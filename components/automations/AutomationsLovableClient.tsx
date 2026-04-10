@@ -1,0 +1,1094 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
+import DashboardLayout from "@/components/DashboardLayout";
+import { PageBanner } from "@/components/PageBanner";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Zap,
+  Plus,
+  Instagram,
+  Facebook,
+  Linkedin,
+  Twitter,
+  MessageCircle,
+  Mail,
+  Pencil,
+  Trash2,
+  Info,
+  Link2,
+  MessageSquare,
+  ImageIcon,
+  CalendarDays,
+  ExternalLink,
+  Loader2,
+} from "lucide-react";
+import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { toast } from "sonner";
+
+/* ─────────────────────────────────────────── Types ─── */
+
+type AutomationType = "comment_to_dm" | "comment_to_email";
+type Platform = "instagram" | "facebook" | "tiktok" | "linkedin" | "twitter";
+
+interface SocialAutomation {
+  id: string;
+  name: string;
+  type: AutomationType;
+  platforms: Platform[];
+  trigger_keyword: string;
+  dm_message: string;
+  include_email_capture: boolean;
+  email_dm_message: string | null;
+  systemeio_tag: string | null;
+  target_post_url: string | null;
+  comment_reply_variants: string[] | null;
+  enabled: boolean;
+  stats: { triggers: number; dms_sent: number };
+  created_at: string;
+}
+
+interface FormState {
+  name: string;
+  type: AutomationType;
+  platforms: Platform[];
+  trigger_keyword: string;
+  dm_message: string;
+  include_email_capture: boolean;
+  email_dm_message: string;
+  systemeio_tag: string;
+  target_post_url: string;
+  target_post_preview: string; // display only, not persisted
+  comment_reply_variants: string; // newline-separated in form
+}
+
+const DEFAULT_COMMENT_REPLIES = [
+  "C'est dans tes DMs ! 📩",
+  "RDV en message privé 😊",
+  "Dis-moi si tu as bien reçu !",
+  "Je t'envoie ça dans 2mn ⚡",
+  "Super, c'est dans tes messages !",
+].join("\n");
+
+const DEFAULT_TIKTOK_COMMENT_REPLIES = [
+  "Merci pour ton commentaire ! 🙌",
+  "Super, merci de participer !",
+  "Top, content que ça t'intéresse ! 🔥",
+  "C'est noté, merci !",
+  "Génial, merci à toi !",
+].join("\n");
+
+const DEFAULT_LINKEDIN_COMMENT_REPLIES = [
+  "Merci pour ton retour ! 🙏",
+  "Super remarque, merci !",
+  "Content que ça résonne avec toi !",
+  "Merci d'avoir pris le temps de commenter 👏",
+  "Très bonne question, merci !",
+].join("\n");
+
+const DEFAULT_TWITTER_COMMENT_REPLIES = [
+  "Merci pour ta réponse ! 🙌",
+  "Top, merci de participer !",
+  "Super, content que ça t'intéresse ! 🔥",
+  "C'est noté, merci !",
+  "Génial, merci à toi !",
+].join("\n");
+
+const DEFAULT_FORM: FormState = {
+  name: "",
+  type: "comment_to_dm",
+  platforms: ["facebook"],
+  trigger_keyword: "",
+  dm_message: "",
+  include_email_capture: false,
+  email_dm_message: "",
+  systemeio_tag: "",
+  target_post_url: "",
+  target_post_preview: "",
+  comment_reply_variants: DEFAULT_COMMENT_REPLIES,
+};
+
+/* ─────────────────────────── Platform status config ─── */
+
+// TikTok icon (inline SVG component matching lucide style)
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.15 15a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.72a8.2 8.2 0 0 0 4.76 1.52v-3.4a4.85 4.85 0 0 1-1-.15z" />
+    </svg>
+  );
+}
+
+const PLATFORM_STATUS = [
+  {
+    id: "facebook",
+    label: "Facebook",
+    icon: Facebook,
+    status: "available" as const,
+    color: "text-blue-500",
+    bg: "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/40",
+    description: "Auto DM + réponse commentaire",
+  },
+  {
+    id: "instagram",
+    label: "Instagram",
+    icon: Instagram,
+    status: "available" as const,
+    color: "text-pink-500",
+    bg: "bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-800/40",
+    description: "Auto DM + réponse commentaire",
+  },
+  {
+    id: "tiktok",
+    label: "TikTok",
+    icon: TikTokIcon,
+    status: "available" as const,
+    color: "text-black dark:text-white",
+    bg: "bg-gray-50 dark:bg-gray-950/20 border-gray-200 dark:border-gray-800/40",
+    description: "Auto réponse commentaire",
+  },
+  {
+    id: "linkedin",
+    label: "LinkedIn",
+    icon: Linkedin,
+    status: "available" as const,
+    color: "text-sky-600",
+    bg: "bg-sky-50 dark:bg-sky-950/20 border-sky-200 dark:border-sky-800/40",
+    description: "Auto réponse commentaire",
+  },
+  {
+    id: "twitter",
+    label: "X / Twitter",
+    icon: Twitter,
+    status: "available" as const,
+    color: "text-sky-500",
+    bg: "bg-sky-50 dark:bg-sky-950/20 border-sky-200 dark:border-sky-800/40",
+    description: "Auto like + réponse commentaire",
+  },
+  {
+    id: "pinterest",
+    label: "Pinterest",
+    icon: ImageIcon,
+    status: "soon" as const,
+    color: "text-red-500",
+    bg: "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800/40",
+    description: "",
+  },
+  {
+    id: "threads",
+    label: "Threads",
+    icon: MessageCircle,
+    status: "soon" as const,
+    color: "text-slate-500",
+    bg: "bg-slate-50 dark:bg-slate-950/20 border-slate-200 dark:border-slate-800/40",
+    description: "",
+  },
+];
+
+/* ─────────────────────────── Helper: read active project from cookie ─── */
+
+function getActiveProjectId(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|; )tipote_active_project=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/** Convert newline-separated string → array, filter blanks */
+function parseVariants(raw: string): string[] {
+  return raw
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/* ─────────────────────────────────────────── Main component ─── */
+
+export default function AutomationsLovableClient() {
+  const t = useTranslations("automations");
+
+  const [automations, setAutomations] = useState<SocialAutomation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [form, setForm] = useState<FormState>(DEFAULT_FORM);
+  const [postPickerOpen, setPostPickerOpen] = useState(false);
+
+  /* ── Load automations ── */
+  const loadAutomations = useCallback(async () => {
+    setIsLoading(true);
+    const supabase = getSupabaseBrowserClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setIsLoading(false); return; }
+
+    const projectId = getActiveProjectId();
+
+    try {
+      let query = supabase
+        .from("social_automations")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (projectId) query = query.eq("project_id", projectId);
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("[automations] Load error:", error);
+        setAutomations([]);
+      } else {
+        setAutomations((data as SocialAutomation[]) ?? []);
+      }
+    } catch {
+      setAutomations([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadAutomations(); }, [loadAutomations]);
+
+  /* ── Open create modal ── */
+  function openCreate() {
+    setForm(DEFAULT_FORM);
+    setEditingId(null);
+    setShowModal(true);
+  }
+
+  /* ── Open create modal for a specific platform ── */
+  function openCreateForPlatform(platform: Platform) {
+    const isCommentOnly = platform === "tiktok" || platform === "linkedin" || platform === "twitter";
+    setForm({
+      ...DEFAULT_FORM,
+      platforms: [platform],
+      type: "comment_to_dm",
+      comment_reply_variants:
+        platform === "linkedin"
+          ? DEFAULT_LINKEDIN_COMMENT_REPLIES
+          : platform === "tiktok"
+          ? DEFAULT_TIKTOK_COMMENT_REPLIES
+          : platform === "twitter"
+          ? DEFAULT_TWITTER_COMMENT_REPLIES
+          : DEFAULT_COMMENT_REPLIES,
+      dm_message: isCommentOnly ? "" : "",
+    });
+    setEditingId(null);
+    setShowModal(true);
+  }
+
+  /* ── Open edit modal ── */
+  function openEdit(auto: SocialAutomation) {
+    setForm({
+      name: auto.name,
+      type: auto.type,
+      platforms: auto.platforms,
+      trigger_keyword: auto.trigger_keyword,
+      dm_message: auto.dm_message,
+      include_email_capture: auto.include_email_capture,
+      email_dm_message: auto.email_dm_message ?? "",
+      systemeio_tag: auto.systemeio_tag ?? "",
+      target_post_url: auto.target_post_url ?? "",
+      target_post_preview: "",
+      comment_reply_variants: (auto.comment_reply_variants ?? []).join("\n"),
+    });
+    setEditingId(auto.id);
+    setShowModal(true);
+  }
+
+  /* ── Save (create or update) ── */
+  async function handleSave() {
+    const isCommentOnlyPlatform = form.platforms[0] === "tiktok" || form.platforms[0] === "linkedin" || form.platforms[0] === "twitter";
+    if (!form.name.trim()) { toast.error(t("form.errorName")); return; }
+    if (!form.trigger_keyword.trim()) { toast.error(t("form.errorKeyword")); return; }
+    if (!isCommentOnlyPlatform && !form.dm_message.trim()) { toast.error(t("form.errorMessage")); return; }
+    if (form.platforms.length === 0) { toast.error(t("form.errorPlatform")); return; }
+    // LinkedIn permet "tous les posts" (pas de target obligatoire)
+    if (form.platforms[0] !== "linkedin" && !form.target_post_url.trim()) { toast.error("Choisis un post cible avant de continuer."); return; }
+
+    setIsSaving(true);
+    const supabase = getSupabaseBrowserClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setIsSaving(false); return; }
+
+    const projectId = getActiveProjectId();
+    const variants = parseVariants(form.comment_reply_variants);
+
+    const payload = {
+      user_id: user.id,
+      project_id: projectId,
+      name: form.name.trim(),
+      type: form.type,
+      platforms: form.platforms,
+      trigger_keyword: form.trigger_keyword.trim().toUpperCase(),
+      dm_message: form.dm_message.trim(),
+      include_email_capture: form.include_email_capture,
+      email_dm_message: form.include_email_capture ? form.email_dm_message.trim() : null,
+      systemeio_tag: form.include_email_capture ? form.systemeio_tag.trim() : null,
+      target_post_url: form.target_post_url.trim() || null,
+      comment_reply_variants: variants.length > 0 ? variants : null,
+      stats: { triggers: 0, dms_sent: 0 },
+    };
+
+    try {
+      let error;
+      if (editingId) {
+        const res = await supabase
+          .from("social_automations")
+          .update({ ...payload, updated_at: new Date().toISOString() })
+          .eq("id", editingId)
+          .eq("user_id", user.id);
+        error = res.error;
+      } else {
+        const res = await supabase
+          .from("social_automations")
+          .insert(payload);
+        error = res.error;
+      }
+
+      if (error) {
+        toast.error(t("errors.saveFailed"));
+      } else {
+        toast.success(editingId ? t("savedUpdated") : t("savedCreated"));
+        setShowModal(false);
+        loadAutomations();
+
+        // Auto-subscribe aux webhooks Meta (non-bloquant)
+        const subPlatform = form.platforms[0] ?? "facebook";
+        if (subPlatform === "facebook" || subPlatform === "instagram") {
+          fetch("/api/automations/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ platform: subPlatform }),
+          })
+            .then((r) => r.json())
+            .then((d) => {
+              if (d.ok) console.log(`[automations] ${subPlatform} abonné aux webhooks`);
+              else console.warn(`[automations] Webhook subscription issue:`, d.error);
+            })
+            .catch(() => {});
+        }
+      }
+    } catch {
+      toast.error(t("errors.saveFailed"));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  /* ── Toggle enabled ── */
+  async function handleToggle(auto: SocialAutomation) {
+    const supabase = getSupabaseBrowserClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("social_automations")
+      .update({ enabled: !auto.enabled, updated_at: new Date().toISOString() })
+      .eq("id", auto.id)
+      .eq("user_id", user.id);
+
+    if (!error) {
+      setAutomations((prev) =>
+        prev.map((a) => a.id === auto.id ? { ...a, enabled: !a.enabled } : a)
+      );
+
+      // Si on active une automation, re-subscribe aux webhooks
+      if (!auto.enabled) {
+        const subPlatform = auto.platforms?.[0] ?? "facebook";
+        if (subPlatform === "facebook" || subPlatform === "instagram") {
+          fetch("/api/automations/subscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ platform: subPlatform }),
+          }).catch(() => {});
+        }
+      }
+    }
+  }
+
+  /* ── Delete ── */
+  async function handleDelete(auto: SocialAutomation) {
+    if (!confirm(t("deleteConfirm"))) return;
+    const supabase = getSupabaseBrowserClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("social_automations")
+      .delete()
+      .eq("id", auto.id)
+      .eq("user_id", user.id);
+
+    if (!error) {
+      setAutomations((prev) => prev.filter((a) => a.id !== auto.id));
+      toast.success(t("deleted"));
+    }
+  }
+
+  /* ── Platform toggle helper (Facebook only for now) ── */
+  function selectPlatform(p: Platform) {
+    setForm((f) => ({
+      ...f,
+      platforms: [p],
+      // Reset post selection when platform changes
+      target_post_url: "",
+      target_post_preview: "",
+    }));
+  }
+
+
+  /* ─── Rendered ─── */
+  return (
+    <DashboardLayout
+      title={t("title")}
+    >
+      <PageBanner icon={<Zap className="w-5 h-5" />} title={t("hero.title")} subtitle={t("hero.description")} />
+
+      {/* ── Automatiser par plateforme ── */}
+      <div>
+        <h3 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">
+          {t("platformsTitle")}
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {PLATFORM_STATUS.map((p) => {
+            const Icon = p.icon;
+            const isAvailable = p.status === "available";
+            return (
+              <button
+                key={p.id}
+                type="button"
+                disabled={!isAvailable}
+                onClick={() => isAvailable && openCreateForPlatform(p.id as Platform)}
+                className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-all ${
+                  isAvailable
+                    ? `${p.bg} hover:shadow-md cursor-pointer group`
+                    : "bg-muted/30 border-border opacity-50 cursor-not-allowed"
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                  isAvailable ? "bg-white/80 dark:bg-white/10" : "bg-muted"
+                }`}>
+                  <Icon className={`w-5 h-5 ${isAvailable ? p.color : "text-muted-foreground"}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{p.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {isAvailable
+                      ? p.description
+                      : p.status === "soon"
+                      ? t("status.soon")
+                      : t("status.unavailable")}
+                  </p>
+                </div>
+                {isAvailable && (
+                  <Plus className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Automations list ── */}
+      <div>
+        <h3 className="text-lg font-display font-bold mb-4">{t("listTitle")}</h3>
+
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2].map((i) => (
+              <div key={i} className="h-24 rounded-xl bg-muted animate-pulse" />
+            ))}
+          </div>
+        ) : automations.length === 0 ? (
+          /* Empty state */
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                <Zap className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <h4 className="font-display font-semibold text-lg mb-2">{t("empty.title")}</h4>
+              <p className="text-sm text-muted-foreground max-w-xs">{t("empty.description")}</p>
+            </CardContent>
+          </Card>
+        ) : (
+          /* Automation cards */
+          <div className="space-y-3">
+            {automations.map((auto) => (
+              <AutomationCard
+                key={auto.id}
+                auto={auto}
+                onEdit={openEdit}
+                onDelete={handleDelete}
+                onToggle={handleToggle}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Post Picker Modal ── */}
+      <PostPickerModal
+        open={postPickerOpen}
+        onOpenChange={setPostPickerOpen}
+        platform={form.platforms[0] ?? "facebook"}
+        onSelect={(postId, preview) => {
+          setForm((f) => ({ ...f, target_post_url: postId, target_post_preview: preview }));
+          setPostPickerOpen(false);
+        }}
+      />
+
+      {/* ── Create / Edit Modal ── */}
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl flex flex-col max-h-[90vh] overflow-hidden" aria-describedby="automation-form-desc">
+          <DialogHeader className="shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-primary" />
+              {editingId ? t("form.editTitle") : t("form.createTitle")}
+            </DialogTitle>
+            <DialogDescription id="automation-form-desc" className="sr-only">
+              {editingId ? t("form.editTitle") : t("form.createTitle")}
+            </DialogDescription>
+          </DialogHeader>
+
+          {(() => {
+            const isCommentOnly = form.platforms[0] === "tiktok" || form.platforms[0] === "linkedin" || form.platforms[0] === "twitter";
+            const isTikTok = isCommentOnly; // alias for backward compat in form logic
+            const platformLabel = form.platforms[0] === "instagram" ? "Instagram" : form.platforms[0] === "tiktok" ? "TikTok" : form.platforms[0] === "linkedin" ? "LinkedIn" : form.platforms[0] === "twitter" ? "X / Twitter" : "Facebook";
+            return (
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden space-y-5 py-2 pr-1">
+            {/* Platform badge (read-only) */}
+            <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+              {form.platforms[0] === "instagram" ? <Instagram className="w-4 h-4 text-pink-500" /> : form.platforms[0] === "tiktok" ? <TikTokIcon className="w-4 h-4 text-black dark:text-white" /> : form.platforms[0] === "linkedin" ? <Linkedin className="w-4 h-4 text-sky-600" /> : form.platforms[0] === "twitter" ? <Twitter className="w-4 h-4 text-sky-500" /> : <Facebook className="w-4 h-4 text-blue-500" />}
+              <span className="text-sm font-medium">{platformLabel}</span>
+              {isCommentOnly && <Badge variant="secondary" className="text-xs ml-auto">{form.platforms[0] === "linkedin" ? "Réponse commentaire" : form.platforms[0] === "twitter" ? "Like + réponse commentaire" : t("form.tiktokCommentOnly")}</Badge>}
+            </div>
+
+            {/* Name */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">{t("form.name")}</label>
+              <Input
+                placeholder={t("form.namePlaceholder")}
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </div>
+
+            {/* Type — hidden for TikTok (comment reply only) */}
+            {!isTikTok && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">{t("form.type")}</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {(["comment_to_dm", "comment_to_email"] as AutomationType[]).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, type }))}
+                      className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-colors overflow-hidden ${
+                        form.type === type
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      {type === "comment_to_dm"
+                        ? <MessageCircle className="w-4 h-4 text-primary shrink-0" />
+                        : <Mail className="w-4 h-4 text-primary shrink-0" />}
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{t(`form.type_${type}`)}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{t(`form.type_${type}_desc`)}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Trigger keyword */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">{t("form.keyword")}</label>
+              <Input
+                placeholder={t("form.keywordPlaceholder")}
+                value={form.trigger_keyword}
+                onChange={(e) => setForm((f) => ({ ...f, trigger_keyword: e.target.value.toUpperCase() }))}
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground">{t("form.keywordHint")}</p>
+            </div>
+
+            {/* Target post picker */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium flex items-center gap-1.5">
+                <Link2 className="w-3.5 h-3.5 text-muted-foreground" />
+                {t("form.targetPost")}
+                {form.platforms[0] !== "linkedin" && <span className="text-xs text-destructive font-medium">*</span>}
+                {form.platforms[0] === "linkedin" && <span className="text-xs text-muted-foreground">(optionnel — vide = tous tes posts)</span>}
+              </label>
+              {form.target_post_url ? (
+                <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2">
+                  <ImageIcon className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span className="flex-1 text-xs text-foreground truncate">
+                    {form.target_post_preview || form.target_post_url}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, target_post_url: "", target_post_preview: "" }))}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-2 justify-start"
+                  onClick={() => setPostPickerOpen(true)}
+                >
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  {t("form.targetPostPick")} {platformLabel}
+                </Button>
+              )}
+              <p className="text-xs text-muted-foreground">{t("form.targetPostHint")}</p>
+            </div>
+
+            {/* DM Message — hidden for TikTok */}
+            {!isTikTok && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">
+                  {form.type === "comment_to_email" ? t("form.firstDmMessage") : t("form.dmMessage")}
+                </label>
+                <Textarea
+                  placeholder={t("form.dmMessagePlaceholder")}
+                  value={form.dm_message}
+                  onChange={(e) => setForm((f) => ({ ...f, dm_message: e.target.value }))}
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground">{t("form.dmMessageHint")}</p>
+              </div>
+            )}
+
+            {/* Comment reply variants */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium flex items-center gap-1.5">
+                <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
+                {t("form.commentReplies")}
+                {isTikTok && <span className="text-xs text-destructive font-medium">*</span>}
+              </label>
+              <Textarea
+                placeholder={isTikTok ? t("form.tiktokCommentRepliesPlaceholder") : t("form.commentRepliesPlaceholder")}
+                value={form.comment_reply_variants}
+                onChange={(e) => setForm((f) => ({ ...f, comment_reply_variants: e.target.value }))}
+                rows={5}
+                className="font-mono text-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                {isTikTok ? t("form.tiktokCommentRepliesHint") : t("form.commentRepliesHint")}
+              </p>
+            </div>
+
+            {/* Email capture (only for comment_to_email, not TikTok) */}
+            {!isTikTok && form.type === "comment_to_email" && (
+              <>
+                <div className="flex items-center gap-3 rounded-lg border border-border p-3">
+                  <Switch
+                    checked={form.include_email_capture}
+                    onCheckedChange={(v) => setForm((f) => ({ ...f, include_email_capture: v }))}
+                  />
+                  <div>
+                    <p className="text-sm font-medium">{t("form.emailCapture")}</p>
+                    <p className="text-xs text-muted-foreground">{t("form.emailCaptureHint")}</p>
+                  </div>
+                </div>
+
+                {form.include_email_capture && (
+                  <>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">{t("form.emailDmMessage")}</label>
+                      <Textarea
+                        placeholder={t("form.emailDmPlaceholder")}
+                        value={form.email_dm_message}
+                        onChange={(e) => setForm((f) => ({ ...f, email_dm_message: e.target.value }))}
+                        rows={3}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium">{t("form.systemeioTag")}</label>
+                      <Input
+                        placeholder={t("form.systemeioTagPlaceholder")}
+                        value={form.systemeio_tag}
+                        onChange={(e) => setForm((f) => ({ ...f, systemeio_tag: e.target.value }))}
+                      />
+                      <p className="text-xs text-muted-foreground">{t("form.systemeioTagHint")}</p>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+
+            {/* Info note */}
+            <div className="flex items-start gap-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40 p-3">
+              <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-blue-700 dark:text-blue-400">
+                {isTikTok ? t("form.tiktokNote") : t("form.rgpdNote")}
+              </p>
+            </div>
+          </div>
+            );
+          })()}
+
+          <DialogFooter className="shrink-0 border-t pt-4 mt-2">
+            <Button variant="outline" onClick={() => setShowModal(false)}>
+              {t("form.cancel")}
+            </Button>
+            <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+              {isSaving ? (
+                <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+              ) : (
+                <Zap className="w-4 h-4" />
+              )}
+              {isSaving ? t("form.saving") : t("form.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </DashboardLayout>
+  );
+}
+
+/* ─────────────────────────── AutomationCard sub-component ─── */
+
+function AutomationCard({
+  auto,
+  onEdit,
+  onDelete,
+  onToggle,
+}: {
+  auto: SocialAutomation;
+  onEdit: (a: SocialAutomation) => void;
+  onDelete: (a: SocialAutomation) => void;
+  onToggle: (a: SocialAutomation) => void;
+}) {
+  const t = useTranslations("automations");
+  const [showTest, setShowTest] = useState(false);
+  const [testInput, setTestInput] = useState("");
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; detail: string } | null>(null);
+
+  const platformIcons: Record<Platform, React.ElementType> = {
+    instagram: Instagram,
+    facebook: Facebook,
+    tiktok: TikTokIcon,
+    linkedin: Linkedin,
+    twitter: Twitter,
+  };
+  const platformColors: Record<Platform, string> = {
+    instagram: "text-pink-500",
+    facebook: "text-blue-500",
+    tiktok: "text-black dark:text-white",
+    linkedin: "text-sky-600",
+    twitter: "text-sky-500",
+  };
+
+  const hasPostTarget = Boolean(auto.target_post_url?.trim());
+  const replyCount = auto.comment_reply_variants?.length ?? 0;
+
+  async function runTest() {
+    if (!testInput.trim()) return;
+    setIsTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch("/api/automations/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ automation_id: auto.id, test_comment: testInput }),
+      });
+      const data = await res.json();
+      setTestResult({ ok: data.ok, detail: data.detail ?? data.error ?? "Erreur inconnue" });
+    } catch {
+      setTestResult({ ok: false, detail: "Erreur réseau" });
+    } finally {
+      setIsTesting(false);
+    }
+  }
+
+  return (
+    <Card className={`transition-opacity ${auto.enabled ? "" : "opacity-60"}`}>
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+            auto.type === "comment_to_dm"
+              ? "bg-primary/10"
+              : "bg-green-50 dark:bg-green-950/20"
+          }`}>
+            {auto.type === "comment_to_dm"
+              ? <MessageCircle className="w-5 h-5 text-primary" />
+              : <Mail className="w-5 h-5 text-green-600" />
+            }
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="font-medium text-sm">{auto.name}</h4>
+              {auto.platforms.map((p) => {
+                const PIcon = platformIcons[p];
+                return (
+                  <span key={p} className={`${platformColors[p]}`}>
+                    <PIcon className="w-3.5 h-3.5" />
+                  </span>
+                );
+              })}
+              <Badge variant={auto.enabled ? "default" : "secondary"} className="text-xs">
+                {auto.enabled ? t("statusActive") : t("statusInactive")}
+              </Badge>
+              {hasPostTarget && (
+                <Badge variant="outline" className="text-xs gap-1">
+                  <Link2 className="w-2.5 h-2.5" />
+                  {t("card.postTargeted")}
+                </Badge>
+              )}
+            </div>
+
+            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground min-w-0">
+              <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground shrink-0">
+                {auto.trigger_keyword}
+              </span>
+              <span className="shrink-0">→</span>
+              <span className="truncate min-w-0">{auto.dm_message}</span>
+            </div>
+
+            {replyCount > 0 && (
+              <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                <MessageSquare className="w-3 h-3" />
+                <span>{t("card.replyVariants", { count: replyCount })}</span>
+              </div>
+            )}
+
+            <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+              <span>{t("statsTriggers", { count: auto.stats?.triggers ?? 0 })}</span>
+              <span>{t("statsDms", { count: auto.stats?.dms_sent ?? 0 })}</span>
+              <button
+                type="button"
+                onClick={() => { setShowTest((v) => !v); setTestResult(null); }}
+                className="text-primary hover:underline text-xs"
+              >
+                {showTest ? "Masquer le test" : "Tester"}
+              </button>
+            </div>
+
+            {/* Inline test panel */}
+            {showTest && (
+              <div className="mt-3 rounded-lg border border-dashed border-primary/30 bg-primary/3 p-3 space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Simule un commentaire contenant ton mot-clé pour vérifier que tout fonctionne.
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    value={testInput}
+                    onChange={(e) => setTestInput(e.target.value)}
+                    placeholder={`ex: ${auto.trigger_keyword}`}
+                    className="text-xs h-8"
+                    onKeyDown={(e) => { if (e.key === "Enter") runTest(); }}
+                  />
+                  <Button size="sm" className="h-8 shrink-0" onClick={runTest} disabled={isTesting || !testInput.trim()}>
+                    {isTesting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Tester"}
+                  </Button>
+                </div>
+                {testResult && (
+                  <p className={`text-xs ${testResult.ok ? "text-green-600" : "text-destructive"}`}>
+                    {testResult.ok ? "✓" : "✗"} {testResult.detail}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Switch
+              checked={auto.enabled}
+              onCheckedChange={() => onToggle(auto)}
+              title={auto.enabled ? t("disable") : t("enable")}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-8 h-8"
+              onClick={() => onEdit(auto)}
+              title={t("edit")}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-8 h-8 text-destructive hover:text-destructive"
+              onClick={() => onDelete(auto)}
+              title={t("delete")}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ─────────────────────────── PostPickerModal sub-component ─── */
+
+interface PostItem {
+  id: string;
+  message: string;
+  created_time: string;
+  permalink_url: string;
+}
+
+function PostPickerModal({
+  open,
+  onOpenChange,
+  platform,
+  onSelect,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  platform: Platform;
+  onSelect: (postId: string, preview: string) => void;
+}) {
+  const t = useTranslations("automations");
+  const [posts, setPosts] = useState<PostItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    setError(null);
+    setPosts([]);
+
+    const apiUrl = platform === "instagram"
+      ? "/api/social/instagram-posts"
+      : platform === "tiktok"
+      ? "/api/social/tiktok-videos"
+      : platform === "linkedin"
+      ? "/api/social/linkedin-posts"
+      : platform === "twitter"
+      ? "/api/social/twitter-tweets"
+      : "/api/social/facebook-posts";
+
+    fetch(apiUrl)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.error) setError(d.error);
+        else setPosts(d.posts ?? d.videos?.map((v: any) => ({
+          id: v.id,
+          message: v.title || v.video_description || "(sans titre)",
+          created_time: v.create_time ? new Date(v.create_time * 1000).toISOString() : "",
+          permalink_url: "",
+        })) ?? []);
+      })
+      .catch(() => setError("Impossible de charger les posts"))
+      .finally(() => setLoading(false));
+  }, [open, platform]);
+
+  function formatDate(iso: string) {
+    try {
+      return new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+    } catch { return iso; }
+  }
+
+  const PlatformIcon = platform === "instagram" ? Instagram : platform === "tiktok" ? TikTokIcon : platform === "linkedin" ? Linkedin : platform === "twitter" ? Twitter : Facebook;
+  const iconColor = platform === "instagram" ? "text-pink-500" : platform === "tiktok" ? "text-black dark:text-white" : platform === "linkedin" ? "text-sky-600" : platform === "twitter" ? "text-sky-500" : "text-blue-500";
+  const platformLabel = platform === "instagram" ? "Instagram" : platform === "tiktok" ? "TikTok" : platform === "linkedin" ? "LinkedIn" : platform === "twitter" ? "X / Twitter" : "Facebook";
+  const pickerTitle = `${t("form.targetPostPickTitle")} ${platformLabel}`;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-lg max-h-[80vh] flex flex-col overflow-x-hidden" aria-describedby="post-picker-desc">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <PlatformIcon className={`w-4 h-4 ${iconColor}`} />
+            {pickerTitle}
+          </DialogTitle>
+          <DialogDescription id="post-picker-desc" className="sr-only">
+            {pickerTitle}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto space-y-2 py-2 min-h-0">
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {error && !loading && (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              <p>{error}</p>
+              <p className="text-xs mt-1 text-muted-foreground/70">{t("form.targetPostPickError")}</p>
+            </div>
+          )}
+
+          {!loading && !error && posts.length === 0 && (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              {t("form.targetPostPickEmpty")}
+            </div>
+          )}
+
+          {!loading && posts.map((post) => {
+            const preview = post.message?.slice(0, 120) || "—";
+            return (
+              <button
+                key={post.id}
+                type="button"
+                onClick={() => onSelect(post.id, preview)}
+                className="w-full text-left rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 p-3 transition-colors"
+              >
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <CalendarDays className="w-3 h-3 shrink-0" />
+                      {formatDate(post.created_time)}
+                    </p>
+                    <p className="text-sm text-foreground line-clamp-2">{preview}</p>
+                  </div>
+                  {post.permalink_url && (
+                    <a
+                      href={post.permalink_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="shrink-0 text-muted-foreground hover:text-primary mt-0.5"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex justify-end pt-2 border-t">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            Annuler
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+

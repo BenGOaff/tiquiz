@@ -1,0 +1,1287 @@
+// app/api/automations/webhook/route.ts
+// Gère les webhooks Meta (commentaires Facebook)
+// GET  : vérification du webhook Meta (hub.challenge)
+// POST : deux modes :
+//   1. Meta natif  → X-Hub-Signature-256 header, payload Meta standard
+//   2. n8n relayé  → x-n8n-secret header, payload custom (rétrocompatible)
+// PUT  : réponse email (appelée par n8n après réponse DM de l'user)
+
+import { createHmac } from "node:crypto";
+import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { decrypt } from "@/lib/crypto";
+
+export const dynamic = "force-dynamic";
+
+/* ─── Debug logging helper ─── */
+async function logWebhook(
+  eventType: string,
+  data: { pageId?: string; userId?: string; source?: string; payload?: unknown; result?: unknown },
+) {
+  try {
+    await supabaseAdmin.from("webhook_debug_logs").insert({
+      event_type: eventType,
+      page_id: data.pageId ?? null,
+      user_id: data.userId ?? null,
+      source: data.source ?? "meta",
+      payload_summary: data.payload ?? null,
+      result: data.result ?? null,
+    });
+  } catch {
+    // Table might not exist yet — silently ignore
+  }
+}
+
+/* ─── Meta webhook verification ─── */
+export async function GET(req: NextRequest) {
+  const { searchParams } = req.nextUrl;
+  const mode = searchParams.get("hub.mode");
+  const token = searchParams.get("hub.verify_token");
+  const challenge = searchParams.get("hub.challenge");
+
+  const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
+
+  if (mode === "subscribe" && token === verifyToken && challenge) {
+    return new NextResponse(challenge, { status: 200 });
+  }
+
+  return NextResponse.json({ error: "Verification failed" }, { status: 403 });
+}
+
+/* ─── Incoming comment event ─── */
+export async function POST(req: NextRequest) {
+  console.log("[webhook] ⚡ POST received", {
+    url: req.url,
+    headers: {
+      "x-hub-signature-256": req.headers.get("x-hub-signature-256") ? "present" : "missing",
+      "x-n8n-secret": req.headers.get("x-n8n-secret") ? "present" : "missing",
+      "content-type": req.headers.get("content-type"),
+    },
+  });
+
+  const n8nSecret = req.headers.get("x-n8n-secret");
+  const metaSig = req.headers.get("x-hub-signature-256");
+
+  // Log every incoming POST to DB for debugging
+  await logWebhook("received", {
+    source: n8nSecret ? "n8n" : "meta",
+    payload: {
+      hasSignature: !!metaSig,
+      hasN8nSecret: !!n8nSecret,
+      contentType: req.headers.get("content-type"),
+    },
+  });
+
+  // ── Path 1: n8n forwarded (rétrocompatible) ──
+  if (n8nSecret) {
+    if (n8nSecret !== process.env.N8N_SHARED_SECRET) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return handleN8nPayload(req);
+  }
+
+  // ── Path 2: Meta native webhook ──
+  return handleMetaNativePayload(req, metaSig);
+}
+
+/* ─── n8n forwarded handler (existing format) ─── */
+async function handleN8nPayload(req: NextRequest): Promise<NextResponse> {
+  let body: CommentWebhookPayload;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const { platform, page_id, sender_id, sender_name, comment_text, comment_id, post_id, page_access_token, user_id } = body;
+
+  if (!platform || !page_id || !sender_id || !comment_text || !page_access_token) {
+    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+
+  return processComment({ platform, page_id, sender_id, sender_name, comment_text, comment_id, post_id, page_access_token, user_id });
+}
+
+/* ─── Meta native webhook handler ─── */
+async function handleMetaNativePayload(req: NextRequest, signature: string | null): Promise<NextResponse> {
+  const rawBody = await req.text();
+
+  // Pré-lecture du payload pour déterminer le bon secret avant vérification
+  let payloadObj: MetaNativePayload;
+  try {
+    payloadObj = JSON.parse(rawBody);
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  // Choisir le bon app secret selon l'objet du webhook
+  // Les webhooks Page ET Instagram passent tous par Tipote ter (qui a le produit Webhooks).
+  // Meta signe avec le secret de l'app PARENTE Tipote ter (INSTAGRAM_META_APP_SECRET).
+  const appSecret =
+    process.env.INSTAGRAM_META_APP_SECRET ?? process.env.INSTAGRAM_APP_SECRET ?? process.env.META_APP_SECRET;
+
+  if (appSecret) {
+    if (!signature) {
+      await logWebhook("signature_fail", { payload: { reason: "missing_signature", object: payloadObj.object } });
+      // Return 200 to stop Meta from retrying — event is not processed
+      return NextResponse.json({ ok: true, skipped: "missing_signature" });
+    }
+    const expected = `sha256=${createHmac("sha256", appSecret).update(rawBody).digest("hex")}`;
+    if (signature !== expected) {
+      await logWebhook("signature_fail", {
+        payload: {
+          reason: "mismatch",
+          object: payloadObj.object,
+          signaturePrefix: signature.slice(0, 20),
+          expectedPrefix: expected.slice(0, 20),
+          secretUsed: appSecret === process.env.INSTAGRAM_META_APP_SECRET ? "INSTAGRAM_META_APP_SECRET"
+            : appSecret === process.env.INSTAGRAM_APP_SECRET ? "INSTAGRAM_APP_SECRET"
+            : "META_APP_SECRET",
+        },
+      });
+      // Return 200 to stop Meta from endlessly retrying stale events.
+      // Legitimate new events still pass signature — see signature_ok logs.
+      return NextResponse.json({ ok: true, skipped: "signature_mismatch" });
+    }
+  }
+
+  const payload = payloadObj;
+  const entryIds = (payload.entry ?? []).map((e) => e.id);
+  await logWebhook("signature_ok", { pageId: entryIds[0], payload: { object: payload.object, entryIds, entryCount: payload.entry?.length ?? 0 } });
+  console.log("[webhook] ✅ Signature OK, payload:", JSON.stringify(payload).slice(0, 500));
+
+  // Seuls les events Page (Facebook) et Instagram sont traités ici
+  if (payload.object !== "page" && payload.object !== "instagram") {
+    console.log("[webhook] Skipped: object is", payload.object);
+    return NextResponse.json({ ok: true, skipped: true });
+  }
+
+  // Déléguer les events Instagram au handler dédié
+  if (payload.object === "instagram") {
+    return handleInstagramNativePayload(payload);
+  }
+
+  const results: { matched: number; errors: number } = { matched: 0, errors: 0 };
+
+  for (const entry of payload.entry ?? []) {
+    const pageId = entry.id;
+
+    // Log what we received in this entry for debugging
+    const entryShape = {
+      pageId,
+      hasChanges: !!entry.changes?.length,
+      changesCount: entry.changes?.length ?? 0,
+      hasMessaging: !!entry.messaging?.length,
+      messagingCount: entry.messaging?.length ?? 0,
+      changeFields: entry.changes?.map((c) => c.field) ?? [],
+      changeItems: entry.changes?.map((c) => `${c.value?.item}/${c.value?.verb}`) ?? [],
+    };
+    await logWebhook("entry_detail", { pageId, payload: entryShape });
+
+    // Messaging events (DMs) arrive in entry.messaging[], not entry.changes[]
+    // Process incoming messages to detect email replies for Systeme.io sync.
+    if (entry.messaging?.length) {
+      console.log("[webhook] 📨 Messaging event received for page:", pageId, "count:", entry.messaging.length);
+      await logWebhook("messaging_event", { pageId, payload: { count: entry.messaging.length } });
+
+      for (const msg of entry.messaging) {
+        // Only process user-sent messages (not echoes of our own messages)
+        if (msg.message?.text && msg.sender?.id && msg.sender.id !== pageId) {
+          await handleIncomingDM(pageId, msg.sender.id, msg.message.text);
+        }
+      }
+      continue;
+    }
+
+    if (!entry.changes?.length) {
+      await logWebhook("no_changes", { pageId, payload: { keys: Object.keys(entry) } });
+      continue;
+    }
+
+    for (const change of entry.changes ?? []) {
+      // Log every change field we see
+      if (change.field !== "feed") {
+        await logWebhook("skip_non_feed", { pageId, payload: { field: change.field } });
+        continue;
+      }
+      const val = change.value;
+      // Log the feed event details
+      await logWebhook("feed_event", { pageId, payload: { item: val.item, verb: val.verb, hasMessage: !!val.message, hasFrom: !!val.from?.id, messagePreview: val.message?.slice(0, 50), postId: val.post_id, commentId: val.comment_id } });
+
+      if (val.item !== "comment" || val.verb !== "add") {
+        await logWebhook("skip_non_comment", { pageId, payload: { item: val.item, verb: val.verb } });
+        continue;
+      }
+
+      // We need at least a from.id OR a comment_id to proceed
+      if (!val.from?.id && !val.comment_id) {
+        await logWebhook("skip_missing_data", { pageId, payload: { hasFromId: !!val.from?.id, hasCommentId: !!val.comment_id, hasMessage: !!val.message } });
+        continue;
+      }
+
+      // Look up page access token + user_id from our DB (needed for Graph API fetch + processComment)
+      let pageAccessToken: string | null = null;
+      let connUserId: string | undefined;
+      try {
+        const { data: conn } = await supabaseAdmin
+          .from("social_connections")
+          .select("access_token_encrypted, user_id")
+          .eq("platform", "facebook")
+          .eq("platform_user_id", pageId)
+          .maybeSingle();
+
+        if (conn?.access_token_encrypted) {
+          pageAccessToken = decrypt(conn.access_token_encrypted);
+          connUserId = conn.user_id;
+        }
+      } catch (err) {
+        console.error("[webhook] Token lookup error:", err);
+      }
+
+      if (!pageAccessToken) {
+        console.warn("[webhook] ❌ No token found for page:", pageId);
+        await logWebhook("no_token", { pageId, payload: { commentId: val.comment_id, fromId: val.from?.id } });
+        continue;
+      }
+      console.log("[webhook] 🔑 Token found for page:", pageId, "user:", connUserId);
+      await logWebhook("token_found", { pageId, userId: connUserId, payload: { commentText: val.message?.slice(0, 50), fromId: val.from?.id, commentId: val.comment_id, hasMessage: !!val.message } });
+
+      // Meta's Page feed webhook often does NOT include the comment text (message field).
+      // When message is missing, fetch it from the Graph API using the comment_id.
+      let commentText = val.message ?? "";
+      let senderId = val.from?.id ?? "";
+      let senderName = val.from?.name ?? "";
+
+      if ((!commentText || !senderId) && val.comment_id) {
+        // Use user's pageAccessToken to read the comment.
+        let fetched = await fetchCommentFromGraphAPI(pageAccessToken, val.comment_id);
+        if (fetched) {
+          await logWebhook("graph_api_fetch_ok", { pageId, payload: { commentId: val.comment_id, fetchedMessage: fetched.message?.slice(0, 80), fetchedFromId: fetched.fromId } });
+          if (!commentText && fetched.message) commentText = fetched.message;
+          if (!senderId && fetched.fromId) senderId = fetched.fromId;
+          if (!senderName && fetched.fromName) senderName = fetched.fromName;
+        } else {
+          await logWebhook("graph_api_fetch_fail", { pageId, payload: { commentId: val.comment_id } });
+        }
+      }
+
+      if (!commentText || !senderId) {
+        await logWebhook("skip_missing_data_after_fetch", { pageId, payload: { hasMessage: !!commentText, hasFromId: !!senderId, commentId: val.comment_id } });
+        continue;
+      }
+
+      // post_id in Meta's format is "pageId_postId"
+      const rawPostId = val.post_id ?? "";
+
+      const res = await processComment({
+        platform: "facebook",
+        page_id: pageId,
+        sender_id: senderId,
+        sender_name: senderName,
+        comment_text: commentText,
+        comment_id: val.comment_id,
+        post_id: rawPostId, // pass full post_id for matching
+        page_access_token: pageAccessToken,
+        user_id: connUserId, // filter automations to this page's owner
+      });
+
+      const resBody = await res.json().catch(() => ({}));
+      if ((resBody as any).matched) results.matched++;
+    }
+  }
+
+  return NextResponse.json({ ok: true, ...results });
+}
+
+/* ─── Core comment processing (shared by both paths) ─── */
+async function processComment(params: {
+  platform: "instagram" | "facebook";
+  page_id: string;
+  sender_id: string;
+  sender_name: string;
+  comment_text: string;
+  comment_id?: string;
+  post_id?: string;
+  page_access_token: string;
+  user_id?: string;
+}): Promise<NextResponse> {
+  const { platform, page_id, sender_id, sender_name, comment_text, comment_id, post_id, page_access_token, user_id } = params;
+  const commentUpper = comment_text.toUpperCase();
+
+  console.log("[webhook] 📝 processComment:", { platform, page_id, sender_id, sender_name, comment_text, post_id, user_id });
+
+  // ── GUARD: ignore comments posted by the Page itself (prevents infinite loop) ──
+  if (sender_id === page_id) {
+    console.log(`[webhook] SKIP — comment from the page itself (${sender_id})`);
+    await logWebhook("skip_self_comment", { pageId: page_id, payload: { sender_id, comment_text: comment_text.slice(0, 50) } });
+    return NextResponse.json({ ok: true, matched: 0, skipped: true, reason: "self_comment" });
+  }
+
+  try {
+    // NOTE: .contains("platforms", [platform]) on TEXT[] columns is unreliable
+    // in some Supabase JS versions. Fetch all enabled automations and filter in JS.
+    let query = supabaseAdmin
+      .from("social_automations")
+      .select("*")
+      .eq("enabled", true);
+
+    if (user_id) query = query.eq("user_id", user_id);
+
+    const { data: allAutomations, error } = await query;
+    const automations = (allAutomations ?? []).filter(
+      (a) => Array.isArray(a.platforms) && a.platforms.includes(platform),
+    );
+
+    if (error || !automations?.length) {
+      console.log("[webhook] ❌ No automations found", { error, count: automations?.length ?? 0 });
+      await logWebhook("no_automations", { pageId: page_id, userId: user_id, payload: { platform, error: error?.message, commentText: comment_text.slice(0, 50) } });
+      return NextResponse.json({ ok: true, matched: 0 });
+    }
+
+    console.log("[webhook] 🔍 Checking", automations.length, "automations. Comment:", commentUpper);
+
+    // Find the first automation whose keyword appears in the comment
+    // If automation has target_post_url set, the incoming post_id must match
+    const matched = automations.find((auto) => {
+      const keywordMatch = commentUpper.includes(auto.trigger_keyword.toUpperCase());
+      console.log("[webhook]   →", auto.name, "keyword:", auto.trigger_keyword, "match:", keywordMatch, "target_post_url:", auto.target_post_url, "incoming post_id:", post_id);
+      if (!keywordMatch) return false;
+      if (auto.target_post_url) {
+        if (!post_id) return false;
+        const postMatch = auto.target_post_url === post_id ||
+               auto.target_post_url.includes(post_id) ||
+               post_id.includes(auto.target_post_url);
+        console.log("[webhook]   → post match:", postMatch);
+        return postMatch;
+      }
+      return true;
+    });
+
+    if (!matched) {
+      console.log("[webhook] ❌ No automation matched this comment");
+      await logWebhook("no_match", { pageId: page_id, userId: user_id, payload: { platform, commentText: comment_text.slice(0, 80), automationCount: automations.length, automationKeywords: automations.map((a) => a.trigger_keyword) } });
+      return NextResponse.json({ ok: true, matched: 0 });
+    }
+
+    console.log("[webhook] ✅ MATCHED automation:", matched.name, "id:", matched.id);
+    await logWebhook("matched", { pageId: page_id, userId: user_id, payload: { platform, automationId: matched.id, automationName: matched.name, commentText: comment_text.slice(0, 80) } });
+    const firstName = extractFirstName(sender_name);
+
+    // ── DEDUP: check if this comment OR this user+post was already processed ──
+    {
+      const { data: freshAuto } = await supabaseAdmin
+        .from("social_automations")
+        .select("meta")
+        .eq("id", matched.id)
+        .single();
+
+      const freshMeta = (freshAuto?.meta as Record<string, unknown>) ?? {};
+      const alreadyProcessed: string[] = Array.isArray(freshMeta.ig_processed_ids)
+        ? (freshMeta.ig_processed_ids as string[])
+        : [];
+
+      // Dedup by comment_id (existing)
+      if (comment_id && alreadyProcessed.includes(comment_id)) {
+        console.log(`[webhook] SKIP ${comment_id} — already processed`);
+        return NextResponse.json({ ok: true, matched: 1, skipped: true, reason: "already_processed" });
+      }
+
+      // Dedup by sender+post: only 1 reply + 1 DM per user per post per automation
+      const userPostKey = `user:${sender_id}:post:${post_id ?? "all"}`;
+      const processedUserPosts: string[] = Array.isArray(freshMeta.processed_user_posts)
+        ? (freshMeta.processed_user_posts as string[])
+        : [];
+
+      if (processedUserPosts.includes(userPostKey)) {
+        console.log(`[webhook] SKIP — user ${sender_id} already got a reply on post ${post_id}`);
+        await logWebhook("skip_user_post_dedup", { pageId: page_id, payload: { sender_id, post_id, userPostKey } });
+        return NextResponse.json({ ok: true, matched: 1, skipped: true, reason: "user_post_already_processed" });
+      }
+
+      // ── MARK AS PROCESSED IMMEDIATELY (before sending DM) ──
+      const updatedIds = [...alreadyProcessed, ...(comment_id ? [comment_id] : [])].slice(-200);
+      const updatedUserPosts = [...processedUserPosts, userPostKey].slice(-500);
+      await supabaseAdmin
+        .from("social_automations")
+        .update({
+          meta: {
+            ...freshMeta,
+            ig_last_comment_id: comment_id ?? freshMeta.ig_last_comment_id,
+            ig_last_processed: Math.floor(Date.now() / 1000),
+            ig_processed_ids: updatedIds,
+            processed_user_posts: updatedUserPosts,
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", matched.id);
+    }
+
+    // 1. Reply to comment with random variant
+    let commentReplyOk = false;
+    if (matched.comment_reply_variants?.length && comment_id) {
+      const variants: string[] = matched.comment_reply_variants;
+      const replyText = variants[Math.floor(Math.random() * variants.length)];
+      try {
+        if (platform === "instagram") {
+          await replyToInstagramComment(page_access_token, comment_id, replyText);
+        } else {
+          await replyToComment(page_access_token, comment_id, replyText);
+        }
+        commentReplyOk = true;
+        console.log(`[webhook] Comment reply sent for ${comment_id}`);
+      } catch (err) {
+        console.error(`[webhook] Comment reply FAILED for ${comment_id}:`, err);
+        await logWebhook("comment_reply_fail", { pageId: page_id, payload: { commentId: comment_id, error: String(err).slice(0, 200), tokenUsed: "oauth" } });
+
+        // Facebook: fallback to per-user Messenger token for comment reply
+        // The OAuth token (Tipote app) may lack pages_manage_engagement;
+        // the Messenger token (Tipote ter) may have it.
+        if (platform === "facebook" && user_id) {
+          try {
+            const { data: messengerConn } = await supabaseAdmin
+              .from("social_connections")
+              .select("access_token_encrypted")
+              .eq("user_id", user_id)
+              .eq("platform", "facebook_messenger")
+              .maybeSingle();
+
+            if (messengerConn?.access_token_encrypted) {
+              const messengerToken = decrypt(messengerConn.access_token_encrypted);
+              await replyToComment(messengerToken, comment_id, replyText);
+              commentReplyOk = true;
+              console.log(`[webhook] Comment reply sent via Messenger token for ${comment_id}`);
+              await logWebhook("comment_reply_ok_messenger_token", { pageId: page_id, payload: { commentId: comment_id } });
+            }
+          } catch (err2) {
+            console.error(`[webhook] Comment reply via Messenger token also FAILED:`, err2);
+            await logWebhook("comment_reply_fail_messenger_token", { pageId: page_id, payload: { commentId: comment_id, error: String(err2).slice(0, 200) } });
+          }
+        }
+      }
+    }
+
+    // 2. Send DM
+    // Pour Facebook : utiliser Private Reply (recipient.comment_id) via MESSENGER token
+    // C'est la seule façon d'envoyer un DM à quelqu'un qui a juste commenté (pas de conversation ouverte).
+    // Pour Instagram : Private Reply via comment_id (déjà implémenté)
+    const dmText = personalize(matched.dm_message, { prenom: firstName, firstname: firstName });
+    let dmResult: { ok: boolean; error?: string };
+
+    if (platform === "instagram" && comment_id) {
+      dmResult = await sendInstagramPrivateReply(page_access_token, page_id, comment_id, dmText);
+      if (!dmResult.ok) {
+        console.warn("[webhook] Instagram Private Reply failed, trying recipient.id fallback:", dmResult.error);
+        dmResult = await sendInstagramDMById(page_access_token, page_id, sender_id, dmText);
+      }
+    } else if (platform === "facebook" && comment_id) {
+      // Facebook Private Reply : envoyer un DM lié au commentaire.
+      // Utiliser le token OAuth de l'user (page_access_token) en priorité.
+      // MESSENGER_PAGE_ACCESS_TOKEN en fallback optionnel uniquement.
+
+      await logWebhook("dm_attempt_start", { pageId: page_id, payload: {
+        commentId: comment_id, senderId: sender_id,
+        oauthTokenPrefix: page_access_token.slice(0, 10),
+      }});
+
+      // DM Facebook : utiliser le token Messenger per-user (facebook_messenger dans social_connections)
+      // qui a pages_messaging via l'app Tipote ter.
+      // Fallback: MESSENGER_PAGE_ACCESS_TOKEN env var, puis page_access_token OAuth.
+      let dmToken = page_access_token;
+
+      // Chercher le token messenger per-user dans social_connections
+      try {
+        const { data: messengerConn } = await supabaseAdmin
+          .from("social_connections")
+          .select("access_token_encrypted")
+          .eq("user_id", user_id)
+          .eq("platform", "facebook_messenger")
+          .maybeSingle();
+
+        if (messengerConn?.access_token_encrypted) {
+          dmToken = decrypt(messengerConn.access_token_encrypted);
+          await logWebhook("dm_using_per_user_messenger_token", { pageId: page_id });
+        } else if (process.env.MESSENGER_PAGE_ACCESS_TOKEN) {
+          dmToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+          await logWebhook("dm_using_env_messenger_token", { pageId: page_id });
+        }
+      } catch (e) {
+        console.warn("[webhook] Failed to get per-user messenger token:", e);
+        if (process.env.MESSENGER_PAGE_ACCESS_TOKEN) {
+          dmToken = process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+        }
+      }
+
+      // Tentative 1 : Private Reply avec le token DM (per-user messenger ou fallback)
+      dmResult = await sendFacebookPrivateReply(dmToken, comment_id, dmText, page_id);
+      if (!dmResult.ok) {
+        await logWebhook("dm_private_reply_fail", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
+
+        // Tentative 2 : essayer avec OAuth si différent
+        if (page_access_token !== dmToken) {
+          dmResult = await sendFacebookPrivateReply(page_access_token, comment_id, dmText, page_id);
+          if (!dmResult.ok) {
+            await logWebhook("dm_private_reply_fail_oauth", { pageId: page_id, payload: { commentId: comment_id, error: dmResult.error?.slice(0, 500) } });
+          }
+        }
+
+        // Tentative 3 : recipient.id (ne marche que si conversation déjà ouverte)
+        if (!dmResult.ok) {
+          dmResult = await sendMetaDM(dmToken, sender_id, dmText, page_id);
+        }
+      }
+    } else {
+      dmResult = await sendMetaDM(page_access_token, sender_id, dmText, page_id);
+    }
+
+    if (!dmResult.ok) {
+      console.error("[webhook] DM send failed:", dmResult.error);
+      await logWebhook("dm_fail_final", { pageId: page_id, payload: { commentId: comment_id, senderId: sender_id, error: dmResult.error?.slice(0, 200) } });
+
+      // Create in-app notification for the user on first DM failure (max 1 per day per automation)
+      if (user_id) {
+        try {
+          const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+          const { data: recentNotif } = await supabaseAdmin
+            .from("notifications")
+            .select("id")
+            .eq("user_id", user_id)
+            .eq("type", "dm_send_failed")
+            .gte("created_at", oneDayAgo)
+            .limit(1);
+
+          if (!recentNotif?.length) {
+            const detailMsg = platform === "facebook"
+              ? "Le token Messenger est manquant ou invalide. Connecte ta page via « Connecter Messenger » dans Paramètres → Connexions."
+              : "Le token est peut-être expiré. Reconnecte ton compte dans Paramètres → Connexions.";
+            await supabaseAdmin.from("notifications").insert({
+              user_id,
+              type: "dm_send_failed",
+              title: `DM automatique non envoyé (${platform})`,
+              body: `L'automatisation "${matched.name}" a détecté le mot-clé mais n'a pas pu envoyer le DM. ${detailMsg}`,
+              icon: "⚠️",
+              action_url: "/settings?tab=connections",
+              action_label: "Vérifier la connexion",
+              meta: { automation_id: matched.id, platform, error: dmResult.error?.slice(0, 200) },
+            });
+          }
+        } catch (notifErr) {
+          console.warn("[webhook] Failed to create DM failure notification:", notifErr);
+        }
+      }
+    }
+
+    // 2b. If DM sent + automation has systemeio_tag → register email capture
+    // so when the user replies with their email, we can sync to Systeme.io.
+    if (dmResult.ok && matched.systemeio_tag && user_id) {
+      try {
+        await supabaseAdmin.from("dm_email_captures").upsert(
+          {
+            page_id,
+            sender_id,
+            sender_name,
+            automation_id: matched.id,
+            user_id,
+            platform,
+            status: "pending",
+          },
+          { onConflict: "page_id,sender_id,automation_id" },
+        );
+        console.log(`[webhook] Email capture registered for sender ${sender_id} → automation ${matched.id}`);
+      } catch (err) {
+        console.warn("[webhook] Failed to register email capture:", err);
+      }
+    }
+
+    await logWebhook("processed", { pageId: page_id, userId: user_id, payload: { automationId: matched.id, commentReplyOk, dmSent: dmResult.ok, dmError: dmResult.error?.slice(0, 200) } });
+
+    // 3. Update stats only (meta already saved above)
+    const currentStats = (matched.stats as Record<string, number>) ?? { triggers: 0, dms_sent: 0, dms_failed: 0 };
+    await supabaseAdmin
+      .from("social_automations")
+      .update({
+        stats: {
+          triggers: (currentStats.triggers ?? 0) + 1,
+          dms_sent: (currentStats.dms_sent ?? 0) + (dmResult.ok ? 1 : 0),
+          dms_failed: (currentStats.dms_failed ?? 0) + (dmResult.ok ? 0 : 1),
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", matched.id);
+
+    // Always return 200 — Meta retries on non-2xx, we don't want that
+    return NextResponse.json({
+      ok: true,
+      matched: 1,
+      automation_id: matched.id,
+      comment_reply_sent: commentReplyOk,
+      comment_reply_variants_count: matched.comment_reply_variants?.length ?? 0,
+      comment_id_present: !!comment_id,
+      dm_sent: dmResult.ok,
+      ...(dmResult.ok ? {} : { dm_error: dmResult.error }),
+    });
+
+  } catch (err) {
+    console.error("[webhook] Error:", err);
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+}
+
+/* ─── Email reply handler ─── */
+export async function PUT(req: NextRequest) {
+  const secret = req.headers.get("x-n8n-secret");
+  if (secret !== process.env.N8N_SHARED_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body: EmailReplyPayload;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  const { automation_id, email, sender_name, sender_id, page_access_token } = body;
+
+  if (!automation_id || !email || !sender_id || !page_access_token) {
+    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+
+  const { data: automation, error } = await supabaseAdmin
+    .from("social_automations")
+    .select("*")
+    .eq("id", automation_id)
+    .single();
+
+  if (error || !automation) {
+    return NextResponse.json({ error: "Automation not found" }, { status: 404 });
+  }
+
+  const firstName = extractFirstName(sender_name);
+
+  if (automation.systemeio_tag) {
+    try {
+      await addToSystemeIo({ email, firstName, tag: automation.systemeio_tag });
+    } catch (err) {
+      console.error("[webhook] systeme.io error:", err);
+    }
+  }
+
+  if (automation.email_dm_message) {
+    const confirmDm = personalize(automation.email_dm_message, { email, prenom: firstName, firstname: firstName });
+    await sendMetaDM(page_access_token, sender_id, confirmDm);
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
+/* ─── Instagram native webhook handler ─── */
+async function handleInstagramNativePayload(payload: MetaNativePayload): Promise<NextResponse> {
+  const results: { matched: number; errors: number } = { matched: 0, errors: 0 };
+
+  for (const entry of payload.entry ?? []) {
+    const igAccountId = entry.id;
+
+    // Instagram messaging events arrive in entry.messaging[] (same structure as FB)
+    if (entry.messaging?.length) {
+      console.log("[webhook/instagram] 📨 Messaging event received for IG:", igAccountId, "count:", entry.messaging.length);
+      await logWebhook("ig_messaging_event", { pageId: igAccountId, payload: { count: entry.messaging.length } });
+
+      for (const msg of entry.messaging) {
+        if (msg.message?.text && msg.sender?.id && msg.sender.id !== igAccountId) {
+          await handleIncomingDM(igAccountId, msg.sender.id, msg.message.text);
+        }
+      }
+    }
+
+    for (const change of entry.changes ?? []) {
+      // Instagram DM messages can also arrive as changes with field "messages"
+      if (change.field === "messages") {
+        const val = change.value as any;
+        const senderId = val?.sender?.id ?? val?.from?.id;
+        const text = val?.message ?? val?.text;
+        if (senderId && text && senderId !== igAccountId) {
+          console.log("[webhook/instagram] 📨 Message change event:", igAccountId);
+          await handleIncomingDM(igAccountId, senderId, text);
+        }
+        continue;
+      }
+
+      if (change.field !== "comments") continue;
+      const val = change.value;
+      // Le payload Instagram comments a "text" (pas "message") et "from.username"
+      const commentText = (val as any).text ?? val.message;
+      const fromId = val.from?.id;
+      if (!commentText || !fromId) continue;
+
+      // Récupérer le token Instagram depuis la DB
+      let igAccessToken: string | null = null;
+      let connUserId: string | undefined;
+      try {
+        const { data: conn } = await supabaseAdmin
+          .from("social_connections")
+          .select("access_token_encrypted, user_id")
+          .eq("platform", "instagram")
+          .eq("platform_user_id", igAccountId)
+          .maybeSingle();
+
+        if (conn?.access_token_encrypted) {
+          igAccessToken = decrypt(conn.access_token_encrypted);
+          connUserId = conn.user_id;
+        }
+      } catch (err) {
+        console.error("[webhook/instagram] Token lookup error:", err);
+      }
+
+      if (!igAccessToken) {
+        console.warn("[webhook/instagram] No token for IG account:", igAccountId);
+        continue;
+      }
+
+      const mediaId = (val as any).media?.id;
+      const commentId = (val as any).id ?? val.comment_id;
+      const senderName = val.from?.name ?? (val as any).from?.username ?? fromId;
+
+      const res = await processComment({
+        platform: "instagram",
+        page_id: igAccountId,
+        sender_id: fromId,
+        sender_name: senderName,
+        comment_text: commentText,
+        comment_id: commentId,
+        post_id: mediaId,
+        page_access_token: igAccessToken,
+        user_id: connUserId,
+      });
+
+      const resBody = await res.json().catch(() => ({}));
+      if ((resBody as any).matched) results.matched++;
+    }
+  }
+
+  return NextResponse.json({ ok: true, ...results });
+}
+
+/* ─── Incoming DM handler (email capture) ─── */
+
+const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+
+async function handleIncomingDM(pageId: string, senderId: string, messageText: string) {
+  const email = messageText.match(EMAIL_REGEX)?.[0]?.toLowerCase();
+
+  await logWebhook("dm_incoming", {
+    pageId,
+    payload: {
+      senderId,
+      messagePreview: messageText.slice(0, 80),
+      emailDetected: email ?? null,
+    },
+  });
+
+  if (!email) {
+    console.log(`[webhook] DM from ${senderId}: no email detected in "${messageText.slice(0, 50)}"`);
+    return;
+  }
+
+  // Find the pending email capture for this sender on this page
+  const { data: capture } = await supabaseAdmin
+    .from("dm_email_captures")
+    .select("id, automation_id, user_id, sender_name, platform")
+    .eq("page_id", pageId)
+    .eq("sender_id", senderId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!capture) {
+    console.log(`[webhook] DM email from ${senderId} but no pending capture found`);
+    await logWebhook("dm_email_no_capture", { pageId, payload: { senderId, email } });
+    return;
+  }
+
+  // Get the automation config (systemeio_tag, email_dm_message)
+  const { data: automation } = await supabaseAdmin
+    .from("social_automations")
+    .select("systemeio_tag, email_dm_message, name")
+    .eq("id", capture.automation_id)
+    .single();
+
+  if (!automation) {
+    console.warn(`[webhook] Automation ${capture.automation_id} not found for email capture`);
+    return;
+  }
+
+  console.log(`[webhook] ✉️ Email captured: ${email} from ${senderId} → automation "${automation.name}" tag="${automation.systemeio_tag}"`);
+
+  // Mark capture as done
+  await supabaseAdmin
+    .from("dm_email_captures")
+    .update({ status: "captured", email, captured_at: new Date().toISOString() })
+    .eq("id", capture.id);
+
+  // Sync to Systeme.io
+  if (automation.systemeio_tag) {
+    try {
+      const firstName = extractFirstName(capture.sender_name ?? "");
+      await addToSystemeIo({ email, firstName, tag: automation.systemeio_tag });
+      console.log(`[webhook] ✅ Systeme.io sync OK: ${email} → tag "${automation.systemeio_tag}"`);
+      await logWebhook("sio_sync_ok", { pageId, userId: capture.user_id, payload: { email, tag: automation.systemeio_tag, automationId: capture.automation_id } });
+    } catch (err) {
+      console.error("[webhook] Systeme.io sync failed:", err);
+      await logWebhook("sio_sync_fail", { pageId, userId: capture.user_id, payload: { email, error: String(err).slice(0, 200) } });
+    }
+  }
+
+  // Send confirmation DM if configured
+  if (automation.email_dm_message) {
+    try {
+      const firstName = extractFirstName(capture.sender_name ?? "");
+      const confirmText = personalize(automation.email_dm_message, {
+        prenom: firstName,
+        firstname: firstName,
+        email,
+      });
+
+      const platform = capture.platform ?? "facebook";
+
+      if (platform === "instagram") {
+        // Instagram: look up the instagram connection token
+        const { data: igConn } = await supabaseAdmin
+          .from("social_connections")
+          .select("access_token_encrypted")
+          .eq("user_id", capture.user_id)
+          .eq("platform", "instagram")
+          .eq("platform_user_id", pageId)
+          .maybeSingle();
+
+        if (igConn?.access_token_encrypted) {
+          const igToken = decrypt(igConn.access_token_encrypted);
+          const result = await sendInstagramDMById(igToken, pageId, senderId, confirmText);
+          if (result.ok) {
+            console.log(`[webhook] IG confirmation DM sent to ${senderId}`);
+          } else {
+            console.warn(`[webhook] IG confirmation DM failed:`, result.error);
+          }
+        } else {
+          console.warn(`[webhook] No Instagram token found for confirmation DM, user=${capture.user_id} page=${pageId}`);
+        }
+      } else {
+        // Facebook: try Messenger token first, fallback to Facebook OAuth token
+        const { data: messengerConn } = await supabaseAdmin
+          .from("social_connections")
+          .select("access_token_encrypted")
+          .eq("user_id", capture.user_id)
+          .eq("platform", "facebook_messenger")
+          .maybeSingle();
+
+        let dmToken: string | undefined;
+        if (messengerConn?.access_token_encrypted) {
+          dmToken = decrypt(messengerConn.access_token_encrypted);
+        } else {
+          const { data: fbConn } = await supabaseAdmin
+            .from("social_connections")
+            .select("access_token_encrypted")
+            .eq("user_id", capture.user_id)
+            .eq("platform", "facebook")
+            .eq("platform_user_id", pageId)
+            .maybeSingle();
+          if (fbConn?.access_token_encrypted) {
+            dmToken = decrypt(fbConn.access_token_encrypted);
+          }
+        }
+
+        if (dmToken) {
+          await sendMetaDM(dmToken, senderId, confirmText, pageId);
+          console.log(`[webhook] FB confirmation DM sent to ${senderId}`);
+        } else {
+          console.warn(`[webhook] No Facebook token found for confirmation DM, user=${capture.user_id} page=${pageId}`);
+        }
+      }
+    } catch (err) {
+      console.error("[webhook] Confirmation DM failed:", err);
+    }
+  }
+}
+
+/* ─── Types ─── */
+
+interface CommentWebhookPayload {
+  platform: "instagram" | "facebook";
+  page_id: string;
+  sender_id: string;
+  sender_name: string;
+  comment_text: string;
+  comment_id?: string;
+  post_id?: string;
+  page_access_token: string;
+  user_id?: string;
+}
+
+interface EmailReplyPayload {
+  automation_id: string;
+  email: string;
+  sender_name: string;
+  sender_id: string;
+  page_access_token: string;
+}
+
+interface MetaNativePayload {
+  object: string;
+  entry: Array<{
+    id: string;
+    time?: number;
+    changes?: Array<{
+      field: string;
+      value: {
+        from?: { id: string; name?: string };
+        message?: string;
+        post_id?: string;
+        comment_id?: string;
+        item?: string;
+        verb?: string;
+        created_time?: number;
+      };
+    }>;
+    messaging?: Array<{
+      sender: { id: string };
+      recipient: { id: string };
+      timestamp: number;
+      message?: { mid: string; text?: string };
+    }>;
+  }>;
+}
+
+/* ─── Helpers ─── */
+
+function extractFirstName(fullName: string): string {
+  return (fullName ?? "").split(" ")[0] ?? fullName ?? "";
+}
+
+function personalize(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? `{{${key}}}`);
+}
+
+/**
+ * Instagram Private Reply : envoie un DM lié au commentaire (méthode ManyChat).
+ * Essaie IG Graph API puis Messenger Platform en fallback.
+ */
+async function sendInstagramPrivateReply(
+  igAccessToken: string,
+  igAccountId: string,
+  commentId: string,
+  text: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    // Tentative 1 : Instagram Graph API
+    const res = await fetch(`https://graph.instagram.com/v22.0/${igAccountId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipient: { comment_id: commentId },
+        message: { text },
+        access_token: igAccessToken,
+      }),
+    });
+
+    if (res.ok) return { ok: true };
+
+    const errBody = await res.text();
+    console.warn(`[webhook] IG Private Reply failed (${res.status}):`, errBody.slice(0, 200));
+
+    // Tentative 2 : Messenger Platform (utiliser /{igAccountId}/messages au lieu de /me/messages)
+    const fbRes = await fetch(`https://graph.facebook.com/v22.0/${igAccountId}/messages`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${igAccessToken}`,
+      },
+      body: JSON.stringify({
+        recipient: { comment_id: commentId },
+        message: { text },
+      }),
+    });
+
+    if (fbRes.ok) return { ok: true };
+
+    const fbErr = await fbRes.text();
+    return { ok: false, error: `IG: ${errBody.slice(0, 150)} | FB: ${fbErr.slice(0, 150)}` };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+/**
+ * Instagram DM fallback : envoie un DM via recipient.id.
+ */
+async function sendInstagramDMById(
+  igAccessToken: string,
+  igAccountId: string,
+  recipientId: string,
+  text: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch(`https://graph.instagram.com/v22.0/${igAccountId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipient: { id: recipientId },
+        message: { text },
+        messaging_type: "RESPONSE",
+        access_token: igAccessToken,
+      }),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.text();
+      return { ok: false, error: errBody };
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+/**
+ * Facebook Private Reply : envoie un DM lié au commentaire.
+ * Le webhook envoie comment_id au format "{post_id}_{comment_id}".
+ * Certaines API Meta attendent le format complet, d'autres la partie commentaire seule.
+ * On essaie les deux formats avec 3 endpoints différents.
+ * Le token doit avoir la permission pages_messaging.
+ *
+ * IMPORTANT: On utilise /{pageId}/messages au lieu de /me/messages.
+ * /me/messages échoue avec "Object with ID 'me' does not exist" si le token
+ * n'est pas un Page Token pur. /{pageId}/messages est plus robuste.
+ */
+async function sendFacebookPrivateReply(
+  accessToken: string,
+  commentId: string,
+  text: string,
+  pageId?: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const errors: string[] = [];
+
+  // Préparer les deux formats de comment_id
+  // Le webhook envoie "postId_commentId" (ex: "122103762561267846_900776099482667")
+  // L'API Private Reply pourrait attendre l'un ou l'autre format
+  const commentIdFull = commentId; // format complet tel quel
+  const commentIdStripped = commentId.includes("_")
+    ? commentId.split("_").pop()!
+    : commentId; // partie commentaire seule
+
+  const idsToTry = commentIdFull !== commentIdStripped
+    ? [commentIdFull, commentIdStripped]
+    : [commentIdFull];
+
+  // Déterminer l'endpoint messages. Utiliser /{pageId}/messages si possible
+  // car /me/messages échoue quand le token est un User Token.
+  const messagesEndpoint = pageId
+    ? `https://graph.facebook.com/v22.0/${pageId}/messages`
+    : "https://graph.facebook.com/v22.0/me/messages";
+
+  console.log("[webhook] DM Private Reply - formats à essayer:", {
+    commentIdFull, commentIdStripped, tokenPrefix: accessToken.slice(0, 10),
+    endpoint: pageId ? `/${pageId}/messages` : "/me/messages",
+  });
+
+  for (const cId of idsToTry) {
+    const idLabel = cId === commentIdFull ? "full" : "stripped";
+
+    // ── Méthode A : POST /{comment_id}/private_replies (endpoint dédié Graph API) ──
+    try {
+      const url = `https://graph.facebook.com/v22.0/${cId}/private_replies`;
+      console.log(`[webhook] DM tentative A(${idLabel}): POST /${cId}/private_replies`);
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ message: text }),
+      });
+
+      if (res.ok) {
+        console.log(`[webhook] DM méthode A(${idLabel}) OK !`);
+        return { ok: true };
+      }
+
+      const err = await res.text();
+      console.warn(`[webhook] DM A(${idLabel}) échouée:`, err.slice(0, 200));
+      errors.push(`A(${idLabel}): ${err.slice(0, 120)}`);
+    } catch (err) {
+      errors.push(`A(${idLabel}): ${String(err).slice(0, 80)}`);
+    }
+
+    // ── Méthode B : POST /{pageId}/messages avec recipient.comment_id (Send API) ──
+    try {
+      console.log(`[webhook] DM tentative B(${idLabel}): POST ${messagesEndpoint} + comment_id=${cId}`);
+      const res = await fetch(messagesEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          recipient: { comment_id: cId },
+          message: { text },
+          messaging_type: "RESPONSE",
+        }),
+      });
+
+      if (res.ok) {
+        console.log(`[webhook] DM méthode B(${idLabel}) OK !`);
+        return { ok: true };
+      }
+
+      const err = await res.text();
+      console.warn(`[webhook] DM B(${idLabel}) échouée:`, err.slice(0, 200));
+      errors.push(`B(${idLabel}): ${err.slice(0, 120)}`);
+    } catch (err) {
+      errors.push(`B(${idLabel}): ${String(err).slice(0, 80)}`);
+    }
+  }
+
+  return { ok: false, error: errors.join(" | ") };
+}
+
+async function sendMetaDM(
+  pageAccessToken: string,
+  recipientId: string,
+  text: string,
+  pageId?: string,
+): Promise<{ ok: boolean; error?: string }> {
+  // Use the user's page access token directly.
+  // MESSENGER_PAGE_ACCESS_TOKEN is only a fallback for legacy setups.
+  const token = pageAccessToken || process.env.MESSENGER_PAGE_ACCESS_TOKEN;
+
+  // Utiliser /{pageId}/messages au lieu de /me/messages.
+  // /me/messages échoue si le token est un User Token ("Object with ID 'me' does not exist").
+  // /{pageId}/messages est plus robuste.
+  const targetPageId = pageId ?? process.env.FACEBOOK_PAGE_ID;
+  const messagesEndpoint = targetPageId
+    ? `https://graph.facebook.com/v22.0/${targetPageId}/messages`
+    : "https://graph.facebook.com/v22.0/me/messages";
+
+  try {
+    const res = await fetch(messagesEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        recipient: { id: recipientId },
+        message: { text },
+        messaging_type: "RESPONSE",
+      }),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.text();
+      return { ok: false, error: errBody };
+    }
+
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
+}
+
+async function replyToInstagramComment(igAccessToken: string, commentId: string, text: string): Promise<void> {
+  const res = await fetch(`https://graph.instagram.com/v22.0/${commentId}/replies`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: text, access_token: igAccessToken }),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`Instagram comment reply failed: ${errBody}`);
+  }
+}
+
+/**
+ * Fetch comment details from the Graph API.
+ * Meta's Page feed webhook often omits the comment text (message field).
+ * This function retrieves it using the comment_id.
+ */
+async function fetchCommentFromGraphAPI(
+  accessToken: string,
+  commentId: string,
+): Promise<{ message: string; fromId: string; fromName: string } | null> {
+  try {
+    const url = `https://graph.facebook.com/v22.0/${commentId}?fields=message,from&access_token=${accessToken}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      const errBody = await res.text();
+      console.warn(`[webhook] Graph API fetch failed for ${commentId} (${res.status}):`, errBody.slice(0, 300));
+      // Log the error to DB for debugging (token prefix helps identify which token was used)
+      await logWebhook("graph_api_error", {
+        pageId: commentId,
+        payload: {
+          status: res.status,
+          error: errBody.slice(0, 300),
+          tokenPrefix: accessToken.slice(0, 10) + "...",
+        },
+      });
+      return null;
+    }
+    const data = await res.json();
+    return {
+      message: data.message ?? "",
+      fromId: data.from?.id ?? "",
+      fromName: data.from?.name ?? "",
+    };
+  } catch (err) {
+    console.error(`[webhook] Graph API fetch error for ${commentId}:`, err);
+    await logWebhook("graph_api_exception", { pageId: commentId, payload: { error: String(err).slice(0, 300) } });
+    return null;
+  }
+}
+
+async function replyToComment(pageAccessToken: string, commentId: string, text: string): Promise<void> {
+  const res = await fetch(`https://graph.facebook.com/v22.0/${commentId}/comments`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${pageAccessToken}`,
+    },
+    body: JSON.stringify({ message: text }),
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`Comment reply failed: ${errBody}`);
+  }
+}
+
+async function addToSystemeIo(params: { email: string; firstName: string; tag: string }) {
+  const apiKey = process.env.SYSTEME_IO_API_KEY;
+  if (!apiKey) return;
+
+  const createRes = await fetch("https://api.systeme.io/api/contacts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
+    body: JSON.stringify({ email: params.email, fields: [{ slug: "first_name", value: params.firstName }] }),
+  });
+
+  if (!createRes.ok) throw new Error(`systeme.io contact failed: ${await createRes.text()}`);
+
+  const contact = await createRes.json();
+  if (!contact.id) return;
+
+  const tagRes = await fetch("https://api.systeme.io/api/tags", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
+    body: JSON.stringify({ name: params.tag }),
+  });
+
+  if (!tagRes.ok) return;
+  const tag = await tagRes.json();
+  if (!tag.id) return;
+
+  await fetch(`https://api.systeme.io/api/contacts/${contact.id}/tags`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-API-Key": apiKey },
+    body: JSON.stringify({ tagId: tag.id }),
+  });
+}

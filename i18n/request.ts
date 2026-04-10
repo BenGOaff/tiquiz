@@ -1,6 +1,8 @@
 // i18n/request.ts
 // next-intl server-side locale detection.
 // Locale comes from the ui_locale cookie (set by LanguageSwitcher or first-visit middleware).
+// Falls back to 'fr' if the cookie is missing or the locale is unsupported.
+// NOTE: this file is server-only (uses next/headers). Import constants from ./config instead.
 
 import { getRequestConfig } from "next-intl/server";
 import { cookies } from "next/headers";

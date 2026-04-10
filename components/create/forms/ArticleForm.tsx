@@ -1,0 +1,499 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { AIContent } from "@/components/ui/ai-content";
+import {
+  Loader2,
+  Wand2,
+  RefreshCw,
+  Save,
+  CalendarDays,
+  X,
+  Pencil,
+  Copy,
+  Check,
+  FileDown,
+} from "lucide-react";
+import { copyToClipboard, downloadAsPdf } from "@/lib/content-utils";
+import { ScheduleModal } from "@/components/content/ScheduleModal";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArticleEditorModal } from "@/components/create/forms/ArticleEditorModal";
+
+interface ArticleFormProps {
+  onGenerate: (params: any) => Promise<string | { text: string; contentId?: string | null }>;
+  onSave: (data: any) => Promise<string | null>;
+  onClose: () => void;
+  isGenerating: boolean;
+  isSaving: boolean;
+}
+
+type Objective = "traffic_seo" | "authority" | "emails" | "sales";
+type ArticleStep = "plan" | "write";
+
+export function ArticleForm({
+  onGenerate,
+  onSave,
+  onClose,
+  isGenerating,
+  isSaving,
+}: ArticleFormProps) {
+  const [subject, setSubject] = useState("");
+  const [seoKeyword, setSeoKeyword] = useState("");
+
+  // ✅ requis : 1 choix unique
+  const [objective, setObjective] = useState<Objective | "">("");
+
+  const [links, setLinks] = useState("");
+  const [ctaText, setCtaText] = useState("");
+  const [ctaLink, setCtaLink] = useState("");
+
+  const [generatedContent, setGeneratedContent] = useState(""); // contient le plan OU l’article selon step
+  const [title, setTitle] = useState("");
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+
+  // flow 2 étapes
+  const [articleStep, setArticleStep] = useState<ArticleStep>("plan");
+
+  // ✅ modal "Modifier & copier"
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // ✅ UX: afficher un aperçu "beau" par défaut, avec option "texte brut"
+  const [showRawEditor, setShowRawEditor] = useState(false);
+
+  // Track saved content to avoid duplicates
+  const [savedContentId, setSavedContentId] = useState<string | null>(null);
+
+  const t = useTranslations("articleForm");
+
+  const objectives = useMemo(
+    () => [
+      { id: "traffic_seo" as const, label: "Trafic SEO" },
+      { id: "authority" as const, label: "Autorité" },
+      { id: "emails" as const, label: "Emails" },
+      { id: "sales" as const, label: "Ventes" },
+    ],
+    []
+  );
+
+  const canGeneratePlan = Boolean(
+    (subject || seoKeyword) && objective && !isGenerating
+  );
+  const hasPlan =
+    articleStep === "write" && Boolean(generatedContent?.trim()); // quand on a validé le plan, generatedContent = plan
+  const canWriteArticle = Boolean(hasPlan && !isGenerating);
+
+  const handleGeneratePlan = async () => {
+    const result = await onGenerate({
+      type: "article",
+      articleStep: "plan",
+      objective,
+      subject,
+      seoKeyword,
+      links: links || undefined,
+      ctaText: ctaText || undefined,
+      ctaLink: ctaLink || undefined,
+    });
+    const content = typeof result === "string" ? result : result.text;
+    const genId = typeof result === "object" && result !== null && "contentId" in result ? result.contentId : null;
+
+    if (content) {
+      setGeneratedContent(content);
+      setArticleStep("write"); // ✅ l'étape suivante attend un plan validé
+      if (!title) setTitle(subject || seoKeyword);
+      setShowRawEditor(true); // ✅ plan éditable par défaut
+    }
+    if (genId && !savedContentId) setSavedContentId(genId);
+  };
+
+  const handleWriteArticle = async () => {
+    const plan = generatedContent;
+
+    const result = await onGenerate({
+      type: "article",
+      articleStep: "write",
+      objective,
+      subject,
+      seoKeyword,
+      links: links || undefined,
+      ctaText: ctaText || undefined,
+      ctaLink: ctaLink || undefined,
+      approvedPlan: plan, // ✅ obligatoire pour l'étape write
+    });
+    const content = typeof result === "string" ? result : result.text;
+    const genId = typeof result === "object" && result !== null && "contentId" in result ? result.contentId : null;
+
+    if (content) {
+      setGeneratedContent(content); // maintenant = article complet
+      if (!title) setTitle(subject || seoKeyword);
+      setShowRawEditor(false);
+    }
+    if (genId && !savedContentId) setSavedContentId(genId);
+  };
+
+  const handleRegenerate = async () => {
+    if (articleStep === "plan") return handleGeneratePlan();
+    return handleWriteArticle();
+  };
+
+  const handleSave = async (status: "draft" | "scheduled" | "published", scheduledDate?: string, scheduledTime?: string) => {
+    const meta: Record<string, any> = {};
+    if (scheduledTime) meta.scheduled_time = scheduledTime;
+
+    if (savedContentId) {
+      // Update existing entry instead of creating a duplicate
+      try {
+        await fetch(`/api/content/${savedContentId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title,
+            content: generatedContent,
+            status,
+            scheduledDate,
+            meta: Object.keys(meta).length > 0 ? meta : undefined,
+          }),
+        });
+      } catch {
+        // Non-blocking
+      }
+    } else {
+      const id = await onSave({
+        title,
+        content: generatedContent,
+        type: "article",
+        platform: "blog",
+        status,
+        scheduled_date: scheduledDate,
+        meta: Object.keys(meta).length > 0 ? meta : undefined,
+      });
+      if (id) setSavedContentId(id);
+    }
+  };
+
+  const handleScheduleConfirm = async (date: string, time: string) => {
+    await handleSave("scheduled", date, time);
+  };
+
+  const isArticleReady =
+    articleStep === "write" &&
+    Boolean(generatedContent?.trim()) &&
+    !generatedContent.startsWith("PLAN");
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">Article de Blog</h2>
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <X className="w-5 h-5" />
+        </Button>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Sujet ou mot-clé SEO *</Label>
+            <Input
+              placeholder="Ex: Comment augmenter son trafic organique"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Mot-clé SEO principal</Label>
+            <Input
+              placeholder="Ex: trafic organique"
+              value={seoKeyword}
+              onChange={(e) => setSeoKeyword(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Objectif *</Label>
+            <Select
+              value={objective}
+              onValueChange={(v) => setObjective(v as Objective)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choisir un objectif" />
+              </SelectTrigger>
+              <SelectContent>
+                {objectives.map((o) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Liens à placer (optionnel)</Label>
+            <Textarea
+              placeholder="Collez les URLs importantes (1 par ligne)"
+              value={links}
+              onChange={(e) => setLinks(e.target.value)}
+              rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>CTA (optionnel)</Label>
+            <Input
+              placeholder="Ex: Télécharger le guide gratuit"
+              value={ctaText}
+              onChange={(e) => setCtaText(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Lien CTA (optionnel)</Label>
+            <Input
+              placeholder="Ex: https://..."
+              value={ctaLink}
+              onChange={(e) => setCtaLink(e.target.value)}
+            />
+          </div>
+
+          {/* ✅ Étape 1: générer le plan */}
+          {articleStep === "plan" && (
+            <Button
+              className="w-full"
+              onClick={handleGeneratePlan}
+              disabled={!canGeneratePlan}
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {t("generating")}
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  {t("generateOutline")}
+                </>
+              )}
+            </Button>
+          )}
+
+          {/* ✅ Étape 2: validation = clic "Rédiger" */}
+          {articleStep === "write" && (
+            <Button
+              className="w-full"
+              onClick={handleWriteArticle}
+              disabled={!canWriteArticle}
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {t("writing")}
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  {t("validateAndWrite")}
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Titre (pour sauvegarde)</Label>
+            <Input
+              placeholder="Titre de votre article"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <Label>
+                {articleStep === "plan" ? t("outlineGenerated") : t("contentGenerated")}
+              </Label>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowRawEditor((v) => !v)}
+                  disabled={!generatedContent?.trim()}
+                >
+                  {showRawEditor ? t("preview") : t("plainText")}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditorOpen(true)}
+                  disabled={!generatedContent?.trim()}
+                >
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Modifier
+                </Button>
+              </div>
+            </div>
+
+            {/* ✅ Aperçu "beau" (markdown) par défaut, sauf pour le plan qui est éditable */}
+            {!showRawEditor ? (
+              <div className="rounded-xl border bg-background p-4">
+                <AIContent
+                  content={generatedContent}
+                  mode="auto"
+                  scroll
+                  maxHeight="420px"
+                  className="text-sm"
+                />
+                {!generatedContent?.trim() ? (
+                  <div className="text-sm text-muted-foreground">
+                    {t("contentPlaceholder")}
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {articleStep === "write" && !isArticleReady && generatedContent && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Pencil className="w-3 h-3" />
+                    Modifiez le plan ci-dessous avant de lancer la rédaction
+                  </p>
+                )}
+                <Textarea
+                  value={generatedContent}
+                  onChange={(e) => setGeneratedContent(e.target.value)}
+                  rows={16}
+                  placeholder={t("contentPlaceholder")}
+                  className="resize-none font-mono text-sm leading-relaxed"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* ✅ Save uniquement quand on a l’article (pas juste le plan) */}
+          {isArticleReady && (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleSave("draft")}
+                disabled={!title || isSaving}
+              >
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4 mr-1" />
+                )}
+                {t("draft")}
+              </Button>
+
+              <Button
+                size="sm"
+                onClick={() => setScheduleModalOpen(true)}
+                disabled={!title || isSaving}
+              >
+                <CalendarDays className="w-4 h-4 mr-1" />
+                Programmer
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegenerate}
+                disabled={isGenerating}
+              >
+                <RefreshCw className="w-4 h-4 mr-1" />
+                {t("regenerate")}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  const ok = await copyToClipboard(generatedContent);
+                  if (ok) { setCopied(true); setTimeout(() => setCopied(false), 1600); }
+                }}
+                disabled={!generatedContent}
+              >
+                {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
+                {copied ? t("copied") : t("copy")}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadAsPdf(generatedContent, title || "Article")}
+                disabled={!generatedContent}
+              >
+                <FileDown className="w-4 h-4 mr-1" />
+                PDF
+              </Button>
+            </div>
+          )}
+
+          {/* En phase plan validé (write) mais avant article final: actions */}
+          {articleStep === "write" && !isArticleReady && generatedContent && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegenerate}
+                disabled={isGenerating}
+              >
+                <RefreshCw className="w-4 h-4 mr-1" />
+                {t("regenerateArticle")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setGeneratedContent("");
+                  setArticleStep("plan");
+                  setShowRawEditor(false);
+                }}
+                disabled={isGenerating}
+              >
+                Refaire un plan
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <ScheduleModal
+        open={scheduleModalOpen}
+        onOpenChange={setScheduleModalOpen}
+        platformLabel="Blog"
+        onConfirm={handleScheduleConfirm}
+      />
+
+      {/* ✅ MODALE ÉDITEUR */}
+      <ArticleEditorModal
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        initialValue={generatedContent || ""} // ✅ injecte le plan/article courant
+        title="Modifier & copier"
+        applyLabel="Appliquer"
+        onApply={({ text }) => {
+          // DB = texte (le bouton "Copier" dans la modale gère HTML/texte)
+          setGeneratedContent(text);
+        }}
+      />
+    </div>
+  );
+}

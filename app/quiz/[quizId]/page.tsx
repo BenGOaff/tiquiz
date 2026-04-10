@@ -3,15 +3,17 @@ import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import QuizDetailClient from "@/components/quiz/QuizDetailClient";
 
-export const metadata = { title: "Modifier le quiz – Tiquiz" };
+type RouteContext = { params: Promise<{ quizId: string }> };
 
-type Props = { params: Promise<{ quizId: string }> };
-
-export default async function QuizDetailPage({ params }: Props) {
-  const { quizId } = await params;
+export default async function QuizDetailPage({ params }: RouteContext) {
   const supabase = await getSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.user) redirect("/");
+
+  const { quizId } = await params;
 
   return <QuizDetailClient quizId={quizId} />;
 }

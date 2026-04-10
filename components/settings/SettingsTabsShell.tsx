@@ -1,0 +1,2498 @@
+// components/settings/SettingsTabsShell.tsx
+"use client";
+
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  User,
+  Globe,
+  CreditCard,
+  Save,
+  Linkedin,
+  Instagram,
+  Youtube,
+  Facebook,
+  Link as LinkIcon,
+  AlertTriangle,
+  RotateCcw,
+  Plus,
+  Trash2,
+  Sparkles,
+  Loader2,
+  Shield,
+  Key,
+  Plug,
+  FileText,
+  Paintbrush,
+  Target,
+  Pencil,
+  Eye,
+  BookOpen,
+  AtSign,
+  Bell,
+  Mail,
+} from "lucide-react";
+
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import BrandingSettings from "@/components/settings/BrandingSettings";
+import type { BrandingData } from "@/components/settings/BrandingSettings";
+import CompetitorAnalysisSection from "@/components/settings/CompetitorAnalysisSection";
+import ProjectSourcesSection from "@/components/settings/ProjectSourcesSection";
+import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
+import SocialConnections from "@/components/settings/SocialConnections";
+import LegalDocGenerator from "@/components/settings/legal/LegalDocGenerator";
+import type { DocType } from "@/components/settings/legal/types";
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
+import SetPasswordForm from "@/components/SetPasswordForm";
+import BillingSection from "@/components/settings/BillingSection";
+import { AIContent } from "@/components/ui/ai-content";
+import LogoutButton from "@/components/LogoutButton";
+
+function TikTokIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 0 0-.79-.05A6.34 6.34 0 0 0 3.15 15a6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.34-6.34V8.72a8.2 8.2 0 0 0 4.76 1.52v-3.4a4.85 4.85 0 0 1-1-.15z" />
+    </svg>
+  );
+}
+
+function PinterestIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z" />
+    </svg>
+  );
+}
+
+type TabKey = "profile" | "connections" | "settings" | "positioning" | "branding" | "sources" | "pricing";
+
+type Props = {
+  userEmail: string;
+  activeTab: TabKey;
+};
+
+function normalizeTab(v: string | null): TabKey {
+  const s = (v ?? "").trim().toLowerCase();
+  if (s === "profile" || s === "connections" || s === "settings" || s === "positioning" || s === "branding" || s === "sources") return s;
+  // compat ancien: tab=billing, tab=ai
+  if (s === "billing" || s === "pricing" || s === "ai") return "pricing";
+  return "profile";
+}
+
+type PricingTier = {
+  label: string;
+  price: string;
+  period: string;
+  description: string;
+};
+
+type OfferItem = {
+  name: string;
+  price: string;
+  link: string;
+  promise: string;
+  description: string;
+  target: string;
+  format: string;
+  pricing?: PricingTier[];
+};
+
+type ProfileRow = {
+  first_name?: string | null;
+  niche?: string | null;
+  mission?: string | null;
+  offers?: OfferItem[] | null;
+  privacy_url?: string | null;
+  terms_url?: string | null;
+  cgv_url?: string | null;
+  sio_user_api_key?: string | null;
+  sio_api_key_name?: string | null;
+  content_locale?: string | null;
+  address_form?: string | null;
+  linkedin_url?: string | null;
+  instagram_url?: string | null;
+  youtube_url?: string | null;
+  website_url?: string | null;
+  tiktok_url?: string | null;
+  pinterest_url?: string | null;
+  threads_url?: string | null;
+  facebook_url?: string | null;
+  custom_links?: { label: string; url: string }[] | null;
+  // Branding
+  brand_font?: string | null;
+  brand_color_base?: string | null;
+  brand_color_accent?: string | null;
+  brand_logo_url?: string | null;
+  brand_author_photo_url?: string | null;
+  brand_tone_of_voice?: string | null;
+  // Onboarding tone (fallback for brand_tone_of_voice)
+  preferred_tone?: string | null;
+  // Diagnostic profile (contains niche components from onboarding)
+  diagnostic_profile?: Record<string, any> | null;
+  // Storytelling (6-step founder journey)
+  storytelling?: StorytellingData | null;
+};
+
+type StorytellingData = {
+  situation_initiale?: string;
+  element_declencheur?: string;
+  peripeties?: string;
+  moment_critique?: string;
+  resolution?: string;
+  situation_finale?: string;
+};
+
+/**
+ * Formate un résumé persona plat en markdown structuré.
+ * Détecte les labels "Douleurs principales :", "Désirs :", etc.
+ * et les convertit en titres + listes à puces.
+ */
+function formatPersonaSummary(text: string): string {
+  if (!text?.trim()) return text;
+  // Si déjà formaté en markdown (contient des titres ou des listes), ne pas reformater
+  if (/^##?\s/m.test(text) || /^\s*[-*]\s/m.test(text)) return text;
+
+  // Labels de sections connus (insensible à la casse, avec ou sans ":")
+  const sectionLabels = [
+    "Douleurs principales",
+    "Douleurs",
+    "Points de douleur",
+    "Désirs",
+    "Objectifs",
+    "Motivations",
+    "Objections fréquentes",
+    "Objections",
+    "Canaux préférés",
+    "Canaux",
+    "Déclencheurs d'achat",
+    "Déclencheurs",
+    "Phrases exactes",
+    "Phrases types",
+  ];
+
+  // Build regex: match "Label :" or "Label:" anywhere in text
+  const labelPattern = sectionLabels
+    .map((l) => l.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+  const regex = new RegExp(`(?:^|(?<=[\\.!?]\\s*))\\s*(${labelPattern})\\s*:\\s*`, "gi");
+
+  // Find all section matches
+  const matches: { label: string; index: number; endIndex: number }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(text)) !== null) {
+    matches.push({ label: m[1], index: m.index, endIndex: m.index + m[0].length });
+  }
+
+  if (matches.length === 0) return text;
+
+  // Extract intro (text before first section)
+  const intro = text.slice(0, matches[0].index).replace(/[\s.]+$/, "").trim();
+
+  const parts: string[] = [];
+  if (intro) parts.push(intro + "\n");
+
+  for (let i = 0; i < matches.length; i++) {
+    const label = matches[i].label;
+    const start = matches[i].endIndex;
+    const end = i + 1 < matches.length ? matches[i + 1].index : text.length;
+    const content = text.slice(start, end).replace(/[\s.]+$/, "").trim();
+
+    parts.push(`\n## ${label}\n`);
+
+    // Split items on ";" or "," (for channels)
+    const items = content
+      .split(/\s*;\s*/)
+      .flatMap((item) => {
+        // If an item contains no ";" but has comma-separated items (like channels), split on ","
+        // Only do this for short items (channels-like), not descriptions
+        return [item];
+      })
+      .map((item) => item.replace(/^\s*\.?\s*$/, "").trim())
+      .filter(Boolean);
+
+    if (items.length > 1) {
+      for (const item of items) {
+        parts.push(`- ${item}`);
+      }
+    } else if (items.length === 1) {
+      parts.push(`- ${items[0]}`);
+    }
+  }
+
+  return parts.join("\n");
+}
+
+export default function SettingsTabsShell({ userEmail, activeTab }: Props) {
+  const tSettings = useTranslations("settings");
+  const tSP = useTranslations("settingsPage");
+  const router = useRouter();
+  const sp = useSearchParams();
+  const { toast } = useToast();
+
+  const [tab, setTab] = useState<TabKey>(activeTab);
+  useEffect(() => setTab(activeTab), [activeTab]);
+
+  const queryBase = useMemo(() => {
+    const params = new URLSearchParams();
+    sp.forEach((value, key) => {
+      if (key === "tab") return;
+      params.set(key, value);
+    });
+    return params;
+  }, [sp]);
+
+  const onTabChange = (next: string) => {
+    const t = normalizeTab(next);
+    setTab(t);
+
+    // URL compat: historiquement Tipote utilisait tab=billing
+    const urlTab = t === "pricing" ? "billing" : t;
+
+    const params = new URLSearchParams(queryBase);
+    params.set("tab", urlTab);
+    const qs = params.toString();
+    router.push(qs ? `/settings?${qs}` : "/settings");
+  };
+
+  // -------------------------
+  // Profil (connecté à /api/profile)
+  // -------------------------
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [firstName, setFirstName] = useState("");
+  const [mission, setMission] = useState("");
+  // Niche formula broken into 4 fields
+  const [nicheTarget, setNicheTarget] = useState("");
+  const [nicheObjective, setNicheObjective] = useState("");
+  const [nicheMechanism, setNicheMechanism] = useState("");
+  const [nicheMarker, setNicheMarker] = useState("");
+  // Storytelling (6 steps)
+  const [storySituationInitiale, setStorySituationInitiale] = useState("");
+  const [storyElementDeclencheur, setStoryElementDeclencheur] = useState("");
+  const [storyPeripeties, setStoryPeripeties] = useState("");
+  const [storyMomentCritique, setStoryMomentCritique] = useState("");
+  const [storyResolution, setStoryResolution] = useState("");
+  const [storySituationFinale, setStorySituationFinale] = useState("");
+  const [pendingProfile, startProfileTransition] = useTransition();
+  const [pendingPositioning, startPositioningTransition] = useTransition();
+
+  // -------------------------
+  // Email preferences
+  // -------------------------
+  const [emailPrefSocial, setEmailPrefSocial] = useState(true);
+  const [emailPrefCredits, setEmailPrefCredits] = useState(true);
+  const [emailPrefDigest, setEmailPrefDigest] = useState(true);
+  const [emailPrefMonthly, setEmailPrefMonthly] = useState(true);
+  const [emailPrefMilestones, setEmailPrefMilestones] = useState(true);
+  const [emailPrefsLoaded, setEmailPrefsLoaded] = useState(false);
+
+  const [privacyUrl, setPrivacyUrl] = useState("");
+  const [termsUrl, setTermsUrl] = useState("");
+  const [cgvUrl, setCgvUrl] = useState("");
+  const [pendingLegal, startLegalTransition] = useTransition();
+  const [legalGenOpen, setLegalGenOpen] = useState(false);
+  const [legalGenDocType, setLegalGenDocType] = useState<DocType>("mentions");
+
+  const [sioApiKey, setSioApiKey] = useState("");
+  const [sioApiKeyName, setSioApiKeyName] = useState("");
+  const [pendingSio, startSioTransition] = useTransition();
+
+  const [contentLocale, setContentLocale] = useState("fr");
+  const [addressForm, setAddressForm] = useState("tu");
+  const [pendingLocale, startLocaleTransition] = useTransition();
+
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [instagramUrl, setInstagramUrl] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
+  const [tiktokUrl, setTiktokUrl] = useState("");
+  const [pinterestUrl, setPinterestUrl] = useState("");
+  const [threadsUrl, setThreadsUrl] = useState("");
+  const [facebookUrl, setFacebookUrl] = useState("");
+  const [customLinks, setCustomLinks] = useState<{ label: string; url: string }[]>([]);
+  const [pendingLinks, startLinksTransition] = useTransition();
+
+  const [offers, setOffers] = useState<OfferItem[]>([]);
+  const [initialOffers, setInitialOffers] = useState<OfferItem[]>([]);
+  const [pendingOffers, startOffersTransition] = useTransition();
+
+  // Generated offers (from AI strategy)
+  type GeneratedOffer = { name: string; level?: string; promise?: string; description?: string; price_min?: number; price_max?: number; format?: string };
+  const [generatedOffers, setGeneratedOffers] = useState<GeneratedOffer[]>([]);
+  const [generatedOffersLoading, setGeneratedOffersLoading] = useState(false);
+  const [deletingGenOffer, setDeletingGenOffer] = useState<number | null>(null);
+
+  const [initialProfile, setInitialProfile] = useState<ProfileRow | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setProfileLoading(true);
+      try {
+        const res = await fetch("/api/profile", { method: "GET" });
+        const json = (await res.json().catch(() => null)) as any;
+        if (cancelled) return;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+
+        const row = (json.profile ?? null) as ProfileRow | null;
+        setInitialProfile(row);
+        setFirstName(row?.first_name ?? "");
+        setMission(row?.mission ?? "");
+        // Parse niche formula into 4 sub-fields
+        // Priority 1: use individual components from diagnostic_profile (onboarding source of truth)
+        const diag = row?.diagnostic_profile;
+        const diagTarget = typeof diag?.nicheTarget === "string" ? diag.nicheTarget.trim() : "";
+        const diagObjective = typeof diag?.nicheObjective === "string" ? diag.nicheObjective.trim() : "";
+        const diagMechanism = typeof diag?.nicheMechanism === "string" ? diag.nicheMechanism.trim() : "";
+        const diagTimeframe = typeof diag?.nicheTimeframe === "string" ? diag.nicheTimeframe.trim() : "";
+
+        if (diagTarget || diagObjective) {
+          setNicheTarget(diagTarget);
+          setNicheObjective(diagObjective);
+          setNicheMechanism(diagMechanism);
+          setNicheMarker(diagTimeframe);
+        } else {
+          // Priority 2: parse from niche string (supports "grâce à" and "avec")
+          const nicheStr = row?.niche ?? "";
+          const nicheMatch = nicheStr.match(
+            /j['']aide les (.+?) à (.+?)(?:\s+(?:grâce à|avec)\s+(.+?))?(?:\s+en\s+(.+))?$/i
+          );
+          if (nicheMatch) {
+            setNicheTarget(nicheMatch[1]?.trim() ?? "");
+            setNicheObjective(nicheMatch[2]?.trim() ?? "");
+            setNicheMechanism(nicheMatch[3]?.trim() ?? "");
+            setNicheMarker(nicheMatch[4]?.trim() ?? "");
+          } else {
+            setNicheTarget(nicheStr);
+            setNicheObjective("");
+            setNicheMechanism("");
+            setNicheMarker("");
+          }
+        }
+        setPrivacyUrl(row?.privacy_url ?? "");
+        setTermsUrl(row?.terms_url ?? "");
+        setCgvUrl(row?.cgv_url ?? "");
+        setSioApiKey(row?.sio_user_api_key ?? "");
+        setSioApiKeyName(row?.sio_api_key_name ?? "");
+        setContentLocale(row?.content_locale ?? "fr");
+        setAddressForm(row?.address_form ?? "tu");
+        setLinkedinUrl(row?.linkedin_url ?? "");
+        setInstagramUrl(row?.instagram_url ?? "");
+        setYoutubeUrl(row?.youtube_url ?? "");
+        setWebsiteUrl(row?.website_url ?? "");
+        setTiktokUrl(row?.tiktok_url ?? "");
+        setPinterestUrl(row?.pinterest_url ?? "");
+        setThreadsUrl(row?.threads_url ?? "");
+        setFacebookUrl(row?.facebook_url ?? "");
+        setCustomLinks(Array.isArray(row?.custom_links) ? row.custom_links : []);
+
+        // Storytelling
+        const st = row?.storytelling;
+        if (st && typeof st === "object") {
+          setStorySituationInitiale(st.situation_initiale ?? "");
+          setStoryElementDeclencheur(st.element_declencheur ?? "");
+          setStoryPeripeties(st.peripeties ?? "");
+          setStoryMomentCritique(st.moment_critique ?? "");
+          setStoryResolution(st.resolution ?? "");
+          setStorySituationFinale(st.situation_finale ?? "");
+        }
+
+        const loadedOffers = Array.isArray(row?.offers)
+          ? row.offers.map((o: any) => ({
+              name: String(o?.name ?? ""),
+              price: String(o?.price ?? ""),
+              link: String(o?.link ?? ""),
+              promise: String(o?.promise ?? ""),
+              description: String(o?.description ?? ""),
+              target: String(o?.target ?? ""),
+              format: String(o?.format ?? ""),
+            }))
+          : [];
+        setOffers(loadedOffers);
+        setInitialOffers(loadedOffers);
+      } catch (e: any) {
+        if (!cancelled) {
+          toast({
+            title: "Impossible de charger le profil",
+            description: e?.message ?? "Erreur inconnue",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (!cancelled) setProfileLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [toast]);
+
+  // Load email preferences
+  useEffect(() => {
+    fetch("/api/email-preferences")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && !data.error) {
+          setEmailPrefSocial(data.social_alerts ?? true);
+          setEmailPrefCredits(data.credits_alerts ?? true);
+          setEmailPrefDigest(data.weekly_digest ?? true);
+          setEmailPrefMonthly(data.monthly_report ?? true);
+          setEmailPrefMilestones(data.milestone_emails ?? true);
+          setEmailPrefsLoaded(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  async function toggleEmailPref(field: string, value: boolean) {
+    const res = await fetch("/api/email-preferences", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [field]: value }),
+    });
+    if (!res.ok) {
+      toast({ title: "Erreur", description: "Impossible de sauvegarder", variant: "destructive" });
+    }
+  }
+
+  // Load generated offers from strategy plan
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setGeneratedOffersLoading(true);
+      try {
+        const res = await fetch("/api/strategy/offer-pyramid");
+        const json = await res.json().catch(() => null);
+        if (cancelled) return;
+        // Extract offers from selected_pyramid (returned by GET endpoint)
+        const pyramid = json?.selected_pyramid;
+        if (pyramid && Array.isArray(pyramid.offers)) {
+          setGeneratedOffers(pyramid.offers.map((o: any) => ({
+            name: String(o?.name ?? o?.offer_name ?? o?.title ?? ""),
+            level: String(o?.level ?? ""),
+            promise: String(o?.promise ?? o?.main_outcome ?? ""),
+            description: String(o?.description ?? ""),
+            price_min: typeof o?.price_min === "number" ? o.price_min : null,
+            price_max: typeof o?.price_max === "number" ? o.price_max : null,
+            format: String(o?.format ?? ""),
+          })));
+        }
+      } catch { /* ignore */ }
+      if (!cancelled) setGeneratedOffersLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const deleteGeneratedOffer = async (index: number) => {
+    setDeletingGenOffer(index);
+    try {
+      const res = await fetch("/api/strategy/offer-pyramid", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ offerIndex: index }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGeneratedOffers((prev) => prev.filter((_, i) => i !== index));
+        toast({ title: tSP("reglages.generatedOfferDeleted") });
+      }
+    } catch {
+      toast({ title: "Error", variant: "destructive" });
+    }
+    setDeletingGenOffer(null);
+  };
+
+  const deleteAllGeneratedOffers = async () => {
+    setGeneratedOffersLoading(true);
+    try {
+      const res = await fetch("/api/strategy/offer-pyramid", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setGeneratedOffers([]);
+        toast({ title: tSP("reglages.allGeneratedOffersDeleted") });
+      }
+    } catch {
+      toast({ title: "Error", variant: "destructive" });
+    }
+    setGeneratedOffersLoading(false);
+  };
+
+  const profileDirty = useMemo(() => {
+    const i = initialProfile;
+    return (i?.first_name ?? "") !== firstName;
+  }, [initialProfile, firstName]);
+
+  const assembledNiche = useMemo(() => {
+    if (!nicheTarget && !nicheObjective && !nicheMechanism && !nicheMarker) return "";
+    const parts = [`J'aide les ${nicheTarget || "…"} à ${nicheObjective || "…"}`];
+    if (nicheMechanism) parts.push(`grâce à ${nicheMechanism}`);
+    if (nicheMarker) parts.push(`en ${nicheMarker}`);
+    return parts.join(" ");
+  }, [nicheTarget, nicheObjective, nicheMechanism, nicheMarker]);
+
+  const assembledStorytelling = useMemo<StorytellingData>(() => ({
+    situation_initiale: storySituationInitiale,
+    element_declencheur: storyElementDeclencheur,
+    peripeties: storyPeripeties,
+    moment_critique: storyMomentCritique,
+    resolution: storyResolution,
+    situation_finale: storySituationFinale,
+  }), [storySituationInitiale, storyElementDeclencheur, storyPeripeties, storyMomentCritique, storyResolution, storySituationFinale]);
+
+  const storytellingHasContent = useMemo(() => {
+    return Object.values(assembledStorytelling).some((v) => (v ?? "").trim().length > 0);
+  }, [assembledStorytelling]);
+
+  const storytellingDirty = useMemo(() => {
+    const saved = initialProfile?.storytelling;
+    const keys: (keyof StorytellingData)[] = [
+      "situation_initiale", "element_declencheur", "peripeties",
+      "moment_critique", "resolution", "situation_finale",
+    ];
+    return keys.some((k) => (assembledStorytelling[k] ?? "") !== ((saved as any)?.[k] ?? ""));
+  }, [initialProfile, assembledStorytelling]);
+
+  const positioningDirty = useMemo(() => {
+    const i = initialProfile;
+    return assembledNiche !== (i?.niche ?? "") || mission !== (i?.mission ?? "") || storytellingDirty;
+  }, [initialProfile, assembledNiche, mission, storytellingDirty]);
+
+  const saveProfile = () => {
+    startProfileTransition(async () => {
+      try {
+        const body: any = {};
+        if ((initialProfile?.first_name ?? "") !== firstName) body.first_name = firstName;
+
+        const res = await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+
+        const row = (json.profile ?? null) as ProfileRow | null;
+        setInitialProfile(row);
+
+        toast({ title: "Profil mis à jour" });
+      } catch (e: any) {
+        toast({
+          title: "Enregistrement impossible",
+          description: e?.message ?? "Erreur inconnue",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  const [showPositioningConfirm, setShowPositioningConfirm] = useState(false);
+
+  const doSavePositioning = () => {
+    startPositioningTransition(async () => {
+      try {
+        const body: any = { niche: assembledNiche, mission };
+        if (storytellingHasContent || storytellingDirty) {
+          body.storytelling = assembledStorytelling;
+        }
+
+        const res = await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+
+        const row = (json.profile ?? null) as ProfileRow | null;
+        setInitialProfile(row);
+
+        toast({ title: "Positionnement enregistré" });
+      } catch (e: any) {
+        toast({
+          title: "Enregistrement impossible",
+          description: e?.message ?? "Erreur inconnue",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  const savePositioning = () => {
+    // If existing niche is substantially different from new one, confirm before overwriting
+    const existingNiche = (initialProfile?.niche ?? "").trim();
+    if (existingNiche && assembledNiche && existingNiche !== assembledNiche) {
+      setShowPositioningConfirm(true);
+      return;
+    }
+    doSavePositioning();
+  };
+
+  // -------------------------
+  // Offers management
+  // -------------------------
+  const offersDirty = useMemo(() => {
+    if (offers.length !== initialOffers.length) return true;
+    return offers.some(
+      (o, i) =>
+        o.name !== initialOffers[i]?.name ||
+        o.price !== initialOffers[i]?.price ||
+        o.link !== initialOffers[i]?.link ||
+        o.promise !== initialOffers[i]?.promise ||
+        o.description !== initialOffers[i]?.description ||
+        o.target !== initialOffers[i]?.target ||
+        o.format !== initialOffers[i]?.format ||
+        JSON.stringify(o.pricing || []) !== JSON.stringify(initialOffers[i]?.pricing || []),
+    );
+  }, [offers, initialOffers]);
+
+  const addOffer = () => setOffers((prev) => [...prev, { name: "", price: "", link: "", promise: "", description: "", target: "", format: "", pricing: [] }]);
+
+  const removeOffer = (idx: number) => setOffers((prev) => prev.filter((_, i) => i !== idx));
+
+  const updateOffer = (idx: number, field: keyof OfferItem, value: string) => {
+    setOffers((prev) => prev.map((o, i) => (i === idx ? { ...o, [field]: value } : o)));
+  };
+
+  const addPricingTier = (offerIdx: number) => {
+    setOffers((prev) => prev.map((o, i) => {
+      if (i !== offerIdx) return o;
+      const tiers = [...(o.pricing || []), { label: "", price: "", period: "", description: "" }];
+      return { ...o, pricing: tiers };
+    }));
+  };
+
+  const removePricingTier = (offerIdx: number, tierIdx: number) => {
+    setOffers((prev) => prev.map((o, i) => {
+      if (i !== offerIdx) return o;
+      return { ...o, pricing: (o.pricing || []).filter((_, ti) => ti !== tierIdx) };
+    }));
+  };
+
+  const updatePricingTier = (offerIdx: number, tierIdx: number, field: keyof PricingTier, value: string) => {
+    setOffers((prev) => prev.map((o, i) => {
+      if (i !== offerIdx) return o;
+      const tiers = (o.pricing || []).map((t, ti) => (ti === tierIdx ? { ...t, [field]: value } : t));
+      return { ...o, pricing: tiers };
+    }));
+  };
+
+  const saveOffers = () => {
+    startOffersTransition(async () => {
+      try {
+        const cleaned = offers.filter((o) => o.name.trim());
+        const res = await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ offers: cleaned }),
+        });
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+
+        const row = (json.profile ?? null) as ProfileRow | null;
+        const saved = Array.isArray(row?.offers)
+          ? row.offers.map((o: any) => ({
+              name: String(o?.name ?? ""),
+              price: String(o?.price ?? ""),
+              link: String(o?.link ?? ""),
+              promise: String(o?.promise ?? ""),
+              description: String(o?.description ?? ""),
+              target: String(o?.target ?? ""),
+              format: String(o?.format ?? ""),
+            }))
+          : cleaned;
+        setOffers(saved);
+        setInitialOffers(saved);
+
+        toast({ title: "Offres enregistrées" });
+      } catch (e: any) {
+        toast({ title: "Impossible d'enregistrer", description: e?.message ?? "Erreur", variant: "destructive" });
+      }
+    });
+  };
+
+  // -------------------------
+  // Persona enrichment
+  // -------------------------
+  const [enriching, setEnriching] = useState(false);
+  const [personaDetailedMarkdown, setPersonaDetailedMarkdown] = useState<string | null>(null);
+  const [initialPersonaDetailedMarkdown, setInitialPersonaDetailedMarkdown] = useState<string | null>(null);
+  const [competitorInsightsMarkdown, setCompetitorInsightsMarkdown] = useState<string | null>(null);
+  const [initialCompetitorInsightsMarkdown, setInitialCompetitorInsightsMarkdown] = useState<string | null>(null);
+  const [insightsEditMode, setInsightsEditMode] = useState(false);
+  const [narrativeSynthesisMarkdown, setNarrativeSynthesisMarkdown] = useState<string | null>(null);
+  const [initialNarrativeSynthesisMarkdown, setInitialNarrativeSynthesisMarkdown] = useState<string | null>(null);
+  const [personaDetailTab, setPersonaDetailTab] = useState<"summary" | "detailed" | "synthesis">("summary");
+  const [summaryEditMode, setSummaryEditMode] = useState(false);
+  const [detailedEditMode, setDetailedEditMode] = useState(false);
+  const [synthesisEditMode, setSynthesisEditMode] = useState(false);
+  const [personaStale, setPersonaStale] = useState(false);
+  const [savingPersonaMarkdown, startSavingPersonaMarkdown] = useTransition();
+
+  const personaMarkdownDirty = useMemo(() => {
+    return (personaDetailedMarkdown ?? "") !== (initialPersonaDetailedMarkdown ?? "")
+      || (narrativeSynthesisMarkdown ?? "") !== (initialNarrativeSynthesisMarkdown ?? "")
+      || (competitorInsightsMarkdown ?? "") !== (initialCompetitorInsightsMarkdown ?? "");
+  }, [personaDetailedMarkdown, initialPersonaDetailedMarkdown, narrativeSynthesisMarkdown, initialNarrativeSynthesisMarkdown, competitorInsightsMarkdown, initialCompetitorInsightsMarkdown]);
+
+  const savePersonaMarkdown = () => {
+    startSavingPersonaMarkdown(async () => {
+      try {
+        const res = await fetch("/api/persona", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            persona_detailed_markdown: personaDetailedMarkdown,
+            narrative_synthesis_markdown: narrativeSynthesisMarkdown,
+            competitor_insights_markdown: competitorInsightsMarkdown,
+          }),
+        });
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+        setInitialPersonaDetailedMarkdown(personaDetailedMarkdown);
+        setInitialNarrativeSynthesisMarkdown(narrativeSynthesisMarkdown);
+        setInitialCompetitorInsightsMarkdown(competitorInsightsMarkdown);
+        toast({ title: "Persona enregistré" });
+      } catch (e: any) {
+        toast({ title: "Enregistrement impossible", description: e?.message ?? "Erreur inconnue", variant: "destructive" });
+      }
+    });
+  };
+
+  // Load existing persona detailed data on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/persona", { method: "GET" });
+        const json = (await res.json().catch(() => null)) as any;
+        if (cancelled || !json?.ok || !json?.persona) return;
+        if (json.persona.persona_detailed_markdown) {
+          setPersonaDetailedMarkdown(json.persona.persona_detailed_markdown);
+          setInitialPersonaDetailedMarkdown(json.persona.persona_detailed_markdown);
+        }
+        if (json.persona.competitor_insights_markdown) {
+          setCompetitorInsightsMarkdown(json.persona.competitor_insights_markdown);
+          setInitialCompetitorInsightsMarkdown(json.persona.competitor_insights_markdown);
+        }
+        if (json.persona.narrative_synthesis_markdown) {
+          setNarrativeSynthesisMarkdown(json.persona.narrative_synthesis_markdown);
+          setInitialNarrativeSynthesisMarkdown(json.persona.narrative_synthesis_markdown);
+        }
+        if (json.persona.persona_summary_modified) setPersonaStale(true);
+      } catch {
+        // non-blocking
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const enrichPersona = async () => {
+    setEnriching(true);
+    try {
+      const res = await fetch("/api/persona/enrich", { method: "POST" });
+
+      const contentType = res.headers.get("content-type") ?? "";
+
+      // ── SSE stream mode (heartbeats prevent proxy 504) ──
+      if (contentType.includes("text/event-stream")) {
+        const reader = res.body?.getReader();
+        if (!reader) throw new Error("Stream non disponible");
+
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let finalResult: any = null;
+        let finalError: string | null = null;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split("\n\n");
+          buffer = events.pop() ?? "";
+          for (const eventBlock of events) {
+            const lines = eventBlock.split("\n");
+            let eventType = "";
+            let eventData = "";
+            for (const line of lines) {
+              if (line.startsWith("event: ")) eventType = line.slice(7);
+              if (line.startsWith("data: ")) eventData = line.slice(6);
+            }
+            if (!eventData) continue;
+            try {
+              const parsed = JSON.parse(eventData);
+              if (eventType === "result") finalResult = parsed;
+              else if (eventType === "error") finalError = parsed.error || "Erreur inconnue";
+            } catch { /* skip malformed */ }
+          }
+        }
+
+        if (finalError) {
+          if (finalError === "NO_CREDITS") {
+            toast({
+              title: "Crédits insuffisants",
+              description: "L'enrichissement du persona coûte 1 crédit.",
+              variant: "destructive",
+            });
+            return;
+          }
+          throw new Error(finalError);
+        }
+
+        if (finalResult?.ok) {
+          if (finalResult.persona_summary) setMission(finalResult.persona_summary);
+          if (finalResult.persona_detailed_markdown) setPersonaDetailedMarkdown(finalResult.persona_detailed_markdown);
+          if (finalResult.competitor_insights_markdown) setCompetitorInsightsMarkdown(finalResult.competitor_insights_markdown);
+          if (finalResult.narrative_synthesis_markdown) setNarrativeSynthesisMarkdown(finalResult.narrative_synthesis_markdown);
+          if (finalResult.persona_detailed_markdown) setPersonaDetailTab("detailed");
+          // Don't update initialProfile here — it should only change after an explicit Save.
+          // Updating it here made positioningDirty = false, disabling the Save button.
+          setPersonaStale(false);
+          toast({ title: "Persona enrichi avec succès" });
+        } else {
+          throw new Error("Aucun résultat reçu");
+        }
+        return;
+      }
+
+      // ── Fallback JSON mode (pre-auth errors return JSON directly) ──
+      const json = (await res.json().catch(() => null)) as any;
+      if (!json?.ok) {
+        if (json?.error === "NO_CREDITS") {
+          toast({
+            title: "Crédits insuffisants",
+            description: "L'enrichissement du persona coûte 1 crédit.",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw new Error(json?.error || "Erreur");
+      }
+
+      if (json.persona_summary) setMission(json.persona_summary);
+      if (json.persona_detailed_markdown) setPersonaDetailedMarkdown(json.persona_detailed_markdown);
+      if (json.competitor_insights_markdown) setCompetitorInsightsMarkdown(json.competitor_insights_markdown);
+      if (json.narrative_synthesis_markdown) setNarrativeSynthesisMarkdown(json.narrative_synthesis_markdown);
+      if (json.persona_detailed_markdown) setPersonaDetailTab("detailed");
+      // Don't update initialProfile here — keep dirty so Save button stays enabled.
+      setPersonaStale(false);
+      toast({ title: "Persona enrichi avec succès" });
+    } catch (e: any) {
+      toast({
+        title: "Erreur lors de l'enrichissement",
+        description: e?.message ?? "Erreur inconnue",
+        variant: "destructive",
+      });
+    } finally {
+      setEnriching(false);
+    }
+  };
+
+  // -------------------------
+  // Legal URLs
+  // -------------------------
+  const legalDirty = useMemo(() => {
+    const i = initialProfile;
+    return (i?.privacy_url ?? "") !== privacyUrl || (i?.terms_url ?? "") !== termsUrl || (i?.cgv_url ?? "") !== cgvUrl;
+  }, [initialProfile, privacyUrl, termsUrl, cgvUrl]);
+
+  const saveLegalUrls = () => {
+    startLegalTransition(async () => {
+      try {
+        const body: any = {};
+        if ((initialProfile?.privacy_url ?? "") !== privacyUrl) body.privacy_url = privacyUrl;
+        if ((initialProfile?.terms_url ?? "") !== termsUrl) body.terms_url = termsUrl;
+        if ((initialProfile?.cgv_url ?? "") !== cgvUrl) body.cgv_url = cgvUrl;
+
+        const res = await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+
+        const row = (json.profile ?? null) as ProfileRow | null;
+        setInitialProfile(row);
+        setPrivacyUrl(row?.privacy_url ?? "");
+        setTermsUrl(row?.terms_url ?? "");
+        setCgvUrl(row?.cgv_url ?? "");
+
+        toast({ title: "URLs légales enregistrées" });
+      } catch (e: any) {
+        toast({
+          title: "Enregistrement impossible",
+          description: e?.message ?? "Erreur inconnue",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  // -------------------------
+  // Systeme.io API Key
+  // -------------------------
+  const sioDirty = useMemo(() => {
+    return (
+      (initialProfile?.sio_user_api_key ?? "") !== sioApiKey ||
+      (initialProfile?.sio_api_key_name ?? "") !== sioApiKeyName
+    );
+  }, [initialProfile, sioApiKey, sioApiKeyName]);
+
+  const saveSioKey = () => {
+    startSioTransition(async () => {
+      try {
+        const res = await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sio_user_api_key: sioApiKey, sio_api_key_name: sioApiKeyName }),
+        });
+
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+
+        const row = (json.profile ?? null) as ProfileRow | null;
+        setInitialProfile(row);
+        setSioApiKey(row?.sio_user_api_key ?? "");
+        setSioApiKeyName(row?.sio_api_key_name ?? "");
+
+        toast({ title: tSP("connections.sioSaved") });
+      } catch (e: any) {
+        toast({
+          title: "Enregistrement impossible",
+          description: e?.message ?? "Erreur inconnue",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  // -------------------------
+  // Settings (content locale + address form)
+  // -------------------------
+  const settingsDirty = useMemo(() => {
+    return (
+      (initialProfile?.content_locale ?? "fr") !== contentLocale ||
+      (initialProfile?.address_form ?? "tu") !== addressForm
+    );
+  }, [initialProfile, contentLocale, addressForm]);
+
+  const saveSettings = () => {
+    startLocaleTransition(async () => {
+      try {
+        const res = await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content_locale: contentLocale, address_form: addressForm }),
+        });
+
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+
+        const row = (json.profile ?? null) as ProfileRow | null;
+        setInitialProfile(row);
+        setContentLocale(row?.content_locale ?? "fr");
+        setAddressForm(row?.address_form ?? "tu");
+
+        toast({ title: tSP("reglages.saved") });
+      } catch (e: any) {
+        toast({
+          title: tSP("reglages.saveError"),
+          description: e?.message ?? "Erreur inconnue",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  // -------------------------
+  // Social Links
+  // -------------------------
+  const linksDirty = useMemo(() => {
+    const i = initialProfile;
+    return (
+      (i?.linkedin_url ?? "") !== linkedinUrl ||
+      (i?.instagram_url ?? "") !== instagramUrl ||
+      (i?.youtube_url ?? "") !== youtubeUrl ||
+      (i?.website_url ?? "") !== websiteUrl ||
+      (i?.tiktok_url ?? "") !== tiktokUrl ||
+      (i?.pinterest_url ?? "") !== pinterestUrl ||
+      (i?.threads_url ?? "") !== threadsUrl ||
+      (i?.facebook_url ?? "") !== facebookUrl ||
+      JSON.stringify(Array.isArray(i?.custom_links) ? i.custom_links : []) !== JSON.stringify(customLinks)
+    );
+  }, [initialProfile, linkedinUrl, instagramUrl, youtubeUrl, websiteUrl, tiktokUrl, pinterestUrl, threadsUrl, facebookUrl, customLinks]);
+
+  const saveLinks = () => {
+    startLinksTransition(async () => {
+      try {
+        const body: any = {};
+        if ((initialProfile?.linkedin_url ?? "") !== linkedinUrl) body.linkedin_url = linkedinUrl;
+        if ((initialProfile?.instagram_url ?? "") !== instagramUrl) body.instagram_url = instagramUrl;
+        if ((initialProfile?.youtube_url ?? "") !== youtubeUrl) body.youtube_url = youtubeUrl;
+        if ((initialProfile?.website_url ?? "") !== websiteUrl) body.website_url = websiteUrl;
+        if ((initialProfile?.tiktok_url ?? "") !== tiktokUrl) body.tiktok_url = tiktokUrl;
+        if ((initialProfile?.pinterest_url ?? "") !== pinterestUrl) body.pinterest_url = pinterestUrl;
+        if ((initialProfile?.threads_url ?? "") !== threadsUrl) body.threads_url = threadsUrl;
+        if ((initialProfile?.facebook_url ?? "") !== facebookUrl) body.facebook_url = facebookUrl;
+        const prevCustom = Array.isArray(initialProfile?.custom_links) ? initialProfile.custom_links : [];
+        if (JSON.stringify(prevCustom) !== JSON.stringify(customLinks)) body.custom_links = customLinks.filter(l => l.url.trim());
+
+        const res = await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const json = (await res.json().catch(() => null)) as any;
+        if (!json?.ok) throw new Error(json?.error || "Erreur");
+
+        const row = (json.profile ?? null) as ProfileRow | null;
+        setInitialProfile(row);
+        setLinkedinUrl(row?.linkedin_url ?? "");
+        setInstagramUrl(row?.instagram_url ?? "");
+        setYoutubeUrl(row?.youtube_url ?? "");
+        setWebsiteUrl(row?.website_url ?? "");
+        setTiktokUrl(row?.tiktok_url ?? "");
+        setPinterestUrl(row?.pinterest_url ?? "");
+        setThreadsUrl(row?.threads_url ?? "");
+        setFacebookUrl(row?.facebook_url ?? "");
+        setCustomLinks(Array.isArray(row?.custom_links) ? row.custom_links : []);
+
+        toast({ title: tSP("reglages.linksSaved") });
+      } catch (e: any) {
+        toast({
+          title: tSP("reglages.linksSaveError"),
+          description: e?.message ?? "Erreur inconnue",
+          variant: "destructive",
+        });
+      }
+    });
+  };
+
+  // -------------------------
+  // ✅ Reset Tipote (connecté à /api/account/reset)
+  // -------------------------
+  const [resetting, setResetting] = useState(false);
+
+  async function onResetAccount() {
+    try {
+      const ok1 = window.confirm(
+        "⚠️ Réinitialiser ton Tipote ?\n\nTous les contenus, toutes les tâches et toutes les personnalisations seront effacés. C’est définitif.",
+      );
+      if (!ok1) return;
+
+      const confirmWord = window.prompt('Tape "RESET" pour confirmer :');
+      if ((confirmWord ?? "").trim().toUpperCase() !== "RESET") {
+        toast({
+          title: "Réinitialisation annulée",
+          description: 'Tu dois taper "RESET" pour confirmer.',
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setResetting(true);
+
+      const res = await fetch("/api/account/reset", { method: "POST" });
+      const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+
+      if (!res.ok || !json?.ok) {
+        toast({
+          title: "Reset impossible",
+          description: json?.error || "Erreur inconnue",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Tipote réinitialisé ✅",
+        description: "On te renvoie vers l’onboarding.",
+      });
+
+      window.location.href = "/onboarding";
+    } catch (e) {
+      toast({
+        title: "Reset impossible",
+        description: e instanceof Error ? e.message : "Erreur inconnue",
+        variant: "destructive",
+      });
+    } finally {
+      setResetting(false);
+    }
+  }
+
+  return (
+    <Tabs defaultValue="profile" value={tab} onValueChange={onTabChange} className="w-full">
+      <TabsList className="mb-6 flex-wrap h-auto gap-1">
+        <TabsTrigger value="profile" className="gap-2">
+          <User className="w-4 h-4" />
+          {tSettings("tabs.profile")}
+        </TabsTrigger>
+        <TabsTrigger value="connections" className="gap-2">
+          <Plug className="w-4 h-4" />
+          {tSettings("tabs.connections")}
+        </TabsTrigger>
+        <TabsTrigger value="settings" className="gap-2">
+          <Globe className="w-4 h-4" />
+          {tSettings("tabs.settings")}
+        </TabsTrigger>
+        <TabsTrigger value="positioning" className="gap-2">
+          <Target className="w-4 h-4" />
+          {tSP("positioning")}
+        </TabsTrigger>
+        <TabsTrigger value="branding" className="gap-2">
+          <Paintbrush className="w-4 h-4" />
+          {tSettings("tabs.branding")}
+        </TabsTrigger>
+        <TabsTrigger value="sources" className="gap-2">
+          <BookOpen className="w-4 h-4" />
+          Sources
+        </TabsTrigger>
+<TabsTrigger value="pricing" className="gap-2">
+          <CreditCard className="w-4 h-4" />
+          {tSettings("tabs.pricing")}
+        </TabsTrigger>
+      </TabsList>
+
+      {/* PROFIL */}
+      <TabsContent value="profile" className="space-y-6">
+        <Card className="p-6">
+          <h3 className="text-lg font-bold mb-6">{tSP("profile.title")}</h3>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">{tSP("profile.email")}</Label>
+              <Input id="email" type="email" value={userEmail} disabled readOnly autoComplete="off" />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="name">{tSP("profile.firstName")}</Label>
+              <Input id="name" value={firstName} onChange={(e) => setFirstName(e.target.value)} disabled={profileLoading} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">{tSP("profile.password")}</Label>
+              <div className="flex gap-2">
+                <Input id="password" type="text" value="••••••••" disabled className="flex-1" readOnly autoComplete="off" />
+
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline">{tSP("profile.changePassword")}</Button>
+                  </DialogTrigger>
+
+                  <DialogContent className="sm:max-w-[520px]">
+                    <DialogHeader>
+                      <DialogTitle>{tSP("profile.password")}</DialogTitle>
+                      <DialogDescription className="sr-only">
+                        {tSP("profile.passwordDialog.description")}
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <SetPasswordForm mode="reset" />
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="timezone">{tSP("profile.timezoneLabel")}</Label>
+              <Select defaultValue="europe-paris">
+                <SelectTrigger id="timezone">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="europe-paris">Europe/Paris (UTC+1)</SelectItem>
+                  <SelectItem value="europe-london">Europe/London (UTC)</SelectItem>
+                  <SelectItem value="america-new-york">America/New_York (UTC-5)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <Button className="mt-6" onClick={saveProfile} disabled={!profileDirty || pendingProfile}>
+            <Save className="w-4 h-4 mr-2" />
+            {pendingProfile ? tSP("profile.saving") : tSP("profile.save")}
+          </Button>
+        </Card>
+
+        {/* Préférences de notification email */}
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Mail className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-bold">{tSP("profile.emailPrefs.title")}</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-5">
+            {tSP("profile.emailPrefs.desc")}
+          </p>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{tSP("profile.emailPrefs.socialAlerts")}</p>
+                <p className="text-xs text-muted-foreground">{tSP("profile.emailPrefs.socialAlertsDesc")}</p>
+              </div>
+              <Switch
+                checked={emailPrefSocial}
+                disabled={!emailPrefsLoaded}
+                onCheckedChange={(v) => {
+                  setEmailPrefSocial(v);
+                  toggleEmailPref("social_alerts", v);
+                }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{tSP("profile.emailPrefs.creditsAlerts")}</p>
+                <p className="text-xs text-muted-foreground">{tSP("profile.emailPrefs.creditsAlertsDesc")}</p>
+              </div>
+              <Switch
+                checked={emailPrefCredits}
+                disabled={!emailPrefsLoaded}
+                onCheckedChange={(v) => {
+                  setEmailPrefCredits(v);
+                  toggleEmailPref("credits_alerts", v);
+                }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{tSP("profile.emailPrefs.weeklyDigest")}</p>
+                <p className="text-xs text-muted-foreground">{tSP("profile.emailPrefs.weeklyDigestDesc")}</p>
+              </div>
+              <Switch
+                checked={emailPrefDigest}
+                disabled={!emailPrefsLoaded}
+                onCheckedChange={(v) => {
+                  setEmailPrefDigest(v);
+                  toggleEmailPref("weekly_digest", v);
+                }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{tSP("profile.emailPrefs.monthlyReport")}</p>
+                <p className="text-xs text-muted-foreground">{tSP("profile.emailPrefs.monthlyReportDesc")}</p>
+              </div>
+              <Switch
+                checked={emailPrefMonthly}
+                disabled={!emailPrefsLoaded}
+                onCheckedChange={(v) => {
+                  setEmailPrefMonthly(v);
+                  toggleEmailPref("monthly_report", v);
+                }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{tSP("profile.emailPrefs.milestoneEmails")}</p>
+                <p className="text-xs text-muted-foreground">{tSP("profile.emailPrefs.milestoneEmailsDesc")}</p>
+              </div>
+              <Switch
+                checked={emailPrefMilestones}
+                disabled={!emailPrefsLoaded}
+                onCheckedChange={(v) => {
+                  setEmailPrefMilestones(v);
+                  toggleEmailPref("milestone_emails", v);
+                }}
+              />
+            </div>
+          </div>
+        </Card>
+
+        {/* Déconnexion */}
+        <Card className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium">{tSP("profile.logoutTitle")}</h3>
+              <p className="text-sm text-muted-foreground">{tSP("profile.logoutDesc")}</p>
+            </div>
+            <LogoutButton />
+          </div>
+        </Card>
+
+        {/* ✅ ZONE DANGER */}
+        <Card className="p-6 border border-red-200 bg-red-50/40">
+          <div className="flex items-start gap-3 mb-3">
+            <div className="mt-0.5 rounded-full bg-red-100 p-2 text-red-600">
+              <AlertTriangle className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-red-700">{tSP("profile.danger.title")}</h3>
+              <p className="text-sm font-medium text-red-700/90">{tSP("profile.danger.subtitle")}</p>
+            </div>
+          </div>
+
+          <p className="text-sm text-red-700/80">
+            {tSP("profile.danger.desc")}
+          </p>
+
+          <Button variant="destructive" className="mt-4 gap-2" onClick={onResetAccount} disabled={resetting}>
+            <RotateCcw className="h-4 h-4" />
+            {resetting ? tSP("profile.danger.resetting") : tSP("profile.danger.reset")}
+          </Button>
+        </Card>
+      </TabsContent>
+
+      {/* CONNEXIONS */}
+      <TabsContent value="connections" className="space-y-6">
+        <SocialConnections />
+
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <Key className="w-5 h-5 text-muted-foreground" />
+            <h3 className="text-lg font-bold">Systeme.io</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            {tSP("connections.sioDesc")}{" "}
+            <a
+              href="https://aide.systeme.io/article/2322-comment-creer-une-cle-api-publique-sur-systeme-io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline text-primary hover:text-primary/80"
+            >
+              {tSP("connections.sioApiHelp")}
+            </a>
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>{tSP("connections.sioKeyName")}</Label>
+              <Input
+                type="text"
+                autoComplete="off"
+                placeholder={tSP("connections.sioKeyNamePlaceholder")}
+                value={sioApiKeyName}
+                onChange={(e) => setSioApiKeyName(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{tSP("connections.sioLabel")}</Label>
+              <Input
+                type="text"
+                autoComplete="off"
+                placeholder={tSP("connections.sioPlaceholder")}
+                value={sioApiKey}
+                onChange={(e) => setSioApiKey(e.target.value)}
+                disabled={profileLoading}
+                className="font-mono tracking-wider"
+              />
+            </div>
+          </div>
+
+          <Button variant="outline" className="mt-4" onClick={saveSioKey} disabled={!sioDirty || pendingSio}>
+            <Save className="w-4 h-4 mr-2" />
+            {pendingSio ? tSP("connections.saving") : tSP("connections.save")}
+          </Button>
+        </Card>
+      </TabsContent>
+
+      {/* RÉGLAGES */}
+      <TabsContent value="settings" className="space-y-6">
+        <Card className="p-6">
+          <h3 className="text-lg font-bold mb-6">{tSP("reglages.langTitle")}</h3>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>{tSP("reglages.uiLangLabel")}</Label>
+              <LanguageSwitcher variant="bare" />
+            </div>
+
+            <div className="space-y-2">
+              <Label>{tSP("reglages.contentLangLabel")}</Label>
+              <Select value={contentLocale} onValueChange={setContentLocale} disabled={profileLoading}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fr">Français</SelectItem>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="es">Español</SelectItem>
+                  <SelectItem value="it">Italiano</SelectItem>
+                  <SelectItem value="pt">Português</SelectItem>
+                  <SelectItem value="de">Deutsch</SelectItem>
+                  <SelectItem value="nl">Nederlands</SelectItem>
+                  <SelectItem value="ar">العربية</SelectItem>
+                  <SelectItem value="tr">Türkçe</SelectItem>
+                  <SelectItem value="pl">Polski</SelectItem>
+                  <SelectItem value="ro">Română</SelectItem>
+                  <SelectItem value="ru">Русский</SelectItem>
+                  <SelectItem value="ja">日本語</SelectItem>
+                  <SelectItem value="zh">中文</SelectItem>
+                  <SelectItem value="ko">한국어</SelectItem>
+                  <SelectItem value="hi">हिन्दी</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{tSP("reglages.addressLabel")}</Label>
+              <Select value={addressForm} onValueChange={setAddressForm} disabled={profileLoading}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="tu">{tSP("reglages.tu")}</SelectItem>
+                  <SelectItem value="vous">{tSP("reglages.vous")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <Button variant="outline" className="mt-4" onClick={saveSettings} disabled={!settingsDirty || pendingLocale}>
+            <Save className="w-4 h-4 mr-2" />
+            {pendingLocale ? tSP("reglages.saving") : tSP("reglages.save")}
+          </Button>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-6">
+            <Shield className="w-5 h-5 text-muted-foreground" />
+            <h3 className="text-lg font-bold">{tSP("reglages.legalTitle")}</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            {tSP("reglages.legalDesc")}
+          </p>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{tSP("reglages.privacy")}</Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder={tSP("reglages.privacyPlaceholder")}
+                  value={privacyUrl}
+                  onChange={(e) => setPrivacyUrl(e.target.value)}
+                  disabled={profileLoading}
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 shrink-0"
+                  onClick={() => { setLegalGenDocType("privacy"); setLegalGenOpen(true); }}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  {tSP("reglages.generate")}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{tSP("reglages.mentions")}</Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder={tSP("reglages.mentionsPlaceholder")}
+                  value={termsUrl}
+                  onChange={(e) => setTermsUrl(e.target.value)}
+                  disabled={profileLoading}
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 shrink-0"
+                  onClick={() => { setLegalGenDocType("mentions"); setLegalGenOpen(true); }}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  {tSP("reglages.generate")}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>{tSP("reglages.cgv")}</Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder={tSP("reglages.cgvPlaceholder")}
+                  value={cgvUrl}
+                  onChange={(e) => setCgvUrl(e.target.value)}
+                  disabled={profileLoading}
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 shrink-0"
+                  onClick={() => { setLegalGenDocType("cgv"); setLegalGenOpen(true); }}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  {tSP("reglages.generate")}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <Button variant="outline" className="mt-4" onClick={saveLegalUrls} disabled={!legalDirty || pendingLegal}>
+            <Save className="w-4 h-4 mr-2" />
+            {pendingLegal ? tSP("reglages.saving") : tSP("reglages.save")}
+          </Button>
+        </Card>
+
+        <LegalDocGenerator
+          open={legalGenOpen}
+          onOpenChange={setLegalGenOpen}
+          docType={legalGenDocType}
+        />
+
+        <Card className="p-6">
+          <h3 className="text-lg font-bold mb-6">{tSP("reglages.linksTitle")}</h3>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Facebook className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="https://facebook.com/..."
+                className="flex-1"
+                value={facebookUrl}
+                onChange={(e) => setFacebookUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Instagram className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="https://instagram.com/..."
+                className="flex-1"
+                value={instagramUrl}
+                onChange={(e) => setInstagramUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <TikTokIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="https://tiktok.com/@..."
+                className="flex-1"
+                value={tiktokUrl}
+                onChange={(e) => setTiktokUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Youtube className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="https://youtube.com/@..."
+                className="flex-1"
+                value={youtubeUrl}
+                onChange={(e) => setYoutubeUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Linkedin className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="https://linkedin.com/in/..."
+                className="flex-1"
+                value={linkedinUrl}
+                onChange={(e) => setLinkedinUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <PinterestIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="https://pinterest.com/..."
+                className="flex-1"
+                value={pinterestUrl}
+                onChange={(e) => setPinterestUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <AtSign className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="https://threads.net/@..."
+                className="flex-1"
+                value={threadsUrl}
+                onChange={(e) => setThreadsUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Globe className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+              <Input
+                placeholder="https://monsite.com"
+                className="flex-1"
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+
+            {/* Custom links */}
+            {customLinks.map((link, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <LinkIcon className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                <Input
+                  placeholder="Label"
+                  className="w-28 sm:w-36 flex-shrink-0"
+                  value={link.label}
+                  onChange={(e) => {
+                    const copy = [...customLinks];
+                    copy[i] = { ...copy[i], label: e.target.value };
+                    setCustomLinks(copy);
+                  }}
+                  disabled={profileLoading}
+                />
+                <Input
+                  placeholder="https://..."
+                  className="flex-1"
+                  value={link.url}
+                  onChange={(e) => {
+                    const copy = [...customLinks];
+                    copy[i] = { ...copy[i], url: e.target.value };
+                    setCustomLinks(copy);
+                  }}
+                  disabled={profileLoading}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="flex-shrink-0"
+                  onClick={() => setCustomLinks(customLinks.filter((_, j) => j !== i))}
+                  disabled={profileLoading}
+                >
+                  <Trash2 className="w-4 h-4 text-muted-foreground" />
+                </Button>
+              </div>
+            ))}
+
+            {customLinks.length < 10 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
+                onClick={() => setCustomLinks([...customLinks, { label: "", url: "" }])}
+                disabled={profileLoading}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                {tSP("reglages.addLink")}
+              </Button>
+            )}
+          </div>
+
+          <Button variant="outline" className="mt-4" onClick={saveLinks} disabled={!linksDirty || pendingLinks}>
+            <Save className="w-4 h-4 mr-2" />
+            {pendingLinks ? tSP("reglages.saving") : tSP("reglages.save")}
+          </Button>
+        </Card>
+
+        <Card className="p-6">
+          <h3 className="text-lg font-bold mb-4">{tSP("reglages.offersTitle")}</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {tSP("reglages.offersDesc")}
+          </p>
+
+          <div className="space-y-4">
+            {offers.map((offer, idx) => (
+              <div key={idx} className="rounded-lg border bg-muted/20 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-muted-foreground">{tSP("reglages.offerN", { n: idx + 1 })}</span>
+                  <Button variant="ghost" size="icon" onClick={() => removeOffer(idx)} disabled={profileLoading}>
+                    <Trash2 className="w-4 h-4 text-muted-foreground" />
+                  </Button>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">{tSP("reglages.offerName")}</Label>
+                  <Input
+                    placeholder={tSP("reglages.offerNamePlaceholder")}
+                    value={offer.name}
+                    onChange={(e) => updateOffer(idx, "name", e.target.value)}
+                    disabled={profileLoading}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">{tSP("reglages.offerPromise")}</Label>
+                  <Input
+                    placeholder={tSP("reglages.offerPromisePlaceholder")}
+                    value={offer.promise}
+                    onChange={(e) => updateOffer(idx, "promise", e.target.value)}
+                    disabled={profileLoading}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">{tSP("reglages.offerTarget")}</Label>
+                  <Input
+                    placeholder={tSP("reglages.offerTargetPlaceholder")}
+                    value={offer.target}
+                    onChange={(e) => updateOffer(idx, "target", e.target.value)}
+                    disabled={profileLoading}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">{tSP("reglages.offerDesc")}</Label>
+                  <Textarea
+                    placeholder={tSP("reglages.offerDescPlaceholder")}
+                    value={offer.description}
+                    onChange={(e) => updateOffer(idx, "description", e.target.value)}
+                    disabled={profileLoading}
+                    className="min-h-[60px]"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">{tSP("reglages.offerFormat")}</Label>
+                    <Input
+                      placeholder={tSP("reglages.offerFormatPlaceholder")}
+                      value={offer.format}
+                      onChange={(e) => updateOffer(idx, "format", e.target.value)}
+                      disabled={profileLoading}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">{tSP("reglages.offerLink")}</Label>
+                    <Input
+                      placeholder="https://..."
+                      value={offer.link}
+                      onChange={(e) => updateOffer(idx, "link", e.target.value)}
+                      disabled={profileLoading}
+                    />
+                    <div className="text-[11px] text-muted-foreground bg-muted/40 rounded-md p-2.5 mt-1.5 space-y-1">
+                      <p className="font-medium text-foreground/80">{tSP("reglages.offerLinkHintTitle")}</p>
+                      <ul className="list-disc ml-3.5 space-y-0.5">
+                        <li>{tSP("reglages.offerLinkHintSio")}</li>
+                        <li>{tSP("reglages.offerLinkHintStripe")}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pricing tiers */}
+                <div className="space-y-2 pt-2 border-t border-border/50">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-medium">{tSP("reglages.pricingTitle")}</Label>
+                  </div>
+                  {(!offer.pricing || offer.pricing.length === 0) && (
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">{tSP("reglages.offerPrice")}</Label>
+                        <Input
+                          placeholder={tSP("reglages.offerPricePlaceholder")}
+                          value={offer.price}
+                          onChange={(e) => updateOffer(idx, "price", e.target.value)}
+                          disabled={profileLoading}
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">{tSP("reglages.pricingHint")}</p>
+                    </div>
+                  )}
+                  {(offer.pricing || []).map((tier, tierIdx) => (
+                    <div key={tierIdx} className="rounded border bg-background p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">{tSP("reglages.tierN", { n: tierIdx + 1 })}</span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removePricingTier(idx, tierIdx)} disabled={profileLoading}>
+                          <Trash2 className="w-3 h-3 text-muted-foreground" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">{tSP("reglages.tierLabel")}</Label>
+                          <Input
+                            placeholder={tSP("reglages.tierLabelPlaceholder")}
+                            value={tier.label}
+                            onChange={(e) => updatePricingTier(idx, tierIdx, "label", e.target.value)}
+                            disabled={profileLoading}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">{tSP("reglages.tierPrice")}</Label>
+                          <Input
+                            placeholder={tSP("reglages.tierPricePlaceholder")}
+                            value={tier.price}
+                            onChange={(e) => updatePricingTier(idx, tierIdx, "price", e.target.value)}
+                            disabled={profileLoading}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">{tSP("reglages.tierPeriod")}</Label>
+                          <Input
+                            placeholder={tSP("reglages.tierPeriodPlaceholder")}
+                            value={tier.period}
+                            onChange={(e) => updatePricingTier(idx, tierIdx, "period", e.target.value)}
+                            disabled={profileLoading}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">{tSP("reglages.tierDesc")}</Label>
+                        <Input
+                          placeholder={tSP("reglages.tierDescPlaceholder")}
+                          value={tier.description}
+                          onChange={(e) => updatePricingTier(idx, tierIdx, "description", e.target.value)}
+                          disabled={profileLoading}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  <Button variant="ghost" size="sm" onClick={() => addPricingTier(idx)} disabled={profileLoading} className="gap-1 text-xs h-7">
+                    <Plus className="w-3 h-3" />
+                    {tSP("reglages.addTier")}
+                  </Button>
+                </div>
+              </div>
+            ))}
+
+            <Button variant="outline" size="sm" onClick={addOffer} disabled={profileLoading} className="gap-1">
+              <Plus className="w-4 h-4" />
+              {tSP("reglages.addOffer")}
+            </Button>
+          </div>
+
+          <Button variant="outline" className="mt-4" onClick={saveOffers} disabled={!offersDirty || pendingOffers}>
+            <Save className="w-4 h-4 mr-2" />
+            {pendingOffers ? tSP("reglages.saving") : tSP("reglages.saveOffers")}
+          </Button>
+        </Card>
+
+        {/* Generated offers (from AI strategy) */}
+        {(generatedOffers.length > 0 || generatedOffersLoading) && (
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold">{tSP("reglages.generatedOffersTitle")}</h3>
+                <p className="text-sm text-muted-foreground">{tSP("reglages.generatedOffersDesc")}</p>
+              </div>
+              {generatedOffers.length > 0 && (
+                <Button variant="destructive" size="sm" onClick={deleteAllGeneratedOffers} disabled={generatedOffersLoading}>
+                  <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                  {tSP("reglages.deleteAll")}
+                </Button>
+              )}
+            </div>
+
+            {generatedOffersLoading && generatedOffers.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {generatedOffers.map((offer, idx) => (
+                  <div key={idx} className="rounded-lg border bg-muted/20 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-sm">{offer.name || tSP("reglages.untitledOffer")}</span>
+                          {offer.level && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium uppercase">{offer.level}</span>
+                          )}
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 font-medium">{tSP("reglages.generatedBadge")}</span>
+                        </div>
+                        {offer.promise && <p className="text-xs text-muted-foreground mb-1">{offer.promise}</p>}
+                        {(offer.price_min != null || offer.price_max != null) && (
+                          <p className="text-xs text-muted-foreground">
+                            {offer.price_min != null && offer.price_max != null
+                              ? `${offer.price_min}€ – ${offer.price_max}€`
+                              : offer.price_min != null ? `${offer.price_min}€+` : `${offer.price_max}€`}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="shrink-0 text-destructive hover:text-destructive"
+                        onClick={() => deleteGeneratedOffer(idx)}
+                        disabled={deletingGenOffer === idx}
+                      >
+                        {deletingGenOffer === idx ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
+      </TabsContent>
+
+      {/* POSITIONNEMENT */}
+      <TabsContent value="positioning" className="space-y-6">
+        {/* Niche formula */}
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-2">
+            <Target className="w-5 h-5 text-muted-foreground" />
+            <h3 className="text-lg font-bold">{tSP("positioningTab.nicheTitle")}</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-5">
+            {tSP("positioningTab.nicheDesc")}
+          </p>
+
+          <div className="rounded-lg border bg-muted/30 px-4 py-3 mb-5 text-sm font-medium">
+            J&apos;aide les{" "}
+            <span className="font-semibold text-primary">{nicheTarget || "[cible]"}</span>{" "}
+            à{" "}
+            <span className="font-semibold text-primary">{nicheObjective || "[objectif]"}</span>
+            {(nicheMechanism || !nicheTarget) && (
+              <>
+                {" "}grâce à{" "}
+                <span className="font-semibold text-primary">{nicheMechanism || "[mécanisme unique]"}</span>
+              </>
+            )}
+            {(nicheMarker || !nicheTarget) && (
+              <>
+                {" "}en{" "}
+                <span className="font-semibold text-primary">{nicheMarker || "[marqueur temporel]"}</span>
+              </>
+            )}
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">{tSP("positioningTab.cible")}</Label>
+              <Input
+                placeholder={tSP("positioningTab.ciblePlaceholder")}
+                value={nicheTarget}
+                onChange={(e) => setNicheTarget(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">{tSP("positioningTab.objectif")}</Label>
+              <Input
+                placeholder={tSP("positioningTab.objectifPlaceholder")}
+                value={nicheObjective}
+                onChange={(e) => setNicheObjective(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">{tSP("positioningTab.mecanisme")}</Label>
+              <Input
+                placeholder={tSP("positioningTab.mecanismePlaceholder")}
+                value={nicheMechanism}
+                onChange={(e) => setNicheMechanism(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">{tSP("positioningTab.marqueur")}</Label>
+              <Input
+                placeholder={tSP("positioningTab.marqueurPlaceholder")}
+                value={nicheMarker}
+                onChange={(e) => setNicheMarker(e.target.value)}
+                disabled={profileLoading}
+              />
+            </div>
+          </div>
+
+          <Button variant="outline" className="mt-5" onClick={savePositioning} disabled={!positioningDirty || pendingPositioning}>
+            <Save className="w-4 h-4 mr-2" />
+            {pendingPositioning ? tSP("positioningTab.saving") : tSP("positioningTab.save")}
+          </Button>
+
+          <AlertDialog open={showPositioningConfirm} onOpenChange={setShowPositioningConfirm}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{tSP("positioningTab.overwriteTitle")}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {tSP("positioningTab.overwriteDesc")}
+                  <span className="block mt-2 p-2 rounded bg-muted text-xs text-muted-foreground italic">
+                    {initialProfile?.niche}
+                  </span>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{tSP("positioningTab.overwriteCancel")}</AlertDialogCancel>
+                <AlertDialogAction onClick={() => { setShowPositioningConfirm(false); doSavePositioning(); }}>
+                  {tSP("positioningTab.overwriteConfirm")}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </Card>
+
+        {/* Storytelling */}
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-2">
+            <BookOpen className="w-5 h-5 text-muted-foreground" />
+            <h3 className="text-lg font-bold">Ton storytelling</h3>
+          </div>
+          <p className="text-sm text-muted-foreground mb-5">
+            Raconte ton parcours en 6 étapes. Tipote utilisera ton histoire pour personnaliser tes contenus, pages de vente, emails et posts.
+          </p>
+
+          <div className="space-y-5">
+            {/* Step 1 */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">1</span>
+                <Label className="text-sm font-semibold">La situation initiale</Label>
+              </div>
+              <p className="text-xs text-muted-foreground ml-8">
+                Il était une fois… Décris ta vie / ton activité avant le déclic. Le monde &quot;normal&quot; dans lequel tu évoluais.
+              </p>
+              <Textarea
+                value={storySituationInitiale}
+                onChange={(e) => setStorySituationInitiale(e.target.value)}
+                placeholder="Ex: J'étais salarié(e) dans une grande entreprise depuis 8 ans. Je faisais ce qu'on attendait de moi, mais quelque chose manquait…"
+                className="ml-8 resize-y min-h-[80px]"
+                disabled={profileLoading}
+              />
+            </div>
+
+            {/* Step 2 */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">2</span>
+                <Label className="text-sm font-semibold">L&apos;élément déclencheur</Label>
+              </div>
+              <p className="text-xs text-muted-foreground ml-8">
+                Mais un jour… Quel événement a tout changé ? Le moment où l&apos;ordre établi a été perturbé.
+              </p>
+              <Textarea
+                value={storyElementDeclencheur}
+                onChange={(e) => setStoryElementDeclencheur(e.target.value)}
+                placeholder="Ex: Un lundi matin, j'ai reçu un mail de restructuration. C'était le déclic : je ne voulais plus dépendre d'une décision qui n'était pas la mienne…"
+                className="ml-8 resize-y min-h-[80px]"
+                disabled={profileLoading}
+              />
+            </div>
+
+            {/* Step 3 */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold">3</span>
+                <Label className="text-sm font-semibold">A cause de ça…</Label>
+              </div>
+              <p className="text-xs text-muted-foreground ml-8">
+                Les galères, les doutes, les échecs. La situation se dégrade avant de s&apos;améliorer.
+              </p>
+              <Textarea
+                value={storyPeripeties}
+                onChange={(e) => setStoryPeripeties(e.target.value)}
+                placeholder="Ex: J'ai lancé mon activité sans plan, perdu mes premières économies, eu des mois à 0€ de CA. Ma famille doutait, je doutais aussi…"
+                className="ml-8 resize-y min-h-[80px]"
+                disabled={profileLoading}
+              />
+            </div>
+
+            {/* Step 4 */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">4</span>
+                <Label className="text-sm font-semibold">Jusqu&apos;au jour où…</Label>
+              </div>
+              <p className="text-xs text-muted-foreground ml-8">
+                Le pire moment. Tout semble perdu pour le héros. Mais une solution se dessine.
+              </p>
+              <Textarea
+                value={storyMomentCritique}
+                onChange={(e) => setStoryMomentCritique(e.target.value)}
+                placeholder="Ex: J'étais à deux doigts de tout arrêter. Et puis j'ai découvert une méthode / rencontré un mentor / compris quelque chose de fondamental…"
+                className="ml-8 resize-y min-h-[80px]"
+                disabled={profileLoading}
+              />
+            </div>
+
+            {/* Step 5 */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">5</span>
+                <Label className="text-sm font-semibold">Tout s&apos;arrange…</Label>
+              </div>
+              <p className="text-xs text-muted-foreground ml-8">
+                La résolution. Ta situation s&apos;améliore progressivement grâce à ce que tu as découvert.
+              </p>
+              <Textarea
+                value={storyResolution}
+                onChange={(e) => setStoryResolution(e.target.value)}
+                placeholder="Ex: En appliquant cette approche, j'ai signé mes premiers clients, puis 10, puis 50. Mon CA a atteint X€/mois en Y mois…"
+                className="ml-8 resize-y min-h-[80px]"
+                disabled={profileLoading}
+              />
+            </div>
+
+            {/* Step 6 */}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">6</span>
+                <Label className="text-sm font-semibold">Et depuis ce jour…</Label>
+              </div>
+              <p className="text-xs text-muted-foreground ml-8">
+                Le tableau final positif. Ta vie aujourd&apos;hui, meilleure qu&apos;avant. Et pourquoi tu aides les autres maintenant.
+              </p>
+              <Textarea
+                value={storySituationFinale}
+                onChange={(e) => setStorySituationFinale(e.target.value)}
+                placeholder="Ex: Aujourd'hui je vis de ma passion, j'ai accompagné +200 personnes et j'aide les [cible] à [objectif] sans [obstacle]. Mon objectif : …"
+                className="ml-8 resize-y min-h-[80px]"
+                disabled={profileLoading}
+              />
+            </div>
+          </div>
+
+          <Button variant="outline" className="mt-5" onClick={savePositioning} disabled={!positioningDirty || pendingPositioning}>
+            <Save className="w-4 h-4 mr-2" />
+            {pendingPositioning ? tSP("positioningTab.saving") : tSP("positioningTab.save")}
+          </Button>
+        </Card>
+
+        {/* Persona */}
+        <Card className="p-6">
+          <h3 className="text-lg font-bold mb-2">{tSP("positioningTab.personaTitle")}</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {tSP("positioningTab.personaDesc")}
+          </p>
+
+          {/* Sub-tabs for persona views */}
+          <div className="flex gap-1 mb-4 border-b">
+            <button
+              onClick={() => setPersonaDetailTab("summary")}
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                personaDetailTab === "summary"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Résumé
+            </button>
+            <button
+              onClick={() => setPersonaDetailTab("detailed")}
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                personaDetailTab === "detailed"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Persona détaillé
+            </button>
+            <button
+              onClick={() => setPersonaDetailTab("synthesis")}
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                personaDetailTab === "synthesis"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Synthèse narrative
+            </button>
+          </div>
+
+          {personaDetailTab === "summary" && (
+            <div className="space-y-3">
+              {summaryEditMode ? (
+                <div className="space-y-2">
+                  <Textarea
+                    value={mission}
+                    onChange={(e) => setMission(e.target.value)}
+                    rows={12}
+                    className="resize-y min-h-[300px] font-mono text-sm"
+                    disabled={profileLoading}
+                    placeholder={tSP("positioningTab.personaPlaceholder")}
+                    autoFocus
+                  />
+                  <div className="flex justify-end">
+                    <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setSummaryEditMode(false)}>
+                      <Eye className="w-3.5 h-3.5" />
+                      Aperçu
+                    </Button>
+                  </div>
+                </div>
+              ) : mission ? (
+                <div
+                  className="rounded-lg border bg-background cursor-text hover:ring-2 hover:ring-primary/20 transition-all"
+                  onClick={() => setSummaryEditMode(true)}
+                  title="Cliquer pour modifier"
+                >
+                  <AIContent
+                    content={formatPersonaSummary(mission)}
+                    mode="markdown"
+                    scroll
+                    maxHeight="70vh"
+                    className="p-5"
+                  />
+                </div>
+              ) : (
+                <div className="p-8 text-center text-muted-foreground rounded-lg border bg-background">
+                  <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm font-medium mb-1">Pas encore de résumé persona</p>
+                  <p className="text-xs">Clique sur &quot;Enrichir avec l&apos;IA&quot; pour générer un résumé de ton client idéal.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {personaDetailTab === "detailed" && (
+            <div className="rounded-lg border bg-background">
+              {personaStale && personaDetailedMarkdown && (
+                <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 rounded-t-lg">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                      Le résumé persona a été modifié depuis le dernier enrichissement
+                    </p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                      Clique sur &quot;Enrichir avec l&apos;IA&quot; pour mettre à jour le persona détaillé avec tes modifications.
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" className="shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900" onClick={enrichPersona} disabled={enriching}>
+                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                    Ré-enrichir
+                  </Button>
+                </div>
+              )}
+              {personaDetailedMarkdown !== null ? (
+                detailedEditMode ? (
+                  <div className="p-4 space-y-2">
+                    <textarea
+                      value={personaDetailedMarkdown}
+                      onChange={(e) => setPersonaDetailedMarkdown(e.target.value)}
+                      className="w-full min-h-[300px] max-h-[70vh] rounded-md border border-input bg-background px-3 py-2 text-sm resize-y font-mono"
+                      placeholder="Persona détaillé..."
+                      autoFocus
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setDetailedEditMode(false)}>
+                        <Eye className="w-3.5 h-3.5" />
+                        Aperçu
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={!personaMarkdownDirty || savingPersonaMarkdown}>
+                        <Save className="w-4 h-4 mr-2" />
+                        {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div
+                      className="cursor-text hover:ring-2 hover:ring-primary/20 transition-all rounded-lg"
+                      onClick={() => setDetailedEditMode(true)}
+                      title="Cliquer pour modifier"
+                    >
+                      <AIContent
+                        content={personaDetailedMarkdown}
+                        mode="markdown"
+                        scroll
+                        maxHeight="70vh"
+                        className="p-5"
+                      />
+                    </div>
+                    {personaMarkdownDirty && (
+                      <div className="flex justify-end px-4 pb-3">
+                        <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={savingPersonaMarkdown}>
+                          <Save className="w-4 h-4 mr-2" />
+                          {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )
+              ) : (
+                <div className="p-8 text-center text-muted-foreground">
+                  <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm font-medium mb-1">Pas encore de persona détaillé</p>
+                  <p className="text-xs">Clique sur &quot;Enrichir avec l&apos;IA&quot; pour générer un profil persona ultra-détaillé de ton client idéal.</p>
+                </div>
+              )}
+              {competitorInsightsMarkdown && (
+                <>
+                  <hr className="border-border" />
+                  <div className="p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-base font-bold">Mécanisme unique &amp; analyse concurrentielle</h4>
+                      {!insightsEditMode && (
+                        <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground" onClick={() => setInsightsEditMode(true)}>
+                          <Pencil className="w-3.5 h-3.5" />
+                          Modifier
+                        </Button>
+                      )}
+                    </div>
+                    {insightsEditMode ? (
+                      <div className="space-y-2">
+                        <textarea
+                          value={competitorInsightsMarkdown}
+                          onChange={(e) => setCompetitorInsightsMarkdown(e.target.value)}
+                          className="w-full min-h-[200px] max-h-[70vh] rounded-md border border-input bg-background px-3 py-2 text-sm resize-y font-mono"
+                          placeholder="Mécanisme unique & analyse concurrentielle..."
+                          autoFocus
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setInsightsEditMode(false)}>
+                            <Eye className="w-3.5 h-3.5" />
+                            Aperçu
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={!personaMarkdownDirty || savingPersonaMarkdown}>
+                            <Save className="w-4 h-4 mr-2" />
+                            {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="cursor-text hover:ring-2 hover:ring-primary/20 transition-all rounded-lg"
+                        onClick={() => setInsightsEditMode(true)}
+                        title="Cliquer pour modifier"
+                      >
+                        <AIContent
+                          content={competitorInsightsMarkdown}
+                          mode="markdown"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {personaDetailTab === "synthesis" && (
+            <div className="rounded-lg border bg-background">
+              {personaStale && narrativeSynthesisMarkdown && (
+                <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 rounded-t-lg">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                      Le résumé persona a été modifié depuis le dernier enrichissement
+                    </p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                      Clique sur &quot;Enrichir avec l&apos;IA&quot; pour mettre à jour la synthèse.
+                    </p>
+                  </div>
+                </div>
+              )}
+              {narrativeSynthesisMarkdown !== null ? (
+                synthesisEditMode ? (
+                  <div className="p-4 space-y-2">
+                    <textarea
+                      value={narrativeSynthesisMarkdown}
+                      onChange={(e) => setNarrativeSynthesisMarkdown(e.target.value)}
+                      className="w-full min-h-[300px] max-h-[70vh] rounded-md border border-input bg-background px-3 py-2 text-sm resize-y font-mono"
+                      placeholder="Synthèse narrative..."
+                      autoFocus
+                    />
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => setSynthesisEditMode(false)}>
+                        <Eye className="w-3.5 h-3.5" />
+                        Aperçu
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={!personaMarkdownDirty || savingPersonaMarkdown}>
+                        <Save className="w-4 h-4 mr-2" />
+                        {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div
+                      className="cursor-text hover:ring-2 hover:ring-primary/20 transition-all rounded-lg"
+                      onClick={() => setSynthesisEditMode(true)}
+                      title="Cliquer pour modifier"
+                    >
+                      <AIContent
+                        content={narrativeSynthesisMarkdown}
+                        mode="markdown"
+                        scroll
+                        maxHeight="70vh"
+                        className="p-5"
+                      />
+                    </div>
+                    {personaMarkdownDirty && (
+                      <div className="flex justify-end px-4 pb-3">
+                        <Button variant="outline" size="sm" onClick={savePersonaMarkdown} disabled={savingPersonaMarkdown}>
+                          <Save className="w-4 h-4 mr-2" />
+                          {savingPersonaMarkdown ? "Enregistrement…" : "Enregistrer"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )
+              ) : (
+                <div className="p-8 text-center text-muted-foreground">
+                  <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm font-medium mb-1">Pas encore de synthèse narrative</p>
+                  <p className="text-xs">Clique sur &quot;Enrichir avec l&apos;IA&quot; pour générer une synthèse complète.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3 mt-4">
+            <Button variant="outline" onClick={savePositioning} disabled={!positioningDirty || pendingPositioning}>
+              <Save className="w-4 h-4 mr-2" />
+              {pendingPositioning ? tSP("positioningTab.saving") : tSP("positioningTab.save")}
+            </Button>
+            <Button variant="outline" onClick={enrichPersona} disabled={enriching}>
+              {enriching ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Sparkles className="w-4 h-4 mr-2" />
+              )}
+              {enriching ? tSP("positioningTab.enriching") : tSP("positioningTab.enrich")}
+            </Button>
+          </div>
+
+          {/* AI generating overlay dialog */}
+          <Dialog open={enriching}>
+            <DialogContent className="sm:max-w-md [&>button]:hidden" onInteractOutside={(e) => e.preventDefault()}>
+              <AIGeneratingOverlay />
+            </DialogContent>
+          </Dialog>
+          <p className="text-xs text-muted-foreground mt-2">
+            {tSP("positioningTab.enrichDesc")}
+          </p>
+        </Card>
+
+        {/* Analyse concurrentielle */}
+        <CompetitorAnalysisSection />
+      </TabsContent>
+
+      {/* BRANDING */}
+      <TabsContent value="branding" className="space-y-6">
+        <BrandingSettings
+          initial={initialProfile as BrandingData | null}
+          loading={profileLoading}
+          onSaved={(data) => {
+            setInitialProfile((prev) => ({ ...prev, ...data }));
+          }}
+        />
+      </TabsContent>
+
+      {/* SOURCES DE CONTEXTE */}
+      <TabsContent value="sources" className="space-y-6">
+        <ProjectSourcesSection />
+      </TabsContent>
+
+{/* ABONNEMENT */}
+      <TabsContent value="pricing" className="space-y-6">
+        <BillingSection email={userEmail} />
+      </TabsContent>
+    </Tabs>
+  );
+}

@@ -1,0 +1,1105 @@
+// components/dashboard/TodayLovable.tsx
+// Dashboard "Mode Pilote" — le dashboard choisit pour l'utilisateur et le coache.
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
+
+import Link from "next/link";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
+import { PageHeader } from "@/components/PageHeader";
+import { PageBanner } from "@/components/PageBanner";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+
+import {
+  ArrowRight,
+  ChevronRight,
+  BarChart3,
+  TrendingUp,
+  Target,
+  Lightbulb,
+  CalendarClock,
+} from "lucide-react";
+
+import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
+
+type AnyRecord = Record<string, unknown>;
+
+type StrategicObjective = {
+  phaseKey: string;    // "startup" | "foundations" | "growth" | "scale"
+  phaseNumber: number; // 0, 1, 2, 3
+  focus: string;       // plan_90_days.focus (raw, may be empty)
+  ctaLabelKey: string; // translation key under today.ctas
+  ctaHref: string;     // "/create"
+};
+
+type PositiveMessage = {
+  format: "none" | "one" | "two" | "many";
+  actionKeys: string[];  // e.g. ["persona", "offre"]
+  otherLabel?: string;   // for "autre" category
+};
+
+type CoachingInsight = {
+  positive: PositiveMessage;
+  recommendationKey: string; // key under today.coaching
+  ctaLabelKey: string;       // key under today.ctas
+  ctaHref: string;
+};
+
+type TaskCategory = {
+  key: string;
+  label: string;
+  total: number;
+  done: number;
+};
+
+type ProgressionData = {
+  hasMetrics: boolean;
+  revenue: number | null;
+  salesCount: number | null;
+  newSubscribers: number | null;
+  conversionRate: number | null;
+  contentCounts: Record<string, number>;
+  totalContents: number;
+  // mois précédent pour calcul de tendance
+  prevRevenue: number | null;
+  prevNewSubscribers: number | null;
+  prevConversionRate: number | null;
+  // revenus vs objectif
+  revenueGoal: number | null;
+  currentMonthRevenue: number;
+};
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+function toStr(v: unknown): string {
+  if (typeof v === "string") return v;
+  if (typeof v === "number") return String(v);
+  return "";
+}
+
+function asStringArray(v: unknown): string[] {
+  if (Array.isArray(v)) return v.map(toStr).filter(Boolean);
+  return [];
+}
+
+/**
+ * Extract the first task title from plan_json when project_tasks is empty.
+ * This ensures the "Prochaine étape" always shows something actionable.
+ */
+function extractFirstTaskFromPlan(planJson: AnyRecord): string | null {
+  // Try tasks_by_timeframe (new schema)
+  const plan90 =
+    (planJson.plan_90_days as AnyRecord) ??
+    (planJson.plan90 as AnyRecord) ??
+    (planJson.plan_90 as AnyRecord);
+
+  const tbf =
+    (plan90 && typeof plan90 === "object" ? (plan90 as AnyRecord).tasks_by_timeframe : null) ??
+    planJson.tasks_by_timeframe;
+
+  if (tbf && typeof tbf === "object") {
+    for (const v of Object.values(tbf as Record<string, unknown>)) {
+      if (!Array.isArray(v)) continue;
+      for (const item of v) {
+        if (!item || typeof item !== "object") continue;
+        const title = (item as AnyRecord).title ?? (item as AnyRecord).task ?? (item as AnyRecord).name;
+        if (typeof title === "string" && title.trim()) return title.trim();
+      }
+    }
+  }
+
+  // Try action_plan_30_90 (legacy)
+  const ap = planJson.action_plan_30_90;
+  if (ap && typeof ap === "object") {
+    for (const [k, v] of Object.entries(ap as Record<string, unknown>)) {
+      if (!k.startsWith("weeks_") || !v || typeof v !== "object") continue;
+      const actions = (v as AnyRecord).actions;
+      if (Array.isArray(actions)) {
+        for (const a of actions) {
+          if (typeof a === "string" && a.trim()) return a.trim();
+        }
+      }
+    }
+  }
+
+  // Try tasks[] (legacy simple)
+  if (Array.isArray(planJson.tasks)) {
+    for (const item of planJson.tasks) {
+      if (!item || typeof item !== "object") continue;
+      const title = (item as AnyRecord).title ?? (item as AnyRecord).task ?? (item as AnyRecord).name;
+      if (typeof title === "string" && title.trim()) return title.trim();
+    }
+  }
+
+  return null;
+}
+
+function parseDate(v: unknown): Date | null {
+  const s = toStr(v).trim();
+  if (!s) return null;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function isDoneStatus(s: string): boolean {
+  const low = (s || "").toLowerCase().trim();
+  return low === "done" || low === "completed" || low === "fait" || low === "terminé" || low === "termine";
+}
+
+function normalizeContentType(row: any): string {
+  return toStr(row?.type ?? row?.content_type ?? "").trim().toLowerCase();
+}
+
+function isSchemaError(msg: string) {
+  const m = (msg || "").toLowerCase();
+  return m.includes("column") || m.includes("does not exist") || m.includes("schema") || m.includes("relation");
+}
+
+function ucFirst(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+type ContentSchemaHint = { hasUserId?: boolean; selectIndex?: number };
+
+function loadContentSchemaHint(userId: string): ContentSchemaHint | null {
+  try {
+    const raw = localStorage.getItem(`tipote_content_schema_hint:${userId}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function saveContentSchemaHint(userId: string, hint: ContentSchemaHint) {
+  try { localStorage.setItem(`tipote_content_schema_hint:${userId}`, JSON.stringify(hint)); } catch {}
+}
+
+/* ------------------------------------------------------------------ */
+/*  Task category detection                                            */
+/* ------------------------------------------------------------------ */
+
+type CategoryDef = { key: string; label: string; keywords: string[] };
+
+const TASK_CATEGORIES: CategoryDef[] = [
+  {
+    key: "persona",
+    label: "persona",
+    keywords: ["persona", "avatar", "client idéal", "client ideal", "cible", "portrait"],
+  },
+  {
+    key: "offre",
+    label: "offre",
+    keywords: ["offre", "prix", "tarif", "positionnement", "promesse", "valeur", "proposition", "pricing", "packaging"],
+  },
+  {
+    key: "lead_magnet",
+    label: "lead magnet",
+    keywords: ["lead magnet", "aimant", "capture", "quiz", "checklist", "freebie", "gratuit", "opt-in", "optin"],
+  },
+  {
+    key: "page_vente",
+    label: "page de vente",
+    keywords: ["page de vente", "landing", "tunnel", "funnel", "page de capture", "sales page"],
+  },
+  {
+    key: "email",
+    label: "séquence email",
+    keywords: ["email", "séquence", "sequence", "newsletter", "bienvenue", "automation", "autorépondeur"],
+  },
+  {
+    key: "contenu",
+    label: "contenu",
+    keywords: ["post", "contenu", "article", "vidéo", "video", "blog", "réseaux", "publier", "rédiger", "planifier", "linkedin", "instagram", "tiktok", "facebook", "twitter", "reel", "story"],
+  },
+];
+
+function categorizeTask(title: string): string | null {
+  const t = title.toLowerCase();
+  for (const cat of TASK_CATEGORIES) {
+    for (const kw of cat.keywords) {
+      if (t.includes(kw)) return cat.key;
+    }
+  }
+  return null;
+}
+
+function buildTaskCategories(tasks: AnyRecord[]): TaskCategory[] {
+  const counts: Record<string, { total: number; done: number }> = {};
+
+  for (const cat of TASK_CATEGORIES) {
+    counts[cat.key] = { total: 0, done: 0 };
+  }
+  counts["autre"] = { total: 0, done: 0 };
+
+  for (const t of tasks) {
+    const title = toStr(t.title ?? t.task ?? t.name).trim();
+    const status = toStr(t.status ?? t.state ?? t.statut).trim();
+    const catKey = categorizeTask(title) || "autre";
+    counts[catKey].total++;
+    if (isDoneStatus(status)) counts[catKey].done++;
+  }
+
+  return [...TASK_CATEGORIES, { key: "autre", label: "autre", keywords: [] }]
+    .map((cat) => ({
+      key: cat.key,
+      label: cat.label,
+      total: counts[cat.key].total,
+      done: counts[cat.key].done,
+    }))
+    .filter((c) => c.total > 0);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Coaching engine                                                    */
+/* ------------------------------------------------------------------ */
+
+type CoachingReco = {
+  recommendationKey: string;
+  ctaLabelKey: string;
+  ctaHref: string;
+};
+
+const COACHING_RECOS: Record<string, CoachingReco> = {
+  persona: { recommendationKey: "persona", ctaLabelKey: "seeStrategy", ctaHref: "/strategy" },
+  offre: { recommendationKey: "offre", ctaLabelKey: "seeStrategy", ctaHref: "/strategy" },
+  lead_magnet: { recommendationKey: "lead_magnet", ctaLabelKey: "createContent", ctaHref: "/create" },
+  page_vente: { recommendationKey: "page_vente", ctaLabelKey: "seeStrategy", ctaHref: "/strategy" },
+  email: { recommendationKey: "email", ctaLabelKey: "createContent", ctaHref: "/create" },
+  contenu: { recommendationKey: "contenu", ctaLabelKey: "createContent", ctaHref: "/create" },
+};
+
+// Priority order for recommendations
+const RECO_PRIORITY = ["persona", "offre", "lead_magnet", "page_vente", "email", "contenu"];
+
+function buildPositiveData(completedCategories: TaskCategory[]): PositiveMessage {
+  if (completedCategories.length === 0) return { format: "none", actionKeys: [] };
+
+  const slice = completedCategories.slice(0, 3);
+  const actionKeys = slice.map((c) => c.key);
+  const otherLabel = slice.find((c) => c.key === "autre")?.label;
+
+  if (slice.length === 1) return { format: "one", actionKeys, otherLabel };
+  if (slice.length === 2) return { format: "two", actionKeys, otherLabel };
+  return { format: "many", actionKeys, otherLabel };
+}
+
+function buildCoachingInsight(categories: TaskCategory[], hasStrategy: boolean): CoachingInsight {
+  if (!hasStrategy) {
+    return {
+      positive: { format: "none", actionKeys: [] },
+      recommendationKey: "noStrategy",
+      ctaLabelKey: "generateStrategy",
+      ctaHref: "/strategy",
+    };
+  }
+
+  // Find completed and incomplete categories
+  const completed = categories.filter((c) => c.total > 0 && c.done >= c.total);
+  const incomplete = categories.filter((c) => c.total > 0 && c.done < c.total);
+  const positive = buildPositiveData(completed);
+
+  // Find highest-priority incomplete category
+  for (const key of RECO_PRIORITY) {
+    const cat = incomplete.find((c) => c.key === key);
+    if (cat) {
+      const reco = COACHING_RECOS[key];
+      if (reco) {
+        return {
+          positive,
+          recommendationKey: reco.recommendationKey,
+          ctaLabelKey: reco.ctaLabelKey,
+          ctaHref: reco.ctaHref,
+        };
+      }
+    }
+  }
+
+  // All tracked categories are done, or only "autre" remains
+  if (incomplete.length > 0) {
+    return {
+      positive,
+      recommendationKey: "autre",
+      ctaLabelKey: "seeTasks",
+      ctaHref: "/tasks",
+    };
+  }
+
+  // No tasks exist at all — don't claim "all done", encourage the user to start
+  const totalTasks = categories.reduce((sum, c) => sum + c.total, 0);
+  if (totalTasks === 0) {
+    return {
+      positive: { format: "none", actionKeys: [] },
+      recommendationKey: "noTasks",
+      ctaLabelKey: "seeStrategy",
+      ctaHref: "/strategy",
+    };
+  }
+
+  // Everything genuinely done
+  return {
+    positive,
+    recommendationKey: "allDone",
+    ctaLabelKey: "createContent",
+    ctaHref: "/create",
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Strategic objective from plan_json                                 */
+/* ------------------------------------------------------------------ */
+
+function buildStrategicObjective(
+  planJson: AnyRecord | null,
+  planCreatedAt: string | null,
+  categories: TaskCategory[],
+  hasStrategy: boolean,
+): StrategicObjective {
+  if (!hasStrategy || !planJson) {
+    return {
+      phaseKey: "startup",
+      phaseNumber: 0,
+      focus: "",  // component will use today.objective.strategyFocus
+      ctaLabelKey: "generateStrategy",
+      ctaHref: "/strategy",
+    };
+  }
+
+  // Determine current phase based on task completion (not time elapsed)
+  // Phase progression: foundations → growth → scale
+  const totalDone = categories.reduce((s, c) => s + c.done, 0);
+  const totalAll = categories.reduce((s, c) => s + c.total, 0);
+  const completionRatio = totalAll > 0 ? totalDone / totalAll : 0;
+
+  let phaseNumber = 1;
+  let phaseKey = "foundations";
+  if (completionRatio > 0.66) { phaseNumber = 3; phaseKey = "scale"; }
+  else if (completionRatio > 0.33) { phaseNumber = 2; phaseKey = "growth"; }
+
+  // Get focus from plan
+  const plan90 = (planJson.plan_90_days ?? planJson.plan90 ?? planJson.plan_90) as AnyRecord | null;
+  const focusRaw = toStr(plan90?.focus ?? planJson.focus ?? "");
+  const focus = focusRaw; // if empty, component falls back to phase label
+
+  // Smart CTA based on what's incomplete
+  const incomplete = categories.filter((c) => c.total > 0 && c.done < c.total);
+  const hasIncompleteContent = incomplete.some((c) => c.key === "contenu");
+  const hasIncompleteOffer = incomplete.some((c) => c.key === "offre" || c.key === "lead_magnet" || c.key === "page_vente");
+
+  let ctaLabelKey = "seeStrategy";
+  let ctaHref = "/strategy";
+
+  if (hasIncompleteContent && !hasIncompleteOffer) {
+    ctaLabelKey = "createContents";
+    ctaHref = "/create";
+  } else if (incomplete.length === 0) {
+    ctaLabelKey = "createContent";
+    ctaHref = "/create";
+  }
+
+  return { phaseKey, phaseNumber, focus, ctaLabelKey, ctaHref };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Progression summary                                               */
+/* ------------------------------------------------------------------ */
+
+type ProgressionLine = { label: string; value: string; trend?: "up" | "down" | "stable" };
+
+function buildProgressionSummary(p: ProgressionData): { headline: string | null; lines: ProgressionLine[] } | null {
+  if (!p.hasMetrics) return null;
+
+  const hasPrev =
+    p.prevRevenue !== null || p.prevNewSubscribers !== null || p.prevConversionRate !== null;
+
+  const lines: ProgressionLine[] = [];
+  let hasPositive = false;
+  let hasNegative = false;
+
+  if (p.revenue !== null) {
+    if (hasPrev && p.prevRevenue !== null && p.prevRevenue > 0) {
+      const pct = Math.round(((p.revenue - p.prevRevenue) / p.prevRevenue) * 100);
+      if (pct >= 5) { lines.push({ label: "CA", value: `${p.revenue.toLocaleString("fr-FR")}€ (+${pct}%)`, trend: "up" }); hasPositive = true; }
+      else if (pct <= -5) { lines.push({ label: "CA", value: `${p.revenue.toLocaleString("fr-FR")}€ (${pct}%)`, trend: "down" }); hasNegative = true; }
+      else lines.push({ label: "CA", value: `${p.revenue.toLocaleString("fr-FR")}€`, trend: "stable" });
+    } else {
+      lines.push({ label: "CA", value: `${p.revenue.toLocaleString("fr-FR")}€` });
+    }
+  }
+
+  if (p.newSubscribers !== null) {
+    if (hasPrev && p.prevNewSubscribers !== null && p.prevNewSubscribers > 0) {
+      const pct = Math.round(((p.newSubscribers - p.prevNewSubscribers) / p.prevNewSubscribers) * 100);
+      if (pct >= 10) { lines.push({ label: "Nouveaux inscrits", value: `${p.newSubscribers} (+${pct}%)`, trend: "up" }); hasPositive = true; }
+      else if (pct <= -10) { lines.push({ label: "Nouveaux inscrits", value: `${p.newSubscribers} (${pct}%)`, trend: "down" }); hasNegative = true; }
+      else lines.push({ label: "Nouveaux inscrits", value: `${p.newSubscribers}`, trend: "stable" });
+    } else {
+      lines.push({ label: "Nouveaux inscrits", value: `${p.newSubscribers}` });
+    }
+  }
+
+  if (p.conversionRate !== null) {
+    if (hasPrev && p.prevConversionRate !== null) {
+      const diff = +(p.conversionRate - p.prevConversionRate).toFixed(1);
+      if (diff >= 0.5) { lines.push({ label: "Conversion", value: `${p.conversionRate.toFixed(1)}% (+${diff}pts)`, trend: "up" }); hasPositive = true; }
+      else if (diff <= -0.5) { lines.push({ label: "Conversion", value: `${p.conversionRate.toFixed(1)}% (${diff}pts)`, trend: "down" }); hasNegative = true; }
+      else lines.push({ label: "Conversion", value: `${p.conversionRate.toFixed(1)}%`, trend: "stable" });
+    } else {
+      lines.push({ label: "Conversion", value: `${p.conversionRate.toFixed(1)}%` });
+    }
+  }
+
+  let headline: string | null = null;
+  if (hasPositive && !hasNegative) headline = "Super dynamique ce mois-ci !";
+  else if (hasNegative && !hasPositive) headline = "Attention, quelques indicateurs baissent.";
+  else if (hasNegative && hasPositive) headline = "Résultats mitigés ce mois-ci.";
+
+  return { headline, lines };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Week label                                                         */
+/* ------------------------------------------------------------------ */
+
+const INTL_LOCALES: Record<string, string> = {
+  fr: "fr-FR", en: "en-US", es: "es-ES", it: "it-IT", ar: "ar-SA",
+};
+
+function weekLabel(locale = "fr-FR"): string {
+  const now = new Date();
+  const day = now.getDay();
+  const diffMon = day === 0 ? -6 : 1 - day;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diffMon);
+  monday.setHours(0, 0, 0, 0);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  const fmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" });
+  return `${fmt.format(monday)} – ${fmt.format(sunday)}`;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main component                                                     */
+/* ------------------------------------------------------------------ */
+
+export default function TodayLovable() {
+  const t = useTranslations("today");
+  const locale = useLocale();
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+
+  const [objective, setObjective] = useState<StrategicObjective | null>(null);
+  const [coaching, setCoaching] = useState<CoachingInsight | null>(null);
+  const [doneCount, setDoneCount] = useState(0);
+  const [encouragementText, setEncouragementText] = useState("");
+  const [nextTask, setNextTask] = useState<string | null>(null);
+  const [scheduledToday, setScheduledToday] = useState<{ title: string; channel: string; time: string | null }[]>([]);
+  const [progression, setProgression] = useState<ProgressionData>({
+    hasMetrics: false,
+    revenue: null,
+    salesCount: null,
+    newSubscribers: null,
+    conversionRate: null,
+    contentCounts: {},
+    totalContents: 0,
+    prevRevenue: null,
+    prevNewSubscribers: null,
+    prevConversionRate: null,
+    revenueGoal: null,
+    currentMonthRevenue: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  const currentWeekLabel = useMemo(() => weekLabel(INTL_LOCALES[locale] ?? "fr-FR"), [locale]);
+
+  // Fetch AI-generated encouragement (cached client-side for 30min)
+  const fetchEncouragement = useCallback(async (currentDoneCount: number) => {
+    if (currentDoneCount === 0) { setEncouragementText(""); return; }
+    // Check cache
+    const cacheKey = "tipote_encouragement";
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const { text, doneCount: cachedDone, ts } = JSON.parse(cached);
+        const age = Date.now() - ts;
+        // Use cache if <30min old AND done count hasn't changed
+        if (age < 30 * 60 * 1000 && cachedDone === currentDoneCount && text) {
+          setEncouragementText(text);
+          return;
+        }
+      }
+    } catch { /* ignore */ }
+
+    try {
+      const res = await fetch("/api/coach/encouragement");
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json.ok && json.text) {
+        setEncouragementText(json.text);
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({
+            text: json.text,
+            doneCount: json.doneCount ?? currentDoneCount,
+            ts: Date.now(),
+          }));
+        } catch { /* ignore */ }
+      }
+    } catch { /* fail-open */ }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    async function load() {
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        if (authError || !user?.id) return;
+        const userId = user.id;
+        if (cancelled) return;
+
+        // ------ Fetch plan ------
+        const planResRaw = await supabase
+          .from("business_plan")
+          .select("plan_json, created_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        const planRes = {
+          data: planResRaw.data?.[0] ?? null,
+          error: planResRaw.error,
+        };
+
+        // ------ Fetch tasks via API (uses supabaseAdmin to bypass RLS) ------
+        let tasks: AnyRecord[] = [];
+        const fetchTasks = async () => {
+          try {
+            const res = await fetch("/api/tasks");
+            if (res.ok) {
+              const json = await res.json();
+              if (json.ok && Array.isArray(json.tasks)) {
+                tasks = json.tasks as AnyRecord[];
+              }
+            }
+          } catch {
+            // fail-open
+          }
+        };
+        await fetchTasks();
+
+        // If no tasks in DB but plan_json exists, trigger sync and re-fetch once
+        if (tasks.length === 0 && !planRes.error && planRes.data?.plan_json) {
+          try {
+            await fetch("/api/tasks/sync", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({}),
+            });
+            await fetchTasks();
+          } catch {
+            // fail-open
+          }
+        }
+
+        // ------ Fetch metrics (may not exist) — 2 mois pour calculer les tendances ------
+        let metricsRows: AnyRecord[] = [];
+        try {
+          const metricsRes = await supabase
+            .from("metrics")
+            .select("revenue,sales_count,new_subscribers,conversion_rate")
+            .eq("user_id", userId)
+            .order("month", { ascending: false })
+            .limit(2);
+          if (!metricsRes.error && Array.isArray(metricsRes.data)) {
+            metricsRows = metricsRes.data as AnyRecord[];
+          }
+        } catch {
+          // fail-open — table may not exist
+        }
+
+        // ------ Fetch content rows (with schema fallback) ------
+        const contentAttempts = [
+          { select: "id,title,status,type,user_id", orderCol: "created_at" },
+          { select: "id,titre,statut,type,user_id", orderCol: "created_at" },
+          { select: "id,title,status,type", orderCol: "created_at" },
+          { select: "id,titre,statut,type", orderCol: "created_at" },
+        ];
+
+        const hint = loadContentSchemaHint(userId) || {};
+        let contentRows: AnyRecord[] = [];
+
+        const startIdx = typeof hint.selectIndex === "number" ? hint.selectIndex : 0;
+        for (let offset = 0; offset < contentAttempts.length; offset++) {
+          const i = (startIdx + offset) % contentAttempts.length;
+          const a = contentAttempts[i];
+          const hasUid = a.select.includes("user_id");
+          if (hint.hasUserId === false && hasUid) continue;
+
+          let q = supabase.from("content_item").select(a.select)
+            .order(a.orderCol as any, { ascending: false }).limit(300);
+          if (hasUid && hint.hasUserId !== false) q = q.eq("user_id", userId);
+
+          const res = await q;
+          if (!res.error && Array.isArray(res.data)) {
+            saveContentSchemaHint(userId, { hasUserId: hasUid || undefined, selectIndex: i });
+            contentRows = res.data as unknown as AnyRecord[];
+            break;
+          }
+          if (res.error && isSchemaError(res.error.message) && res.error.message.toLowerCase().includes("user_id")) {
+            saveContentSchemaHint(userId, { ...hint, hasUserId: false, selectIndex: i });
+            continue;
+          }
+          if (res.error && isSchemaError(res.error.message)) continue;
+          break;
+        }
+
+        // ------ Fetch scheduled content for today ------
+        let todayScheduled: { title: string; channel: string; time: string | null }[] = [];
+        try {
+          const todayStr = new Date().toISOString().slice(0, 10);
+          const schedRes = await supabase
+            .from("content_item")
+            .select("title:titre,channel:canal,meta,scheduled_date:date_planifiee")
+            .eq("user_id", userId)
+            .eq("statut", "scheduled")
+            .eq("date_planifiee", todayStr)
+            .limit(20);
+          if (!schedRes.error && Array.isArray(schedRes.data)) {
+            todayScheduled = schedRes.data.map((r: any) => ({
+              title: toStr(r.title || r.titre).trim() || "Contenu sans titre",
+              channel: toStr(r.channel || r.canal).trim(),
+              time: r.meta && typeof r.meta === "object" ? toStr((r.meta as AnyRecord).scheduled_time).trim() || null : null,
+            }));
+          }
+        } catch {
+          // fail-open: scheduled_date column may not exist on all instances
+        }
+
+        if (cancelled) return;
+
+        // ------ Process data ------
+        const planJson = (planRes.data?.plan_json ?? null) as AnyRecord | null;
+        const planCreatedAt = toStr(planRes.data?.created_at);
+        const hasStrategy = !planRes.error && !!planJson && Object.keys(planJson).length > 0;
+
+        const categories = buildTaskCategories(tasks);
+
+        // Strategic objective
+        const obj = buildStrategicObjective(planJson, planCreatedAt || null, categories, hasStrategy);
+
+        // Coaching insight
+        const coach = buildCoachingInsight(categories, hasStrategy);
+
+        // Metrics (mois courant + mois précédent pour tendances)
+        let revenue: number | null = null;
+        let salesCount: number | null = null;
+        let newSubscribers: number | null = null;
+        let conversionRate: number | null = null;
+        let prevRevenue: number | null = null;
+        let prevNewSubscribers: number | null = null;
+        let prevConversionRate: number | null = null;
+        let hasMetrics = false;
+
+        if (metricsRows.length > 0) {
+          const m = metricsRows[0] as any;
+          revenue = typeof m.revenue === "number" ? m.revenue : null;
+          salesCount = typeof m.sales_count === "number" ? m.sales_count : null;
+          newSubscribers = typeof m.new_subscribers === "number" ? m.new_subscribers : null;
+          conversionRate = typeof m.conversion_rate === "number" ? m.conversion_rate : null;
+          hasMetrics = revenue !== null || salesCount !== null || newSubscribers !== null;
+        }
+        if (metricsRows.length > 1) {
+          const p = metricsRows[1] as any;
+          prevRevenue = typeof p.revenue === "number" ? p.revenue : null;
+          prevNewSubscribers = typeof p.new_subscribers === "number" ? p.new_subscribers : null;
+          prevConversionRate = typeof p.conversion_rate === "number" ? p.conversion_rate : null;
+        }
+
+        // Tâches réalisées + prochaine tâche à faire
+        const sortedByUpdated = [...tasks].sort(
+          (a, b) => new Date(toStr(b.updated_at)).getTime() - new Date(toStr(a.updated_at)).getTime(),
+        );
+        const doneTasks = sortedByUpdated.filter((t) => isDoneStatus(toStr(t.status)));
+        const currentDoneCount = doneTasks.length;
+        let nextIncomplete = tasks
+          .filter((t) => {
+            const s = toStr(t.status).toLowerCase().trim();
+            return !isDoneStatus(s) && s !== "cancelled" && s !== "annulé";
+          })
+          .sort((a, b) => {
+            const pa = Number(a.priority) || 99;
+            const pb = Number(b.priority) || 99;
+            if (pa !== pb) return pa - pb;
+            return new Date(toStr(a.created_at)).getTime() - new Date(toStr(b.created_at)).getTime();
+          })[0];
+
+        // If project_tasks is empty but plan_json has tasks, extract first task as suggestion
+        if (!nextIncomplete && currentDoneCount === 0 && planJson) {
+          const firstPlanTask = extractFirstTaskFromPlan(planJson);
+          if (firstPlanTask) {
+            nextIncomplete = { title: firstPlanTask } as AnyRecord;
+          }
+        }
+
+        // Content counts
+        const contentCounts: Record<string, number> = {};
+        let totalContents = 0;
+        for (const c of contentRows) {
+          totalContents++;
+          const cType = normalizeContentType(c) || "contenu";
+          contentCounts[cType] = (contentCounts[cType] || 0) + 1;
+        }
+
+        // Revenue goal from business_profiles
+        let revenueGoalNum: number | null = null;
+        try {
+          const { data: bpRow } = await supabase
+            .from("business_profiles")
+            .select("revenue_goal_monthly")
+            .eq("user_id", userId)
+            .order("updated_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (bpRow?.revenue_goal_monthly) {
+            const raw = String(bpRow.revenue_goal_monthly);
+            const digits = raw.replace(/[^\d.,]/g, "").replace(",", ".");
+            const n = parseFloat(digits);
+            if (Number.isFinite(n) && n > 0) revenueGoalNum = n;
+          }
+        } catch { /* fail-open */ }
+
+        // Current month revenue from offer_metrics
+        let currentMonthRev = 0;
+        try {
+          const nowD = new Date();
+          const mStart = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}-01`;
+          const mEnd = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, "0")}-31`;
+          const { data: revRows } = await supabase
+            .from("offer_metrics")
+            .select("revenue")
+            .eq("user_id", userId)
+            .eq("is_paid", true)
+            .gte("month", mStart)
+            .lte("month", mEnd)
+            .neq("offer_name", "__email_stats__");
+          if (revRows) {
+            for (const r of revRows as any[]) {
+              currentMonthRev += Number(r.revenue) || 0;
+            }
+          }
+        } catch { /* fail-open */ }
+
+        if (!cancelled) {
+          setObjective(obj);
+          setCoaching(coach);
+          setDoneCount(currentDoneCount);
+          setNextTask(toStr(nextIncomplete?.title) || null);
+          // Fetch AI encouragement (async, non-blocking)
+          fetchEncouragement(currentDoneCount);
+          setScheduledToday(todayScheduled);
+          setProgression({
+            hasMetrics,
+            revenue,
+            salesCount,
+            newSubscribers,
+            conversionRate,
+            contentCounts,
+            totalContents,
+            prevRevenue,
+            prevNewSubscribers,
+            prevConversionRate,
+            revenueGoal: revenueGoalNum,
+            currentMonthRevenue: currentMonthRev,
+          });
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+
+    // ── Re-fetch when tab becomes visible (covers strategy → dashboard navigation) ──
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible" && !cancelled) {
+        load();
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // ── Supabase Realtime: instant sync when project_tasks change ──
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.id || cancelled) return;
+
+        realtimeChannel = supabase
+          .channel("dashboard-tasks-sync")
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "project_tasks",
+              filter: `user_id=eq.${user.id}`,
+            },
+            () => {
+              if (cancelled) return;
+              // Debounce rapid task toggles (e.g., checking multiple tasks quickly)
+              if (debounceTimer) clearTimeout(debounceTimer);
+              debounceTimer = setTimeout(() => { load(); }, 600);
+            },
+          )
+          .subscribe();
+      } catch {
+        // fail-open: realtime may not be configured on this Supabase instance
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (debounceTimer) clearTimeout(debounceTimer);
+      if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+    };
+  }, [supabase, fetchEncouragement]);
+
+  // Résumé intelligent de la progression analytics
+  const progressionSummary = useMemo(() => buildProgressionSummary(progression), [progression]);
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+          <PageHeader left={<h1 className="text-lg font-display font-bold truncate">{t("title")}</h1>} />
+
+          <div className="flex-1 p-4 sm:p-5 lg:p-6"><div className="max-w-[1200px] mx-auto w-full space-y-5">
+            {loading ? (
+              <div className="py-20 text-center text-muted-foreground text-sm">
+                {t("loading")}
+              </div>
+            ) : (
+              <>
+                {/* ================================================= */}
+                {/* BLOC 1 — Ton objectif en ce moment                 */}
+                {/* ================================================= */}
+                {objective && (
+                  <PageBanner
+                    icon={<Target className="w-5 h-5" />}
+                    title={t(`objective.phase.${objective.phaseKey}`)}
+                    subtitle={objective.focus
+                      ? (objective.focus.length > 80 ? objective.focus.slice(0, 77) + "…" : objective.focus)
+                      : ""}
+                  >
+                    <Button asChild variant="secondary" className="gap-2 shrink-0">
+                      <Link href={objective.ctaHref}>
+                        {t(`ctas.${objective.ctaLabelKey}`)} <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    </Button>
+                  </PageBanner>
+                )}
+
+                {/* ================================================= */}
+                {/* BLOC 1b — Contenus programmés aujourd'hui           */}
+                {/* ================================================= */}
+                {scheduledToday.length > 0 && (
+                  <Card className="border-amber-200 dark:border-amber-800/40 bg-amber-50/50 dark:bg-amber-950/20 overflow-hidden">
+                    <div className="p-5">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
+                          <CalendarClock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-semibold text-foreground">
+                            {scheduledToday.length === 1
+                              ? "1 contenu programmé aujourd\u2019hui"
+                              : `${scheduledToday.length} contenus programmés aujourd\u2019hui`}
+                          </h3>
+                          <p className="text-xs text-muted-foreground">N&apos;oublie pas de les publier !</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {scheduledToday.map((item, i) => (
+                          <div key={i} className="flex items-center gap-3 rounded-lg bg-background/80 border border-border/50 px-3 py-2">
+                            <span className="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase min-w-[60px]">
+                              {item.channel || "—"}
+                            </span>
+                            <span className="text-sm text-foreground flex-1 truncate">{item.title}</span>
+                            {item.time && (
+                              <span className="text-xs text-muted-foreground shrink-0">{item.time}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      <Button asChild variant="outline" size="sm" className="w-full mt-3 gap-2">
+                        <Link href="/contents?view=calendar">
+                          Voir le calendrier <ArrowRight className="w-3 h-3" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </Card>
+                )}
+
+                {/* ================================================= */}
+                {/* BLOC 2+3 — Coaching + Progression (côte à côte)    */}
+                {/* ================================================= */}
+                <div className="grid md:grid-cols-2 gap-6">
+
+                  {/* --- Cette semaine : coaching --- */}
+                  <Card className="p-6 flex flex-col">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Lightbulb className="w-4 h-4 text-amber-500" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        {t("thisWeek")}
+                      </p>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-6">
+                      {currentWeekLabel}
+                    </p>
+
+                    <div className="space-y-3 flex-1 flex flex-col">
+                      {/* Smart encouragement summary (above next step) */}
+                      {encouragementText ? (
+                        <p className="text-sm text-muted-foreground leading-relaxed">{encouragementText}</p>
+                      ) : null}
+
+                      {/* Prochaine tâche ou coaching personnalisé */}
+                      {nextTask ? (
+                        <div className="flex items-start gap-3 rounded-lg bg-primary/5 border border-primary/15 p-4">
+                          <span className="text-primary text-base shrink-0 mt-0.5">→</span>
+                          <div>
+                            <p className="text-xs font-medium text-primary/70 uppercase tracking-wide mb-0.5">
+                              {t("nextStep")}
+                            </p>
+                            <p className="text-sm font-medium text-foreground leading-snug">
+                              {nextTask}
+                            </p>
+                          </div>
+                        </div>
+                      ) : doneCount === 0 && coaching ? (
+                        <div className="rounded-lg bg-primary/5 border border-primary/15 p-4">
+                          <p className="text-sm text-foreground leading-relaxed">
+                            {ucFirst(t(`coaching.${coaching.recommendationKey}.recommendation`))} {t(`coaching.${coaching.recommendationKey}.why`)}.
+                          </p>
+                        </div>
+                      ) : null}
+
+                      <Button asChild variant="default" className="w-full gap-2 mt-auto">
+                        <Link href={coaching?.ctaHref ?? "/strategy"}>
+                          {t(`ctas.${coaching?.ctaLabelKey ?? "seeStrategy"}`)} <ArrowRight className="w-4 h-4" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </Card>
+
+                  {/* --- Ta progression --- */}
+                  <Card className="p-6 flex flex-col">
+                    <div className="flex items-center gap-2 mb-1">
+                      <TrendingUp className="w-4 h-4 text-primary" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        {t("progressionTitle")}
+                      </p>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-6">
+                      {t("progressionSub")}
+                    </p>
+
+                    <div className="space-y-3 flex-1 flex flex-col">
+                      {/* Revenue vs Goal */}
+                      {(progression.revenueGoal && progression.revenueGoal > 0) ? (() => {
+                        // Use offer_metrics revenue, fallback to metrics.revenue if 0
+                        const rev = progression.currentMonthRevenue > 0
+                          ? progression.currentMonthRevenue
+                          : (progression.revenue ?? 0);
+                        const goal = progression.revenueGoal!;
+                        const pct = Math.min(100, Math.round((rev / goal) * 100));
+                        return (
+                          <div className="rounded-lg border border-border/60 p-4 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-medium text-muted-foreground">Revenus ce mois vs objectif</span>
+                              <span className={`text-sm font-bold ${pct >= 100 ? "text-green-600" : pct >= 50 ? "text-amber-600" : "text-muted-foreground"}`}>{pct}%</span>
+                            </div>
+                            <Progress value={pct} className="h-2" />
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span>{rev.toLocaleString("fr-FR")} €</span>
+                              <span>Objectif : {goal.toLocaleString("fr-FR")} €</span>
+                            </div>
+                          </div>
+                        );
+                      })() : null}
+
+                      {/* Analyse intelligente des stats analytics */}
+                      {progression.hasMetrics && progressionSummary ? (
+                        <div className="rounded-lg bg-muted/40 border border-border/60 p-4 space-y-2">
+                          {progressionSummary.headline && (
+                            <p className="text-sm font-medium text-foreground">{progressionSummary.headline}</p>
+                          )}
+                          <div className="space-y-1">
+                            {progressionSummary.lines.map((line, i) => (
+                              <div key={i} className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">{line.label}</span>
+                                <span className={`font-medium ${
+                                  line.trend === "up" ? "text-green-600" :
+                                  line.trend === "down" ? "text-red-500" :
+                                  "text-foreground"
+                                }`}>{line.value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="rounded-lg bg-muted/50 border border-border/50 p-4">
+                          <div className="flex items-start gap-3">
+                            <BarChart3 className="w-4 h-4 text-muted-foreground/60 mt-0.5 shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium text-foreground">
+                                {t("fillStats")}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {t("fillStatsSub")}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <Button asChild variant="outline" size="sm" className="w-full gap-2 mt-auto">
+                        <Link href="/analytics">
+                          {progression.hasMetrics ? t("viewStats") : t("fillStatsBtn")} <ArrowRight className="w-3 h-3" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </Card>
+                </div>
+
+                {/* ================================================= */}
+                {/* BLOC 4 — Lien stratégie (discret)                  */}
+                {/* ================================================= */}
+                <div className="flex items-center justify-center pt-2">
+                  <Link
+                    href="/strategy"
+                    className="group flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {t("viewStrategy")}
+                    <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                  </Link>
+                </div>
+              </>
+            )}
+          </div></div>
+        </main>
+      </div>
+    </SidebarProvider>
+  );
+}

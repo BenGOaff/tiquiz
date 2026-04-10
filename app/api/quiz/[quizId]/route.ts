@@ -1,5 +1,6 @@
 // app/api/quiz/[quizId]/route.ts
 // Single quiz operations: GET detail, PATCH update, DELETE
+
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
@@ -7,12 +8,16 @@ export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ quizId: string }> };
 
-// GET — quiz with questions, results, and leads
+// GET — quiz with questions, results, and leads count
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
     const { quizId } = await context.params;
     const supabase = await getSupabaseServerClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
     if (userError || !user) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
@@ -21,29 +26,30 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       supabase.from("quizzes").select("*").eq("id", quizId).eq("user_id", user.id).maybeSingle(),
       supabase.from("quiz_questions").select("*").eq("quiz_id", quizId).order("sort_order"),
       supabase.from("quiz_results").select("*").eq("quiz_id", quizId).order("sort_order"),
-      supabase.from("quiz_leads").select("*").eq("quiz_id", quizId).order("created_at", { ascending: false }),
+      supabase.from("quiz_leads").select("*, quiz_results(title)").eq("quiz_id", quizId).order("created_at", { ascending: false }),
     ]);
 
     if (!quizRes.data) {
       return NextResponse.json({ ok: false, error: "Quiz not found" }, { status: 404 });
     }
 
-    // Build result title lookup
+    // Build a lookup map for result titles (fallback if FK join fails)
     const resultTitleMap = new Map<string, string>();
-    for (const r of resultsRes.data ?? []) {
+    for (const r of (resultsRes.data ?? [])) {
       resultTitleMap.set(r.id, r.title);
     }
 
-    const leads = (leadsRes.data ?? []).map((l: Record<string, unknown>) => ({
+    const leads = (leadsRes.data ?? []).map((l: any) => ({
       ...l,
-      result_title: resultTitleMap.get(l.result_id as string) ?? null,
+      result_title: l.quiz_results?.title ?? resultTitleMap.get(l.result_id) ?? null,
+      quiz_results: undefined,
     }));
 
     return NextResponse.json({
       ok: true,
       quiz: {
         ...quizRes.data,
-        questions: (questionsRes.data ?? []).map((q: Record<string, unknown>) => ({
+        questions: (questionsRes.data ?? []).map((q: any) => ({
           ...q,
           options: q.options as { text: string; result_index: number }[],
         })),
@@ -59,17 +65,21 @@ export async function GET(_req: NextRequest, context: RouteContext) {
   }
 }
 
-// PATCH — update quiz fields, questions, results
+// PATCH — update quiz fields and/or status
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
     const { quizId } = await context.params;
     const supabase = await getSupabaseServerClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
     if (userError || !user) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    let body: Record<string, unknown>;
+    let body: any;
     try {
       body = await req.json();
     } catch {
@@ -97,22 +107,24 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "capture_last_name", "capture_phone", "capture_country",
     ];
 
-    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    const patch: Record<string, any> = { updated_at: new Date().toISOString() };
     for (const key of allowedFields) {
       if (key in body) patch[key] = body[key];
     }
 
     const { error } = await supabase.from("quizzes").update(patch).eq("id", quizId);
+
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
 
     // Update questions if provided
     if (Array.isArray(body.questions)) {
+      // Delete old questions and re-insert
       await supabase.from("quiz_questions").delete().eq("quiz_id", quizId);
-      if ((body.questions as unknown[]).length > 0) {
+      if (body.questions.length > 0) {
         await supabase.from("quiz_questions").insert(
-          (body.questions as Record<string, unknown>[]).map((q, i) => ({
+          body.questions.map((q: any, i: number) => ({
             quiz_id: quizId,
             question_text: String(q.question_text ?? ""),
             options: Array.isArray(q.options) ? q.options : [],
@@ -125,9 +137,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     // Update results if provided
     if (Array.isArray(body.results)) {
       await supabase.from("quiz_results").delete().eq("quiz_id", quizId);
-      if ((body.results as unknown[]).length > 0) {
+      if (body.results.length > 0) {
         await supabase.from("quiz_results").insert(
-          (body.results as Record<string, unknown>[]).map((r, i) => ({
+          body.results.map((r: any, i: number) => ({
             quiz_id: quizId,
             title: String(r.title ?? ""),
             description: r.description ?? null,
@@ -146,6 +158,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     return NextResponse.json({ ok: true });
   } catch (e) {
+    console.error("[PATCH /api/quiz/[quizId]] Error:", e);
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
       { status: 500 },
@@ -158,7 +171,11 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
   try {
     const { quizId } = await context.params;
     const supabase = await getSupabaseServerClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
     if (userError || !user) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }

@@ -1,0 +1,1313 @@
+// components/content/MyContentLovableClient.tsx
+"use client";
+
+// UI 1:1 Lovable (MyContent) + data Tipote
+// - SidebarProvider + AppSidebar + header sticky
+// - List / Calendar toggle
+// - Search
+// - Stats cards
+// - Edit Dialog + Delete Dialog (branchés sur /api/content/:id)
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
+import { PageHeader } from "@/components/PageHeader";
+import { PageBanner } from "@/components/PageBanner";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+import {
+  Plus,
+  Search,
+  List,
+  CalendarDays,
+  MoreVertical,
+  Edit,
+  Trash2,
+  FileText,
+  Mail,
+  Video,
+  MessageSquare,
+  Clock,
+  CheckCircle2,
+  Calendar,
+  CalendarX,
+  ClipboardList,
+  Eye,
+  Users,
+  Share2,
+  ChevronLeft,
+  Package,
+  Route,
+  Globe,
+  ExternalLink,
+  Download,
+  Loader2,
+  type LucideIcon,
+} from "lucide-react";
+
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+
+import type { ContentListItem } from "@/lib/types/content";
+import { ContentCalendarView } from "@/components/content/ContentCalendarView";
+import { toast } from "@/components/ui/use-toast";
+
+type QuizListItem = {
+  id: string;
+  title: string;
+  status: string;
+  views_count: number;
+  shares_count: number;
+  leads_count: number;
+  created_at: string;
+};
+
+type FunnelListItem = {
+  id: string;
+  title: string;
+  slug: string;
+  page_type: string;
+  status: string;
+  template_id: string;
+  views_count: number;
+  leads_count: number;
+  payment_url: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type Props = {
+  userEmail: string;
+  initialView: "list" | "calendar";
+  items: ContentListItem[];
+  quizzes?: QuizListItem[];
+  funnels?: FunnelListItem[];
+  error?: string;
+};
+
+type ContentFolder = {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  color: string;
+  bgColor: string;
+  matchType: (type: string | null) => boolean;
+};
+
+// Colors and icons 1:1 with Créer page (CreateLovableClient contentTypes)
+const CONTENT_FOLDERS: ContentFolder[] = [
+  {
+    id: "posts",
+    label: "Mes Posts",
+    icon: MessageSquare,
+    color: "text-white",
+    bgColor: "bg-blue-500",
+    matchType: (t) => {
+      const s = safeString(t).toLowerCase();
+      return s.includes("post") || s.includes("réseau") || s.includes("reseau") || s.includes("social");
+    },
+  },
+  {
+    id: "emails",
+    label: "Mes Emails",
+    icon: Mail,
+    color: "text-white",
+    bgColor: "bg-green-500",
+    matchType: (t) => safeString(t).toLowerCase().includes("email"),
+  },
+  {
+    id: "articles",
+    label: "Mes Articles",
+    icon: FileText,
+    color: "text-white",
+    bgColor: "bg-purple-500",
+    matchType: (t) => {
+      const s = safeString(t).toLowerCase();
+      return s.includes("article") || s.includes("blog");
+    },
+  },
+  {
+    id: "scripts",
+    label: "Mes Scripts",
+    icon: Video,
+    color: "text-white",
+    bgColor: "bg-red-500",
+    matchType: (t) => {
+      const s = safeString(t).toLowerCase();
+      return s.includes("video") || s.includes("vidéo") || s.includes("script");
+    },
+  },
+  {
+    id: "offres",
+    label: "Mes Offres",
+    icon: Package,
+    color: "text-white",
+    bgColor: "bg-orange-500",
+    matchType: (t) => {
+      const s = safeString(t).toLowerCase();
+      return s.includes("offer") || s.includes("offre");
+    },
+  },
+  {
+    id: "funnels",
+    label: "Mes Pages",
+    icon: Route,
+    color: "text-white",
+    bgColor: "bg-indigo-500",
+    matchType: (t) => safeString(t).toLowerCase().includes("funnel"),
+  },
+  {
+    id: "strategies",
+    label: "Mes Stratégies",
+    icon: CalendarDays,
+    color: "text-white",
+    bgColor: "bg-amber-500",
+    matchType: (t) => safeString(t).toLowerCase().includes("strategy") || safeString(t).toLowerCase().includes("stratégie"),
+  },
+  {
+    id: "quiz",
+    label: "Mes Quiz",
+    icon: ClipboardList,
+    color: "text-white",
+    bgColor: "bg-teal-500",
+    matchType: () => false, // Quiz uses separate data source
+  },
+];
+
+function countItemsForFolder(folder: ContentFolder, items: ContentListItem[], quizzes: QuizListItem[], funnels: FunnelListItem[]): number {
+  if (folder.id === "quiz") return quizzes.length;
+  if (folder.id === "funnels") return funnels.length;
+  return items.filter((it) => folder.matchType(it.type)).length;
+}
+
+const typeIcons: Record<string, any> = {
+  post: MessageSquare,
+  email: Mail,
+  article: FileText,
+  video: Video,
+  quiz: ClipboardList,
+};
+
+const statusColors: Record<string, string> = {
+  draft: "bg-muted text-muted-foreground",
+  scheduled: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+  planned: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+  published: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+  failed: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
+};
+
+const statusLabels: Record<string, string> = {
+  draft: "Brouillon",
+  scheduled: "Planifié",
+  planned: "Planifié",
+  published: "Publié",
+  failed: "Erreur",
+};
+
+function safeString(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
+function toYmdOrEmpty(v: string | null | undefined) {
+  const s = safeString(v).trim();
+  if (!s) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const iso = s.split("T")[0];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  return "";
+}
+
+function normalizeKeyType(type: string | null) {
+  const t = safeString(type).toLowerCase();
+  if (t.includes("email")) return "email";
+  if (t.includes("video") || t.includes("vidéo")) return "video";
+  if (t.includes("article") || t.includes("blog")) return "article";
+  if (t.includes("post") || t.includes("réseau") || t.includes("reseau") || t.includes("social")) return "post";
+  return "post";
+}
+
+function normalizeKeyStatus(status: string | null) {
+  const s = safeString(status).toLowerCase();
+  if (s === "planned") return "scheduled";
+  if (s === "schedule") return "scheduled";
+  if (!s) return "draft";
+  return s;
+}
+
+function formatDate(dateString: string | null) {
+  if (!dateString) return "";
+  try {
+    return format(new Date(dateString), "dd MMMM yyyy", { locale: fr });
+  } catch {
+    return dateString;
+  }
+}
+
+export default function MyContentLovableClient({
+  userEmail,
+  initialView,
+  items: initialItems,
+  quizzes = [],
+  funnels: initialFunnels = [],
+  error,
+}: Props) {
+  const router = useRouter();
+
+  const [view, setView] = useState<"list" | "calendar">(initialView);
+  const [search, setSearch] = useState("");
+  const [activeFolder, setActiveFolder] = useState<string | null>(null);
+
+  const [editingContent, setEditingContent] = useState<ContentListItem | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<ContentListItem | null>(null);
+
+  const [busy, setBusy] = useState<"edit" | "delete" | "plan" | "unplan" | "publish" | null>(null);
+
+  const [editTitle, setEditTitle] = useState("");
+  const [editBody, setEditBody] = useState("");
+
+  const [planningContent, setPlanningContent] = useState<ContentListItem | null>(null);
+  const [planDate, setPlanDate] = useState<string>("");
+  const [planTime, setPlanTime] = useState<string>("09:00");
+
+  // Funnel state
+  const [funnels, setFunnels] = useState<FunnelListItem[]>(initialFunnels);
+  const [deleteFunnelConfirm, setDeleteFunnelConfirm] = useState<FunnelListItem | null>(null);
+  const [funnelLeads, setFunnelLeads] = useState<{ pageId: string; leads: any[] } | null>(null);
+  const [loadingLeads, setLoadingLeads] = useState(false);
+
+  const openPlan = (content: ContentListItem) => {
+    setPlanningContent(content);
+    setPlanDate(toYmdOrEmpty(content.scheduled_date));
+    // Pré-remplir l'heure depuis meta.scheduled_time si disponible
+    const metaTime = (content.meta as any)?.scheduled_time;
+    setPlanTime(typeof metaTime === "string" && metaTime.trim() ? metaTime : "09:00");
+  };
+
+  const filtered = useMemo(() => {
+    let result = initialItems;
+
+    // Filter by active folder
+    if (activeFolder && activeFolder !== "quiz") {
+      const folder = CONTENT_FOLDERS.find((f) => f.id === activeFolder);
+      if (folder) {
+        result = result.filter((c) => folder.matchType(c.type));
+      }
+    }
+
+    // Filter by search
+    const q = search.trim().toLowerCase();
+    if (q) {
+      result = result.filter((c) => {
+        const t = safeString(c.title).toLowerCase();
+        const body = safeString(c.content).toLowerCase();
+        const type = safeString(c.type).toLowerCase();
+        const channel = safeString(c.channel).toLowerCase();
+        return t.includes(q) || body.includes(q) || type.includes(q) || channel.includes(q);
+      });
+    }
+
+    return result;
+  }, [initialItems, search, activeFolder]);
+
+  const openEdit = (content: ContentListItem) => {
+    setEditingContent(content);
+    setEditTitle(safeString(content.title));
+    setEditBody(safeString(content.content));
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingContent) return;
+    setBusy("edit");
+    try {
+      const res = await fetch(`/api/content/${editingContent.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editTitle,
+          content: editBody,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.ok === false) {
+        toast({
+          title: "Erreur",
+          description: json?.error ?? "Impossible de mettre à jour le contenu",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({ title: "Enregistré ✅", description: "Le contenu a été mis à jour." });
+      setEditingContent(null);
+      router.refresh();
+    } catch (e) {
+      toast({
+        title: "Erreur",
+        description: e instanceof Error ? e.message : "Impossible de mettre à jour le contenu",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleSavePlan = async () => {
+    if (!planningContent) return;
+    if (!planDate) {
+      toast({
+        title: "Date manquante",
+        description: "Choisis une date de planification.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setBusy("plan");
+    try {
+      const res = await fetch(`/api/content/${planningContent.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "scheduled",
+          scheduledDate: planDate,
+          meta: planTime ? { scheduled_time: planTime } : undefined,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.ok === false) {
+        toast({
+          title: "Erreur",
+          description: json?.error ?? "Impossible de planifier le contenu",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const isReschedule = normalizeKeyStatus(planningContent.status) === "scheduled";
+      toast({
+        title: isReschedule ? "Reprogrammé" : "Planifié",
+        description: isReschedule
+          ? `Publication reprogrammée au ${planDate} à ${planTime || "09:00"}.`
+          : "La date de publication a été enregistrée.",
+      });
+      setPlanningContent(null);
+      router.refresh();
+    } catch (e) {
+      toast({
+        title: "Erreur",
+        description: e instanceof Error ? e.message : "Impossible de planifier le contenu",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleUnplan = async (item: ContentListItem) => {
+    setBusy("unplan");
+    try {
+      const res = await fetch(`/api/content/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "draft",
+          scheduledDate: null,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.ok === false) {
+        toast({
+          title: "Erreur",
+          description: json?.error ?? "Impossible de déplanifier le contenu",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({ title: "Déplanifié ✅", description: "Le contenu repasse en brouillon." });
+      router.refresh();
+    } catch (e) {
+      toast({
+        title: "Erreur",
+        description: e instanceof Error ? e.message : "Impossible de déplanifier le contenu",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleMarkPublished = async (item: ContentListItem) => {
+    setBusy("publish");
+    try {
+      const res = await fetch(`/api/content/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: "published",
+          scheduledDate: null,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.ok === false) {
+        toast({
+          title: "Erreur",
+          description: json?.error ?? "Impossible de marquer le contenu comme publié",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({ title: "Publié ✅", description: "Le statut a été mis à jour." });
+      router.refresh();
+    } catch (e) {
+      toast({
+        title: "Erreur",
+        description: e instanceof Error ? e.message : "Impossible de marquer le contenu comme publié",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    setBusy("delete");
+    try {
+      const res = await fetch(`/api/content/${deleteConfirm.id}`, {
+        method: "DELETE",
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.ok === false) {
+        toast({
+          title: "Erreur",
+          description: json?.error ?? "Impossible de supprimer le contenu",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({ title: "Supprimé ✅", description: "Le contenu a été supprimé." });
+      setDeleteConfirm(null);
+      router.refresh();
+    } catch (e) {
+      toast({
+        title: "Erreur",
+        description: e instanceof Error ? e.message : "Impossible de supprimer le contenu",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  if (error) {
+    return (
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full">
+          <AppSidebar />
+
+          <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+            <PageHeader
+              left={<h1 className="text-lg font-display font-bold truncate">Mes Contenus</h1>}
+            />
+
+            <div className="flex-1 p-4 sm:p-5 lg:p-6">
+              <div className="max-w-[1200px] mx-auto w-full space-y-5">
+                <Card className="p-6">
+                  <p className="text-sm text-muted-foreground">Impossible de charger tes contenus pour le moment.</p>
+                  <p className="mt-2 text-sm text-rose-600">{error}</p>
+                </Card>
+              </div>
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
+    );
+  }
+
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+
+        <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
+          <PageHeader
+            left={<h1 className="text-lg font-display font-bold truncate">Mes Contenus</h1>}
+          />
+
+          {/* Container */}
+          <div className="flex-1 p-4 sm:p-5 lg:p-6">
+            <div className="max-w-[1200px] mx-auto w-full space-y-5">
+            <PageBanner
+              icon={<ClipboardList className="w-5 h-5" />}
+              title="Tous tes contenus"
+              subtitle="Posts, emails, articles, scripts et pages — tout au même endroit."
+            >
+              <Button asChild size="sm" className="bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground">
+                <Link href="/create">
+                  <Plus className="w-4 h-4 mr-1" />
+                  Créer
+                </Link>
+              </Button>
+            </PageBanner>
+
+            {/* Filters & Toggle */}
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div className="relative flex-1 max-w-md w-full">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher..."
+                  className="pl-9"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={view === "list" ? "default" : "outline"}
+                  className="gap-2"
+                  onClick={() => setView("list")}
+                >
+                  <List className="w-4 h-4" />
+                  Liste
+                </Button>
+
+                <Button
+                  variant={view === "calendar" ? "default" : "outline"}
+                  className="gap-2"
+                  onClick={() => setView("calendar")}
+                >
+                  <CalendarDays className="w-4 h-4" />
+                  Calendrier
+                </Button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="space-y-6">
+              {view === "calendar" ? (
+                <ContentCalendarView
+                  contents={filtered}
+                  onSelectContent={(content) => {
+                    const ct = normalizeKeyType(content.type);
+                    // For posts (draft or scheduled): open in full editor
+                    if (ct === "post") {
+                      router.push(`/create?edit=${content.id}`);
+                    } else {
+                      router.push(`/contents/${content.id}`);
+                    }
+                  }}
+                />
+              ) : activeFolder === null ? (
+                /* ===== Folder Grid View ===== */
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {CONTENT_FOLDERS.map((folder) => {
+                      const count = countItemsForFolder(folder, initialItems, quizzes, funnels);
+                      const FIcon = folder.icon;
+                      return (
+                        <button
+                          key={folder.id}
+                          onClick={() => setActiveFolder(folder.id)}
+                          className="group text-left"
+                        >
+                          <Card className="p-5 transition-all hover:shadow-md hover:border-primary/30 cursor-pointer h-full">
+                            <div className={`w-11 h-11 rounded-xl ${folder.bgColor} flex items-center justify-center mb-3`}>
+                              <FIcon className={`w-5 h-5 ${folder.color}`} />
+                            </div>
+                            <div className="font-semibold text-sm group-hover:text-primary transition-colors">
+                              {folder.label}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {count} {count <= 1 ? "élément" : "éléments"}
+                            </div>
+                          </Card>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Recent content preview below folders */}
+                  {initialItems.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                        Derniers contenus
+                      </h3>
+                      <div className="space-y-3">
+                        {initialItems.slice(0, 5).map((item) => {
+                          const typeKey = normalizeKeyType(item.type);
+                          const statusKey = normalizeKeyStatus(item.status);
+                          const Icon = typeIcons[typeKey] ?? FileText;
+                          const badgeClasses = statusColors[statusKey] ?? "bg-muted text-muted-foreground";
+                          const badgeLabel = statusLabels[statusKey] ?? "—";
+
+                          return (
+                            <Card key={item.id} className="p-4">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-start gap-3 min-w-0 flex-1">
+                                  <div className="mt-0.5 rounded-md bg-muted p-2 shrink-0">
+                                    <Icon className="h-4 w-4 text-muted-foreground" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <div className="font-medium truncate">
+                                        {safeString(item.title) || "Sans titre"}
+                                      </div>
+                                      <Badge className={`${badgeClasses} shrink-0`}>{badgeLabel}</Badge>
+                                    </div>
+                                    <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                      {safeString(item.channel) ? (
+                                        <span className="capitalize">{safeString(item.channel)}</span>
+                                      ) : null}
+                                      {statusKey === "scheduled" && item.scheduled_date ? (
+                                        <button
+                                          className="inline-flex items-center gap-1 hover:text-primary transition-colors cursor-pointer rounded px-1 -mx-1 hover:bg-primary/5"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openPlan(item);
+                                          }}
+                                          title="Modifier la date et l'heure de publication"
+                                        >
+                                          <Clock className="h-3.5 w-3.5" />
+                                          {formatDate(item.scheduled_date)}
+                                          {(item.meta as any)?.scheduled_time ? ` à ${(item.meta as any).scheduled_time}` : ""}
+                                        </button>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                </div>
+                                <Button variant="outline" size="sm" asChild className="shrink-0">
+                                  <Link href={`/contents/${item.id}`}>Voir</Link>
+                                </Button>
+                              </div>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : activeFolder === "quiz" ? (
+                /* ===== Quiz Folder View ===== */
+                <div className="space-y-4">
+                  <button
+                    onClick={() => setActiveFolder(null)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Retour aux dossiers
+                  </button>
+
+                  <h2 className="text-lg font-bold flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5 text-teal-600" />
+                    Mes Quiz
+                  </h2>
+
+                  {quizzes.length === 0 ? (
+                    <Card className="p-6">
+                      <p className="text-sm text-muted-foreground text-center py-4">Aucun quiz créé.</p>
+                    </Card>
+                  ) : (
+                    <div className="space-y-3">
+                      {quizzes.map((qz) => {
+                        const isActive = qz.status === "active";
+                        return (
+                          <Card key={qz.id} className="p-4">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex items-start gap-3 min-w-0 flex-1">
+                                <div className="mt-0.5 rounded-md bg-teal-100 dark:bg-teal-900 p-2 shrink-0">
+                                  <ClipboardList className="h-4 w-4 text-teal-700 dark:text-teal-300" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <div className="font-medium truncate">
+                                      {qz.title || "Quiz sans titre"}
+                                    </div>
+                                    <Badge
+                                      className={
+                                        isActive
+                                          ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                                          : "bg-muted text-muted-foreground"
+                                      }
+                                    >
+                                      {isActive ? "Actif" : "Brouillon"}
+                                    </Badge>
+                                  </div>
+                                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                    <span className="inline-flex items-center gap-1">
+                                      <Eye className="h-3.5 w-3.5" /> {qz.views_count} vues
+                                    </span>
+                                    <span className="inline-flex items-center gap-1">
+                                      <Users className="h-3.5 w-3.5" /> {qz.leads_count} emails
+                                    </span>
+                                    <span className="inline-flex items-center gap-1">
+                                      <Share2 className="h-3.5 w-3.5" /> {qz.shares_count} partages
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <Button variant="outline" size="sm" asChild>
+                                <Link href={`/quiz/${qz.id}`}>Gérer</Link>
+                              </Button>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : activeFolder === "funnels" ? (
+                /* ===== Funnels Folder View ===== */
+                <div className="space-y-4">
+                  <button
+                    onClick={() => setActiveFolder(null)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Retour aux dossiers
+                  </button>
+
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-bold flex items-center gap-2">
+                      <Route className="w-5 h-5 text-indigo-600" />
+                      Mes Pages
+                    </h2>
+                    <Button size="sm" asChild>
+                      <Link href="/pages">
+                        <Plus className="w-4 h-4 mr-1" /> Créer une page
+                      </Link>
+                    </Button>
+                  </div>
+
+                  {funnels.length === 0 ? (
+                    <Card className="p-6">
+                      <p className="text-sm text-muted-foreground text-center py-4">Aucune page créée.</p>
+                    </Card>
+                  ) : (
+                    <div className="space-y-3">
+                      {funnels.map((page) => {
+                        const isPublished = page.status === "published";
+                        const publicUrl = typeof window !== "undefined"
+                          ? `${window.location.origin}/p/${page.slug}`
+                          : `/p/${page.slug}`;
+                        return (
+                          <Card key={page.id} className="p-4">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex items-start gap-3 min-w-0 flex-1">
+                                <div className="mt-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900 p-2 shrink-0">
+                                  <Globe className="h-4 w-4 text-indigo-700 dark:text-indigo-300" />
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <div className="font-medium truncate max-w-[300px]">
+                                      {page.title || "Page sans titre"}
+                                    </div>
+                                    <Badge className={isPublished
+                                      ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                                      : "bg-muted text-muted-foreground"
+                                    }>
+                                      {isPublished ? "En ligne" : "Brouillon"}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                      {page.page_type === "sales" ? "Vente" : "Capture"}
+                                    </Badge>
+                                  </div>
+                                  <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                    <span className="inline-flex items-center gap-1">
+                                      <Eye className="h-3.5 w-3.5" /> {page.views_count} vues
+                                    </span>
+                                    <span className="inline-flex items-center gap-1">
+                                      <Users className="h-3.5 w-3.5" /> {page.leads_count} leads
+                                    </span>
+                                    {isPublished && (
+                                      <a
+                                        href={publicUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-indigo-600 hover:underline"
+                                      >
+                                        <ExternalLink className="h-3 w-3" /> Voir en ligne
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => router.push(`/pages?edit=${page.id}`)}>
+                                    <Edit className="w-4 h-4 mr-2" /> Éditer
+                                  </DropdownMenuItem>
+                                  {isPublished && (
+                                    <DropdownMenuItem onClick={() => window.open(publicUrl, "_blank")}>
+                                      <ExternalLink className="w-4 h-4 mr-2" /> Ouvrir
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem onClick={async () => {
+                                    setLoadingLeads(true);
+                                    setFunnelLeads(null);
+                                    try {
+                                      const res = await fetch(`/api/pages/${page.id}/leads`);
+                                      const data = await res.json();
+                                      setFunnelLeads({ pageId: page.id, leads: data.leads ?? [] });
+                                    } catch { /* ignore */ } finally {
+                                      setLoadingLeads(false);
+                                    }
+                                  }}>
+                                    <Users className="w-4 h-4 mr-2" /> Voir les leads ({page.leads_count})
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-destructive"
+                                    onClick={() => setDeleteFunnelConfirm(page)}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" /> Supprimer
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Leads modal */}
+                  {funnelLeads && (
+                    <Dialog open onOpenChange={() => setFunnelLeads(null)}>
+                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Leads capturés</DialogTitle>
+                          <DialogDescription>{funnelLeads.leads.length} lead(s)</DialogDescription>
+                        </DialogHeader>
+                        {funnelLeads.leads.length === 0 ? (
+                          <p className="text-sm text-muted-foreground py-4 text-center">Aucun lead capturé pour cette page.</p>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b text-left">
+                                    <th className="pb-2 font-medium">Email</th>
+                                    <th className="pb-2 font-medium">Prénom</th>
+                                    <th className="pb-2 font-medium">Date</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {funnelLeads.leads.map((lead: any, i: number) => (
+                                    <tr key={lead.id ?? i} className="border-b last:border-0">
+                                      <td className="py-2">{lead.email}</td>
+                                      <td className="py-2">{lead.first_name || "—"}</td>
+                                      <td className="py-2 text-muted-foreground">
+                                        {lead.created_at ? formatDate(lead.created_at) : "—"}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const csv = ["Email,Prénom,Date"];
+                                for (const l of funnelLeads.leads) {
+                                  csv.push(`${l.email ?? ""},${l.first_name ?? ""},${l.created_at ?? ""}`);
+                                }
+                                const blob = new Blob([csv.join("\n")], { type: "text/csv" });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement("a");
+                                a.href = url;
+                                a.download = `leads-${funnelLeads.pageId}.csv`;
+                                a.click();
+                                URL.revokeObjectURL(url);
+                              }}
+                            >
+                              <Download className="w-4 h-4 mr-2" /> Télécharger en CSV
+                            </Button>
+                          </div>
+                        )}
+                      </DialogContent>
+                    </Dialog>
+                  )}
+
+                  {/* Loading leads */}
+                  {loadingLeads && (
+                    <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" /> Chargement des leads...
+                    </div>
+                  )}
+
+                  {/* Delete funnel confirmation */}
+                  {deleteFunnelConfirm && (
+                    <Dialog open onOpenChange={() => setDeleteFunnelConfirm(null)}>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Supprimer cette page ?</DialogTitle>
+                          <DialogDescription>
+                            &laquo; {deleteFunnelConfirm.title || "Page sans titre"} &raquo; sera archivé et ne sera plus accessible.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setDeleteFunnelConfirm(null)}>
+                            Annuler
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            onClick={async () => {
+                              const id = deleteFunnelConfirm.id;
+                              setDeleteFunnelConfirm(null);
+                              try {
+                                await fetch(`/api/pages/${id}`, { method: "DELETE" });
+                                setFunnels((prev) => prev.filter((p) => p.id !== id));
+                                toast({ title: "Page supprimée" });
+                              } catch { /* ignore */ }
+                            }}
+                          >
+                            Supprimer
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  )}
+                </div>
+              ) : (
+                /* ===== Content Folder View (filtered by type) ===== */
+                <div className="space-y-4">
+                  <button
+                    onClick={() => setActiveFolder(null)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Retour aux dossiers
+                  </button>
+
+                  {(() => {
+                    const folder = CONTENT_FOLDERS.find((f) => f.id === activeFolder);
+                    if (!folder) return null;
+                    const FIcon = folder.icon;
+                    return (
+                      <h2 className="text-lg font-bold flex items-center gap-2">
+                        <FIcon className={`w-5 h-5 ${folder.color}`} />
+                        {folder.label}
+                      </h2>
+                    );
+                  })()}
+
+                  {filtered.length === 0 ? (
+                    <Card className="p-6">
+                      <p className="text-sm text-muted-foreground text-center py-4">Aucun contenu dans ce dossier.</p>
+                    </Card>
+                  ) : (
+                    <div className="space-y-8">
+                      {Object.entries(
+                        filtered.reduce<Record<string, ContentListItem[]>>((acc, item) => {
+                          const key = item.created_at ? formatDate(item.created_at) : "—";
+                          acc[key] = acc[key] || [];
+                          acc[key].push(item);
+                          return acc;
+                        }, {})
+                      )
+                        .sort((a, b) => {
+                          const da = a[0] === "—" ? 0 : new Date(a[0]).getTime();
+                          const db = b[0] === "—" ? 0 : new Date(b[0]).getTime();
+                          return db - da;
+                        })
+                        .map(([day, dayItems]) => (
+                          <div key={day} className="space-y-3">
+                            <div className="text-sm text-muted-foreground">{day}</div>
+
+                            <div className="space-y-3">
+                              {dayItems.map((item) => {
+                                const typeKey = normalizeKeyType(item.type);
+                                const statusKey = normalizeKeyStatus(item.status);
+                                const Icon = typeIcons[typeKey] ?? FileText;
+
+                                const badgeClasses =
+                                  statusColors[statusKey] ?? "bg-muted text-muted-foreground";
+                                const badgeLabel = statusLabels[statusKey] ?? "—";
+
+                                return (
+                                  <Card key={item.id} className="p-4">
+                                    <div className="flex items-start justify-between gap-4">
+                                      <div className="flex items-start gap-3 min-w-0 flex-1">
+                                        <div className="mt-0.5 rounded-md bg-muted p-2 shrink-0">
+                                          <Icon className="h-4 w-4 text-muted-foreground" />
+                                        </div>
+
+                                        <div className="min-w-0">
+                                          <div className="flex items-center gap-2">
+                                            <div className="font-medium truncate">
+                                              {safeString(item.title) || "Sans titre"}
+                                            </div>
+                                            <Badge className={`${badgeClasses} shrink-0`}>{badgeLabel}</Badge>
+                                          </div>
+
+                                          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                            {safeString(item.channel) ? (
+                                              <span className="capitalize">{safeString(item.channel)}</span>
+                                            ) : null}
+
+                                            {statusKey === "scheduled" && item.scheduled_date ? (
+                                              <button
+                                                className="inline-flex items-center gap-1 hover:text-primary transition-colors cursor-pointer rounded px-1 -mx-1 hover:bg-primary/5"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  openPlan(item);
+                                                }}
+                                                title="Modifier la date et l'heure de publication"
+                                              >
+                                                <Clock className="h-3.5 w-3.5" />
+                                                {formatDate(item.scheduled_date)}
+                                                {(item.meta as any)?.scheduled_time ? ` à ${(item.meta as any).scheduled_time}` : ""}
+                                              </button>
+                                            ) : null}
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        <Button variant="outline" size="sm" asChild>
+                                          <Link href={`/contents/${item.id}`}>Voir</Link>
+                                        </Button>
+
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon">
+                                              <MoreVertical className="w-4 h-4" />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => openEdit(item)} disabled={busy !== null}>
+                                              <Edit className="w-4 h-4 mr-2" />
+                                              Modifier
+                                            </DropdownMenuItem>
+
+                                            {normalizeKeyStatus(item.status) !== "published" ? (
+                                              <DropdownMenuItem
+                                                onClick={() => handleMarkPublished(item)}
+                                                disabled={busy !== null}
+                                              >
+                                                <CheckCircle2 className="w-4 h-4 mr-2" />
+                                                Marquer comme publié
+                                              </DropdownMenuItem>
+                                            ) : null}
+
+                                            <DropdownMenuItem onClick={() => openPlan(item)} disabled={busy !== null}>
+                                              <Calendar className="w-4 h-4 mr-2" />
+                                              {normalizeKeyStatus(item.status) === "scheduled"
+                                                ? "Modifier date"
+                                                : "Planifier"}
+                                            </DropdownMenuItem>
+
+                                            {normalizeKeyStatus(item.status) === "scheduled" ? (
+                                              <DropdownMenuItem
+                                                onClick={() => handleUnplan(item)}
+                                                disabled={busy !== null}
+                                              >
+                                                <CalendarX className="w-4 h-4 mr-2" />
+                                                Déplanifier
+                                              </DropdownMenuItem>
+                                            ) : null}
+
+                                            <DropdownMenuItem
+                                              className="text-rose-600 focus:text-rose-600"
+                                              onClick={() => setDeleteConfirm(item)}
+                                              disabled={busy !== null}
+                                            >
+                                              <Trash2 className="w-4 h-4 mr-2" />
+                                              Supprimer
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </div>
+                                    </div>
+                                  </Card>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Edit Dialog (Lovable 1:1) */}
+            <Dialog open={!!editingContent} onOpenChange={(open) => (!open ? setEditingContent(null) : null)}>
+              <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                  <DialogTitle>Modifier le contenu</DialogTitle>
+                  <DialogDescription>Modifiez le titre et le contenu ci-dessous.</DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-title">Titre</Label>
+                    <Input
+                      id="edit-title"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="Titre..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-body">Contenu</Label>
+                    <Textarea
+                      id="edit-body"
+                      value={editBody}
+                      onChange={(e) => setEditBody(e.target.value)}
+                      rows={12}
+                      placeholder="Contenu..."
+                    />
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setEditingContent(null)} disabled={busy === "edit"}>
+                    Annuler
+                  </Button>
+                  <Button onClick={handleSaveEdit} disabled={busy === "edit"}>
+                    {busy === "edit" ? "Enregistrement..." : "Enregistrer"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Plan / Reschedule Dialog */}
+            <Dialog open={!!planningContent} onOpenChange={(open) => (!open ? setPlanningContent(null) : null)}>
+              <DialogContent className="sm:max-w-[480px]">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <CalendarDays className="h-5 w-5 text-primary" />
+                    {planningContent && normalizeKeyStatus(planningContent.status) === "scheduled"
+                      ? "Reprogrammer la publication"
+                      : "Planifier la publication"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {planningContent && normalizeKeyStatus(planningContent.status) === "scheduled"
+                      ? "Modifie la date et l\u2019heure de publication. Le post sera automatiquement publi\u00e9 via Tipote."
+                      : "Choisis une date et une heure de publication. Le statut passera sur \u00abPlanifi\u00e9\u00bb."}
+                  </DialogDescription>
+                </DialogHeader>
+
+                {/* Resume du contenu */}
+                {planningContent && (
+                  <div className="rounded-lg border bg-muted/50 p-3">
+                    <p className="text-sm font-medium truncate">
+                      {safeString(planningContent.title) || "Sans titre"}
+                    </p>
+                    {safeString(planningContent.channel) && (
+                      <p className="text-xs text-muted-foreground capitalize mt-0.5">
+                        {safeString(planningContent.channel)}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="plan-date">Date de publication</Label>
+                    <Input
+                      id="plan-date"
+                      type="date"
+                      value={planDate}
+                      min={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => setPlanDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="plan-time">Heure de publication</Label>
+                    <Input
+                      id="plan-time"
+                      type="time"
+                      value={planTime}
+                      onChange={(e) => setPlanTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <DialogFooter className="gap-2 sm:gap-0">
+                  <Button variant="outline" onClick={() => setPlanningContent(null)} disabled={busy === "plan"}>
+                    Annuler
+                  </Button>
+                  <Button onClick={handleSavePlan} disabled={busy === "plan" || !planDate}>
+                    {busy === "plan"
+                      ? "Enregistrement..."
+                      : planningContent && normalizeKeyStatus(planningContent.status) === "scheduled"
+                        ? "Reprogrammer"
+                        : "Planifier"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirm Dialog (Lovable 1:1) */}
+            <Dialog open={!!deleteConfirm} onOpenChange={(open) => (!open ? setDeleteConfirm(null) : null)}>
+              <DialogContent className="sm:max-w-[520px]">
+                <DialogHeader>
+                  <DialogTitle>Supprimer le contenu</DialogTitle>
+                  <DialogDescription>
+                    Cette action est irréversible. Le contenu sera supprimé définitivement.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setDeleteConfirm(null)} disabled={busy === "delete"}>
+                    Annuler
+                  </Button>
+                  <Button variant="destructive" onClick={handleDelete} disabled={busy === "delete"}>
+                    {busy === "delete" ? "Suppression..." : "Supprimer"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Footer info (email) */}
+            <div className="text-xs text-muted-foreground">
+              Connecté en tant que <span className="font-medium">{userEmail}</span>
+            </div>
+          </div>
+          </div>
+        </main>
+      </div>
+    </SidebarProvider>
+  );
+}

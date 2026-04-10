@@ -1,14 +1,20 @@
 // app/dashboard/page.tsx
+// Dashboard pixel-perfect (Lovable Today.tsx)
+// - Auth Supabase obligatoire
+// - UI 1:1 via component client TodayLovable
+
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import DashboardClient from "@/components/dashboard/DashboardClient";
 
-export const metadata = { title: "Tableau de bord – Tiquiz" };
+import TodayLovable from "@/components/dashboard/TodayLovable";
 
 export default async function DashboardPage() {
   const supabase = await getSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  return <DashboardClient />;
+  if (!session?.user) redirect("/");
+
+  return <TodayLovable />;
 }
