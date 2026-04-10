@@ -1,49 +1,45 @@
 // app/api/systeme-io/free-optin/route.ts
+// Webhook pour les opt-in gratuits Systeme.io
+// Crée le compte en plan "free" + envoie magic link
+
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const FREE_SECRET = (process.env.SYSTEME_IO_FREE_WEBHOOK_SECRET ?? "").trim();
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.tipote.com").trim();
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim();
 
-// Client "anon" pour envoyer le magic link (utilise les templates Supabase)
 const supabaseAnon = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   { auth: { persistSession: false } },
 );
 
-// Systeme.io envoie parfois JSON, parfois form-urlencoded
-async function readBodyAny(req: NextRequest): Promise<any> {
+async function readBodyAny(req: NextRequest): Promise<Record<string, unknown> | null> {
   const raw = await req.text().catch(() => "");
   if (!raw) return null;
-
-  // JSON
-  try {
-    return JSON.parse(raw);
-  } catch {
-    // x-www-form-urlencoded
+  try { return JSON.parse(raw); } catch {
     try {
       const params = new URLSearchParams(raw);
-      const obj: Record<string, any> = {};
+      const obj: Record<string, string> = {};
       let hasAny = false;
-      params.forEach((v, k) => {
-        obj[k] = v;
-        hasAny = true;
-      });
+      params.forEach((v, k) => { obj[k] = v; hasAny = true; });
       return hasAny ? obj : null;
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   }
 }
 
-function deepGet(obj: any, path: string): any {
-  if (!obj) return undefined;
-  return path.split(".").reduce((acc, key) => (acc && key in acc ? (acc as any)[key] : undefined), obj);
+function deepGet(obj: unknown, path: string): unknown {
+  if (!obj || typeof obj !== "object") return undefined;
+  return path.split(".").reduce((acc: unknown, key) => {
+    if (acc && typeof acc === "object" && key in (acc as Record<string, unknown>)) {
+      return (acc as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, obj);
 }
 
-function pickString(body: any, paths: string[]): string | null {
+function pickString(body: unknown, paths: string[]): string | null {
   for (const p of paths) {
     const v = deepGet(body, p);
     if (v !== undefined && v !== null) {
@@ -54,125 +50,80 @@ function pickString(body: any, paths: string[]): string | null {
   return null;
 }
 
-// Pagination safe (si > 1000 users)
 async function findUserByEmail(email: string) {
   const lower = email.toLowerCase();
   let page = 1;
   const perPage = 1000;
-
   while (true) {
     const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
     if (error) throw error;
-
-    const users = (data as any)?.users ?? [];
-    const found = users.find((u: any) => typeof u.email === "string" && u.email.toLowerCase() === lower);
+    const users = (data as Record<string, unknown>)?.users as Record<string, unknown>[] ?? [];
+    const found = users.find((u) => typeof u.email === "string" && (u.email as string).toLowerCase() === lower);
     if (found) return found;
-
-    if (users.length < perPage) break; // dernière page
+    if (users.length < perPage) break;
     page += 1;
   }
   return null;
 }
 
-async function getOrCreateUser(
-  email: string,
-  first_name: string | null,
-  last_name: string | null,
-  sio_contact_id: string | null,
-) {
+async function getOrCreateUser(email: string, firstName: string | null, lastName: string | null, sioContactId: string | null) {
   const existing = await findUserByEmail(email);
   if (existing) return existing.id as string;
-
   const { data, error } = await supabaseAdmin.auth.admin.createUser({
     email,
     email_confirm: true,
-    user_metadata: { first_name, last_name, sio_contact_id },
+    user_metadata: { first_name: firstName, last_name: lastName, sio_contact_id: sioContactId },
   });
-
   if (error || !data?.user) throw error ?? new Error("createUser failed");
   return data.user.id as string;
 }
 
-async function upsertProfile(
-  userId: string,
-  email: string,
-  first_name: string | null,
-  last_name: string | null,
-  sio_contact_id: string | null,
-) {
-  // ⚠️ CRITICAL: Protect paid plans from being overwritten by free-optin.
-  // Race condition fix: instead of check-then-upsert (non-atomic), we:
-  // 1. Try INSERT (new users only) with plan="free"
-  // 2. If user exists (conflict), UPDATE only non-plan fields
-  //    AND only set plan="free" if current plan is NOT a paid plan.
-  // This eliminates the race window where a sale webhook could set a paid
-  // plan between our check and our upsert.
+async function upsertFreeProfile(userId: string, email: string, firstName: string | null, lastName: string | null, sioContactId: string | null) {
+  const PAID_PLANS = ["lifetime", "monthly", "yearly"];
 
-  const PAID_PLANS = ["beta", "basic", "pro", "elite"];
-
-  // First, try to get existing profile
   const { data: existing } = await supabaseAdmin
     .from("profiles")
-    .select("id, plan")
-    .eq("id", userId)
+    .select("user_id, plan")
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (!existing) {
-    // New user — safe to insert with "free"
-    const { error } = await supabaseAdmin.from("profiles").upsert({
-      id: userId,
+    await supabaseAdmin.from("profiles").upsert({
+      user_id: userId,
       email,
-      first_name,
-      last_name,
-      sio_contact_id,
+      full_name: [firstName, lastName].filter(Boolean).join(" ") || null,
+      first_name: firstName,
+      last_name: lastName,
+      sio_contact_id: sioContactId,
       plan: "free",
       updated_at: new Date().toISOString(),
-    }, { onConflict: "id" });
-
-    if (error) throw error;
+    }, { onConflict: "user_id" });
     return;
   }
 
-  const existingPlan = (existing.plan ?? "").toString().trim().toLowerCase();
-  const hasPaidPlan = PAID_PLANS.includes(existingPlan);
-
-  if (hasPaidPlan) {
-    // ✅ User has a paid plan — update contact info but NEVER touch the plan
-    console.log(
-      `[Systeme.io free-optin] User ${email} already has plan="${existingPlan}" — NOT overwriting with "free".`,
-    );
-    const { error } = await supabaseAdmin
-      .from("profiles")
-      .update({
-        email,
-        first_name: first_name || undefined,
-        last_name: last_name || undefined,
-        sio_contact_id: sio_contact_id || undefined,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", userId);
-    if (error) throw error;
-  } else {
-    // User exists but has no paid plan — safe to set "free"
-    const { error } = await supabaseAdmin
-      .from("profiles")
-      .update({
-        email,
-        first_name,
-        last_name,
-        sio_contact_id,
-        plan: "free",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", userId);
-    if (error) throw error;
+  const existingPlan = String((existing as Record<string, unknown>).plan ?? "").trim();
+  if (PAID_PLANS.includes(existingPlan)) {
+    // Never downgrade paid users
+    console.log(`[Tiquiz free-optin] ${email} already has plan="${existingPlan}" — NOT overwriting.`);
+    await supabaseAdmin.from("profiles").update({
+      email,
+      first_name: firstName || undefined,
+      last_name: lastName || undefined,
+      sio_contact_id: sioContactId || undefined,
+      updated_at: new Date().toISOString(),
+    }).eq("user_id", userId);
+    return;
   }
-}
 
-async function ensureCredits(userId: string) {
-  // service_role => OK
-  const { error } = await supabaseAdmin.rpc("ensure_user_credits", { p_user_id: userId });
-  if (error) throw error;
+  await supabaseAdmin.from("profiles").update({
+    email,
+    full_name: [firstName, lastName].filter(Boolean).join(" ") || null,
+    first_name: firstName,
+    last_name: lastName,
+    sio_contact_id: sioContactId,
+    plan: "free",
+    updated_at: new Date().toISOString(),
+  }).eq("user_id", userId);
 }
 
 async function sendMagicLink(email: string): Promise<boolean> {
@@ -180,37 +131,21 @@ async function sendMagicLink(email: string): Promise<boolean> {
     email,
     options: {
       emailRedirectTo: `${APP_URL}/auth/callback`,
-      shouldCreateUser: false, // on a déjà créé le user côté admin
+      shouldCreateUser: false,
     },
   });
   if (error) {
-    // Non-blocking: user exists, they can use "mot de passe oublié"
-    console.error("[Systeme.io free-optin] sendMagicLink error:", error);
+    console.error("[Tiquiz free-optin] sendMagicLink error:", error);
     return false;
   }
   return true;
 }
 
-// ---------- GET = diagnostic only ----------
 export async function GET(req: NextRequest) {
-  console.warn(
-    `[Systeme.io free-optin] ⚠️ GET request received (expected POST). ` +
-    `Host: ${req.headers.get("host")} — Webhook URL must point to app.tipote.com`,
-  );
-
-  return NextResponse.json(
-    {
-      error: "This endpoint only accepts POST requests from Systeme.io webhooks. " +
-        "If you are seeing this, the webhook URL may be misconfigured. " +
-        "Use https://app.tipote.com/api/systeme-io/free-optin (not tipote.com or www.tipote.com).",
-      route: "/api/systeme-io/free-optin",
-      host: req.headers.get("host"),
-      method: "GET",
-      expected_method: "POST",
-      now: new Date().toISOString(),
-    },
-    { status: 405 },
-  );
+  return NextResponse.json({
+    error: "POST only. Use https://quiz.tipote.com/api/systeme-io/free-optin?secret=<SECRET>",
+    host: req.headers.get("host"),
+  }, { status: 405 });
 }
 
 export async function POST(req: NextRequest) {
@@ -223,100 +158,49 @@ export async function POST(req: NextRequest) {
     const body = await readBodyAny(req);
     if (!body) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
-    // Log every incoming free-optin call for debugging
-    console.log(
-      `[Systeme.io free-optin] Incoming request — email=${body?.data?.customer?.email ?? body?.email ?? "?"}`,
-    );
-
-    // Best-effort: log raw payload to webhook_logs table for audit
+    // Log
     try {
       await supabaseAdmin.from("webhook_logs").insert({
         source: "systeme_io_free_optin",
         event_type: "free_optin",
         payload: body,
         received_at: new Date().toISOString(),
-      } as any);
-    } catch {
-      // table may not exist — that's fine
-    }
+      });
+    } catch { /* table may not exist */ }
 
-    // ✅ Systeme.io optin: payload uses "contact" (not "customer"), and "fields" is an ARRAY
-    // of { fieldName, slug, value } objects — NOT an object with direct keys.
-    // Fallback to old paths for backward compat.
-
-    const emailRaw = pickString(body, [
-      "contact.email",
-      "data.contact.email",
-      "customer.email",
-      "data.customer.email",
-      "email",
-      "Email",
-    ]) ?? "";
-    const email = emailRaw.trim().toLowerCase();
-    if (!email) return NextResponse.json({ error: "Missing email" }, { status: 400 });
-
-    // Helper: extract a field value from Systeme.io optin "fields" array
-    // where fields = [{ fieldName: "first_name", slug: "first_name", value: "John" }, ...]
+    // Extract fields from SIO optin format (fields can be array)
     function pickFieldFromArray(fieldName: string): string | null {
       const fields = deepGet(body, "contact.fields") ?? deepGet(body, "data.contact.fields");
       if (Array.isArray(fields)) {
-        const entry = fields.find(
-          (f: any) => f?.fieldName === fieldName || f?.slug === fieldName,
+        const entry = (fields as Record<string, unknown>[]).find(
+          (f) => f?.fieldName === fieldName || f?.slug === fieldName,
         );
         if (entry?.value) return String(entry.value).trim() || null;
       }
       return null;
     }
 
-    const firstName =
-      pickFieldFromArray("first_name") ??
-      pickString(body, [
-        "contact.fields.first_name",
-        "customer.fields.first_name",
-        "data.customer.fields.first_name",
-        "first_name",
-        "firstname",
-        "Prenom",
-      ]) ?? null;
+    const email = (pickString(body, [
+      "contact.email", "data.contact.email",
+      "customer.email", "data.customer.email", "email",
+    ]) ?? "").trim().toLowerCase();
+    if (!email) return NextResponse.json({ error: "Missing email" }, { status: 400 });
 
-    // ✅ Systeme.io optin sends "last_name" or "surname" in the fields array
-    const lastName =
-      pickFieldFromArray("last_name") ??
-      pickFieldFromArray("surname") ??
-      pickString(body, [
-        "contact.fields.surname",
-        "contact.fields.last_name",
-        "customer.fields.surname",
-        "customer.fields.last_name",
-        "data.customer.fields.surname",
-        "data.customer.fields.last_name",
-        "surname",
-        "last_name",
-        "Nom",
-      ]) ?? null;
-
-    // ✅ Contact ID: Systeme.io optin sends "contact.id" (not contactId)
-    const sioContactId =
-      pickString(body, [
-        "contact.id",
-        "data.contact.id",
-        "customer.contactId",
-        "customer.contact_id",
-        "data.customer.contactId",
-        "data.customer.contact_id",
-        "contactId",
-        "contact_id",
-      ]) ?? null;
+    const firstName = pickFieldFromArray("first_name") ?? pickString(body, [
+      "contact.fields.first_name", "customer.fields.first_name",
+      "data.customer.fields.first_name", "first_name",
+    ]);
+    const lastName = pickFieldFromArray("last_name") ?? pickFieldFromArray("surname") ?? pickString(body, [
+      "contact.fields.surname", "customer.fields.surname",
+      "data.customer.fields.surname", "surname", "last_name",
+    ]);
+    const sioContactId = pickString(body, [
+      "contact.id", "data.contact.id",
+      "customer.contactId", "data.customer.contactId", "contactId",
+    ]);
 
     const userId = await getOrCreateUser(email, firstName, lastName, sioContactId);
-
-    // IMPORTANT: on force plan=free (opt-in free)
-    await upsertProfile(userId, email, firstName, lastName, sioContactId);
-
-    // DB = source de vérité des crédits (inclut free one-shot)
-    await ensureCredits(userId);
-
-    // Magic link (non-blocking: user exists even if link fails)
+    await upsertFreeProfile(userId, email, firstName, lastName, sioContactId);
     const magicLinkSent = await sendMagicLink(email);
 
     return NextResponse.json({
@@ -328,7 +212,7 @@ export async function POST(req: NextRequest) {
       magic_link_sent: magicLinkSent,
     });
   } catch (err) {
-    console.error("[Systeme.io free-optin] error:", err);
+    console.error("[Tiquiz free-optin] Error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

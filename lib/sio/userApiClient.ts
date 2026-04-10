@@ -1,10 +1,9 @@
 // lib/sio/userApiClient.ts
 // Shared Systeme.io API client using a user's own API key.
-// Used for webhook registration, contact enrichment, course enrollment, etc.
 
 const SIO_BASE = "https://api.systeme.io/api";
 
-export interface SioResponse<T = any> {
+export interface SioResponse<T = unknown> {
   ok: boolean;
   status: number;
   data: T | null;
@@ -14,7 +13,7 @@ export interface SioResponse<T = any> {
 /**
  * Make an authenticated request to the Systeme.io API using the user's API key.
  */
-export async function sioUserRequest<T = any>(
+export async function sioUserRequest<T = unknown>(
   apiKey: string,
   path: string,
   options: {
@@ -33,7 +32,6 @@ export async function sioUserRequest<T = any>(
   const fetchOptions: RequestInit = { method, headers };
 
   if (body && method !== "GET") {
-    // Systeme.io uses merge-patch for PATCH
     headers["Content-Type"] =
       method === "PATCH" ? "application/merge-patch+json" : "application/json";
     fetchOptions.body = JSON.stringify(body);

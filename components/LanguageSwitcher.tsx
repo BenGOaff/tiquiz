@@ -1,21 +1,9 @@
 "use client";
-// LanguageSwitcher — lets the user switch the app's interface language.
-// Sets the ui_locale cookie immediately (for fast response) and persists to DB.
-// Page reloads after switch so next-intl re-reads the new locale server-side.
 
-import { useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Globe } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { SUPPORTED_LOCALES, type SupportedLocale } from "@/i18n/config";
+import { SUPPORTED_LOCALES } from "@/i18n/config";
 
-const LANGUAGE_LABELS: Record<SupportedLocale, string> = {
+const LOCALE_LABELS: Record<string, string> = {
   fr: "Français",
   en: "English",
   es: "Español",
@@ -23,86 +11,34 @@ const LANGUAGE_LABELS: Record<SupportedLocale, string> = {
   ar: "العربية",
 };
 
-function setLocaleCookie(locale: string) {
-  const maxAge = 365 * 24 * 60 * 60;
-  document.cookie = `ui_locale=${locale}; path=/; max-age=${maxAge}; samesite=lax`;
-}
-
-async function persistLocaleToDb(locale: string) {
-  try {
-    await fetch("/api/settings/ui-locale", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ui_locale: locale }),
-    });
-  } catch {
-    // non-blocking — cookie is already set
-  }
-}
-
-type Props = {
-  /** "sidebar" = compact icon only; "settings" = full with label; "bare" = just the dropdown */
-  variant?: "sidebar" | "settings" | "bare";
-};
-
-export function LanguageSwitcher({ variant = "settings" }: Props) {
-  const locale = useLocale() as SupportedLocale;
+export default function LanguageSwitcher() {
   const t = useTranslations("languageSwitcher");
-  const [, startTransition] = useTransition();
+  const currentLocale = useLocale();
 
-  const handleChange = (next: string) => {
-    if (next === locale) return;
-    setLocaleCookie(next);
-    startTransition(() => {
-      persistLocaleToDb(next).finally(() => {
-        window.location.reload();
-      });
-    });
-  };
-
-  if (variant === "sidebar") {
-    return (
-      <Select value={locale} onValueChange={handleChange}>
-        <SelectTrigger
-          className="h-8 w-full gap-1.5 border-0 bg-transparent px-2 text-xs text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus:ring-0"
-          aria-label={t("label")}
-        >
-          <Globe className="h-3.5 w-3.5 shrink-0" />
-          <SelectValue>{LANGUAGE_LABELS[locale]}</SelectValue>
-        </SelectTrigger>
-        <SelectContent side="right" align="end">
-          {SUPPORTED_LOCALES.map((l) => (
-            <SelectItem key={l} value={l} className="text-xs" dir={l === "ar" ? "rtl" : "ltr"}>
-              {LANGUAGE_LABELS[l]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    );
+  function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const locale = e.target.value;
+    document.cookie = `ui_locale=${locale};path=/;max-age=${365 * 24 * 60 * 60};samesite=lax`;
+    // Persist to DB (non-blocking)
+    fetch("/api/settings/ui-locale", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ locale }),
+    }).catch(() => {});
+    window.location.reload();
   }
-
-  const selectEl = (
-    <Select value={locale} onValueChange={handleChange}>
-      <SelectTrigger className={variant === "bare" ? undefined : "w-[220px]"}>
-        {variant !== "bare" && <Globe className="mr-2 h-4 w-4 shrink-0 text-muted-foreground" />}
-        <SelectValue>{LANGUAGE_LABELS[locale]}</SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        {SUPPORTED_LOCALES.map((l) => (
-          <SelectItem key={l} value={l} dir={l === "ar" ? "rtl" : "ltr"}>
-            {LANGUAGE_LABELS[l]}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-
-  if (variant === "bare") return selectEl;
 
   return (
-    <div className="space-y-2">
-      <p className="text-sm font-medium">{t("label")}</p>
-      {selectEl}
-    </div>
+    <select
+      value={currentLocale}
+      onChange={handleChange}
+      className="text-sm bg-background border border-input rounded-md px-2 py-1.5 cursor-pointer"
+      aria-label={t("label")}
+    >
+      {SUPPORTED_LOCALES.map((loc) => (
+        <option key={loc} value={loc}>
+          {LOCALE_LABELS[loc] ?? loc}
+        </option>
+      ))}
+    </select>
   );
 }

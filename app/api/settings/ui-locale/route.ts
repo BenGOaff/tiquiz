@@ -1,42 +1,25 @@
 // app/api/settings/ui-locale/route.ts
-// PATCH: save the user's interface language preference to business_profiles.ui_locale
-
+// Save interface language preference
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-const SUPPORTED_LOCALES = ["fr", "en", "es", "it", "ar"];
-
-export async function PATCH(req: NextRequest) {
-  const supabase = await getSupabaseServerClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  let body: unknown;
+export async function POST(req: NextRequest) {
   try {
-    body = await req.json();
+    const supabase = await getSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ ok: false }, { status: 401 });
+
+    const { locale } = await req.json();
+    if (!locale) return NextResponse.json({ ok: false }, { status: 400 });
+
+    await supabaseAdmin
+      .from("profiles")
+      .update({ ui_locale: locale, updated_at: new Date().toISOString() })
+      .eq("user_id", user.id);
+
+    return NextResponse.json({ ok: true });
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    return NextResponse.json({ ok: false }, { status: 500 });
   }
-
-  const ui_locale = (body as any)?.ui_locale;
-  if (typeof ui_locale !== "string" || !SUPPORTED_LOCALES.includes(ui_locale)) {
-    return NextResponse.json({ error: "Invalid locale" }, { status: 400 });
-  }
-
-  const { error } = await supabaseAdmin
-    .from("business_profiles")
-    .update({ ui_locale })
-    .eq("user_id", session.user.id);
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ ok: true, ui_locale });
 }

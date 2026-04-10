@@ -17,8 +17,8 @@ import {
   Copy,
   Check,
 } from "lucide-react";
-import ToastNotificationOverlay from "@/components/widgets/ToastNotificationOverlay";
-import SocialShareOverlay from "@/components/widgets/SocialShareOverlay";
+
+
 
 type QuizOption = { text: string; result_index: number };
 type QuizQuestion = {
@@ -67,10 +67,6 @@ interface PublicQuizClientProps {
   quizId: string;
   /** If provided, skip the API fetch and use this data directly (preview mode). */
   previewData?: PublicQuizData | null;
-  /** Toast widget ID for social proof overlay */
-  toastWidgetId?: string | null;
-  /** Social share widget ID */
-  shareWidgetId?: string | null;
 }
 
 export type { PublicQuizData };
@@ -382,12 +378,10 @@ function getT(locale: string | null | undefined, addressForm?: string | null): Q
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function PublicQuizClient({ quizId, previewData, toastWidgetId: serverToastId, shareWidgetId: serverShareId }: PublicQuizClientProps) {
+export default function PublicQuizClient({ quizId, previewData }: PublicQuizClientProps) {
   const [quiz, setQuiz] = useState<PublicQuizData | null>(previewData ?? null);
   const [loading, setLoading] = useState(!previewData);
   const [error, setError] = useState<string | null>(null);
-  const [toastWidgetId, setToastWidgetId] = useState<string | null>(serverToastId || null);
-  const [shareWidgetId, setShareWidgetId] = useState<string | null>(serverShareId || null);
 
   const [step, setStep] = useState<Step>("intro");
   const [currentQ, setCurrentQ] = useState(0);
@@ -450,8 +444,6 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
           results: json.results ?? [],
         };
         setQuiz(quizData);
-        if (json.toast_widget_id) setToastWidgetId(json.toast_widget_id);
-        if (json.share_widget_id) setShareWidgetId(json.share_widget_id);
       } catch {
         setError(getT(null).loadError);
       } finally {
@@ -592,8 +584,6 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
   };
 
   // Toast notification overlay (renders as fixed position, works across all steps)
-  const toastOverlay = toastWidgetId ? <ToastNotificationOverlay widgetId={toastWidgetId} /> : null;
-  const shareOverlay = shareWidgetId ? <SocialShareOverlay widgetId={shareWidgetId} /> : null;
 
   if (loading) {
     return (
@@ -632,8 +622,8 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
 
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4 sm:p-6">
-        {toastOverlay}
-        {shareOverlay}
+        
+        
         <Card className="max-w-2xl w-full overflow-hidden shadow-lg border-0">
           <div className="p-6 sm:p-10 space-y-6">
             <h1 className="text-2xl sm:text-3xl font-bold leading-tight">{quiz.title}</h1>
@@ -664,7 +654,7 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
             </Button>
           </div>
         </Card>
-        <TipoteFooter locale={quiz.locale} />
+        <TiquizFooter locale={quiz.locale} />
       </div>
     );
   }
@@ -678,8 +668,8 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
 
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4 sm:p-6">
-        {toastOverlay}
-        {shareOverlay}
+        
+        
         <Card className="max-w-2xl w-full overflow-hidden shadow-lg border-0">
           {/* Progress bar at top */}
           <Progress value={progress} className="h-1.5 rounded-none" />
@@ -734,8 +724,8 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
   if (step === "email") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4 sm:p-6">
-        {toastOverlay}
-        {shareOverlay}
+        
+        
         <Card className="max-w-2xl w-full overflow-hidden shadow-lg border-0">
           <div className="p-6 sm:p-10 space-y-6">
             <h2 className="text-xl sm:text-2xl font-bold">
@@ -846,7 +836,7 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
             )}
           </div>
         </Card>
-        <TipoteFooter locale={quiz.locale} />
+        <TiquizFooter locale={quiz.locale} />
       </div>
     );
   }
@@ -855,8 +845,8 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
   if (step === "result") {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4 sm:p-6">
-        {toastOverlay}
-        {shareOverlay}
+        
+        
         <Card className="max-w-2xl w-full overflow-hidden shadow-lg border-0">
           <div className="p-6 sm:p-10 space-y-6">
             <div className="space-y-3">
@@ -988,7 +978,7 @@ export default function PublicQuizClient({ quizId, previewData, toastWidgetId: s
           )}
           </div>
         </Card>
-        <TipoteFooter locale={quiz.locale} />
+        <TiquizFooter locale={quiz.locale} />
       </div>
     );
   }
@@ -1046,22 +1036,22 @@ function ConsentText({ text, privacyUrl, locale }: { text: string | null; privac
   );
 }
 
-const tipoteFooterTexts: Record<string, string> = {
-  fr: "Ce quiz vous est offert par Tipote",
-  en: "This quiz is powered by Tipote",
-  es: "Este quiz es ofrecido por Tipote",
-  de: "Dieses Quiz wird Ihnen von Tipote bereitgestellt",
-  pt: "Este quiz \u00e9 oferecido por Tipote",
-  it: "Questo quiz \u00e8 offerto da Tipote",
-  ar: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u0645\u0642\u062f\u0645 \u0644\u0643\u0645 \u0645\u0646 Tipote",
+const tiquizFooterTexts: Record<string, string> = {
+  fr: "Ce quiz vous est offert par Tiquiz",
+  en: "This quiz is powered by Tiquiz",
+  es: "Este quiz es ofrecido por Tiquiz",
+  de: "Dieses Quiz wird Ihnen von Tiquiz bereitgestellt",
+  pt: "Este quiz \u00e9 oferecido por Tiquiz",
+  it: "Questo quiz \u00e8 offerto da Tiquiz",
+  ar: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u0645\u0642\u062f\u0645 \u0644\u0643\u0645 \u0645\u0646 Tiquiz",
 };
 
-function TipoteFooter({ locale }: { locale?: string | null }) {
-  const text = tipoteFooterTexts[locale ?? "fr"] ?? tipoteFooterTexts.fr;
+function TiquizFooter({ locale }: { locale?: string | null }) {
+  const text = tiquizFooterTexts[locale ?? "fr"] ?? tiquizFooterTexts.fr;
   return (
     <p className="text-center text-xs text-muted-foreground/60 mt-6">
       <a
-        href="https://www.tipote.com/commande"
+        href="https://www.quiz.tipote.com"
         target="_blank"
         rel="noopener noreferrer"
         className="hover:text-muted-foreground transition-colors"

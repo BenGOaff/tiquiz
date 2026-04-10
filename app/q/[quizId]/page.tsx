@@ -1,53 +1,40 @@
 // app/q/[quizId]/page.tsx
 // Public quiz page (no auth required)
 import type { Metadata } from "next";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
 
-// Force dynamic rendering so quiz metadata/status is always fresh.
 export const dynamic = "force-dynamic";
 
-type RouteContext = { params: Promise<{ quizId: string }> };
+type Props = { params: Promise<{ quizId: string }> };
 
-export async function generateMetadata({ params }: RouteContext): Promise<Metadata> {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { quizId } = await params;
-
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!supabaseUrl || !supabaseKey) return {};
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const { data } = await supabase
+    const { data } = await supabaseAdmin
       .from("quizzes")
       .select("title, introduction, og_image_url")
       .eq("id", quizId)
       .eq("status", "active")
       .maybeSingle();
 
-    if (!data) return {};
+    if (!data) return { title: "Quiz – Tiquiz" };
 
-    const meta: Metadata = {
-      title: data.title,
-      description: data.introduction?.slice(0, 160) || undefined,
+    return {
+      title: `${data.title} – Tiquiz`,
+      description: data.introduction?.slice(0, 160) ?? undefined,
       openGraph: {
         title: data.title,
-        description: data.introduction?.slice(0, 160) || undefined,
-        type: "website",
+        description: data.introduction?.slice(0, 160) ?? undefined,
+        ...(data.og_image_url ? { images: [{ url: data.og_image_url }] } : {}),
       },
     };
-
-    if (data.og_image_url) {
-      meta.openGraph!.images = [{ url: data.og_image_url, width: 1200, height: 630 }];
-    }
-
-    return meta;
   } catch {
-    return {};
+    return { title: "Quiz – Tiquiz" };
   }
 }
 
-export default async function PublicQuizPage({ params }: RouteContext) {
+export default async function PublicQuizPage({ params }: Props) {
   const { quizId } = await params;
   return <PublicQuizClient quizId={quizId} />;
 }
