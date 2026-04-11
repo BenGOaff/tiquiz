@@ -7,7 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim();
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").replace(/\/+$/, "");
 
 const supabaseAnon = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -172,7 +172,7 @@ async function sendMagicLink(email: string) {
 
 export async function GET(req: NextRequest) {
   return NextResponse.json({
-    error: "POST only. Use https://quiz.tipote.com/api/systeme-io/webhook?secret=<SECRET>",
+    error: `POST only. Use ${APP_URL}/api/systeme-io/webhook?secret=<SECRET>`,
     host: req.headers.get("host"),
     method: "GET",
   }, { status: 405 });

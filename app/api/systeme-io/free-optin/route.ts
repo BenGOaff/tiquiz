@@ -7,7 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 const FREE_SECRET = (process.env.SYSTEME_IO_FREE_WEBHOOK_SECRET ?? "").trim();
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim();
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").replace(/\/+$/, "");
 
 const supabaseAnon = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -143,7 +143,7 @@ async function sendMagicLink(email: string): Promise<boolean> {
 
 export async function GET(req: NextRequest) {
   return NextResponse.json({
-    error: "POST only. Use https://quiz.tipote.com/api/systeme-io/free-optin?secret=<SECRET>",
+    error: `POST only. Use ${APP_URL}/api/systeme-io/free-optin?secret=<SECRET>`,
     host: req.headers.get("host"),
   }, { status: 405 });
 }
