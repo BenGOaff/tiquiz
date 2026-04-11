@@ -4,10 +4,29 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   TIQUIZ DESIGN SYSTEM — Source of truth for all UI components
+   ═══════════════════════════════════════════════════════════════════════════
+
+   BRAND COLORS (hex reference):
+   ┌────────────────────────────────────────────────────────────────────────┐
+   │  Text / foreground  : #2E386E  (dark navy — used for all body text)  │
+   │  Primary / accents  : #5D6CDB  (vibrant indigo — buttons, links)     │
+   │  Primary dark       : #2E3A6E  (deep navy — gradient endpoints)      │
+   │  Turquoise accent   : #20BBE6  (turquoise — small highlight pops)    │
+   │  Background         : #F6F7FB  (soft off-white)                      │
+   └────────────────────────────────────────────────────────────────────────┘
+
+   TYPOGRAPHY:
+   - Font: Inter everywhere
+   - Same hierarchy as Tipote
+
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -46,84 +65,87 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* Brand-specific color utilities */
+  --color-tq-turquoise: #20BBE6;
+  --color-tq-navy: #2E386E;
+  --color-tq-indigo: #5D6CDB;
+  --color-tq-navy-dark: #1e2654;
 }
 
 :root {
-  /* Tiquiz Design System — Indigo/Navy + Turquoise (#20bbe6) accents */
-  --background: oklch(0.975 0.005 270);   /* #F6F7FB soft off-white */
-  --foreground: oklch(0.305 0.07 270);    /* #2E386E dark navy */
-  --card: oklch(1 0 0);                   /* white */
-  --card-foreground: oklch(0.305 0.07 270);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.305 0.07 270);
-  --primary: oklch(0.545 0.17 270);       /* #5D6CDB indigo */
-  --primary-foreground: oklch(1 0 0);     /* white */
-  --secondary: oklch(0.965 0.005 270);
-  --secondary-foreground: oklch(0.31 0.07 265);
-  --muted: oklch(0.965 0.005 270);
-  --muted-foreground: oklch(0.48 0.04 265);
-  --accent: oklch(0.96 0.02 270);
-  --accent-foreground: oklch(0.31 0.07 265);
-  --destructive: oklch(0.55 0.2 27);
-  --border: oklch(0.9 0.005 270);
-  --input: oklch(0.9 0.005 270);
-  --ring: oklch(0.545 0.17 270);          /* indigo ring */
-  --chart-1: oklch(0.545 0.17 270);
-  --chart-2: oklch(0.72 0.13 210);        /* turquoise */
-  --chart-3: oklch(0.31 0.07 265);
-  --chart-4: oklch(0.48 0.04 265);
-  --chart-5: oklch(0.87 0 0);
+  /* ── Core palette using HSL (same format as Tipote, guaranteed to work) ── */
+  --background: 225 33% 98%;        /* #F6F7FB */
+  --foreground: 231 41% 31%;        /* #2E386E */
+  --card: 0 0% 100%;
+  --card-foreground: 231 41% 31%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 231 41% 31%;
+  --primary: 233 64% 61%;           /* #5D6CDB */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 33% 96%;
+  --secondary-foreground: 230 41% 28%;
+  --muted: 220 33% 96%;
+  --muted-foreground: 236 16% 50%;
+  --accent: 236 79% 96%;
+  --accent-foreground: 230 41% 28%;
+  --destructive: 0 72% 51%;
+  --border: 220 13% 90%;
+  --input: 220 13% 90%;
+  --ring: 233 64% 61%;
+  --chart-1: 233 64% 61%;
+  --chart-2: 194 79% 52%;           /* #20BBE6 turquoise */
+  --chart-3: 230 41% 28%;
+  --chart-4: 236 16% 50%;
+  --chart-5: 0 0% 87%;
   --radius: 0.75rem;
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.305 0.07 270);
-  --sidebar-primary: oklch(0.545 0.17 270);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.96 0.02 270);
-  --sidebar-accent-foreground: oklch(0.31 0.07 265);
-  --sidebar-border: oklch(0.92 0 0);
-  --sidebar-ring: oklch(0.545 0.17 270);
 
-  /* Brand turquoise for accent highlights */
-  --tiquiz-turquoise: #20bbe6;
-  --tiquiz-navy: #2E386E;
-  --tiquiz-indigo: #5D6CDB;
-  --tiquiz-navy-dark: #1e2654;
+  /* ── Sidebar ── */
+  --sidebar: 0 0% 100%;
+  --sidebar-foreground: 231 41% 31%;
+  --sidebar-primary: 233 64% 61%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 236 79% 96%;
+  --sidebar-accent-foreground: 230 41% 28%;
+  --sidebar-border: 0 0% 90%;
+  --sidebar-ring: 233 64% 61%;
+
+  /* ── Gradients ── */
   --gradient-primary: linear-gradient(135deg, #5D6CDB 0%, #2E386E 100%);
-  --gradient-hero: linear-gradient(135deg, rgba(93,108,219,0.95) 0%, rgba(46,56,110,0.95) 100%);
+  --gradient-hero: linear-gradient(135deg, rgba(93,108,219,0.95) 0%, rgba(30,38,84,0.98) 100%);
 }
 
 .dark {
-  --background: oklch(0.2 0.03 265);
-  --foreground: oklch(0.95 0 0);
-  --card: oklch(0.25 0.04 265);
-  --card-foreground: oklch(0.95 0 0);
-  --popover: oklch(0.25 0.04 265);
-  --popover-foreground: oklch(0.95 0 0);
-  --primary: oklch(0.6 0.17 270);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.28 0.04 265);
-  --secondary-foreground: oklch(0.95 0 0);
-  --muted: oklch(0.28 0.04 265);
-  --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.545 0.17 270);
-  --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.55 0.2 27);
-  --border: oklch(0.35 0.03 265);
-  --input: oklch(0.35 0.03 265);
-  --ring: oklch(0.6 0.17 270);
-  --chart-1: oklch(0.6 0.17 270);
-  --chart-2: oklch(0.72 0.13 210);
-  --chart-3: oklch(0.31 0.07 265);
-  --chart-4: oklch(0.48 0.04 265);
-  --chart-5: oklch(0.87 0 0);
-  --sidebar: oklch(0.22 0.04 265);
-  --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.6 0.17 270);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.28 0.04 265);
-  --sidebar-accent-foreground: oklch(0.95 0 0);
-  --sidebar-border: oklch(0.35 0.03 265);
-  --sidebar-ring: oklch(0.6 0.17 270);
+  --background: 230 50% 12%;
+  --foreground: 0 0% 95%;
+  --card: 230 41% 18%;
+  --card-foreground: 0 0% 95%;
+  --popover: 230 41% 18%;
+  --popover-foreground: 0 0% 95%;
+  --primary: 233 64% 65%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 230 41% 22%;
+  --secondary-foreground: 0 0% 95%;
+  --muted: 230 41% 22%;
+  --muted-foreground: 0 0% 65%;
+  --accent: 233 64% 61%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 51%;
+  --border: 230 30% 30%;
+  --input: 230 30% 30%;
+  --ring: 233 64% 65%;
+  --chart-1: 233 64% 65%;
+  --chart-2: 194 79% 52%;
+  --chart-3: 230 41% 28%;
+  --chart-4: 0 0% 50%;
+  --chart-5: 0 0% 87%;
+  --sidebar: 230 41% 15%;
+  --sidebar-foreground: 0 0% 95%;
+  --sidebar-primary: 233 64% 65%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 230 41% 22%;
+  --sidebar-accent-foreground: 0 0% 95%;
+  --sidebar-border: 230 30% 30%;
+  --sidebar-ring: 233 64% 65%;
 }
 
 @layer base {
@@ -136,4 +158,18 @@
   html {
     @apply font-sans;
   }
+}
+
+/* ── Brand gradient utilities ── */
+.gradient-primary {
+  background: linear-gradient(135deg, #5D6CDB 0%, #2E386E 100%);
+}
+.gradient-hero {
+  background: linear-gradient(135deg, rgba(93,108,219,0.95) 0%, rgba(30,38,84,0.98) 100%);
+}
+.text-gradient-brand {
+  background: linear-gradient(135deg, #20BBE6 0%, #2E386E 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }

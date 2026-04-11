@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Sparkles,
   BarChart3,
@@ -28,27 +29,27 @@ export default async function HomePage() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* ── Header ── */}
       <header className="w-full border-b border-border bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-sm" style={{ background: "linear-gradient(135deg, #5D6CDB 0%, #2E386E 100%)" }}>
-              T
-            </div>
-            <span className="text-xl font-bold" style={{ color: "var(--tiquiz-navy)" }}>
-              Tiquiz
-            </span>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/tiquiz-logo (2).png"
+              alt="Tiquiz"
+              width={120}
+              height={40}
+              className="h-9 w-auto"
+              priority
+            />
           </Link>
           <div className="flex items-center gap-3">
             <Link
               href="/login"
-              className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-colors hover:bg-accent"
-              style={{ color: "var(--tiquiz-navy)" }}
+              className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
             >
               Se connecter
             </Link>
             <Link
               href="/signup"
-              className="inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 shadow-md"
-              style={{ background: "linear-gradient(135deg, #5D6CDB 0%, #2E386E 100%)" }}
+              className="inline-flex items-center justify-center rounded-lg gradient-primary px-4 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90 shadow-md"
             >
               Commencer gratuitement
             </Link>
@@ -58,23 +59,20 @@ export default async function HomePage() {
 
       {/* ── Hero ── */}
       <section className="relative overflow-hidden">
-        <div
-          className="absolute inset-0"
-          style={{ background: "linear-gradient(135deg, rgba(93,108,219,0.95) 0%, rgba(30,38,84,0.98) 100%)" }}
-        />
+        <div className="absolute inset-0 gradient-hero" />
         {/* Decorative circles */}
-        <div className="absolute top-[-80px] right-[-80px] w-[300px] h-[300px] rounded-full opacity-10" style={{ background: "#20bbe6" }} />
-        <div className="absolute bottom-[-60px] left-[-60px] w-[200px] h-[200px] rounded-full opacity-10" style={{ background: "#20bbe6" }} />
+        <div className="absolute top-[-80px] right-[-80px] w-[300px] h-[300px] rounded-full bg-tq-turquoise/10" />
+        <div className="absolute bottom-[-60px] left-[-60px] w-[200px] h-[200px] rounded-full bg-tq-turquoise/10" />
 
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-28 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium text-white/90 mb-6" style={{ background: "rgba(32,187,230,0.2)", border: "1px solid rgba(32,187,230,0.3)" }}>
-            <Sparkles className="h-3.5 w-3.5" style={{ color: "#20bbe6" }} />
+          <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium text-white/90 mb-6 border border-tq-turquoise/30 bg-tq-turquoise/20">
+            <Sparkles className="h-3.5 w-3.5 text-tq-turquoise" />
             Propulsé par l&apos;IA
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white tracking-tight mb-6 leading-tight">
             Crée des quiz engageants.
             <br />
-            <span style={{ color: "#20bbe6" }}>Capture des leads.</span>
+            <span className="text-tq-turquoise">Capture des leads.</span>
           </h1>
           <p className="text-lg sm:text-xl text-white/70 max-w-2xl mx-auto mb-10 leading-relaxed">
             Crée des quiz interactifs en quelques minutes avec l&apos;IA,
@@ -83,8 +81,7 @@ export default async function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               href="/signup"
-              className="inline-flex items-center justify-center gap-2 rounded-xl px-8 py-3.5 text-base font-semibold text-white transition-all hover:brightness-110 shadow-lg"
-              style={{ background: "#20bbe6" }}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-tq-turquoise px-8 py-3.5 text-base font-semibold text-white transition-all hover:brightness-110 shadow-lg"
             >
               Commencer gratuitement
               <ArrowRight className="h-4 w-4" />
@@ -104,7 +101,7 @@ export default async function HomePage() {
       <section className="py-20 sm:py-24">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4" style={{ color: "var(--tiquiz-navy)" }}>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-tq-navy mb-4">
               Tout ce qu&apos;il te faut pour tes quiz
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -147,17 +144,12 @@ export default async function HomePage() {
             ].map(({ icon: Icon, title, desc }) => (
               <div
                 key={title}
-                className="group rounded-xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:border-transparent"
+                className="group rounded-xl border border-border bg-card p-6 transition-all hover:shadow-lg hover:border-tq-turquoise/30"
               >
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center mb-4"
-                  style={{ background: "rgba(32,187,230,0.1)" }}
-                >
-                  <Icon className="h-5 w-5" style={{ color: "#20bbe6" }} />
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center mb-4 bg-tq-turquoise/10">
+                  <Icon className="h-5 w-5 text-tq-turquoise" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2" style={{ color: "var(--tiquiz-navy)" }}>
-                  {title}
-                </h3>
+                <h3 className="text-lg font-semibold text-tq-navy mb-2">{title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
               </div>
             ))}
@@ -166,10 +158,10 @@ export default async function HomePage() {
       </section>
 
       {/* ── How it works ── */}
-      <section className="py-20 sm:py-24" style={{ background: "rgba(93,108,219,0.03)" }}>
+      <section className="py-20 sm:py-24 bg-primary/[0.03]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4" style={{ color: "var(--tiquiz-navy)" }}>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-tq-navy mb-4">
               3 étapes, c&apos;est tout
             </h2>
             <p className="text-lg text-muted-foreground">
@@ -184,15 +176,10 @@ export default async function HomePage() {
               { step: "3", title: "Capture des leads", desc: "Partage le lien. Les leads arrivent dans ton dashboard et ton CRM." },
             ].map(({ step, title, desc }) => (
               <div key={step} className="text-center">
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-5 text-lg font-bold text-white"
-                  style={{ background: "linear-gradient(135deg, #5D6CDB 0%, #2E386E 100%)" }}
-                >
+                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-5 text-lg font-bold text-white gradient-primary">
                   {step}
                 </div>
-                <h3 className="text-lg font-semibold mb-2" style={{ color: "var(--tiquiz-navy)" }}>
-                  {title}
-                </h3>
+                <h3 className="text-lg font-semibold text-tq-navy mb-2">{title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
               </div>
             ))}
@@ -203,16 +190,16 @@ export default async function HomePage() {
       {/* ── Pricing hint ── */}
       <section className="py-20 sm:py-24">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4" style={{ color: "var(--tiquiz-navy)" }}>
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-tq-navy mb-4">
             Commence gratuitement
           </h2>
           <p className="text-lg text-muted-foreground mb-10">
             1 quiz + 10 réponses/mois offerts. Passe en illimité quand tu es prêt.
           </p>
 
-          <div className="rounded-2xl border border-border bg-card p-8 sm:p-10 text-left">
+          <div className="rounded-2xl border border-border bg-card p-8 sm:p-10 text-left shadow-sm">
             <div className="flex items-center gap-3 mb-6">
-              <div className="text-3xl font-bold" style={{ color: "var(--tiquiz-navy)" }}>Gratuit</div>
+              <div className="text-3xl font-bold text-tq-navy">Gratuit</div>
               <span className="text-sm text-muted-foreground">pour toujours</span>
             </div>
             <ul className="space-y-3 mb-8">
@@ -225,15 +212,14 @@ export default async function HomePage() {
                 "Quiz public responsive",
               ].map((item) => (
                 <li key={item} className="flex items-center gap-3 text-sm">
-                  <CheckCircle2 className="h-4 w-4 flex-shrink-0" style={{ color: "#20bbe6" }} />
+                  <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-tq-turquoise" />
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
             <Link
               href="/signup"
-              className="inline-flex items-center justify-center gap-2 rounded-xl w-full px-6 py-3.5 text-base font-semibold text-white transition-all hover:brightness-110 shadow-md"
-              style={{ background: "linear-gradient(135deg, #5D6CDB 0%, #2E386E 100%)" }}
+              className="inline-flex items-center justify-center gap-2 rounded-xl w-full gradient-primary px-6 py-3.5 text-base font-semibold text-white transition-all hover:opacity-90 shadow-md"
             >
               Créer mon premier quiz
               <ArrowRight className="h-4 w-4" />
@@ -244,11 +230,8 @@ export default async function HomePage() {
 
       {/* ── CTA Final ── */}
       <section className="relative overflow-hidden">
-        <div
-          className="absolute inset-0"
-          style={{ background: "linear-gradient(135deg, rgba(93,108,219,0.95) 0%, rgba(30,38,84,0.98) 100%)" }}
-        />
-        <div className="absolute top-[-40px] left-[50%] w-[200px] h-[200px] rounded-full opacity-10" style={{ background: "#20bbe6" }} />
+        <div className="absolute inset-0 gradient-hero" />
+        <div className="absolute top-[-40px] left-[50%] w-[200px] h-[200px] rounded-full bg-tq-turquoise/10" />
 
         <div className="relative max-w-3xl mx-auto px-4 sm:px-6 py-16 sm:py-20 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-4">
@@ -259,8 +242,7 @@ export default async function HomePage() {
           </p>
           <Link
             href="/signup"
-            className="inline-flex items-center justify-center gap-2 rounded-xl px-8 py-3.5 text-base font-semibold text-white transition-all hover:brightness-110 shadow-lg"
-            style={{ background: "#20bbe6" }}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-tq-turquoise px-8 py-3.5 text-base font-semibold text-white transition-all hover:brightness-110 shadow-lg"
           >
             Commencer maintenant
             <ArrowRight className="h-4 w-4" />
@@ -271,14 +253,15 @@ export default async function HomePage() {
       {/* ── Footer ── */}
       <footer className="w-full border-t border-border bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded flex items-center justify-center text-white font-bold text-xs" style={{ background: "linear-gradient(135deg, #5D6CDB 0%, #2E386E 100%)" }}>
-              T
-            </div>
-            <span className="text-sm font-semibold" style={{ color: "var(--tiquiz-navy)" }}>
-              Tiquiz
-            </span>
-          </div>
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/tiquiz-logo (2).png"
+              alt="Tiquiz"
+              width={80}
+              height={28}
+              className="h-6 w-auto"
+            />
+          </Link>
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} Tiquiz. Tous droits réservés.
           </p>
