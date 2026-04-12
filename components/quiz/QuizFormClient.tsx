@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, ArrowLeft, Loader2, Sparkles, FileText, Upload, Settings2, MessageSquare, Award, Users, Share2, Zap, ChevronRight, GripVertical, Save, Globe } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Loader2, Sparkles, FileText, Upload, Settings2, MessageSquare, Award, Users, Share2, Zap, ChevronRight, GripVertical, Save, Globe, Monitor } from "lucide-react";
 import SortableQuestionList from "@/components/quiz/SortableQuestionList";
 import QuizShareSettings from "@/components/quiz/QuizShareSettings";
+import QuizPreview from "@/components/quiz/QuizPreview";
 import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
@@ -507,6 +508,30 @@ export default function QuizFormClient() {
           {saving ? t("saving") : "Enregistrer"}
         </Button>
       </div>
+
+      {/* Preview panel — always visible below banner */}
+      <details className="group">
+        <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium text-primary hover:text-primary/80 transition-colors select-none">
+          <Monitor className="h-4 w-4" />
+          Aperçu en direct
+          <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
+        </summary>
+        <div className="mt-3">
+          <QuizPreview
+            title={title}
+            introduction={introduction}
+            questions={questions}
+            results={results}
+            captureHeading={captureHeading}
+            captureSubtitle={captureSubtitle}
+            captureFirstName={captureFirstName}
+            captureLastName={captureLastName}
+            capturePhone={capturePhone}
+            captureCountry={captureCountry}
+            ctaText={ctaText}
+          />
+        </div>
+      </details>
 
       {/* Source tabs (Manuel / IA / Import) */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
