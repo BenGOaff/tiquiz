@@ -69,11 +69,9 @@ export default function AppShell({
             </div>
           </header>
 
-          {/* Content — fills the space between sidebar and right edge, with equal padding */}
-          <div className={contentClassName ?? "flex-1 p-5 sm:p-6 lg:p-8"}>
-            <div className="w-full space-y-5">
-              {children}
-            </div>
+          {/* Content — same layout as Tipote */}
+          <div className={contentClassName ?? "flex-1 p-4 lg:p-6"}>
+            {children}
           </div>
         </main>
       </div>
