@@ -80,7 +80,7 @@ export function AppSidebar() {
   const t = useTranslations("nav");
 
   return (
-    <Sidebar collapsible="none">
+    <Sidebar collapsible="offcanvas">
       <SidebarHeader className="p-4 flex flex-row items-center justify-between">
         <Link href="/dashboard" className="block">
           <img
@@ -89,6 +89,7 @@ export function AppSidebar() {
             className="h-10 w-auto"
           />
         </Link>
+        <SidebarCollapseButton />
       </SidebarHeader>
 
       <SidebarContent className="overflow-y-auto overflow-x-visible px-3 py-4">
