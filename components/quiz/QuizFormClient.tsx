@@ -1089,25 +1089,44 @@ export default function QuizFormClient() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Objective */}
+                {/* Objective — dropdown with 16 types */}
                 <div className="space-y-2">
                   <Label htmlFor="ai-objective">{t("aiObjectiveLabel")}</Label>
-                  <Textarea
+                  <select
                     id="ai-objective"
                     value={aiObjective}
                     onChange={(e) => setAiObjective(e.target.value)}
-                    placeholder={t("aiObjectivePlaceholder")}
-                  />
+                    className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background"
+                  >
+                    <option value="">— Choisis un objectif —</option>
+                    <option value="engagement">Créer de l&apos;engagement — Contenus funs et interactifs</option>
+                    <option value="eduquer">Éduquer — Transmettre des connaissances</option>
+                    <option value="qualifier">Qualifier — Évaluer niveau ou compétences</option>
+                    <option value="sensibiliser">Sensibiliser — Faire prendre conscience</option>
+                    <option value="reviser">Réviser — Consolider des acquis</option>
+                    <option value="decouvrir">Découvrir — Explorer un sujet</option>
+                    <option value="tester">Tester — Vérifier des connaissances</option>
+                    <option value="classer">Classer — Positionner dans un niveau</option>
+                    <option value="challenger">Challenger — Stimuler la progression</option>
+                    <option value="initier">Initier — Découvrir les bases d&apos;un sujet</option>
+                    <option value="perfectionner">Perfectionner — Approfondir l&apos;existant</option>
+                    <option value="diagnostiquer">Diagnostiquer — Identifier lacunes / freins</option>
+                    <option value="motiver">Motiver — Encourager et redonner de l&apos;élan</option>
+                    <option value="certifier">Certifier — Valider un niveau</option>
+                    <option value="orienter">Orienter — Guider vers une offre ou un choix</option>
+                    <option value="recruter">Recruter — Évaluer pour sélectionner</option>
+                  </select>
                 </div>
 
-                {/* Target audience */}
+                {/* Détail objectif */}
                 <div className="space-y-2">
-                  <Label htmlFor="ai-target">{t("aiTargetLabel")}</Label>
-                  <Input
-                    id="ai-target"
+                  <Label htmlFor="ai-target">Précise ton objectif</Label>
+                  <Textarea
+                    id="ai-objective-detail"
                     value={aiTarget}
                     onChange={(e) => setAiTarget(e.target.value)}
-                    placeholder={t("aiTargetPlaceholder")}
+                    placeholder="Ex : Qualifier mes prospects pour mon offre de coaching à destination des entrepreneurs débutants..."
+                    className="h-16"
                   />
                 </div>
 
