@@ -1046,7 +1046,18 @@ const tiquizFooterTexts: Record<string, string> = {
   ar: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u0645\u0642\u062f\u0645 \u0644\u0643\u0645 \u0645\u0646 Tiquiz",
 };
 
-function TiquizFooter({ locale }: { locale?: string | null }) {
+function TiquizFooter({ locale, customText, customUrl }: { locale?: string | null; customText?: string | null; customUrl?: string | null }) {
+  // Paid plans: show custom footer if set
+  if (customText && customUrl) {
+    return (
+      <p className="text-center text-xs text-muted-foreground/60 mt-6">
+        <a href={customUrl} target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
+          {customText}
+        </a>
+      </p>
+    );
+  }
+  // Free plan or no custom: show Tiquiz branding
   const text = tiquizFooterTexts[locale ?? "fr"] ?? tiquizFooterTexts.fr;
   return (
     <p className="text-center text-xs text-muted-foreground/60 mt-6">
