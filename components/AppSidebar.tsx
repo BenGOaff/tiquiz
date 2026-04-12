@@ -80,7 +80,7 @@ export function AppSidebar() {
   const t = useTranslations("nav");
 
   return (
-    <Sidebar collapsible="offcanvas">
+    <Sidebar collapsible="icon">
       <SidebarHeader className="p-4 flex flex-row items-center justify-between">
         <Link href="/dashboard" className="block">
           <img
