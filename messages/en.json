@@ -24,6 +24,11 @@
     "active": "Active"
   },
   "nav": {
+    "quizzes": "My quizzes",
+    "create": "Create a quiz",
+    "leads": "My leads",
+    "stats": "Statistics",
+    "support": "Help",
     "dashboard": "Dashboard",
     "newQuiz": "New quiz",
     "settings": "Settings",
@@ -239,5 +244,14 @@
   },
   "languageSwitcher": {
     "label": "Language"
+  },
+  "header": {
+    "account": "My account",
+    "logout": "Log out",
+    "menu": {
+      "settings": "Settings",
+      "systemeio": "Systeme.io Key",
+      "account": "My account"
+    }
   }
 }
