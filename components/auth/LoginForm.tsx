@@ -135,7 +135,7 @@ export default function LoginForm() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-foreground">Tiquiz</h1>
+          <img src="/tiquiz-logo (2).png" alt="Tiquiz" className="h-12 w-auto mx-auto mb-2" />
           <p className="text-muted-foreground mt-2">{t("tagline")}</p>
         </div>
 
