@@ -75,17 +75,8 @@ export default function SettingsClient() {
   if (loading) return null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="w-full border-b border-border">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/dashboard"><ArrowLeft className="h-4 w-4 mr-1" />Tiquiz</Link>
-          </Button>
-          <h1 className="text-xl font-bold">{t("title")}</h1>
-        </div>
-      </header>
-
-      <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+    <div className="space-y-5">
+      <main className="max-w-3xl mx-auto space-y-6">
         {/* Language */}
         <Card>
           <CardHeader>

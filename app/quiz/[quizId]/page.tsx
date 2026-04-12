@@ -1,7 +1,7 @@
 // app/quiz/[quizId]/page.tsx
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import QuizDetailClient from "@/components/quiz/QuizDetailClient";
+import QuizEditShell from "./QuizEditShell";
 
 export const metadata = { title: "Modifier le quiz – Tiquiz" };
 
@@ -13,5 +13,5 @@ export default async function QuizDetailPage({ params }: Props) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  return <QuizDetailClient quizId={quizId} />;
+  return <QuizEditShell quizId={quizId} userEmail={user.email ?? ""} />;
 }

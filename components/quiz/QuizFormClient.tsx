@@ -395,21 +395,8 @@ export default function QuizFormClient() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="w-full border-b border-border">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/dashboard">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Tiquiz
-            </Link>
-          </Button>
-          <h1 className="text-xl font-bold">{t("createTitle")}</h1>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-4 py-8">
+    <div className="space-y-5">
+      <main className="max-w-4xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6 w-full sm:w-auto">
             <TabsTrigger value="manual">{t("tabManual")}</TabsTrigger>
