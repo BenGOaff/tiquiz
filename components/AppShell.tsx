@@ -1,7 +1,6 @@
 "use client";
 
 import { ReactNode } from "react";
-import Link from "next/link";
 import { PanelLeftOpen } from "lucide-react";
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -16,25 +15,20 @@ interface AppShellProps {
   contentClassName?: string;
 }
 
-function SidebarOpenButton({ title }: { title?: ReactNode }) {
+/** Reopen button — only visible when sidebar is collapsed (desktop) or on mobile */
+function SidebarOpenButton() {
   const { open, toggleSidebar, isMobile } = useSidebar();
-  // Only show when sidebar is collapsed or on mobile
   if (!isMobile && open) return null;
   return (
-    <>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        onClick={toggleSidebar}
-        aria-label="Open sidebar"
-      >
-        <PanelLeftOpen className="h-5 w-5 text-muted-foreground" />
-      </Button>
-      {title && (
-        <h1 className="text-lg font-sans font-bold truncate">{title}</h1>
-      )}
-    </>
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-8 w-8 shrink-0"
+      onClick={toggleSidebar}
+      aria-label="Open sidebar"
+    >
+      <PanelLeftOpen className="h-5 w-5 text-muted-foreground" />
+    </Button>
   );
 }
 
@@ -51,17 +45,13 @@ export default function AppShell({
         <AppSidebar />
 
         <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
-          {/* Header — logo always visible + title shows when sidebar is collapsed */}
+          {/* Header — identical structure to Tipote */}
           <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10">
-            <div className="flex items-center gap-3 min-w-0">
-              <SidebarOpenButton title={headerTitle} />
-              <Link href="/dashboard" className="shrink-0">
-                <img
-                  src="/tiquiz-logo.png"
-                  alt="Tiquiz"
-                  className="h-7 w-auto"
-                />
-              </Link>
+            <div className="flex items-center gap-2 min-w-0">
+              <SidebarOpenButton />
+              {headerTitle ? (
+                <h1 className="text-lg font-display font-bold truncate">{headerTitle}</h1>
+              ) : null}
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {headerRight}
@@ -69,7 +59,7 @@ export default function AppShell({
             </div>
           </header>
 
-          {/* Content — same layout as Tipote */}
+          {/* Content — identical to Tipote: flex-1 p-4 lg:p-6 */}
           <div className={contentClassName ?? "flex-1 p-4 lg:p-6"}>
             {children}
           </div>
