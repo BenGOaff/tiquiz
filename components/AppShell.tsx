@@ -69,9 +69,9 @@ export default function AppShell({
             </div>
           </header>
 
-          {/* Content — centered in the available space between sidebar and right edge */}
-          <div className={contentClassName ?? "flex-1 flex justify-center px-5 sm:px-8 lg:px-12 py-5 sm:py-6 lg:py-8"}>
-            <div className="w-full max-w-5xl space-y-5">
+          {/* Content — fills the space between sidebar and right edge, with equal padding */}
+          <div className={contentClassName ?? "flex-1 p-5 sm:p-6 lg:p-8"}>
+            <div className="w-full space-y-5">
               {children}
             </div>
           </div>
