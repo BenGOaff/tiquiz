@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, ArrowLeft, Loader2, Sparkles } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Loader2, Sparkles, FileText, Upload, Settings2, MessageSquare, Award, Users, Share2, Zap, ChevronRight, GripVertical, Save } from "lucide-react";
 import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
@@ -391,31 +391,180 @@ export default function QuizFormClient() {
   ];
 
   // ---------------------------------------------------------------------------
+  // Step navigation (Typeform-style)
+  // ---------------------------------------------------------------------------
+
+  const [step, setStep] = useState(0);
+
+  const STEPS = [
+    { key: "general", icon: Settings2, label: t("createTitle") },
+    { key: "questions", icon: MessageSquare, label: t("questionsTitle") },
+    { key: "results", icon: Award, label: t("resultsTitle") },
+    { key: "capture", icon: Users, label: t("captureHeadingLabel") },
+    { key: "virality", icon: Share2, label: t("viralityLabel") },
+    { key: "sio", icon: Zap, label: "Systeme.io" },
+  ];
+
+  // Import file handling
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+
+  async function handleImportFile() {
+    if (!importFile) return;
+    setImporting(true);
+    try {
+      const text = await importFile.text();
+      // Send to AI to parse into quiz format
+      const res = await fetch("/api/quiz/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "import",
+          content: text.slice(0, 10000), // limit to 10k chars
+          locale: aiLocale,
+        }),
+      });
+
+      if (!res.ok) {
+        toast.error("Erreur lors de l'import");
+        setImporting(false);
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) { setImporting(false); return; }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data:")) continue;
+          const payload = trimmed.slice(5).trim();
+          if (payload === "[DONE]") break;
+
+          try {
+            const parsed = JSON.parse(payload);
+            if (parsed.title) setTitle(parsed.title);
+            if (parsed.introduction) setIntroduction(parsed.introduction);
+            if (Array.isArray(parsed.questions) && parsed.questions.length > 0) {
+              setQuestions(parsed.questions.map((q: { question_text?: string; options?: QuizOption[] }) => ({
+                question_text: q.question_text ?? "",
+                options: Array.isArray(q.options) ? q.options.map((o: QuizOption) => ({ text: o.text ?? "", result_index: o.result_index ?? 0 })) : [{ text: "", result_index: 0 }, { text: "", result_index: 0 }],
+              })));
+            }
+            if (Array.isArray(parsed.results) && parsed.results.length > 0) {
+              setResults(parsed.results.map((r: Partial<QuizResult>) => ({
+                title: r.title ?? "", description: r.description ?? "", insight: r.insight ?? "", projection: r.projection ?? "",
+                cta_text: r.cta_text ?? "", cta_url: r.cta_url ?? "",
+                sio_tag_name: r.sio_tag_name ?? "", sio_course_id: r.sio_course_id ?? "", sio_community_id: r.sio_community_id ?? "",
+              })));
+            }
+          } catch { /* skip */ }
+        }
+      }
+
+      toast.success("Quiz importé avec succès !");
+      setActiveTab("manual");
+    } catch {
+      toast.error("Erreur lors de l'import");
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
 
   return (
     <div className="space-y-5">
-      <main className="max-w-4xl mx-auto">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6 w-full sm:w-auto">
-            <TabsTrigger value="manual">{t("tabManual")}</TabsTrigger>
-            <TabsTrigger value="ai">
-              <Sparkles className="h-4 w-4 mr-1" />
-              {t("tabAI")}
-            </TabsTrigger>
-            <TabsTrigger value="import">{t("tabImport")}</TabsTrigger>
-          </TabsList>
+      {/* Banner */}
+      <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
+        <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
+          <Sparkles className="h-5 w-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg font-bold">{t("createTitle")}</h2>
+          <p className="text-sm text-white/70">Crée ton quiz manuellement, avec l&apos;IA ou en important un document</p>
+        </div>
+        <Button onClick={handleSave} disabled={saving} variant="secondary" className="shrink-0">
+          {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+          {saving ? t("saving") : "Enregistrer"}
+        </Button>
+      </div>
+
+      {/* Source tabs (Manuel / IA / Import) */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="manual" className="gap-1.5">
+            <FileText className="h-4 w-4" />
+            {t("tabManual")}
+          </TabsTrigger>
+          <TabsTrigger value="ai" className="gap-1.5">
+            <Sparkles className="h-4 w-4" />
+            {t("tabAI")}
+          </TabsTrigger>
+          <TabsTrigger value="import" className="gap-1.5">
+            <Upload className="h-4 w-4" />
+            {t("tabImport")}
+          </TabsTrigger>
+        </TabsList>
 
           {/* ================================================================
-              MANUAL TAB
+              MANUAL TAB — Step-based layout
               ================================================================ */}
           <TabsContent value="manual">
-            <div className="space-y-6">
-              {/* ---- General settings ---- */}
+            <div className="flex gap-6 mt-4">
+              {/* Step sidebar */}
+              <nav className="hidden md:flex flex-col gap-1 w-48 shrink-0 sticky top-20 self-start">
+                {STEPS.map((s, i) => (
+                  <button
+                    key={s.key}
+                    onClick={() => setStep(i)}
+                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
+                      step === i
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    <s.icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{s.label}</span>
+                  </button>
+                ))}
+              </nav>
+
+              {/* Step content */}
+              <div className="flex-1 min-w-0 space-y-6">
+                {/* Mobile step selector */}
+                <div className="md:hidden">
+                  <select
+                    value={step}
+                    onChange={(e) => setStep(Number(e.target.value))}
+                    className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background"
+                  >
+                    {STEPS.map((s, i) => (
+                      <option key={s.key} value={i}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Step 0: General */}
+                {step === 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>{t("createTitle")}</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings2 className="h-5 w-5 text-primary" />
+                    {t("createTitle")}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Title */}
@@ -517,8 +666,10 @@ export default function QuizFormClient() {
                   </div>
                 </CardContent>
               </Card>
+                )}
 
-              {/* ---- Capture config ---- */}
+                {/* Step 3: Capture config */}
+                {step === 3 && (
               <Card>
                 <CardHeader>
                   <CardTitle>{t("captureHeadingLabel")}</CardTitle>
@@ -581,8 +732,10 @@ export default function QuizFormClient() {
                   </div>
                 </CardContent>
               </Card>
+                )}
 
-              {/* ---- Virality ---- */}
+                {/* Step 4: Virality */}
+                {step === 4 && (
               <Card>
                 <CardHeader>
                   <CardTitle>{t("viralityLabel")}</CardTitle>
@@ -634,8 +787,10 @@ export default function QuizFormClient() {
                   )}
                 </CardContent>
               </Card>
+                )}
 
-              {/* ---- Questions ---- */}
+                {/* Step 1: Questions */}
+                {step === 1 && (
               <Card>
                 <CardHeader>
                   <CardTitle>{t("questionsTitle")}</CardTitle>
@@ -740,7 +895,10 @@ export default function QuizFormClient() {
                 </CardContent>
               </Card>
 
-              {/* ---- Results ---- */}
+                )}
+
+                {/* Step 2: Results */}
+                {step === 2 && (
               <Card>
                 <CardHeader>
                   <CardTitle>{t("resultsTitle")}</CardTitle>
@@ -890,15 +1048,32 @@ export default function QuizFormClient() {
                 </CardContent>
               </Card>
 
-              {/* ---- Save button ---- */}
-              <Button
-                className="w-full"
-                onClick={handleSave}
-                disabled={saving}
-              >
-                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {saving ? t("saving") : t("createTitle")}
-              </Button>
+                )}
+
+                {/* Step navigation buttons */}
+                <div className="flex items-center justify-between pt-4 border-t border-border">
+                  <Button
+                    variant="outline"
+                    onClick={() => setStep(Math.max(0, step - 1))}
+                    disabled={step === 0}
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Précédent
+                  </Button>
+                  {step < STEPS.length - 1 ? (
+                    <Button onClick={() => setStep(step + 1)}>
+                      Suivant
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  ) : (
+                    <Button onClick={handleSave} disabled={saving}>
+                      {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      <Save className="h-4 w-4 mr-2" />
+                      {saving ? t("saving") : "Enregistrer le quiz"}
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
           </TabsContent>
 
@@ -1012,22 +1187,73 @@ export default function QuizFormClient() {
               IMPORT TAB
               ================================================================ */}
           <TabsContent value="import">
-            <Card>
+            <Card className="mt-4">
               <CardHeader>
-                <CardTitle>{t("tabImport")}</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="h-5 w-5 text-primary" />
+                  Importer un quiz
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="py-12 text-center text-muted-foreground">
-                  <p className="text-lg font-medium">Coming soon</p>
-                  <p className="mt-1 text-sm">
-                    This feature is not yet available.
-                  </p>
+              <CardContent className="space-y-6">
+                <p className="text-sm text-muted-foreground">
+                  Importe un document (TXT, PDF ou DOCX) contenant tes questions et réponses.
+                  L&apos;IA analysera le contenu et créera automatiquement le quiz.
+                </p>
+
+                <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+                  <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+                  <p className="font-medium mb-2">Glisse ton fichier ici ou clique pour sélectionner</p>
+                  <p className="text-xs text-muted-foreground mb-4">TXT, PDF, DOCX — max 10 000 caractères</p>
+                  <input
+                    type="file"
+                    accept=".txt,.pdf,.docx"
+                    onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                    className="hidden"
+                    id="import-file"
+                  />
+                  <Button variant="outline" asChild>
+                    <label htmlFor="import-file" className="cursor-pointer">
+                      Sélectionner un fichier
+                    </label>
+                  </Button>
+                </div>
+
+                {importFile && (
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-sm font-medium">{importFile.name}</p>
+                        <p className="text-xs text-muted-foreground">{(importFile.size / 1024).toFixed(1)} Ko</p>
+                      </div>
+                    </div>
+                    <Button onClick={handleImportFile} disabled={importing}>
+                      {importing ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Import en cours...</>
+                      ) : (
+                        <><Sparkles className="h-4 w-4 mr-2" />Analyser et importer</>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {/* Locale selector for import */}
+                <div className="space-y-2">
+                  <Label>Langue du quiz importé</Label>
+                  <select
+                    value={aiLocale}
+                    onChange={(e) => setAiLocale(e.target.value)}
+                    className="w-full border border-input rounded-lg px-2.5 py-1.5 text-sm bg-background"
+                  >
+                    {localeOptions.map((lo) => (
+                      <option key={lo.value} value={lo.value}>{lo.label}</option>
+                    ))}
+                  </select>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
-      </main>
     </div>
   );
 }
