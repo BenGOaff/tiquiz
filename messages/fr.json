@@ -21,7 +21,9 @@
     "preview": "Aperçu",
     "publish": "Publier",
     "draft": "Brouillon",
-    "active": "Actif"
+    "active": "Actif",
+    "aiGeneratingTitle": "L'IA crée ton quiz...",
+    "aiGeneratingSubtitle": "Ça prend quelques secondes. On prépare des questions engageantes et des résultats qui donnent de la valeur."
   },
   "nav": {
     "quizzes": "Mes quiz",

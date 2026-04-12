@@ -61,16 +61,31 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Fetch user's branding profile for tone personalization
+    const { supabaseAdmin } = await import("@/lib/supabaseAdmin");
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("brand_tone, address_form")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    // Use branding tone from profile if not explicitly provided, fallback to "inspirant"
+    const toneFromBody = String(body.tone ?? "").trim();
+    const resolvedTone = toneFromBody || profile?.brand_tone || "inspirant";
+    const resolvedAddressForm = body.addressForm === "vous" || body.addressForm === "tu"
+      ? body.addressForm
+      : (profile?.address_form ?? "tu");
+
     const prompts = buildQuizGenerationPrompt({
       objective,
       target,
-      tone: String(body.tone ?? "inspirant"),
+      tone: resolvedTone,
       cta: String(body.cta ?? ""),
       bonus: String(body.bonus ?? ""),
       questionCount: Math.min(10, Math.max(3, Number(body.questionCount) || 7)),
       resultCount: Math.min(5, Math.max(2, Number(body.resultCount) || 3)),
       locale: String(body.locale ?? "fr"),
-      addressForm: body.addressForm === "vous" ? "vous" : "tu",
+      addressForm: resolvedAddressForm === "vous" ? "vous" : "tu",
     });
     system = prompts.system;
     userPrompt = prompts.user;

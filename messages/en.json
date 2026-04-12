@@ -21,7 +21,9 @@
     "preview": "Preview",
     "publish": "Publish",
     "draft": "Draft",
-    "active": "Active"
+    "active": "Active",
+    "aiGeneratingTitle": "AI is crafting your quiz...",
+    "aiGeneratingSubtitle": "This takes a few seconds. We're preparing engaging questions and results that deliver real value."
   },
   "nav": {
     "quizzes": "My quizzes",
