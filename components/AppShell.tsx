@@ -15,19 +15,25 @@ interface AppShellProps {
   contentClassName?: string;
 }
 
-function SidebarOpenButton() {
+function SidebarOpenButton({ title }: { title?: ReactNode }) {
   const { open, toggleSidebar, isMobile } = useSidebar();
+  // Only show when sidebar is collapsed or on mobile
   if (!isMobile && open) return null;
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-8 w-8 shrink-0"
-      onClick={toggleSidebar}
-      aria-label="Open sidebar"
-    >
-      <PanelLeftOpen className="h-5 w-5 text-muted-foreground" />
-    </Button>
+    <>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 shrink-0"
+        onClick={toggleSidebar}
+        aria-label="Open sidebar"
+      >
+        <PanelLeftOpen className="h-5 w-5 text-muted-foreground" />
+      </Button>
+      {title && (
+        <h1 className="text-lg font-sans font-bold truncate">{title}</h1>
+      )}
+    </>
   );
 }
 
@@ -36,7 +42,7 @@ export default function AppShell({
   userEmail,
   headerTitle,
   headerRight,
-  contentClassName = "flex-1 p-4 sm:p-5 lg:p-6",
+  contentClassName,
 }: AppShellProps) {
   return (
     <SidebarProvider>
@@ -44,13 +50,10 @@ export default function AppShell({
         <AppSidebar />
 
         <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
-          {/* Header — copié de Tipote DashboardLayout */}
+          {/* Header — like Tipote: title only shows when sidebar is collapsed */}
           <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10 border-b border-border/40">
             <div className="flex items-center gap-2 min-w-0">
-              <SidebarOpenButton />
-              {headerTitle && (
-                <h1 className="text-lg font-display font-bold truncate">{headerTitle}</h1>
-              )}
+              <SidebarOpenButton title={headerTitle} />
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {headerRight}
@@ -58,9 +61,9 @@ export default function AppShell({
             </div>
           </header>
 
-          {/* Content */}
-          <div className={contentClassName}>
-            <div className="max-w-[1200px] mx-auto w-full">
+          {/* Content — centered with max-width, like Tipote */}
+          <div className={contentClassName ?? "flex-1 p-4 sm:p-5 lg:p-6"}>
+            <div className="max-w-[1200px] mx-auto w-full space-y-5">
               {children}
             </div>
           </div>
