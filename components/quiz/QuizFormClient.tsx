@@ -15,6 +15,7 @@ import SortableQuestionList from "@/components/quiz/SortableQuestionList";
 import QuizShareSettings from "@/components/quiz/QuizShareSettings";
 import QuizPreview from "@/components/quiz/QuizPreview";
 import SioSelectors from "@/components/quiz/SioSelectors";
+import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
 import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
@@ -263,6 +264,59 @@ export default function QuizFormClient() {
   // AI Generation (SSE)
   // ---------------------------------------------------------------------------
 
+  // Helper: populate form state from a quiz object (used by AI gen + import)
+  function populateFromQuiz(quiz: Record<string, unknown>) {
+    if (quiz.title) setTitle(String(quiz.title));
+    if (quiz.introduction) setIntroduction(String(quiz.introduction));
+    if (quiz.locale) setLocale(String(quiz.locale));
+    if (quiz.address_form) setAddressForm(String(quiz.address_form));
+    if (quiz.cta_text) setCtaText(String(quiz.cta_text));
+    if (quiz.cta_url) setCtaUrl(String(quiz.cta_url));
+    if (quiz.consent_text) setConsentText(String(quiz.consent_text));
+    if (quiz.capture_heading) setCaptureHeading(String(quiz.capture_heading));
+    if (quiz.capture_subtitle) setCaptureSubtitle(String(quiz.capture_subtitle));
+    if (quiz.virality_enabled !== undefined) setViralityEnabled(Boolean(quiz.virality_enabled));
+    if (quiz.bonus_description) setBonusDescription(String(quiz.bonus_description));
+    if (quiz.share_message) setShareMessage(String(quiz.share_message));
+
+    if (Array.isArray(quiz.questions) && quiz.questions.length > 0) {
+      setQuestions(
+        quiz.questions.map(
+          (q: { question_text?: string; options?: QuizOption[] }) => ({
+            question_text: q.question_text ?? "",
+            options: Array.isArray(q.options)
+              ? q.options.map((o: QuizOption) => ({
+                  text: o.text ?? "",
+                  result_index: o.result_index ?? 0,
+                }))
+              : [
+                  { text: "", result_index: 0 },
+                  { text: "", result_index: 0 },
+                ],
+          })
+        )
+      );
+    }
+
+    if (Array.isArray(quiz.results) && quiz.results.length > 0) {
+      setResults(
+        quiz.results.map(
+          (r: Partial<QuizResult>) => ({
+            title: r.title ?? "",
+            description: r.description ?? "",
+            insight: r.insight ?? "",
+            projection: r.projection ?? "",
+            cta_text: r.cta_text ?? "",
+            cta_url: r.cta_url ?? "",
+            sio_tag_name: r.sio_tag_name ?? "",
+            sio_course_id: r.sio_course_id ?? "",
+            sio_community_id: r.sio_community_id ?? "",
+          })
+        )
+      );
+    }
+  }
+
   async function handleGenerate() {
     if (!aiObjective.trim()) {
       toast.error(t("aiObjectiveLabel") + " — required");
@@ -300,6 +354,7 @@ export default function QuizFormClient() {
 
       const decoder = new TextDecoder();
       let buffer = "";
+      let currentEvent = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -311,6 +366,13 @@ export default function QuizFormClient() {
 
         for (const line of lines) {
           const trimmed = line.trim();
+
+          // Track SSE event type
+          if (trimmed.startsWith("event:")) {
+            currentEvent = trimmed.slice(6).trim();
+            continue;
+          }
+
           if (!trimmed.startsWith("data:")) continue;
           const payload = trimmed.slice(5).trim();
           if (payload === "[DONE]") break;
@@ -318,58 +380,19 @@ export default function QuizFormClient() {
           try {
             const parsed = JSON.parse(payload);
 
-            if (parsed.title) setTitle(parsed.title);
-            if (parsed.introduction) setIntroduction(parsed.introduction);
-            if (parsed.locale) setLocale(parsed.locale);
-            if (parsed.address_form) setAddressForm(parsed.address_form);
-            if (parsed.cta_text) setCtaText(parsed.cta_text);
-            if (parsed.cta_url) setCtaUrl(parsed.cta_url);
-            if (parsed.consent_text) setConsentText(parsed.consent_text);
-            if (parsed.capture_heading) setCaptureHeading(parsed.capture_heading);
-            if (parsed.capture_subtitle) setCaptureSubtitle(parsed.capture_subtitle);
-            if (parsed.virality_enabled !== undefined) setViralityEnabled(parsed.virality_enabled);
-            if (parsed.bonus_description) setBonusDescription(parsed.bonus_description);
-            if (parsed.share_message) setShareMessage(parsed.share_message);
-
-            if (Array.isArray(parsed.questions) && parsed.questions.length > 0) {
-              setQuestions(
-                parsed.questions.map(
-                  (q: { question_text?: string; options?: QuizOption[] }) => ({
-                    question_text: q.question_text ?? "",
-                    options: Array.isArray(q.options)
-                      ? q.options.map((o: QuizOption) => ({
-                          text: o.text ?? "",
-                          result_index: o.result_index ?? 0,
-                        }))
-                      : [
-                          { text: "", result_index: 0 },
-                          { text: "", result_index: 0 },
-                        ],
-                  })
-                )
-              );
+            if (currentEvent === "result" && parsed.ok && parsed.quiz) {
+              // Backend wraps quiz data in { ok: true, quiz: {...} }
+              populateFromQuiz(parsed.quiz as Record<string, unknown>);
+            } else if (currentEvent === "error") {
+              toast.error(parsed.error || t("errSave"));
             }
-
-            if (Array.isArray(parsed.results) && parsed.results.length > 0) {
-              setResults(
-                parsed.results.map(
-                  (r: Partial<QuizResult>) => ({
-                    title: r.title ?? "",
-                    description: r.description ?? "",
-                    insight: r.insight ?? "",
-                    projection: r.projection ?? "",
-                    cta_text: r.cta_text ?? "",
-                    cta_url: r.cta_url ?? "",
-                    sio_tag_name: r.sio_tag_name ?? "",
-                    sio_course_id: r.sio_course_id ?? "",
-                    sio_community_id: r.sio_community_id ?? "",
-                  })
-                )
-              );
-            }
+            // heartbeat and progress events are ignored (overlay handles UX)
           } catch {
             // skip unparseable chunks
           }
+
+          // Reset event after processing data
+          currentEvent = "";
         }
       }
 
@@ -444,6 +467,7 @@ export default function QuizFormClient() {
 
       const decoder = new TextDecoder();
       let buffer = "";
+      let currentEvent = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -455,28 +479,23 @@ export default function QuizFormClient() {
 
         for (const line of lines) {
           const trimmed = line.trim();
+          if (trimmed.startsWith("event:")) {
+            currentEvent = trimmed.slice(6).trim();
+            continue;
+          }
           if (!trimmed.startsWith("data:")) continue;
           const payload = trimmed.slice(5).trim();
           if (payload === "[DONE]") break;
 
           try {
             const parsed = JSON.parse(payload);
-            if (parsed.title) setTitle(parsed.title);
-            if (parsed.introduction) setIntroduction(parsed.introduction);
-            if (Array.isArray(parsed.questions) && parsed.questions.length > 0) {
-              setQuestions(parsed.questions.map((q: { question_text?: string; options?: QuizOption[] }) => ({
-                question_text: q.question_text ?? "",
-                options: Array.isArray(q.options) ? q.options.map((o: QuizOption) => ({ text: o.text ?? "", result_index: o.result_index ?? 0 })) : [{ text: "", result_index: 0 }, { text: "", result_index: 0 }],
-              })));
-            }
-            if (Array.isArray(parsed.results) && parsed.results.length > 0) {
-              setResults(parsed.results.map((r: Partial<QuizResult>) => ({
-                title: r.title ?? "", description: r.description ?? "", insight: r.insight ?? "", projection: r.projection ?? "",
-                cta_text: r.cta_text ?? "", cta_url: r.cta_url ?? "",
-                sio_tag_name: r.sio_tag_name ?? "", sio_course_id: r.sio_course_id ?? "", sio_community_id: r.sio_community_id ?? "",
-              })));
+            if (currentEvent === "result" && parsed.ok && parsed.quiz) {
+              populateFromQuiz(parsed.quiz as Record<string, unknown>);
+            } else if (currentEvent === "error") {
+              toast.error(parsed.error || "Erreur lors de l'import");
             }
           } catch { /* skip */ }
+          currentEvent = "";
         }
       }
 
@@ -1026,6 +1045,9 @@ export default function QuizFormClient() {
               AI TAB
               ================================================================ */}
           <TabsContent value="ai">
+            {generating ? (
+              <AIGeneratingOverlay />
+            ) : (
             <Card>
               <CardHeader>
                 <CardTitle>
@@ -1145,6 +1167,7 @@ export default function QuizFormClient() {
                 </Button>
               </CardContent>
             </Card>
+            )}
           </TabsContent>
 
           {/* ================================================================

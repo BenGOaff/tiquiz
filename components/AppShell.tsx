@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
+import Link from "next/link";
 import { PanelLeftOpen } from "lucide-react";
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -50,10 +51,17 @@ export default function AppShell({
         <AppSidebar />
 
         <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
-          {/* Header — like Tipote: title only shows when sidebar is collapsed */}
-          <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10">
-            <div className="flex items-center gap-2 min-w-0">
+          {/* Header — logo always visible + title shows when sidebar is collapsed */}
+          <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10 border-b border-border/40">
+            <div className="flex items-center gap-3 min-w-0">
               <SidebarOpenButton title={headerTitle} />
+              <Link href="/dashboard" className="shrink-0">
+                <img
+                  src="/tiquiz-logo.png"
+                  alt="Tiquiz"
+                  className="h-7 w-auto"
+                />
+              </Link>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {headerRight}
@@ -61,9 +69,9 @@ export default function AppShell({
             </div>
           </header>
 
-          {/* Content — centered with max-width, like Tipote */}
-          <div className={contentClassName ?? "flex-1 p-5 sm:p-6 lg:p-8"}>
-            <div className="max-w-[1100px] mx-auto w-full space-y-5">
+          {/* Content — centered in the available space between sidebar and right edge */}
+          <div className={contentClassName ?? "flex-1 flex flex-col p-5 sm:p-6 lg:p-8"}>
+            <div className="w-full max-w-[1100px] mx-auto space-y-5">
               {children}
             </div>
           </div>

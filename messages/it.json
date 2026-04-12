@@ -21,7 +21,9 @@
     "preview": "Anteprima",
     "publish": "Pubblica",
     "draft": "Bozza",
-    "active": "Attivo"
+    "active": "Attivo",
+    "aiGeneratingTitle": "L'IA sta creando il tuo quiz...",
+    "aiGeneratingSubtitle": "Ci vogliono pochi secondi. Stiamo preparando domande coinvolgenti e risultati di valore."
   },
   "nav": {
     "quizzes": "I miei quiz",

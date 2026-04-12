@@ -1,5 +1,6 @@
 // lib/prompts/quiz/system.ts
 // AI prompt builder for quiz lead magnet generation
+// Mirrors the Tipote prompt system with full branding/tone integration.
 
 type QuizPromptParams = {
   objective: string;
@@ -9,6 +10,8 @@ type QuizPromptParams = {
   bonus?: string;
   questionCount?: number;
   resultCount?: number;
+  niche?: string;
+  mission?: string;
   locale?: string;
   addressForm?: "tu" | "vous";
 };
@@ -25,6 +28,8 @@ export function buildQuizGenerationPrompt(params: QuizPromptParams): {
     bonus = "",
     questionCount = 7,
     resultCount = 3,
+    niche = "",
+    mission = "",
     locale = "fr",
     addressForm = "tu",
   } = params;
@@ -53,13 +58,13 @@ PRINCIPES :
 - Chaque résultat contient un insight fort, une projection motivante, et un pont naturel vers le CTA.
 - Le quiz doit être engageant, rapide (2-3 min), avec des questions simples et des options claires.
 - Le ton doit être ${tone}, jamais condescendant.
-- TUTOIEMENT/VOUVOIEMENT : Tu dois ${formality === "vous" ? "VOUVOYER" : "TUTOYER"} le lecteur du quiz dans TOUT le contenu. Utilise systématiquement "${formality}" et ses formes associées.
+- TUTOIEMENT/VOUVOIEMENT : Tu dois ${formality === "vous" ? "VOUVOYER" : "TUTOYER"} le lecteur du quiz dans TOUT le contenu (introduction, questions, options, résultats, projections, CTA, share_message). Utilise systématiquement "${formality}" et ses formes associées.
 - Les questions doivent être variées (pas juste des échelles 1-5).
 - Chaque option de réponse est mappée vers un profil résultat (result_index).
 
 FORMAT DE SORTIE : JSON strict, pas de markdown, pas de commentaires.
 {
-  "title": "Titre accrocheur du quiz",
+  "title": "Titre accrocheur du quiz (avec emoji optionnel)",
   "introduction": "Texte d'intro engageant (2-3 phrases max)",
   "questions": [
     {
@@ -76,12 +81,12 @@ FORMAT DE SORTIE : JSON strict, pas de markdown, pas de commentaires.
       "title": "Nom du profil",
       "description": "Description valorisante du profil (2-3 phrases)",
       "insight": "Prise de conscience forte et spécifique",
-      "projection": "Projection motivante",
+      "projection": "${formality === "vous" ? "Si vous continuez comme ça... / Si vous passez à l'action..." : "Si tu continues comme ça... / Si tu passes à l'action..."}",
       "cta_text": "Texte du CTA personnalisé pour ce profil"
     }
   ],
   "cta_text": "Texte du CTA principal",
-  "share_message": "Message d'incitation au partage"
+  "share_message": "Message d'incitation au partage (si bonus demandé)"
 }`;
 
   const userParts: string[] = [
@@ -94,6 +99,8 @@ FORMAT DE SORTIE : JSON strict, pas de markdown, pas de commentaires.
 
   if (cta) userParts.push(`CTA FINAL SOUHAITÉ : ${cta}`);
   if (bonus) userParts.push(`BONUS DE PARTAGE : ${bonus}\nGénère aussi un share_message engageant.`);
+  if (niche) userParts.push(`NICHE DU CRÉATEUR : ${niche}`);
+  if (mission) userParts.push(`PERSONA CIBLE (contexte) : ${mission}`);
 
   userParts.push(`LANGUE : ${langLabel}`);
   userParts.push(`FORME D'ADRESSE : ${formality === "vous" ? "Vouvoiement (vous)" : "Tutoiement (tu)"}`);
