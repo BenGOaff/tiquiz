@@ -16,25 +16,20 @@ interface AppShellProps {
   contentClassName?: string;
 }
 
-function SidebarOpenButton({ title }: { title?: ReactNode }) {
-  const { open, toggleSidebar, isMobile } = useSidebar();
-  // Only show when sidebar is collapsed or on mobile
-  if (!isMobile && open) return null;
+/** On mobile, opens the sidebar Sheet overlay */
+function MobileSidebarToggle() {
+  const { isMobile, toggleSidebar } = useSidebar();
+  if (!isMobile) return null;
   return (
-    <>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        onClick={toggleSidebar}
-        aria-label="Open sidebar"
-      >
-        <PanelLeftOpen className="h-5 w-5 text-muted-foreground" />
-      </Button>
-      {title && (
-        <h1 className="text-lg font-sans font-bold truncate">{title}</h1>
-      )}
-    </>
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-8 w-8 shrink-0 md:hidden"
+      onClick={toggleSidebar}
+      aria-label="Open sidebar"
+    >
+      <PanelLeftOpen className="h-5 w-5 text-muted-foreground" />
+    </Button>
   );
 }
 
@@ -48,13 +43,16 @@ export default function AppShell({
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
+        {/* Sidebar: sticky in-flow on desktop, Sheet overlay on mobile */}
         <AppSidebar />
 
-        <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
-          {/* Header — logo always visible + title shows when sidebar is collapsed */}
+        <main className="flex-1 min-w-0 overflow-auto bg-muted/30 flex flex-col">
           <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10">
             <div className="flex items-center gap-3 min-w-0">
-              <SidebarOpenButton title={headerTitle} />
+              <MobileSidebarToggle />
+              {headerTitle && (
+                <h1 className="text-lg font-sans font-bold truncate">{headerTitle}</h1>
+              )}
               <Link href="/dashboard" className="shrink-0">
                 <img
                   src="/tiquiz-logo.png"
@@ -69,7 +67,6 @@ export default function AppShell({
             </div>
           </header>
 
-          {/* Content — same layout as Tipote */}
           <div className={contentClassName ?? "flex-1 p-4 lg:p-6"}>
             {children}
           </div>
