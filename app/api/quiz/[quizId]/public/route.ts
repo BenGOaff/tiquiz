@@ -172,7 +172,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     const admin = supabaseAdmin;
 
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,user_id,title,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,share_message,locale,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country").eq("id", quizId).eq("status", "active").maybeSingle(),
+      admin.from("quizzes").select("id,user_id,title,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,share_message,locale,address_form,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country").eq("id", quizId).eq("status", "active").maybeSingle(),
       admin.from("quiz_questions").select("id,question_text,options,sort_order").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,cta_text,cta_url,sort_order").eq("quiz_id", quizId).order("sort_order"),
     ]);
@@ -181,17 +181,22 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
     }
 
-    // Fetch creator's address_form
+    // Resolve address_form (quiz-level overrides profile-level) + fallback privacy_url
     const quizUserId = (quizRes.data as Record<string, unknown>).user_id as string | undefined;
-    let addressForm = "tu";
+    const quizAddressForm = (quizRes.data as Record<string, unknown>).address_form as string | null;
+    let addressForm = quizAddressForm === "tu" || quizAddressForm === "vous" ? quizAddressForm : "tu";
     let fallbackPrivacyUrl = "";
+
     if (quizUserId) {
       const { data: bp } = await admin
         .from("profiles")
         .select("address_form, privacy_url")
         .eq("user_id", quizUserId)
         .maybeSingle();
-      addressForm = (bp as Record<string, unknown>)?.address_form === "vous" ? "vous" : "tu";
+      // Only use profile address_form if quiz doesn't have one
+      if (!quizAddressForm) {
+        addressForm = (bp as Record<string, unknown>)?.address_form === "vous" ? "vous" : "tu";
+      }
       fallbackPrivacyUrl = String((bp as Record<string, unknown>)?.privacy_url ?? "").trim();
     }
 
@@ -290,7 +295,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // ── Auto-send to Systeme.io (non-blocking) ──
-    if (resultId) {
+    if (resultId && lead?.id) {
+      const leadId = lead.id;
       (async () => {
         try {
           const { data: result } = await admin
@@ -308,14 +314,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
           const apiKey = String((profile as Record<string, unknown>)?.sio_user_api_key ?? "").trim();
           if (!apiKey) return;
 
-          const tagName = String((result as Record<string, unknown>)?.sio_tag_name ?? "").trim();
+          const sioTagName = String((result as Record<string, unknown>)?.sio_tag_name ?? "").trim();
           const courseId = String((result as Record<string, unknown>)?.sio_course_id ?? "").trim();
           const communityId = String((result as Record<string, unknown>)?.sio_community_id ?? "").trim();
           const resultTitle = String((result as Record<string, unknown>)?.title ?? "").trim();
 
           let sioContactId: number | null = null;
-          if (tagName) {
-            sioContactId = await applyTagToContact(apiKey, email, tagName, {
+          if (sioTagName) {
+            sioContactId = await applyTagToContact(apiKey, email, sioTagName, {
               firstName: firstName || undefined,
               surname: lastName || undefined,
               phoneNumber: phone || undefined,
@@ -334,6 +340,16 @@ export async function POST(req: NextRequest, context: RouteContext) {
           if (resultTitle) await enrichSioContact(apiKey, sioContactId, resultTitle);
           if (courseId) await enrollInSioCourse(apiKey, courseId, sioContactId);
           if (communityId) await addToSioCommunity(apiKey, communityId, sioContactId);
+
+          // Update lead sync status in DB
+          await admin
+            .from("quiz_leads")
+            .update({
+              sio_synced: true,
+              sio_synced_at: new Date().toISOString(),
+              sio_tag_applied: sioTagName || null,
+            })
+            .eq("id", leadId);
         } catch (e) {
           console.error("[Systeme.io auto-tag POST] Error:", e);
         }

@@ -52,7 +52,7 @@ export default function AppShell({
 
         <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
           {/* Header — logo always visible + title shows when sidebar is collapsed */}
-          <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10 border-b border-border/40">
+          <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10">
             <div className="flex items-center gap-3 min-w-0">
               <SidebarOpenButton title={headerTitle} />
               <Link href="/dashboard" className="shrink-0">
@@ -70,8 +70,8 @@ export default function AppShell({
           </header>
 
           {/* Content — centered in the available space between sidebar and right edge */}
-          <div className={contentClassName ?? "flex-1 flex flex-col p-5 sm:p-6 lg:p-8"}>
-            <div className="w-full max-w-[1100px] mx-auto space-y-5">
+          <div className={contentClassName ?? "flex-1 flex justify-center p-5 sm:p-6 lg:p-8"}>
+            <div className="w-full max-w-3xl space-y-5">
               {children}
             </div>
           </div>

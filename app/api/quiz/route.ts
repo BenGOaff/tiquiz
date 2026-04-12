@@ -90,6 +90,7 @@ export async function POST(req: NextRequest) {
         bonus_description: body.bonus_description ?? null,
         share_message: body.share_message ?? null,
         locale: body.locale ?? "fr",
+        address_form: body.address_form === "tu" || body.address_form === "vous" ? body.address_form : null,
         sio_share_tag_name: body.sio_share_tag_name ?? null,
         capture_heading: body.capture_heading ?? null,
         capture_subtitle: body.capture_subtitle ?? null,
