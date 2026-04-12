@@ -84,7 +84,7 @@ export function AppSidebar() {
       <SidebarHeader className="p-4 flex flex-row items-center justify-between">
         <Link href="/dashboard" className="block">
           <img
-            src="/tiquiz-logo (2).png"
+            src="/tiquiz-logo.png"
             alt="Tiquiz"
             className="h-10 w-auto"
           />

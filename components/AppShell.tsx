@@ -51,7 +51,7 @@ export default function AppShell({
 
         <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
           {/* Header — like Tipote: title only shows when sidebar is collapsed */}
-          <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10 border-b border-border/40">
+          <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10">
             <div className="flex items-center gap-2 min-w-0">
               <SidebarOpenButton title={headerTitle} />
             </div>
@@ -62,8 +62,8 @@ export default function AppShell({
           </header>
 
           {/* Content — centered with max-width, like Tipote */}
-          <div className={contentClassName ?? "flex-1 p-4 sm:p-5 lg:p-6"}>
-            <div className="max-w-[1200px] mx-auto w-full space-y-5">
+          <div className={contentClassName ?? "flex-1 p-5 sm:p-6 lg:p-8"}>
+            <div className="max-w-[1100px] mx-auto w-full space-y-5">
               {children}
             </div>
           </div>

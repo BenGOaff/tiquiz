@@ -14,7 +14,9 @@ const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
 function getClaudeApiKey(): string {
   return (
-    process.env.ANTHROPIC_API_KEY?.trim() || ""
+    process.env.ANTHROPIC_API_KEY?.trim() ||
+    process.env.CLAUDE_API_KEY_OWNER?.trim() ||
+    ""
   );
 }
 

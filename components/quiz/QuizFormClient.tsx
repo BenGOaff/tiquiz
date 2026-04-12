@@ -14,6 +14,7 @@ import { Plus, Trash2, ArrowLeft, Loader2, Sparkles, FileText, Upload, Settings2
 import SortableQuestionList from "@/components/quiz/SortableQuestionList";
 import QuizShareSettings from "@/components/quiz/QuizShareSettings";
 import QuizPreview from "@/components/quiz/QuizPreview";
+import SioSelectors from "@/components/quiz/SioSelectors";
 import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
@@ -962,43 +963,15 @@ export default function QuizFormClient() {
                         </div>
                       </div>
 
-                      {/* SIO fields */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label>{t("sioTagLabel")}</Label>
-                          <Input
-                            value={result.sio_tag_name}
-                            onChange={(e) =>
-                              updateResult(rIdx, {
-                                sio_tag_name: e.target.value,
-                              })
-                            }
-                            placeholder={t("sioTagPlaceholder")}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>{t("sioCourseLabel")}</Label>
-                          <Input
-                            value={result.sio_course_id}
-                            onChange={(e) =>
-                              updateResult(rIdx, {
-                                sio_course_id: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>{t("sioCommunityLabel")}</Label>
-                          <Input
-                            value={result.sio_community_id}
-                            onChange={(e) =>
-                              updateResult(rIdx, {
-                                sio_community_id: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                      </div>
+                      {/* SIO fields — dropdowns from user's SIO account */}
+                      <SioSelectors
+                        tagValue={result.sio_tag_name}
+                        courseValue={result.sio_course_id}
+                        communityValue={result.sio_community_id}
+                        onTagChange={(v) => updateResult(rIdx, { sio_tag_name: v })}
+                        onCourseChange={(v) => updateResult(rIdx, { sio_course_id: v })}
+                        onCommunityChange={(v) => updateResult(rIdx, { sio_community_id: v })}
+                      />
                     </div>
                   ))}
 
