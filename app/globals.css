@@ -5,29 +5,14 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   TIQUIZ DESIGN SYSTEM — Source of truth for all UI components
-   ═══════════════════════════════════════════════════════════════════════════
-
-   BRAND COLORS (hex reference):
-   ┌────────────────────────────────────────────────────────────────────────┐
-   │  Text / foreground  : #2E386E  (dark navy — used for all body text)  │
-   │  Primary / accents  : #5D6CDB  (vibrant indigo — buttons, links)     │
-   │  Primary dark       : #2E3A6E  (deep navy — gradient endpoints)      │
-   │  Turquoise accent   : #20BBE6  (turquoise — small highlight pops)    │
-   │  Background         : #F6F7FB  (soft off-white)                      │
-   └────────────────────────────────────────────────────────────────────────┘
-
-   TYPOGRAPHY:
-   - Font: Inter everywhere
-   - Same hierarchy as Tipote
-
+   TIQUIZ DESIGN SYSTEM — Copié de Tipote, adapté turquoise
    ═══════════════════════════════════════════════════════════════════════════ */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: var(--font-geist-mono);
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -65,87 +50,78 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
-  /* Brand-specific color utilities */
-  --color-tq-turquoise: #20BBE6;
-  --color-tq-navy: #2E386E;
-  --color-tq-indigo: #5D6CDB;
-  --color-tq-navy-dark: #1e2654;
 }
 
 :root {
-  /* ── Core palette using HSL (same format as Tipote, guaranteed to work) ── */
-  --background: 225 33% 98%;        /* #F6F7FB */
-  --foreground: 231 41% 31%;        /* #2E386E */
-  --card: 0 0% 100%;
-  --card-foreground: 231 41% 31%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 231 41% 31%;
-  --primary: 233 64% 61%;           /* #5D6CDB */
-  --primary-foreground: 0 0% 100%;
-  --secondary: 220 33% 96%;
-  --secondary-foreground: 230 41% 28%;
-  --muted: 220 33% 96%;
-  --muted-foreground: 236 16% 50%;
-  --accent: 236 79% 96%;
-  --accent-foreground: 230 41% 28%;
-  --destructive: 0 72% 51%;
-  --border: 220 13% 90%;
-  --input: 220 13% 90%;
-  --ring: 233 64% 61%;
-  --chart-1: 233 64% 61%;
-  --chart-2: 194 79% 52%;           /* #20BBE6 turquoise */
-  --chart-3: 230 41% 28%;
-  --chart-4: 236 16% 50%;
-  --chart-5: 0 0% 87%;
+  /* Copié de Tipote globals.css — valeurs hsl() wrappées pour Tailwind v4 */
+  --background: hsl(225 33% 98%);        /* #F6F7FB */
+  --foreground: hsl(231 41% 31%);        /* #2E386E */
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(231 41% 31%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(231 41% 31%);
+  --primary: hsl(233 64% 61%);           /* #5D6CDB */
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(220 33% 96%);
+  --secondary-foreground: hsl(230 41% 28%);
+  --muted: hsl(220 33% 96%);
+  --muted-foreground: hsl(236 16% 50%);
+  --accent: hsl(236 79% 96%);
+  --accent-foreground: hsl(230 41% 28%);
+  --destructive: hsl(0 72% 51%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(0 0% 76%);
+  --input: hsl(0 0% 76%);
+  --ring: hsl(233 64% 61%);
+  --chart-1: hsl(233 64% 61%);
+  --chart-2: hsl(194 79% 52%);           /* #20BBE6 turquoise */
+  --chart-3: hsl(230 41% 28%);
+  --chart-4: hsl(236 16% 50%);
+  --chart-5: hsl(0 0% 87%);
   --radius: 0.75rem;
 
-  /* ── Sidebar ── */
-  --sidebar: 0 0% 100%;
-  --sidebar-foreground: 231 41% 31%;
-  --sidebar-primary: 233 64% 61%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 236 79% 96%;
-  --sidebar-accent-foreground: 230 41% 28%;
-  --sidebar-border: 0 0% 90%;
-  --sidebar-ring: 233 64% 61%;
+  /* Sidebar — copié de Tipote */
+  --sidebar: hsl(0 0% 100%);
+  --sidebar-foreground: hsl(231 41% 31%);
+  --sidebar-primary: hsl(233 64% 61%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(236 79% 96%);
+  --sidebar-accent-foreground: hsl(230 41% 28%);
+  --sidebar-border: hsl(0 0% 90%);
+  --sidebar-ring: hsl(233 64% 61%);
 
-  /* ── Gradients ── */
-  --gradient-primary: linear-gradient(135deg, #5D6CDB 0%, #2E386E 100%);
-  --gradient-hero: linear-gradient(135deg, rgba(93,108,219,0.95) 0%, rgba(30,38,84,0.98) 100%);
+  /* Gradients Tipote */
+  --gradient-primary: linear-gradient(135deg, hsl(233 64% 61%) 0%, hsl(230 41% 28%) 100%);
 }
 
 .dark {
-  --background: 230 50% 12%;
-  --foreground: 0 0% 95%;
-  --card: 230 41% 18%;
-  --card-foreground: 0 0% 95%;
-  --popover: 230 41% 18%;
-  --popover-foreground: 0 0% 95%;
-  --primary: 233 64% 65%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 230 41% 22%;
-  --secondary-foreground: 0 0% 95%;
-  --muted: 230 41% 22%;
-  --muted-foreground: 0 0% 65%;
-  --accent: 233 64% 61%;
-  --accent-foreground: 0 0% 100%;
-  --destructive: 0 72% 51%;
-  --border: 230 30% 30%;
-  --input: 230 30% 30%;
-  --ring: 233 64% 65%;
-  --chart-1: 233 64% 65%;
-  --chart-2: 194 79% 52%;
-  --chart-3: 230 41% 28%;
-  --chart-4: 0 0% 50%;
-  --chart-5: 0 0% 87%;
-  --sidebar: 230 41% 15%;
-  --sidebar-foreground: 0 0% 95%;
-  --sidebar-primary: 233 64% 65%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 230 41% 22%;
-  --sidebar-accent-foreground: 0 0% 95%;
-  --sidebar-border: 230 30% 30%;
-  --sidebar-ring: 233 64% 65%;
+  --background: hsl(230 50% 12%);
+  --foreground: hsl(0 0% 95%);
+  --card: hsl(230 41% 18%);
+  --card-foreground: hsl(0 0% 95%);
+  --popover: hsl(230 41% 18%);
+  --popover-foreground: hsl(0 0% 95%);
+  --primary: hsl(233 64% 65%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(230 41% 22%);
+  --secondary-foreground: hsl(0 0% 95%);
+  --muted: hsl(230 41% 22%);
+  --muted-foreground: hsl(0 0% 65%);
+  --accent: hsl(233 64% 61%);
+  --accent-foreground: hsl(0 0% 100%);
+  --destructive: hsl(0 72% 51%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(230 30% 30%);
+  --input: hsl(230 30% 30%);
+  --ring: hsl(233 64% 65%);
+  --sidebar: hsl(230 41% 15%);
+  --sidebar-foreground: hsl(0 0% 95%);
+  --sidebar-primary: hsl(233 64% 65%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(230 41% 22%);
+  --sidebar-accent-foreground: hsl(0 0% 95%);
+  --sidebar-border: hsl(230 30% 30%);
+  --sidebar-ring: hsl(233 64% 65%);
 }
 
 @layer base {
@@ -160,16 +136,16 @@
   }
 }
 
-/* ── Brand gradient utilities ── */
+/* ── Tipote gradient utilities ── */
 .gradient-primary {
-  background: linear-gradient(135deg, #5D6CDB 0%, #2E386E 100%);
+  background: linear-gradient(135deg, hsl(233 64% 61%) 0%, hsl(230 41% 28%) 100%);
 }
 .gradient-hero {
-  background: linear-gradient(135deg, rgba(93,108,219,0.95) 0%, rgba(30,38,84,0.98) 100%);
+  background: linear-gradient(135deg, hsla(233,64%,61%,0.95) 0%, hsla(230,41%,28%,0.98) 100%);
 }
-.text-gradient-brand {
-  background: linear-gradient(135deg, #20BBE6 0%, #2E386E 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+
+/* ── Tipote font-display ── */
+.font-display {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans",
+    sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
