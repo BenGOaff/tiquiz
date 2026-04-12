@@ -10,7 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, ArrowLeft, Loader2, Sparkles, FileText, Upload, Settings2, MessageSquare, Award, Users, Share2, Zap, ChevronRight, GripVertical, Save } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Loader2, Sparkles, FileText, Upload, Settings2, MessageSquare, Award, Users, Share2, Zap, ChevronRight, GripVertical, Save, Globe } from "lucide-react";
+import SortableQuestionList from "@/components/quiz/SortableQuestionList";
+import QuizShareSettings from "@/components/quiz/QuizShareSettings";
 import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
@@ -396,13 +398,17 @@ export default function QuizFormClient() {
 
   const [step, setStep] = useState(0);
 
+  // OG image + status (for share settings)
+  const [ogImageUrl, setOgImageUrl] = useState("");
+  const [quizStatus, setQuizStatus] = useState("draft");
+
   const STEPS = [
-    { key: "general", icon: Settings2, label: t("createTitle") },
-    { key: "questions", icon: MessageSquare, label: t("questionsTitle") },
-    { key: "results", icon: Award, label: t("resultsTitle") },
-    { key: "capture", icon: Users, label: t("captureHeadingLabel") },
-    { key: "virality", icon: Share2, label: t("viralityLabel") },
-    { key: "sio", icon: Zap, label: "Systeme.io" },
+    { key: "general", icon: Settings2, label: "Infos générales" },
+    { key: "questions", icon: MessageSquare, label: "Questions" },
+    { key: "results", icon: Award, label: "Résultats" },
+    { key: "capture", icon: Users, label: "Capture" },
+    { key: "virality", icon: Share2, label: "Viralité" },
+    { key: "share", icon: Globe, label: "Partage" },
   ];
 
   // Import file handling
@@ -738,49 +744,71 @@ export default function QuizFormClient() {
                 {step === 4 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>{t("viralityLabel")}</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Share2 className="h-5 w-5 text-primary" />
+                    Bonus de viralité
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <label className="flex items-center gap-2 text-sm">
+                <CardContent className="space-y-5">
+                  {/* Explanation */}
+                  <div className="rounded-lg bg-primary/5 border border-primary/10 p-4 text-sm space-y-2">
+                    <p className="font-medium text-foreground">Comment ça marche ?</p>
+                    <p className="text-muted-foreground">
+                      Quand un visiteur termine le quiz, tu peux lui proposer un <strong>bonus exclusif</strong> en échange d&apos;un partage.
+                      S&apos;il partage le quiz avec ses contacts, il débloque le bonus automatiquement.
+                    </p>
+                    <p className="text-muted-foreground">
+                      Le bonus peut être un accès à une formation, un PDF, une vidéo, un lien vers une campagne email...
+                      L&apos;automatisation se fait via <strong>Systeme.io</strong> (tag dédié au partage → déclenche l&apos;envoi du bonus).
+                    </p>
+                  </div>
+
+                  <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
                     <input
                       type="checkbox"
                       checked={viralityEnabled}
                       onChange={(e) => setViralityEnabled(e.target.checked)}
-                      className="h-4 w-4 rounded border-input"
+                      className="h-5 w-5 rounded border-input accent-primary"
                     />
-                    <span>
-                      {t("viralityLabel")}
-                      <span className="text-muted-foreground ml-2">
-                        — {t("viralityDesc")}
-                      </span>
-                    </span>
+                    <div>
+                      <span className="font-medium">Activer le bonus de viralité</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">Les visiteurs pourront partager le quiz pour débloquer un bonus</p>
+                    </div>
                   </label>
 
                   {viralityEnabled && (
-                    <div className="space-y-4 pl-6 border-l-2 border-border">
+                    <div className="space-y-4 pl-5 border-l-2 border-primary/20">
                       <div className="space-y-2">
-                        <Label htmlFor="bonus-desc">{t("bonusLabel")}</Label>
+                        <Label htmlFor="bonus-desc">Description du bonus</Label>
+                        <p className="text-xs text-muted-foreground">Ce texte sera affiché au visiteur pour le motiver à partager</p>
                         <Input
                           id="bonus-desc"
                           value={bonusDescription}
                           onChange={(e) => setBonusDescription(e.target.value)}
-                          placeholder={t("bonusPlaceholder")}
+                          placeholder="Ex : Reçois notre guide PDF exclusif « Les 10 erreurs à éviter »"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="share-msg">{t("shareMessageLabel")}</Label>
+                        <Label htmlFor="share-msg">Message de partage</Label>
+                        <p className="text-xs text-muted-foreground">Le texte pré-rempli quand le visiteur partage sur les réseaux</p>
                         <Textarea
                           id="share-msg"
                           value={shareMessage}
                           onChange={(e) => setShareMessage(e.target.value)}
+                          placeholder="Ex : J'ai découvert mon profil avec ce quiz ! Et toi, quel est ton résultat ?"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="share-tag">{t("shareTagLabel")}</Label>
+                        <Label htmlFor="share-tag">Tag Systeme.io (partage)</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Ce tag sera appliqué au contact dans Systeme.io quand il partage.
+                          Tu peux l&apos;utiliser pour déclencher l&apos;envoi automatique du bonus.
+                        </p>
                         <Input
                           id="share-tag"
                           value={sioShareTagName}
                           onChange={(e) => setSioShareTagName(e.target.value)}
+                          placeholder="Ex : quiz-partagé"
                         />
                       </div>
                     </div>
@@ -789,112 +817,20 @@ export default function QuizFormClient() {
               </Card>
                 )}
 
-                {/* Step 1: Questions */}
+                {/* Step 1: Questions (drag & drop) */}
                 {step === 1 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t("questionsTitle")}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {questions.map((question, qIdx) => (
-                    <div
-                      key={qIdx}
-                      className="space-y-3 p-4 rounded-lg border border-border bg-muted/30"
-                    >
-                      <div className="flex items-center justify-between">
-                        <Label className="text-base font-semibold">
-                          {t("questionLabel", { n: qIdx + 1 })}
-                        </Label>
-                        {questions.length > 1 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeQuestion(qIdx)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive mr-1" />
-                            {t("removeQuestion")}
-                          </Button>
-                        )}
-                      </div>
-
-                      <Input
-                        value={question.question_text}
-                        onChange={(e) =>
-                          updateQuestion(qIdx, {
-                            question_text: e.target.value,
-                          })
-                        }
-                        placeholder={t("questionPlaceholder")}
-                      />
-
-                      <div className="space-y-2 pl-4">
-                        {question.options.map((option, oIdx) => (
-                          <div key={oIdx} className="flex items-center gap-2">
-                            <Input
-                              className="flex-1"
-                              value={option.text}
-                              onChange={(e) =>
-                                updateOption(qIdx, oIdx, {
-                                  text: e.target.value,
-                                })
-                              }
-                              placeholder={t("optionPlaceholder", {
-                                n: oIdx + 1,
-                              })}
-                            />
-
-                            <div className="flex items-center gap-1 shrink-0">
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                {t("mapsToResult")}
-                              </span>
-                              <select
-                                value={option.result_index}
-                                onChange={(e) =>
-                                  updateOption(qIdx, oIdx, {
-                                    result_index: Number(e.target.value),
-                                  })
-                                }
-                                className="border border-input rounded-lg px-2 py-1 text-sm bg-background w-16"
-                              >
-                                {results.map((_, rIdx) => (
-                                  <option key={rIdx} value={rIdx}>
-                                    {rIdx + 1}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            {question.options.length > 1 && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => removeOption(qIdx, oIdx)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                              </Button>
-                            )}
-                          </div>
-                        ))}
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addOption(qIdx)}
-                        >
-                          <Plus className="h-3.5 w-3.5 mr-1" />
-                          {t("addOption")}
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-
-                  <Button variant="outline" onClick={addQuestion}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    {t("addQuestion")}
-                  </Button>
-                </CardContent>
-              </Card>
-
+                  <SortableQuestionList
+                    questions={questions}
+                    resultsCount={results.length}
+                    onReorder={setQuestions}
+                    onUpdate={updateQuestion}
+                    onUpdateOption={updateOption}
+                    onAddOption={addOption}
+                    onRemoveOption={removeOption}
+                    onAdd={addQuestion}
+                    onRemove={removeQuestion}
+                    t={t}
+                  />
                 )}
 
                 {/* Step 2: Results */}
@@ -1048,6 +984,17 @@ export default function QuizFormClient() {
                 </CardContent>
               </Card>
 
+                )}
+
+                {/* Step 5: Partage */}
+                {step === 5 && (
+                  <QuizShareSettings
+                    quizId=""
+                    status={quizStatus}
+                    ogImageUrl={ogImageUrl}
+                    onStatusChange={setQuizStatus}
+                    onOgImageChange={setOgImageUrl}
+                  />
                 )}
 
                 {/* Step navigation buttons */}
