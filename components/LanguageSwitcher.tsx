@@ -11,14 +11,13 @@ const LOCALE_LABELS: Record<string, string> = {
   ar: "العربية",
 };
 
-export default function LanguageSwitcher() {
+export function LanguageSwitcher({ variant }: { variant?: "sidebar" | "default" }) {
   const t = useTranslations("languageSwitcher");
   const currentLocale = useLocale();
 
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const locale = e.target.value;
     document.cookie = `ui_locale=${locale};path=/;max-age=${365 * 24 * 60 * 60};samesite=lax`;
-    // Persist to DB (non-blocking)
     fetch("/api/settings/ui-locale", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -31,7 +30,7 @@ export default function LanguageSwitcher() {
     <select
       value={currentLocale}
       onChange={handleChange}
-      className="text-sm bg-background border border-input rounded-md px-2 py-1.5 cursor-pointer"
+      className="text-sm bg-background border border-input rounded-md px-2 py-1.5 cursor-pointer w-full"
       aria-label={t("label")}
     >
       {SUPPORTED_LOCALES.map((loc) => (
@@ -42,3 +41,5 @@ export default function LanguageSwitcher() {
     </select>
   );
 }
+
+export default LanguageSwitcher;

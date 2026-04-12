@@ -24,6 +24,11 @@
     "active": "نشط"
   },
   "nav": {
+    "quizzes": "اختباراتي",
+    "create": "إنشاء اختبار",
+    "leads": "عملائي",
+    "stats": "الإحصائيات",
+    "support": "مساعدة",
     "dashboard": "لوحة التحكم",
     "newQuiz": "اختبار جديد",
     "settings": "الإعدادات",
@@ -239,5 +244,14 @@
   },
   "languageSwitcher": {
     "label": "اللغة"
+  },
+  "header": {
+    "account": "حسابي",
+    "logout": "تسجيل الخروج",
+    "menu": {
+      "settings": "الإعدادات",
+      "systemeio": "مفتاح Systeme.io",
+      "account": "حسابي"
+    }
   }
 }
