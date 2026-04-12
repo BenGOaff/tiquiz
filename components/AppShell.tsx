@@ -59,9 +59,11 @@ export default function AppShell({
             </div>
           </header>
 
-          {/* Content — identical to Tipote: flex-1 p-4 lg:p-6 */}
-          <div className={contentClassName ?? "flex-1 p-4 lg:p-6"}>
-            {children}
+          {/* Content — identical to Tipote DashboardLayout */}
+          <div className="flex-1 p-4 sm:p-5 lg:p-6">
+            <div className={contentClassName ?? "max-w-[1200px] mx-auto w-full space-y-5"}>
+              {children}
+            </div>
           </div>
         </main>
       </div>
