@@ -513,476 +513,177 @@ export default function QuizFormClient() {
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="space-y-5">
-      {/* Banner */}
-      <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
-        <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
-          <Sparkles className="h-5 w-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold">{t("createTitle")}</h2>
-          <p className="text-sm text-white/70">Crée ton quiz manuellement, avec l&apos;IA ou en important un document</p>
-        </div>
-        <Button onClick={handleSave} disabled={saving} variant="secondary" className="shrink-0">
+    <div className="space-y-4">
+      {/* Top bar: tabs + save button */}
+      <div className="flex items-center justify-between gap-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="manual" className="gap-1.5">
+              <FileText className="h-4 w-4" />
+              {t("tabManual")}
+            </TabsTrigger>
+            <TabsTrigger value="ai" className="gap-1.5">
+              <Sparkles className="h-4 w-4" />
+              {t("tabAI")}
+            </TabsTrigger>
+            <TabsTrigger value="import" className="gap-1.5">
+              <Upload className="h-4 w-4" />
+              {t("tabImport")}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <Button onClick={handleSave} disabled={saving} className="shrink-0">
           {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
           {saving ? t("saving") : "Enregistrer"}
         </Button>
       </div>
 
-      {/* Preview panel — always visible below banner */}
-      <details className="group">
-        <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium text-primary hover:text-primary/80 transition-colors select-none">
-          <Monitor className="h-4 w-4" />
-          Aperçu en direct
-          <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
-        </summary>
-        <div className="mt-3">
-          <QuizPreview
-            title={title}
-            introduction={introduction}
-            questions={questions}
-            results={results}
-            captureHeading={captureHeading}
-            captureSubtitle={captureSubtitle}
-            captureFirstName={captureFirstName}
-            captureLastName={captureLastName}
-            capturePhone={capturePhone}
-            captureCountry={captureCountry}
-            ctaText={ctaText}
-          />
-        </div>
-      </details>
+      {/* ================================================================
+          MANUAL TAB — Step sidebar + content
+          ================================================================ */}
+      {activeTab === "manual" && (
+        <div className="flex gap-5">
+          {/* Step sidebar */}
+          <nav className="hidden md:flex flex-col gap-0.5 w-44 shrink-0 sticky top-20 self-start">
+            {STEPS.map((s, i) => (
+              <button
+                key={s.key}
+                onClick={() => setStep(i)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${
+                  step === i
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                <span className="truncate">{s.label}</span>
+              </button>
+            ))}
+          </nav>
 
-      {/* Source tabs (Manuel / IA / Import) */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full sm:w-auto">
-          <TabsTrigger value="manual" className="gap-1.5">
-            <FileText className="h-4 w-4" />
-            {t("tabManual")}
-          </TabsTrigger>
-          <TabsTrigger value="ai" className="gap-1.5">
-            <Sparkles className="h-4 w-4" />
-            {t("tabAI")}
-          </TabsTrigger>
-          <TabsTrigger value="import" className="gap-1.5">
-            <Upload className="h-4 w-4" />
-            {t("tabImport")}
-          </TabsTrigger>
-        </TabsList>
-
-          {/* ================================================================
-              MANUAL TAB — Step-based layout
-              ================================================================ */}
-          <TabsContent value="manual">
-            <div className="flex gap-6 mt-4">
-              {/* Step sidebar */}
-              <nav className="hidden md:flex flex-col gap-1 w-48 shrink-0 sticky top-20 self-start">
+          {/* Step content */}
+          <div className="flex-1 min-w-0 space-y-5">
+            {/* Mobile step selector */}
+            <div className="md:hidden">
+              <select
+                value={step}
+                onChange={(e) => setStep(Number(e.target.value))}
+                className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background"
+              >
                 {STEPS.map((s, i) => (
-                  <button
-                    key={s.key}
-                    onClick={() => setStep(i)}
-                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
-                      step === i
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    <s.icon className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{s.label}</span>
-                  </button>
+                  <option key={s.key} value={i}>{s.label}</option>
                 ))}
-              </nav>
+              </select>
+            </div>
 
-              {/* Step content */}
-              <div className="flex-1 min-w-0 space-y-6">
-                {/* Mobile step selector */}
-                <div className="md:hidden">
-                  <select
-                    value={step}
-                    onChange={(e) => setStep(Number(e.target.value))}
-                    className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background"
-                  >
-                    {STEPS.map((s, i) => (
-                      <option key={s.key} value={i}>{s.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Step 0: General */}
-                {step === 0 && (
+            {/* Step 0: General */}
+            {step === 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings2 className="h-5 w-5 text-primary" />
-                    {t("createTitle")}
-                  </CardTitle>
+                  <CardTitle>{t("createTitle")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Title */}
                   <div className="space-y-2">
                     <Label htmlFor="quiz-title">{t("titleLabel")}</Label>
-                    <Input
-                      id="quiz-title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder={t("titlePlaceholder")}
-                    />
+                    <Input id="quiz-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("titlePlaceholder")} />
                   </div>
-
-                  {/* Introduction */}
                   <div className="space-y-2">
                     <Label htmlFor="quiz-intro">{t("introLabel")}</Label>
-                    <Textarea
-                      id="quiz-intro"
-                      value={introduction}
-                      onChange={(e) => setIntroduction(e.target.value)}
-                      placeholder={t("introPlaceholder")}
-                    />
+                    <Textarea id="quiz-intro" value={introduction} onChange={(e) => setIntroduction(e.target.value)} placeholder={t("introPlaceholder")} />
                   </div>
-
-                  {/* Locale + Address form */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="quiz-locale">{t("localeLabel")}</Label>
-                      <select
-                        id="quiz-locale"
-                        value={locale}
-                        onChange={(e) => setLocale(e.target.value)}
-                        className="w-full border border-input rounded-lg px-2.5 py-1.5 text-sm bg-background"
-                      >
-                        {localeOptions.map((lo) => (
-                          <option key={lo.value} value={lo.value}>
-                            {lo.label}
-                          </option>
-                        ))}
+                      <Label>{t("localeLabel")}</Label>
+                      <select value={locale} onChange={(e) => setLocale(e.target.value)} className="w-full border border-input rounded-lg px-2.5 py-1.5 text-sm bg-background">
+                        {localeOptions.map((lo) => (<option key={lo.value} value={lo.value}>{lo.label}</option>))}
                       </select>
                     </div>
-
                     <div className="space-y-2">
-                      <Label htmlFor="quiz-address">{t("addressFormLabel")}</Label>
-                      <select
-                        id="quiz-address"
-                        value={addressForm}
-                        onChange={(e) => setAddressForm(e.target.value)}
-                        className="w-full border border-input rounded-lg px-2.5 py-1.5 text-sm bg-background"
-                      >
+                      <Label>{t("addressFormLabel")}</Label>
+                      <select value={addressForm} onChange={(e) => setAddressForm(e.target.value)} className="w-full border border-input rounded-lg px-2.5 py-1.5 text-sm bg-background">
                         <option value="tu">{t("tu")}</option>
                         <option value="vous">{t("vous")}</option>
                       </select>
                     </div>
                   </div>
-
-                  {/* CTA text + URL */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="quiz-cta">{t("ctaLabel")}</Label>
-                      <Input
-                        id="quiz-cta"
-                        value={ctaText}
-                        onChange={(e) => setCtaText(e.target.value)}
-                        placeholder={t("ctaPlaceholder")}
-                      />
+                      <Label>{t("ctaLabel")}</Label>
+                      <Input value={ctaText} onChange={(e) => setCtaText(e.target.value)} placeholder={t("ctaPlaceholder")} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="quiz-cta-url">{t("ctaUrlLabel")}</Label>
-                      <Input
-                        id="quiz-cta-url"
-                        value={ctaUrl}
-                        onChange={(e) => setCtaUrl(e.target.value)}
-                        placeholder={t("ctaUrlPlaceholder")}
-                      />
+                      <Label>{t("ctaUrlLabel")}</Label>
+                      <Input value={ctaUrl} onChange={(e) => setCtaUrl(e.target.value)} placeholder={t("ctaUrlPlaceholder")} />
                     </div>
                   </div>
-
-                  {/* Privacy URL */}
                   <div className="space-y-2">
-                    <Label htmlFor="quiz-privacy">{t("privacyUrlLabel")}</Label>
-                    <Input
-                      id="quiz-privacy"
-                      value={privacyUrl}
-                      onChange={(e) => setPrivacyUrl(e.target.value)}
-                      placeholder="https://…"
-                    />
+                    <Label>{t("privacyUrlLabel")}</Label>
+                    <Input value={privacyUrl} onChange={(e) => setPrivacyUrl(e.target.value)} placeholder="https://…" />
                   </div>
-
-                  {/* Consent text */}
                   <div className="space-y-2">
-                    <Label htmlFor="quiz-consent">{t("consentLabel")}</Label>
-                    <Input
-                      id="quiz-consent"
-                      value={consentText}
-                      onChange={(e) => setConsentText(e.target.value)}
-                      placeholder={t("consentPlaceholder")}
-                    />
+                    <Label>{t("consentLabel")}</Label>
+                    <Input value={consentText} onChange={(e) => setConsentText(e.target.value)} placeholder={t("consentPlaceholder")} />
                   </div>
                 </CardContent>
               </Card>
-                )}
+            )}
 
-                {/* Step 3: Capture config */}
-                {step === 3 && (
+            {/* Step 1: Questions */}
+            {step === 1 && (
+              <SortableQuestionList
+                questions={questions}
+                resultsCount={results.length}
+                onReorder={setQuestions}
+                onUpdate={updateQuestion}
+                onUpdateOption={updateOption}
+                onAddOption={addOption}
+                onRemoveOption={removeOption}
+                onAdd={addQuestion}
+                onRemove={removeQuestion}
+                t={t}
+              />
+            )}
+
+            {/* Step 2: Results */}
+            {step === 2 && (
               <Card>
-                <CardHeader>
-                  <CardTitle>{t("captureHeadingLabel")}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="capture-heading">{t("captureHeadingLabel")}</Label>
-                    <Input
-                      id="capture-heading"
-                      value={captureHeading}
-                      onChange={(e) => setCaptureHeading(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="capture-subtitle">{t("captureSubtitleLabel")}</Label>
-                    <Input
-                      id="capture-subtitle"
-                      value={captureSubtitle}
-                      onChange={(e) => setCaptureSubtitle(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={captureFirstName}
-                        onChange={(e) => setCaptureFirstName(e.target.checked)}
-                        className="h-4 w-4 rounded border-input"
-                      />
-                      {t("captureFirstName")}
-                    </label>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={captureLastName}
-                        onChange={(e) => setCaptureLastName(e.target.checked)}
-                        className="h-4 w-4 rounded border-input"
-                      />
-                      {t("captureLastName")}
-                    </label>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={capturePhone}
-                        onChange={(e) => setCapturePhone(e.target.checked)}
-                        className="h-4 w-4 rounded border-input"
-                      />
-                      {t("capturePhone")}
-                    </label>
-                    <label className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={captureCountry}
-                        onChange={(e) => setCaptureCountry(e.target.checked)}
-                        className="h-4 w-4 rounded border-input"
-                      />
-                      {t("captureCountry")}
-                    </label>
-                  </div>
-                </CardContent>
-              </Card>
-                )}
-
-                {/* Step 4: Virality */}
-                {step === 4 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Share2 className="h-5 w-5 text-primary" />
-                    Bonus de viralité
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-5">
-                  {/* Explanation */}
-                  <div className="rounded-lg bg-primary/5 border border-primary/10 p-4 text-sm space-y-2">
-                    <p className="font-medium text-foreground">Comment ça marche ?</p>
-                    <p className="text-muted-foreground">
-                      Quand un visiteur termine le quiz, tu peux lui proposer un <strong>bonus exclusif</strong> en échange d&apos;un partage.
-                      S&apos;il partage le quiz avec ses contacts, il débloque le bonus automatiquement.
-                    </p>
-                    <p className="text-muted-foreground">
-                      Le bonus peut être un accès à une formation, un PDF, une vidéo, un lien vers une campagne email...
-                      L&apos;automatisation se fait via <strong>Systeme.io</strong> (tag dédié au partage → déclenche l&apos;envoi du bonus).
-                    </p>
-                  </div>
-
-                  <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
-                    <input
-                      type="checkbox"
-                      checked={viralityEnabled}
-                      onChange={(e) => setViralityEnabled(e.target.checked)}
-                      className="h-5 w-5 rounded border-input accent-primary"
-                    />
-                    <div>
-                      <span className="font-medium">Activer le bonus de viralité</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">Les visiteurs pourront partager le quiz pour débloquer un bonus</p>
-                    </div>
-                  </label>
-
-                  {viralityEnabled && (
-                    <div className="space-y-4 pl-5 border-l-2 border-primary/20">
-                      <div className="space-y-2">
-                        <Label htmlFor="bonus-desc">Description du bonus</Label>
-                        <p className="text-xs text-muted-foreground">Ce texte sera affiché au visiteur pour le motiver à partager</p>
-                        <Input
-                          id="bonus-desc"
-                          value={bonusDescription}
-                          onChange={(e) => setBonusDescription(e.target.value)}
-                          placeholder="Ex : Reçois notre guide PDF exclusif « Les 10 erreurs à éviter »"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="share-msg">Message de partage</Label>
-                        <p className="text-xs text-muted-foreground">Le texte pré-rempli quand le visiteur partage sur les réseaux</p>
-                        <Textarea
-                          id="share-msg"
-                          value={shareMessage}
-                          onChange={(e) => setShareMessage(e.target.value)}
-                          placeholder="Ex : J'ai découvert mon profil avec ce quiz ! Et toi, quel est ton résultat ?"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="share-tag">Tag Systeme.io (partage)</Label>
-                        <p className="text-xs text-muted-foreground">
-                          Ce tag sera appliqué au contact dans Systeme.io quand il partage.
-                          Tu peux l&apos;utiliser pour déclencher l&apos;envoi automatique du bonus.
-                        </p>
-                        <Input
-                          id="share-tag"
-                          value={sioShareTagName}
-                          onChange={(e) => setSioShareTagName(e.target.value)}
-                          placeholder="Ex : quiz-partagé"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-                )}
-
-                {/* Step 1: Questions (drag & drop) */}
-                {step === 1 && (
-                  <SortableQuestionList
-                    questions={questions}
-                    resultsCount={results.length}
-                    onReorder={setQuestions}
-                    onUpdate={updateQuestion}
-                    onUpdateOption={updateOption}
-                    onAddOption={addOption}
-                    onRemoveOption={removeOption}
-                    onAdd={addQuestion}
-                    onRemove={removeQuestion}
-                    t={t}
-                  />
-                )}
-
-                {/* Step 2: Results */}
-                {step === 2 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t("resultsTitle")}</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle>{t("resultsTitle")}</CardTitle></CardHeader>
                 <CardContent className="space-y-6">
                   {results.map((result, rIdx) => (
-                    <div
-                      key={rIdx}
-                      className="space-y-3 p-4 rounded-lg border border-border bg-muted/30"
-                    >
+                    <div key={rIdx} className="space-y-3 p-4 rounded-lg border border-border bg-muted/30">
                       <div className="flex items-center justify-between">
-                        <Label className="text-base font-semibold">
-                          {t("resultLabel", { n: rIdx + 1 })}
-                        </Label>
+                        <Label className="text-base font-semibold">{t("resultLabel", { n: rIdx + 1 })}</Label>
                         {results.length > 1 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeResult(rIdx)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive mr-1" />
-                            {t("removeQuestion")}
+                          <Button variant="ghost" size="sm" onClick={() => removeResult(rIdx)}>
+                            <Trash2 className="h-4 w-4 text-destructive mr-1" />{t("removeQuestion")}
                           </Button>
                         )}
                       </div>
-
-                      {/* Result title */}
                       <div className="space-y-2">
                         <Label>{t("resultTitleLabel")}</Label>
-                        <Input
-                          value={result.title}
-                          onChange={(e) =>
-                            updateResult(rIdx, { title: e.target.value })
-                          }
-                          placeholder={t("resultTitlePlaceholder")}
-                        />
+                        <Input value={result.title} onChange={(e) => updateResult(rIdx, { title: e.target.value })} placeholder={t("resultTitlePlaceholder")} />
                       </div>
-
-                      {/* Description */}
                       <div className="space-y-2">
                         <Label>{t("resultDescLabel")}</Label>
-                        <Textarea
-                          value={result.description}
-                          onChange={(e) =>
-                            updateResult(rIdx, {
-                              description: e.target.value,
-                            })
-                          }
-                        />
+                        <Textarea value={result.description} onChange={(e) => updateResult(rIdx, { description: e.target.value })} />
                       </div>
-
-                      {/* Insight */}
                       <div className="space-y-2">
                         <Label>{t("resultInsightLabel")}</Label>
-                        <Textarea
-                          value={result.insight}
-                          onChange={(e) =>
-                            updateResult(rIdx, { insight: e.target.value })
-                          }
-                        />
+                        <Textarea value={result.insight} onChange={(e) => updateResult(rIdx, { insight: e.target.value })} />
                       </div>
-
-                      {/* Projection */}
                       <div className="space-y-2">
                         <Label>{t("resultProjectionLabel")}</Label>
-                        <Textarea
-                          value={result.projection}
-                          onChange={(e) =>
-                            updateResult(rIdx, {
-                              projection: e.target.value,
-                            })
-                          }
-                        />
+                        <Textarea value={result.projection} onChange={(e) => updateResult(rIdx, { projection: e.target.value })} />
                       </div>
-
-                      {/* CTA text + URL */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>{t("resultCtaLabel")}</Label>
-                          <Input
-                            value={result.cta_text}
-                            onChange={(e) =>
-                              updateResult(rIdx, {
-                                cta_text: e.target.value,
-                              })
-                            }
-                          />
+                          <Input value={result.cta_text} onChange={(e) => updateResult(rIdx, { cta_text: e.target.value })} />
                         </div>
                         <div className="space-y-2">
                           <Label>{t("resultCtaUrlLabel")}</Label>
-                          <Input
-                            value={result.cta_url}
-                            onChange={(e) =>
-                              updateResult(rIdx, {
-                                cta_url: e.target.value,
-                              })
-                            }
-                            placeholder="https://…"
-                          />
+                          <Input value={result.cta_url} onChange={(e) => updateResult(rIdx, { cta_url: e.target.value })} placeholder="https://…" />
                         </div>
                       </div>
-
-                      {/* SIO fields — dropdowns from user's SIO account */}
                       <SioSelectors
                         tagValue={result.sio_tag_name}
                         courseValue={result.sio_course_id}
@@ -993,254 +694,205 @@ export default function QuizFormClient() {
                       />
                     </div>
                   ))}
-
-                  <Button variant="outline" onClick={addResult}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    {t("addResult")}
-                  </Button>
+                  <Button variant="outline" onClick={addResult}><Plus className="h-4 w-4 mr-1" />{t("addResult")}</Button>
                 </CardContent>
               </Card>
-
-                )}
-
-                {/* Step 5: Partage */}
-                {step === 5 && (
-                  <QuizShareSettings
-                    quizId=""
-                    status={quizStatus}
-                    ogImageUrl={ogImageUrl}
-                    onStatusChange={setQuizStatus}
-                    onOgImageChange={setOgImageUrl}
-                  />
-                )}
-
-                {/* Step navigation buttons */}
-                <div className="flex items-center justify-between pt-4 border-t border-border">
-                  <Button
-                    variant="outline"
-                    onClick={() => setStep(Math.max(0, step - 1))}
-                    disabled={step === 0}
-                  >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Précédent
-                  </Button>
-                  {step < STEPS.length - 1 ? (
-                    <Button onClick={() => setStep(step + 1)}>
-                      Suivant
-                      <ChevronRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  ) : (
-                    <Button onClick={handleSave} disabled={saving}>
-                      {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                      <Save className="h-4 w-4 mr-2" />
-                      {saving ? t("saving") : "Enregistrer le quiz"}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* ================================================================
-              AI TAB
-              ================================================================ */}
-          <TabsContent value="ai">
-            {generating ? (
-              <AIGeneratingOverlay />
-            ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  <Sparkles className="h-5 w-5 inline-block mr-2" />
-                  {t("tabAI")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Objective — dropdown with 16 types */}
-                <div className="space-y-2">
-                  <Label htmlFor="ai-objective">{t("aiObjectiveLabel")}</Label>
-                  <select
-                    id="ai-objective"
-                    value={aiObjective}
-                    onChange={(e) => setAiObjective(e.target.value)}
-                    className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background"
-                  >
-                    <option value="">— Choisis un objectif —</option>
-                    <option value="engagement">Créer de l&apos;engagement — Contenus funs et interactifs</option>
-                    <option value="eduquer">Éduquer — Transmettre des connaissances</option>
-                    <option value="qualifier">Qualifier — Évaluer niveau ou compétences</option>
-                    <option value="sensibiliser">Sensibiliser — Faire prendre conscience</option>
-                    <option value="reviser">Réviser — Consolider des acquis</option>
-                    <option value="decouvrir">Découvrir — Explorer un sujet</option>
-                    <option value="tester">Tester — Vérifier des connaissances</option>
-                    <option value="classer">Classer — Positionner dans un niveau</option>
-                    <option value="challenger">Challenger — Stimuler la progression</option>
-                    <option value="initier">Initier — Découvrir les bases d&apos;un sujet</option>
-                    <option value="perfectionner">Perfectionner — Approfondir l&apos;existant</option>
-                    <option value="diagnostiquer">Diagnostiquer — Identifier lacunes / freins</option>
-                    <option value="motiver">Motiver — Encourager et redonner de l&apos;élan</option>
-                    <option value="certifier">Certifier — Valider un niveau</option>
-                    <option value="orienter">Orienter — Guider vers une offre ou un choix</option>
-                    <option value="recruter">Recruter — Évaluer pour sélectionner</option>
-                  </select>
-                </div>
-
-                {/* Détail objectif */}
-                <div className="space-y-2">
-                  <Label htmlFor="ai-target">Précise ton objectif</Label>
-                  <Textarea
-                    id="ai-objective-detail"
-                    value={aiTarget}
-                    onChange={(e) => setAiTarget(e.target.value)}
-                    placeholder="Ex : Qualifier mes prospects pour mon offre de coaching à destination des entrepreneurs débutants..."
-                    className="h-16"
-                  />
-                </div>
-
-                {/* Tone */}
-                <div className="space-y-2">
-                  <Label htmlFor="ai-tone">{t("aiToneLabel")}</Label>
-                  <Input
-                    id="ai-tone"
-                    value={aiTone}
-                    onChange={(e) => setAiTone(e.target.value)}
-                    placeholder={t("aiTonePlaceholder")}
-                  />
-                </div>
-
-                {/* CTA */}
-                <div className="space-y-2">
-                  <Label htmlFor="ai-cta">{t("aiCtaLabel")}</Label>
-                  <Input
-                    id="ai-cta"
-                    value={aiCta}
-                    onChange={(e) => setAiCta(e.target.value)}
-                    placeholder={t("aiCtaPlaceholder")}
-                  />
-                </div>
-
-                {/* Bonus */}
-                <div className="space-y-2">
-                  <Label htmlFor="ai-bonus">{t("aiBonusLabel")}</Label>
-                  <Input
-                    id="ai-bonus"
-                    value={aiBonus}
-                    onChange={(e) => setAiBonus(e.target.value)}
-                    placeholder={t("aiBonusPlaceholder")}
-                  />
-                </div>
-
-                {/* Locale */}
-                <div className="space-y-2">
-                  <Label htmlFor="ai-locale">{t("localeLabel")}</Label>
-                  <select
-                    id="ai-locale"
-                    value={aiLocale}
-                    onChange={(e) => setAiLocale(e.target.value)}
-                    className="w-full border border-input rounded-lg px-2.5 py-1.5 text-sm bg-background"
-                  >
-                    {localeOptions.map((lo) => (
-                      <option key={lo.value} value={lo.value}>
-                        {lo.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Generate button */}
-                <Button
-                  className="w-full"
-                  onClick={handleGenerate}
-                  disabled={generating}
-                >
-                  {generating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      {t("aiGenerating")}
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      {t("aiGenerate")}
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
             )}
-          </TabsContent>
 
-          {/* ================================================================
-              IMPORT TAB
-              ================================================================ */}
-          <TabsContent value="import">
-            <Card className="mt-4">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="h-5 w-5 text-primary" />
-                  Importer un quiz
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <p className="text-sm text-muted-foreground">
-                  Importe un document (TXT, PDF ou DOCX) contenant tes questions et réponses.
-                  L&apos;IA analysera le contenu et créera automatiquement le quiz.
-                </p>
+            {/* Step 3: Capture */}
+            {step === 3 && (
+              <Card>
+                <CardHeader><CardTitle>{t("captureHeadingLabel")}</CardTitle></CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>{t("captureHeadingLabel")}</Label>
+                    <Input value={captureHeading} onChange={(e) => setCaptureHeading(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{t("captureSubtitleLabel")}</Label>
+                    <Input value={captureSubtitle} onChange={(e) => setCaptureSubtitle(e.target.value)} />
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {[
+                      { label: t("captureFirstName"), checked: captureFirstName, set: setCaptureFirstName },
+                      { label: t("captureLastName"), checked: captureLastName, set: setCaptureLastName },
+                      { label: t("capturePhone"), checked: capturePhone, set: setCapturePhone },
+                      { label: t("captureCountry"), checked: captureCountry, set: setCaptureCountry },
+                    ].map(({ label, checked, set }) => (
+                      <label key={label} className="flex items-center gap-2 text-sm">
+                        <input type="checkbox" checked={checked} onChange={(e) => set(e.target.checked)} className="h-4 w-4 rounded border-input" />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-                <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
-                  <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-                  <p className="font-medium mb-2">Glisse ton fichier ici ou clique pour sélectionner</p>
-                  <p className="text-xs text-muted-foreground mb-4">TXT, PDF, DOCX — max 10 000 caractères</p>
-                  <input
-                    type="file"
-                    accept=".txt,.pdf,.docx"
-                    onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
-                    className="hidden"
-                    id="import-file"
-                  />
-                  <Button variant="outline" asChild>
-                    <label htmlFor="import-file" className="cursor-pointer">
-                      Sélectionner un fichier
-                    </label>
-                  </Button>
-                </div>
-
-                {importFile && (
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="text-sm font-medium">{importFile.name}</p>
-                        <p className="text-xs text-muted-foreground">{(importFile.size / 1024).toFixed(1)} Ko</p>
+            {/* Step 4: Virality */}
+            {step === 4 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><Share2 className="h-5 w-5 text-primary" />Bonus de viralité</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
+                    <input type="checkbox" checked={viralityEnabled} onChange={(e) => setViralityEnabled(e.target.checked)} className="h-5 w-5 rounded border-input accent-primary" />
+                    <div>
+                      <span className="font-medium">Activer le bonus de viralité</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">Les visiteurs pourront partager le quiz pour débloquer un bonus</p>
+                    </div>
+                  </label>
+                  {viralityEnabled && (
+                    <div className="space-y-4 pl-5 border-l-2 border-primary/20">
+                      <div className="space-y-2">
+                        <Label>Description du bonus</Label>
+                        <Input value={bonusDescription} onChange={(e) => setBonusDescription(e.target.value)} placeholder="Ex : Reçois notre guide PDF exclusif" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Message de partage</Label>
+                        <Textarea value={shareMessage} onChange={(e) => setShareMessage(e.target.value)} placeholder="Ex : J'ai découvert mon profil avec ce quiz !" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Tag Systeme.io (partage)</Label>
+                        <Input value={sioShareTagName} onChange={(e) => setSioShareTagName(e.target.value)} placeholder="Ex : quiz-partagé" />
                       </div>
                     </div>
-                    <Button onClick={handleImportFile} disabled={importing}>
-                      {importing ? (
-                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Import en cours...</>
-                      ) : (
-                        <><Sparkles className="h-4 w-4 mr-2" />Analyser et importer</>
-                      )}
-                    </Button>
-                  </div>
-                )}
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
-                {/* Locale selector for import */}
-                <div className="space-y-2">
-                  <Label>Langue du quiz importé</Label>
-                  <select
-                    value={aiLocale}
-                    onChange={(e) => setAiLocale(e.target.value)}
-                    className="w-full border border-input rounded-lg px-2.5 py-1.5 text-sm bg-background"
-                  >
-                    {localeOptions.map((lo) => (
-                      <option key={lo.value} value={lo.value}>{lo.label}</option>
-                    ))}
-                  </select>
+            {/* Step 5: Share */}
+            {step === 5 && (
+              <QuizShareSettings
+                quizId=""
+                status={quizStatus}
+                ogImageUrl={ogImageUrl}
+                onStatusChange={setQuizStatus}
+                onOgImageChange={setOgImageUrl}
+              />
+            )}
+
+            {/* Prev / Next */}
+            <div className="flex items-center justify-between pt-2">
+              <Button variant="outline" onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0}>
+                <ArrowLeft className="h-4 w-4 mr-2" />Précédent
+              </Button>
+              {step < STEPS.length - 1 ? (
+                <Button onClick={() => setStep(step + 1)}>Suivant<ChevronRight className="h-4 w-4 ml-2" /></Button>
+              ) : (
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  <Save className="h-4 w-4 mr-2" />
+                  {saving ? t("saving") : "Enregistrer le quiz"}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================
+          AI TAB
+          ================================================================ */}
+      {activeTab === "ai" && (
+        generating ? (
+          <AIGeneratingOverlay />
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" />{t("tabAI")}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>{t("aiObjectiveLabel")}</Label>
+                <select value={aiObjective} onChange={(e) => setAiObjective(e.target.value)} className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background">
+                  <option value="">— Choisis un objectif —</option>
+                  <option value="engagement">Créer de l&apos;engagement</option>
+                  <option value="eduquer">Éduquer</option>
+                  <option value="qualifier">Qualifier</option>
+                  <option value="sensibiliser">Sensibiliser</option>
+                  <option value="tester">Tester</option>
+                  <option value="diagnostiquer">Diagnostiquer</option>
+                  <option value="motiver">Motiver</option>
+                  <option value="orienter">Orienter</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label>Précise ton objectif</Label>
+                <Textarea value={aiTarget} onChange={(e) => setAiTarget(e.target.value)} placeholder="Ex : Qualifier mes prospects pour mon offre de coaching…" className="h-16" />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("aiToneLabel")}</Label>
+                <Input value={aiTone} onChange={(e) => setAiTone(e.target.value)} placeholder={t("aiTonePlaceholder")} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("aiCtaLabel")}</Label>
+                <Input value={aiCta} onChange={(e) => setAiCta(e.target.value)} placeholder={t("aiCtaPlaceholder")} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("aiBonusLabel")}</Label>
+                <Input value={aiBonus} onChange={(e) => setAiBonus(e.target.value)} placeholder={t("aiBonusPlaceholder")} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("localeLabel")}</Label>
+                <select value={aiLocale} onChange={(e) => setAiLocale(e.target.value)} className="w-full border border-input rounded-lg px-2.5 py-1.5 text-sm bg-background">
+                  {localeOptions.map((lo) => (<option key={lo.value} value={lo.value}>{lo.label}</option>))}
+                </select>
+              </div>
+              <Button className="w-full" onClick={handleGenerate} disabled={generating}>
+                <Sparkles className="h-4 w-4 mr-2" />{t("aiGenerate")}
+              </Button>
+            </CardContent>
+          </Card>
+        )
+      )}
+
+      {/* ================================================================
+          IMPORT TAB
+          ================================================================ */}
+      {activeTab === "import" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Upload className="h-5 w-5 text-primary" />Importer un quiz</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <p className="text-sm text-muted-foreground">
+              Importe un document (TXT, PDF ou DOCX) contenant tes questions et réponses.
+            </p>
+            <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
+              <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+              <p className="font-medium mb-2">Glisse ton fichier ici ou clique pour sélectionner</p>
+              <p className="text-xs text-muted-foreground mb-4">TXT, PDF, DOCX — max 10 000 caractères</p>
+              <input type="file" accept=".txt,.pdf,.docx" onChange={(e) => setImportFile(e.target.files?.[0] ?? null)} className="hidden" id="import-file" />
+              <Button variant="outline" asChild>
+                <label htmlFor="import-file" className="cursor-pointer">Sélectionner un fichier</label>
+              </Button>
+            </div>
+            {importFile && (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">{importFile.name}</p>
+                    <p className="text-xs text-muted-foreground">{(importFile.size / 1024).toFixed(1)} Ko</p>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                <Button onClick={handleImportFile} disabled={importing}>
+                  {importing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Import en cours...</> : <><Sparkles className="h-4 w-4 mr-2" />Analyser et importer</>}
+                </Button>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Langue du quiz importé</Label>
+              <select value={aiLocale} onChange={(e) => setAiLocale(e.target.value)} className="w-full border border-input rounded-lg px-2.5 py-1.5 text-sm bg-background">
+                {localeOptions.map((lo) => (<option key={lo.value} value={lo.value}>{lo.label}</option>))}
+              </select>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
