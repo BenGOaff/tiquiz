@@ -8,6 +8,7 @@ interface DashboardLayoutProps {
   title: string;
   userEmail?: string;
   contentClassName?: string;
+  headerRight?: ReactNode;
 }
 
 export default function DashboardLayout({
@@ -15,9 +16,10 @@ export default function DashboardLayout({
   title,
   userEmail = "",
   contentClassName,
+  headerRight,
 }: DashboardLayoutProps) {
   return (
-    <AppShell userEmail={userEmail} headerTitle={title} contentClassName={contentClassName}>
+    <AppShell userEmail={userEmail} headerTitle={title} headerRight={headerRight} contentClassName={contentClassName}>
       {children}
     </AppShell>
   );
