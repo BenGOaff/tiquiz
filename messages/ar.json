@@ -231,6 +231,7 @@
     "aiGenerating": "جاري الإنشاء…",
     "aiGenerated": "تم إنشاء الاختبار! يمكنك تعديله قبل الحفظ.",
     "aiObjectivePick": "— اختر هدفاً —",
+    "aiObjectiveMulti": "اختر هدفاً واحداً أو أكثر لاختبارك",
     "aiFormatLabel": "صيغة الاختبار",
     "aiFormatShort": "قصير",
     "aiFormatShortDesc": "3-5 أسئلة — تحويلات سريعة",

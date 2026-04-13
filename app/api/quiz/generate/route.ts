@@ -152,8 +152,14 @@ export async function POST(req: NextRequest) {
 
         if (!res.ok) {
           const errText = await res.text().catch(() => "");
-          console.error("[quiz/generate] Claude API error:", res.status, errText.slice(0, 300));
-          sendSSE("error", { ok: false, error: `Erreur Claude API (${res.status}). Réessaie.` });
+          console.error("[quiz/generate] Claude API error:", res.status, errText.slice(0, 500));
+          if (res.status === 401) {
+            sendSSE("error", { ok: false, error: "Clé API Anthropic invalide ou expirée. Vérifie ANTHROPIC_API_KEY dans ton .env." });
+          } else if (res.status === 429) {
+            sendSSE("error", { ok: false, error: "Trop de requêtes vers Claude. Réessaie dans quelques secondes." });
+          } else {
+            sendSSE("error", { ok: false, error: `Erreur Claude API (${res.status}). Réessaie.` });
+          }
           return;
         }
 

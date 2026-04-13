@@ -231,6 +231,7 @@
     "aiGenerating": "Generando…",
     "aiGenerated": "¡Quiz generado! Puedes editarlo antes de guardar.",
     "aiObjectivePick": "— Elige un objetivo —",
+    "aiObjectiveMulti": "Selecciona uno o más objetivos para tu quiz",
     "aiFormatLabel": "Formato del quiz",
     "aiFormatShort": "Corto",
     "aiFormatShortDesc": "3-5 preguntas — conversiones rápidas",

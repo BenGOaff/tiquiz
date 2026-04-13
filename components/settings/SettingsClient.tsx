@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { Settings, Palette, Key, Trash2, Loader2, Save } from "lucide-react";
+import {
+  Settings, Palette, Key, Trash2, Loader2, Save,
+  CreditCard, Upload, Check, Crown, Zap, Star, ArrowRight,
+} from "lucide-react";
 import { toast } from "sonner";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -41,11 +43,44 @@ const TONES = [
   { value: "inspirant", label: "Inspirant" },
 ];
 
+const PLANS = [
+  {
+    id: "free",
+    name: "Free",
+    icon: Zap,
+    price: "0€",
+    period: "",
+    features: ["1 quiz actif", "10 réponses/mois", "Capture d'emails", "Lien de partage"],
+    cta: null,
+  },
+  {
+    id: "pro_monthly",
+    name: "Pro",
+    icon: Star,
+    price: "19€",
+    period: "/mois",
+    features: ["Quiz illimités", "Réponses illimitées", "Viralité & bonus", "Systeme.io", "Branding personnalisé", "Export CSV"],
+    cta: "Passer à Pro",
+    popular: true,
+  },
+  {
+    id: "pro_yearly",
+    name: "Pro Annuel",
+    icon: Crown,
+    price: "190€",
+    period: "/an",
+    badge: "−17%",
+    features: ["Tout Pro inclus", "2 mois offerts", "Support prioritaire", "Accès anticipé nouveautés"],
+    cta: "Passer à Pro Annuel",
+  },
+];
+
 export default function SettingsClient() {
   const t = useTranslations("settings");
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") || "general";
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,6 +89,7 @@ export default function SettingsClient() {
   // General
   const [addressForm, setAddressForm] = useState("tu");
   const [privacyUrl, setPrivacyUrl] = useState("");
+  const [targetAudience, setTargetAudience] = useState("");
 
   // Branding
   const [brandLogoUrl, setBrandLogoUrl] = useState("");
@@ -62,9 +98,7 @@ export default function SettingsClient() {
   const [brandFont, setBrandFont] = useState("Inter");
   const [brandTone, setBrandTone] = useState("professionnel");
   const [brandWebsiteUrl, setBrandWebsiteUrl] = useState("");
-
-  // Target audience
-  const [targetAudience, setTargetAudience] = useState("");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   // SIO
   const [sioKey, setSioKey] = useState("");
@@ -79,6 +113,7 @@ export default function SettingsClient() {
           setProfile(p);
           setAddressForm(p.address_form ?? "tu");
           setPrivacyUrl(p.privacy_url ?? "");
+          setTargetAudience(p.target_audience ?? "");
           setSioKey(p.sio_user_api_key ?? "");
           setSioKeyName(p.sio_api_key_name ?? "");
           setBrandLogoUrl(p.brand_logo_url ?? "");
@@ -87,7 +122,6 @@ export default function SettingsClient() {
           setBrandFont(p.brand_font ?? "Inter");
           setBrandTone(p.brand_tone ?? "professionnel");
           setBrandWebsiteUrl(p.brand_website_url ?? "");
-          setTargetAudience(p.target_audience ?? "");
         }
       })
       .finally(() => setLoading(false));
@@ -102,6 +136,7 @@ export default function SettingsClient() {
         body: JSON.stringify({
           address_form: addressForm,
           privacy_url: privacyUrl.trim() || null,
+          target_audience: targetAudience.trim() || null,
           sio_user_api_key: sioKey.trim() || null,
           sio_api_key_name: sioKeyName.trim() || null,
           brand_logo_url: brandLogoUrl.trim() || null,
@@ -110,7 +145,6 @@ export default function SettingsClient() {
           brand_font: brandFont,
           brand_tone: brandTone,
           brand_website_url: brandWebsiteUrl.trim() || null,
-          target_audience: targetAudience.trim() || null,
         }),
       });
       const data = await res.json();
@@ -120,6 +154,34 @@ export default function SettingsClient() {
       toast.error("Erreur réseau");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleLogoUpload(file: File) {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Fichier image uniquement");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image trop lourde (max 2 Mo)");
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `logos/${user.id}/logo.${ext}`;
+      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      setBrandLogoUrl(urlData.publicUrl);
+      toast.success("Logo chargé");
+    } catch {
+      toast.error("Erreur lors du chargement du logo");
+    } finally {
+      setUploadingLogo(false);
     }
   }
 
@@ -139,6 +201,8 @@ export default function SettingsClient() {
 
   if (loading) return null;
 
+  const currentPlan = profile?.plan ?? "free";
+
   return (
     <div className="space-y-5">
       {/* Banner */}
@@ -150,22 +214,24 @@ export default function SettingsClient() {
           <h2 className="text-lg font-bold">{t("title")}</h2>
           <p className="text-sm text-white/70">Configure ton compte et tes préférences</p>
         </div>
-        <Button onClick={handleSave} disabled={saving} variant="secondary" className="shrink-0">
+        <Button onClick={handleSave} disabled={saving} variant="secondary" className="shrink-0 rounded-full">
           {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
           Enregistrer
         </Button>
       </div>
 
-      <Tabs defaultValue={initialTab}>
-        <TabsList className="w-full sm:w-auto">
+      {/* Tabs — sticky below banner */}
+      <Tabs defaultValue={initialTab} className="space-y-4">
+        <TabsList className="w-full sm:w-auto sticky top-14 z-10 bg-background">
           <TabsTrigger value="general"><Settings className="h-4 w-4 mr-1.5" />Général</TabsTrigger>
           <TabsTrigger value="branding"><Palette className="h-4 w-4 mr-1.5" />Branding</TabsTrigger>
           <TabsTrigger value="systemeio"><Key className="h-4 w-4 mr-1.5" />Systeme.io</TabsTrigger>
+          <TabsTrigger value="pricing"><CreditCard className="h-4 w-4 mr-1.5" />Tarifs</TabsTrigger>
           <TabsTrigger value="account"><Trash2 className="h-4 w-4 mr-1.5" />Compte</TabsTrigger>
         </TabsList>
 
         {/* ── General ── */}
-        <TabsContent value="general" className="space-y-4 mt-4">
+        <TabsContent value="general" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>{t("languageTitle")}</CardTitle>
@@ -224,23 +290,52 @@ export default function SettingsClient() {
         </TabsContent>
 
         {/* ── Branding ── */}
-        <TabsContent value="branding" className="space-y-4 mt-4">
+        <TabsContent value="branding" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Logo</CardTitle>
-              <CardDescription>URL de ton logo (utilisé dans les quiz et emails)</CardDescription>
+              <CardDescription>Charge ton logo ou colle une URL</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               <div className="flex items-center gap-4">
-                {brandLogoUrl && (
-                  <img src={brandLogoUrl} alt="Logo" className="h-12 w-auto rounded border" />
+                {brandLogoUrl ? (
+                  <img src={brandLogoUrl} alt="Logo" className="h-14 w-14 object-contain rounded-lg border bg-white p-1" />
+                ) : (
+                  <div className="h-14 w-14 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+                    <Upload className="h-5 w-5 text-muted-foreground/50" />
+                  </div>
                 )}
-                <Input
-                  value={brandLogoUrl}
-                  onChange={(e) => setBrandLogoUrl(e.target.value)}
-                  placeholder="https://monsite.com/logo.png"
-                  className="flex-1"
-                />
+                <div className="flex-1 space-y-2">
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full"
+                      disabled={uploadingLogo}
+                      onClick={() => logoInputRef.current?.click()}
+                    >
+                      {uploadingLogo ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Upload className="h-4 w-4 mr-1.5" />}
+                      Charger une image
+                    </Button>
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleLogoUpload(f);
+                      }}
+                    />
+                  </div>
+                  <Input
+                    value={brandLogoUrl}
+                    onChange={(e) => setBrandLogoUrl(e.target.value)}
+                    placeholder="ou colle l'URL de ton logo"
+                    className="text-xs"
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -250,7 +345,7 @@ export default function SettingsClient() {
               <CardTitle>Couleurs</CardTitle>
               <CardDescription>Couleurs de marque pour tes quiz</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Couleur principale</Label>
@@ -293,7 +388,7 @@ export default function SettingsClient() {
               <CardTitle>Typographie & ton</CardTitle>
               <CardDescription>Police et style de communication</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Police</Label>
@@ -339,7 +434,7 @@ export default function SettingsClient() {
         </TabsContent>
 
         {/* ── Systeme.io ── */}
-        <TabsContent value="systemeio" className="space-y-4 mt-4">
+        <TabsContent value="systemeio" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Clé API Systeme.io</CardTitle>
@@ -372,16 +467,81 @@ export default function SettingsClient() {
           </Card>
         </TabsContent>
 
+        {/* ── Pricing ── */}
+        <TabsContent value="pricing" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-3">
+            {PLANS.map((plan) => {
+              const isCurrent = currentPlan === plan.id || (currentPlan === "free" && plan.id === "free");
+              const isPro = plan.id.startsWith("pro");
+              return (
+                <Card key={plan.id} className={`relative ${plan.popular ? "border-primary ring-1 ring-primary" : ""}`}>
+                  {plan.popular && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-semibold px-3 py-0.5 rounded-full">
+                      Populaire
+                    </div>
+                  )}
+                  <CardContent className="pt-6 pb-5 px-5 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${plan.popular ? "bg-primary/10" : "bg-muted"}`}>
+                        <plan.icon className={`h-4 w-4 ${plan.popular ? "text-primary" : "text-muted-foreground"}`} />
+                      </div>
+                      <div>
+                        <h3 className="font-bold">{plan.name}</h3>
+                        {plan.badge && (
+                          <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">{plan.badge}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-bold">{plan.price}</span>
+                      {plan.period && <span className="text-sm text-muted-foreground">{plan.period}</span>}
+                    </div>
+                    <ul className="space-y-2">
+                      {plan.features.map((f) => (
+                        <li key={f} className="flex items-center gap-2 text-sm">
+                          <Check className="h-4 w-4 text-primary shrink-0" />
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                    {isCurrent ? (
+                      <div className="text-center text-sm font-medium text-muted-foreground py-2 border rounded-full">
+                        Plan actuel
+                      </div>
+                    ) : plan.cta ? (
+                      <Button className="w-full rounded-full" variant={plan.popular ? "default" : "outline"}>
+                        {plan.cta} <ArrowRight className="h-4 w-4 ml-1.5" />
+                      </Button>
+                    ) : null}
+                    {isCurrent && isPro && (
+                      <button
+                        type="button"
+                        className="w-full text-center text-xs text-muted-foreground hover:text-destructive transition-colors"
+                        onClick={() => toast.info("Contacte le support pour changer de plan.")}
+                      >
+                        Downgrader vers Free
+                      </button>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground text-center">
+            Les paiements sont gérés par Stripe. Tu peux changer de plan à tout moment.
+          </p>
+        </TabsContent>
+
         {/* ── Account ── */}
-        <TabsContent value="account" className="space-y-4 mt-4">
+        <TabsContent value="account" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Plan actuel</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-3">
-                <span className="text-lg font-semibold capitalize">{profile?.plan ?? "free"}</span>
-                {profile?.plan === "free" && (
+                <span className="text-lg font-semibold capitalize">{currentPlan}</span>
+                {currentPlan === "free" && (
                   <span className="text-sm text-muted-foreground">— 1 quiz, 10 réponses/mois</span>
                 )}
               </div>
@@ -393,13 +553,13 @@ export default function SettingsClient() {
               <CardTitle className="text-destructive">Zone de danger</CardTitle>
               <CardDescription>Ces actions sont irréversibles</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Supprimer mon compte</p>
                   <p className="text-sm text-muted-foreground">Supprime toutes tes données, quiz et leads</p>
                 </div>
-                <Button variant="destructive" size="sm" onClick={handleDeleteAccount}>
+                <Button variant="destructive" size="sm" className="rounded-full" onClick={handleDeleteAccount}>
                   <Trash2 className="h-4 w-4 mr-2" />Supprimer
                 </Button>
               </div>

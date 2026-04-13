@@ -113,7 +113,7 @@ export default function QuizFormClient() {
   const [saving, setSaving] = useState(false);
 
   // ---- AI generation state ----
-  const [aiObjective, setAiObjective] = useState("");
+  const [aiObjectives, setAiObjectives] = useState<string[]>([]);
   const [aiTarget, setAiTarget] = useState("");
   const [aiTargetFromProfile, setAiTargetFromProfile] = useState("");
   const [aiCta, setAiCta] = useState("");
@@ -336,7 +336,7 @@ export default function QuizFormClient() {
   }
 
   async function handleGenerate() {
-    if (!aiObjective.trim()) {
+    if (aiObjectives.length === 0) {
       toast.error(t("aiObjectiveLabel") + " — required");
       return;
     }
@@ -354,7 +354,7 @@ export default function QuizFormClient() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          objective: aiObjective.trim(),
+          objective: aiObjectives.join(", "),
           target: aiTarget.trim(),
           cta: aiCta.trim(),
           bonus: aiBonus.trim(),
@@ -842,15 +842,45 @@ export default function QuizFormClient() {
               <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" />{t("tabAI")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
-              {/* 1. Objective — 16 options */}
+              {/* 1. Objectives — visual grid with checkboxes */}
               <div className="space-y-2">
                 <Label>{t("aiObjectiveLabel")}</Label>
-                <select value={aiObjective} onChange={(e) => setAiObjective(e.target.value)} className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background">
-                  <option value="">{t("aiObjectivePick")}</option>
-                  {QUIZ_OBJECTIVES.map((o) => (
-                    <option key={o.value} value={o.value}>{o.labelFr} — {o.desc}</option>
-                  ))}
-                </select>
+                <p className="text-xs text-muted-foreground">{t("aiObjectiveMulti")}</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                  {QUIZ_OBJECTIVES.map((o) => {
+                    const selected = aiObjectives.includes(o.value);
+                    return (
+                      <button
+                        key={o.value}
+                        type="button"
+                        onClick={() =>
+                          setAiObjectives((prev) =>
+                            selected
+                              ? prev.filter((v) => v !== o.value)
+                              : [...prev, o.value]
+                          )
+                        }
+                        className={`flex items-start gap-2 p-2.5 rounded-xl border text-left transition-all ${
+                          selected
+                            ? "border-primary bg-primary/5 ring-1 ring-primary"
+                            : "border-border hover:border-primary/40"
+                        }`}
+                      >
+                        <div className={`mt-0.5 w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${
+                          selected ? "bg-primary border-primary" : "border-muted-foreground/40"
+                        }`}>
+                          {selected && (
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-xs leading-tight">{o.labelFr}</p>
+                          <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 line-clamp-2">{o.desc}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* 2. Format (short/long) */}
