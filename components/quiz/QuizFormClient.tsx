@@ -10,12 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, ArrowLeft, Loader2, Sparkles, FileText, Upload, Settings2, MessageSquare, Award, Users, Share2, Zap, ChevronRight, GripVertical, Save, Globe, Monitor } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Loader2, Sparkles, FileText, Upload, Settings2, MessageSquare, Award, Users, Share2, Zap, ChevronRight, GripVertical, Save, Globe, Monitor, BarChart3, TrendingUp } from "lucide-react";
 import SortableQuestionList from "@/components/quiz/SortableQuestionList";
 import QuizShareSettings from "@/components/quiz/QuizShareSettings";
 import QuizPreview from "@/components/quiz/QuizPreview";
 import SioSelectors from "@/components/quiz/SioSelectors";
 import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
+import { QUIZ_OBJECTIVES } from "@/lib/prompts/quiz/system";
 import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
@@ -118,6 +119,8 @@ export default function QuizFormClient() {
   const [aiCta, setAiCta] = useState("");
   const [aiBonus, setAiBonus] = useState("");
   const [aiLocale, setAiLocale] = useState("fr");
+  const [aiFormat, setAiFormat] = useState<"short" | "long">("long");
+  const [aiSegmentation, setAiSegmentation] = useState<"level" | "profile">("profile");
   const [generating, setGenerating] = useState(false);
 
   // Active tab
@@ -335,6 +338,9 @@ export default function QuizFormClient() {
           cta: aiCta.trim(),
           bonus: aiBonus.trim(),
           locale: aiLocale,
+          format: aiFormat,
+          segmentation: aiSegmentation,
+          questionCount: aiFormat === "short" ? 5 : 8,
         }),
       });
 
@@ -804,44 +810,101 @@ export default function QuizFormClient() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" />{t("tabAI")}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-5">
+              {/* 1. Objective — 16 options */}
               <div className="space-y-2">
                 <Label>{t("aiObjectiveLabel")}</Label>
                 <select value={aiObjective} onChange={(e) => setAiObjective(e.target.value)} className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background">
-                  <option value="">— Choisis un objectif —</option>
-                  <option value="engagement">Créer de l&apos;engagement</option>
-                  <option value="eduquer">Éduquer</option>
-                  <option value="qualifier">Qualifier</option>
-                  <option value="sensibiliser">Sensibiliser</option>
-                  <option value="tester">Tester</option>
-                  <option value="diagnostiquer">Diagnostiquer</option>
-                  <option value="motiver">Motiver</option>
-                  <option value="orienter">Orienter</option>
+                  <option value="">{t("aiObjectivePick")}</option>
+                  {QUIZ_OBJECTIVES.map((o) => (
+                    <option key={o.value} value={o.value}>{o.labelFr} — {o.desc}</option>
+                  ))}
                 </select>
               </div>
+
+              {/* 2. Format (short/long) */}
               <div className="space-y-2">
-                <Label>Précise ton objectif</Label>
-                <Textarea value={aiTarget} onChange={(e) => setAiTarget(e.target.value)} placeholder="Ex : Qualifier mes prospects pour mon offre de coaching…" className="h-16" />
+                <Label>{t("aiFormatLabel")}</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setAiFormat("short")}
+                    className={`p-3 rounded-xl border text-left transition-all ${aiFormat === "short" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
+                  >
+                    <Zap className="h-4 w-4 text-amber-500 mb-1" />
+                    <p className="font-medium text-sm">{t("aiFormatShort")}</p>
+                    <p className="text-xs text-muted-foreground">{t("aiFormatShortDesc")}</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAiFormat("long")}
+                    className={`p-3 rounded-xl border text-left transition-all ${aiFormat === "long" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
+                  >
+                    <BarChart3 className="h-4 w-4 text-primary mb-1" />
+                    <p className="font-medium text-sm">{t("aiFormatLong")}</p>
+                    <p className="text-xs text-muted-foreground">{t("aiFormatLongDesc")}</p>
+                  </button>
+                </div>
               </div>
+
+              {/* 3. Target */}
+              <div className="space-y-2">
+                <Label>{t("aiTargetLabel")}</Label>
+                <Textarea value={aiTarget} onChange={(e) => setAiTarget(e.target.value)} placeholder={t("aiTargetPlaceholder")} className="h-16" />
+              </div>
+
+              {/* 4. Segmentation */}
+              <div className="space-y-2">
+                <Label>{t("aiSegmentationLabel")}</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setAiSegmentation("profile")}
+                    className={`p-3 rounded-xl border text-left transition-all ${aiSegmentation === "profile" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
+                  >
+                    <Users className="h-4 w-4 text-violet-500 mb-1" />
+                    <p className="font-medium text-sm">{t("aiSegProfile")}</p>
+                    <p className="text-xs text-muted-foreground">{t("aiSegProfileDesc")}</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAiSegmentation("level")}
+                    className={`p-3 rounded-xl border text-left transition-all ${aiSegmentation === "level" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
+                  >
+                    <TrendingUp className="h-4 w-4 text-emerald-500 mb-1" />
+                    <p className="font-medium text-sm">{t("aiSegLevel")}</p>
+                    <p className="text-xs text-muted-foreground">{t("aiSegLevelDesc")}</p>
+                  </button>
+                </div>
+              </div>
+
+              {/* 5. Tone */}
               <div className="space-y-2">
                 <Label>{t("aiToneLabel")}</Label>
                 <Input value={aiTone} onChange={(e) => setAiTone(e.target.value)} placeholder={t("aiTonePlaceholder")} />
               </div>
+
+              {/* 6. CTA */}
               <div className="space-y-2">
                 <Label>{t("aiCtaLabel")}</Label>
                 <Input value={aiCta} onChange={(e) => setAiCta(e.target.value)} placeholder={t("aiCtaPlaceholder")} />
               </div>
+
+              {/* 7. Bonus */}
               <div className="space-y-2">
                 <Label>{t("aiBonusLabel")}</Label>
                 <Input value={aiBonus} onChange={(e) => setAiBonus(e.target.value)} placeholder={t("aiBonusPlaceholder")} />
               </div>
+
+              {/* 8. Locale */}
               <div className="space-y-2">
                 <Label>{t("localeLabel")}</Label>
                 <select value={aiLocale} onChange={(e) => setAiLocale(e.target.value)} className="w-full border border-input rounded-lg px-2.5 py-1.5 text-sm bg-background">
                   {localeOptions.map((lo) => (<option key={lo.value} value={lo.value}>{lo.label}</option>))}
                 </select>
               </div>
-              <Button className="w-full" onClick={handleGenerate} disabled={generating}>
+
+              <Button className="w-full rounded-full" onClick={handleGenerate} disabled={generating}>
                 <Sparkles className="h-4 w-4 mr-2" />{t("aiGenerate")}
               </Button>
             </CardContent>

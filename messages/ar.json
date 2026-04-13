@@ -226,7 +226,18 @@
     "aiBonusPlaceholder": "مثال: دليل PDF مجاني…",
     "aiGenerate": "إنشاء الاختبار",
     "aiGenerating": "جاري الإنشاء…",
-    "aiGenerated": "تم إنشاء الاختبار! يمكنك تعديله قبل الحفظ."
+    "aiGenerated": "تم إنشاء الاختبار! يمكنك تعديله قبل الحفظ.",
+    "aiObjectivePick": "— اختر هدفاً —",
+    "aiFormatLabel": "صيغة الاختبار",
+    "aiFormatShort": "قصير",
+    "aiFormatShortDesc": "3-5 أسئلة — تحويلات سريعة",
+    "aiFormatLong": "طويل",
+    "aiFormatLongDesc": "8-12 سؤال — قيمة أكبر",
+    "aiSegmentationLabel": "نوع التقسيم",
+    "aiSegProfile": "حسب الملف الشخصي",
+    "aiSegProfileDesc": "أنماط الشخصية، النماذج الأصلية…",
+    "aiSegLevel": "حسب المستوى",
+    "aiSegLevelDesc": "مبتدئ، متوسط، خبير…"
   },
   "quizDetail": {
     "backToList": "العودة إلى الاختبارات",

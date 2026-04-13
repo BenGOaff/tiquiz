@@ -76,16 +76,22 @@ export async function POST(req: NextRequest) {
       ? body.addressForm
       : (profile?.address_form ?? "tu");
 
+    const format = body.format === "short" ? "short" : "long";
+    const segmentation = body.segmentation === "level" ? "level" : "profile";
+    const defaultQuestionCount = format === "short" ? 5 : 8;
+
     const prompts = buildQuizGenerationPrompt({
       objective,
       target,
       tone: resolvedTone,
       cta: String(body.cta ?? ""),
       bonus: String(body.bonus ?? ""),
-      questionCount: Math.min(10, Math.max(3, Number(body.questionCount) || 7)),
+      questionCount: Math.min(12, Math.max(3, Number(body.questionCount) || defaultQuestionCount)),
       resultCount: Math.min(5, Math.max(2, Number(body.resultCount) || 3)),
       locale: String(body.locale ?? "fr"),
       addressForm: resolvedAddressForm === "vous" ? "vous" : "tu",
+      format,
+      segmentation,
     });
     system = prompts.system;
     userPrompt = prompts.user;

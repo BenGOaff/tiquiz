@@ -226,7 +226,18 @@
     "aiBonusPlaceholder": "Ej: Guía PDF gratuita…",
     "aiGenerate": "Generar quiz",
     "aiGenerating": "Generando…",
-    "aiGenerated": "¡Quiz generado! Puedes editarlo antes de guardar."
+    "aiGenerated": "¡Quiz generado! Puedes editarlo antes de guardar.",
+    "aiObjectivePick": "— Elige un objetivo —",
+    "aiFormatLabel": "Formato del quiz",
+    "aiFormatShort": "Corto",
+    "aiFormatShortDesc": "3-5 preguntas — conversiones rápidas",
+    "aiFormatLong": "Largo",
+    "aiFormatLongDesc": "8-12 preguntas — más valor",
+    "aiSegmentationLabel": "Tipo de segmentación",
+    "aiSegProfile": "Por perfil",
+    "aiSegProfileDesc": "Tipos de personalidad, arquetipos…",
+    "aiSegLevel": "Por nivel",
+    "aiSegLevelDesc": "Principiante, intermedio, experto…"
   },
   "quizDetail": {
     "backToList": "Volver a los quiz",
