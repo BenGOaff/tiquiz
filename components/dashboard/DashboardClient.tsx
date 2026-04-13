@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Plus, Eye, Users, TrendingUp, ClipboardList, Target, BarChart3,
-  Sparkles, Mail, Link2, Calendar, ChevronDown, ArrowUpRight,
+  Sparkles, Mail, Link2, ArrowUpRight, Download,
 } from "lucide-react";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
@@ -242,14 +242,6 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
     <DashboardLayout
       title={tn("dashboard")}
       userEmail={userEmail}
-      headerRight={
-        <Button asChild size="sm">
-          <Link href="/quiz/new">
-            <Plus className="h-4 w-4 mr-1.5" />
-            {t("newQuiz")}
-          </Link>
-        </Button>
-      }
     >
       {loading ? (
         /* Skeleton loading state matching the dashboard layout */
@@ -277,19 +269,41 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Row 1: Welcome banner when no quizzes */}
+          {/* Row 1: Action buttons — "Télécharger mes leads" + "Nouveau quiz" */}
+          <div className="flex items-center justify-end gap-3">
+            <Button
+              asChild
+              variant="outline"
+              className="rounded-full border-primary text-primary hover:bg-primary/5"
+            >
+              <Link href="/leads">
+                <Download className="h-4 w-4 mr-1.5" />
+                {t("downloadLeads")}
+              </Link>
+            </Button>
+            <Button
+              asChild
+              className="rounded-full"
+            >
+              <Link href="/quiz/new">
+                <Plus className="h-4 w-4 mr-1.5" />
+                {t("newQuiz")}
+              </Link>
+            </Button>
+          </div>
+
+          {/* Row 2: Welcome banner when no quizzes */}
           {quizzes.length === 0 && (
-            <div className="rounded-xl gradient-primary p-6 text-white">
-              <div className="flex items-start justify-between">
+            <div className="rounded-2xl gradient-primary p-6 text-white">
+              <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-bold mb-1">{t("welcomeTitle")}</h2>
                   <p className="text-white/80 text-sm max-w-lg">{t("welcomeDesc")}</p>
                 </div>
                 <Button
                   asChild
-                  size="sm"
                   variant="secondary"
-                  className="bg-white/20 hover:bg-white/30 text-white border-0 shrink-0"
+                  className="rounded-full bg-white/20 hover:bg-white/30 text-white border-white/30 shrink-0"
                 >
                   <Link href="/quiz/new">
                     <Plus className="h-4 w-4 mr-1.5" />
@@ -300,7 +314,7 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
             </div>
           )}
 
-          {/* Row 2: KPI stat cards */}
+          {/* Row 3: KPI stat cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {KPI_CARDS.map(({ label, value, sub, icon: Icon, bgColor, iconColor }) => (
               <Card key={label} className="hover:shadow-md transition-shadow">
@@ -467,7 +481,7 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
                     <p className="text-sm text-muted-foreground mb-3">
                       {s.description}
                     </p>
-                    <Button asChild variant="outline" size="sm">
+                    <Button asChild variant="outline" size="sm" className="rounded-full">
                       <Link href={s.href}>{t("learnMore")}</Link>
                     </Button>
                   </CardContent>
