@@ -26,12 +26,12 @@
     "aiGeneratingSubtitle": "Ça prend quelques secondes. On prépare des questions engageantes et des résultats qui donnent de la valeur."
   },
   "nav": {
+    "dashboard": "Tableau de bord",
     "quizzes": "Mes quiz",
     "create": "Créer un quiz",
     "leads": "Mes leads",
     "stats": "Statistiques",
     "support": "Aide",
-    "dashboard": "Tableau de bord",
     "newQuiz": "Nouveau quiz",
     "settings": "Paramètres",
     "logout": "Se déconnecter"
@@ -107,7 +107,7 @@
   },
   "dashboard": {
     "title": "Mes quiz",
-    "subtitle": "Gère tes quiz et suis tes performances.",
+    "subtitle": "Vue d'ensemble de tes quiz et performances.",
     "createQuiz": "Créer un quiz",
     "noQuizzes": "Aucun quiz créé pour l'instant.",
     "noQuizzesDesc": "Crée ton premier quiz pour commencer à capturer des leads.",

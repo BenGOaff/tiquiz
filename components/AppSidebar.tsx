@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
+  LayoutDashboard,
   ClipboardList,
   Sparkles,
   Users,
@@ -55,8 +56,9 @@ const MENU_ITEM_CLASS =
 const MENU_ITEM_ACTIVE_CLASS = "bg-sidebar-accent !text-primary font-semibold";
 
 const MENU_ITEMS = [
-  { key: "quizzes", url: "/dashboard", icon: ClipboardList, end: true },
+  { key: "dashboard", url: "/dashboard", icon: LayoutDashboard, end: true },
   { key: "create", url: "/quiz/new", icon: Sparkles, end: false },
+  { key: "quizzes", url: "/quizzes", icon: ClipboardList, end: false },
   { key: "leads", url: "/leads", icon: Users, end: false },
   { key: "stats", url: "/stats", icon: BarChart3, end: false },
 ] as const;

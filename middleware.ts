@@ -15,7 +15,7 @@ function detectLocaleFromHeader(req: NextRequest): string {
   return langs.find((l) => SUPPORTED_LOCALES.includes(l)) ?? "fr";
 }
 
-const PROTECTED_PREFIXES = ["/dashboard", "/quiz", "/settings", "/leads", "/stats"];
+const PROTECTED_PREFIXES = ["/dashboard", "/quiz", "/quizzes", "/settings", "/leads", "/stats"];
 
 function startsWithAny(pathname: string, prefixes: string[]) {
   return prefixes.some((p) => pathname === p || pathname.startsWith(p + "/"));

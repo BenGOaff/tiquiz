@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Eye, Play, CheckCircle, Users, Share2, Pencil, Trash2, Copy,
-  BarChart3, TrendingUp, Target, ClipboardList,
+  BarChart3, TrendingUp, Target, ClipboardList, LayoutDashboard,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -39,6 +39,7 @@ type Quiz = {
 
 export default function DashboardClient({ userEmail }: { userEmail?: string }) {
   const t = useTranslations("dashboard");
+  const tn = useTranslations("nav");
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -133,14 +134,14 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
   ];
 
   return (
-    <DashboardLayout title={t("title")} userEmail={userEmail}>
+    <DashboardLayout title={tn("dashboard")} userEmail={userEmail}>
       {/* Page banner */}
       <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
         <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
-          <BarChart3 className="h-5 w-5" />
+          <LayoutDashboard className="h-5 w-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold">{t("title")}</h2>
+          <h2 className="text-lg font-bold">{tn("dashboard")}</h2>
           <p className="text-sm text-white/70">{t("subtitle")}</p>
         </div>
         <Button asChild variant="secondary" className="shrink-0">
