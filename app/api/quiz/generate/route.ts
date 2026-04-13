@@ -61,11 +61,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Fetch user's branding profile for tone personalization
+    // Fetch user's branding profile for tone + target personalization
     const { supabaseAdmin } = await import("@/lib/supabaseAdmin");
     const { data: profile } = await supabaseAdmin
       .from("profiles")
-      .select("brand_tone, address_form")
+      .select("brand_tone, address_form, target_audience")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -157,13 +157,27 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        const json = await res.json() as Record<string, unknown>;
+        let json: Record<string, unknown>;
+        try {
+          json = await res.json() as Record<string, unknown>;
+        } catch (parseErr) {
+          console.error("[quiz/generate] Failed to parse Claude response as JSON:", parseErr);
+          sendSSE("error", { ok: false, error: "Réponse Claude invalide. Réessaie." });
+          return;
+        }
+
         const parts = Array.isArray(json?.content) ? json.content : [];
         const raw = (parts as Record<string, unknown>[])
           .map((p) => (p?.type === "text" ? String(p?.text ?? "") : ""))
           .filter(Boolean)
           .join("")
           .trim();
+
+        if (!raw) {
+          console.error("[quiz/generate] Empty response from Claude. stop_reason:", json?.stop_reason, "content length:", parts.length);
+          sendSSE("error", { ok: false, error: "L'IA a retourné une réponse vide. Réessaie." });
+          return;
+        }
 
         if (json?.stop_reason === "max_tokens") {
           sendSSE("error", { ok: false, error: "La génération a été tronquée. Essaie avec moins de questions." });
@@ -186,6 +200,7 @@ export async function POST(req: NextRequest) {
             }
           }
         } catch {
+          console.error("[quiz/generate] JSON extraction failed. Raw (first 500 chars):", raw.slice(0, 500));
           sendSSE("error", { ok: false, error: "L'IA a retourné un JSON invalide. Réessaie." });
           return;
         }

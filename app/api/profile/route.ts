@@ -53,6 +53,7 @@ export async function PATCH(req: NextRequest) {
       "sio_user_api_key", "sio_api_key_name",
       "brand_logo_url", "brand_color_primary", "brand_color_accent",
       "brand_font", "brand_tone", "brand_website_url",
+      "target_audience",
     ];
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     for (const key of allowed) {

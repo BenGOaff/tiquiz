@@ -29,6 +29,7 @@ type Profile = {
   brand_font: string | null;
   brand_tone: string | null;
   brand_website_url: string | null;
+  target_audience: string | null;
 };
 
 const FONTS = ["Inter", "Poppins", "Montserrat", "Playfair Display", "Lato", "Roboto", "Open Sans", "Nunito"];
@@ -62,6 +63,9 @@ export default function SettingsClient() {
   const [brandTone, setBrandTone] = useState("professionnel");
   const [brandWebsiteUrl, setBrandWebsiteUrl] = useState("");
 
+  // Target audience
+  const [targetAudience, setTargetAudience] = useState("");
+
   // SIO
   const [sioKey, setSioKey] = useState("");
   const [sioKeyName, setSioKeyName] = useState("");
@@ -83,6 +87,7 @@ export default function SettingsClient() {
           setBrandFont(p.brand_font ?? "Inter");
           setBrandTone(p.brand_tone ?? "professionnel");
           setBrandWebsiteUrl(p.brand_website_url ?? "");
+          setTargetAudience(p.target_audience ?? "");
         }
       })
       .finally(() => setLoading(false));
@@ -105,6 +110,7 @@ export default function SettingsClient() {
           brand_font: brandFont,
           brand_tone: brandTone,
           brand_website_url: brandWebsiteUrl.trim() || null,
+          target_audience: targetAudience.trim() || null,
         }),
       });
       const data = await res.json();
@@ -184,6 +190,21 @@ export default function SettingsClient() {
                 <option value="tu">Tutoiement (tu)</option>
                 <option value="vous">Vouvoiement (vous)</option>
               </select>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Public cible</CardTitle>
+              <CardDescription>Décris ton audience — pré-rempli dans la création de quiz IA</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <textarea
+                value={targetAudience}
+                onChange={(e) => setTargetAudience(e.target.value)}
+                placeholder="Ex : J'aide les mampreneures à vendre via Instagram"
+                className="w-full text-sm border border-input rounded-lg px-3 py-2 bg-background min-h-[60px] resize-y"
+              />
             </CardContent>
           </Card>
 

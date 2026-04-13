@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -115,6 +115,7 @@ export default function QuizFormClient() {
   // ---- AI generation state ----
   const [aiObjective, setAiObjective] = useState("");
   const [aiTarget, setAiTarget] = useState("");
+  const [aiTargetFromProfile, setAiTargetFromProfile] = useState("");
   const [aiCta, setAiCta] = useState("");
   const [aiBonus, setAiBonus] = useState("");
   const [aiLocale, setAiLocale] = useState("fr");
@@ -124,6 +125,21 @@ export default function QuizFormClient() {
 
   // Active tab
   const [activeTab, setActiveTab] = useState("manual");
+
+  // Pre-fill target audience from user profile
+  useEffect(() => {
+    fetch("/api/profile")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok && data.profile) {
+          const ta = data.profile.target_audience ?? "";
+          setAiTargetFromProfile(ta);
+          if (ta && !aiTarget) setAiTarget(ta);
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Question helpers
@@ -331,6 +347,7 @@ export default function QuizFormClient() {
 
     setGenerating(true);
     let quizReceived = false;
+    let errorShown = false;
 
     try {
       const res = await fetch("/api/quiz/generate", {
@@ -349,8 +366,13 @@ export default function QuizFormClient() {
       });
 
       if (!res.ok) {
-        const err = await res.json().catch(() => null);
-        toast.error(err?.error || t("errSave"));
+        // Non-SSE error (400, 401, 500 before stream starts)
+        let errMsg = t("errSave");
+        try {
+          const err = await res.json();
+          if (err?.error) errMsg = err.error;
+        } catch { /* response wasn't JSON */ }
+        toast.error(errMsg);
         setGenerating(false);
         return;
       }
@@ -377,7 +399,6 @@ export default function QuizFormClient() {
         for (const line of lines) {
           const trimmed = line.trim();
 
-          // Track SSE event type
           if (trimmed.startsWith("event:")) {
             currentEvent = trimmed.slice(6).trim();
             continue;
@@ -393,27 +414,29 @@ export default function QuizFormClient() {
             if (currentEvent === "result" && parsed.ok && parsed.quiz) {
               populateFromQuiz(parsed.quiz as Record<string, unknown>);
               quizReceived = true;
-            } else if (currentEvent === "error") {
+            } else if (currentEvent === "error" && !errorShown) {
               toast.error(parsed.error || t("errSave"));
+              errorShown = true;
             }
           } catch {
-            // skip unparseable chunks
+            // skip unparseable SSE chunks
           }
 
           currentEvent = "";
         }
       }
 
-      // Only show success + switch tab if quiz data was actually received
       if (quizReceived) {
         toast.success(t("aiGenerated"));
         setActiveTab("manual");
-      } else if (!quizReceived) {
-        // No quiz and no error event — generic fallback
-        toast.error(t("errSave"));
+      } else if (!errorShown) {
+        // Stream ended without result and without any error event
+        toast.error(t("aiGenerateError"));
       }
-    } catch {
-      toast.error(t("errSave"));
+    } catch (e) {
+      if (!errorShown) {
+        toast.error(t("aiGenerateError"));
+      }
     } finally {
       setGenerating(false);
     }
@@ -855,10 +878,28 @@ export default function QuizFormClient() {
                 </div>
               </div>
 
-              {/* 3. Target */}
+              {/* 3. Target — pre-filled from profile if available */}
               <div className="space-y-2">
                 <Label>{t("aiTargetLabel")}</Label>
                 <Textarea value={aiTarget} onChange={(e) => setAiTarget(e.target.value)} placeholder={t("aiTargetPlaceholder")} className="h-16" />
+                {aiTarget && aiTarget !== aiTargetFromProfile && (
+                  <button
+                    type="button"
+                    className="text-xs text-primary hover:underline"
+                    onClick={() => {
+                      fetch("/api/profile", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ target_audience: aiTarget }),
+                      }).then(() => {
+                        setAiTargetFromProfile(aiTarget);
+                        toast.success(t("targetSaved"));
+                      });
+                    }}
+                  >
+                    {t("saveAsDefault")}
+                  </button>
+                )}
               </div>
 
               {/* 4. Segmentation */}

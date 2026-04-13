@@ -83,6 +83,8 @@ export function buildQuizGenerationPrompt(params: QuizPromptParams): {
 
 RÔLE : Tu crées des quiz engageants conçus pour capturer des emails via une page de capture. Le quiz doit susciter la curiosité et inciter le visiteur à donner son adresse email pour voir ses résultats, recevoir une analyse personnalisée ou obtenir une ressource bonus.
 
+CONTEXTE PRODUIT : Ce quiz est créé sur Tiquiz, la plateforme qui permet aux entrepreneurs, coachs et créateurs de contenu de créer des quiz engageants pour qualifier leurs prospects, capturer des leads et booster leurs ventes — sans compétences techniques. Chaque quiz doit refléter l'expertise et l'unicité du créateur, jamais paraître générique ou automatisé.
+
 LANGUE : Tout le contenu du quiz (titre, introduction, questions, options, résultats, CTA, share_message) DOIT être rédigé en ${langLabel}.
 
 OBJECTIF STRATÉGIQUE : ${objectiveLabel}
