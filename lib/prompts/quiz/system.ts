@@ -89,7 +89,7 @@ LANGUE : Tout le contenu du quiz (titre, introduction, questions, options, résu
 
 OBJECTIF STRATÉGIQUE : ${objectiveLabel}
 
-FORMAT : ${isShort ? "Quiz COURT (3 à 5 questions) → conversions rapides, légèreté, curiosité maximale." : "Quiz LONG (8 à 12 questions) → plus de valeur, meilleur diagnostic, profondeur d'analyse."}
+FORMAT : ${isShort ? "Quiz COURT (3 à 5 questions) → conversions rapides, légèreté, curiosité maximale." : "Quiz LONG (6 à 10 questions) → plus de valeur, meilleur diagnostic, profondeur d'analyse."}
 
 SEGMENTATION : ${segmentation === "level" ? "Par NIVEAU (débutant, intermédiaire, expert…). Le scoring classe le participant selon son degré de maîtrise." : "Par PROFIL (types de personnalité, styles, archétypes…). Le scoring révèle un profil valorisant et personnalisé."}
 

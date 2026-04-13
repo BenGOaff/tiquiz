@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, ArrowLeft, Loader2, Sparkles, FileText, Upload, Settings2, MessageSquare, Award, Users, Share2, Zap, ChevronRight, GripVertical, Save, Globe, Monitor, BarChart3, TrendingUp } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Loader2, Sparkles, FileText, Upload, Settings2, MessageSquare, Award, Users, Share2, Zap, ChevronRight, ChevronDown, GripVertical, Save, Globe, Monitor, BarChart3, TrendingUp } from "lucide-react";
 import SortableQuestionList from "@/components/quiz/SortableQuestionList";
 import QuizShareSettings from "@/components/quiz/QuizShareSettings";
 import QuizPreview from "@/components/quiz/QuizPreview";
@@ -74,6 +74,89 @@ function emptyResult(): QuizResult {
 }
 
 // ---------------------------------------------------------------------------
+// Objectives dropdown with checkboxes
+// ---------------------------------------------------------------------------
+
+function ObjectivesDropdown({
+  objectives,
+  onChange,
+  label,
+  hint,
+}: {
+  objectives: string[];
+  onChange: (v: string[]) => void;
+  label: string;
+  hint: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close on click outside
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  const selectedLabels = QUIZ_OBJECTIVES
+    .filter((o) => objectives.includes(o.value))
+    .map((o) => o.labelFr);
+
+  return (
+    <div className="space-y-1.5" ref={ref}>
+      <Label>{label}</Label>
+      <p className="text-xs text-muted-foreground">{hint}</p>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between border border-input rounded-lg px-3 py-2 text-sm bg-background text-left hover:border-primary/40 transition-colors"
+      >
+        <span className={selectedLabels.length > 0 ? "text-foreground" : "text-muted-foreground"}>
+          {selectedLabels.length > 0 ? selectedLabels.join(", ") : "— Choisis un ou plusieurs objectifs —"}
+        </span>
+        <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="border border-border rounded-xl bg-background shadow-lg max-h-64 overflow-y-auto p-1.5">
+          {QUIZ_OBJECTIVES.map((o) => {
+            const checked = objectives.includes(o.value);
+            return (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() =>
+                  onChange(
+                    checked
+                      ? objectives.filter((v) => v !== o.value)
+                      : [...objectives, o.value]
+                  )
+                }
+                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors ${
+                  checked ? "bg-primary/5" : "hover:bg-muted"
+                }`}
+              >
+                <div className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${
+                  checked ? "bg-primary border-primary" : "border-muted-foreground/30"
+                }`}>
+                  {checked && (
+                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+                <span className="text-sm font-medium">{o.labelFr}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -109,8 +192,83 @@ export default function QuizFormClient() {
   const [questions, setQuestions] = useState<QuizQuestion[]>([emptyQuestion()]);
   const [results, setResults] = useState<QuizResult[]>([emptyResult()]);
 
-  // Saving
+  // Saving & auto-save
   const [saving, setSaving] = useState(false);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasUnsavedChanges = useRef(false);
+
+  // Auto-save as draft after 3s of inactivity
+  const triggerAutoSave = useCallback(() => {
+    if (!title.trim()) return; // don't save empty quizzes
+    hasUnsavedChanges.current = true;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(async () => {
+      try {
+        const payload = {
+          title: title.trim(),
+          introduction: introduction.trim() || null,
+          locale,
+          address_form: addressForm,
+          cta_text: ctaText.trim() || null,
+          cta_url: ctaUrl.trim() || null,
+          privacy_url: privacyUrl.trim() || null,
+          consent_text: consentText.trim() || null,
+          capture_heading: captureHeading.trim() || null,
+          capture_subtitle: captureSubtitle.trim() || null,
+          capture_first_name: captureFirstName,
+          capture_last_name: captureLastName,
+          capture_phone: capturePhone,
+          capture_country: captureCountry,
+          virality_enabled: viralityEnabled,
+          bonus_description: bonusDescription.trim() || null,
+          share_message: shareMessage.trim() || null,
+          sio_share_tag_name: sioShareTagName.trim() || null,
+          questions: questions.map((q) => ({
+            question_text: q.question_text,
+            options: q.options,
+          })),
+          results: results.map((r) => ({
+            title: r.title,
+            description: r.description || null,
+            insight: r.insight || null,
+            projection: r.projection || null,
+            cta_text: r.cta_text || null,
+            cta_url: r.cta_url || null,
+            sio_tag_name: r.sio_tag_name || null,
+            sio_course_id: r.sio_course_id || null,
+            sio_community_id: r.sio_community_id || null,
+          })),
+        };
+
+        if (draftId) {
+          // Update existing draft
+          await fetch(`/api/quiz/${draftId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+        } else {
+          // Create new draft
+          const res = await fetch("/api/quiz", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (data.ok && data.quizId) {
+            setDraftId(data.quizId);
+          }
+        }
+        hasUnsavedChanges.current = false;
+      } catch {
+        // silent — don't interrupt user
+      }
+    }, 3000);
+  }, [title, introduction, locale, addressForm, ctaText, ctaUrl, privacyUrl, consentText,
+      captureHeading, captureSubtitle, captureFirstName, captureLastName, capturePhone,
+      captureCountry, viralityEnabled, bonusDescription, shareMessage, sioShareTagName,
+      questions, results, draftId]);
 
   // ---- AI generation state ----
   const [aiObjectives, setAiObjectives] = useState<string[]>([]);
@@ -125,6 +283,16 @@ export default function QuizFormClient() {
 
   // Active tab
   const [activeTab, setActiveTab] = useState("manual");
+
+  // Trigger auto-save on form changes (only when on manual tab)
+  useEffect(() => {
+    if (activeTab === "manual" && title.trim()) {
+      triggerAutoSave();
+    }
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, [title, introduction, questions, results, activeTab, triggerAutoSave]);
 
   // Pre-fill target audience from user profile
   useEffect(() => {
@@ -224,50 +392,62 @@ export default function QuizFormClient() {
 
     setSaving(true);
     try {
-      const res = await fetch("/api/quiz", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: title.trim(),
-          introduction: introduction.trim() || null,
-          locale,
-          address_form: addressForm,
-          cta_text: ctaText.trim() || null,
-          cta_url: ctaUrl.trim() || null,
-          privacy_url: privacyUrl.trim() || null,
-          consent_text: consentText.trim() || null,
-          capture_heading: captureHeading.trim() || null,
-          capture_subtitle: captureSubtitle.trim() || null,
-          capture_first_name: captureFirstName,
-          capture_last_name: captureLastName,
-          capture_phone: capturePhone,
-          capture_country: captureCountry,
-          virality_enabled: viralityEnabled,
-          bonus_description: bonusDescription.trim() || null,
-          share_message: shareMessage.trim() || null,
-          sio_share_tag_name: sioShareTagName.trim() || null,
-          questions: questions.map((q) => ({
-            question_text: q.question_text,
-            options: q.options,
-          })),
-          results: results.map((r) => ({
-            title: r.title,
-            description: r.description || null,
-            insight: r.insight || null,
-            projection: r.projection || null,
-            cta_text: r.cta_text || null,
-            cta_url: r.cta_url || null,
-            sio_tag_name: r.sio_tag_name || null,
-            sio_course_id: r.sio_course_id || null,
-            sio_community_id: r.sio_community_id || null,
-          })),
-        }),
-      });
+      const payload = {
+        title: title.trim(),
+        introduction: introduction.trim() || null,
+        locale,
+        address_form: addressForm,
+        cta_text: ctaText.trim() || null,
+        cta_url: ctaUrl.trim() || null,
+        privacy_url: privacyUrl.trim() || null,
+        consent_text: consentText.trim() || null,
+        capture_heading: captureHeading.trim() || null,
+        capture_subtitle: captureSubtitle.trim() || null,
+        capture_first_name: captureFirstName,
+        capture_last_name: captureLastName,
+        capture_phone: capturePhone,
+        capture_country: captureCountry,
+        virality_enabled: viralityEnabled,
+        bonus_description: bonusDescription.trim() || null,
+        share_message: shareMessage.trim() || null,
+        sio_share_tag_name: sioShareTagName.trim() || null,
+        questions: questions.map((q) => ({
+          question_text: q.question_text,
+          options: q.options,
+        })),
+        results: results.map((r) => ({
+          title: r.title,
+          description: r.description || null,
+          insight: r.insight || null,
+          projection: r.projection || null,
+          cta_text: r.cta_text || null,
+          cta_url: r.cta_url || null,
+          sio_tag_name: r.sio_tag_name || null,
+          sio_course_id: r.sio_course_id || null,
+          sio_community_id: r.sio_community_id || null,
+        })),
+      };
+
+      let res: Response;
+      if (draftId) {
+        res = await fetch(`/api/quiz/${draftId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch("/api/quiz", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
 
       const data = await res.json();
       if (data.ok) {
+        hasUnsavedChanges.current = false;
         toast.success(t("saved"));
-        router.push(`/quiz/${data.quizId}`);
+        router.push(`/quiz/${draftId || data.quizId}`);
       } else {
         toast.error(data.error || t("errSave"));
       }
@@ -361,7 +541,7 @@ export default function QuizFormClient() {
           locale: aiLocale,
           format: aiFormat,
           segmentation: aiSegmentation,
-          questionCount: aiFormat === "short" ? 5 : 8,
+          questionCount: aiFormat === "short" ? 4 : 8,
         }),
       });
 
@@ -842,46 +1022,13 @@ export default function QuizFormClient() {
               <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" />{t("tabAI")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
-              {/* 1. Objectives — visual grid with checkboxes */}
-              <div className="space-y-2">
-                <Label>{t("aiObjectiveLabel")}</Label>
-                <p className="text-xs text-muted-foreground">{t("aiObjectiveMulti")}</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                  {QUIZ_OBJECTIVES.map((o) => {
-                    const selected = aiObjectives.includes(o.value);
-                    return (
-                      <button
-                        key={o.value}
-                        type="button"
-                        onClick={() =>
-                          setAiObjectives((prev) =>
-                            selected
-                              ? prev.filter((v) => v !== o.value)
-                              : [...prev, o.value]
-                          )
-                        }
-                        className={`flex items-start gap-2 p-2.5 rounded-xl border text-left transition-all ${
-                          selected
-                            ? "border-primary bg-primary/5 ring-1 ring-primary"
-                            : "border-border hover:border-primary/40"
-                        }`}
-                      >
-                        <div className={`mt-0.5 w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${
-                          selected ? "bg-primary border-primary" : "border-muted-foreground/40"
-                        }`}>
-                          {selected && (
-                            <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-medium text-xs leading-tight">{o.labelFr}</p>
-                          <p className="text-[10px] text-muted-foreground leading-tight mt-0.5 line-clamp-2">{o.desc}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              {/* 1. Objectives — compact dropdown with checkboxes */}
+              <ObjectivesDropdown
+                objectives={aiObjectives}
+                onChange={setAiObjectives}
+                label={t("aiObjectiveLabel")}
+                hint={t("aiObjectiveMulti")}
+              />
 
               {/* 2. Format (short/long) */}
               <div className="space-y-2">
