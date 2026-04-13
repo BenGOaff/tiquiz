@@ -115,7 +115,6 @@ export default function QuizFormClient() {
   // ---- AI generation state ----
   const [aiObjective, setAiObjective] = useState("");
   const [aiTarget, setAiTarget] = useState("");
-  const [aiTone, setAiTone] = useState("");
   const [aiCta, setAiCta] = useState("");
   const [aiBonus, setAiBonus] = useState("");
   const [aiLocale, setAiLocale] = useState("fr");
@@ -325,8 +324,14 @@ export default function QuizFormClient() {
       toast.error(t("aiObjectiveLabel") + " — required");
       return;
     }
+    if (!aiTarget.trim()) {
+      toast.error(t("aiTargetLabel") + " — required");
+      return;
+    }
 
     setGenerating(true);
+    let quizReceived = false;
+
     try {
       const res = await fetch("/api/quiz/generate", {
         method: "POST",
@@ -334,7 +339,6 @@ export default function QuizFormClient() {
         body: JSON.stringify({
           objective: aiObjective.trim(),
           target: aiTarget.trim(),
-          tone: aiTone.trim(),
           cta: aiCta.trim(),
           bonus: aiBonus.trim(),
           locale: aiLocale,
@@ -387,23 +391,27 @@ export default function QuizFormClient() {
             const parsed = JSON.parse(payload);
 
             if (currentEvent === "result" && parsed.ok && parsed.quiz) {
-              // Backend wraps quiz data in { ok: true, quiz: {...} }
               populateFromQuiz(parsed.quiz as Record<string, unknown>);
+              quizReceived = true;
             } else if (currentEvent === "error") {
               toast.error(parsed.error || t("errSave"));
             }
-            // heartbeat and progress events are ignored (overlay handles UX)
           } catch {
             // skip unparseable chunks
           }
 
-          // Reset event after processing data
           currentEvent = "";
         }
       }
 
-      toast.success(t("aiGenerated"));
-      setActiveTab("manual");
+      // Only show success + switch tab if quiz data was actually received
+      if (quizReceived) {
+        toast.success(t("aiGenerated"));
+        setActiveTab("manual");
+      } else if (!quizReceived) {
+        // No quiz and no error event — generic fallback
+        toast.error(t("errSave"));
+      }
     } catch {
       toast.error(t("errSave"));
     } finally {
@@ -878,25 +886,19 @@ export default function QuizFormClient() {
                 </div>
               </div>
 
-              {/* 5. Tone */}
-              <div className="space-y-2">
-                <Label>{t("aiToneLabel")}</Label>
-                <Input value={aiTone} onChange={(e) => setAiTone(e.target.value)} placeholder={t("aiTonePlaceholder")} />
-              </div>
-
-              {/* 6. CTA */}
+              {/* 5. CTA */}
               <div className="space-y-2">
                 <Label>{t("aiCtaLabel")}</Label>
                 <Input value={aiCta} onChange={(e) => setAiCta(e.target.value)} placeholder={t("aiCtaPlaceholder")} />
               </div>
 
-              {/* 7. Bonus */}
+              {/* 6. Bonus */}
               <div className="space-y-2">
                 <Label>{t("aiBonusLabel")}</Label>
                 <Input value={aiBonus} onChange={(e) => setAiBonus(e.target.value)} placeholder={t("aiBonusPlaceholder")} />
               </div>
 
-              {/* 8. Locale */}
+              {/* 7. Locale */}
               <div className="space-y-2">
                 <Label>{t("localeLabel")}</Label>
                 <select value={aiLocale} onChange={(e) => setAiLocale(e.target.value)} className="w-full border border-input rounded-lg px-2.5 py-1.5 text-sm bg-background">
