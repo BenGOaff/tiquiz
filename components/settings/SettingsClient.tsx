@@ -220,14 +220,13 @@ export default function SettingsClient() {
         </Button>
       </div>
 
-      {/* Tabs — sticky below banner */}
+      {/* Tabs */}
       <Tabs defaultValue={initialTab} className="space-y-4">
-        <TabsList className="w-full sm:w-auto sticky top-14 z-10 bg-background">
-          <TabsTrigger value="general"><Settings className="h-4 w-4 mr-1.5" />Général</TabsTrigger>
-          <TabsTrigger value="branding"><Palette className="h-4 w-4 mr-1.5" />Branding</TabsTrigger>
-          <TabsTrigger value="systemeio"><Key className="h-4 w-4 mr-1.5" />Systeme.io</TabsTrigger>
-          <TabsTrigger value="pricing"><CreditCard className="h-4 w-4 mr-1.5" />Tarifs</TabsTrigger>
-          <TabsTrigger value="account"><Trash2 className="h-4 w-4 mr-1.5" />Compte</TabsTrigger>
+        <TabsList className="w-full sm:w-auto sticky top-14 z-10 bg-background border-b rounded-none justify-start gap-0 h-auto p-0">
+          <TabsTrigger value="general" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><Settings className="h-4 w-4 mr-1.5" />Général</TabsTrigger>
+          <TabsTrigger value="branding" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><Palette className="h-4 w-4 mr-1.5" />Branding</TabsTrigger>
+          <TabsTrigger value="systemeio" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><Key className="h-4 w-4 mr-1.5" />Systeme.io</TabsTrigger>
+          <TabsTrigger value="account" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><CreditCard className="h-4 w-4 mr-1.5" />Compte & Tarifs</TabsTrigger>
         </TabsList>
 
         {/* ── General ── */}
@@ -467,29 +466,46 @@ export default function SettingsClient() {
           </Card>
         </TabsContent>
 
-        {/* ── Pricing ── */}
-        <TabsContent value="pricing" className="space-y-4">
+        {/* ── Compte & Tarifs (fusionnés) ── */}
+        <TabsContent value="account" className="space-y-6">
+          {/* Plan actuel */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Mon abonnement</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="text-lg font-semibold capitalize">{currentPlan}</span>
+                {currentPlan === "free" && <span className="text-sm text-muted-foreground">— 1 quiz, 10 réponses/mois</span>}
+                {(currentPlan === "monthly" || currentPlan === "yearly" || currentPlan === "lifetime") && <span className="text-sm text-muted-foreground">— Quiz et réponses illimités</span>}
+              </div>
+              {(currentPlan === "monthly" || currentPlan === "yearly") && (
+                <button type="button" onClick={() => { if (confirm("Es-tu sûr de vouloir annuler ton abonnement ? Tu repasseras en plan gratuit (1 quiz, 10 réponses/mois).")) { toast.info("Pour annuler, contacte-nous à hello@ethilife.fr ou gère ton abonnement depuis Systeme.io."); } }} className="text-sm text-destructive hover:underline">
+                  Annuler mon abonnement
+                </button>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Tarifs */}
           <div className="grid gap-4 md:grid-cols-3">
             {PLANS.map((plan) => {
-              const isCurrent = currentPlan === plan.id || (currentPlan === "free" && plan.id === "free");
-              const isPro = plan.id.startsWith("pro");
+              const isCurrent = currentPlan === plan.id || (currentPlan === "free" && plan.id === "free") || (currentPlan === "monthly" && plan.id === "pro_monthly") || (currentPlan === "yearly" && plan.id === "pro_yearly") || (currentPlan === "lifetime" && plan.id === "pro_monthly");
               return (
-                <Card key={plan.id} className={`relative ${plan.popular ? "border-primary ring-1 ring-primary" : ""}`}>
+                <Card key={plan.id} className={`relative overflow-visible ${plan.popular ? "border-primary ring-1 ring-primary" : ""}`}>
                   {plan.popular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-semibold px-3 py-0.5 rounded-full">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-semibold px-4 py-1 rounded-full whitespace-nowrap z-10 shadow-sm">
                       Populaire
                     </div>
                   )}
-                  <CardContent className="pt-6 pb-5 px-5 space-y-4">
+                  <CardContent className="pt-8 pb-5 px-5 space-y-4">
                     <div className="flex items-center gap-2">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${plan.popular ? "bg-primary/10" : "bg-muted"}`}>
                         <plan.icon className={`h-4 w-4 ${plan.popular ? "text-primary" : "text-muted-foreground"}`} />
                       </div>
-                      <div>
+                      <div className="flex items-center gap-2">
                         <h3 className="font-bold">{plan.name}</h3>
-                        {plan.badge && (
-                          <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">{plan.badge}</span>
-                        )}
+                        {plan.badge && <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">{plan.badge}</span>}
                       </div>
                     </div>
                     <div className="flex items-baseline gap-1">
@@ -497,57 +513,57 @@ export default function SettingsClient() {
                       {plan.period && <span className="text-sm text-muted-foreground">{plan.period}</span>}
                     </div>
                     <ul className="space-y-2">
-                      {plan.features.map((f) => (
-                        <li key={f} className="flex items-center gap-2 text-sm">
-                          <Check className="h-4 w-4 text-primary shrink-0" />
-                          {f}
-                        </li>
-                      ))}
+                      {plan.features.map((f) => (<li key={f} className="flex items-center gap-2 text-sm"><Check className="h-4 w-4 text-primary shrink-0" />{f}</li>))}
                     </ul>
                     {isCurrent ? (
-                      <div className="text-center text-sm font-medium text-muted-foreground py-2 border rounded-full">
-                        Plan actuel
-                      </div>
+                      <div className="text-center text-sm font-medium text-muted-foreground py-2 border rounded-full">Plan actuel</div>
                     ) : plan.cta ? (
-                      <Button className="w-full rounded-full" variant={plan.popular ? "default" : "outline"}>
-                        {plan.cta} <ArrowRight className="h-4 w-4 ml-1.5" />
+                      <Button className="w-full rounded-full" variant={plan.popular ? "default" : "outline"} asChild>
+                        <a href={plan.id === "pro_monthly" ? "https://www.tipote.fr/tiquiz-mensuel" : "https://www.tipote.fr/tiquiz-annuel"} target="_blank" rel="noopener noreferrer">{plan.cta} <ArrowRight className="h-4 w-4 ml-1.5" /></a>
                       </Button>
                     ) : null}
-                    {isCurrent && isPro && (
-                      <button
-                        type="button"
-                        className="w-full text-center text-xs text-muted-foreground hover:text-destructive transition-colors"
-                        onClick={() => toast.info("Contacte le support pour changer de plan.")}
-                      >
-                        Downgrader vers Free
-                      </button>
-                    )}
                   </CardContent>
                 </Card>
               );
             })}
           </div>
-          <p className="text-xs text-muted-foreground text-center">
-            Les paiements sont gérés par Stripe. Tu peux changer de plan à tout moment.
-          </p>
-        </TabsContent>
+          <p className="text-xs text-muted-foreground text-center">Les paiements sont gérés par Systeme.io. Tu peux changer de plan à tout moment.</p>
 
-        {/* ── Account ── */}
-        <TabsContent value="account" className="space-y-4">
+          {/* Mot de passe */}
           <Card>
             <CardHeader>
-              <CardTitle>Plan actuel</CardTitle>
+              <CardTitle>Mot de passe</CardTitle>
+              <CardDescription>Définis ou change ton mot de passe pour te connecter sans magic link</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-3">
-                <span className="text-lg font-semibold capitalize">{currentPlan}</span>
-                {currentPlan === "free" && (
-                  <span className="text-sm text-muted-foreground">— 1 quiz, 10 réponses/mois</span>
-                )}
+            <CardContent className="space-y-3">
+              <div>
+                <Label>Nouveau mot de passe</Label>
+                <Input id="new-password" type="password" placeholder="Minimum 6 caractères" className="mt-1.5" />
               </div>
+              <div>
+                <Label>Confirmer le mot de passe</Label>
+                <Input id="confirm-password" type="password" placeholder="Confirme ton mot de passe" className="mt-1.5" />
+              </div>
+              <Button variant="outline" className="rounded-full" onClick={async () => {
+                const pw = (document.getElementById("new-password") as HTMLInputElement)?.value;
+                const confirm = (document.getElementById("confirm-password") as HTMLInputElement)?.value;
+                if (!pw || pw.length < 6) { toast.error("Le mot de passe doit faire au moins 6 caractères"); return; }
+                if (pw !== confirm) { toast.error("Les mots de passe ne correspondent pas"); return; }
+                try {
+                  const supabase = getSupabaseBrowserClient();
+                  const { error } = await supabase.auth.updateUser({ password: pw });
+                  if (error) throw error;
+                  toast.success("Mot de passe mis à jour !");
+                  (document.getElementById("new-password") as HTMLInputElement).value = "";
+                  (document.getElementById("confirm-password") as HTMLInputElement).value = "";
+                } catch (err: any) { toast.error(err?.message || "Erreur"); }
+              }}>
+                <Save className="h-4 w-4 mr-2" />Enregistrer le mot de passe
+              </Button>
             </CardContent>
           </Card>
 
+          {/* Zone danger */}
           <Card className="border-destructive/30">
             <CardHeader>
               <CardTitle className="text-destructive">Zone de danger</CardTitle>

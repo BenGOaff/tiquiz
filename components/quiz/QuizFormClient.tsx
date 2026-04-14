@@ -804,16 +804,16 @@ export default function QuizFormClient() {
       {/* Top bar: tabs + save button */}
       <div className="flex items-center justify-between gap-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="manual" className="gap-1.5" onClick={(e) => { e.preventDefault(); handleCreateManual(); }}>
+          <TabsList className="w-full sm:w-auto bg-transparent border-b rounded-none justify-start gap-0 h-auto p-0">
+            <TabsTrigger value="manual" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5" onClick={(e) => { e.preventDefault(); handleCreateManual(); }}>
               <FileText className="h-4 w-4" />
               {creatingManual ? <Loader2 className="h-4 w-4 animate-spin" /> : t("tabManual")}
             </TabsTrigger>
-            <TabsTrigger value="ai" className="gap-1.5">
+            <TabsTrigger value="ai" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5">
               <Sparkles className="h-4 w-4" />
               {t("tabAI")}
             </TabsTrigger>
-            <TabsTrigger value="import" className="gap-1.5">
+            <TabsTrigger value="import" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5">
               <Upload className="h-4 w-4" />
               {t("tabImport")}
             </TabsTrigger>
