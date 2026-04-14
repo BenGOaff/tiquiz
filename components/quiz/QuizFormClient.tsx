@@ -54,6 +54,8 @@ function emptyQuestion(): QuizQuestion {
     question_text: "",
     options: [
       { text: "", result_index: 0 },
+      { text: "", result_index: 1 },
+      { text: "", result_index: 2 },
       { text: "", result_index: 0 },
     ],
   };
@@ -119,37 +121,39 @@ function ObjectivesDropdown({
         <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="border border-border rounded-xl bg-background shadow-lg max-h-64 overflow-y-auto p-1.5">
-          {QUIZ_OBJECTIVES.map((o) => {
-            const checked = objectives.includes(o.value);
-            return (
-              <button
-                key={o.value}
-                type="button"
-                onClick={() =>
-                  onChange(
-                    checked
-                      ? objectives.filter((v) => v !== o.value)
-                      : [...objectives, o.value]
-                  )
-                }
-                className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors ${
-                  checked ? "bg-primary/5" : "hover:bg-muted"
-                }`}
-              >
-                <div className={`w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${
-                  checked ? "bg-primary border-primary" : "border-muted-foreground/30"
-                }`}>
-                  {checked && (
-                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </div>
-                <span className="text-sm font-medium">{o.labelFr}</span>
-              </button>
-            );
-          })}
+        <div className="border border-border rounded-xl bg-background shadow-lg max-h-80 overflow-y-auto p-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
+            {QUIZ_OBJECTIVES.map((o) => {
+              const checked = objectives.includes(o.value);
+              return (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() =>
+                    onChange(
+                      checked
+                        ? objectives.filter((v) => v !== o.value)
+                        : [...objectives, o.value]
+                    )
+                  }
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-colors ${
+                    checked ? "bg-primary/5" : "hover:bg-muted"
+                  }`}
+                >
+                  <div className={`w-3.5 h-3.5 rounded border-2 shrink-0 flex items-center justify-center transition-colors ${
+                    checked ? "bg-primary border-primary" : "border-muted-foreground/30"
+                  }`}>
+                    {checked && (
+                      <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className="text-xs font-medium leading-tight">{o.labelFr}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
@@ -277,7 +281,7 @@ export default function QuizFormClient() {
   const [aiCta, setAiCta] = useState("");
   const [aiBonus, setAiBonus] = useState("");
   const [aiLocale, setAiLocale] = useState("fr");
-  const [aiFormat, setAiFormat] = useState<"short" | "long">("long");
+  const [aiFormat, setAiFormat] = useState<"short" | "long">("short");
   const [aiSegmentation, setAiSegmentation] = useState<"level" | "profile">("profile");
   const [generating, setGenerating] = useState(false);
 
@@ -528,6 +532,7 @@ export default function QuizFormClient() {
     setGenerating(true);
     let quizReceived = false;
     let errorShown = false;
+    let receivedQuiz: Record<string, unknown> | null = null;
 
     try {
       const res = await fetch("/api/quiz/generate", {
@@ -594,6 +599,7 @@ export default function QuizFormClient() {
             if (currentEvent === "result" && parsed.ok && parsed.quiz) {
               populateFromQuiz(parsed.quiz as Record<string, unknown>);
               quizReceived = true;
+              receivedQuiz = parsed.quiz as Record<string, unknown>;
             } else if (currentEvent === "error" && !errorShown) {
               toast.error(parsed.error || t("errSave"));
               errorShown = true;
@@ -606,11 +612,35 @@ export default function QuizFormClient() {
         }
       }
 
-      if (quizReceived) {
+      if (quizReceived && receivedQuiz) {
         toast.success(t("aiGenerated"));
+        // Auto-save the generated quiz and redirect to the WYSIWYG editor
+        try {
+          const savePayload = {
+            title: String(receivedQuiz.title || ""),
+            introduction: receivedQuiz.introduction ? String(receivedQuiz.introduction) : null,
+            locale: aiLocale,
+            address_form: "tu",
+            cta_text: receivedQuiz.cta_text ? String(receivedQuiz.cta_text) : aiCta || null,
+            virality_enabled: Boolean(receivedQuiz.virality_enabled),
+            bonus_description: receivedQuiz.bonus_description ? String(receivedQuiz.bonus_description) : null,
+            share_message: receivedQuiz.share_message ? String(receivedQuiz.share_message) : null,
+            questions: Array.isArray(receivedQuiz.questions) ? receivedQuiz.questions : [],
+            results: Array.isArray(receivedQuiz.results) ? receivedQuiz.results : [],
+          };
+          const saveRes = await fetch("/api/quiz", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(savePayload),
+          });
+          const saveData = await saveRes.json();
+          if (saveData.ok && saveData.quizId) {
+            router.push(`/quiz/${saveData.quizId}`);
+            return;
+          }
+        } catch { /* fallback to manual tab */ }
         setActiveTab("manual");
       } else if (!errorShown) {
-        // Stream ended without result and without any error event
         toast.error(t("aiGenerateError"));
       }
     } catch (e) {

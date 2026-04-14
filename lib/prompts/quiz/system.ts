@@ -55,7 +55,7 @@ export function buildQuizGenerationPrompt(params: QuizPromptParams): {
     mission = "",
     locale = "fr",
     addressForm = "tu",
-    format = "long",
+    format = "short",
     segmentation = "profile",
   } = params;
 
@@ -116,10 +116,11 @@ ${isShort
 - L'introduction installe le contexte et promet une révélation personnalisée.`}
 
 QUESTIONS — RÈGLES :
+- Chaque question doit avoir exactement 4 options de réponse.
 - Variété de formats : Vrai/Faux, Oui/Non, Choix simple, scénarios, mises en situation.
 - PAS de questions scolaires ni d'échelles 1-5.
-- Chaque option de réponse est mappée vers un profil résultat via result_index.
-- Répartir les result_index de façon équilibrée pour que chaque profil ait des chances égales.
+- Chaque option de réponse est mappée vers un profil résultat via result_index (entre 0 et ${resultCount - 1}).
+- Répartir les result_index de façon équilibrée parmi les 4 options pour que chaque profil ait des chances égales.
 
 RÉSULTATS — RÈGLES :
 - Chaque résultat doit être TRANSFORMATIF : révéler un élément caché, bloquant ou valorisant.
@@ -139,7 +140,8 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
       "options": [
         { "text": "Option A", "result_index": 0 },
         { "text": "Option B", "result_index": 1 },
-        { "text": "Option C", "result_index": 2 }
+        { "text": "Option C", "result_index": 2 },
+        { "text": "Option D", "result_index": 0 }
       ]
     }
   ],
@@ -148,7 +150,7 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
       "title": "Nom du profil ou niveau",
       "description": "Description valorisante (2-3 phrases)",
       "insight": "Prise de conscience forte et spécifique — ce que la personne ne voyait pas",
-      "projection": "${formality === "vous" ? "Et si vous..." : "Et si tu..."} — projection motivante vers l'action",
+      "projection": "${formality === "vous" ? "Et si vous..." : "Et si tu..."}  — projection motivante vers l'action",
       "cta_text": "Texte du CTA personnalisé pour ce profil"
     }
   ],
@@ -175,10 +177,10 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
   userParts.push(`FORME D'ADRESSE : ${formality === "vous" ? "Vouvoiement (vous)" : "Tutoiement (tu)"}`);
   userParts.push(
     `\nCONSIGNES STRICTES :`,
-    `- Génère exactement ${questionCount} questions avec ${resultCount} options chacune (une par profil).`,
+    `- Génère exactement ${questionCount} questions avec 4 options chacune.`,
     `- Génère exactement ${resultCount} profils résultat.`,
     `- Chaque option doit avoir un result_index entre 0 et ${resultCount - 1}.`,
-    `- Répartis les result_index de façon parfaitement équilibrée dans les questions.`,
+    `- Répartis les result_index de façon équilibrée parmi les 4 options de chaque question.`,
     `- Tout le contenu DOIT être en ${langLabel}.`,
     `- Les résultats doivent être TRANSFORMATIFS, pas génériques.`,
     `- Le CTA doit s'intégrer naturellement, comme une suite logique du résultat.`,

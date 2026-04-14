@@ -621,21 +621,18 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     });
 
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4 sm:p-6">
-        
-        
-        <Card className="max-w-2xl w-full overflow-hidden shadow-lg border-0">
-          <div className="p-6 sm:p-10 space-y-6">
-            <h1 className="text-2xl sm:text-3xl font-bold leading-tight">{quiz.title}</h1>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 px-4 sm:px-6">
+        <div className="max-w-2xl w-full space-y-8 text-center py-16 sm:py-24">
+            <h1 className="text-3xl sm:text-5xl font-bold leading-tight">{quiz.title}</h1>
 
             {descLines.length > 0 && (
-              <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">
+              <p className="text-muted-foreground text-lg leading-relaxed whitespace-pre-line max-w-xl mx-auto">
                 {descLines.join("\n")}
               </p>
             )}
 
             {bulletLines.length > 0 && (
-              <ul className="space-y-2.5">
+              <ul className="space-y-3 text-left max-w-md mx-auto">
                 {bulletLines.map((line, i) => (
                   <li key={i} className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 shrink-0" />
@@ -649,11 +646,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               {totalQ} {t.questions} — ~{Math.max(1, Math.ceil(totalQ * 0.5))} {t.min}
             </p>
 
-            <Button size="lg" className="w-full h-12 text-base rounded-full" onClick={() => { trackEvent("start"); setStep("quiz"); }}>
+            <Button size="lg" className="h-14 px-12 text-lg rounded-full shadow-lg" onClick={() => { trackEvent("start"); setStep("quiz"); }}>
               {t.start}
             </Button>
-          </div>
-        </Card>
+        </div>
         <TiquizFooter locale={quiz.locale} />
       </div>
     );
@@ -667,55 +663,49 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     const hasMultipleOptions = q.options.length >= 3;
 
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4 sm:p-6">
-        
-        
-        <Card className="max-w-2xl w-full overflow-hidden shadow-lg border-0">
-          {/* Progress bar at top */}
-          <Progress value={progress} className="h-1.5 rounded-none" />
+      <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/30">
+          {/* Progress bar fixed top */}
+          <div className="fixed top-0 left-0 right-0 z-10">
+            <Progress value={progress} className="h-1.5 rounded-none" />
+          </div>
 
-          <div className="p-6 sm:p-10 space-y-6">
-            <p className="text-xs font-bold uppercase tracking-widest text-primary">
-              {t.questions.charAt(0).toUpperCase() + t.questions.slice(1)} {currentQ + 1}/{totalQ}
-            </p>
+          <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-16">
+            <div className="max-w-2xl w-full space-y-8">
+              <p className="text-xs font-bold uppercase tracking-widest text-primary">
+                {t.questions.charAt(0).toUpperCase() + t.questions.slice(1)} {currentQ + 1}/{totalQ}
+              </p>
 
-            <h2 className="text-xl sm:text-2xl font-bold leading-tight">{q.question_text}</h2>
+              <h2 className="text-2xl sm:text-4xl font-bold leading-tight">{q.question_text}</h2>
 
-            <div className={`grid gap-3 ${hasMultipleOptions ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
-              {q.options.map((opt, oi) => {
-                const isSelected = answers[currentQ] === oi;
-                return (
-                  <button
-                    key={oi}
-                    onClick={() => handleAnswer(oi)}
-                    className={`text-left p-4 rounded-xl border-2 transition-all duration-150 ${
-                      isSelected
-                        ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-border hover:border-primary/40 hover:bg-muted/30"
-                    }`}
-                  >
-                    <span className="text-sm font-medium">{opt.text}</span>
-                  </button>
-                );
-              })}
-            </div>
+              <div className={`grid gap-3 ${hasMultipleOptions ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
+                {q.options.map((opt, oi) => {
+                  const isSelected = answers[currentQ] === oi;
+                  return (
+                    <button
+                      key={oi}
+                      onClick={() => handleAnswer(oi)}
+                      className={`text-left p-5 rounded-xl border-2 transition-all duration-200 ${
+                        isSelected
+                          ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
+                          : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"
+                      }`}
+                    >
+                      <span className="text-base font-medium">{opt.text}</span>
+                    </button>
+                  );
+                })}
+              </div>
 
-            <div className="flex items-center justify-between pt-2">
-              {currentQ > 0 ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setCurrentQ(currentQ - 1)}
-                >
-                  <ArrowLeft className="w-4 h-4 mr-1" /> {t.previous}
-                </Button>
-              ) : (
-                <div />
-              )}
-              <span className="text-xs text-muted-foreground">{Math.round(progress)}%</span>
+              <div className="flex items-center justify-between pt-4">
+                {currentQ > 0 ? (
+                  <Button variant="ghost" size="sm" onClick={() => setCurrentQ(currentQ - 1)}>
+                    <ArrowLeft className="w-4 h-4 mr-1" /> {t.previous}
+                  </Button>
+                ) : <div />}
+                <span className="text-sm text-muted-foreground">{Math.round(progress)}%</span>
+              </div>
             </div>
           </div>
-        </Card>
       </div>
     );
   }
@@ -723,15 +713,12 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   // STEP: Email capture
   if (step === "email") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4 sm:p-6">
-        
-        
-        <Card className="max-w-2xl w-full overflow-hidden shadow-lg border-0">
-          <div className="p-6 sm:p-10 space-y-6">
-            <h2 className="text-xl sm:text-2xl font-bold">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 px-4 sm:px-6">
+        <div className="max-w-lg w-full space-y-6 py-16 sm:py-24">
+            <h2 className="text-2xl sm:text-4xl font-bold text-center">
               {quiz.capture_heading || t.captureHeadingDefault}
             </h2>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-center text-lg">
               {quiz.capture_subtitle || t.captureSubtitleDefault}
             </p>
 
@@ -835,7 +822,6 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               </p>
             )}
           </div>
-        </Card>
         <TiquizFooter locale={quiz.locale} />
       </div>
     );
@@ -844,13 +830,12 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   // STEP: Result
   if (step === "result") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4 sm:p-6">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 px-4 sm:px-6">
         
         
-        <Card className="max-w-2xl w-full overflow-hidden shadow-lg border-0">
-          <div className="p-6 sm:p-10 space-y-6">
+        <div className="max-w-2xl w-full py-16 sm:py-24 space-y-8">
             <div className="space-y-3">
-              <h2 className="text-2xl sm:text-3xl font-bold leading-tight text-primary">
+              <h2 className="text-3xl sm:text-5xl font-bold leading-tight text-primary">
                 {resultProfile?.title ?? t.resultFallback}
               </h2>
             </div>
@@ -977,7 +962,6 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             </p>
           )}
           </div>
-        </Card>
         <TiquizFooter locale={quiz.locale} />
       </div>
     );
