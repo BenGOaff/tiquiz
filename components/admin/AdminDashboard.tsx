@@ -77,14 +77,15 @@ export default function AdminDashboard() {
   const stats = {
     total: users.length,
     free: users.filter(u => u.plan === "free").length,
-    paid: users.filter(u => u.plan === "paid").length,
-    beta: users.filter(u => u.plan === "beta").length,
+    monthly: users.filter(u => u.plan === "monthly").length,
+    yearly: users.filter(u => u.plan === "yearly").length,
+    lifetime: users.filter(u => u.plan === "lifetime").length,
     totalLeads: users.reduce((s, u) => s + u.lead_count, 0),
     totalQuizzes: users.reduce((s, u) => s + u.quiz_count, 0),
   };
 
   const planBadge = (plan: string) => {
-    const cls = plan === "beta" ? "bg-purple-100 text-purple-700" : plan === "paid" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600";
+    const cls = plan === "lifetime" ? "bg-purple-100 text-purple-700" : (plan === "monthly" || plan === "yearly") ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600";
     return <Badge className={cls}>{plan}</Badge>;
   };
 
@@ -100,8 +101,9 @@ export default function AdminDashboard() {
         {[
           { label: "Total users", value: stats.total, icon: Users },
           { label: "Free", value: stats.free, icon: Users },
-          { label: "Paid", value: stats.paid, icon: Users },
-          { label: "Beta", value: stats.beta, icon: Users },
+          { label: "Mensuel", value: stats.monthly, icon: Users },
+          { label: "Annuel", value: stats.yearly, icon: Users },
+          { label: "Lifetime", value: stats.lifetime, icon: Users },
           { label: "Total quiz", value: stats.totalQuizzes, icon: BarChart3 },
           { label: "Total leads", value: stats.totalLeads, icon: BarChart3 },
         ].map(({ label, value, icon: Icon }) => (
@@ -116,7 +118,7 @@ export default function AdminDashboard() {
       <Card><CardContent className="pt-4 flex items-end gap-3">
         <div className="flex-1 space-y-1"><label className="text-xs font-medium">Inviter un user</label><Input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="email@example.com" /></div>
         <select value={newPlan} onChange={e => setNewPlan(e.target.value)} className="border rounded-lg px-2 py-2 text-sm">
-          <option value="free">Free</option><option value="paid">Paid</option><option value="beta">Beta</option>
+          <option value="free">Free</option><option value="monthly">Mensuel</option><option value="yearly">Annuel</option><option value="lifetime">Lifetime</option>
         </select>
         <Button onClick={createUser} disabled={creating}>{creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-1" />Créer + Magic Link</>}</Button>
       </CardContent></Card>
@@ -125,7 +127,7 @@ export default function AdminDashboard() {
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 max-w-sm"><Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par email…" className="pl-9" /></div>
         <div className="flex gap-1">
-          {["all", "free", "paid", "beta"].map(p => (
+          {["all", "free", "monthly", "yearly", "lifetime"].map(p => (
             <button key={p} onClick={() => setPlanFilter(p)} className={`px-3 py-1.5 rounded-full text-xs font-medium ${planFilter === p ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>
               {p === "all" ? "Tous" : p}
             </button>
@@ -162,7 +164,7 @@ export default function AdminDashboard() {
                     <td className="px-4 py-3 text-muted-foreground text-xs">{u.last_sign_in ? new Date(u.last_sign_in).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "Jamais"}</td>
                     <td className="px-4 py-3">
                       <select value={u.plan} onChange={e => updatePlan(uid, e.target.value)} className="border rounded px-2 py-1 text-xs bg-background">
-                        <option value="free">Free</option><option value="paid">Paid</option><option value="beta">Beta</option>
+                        <option value="free">Free</option><option value="monthly">Mensuel</option><option value="yearly">Annuel</option><option value="lifetime">Lifetime</option>
                       </select>
                     </td>
                   </tr>

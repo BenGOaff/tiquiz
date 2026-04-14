@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { user_id, email, plan } = body;
 
-    if (!plan || !["free", "paid", "beta"].includes(plan)) {
+    if (!plan || !["free", "monthly", "yearly", "lifetime"].includes(plan)) {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 

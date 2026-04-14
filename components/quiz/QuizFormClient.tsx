@@ -315,7 +315,11 @@ export default function QuizFormClient() {
       if (data.ok && data.quizId) {
         router.push(`/quiz/${data.quizId}`);
       } else {
-        toast.error(data.error || "Erreur lors de la création");
+        if (data.error === "FREE_PLAN_QUIZ_LIMIT") {
+          toast.error("Le plan gratuit est limité à 1 quiz. Passe à un plan payant pour en créer davantage !");
+        } else {
+          toast.error(data.error || "Erreur lors de la création");
+        }
         setCreatingManual(false);
       }
     } catch {

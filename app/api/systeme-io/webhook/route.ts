@@ -13,20 +13,20 @@ const supabaseAnon = createClient(
   { auth: { persistSession: false } },
 );
 
-// Plans Tiquiz: free | paid | beta
-type TiquizPlan = "free" | "paid" | "beta";
+// Plans Tiquiz DB: free | monthly | yearly | lifetime
+type TiquizPlan = "free" | "monthly" | "yearly" | "lifetime";
 
 // Mapping des offer price IDs Systeme.io vers plan Tiquiz
 const OFFER_TO_PLAN: Record<string, TiquizPlan> = {
   // Mensuel
-  "offer-price-3198235": "paid",
-  "3198235": "paid",
+  "offer-price-3198235": "monthly",
+  "3198235": "monthly",
   // Annuel
-  "offer-price-3198261": "paid",
-  "3198261": "paid",
+  "offer-price-3198261": "yearly",
+  "3198261": "yearly",
   // Beta (lifetime)
-  "offer-price-3198280": "beta",
-  "3198280": "beta",
+  "offer-price-3198280": "lifetime",
+  "3198280": "lifetime",
 };
 
 function inferPlan(offerId: string): TiquizPlan | null {
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
     if (!finalPlan) {
       const { data: existing } = await supabaseAdmin.from("profiles").select("plan").eq("user_id", userId).maybeSingle();
       const ep = existing?.plan;
-      finalPlan = (ep && ep !== "free") ? ep as TiquizPlan : "beta";
+      finalPlan = (ep && ep !== "free") ? ep as TiquizPlan : "lifetime";
       console.warn(`[Tiquiz webhook] Unknown offer ${offerId}, defaulting to ${finalPlan}`);
     }
 
