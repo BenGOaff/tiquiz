@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Copy, Eye, Play, CheckCircle, Users, Share2, Download,
   RefreshCw, Loader2, Plus, Trash2, Monitor, Smartphone, Pencil,
-  Palette, SlidersHorizontal, X, Save, ChevronDown, Image,
+  Palette, SlidersHorizontal, X, Save, ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import SioSelectors from "@/components/quiz/SioSelectors";
@@ -265,7 +265,6 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   <div className="flex items-center gap-2"><input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">Couleur principale</span></div>
                   <div className="flex items-center gap-2"><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">Couleur de fond</span></div>
                 </div>
-                <div className="space-y-2"><Label className="text-xs">Image de couverture</Label><button className="w-full border-2 border-dashed rounded-lg p-4 text-xs text-muted-foreground hover:border-primary/30 transition-colors flex items-center justify-center gap-2"><Image className="w-4 h-4" />Ajouter une image</button></div>
                 <div className="space-y-2"><Label className="text-xs">Logo <Badge variant="outline" className="text-[10px] ml-1">Payant</Badge></Label><button className="w-full border-2 border-dashed rounded-lg p-4 text-xs text-muted-foreground hover:border-primary/30 transition-colors flex items-center justify-center gap-2"><Plus className="w-4 h-4" />Ajouter mon logo</button></div>
               </div>)}
               {leftTab === "settings" && (<div className="space-y-5">
