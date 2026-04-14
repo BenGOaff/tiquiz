@@ -284,9 +284,45 @@ export default function QuizFormClient() {
   const [aiFormat, setAiFormat] = useState<"short" | "long">("short");
   const [aiSegmentation, setAiSegmentation] = useState<"level" | "profile">("profile");
   const [generating, setGenerating] = useState(false);
+  const [creatingManual, setCreatingManual] = useState(false);
 
   // Active tab
-  const [activeTab, setActiveTab] = useState("manual");
+  const [activeTab, setActiveTab] = useState("ai");
+
+  // Create empty quiz and redirect to WYSIWYG editor
+  async function handleCreateManual() {
+    setCreatingManual(true);
+    try {
+      const res = await fetch("/api/quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Mon quiz",
+          locale: "fr",
+          questions: [
+            { question_text: "", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }] },
+            { question_text: "", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }] },
+            { question_text: "", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }] },
+          ],
+          results: [
+            { title: "Résultat 1", description: null },
+            { title: "Résultat 2", description: null },
+            { title: "Résultat 3", description: null },
+          ],
+        }),
+      });
+      const data = await res.json();
+      if (data.ok && data.quizId) {
+        router.push(`/quiz/${data.quizId}`);
+      } else {
+        toast.error(data.error || "Erreur lors de la création");
+        setCreatingManual(false);
+      }
+    } catch {
+      toast.error("Erreur lors de la création");
+      setCreatingManual(false);
+    }
+  }
 
   // Trigger auto-save on form changes (only when on manual tab)
   useEffect(() => {
@@ -765,9 +801,9 @@ export default function QuizFormClient() {
       <div className="flex items-center justify-between gap-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
           <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="manual" className="gap-1.5">
+            <TabsTrigger value="manual" className="gap-1.5" onClick={(e) => { e.preventDefault(); handleCreateManual(); }}>
               <FileText className="h-4 w-4" />
-              {t("tabManual")}
+              {creatingManual ? <Loader2 className="h-4 w-4 animate-spin" /> : t("tabManual")}
             </TabsTrigger>
             <TabsTrigger value="ai" className="gap-1.5">
               <Sparkles className="h-4 w-4" />
@@ -779,263 +815,14 @@ export default function QuizFormClient() {
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <Button onClick={handleSave} disabled={saving} className="shrink-0">
-          {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-          {saving ? t("saving") : "Enregistrer"}
-        </Button>
       </div>
 
-      {/* ================================================================
-          MANUAL TAB — Step sidebar + content
-          ================================================================ */}
+      {/* MANUAL TAB — creates quiz and redirects to WYSIWYG editor */}
       {activeTab === "manual" && (
-        <div className="flex gap-5">
-          {/* Step sidebar */}
-          <nav className="hidden md:flex flex-col gap-0.5 w-44 shrink-0 sticky top-20 self-start">
-            {STEPS.map((s, i) => (
-              <button
-                key={s.key}
-                onClick={() => setStep(i)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${
-                  step === i
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                <span className="truncate">{s.label}</span>
-              </button>
-            ))}
-          </nav>
-
-          {/* Step content */}
-          <div className="flex-1 min-w-0 space-y-5">
-            {/* Mobile step selector */}
-            <div className="md:hidden">
-              <select
-                value={step}
-                onChange={(e) => setStep(Number(e.target.value))}
-                className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background"
-              >
-                {STEPS.map((s, i) => (
-                  <option key={s.key} value={i}>{s.label}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Step 0: General */}
-            {step === 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t("createTitle")}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="quiz-title">{t("titleLabel")}</Label>
-                    <Input id="quiz-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("titlePlaceholder")} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="quiz-intro">{t("introLabel")}</Label>
-                    <Textarea id="quiz-intro" value={introduction} onChange={(e) => setIntroduction(e.target.value)} placeholder={t("introPlaceholder")} />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>{t("localeLabel")}</Label>
-                      <select value={locale} onChange={(e) => setLocale(e.target.value)} className="w-full border border-input rounded-lg px-2.5 py-1.5 text-sm bg-background">
-                        {localeOptions.map((lo) => (<option key={lo.value} value={lo.value}>{lo.label}</option>))}
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>{t("addressFormLabel")}</Label>
-                      <select value={addressForm} onChange={(e) => setAddressForm(e.target.value)} className="w-full border border-input rounded-lg px-2.5 py-1.5 text-sm bg-background">
-                        <option value="tu">{t("tu")}</option>
-                        <option value="vous">{t("vous")}</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>{t("ctaLabel")}</Label>
-                      <Input value={ctaText} onChange={(e) => setCtaText(e.target.value)} placeholder={t("ctaPlaceholder")} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>{t("ctaUrlLabel")}</Label>
-                      <Input value={ctaUrl} onChange={(e) => setCtaUrl(e.target.value)} placeholder={t("ctaUrlPlaceholder")} />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("privacyUrlLabel")}</Label>
-                    <Input value={privacyUrl} onChange={(e) => setPrivacyUrl(e.target.value)} placeholder="https://…" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("consentLabel")}</Label>
-                    <Input value={consentText} onChange={(e) => setConsentText(e.target.value)} placeholder={t("consentPlaceholder")} />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Step 1: Questions */}
-            {step === 1 && (
-              <SortableQuestionList
-                questions={questions}
-                resultsCount={results.length}
-                onReorder={setQuestions}
-                onUpdate={updateQuestion}
-                onUpdateOption={updateOption}
-                onAddOption={addOption}
-                onRemoveOption={removeOption}
-                onAdd={addQuestion}
-                onRemove={removeQuestion}
-                t={t}
-              />
-            )}
-
-            {/* Step 2: Results */}
-            {step === 2 && (
-              <Card>
-                <CardHeader><CardTitle>{t("resultsTitle")}</CardTitle></CardHeader>
-                <CardContent className="space-y-6">
-                  {results.map((result, rIdx) => (
-                    <div key={rIdx} className="space-y-3 p-4 rounded-lg border border-border bg-muted/30">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-base font-semibold">{t("resultLabel", { n: rIdx + 1 })}</Label>
-                        {results.length > 1 && (
-                          <Button variant="ghost" size="sm" onClick={() => removeResult(rIdx)}>
-                            <Trash2 className="h-4 w-4 text-destructive mr-1" />{t("removeQuestion")}
-                          </Button>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label>{t("resultTitleLabel")}</Label>
-                        <Input value={result.title} onChange={(e) => updateResult(rIdx, { title: e.target.value })} placeholder={t("resultTitlePlaceholder")} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>{t("resultDescLabel")}</Label>
-                        <Textarea value={result.description} onChange={(e) => updateResult(rIdx, { description: e.target.value })} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>{t("resultInsightLabel")}</Label>
-                        <Textarea value={result.insight} onChange={(e) => updateResult(rIdx, { insight: e.target.value })} />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>{t("resultProjectionLabel")}</Label>
-                        <Textarea value={result.projection} onChange={(e) => updateResult(rIdx, { projection: e.target.value })} />
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>{t("resultCtaLabel")}</Label>
-                          <Input value={result.cta_text} onChange={(e) => updateResult(rIdx, { cta_text: e.target.value })} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>{t("resultCtaUrlLabel")}</Label>
-                          <Input value={result.cta_url} onChange={(e) => updateResult(rIdx, { cta_url: e.target.value })} placeholder="https://…" />
-                        </div>
-                      </div>
-                      <SioSelectors
-                        tagValue={result.sio_tag_name}
-                        courseValue={result.sio_course_id}
-                        communityValue={result.sio_community_id}
-                        onTagChange={(v) => updateResult(rIdx, { sio_tag_name: v })}
-                        onCourseChange={(v) => updateResult(rIdx, { sio_course_id: v })}
-                        onCommunityChange={(v) => updateResult(rIdx, { sio_community_id: v })}
-                      />
-                    </div>
-                  ))}
-                  <Button variant="outline" onClick={addResult}><Plus className="h-4 w-4 mr-1" />{t("addResult")}</Button>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Step 3: Capture */}
-            {step === 3 && (
-              <Card>
-                <CardHeader><CardTitle>{t("captureHeadingLabel")}</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>{t("captureHeadingLabel")}</Label>
-                    <Input value={captureHeading} onChange={(e) => setCaptureHeading(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("captureSubtitleLabel")}</Label>
-                    <Input value={captureSubtitle} onChange={(e) => setCaptureSubtitle(e.target.value)} />
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    {[
-                      { label: t("captureFirstName"), checked: captureFirstName, set: setCaptureFirstName },
-                      { label: t("captureLastName"), checked: captureLastName, set: setCaptureLastName },
-                      { label: t("capturePhone"), checked: capturePhone, set: setCapturePhone },
-                      { label: t("captureCountry"), checked: captureCountry, set: setCaptureCountry },
-                    ].map(({ label, checked, set }) => (
-                      <label key={label} className="flex items-center gap-2 text-sm">
-                        <input type="checkbox" checked={checked} onChange={(e) => set(e.target.checked)} className="h-4 w-4 rounded border-input" />
-                        {label}
-                      </label>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Step 4: Virality */}
-            {step === 4 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><Share2 className="h-5 w-5 text-primary" />Bonus de viralité</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-5">
-                  <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
-                    <input type="checkbox" checked={viralityEnabled} onChange={(e) => setViralityEnabled(e.target.checked)} className="h-5 w-5 rounded border-input accent-primary" />
-                    <div>
-                      <span className="font-medium">Activer le bonus de viralité</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">Les visiteurs pourront partager le quiz pour débloquer un bonus</p>
-                    </div>
-                  </label>
-                  {viralityEnabled && (
-                    <div className="space-y-4 pl-5 border-l-2 border-primary/20">
-                      <div className="space-y-2">
-                        <Label>Description du bonus</Label>
-                        <Input value={bonusDescription} onChange={(e) => setBonusDescription(e.target.value)} placeholder="Ex : Reçois notre guide PDF exclusif" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Message de partage</Label>
-                        <Textarea value={shareMessage} onChange={(e) => setShareMessage(e.target.value)} placeholder="Ex : J'ai découvert mon profil avec ce quiz !" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Tag Systeme.io (partage)</Label>
-                        <Input value={sioShareTagName} onChange={(e) => setSioShareTagName(e.target.value)} placeholder="Ex : quiz-partagé" />
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Step 5: Share */}
-            {step === 5 && (
-              <QuizShareSettings
-                quizId=""
-                status={quizStatus}
-                ogImageUrl={ogImageUrl}
-                onStatusChange={setQuizStatus}
-                onOgImageChange={setOgImageUrl}
-              />
-            )}
-
-            {/* Prev / Next */}
-            <div className="flex items-center justify-between pt-2">
-              <Button variant="outline" onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0}>
-                <ArrowLeft className="h-4 w-4 mr-2" />Précédent
-              </Button>
-              {step < STEPS.length - 1 ? (
-                <Button onClick={() => setStep(step + 1)}>Suivant<ChevronRight className="h-4 w-4 ml-2" /></Button>
-              ) : (
-                <Button onClick={handleSave} disabled={saving}>
-                  {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  <Save className="h-4 w-4 mr-2" />
-                  {saving ? t("saving") : "Enregistrer le quiz"}
-                </Button>
-              )}
-            </div>
+        <div className="flex items-center justify-center min-h-[40vh]">
+          <div className="text-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+            <p className="text-sm text-muted-foreground">Création de ton quiz en cours…</p>
           </div>
         </div>
       )}
