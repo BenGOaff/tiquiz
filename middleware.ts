@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { isAdminEmail } from "@/lib/adminEmails";
 
 const UI_LOCALE_COOKIE = "ui_locale";
 const SUPPORTED_LOCALES = ["fr", "en", "es", "it", "ar"];
@@ -15,7 +16,7 @@ function detectLocaleFromHeader(req: NextRequest): string {
   return langs.find((l) => SUPPORTED_LOCALES.includes(l)) ?? "fr";
 }
 
-const PROTECTED_PREFIXES = ["/dashboard", "/quiz", "/quizzes", "/settings", "/leads", "/stats"];
+const PROTECTED_PREFIXES = ["/dashboard", "/quiz", "/quizzes", "/settings", "/leads", "/stats", "/admin"];
 
 function startsWithAny(pathname: string, prefixes: string[]) {
   return prefixes.some((p) => pathname === p || pathname.startsWith(p + "/"));
@@ -91,6 +92,11 @@ export async function middleware(req: NextRequest) {
         const loginUrl = new URL("/login", req.url);
         loginUrl.searchParams.set("redirect", pathname);
         return NextResponse.redirect(loginUrl);
+      }
+
+      // Admin route protection
+      if (pathname.startsWith("/admin") && !isAdminEmail(user.email)) {
+        return NextResponse.redirect(new URL("/dashboard", req.url));
       }
     } catch {
       // Fail-open: never block on Supabase errors
