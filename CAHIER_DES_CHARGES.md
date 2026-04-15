@@ -400,6 +400,22 @@ Tour guidé en **7 étapes** (+ welcome + completion), inspiré du système Tipo
 2. Configure ta clé API Systeme.io
 3. Partage le lien public de ton quiz
 
+### 8.6. Centre d'aide (mutualisé avec Tipote)
+
+Le support est **mutualisé** avec Tipote. Le bouton "Aide" dans la sidebar de Tiquiz redirige vers le centre d'aide Tipote, section Tiquiz (`https://app.tipote.com/support/tiquiz`).
+
+**Contenu Tiquiz dans le support Tipote :**
+- Catégorie dédiée "Tiquiz — Quiz & Leads"
+- 6 articles multilingues (FR/EN/ES/IT/AR) :
+  1. Qu'est-ce que Tiquiz ?
+  2. Créer un quiz (manuel ou IA)
+  3. Capturer et gérer les leads
+  4. Connecter Systeme.io
+  5. Activer la viralité (bonus de partage)
+  6. Plans et tarifs Tiquiz
+- Chatbot IA + système de tickets partagés avec Tipote
+- Pas de duplication : un seul centre d'aide, un seul système de tickets
+
 ---
 
 ## 9. SÉCURITÉ
@@ -473,6 +489,7 @@ pm2 restart tiquiz-prod --update-env
 - Settings utilisateur
 - Email templates Tiquiz (invite, magic link, reset password, confirm signup)
 - **Didacticiel interactif** (tour guidé 7 étapes — inspiré de Tipote, adapté Tiquiz)
+- **Centre d'aide** mutualisé avec Tipote (catégorie Tiquiz + chatbot + tickets partagés)
 
 ### À faire 🔄
 

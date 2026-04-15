@@ -7,7 +7,6 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { UserAvatarMenu } from "@/components/UserAvatarMenu";
 import { Button } from "@/components/ui/button";
 import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
-import { HelpButton } from "@/components/tutorial/HelpButton";
 
 interface AppShellProps {
   children: ReactNode;
@@ -71,7 +70,6 @@ export default function AppShell({
 
         {/* Tutorial system */}
         <TutorialOverlay />
-        <HelpButton />
       </div>
     </SidebarProvider>
   );

@@ -135,7 +135,9 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <a
-                href="mailto:hello@tipote.com"
+                href="https://app.tipote.com/support/tiquiz"
+                target="_blank"
+                rel="noopener noreferrer"
                 className={MENU_ITEM_CLASS}
               >
                 <HelpCircle className="w-5 h-5" />
