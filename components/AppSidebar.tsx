@@ -11,6 +11,7 @@ import {
   BarChart3,
   PanelLeftClose,
   HelpCircle,
+  Settings,
 } from "lucide-react";
 import {
   Sidebar,
@@ -26,6 +27,8 @@ import {
 } from "@/components/ui/sidebar";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
+import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
+import { TutorialNudge } from "@/components/tutorial/TutorialNudge";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -61,6 +64,7 @@ const MENU_ITEMS = [
   { key: "quizzes", url: "/quizzes", icon: ClipboardList, end: false },
   { key: "leads", url: "/leads", icon: Users, end: false },
   { key: "stats", url: "/stats", icon: BarChart3, end: false },
+  { key: "settings", url: "/settings", icon: Settings, end: false },
 ] as const;
 
 function SidebarCollapseButton() {
@@ -100,17 +104,23 @@ export function AppSidebar() {
             <SidebarMenu className="space-y-1">
               {MENU_ITEMS.map((item) => (
                 <SidebarMenuItem key={item.key}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.end}
-                      className={MENU_ITEM_CLASS}
-                      activeClassName={MENU_ITEM_ACTIVE_CLASS}
-                    >
-                      <item.icon className="w-5 h-5" />
-                      <span>{t(item.key)}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
+                  <TutorialSpotlight
+                    elementId={item.key}
+                    showNextButton
+                    tooltipPosition="right"
+                  >
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        end={item.end}
+                        className={MENU_ITEM_CLASS}
+                        activeClassName={MENU_ITEM_ACTIVE_CLASS}
+                      >
+                        <item.icon className="w-5 h-5" />
+                        <span>{t(item.key)}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </TutorialSpotlight>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
@@ -119,6 +129,8 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4 space-y-1">
+        <TutorialNudge />
+
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>

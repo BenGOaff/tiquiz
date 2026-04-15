@@ -345,6 +345,61 @@ Systeme.io (webhook vente/optin) → Supabase Auth + profiles
 - Paramètres : objectif, audience, ton, CTA, bonus, langue, nombre questions/résultats, forme d'adresse
 - Output : quiz complet structuré (titre, intro, questions, options, résultats)
 
+### 8.5. Système de didacticiel interactif
+
+Tour guidé en **7 étapes** (+ welcome + completion), inspiré du système Tipote mais adapté aux fonctionnalités Tiquiz.
+
+**Architecture :**
+
+- `hooks/useTutorial.ts` — Gestion d'état Context + localStorage (persistance par user)
+- `components/tutorial/WelcomeModal.tsx` — Modal d'accueil avec présentation des 4 piliers
+- `components/tutorial/TourCompleteModal.tsx` — Modal de fin avec actions clés à faire
+- `components/tutorial/TutorialSpotlight.tsx` — Spotlight positionné (tooltip + ring autour de l'élément)
+- `components/tutorial/TutorialOverlay.tsx` — Overlay semi-transparent + rendu des modales
+- `components/tutorial/HelpButton.tsx` — Bouton flottant pour relancer le tour
+- `components/tutorial/TutorialNudge.tsx` — Nudge dans la sidebar pour inviter au tour
+
+**Phases du tour :**
+
+| Phase | Élément | URL cible | Description |
+|:------|:--------|:----------|:------------|
+| `welcome` | — | — | Modal d'accueil avec 4 étapes visuelles |
+| `tour_dashboard` | `dashboard` | `/dashboard` | Tableau de bord : stats, liste quiz |
+| `tour_create` | `create` | `/quiz/new` | Créer un quiz : manuel ou IA |
+| `tour_quizzes` | `quizzes` | `/quizzes` | Mes quiz : gérer, activer, partager |
+| `tour_leads` | `leads` | `/leads` | Mes leads : contacts capturés |
+| `tour_stats` | `stats` | `/stats` | Statistiques : performances des quiz |
+| `tour_settings` | `settings` | `/settings` | Paramètres : langue, SIO, privacy |
+| `tour_complete` | — | `/dashboard` | Modal de fin + actions clés |
+| `completed` | — | — | Tour terminé |
+
+**Comportement :**
+
+- Fenêtre de 7 jours après première visite (FIRST_DAYS_WINDOW = 7)
+- "Plus tard" = non-définitif (le tour revient à la prochaine visite dans la fenêtre)
+- "Ne plus me montrer" = opt-out permanent (done=true, optOut=true)
+- Reset possible via HelpButton (bouton flottant bas gauche)
+- Step counter affiché dans le spotlight (ex: "3 / 7")
+- Smart positioning des tooltips (top/bottom/left/right + clamp viewport)
+- Support mobile : repositionnement auto des tooltips
+- Traduction complète via `next-intl` (namespace `tutorial`, 5 langues)
+- localStorage keys : `tiquiz_tutorial_{phase|optout|done|first_seen_at}_v1_{userId}`
+
+**Gradient Tiquiz :** Les modales utilisent le gradient primaire Tiquiz (blue → turquoise, 135°).
+
+**Modal Welcome (4 piliers) :**
+
+1. Créer ton premier quiz (Sparkles)
+2. Capturer des leads qualifiés (Users)
+3. Connecter Systeme.io (Link)
+4. Partager et faire grandir ta liste (Share2)
+
+**Modal Completion (actions clés) :**
+
+1. Crée ton premier quiz pour tester
+2. Configure ta clé API Systeme.io
+3. Partage le lien public de ton quiz
+
 ---
 
 ## 9. SÉCURITÉ
@@ -417,6 +472,7 @@ pm2 restart tiquiz-prod --update-env
 - Dashboard avec stats
 - Settings utilisateur
 - Email templates Tiquiz (invite, magic link, reset password, confirm signup)
+- **Didacticiel interactif** (tour guidé 7 étapes — inspiré de Tipote, adapté Tiquiz)
 
 ### À faire 🔄
 

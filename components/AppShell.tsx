@@ -6,6 +6,8 @@ import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { UserAvatarMenu } from "@/components/UserAvatarMenu";
 import { Button } from "@/components/ui/button";
+import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
+import { HelpButton } from "@/components/tutorial/HelpButton";
 
 interface AppShellProps {
   children: ReactNode;
@@ -45,7 +47,7 @@ export default function AppShell({
         <AppSidebar />
 
         <main className="flex-1 overflow-auto bg-muted/30 flex flex-col">
-          {/* Header — identical structure to Tipote */}
+          {/* Header */}
           <header className="h-14 flex items-center justify-between px-4 lg:px-6 bg-background sticky top-0 z-10">
             <div className="flex items-center gap-2 min-w-0">
               <SidebarOpenButton />
@@ -59,13 +61,17 @@ export default function AppShell({
             </div>
           </header>
 
-          {/* Content — identical to Tipote DashboardLayout */}
+          {/* Content */}
           <div className="flex-1 p-4 sm:p-5 lg:p-6">
             <div className={contentClassName ?? "max-w-[1200px] mx-auto w-full space-y-5"}>
               {children}
             </div>
           </div>
         </main>
+
+        {/* Tutorial system */}
+        <TutorialOverlay />
+        <HelpButton />
       </div>
     </SidebarProvider>
   );
