@@ -253,7 +253,19 @@
     "aiSegProfile": "Per profilo",
     "aiSegProfileDesc": "Tipi di personalità, archetipi…",
     "aiSegLevel": "Per livello",
-    "aiSegLevelDesc": "Principiante, intermedio, esperto…"
+    "aiSegLevelDesc": "Principiante, intermedio, esperto…",
+    "aiChatEntryLabel": "Nessuna idea? Brainstorm con l'IA →",
+    "aiChatTitle": "Brainstorm la tua idea di quiz",
+    "aiChatDescription": "Rispondi in poche frasi — ti proporrò angolazioni adatte alla tua attività.",
+    "aiChatKickoff": "Aiutami a trovare una buona idea di quiz per il mio business.",
+    "aiChatPlaceholder": "La tua risposta…",
+    "aiChatError": "Si è verificato un errore. Riprova o usa il modulo diretto.",
+    "aiChatCapReached": "Chat terminata. Usa il modulo per regolare.",
+    "aiChatTurns": "{count}/{max} messaggi",
+    "aiChatBriefReady": "Ho abbastanza informazioni!",
+    "aiChatBriefHint": "Precompilo il modulo. Potrai regolarlo prima di generare.",
+    "aiChatUseBrief": "Usa queste info e continua →",
+    "aiChatBriefApplied": "Modulo precompilato — regola e clicca su Genera."
   },
   "quizDetail": {
     "backToList": "Torna ai quiz",
