@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,19 +11,46 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Copy, Eye, Play, CheckCircle, Users, Share2, Download,
-  RefreshCw, Loader2, Plus, Trash2, Monitor, Smartphone, Pencil,
-  Palette, SlidersHorizontal, X, Save, ChevronDown,
+  Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save,
 } from "lucide-react";
 import { toast } from "sonner";
-import SioSelectors from "@/components/quiz/SioSelectors";
 import { SioTagPicker } from "@/components/ui/sio-tag-picker";
+import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import {
+  ALLOWED_SHARE_NETWORKS,
+  BRAND_FONT_CHOICES,
+  DEFAULT_BRAND_COLOR_BACKGROUND,
+  DEFAULT_BRAND_COLOR_PRIMARY,
+  DEFAULT_BRAND_FONT,
+  googleFontHref,
+  sanitizeSlug,
+  type BrandFontChoice,
+  type ShareNetwork,
+} from "@/lib/quizBranding";
 
 // Types
 type QuizOption = { text: string; result_index: number; sio_tag_name?: string | null };
 type QuizQuestion = { id?: string; question_text: string; options: QuizOption[]; sort_order: number };
 type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number };
 type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_title: string | null; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
-type QuizData = { id: string; title: string; introduction: string | null; cta_text: string | null; cta_url: string | null; privacy_url: string | null; consent_text: string | null; capture_heading: string | null; capture_subtitle: string | null; capture_first_name: boolean | null; capture_last_name: boolean | null; capture_phone: boolean | null; capture_country: boolean | null; virality_enabled: boolean; bonus_description: string | null; share_message: string | null; locale: string | null; sio_share_tag_name: string | null; sio_capture_tag: string | null; status: string; views_count: number; starts_count: number; completions_count: number; shares_count: number; questions: QuizQuestion[]; results: QuizResult[] };
+type QuizData = {
+  id: string; title: string; slug: string | null;
+  introduction: string | null; cta_text: string | null; cta_url: string | null;
+  privacy_url: string | null; consent_text: string | null;
+  capture_heading: string | null; capture_subtitle: string | null;
+  capture_first_name: boolean | null; capture_last_name: boolean | null;
+  capture_phone: boolean | null; capture_country: boolean | null;
+  virality_enabled: boolean; bonus_description: string | null;
+  share_message: string | null; locale: string | null;
+  sio_share_tag_name: string | null; sio_capture_tag: string | null;
+  brand_font: string | null; brand_color_primary: string | null; brand_color_background: string | null;
+  share_networks: string[] | null; og_description: string | null; og_image_url: string | null;
+  custom_footer_text: string | null; custom_footer_url: string | null;
+  status: string; views_count: number; starts_count: number;
+  completions_count: number; shares_count: number;
+  questions: QuizQuestion[]; results: QuizResult[];
+};
+type ProfileBrand = { brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null; plan: string | null };
 interface QuizDetailClientProps { quizId: string; }
 
 // Inline edit: click to edit text directly on the preview
@@ -52,8 +78,6 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style 
 
 // Main component
 export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
-  const t = useTranslations("quizDetail");
-  const tf = useTranslations("quizForm");
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -87,9 +111,19 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [mainTab, setMainTab] = useState<"create" | "share" | "results">("create");
   const [leftTab, setLeftTab] = useState<"edition" | "design" | "settings">("edition");
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
-  const [primaryColor, setPrimaryColor] = useState("#5B5FE2");
-  const [bgColor, setBgColor] = useState("#ffffff");
-  const [fontFamily, setFontFamily] = useState("Inter");
+  const [primaryColor, setPrimaryColor] = useState<string>(DEFAULT_BRAND_COLOR_PRIMARY);
+  const [bgColor, setBgColor] = useState<string>(DEFAULT_BRAND_COLOR_BACKGROUND);
+  const [fontFamily, setFontFamily] = useState<BrandFontChoice>(DEFAULT_BRAND_FONT);
+  const [slug, setSlug] = useState("");
+  const [ogDescription, setOgDescription] = useState("");
+  const [customFooterText, setCustomFooterText] = useState("");
+  const [customFooterUrl, setCustomFooterUrl] = useState("");
+  const [shareNetworks, setShareNetworks] = useState<ShareNetwork[]>([]);
+  const [brandLogoUrl, setBrandLogoUrl] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [profile, setProfile] = useState<ProfileBrand | null>(null);
+  const isPaidPlan = (profile?.plan ?? "free") !== "free";
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -111,14 +145,18 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     }
   };
 
-  // Fetch
+  // Fetch quiz + profile in parallel (profile branding is the default fallback)
   const fetchQuiz = useCallback(async () => {
     try {
-      const res = await fetch(`/api/quiz/${quizId}`);
-      const json = await res.json();
-      if (!json?.ok || !json.quiz) { toast.error("Quiz not found"); router.push("/dashboard"); return; }
-      const q: QuizData = { ...json.quiz, questions: json.quiz.questions ?? [], results: json.quiz.results ?? [] };
-      setQuiz(q); setLeads(json.leads ?? []);
+      const [quizRes, profileRes] = await Promise.all([
+        fetch(`/api/quiz/${quizId}`).then((r) => r.json()),
+        fetch(`/api/profile`).then((r) => r.json()).catch(() => null),
+      ]);
+      if (!quizRes?.ok || !quizRes.quiz) { toast.error("Quiz not found"); router.push("/dashboard"); return; }
+      const q: QuizData = { ...quizRes.quiz, questions: quizRes.quiz.questions ?? [], results: quizRes.quiz.results ?? [] };
+      const prof = profileRes?.ok ? (profileRes.profile as ProfileBrand) : null;
+      setProfile(prof);
+      setQuiz(q); setLeads(quizRes.leads ?? []);
       setTitle(q.title); setIntroduction(q.introduction ?? "");
       setCtaText(q.cta_text ?? ""); setCtaUrl(q.cta_url ?? "");
       setPrivacyUrl(q.privacy_url ?? ""); setConsentText(q.consent_text ?? "");
@@ -129,13 +167,78 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setShareMessage(q.share_message ?? ""); setLocale(q.locale ?? "");
       setSioShareTagName(q.sio_share_tag_name ?? ""); setSioCaptureTag(q.sio_capture_tag ?? ""); setStatus(q.status);
       setEditQuestions(q.questions); setEditResults(q.results);
+      setSlug(q.slug ?? "");
+      setOgDescription(q.og_description ?? "");
+      setCustomFooterText(q.custom_footer_text ?? "");
+      setCustomFooterUrl(q.custom_footer_url ?? "");
+      setShareNetworks(Array.isArray(q.share_networks) ? (q.share_networks as ShareNetwork[]) : []);
+      // Branding: quiz overrides profile, profile overrides default constants
+      const resolvedFont = (BRAND_FONT_CHOICES as readonly string[]).includes(q.brand_font ?? "")
+        ? (q.brand_font as BrandFontChoice)
+        : (BRAND_FONT_CHOICES as readonly string[]).includes(prof?.brand_font ?? "")
+          ? (prof!.brand_font as BrandFontChoice)
+          : DEFAULT_BRAND_FONT;
+      setFontFamily(resolvedFont);
+      setPrimaryColor(q.brand_color_primary || prof?.brand_color_primary || DEFAULT_BRAND_COLOR_PRIMARY);
+      setBgColor(q.brand_color_background || DEFAULT_BRAND_COLOR_BACKGROUND);
+      setBrandLogoUrl(prof?.brand_logo_url ?? null);
     } catch { toast.error("Error loading quiz"); } finally { setLoading(false); }
   }, [quizId, router]);
   useEffect(() => { fetchQuiz(); }, [fetchQuiz]);
 
+  // Dynamic Google Font link in preview (same mechanism as public page → true WYSIWYG)
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const href = googleFontHref(fontFamily);
+    let link = document.head.querySelector<HTMLLinkElement>('link[data-tiquiz-editor-font="1"]');
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.setAttribute("data-tiquiz-editor-font", "1");
+      document.head.appendChild(link);
+    }
+    if (link.href !== href) link.href = href;
+  }, [fontFamily]);
+
+  // Logo upload (reuses public-assets bucket, same layout as SettingsClient)
+  async function handleLogoUpload(file: File) {
+    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error("Image trop lourde (max 2 Mo)"); return; }
+    setUploadingLogo(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Non connecté"); return; }
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `logos/${user.id}/logo.${ext}`;
+      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      const publicUrl = urlData.publicUrl;
+      // Persist at the profile level (single source of truth) + optimistic UI
+      await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brand_logo_url: publicUrl }),
+      });
+      setBrandLogoUrl(publicUrl);
+      toast.success("Logo chargé");
+    } catch {
+      toast.error("Erreur upload logo");
+    } finally {
+      setUploadingLogo(false);
+    }
+  }
+
+  function toggleShareNetwork(n: ShareNetwork) {
+    setShareNetworks((prev) => (prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]));
+  }
+
   // Save
   const handleSave = async () => {
     if (!title.trim()) { toast.error("Titre requis"); return; }
+    const cleanedSlug = slug.trim() ? sanitizeSlug(slug) : null;
+    if (slug.trim() && !cleanedSlug) { toast.error("Slug invalide (a-z, 0-9, -)"); return; }
     setSaving(true);
     try {
       const res = await fetch(`/api/quiz/${quizId}`, {
@@ -149,6 +252,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           virality_enabled: viralityEnabled, bonus_description: bonusDescription,
           share_message: shareMessage, locale: locale || null,
           sio_share_tag_name: sioShareTagName || null, sio_capture_tag: sioCaptureTag || null, status,
+          // Branding
+          brand_font: fontFamily, brand_color_primary: primaryColor, brand_color_background: bgColor,
+          // Share + SEO
+          slug: slug.trim() ? cleanedSlug : null,
+          og_description: ogDescription.trim() || null,
+          share_networks: shareNetworks,
+          // Custom footer — ignored server-side for free plan but we still send it
+          custom_footer_text: customFooterText.trim() || null,
+          custom_footer_url: customFooterUrl.trim() || null,
           questions: editQuestions.map((q, i) => ({
             question_text: q.question_text,
             options: q.options.map((o) => ({
@@ -162,7 +274,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         }),
       });
       const json = await res.json();
-      if (!json?.ok) throw new Error(json?.error || "Error");
+      if (!json?.ok) {
+        if (res.status === 409 && json?.error === "SLUG_TAKEN") { toast.error("Ce slug est déjà utilisé"); return; }
+        throw new Error(json?.error || "Error");
+      }
       toast.success("Sauvegardé !");
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : "Erreur"); } finally { setSaving(false); }
   };
@@ -173,7 +288,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     try { await fetch(`/api/quiz/${quizId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: ns }) }); toast.success(ns === "active" ? "Quiz publié !" : "Quiz désactivé"); } catch { setStatus(status); }
   };
 
-  const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/q/${quizId}` : `/q/${quizId}`;
+  // Public URL — prefer custom slug when set, fall back to UUID
+  const publicSegment = slug.trim() ? sanitizeSlug(slug) ?? quizId : quizId;
+  const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/q/${publicSegment}` : `/q/${publicSegment}`;
   const handleCopyLink = () => { navigator.clipboard.writeText(publicUrl).then(() => { setCopied(true); toast.success("Lien copié !"); setTimeout(() => setCopied(false), 2000); }); };
 
   // Helpers
@@ -271,12 +388,53 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 ))}
               </>)}
               {leftTab === "design" && (<div className="space-y-5">
-                <div className="space-y-2"><Label className="text-xs">Police d&apos;écriture</Label><select value={fontFamily} onChange={e => setFontFamily(e.target.value)} className="w-full border rounded-lg px-2.5 py-1.5 text-sm bg-background"><option>Inter</option><option>Poppins</option><option>DM Sans</option><option>Montserrat</option></select></div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Police d&apos;écriture</Label>
+                  <select
+                    value={fontFamily}
+                    onChange={e => setFontFamily(e.target.value as BrandFontChoice)}
+                    className="w-full border rounded-lg px-2.5 py-1.5 text-sm bg-background"
+                    style={{ fontFamily }}
+                  >
+                    {BRAND_FONT_CHOICES.map((f) => (
+                      <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-muted-foreground">Aperçu live dans le panneau de droite.</p>
+                </div>
                 <div className="space-y-3"><Label className="text-xs">Couleurs</Label>
                   <div className="flex items-center gap-2"><input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">Couleur principale</span></div>
                   <div className="flex items-center gap-2"><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">Couleur de fond</span></div>
+                  <button type="button" onClick={() => { if (profile?.brand_color_primary) setPrimaryColor(profile.brand_color_primary); else setPrimaryColor(DEFAULT_BRAND_COLOR_PRIMARY); setBgColor(DEFAULT_BRAND_COLOR_BACKGROUND); }} className="text-[11px] text-primary hover:underline">Réinitialiser aux couleurs du profil</button>
                 </div>
-                <div className="space-y-2"><Label className="text-xs">Logo <Badge variant="outline" className="text-[10px] ml-1">Payant</Badge></Label><button className="w-full border-2 border-dashed rounded-lg p-4 text-xs text-muted-foreground hover:border-primary/30 transition-colors flex items-center justify-center gap-2"><Plus className="w-4 h-4" />Ajouter mon logo</button></div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Logo</Label>
+                  {brandLogoUrl ? (
+                    <div className="space-y-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={brandLogoUrl} alt="Logo" className="max-h-16 w-auto object-contain rounded border bg-white p-1" />
+                      <div className="flex items-center gap-2">
+                        <button type="button" onClick={() => logoInputRef.current?.click()} className="text-xs text-primary hover:underline" disabled={uploadingLogo}>
+                          {uploadingLogo ? "Envoi…" : "Changer"}
+                        </button>
+                        <button type="button" onClick={async () => { await fetch("/api/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brand_logo_url: null }) }); setBrandLogoUrl(null); }} className="text-xs text-destructive hover:underline">Retirer</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo} className="w-full border-2 border-dashed rounded-lg p-4 text-xs text-muted-foreground hover:border-primary/30 transition-colors flex items-center justify-center gap-2">
+                      <Plus className="w-4 h-4" />
+                      {uploadingLogo ? "Envoi…" : "Ajouter mon logo"}
+                    </button>
+                  )}
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ""; }}
+                  />
+                  <p className="text-[10px] text-muted-foreground">Partagé avec tous vos quiz (paramètre du profil).</p>
+                </div>
               </div>)}
               {leftTab === "settings" && (<div className="space-y-5">
                 <div><Label className="text-xs font-semibold">Formulaire de prise de contact</Label><p className="text-[11px] text-muted-foreground mb-2">Personnalise le questionnaire permettant d&apos;accéder aux résultats</p>
@@ -309,6 +467,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               {/* ── INTRO SECTION ── */}
               <div ref={introRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 text-center">
                 <div className="max-w-2xl w-full space-y-6">
+                  {brandLogoUrl && (
+                    <div className="flex justify-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={brandLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
+                    </div>
+                  )}
                   <InlineEdit value={title} onChange={setTitle} className="text-3xl sm:text-5xl font-bold leading-tight" placeholder="Titre du quiz…" />
                   <InlineEdit value={introduction} onChange={setIntroduction} multiline className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
                   <p className="text-sm text-muted-foreground">{editQuestions.length} questions — ~{Math.max(1, Math.ceil(editQuestions.length * 0.5))} min</p>
@@ -417,14 +581,102 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       {/* SHARE TAB */}
       {mainTab === "share" && (
         <div className="flex-1 overflow-y-auto p-6"><div className="max-w-3xl mx-auto space-y-4">
+          {/* Custom URL slug */}
           <Card><CardContent className="pt-6 space-y-3">
-            <h3 className="font-semibold flex items-center gap-2"><Copy className="w-4 h-4 text-primary" /> Lien de partage</h3>
+            <h3 className="font-semibold flex items-center gap-2"><Copy className="w-4 h-4 text-primary" /> Lien personnalisé</h3>
+            <p className="text-xs text-muted-foreground">Choisis une URL courte et mémorable. Lettres minuscules, chiffres et tirets uniquement.</p>
             <div className="flex items-center gap-2">
-              <Input value={publicUrl} readOnly className="font-mono text-sm bg-muted" />
+              <div className="flex items-center border rounded-lg bg-muted/30 pl-3 pr-1 py-1 flex-1">
+                <span className="text-sm text-muted-foreground font-mono whitespace-nowrap">
+                  {typeof window !== "undefined" ? `${window.location.origin}/q/` : "/q/"}
+                </span>
+                <input
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                  placeholder={quizId}
+                  className="flex-1 bg-transparent outline-none text-sm font-mono px-1 py-1"
+                />
+              </div>
+              <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enregistrer"}</Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Input value={publicUrl} readOnly className="font-mono text-sm bg-muted flex-1" />
               <Button variant="outline" size="icon" onClick={handleCopyLink}>{copied ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}</Button>
             </div>
             <pre className="text-xs font-mono bg-muted rounded-lg p-3 overflow-x-auto border mt-3">{`<iframe src="${publicUrl}" width="100%" height="700" frameborder="0" style="border:none;border-radius:12px;max-width:640px;margin:0 auto;display:block;"></iframe>`}</pre>
           </CardContent></Card>
+
+          {/* Share networks */}
+          <Card><CardContent className="pt-6 space-y-3">
+            <h3 className="font-semibold flex items-center gap-2"><Share2 className="w-4 h-4 text-primary" /> Réseaux de partage proposés</h3>
+            <p className="text-xs text-muted-foreground">Choisis les réseaux affichés sur la page de résultat.</p>
+            <div className="flex flex-wrap gap-2">
+              {ALLOWED_SHARE_NETWORKS.map((n) => {
+                const active = shareNetworks.includes(n);
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => toggleShareNetwork(n)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize border transition-colors ${active ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:border-primary/40"}`}
+                  >
+                    {n}
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent></Card>
+
+          {/* SEO / Open Graph description */}
+          <Card><CardContent className="pt-6 space-y-3">
+            <h3 className="font-semibold">Aperçu sur les réseaux (SEO)</h3>
+            <p className="text-xs text-muted-foreground">Description utilisée quand un visiteur partage le lien.</p>
+            <Textarea
+              value={ogDescription}
+              onChange={(e) => setOgDescription(e.target.value)}
+              placeholder="Courte phrase d'accroche affichée sous le titre du lien partagé…"
+              rows={2}
+              maxLength={200}
+              className="text-sm"
+            />
+            <p className="text-[10px] text-muted-foreground text-right">{ogDescription.length}/200</p>
+          </CardContent></Card>
+
+          {/* Custom footer — paid plans only */}
+          <Card className={isPaidPlan ? "" : "opacity-70"}>
+            <CardContent className="pt-6 space-y-3">
+              <h3 className="font-semibold flex items-center gap-2">
+                Pied de page personnalisé
+                {!isPaidPlan && <Badge variant="outline" className="text-[10px]">Payant</Badge>}
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {isPaidPlan
+                  ? "Remplace « Ce quiz vous est offert par Tiquiz » par votre propre signature."
+                  : "Disponible avec un plan payant. Sinon, le footer Tiquiz reste affiché."}
+              </p>
+              <Input
+                value={customFooterText}
+                onChange={(e) => setCustomFooterText(e.target.value)}
+                placeholder="Ex: Ce quiz vous est offert par Mon Site"
+                className="text-sm"
+                disabled={!isPaidPlan}
+              />
+              <Input
+                value={customFooterUrl}
+                onChange={(e) => setCustomFooterUrl(e.target.value)}
+                placeholder="https://monsite.com"
+                className="text-sm"
+                disabled={!isPaidPlan}
+              />
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end">
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-1" />}
+              Enregistrer
+            </Button>
+          </div>
         </div></div>
       )}
 

@@ -2,6 +2,7 @@
 // Single quiz operations: GET detail, PATCH update, DELETE
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { sanitizeSlug, sanitizeShareNetworks, BRAND_FONT_CHOICES } from "@/lib/quizBranding";
 
 export const dynamic = "force-dynamic";
 
@@ -93,13 +94,65 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "title", "introduction", "cta_text", "cta_url", "privacy_url",
       "consent_text", "virality_enabled", "bonus_description",
       "share_message", "status", "sio_share_tag_name", "sio_capture_tag", "locale",
-      "address_form", "og_image_url", "capture_heading", "capture_subtitle",
+      "address_form", "og_image_url", "og_description", "capture_heading", "capture_subtitle",
       "capture_first_name", "capture_last_name", "capture_phone", "capture_country",
+      "custom_footer_text", "custom_footer_url",
+      "brand_font", "brand_color_primary", "brand_color_background",
     ];
 
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
     for (const key of allowedFields) {
       if (key in body) patch[key] = body[key];
+    }
+
+    // Validate brand_font against whitelist (null = clear)
+    if ("brand_font" in patch) {
+      const val = patch.brand_font;
+      if (val !== null && (typeof val !== "string" || !BRAND_FONT_CHOICES.includes(val as typeof BRAND_FONT_CHOICES[number]))) {
+        patch.brand_font = null;
+      }
+    }
+
+    // Validate hex colors (null = clear, otherwise must be #rgb or #rrggbb)
+    const hexRe = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+    for (const key of ["brand_color_primary", "brand_color_background"] as const) {
+      if (key in patch) {
+        const val = patch[key];
+        if (val !== null && (typeof val !== "string" || !hexRe.test(val))) patch[key] = null;
+      }
+    }
+
+    // Slug: sanitize, verify uniqueness (case-insensitive) against other quizzes
+    if ("slug" in body) {
+      const raw = body.slug;
+      if (raw === null || (typeof raw === "string" && raw.trim() === "")) {
+        patch.slug = null;
+      } else {
+        const cleaned = sanitizeSlug(raw);
+        if (!cleaned) {
+          return NextResponse.json({ ok: false, error: "Invalid slug" }, { status: 400 });
+        }
+        // Never allow a slug that looks like a UUID (would shadow direct /q/{id} access)
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(cleaned)) {
+          return NextResponse.json({ ok: false, error: "Slug cannot look like an ID" }, { status: 400 });
+        }
+        const { data: conflict } = await supabase
+          .from("quizzes")
+          .select("id")
+          .ilike("slug", cleaned)
+          .neq("id", quizId)
+          .limit(1)
+          .maybeSingle();
+        if (conflict) {
+          return NextResponse.json({ ok: false, error: "SLUG_TAKEN" }, { status: 409 });
+        }
+        patch.slug = cleaned;
+      }
+    }
+
+    // Share networks: enum-filter + dedupe
+    if ("share_networks" in body) {
+      patch.share_networks = sanitizeShareNetworks(body.share_networks);
     }
 
     const { error } = await supabase.from("quizzes").update(patch).eq("id", quizId);
