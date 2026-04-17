@@ -54,6 +54,7 @@ type QuizLead = { id: string; email: string; first_name: string | null; last_nam
 type QuizData = {
   id: string; title: string; slug: string | null;
   introduction: string | null; cta_text: string | null; cta_url: string | null;
+  start_button_text: string | null;
   privacy_url: string | null; consent_text: string | null;
   capture_heading: string | null; capture_subtitle: string | null;
   capture_first_name: boolean | null; capture_last_name: boolean | null;
@@ -135,6 +136,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [introduction, setIntroduction] = useState("");
   const [ctaText, setCtaText] = useState("");
   const [ctaUrl, setCtaUrl] = useState("");
+  const [startButtonText, setStartButtonText] = useState("");
   const [privacyUrl, setPrivacyUrl] = useState("");
   const [consentText, setConsentText] = useState("");
   const [captureHeading, setCaptureHeading] = useState("");
@@ -205,6 +207,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setQuiz(q); setLeads(quizRes.leads ?? []);
       setTitle(q.title); setIntroduction(q.introduction ?? "");
       setCtaText(q.cta_text ?? ""); setCtaUrl(q.cta_url ?? "");
+      setStartButtonText(q.start_button_text ?? "");
       setPrivacyUrl(q.privacy_url ?? ""); setConsentText(q.consent_text ?? "");
       setCaptureHeading(q.capture_heading ?? ""); setCaptureSubtitle(q.capture_subtitle ?? "");
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
@@ -293,6 +296,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title, introduction, cta_text: ctaText, cta_url: ctaUrl,
+          start_button_text: startButtonText || null,
           privacy_url: privacyUrl || null, consent_text: consentText,
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
           capture_first_name: captureFirstName, capture_last_name: captureLastName,
@@ -550,9 +554,16 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   )}
                   <InlineEdit value={title} onChange={setTitle} className="text-3xl sm:text-5xl font-bold leading-tight" placeholder="Titre du quiz…" />
                   <RichTextEdit value={introduction} onChange={setIntroduction} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
-                  <button className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg mx-auto block transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
-                    Commencer le test
-                  </button>
+                  <div className="flex justify-center">
+                    <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
+                      <InlineEdit
+                        value={startButtonText}
+                        onChange={setStartButtonText}
+                        className="text-white font-semibold text-center"
+                        placeholder="Commencer le test"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 

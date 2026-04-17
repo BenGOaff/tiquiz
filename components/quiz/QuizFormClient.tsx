@@ -278,7 +278,7 @@ export default function QuizFormClient() {
   const [aiObjectives, setAiObjectives] = useState<string[]>([]);
   const [aiTarget, setAiTarget] = useState("");
   const [aiTargetFromProfile, setAiTargetFromProfile] = useState("");
-  const [aiCta, setAiCta] = useState("");
+  const [aiIntention, setAiIntention] = useState("");
   const [aiBonus, setAiBonus] = useState("");
   const [aiLocale, setAiLocale] = useState("fr");
   const [aiFormat, setAiFormat] = useState<"short" | "long">("short");
@@ -581,7 +581,7 @@ export default function QuizFormClient() {
         body: JSON.stringify({
           objective: aiObjectives.join(", "),
           target: aiTarget.trim(),
-          cta: aiCta.trim(),
+          intention: aiIntention.trim(),
           bonus: aiBonus.trim(),
           locale: aiLocale,
           format: aiFormat,
@@ -661,7 +661,7 @@ export default function QuizFormClient() {
             introduction: receivedQuiz.introduction ? String(receivedQuiz.introduction) : null,
             locale: aiLocale,
             address_form: "tu",
-            cta_text: receivedQuiz.cta_text ? String(receivedQuiz.cta_text) : aiCta || null,
+            cta_text: receivedQuiz.cta_text ? String(receivedQuiz.cta_text) : null,
             virality_enabled: Boolean(receivedQuiz.virality_enabled),
             bonus_description: receivedQuiz.bonus_description ? String(receivedQuiz.bonus_description) : null,
             share_message: receivedQuiz.share_message ? String(receivedQuiz.share_message) : null,
@@ -925,10 +925,16 @@ export default function QuizFormClient() {
                 </div>
               </div>
 
-              {/* 5. CTA */}
+              {/* 5. Intention business */}
               <div className="space-y-2">
-                <Label>{t("aiCtaLabel")}</Label>
-                <Input value={aiCta} onChange={(e) => setAiCta(e.target.value)} placeholder={t("aiCtaPlaceholder")} />
+                <Label>{t("aiIntentionLabel")}</Label>
+                <Textarea
+                  value={aiIntention}
+                  onChange={(e) => setAiIntention(e.target.value)}
+                  placeholder={t("aiIntentionPlaceholder")}
+                  className="h-20"
+                />
+                <p className="text-xs text-muted-foreground">{t("aiIntentionHint")}</p>
               </div>
 
               {/* 6. Bonus */}

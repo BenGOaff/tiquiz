@@ -9,6 +9,7 @@ type QuizPromptParams = {
   tone?: string;
   cta?: string;
   bonus?: string;
+  intention?: string;
   questionCount?: number;
   resultCount?: number;
   niche?: string;
@@ -49,6 +50,7 @@ export function buildQuizGenerationPrompt(params: QuizPromptParams): {
     tone = "inspirant",
     cta = "",
     bonus = "",
+    intention = "",
     questionCount = 7,
     resultCount = 3,
     niche = "",
@@ -88,7 +90,7 @@ CONTEXTE PRODUIT : Ce quiz est créé sur Tiquiz, la plateforme qui permet aux e
 LANGUE : Tout le contenu du quiz (titre, introduction, questions, options, résultats, CTA, share_message) DOIT être rédigé en ${langLabel}.
 
 OBJECTIF STRATÉGIQUE : ${objectiveLabel}
-
+${intention ? `\nINTENTION BUSINESS DU CRÉATEUR : ${intention}\nChaque résultat doit amener le participant, de manière naturelle et personnalisée, vers CETTE intention business. Le CTA de chaque résultat doit servir cet objectif concret (et non un CTA générique).\n` : ""}
 FORMAT : ${isShort ? "Quiz COURT (3 à 5 questions) → conversions rapides, légèreté, curiosité maximale." : "Quiz LONG (6 à 10 questions) → plus de valeur, meilleur diagnostic, profondeur d'analyse."}
 
 SEGMENTATION : ${segmentation === "level" ? "Par NIVEAU (débutant, intermédiaire, expert…). Le scoring classe le participant selon son degré de maîtrise." : "Par PROFIL (types de personnalité, styles, archétypes…). Le scoring révèle un profil valorisant et personnalisé."}
@@ -125,7 +127,8 @@ QUESTIONS — RÈGLES :
 RÉSULTATS — RÈGLES :
 - Chaque résultat doit être TRANSFORMATIF : révéler un élément caché, bloquant ou valorisant.
 - Mettre en valeur l'expertise de l'auteur du quiz.
-- Le CTA doit s'intégrer naturellement après le résultat, jamais plaqué artificiellement.
+- Le CTA de chaque résultat doit s'intégrer naturellement après le résultat, jamais plaqué artificiellement.
+- Chaque cta_text est UNIQUE au profil : il doit refléter la promesse adaptée à CE résultat (et servir l'intention business du créateur si elle est fournie). Jamais un CTA générique type "En savoir plus".
 ${segmentation === "level"
     ? "- Scoring par majorité de réponses (le résultat correspondant au result_index le plus fréquent l'emporte)."
     : "- Scoring par profil dominant (le result_index majoritaire détermine le profil révélé)."}
@@ -168,7 +171,8 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
     `NOMBRE DE PROFILS RÉSULTAT : ${resultCount}`,
   ];
 
-  if (cta) userParts.push(`CTA FINAL SOUHAITÉ : ${cta}`);
+  if (intention) userParts.push(`INTENTION BUSINESS : ${intention}\nChaque CTA de résultat doit servir cette intention avec des formulations spécifiques au profil révélé.`);
+  if (cta) userParts.push(`CTA DE RÉFÉRENCE (peut inspirer les CTA par résultat) : ${cta}`);
   if (bonus) userParts.push(`BONUS DE PARTAGE : ${bonus}\nGénère un share_message engageant qui donne envie de partager.`);
   if (niche) userParts.push(`NICHE DU CRÉATEUR : ${niche}`);
   if (mission) userParts.push(`CONTEXTE / PERSONA : ${mission}`);

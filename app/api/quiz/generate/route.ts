@@ -86,6 +86,7 @@ export async function POST(req: NextRequest) {
       tone: resolvedTone,
       cta: String(body.cta ?? ""),
       bonus: String(body.bonus ?? ""),
+      intention: String(body.intention ?? ""),
       questionCount: Math.min(12, Math.max(3, Number(body.questionCount) || defaultQuestionCount)),
       resultCount: Math.min(5, Math.max(2, Number(body.resultCount) || 3)),
       locale: String(body.locale ?? "fr"),

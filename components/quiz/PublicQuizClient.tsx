@@ -48,6 +48,7 @@ type PublicQuizData = {
   introduction: string | null;
   cta_text: string | null;
   cta_url: string | null;
+  start_button_text?: string | null;
   privacy_url: string | null;
   consent_text: string | null;
   virality_enabled: boolean;
@@ -700,7 +701,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             )}
 
             <Button size="lg" className="h-14 px-12 text-lg rounded-full shadow-lg" onClick={() => { trackEvent("start"); setStep("quiz"); }}>
-              {t.start}
+              {quiz.start_button_text?.trim() || t.start}
             </Button>
         </div>
         <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} />
