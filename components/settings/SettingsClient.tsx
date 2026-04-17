@@ -178,8 +178,10 @@ export default function SettingsClient() {
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       setBrandLogoUrl(urlData.publicUrl);
       toast.success("Logo chargé");
-    } catch {
-      toast.error("Erreur lors du chargement du logo");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Logo upload failed:", err);
+      toast.error(`Erreur upload logo : ${msg}`);
     } finally {
       setUploadingLogo(false);
     }

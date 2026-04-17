@@ -5,18 +5,15 @@ import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Loader2, ArrowLeft, Gift, CheckCircle2, Copy, Check } from "lucide-react";
 import {
-  Loader2,
-  ArrowRight,
-  ArrowLeft,
-  Gift,
-  CheckCircle2,
-  Mail,
-  Copy,
-  Check,
-} from "lucide-react";
+  resolveQuizBranding,
+  googleFontHref,
+  cssFontFamily,
+  hexToHslTriplet,
+  type QuizBranding,
+} from "@/lib/quizBranding";
 
 
 
@@ -57,6 +54,8 @@ type PublicQuizData = {
   capture_last_name?: boolean | null;
   capture_phone?: boolean | null;
   capture_country?: boolean | null;
+  custom_footer_text?: string | null;
+  custom_footer_url?: string | null;
   questions: QuizQuestion[];
   results: QuizResult[];
 };
@@ -382,6 +381,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   const [quiz, setQuiz] = useState<PublicQuizData | null>(previewData ?? null);
   const [loading, setLoading] = useState(!previewData);
   const [error, setError] = useState<string | null>(null);
+  const [branding, setBranding] = useState<QuizBranding>(() => resolveQuizBranding(null, null));
 
   const [step, setStep] = useState<Step>("intro");
   const [currentQ, setCurrentQ] = useState(0);
@@ -400,6 +400,31 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   const [bonusUnlocked, setBonusUnlocked] = useState(false);
 
   const t = getT(quiz?.locale, quiz?.address_form);
+
+  // ─── Dynamic Google Font injection (WYSIWYG with editor preview) ───
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const href = googleFontHref(branding.font);
+    // Avoid duplicate <link> tags when font changes or hot-reloads
+    let link = document.head.querySelector<HTMLLinkElement>(
+      'link[data-tiquiz-font="1"]',
+    );
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.setAttribute("data-tiquiz-font", "1");
+      document.head.appendChild(link);
+    }
+    if (link.href !== href) link.href = href;
+  }, [branding.font]);
+
+  // ─── Root style applied to every step (font + brand color + background) ───
+  const hslPrimary = hexToHslTriplet(branding.primaryColor);
+  const rootStyle: React.CSSProperties = {
+    fontFamily: cssFontFamily(branding.font),
+    backgroundColor: branding.backgroundColor,
+    ...(hslPrimary ? ({ ["--primary" as string]: hslPrimary } as React.CSSProperties) : {}),
+  };
 
   // ─── Funnel tracking (fire & forget, non-blocking) ───
   const trackedRef = useCallback(() => {
@@ -444,6 +469,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
           results: json.results ?? [],
         };
         setQuiz(quizData);
+        if (json.branding) setBranding(json.branding as QuizBranding);
       } catch {
         setError(getT(null).loadError);
       } finally {
@@ -587,7 +613,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30">
+      <div className="min-h-screen flex items-center justify-center" style={rootStyle}>
         <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -595,7 +621,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
   if (error || !quiz) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30 p-6">
+      <div className="min-h-screen flex items-center justify-center p-6" style={rootStyle}>
         <Card className="p-8 max-w-md text-center">
           <p className="text-muted-foreground">{error || t.quizNotFound}</p>
         </Card>
@@ -621,8 +647,21 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     });
 
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 px-4 sm:px-6">
+      <div
+        className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        style={rootStyle}
+      >
         <div className="max-w-2xl w-full space-y-8 text-center py-16 sm:py-24">
+            {branding.logoUrl && (
+              <div className="flex justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={branding.logoUrl}
+                  alt=""
+                  className="max-h-16 w-auto object-contain"
+                />
+              </div>
+            )}
             <h1 className="text-3xl sm:text-5xl font-bold leading-tight">{quiz.title}</h1>
 
             {descLines.length > 0 && (
@@ -650,7 +689,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               {t.start}
             </Button>
         </div>
-        <TiquizFooter locale={quiz.locale} />
+        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} />
       </div>
     );
   }
@@ -663,7 +702,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     const hasMultipleOptions = q.options.length >= 3;
 
     return (
-      <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/30">
+      <div className="min-h-screen flex flex-col" style={rootStyle}>
           {/* Progress bar fixed top */}
           <div className="fixed top-0 left-0 right-0 z-10">
             <Progress value={progress} className="h-1.5 rounded-none" />
@@ -713,7 +752,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   // STEP: Email capture
   if (step === "email") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 px-4 sm:px-6">
+      <div
+        className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        style={rootStyle}
+      >
         <div className="max-w-lg w-full space-y-6 py-16 sm:py-24">
             <h2 className="text-2xl sm:text-4xl font-bold text-center">
               {quiz.capture_heading || t.captureHeadingDefault}
@@ -822,7 +864,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               </p>
             )}
           </div>
-        <TiquizFooter locale={quiz.locale} />
+        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} />
       </div>
     );
   }
@@ -830,9 +872,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   // STEP: Result
   if (step === "result") {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-background to-muted/30 px-4 sm:px-6">
-        
-        
+      <div
+        className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        style={rootStyle}
+      >
         <div className="max-w-2xl w-full py-16 sm:py-24 space-y-8">
             <div className="space-y-3">
               <h2 className="text-3xl sm:text-5xl font-bold leading-tight text-primary">
@@ -962,7 +1005,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             </p>
           )}
           </div>
-        <TiquizFooter locale={quiz.locale} />
+        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} />
       </div>
     );
   }
@@ -1046,7 +1089,7 @@ function TiquizFooter({ locale, customText, customUrl }: { locale?: string | nul
   return (
     <p className="text-center text-xs text-muted-foreground/60 mt-6">
       <a
-        href="https://quiz.tipote.com"
+        href="https://tiquiz.com"
         target="_blank"
         rel="noopener noreferrer"
         className="hover:text-muted-foreground transition-colors"

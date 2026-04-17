@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { resolveQuizBranding } from "@/lib/quizBranding";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -13,6 +14,33 @@ export const maxDuration = 30;
 type RouteContext = { params: Promise<{ quizId: string }> };
 
 const SIO_BASE = "https://api.systeme.io/api";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resolves the "[quizId]" URL segment — which may be a UUID or a custom slug —
+ * to the real quiz row's id. Returns null if not found/inactive.
+ */
+async function resolveQuizId(
+  admin: typeof supabaseAdmin,
+  slugOrId: string,
+  opts: { requireActive?: boolean } = {},
+): Promise<string | null> {
+  const needle = slugOrId.trim();
+  if (!needle) return null;
+
+  // Try UUID direct first
+  if (UUID_RE.test(needle)) {
+    const q = admin.from("quizzes").select("id").eq("id", needle);
+    const { data } = opts.requireActive ? await q.eq("status", "active").maybeSingle() : await q.maybeSingle();
+    if (data?.id) return data.id as string;
+  }
+
+  // Fallback: slug (case-insensitive)
+  const q = admin.from("quizzes").select("id").ilike("slug", needle);
+  const { data } = opts.requireActive ? await q.eq("status", "active").maybeSingle() : await q.maybeSingle();
+  return (data?.id as string) ?? null;
+}
 
 // ── Systeme.io helpers ──────────────────────────────────────────
 
@@ -168,11 +196,16 @@ async function addToSioCommunity(apiKey: string, communityId: string, contactId:
 
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
-    const { quizId } = await context.params;
+    const { quizId: slugOrId } = await context.params;
     const admin = supabaseAdmin;
 
+    const quizId = await resolveQuizId(admin, slugOrId, { requireActive: true });
+    if (!quizId) {
+      return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
+    }
+
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,user_id,title,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,share_message,locale,address_form,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country").eq("id", quizId).eq("status", "active").maybeSingle(),
+      admin.from("quizzes").select("id,user_id,title,introduction,cta_text,cta_url,privacy_url,consent_text,virality_enabled,bonus_description,share_message,locale,address_form,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country,slug,brand_font,brand_color_primary,brand_color_background,custom_footer_text,custom_footer_url,share_networks,og_description,og_image_url").eq("id", quizId).maybeSingle(),
       admin.from("quiz_questions").select("id,question_text,options,sort_order").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,cta_text,cta_url,sort_order").eq("quiz_id", quizId).order("sort_order"),
     ]);
@@ -181,39 +214,69 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
     }
 
-    // Resolve address_form (quiz-level overrides profile-level) + fallback privacy_url
-    const quizUserId = (quizRes.data as Record<string, unknown>).user_id as string | undefined;
-    const quizAddressForm = (quizRes.data as Record<string, unknown>).address_form as string | null;
+    // Resolve address_form (quiz-level overrides profile-level) + fallback privacy_url + branding
+    const quizRow = quizRes.data as Record<string, unknown>;
+    const quizUserId = quizRow.user_id as string | undefined;
+    const quizAddressForm = quizRow.address_form as string | null;
     let addressForm = quizAddressForm === "tu" || quizAddressForm === "vous" ? quizAddressForm : "tu";
     let fallbackPrivacyUrl = "";
+    let profileRow: Record<string, unknown> | null = null;
 
     if (quizUserId) {
       const { data: bp } = await admin
         .from("profiles")
-        .select("address_form, privacy_url")
+        .select("address_form, privacy_url, brand_logo_url, brand_font, brand_color_primary, plan")
         .eq("user_id", quizUserId)
         .maybeSingle();
-      // Only use profile address_form if quiz doesn't have one
+      profileRow = (bp as Record<string, unknown>) ?? null;
       if (!quizAddressForm) {
-        addressForm = (bp as Record<string, unknown>)?.address_form === "vous" ? "vous" : "tu";
+        addressForm = profileRow?.address_form === "vous" ? "vous" : "tu";
       }
-      fallbackPrivacyUrl = String((bp as Record<string, unknown>)?.privacy_url ?? "").trim();
+      fallbackPrivacyUrl = String(profileRow?.privacy_url ?? "").trim();
     }
 
-    // Increment view count (non-blocking)
-    admin.from("quizzes").update({ views_count: ((quizRes.data as Record<string, unknown>).views_count as number ?? 0) + 1 }).eq("id", quizId).then(() => {});
+    // Compute resolved branding for the visitor
+    const branding = resolveQuizBranding(
+      {
+        brand_font: quizRow.brand_font as string | null,
+        brand_color_primary: quizRow.brand_color_primary as string | null,
+        brand_color_background: quizRow.brand_color_background as string | null,
+      },
+      {
+        brand_font: profileRow?.brand_font as string | null,
+        brand_color_primary: profileRow?.brand_color_primary as string | null,
+        brand_logo_url: profileRow?.brand_logo_url as string | null,
+      },
+    );
 
-    const { user_id: _uid, ...quizPublic } = quizRes.data as Record<string, unknown>;
+    // Only paid plans can override the Tiquiz footer. Free plan → footer ignored.
+    const plan = String(profileRow?.plan ?? "free").trim();
+    const isPaid = plan === "lifetime" || plan === "monthly" || plan === "yearly";
+    const customFooterText = isPaid ? (quizRow.custom_footer_text as string | null) : null;
+    const customFooterUrl = isPaid ? (quizRow.custom_footer_url as string | null) : null;
+
+    // Increment view count (non-blocking)
+    admin.from("quizzes").update({ views_count: (quizRow.views_count as number ?? 0) + 1 }).eq("id", quizId).then(() => {});
+
+    const { user_id: _uid, ...quizPublic } = quizRow;
+    void _uid;
     const effectivePrivacyUrl = String(quizPublic.privacy_url ?? "").trim() || fallbackPrivacyUrl;
 
     return NextResponse.json({
       ok: true,
-      quiz: { ...quizPublic, address_form: addressForm, privacy_url: effectivePrivacyUrl || null },
+      quiz: {
+        ...quizPublic,
+        address_form: addressForm,
+        privacy_url: effectivePrivacyUrl || null,
+        custom_footer_text: customFooterText,
+        custom_footer_url: customFooterUrl,
+      },
       questions: (questionsRes.data ?? []).map((q: Record<string, unknown>) => ({
         ...q,
         options: q.options as { text: string; result_index: number }[],
       })),
       results: resultsRes.data ?? [],
+      branding,
     });
   } catch (e) {
     return NextResponse.json(
@@ -227,7 +290,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
-    const { quizId } = await context.params;
+    const { quizId: slugOrId } = await context.params;
     const admin = supabaseAdmin;
 
     let body: Record<string, unknown>;
@@ -242,11 +305,15 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Valid email required" }, { status: 400 });
     }
 
+    const quizId = await resolveQuizId(admin, slugOrId, { requireActive: true });
+    if (!quizId) {
+      return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
+    }
+
     const { data: quiz } = await admin
       .from("quizzes")
       .select("id, user_id, title, sio_capture_tag")
       .eq("id", quizId)
-      .eq("status", "active")
       .maybeSingle();
 
     if (!quiz) {
@@ -411,8 +478,13 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
-    const { quizId } = await context.params;
+    const { quizId: slugOrId } = await context.params;
     const admin = supabaseAdmin;
+
+    const quizId = await resolveQuizId(admin, slugOrId);
+    if (!quizId) {
+      return NextResponse.json({ ok: false, error: "Quiz not found" }, { status: 404 });
+    }
 
     let body: Record<string, unknown>;
     try {
