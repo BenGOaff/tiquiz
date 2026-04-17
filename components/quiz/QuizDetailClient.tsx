@@ -11,10 +11,28 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Copy, Eye, Play, CheckCircle, Users, Share2, Download,
-  Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save,
+  Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { SioTagPicker } from "@/components/ui/sio-tag-picker";
+import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import {
   ALLOWED_SHARE_NETWORKS,
@@ -72,6 +90,34 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style 
     <div onClick={() => setEditing(true)} style={style} className={`${className || ""} cursor-text rounded-lg hover:ring-2 hover:ring-primary/20 hover:bg-primary/5 px-2 py-1 transition-all group relative min-h-[1.2em]`}>
       {value || <span className="opacity-40 italic">{placeholder}</span>}
       <Pencil className="absolute top-1 right-1 w-3 h-3 text-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+    </div>
+  );
+}
+
+// Compact draggable row for the sidebar question list
+function SortableSidebarQuestion({ id, index, label, onClick, onRemove, canDelete }: {
+  id: string; index: number; label: string; onClick: () => void; onRemove: () => void; canDelete: boolean;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-1 group">
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted touch-none" aria-label="Réordonner">
+        <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+      </button>
+      <button onClick={onClick} className="flex-1 text-left px-2 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors truncate">
+        <span className="text-xs text-muted-foreground mr-2">{index + 1}</span>
+        {label}
+      </button>
+      {canDelete && (
+        <button onClick={onRemove} className="opacity-0 group-hover:opacity-100 text-destructive p-1 rounded hover:bg-destructive/10">
+          <Trash2 className="w-3 h-3" />
+        </button>
+      )}
     </div>
   );
 }
@@ -223,8 +269,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       });
       setBrandLogoUrl(publicUrl);
       toast.success("Logo chargé");
-    } catch {
-      toast.error("Erreur upload logo");
+    } catch (err) {
+      console.error("Logo upload failed:", err);
+      const msg = err instanceof Error ? err.message : "erreur inconnue";
+      toast.error(`Erreur upload logo : ${msg}`);
     } finally {
       setUploadingLogo(false);
     }
@@ -293,6 +341,22 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/q/${publicSegment}` : `/q/${publicSegment}`;
   const handleCopyLink = () => { navigator.clipboard.writeText(publicUrl).then(() => { setCopied(true); toast.success("Lien copié !"); setTimeout(() => setCopied(false), 2000); }); };
 
+  // Drag-and-drop sensors for the sidebar question list
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleQuestionDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const ids = editQuestions.map((_, i) => `q-${i}`);
+    const oldIndex = ids.indexOf(String(active.id));
+    const newIndex = ids.indexOf(String(over.id));
+    if (oldIndex < 0 || newIndex < 0) return;
+    setEditQuestions((prev) => arrayMove(prev, oldIndex, newIndex).map((q, i) => ({ ...q, sort_order: i })));
+  };
+
   // Helpers
   const updateQ = (i: number, v: string) => setEditQuestions(p => p.map((q, qi) => qi === i ? { ...q, question_text: v } : q));
   const updateOpt = (qi: number, oi: number, v: string) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, text: v } : o) }));
@@ -360,17 +424,23 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 <button onClick={() => scrollToSection("intro")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors">
                   <span className="text-xs text-muted-foreground mr-2">1</span>Introduction
                 </button>
-                {/* Questions */}
+                {/* Questions (drag-and-drop to reorder) */}
                 <div className="flex items-center justify-between"><span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Questions</span><button onClick={addQuestion} className="text-primary hover:bg-primary/10 rounded p-0.5"><Plus className="w-4 h-4" /></button></div>
-                {editQuestions.map((q, i) => (
-                  <div key={i} className="flex items-center gap-1 group">
-                    <button onClick={() => scrollToSection(`q-${i}`)} className="flex-1 text-left px-3 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors truncate">
-                      <span className="text-xs text-muted-foreground mr-2">{i+1}</span>
-                      {q.question_text ? q.question_text.slice(0,35) + (q.question_text.length > 35 ? "…" : "") : "Question vide"}
-                    </button>
-                    {editQuestions.length > 1 && <button onClick={() => removeQuestion(i)} className="opacity-0 group-hover:opacity-100 text-destructive p-1 rounded hover:bg-destructive/10"><Trash2 className="w-3 h-3" /></button>}
-                  </div>
-                ))}
+                <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleQuestionDragEnd}>
+                  <SortableContext items={editQuestions.map((_, i) => `q-${i}`)} strategy={verticalListSortingStrategy}>
+                    {editQuestions.map((q, i) => (
+                      <SortableSidebarQuestion
+                        key={`q-${i}`}
+                        id={`q-${i}`}
+                        index={i}
+                        label={q.question_text ? q.question_text.slice(0, 35) + (q.question_text.length > 35 ? "…" : "") : "Question vide"}
+                        onClick={() => scrollToSection(`q-${i}`)}
+                        onRemove={() => removeQuestion(i)}
+                        canDelete={editQuestions.length > 1}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
                 {/* Accès aux résultats */}
                 <div className="font-semibold text-xs uppercase tracking-wider text-muted-foreground pt-2">Accès aux résultats</div>
                 <button onClick={() => scrollToSection("capture")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors">
@@ -454,6 +524,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 {viralityEnabled && <div className="space-y-2 pl-3 border-l-2 border-primary/20">
                   <Input value={bonusDescription} onChange={e => setBonusDescription(e.target.value)} placeholder="Description du bonus" className="text-xs" />
                   <Textarea value={shareMessage} onChange={e => setShareMessage(e.target.value)} placeholder="Message de partage" className="text-xs" rows={2} />
+                  <div className="pt-1">
+                    <Label className="text-[11px] font-semibold">Tag Systeme.io après partage</Label>
+                    <p className="text-[10px] text-muted-foreground mb-1">Ajouté au contact quand il partage le quiz.</p>
+                    <SioTagPicker value={sioShareTagName} onChange={setSioShareTagName} />
+                  </div>
                 </div>}
                 <div className="space-y-2"><Label className="text-xs">CTA global</Label><Input value={ctaText} onChange={e => setCtaText(e.target.value)} placeholder="Texte du CTA" className="text-xs" /><Input value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} placeholder="URL du CTA" className="text-xs" /></div>
               </div>)}
@@ -474,8 +549,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     </div>
                   )}
                   <InlineEdit value={title} onChange={setTitle} className="text-3xl sm:text-5xl font-bold leading-tight" placeholder="Titre du quiz…" />
-                  <InlineEdit value={introduction} onChange={setIntroduction} multiline className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
-                  <p className="text-sm text-muted-foreground">{editQuestions.length} questions — ~{Math.max(1, Math.ceil(editQuestions.length * 0.5))} min</p>
+                  <RichTextEdit value={introduction} onChange={setIntroduction} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
                   <button className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg mx-auto block transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
                     Commencer le test
                   </button>
@@ -517,9 +591,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           ))}
                         </div>
                         <button onClick={() => addOpt(qi)} className="text-xs hover:underline" style={{ color: pc }}>+ Ajouter une option</button>
-                        <div className="text-center pt-4">
-                          <button className="px-8 py-3 rounded-full text-white font-semibold text-base" style={{ backgroundColor: pc }}>Suivant</button>
-                        </div>
+                        <p className="text-center text-xs text-muted-foreground pt-4 italic">Un clic sur une option passe à la question suivante.</p>
                       </div>
                     </div>
                   </div>
@@ -556,9 +628,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 <div key={ri} ref={el => { resultRefs.current[ri] = el; }} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                   <div className="max-w-2xl w-full space-y-6">
                     <InlineEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder="Titre du résultat…" />
-                    <InlineEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} multiline className="text-muted-foreground text-lg leading-relaxed" placeholder="Description…" />
-                    <div className="p-5 rounded-xl bg-muted/50 border"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Prise de conscience</p><InlineEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} multiline className="text-sm leading-relaxed" placeholder="Insight…" /></div>
-                    <div className="p-5 rounded-xl border" style={{ backgroundColor: `${pc}08`, borderColor: `${pc}30` }}><p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: `${pc}99` }}>Et si...</p><InlineEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} multiline className="text-sm leading-relaxed" placeholder="Projection…" /></div>
+                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} className="text-muted-foreground text-lg leading-relaxed" placeholder="Description…" />
+                    <div className="p-5 rounded-xl bg-muted/50 border"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Prise de conscience</p><RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} className="text-sm leading-relaxed" placeholder="Insight…" /></div>
+                    <div className="p-5 rounded-xl border" style={{ backgroundColor: `${pc}08`, borderColor: `${pc}30` }}><p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: `${pc}99` }}>Et si...</p><RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} className="text-sm leading-relaxed" placeholder="Projection…" /></div>
                     <div className="space-y-2">
                       <button className="w-full px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>
                         <InlineEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} className="text-white font-semibold text-center" placeholder="Texte du CTA…" />
@@ -569,9 +641,17 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 </div>
               ))}
 
-              {/* Footer Tiquiz */}
-              <div className="text-center py-8 border-t">
-                <p className="text-xs text-muted-foreground/50">Ce quiz vous est offert par <span className="font-semibold">Tiquiz</span></p>
+              {/* Footer Tiquiz — creator logo when set, Tiquiz logo otherwise */}
+              <div className="text-center py-8 border-t space-y-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={brandLogoUrl || "/tiquiz-logo.png"}
+                  alt=""
+                  className="max-h-10 w-auto object-contain mx-auto"
+                />
+                <p className="text-xs text-muted-foreground/50">
+                  Ce quiz vous est offert par <span className="font-semibold">{brandLogoUrl ? "" : "Tiquiz"}</span>
+                </p>
               </div>
             </div>
           </main>

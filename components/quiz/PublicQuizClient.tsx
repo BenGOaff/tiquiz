@@ -14,6 +14,13 @@ import {
   hexToHslTriplet,
   type QuizBranding,
 } from "@/lib/quizBranding";
+import { sanitizeRichText } from "@/lib/richText";
+
+// Rich text fields contain raw HTML tags (<p>, <b>, <a>, …). Strings without any
+// tag are treated as legacy plain text so the old ✓/•/- bullet rendering still
+// works for quizzes created before the rich-text editor landed.
+const HTML_TAG_RE = /<\/?[a-zA-Z][^>]*>/;
+const isHtml = (s: string | null | undefined) => !!s && HTML_TAG_RE.test(s);
 
 
 
@@ -633,8 +640,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
   // STEP: Intro
   if (step === "intro") {
+    const introRich = isHtml(quiz.introduction);
     // Split introduction into lines — lines starting with ✓/✔/- become checkmarks
-    const introLines = (quiz.introduction ?? "").split("\n").filter((l) => l.trim());
+    // (legacy plain-text rendering kept for quizzes created before the rich-text editor)
+    const introLines = introRich ? [] : (quiz.introduction ?? "").split("\n").filter((l) => l.trim());
     const bulletLines: string[] = [];
     const descLines: string[] = [];
     introLines.forEach((line) => {
@@ -664,32 +673,37 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             )}
             <h1 className="text-3xl sm:text-5xl font-bold leading-tight">{quiz.title}</h1>
 
-            {descLines.length > 0 && (
-              <p className="text-muted-foreground text-lg leading-relaxed whitespace-pre-line max-w-xl mx-auto">
-                {descLines.join("\n")}
-              </p>
-            )}
+            {introRich ? (
+              <div
+                className="tiquiz-rich text-muted-foreground text-lg leading-relaxed max-w-xl mx-auto"
+                dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.introduction) }}
+              />
+            ) : (
+              <>
+                {descLines.length > 0 && (
+                  <p className="text-muted-foreground text-lg leading-relaxed whitespace-pre-line max-w-xl mx-auto">
+                    {descLines.join("\n")}
+                  </p>
+                )}
 
-            {bulletLines.length > 0 && (
-              <ul className="space-y-3 text-left max-w-md mx-auto">
-                {bulletLines.map((line, i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-                    <span className="text-muted-foreground">{line}</span>
-                  </li>
-                ))}
-              </ul>
+                {bulletLines.length > 0 && (
+                  <ul className="space-y-3 text-left max-w-md mx-auto">
+                    {bulletLines.map((line, i) => (
+                      <li key={i} className="flex items-start gap-3">
+                        <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                        <span className="text-muted-foreground">{line}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </>
             )}
-
-            <p className="text-sm text-muted-foreground">
-              {totalQ} {t.questions} — ~{Math.max(1, Math.ceil(totalQ * 0.5))} {t.min}
-            </p>
 
             <Button size="lg" className="h-14 px-12 text-lg rounded-full shadow-lg" onClick={() => { trackEvent("start"); setStep("quiz"); }}>
               {t.start}
             </Button>
         </div>
-        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} />
+        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} />
       </div>
     );
   }
@@ -864,7 +878,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               </p>
             )}
           </div>
-        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} />
+        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} />
       </div>
     );
   }
@@ -884,20 +898,41 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             </div>
 
             {resultProfile?.description && (
-              <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">{resultProfile.description}</p>
+              isHtml(resultProfile.description) ? (
+                <div
+                  className="tiquiz-rich text-muted-foreground text-base leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(resultProfile.description) }}
+                />
+              ) : (
+                <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">{resultProfile.description}</p>
+              )
             )}
 
             {resultProfile?.insight && (
               <div className="p-4 rounded-xl bg-muted/50 border">
                 <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5">{t.insight}</p>
-                <p className="text-sm leading-relaxed whitespace-pre-line">{resultProfile.insight}</p>
+                {isHtml(resultProfile.insight) ? (
+                  <div
+                    className="tiquiz-rich text-sm leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(resultProfile.insight) }}
+                  />
+                ) : (
+                  <p className="text-sm leading-relaxed whitespace-pre-line">{resultProfile.insight}</p>
+                )}
               </div>
             )}
 
             {resultProfile?.projection && (
               <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
                 <p className="text-xs font-bold uppercase tracking-widest text-primary/70 mb-1.5">{t.projection}</p>
-                <p className="text-sm leading-relaxed whitespace-pre-line">{resultProfile.projection}</p>
+                {isHtml(resultProfile.projection) ? (
+                  <div
+                    className="tiquiz-rich text-sm leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(resultProfile.projection) }}
+                  />
+                ) : (
+                  <p className="text-sm leading-relaxed whitespace-pre-line">{resultProfile.projection}</p>
+                )}
               </div>
             )}
 
@@ -1005,7 +1040,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             </p>
           )}
           </div>
-        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} />
+        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} />
       </div>
     );
   }
@@ -1073,29 +1108,43 @@ const tiquizFooterTexts: Record<string, string> = {
   ar: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u0645\u0642\u062f\u0645 \u0644\u0643\u0645 \u0645\u0646 Tiquiz",
 };
 
-function TiquizFooter({ locale, customText, customUrl }: { locale?: string | null; customText?: string | null; customUrl?: string | null }) {
+function TiquizFooter({ locale, customText, customUrl, logoUrl }: { locale?: string | null; customText?: string | null; customUrl?: string | null; logoUrl?: string | null }) {
   // Paid plans: show custom footer if set
   if (customText && customUrl) {
     return (
-      <p className="text-center text-xs text-muted-foreground/60 mt-6">
-        <a href={customUrl} target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
-          {customText}
-        </a>
-      </p>
+      <div className="text-center mt-6 space-y-2">
+        {logoUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoUrl} alt="" className="max-h-10 w-auto object-contain mx-auto" />
+        )}
+        <p className="text-xs text-muted-foreground/60">
+          <a href={customUrl} target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">
+            {customText}
+          </a>
+        </p>
+      </div>
     );
   }
-  // Free plan or no custom: show Tiquiz branding
+  // Free plan or no custom: show Tiquiz branding (with creator logo, or Tiquiz fallback)
   const text = tiquizFooterTexts[locale ?? "fr"] ?? tiquizFooterTexts.fr;
   return (
-    <p className="text-center text-xs text-muted-foreground/60 mt-6">
-      <a
-        href="https://tiquiz.com"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="hover:text-muted-foreground transition-colors"
-      >
-        {text}
-      </a>
-    </p>
+    <div className="text-center mt-6 space-y-2">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={logoUrl || "/tiquiz-logo.png"}
+        alt=""
+        className="max-h-10 w-auto object-contain mx-auto"
+      />
+      <p className="text-xs text-muted-foreground/60">
+        <a
+          href="https://tiquiz.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-muted-foreground transition-colors"
+        >
+          {text}
+        </a>
+      </p>
+    </div>
   );
 }
