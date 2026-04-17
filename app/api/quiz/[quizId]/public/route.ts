@@ -244,7 +244,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     const { data: quiz } = await admin
       .from("quizzes")
-      .select("id, user_id, title")
+      .select("id, user_id, title, sio_capture_tag")
       .eq("id", quizId)
       .eq("status", "active")
       .maybeSingle();
@@ -295,16 +295,11 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     // ── Auto-send to Systeme.io (non-blocking) ──
-    if (resultId && lead?.id) {
+    if (lead?.id) {
       const leadId = lead.id;
+      const captureTag = String((quiz as Record<string, unknown>).sio_capture_tag ?? "").trim();
       (async () => {
         try {
-          const { data: result } = await admin
-            .from("quiz_results")
-            .select("sio_tag_name, sio_course_id, sio_community_id, title")
-            .eq("id", resultId)
-            .maybeSingle();
-
           const { data: profile } = await admin
             .from("profiles")
             .select("sio_user_api_key")
@@ -314,29 +309,76 @@ export async function POST(req: NextRequest, context: RouteContext) {
           const apiKey = String((profile as Record<string, unknown>)?.sio_user_api_key ?? "").trim();
           if (!apiKey) return;
 
-          const sioTagName = String((result as Record<string, unknown>)?.sio_tag_name ?? "").trim();
-          const courseId = String((result as Record<string, unknown>)?.sio_course_id ?? "").trim();
-          const communityId = String((result as Record<string, unknown>)?.sio_community_id ?? "").trim();
-          const resultTitle = String((result as Record<string, unknown>)?.title ?? "").trim();
-
-          let sioContactId: number | null = null;
-          if (sioTagName) {
-            sioContactId = await applyTagToContact(apiKey, email, sioTagName, {
-              firstName: firstName || undefined,
-              surname: lastName || undefined,
-              phoneNumber: phone || undefined,
-              country: country || undefined,
-            });
-          } else {
-            sioContactId = await ensureSioContact(apiKey, email, {
-              firstName: firstName || undefined,
-              surname: lastName || undefined,
-              phoneNumber: phone || undefined,
-              country: country || undefined,
-            });
+          // Fetch result details (if any)
+          let sioTagName = "";
+          let courseId = "";
+          let communityId = "";
+          let resultTitle = "";
+          if (resultId) {
+            const { data: result } = await admin
+              .from("quiz_results")
+              .select("sio_tag_name, sio_course_id, sio_community_id, title")
+              .eq("id", resultId)
+              .maybeSingle();
+            sioTagName = String((result as Record<string, unknown>)?.sio_tag_name ?? "").trim();
+            courseId = String((result as Record<string, unknown>)?.sio_course_id ?? "").trim();
+            communityId = String((result as Record<string, unknown>)?.sio_community_id ?? "").trim();
+            resultTitle = String((result as Record<string, unknown>)?.title ?? "").trim();
           }
 
+          // Collect per-answer tags by looking up the quiz's questions + chosen options
+          const answerTags: string[] = [];
+          if (answers && answers.length > 0) {
+            const { data: questions } = await admin
+              .from("quiz_questions")
+              .select("options, sort_order")
+              .eq("quiz_id", quizId)
+              .order("sort_order");
+            const qArr = (questions ?? []) as Record<string, unknown>[];
+            for (const a of answers as Record<string, unknown>[]) {
+              const qIdx = Number(a?.question_index);
+              const oIdx = Number(a?.option_index);
+              if (!Number.isFinite(qIdx) || !Number.isFinite(oIdx)) continue;
+              const q = qArr[qIdx];
+              if (!q) continue;
+              const opts = (q.options as Record<string, unknown>[]) ?? [];
+              const opt = opts[oIdx];
+              if (!opt) continue;
+              const tag = String(opt.sio_tag_name ?? "").trim();
+              if (tag) answerTags.push(tag);
+            }
+          }
+
+          // Ensure contact once, then apply all tags (result + capture + per-answer), deduped
+          const sioContactId = await ensureSioContact(apiKey, email, {
+            firstName: firstName || undefined,
+            surname: lastName || undefined,
+            phoneNumber: phone || undefined,
+            country: country || undefined,
+          });
           if (!sioContactId) return;
+
+          const tagsToApply = Array.from(
+            new Set(
+              [sioTagName, captureTag, ...answerTags]
+                .map((t) => t.trim())
+                .filter((t) => t.length > 0),
+            ),
+          );
+
+          for (const tagName of tagsToApply) {
+            try {
+              const tagId = await ensureSioTag(apiKey, tagName);
+              if (!tagId) continue;
+              await sioFetch(apiKey, `/contacts/${sioContactId}/tags`, {
+                method: "POST",
+                body: { tagId },
+              });
+            } catch (e) {
+              console.error("[Systeme.io tag apply] Error:", e);
+            }
+          }
+
           if (resultTitle) await enrichSioContact(apiKey, sioContactId, resultTitle);
           if (courseId) await enrollInSioCourse(apiKey, courseId, sioContactId);
           if (communityId) await addToSioCommunity(apiKey, communityId, sioContactId);
@@ -347,7 +389,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
             .update({
               sio_synced: true,
               sio_synced_at: new Date().toISOString(),
-              sio_tag_applied: sioTagName || null,
+              sio_tag_applied: tagsToApply.join(",") || null,
             })
             .eq("id", leadId);
         } catch (e) {

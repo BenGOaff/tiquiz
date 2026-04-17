@@ -23,7 +23,16 @@
     "draft": "Borrador",
     "active": "Activo",
     "aiGeneratingTitle": "La IA está creando tu quiz...",
-    "aiGeneratingSubtitle": "Tarda solo unos segundos. Estamos preparando preguntas atractivas y resultados que aportan valor real."
+    "aiGeneratingSubtitle": "Tarda solo unos segundos. Estamos preparando preguntas atractivas y resultados que aportan valor real.",
+    "sioNoApiKey": "Clave API de Systeme.io no configurada.",
+    "sioGoToSettings": "Configurar en Ajustes",
+    "sioTagsError": "No se pueden cargar las etiquetas.",
+    "sioRetry": "Reintentar",
+    "sioNewTagPlaceholder": "Nombre de la nueva etiqueta",
+    "sioTagsLoading": "Cargando…",
+    "sioLoadTags": "Cargar mis etiquetas",
+    "sioNoTag": "— Ninguna etiqueta —",
+    "sioCreateTag": "Crear una nueva etiqueta"
   },
   "nav": {
     "quizzes": "Mis quiz",

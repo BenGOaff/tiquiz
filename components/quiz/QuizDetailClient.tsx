@@ -17,13 +17,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import SioSelectors from "@/components/quiz/SioSelectors";
+import { SioTagPicker } from "@/components/ui/sio-tag-picker";
 
 // Types
-type QuizOption = { text: string; result_index: number };
+type QuizOption = { text: string; result_index: number; sio_tag_name?: string | null };
 type QuizQuestion = { id?: string; question_text: string; options: QuizOption[]; sort_order: number };
 type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number };
 type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_title: string | null; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
-type QuizData = { id: string; title: string; introduction: string | null; cta_text: string | null; cta_url: string | null; privacy_url: string | null; consent_text: string | null; capture_heading: string | null; capture_subtitle: string | null; capture_first_name: boolean | null; capture_last_name: boolean | null; capture_phone: boolean | null; capture_country: boolean | null; virality_enabled: boolean; bonus_description: string | null; share_message: string | null; locale: string | null; sio_share_tag_name: string | null; status: string; views_count: number; starts_count: number; completions_count: number; shares_count: number; questions: QuizQuestion[]; results: QuizResult[] };
+type QuizData = { id: string; title: string; introduction: string | null; cta_text: string | null; cta_url: string | null; privacy_url: string | null; consent_text: string | null; capture_heading: string | null; capture_subtitle: string | null; capture_first_name: boolean | null; capture_last_name: boolean | null; capture_phone: boolean | null; capture_country: boolean | null; virality_enabled: boolean; bonus_description: string | null; share_message: string | null; locale: string | null; sio_share_tag_name: string | null; sio_capture_tag: string | null; status: string; views_count: number; starts_count: number; completions_count: number; shares_count: number; questions: QuizQuestion[]; results: QuizResult[] };
 interface QuizDetailClientProps { quizId: string; }
 
 // Inline edit: click to edit text directly on the preview
@@ -77,6 +78,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [shareMessage, setShareMessage] = useState("");
   const [locale, setLocale] = useState("");
   const [sioShareTagName, setSioShareTagName] = useState("");
+  const [sioCaptureTag, setSioCaptureTag] = useState("");
   const [status, setStatus] = useState("draft");
   const [editQuestions, setEditQuestions] = useState<QuizQuestion[]>([]);
   const [editResults, setEditResults] = useState<QuizResult[]>([]);
@@ -125,7 +127,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setCapturePhone(q.capture_phone ?? false); setCaptureCountry(q.capture_country ?? false);
       setViralityEnabled(q.virality_enabled); setBonusDescription(q.bonus_description ?? "");
       setShareMessage(q.share_message ?? ""); setLocale(q.locale ?? "");
-      setSioShareTagName(q.sio_share_tag_name ?? ""); setStatus(q.status);
+      setSioShareTagName(q.sio_share_tag_name ?? ""); setSioCaptureTag(q.sio_capture_tag ?? ""); setStatus(q.status);
       setEditQuestions(q.questions); setEditResults(q.results);
     } catch { toast.error("Error loading quiz"); } finally { setLoading(false); }
   }, [quizId, router]);
@@ -146,8 +148,16 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           capture_phone: capturePhone, capture_country: captureCountry,
           virality_enabled: viralityEnabled, bonus_description: bonusDescription,
           share_message: shareMessage, locale: locale || null,
-          sio_share_tag_name: sioShareTagName || null, status,
-          questions: editQuestions.map((q, i) => ({ question_text: q.question_text, options: q.options, sort_order: i })),
+          sio_share_tag_name: sioShareTagName || null, sio_capture_tag: sioCaptureTag || null, status,
+          questions: editQuestions.map((q, i) => ({
+            question_text: q.question_text,
+            options: q.options.map((o) => ({
+              text: o.text,
+              result_index: o.result_index,
+              ...(o.sio_tag_name ? { sio_tag_name: o.sio_tag_name } : {}),
+            })),
+            sort_order: i,
+          })),
           results: editResults.map((r, i) => ({ title: r.title, description: r.description, insight: r.insight, projection: r.projection, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: r.sio_tag_name || null, sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i })),
         }),
       });
@@ -170,6 +180,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const updateQ = (i: number, v: string) => setEditQuestions(p => p.map((q, qi) => qi === i ? { ...q, question_text: v } : q));
   const updateOpt = (qi: number, oi: number, v: string) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, text: v } : o) }));
   const updateOptResult = (qi: number, oi: number, ri: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, result_index: ri } : o) }));
+  const updateOptTag = (qi: number, oi: number, tagName: string) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, sio_tag_name: tagName || null } : o) }));
   const addOpt = (qi: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: [...q.options, { text: "", result_index: 0 }] }));
   const removeOpt = (qi: number, oi: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.filter((_, j) => j !== oi) }));
   const addQuestion = () => setEditQuestions(p => [...p, { question_text: "", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }], sort_order: p.length }]);
@@ -330,6 +341,13 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                                   {editResults.map((_, ri) => <option key={ri} value={ri}>Résultat {ri + 1}</option>)}
                                 </select>
                               </div>
+                              <div className="mt-2.5 pt-2.5 border-t border-border/60">
+                                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">Tag Systeme.io</div>
+                                <SioTagPicker
+                                  value={opt.sio_tag_name ?? ""}
+                                  onChange={(v) => updateOptTag(qi, oi, v)}
+                                />
+                              </div>
                               {q.options.length > 2 && <button onClick={() => removeOpt(qi, oi)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10 rounded p-0.5"><X className="w-3.5 h-3.5" /></button>}
                             </div>
                           ))}
@@ -358,6 +376,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     {capturePhone && <div><label className="text-sm text-muted-foreground">Téléphone (optional)</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
                   </div>
                   <button className="w-full max-w-md mx-auto block px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>Accéder aux résultats</button>
+                  <div className="max-w-md mx-auto p-4 rounded-xl bg-muted/40 border border-dashed">
+                    <div className="text-xs font-semibold text-foreground mb-1">Tag Systeme.io à l&apos;inscription</div>
+                    <p className="text-[11px] text-muted-foreground mb-2">Appliqué à chaque lead dès qu&apos;il remplit ce formulaire.</p>
+                    <SioTagPicker
+                      value={sioCaptureTag}
+                      onChange={setSioCaptureTag}
+                    />
+                  </div>
                 </div>
               </div>
 

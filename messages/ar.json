@@ -23,7 +23,16 @@
     "draft": "مسودة",
     "active": "نشط",
     "aiGeneratingTitle": "الذكاء الاصطناعي يُنشئ اختبارك...",
-    "aiGeneratingSubtitle": "يستغرق ذلك بضع ثوانٍ. نحضّر أسئلة جذابة ونتائج تقدّم قيمة حقيقية."
+    "aiGeneratingSubtitle": "يستغرق ذلك بضع ثوانٍ. نحضّر أسئلة جذابة ونتائج تقدّم قيمة حقيقية.",
+    "sioNoApiKey": "مفتاح API لـ Systeme.io غير مُهيّأ.",
+    "sioGoToSettings": "الإعداد في الإعدادات",
+    "sioTagsError": "تعذّر تحميل الوسوم.",
+    "sioRetry": "إعادة المحاولة",
+    "sioNewTagPlaceholder": "اسم الوسم الجديد",
+    "sioTagsLoading": "جارٍ التحميل…",
+    "sioLoadTags": "تحميل وسومي",
+    "sioNoTag": "— بدون وسم —",
+    "sioCreateTag": "إنشاء وسم جديد"
   },
   "nav": {
     "quizzes": "اختباراتي",

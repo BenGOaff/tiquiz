@@ -23,7 +23,16 @@
     "draft": "Brouillon",
     "active": "Actif",
     "aiGeneratingTitle": "L'IA crée ton quiz...",
-    "aiGeneratingSubtitle": "Ça prend quelques secondes. On prépare des questions engageantes et des résultats qui donnent de la valeur."
+    "aiGeneratingSubtitle": "Ça prend quelques secondes. On prépare des questions engageantes et des résultats qui donnent de la valeur.",
+    "sioNoApiKey": "Clé API Systeme.io non configurée.",
+    "sioGoToSettings": "Configurer dans Paramètres",
+    "sioTagsError": "Impossible de charger les tags.",
+    "sioRetry": "Réessayer",
+    "sioNewTagPlaceholder": "Nom du nouveau tag",
+    "sioTagsLoading": "Chargement…",
+    "sioLoadTags": "Charger mes tags",
+    "sioNoTag": "— Aucun tag —",
+    "sioCreateTag": "Créer un nouveau tag"
   },
   "nav": {
     "dashboard": "Tableau de bord",

@@ -21,12 +21,12 @@ export async function GET() {
 
     const apiKey = String((profile as Record<string, unknown>)?.sio_user_api_key ?? "").trim();
     if (!apiKey) {
-      return NextResponse.json({ ok: true, tags: [] });
+      return NextResponse.json({ ok: false, error: "NO_API_KEY", tags: [] });
     }
 
     const res = await sioUserRequest<{ items: { id: number; name: string }[] }>(apiKey, "/tags?limit=100");
     if (!res.ok) {
-      return NextResponse.json({ ok: false, error: res.error }, { status: 400 });
+      return NextResponse.json({ ok: false, error: res.error, tags: [] }, { status: 400 });
     }
 
     return NextResponse.json({ ok: true, tags: res.data?.items ?? [] });

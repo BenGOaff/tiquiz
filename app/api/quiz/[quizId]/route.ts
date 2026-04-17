@@ -92,7 +92,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const allowedFields = [
       "title", "introduction", "cta_text", "cta_url", "privacy_url",
       "consent_text", "virality_enabled", "bonus_description",
-      "share_message", "status", "sio_share_tag_name", "locale",
+      "share_message", "status", "sio_share_tag_name", "sio_capture_tag", "locale",
       "address_form", "og_image_url", "capture_heading", "capture_subtitle",
       "capture_first_name", "capture_last_name", "capture_phone", "capture_country",
     ];
@@ -115,7 +115,17 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           (body.questions as Record<string, unknown>[]).map((q, i) => ({
             quiz_id: quizId,
             question_text: String(q.question_text ?? ""),
-            options: Array.isArray(q.options) ? q.options : [],
+            options: Array.isArray(q.options)
+              ? (q.options as Record<string, unknown>[]).map((o) => {
+                  const cleaned: Record<string, unknown> = {
+                    text: String(o?.text ?? ""),
+                    result_index: Number.isFinite(Number(o?.result_index)) ? Number(o?.result_index) : 0,
+                  };
+                  const tag = String(o?.sio_tag_name ?? "").trim();
+                  if (tag) cleaned.sio_tag_name = tag;
+                  return cleaned;
+                })
+              : [],
             sort_order: i,
           })),
         );
