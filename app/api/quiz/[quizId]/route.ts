@@ -3,6 +3,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { sanitizeSlug, sanitizeShareNetworks, BRAND_FONT_CHOICES } from "@/lib/quizBranding";
+import { sanitizeRichText } from "@/lib/richText";
+
+// Fields accepting rich-text HTML (bold, italic, links, images, alignment).
+const RICH_TEXT_FIELDS = ["introduction"] as const;
 
 export const dynamic = "force-dynamic";
 
@@ -105,6 +109,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       if (key in body) patch[key] = body[key];
     }
 
+    // Sanitize rich-text fields server-side (defence in depth, browser already sanitizes)
+    for (const key of RICH_TEXT_FIELDS) {
+      if (key in patch && typeof patch[key] === "string") {
+        patch[key] = sanitizeRichText(patch[key] as string);
+      }
+    }
+
     // Validate brand_font against whitelist (null = clear)
     if ("brand_font" in patch) {
       const val = patch.brand_font;
@@ -193,9 +204,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           (body.results as Record<string, unknown>[]).map((r, i) => ({
             quiz_id: quizId,
             title: String(r.title ?? ""),
-            description: r.description ?? null,
-            insight: r.insight ?? null,
-            projection: r.projection ?? null,
+            description: typeof r.description === "string" ? sanitizeRichText(r.description) : null,
+            insight: typeof r.insight === "string" ? sanitizeRichText(r.insight) : null,
+            projection: typeof r.projection === "string" ? sanitizeRichText(r.projection) : null,
             cta_text: r.cta_text ?? null,
             cta_url: r.cta_url ?? null,
             sio_tag_name: r.sio_tag_name ?? null,
