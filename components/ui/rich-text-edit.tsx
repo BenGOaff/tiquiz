@@ -36,6 +36,25 @@ export function RichTextEdit({
     }
   }, [value, editing]);
 
+  // When entering edit mode, populate the fresh contenteditable node and place
+  // the caret at the end so the user can start typing/modifying right away.
+  // We intentionally don't depend on `value` here — re-seeding while the user
+  // is typing would wipe their cursor position.
+  useEffect(() => {
+    if (!editing || !ref.current) return;
+    ref.current.innerHTML = sanitizeRichText(value);
+    ref.current.focus();
+    const sel = typeof window !== "undefined" ? window.getSelection() : null;
+    if (sel && typeof document !== "undefined") {
+      const range = document.createRange();
+      range.selectNodeContents(ref.current);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing]);
+
   const exec = useCallback((cmd: string, arg?: string) => {
     if (typeof document === "undefined") return;
     document.execCommand(cmd, false, arg);
