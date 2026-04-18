@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, Copy, Eye, Play, CheckCircle, Users, Share2, Download,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
@@ -57,9 +58,10 @@ type QuizData = {
   start_button_text: string | null;
   privacy_url: string | null; consent_text: string | null;
   capture_heading: string | null; capture_subtitle: string | null;
+  address_form: string | null;
   capture_first_name: boolean | null; capture_last_name: boolean | null;
   capture_phone: boolean | null; capture_country: boolean | null;
-  virality_enabled: boolean; bonus_description: string | null;
+  virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null;
   share_message: string | null; locale: string | null;
   sio_share_tag_name: string | null; sio_capture_tag: string | null;
   brand_font: string | null; brand_color_primary: string | null; brand_color_background: string | null;
@@ -91,6 +93,53 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style 
     <div onClick={() => setEditing(true)} style={style} className={`${className || ""} cursor-text rounded-lg hover:ring-2 hover:ring-primary/20 hover:bg-primary/5 px-2 py-1 transition-all group relative min-h-[1.2em]`}>
       {value || <span className="opacity-40 italic">{placeholder}</span>}
       <Pencil className="absolute top-1 right-1 w-3 h-3 text-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+    </div>
+  );
+}
+
+// Rounded pill used in the capture-form settings panel
+function CapturePill({ label, active, locked, onToggle }: {
+  label: string; active: boolean; locked?: boolean; onToggle?: () => void;
+}) {
+  const base = "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors border";
+  if (locked) {
+    return <span className={`${base} bg-muted text-muted-foreground border-border`}>{label}</span>;
+  }
+  if (active) {
+    return (
+      <button type="button" onClick={onToggle} className={`${base} bg-primary/10 text-primary border-primary/30 hover:bg-primary/15`}>
+        {label}
+        <X className="w-3 h-3 opacity-60" />
+      </button>
+    );
+  }
+  return (
+    <button type="button" onClick={onToggle} className={`${base} bg-background text-muted-foreground border-dashed border-border hover:text-foreground hover:border-primary/30`}>
+      <Plus className="w-3 h-3" /> {label}
+    </button>
+  );
+}
+
+// Row with label + hint + toggle switch for settings panel
+function SettingsToggle({ label, hint, checked, onChange, disabled }: {
+  label: string; hint?: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean;
+}) {
+  return (
+    <div className={`flex items-start justify-between gap-3 py-1.5 ${disabled ? "opacity-60" : ""}`}>
+      <div className="min-w-0 flex-1">
+        <div className="text-xs font-medium">{label}</div>
+        {hint && <p className="text-[11px] text-muted-foreground leading-snug">{hint}</p>}
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={disabled}
+        onClick={() => !disabled && onChange(!checked)}
+        className={`relative shrink-0 w-9 h-5 rounded-full transition-colors ${checked ? "bg-primary" : "bg-muted"} ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+      >
+        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-[18px]" : "translate-x-0.5"}`} />
+      </button>
     </div>
   );
 }
@@ -147,6 +196,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [captureCountry, setCaptureCountry] = useState(false);
   const [viralityEnabled, setViralityEnabled] = useState(false);
   const [bonusDescription, setBonusDescription] = useState("");
+  const [bonusImageUrl, setBonusImageUrl] = useState<string | null>(null);
+  const [uploadingBonusImage, setUploadingBonusImage] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
   const [locale, setLocale] = useState("");
   const [sioShareTagName, setSioShareTagName] = useState("");
@@ -170,6 +221,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [brandLogoUrl, setBrandLogoUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const bonusImageInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState<ProfileBrand | null>(null);
   const isPaidPlan = (profile?.plan ?? "free") !== "free";
   const [saving, setSaving] = useState(false);
@@ -213,6 +265,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
       setCapturePhone(q.capture_phone ?? false); setCaptureCountry(q.capture_country ?? false);
       setViralityEnabled(q.virality_enabled); setBonusDescription(q.bonus_description ?? "");
+      setBonusImageUrl(q.bonus_image_url ?? null);
       setShareMessage(q.share_message ?? ""); setLocale(q.locale ?? "");
       setSioShareTagName(q.sio_share_tag_name ?? ""); setSioCaptureTag(q.sio_capture_tag ?? ""); setStatus(q.status);
       setEditQuestions(q.questions); setEditResults(q.results);
@@ -281,6 +334,32 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     }
   }
 
+  // Bonus image upload: mockup / image / GIF shown on the share step so the
+  // visitor understands what they unlock before sharing.
+  async function handleBonusImageUpload(file: File) {
+    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return; }
+    if (file.size > 4 * 1024 * 1024) { toast.error("Image trop lourde (max 4 Mo)"); return; }
+    setUploadingBonusImage(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error("Non connecté"); return; }
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `bonus/${user.id}/${quizId}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      setBonusImageUrl(urlData.publicUrl);
+      toast.success("Image du bonus chargée");
+    } catch (err) {
+      console.error("Bonus image upload failed:", err);
+      const msg = err instanceof Error ? err.message : "erreur inconnue";
+      toast.error(`Erreur upload image : ${msg}`);
+    } finally {
+      setUploadingBonusImage(false);
+    }
+  }
+
   function toggleShareNetwork(n: ShareNetwork) {
     setShareNetworks((prev) => (prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]));
   }
@@ -302,6 +381,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           capture_first_name: captureFirstName, capture_last_name: captureLastName,
           capture_phone: capturePhone, capture_country: captureCountry,
           virality_enabled: viralityEnabled, bonus_description: bonusDescription,
+          bonus_image_url: bonusImageUrl,
           share_message: shareMessage, locale: locale || null,
           sio_share_tag_name: sioShareTagName || null, sio_capture_tag: sioCaptureTag || null, status,
           // Branding
@@ -510,31 +590,135 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   <p className="text-[10px] text-muted-foreground">Partagé avec tous vos quiz (paramètre du profil).</p>
                 </div>
               </div>)}
-              {leftTab === "settings" && (<div className="space-y-5">
-                <div><Label className="text-xs font-semibold">Formulaire de prise de contact</Label><p className="text-[11px] text-muted-foreground mb-2">Personnalise le questionnaire permettant d&apos;accéder aux résultats</p>
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {captureFirstName && <Badge variant="secondary" className="text-xs">Prénom* <button onClick={() => setCaptureFirstName(false)}><X className="w-2.5 h-2.5 ml-1" /></button></Badge>}
-                    {captureLastName && <Badge variant="secondary" className="text-xs">Nom* <button onClick={() => setCaptureLastName(false)}><X className="w-2.5 h-2.5 ml-1" /></button></Badge>}
-                    <Badge variant="default" className="text-xs">Adresse email*</Badge>
-                    {capturePhone && <Badge variant="secondary" className="text-xs">Téléphone <button onClick={() => setCapturePhone(false)}><X className="w-2.5 h-2.5 ml-1" /></button></Badge>}
+              {leftTab === "settings" && (<div className="space-y-6">
+                {/* ── Formulaire de prise de contact ── */}
+                <section className="space-y-2.5">
+                  <div>
+                    <h3 className="text-sm font-semibold">Formulaire de prise de contact</h3>
+                    <p className="text-[11px] text-muted-foreground leading-snug">Choisis les champs demandés avant l&apos;accès aux résultats.</p>
                   </div>
-                  <button onClick={() => { if (!captureFirstName) setCaptureFirstName(true); else if (!captureLastName) setCaptureLastName(true); else if (!capturePhone) setCapturePhone(true); else if (!captureCountry) setCaptureCountry(true); }} className="text-xs text-primary hover:underline flex items-center gap-1"><Plus className="w-3 h-3" /> Ajouter un élément</button>
-                </div>
-                <div className="space-y-2"><Label className="text-xs">Options</Label>
-                  <label className="flex items-center justify-between text-xs"><span>Planifier une date de clôture</span><input type="checkbox" className="rounded" /></label>
-                  <label className="flex items-center justify-between text-xs"><span>Inclure le lien de mon site</span><input type="checkbox" className="rounded" /></label>
-                  <label className="flex items-center justify-between text-xs"><span>Prioriser le partage</span><input type="checkbox" checked={viralityEnabled} onChange={e => setViralityEnabled(e.target.checked)} className="rounded" /></label>
-                </div>
-                {viralityEnabled && <div className="space-y-2 pl-3 border-l-2 border-primary/20">
-                  <Input value={bonusDescription} onChange={e => setBonusDescription(e.target.value)} placeholder="Description du bonus" className="text-xs" />
-                  <Textarea value={shareMessage} onChange={e => setShareMessage(e.target.value)} placeholder="Message de partage" className="text-xs" rows={2} />
-                  <div className="pt-1">
-                    <Label className="text-[11px] font-semibold">Tag Systeme.io après partage</Label>
-                    <p className="text-[10px] text-muted-foreground mb-1">Ajouté au contact quand il partage le quiz.</p>
-                    <SioTagPicker value={sioShareTagName} onChange={setSioShareTagName} />
+                  <div className="flex flex-wrap gap-1.5">
+                    <CapturePill label="Adresse email*" active locked />
+                    <CapturePill label="Prénom*" active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />
+                    <CapturePill label="Nom*" active={captureLastName} onToggle={() => setCaptureLastName(!captureLastName)} />
+                    <CapturePill label="Téléphone" active={capturePhone} onToggle={() => setCapturePhone(!capturePhone)} />
+                    <CapturePill label="Pays" active={captureCountry} onToggle={() => setCaptureCountry(!captureCountry)} />
                   </div>
-                </div>}
-                <div className="space-y-2"><Label className="text-xs">CTA global</Label><Input value={ctaText} onChange={e => setCtaText(e.target.value)} placeholder="Texte du CTA" className="text-xs" /><Input value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} placeholder="URL du CTA" className="text-xs" /></div>
+                  {(!captureFirstName || !captureLastName || !capturePhone || !captureCountry) && (
+                    <button
+                      onClick={() => {
+                        if (!captureFirstName) setCaptureFirstName(true);
+                        else if (!captureLastName) setCaptureLastName(true);
+                        else if (!capturePhone) setCapturePhone(true);
+                        else if (!captureCountry) setCaptureCountry(true);
+                      }}
+                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-muted/60 hover:bg-muted text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Ajouter un élément
+                    </button>
+                  )}
+                </section>
+
+                <Separator />
+
+                {/* ── Options ── */}
+                <section className="space-y-2">
+                  <h3 className="text-sm font-semibold">Options</h3>
+                  <SettingsToggle
+                    label="Inclure le lien de mon site"
+                    hint="Petit lien vers privacy_url dans le pied de page du quiz."
+                    checked={!!privacyUrl}
+                    onChange={() => { /* geré via l'onglet Partage */ }}
+                    disabled
+                  />
+                  <SettingsToggle
+                    label="Demande de partage"
+                    hint="Propose au visiteur de partager le quiz avant de voir ses résultats, en échange du bonus."
+                    checked={viralityEnabled}
+                    onChange={v => setViralityEnabled(v)}
+                  />
+                </section>
+
+                {viralityEnabled && (
+                  <section className="space-y-3 bg-muted/30 border rounded-xl p-3">
+                    <div>
+                      <h4 className="text-xs font-semibold">Bonus offert pour un partage</h4>
+                      <p className="text-[11px] text-muted-foreground leading-snug">Décris ce que le visiteur reçoit quand il partage.</p>
+                    </div>
+                    <Input value={bonusDescription} onChange={e => setBonusDescription(e.target.value)} placeholder="Ex. : ma mini-formation exclusive" className="text-xs" />
+
+                    <div>
+                      <Label className="text-[11px] font-semibold">Visuel du bonus (optionnel)</Label>
+                      <p className="text-[10px] text-muted-foreground mb-1.5">Mockup, image ou GIF pour mettre en avant le bonus.</p>
+                      {bonusImageUrl ? (
+                        <div className="flex items-center gap-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={bonusImageUrl} alt="" className="w-14 h-14 rounded-lg object-cover border" />
+                          <div className="flex-1 space-y-1">
+                            <button
+                              type="button"
+                              onClick={() => bonusImageInputRef.current?.click()}
+                              disabled={uploadingBonusImage}
+                              className="text-xs text-primary hover:underline block"
+                            >
+                              {uploadingBonusImage ? "Envoi…" : "Remplacer"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setBonusImageUrl(null)}
+                              className="text-xs text-destructive hover:underline block"
+                            >
+                              Retirer
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => bonusImageInputRef.current?.click()}
+                          disabled={uploadingBonusImage}
+                          className="w-full border-2 border-dashed rounded-lg p-3 text-xs text-muted-foreground hover:border-primary/30 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Plus className="w-3 h-3" />
+                          {uploadingBonusImage ? "Envoi…" : "Ajouter un visuel"}
+                        </button>
+                      )}
+                      <input
+                        ref={bonusImageInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBonusImageUpload(f); e.target.value = ""; }}
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-[11px] font-semibold">Message de partage</Label>
+                      <p className="text-[10px] text-muted-foreground mb-1.5">Texte pré-rempli lorsque le visiteur partage.</p>
+                      <Textarea value={shareMessage} onChange={e => setShareMessage(e.target.value)} placeholder={`Je viens de faire le quiz "${title || "…"}" !`} className="text-xs" rows={2} />
+                    </div>
+
+                    <div>
+                      <Label className="text-[11px] font-semibold">Tag Systeme.io après partage</Label>
+                      <p className="text-[10px] text-muted-foreground mb-1.5">Ajouté au contact quand il partage réellement. Déclenche ton automatisation.</p>
+                      <SioTagPicker value={sioShareTagName} onChange={setSioShareTagName} />
+                    </div>
+                  </section>
+                )}
+
+                <Separator />
+
+                {/* ── CTA par défaut ── */}
+                <section className="space-y-1.5">
+                  <div>
+                    <h3 className="text-sm font-semibold">CTA par défaut</h3>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      Utilisé seulement pour les résultats qui n&apos;ont pas leur propre CTA. Tu peux en définir un spécifique sur chaque résultat depuis l&apos;onglet Édition.
+                    </p>
+                  </div>
+                  <Input value={ctaText} onChange={e => setCtaText(e.target.value)} placeholder="Texte du CTA" className="text-xs" />
+                  <Input value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} placeholder="URL du CTA" className="text-xs" />
+                </section>
               </div>)}
             </div>
           </aside>
@@ -612,8 +796,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               {/* ── CAPTURE / LEAD FORM ── */}
               <div ref={captureRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                 <div className="max-w-lg w-full space-y-6">
-                  <InlineEdit value={captureHeading || "Vos résultats sont prêts"} onChange={setCaptureHeading} className="text-2xl sm:text-4xl font-bold text-center" placeholder="Titre…" />
-                  <InlineEdit value={captureSubtitle || "Pour accéder aux résultats, veuillez laisser vos coordonnées."} onChange={setCaptureSubtitle} className="text-muted-foreground text-center text-base" placeholder="Sous-titre…" />
+                  <InlineEdit value={captureHeading || (quiz?.address_form === "vous" ? "Vos résultats sont prêts" : "Tes résultats sont prêts")} onChange={setCaptureHeading} className="text-2xl sm:text-4xl font-bold text-center" placeholder="Titre…" />
+                  <InlineEdit value={captureSubtitle || (quiz?.address_form === "vous" ? "Entrez votre email pour découvrir votre profil." : "Entre ton email pour découvrir ton profil.")} onChange={setCaptureSubtitle} className="text-muted-foreground text-center text-base" placeholder="Sous-titre…" />
                   <div className="space-y-3 max-w-md mx-auto">
                     {(captureFirstName || captureLastName) && <div className="grid grid-cols-2 gap-3">
                       {captureFirstName && <div><label className="text-sm text-muted-foreground">Prénom</label><Input readOnly className="mt-1 bg-muted/20" /></div>}

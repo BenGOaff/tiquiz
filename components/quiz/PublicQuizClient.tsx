@@ -53,7 +53,9 @@ type PublicQuizData = {
   consent_text: string | null;
   virality_enabled: boolean;
   bonus_description: string | null;
+  bonus_image_url: string | null;
   share_message: string | null;
+  share_networks?: string[] | null;
   locale: string | null;
   address_form?: string | null;
   capture_heading: string | null;
@@ -114,6 +116,15 @@ type QuizTranslations = {
   thanksForSharing: string;
   emailPlaceholder: string;
   defaultShareMessage: (title: string) => string;
+  // Share step (between capture and result)
+  bonusStepHeading: string;
+  bonusStepIntro: (bonus: string) => string;
+  skipShare: string;
+  continueToResult: string;
+  bonusUnlockedContinue: string;
+  confirmShareAfterCopy: string;
+  confirmShareHint: string;
+  sharingTooFast: string;
 };
 
 const translations: Record<string, QuizTranslations> = {
@@ -148,6 +159,14 @@ const translations: Record<string, QuizTranslations> = {
     emailPlaceholder: "ton@email.com",
     thanksForSharing: "Merci pour le partage !",
     defaultShareMessage: (title) => `Je viens de faire le quiz "${title}" ! Fais-le aussi :`,
+    bonusStepHeading: "Avant de découvrir tes résultats…",
+    bonusStepIntro: (bonus) => `Partage le quiz pour recevoir ${bonus || "ton bonus"} avec tes résultats.`,
+    skipShare: "Non merci, voir mes résultats",
+    continueToResult: "Voir mes résultats",
+    bonusUnlockedContinue: "Bonus débloqué ! Voir mes résultats",
+    confirmShareAfterCopy: "J’ai partagé le lien",
+    confirmShareHint: "Colle le lien dans le réseau de ton choix puis reviens ici.",
+    sharingTooFast: "Hmm, tu as fermé la fenêtre de partage trop vite. Partage vraiment pour recevoir ton bonus.",
   },
   fr_vous: {
     quizUnavailable: "Ce quiz n\u2019est pas disponible.",
@@ -180,6 +199,14 @@ const translations: Record<string, QuizTranslations> = {
     emailPlaceholder: "votre@email.com",
     thanksForSharing: "Merci pour le partage !",
     defaultShareMessage: (title) => `Je viens de faire le quiz "${title}" ! Faites-le aussi :`,
+    bonusStepHeading: "Avant de découvrir vos résultats…",
+    bonusStepIntro: (bonus) => `Partagez le quiz pour recevoir ${bonus || "votre bonus"} avec vos résultats.`,
+    skipShare: "Non merci, voir mes résultats",
+    continueToResult: "Voir mes résultats",
+    bonusUnlockedContinue: "Bonus débloqué ! Voir mes résultats",
+    confirmShareAfterCopy: "J’ai partagé le lien",
+    confirmShareHint: "Collez le lien dans le réseau de votre choix puis revenez ici.",
+    sharingTooFast: "Hmm, vous avez fermé la fenêtre de partage trop vite. Partagez vraiment pour recevoir votre bonus.",
   },
   en: {
     quizUnavailable: "This quiz is not available.",
@@ -212,6 +239,14 @@ const translations: Record<string, QuizTranslations> = {
     emailPlaceholder: "your@email.com",
     thanksForSharing: "Thanks for sharing!",
     defaultShareMessage: (title) => `I just took the quiz "${title}"! Try it too:`,
+    bonusStepHeading: "Before you see your results…",
+    bonusStepIntro: (bonus) => `Share the quiz to get ${bonus || "your bonus"} with your results.`,
+    skipShare: "No thanks, see my results",
+    continueToResult: "See my results",
+    bonusUnlockedContinue: "Bonus unlocked! See my results",
+    confirmShareAfterCopy: "I shared the link",
+    confirmShareHint: "Paste the link on your network of choice, then come back here.",
+    sharingTooFast: "Looks like you closed the share window too quickly. Share for real to get your bonus.",
   },
   es: {
     quizUnavailable: "Este quiz no est\u00e1 disponible.",
@@ -244,6 +279,14 @@ const translations: Record<string, QuizTranslations> = {
     emailPlaceholder: "tu@email.com",
     thanksForSharing: "\u00a1Gracias por compartir!",
     defaultShareMessage: (title) => `\u00a1Acabo de hacer el quiz "${title}"! Hazlo t\u00fa tambi\u00e9n:`,
+    bonusStepHeading: "Antes de ver tus resultados…",
+    bonusStepIntro: (bonus) => `Comparte el quiz para recibir ${bonus || "tu bonus"} con tus resultados.`,
+    skipShare: "No gracias, ver mis resultados",
+    continueToResult: "Ver mis resultados",
+    bonusUnlockedContinue: "¡Bonus desbloqueado! Ver mis resultados",
+    confirmShareAfterCopy: "He compartido el enlace",
+    confirmShareHint: "Pega el enlace en la red que quieras y vuelve aquí.",
+    sharingTooFast: "Parece que cerraste la ventana demasiado rápido. Comparte de verdad para recibir tu bonus.",
   },
   de: {
     quizUnavailable: "Dieses Quiz ist nicht verf\u00fcgbar.",
@@ -276,6 +319,14 @@ const translations: Record<string, QuizTranslations> = {
     emailPlaceholder: "deine@email.com",
     thanksForSharing: "Danke f\u00fcrs Teilen!",
     defaultShareMessage: (title) => `Ich habe gerade das Quiz "${title}" gemacht! Probier es auch:`,
+    bonusStepHeading: "Bevor du dein Ergebnis siehst…",
+    bonusStepIntro: (bonus) => `Teile das Quiz, um ${bonus || "deinen Bonus"} mit deinen Ergebnissen zu erhalten.`,
+    skipShare: "Nein danke, Ergebnis zeigen",
+    continueToResult: "Mein Ergebnis sehen",
+    bonusUnlockedContinue: "Bonus freigeschaltet! Ergebnis sehen",
+    confirmShareAfterCopy: "Ich habe den Link geteilt",
+    confirmShareHint: "Füge den Link in deinem Netzwerk ein und komm dann hierher zurück.",
+    sharingTooFast: "Du hast das Fenster zu schnell geschlossen. Teile wirklich, um deinen Bonus zu erhalten.",
   },
   pt: {
     quizUnavailable: "Este quiz n\u00e3o est\u00e1 dispon\u00edvel.",
@@ -308,6 +359,14 @@ const translations: Record<string, QuizTranslations> = {
     emailPlaceholder: "seu@email.com",
     thanksForSharing: "Obrigado por compartilhar!",
     defaultShareMessage: (title) => `Acabei de fazer o quiz "${title}"! Fa\u00e7a voc\u00ea tamb\u00e9m:`,
+    bonusStepHeading: "Antes de ver seu resultado…",
+    bonusStepIntro: (bonus) => `Compartilhe o quiz para receber ${bonus || "seu bônus"} com seus resultados.`,
+    skipShare: "Não, obrigado, ver meus resultados",
+    continueToResult: "Ver meus resultados",
+    bonusUnlockedContinue: "Bônus desbloqueado! Ver meus resultados",
+    confirmShareAfterCopy: "Eu compartilhei o link",
+    confirmShareHint: "Cole o link na rede da sua escolha e depois volte aqui.",
+    sharingTooFast: "Parece que você fechou a janela rápido demais. Compartilhe de verdade para receber seu bônus.",
   },
   it: {
     quizUnavailable: "Questo quiz non \u00e8 disponibile.",
@@ -340,6 +399,14 @@ const translations: Record<string, QuizTranslations> = {
     emailPlaceholder: "tua@email.com",
     thanksForSharing: "Grazie per la condivisione!",
     defaultShareMessage: (title) => `Ho appena fatto il quiz "${title}"! Fallo anche tu:`,
+    bonusStepHeading: "Prima di vedere i tuoi risultati…",
+    bonusStepIntro: (bonus) => `Condividi il quiz per ricevere ${bonus || "il tuo bonus"} con i tuoi risultati.`,
+    skipShare: "No grazie, mostra i risultati",
+    continueToResult: "Vedi i miei risultati",
+    bonusUnlockedContinue: "Bonus sbloccato! Vedi i miei risultati",
+    confirmShareAfterCopy: "Ho condiviso il link",
+    confirmShareHint: "Incolla il link sul social che preferisci e poi torna qui.",
+    sharingTooFast: "Hai chiuso la finestra troppo in fretta. Condividi davvero per ricevere il bonus.",
   },
   ar: {
     quizUnavailable: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d.",
@@ -372,6 +439,14 @@ const translations: Record<string, QuizTranslations> = {
     emailPlaceholder: "بريدك@email.com",
     thanksForSharing: "\u0634\u0643\u0631\u0627\u064b \u0644\u0644\u0645\u0634\u0627\u0631\u0643\u0629!",
     defaultShareMessage: (title) => `\u0644\u0642\u062f \u0623\u062c\u0631\u064a\u062a \u0627\u062e\u062a\u0628\u0627\u0631 "${title}"! \u062c\u0631\u0628\u0647 \u0623\u0646\u062a \u0623\u064a\u0636\u0627\u064b:`,
+    bonusStepHeading: "قبل أن ترى نتائجك…",
+    bonusStepIntro: (bonus) => `شارك الاختبار لتستلم ${bonus || "مكافأتك"} مع نتائجك.`,
+    skipShare: "لا شكراً، أرني النتائج",
+    continueToResult: "أرني نتائجي",
+    bonusUnlockedContinue: "تم فتح المكافأة! أرني نتائجي",
+    confirmShareAfterCopy: "لقد شاركت الرابط",
+    confirmShareHint: "ألصق الرابط على الشبكة التي تختارها ثم عد إلى هنا.",
+    sharingTooFast: "أغلقت نافذة المشاركة بسرعة. شارك فعلاً لتستلم مكافأتك.",
   },
 };
 
@@ -554,17 +629,29 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
         });
       }
 
-      setStep("result");
+      // If the creator set up a bonus-on-share, show the intermediate step so
+      // the visitor can unlock it before seeing their results.
+      const hasBonusFlow = Boolean(quiz?.virality_enabled && (quiz?.bonus_description || "").trim());
+      setStep(hasBonusFlow ? "bonus" : "result");
     } catch {
       // Still show result even if save fails
       setResultProfile(computeResult());
-      setStep("result");
+      const hasBonusFlow = Boolean(quiz?.virality_enabled && (quiz?.bonus_description || "").trim());
+      setStep(hasBonusFlow ? "bonus" : "result");
     } finally {
       setSubmitting(false);
     }
   };
 
   const [linkCopied, setLinkCopied] = useState(false);
+  // Anti-cheat: when true, we detected that the user closed the share popup
+  // almost instantly — we don't credit the share. The message nudges them to
+  // actually share.
+  const [shareWarning, setShareWarning] = useState(false);
+  // Show the "I shared the link" confirmation after the user copied the link.
+  const [copyConfirmVisible, setCopyConfirmVisible] = useState(false);
+  // Copy time used to gate the confirmation button (prevents 1-click cheat).
+  const [copyTimestamp, setCopyTimestamp] = useState(0);
 
   const getShareData = () => {
     const shareText =
@@ -573,8 +660,9 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     return { shareText, shareUrl };
   };
 
-  const trackShare = async () => {
+  const trackShare = useCallback(async () => {
     setHasShared(true);
+    setShareWarning(false);
     try {
       const res = await fetch(`/api/quiz/${quizId}/public`, {
         method: "PATCH",
@@ -586,12 +674,34 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     } catch {
       // non-blocking
     }
-  };
+  }, [email, quizId]);
+
+  // Anti-cheat threshold: opening a share popup and closing it under this many
+  // milliseconds is considered a fake share. Tuned to allow a quick tweet but
+  // reject one-click fraud.
+  const MIN_SHARE_DWELL_MS = 3500;
+  const MIN_COPY_DWELL_MS = 5000;
 
   const shareOn = (platform: string) => {
     const { shareText, shareUrl } = getShareData();
     const encoded = encodeURIComponent(shareUrl);
     const text = encodeURIComponent(shareText);
+
+    // Web Share API (mainly mobile) — only resolves when the user actually
+    // completes the share sheet, so we can credit without heuristics.
+    if (
+      platform === "native" &&
+      typeof navigator !== "undefined" &&
+      typeof navigator.share === "function"
+    ) {
+      navigator
+        .share({ title: quiz?.title || "", text: shareText, url: shareUrl })
+        .then(() => trackShare())
+        .catch(() => {
+          /* user cancelled */
+        });
+      return;
+    }
 
     const urls: Record<string, string> = {
       x: `https://twitter.com/intent/tweet?text=${text}&url=${encoded}`,
@@ -603,17 +713,58 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     };
 
     const url = urls[platform];
-    if (url) {
-      window.open(url, "_blank", "noopener,noreferrer,width=600,height=500");
-      trackShare();
+    if (!url) return;
+
+    setShareWarning(false);
+    const openedAt = Date.now();
+    const popup = window.open(
+      url,
+      "_blank",
+      "noopener,noreferrer,width=600,height=500",
+    );
+
+    // Popup blocked (common on mobile). Fall back to a full-tab redirect —
+    // the visitor will come back via history.back. No anti-cheat possible,
+    // so we credit optimistically once they return.
+    if (!popup) {
+      const onReturn = () => {
+        if (document.visibilityState === "visible") {
+          document.removeEventListener("visibilitychange", onReturn);
+          if (Date.now() - openedAt >= MIN_SHARE_DWELL_MS) trackShare();
+          else setShareWarning(true);
+        }
+      };
+      document.addEventListener("visibilitychange", onReturn);
+      window.location.href = url;
+      return;
     }
+
+    // Poll until the share popup closes, then credit only if enough time
+    // elapsed — a split-second close almost certainly means no share.
+    const timer = window.setInterval(() => {
+      if (popup.closed) {
+        window.clearInterval(timer);
+        if (Date.now() - openedAt >= MIN_SHARE_DWELL_MS) trackShare();
+        else setShareWarning(true);
+      }
+    }, 600);
   };
 
   const copyShareLink = async () => {
     const { shareText, shareUrl } = getShareData();
     await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
     setLinkCopied(true);
+    setCopyConfirmVisible(true);
+    setCopyTimestamp(Date.now());
+    setShareWarning(false);
     setTimeout(() => setLinkCopied(false), 2000);
+  };
+
+  const confirmCopyShare = () => {
+    if (Date.now() - copyTimestamp < MIN_COPY_DWELL_MS) {
+      setShareWarning(true);
+      return;
+    }
     trackShare();
   };
 
@@ -884,6 +1035,181 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     );
   }
 
+  // STEP: Bonus — only shown when virality_enabled + bonus_description is set.
+  // Inserted between email capture and results so the visitor understands
+  // they unlock the bonus BY sharing, not just by seeing it next to the
+  // results (where it often got missed).
+  if (step === "bonus") {
+    const bonusText = (quiz.bonus_description || "").trim();
+    const allowedNetworks = (quiz.share_networks && quiz.share_networks.length > 0)
+      ? quiz.share_networks
+      : ["x", "facebook", "linkedin", "whatsapp", "threads"];
+    const canWebShare =
+      typeof navigator !== "undefined" && typeof navigator.share === "function";
+    const proceedToResult = () => setStep("result");
+
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        style={rootStyle}
+      >
+        <div className="max-w-lg w-full py-12 sm:py-16 space-y-6">
+          <div className="text-center space-y-3">
+            <div className="flex justify-center">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Gift className="w-8 h-8 text-primary" />
+              </div>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold leading-tight">
+              {t.bonusStepHeading}
+            </h2>
+            <p className="text-muted-foreground text-base leading-relaxed">
+              {t.bonusStepIntro(bonusText)}
+            </p>
+          </div>
+
+          {quiz.bonus_image_url && (
+            <div className="flex justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={quiz.bonus_image_url}
+                alt=""
+                className="max-w-full max-h-64 rounded-xl shadow-sm object-contain"
+              />
+            </div>
+          )}
+
+          {!hasShared ? (
+            <div className="space-y-3">
+              {canWebShare && (
+                <Button
+                  size="lg"
+                  className="w-full h-12 rounded-full"
+                  onClick={() => shareOn("native")}
+                >
+                  {t.shareToUnlock}
+                </Button>
+              )}
+
+              <div className="flex flex-wrap gap-2 justify-center">
+                {allowedNetworks.includes("x") && (
+                  <button
+                    onClick={() => shareOn("x")}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black text-white text-sm font-medium hover:opacity-80 transition-opacity"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    X
+                  </button>
+                )}
+                {allowedNetworks.includes("facebook") && (
+                  <button
+                    onClick={() => shareOn("facebook")}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#1877F2] text-white text-sm font-medium hover:opacity-80 transition-opacity"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                    Facebook
+                  </button>
+                )}
+                {allowedNetworks.includes("linkedin") && (
+                  <button
+                    onClick={() => shareOn("linkedin")}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#0A66C2] text-white text-sm font-medium hover:opacity-80 transition-opacity"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                    LinkedIn
+                  </button>
+                )}
+                {allowedNetworks.includes("threads") && (
+                  <button
+                    onClick={() => shareOn("threads")}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black text-white text-sm font-medium hover:opacity-80 transition-opacity"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.59 12c.025 3.083.717 5.496 2.057 7.164 1.43 1.783 3.631 2.698 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.278 3.258-.873 1.078-2.103 1.678-3.652 1.783-1.137.077-2.222-.166-3.05-.687-.959-.6-1.51-1.529-1.552-2.616-.076-1.98 1.637-3.27 4.168-3.455 1.489-.109 2.851.057 4.047.492a4.48 4.48 0 0 0-.122-1.147c-.3-1.14-1.167-1.72-2.578-1.724h-.042c-1.06.015-1.924.396-2.424 1.07l-1.693-1.14c.796-1.074 2.04-1.678 3.532-1.711h.061c1.552.015 2.79.509 3.68 1.468.794.857 1.297 2.04 1.494 3.51.611.239 1.16.544 1.637.917.85.666 1.47 1.558 1.791 2.592.69 2.22.129 4.708-1.5 6.348C18.089 23.147 15.624 23.98 12.186 24z"/></svg>
+                    Threads
+                  </button>
+                )}
+                {allowedNetworks.includes("whatsapp") && (
+                  <button
+                    onClick={() => shareOn("whatsapp")}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#25D366] text-white text-sm font-medium hover:opacity-80 transition-opacity"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    WhatsApp
+                  </button>
+                )}
+                <button
+                  onClick={copyShareLink}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-muted text-foreground text-sm font-medium hover:opacity-80 transition-opacity border"
+                >
+                  {linkCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                  {linkCopied ? t.copied : t.copyLink}
+                </button>
+              </div>
+
+              {shareWarning && (
+                <p className="text-sm text-amber-600 text-center bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  {t.sharingTooFast}
+                </p>
+              )}
+
+              {copyConfirmVisible && (
+                <div className="space-y-1.5 pt-2">
+                  <p className="text-xs text-muted-foreground text-center">
+                    {t.confirmShareHint}
+                  </p>
+                  <Button
+                    onClick={confirmCopyShare}
+                    className="w-full h-11 rounded-full"
+                    variant="outline"
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    {t.confirmShareAfterCopy}
+                  </Button>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={proceedToResult}
+                className="block w-full text-sm text-muted-foreground hover:text-foreground underline text-center pt-2"
+              >
+                {t.skipShare}
+              </button>
+            </div>
+          ) : (
+            <Button
+              onClick={proceedToResult}
+              size="lg"
+              className="w-full h-12 rounded-full"
+            >
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              {bonusUnlocked ? t.bonusUnlockedContinue : t.continueToResult}
+            </Button>
+          )}
+
+          {quiz.privacy_url && (
+            <p className="text-xs text-center text-muted-foreground">
+              <a
+                href={quiz.privacy_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                {t.privacyPolicy}
+              </a>
+            </p>
+          )}
+        </div>
+        <TiquizFooter
+          locale={quiz.locale}
+          customText={quiz.custom_footer_text}
+          customUrl={quiz.custom_footer_url}
+          logoUrl={branding.logoUrl}
+        />
+      </div>
+    );
+  }
+
   // STEP: Result
   if (step === "result") {
     return (
@@ -950,81 +1276,13 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             ) : null;
           })()}
 
-          {/* Virality */}
-          {quiz.virality_enabled && (
-            <Card className="p-4 space-y-3 border-dashed">
-              <div className="flex items-center gap-2">
-                <Gift className="w-5 h-5 text-primary" />
-                <span className="font-medium">{t.exclusiveBonus}</span>
-              </div>
-              {quiz.bonus_description && (
-                <p className="text-sm text-muted-foreground">
-                  {quiz.bonus_description}
-                </p>
-              )}
-              {!hasShared ? (
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    {t.shareToUnlock}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => shareOn("x")}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black text-white text-sm font-medium hover:opacity-80 transition-opacity"
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                      X
-                    </button>
-                    <button
-                      onClick={() => shareOn("facebook")}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#1877F2] text-white text-sm font-medium hover:opacity-80 transition-opacity"
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                      Facebook
-                    </button>
-                    <button
-                      onClick={() => shareOn("linkedin")}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#0A66C2] text-white text-sm font-medium hover:opacity-80 transition-opacity"
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                      LinkedIn
-                    </button>
-                    <button
-                      onClick={() => shareOn("threads")}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black text-white text-sm font-medium hover:opacity-80 transition-opacity"
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.59 12c.025 3.083.717 5.496 2.057 7.164 1.43 1.783 3.631 2.698 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.278 3.258-.873 1.078-2.103 1.678-3.652 1.783-1.137.077-2.222-.166-3.05-.687-.959-.6-1.51-1.529-1.552-2.616-.076-1.98 1.637-3.27 4.168-3.455 1.489-.109 2.851.057 4.047.492a4.48 4.48 0 0 0-.122-1.147c-.3-1.14-1.167-1.72-2.578-1.724h-.042c-1.06.015-1.924.396-2.424 1.07l-1.693-1.14c.796-1.074 2.04-1.678 3.532-1.711h.061c1.552.015 2.79.509 3.68 1.468.794.857 1.297 2.04 1.494 3.51.611.239 1.16.544 1.637.917.85.666 1.47 1.558 1.791 2.592.69 2.22.129 4.708-1.5 6.348C18.089 23.147 15.624 23.98 12.186 24zm-1.248-8.096c-.948.067-2.467.35-2.416 1.442.021.448.27.836.7 1.09.555.327 1.3.434 1.95.39 1.098-.075 1.943-.499 2.51-1.261.408-.549.694-1.27.856-2.15-.87-.315-1.89-.502-3.6-.511z"/></svg>
-                      Threads
-                    </button>
-                    <button
-                      onClick={() => shareOn("whatsapp")}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#25D366] text-white text-sm font-medium hover:opacity-80 transition-opacity"
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                      WhatsApp
-                    </button>
-                    <button
-                      onClick={copyShareLink}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-muted text-foreground text-sm font-medium hover:opacity-80 transition-opacity border"
-                    >
-                      {linkCopied ? (
-                        <Check className="w-4 h-4 text-green-600" />
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
-                      {linkCopied ? t.copied : t.copyLink}
-                    </button>
-                  </div>
-                </div>
-              ) : bonusUnlocked ? (
-                <div className="flex items-center gap-2 text-green-600 text-sm">
-                  <CheckCircle2 className="w-4 h-4" /> {t.bonusUnlocked}
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-green-600 text-sm">
-                  <CheckCircle2 className="w-4 h-4" /> {t.thanksForSharing}
-                </div>
-              )}
+          {/* Confirm bonus unlock (if the visitor shared on the previous step).
+              The full share UI now lives in step="bonus", so here we only
+              reassure the visitor that their bonus is on its way. */}
+          {quiz.virality_enabled && bonusUnlocked && (
+            <Card className="p-4 border-dashed flex items-center gap-2 text-green-600">
+              <CheckCircle2 className="w-5 h-5 shrink-0" />
+              <span className="text-sm font-medium">{t.bonusUnlocked}</span>
             </Card>
           )}
 
