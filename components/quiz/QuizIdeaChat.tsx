@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { renderInlineMarkdown } from "@/lib/renderInlineMarkdown";
 
 export type QuizBrief = {
   objectives: string[];
@@ -23,8 +24,6 @@ export type QuizBrief = {
 };
 
 type Message = { role: "user" | "assistant"; content: string };
-
-const MAX_USER_TURNS = 6;
 
 export function QuizIdeaChat({
   open,
@@ -152,12 +151,9 @@ export function QuizIdeaChat({
     }
   }
 
-  const userTurns = messages.filter((m) => m.role === "user").length;
-  const capReached = userTurns >= MAX_USER_TURNS;
-
   async function handleSend() {
     const text = input.trim();
-    if (!text || streaming || capReached) return;
+    if (!text || streaming) return;
     setInput("");
     const nextHistory: Message[] = [...messages, { role: "user", content: text }];
     // Drop empty assistant placeholders before resending
@@ -198,15 +194,17 @@ export function QuizIdeaChat({
                 className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap ${
+                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
                     m.role === "user"
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-foreground"
                   }`}
                 >
-                  {m.content || (streaming && i === messages.length - 2 ? (
+                  {m.content ? (
+                    renderInlineMarkdown(m.content)
+                  ) : streaming && i === messages.length - 2 ? (
                     <Loader2 className="h-3 w-3 animate-spin inline" />
-                  ) : null)}
+                  ) : null}
                 </div>
               </div>
             ))}
@@ -235,29 +233,24 @@ export function QuizIdeaChat({
             </Button>
           </div>
         ) : (
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={capReached ? t("aiChatCapReached") : t("aiChatPlaceholder")}
-                rows={2}
-                disabled={streaming || capReached}
-                className="resize-none text-sm"
-              />
-              <Button
-                size="icon"
-                onClick={handleSend}
-                disabled={streaming || !input.trim() || capReached}
-                aria-label="Send"
-              >
-                {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </Button>
-            </div>
-            <p className="text-[10px] text-muted-foreground text-right">
-              {t("aiChatTurns", { count: userTurns, max: MAX_USER_TURNS })}
-            </p>
+          <div className="flex gap-2">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={t("aiChatPlaceholder")}
+              rows={2}
+              disabled={streaming}
+              className="resize-none text-sm"
+            />
+            <Button
+              size="icon"
+              onClick={handleSend}
+              disabled={streaming || !input.trim()}
+              aria-label="Send"
+            >
+              {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            </Button>
           </div>
         )}
       </DialogContent>

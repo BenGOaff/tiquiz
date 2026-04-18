@@ -262,10 +262,10 @@
     "aiChatError": "Something went wrong. Try again or use the direct form.",
     "aiChatCapReached": "Chat ended. Use the form to adjust.",
     "aiChatTurns": "{count}/{max} messages",
-    "aiChatBriefReady": "I have enough to start!",
-    "aiChatBriefHint": "I'll pre-fill the form. You can tweak it before generating.",
-    "aiChatUseBrief": "Use this and continue →",
-    "aiChatBriefApplied": "Form pre-filled — adjust then click Generate."
+    "aiChatBriefReady": "We have everything we need!",
+    "aiChatBriefHint": "I'll generate your quiz now with these details.",
+    "aiChatUseBrief": "Generate my quiz",
+    "aiChatBriefApplied": "Generating…"
   },
   "quizDetail": {
     "backToList": "Back to quizzes",

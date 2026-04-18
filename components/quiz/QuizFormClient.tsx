@@ -288,18 +288,38 @@ export default function QuizFormClient() {
   const [creatingManual, setCreatingManual] = useState(false);
   const [ideaChatOpen, setIdeaChatOpen] = useState(false);
 
-  // Pre-fill AI form fields from the chat's structured brief
-  function applyBriefToForm(brief: QuizBrief) {
-    // Keep only valid objective values that exist in our 16-objectives list
+  // Close the chat and launch generation directly with the brief.
+  // The generation ends by redirecting to the quiz editor, so we don't need
+  // to pre-fill the form — but we still sync state so the spinner overlay
+  // has consistent values if the user navigates back.
+  function launchFromBrief(brief: QuizBrief) {
     const validValues = new Set(QUIZ_OBJECTIVES.map((o) => o.value));
-    const validObjectives = brief.objectives.filter((o) => validValues.has(o as typeof QUIZ_OBJECTIVES[number]["value"]));
+    const validObjectives = brief.objectives.filter((o) =>
+      validValues.has(o as typeof QUIZ_OBJECTIVES[number]["value"]),
+    );
+    const objectives = validObjectives.length > 0 ? validObjectives : aiObjectives;
+    const target = brief.target || aiTarget;
+    const intention = brief.intention || aiIntention;
+    const bonus = brief.bonus || aiBonus;
+
+    // Mirror into form state so the user sees the values if they navigate back
     if (validObjectives.length > 0) setAiObjectives(validObjectives);
     if (brief.target) setAiTarget(brief.target);
     if (brief.intention) setAiIntention(brief.intention);
     if (brief.bonus) setAiBonus(brief.bonus);
     setAiFormat(brief.format);
     setAiSegmentation(brief.segmentation);
-    toast.success(t("aiChatBriefApplied"));
+
+    setIdeaChatOpen(false);
+    void handleGenerate({
+      objectives,
+      target,
+      intention,
+      bonus,
+      locale: aiLocale,
+      format: brief.format,
+      segmentation: brief.segmentation,
+    });
   }
 
   // Active tab
@@ -575,12 +595,32 @@ export default function QuizFormClient() {
     }
   }
 
-  async function handleGenerate() {
-    if (aiObjectives.length === 0) {
+  type GenerateParams = {
+    objectives: string[];
+    target: string;
+    intention: string;
+    bonus: string;
+    locale: string;
+    format: "short" | "long";
+    segmentation: "level" | "profile";
+  };
+
+  async function handleGenerate(override?: GenerateParams) {
+    const params: GenerateParams = override ?? {
+      objectives: aiObjectives,
+      target: aiTarget.trim(),
+      intention: aiIntention.trim(),
+      bonus: aiBonus.trim(),
+      locale: aiLocale,
+      format: aiFormat,
+      segmentation: aiSegmentation,
+    };
+
+    if (params.objectives.length === 0) {
       toast.error(t("aiObjectiveLabel") + " — required");
       return;
     }
-    if (!aiTarget.trim()) {
+    if (!params.target.trim()) {
       toast.error(t("aiTargetLabel") + " — required");
       return;
     }
@@ -595,14 +635,14 @@ export default function QuizFormClient() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          objective: aiObjectives.join(", "),
-          target: aiTarget.trim(),
-          intention: aiIntention.trim(),
-          bonus: aiBonus.trim(),
-          locale: aiLocale,
-          format: aiFormat,
-          segmentation: aiSegmentation,
-          questionCount: aiFormat === "short" ? 4 : 8,
+          objective: params.objectives.join(", "),
+          target: params.target,
+          intention: params.intention,
+          bonus: params.bonus,
+          locale: params.locale,
+          format: params.format,
+          segmentation: params.segmentation,
+          questionCount: params.format === "short" ? 4 : 8,
         }),
       });
 
@@ -675,7 +715,7 @@ export default function QuizFormClient() {
           const savePayload = {
             title: String(receivedQuiz.title || ""),
             introduction: receivedQuiz.introduction ? String(receivedQuiz.introduction) : null,
-            locale: aiLocale,
+            locale: params.locale,
             address_form: "tu",
             cta_text: receivedQuiz.cta_text ? String(receivedQuiz.cta_text) : null,
             virality_enabled: Boolean(receivedQuiz.virality_enabled),
@@ -974,7 +1014,7 @@ export default function QuizFormClient() {
                 </select>
               </div>
 
-              <Button className="w-full rounded-full" onClick={handleGenerate} disabled={generating}>
+              <Button className="w-full rounded-full" onClick={() => handleGenerate()} disabled={generating}>
                 <Sparkles className="h-4 w-4 mr-2" />{t("aiGenerate")}
               </Button>
             </CardContent>
@@ -1031,7 +1071,7 @@ export default function QuizFormClient() {
         open={ideaChatOpen}
         onOpenChange={setIdeaChatOpen}
         locale={aiLocale}
-        onBriefReady={applyBriefToForm}
+        onBriefReady={launchFromBrief}
       />
     </div>
   );

@@ -262,10 +262,10 @@
     "aiChatError": "Ha ocurrido un error. Reintenta o usa el formulario directo.",
     "aiChatCapReached": "Conversación terminada. Usa el formulario para ajustar.",
     "aiChatTurns": "{count}/{max} mensajes",
-    "aiChatBriefReady": "¡Tengo suficiente información!",
-    "aiChatBriefHint": "Pre-relleno el formulario. Podrás ajustarlo antes de generar.",
-    "aiChatUseBrief": "Usar esta información y continuar →",
-    "aiChatBriefApplied": "Formulario pre-rellenado — ajusta y haz clic en Generar."
+    "aiChatBriefReady": "¡Tenemos todo lo necesario!",
+    "aiChatBriefHint": "Genero tu quiz ahora con esta información.",
+    "aiChatUseBrief": "Generar mi quiz",
+    "aiChatBriefApplied": "Generando…"
   },
   "quizDetail": {
     "backToList": "Volver a los quiz",

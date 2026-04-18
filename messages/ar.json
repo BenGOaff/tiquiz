@@ -262,10 +262,10 @@
     "aiChatError": "حدث خطأ. حاول مرة أخرى أو استخدم النموذج المباشر.",
     "aiChatCapReached": "انتهت المحادثة. استخدم النموذج للتعديل.",
     "aiChatTurns": "{count}/{max} رسائل",
-    "aiChatBriefReady": "لدي ما يكفي من المعلومات!",
-    "aiChatBriefHint": "سأقوم بملء النموذج مسبقًا. يمكنك تعديله قبل الإنشاء.",
-    "aiChatUseBrief": "استخدم هذه المعلومات وتابع →",
-    "aiChatBriefApplied": "تم ملء النموذج مسبقًا — اضبط واضغط على إنشاء."
+    "aiChatBriefReady": "لدينا كل ما نحتاجه!",
+    "aiChatBriefHint": "سأولّد اختبارك الآن بهذه المعلومات.",
+    "aiChatUseBrief": "توليد اختباري",
+    "aiChatBriefApplied": "جارٍ التوليد…"
   },
   "quizDetail": {
     "backToList": "العودة إلى الاختبارات",

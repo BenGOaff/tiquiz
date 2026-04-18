@@ -262,10 +262,10 @@
     "aiChatError": "Si è verificato un errore. Riprova o usa il modulo diretto.",
     "aiChatCapReached": "Chat terminata. Usa il modulo per regolare.",
     "aiChatTurns": "{count}/{max} messaggi",
-    "aiChatBriefReady": "Ho abbastanza informazioni!",
-    "aiChatBriefHint": "Precompilo il modulo. Potrai regolarlo prima di generare.",
-    "aiChatUseBrief": "Usa queste info e continua →",
-    "aiChatBriefApplied": "Modulo precompilato — regola e clicca su Genera."
+    "aiChatBriefReady": "Abbiamo tutto il necessario!",
+    "aiChatBriefHint": "Genero il tuo quiz ora con queste informazioni.",
+    "aiChatUseBrief": "Genera il mio quiz",
+    "aiChatBriefApplied": "Generazione in corso…"
   },
   "quizDetail": {
     "backToList": "Torna ai quiz",
