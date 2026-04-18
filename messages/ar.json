@@ -253,7 +253,19 @@
     "aiSegProfile": "حسب الملف الشخصي",
     "aiSegProfileDesc": "أنماط الشخصية، النماذج الأصلية…",
     "aiSegLevel": "حسب المستوى",
-    "aiSegLevelDesc": "مبتدئ، متوسط، خبير…"
+    "aiSegLevelDesc": "مبتدئ، متوسط، خبير…",
+    "aiChatEntryLabel": "لا تملك فكرة؟ ناقش مع الذكاء الاصطناعي →",
+    "aiChatTitle": "ناقش فكرة الاختبار",
+    "aiChatDescription": "أجب ببضع جمل — سأقترح لك زوايا مناسبة لنشاطك.",
+    "aiChatKickoff": "ساعدني في إيجاد فكرة جيدة لاختبار لعملي.",
+    "aiChatPlaceholder": "إجابتك…",
+    "aiChatError": "حدث خطأ. حاول مرة أخرى أو استخدم النموذج المباشر.",
+    "aiChatCapReached": "انتهت المحادثة. استخدم النموذج للتعديل.",
+    "aiChatTurns": "{count}/{max} رسائل",
+    "aiChatBriefReady": "لدي ما يكفي من المعلومات!",
+    "aiChatBriefHint": "سأقوم بملء النموذج مسبقًا. يمكنك تعديله قبل الإنشاء.",
+    "aiChatUseBrief": "استخدم هذه المعلومات وتابع →",
+    "aiChatBriefApplied": "تم ملء النموذج مسبقًا — اضبط واضغط على إنشاء."
   },
   "quizDetail": {
     "backToList": "العودة إلى الاختبارات",

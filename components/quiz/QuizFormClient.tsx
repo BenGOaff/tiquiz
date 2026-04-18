@@ -16,6 +16,7 @@ import QuizShareSettings from "@/components/quiz/QuizShareSettings";
 import QuizPreview from "@/components/quiz/QuizPreview";
 import SioSelectors from "@/components/quiz/SioSelectors";
 import { AIGeneratingOverlay } from "@/components/ui/ai-generating-overlay";
+import { QuizIdeaChat, type QuizBrief } from "@/components/quiz/QuizIdeaChat";
 import { QUIZ_OBJECTIVES } from "@/lib/prompts/quiz/system";
 import { toast } from "sonner";
 
@@ -285,6 +286,21 @@ export default function QuizFormClient() {
   const [aiSegmentation, setAiSegmentation] = useState<"level" | "profile">("profile");
   const [generating, setGenerating] = useState(false);
   const [creatingManual, setCreatingManual] = useState(false);
+  const [ideaChatOpen, setIdeaChatOpen] = useState(false);
+
+  // Pre-fill AI form fields from the chat's structured brief
+  function applyBriefToForm(brief: QuizBrief) {
+    // Keep only valid objective values that exist in our 16-objectives list
+    const validValues = new Set(QUIZ_OBJECTIVES.map((o) => o.value));
+    const validObjectives = brief.objectives.filter((o) => validValues.has(o as typeof QUIZ_OBJECTIVES[number]["value"]));
+    if (validObjectives.length > 0) setAiObjectives(validObjectives);
+    if (brief.target) setAiTarget(brief.target);
+    if (brief.intention) setAiIntention(brief.intention);
+    if (brief.bonus) setAiBonus(brief.bonus);
+    setAiFormat(brief.format);
+    setAiSegmentation(brief.segmentation);
+    toast.success(t("aiChatBriefApplied"));
+  }
 
   // Active tab
   const [activeTab, setActiveTab] = useState("ai");
@@ -839,8 +855,15 @@ export default function QuizFormClient() {
           <AIGeneratingOverlay />
         ) : (
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-start justify-between gap-3">
               <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" />{t("tabAI")}</CardTitle>
+              <button
+                type="button"
+                onClick={() => setIdeaChatOpen(true)}
+                className="text-xs text-muted-foreground hover:text-primary underline underline-offset-2 whitespace-nowrap shrink-0"
+              >
+                {t("aiChatEntryLabel")}
+              </button>
             </CardHeader>
             <CardContent className="space-y-5">
               {/* 1. Objectives — compact dropdown with checkboxes */}
@@ -1003,6 +1026,13 @@ export default function QuizFormClient() {
           </CardContent>
         </Card>
       )}
+
+      <QuizIdeaChat
+        open={ideaChatOpen}
+        onOpenChange={setIdeaChatOpen}
+        locale={aiLocale}
+        onBriefReady={applyBriefToForm}
+      />
     </div>
   );
 }
