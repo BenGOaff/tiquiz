@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, Copy, Eye, Play, CheckCircle, Users, Share2, Download,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
+  Gift,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -231,6 +232,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const introRef = useRef<HTMLDivElement>(null);
   const questionRefs = useRef<(HTMLDivElement | null)[]>([]);
   const captureRef = useRef<HTMLDivElement>(null);
+  const bonusRef = useRef<HTMLDivElement>(null);
   const resultRefs = useRef<(HTMLDivElement | null)[]>([]);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -238,6 +240,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     let el: HTMLDivElement | null = null;
     if (id === "intro") el = introRef.current;
     else if (id === "capture") el = captureRef.current;
+    else if (id === "bonus") el = bonusRef.current;
     else if (id.startsWith("q-")) el = questionRefs.current[parseInt(id.split("-")[1])];
     else if (id.startsWith("r-")) el = resultRefs.current[parseInt(id.split("-")[1])];
     if (el && previewRef.current) {
@@ -530,6 +533,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 <button onClick={() => scrollToSection("capture")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors">
                   <span className="text-xs text-muted-foreground mr-2">1</span>Prise d&apos;informations
                 </button>
+                {viralityEnabled && (
+                  <button onClick={() => scrollToSection("bonus")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors">
+                    <span className="text-xs text-muted-foreground mr-2">2</span>Demande de partage
+                  </button>
+                )}
                 {/* Résultats */}
                 <div className="flex items-center justify-between pt-2"><span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Résultats</span><button onClick={addResult} className="text-primary hover:bg-primary/10 rounded p-0.5"><Plus className="w-4 h-4" /></button></div>
                 {editResults.map((r, i) => (
@@ -625,15 +633,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 <section className="space-y-2">
                   <h3 className="text-sm font-semibold">Options</h3>
                   <SettingsToggle
-                    label="Inclure le lien de mon site"
-                    hint="Petit lien vers privacy_url dans le pied de page du quiz."
-                    checked={!!privacyUrl}
-                    onChange={() => { /* geré via l'onglet Partage */ }}
-                    disabled
-                  />
-                  <SettingsToggle
                     label="Demande de partage"
-                    hint="Propose au visiteur de partager le quiz avant de voir ses résultats, en échange du bonus."
+                    hint="Propose au visiteur de partager le quiz avant de voir ses résultats, en échange du bonus. L'étape apparaît entre la capture d'email et les résultats."
                     checked={viralityEnabled}
                     onChange={v => setViralityEnabled(v)}
                   />
@@ -817,6 +818,58 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   </div>
                 </div>
               </div>
+
+              {/* ── BONUS / SHARE STEP (only if viralityEnabled) ── */}
+              {viralityEnabled && (
+                <div ref={bonusRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
+                  <div className="max-w-lg w-full space-y-5 text-center">
+                    <div className="flex justify-center">
+                      <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: `${pc}15`, color: pc }}>
+                        <Gift className="w-7 h-7" />
+                      </div>
+                    </div>
+                    <h2 className="text-2xl sm:text-4xl font-bold leading-tight">
+                      {quiz?.address_form === "vous" ? "Un petit cadeau avant vos résultats" : "Un petit cadeau avant tes résultats"}
+                    </h2>
+                    <p className="text-muted-foreground text-base leading-relaxed">
+                      {quiz?.address_form === "vous"
+                        ? "Partagez le quiz pour recevoir en plus de vos résultats :"
+                        : "Partage le quiz pour recevoir en plus de tes résultats :"}
+                    </p>
+                    <div className="rounded-xl border p-4 bg-muted/30 space-y-3 text-left">
+                      {bonusImageUrl && (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={bonusImageUrl} alt="" className="w-full max-h-44 object-contain rounded-lg bg-white" />
+                      )}
+                      <InlineEdit
+                        value={bonusDescription}
+                        onChange={setBonusDescription}
+                        multiline
+                        className="text-sm font-medium"
+                        placeholder="Décris ton bonus ici…"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                        {shareNetworks.length > 0 ? "Partage via" : "Active au moins un réseau dans l'onglet Partage"}
+                      </p>
+                      <div className="flex flex-wrap justify-center gap-2">
+                        {shareNetworks.map((n) => (
+                          <button key={n} type="button" className="px-4 py-2 rounded-full border text-xs font-medium capitalize hover:bg-muted transition-colors">
+                            {n}
+                          </button>
+                        ))}
+                        <button type="button" className="px-4 py-2 rounded-full border text-xs font-medium hover:bg-muted transition-colors inline-flex items-center gap-1.5">
+                          <Copy className="w-3 h-3" /> Copier le lien
+                        </button>
+                      </div>
+                    </div>
+                    <button type="button" className="text-xs text-muted-foreground underline hover:text-foreground">
+                      {quiz?.address_form === "vous" ? "Continuer sans bonus" : "Continuer sans bonus"}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* ── RESULTS ── */}
               {editResults.map((r, ri) => (
