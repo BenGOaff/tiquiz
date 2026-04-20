@@ -1,5 +1,9 @@
 // app/api/systeme-io/webhook/route.ts
 // Webhook Systeme.io pour Tiquiz — crée/upgrade les users après achat.
+//
+// SIO fires the SAME URL for successful sales, failed payments, cancellations
+// and refunds. We only grant access on confirmed-payment events and we must
+// be idempotent because SIO retries aggressively on any non-2xx response.
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createClient } from "@supabase/supabase-js";
@@ -29,6 +33,11 @@ const OFFER_TO_PLAN: Record<string, TiquizPlan> = {
   "3198280": "lifetime",
 };
 
+// Events that explicitly indicate NO payment received → never grant access.
+// We match case-insensitively on the event type string so new SIO naming
+// variants get caught without a code change.
+const FAILURE_EVENT_RE = /FAIL|CANCEL|REFUND|CHARGEBACK|DECLIN|EXPIR|DISPUT/i;
+
 function inferPlan(offerId: string): TiquizPlan | null {
   if (!offerId) return null;
   const id = String(offerId).trim().toLowerCase();
@@ -54,25 +63,77 @@ function extractStr(body: any, paths: string[]): string | null {
   return null;
 }
 
+async function logWebhook(row: {
+  event_id: string | null;
+  event_type: string | null;
+  payload: any;
+  status: string;
+  error?: string | null;
+}) {
+  try {
+    await supabaseAdmin.from("webhook_logs").insert({
+      source: "systeme_io",
+      event_id: row.event_id,
+      event_type: row.event_type,
+      payload: row.payload,
+      status: row.status,
+      error: row.error ?? null,
+      received_at: new Date().toISOString(),
+    } as any);
+  } catch {
+    // table may not exist or columns missing on old deploys — don't block the flow
+  }
+}
+
 export async function GET() {
   return NextResponse.json({ error: "POST only. URL: https://quiz.tipote.com/api/systeme-io/webhook?secret=YOUR_SECRET" }, { status: 405 });
 }
 
 export async function POST(req: NextRequest) {
+  let rawBody: any = null;
+  let eventType: string | null = null;
+  let eventId: string | null = null;
+
   try {
     const secret = req.nextUrl.searchParams.get("secret");
     if (!WEBHOOK_SECRET || secret !== WEBHOOK_SECRET) {
       return NextResponse.json({ error: "Invalid secret" }, { status: 401 });
     }
 
-    let rawBody: any;
-    try { const text = await req.text(); rawBody = JSON.parse(text); } catch { return NextResponse.json({ error: "Invalid body" }, { status: 400 }); }
+    try { const text = await req.text(); rawBody = JSON.parse(text); }
+    catch { return NextResponse.json({ error: "Invalid body" }, { status: 400 }); }
 
-    // Log webhook
-    try { await supabaseAdmin.from("webhook_logs").insert({ source: "systeme_io", payload: rawBody, received_at: new Date().toISOString() } as any); } catch {}
+    eventType = extractStr(rawBody, ["type", "event", "event_type", "eventName", "data.type"]);
+    const orderId = extractStr(rawBody, ["order.id", "data.order.id", "order_id", "orderId"]);
+    eventId = orderId ? `sio_order_${orderId}` : null;
+
+    // 1. Reject failure/cancel/refund events BEFORE granting anything.
+    if (eventType && FAILURE_EVENT_RE.test(eventType)) {
+      console.log(`[Tiquiz webhook] Ignoring failure event type=${eventType} order=${orderId}`);
+      await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "failure_event" });
+      return NextResponse.json({ ok: true, skipped: "failure_event", event_type: eventType });
+    }
 
     const email = extractStr(rawBody, ["customer.email", "data.customer.email", "email"])?.toLowerCase();
-    if (!email) return NextResponse.json({ error: "No email" }, { status: 400 });
+    if (!email) {
+      await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "skipped", error: "no_email" });
+      return NextResponse.json({ error: "No email" }, { status: 400 });
+    }
+
+    // 2. Idempotency: if SIO already delivered + we processed it, don't resend.
+    if (eventId) {
+      const { data: dup } = await supabaseAdmin
+        .from("webhook_logs")
+        .select("id")
+        .eq("event_id", eventId)
+        .eq("status", "processed")
+        .limit(1)
+        .maybeSingle();
+      if (dup) {
+        console.log(`[Tiquiz webhook] Duplicate retry event=${eventId} — skipping`);
+        return NextResponse.json({ ok: true, duplicate: true, event_id: eventId });
+      }
+    }
 
     const firstName = extractStr(rawBody, ["customer.fields.first_name", "data.customer.fields.first_name", "first_name"]);
     const lastName = extractStr(rawBody, ["customer.fields.surname", "data.customer.fields.surname", "last_name"]);
@@ -82,7 +143,7 @@ export async function POST(req: NextRequest) {
     ]) ?? "";
 
     const plan = inferPlan(offerId);
-    console.log(`[Tiquiz webhook] email=${email} offerId=${offerId} plan=${plan}`);
+    console.log(`[Tiquiz webhook] email=${email} type=${eventType} offerId=${offerId} plan=${plan} order=${orderId}`);
 
     // Create or find user
     let userId: string;
@@ -95,35 +156,74 @@ export async function POST(req: NextRequest) {
     } else if (createErr?.message?.toLowerCase().includes("already been registered")) {
       const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
       const found = ((authData as any)?.users ?? []).find((u: any) => u.email?.toLowerCase() === email);
-      if (!found) return NextResponse.json({ error: "User exists but not found" }, { status: 500 });
+      if (!found) {
+        await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "error", error: "user_exists_but_not_found" });
+        return NextResponse.json({ error: "User exists but not found" }, { status: 500 });
+      }
       userId = found.id;
     } else {
       throw createErr;
     }
 
-    // Resolve plan
-    let finalPlan = plan;
+    // 3. Resolve plan — NEVER default to lifetime on unknown offers.
+    // If we can't map the offer to a known paid plan and the user isn't
+    // already paying, refuse to grant access. Log it so you can see the
+    // orphan in webhook_logs and fix OFFER_TO_PLAN (or the SIO config).
+    let finalPlan: TiquizPlan | null = plan;
     if (!finalPlan) {
       const { data: existing } = await supabaseAdmin.from("profiles").select("plan").eq("user_id", userId).maybeSingle();
-      const ep = existing?.plan;
-      finalPlan = (ep && ep !== "free") ? ep as TiquizPlan : "lifetime";
-      console.warn(`[Tiquiz webhook] Unknown offer ${offerId}, defaulting to ${finalPlan}`);
+      const ep = existing?.plan as TiquizPlan | undefined;
+      if (ep && ep !== "free") {
+        // Already paying — re-sending a webhook without a clear offer shouldn't
+        // downgrade them. Keep their current plan.
+        finalPlan = ep;
+        console.warn(`[Tiquiz webhook] Unknown offer ${offerId} — keeping existing paid plan ${ep}`);
+      } else {
+        const msg = `unknown_offer:${offerId || "missing"}`;
+        console.error(`[Tiquiz webhook] REFUSE grant — ${msg} email=${email}`);
+        await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "refused", error: msg });
+        return NextResponse.json({ ok: false, refused: true, reason: "unknown_offer", offer_id: offerId }, { status: 200 });
+      }
     }
 
     // Upsert profile
-    await supabaseAdmin.from("profiles").upsert({
+    const { error: upsertErr } = await supabaseAdmin.from("profiles").upsert({
       user_id: userId, email, first_name: firstName, last_name: lastName,
       plan: finalPlan, updated_at: new Date().toISOString(),
     }, { onConflict: "user_id" });
+    if (upsertErr) {
+      await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "error", error: `upsert:${upsertErr.message}` });
+      throw upsertErr;
+    }
 
-    // Magic link
-    await supabaseAnon.auth.signInWithOtp({
-      email, options: { emailRedirectTo: `${APP_URL}/auth/callback`, shouldCreateUser: false },
-    }).catch(() => {});
+    // 4. Magic link — await + surface errors instead of swallowing them.
+    // If the send fails (SMTP down, rate limit), we record it so you can
+    // see the failure in webhook_logs AND return 5xx so SIO retries.
+    const { error: otpErr } = await supabaseAnon.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: `${APP_URL}/auth/callback`, shouldCreateUser: false },
+    });
 
-    return NextResponse.json({ ok: true, email, user_id: userId, plan: finalPlan, magic_link_sent: true });
-  } catch (err) {
+    if (otpErr) {
+      console.error(`[Tiquiz webhook] Magic link FAILED email=${email} err=${otpErr.message}`);
+      await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "error", error: `magic_link:${otpErr.message}` });
+      // Return 500 so SIO retries — profile is already upserted so the
+      // retry will hit the idempotency short-circuit only once the magic
+      // link actually goes out (we only mark 'processed' below).
+      return NextResponse.json({ ok: false, user_id: userId, plan: finalPlan, magic_link_sent: false, error: otpErr.message }, { status: 500 });
+    }
+
+    await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "processed" });
+    return NextResponse.json({ ok: true, email, user_id: userId, plan: finalPlan, magic_link_sent: true, event_id: eventId });
+  } catch (err: any) {
     console.error("[Tiquiz webhook] Error:", err);
+    await logWebhook({
+      event_id: eventId,
+      event_type: eventType,
+      payload: rawBody,
+      status: "error",
+      error: err?.message ? String(err.message).slice(0, 500) : "unknown",
+    });
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
