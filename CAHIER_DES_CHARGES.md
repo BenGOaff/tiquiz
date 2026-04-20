@@ -1,4 +1,4 @@
-# CAHIER DES CHARGES Tiquiz — Version Avril 2026 (État actuel du produit)
+# CAHIER DES CHARGES Tiquiz — Mise à jour Avril 2026
 
 Application Web SaaS multilingue (FR/EN/ES/IT/AR) de création de quiz interactifs pour capture de leads, avec intégration Systeme.io et génération IA.
 
@@ -15,14 +15,21 @@ Tiquiz est un outil de création de quiz lead magnets, ultra simple côté utili
 ### 1.2. Fonctionnalités clés
 
 - Création de quiz manuellement ou par **génération IA** (Claude Anthropic, streaming SSE)
-- Page publique de quiz responsive (`/q/[quizId]`)
-- Capture de leads (email + prénom + nom + téléphone + pays, configurable)
-- Résultats personnalisés avec CTA par résultat
+- **Brainstorm IA conversationnel** (`/api/quiz/idea-chat`, Claude Haiku) pour dégrossir un brief avant génération
+- **Éditeur WYSIWYG live** : sidebar multi-onglets (Structure / Design / Paramètres / Partage) + preview temps réel, switch mobile/desktop, édition inline sur tous les textes, champs rich-text (gras, italique, liens, images, alignement) pour intro / description / insight / projection
+- **Branding par quiz** : police Google (whitelist), couleur principale, couleur de fond, logo — héritage du profil avec override au niveau du quiz
+- **URL courte personnalisée** par quiz (`slug` → `/q/{slug}`, sanitisée + anti-collision avec UUID)
+- Page publique de quiz responsive (`/q/{quizId|slug}`)
+- Capture de leads configurable (email + prénom + nom + téléphone + pays), avec **tag Systeme.io capture** distinct du tag share
+- Résultats personnalisés avec CTA par résultat, plus un CTA par défaut en fallback
+- **Answer tags** : chaque option de question peut porter son propre `sio_tag_name` appliqué selon la réponse
 - **Intégration Systeme.io** : auto-tagging, inscription formation, ajout communauté, enrichissement contact
-- **Viralité** : share bonus avec tag SIO dédié
+- **Viralité** : étape "bonus" dédiée entre capture et résultats, anti-triche (navigator.share mobile, polling popup desktop, dwell + confirmation pour copy-link), visuel du bonus (image / mockup / GIF), sélecteur de réseaux (Facebook, X, LinkedIn, WhatsApp, Telegram, email, copy), tag SIO share dédié
+- Partage OG personnalisable par quiz (`og_image_url`, `og_description`) + footer custom (`custom_footer_text`, `custom_footer_url`)
 - Tracking funnel (vues, starts, completions, shares, taux de conversion)
-- Dashboard avec stats par quiz
-- **5 langues** (FR, EN, ES, IT, AR) + support RTL
+- Dashboard avec stats par quiz, pages dédiées `/quizzes`, `/leads`, `/stats`
+- **UI en 5 langues** (FR, EN, ES, IT, AR) + support RTL — **quiz public en 8 variantes** (fr, fr_vous, en, es, it, de, pt, ar) avec forme d'adresse tu/vous par quiz
+- Back-office admin minimaliste (`/admin` réservé aux emails whitelistés)
 - Monétisation freemium via webhooks Systeme.io
 
 ### 1.3. Ce que Tiquiz N'A PAS (vs Tipote)
@@ -63,11 +70,15 @@ INSCRIPTION (SIO webhook ou signup)
 | Accueil | / | Landing page |
 | Login | /login | Connexion (password + magic link) |
 | Signup | /signup | Inscription |
-| Dashboard | /dashboard | Liste des quiz + stats |
-| Nouveau quiz | /quiz/new | Création (3 onglets : Manuel, IA, Import) |
-| Éditer quiz | /quiz/[quizId] | Édition d'un quiz existant |
-| Quiz public | /q/[quizId] | Page publique du quiz (sans auth) |
-| Paramètres | /settings | Langue, adresse, privacy, clé SIO |
+| Dashboard | /dashboard | Vue d'ensemble + onboarding |
+| Mes quiz | /quizzes | Liste dédiée des quiz (gérer, activer, partager) |
+| Nouveau quiz | /quiz/new | Création (Manuel / IA / Brainstorm IA / Import) |
+| Éditer quiz | /quiz/[quizId] | Éditeur WYSIWYG live (Structure/Design/Paramètres/Partage) |
+| Quiz public | /q/[quizId\|slug] | Page publique du quiz, résolution par UUID ou slug |
+| Mes leads | /leads | Toutes les leads capturées sur tous les quiz |
+| Statistiques | /stats | Analytics agrégés par quiz (funnel, conversion) |
+| Paramètres | /settings | Profil, langue, adresse, privacy, clé SIO, branding global (police/couleur/logo) |
+| Admin | /admin | Back-office (emails whitelistés uniquement) |
 | Callback auth | /auth/callback | Gestion OTP / PKCE / implicit |
 
 ---
@@ -100,53 +111,82 @@ Page d'accueil après login.
 
 ### 3.3. Création / Édition de quiz (/quiz/new et /quiz/[quizId])
 
-**3 onglets :**
+**Modes de création (page `/quiz/new`) :**
 
-**Onglet Manuel :**
+- **Manuel** : formulaire complet
+- **Génération IA** : streaming SSE (`/api/quiz/generate`) qui remplit le formulaire en temps réel à partir d'un brief (objectif, audience, ton, CTA, bonus, nombre de questions / résultats, forme d'adresse, langue)
+- **Brainstorm IA** : chat conversationnel (`/api/quiz/idea-chat`, Claude Haiku) qui aide l'utilisateur à cadrer son idée en 4–6 tours avant de lancer la génération complète
+- **Import** : placeholder (à venir — CSV/JSON)
 
-- Métadonnées : titre, introduction, langue, forme d'adresse (tu/vous)
-- CTA : texte + URL
-- Privacy : URL politique de confidentialité, texte de consentement
-- Champs de capture : toggles pour prénom, nom, téléphone, pays
-- Viralité : activer share bonus, message de partage, tag SIO share
-- Questions : ajout/suppression dynamique de questions et options
-- Résultats : profils de résultat avec titre, description, insight, projection, CTA, mapping SIO (tag, course, community)
+**Éditeur WYSIWYG live (`/quiz/[quizId]`) :**
 
-**Onglet IA :**
+L'éditeur a une sidebar à gauche avec 4 onglets + une preview live à droite (switch mobile/desktop en temps réel). Édition inline sur tous les textes (InlineEdit / RichTextEdit) directement dans la preview.
 
-- Paramètres : objectif, audience cible, ton, CTA, description bonus
-- Langue de génération (5 langues supportées)
-- Limites : nombre de questions, nombre de résultats
-- Forme d'adresse (tu/vous)
-- Génération via streaming SSE (`/api/quiz/generate`)
-- Les champs du formulaire se remplissent en temps réel
+- **Structure** — arborescence : Intro, Questions (drag-and-drop), Prise d'informations, Demande de partage (si viralité activée), Résultats (drag-and-drop) ; scroll-to-section au clic
+- **Design** — police (whitelist Google Fonts : Inter, Poppins, Nunito, Montserrat, etc.), couleur principale, couleur de fond, logo de marque (héritage profil → override par quiz)
+- **Paramètres** — formulaire de capture (pills activables pour prénom, nom, téléphone, pays), options (toggle "Demande de partage"), bloc bonus (description, visuel image/mockup/GIF uploadable, message de partage pré-rempli, tag SIO post-share), CTA par défaut (fallback pour les résultats qui n'ont pas leur propre CTA)
+- **Partage** — slug personnalisé (`/q/{slug}`), sélecteur de réseaux de partage (Facebook, X, LinkedIn, WhatsApp, Telegram, email, copy), OG image + OG description, footer custom (texte + URL)
 
-**Onglet Import :**
+**Champs rich-text** (HTML sanitizé côté client et serveur via `sanitizeRichText`) : introduction, description / insight / projection de chaque résultat. Supportent gras, italique, liens, images, alignement.
 
-- Placeholder (à venir)
+**Champs éditables inline** : titre, bouton "Commencer", questions, options, titres de résultats, CTA par résultat + URL, heading/subtitle de capture.
 
-### 3.4. Quiz public (/q/[quizId])
+**Par résultat** : titre, description, insight ("Prise de conscience"), projection ("Et si…"), CTA texte + URL spécifique, mapping SIO (tag, course, community).
 
-Parcours utilisateur en étapes :
+**Par option de question** : texte, mapping vers un résultat, `sio_tag_name` optionnel (answer tag appliqué selon la réponse).
 
-1. **Intro** : titre + introduction + bouton "Commencer"
-2. **Questions** : navigation multi-étapes (précédent/suivant)
-3. **Capture email** : email + champs optionnels configurés
-4. **Consentement** : lien privacy + checkbox
-5. **Résultat** : titre, description, insight, projection + CTA spécifique
-6. **Bonus share** (si viralité activée) : prompt de partage pour débloquer un bonus
+### 3.4. Quiz public (/q/[quizId|slug])
 
-**Multilingue :** 7 variantes de traduction (fr, fr_vous, en, es, it, ar, ar_formal)
+Résolution de l'URL : UUID direct OU slug personnalisé (stocké sur `quizzes.slug`, validation case-insensitive, refuse les slugs qui ressemblent à un UUID pour éviter de shadow le fallback direct).
 
-**Tracking :** vues (page load), starts (clic commencer), completions (soumission lead), shares
+**Parcours utilisateur :**
+
+1. **Intro** — titre, introduction rich-text, bouton "Commencer" (texte éditable, `start_button_text`)
+2. **Questions** — navigation multi-étapes (précédent / suivant) avec barre de progression
+3. **Capture** — heading + subtitle personnalisés, email + champs optionnels configurés (prénom, nom, téléphone, pays), consentement via `privacy_url` + `consent_text`
+4. **Bonus share** (si `virality_enabled` et `bonus_description` renseignés) — étape intermédiaire **avant** les résultats :
+   - Heading contextuel tu/vous, description du bonus, visuel optionnel (`bonus_image_url`)
+   - Boutons des réseaux sélectionnés (`share_networks`) + bouton "Copier le lien"
+   - **Anti-triche** :
+     - Mobile → `navigator.share()` natif (ne résout qu'en cas de partage réel)
+     - Desktop → `window.open()` + polling `popup.closed` avec durée minimale d'ouverture (`MIN_SHARE_DWELL_MS = 3500ms`)
+     - Popup bloqué → fallback via `document.visibilitychange` avec même dwell
+     - Copy-link → dwell `MIN_COPY_DWELL_MS = 5000ms` + bouton de confirmation manuelle "J'ai partagé le lien"
+   - Déverrouillage bonus = application du `sio_share_tag_name` + incrément `shares_count`
+   - Option "Continuer sans bonus" laisse passer au résultat sans tag ni bonus
+5. **Résultat** — titre, description rich-text, insight rich-text ("Prise de conscience"), projection rich-text ("Et si…"), CTA spécifique du résultat OU fallback sur le CTA par défaut du quiz
+6. **Footer** — logo de marque (ou Tiquiz par défaut) + éventuels `custom_footer_text` / `custom_footer_url`
+
+**Branding runtime** : injection dynamique de la Google Font choisie, application des couleurs (`brand_color_primary` / `brand_color_background`) sur tout le parcours.
+
+**Multilingue public :** 8 variantes de traduction dans `PublicQuizClient` (`fr`, `fr_vous`, `en`, `es`, `it`, `de`, `pt`, `ar`). La variante `fr_vous` est sélectionnée automatiquement si `address_form === "vous"`. Les locales `de` et `pt` ne concernent que le quiz public — l'UI admin reste en 5 langues (cf. §6).
+
+**Tracking funnel :** `increment_quiz_counter(quiz_id, counter_name)` pour `views` (page load), `starts` (clic Commencer), `completions` (soumission lead), `shares` (partage validé).
 
 ### 3.5. Paramètres (/settings)
 
-- **Langue** : sélection locale UI (stocké cookie + DB)
-- **Forme d'adresse** : tu/vous par défaut
+- **Profil** : nom, prénom
+- **Langue** : sélection locale UI (stocké cookie `ui_locale` + DB)
+- **Forme d'adresse** par défaut : tu/vous (utilisée en fallback quand un quiz ne surcharge pas sa propre forme)
 - **URL Privacy** : lien politique de confidentialité par défaut
-- **Clé API Systeme.io** : clé personnelle pour sync leads
-- **Nom de la clé** : label pour gestion
+- **Branding global** : police Google (whitelist), couleur principale, logo uploadé (bucket Supabase `public-assets`) — utilisés par défaut sur tous les nouveaux quiz
+- **Clé API Systeme.io** : clé personnelle pour sync leads (`sio_user_api_key`) + label (`sio_api_key_name`)
+
+### 3.6. Mes quiz (/quizzes)
+
+Liste dédiée de tous les quiz de l'utilisateur avec actions rapides : copier le lien public, éditer, activer / archiver, supprimer. Alternative plus focalisée au dashboard.
+
+### 3.7. Mes leads (/leads)
+
+Vue agrégée de toutes les leads capturées, tous quiz confondus. Colonnes : email, prénom, nom, téléphone, pays, résultat, quiz source, date, statut share, statut bonus. Action : forcer une resync Systeme.io via `POST /api/leads`.
+
+### 3.8. Statistiques (/stats)
+
+Analytics agrégés : funnel global, conversion par quiz, comparaison des taux (vues → starts → completions → shares).
+
+### 3.9. Admin (/admin)
+
+Back-office minimaliste réservé aux emails whitelistés (`lib/adminEmails.ts`). Permet de lister les utilisateurs, ajuster leur plan, créer un utilisateur. Utilise `supabaseAdmin` (service role) côté serveur via `/api/admin/users`.
 
 ---
 
@@ -160,19 +200,19 @@ Parcours utilisateur en étapes :
 
 ### 4.2. Auto-tagging à la soumission de lead
 
-Quand un lead soumet le quiz :
+Quand un lead soumet le quiz, l'API `POST /api/quiz/[quizId]/public` effectue en fire-and-forget :
 
-1. Le résultat a un `sio_tag_name` configuré
-2. Trouve/crée le tag dans SIO
-3. Trouve/crée le contact par email
-4. Applique le tag au contact
+1. Trouve/crée le contact SIO par email (enrichit avec prénom, nom, téléphone, pays si fournis)
+2. Applique le **tag capture** (`quizzes.sio_capture_tag`) à chaque lead, tous résultats confondus
+3. Applique le **tag résultat** (`quiz_results.sio_tag_name`) correspondant au profil obtenu
+4. Applique les **answer tags** — chaque option répondue peut porter un `sio_tag_name` (configuré dans `options[i].sio_tag_name`), tous sont appliqués
 5. Met à jour le champ personnalisé `tiquiz_result` avec le titre du résultat
-6. Optionnellement inscrit dans une formation (`sio_course_id`)
-7. Optionnellement ajoute à une communauté (`sio_community_id`)
+6. Optionnellement inscrit dans une formation (`quiz_results.sio_course_id`)
+7. Optionnellement ajoute à une communauté (`quiz_results.sio_community_id`)
 
 ### 4.3. Share tag
 
-Quand un lead partage le quiz, applique le `sio_share_tag_name` au contact.
+Quand un lead valide un partage (anti-triche passé : navigator.share / popup dwell / copy-confirm), l'API `PATCH /api/quiz/[quizId]/public` applique `quizzes.sio_share_tag_name` au contact, déclenchant l'automation de bonus côté Systeme.io. Le lead est marqué `has_shared = true` et `bonus_unlocked = true`.
 
 ### 4.4. Webhooks entrants
 
@@ -226,7 +266,9 @@ Quand un lead partage le quiz, applique le `sio_share_tag_name` au contact.
 - Fallback : Accept-Language header → défaut français
 - Support RTL pour l'arabe
 
-### 6.2. Fichiers de traduction
+### 6.2. UI admin — 5 langues
+
+Fichiers de traduction utilisés pour toute l'interface de création/administration :
 
 - `messages/fr.json` (français)
 - `messages/en.json` (anglais)
@@ -234,9 +276,19 @@ Quand un lead partage le quiz, applique le `sio_share_tag_name` au contact.
 - `messages/it.json` (italien)
 - `messages/ar.json` (arabe)
 
-### 6.3. Clés traduites
+### 6.3. Quiz public — 8 variantes
 
-Navigation, formulaires auth, quiz builder, dashboard, settings, interface quiz publique, erreurs, notifications.
+Les textes du parcours public (boutons, placeholders, messages d'erreur, prompts de partage, fallback résultats…) sont gérés **hors `next-intl`** dans `PublicQuizClient.tsx`. Ils couvrent 8 variantes :
+
+- `fr` (tutoiement par défaut)
+- `fr_vous` (vouvoiement — sélectionné auto si `quizzes.address_form === "vous"`)
+- `en`, `es`, `it`, `de`, `pt`, `ar`
+
+La forme d'adresse tu/vous est gérée par quiz (colonne `quizzes.address_form`), avec fallback sur la préférence profil.
+
+### 6.4. Clés traduites
+
+Navigation, formulaires auth, quiz builder, dashboard, settings, interface quiz publique (8 variantes), erreurs, notifications, didacticiel.
 
 ---
 
@@ -294,18 +346,32 @@ Systeme.io (webhook vente/optin) → Supabase Auth + profiles
 
 **Profil :**
 
-- `profiles` — user_id, email, full_name, first_name, last_name, ui_locale, address_form, privacy_url, sio_user_api_key, sio_api_key_name, plan, product_id, sio_contact_id, responses_used_this_month, responses_reset_at
+- `profiles` — user_id, email, full_name, first_name, last_name, ui_locale, address_form, privacy_url, sio_user_api_key, sio_api_key_name, plan, product_id, sio_contact_id, responses_used_this_month, responses_reset_at, **brand_font, brand_color_primary, brand_logo_url** (branding par défaut utilisé en fallback par les quiz)
 
 **Quiz :**
 
-- `quizzes` — user_id, title, introduction, locale, status (draft/active), capture config (heading, subtitle, champs toggles), CTA (text, url), privacy (url, consent_text), virality (enabled, bonus_description, share_message, sio_share_tag_name), og_image_url, analytics counters (views, starts, completions, shares)
-- `quiz_questions` — quiz_id, question_text, options (JSONB: `[{ text, result_index }]`)
-- `quiz_results` — quiz_id, title, description, insight, projection, cta_text, cta_url, sio_tag_name, sio_course_id, sio_community_id
-- `quiz_leads` — quiz_id, email, first_name, last_name, phone, country, result_id, consent_given, has_shared, bonus_unlocked, answers (JSONB), unique(quiz_id, email)
+- `quizzes` — colonnes principales :
+  - Identité : `user_id`, `title`, `slug` (unique, case-insensitive), `introduction` (HTML rich-text), `locale`, `address_form` (tu/vous par quiz, override du profil), `status` (draft/active)
+  - Capture : `capture_heading`, `capture_subtitle`, `capture_first_name`, `capture_last_name`, `capture_phone`, `capture_country`
+  - Parcours : `start_button_text`
+  - CTA par défaut : `cta_text`, `cta_url`
+  - Privacy / footer : `privacy_url`, `consent_text`, `custom_footer_text`, `custom_footer_url`
+  - Viralité : `virality_enabled`, `bonus_description`, `bonus_image_url`, `share_message`, `share_networks` (JSONB enum filtré), `sio_share_tag_name`
+  - Systeme.io : `sio_capture_tag` (appliqué à la soumission du lead, distinct du share tag)
+  - SEO / OG : `og_image_url`, `og_description`
+  - Branding par quiz (override du profil) : `brand_font`, `brand_color_primary`, `brand_color_background`
+  - Analytics : `views_count`, `starts_count`, `completions_count`, `shares_count`
+- `quiz_questions` — `quiz_id`, `question_text`, `options` (JSONB : `[{ text, result_index, sio_tag_name? }]` — chaque option peut porter son propre tag SIO), `sort_order`
+- `quiz_results` — `quiz_id`, `title`, `description` (rich-text), `insight` (rich-text), `projection` (rich-text), `cta_text`, `cta_url`, `sio_tag_name`, `sio_course_id`, `sio_community_id`, `sort_order`
+- `quiz_leads` — `quiz_id`, `email`, `first_name`, `last_name`, `phone`, `country`, `result_id`, `consent_given`, `has_shared`, `bonus_unlocked`, `answers` (JSONB), `created_at`, unique(quiz_id, email)
 
 **Logs :**
 
-- `webhook_logs` — source, event_type, payload (JSONB), received_at
+- `webhook_logs` — `source`, `event_type`, `payload` (JSONB), `received_at`
+
+**Storage :**
+
+- Bucket Supabase `public-assets` (public-read, écriture authentifiée sous le préfixe `{user_id}/...`) utilisé pour logos de marque, images OG, visuels de bonus. Chemins typiques : `bonus/{user_id}/{quiz_id}-{timestamp}.{ext}`, `logos/{user_id}/...`.
 
 **RLS :** Toutes les tables utilisent Row Level Security. Users gèrent leurs propres données. Accès public aux quiz actifs via API.
 
@@ -322,28 +388,45 @@ Systeme.io (webhook vente/optin) → Supabase Auth + profiles
 | `/api/quiz` | GET | oui | Liste les quiz de l'utilisateur |
 | `/api/quiz` | POST | oui | Crée un quiz (vérifie quota free) |
 | `/api/quiz/[quizId]` | GET | oui | Détail quiz + questions + résultats + leads |
-| `/api/quiz/[quizId]` | PATCH | oui | Met à jour un quiz |
+| `/api/quiz/[quizId]` | PATCH | oui | Met à jour un quiz (slug, branding, capture, viralité, questions, résultats, etc. + sanitisation rich-text serveur) |
 | `/api/quiz/[quizId]` | DELETE | oui | Supprime un quiz (cascade) |
-| `/api/quiz/generate` | POST | oui | Génération IA quiz (streaming SSE) |
+| `/api/quiz/generate` | POST | oui | Génération IA quiz complète (streaming SSE) |
+| `/api/quiz/idea-chat` | POST | oui | Brainstorm IA conversationnel (Claude Haiku, max 6 tours utilisateur) |
 | `/api/quiz/[quizId]/track` | POST | non | Tracking funnel (start, complete) |
-| `/api/quiz/[quizId]/public` | GET | non | Récupère quiz actif (données publiques) |
-| `/api/quiz/[quizId]/public` | POST | non | Soumet un lead + sync SIO |
-| `/api/quiz/[quizId]/public` | PATCH | non | Enregistre un share + tag SIO |
+| `/api/quiz/[quizId]/public` | GET | non | Récupère quiz actif (données publiques) — résout UUID ou slug |
+| `/api/quiz/[quizId]/public` | POST | non | Soumet un lead + sync SIO (tag capture + result tag + course + community) |
+| `/api/quiz/[quizId]/public` | PATCH | non | Enregistre un share validé + tag SIO share |
 | `/api/quiz/[quizId]/sync-systeme` | POST | oui | Bulk sync leads vers SIO |
+| `/api/leads` | GET | oui | Liste toutes les leads de l'utilisateur (tous quiz confondus) |
+| `/api/leads` | POST | oui | Force la resync d'une lead vers SIO |
 | `/api/profile` | GET | oui | Récupère le profil utilisateur |
-| `/api/profile` | PATCH | oui | Met à jour le profil |
+| `/api/profile` | PATCH | oui | Met à jour le profil (branding, SIO, privacy, etc.) |
 | `/api/systeme-io/webhook` | POST | secret | Webhook ventes SIO |
 | `/api/systeme-io/free-optin` | POST | secret | Webhook optin gratuit SIO |
-| `/api/systeme-io/tags` | GET | oui | Liste les tags SIO de l'utilisateur |
+| `/api/systeme-io/tags` | GET | oui | Liste les tags SIO de l'utilisateur (pour le picker) |
 | `/api/settings/ui-locale` | POST | oui | Change la langue UI |
+| `/api/admin/users` | GET/POST/PATCH | admin | Liste/crée/met à jour les utilisateurs (emails whitelistés) |
 
-### 8.4. Prompt IA (génération quiz)
+### 8.4. IA et prompts
+
+**Génération quiz complète** (`/api/quiz/generate`)
 
 - Fichier : `lib/prompts/quiz/system.ts`
-- Provider : Claude Anthropic (Sonnet 4)
-- Mode : streaming SSE (chunks JSON en temps réel)
+- Provider : Claude Anthropic (modèle via env `ANTHROPIC_MODEL`, ex. Sonnet 4)
+- Mode : streaming SSE (chunks JSON remplis en temps réel dans le formulaire)
 - Paramètres : objectif, audience, ton, CTA, bonus, langue, nombre questions/résultats, forme d'adresse
-- Output : quiz complet structuré (titre, intro, questions, options, résultats)
+- Output : quiz complet structuré (titre, intro, questions + options, résultats + insight/projection/CTA)
+
+**Brainstorm IA** (`/api/quiz/idea-chat`)
+
+- Fichier : `lib/prompts/quiz/chat.ts`
+- Provider : Claude Haiku (env `ANTHROPIC_CHAT_MODEL`, défaut `claude-haiku-4-5-20251001`) — choix économique et rapide
+- Mode : conversation structurée, max **6 tours utilisateur**, qui aboutit à un brief structuré consommé ensuite par le générateur principal
+- Usage : cadrer une idée floue ("Pas d'idée ?") avant la génération
+
+**Sanitisation rich-text**
+
+- `lib/richText.ts` : `sanitizeRichText(html)` appliqué côté client (éditeur) et serveur (API PATCH quiz, route `/api/quiz/[quizId]`) sur `introduction`, `results.description`, `results.insight`, `results.projection`.
 
 ### 8.5. Système de didacticiel interactif
 
@@ -479,14 +562,21 @@ pm2 restart tiquiz-prod --update-env
 ### Implémenté ✅
 
 - Auth complète (password + magic link + webhooks SIO)
-- Quiz engine (création manuelle + génération IA)
-- Quiz public avec funnel complet
-- Capture de leads
-- Intégration Systeme.io (tags, formations, communautés, contacts)
+- Quiz engine (création manuelle + génération IA streaming + brainstorm IA conversationnel)
+- **Éditeur WYSIWYG live** (sidebar Structure/Design/Paramètres/Partage + preview live mobile/desktop, édition inline, rich-text avec sanitisation client+serveur)
+- **Branding par quiz** (police Google, couleurs, logo) avec héritage du profil
+- **Slug personnalisé** (`/q/{slug}`) + OG image/description + footer custom
+- **Answer tags** (tag SIO par option de question)
+- **Étape bonus anti-triche** entre capture et résultats (navigator.share / popup polling / copy-link dwell + confirmation), visuel du bonus, sélecteur de réseaux
+- Quiz public avec funnel complet (8 variantes de traduction publique)
+- Capture de leads configurable + tag SIO capture distinct du share
+- Intégration Systeme.io (tags, formations, communautés, contacts) + picker de tags
 - Monétisation freemium (plans + quotas)
-- i18n 5 langues + RTL
-- Dashboard avec stats
-- Settings utilisateur
+- UI en 5 langues + RTL
+- Dashboard + pages dédiées `/quizzes`, `/leads`, `/stats`
+- Settings utilisateur (profil, branding global, SIO, privacy)
+- Back-office admin (`/admin` + `/api/admin/users`)
+- Storage Supabase (`public-assets`) pour logos, OG, bonus
 - Email templates Tiquiz (invite, magic link, reset password, confirm signup)
 - **Didacticiel interactif** (tour guidé 7 étapes — inspiré de Tipote, adapté Tiquiz)
 - **Centre d'aide** mutualisé avec Tipote (catégorie Tiquiz + chatbot + tickets partagés)
@@ -494,7 +584,7 @@ pm2 restart tiquiz-prod --update-env
 ### À faire 🔄
 
 - Import de quiz (CSV/JSON) — onglet placeholder
-- Analytics détaillés par quiz (graphiques, tendances)
+- Analytics détaillés par quiz (graphiques, tendances) au-delà des compteurs bruts
 - Mapping offer_id SIO (remplacer les placeholders par les vrais IDs)
 - Tests automatisés
 - Configuration Nginx pour `quiz.tipote.com` → Tiquiz (port 3001)
