@@ -16,6 +16,7 @@ type RouteContext = { params: Promise<{ quizId: string }> };
 const SIO_BASE = "https://api.systeme.io/api";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Resolves the "[quizId]" URL segment — which may be a UUID or a custom slug —
@@ -255,8 +256,14 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     const customFooterText = isPaid ? (quizRow.custom_footer_text as string | null) : null;
     const customFooterUrl = isPaid ? (quizRow.custom_footer_url as string | null) : null;
 
-    // Increment view count (non-blocking)
-    admin.from("quizzes").update({ views_count: (quizRow.views_count as number ?? 0) + 1 }).eq("id", quizId).then(() => {});
+    // Increment view count atomically. The previous SELECT-then-UPDATE
+    // pattern lost increments under concurrent load: two visitors would
+    // read the same stale count and both write "+1", losing one hit.
+    // The RPC already exists and is used for starts_count / completions_count.
+    admin
+      .rpc("increment_quiz_counter", { quiz_id_input: quizId, counter_name: "views_count" })
+      .then(() => {})
+      .then(undefined, () => {});
 
     const { user_id: _uid, ...quizPublic } = quizRow;
     void _uid;
@@ -301,7 +308,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     const email = String(body.email ?? "").trim().toLowerCase();
-    if (!email || !email.includes("@")) {
+    // Reject malformed addresses ("a@", "@b", "foo@bar" without a TLD) so the
+    // lead list isn't polluted and the Systeme.io sync doesn't reject them.
+    if (!EMAIL_RE.test(email)) {
       return NextResponse.json({ ok: false, error: "Valid email required" }, { status: 400 });
     }
 
@@ -450,17 +459,35 @@ export async function POST(req: NextRequest, context: RouteContext) {
           if (courseId) await enrollInSioCourse(apiKey, courseId, sioContactId);
           if (communityId) await addToSioCommunity(apiKey, communityId, sioContactId);
 
-          // Update lead sync status in DB
+          // Update lead sync status in DB. Also clear any previous error
+          // markers since the sync succeeded this time.
           await admin
             .from("quiz_leads")
             .update({
               sio_synced: true,
               sio_synced_at: new Date().toISOString(),
               sio_tag_applied: tagsToApply.join(",") || null,
+              sio_last_attempt_at: new Date().toISOString(),
+              sio_last_error: null,
             })
             .eq("id", leadId);
         } catch (e) {
           console.error("[Systeme.io auto-tag POST] Error:", e);
+          // Record the failure on the lead so a future dashboard panel
+          // can surface "N leads failed to sync to Systeme.io" and offer a
+          // retry button. Previously these errors were only in server
+          // logs and the lead silently stayed at sio_synced=false forever.
+          try {
+            await admin
+              .from("quiz_leads")
+              .update({
+                sio_last_attempt_at: new Date().toISOString(),
+                sio_last_error: e instanceof Error ? e.message.slice(0, 500) : String(e).slice(0, 500),
+              })
+              .eq("id", leadId);
+          } catch {
+            /* the lead may have been deleted concurrently; ignore */
+          }
         }
       })();
     }
@@ -494,27 +521,45 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     const email = String(body.email ?? "").trim().toLowerCase();
-    if (!email) {
-      return NextResponse.json({ ok: false, error: "Email required" }, { status: 400 });
+    if (!EMAIL_RE.test(email)) {
+      return NextResponse.json({ ok: false, error: "Valid email required" }, { status: 400 });
     }
 
-    await admin
+    // Mark share — and verify the row actually matched a lead. Previously a
+    // PATCH with a bogus/unknown email silently matched 0 rows and still
+    // returned ok:true while incrementing shares_count, so the visitor
+    // thought they'd unlocked the bonus but no lead was credited.
+    const { data: updatedLeads, error: updateErr } = await admin
       .from("quiz_leads")
       .update({ has_shared: true, bonus_unlocked: true })
       .eq("quiz_id", quizId)
-      .eq("email", email);
+      .eq("email", email)
+      .select("id");
+
+    if (updateErr) {
+      return NextResponse.json({ ok: false, error: updateErr.message }, { status: 500 });
+    }
+
+    if (!updatedLeads || updatedLeads.length === 0) {
+      // No lead exists for this (quiz, email): don't credit the share and
+      // don't pretend the bonus is unlocked. Client can recover by
+      // re-capturing the email first.
+      return NextResponse.json(
+        { ok: false, error: "Lead not found for this email" },
+        { status: 404 },
+      );
+    }
 
     const { data: quiz } = await admin
       .from("quizzes")
-      .select("shares_count, sio_share_tag_name, user_id")
+      .select("sio_share_tag_name, user_id")
       .eq("id", quizId)
       .maybeSingle();
 
     if (quiz) {
+      // Atomic increment; see GET for rationale.
       await admin
-        .from("quizzes")
-        .update({ shares_count: ((quiz as Record<string, unknown>).shares_count as number ?? 0) + 1 })
-        .eq("id", quizId);
+        .rpc("increment_quiz_counter", { quiz_id_input: quizId, counter_name: "shares_count" });
 
       const shareTagName = String((quiz as Record<string, unknown>).sio_share_tag_name ?? "").trim();
       if (shareTagName && (quiz as Record<string, unknown>).user_id) {

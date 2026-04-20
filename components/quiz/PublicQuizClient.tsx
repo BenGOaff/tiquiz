@@ -1,7 +1,7 @@
 // components/quiz/PublicQuizClient.tsx
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -88,6 +88,7 @@ export type { PublicQuizData };
 type QuizTranslations = {
   quizUnavailable: string;
   loadError: string;
+  saveError: string;
   quizNotFound: string;
   start: string;
   previous: string;
@@ -131,6 +132,7 @@ const translations: Record<string, QuizTranslations> = {
   fr: {
     quizUnavailable: "Ce quiz n\u2019est pas disponible.",
     loadError: "Impossible de charger le quiz.",
+    saveError: "Impossible d\u2019enregistrer tes r\u00e9ponses. V\u00e9rifie ta connexion et r\u00e9essaie.",
     quizNotFound: "Quiz introuvable",
     start: "Commencer le test",
     previous: "Pr\u00e9c\u00e9dent",
@@ -171,6 +173,7 @@ const translations: Record<string, QuizTranslations> = {
   fr_vous: {
     quizUnavailable: "Ce quiz n\u2019est pas disponible.",
     loadError: "Impossible de charger le quiz.",
+    saveError: "Impossible d\u2019enregistrer vos r\u00e9ponses. V\u00e9rifiez votre connexion et r\u00e9essayez.",
     quizNotFound: "Quiz introuvable",
     start: "Commencer le test",
     previous: "Pr\u00e9c\u00e9dent",
@@ -211,6 +214,7 @@ const translations: Record<string, QuizTranslations> = {
   en: {
     quizUnavailable: "This quiz is not available.",
     loadError: "Unable to load the quiz.",
+    saveError: "Couldn\u2019t save your answers. Check your connection and try again.",
     quizNotFound: "Quiz not found",
     start: "Start the quiz",
     previous: "Previous",
@@ -251,6 +255,7 @@ const translations: Record<string, QuizTranslations> = {
   es: {
     quizUnavailable: "Este quiz no est\u00e1 disponible.",
     loadError: "No se pudo cargar el quiz.",
+    saveError: "No se pudieron guardar tus respuestas. Revisa tu conexi\u00f3n e int\u00e9ntalo de nuevo.",
     quizNotFound: "Quiz no encontrado",
     start: "Empezar el test",
     previous: "Anterior",
@@ -291,6 +296,7 @@ const translations: Record<string, QuizTranslations> = {
   de: {
     quizUnavailable: "Dieses Quiz ist nicht verf\u00fcgbar.",
     loadError: "Quiz konnte nicht geladen werden.",
+    saveError: "Deine Antworten konnten nicht gespeichert werden. Pr\u00fcfe deine Verbindung und versuche es erneut.",
     quizNotFound: "Quiz nicht gefunden",
     start: "Quiz starten",
     previous: "Zur\u00fcck",
@@ -331,6 +337,7 @@ const translations: Record<string, QuizTranslations> = {
   pt: {
     quizUnavailable: "Este quiz n\u00e3o est\u00e1 dispon\u00edvel.",
     loadError: "N\u00e3o foi poss\u00edvel carregar o quiz.",
+    saveError: "N\u00e3o foi poss\u00edvel salvar suas respostas. Verifique sua conex\u00e3o e tente novamente.",
     quizNotFound: "Quiz n\u00e3o encontrado",
     start: "Come\u00e7ar o teste",
     previous: "Anterior",
@@ -371,6 +378,7 @@ const translations: Record<string, QuizTranslations> = {
   it: {
     quizUnavailable: "Questo quiz non \u00e8 disponibile.",
     loadError: "Impossibile caricare il quiz.",
+    saveError: "Impossibile salvare le tue risposte. Controlla la connessione e riprova.",
     quizNotFound: "Quiz non trovato",
     start: "Inizia il test",
     previous: "Precedente",
@@ -411,6 +419,7 @@ const translations: Record<string, QuizTranslations> = {
   ar: {
     quizUnavailable: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d.",
     loadError: "\u062a\u0639\u0630\u0631 \u062a\u062d\u0645\u064a\u0644 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631.",
+    saveError: "\u062a\u0639\u0630\u0631 \u062d\u0641\u0638 \u0625\u062c\u0627\u0628\u0627\u062a\u0643. \u062a\u062d\u0642\u0642 \u0645\u0646 \u0627\u062a\u0635\u0627\u0644\u0643 \u0648\u062d\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062e\u0631\u0649.",
     quizNotFound: "\u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u063a\u064a\u0631 \u0645\u0648\u062c\u0648\u062f",
     start: "\u0627\u0628\u062f\u0623 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631",
     previous: "\u0627\u0644\u0633\u0627\u0628\u0642",
@@ -481,6 +490,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   const [resultProfile, setResultProfile] = useState<QuizResult | null>(null);
   const [hasShared, setHasShared] = useState(false);
   const [bonusUnlocked, setBonusUnlocked] = useState(false);
+  // Surfaced to the visitor when the lead POST fails so they know their
+  // answers weren't saved and can retry, instead of silently landing on
+  // the result screen while the creator's lead list stays empty.
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const t = getT(quiz?.locale, quiz?.address_form);
 
@@ -562,6 +575,78 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     load();
   }, [quizId, previewData]);
 
+  // ─── Session persistence: resume the bonus/result step across refresh ───
+  // Why sessionStorage and not localStorage? sessionStorage is scoped to
+  // the tab and cleared on tab close, so each fresh visit starts a new
+  // quiz session (expected UX), but an accidental reload or mobile-app
+  // backgrounding mid-result doesn't send the visitor back to question 1
+  // and make the results unrecoverable.
+  // We only persist from the bonus/result step onward — mid-quiz restart
+  // is fine, it's specifically the post-capture states we don't want to
+  // lose because the lead was already saved server-side.
+  const sessionKey = `tiquiz:session:${quizId}`;
+  const restoredRef = useRef(false);
+
+  useEffect(() => {
+    if (previewData) return;
+    if (!quiz || restoredRef.current) return;
+    restoredRef.current = true;
+    if (typeof window === "undefined") return;
+    try {
+      const raw = sessionStorage.getItem(sessionKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as {
+        v?: number;
+        step?: Step;
+        resultProfileId?: string | null;
+        hasShared?: boolean;
+        bonusUnlocked?: boolean;
+        email?: string;
+      };
+      if (!saved || saved.v !== 1) return;
+      if (saved.step !== "bonus" && saved.step !== "result") return;
+      const profile = saved.resultProfileId
+        ? quiz.results.find((r) => r.id === saved.resultProfileId) ?? null
+        : null;
+      // If the saved result profile no longer exists (creator deleted/
+      // restructured the quiz since), abandon the resume cleanly rather
+      // than showing an empty result screen.
+      if (!profile) {
+        sessionStorage.removeItem(sessionKey);
+        return;
+      }
+      setResultProfile(profile);
+      setHasShared(Boolean(saved.hasShared));
+      setBonusUnlocked(Boolean(saved.bonusUnlocked));
+      if (typeof saved.email === "string") setEmail(saved.email);
+      setStep(saved.step);
+    } catch {
+      // Corrupt payload — clear and start fresh
+      try { sessionStorage.removeItem(sessionKey); } catch { /* ignore */ }
+    }
+  }, [quiz, previewData, sessionKey]);
+
+  useEffect(() => {
+    if (previewData) return;
+    if (typeof window === "undefined") return;
+    if (step !== "bonus" && step !== "result") return;
+    try {
+      sessionStorage.setItem(
+        sessionKey,
+        JSON.stringify({
+          v: 1,
+          step,
+          resultProfileId: resultProfile?.id ?? null,
+          hasShared,
+          bonusUnlocked,
+          email,
+        }),
+      );
+    } catch {
+      // quota exceeded or storage disabled — non-fatal
+    }
+  }, [previewData, sessionKey, step, resultProfile, hasShared, bonusUnlocked, email]);
+
   const computeResult = useCallback((): QuizResult | null => {
     if (!quiz) return null;
     const scores: number[] = new Array(quiz.results.length).fill(0);
@@ -601,9 +686,9 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   const handleSubmitEmail = async () => {
     if (!email.trim()) return;
     setSubmitting(true);
+    setSubmitError(null);
     try {
       const profile = computeResult();
-      setResultProfile(profile);
 
       // In preview mode, skip the actual lead submission
       if (!previewData) {
@@ -613,7 +698,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
           option_index: optionIdx,
         }));
 
-        await fetch(`/api/quiz/${quizId}/public`, {
+        const res = await fetch(`/api/quiz/${quizId}/public`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -627,17 +712,29 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             answers: answersPayload,
           }),
         });
+
+        // fetch() only rejects on network errors — HTTP 400/500 need an
+        // explicit res.ok check. Previously, a DB constraint / inactive
+        // quiz / invalid email got silently swallowed and the visitor was
+        // still advanced to the results, so the creator never saw the
+        // lead. Block advancement here so they can retry.
+        if (!res.ok) {
+          setSubmitError(t.saveError);
+          setSubmitting(false);
+          return;
+        }
       }
+
+      setResultProfile(profile);
 
       // If the creator set up a bonus-on-share, show the intermediate step so
       // the visitor can unlock it before seeing their results.
       const hasBonusFlow = Boolean(quiz?.virality_enabled && (quiz?.bonus_description || "").trim());
       setStep(hasBonusFlow ? "bonus" : "result");
     } catch {
-      // Still show result even if save fails
-      setResultProfile(computeResult());
-      const hasBonusFlow = Boolean(quiz?.virality_enabled && (quiz?.bonus_description || "").trim());
-      setStep(hasBonusFlow ? "bonus" : "result");
+      // Network-level failure (offline, DNS, etc.) — same treatment: show
+      // the error, keep them on the email step, let them retry.
+      setSubmitError(t.saveError);
     } finally {
       setSubmitting(false);
     }
@@ -1015,6 +1112,12 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               ) : null}
               {t.viewResult}
             </Button>
+
+            {submitError && (
+              <p className="text-sm text-center text-red-600 mt-2" role="alert">
+                {submitError}
+              </p>
+            )}
 
             {quiz.privacy_url && (
               <p className="text-xs text-center text-muted-foreground">
