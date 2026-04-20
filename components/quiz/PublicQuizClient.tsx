@@ -717,37 +717,36 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
     setShareWarning(false);
     const openedAt = Date.now();
-    const popup = window.open(
-      url,
-      "_blank",
-      "noopener,noreferrer,width=600,height=500",
-    );
 
-    // Popup blocked (common on mobile). Fall back to a full-tab redirect —
-    // the visitor will come back via history.back. No anti-cheat possible,
-    // so we credit optimistically once they return.
-    if (!popup) {
-      const onReturn = () => {
-        if (document.visibilityState === "visible") {
-          document.removeEventListener("visibilitychange", onReturn);
-          if (Date.now() - openedAt >= MIN_SHARE_DWELL_MS) trackShare();
-          else setShareWarning(true);
-        }
-      };
-      document.addEventListener("visibilitychange", onReturn);
-      window.location.href = url;
-      return;
-    }
+    // Open in a new tab via a synthesized anchor click.
+    //
+    // Why not window.open? When "noopener" is passed in the features string,
+    // the HTML spec requires window.open to return null — so the previous
+    // code's `if (!popup) window.location.href = url` fallback fired on
+    // EVERY click, redirecting the main quiz tab to the share URL. The
+    // visitor lost their quiz progress and Back returned them to the intro.
+    //
+    // An anchor with target=_blank + rel=noopener reliably opens a new tab
+    // on desktop and mobile without ever touching the current tab, and
+    // keeps the same security posture. We lose popup.closed polling but
+    // keep the visibilitychange dwell-time heuristic for anti-cheat.
+    const a = document.createElement("a");
+    a.href = url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
 
-    // Poll until the share popup closes, then credit only if enough time
-    // elapsed — a split-second close almost certainly means no share.
-    const timer = window.setInterval(() => {
-      if (popup.closed) {
-        window.clearInterval(timer);
+    const onReturn = () => {
+      if (document.visibilityState === "visible") {
+        document.removeEventListener("visibilitychange", onReturn);
         if (Date.now() - openedAt >= MIN_SHARE_DWELL_MS) trackShare();
         else setShareWarning(true);
       }
-    }, 600);
+    };
+    document.addEventListener("visibilitychange", onReturn);
   };
 
   const copyShareLink = async () => {
