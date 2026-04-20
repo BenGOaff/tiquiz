@@ -63,6 +63,25 @@ function extractStr(body: any, paths: string[]): string | null {
   return null;
 }
 
+// Paginated lookup: SIO already has >1k customers and listUsers caps at
+// 1000 per page, so we can't rely on a single call. Walks pages until it
+// finds the match or exhausts the list.
+async function findUserByEmail(email: string): Promise<{ id: string } | null> {
+  const lower = email.toLowerCase();
+  const perPage = 1000;
+  let page = 1;
+  while (true) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+    const users = ((data as any)?.users ?? []) as Array<{ id: string; email?: string | null }>;
+    const found = users.find((u) => typeof u.email === "string" && u.email.toLowerCase() === lower);
+    if (found) return { id: found.id };
+    if (users.length < perPage) return null;
+    page += 1;
+    if (page > 50) return null; // 50k users hard-stop, well beyond current scale
+  }
+}
+
 async function logWebhook(row: {
   event_id: string | null;
   event_type: string | null;
@@ -154,8 +173,7 @@ export async function POST(req: NextRequest) {
     if (created?.user) {
       userId = created.user.id;
     } else if (createErr?.message?.toLowerCase().includes("already been registered")) {
-      const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-      const found = ((authData as any)?.users ?? []).find((u: any) => u.email?.toLowerCase() === email);
+      const found = await findUserByEmail(email);
       if (!found) {
         await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "error", error: "user_exists_but_not_found" });
         return NextResponse.json({ error: "User exists but not found" }, { status: 500 });
@@ -165,19 +183,22 @@ export async function POST(req: NextRequest) {
       throw createErr;
     }
 
+    // Capture the old plan BEFORE upsert so we can audit plan transitions.
+    const { data: priorProfile } = await supabaseAdmin
+      .from("profiles").select("plan").eq("user_id", userId).maybeSingle();
+    const oldPlan = (priorProfile?.plan as TiquizPlan | undefined) ?? null;
+
     // 3. Resolve plan — NEVER default to lifetime on unknown offers.
     // If we can't map the offer to a known paid plan and the user isn't
     // already paying, refuse to grant access. Log it so you can see the
     // orphan in webhook_logs and fix OFFER_TO_PLAN (or the SIO config).
     let finalPlan: TiquizPlan | null = plan;
     if (!finalPlan) {
-      const { data: existing } = await supabaseAdmin.from("profiles").select("plan").eq("user_id", userId).maybeSingle();
-      const ep = existing?.plan as TiquizPlan | undefined;
-      if (ep && ep !== "free") {
+      if (oldPlan && oldPlan !== "free") {
         // Already paying — re-sending a webhook without a clear offer shouldn't
         // downgrade them. Keep their current plan.
-        finalPlan = ep;
-        console.warn(`[Tiquiz webhook] Unknown offer ${offerId} — keeping existing paid plan ${ep}`);
+        finalPlan = oldPlan;
+        console.warn(`[Tiquiz webhook] Unknown offer ${offerId} — keeping existing paid plan ${oldPlan}`);
       } else {
         const msg = `unknown_offer:${offerId || "missing"}`;
         console.error(`[Tiquiz webhook] REFUSE grant — ${msg} email=${email}`);
@@ -194,6 +215,21 @@ export async function POST(req: NextRequest) {
     if (upsertErr) {
       await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "error", error: `upsert:${upsertErr.message}` });
       throw upsertErr;
+    }
+
+    // Audit: log plan transition (skip no-op re-sends of the same plan).
+    if (finalPlan !== oldPlan) {
+      try {
+        await supabaseAdmin.from("plan_change_log").insert({
+          target_user_id: userId,
+          target_email: email,
+          old_plan: oldPlan,
+          new_plan: finalPlan,
+          reason: `systeme_io:${eventType ?? "unknown"}:${offerId || "no_offer"}`,
+        } as any);
+      } catch {
+        // table may not exist on older deploys — audit is best-effort
+      }
     }
 
     // 4. Magic link — await + surface errors instead of swallowing them.
