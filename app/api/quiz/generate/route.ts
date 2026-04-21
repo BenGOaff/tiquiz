@@ -77,8 +77,8 @@ export async function POST(req: NextRequest) {
       if (!content) {
         return NextResponse.json({ ok: false, error: "content is required for import mode" }, { status: 400 });
       }
-      if (content.length > 10_000) {
-        return NextResponse.json({ ok: false, error: "content exceeds 10000 characters" }, { status: 400 });
+      if (content.length > 50_000) {
+        return NextResponse.json({ ok: false, error: "content exceeds 50000 characters" }, { status: 400 });
       }
       const prompts = buildQuizImportPrompt({
         content,

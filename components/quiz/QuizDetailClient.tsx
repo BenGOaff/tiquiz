@@ -341,7 +341,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // visitor understands what they unlock before sharing.
   async function handleBonusImageUpload(file: File) {
     if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return; }
-    if (file.size > 4 * 1024 * 1024) { toast.error("Image trop lourde (max 4 Mo)"); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("Image trop lourde (max 10 Mo)"); return; }
     setUploadingBonusImage(true);
     try {
       const supabase = getSupabaseBrowserClient();
