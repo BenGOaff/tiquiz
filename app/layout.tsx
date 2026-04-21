@@ -3,16 +3,53 @@ import "./globals.css";
 import type { Metadata } from "next";
 import Providers from "@/components/Providers";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages } from "next-intl/server";
-import { RTL_LOCALES } from "@/i18n/config";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { RTL_LOCALES, SUPPORTED_LOCALES } from "@/i18n/config";
 
-export const metadata: Metadata = {
-  title: "Tiquiz",
-  description: "Tiquiz – Crée des quiz engageants et capture des leads",
-  icons: {
-    icon: "/favicon.ico",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const t = await getTranslations({ locale, namespace: "metadata" });
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tiquiz.com";
+  const languages: Record<string, string> = {};
+  for (const l of SUPPORTED_LOCALES) {
+    languages[l] = siteUrl;
+  }
+  languages["x-default"] = siteUrl;
+
+  return {
+    metadataBase: new URL(siteUrl),
+    title: {
+      default: t("title"),
+      template: `%s · ${t("title")}`,
+    },
+    description: t("description"),
+    applicationName: "Tiquiz",
+    alternates: {
+      canonical: "/",
+      languages,
+    },
+    openGraph: {
+      type: "website",
+      siteName: "Tiquiz",
+      title: t("title"),
+      description: t("description"),
+      url: siteUrl,
+      locale: locale === "ar" ? "ar_AR" : `${locale}_${locale.toUpperCase()}`,
+      alternateLocale: SUPPORTED_LOCALES.filter((l) => l !== locale).map((l) =>
+        l === "ar" ? "ar_AR" : `${l}_${l.toUpperCase()}`,
+      ),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: t("title"),
+      description: t("description"),
+    },
+    icons: {
+      icon: "/favicon.ico",
+    },
+  };
+}
 
 export default async function RootLayout({
   children,

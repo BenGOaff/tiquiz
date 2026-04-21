@@ -6,14 +6,15 @@ import { createServerClient } from "@supabase/ssr";
 import { isAdminEmail } from "@/lib/adminEmails";
 
 const UI_LOCALE_COOKIE = "ui_locale";
-const SUPPORTED_LOCALES = ["fr", "en", "es", "it", "ar"];
+const SUPPORTED_LOCALES = ["en", "fr", "es", "it", "ar"];
+const DEFAULT_LOCALE = "en";
 
 function detectLocaleFromHeader(req: NextRequest): string {
   const acceptLang = req.headers.get("accept-language") ?? "";
   const langs = acceptLang
     .split(",")
     .map((l) => l.split(";")[0].trim().slice(0, 2).toLowerCase());
-  return langs.find((l) => SUPPORTED_LOCALES.includes(l)) ?? "fr";
+  return langs.find((l) => SUPPORTED_LOCALES.includes(l)) ?? DEFAULT_LOCALE;
 }
 
 const PROTECTED_PREFIXES = ["/dashboard", "/quiz", "/quizzes", "/settings", "/leads", "/stats", "/admin"];
