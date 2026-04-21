@@ -11,10 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
-  ArrowLeft, Copy, Eye, Play, CheckCircle, Users, Share2, Download,
+  ArrowLeft, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
   Gift,
 } from "lucide-react";
+import QuizResultsAnalytics from "@/components/quiz/QuizResultsAnalytics";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -52,7 +53,7 @@ import {
 type QuizOption = { text: string; result_index: number; sio_tag_name?: string | null };
 type QuizQuestion = { id?: string; question_text: string; options: QuizOption[]; sort_order: number };
 type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number };
-type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_title: string | null; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
+type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; option_index: number }[] | null; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
 type QuizData = {
   id: string; title: string; slug: string | null;
   introduction: string | null; cta_text: string | null; cta_url: string | null;
@@ -1010,20 +1011,20 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
       {/* RESULTS TAB */}
       {mainTab === "results" && (
-        <div className="flex-1 overflow-y-auto p-6"><div className="max-w-5xl mx-auto space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {[{ icon: Eye, label: "Vues", v: quiz.views_count },{ icon: Play, label: "Démarrés", v: quiz.starts_count },{ icon: CheckCircle, label: "Complétés", v: quiz.completions_count },{ icon: Users, label: "Leads", v: leads.length },{ icon: Share2, label: "Partages", v: quiz.shares_count }].map(({ icon: I, label, v }) => (
-              <Card key={label}><CardContent className="pt-6"><div className="flex items-center gap-2 text-sm text-muted-foreground"><I className="w-4 h-4" />{label}</div><div className="mt-1 text-2xl font-bold">{v}</div></CardContent></Card>
-            ))}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-5xl mx-auto">
+            <QuizResultsAnalytics
+              viewsCount={quiz.views_count}
+              startsCount={quiz.starts_count}
+              completionsCount={quiz.completions_count}
+              sharesCount={quiz.shares_count}
+              leads={leads}
+              questions={editQuestions}
+              results={editResults}
+              onExportCSV={handleExportCSV}
+            />
           </div>
-          <Card><CardContent className="pt-6"><h3 className="text-sm text-muted-foreground mb-2">Taux de conversion</h3><div className="text-4xl font-bold">{quiz.views_count > 0 ? ((leads.length / quiz.views_count) * 100).toFixed(1) : "0"}%</div></CardContent></Card>
-          <div className="flex items-center justify-between"><h3 className="font-bold text-lg">Leads ({leads.length})</h3>{leads.length > 0 && <Button variant="outline" size="sm" onClick={handleExportCSV}><Download className="w-4 h-4 mr-1" />CSV</Button>}</div>
-          {leads.length === 0 ? <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Aucun lead</CardContent></Card> : (
-            <Card><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b bg-muted/50"><th className="text-left px-4 py-3">Email</th><th className="text-left px-4 py-3">Prénom</th><th className="text-left px-4 py-3">Résultat</th><th className="text-left px-4 py-3">Date</th></tr></thead><tbody>
-              {leads.map(l => <tr key={l.id} className="border-b"><td className="px-4 py-3 font-medium">{l.email}</td><td className="px-4 py-3">{l.first_name ?? "—"}</td><td className="px-4 py-3">{l.result_title ?? "—"}</td><td className="px-4 py-3 text-muted-foreground">{l.created_at ? new Date(l.created_at).toLocaleDateString() : "—"}</td></tr>)}
-            </tbody></table></div></Card>
-          )}
-        </div></div>
+        </div>
       )}
     </div>
   );
