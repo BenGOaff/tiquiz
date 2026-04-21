@@ -69,13 +69,14 @@ const MENU_ITEMS = [
 
 function SidebarCollapseButton() {
   const { toggleSidebar } = useSidebar();
+  const t = useTranslations("common");
   return (
     <Button
       variant="ghost"
       size="icon"
       className="h-7 w-7 text-muted-foreground hover:text-foreground"
       onClick={toggleSidebar}
-      aria-label="Fermer"
+      aria-label={t("close")}
     >
       <PanelLeftClose className="h-4 w-4" />
     </Button>
@@ -141,7 +142,7 @@ export function AppSidebar() {
                 className={MENU_ITEM_CLASS}
               >
                 <HelpCircle className="w-5 h-5" />
-                <span>{t("support") ?? "Aide"}</span>
+                <span>{t("support")}</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

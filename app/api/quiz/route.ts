@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
       if ((count ?? 0) >= 1) {
         return NextResponse.json(
-          { ok: false, error: "FREE_PLAN_QUIZ_LIMIT", message: "Le plan gratuit est limité à 1 quiz. Passe à un plan payant pour créer plus de quiz." },
+          { ok: false, error: "FREE_PLAN_QUIZ_LIMIT", message: "The free plan is limited to 1 quiz. Upgrade to a paid plan to create more." },
           { status: 403 },
         );
       }
