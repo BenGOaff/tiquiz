@@ -60,6 +60,7 @@ type QuizData = {
   start_button_text: string | null;
   privacy_url: string | null; consent_text: string | null;
   capture_heading: string | null; capture_subtitle: string | null;
+  result_insight_heading: string | null; result_projection_heading: string | null;
   address_form: string | null;
   capture_first_name: boolean | null; capture_last_name: boolean | null;
   capture_phone: boolean | null; capture_country: boolean | null;
@@ -192,6 +193,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [consentText, setConsentText] = useState("");
   const [captureHeading, setCaptureHeading] = useState("");
   const [captureSubtitle, setCaptureSubtitle] = useState("");
+  const [resultInsightHeading, setResultInsightHeading] = useState("");
+  const [resultProjectionHeading, setResultProjectionHeading] = useState("");
   const [captureFirstName, setCaptureFirstName] = useState(false);
   const [captureLastName, setCaptureLastName] = useState(false);
   const [capturePhone, setCapturePhone] = useState(false);
@@ -266,6 +269,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setStartButtonText(q.start_button_text ?? "");
       setPrivacyUrl(q.privacy_url ?? ""); setConsentText(q.consent_text ?? "");
       setCaptureHeading(q.capture_heading ?? ""); setCaptureSubtitle(q.capture_subtitle ?? "");
+      setResultInsightHeading(q.result_insight_heading ?? ""); setResultProjectionHeading(q.result_projection_heading ?? "");
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
       setCapturePhone(q.capture_phone ?? false); setCaptureCountry(q.capture_country ?? false);
       setViralityEnabled(q.virality_enabled); setBonusDescription(q.bonus_description ?? "");
@@ -382,6 +386,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           start_button_text: startButtonText || null,
           privacy_url: privacyUrl || null, consent_text: consentText,
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
+          result_insight_heading: resultInsightHeading.trim() || null,
+          result_projection_heading: resultProjectionHeading.trim() || null,
           capture_first_name: captureFirstName, capture_last_name: captureLastName,
           capture_phone: capturePhone, capture_country: captureCountry,
           virality_enabled: viralityEnabled, bonus_description: bonusDescription,
@@ -878,8 +884,29 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   <div className="max-w-2xl w-full space-y-6">
                     <InlineEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder="Titre du résultat…" />
                     <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} className="text-muted-foreground text-lg leading-relaxed" placeholder="Description…" />
-                    <div className="p-5 rounded-xl bg-muted/50 border"><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Prise de conscience</p><RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} className="text-sm leading-relaxed" placeholder="Insight…" /></div>
-                    <div className="p-5 rounded-xl border" style={{ backgroundColor: `${pc}08`, borderColor: `${pc}30` }}><p className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: `${pc}99` }}>Et si...</p><RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} className="text-sm leading-relaxed" placeholder="Projection…" /></div>
+                    <div className="p-5 rounded-xl bg-muted/50 border">
+                      <div className="mb-2">
+                        <InlineEdit
+                          value={resultInsightHeading || "Prise de conscience"}
+                          onChange={setResultInsightHeading}
+                          className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+                          placeholder="Titre du bloc insight…"
+                        />
+                      </div>
+                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} className="text-sm leading-relaxed" placeholder="Insight…" />
+                    </div>
+                    <div className="p-5 rounded-xl border" style={{ backgroundColor: `${pc}08`, borderColor: `${pc}30` }}>
+                      <div className="mb-2">
+                        <InlineEdit
+                          value={resultProjectionHeading || "Et si..."}
+                          onChange={setResultProjectionHeading}
+                          className="text-xs font-bold uppercase tracking-widest"
+                          style={{ color: `${pc}99` }}
+                          placeholder="Titre du bloc projection…"
+                        />
+                      </div>
+                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} className="text-sm leading-relaxed" placeholder="Projection…" />
+                    </div>
                     <div className="space-y-2">
                       <button className="w-full px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>
                         <InlineEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} className="text-white font-semibold text-center" placeholder="Texte du CTA…" />

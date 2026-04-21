@@ -60,6 +60,8 @@ type PublicQuizData = {
   address_form?: string | null;
   capture_heading: string | null;
   capture_subtitle: string | null;
+  result_insight_heading?: string | null;
+  result_projection_heading?: string | null;
   capture_first_name?: boolean | null;
   capture_last_name?: boolean | null;
   capture_phone?: boolean | null;
@@ -1354,7 +1356,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
             {resultProfile?.insight && (
               <div className="p-4 rounded-xl bg-muted/50 border">
-                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5">{t.insight}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5">{quiz.result_insight_heading?.trim() || t.insight}</p>
                 {isHtml(resultProfile.insight) ? (
                   <div
                     className="tiquiz-rich text-sm leading-relaxed"
@@ -1368,7 +1370,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
             {resultProfile?.projection && (
               <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-                <p className="text-xs font-bold uppercase tracking-widest text-primary/70 mb-1.5">{t.projection}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-primary/70 mb-1.5">{quiz.result_projection_heading?.trim() || t.projection}</p>
                 {isHtml(resultProfile.projection) ? (
                   <div
                     className="tiquiz-rich text-sm leading-relaxed"

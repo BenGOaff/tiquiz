@@ -103,6 +103,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "custom_footer_text", "custom_footer_url",
       "brand_font", "brand_color_primary", "brand_color_background",
       "start_button_text",
+      "result_insight_heading", "result_projection_heading",
     ];
 
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
