@@ -193,3 +193,84 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
 
   return { system, user: userParts.join("\n") };
 }
+
+// ── Import prompt: parse raw user-pasted content into a structured quiz ──
+// The creator pastes notes / questions drafted elsewhere (.txt for now) and
+// the AI must structure it into the same JSON schema as the generation prompt.
+// We keep the OUTPUT shape identical so the downstream parser + form fillers
+// don't care whether the quiz came from a form or an imported file.
+export function buildQuizImportPrompt(params: {
+  content: string;
+  locale?: string;
+  addressForm?: "tu" | "vous";
+  tone?: string;
+}): { system: string; user: string } {
+  const { content, locale = "fr", addressForm = "tu", tone = "inspirant" } = params;
+  const formality = addressForm === "vous" ? "vous" : "tu";
+  const localeLabels: Record<string, string> = {
+    fr: "français",
+    en: "anglais (English)",
+    es: "espagnol (Español)",
+    de: "allemand (Deutsch)",
+    pt: "portugais (Português)",
+    it: "italien (Italiano)",
+    ar: "arabe (العربية)",
+  };
+  const langLabel = localeLabels[locale] || localeLabels.fr;
+
+  const system = `Tu es un expert en création de quiz qui STRUCTURE du contenu brut en quiz exploitable.
+
+RÔLE : On te fournit le contenu brut d'un quiz (copié d'un doc, d'un brouillon, d'un PDF). Ta mission : le transformer en JSON quiz exploitable par Tiquiz, SANS inventer de contenu qui ne serait pas dans le texte source.
+
+RÈGLES D'OR :
+- Respecte FIDÈLEMENT les questions, options et résultats du texte source.
+- Si une question a moins de 4 options dans le source, ajoute des options neutres/plausibles pour arriver à 4 (et seulement dans ce cas).
+- Si le source n'a pas de résultats explicites, déduis 3 profils cohérents à partir du ton et des questions (ex: débutant / intermédiaire / expert).
+- Si certains champs manquent (introduction, CTA, share_message), génère-les de façon brève et cohérente avec le contenu.
+- NE TRADUIS PAS le contenu si le source est déjà dans la bonne langue. La langue de sortie est ${langLabel}.
+- Forme d'adresse : ${formality === "vous" ? "VOUVOYER" : "TUTOYER"}. Conserve la forme du source si elle est claire.
+- Ton : ${tone}.
+
+FORMAT DE SORTIE : JSON strict uniquement, sans markdown, sans commentaires.
+{
+  "title": "Titre accrocheur du quiz",
+  "introduction": "Texte d'intro engageant (1-3 phrases)",
+  "questions": [
+    {
+      "question_text": "La question",
+      "options": [
+        { "text": "Option A", "result_index": 0 },
+        { "text": "Option B", "result_index": 1 },
+        { "text": "Option C", "result_index": 2 },
+        { "text": "Option D", "result_index": 0 }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "title": "Nom du profil ou niveau",
+      "description": "Description valorisante (2-3 phrases)",
+      "insight": "Prise de conscience forte et spécifique",
+      "projection": "${formality === "vous" ? "Et si vous..." : "Et si tu..."}",
+      "cta_text": "Texte du CTA personnalisé"
+    }
+  ],
+  "cta_text": "Texte du CTA principal",
+  "share_message": "Message d'incitation au partage"
+}`;
+
+  const user = `CONTENU BRUT À STRUCTURER (langue cible de sortie : ${langLabel}) :
+
+"""
+${content}
+"""
+
+CONSIGNES :
+- Si des questions/options/résultats apparaissent clairement dans le source, RESPECTE-LES fidèlement.
+- Chaque question DOIT avoir exactement 4 options avec un result_index valide (0 à results.length - 1).
+- Répartis les result_index de façon équilibrée si le source ne le fait pas.
+- Si aucun résultat n'est fourni, crée 3 profils cohérents à partir du thème du source.
+- Réponds UNIQUEMENT en JSON valide, rien autour.`;
+
+  return { system, user };
+}

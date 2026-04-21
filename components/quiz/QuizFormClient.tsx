@@ -785,9 +785,27 @@ export default function QuizFormClient() {
 
   async function handleImportFile() {
     if (!importFile) return;
+
+    // Only .txt is supported end-to-end today. PDF/DOCX would need a
+    // server-side parser (pdf-parse, mammoth) to turn binary into text;
+    // without that, `.text()` returns gibberish and the AI hallucinates.
+    // Fail fast with a clear message rather than silently producing
+    // garbage questions.
+    const name = importFile.name.toLowerCase();
+    const isTxt = name.endsWith(".txt") || importFile.type === "text/plain";
+    if (!isTxt) {
+      toast.error("Formats PDF et DOCX bientôt supportés. Pour l'instant, exporte ton contenu en .txt.");
+      return;
+    }
+
     setImporting(true);
     try {
       const text = await importFile.text();
+      if (!text.trim()) {
+        toast.error("Fichier vide.");
+        setImporting(false);
+        return;
+      }
       // Send to AI to parse into quiz format
       const res = await fetch("/api/quiz/generate", {
         method: "POST",
@@ -800,7 +818,8 @@ export default function QuizFormClient() {
       });
 
       if (!res.ok) {
-        toast.error("Erreur lors de l'import");
+        const errText = await res.text().catch(() => "");
+        toast.error(`Erreur lors de l'import${errText ? ` : ${errText.slice(0, 150)}` : ""}`);
         setImporting(false);
         return;
       }
@@ -1032,13 +1051,16 @@ export default function QuizFormClient() {
           </CardHeader>
           <CardContent className="space-y-5">
             <p className="text-sm text-muted-foreground">
-              Importe un document (TXT, PDF ou DOCX) contenant tes questions et réponses.
+              Importe un fichier <strong>.txt</strong> contenant tes questions et réponses.
+              L'IA va structurer le contenu en quiz (questions, options, résultats).
+              <br />
+              <span className="text-xs">Pour les PDF / DOCX, copie le texte dans un fichier .txt avant d'importer.</span>
             </p>
             <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
               <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
               <p className="font-medium mb-2">Glisse ton fichier ici ou clique pour sélectionner</p>
-              <p className="text-xs text-muted-foreground mb-4">TXT, PDF, DOCX — max 10 000 caractères</p>
-              <input type="file" accept=".txt,.pdf,.docx" onChange={(e) => setImportFile(e.target.files?.[0] ?? null)} className="hidden" id="import-file" />
+              <p className="text-xs text-muted-foreground mb-4">.txt uniquement — max 10 000 caractères</p>
+              <input type="file" accept=".txt,text/plain" onChange={(e) => setImportFile(e.target.files?.[0] ?? null)} className="hidden" id="import-file" />
               <Button variant="outline" asChild>
                 <label htmlFor="import-file" className="cursor-pointer">Sélectionner un fichier</label>
               </Button>

@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { buildQuizGenerationPrompt } from "@/lib/prompts/quiz/system";
+import { buildQuizGenerationPrompt, buildQuizImportPrompt } from "@/lib/prompts/quiz/system";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,14 +52,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
     }
 
-    const objective = String(body.objective ?? "").trim();
-    const target = String(body.target ?? "").trim();
-    if (!objective || !target) {
-      return NextResponse.json(
-        { ok: false, error: "objective and target are required" },
-        { status: 400 },
-      );
-    }
+    // Two modes share this endpoint:
+    //  - "generate" (default): creator fills a form → AI writes a quiz from scratch
+    //  - "import": creator pastes raw content → AI structures it into a quiz
+    const mode = String(body.mode ?? "generate").trim();
+    const isImport = mode === "import";
 
     // Fetch user's branding profile for tone + target personalization
     const { supabaseAdmin } = await import("@/lib/supabaseAdmin");
@@ -69,33 +66,59 @@ export async function POST(req: NextRequest) {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    // Use branding tone from profile if not explicitly provided, fallback to "inspirant"
     const toneFromBody = String(body.tone ?? "").trim();
     const resolvedTone = toneFromBody || profile?.brand_tone || "inspirant";
     const resolvedAddressForm = body.addressForm === "vous" || body.addressForm === "tu"
       ? body.addressForm
       : (profile?.address_form ?? "tu");
 
-    const format = body.format === "short" ? "short" : "long";
-    const segmentation = body.segmentation === "level" ? "level" : "profile";
-    const defaultQuestionCount = format === "short" ? 5 : 8;
+    if (isImport) {
+      const content = String(body.content ?? "").trim();
+      if (!content) {
+        return NextResponse.json({ ok: false, error: "content is required for import mode" }, { status: 400 });
+      }
+      if (content.length > 10_000) {
+        return NextResponse.json({ ok: false, error: "content exceeds 10000 characters" }, { status: 400 });
+      }
+      const prompts = buildQuizImportPrompt({
+        content,
+        locale: String(body.locale ?? "fr"),
+        addressForm: resolvedAddressForm === "vous" ? "vous" : "tu",
+        tone: resolvedTone,
+      });
+      system = prompts.system;
+      userPrompt = prompts.user;
+    } else {
+      const objective = String(body.objective ?? "").trim();
+      const target = String(body.target ?? "").trim();
+      if (!objective || !target) {
+        return NextResponse.json(
+          { ok: false, error: "objective and target are required" },
+          { status: 400 },
+        );
+      }
 
-    const prompts = buildQuizGenerationPrompt({
-      objective,
-      target,
-      tone: resolvedTone,
-      cta: String(body.cta ?? ""),
-      bonus: String(body.bonus ?? ""),
-      intention: String(body.intention ?? ""),
-      questionCount: Math.min(12, Math.max(3, Number(body.questionCount) || defaultQuestionCount)),
-      resultCount: Math.min(5, Math.max(2, Number(body.resultCount) || 3)),
-      locale: String(body.locale ?? "fr"),
-      addressForm: resolvedAddressForm === "vous" ? "vous" : "tu",
-      format,
-      segmentation,
-    });
-    system = prompts.system;
-    userPrompt = prompts.user;
+      const format = body.format === "short" ? "short" : "long";
+      const segmentation = body.segmentation === "level" ? "level" : "profile";
+      const defaultQuestionCount = format === "short" ? 5 : 8;
+
+      const prompts = buildQuizGenerationPrompt({
+        objective,
+        target,
+        tone: resolvedTone,
+        cta: String(body.cta ?? ""),
+        bonus: String(body.bonus ?? ""),
+        intention: String(body.intention ?? ""),
+        questionCount: Math.min(12, Math.max(3, Number(body.questionCount) || defaultQuestionCount)),
+        resultCount: Math.min(5, Math.max(2, Number(body.resultCount) || 3)),
+        locale: String(body.locale ?? "fr"),
+        addressForm: resolvedAddressForm === "vous" ? "vous" : "tu",
+        format,
+        segmentation,
+      });
+      system = prompts.system;
+      userPrompt = prompts.user;
+    }
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },

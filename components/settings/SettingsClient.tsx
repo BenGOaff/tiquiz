@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Settings, Palette, Key, Trash2, Loader2, Save,
   CreditCard, Upload, Check, Crown, Zap, Star, ArrowRight,
+  Tag as TagIcon, Workflow, AlertTriangle, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -463,6 +464,131 @@ export default function SettingsClient() {
                   type="password"
                   className="mt-1.5 font-mono"
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Automations SIO — guide utilisateur */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Workflow className="h-5 w-5 text-primary" />
+                Automatiser ce qui se passe après la capture
+              </CardTitle>
+              <CardDescription>
+                Une fois le lead capturé par ton quiz, Tiquiz pose un <strong>tag</strong> sur le
+                contact dans Systeme.io. Ce tag peut déclencher une automatisation — inscription à une
+                campagne, accès à une formation, ajout à une communauté, etc. Tout se configure
+                dans Systeme.io, tu n'as rien à coder.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5 text-sm">
+              {/* Étape 1 */}
+              <div className="flex gap-3">
+                <div className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center text-sm">
+                  1
+                </div>
+                <div className="space-y-1.5">
+                  <div className="font-semibold flex items-center gap-1.5">
+                    <TagIcon className="h-4 w-4" />
+                    Crée tes tags dans Systeme.io avant de créer ton quiz
+                  </div>
+                  <p className="text-muted-foreground">
+                    Dans Systeme.io &gt; <strong>Contacts &gt; Tags</strong>, crée un tag par résultat
+                    de quiz que tu veux pouvoir automatiser. Exemples : <code className="text-xs bg-muted px-1 py-0.5 rounded">quiz-visionnaire</code>,{" "}
+                    <code className="text-xs bg-muted px-1 py-0.5 rounded">quiz-strategique</code>,{" "}
+                    <code className="text-xs bg-muted px-1 py-0.5 rounded">quiz-partage</code> (pour les participants qui partagent).
+                  </p>
+                  <p className="text-muted-foreground">
+                    Ensuite, en créant ton quiz dans Tiquiz, associe ces tags à chacun de tes
+                    résultats dans l'onglet <strong>Systeme.io</strong> du quiz.
+                  </p>
+                </div>
+              </div>
+
+              {/* Étape 2 */}
+              <div className="flex gap-3">
+                <div className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center text-sm">
+                  2
+                </div>
+                <div className="space-y-1.5">
+                  <div className="font-semibold flex items-center gap-1.5">
+                    <Workflow className="h-4 w-4" />
+                    Crée une automatisation dans Systeme.io
+                  </div>
+                  <p className="text-muted-foreground">
+                    Dans Systeme.io &gt; <strong>Automatisations &gt; Règles</strong>, clique sur{" "}
+                    <strong>Créer une règle</strong>.
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                    <li><strong>Déclencheur</strong> : « Tag ajouté à un contact » → choisis ton tag (ex: <code className="text-xs bg-muted px-1 py-0.5 rounded">quiz-visionnaire</code>)</li>
+                    <li>
+                      <strong>Actions</strong> (tu peux en enchaîner autant que tu veux) :
+                      <ul className="list-[circle] pl-5 mt-1 space-y-0.5">
+                        <li>Abonner à une <strong>campagne email</strong> (séquence d'onboarding, newsletter…)</li>
+                        <li>Donner <strong>accès à une formation</strong> de ton école Systeme.io</li>
+                        <li>Donner <strong>accès à une communauté</strong></li>
+                        <li><strong>Envoyer un email</strong> unique (bienvenue, bonus, etc.)</li>
+                        <li>Ajouter un autre tag, déclencher un webhook, etc.</li>
+                      </ul>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Étape 3 */}
+              <div className="flex gap-3">
+                <div className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center text-sm">
+                  3
+                </div>
+                <div className="space-y-1.5">
+                  <div className="font-semibold">Ce qui se passe quand un lead répond</div>
+                  <p className="text-muted-foreground">
+                    Le participant entre son email → Tiquiz crée (ou met à jour) le contact dans
+                    Systeme.io et pose le tag correspondant à son résultat. Systeme.io détecte le
+                    tag et déclenche <strong>toutes</strong> les actions de ta règle. Zéro clic de
+                    ta part.
+                  </p>
+                </div>
+              </div>
+
+              {/* Warning test */}
+              <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30 p-3">
+                <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                <div className="space-y-1">
+                  <div className="font-semibold text-amber-900 dark:text-amber-200">
+                    Important quand tu testes ton quiz
+                  </div>
+                  <p className="text-amber-900/80 dark:text-amber-200/80 text-[13px]">
+                    Systeme.io <strong>ne redéclenche pas</strong> une automatisation si le tag est
+                    déjà posé sur ton email de test. Avant chaque nouveau test, va dans{" "}
+                    <strong>Contacts</strong>, ouvre ton contact test, et <strong>retire manuellement le tag</strong> —
+                    sinon tu verras ton contact dans Systeme.io mais la règle ne se déclenchera pas
+                    et tu penseras que c'est cassé.
+                  </p>
+                </div>
+              </div>
+
+              {/* Liens */}
+              <div className="pt-1 flex flex-wrap gap-3 text-[13px]">
+                <a
+                  href="https://aide.systeme.io/article/1214-comment-fonctionne-le-workflow-de-systemeio"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-primary hover:underline"
+                >
+                  Guide officiel Systeme.io — workflows & automatisations
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+                <a
+                  href="https://app.tipote.com/support/article/tiquiz-systeme-io"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-primary hover:underline"
+                >
+                  Aide Tiquiz — connecter Systeme.io
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
               </div>
             </CardContent>
           </Card>
