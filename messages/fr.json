@@ -1,4 +1,18 @@
 {
+  "metadata": {
+    "title": "Tiquiz",
+    "description": "Crée des quiz engageants, capture des leads qualifiés et développe ton audience.",
+    "pages": {
+      "login": "Connexion",
+      "signup": "Créer un compte",
+      "dashboard": "Tableau de bord",
+      "quizzes": "Mes quiz",
+      "leads": "Mes leads",
+      "stats": "Statistiques",
+      "settings": "Paramètres",
+      "admin": "Admin"
+    }
+  },
   "common": {
     "save": "Enregistrer",
     "cancel": "Annuler",
@@ -44,6 +58,85 @@
     "newQuiz": "Nouveau quiz",
     "settings": "Paramètres",
     "logout": "Se déconnecter"
+  },
+  "stats": {
+    "title": "Statistiques",
+    "subtitle": "Vue d'ensemble de tes performances",
+    "loading": "Chargement…",
+    "empty": "Pas encore de données",
+    "emptyDesc": "Crée et partage un quiz pour voir tes statistiques ici.",
+    "statusActive": "Actif",
+    "statusDraft": "Brouillon",
+    "aiUnavailable": "Impossible d'analyser les statistiques pour le moment.",
+    "totals": {
+      "views": "Vues",
+      "starts": "Démarrés",
+      "completions": "Complétés",
+      "leads": "Leads",
+      "shares": "Partages"
+    },
+    "funnel": {
+      "title": "Entonnoir de conversion",
+      "startRate": "Taux de démarrage",
+      "startRateDetail": "{starts} démarrés / {views} vues",
+      "completionRate": "Taux de complétion",
+      "completionRateDetail": "{completions} complétés / {starts} démarrés",
+      "leadRate": "Taux de conversion (leads)",
+      "leadRateDetail": "{leads} leads / {starts} démarrés"
+    },
+    "perQuiz": {
+      "title": "Performances par quiz",
+      "conversion": "conversion"
+    },
+    "ai": {
+      "title": "Analyse IA",
+      "intro": "L'IA analyse tes performances et te donne des recommandations pour améliorer tes quiz.",
+      "analyze": "Analyser mes résultats",
+      "analyzing": "Analyse en cours…"
+    }
+  },
+  "leads": {
+    "title": "Mes leads",
+    "captured": "{count} leads capturés",
+    "exportCsv": "Exporter CSV",
+    "exportDone": "Export CSV téléchargé",
+    "searchPlaceholder": "Rechercher par email, prénom, nom…",
+    "allQuizzes": "Tous les quiz",
+    "loading": "Chargement…",
+    "empty": "Aucun lead",
+    "emptyDesc": "Les leads apparaîtront ici quand des personnes répondront à tes quiz.",
+    "syncSuccess": "Lead synchronisé avec Systeme.io",
+    "syncError": "Erreur de synchronisation",
+    "networkError": "Erreur réseau",
+    "stats": {
+      "total": "Total leads",
+      "syncedSio": "Synchronisés SIO",
+      "notSynced": "Non synchronisés",
+      "thisMonth": "Ce mois"
+    },
+    "cols": {
+      "email": "Email",
+      "name": "Nom",
+      "quiz": "Quiz",
+      "result": "Résultat",
+      "sioTag": "Tag SIO",
+      "sync": "Sync",
+      "date": "Date"
+    },
+    "csv": {
+      "email": "Email",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "phone": "Téléphone",
+      "country": "Pays",
+      "quiz": "Quiz",
+      "result": "Résultat",
+      "sioTag": "Tag SIO",
+      "syncSio": "Sync SIO",
+      "date": "Date",
+      "yes": "Oui",
+      "no": "Non"
+    }
   },
   "loginPage": {
     "tagline": "Crée des quiz engageants et capture des leads",
