@@ -1,4 +1,18 @@
 {
+  "metadata": {
+    "title": "Tiquiz",
+    "description": "Create engaging quizzes, capture qualified leads, and grow your audience.",
+    "pages": {
+      "login": "Sign in",
+      "signup": "Create your account",
+      "dashboard": "Dashboard",
+      "quizzes": "My quizzes",
+      "leads": "My leads",
+      "stats": "Statistics",
+      "settings": "Settings",
+      "admin": "Admin"
+    }
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -44,6 +58,85 @@
     "newQuiz": "New quiz",
     "settings": "Settings",
     "logout": "Log out"
+  },
+  "stats": {
+    "title": "Statistics",
+    "subtitle": "Overview of your performance",
+    "loading": "Loading…",
+    "empty": "No data yet",
+    "emptyDesc": "Create and share a quiz to see your statistics here.",
+    "statusActive": "Active",
+    "statusDraft": "Draft",
+    "aiUnavailable": "Unable to analyze statistics right now.",
+    "totals": {
+      "views": "Views",
+      "starts": "Starts",
+      "completions": "Completions",
+      "leads": "Leads",
+      "shares": "Shares"
+    },
+    "funnel": {
+      "title": "Conversion funnel",
+      "startRate": "Start rate",
+      "startRateDetail": "{starts} starts / {views} views",
+      "completionRate": "Completion rate",
+      "completionRateDetail": "{completions} completions / {starts} starts",
+      "leadRate": "Lead conversion rate",
+      "leadRateDetail": "{leads} leads / {starts} starts"
+    },
+    "perQuiz": {
+      "title": "Performance per quiz",
+      "conversion": "conversion"
+    },
+    "ai": {
+      "title": "AI analysis",
+      "intro": "AI analyzes your performance and gives you recommendations to improve your quizzes.",
+      "analyze": "Analyze my results",
+      "analyzing": "Analyzing…"
+    }
+  },
+  "leads": {
+    "title": "My leads",
+    "captured": "{count} leads captured",
+    "exportCsv": "Export CSV",
+    "exportDone": "CSV export downloaded",
+    "searchPlaceholder": "Search by email, first name, last name…",
+    "allQuizzes": "All quizzes",
+    "loading": "Loading…",
+    "empty": "No leads yet",
+    "emptyDesc": "Leads will appear here when people answer your quizzes.",
+    "syncSuccess": "Lead synced to Systeme.io",
+    "syncError": "Sync error",
+    "networkError": "Network error",
+    "stats": {
+      "total": "Total leads",
+      "syncedSio": "Synced to SIO",
+      "notSynced": "Not synced",
+      "thisMonth": "This month"
+    },
+    "cols": {
+      "email": "Email",
+      "name": "Name",
+      "quiz": "Quiz",
+      "result": "Result",
+      "sioTag": "SIO tag",
+      "sync": "Sync",
+      "date": "Date"
+    },
+    "csv": {
+      "email": "Email",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "phone": "Phone",
+      "country": "Country",
+      "quiz": "Quiz",
+      "result": "Result",
+      "sioTag": "SIO tag",
+      "syncSio": "SIO sync",
+      "date": "Date",
+      "yes": "Yes",
+      "no": "No"
+    }
   },
   "loginPage": {
     "tagline": "Create engaging quizzes and capture leads",
