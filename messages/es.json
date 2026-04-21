@@ -1,4 +1,18 @@
 {
+  "metadata": {
+    "title": "Tiquiz",
+    "description": "Crea quizzes atractivos, capta leads cualificados y haz crecer tu audiencia.",
+    "pages": {
+      "login": "Iniciar sesión",
+      "signup": "Crea tu cuenta",
+      "dashboard": "Panel",
+      "quizzes": "Mis quizzes",
+      "leads": "Mis leads",
+      "stats": "Estadísticas",
+      "settings": "Ajustes",
+      "admin": "Admin"
+    }
+  },
   "common": {
     "save": "Guardar",
     "cancel": "Cancelar",
@@ -44,6 +58,85 @@
     "newQuiz": "Nuevo quiz",
     "settings": "Configuración",
     "logout": "Cerrar sesión"
+  },
+  "stats": {
+    "title": "Estadísticas",
+    "subtitle": "Resumen de tu rendimiento",
+    "loading": "Cargando…",
+    "empty": "Aún sin datos",
+    "emptyDesc": "Crea y comparte un quiz para ver tus estadísticas aquí.",
+    "statusActive": "Activo",
+    "statusDraft": "Borrador",
+    "aiUnavailable": "No se pueden analizar las estadísticas en este momento.",
+    "totals": {
+      "views": "Vistas",
+      "starts": "Inicios",
+      "completions": "Completados",
+      "leads": "Leads",
+      "shares": "Comparticiones"
+    },
+    "funnel": {
+      "title": "Embudo de conversión",
+      "startRate": "Tasa de inicio",
+      "startRateDetail": "{starts} inicios / {views} vistas",
+      "completionRate": "Tasa de finalización",
+      "completionRateDetail": "{completions} completados / {starts} inicios",
+      "leadRate": "Tasa de conversión (leads)",
+      "leadRateDetail": "{leads} leads / {starts} inicios"
+    },
+    "perQuiz": {
+      "title": "Rendimiento por quiz",
+      "conversion": "conversión"
+    },
+    "ai": {
+      "title": "Análisis con IA",
+      "intro": "La IA analiza tu rendimiento y te da recomendaciones para mejorar tus quiz.",
+      "analyze": "Analizar mis resultados",
+      "analyzing": "Analizando…"
+    }
+  },
+  "leads": {
+    "title": "Mis leads",
+    "captured": "{count} leads capturados",
+    "exportCsv": "Exportar CSV",
+    "exportDone": "Exportación CSV descargada",
+    "searchPlaceholder": "Buscar por email, nombre, apellido…",
+    "allQuizzes": "Todos los quiz",
+    "loading": "Cargando…",
+    "empty": "Sin leads aún",
+    "emptyDesc": "Los leads aparecerán aquí cuando las personas respondan a tus quiz.",
+    "syncSuccess": "Lead sincronizado con Systeme.io",
+    "syncError": "Error de sincronización",
+    "networkError": "Error de red",
+    "stats": {
+      "total": "Total de leads",
+      "syncedSio": "Sincronizados SIO",
+      "notSynced": "No sincronizados",
+      "thisMonth": "Este mes"
+    },
+    "cols": {
+      "email": "Email",
+      "name": "Nombre",
+      "quiz": "Quiz",
+      "result": "Resultado",
+      "sioTag": "Etiqueta SIO",
+      "sync": "Sync",
+      "date": "Fecha"
+    },
+    "csv": {
+      "email": "Email",
+      "firstName": "Nombre",
+      "lastName": "Apellido",
+      "phone": "Teléfono",
+      "country": "País",
+      "quiz": "Quiz",
+      "result": "Resultado",
+      "sioTag": "Etiqueta SIO",
+      "syncSio": "Sync SIO",
+      "date": "Fecha",
+      "yes": "Sí",
+      "no": "No"
+    }
   },
   "loginPage": {
     "tagline": "Crea quiz atractivos y captura leads",
