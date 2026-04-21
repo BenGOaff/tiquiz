@@ -23,7 +23,8 @@ type Quiz = {
 };
 
 export default function StatsShell({ userEmail }: { userEmail: string }) {
-  const t = useTranslations("nav");
+  const tNav = useTranslations("nav");
+  const t = useTranslations("stats");
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
@@ -100,33 +101,33 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
         setAiAnalysis(text);
       }
     } catch {
-      setAiAnalysis("Impossible d'analyser les statistiques pour le moment.");
+      setAiAnalysis(t("aiUnavailable"));
     } finally {
       setAnalyzingAi(false);
     }
   }
 
   return (
-    <AppShell userEmail={userEmail} headerTitle={t("stats")}>
+    <AppShell userEmail={userEmail} headerTitle={tNav("stats")}>
       {/* Banner */}
       <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
         <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
           <BarChart3 className="h-5 w-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold">Statistiques</h2>
-          <p className="text-sm text-white/70">Vue d&apos;ensemble de tes performances</p>
+          <h2 className="text-lg font-bold">{t("title")}</h2>
+          <p className="text-sm text-white/70">{t("subtitle")}</p>
         </div>
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground">Chargement...</div>
+        <div className="text-center py-12 text-muted-foreground">{t("loading")}</div>
       ) : quizzes.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Pas encore de données</h3>
-            <p className="text-muted-foreground">Crée et partage un quiz pour voir tes statistiques ici.</p>
+            <h3 className="text-lg font-semibold mb-2">{t("empty")}</h3>
+            <p className="text-muted-foreground">{t("emptyDesc")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -134,11 +135,11 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
           {/* Global stats cards */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {[
-              { label: "Vues", value: totals.views, icon: Eye, color: "text-blue-500" },
-              { label: "Démarrés", value: totals.starts, icon: Play, color: "text-indigo-500" },
-              { label: "Complétés", value: totals.completions, icon: CheckCircle, color: "text-green-500" },
-              { label: "Leads", value: totals.leads, icon: Users, color: "text-primary" },
-              { label: "Partages", value: totals.shares, icon: Share2, color: "text-teal-500" },
+              { label: t("totals.views"), value: totals.views, icon: Eye, color: "text-blue-500" },
+              { label: t("totals.starts"), value: totals.starts, icon: Play, color: "text-indigo-500" },
+              { label: t("totals.completions"), value: totals.completions, icon: CheckCircle, color: "text-green-500" },
+              { label: t("totals.leads"), value: totals.leads, icon: Users, color: "text-primary" },
+              { label: t("totals.shares"), value: totals.shares, icon: Share2, color: "text-teal-500" },
             ].map(({ label, value, icon: Icon, color }) => (
               <Card key={label}>
                 <CardContent className="py-4 text-center">
@@ -155,33 +156,33 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
-                Entonnoir de conversion
+                {t("funnel.title")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span>Taux de démarrage</span>
+                  <span>{t("funnel.startRate")}</span>
                   <span className="font-semibold">{startRate}%</span>
                 </div>
                 <Progress value={startRate} className="h-3" />
-                <p className="text-xs text-muted-foreground mt-1">{totals.starts} démarrés / {totals.views} vues</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("funnel.startRateDetail", { starts: totals.starts, views: totals.views })}</p>
               </div>
               <div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span>Taux de complétion</span>
+                  <span>{t("funnel.completionRate")}</span>
                   <span className="font-semibold">{completionRate}%</span>
                 </div>
                 <Progress value={completionRate} className="h-3" />
-                <p className="text-xs text-muted-foreground mt-1">{totals.completions} complétés / {totals.starts} démarrés</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("funnel.completionRateDetail", { completions: totals.completions, starts: totals.starts })}</p>
               </div>
               <div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span>Taux de conversion (leads)</span>
+                  <span>{t("funnel.leadRate")}</span>
                   <span className="font-semibold">{leadRate}%</span>
                 </div>
                 <Progress value={leadRate} className="h-3" />
-                <p className="text-xs text-muted-foreground mt-1">{totals.leads} leads / {totals.starts} démarrés</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("funnel.leadRateDetail", { leads: totals.leads, starts: totals.starts })}</p>
               </div>
             </CardContent>
           </Card>
@@ -189,7 +190,7 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
           {/* Per-quiz stats */}
           <Card>
             <CardHeader>
-              <CardTitle>Performances par quiz</CardTitle>
+              <CardTitle>{t("perQuiz.title")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -203,7 +204,7 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-semibold truncate">{quiz.title}</span>
                           <Badge variant={quiz.status === "active" ? "default" : "secondary"} className="text-xs">
-                            {quiz.status === "active" ? "Actif" : "Brouillon"}
+                            {quiz.status === "active" ? t("statusActive") : t("statusDraft")}
                           </Badge>
                         </div>
                         <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
@@ -216,7 +217,7 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-lg font-bold text-primary">{qLeadRate}%</p>
-                        <p className="text-xs text-muted-foreground">conversion</p>
+                        <p className="text-xs text-muted-foreground">{t("perQuiz.conversion")}</p>
                       </div>
                     </div>
                   );
@@ -230,7 +231,7 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
-                Analyse IA
+                {t("ai.title")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -241,13 +242,13 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
               ) : (
                 <div className="text-center py-6">
                   <p className="text-muted-foreground mb-4">
-                    L&apos;IA analyse tes performances et te donne des recommandations pour améliorer tes quiz.
+                    {t("ai.intro")}
                   </p>
                   <Button onClick={runAiAnalysis} disabled={analyzingAi}>
                     {analyzingAi ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Analyse en cours...</>
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t("ai.analyzing")}</>
                     ) : (
-                      <><Sparkles className="h-4 w-4 mr-2" />Analyser mes résultats</>
+                      <><Sparkles className="h-4 w-4 mr-2" />{t("ai.analyze")}</>
                     )}
                   </Button>
                 </div>

@@ -2,14 +2,14 @@
 
 import { useEffect, useState, useMemo } from "react";
 import AppShell from "@/components/AppShell";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  Users, Download, RefreshCw, Search, Mail, Phone, Globe, Calendar,
-  CheckCircle2, XCircle, ArrowUpDown,
+  Users, Download, RefreshCw, Search, Mail, Calendar,
+  CheckCircle2, XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,7 +31,10 @@ type Lead = {
 };
 
 export default function LeadsShell({ userEmail }: { userEmail: string }) {
-  const t = useTranslations("nav");
+  const tNav = useTranslations("nav");
+  const t = useTranslations("leads");
+  const locale = useLocale();
+  const localeTag = locale === "en" ? "en-US" : `${locale}-${locale.toUpperCase()}`;
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -69,7 +72,18 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
   }, [leads, filterQuiz, search]);
 
   function exportCSV() {
-    const headers = ["Email", "Prénom", "Nom", "Téléphone", "Pays", "Quiz", "Résultat", "Tag SIO", "Sync SIO", "Date"];
+    const headers = [
+      t("csv.email"),
+      t("csv.firstName"),
+      t("csv.lastName"),
+      t("csv.phone"),
+      t("csv.country"),
+      t("csv.quiz"),
+      t("csv.result"),
+      t("csv.sioTag"),
+      t("csv.syncSio"),
+      t("csv.date"),
+    ];
     const rows = filtered.map((l) => [
       l.email,
       l.first_name ?? "",
@@ -79,18 +93,18 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
       l.quiz_title,
       l.result_title ?? l.quiz_results?.title ?? "",
       l.sio_tag_applied ?? l.quiz_results?.sio_tag_name ?? "",
-      l.sio_synced ? "Oui" : "Non",
-      new Date(l.created_at).toLocaleDateString("fr-FR"),
+      l.sio_synced ? t("csv.yes") : t("csv.no"),
+      new Date(l.created_at).toLocaleDateString(localeTag),
     ]);
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = `tiquiz-leads-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Export CSV téléchargé");
+    toast.success(t("exportDone"));
   }
 
   async function syncLead(leadId: string, quizId: string) {
@@ -103,15 +117,15 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
       });
       const data = await res.json();
       if (data.ok) {
-        toast.success("Lead synchronisé avec Systeme.io");
+        toast.success(t("syncSuccess"));
         setLeads((prev) =>
           prev.map((l) => (l.id === leadId ? { ...l, sio_synced: true } : l))
         );
       } else {
-        toast.error(data.error ?? "Erreur de synchronisation");
+        toast.error(data.error ?? t("syncError"));
       }
     } catch {
-      toast.error("Erreur réseau");
+      toast.error(t("networkError"));
     } finally {
       setSyncing((prev) => {
         const next = new Set(prev);
@@ -122,18 +136,18 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
   }
 
   return (
-    <AppShell userEmail={userEmail} headerTitle={t("leads")}>
+    <AppShell userEmail={userEmail} headerTitle={tNav("leads")}>
       {/* Banner */}
       <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
         <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
           <Users className="h-5 w-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold">Mes leads</h2>
-          <p className="text-sm text-white/70">{filtered.length} leads capturés</p>
+          <h2 className="text-lg font-bold">{t("title")}</h2>
+          <p className="text-sm text-white/70">{t("captured", { count: filtered.length })}</p>
         </div>
         <Button onClick={exportCSV} variant="secondary" className="shrink-0" disabled={filtered.length === 0}>
-          <Download className="h-4 w-4 mr-2" /> Exporter CSV
+          <Download className="h-4 w-4 mr-2" /> {t("exportCsv")}
         </Button>
       </div>
 
@@ -142,7 +156,7 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Rechercher par email, prénom, nom..."
+            placeholder={t("searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
@@ -153,7 +167,7 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
           onChange={(e) => setFilterQuiz(e.target.value)}
           className="text-sm border border-input rounded-lg px-3 py-2 bg-background"
         >
-          <option value="all">Tous les quiz</option>
+          <option value="all">{t("allQuizzes")}</option>
           {quizzes.map((q) => (
             <option key={q.id} value={q.id}>{q.title}</option>
           ))}
@@ -163,10 +177,10 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
       {/* Stats cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Total leads", value: leads.length, icon: Users },
-          { label: "Synchronisés SIO", value: leads.filter((l) => l.sio_synced).length, icon: CheckCircle2 },
-          { label: "Non synchronisés", value: leads.filter((l) => !l.sio_synced).length, icon: XCircle },
-          { label: "Ce mois", value: leads.filter((l) => new Date(l.created_at).getMonth() === new Date().getMonth()).length, icon: Calendar },
+          { label: t("stats.total"), value: leads.length, icon: Users },
+          { label: t("stats.syncedSio"), value: leads.filter((l) => l.sio_synced).length, icon: CheckCircle2 },
+          { label: t("stats.notSynced"), value: leads.filter((l) => !l.sio_synced).length, icon: XCircle },
+          { label: t("stats.thisMonth"), value: leads.filter((l) => new Date(l.created_at).getMonth() === new Date().getMonth()).length, icon: Calendar },
         ].map(({ label, value, icon: Icon }) => (
           <Card key={label}>
             <CardContent className="py-4 flex items-center gap-3">
@@ -184,13 +198,13 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
 
       {/* Table */}
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground">Chargement...</div>
+        <div className="text-center py-12 text-muted-foreground">{t("loading")}</div>
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Aucun lead</h3>
-            <p className="text-muted-foreground">Les leads apparaîtront ici quand des personnes répondront à tes quiz.</p>
+            <h3 className="text-lg font-semibold mb-2">{t("empty")}</h3>
+            <p className="text-muted-foreground">{t("emptyDesc")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -199,13 +213,13 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="text-left px-4 py-3 font-medium">Email</th>
-                  <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Nom</th>
-                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Quiz</th>
-                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Résultat</th>
-                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Tag SIO</th>
-                  <th className="text-center px-4 py-3 font-medium">Sync</th>
-                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">Date</th>
+                  <th className="text-left px-4 py-3 font-medium">{t("cols.email")}</th>
+                  <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">{t("cols.name")}</th>
+                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">{t("cols.quiz")}</th>
+                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">{t("cols.result")}</th>
+                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">{t("cols.sioTag")}</th>
+                  <th className="text-center px-4 py-3 font-medium">{t("cols.sync")}</th>
+                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">{t("cols.date")}</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -240,7 +254,7 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
                       )}
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">
-                      {new Date(lead.created_at).toLocaleDateString("fr-FR")}
+                      {new Date(lead.created_at).toLocaleDateString(localeTag)}
                     </td>
                     <td className="px-4 py-3">
                       {!lead.sio_synced && (
