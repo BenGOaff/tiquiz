@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   const apiKey = getClaudeApiKey();
   if (!apiKey) {
     return NextResponse.json(
-      { ok: false, error: "Clé API Claude manquante côté serveur." },
+      { ok: false, error: "Claude API key missing on the server." },
       { status: 500 },
     );
   }
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
       }, 5000);
 
       try {
-        sendSSE("progress", { step: "Génération du quiz en cours..." });
+        sendSSE("progress", { step: "Generating your quiz…" });
 
         const timeoutMs = 180_000;
         const abortController = new AbortController();
@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
         } catch (fetchErr) {
           const name = String((fetchErr as Error)?.name ?? "");
           if (name === "AbortError") {
-            sendSSE("error", { ok: false, error: `Timeout Claude API après ${timeoutMs / 1000}s` });
+            sendSSE("error", { ok: false, error: `Claude API timeout after ${timeoutMs / 1000}s.` });
             return;
           }
           throw fetchErr;
@@ -178,11 +178,11 @@ export async function POST(req: NextRequest) {
           const errText = await res.text().catch(() => "");
           console.error("[quiz/generate] Claude API error:", res.status, errText.slice(0, 500));
           if (res.status === 401) {
-            sendSSE("error", { ok: false, error: "Clé API Anthropic invalide ou expirée. Vérifie ANTHROPIC_API_KEY dans ton .env." });
+            sendSSE("error", { ok: false, error: "Anthropic API key is invalid or expired. Check ANTHROPIC_API_KEY in your environment." });
           } else if (res.status === 429) {
-            sendSSE("error", { ok: false, error: "Trop de requêtes vers Claude. Réessaie dans quelques secondes." });
+            sendSSE("error", { ok: false, error: "Too many requests to Claude. Retry in a few seconds." });
           } else {
-            sendSSE("error", { ok: false, error: `Erreur Claude API (${res.status}). Réessaie.` });
+            sendSSE("error", { ok: false, error: `Claude API error (${res.status}). Please retry.` });
           }
           return;
         }
@@ -192,7 +192,7 @@ export async function POST(req: NextRequest) {
           json = await res.json() as Record<string, unknown>;
         } catch (parseErr) {
           console.error("[quiz/generate] Failed to parse Claude response as JSON:", parseErr);
-          sendSSE("error", { ok: false, error: "Réponse Claude invalide. Réessaie." });
+          sendSSE("error", { ok: false, error: "Invalid Claude response. Please retry." });
           return;
         }
 
@@ -205,12 +205,12 @@ export async function POST(req: NextRequest) {
 
         if (!raw) {
           console.error("[quiz/generate] Empty response from Claude. stop_reason:", json?.stop_reason, "content length:", parts.length);
-          sendSSE("error", { ok: false, error: "L'IA a retourné une réponse vide. Réessaie." });
+          sendSSE("error", { ok: false, error: "AI returned an empty response. Please retry." });
           return;
         }
 
         if (json?.stop_reason === "max_tokens") {
-          sendSSE("error", { ok: false, error: "La génération a été tronquée. Essaie avec moins de questions." });
+          sendSSE("error", { ok: false, error: "Generation was truncated. Try with fewer questions." });
           return;
         }
 
@@ -231,7 +231,7 @@ export async function POST(req: NextRequest) {
           }
         } catch {
           console.error("[quiz/generate] JSON extraction failed. Raw (first 500 chars):", raw.slice(0, 500));
-          sendSSE("error", { ok: false, error: "L'IA a retourné un JSON invalide. Réessaie." });
+          sendSSE("error", { ok: false, error: "AI returned invalid JSON. Please retry." });
           return;
         }
 

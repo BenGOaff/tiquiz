@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const apiKey = getClaudeApiKey();
   if (!apiKey) {
     return NextResponse.json(
-      { ok: false, error: "Clé API Claude manquante côté serveur." },
+      { ok: false, error: "Claude API key missing on the server." },
       { status: 500 },
     );
   }
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     const userTurnCount = messages.filter((m) => m.role === "user").length;
     if (userTurnCount > MAX_USER_TURNS) {
       return NextResponse.json(
-        { ok: false, error: "Trop d'échanges. Relance la discussion ou utilise le formulaire direct." },
+        { ok: false, error: "Too many turns. Restart the conversation or use the direct form." },
         { status: 400 },
       );
     }
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
         } catch (fetchErr) {
           const name = String((fetchErr as Error)?.name ?? "");
           if (name === "AbortError") {
-            sendSSE("error", { ok: false, error: "Timeout Claude API." });
+            sendSSE("error", { ok: false, error: "Claude API timeout." });
             return;
           }
           throw fetchErr;
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
         if (!res.ok || !res.body) {
           const errText = await res.text().catch(() => "");
           console.error("[idea-chat] Claude API error:", res.status, errText.slice(0, 500));
-          sendSSE("error", { ok: false, error: `Erreur Claude API (${res.status}).` });
+          sendSSE("error", { ok: false, error: `Claude API error (${res.status}).` });
           return;
         }
 
