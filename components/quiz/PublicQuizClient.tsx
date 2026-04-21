@@ -522,6 +522,21 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     ...(hslPrimary ? ({ ["--primary" as string]: hslPrimary } as React.CSSProperties) : {}),
   };
 
+  // Paint <html> + <body> with the brand background so any scroll overflow
+  // (mobile address-bar, scrollbar appearing, zoom, etc.) keeps the same
+  // color instead of revealing the app's default grey.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const prevHtml = document.documentElement.style.backgroundColor;
+    const prevBody = document.body.style.backgroundColor;
+    document.documentElement.style.backgroundColor = branding.backgroundColor;
+    document.body.style.backgroundColor = branding.backgroundColor;
+    return () => {
+      document.documentElement.style.backgroundColor = prevHtml;
+      document.body.style.backgroundColor = prevBody;
+    };
+  }, [branding.backgroundColor]);
+
   // ─── Funnel tracking (fire & forget, non-blocking) ───
   const trackedRef = useCallback(() => {
     // We use a mutable Set to avoid tracking the same event twice per session
