@@ -8,6 +8,7 @@
 // (quiz_leads.answers JSONB + result_id) — no extra round trip.
 
 import { useMemo } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Area,
   AreaChart,
@@ -99,6 +100,9 @@ export default function QuizResultsAnalytics({
   results,
   onExportCSV,
 }: Props) {
+  const t = useTranslations("quizDetail");
+  const locale = useLocale();
+
   const conversionRate =
     viewsCount > 0 ? (leads.length / viewsCount) * 100 : 0;
 
@@ -112,11 +116,11 @@ export default function QuizResultsAnalytics({
     }
     return results
       .map((r) => ({
-        name: r.title || "Sans titre",
+        name: r.title || t("untitledResult"),
         value: r.id ? counts.get(r.id) ?? 0 : 0,
       }))
       .filter((r) => r.value > 0);
-  }, [leads, results]);
+  }, [leads, results, t]);
 
   // ─── Lead acquisition trend (last 30 days) ───────────────────────────────
   const trendData = useMemo(() => {
@@ -129,7 +133,7 @@ export default function QuizResultsAnalytics({
       const key = d.toISOString().slice(0, 10);
       days.push({
         date: key,
-        label: d.toLocaleDateString("fr-FR", {
+        label: d.toLocaleDateString(locale, {
           day: "2-digit",
           month: "2-digit",
         }),
@@ -144,7 +148,7 @@ export default function QuizResultsAnalytics({
       if (i !== undefined) days[i].count += 1;
     }
     return days;
-  }, [leads]);
+  }, [leads, locale]);
 
   // ─── Per-question answer distribution ────────────────────────────────────
   const questionStats = useMemo(() => {
@@ -164,28 +168,28 @@ export default function QuizResultsAnalytics({
         }
       }
       const data = q.options.map((opt, oIdx) => ({
-        name: truncate(opt.text || `Option ${oIdx + 1}`),
-        fullName: opt.text || `Option ${oIdx + 1}`,
+        name: truncate(opt.text || t("optionFallback", { n: oIdx + 1 })),
+        fullName: opt.text || t("optionFallback", { n: oIdx + 1 }),
         value: optionCounts[oIdx],
       }));
       return {
         questionIndex: qIdx,
-        questionText: q.question_text || `Question ${qIdx + 1}`,
+        questionText: q.question_text || t("questionFallback", { n: qIdx + 1 }),
         totalAnswered,
         data,
       };
     });
-  }, [leads, questions]);
+  }, [leads, questions, t]);
 
   const hasAnyAnswers = questionStats.some((q) => q.totalAnswered > 0);
 
   // ─── KPI card config ─────────────────────────────────────────────────────
   const kpis = [
-    { icon: Eye, label: "Vues", value: viewsCount },
-    { icon: Play, label: "Démarrés", value: startsCount },
-    { icon: CheckCircle, label: "Complétés", value: completionsCount },
-    { icon: Users, label: "Leads", value: leads.length },
-    { icon: Share2, label: "Partages", value: sharesCount },
+    { icon: Eye, label: t("kpiViews"), value: viewsCount },
+    { icon: Play, label: t("kpiStarts"), value: startsCount },
+    { icon: CheckCircle, label: t("kpiCompletions"), value: completionsCount },
+    { icon: Users, label: t("kpiLeads"), value: leads.length },
+    { icon: Share2, label: t("kpiShares"), value: sharesCount },
   ];
 
   return (
@@ -210,14 +214,16 @@ export default function QuizResultsAnalytics({
         <Card>
           <CardContent className="pt-6">
             <h3 className="text-sm text-muted-foreground mb-2">
-              Taux de conversion
+              {t("conversionRate")}
             </h3>
             <div className="text-4xl font-bold">
               {conversionRate.toFixed(1)}%
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {leads.length} lead{leads.length > 1 ? "s" : ""} sur {viewsCount}{" "}
-              vue{viewsCount > 1 ? "s" : ""}
+              {t("conversionSubtitle", {
+                leads: leads.length,
+                views: viewsCount,
+              })}
             </p>
           </CardContent>
         </Card>
@@ -225,11 +231,11 @@ export default function QuizResultsAnalytics({
           <CardContent className="pt-6">
             <h3 className="text-sm font-semibold flex items-center gap-2 mb-4">
               <TrendingUp className="w-4 h-4 text-primary" />
-              Leads sur les 30 derniers jours
+              {t("trendTitle")}
             </h3>
             {leads.length === 0 ? (
               <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">
-                Aucun lead pour l&apos;instant
+                {t("trendEmpty")}
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={160}>
@@ -271,8 +277,8 @@ export default function QuizResultsAnalytics({
                       border: "1px solid hsl(var(--border))",
                       fontSize: 12,
                     }}
-                    labelFormatter={(v) => `Le ${v}`}
-                    formatter={(v: number) => [`${v} lead${v > 1 ? "s" : ""}`, ""]}
+                    labelFormatter={(v) => t("trendTooltipDate", { date: String(v) })}
+                    formatter={(v: number) => [t("trendTooltipLeads", { count: v }), ""]}
                   />
                   <Area
                     type="monotone"
@@ -294,7 +300,7 @@ export default function QuizResultsAnalytics({
           <CardContent className="pt-6">
             <h3 className="text-sm font-semibold flex items-center gap-2 mb-4">
               <Award className="w-4 h-4 text-primary" />
-              Répartition des résultats
+              {t("resultsDistribution")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
               <div className="h-56">
@@ -357,7 +363,7 @@ export default function QuizResultsAnalytics({
         <div className="space-y-4">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <BarChart3 className="w-4 h-4 text-primary" />
-            Réponses par question
+            {t("answersBreakdown")}
           </h3>
           {questionStats.map((q) => {
             if (q.totalAnswered === 0) return null;
@@ -366,13 +372,13 @@ export default function QuizResultsAnalytics({
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between gap-3 mb-4">
                     <p className="font-medium text-sm">
-                      <span className="text-muted-foreground mr-2">
-                        Q{q.questionIndex + 1}
+                      <span className="text-muted-foreground me-2">
+                        {t("questionPrefix", { n: q.questionIndex + 1 })}
                       </span>
                       {q.questionText}
                     </p>
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {q.totalAnswered} réponse{q.totalAnswered > 1 ? "s" : ""}
+                      {t("answersCount", { count: q.totalAnswered })}
                     </span>
                   </div>
                   <div className="space-y-3">
@@ -423,10 +429,10 @@ export default function QuizResultsAnalytics({
 
       {/* Leads table */}
       <div className="flex items-center justify-between">
-        <h3 className="font-bold text-lg">Leads ({leads.length})</h3>
+        <h3 className="font-bold text-lg">{t("leadsCount", { count: leads.length })}</h3>
         {leads.length > 0 && (
           <Button variant="outline" size="sm" onClick={onExportCSV}>
-            <Download className="w-4 h-4 mr-1" />
+            <Download className="w-4 h-4 me-1" />
             CSV
           </Button>
         )}
@@ -434,7 +440,7 @@ export default function QuizResultsAnalytics({
       {leads.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Aucun lead
+            {t("leadsEmpty")}
           </CardContent>
         </Card>
       ) : (
@@ -443,10 +449,10 @@ export default function QuizResultsAnalytics({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="text-left px-4 py-3">Email</th>
-                  <th className="text-left px-4 py-3">Prénom</th>
-                  <th className="text-left px-4 py-3">Résultat</th>
-                  <th className="text-left px-4 py-3">Date</th>
+                  <th className="text-start px-4 py-3">{t("email")}</th>
+                  <th className="text-start px-4 py-3">{t("firstName")}</th>
+                  <th className="text-start px-4 py-3">{t("result")}</th>
+                  <th className="text-start px-4 py-3">{t("date")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -457,7 +463,7 @@ export default function QuizResultsAnalytics({
                     <td className="px-4 py-3">{l.result_title ?? "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {l.created_at
-                        ? new Date(l.created_at).toLocaleDateString()
+                        ? new Date(l.created_at).toLocaleDateString(locale)
                         : "—"}
                     </td>
                   </tr>
