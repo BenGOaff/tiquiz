@@ -812,7 +812,7 @@ export default function QuizFormClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: "import",
-          content: text.slice(0, 10000), // limit to 10k chars
+          content: text.slice(0, 50000),
           locale: aiLocale,
         }),
       });
@@ -1059,7 +1059,7 @@ export default function QuizFormClient() {
             <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
               <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
               <p className="font-medium mb-2">Glisse ton fichier ici ou clique pour sélectionner</p>
-              <p className="text-xs text-muted-foreground mb-4">.txt uniquement — max 10 000 caractères</p>
+              <p className="text-xs text-muted-foreground mb-4">.txt uniquement — max 50 000 caractères</p>
               <input type="file" accept=".txt,text/plain" onChange={(e) => setImportFile(e.target.files?.[0] ?? null)} className="hidden" id="import-file" />
               <Button variant="outline" asChild>
                 <label htmlFor="import-file" className="cursor-pointer">Sélectionner un fichier</label>
