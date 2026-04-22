@@ -46,7 +46,19 @@
     "sioTagsLoading": "Loading…",
     "sioLoadTags": "Load my tags",
     "sioNoTag": "— No tag —",
-    "sioCreateTag": "Create a new tag"
+    "sioCreateTag": "Create a new tag",
+    "sioLoadingAll": "Loading Systeme.io data...",
+    "sioConfigurePrompt": "Configure your Systeme.io API key in Settings to see your tags, courses and communities here.",
+    "sioSettingsLink": "Settings",
+    "sioNoTagOpt": "— No tag —",
+    "sioNoCourseOpt": "— No course —",
+    "sioNoCommunityOpt": "— No community —",
+    "rteBold": "Bold",
+    "rteItalic": "Italic",
+    "rteAlignCenter": "Center",
+    "rteInsertLink": "Add link",
+    "rteImagePrompt": "Image URL (https://… or /path)",
+    "rteUrlInvalid": "Invalid URL."
   },
   "nav": {
     "quizzes": "My quizzes",

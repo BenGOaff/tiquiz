@@ -46,7 +46,19 @@
     "sioTagsLoading": "Chargement…",
     "sioLoadTags": "Charger mes tags",
     "sioNoTag": "— Aucun tag —",
-    "sioCreateTag": "Créer un nouveau tag"
+    "sioCreateTag": "Créer un nouveau tag",
+    "sioLoadingAll": "Chargement des données Systeme.io...",
+    "sioConfigurePrompt": "Configure ta clé API Systeme.io dans les Paramètres pour voir tes tags, formations et communautés ici.",
+    "sioSettingsLink": "Paramètres",
+    "sioNoTagOpt": "— Aucun tag —",
+    "sioNoCourseOpt": "— Aucune formation —",
+    "sioNoCommunityOpt": "— Aucune communauté —",
+    "rteBold": "Gras",
+    "rteItalic": "Italique",
+    "rteAlignCenter": "Centrer",
+    "rteInsertLink": "Ajouter un lien",
+    "rteImagePrompt": "URL de l'image (https://… ou /chemin)",
+    "rteUrlInvalid": "URL invalide."
   },
   "nav": {
     "dashboard": "Tableau de bord",

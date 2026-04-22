@@ -46,7 +46,19 @@
     "sioTagsLoading": "Caricamento…",
     "sioLoadTags": "Carica i miei tag",
     "sioNoTag": "— Nessun tag —",
-    "sioCreateTag": "Crea un nuovo tag"
+    "sioCreateTag": "Crea un nuovo tag",
+    "sioLoadingAll": "Caricamento dei dati Systeme.io...",
+    "sioConfigurePrompt": "Configura la tua chiave API Systeme.io nelle Impostazioni per vedere qui i tuoi tag, corsi e comunità.",
+    "sioSettingsLink": "Impostazioni",
+    "sioNoTagOpt": "— Nessun tag —",
+    "sioNoCourseOpt": "— Nessun corso —",
+    "sioNoCommunityOpt": "— Nessuna comunità —",
+    "rteBold": "Grassetto",
+    "rteItalic": "Corsivo",
+    "rteAlignCenter": "Centra",
+    "rteInsertLink": "Aggiungi link",
+    "rteImagePrompt": "URL dell'immagine (https://… o /percorso)",
+    "rteUrlInvalid": "URL non valido."
   },
   "nav": {
     "quizzes": "I miei quiz",

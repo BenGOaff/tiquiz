@@ -46,7 +46,19 @@
     "sioTagsLoading": "جارٍ التحميل…",
     "sioLoadTags": "تحميل وسومي",
     "sioNoTag": "— بدون وسم —",
-    "sioCreateTag": "إنشاء وسم جديد"
+    "sioCreateTag": "إنشاء وسم جديد",
+    "sioLoadingAll": "جارٍ تحميل بيانات Systeme.io...",
+    "sioConfigurePrompt": "قم بتكوين مفتاح API لـ Systeme.io في الإعدادات لرؤية الوسوم والدورات والمجتمعات هنا.",
+    "sioSettingsLink": "الإعدادات",
+    "sioNoTagOpt": "— لا يوجد وسم —",
+    "sioNoCourseOpt": "— لا توجد دورة —",
+    "sioNoCommunityOpt": "— لا يوجد مجتمع —",
+    "rteBold": "عريض",
+    "rteItalic": "مائل",
+    "rteAlignCenter": "توسيط",
+    "rteInsertLink": "إضافة رابط",
+    "rteImagePrompt": "عنوان URL للصورة (https://… أو /path)",
+    "rteUrlInvalid": "عنوان URL غير صالح."
   },
   "nav": {
     "quizzes": "اختباراتي",
