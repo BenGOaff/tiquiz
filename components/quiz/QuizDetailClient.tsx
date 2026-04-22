@@ -38,6 +38,7 @@ import { SioTagPicker } from "@/components/ui/sio-tag-picker";
 import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { useTranslations } from "next-intl";
 import {
   ALLOWED_SHARE_NETWORKS,
   BRAND_FONT_CHOICES,
@@ -178,6 +179,7 @@ function SortableSidebarQuestion({ id, index, label, onClick, onRemove, canDelet
 
 // Main component
 export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
+  const t = useTranslations("quizEditor");
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -261,7 +263,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         fetch(`/api/quiz/${quizId}`).then((r) => r.json()),
         fetch(`/api/profile`).then((r) => r.json()).catch(() => null),
       ]);
-      if (!quizRes?.ok || !quizRes.quiz) { toast.error("Quiz not found"); router.push("/dashboard"); return; }
+      if (!quizRes?.ok || !quizRes.quiz) { t.error(t("errQuizNotFound")); router.push("/dashboard"); return; }
       const q: QuizData = { ...quizRes.quiz, questions: quizRes.quiz.questions ?? [], results: quizRes.quiz.results ?? [] };
       const prof = profileRes?.ok ? (profileRes.profile as ProfileBrand) : null;
       setProfile(prof);
@@ -296,7 +298,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setPrimaryColor(q.brand_color_primary || prof?.brand_color_primary || DEFAULT_BRAND_COLOR_PRIMARY);
       setBgColor(q.brand_color_background || DEFAULT_BRAND_COLOR_BACKGROUND);
       setBrandLogoUrl(prof?.brand_logo_url ?? null);
-    } catch { toast.error("Error loading quiz"); } finally { setLoading(false); }
+    } catch { toast.error(t("errLoading")); } finally { setLoading(false); }
   }, [quizId, router]);
   useEffect(() => { fetchQuiz(); }, [fetchQuiz]);
 
@@ -316,13 +318,13 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
   // Logo upload (reuses public-assets bucket, same layout as SettingsClient)
   async function handleLogoUpload(file: File) {
-    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return; }
-    if (file.size > 2 * 1024 * 1024) { toast.error("Image trop lourde (max 2 Mo)"); return; }
+    if (!file.type.startsWith("image/")) { toast.error(t("errImageOnly")); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error(t("errImageTooLarge2")); return; }
     setUploadingLogo(true);
     try {
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { toast.error("Non connecté"); return; }
+      if (!user) { toast.error(t("errNotSignedIn")); return; }
       const ext = file.name.split(".").pop() ?? "png";
       const path = `logos/${user.id}/logo.${ext}`;
       const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
@@ -336,11 +338,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         body: JSON.stringify({ brand_logo_url: publicUrl }),
       });
       setBrandLogoUrl(publicUrl);
-      toast.success("Logo chargé");
+      toast.success(t("logoUploaded"));
     } catch (err) {
       console.error("Logo upload failed:", err);
-      const msg = err instanceof Error ? err.message : "erreur inconnue";
-      toast.error(`Erreur upload logo : ${msg}`);
+      const msg = err instanceof Error ? err.message : t("errUnknown");
+      toast.error(t("errLogoUpload", { msg }));
     } finally {
       setUploadingLogo(false);
     }
@@ -350,7 +352,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // visitor understands what they unlock before sharing.
   async function handleBonusImageUpload(file: File) {
     if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return; }
-    if (file.size > 10 * 1024 * 1024) { toast.error("Image trop lourde (max 10 Mo)"); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("errImageTooLarge10")); return; }
     setUploadingBonusImage(true);
     try {
       const supabase = getSupabaseBrowserClient();
@@ -362,11 +364,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       setBonusImageUrl(urlData.publicUrl);
-      toast.success("Image du bonus chargée");
+      toast.success(t("bonusImageUploaded"));
     } catch (err) {
       console.error("Bonus image upload failed:", err);
-      const msg = err instanceof Error ? err.message : "erreur inconnue";
-      toast.error(`Erreur upload image : ${msg}`);
+      const msg = err instanceof Error ? err.message : t("errUnknown");
+      toast.error(t("errImageUpload", { msg }));
     } finally {
       setUploadingBonusImage(false);
     }
@@ -378,9 +380,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
   // Save
   const handleSave = async () => {
-    if (!title.trim()) { toast.error("Titre requis"); return; }
+    if (!title.trim()) { toast.error(t("errTitleRequired")); return; }
     const cleanedSlug = slug.trim() ? sanitizeSlug(slug) : null;
-    if (slug.trim() && !cleanedSlug) { toast.error("Slug invalide (a-z, 0-9, -)"); return; }
+    if (slug.trim() && !cleanedSlug) { toast.error(t("errSlugInvalid")); return; }
     setSaving(true);
     try {
       const res = await fetch(`/api/quiz/${quizId}`, {
@@ -421,23 +423,23 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       });
       const json = await res.json();
       if (!json?.ok) {
-        if (res.status === 409 && json?.error === "SLUG_TAKEN") { toast.error("Ce slug est déjà utilisé"); return; }
+        if (res.status === 409 && json?.error === "SLUG_TAKEN") { toast.error(t("errSlugTaken")); return; }
         throw new Error(json?.error || "Error");
       }
-      toast.success("Sauvegardé !");
-    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : "Erreur"); } finally { setSaving(false); }
+      toast.success(t("saved"));
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : t("errGeneric")); } finally { setSaving(false); }
   };
 
   const handleToggleStatus = async () => {
     const ns = status === "active" ? "draft" : "active";
     setStatus(ns);
-    try { await fetch(`/api/quiz/${quizId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: ns }) }); toast.success(ns === "active" ? "Quiz publié !" : "Quiz désactivé"); } catch { setStatus(status); }
+    try { await fetch(`/api/quiz/${quizId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: ns }) }); toast.success(ns === "active" ? t("quizPublished") : t("quizDeactivated")); } catch { setStatus(status); }
   };
 
   // Public URL — prefer custom slug when set, fall back to UUID
   const publicSegment = slug.trim() ? sanitizeSlug(slug) ?? quizId : quizId;
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/q/${publicSegment}` : `/q/${publicSegment}`;
-  const handleCopyLink = () => { navigator.clipboard.writeText(publicUrl).then(() => { setCopied(true); toast.success("Lien copié !"); setTimeout(() => setCopied(false), 2000); }); };
+  const handleCopyLink = () => { navigator.clipboard.writeText(publicUrl).then(() => { setCopied(true); toast.success(t("linkCopied")); setTimeout(() => setCopied(false), 2000); }); };
 
   // Drag-and-drop sensors for the sidebar question list
   const dndSensors = useSensors(
@@ -468,7 +470,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const removeResult = (i: number) => { setEditResults(p => p.filter((_, ri) => ri !== i)); setEditQuestions(p => p.map(q => ({ ...q, options: q.options.map(o => ({ ...o, result_index: o.result_index > i ? o.result_index - 1 : o.result_index === i ? 0 : o.result_index })) }))); };
   const handleExportCSV = () => {
     if (!leads.length) return;
-    const csv = ["Email,Prénom,Nom,Résultat,Date", ...leads.map(l => [l.email, l.first_name ?? "", l.last_name ?? "", l.result_title ?? "", l.created_at ? new Date(l.created_at).toLocaleDateString() : ""].map(c => `"${String(c).replace(/"/g,'""')}"`).join(","))].join("\n");
+    const csv = [t("csvHeader"), ...leads.map(l => [l.email, l.first_name ?? "", l.last_name ?? "", l.result_title ?? "", l.created_at ? new Date(l.created_at).toLocaleDateString() : ""].map(c => `"${String(c).replace(/"/g,'""')}"`).join(","))].join("\n");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = `leads-${quizId}.csv`; a.click();
   };
 
@@ -483,12 +485,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-background z-10">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild><Link href="/dashboard"><ArrowLeft className="w-5 h-5" /></Link></Button>
-          <span className="font-semibold text-sm truncate max-w-[200px]">{title || "Mon quiz"}</span>
+          <span className="font-semibold text-sm truncate max-w-[200px]">{title || t("titleFallback")}</span>
         </div>
         <nav className="hidden sm:flex items-center bg-muted rounded-lg p-0.5">
           {(["create","share","results"] as const).map(tab => (
             <button key={tab} onClick={() => setMainTab(tab)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mainTab === tab ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />Créer</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />Partager</> : <><Eye className="w-3.5 h-3.5 inline mr-1.5" />Résultats</>}
+              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : <><Eye className="w-3.5 h-3.5 inline mr-1.5" />{t("tabResults")}</>}
             </button>
           ))}
         </nav>
@@ -498,9 +500,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             <button onClick={() => setDevice("mobile")} className={`p-1.5 rounded-md ${device === "mobile" ? "bg-background shadow-sm" : ""}`}><Smartphone className="w-4 h-4" /></button>
           </div>
           <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}{saving ? "" : "Enregistrer"}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}{saving ? "" : t("save")}
           </Button>
-          <Button size="sm" onClick={handleToggleStatus}>{status === "active" ? "Désactiver" : "Publier"}</Button>
+          <Button size="sm" onClick={handleToggleStatus}>{status === "active" ? t("deactivate") : t("publish")}</Button>
         </div>
       </header>
 
@@ -512,7 +514,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
             <div className="flex border-b">
               {(["edition","design","settings"] as const).map(tab => (
                 <button key={tab} onClick={() => setLeftTab(tab)} className={`flex-1 px-2 py-2.5 text-xs font-medium ${leftTab === tab ? "text-primary border-b-2 border-primary" : "text-muted-foreground"}`}>
-                  {tab === "edition" ? "Édition" : tab === "design" ? "Design" : "Paramètres"}
+                  {tab === "edition" ? t("sidebarEdition") : tab === "design" ? t("sidebarDesign") : t("sidebarSettings")}
                 </button>
               ))}
             </div>
@@ -520,10 +522,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               {leftTab === "edition" && (<>
                 {/* Introduction */}
                 <button onClick={() => scrollToSection("intro")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors">
-                  <span className="text-xs text-muted-foreground mr-2">1</span>Introduction
+                  <span className="text-xs text-muted-foreground mr-2">1</span>{t("sidebarIntroduction")}
                 </button>
                 {/* Questions (drag-and-drop to reorder) */}
-                <div className="flex items-center justify-between"><span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Questions</span><button onClick={addQuestion} className="text-primary hover:bg-primary/10 rounded p-0.5"><Plus className="w-4 h-4" /></button></div>
+                <div className="flex items-center justify-between"><span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">{t("sidebarQuestions")}</span><button onClick={addQuestion} className="text-primary hover:bg-primary/10 rounded p-0.5"><Plus className="w-4 h-4" /></button></div>
                 <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleQuestionDragEnd}>
                   <SortableContext items={editQuestions.map((_, i) => `q-${i}`)} strategy={verticalListSortingStrategy}>
                     {editQuestions.map((q, i) => (
@@ -531,7 +533,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         key={`q-${i}`}
                         id={`q-${i}`}
                         index={i}
-                        label={q.question_text ? q.question_text.slice(0, 35) + (q.question_text.length > 35 ? "…" : "") : "Question vide"}
+                        label={q.question_text ? q.question_text.slice(0, 35) + (q.question_text.length > 35 ? "…" : "") : t("sidebarEmptyQuestion")}
                         onClick={() => scrollToSection(`q-${i}`)}
                         onRemove={() => removeQuestion(i)}
                         canDelete={editQuestions.length > 1}
@@ -540,21 +542,21 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   </SortableContext>
                 </DndContext>
                 {/* Accès aux résultats */}
-                <div className="font-semibold text-xs uppercase tracking-wider text-muted-foreground pt-2">Accès aux résultats</div>
+                <div className="font-semibold text-xs uppercase tracking-wider text-muted-foreground pt-2">{t("sidebarResultsAccess")}</div>
                 <button onClick={() => scrollToSection("capture")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors">
-                  <span className="text-xs text-muted-foreground mr-2">1</span>Prise d&apos;informations
+                  <span className="text-xs text-muted-foreground mr-2">1</span>{t("sidebarLeadCapture")}
                 </button>
                 {viralityEnabled && (
                   <button onClick={() => scrollToSection("bonus")} className="w-full text-left px-3 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors">
-                    <span className="text-xs text-muted-foreground mr-2">2</span>Demande de partage
+                    <span className="text-xs text-muted-foreground mr-2">2</span>{t("sidebarShareStep")}
                   </button>
                 )}
                 {/* Résultats */}
-                <div className="flex items-center justify-between pt-2"><span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">Résultats</span><button onClick={addResult} className="text-primary hover:bg-primary/10 rounded p-0.5"><Plus className="w-4 h-4" /></button></div>
+                <div className="flex items-center justify-between pt-2"><span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">{t("sidebarResults")}</span><button onClick={addResult} className="text-primary hover:bg-primary/10 rounded p-0.5"><Plus className="w-4 h-4" /></button></div>
                 {editResults.map((r, i) => (
                   <div key={i} className="flex items-center gap-1 group">
                     <button onClick={() => scrollToSection(`r-${i}`)} className="flex-1 text-left px-3 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors truncate">
-                      <span className="text-xs text-muted-foreground mr-2">{i+1}</span>{r.title || "Résultat vide"}
+                      <span className="text-xs text-muted-foreground mr-2">{i+1}</span>{r.title || t("sidebarEmptyResult")}
                     </button>
                     {editResults.length > 1 && <button onClick={() => removeResult(i)} className="opacity-0 group-hover:opacity-100 text-destructive p-1 rounded hover:bg-destructive/10"><Trash2 className="w-3 h-3" /></button>}
                   </div>
