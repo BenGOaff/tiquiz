@@ -1,7 +1,17 @@
 import type { MetadataRoute } from "next";
 import { SUPPORTED_LOCALES } from "@/i18n/config";
 
-const PUBLIC_ROUTES = ["", "/login", "/signup", "/legal/terms", "/legal/privacy"];
+const PUBLIC_ROUTES = [
+  "",
+  "/login",
+  "/signup",
+  "/privacy",
+  "/legal",
+  "/terms",
+  "/terms-of-use",
+  "/cookies",
+  "/affiliate",
+];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://tiquiz.com").replace(/\/$/, "");

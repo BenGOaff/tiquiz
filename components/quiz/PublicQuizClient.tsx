@@ -1629,6 +1629,18 @@ const tiquizFooterTexts: Record<string, string> = {
   ar: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u0645\u0642\u062f\u0645 \u0644\u0643\u0645 \u0645\u0646 Tiquiz",
 };
 
+// Short labels for legal footer links, one per UI locale.
+const legalLinkLabels: Record<string, { privacy: string; terms: string; cookies: string; legal: string }> = {
+  fr: { privacy: "Confidentialité", terms: "CGV", cookies: "Cookies", legal: "Mentions légales" },
+  en: { privacy: "Privacy", terms: "Terms", cookies: "Cookies", legal: "Legal" },
+  es: { privacy: "Privacidad", terms: "Términos", cookies: "Cookies", legal: "Aviso legal" },
+  de: { privacy: "Datenschutz", terms: "AGB", cookies: "Cookies", legal: "Impressum" },
+  pt: { privacy: "Privacidade", terms: "Termos", cookies: "Cookies", legal: "Aviso legal" },
+  it: { privacy: "Privacy", terms: "Condizioni", cookies: "Cookie", legal: "Note legali" },
+  ar: { privacy: "الخصوصية", terms: "الشروط", cookies: "الكوكيز", legal: "إشعار قانوني" },
+};
+
+
 function TiquizFooter({ locale, customText, customUrl, logoUrl }: { locale?: string | null; customText?: string | null; customUrl?: string | null; logoUrl?: string | null }) {
   // Paid plans: show custom footer if set
   if (customText && customUrl) {
@@ -1648,6 +1660,7 @@ function TiquizFooter({ locale, customText, customUrl, logoUrl }: { locale?: str
   }
   // Free plan or no custom: show Tiquiz branding (with creator logo, or Tiquiz fallback)
   const text = tiquizFooterTexts[locale ?? "fr"] ?? tiquizFooterTexts.fr;
+  const links = legalLinkLabels[locale ?? "fr"] ?? legalLinkLabels.fr;
   return (
     <div className="text-center mt-6 space-y-2">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1665,6 +1678,15 @@ function TiquizFooter({ locale, customText, customUrl, logoUrl }: { locale?: str
         >
           {text}
         </a>
+      </p>
+      <p className="text-[10px] text-muted-foreground/50 space-x-2">
+        <a href="/privacy" className="hover:text-muted-foreground transition-colors">{links.privacy}</a>
+        <span aria-hidden>·</span>
+        <a href="/terms" className="hover:text-muted-foreground transition-colors">{links.terms}</a>
+        <span aria-hidden>·</span>
+        <a href="/cookies" className="hover:text-muted-foreground transition-colors">{links.cookies}</a>
+        <span aria-hidden>·</span>
+        <a href="/legal" className="hover:text-muted-foreground transition-colors">{links.legal}</a>
       </p>
     </div>
   );
