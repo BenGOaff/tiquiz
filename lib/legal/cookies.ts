@@ -151,4 +151,69 @@ const en: LegalPage = {
   ],
 };
 
-export const cookies: Record<string, LegalPage> = { fr, en, es: en, it: en, ar: en };
+
+const es: LegalPage = {
+  title: "Política de cookies",
+  lastUpdated: "Última actualización: 22/04/2026",
+  intro: `Esta política informa a los usuarios sobre las cookies y trazadores utilizados durante la navegación en tiquiz.com y la aplicación Tiquiz. Los servicios son editados por ${C.name} (${C.form}, RCS ${C.rcs}, sede ${C.address}).`,
+  sections: [
+    { h: "1. Definición", body: ["Una cookie es un archivo depositado en el dispositivo del usuario al consultar un sitio. Almacena información de navegación o comportamiento. Algunas cookies son depositadas por Tiquiz, otras por socios terceros."] },
+    { h: "2. Finalidades", body: ["Las cookies sirven para:", [ "Asegurar el funcionamiento técnico del servicio.", "Proteger el acceso y las transacciones.", "Medir la audiencia y el rendimiento.", "Ofrecer funciones de compartir." ]] },
+    { h: "3. Categorías de cookies", body: [
+      "**Estrictamente necesarias.** Indispensables para el funcionamiento (autenticación, sesión, carrito, pago). No se requiere consentimiento.",
+      "**Analíticas.** Miden la audiencia y mejoran el rendimiento. Depositadas tras consentimiento.",
+      "**Compartir y servicios de terceros.** Integran servicios de terceros (Systeme.io, redes sociales). Consentimiento requerido.",
+      "**Pago.** Depositadas por Stripe o PayPal para asegurar las transacciones. Estrictamente necesarias." ] },
+    { h: "4. Gestión del consentimiento", body: ["En la primera visita, un banner permite aceptar, rechazar o personalizar las cookies no esenciales. El consentimiento se recoge de manera libre, específica, informada e inequívoca. Puede retirarse en cualquier momento a través del enlace disponible en el pie de página."] },
+    { h: "5. Configuración del navegador", body: ["El usuario puede configurar su navegador para rechazar todas o parte de las cookies o eliminarlas. La desactivación puede alterar el funcionamiento de ciertas funcionalidades."] },
+    { h: "6. Transferencias fuera de la UE", body: ["Las transferencias eventuales fuera de la Unión Europea están reguladas por las cláusulas contractuales tipo o mecanismos equivalentes reconocidos por la Comisión Europea."] },
+    { h: "7. Plazo de conservación", body: ["Las cookies se conservan un máximo de 13 meses desde su depósito. Las preferencias de consentimiento también se conservan 13 meses máximo."] },
+    { h: "8. Tus derechos", body: ["Puedes en cualquier momento oponerte al depósito de cookies no esenciales, retirar tu consentimiento, pedir acceso o supresión de los datos recogidos. Contacto: " + C.email + ". Reclamación posible ante la autoridad de control competente."] },
+    { h: "9. Modificación", body: ["La política puede evolucionar para tener en cuenta evoluciones legales o técnicas."] },
+    { h: "10. Contacto", body: [`${C.name} — ${C.address} — ${C.email}.`] },
+  ],
+};
+const it: LegalPage = {
+  title: "Informativa sui cookie",
+  lastUpdated: "Ultimo aggiornamento: 22/04/2026",
+  intro: `La presente informativa informa gli utenti sui cookie e tracciatori utilizzati durante la navigazione su tiquiz.com e l'applicazione Tiquiz. I servizi sono editi da ${C.name} (${C.form}, RCS ${C.rcs}, sede ${C.address}).`,
+  sections: [
+    { h: "1. Definizione", body: ["Un cookie è un file depositato sul dispositivo dell'utente durante la consultazione di un sito. Memorizza informazioni di navigazione o comportamento. Alcuni cookie sono depositati da Tiquiz, altri da partner terzi."] },
+    { h: "2. Finalità", body: ["I cookie servono a:", [ "Assicurare il funzionamento tecnico del servizio.", "Proteggere l'accesso e le transazioni.", "Misurare l'audience e le prestazioni.", "Proporre funzionalità di condivisione." ]] },
+    { h: "3. Categorie di cookie", body: [
+      "**Strettamente necessari.** Indispensabili al funzionamento (autenticazione, sessione, carrello, pagamento). Nessun consenso richiesto.",
+      "**Analitici.** Misurano l'audience e migliorano le prestazioni. Depositati previo consenso.",
+      "**Condivisione e servizi di terzi.** Integrano servizi di terzi (Systeme.io, social network). Consenso richiesto.",
+      "**Pagamento.** Depositati da Stripe o PayPal per proteggere le transazioni. Strettamente necessari." ] },
+    { h: "4. Gestione del consenso", body: ["Alla prima visita, un banner consente di accettare, rifiutare o personalizzare i cookie non essenziali. Il consenso è raccolto in maniera libera, specifica, informata e inequivocabile. Può essere revocato in qualsiasi momento tramite il link in fondo alla pagina."] },
+    { h: "5. Impostazioni del browser", body: ["L'utente può configurare il proprio browser per rifiutare tutti o parte dei cookie o per eliminarli. La disattivazione può alterare il funzionamento di alcune funzionalità."] },
+    { h: "6. Trasferimenti fuori dall'UE", body: ["Gli eventuali trasferimenti fuori dall'Unione Europea sono regolati da clausole contrattuali tipo o meccanismi equivalenti riconosciuti dalla Commissione europea."] },
+    { h: "7. Durata di conservazione", body: ["I cookie sono conservati al massimo 13 mesi dal loro deposito. Le preferenze di consenso sono conservate anch'esse al massimo 13 mesi."] },
+    { h: "8. I tuoi diritti", body: ["Puoi in qualsiasi momento opporti al deposito di cookie non essenziali, revocare il tuo consenso, chiedere l'accesso o la cancellazione dei dati raccolti. Contatto: " + C.email + ". Reclamo possibile presso l'autorità di controllo competente."] },
+    { h: "9. Modifiche", body: ["L'informativa può evolvere per tenere conto di evoluzioni legali o tecniche."] },
+    { h: "10. Contatto", body: [`${C.name} — ${C.address} — ${C.email}.`] },
+  ],
+};
+const ar: LegalPage = {
+  title: "سياسة ملفات تعريف الارتباط",
+  lastUpdated: "آخر تحديث: 22/04/2026",
+  intro: `تُعلِم هذه السياسة المستخدمين بملفات تعريف الارتباط والمتتبعات المستخدمة أثناء التصفح على موقع tiquiz.com وتطبيق Tiquiz. الخدمات نشرتها ${C.name} (${C.form}، RCS ${C.rcs}، المقر ${C.address}).`,
+  sections: [
+    { h: "1. التعريف", body: ["ملف تعريف الارتباط هو ملف يُودَع على جهاز المستخدم عند زيارة موقع. يخزّن معلومات التصفح أو السلوك. بعضها يُودَع من قبل Tiquiz والبعض الآخر من قبل شركاء خارجيين."] },
+    { h: "2. الأغراض", body: ["تُستخدم ملفات تعريف الارتباط لـ:", [ "ضمان التشغيل التقني للخدمة.", "تأمين الوصول والمعاملات.", "قياس الجمهور والأداء.", "اقتراح ميزات المشاركة." ]] },
+    { h: "3. فئات ملفات تعريف الارتباط", body: [
+      "**ضرورية تمامًا.** لا غنى عنها لتشغيل الخدمة (المصادقة، الجلسة، السلة، الدفع). لا تتطلب موافقة.",
+      "**تحليلية.** تقيس الجمهور وتحسّن الأداء. تُودَع بعد الموافقة.",
+      "**المشاركة وخدمات الطرف الثالث.** تدمج خدمات طرف ثالث (Systeme.io، شبكات التواصل). تتطلب موافقة.",
+      "**الدفع.** تُودَع من قبل Stripe أو PayPal لتأمين المعاملات. ضرورية تمامًا." ] },
+    { h: "4. إدارة الموافقة", body: ["في الزيارة الأولى، يسمح شعار بقبول أو رفض أو تخصيص ملفات تعريف الارتباط غير الأساسية. تُجمَع الموافقة بشكل حر ومحدد ومستنير ومُتعدد. يمكن سحبها في أي وقت عبر الرابط المتاح في تذييل الصفحة."] },
+    { h: "5. إعدادات المتصفح", body: ["يمكن للمستخدم إعداد متصفحه لرفض كل أو بعض ملفات تعريف الارتباط أو حذفها. قد يؤثر التعطيل على تشغيل بعض الميزات."] },
+    { h: "6. التحويلات خارج الاتحاد الأوروبي", body: ["تُنظَّم أي تحويلات محتملة خارج الاتحاد الأوروبي ببنود تعاقدية نموذجية أو آليات مكافئة تعترف بها المفوضية الأوروبية."] },
+    { h: "7. مدة الاحتفاظ", body: ["يتم الاحتفاظ بملفات تعريف الارتباط لمدة أقصاها 13 شهرًا من تاريخ إيداعها. يتم الاحتفاظ بتفضيلات الموافقة أيضًا لمدة أقصاها 13 شهرًا."] },
+    { h: "8. حقوقك", body: ["يمكنك في أي وقت الاعتراض على إيداع ملفات تعريف الارتباط غير الأساسية، وسحب موافقتك، وطلب الوصول إلى البيانات المجمعة أو حذفها. الاتصال: " + C.email + ". يمكن تقديم شكوى إلى السلطة المختصة."] },
+    { h: "9. التعديلات", body: ["قد تتطور هذه السياسة لمراعاة التطورات القانونية أو التقنية."] },
+    { h: "10. الاتصال", body: [`${C.name} — ${C.address} — ${C.email}.`] },
+  ],
+};
+
+export const cookies: Record<string, LegalPage> = { fr, en, es, it, ar };
