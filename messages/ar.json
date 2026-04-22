@@ -1,4 +1,18 @@
 {
+  "metadata": {
+    "title": "Tiquiz",
+    "description": "أنشئ اختبارات تفاعلية، اجذب عملاء محتملين مؤهلين، ونمِّ جمهورك.",
+    "pages": {
+      "login": "تسجيل الدخول",
+      "signup": "إنشاء حساب",
+      "dashboard": "لوحة التحكم",
+      "quizzes": "اختباراتي",
+      "leads": "عملائي المحتملون",
+      "stats": "الإحصائيات",
+      "settings": "الإعدادات",
+      "admin": "المسؤول"
+    }
+  },
   "common": {
     "save": "حفظ",
     "cancel": "إلغاء",
@@ -44,6 +58,85 @@
     "newQuiz": "اختبار جديد",
     "settings": "الإعدادات",
     "logout": "تسجيل الخروج"
+  },
+  "stats": {
+    "title": "الإحصائيات",
+    "subtitle": "نظرة عامة على أدائك",
+    "loading": "جارٍ التحميل…",
+    "empty": "لا توجد بيانات بعد",
+    "emptyDesc": "أنشئ اختباراً وشاركه لرؤية إحصائياتك هنا.",
+    "statusActive": "نشط",
+    "statusDraft": "مسودة",
+    "aiUnavailable": "لا يمكن تحليل الإحصائيات في الوقت الحالي.",
+    "totals": {
+      "views": "المشاهدات",
+      "starts": "بدأوا",
+      "completions": "أكملوا",
+      "leads": "العملاء",
+      "shares": "المشاركات"
+    },
+    "funnel": {
+      "title": "قمع التحويل",
+      "startRate": "معدل البدء",
+      "startRateDetail": "{starts} بدأوا / {views} مشاهدة",
+      "completionRate": "معدل الإكمال",
+      "completionRateDetail": "{completions} مكتمل / {starts} بدأوا",
+      "leadRate": "معدل تحويل العملاء",
+      "leadRateDetail": "{leads} عميل / {starts} بدأوا"
+    },
+    "perQuiz": {
+      "title": "الأداء لكل اختبار",
+      "conversion": "تحويل"
+    },
+    "ai": {
+      "title": "تحليل الذكاء الاصطناعي",
+      "intro": "يحلل الذكاء الاصطناعي أداءك ويقدم لك توصيات لتحسين اختباراتك.",
+      "analyze": "حلل نتائجي",
+      "analyzing": "جارٍ التحليل…"
+    }
+  },
+  "leads": {
+    "title": "عملائي",
+    "captured": "{count} عميل محتمل تم جمعهم",
+    "exportCsv": "تصدير CSV",
+    "exportDone": "تم تنزيل ملف CSV",
+    "searchPlaceholder": "ابحث بالبريد الإلكتروني أو الاسم…",
+    "allQuizzes": "جميع الاختبارات",
+    "loading": "جارٍ التحميل…",
+    "empty": "لا يوجد عملاء محتملون بعد",
+    "emptyDesc": "سيظهر العملاء هنا عندما يجيب الناس على اختباراتك.",
+    "syncSuccess": "تمت مزامنة العميل مع Systeme.io",
+    "syncError": "خطأ في المزامنة",
+    "networkError": "خطأ في الشبكة",
+    "stats": {
+      "total": "إجمالي العملاء",
+      "syncedSio": "متزامن مع SIO",
+      "notSynced": "غير متزامن",
+      "thisMonth": "هذا الشهر"
+    },
+    "cols": {
+      "email": "البريد الإلكتروني",
+      "name": "الاسم",
+      "quiz": "الاختبار",
+      "result": "النتيجة",
+      "sioTag": "وسم SIO",
+      "sync": "مزامنة",
+      "date": "التاريخ"
+    },
+    "csv": {
+      "email": "البريد الإلكتروني",
+      "firstName": "الاسم الأول",
+      "lastName": "اسم العائلة",
+      "phone": "الهاتف",
+      "country": "البلد",
+      "quiz": "الاختبار",
+      "result": "النتيجة",
+      "sioTag": "وسم SIO",
+      "syncSio": "مزامنة SIO",
+      "date": "التاريخ",
+      "yes": "نعم",
+      "no": "لا"
+    }
   },
   "loginPage": {
     "tagline": "أنشئ اختبارات جذابة واجمع العملاء المحتملين",
