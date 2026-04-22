@@ -225,6 +225,8 @@ export default function QuizFormClient() {
           capture_last_name: captureLastName,
           capture_phone: capturePhone,
           capture_country: captureCountry,
+          ask_first_name: aiAskFirstName,
+          ask_gender: aiAskGender,
           virality_enabled: viralityEnabled,
           bonus_description: bonusDescription.trim() || null,
           share_message: shareMessage.trim() || null,
@@ -284,6 +286,8 @@ export default function QuizFormClient() {
   const [aiLocale, setAiLocale] = useState("fr");
   const [aiFormat, setAiFormat] = useState<"short" | "long">("short");
   const [aiSegmentation, setAiSegmentation] = useState<"level" | "profile">("profile");
+  const [aiAskFirstName, setAiAskFirstName] = useState(false);
+  const [aiAskGender, setAiAskGender] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [creatingManual, setCreatingManual] = useState(false);
   const [ideaChatOpen, setIdeaChatOpen] = useState(false);
@@ -487,6 +491,8 @@ export default function QuizFormClient() {
         capture_last_name: captureLastName,
         capture_phone: capturePhone,
         capture_country: captureCountry,
+        ask_first_name: aiAskFirstName,
+        ask_gender: aiAskGender,
         virality_enabled: viralityEnabled,
         bonus_description: bonusDescription.trim() || null,
         share_message: shareMessage.trim() || null,
@@ -603,6 +609,8 @@ export default function QuizFormClient() {
     locale: string;
     format: "short" | "long";
     segmentation: "level" | "profile";
+    askFirstName?: boolean;
+    askGender?: boolean;
   };
 
   async function handleGenerate(override?: GenerateParams) {
@@ -614,6 +622,8 @@ export default function QuizFormClient() {
       locale: aiLocale,
       format: aiFormat,
       segmentation: aiSegmentation,
+      askFirstName: aiAskFirstName,
+      askGender: aiAskGender,
     };
 
     if (params.objectives.length === 0) {
@@ -643,6 +653,8 @@ export default function QuizFormClient() {
           format: params.format,
           segmentation: params.segmentation,
           questionCount: params.format === "short" ? 4 : 8,
+          askFirstName: params.askFirstName,
+          askGender: params.askGender,
         }),
       });
 
@@ -1005,6 +1017,30 @@ export default function QuizFormClient() {
                     <p className="text-xs text-muted-foreground">{t("aiSegLevelDesc")}</p>
                   </button>
                 </div>
+              </div>
+
+              {/* Personalization toggles — name + gender */}
+              <div className="space-y-2 p-3 rounded-xl border border-dashed">
+                <Label>{t("aiPersonalizeLabel")}</Label>
+                <p className="text-xs text-muted-foreground">{t("aiPersonalizeHint")}</p>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={aiAskFirstName}
+                    onChange={(e) => setAiAskFirstName(e.target.checked)}
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  {t("aiAskFirstName")}
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={aiAskGender}
+                    onChange={(e) => setAiAskGender(e.target.checked)}
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  {t("aiAskGender")}
+                </label>
               </div>
 
               {/* 5. Intention business */}
