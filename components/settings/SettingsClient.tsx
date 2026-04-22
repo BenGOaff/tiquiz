@@ -590,7 +590,7 @@ export default function SettingsClient() {
             {PLANS.map((plan) => {
               const isCurrent = currentPlan === plan.id || (currentPlan === "free" && plan.id === "free") || (currentPlan === "monthly" && plan.id === "pro_monthly") || (currentPlan === "yearly" && plan.id === "pro_yearly") || (currentPlan === "lifetime" && plan.id === "pro_monthly");
               return (
-                <Card key={plan.id} className={`relative overflow-visible ${plan.popular ? "border-primary ring-1 ring-primary" : ""}`}>
+                <Card key={plan.id} className={`relative overflow-visible ${('popular' in plan && plan.popular) ? "border-primary ring-1 ring-primary" : ""}`}>
                   {('popular' in plan && plan.popular) && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-semibold px-4 py-1 rounded-full whitespace-nowrap z-10 shadow-sm">
                       {t("popular")}
