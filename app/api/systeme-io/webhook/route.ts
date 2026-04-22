@@ -50,6 +50,13 @@ const OFFER_TO_PLAN: Record<string, TiquizPlan> = {
 // variants get caught without a code change.
 const FAILURE_EVENT_RE = /FAIL|CANCEL|REFUND|CHARGEBACK|DECLIN|EXPIR|DISPUT/i;
 
+// Events that indicate a free opt-in (capture form, newsletter signup…)
+// rather than a paid sale. When matched without a recognised paid offer, we
+// create the user with the free plan instead of refusing.
+// This lets the creator reuse the SAME webhook URL on every Systeme.io
+// automation — paid AND free — without needing to juggle multiple endpoints.
+const OPTIN_EVENT_RE = /OPT[_-]?IN|CONTACT[_-]?(?:CREATED|ADDED|NEW|SUBSCRIBE)|SUBSCRIBER[_-]?ADDED|NEWSLETTER|LEAD[_-]?(?:CREATED|CAPTURED|NEW)/i;
+
 function inferPlan(offerId: string): TiquizPlan | null {
   if (!offerId) return null;
   const id = String(offerId).trim().toLowerCase();
@@ -211,6 +218,16 @@ export async function POST(req: NextRequest) {
         // downgrade them. Keep their current plan.
         finalPlan = oldPlan;
         console.warn(`[Tiquiz webhook] Unknown offer ${offerId} — keeping existing paid plan ${oldPlan}`);
+      } else if (eventType && OPTIN_EVENT_RE.test(eventType)) {
+        // Free opt-in flow (Systeme.io capture form, newsletter, contact created…).
+        // Same webhook URL can therefore be used across free AND paid automations.
+        finalPlan = "free";
+        console.log(`[Tiquiz webhook] Opt-in event ${eventType} — granting free plan to ${email}`);
+      } else if (!offerId) {
+        // No offer ID at all and no payment-shaped event → treat as free opt-in.
+        // Covers cases where Systeme.io fires a generic contact event.
+        finalPlan = "free";
+        console.log(`[Tiquiz webhook] No offer id + non-payment event (${eventType ?? "unknown"}) — granting free plan to ${email}`);
       } else {
         const msg = `unknown_offer:${offerId || "missing"}`;
         console.error(`[Tiquiz webhook] REFUSE grant — ${msg} email=${email}`);
