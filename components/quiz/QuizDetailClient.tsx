@@ -161,7 +161,7 @@ function SortableSidebarQuestion({ id, index, label, onClick, onRemove, canDelet
   };
   return (
     <div ref={setNodeRef} style={style} className="flex items-center gap-1 group">
-      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted touch-none" aria-label="Réordonner">
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted touch-none" aria-label=t("reorder")>
         <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
       </button>
       <button onClick={onClick} className="flex-1 text-left px-2 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors truncate">
@@ -357,7 +357,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     try {
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { toast.error("Non connecté"); return; }
+      if (!user) { toast.error(t("errNotSignedIn")); return; }
       const ext = file.name.split(".").pop() ?? "png";
       const path = `bonus/${user.id}/${quizId}-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
@@ -774,8 +774,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <img src={brandLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
                     </div>
                   )}
-                  <InlineEdit value={title} onChange={setTitle} className="text-3xl sm:text-5xl font-bold leading-tight" placeholder="Titre du quiz…" />
-                  <RichTextEdit value={introduction} onChange={setIntroduction} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder="Texte d'introduction…" />
+                  <InlineEdit value={title} onChange={setTitle} className="text-3xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
+                  <RichTextEdit value={introduction} onChange={setIntroduction} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder={t("previewIntroPh")} />
                   <div className="flex justify-center">
                     <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
                       <InlineEdit
@@ -800,24 +800,24 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     </div>
                     <div className="flex-1 flex flex-col items-center justify-center">
                       <div className="max-w-2xl w-full space-y-8">
-                        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: pc }}>Questions {qi + 1}/{editQuestions.length}</p>
-                        <InlineEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} className="text-2xl sm:text-4xl font-bold leading-tight" placeholder="Texte de la question…" />
+                        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: pc }}>{t("previewQuestionsCounter", { n: qi + 1, total: editQuestions.length })}</p>
+                        <InlineEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} className="text-2xl sm:text-4xl font-bold leading-tight" placeholder={t("previewQuestionPh")} />
                         <div className={`grid gap-3 ${q.options.length >= 3 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
                           {q.options.map((opt, oi) => (
                             <div key={oi} className="relative p-5 rounded-xl border-2 border-border hover:border-primary/30 transition-all group">
-                              <InlineEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} className="text-base font-medium" placeholder={`Option ${oi + 1}…`} />
+                              <InlineEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} className="text-base font-medium" placeholder={t("previewOptionPh", { n: oi + 1 })} />
                               <div className="flex items-center gap-1.5 mt-2">
-                                <span className="text-xs" style={{ color: `${pc}99` }}>+1 point pour le</span>
+                                <span className="text-xs" style={{ color: `${pc}99` }}>{t("previewPointFor")}</span>
                                 <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
-                                  {editResults.map((_, ri) => <option key={ri} value={ri}>Résultat {ri + 1}</option>)}
+                                  {editResults.map((_, ri) => <option key={ri} value={ri}>{t("previewResult", { n: ri + 1 })}</option>)}
                                 </select>
                               </div>
                               {q.options.length > 2 && <button onClick={() => removeOpt(qi, oi)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10 rounded p-0.5"><X className="w-3.5 h-3.5" /></button>}
                             </div>
                           ))}
                         </div>
-                        <button onClick={() => addOpt(qi)} className="text-xs hover:underline" style={{ color: pc }}>+ Ajouter une option</button>
-                        <p className="text-center text-xs text-muted-foreground pt-4 italic">Un clic sur une option passe à la question suivante.</p>
+                        <button onClick={() => addOpt(qi)} className="text-xs hover:underline" style={{ color: pc }}>{t("previewAddOption")}</button>
+                        <p className="text-center text-xs text-muted-foreground pt-4 italic">{t("previewClickHint")}</p>
                       </div>
                     </div>
                   </div>
@@ -827,17 +827,17 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               {/* ── CAPTURE / LEAD FORM ── */}
               <div ref={captureRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                 <div className="max-w-lg w-full space-y-6">
-                  <InlineEdit value={captureHeading || (quiz?.address_form === "vous" ? "Vos résultats sont prêts" : "Tes résultats sont prêts")} onChange={setCaptureHeading} className="text-2xl sm:text-4xl font-bold text-center" placeholder="Titre…" />
-                  <InlineEdit multiline value={captureSubtitle || (quiz?.address_form === "vous" ? "Entrez votre email pour découvrir votre profil." : "Entre ton email pour découvrir ton profil.")} onChange={setCaptureSubtitle} className="text-muted-foreground text-center text-base whitespace-pre-line" placeholder={"Sous-titre…\nUne ligne vide crée un paragraphe, un tiret « - » démarre une puce."} />
+                  <InlineEdit value={captureHeading || t("previewCaptureHeadingDefault")} onChange={setCaptureHeading} className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("previewCaptureHeadingPh")} />
+                  <InlineEdit multiline value={captureSubtitle || t("previewCaptureSubtitleDefault")} onChange={setCaptureSubtitle} className="text-muted-foreground text-center text-base whitespace-pre-line" placeholder={t("previewCaptureSubtitlePh")} />
                   <div className="space-y-3 max-w-md mx-auto">
                     {(captureFirstName || captureLastName) && <div className="grid grid-cols-2 gap-3">
-                      {captureFirstName && <div><label className="text-sm text-muted-foreground">Prénom</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
-                      {captureLastName && <div><label className="text-sm text-muted-foreground">Nom</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
+                      {captureFirstName && <div><label className="text-sm text-muted-foreground">{t("previewCaptureFirstName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
+                      {captureLastName && <div><label className="text-sm text-muted-foreground">{t("previewCaptureLastName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
                     </div>}
                     <div><label className="text-sm text-muted-foreground">Email</label><Input readOnly className="mt-1 bg-muted/20" /></div>
-                    {capturePhone && <div><label className="text-sm text-muted-foreground">Téléphone (optional)</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
+                    {capturePhone && <div><label className="text-sm text-muted-foreground">{t("previewCapturePhone")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
                   </div>
-                  <button className="w-full max-w-md mx-auto block px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>Accéder aux résultats</button>
+                  <button className="w-full max-w-md mx-auto block px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>{t("previewCaptureSubmit")}</button>
                 </div>
               </div>
 
@@ -851,12 +851,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       </div>
                     </div>
                     <h2 className="text-2xl sm:text-4xl font-bold leading-tight">
-                      {quiz?.address_form === "vous" ? "Un petit cadeau avant vos résultats" : "Un petit cadeau avant tes résultats"}
+                      {t("previewBonusHeadingDefault")}
                     </h2>
                     <p className="text-muted-foreground text-base leading-relaxed">
-                      {quiz?.address_form === "vous"
-                        ? "Partagez le quiz pour recevoir en plus de vos résultats :"
-                        : "Partage le quiz pour recevoir en plus de tes résultats :"}
+                      {t("previewBonusIntro")}
                     </p>
                     <div className="rounded-xl border p-4 bg-muted/30 space-y-3 text-left">
                       {bonusImageUrl && (
@@ -868,12 +866,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                         onChange={setBonusDescription}
                         multiline
                         className="text-sm font-medium"
-                        placeholder="Décris ton bonus ici…"
+                        placeholder={t("previewBonusDescPh")}
                       />
                     </div>
                     <div className="space-y-2">
                       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                        {shareNetworks.length > 0 ? "Partage via" : "Active au moins un réseau dans l'onglet Partage"}
+                        {shareNetworks.length > 0 ? t("previewBonusShareVia") : t("previewBonusNoNetworks")}
                       </p>
                       <div className="flex flex-wrap justify-center gap-2">
                         {shareNetworks.map((n) => (
@@ -882,12 +880,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           </button>
                         ))}
                         <button type="button" className="px-4 py-2 rounded-full border text-xs font-medium hover:bg-muted transition-colors inline-flex items-center gap-1.5">
-                          <Copy className="w-3 h-3" /> Copier le lien
+                          <Copy className="w-3 h-3" /> {t("previewBonusCopyLink")}
                         </button>
                       </div>
                     </div>
                     <button type="button" className="text-xs text-muted-foreground underline hover:text-foreground">
-                      {quiz?.address_form === "vous" ? "Continuer sans bonus" : "Continuer sans bonus"}
+                      {t("previewBonusContinueWithout")}
                     </button>
                   </div>
                 </div>
@@ -897,40 +895,40 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               {editResults.map((r, ri) => (
                 <div key={ri} ref={el => { resultRefs.current[ri] = el; }} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                   <div className="max-w-2xl w-full space-y-6">
-                    <InlineEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder="Titre du résultat…" />
-                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} className="text-muted-foreground text-lg leading-relaxed" placeholder="Description…" />
+                    <InlineEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
+                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} className="text-muted-foreground text-lg leading-relaxed" placeholder={t("previewResultDescPh")} />
                     <div className="p-5 rounded-xl bg-muted/50 border">
                       <div className="mb-2">
                         <InlineEdit
-                          value={resultInsightHeading || "Prise de conscience"}
+                          value={resultInsightHeading || t("previewResultInsightDefault")}
                           onChange={setResultInsightHeading}
                           className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
-                          placeholder="Titre du bloc insight…"
+                          placeholder={t("previewResultInsightHeadingPh")}
                         />
                       </div>
-                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} className="text-sm leading-relaxed" placeholder="Insight…" />
+                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} className="text-sm leading-relaxed" placeholder={t("previewResultInsightPh")} />
                     </div>
                     <div className="p-5 rounded-xl border" style={{ backgroundColor: `${pc}08`, borderColor: `${pc}30` }}>
                       <div className="mb-2">
                         <InlineEdit
-                          value={resultProjectionHeading || "Et si..."}
+                          value={resultProjectionHeading || t("previewResultProjectionDefault")}
                           onChange={setResultProjectionHeading}
                           className="text-xs font-bold uppercase tracking-widest"
                           style={{ color: `${pc}99` }}
-                          placeholder="Titre du bloc projection…"
+                          placeholder={t("previewResultProjectionHeadingPh")}
                         />
                       </div>
-                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} className="text-sm leading-relaxed" placeholder="Projection…" />
+                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} className="text-sm leading-relaxed" placeholder={t("previewResultProjectionPh")} />
                     </div>
                     <div className="space-y-2">
                       <button className="w-full px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>
-                        <InlineEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} className="text-white font-semibold text-center" placeholder="Texte du CTA…" />
+                        <InlineEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} className="text-white font-semibold text-center" placeholder={t("previewResultCtaPh")} />
                       </button>
-                      <InlineEdit value={r.cta_url ?? ctaUrl ?? ""} onChange={(v) => updateR(ri, "cta_url", v || null)} className="text-xs text-muted-foreground text-center" placeholder="URL du CTA (https://…)" />
+                      <InlineEdit value={r.cta_url ?? ctaUrl ?? ""} onChange={(v) => updateR(ri, "cta_url", v || null)} className="text-xs text-muted-foreground text-center" placeholder={t("previewResultCtaUrlPh")} />
                     </div>
                     <div className="p-4 rounded-xl bg-muted/40 border border-dashed">
-                      <div className="text-xs font-semibold text-foreground mb-1">Tag Systeme.io pour ce résultat</div>
-                      <p className="text-[11px] text-muted-foreground mb-2">Appliqué au lead qui obtient « {r.title || `Résultat ${ri + 1}`} ». Utilise-le pour segmenter tes automatisations.</p>
+                      <div className="text-xs font-semibold text-foreground mb-1">{t("previewResultTagLabel")}</div>
+                      <p className="text-[11px] text-muted-foreground mb-2">{t("previewResultTagHint", { title: r.title || t("previewResult", { n: ri + 1 }) })}</p>
                       <SioTagPicker value={r.sio_tag_name ?? ""} onChange={(v) => updateR(ri, "sio_tag_name", v || null)} />
                     </div>
                   </div>
@@ -946,7 +944,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                   className="max-h-10 w-auto object-contain mx-auto"
                 />
                 <p className="text-xs text-muted-foreground/50">
-                  Ce quiz vous est offert par <span className="font-semibold">{brandLogoUrl ? "" : "Tiquiz"}</span>
+                  {t("previewPoweredByLink")}
                 </p>
               </div>
             </div>
@@ -959,8 +957,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         <div className="flex-1 overflow-y-auto p-6"><div className="max-w-3xl mx-auto space-y-4">
           {/* Custom URL slug */}
           <Card><CardContent className="pt-6 space-y-3">
-            <h3 className="font-semibold flex items-center gap-2"><Copy className="w-4 h-4 text-primary" /> Lien personnalisé</h3>
-            <p className="text-xs text-muted-foreground">Choisis une URL courte et mémorable. Lettres minuscules, chiffres et tirets uniquement.</p>
+            <h3 className="font-semibold flex items-center gap-2"><Copy className="w-4 h-4 text-primary" /> {t("shareTabCustomLink")}</h3>
+            <p className="text-xs text-muted-foreground">{t("shareTabCustomLinkHint")}</p>
             <div className="flex items-center gap-2">
               <div className="flex items-center border rounded-lg bg-muted/30 pl-3 pr-1 py-1 flex-1">
                 <span className="text-sm text-muted-foreground font-mono whitespace-nowrap">
@@ -984,8 +982,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
           {/* Share networks */}
           <Card><CardContent className="pt-6 space-y-3">
-            <h3 className="font-semibold flex items-center gap-2"><Share2 className="w-4 h-4 text-primary" /> Réseaux de partage proposés</h3>
-            <p className="text-xs text-muted-foreground">Choisis les réseaux affichés sur la page de résultat.</p>
+            <h3 className="font-semibold flex items-center gap-2"><Share2 className="w-4 h-4 text-primary" /> {t("shareTabNetworks")}</h3>
+            <p className="text-xs text-muted-foreground">{t("shareTabNetworksHint")}</p>
             <div className="flex flex-wrap gap-2">
               {ALLOWED_SHARE_NETWORKS.map((n) => {
                 const active = shareNetworks.includes(n);
@@ -1005,12 +1003,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
           {/* SEO / Open Graph description */}
           <Card><CardContent className="pt-6 space-y-3">
-            <h3 className="font-semibold">Aperçu sur les réseaux (SEO)</h3>
-            <p className="text-xs text-muted-foreground">Description utilisée quand un visiteur partage le lien.</p>
+            <h3 className="font-semibold">{t("shareTabSeoTitle")}</h3>
+            <p className="text-xs text-muted-foreground">{t("shareTabSeoHint")}</p>
             <Textarea
               value={ogDescription}
               onChange={(e) => setOgDescription(e.target.value)}
-              placeholder="Courte phrase d'accroche affichée sous le titre du lien partagé…"
+              placeholder={t("shareTabSeoPlaceholder")}
               rows={2}
               maxLength={200}
               className="text-sm"
@@ -1022,18 +1020,18 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           <Card className={isPaidPlan ? "" : "opacity-70"}>
             <CardContent className="pt-6 space-y-3">
               <h3 className="font-semibold flex items-center gap-2">
-                Pied de page personnalisé
-                {!isPaidPlan && <Badge variant="outline" className="text-[10px]">Payant</Badge>}
+                {t("shareTabCustomFooter")}
+                {!isPaidPlan && <Badge variant="outline" className="text-[10px]">{t("shareTabPaidBadge")}</Badge>}
               </h3>
               <p className="text-xs text-muted-foreground">
                 {isPaidPlan
-                  ? "Remplace « Ce quiz vous est offert par Tiquiz » par votre propre signature."
-                  : "Disponible avec un plan payant. Sinon, le footer Tiquiz reste affiché."}
+                  ? t("shareTabCustomFooterPaidHint")
+                  : t("shareTabCustomFooterFreeHint")}
               </p>
               <Input
                 value={customFooterText}
                 onChange={(e) => setCustomFooterText(e.target.value)}
-                placeholder="Ex: Ce quiz vous est offert par Mon Site"
+                placeholder={t("shareTabCustomFooterTextPh")}
                 className="text-sm"
                 disabled={!isPaidPlan}
               />
