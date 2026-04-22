@@ -638,5 +638,25 @@
     "shareTabCustomFooterFreeHint": "Disponibile con piano a pagamento. Altrimenti il footer Tiquiz resta.",
     "shareTabCustomFooterTextPh": "Es.: Questo quiz è offerto da Il Mio Brand",
     "reorder": "Riordina"
+  },
+  "resetPasswordPage": {
+    "labelNewPassword": "Nuova password",
+    "labelConfirm": "Conferma password",
+    "hintMinLength": "Minimo 8 caratteri.",
+    "saving": "Salvataggio…",
+    "submit": "Salva password",
+    "errFillBoth": "Compila entrambi i campi.",
+    "errMismatch": "Le password non corrispondono.",
+    "errMinLength": "La password deve avere almeno 8 caratteri.",
+    "errSessionExpired": "Sessione scaduta. Accedi di nuovo e riprova.",
+    "errSamePassword": "Scegli una password diversa da quella attuale.",
+    "errUpdateFailed": "Impossibile aggiornare la password.",
+    "errUnexpected": "Errore imprevisto. Riprova.",
+    "successFirst": "Password impostata. Ora puoi accedere senza link magico.",
+    "successReset": "Password aggiornata.",
+    "showPassword": "Mostra password",
+    "hidePassword": "Nascondi password",
+    "sectionTitle": "Password",
+    "sectionDesc": "Imposta o cambia la tua password per accedere senza link magico."
   }
 }

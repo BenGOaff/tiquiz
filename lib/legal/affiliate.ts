@@ -195,4 +195,72 @@ const en: LegalPage = {
   ],
 };
 
-export const affiliate: Record<string, LegalPage> = { fr, en, es: en, it: en, ar: en };
+
+const es: LegalPage = {
+  title: "Condiciones generales del programa de afiliación",
+  lastUpdated: "Última actualización: 22/04/2026",
+  intro: `${C.name} (${C.form}, capital ${C.capital}, RCS ${C.rcs}, sede ${C.address}) — en adelante «el Editor» — propone un programa de afiliación que permite a los participantes promocionar Tiquiz® a cambio de comisiones.`,
+  sections: [
+    { h: "Artículo 1 – Objeto", body: ["El programa permite a los afiliados percibir comisiones sobre las ventas Tiquiz® generadas a través de su enlace de afiliado."] },
+    { h: "Artículo 2 – Inscripción", body: ["La inscripción es gratuita. El Editor se reserva el derecho de aceptar o rechazar cualquier candidatura sin justificación. El afiliado debe proporcionar información exacta y mantenerla actualizada."] },
+    { h: "Artículo 3 – Funcionamiento", body: ["Cada afiliado recibe un enlace único a través de la plataforma Systeme.io. Una cookie identifica al afiliado al hacer clic. Las comisiones se atribuyen conforme a las condiciones en caso de venta."] },
+    { h: "Artículo 4 – Cookies y atribución", body: ["El seguimiento se basa en cookies, válidas indefinidamente siempre que se conserven en el dispositivo del usuario y no se supriman. El Editor no garantiza una atribución perfecta de las ventas. En caso de conflicto, el Editor decide soberanamente sobre la atribución."] },
+    { h: "Artículo 5 – Comisiones", body: ["Los importes figuran en las páginas del programa. Las comisiones solo se deben tras el cobro efectivo del pago. Pueden anularse en caso de reembolso, impago, fraude o incumplimiento de las presentes condiciones. Se requiere la validación del Editor antes del pago."] },
+    { h: "Artículo 6 – Pago", body: ["Las comisiones validadas se pagan entre el 10 y el 13 de cada mes para las ventas del mes anterior, vía Systeme.io u otro medio decidido por el Editor. Puede aplicarse un umbral mínimo de pago. El afiliado asume él solo sus obligaciones fiscales y sociales."] },
+    { h: "Artículo 7 – Auto-afiliación y prácticas prohibidas", body: ["El afiliado no puede percibir comisión sobre sus propias compras, directas o indirectas. Se prohíben en particular: toda compra realizada a través de su propio enlace de afiliado, por personas cercanas o por cuentas/emails/medios de pago que controle, así como cualquier intento de eludir el seguimiento.","El Editor puede solicitar justificantes en caso de duda. Las comisiones fraudulentas pueden anularse, retenerse o recuperarse. La cuenta puede suspenderse o suprimirse sin previo aviso en caso de violación."] },
+    { h: "Artículo 8 – Obligaciones del afiliado", body: ["El afiliado se compromete a promocionar Tiquiz® lealmente, con transparencia y respetando la normativa. Están prohibidas: informaciones engañosas, promesas de ganancias, spam, suplantación de identidad, medios fraudulentos."] },
+    { h: "Artículo 9 – Propiedad intelectual", body: ["Las marcas, logos y contenidos siguen siendo propiedad exclusiva del Editor. El afiliado dispone de un derecho de uso limitado al marco del programa."] },
+    { h: "Artículo 10 – Responsabilidad", body: ["El afiliado actúa con total independencia. No existe ningún vínculo de subordinación, mandato o representación. El afiliado asume él solo la responsabilidad de sus contenidos, acciones de promoción y cumplimiento de la ley. El Editor no es responsable de los actos del afiliado."] },
+    { h: "Artículo 11 – Suspensión y rescisión", body: ["El Editor puede suspender o rescindir la cuenta en cualquier momento en caso de incumplimiento, fraude o comportamiento perjudicial. Las comisiones en curso pueden anularse."] },
+    { h: "Artículo 12 – Modificación del programa", body: ["El Editor se reserva el derecho a modificar en cualquier momento las condiciones, comisiones o modalidades de pago."] },
+    { h: "Artículo 13 – Datos personales", body: ["Pueden tratarse datos personales en el marco del programa. Las partes respetan la normativa aplicable."] },
+    { h: "Artículo 14 – Derecho aplicable y jurisdicción", body: ["Las condiciones están sometidas al derecho francés. Para los profesionales, los tribunales de la Cour d'appel de Montpellier tienen competencia exclusiva."] },
+    { h: "Contacto", body: [`${C.name} — ${C.address} — ${C.email}.`] },
+  ],
+};
+const it: LegalPage = {
+  title: "Condizioni generali del programma di affiliazione",
+  lastUpdated: "Ultimo aggiornamento: 22/04/2026",
+  intro: `${C.name} (${C.form}, capitale ${C.capital}, RCS ${C.rcs}, sede ${C.address}) — di seguito "l'Editore" — propone un programma di affiliazione che consente ai partecipanti di promuovere Tiquiz® in cambio di commissioni.`,
+  sections: [
+    { h: "Articolo 1 – Oggetto", body: ["Il programma consente agli affiliati di percepire commissioni sulle vendite Tiquiz® generate tramite il loro link di affiliazione."] },
+    { h: "Articolo 2 – Iscrizione", body: ["L'iscrizione è gratuita. L'Editore si riserva il diritto di accettare o rifiutare qualsiasi candidatura senza giustificazione. L'affiliato deve fornire informazioni esatte e mantenerle aggiornate."] },
+    { h: "Articolo 3 – Funzionamento", body: ["Ogni affiliato riceve un link unico tramite la piattaforma Systeme.io. Un cookie identifica l'affiliato al click. Le commissioni sono attribuite secondo le condizioni in caso di vendita."] },
+    { h: "Articolo 4 – Cookie e attribuzione", body: ["Il tracciamento si basa sui cookie, validi indefinitamente a condizione che siano conservati sul dispositivo dell'utente e non siano eliminati. L'Editore non garantisce un'attribuzione perfetta delle vendite. In caso di conflitto, l'Editore determina sovranamente l'attribuzione."] },
+    { h: "Articolo 5 – Commissioni", body: ["Gli importi figurano sulle pagine del programma. Le commissioni sono dovute solo dopo l'effettivo incasso del pagamento. Possono essere annullate in caso di rimborso, mancato pagamento, frode o inosservanza delle presenti condizioni. È richiesta la validazione dell'Editore prima del pagamento."] },
+    { h: "Articolo 6 – Pagamento", body: ["Le commissioni validate vengono versate tra il 10 e il 13 di ogni mese per le vendite del mese precedente, tramite Systeme.io o altro mezzo deciso dall'Editore. Può applicarsi una soglia minima di pagamento. L'affiliato si assume da solo i propri obblighi fiscali e previdenziali."] },
+    { h: "Articolo 7 – Auto-affiliazione e pratiche vietate", body: ["L'affiliato non può percepire commissioni sui propri acquisti, diretti o indiretti. Sono in particolare vietati: qualsiasi acquisto effettuato tramite il proprio link di affiliazione, da persone vicine o da account/email/mezzi di pagamento che controlla, nonché qualsiasi tentativo di aggirare il tracciamento.","L'Editore può richiedere giustificativi in caso di dubbio. Le commissioni fraudolente possono essere annullate, trattenute o recuperate. L'account può essere sospeso o eliminato senza preavviso in caso di violazione."] },
+    { h: "Articolo 8 – Obblighi dell'affiliato", body: ["L'affiliato si impegna a promuovere Tiquiz® lealmente, con trasparenza e nel rispetto della normativa. Sono vietati: informazioni ingannevoli, promesse di guadagni, spam, furto d'identità, mezzi fraudolenti."] },
+    { h: "Articolo 9 – Proprietà intellettuale", body: ["I marchi, loghi e contenuti rimangono di proprietà esclusiva dell'Editore. L'affiliato dispone di un diritto di utilizzo limitato al quadro del programma."] },
+    { h: "Articolo 10 – Responsabilità", body: ["L'affiliato agisce in totale indipendenza. Non esiste alcun rapporto di subordinazione, mandato o rappresentanza. L'affiliato si assume da solo la responsabilità dei propri contenuti, azioni promozionali e rispetto della legge. L'Editore non è responsabile delle azioni dell'affiliato."] },
+    { h: "Articolo 11 – Sospensione e risoluzione", body: ["L'Editore può sospendere o risolvere l'account in qualsiasi momento in caso di inosservanza, frode o comportamento dannoso. Le commissioni in corso possono essere annullate."] },
+    { h: "Articolo 12 – Modifica del programma", body: ["L'Editore si riserva il diritto di modificare in qualsiasi momento le condizioni, le commissioni o le modalità di pagamento."] },
+    { h: "Articolo 13 – Dati personali", body: ["Nel quadro del programma possono essere trattati dati personali. Le parti rispettano la normativa applicabile."] },
+    { h: "Articolo 14 – Diritto applicabile e giurisdizione", body: ["Le condizioni sono soggette al diritto francese. Per i professionisti, i tribunali della Corte d'appello di Montpellier hanno competenza esclusiva."] },
+    { h: "Contatto", body: [`${C.name} — ${C.address} — ${C.email}.`] },
+  ],
+};
+const ar: LegalPage = {
+  title: "الشروط العامة لبرنامج الشركاء",
+  lastUpdated: "آخر تحديث: 22/04/2026",
+  intro: `${C.name} (${C.form}، رأس مال ${C.capital}، RCS ${C.rcs}، المقر ${C.address}) — "الناشر" — تقترح برنامج شركاء يتيح للمشاركين الترويج لـ Tiquiz® مقابل عمولات.`,
+  sections: [
+    { h: "المادة 1 – الموضوع", body: ["يتيح البرنامج للشركاء الحصول على عمولات على مبيعات Tiquiz® المُنشأة عبر رابط الشراكة الخاص بهم."] },
+    { h: "المادة 2 – التسجيل", body: ["التسجيل مجاني. يحتفظ الناشر بالحق في قبول أو رفض أي طلب دون تبرير. يجب على الشريك تقديم معلومات دقيقة والحفاظ على تحديثها."] },
+    { h: "المادة 3 – آلية العمل", body: ["يتلقى كل شريك رابطًا فريدًا عبر منصة Systeme.io. يحدد ملف تعريف ارتباط الشريك عند النقر. تُمنح العمولات وفقًا للشروط في حالة البيع."] },
+    { h: "المادة 4 – ملفات تعريف الارتباط والإسناد", body: ["يعتمد التتبع على ملفات تعريف الارتباط، الصالحة إلى أجل غير مسمى بشرط الاحتفاظ بها على جهاز المستخدم وعدم حذفها. لا يضمن الناشر إسنادًا مثاليًا للمبيعات. في حالة النزاع، يحدد الناشر الإسناد بشكل سيادي."] },
+    { h: "المادة 5 – العمولات", body: ["المبالغ مذكورة في صفحات البرنامج. لا تُستحق العمولات إلا بعد التحصيل الفعلي للدفع. يمكن إلغاؤها في حالة الاسترداد أو عدم الدفع أو الاحتيال أو عدم احترام هذه الشروط. يُشترط التحقق من الناشر قبل الدفع."] },
+    { h: "المادة 6 – الدفع", body: ["تُدفع العمولات المعتمدة بين 10 و13 من كل شهر لمبيعات الشهر السابق، عبر Systeme.io أو أي وسيلة أخرى يقررها الناشر. قد ينطبق حد أدنى للدفع. يتحمل الشريك وحده التزاماته الضريبية والاجتماعية."] },
+    { h: "المادة 7 – الشراكة الذاتية والممارسات المحظورة", body: ["لا يمكن للشريك الحصول على عمولة على مشترياته الخاصة، المباشرة أو غير المباشرة. يُحظر بشكل خاص: أي شراء عبر رابطه الخاص، من قبل المقربين أو من قبل حسابات/رسائل/وسائل دفع يتحكم فيها، وكذلك أي محاولة للتحايل على التتبع.","يمكن للناشر طلب مستندات إثبات في حالة الشك. يمكن إلغاء العمولات الاحتيالية أو حجزها أو استردادها. يمكن تعليق الحساب أو حذفه دون إشعار في حالة الانتهاك."] },
+    { h: "المادة 8 – التزامات الشريك", body: ["يلتزم الشريك بالترويج لـ Tiquiz® بنزاهة وشفافية واحترام للتشريعات. يُحظر: المعلومات المضللة، ووعود الأرباح، والبريد المزعج، وانتحال الهوية، والوسائل الاحتيالية."] },
+    { h: "المادة 9 – الملكية الفكرية", body: ["تظل العلامات التجارية والشعارات والمحتوى ملكية حصرية للناشر. يتمتع الشريك بحق استخدام محدود بإطار البرنامج."] },
+    { h: "المادة 10 – المسؤولية", body: ["يتصرف الشريك باستقلالية تامة. لا توجد علاقة تبعية أو توكيل أو تمثيل. يتحمل الشريك وحده مسؤولية محتوياته وأعمال الترويج واحترام القانون. الناشر غير مسؤول عن تصرفات الشريك."] },
+    { h: "المادة 11 – التعليق والإنهاء", body: ["يمكن للناشر تعليق الحساب أو إنهائه في أي وقت في حالة عدم الاحترام أو الاحتيال أو السلوك الضار. يمكن إلغاء العمولات الجارية."] },
+    { h: "المادة 12 – تعديل البرنامج", body: ["يحتفظ الناشر بالحق في تعديل الشروط أو العمولات أو طرق الدفع في أي وقت."] },
+    { h: "المادة 13 – البيانات الشخصية", body: ["قد تُعالَج بيانات شخصية في إطار البرنامج. تحترم الأطراف التشريعات المطبقة."] },
+    { h: "المادة 14 – القانون الواجب التطبيق والاختصاص", body: ["تخضع الشروط للقانون الفرنسي. بالنسبة للمحترفين، تتمتع محاكم محكمة استئناف مونبلييه بالاختصاص الحصري."] },
+    { h: "الاتصال", body: [`${C.name} — ${C.address} — ${C.email}.`] },
+  ],
+};
+
+export const affiliate: Record<string, LegalPage> = { fr, en, es, it, ar };
