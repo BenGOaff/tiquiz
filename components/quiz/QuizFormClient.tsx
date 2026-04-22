@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -91,6 +91,10 @@ function ObjectivesDropdown({
   label: string;
   hint: string;
 }) {
+  const t = useTranslations("quizForm");
+  const locale = useLocale();
+  const labelFor = (o: { labelFr: string; labelEn: string }) =>
+    locale === "fr" ? o.labelFr : o.labelEn;
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -105,7 +109,7 @@ function ObjectivesDropdown({
 
   const selectedLabels = QUIZ_OBJECTIVES
     .filter((o) => objectives.includes(o.value))
-    .map((o) => o.labelFr);
+    .map(labelFor);
 
   return (
     <div className="space-y-1.5" ref={ref}>
@@ -117,7 +121,7 @@ function ObjectivesDropdown({
         className="w-full flex items-center justify-between border border-input rounded-lg px-3 py-2 text-sm bg-background text-left hover:border-primary/40 transition-colors"
       >
         <span className={selectedLabels.length > 0 ? "text-foreground" : "text-muted-foreground"}>
-          {selectedLabels.length > 0 ? selectedLabels.join(", ") : "— Choisis un ou plusieurs objectifs —"}
+          {selectedLabels.length > 0 ? selectedLabels.join(", ") : t("aiObjectivePick")}
         </span>
         <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
@@ -150,7 +154,7 @@ function ObjectivesDropdown({
                       </svg>
                     )}
                   </div>
-                  <span className="text-xs font-medium leading-tight">{o.labelFr}</span>
+                  <span className="text-xs font-medium leading-tight">{labelFor(o)}</span>
                 </button>
               );
             })}
@@ -345,9 +349,9 @@ export default function QuizFormClient() {
             { question_text: "", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }] },
           ],
           results: [
-            { title: "Résultat 1", description: null },
-            { title: "Résultat 2", description: null },
-            { title: "Résultat 3", description: null },
+            { title: t("result1Default"), description: null },
+            { title: t("result2Default"), description: null },
+            { title: t("result3Default"), description: null },
           ],
         }),
       });
@@ -356,14 +360,14 @@ export default function QuizFormClient() {
         router.push(`/quiz/${data.quizId}`);
       } else {
         if (data.error === "FREE_PLAN_QUIZ_LIMIT") {
-          toast.error("Le plan gratuit est limité à 1 quiz. Passe à un plan payant pour en créer davantage !");
+          toast.error(t("errFreePlanLimit"));
         } else {
-          toast.error(data.error || "Erreur lors de la création");
+          toast.error(data.error || t("errCreate"));
         }
         setCreatingManual(false);
       }
     } catch {
-      toast.error("Erreur lors de la création");
+      toast.error(t("errCreate"));
       setCreatingManual(false);
     }
   }
@@ -765,7 +769,7 @@ export default function QuizFormClient() {
   // ---------------------------------------------------------------------------
 
   const localeOptions = [
-    { value: "fr", label: "Français" },
+    { value: "fr", label: t("localeFrench") },
     { value: "en", label: "English" },
     { value: "es", label: "Español" },
     { value: "it", label: "Italiano" },
@@ -783,11 +787,11 @@ export default function QuizFormClient() {
   const [quizStatus, setQuizStatus] = useState("draft");
 
   const STEPS = [
-    { key: "general", icon: Settings2, label: "Infos générales" },
+    { key: "general", icon: Settings2, label: t("tabGeneralInfo") },
     { key: "questions", icon: MessageSquare, label: "Questions" },
-    { key: "results", icon: Award, label: "Résultats" },
+    { key: "results", icon: Award, label: t("tabResultsSection") },
     { key: "capture", icon: Users, label: "Capture" },
-    { key: "virality", icon: Share2, label: "Viralité" },
+    { key: "virality", icon: Share2, label: t("tabVirality") },
     { key: "share", icon: Globe, label: "Partage" },
   ];
 
@@ -806,7 +810,7 @@ export default function QuizFormClient() {
     const name = importFile.name.toLowerCase();
     const isTxt = name.endsWith(".txt") || importFile.type === "text/plain";
     if (!isTxt) {
-      toast.error("Formats PDF et DOCX bientôt supportés. Pour l'instant, exporte ton contenu en .txt.");
+      toast.error(t("importFormatsNotice"));
       return;
     }
 
@@ -873,7 +877,7 @@ export default function QuizFormClient() {
         }
       }
 
-      toast.success("Quiz importé avec succès !");
+      toast.success(t("quizImported"));
       setActiveTab("manual");
     } catch {
       toast.error("Erreur lors de l'import");
@@ -913,7 +917,7 @@ export default function QuizFormClient() {
         <div className="flex items-center justify-center min-h-[40vh]">
           <div className="text-center space-y-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-            <p className="text-sm text-muted-foreground">Création de ton quiz en cours…</p>
+            <p className="text-sm text-muted-foreground">{t("creatingQuiz")}</p>
           </div>
         </div>
       )}
@@ -1083,22 +1087,22 @@ export default function QuizFormClient() {
       {activeTab === "import" && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Upload className="h-5 w-5 text-primary" />Importer un quiz</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Upload className="h-5 w-5 text-primary" />{t("importQuiz")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
             <p className="text-sm text-muted-foreground">
               Importe un fichier <strong>.txt</strong> contenant tes questions et réponses.
               L'IA va structurer le contenu en quiz (questions, options, résultats).
               <br />
-              <span className="text-xs">Pour les PDF / DOCX, copie le texte dans un fichier .txt avant d'importer.</span>
+              <span className="text-xs">{t("importPdfDocxHint")}</span>
             </p>
             <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors">
               <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-              <p className="font-medium mb-2">Glisse ton fichier ici ou clique pour sélectionner</p>
+              <p className="font-medium mb-2">{t("importDropHint")}</p>
               <p className="text-xs text-muted-foreground mb-4">.txt uniquement — max 50 000 caractères</p>
               <input type="file" accept=".txt,text/plain" onChange={(e) => setImportFile(e.target.files?.[0] ?? null)} className="hidden" id="import-file" />
               <Button variant="outline" asChild>
-                <label htmlFor="import-file" className="cursor-pointer">Sélectionner un fichier</label>
+                <label htmlFor="import-file" className="cursor-pointer">{t("importSelectFile")}</label>
               </Button>
             </div>
             {importFile && (
@@ -1111,12 +1115,12 @@ export default function QuizFormClient() {
                   </div>
                 </div>
                 <Button onClick={handleImportFile} disabled={importing}>
-                  {importing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Import en cours...</> : <><Sparkles className="h-4 w-4 mr-2" />Analyser et importer</>}
+                  {importing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t("importInProgress")}</> : <><Sparkles className="h-4 w-4 mr-2" />{t("importAnalyze")}</>}
                 </Button>
               </div>
             )}
             <div className="space-y-2">
-              <Label>Langue du quiz importé</Label>
+              <Label>{t("importQuizLocale")}</Label>
               <select value={aiLocale} onChange={(e) => setAiLocale(e.target.value)} className="w-full border border-input rounded-lg px-2.5 py-1.5 text-sm bg-background">
                 {localeOptions.map((lo) => (<option key={lo.value} value={lo.value}>{lo.label}</option>))}
               </select>
