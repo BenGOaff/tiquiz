@@ -20,17 +20,29 @@ const supabaseAnon = createClient(
 // Plans Tiquiz DB: free | monthly | yearly | lifetime
 type TiquizPlan = "free" | "monthly" | "yearly" | "lifetime";
 
-// Mapping des offer price IDs Systeme.io vers plan Tiquiz
+// Mapping des offer price IDs Systeme.io vers plan Tiquiz.
+// Une même formule peut avoir plusieurs price IDs (un par locale / page de vente),
+// tous mappés vers le même plan Tiquiz — le même webhook peut donc être réutilisé
+// sur toutes les pages de vente de cette offre.
 const OFFER_TO_PLAN: Record<string, TiquizPlan> = {
-  // Mensuel
+  // Mensuel — FR
   "offer-price-3198235": "monthly",
   "3198235": "monthly",
-  // Annuel
+  // Mensuel — EN
+  "offer-price-3211596": "monthly",
+  "3211596": "monthly",
+  // Annuel — FR
   "offer-price-3198261": "yearly",
   "3198261": "yearly",
-  // Beta (lifetime)
+  // Annuel — EN
+  "offer-price-3211612": "yearly",
+  "3211612": "yearly",
+  // Beta (lifetime) — FR
   "offer-price-3198280": "lifetime",
   "3198280": "lifetime",
+  // Beta (lifetime) — EN
+  "offer-price-3211578": "lifetime",
+  "3211578": "lifetime",
 };
 
 // Events that explicitly indicate NO payment received → never grant access.
