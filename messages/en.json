@@ -683,5 +683,32 @@
     "ogImageLabel": "Share image (1200x630px)",
     "ogDescLabel": "Meta description",
     "ogDescPh": "Find out what profile you are by taking this quiz!"
+  },
+  "quizPreview": {
+    "livePreview": "Live preview",
+    "desktop": "Desktop",
+    "tablet": "Tablet",
+    "mobile": "Mobile",
+    "stepIntro": "Intro",
+    "stepQuestion": "Question {n}",
+    "stepCapture": "Capture",
+    "stepResult": "Result",
+    "fallbackTitle": "Quiz title",
+    "fallbackIntro": "Quiz description...",
+    "fallbackStart": "Start",
+    "questionCounter": "Question {n} / {total}",
+    "fallbackQuestion": "Question text?",
+    "fallbackOption": "Option {n}",
+    "previous": "Previous",
+    "fallbackCaptureHeading": "Discover your result",
+    "fallbackCaptureSubtitle": "Enter your details to see your personalized profile",
+    "emailPh": "Email *",
+    "firstNamePh": "First name",
+    "lastNamePh": "Last name",
+    "phonePh": "Phone",
+    "countryPh": "Country",
+    "seeResult": "See my result",
+    "fallbackResultTitle": "Your profile",
+    "fallbackResultDesc": "Result description..."
   }
 }

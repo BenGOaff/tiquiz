@@ -683,5 +683,32 @@
     "ogImageLabel": "صورة المشاركة (1200x630px)",
     "ogDescLabel": "وصف Meta",
     "ogDescPh": "اكتشف أي ملف شخصي أنت بالإجابة على هذا الاختبار!"
+  },
+  "quizPreview": {
+    "livePreview": "معاينة مباشرة",
+    "desktop": "سطح المكتب",
+    "tablet": "جهاز لوحي",
+    "mobile": "جوال",
+    "stepIntro": "مقدمة",
+    "stepQuestion": "سؤال {n}",
+    "stepCapture": "التقاط",
+    "stepResult": "النتيجة",
+    "fallbackTitle": "عنوان الاختبار",
+    "fallbackIntro": "وصف الاختبار...",
+    "fallbackStart": "ابدأ",
+    "questionCounter": "سؤال {n} / {total}",
+    "fallbackQuestion": "نص السؤال؟",
+    "fallbackOption": "الخيار {n}",
+    "previous": "السابق",
+    "fallbackCaptureHeading": "اكتشف نتيجتك",
+    "fallbackCaptureSubtitle": "أدخل معلوماتك لرؤية ملفك الشخصي المخصص",
+    "emailPh": "البريد الإلكتروني *",
+    "firstNamePh": "الاسم الأول",
+    "lastNamePh": "اسم العائلة",
+    "phonePh": "الهاتف",
+    "countryPh": "البلد",
+    "seeResult": "عرض نتيجتي",
+    "fallbackResultTitle": "ملفك الشخصي",
+    "fallbackResultDesc": "وصف النتيجة..."
   }
 }

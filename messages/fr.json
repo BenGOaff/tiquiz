@@ -683,5 +683,32 @@
     "ogImageLabel": "Image de partage (1200x630px)",
     "ogDescLabel": "Meta description",
     "ogDescPh": "Découvre quel profil tu es en répondant à ce quiz !"
+  },
+  "quizPreview": {
+    "livePreview": "Aperçu en direct",
+    "desktop": "Desktop",
+    "tablet": "Tablette",
+    "mobile": "Mobile",
+    "stepIntro": "Intro",
+    "stepQuestion": "Question {n}",
+    "stepCapture": "Capture",
+    "stepResult": "Résultat",
+    "fallbackTitle": "Titre du quiz",
+    "fallbackIntro": "Description du quiz...",
+    "fallbackStart": "Commencer",
+    "questionCounter": "Question {n} / {total}",
+    "fallbackQuestion": "Texte de la question ?",
+    "fallbackOption": "Option {n}",
+    "previous": "Précédent",
+    "fallbackCaptureHeading": "Découvre ton résultat",
+    "fallbackCaptureSubtitle": "Entre tes informations pour voir ton profil personnalisé",
+    "emailPh": "Email *",
+    "firstNamePh": "Prénom",
+    "lastNamePh": "Nom",
+    "phonePh": "Téléphone",
+    "countryPh": "Pays",
+    "seeResult": "Voir mon résultat",
+    "fallbackResultTitle": "Ton profil",
+    "fallbackResultDesc": "Description du résultat..."
   }
 }
