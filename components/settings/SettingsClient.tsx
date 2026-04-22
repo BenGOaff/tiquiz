@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import SetPasswordForm from "@/components/auth/SetPasswordForm";
 
 type Profile = {
   full_name: string | null;
@@ -657,39 +658,8 @@ export default function SettingsClient() {
           </div>
           <p className="text-xs text-muted-foreground text-center">Les paiements sont gérés par Systeme.io. Tu peux changer de plan à tout moment.</p>
 
-          {/* Mot de passe */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Mot de passe</CardTitle>
-              <CardDescription>Définis ou change ton mot de passe pour te connecter sans magic link</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div>
-                <Label>Nouveau mot de passe</Label>
-                <Input id="new-password" type="password" placeholder="Minimum 6 caractères" className="mt-1.5" />
-              </div>
-              <div>
-                <Label>Confirmer le mot de passe</Label>
-                <Input id="confirm-password" type="password" placeholder="Confirme ton mot de passe" className="mt-1.5" />
-              </div>
-              <Button variant="outline" className="rounded-full" onClick={async () => {
-                const pw = (document.getElementById("new-password") as HTMLInputElement)?.value;
-                const confirm = (document.getElementById("confirm-password") as HTMLInputElement)?.value;
-                if (!pw || pw.length < 6) { toast.error("Le mot de passe doit faire au moins 6 caractères"); return; }
-                if (pw !== confirm) { toast.error("Les mots de passe ne correspondent pas"); return; }
-                try {
-                  const supabase = getSupabaseBrowserClient();
-                  const { error } = await supabase.auth.updateUser({ password: pw });
-                  if (error) throw error;
-                  toast.success("Mot de passe mis à jour !");
-                  (document.getElementById("new-password") as HTMLInputElement).value = "";
-                  (document.getElementById("confirm-password") as HTMLInputElement).value = "";
-                } catch (err: any) { toast.error(err?.message || "Erreur"); }
-              }}>
-                <Save className="h-4 w-4 mr-2" />Enregistrer le mot de passe
-              </Button>
-            </CardContent>
-          </Card>
+          {/* Password — set or change so the user can sign in without magic link */}
+          <PasswordSection />
 
           {/* Zone danger */}
           <Card className="border-destructive/30">
@@ -712,5 +682,23 @@ export default function SettingsClient() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// Localized wrapper around SetPasswordForm. Renders in its own Card so the
+// password section in the Settings → Billing tab reads the current UI locale
+// for title, description and inline validation messages.
+function PasswordSection() {
+  const t = useTranslations("resetPasswordPage");
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t("sectionTitle")}</CardTitle>
+        <CardDescription>{t("sectionDesc")}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <SetPasswordForm mode="reset" />
+      </CardContent>
+    </Card>
   );
 }

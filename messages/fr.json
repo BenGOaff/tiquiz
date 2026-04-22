@@ -638,5 +638,25 @@
     "shareTabCustomFooterFreeHint": "Disponible avec un plan payant. Sinon, le footer Tiquiz reste affiché.",
     "shareTabCustomFooterTextPh": "Ex : Ce quiz vous est offert par Mon Site",
     "reorder": "Réordonner"
+  },
+  "resetPasswordPage": {
+    "labelNewPassword": "Nouveau mot de passe",
+    "labelConfirm": "Confirmer le mot de passe",
+    "hintMinLength": "Minimum 8 caractères.",
+    "saving": "Enregistrement…",
+    "submit": "Enregistrer le mot de passe",
+    "errFillBoth": "Remplis les deux champs.",
+    "errMismatch": "Les mots de passe ne correspondent pas.",
+    "errMinLength": "Le mot de passe doit faire au moins 8 caractères.",
+    "errSessionExpired": "Session expirée. Reconnecte-toi et réessaie.",
+    "errSamePassword": "Choisis un mot de passe différent de l'actuel.",
+    "errUpdateFailed": "Impossible de mettre à jour le mot de passe.",
+    "errUnexpected": "Erreur inattendue. Réessaie.",
+    "successFirst": "Mot de passe défini. Tu peux maintenant te connecter sans lien magique.",
+    "successReset": "Mot de passe mis à jour.",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe",
+    "sectionTitle": "Mot de passe",
+    "sectionDesc": "Définis ou change ton mot de passe pour te connecter sans lien magique."
   }
 }

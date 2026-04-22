@@ -638,5 +638,25 @@
     "shareTabCustomFooterFreeHint": "متاح مع خطة مدفوعة. وإلا يبقى تذييل Tiquiz.",
     "shareTabCustomFooterTextPh": "مثال: هذا الاختبار مقدم من علامتي التجارية",
     "reorder": "إعادة الترتيب"
+  },
+  "resetPasswordPage": {
+    "labelNewPassword": "كلمة مرور جديدة",
+    "labelConfirm": "تأكيد كلمة المرور",
+    "hintMinLength": "8 أحرف على الأقل.",
+    "saving": "جارٍ الحفظ…",
+    "submit": "حفظ كلمة المرور",
+    "errFillBoth": "املأ الحقلين.",
+    "errMismatch": "كلمتا المرور غير متطابقتين.",
+    "errMinLength": "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.",
+    "errSessionExpired": "انتهت الجلسة. قم بتسجيل الدخول مرة أخرى.",
+    "errSamePassword": "اختر كلمة مرور مختلفة عن الحالية.",
+    "errUpdateFailed": "تعذّر تحديث كلمة المرور.",
+    "errUnexpected": "خطأ غير متوقع. حاول مرة أخرى.",
+    "successFirst": "تم تعيين كلمة المرور. يمكنك الآن تسجيل الدخول بدون رابط سحري.",
+    "successReset": "تم تحديث كلمة المرور.",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور",
+    "sectionTitle": "كلمة المرور",
+    "sectionDesc": "عيّن أو غيّر كلمة المرور لتسجيل الدخول بدون رابط سحري."
   }
 }
