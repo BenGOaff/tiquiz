@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowRight } from "lucide-react";
+import LegalFooterLinks from "@/components/legal/LegalFooterLinks";
 
 export default function SignupForm() {
   const t = useTranslations("signupPage");
@@ -149,6 +150,7 @@ export default function SignupForm() {
             </div>
           </CardContent>
         </Card>
+        <LegalFooterLinks className="mt-4" />
       </div>
     </div>
   );

@@ -153,6 +153,7 @@ function SettingsToggle({ label, hint, checked, onChange, disabled }: {
 function SortableSidebarQuestion({ id, index, label, onClick, onRemove, canDelete }: {
   id: string; index: number; label: string; onClick: () => void; onRemove: () => void; canDelete: boolean;
 }) {
+  const t = useTranslations("quizEditor");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -161,7 +162,7 @@ function SortableSidebarQuestion({ id, index, label, onClick, onRemove, canDelet
   };
   return (
     <div ref={setNodeRef} style={style} className="flex items-center gap-1 group">
-      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted touch-none" aria-label=t("reorder")>
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted touch-none" aria-label={t("reorder")}>
         <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
       </button>
       <button onClick={onClick} className="flex-1 text-left px-2 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors truncate">

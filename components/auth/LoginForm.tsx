@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
+import LegalFooterLinks from "@/components/legal/LegalFooterLinks";
 
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -283,6 +284,7 @@ export default function LoginForm() {
         <p className="text-center text-sm text-muted-foreground mt-6">
           {t("copyright", { year: new Date().getFullYear() })}
         </p>
+        <LegalFooterLinks className="mt-2" />
       </div>
     </div>
   );
