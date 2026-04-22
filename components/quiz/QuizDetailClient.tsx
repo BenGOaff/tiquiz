@@ -264,7 +264,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         fetch(`/api/quiz/${quizId}`).then((r) => r.json()),
         fetch(`/api/profile`).then((r) => r.json()).catch(() => null),
       ]);
-      if (!quizRes?.ok || !quizRes.quiz) { t.error(t("errQuizNotFound")); router.push("/dashboard"); return; }
+      if (!quizRes?.ok || !quizRes.quiz) { toast.error(t("errQuizNotFound")); router.push("/dashboard"); return; }
       const q: QuizData = { ...quizRes.quiz, questions: quizRes.quiz.questions ?? [], results: quizRes.quiz.results ?? [] };
       const prof = profileRes?.ok ? (profileRes.profile as ProfileBrand) : null;
       setProfile(prof);
@@ -352,7 +352,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // Bonus image upload: mockup / image / GIF shown on the share step so the
   // visitor understands what they unlock before sharing.
   async function handleBonusImageUpload(file: File) {
-    if (!file.type.startsWith("image/")) { toast.error("Fichier image uniquement"); return; }
+    if (!file.type.startsWith("image/")) { toast.error(t("errImageOnly")); return; }
     if (file.size > 10 * 1024 * 1024) { toast.error(t("errImageTooLarge10")); return; }
     setUploadingBonusImage(true);
     try {
