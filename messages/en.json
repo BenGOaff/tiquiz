@@ -658,5 +658,30 @@
     "hidePassword": "Hide password",
     "sectionTitle": "Password",
     "sectionDesc": "Set or change your password so you can sign in without a magic link."
+  },
+  "quizShare": {
+    "toastLinkCopied": "Link copied!",
+    "toastIframeCopied": "Iframe code copied!",
+    "publicationTitle": "Publication",
+    "publicationDesc": "Toggle public access to your quiz",
+    "statusActive": "Active",
+    "statusDraft": "Draft",
+    "publicVisible": "Your quiz is publicly accessible",
+    "publicHidden": "Your quiz is only visible to you",
+    "deactivate": "Deactivate",
+    "activate": "Activate",
+    "linkTitle": "Share link",
+    "linkDesc": "Custom URL to share your quiz",
+    "iframeTitle": "Iframe embed",
+    "iframeDesc": "Copy this code to embed the quiz on your site",
+    "copied": "Copied",
+    "copy": "Copy",
+    "networksTitle": "Share networks",
+    "networksDesc": "Pick the networks visitors can share the quiz on",
+    "ogTitle": "Social meta data",
+    "ogDesc": "Image and description shown when shared on social networks",
+    "ogImageLabel": "Share image (1200x630px)",
+    "ogDescLabel": "Meta description",
+    "ogDescPh": "Find out what profile you are by taking this quiz!"
   }
 }

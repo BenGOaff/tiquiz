@@ -658,5 +658,30 @@
     "hidePassword": "Ocultar contraseña",
     "sectionTitle": "Contraseña",
     "sectionDesc": "Define o cambia tu contraseña para iniciar sesión sin enlace mágico."
+  },
+  "quizShare": {
+    "toastLinkCopied": "¡Enlace copiado!",
+    "toastIframeCopied": "¡Código iframe copiado!",
+    "publicationTitle": "Publicación",
+    "publicationDesc": "Activa o desactiva el acceso público a tu quiz",
+    "statusActive": "Activo",
+    "statusDraft": "Borrador",
+    "publicVisible": "Tu quiz es accesible públicamente",
+    "publicHidden": "Tu quiz solo es visible para ti",
+    "deactivate": "Desactivar",
+    "activate": "Activar",
+    "linkTitle": "Enlace de compartir",
+    "linkDesc": "URL personalizable para compartir tu quiz",
+    "iframeTitle": "Integración iframe",
+    "iframeDesc": "Copia este código para integrar el quiz en tu sitio",
+    "copied": "Copiado",
+    "copy": "Copiar",
+    "networksTitle": "Redes de compartir",
+    "networksDesc": "Elige las redes en las que tus visitantes podrán compartir el quiz",
+    "ogTitle": "Metadatos sociales",
+    "ogDesc": "Imagen y descripción mostradas al compartir en redes",
+    "ogImageLabel": "Imagen de compartir (1200x630px)",
+    "ogDescLabel": "Meta descripción",
+    "ogDescPh": "¡Descubre qué perfil eres respondiendo este quiz!"
   }
 }

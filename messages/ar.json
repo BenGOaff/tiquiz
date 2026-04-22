@@ -658,5 +658,30 @@
     "hidePassword": "إخفاء كلمة المرور",
     "sectionTitle": "كلمة المرور",
     "sectionDesc": "عيّن أو غيّر كلمة المرور لتسجيل الدخول بدون رابط سحري."
+  },
+  "quizShare": {
+    "toastLinkCopied": "تم نسخ الرابط!",
+    "toastIframeCopied": "تم نسخ كود iframe!",
+    "publicationTitle": "النشر",
+    "publicationDesc": "فعّل أو عطّل الوصول العام إلى اختبارك",
+    "statusActive": "نشط",
+    "statusDraft": "مسودة",
+    "publicVisible": "اختبارك متاح للعموم",
+    "publicHidden": "اختبارك مرئي لك فقط",
+    "deactivate": "تعطيل",
+    "activate": "تفعيل",
+    "linkTitle": "رابط المشاركة",
+    "linkDesc": "عنوان URL مخصص لمشاركة اختبارك",
+    "iframeTitle": "تضمين iframe",
+    "iframeDesc": "انسخ هذا الكود لتضمين الاختبار في موقعك",
+    "copied": "تم النسخ",
+    "copy": "نسخ",
+    "networksTitle": "شبكات المشاركة",
+    "networksDesc": "اختر الشبكات التي يمكن لزوارك المشاركة عليها",
+    "ogTitle": "بيانات وصفية اجتماعية",
+    "ogDesc": "الصورة والوصف المعروضان عند المشاركة",
+    "ogImageLabel": "صورة المشاركة (1200x630px)",
+    "ogDescLabel": "وصف Meta",
+    "ogDescPh": "اكتشف أي ملف شخصي أنت بالإجابة على هذا الاختبار!"
   }
 }

@@ -658,5 +658,30 @@
     "hidePassword": "Masquer le mot de passe",
     "sectionTitle": "Mot de passe",
     "sectionDesc": "Définis ou change ton mot de passe pour te connecter sans lien magique."
+  },
+  "quizShare": {
+    "toastLinkCopied": "Lien copié !",
+    "toastIframeCopied": "Code iframe copié !",
+    "publicationTitle": "Publication",
+    "publicationDesc": "Active ou désactive l'accès public à ton quiz",
+    "statusActive": "Actif",
+    "statusDraft": "Brouillon",
+    "publicVisible": "Ton quiz est accessible publiquement",
+    "publicHidden": "Ton quiz n'est visible que par toi",
+    "deactivate": "Désactiver",
+    "activate": "Activer",
+    "linkTitle": "Lien de partage",
+    "linkDesc": "URL personnalisable pour partager ton quiz",
+    "iframeTitle": "Intégration iframe",
+    "iframeDesc": "Copie ce code pour intégrer le quiz dans ton site",
+    "copied": "Copié",
+    "copy": "Copier",
+    "networksTitle": "Réseaux de partage",
+    "networksDesc": "Choisis les réseaux sur lesquels tes visiteurs pourront partager le quiz",
+    "ogTitle": "Méta données sociales",
+    "ogDesc": "Image et description affichées lors du partage sur les réseaux",
+    "ogImageLabel": "Image de partage (1200x630px)",
+    "ogDescLabel": "Meta description",
+    "ogDescPh": "Découvre quel profil tu es en répondant à ce quiz !"
   }
 }
