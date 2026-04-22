@@ -321,7 +321,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     const { data: quiz } = await admin
       .from("quizzes")
-      .select("id, user_id, title, sio_capture_tag")
+      .select("id, user_id, title")
       .eq("id", quizId)
       .maybeSingle();
 
@@ -373,7 +373,6 @@ export async function POST(req: NextRequest, context: RouteContext) {
     // ── Auto-send to Systeme.io (non-blocking) ──
     if (lead?.id) {
       const leadId = lead.id;
-      const captureTag = String((quiz as Record<string, unknown>).sio_capture_tag ?? "").trim();
       (async () => {
         try {
           const { data: profile } = await admin
@@ -402,30 +401,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
             resultTitle = String((result as Record<string, unknown>)?.title ?? "").trim();
           }
 
-          // Collect per-answer tags by looking up the quiz's questions + chosen options
-          const answerTags: string[] = [];
-          if (answers && answers.length > 0) {
-            const { data: questions } = await admin
-              .from("quiz_questions")
-              .select("options, sort_order")
-              .eq("quiz_id", quizId)
-              .order("sort_order");
-            const qArr = (questions ?? []) as Record<string, unknown>[];
-            for (const a of answers as Record<string, unknown>[]) {
-              const qIdx = Number(a?.question_index);
-              const oIdx = Number(a?.option_index);
-              if (!Number.isFinite(qIdx) || !Number.isFinite(oIdx)) continue;
-              const q = qArr[qIdx];
-              if (!q) continue;
-              const opts = (q.options as Record<string, unknown>[]) ?? [];
-              const opt = opts[oIdx];
-              if (!opt) continue;
-              const tag = String(opt.sio_tag_name ?? "").trim();
-              if (tag) answerTags.push(tag);
-            }
-          }
-
-          // Ensure contact once, then apply all tags (result + capture + per-answer), deduped
+          // Ensure contact once, then apply the result tag
           const sioContactId = await ensureSioContact(apiKey, email, {
             firstName: firstName || undefined,
             surname: lastName || undefined,
@@ -434,13 +410,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
           });
           if (!sioContactId) return;
 
-          const tagsToApply = Array.from(
-            new Set(
-              [sioTagName, captureTag, ...answerTags]
-                .map((t) => t.trim())
-                .filter((t) => t.length > 0),
-            ),
-          );
+          const tagsToApply = sioTagName ? [sioTagName] : [];
 
           for (const tagName of tagsToApply) {
             try {

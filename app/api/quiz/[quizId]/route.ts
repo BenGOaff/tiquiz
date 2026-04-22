@@ -97,7 +97,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const allowedFields = [
       "title", "introduction", "cta_text", "cta_url", "privacy_url",
       "consent_text", "virality_enabled", "bonus_description",
-      "share_message", "bonus_image_url", "status", "sio_share_tag_name", "sio_capture_tag", "locale",
+      "share_message", "bonus_image_url", "status", "sio_share_tag_name", "locale",
       "address_form", "og_image_url", "og_description", "capture_heading", "capture_subtitle",
       "capture_first_name", "capture_last_name", "capture_phone", "capture_country",
       "custom_footer_text", "custom_footer_url",

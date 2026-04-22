@@ -1,14 +1,15 @@
 // components/ui/sio-tag-picker.tsx
 // Réutilisable : sélectionner ou créer un tag Systeme.io.
-// Charge les tags depuis /api/systeme-io/tags, affiche un dropdown,
-// et permet de créer de nouveaux tags inline.
-// Affiche un message clair si la clé API n'est pas configurée.
+// - Si enveloppé par <SioTagsProvider>, partage le chargement des tags
+//   (un seul "Charger mes tags" pour toute la page).
+// - Sinon, mode autonome (backward compatible).
 
 "use client";
 
 import { useState, useCallback } from "react";
 import { Loader2, ChevronDown, Plus, Check, X, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useSioTagsContext } from "@/components/ui/sio-tags-provider";
 
 type SioTag = { id: number; name: string };
 
@@ -21,53 +22,66 @@ type SioTagPickerProps = {
 
 export function SioTagPicker({ value, onChange, variant = "light", placeholder }: SioTagPickerProps) {
   const t = useTranslations("common");
+  const ctx = useSioTagsContext();
 
-  const [tags, setTags] = useState<SioTag[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const [noApiKey, setNoApiKey] = useState(false);
-  const [error, setError] = useState(false);
+  const [localTags, setLocalTags] = useState<SioTag[]>([]);
+  const [localLoading, setLocalLoading] = useState(false);
+  const [localLoaded, setLocalLoaded] = useState(false);
+  const [localNoApiKey, setLocalNoApiKey] = useState(false);
+  const [localError, setLocalError] = useState(false);
 
   const [creatingNew, setCreatingNew] = useState(false);
   const [newTagName, setNewTagName] = useState("");
 
   const isDark = variant === "dark";
 
+  const tags: SioTag[] = ctx ? (ctx.tags ?? []) : localTags;
+  const loaded = ctx ? ctx.tags !== null : localLoaded;
+  const loading = ctx ? ctx.loading : localLoading;
+  const noApiKey = ctx ? ctx.noApiKey : localNoApiKey;
+  const error = ctx ? ctx.error : localError;
+
   const loadTags = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    setNoApiKey(false);
+    if (ctx) {
+      await ctx.loadTags();
+      return;
+    }
+    setLocalLoading(true);
+    setLocalError(false);
+    setLocalNoApiKey(false);
     try {
       const res = await fetch("/api/systeme-io/tags");
       const json = await res.json();
       if (json?.ok && Array.isArray(json.tags)) {
-        setTags(json.tags);
-        setLoaded(true);
+        setLocalTags(json.tags);
+        setLocalLoaded(true);
       } else if (Array.isArray(json?.tags)) {
-        setTags(json.tags);
-        setLoaded(true);
+        setLocalTags(json.tags);
+        setLocalLoaded(true);
       } else if (json?.error === "NO_API_KEY") {
-        setNoApiKey(true);
+        setLocalNoApiKey(true);
       } else {
-        setError(true);
+        setLocalError(true);
       }
     } catch {
-      setError(true);
+      setLocalError(true);
     } finally {
-      setLoading(false);
+      setLocalLoading(false);
     }
-  }, []);
+  }, [ctx]);
 
   const confirmNewTag = useCallback(() => {
     const name = newTagName.trim();
     if (!name) return;
-    if (!tags.find((tag) => tag.name.toLowerCase() === name.toLowerCase())) {
-      setTags((prev) => [...prev, { id: Date.now(), name }]);
+    if (ctx) {
+      ctx.addTagLocal(name);
+    } else if (!localTags.find((tag) => tag.name.toLowerCase() === name.toLowerCase())) {
+      setLocalTags((prev) => [...prev, { id: Date.now(), name }]);
     }
     onChange(name);
     setCreatingNew(false);
     setNewTagName("");
-  }, [newTagName, tags, onChange]);
+  }, [newTagName, localTags, onChange, ctx]);
 
   if (noApiKey) {
     return (
@@ -144,7 +158,6 @@ export function SioTagPicker({ value, onChange, variant = "light", placeholder }
   }
 
   if (!loaded) {
-    // Show current value as a badge when present, so user sees state before loading
     return (
       <div className="flex items-center gap-2">
         {value && (
@@ -171,7 +184,6 @@ export function SioTagPicker({ value, onChange, variant = "light", placeholder }
     );
   }
 
-  // When loaded but current value isn't in fetched list, include it so user doesn't lose it
   const tagOptions = value && !tags.find((tag) => tag.name === value)
     ? [{ id: -1, name: value }, ...tags]
     : tags;
