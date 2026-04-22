@@ -564,7 +564,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               </>)}
               {leftTab === "design" && (<div className="space-y-5">
                 <div className="space-y-2">
-                  <Label className="text-xs">Police d&apos;écriture</Label>
+                  <Label className="text-xs">{t("designFont")}</Label>
                   <select
                     value={fontFamily}
                     onChange={e => setFontFamily(e.target.value as BrandFontChoice)}
@@ -575,30 +575,30 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>
                     ))}
                   </select>
-                  <p className="text-[10px] text-muted-foreground">Aperçu live dans le panneau de droite.</p>
+                  <p className="text-[10px] text-muted-foreground">{t("designFontPreviewHint")}</p>
                 </div>
-                <div className="space-y-3"><Label className="text-xs">Couleurs</Label>
-                  <div className="flex items-center gap-2"><input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">Couleur principale</span></div>
-                  <div className="flex items-center gap-2"><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">Couleur de fond</span></div>
-                  <button type="button" onClick={() => { if (profile?.brand_color_primary) setPrimaryColor(profile.brand_color_primary); else setPrimaryColor(DEFAULT_BRAND_COLOR_PRIMARY); setBgColor(DEFAULT_BRAND_COLOR_BACKGROUND); }} className="text-[11px] text-primary hover:underline">Réinitialiser aux couleurs du profil</button>
+                <div className="space-y-3"><Label className="text-xs">{t("designColors")}</Label>
+                  <div className="flex items-center gap-2"><input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">{t("designPrimaryColor")}</span></div>
+                  <div className="flex items-center gap-2"><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">{t("designBackgroundColor")}</span></div>
+                  <button type="button" onClick={() => { if (profile?.brand_color_primary) setPrimaryColor(profile.brand_color_primary); else setPrimaryColor(DEFAULT_BRAND_COLOR_PRIMARY); setBgColor(DEFAULT_BRAND_COLOR_BACKGROUND); }} className="text-[11px] text-primary hover:underline">{t("designResetColors")}</button>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">Logo</Label>
+                  <Label className="text-xs">{t("designLogo")}</Label>
                   {brandLogoUrl ? (
                     <div className="space-y-2">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={brandLogoUrl} alt="Logo" className="max-h-16 w-auto object-contain rounded border bg-white p-1" />
                       <div className="flex items-center gap-2">
                         <button type="button" onClick={() => logoInputRef.current?.click()} className="text-xs text-primary hover:underline" disabled={uploadingLogo}>
-                          {uploadingLogo ? "Envoi…" : "Changer"}
+                          {uploadingLogo ? t("designUploading") : t("designChange")}
                         </button>
-                        <button type="button" onClick={async () => { await fetch("/api/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brand_logo_url: null }) }); setBrandLogoUrl(null); }} className="text-xs text-destructive hover:underline">Retirer</button>
+                        <button type="button" onClick={async () => { await fetch("/api/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brand_logo_url: null }) }); setBrandLogoUrl(null); }} className="text-xs text-destructive hover:underline">{t("designRemove")}</button>
                       </div>
                     </div>
                   ) : (
                     <button type="button" onClick={() => logoInputRef.current?.click()} disabled={uploadingLogo} className="w-full border-2 border-dashed rounded-lg p-4 text-xs text-muted-foreground hover:border-primary/30 transition-colors flex items-center justify-center gap-2">
                       <Plus className="w-4 h-4" />
-                      {uploadingLogo ? "Envoi…" : "Ajouter mon logo"}
+                      {uploadingLogo ? t("designUploading") : t("designAddLogo")}
                     </button>
                   )}
                   <input
@@ -608,22 +608,22 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     className="hidden"
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ""; }}
                   />
-                  <p className="text-[10px] text-muted-foreground">Partagé avec tous vos quiz (paramètre du profil).</p>
+                  <p className="text-[10px] text-muted-foreground">{t("designLogoShared")}</p>
                 </div>
               </div>)}
               {leftTab === "settings" && (<div className="space-y-6">
                 {/* ── Formulaire de prise de contact ── */}
                 <section className="space-y-2.5">
                   <div>
-                    <h3 className="text-sm font-semibold">Formulaire de prise de contact</h3>
-                    <p className="text-[11px] text-muted-foreground leading-snug">Choisis les champs demandés avant l&apos;accès aux résultats.</p>
+                    <h3 className="text-sm font-semibold">{t("captureFormTitle")}</h3>
+                    <p className="text-[11px] text-muted-foreground leading-snug">{t("captureFormHint")}</p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    <CapturePill label="Adresse email*" active locked />
-                    <CapturePill label="Prénom*" active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />
-                    <CapturePill label="Nom*" active={captureLastName} onToggle={() => setCaptureLastName(!captureLastName)} />
-                    <CapturePill label="Téléphone" active={capturePhone} onToggle={() => setCapturePhone(!capturePhone)} />
-                    <CapturePill label="Pays" active={captureCountry} onToggle={() => setCaptureCountry(!captureCountry)} />
+                    <CapturePill label={t("fieldEmailRequired")} active locked />
+                    <CapturePill label={t("fieldFirstNameRequired")} active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />
+                    <CapturePill label={t("fieldLastNameRequired")} active={captureLastName} onToggle={() => setCaptureLastName(!captureLastName)} />
+                    <CapturePill label={t("fieldPhone")} active={capturePhone} onToggle={() => setCapturePhone(!capturePhone)} />
+                    <CapturePill label={t("fieldCountry")} active={captureCountry} onToggle={() => setCaptureCountry(!captureCountry)} />
                   </div>
                   {(!captureFirstName || !captureLastName || !capturePhone || !captureCountry) && (
                     <button
@@ -635,7 +635,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       }}
                       className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-muted/60 hover:bg-muted text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      <Plus className="w-3.5 h-3.5" /> Ajouter un élément
+                      <Plus className="w-3.5 h-3.5" /> {t("addField")}
                     </button>
                   )}
                 </section>
@@ -645,20 +645,20 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 {/* ── Personnalisation (prénom + genre) ── */}
                 <section className="space-y-2.5">
                   <div>
-                    <h3 className="text-sm font-semibold">Personnalisation du quiz</h3>
+                    <h3 className="text-sm font-semibold">{t("personalizeTitle")}</h3>
                     <p className="text-[11px] text-muted-foreground leading-snug">
-                      Demande le prénom et/ou le genre avant le quiz pour adapter dynamiquement les questions, résultats et CTA. Utilise <code className="text-[10px] bg-muted px-1 py-0.5 rounded">{"{name}"}</code> pour insérer le prénom et <code className="text-[10px] bg-muted px-1 py-0.5 rounded">{"{m|f|x}"}</code> pour 3 variantes (masculin|féminin|inclusif).
+                      {t("personalizeHintLead")} <code className="text-[10px] bg-muted px-1 py-0.5 rounded">{"{name}"}</code> {t("personalizeHintMid")} <code className="text-[10px] bg-muted px-1 py-0.5 rounded">{"{m|f|x}"}</code> {t("personalizeHintTail")}
                     </p>
                   </div>
                   <SettingsToggle
-                    label="Demander le prénom"
-                    hint="Écran avant la 1ʳᵉ question qui demande le prénom. Utilise {name} dans tes textes pour l'insérer."
+                    label={t("personalizeAskFirstName")}
+                    hint={t("personalizeAskFirstNameHint")}
                     checked={askFirstName}
                     onChange={setAskFirstName}
                   />
                   <SettingsToggle
-                    label="Demander le genre (il / elle / iel)"
-                    hint="Écran avant la 1ʳᵉ question qui propose 3 options. Utilise {prêt|prête|prêt·e} dans tes textes pour trois variantes."
+                    label={t("personalizeAskGender")}
+                    hint={t("personalizeAskGenderHint")}
                     checked={askGender}
                     onChange={setAskGender}
                   />
@@ -668,10 +668,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
 
                 {/* ── Options ── */}
                 <section className="space-y-2">
-                  <h3 className="text-sm font-semibold">Options</h3>
+                  <h3 className="text-sm font-semibold">{t("optionsTitle")}</h3>
                   <SettingsToggle
-                    label="Demande de partage"
-                    hint="Propose au visiteur de partager le quiz avant de voir ses résultats, en échange du bonus. L'étape apparaît entre la capture d'email et les résultats."
+                    label={t("optionShareRequest")}
+                    hint={t("optionShareRequestHint")}
                     checked={viralityEnabled}
                     onChange={v => setViralityEnabled(v)}
                   />
@@ -680,14 +680,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 {viralityEnabled && (
                   <section className="space-y-3 bg-muted/30 border rounded-xl p-3">
                     <div>
-                      <h4 className="text-xs font-semibold">Bonus offert pour un partage</h4>
-                      <p className="text-[11px] text-muted-foreground leading-snug">Décris ce que le visiteur reçoit quand il partage.</p>
+                      <h4 className="text-xs font-semibold">{t("bonusTitle")}</h4>
+                      <p className="text-[11px] text-muted-foreground leading-snug">{t("bonusHint")}</p>
                     </div>
-                    <Input value={bonusDescription} onChange={e => setBonusDescription(e.target.value)} placeholder="Ex. : ma mini-formation exclusive" className="text-xs" />
+                    <Input value={bonusDescription} onChange={e => setBonusDescription(e.target.value)} placeholder={t("bonusPlaceholder")} className="text-xs" />
 
                     <div>
-                      <Label className="text-[11px] font-semibold">Visuel du bonus (optionnel)</Label>
-                      <p className="text-[10px] text-muted-foreground mb-1.5">Mockup, image ou GIF pour mettre en avant le bonus.</p>
+                      <Label className="text-[11px] font-semibold">{t("bonusVisualLabel")}</Label>
+                      <p className="text-[10px] text-muted-foreground mb-1.5">{t("bonusVisualHint")}</p>
                       {bonusImageUrl ? (
                         <div className="flex items-center gap-2">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -699,14 +699,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                               disabled={uploadingBonusImage}
                               className="text-xs text-primary hover:underline block"
                             >
-                              {uploadingBonusImage ? "Envoi…" : "Remplacer"}
+                              {uploadingBonusImage ? t("uploading") : t("replace")}
                             </button>
                             <button
                               type="button"
                               onClick={() => setBonusImageUrl(null)}
                               className="text-xs text-destructive hover:underline block"
                             >
-                              Retirer
+                              {t("remove")}
                             </button>
                           </div>
                         </div>
@@ -718,7 +718,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           className="w-full border-2 border-dashed rounded-lg p-3 text-xs text-muted-foreground hover:border-primary/30 transition-colors flex items-center justify-center gap-2"
                         >
                           <Plus className="w-3 h-3" />
-                          {uploadingBonusImage ? "Envoi…" : "Ajouter un visuel"}
+                          {uploadingBonusImage ? t("uploading") : t("addBonusVisual")}
                         </button>
                       )}
                       <input
@@ -731,14 +731,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     </div>
 
                     <div>
-                      <Label className="text-[11px] font-semibold">Message de partage</Label>
-                      <p className="text-[10px] text-muted-foreground mb-1.5">Texte pré-rempli lorsque le visiteur partage.</p>
-                      <Textarea value={shareMessage} onChange={e => setShareMessage(e.target.value)} placeholder={`Je viens de faire le quiz "${title || "…"}" !`} className="text-xs" rows={2} />
+                      <Label className="text-[11px] font-semibold">{t("shareMessageLabel")}</Label>
+                      <p className="text-[10px] text-muted-foreground mb-1.5">{t("shareMessageHint")}</p>
+                      <Textarea value={shareMessage} onChange={e => setShareMessage(e.target.value)} placeholder={t("shareMessageDefault", { title: title || "…" })} className="text-xs" rows={2} />
                     </div>
 
                     <div>
-                      <Label className="text-[11px] font-semibold">Tag Systeme.io après partage</Label>
-                      <p className="text-[10px] text-muted-foreground mb-1.5">Ajouté au contact quand il partage réellement. Déclenche ton automatisation.</p>
+                      <Label className="text-[11px] font-semibold">{t("shareTagLabel")}</Label>
+                      <p className="text-[10px] text-muted-foreground mb-1.5">{t("shareTagHint")}</p>
                       <SioTagPicker value={sioShareTagName} onChange={setSioShareTagName} />
                     </div>
                   </section>
@@ -749,13 +749,13 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                 {/* ── CTA par défaut ── */}
                 <section className="space-y-1.5">
                   <div>
-                    <h3 className="text-sm font-semibold">CTA par défaut</h3>
+                    <h3 className="text-sm font-semibold">{t("defaultCtaTitle")}</h3>
                     <p className="text-[11px] text-muted-foreground leading-snug">
-                      Utilisé seulement pour les résultats qui n&apos;ont pas leur propre CTA. Tu peux en définir un spécifique sur chaque résultat depuis l&apos;onglet Édition.
+                      {t("defaultCtaHint")}
                     </p>
                   </div>
-                  <Input value={ctaText} onChange={e => setCtaText(e.target.value)} placeholder="Texte du CTA" className="text-xs" />
-                  <Input value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} placeholder="URL du CTA" className="text-xs" />
+                  <Input value={ctaText} onChange={e => setCtaText(e.target.value)} placeholder={t("ctaTextPlaceholder")} className="text-xs" />
+                  <Input value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} placeholder={t("ctaUrlPlaceholder")} className="text-xs" />
                 </section>
               </div>)}
             </div>
