@@ -6,6 +6,7 @@
 // same sanitizer to keep the public page XSS-safe.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Bold, Italic, Underline as UnderlineIcon,
   AlignLeft, AlignCenter, AlignRight,
@@ -26,20 +27,16 @@ interface RichTextEditProps {
 export function RichTextEdit({
   value, onChange, className, placeholder, style, singleLine,
 }: RichTextEditProps) {
+  const t = useTranslations("common");
   const ref = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
 
-  // Keep the contenteditable in sync when the parent updates `value` while not editing.
   useEffect(() => {
     if (!editing && ref.current && ref.current.innerHTML !== value) {
       ref.current.innerHTML = sanitizeRichText(value);
     }
   }, [value, editing]);
 
-  // When entering edit mode, populate the fresh contenteditable node and place
-  // the caret at the end so the user can start typing/modifying right away.
-  // We intentionally don't depend on `value` here — re-seeding while the user
-  // is typing would wipe their cursor position.
   useEffect(() => {
     if (!editing || !ref.current) return;
     ref.current.innerHTML = sanitizeRichText(value);
@@ -76,14 +73,13 @@ export function RichTextEdit({
   };
 
   const onInsertLink = () => {
-    const url = window.prompt("URL du lien (https://…, mailto:…)");
+    const url = window.prompt(t("rteLinkPrompt"));
     if (!url) return;
     if (!isSafeUrl(url)) {
-      window.alert("URL invalide : seuls https, mailto, tel et chemins relatifs sont autorisés.");
+      window.alert(t("rteLinkInvalid"));
       return;
     }
     exec("createLink", url);
-    // Force target=_blank rel=noopener on freshly inserted links
     const el = ref.current;
     if (el) {
       el.querySelectorAll("a").forEach((a) => {
@@ -94,10 +90,10 @@ export function RichTextEdit({
   };
 
   const onInsertImage = () => {
-    const url = window.prompt("URL de l'image (https://… ou /chemin)");
+    const url = window.prompt(t("rteImagePrompt"));
     if (!url) return;
     if (!isSafeUrl(url)) {
-      window.alert("URL invalide.");
+      window.alert(t("rteUrlInvalid"));
       return;
     }
     exec("insertImage", url);
@@ -116,18 +112,18 @@ export function RichTextEdit({
     return (
       <div className="space-y-1">
         <div className="flex flex-wrap items-center gap-0.5 rounded-lg border bg-background p-1 shadow-sm sticky top-2 z-20">
-          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("bold"); }} title="Gras"><Bold className="w-3.5 h-3.5" /></ToolbarBtn>
-          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("italic"); }} title="Italique"><Italic className="w-3.5 h-3.5" /></ToolbarBtn>
-          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("underline"); }} title="Souligné"><UnderlineIcon className="w-3.5 h-3.5" /></ToolbarBtn>
+          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("bold"); }} title={t("rteBold")}><Bold className="w-3.5 h-3.5" /></ToolbarBtn>
+          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("italic"); }} title={t("rteItalic")}><Italic className="w-3.5 h-3.5" /></ToolbarBtn>
+          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("underline"); }} title={t("rteUnderline")}><UnderlineIcon className="w-3.5 h-3.5" /></ToolbarBtn>
           <span className="w-px h-4 bg-border mx-0.5" />
           {!singleLine && <>
-            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyLeft"); }} title="Aligner à gauche"><AlignLeft className="w-3.5 h-3.5" /></ToolbarBtn>
-            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyCenter"); }} title="Centrer"><AlignCenter className="w-3.5 h-3.5" /></ToolbarBtn>
-            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyRight"); }} title="Aligner à droite"><AlignRight className="w-3.5 h-3.5" /></ToolbarBtn>
+            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyLeft"); }} title={t("rteAlignLeft")}><AlignLeft className="w-3.5 h-3.5" /></ToolbarBtn>
+            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyCenter"); }} title={t("rteAlignCenter")}><AlignCenter className="w-3.5 h-3.5" /></ToolbarBtn>
+            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyRight"); }} title={t("rteAlignRight")}><AlignRight className="w-3.5 h-3.5" /></ToolbarBtn>
             <span className="w-px h-4 bg-border mx-0.5" />
           </>}
-          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertLink(); }} title="Ajouter un lien"><LinkIcon className="w-3.5 h-3.5" /></ToolbarBtn>
-          {!singleLine && <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertImage(); }} title="Insérer une image"><ImageIcon className="w-3.5 h-3.5" /></ToolbarBtn>}
+          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertLink(); }} title={t("rteInsertLink")}><LinkIcon className="w-3.5 h-3.5" /></ToolbarBtn>
+          {!singleLine && <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertImage(); }} title={t("rteInsertImage")}><ImageIcon className="w-3.5 h-3.5" /></ToolbarBtn>}
         </div>
         <div
           ref={ref}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   DndContext,
   closestCenter,
@@ -45,6 +46,7 @@ function SortableQuestion({
   id, index, question, resultsCount, canDelete,
   onUpdate, onUpdateOption, onAddOption, onRemoveOption, onRemove, t,
 }: SortableQuestionProps) {
+  const tEditor = useTranslations("quizEditor");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
   const style = {
@@ -64,7 +66,7 @@ function SortableQuestion({
           {...attributes}
           {...listeners}
           className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted touch-none"
-          aria-label="Réordonner"
+          aria-label={tEditor("reorder")}
         >
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </button>

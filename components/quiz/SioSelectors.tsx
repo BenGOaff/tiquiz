@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
@@ -22,6 +23,7 @@ export default function SioSelectors({
   tagValue, courseValue, communityValue,
   onTagChange, onCourseChange, onCommunityChange,
 }: SioSelectorsProps) {
+  const t = useTranslations("common");
   const [tags, setTags] = useState<SioTag[]>([]);
   const [courses, setCourses] = useState<SioCourse[]>([]);
   const [communities, setCommunities] = useState<SioCommunity[]>([]);
@@ -38,7 +40,6 @@ export default function SioSelectors({
         setTags(tagsData.tags ?? []);
         setCourses(coursesData.courses ?? []);
         setCommunities(communitiesData.communities ?? []);
-        // If all empty, likely no API key configured
         if (!tagsData.tags?.length && !coursesData.courses?.length && !communitiesData.communities?.length) {
           setHasKey(false);
         }
@@ -51,7 +52,7 @@ export default function SioSelectors({
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Chargement des données Systeme.io...
+        {t("sioLoadingAll")}
       </div>
     );
   }
@@ -59,46 +60,44 @@ export default function SioSelectors({
   if (!hasKey) {
     return (
       <div className="rounded-lg bg-muted/50 border border-border p-3 text-sm text-muted-foreground">
-        Configure ta clé API Systeme.io dans les <a href="/settings?tab=systemeio" className="text-primary underline">Paramètres</a> pour voir tes tags, formations et communautés ici.
+        {t("sioConfigurePrompt")} <a href="/settings?tab=systemeio" className="text-primary underline">{t("sioSettingsLink")}</a>
       </div>
     );
   }
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      {/* Tag */}
       <div className="space-y-2">
-        <Label>Tag Systeme.io</Label>
+        <Label>{t("sioTagLabel")}</Label>
         {tags.length > 0 ? (
           <select
             value={tagValue}
             onChange={(e) => onTagChange(e.target.value)}
             className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background"
           >
-            <option value="">— Aucun tag —</option>
-            {tags.map((t) => (
-              <option key={t.id} value={t.name}>{t.name}</option>
+            <option value="">{t("sioNoTagOpt")}</option>
+            {tags.map((tag) => (
+              <option key={tag.id} value={tag.name}>{tag.name}</option>
             ))}
           </select>
         ) : (
           <Input
             value={tagValue}
             onChange={(e) => onTagChange(e.target.value)}
-            placeholder="Nom du tag"
+            placeholder={t("sioTagNamePh")}
           />
         )}
       </div>
 
-      {/* Course */}
       <div className="space-y-2">
-        <Label>Formation Systeme.io</Label>
+        <Label>{t("sioCourseLabel")}</Label>
         {courses.length > 0 ? (
           <select
             value={courseValue}
             onChange={(e) => onCourseChange(e.target.value)}
             className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background"
           >
-            <option value="">— Aucune formation —</option>
+            <option value="">{t("sioNoCourseOpt")}</option>
             {courses.map((c) => (
               <option key={c.id} value={String(c.id)}>{c.title}</option>
             ))}
@@ -107,21 +106,20 @@ export default function SioSelectors({
           <Input
             value={courseValue}
             onChange={(e) => onCourseChange(e.target.value)}
-            placeholder="ID de la formation"
+            placeholder={t("sioCourseIdPh")}
           />
         )}
       </div>
 
-      {/* Community */}
       <div className="space-y-2">
-        <Label>Communauté Systeme.io</Label>
+        <Label>{t("sioCommunityLabel")}</Label>
         {communities.length > 0 ? (
           <select
             value={communityValue}
             onChange={(e) => onCommunityChange(e.target.value)}
             className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background"
           >
-            <option value="">— Aucune communauté —</option>
+            <option value="">{t("sioNoCommunityOpt")}</option>
             {communities.map((c) => (
               <option key={c.id} value={String(c.id)}>{c.name}</option>
             ))}
@@ -130,7 +128,7 @@ export default function SioSelectors({
           <Input
             value={communityValue}
             onChange={(e) => onCommunityChange(e.target.value)}
-            placeholder="ID de la communauté"
+            placeholder={t("sioCommunityIdPh")}
           />
         )}
       </div>

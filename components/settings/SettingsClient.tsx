@@ -37,45 +37,46 @@ type Profile = {
 };
 
 const FONTS = ["Inter", "Poppins", "Montserrat", "Playfair Display", "Lato", "Roboto", "Open Sans", "Nunito"];
+// Tones and plans reference translation keys resolved at render time via t().
 const TONES = [
-  { value: "professionnel", label: "Professionnel" },
-  { value: "amical", label: "Amical (tu)" },
-  { value: "formel", label: "Formel (vous)" },
-  { value: "fun", label: "Fun & décalé" },
-  { value: "inspirant", label: "Inspirant" },
-];
+  { value: "professionnel", labelKey: "toneProfessional" },
+  { value: "amical", labelKey: "toneFriendly" },
+  { value: "formel", labelKey: "toneFormal" },
+  { value: "fun", labelKey: "toneFun" },
+  { value: "inspirant", labelKey: "toneInspiring" },
+] as const;
 
 const PLANS = [
   {
     id: "free",
-    name: "Free",
+    nameKey: "planFreeName",
     icon: Zap,
-    price: "0€",
-    period: "",
-    features: ["1 quiz actif", "10 réponses/mois", "Capture d'emails", "Lien de partage"],
-    cta: null,
+    priceKey: "planFreePrice",
+    periodKey: null as string | null,
+    featureKeys: ["planFreeF1", "planFreeF2", "planFreeF3", "planFreeF4"],
+    ctaKey: null as string | null,
   },
   {
     id: "pro_monthly",
-    name: "Pro",
+    nameKey: "planProName",
     icon: Star,
-    price: "19€",
-    period: "/mois",
-    features: ["Quiz illimités", "Réponses illimitées", "Viralité & bonus", "Systeme.io", "Branding personnalisé", "Export CSV"],
-    cta: "Passer à Pro",
+    priceKey: "planProPrice",
+    periodKey: "planProPeriod" as string | null,
+    featureKeys: ["planProF1", "planProF2", "planProF3", "planProF4", "planProF5", "planProF6"],
+    ctaKey: "planProCta" as string | null,
     popular: true,
   },
   {
     id: "pro_yearly",
-    name: "Pro Annuel",
+    nameKey: "planYearlyName",
     icon: Crown,
-    price: "190€",
-    period: "/an",
+    priceKey: "planYearlyPrice",
+    periodKey: "planYearlyPeriod" as string | null,
     badge: "−17%",
-    features: ["Tout Pro inclus", "2 mois offerts", "Support prioritaire", "Accès anticipé nouveautés"],
-    cta: "Passer à Pro Annuel",
+    featureKeys: ["planYearlyF1", "planYearlyF2", "planYearlyF3", "planYearlyF4"],
+    ctaKey: "planYearlyCta" as string | null,
   },
-];
+] as const;
 
 export default function SettingsClient() {
   const t = useTranslations("settings");
@@ -151,9 +152,9 @@ export default function SettingsClient() {
       });
       const data = await res.json();
       if (data.ok) toast.success(t("saved"));
-      else toast.error(data.error ?? "Erreur");
+      else toast.error(data.error ?? t("errGeneric"));
     } catch {
-      toast.error("Erreur réseau");
+      toast.error(t("errNetwork"));
     } finally {
       setSaving(false);
     }
@@ -161,11 +162,11 @@ export default function SettingsClient() {
 
   async function handleLogoUpload(file: File) {
     if (!file.type.startsWith("image/")) {
-      toast.error("Fichier image uniquement");
+      toast.error(t("errImageOnly"));
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image trop lourde (max 2 Mo)");
+      toast.error(t("errImageTooLarge2"));
       return;
     }
     setUploadingLogo(true);
@@ -179,18 +180,18 @@ export default function SettingsClient() {
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       setBrandLogoUrl(urlData.publicUrl);
-      toast.success("Logo chargé");
+      toast.success(t("logoUploaded"));
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("Logo upload failed:", err);
-      toast.error(`Erreur upload logo : ${msg}`);
+      toast.error(t("errLogoUpload", { msg }));
     } finally {
       setUploadingLogo(false);
     }
   }
 
   async function handleDeleteAccount() {
-    if (!confirm("Es-tu sûr de vouloir supprimer ton compte ? Cette action est irréversible.")) return;
+    if (!confirm(t("confirmDeleteAccount"))) return;
     try {
       const res = await fetch("/api/profile", { method: "DELETE" });
       if (res.ok) {
@@ -199,7 +200,7 @@ export default function SettingsClient() {
         router.push("/");
       }
     } catch {
-      toast.error("Erreur");
+      toast.error(t("errGeneric"));
     }
   }
 
@@ -216,21 +217,21 @@ export default function SettingsClient() {
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-lg font-bold">{t("title")}</h2>
-          <p className="text-sm text-white/70">Configure ton compte et tes préférences</p>
+          <p className="text-sm text-white/70">{t("subtitle")}</p>
         </div>
         <Button onClick={handleSave} disabled={saving} variant="secondary" className="shrink-0 rounded-full">
           {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-          Enregistrer
+          {t("saveBtn")}
         </Button>
       </div>
 
       {/* Tabs */}
       <Tabs defaultValue={initialTab} className="space-y-4">
         <TabsList className="w-full sm:w-auto sticky top-14 z-10 bg-background border-b rounded-none justify-start gap-0 h-auto p-0">
-          <TabsTrigger value="general" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><Settings className="h-4 w-4 mr-1.5" />Général</TabsTrigger>
-          <TabsTrigger value="branding" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><Palette className="h-4 w-4 mr-1.5" />Branding</TabsTrigger>
-          <TabsTrigger value="systemeio" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><Key className="h-4 w-4 mr-1.5" />Systeme.io</TabsTrigger>
-          <TabsTrigger value="account" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><CreditCard className="h-4 w-4 mr-1.5" />Compte & Tarifs</TabsTrigger>
+          <TabsTrigger value="general" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><Settings className="h-4 w-4 mr-1.5" />{t("tabGeneral")}</TabsTrigger>
+          <TabsTrigger value="branding" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><Palette className="h-4 w-4 mr-1.5" />{t("tabBranding")}</TabsTrigger>
+          <TabsTrigger value="systemeio" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><Key className="h-4 w-4 mr-1.5" />{t("tabSystemeio")}</TabsTrigger>
+          <TabsTrigger value="account" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><CreditCard className="h-4 w-4 mr-1.5" />{t("tabAccount")}</TabsTrigger>
         </TabsList>
 
         {/* ── General ── */}
@@ -247,8 +248,8 @@ export default function SettingsClient() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Forme d&apos;adresse</CardTitle>
-              <CardDescription>Tutoiement ou vouvoiement dans les quiz</CardDescription>
+              <CardTitle>{t("addressFormTitle")}</CardTitle>
+              <CardDescription>{t("addressFormDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <select
@@ -256,22 +257,22 @@ export default function SettingsClient() {
                 onChange={(e) => setAddressForm(e.target.value)}
                 className="text-sm border border-input rounded-lg px-3 py-2 bg-background w-full sm:w-auto"
               >
-                <option value="tu">Tutoiement (tu)</option>
-                <option value="vous">Vouvoiement (vous)</option>
+                <option value="tu">{t("addressTu")}</option>
+                <option value="vous">{t("addressVous")}</option>
               </select>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Public cible</CardTitle>
-              <CardDescription>Décris ton audience — pré-rempli dans la création de quiz IA</CardDescription>
+              <CardTitle>{t("audienceTitle")}</CardTitle>
+              <CardDescription>{t("audienceDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <textarea
                 value={targetAudience}
                 onChange={(e) => setTargetAudience(e.target.value)}
-                placeholder="Ex : J'aide les mampreneures à vendre via Instagram"
+                placeholder={t("audiencePh")}
                 className="w-full text-sm border border-input rounded-lg px-3 py-2 bg-background min-h-[60px] resize-y"
               />
             </CardContent>
@@ -279,8 +280,8 @@ export default function SettingsClient() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Politique de confidentialité</CardTitle>
-              <CardDescription>URL par défaut utilisée dans tes quiz</CardDescription>
+              <CardTitle>{t("privacyTitle")}</CardTitle>
+              <CardDescription>{t("privacyDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <Input
@@ -296,8 +297,8 @@ export default function SettingsClient() {
         <TabsContent value="branding" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Logo</CardTitle>
-              <CardDescription>Charge ton logo ou colle une URL</CardDescription>
+              <CardTitle>{t("logoTitle")}</CardTitle>
+              <CardDescription>{t("logoDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center gap-4">
@@ -319,7 +320,7 @@ export default function SettingsClient() {
                       onClick={() => logoInputRef.current?.click()}
                     >
                       {uploadingLogo ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Upload className="h-4 w-4 mr-1.5" />}
-                      Charger une image
+                      {t("logoUploadBtn")}
                     </Button>
                     <input
                       ref={logoInputRef}
@@ -335,7 +336,7 @@ export default function SettingsClient() {
                   <Input
                     value={brandLogoUrl}
                     onChange={(e) => setBrandLogoUrl(e.target.value)}
-                    placeholder="ou colle l'URL de ton logo"
+                    placeholder={t("logoUrlPh")}
                     className="text-xs"
                   />
                 </div>
@@ -345,13 +346,13 @@ export default function SettingsClient() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Couleurs</CardTitle>
-              <CardDescription>Couleurs de marque pour tes quiz</CardDescription>
+              <CardTitle>{t("colorsTitle")}</CardTitle>
+              <CardDescription>{t("colorsDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <Label>Couleur principale</Label>
+                  <Label>{t("colorPrimary")}</Label>
                   <div className="flex items-center gap-3 mt-1.5">
                     <input
                       type="color"
@@ -367,7 +368,7 @@ export default function SettingsClient() {
                   </div>
                 </div>
                 <div>
-                  <Label>Couleur d&apos;accent</Label>
+                  <Label>{t("colorAccent")}</Label>
                   <div className="flex items-center gap-3 mt-1.5">
                     <input
                       type="color"
@@ -388,13 +389,13 @@ export default function SettingsClient() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Typographie & ton</CardTitle>
-              <CardDescription>Police et style de communication</CardDescription>
+              <CardTitle>{t("typoTitle")}</CardTitle>
+              <CardDescription>{t("typoDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <Label>Police</Label>
+                  <Label>{t("fontLabel")}</Label>
                   <select
                     value={brandFont}
                     onChange={(e) => setBrandFont(e.target.value)}
@@ -406,14 +407,14 @@ export default function SettingsClient() {
                   </select>
                 </div>
                 <div>
-                  <Label>Ton de voix</Label>
+                  <Label>{t("toneLabel")}</Label>
                   <select
                     value={brandTone}
                     onChange={(e) => setBrandTone(e.target.value)}
                     className="mt-1.5 w-full text-sm border border-input rounded-lg px-3 py-2 bg-background"
                   >
-                    {TONES.map((t) => (
-                      <option key={t.value} value={t.value}>{t.label}</option>
+                    {TONES.map((tone) => (
+                      <option key={tone.value} value={tone.value}>{t(tone.labelKey)}</option>
                     ))}
                   </select>
                 </div>
@@ -423,8 +424,8 @@ export default function SettingsClient() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Site web</CardTitle>
-              <CardDescription>URL de ton site (affiché dans les quiz)</CardDescription>
+              <CardTitle>{t("websiteTitle")}</CardTitle>
+              <CardDescription>{t("websiteDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <Input
@@ -440,24 +441,21 @@ export default function SettingsClient() {
         <TabsContent value="systemeio" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Clé API Systeme.io</CardTitle>
-              <CardDescription>
-                Connecte ton compte Systeme.io pour synchroniser automatiquement les leads.
-                Tu peux trouver ta clé API dans Systeme.io &gt; Paramètres &gt; API.
-              </CardDescription>
+              <CardTitle>{t("sioTitle")}</CardTitle>
+              <CardDescription>{t("sioDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label>Nom de la connexion</Label>
+                <Label>{t("sioConnNameLabel")}</Label>
                 <Input
                   value={sioKeyName}
                   onChange={(e) => setSioKeyName(e.target.value)}
-                  placeholder="Mon projet"
+                  placeholder={t("sioConnNamePh")}
                   className="mt-1.5"
                 />
               </div>
               <div>
-                <Label>Clé API</Label>
+                <Label>{t("sioApiKeyLabel")}</Label>
                 <Input
                   value={sioKey}
                   onChange={(e) => setSioKey(e.target.value)}
@@ -474,14 +472,9 @@ export default function SettingsClient() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Workflow className="h-5 w-5 text-primary" />
-                Automatiser ce qui se passe après la capture
+                {t("autoTitle")}
               </CardTitle>
-              <CardDescription>
-                Une fois le lead capturé par ton quiz, Tiquiz pose un <strong>tag</strong> sur le
-                contact dans Systeme.io. Ce tag peut déclencher une automatisation — inscription à une
-                campagne, accès à une formation, ajout à une communauté, etc. Tout se configure
-                dans Systeme.io, tu n'as rien à coder.
-              </CardDescription>
+              <CardDescription>{t("autoDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5 text-sm">
               {/* Étape 1 */}
@@ -492,18 +485,10 @@ export default function SettingsClient() {
                 <div className="space-y-1.5">
                   <div className="font-semibold flex items-center gap-1.5">
                     <TagIcon className="h-4 w-4" />
-                    Crée tes tags dans Systeme.io avant de créer ton quiz
+                    {t("autoStep1Title")}
                   </div>
-                  <p className="text-muted-foreground">
-                    Dans Systeme.io &gt; <strong>Contacts &gt; Tags</strong>, crée un tag par résultat
-                    de quiz que tu veux pouvoir automatiser. Exemples : <code className="text-xs bg-muted px-1 py-0.5 rounded">quiz-visionnaire</code>,{" "}
-                    <code className="text-xs bg-muted px-1 py-0.5 rounded">quiz-strategique</code>,{" "}
-                    <code className="text-xs bg-muted px-1 py-0.5 rounded">quiz-partage</code> (pour les participants qui partagent).
-                  </p>
-                  <p className="text-muted-foreground">
-                    Ensuite, en créant ton quiz dans Tiquiz, associe ces tags à chacun de tes
-                    résultats dans l'onglet <strong>Systeme.io</strong> du quiz.
-                  </p>
+                  <p className="text-muted-foreground">{t("autoStep1P1")}</p>
+                  <p className="text-muted-foreground">{t("autoStep1P2")}</p>
                 </div>
               </div>
 
@@ -515,22 +500,19 @@ export default function SettingsClient() {
                 <div className="space-y-1.5">
                   <div className="font-semibold flex items-center gap-1.5">
                     <Workflow className="h-4 w-4" />
-                    Crée une automatisation dans Systeme.io
+                    {t("autoStep2Title")}
                   </div>
-                  <p className="text-muted-foreground">
-                    Dans Systeme.io &gt; <strong>Automatisations &gt; Règles</strong>, clique sur{" "}
-                    <strong>Créer une règle</strong>.
-                  </p>
+                  <p className="text-muted-foreground">{t("autoStep2P1")}</p>
                   <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-                    <li><strong>Déclencheur</strong> : « Tag ajouté à un contact » → choisis ton tag (ex: <code className="text-xs bg-muted px-1 py-0.5 rounded">quiz-visionnaire</code>)</li>
+                    <li>{t("autoStep2Trigger")}</li>
                     <li>
-                      <strong>Actions</strong> (tu peux en enchaîner autant que tu veux) :
+                      {t("autoStep2Actions")}
                       <ul className="list-[circle] pl-5 mt-1 space-y-0.5">
-                        <li>Abonner à une <strong>campagne email</strong> (séquence d'onboarding, newsletter…)</li>
-                        <li>Donner <strong>accès à une formation</strong> de ton école Systeme.io</li>
-                        <li>Donner <strong>accès à une communauté</strong></li>
-                        <li><strong>Envoyer un email</strong> unique (bienvenue, bonus, etc.)</li>
-                        <li>Ajouter un autre tag, déclencher un webhook, etc.</li>
+                        <li>{t("autoStep2A1")}</li>
+                        <li>{t("autoStep2A2")}</li>
+                        <li>{t("autoStep2A3")}</li>
+                        <li>{t("autoStep2A4")}</li>
+                        <li>{t("autoStep2A5")}</li>
                       </ul>
                     </li>
                   </ul>
@@ -543,13 +525,8 @@ export default function SettingsClient() {
                   3
                 </div>
                 <div className="space-y-1.5">
-                  <div className="font-semibold">Ce qui se passe quand un lead répond</div>
-                  <p className="text-muted-foreground">
-                    Le participant entre son email → Tiquiz crée (ou met à jour) le contact dans
-                    Systeme.io et pose le tag correspondant à son résultat. Systeme.io détecte le
-                    tag et déclenche <strong>toutes</strong> les actions de ta règle. Zéro clic de
-                    ta part.
-                  </p>
+                  <div className="font-semibold">{t("autoStep3Title")}</div>
+                  <p className="text-muted-foreground">{t("autoStep3P")}</p>
                 </div>
               </div>
 
@@ -557,16 +534,8 @@ export default function SettingsClient() {
               <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30 p-3">
                 <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
                 <div className="space-y-1">
-                  <div className="font-semibold text-amber-900 dark:text-amber-200">
-                    Important quand tu testes ton quiz
-                  </div>
-                  <p className="text-amber-900/80 dark:text-amber-200/80 text-[13px]">
-                    Systeme.io <strong>ne redéclenche pas</strong> une automatisation si le tag est
-                    déjà posé sur ton email de test. Avant chaque nouveau test, va dans{" "}
-                    <strong>Contacts</strong>, ouvre ton contact test, et <strong>retire manuellement le tag</strong> —
-                    sinon tu verras ton contact dans Systeme.io mais la règle ne se déclenchera pas
-                    et tu penseras que c'est cassé.
-                  </p>
+                  <div className="font-semibold text-amber-900 dark:text-amber-200">{t("autoTestTitle")}</div>
+                  <p className="text-amber-900/80 dark:text-amber-200/80 text-[13px]">{t("autoTestP")}</p>
                 </div>
               </div>
 
@@ -578,7 +547,7 @@ export default function SettingsClient() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-primary hover:underline"
                 >
-                  Guide officiel Systeme.io — workflows & automatisations
+                  {t("autoLinkSio")}
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
                 <a
@@ -587,7 +556,7 @@ export default function SettingsClient() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-primary hover:underline"
                 >
-                  Aide Tiquiz — connecter Systeme.io
+                  {t("autoLinkTiquiz")}
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               </div>
@@ -600,17 +569,17 @@ export default function SettingsClient() {
           {/* Plan actuel */}
           <Card>
             <CardHeader>
-              <CardTitle>Mon abonnement</CardTitle>
+              <CardTitle>{t("subscriptionTitle")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center gap-3">
                 <span className="text-lg font-semibold capitalize">{currentPlan}</span>
-                {currentPlan === "free" && <span className="text-sm text-muted-foreground">— 1 quiz, 10 réponses/mois</span>}
-                {(currentPlan === "monthly" || currentPlan === "yearly" || currentPlan === "lifetime") && <span className="text-sm text-muted-foreground">— Quiz et réponses illimités</span>}
+                {currentPlan === "free" && <span className="text-sm text-muted-foreground">{t("freeInline")}</span>}
+                {(currentPlan === "monthly" || currentPlan === "yearly" || currentPlan === "lifetime") && <span className="text-sm text-muted-foreground">{t("paidInline")}</span>}
               </div>
               {(currentPlan === "monthly" || currentPlan === "yearly") && (
-                <button type="button" onClick={() => { if (confirm("Es-tu sûr de vouloir annuler ton abonnement ? Tu repasseras en plan gratuit (1 quiz, 10 réponses/mois).")) { toast.info("Pour annuler, contacte-nous à hello@ethilife.fr ou gère ton abonnement depuis Systeme.io."); } }} className="text-sm text-destructive hover:underline">
-                  Annuler mon abonnement
+                <button type="button" onClick={() => { if (confirm(t("confirmCancelSub"))) { toast.info(t("cancelInstructions")); } }} className="text-sm text-destructive hover:underline">
+                  {t("cancelSub")}
                 </button>
               )}
             </CardContent>
@@ -622,33 +591,33 @@ export default function SettingsClient() {
               const isCurrent = currentPlan === plan.id || (currentPlan === "free" && plan.id === "free") || (currentPlan === "monthly" && plan.id === "pro_monthly") || (currentPlan === "yearly" && plan.id === "pro_yearly") || (currentPlan === "lifetime" && plan.id === "pro_monthly");
               return (
                 <Card key={plan.id} className={`relative overflow-visible ${plan.popular ? "border-primary ring-1 ring-primary" : ""}`}>
-                  {plan.popular && (
+                  {('popular' in plan && plan.popular) && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-semibold px-4 py-1 rounded-full whitespace-nowrap z-10 shadow-sm">
-                      Populaire
+                      {t("popular")}
                     </div>
                   )}
                   <CardContent className="pt-8 pb-5 px-5 space-y-4">
                     <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${plan.popular ? "bg-primary/10" : "bg-muted"}`}>
-                        <plan.icon className={`h-4 w-4 ${plan.popular ? "text-primary" : "text-muted-foreground"}`} />
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${('popular' in plan && plan.popular) ? "bg-primary/10" : "bg-muted"}`}>
+                        <plan.icon className={`h-4 w-4 ${('popular' in plan && plan.popular) ? "text-primary" : "text-muted-foreground"}`} />
                       </div>
                       <div className="flex items-center gap-2">
-                        <h3 className="font-bold">{plan.name}</h3>
-                        {plan.badge && <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">{plan.badge}</span>}
+                        <h3 className="font-bold">{t(plan.nameKey)}</h3>
+                        {('badge' in plan && plan.badge) && <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">{plan.badge}</span>}
                       </div>
                     </div>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-bold">{plan.price}</span>
-                      {plan.period && <span className="text-sm text-muted-foreground">{plan.period}</span>}
+                      <span className="text-3xl font-bold">{t(plan.priceKey)}</span>
+                      {plan.periodKey && <span className="text-sm text-muted-foreground">{t(plan.periodKey)}</span>}
                     </div>
                     <ul className="space-y-2">
-                      {plan.features.map((f) => (<li key={f} className="flex items-center gap-2 text-sm"><Check className="h-4 w-4 text-primary shrink-0" />{f}</li>))}
+                      {plan.featureKeys.map((fk) => (<li key={fk} className="flex items-center gap-2 text-sm"><Check className="h-4 w-4 text-primary shrink-0" />{t(fk)}</li>))}
                     </ul>
                     {isCurrent ? (
-                      <div className="text-center text-sm font-medium text-muted-foreground py-2 border rounded-full">Plan actuel</div>
-                    ) : plan.cta ? (
-                      <Button className="w-full rounded-full" variant={plan.popular ? "default" : "outline"} asChild>
-                        <a href={plan.id === "pro_monthly" ? "https://www.tipote.fr/tiquiz-mensuel" : "https://www.tipote.fr/tiquiz-annuel"} target="_blank" rel="noopener noreferrer">{plan.cta} <ArrowRight className="h-4 w-4 ml-1.5" /></a>
+                      <div className="text-center text-sm font-medium text-muted-foreground py-2 border rounded-full">{t("currentPlan")}</div>
+                    ) : plan.ctaKey ? (
+                      <Button className="w-full rounded-full" variant={('popular' in plan && plan.popular) ? "default" : "outline"} asChild>
+                        <a href={plan.id === "pro_monthly" ? "https://www.tipote.fr/tiquiz-mensuel" : "https://www.tipote.fr/tiquiz-annuel"} target="_blank" rel="noopener noreferrer">{t(plan.ctaKey)} <ArrowRight className="h-4 w-4 ml-1.5" /></a>
                       </Button>
                     ) : null}
                   </CardContent>
@@ -656,7 +625,7 @@ export default function SettingsClient() {
               );
             })}
           </div>
-          <p className="text-xs text-muted-foreground text-center">Les paiements sont gérés par Systeme.io. Tu peux changer de plan à tout moment.</p>
+          <p className="text-xs text-muted-foreground text-center">{t("paymentsManaged")}</p>
 
           {/* Password — set or change so the user can sign in without magic link */}
           <PasswordSection />
@@ -664,17 +633,17 @@ export default function SettingsClient() {
           {/* Zone danger */}
           <Card className="border-destructive/30">
             <CardHeader>
-              <CardTitle className="text-destructive">Zone de danger</CardTitle>
-              <CardDescription>Ces actions sont irréversibles</CardDescription>
+              <CardTitle className="text-destructive">{t("dangerZone")}</CardTitle>
+              <CardDescription>{t("dangerZoneDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">Supprimer mon compte</p>
-                  <p className="text-sm text-muted-foreground">Supprime toutes tes données, quiz et leads</p>
+                  <p className="font-medium">{t("deleteAccount")}</p>
+                  <p className="text-sm text-muted-foreground">{t("deleteAccountDesc")}</p>
                 </div>
                 <Button variant="destructive" size="sm" className="rounded-full" onClick={handleDeleteAccount}>
-                  <Trash2 className="h-4 w-4 mr-2" />Supprimer
+                  <Trash2 className="h-4 w-4 mr-2" />{t("deleteBtn")}
                 </Button>
               </div>
             </CardContent>
