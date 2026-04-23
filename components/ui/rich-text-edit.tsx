@@ -1,15 +1,23 @@
 "use client";
 
-// Inline rich-text editor used in the quiz editor.
-// Click-to-edit with a floating toolbar: bold, italic, underline, alignment,
-// link, image. Stores sanitized HTML. Read-only renders also go through the
-// same sanitizer to keep the public page XSS-safe.
+// Inline rich-text editor used everywhere in the quiz editor.
+// Click-to-edit with a floating toolbar: bold / italic / underline / alignment
+// (left / center / right) / bullet list / numbered list / link / image.
+// Stores sanitized HTML. Read-only renders also go through the same sanitizer
+// to keep the public page XSS-safe.
+//
+// `singleLine`:
+//   - Enter commits the edit instead of inserting a newline
+//   - Block-level tools (lists) are hidden (they don't make sense on a one-line
+//     field) — alignment is kept because it's a purely visual toggle that works
+//     on a single line too.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Bold, Italic, Underline as UnderlineIcon,
   AlignLeft, AlignCenter, AlignRight,
+  List, ListOrdered,
   Link as LinkIcon, Image as ImageIcon, Pencil,
 } from "lucide-react";
 import { sanitizeRichText, isSafeUrl } from "@/lib/richText";
@@ -116,12 +124,15 @@ export function RichTextEdit({
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("italic"); }} title={t("rteItalic")}><Italic className="w-3.5 h-3.5" /></ToolbarBtn>
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("underline"); }} title={t("rteUnderline")}><UnderlineIcon className="w-3.5 h-3.5" /></ToolbarBtn>
           <span className="w-px h-4 bg-border mx-0.5" />
+          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyLeft"); }} title={t("rteAlignLeft")}><AlignLeft className="w-3.5 h-3.5" /></ToolbarBtn>
+          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyCenter"); }} title={t("rteAlignCenter")}><AlignCenter className="w-3.5 h-3.5" /></ToolbarBtn>
+          <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyRight"); }} title={t("rteAlignRight")}><AlignRight className="w-3.5 h-3.5" /></ToolbarBtn>
           {!singleLine && <>
-            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyLeft"); }} title={t("rteAlignLeft")}><AlignLeft className="w-3.5 h-3.5" /></ToolbarBtn>
-            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyCenter"); }} title={t("rteAlignCenter")}><AlignCenter className="w-3.5 h-3.5" /></ToolbarBtn>
-            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyRight"); }} title={t("rteAlignRight")}><AlignRight className="w-3.5 h-3.5" /></ToolbarBtn>
             <span className="w-px h-4 bg-border mx-0.5" />
+            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("insertUnorderedList"); }} title={t("rteBulletList")}><List className="w-3.5 h-3.5" /></ToolbarBtn>
+            <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("insertOrderedList"); }} title={t("rteNumberedList")}><ListOrdered className="w-3.5 h-3.5" /></ToolbarBtn>
           </>}
+          <span className="w-px h-4 bg-border mx-0.5" />
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertLink(); }} title={t("rteInsertLink")}><LinkIcon className="w-3.5 h-3.5" /></ToolbarBtn>
           {!singleLine && <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertImage(); }} title={t("rteInsertImage")}><ImageIcon className="w-3.5 h-3.5" /></ToolbarBtn>}
         </div>

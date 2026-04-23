@@ -58,7 +58,9 @@
     "rteAlignCenter": "توسيط",
     "rteInsertLink": "إضافة رابط",
     "rteImagePrompt": "عنوان URL للصورة (https://… أو /path)",
-    "rteUrlInvalid": "عنوان URL غير صالح."
+    "rteUrlInvalid": "عنوان URL غير صالح.",
+    "rteBulletList": "قائمة نقطية",
+    "rteNumberedList": "قائمة مرقّمة"
   },
   "nav": {
     "quizzes": "اختباراتي",

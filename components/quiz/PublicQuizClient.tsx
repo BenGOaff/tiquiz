@@ -1013,7 +1013,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                 />
               </div>
             )}
-            <h1 className="text-3xl sm:text-5xl font-bold leading-tight">{quiz.title}</h1>
+            <h1
+              className="tiquiz-rich text-3xl sm:text-5xl font-bold leading-tight"
+              dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.title)) }}
+            />
 
             {introRich ? (
               <div
@@ -1042,7 +1045,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             )}
 
             <Button size="lg" className="h-14 px-12 text-lg rounded-full shadow-lg" onClick={() => { trackEvent("start"); setStep((quiz.ask_first_name || quiz.ask_gender) ? "personalize" : "quiz"); }}>
-              {quiz.start_button_text?.trim() || t.start}
+              <span
+                className="tiquiz-rich"
+                dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.start_button_text?.trim() || "") || t.start }}
+              />
             </Button>
         </div>
         <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} />
@@ -1128,7 +1134,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                 {t.questions.charAt(0).toUpperCase() + t.questions.slice(1)} {currentQ + 1}/{totalQ}
               </p>
 
-              <h2 className="text-2xl sm:text-4xl font-bold leading-tight">{interp(q.question_text)}</h2>
+              <h2
+                className="tiquiz-rich text-2xl sm:text-4xl font-bold leading-tight"
+                dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(q.question_text)) }}
+              />
 
               <div className={`grid gap-3 ${hasMultipleOptions ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
                 {q.options.map((opt, oi) => {
@@ -1143,7 +1152,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                           : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"
                       }`}
                     >
-                      <span className="text-base font-medium">{interp(opt.text)}</span>
+                      <span
+                        className="tiquiz-rich text-base font-medium"
+                        dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
+                      />
                     </button>
                   );
                 })}
@@ -1171,13 +1183,32 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
         style={rootStyle}
       >
         <div className="max-w-lg w-full space-y-6 py-16 sm:py-24">
-            <h2 className="text-2xl sm:text-4xl font-bold text-center">
-              {interp(quiz.capture_heading) || t.captureHeadingDefault}
-            </h2>
-            <RichParagraph
-              className="text-muted-foreground text-center text-lg"
-              text={interp(quiz.capture_subtitle) || t.captureSubtitleDefault}
+            <h2
+              className="tiquiz-rich text-2xl sm:text-4xl font-bold text-center"
+              dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.capture_heading) || "") || t.captureHeadingDefault }}
             />
+            {(() => {
+              const sub = interp(quiz.capture_subtitle) || t.captureSubtitleDefault;
+              // Legacy plain-text content (with "- " bullets) keeps the
+              // existing RichParagraph renderer. Anything with HTML tags is
+              // rendered directly so the editor's alignment / bold / lists /
+              // etc. survive.
+              const hasHtmlTags = /<[a-z][\s\S]*?>/i.test(sub);
+              if (hasHtmlTags) {
+                return (
+                  <div
+                    className="tiquiz-rich text-muted-foreground text-center text-lg"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(sub) }}
+                  />
+                );
+              }
+              return (
+                <RichParagraph
+                  className="text-muted-foreground text-center text-lg"
+                  text={sub}
+                />
+              );
+            })()}
 
             <div className="space-y-4">
               {(quiz.capture_first_name || quiz.capture_last_name) && (
@@ -1474,9 +1505,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
       >
         <div className="max-w-2xl w-full py-16 sm:py-24 space-y-8">
             <div className="space-y-3">
-              <h2 className="text-3xl sm:text-5xl font-bold leading-tight text-primary">
-                {interp(resultProfile?.title) || t.resultFallback}
-              </h2>
+              <h2
+                className="tiquiz-rich text-3xl sm:text-5xl font-bold leading-tight text-primary"
+                dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(resultProfile?.title) || "") || t.resultFallback }}
+              />
             </div>
 
             {resultProfile?.description && (() => {
@@ -1495,7 +1527,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               const ins = interp(resultProfile.insight);
               return (
                 <div className="p-4 rounded-xl bg-muted/50 border">
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5">{quiz.result_insight_heading?.trim() || t.insight}</p>
+                  <p
+                    className="tiquiz-rich text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.result_insight_heading?.trim() || "") || t.insight }}
+                  />
                   {isHtml(ins) ? (
                     <div
                       className="tiquiz-rich text-sm leading-relaxed"
@@ -1512,7 +1547,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               const proj = interp(resultProfile.projection);
               return (
                 <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-                  <p className="text-xs font-bold uppercase tracking-widest text-primary/70 mb-1.5">{quiz.result_projection_heading?.trim() || t.projection}</p>
+                  <p
+                    className="tiquiz-rich text-xs font-bold uppercase tracking-widest text-primary/70 mb-1.5"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.result_projection_heading?.trim() || "") || t.projection }}
+                  />
                   {isHtml(proj) ? (
                     <div
                       className="tiquiz-rich text-sm leading-relaxed"
@@ -1532,7 +1570,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             return ctaText && ctaUrl ? (
               <Button size="lg" className="w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug" asChild>
                 <a href={ctaUrl} target="_blank" rel="noopener noreferrer">
-                  {ctaText}
+                  <span
+                    className="tiquiz-rich"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(ctaText) }}
+                  />
                 </a>
               </Button>
             ) : null;
