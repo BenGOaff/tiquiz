@@ -139,7 +139,8 @@
   margin: 0.5rem auto;
 }
 .tiquiz-rich p { margin: 0.5em 0; }
-.tiquiz-rich ul, .tiquiz-rich ol { padding-left: 1.25rem; margin: 0.5em 0; }
+.tiquiz-rich ul { list-style: disc outside; padding-left: 1.25rem; margin: 0.5em 0; }
+.tiquiz-rich ol { list-style: decimal outside; padding-left: 1.5rem; margin: 0.5em 0; }
 .tiquiz-rich li { margin: 0.25em 0; }
 .tiquiz-rich a { color: inherit; text-decoration: underline; }
 .tiquiz-rich h1 { font-size: 1.5rem; font-weight: 700; margin: 0.75em 0 0.25em; }

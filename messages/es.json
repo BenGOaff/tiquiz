@@ -58,7 +58,9 @@
     "rteAlignCenter": "Centrar",
     "rteInsertLink": "Añadir enlace",
     "rteImagePrompt": "URL de la imagen (https://… o /ruta)",
-    "rteUrlInvalid": "URL no válida."
+    "rteUrlInvalid": "URL no válida.",
+    "rteBulletList": "Lista con viñetas",
+    "rteNumberedList": "Lista numerada"
   },
   "nav": {
     "quizzes": "Mis quiz",

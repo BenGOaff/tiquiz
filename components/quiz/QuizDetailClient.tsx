@@ -775,13 +775,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <img src={brandLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
                     </div>
                   )}
-                  <InlineEdit value={title} onChange={setTitle} className="text-3xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
+                  <RichTextEdit value={title} onChange={setTitle} singleLine className="text-3xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
                   <RichTextEdit value={introduction} onChange={setIntroduction} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder={t("previewIntroPh")} />
                   <div className="flex justify-center">
                     <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
-                      <InlineEdit
+                      <RichTextEdit
                         value={startButtonText}
                         onChange={setStartButtonText}
+                        singleLine
                         className="text-white font-semibold text-center"
                         placeholder="Commencer le test"
                       />
@@ -802,11 +803,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <div className="flex-1 flex flex-col items-center justify-center">
                       <div className="max-w-2xl w-full space-y-8">
                         <p className="text-xs font-bold uppercase tracking-widest" style={{ color: pc }}>{t("previewQuestionsCounter", { n: qi + 1, total: editQuestions.length })}</p>
-                        <InlineEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} className="text-2xl sm:text-4xl font-bold leading-tight" placeholder={t("previewQuestionPh")} />
+                        <RichTextEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} singleLine className="text-2xl sm:text-4xl font-bold leading-tight" placeholder={t("previewQuestionPh")} />
                         <div className={`grid gap-3 ${q.options.length >= 3 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
                           {q.options.map((opt, oi) => (
                             <div key={oi} className="relative p-5 rounded-xl border-2 border-border hover:border-primary/30 transition-all group">
-                              <InlineEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} className="text-base font-medium" placeholder={t("previewOptionPh", { n: oi + 1 })} />
+                              <RichTextEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} singleLine className="text-base font-medium" placeholder={t("previewOptionPh", { n: oi + 1 })} />
                               <div className="flex items-center gap-1.5 mt-2">
                                 <span className="text-xs" style={{ color: `${pc}99` }}>{t("previewPointFor")}</span>
                                 <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
@@ -828,8 +829,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               {/* ── CAPTURE / LEAD FORM ── */}
               <div ref={captureRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                 <div className="max-w-lg w-full space-y-6">
-                  <InlineEdit value={captureHeading || t("previewCaptureHeadingDefault")} onChange={setCaptureHeading} className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("previewCaptureHeadingPh")} />
-                  <InlineEdit multiline value={captureSubtitle || t("previewCaptureSubtitleDefault")} onChange={setCaptureSubtitle} className="text-muted-foreground text-center text-base whitespace-pre-line" placeholder={t("previewCaptureSubtitlePh")} />
+                  <RichTextEdit value={captureHeading || t("previewCaptureHeadingDefault")} onChange={setCaptureHeading} singleLine className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("previewCaptureHeadingPh")} />
+                  <RichTextEdit value={captureSubtitle || t("previewCaptureSubtitleDefault")} onChange={setCaptureSubtitle} className="text-muted-foreground text-base text-center" placeholder={t("previewCaptureSubtitlePh")} />
                   <div className="space-y-3 max-w-md mx-auto">
                     {(captureFirstName || captureLastName) && <div className="grid grid-cols-2 gap-3">
                       {captureFirstName && <div><label className="text-sm text-muted-foreground">{t("previewCaptureFirstName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
@@ -896,13 +897,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               {editResults.map((r, ri) => (
                 <div key={ri} ref={el => { resultRefs.current[ri] = el; }} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                   <div className="max-w-2xl w-full space-y-6">
-                    <InlineEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
+                    <RichTextEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} singleLine className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
                     <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} className="text-muted-foreground text-lg leading-relaxed" placeholder={t("previewResultDescPh")} />
                     <div className="p-5 rounded-xl bg-muted/50 border">
                       <div className="mb-2">
-                        <InlineEdit
+                        <RichTextEdit
                           value={resultInsightHeading || t("previewResultInsightDefault")}
                           onChange={setResultInsightHeading}
+                          singleLine
                           className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
                           placeholder={t("previewResultInsightHeadingPh")}
                         />
@@ -911,9 +913,10 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     </div>
                     <div className="p-5 rounded-xl border" style={{ backgroundColor: `${pc}08`, borderColor: `${pc}30` }}>
                       <div className="mb-2">
-                        <InlineEdit
+                        <RichTextEdit
                           value={resultProjectionHeading || t("previewResultProjectionDefault")}
                           onChange={setResultProjectionHeading}
+                          singleLine
                           className="text-xs font-bold uppercase tracking-widest"
                           style={{ color: `${pc}99` }}
                           placeholder={t("previewResultProjectionHeadingPh")}
@@ -923,7 +926,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     </div>
                     <div className="space-y-2">
                       <button className="w-full px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>
-                        <InlineEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} className="text-white font-semibold text-center" placeholder={t("previewResultCtaPh")} />
+                        <RichTextEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} singleLine className="text-white font-semibold text-center" placeholder={t("previewResultCtaPh")} />
                       </button>
                       <InlineEdit value={r.cta_url ?? ctaUrl ?? ""} onChange={(v) => updateR(ri, "cta_url", v || null)} className="text-xs text-muted-foreground text-center" placeholder={t("previewResultCtaUrlPh")} />
                     </div>

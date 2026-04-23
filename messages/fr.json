@@ -58,7 +58,9 @@
     "rteAlignCenter": "Centrer",
     "rteInsertLink": "Ajouter un lien",
     "rteImagePrompt": "URL de l'image (https://… ou /chemin)",
-    "rteUrlInvalid": "URL invalide."
+    "rteUrlInvalid": "URL invalide.",
+    "rteBulletList": "Liste à puces",
+    "rteNumberedList": "Liste numérotée"
   },
   "nav": {
     "dashboard": "Tableau de bord",
