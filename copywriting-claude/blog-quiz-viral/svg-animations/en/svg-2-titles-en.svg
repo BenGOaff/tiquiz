@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid meet" style="font-family:'Inter','Plus Jakarta Sans',-apple-system,system-ui,sans-serif;" role="img" aria-labelledby="tqSvg2Title tqSvg2Desc">
+  <title id="tqSvg2Title">Four viral quiz headline examples on mobile mockups</title>
+  <desc id="tqSvg2Desc">Grid of four iPhone mockups each showing a different proven quiz headline pattern: positioning, diagnostic, maturity, and audit</desc>
+  <defs>
+    <linearGradient id="tqGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5D6CDB"/>
+      <stop offset="100%" stop-color="#20BBE6"/>
+    </linearGradient>
+    <linearGradient id="tqGrad2Soft" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#EEF0FE"/>
+      <stop offset="100%" stop-color="#E3F5FC"/>
+    </linearGradient>
+    <filter id="tqShadow2" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#2E386E" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+  <style>
+    .tq2-bg { fill: #F6F7FB; }
+    .tq2-orb-indigo { fill: #5D6CDB; opacity: 0.07; }
+    .tq2-orb-cyan { fill: #20BBE6; opacity: 0.07; }
+    .tq2-phone-frame { fill: #1C1F2E; }
+    .tq2-phone-screen { fill: #fff; }
+    .tq2-notch { fill: #1C1F2E; }
+    .tq2-eyebrow { fill: #0EA2CB; font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; }
+    .tq2-qtitle { fill: #2E386E; font-weight: 900; letter-spacing: -0.02em; }
+    .tq2-sub { fill: #6B7280; font-size: 11px; font-weight: 600; }
+    .tq2-cta { fill: #fff; font-weight: 800; font-size: 13px; }
+    .tq2-caption { fill: #2E386E; font-weight: 800; font-size: 16px; text-anchor: middle; }
+    .tq2-hd { fill: #2E386E; font-weight: 900; font-size: 30px; letter-spacing: -0.03em; text-anchor: middle; }
+    .tq2-hd-sub { fill: #6B7280; font-weight: 500; font-size: 15px; text-anchor: middle; }
+    @keyframes tq2Float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
+    @keyframes tq2Pulse { 0%,100% { transform: scale(1); opacity: 0.88 } 50% { transform: scale(1.04); opacity: 1 } }
+    .tq2-phone-float { animation: tq2Float 3.2s ease-in-out infinite; transform-origin: center; }
+    .tq2-phone-d2 { animation-delay: 0.4s; }
+    .tq2-phone-d3 { animation-delay: 0.8s; }
+    .tq2-phone-d4 { animation-delay: 1.2s; }
+    .tq2-btn-inner { animation: tq2Pulse 2.4s ease-in-out infinite; transform-origin: center; }
+  </style>
+  <rect class="tq2-bg" x="0" y="0" width="1200" height="720" rx="24"/>
+  <circle class="tq2-orb-indigo" cx="150" cy="120" r="200"/>
+  <circle class="tq2-orb-cyan" cx="1050" cy="600" r="220"/>
+  <text class="tq2-hd" x="600" y="55">4 headline patterns that stop the scroll</text>
+  <text class="tq2-hd-sub" x="600" y="82">Each phone = a proven 2026 angle</text>
+  <g transform="translate(80, 115)">
+    <g class="tq2-phone-float">
+      <g filter="url(#tqShadow2)">
+        <rect class="tq2-phone-frame" x="0" y="0" width="240" height="480" rx="36"/>
+        <rect class="tq2-phone-screen" x="10" y="10" width="220" height="460" rx="28"/>
+      </g>
+      <rect class="tq2-notch" x="90" y="20" width="60" height="14" rx="7"/>
+      <rect x="22" y="52" width="196" height="6" rx="3" fill="#E6E8F0"/>
+      <rect x="22" y="80" width="196" height="320" rx="20" fill="url(#tqGrad2Soft)"/>
+      <text class="tq2-eyebrow" x="40" y="115">Quiz · 2 min</text>
+      <text class="tq2-qtitle" x="40" y="155" font-size="22">What kind</text>
+      <text class="tq2-qtitle" x="40" y="181" font-size="22">of coach</text>
+      <text class="tq2-qtitle" x="40" y="207" font-size="22">are you?</text>
+      <text class="tq2-sub" x="40" y="240">4 profiles detected</text>
+      <text class="tq2-sub" x="40" y="258">Instant results</text>
+      <g transform="translate(40, 285)">
+        <g class="tq2-btn-inner">
+          <rect x="0" y="0" width="160" height="40" rx="20" fill="url(#tqGrad2)"/>
+          <text class="tq2-cta" x="80" y="25" text-anchor="middle">Start →</text>
+        </g>
+      </g>
+      <rect x="40" y="345" width="130" height="6" rx="3" fill="#E6E8F0"/>
+      <rect x="40" y="360" width="90" height="6" rx="3" fill="#E6E8F0"/>
+    </g>
+  </g>
+  <text class="tq2-caption" x="200" y="625">1 · Positioning</text>
+  <g transform="translate(370, 115)">
+    <g class="tq2-phone-float tq2-phone-d2">
+      <g filter="url(#tqShadow2)">
+        <rect class="tq2-phone-frame" x="0" y="0" width="240" height="480" rx="36"/>
+        <rect class="tq2-phone-screen" x="10" y="10" width="220" height="460" rx="28"/>
+      </g>
+      <rect class="tq2-notch" x="90" y="20" width="60" height="14" rx="7"/>
+      <rect x="22" y="52" width="196" height="6" rx="3" fill="#E6E8F0"/>
+      <rect x="22" y="80" width="196" height="320" rx="20" fill="url(#tqGrad2Soft)"/>
+      <text class="tq2-eyebrow" x="40" y="115">Diagnostic · 3 min</text>
+      <text class="tq2-qtitle" x="40" y="155" font-size="19">What's really</text>
+      <text class="tq2-qtitle" x="40" y="178" font-size="19">blocking your</text>
+      <text class="tq2-qtitle" x="40" y="201" font-size="19">sales?</text>
+      <text class="tq2-sub" x="40" y="234">5 profiles · we dig</text>
+      <text class="tq2-sub" x="40" y="252">to the real blocker</text>
+      <g transform="translate(40, 285)">
+        <g class="tq2-btn-inner">
+          <rect x="0" y="0" width="160" height="40" rx="20" fill="url(#tqGrad2)"/>
+          <text class="tq2-cta" x="80" y="25" text-anchor="middle">Find out →</text>
+        </g>
+      </g>
+      <rect x="40" y="345" width="140" height="6" rx="3" fill="#E6E8F0"/>
+      <rect x="40" y="360" width="100" height="6" rx="3" fill="#E6E8F0"/>
+    </g>
+  </g>
+  <text class="tq2-caption" x="490" y="625">2 · Diagnostic</text>
+  <g transform="translate(660, 115)">
+    <g class="tq2-phone-float tq2-phone-d3">
+      <g filter="url(#tqShadow2)">
+        <rect class="tq2-phone-frame" x="0" y="0" width="240" height="480" rx="36"/>
+        <rect class="tq2-phone-screen" x="10" y="10" width="220" height="460" rx="28"/>
+      </g>
+      <rect class="tq2-notch" x="90" y="20" width="60" height="14" rx="7"/>
+      <rect x="22" y="52" width="196" height="6" rx="3" fill="#E6E8F0"/>
+      <rect x="22" y="80" width="196" height="320" rx="20" fill="url(#tqGrad2Soft)"/>
+      <text class="tq2-eyebrow" x="40" y="115">Maturity · 4 min</text>
+      <text class="tq2-qtitle" x="40" y="155" font-size="20">In 6 months,</text>
+      <text class="tq2-qtitle" x="40" y="178" font-size="20">where will your</text>
+      <text class="tq2-qtitle" x="40" y="201" font-size="20">business be?</text>
+      <text class="tq2-sub" x="40" y="234">Accurate forecast</text>
+      <text class="tq2-sub" x="40" y="252">from your answers</text>
+      <g transform="translate(40, 285)">
+        <g class="tq2-btn-inner">
+          <rect x="0" y="0" width="160" height="40" rx="20" fill="url(#tqGrad2)"/>
+          <text class="tq2-cta" x="80" y="25" text-anchor="middle">See my future →</text>
+        </g>
+      </g>
+      <rect x="40" y="345" width="150" height="6" rx="3" fill="#E6E8F0"/>
+      <rect x="40" y="360" width="110" height="6" rx="3" fill="#E6E8F0"/>
+    </g>
+  </g>
+  <text class="tq2-caption" x="780" y="625">3 · Maturity</text>
+  <g transform="translate(950, 115)">
+    <g class="tq2-phone-float tq2-phone-d4">
+      <g filter="url(#tqShadow2)">
+        <rect class="tq2-phone-frame" x="0" y="0" width="240" height="480" rx="36"/>
+        <rect class="tq2-phone-screen" x="10" y="10" width="220" height="460" rx="28"/>
+      </g>
+      <rect class="tq2-notch" x="90" y="20" width="60" height="14" rx="7"/>
+      <rect x="22" y="52" width="196" height="6" rx="3" fill="#E6E8F0"/>
+      <rect x="22" y="80" width="196" height="320" rx="20" fill="url(#tqGrad2Soft)"/>
+      <text class="tq2-eyebrow" x="40" y="115">Audit · 2 min</text>
+      <text class="tq2-qtitle" x="40" y="155" font-size="20">Is your funnel</text>
+      <text class="tq2-qtitle" x="40" y="178" font-size="20">really ready to</text>
+      <text class="tq2-qtitle" x="40" y="201" font-size="20">convert?</text>
+      <text class="tq2-sub" x="40" y="234">8 checkpoints</text>
+      <text class="tq2-sub" x="40" y="252">live score / 100</text>
+      <g transform="translate(40, 285)">
+        <g class="tq2-btn-inner">
+          <rect x="0" y="0" width="160" height="40" rx="20" fill="url(#tqGrad2)"/>
+          <text class="tq2-cta" x="80" y="25" text-anchor="middle">Run the test →</text>
+        </g>
+      </g>
+      <rect x="40" y="345" width="130" height="6" rx="3" fill="#E6E8F0"/>
+      <rect x="40" y="360" width="95" height="6" rx="3" fill="#E6E8F0"/>
+    </g>
+  </g>
+  <text class="tq2-caption" x="1070" y="625">4 · Quick audit</text>
+  <g transform="translate(0, 655)">
+    <rect x="80" y="0" width="1040" height="54" rx="16" fill="url(#tqGrad2)"/>
+    <text x="600" y="34" fill="#fff" font-weight="900" font-size="18" text-anchor="middle">+ 2 more angles: Market research · Direct challenge</text>
+  </g>
+  <text x="1160" y="710" fill="#9AA0B5" font-size="12" font-weight="600" text-anchor="end">— tipote.fr/tiquiz</text>
+</svg>

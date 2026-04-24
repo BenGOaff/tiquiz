@@ -19,6 +19,7 @@ import {
   AlignLeft, AlignCenter, AlignRight,
   List, ListOrdered,
   Link as LinkIcon, Image as ImageIcon, Pencil,
+  Sparkles, Loader2,
 } from "lucide-react";
 import { sanitizeRichText, isSafeUrl } from "@/lib/richText";
 
@@ -30,14 +31,35 @@ interface RichTextEditProps {
   style?: React.CSSProperties;
   /** Single-line behaviour: Enter saves, block formatting disabled. */
   singleLine?: boolean;
+  /**
+   * When provided, a ✨ button is shown in the display mode. Clicking it
+   * sends the current plain-text value to the genderize API and replaces
+   * the field with the folded `{m|f|x}` variant. Formatting is lost.
+   */
+  onGenderize?: (plainText: string) => Promise<string | null>;
 }
 
 export function RichTextEdit({
-  value, onChange, className, placeholder, style, singleLine,
+  value, onChange, className, placeholder, style, singleLine, onGenderize,
 }: RichTextEditProps) {
   const t = useTranslations("common");
   const ref = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
+  const [genderizing, setGenderizing] = useState(false);
+
+  const handleGenderize = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onGenderize || genderizing) return;
+    const plain = stripTagsQuick(value);
+    if (!plain) return;
+    setGenderizing(true);
+    try {
+      const folded = await onGenderize(plain);
+      if (folded) onChange(folded);
+    } finally {
+      setGenderizing(false);
+    }
+  }, [onGenderize, onChange, value, genderizing]);
 
   useEffect(() => {
     if (!editing && ref.current && ref.current.innerHTML !== value) {
@@ -163,6 +185,17 @@ export function RichTextEdit({
         <div dangerouslySetInnerHTML={{ __html: sanitizeRichText(value) }} />
       )}
       <Pencil className="absolute top-1 right-1 w-3 h-3 text-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+      {onGenderize && !isEmpty && (
+        <button
+          type="button"
+          onClick={handleGenderize}
+          disabled={genderizing}
+          title="Générer les variantes de genre (Il / Elle / Iel)"
+          className="absolute top-1 right-6 p-0.5 text-primary/30 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity"
+        >
+          {genderizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+        </button>
+      )}
     </div>
   );
 }

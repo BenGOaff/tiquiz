@@ -1,0 +1,158 @@
+<!-- SVG 1 — Thématique : Quiz générique VS Quiz qualifiant (Tiquiz) -->
+<!-- À coller dans un bloc "Code HTML" de Systeme.io. -->
+<!-- Responsive : s'adapte à la largeur du conteneur parent. -->
+
+<div style="width:100%;max-width:960px;margin:2rem auto;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto;display:block;font-family:'Inter','Plus Jakarta Sans',-apple-system,system-ui,sans-serif;" role="img" aria-labelledby="tqSvg1Title tqSvg1Desc">
+  <title id="tqSvg1Title">Quiz générique versus Quiz qualifiant Tiquiz</title>
+  <desc id="tqSvg1Desc">Comparaison visuelle entre un quiz Buzzfeed classique et un quiz Tiquiz qui segmente les leads vers quatre offres</desc>
+
+  <defs>
+    <linearGradient id="tqGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5D6CDB"/>
+      <stop offset="100%" stop-color="#20BBE6"/>
+    </linearGradient>
+    <filter id="tqShadow1" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#2E386E" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <style>
+    .tq1-bg-wash { fill: #F6F7FB; }
+    .tq1-orb-cyan { fill: #20BBE6; opacity: 0.08; }
+    .tq1-orb-indigo { fill: #5D6CDB; opacity: 0.08; }
+    .tq1-card-lose { fill: #FFF8F8; stroke: #FECACA; stroke-width: 1.5; }
+    .tq1-card-win { fill: #fff; stroke: rgba(32,187,230,0.25); stroke-width: 1.5; }
+    .tq1-title-lose { fill: #B91C1C; font-weight: 900; font-size: 22px; letter-spacing: 0.06em; text-transform: uppercase; }
+    .tq1-title-win { fill: #0EA2CB; font-weight: 900; font-size: 22px; letter-spacing: 0.06em; text-transform: uppercase; }
+    .tq1-quiz-q { fill: #2E386E; font-weight: 800; font-size: 22px; }
+    .tq1-label { fill: #6B7280; font-size: 14px; font-weight: 600; }
+    .tq1-euro { fill: #fff; font-weight: 900; font-size: 16px; }
+    .tq1-result-bad { fill: #EF4444; font-weight: 900; font-size: 28px; }
+    .tq1-result-good { fill: #0EA2CB; font-weight: 900; font-size: 26px; }
+    .tq1-vs { fill: #2E386E; font-weight: 900; font-size: 42px; letter-spacing: -0.02em; }
+
+    @keyframes tq1Pulse { 0%,100% { opacity: 0.4 } 50% { opacity: 1 } }
+    @keyframes tq1FlowDash { to { stroke-dashoffset: -20 } }
+    @keyframes tq1Blink { 0%,100% { opacity: 0.2 } 50% { opacity: 1 } }
+    @keyframes tq1BounceY { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-3px) } }
+
+    .tq1-qmark-inner { animation: tq1Pulse 1.8s ease-in-out infinite; }
+    .tq1-arrow-left { stroke-dasharray: 6 6; animation: tq1Blink 1.4s ease-in-out infinite; }
+    .tq1-flow { stroke-dasharray: 8 6; animation: tq1FlowDash 1.2s linear infinite; }
+    .tq1-offer-inner { animation: tq1BounceY 2s ease-in-out infinite; }
+    .tq1-offer-d2 { animation-delay: 0.3s; }
+    .tq1-offer-d3 { animation-delay: 0.6s; }
+    .tq1-offer-d4 { animation-delay: 0.9s; }
+  </style>
+
+  <!-- Fond + orbes -->
+  <rect class="tq1-bg-wash" x="0" y="0" width="1200" height="600" rx="24"/>
+  <circle class="tq1-orb-indigo" cx="100" cy="60" r="180"/>
+  <circle class="tq1-orb-cyan" cx="1100" cy="540" r="200"/>
+
+  <!-- ========== CARD GAUCHE ========== -->
+  <g filter="url(#tqShadow1)">
+    <rect class="tq1-card-lose" x="40" y="80" width="500" height="440" rx="22"/>
+  </g>
+  <text class="tq1-title-lose" x="70" y="130">Quiz générique</text>
+
+  <rect x="70" y="155" width="440" height="60" rx="12" fill="#FEF2F2"/>
+  <text class="tq1-quiz-q" x="90" y="192">Quel héros Marvel es-tu ?</text>
+
+  <!-- 3 répondants -->
+  <g transform="translate(70, 240)">
+    <circle cx="30" cy="30" r="22" fill="#FFD6D6"/>
+    <text x="30" y="38" fill="#B91C1C" font-weight="900" font-size="20" text-anchor="middle">?</text>
+    <circle cx="90" cy="30" r="22" fill="#FFE4CC"/>
+    <text x="90" y="38" fill="#B91C1C" font-weight="900" font-size="20" text-anchor="middle">?</text>
+    <circle cx="150" cy="30" r="22" fill="#FFD6D6"/>
+    <text x="150" y="38" fill="#B91C1C" font-weight="900" font-size="20" text-anchor="middle">?</text>
+  </g>
+
+  <!-- Flèche vers néant -->
+  <g transform="translate(280, 270)">
+    <line class="tq1-arrow-left" x1="0" y1="0" x2="140" y2="0" stroke="#FCA5A5" stroke-width="3" stroke-linecap="round"/>
+    <polygon points="140,-6 152,0 140,6" fill="#FCA5A5"/>
+  </g>
+
+  <!-- Cul-de-sac (animation sur enfant) -->
+  <g transform="translate(445, 270)">
+    <g class="tq1-qmark-inner">
+      <circle cx="0" cy="0" r="40" fill="#FEE2E2" stroke="#EF4444" stroke-width="3"/>
+      <text x="0" y="12" fill="#B91C1C" font-weight="900" font-size="44" text-anchor="middle">?</text>
+    </g>
+  </g>
+
+  <rect x="70" y="400" width="440" height="80" rx="14" fill="#FEE2E2"/>
+  <text class="tq1-result-bad" x="90" y="440">0 lead · 0 vente</text>
+  <text class="tq1-label" x="90" y="465">Joli taux d'engagement. <tspan font-weight="900" fill="#EF4444">Zéro impact business.</tspan></text>
+
+  <!-- ========== VS ========== -->
+  <g transform="translate(600, 300)">
+    <circle cx="0" cy="0" r="40" fill="#fff" stroke="#2E386E" stroke-width="3"/>
+    <text class="tq1-vs" x="0" y="14" text-anchor="middle">VS</text>
+  </g>
+
+  <!-- ========== CARD DROITE ========== -->
+  <g filter="url(#tqShadow1)">
+    <rect class="tq1-card-win" x="660" y="80" width="500" height="440" rx="22"/>
+  </g>
+  <text class="tq1-title-win" x="690" y="130">Quiz qualifiant Tiquiz</text>
+
+  <rect x="690" y="155" width="440" height="60" rx="12" fill="#E3F5FC"/>
+  <text class="tq1-quiz-q" x="710" y="192">Quelle offre devrais-tu lancer ?</text>
+
+  <!-- 4 profils -->
+  <g transform="translate(690, 240)">
+    <circle cx="30" cy="30" r="22" fill="#5D6CDB"/>
+    <text x="30" y="38" fill="#fff" font-weight="900" font-size="18" text-anchor="middle">D</text>
+    <circle cx="90" cy="30" r="22" fill="#20BBE6"/>
+    <text x="90" y="38" fill="#fff" font-weight="900" font-size="18" text-anchor="middle">M</text>
+    <circle cx="150" cy="30" r="22" fill="#3F4DBA"/>
+    <text x="150" y="38" fill="#fff" font-weight="900" font-size="18" text-anchor="middle">P</text>
+    <circle cx="210" cy="30" r="22" fill="#0EA2CB"/>
+    <text x="210" y="38" fill="#fff" font-weight="900" font-size="18" text-anchor="middle">A</text>
+  </g>
+
+  <!-- Flèches flow -->
+  <g transform="translate(930, 270)">
+    <path class="tq1-flow" d="M0,0 L60,-35" stroke="#20BBE6" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path class="tq1-flow" d="M0,0 L60,-12" stroke="#20BBE6" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path class="tq1-flow" d="M0,0 L60,12" stroke="#20BBE6" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path class="tq1-flow" d="M0,0 L60,35" stroke="#20BBE6" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- 4 offres (animation sur enfants) -->
+  <g transform="translate(1000, 220)">
+    <g class="tq1-offer-inner">
+      <rect x="0" y="0" width="100" height="26" rx="13" fill="url(#tqGrad1)"/>
+      <text class="tq1-euro" x="50" y="18" text-anchor="middle">47 €</text>
+    </g>
+  </g>
+  <g transform="translate(1000, 252)">
+    <g class="tq1-offer-inner tq1-offer-d2">
+      <rect x="0" y="0" width="100" height="26" rx="13" fill="url(#tqGrad1)"/>
+      <text class="tq1-euro" x="50" y="18" text-anchor="middle">197 €</text>
+    </g>
+  </g>
+  <g transform="translate(1000, 284)">
+    <g class="tq1-offer-inner tq1-offer-d3">
+      <rect x="0" y="0" width="100" height="26" rx="13" fill="url(#tqGrad1)"/>
+      <text class="tq1-euro" x="50" y="18" text-anchor="middle">497 €</text>
+    </g>
+  </g>
+  <g transform="translate(1000, 316)">
+    <g class="tq1-offer-inner tq1-offer-d4">
+      <rect x="0" y="0" width="100" height="26" rx="13" fill="url(#tqGrad1)"/>
+      <text class="tq1-euro" x="50" y="18" text-anchor="middle">1 497 €</text>
+    </g>
+  </g>
+
+  <rect x="690" y="400" width="440" height="80" rx="14" fill="#E3F5FC"/>
+  <text class="tq1-result-good" x="710" y="440">Leads qualifiés · CA ciblé</text>
+  <text class="tq1-label" x="710" y="465">Chaque profil reçoit <tspan font-weight="900" fill="#0EA2CB">la bonne offre au bon moment.</tspan></text>
+
+  <text x="1160" y="560" fill="#9AA0B5" font-size="12" font-weight="600" text-anchor="end">— tipote.fr/tiquiz</text>
+</svg>
+</div>

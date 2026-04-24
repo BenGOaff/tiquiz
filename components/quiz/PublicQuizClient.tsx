@@ -138,7 +138,6 @@ type QuizTranslations = {
   personalizeFirstName: string;
   personalizeFirstNamePlaceholder: string;
   personalizeGender: string;
-  personalizeGenderHint: string;
   personalizeContinue: string;
 };
 
@@ -188,7 +187,6 @@ const translations: Record<string, QuizTranslations> = {
     personalizeFirstName: "Ton prénom",
     personalizeFirstNamePlaceholder: "Ex : Marie",
     personalizeGender: "Comment préfères-tu être désigné·e ?",
-    personalizeGenderHint: "On s’en servira pour accorder correctement les questions, les résultats et les CTA.",
     personalizeContinue: "Commencer le quiz",
   },
   fr_vous: {
@@ -236,7 +234,6 @@ const translations: Record<string, QuizTranslations> = {
     personalizeFirstName: "Votre prénom",
     personalizeFirstNamePlaceholder: "Ex : Marie",
     personalizeGender: "Comment préférez-vous être désigné·e ?",
-    personalizeGenderHint: "On s’en servira pour accorder correctement les questions, les résultats et les CTA.",
     personalizeContinue: "Commencer le quiz",
   },
   en: {
@@ -284,7 +281,6 @@ const translations: Record<string, QuizTranslations> = {
     personalizeFirstName: "Your first name",
     personalizeFirstNamePlaceholder: "e.g. Alex",
     personalizeGender: "How should we refer to you?",
-    personalizeGenderHint: "We’ll use this to pick the right pronouns in questions, results and CTAs.",
     personalizeContinue: "Start the quiz",
   },
   es: {
@@ -332,7 +328,6 @@ const translations: Record<string, QuizTranslations> = {
     personalizeFirstName: "Tu nombre",
     personalizeFirstNamePlaceholder: "Ej: Ana",
     personalizeGender: "¿Cómo prefieres que te tratemos?",
-    personalizeGenderHint: "Lo usaremos para ajustar los pronombres en las preguntas, resultados y CTAs.",
     personalizeContinue: "Empezar el quiz",
   },
   de: {
@@ -380,7 +375,6 @@ const translations: Record<string, QuizTranslations> = {
     personalizeFirstName: "Dein Vorname",
     personalizeFirstNamePlaceholder: "z. B. Alex",
     personalizeGender: "Wie sollen wir dich ansprechen?",
-    personalizeGenderHint: "Wir verwenden das für die richtigen Pronomen in Fragen, Ergebnissen und CTAs.",
     personalizeContinue: "Quiz starten",
   },
   pt: {
@@ -428,7 +422,6 @@ const translations: Record<string, QuizTranslations> = {
     personalizeFirstName: "Seu nome",
     personalizeFirstNamePlaceholder: "Ex: Ana",
     personalizeGender: "Como prefere que te chamemos?",
-    personalizeGenderHint: "Usaremos isso para acertar os pronomes nas perguntas, resultados e CTAs.",
     personalizeContinue: "Começar o quiz",
   },
   it: {
@@ -476,7 +469,6 @@ const translations: Record<string, QuizTranslations> = {
     personalizeFirstName: "Il tuo nome",
     personalizeFirstNamePlaceholder: "Es: Anna",
     personalizeGender: "Come preferisci essere chiamat·a?",
-    personalizeGenderHint: "Useremo questi dati per adattare pronomi e accordi nelle domande, risultati e CTA.",
     personalizeContinue: "Inizia il quiz",
   },
   ar: {
@@ -524,7 +516,6 @@ const translations: Record<string, QuizTranslations> = {
     personalizeFirstName: "اسمك الأول",
     personalizeFirstNamePlaceholder: "مثالًا: ياسمين",
     personalizeGender: "كيف تُفضّل أن نخاطبك؟",
-    personalizeGenderHint: "سنستخدمها لضبط الضمائر في الأسئلة والنتائج.",
     personalizeContinue: "ابدأ الاختبار",
   },
 };
@@ -1098,7 +1089,6 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                   </button>
                 ))}
               </div>
-              <p className="text-[11px] text-muted-foreground">{t.personalizeGenderHint}</p>
             </div>
           )}
           <Button
