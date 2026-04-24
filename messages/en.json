@@ -755,7 +755,9 @@
     "genderizeAll": "Genderize entire quiz",
     "genderizingAll": "Generating… ({done}/{total})",
     "genderizeAllDone": "Variants generated ✓",
-    "genderizeAllPartial": "Partial: {done}/{total} fields done"
+    "genderizeAllPartial": "Partial: {done}/{total} fields done",
+    "bonusImageAlt": "Bonus preview",
+    "bonusImageClickHint": "Click to replace"
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",

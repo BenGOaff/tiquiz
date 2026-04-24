@@ -755,7 +755,9 @@
     "genderizeAll": "Generar todas las variantes",
     "genderizingAll": "Generando… ({done}/{total})",
     "genderizeAllDone": "Variantes generadas ✓",
-    "genderizeAllPartial": "Parcial: {done}/{total} campos"
+    "genderizeAllPartial": "Parcial: {done}/{total} campos",
+    "bonusImageAlt": "Vista previa del bonus",
+    "bonusImageClickHint": "Haz clic para reemplazar"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nueva contraseña",

@@ -755,7 +755,9 @@
     "genderizeAll": "Genrer tout le quiz",
     "genderizingAll": "Génération en cours… ({done}/{total})",
     "genderizeAllDone": "Variantes générées ✓",
-    "genderizeAllPartial": "Partiel : {done}/{total} champs traités"
+    "genderizeAllPartial": "Partiel : {done}/{total} champs traités",
+    "bonusImageAlt": "Aperçu du bonus",
+    "bonusImageClickHint": "Cliquer pour remplacer"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",
