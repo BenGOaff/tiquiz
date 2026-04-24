@@ -755,7 +755,9 @@
     "genderizeAll": "توليد جميع الصيغ",
     "genderizingAll": "جارٍ التوليد… ({done}/{total})",
     "genderizeAllDone": "تم توليد الصيغ ✓",
-    "genderizeAllPartial": "جزئي: {done}/{total} حقول"
+    "genderizeAllPartial": "جزئي: {done}/{total} حقول",
+    "bonusImageAlt": "معاينة الهدية",
+    "bonusImageClickHint": "انقر للاستبدال"
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",
