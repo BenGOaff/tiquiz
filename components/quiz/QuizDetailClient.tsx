@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
-  Gift,
+  Gift, Sparkles,
 } from "lucide-react";
 import QuizResultsAnalytics from "@/components/quiz/QuizResultsAnalytics";
 import { toast } from "sonner";
@@ -79,13 +79,32 @@ type QuizData = {
 type ProfileBrand = { brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null; plan: string | null };
 interface QuizDetailClientProps { quizId: string; }
 
-// Inline edit: click to edit text directly on the preview
-function InlineEdit({ value, onChange, multiline, className, placeholder, style }: {
+// Inline edit: click to edit text directly on the preview.
+// Pass `onGenderize` to display a ✨ button that rewrites the value into the
+// `{masc|fem|incl}` interpolation format used by the public renderer.
+function InlineEdit({ value, onChange, multiline, className, placeholder, style, onGenderize }: {
   value: string; onChange: (v: string) => void; multiline?: boolean; className?: string; placeholder?: string; style?: React.CSSProperties;
+  onGenderize?: (current: string) => Promise<string | null>;
 }) {
   const [editing, setEditing] = useState(false);
+  const [genderizing, setGenderizing] = useState(false);
   const ref = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
+
+  const handleGenderize = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (genderizing) return;
+    const current = value?.trim();
+    if (!current) return;
+    setGenderizing(true);
+    try {
+      const folded = await onGenderize!(current);
+      if (folded) onChange(folded);
+    } finally {
+      setGenderizing(false);
+    }
+  };
+
   if (editing) {
     const cls = `${className || ""} w-full bg-white/90 border-2 border-primary/40 outline-none rounded-lg px-2 py-1`;
     return multiline ? (
@@ -98,6 +117,17 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style 
     <div onClick={() => setEditing(true)} style={style} className={`${className || ""} cursor-text rounded-lg hover:ring-2 hover:ring-primary/20 hover:bg-primary/5 px-2 py-1 transition-all group relative min-h-[1.2em]`}>
       {value || <span className="opacity-40 italic">{placeholder}</span>}
       <Pencil className="absolute top-1 right-1 w-3 h-3 text-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+      {onGenderize && (
+        <button
+          type="button"
+          onClick={handleGenderize}
+          disabled={genderizing || !value?.trim()}
+          title="Générer les variantes de genre (Il / Elle / Iel)"
+          className="absolute top-1 right-6 p-0.5 text-primary/40 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity"
+        >
+          {genderizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+        </button>
+      )}
     </div>
   );
 }
@@ -316,6 +346,27 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     }
     if (link.href !== href) link.href = href;
   }, [fontFamily]);
+
+  // Rewrite one line of quiz copy into the `{m|f|x}` interpolation format.
+  // Shared across InlineEdit call sites (question text, options, results, CTA).
+  const genderize = useCallback(async (text: string): Promise<string | null> => {
+    try {
+      const res = await fetch("/api/quiz/gender-variants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, locale: locale || "fr" }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.ok) {
+        toast.error("Impossible de générer les variantes. Réessaie.");
+        return null;
+      }
+      return typeof json.folded === "string" ? json.folded : null;
+    } catch {
+      toast.error("Impossible de générer les variantes. Réessaie.");
+      return null;
+    }
+  }, [locale]);
 
   // Logo upload (reuses public-assets bucket, same layout as SettingsClient)
   async function handleLogoUpload(file: File) {
@@ -803,11 +854,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                     <div className="flex-1 flex flex-col items-center justify-center">
                       <div className="max-w-2xl w-full space-y-8">
                         <p className="text-xs font-bold uppercase tracking-widest" style={{ color: pc }}>{t("previewQuestionsCounter", { n: qi + 1, total: editQuestions.length })}</p>
-                        <RichTextEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} singleLine className="text-2xl sm:text-4xl font-bold leading-tight" placeholder={t("previewQuestionPh")} />
+                        <RichTextEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} singleLine className="text-2xl sm:text-4xl font-bold leading-tight" placeholder={t("previewQuestionPh")} />
                         <div className={`grid gap-3 ${q.options.length >= 3 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
                           {q.options.map((opt, oi) => (
                             <div key={oi} className="relative p-5 rounded-xl border-2 border-border hover:border-primary/30 transition-all group">
-                              <RichTextEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} singleLine className="text-base font-medium" placeholder={t("previewOptionPh", { n: oi + 1 })} />
+                              <RichTextEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} singleLine className="text-base font-medium" placeholder={t("previewOptionPh", { n: oi + 1 })} />
                               <div className="flex items-center gap-1.5 mt-2">
                                 <span className="text-xs" style={{ color: `${pc}99` }}>{t("previewPointFor")}</span>
                                 <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
@@ -897,8 +948,8 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               {editResults.map((r, ri) => (
                 <div key={ri} ref={el => { resultRefs.current[ri] = el; }} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                   <div className="max-w-2xl w-full space-y-6">
-                    <RichTextEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} singleLine className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
-                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} className="text-muted-foreground text-lg leading-relaxed" placeholder={t("previewResultDescPh")} />
+                    <RichTextEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} singleLine className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
+                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} className="text-muted-foreground text-lg leading-relaxed" placeholder={t("previewResultDescPh")} />
                     <div className="p-5 rounded-xl bg-muted/50 border">
                       <div className="mb-2">
                         <RichTextEdit
@@ -909,7 +960,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           placeholder={t("previewResultInsightHeadingPh")}
                         />
                       </div>
-                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} className="text-sm leading-relaxed" placeholder={t("previewResultInsightPh")} />
+                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} className="text-sm leading-relaxed" placeholder={t("previewResultInsightPh")} />
                     </div>
                     <div className="p-5 rounded-xl border" style={{ backgroundColor: `${pc}08`, borderColor: `${pc}30` }}>
                       <div className="mb-2">
@@ -922,11 +973,11 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                           placeholder={t("previewResultProjectionHeadingPh")}
                         />
                       </div>
-                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} className="text-sm leading-relaxed" placeholder={t("previewResultProjectionPh")} />
+                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} className="text-sm leading-relaxed" placeholder={t("previewResultProjectionPh")} />
                     </div>
                     <div className="space-y-2">
                       <button className="w-full px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>
-                        <RichTextEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} singleLine className="text-white font-semibold text-center" placeholder={t("previewResultCtaPh")} />
+                        <RichTextEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} onGenderize={genderize} singleLine className="text-white font-semibold text-center" placeholder={t("previewResultCtaPh")} />
                       </button>
                       <InlineEdit value={r.cta_url ?? ctaUrl ?? ""} onChange={(v) => updateR(ri, "cta_url", v || null)} className="text-xs text-muted-foreground text-center" placeholder={t("previewResultCtaUrlPh")} />
                     </div>
