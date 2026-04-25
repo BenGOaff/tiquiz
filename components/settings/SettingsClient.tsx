@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import SetPasswordForm from "@/components/auth/SetPasswordForm";
+import SioApiKeysManager from "@/components/sio/SioApiKeysManager";
 
 type Profile = {
   full_name: string | null;
@@ -24,8 +25,6 @@ type Profile = {
   ui_locale: string | null;
   address_form: string | null;
   privacy_url: string | null;
-  sio_user_api_key: string | null;
-  sio_api_key_name: string | null;
   plan: string | null;
   brand_logo_url: string | null;
   brand_color_primary: string | null;
@@ -37,7 +36,6 @@ type Profile = {
 };
 
 const FONTS = ["Inter", "Poppins", "Montserrat", "Playfair Display", "Lato", "Roboto", "Open Sans", "Nunito"];
-// Tones and plans reference translation keys resolved at render time via t().
 const TONES = [
   { value: "professionnel", labelKey: "toneProfessional" },
   { value: "amical", labelKey: "toneFriendly" },
@@ -89,12 +87,10 @@ export default function SettingsClient() {
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
 
-  // General
   const [addressForm, setAddressForm] = useState("tu");
   const [privacyUrl, setPrivacyUrl] = useState("");
   const [targetAudience, setTargetAudience] = useState("");
 
-  // Branding
   const [brandLogoUrl, setBrandLogoUrl] = useState("");
   const [brandColorPrimary, setBrandColorPrimary] = useState("#5D6CDB");
   const [brandColorAccent, setBrandColorAccent] = useState("#20BBE6");
@@ -102,10 +98,6 @@ export default function SettingsClient() {
   const [brandTone, setBrandTone] = useState("professionnel");
   const [brandWebsiteUrl, setBrandWebsiteUrl] = useState("");
   const [uploadingLogo, setUploadingLogo] = useState(false);
-
-  // SIO
-  const [sioKey, setSioKey] = useState("");
-  const [sioKeyName, setSioKeyName] = useState("");
 
   useEffect(() => {
     fetch("/api/profile")
@@ -117,8 +109,6 @@ export default function SettingsClient() {
           setAddressForm(p.address_form ?? "tu");
           setPrivacyUrl(p.privacy_url ?? "");
           setTargetAudience(p.target_audience ?? "");
-          setSioKey(p.sio_user_api_key ?? "");
-          setSioKeyName(p.sio_api_key_name ?? "");
           setBrandLogoUrl(p.brand_logo_url ?? "");
           setBrandColorPrimary(p.brand_color_primary ?? "#5D6CDB");
           setBrandColorAccent(p.brand_color_accent ?? "#20BBE6");
@@ -140,8 +130,6 @@ export default function SettingsClient() {
           address_form: addressForm,
           privacy_url: privacyUrl.trim() || null,
           target_audience: targetAudience.trim() || null,
-          sio_user_api_key: sioKey.trim() || null,
-          sio_api_key_name: sioKeyName.trim() || null,
           brand_logo_url: brandLogoUrl.trim() || null,
           brand_color_primary: brandColorPrimary,
           brand_color_accent: brandColorAccent,
@@ -210,7 +198,6 @@ export default function SettingsClient() {
 
   return (
     <div className="space-y-5">
-      {/* Banner */}
       <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
         <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
           <Settings className="h-5 w-5" />
@@ -225,7 +212,6 @@ export default function SettingsClient() {
         </Button>
       </div>
 
-      {/* Tabs */}
       <Tabs defaultValue={initialTab} className="space-y-4">
         <TabsList className="w-full sm:w-auto sticky top-14 z-10 bg-background border-b rounded-none justify-start gap-0 h-auto p-0">
           <TabsTrigger value="general" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><Settings className="h-4 w-4 mr-1.5" />{t("tabGeneral")}</TabsTrigger>
@@ -234,7 +220,6 @@ export default function SettingsClient() {
           <TabsTrigger value="account" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><CreditCard className="h-4 w-4 mr-1.5" />{t("tabAccount")}</TabsTrigger>
         </TabsList>
 
-        {/* ── General ── */}
         <TabsContent value="general" className="space-y-4">
           <Card>
             <CardHeader>
@@ -293,7 +278,6 @@ export default function SettingsClient() {
           </Card>
         </TabsContent>
 
-        {/* ── Branding ── */}
         <TabsContent value="branding" className="space-y-4">
           <Card>
             <CardHeader>
@@ -437,37 +421,9 @@ export default function SettingsClient() {
           </Card>
         </TabsContent>
 
-        {/* ── Systeme.io ── */}
         <TabsContent value="systemeio" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("sioTitle")}</CardTitle>
-              <CardDescription>{t("sioDesc")}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>{t("sioConnNameLabel")}</Label>
-                <Input
-                  value={sioKeyName}
-                  onChange={(e) => setSioKeyName(e.target.value)}
-                  placeholder={t("sioConnNamePh")}
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label>{t("sioApiKeyLabel")}</Label>
-                <Input
-                  value={sioKey}
-                  onChange={(e) => setSioKey(e.target.value)}
-                  placeholder="pk_xxxxxxxxxxxxxxxxxxxxxxxx"
-                  type="password"
-                  className="mt-1.5 font-mono"
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <SioApiKeysManager />
 
-          {/* Automations SIO — guide utilisateur */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -477,7 +433,6 @@ export default function SettingsClient() {
               <CardDescription>{t("autoDesc")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-5 text-sm">
-              {/* Étape 1 */}
               <div className="flex gap-3">
                 <div className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center text-sm">
                   1
@@ -492,7 +447,6 @@ export default function SettingsClient() {
                 </div>
               </div>
 
-              {/* Étape 2 */}
               <div className="flex gap-3">
                 <div className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center text-sm">
                   2
@@ -519,7 +473,6 @@ export default function SettingsClient() {
                 </div>
               </div>
 
-              {/* Étape 3 */}
               <div className="flex gap-3">
                 <div className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center text-sm">
                   3
@@ -530,7 +483,6 @@ export default function SettingsClient() {
                 </div>
               </div>
 
-              {/* Warning test */}
               <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30 p-3">
                 <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
                 <div className="space-y-1">
@@ -539,7 +491,6 @@ export default function SettingsClient() {
                 </div>
               </div>
 
-              {/* Liens */}
               <div className="pt-1 flex flex-wrap gap-3 text-[13px]">
                 <a
                   href="https://aide.systeme.io/article/1214-comment-fonctionne-le-workflow-de-systemeio"
@@ -564,9 +515,7 @@ export default function SettingsClient() {
           </Card>
         </TabsContent>
 
-        {/* ── Compte & Tarifs (fusionnés) ── */}
         <TabsContent value="account" className="space-y-6">
-          {/* Plan actuel */}
           <Card>
             <CardHeader>
               <CardTitle>{t("subscriptionTitle")}</CardTitle>
@@ -585,7 +534,6 @@ export default function SettingsClient() {
             </CardContent>
           </Card>
 
-          {/* Tarifs */}
           <div className="grid gap-4 md:grid-cols-3">
             {PLANS.map((plan) => {
               const isCurrent = currentPlan === plan.id || (currentPlan === "free" && plan.id === "free") || (currentPlan === "monthly" && plan.id === "pro_monthly") || (currentPlan === "yearly" && plan.id === "pro_yearly") || (currentPlan === "lifetime" && plan.id === "pro_monthly");
@@ -627,10 +575,8 @@ export default function SettingsClient() {
           </div>
           <p className="text-xs text-muted-foreground text-center">{t("paymentsManaged")}</p>
 
-          {/* Password — set or change so the user can sign in without magic link */}
           <PasswordSection />
 
-          {/* Zone danger */}
           <Card className="border-destructive/30">
             <CardHeader>
               <CardTitle className="text-destructive">{t("dangerZone")}</CardTitle>
@@ -654,9 +600,6 @@ export default function SettingsClient() {
   );
 }
 
-// Localized wrapper around SetPasswordForm. Renders in its own Card so the
-// password section in the Settings → Billing tab reads the current UI locale
-// for title, description and inline validation messages.
 function PasswordSection() {
   const t = useTranslations("resetPasswordPage");
   return (
