@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet" style="font-family:'Inter','Plus Jakarta Sans',-apple-system,system-ui,sans-serif;" role="img" aria-labelledby="t2 d2">
+  <title id="t2">Without email capture, 97% of your visitors evaporate</title>
+  <desc id="d2">Funnel visualization: out of 1,000 visitors without an email capture strategy, around 970 leave without giving any contact info and only 30 get captured</desc>
+
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5A6EF6"/>
+      <stop offset="100%" stop-color="#20BBE6"/>
+    </linearGradient>
+    <linearGradient id="lostGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#9AA0B5" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#9AA0B5" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#2E386E" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <style>
+    .bg { fill: #F6F7FB; }
+    .orb-i { fill: #5A6EF6; opacity: 0.07; }
+    .orb-c { fill: #20BBE6; opacity: 0.07; }
+    .hd { fill: #2E386E; font-weight: 900; font-size: 30px; letter-spacing: -0.03em; text-anchor: middle; }
+    .sub { fill: #6B7280; font-weight: 500; font-size: 16px; text-anchor: middle; }
+    .top-band { fill: url(#grad); }
+    .lost-band { fill: #9AA0B5; opacity: 0.25; }
+    .kept-band { fill: url(#grad); }
+    .label-big { fill: #fff; font-weight: 900; font-size: 36px; letter-spacing: -0.03em; }
+    .label-lost { fill: #6B7280; font-weight: 900; font-size: 28px; letter-spacing: -0.02em; }
+    .pct-lost { fill: #6B7280; font-weight: 900; font-size: 22px; letter-spacing: -0.02em; }
+    .pct-kept { fill: #0EA2CB; font-weight: 900; font-size: 22px; letter-spacing: -0.02em; }
+    .desc-band { fill: #6B7280; font-weight: 600; font-size: 14px; }
+    .arrow-text { fill: #9AA0B5; font-weight: 700; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1200" height="700" rx="24"/>
+  <circle class="orb-i" cx="180" cy="120" r="220"/>
+  <circle class="orb-c" cx="1020" cy="580" r="240"/>
+
+  <text class="hd" x="600" y="60">Without a capture strategy, 97% of your visitors evaporate</text>
+  <text class="sub" x="600" y="92">Out of 1,000 visitors on your site with a classic opt-in, here's what happens.</text>
+
+  <!-- ÉTAPE 1 : 1000 visiteurs au top -->
+  <g transform="translate(140, 145)" filter="url(#shadow)">
+    <rect class="top-band" x="0" y="0" width="920" height="80" rx="14"/>
+    <text class="label-big" x="40" y="50">1,000 visitors land on your site</text>
+    <text fill="rgba(255,255,255,0.85)" font-weight="700" font-size="13" x="40" y="68" letter-spacing="0.04em">EVERY MONTH, ON AVERAGE</text>
+  </g>
+
+  <!-- Flèche vers le bas avec label -->
+  <g transform="translate(600, 245)">
+    <text class="arrow-text" x="0" y="20" text-anchor="middle">no capture activated</text>
+    <line x1="0" y1="28" x2="0" y2="62" stroke="#9AA0B5" stroke-width="2" stroke-dasharray="6 4"/>
+    <polygon points="-7,62 0,72 7,62" fill="#9AA0B5"/>
+  </g>
+
+  <!-- ÉTAPE 2 : Le split — 970 lost, 30 kept -->
+  <g transform="translate(140, 335)">
+    <!-- 970 lost (occupies ~91% width = 840px) -->
+    <g filter="url(#shadow)">
+      <rect class="lost-band" x="0" y="0" width="840" height="100" rx="14"/>
+    </g>
+    <text class="label-lost" x="20" y="46">970 leave</text>
+    <text class="pct-lost" x="20" y="76">→ 97% evaporate into the digital void</text>
+
+    <!-- 30 kept (occupies ~9% = 80px) -->
+    <g filter="url(#shadow)">
+      <rect class="kept-band" x="850" y="0" width="80" height="100" rx="14"/>
+    </g>
+    <text fill="#fff" font-weight="900" font-size="22" x="890" y="46" text-anchor="middle">30</text>
+    <text fill="rgba(255,255,255,0.9)" font-weight="800" font-size="9" x="890" y="62" text-anchor="middle">CAPTURED</text>
+    <text fill="rgba(255,255,255,0.85)" font-weight="700" font-size="9" x="890" y="78" text-anchor="middle">3%</text>
+  </g>
+
+  <!-- Bottom comparison band : Avec un quiz, ça change -->
+  <g transform="translate(140, 510)">
+    <rect x="0" y="0" width="920" height="120" rx="14" fill="#fff" stroke="rgba(32,187,230,0.3)" stroke-width="1.5" filter="url(#shadow)"/>
+    <text fill="#0EA2CB" font-weight="900" font-size="13" letter-spacing="0.1em" x="32" y="34" text-transform="uppercase">WITH AN INTERACTIVE QUIZ, THE SAME PAGE DELIVERS</text>
+    <text fill="#2E386E" font-weight="900" font-size="32" letter-spacing="-0.02em" x="32" y="76">350 leads captured</text>
+    <text fill="#6B7280" font-weight="600" font-size="14" x="32" y="100">that's <tspan fill="#0EA2CB" font-weight="900">35 %</tspan> de conversion · <tspan fill="#0EA2CB" font-weight="900">12x more</tspan> than a classic opt-in.</text>
+
+    <!-- Source -->
+    <text fill="#9AA0B5" font-weight="600" font-size="11" x="900" y="100" text-anchor="end">Source: Interact + Outgrow benchmarks</text>
+  </g>
+
+  <text x="1160" y="675" fill="#9AA0B5" font-size="12" font-weight="600" text-anchor="end">— tipote.fr/tiquiz</text>
+</svg>

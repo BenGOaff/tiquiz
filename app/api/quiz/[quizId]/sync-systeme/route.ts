@@ -3,10 +3,16 @@
 // Supports two modes:
 //   1. Bulk with tag: { tagName: "..." } — syncs ALL leads and applies tag (from QuizDetailClient)
 //   2. Individual leads: { lead_ids: ["uuid",...] } — syncs specific leads using their result's tag (from LeadsShell)
+//
+// The API key used is the one attached to the quiz (quizzes.sio_api_key_id),
+// resolved via the cascade in lib/sio/resolveApiKey.ts. This means a user
+// with several SIO accounts (one per client) syncs each quiz's leads to
+// the right Systeme.io workspace automatically.
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sioUserRequest } from "@/lib/sio/userApiClient";
+import { resolveApiKey } from "@/lib/sio/resolveApiKey";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -28,17 +34,23 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "tagName or lead_ids required" }, { status: 400 });
     }
 
-    // Get API key
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("sio_user_api_key")
+    // Use the key attached to the quiz (cascading resolver). This is what
+    // makes multi-client SIO accounts work: each quiz can target a
+    // different Systeme.io workspace.
+    const { data: quizRow } = await supabaseAdmin
+      .from("quizzes")
+      .select("sio_api_key_id")
+      .eq("id", quizId)
       .eq("user_id", user.id)
       .maybeSingle();
 
-    const apiKey = String((profile as Record<string, unknown>)?.sio_user_api_key ?? "").trim();
-    if (!apiKey) {
+    const resolved = await resolveApiKey(user.id, {
+      explicitKeyId: (quizRow as { sio_api_key_id?: string | null } | null)?.sio_api_key_id ?? null,
+    });
+    if (!resolved) {
       return NextResponse.json({ ok: false, error: "No Systeme.io API key configured" }, { status: 400 });
     }
+    const apiKey = resolved.apiKey;
 
     // Determine which leads to sync
     let leadsQuery = supabaseAdmin

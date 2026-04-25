@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet" style="font-family:'Inter','Plus Jakarta Sans',-apple-system,system-ui,sans-serif;" role="img" aria-labelledby="t3 d3">
+  <title id="t3">Classic opt-in vs Interactive quiz</title>
+  <desc id="d3">Comparison between a classic opt-in with ebook converting 2 to 3% of visitors and an interactive quiz capturing 30 to 40% of visitors</desc>
+
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5A6EF6"/>
+      <stop offset="100%" stop-color="#20BBE6"/>
+    </linearGradient>
+    <linearGradient id="winBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#EEF0FE"/>
+      <stop offset="100%" stop-color="#E3F5FC"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#2E386E" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <style>
+    .bg { fill: #F6F7FB; }
+    .orb-i { fill: #5A6EF6; opacity: 0.07; }
+    .orb-c { fill: #20BBE6; opacity: 0.07; }
+    .hd { fill: #2E386E; font-weight: 900; font-size: 30px; letter-spacing: -0.03em; text-anchor: middle; }
+    .sub { fill: #6B7280; font-weight: 500; font-size: 16px; text-anchor: middle; }
+    .card-old { fill: #F0F2F7; stroke: #E6E8F0; stroke-width: 1.5; }
+    .card-win { fill: url(#winBg); stroke: rgba(32,187,230,0.3); stroke-width: 1.5; }
+    .ttl-old { fill: #6B7280; font-weight: 900; font-size: 16px; letter-spacing: 0.12em; text-transform: uppercase; }
+    .ttl-win { fill: #0EA2CB; font-weight: 900; font-size: 16px; letter-spacing: 0.12em; text-transform: uppercase; }
+    .num-big { font-weight: 900; font-size: 78px; letter-spacing: -0.04em; text-anchor: middle; }
+    .num-old { fill: #6B7280; opacity: 0.7; }
+    .num-win { fill: #0EA2CB; }
+    .num-label { font-weight: 700; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; text-anchor: middle; }
+    .feature-row { font-size: 14px; font-weight: 600; }
+    .feature-icon { font-weight: 900; font-size: 14px; }
+    .vs-circle { fill: #fff; stroke: #2E386E; stroke-width: 3; }
+    .vs-text { fill: #2E386E; font-weight: 900; font-size: 24px; letter-spacing: -0.02em; text-anchor: middle; }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1200" height="700" rx="24"/>
+  <circle class="orb-i" cx="180" cy="120" r="220"/>
+  <circle class="orb-c" cx="1020" cy="580" r="240"/>
+
+  <text class="hd" x="600" y="60">Classic opt-in vs Interactive quiz</text>
+  <text class="sub" x="600" y="92">For the same traffic, the quiz captures 10 to 15x more leads.</text>
+
+  <!-- CARD GAUCHE — Opt-in classique -->
+  <g filter="url(#shadow)">
+    <rect class="card-old" x="60" y="135" width="480" height="510" rx="22"/>
+  </g>
+  <text class="ttl-old" x="90" y="180">Classic opt-in + ebook</text>
+
+  <text class="num-big num-old" x="300" y="290">2-3%</text>
+  <text class="num-label" x="300" y="318" fill="#6B7280">OF VISITORS CAPTURED</text>
+
+  <line x1="120" y1="358" x2="480" y2="358" stroke="#E6E8F0" stroke-width="1.5"/>
+
+  <g transform="translate(120, 395)">
+    <text class="feature-icon" fill="#9AA0B5">✕</text>
+    <text class="feature-row" x="24" y="0" fill="#6B7280">Ebook read by 12% of subscribers</text>
+  </g>
+  <g transform="translate(120, 430)">
+    <text class="feature-icon" fill="#9AA0B5">✕</text>
+    <text class="feature-row" x="24" y="0" fill="#6B7280">No segmentation at entry</text>
+  </g>
+  <g transform="translate(120, 465)">
+    <text class="feature-icon" fill="#9AA0B5">✕</text>
+    <text class="feature-row" x="24" y="0" fill="#6B7280">Engagement: 3 seconds</text>
+  </g>
+  <g transform="translate(120, 500)">
+    <text class="feature-icon" fill="#9AA0B5">✕</text>
+    <text class="feature-row" x="24" y="0" fill="#6B7280">Format seen 200 times this year</text>
+  </g>
+  <g transform="translate(120, 535)">
+    <text class="feature-icon" fill="#9AA0B5">✕</text>
+    <text class="feature-row" x="24" y="0" fill="#6B7280">No offer pre-sell</text>
+  </g>
+
+  <text fill="#9AA0B5" font-weight="600" font-size="11" x="120" y="600">Source: Sumo + GetResponse benchmarks</text>
+
+  <!-- VS -->
+  <g transform="translate(600, 380)">
+    <circle class="vs-circle" cx="0" cy="0" r="42"/>
+    <text class="vs-text" x="0" y="9" text-anchor="middle">× 12</text>
+  </g>
+
+  <!-- CARD DROITE — Interactive quiz -->
+  <g filter="url(#shadow)">
+    <rect class="card-win" x="660" y="135" width="480" height="510" rx="22"/>
+  </g>
+  <text class="ttl-win" x="690" y="180">Interactive quiz</text>
+
+  <text class="num-big num-win" x="900" y="290">30-40%</text>
+  <text class="num-label" x="900" y="318" fill="#0EA2CB">OF VISITORS CAPTURED</text>
+
+  <line x1="720" y1="358" x2="1080" y2="358" stroke="rgba(32,187,230,0.2)" stroke-width="1.5"/>
+
+  <g transform="translate(720, 395)">
+    <text class="feature-icon" fill="#20BBE6">✓</text>
+    <text class="feature-row" x="24" y="0" fill="#0EA2CB">4 minutes of active engagement</text>
+  </g>
+  <g transform="translate(720, 430)">
+    <text class="feature-icon" fill="#20BBE6">✓</text>
+    <text class="feature-row" x="24" y="0" fill="#0EA2CB">Auto segmentation into 4 profiles</text>
+  </g>
+  <g transform="translate(720, 465)">
+    <text class="feature-icon" fill="#20BBE6">✓</text>
+    <text class="feature-row" x="24" y="0" fill="#0EA2CB">Playful engagement = shared</text>
+  </g>
+  <g transform="translate(720, 500)">
+    <text class="feature-icon" fill="#20BBE6">✓</text>
+    <text class="feature-row" x="24" y="0" fill="#0EA2CB">Fresh format, still uncommon</text>
+  </g>
+  <g transform="translate(720, 535)">
+    <text class="feature-icon" fill="#20BBE6">✓</text>
+    <text class="feature-row" x="24" y="0" fill="#0EA2CB">Result page = pre-sell</text>
+  </g>
+
+  <text fill="#9AA0B5" font-weight="600" font-size="11" x="720" y="600">Source: Interact + Outgrow benchmarks</text>
+
+  <text x="1160" y="675" fill="#9AA0B5" font-size="12" font-weight="600" text-anchor="end">— tipote.fr/tiquiz</text>
+</svg>

@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet" style="font-family:'Inter','Plus Jakarta Sans',-apple-system,system-ui,sans-serif;" role="img" aria-labelledby="t4 d4">
+  <title id="t4">The triple effect of the interactive quiz</title>
+  <desc id="d4">The quiz does three things at once: it captures the visitor's email, qualifies their profile, and pre-sells the matching offer</desc>
+
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5A6EF6"/>
+      <stop offset="100%" stop-color="#20BBE6"/>
+    </linearGradient>
+    <linearGradient id="softBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#EEF0FE"/>
+      <stop offset="100%" stop-color="#E3F5FC"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#2E386E" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <style>
+    .bg { fill: #F6F7FB; }
+    .orb-i { fill: #5A6EF6; opacity: 0.07; }
+    .orb-c { fill: #20BBE6; opacity: 0.07; }
+    .hd { fill: #2E386E; font-weight: 900; font-size: 30px; letter-spacing: -0.03em; text-anchor: middle; }
+    .sub { fill: #6B7280; font-weight: 500; font-size: 16px; text-anchor: middle; }
+    .step-card { fill: #fff; stroke: rgba(32,187,230,0.25); stroke-width: 1.5; }
+    .step-num-circle { fill: url(#grad); }
+    .step-num { fill: #fff; font-weight: 900; font-size: 24px; letter-spacing: -0.02em; text-anchor: middle; }
+    .step-icon-bg { fill: url(#softBg); }
+    .step-title { fill: #2E386E; font-weight: 900; font-size: 22px; letter-spacing: -0.02em; }
+    .step-desc { fill: #6B7280; font-weight: 500; font-size: 14px; line-height: 1.5; }
+    .step-stat { fill: #0EA2CB; font-weight: 800; font-size: 13px; }
+    .arrow-flow { stroke: #20BBE6; stroke-width: 3; stroke-dasharray: 8 6; }
+    .bottom-band { fill: url(#grad); }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1200" height="700" rx="24"/>
+  <circle class="orb-i" cx="180" cy="120" r="220"/>
+  <circle class="orb-c" cx="1020" cy="580" r="240"/>
+
+  <text class="hd" x="600" y="60">The quiz does 3 things at once</text>
+  <text class="sub" x="600" y="92">Where the classic opt-in only does one (and not even well).</text>
+
+  <!-- ÉTAPE 1 : Capte l'email -->
+  <g transform="translate(60, 145)" filter="url(#shadow)">
+    <rect class="step-card" x="0" y="0" width="350" height="380" rx="22"/>
+  </g>
+
+  <g transform="translate(105, 195)">
+    <circle class="step-num-circle" cx="0" cy="0" r="32"/>
+    <text class="step-num" x="0" y="9">1</text>
+  </g>
+
+  <g transform="translate(155, 165)">
+    <rect class="step-icon-bg" x="0" y="0" width="60" height="60" rx="14"/>
+    <text x="30" y="40" fill="#0EA2CB" font-weight="900" font-size="28" text-anchor="middle">@</text>
+  </g>
+
+  <text class="step-title" x="90" y="285">It captures the email</text>
+  <text class="step-desc" x="90" y="320">The visitor plays a game, so they</text>
+  <text class="step-desc" x="90" y="340">naturally accept to leave</text>
+  <text class="step-desc" x="90" y="360">their email to see their results.</text>
+
+  <text class="step-stat" x="90" y="405">Conversion: 30 to 40%</text>
+  <text fill="#9AA0B5" font-weight="600" font-size="11" x="90" y="425">vs 2-3% with classic opt-in</text>
+
+  <text class="step-desc" x="90" y="475" fill="#9AA0B5" font-style="italic">"4 minutes of attention is</text>
+  <text class="step-desc" x="90" y="495" fill="#9AA0B5" font-style="italic">already half a sales call."</text>
+
+  <!-- ÉTAPE 2 : Qualifie le prospect -->
+  <g transform="translate(425, 145)" filter="url(#shadow)">
+    <rect class="step-card" x="0" y="0" width="350" height="380" rx="22"/>
+  </g>
+
+  <g transform="translate(470, 195)">
+    <circle class="step-num-circle" cx="0" cy="0" r="32"/>
+    <text class="step-num" x="0" y="9">2</text>
+  </g>
+
+  <g transform="translate(520, 165)">
+    <rect class="step-icon-bg" x="0" y="0" width="60" height="60" rx="14"/>
+    <text x="30" y="40" fill="#0EA2CB" font-weight="900" font-size="22" text-anchor="middle">⊞</text>
+  </g>
+
+  <text class="step-title" x="455" y="285">It qualifies the prospect</text>
+  <text class="step-desc" x="455" y="320">Every quiz answer tells you</text>
+  <text class="step-desc" x="455" y="340">who they are: profile, level,</text>
+  <text class="step-desc" x="455" y="360">real needs.</text>
+
+  <text class="step-stat" x="455" y="405">4 profiles detected</text>
+  <text fill="#9AA0B5" font-weight="600" font-size="11" x="455" y="425">tag auto-applied in Systeme io</text>
+
+  <text class="step-desc" x="455" y="475" fill="#9AA0B5" font-style="italic">"Never again the same generic</text>
+  <text class="step-desc" x="455" y="495" fill="#9AA0B5" font-style="italic">email to your entire list."</text>
+
+  <!-- ÉTAPE 3 : Pré-vend l'offre -->
+  <g transform="translate(790, 145)" filter="url(#shadow)">
+    <rect class="step-card" x="0" y="0" width="350" height="380" rx="22"/>
+  </g>
+
+  <g transform="translate(835, 195)">
+    <circle class="step-num-circle" cx="0" cy="0" r="32"/>
+    <text class="step-num" x="0" y="9">3</text>
+  </g>
+
+  <g transform="translate(885, 165)">
+    <rect class="step-icon-bg" x="0" y="0" width="60" height="60" rx="14"/>
+    <text x="30" y="40" fill="#0EA2CB" font-weight="900" font-size="22" text-anchor="middle">→</text>
+  </g>
+
+  <text class="step-title" x="820" y="285">It pre-sells the offer</text>
+  <text class="step-desc" x="820" y="320">The result page sends the</text>
+  <text class="step-desc" x="820" y="340">visitor to the offer matching</text>
+  <text class="step-desc" x="820" y="360">their exact profile.</text>
+
+  <text class="step-stat" x="820" y="405">CTA customized per profile</text>
+  <text fill="#9AA0B5" font-weight="600" font-size="11" x="820" y="425">offer conversion × 5 to 7</text>
+
+  <text class="step-desc" x="820" y="475" fill="#9AA0B5" font-style="italic">"The visitor leaves the quiz</text>
+  <text class="step-desc" x="820" y="495" fill="#9AA0B5" font-style="italic">already warmed up for your offer."</text>
+
+  <!-- Flow arrows between cards -->
+  <g transform="translate(410, 335)">
+    <line class="arrow-flow" x1="0" y1="0" x2="14" y2="0"/>
+  </g>
+  <g transform="translate(775, 335)">
+    <line class="arrow-flow" x1="0" y1="0" x2="14" y2="0"/>
+  </g>
+
+  <!-- Bottom band -->
+  <g transform="translate(60, 555)">
+    <rect class="bottom-band" x="0" y="0" width="1080" height="80" rx="18"/>
+    <text fill="#fff" font-weight="900" font-size="22" letter-spacing="-0.02em" x="40" y="38">Instead of an opt-in doing one thing (badly),</text>
+    <text fill="#fff" font-weight="900" font-size="22" letter-spacing="-0.02em" x="40" y="64">you're doing 3 things at once. With zero extra effort.</text>
+  </g>
+
+  <text x="1160" y="675" fill="#9AA0B5" font-size="12" font-weight="600" text-anchor="end">— tipote.fr/tiquiz</text>
+</svg>

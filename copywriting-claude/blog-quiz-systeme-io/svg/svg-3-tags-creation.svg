@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid meet" style="font-family:'Inter','Plus Jakarta Sans',-apple-system,system-ui,sans-serif;" role="img" aria-labelledby="tqTagsTitle tqTagsDesc">
+  <title id="tqTagsTitle">Création des tags Systeme.io pour chaque profil de quiz</title>
+  <desc id="tqTagsDesc">Visualisation de la création de plusieurs tags dans Systeme.io qui correspondront aux profils de résultat du quiz</desc>
+
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5A6EF6"/>
+      <stop offset="100%" stop-color="#20BBE6"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#2E386E" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <style>
+    .bg { fill: #F6F7FB; }
+    .orb-i { fill: #5A6EF6; opacity: 0.07; }
+    .orb-c { fill: #20BBE6; opacity: 0.07; }
+    .hd { fill: #2E386E; font-weight: 900; font-size: 28px; letter-spacing: -0.03em; text-anchor: middle; }
+    .sub { fill: #6B7280; font-weight: 500; font-size: 15px; text-anchor: middle; }
+    .panel { fill: #fff; stroke: #E6E8F0; stroke-width: 1.5; }
+    .panel-head { fill: #2E386E; }
+    .panel-title { fill: #fff; font-weight: 800; font-size: 14px; }
+    .row { fill: #fff; stroke: #F0F2F7; }
+    .row-alt { fill: #F6F7FB; }
+    .tag-text { fill: #2E386E; font-weight: 800; font-size: 14px; font-family: 'Courier New', monospace; }
+    .tag-desc { fill: #6B7280; font-weight: 500; font-size: 12px; }
+    .col-title { fill: #9AA0B5; font-weight: 700; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .step-pill { fill: #20BBE6; }
+    .step-pill-text { fill: #fff; font-weight: 900; font-size: 11px; letter-spacing: 0.08em; }
+    .arrow-label { fill: #0EA2CB; font-weight: 800; font-size: 13px; }
+
+    /* Anim retirée — les cartes sont visibles en permanence */
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1200" height="600" rx="24"/>
+  <circle class="orb-i" cx="160" cy="120" r="200"/>
+  <circle class="orb-c" cx="1040" cy="500" r="220"/>
+
+  <text class="hd" x="600" y="55">Tu prépares tes tags Systeme.io en amont</text>
+  <text class="sub" x="600" y="84">Un tag par profil de résultat de ton quiz. C'est ce qui déclenchera tes workflows.</text>
+
+  <!-- Quiz profile cards (left) -->
+  <g transform="translate(80, 140)">
+    <text class="col-title" x="0" y="0">Profils du quiz</text>
+    <g transform="translate(0, 20)">
+      <g class="row-anim row-d1">
+        <rect x="0" y="0" width="280" height="72" rx="14" fill="#fff" stroke="#E6E8F0"/>
+        <circle cx="32" cy="36" r="18" fill="#5A6EF6"/>
+        <text x="32" y="42" fill="#fff" font-weight="900" font-size="14" text-anchor="middle">D</text>
+        <text class="tag-text" x="62" y="33" font-family="Inter" font-size="15">Débutant</text>
+        <text class="tag-desc" x="62" y="52">Niveau 1 · découvre le sujet</text>
+      </g>
+    </g>
+    <g transform="translate(0, 110)">
+      <g class="row-anim row-d2">
+        <rect x="0" y="0" width="280" height="72" rx="14" fill="#fff" stroke="#E6E8F0"/>
+        <circle cx="32" cy="36" r="18" fill="#20BBE6"/>
+        <text x="32" y="42" fill="#fff" font-weight="900" font-size="14" text-anchor="middle">M</text>
+        <text class="tag-text" x="62" y="33" font-family="Inter" font-size="15">Motivée</text>
+        <text class="tag-desc" x="62" y="52">Niveau 2 · prête à acheter</text>
+      </g>
+    </g>
+    <g transform="translate(0, 200)">
+      <g class="row-anim row-d3">
+        <rect x="0" y="0" width="280" height="72" rx="14" fill="#fff" stroke="#E6E8F0"/>
+        <circle cx="32" cy="36" r="18" fill="#3F4DBA"/>
+        <text x="32" y="42" fill="#fff" font-weight="900" font-size="14" text-anchor="middle">P</text>
+        <text class="tag-text" x="62" y="33" font-family="Inter" font-size="15">Pragmatique</text>
+        <text class="tag-desc" x="62" y="52">Niveau 3 · veut un système</text>
+      </g>
+    </g>
+    <g transform="translate(0, 290)">
+      <g class="row-anim row-d4">
+        <rect x="0" y="0" width="280" height="72" rx="14" fill="#fff" stroke="#E6E8F0"/>
+        <circle cx="32" cy="36" r="18" fill="#0EA2CB"/>
+        <text x="32" y="42" fill="#fff" font-weight="900" font-size="14" text-anchor="middle">A</text>
+        <text class="tag-text" x="62" y="33" font-family="Inter" font-size="15">Avancé</text>
+        <text class="tag-desc" x="62" y="52">Niveau 4 · cherche du premium</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Arrows -->
+  <g transform="translate(420, 200)">
+    <line x1="0" y1="0" x2="80" y2="0" stroke="#20BBE6" stroke-width="3" stroke-dasharray="8 6" stroke-linecap="round"/>
+    <polygon points="80,-6 92,0 80,6" fill="#20BBE6"/>
+  </g>
+  <g transform="translate(420, 290)">
+    <line x1="0" y1="0" x2="80" y2="0" stroke="#20BBE6" stroke-width="3" stroke-dasharray="8 6" stroke-linecap="round"/>
+    <polygon points="80,-6 92,0 80,6" fill="#20BBE6"/>
+  </g>
+  <g transform="translate(420, 380)">
+    <line x1="0" y1="0" x2="80" y2="0" stroke="#20BBE6" stroke-width="3" stroke-dasharray="8 6" stroke-linecap="round"/>
+    <polygon points="80,-6 92,0 80,6" fill="#20BBE6"/>
+  </g>
+  <g transform="translate(420, 470)">
+    <line x1="0" y1="0" x2="80" y2="0" stroke="#20BBE6" stroke-width="3" stroke-dasharray="8 6" stroke-linecap="round"/>
+    <polygon points="80,-6 92,0 80,6" fill="#20BBE6"/>
+  </g>
+
+  <!-- Systeme.io tags panel (right) -->
+  <g filter="url(#shadow)" transform="translate(540, 140)">
+    <rect x="0" y="0" width="580" height="380" rx="16" fill="#fff" stroke="#E6E8F0"/>
+    <rect x="0" y="0" width="580" height="46" rx="16" fill="#2E386E"/>
+    <rect x="0" y="30" width="580" height="16" fill="#2E386E"/>
+    <text x="20" y="30" fill="#fff" font-weight="900" font-size="14">Systeme.io · CRM › Tags</text>
+    <rect x="500" y="12" width="65" height="22" rx="6" fill="url(#grad)"/>
+    <text x="532" y="27" fill="#fff" font-weight="800" font-size="11" text-anchor="middle">+ Ajouter</text>
+
+    <!-- Tag rows -->
+    <g transform="translate(0, 60)">
+      <rect x="0" y="0" width="580" height="62" fill="#F6F7FB"/>
+      <g transform="translate(20, 14)">
+        <rect x="0" y="0" width="120" height="34" rx="6" fill="#EEF0FE" stroke="#5A6EF6"/>
+        <text x="60" y="22" fill="#5A6EF6" font-weight="800" font-size="13" text-anchor="middle" font-family="Courier New">quiz-debutant</text>
+      </g>
+      <text x="170" y="28" fill="#6B7280" font-size="13" font-weight="500">Profil détecté : Débutant</text>
+      <text x="170" y="46" fill="#9AA0B5" font-size="11">→ déclenchera : "Workflow Découverte"</text>
+    </g>
+
+    <g transform="translate(0, 122)">
+      <rect x="0" y="0" width="580" height="62" fill="#fff"/>
+      <g transform="translate(20, 14)">
+        <rect x="0" y="0" width="120" height="34" rx="6" fill="#E3F5FC" stroke="#20BBE6"/>
+        <text x="60" y="22" fill="#0EA2CB" font-weight="800" font-size="13" text-anchor="middle" font-family="Courier New">quiz-motivee</text>
+      </g>
+      <text x="170" y="28" fill="#6B7280" font-size="13" font-weight="500">Profil détecté : Motivée</text>
+      <text x="170" y="46" fill="#9AA0B5" font-size="11">→ déclenchera : "Workflow Programme à 197 €"</text>
+    </g>
+
+    <g transform="translate(0, 184)">
+      <rect x="0" y="0" width="580" height="62" fill="#F6F7FB"/>
+      <g transform="translate(20, 14)">
+        <rect x="0" y="0" width="140" height="34" rx="6" fill="#EEF0FE" stroke="#3F4DBA"/>
+        <text x="70" y="22" fill="#3F4DBA" font-weight="800" font-size="13" text-anchor="middle" font-family="Courier New">quiz-pragmatique</text>
+      </g>
+      <text x="190" y="28" fill="#6B7280" font-size="13" font-weight="500">Profil détecté : Pragmatique</text>
+      <text x="190" y="46" fill="#9AA0B5" font-size="11">→ déclenchera : "Workflow Accompagnement"</text>
+    </g>
+
+    <g transform="translate(0, 246)">
+      <rect x="0" y="0" width="580" height="62" fill="#fff"/>
+      <g transform="translate(20, 14)">
+        <rect x="0" y="0" width="120" height="34" rx="6" fill="#E3F5FC" stroke="#0EA2CB"/>
+        <text x="60" y="22" fill="#0EA2CB" font-weight="800" font-size="13" text-anchor="middle" font-family="Courier New">quiz-avance</text>
+      </g>
+      <text x="170" y="28" fill="#6B7280" font-size="13" font-weight="500">Profil détecté : Avancé</text>
+      <text x="170" y="46" fill="#9AA0B5" font-size="11">→ déclenchera : "Workflow Premium 1 497 €"</text>
+    </g>
+
+    <g transform="translate(0, 320)">
+      <text x="20" y="32" fill="#9AA0B5" font-size="12" font-weight="600">À chaque tag posé par Tiquiz, le bon workflow Systeme.io se déclenche tout seul.</text>
+    </g>
+  </g>
+
+  <text x="1160" y="580" fill="#9AA0B5" font-size="12" font-weight="600" text-anchor="end">— tipote.fr/tiquiz</text>
+</svg>
