@@ -1,5 +1,10 @@
 // app/api/profile/route.ts
 // GET: fetch user profile | PATCH: update profile settings
+//
+// Note: sio_user_api_key / sio_api_key_name are no longer in the whitelist.
+// Those legacy columns now feed the lazy migration only — new keys are
+// registered through /api/sio-api-keys, encrypted at rest, and managed
+// from Settings via SioApiKeysManager.
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -16,7 +21,6 @@ export async function GET() {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    // Auto-create profile if missing
     if (!profile) {
       const { data: newProfile } = await supabaseAdmin
         .from("profiles")
@@ -47,10 +51,8 @@ export async function PATCH(req: NextRequest) {
 
     const body = await req.json();
 
-    // Whitelist updatable fields
     const allowed = [
       "full_name", "ui_locale", "address_form", "privacy_url",
-      "sio_user_api_key", "sio_api_key_name",
       "brand_logo_url", "brand_color_primary", "brand_color_accent",
       "brand_font", "brand_tone", "brand_website_url",
       "target_audience",
