@@ -1,30 +1,30 @@
 // app/api/systeme-io/tags/route.ts
-// GET user's Systeme.io tags (paginated)
-import { NextResponse } from "next/server";
+// GET user's Systeme.io tags (paginated). Accepts ?keyId= so the quiz
+// editor can preview the tags of a specific key without changing the
+// user's default.
+import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sioUserRequest } from "@/lib/sio/userApiClient";
+import { resolveApiKey } from "@/lib/sio/resolveApiKey";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const supabase = await getSupabaseServerClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
 
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("sio_user_api_key")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    const apiKey = String((profile as Record<string, unknown>)?.sio_user_api_key ?? "").trim();
-    if (!apiKey) {
+    const explicitKeyId = req.nextUrl.searchParams.get("keyId");
+    const resolved = await resolveApiKey(user.id, { explicitKeyId });
+    if (!resolved) {
       return NextResponse.json({ ok: false, error: "NO_API_KEY", tags: [] });
     }
 
-    const res = await sioUserRequest<{ items: { id: number; name: string }[] }>(apiKey, "/tags?limit=100");
+    const res = await sioUserRequest<{ items: { id: number; name: string }[] }>(
+      resolved.apiKey,
+      "/tags?limit=100",
+    );
     if (!res.ok) {
       return NextResponse.json({ ok: false, error: res.error, tags: [] }, { status: 400 });
     }

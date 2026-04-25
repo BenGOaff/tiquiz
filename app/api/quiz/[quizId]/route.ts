@@ -8,6 +8,8 @@ import { sanitizeRichText } from "@/lib/richText";
 // Fields accepting rich-text HTML (bold, italic, links, images, alignment).
 const RICH_TEXT_FIELDS = ["introduction"] as const;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ quizId: string }> };
@@ -105,6 +107,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "brand_font", "brand_color_primary", "brand_color_background",
       "start_button_text",
       "result_insight_heading", "result_projection_heading",
+      "sio_api_key_id",
     ];
 
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -133,6 +136,28 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       if (key in patch) {
         const val = patch[key];
         if (val !== null && (typeof val !== "string" || !hexRe.test(val))) patch[key] = null;
+      }
+    }
+
+    // sio_api_key_id: must be a UUID owned by this user, or null. We re-check
+    // ownership against sio_api_keys so the editor cannot smuggle a key-id
+    // belonging to another user via a forged PATCH body.
+    if ("sio_api_key_id" in patch) {
+      const val = patch.sio_api_key_id;
+      if (val === null || val === "") {
+        patch.sio_api_key_id = null;
+      } else if (typeof val !== "string" || !UUID_RE.test(val)) {
+        return NextResponse.json({ ok: false, error: "Invalid sio_api_key_id" }, { status: 400 });
+      } else {
+        const { data: keyRow } = await supabase
+          .from("sio_api_keys")
+          .select("id")
+          .eq("id", val)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (!keyRow) {
+          return NextResponse.json({ ok: false, error: "sio_api_key_id not found" }, { status: 400 });
+        }
       }
     }
 
