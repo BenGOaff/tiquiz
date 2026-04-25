@@ -3,10 +3,19 @@
 // GET: fetch active quiz data
 // POST: submit lead (email capture) + auto-send to Systeme.io with result tag
 // PATCH: mark share + auto-apply share tag in Systeme.io
+//
+// SIO KEY RESOLUTION
+// ------------------
+// The API key used to sync each lead is resolved through the cascade in
+// lib/sio/resolveApiKey.ts: explicit quiz.sio_api_key_id → user default →
+// any user key → legacy plaintext column. This guarantees that when a
+// funnel-builder manages multiple Systeme.io workspaces (one per client),
+// every lead lands in the workspace attached to its quiz — never another.
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveQuizBranding } from "@/lib/quizBranding";
+import { resolveApiKey } from "@/lib/sio/resolveApiKey";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -18,10 +27,6 @@ const SIO_BASE = "https://api.systeme.io/api";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/**
- * Resolves the "[quizId]" URL segment — which may be a UUID or a custom slug —
- * to the real quiz row's id. Returns null if not found/inactive.
- */
 async function resolveQuizId(
   admin: typeof supabaseAdmin,
   slugOrId: string,
@@ -30,20 +35,16 @@ async function resolveQuizId(
   const needle = slugOrId.trim();
   if (!needle) return null;
 
-  // Try UUID direct first
   if (UUID_RE.test(needle)) {
     const q = admin.from("quizzes").select("id").eq("id", needle);
     const { data } = opts.requireActive ? await q.eq("status", "active").maybeSingle() : await q.maybeSingle();
     if (data?.id) return data.id as string;
   }
 
-  // Fallback: slug (case-insensitive)
   const q = admin.from("quizzes").select("id").ilike("slug", needle);
   const { data } = opts.requireActive ? await q.eq("status", "active").maybeSingle() : await q.maybeSingle();
   return (data?.id as string) ?? null;
 }
-
-// ── Systeme.io helpers ──────────────────────────────────────────
 
 async function sioFetch(
   apiKey: string,
@@ -215,7 +216,6 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
     }
 
-    // Resolve address_form (quiz-level overrides profile-level) + fallback privacy_url + branding
     const quizRow = quizRes.data as Record<string, unknown>;
     const quizUserId = quizRow.user_id as string | undefined;
     const quizAddressForm = quizRow.address_form as string | null;
@@ -236,7 +236,6 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       fallbackPrivacyUrl = String(profileRow?.privacy_url ?? "").trim();
     }
 
-    // Compute resolved branding for the visitor
     const branding = resolveQuizBranding(
       {
         brand_font: quizRow.brand_font as string | null,
@@ -250,16 +249,11 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       },
     );
 
-    // Only paid plans can override the Tiquiz footer. Free plan → footer ignored.
     const plan = String(profileRow?.plan ?? "free").trim();
     const isPaid = plan === "lifetime" || plan === "monthly" || plan === "yearly";
     const customFooterText = isPaid ? (quizRow.custom_footer_text as string | null) : null;
     const customFooterUrl = isPaid ? (quizRow.custom_footer_url as string | null) : null;
 
-    // Increment view count atomically. The previous SELECT-then-UPDATE
-    // pattern lost increments under concurrent load: two visitors would
-    // read the same stale count and both write "+1", losing one hit.
-    // The RPC already exists and is used for starts_count / completions_count.
     admin
       .rpc("increment_quiz_counter", { quiz_id_input: quizId, counter_name: "views_count" })
       .then(() => {})
@@ -308,8 +302,6 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     const email = String(body.email ?? "").trim().toLowerCase();
-    // Reject malformed addresses ("a@", "@b", "foo@bar" without a TLD) so the
-    // lead list isn't polluted and the Systeme.io sync doesn't reject them.
     if (!EMAIL_RE.test(email)) {
       return NextResponse.json({ ok: false, error: "Valid email required" }, { status: 400 });
     }
@@ -319,9 +311,12 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
     }
 
+    // Pull sio_api_key_id alongside user_id so the right SIO workspace
+    // gets the lead. Reading both in one query avoids any race where the
+    // editor changes the attached key between SELECT and sync.
     const { data: quiz } = await admin
       .from("quizzes")
-      .select("id, user_id, title")
+      .select("id, user_id, title, sio_api_key_id")
       .eq("id", quizId)
       .maybeSingle();
 
@@ -329,11 +324,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
     }
 
-    // ── Check response limit for free plan ──
     try {
       const { data: limitResult } = await admin.rpc("increment_response_count", { p_user_id: quiz.user_id });
       if (limitResult && typeof limitResult === "object" && (limitResult as Record<string, unknown>).allowed === false) {
-        // Still save the lead but mark the quiz owner has hit limit
         console.warn(`[Tiquiz] Quiz owner ${quiz.user_id} hit response limit`);
       }
     } catch {
@@ -373,21 +366,23 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
 
-    // ── Auto-send to Systeme.io (non-blocking) ──
     if (lead?.id) {
       const leadId = lead.id;
+      const quizUserId = quiz.user_id;
+      const quizSioApiKeyId = (quiz as { sio_api_key_id?: string | null }).sio_api_key_id ?? null;
+
       (async () => {
         try {
-          const { data: profile } = await admin
-            .from("profiles")
-            .select("sio_user_api_key")
-            .eq("user_id", quiz.user_id)
-            .maybeSingle();
+          // Cascade: explicit quiz key → user default → any user key →
+          // legacy plaintext. The user_id scoping inside resolveApiKey
+          // guarantees we can NEVER pick a key belonging to another user,
+          // even if a corrupted FK pointed somewhere foreign.
+          const resolved = await resolveApiKey(quizUserId, {
+            explicitKeyId: quizSioApiKeyId,
+          });
+          if (!resolved) return;
+          const apiKey = resolved.apiKey;
 
-          const apiKey = String((profile as Record<string, unknown>)?.sio_user_api_key ?? "").trim();
-          if (!apiKey) return;
-
-          // Fetch result details (if any)
           let sioTagName = "";
           let courseId = "";
           let communityId = "";
@@ -404,7 +399,6 @@ export async function POST(req: NextRequest, context: RouteContext) {
             resultTitle = String((result as Record<string, unknown>)?.title ?? "").trim();
           }
 
-          // Ensure contact once, then apply the result tag
           const sioContactId = await ensureSioContact(apiKey, email, {
             firstName: firstName || undefined,
             surname: lastName || undefined,
@@ -432,8 +426,6 @@ export async function POST(req: NextRequest, context: RouteContext) {
           if (courseId) await enrollInSioCourse(apiKey, courseId, sioContactId);
           if (communityId) await addToSioCommunity(apiKey, communityId, sioContactId);
 
-          // Update lead sync status in DB. Also clear any previous error
-          // markers since the sync succeeded this time.
           await admin
             .from("quiz_leads")
             .update({
@@ -446,10 +438,6 @@ export async function POST(req: NextRequest, context: RouteContext) {
             .eq("id", leadId);
         } catch (e) {
           console.error("[Systeme.io auto-tag POST] Error:", e);
-          // Record the failure on the lead so a future dashboard panel
-          // can surface "N leads failed to sync to Systeme.io" and offer a
-          // retry button. Previously these errors were only in server
-          // logs and the lead silently stayed at sio_synced=false forever.
           try {
             await admin
               .from("quiz_leads")
@@ -498,10 +486,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Valid email required" }, { status: 400 });
     }
 
-    // Mark share — and verify the row actually matched a lead. Previously a
-    // PATCH with a bogus/unknown email silently matched 0 rows and still
-    // returned ok:true while incrementing shares_count, so the visitor
-    // thought they'd unlocked the bonus but no lead was credited.
     const { data: updatedLeads, error: updateErr } = await admin
       .from("quiz_leads")
       .update({ has_shared: true, bonus_unlocked: true })
@@ -514,38 +498,39 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     if (!updatedLeads || updatedLeads.length === 0) {
-      // No lead exists for this (quiz, email): don't credit the share and
-      // don't pretend the bonus is unlocked. Client can recover by
-      // re-capturing the email first.
       return NextResponse.json(
         { ok: false, error: "Lead not found for this email" },
         { status: 404 },
       );
     }
 
+    // Pull sio_api_key_id so the share tag is applied on the same SIO
+    // workspace as the lead's original capture sync.
     const { data: quiz } = await admin
       .from("quizzes")
-      .select("sio_share_tag_name, user_id")
+      .select("sio_share_tag_name, user_id, sio_api_key_id")
       .eq("id", quizId)
       .maybeSingle();
 
     if (quiz) {
-      // Atomic increment; see GET for rationale.
       await admin
         .rpc("increment_quiz_counter", { quiz_id_input: quizId, counter_name: "shares_count" });
 
-      const shareTagName = String((quiz as Record<string, unknown>).sio_share_tag_name ?? "").trim();
-      if (shareTagName && (quiz as Record<string, unknown>).user_id) {
+      const quizRow = quiz as { sio_share_tag_name?: string | null; user_id?: string; sio_api_key_id?: string | null };
+      const shareTagName = String(quizRow.sio_share_tag_name ?? "").trim();
+      const quizUserId = quizRow.user_id;
+      const quizSioApiKeyId = quizRow.sio_api_key_id ?? null;
+
+      if (shareTagName && quizUserId) {
         (async () => {
           try {
-            const { data: profile } = await admin
-              .from("profiles")
-              .select("sio_user_api_key")
-              .eq("user_id", (quiz as Record<string, unknown>).user_id as string)
-              .maybeSingle();
-            const apiKey = String((profile as Record<string, unknown>)?.sio_user_api_key ?? "").trim();
-            if (!apiKey) return;
-            await applyTagToContact(apiKey, email, shareTagName);
+            // Same cascade as POST so the share tag lands in the same
+            // workspace where the lead lives.
+            const resolved = await resolveApiKey(quizUserId, {
+              explicitKeyId: quizSioApiKeyId,
+            });
+            if (!resolved) return;
+            await applyTagToContact(resolved.apiKey, email, shareTagName);
           } catch (e) {
             console.error("[Systeme.io auto-tag PATCH] Error:", e);
           }
