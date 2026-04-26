@@ -52,7 +52,7 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
 
     const allowed = [
-      "full_name", "ui_locale", "address_form", "privacy_url",
+      "full_name", "ui_locale", "content_locale", "address_form", "privacy_url",
       "brand_logo_url", "brand_color_primary", "brand_color_accent",
       "brand_font", "brand_tone", "brand_website_url",
       "target_audience",

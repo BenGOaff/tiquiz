@@ -14,7 +14,7 @@ import {
   Tag as TagIcon, Workflow, AlertTriangle, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import SetPasswordForm from "@/components/auth/SetPasswordForm";
 import SioApiKeysManager from "@/components/sio/SioApiKeysManager";
@@ -23,6 +23,7 @@ type Profile = {
   full_name: string | null;
   email: string | null;
   ui_locale: string | null;
+  content_locale: string | null;
   address_form: string | null;
   privacy_url: string | null;
   plan: string | null;
@@ -88,6 +89,7 @@ export default function SettingsClient() {
   const [profile, setProfile] = useState<Profile | null>(null);
 
   const [addressForm, setAddressForm] = useState("tu");
+  const [contentLocale, setContentLocale] = useState("fr");
   const [privacyUrl, setPrivacyUrl] = useState("");
   const [targetAudience, setTargetAudience] = useState("");
 
@@ -107,6 +109,7 @@ export default function SettingsClient() {
           const p = data.profile;
           setProfile(p);
           setAddressForm(p.address_form ?? "tu");
+          setContentLocale(p.content_locale ?? "fr");
           setPrivacyUrl(p.privacy_url ?? "");
           setTargetAudience(p.target_audience ?? "");
           setBrandLogoUrl(p.brand_logo_url ?? "");
@@ -128,6 +131,7 @@ export default function SettingsClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           address_form: addressForm,
+          content_locale: contentLocale,
           privacy_url: privacyUrl.trim() || null,
           target_audience: targetAudience.trim() || null,
           brand_logo_url: brandLogoUrl.trim() || null,
@@ -223,11 +227,21 @@ export default function SettingsClient() {
         <TabsContent value="general" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>{t("languageTitle")}</CardTitle>
-              <CardDescription>{t("languageDesc")}</CardDescription>
+              <CardTitle>{t("contentLocaleTitle")}</CardTitle>
+              <CardDescription>{t("contentLocaleDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
-              <LanguageSwitcher />
+              <LanguageCombobox
+                value={contentLocale}
+                onValueChange={setContentLocale}
+                strings={{
+                  placeholder: t("contentLocalePlaceholder"),
+                  searchPlaceholder: t("contentLocaleSearchPlaceholder"),
+                  popularHeading: t("contentLocalePopularHeading"),
+                  allHeading: t("contentLocaleAllHeading"),
+                  noResults: t("contentLocaleNoResults"),
+                }}
+              />
             </CardContent>
           </Card>
 
