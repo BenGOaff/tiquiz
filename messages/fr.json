@@ -380,8 +380,8 @@
     "aiChatBriefApplied": "Génération en cours…",
     "aiPersonalizeLabel": "Personnalisation dynamique",
     "aiPersonalizeHint": "Adapte questions, résultats et CTA au visiteur. L'IA produit directement les variantes si tu actives les options ci-dessous.",
-    "aiAskFirstName": "Demander le prénom (utilise {name} dans les textes)",
-    "aiAskGender": "Demander le genre (utilise {m|f|x} pour 3 variantes)",
+    "aiAskFirstName": "Demander le prénom",
+    "aiAskGender": "Demander le genre",
     "result1Default": "Résultat 1",
     "result2Default": "Résultat 2",
     "result3Default": "Résultat 3",
@@ -840,5 +840,9 @@
     "seeResult": "Voir mon résultat",
     "fallbackResultTitle": "Ton profil",
     "fallbackResultDesc": "Description du résultat..."
+  },
+  "quizVars": {
+    "insertNameTitle": "Insérer le prénom du visiteur ({name})",
+    "insertGenderTitle": "Insérer une variante selon le genre — masculin | féminin | non-binaire (ex : cher | chère | cher·e)"
   }
 }

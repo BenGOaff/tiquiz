@@ -380,8 +380,8 @@
     "aiChatBriefApplied": "Generando…",
     "aiPersonalizeLabel": "Personalización dinámica",
     "aiPersonalizeHint": "Adapta preguntas, resultados y CTAs al visitante. La IA genera las variantes directamente si activas las opciones.",
-    "aiAskFirstName": "Pedir el nombre (usa {name} en los textos)",
-    "aiAskGender": "Pedir el género (usa {m|f|x} para 3 variantes)",
+    "aiAskFirstName": "Pedir el nombre",
+    "aiAskGender": "Pedir el género",
     "result1Default": "Resultado 1",
     "result2Default": "Resultado 2",
     "result3Default": "Resultado 3",
@@ -840,5 +840,9 @@
     "seeResult": "Ver mi resultado",
     "fallbackResultTitle": "Tu perfil",
     "fallbackResultDesc": "Descripción del resultado..."
+  },
+  "quizVars": {
+    "insertNameTitle": "Insertar el nombre del visitante ({name})",
+    "insertGenderTitle": "Insertar una variante según el género — masculino | femenino | no binario (ej.: querido | querida | queride)"
   }
 }

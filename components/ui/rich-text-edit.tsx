@@ -22,6 +22,7 @@ import {
   Sparkles, Loader2,
 } from "lucide-react";
 import { sanitizeRichText, isSafeUrl } from "@/lib/richText";
+import { QuizVarInserter, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 
 interface RichTextEditProps {
   value: string;
@@ -37,10 +38,17 @@ interface RichTextEditProps {
    * the field with the folded `{m|f|x}` variant. Formatting is lost.
    */
   onGenderize?: (plainText: string) => Promise<string | null>;
+  /**
+   * Personalization placeholders the user can insert at the caret. Driven
+   * by the quiz's ask_first_name / ask_gender flags. When provided and at
+   * least one is true, "+ {name}" / "+ {m|f|x}" chips show up next to
+   * the formatting toolbar in edit mode.
+   */
+  availableVars?: QuizVarFlags;
 }
 
 export function RichTextEdit({
-  value, onChange, className, placeholder, style, singleLine, onGenderize,
+  value, onChange, className, placeholder, style, singleLine, onGenderize, availableVars,
 }: RichTextEditProps) {
   const t = useTranslations("common");
   const ref = useRef<HTMLDivElement>(null);
@@ -137,6 +145,7 @@ export function RichTextEdit({
   };
 
   const baseCls = `${className || ""} cursor-text rounded-lg px-2 py-1 transition-all min-h-[1.2em]`;
+  const hasVars = availableVars && (availableVars.name || availableVars.gender);
 
   if (editing) {
     return (
@@ -157,6 +166,19 @@ export function RichTextEdit({
           <span className="w-px h-4 bg-border mx-0.5" />
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertLink(); }} title={t("rteInsertLink")}><LinkIcon className="w-3.5 h-3.5" /></ToolbarBtn>
           {!singleLine && <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertImage(); }} title={t("rteInsertImage")}><ImageIcon className="w-3.5 h-3.5" /></ToolbarBtn>}
+          {hasVars && (
+            <>
+              <span className="w-px h-4 bg-border mx-0.5" />
+              <QuizVarInserter
+                vars={availableVars!}
+                compact
+                // execCommand keeps the caret position inside the
+                // contentEditable — exactly what we need to drop the
+                // placeholder where the cursor sits.
+                onInsert={(placeholder) => exec("insertText", placeholder)}
+              />
+            </>
+          )}
         </div>
         <div
           ref={ref}
