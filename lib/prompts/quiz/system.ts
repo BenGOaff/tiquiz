@@ -3,6 +3,8 @@
 // Adapted from Quiz Cash Creator methodology — 16 strategic objectives,
 // format awareness, segmentation, and conversion-optimized output.
 
+import { buildLanguageDirective } from "@/lib/quizLanguages";
+
 type QuizPromptParams = {
   objective: string;
   target: string;
@@ -70,16 +72,7 @@ export function buildQuizGenerationPrompt(params: QuizPromptParams): {
   const formality = addressForm === "vous" ? "vous" : "tu";
   const isShort = format === "short";
 
-  const localeLabels: Record<string, string> = {
-    fr: "français",
-    en: "anglais (English)",
-    es: "espagnol (Español)",
-    de: "allemand (Deutsch)",
-    pt: "portugais (Português)",
-    it: "italien (Italiano)",
-    ar: "arabe (العربية)",
-  };
-  const langLabel = localeLabels[locale] || localeLabels.fr;
+  const langLabel = buildLanguageDirective(locale);
 
   // Resolve objective label for prompt context
   const objectiveEntry = QUIZ_OBJECTIVES.find((o) => o.value === objective);
@@ -230,16 +223,7 @@ export function buildQuizImportPrompt(params: {
 }): { system: string; user: string } {
   const { content, locale = "fr", addressForm = "tu", tone = "inspirant" } = params;
   const formality = addressForm === "vous" ? "vous" : "tu";
-  const localeLabels: Record<string, string> = {
-    fr: "français",
-    en: "anglais (English)",
-    es: "espagnol (Español)",
-    de: "allemand (Deutsch)",
-    pt: "portugais (Português)",
-    it: "italien (Italiano)",
-    ar: "arabe (العربية)",
-  };
-  const langLabel = localeLabels[locale] || localeLabels.fr;
+  const langLabel = buildLanguageDirective(locale);
 
   const system = `Tu es un expert en création de quiz qui STRUCTURE du contenu brut en quiz exploitable.
 
