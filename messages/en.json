@@ -380,8 +380,8 @@
     "aiChatBriefApplied": "Generating…",
     "aiPersonalizeLabel": "Dynamic personalization",
     "aiPersonalizeHint": "Adapt questions, results and CTAs to the visitor. The AI produces variants directly if you enable the options below.",
-    "aiAskFirstName": "Ask for first name (uses {name} in text)",
-    "aiAskGender": "Ask for gender (uses {m|f|x} for 3 variants)",
+    "aiAskFirstName": "Ask for first name",
+    "aiAskGender": "Ask for gender",
     "result1Default": "Result 1",
     "result2Default": "Result 2",
     "result3Default": "Result 3",
@@ -840,5 +840,9 @@
     "seeResult": "See my result",
     "fallbackResultTitle": "Your profile",
     "fallbackResultDesc": "Result description..."
+  },
+  "quizVars": {
+    "insertNameTitle": "Insert visitor's first name ({name})",
+    "insertGenderTitle": "Insert a gender-aware variant — masculine | feminine | non-binary (e.g. dear | dear | dear)"
   }
 }

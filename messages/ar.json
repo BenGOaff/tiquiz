@@ -380,8 +380,8 @@
     "aiChatBriefApplied": "جارٍ التوليد…",
     "aiPersonalizeLabel": "تخصيص ديناميكي",
     "aiPersonalizeHint": "تكييف الأسئلة والنتائج و CTA مع الزائر. الذكاء الاصطناعي ينتج المتغيرات مباشرة عند تفعيل الخيارات أدناه.",
-    "aiAskFirstName": "طلب الاسم (استخدم {name} في النصوص)",
-    "aiAskGender": "طلب الجنس (استخدم {m|f|x} لثلاث متغيرات)",
+    "aiAskFirstName": "طلب الاسم",
+    "aiAskGender": "طلب الجنس",
     "result1Default": "النتيجة 1",
     "result2Default": "النتيجة 2",
     "result3Default": "النتيجة 3",
@@ -840,5 +840,9 @@
     "seeResult": "عرض نتيجتي",
     "fallbackResultTitle": "ملفك الشخصي",
     "fallbackResultDesc": "وصف النتيجة..."
+  },
+  "quizVars": {
+    "insertNameTitle": "إدراج اسم الزائر ({name})",
+    "insertGenderTitle": "إدراج صياغة تتغيّر حسب الجنس — مذكر | مؤنث | محايد"
   }
 }

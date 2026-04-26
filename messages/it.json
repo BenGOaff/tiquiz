@@ -380,8 +380,8 @@
     "aiChatBriefApplied": "Generazione in corso…",
     "aiPersonalizeLabel": "Personalizzazione dinamica",
     "aiPersonalizeHint": "Adatta domande, risultati e CTA al visitatore. L'IA produce le varianti direttamente se attivi le opzioni qui sotto.",
-    "aiAskFirstName": "Chiedi il nome (usa {name} nei testi)",
-    "aiAskGender": "Chiedi il genere (usa {m|f|x} per 3 varianti)",
+    "aiAskFirstName": "Chiedi il nome",
+    "aiAskGender": "Chiedi il genere",
     "result1Default": "Risultato 1",
     "result2Default": "Risultato 2",
     "result3Default": "Risultato 3",
@@ -840,5 +840,9 @@
     "seeResult": "Vedi il mio risultato",
     "fallbackResultTitle": "Il tuo profilo",
     "fallbackResultDesc": "Descrizione del risultato..."
+  },
+  "quizVars": {
+    "insertNameTitle": "Inserisci il nome del visitatore ({name})",
+    "insertGenderTitle": "Inserisci una variante in base al genere — maschile | femminile | non binario (es.: caro | cara | car*)"
   }
 }
