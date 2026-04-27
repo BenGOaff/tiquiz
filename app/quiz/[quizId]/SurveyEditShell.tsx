@@ -1,14 +1,10 @@
 "use client";
 
-import AppShell from "@/components/AppShell";
+// SurveyEditShell — purposely NOT wrapped in AppShell so the WYSIWYG editor
+// takes the full viewport (mirrors QuizEditShell). The editor's own top bar
+// + sidebar provide all the navigation a creator needs while editing.
 import SurveyDetailClient from "@/components/quiz/SurveyDetailClient";
-import { useTranslations } from "next-intl";
 
-export default function SurveyEditShell({ quizId, userEmail }: { quizId: string; userEmail: string }) {
-  const t = useTranslations("survey");
-  return (
-    <AppShell userEmail={userEmail} headerTitle={t("editTitle")}>
-      <SurveyDetailClient quizId={quizId} />
-    </AppShell>
-  );
+export default function SurveyEditShell({ quizId }: { quizId: string; userEmail: string }) {
+  return <SurveyDetailClient quizId={quizId} />;
 }
