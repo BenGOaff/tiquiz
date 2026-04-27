@@ -201,25 +201,42 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     // Update questions if provided
     if (Array.isArray(body.questions)) {
+      const ALLOWED_TYPES = new Set([
+        "multiple_choice",
+        "rating_scale",
+        "star_rating",
+        "free_text",
+        "image_choice",
+        "yes_no",
+      ]);
       await supabase.from("quiz_questions").delete().eq("quiz_id", quizId);
       if ((body.questions as unknown[]).length > 0) {
         await supabase.from("quiz_questions").insert(
-          (body.questions as Record<string, unknown>[]).map((q, i) => ({
-            quiz_id: quizId,
-            question_text: String(q.question_text ?? ""),
-            options: Array.isArray(q.options)
-              ? (q.options as Record<string, unknown>[]).map((o) => {
-                  const cleaned: Record<string, unknown> = {
-                    text: String(o?.text ?? ""),
-                    result_index: Number.isFinite(Number(o?.result_index)) ? Number(o?.result_index) : 0,
-                  };
-                  const tag = String(o?.sio_tag_name ?? "").trim();
-                  if (tag) cleaned.sio_tag_name = tag;
-                  return cleaned;
-                })
-              : [],
-            sort_order: i,
-          })),
+          (body.questions as Record<string, unknown>[]).map((q, i) => {
+            const rawType = typeof q.question_type === "string" ? q.question_type : "multiple_choice";
+            const question_type = ALLOWED_TYPES.has(rawType) ? rawType : "multiple_choice";
+            return {
+              quiz_id: quizId,
+              question_text: String(q.question_text ?? ""),
+              options: Array.isArray(q.options)
+                ? (q.options as Record<string, unknown>[]).map((o) => {
+                    const cleaned: Record<string, unknown> = {
+                      text: String(o?.text ?? ""),
+                      result_index: Number.isFinite(Number(o?.result_index)) ? Number(o?.result_index) : 0,
+                    };
+                    const tag = String(o?.sio_tag_name ?? "").trim();
+                    if (tag) cleaned.sio_tag_name = tag;
+                    if (typeof o?.image_url === "string" && o.image_url.trim()) {
+                      cleaned.image_url = String(o.image_url).trim();
+                    }
+                    return cleaned;
+                  })
+                : [],
+              sort_order: i,
+              question_type,
+              config: q.config && typeof q.config === "object" && !Array.isArray(q.config) ? q.config : {},
+            };
+          }),
         );
       }
     }
