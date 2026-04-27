@@ -56,15 +56,31 @@ const config = {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Surface scale — used by SectionCard / StatCard / EmptyState.
+        surface: {
+          DEFAULT: "hsl(var(--surface))",
+          muted: "hsl(var(--surface-muted))",
+          soft: "hsl(var(--surface-soft))",
+        },
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
         display: ["Inter", "system-ui", "sans-serif"],
       },
       borderRadius: {
+        // 4px / 6px / 8px / 12px (default --radius) / 16px / 24px
+        // Used by Card (lg), Pill / CTA (full), Hero block (2xl).
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "calc(var(--radius) + 4px)",
+        "2xl": "calc(var(--radius) + 12px)",
+      },
+      boxShadow: {
+        // SaaS-grade defaults for cards / interactive surfaces.
+        soft: "var(--shadow-soft)",
+        card: "var(--shadow-card)",
+        "card-hover": "var(--shadow-card-hover)",
       },
       keyframes: {
         "accordion-down": {
