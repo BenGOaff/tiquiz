@@ -9,6 +9,8 @@ const LOCALE_LABELS: Record<string, string> = {
   es: "Español",
   it: "Italiano",
   ar: "العربية",
+  pt: "Português (Portugal)",
+  "pt-BR": "Português (Brasil)",
 };
 
 export function LanguageSwitcher({ variant }: { variant?: "sidebar" | "default" }) {
