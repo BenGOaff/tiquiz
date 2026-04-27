@@ -10,7 +10,8 @@
       "leads": "Meus leads",
       "stats": "Estatísticas",
       "settings": "Configurações",
-      "admin": "Admin"
+      "admin": "Admin",
+      "projects": "Meus projetos"
     }
   },
   "common": {
@@ -955,5 +956,22 @@
     "trendResponseCount": "respostas",
     "yesLabel": "Sim",
     "noLabel": "Não"
+  },
+  "projects": {
+    "title": "Meus projetos",
+    "subtitle": "Seus quizzes e pesquisas em um só lugar",
+    "createQuiz": "Criar um quiz",
+    "createSurvey": "Criar uma pesquisa",
+    "filter_all": "Todos",
+    "filter_quiz": "Quizzes",
+    "filter_survey": "Pesquisas",
+    "badgeQuiz": "Quiz",
+    "badgeSurvey": "Pesquisa",
+    "untitled": "Sem título",
+    "respondents": "respostas",
+    "emptyTitle": "Sem projetos por enquanto",
+    "emptyDesc": "Crie seu primeiro quiz ou pesquisa em menos de dois minutos.",
+    "emptyFilterTitle": "Sem projetos nesta categoria",
+    "emptyFilterDesc": "Mude para « Todos » para ver todos os seus projetos."
   }
 }

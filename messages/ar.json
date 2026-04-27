@@ -10,7 +10,8 @@
       "leads": "عملائي المحتملون",
       "stats": "الإحصائيات",
       "settings": "الإعدادات",
-      "admin": "المسؤول"
+      "admin": "المسؤول",
+      "projects": "مشاريعي"
     }
   },
   "common": {
@@ -955,5 +956,22 @@
     "trendResponseCount": "إجابة",
     "yesLabel": "نعم",
     "noLabel": "لا"
+  },
+  "projects": {
+    "title": "مشاريعي",
+    "subtitle": "اختباراتك واستطلاعاتك في مكان واحد",
+    "createQuiz": "إنشاء اختبار",
+    "createSurvey": "إنشاء استطلاع",
+    "filter_all": "الكل",
+    "filter_quiz": "اختبارات",
+    "filter_survey": "استطلاعات",
+    "badgeQuiz": "اختبار",
+    "badgeSurvey": "استطلاع",
+    "untitled": "بدون عنوان",
+    "respondents": "إجابة",
+    "emptyTitle": "لا توجد مشاريع بعد",
+    "emptyDesc": "أنشئ أول اختبار أو استطلاع في أقل من دقيقتين.",
+    "emptyFilterTitle": "لا توجد مشاريع في هذه الفئة",
+    "emptyFilterDesc": "انتقل إلى « الكل » لرؤية جميع مشاريعك."
   }
 }
