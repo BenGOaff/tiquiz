@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="lightBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EEF0FE"/>
+      <stop offset="100%" stop-color="#E3F5FC"/>
+    </linearGradient>
+    <radialGradient id="glowCyan" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#20BBE6" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#20BBE6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,700;0,800;1,800&amp;display=swap');
+    text { font-family: 'Plus Jakarta Sans', 'Inter', sans-serif; }
+  </style>
+
+  <rect x="0" y="0" width="1920" height="1080" fill="url(#lightBg)"/>
+
+  <ellipse cx="960" cy="615" rx="500" ry="80" fill="url(#glowCyan)"/>
+
+  <text x="960" y="540" text-anchor="middle" font-weight="800" font-size="148" letter-spacing="-0.05em" fill="#2E386E">Il existe une</text>
+  <text x="960" y="700" text-anchor="middle" font-weight="800" font-size="200" letter-spacing="-0.05em" fill="#20BBE6" font-style="italic">meilleure</text>
+  <text x="960" y="850" text-anchor="middle" font-weight="800" font-size="148" letter-spacing="-0.05em" fill="#2E386E">façon.</text>
+
+  <text x="1860" y="1050" text-anchor="end" fill="#6B7280" font-size="16" font-weight="600">v2 — pivot acte 1 → 2 (19–22 s)</text>
+</svg>

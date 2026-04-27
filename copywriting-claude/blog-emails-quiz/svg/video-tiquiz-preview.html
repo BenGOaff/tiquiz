@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Tiquiz — Aperçu animation 60 secondes</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0;
+    background: #0B0F1A;
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  header {
+    text-align: center;
+    padding: 24px;
+  }
+  h1 {
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    margin: 0 0 8px;
+    font-size: 28px;
+  }
+  .subtitle {
+    color: #9AA0B5;
+    font-size: 14px;
+    margin: 0;
+  }
+  .controls {
+    margin: 16px 0 24px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  button {
+    background: #5A6EF6;
+    color: #fff;
+    border: 0;
+    padding: 12px 24px;
+    border-radius: 24px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  button:hover { transform: translateY(-2px); }
+  button.secondary { background: #2E386E; }
+  .video-frame {
+    width: 90vw;
+    max-width: 1280px;
+    aspect-ratio: 16/9;
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .video-frame object {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .timecode {
+    color: #5A6EF6;
+    font-weight: 700;
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+  footer {
+    margin-top: 32px;
+    color: #6B7280;
+    font-size: 13px;
+    text-align: center;
+    padding: 0 16px;
+  }
+  footer a { color: #20BBE6; text-decoration: none; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>Aperçu animation Tiquiz — 60 secondes</h1>
+    <p class="subtitle">Clique sur ▶ Lancer pour voir l'animation. Pour la convertir en MP4, lis le bloc en bas.</p>
+  </header>
+
+  <div class="video-frame">
+    <object id="svgObj" type="image/svg+xml" data="video-tiquiz-60s-v3.svg"></object>
+  </div>
+
+  <div class="controls">
+    <button onclick="restartAnimation()">▶ Lancer / relancer</button>
+    <button class="secondary" onclick="pauseAnimation()">⏸ Pause</button>
+    <button class="secondary" onclick="resumeAnimation()">▶ Reprendre</button>
+    <span class="timecode" id="timecode">0.00 s</span>
+  </div>
+
+  <footer>
+    Pour exporter en vidéo MP4 : ouvre un terminal dans ce dossier et lance <code>bash svg-to-mp4.sh</code><br>
+    (nécessite chromium et ffmpeg installés sur ta machine).
+  </footer>
+
+  <script>
+    const obj = document.getElementById('svgObj');
+    const tc = document.getElementById('timecode');
+    let svgRoot = null;
+
+    obj.addEventListener('load', () => {
+      svgRoot = obj.contentDocument.documentElement;
+      tickTimecode();
+    });
+
+    function restartAnimation() {
+      if (!svgRoot) return;
+      svgRoot.setCurrentTime(0);
+      svgRoot.unpauseAnimations();
+    }
+
+    function pauseAnimation() {
+      if (!svgRoot) return;
+      svgRoot.pauseAnimations();
+    }
+
+    function resumeAnimation() {
+      if (!svgRoot) return;
+      svgRoot.unpauseAnimations();
+    }
+
+    function tickTimecode() {
+      if (svgRoot) {
+        tc.textContent = svgRoot.getCurrentTime().toFixed(2) + ' s';
+      }
+      requestAnimationFrame(tickTimecode);
+    }
+  </script>
+</body>
+</html>

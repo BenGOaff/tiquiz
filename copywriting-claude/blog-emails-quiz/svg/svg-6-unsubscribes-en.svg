@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet" style="font-family:'Inter','Plus Jakarta Sans',-apple-system,system-ui,sans-serif;" role="img" aria-labelledby="t6 d6">
+  <title id="t6">Quiz segmentation drops unsubscribe rate</title>
+  <desc id="d6">A list segmented by quiz has a noticeably lower unsubscribe rate across every documented industry (e-commerce, coaching, education, services), per Mailchimp Effects of List Segmentation</desc>
+
+  <defs>
+    <linearGradient id="winBg6" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#EEF0FE"/>
+      <stop offset="100%" stop-color="#E3F5FC"/>
+    </linearGradient>
+    <linearGradient id="barGrad6" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5A6EF6"/>
+      <stop offset="100%" stop-color="#20BBE6"/>
+    </linearGradient>
+    <filter id="shadow6" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#2E386E" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <style>
+    .bg6 { fill: #F6F7FB; }
+    .orb6-i { fill: #5A6EF6; opacity: 0.07; }
+    .orb6-c { fill: #20BBE6; opacity: 0.07; }
+    .hd6 { fill: #2E386E; font-weight: 900; font-size: 34px; letter-spacing: -0.03em; text-anchor: middle; }
+    .sub6 { fill: #6B7280; font-weight: 500; font-size: 17px; text-anchor: middle; }
+    .card-old6 { fill: #F0F2F7; stroke: #E6E8F0; stroke-width: 1.5; }
+    .card-win6 { fill: url(#winBg6); stroke: rgba(32,187,230,0.3); stroke-width: 1.5; }
+    .card-ttl-old { fill: #6B7280; font-weight: 900; font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; }
+    .card-ttl-win { fill: #0EA2CB; font-weight: 900; font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; }
+    .stat-label { fill: #6B7280; font-weight: 600; font-size: 16px; }
+    .stat-label-win { fill: #2E386E; font-weight: 700; font-size: 16px; }
+    .num-big6 { font-weight: 900; font-size: 96px; letter-spacing: -0.04em; }
+    .num-old6 { fill: #9AA0B5; }
+    .num-win6 { fill: #0EA2CB; }
+    .bar-track { fill: #E6E8F0; }
+    .src6 { fill: #9AA0B5; font-weight: 600; font-size: 13px; }
+  </style>
+
+  <rect class="bg6" x="0" y="0" width="1200" height="700" rx="24"/>
+  <circle class="orb6-i" cx="180" cy="120" r="220"/>
+  <circle class="orb6-c" cx="1020" cy="580" r="240"/>
+
+  <text class="hd6" x="600" y="64">Segment, and you keep your contacts</text>
+  <text class="sub6" x="600" y="98">Unsubscribe rate drops in every industry Mailchimp documented.</text>
+
+  <!-- LEFT CARD — No segmentation -->
+  <g filter="url(#shadow6)">
+    <rect class="card-old6" x="60" y="150" width="480" height="420" rx="22"/>
+  </g>
+  <text class="card-ttl-old" x="90" y="195">List sent in bulk</text>
+
+  <text class="stat-label" x="90" y="265">Unsubscribe rate</text>
+  <text class="num-big6 num-old6" x="90" y="380">100%</text>
+  <text class="stat-label" x="90" y="415" font-size="14" fill="#9AA0B5">market reference (Mailchimp)</text>
+
+  <rect class="bar-track" x="90" y="475" width="420" height="22" rx="11"/>
+  <rect x="90" y="475" width="420" height="22" rx="11" fill="#9AA0B5"/>
+
+  <!-- RIGHT CARD — Segmented by quiz -->
+  <g filter="url(#shadow6)">
+    <rect class="card-win6" x="660" y="150" width="480" height="420" rx="22"/>
+  </g>
+  <text class="card-ttl-win" x="690" y="195">List segmented by quiz</text>
+
+  <text class="stat-label-win" x="690" y="265">Unsubscribe rate</text>
+  <text class="num-big6 num-win6" x="690" y="380">−10%</text>
+  <text class="stat-label-win" x="690" y="415" font-size="14" fill="#0EA2CB">contacts kept longer</text>
+
+  <rect class="bar-track" x="690" y="475" width="420" height="22" rx="11"/>
+  <rect x="690" y="475" width="378" height="22" rx="11" fill="url(#barGrad6)"/>
+
+  <!-- Industries cited -->
+  <text class="stat-label" x="600" y="615" text-anchor="middle" font-weight="600">Observed in e-commerce, coaching, online education, services — every documented industry.</text>
+
+  <text class="src6" x="600" y="645" text-anchor="middle">Source: Mailchimp Effects of List Segmentation on Email Marketing Stats</text>
+
+  <text x="1160" y="685" fill="#9AA0B5" font-size="12" font-weight="600" text-anchor="end">— tipote.blog/tiquiz</text>
+</svg>

@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet" style="font-family:'Inter','Plus Jakarta Sans',-apple-system,system-ui,sans-serif;" role="img" aria-labelledby="t7 d7">
+  <title id="t7">Interactive content vs passive content — 2x conversions</title>
+  <desc id="d7">Interactive content (quizzes, calculators) drives 2x more conversions than passive content (ebook, PDF, blog), per Outgrow Interactive Content Statistics</desc>
+
+  <defs>
+    <linearGradient id="winBg7" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#EEF0FE"/>
+      <stop offset="100%" stop-color="#E3F5FC"/>
+    </linearGradient>
+    <linearGradient id="barGrad7" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5A6EF6"/>
+      <stop offset="100%" stop-color="#20BBE6"/>
+    </linearGradient>
+    <filter id="shadow7" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#2E386E" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <style>
+    .bg7 { fill: #F6F7FB; }
+    .orb7-i { fill: #5A6EF6; opacity: 0.07; }
+    .orb7-c { fill: #20BBE6; opacity: 0.07; }
+    .hd7 { fill: #2E386E; font-weight: 900; font-size: 34px; letter-spacing: -0.03em; text-anchor: middle; }
+    .sub7 { fill: #6B7280; font-weight: 500; font-size: 17px; text-anchor: middle; }
+    .card-old7 { fill: #F0F2F7; stroke: #E6E8F0; stroke-width: 1.5; }
+    .card-win7 { fill: url(#winBg7); stroke: rgba(32,187,230,0.3); stroke-width: 1.5; }
+    .card-ttl-old { fill: #6B7280; font-weight: 900; font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; }
+    .card-ttl-win { fill: #0EA2CB; font-weight: 900; font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; }
+    .stat-label { fill: #6B7280; font-weight: 600; font-size: 16px; }
+    .stat-label-win { fill: #2E386E; font-weight: 700; font-size: 16px; }
+    .num-big7 { font-weight: 900; font-size: 96px; letter-spacing: -0.04em; }
+    .num-old7 { fill: #9AA0B5; }
+    .num-win7 { fill: #0EA2CB; }
+    .bar-track { fill: #E6E8F0; }
+    .ex-tag-old { fill: #6B7280; font-weight: 600; font-size: 14px; }
+    .src7 { fill: #9AA0B5; font-weight: 600; font-size: 13px; }
+  </style>
+
+  <rect class="bg7" x="0" y="0" width="1200" height="700" rx="24"/>
+  <circle class="orb7-i" cx="180" cy="120" r="220"/>
+  <circle class="orb7-c" cx="1020" cy="580" r="240"/>
+
+  <text class="hd7" x="600" y="64">Interactive content converts 2x more</text>
+  <text class="sub7" x="600" y="98">Quizzes and calculators vs ebooks, PDFs and blog posts: same rule across niches.</text>
+
+  <!-- LEFT CARD — Passive content -->
+  <g filter="url(#shadow7)">
+    <rect class="card-old7" x="60" y="150" width="480" height="450" rx="22"/>
+  </g>
+  <text class="card-ttl-old" x="90" y="195">Passive content</text>
+
+  <text class="stat-label" x="90" y="265">Lead conversion</text>
+  <text class="num-big7 num-old7" x="90" y="380">1×</text>
+  <text class="stat-label" x="90" y="415" font-size="14" fill="#9AA0B5">market reference</text>
+
+  <rect class="bar-track" x="90" y="475" width="420" height="22" rx="11"/>
+  <rect x="90" y="475" width="180" height="22" rx="11" fill="#9AA0B5"/>
+
+  <!-- Tags -->
+  <g transform="translate(90, 540)">
+    <rect x="0" y="0" width="68" height="28" rx="14" fill="#E6E8F0"/>
+    <text class="ex-tag-old" x="34" y="19" text-anchor="middle">Ebook</text>
+    <rect x="78" y="0" width="60" height="28" rx="14" fill="#E6E8F0"/>
+    <text class="ex-tag-old" x="108" y="19" text-anchor="middle">PDF</text>
+    <rect x="148" y="0" width="64" height="28" rx="14" fill="#E6E8F0"/>
+    <text class="ex-tag-old" x="180" y="19" text-anchor="middle">Blog</text>
+  </g>
+
+  <!-- RIGHT CARD — Interactive content -->
+  <g filter="url(#shadow7)">
+    <rect class="card-win7" x="660" y="150" width="480" height="450" rx="22"/>
+  </g>
+  <text class="card-ttl-win" x="690" y="195">Interactive content</text>
+
+  <!-- Badge ×2 -->
+  <g transform="translate(1050, 175)">
+    <rect x="-50" y="-22" width="100" height="40" rx="20" fill="#20BBE6"/>
+    <text x="0" y="7" fill="#fff" font-weight="900" font-size="22" text-anchor="middle">× 2</text>
+  </g>
+
+  <text class="stat-label-win" x="690" y="265">Lead conversion</text>
+  <text class="num-big7 num-win7" x="690" y="380">2×</text>
+  <text class="stat-label-win" x="690" y="415" font-size="14" fill="#0EA2CB">conversions doubled vs passive</text>
+
+  <rect class="bar-track" x="690" y="475" width="420" height="22" rx="11"/>
+  <rect x="690" y="475" width="360" height="22" rx="11" fill="url(#barGrad7)"/>
+
+  <!-- Tags -->
+  <g transform="translate(690, 540)">
+    <rect x="0" y="0" width="58" height="28" rx="14" fill="#5A6EF6"/>
+    <text x="29" y="19" text-anchor="middle" fill="#fff" font-weight="700" font-size="14">Quiz</text>
+    <rect x="68" y="0" width="120" height="28" rx="14" fill="#20BBE6"/>
+    <text x="128" y="19" text-anchor="middle" fill="#fff" font-weight="700" font-size="14">Calculators</text>
+    <rect x="198" y="0" width="86" height="28" rx="14" fill="#3F4DBA"/>
+    <text x="241" y="19" text-anchor="middle" fill="#fff" font-weight="700" font-size="14">Surveys</text>
+  </g>
+
+  <text class="src7" x="600" y="650" text-anchor="middle">Source: Outgrow — Interactive Content Statistics (updated annually)</text>
+
+  <text x="1160" y="685" fill="#9AA0B5" font-size="12" font-weight="600" text-anchor="end">— tipote.blog/tiquiz</text>
+</svg>

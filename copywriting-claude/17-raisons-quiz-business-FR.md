@@ -1,6 +1,6 @@
 # 17 raisons de lancer un quiz qui vend pour toi
 
-**TL;DR :** Lancer un quiz qui vend pour toi en 2026 repose sur 5 leviers : (1) tu captes 10 fois plus de leads qu'avec un ebook (30-40 % de conversion vs 2-3 %), (2) tes contacts arrivent déjà segmentés par profil donc tu écris des emails qui touchent au lieu de mails génériques, (3) la page de résultat personnalisée pré-vend ton offre à chaque répondant (méthode Adobe, Beardbrand, Warby Parker, Care/of), (4) tu construis ton autorité au passage et tu nourris tes pubs Meta avec de la vraie data prospect, (5) c'est un actif business qui tourne pendant 5 à 10 ans (Pottermore depuis 2011, Adobe Creative Types depuis 2017). Avec un outil comme __[Tiquiz](https://www.tipote.fr/tiquiz)__ (IA intégrée + connexion native [Systeme.io](https://systeme.io)), tu lances un quiz complet en moins d'une heure et tu remplaces définitivement l'ebook gratuit que plus personne ne télécharge.
+**TL;DR :** Lancer un quiz qui vend pour toi en 2026 repose sur 5 leviers : (1) tu captes 10 fois plus de leads qu'avec un ebook (30-40 % de conversion vs 2-3 %), (2) tes contacts arrivent déjà segmentés par profil donc tu écris des emails qui touchent au lieu de mails génériques, (3) la page de résultat personnalisée pré-vend ton offre à chaque répondant (méthode Adobe, Beardbrand, Warby Parker, Function of Beauty), (4) tu construis ton autorité au passage et tu nourris tes pubs Meta avec de la vraie data prospect, (5) c'est un actif business qui tourne pendant 5 à 10 ans (Pottermore depuis 2011, Adobe Creative Types depuis 2017). Avec un outil comme __[Tiquiz](https://www.tipote.fr/tiquiz)__ (IA intégrée + connexion native [Systeme.io](https://systeme.io)), tu lances un quiz complet en moins d'une heure et tu remplaces définitivement l'ebook gratuit que plus personne ne télécharge.
 
 ---
 
@@ -90,7 +90,7 @@ Tes vieux inscrits qui n'ouvrent plus rien ? Tu les relances avec un quiz "Quel 
 
 Tu glisses une question dans ton quiz : "Quel format te ferait passer à l'achat ?". Si 60 % te répondent "un accompagnement de trois mois", tu sais quoi lancer. Tu arrêtes de deviner.
 
-**LA PREUVE.** **Care/of** (vitamines personnalisées américaines) a construit toute sa R&D produit sur les données de son quiz d'onboarding. La marque a été rachetée par **Bayer pour 225 millions de dollars** en 2020 — annonce officielle relayée par [TechCrunch](https://techcrunch.com/) et [Reuters](https://www.reuters.com/). Va voir leur quiz sur **[takecareof.com](https://takecareof.com)** : c'est exactement le type de mécanique que tu peux copier en B2C ou en coaching.
+**LA PREUVE.** **Asphalte**, marque française de vêtements bien connue en France, a bâti tout son business sur ce principe. Avant de produire le moindre tee-shirt ou pantalon, ils envoient un questionnaire interactif à leur communauté : quelle coupe tu préfères, quelle couleur, à quel prix tu serais prêt à acheter. Les produits qui ne récoltent pas assez de réponses ne sortent jamais. Méthode publiquement documentée sur **[asphalte.com](https://www.asphalte.com)** et dans la presse business française ([Maddyness](https://www.maddyness.com/), [Les Échos](https://www.lesechos.fr/)). Tu copies la mécanique pour valider tes offres de coaching, de formation ou tes services avant de te lancer.
 
 ### 11. Tes clients arrivent déjà chauds
 
@@ -112,13 +112,13 @@ En sachant qui est qui dans ta base, tu peux proposer la bonne offre à la bonne
 
 Chaque quiz rempli te donne 5 à 10 signaux sur ce que veut ton audience. Ce qui les bloque, ce qu'ils cherchent, ce qu'ils sont prêts à acheter. Tu vois en temps réel, sans payer un cabinet d'études.
 
-**LA PREUVE.** **Care/of** (encore) — chaque réponse de quiz alimentait leur roadmap produit. Documenté en détail dans le case study [Drip](https://www.drip.com/blog/quiz-funnel-examples). Va aussi voir **[The Sill](https://www.thesill.com)** qui matche tes plantes selon ton appartement et ta lumière : ils savent exactement quelles plantes commander en stock prioritaire selon les villes et les saisons.
+**LA PREUVE.** **[The Sill](https://www.thesill.com)** matche tes plantes selon ton appartement et ta lumière via un quiz court : ils savent exactement quelles plantes commander en stock prioritaire selon les villes et les saisons. Côté méthode, **Glossier** a construit ses produits emblématiques (Boy Brow, Milky Jelly Cleanser) à partir des données issues de questionnaires communautaires, méthodologie largement documentée par [Harvard Business Review](https://hbr.org/2018/03/how-glossier-turned-itself-into-a-billion-dollar-beauty-brand) et la presse business française.
 
 ### 14. Tu construis ton autorité au passage
 
 Les bonnes questions de quiz sont une démonstration d'expertise. Quand tu poses LA bonne question, le prospect se dit "OK, ce type maîtrise son sujet". Avant même que tu lui aies vendu quoi que ce soit.
 
-**LA PREUVE.** Va sur **[apple.com/fr/shop/buy-iphone](https://www.apple.com/fr/shop/buy-iphone)**, clique sur "Quel iPhone est fait pour vous ?". Trois questions seulement. À la fin, tu te dis "ils ont compris mon usage". Avant même d'avoir cliqué sur "Acheter". Apple n'a pas besoin de te dire qu'il est expert. Le quiz le dit pour eux.
+**LA PREUVE.** Va passer le **Diagnostic Cheveux** de **[Kérastase](https://www.kerastase.fr)** (groupe L'Oréal). Une quinzaine de questions ultra ciblées : texture de cheveu, porosité, niveau de traitement chimique, fréquence de lavage, exposition à la chaleur, problématiques précises. Pendant que tu réponds, tu te dis "ils ont étudié les cheveux comme personne". Le quiz se termine sur une routine personnalisée avec leurs produits. Kérastase n'a pas besoin de te dire "nous sommes les experts" — chaque question le crie pour eux.
 
 ### 15. Tu nourris tes pubs avec de la vraie data
 
@@ -173,7 +173,7 @@ Un quiz interactif convertit 30 à 40 % des visiteurs en leads, contre 2 à 3 % 
 
 ### Quels exemples de quiz ont vraiment marché ?
 
-[Adobe Creative Types](https://mycreativetype.com) tourne depuis 2017. [Beardbrand](https://www.beardbrand.com/pages/quiz) a capté 150 000 leads avec son quiz "What Kind of Beardsman Are You?". [Care/of](https://takecareof.com) a été racheté par Bayer pour 225 millions de dollars en 2020. [Wizarding World](https://www.wizardingworld.com/sorting-ceremony) tourne sa Sorting Ceremony depuis 2011. [16Personalities](https://www.16personalities.com/) revendique plus d'un milliard de tests passés.
+[Adobe Creative Types](https://mycreativetype.com) tourne depuis 2017. [Beardbrand](https://www.beardbrand.com/pages/quiz) a capté 150 000 leads avec son quiz "What Kind of Beardsman Are You?". **Asphalte** (marque française) bâtit chaque produit à partir des questionnaires de sa communauté. [Wizarding World](https://www.wizardingworld.com/sorting-ceremony) tourne sa Sorting Ceremony depuis 2011. [16Personalities](https://www.16personalities.com/) revendique plus d'un milliard de tests passés.
 
 ### Un quiz fonctionne-t-il pour les solopreneurs et les coachs ?
 
@@ -239,10 +239,10 @@ Tu hésites entre un ebook et un quiz ? 17 avantages chiffrés et exemples concr
 - [Wizarding World Sorting Hat](https://www.wizardingworld.com/sorting-ceremony) — depuis 2011
 - [Sephora Beauty Profile](https://www.sephora.fr) — section Beauty Match
 - [Beardbrand "What Kind of Beardsman Are You?"](https://www.beardbrand.com/pages/quiz) — 150 000 leads documentés
-- [Apple "Quel iPhone est fait pour vous ?"](https://www.apple.com/fr/shop/buy-iphone)
+- [Kérastase Diagnostic Cheveux](https://www.kerastase.fr) — démonstration d'expertise par les questions
 - [Warby Parker "Find Your Frames"](https://www.warbyparker.com/quiz)
 - [Function of Beauty Quiz](https://www.functionofbeauty.com)
-- [Care/of Quiz](https://takecareof.com)
+- [Asphalte](https://www.asphalte.com) — questionnaires communautaires avant production
 - [The Sill Plant Match](https://www.thesill.com)
 - [BuzzFeed Quizzes](https://www.buzzfeed.com/quizzes)
 - [16Personalities](https://www.16personalities.com/)
@@ -258,7 +258,8 @@ Tu hésites entre un ebook et un quiz ? 17 avantages chiffrés et exemples concr
 ### Cas business documentés
 
 - **Beardbrand quiz — 150 000 leads** → case study [Drip](https://www.drip.com/blog/quiz-funnel-examples)
-- **Care/of racheté par Bayer 225M$** → couvert par TechCrunch et Reuters (2020)
+- **Asphalte (FR) — production validée par questionnaires** → couverture [Maddyness](https://www.maddyness.com/) et [Les Échos](https://www.lesechos.fr/)
+- **Glossier — produits issus du community feedback** → étude [Harvard Business Review](https://hbr.org/2018/03/how-glossier-turned-itself-into-a-billion-dollar-beauty-brand)
 - **Warby Parker / croissance via quiz** → études Harvard Business School
 - **BuzzFeed quizzes (volume cumulé)** → rapports annuels [BuzzFeed Inc.](https://investors.buzzfeed.com/)
 - **Ryan Levesque — méthode Ask** → livre [Ask sur Amazon](https://www.amazon.fr/dp/1781334757)
@@ -292,7 +293,7 @@ Tu hésites entre un ebook et un quiz ? 17 avantages chiffrés et exemples concr
       "name": "Quels sont les exemples de quiz qui ont vraiment marché ?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Adobe Creative Types (depuis 2017), Wizarding World Sorting Hat (ex-Pottermore, depuis 2011), Beardbrand What Kind of Beardsman Are You (150 000 leads documentés), Sephora Beauty Profile, Apple Quel iPhone est fait pour vous, Warby Parker Find Your Frames, Function of Beauty, Care/of (racheté par Bayer 225M$), The Sill Plant Match, BuzzFeed Quizzes, 16Personalities (plus d'un milliard de tests). Toutes ces marques utilisent un quiz comme pièce centrale de leur acquisition ou de leur recommandation produit."
+        "text": "Adobe Creative Types (depuis 2017), Wizarding World Sorting Hat (ex-Pottermore, depuis 2011), Beardbrand What Kind of Beardsman Are You (150 000 leads documentés), Sephora Beauty Profile, Kérastase Diagnostic Cheveux, Warby Parker Find Your Frames, Function of Beauty, Asphalte (marque française qui valide chaque produit par questionnaire communautaire), The Sill Plant Match, BuzzFeed Quizzes, 16Personalities (plus d'un milliard de tests). Toutes ces marques utilisent un quiz ou un questionnaire comme pièce centrale de leur acquisition ou de leur recommandation produit."
       }
     },
     {

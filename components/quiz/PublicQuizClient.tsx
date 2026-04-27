@@ -26,13 +26,32 @@ const isHtml = (s: string | null | undefined) => !!s && HTML_TAG_RE.test(s);
 
 
 
-type QuizOption = { text: string; result_index: number };
+type QuizOption = { text: string; result_index: number; image_url?: string | null };
+type QuestionType =
+  | "multiple_choice"
+  | "rating_scale"
+  | "star_rating"
+  | "free_text"
+  | "image_choice"
+  | "yes_no";
 type QuizQuestion = {
   id: string;
   question_text: string;
   options: QuizOption[];
   sort_order: number;
+  question_type?: QuestionType;
+  config?: Record<string, unknown> | null;
 };
+
+// Survey answers are stored as a discriminated union so each question type
+// can carry its native value shape (option index, numeric rating, free text).
+// Legacy multiple_choice quizzes always end up in the "option" branch, so
+// computeResult / SIO sync logic keeps working unchanged for them.
+type SurveyAnswer =
+  | { kind: "option"; optionIndex: number }
+  | { kind: "rating"; value: number }
+  | { kind: "star"; value: number }
+  | { kind: "text"; value: string };
 type QuizResult = {
   id: string;
   title: string;
@@ -47,6 +66,11 @@ type QuizResult = {
 type PublicQuizData = {
   id: string;
   title: string;
+  // mode === "survey" disables result-profile computation, the bonus-on-share
+  // step, and the typical "your profile" reveal — surveys end on a thank-you
+  // step instead. Falls back to "quiz" for any quiz row created before the
+  // 019_survey_mode migration.
+  mode?: "quiz" | "survey" | null;
   introduction: string | null;
   cta_text: string | null;
   cta_url: string | null;
@@ -140,6 +164,20 @@ type QuizTranslations = {
   personalizeGender: string;
   personalizeContinue: string;
   resultCtaDefault: string;
+  // Survey-specific copy. Falls back to neutral wording so surveys feel
+  // distinct from quizzes (no "result", no "profile").
+  surveyThanksHeading: string;
+  surveyThanksBody: string;
+  surveyShareCta: string;
+  // Free-text question UX
+  freeTextPlaceholder: string;
+  nextQuestion: string;
+  // Yes/no question buttons
+  yesLabel: string;
+  noLabel: string;
+  // Rating scale endpoints (NPS-style 0-10)
+  ratingScaleMinLabel: string;
+  ratingScaleMaxLabel: string;
 };
 
 const translations: Record<string, QuizTranslations> = {
@@ -190,6 +228,15 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Comment préfères-tu être désigné·e ?",
     personalizeContinue: "Commencer le quiz",
     resultCtaDefault: "Découvrir",
+    surveyThanksHeading: "Merci pour ta participation !",
+    surveyThanksBody: "Tes réponses ont bien été enregistrées. Tu peux fermer cette page ou continuer ci-dessous.",
+    surveyShareCta: "Partager ce sondage",
+    freeTextPlaceholder: "Ta réponse…",
+    nextQuestion: "Suivant",
+    yesLabel: "Oui",
+    noLabel: "Non",
+    ratingScaleMinLabel: "Pas du tout",
+    ratingScaleMaxLabel: "Tout à fait",
   },
   fr_vous: {
     quizUnavailable: "Ce quiz n\u2019est pas disponible.",
@@ -238,6 +285,15 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Comment préférez-vous être désigné·e ?",
     personalizeContinue: "Commencer le quiz",
     resultCtaDefault: "Découvrir",
+    surveyThanksHeading: "Merci pour votre participation !",
+    surveyThanksBody: "Vos réponses ont bien été enregistrées. Vous pouvez fermer cette page ou continuer ci-dessous.",
+    surveyShareCta: "Partager ce sondage",
+    freeTextPlaceholder: "Votre réponse…",
+    nextQuestion: "Suivant",
+    yesLabel: "Oui",
+    noLabel: "Non",
+    ratingScaleMinLabel: "Pas du tout",
+    ratingScaleMaxLabel: "Tout à fait",
   },
   en: {
     quizUnavailable: "This quiz is not available.",
@@ -286,6 +342,15 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "How should we refer to you?",
     personalizeContinue: "Start the quiz",
     resultCtaDefault: "Discover",
+    surveyThanksHeading: "Thanks for your responses!",
+    surveyThanksBody: "Your answers have been recorded. You can close this page or continue below.",
+    surveyShareCta: "Share this survey",
+    freeTextPlaceholder: "Your answer…",
+    nextQuestion: "Next",
+    yesLabel: "Yes",
+    noLabel: "No",
+    ratingScaleMinLabel: "Not at all",
+    ratingScaleMaxLabel: "Absolutely",
   },
   es: {
     quizUnavailable: "Este quiz no est\u00e1 disponible.",
@@ -334,6 +399,15 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "¿Cómo prefieres que te tratemos?",
     personalizeContinue: "Empezar el quiz",
     resultCtaDefault: "Descubrir",
+    surveyThanksHeading: "¡Gracias por tu participación!",
+    surveyThanksBody: "Tus respuestas se han registrado. Puedes cerrar esta página o continuar abajo.",
+    surveyShareCta: "Compartir esta encuesta",
+    freeTextPlaceholder: "Tu respuesta…",
+    nextQuestion: "Siguiente",
+    yesLabel: "Sí",
+    noLabel: "No",
+    ratingScaleMinLabel: "Nada",
+    ratingScaleMaxLabel: "Totalmente",
   },
   de: {
     quizUnavailable: "Dieses Quiz ist nicht verf\u00fcgbar.",
@@ -382,6 +456,15 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Wie sollen wir dich ansprechen?",
     personalizeContinue: "Quiz starten",
     resultCtaDefault: "Entdecken",
+    surveyThanksHeading: "Danke für deine Teilnahme!",
+    surveyThanksBody: "Deine Antworten wurden gespeichert. Du kannst diese Seite schließen oder unten weitermachen.",
+    surveyShareCta: "Diese Umfrage teilen",
+    freeTextPlaceholder: "Deine Antwort…",
+    nextQuestion: "Weiter",
+    yesLabel: "Ja",
+    noLabel: "Nein",
+    ratingScaleMinLabel: "Gar nicht",
+    ratingScaleMaxLabel: "Voll und ganz",
   },
   pt: {
     quizUnavailable: "Este quiz n\u00e3o est\u00e1 dispon\u00edvel.",
@@ -430,6 +513,15 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Como prefere que te chamemos?",
     personalizeContinue: "Começar o quiz",
     resultCtaDefault: "Descobrir",
+    surveyThanksHeading: "Obrigado pela sua participação!",
+    surveyThanksBody: "As suas respostas foram registadas. Pode fechar esta página ou continuar abaixo.",
+    surveyShareCta: "Partilhar este inquérito",
+    freeTextPlaceholder: "A sua resposta…",
+    nextQuestion: "Seguinte",
+    yesLabel: "Sim",
+    noLabel: "Não",
+    ratingScaleMinLabel: "Nada",
+    ratingScaleMaxLabel: "Totalmente",
   },
   it: {
     quizUnavailable: "Questo quiz non \u00e8 disponibile.",
@@ -478,6 +570,15 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Come preferisci essere chiamat·a?",
     personalizeContinue: "Inizia il quiz",
     resultCtaDefault: "Scopri",
+    surveyThanksHeading: "Grazie per la partecipazione!",
+    surveyThanksBody: "Le tue risposte sono state registrate. Puoi chiudere questa pagina o continuare qui sotto.",
+    surveyShareCta: "Condividi questo sondaggio",
+    freeTextPlaceholder: "La tua risposta…",
+    nextQuestion: "Avanti",
+    yesLabel: "Sì",
+    noLabel: "No",
+    ratingScaleMinLabel: "Per niente",
+    ratingScaleMaxLabel: "Assolutamente",
   },
   ar: {
     quizUnavailable: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d.",
@@ -526,6 +627,15 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "كيف تُفضّل أن نخاطبك؟",
     personalizeContinue: "ابدأ الاختبار",
     resultCtaDefault: "اكتشف",
+    surveyThanksHeading: "شكراً على مشاركتك!",
+    surveyThanksBody: "تم تسجيل إجاباتك. يمكنك إغلاق هذه الصفحة أو المتابعة أدناه.",
+    surveyShareCta: "شارك هذا الاستطلاع",
+    freeTextPlaceholder: "إجابتك…",
+    nextQuestion: "التالي",
+    yesLabel: "نعم",
+    noLabel: "لا",
+    ratingScaleMinLabel: "إطلاقاً",
+    ratingScaleMaxLabel: "تماماً",
   },
 };
 
@@ -534,7 +644,13 @@ function getT(locale: string | null | undefined, addressForm?: string | null): Q
   if ((locale ?? "fr") === "fr" && addressForm === "vous") {
     return translations.fr_vous;
   }
-  return translations[locale ?? "fr"] ?? translations.fr;
+  const code = locale ?? "fr";
+  // BCP-47 fallback chain: pt-BR / pt-PT → pt; zh-Hant → zh; etc.
+  // Avoids landing back on French for any locale that just adds a region.
+  if (translations[code]) return translations[code];
+  const base = code.split("-")[0];
+  if (translations[base]) return translations[base];
+  return translations.fr;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -547,7 +663,12 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
   const [step, setStep] = useState<Step>("intro");
   const [currentQ, setCurrentQ] = useState(0);
-  const [answers, setAnswers] = useState<number[]>([]);
+  // One slot per question. Undefined = not yet answered (used to gate the
+  // "next" button on free_text questions, where there's no auto-advance).
+  const [answers, setAnswers] = useState<(SurveyAnswer | undefined)[]>([]);
+  // Mirror state for the free_text textarea so it stays controlled while the
+  // visitor types — only commits to `answers` when they tap "Next".
+  const [freeTextDraft, setFreeTextDraft] = useState<string>("");
 
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -701,10 +822,11 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
       const profile = saved.resultProfileId
         ? quiz.results.find((r) => r.id === saved.resultProfileId) ?? null
         : null;
-      // If the saved result profile no longer exists (creator deleted/
-      // restructured the quiz since), abandon the resume cleanly rather
-      // than showing an empty result screen.
-      if (!profile) {
+      // Surveys never persist a result profile — they go straight to the
+      // thank-you screen, which doesn't need one. For quizzes, if the saved
+      // profile id no longer matches any result (creator deleted/
+      // restructured), bail out so we don't render an empty result screen.
+      if (quiz.mode !== "survey" && !profile) {
         sessionStorage.removeItem(sessionKey);
         return;
       }
@@ -742,11 +864,15 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
   const computeResult = useCallback((): QuizResult | null => {
     if (!quiz) return null;
+    // Surveys never compute a result profile — the engine only routes
+    // option-based answers, so non-quiz modes short-circuit here.
+    if (quiz.mode === "survey") return null;
     const scores: number[] = new Array(quiz.results.length).fill(0);
-    answers.forEach((chosenIdx, qIdx) => {
+    answers.forEach((ans, qIdx) => {
+      if (!ans || ans.kind !== "option") return;
       const q = quiz.questions[qIdx];
       if (!q) return;
-      const opt = q.options[chosenIdx];
+      const opt = q.options[ans.optionIndex];
       if (!opt) return;
       const ri = opt.result_index;
       if (ri >= 0 && ri < scores.length) scores[ri]++;
@@ -762,10 +888,17 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     return quiz.results[maxIdx] ?? null;
   }, [quiz, answers]);
 
-  const handleAnswer = (optionIdx: number) => {
+  // Single answer-commit pathway for every question type. Auto-advances to
+  // the next question (or to email capture on the last one) so the existing
+  // multiple_choice UX stays untouched and rating/star/yes_no/image inherit
+  // the same one-tap flow. Free-text uses commitAnswer with explicit value
+  // wired to the "Next" button, since auto-advance-on-keystroke would feel
+  // hostile while typing.
+  const commitAnswer = (ans: SurveyAnswer) => {
     const newAnswers = [...answers];
-    newAnswers[currentQ] = optionIdx;
+    newAnswers[currentQ] = ans;
     setAnswers(newAnswers);
+    setFreeTextDraft("");
 
     if (quiz && currentQ < quiz.questions.length - 1) {
       setCurrentQ(currentQ + 1);
@@ -785,11 +918,22 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
       // In preview mode, skip the actual lead submission
       if (!previewData) {
-        // Build per-question answers for analytics / export
-        const answersPayload = answers.map((optionIdx: number, qIdx: number) => ({
-          question_index: qIdx,
-          option_index: optionIdx,
-        }));
+        // Build per-question answers for analytics / export. Each shape is
+        // small but distinct so Tendances (survey) and lead-export (quiz)
+        // can render the right widget without re-deriving the type.
+        const answersPayload = answers.map((ans, qIdx) => {
+          if (!ans) return { question_index: qIdx };
+          if (ans.kind === "option") {
+            return { question_index: qIdx, option_index: ans.optionIndex };
+          }
+          if (ans.kind === "rating") {
+            return { question_index: qIdx, rating: ans.value };
+          }
+          if (ans.kind === "star") {
+            return { question_index: qIdx, stars: ans.value };
+          }
+          return { question_index: qIdx, text: ans.value };
+        });
 
         const res = await fetch(`/api/quiz/${quizId}/public`, {
           method: "POST",
@@ -1119,6 +1263,197 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     if (!q) return null;
     const progress = ((currentQ + 1) / totalQ) * 100;
     const hasMultipleOptions = q.options.length >= 3;
+    const qType: QuestionType = (q.question_type as QuestionType) ?? "multiple_choice";
+    const currentAnswer = answers[currentQ];
+
+    // Per-type renderer. Each branch returns the answer-collection block;
+    // header / progress / "previous" footer stay shared so visual rhythm is
+    // consistent across question types (mobile-first, generous tap targets).
+    let answerBlock: React.ReactNode;
+
+    if (qType === "rating_scale") {
+      // NPS-style 0-10 scale. Config lets the creator override the bounds
+      // and the endpoint labels per question; defaults give an out-of-the-box
+      // NPS scale so the picker can drop one in without configuration.
+      const cfg = (q.config ?? {}) as Record<string, unknown>;
+      const min = typeof cfg.min === "number" ? cfg.min : 0;
+      const max = typeof cfg.max === "number" ? cfg.max : 10;
+      const minLabel = (cfg.minLabel as string) || t.ratingScaleMinLabel;
+      const maxLabel = (cfg.maxLabel as string) || t.ratingScaleMaxLabel;
+      const values: number[] = [];
+      for (let v = min; v <= max; v++) values.push(v);
+      const selected = currentAnswer?.kind === "rating" ? currentAnswer.value : null;
+      answerBlock = (
+        <div className="space-y-3">
+          <div className="grid grid-cols-6 sm:grid-cols-11 gap-2">
+            {values.map((v) => {
+              const isSel = selected === v;
+              return (
+                <button
+                  key={v}
+                  onClick={() => commitAnswer({ kind: "rating", value: v })}
+                  className={`h-12 rounded-lg border-2 font-semibold transition-all ${
+                    isSel
+                      ? "border-primary bg-primary text-primary-foreground shadow-md scale-105"
+                      : "border-border hover:border-primary/40 hover:bg-muted/30"
+                  }`}
+                  aria-label={String(v)}
+                >
+                  {v}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground px-1">
+            <span>{minLabel}</span>
+            <span>{maxLabel}</span>
+          </div>
+        </div>
+      );
+    } else if (qType === "star_rating") {
+      const cfg = (q.config ?? {}) as Record<string, unknown>;
+      const max = typeof cfg.max === "number" ? cfg.max : 5;
+      const stars: number[] = [];
+      for (let v = 1; v <= max; v++) stars.push(v);
+      const selected = currentAnswer?.kind === "star" ? currentAnswer.value : 0;
+      answerBlock = (
+        <div className="flex justify-center gap-2 sm:gap-3">
+          {stars.map((v) => {
+            const filled = v <= selected;
+            return (
+              <button
+                key={v}
+                onClick={() => commitAnswer({ kind: "star", value: v })}
+                className="text-5xl sm:text-6xl leading-none transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+                aria-label={`${v}/${max}`}
+                style={{ color: filled ? "var(--primary)" : "rgba(0,0,0,0.15)" }}
+              >
+                ★
+              </button>
+            );
+          })}
+        </div>
+      );
+    } else if (qType === "yes_no") {
+      const selectedYes = currentAnswer?.kind === "option" && currentAnswer.optionIndex === 0;
+      const selectedNo = currentAnswer?.kind === "option" && currentAnswer.optionIndex === 1;
+      answerBlock = (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <button
+            onClick={() => commitAnswer({ kind: "option", optionIndex: 0 })}
+            className={`h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${
+              selectedYes
+                ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
+                : "border-border hover:border-primary/40 hover:bg-muted/30"
+            }`}
+          >
+            {t.yesLabel}
+          </button>
+          <button
+            onClick={() => commitAnswer({ kind: "option", optionIndex: 1 })}
+            className={`h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${
+              selectedNo
+                ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
+                : "border-border hover:border-primary/40 hover:bg-muted/30"
+            }`}
+          >
+            {t.noLabel}
+          </button>
+        </div>
+      );
+    } else if (qType === "free_text") {
+      const cfg = (q.config ?? {}) as Record<string, unknown>;
+      const maxLength = typeof cfg.maxLength === "number" ? cfg.maxLength : 1000;
+      const draft = freeTextDraft || (currentAnswer?.kind === "text" ? currentAnswer.value : "");
+      const trimmed = draft.trim();
+      answerBlock = (
+        <div className="space-y-3">
+          <textarea
+            value={draft}
+            onChange={(e) => setFreeTextDraft(e.target.value.slice(0, maxLength))}
+            placeholder={t.freeTextPlaceholder}
+            rows={5}
+            className="w-full rounded-xl border-2 border-border focus:border-primary focus:ring-0 px-4 py-3 text-base resize-none outline-none transition-colors"
+          />
+          <div className="flex justify-end text-xs text-muted-foreground">
+            {draft.length}/{maxLength}
+          </div>
+          <Button
+            size="lg"
+            className="w-full h-12 rounded-full"
+            disabled={trimmed.length === 0}
+            onClick={() => commitAnswer({ kind: "text", value: trimmed })}
+          >
+            {t.nextQuestion}
+          </Button>
+        </div>
+      );
+    } else if (qType === "image_choice") {
+      // image_choice = multiple_choice with thumbnails. Falls back to text
+      // when an option lacks an image_url so a half-filled question still
+      // works (mobile-first: stacks 1col below sm, 2col above).
+      answerBlock = (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {q.options.map((opt, oi) => {
+            const isSelected =
+              currentAnswer?.kind === "option" && currentAnswer.optionIndex === oi;
+            return (
+              <button
+                key={oi}
+                onClick={() => commitAnswer({ kind: "option", optionIndex: oi })}
+                className={`group flex flex-col rounded-xl border-2 overflow-hidden transition-all ${
+                  isSelected
+                    ? "border-primary shadow-md scale-[1.02]"
+                    : "border-border hover:border-primary/40 hover:shadow-sm"
+                }`}
+              >
+                {opt.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={opt.image_url}
+                    alt={opt.text}
+                    className="w-full aspect-video object-cover"
+                  />
+                ) : (
+                  <div className="w-full aspect-video bg-muted/40" aria-hidden />
+                )}
+                <span
+                  className="tiquiz-rich text-base font-medium text-left p-4"
+                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
+                />
+              </button>
+            );
+          })}
+        </div>
+      );
+    } else {
+      // multiple_choice (default): existing UI preserved verbatim so legacy
+      // quizzes look identical to before the refactor.
+      answerBlock = (
+        <div className={`grid gap-3 ${hasMultipleOptions ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
+          {q.options.map((opt, oi) => {
+            const isSelected =
+              currentAnswer?.kind === "option" && currentAnswer.optionIndex === oi;
+            return (
+              <button
+                key={oi}
+                onClick={() => commitAnswer({ kind: "option", optionIndex: oi })}
+                className={`text-left p-5 rounded-xl border-2 transition-all duration-200 ${
+                  isSelected
+                    ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
+                    : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"
+                }`}
+              >
+                <span
+                  className="tiquiz-rich text-base font-medium"
+                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
+                />
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
 
     return (
       <div className="min-h-screen flex flex-col" style={rootStyle}>
@@ -1138,31 +1473,18 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(q.question_text)) }}
               />
 
-              <div className={`grid gap-3 ${hasMultipleOptions ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
-                {q.options.map((opt, oi) => {
-                  const isSelected = answers[currentQ] === oi;
-                  return (
-                    <button
-                      key={oi}
-                      onClick={() => handleAnswer(oi)}
-                      className={`text-left p-5 rounded-xl border-2 transition-all duration-200 ${
-                        isSelected
-                          ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
-                          : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"
-                      }`}
-                    >
-                      <span
-                        className="tiquiz-rich text-base font-medium"
-                        dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
-                      />
-                    </button>
-                  );
-                })}
-              </div>
+              {answerBlock}
 
               <div className="flex items-center justify-between pt-4">
                 {currentQ > 0 ? (
-                  <Button variant="ghost" size="sm" onClick={() => setCurrentQ(currentQ - 1)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setFreeTextDraft("");
+                      setCurrentQ(currentQ - 1);
+                    }}
+                  >
                     <ArrowLeft className="w-4 h-4 mr-1" /> {t.previous}
                   </Button>
                 ) : <div />}
@@ -1491,6 +1813,69 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
           customUrl={quiz.custom_footer_url}
           logoUrl={branding.logoUrl}
         />
+      </div>
+    );
+  }
+
+  // STEP: Result — survey branch first, since survey leads land here too
+  // (no resultProfile, no bonus flow, no profile reveal).
+  if (step === "result" && quiz.mode === "survey") {
+    const ctaUrl = quiz.cta_url || "";
+    const ctaText = interp(quiz.cta_text || "") || t.resultCtaDefault;
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        style={rootStyle}
+      >
+        <div className="max-w-lg w-full py-16 sm:py-24 space-y-6 text-center">
+          <h2 className="text-3xl sm:text-4xl font-bold leading-tight">
+            {t.surveyThanksHeading}
+          </h2>
+          <p className="text-muted-foreground text-lg">{t.surveyThanksBody}</p>
+
+          {ctaUrl && (
+            <Button
+              size="lg"
+              className="w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug"
+              asChild
+            >
+              <a href={ctaUrl} target="_blank" rel="noopener noreferrer">
+                <span
+                  className="tiquiz-rich"
+                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(ctaText) }}
+                />
+              </a>
+            </Button>
+          )}
+
+          {/* Surveys still get a share button — just no gating, no bonus.
+              The user explicitly asked for "no viral but share at end". */}
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full rounded-full"
+            onClick={async () => {
+              const shareData = getShareData();
+              try {
+                if (typeof navigator !== "undefined" && navigator.share) {
+                  await navigator.share({ title: quiz.title, text: shareData.shareText, url: shareData.shareUrl });
+                } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+                  await navigator.clipboard.writeText(shareData.shareUrl);
+                  setLinkCopied(true);
+                  setTimeout(() => setLinkCopied(false), 2000);
+                }
+              } catch {
+                /* user cancelled native share — no-op */
+              }
+            }}
+          >
+            {linkCopied ? (
+              <><Check className="w-4 h-4 mr-2" /> {t.copied}</>
+            ) : (
+              <><Copy className="w-4 h-4 mr-2" /> {t.surveyShareCta}</>
+            )}
+          </Button>
+        </div>
       </div>
     );
   }

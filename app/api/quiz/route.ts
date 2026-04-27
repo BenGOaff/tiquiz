@@ -54,7 +54,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "title is required" }, { status: 400 });
     }
 
-    // Check quiz limit for free plan (1 quiz max)
+    // Surveys reuse the quizzes table (mode='survey') so the free-plan
+    // counter stays unified — the limit is "projects", not "quizzes only".
+    const mode = body.mode === "survey" ? "survey" : "quiz";
+    const isSurvey = mode === "survey";
+
+    // Check project limit for free plan (1 quiz/survey max)
     const { data: profile } = await supabase
       .from("profiles")
       .select("plan")
@@ -75,19 +80,22 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Insert quiz
+    // Insert quiz / survey row. Surveys force virality_enabled=false because
+    // the visible UI flow doesn't have a bonus-on-share gate — the user
+    // explicitly asked for "no viral but share at end".
     const { data: quiz, error: quizError } = await supabase
       .from("quizzes")
       .insert({
         user_id: user.id,
+        mode,
         title,
         introduction: body.introduction ?? null,
         cta_text: body.cta_text ?? null,
         cta_url: body.cta_url ?? null,
         privacy_url: body.privacy_url ?? null,
         consent_text: body.consent_text ?? null,
-        virality_enabled: Boolean(body.virality_enabled),
-        bonus_description: body.bonus_description ?? null,
+        virality_enabled: isSurvey ? false : Boolean(body.virality_enabled),
+        bonus_description: isSurvey ? null : (body.bonus_description ?? null),
         share_message: body.share_message ?? null,
         locale: body.locale ?? "fr",
         address_form: body.address_form === "tu" || body.address_form === "vous" ? body.address_form : null,
@@ -113,21 +121,40 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Insert questions
+    // Insert questions. Survey questions carry question_type + config so the
+    // public renderer knows which widget to mount; legacy quiz inserts that
+    // omit those fields fall through to the column defaults
+    // (multiple_choice / {}).
+    const ALLOWED_TYPES = new Set([
+      "multiple_choice",
+      "rating_scale",
+      "star_rating",
+      "free_text",
+      "image_choice",
+      "yes_no",
+    ]);
     const questions = Array.isArray(body.questions) ? body.questions : [];
     if (questions.length > 0) {
       await supabase.from("quiz_questions").insert(
-        questions.map((q: Record<string, unknown>, i: number) => ({
-          quiz_id: quiz.id,
-          question_text: String(q.question_text ?? ""),
-          options: Array.isArray(q.options) ? q.options : [],
-          sort_order: i,
-        })),
+        questions.map((q: Record<string, unknown>, i: number) => {
+          const rawType = typeof q.question_type === "string" ? q.question_type : "multiple_choice";
+          const question_type = ALLOWED_TYPES.has(rawType) ? rawType : "multiple_choice";
+          return {
+            quiz_id: quiz.id,
+            question_text: String(q.question_text ?? ""),
+            options: Array.isArray(q.options) ? q.options : [],
+            sort_order: i,
+            question_type,
+            config: q.config && typeof q.config === "object" && !Array.isArray(q.config) ? q.config : {},
+          };
+        }),
       );
     }
 
-    // Insert results
-    const results = Array.isArray(body.results) ? body.results : [];
+    // Insert results — surveys never have result profiles, so we skip the
+    // whole block when mode='survey'. The renderer handles a survey row
+    // with zero quiz_results without ever trying to compute one.
+    const results = !isSurvey && Array.isArray(body.results) ? body.results : [];
     if (results.length > 0) {
       await supabase.from("quiz_results").insert(
         results.map((r: Record<string, unknown>, i: number) => ({

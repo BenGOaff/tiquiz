@@ -207,8 +207,8 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     }
 
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,user_id,title,introduction,cta_text,cta_url,start_button_text,privacy_url,consent_text,virality_enabled,bonus_description,bonus_image_url,share_message,locale,address_form,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country,ask_first_name,ask_gender,slug,brand_font,brand_color_primary,brand_color_background,custom_footer_text,custom_footer_url,share_networks,og_description,og_image_url").eq("id", quizId).maybeSingle(),
-      admin.from("quiz_questions").select("id,question_text,options,sort_order").eq("quiz_id", quizId).order("sort_order"),
+      admin.from("quizzes").select("id,user_id,title,introduction,cta_text,cta_url,start_button_text,privacy_url,consent_text,virality_enabled,bonus_description,bonus_image_url,share_message,locale,address_form,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country,ask_first_name,ask_gender,slug,brand_font,brand_color_primary,brand_color_background,custom_footer_text,custom_footer_url,share_networks,og_description,og_image_url,mode").eq("id", quizId).maybeSingle(),
+      admin.from("quiz_questions").select("id,question_text,options,sort_order,question_type,config").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,cta_text,cta_url,sort_order").eq("quiz_id", quizId).order("sort_order"),
     ]);
 
@@ -275,6 +275,8 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       questions: (questionsRes.data ?? []).map((q: Record<string, unknown>) => ({
         ...q,
         options: q.options as { text: string; result_index: number }[],
+        question_type: (q.question_type as string) ?? "multiple_choice",
+        config: (q.config as Record<string, unknown>) ?? {},
       })),
       results: resultsRes.data ?? [],
       branding,

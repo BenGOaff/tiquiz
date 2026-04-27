@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet" style="font-family:'Inter','Plus Jakarta Sans',-apple-system,system-ui,sans-serif;" role="img" aria-labelledby="t5 d5">
+  <title id="t5">Quiz segmentation — opens and clicks multiplied</title>
+  <desc id="d5">Comparison between a list sent in bulk and a list segmented by quiz: +14% opens, x2 clicks per Mailchimp Email Marketing Benchmarks</desc>
+
+  <defs>
+    <linearGradient id="winBg5" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#EEF0FE"/>
+      <stop offset="100%" stop-color="#E3F5FC"/>
+    </linearGradient>
+    <linearGradient id="barGrad5" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5A6EF6"/>
+      <stop offset="100%" stop-color="#20BBE6"/>
+    </linearGradient>
+    <filter id="shadow5" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#2E386E" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <style>
+    .bg5 { fill: #F6F7FB; }
+    .orb5-i { fill: #5A6EF6; opacity: 0.07; }
+    .orb5-c { fill: #20BBE6; opacity: 0.07; }
+    .hd5 { fill: #2E386E; font-weight: 900; font-size: 34px; letter-spacing: -0.03em; text-anchor: middle; }
+    .sub5 { fill: #6B7280; font-weight: 500; font-size: 17px; text-anchor: middle; }
+    .card-old5 { fill: #F0F2F7; stroke: #E6E8F0; stroke-width: 1.5; }
+    .card-win5 { fill: url(#winBg5); stroke: rgba(32,187,230,0.3); stroke-width: 1.5; }
+    .card-ttl-old { fill: #6B7280; font-weight: 900; font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; }
+    .card-ttl-win { fill: #0EA2CB; font-weight: 900; font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; }
+    .stat-label { fill: #6B7280; font-weight: 600; font-size: 16px; }
+    .stat-label-win { fill: #2E386E; font-weight: 700; font-size: 16px; }
+    .num-big5 { font-weight: 900; font-size: 72px; letter-spacing: -0.03em; }
+    .num-old5 { fill: #9AA0B5; }
+    .num-win5 { fill: #0EA2CB; }
+    .bar-track { fill: #E6E8F0; }
+    .badge { fill: #2E386E; font-weight: 900; font-size: 18px; letter-spacing: -0.02em; text-anchor: middle; }
+    .src5 { fill: #9AA0B5; font-weight: 600; font-size: 13px; }
+  </style>
+
+  <rect class="bg5" x="0" y="0" width="1200" height="700" rx="24"/>
+  <circle class="orb5-i" cx="180" cy="120" r="220"/>
+  <circle class="orb5-c" cx="1020" cy="580" r="240"/>
+
+  <text class="hd5" x="600" y="64">Segment your list, double your clicks</text>
+  <text class="sub5" x="600" y="98">When a quiz tags your leads by profile, every email reaches the right person.</text>
+
+  <!-- LEFT CARD — No segmentation -->
+  <g filter="url(#shadow5)">
+    <rect class="card-old5" x="60" y="150" width="480" height="440" rx="22"/>
+  </g>
+  <text class="card-ttl-old" x="90" y="195">List sent in bulk</text>
+
+  <text class="stat-label" x="90" y="255">Opens</text>
+  <text class="num-big5 num-old5" x="90" y="335">21%</text>
+  <rect class="bar-track" x="90" y="355" width="420" height="14" rx="7"/>
+  <rect x="90" y="355" width="180" height="14" rx="7" fill="#9AA0B5"/>
+
+  <text class="stat-label" x="90" y="430">Clicks</text>
+  <text class="num-big5 num-old5" x="90" y="510">2.6%</text>
+  <rect class="bar-track" x="90" y="530" width="420" height="14" rx="7"/>
+  <rect x="90" y="530" width="55" height="14" rx="7" fill="#9AA0B5"/>
+
+  <!-- RIGHT CARD — Segmented by quiz -->
+  <g filter="url(#shadow5)">
+    <rect class="card-win5" x="660" y="150" width="480" height="440" rx="22"/>
+  </g>
+  <text class="card-ttl-win" x="690" y="195">List segmented by quiz</text>
+
+  <text class="stat-label-win" x="690" y="255">Opens</text>
+  <text class="num-big5 num-win5" x="690" y="335">24%</text>
+  <g transform="translate(1010, 308)">
+    <rect x="-50" y="-26" width="100" height="40" rx="20" fill="#20BBE6"/>
+    <text x="0" y="3" fill="#fff" font-weight="900" font-size="20" text-anchor="middle">+14%</text>
+  </g>
+  <rect class="bar-track" x="690" y="355" width="420" height="14" rx="7"/>
+  <rect x="690" y="355" width="205" height="14" rx="7" fill="url(#barGrad5)"/>
+
+  <text class="stat-label-win" x="690" y="430">Clicks</text>
+  <text class="num-big5 num-win5" x="690" y="510">5.2%</text>
+  <g transform="translate(1010, 483)">
+    <rect x="-50" y="-26" width="100" height="40" rx="20" fill="#20BBE6"/>
+    <text x="0" y="3" fill="#fff" font-weight="900" font-size="22" text-anchor="middle">× 2</text>
+  </g>
+  <rect class="bar-track" x="690" y="530" width="420" height="14" rx="7"/>
+  <rect x="690" y="530" width="110" height="14" rx="7" fill="url(#barGrad5)"/>
+
+  <text class="src5" x="600" y="640" text-anchor="middle">Source: Mailchimp Email Marketing Benchmarks (Effects of List Segmentation)</text>
+
+  <text x="1160" y="675" fill="#9AA0B5" font-size="12" font-weight="600" text-anchor="end">— tipote.blog/tiquiz</text>
+</svg>

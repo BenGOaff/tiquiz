@@ -1,0 +1,563 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="ttl desc">
+  <title id="ttl">Tiquiz — vidéo kinetic 60s v3 (rythme accéléré)</title>
+  <desc id="desc">Vidéo kinetic typography 60s pour Tiquiz, structure en 4 actes accélérée avec word-by-word, crash entries, particle bursts, et rythme rapide proche du style gojiberry</desc>
+
+  <defs>
+    <linearGradient id="lightBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EEF0FE"/>
+      <stop offset="100%" stop-color="#E3F5FC"/>
+    </linearGradient>
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5A6EF6"/>
+      <stop offset="100%" stop-color="#20BBE6"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#5A6EF6" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#5A6EF6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowCyan" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#20BBE6" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#20BBE6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="flash" cx="50%" cy="50%" r="80%">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="darkShadow"><feDropShadow dx="0" dy="8" stdDeviation="20" flood-color="#000" flood-opacity="0.5"/></filter>
+    <filter id="lightShadow"><feDropShadow dx="0" dy="10" stdDeviation="22" flood-color="#2E386E" flood-opacity="0.18"/></filter>
+  </defs>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,600;0,700;0,800;0,900;1,800;1,900&amp;display=swap');
+    text { font-family: 'Inter', system-ui, sans-serif; }
+    .h0 { font-weight: 900; font-size: 220px; letter-spacing: -0.05em; }
+    .h1 { font-weight: 900; font-size: 160px; letter-spacing: -0.05em; }
+    .h2 { font-weight: 800; font-size: 120px; letter-spacing: -0.04em; }
+    .h3 { font-weight: 800; font-size: 88px; letter-spacing: -0.03em; }
+    .h4 { font-weight: 700; font-size: 60px; letter-spacing: -0.02em; }
+    .body { font-weight: 600; font-size: 40px; }
+    .small { font-weight: 600; font-size: 22px; }
+    .it { font-style: italic; }
+    .white { fill: #fff; }
+    .ink { fill: #2E386E; }
+    .cyan { fill: #20BBE6; }
+    .indigo { fill: #5A6EF6; }
+    .deep-cyan { fill: #0EA2CB; }
+    .grey-dark { fill: #6B7280; }
+    .grey-mid { fill: #9AA0B5; }
+  </style>
+
+  <!-- ============================================================== -->
+  <!--  FONDS ET FLASH                                                -->
+  <!-- ============================================================== -->
+
+  <!-- Dark BG -->
+  <rect x="0" y="0" width="1920" height="1080" fill="#0B0F1A">
+    <animate attributeName="opacity" values="1;1;0;0" keyTimes="0;0.247;0.262;1" dur="60s" fill="freeze"/>
+  </rect>
+
+  <!-- Light BG -->
+  <rect x="0" y="0" width="1920" height="1080" fill="url(#lightBg)" opacity="0">
+    <animate attributeName="opacity" values="0;0;1;1" keyTimes="0;0.247;0.262;1" dur="60s" fill="freeze"/>
+  </rect>
+
+  <!-- Flash blanc à 14.8s (transition pivot) -->
+  <rect x="0" y="0" width="1920" height="1080" fill="url(#flash)" opacity="0">
+    <animate attributeName="opacity" values="0;0;1;0" keyTimes="0;0.245;0.252;0.27" dur="60s" fill="freeze"/>
+  </rect>
+
+  <!-- Particules dust act 1 -->
+  <g fill="#fff" opacity="0.6">
+    <circle cx="180" cy="200" r="2"><animate attributeName="cy" values="200;240;200" dur="8s" repeatCount="indefinite"/></circle>
+    <circle cx="450" cy="380" r="1.5"><animate attributeName="cx" values="450;480;450" dur="10s" repeatCount="indefinite"/></circle>
+    <circle cx="1700" cy="280" r="2"><animate attributeName="cy" values="280;320;280" dur="9s" repeatCount="indefinite"/></circle>
+    <circle cx="1500" cy="800" r="1.5"><animate attributeName="cx" values="1500;1530;1500" dur="11s" repeatCount="indefinite"/></circle>
+    <circle cx="320" cy="900" r="2"><animate attributeName="cy" values="900;860;900" dur="7s" repeatCount="indefinite"/></circle>
+    <circle cx="900" cy="180" r="1.5"><animate attributeName="cx" values="900;940;900" dur="9s" repeatCount="indefinite"/></circle>
+    <circle cx="1200" cy="950" r="2"><animate attributeName="cy" values="950;920;950" dur="10s" repeatCount="indefinite"/></circle>
+    <animate attributeName="opacity" values="0.6;0.6;0;0" keyTimes="0;0.247;0.262;1" dur="60s" fill="freeze"/>
+  </g>
+
+  <!-- ============================================================== -->
+  <!--  ACT 1 — PROBLÈME (0–14.8s) - rythme rapide                    -->
+  <!-- ============================================================== -->
+
+  <!-- 0.0-1.4s : "On va se le dire." — CRASH IN -->
+  <g transform="translate(960 580)" opacity="0">
+    <text class="h1 white" x="0" y="0" text-anchor="middle">On va se le dire.</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.9;1" dur="1.4s" begin="0s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.5;1.15;1" keyTimes="0;0.5;1" dur="0.35s" begin="0s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- 1.4-3.0s : "Ton ebook GRATUIT" word-by-word slam -->
+  <g opacity="0">
+    <text class="h2 white" x="960" y="500" text-anchor="middle">Ton ebook</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.08;0.85;1" dur="1.6s" begin="1.4s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="0 -40;0 0" dur="0.25s" begin="1.4s" fill="freeze" additive="sum"/>
+  </g>
+  <g transform="translate(960 670)" opacity="0">
+    <text class="h1 cyan it" x="0" y="0" text-anchor="middle">DORT.</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.15;0.85;1" dur="1.4s" begin="1.6s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.4;1.25;1" keyTimes="0;0.6;1" dur="0.35s" begin="1.6s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- Glow halo derrière "DORT" -->
+  <ellipse cx="960" cy="640" rx="450" ry="80" fill="url(#glowCyan)" opacity="0">
+    <animate attributeName="opacity" values="0;0.7;0" keyTimes="0;0.2;1" dur="1.4s" begin="1.6s" fill="freeze"/>
+  </ellipse>
+
+  <!-- 3.0-5.0s : 4 stat cards burst from sides -->
+  <g filter="url(#darkShadow)">
+    <g opacity="0">
+      <rect x="100" y="240" width="380" height="100" rx="50" fill="#161E2E"/>
+      <text x="290" y="300" text-anchor="middle" class="small white">1 200 visites ce mois</text>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.85;1" dur="2s" begin="3s" fill="freeze"/>
+      <animateTransform attributeName="transform" type="translate" values="-500 0;0 0" dur="0.3s" begin="3s" fill="freeze" additive="sum"/>
+    </g>
+    <g opacity="0">
+      <rect x="1380" y="240" width="440" height="100" rx="50" fill="#161E2E"/>
+      <text x="1600" y="300" text-anchor="middle" class="small white">47 téléchargements</text>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.85;1" dur="2s" begin="3.15s" fill="freeze"/>
+      <animateTransform attributeName="transform" type="translate" values="500 0;0 0" dur="0.3s" begin="3.15s" fill="freeze" additive="sum"/>
+    </g>
+    <g opacity="0">
+      <rect x="100" y="780" width="420" height="100" rx="50" fill="#161E2E"/>
+      <text x="310" y="840" text-anchor="middle" class="small white">0 réponse client</text>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.85;1" dur="2s" begin="3.3s" fill="freeze"/>
+      <animateTransform attributeName="transform" type="translate" values="-500 0;0 0" dur="0.3s" begin="3.3s" fill="freeze" additive="sum"/>
+    </g>
+    <g opacity="0">
+      <rect x="1400" y="780" width="380" height="100" rx="50" fill="#161E2E"/>
+      <text x="1590" y="840" text-anchor="middle" class="small white">📄 ebook.pdf</text>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.85;1" dur="2s" begin="3.45s" fill="freeze"/>
+      <animateTransform attributeName="transform" type="translate" values="500 0;0 0" dur="0.3s" begin="3.45s" fill="freeze" additive="sum"/>
+    </g>
+  </g>
+
+  <!-- 5.0-7.5s : "Personne ne le LIT." word-by-word + phone slide -->
+  <g opacity="0">
+    <text class="h2 white" x="960" y="380" text-anchor="middle">Personne ne le</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.08;0.92;1" dur="2.5s" begin="5s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="0 -50;0 0" dur="0.25s" begin="5s" fill="freeze" additive="sum"/>
+  </g>
+  <g transform="translate(960 540)" opacity="0">
+    <text class="h0 cyan it" x="0" y="0" text-anchor="middle">LIT.</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.12;0.92;1" dur="2.3s" begin="5.2s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.3;1.3;1" keyTimes="0;0.6;1" dur="0.4s" begin="5.2s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- Phone notification -->
+  <g filter="url(#darkShadow)" opacity="0">
+    <rect x="660" y="710" width="600" height="220" rx="40" fill="#161E2E" stroke="#2A3344" stroke-width="2"/>
+    <circle cx="730" cy="790" r="28" fill="#5A6EF6"/>
+    <text x="780" y="785" font-size="24" font-weight="800" fill="#fff">Newsletter Tiquiz</text>
+    <text x="780" y="820" font-size="20" font-weight="500" fill="#9AA0B5">Pas ouvert depuis 14 jours</text>
+    <line x1="700" y1="850" x2="1220" y2="850" stroke="#2A3344"/>
+    <text x="700" y="895" fill="#9AA0B5" font-size="20">📨 Réponses : 0</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.85;1" dur="2.3s" begin="5.4s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="0 200;0 0" dur="0.4s" begin="5.4s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- 7.5-11s : "Personne. Ne. Te. RÉPOND." 4 punches -->
+  <g transform="translate(960 540)" opacity="0">
+    <text class="h1 white" x="0" y="0" text-anchor="middle">Personne.</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.18;0.6;1" dur="1s" begin="7.5s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.5;1.15;1" keyTimes="0;0.5;1" dur="0.3s" begin="7.5s" fill="freeze" additive="sum"/>
+  </g>
+  <g transform="translate(960 540)" opacity="0">
+    <text class="h1 white" x="0" y="0" text-anchor="middle">Ne.</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.18;0.6;1" dur="0.9s" begin="8.4s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.5;1.15;1" keyTimes="0;0.5;1" dur="0.3s" begin="8.4s" fill="freeze" additive="sum"/>
+  </g>
+  <g transform="translate(960 540)" opacity="0">
+    <text class="h1 white" x="0" y="0" text-anchor="middle">Te.</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.18;0.6;1" dur="0.9s" begin="9.2s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.5;1.15;1" keyTimes="0;0.5;1" dur="0.3s" begin="9.2s" fill="freeze" additive="sum"/>
+  </g>
+  <g transform="translate(960 540)" opacity="0">
+    <text class="h0 cyan it" x="0" y="0" text-anchor="middle">RÉPOND.</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.9;1" dur="2s" begin="10s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.4;1.3;1" keyTimes="0;0.5;1" dur="0.4s" begin="10s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- Bubbles fly across -->
+  <g filter="url(#darkShadow)" opacity="0">
+    <g transform="translate(140 220)">
+      <rect width="380" height="100" rx="20" fill="#161E2E" opacity="0.85"/>
+      <text x="20" y="42" font-size="18" fill="#9AA0B5">Bonjour, j'espère que ce mail vous</text>
+      <text x="20" y="68" font-size="18" fill="#9AA0B5">trouve bien…</text>
+      <text x="20" y="92" font-size="16" font-weight="700" fill="#F25C5C">→ ignoré</text>
+    </g>
+    <g transform="translate(1380 280) rotate(5 1580 380)">
+      <rect width="400" height="100" rx="20" fill="#161E2E" opacity="0.85"/>
+      <text x="20" y="42" font-size="18" fill="#9AA0B5">Cher(ère) prospect, en pièce</text>
+      <text x="20" y="68" font-size="18" fill="#9AA0B5">jointe vous trouverez…</text>
+      <text x="20" y="92" font-size="16" font-weight="700" fill="#F25C5C">→ ignoré</text>
+    </g>
+    <g transform="translate(180 760) rotate(-3 380 860)">
+      <rect width="420" height="100" rx="20" fill="#161E2E" opacity="0.85"/>
+      <text x="20" y="42" font-size="18" fill="#9AA0B5">Suite à votre téléchargement,</text>
+      <text x="20" y="68" font-size="18" fill="#9AA0B5">voici notre offre…</text>
+      <text x="20" y="92" font-size="16" font-weight="700" fill="#F25C5C">→ se désinscrit</text>
+    </g>
+    <animate attributeName="opacity" values="0;0.95;0.95;0" keyTimes="0;0.2;0.85;1" dur="2.8s" begin="10.5s" fill="freeze"/>
+  </g>
+
+  <!-- 11s-13s : "Il existe une..." setup -->
+  <g transform="translate(960 540)" opacity="0">
+    <text class="h2 white" x="0" y="0" text-anchor="middle">Il existe une...</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.85;1" dur="2s" begin="13s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.7;1.1;1" keyTimes="0;0.5;1" dur="0.35s" begin="13s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- ============================================================== -->
+  <!--  ACT 2 — RÉVÉLATION (15-32s)                                    -->
+  <!-- ============================================================== -->
+
+  <!-- 15-17.5s : "MEILLEURE FAÇON" big italic burst -->
+  <ellipse cx="960" cy="540" rx="700" ry="160" fill="url(#glowCyan)" opacity="0">
+    <animate attributeName="opacity" values="0;0.8;0" keyTimes="0;0.3;1" dur="2.5s" begin="15s" fill="freeze"/>
+  </ellipse>
+  <g transform="translate(960 480)" opacity="0">
+    <text class="h2 ink" x="0" y="0" text-anchor="middle">une</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.08;0.85;1" dur="2.5s" begin="15s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="-100 0;0 0" dur="0.3s" begin="15s" fill="freeze" additive="sum"/>
+  </g>
+  <g transform="translate(960 640)" opacity="0">
+    <text class="h0 cyan it" x="0" y="0" text-anchor="middle">MEILLEURE</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.12;0.85;1" dur="2.5s" begin="15.2s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.3;1.25;1" keyTimes="0;0.5;1" dur="0.45s" begin="15.2s" fill="freeze" additive="sum"/>
+  </g>
+  <g transform="translate(960 800)" opacity="0">
+    <text class="h2 ink" x="0" y="0" text-anchor="middle">façon.</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.85;1" dur="2.3s" begin="15.5s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="100 0;0 0" dur="0.3s" begin="15.5s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- 17.5-20s : "Les gens te disent qui ils sont." -->
+  <g opacity="0">
+    <text class="h3 ink" x="960" y="500" text-anchor="middle">Les gens te disent</text>
+    <text class="h3 ink" x="960" y="600" text-anchor="middle">qui ils sont.</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.85;1" dur="2.5s" begin="17.5s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.85;1.05;1" keyTimes="0;0.6;1" dur="0.35s" begin="17.5s" fill="freeze" additive="sum"/>
+    <animateTransform attributeName="transform" type="translate" values="-144 -90;0 0" keyTimes="0;0.6" dur="0.35s" begin="17.5s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- 20-22.5s : "Si tu leur DEMANDES." -->
+  <g transform="translate(960 540)" opacity="0">
+    <text class="h2 ink" x="0" y="0" text-anchor="middle">Si tu leur</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.85;1" dur="2.5s" begin="20s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="0 -40;0 0" dur="0.25s" begin="20s" fill="freeze" additive="sum"/>
+  </g>
+  <g transform="translate(960 700)" opacity="0">
+    <text class="h1 deep-cyan it" x="0" y="0" text-anchor="middle">DEMANDES.</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.12;0.85;1" dur="2.3s" begin="20.2s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.4;1.25;1" keyTimes="0;0.5;1" dur="0.4s" begin="20.2s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- 22.5-25s : 4 profile cards burst -->
+  <g filter="url(#lightShadow)">
+    <g opacity="0">
+      <rect x="120" y="240" width="380" height="110" rx="22" fill="#fff"/>
+      <circle cx="180" cy="295" r="32" fill="#5A6EF6"/>
+      <text x="230" y="290" font-size="24" font-weight="700" fill="#2E386E">Sophie M.</text>
+      <text x="230" y="318" font-size="20" fill="#6B7280">Coach business</text>
+      <rect x="430" y="270" width="50" height="50" rx="14" fill="#20BBE6"/>
+      <text x="455" y="305" font-size="32" font-weight="900" fill="#fff" text-anchor="middle">✓</text>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.08;0.85;1" dur="3s" begin="22.5s" fill="freeze"/>
+      <animateTransform attributeName="transform" type="translate" values="-500 0;0 0" dur="0.35s" begin="22.5s" fill="freeze" additive="sum"/>
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 -10;0 0" dur="6s" begin="23s" repeatCount="indefinite" additive="sum"/>
+    </g>
+    <g opacity="0">
+      <rect x="1420" y="220" width="380" height="110" rx="22" fill="#fff"/>
+      <circle cx="1480" cy="275" r="32" fill="#0EA2CB"/>
+      <text x="1530" y="270" font-size="24" font-weight="700" fill="#2E386E">Marc D.</text>
+      <text x="1530" y="298" font-size="20" fill="#6B7280">Solopreneur</text>
+      <rect x="1730" y="250" width="50" height="50" rx="14" fill="#20BBE6"/>
+      <text x="1755" y="285" font-size="32" font-weight="900" fill="#fff" text-anchor="middle">✓</text>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.08;0.85;1" dur="3s" begin="22.65s" fill="freeze"/>
+      <animateTransform attributeName="transform" type="translate" values="500 0;0 0" dur="0.35s" begin="22.65s" fill="freeze" additive="sum"/>
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 12;0 0" dur="7s" begin="23.15s" repeatCount="indefinite" additive="sum"/>
+    </g>
+    <g opacity="0">
+      <rect x="160" y="780" width="380" height="110" rx="22" fill="#fff"/>
+      <circle cx="220" cy="835" r="32" fill="#3F4DBA"/>
+      <text x="270" y="830" font-size="24" font-weight="700" fill="#2E386E">Claire R.</text>
+      <text x="270" y="858" font-size="20" fill="#6B7280">Formatrice</text>
+      <rect x="470" y="810" width="50" height="50" rx="14" fill="#20BBE6"/>
+      <text x="495" y="845" font-size="32" font-weight="900" fill="#fff" text-anchor="middle">✓</text>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.08;0.85;1" dur="3s" begin="22.8s" fill="freeze"/>
+      <animateTransform attributeName="transform" type="translate" values="-500 0;0 0" dur="0.35s" begin="22.8s" fill="freeze" additive="sum"/>
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 -14;0 0" dur="8s" begin="23.3s" repeatCount="indefinite" additive="sum"/>
+    </g>
+    <g opacity="0">
+      <rect x="1380" y="800" width="380" height="110" rx="22" fill="#fff"/>
+      <circle cx="1440" cy="855" r="32" fill="#20BBE6"/>
+      <text x="1490" y="850" font-size="24" font-weight="700" fill="#2E386E">Léa B.</text>
+      <text x="1490" y="878" font-size="20" fill="#6B7280">Freelance</text>
+      <rect x="1690" y="830" width="50" height="50" rx="14" fill="#20BBE6"/>
+      <text x="1715" y="865" font-size="32" font-weight="900" fill="#fff" text-anchor="middle">✓</text>
+      <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.08;0.85;1" dur="3s" begin="22.95s" fill="freeze"/>
+      <animateTransform attributeName="transform" type="translate" values="500 0;0 0" dur="0.35s" begin="22.95s" fill="freeze" additive="sum"/>
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 11;0 0" dur="9s" begin="23.45s" repeatCount="indefinite" additive="sum"/>
+    </g>
+  </g>
+
+  <!-- 25-26s : "Un quiz révèle :" -->
+  <g transform="translate(960 540)" opacity="0">
+    <text class="h2 ink" x="0" y="0" text-anchor="middle">Un quiz révèle :</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.18;0.85;1" dur="1s" begin="25.5s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.5;1.2;1" keyTimes="0;0.5;1" dur="0.3s" begin="25.5s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- 26-30s : 4 checkmarks staggered slam-in -->
+  <g opacity="0">
+    <rect x="540" y="280" width="60" height="60" rx="14" fill="#20BBE6"/>
+    <text x="570" y="325" font-size="36" font-weight="900" fill="#fff" text-anchor="middle">✓</text>
+    <text x="630" y="325" class="h4 ink">Leur niveau</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.07;0.92;1" dur="5s" begin="26.5s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="-200 0;30 0;0 0" keyTimes="0;0.6;1" dur="0.35s" begin="26.5s" fill="freeze" additive="sum"/>
+  </g>
+  <g opacity="0">
+    <rect x="540" y="430" width="60" height="60" rx="14" fill="#20BBE6"/>
+    <text x="570" y="475" font-size="36" font-weight="900" fill="#fff" text-anchor="middle">✓</text>
+    <text x="630" y="475" class="h4 ink">Leur frein</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.07;0.92;1" dur="4.5s" begin="27s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="-200 0;30 0;0 0" keyTimes="0;0.6;1" dur="0.35s" begin="27s" fill="freeze" additive="sum"/>
+  </g>
+  <g opacity="0">
+    <rect x="540" y="580" width="60" height="60" rx="14" fill="#20BBE6"/>
+    <text x="570" y="625" font-size="36" font-weight="900" fill="#fff" text-anchor="middle">✓</text>
+    <text x="630" y="625" class="h4 ink">Leur budget</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.07;0.92;1" dur="4s" begin="27.5s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="-200 0;30 0;0 0" keyTimes="0;0.6;1" dur="0.35s" begin="27.5s" fill="freeze" additive="sum"/>
+  </g>
+  <g opacity="0">
+    <rect x="540" y="730" width="60" height="60" rx="14" fill="#20BBE6"/>
+    <text x="570" y="775" font-size="36" font-weight="900" fill="#fff" text-anchor="middle">✓</text>
+    <text x="630" y="775" class="h4 ink">Leur moment d'achat</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.07;0.92;1" dur="3.5s" begin="28s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="-200 0;30 0;0 0" keyTimes="0;0.6;1" dur="0.35s" begin="28s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- 30-32s : "Avant le premier email." -->
+  <g transform="translate(960 540)" opacity="0">
+    <text class="h3 deep-cyan it" x="0" y="0" text-anchor="middle">Avant le premier email.</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.12;0.85;1" dur="2s" begin="30s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.6;1.1;1" keyTimes="0;0.5;1" dur="0.35s" begin="30s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- ============================================================== -->
+  <!--  ACT 3 — PRODUIT (32-50s)                                       -->
+  <!-- ============================================================== -->
+
+  <!-- 32-35s : Logo TIQUIZ EXPLOSE -->
+  <ellipse cx="960" cy="540" rx="800" ry="220" fill="url(#glow)" opacity="0">
+    <animate attributeName="opacity" values="0;0.9;0.6" keyTimes="0;0.3;1" dur="3s" begin="32s" fill="freeze"/>
+  </ellipse>
+  <g transform="translate(960 580)" opacity="0">
+    <text x="0" y="0" text-anchor="middle" font-weight="900" font-size="240" letter-spacing="-0.05em" fill="url(#brandGrad)">Tiquiz</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.13;0.85;1" dur="3s" begin="32s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.2;1.3;1" keyTimes="0;0.5;1" dur="0.5s" begin="32s" fill="freeze" additive="sum"/>
+  </g>
+  <g transform="translate(960 700)" opacity="0">
+    <text x="0" y="0" text-anchor="middle" class="body grey-dark">Le quiz qui vend pour toi</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.15;0.85;1" dur="2.7s" begin="32.4s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="0 30;0 0" dur="0.3s" begin="32.4s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- 35-39s : Dashboard slide + leads séquentiels -->
+  <g filter="url(#lightShadow)" opacity="0">
+    <rect x="510" y="240" width="900" height="640" rx="22" fill="#fff"/>
+    <text x="550" y="300" font-size="28" font-weight="800" fill="#2E386E">Derniers leads chauds</text>
+    <line x1="550" y1="320" x2="1370" y2="320" stroke="#E6E8F0"/>
+
+    <!-- Lead 1 - Sophie 🔥🔥🔥 -->
+    <g>
+      <circle cx="580" cy="380" r="26" fill="#5A6EF6"/>
+      <text x="630" y="375" font-size="22" font-weight="700" fill="#2E386E">Sophie M.</text>
+      <text x="630" y="402" font-size="18" fill="#6B7280">Profil Motivée</text>
+      <text x="1340" y="385" font-size="22" text-anchor="end">🔥🔥🔥</text>
+    </g>
+    <line x1="580" y1="430" x2="1340" y2="430" stroke="#E6E8F0"/>
+    <!-- Lead 2 -->
+    <g>
+      <circle cx="580" cy="470" r="26" fill="#0EA2CB"/>
+      <text x="630" y="465" font-size="22" font-weight="700" fill="#2E386E">Marc D.</text>
+      <text x="630" y="492" font-size="18" fill="#6B7280">Profil Pragmatique</text>
+      <text x="1340" y="475" font-size="22" text-anchor="end">🔥🔥</text>
+    </g>
+    <line x1="580" y1="520" x2="1340" y2="520" stroke="#E6E8F0"/>
+    <!-- Lead 3 -->
+    <g>
+      <circle cx="580" cy="560" r="26" fill="#3F4DBA"/>
+      <text x="630" y="555" font-size="22" font-weight="700" fill="#2E386E">Claire R.</text>
+      <text x="630" y="582" font-size="18" fill="#6B7280">Profil Premium</text>
+      <text x="1340" y="565" font-size="22" text-anchor="end">🔥🔥🔥</text>
+    </g>
+    <line x1="580" y1="610" x2="1340" y2="610" stroke="#E6E8F0"/>
+    <!-- Lead 4 -->
+    <g>
+      <circle cx="580" cy="650" r="26" fill="#20BBE6"/>
+      <text x="630" y="645" font-size="22" font-weight="700" fill="#2E386E">Léo T.</text>
+      <text x="630" y="672" font-size="18" fill="#6B7280">Profil Découverte</text>
+      <text x="1340" y="655" font-size="22" text-anchor="end">🔥</text>
+    </g>
+    <line x1="580" y1="700" x2="1340" y2="700" stroke="#E6E8F0"/>
+    <!-- Lead 5 -->
+    <g>
+      <circle cx="580" cy="740" r="26" fill="#5A6EF6"/>
+      <text x="630" y="735" font-size="22" font-weight="700" fill="#2E386E">Léa B.</text>
+      <text x="630" y="762" font-size="18" fill="#6B7280">Profil Pro</text>
+      <text x="1340" y="745" font-size="22" text-anchor="end">🔥🔥🔥</text>
+    </g>
+    <line x1="580" y1="790" x2="1340" y2="790" stroke="#E6E8F0"/>
+    <!-- Lead 6 -->
+    <g>
+      <circle cx="580" cy="830" r="26" fill="#0EA2CB"/>
+      <text x="630" y="825" font-size="22" font-weight="700" fill="#2E386E">Tom P.</text>
+      <text x="630" y="852" font-size="18" fill="#6B7280">Profil Motivé</text>
+      <text x="1340" y="835" font-size="22" text-anchor="end">🔥🔥🔥</text>
+    </g>
+
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.07;0.85;1" dur="4s" begin="35s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="0 400;0 0" dur="0.5s" begin="35s" fill="freeze" additive="sum"/>
+  </g>
+
+  <text class="h3 ink" x="960" y="180" text-anchor="middle" opacity="0">
+    Tiquiz capte tes leads.
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.07;0.85;1" dur="4s" begin="35.2s" fill="freeze"/>
+  </text>
+
+  <!-- 39-43s : Workflow Tiquiz → Systeme io → Email -->
+  <g opacity="0">
+    <text class="h3 ink" x="960" y="180" text-anchor="middle">Tag posé. Email envoyé.</text>
+
+    <!-- Tiquiz card -->
+    <g filter="url(#lightShadow)">
+      <rect x="240" y="380" width="380" height="220" rx="22" fill="url(#brandGrad)"/>
+      <text x="430" y="460" text-anchor="middle" font-weight="800" font-size="56" fill="#fff">Tiquiz</text>
+      <text x="430" y="510" text-anchor="middle" font-size="22" fill="#fff" opacity="0.9">Quiz rempli</text>
+      <text x="430" y="555" text-anchor="middle" font-size="22" font-weight="700" fill="#fff">Profil Motivée</text>
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 -10;0 0" dur="6s" repeatCount="indefinite"/>
+    </g>
+
+    <!-- Flèche arrow flow -->
+    <line x1="640" y1="490" x2="900" y2="490" stroke="#0EA2CB" stroke-width="8" stroke-linecap="round"/>
+    <path d="M 870 460 L 940 490 L 870 520 Z" fill="#0EA2CB"/>
+    <text x="770" y="455" text-anchor="middle" font-size="22" font-weight="700" fill="#0EA2CB">API native</text>
+
+    <!-- Systeme io card -->
+    <g filter="url(#lightShadow)">
+      <rect x="960" y="380" width="380" height="220" rx="22" fill="#fff" stroke="#E6E8F0" stroke-width="2"/>
+      <text x="1150" y="460" text-anchor="middle" font-weight="800" font-size="44" fill="#2E386E">Systeme io</text>
+      <text x="1150" y="510" text-anchor="middle" font-size="22" font-weight="700" fill="#0EA2CB">✓ Tag posé</text>
+      <text x="1150" y="555" text-anchor="middle" font-size="22" fill="#6B7280">Workflow déclenché</text>
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 -12;0 0" dur="7s" repeatCount="indefinite"/>
+    </g>
+
+    <line x1="1360" y1="490" x2="1620" y2="490" stroke="#5A6EF6" stroke-width="8" stroke-linecap="round"/>
+    <path d="M 1590 460 L 1660 490 L 1590 520 Z" fill="#5A6EF6"/>
+
+    <!-- Email card -->
+    <g filter="url(#lightShadow)">
+      <rect x="1680" y="380" width="200" height="220" rx="22" fill="#5A6EF6"/>
+      <text x="1780" y="460" text-anchor="middle" font-size="44" fill="#fff">✉</text>
+      <text x="1780" y="520" text-anchor="middle" font-size="20" font-weight="700" fill="#fff">Email</text>
+      <text x="1780" y="550" text-anchor="middle" font-size="20" font-weight="700" fill="#fff">parfait</text>
+      <animateTransform attributeName="transform" type="translate" values="0 0;0 -8;0 0" dur="5s" repeatCount="indefinite"/>
+    </g>
+
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.06;0.92;1" dur="4s" begin="39s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.85;1.05;1" keyTimes="0;0.6;1" dur="0.4s" begin="39s" fill="freeze" additive="sum"/>
+    <animateTransform attributeName="transform" type="translate" values="-144 -54;0 0" keyTimes="0;0.6" dur="0.4s" begin="39s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- 43-46s : "Zéro Zapier. Zéro Make." -->
+  <g transform="translate(960 480)" opacity="0">
+    <text class="h2 ink" x="0" y="0" text-anchor="middle">Zéro Zapier.</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.12;0.92;1" dur="3s" begin="43s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.6;1.15;1" keyTimes="0;0.5;1" dur="0.4s" begin="43s" fill="freeze" additive="sum"/>
+  </g>
+  <g transform="translate(960 640)" opacity="0">
+    <text class="h2 cyan it" x="0" y="0" text-anchor="middle">Zéro Make.</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.15;0.85;1" dur="2.5s" begin="43.6s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.6;1.2;1" keyTimes="0;0.5;1" dur="0.4s" begin="43.6s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- 46-50s : "Au bon profil. Au bon moment." -->
+  <g transform="translate(960 480)" opacity="0">
+    <text class="h2 ink" x="0" y="0" text-anchor="middle">Au bon profil.</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.85;1" dur="4s" begin="46s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="-200 0;0 0" dur="0.35s" begin="46s" fill="freeze" additive="sum"/>
+  </g>
+  <g transform="translate(960 640)" opacity="0">
+    <text class="h2 deep-cyan it" x="0" y="0" text-anchor="middle">Au bon moment.</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.12;0.85;1" dur="3.5s" begin="46.5s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="200 0;0 0" dur="0.35s" begin="46.5s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- ============================================================== -->
+  <!--  ACT 4 — CTA (50-60s)                                           -->
+  <!-- ============================================================== -->
+
+  <!-- 50-55s : "ARRÊTE." (slam) "DE DEVINER." (slam after) -->
+  <ellipse cx="960" cy="540" rx="900" ry="240" fill="url(#glow)" opacity="0">
+    <animate attributeName="opacity" values="0;0.7;0" keyTimes="0;0.3;1" dur="5s" begin="50s" fill="freeze"/>
+  </ellipse>
+  <g transform="translate(960 470)" opacity="0">
+    <text x="0" y="0" text-anchor="middle" font-weight="900" font-size="240" letter-spacing="-0.05em" fill="url(#brandGrad)">Arrête.</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.92;1" dur="5s" begin="50s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.3;1.3;1" keyTimes="0;0.5;1" dur="0.5s" begin="50s" fill="freeze" additive="sum"/>
+  </g>
+  <g transform="translate(960 720)" opacity="0">
+    <text x="0" y="0" text-anchor="middle" font-weight="900" font-size="180" letter-spacing="-0.04em" fill="#2E386E" font-style="italic">de deviner.</text>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.15;0.92;1" dur="4.5s" begin="50.5s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.3;1.25;1" keyTimes="0;0.5;1" dur="0.5s" begin="50.5s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- Lignes diagonales décoratives -->
+  <g opacity="0">
+    <line x1="80" y1="200" x2="280" y2="180" stroke="#5A6EF6" stroke-width="8" stroke-linecap="round" opacity="0.5"/>
+    <line x1="1640" y1="900" x2="1840" y2="880" stroke="#20BBE6" stroke-width="8" stroke-linecap="round" opacity="0.5"/>
+    <line x1="1620" y1="180" x2="1840" y2="220" stroke="#5A6EF6" stroke-width="8" stroke-linecap="round" opacity="0.4"/>
+    <line x1="80" y1="900" x2="280" y2="920" stroke="#20BBE6" stroke-width="8" stroke-linecap="round" opacity="0.4"/>
+    <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;0.1;0.92;1" dur="5s" begin="50s" fill="freeze"/>
+  </g>
+
+  <!-- 55-60s : Logo + CTA -->
+  <ellipse cx="960" cy="450" rx="500" ry="120" fill="url(#glow)" opacity="0">
+    <animate attributeName="opacity" values="0;0.6;0.6" keyTimes="0;0.2;1" dur="5s" begin="55s" fill="freeze"/>
+  </ellipse>
+  <g transform="translate(960 510)" opacity="0">
+    <text x="0" y="0" text-anchor="middle" font-weight="900" font-size="180" letter-spacing="-0.04em" fill="url(#brandGrad)">Tiquiz</text>
+    <animate attributeName="opacity" values="0;1;1" keyTimes="0;0.1;1" dur="5s" begin="55s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.5;1.15;1" keyTimes="0;0.5;1" dur="0.4s" begin="55s" fill="freeze" additive="sum"/>
+  </g>
+  <text x="960" y="580" text-anchor="middle" class="body grey-dark" opacity="0">Le quiz qui vend pour toi
+    <animate attributeName="opacity" values="0;1;1" keyTimes="0;0.2;1" dur="5s" begin="55.3s" fill="freeze"/>
+  </text>
+
+  <!-- Bouton CTA scale-in -->
+  <g transform="translate(960 700)" opacity="0">
+    <g filter="url(#lightShadow)" transform="translate(-450 0)">
+      <rect width="900" height="120" rx="60" fill="#2E386E"/>
+      <text x="450" y="82" text-anchor="middle" font-weight="800" font-size="52" fill="#fff">Lance ton quiz gratuit →</text>
+    </g>
+    <animate attributeName="opacity" values="0;1;1" keyTimes="0;0.15;1" dur="4s" begin="56s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="scale" values="0.6;1.08;1" keyTimes="0;0.6;1" dur="0.45s" begin="56s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- Curseur qui pointe (apparait après le bouton) -->
+  <g transform="translate(1360 800)" opacity="0">
+    <path d="M 0 0 L 0 36 L 10 27 L 17 44 L 24 41 L 17 24 L 29 24 Z" fill="#2E386E" stroke="#fff" stroke-width="2"/>
+    <animate attributeName="opacity" values="0;1;1" keyTimes="0;0.3;1" dur="3s" begin="57s" fill="freeze"/>
+    <animateTransform attributeName="transform" type="translate" values="50 50;0 0" dur="0.4s" begin="57s" fill="freeze" additive="sum"/>
+  </g>
+
+  <!-- URL tipote.fr/tiquiz -->
+  <text x="960" y="900" text-anchor="middle" font-size="26" fill="#6B7280" font-weight="600" opacity="0">tipote.fr/tiquiz
+    <animate attributeName="opacity" values="0;1;1" keyTimes="0;0.5;1" dur="3s" begin="57.5s" fill="freeze"/>
+  </text>
+
+</svg>

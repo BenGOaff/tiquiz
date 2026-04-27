@@ -4,7 +4,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { buildQuizGenerationPrompt, buildQuizImportPrompt } from "@/lib/prompts/quiz/system";
+import {
+  buildQuizGenerationPrompt,
+  buildQuizImportPrompt,
+  buildSurveyGenerationPrompt,
+  buildSurveyImportPrompt,
+} from "@/lib/prompts/quiz/system";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +42,9 @@ export async function POST(req: NextRequest) {
 
   let system: string;
   let userPrompt: string;
+  // Hoisted so the SSE progress message ("Generating your survey/quiz…")
+  // can read it inside the stream callback below.
+  let isSurvey = false;
 
   try {
     const supabase = await getSupabaseServerClient();
@@ -55,8 +63,13 @@ export async function POST(req: NextRequest) {
     // Two modes share this endpoint:
     //  - "generate" (default): creator fills a form → AI writes a quiz from scratch
     //  - "import": creator pastes raw content → AI structures it into a quiz
+    // The "kind" param toggles between quiz schema (with results / profiles)
+    // and survey schema (with question_type per question, no results). Default
+    // stays "quiz" so the existing /quiz/new flow is byte-for-byte unchanged.
     const mode = String(body.mode ?? "generate").trim();
     const isImport = mode === "import";
+    const kind = body.kind === "survey" ? "survey" : "quiz";
+    isSurvey = kind === "survey";
 
     // Fetch user's branding profile for tone + target personalization
     const { supabaseAdmin } = await import("@/lib/supabaseAdmin");
@@ -80,11 +93,39 @@ export async function POST(req: NextRequest) {
       if (content.length > 50_000) {
         return NextResponse.json({ ok: false, error: "content exceeds 50000 characters" }, { status: 400 });
       }
-      const prompts = buildQuizImportPrompt({
-        content,
+      const prompts = isSurvey
+        ? buildSurveyImportPrompt({
+            content,
+            locale: String(body.locale ?? "fr"),
+            addressForm: resolvedAddressForm === "vous" ? "vous" : "tu",
+            tone: resolvedTone,
+          })
+        : buildQuizImportPrompt({
+            content,
+            locale: String(body.locale ?? "fr"),
+            addressForm: resolvedAddressForm === "vous" ? "vous" : "tu",
+            tone: resolvedTone,
+          });
+      system = prompts.system;
+      userPrompt = prompts.user;
+    } else if (isSurvey) {
+      const objective = String(body.objective ?? "").trim();
+      const target = String(body.target ?? "").trim();
+      if (!objective || !target) {
+        return NextResponse.json(
+          { ok: false, error: "objective and target are required" },
+          { status: 400 },
+        );
+      }
+      const prompts = buildSurveyGenerationPrompt({
+        objective,
+        target,
+        tone: resolvedTone,
+        cta: String(body.cta ?? ""),
+        intention: String(body.intention ?? ""),
+        questionCount: Math.min(12, Math.max(3, Number(body.questionCount) || 6)),
         locale: String(body.locale ?? "fr"),
         addressForm: resolvedAddressForm === "vous" ? "vous" : "tu",
-        tone: resolvedTone,
       });
       system = prompts.system;
       userPrompt = prompts.user;
@@ -141,7 +182,7 @@ export async function POST(req: NextRequest) {
       }, 5000);
 
       try {
-        sendSSE("progress", { step: "Generating your quiz…" });
+        sendSSE("progress", { step: isSurvey ? "Generating your survey…" : "Generating your quiz…" });
 
         const timeoutMs = 180_000;
         const abortController = new AbortController();

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid meet" style="font-family:'Inter',sans-serif;">
+  <defs>
+    <linearGradient id="lightBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EEF0FE"/>
+      <stop offset="100%" stop-color="#E3F5FC"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="1920" height="1080" fill="url(#lightBg)"/>
+
+  <!-- Texte central -->
+  <text x="960" y="320" text-anchor="middle" fill="#2E386E" font-weight="700" font-size="56" letter-spacing="-0.02em">Un quiz révèle :</text>
+
+  <!-- 4 lignes check -->
+  <g transform="translate(680, 420)">
+    <rect width="48" height="48" rx="12" fill="#20BBE6"/>
+    <text x="24" y="34" font-size="28" font-weight="900" fill="#fff" text-anchor="middle">✓</text>
+    <text x="80" y="38" fill="#2E386E" font-weight="600" font-size="36">Leur niveau</text>
+  </g>
+  <g transform="translate(680, 510)">
+    <rect width="48" height="48" rx="12" fill="#20BBE6"/>
+    <text x="24" y="34" font-size="28" font-weight="900" fill="#fff" text-anchor="middle">✓</text>
+    <text x="80" y="38" fill="#2E386E" font-weight="600" font-size="36">Leur frein</text>
+  </g>
+  <g transform="translate(680, 600)">
+    <rect width="48" height="48" rx="12" fill="#20BBE6"/>
+    <text x="24" y="34" font-size="28" font-weight="900" fill="#fff" text-anchor="middle">✓</text>
+    <text x="80" y="38" fill="#2E386E" font-weight="600" font-size="36">Leur budget</text>
+  </g>
+  <g transform="translate(680, 690)">
+    <rect width="48" height="48" rx="12" fill="#20BBE6"/>
+    <text x="24" y="34" font-size="28" font-weight="900" fill="#fff" text-anchor="middle">✓</text>
+    <text x="80" y="38" fill="#2E386E" font-weight="600" font-size="36">Leur moment d'achat</text>
+  </g>
+
+  <text x="1860" y="1050" text-anchor="end" fill="#6B7280" font-size="16" font-weight="600">Acte 2 — Révélation (26–31 s)</text>
+</svg>

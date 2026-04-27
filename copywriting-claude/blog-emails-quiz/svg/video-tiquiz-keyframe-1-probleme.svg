@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid meet" style="font-family:'Inter',sans-serif;">
+  <rect x="0" y="0" width="1920" height="1080" fill="#0B0F1A"/>
+
+  <!-- Particules dust -->
+  <g fill="#fff" opacity="0.4">
+    <circle cx="180" cy="200" r="2"/>
+    <circle cx="450" cy="380" r="1.5"/>
+    <circle cx="1700" cy="280" r="2"/>
+    <circle cx="1500" cy="800" r="1.5"/>
+    <circle cx="320" cy="900" r="2"/>
+    <circle cx="900" cy="180" r="1.5"/>
+    <circle cx="1200" cy="950" r="2"/>
+  </g>
+
+  <!-- Texte central -->
+  <text x="960" y="560" text-anchor="middle" fill="#fff" font-weight="900" font-size="96" letter-spacing="-0.04em">Personne ne te répond.</text>
+
+  <!-- Bulles cold messages floues -->
+  <g filter="drop-shadow(0 6px 14px rgba(0,0,0,0.5))" transform="translate(140, 220) rotate(-3)">
+    <rect width="380" height="100" rx="20" fill="#161E2E" opacity="0.85"/>
+    <text x="20" y="40" fill="#9AA0B5" font-size="16">Bonjour, j'espère que ce mail vous trouve…</text>
+    <text x="20" y="70" fill="#9AA0B5" font-size="16">Je voulais vous proposer un audit gratuit…</text>
+  </g>
+  <g filter="drop-shadow(0 6px 14px rgba(0,0,0,0.5))" transform="translate(1380, 280) rotate(4)">
+    <rect width="380" height="100" rx="20" fill="#161E2E" opacity="0.85"/>
+    <text x="20" y="40" fill="#9AA0B5" font-size="16">Cher(ère) prospect, en pièce jointe vous…</text>
+    <text x="20" y="70" fill="#9AA0B5" font-size="16">Cordialement, John</text>
+  </g>
+  <g filter="drop-shadow(0 6px 14px rgba(0,0,0,0.5))" transform="translate(180, 780) rotate(2)">
+    <rect width="420" height="100" rx="20" fill="#161E2E" opacity="0.85"/>
+    <text x="20" y="40" fill="#9AA0B5" font-size="16">Suite à votre téléchargement, voici notre…</text>
+    <text x="20" y="70" fill="#9AA0B5" font-size="16">Sans réponse de votre part…</text>
+  </g>
+  <g filter="drop-shadow(0 6px 14px rgba(0,0,0,0.5))" transform="translate(1340, 760) rotate(-3)">
+    <rect width="380" height="100" rx="20" fill="#161E2E" opacity="0.85"/>
+    <text x="20" y="40" fill="#9AA0B5" font-size="16">Hello [Prénom], on m'a parlé de vous…</text>
+    <text x="20" y="70" fill="#F25C5C" font-size="16" font-weight="700">→ se désinscrire</text>
+  </g>
+
+  <text x="1860" y="1050" text-anchor="end" fill="#6B7280" font-size="16" font-weight="600">Acte 1 — Problème (10–14 s)</text>
+</svg>

@@ -11,7 +11,7 @@ import {
   BarChart3,
   PanelLeftClose,
   HelpCircle,
-  Settings,
+  MessageCircleQuestion,
 } from "lucide-react";
 import {
   Sidebar,
@@ -58,13 +58,22 @@ const MENU_ITEM_CLASS =
   "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-sidebar-accent relative font-semibold text-[#5a5a7a]";
 const MENU_ITEM_ACTIVE_CLASS = "bg-sidebar-accent !text-primary font-semibold";
 
+// Settings deliberately moved out of the sidebar — accessible via the
+// profile avatar dropdown in the header (UserAvatarMenu). Keeps the
+// sidebar focused on day-to-day work, not configuration.
 const MENU_ITEMS = [
   { key: "dashboard", url: "/dashboard", icon: LayoutDashboard, end: true },
   { key: "create", url: "/quiz/new", icon: Sparkles, end: false },
-  { key: "quizzes", url: "/quizzes", icon: ClipboardList, end: false },
+  // Surveys get their own creation entry — different mental model (feedback,
+  // not lead-magnet) and a different AI prompt, so a dedicated route avoids
+  // overloading the quiz creator with an extra mode toggle. Both flows save
+  // into the same `quizzes` table, just with mode='quiz' vs 'survey'.
+  { key: "createSurvey", url: "/survey/new", icon: MessageCircleQuestion, end: false },
+  // "projects" = umbrella label covering quizzes + surveys. Route stays
+  // /quizzes for now; the page filters by mode (commit 6).
+  { key: "projects", url: "/quizzes", icon: ClipboardList, end: false },
   { key: "leads", url: "/leads", icon: Users, end: false },
   { key: "stats", url: "/stats", icon: BarChart3, end: false },
-  { key: "settings", url: "/settings", icon: Settings, end: false },
 ] as const;
 
 function SidebarCollapseButton() {
