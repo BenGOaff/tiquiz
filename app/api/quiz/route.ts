@@ -106,6 +106,7 @@ export async function POST(req: NextRequest) {
         capture_last_name: Boolean(body.capture_last_name),
         capture_phone: Boolean(body.capture_phone),
         capture_country: Boolean(body.capture_country),
+        show_consent_checkbox: body.show_consent_checkbox === false ? false : true,
         // Personalization flags (show the "Personalize" screen before Q1)
         ask_first_name: body.ask_first_name === true ? true : false,
         ask_gender: body.ask_gender === true ? true : false,

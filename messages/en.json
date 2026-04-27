@@ -450,7 +450,9 @@
     "leadsEmpty": "No leads",
     "untitledResult": "Untitled",
     "optionFallback": "Option {n}",
-    "questionFallback": "Question {n}"
+    "questionFallback": "Question {n}",
+    "showConsentCheckboxLabel": "Show the consent checkbox",
+    "showConsentCheckboxHint": "Turn off if you already handle GDPR consent elsewhere (your CRM, another page)."
   },
   "settings": {
     "title": "Settings",

@@ -450,7 +450,9 @@
     "leadsEmpty": "Aucun lead",
     "untitledResult": "Sans titre",
     "optionFallback": "Option {n}",
-    "questionFallback": "Question {n}"
+    "questionFallback": "Question {n}",
+    "showConsentCheckboxLabel": "Afficher la case à cocher de consentement",
+    "showConsentCheckboxHint": "Désactive si tu gères déjà le consentement RGPD ailleurs (ton CRM, une autre page)."
   },
   "settings": {
     "title": "Paramètres",
