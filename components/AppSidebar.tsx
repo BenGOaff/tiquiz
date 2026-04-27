@@ -11,6 +11,7 @@ import {
   BarChart3,
   PanelLeftClose,
   HelpCircle,
+  MessageCircleQuestion,
 } from "lucide-react";
 import {
   Sidebar,
@@ -63,9 +64,13 @@ const MENU_ITEM_ACTIVE_CLASS = "bg-sidebar-accent !text-primary font-semibold";
 const MENU_ITEMS = [
   { key: "dashboard", url: "/dashboard", icon: LayoutDashboard, end: true },
   { key: "create", url: "/quiz/new", icon: Sparkles, end: false },
-  // "projects" = umbrella label covering quizzes + surveys (the upcoming
-  // sondage feature). Route stays /quizzes for now; the page will filter
-  // by mode once survey rows land.
+  // Surveys get their own creation entry — different mental model (feedback,
+  // not lead-magnet) and a different AI prompt, so a dedicated route avoids
+  // overloading the quiz creator with an extra mode toggle. Both flows save
+  // into the same `quizzes` table, just with mode='quiz' vs 'survey'.
+  { key: "createSurvey", url: "/survey/new", icon: MessageCircleQuestion, end: false },
+  // "projects" = umbrella label covering quizzes + surveys. Route stays
+  // /quizzes for now; the page filters by mode (commit 6).
   { key: "projects", url: "/quizzes", icon: ClipboardList, end: false },
   { key: "leads", url: "/leads", icon: Users, end: false },
   { key: "stats", url: "/stats", icon: BarChart3, end: false },
