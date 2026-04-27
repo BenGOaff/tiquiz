@@ -71,7 +71,8 @@
     "support": "Ajuda",
     "newQuiz": "Novo quiz",
     "settings": "Configurações",
-    "logout": "Sair"
+    "logout": "Sair",
+    "projects": "Meus projetos"
   },
   "stats": {
     "title": "Estatísticas",

@@ -71,7 +71,8 @@
     "dashboard": "Dashboard",
     "newQuiz": "New quiz",
     "settings": "Settings",
-    "logout": "Log out"
+    "logout": "Log out",
+    "projects": "My projects"
   },
   "stats": {
     "title": "Statistics",

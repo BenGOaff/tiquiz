@@ -71,7 +71,8 @@
     "dashboard": "Panel",
     "newQuiz": "Nuevo quiz",
     "settings": "Configuración",
-    "logout": "Cerrar sesión"
+    "logout": "Cerrar sesión",
+    "projects": "Mis proyectos"
   },
   "stats": {
     "title": "Estadísticas",

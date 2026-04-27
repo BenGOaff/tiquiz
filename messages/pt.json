@@ -71,7 +71,8 @@
     "support": "Ajuda",
     "newQuiz": "Novo quiz",
     "settings": "Definições",
-    "logout": "Terminar sessão"
+    "logout": "Terminar sessão",
+    "projects": "Os meus projetos"
   },
   "stats": {
     "title": "Estatísticas",
