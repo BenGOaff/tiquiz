@@ -450,7 +450,9 @@
     "leadsEmpty": "Sem leads",
     "untitledResult": "Sem título",
     "optionFallback": "Opção {n}",
-    "questionFallback": "Pergunta {n}"
+    "questionFallback": "Pergunta {n}",
+    "showConsentCheckboxLabel": "Mostrar a caixa de consentimento",
+    "showConsentCheckboxHint": "Desativa se já tratas o consentimento RGPD noutro local (CRM, outra página)."
   },
   "settings": {
     "title": "Definições",

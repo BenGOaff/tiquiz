@@ -265,6 +265,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   const [captureLastName, setCaptureLastName] = useState(false);
   const [capturePhone, setCapturePhone] = useState(false);
   const [captureCountry, setCaptureCountry] = useState(false);
+  // Defaults to true so older quizzes (no column value yet) keep showing the
+  // GDPR-style checkbox. Only flips when the creator explicitly opts out.
+  const [showConsentCheckbox, setShowConsentCheckbox] = useState(true);
   const [askFirstName, setAskFirstName] = useState(false);
   const [askGender, setAskGender] = useState(false);
   const [viralityEnabled, setViralityEnabled] = useState(false);
@@ -338,6 +341,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
       setCaptureHeading(q.capture_heading ?? ""); setCaptureSubtitle(q.capture_subtitle ?? "");
       setResultInsightHeading(q.result_insight_heading ?? ""); setResultProjectionHeading(q.result_projection_heading ?? "");
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
+      setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
       setCapturePhone(q.capture_phone ?? false); setCaptureCountry(q.capture_country ?? false);
       setAskFirstName(Boolean((q as unknown as Record<string, unknown>).ask_first_name));
       setAskGender(Boolean((q as unknown as Record<string, unknown>).ask_gender));
@@ -543,6 +547,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           title, introduction, cta_text: ctaText, cta_url: ctaUrl,
           start_button_text: startButtonText || null,
           privacy_url: privacyUrl || null, consent_text: consentText,
+          show_consent_checkbox: showConsentCheckbox,
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
           result_insight_heading: resultInsightHeading.trim() || null,
           result_projection_heading: resultProjectionHeading.trim() || null,
@@ -790,6 +795,16 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <Plus className="w-3.5 h-3.5" /> {t("addField")}
                     </button>
                   )}
+                  {/* Consent checkbox is opt-out — most creators want it for
+                      RGPD safety, but some manage consent upstream (their CRM,
+                      a separate landing page) and don't want a redundant
+                      checkbox under the email field. */}
+                  <SettingsToggle
+                    label={t("showConsentCheckboxLabel")}
+                    hint={t("showConsentCheckboxHint")}
+                    checked={showConsentCheckbox}
+                    onChange={setShowConsentCheckbox}
+                  />
                 </section>
 
                 <Separator />

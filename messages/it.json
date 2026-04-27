@@ -450,7 +450,9 @@
     "leadsEmpty": "Nessun lead",
     "untitledResult": "Senza titolo",
     "optionFallback": "Opzione {n}",
-    "questionFallback": "Domanda {n}"
+    "questionFallback": "Domanda {n}",
+    "showConsentCheckboxLabel": "Mostra la casella di consenso",
+    "showConsentCheckboxHint": "Disattiva se gestisci già il consenso GDPR altrove (CRM, altra pagina)."
   },
   "settings": {
     "title": "Impostazioni",
