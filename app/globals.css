@@ -32,9 +32,21 @@
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 76%;
-    --input: 0 0% 76%;
+    /* ── Borders / inputs ──
+       Softened to 92% lightness so cards / inputs sit on the page with a
+       barely-there outline — kawaak / waalaxy feel where shadows do the
+       visual lift, not borders. */
+    --border: 220 13% 92%;
+    --input: 220 13% 92%;
     --ring: 233 64% 61%;
+
+    /* ── Surfaces (additive — used by SectionCard / StatCard / EmptyState) ──
+       surface       : default page-level surface (card bg)
+       surface-muted : "subdued" panels (filter strips, helper boxes)
+       surface-soft  : tinted blocks (icon circles, feature highlights) */
+    --surface: 0 0% 100%;
+    --surface-muted: 220 33% 97%;
+    --surface-soft: 233 64% 96%;
 
     --chart-1: 233 64% 61%;
     --chart-2: 194 79% 52%;           /* #20BBE6 turquoise */
@@ -45,6 +57,13 @@
     --radius: 0.75rem;
 
     --gradient-primary: linear-gradient(135deg, hsl(233 64% 61%) 0%, hsl(194 79% 52%) 100%);
+
+    /* ── Shadows ──
+       SaaS-grade defaults for cards / interactive surfaces. soft = subtle
+       at-rest tier; card = default card; card-hover = lift on hover. */
+    --shadow-soft: 0 1px 2px hsl(220 13% 50% / 0.04), 0 1px 3px hsl(220 13% 50% / 0.06);
+    --shadow-card: 0 1px 3px hsl(220 13% 50% / 0.04), 0 4px 12px hsl(220 13% 50% / 0.06);
+    --shadow-card-hover: 0 2px 6px hsl(220 13% 50% / 0.06), 0 8px 24px hsl(220 13% 50% / 0.08);
 
     /* Sidebar — copié de Tipote */
     --sidebar-background: 0 0% 100%;
