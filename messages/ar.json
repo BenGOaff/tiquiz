@@ -98,12 +98,17 @@
       "completionRate": "معدل الإكمال",
       "completionRateDetail": "{completions} مكتمل / {starts} بدأوا",
       "leadRate": "معدل تحويل العملاء",
-      "leadRateDetail": "{leads} عميل / {starts} بدأوا"
+      "leadRateDetail": "{leads} عميل / {starts} بدأوا",
+      "leadRateDetailViews": "{leads} عميل / {views} مشاهدة (لم يتم تتبع البدء)"
     },
     "perQuiz": {
       "title": "الأداء لكل اختبار",
-      "conversion": "تحويل"
-    }
+      "conversion": "تحويل",
+      "basisStarts": "من البدء",
+      "basisViews": "من المشاهدات",
+      "noData": "بيانات غير كافية"
+    },
+    "untitled": "بدون عنوان"
   },
   "leads": {
     "title": "عملائي",

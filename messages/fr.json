@@ -98,12 +98,17 @@
       "completionRate": "Taux de complétion",
       "completionRateDetail": "{completions} complétés / {starts} démarrés",
       "leadRate": "Taux de conversion (leads)",
-      "leadRateDetail": "{leads} leads / {starts} démarrés"
+      "leadRateDetail": "{leads} leads / {starts} démarrés",
+      "leadRateDetailViews": "{leads} leads / {views} vues (démarrages non suivis)"
     },
     "perQuiz": {
       "title": "Performances par quiz",
-      "conversion": "conversion"
-    }
+      "conversion": "conversion",
+      "basisStarts": "sur les démarrages",
+      "basisViews": "sur les vues",
+      "noData": "Pas assez de données"
+    },
+    "untitled": "Sans titre"
   },
   "leads": {
     "title": "Mes leads",

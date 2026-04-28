@@ -98,12 +98,17 @@
       "completionRate": "Tasso di completamento",
       "completionRateDetail": "{completions} completati / {starts} avviati",
       "leadRate": "Tasso di conversione (lead)",
-      "leadRateDetail": "{leads} lead / {starts} avviati"
+      "leadRateDetail": "{leads} lead / {starts} avviati",
+      "leadRateDetailViews": "{leads} lead / {views} visualizzazioni (avvii non tracciati)"
     },
     "perQuiz": {
       "title": "Prestazioni per quiz",
-      "conversion": "conversione"
-    }
+      "conversion": "conversione",
+      "basisStarts": "sugli avvii",
+      "basisViews": "sulle visualizzazioni",
+      "noData": "Dati insufficienti"
+    },
+    "untitled": "Senza titolo"
   },
   "leads": {
     "title": "I miei lead",
