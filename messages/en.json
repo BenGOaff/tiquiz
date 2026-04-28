@@ -78,29 +78,37 @@
   },
   "stats": {
     "title": "Statistics",
-    "subtitle": "Overview of your performance",
+    "subtitle": "Run your quizzes like an entrepreneur — dated numbers, clear trends.",
     "loading": "Loading…",
     "empty": "No data yet",
     "emptyDesc": "Create and share a quiz to see your statistics here.",
     "statusActive": "Active",
     "statusDraft": "Draft",
-    "totals": {
+    "rangeLabel": "Range:",
+    "ranges": {
+      "7d": "7 days",
+      "30d": "30 days",
+      "90d": "90 days",
+      "all": "All time"
+    },
+    "kpis": {
+      "leads": "Leads",
+      "conversion": "Conversion rate",
       "views": "Views",
       "starts": "Starts",
       "completions": "Completions",
-      "leads": "Leads",
       "shares": "Shares"
     },
-    "funnel": {
-      "title": "Conversion funnel",
-      "startRate": "Start rate",
-      "startRateDetail": "{starts} starts / {views} views",
-      "completionRate": "Completion rate",
-      "completionRateDetail": "{completions} completions / {starts} starts",
-      "leadRate": "Lead conversion rate",
-      "leadRateDetail": "{leads} leads / {starts} starts",
-      "leadRateDetailViews": "{leads} leads / {views} views (starts not tracked)"
+    "acquisition": {
+      "title": "Lead acquisition",
+      "bestDay": "Best day: {date} ({count} leads)",
+      "empty": "No leads captured in this range."
     },
+    "lifetime": {
+      "title": "Lifetime totals",
+      "badge": "All time"
+    },
+    "eventsNoticeDesc": "New views, starts and completions are now timestamped — the charts will fill in as visitors come. Meanwhile the lifetime totals stay reliable.",
     "perQuiz": {
       "title": "Performance per quiz",
       "conversion": "conversion",

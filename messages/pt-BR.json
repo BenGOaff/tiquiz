@@ -84,6 +84,23 @@
     "emptyDesc": "Crie e compartilhe um quiz para ver suas estatísticas aqui.",
     "statusActive": "Ativo",
     "statusDraft": "Rascunho",
+    "rangeLabel": "Período:",
+    "ranges": { "7d": "7 dias", "30d": "30 dias", "90d": "90 dias", "all": "Tudo" },
+    "kpis": {
+      "leads": "Leads",
+      "conversion": "Taxa de conversão",
+      "views": "Visualizações",
+      "starts": "Inícios",
+      "completions": "Concluídos",
+      "shares": "Compartilhamentos"
+    },
+    "acquisition": {
+      "title": "Aquisição de leads",
+      "bestDay": "Melhor dia: {date} ({count} leads)",
+      "empty": "Nenhum lead capturado neste período."
+    },
+    "lifetime": { "title": "Totais acumulados", "badge": "Sempre" },
+    "eventsNoticeDesc": "Novas visualizações, inícios e conclusões agora têm data — os gráficos vão se preencher com a atividade. Enquanto isso, os totais acumulados continuam confiáveis.",
     "totals": {
       "views": "Visualizações",
       "starts": "Iniciados",

@@ -1,5 +1,12 @@
 // app/api/quiz/[quizId]/track/route.ts
-// Lightweight funnel event tracking (no auth)
+// Lightweight funnel event tracking (no auth).
+//
+// Each call writes a timestamped row in quiz_events AND bumps the
+// matching cumulative counter on quizzes — both inside the same
+// log_quiz_event RPC so the two never drift. Older API code that
+// only used increment_quiz_counter still works (the counter is the
+// same column), but new code paths reading from quiz_events get
+// proper time-series data for the stats page.
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -23,10 +30,10 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const quizId = await resolveId(slugOrId);
     if (!quizId) return NextResponse.json({ ok: true });
 
-    if (event === "start") {
-      await supabaseAdmin.rpc("increment_quiz_counter", { quiz_id_input: quizId, counter_name: "starts_count" });
-    } else if (event === "complete") {
-      await supabaseAdmin.rpc("increment_quiz_counter", { quiz_id_input: quizId, counter_name: "completions_count" });
+    // Only forward known event types — anything else is a noop so we
+    // don't pollute the events log with typos from older clients.
+    if (event === "start" || event === "complete") {
+      await supabaseAdmin.rpc("log_quiz_event", { quiz_id_input: quizId, event_type_input: event });
     }
 
     return NextResponse.json({ ok: true });
