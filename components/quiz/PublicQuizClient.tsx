@@ -1551,7 +1551,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
         className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
         style={rootStyle}
       >
-        <div className="max-w-lg w-full space-y-6 py-16 sm:py-24">
+        {/* Slide-in for the email capture step too — full visitor
+            flow now uses the same gentle entrance keyframe so each
+            step transition reads as a guided experience. */}
+        <div className="max-w-lg w-full space-y-6 py-16 sm:py-24 animate-quiz-step-in">
             <h2
               className="tiquiz-rich text-2xl sm:text-4xl font-bold text-center"
               dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.capture_heading) || "") || t.captureHeadingDefault }}
@@ -1904,7 +1907,19 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
         className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
         style={rootStyle}
       >
-        <div className="max-w-lg w-full py-16 sm:py-24 space-y-6 text-center">
+        {/* Soft slide-in for the thank-you payoff screen — same
+            keyframe as the quiz questions so the entire visitor flow
+            feels coordinated. */}
+        <div className="max-w-lg w-full py-16 sm:py-24 space-y-6 text-center animate-quiz-step-in">
+          {/* Soft success halo behind the heading — visual reward for
+              the visitor finishing the survey, no confetti
+              distraction. */}
+          <div className="flex justify-center">
+            <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center ring-4 ring-emerald-50 dark:ring-emerald-900/10">
+              <Check className="w-8 h-8 text-emerald-600 dark:text-emerald-300" />
+            </div>
+          </div>
+
           <h2 className="text-3xl sm:text-4xl font-bold leading-tight">
             {t.surveyThanksHeading}
           </h2>
@@ -1964,7 +1979,9 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
         className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
         style={rootStyle}
       >
-        <div className="max-w-2xl w-full py-16 sm:py-24 space-y-8">
+        {/* Slide-in for the result reveal — final payoff of the
+            quiz, deserves more than a content swap. */}
+        <div className="max-w-2xl w-full py-16 sm:py-24 space-y-8 animate-quiz-step-in">
             <div className="space-y-3">
               <h2
                 className="tiquiz-rich text-3xl sm:text-5xl font-bold leading-tight text-primary"
