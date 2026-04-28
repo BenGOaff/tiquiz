@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import DashboardLayout from "@/components/DashboardLayout";
+import { Greeting } from "@/components/ui/greeting";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -269,8 +270,12 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Row 1: Action buttons — "Télécharger mes leads" + "Nouveau quiz" */}
-          <div className="flex items-center justify-end gap-3">
+          {/* Personalised hero — replaces the static welcome card. Uses the
+              user's first name when available; rotates a friendly subtitle
+              once a day so returning users don't see the same line. */}
+          <div className="flex items-end justify-between gap-4 flex-wrap">
+            <Greeting subtitle />
+            <div className="flex items-center gap-3 flex-wrap">
             <Button
               asChild
               variant="outline"
@@ -290,6 +295,7 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
                 {t("newQuiz")}
               </Link>
             </Button>
+            </div>
           </div>
 
           {/* Row 2: Welcome banner when no quizzes */}
