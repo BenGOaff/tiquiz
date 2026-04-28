@@ -632,10 +632,10 @@ function QuestionFunnelCard({
   return (
     <Card className="hover:shadow-card-hover transition-shadow">
       <CardContent className="p-5 space-y-4">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
           <h3 className="font-semibold truncate text-foreground" title={title}>{title}</h3>
           {biggestDrop && (
-            <Badge variant="secondary" className="shrink-0 text-[11px] bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 border-0">
+            <Badge variant="secondary" className="shrink-0 self-start text-[11px] bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 border-0">
               {droppedLabel} {biggestDrop.pct}% Q{biggestDrop.from + 1}→Q{biggestDrop.to + 1}
             </Badge>
           )}
