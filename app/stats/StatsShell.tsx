@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
-  BarChart3, Eye, Play, CheckCircle, Users, Share2, TrendingUp, Sparkles, Loader2,
+  BarChart3, Eye, Play, CheckCircle, Users, Share2, TrendingUp,
 } from "lucide-react";
 
 type Quiz = {
@@ -27,8 +27,6 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
   const t = useTranslations("stats");
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [loading, setLoading] = useState(true);
-  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
-  const [analyzingAi, setAnalyzingAi] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -67,45 +65,6 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
   const startRate = totals.views > 0 ? Math.round((totals.starts / totals.views) * 100) : 0;
   const completionRate = totals.starts > 0 ? Math.round((totals.completions / totals.starts) * 100) : 0;
   const leadRate = totals.starts > 0 ? Math.round((totals.leads / totals.starts) * 100) : 0;
-
-  async function runAiAnalysis() {
-    setAnalyzingAi(true);
-    try {
-      const statsPayload = quizzes.map((q) => ({
-        title: q.title,
-        views: q.views_count,
-        starts: q.starts_count,
-        completions: q.completions_count,
-        leads: q.leads_count ?? 0,
-        shares: q.shares_count,
-      }));
-
-      const res = await fetch("/api/quiz/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: "analyze_stats",
-          stats: statsPayload,
-        }),
-      });
-
-      if (res.ok && res.body) {
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let text = "";
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          text += decoder.decode(value, { stream: true });
-        }
-        setAiAnalysis(text);
-      }
-    } catch {
-      setAiAnalysis(t("aiUnavailable"));
-    } finally {
-      setAnalyzingAi(false);
-    }
-  }
 
   return (
     <AppShell userEmail={userEmail} headerTitle={tNav("stats")}>
@@ -226,35 +185,6 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
             </CardContent>
           </Card>
 
-          {/* AI Analysis */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                {t("ai.title")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {aiAnalysis ? (
-                <div className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap">
-                  {aiAnalysis}
-                </div>
-              ) : (
-                <div className="text-center py-6">
-                  <p className="text-muted-foreground mb-4">
-                    {t("ai.intro")}
-                  </p>
-                  <Button onClick={runAiAnalysis} disabled={analyzingAi}>
-                    {analyzingAi ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t("ai.analyzing")}</>
-                    ) : (
-                      <><Sparkles className="h-4 w-4 mr-2" />{t("ai.analyze")}</>
-                    )}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </>
       )}
     </AppShell>

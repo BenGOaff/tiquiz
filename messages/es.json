@@ -84,7 +84,6 @@
     "emptyDesc": "Crea y comparte un quiz para ver tus estadísticas aquí.",
     "statusActive": "Activo",
     "statusDraft": "Borrador",
-    "aiUnavailable": "No se pueden analizar las estadísticas en este momento.",
     "totals": {
       "views": "Vistas",
       "starts": "Inicios",
@@ -104,12 +103,6 @@
     "perQuiz": {
       "title": "Rendimiento por quiz",
       "conversion": "conversión"
-    },
-    "ai": {
-      "title": "Análisis con IA",
-      "intro": "La IA analiza tu rendimiento y te da recomendaciones para mejorar tus quiz.",
-      "analyze": "Analizar mis resultados",
-      "analyzing": "Analizando…"
     }
   },
   "leads": {
