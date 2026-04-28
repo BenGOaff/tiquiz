@@ -125,6 +125,13 @@
       "basisViews": "das visualizações",
       "noData": "Dados insuficientes"
     },
+    "questionFunnel": {
+      "title": "Onde seus respondentes desistem?",
+      "questionLabel": "Pergunta",
+      "visitors": "vistas",
+      "dropped": "Maior queda:",
+      "kept": "Chegaram até o fim:"
+    },
     "untitled": "Sem título"
   },
   "leads": {

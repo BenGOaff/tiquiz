@@ -116,6 +116,13 @@
       "basisViews": "of views",
       "noData": "Not enough data"
     },
+    "questionFunnel": {
+      "title": "Where do respondents drop off?",
+      "questionLabel": "Question",
+      "visitors": "seen",
+      "dropped": "Biggest drop:",
+      "kept": "Stayed to the end:"
+    },
     "untitled": "Untitled"
   },
   "leads": {

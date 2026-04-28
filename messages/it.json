@@ -125,6 +125,13 @@
       "basisViews": "sulle visualizzazioni",
       "noData": "Dati insufficienti"
     },
+    "questionFunnel": {
+      "title": "Dove abbandonano i tuoi rispondenti?",
+      "questionLabel": "Domanda",
+      "visitors": "viste",
+      "dropped": "Calo maggiore:",
+      "kept": "Sono arrivati fino in fondo:"
+    },
     "untitled": "Senza titolo"
   },
   "leads": {

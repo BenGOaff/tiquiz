@@ -30,10 +30,20 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 
-type EventType = "view" | "start" | "complete" | "share";
-const EVENT_TYPES: EventType[] = ["view", "start", "complete", "share"];
+// "Cumulative" types are the four funnel events that have a column on
+// quizzes (views_count, starts_count, etc.) — they go into the daily
+// time-series + KPI tiles. "question_view" is per-question retention
+// only and is handled separately further down.
+type CumulativeEventType = "view" | "start" | "complete" | "share";
+type EventType = CumulativeEventType | "question_view";
+const EVENT_TYPES: CumulativeEventType[] = ["view", "start", "complete", "share"];
 
-type EventRow = { quiz_id: string; event_type: EventType; created_at: string };
+type EventRow = {
+  quiz_id: string;
+  event_type: EventType;
+  created_at: string;
+  meta?: { q?: number } | null;
+};
 type LeadRow = { quiz_id: string; created_at: string };
 
 /** Local-day key (YYYY-MM-DD) so the chart doesn't lump hours in the
@@ -107,9 +117,11 @@ export async function GET(req: NextRequest) {
     }
 
     // ── EVENTS in current window ────────────────────────────────────
+    // Pull meta along — we need it to compute the per-question
+    // drop-off funnel further down.
     let eventsQ = supabaseAdmin
       .from("quiz_events")
-      .select("quiz_id, event_type, created_at")
+      .select("quiz_id, event_type, created_at, meta")
       .in("quiz_id", quizIds);
     if (from) eventsQ = eventsQ.gte("created_at", from.toISOString());
     const { data: rawEvents } = await eventsQ;
@@ -159,13 +171,16 @@ export async function GET(req: NextRequest) {
     const today = new Date();
     today.setUTCHours(0, 0, 0, 0);
 
-    const eventBuckets: Record<EventType, Map<string, number>> = {
+    const eventBuckets: Record<CumulativeEventType, Map<string, number>> = {
       view: fillDailyZeros(anchorStart, today),
       start: fillDailyZeros(anchorStart, today),
       complete: fillDailyZeros(anchorStart, today),
       share: fillDailyZeros(anchorStart, today),
     };
     for (const e of events) {
+      // Skip question_view here — it's not cumulative funnel data,
+      // it's per-question retention handled separately below.
+      if (e.event_type === "question_view") continue;
       const d = toDayKey(e.created_at);
       const bucket = eventBuckets[e.event_type];
       if (bucket && bucket.has(d)) bucket.set(d, (bucket.get(d) ?? 0) + 1);
@@ -187,8 +202,11 @@ export async function GET(req: NextRequest) {
 
     // ── TOTALS for the period + previous-period deltas ──────────────
     const sumEvents = (rows: EventRow[]) => {
-      const acc: Record<EventType, number> = { view: 0, start: 0, complete: 0, share: 0 };
-      for (const e of rows) acc[e.event_type] = (acc[e.event_type] ?? 0) + 1;
+      const acc: Record<CumulativeEventType, number> = { view: 0, start: 0, complete: 0, share: 0 };
+      for (const e of rows) {
+        if (e.event_type === "question_view") continue;
+        acc[e.event_type] = (acc[e.event_type] ?? 0) + 1;
+      }
       return acc;
     };
     const cur = sumEvents(events);
@@ -196,7 +214,7 @@ export async function GET(req: NextRequest) {
 
     // Same defensive math as the per-quiz card: when starts is missing
     // we fall back to views as the conversion denominator.
-    const conversionRate = (e: Record<EventType, number>, leadCount: number) => {
+    const conversionRate = (e: Record<CumulativeEventType, number>, leadCount: number) => {
       const denom = e.start > 0 ? e.start : e.view;
       return denom > 0 ? Math.min(100, Math.round((leadCount / denom) * 100)) : 0;
     };
@@ -276,6 +294,40 @@ export async function GET(req: NextRequest) {
       if (row) row.leads++;
     }
 
+    // ── PER-QUESTION drop-off funnel ────────────────────────────────
+    // For each quiz we count how many distinct visitors saw each
+    // question_index. Because question_view is deduped client-side
+    // per session, the count is "unique sessions that reached this
+    // question". The drop-off is implicit — the stats UI just shows
+    // the descending bars and the entrepreneur sees where they
+    // collapse.
+    //
+    // Schema: questionFunnels = [{
+    //   quizId, title,
+    //   questions: [{ index: 0, views: 120 }, { index: 1, views: 88 }, ...]
+    // }]
+    //
+    // Empty for projects that have not received any question_view
+    // event (legacy data + projects published pre-migration).
+    const questionFunnels = (quizzes ?? []).map((q) => {
+      const counts = new Map<number, number>();
+      for (const e of events) {
+        if (e.event_type !== "question_view") continue;
+        if (e.quiz_id !== q.id) continue;
+        const idx = typeof e.meta?.q === "number" ? e.meta.q : null;
+        if (idx === null) continue;
+        counts.set(idx, (counts.get(idx) ?? 0) + 1);
+      }
+      const sorted = Array.from(counts.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([index, views]) => ({ index, views }));
+      return {
+        quizId: q.id as string,
+        title: (q.title as string) ?? "",
+        questions: sorted,
+      };
+    }).filter((f) => f.questions.length > 0);
+
     return NextResponse.json({
       ok: true,
       range,
@@ -284,6 +336,7 @@ export async function GET(req: NextRequest) {
       leadsByDay,
       totals,
       perQuiz: Array.from(perQuizMap.values()),
+      questionFunnels,
       // Tip: tells the UI whether quiz_events has *any* row yet, so
       // it can warn the creator that the time-series only reflects
       // post-migration activity for legacy projects.

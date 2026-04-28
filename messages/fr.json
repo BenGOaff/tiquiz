@@ -116,6 +116,13 @@
       "basisViews": "sur les vues",
       "noData": "Pas assez de données"
     },
+    "questionFunnel": {
+      "title": "Où décrochent tes répondants ?",
+      "questionLabel": "Question",
+      "visitors": "vus",
+      "dropped": "Pire chute :",
+      "kept": "Restés jusqu'au bout :"
+    },
     "untitled": "Sans titre"
   },
   "leads": {

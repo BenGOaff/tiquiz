@@ -762,6 +762,36 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     [quizId, previewData, trackedRef],
   );
 
+  // Per-question retention tracking. We log each question the visitor
+  // *sees* exactly once per session — using a separate dedupe key
+  // ("q:<index>") so a visitor going back-and-forth between questions
+  // doesn't inflate the count. The stats page later compares
+  // question_view counts to compute drop-off per question.
+  const trackQuestionView = useCallback(
+    (questionIndex: number) => {
+      if (previewData) return;
+      const key = `q:${questionIndex}`;
+      if (trackedRef.has(key)) return;
+      trackedRef.add(key);
+      fetch(`/api/quiz/${quizId}/track`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event: "question_view", questionIndex }),
+      }).catch(() => {});
+    },
+    [quizId, previewData, trackedRef],
+  );
+
+  // Fire per-question tracking each time the visitor lands on a
+  // question (quiz step active). The dedupe inside trackQuestionView
+  // means a visitor going Back→Forward only counts once per question.
+  useEffect(() => {
+    if (step !== "quiz") return;
+    if (!quiz?.questions?.length) return;
+    if (currentQ < 0 || currentQ >= quiz.questions.length) return;
+    trackQuestionView(currentQ);
+  }, [step, currentQ, quiz, trackQuestionView]);
+
   useEffect(() => {
     // In preview mode, data is already provided via props
     if (previewData) {
@@ -1463,19 +1493,31 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
     return (
       <div className="min-h-screen flex flex-col" style={rootStyle}>
-          {/* Progress bar fixed top */}
+          {/* Progress bar fixed top — visible at any scroll position
+              so the visitor always knows how far they are. */}
           <div className="fixed top-0 left-0 right-0 z-10">
             <Progress value={progress} className="h-1.5 rounded-none" />
           </div>
 
           <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-16">
-            <div className="max-w-2xl w-full space-y-8">
-              <p className="text-xs font-bold uppercase tracking-widest text-primary">
-                {t.questions.charAt(0).toUpperCase() + t.questions.slice(1)} {currentQ + 1}/{totalQ}
-              </p>
+            {/* key={currentQ} re-mounts this block each time the
+                visitor moves to a new question, which retriggers the
+                quiz-step-in keyframe → the new question rises in
+                rather than popping. Subtle but transforms the feel
+                from "form" to "guided experience". */}
+            <div key={currentQ} className="max-w-2xl w-full space-y-8 animate-quiz-step-in">
+              {/* Pill-style step indicator — sits more confidently than
+                  the previous tracking-widest paragraph and keeps the
+                  primary brand color in view at every step. */}
+              <div className="flex items-center justify-center">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold tabular-nums">
+                  {t.questions.charAt(0).toUpperCase() + t.questions.slice(1)}
+                  <span className="opacity-70">{currentQ + 1} / {totalQ}</span>
+                </span>
+              </div>
 
               <h2
-                className="tiquiz-rich text-2xl sm:text-4xl font-bold leading-tight"
+                className="tiquiz-rich text-2xl sm:text-4xl font-bold leading-tight text-center"
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(q.question_text)) }}
               />
 
@@ -1494,7 +1536,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                     <ArrowLeft className="w-4 h-4 mr-1" /> {t.previous}
                   </Button>
                 ) : <div />}
-                <span className="text-sm text-muted-foreground">{Math.round(progress)}%</span>
+                <span className="text-sm text-muted-foreground tabular-nums">{Math.round(progress)}%</span>
               </div>
             </div>
           </div>

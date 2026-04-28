@@ -125,6 +125,13 @@
       "basisViews": "من المشاهدات",
       "noData": "بيانات غير كافية"
     },
+    "questionFunnel": {
+      "title": "أين يتوقف المجيبون؟",
+      "questionLabel": "السؤال",
+      "visitors": "مشاهدات",
+      "dropped": "أكبر انخفاض:",
+      "kept": "وصلوا حتى النهاية:"
+    },
     "untitled": "بدون عنوان"
   },
   "leads": {

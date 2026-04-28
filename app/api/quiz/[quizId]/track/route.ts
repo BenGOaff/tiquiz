@@ -25,7 +25,8 @@ async function resolveId(slugOrId: string): Promise<string | null> {
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
     const { quizId: slugOrId } = await context.params;
-    const { event } = await req.json();
+    const body = await req.json();
+    const { event, questionIndex } = body as { event?: string; questionIndex?: number };
 
     const quizId = await resolveId(slugOrId);
     if (!quizId) return NextResponse.json({ ok: true });
@@ -34,6 +35,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
     // don't pollute the events log with typos from older clients.
     if (event === "start" || event === "complete") {
       await supabaseAdmin.rpc("log_quiz_event", { quiz_id_input: quizId, event_type_input: event });
+    } else if (event === "question_view" && Number.isInteger(questionIndex) && questionIndex! >= 0) {
+      // Per-question retention — meta carries the question index so
+      // /api/stats can later compute "where did visitors drop off?".
+      await supabaseAdmin.rpc("log_quiz_event", {
+        quiz_id_input: quizId,
+        event_type_input: "question_view",
+        meta_input: { q: questionIndex },
+      });
     }
 
     return NextResponse.json({ ok: true });

@@ -97,11 +97,20 @@ const config = {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(100%)" },
         },
+        // Question slide-in for the public quiz flow. Each new
+        // question rises a touch and fades in — gives the answering
+        // experience a subtle "guided" feel instead of an abrupt
+        // content swap.
+        "quiz-step-in": {
+          "0%": { opacity: "0", transform: "translateY(12px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         shimmer: "shimmer 1.6s infinite",
+        "quiz-step-in": "quiz-step-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both",
       },
     },
   },
