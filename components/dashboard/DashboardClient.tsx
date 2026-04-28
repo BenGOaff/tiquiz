@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Mascot } from "@/components/ui/mascot";
+import { InsightsList } from "@/components/ui/insights-card";
+import { computeInsights } from "@/lib/insights";
 import {
   Plus, Eye, Users, TrendingUp, ClipboardList, Target, BarChart3,
   Sparkles, Mail, Link2, ArrowUpRight, Download,
@@ -110,6 +112,32 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
       totalLeads: totals.leads,
       activeSurveyCount: 0, // Tiquiz dashboard groups quiz + survey rows together; refine when listings split
       leadsLastWeek: recentLeads,
+    });
+  }, [quizzes, totals.leads]);
+
+  // Smart insights — rule-based, no LLM call. Detects situations like
+  // "your project is quiet for 7+ days" or "high traffic + low capture
+  // = funnel leak" and surfaces them as actionable cards. Up to 3.
+  const insights = useMemo(() => {
+    const now = Date.now();
+    return computeInsights({
+      activeProjects: quizzes
+        .filter((q) => q.status === "active")
+        .map((q) => ({
+          id: q.id,
+          title: q.title,
+          starts_count: q.starts_count,
+          leads_count: q.leads_count ?? 0,
+          shares_count: q.shares_count,
+          // Approximation: use created_at as a proxy for "last activity"
+          // until we track per-day events.
+          daysSinceActive: q.created_at
+            ? Math.floor((now - new Date(q.created_at).getTime()) / 86400000)
+            : null,
+          mode: null,
+        })),
+      totalLeads: totals.leads,
+      draftProjectCount: quizzes.filter((q) => q.status === "draft").length,
     });
   }, [quizzes, totals.leads]);
 
@@ -326,6 +354,11 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
               track. Soft tinted card so it feels like guidance, not a
               billboard. */}
           {weeklyGoal && <WeeklyGoalCard goal={weeklyGoal} />}
+
+          {/* Rule-based smart insights — quiet projects, leaky funnels,
+              top performers, surveys to launch. Renders nothing when
+              no rule matches, so it's never noise. */}
+          {insights.length > 0 && <InsightsList insights={insights} />}
 
           {/* Row 2: Welcome banner when no quizzes — anchored by the
               mascot waving "celebrate" so the cold-start moment feels
