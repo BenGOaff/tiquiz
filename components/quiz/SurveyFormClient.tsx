@@ -203,6 +203,11 @@ export default function SurveyFormClient() {
         return;
       }
       toast.success(t("aiGenerated"));
+      // Subtle celebration when the AI burst lands — feels like the
+      // assistant just delivered something. Top-right because the user's
+      // attention is on the form, not the page centre.
+      const { celebrate } = await import("@/lib/celebrate");
+      celebrate({ intensity: "subtle", origin: "top-right" });
       await saveSurveyAndRedirect({
         title: String(survey.title || t("manualDefaultTitle")),
         introduction: survey.introduction ? String(survey.introduction) : null,

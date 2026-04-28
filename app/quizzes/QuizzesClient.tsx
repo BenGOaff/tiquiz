@@ -7,6 +7,7 @@ import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { TopPerformerBadge, TrendingBadge } from "@/components/ui/highlight-badge";
 import {
   Plus,
   Eye,
@@ -112,6 +113,33 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
     if (filter === "all") return projects;
     return projects.filter((p) => p.mode === filter);
   }, [projects, filter]);
+
+  // Identify the top-performer (highest conversion rate). Only flagged
+  // when there's a non-trivial sample size — a single quiz with 1/1 lead
+  // shouldn't claim the trophy. Returns null when nobody qualifies so
+  // the badge never lies.
+  const topPerformerId = useMemo(() => {
+    let best: { id: string; rate: number } | null = null;
+    for (const p of projects) {
+      if (p.starts_count < 5) continue; // need a minimum sample
+      const rate = (p.leads_count ?? 0) / p.starts_count;
+      if (rate <= 0) continue;
+      if (!best || rate > best.rate) best = { id: p.id, rate };
+    }
+    return best?.id ?? null;
+  }, [projects]);
+
+  // "Trending" = a project that has earned at least one lead AND was
+  // updated in the last 7 days. Cheap heuristic; can be replaced by
+  // velocity later when we track per-day events.
+  const trendingIds = useMemo(() => {
+    const sevenDaysAgo = Date.now() - 7 * 24 * 3600 * 1000;
+    return new Set(
+      projects
+        .filter((p) => (p.leads_count ?? 0) >= 3 && new Date(p.created_at).getTime() > sevenDaysAgo)
+        .map((p) => p.id),
+    );
+  }, [projects]);
 
   return (
     <AppShell userEmail={userEmail} headerTitle={tProjects("title")}>
@@ -233,6 +261,10 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                         <Badge variant={p.status === "active" ? "default" : "secondary"}>
                           {p.status === "active" ? "Active" : "Draft"}
                         </Badge>
+                        {/* Contextual highlight badges — only on the row
+                            that earned them so they keep meaning something. */}
+                        {topPerformerId === p.id && <TopPerformerBadge />}
+                        {trendingIds.has(p.id) && topPerformerId !== p.id && <TrendingBadge />}
                       </div>
 
                       <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
