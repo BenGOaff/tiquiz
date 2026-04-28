@@ -79,7 +79,7 @@ type QuizData = {
   completions_count: number; shares_count: number;
   questions: QuizQuestion[]; results: QuizResult[];
 };
-type ProfileBrand = { brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null; plan: string | null };
+type ProfileBrand = { brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null; plan: string | null; privacy_url: string | null };
 interface QuizDetailClientProps { quizId: string; }
 
 // Inline edit: click to edit text directly on the preview.
@@ -665,10 +665,14 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
         </nav>
         <div className="flex items-center gap-2">
           {/* Readiness ring — passive nudge showing how close the project
-              is to publishable. Computed live from local edit state so it
-              ticks up as the user fills fields, no roundtrip needed.
-              Hidden on small screens where the top bar is already dense. */}
-          {(() => {
+              is to publishable. Hidden once the quiz is already
+              published: the score is a pre-publish gauge, not a quality
+              critic, so keeping it visible after the fact reads as
+              "your published work is incomplete" — which is misleading
+              when the user has consciously chosen to publish without
+              100 % of the optional checks (e.g. privacy URL omitted on
+              purpose). */}
+          {status !== "active" && (() => {
             const r = computeReadiness({
               mode: "quiz",
               title,
@@ -677,7 +681,12 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
               cta_url: ctaUrl,
               questions: editQuestions,
               results: editResults,
-              privacy_url: privacyUrl,
+              // Match runtime behaviour: the public quiz route falls
+              // back to the profile-level privacy URL when the quiz
+              // doesn't have its own. Mirror that here so the readiness
+              // check doesn't flag a missing field that the published
+              // page actually has.
+              privacy_url: privacyUrl || profile?.privacy_url || "",
               status,
             });
             return (
