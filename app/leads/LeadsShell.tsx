@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { SkeletonCard } from "@/components/ui/skeleton";
+import { Mascot } from "@/components/ui/mascot";
 import {
   Users, Download, RefreshCw, Search, Mail, Calendar,
   CheckCircle2, XCircle,
@@ -174,18 +176,19 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
         </select>
       </div>
 
-      {/* Stats cards */}
+      {/* Stats cards — tinted by category so the eye lands on
+          actionable rows (not-synced) immediately. */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: t("stats.total"), value: leads.length, icon: Users },
-          { label: t("stats.syncedSio"), value: leads.filter((l) => l.sio_synced).length, icon: CheckCircle2 },
-          { label: t("stats.notSynced"), value: leads.filter((l) => !l.sio_synced).length, icon: XCircle },
-          { label: t("stats.thisMonth"), value: leads.filter((l) => new Date(l.created_at).getMonth() === new Date().getMonth()).length, icon: Calendar },
-        ].map(({ label, value, icon: Icon }) => (
-          <Card key={label}>
+          { label: t("stats.total"), value: leads.length, icon: Users, bg: "bg-primary/10", fg: "text-primary" },
+          { label: t("stats.syncedSio"), value: leads.filter((l) => l.sio_synced).length, icon: CheckCircle2, bg: "bg-emerald-100 dark:bg-emerald-900/30", fg: "text-emerald-600 dark:text-emerald-300" },
+          { label: t("stats.notSynced"), value: leads.filter((l) => !l.sio_synced).length, icon: XCircle, bg: "bg-amber-100 dark:bg-amber-900/30", fg: "text-amber-600 dark:text-amber-300" },
+          { label: t("stats.thisMonth"), value: leads.filter((l) => new Date(l.created_at).getMonth() === new Date().getMonth()).length, icon: Calendar, bg: "bg-sky-100 dark:bg-sky-900/30", fg: "text-sky-600 dark:text-sky-300" },
+        ].map(({ label, value, icon: Icon, bg, fg }) => (
+          <Card key={label} className="hover:shadow-card-hover transition-shadow">
             <CardContent className="py-4 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Icon className="h-4 w-4 text-primary" />
+              <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center`}>
+                <Icon className={`h-4 w-4 ${fg}`} />
               </div>
               <div>
                 <p className="text-2xl font-bold tabular-nums">{value}</p>
@@ -198,13 +201,34 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
 
       {/* Table */}
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground">{t("loading")}</div>
+        <SkeletonCard className="h-[420px]" />
       ) : filtered.length === 0 ? (
+        // Two distinct empty states:
+        //  - "no leads at all" → mascot waves, encouraging copy
+        //  - "filter excluded everything" → mascot in search mode + reset CTA
         <Card>
-          <CardContent className="py-12 text-center">
-            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">{t("empty")}</h3>
-            <p className="text-muted-foreground">{t("emptyDesc")}</p>
+          <CardContent className="py-14 text-center flex flex-col items-center gap-3">
+            <Mascot
+              expression={leads.length === 0 ? "wave" : "search"}
+              size={88}
+              tone="soft"
+            />
+            <h3 className="text-lg font-semibold">
+              {leads.length === 0 ? t("empty") : t("emptyFiltered")}
+            </h3>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              {leads.length === 0 ? t("emptyDesc") : t("emptyFilteredDesc")}
+            </p>
+            {leads.length > 0 && (search || filterQuiz !== "all") && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full mt-2"
+                onClick={() => { setSearch(""); setFilterQuiz("all"); }}
+              >
+                {t("clearFilters")}
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
