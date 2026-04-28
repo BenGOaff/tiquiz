@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TopPerformerBadge, TrendingBadge } from "@/components/ui/highlight-badge";
+import { EmptyCanvasArt, EmptySearchArt } from "@/components/ui/illustrations";
 import {
   Plus,
   Eye,
@@ -193,23 +194,30 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
         <div className="text-center py-12 text-muted-foreground">...</div>
       ) : filtered.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center">
-            <ClipboardList className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <CardContent className="py-12 text-center flex flex-col items-center">
+            {/* Custom Tipote/Tiquiz illustration — soft, friendly, on
+                brand. EmptyCanvasArt for "no project yet", EmptySearchArt
+                for "no result in this filter". */}
+            {projects.length === 0 ? (
+              <EmptyCanvasArt className="w-32 h-32 mb-2" />
+            ) : (
+              <EmptySearchArt className="w-28 h-28 mb-2" />
+            )}
             <h3 className="text-lg font-semibold mb-2">
               {projects.length === 0 ? tProjects("emptyTitle") : tProjects("emptyFilterTitle")}
             </h3>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-muted-foreground mb-6 max-w-md">
               {projects.length === 0 ? tProjects("emptyDesc") : tProjects("emptyFilterDesc")}
             </p>
             {projects.length === 0 && (
               <div className="flex items-center justify-center gap-2 flex-wrap">
-                <Button asChild>
+                <Button asChild className="rounded-full">
                   <Link href="/quiz/new">
                     <Sparkles className="h-4 w-4 mr-2" />
                     {tProjects("createQuiz")}
                   </Link>
                 </Button>
-                <Button asChild variant="outline">
+                <Button asChild variant="outline" className="rounded-full">
                   <Link href="/survey/new">
                     <MessageCircleQuestion className="h-4 w-4 mr-2" />
                     {tProjects("createSurvey")}
