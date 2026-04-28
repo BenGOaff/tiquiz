@@ -217,11 +217,12 @@ export default function SettingsClient() {
       </div>
 
       <Tabs defaultValue={initialTab} className="space-y-4">
-        <TabsList className="w-full sm:w-auto sticky top-14 z-10 bg-background border-b rounded-none justify-start gap-0 h-auto p-0">
-          <TabsTrigger value="general" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><Settings className="h-4 w-4 mr-1.5" />{t("tabGeneral")}</TabsTrigger>
-          <TabsTrigger value="branding" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><Palette className="h-4 w-4 mr-1.5" />{t("tabBranding")}</TabsTrigger>
-          <TabsTrigger value="systemeio" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><Key className="h-4 w-4 mr-1.5" />{t("tabSystemeio")}</TabsTrigger>
-          <TabsTrigger value="account" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-3 text-sm font-medium"><CreditCard className="h-4 w-4 mr-1.5" />{t("tabAccount")}</TabsTrigger>
+        {/* Pill tabs — same style as the rest of Tiquiz / Tipote post-refresh. */}
+        <TabsList className="h-auto p-1 gap-1 flex-wrap sticky top-14 z-10">
+          <TabsTrigger value="general" className="gap-1.5 px-4 py-2"><Settings className="h-4 w-4" />{t("tabGeneral")}</TabsTrigger>
+          <TabsTrigger value="branding" className="gap-1.5 px-4 py-2"><Palette className="h-4 w-4" />{t("tabBranding")}</TabsTrigger>
+          <TabsTrigger value="systemeio" className="gap-1.5 px-4 py-2"><Key className="h-4 w-4" />{t("tabSystemeio")}</TabsTrigger>
+          <TabsTrigger value="account" className="gap-1.5 px-4 py-2"><CreditCard className="h-4 w-4" />{t("tabAccount")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-4">

@@ -262,29 +262,30 @@ export default function SurveyFormClient() {
   }
 
   // ── Render ────────────────────────────────────────────────────────
+  // Width matches /quiz/new (AppShell renders max-w-[1200px] outside) so
+  // the survey-creation entry feels like a sibling of quiz-creation, not
+  // a stripped-down modal.
   return (
-    <div className="space-y-4 max-w-3xl mx-auto">
+    <div className="space-y-4 w-full">
       {(generating || importing) && <AIGeneratingOverlay />}
 
+      {/* Pill tabs (kawaak / tipote settings style) — replaces the previous
+          underline tabs which felt dated. The default <TabsList> /
+          <TabsTrigger> shadcn primitives already give a muted-bg container
+          with an elevated active pill; we just stop overriding them. */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-        <TabsList className="w-full sm:w-auto bg-transparent border-b rounded-none justify-start gap-0 h-auto p-0">
-          <TabsTrigger
-            value="ai"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5"
-          >
+        <TabsList className="h-auto p-1 gap-1">
+          <TabsTrigger value="ai" className="gap-1.5 px-4 py-2">
             <Sparkles className="h-4 w-4" />
             {t("tabAi")}
           </TabsTrigger>
-          <TabsTrigger
-            value="import"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5"
-          >
+          <TabsTrigger value="import" className="gap-1.5 px-4 py-2">
             <Upload className="h-4 w-4" />
             {t("tabImport")}
           </TabsTrigger>
           <TabsTrigger
             value="manual"
-            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5"
+            className="gap-1.5 px-4 py-2"
             onClick={(e) => {
               e.preventDefault();
               handleCreateManual();
