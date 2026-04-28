@@ -254,8 +254,12 @@ export async function GET(_req: NextRequest, context: RouteContext) {
     const customFooterText = isPaid ? (quizRow.custom_footer_text as string | null) : null;
     const customFooterUrl = isPaid ? (quizRow.custom_footer_url as string | null) : null;
 
+    // log_quiz_event bumps the cumulative counter AND writes a dated
+    // row in quiz_events — both transactional, so the stats page can
+    // do real time-series analysis (per-day views, week-over-week
+    // trends, etc.) on top of the same data the lifetime counters use.
     admin
-      .rpc("increment_quiz_counter", { quiz_id_input: quizId, counter_name: "views_count" })
+      .rpc("log_quiz_event", { quiz_id_input: quizId, event_type_input: "view" })
       .then(() => {})
       .then(undefined, () => {});
 
@@ -515,8 +519,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       .maybeSingle();
 
     if (quiz) {
+      // log_quiz_event = counter + dated row so share velocity is
+      // visible in the stats time-series, not just the lifetime total.
       await admin
-        .rpc("increment_quiz_counter", { quiz_id_input: quizId, counter_name: "shares_count" });
+        .rpc("log_quiz_event", { quiz_id_input: quizId, event_type_input: "share" });
 
       const quizRow = quiz as { sio_share_tag_name?: string | null; user_id?: string; sio_api_key_id?: string | null };
       const shareTagName = String(quizRow.sio_share_tag_name ?? "").trim();

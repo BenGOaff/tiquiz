@@ -78,29 +78,37 @@
   },
   "stats": {
     "title": "Statistiques",
-    "subtitle": "Vue d'ensemble de tes performances",
+    "subtitle": "Pilote tes quiz comme un entrepreneur — chiffres datés, tendances claires.",
     "loading": "Chargement…",
     "empty": "Pas encore de données",
     "emptyDesc": "Crée et partage un quiz pour voir tes statistiques ici.",
     "statusActive": "Actif",
     "statusDraft": "Brouillon",
-    "totals": {
-      "views": "Vues",
-      "starts": "Démarrés",
-      "completions": "Complétés",
+    "rangeLabel": "Période :",
+    "ranges": {
+      "7d": "7 jours",
+      "30d": "30 jours",
+      "90d": "90 jours",
+      "all": "Tout"
+    },
+    "kpis": {
       "leads": "Leads",
+      "conversion": "Taux de conversion",
+      "views": "Vues",
+      "starts": "Démarrages",
+      "completions": "Complétés",
       "shares": "Partages"
     },
-    "funnel": {
-      "title": "Entonnoir de conversion",
-      "startRate": "Taux de démarrage",
-      "startRateDetail": "{starts} démarrés / {views} vues",
-      "completionRate": "Taux de complétion",
-      "completionRateDetail": "{completions} complétés / {starts} démarrés",
-      "leadRate": "Taux de conversion (leads)",
-      "leadRateDetail": "{leads} leads / {starts} démarrés",
-      "leadRateDetailViews": "{leads} leads / {views} vues (démarrages non suivis)"
+    "acquisition": {
+      "title": "Acquisition de leads",
+      "bestDay": "Meilleur jour : {date} ({count} leads)",
+      "empty": "Aucun lead capturé sur cette période."
     },
+    "lifetime": {
+      "title": "Cumul depuis la création",
+      "badge": "Tout temps"
+    },
+    "eventsNoticeDesc": "Les nouvelles vues, démarrages et complétions sont désormais datés — les courbes vont se remplir au fil de l'activité. En attendant, tu peux compter sur le cumul depuis la création.",
     "perQuiz": {
       "title": "Performances par quiz",
       "conversion": "conversion",
