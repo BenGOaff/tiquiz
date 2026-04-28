@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { SettingsAchievements } from "@/components/settings/SettingsAchievements";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -531,6 +532,12 @@ export default function SettingsClient() {
         </TabsContent>
 
         <TabsContent value="account" className="space-y-6">
+          {/* Achievements gallery — gamified summary of what the user
+              has earned. Computed live on mount from /api/quiz so it
+              always reflects the current state without a separate
+              tracking system. */}
+          <SettingsAchievements />
+
           <Card>
             <CardHeader>
               <CardTitle>{t("subscriptionTitle")}</CardTitle>
