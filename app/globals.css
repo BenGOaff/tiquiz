@@ -63,11 +63,12 @@
     --gradient-primary: linear-gradient(135deg, hsl(233 64% 61%) 0%, hsl(194 79% 52%) 100%);
 
     /* ── Shadows ──
-       SaaS-grade defaults for cards / interactive surfaces. soft = subtle
-       at-rest tier; card = default card; card-hover = lift on hover. */
-    --shadow-soft: 0 1px 2px hsl(220 13% 50% / 0.04), 0 1px 3px hsl(220 13% 50% / 0.06);
-    --shadow-card: 0 1px 3px hsl(220 13% 50% / 0.04), 0 4px 12px hsl(220 13% 50% / 0.06);
-    --shadow-card-hover: 0 2px 6px hsl(220 13% 50% / 0.06), 0 8px 24px hsl(220 13% 50% / 0.08);
+       Cards are slightly more "lifted" than the original soft set —
+       gives the kawaak-style depth on a white page bg without feeling
+       heavy. card-hover bumps subtly on hover for interactive surfaces. */
+    --shadow-soft: 0 1px 2px hsl(220 13% 50% / 0.05), 0 1px 3px hsl(220 13% 50% / 0.07);
+    --shadow-card: 0 1px 2px hsl(220 13% 50% / 0.05), 0 6px 16px hsl(220 13% 50% / 0.10);
+    --shadow-card-hover: 0 2px 4px hsl(220 13% 50% / 0.06), 0 12px 28px hsl(220 13% 50% / 0.14);
 
     /* ── Sidebar ──
        Sidebar bg matches `--card` (gray-blue tint) so it reads as a

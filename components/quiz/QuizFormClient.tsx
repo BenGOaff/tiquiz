@@ -888,17 +888,20 @@ export default function QuizFormClient() {
     <div className="space-y-4">
       {/* Top bar: tabs + save button */}
       <div className="flex items-center justify-between gap-4">
+        {/* Pill tabs (kawaak / tipote settings style) — modern, no dated
+            underline, lets the default shadcn TabsList / TabsTrigger
+            primitives do the work. */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
-          <TabsList className="w-full sm:w-auto bg-transparent border-b rounded-none justify-start gap-0 h-auto p-0">
-            <TabsTrigger value="manual" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5" onClick={(e) => { e.preventDefault(); handleCreateManual(); }}>
+          <TabsList className="h-auto p-1 gap-1">
+            <TabsTrigger value="manual" className="gap-1.5 px-4 py-2" onClick={(e) => { e.preventDefault(); handleCreateManual(); }}>
               <FileText className="h-4 w-4" />
               {creatingManual ? <Loader2 className="h-4 w-4 animate-spin" /> : t("tabManual")}
             </TabsTrigger>
-            <TabsTrigger value="ai" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5">
+            <TabsTrigger value="ai" className="gap-1.5 px-4 py-2">
               <Sparkles className="h-4 w-4" />
               {t("tabAI")}
             </TabsTrigger>
-            <TabsTrigger value="import" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-5 py-3 text-sm font-medium gap-1.5">
+            <TabsTrigger value="import" className="gap-1.5 px-4 py-2">
               <Upload className="h-4 w-4" />
               {t("tabImport")}
             </TabsTrigger>
