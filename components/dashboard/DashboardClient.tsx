@@ -9,6 +9,10 @@ import { WeeklyGoalCard } from "@/components/ui/weekly-goal-card";
 import { pickWeeklyGoal } from "@/lib/weekly-goal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Mascot } from "@/components/ui/mascot";
+import { InsightsList } from "@/components/ui/insights-card";
+import { computeInsights } from "@/lib/insights";
 import {
   Plus, Eye, Users, TrendingUp, ClipboardList, Target, BarChart3,
   Sparkles, Mail, Link2, ArrowUpRight, Download,
@@ -108,6 +112,32 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
       totalLeads: totals.leads,
       activeSurveyCount: 0, // Tiquiz dashboard groups quiz + survey rows together; refine when listings split
       leadsLastWeek: recentLeads,
+    });
+  }, [quizzes, totals.leads]);
+
+  // Smart insights — rule-based, no LLM call. Detects situations like
+  // "your project is quiet for 7+ days" or "high traffic + low capture
+  // = funnel leak" and surfaces them as actionable cards. Up to 3.
+  const insights = useMemo(() => {
+    const now = Date.now();
+    return computeInsights({
+      activeProjects: quizzes
+        .filter((q) => q.status === "active")
+        .map((q) => ({
+          id: q.id,
+          title: q.title,
+          starts_count: q.starts_count,
+          leads_count: q.leads_count ?? 0,
+          shares_count: q.shares_count,
+          // Approximation: use created_at as a proxy for "last activity"
+          // until we track per-day events.
+          daysSinceActive: q.created_at
+            ? Math.floor((now - new Date(q.created_at).getTime()) / 86400000)
+            : null,
+          mode: null,
+        })),
+      totalLeads: totals.leads,
+      draftProjectCount: quizzes.filter((q) => q.status === "draft").length,
     });
   }, [quizzes, totals.leads]);
 
@@ -264,15 +294,17 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
       userEmail={userEmail}
     >
       {loading ? (
-        /* Skeleton loading state matching the dashboard layout */
+        /* Shimmer skeletons (replaces the static animate-pulse stand-ins
+           with the design-system Skeleton primitive — same shape, nicer
+           loading effect, coordinated across the page). */
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[...Array(4)].map((_, i) => (
               <Card key={i}>
-                <CardContent className="py-5 px-5">
-                  <div className="w-9 h-9 rounded-lg bg-muted animate-pulse mb-3" />
-                  <div className="h-7 w-16 bg-muted animate-pulse rounded mb-2" />
-                  <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+                <CardContent className="py-5 px-5 space-y-3">
+                  <Skeleton className="w-9 h-9 rounded-lg" />
+                  <Skeleton className="h-7 w-16" />
+                  <Skeleton className="h-4 w-24" />
                 </CardContent>
               </Card>
             ))}
@@ -281,7 +313,7 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
             {[...Array(2)].map((_, i) => (
               <Card key={i}>
                 <CardContent className="py-8">
-                  <div className="h-[200px] bg-muted animate-pulse rounded" />
+                  <Skeleton className="h-[200px] w-full" />
                 </CardContent>
               </Card>
             ))}
@@ -323,11 +355,23 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
               billboard. */}
           {weeklyGoal && <WeeklyGoalCard goal={weeklyGoal} />}
 
-          {/* Row 2: Welcome banner when no quizzes */}
+          {/* Rule-based smart insights — quiet projects, leaky funnels,
+              top performers, surveys to launch. Renders nothing when
+              no rule matches, so it's never noise. */}
+          {insights.length > 0 && <InsightsList insights={insights} />}
+
+          {/* Row 2: Welcome banner when no quizzes — anchored by the
+              mascot waving "celebrate" so the cold-start moment feels
+              warm, not pressuring. The hero is sided with the same
+              gradient banner; we just slot a Mascot card on the left
+              for personality. */}
           {quizzes.length === 0 && (
             <div className="rounded-2xl gradient-primary p-6 text-white">
-              <div className="flex items-start justify-between gap-4">
-                <div>
+              <div className="flex items-center gap-5">
+                <div className="hidden sm:flex shrink-0 w-20 h-20 rounded-2xl bg-white/15 items-center justify-center">
+                  <Mascot expression="celebrate" size={64} tone="soft" />
+                </div>
+                <div className="flex-1 min-w-0">
                   <h2 className="text-xl font-bold mb-1">{t("welcomeTitle")}</h2>
                   <p className="text-white/80 text-sm max-w-lg">{t("welcomeDesc")}</p>
                 </div>
