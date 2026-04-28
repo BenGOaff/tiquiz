@@ -762,6 +762,36 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     [quizId, previewData, trackedRef],
   );
 
+  // Per-question retention tracking. We log each question the visitor
+  // *sees* exactly once per session — using a separate dedupe key
+  // ("q:<index>") so a visitor going back-and-forth between questions
+  // doesn't inflate the count. The stats page later compares
+  // question_view counts to compute drop-off per question.
+  const trackQuestionView = useCallback(
+    (questionIndex: number) => {
+      if (previewData) return;
+      const key = `q:${questionIndex}`;
+      if (trackedRef.has(key)) return;
+      trackedRef.add(key);
+      fetch(`/api/quiz/${quizId}/track`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event: "question_view", questionIndex }),
+      }).catch(() => {});
+    },
+    [quizId, previewData, trackedRef],
+  );
+
+  // Fire per-question tracking each time the visitor lands on a
+  // question (quiz step active). The dedupe inside trackQuestionView
+  // means a visitor going Back→Forward only counts once per question.
+  useEffect(() => {
+    if (step !== "quiz") return;
+    if (!quiz?.questions?.length) return;
+    if (currentQ < 0 || currentQ >= quiz.questions.length) return;
+    trackQuestionView(currentQ);
+  }, [step, currentQ, quiz, trackQuestionView]);
+
   useEffect(() => {
     // In preview mode, data is already provided via props
     if (previewData) {

@@ -125,6 +125,13 @@
       "basisViews": "de las vistas",
       "noData": "Datos insuficientes"
     },
+    "questionFunnel": {
+      "title": "¿Dónde abandonan tus respondedores?",
+      "questionLabel": "Pregunta",
+      "visitors": "vistas",
+      "dropped": "Mayor caída:",
+      "kept": "Llegaron al final:"
+    },
     "untitled": "Sin título"
   },
   "leads": {

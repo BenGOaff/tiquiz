@@ -66,6 +66,11 @@ type StatsResponse = {
     lifetimeCompletions: number;
     lifetimeShares: number;
   }>;
+  questionFunnels: Array<{
+    quizId: string;
+    title: string;
+    questions: Array<{ index: number; views: number }>;
+  }>;
   hasEventData: boolean;
 };
 
@@ -303,6 +308,35 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
             <div className="flex items-start gap-3 p-3 rounded-xl bg-sky-50 dark:bg-sky-900/20 border border-sky-200/60 dark:border-sky-900/40 text-sm text-sky-900 dark:text-sky-200">
               <Info className="h-4 w-4 mt-0.5 shrink-0" />
               <p>{t("eventsNoticeDesc")}</p>
+            </div>
+          )}
+
+          {/* Per-question drop-off — the actionable insight that
+              tells creators "the funnel collapses at Q3, rewrite that
+              one". Only shows for quizzes that have received
+              question_view events; older projects render nothing
+              until visitors start coming through post-migration. */}
+          {data.questionFunnels.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary" />
+                <h2 className="text-base font-semibold text-foreground">
+                  {t("questionFunnel.title")}
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {data.questionFunnels.map((qf) => (
+                  <QuestionFunnelCard
+                    key={qf.quizId}
+                    title={qf.title || t("untitled")}
+                    questions={qf.questions}
+                    questionLabel={t("questionFunnel.questionLabel")}
+                    visitorsLabel={t("questionFunnel.visitors")}
+                    droppedLabel={t("questionFunnel.dropped")}
+                    keptLabel={t("questionFunnel.kept")}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
@@ -548,6 +582,110 @@ function MetricTile({
       <p className="text-sm font-bold tabular-nums leading-none">{value}</p>
       <p className="text-[10px] text-muted-foreground leading-none truncate w-full" title={label}>{label}</p>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// QuestionFunnelCard — per-question retention bars.
+//
+// Shows each question as a horizontal bar whose width = (this question's
+// views / first question's views). The drop-off between questions is
+// implicit but glaring: when a bar is noticeably shorter than the one
+// above it, that question is where visitors leave. We also surface the
+// biggest single-step drop as a callout so the creator's eye lands on
+// the worst offender immediately.
+// ---------------------------------------------------------------------------
+
+function QuestionFunnelCard({
+  title,
+  questions,
+  questionLabel,
+  visitorsLabel,
+  droppedLabel,
+  keptLabel,
+}: {
+  title: string;
+  questions: Array<{ index: number; views: number }>;
+  questionLabel: string;
+  visitorsLabel: string;
+  droppedLabel: string;
+  keptLabel: string;
+}) {
+  if (questions.length === 0) return null;
+  const base = questions[0]?.views ?? 0;
+
+  // Biggest single-step drop — between question N and question N+1.
+  // Surfaces the question where the funnel leaks the most so the
+  // creator can target their copy fix.
+  let biggestDrop: { from: number; to: number; pct: number } | null = null;
+  for (let i = 0; i < questions.length - 1; i++) {
+    const a = questions[i].views;
+    const b = questions[i + 1].views;
+    if (a <= 0) continue;
+    const lostPct = Math.round(((a - b) / a) * 100);
+    if (lostPct <= 0) continue;
+    if (!biggestDrop || lostPct > biggestDrop.pct) {
+      biggestDrop = { from: questions[i].index, to: questions[i + 1].index, pct: lostPct };
+    }
+  }
+
+  return (
+    <Card className="hover:shadow-card-hover transition-shadow">
+      <CardContent className="p-5 space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="font-semibold truncate text-foreground" title={title}>{title}</h3>
+          {biggestDrop && (
+            <Badge variant="secondary" className="shrink-0 text-[11px] bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 border-0">
+              {droppedLabel} {biggestDrop.pct}% Q{biggestDrop.from + 1}→Q{biggestDrop.to + 1}
+            </Badge>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          {questions.map((q, i) => {
+            const widthPct = base > 0 ? Math.max(4, Math.round((q.views / base) * 100)) : 0;
+            const retentionPct = base > 0 ? Math.round((q.views / base) * 100) : 0;
+            const prev = i > 0 ? questions[i - 1].views : null;
+            const stepDrop = prev !== null && prev > 0
+              ? Math.round(((prev - q.views) / prev) * 100)
+              : 0;
+            // Color the bar progressively warmer as retention degrades —
+            // visual signal even before reading numbers.
+            const barTone = retentionPct >= 80 ? "bg-emerald-400 dark:bg-emerald-500"
+              : retentionPct >= 50 ? "bg-primary"
+              : retentionPct >= 30 ? "bg-amber-400 dark:bg-amber-500"
+              : "bg-rose-400 dark:bg-rose-500";
+            return (
+              <div key={q.index} className="space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground tabular-nums">
+                    {questionLabel} {q.index + 1}
+                  </span>
+                  <span className="font-medium tabular-nums">
+                    {q.views} {visitorsLabel}
+                    {i > 0 && stepDrop > 0 && (
+                      <span className="ml-1.5 text-[11px] text-rose-600 dark:text-rose-400">
+                        −{stepDrop}%
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <div className="h-2 rounded-full bg-muted/50 overflow-hidden">
+                  <div
+                    className={cn("h-full rounded-full transition-all duration-500", barTone)}
+                    style={{ width: `${widthPct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="text-[11px] text-muted-foreground">
+          {keptLabel} {questions[questions.length - 1].views} / {base}
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
