@@ -98,12 +98,17 @@
       "completionRate": "Tasa de finalización",
       "completionRateDetail": "{completions} completados / {starts} inicios",
       "leadRate": "Tasa de conversión (leads)",
-      "leadRateDetail": "{leads} leads / {starts} inicios"
+      "leadRateDetail": "{leads} leads / {starts} inicios",
+      "leadRateDetailViews": "{leads} leads / {views} vistas (inicios no rastreados)"
     },
     "perQuiz": {
       "title": "Rendimiento por quiz",
-      "conversion": "conversión"
-    }
+      "conversion": "conversión",
+      "basisStarts": "de los inicios",
+      "basisViews": "de las vistas",
+      "noData": "Datos insuficientes"
+    },
+    "untitled": "Sin título"
   },
   "leads": {
     "title": "Mis leads",

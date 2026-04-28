@@ -1,14 +1,28 @@
 "use client";
 
+// app/stats/StatsShell.tsx
+// Stats page — totals, conversion funnel, and a per-quiz breakdown.
+//
+// Per-quiz cards mirror the dashboard's KPI style: each project gets its
+// own panel with an icon-tinted header, a conversion ring, and a small
+// grid of metric tiles (views / starts / completions / leads / shares).
+//
+// Conversion math: when `starts_count` is 0 but leads have been
+// captured, we fall back to `views_count` as the denominator so the
+// percentage doesn't lie. The funnel is monotonic (views ≥ starts ≥
+// completions ≥ leads), so views is always a safe upper bound. We cap
+// the displayed percentage at 100% to absorb any tracking gaps where
+// leads outnumber starts.
+
 import { useEffect, useState } from "react";
 import AppShell from "@/components/AppShell";
 import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 import {
-  BarChart3, Eye, Play, CheckCircle, Users, Share2, TrendingUp,
+  BarChart3, Eye, Play, CheckCircle, Users, Share2, TrendingUp, Sparkles,
 } from "lucide-react";
 
 type Quiz = {
@@ -21,6 +35,32 @@ type Quiz = {
   shares_count: number;
   leads_count?: number;
 };
+
+/**
+ * Pick the most defensible "denominator" for a quiz's lead conversion.
+ *
+ * Preference order:
+ *  1. starts_count   — true funnel entry rate
+ *  2. views_count    — fallback when starts tracking is missing
+ *
+ * Returns null when no useful baseline exists — caller renders "—".
+ */
+function leadRate(q: Quiz): { pct: number; basis: "starts" | "views" } | null {
+  const leads = q.leads_count ?? 0;
+  if (q.starts_count > 0) {
+    return {
+      pct: Math.min(100, Math.round((leads / q.starts_count) * 100)),
+      basis: "starts",
+    };
+  }
+  if (q.views_count > 0 && leads > 0) {
+    return {
+      pct: Math.min(100, Math.round((leads / q.views_count) * 100)),
+      basis: "views",
+    };
+  }
+  return null;
+}
 
 export default function StatsShell({ userEmail }: { userEmail: string }) {
   const tNav = useTranslations("nav");
@@ -64,7 +104,12 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
 
   const startRate = totals.views > 0 ? Math.round((totals.starts / totals.views) * 100) : 0;
   const completionRate = totals.starts > 0 ? Math.round((totals.completions / totals.starts) * 100) : 0;
-  const leadRate = totals.starts > 0 ? Math.round((totals.leads / totals.starts) * 100) : 0;
+  // Same robustness as per-quiz: fall back to views when starts is missing.
+  const leadDenominator = totals.starts > 0 ? totals.starts : totals.views;
+  const leadRateGlobal = leadDenominator > 0
+    ? Math.min(100, Math.round((totals.leads / leadDenominator) * 100))
+    : 0;
+  const leadRateBasis: "starts" | "views" = totals.starts > 0 ? "starts" : "views";
 
   return (
     <AppShell userEmail={userEmail} headerTitle={tNav("stats")}>
@@ -138,55 +183,230 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
               <div>
                 <div className="flex justify-between text-sm mb-1">
                   <span>{t("funnel.leadRate")}</span>
-                  <span className="font-semibold">{leadRate}%</span>
+                  <span className="font-semibold">{leadRateGlobal}%</span>
                 </div>
-                <Progress value={leadRate} className="h-3" />
-                <p className="text-xs text-muted-foreground mt-1">{t("funnel.leadRateDetail", { leads: totals.leads, starts: totals.starts })}</p>
+                <Progress value={leadRateGlobal} className="h-3" />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {leadRateBasis === "starts"
+                    ? t("funnel.leadRateDetail", { leads: totals.leads, starts: totals.starts })
+                    : t("funnel.leadRateDetailViews", { leads: totals.leads, views: totals.views })}
+                </p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Per-quiz stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("perQuiz.title")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {quizzes.map((quiz) => {
-                  const qLeadRate = quiz.starts_count > 0
-                    ? Math.round(((quiz.leads_count ?? 0) / quiz.starts_count) * 100)
-                    : 0;
-                  return (
-                    <div key={quiz.id} className="flex items-center gap-4 p-3 rounded-lg bg-muted/30">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold truncate">{quiz.title}</span>
-                          <Badge variant={quiz.status === "active" ? "default" : "secondary"} className="text-xs">
-                            {quiz.status === "active" ? t("statusActive") : t("statusDraft")}
-                          </Badge>
+          {/* Per-quiz cards — one card per quiz, dashboard-style */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h2 className="text-base font-semibold text-foreground">{t("perQuiz.title")}</h2>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {quizzes.map((quiz) => {
+                const rate = leadRate(quiz);
+                const isActive = quiz.status === "active";
+                return (
+                  <Card key={quiz.id} className="hover:shadow-card-hover transition-shadow">
+                    <CardContent className="p-5 space-y-4">
+                      {/* Header: title + status + conversion ring */}
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold truncate text-foreground" title={quiz.title}>
+                            {quiz.title || t("untitled")}
+                          </h3>
+                          <div className="mt-1 flex items-center gap-2 text-xs">
+                            <Badge variant={isActive ? "default" : "secondary"} className="text-[11px]">
+                              {isActive ? t("statusActive") : t("statusDraft")}
+                            </Badge>
+                            {rate ? (
+                              <span className="text-muted-foreground">
+                                {rate.basis === "starts"
+                                  ? t("perQuiz.basisStarts")
+                                  : t("perQuiz.basisViews")}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">{t("perQuiz.noData")}</span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                          <span><Eye className="inline h-3 w-3 mr-1" />{quiz.views_count}</span>
-                          <span><Play className="inline h-3 w-3 mr-1" />{quiz.starts_count}</span>
-                          <span><CheckCircle className="inline h-3 w-3 mr-1" />{quiz.completions_count}</span>
-                          <span><Users className="inline h-3 w-3 mr-1" />{quiz.leads_count ?? 0}</span>
-                          <span><Share2 className="inline h-3 w-3 mr-1" />{quiz.shares_count}</span>
+                        <div className="shrink-0 flex flex-col items-center">
+                          {rate ? (
+                            <ConversionRing percent={rate.pct} />
+                          ) : (
+                            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-muted/50">
+                              <span className="text-sm font-semibold text-muted-foreground">—</span>
+                            </div>
+                          )}
+                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground mt-1">
+                            {t("perQuiz.conversion")}
+                          </p>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-lg font-bold text-primary">{qLeadRate}%</p>
-                        <p className="text-xs text-muted-foreground">{t("perQuiz.conversion")}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
 
+                      {/* Mini metric tiles — same density as dashboard KPIs */}
+                      <div className="grid grid-cols-5 gap-2">
+                        <MetricTile icon={<Eye className="h-3.5 w-3.5" />} value={quiz.views_count} label={t("totals.views")} tone="blue" />
+                        <MetricTile icon={<Play className="h-3.5 w-3.5" />} value={quiz.starts_count} label={t("totals.starts")} tone="indigo" />
+                        <MetricTile icon={<CheckCircle className="h-3.5 w-3.5" />} value={quiz.completions_count} label={t("totals.completions")} tone="green" />
+                        <MetricTile icon={<Users className="h-3.5 w-3.5" />} value={quiz.leads_count ?? 0} label={t("totals.leads")} tone="primary" highlight />
+                        <MetricTile icon={<Share2 className="h-3.5 w-3.5" />} value={quiz.shares_count} label={t("totals.shares")} tone="teal" />
+                      </div>
+
+                      {/* Funnel mini-bar — visual depth for the journey */}
+                      <FunnelBar
+                        views={quiz.views_count}
+                        starts={quiz.starts_count}
+                        completions={quiz.completions_count}
+                        leads={quiz.leads_count ?? 0}
+                      />
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
         </>
       )}
     </AppShell>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Conversion ring — small SVG arc with the percentage rendered inside.
+// Mirrors the dashboard's KPI feel without depending on a chart lib.
+// Tone shifts to emerald above 30 % (a healthy lead-capture rate) so
+// the user gets a glanceable signal without reading the number.
+// ---------------------------------------------------------------------------
+
+function ConversionRing({ percent }: { percent: number }) {
+  const size = 56;
+  const stroke = 5;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const dashoffset = circumference - (Math.max(0, Math.min(100, percent)) / 100) * circumference;
+  const tone = percent >= 30 ? "stroke-emerald-500 text-emerald-600"
+    : percent >= 10 ? "stroke-primary text-primary"
+    : "stroke-amber-500 text-amber-600";
+
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          strokeWidth={stroke}
+          className="stroke-muted"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          className={cn("transition-[stroke-dashoffset] duration-500", tone.split(" ")[0])}
+          strokeDasharray={circumference}
+          strokeDashoffset={dashoffset}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className={cn("text-sm font-bold tabular-nums", tone.split(" ")[1])}>
+          {percent}%
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Metric tile — compact KPI used inside per-quiz cards. Tinted icon
+// circle echoes the dashboard's KPI cards but in a denser layout so we
+// can fit the full 5-metric funnel in one row.
+// ---------------------------------------------------------------------------
+
+const TILE_TONES = {
+  blue: "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300",
+  indigo: "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300",
+  green: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300",
+  primary: "bg-primary/10 text-primary",
+  teal: "bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-300",
+} as const;
+
+function MetricTile({
+  icon,
+  value,
+  label,
+  tone,
+  highlight,
+}: {
+  icon: React.ReactNode;
+  value: number;
+  label: string;
+  tone: keyof typeof TILE_TONES;
+  highlight?: boolean;
+}) {
+  return (
+    <div
+      className={
+        "rounded-lg bg-muted/30 px-2 py-2.5 flex flex-col items-center text-center gap-1 " +
+        (highlight ? "ring-1 ring-primary/30" : "")
+      }
+    >
+      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${TILE_TONES[tone]}`}>
+        {icon}
+      </div>
+      <p className="text-sm font-bold tabular-nums leading-none">{value}</p>
+      <p className="text-[10px] text-muted-foreground leading-none truncate w-full" title={label}>
+        {label}
+      </p>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Funnel mini-bar — five proportional segments showing how each step
+// shrinks. Uses views as the 100% baseline; if views is 0 we still draw
+// a flat bar so the layout doesn't jump.
+// ---------------------------------------------------------------------------
+
+function FunnelBar({
+  views,
+  starts,
+  completions,
+  leads,
+}: {
+  views: number;
+  starts: number;
+  completions: number;
+  leads: number;
+}) {
+  // The base for the bar is the largest known step. Usually views, but
+  // if tracking missed views (rare), we fall back to whichever is
+  // largest so the arc still scales meaningfully.
+  const base = Math.max(views, starts, completions, leads);
+  const pct = (n: number) => (base > 0 ? Math.max(2, Math.round((n / base) * 100)) : 0);
+
+  const segments: Array<{ pct: number; color: string }> = [
+    { pct: pct(views), color: "bg-blue-200 dark:bg-blue-900/50" },
+    { pct: pct(starts), color: "bg-indigo-300 dark:bg-indigo-800/60" },
+    { pct: pct(completions), color: "bg-emerald-300 dark:bg-emerald-800/60" },
+    { pct: pct(leads), color: "bg-primary/60" },
+  ];
+
+  if (base === 0) return null;
+
+  return (
+    <div className="flex items-center gap-1 h-3" aria-hidden>
+      {segments.map((s, i) => (
+        <div
+          key={i}
+          className={`${s.color} rounded-sm transition-all`}
+          style={{ width: `${s.pct}%` }}
+        />
+      ))}
+    </div>
   );
 }
