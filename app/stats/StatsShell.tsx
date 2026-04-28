@@ -21,6 +21,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { Mascot } from "@/components/ui/mascot";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import {
   BarChart3, Eye, Play, CheckCircle, Users, Share2, TrendingUp, Sparkles,
 } from "lucide-react";
@@ -125,13 +127,20 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground">{t("loading")}</div>
+        // Two SkeletonCards while data loads — keeps the page from
+        // looking empty during the dashboard fetch.
+        <div className="space-y-4">
+          <SkeletonCard className="h-[120px]" />
+          <SkeletonCard className="h-[280px]" />
+        </div>
       ) : quizzes.length === 0 ? (
+        // Mascot empty-state — same family as the other Tiquiz empty
+        // pages, so cold-start moments feel consistent.
         <Card>
-          <CardContent className="py-12 text-center">
-            <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">{t("empty")}</h3>
-            <p className="text-muted-foreground">{t("emptyDesc")}</p>
+          <CardContent className="py-14 text-center flex flex-col items-center gap-3">
+            <Mascot expression="search" size={88} tone="soft" />
+            <h3 className="text-lg font-semibold">{t("empty")}</h3>
+            <p className="text-sm text-muted-foreground max-w-sm">{t("emptyDesc")}</p>
           </CardContent>
         </Card>
       ) : (
