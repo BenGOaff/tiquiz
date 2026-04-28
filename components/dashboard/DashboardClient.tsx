@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Greeting } from "@/components/ui/greeting";
+import { WeeklyGoalCard } from "@/components/ui/weekly-goal-card";
+import { pickWeeklyGoal } from "@/lib/weekly-goal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -91,6 +93,23 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
     const conversionRate = starts > 0 ? Math.round((leads / starts) * 100) : 0;
     return { views, starts, completions, leads, conversionRate, quizCount: quizzes.length };
   }, [quizzes]);
+
+  // Weekly goal — pure derivation from existing dashboard data, no
+  // extra fetch. Picks one (or null) most-relevant next-step goal.
+  const weeklyGoal = useMemo(() => {
+    const sevenDaysAgo = Date.now() - 7 * 24 * 3600 * 1000;
+    const recentLeads = quizzes.reduce((s, q) => {
+      // We don't track per-day leads on the dashboard — approximate by
+      // counting quizzes created in the last 7d as "recent activity".
+      return s + (new Date(q.created_at).getTime() > sevenDaysAgo ? (q.leads_count ?? 0) : 0);
+    }, 0);
+    return pickWeeklyGoal({
+      publishedCount: quizzes.filter((q) => q.status === "active").length,
+      totalLeads: totals.leads,
+      activeSurveyCount: 0, // Tiquiz dashboard groups quiz + survey rows together; refine when listings split
+      leadsLastWeek: recentLeads,
+    });
+  }, [quizzes, totals.leads]);
 
   // Prospects donut data — always show, with placeholder if empty
   const prospectsData = useMemo(() => {
@@ -297,6 +316,12 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
             </Button>
             </div>
           </div>
+
+          {/* Weekly goal — picks the most relevant next-step automatically.
+              Renders nothing when the user has hit every milestone we
+              track. Soft tinted card so it feels like guidance, not a
+              billboard. */}
+          {weeklyGoal && <WeeklyGoalCard goal={weeklyGoal} />}
 
           {/* Row 2: Welcome banner when no quizzes */}
           {quizzes.length === 0 && (
