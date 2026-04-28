@@ -201,7 +201,10 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
 
       {/* Table */}
       {loading ? (
-        <SkeletonCard className="h-[420px]" />
+        // Adaptive skeleton — full table height on desktop, shorter
+        // on mobile so the placeholder doesn't dominate a small
+        // viewport.
+        <SkeletonCard className="h-[240px] md:h-[420px]" />
       ) : filtered.length === 0 ? (
         // Two distinct empty states:
         //  - "no leads at all" → mascot waves, encouraging copy
