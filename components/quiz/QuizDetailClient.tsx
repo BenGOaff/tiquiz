@@ -16,6 +16,8 @@ import {
   Gift, Sparkles,
 } from "lucide-react";
 import QuizResultsAnalytics from "@/components/quiz/QuizResultsAnalytics";
+import { ReadinessRing } from "@/components/ui/readiness-ring";
+import { computeReadiness } from "@/lib/quiz-readiness";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -587,10 +589,20 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : t("errGeneric")); } finally { setSaving(false); }
   };
 
+  // Publishing a project is the strongest "I made it" moment in the app —
+  // confetti makes it feel like a win, not a checkbox flip. Deactivation
+  // stays silent (toast only) so it doesn't celebrate downgrades.
   const handleToggleStatus = async () => {
     const ns = status === "active" ? "draft" : "active";
     setStatus(ns);
-    try { await fetch(`/api/quiz/${quizId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: ns }) }); toast.success(ns === "active" ? t("quizPublished") : t("quizDeactivated")); } catch { setStatus(status); }
+    try {
+      await fetch(`/api/quiz/${quizId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: ns }) });
+      toast.success(ns === "active" ? t("quizPublished") : t("quizDeactivated"));
+      if (ns === "active") {
+        const { celebrate } = await import("@/lib/celebrate");
+        celebrate({ intensity: "huge" });
+      }
+    } catch { setStatus(status); }
   };
 
   // Public URL — prefer custom slug when set, fall back to UUID
@@ -652,6 +664,28 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           ))}
         </nav>
         <div className="flex items-center gap-2">
+          {/* Readiness ring — passive nudge showing how close the project
+              is to publishable. Computed live from local edit state so it
+              ticks up as the user fills fields, no roundtrip needed.
+              Hidden on small screens where the top bar is already dense. */}
+          {(() => {
+            const r = computeReadiness({
+              mode: "quiz",
+              title,
+              introduction,
+              cta_text: ctaText,
+              cta_url: ctaUrl,
+              questions: editQuestions,
+              results: editResults,
+              privacy_url: privacyUrl,
+              status,
+            });
+            return (
+              <div className="hidden md:block" title={`${r.passedCount}/${r.totalCount} étapes — ${r.percent}% prêt`}>
+                <ReadinessRing percent={r.percent} passed={r.passedCount} total={r.totalCount} size="sm" />
+              </div>
+            );
+          })()}
           <div className="hidden sm:flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
             <button onClick={() => setDevice("desktop")} className={`p-1.5 rounded-md ${device === "desktop" ? "bg-background shadow-sm" : ""}`}><Monitor className="w-4 h-4" /></button>
             <button onClick={() => setDevice("mobile")} className={`p-1.5 rounded-md ${device === "mobile" ? "bg-background shadow-sm" : ""}`}><Smartphone className="w-4 h-4" /></button>
