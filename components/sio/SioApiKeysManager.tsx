@@ -68,11 +68,15 @@ export default function SioApiKeysManager() {
       const data = await res.json();
       if (!data.ok) {
         const errMap: Record<string, string> = {
-          INVALID_KEY: "Clé invalide. Vérifie côté Systeme.io.",
+          INVALID_KEY: "Clé refusée par Systeme.io. Régénère-la depuis ton compte SIO et réessaie.",
+          RATE_LIMITED: "Systeme.io te demande de patienter (trop de requêtes). Réessaie dans 1 minute.",
+          SIO_DOWN: "Systeme.io est momentanément indisponible. Réessaie dans quelques minutes.",
+          NETWORK_ERROR: "Connexion impossible à Systeme.io. Vérifie ta connexion ou réessaie.",
+          SERVER_MISCONFIGURED: "Erreur de configuration côté serveur. Contacte le support.",
           NAME_TAKEN: "Tu as déjà une clé avec ce nom.",
           NAME_REQUIRED: "Renseigne le nom et la clé.",
           KEY_REQUIRED: "Renseigne le nom et la clé.",
-          VALIDATION_FAILED: "La validation a échoué. Réessaie.",
+          VALIDATION_FAILED: "La validation a échoué. Réessaie dans quelques instants.",
         };
         toast.error(errMap[data.error] ?? "Une erreur est survenue.");
         return;
