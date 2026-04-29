@@ -23,8 +23,21 @@ export async function GET() {
     const keys = await listKeys(user.id);
     return NextResponse.json({ ok: true, keys });
   } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[sio-api-keys GET] failed:", { err: e instanceof Error ? { message: e.message, stack: e.stack } : String(e) });
+    // Same SERVER_MISCONFIGURED contract as POST: surface the missing
+    // SIO_KEY_ENCRYPTION_KEY env explicitly so the dashboard shows
+    // an actionable message instead of a bare 500. Triggered when
+    // ensureLegacyMigrated has to decrypt/encrypt a row but the
+    // master key is missing.
+    if (/SIO_KEY_ENCRYPTION_KEY/i.test(msg)) {
+      return NextResponse.json(
+        { ok: false, error: "SERVER_MISCONFIGURED", details: "Encryption key missing on server." },
+        { status: 500 },
+      );
+    }
     return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
+      { ok: false, error: msg || "Unknown error" },
       { status: 500 },
     );
   }
