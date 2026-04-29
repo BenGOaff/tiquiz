@@ -49,6 +49,15 @@ async function importDraftIntoQuizzes(args: {
     draft?.introduction ?? draft?.description ?? "",
   ).slice(0, 2000) || null;
 
+  // Brand overrides from the embed editor's Branding tab. Only kept
+  // when valid so a malformed payload can't poison the quiz row;
+  // unset values fall back to the user's profile defaults at render.
+  const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+  const draftRecord = draft as Record<string, unknown>;
+  const brandFontRaw = typeof draftRecord.brand_font === "string" ? draftRecord.brand_font : "";
+  const brandPrimaryRaw = typeof draftRecord.brand_color_primary === "string" ? draftRecord.brand_color_primary : "";
+  const brandBgRaw = typeof draftRecord.brand_color_background === "string" ? draftRecord.brand_color_background : "";
+
   const { data: quiz, error: quizErr } = await supabaseAdmin
     .from("quizzes")
     .insert({
@@ -56,12 +65,15 @@ async function importDraftIntoQuizzes(args: {
       mode: "quiz",
       title,
       introduction,
-      cta_text: draft?.cta_text ?? null,
-      cta_url: draft?.cta_url ?? null,
-      share_message: draft?.share_message ?? null,
+      cta_text: draftRecord.cta_text ?? null,
+      cta_url: draftRecord.cta_url ?? null,
+      share_message: draftRecord.share_message ?? null,
       locale: draft?.locale ?? "fr",
       address_form: "tu",
       status: "draft",
+      brand_font: brandFontRaw || null,
+      brand_color_primary: HEX_RE.test(brandPrimaryRaw) ? brandPrimaryRaw : null,
+      brand_color_background: HEX_RE.test(brandBgRaw) ? brandBgRaw : null,
     })
     .select("id")
     .single();
@@ -199,10 +211,41 @@ export async function POST(req: NextRequest) {
     return Response.json({ ok: false, error: "Cette session n'appartient pas à cet email" }, { status: 403, headers });
   }
 
-  const imported = await importDraftIntoQuizzes({
-    userId,
-    draft: session.quiz as EmbedQuiz,
-  });
+  // Modern path: the /generate route already materialized a real
+  // anonymous quiz row (quizzes.embed_session_id = sessionToken,
+  // user_id NULL). We just transfer ownership atomically — no
+  // duplication, the URL the visitor was editing in /quiz/[id]
+  // becomes their permanent quiz id.
+  const { data: anonQuiz } = await supabaseAdmin
+    .from("quizzes")
+    .select("id")
+    .eq("embed_session_id", session.id)
+    .is("user_id", null)
+    .maybeSingle();
+
+  let imported: { ok: true; quizId: string } | { ok: false; error: string };
+
+  if (anonQuiz?.id) {
+    const { error: transferErr } = await supabaseAdmin
+      .from("quizzes")
+      .update({ user_id: userId, embed_session_id: null })
+      .eq("id", anonQuiz.id)
+      .is("user_id", null);
+    if (transferErr) {
+      console.error("[embed/claim] ownership transfer failed:", transferErr);
+      imported = { ok: false, error: "Transfert d'ownership impossible" };
+    } else {
+      imported = { ok: true, quizId: anonQuiz.id };
+    }
+  } else {
+    // Legacy fallback: the session was generated before migration 025
+    // and only has the JSON blob. Duplicate it into fresh rows so
+    // pre-pivot drafts aren't stranded.
+    imported = await importDraftIntoQuizzes({
+      userId,
+      draft: session.quiz as EmbedQuiz,
+    });
+  }
   if (!imported.ok) {
     return Response.json({ ok: false, error: imported.error }, { status: 500, headers });
   }

@@ -25,6 +25,12 @@ export type EmbedQuiz = {
   description?: string;
   share_message?: string;
   locale?: string;
+  // Branding overrides exposed in the embed editor. They map 1:1
+  // to the quizzes table columns of the same name on claim, so
+  // the visitor's design choices land in their account untouched.
+  brand_font?: string;
+  brand_color_primary?: string;
+  brand_color_background?: string;
   questions: EmbedQuestion[];
   results: EmbedResult[];
 };
@@ -39,6 +45,6 @@ export type EmbedInputs = {
   askGender: boolean;
 };
 
-export type EmbedPhase = "loading" | "form" | "generating" | "edit" | "publishing";
+export type EmbedPhase = "loading" | "form" | "generating" | "edit";
 
 export type EmbedLocale = "fr" | "en";

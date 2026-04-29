@@ -266,15 +266,105 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        // Persist the freshly-generated draft so /save (the editor
-        // PATCH) can update it and /claim (the post-checkout webhook)
-        // can pick it up.
+        // Materialize the AI draft as a REAL anonymous quiz row
+        // (user_id NULL, embed_session_id = sessionToken) so the
+        // visitor edits via the same QuizDetailClient + endpoints
+        // every Tiquiz user uses. The JSONB blob on the embed
+        // session is kept as a safety net — saves through the
+        // existing /api/embed/quiz/save still work for legacy clients.
+        const draft = quiz as Record<string, unknown>;
+        const draftQuestions = Array.isArray(draft.questions) ? draft.questions : [];
+        const draftResults = Array.isArray(draft.results) ? draft.results : [];
+
+        const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+        const brandFontRaw = typeof draft.brand_font === "string" ? draft.brand_font : "";
+        const brandPrimaryRaw = typeof draft.brand_color_primary === "string" ? draft.brand_color_primary : "";
+        const brandBgRaw = typeof draft.brand_color_background === "string" ? draft.brand_color_background : "";
+
+        // The unique partial index on embed_session_id forbids two
+        // anonymous quizzes per session. If a previous attempt left
+        // one behind (rare — failed insert mid-flight), wipe it
+        // first so the visitor isn't stuck on a stale generation.
+        await supabaseAdmin
+          .from("quizzes")
+          .delete()
+          .eq("embed_session_id", sessionToken);
+
+        const { data: quizRow, error: quizInsertErr } = await supabaseAdmin
+          .from("quizzes")
+          .insert({
+            user_id: null,
+            embed_session_id: sessionToken,
+            mode: "quiz",
+            title: String(draft.title ?? "Mon quiz").slice(0, 200),
+            introduction: typeof draft.introduction === "string"
+              ? draft.introduction.slice(0, 2000)
+              : (typeof draft.description === "string" ? draft.description.slice(0, 2000) : null),
+            cta_text: typeof draft.cta_text === "string" ? draft.cta_text : null,
+            cta_url: typeof draft.cta_url === "string" ? draft.cta_url : null,
+            share_message: typeof draft.share_message === "string" ? draft.share_message : null,
+            locale: typeof draft.locale === "string" ? draft.locale : locale,
+            address_form: addressForm,
+            ask_first_name: askFirstName,
+            ask_gender: askGender,
+            status: "draft",
+            brand_font: brandFontRaw || null,
+            brand_color_primary: HEX_RE.test(brandPrimaryRaw) ? brandPrimaryRaw : null,
+            brand_color_background: HEX_RE.test(brandBgRaw) ? brandBgRaw : null,
+          })
+          .select("id")
+          .single();
+
+        if (quizInsertErr || !quizRow) {
+          console.error("[embed/generate] quiz materialization failed:", quizInsertErr);
+          sse("error", { ok: false, error: "Création du quiz impossible." });
+          return;
+        }
+
+        // Insert questions + results. We use the same field shape the
+        // authenticated POST /api/quiz uses so QuizDetailClient reads
+        // them back identically — no special embed code path.
+        if (draftQuestions.length > 0) {
+          await supabaseAdmin.from("quiz_questions").insert(
+            (draftQuestions as Record<string, unknown>[]).map((q, i) => ({
+              quiz_id: quizRow.id,
+              question_text: String(q.question_text ?? q.text ?? ""),
+              options: Array.isArray(q.options) ? q.options : [],
+              sort_order: i,
+              question_type: "multiple_choice",
+              config: {},
+            })),
+          );
+        }
+        if (draftResults.length > 0) {
+          await supabaseAdmin.from("quiz_results").insert(
+            (draftResults as Record<string, unknown>[]).map((r, i) => ({
+              quiz_id: quizRow.id,
+              title: String(r.title ?? ""),
+              description: typeof r.description === "string" ? r.description : null,
+              insight: typeof r.insight === "string" ? r.insight : null,
+              projection: typeof r.projection === "string" ? r.projection : null,
+              cta_text: typeof r.cta_text === "string" ? r.cta_text : null,
+              cta_url: typeof r.cta_url === "string" ? r.cta_url : null,
+              sort_order: i,
+            })),
+          );
+        }
+
+        // Mirror the JSON onto the embed session for the legacy /save
+        // path. New clients ignore this column — they PATCH the real
+        // quiz row directly.
         await supabaseAdmin
           .from("embed_quiz_sessions")
           .update({ quiz })
           .eq("id", sessionToken);
 
-        sse("result", { ok: true, quiz, session_token: sessionToken });
+        sse("result", {
+          ok: true,
+          quiz,
+          quiz_id: quizRow.id,
+          session_token: sessionToken,
+        });
       } catch (e) {
         console.error("[embed/generate] stream error:", e);
         sse("error", { ok: false, error: e instanceof Error ? e.message : "Erreur inconnue" });

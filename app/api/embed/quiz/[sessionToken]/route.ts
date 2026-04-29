@@ -41,9 +41,20 @@ export async function GET(
     return Response.json({ ok: false, error: "Session inconnue" }, { status: 404, headers });
   }
 
+  // Resolve the materialized anonymous quiz id, if any. The unique
+  // partial index on quizzes(embed_session_id) means at most one
+  // row matches; we return null when the session was created with
+  // the legacy JSON-only flow.
+  const { data: quizRow } = await supabaseAdmin
+    .from("quizzes")
+    .select("id")
+    .eq("embed_session_id", sessionToken)
+    .maybeSingle();
+
   return Response.json({
     ok: true,
     session_token: data.id,
+    quiz_id: quizRow?.id ?? null,
     inputs: data.inputs ?? {},
     quiz: data.quiz ?? null,
     claimed: !!data.claimed_by_user_id,

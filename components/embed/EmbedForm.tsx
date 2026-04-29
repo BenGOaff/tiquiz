@@ -142,7 +142,8 @@ export default function EmbedForm({ locale, inputs, onChange, onSubmit, error }:
           <Sparkles className="size-4 mr-1" />
           {t.submit}
         </Button>
-        <p className="text-xs text-muted-foreground text-center">{t.noEmailNote}</p>
+        {/* removed: 'no email asked' note — internal noise that the
+            visitor doesn't need to be reassured about explicitly. */}
       </CardContent>
     </Card>
   );

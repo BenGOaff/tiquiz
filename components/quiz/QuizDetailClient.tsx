@@ -41,7 +41,7 @@ import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   ALLOWED_SHARE_NETWORKS,
   BRAND_FONT_CHOICES,
@@ -80,7 +80,28 @@ type QuizData = {
   questions: QuizQuestion[]; results: QuizResult[];
 };
 type ProfileBrand = { brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null; plan: string | null; privacy_url: string | null };
-interface QuizDetailClientProps { quizId: string; }
+interface QuizDetailClientProps {
+  quizId: string;
+  /**
+   * Embed-mode session token. When supplied, all /api/quiz/* calls
+   * append ?embed=<token> so the server uses its anonymous-quiz
+   * auth path. Triggers a few UX changes too:
+   *  - SIO sections are hidden (no tags, no API key picker, no
+   *    course/community fields)
+   *  - the user's profile is not fetched (no auth)
+   *  - status changes are forbidden server-side; the publish toggle
+   *    becomes a 'Débloquer Tiquiz' CTA that postMessages the parent
+   */
+  embedSessionToken?: string;
+}
+
+// Wrap a /api/quiz/* URL with the embed token when it's set so the
+// route handler picks the anonymous-quiz auth path.
+function withEmbedToken(url: string, token?: string): string {
+  if (!token) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}embed=${encodeURIComponent(token)}`;
+}
 
 // Inline edit: click to edit text directly on the preview.
 // Pass `onGenderize` to display a ✨ button that rewrites the value into the
@@ -243,8 +264,13 @@ function SortableSidebarQuestion({ id, index, label, onClick, onRemove, canDelet
 }
 
 // Main component
-export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
+export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDetailClientProps) {
+  // Single source of truth for "is this an anonymous embed render?".
+  // Used to short-circuit profile fetches, hide SIO surfaces, and
+  // repurpose the publish CTA into the paywall trigger.
+  const isEmbed = !!embedSessionToken;
   const t = useTranslations("quizEditor");
+  const locale = useLocale();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -327,11 +353,20 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
   // Fetch quiz + profile in parallel (profile branding is the default fallback)
   const fetchQuiz = useCallback(async () => {
     try {
+      // In embed mode there's no logged-in user yet, so the profile
+      // fetch would 401 and pollute the console. We skip it and let
+      // the brand-resolver fall through to its hard-coded defaults.
       const [quizRes, profileRes] = await Promise.all([
-        fetch(`/api/quiz/${quizId}`).then((r) => r.json()),
-        fetch(`/api/profile`).then((r) => r.json()).catch(() => null),
+        fetch(withEmbedToken(`/api/quiz/${quizId}`, embedSessionToken)).then((r) => r.json()),
+        isEmbed
+          ? Promise.resolve(null)
+          : fetch(`/api/profile`).then((r) => r.json()).catch(() => null),
       ]);
-      if (!quizRes?.ok || !quizRes.quiz) { toast.error(t("errQuizNotFound")); router.push("/dashboard"); return; }
+      if (!quizRes?.ok || !quizRes.quiz) {
+        toast.error(t("errQuizNotFound"));
+        if (!isEmbed) router.push("/dashboard");
+        return;
+      }
       const q: QuizData = { ...quizRes.quiz, questions: quizRes.quiz.questions ?? [], results: quizRes.quiz.results ?? [] };
       const prof = profileRes?.ok ? (profileRes.profile as ProfileBrand) : null;
       setProfile(prof);
@@ -543,7 +578,7 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     if (slug.trim() && !cleanedSlug) { toast.error(t("errSlugInvalid")); return; }
     setSaving(true);
     try {
-      const res = await fetch(`/api/quiz/${quizId}`, {
+      const res = await fetch(withEmbedToken(`/api/quiz/${quizId}`, embedSessionToken), {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title, introduction, cta_text: ctaText, cta_url: ctaUrl,
@@ -596,7 +631,9 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
     const ns = status === "active" ? "draft" : "active";
     setStatus(ns);
     try {
-      await fetch(`/api/quiz/${quizId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: ns }) });
+      // status changes are forbidden in embed mode; the bridge to the
+      // checkout is wired through the publish CTA, not this toggle.
+      await fetch(withEmbedToken(`/api/quiz/${quizId}`, embedSessionToken), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: ns }) });
       toast.success(ns === "active" ? t("quizPublished") : t("quizDeactivated"));
       if (ns === "active") {
         const { celebrate } = await import("@/lib/celebrate");
@@ -702,7 +739,23 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
           <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}{saving ? "" : t("save")}
           </Button>
-          <Button size="sm" onClick={handleToggleStatus}>{status === "active" ? t("deactivate") : t("publish")}</Button>
+          {isEmbed ? (
+            // Paywall trigger: hand off to the iframe parent so the
+            // bridge script (public/embed/bridge.js) navigates the
+            // host page to its checkout anchor with the session
+            // token appended.
+            <Button
+              size="sm"
+              onClick={() => {
+                try { window.parent.postMessage({ type: "tiquiz-embed-checkout", session_token: embedSessionToken }, "*"); }
+                catch { /* sandboxed iframe — host page handles fallback */ }
+              }}
+            >
+              {locale === "en" ? "Unlock Tiquiz →" : "Débloquer Tiquiz →"}
+            </Button>
+          ) : (
+            <Button size="sm" onClick={handleToggleStatus}>{status === "active" ? t("deactivate") : t("publish")}</Button>
+          )}
         </div>
       </header>
 
@@ -967,11 +1020,16 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       <Textarea value={shareMessage} onChange={e => setShareMessage(e.target.value)} placeholder={t("shareMessageDefault", { title: title || "…" })} className="text-xs" rows={2} />
                     </div>
 
-                    <div>
-                      <Label className="text-[11px] font-semibold">{t("shareTagLabel")}</Label>
-                      <p className="text-[10px] text-muted-foreground mb-1.5">{t("shareTagHint")}</p>
-                      <SioTagPicker value={sioShareTagName} onChange={setSioShareTagName} />
-                    </div>
+                    {/* SIO tag is a logged-in-only feature — the
+                        embed visitor configures tags later in their
+                        account, after the import. */}
+                    {!isEmbed && (
+                      <div>
+                        <Label className="text-[11px] font-semibold">{t("shareTagLabel")}</Label>
+                        <p className="text-[10px] text-muted-foreground mb-1.5">{t("shareTagHint")}</p>
+                        <SioTagPicker value={sioShareTagName} onChange={setSioShareTagName} />
+                      </div>
+                    )}
                   </section>
                 )}
 
@@ -1202,11 +1260,15 @@ export default function QuizDetailClient({ quizId }: QuizDetailClientProps) {
                       </button>
                       <InlineEdit value={r.cta_url ?? ctaUrl ?? ""} onChange={(v) => updateR(ri, "cta_url", v || null)} className="text-xs text-muted-foreground text-center" placeholder={t("previewResultCtaUrlPh")} />
                     </div>
-                    <div className="p-4 rounded-xl bg-muted/40 border border-dashed">
-                      <div className="text-xs font-semibold text-foreground mb-1">{t("previewResultTagLabel")}</div>
-                      <p className="text-[11px] text-muted-foreground mb-2">{t("previewResultTagHint", { title: r.title || t("previewResult", { n: ri + 1 }) })}</p>
-                      <SioTagPicker value={r.sio_tag_name ?? ""} onChange={(v) => updateR(ri, "sio_tag_name", v || null)} />
-                    </div>
+                    {/* Per-result SIO tag — same rationale as the
+                        share tag above, hidden in the anonymous embed. */}
+                    {!isEmbed && (
+                      <div className="p-4 rounded-xl bg-muted/40 border border-dashed">
+                        <div className="text-xs font-semibold text-foreground mb-1">{t("previewResultTagLabel")}</div>
+                        <p className="text-[11px] text-muted-foreground mb-2">{t("previewResultTagHint", { title: r.title || t("previewResult", { n: ri + 1 }) })}</p>
+                        <SioTagPicker value={r.sio_tag_name ?? ""} onChange={(v) => updateR(ri, "sio_tag_name", v || null)} />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

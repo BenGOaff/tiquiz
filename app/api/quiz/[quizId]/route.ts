@@ -2,8 +2,10 @@
 // Single quiz operations: GET detail, PATCH update, DELETE
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sanitizeSlug, sanitizeShareNetworks, BRAND_FONT_CHOICES } from "@/lib/quizBranding";
 import { sanitizeRichText } from "@/lib/richText";
+import { resolveQuizAuth } from "@/lib/embed/quizAuth";
 
 // Fields accepting rich-text HTML (bold, italic, links, images, alignment).
 const RICH_TEXT_FIELDS = ["introduction"] as const;
@@ -15,20 +17,35 @@ export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ quizId: string }> };
 
 // GET — quiz with questions, results, and leads
-export async function GET(_req: NextRequest, context: RouteContext) {
+export async function GET(req: NextRequest, context: RouteContext) {
   try {
     const { quizId } = await context.params;
-    const supabase = await getSupabaseServerClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
+    const auth = await resolveQuizAuth(req, quizId);
+    if (!auth) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
+    // Embed-mode visitors read through the service role (RLS doesn't
+    // grant them anything because user_id IS NULL); user-mode keeps
+    // its supabase client + RLS for defence in depth. Both paths
+    // converge on the same table, the same shape, the same response.
+    const supabase = auth.mode === "user"
+      ? await getSupabaseServerClient()
+      : supabaseAdmin;
+
+    const baseQuiz = supabase.from("quizzes").select("*").eq("id", quizId);
+    const quizQuery = auth.mode === "user"
+      ? baseQuiz.eq("user_id", auth.userId)
+      : baseQuiz.eq("embed_session_id", auth.sessionToken);
+
     const [quizRes, questionsRes, resultsRes, leadsRes] = await Promise.all([
-      supabase.from("quizzes").select("*").eq("id", quizId).eq("user_id", user.id).maybeSingle(),
+      quizQuery.maybeSingle(),
       supabase.from("quiz_questions").select("*").eq("quiz_id", quizId).order("sort_order"),
       supabase.from("quiz_results").select("*").eq("quiz_id", quizId).order("sort_order"),
-      supabase.from("quiz_leads").select("*").eq("quiz_id", quizId).order("created_at", { ascending: false }),
+      // Anonymous quizzes have no leads — skip the round-trip.
+      auth.mode === "user"
+        ? supabase.from("quiz_leads").select("*").eq("quiz_id", quizId).order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] as Record<string, unknown>[], error: null }),
     ]);
 
     if (!quizRes.data) {
@@ -70,9 +87,8 @@ export async function GET(_req: NextRequest, context: RouteContext) {
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
     const { quizId } = await context.params;
-    const supabase = await getSupabaseServerClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
+    const auth = await resolveQuizAuth(req, quizId);
+    if (!auth) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
@@ -83,16 +99,33 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
     }
 
-    // Verify ownership
-    const { data: existing } = await supabase
-      .from("quizzes")
-      .select("id")
-      .eq("id", quizId)
-      .eq("user_id", user.id)
-      .maybeSingle();
+    // user-mode keeps RLS; embed-mode operates as service role with
+    // an explicit embed_session_id filter so a forged quizId can
+    // never reach a row that isn't this session's.
+    const supabase = auth.mode === "user"
+      ? await getSupabaseServerClient()
+      : supabaseAdmin;
+
+    const ownerCheck = supabase.from("quizzes").select("id").eq("id", quizId);
+    const { data: existing } = await (auth.mode === "user"
+      ? ownerCheck.eq("user_id", auth.userId)
+      : ownerCheck.eq("embed_session_id", auth.sessionToken)).maybeSingle();
 
     if (!existing) {
       return NextResponse.json({ ok: false, error: "Quiz not found" }, { status: 404 });
+    }
+
+    // Embed visitors must not be able to publish (status=active),
+    // pick a public slug, attach SIO tags / API keys, or otherwise
+    // touch fields that only make sense once a real account owns
+    // the quiz. We strip them here as an upfront gate so the rest
+    // of the handler doesn't have to special-case the mode.
+    if (auth.mode === "embed") {
+      const FORBIDDEN_IN_EMBED = [
+        "status", "slug", "sio_share_tag_name", "sio_api_key_id",
+        "share_networks", "privacy_url", "consent_text",
+      ] as const;
+      for (const k of FORBIDDEN_IN_EMBED) delete body[k];
     }
 
     // Build patch
@@ -150,11 +183,18 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       } else if (typeof val !== "string" || !UUID_RE.test(val)) {
         return NextResponse.json({ ok: false, error: "Invalid sio_api_key_id" }, { status: 400 });
       } else {
+        // sio_api_key_id is stripped from the body in embed mode (it's
+        // a user-only field), so this branch only ever runs with
+        // mode==="user". The narrowing here keeps TS happy without a
+        // runtime guard the user path doesn't need.
+        if (auth.mode !== "user") {
+          return NextResponse.json({ ok: false, error: "Forbidden in embed mode" }, { status: 403 });
+        }
         const { data: keyRow } = await supabase
           .from("sio_api_keys")
           .select("id")
           .eq("id", val)
-          .eq("user_id", user.id)
+          .eq("user_id", auth.userId)
           .maybeSingle();
         if (!keyRow) {
           return NextResponse.json({ ok: false, error: "sio_api_key_id not found" }, { status: 400 });
@@ -274,20 +314,26 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 }
 
 // DELETE — delete quiz (cascades to questions, results, leads)
-export async function DELETE(_req: NextRequest, context: RouteContext) {
+// Embed mode (anonymous quizzes) deliberately rejects DELETE; the
+// visitor doesn't own the row in any meaningful sense yet, and the
+// embed_quiz_sessions GC job is responsible for purging orphans.
+export async function DELETE(req: NextRequest, context: RouteContext) {
   try {
     const { quizId } = await context.params;
-    const supabase = await getSupabaseServerClient();
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
+    const auth = await resolveQuizAuth(req, quizId);
+    if (!auth) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
+    if (auth.mode !== "user") {
+      return NextResponse.json({ ok: false, error: "Forbidden in embed mode" }, { status: 403 });
+    }
 
+    const supabase = await getSupabaseServerClient();
     const { error } = await supabase
       .from("quizzes")
       .delete()
       .eq("id", quizId)
-      .eq("user_id", user.id);
+      .eq("user_id", auth.userId);
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
