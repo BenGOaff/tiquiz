@@ -270,7 +270,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // repurpose the publish CTA into the paywall trigger.
   const isEmbed = !!embedSessionToken;
   const t = useTranslations("quizEditor");
-  const locale = useLocale();
+  // The UI locale of the page (next-intl). Distinct from the quiz's
+  // own `locale` state below, which represents the quiz content
+  // language. We only need this to pick a CTA label in embed mode.
+  const uiLocale = useLocale();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -751,7 +754,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 catch { /* sandboxed iframe — host page handles fallback */ }
               }}
             >
-              {locale === "en" ? "Unlock Tiquiz →" : "Débloquer Tiquiz →"}
+              {uiLocale === "en" ? "Unlock Tiquiz →" : "Débloquer Tiquiz →"}
             </Button>
           ) : (
             <Button size="sm" onClick={handleToggleStatus}>{status === "active" ? t("deactivate") : t("publish")}</Button>
