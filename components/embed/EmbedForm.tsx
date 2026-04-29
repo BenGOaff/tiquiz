@@ -7,7 +7,6 @@
 // knobs (tags, course, community).
 
 import { Sparkles } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -28,10 +27,13 @@ type Props = {
 export default function EmbedForm({ locale, inputs, onChange, onSubmit, error }: Props) {
   const t = getEmbedStrings(locale);
 
+  // Plain div, no Card. The shadcn Card carries its own bg-card token
+  // which sits a hair off-white on the page background and looks like
+  // a tight gray-blue panel against the text. The page wrapper already
+  // pads + centers; we just need a vertical-rhythm container here.
   return (
-    <Card className="w-full max-w-2xl mx-auto border-0 shadow-none">
-      <CardContent className="p-0 space-y-5">
-        <div>
+    <div className="w-full max-w-2xl mx-auto space-y-5">
+      <div className="space-y-5">
           <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             {t.formTitle}
           </h2>
@@ -144,7 +146,7 @@ export default function EmbedForm({ locale, inputs, onChange, onSubmit, error }:
         </Button>
         {/* removed: 'no email asked' note — internal noise that the
             visitor doesn't need to be reassured about explicitly. */}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
