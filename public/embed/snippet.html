@@ -1,0 +1,68 @@
+<!--
+  TIQUIZ EMBED — snippets pour les 3 pages de vente systeme.io
+  ────────────────────────────────────────────────────────────
+  Mode d'emploi (identique pour les 3) :
+    1) Dans systeme.io, ajoute un bloc "Code HTML personnalisé"
+       à l'endroit où tu veux faire apparaître la démo.
+    2) Colle exactement le snippet correspondant à la page.
+    3) Remplace REMPLACE-MOI par le domaine public de Tiquiz
+       (ex : https://app.tiquiz.fr).
+    4) Sauvegarde la page. Pas besoin de rien d'autre.
+
+  À retenir :
+    - data-checkout pointe vers le tarif EXACT de chaque page,
+      donc le bouton "Débloquer Tiquiz" renvoie au bon endroit
+      sans interrompre le funnel.
+    - data-source distingue les 3 pages dans la table
+      embed_quiz_sessions → tu pourras filtrer tes leads par
+      origine (toi vs affiliés vs anglais) et calculer ton taux
+      de conversion par page.
+    - data-locale="en" sur la page anglaise fait deux choses :
+      l'UI du widget passe en anglais ET l'IA écrit le quiz
+      en anglais.
+-->
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- 1) PAGE FR — https://www.tipote.fr/tiquiz                    -->
+<!-- ════════════════════════════════════════════════════════════ -->
+
+<div id="tiquiz-embed"></div>
+<script
+  src="https://REMPLACE-MOI/embed/tiquiz.js"
+  data-api="https://REMPLACE-MOI"
+  data-checkout="https://www.tipote.fr/tiquiz#section-518f489a"
+  data-source="tiquiz-fr"
+  data-locale="fr"
+  async
+></script>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- 2) PAGE AFFILIÉS — https://www.tipote.fr/part-tiquiz         -->
+<!-- ════════════════════════════════════════════════════════════ -->
+
+<div id="tiquiz-embed"></div>
+<script
+  src="https://REMPLACE-MOI/embed/tiquiz.js"
+  data-api="https://REMPLACE-MOI"
+  data-checkout="https://www.tipote.fr/part-tiquiz#section-518f489a"
+  data-source="tiquiz-affiliate"
+  data-locale="fr"
+  async
+></script>
+
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- 3) PAGE EN — https://www.tipote.fr/tiquiz-us                 -->
+<!-- ════════════════════════════════════════════════════════════ -->
+
+<div id="tiquiz-embed"></div>
+<script
+  src="https://REMPLACE-MOI/embed/tiquiz.js"
+  data-api="https://REMPLACE-MOI"
+  data-checkout="https://www.tipote.fr/tiquiz-us#row-17f8a66b"
+  data-source="tiquiz-en"
+  data-locale="en"
+  async
+></script>
