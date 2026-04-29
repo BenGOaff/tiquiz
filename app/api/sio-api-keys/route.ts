@@ -3,7 +3,7 @@
 // POST — register a new key after live-validating it against the SIO API.
 //
 // Validation rationale: a wrong API key is the #1 source of "my leads
-// aren't syncing" support tickets. We hit GET /tags?limit=1 before
+// aren't syncing" support tickets. We hit GET /tags?limit=10 before
 // persisting, so a 401/403 surfaces immediately as an error instead of
 // hiding inside async lead-sync failures days later.
 
@@ -45,9 +45,14 @@ export async function POST(req: NextRequest) {
 
     // Live-validate against Systeme.io. /tags is cheap, paginated, and
     // returns 401 on a bad key — perfect canary endpoint.
+    //
+    // limit=10 (NOT 1) — Systeme.io tightened the /tags validator at
+    // some point and now rejects anything < 10 with a 422 "This value
+    // should be between 10 and 100" (caught in production logs on
+    // 2026-04-29). 10 is the smallest accepted value, still cheap.
     let validate;
     try {
-      validate = await sioUserRequest(apiKey, "/tags?limit=1");
+      validate = await sioUserRequest(apiKey, "/tags?limit=10");
     } catch (validateErr) {
       // sioUserRequest catches its own fetch errors so a throw here is
       // truly exceptional (e.g. invalid URL construction). Log loudly
