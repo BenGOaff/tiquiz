@@ -199,8 +199,12 @@ export default function EmbedPreviewClient({
   }
 
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground px-6 sm:px-10 py-8 sm:py-12 flex flex-col">
-      <div className="flex-1 max-w-4xl w-full mx-auto flex flex-col">
+    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col">
+      {/* Generous outer padding so neither the form nor the loader
+          ever touches the iframe edge. The iframe itself carries the
+          rounded corners + shadow — we keep the content area calm
+          and centered with a comfortable gutter. */}
+      <div className="flex-1 w-full max-w-2xl mx-auto flex flex-col px-8 sm:px-12 py-10 sm:py-14">
         {phase === "loading" && (
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
             <Loader2 className="size-5 mr-2 animate-spin" /> {t.genConnect}

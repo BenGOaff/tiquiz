@@ -800,9 +800,18 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
       return;
     }
 
+    // Forward the ?embed=<token> URL param when present so the
+    // public route can render a still-draft anonymous quiz for the
+    // embed visitor's preview. Plain URLs are unaffected.
+    const previewSuffix = (() => {
+      if (typeof window === "undefined") return "";
+      const t = new URL(window.location.href).searchParams.get("embed");
+      return t ? `?embed=${encodeURIComponent(t)}` : "";
+    })();
+
     const load = async () => {
       try {
-        const res = await fetch(`/api/quiz/${quizId}/public`);
+        const res = await fetch(`/api/quiz/${quizId}/public${previewSuffix}`);
         const json = await res.json();
         if (!json?.ok || !json.quiz) {
           setError(getT(json?.quiz?.locale).quizUnavailable);

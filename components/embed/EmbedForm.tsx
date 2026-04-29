@@ -66,10 +66,10 @@ export default function EmbedForm({ locale, inputs, onChange, onSubmit, error }:
               value={inputs.objective}
               onValueChange={(v) => onChange({ objective: v })}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-11 py-2 px-3 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {OBJECTIVE_KEYS.map((k) => (
-                  <SelectItem key={k} value={k}>
+                  <SelectItem key={k} value={k} className="py-2.5 px-3">
                     {t["obj" + k.charAt(0).toUpperCase() + k.slice(1)] ?? k}
                   </SelectItem>
                 ))}
@@ -85,10 +85,10 @@ export default function EmbedForm({ locale, inputs, onChange, onSubmit, error }:
               value={String(inputs.questionCount)}
               onValueChange={(v) => onChange({ questionCount: Number(v) })}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-11 py-2 px-3 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {[3, 5, 7, 10].map((n) => (
-                  <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                  <SelectItem key={n} value={String(n)} className="py-2.5 px-3">{n}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -99,10 +99,10 @@ export default function EmbedForm({ locale, inputs, onChange, onSubmit, error }:
               value={inputs.tone}
               onValueChange={(v) => onChange({ tone: v })}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-11 py-2 px-3 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {TONE_KEYS.map((k) => (
-                  <SelectItem key={k} value={k}>
+                  <SelectItem key={k} value={k} className="py-2.5 px-3">
                     {t["tone" + k.charAt(0).toUpperCase() + k.slice(1)] ?? k}
                   </SelectItem>
                 ))}

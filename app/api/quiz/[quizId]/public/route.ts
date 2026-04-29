@@ -196,14 +196,37 @@ async function addToSioCommunity(apiKey: string, communityId: string, contactId:
 
 // ── GET — public quiz data ───────────────────────────────────────
 
-export async function GET(_req: NextRequest, context: RouteContext) {
+export async function GET(req: NextRequest, context: RouteContext) {
   try {
     const { quizId: slugOrId } = await context.params;
     const admin = supabaseAdmin;
 
-    const quizId = await resolveQuizId(admin, slugOrId, { requireActive: true });
+    // Embed preview path: an anonymous embed visitor wants to see
+    // their (still-draft, still-anonymous) quiz play live before
+    // checkout. We skip the active-status filter when the URL carries
+    // ?embed=<UUID> AND the resolved row's embed_session_id matches.
+    // This never exposes another user's draft because:
+    //   1) the token is a unique UUID stored in localStorage / URL
+    //   2) we re-check the embed_session_id on the row itself below
+    const embedToken = (() => {
+      const raw = req.nextUrl.searchParams.get("embed");
+      return raw && UUID_RE.test(raw) ? raw : null;
+    })();
+
+    const quizId = await resolveQuizId(admin, slugOrId, { requireActive: !embedToken });
     if (!quizId) {
       return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
+    }
+
+    if (embedToken) {
+      const { data: gate } = await admin
+        .from("quizzes")
+        .select("embed_session_id, user_id")
+        .eq("id", quizId)
+        .maybeSingle();
+      if (!gate || gate.user_id !== null || gate.embed_session_id !== embedToken) {
+        return NextResponse.json({ ok: false, error: "Preview token mismatch" }, { status: 404 });
+      }
     }
 
     const [quizRes, questionsRes, resultsRes] = await Promise.all([

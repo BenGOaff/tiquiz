@@ -645,9 +645,14 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     } catch { setStatus(status); }
   };
 
-  // Public URL — prefer custom slug when set, fall back to UUID
+  // Public URL — prefer custom slug when set, fall back to UUID. In
+  // embed mode the quiz is still draft + anonymous, so we append the
+  // embed token so /q/[id] renders it via its own preview gate.
   const publicSegment = slug.trim() ? sanitizeSlug(slug) ?? quizId : quizId;
-  const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/q/${publicSegment}` : `/q/${publicSegment}`;
+  const previewSuffix = isEmbed && embedSessionToken ? `?embed=${encodeURIComponent(embedSessionToken)}` : "";
+  const publicUrl = typeof window !== "undefined"
+    ? `${window.location.origin}/q/${publicSegment}${previewSuffix}`
+    : `/q/${publicSegment}${previewSuffix}`;
   const handleCopyLink = () => { navigator.clipboard.writeText(publicUrl).then(() => { setCopied(true); toast.success(t("linkCopied")); setTimeout(() => setCopied(false), 2000); }); };
 
   // Drag-and-drop sensors for the sidebar question list
@@ -693,8 +698,16 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       {/* TOP BAR */}
       <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-background z-10">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" asChild><Link href="/dashboard"><ArrowLeft className="w-5 h-5" /></Link></Button>
-          <span className="font-semibold text-sm truncate max-w-[200px]">{title || t("titleFallback")}</span>
+          {!isEmbed && (
+            <Button variant="ghost" size="icon" asChild><Link href="/dashboard"><ArrowLeft className="w-5 h-5" /></Link></Button>
+          )}
+          {/* The title is stored as rich HTML (RichTextEdit on the
+              preview canvas drives it). Plain-text rendering here
+              would surface the raw markup — strip tags before
+              showing it in the chrome. */}
+          <span className="font-semibold text-sm truncate max-w-[200px]">
+            {(title || "").replace(/<[^>]*>/g, "").trim() || t("titleFallback")}
+          </span>
         </div>
         <nav className="hidden sm:flex items-center bg-muted rounded-lg p-0.5">
           {(["create","share","results"] as const).map(tab => (
@@ -742,6 +755,19 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}{saving ? "" : t("save")}
           </Button>
+          {isEmbed && (
+            // 'Aperçu' button: opens the public quiz player in a new
+            // tab using the embed-preview gate (?embed=token bypasses
+            // the status='active' filter for this token's quiz only).
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => window.open(publicUrl, "_blank", "noopener")}
+            >
+              <Eye className="w-4 h-4 mr-1" />
+              {uiLocale === "en" ? "Preview" : "Aperçu"}
+            </Button>
+          )}
           {isEmbed ? (
             // Paywall trigger: hand off to the iframe parent so the
             // bridge script (public/embed/bridge.js) navigates the
@@ -789,7 +815,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         key={`q-${i}`}
                         id={`q-${i}`}
                         index={i}
-                        label={q.question_text ? q.question_text.slice(0, 35) + (q.question_text.length > 35 ? "…" : "") : t("sidebarEmptyQuestion")}
+                        label={(() => {
+                          const plain = (q.question_text || "").replace(/<[^>]*>/g, "").trim();
+                          return plain ? plain.slice(0, 35) + (plain.length > 35 ? "…" : "") : t("sidebarEmptyQuestion");
+                        })()}
                         onClick={() => scrollToSection(`q-${i}`)}
                         onRemove={() => removeQuestion(i)}
                         canDelete={editQuestions.length > 1}
@@ -812,7 +841,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 {editResults.map((r, i) => (
                   <div key={i} className="flex items-center gap-1 group">
                     <button onClick={() => scrollToSection(`r-${i}`)} className="flex-1 text-left px-3 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors truncate">
-                      <span className="text-xs text-muted-foreground mr-2">{i+1}</span>{r.title || t("sidebarEmptyResult")}
+                      <span className="text-xs text-muted-foreground mr-2">{i+1}</span>{(r.title || "").replace(/<[^>]*>/g, "").trim() || t("sidebarEmptyResult")}
                     </button>
                     {editResults.length > 1 && <button onClick={() => removeResult(i)} className="opacity-0 group-hover:opacity-100 text-destructive p-1 rounded hover:bg-destructive/10"><Trash2 className="w-3 h-3" /></button>}
                   </div>
