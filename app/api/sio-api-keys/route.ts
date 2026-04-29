@@ -45,11 +45,56 @@ export async function POST(req: NextRequest) {
 
     // Live-validate against Systeme.io. /tags is cheap, paginated, and
     // returns 401 on a bad key — perfect canary endpoint.
-    const validate = await sioUserRequest(apiKey, "/tags?limit=1");
-    if (!validate.ok) {
-      const status = validate.status === 401 || validate.status === 403 ? "INVALID_KEY" : "VALIDATION_FAILED";
+    let validate;
+    try {
+      validate = await sioUserRequest(apiKey, "/tags?limit=1");
+    } catch (validateErr) {
+      // sioUserRequest catches its own fetch errors so a throw here is
+      // truly exceptional (e.g. invalid URL construction). Log loudly
+      // so it shows up in production logs with enough context for triage.
+      console.error("[sio-api-keys POST] sioUserRequest threw:", {
+        userId: user.id,
+        keyName: name,
+        keyLast4: apiKey.slice(-4),
+        err: validateErr instanceof Error ? { message: validateErr.message, stack: validateErr.stack } : String(validateErr),
+      });
       return NextResponse.json(
-        { ok: false, error: status, details: validate.error ?? null },
+        { ok: false, error: "VALIDATION_FAILED", reason: "validate_throw" },
+        { status: 502 },
+      );
+    }
+
+    if (!validate.ok) {
+      // Log the real upstream status + error snippet so support can
+      // tell apart a bad key (401/403) from rate-limit (429), SIO
+      // outage (5xx), or network issue (status=0). The key itself is
+      // never logged — only its last 4 chars.
+      console.warn("[sio-api-keys POST] Systeme.io validation failed:", {
+        userId: user.id,
+        keyName: name,
+        keyLast4: apiKey.slice(-4),
+        upstreamStatus: validate.status,
+        upstreamError: (validate.error ?? "").slice(0, 200),
+      });
+      const errCode = validate.status === 401 || validate.status === 403
+        ? "INVALID_KEY"
+        : validate.status === 429
+          ? "RATE_LIMITED"
+          : validate.status >= 500
+            ? "SIO_DOWN"
+            : validate.status === 0
+              ? "NETWORK_ERROR"
+              : "VALIDATION_FAILED";
+      return NextResponse.json(
+        {
+          ok: false,
+          error: errCode,
+          // Echo the upstream status so the UI can render an actionable
+          // hint ("Systeme.io rate-limited, retry in 1 min" rather than
+          // the generic "validation failed").
+          upstream_status: validate.status,
+          details: (validate.error ?? "").slice(0, 200) || null,
+        },
         { status: 400 },
       );
     }
@@ -59,12 +104,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, key: created });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
+      console.error("[sio-api-keys POST] createKey failed:", {
+        userId: user.id,
+        keyName: name,
+        keyLast4: apiKey.slice(-4),
+        err: e instanceof Error ? { message: e.message, stack: e.stack } : String(e),
+      });
       if (/duplicate|unique/i.test(msg)) {
         return NextResponse.json({ ok: false, error: "NAME_TAKEN" }, { status: 409 });
+      }
+      // SIO_KEY_ENCRYPTION_KEY missing/wrong-size → encryptApiKey throws
+      // with that exact substring. Surface it as its own code so support
+      // can fix the env without digging through stack traces.
+      if (/SIO_KEY_ENCRYPTION_KEY/i.test(msg)) {
+        return NextResponse.json(
+          { ok: false, error: "SERVER_MISCONFIGURED", details: "Encryption key missing on server." },
+          { status: 500 },
+        );
       }
       throw e;
     }
   } catch (e) {
+    console.error("[sio-api-keys POST] uncaught error:", e);
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
       { status: 500 },
