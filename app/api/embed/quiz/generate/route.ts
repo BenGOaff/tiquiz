@@ -24,11 +24,11 @@ export const maxDuration = 300;
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
-// Embed-specific defaults: short quiz (5 questions, 3 profiles) so the
-// "wow" effect lands fast and Claude tokens stay cheap.
-const EMBED_QUESTION_COUNT = 5;
-const EMBED_RESULT_COUNT = 3;
-const EMBED_MAX_TOKENS = 4000;
+// The embed exposes generator knobs in step 1 (matches /quiz/new).
+// Defaults are applied in the request handler when the visitor leaves
+// a field at zero. Token cap stays low — even a 10-question quiz with
+// 5 profiles fits comfortably.
+const EMBED_MAX_TOKENS = 6000;
 
 function getClaudeApiKey(): string {
   return (
@@ -96,6 +96,20 @@ export async function POST(req: NextRequest) {
   const locale = String(body.locale ?? "fr").trim();
   const source = String(body.source ?? "").trim().slice(0, 200) || null;
 
+  // Generator knobs the embed now exposes in step-1 (matches the
+  // authenticated /quiz/new form so the quiz the visitor sees is
+  // representative of what they get post-checkout).
+  const questionCount = Math.min(10, Math.max(3, Number(body.questionCount) || 5));
+  const resultCount = Math.min(5, Math.max(2, Number(body.resultCount) || 3));
+  const format = body.format === "long" ? "long" : "short";
+  const segmentation = body.segmentation === "level" ? "level" : "profile";
+  const askFirstName = Boolean(body.askFirstName);
+  const askGender = Boolean(body.askGender);
+  const ALLOWED_TONES = new Set(["inspirant", "fun", "professionnel", "coach", "expert", "bienveillant"]);
+  const toneRaw = String(body.tone ?? "inspirant").trim().toLowerCase();
+  const tone = ALLOWED_TONES.has(toneRaw) ? toneRaw : "inspirant";
+  const addressForm = body.addressForm === "vous" ? "vous" : "tu";
+
   if (topic.length < 3 || topic.length > 200) {
     return Response.json({ ok: false, error: "Le sujet doit faire entre 3 et 200 caractères." }, { status: 400, headers });
   }
@@ -136,7 +150,18 @@ export async function POST(req: NextRequest) {
 
   if (insertErr || !sessionRow) {
     console.error("[embed/generate] failed to create session:", insertErr);
-    return Response.json({ ok: false, error: "Impossible d'initialiser la session." }, { status: 500, headers });
+    // Surface the actual Postgres error in the body so deployment
+    // problems (table missing → "relation … does not exist", NOT NULL
+    // violations on a stale schema, etc.) are diagnosable from the
+    // browser console instead of being lost in the server logs.
+    const detail = insertErr?.message
+      || insertErr?.hint
+      || (typeof insertErr === "string" ? insertErr : "Insertion impossible.");
+    const isMissingTable = /relation .*embed_quiz_sessions.* does not exist/i.test(detail);
+    const userMsg = isMissingTable
+      ? "Tiquiz n'a pas encore appliqué la migration de l'embed. Demande à ton admin de pousser supabase/migrations/023 + 024."
+      : "Impossible d'initialiser la session : " + detail;
+    return Response.json({ ok: false, error: userMsg }, { status: 500, headers });
   }
   const sessionToken = sessionRow.id as string;
 
@@ -146,13 +171,15 @@ export async function POST(req: NextRequest) {
     objective,
     target: audience,
     intention: topic,
-    tone: "inspirant",
-    questionCount: EMBED_QUESTION_COUNT,
-    resultCount: EMBED_RESULT_COUNT,
+    tone,
+    questionCount,
+    resultCount,
     locale,
-    addressForm: "tu",
-    format: "short",
-    segmentation: "profile",
+    addressForm,
+    format,
+    segmentation,
+    askFirstName,
+    askGender,
   });
 
   const encoder = new TextEncoder();

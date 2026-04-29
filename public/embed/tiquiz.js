@@ -115,6 +115,16 @@
       lblAudience: "À qui s'adresse-t-il ?",
       phAudience: "Ex : freelances de 30 à 45 ans",
       lblObjective: "Ton objectif",
+      lblQuestionCount: "Nombre de questions",
+      lblTone: "Ton",
+      toneInspirant: "Inspirant",
+      toneFun: "Fun et léger",
+      toneProfessionnel: "Professionnel",
+      toneCoach: "Coach motivant",
+      toneExpert: "Expert pointu",
+      toneBienveillant: "Bienveillant",
+      lblAskFirstName: "Demander le prénom du visiteur",
+      lblAskGender: "Demander le genre (m / f)",
       lblEmail: "Ton email (pour recevoir ton quiz)",
       phEmail: "toi@exemple.com",
       submit: "Générer mon quiz avec l'IA →",
@@ -167,6 +177,16 @@
       lblAudience: "Who is it for?",
       phAudience: "E.g. freelancers aged 30 to 45",
       lblObjective: "Your goal",
+      lblQuestionCount: "Number of questions",
+      lblTone: "Tone",
+      toneInspirant: "Inspiring",
+      toneFun: "Fun & light",
+      toneProfessionnel: "Professional",
+      toneCoach: "Motivating coach",
+      toneExpert: "Sharp expert",
+      toneBienveillant: "Caring",
+      lblAskFirstName: "Ask the visitor's first name",
+      lblAskGender: "Ask gender (m / f)",
       lblEmail: "Your email (so we can send you your quiz)",
       phEmail: "you@example.com",
       submit: "Generate my quiz with AI →",
@@ -326,7 +346,14 @@
     });
     if (!res.ok || !res.body) {
       var text = await res.text().catch(function () { return ""; });
-      throw new Error(text || ("HTTP " + res.status));
+      // Server returns {ok:false,error:"…"} on 4xx/5xx. Surface only
+      // the human message instead of dumping the raw JSON in the UI.
+      var msg = text || ("HTTP " + res.status);
+      try {
+        var j = JSON.parse(text);
+        if (j && j.error) msg = String(j.error);
+      } catch (_) { /* not JSON, keep raw text */ }
+      throw new Error(msg);
     }
     var reader = res.body.getReader();
     var decoder = new TextDecoder("utf-8");
@@ -366,7 +393,16 @@
         sessionToken: "",
         quiz: null,
         savedForLater: false,
-        inputs: { topic: "", audience: "", objective: "qualifier", email: "" },
+        inputs: {
+          topic: "",
+          audience: "",
+          objective: "qualifier",
+          questionCount: 5,
+          tone: "inspirant",
+          askFirstName: false,
+          askGender: false,
+          email: "",
+        },
       };
     }
 
@@ -459,6 +495,59 @@
             return w;
           })(),
         ]),
+        // Row: question count + tone (matches /quiz/new in Tiquiz).
+        el("div", { class: "row two", style: "margin-top:14px" }, [
+          (function () {
+            var w = el("div");
+            w.appendChild(el("label", null, [t("lblQuestionCount")]));
+            var sel = el("select");
+            [3, 5, 7, 10].forEach(function (n) {
+              var opt = el("option", { value: String(n) }, [String(n)]);
+              if (Number(s.inputs.questionCount) === n) opt.selected = true;
+              sel.appendChild(opt);
+            });
+            sel.addEventListener("change", function (e) { s.inputs.questionCount = Number(e.target.value); });
+            w.appendChild(sel);
+            return w;
+          })(),
+          (function () {
+            var w = el("div");
+            w.appendChild(el("label", null, [t("lblTone")]));
+            var sel = el("select");
+            ["inspirant","fun","professionnel","coach","expert","bienveillant"].forEach(function (k) {
+              var labelKey = "tone" + k.charAt(0).toUpperCase() + k.slice(1);
+              var opt = el("option", { value: k }, [t(labelKey)]);
+              if (s.inputs.tone === k) opt.selected = true;
+              sel.appendChild(opt);
+            });
+            sel.addEventListener("change", function (e) { s.inputs.tone = e.target.value; });
+            w.appendChild(sel);
+            return w;
+          })(),
+        ]),
+        // Row: personalization toggles (firstName + gender). Plain
+        // checkboxes — we deliberately skip a toggle component to
+        // keep the embed dependency-free.
+        el("div", { style: "margin-top:14px;display:flex;flex-wrap:wrap;gap:18px;font-size:13px;color:" + BRAND.text + ";" }, [
+          (function () {
+            var lbl = el("label", { style: "display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:500;" });
+            var cb = el("input", { type: "checkbox" });
+            cb.checked = !!s.inputs.askFirstName;
+            cb.addEventListener("change", function (e) { s.inputs.askFirstName = e.target.checked; });
+            lbl.appendChild(cb);
+            lbl.appendChild(document.createTextNode(t("lblAskFirstName")));
+            return lbl;
+          })(),
+          (function () {
+            var lbl = el("label", { style: "display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-weight:500;" });
+            var cb = el("input", { type: "checkbox" });
+            cb.checked = !!s.inputs.askGender;
+            cb.addEventListener("change", function (e) { s.inputs.askGender = e.target.checked; });
+            lbl.appendChild(cb);
+            lbl.appendChild(document.createTextNode(t("lblAskGender")));
+            return lbl;
+          })(),
+        ]),
         s.error ? el("p", { class: "error" }, [s.error]) : null,
         el("div", { style: "margin-top:18px" }, [
           el("button", {
@@ -489,6 +578,10 @@
           topic: i.topic.trim(),
           audience: i.audience.trim(),
           objective: i.objective,
+          questionCount: i.questionCount,
+          tone: i.tone,
+          askFirstName: !!i.askFirstName,
+          askGender: !!i.askGender,
           // The backend forwards `locale` straight to Claude's prompt
           // builder, so this is what makes the EN sales page generate
           // an English quiz.

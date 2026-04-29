@@ -49,6 +49,7 @@ export async function middleware(req: NextRequest) {
   if (
     pathname.startsWith("/q/") ||
     pathname.startsWith("/api/") ||
+    pathname.startsWith("/embed/") ||
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/auth/") ||
     pathname.startsWith("/legal/") ||
@@ -57,7 +58,15 @@ export async function middleware(req: NextRequest) {
     pathname === "/favicon.ico"
   ) {
     const res = NextResponse.next();
-    // Set locale cookie on first visit
+    // The /embed/preview page is loaded inside <iframe> on third-party
+    // landing pages (systeme.io, Carrd…). Strip framing restrictions
+    // and set a permissive frame-ancestors so the iframe can render.
+    // This is safe: the page only exposes anonymous-session draft data
+    // already gated by the opaque session_token.
+    if (pathname.startsWith("/embed/")) {
+      res.headers.set("Content-Security-Policy", "frame-ancestors *");
+      res.headers.delete("X-Frame-Options");
+    }
     if (!req.cookies.get(UI_LOCALE_COOKIE)?.value) {
       res.cookies.set(UI_LOCALE_COOKIE, detectLocaleFromHeader(req), {
         path: "/",

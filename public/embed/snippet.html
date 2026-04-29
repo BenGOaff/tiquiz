@@ -1,25 +1,23 @@
 <!--
-  TIQUIZ EMBED — snippets pour les 3 pages de vente systeme.io
-  ────────────────────────────────────────────────────────────
-  Mode d'emploi (identique pour les 3) :
-    1) Dans systeme.io, ajoute un bloc "Code HTML personnalisé"
-       à l'endroit où tu veux faire apparaître la démo.
-    2) Colle exactement le snippet correspondant à la page.
-    3) Remplace REMPLACE-MOI par le domaine public de Tiquiz
-       (ex : https://app.tiquiz.fr).
-    4) Sauvegarde la page. Pas besoin de rien d'autre.
+  TIQUIZ EMBED — snippets iframe (v2)
+  ────────────────────────────────────
+  Cette version charge le VRAI éditeur Tiquiz dans un iframe : le
+  visiteur édite son quiz exactement avec les composants UI qu'il
+  retrouvera dans son compte après commande, sans les options
+  systeme.io (tags, course, community) qui sont propres au compte.
 
-  À retenir :
-    - data-checkout pointe vers le tarif EXACT de chaque page,
-      donc le bouton "Débloquer Tiquiz" renvoie au bon endroit
-      sans interrompre le funnel.
-    - data-source distingue les 3 pages dans la table
-      embed_quiz_sessions → tu pourras filtrer tes leads par
-      origine (toi vs affiliés vs anglais) et calculer ton taux
-      de conversion par page.
-    - data-locale="en" sur la page anglaise fait deux choses :
-      l'UI du widget passe en anglais ET l'IA écrit le quiz
-      en anglais.
+  Mode d'emploi :
+    1) Dans systeme.io, ajoute un bloc « Code HTML personnalisé »
+       à l'endroit où tu veux faire apparaître la démo.
+    2) Colle le snippet correspondant à la page.
+    3) Remplace REMPLACE-MOI par le domaine de Tiquiz
+       (ex : https://app.tiquiz.fr).
+    4) Le bridge JS écoute le clic « Débloquer Tiquiz » envoyé par
+       l'iframe et redirige vers la bonne ancre tarif. Tu peux
+       overrider l'URL via l'attribut data-checkout sur l'iframe.
+
+  Multi-page : tu peux mettre plusieurs <iframe> sur la même page,
+  chacun avec son propre data-checkout.
 -->
 
 
@@ -27,42 +25,48 @@
 <!-- 1) PAGE FR — https://www.tipote.fr/tiquiz                    -->
 <!-- ════════════════════════════════════════════════════════════ -->
 
-<div id="tiquiz-embed"></div>
-<script
-  src="https://REMPLACE-MOI/embed/tiquiz.js"
-  data-api="https://REMPLACE-MOI"
+<iframe
+  src="https://REMPLACE-MOI/embed/preview?locale=fr&source=tiquiz-fr&checkout=https%3A%2F%2Fwww.tipote.fr%2Ftiquiz%23section-518f489a"
   data-checkout="https://www.tipote.fr/tiquiz#section-518f489a"
-  data-source="tiquiz-fr"
-  data-locale="fr"
-  async
-></script>
+  style="width:100%;max-width:1100px;height:min(720px,90vh);min-height:560px;border:0;border-radius:18px;display:block;margin:0 auto;box-shadow:0 16px 48px rgba(35,40,80,.18);"
+  loading="lazy"
+  title="Démo Tiquiz"
+></iframe>
+<script src="https://REMPLACE-MOI/embed/bridge.js" async></script>
 
 
 <!-- ════════════════════════════════════════════════════════════ -->
 <!-- 2) PAGE AFFILIÉS — https://www.tipote.fr/part-tiquiz         -->
 <!-- ════════════════════════════════════════════════════════════ -->
 
-<div id="tiquiz-embed"></div>
-<script
-  src="https://REMPLACE-MOI/embed/tiquiz.js"
-  data-api="https://REMPLACE-MOI"
+<iframe
+  src="https://REMPLACE-MOI/embed/preview?locale=fr&source=tiquiz-affiliate&checkout=https%3A%2F%2Fwww.tipote.fr%2Fpart-tiquiz%23section-518f489a"
   data-checkout="https://www.tipote.fr/part-tiquiz#section-518f489a"
-  data-source="tiquiz-affiliate"
-  data-locale="fr"
-  async
-></script>
+  style="width:100%;max-width:1100px;height:min(720px,90vh);min-height:560px;border:0;border-radius:18px;display:block;margin:0 auto;box-shadow:0 16px 48px rgba(35,40,80,.18);"
+  loading="lazy"
+  title="Tiquiz demo"
+></iframe>
+<script src="https://REMPLACE-MOI/embed/bridge.js" async></script>
 
 
 <!-- ════════════════════════════════════════════════════════════ -->
 <!-- 3) PAGE EN — https://www.tipote.fr/tiquiz-us                 -->
 <!-- ════════════════════════════════════════════════════════════ -->
 
-<div id="tiquiz-embed"></div>
-<script
-  src="https://REMPLACE-MOI/embed/tiquiz.js"
-  data-api="https://REMPLACE-MOI"
+<iframe
+  src="https://REMPLACE-MOI/embed/preview?locale=en&source=tiquiz-en&checkout=https%3A%2F%2Fwww.tipote.fr%2Ftiquiz-us%23row-17f8a66b"
   data-checkout="https://www.tipote.fr/tiquiz-us#row-17f8a66b"
-  data-source="tiquiz-en"
-  data-locale="en"
-  async
-></script>
+  style="width:100%;max-width:1100px;height:min(720px,90vh);min-height:560px;border:0;border-radius:18px;display:block;margin:0 auto;box-shadow:0 16px 48px rgba(35,40,80,.18);"
+  loading="lazy"
+  title="Tiquiz demo"
+></iframe>
+<script src="https://REMPLACE-MOI/embed/bridge.js" async></script>
+
+
+<!--
+  Note de migration :
+  - Le snippet précédent (v1, Web Component vanilla) reste fonctionnel
+    via /embed/tiquiz.js si tu en as collé sur d'autres pages — pas
+    de breaking change. Mais privilégie cette v2 iframe pour avoir un
+    aperçu réellement identique au compte Tiquiz.
+-->
