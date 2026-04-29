@@ -33,12 +33,12 @@ export default function EmbedForm({ locale, inputs, onChange, onSubmit, error }:
   // pads + centers; we just need a vertical-rhythm container here.
   return (
     <div className="w-full max-w-2xl mx-auto space-y-5">
-      <div className="space-y-5">
-          <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            {t.formTitle}
-          </h2>
-          <p className="text-muted-foreground mt-1">{t.formLead}</p>
-        </div>
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+          {t.formTitle}
+        </h2>
+        <p className="text-muted-foreground mt-1">{t.formLead}</p>
+      </div>
 
         <div className="space-y-2">
           <Label htmlFor="tq-topic">{t.lblTopic}</Label>
@@ -143,10 +143,9 @@ export default function EmbedForm({ locale, inputs, onChange, onSubmit, error }:
         >
           <Sparkles className="size-4 mr-1" />
           {t.submit}
-        </Button>
-        {/* removed: 'no email asked' note — internal noise that the
-            visitor doesn't need to be reassured about explicitly. */}
-      </div>
+      </Button>
+      {/* removed: 'no email asked' note — internal noise that the
+          visitor doesn't need to be reassured about explicitly. */}
     </div>
   );
 }
