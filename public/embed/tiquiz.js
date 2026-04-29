@@ -118,6 +118,7 @@
       lblEmail: "Ton email (pour recevoir ton quiz)",
       phEmail: "toi@exemple.com",
       submit: "Générer mon quiz avec l'IA →",
+      noEmailYet: "Aucun email demandé à cette étape. L'IA crée ton quiz, tu l'édites librement.",
       legal: "En cliquant, tu acceptes que ton email soit utilisé pour t'envoyer ton quiz et des conseils Tiquiz. Désabonnement en 1 clic. ",
       legalLink: "Confidentialité",
       legalUrl: "https://www.tipote.fr/legal",
@@ -132,8 +133,16 @@
       defaultTitle: "Mon quiz",
       defaultIntro: "Découvre ton profil en quelques questions.",
       editLead: "Modifie librement. Quand tu es prêt à le partager, débloque Tiquiz.",
+      tabQuestions: "Questions",
+      tabProfiles: "Profils",
       addQ: "+ Ajouter une question",
       addOpt: "+ Ajouter une option",
+      addProfile: "+ Ajouter un profil",
+      profileTitle: "Nom du profil",
+      profileDescription: "Description",
+      profileInsight: "Analyse personnalisée",
+      profileCta: "Texte du bouton (CTA)",
+      profileCtaUrl: "Lien du bouton",
       newQ: "Nouvelle question",
       newOpt: "Nouvelle option",
       optA: "Option A",
@@ -143,11 +152,11 @@
       delQ: "Supprimer cette question",
       delOpt: "Supprimer l'option",
       paywallBadge: "✨ Ton quiz est prêt",
-      paywallTitle: "Débloque Tiquiz pour le partager",
-      paywallText: "Lien public, capture des leads, intégration systeme.io et 100 langues. Importe ce quiz dans ton compte en 1 clic.",
+      paywallTitle: "Débloque Tiquiz pour publier ton quiz",
+      paywallText: "Lien public, capture des leads, intégration systeme.io et 100 langues. Ton quiz t'attendra dans ton compte dès la fin de la commande.",
       paywallCta: "Débloquer Tiquiz →",
-      paywallSavedOk: "✓ Ton quiz est sauvegardé. On t'a envoyé un lien par email.",
-      paywallSaveLater: "Pas maintenant — sauvegarder pour plus tard",
+      paywallSavedOk: "✓ Ton quiz est sauvegardé sur ce navigateur. Reviens quand tu veux.",
+      paywallSaveLater: "Sauvegarder dans ce navigateur",
       poweredBy: "Propulsé par ",
     },
     en: {
@@ -161,6 +170,7 @@
       lblEmail: "Your email (so we can send you your quiz)",
       phEmail: "you@example.com",
       submit: "Generate my quiz with AI →",
+      noEmailYet: "No email required at this stage. The AI builds your quiz, you edit freely.",
       legal: "By clicking, you agree that your email may be used to send you your quiz and Tiquiz tips. One-click unsubscribe. ",
       legalLink: "Privacy",
       legalUrl: "https://www.tipote.fr/legal",
@@ -175,8 +185,16 @@
       defaultTitle: "My quiz",
       defaultIntro: "Discover your profile in just a few questions.",
       editLead: "Edit freely. When you're ready to share it, unlock Tiquiz.",
+      tabQuestions: "Questions",
+      tabProfiles: "Profiles",
       addQ: "+ Add a question",
       addOpt: "+ Add an option",
+      addProfile: "+ Add a profile",
+      profileTitle: "Profile name",
+      profileDescription: "Description",
+      profileInsight: "Personalized insight",
+      profileCta: "Button text (CTA)",
+      profileCtaUrl: "Button link",
       newQ: "New question",
       newOpt: "New option",
       optA: "Option A",
@@ -186,11 +204,11 @@
       delQ: "Delete this question",
       delOpt: "Delete option",
       paywallBadge: "✨ Your quiz is ready",
-      paywallTitle: "Unlock Tiquiz to share it",
-      paywallText: "Public link, lead capture, systeme.io integration and 100 languages. Import this quiz into your account in 1 click.",
+      paywallTitle: "Unlock Tiquiz to publish your quiz",
+      paywallText: "Public link, lead capture, systeme.io integration and 100 languages. Your quiz will be waiting in your account as soon as you complete checkout.",
       paywallCta: "Unlock Tiquiz →",
-      paywallSavedOk: "✓ Your quiz is saved. We've sent you a link by email.",
-      paywallSaveLater: "Not now — save for later",
+      paywallSavedOk: "✓ Quiz saved on this browser. Come back any time.",
+      paywallSaveLater: "Save on this browser",
       poweredBy: "Powered by ",
     },
   };
@@ -206,7 +224,10 @@
   var CSS = (
     ":host{all:initial;display:block;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Inter,sans-serif;color:" + BRAND.text + ";line-height:1.5;}" +
     "*{box-sizing:border-box;}" +
-    ".card{background:" + BRAND.bg + ";border:1px solid " + BRAND.border + ";border-radius:18px;padding:24px;box-shadow:0 8px 32px rgba(35,40,80,.06);max-width:680px;margin:0 auto;position:relative;overflow:hidden;}" +
+    ".card{background:" + BRAND.bg + ";border:1px solid " + BRAND.border + ";border-radius:18px;box-shadow:0 16px 48px rgba(35,40,80,.12);max-width:1100px;margin:0 auto;position:relative;overflow:hidden;height:min(680px,calc(100vh - 80px));min-height:520px;display:flex;flex-direction:column;}" +
+    ".card-body{flex:1;overflow-y:auto;padding:28px 32px;}" +
+    ".card-form{display:flex;flex-direction:column;justify-content:center;max-width:560px;margin:0 auto;width:100%;}" +
+    "@media(max-width:640px){.card{height:min(720px,calc(100vh - 40px));}.card-body{padding:20px;}}" +
     ".card::before{content:\"\";position:absolute;inset:0 0 auto 0;height:4px;background:linear-gradient(90deg," + BRAND.primary + " 0%," + BRAND.accent + " 100%);}" +
     "h2{margin:0 0 6px;font-size:22px;font-weight:700;letter-spacing:-.01em;}" +
     "p.lead{margin:0 0 20px;color:" + BRAND.muted + ";font-size:15px;}" +
@@ -244,6 +265,24 @@
     ".add-q{display:block;width:100%;border:1px dashed " + BRAND.border + ";background:transparent;color:" + BRAND.muted + ";padding:12px;border-radius:12px;cursor:pointer;font:inherit;font-weight:500;}" +
     ".add-q:hover{border-color:" + BRAND.primary + ";color:" + BRAND.primary + ";}" +
     ".cta-row{position:sticky;bottom:0;background:linear-gradient(to top,#fff 70%,rgba(255,255,255,0));padding:18px 0 4px;margin-top:18px;}" +
+    /* editor sticky header + tabs + profile cards */
+    ".editor-top{position:sticky;top:-28px;background:#fff;z-index:5;margin:-28px -32px 14px;padding:18px 32px 12px;border-bottom:1px solid " + BRAND.border + ";}" +
+    ".editor-title{font-size:20px;font-weight:700;border:0;padding:6px 10px;border-radius:8px;background:transparent;width:100%;display:block;margin-bottom:10px;color:" + BRAND.text + ";}" +
+    ".editor-title:focus{background:" + BRAND.soft + ";outline:none;}" +
+    ".tabs{display:flex;gap:4px;background:" + BRAND.soft + ";padding:4px;border-radius:10px;}" +
+    ".tab{flex:1;padding:8px 10px;border:0;background:transparent;cursor:pointer;font:inherit;font-weight:600;font-size:13px;color:" + BRAND.muted + ";border-radius:8px;}" +
+    ".tab.active{background:#fff;color:" + BRAND.primary + ";box-shadow:0 1px 3px rgba(35,40,80,.1);}" +
+    ".tab:hover:not(.active){color:" + BRAND.text + ";}" +
+    ".profile{border:1px solid " + BRAND.border + ";border-radius:14px;padding:14px;margin:0 0 12px;background:" + BRAND.soft + ";}" +
+    ".p-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;}" +
+    ".p-pin{flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:" + BRAND.accent + ";color:#fff;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;}" +
+    ".p-title{flex:1;font-weight:700;border:0;background:transparent;padding:6px 8px;border-radius:8px;font-size:15px;}" +
+    ".p-title:focus{background:#fff;}" +
+    ".field{margin:0 0 10px;}" +
+    ".field>label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:" + BRAND.muted + ";font-weight:700;margin-bottom:4px;}" +
+    ".field textarea,.field input[type=text]{width:100%;font:inherit;color:" + BRAND.text + ";background:#fff;border:1px solid " + BRAND.border + ";border-radius:10px;padding:10px 12px;outline:none;}" +
+    ".field textarea{resize:vertical;min-height:60px;}" +
+    ".field textarea:focus,.field input[type=text]:focus{border-color:" + BRAND.primary + ";box-shadow:0 0 0 3px rgba(93,108,219,.18);}" +
     /* paywall */
     ".paywall{position:relative;}" +
     ".paywall-preview{filter:blur(6px) saturate(.85);pointer-events:none;user-select:none;}" +
@@ -321,6 +360,7 @@
       this.attachShadow({ mode: "open" });
       this._state = {
         step: "form", // form | generating | edit | paywall
+        editorTab: "questions", // questions | profiles
         error: "",
         progress: "",
         sessionToken: "",
@@ -347,12 +387,20 @@
     _render() {
       this._root.innerHTML = "";
       var step = this._state.step;
-      var node;
-      if (step === "form") node = this._renderForm();
-      else if (step === "generating") node = this._renderGenerating();
-      else if (step === "edit") node = this._renderEditor();
-      else if (step === "paywall") node = this._renderPaywall();
-      this._root.appendChild(node);
+      var inner;
+      if (step === "form") inner = this._renderForm();
+      else if (step === "generating") inner = this._renderGenerating();
+      else if (step === "edit") inner = this._renderEditor();
+      else if (step === "paywall") inner = this._renderPaywall();
+      // Form + generating + paywall use the centered card-form layout;
+      // the editor uses the full card-body so it can host the wider
+      // sidebar / main split.
+      var center = step === "form" || step === "generating";
+      var bodyChildren = center ? [el("div", { class: "card-form" }, [inner])] : [inner];
+      var card = el("div", null, [
+        el("div", { class: "card-body" }, bodyChildren),
+      ]);
+      this._root.appendChild(card);
 
       var mark = el("div", { class: "footer-mark" }, [
         t("poweredBy"),
@@ -365,7 +413,7 @@
     _renderForm() {
       var s = this._state;
       var self = this;
-      var card = el("div", { class: "card" }, [
+      var card = el("div", null, [
         el("h2", null, [t("title")]),
         el("p", { class: "lead" }, [t("lead")]),
         el("div", { class: "row" }, [
@@ -411,21 +459,6 @@
             return w;
           })(),
         ]),
-        el("div", { class: "row", style: "margin-top:14px" }, [
-          (function () {
-            var w = el("div");
-            w.appendChild(el("label", null, [t("lblEmail")]));
-            var inp = el("input", {
-              type: "email",
-              placeholder: t("phEmail"),
-              maxlength: "200",
-              value: s.inputs.email,
-            });
-            inp.addEventListener("input", function (e) { s.inputs.email = e.target.value; });
-            w.appendChild(inp);
-            return w;
-          })(),
-        ]),
         s.error ? el("p", { class: "error" }, [s.error]) : null,
         el("div", { style: "margin-top:18px" }, [
           el("button", {
@@ -434,10 +467,7 @@
             onclick: function () { self._submitForm(); },
           }, [t("submit")]),
         ]),
-        el("p", { class: "legal" }, [
-          t("legal"),
-          el("a", { href: t("legalUrl"), target: "_blank", rel: "noopener" }, [t("legalLink")]),
-        ]),
+        el("p", { class: "legal" }, [t("noEmailYet")]),
       ]);
       return card;
     }
@@ -451,15 +481,11 @@
       if (!i.audience || i.audience.trim().length < 2) {
         return this._setState({ error: t("errAudience") });
       }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(i.email)) {
-        return this._setState({ error: t("errEmail") });
-      }
 
       this._setState({ step: "generating", error: "", progress: t("genConnect") });
 
       try {
         var iter = sseFromFetch(apiUrl("/api/embed/quiz/generate"), {
-          email: i.email.trim().toLowerCase(),
           topic: i.topic.trim(),
           audience: i.audience.trim(),
           objective: i.objective,
@@ -496,81 +522,151 @@
       }
     }
 
-    // The embed editor only needs questions[].text + questions[].options[].text.
-    // We ignore (but preserve) anything else so /save round-trips faithfully
-    // and the post-claim import keeps the full payload.
+    // Claude outputs `question_text` (matches the Tiquiz schema). Old
+    // versions of this widget read `text`, leaving the question label
+    // blank in the editor. Accept both, canonicalize to question_text
+    // so /save round-trips the right key into the DB.
     _normalizeQuiz(quiz) {
       var q = JSON.parse(JSON.stringify(quiz || {}));
       if (!Array.isArray(q.questions)) q.questions = [];
       q.questions = q.questions.map(function (qu) {
+        var label = String(qu.question_text || qu.text || qu.question || "");
         return Object.assign({}, qu, {
-          text: String(qu.text || qu.question || ""),
+          question_text: label,
           options: Array.isArray(qu.options) ? qu.options.map(function (o) {
             return Object.assign({}, o, { text: String(o.text || o.label || "") });
           }) : [],
         });
       });
+      if (!Array.isArray(q.results)) q.results = [];
       return q;
     }
 
     // ── Step 2: Generating ───────────────────────────────────────
     _renderGenerating() {
-      return el("div", { class: "card" }, [
-        el("div", { class: "gen" }, [
-          el("div", { class: "spinner" }),
-          el("div", { class: "gen-step" }, [this._state.progress || t("genStep")]),
-          el("div", { class: "gen-sub" }, [t("genSub")]),
-        ]),
+      return el("div", { class: "gen" }, [
+        el("div", { class: "spinner" }),
+        el("div", { class: "gen-step" }, [this._state.progress || t("genStep")]),
+        el("div", { class: "gen-sub" }, [t("genSub")]),
       ]);
     }
 
     // ── Step 3: Editor ───────────────────────────────────────────
     _renderEditor() {
       var self = this;
-      var q = this._state.quiz || { questions: [] };
-      var card = el("div", { class: "card" }, [
-        el("h2", null, [
-          (function () {
-            var inp = el("input", {
-              type: "text",
-              value: q.title || t("defaultTitle"),
-              style: "font-size:22px;font-weight:700;border:0;padding:4px 8px;border-radius:8px;background:transparent;width:100%;",
-            });
-            inp.addEventListener("input", function (e) {
-              q.title = e.target.value;
-              self._scheduleSave();
-            });
-            return inp;
-          })(),
+      var q = this._state.quiz || { questions: [], results: [] };
+      if (!Array.isArray(q.results)) q.results = [];
+      var tab = this._state.editorTab || "questions";
+
+      // Sticky top: editable title + tabs (Questions / Profils).
+      var titleInput = el("input", {
+        class: "editor-title",
+        type: "text",
+        value: q.title || t("defaultTitle"),
+      });
+      titleInput.addEventListener("input", function (e) {
+        q.title = e.target.value; self._scheduleSave();
+      });
+
+      function tabBtn(key, label) {
+        return el("button", {
+          class: "tab" + (tab === key ? " active" : ""),
+          type: "button",
+          onclick: function () { self._setState({ editorTab: key }); },
+        }, [label + (key === "questions" ? " (" + q.questions.length + ")"
+                     : key === "profiles" ? " (" + q.results.length + ")" : "")]);
+      }
+
+      var top = el("div", { class: "editor-top" }, [
+        titleInput,
+        el("div", { class: "tabs" }, [
+          tabBtn("questions", t("tabQuestions")),
+          tabBtn("profiles", t("tabProfiles")),
         ]),
-        el("p", { class: "lead" }, [t("editLead")]),
       ]);
 
-      q.questions.forEach(function (qu, idx) { card.appendChild(self._renderQuestion(qu, idx)); });
-
-      var addBtn = el("button", {
-        class: "add-q",
-        type: "button",
-        onclick: function () {
-          q.questions.push({ text: t("newQ"), options: [
-            { text: t("optA") }, { text: t("optB") }, { text: t("optC") },
-          ] });
-          self._scheduleSave();
-          self._render();
-        },
-      }, [t("addQ")]);
-      card.appendChild(addBtn);
+      var body = el("div", null, []);
+      if (tab === "questions") {
+        q.questions.forEach(function (qu, idx) {
+          body.appendChild(self._renderQuestion(qu, idx));
+        });
+        body.appendChild(el("button", {
+          class: "add-q",
+          type: "button",
+          onclick: function () {
+            q.questions.push({ question_text: t("newQ"), options: [
+              { text: t("optA") }, { text: t("optB") }, { text: t("optC") },
+            ] });
+            self._scheduleSave();
+            self._render();
+          },
+        }, [t("addQ")]));
+      } else {
+        q.results.forEach(function (r, idx) {
+          body.appendChild(self._renderProfile(r, idx));
+        });
+        body.appendChild(el("button", {
+          class: "add-q",
+          type: "button",
+          onclick: function () {
+            q.results.push({ title: t("newQ"), description: "", insight: "", cta_text: "", cta_url: "" });
+            self._scheduleSave();
+            self._render();
+          },
+        }, [t("addProfile")]));
+      }
 
       var ctaRow = el("div", { class: "cta-row" }, [
         el("button", {
           class: "btn btn-primary",
           type: "button",
-          onclick: function () { self._setState({ step: "paywall" }); },
+          style: "max-width:280px;margin-left:auto;display:block;",
+          onclick: function () { self._setState({ step: "paywall", error: "" }); },
         }, [t("shareCta")]),
       ]);
-      card.appendChild(ctaRow);
 
-      return card;
+      return el("div", null, [top, body, ctaRow]);
+    }
+
+    _renderProfile(r, idx) {
+      var self = this;
+      var box = el("div", { class: "profile" });
+      var head = el("div", { class: "p-head" }, [
+        el("span", { class: "p-pin" }, [String.fromCharCode(65 + idx)]),
+        (function () {
+          var inp = el("input", { class: "p-title", type: "text", value: r.title || "" });
+          inp.addEventListener("input", function (e) { r.title = e.target.value; self._scheduleSave(); });
+          return inp;
+        })(),
+        el("button", {
+          class: "q-del",
+          type: "button",
+          title: t("delQ"),
+          "aria-label": t("delQ"),
+          onclick: function () {
+            self._state.quiz.results.splice(idx, 1);
+            self._scheduleSave();
+            self._render();
+          },
+        }, ["×"]),
+      ]);
+      box.appendChild(head);
+
+      function field(labelKey, key, multiline) {
+        var f = el("div", { class: "field" }, [el("label", null, [t(labelKey)])]);
+        var inp = multiline
+          ? el("textarea", { rows: "2" })
+          : el("input", { type: "text" });
+        inp.value = r[key] || "";
+        inp.addEventListener("input", function (e) { r[key] = e.target.value; self._scheduleSave(); });
+        f.appendChild(inp);
+        return f;
+      }
+      box.appendChild(field("profileDescription", "description", true));
+      box.appendChild(field("profileInsight", "insight", true));
+      box.appendChild(field("profileCta", "cta_text", false));
+      box.appendChild(field("profileCtaUrl", "cta_url", false));
+      return box;
     }
 
     _renderQuestion(qu, idx) {
@@ -579,8 +675,8 @@
       var head = el("div", { class: "q-head" }, [
         el("span", { class: "q-num" }, [String(idx + 1)]),
         (function () {
-          var inp = el("input", { class: "q-text", type: "text", value: qu.text });
-          inp.addEventListener("input", function (e) { qu.text = e.target.value; self._scheduleSave(); });
+          var inp = el("input", { class: "q-text", type: "text", value: qu.question_text || "" });
+          inp.addEventListener("input", function (e) { qu.question_text = e.target.value; self._scheduleSave(); });
           return inp;
         })(),
         el("button", {
@@ -644,6 +740,12 @@
 
     async _saveQuiz(savedForLater) {
       if (!this._state.sessionToken || !this._state.quiz) return;
+      // Persist the token in localStorage so the Tiquiz dashboard can
+      // auto-claim the draft after signup, even if the visitor opened
+      // the checkout in a new tab and signed up later. Same browser =
+      // same key, the dashboard reads it on first authenticated load.
+      try { localStorage.setItem("tiquiz_embed_session", this._state.sessionToken); }
+      catch (e) { /* private mode / blocked storage — non-fatal */ }
       try {
         await fetch(apiUrl("/api/embed/quiz/save"), {
           method: "POST",
@@ -654,8 +756,8 @@
             saved_for_later: !!savedForLater,
           }),
         });
-        if (savedForLater) this._setState({ savedForLater: true });
-      } catch (e) { /* silent — the next debounced save will retry */ }
+        if (savedForLater) this._setState({ savedForLater: true, error: "" });
+      } catch (e) { /* silent — next debounced save will retry */ }
     }
 
     // ── Step 4: Paywall ──────────────────────────────────────────
@@ -670,7 +772,7 @@
         var qBox = el("div", { class: "q" }, [
           el("div", { class: "q-head" }, [
             el("span", { class: "q-num" }, [String(idx + 1)]),
-            el("strong", null, [qu.text || ""]),
+            el("strong", null, [qu.question_text || ""]),
           ]),
         ]);
         (qu.options || []).forEach(function (o) {
@@ -681,6 +783,20 @@
         preview.appendChild(qBox);
       });
 
+      // Append the embed session token to the checkout URL. After
+      // purchase + signup, the dashboard reads it back and auto-imports
+      // the draft into the user's account — no email handoff needed.
+      function checkoutHref() {
+        if (!self._state.sessionToken) return CHECKOUT_URL;
+        var sep = CHECKOUT_URL.indexOf("?") === -1 ? "?" : "&";
+        // Preserve any anchor (e.g. #section-518f489a) by splitting it
+        // off, appending the param, then re-attaching the hash.
+        var hashIdx = CHECKOUT_URL.indexOf("#");
+        var base = hashIdx === -1 ? CHECKOUT_URL : CHECKOUT_URL.slice(0, hashIdx);
+        var hash = hashIdx === -1 ? "" : CHECKOUT_URL.slice(hashIdx);
+        return base + sep + "tq_session=" + encodeURIComponent(self._state.sessionToken) + hash;
+      }
+
       var overlay = el("div", { class: "paywall-overlay" }, [
         el("span", { class: "paywall-badge" }, [t("paywallBadge")]),
         el("h3", null, [t("paywallTitle")]),
@@ -688,11 +804,10 @@
         el("button", {
           class: "btn btn-primary",
           type: "button",
-          style: "max-width:320px;",
+          style: "max-width:320px;margin-top:6px;",
           onclick: function () {
-            // Save one last time before redirecting; non-blocking.
-            self._saveQuiz(false);
-            window.open(CHECKOUT_URL, "_blank", "noopener");
+            self._saveQuiz(true);
+            window.open(checkoutHref(), "_blank", "noopener");
           },
         }, [t("paywallCta")]),
         self._state.savedForLater
@@ -704,7 +819,7 @@
             }, [t("paywallSaveLater")]),
       ]);
 
-      return el("div", { class: "card paywall" }, [preview, overlay]);
+      return el("div", { class: "paywall" }, [preview, overlay]);
     }
   }
 

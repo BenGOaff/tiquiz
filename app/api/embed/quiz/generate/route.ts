@@ -83,16 +83,19 @@ export async function POST(req: NextRequest) {
     return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400, headers });
   }
 
-  const email = String(body.email ?? "").trim().toLowerCase();
+  // Email is OPTIONAL at this step now: the new funnel asks for it
+  // only at the publish step, after the quiz is generated and edited
+  // (Tally / Typeform pattern — don't sell before you've delighted).
+  // If supplied we still store it; otherwise the row starts with a
+  // NULL email and /save fills it in later.
+  const rawEmail = String(body.email ?? "").trim().toLowerCase();
+  const email = rawEmail && isValidEmail(rawEmail) ? rawEmail : null;
   const topic = String(body.topic ?? "").trim();
   const audience = String(body.audience ?? "").trim();
   const objective = String(body.objective ?? "").trim();
   const locale = String(body.locale ?? "fr").trim();
   const source = String(body.source ?? "").trim().slice(0, 200) || null;
 
-  if (!isValidEmail(email)) {
-    return Response.json({ ok: false, error: "Email invalide." }, { status: 400, headers });
-  }
   if (topic.length < 3 || topic.length > 200) {
     return Response.json({ ok: false, error: "Le sujet doit faire entre 3 et 200 caractères." }, { status: 400, headers });
   }
@@ -118,8 +121,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Persist the session up-front: even if generation fails we keep
-  // the lead. The row's id is the session_token returned to the
-  // embed.
+  // the row so the embed can /save edits onto it later. The row's
+  // id is the session_token returned to the embed.
   const { data: sessionRow, error: insertErr } = await supabaseAdmin
     .from("embed_quiz_sessions")
     .insert({

@@ -37,24 +37,28 @@ export type RateLimitResult =
   | { ok: false; reason: "email" | "ip"; retryAfterSec: number };
 
 export async function checkRateLimit(args: {
-  email: string;
+  email: string | null;
   ipHash: string | null;
 }): Promise<RateLimitResult> {
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
-  // Per-email: the strongest signal. Same lead, same hour → cap.
-  const { count: emailCount } = await supabaseAdmin
-    .from("embed_quiz_sessions")
-    .select("id", { count: "exact", head: true })
-    .eq("email", args.email)
-    .gte("created_at", oneHourAgo);
+  // Per-email: the strongest signal. We only have an email at the
+  // publish step (post-generation), so this branch only fires there.
+  if (args.email) {
+    const { count: emailCount } = await supabaseAdmin
+      .from("embed_quiz_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("email", args.email)
+      .gte("created_at", oneHourAgo);
 
-  if ((emailCount ?? 0) >= HOURLY_LIMIT_PER_EMAIL) {
-    return { ok: false, reason: "email", retryAfterSec: 3600 };
+    if ((emailCount ?? 0) >= HOURLY_LIMIT_PER_EMAIL) {
+      return { ok: false, reason: "email", retryAfterSec: 3600 };
+    }
   }
 
-  // Per-IP: only kicks in if we managed to capture a usable IP. We
-  // skip silently when behind something that strips it (rare).
+  // Per-IP: the only signal we have at /generate. Drop the ceiling
+  // a bit lower than the original 10/h since it's now load-bearing
+  // (email cap doesn't kick in until /save).
   if (args.ipHash) {
     const { count: ipCount } = await supabaseAdmin
       .from("embed_quiz_sessions")

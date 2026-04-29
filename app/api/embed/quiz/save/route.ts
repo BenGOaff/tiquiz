@@ -30,6 +30,13 @@ export async function POST(req: NextRequest) {
   const sessionToken = String(body.session_token ?? "").trim();
   const quiz = body.quiz;
   const savedForLater = Boolean(body.saved_for_later);
+  // Optional email payload — set when the visitor reaches the
+  // publish step. We accept it once and never overwrite it (a row's
+  // email is the canonical lead identity for the claim flow).
+  const rawEmail = String(body.email ?? "").trim().toLowerCase();
+  const email = rawEmail && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(rawEmail)
+    ? rawEmail
+    : null;
 
   if (!sessionToken) {
     return Response.json({ ok: false, error: "session_token requis" }, { status: 400, headers });
@@ -47,7 +54,7 @@ export async function POST(req: NextRequest) {
 
   const { data: row } = await supabaseAdmin
     .from("embed_quiz_sessions")
-    .select("id, claimed_by_user_id")
+    .select("id, email, claimed_by_user_id")
     .eq("id", sessionToken)
     .maybeSingle();
 
@@ -64,9 +71,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const patch: Record<string, unknown> = { quiz, saved_for_later: savedForLater };
+  // Only write the email if (a) we have a valid one and (b) the row
+  // doesn't already have one — locks the lead identity in place.
+  if (email && !row.email) patch.email = email;
+
   const { error: updateErr } = await supabaseAdmin
     .from("embed_quiz_sessions")
-    .update({ quiz, saved_for_later: savedForLater })
+    .update(patch)
     .eq("id", sessionToken);
 
   if (updateErr) {

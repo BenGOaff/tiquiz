@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import DashboardClient from "@/components/dashboard/DashboardClient";
+import EmbedAutoClaim from "@/components/dashboard/EmbedAutoClaim";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("metadata.pages");
@@ -15,5 +16,12 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  return <DashboardClient userEmail={user.email ?? ""} />;
+  return (
+    <>
+      {/* Picks up an embed_quiz_session token from URL or localStorage
+          and imports the sales-page draft into the user's quizzes. */}
+      <EmbedAutoClaim />
+      <DashboardClient userEmail={user.email ?? ""} />
+    </>
+  );
 }

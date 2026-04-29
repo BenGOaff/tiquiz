@@ -189,10 +189,13 @@ export async function POST(req: NextRequest) {
   if (!session.quiz) {
     return Response.json({ ok: false, error: "Cette session n'a pas encore de quiz généré" }, { status: 400, headers });
   }
-  // Anti email-spoofing: a logged-in user can only claim a session
-  // whose email matches their own. The webhook path already passes
-  // through admin.listUsers so it's implicitly trusted.
-  if (!isWebhook && session.email.toLowerCase() !== userEmail) {
+  // Anti email-spoofing rule: when the session HAS an email we require
+  // it to match the logged-in user's. When the session has NO email
+  // (the embed no longer asks for it), we trust possession of the
+  // opaque session_token as the authorization signal — the token is
+  // a UUID stored in the visitor's localStorage / passed through the
+  // checkout URL, never exposed to third parties.
+  if (!isWebhook && session.email && session.email.toLowerCase() !== userEmail) {
     return Response.json({ ok: false, error: "Cette session n'appartient pas à cet email" }, { status: 403, headers });
   }
 
