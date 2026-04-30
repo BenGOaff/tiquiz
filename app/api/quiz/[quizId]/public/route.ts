@@ -17,7 +17,8 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveQuizBranding } from "@/lib/quizBranding";
 import { resolveApiKey } from "@/lib/sio/resolveApiKey";
 
-export const dynamic = "force-dynamic";
+// No `force-dynamic`: it would make Vercel inject `Cache-Control: private, no-store`,
+// overriding the edge-SWR headers set on the GET response and forcing `cf-cache-status: DYNAMIC`.
 export const maxDuration = 30;
 
 type RouteContext = { params: Promise<{ quizId: string }> };
@@ -290,6 +291,17 @@ export async function GET(req: NextRequest, context: RouteContext) {
     void _uid;
     const effectivePrivacyUrl = String(quizPublic.privacy_url ?? "").trim() || fallbackPrivacyUrl;
 
+    // Edge-SWR resilience for published quizzes: visitors keep seeing the quiz
+    // even when origin is down (deploy / crash / DB hiccup) for up to 24h. Skip
+    // caching for embed previews (creator-only, evolving drafts).
+    const cacheHeaders: Record<string, string> = embedToken
+      ? { "Cache-Control": "private, no-store, max-age=0" }
+      : {
+          "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=86400",
+          "CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
+          "Vercel-CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
+        };
+
     return NextResponse.json({
       ok: true,
       quiz: {
@@ -307,7 +319,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
       })),
       results: resultsRes.data ?? [],
       branding,
-    });
+    }, { headers: cacheHeaders });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
