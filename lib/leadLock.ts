@@ -95,3 +95,16 @@ export function lockAndRedact<T extends LeadLike>(
 ): (T & { locked: boolean })[] {
   return applyLeadLock(leads, plan).map(redactLockedLead);
 }
+
+/**
+ * Capture-time gate: is the brand-new lead about to be locked? Pass
+ * `recentLeadCount` = the user's lead count inside the rolling 30d window
+ * INCLUDING the new one.
+ */
+export function isNewLeadLocked(
+  recentLeadCount: number,
+  plan: string | null | undefined,
+): boolean {
+  if (isPaidPlan(plan)) return false;
+  return recentLeadCount > FREE_LIMITS.visibleLeadsPerMonth;
+}
