@@ -280,11 +280,12 @@ function SortableSidebarQuestion({ id, index, label, onClick, onRemove, canDelet
 }
 
 // Same shape as SortableSidebarQuestion but for the results list (Marie's
-// feedback #2, 2026-04). Kept as a separate component to keep aria labels
-// distinct ("réordonner ce résultat" vs "...cette question") if we ever
-// localise them per role; today the visual is identical.
-function SortableSidebarResult({ id, index, label, onClick, onRemove, canDelete }: {
+// feedback #2, 2026-04). Kept as a separate component because it also
+// carries a coverage-severity dot — the question sidebar doesn't have an
+// equivalent signal to surface.
+function SortableSidebarResult({ id, index, label, onClick, onRemove, canDelete, severity, severityTitle }: {
   id: string; index: number; label: string; onClick: () => void; onRemove: () => void; canDelete: boolean;
+  severity: "ok" | "warn" | "danger"; severityTitle: string;
 }) {
   const t = useTranslations("quizEditor");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -293,14 +294,20 @@ function SortableSidebarResult({ id, index, label, onClick, onRemove, canDelete 
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+  // Quiet ok dot, amber warn, red danger — the danger state is the one that
+  // signals "this result can never be attributed", which Marie hit head-on.
+  const dotClass = severity === "ok"
+    ? "bg-emerald-500"
+    : severity === "warn" ? "bg-amber-500" : "bg-red-500";
   return (
     <div ref={setNodeRef} style={style} className="flex items-center gap-1 group">
       <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted touch-none" aria-label={t("reorder")}>
         <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
       </button>
-      <button onClick={onClick} className="flex-1 text-left px-2 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors truncate">
-        <span className="text-xs text-muted-foreground mr-2">{index + 1}</span>
-        {label}
+      <button onClick={onClick} className="flex-1 text-left px-2 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors truncate flex items-center gap-2">
+        <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${dotClass}`} aria-hidden title={severityTitle} />
+        <span className="text-xs text-muted-foreground">{index + 1}</span>
+        <span className="truncate">{label}</span>
       </button>
       {canDelete && (
         <button onClick={onRemove} className="opacity-0 group-hover:opacity-100 text-destructive p-1 rounded hover:bg-destructive/10">
@@ -527,6 +534,40 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     (text: string) => interpolateText(text, { name: PREVIEW_DEMO_NAME, gender: "x" }),
     [],
   );
+
+  /**
+   * Result-coverage health check (Marie's feedback #3 partie B, 2026-04).
+   *
+   * The scoring engine picks the result that wins a majority vote across the
+   * questions. A result with zero "votes" (no option in the whole quiz points
+   * to it) is mathematically unreachable. A result that's covered by only a
+   * tiny fraction of the questions can theoretically win but has very poor
+   * odds — Marie ran into exactly this when she added 2 layout-themed
+   * questions for a 4th result on a 10-question / 4-result quiz.
+   *
+   * For every result we surface:
+   *   - questionsLeading: how many questions have at least one option that
+   *     points to it
+   *   - severity: ok ≥ ceil(N/R), warn between 1 and ceil(N/R)-1, danger 0
+   *
+   * The badge is purely informative here. The "Rééquilibrer avec l'IA" CTA
+   * (Session 4) reuses this signal as the trigger condition.
+   */
+  type ResultCoverageSeverity = "ok" | "warn" | "danger";
+  const resultCoverage = useMemo(() => {
+    const N = editQuestions.length;
+    const R = Math.max(1, editResults.length);
+    const expected = Math.max(1, Math.ceil(N / R));
+    return editResults.map((_, ri) => {
+      const questionsLeading = editQuestions.reduce(
+        (acc, q) => acc + (q.options.some((o) => o.result_index === ri) ? 1 : 0),
+        0,
+      );
+      const severity: ResultCoverageSeverity =
+        questionsLeading === 0 ? "danger" : questionsLeading < expected ? "warn" : "ok";
+      return { questionsLeading, totalQuestions: N, expected, severity };
+    });
+  }, [editQuestions, editResults]);
 
   // Bulk-genderize every text field of the quiz in one go. Used when the
   // author toggles "Ask gender" after the quiz was already generated without
@@ -958,17 +999,27 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 <div className="flex items-center justify-between pt-2"><span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">{t("sidebarResults")}</span><button onClick={addResult} className="text-primary hover:bg-primary/10 rounded p-0.5"><Plus className="w-4 h-4" /></button></div>
                 <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleResultDragEnd}>
                   <SortableContext items={editResults.map((_, i) => `r-${i}`)} strategy={verticalListSortingStrategy}>
-                    {editResults.map((r, i) => (
-                      <SortableSidebarResult
-                        key={`r-${i}`}
-                        id={`r-${i}`}
-                        index={i}
-                        label={cleanPlaceholdersForLabel(r.title).replace(/<[^>]*>/g, "").trim() || t("sidebarEmptyResult")}
-                        onClick={() => scrollToSection(`r-${i}`)}
-                        onRemove={() => removeResult(i)}
-                        canDelete={editResults.length > 1}
-                      />
-                    ))}
+                    {editResults.map((r, i) => {
+                      const cov = resultCoverage[i] ?? { questionsLeading: 0, totalQuestions: editQuestions.length, expected: 1, severity: "danger" as const };
+                      const sevTitle = cov.severity === "danger"
+                        ? t("coverageDanger", { count: cov.totalQuestions })
+                        : cov.severity === "warn"
+                          ? t("coverageWarn", { count: cov.questionsLeading, total: cov.totalQuestions })
+                          : t("coverageOk", { count: cov.questionsLeading, total: cov.totalQuestions });
+                      return (
+                        <SortableSidebarResult
+                          key={`r-${i}`}
+                          id={`r-${i}`}
+                          index={i}
+                          label={cleanPlaceholdersForLabel(r.title).replace(/<[^>]*>/g, "").trim() || t("sidebarEmptyResult")}
+                          onClick={() => scrollToSection(`r-${i}`)}
+                          onRemove={() => removeResult(i)}
+                          canDelete={editResults.length > 1}
+                          severity={cov.severity}
+                          severityTitle={sevTitle}
+                        />
+                      );
+                    })}
                   </SortableContext>
                 </DndContext>
               </>)}
@@ -1381,9 +1432,36 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               )}
 
               {/* ── RESULTS ── */}
-              {editResults.map((r, ri) => (
+              {editResults.map((r, ri) => {
+                const cov = resultCoverage[ri] ?? { questionsLeading: 0, totalQuestions: editQuestions.length, expected: 1, severity: "danger" as const };
+                // Subtle banner above each result that tells the creator how
+                // many questions can lead a visitor here. Only renders when
+                // there's something worth flagging — green/ok stays silent so
+                // a healthy quiz is uncluttered.
+                const showCoverage = cov.severity !== "ok" && editQuestions.length > 0;
+                return (
                 <div key={ri} ref={el => { resultRefs.current[ri] = el; }} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                   <div className="max-w-2xl w-full space-y-6">
+                    {showCoverage && (
+                      <div
+                        className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
+                          cov.severity === "danger"
+                            ? "border-red-300 bg-red-50 text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
+                            : "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100"
+                        }`}
+                        role="status"
+                      >
+                        <span className={`mt-1 inline-block w-2 h-2 rounded-full shrink-0 ${cov.severity === "danger" ? "bg-red-500" : "bg-amber-500"}`} aria-hidden />
+                        <div className="flex-1">
+                          <p className="font-semibold">
+                            {cov.severity === "danger"
+                              ? t("coverageHeadingDanger")
+                              : t("coverageHeadingWarn", { count: cov.questionsLeading, total: cov.totalQuestions })}
+                          </p>
+                          <p className="text-xs opacity-90 mt-0.5">{t("coverageHelp")}</p>
+                        </div>
+                      </div>
+                    )}
                     <RichTextEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
                     <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} availableVars={personalizationVars} previewTransform={previewInterpolate} className="text-muted-foreground text-lg leading-relaxed" placeholder={t("previewResultDescPh")} />
                     <div className="p-5 rounded-xl bg-muted/50 border">
@@ -1428,7 +1506,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
 
               {/* Footer Tiquiz — creator logo when set, Tiquiz logo otherwise */}
               <div className="text-center py-8 border-t space-y-2">

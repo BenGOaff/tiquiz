@@ -667,6 +667,12 @@
   },
   "quizEditor": {
     "backToTop": "Voltar ao topo",
+    "coverageOk": "{count} de {total} perguntas levam aqui — bem equilibrado",
+    "coverageWarn": "Apenas {count} de {total} perguntas levam aqui",
+    "coverageDanger": "Nenhuma pergunta leva a este resultado ({count} perguntas no total)",
+    "coverageHeadingDanger": "Este resultado nunca pode ser atribuído",
+    "coverageHeadingWarn": "Baixa probabilidade de ser atribuído — {count}/{total} perguntas levam aqui",
+    "coverageHelp": "Para que um resultado seja escolhido, várias perguntas devem levar a ele. Ajusta as opções das tuas perguntas ou pede à IA para reequilibrar.",
     "errQuizNotFound": "Quiz não encontrado",
     "errLoading": "Erro ao carregar o quiz",
     "errTitleRequired": "Título obrigatório",

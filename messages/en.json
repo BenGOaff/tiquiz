@@ -658,6 +658,12 @@
   },
   "quizEditor": {
     "backToTop": "Back to top",
+    "coverageOk": "{count} of {total} questions lead here — well balanced",
+    "coverageWarn": "Only {count} of {total} questions lead here",
+    "coverageDanger": "No question leads to this result ({count} questions total)",
+    "coverageHeadingDanger": "This result can never be attributed",
+    "coverageHeadingWarn": "Low chance of being attributed — {count}/{total} questions lead here",
+    "coverageHelp": "For a result to be picked, several questions need to lead to it. Adjust the options on your questions, or ask the AI to rebalance.",
     "errQuizNotFound": "Quiz not found",
     "errLoading": "Error loading quiz",
     "errTitleRequired": "Title required",
