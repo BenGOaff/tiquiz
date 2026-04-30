@@ -556,6 +556,37 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
    * The badge is purely informative here. The "Rééquilibrer avec l'IA" CTA
    * (Session 4) reuses this signal as the trigger condition.
    */
+  // AI rewrite (Marie's feedback #4, 2026-04): the ✨ button on RichTextEdit
+  // sends the field's plain text to /api/quiz/[id]/rewrite and gets 3
+  // reformulations back. Each field-kind binding is memoised so the
+  // RichTextEdit doesn't re-render on every parent update.
+  const aiRewrite = useCallback(async (plain: string, fieldKind: string): Promise<string[] | null> => {
+    try {
+      const res = await fetch(`/api/quiz/${quizId}/rewrite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: plain, fieldKind }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.ok) {
+        toast.error(data?.error ?? t("errGeneric"));
+        return null;
+      }
+      return Array.isArray(data.proposals) ? data.proposals : null;
+    } catch {
+      toast.error(t("errGeneric"));
+      return null;
+    }
+  }, [quizId, t]);
+  const aiRewriteTitle = useCallback((p: string) => aiRewrite(p, "title"), [aiRewrite]);
+  const aiRewriteIntro = useCallback((p: string) => aiRewrite(p, "intro"), [aiRewrite]);
+  const aiRewriteQuestion = useCallback((p: string) => aiRewrite(p, "question"), [aiRewrite]);
+  const aiRewriteOption = useCallback((p: string) => aiRewrite(p, "option"), [aiRewrite]);
+  const aiRewriteResultTitle = useCallback((p: string) => aiRewrite(p, "result_title"), [aiRewrite]);
+  const aiRewriteResultDesc = useCallback((p: string) => aiRewrite(p, "result_description"), [aiRewrite]);
+  const aiRewriteResultInsight = useCallback((p: string) => aiRewrite(p, "result_insight"), [aiRewrite]);
+  const aiRewriteResultProjection = useCallback((p: string) => aiRewrite(p, "result_projection"), [aiRewrite]);
+
   // AI rebalance modal state (Marie's feedback #3 partie A, 2026-04). The
   // creator clicks "Rééquilibrer avec l'IA" on a low-coverage result, the
   // server asks Claude to redistribute option→result mappings, and we show
@@ -1349,8 +1380,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <img src={brandLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
                     </div>
                   )}
-                  <RichTextEdit value={title} onChange={setTitle} singleLine className="text-3xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
-                  <RichTextEdit value={introduction} onChange={setIntroduction} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder={t("previewIntroPh")} />
+                  <RichTextEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} singleLine className="text-3xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
+                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder={t("previewIntroPh")} />
                   <div className="flex justify-center">
                     <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
                       <RichTextEdit
@@ -1377,11 +1408,11 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     <div className="flex-1 flex flex-col items-center justify-center">
                       <div className="max-w-2xl w-full space-y-8">
                         <p className="text-xs font-bold uppercase tracking-widest" style={{ color: pc }}>{t("previewQuestionsCounter", { n: qi + 1, total: editQuestions.length })}</p>
-                        <RichTextEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-2xl sm:text-4xl font-bold leading-tight" placeholder={t("previewQuestionPh")} />
+                        <RichTextEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-2xl sm:text-4xl font-bold leading-tight" placeholder={t("previewQuestionPh")} />
                         <div className={`grid gap-3 ${q.options.length >= 3 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
                           {q.options.map((opt, oi) => (
                             <div key={oi} className="relative p-5 rounded-xl border-2 border-border hover:border-primary/30 transition-all group">
-                              <RichTextEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-base font-medium" placeholder={t("previewOptionPh", { n: oi + 1 })} />
+                              <RichTextEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} onAIRewrite={aiRewriteOption} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-base font-medium" placeholder={t("previewOptionPh", { n: oi + 1 })} />
                               <div className="flex items-center gap-1.5 mt-2">
                                 <span className="text-xs" style={{ color: `${pc}99` }}>{t("previewPointFor")}</span>
                                 <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
@@ -1550,8 +1581,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         </div>
                       </div>
                     )}
-                    <RichTextEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
-                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} availableVars={personalizationVars} previewTransform={previewInterpolate} className="text-muted-foreground text-lg leading-relaxed" placeholder={t("previewResultDescPh")} />
+                    <RichTextEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} onAIRewrite={aiRewriteResultTitle} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
+                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultDesc} availableVars={personalizationVars} previewTransform={previewInterpolate} className="text-muted-foreground text-lg leading-relaxed" placeholder={t("previewResultDescPh")} />
                     <div className="p-5 rounded-xl bg-muted/50 border">
                       <div className="mb-2">
                         <RichTextEdit
@@ -1562,7 +1593,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           placeholder={t("previewResultInsightHeadingPh")}
                         />
                       </div>
-                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} availableVars={personalizationVars} previewTransform={previewInterpolate} className="text-sm leading-relaxed" placeholder={t("previewResultInsightPh")} />
+                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultInsight} availableVars={personalizationVars} previewTransform={previewInterpolate} className="text-sm leading-relaxed" placeholder={t("previewResultInsightPh")} />
                     </div>
                     <div className="p-5 rounded-xl border" style={{ backgroundColor: `${pc}08`, borderColor: `${pc}30` }}>
                       <div className="mb-2">
@@ -1575,7 +1606,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           placeholder={t("previewResultProjectionHeadingPh")}
                         />
                       </div>
-                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} availableVars={personalizationVars} previewTransform={previewInterpolate} className="text-sm leading-relaxed" placeholder={t("previewResultProjectionPh")} />
+                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultProjection} availableVars={personalizationVars} previewTransform={previewInterpolate} className="text-sm leading-relaxed" placeholder={t("previewResultProjectionPh")} />
                     </div>
                     <div className="space-y-2">
                       <button className="w-full px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>

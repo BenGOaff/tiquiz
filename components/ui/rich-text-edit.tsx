@@ -53,16 +53,55 @@ interface RichTextEditProps {
    * clicking the field. Identity passthrough when omitted.
    */
   previewTransform?: (value: string) => string;
+  /**
+   * When provided, a tiny ✨ button appears in display mode. Clicking it
+   * sends the current plain-text value (placeholders preserved) to the
+   * parent's rewrite handler, which returns 3 reformulations. The user
+   * picks one to replace the field value, or dismisses. Marie's feedback
+   * #4: "écrire mon idée et cliquer sur les petites étoiles pour qu'il
+   * reformule dans le ton du quiz".
+   */
+  onAIRewrite?: (plainText: string) => Promise<string[] | null>;
 }
 
 export function RichTextEdit({
   value, onChange, className, placeholder, style, singleLine, onGenderize, availableVars,
-  previewTransform,
+  previewTransform, onAIRewrite,
 }: RichTextEditProps) {
   const t = useTranslations("common");
   const ref = useRef<HTMLDivElement>(null);
   const [editing, setEditing] = useState(false);
   const [genderizing, setGenderizing] = useState(false);
+  // AI rewrite state: a small popover-like list of proposals shown right
+  // under the field after the creator clicks ✨. We keep it local to the
+  // component so each field manages its own popover independently.
+  const [rewriting, setRewriting] = useState(false);
+  const [aiProposals, setAiProposals] = useState<string[] | null>(null);
+
+  const handleAIRewrite = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onAIRewrite || rewriting) return;
+    const plain = stripTagsQuick(value);
+    if (!plain) return;
+    setRewriting(true);
+    try {
+      const proposals = await onAIRewrite(plain);
+      setAiProposals(proposals && proposals.length > 0 ? proposals : []);
+    } finally {
+      setRewriting(false);
+    }
+  }, [onAIRewrite, value, rewriting]);
+
+  const applyProposal = useCallback((p: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange(p);
+    setAiProposals(null);
+  }, [onChange]);
+
+  const dismissProposals = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setAiProposals(null);
+  }, []);
 
   const handleGenderize = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -204,28 +243,89 @@ export function RichTextEdit({
   }
 
   const isEmpty = !value || stripTagsQuick(value).length === 0;
+  // We render the field + the AI proposals list as siblings inside a shared
+  // wrapper. Click-to-edit is bound on the field DIV only, so clicking a
+  // proposal (or the dismiss button) doesn't accidentally open the editor.
   return (
-    <div
-      onClick={() => setEditing(true)}
-      style={style}
-      className={`${baseCls} hover:ring-2 hover:ring-primary/20 hover:bg-primary/5 group relative`}
-    >
-      {isEmpty ? (
-        <span className="opacity-40 italic">{placeholder}</span>
-      ) : (
-        <div dangerouslySetInnerHTML={{ __html: sanitizeRichText(previewTransform ? previewTransform(value) : value) }} />
-      )}
-      <Pencil className="absolute top-1 right-1 w-3 h-3 text-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
-      {onGenderize && !isEmpty && (
-        <button
-          type="button"
-          onClick={handleGenderize}
-          disabled={genderizing}
-          title="Générer les variantes de genre (Il / Elle / Iel)"
-          className="absolute top-1 right-6 p-0.5 text-primary/30 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity"
+    <div className="relative">
+      <div
+        onClick={() => { if (!aiProposals) setEditing(true); }}
+        style={style}
+        className={`${baseCls} hover:ring-2 hover:ring-primary/20 hover:bg-primary/5 group relative`}
+      >
+        {isEmpty ? (
+          <span className="opacity-40 italic">{placeholder}</span>
+        ) : (
+          <div dangerouslySetInnerHTML={{ __html: sanitizeRichText(previewTransform ? previewTransform(value) : value) }} />
+        )}
+        <Pencil className="absolute top-1 right-1 w-3 h-3 text-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
+        {onGenderize && !isEmpty && (
+          <button
+            type="button"
+            onClick={handleGenderize}
+            disabled={genderizing}
+            title="Générer les variantes de genre (Il / Elle / Iel)"
+            className="absolute top-1 right-6 p-0.5 text-primary/30 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity"
+          >
+            {genderizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+          </button>
+        )}
+        {onAIRewrite && !isEmpty && (
+          <button
+            type="button"
+            onClick={handleAIRewrite}
+            disabled={rewriting}
+            title={t("aiRewriteTitle")}
+            // Position in the gap between pencil and (optional) genderize button.
+            // When both onGenderize and onAIRewrite are provided we shift this
+            // one further right.
+            className={`absolute top-1 ${onGenderize ? "right-11" : "right-6"} p-0.5 text-primary/40 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity`}
+          >
+            {rewriting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+          </button>
+        )}
+      </div>
+
+      {aiProposals !== null && (
+        <div
+          className="mt-2 rounded-xl border bg-background shadow-sm p-2 space-y-1.5"
+          onClick={(e) => e.stopPropagation()}
         >
-          {genderizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-        </button>
+          {aiProposals.length === 0 ? (
+            <p className="text-xs text-muted-foreground px-2 py-1.5">{t("aiRewriteNoResult")}</p>
+          ) : (
+            aiProposals.map((p, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={(e) => applyProposal(p, e)}
+                className="block w-full text-left px-3 py-2 text-sm rounded-lg border bg-background hover:bg-primary/5 hover:border-primary/40 transition-colors"
+              >
+                {p}
+              </button>
+            ))
+          )}
+          <div className="flex justify-between items-center pt-1">
+            <button
+              type="button"
+              onClick={dismissProposals}
+              className="text-[11px] text-muted-foreground hover:underline px-2"
+            >
+              {t("aiRewriteDismiss")}
+            </button>
+            {aiProposals.length > 0 && (
+              <button
+                type="button"
+                onClick={handleAIRewrite}
+                disabled={rewriting}
+                className="text-[11px] text-primary hover:underline px-2 inline-flex items-center gap-1"
+              >
+                {rewriting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                {t("aiRewriteAgain")}
+              </button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
