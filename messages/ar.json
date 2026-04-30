@@ -666,6 +666,7 @@
     "tooltipComplete": "انتهت الجولة! أنشئ أول اختبار، وقم بإعداد Systeme.io، وشارك رابطك."
   },
   "quizEditor": {
+    "backToTop": "العودة إلى الأعلى",
     "errQuizNotFound": "الاختبار غير موجود",
     "errLoading": "خطأ في تحميل الاختبار",
     "errTitleRequired": "العنوان مطلوب",

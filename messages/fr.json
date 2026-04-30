@@ -657,6 +657,7 @@
     "tooltipComplete": "Tour terminé ! Crée ton premier quiz, configure Systeme.io et partage ton lien."
   },
   "quizEditor": {
+    "backToTop": "Revenir en haut",
     "errQuizNotFound": "Quiz introuvable",
     "errLoading": "Erreur de chargement du quiz",
     "errTitleRequired": "Titre requis",

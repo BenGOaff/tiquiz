@@ -666,6 +666,7 @@
     "tooltipComplete": "Tour finalizado! Crie seu primeiro quiz, configure o Systeme.io e compartilhe seu link."
   },
   "quizEditor": {
+    "backToTop": "Voltar ao topo",
     "errQuizNotFound": "Quiz não encontrado",
     "errLoading": "Erro ao carregar o quiz",
     "errTitleRequired": "Título obrigatório",
