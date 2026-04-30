@@ -11,8 +11,9 @@ import { SkeletonCard } from "@/components/ui/skeleton";
 import { Mascot } from "@/components/ui/mascot";
 import {
   Users, Download, RefreshCw, Search, Mail, Calendar,
-  CheckCircle2, XCircle,
+  CheckCircle2, XCircle, Lock, Sparkles,
 } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 
 type Lead = {
@@ -30,6 +31,8 @@ type Lead = {
   has_shared: boolean;
   created_at: string;
   quiz_results: { title: string; sio_tag_name: string | null } | null;
+  /** Server-redacted PII — UI just adds a CSS blur on top. */
+  locked?: boolean;
 };
 
 export default function LeadsShell({ userEmail }: { userEmail: string }) {
@@ -43,6 +46,8 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
   const [filterQuiz, setFilterQuiz] = useState<string>("all");
   const [quizzes, setQuizzes] = useState<{ id: string; title: string }[]>([]);
   const [syncing, setSyncing] = useState<Set<string>>(new Set());
+  const [plan, setPlan] = useState<string>("free");
+  const [lockedCount, setLockedCount] = useState<number>(0);
 
   useEffect(() => {
     fetch("/api/leads")
@@ -51,6 +56,8 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
         if (data.ok) {
           setLeads(data.leads ?? []);
           setQuizzes(data.quizzes ?? []);
+          setPlan(String(data.plan ?? "free"));
+          setLockedCount(Number(data.locked_count ?? 0));
         }
       })
       .finally(() => setLoading(false));
@@ -86,7 +93,10 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
       t("csv.syncSio"),
       t("csv.date"),
     ];
-    const rows = filtered.map((l) => [
+    // Locked rows are skipped — exporting `••••••` masks would only pollute
+    // the file with rows the creator can't act on. The server-side export
+    // does the same on /api/leads/export.
+    const rows = filtered.filter((l) => !l.locked).map((l) => [
       l.email,
       l.first_name ?? "",
       l.last_name ?? "",
@@ -148,10 +158,34 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
           <h2 className="text-lg font-bold">{t("title")}</h2>
           <p className="text-sm text-white/70">{t("captured", { count: filtered.length })}</p>
         </div>
-        <Button onClick={exportCSV} variant="secondary" className="shrink-0" disabled={filtered.length === 0}>
+        <Button onClick={exportCSV} variant="secondary" className="shrink-0" disabled={filtered.filter((l) => !l.locked).length === 0}>
           <Download className="h-4 w-4 mr-2" /> {t("exportCsv")}
         </Button>
       </div>
+
+      {/* Free-tier upsell — only shown if there are actually locked leads.
+          Wording is deliberately concrete ("X leads bloqués") so the value
+          of upgrading is obvious. */}
+      {lockedCount > 0 && plan === "free" && (
+        <div className="rounded-xl border border-amber-300/60 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0">
+            <Lock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-amber-900 dark:text-amber-100">
+              {lockedCount} lead{lockedCount > 1 ? "s" : ""} verrouillé{lockedCount > 1 ? "s" : ""}
+            </p>
+            <p className="text-sm text-amber-800/80 dark:text-amber-200/80">
+              Le plan gratuit affiche les 10 premiers leads par fenêtre de 30 jours. Passe en plan payant pour tout débloquer (export, sync Systeme.io, lecture).
+            </p>
+          </div>
+          <Button asChild variant="default" className="bg-amber-600 hover:bg-amber-700 text-white shrink-0">
+            <Link href="/settings?tab=billing">
+              <Sparkles className="h-4 w-4 mr-2" /> Débloquer
+            </Link>
+          </Button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -251,54 +285,76 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((lead) => (
-                  <tr key={lead.id} className="border-b hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="font-medium truncate max-w-[200px]">{lead.email}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">
-                      {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "—"}
-                    </td>
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      <span className="truncate max-w-[150px] block text-muted-foreground">{lead.quiz_title}</span>
-                    </td>
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      <Badge variant="secondary" className="text-xs">
-                        {lead.result_title ?? lead.quiz_results?.title ?? "—"}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">
-                      {lead.sio_tag_applied ?? lead.quiz_results?.sio_tag_name ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      {lead.sio_synced ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
-                      ) : (
-                        <XCircle className="h-4 w-4 text-muted-foreground/40 mx-auto" />
-                      )}
-                    </td>
-                    <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">
-                      {new Date(lead.created_at).toLocaleDateString(localeTag)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {!lead.sio_synced && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => syncLead(lead.id, lead.quiz_id)}
-                          disabled={syncing.has(lead.id)}
-                          className="text-xs"
-                        >
-                          <RefreshCw className={`h-3.5 w-3.5 mr-1 ${syncing.has(lead.id) ? "animate-spin" : ""}`} />
-                          Sync
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map((lead) => {
+                  // The CSS blur is purely decorative — the server has already
+                  // replaced PII with `••••••` masks for locked rows, so even
+                  // a screen-reader / DOM inspection won't lift the lock.
+                  const blur = lead.locked ? "blur-sm select-none pointer-events-none" : "";
+                  return (
+                    <tr key={lead.id} className={`border-b hover:bg-muted/30 transition-colors ${lead.locked ? "opacity-80 bg-amber-50/30 dark:bg-amber-950/10" : ""}`}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {lead.locked ? (
+                            <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                          ) : (
+                            <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          )}
+                          <span className={`font-medium truncate max-w-[200px] ${blur}`}>{lead.email}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">
+                        <span className={blur}>
+                          {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        <span className="truncate max-w-[150px] block text-muted-foreground">{lead.quiz_title}</span>
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        <Badge variant="secondary" className={`text-xs ${blur}`}>
+                          {lead.result_title ?? lead.quiz_results?.title ?? "—"}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">
+                        <span className={blur}>
+                          {lead.sio_tag_applied ?? lead.quiz_results?.sio_tag_name ?? "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {lead.locked ? (
+                          <Lock className="h-4 w-4 text-amber-500 mx-auto" />
+                        ) : lead.sio_synced ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-muted-foreground/40 mx-auto" />
+                        )}
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">
+                        {new Date(lead.created_at).toLocaleDateString(localeTag)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {lead.locked ? (
+                          <Button asChild variant="ghost" size="sm" className="text-xs text-amber-600 hover:text-amber-700">
+                            <Link href="/settings?tab=billing">
+                              <Sparkles className="h-3.5 w-3.5 mr-1" /> Débloquer
+                            </Link>
+                          </Button>
+                        ) : !lead.sio_synced ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => syncLead(lead.id, lead.quiz_id)}
+                            disabled={syncing.has(lead.id)}
+                            className="text-xs"
+                          >
+                            <RefreshCw className={`h-3.5 w-3.5 mr-1 ${syncing.has(lead.id) ? "animate-spin" : ""}`} />
+                            Sync
+                          </Button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

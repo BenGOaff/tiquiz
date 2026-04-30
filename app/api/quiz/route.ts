@@ -2,6 +2,7 @@
 // CRUD for quizzes (authenticated). GET list, POST create.
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
 
 export const dynamic = "force-dynamic";
 
@@ -54,27 +55,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "title is required" }, { status: 400 });
     }
 
-    // Surveys reuse the quizzes table (mode='survey') so the free-plan
-    // counter stays unified — the limit is "projects", not "quizzes only".
+    // Surveys reuse the quizzes table (mode='survey'). The free-plan cap is
+    // ONE PER MODE — i.e. a free creator can run 1 quiz and 1 sondage in
+    // parallel (previously: 1 total, which forced an unwanted choice).
     const mode = body.mode === "survey" ? "survey" : "quiz";
     const isSurvey = mode === "survey";
 
-    // Check project limit for free plan (1 quiz/survey max)
     const { data: profile } = await supabase
       .from("profiles")
       .select("plan")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (!profile || (profile as Record<string, unknown>).plan === "free") {
+    if (!isPaidPlan((profile as { plan?: string | null } | null)?.plan)) {
       const { count } = await supabase
         .from("quizzes")
         .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .eq("mode", mode);
 
-      if ((count ?? 0) >= 1) {
+      if ((count ?? 0) >= FREE_LIMITS.maxQuizzesPerMode) {
+        const errorCode = isSurvey ? "FREE_PLAN_SURVEY_LIMIT" : "FREE_PLAN_QUIZ_LIMIT";
+        const message = isSurvey
+          ? "Le plan gratuit est limité à 1 sondage. Passe en plan payant pour en créer plus."
+          : "Le plan gratuit est limité à 1 quiz. Passe en plan payant pour en créer plus.";
         return NextResponse.json(
-          { ok: false, error: "FREE_PLAN_QUIZ_LIMIT", message: "The free plan is limited to 1 quiz. Upgrade to a paid plan to create more." },
+          { ok: false, error: errorCode, message },
           { status: 403 },
         );
       }

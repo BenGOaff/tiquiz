@@ -16,8 +16,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveQuizBranding } from "@/lib/quizBranding";
 import { resolveApiKey } from "@/lib/sio/resolveApiKey";
+import { isNewLeadLocked } from "@/lib/leadLock";
+import { isPaidPlan } from "@/lib/planLimits";
 
-export const dynamic = "force-dynamic";
+// No `force-dynamic`: it would make Vercel inject `Cache-Control: private, no-store`,
+// overriding the edge-SWR headers set on the GET response and forcing `cf-cache-status: DYNAMIC`.
 export const maxDuration = 30;
 
 type RouteContext = { params: Promise<{ quizId: string }> };
@@ -290,6 +293,17 @@ export async function GET(req: NextRequest, context: RouteContext) {
     void _uid;
     const effectivePrivacyUrl = String(quizPublic.privacy_url ?? "").trim() || fallbackPrivacyUrl;
 
+    // Edge-SWR resilience for published quizzes: visitors keep seeing the quiz
+    // even when origin is down (deploy / crash / DB hiccup) for up to 24h. Skip
+    // caching for embed previews (creator-only, evolving drafts).
+    const cacheHeaders: Record<string, string> = embedToken
+      ? { "Cache-Control": "private, no-store, max-age=0" }
+      : {
+          "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=86400",
+          "CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
+          "Vercel-CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
+        };
+
     return NextResponse.json({
       ok: true,
       quiz: {
@@ -307,7 +321,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
       })),
       results: resultsRes.data ?? [],
       branding,
-    });
+    }, { headers: cacheHeaders });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
@@ -402,6 +416,33 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
       (async () => {
         try {
+          // Free-tier guard: skip SIO auto-sync if this brand-new lead is
+          // already locked for the creator. Without this, a free creator
+          // could lift the blur out-of-band by reading the lead in their
+          // own Systeme.io account.
+          const { data: planRow } = await admin
+            .from("profiles")
+            .select("plan")
+            .eq("user_id", quizUserId)
+            .maybeSingle();
+          const plan = String((planRow as { plan?: string | null } | null)?.plan ?? "free");
+          if (!isPaidPlan(plan)) {
+            const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+            const { data: ownedQuizzes } = await admin
+              .from("quizzes")
+              .select("id")
+              .eq("user_id", quizUserId);
+            const ownedQuizIds = (ownedQuizzes ?? []).map((q: { id: string }) => q.id);
+            if (ownedQuizIds.length > 0) {
+              const { count } = await admin
+                .from("quiz_leads")
+                .select("id", { count: "exact", head: true })
+                .in("quiz_id", ownedQuizIds)
+                .gte("created_at", since);
+              if (isNewLeadLocked(count ?? 0, plan)) return;
+            }
+          }
+
           // Cascade: explicit quiz key → user default → any user key →
           // legacy plaintext. The user_id scoping inside resolveApiKey
           // guarantees we can NEVER pick a key belonging to another user,

@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { lockAndRedact, type LeadLike } from "@/lib/leadLock";
 
 export async function GET() {
   try {
@@ -18,7 +19,7 @@ export async function GET() {
       .eq("user_id", user.id);
 
     if (!quizzes || quizzes.length === 0) {
-      return NextResponse.json({ ok: true, leads: [], quizzes: [] });
+      return NextResponse.json({ ok: true, leads: [], quizzes: [], plan: "free" });
     }
 
     const quizIds = quizzes.map((q: { id: string }) => q.id);
@@ -32,14 +33,37 @@ export async function GET() {
 
     if (error) throw error;
 
-    // Enrich leads with quiz title
+    const { data: profileRow } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const plan = String((profileRow as { plan?: string | null } | null)?.plan ?? "free");
+
+    // Enrich leads with quiz title, then apply free-tier lock + PII redaction
+    // server-side. Locked leads come back with `••••` placeholders so the UI
+    // can blur them visually without ever holding plaintext.
     const quizMap = Object.fromEntries(quizzes.map((q: { id: string; title: string }) => [q.id, q.title]));
     const enriched = (leads ?? []).map((lead: Record<string, unknown>) => ({
       ...lead,
       quiz_title: quizMap[lead.quiz_id as string] ?? "—",
-    }));
+    })) as unknown as LeadLike[];
 
-    return NextResponse.json({ ok: true, leads: enriched, quizzes });
+    const gated = lockAndRedact(enriched, plan).map((l) =>
+      // The Supabase join returns the nested {quiz_results: {title, sio_tag_name}}
+      // which the generic redactor doesn't know about — strip it for locked rows
+      // so the visitor's chosen result profile can't leak through DevTools either.
+      l.locked ? { ...l, quiz_results: null } : l,
+    );
+    const lockedCount = gated.filter((l) => l.locked).length;
+
+    return NextResponse.json({
+      ok: true,
+      leads: gated,
+      quizzes,
+      plan,
+      locked_count: lockedCount,
+    });
   } catch (err) {
     console.error("[Leads API]", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
