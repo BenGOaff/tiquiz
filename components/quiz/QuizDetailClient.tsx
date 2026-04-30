@@ -279,6 +279,38 @@ function SortableSidebarQuestion({ id, index, label, onClick, onRemove, canDelet
   );
 }
 
+// Same shape as SortableSidebarQuestion but for the results list (Marie's
+// feedback #2, 2026-04). Kept as a separate component to keep aria labels
+// distinct ("réordonner ce résultat" vs "...cette question") if we ever
+// localise them per role; today the visual is identical.
+function SortableSidebarResult({ id, index, label, onClick, onRemove, canDelete }: {
+  id: string; index: number; label: string; onClick: () => void; onRemove: () => void; canDelete: boolean;
+}) {
+  const t = useTranslations("quizEditor");
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-1 group">
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted touch-none" aria-label={t("reorder")}>
+        <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+      </button>
+      <button onClick={onClick} className="flex-1 text-left px-2 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors truncate">
+        <span className="text-xs text-muted-foreground mr-2">{index + 1}</span>
+        {label}
+      </button>
+      {canDelete && (
+        <button onClick={onRemove} className="opacity-0 group-hover:opacity-100 text-destructive p-1 rounded hover:bg-destructive/10">
+          <Trash2 className="w-3 h-3" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 // Main component
 export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDetailClientProps) {
   // Single source of truth for "is this an anonymous embed render?".
@@ -697,6 +729,15 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const publicUrl = typeof window !== "undefined"
     ? `${window.location.origin}/q/${publicSegment}${previewSuffix}`
     : `/q/${publicSegment}${previewSuffix}`;
+  // Owner-side preview URL: same as publicUrl but with ?preview_name=Alex appended
+  // so the public client pre-fills the visitor's first name and skips lead
+  // capture. We keep this URL separate from `publicUrl` (the share link) so the
+  // "Copy link" button always copies the clean public URL — never the preview
+  // variant. PREVIEW_DEMO_NAME stays in lockstep with the editor canvas demo.
+  const previewUrl = (() => {
+    const sep = previewSuffix ? "&" : "?";
+    return `${publicUrl}${sep}preview_name=${encodeURIComponent(PREVIEW_DEMO_NAME)}`;
+  })();
   const handleCopyLink = () => { navigator.clipboard.writeText(publicUrl).then(() => { setCopied(true); toast.success(t("linkCopied")); setTimeout(() => setCopied(false), 2000); }); };
 
   // Drag-and-drop sensors for the sidebar question list
@@ -713,6 +754,35 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     const newIndex = ids.indexOf(String(over.id));
     if (oldIndex < 0 || newIndex < 0) return;
     setEditQuestions((prev) => arrayMove(prev, oldIndex, newIndex).map((q, i) => ({ ...q, sort_order: i })));
+  };
+
+  // Reorder results in the sidebar AND remap every option's `result_index`
+  // to point at the result's NEW position. Without the remap, an option
+  // that previously led to "Result A" (index 0) would silently start
+  // pointing to whatever result moved into slot 0 after the drag — a
+  // catastrophic data loss for the creator's logic. Mirror of the index
+  // bookkeeping `removeResult` already does on delete.
+  const handleResultDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const ids = editResults.map((_, i) => `r-${i}`);
+    const oldIndex = ids.indexOf(String(active.id));
+    const newIndex = ids.indexOf(String(over.id));
+    if (oldIndex < 0 || newIndex < 0) return;
+    setEditResults((prev) => arrayMove(prev, oldIndex, newIndex).map((r, i) => ({ ...r, sort_order: i })));
+    // Build oldIndex → newIndex remap, then rewrite every option's result_index.
+    setEditQuestions((prev) => {
+      const remap = new Map<number, number>();
+      const order = arrayMove(editResults.map((_, i) => i), oldIndex, newIndex);
+      order.forEach((from, to) => remap.set(from, to));
+      return prev.map((q) => ({
+        ...q,
+        options: q.options.map((o) => ({
+          ...o,
+          result_index: remap.get(o.result_index) ?? o.result_index,
+        })),
+      }));
+    });
   };
 
   // Helpers
@@ -806,7 +876,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
             <Button
               size="sm"
               variant="outline"
-              onClick={() => window.open(publicUrl, "_blank", "noopener")}
+              onClick={() => window.open(previewUrl, "_blank", "noopener")}
+              title={uiLocale === "en" ? "Open in preview mode (no lead recorded)" : "Ouvrir en mode aperçu (aucun lead enregistré)"}
             >
               <Eye className="w-4 h-4 mr-1" />
               {uiLocale === "en" ? "Preview" : "Aperçu"}
@@ -883,16 +954,23 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     <span className="text-xs text-muted-foreground mr-2">2</span>{t("sidebarShareStep")}
                   </button>
                 )}
-                {/* Résultats */}
+                {/* Résultats — réordonnables par drag (Marie's feedback #2). */}
                 <div className="flex items-center justify-between pt-2"><span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">{t("sidebarResults")}</span><button onClick={addResult} className="text-primary hover:bg-primary/10 rounded p-0.5"><Plus className="w-4 h-4" /></button></div>
-                {editResults.map((r, i) => (
-                  <div key={i} className="flex items-center gap-1 group">
-                    <button onClick={() => scrollToSection(`r-${i}`)} className="flex-1 text-left px-3 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors truncate">
-                      <span className="text-xs text-muted-foreground mr-2">{i+1}</span>{cleanPlaceholdersForLabel(r.title).replace(/<[^>]*>/g, "").trim() || t("sidebarEmptyResult")}
-                    </button>
-                    {editResults.length > 1 && <button onClick={() => removeResult(i)} className="opacity-0 group-hover:opacity-100 text-destructive p-1 rounded hover:bg-destructive/10"><Trash2 className="w-3 h-3" /></button>}
-                  </div>
-                ))}
+                <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleResultDragEnd}>
+                  <SortableContext items={editResults.map((_, i) => `r-${i}`)} strategy={verticalListSortingStrategy}>
+                    {editResults.map((r, i) => (
+                      <SortableSidebarResult
+                        key={`r-${i}`}
+                        id={`r-${i}`}
+                        index={i}
+                        label={cleanPlaceholdersForLabel(r.title).replace(/<[^>]*>/g, "").trim() || t("sidebarEmptyResult")}
+                        onClick={() => scrollToSection(`r-${i}`)}
+                        onRemove={() => removeResult(i)}
+                        canDelete={editResults.length > 1}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
               </>)}
               {leftTab === "design" && (<div className="space-y-5">
                 <div className="space-y-2">

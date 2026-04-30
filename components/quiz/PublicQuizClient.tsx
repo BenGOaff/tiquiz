@@ -667,6 +667,46 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   const [error, setError] = useState<string | null>(null);
   const [branding, setBranding] = useState<QuizBranding>(() => resolveQuizBranding(null, null));
 
+  // Owner-side preview: ?preview_name=<x> tells us the visitor is the quiz
+  // creator pretending to be a real visitor (Marie's feedback #7, 2026-04).
+  // We pre-fill firstName and skip lead capture entirely (no POST hits the
+  // DB). The sticky banner is mounted imperatively into <body> below so it
+  // shows over EVERY render path (loading / error / intro / questions /
+  // result) — wrapping every early return with a Fragment would have meant
+  // touching ~10 returns for no real win.
+  const [previewName, setPreviewName] = useState<string | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = new URLSearchParams(window.location.search).get("preview_name");
+    const trimmed = raw?.trim();
+    if (trimmed) setPreviewName(trimmed);
+  }, []);
+  const isPreviewMode = previewName !== null || Boolean(previewData);
+
+  // Imperative banner: pure DOM, no React tree threading required.
+  useEffect(() => {
+    if (!isPreviewMode || typeof document === "undefined") return;
+    const el = document.createElement("div");
+    el.setAttribute("data-tiquiz-preview-banner", "");
+    el.style.cssText = [
+      "position:fixed", "top:0", "left:0", "right:0", "z-index:60",
+      "background:#f59e0b", "color:#ffffff",
+      "font:600 13px/1.4 ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif",
+      "padding:8px 16px", "text-align:center",
+      "box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1)",
+    ].join(";");
+    const namePart = previewName ? ` — Bonjour ${previewName}` : "";
+    el.textContent = `\u{1F441}️ Mode aperçu${namePart} · rien n'est enregistré`;
+    document.body.appendChild(el);
+    // Push the page content down so the banner doesn't cover the first row
+    // of the quiz.
+    document.body.style.paddingTop = `${el.offsetHeight}px`;
+    return () => {
+      el.remove();
+      document.body.style.paddingTop = "";
+    };
+  }, [isPreviewMode, previewName]);
+
   const [step, setStep] = useState<Step>("intro");
   const [currentQ, setCurrentQ] = useState(0);
   // One slot per question. Undefined = not yet answered (used to gate the
@@ -677,7 +717,12 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   const [freeTextDraft, setFreeTextDraft] = useState<string>("");
 
   const [email, setEmail] = useState("");
-  const [firstName, setFirstName] = useState("");
+  const [firstName, setFirstName] = useState(() => {
+    // Hydrate firstName synchronously from the URL so the very first render
+    // already shows "Bonjour Marie" instead of a flash of empty string.
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("preview_name")?.trim() ?? "";
+  });
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [country, setCountry] = useState("");
@@ -961,8 +1006,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     try {
       const profile = computeResult();
 
-      // In preview mode, skip the actual lead submission
-      if (!previewData) {
+      // In preview mode (props-data preview OR ?preview_name=<x> URL preview),
+      // skip the actual lead submission so the creator can walk through the
+      // flow without polluting their lead list.
+      if (!isPreviewMode) {
         // Build per-question answers for analytics / export. Each shape is
         // small but distinct so Tendances (survey) and lead-export (quiz)
         // can render the right widget without re-deriving the type.
@@ -1043,6 +1090,12 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   const trackShare = useCallback(async () => {
     setHasShared(true);
     setShareWarning(false);
+    // Owner-side preview: don't write a real share into the DB. Pretend the
+    // bonus unlocked so the creator can see what visitors will see.
+    if (isPreviewMode) {
+      setBonusUnlocked(true);
+      return;
+    }
     try {
       const res = await fetch(`/api/quiz/${quizId}/public`, {
         method: "PATCH",
@@ -1233,7 +1286,14 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               </>
             )}
 
-            <Button size="lg" className="h-14 px-12 text-lg rounded-full shadow-lg" onClick={() => { trackEvent("start"); setStep((quiz.ask_first_name || quiz.ask_gender) ? "personalize" : "quiz"); }}>
+            <Button size="lg" className="h-14 px-12 text-lg rounded-full shadow-lg" onClick={() => {
+              trackEvent("start");
+              // Preview mode with a pre-filled name skips the personalize
+              // screen so the creator goes straight to the questions —
+              // typing "Alex" again would only add friction.
+              const skipPersonalize = isPreviewMode && firstName.trim().length > 0;
+              setStep(!skipPersonalize && (quiz.ask_first_name || quiz.ask_gender) ? "personalize" : "quiz");
+            }}>
               <span
                 className="tiquiz-rich"
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.start_button_text?.trim() || "") || t.start }}
