@@ -33,10 +33,26 @@ const OFFER_TO_PLAN: Record<string, TiquizPlan> = {
   "3198280": "lifetime",
 };
 
-// Events that explicitly indicate NO payment received → never grant access.
-// We match case-insensitively on the event type string so new SIO naming
-// variants get caught without a code change.
-const FAILURE_EVENT_RE = /FAIL|CANCEL|REFUND|CHARGEBACK|DECLIN|EXPIR|DISPUT/i;
+// Plans Tiquiz refuses to downgrade automatically. `beta` is granted manually
+// by Ben for lifetime access; `lifetime` is the paid one-time tier. Both must
+// survive any webhook event — if Ben needs to revoke one, he does it via the
+// admin endpoint, not via SIO. SIO can NEVER bring these accounts back to
+// `free`.
+const LIFETIME_PLANS: ReadonlySet<string> = new Set(["beta", "lifetime"]);
+
+// Events that confirm the end of a paid subscription — we downgrade the
+// affected user's plan back to `free` (UNLESS they're on lifetime/beta).
+// SIO documents `SALE_CANCELED`; the rest of the regex is defensive against
+// future variants and against partner integrations that re-emit different
+// strings (REFUND_*, *_EXPIRED, etc.).
+const TERMINAL_EVENT_RE = /CANCEL|REFUND|EXPIR|CHARGEBACK/i;
+
+// Events that signal a transient payment problem (failed retry, declined,
+// in dispute). DO NOT downgrade — the next retry might succeed and SIO
+// will fire a definitive CANCEL/REFUND later if the situation doesn't
+// improve. Treating these as "no-op" prevents flapping users from being
+// downgraded mid-retry-cycle.
+const TRANSIENT_FAILURE_RE = /FAIL|DECLIN|DISPUT/i;
 
 function inferPlan(offerId: string): TiquizPlan | null {
   if (!offerId) return null;
@@ -122,24 +138,19 @@ export async function POST(req: NextRequest) {
     try { const text = await req.text(); rawBody = JSON.parse(text); }
     catch { return NextResponse.json({ error: "Invalid body" }, { status: 400 }); }
 
-    eventType = extractStr(rawBody, ["type", "event", "event_type", "eventName", "data.type"]);
+    // SIO sends the event type both in the X-Webhook-Event header and inside
+    // the body — prefer the header, fall back to body extraction so older
+    // payload shapes still work.
+    const headerEventType = req.headers.get("x-webhook-event");
+    const bodyEventType = extractStr(rawBody, ["type", "event", "event_type", "eventName", "data.type"]);
+    eventType = (headerEventType || bodyEventType || "").trim() || null;
+
     const orderId = extractStr(rawBody, ["order.id", "data.order.id", "order_id", "orderId"]);
     eventId = orderId ? `sio_order_${orderId}` : null;
 
-    // 1. Reject failure/cancel/refund events BEFORE granting anything.
-    if (eventType && FAILURE_EVENT_RE.test(eventType)) {
-      console.log(`[Tiquiz webhook] Ignoring failure event type=${eventType} order=${orderId}`);
-      await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "failure_event" });
-      return NextResponse.json({ ok: true, skipped: "failure_event", event_type: eventType });
-    }
-
-    const email = extractStr(rawBody, ["customer.email", "data.customer.email", "email"])?.toLowerCase();
-    if (!email) {
-      await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "skipped", error: "no_email" });
-      return NextResponse.json({ error: "No email" }, { status: 400 });
-    }
-
-    // 2. Idempotency: if SIO already delivered + we processed it, don't resend.
+    // 1. Idempotency FIRST — must run before any branch that mutates state
+    //    (downgrade or upgrade). A retried CANCEL must not double-downgrade
+    //    a user who in the meantime upgraded again from a different device.
     if (eventId) {
       const { data: dup } = await supabaseAdmin
         .from("webhook_logs")
@@ -152,6 +163,91 @@ export async function POST(req: NextRequest) {
         console.log(`[Tiquiz webhook] Duplicate retry event=${eventId} — skipping`);
         return NextResponse.json({ ok: true, duplicate: true, event_id: eventId });
       }
+    }
+
+    // 2. Transient failures: log + skip. Don't grant, don't revoke. SIO will
+    //    fire the definitive CANCEL/REFUND if the issue doesn't recover.
+    if (eventType && TRANSIENT_FAILURE_RE.test(eventType)) {
+      console.log(`[Tiquiz webhook] Ignoring transient failure type=${eventType} order=${orderId}`);
+      await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "transient_failure" });
+      return NextResponse.json({ ok: true, skipped: "transient_failure", event_type: eventType });
+    }
+
+    // 3. Terminal events (CANCEL / REFUND / EXPIR / CHARGEBACK): downgrade
+    //    the user's plan to `free` UNLESS they're on a lifetime plan
+    //    (lifetime/beta). Lifetime plans are immune by design — Ben's beta
+    //    cohort and one-time-fee customers keep access regardless of SIO.
+    if (eventType && TERMINAL_EVENT_RE.test(eventType)) {
+      const cancelEmail = extractStr(rawBody, [
+        "contact.email", "data.contact.email",
+        "customer.email", "data.customer.email",
+        "email",
+      ])?.toLowerCase();
+      if (!cancelEmail) {
+        await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "skipped", error: "cancel_no_email" });
+        return NextResponse.json({ ok: false, skipped: "no_email" }, { status: 200 });
+      }
+
+      const found = await findUserByEmail(cancelEmail);
+      if (!found) {
+        await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "processed", error: "cancel_unknown_user" });
+        return NextResponse.json({ ok: true, skipped: "unknown_user", email: cancelEmail });
+      }
+
+      const { data: priorProfile } = await supabaseAdmin
+        .from("profiles").select("plan").eq("user_id", found.id).maybeSingle();
+      const oldPlan = String((priorProfile as { plan?: string | null } | null)?.plan ?? "free").trim().toLowerCase();
+
+      if (!oldPlan || oldPlan === "free") {
+        // Already free — nothing to revoke. Mark processed so retries skip.
+        await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "processed", error: "already_free" });
+        return NextResponse.json({ ok: true, skipped: "already_free", email: cancelEmail });
+      }
+
+      if (LIFETIME_PLANS.has(oldPlan)) {
+        // Beta + lifetime: never downgrade via webhook — these accounts have
+        // been promised lifetime access and the only legitimate revocation
+        // path is the admin route. Logged loudly so any unexpected hit is
+        // visible in webhook_logs.
+        console.warn(`[Tiquiz webhook] REFUSED downgrade for lifetime plan ${oldPlan} email=${cancelEmail} event=${eventType}`);
+        await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "processed", error: `refused_lifetime:${oldPlan}` });
+        return NextResponse.json({ ok: true, skipped: "lifetime_plan", plan: oldPlan, email: cancelEmail });
+      }
+
+      // monthly / yearly → free
+      const { error: downErr } = await supabaseAdmin
+        .from("profiles")
+        .update({ plan: "free", updated_at: new Date().toISOString() })
+        .eq("user_id", found.id);
+      if (downErr) {
+        await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "error", error: `downgrade:${downErr.message}` });
+        // 500 lets SIO retry — webhook_logs row above is `error`, idempotency
+        // won't short-circuit on retry.
+        return NextResponse.json({ error: "Downgrade failed" }, { status: 500 });
+      }
+
+      try {
+        await supabaseAdmin.from("plan_change_log").insert({
+          target_user_id: found.id,
+          target_email: cancelEmail,
+          old_plan: oldPlan,
+          new_plan: "free",
+          reason: `systeme_io:${eventType}:${orderId ?? "no_order"}`,
+        } as any);
+      } catch {
+        // best-effort audit
+      }
+
+      console.log(`[Tiquiz webhook] Downgraded ${cancelEmail} ${oldPlan} → free (${eventType})`);
+      await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "processed", error: `downgraded_from:${oldPlan}` });
+      return NextResponse.json({ ok: true, downgraded: true, email: cancelEmail, old_plan: oldPlan, new_plan: "free", event_type: eventType });
+    }
+
+    // 4. From here on we're in the NEW SALE / unknown event flow — grant access.
+    const email = extractStr(rawBody, ["customer.email", "data.customer.email", "contact.email", "data.contact.email", "email"])?.toLowerCase();
+    if (!email) {
+      await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "skipped", error: "no_email" });
+      return NextResponse.json({ error: "No email" }, { status: 400 });
     }
 
     const firstName = extractStr(rawBody, ["customer.fields.first_name", "data.customer.fields.first_name", "first_name"]);
@@ -186,7 +282,19 @@ export async function POST(req: NextRequest) {
     // Capture the old plan BEFORE upsert so we can audit plan transitions.
     const { data: priorProfile } = await supabaseAdmin
       .from("profiles").select("plan").eq("user_id", userId).maybeSingle();
-    const oldPlan = (priorProfile?.plan as TiquizPlan | undefined) ?? null;
+    const oldPlanRaw = String((priorProfile as { plan?: string | null } | null)?.plan ?? "").trim().toLowerCase();
+    const oldPlan = (oldPlanRaw || null) as TiquizPlan | "beta" | null;
+
+    // Beta + lifetime are immune to webhook plan changes — they paid (or were
+    // granted) lifetime access. If a SIO event somehow lands for one of them
+    // (e.g. they buy a separate monthly subscription on the same email), we
+    // log the attempt and keep their existing plan. The only way to remove
+    // lifetime is the admin endpoint, never an automated webhook.
+    if (oldPlan && LIFETIME_PLANS.has(oldPlan)) {
+      console.warn(`[Tiquiz webhook] REFUSED upgrade overwrite for lifetime plan ${oldPlan} email=${email} event=${eventType}`);
+      await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "processed", error: `refused_lifetime_overwrite:${oldPlan}` });
+      return NextResponse.json({ ok: true, skipped: "lifetime_plan", plan: oldPlan, email });
+    }
 
     // 3. Resolve plan — NEVER default to lifetime on unknown offers.
     // If we can't map the offer to a known paid plan and the user isn't
@@ -197,7 +305,7 @@ export async function POST(req: NextRequest) {
       if (oldPlan && oldPlan !== "free") {
         // Already paying — re-sending a webhook without a clear offer shouldn't
         // downgrade them. Keep their current plan.
-        finalPlan = oldPlan;
+        finalPlan = oldPlan as TiquizPlan;
         console.warn(`[Tiquiz webhook] Unknown offer ${offerId} — keeping existing paid plan ${oldPlan}`);
       } else {
         const msg = `unknown_offer:${offerId || "missing"}`;

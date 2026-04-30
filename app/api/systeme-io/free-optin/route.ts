@@ -79,7 +79,14 @@ async function getOrCreateUser(email: string, firstName: string | null, lastName
 }
 
 async function upsertFreeProfile(userId: string, email: string, firstName: string | null, lastName: string | null, sioContactId: string | null) {
-  const PAID_PLANS = ["lifetime", "monthly", "yearly"];
+  // Any non-`free` plan must survive a free-optin re-fire — beta accounts in
+  // particular are granted manually for lifetime access and must NOT be
+  // downgraded by an unrelated SIO opt-in form. Permissive check: anything
+  // other than "" / "free" is preserved.
+  const isPaidExisting = (p: string) => {
+    const v = p.trim().toLowerCase();
+    return v !== "" && v !== "free";
+  };
 
   const { data: existing } = await supabaseAdmin
     .from("profiles")
@@ -102,7 +109,7 @@ async function upsertFreeProfile(userId: string, email: string, firstName: strin
   }
 
   const existingPlan = String((existing as Record<string, unknown>).plan ?? "").trim();
-  if (PAID_PLANS.includes(existingPlan)) {
+  if (isPaidExisting(existingPlan)) {
     // Never downgrade paid users
     console.log(`[Tiquiz free-optin] ${email} already has plan="${existingPlan}" — NOT overwriting.`);
     await supabaseAdmin.from("profiles").update({
