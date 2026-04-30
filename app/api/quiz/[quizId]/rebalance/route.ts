@@ -15,12 +15,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { checkRateLimit } from "@/lib/aiRateLimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
+
+// Tighter cap than /rewrite: rebalance is a Sonnet call (~10× the cost
+// of a Haiku rewrite) and there's no legitimate use case for hammering
+// it. 10 / 5min lets a creator iterate on the proposed diff a few times.
+const REBALANCE_RATE_LIMIT = { limit: 10, windowMs: 5 * 60 * 1000 };
 
 function getClaudeApiKey(): string {
   return (
@@ -67,6 +73,21 @@ export async function POST(
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr || !user) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Soft cap before we ask Sonnet — rebalance is the most expensive AI
+  // route in the codebase. Per-Vercel-instance limit; Anthropic's quota
+  // catches anything that gets through across instances.
+  const rl = checkRateLimit({
+    key: `rebalance:${user.id}`,
+    limit: REBALANCE_RATE_LIMIT.limit,
+    windowMs: REBALANCE_RATE_LIMIT.windowMs,
+  });
+  if (!rl.ok) {
+    return NextResponse.json(
+      { ok: false, error: "RATE_LIMITED", message: `Trop de demandes de rééquilibrage — réessaie dans ${rl.retryAfterSec}s.`, retry_after_sec: rl.retryAfterSec },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
+    );
   }
 
   let body: { targetResultIndex?: number; intent?: string };

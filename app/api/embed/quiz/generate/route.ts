@@ -285,10 +285,15 @@ export async function POST(req: NextRequest) {
         // anonymous quizzes per session. If a previous attempt left
         // one behind (rare — failed insert mid-flight), wipe it
         // first so the visitor isn't stuck on a stale generation.
-        await supabaseAdmin
+        const { error: prevDelErr } = await supabaseAdmin
           .from("quizzes")
           .delete()
           .eq("embed_session_id", sessionToken);
+        if (prevDelErr) {
+          console.error("[embed/generate] stale-quiz delete failed:", prevDelErr.message);
+          sse("error", { ok: false, error: "Création du quiz impossible." });
+          return;
+        }
 
         const { data: quizRow, error: quizInsertErr } = await supabaseAdmin
           .from("quizzes")
@@ -323,9 +328,13 @@ export async function POST(req: NextRequest) {
 
         // Insert questions + results. We use the same field shape the
         // authenticated POST /api/quiz uses so QuizDetailClient reads
-        // them back identically — no special embed code path.
+        // them back identically — no special embed code path. Both
+        // inserts are now error-checked: if either fails we hard-delete
+        // the orphan quiz row so the visitor isn't stuck with an empty
+        // shell on next /generate attempt (the unique-index sweep above
+        // also handles this on retry, but explicit cleanup is cleaner).
         if (draftQuestions.length > 0) {
-          await supabaseAdmin.from("quiz_questions").insert(
+          const { error: qInsErr } = await supabaseAdmin.from("quiz_questions").insert(
             (draftQuestions as Record<string, unknown>[]).map((q, i) => ({
               quiz_id: quizRow.id,
               question_text: String(q.question_text ?? q.text ?? ""),
@@ -335,9 +344,15 @@ export async function POST(req: NextRequest) {
               config: {},
             })),
           );
+          if (qInsErr) {
+            console.error("[embed/generate] questions insert failed:", qInsErr.message);
+            await supabaseAdmin.from("quizzes").delete().eq("id", quizRow.id);
+            sse("error", { ok: false, error: "Création du quiz impossible." });
+            return;
+          }
         }
         if (draftResults.length > 0) {
-          await supabaseAdmin.from("quiz_results").insert(
+          const { error: rInsErr } = await supabaseAdmin.from("quiz_results").insert(
             (draftResults as Record<string, unknown>[]).map((r, i) => ({
               quiz_id: quizRow.id,
               title: String(r.title ?? ""),
@@ -349,6 +364,14 @@ export async function POST(req: NextRequest) {
               sort_order: i,
             })),
           );
+          if (rInsErr) {
+            console.error("[embed/generate] results insert failed:", rInsErr.message);
+            // Cascade clears quiz_questions via FK, then drop the quiz row.
+            await supabaseAdmin.from("quiz_questions").delete().eq("quiz_id", quizRow.id);
+            await supabaseAdmin.from("quizzes").delete().eq("id", quizRow.id);
+            sse("error", { ok: false, error: "Création du quiz impossible." });
+            return;
+          }
         }
 
         // Mirror the JSON onto the embed session for the legacy /save
