@@ -275,10 +275,14 @@ export async function GET(req: NextRequest, context: RouteContext) {
       },
     );
 
-    const plan = String(profileRow?.plan ?? "free").trim();
-    const isPaid = plan === "lifetime" || plan === "monthly" || plan === "yearly";
-    const customFooterText = isPaid ? (quizRow.custom_footer_text as string | null) : null;
-    const customFooterUrl = isPaid ? (quizRow.custom_footer_url as string | null) : null;
+    // Custom footer is a paid-plan feature: hide it for free creators
+    // (and only for free — beta / lifetime / monthly / yearly all keep it).
+    // Permissive check via isPaidPlan: anything that isn't `free` counts as
+    // paid, so future plan slugs don't accidentally lose the custom footer
+    // until this file is updated.
+    const ownerPlan = String(profileRow?.plan ?? "free").trim();
+    const customFooterText = isPaidPlan(ownerPlan) ? (quizRow.custom_footer_text as string | null) : null;
+    const customFooterUrl = isPaidPlan(ownerPlan) ? (quizRow.custom_footer_url as string | null) : null;
 
     // log_quiz_event bumps the cumulative counter AND writes a dated
     // row in quiz_events — both transactional, so the stats page can
