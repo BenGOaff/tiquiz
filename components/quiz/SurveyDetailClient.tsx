@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
-  ArrowLeft, Copy, Eye, CheckCircle, Share2,
+  ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
   Sparkles, TrendingUp, Star, MessageCircle,
 } from "lucide-react";
@@ -40,6 +40,15 @@ import { SioTagPicker } from "@/components/ui/sio-tag-picker";
 import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
+import { interpolateText } from "@/lib/quizPersonalization";
+
+/** Same demo name we use across the quiz editor — keeps the experience
+ *  consistent between quiz mode and survey mode (Marie's feedback #6, #7). */
+const PREVIEW_DEMO_NAME = "Alex";
+
+function cleanPlaceholdersForLabel(text: string | null | undefined): string {
+  return interpolateText(text, { name: "", gender: "x" });
+}
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTranslations } from "next-intl";
 import {
@@ -359,6 +368,20 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const thanksRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
+  // Back-to-top FAB (#1, mirrored from QuizDetailClient).
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+    const onScroll = () => setShowBackToTop(el.scrollTop > 400);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+  const scrollPreviewToTop = useCallback(() => {
+    previewRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
   const scrollToSection = (id: string) => {
     let el: HTMLDivElement | null = null;
     if (id === "intro") el = introRef.current;
@@ -464,6 +487,38 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     () => ({ name: askFirstName, gender: askGender }),
     [askFirstName, askGender],
   );
+
+  // Mirrored from QuizDetailClient (Marie's feedback #5, #6 — same {name}
+  // placeholder hygiene applies to surveys).
+  const previewInterpolate = useCallback(
+    (text: string) => interpolateText(text, { name: PREVIEW_DEMO_NAME, gender: "x" }),
+    [],
+  );
+
+  // AI rewrite (#4): same /api/quiz/[id]/rewrite endpoint, this just provides
+  // the field-kind binding for survey-flavoured prompts.
+  const aiRewrite = useCallback(async (plain: string, fieldKind: string): Promise<string[] | null> => {
+    try {
+      const res = await fetch(`/api/quiz/${quizId}/rewrite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: plain, fieldKind }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.ok) {
+        toast.error(data?.error ?? t("errGeneric"));
+        return null;
+      }
+      return Array.isArray(data.proposals) ? data.proposals : null;
+    } catch {
+      toast.error(t("errGeneric"));
+      return null;
+    }
+  }, [quizId, t]);
+  const aiRewriteTitle = useCallback((p: string) => aiRewrite(p, "title"), [aiRewrite]);
+  const aiRewriteIntro = useCallback((p: string) => aiRewrite(p, "intro"), [aiRewrite]);
+  const aiRewriteQuestion = useCallback((p: string) => aiRewrite(p, "question"), [aiRewrite]);
+  const aiRewriteOption = useCallback((p: string) => aiRewrite(p, "option"), [aiRewrite]);
 
   // Bulk-genderize every text field of the quiz in one go. Used when the
   // author toggles "Ask gender" after the quiz was already generated without
@@ -626,6 +681,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // Public URL — prefer custom slug when set, fall back to UUID
   const publicSegment = slug.trim() ? sanitizeSlug(slug) ?? quizId : quizId;
   const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/q/${publicSegment}` : `/q/${publicSegment}`;
+  // Owner-side preview URL (#7, mirrored from quiz). Kept separate from
+  // publicUrl so "Copy link" never copies the preview variant.
+  const previewUrl = `${publicUrl}?preview_name=${encodeURIComponent(PREVIEW_DEMO_NAME)}`;
   const handleCopyLink = () => { navigator.clipboard.writeText(publicUrl).then(() => { setCopied(true); toast.success(t("linkCopied")); setTimeout(() => setCopied(false), 2000); }); };
 
   // Drag-and-drop sensors for the sidebar question list
@@ -752,6 +810,15 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             <button onClick={() => setDevice("desktop")} className={`p-1.5 rounded-md ${device === "desktop" ? "bg-background shadow-sm" : ""}`}><Monitor className="w-4 h-4" /></button>
             <button onClick={() => setDevice("mobile")} className={`p-1.5 rounded-md ${device === "mobile" ? "bg-background shadow-sm" : ""}`}><Smartphone className="w-4 h-4" /></button>
           </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => window.open(previewUrl, "_blank", "noopener")}
+            title={locale === "en" ? "Open in preview mode (no response recorded)" : "Ouvrir en mode aperçu (aucune réponse enregistrée)"}
+          >
+            <Eye className="w-4 h-4 mr-1" />
+            {locale === "en" ? "Preview" : "Aperçu"}
+          </Button>
           <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}{saving ? "" : t("save")}
           </Button>
@@ -786,7 +853,13 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                         key={`q-${i}`}
                         id={`q-${i}`}
                         index={i}
-                        label={q.question_text ? q.question_text.slice(0, 35) + (q.question_text.length > 35 ? "…" : "") : t("sidebarEmptyQuestion")}
+                        label={(() => {
+                          // Strip placeholders + HTML before truncating so the
+                          // sidebar shows readable preview text rather than raw
+                          // template syntax (Marie's #5).
+                          const plain = cleanPlaceholdersForLabel(q.question_text).replace(/<[^>]*>/g, "").trim();
+                          return plain ? plain.slice(0, 35) + (plain.length > 35 ? "…" : "") : t("sidebarEmptyQuestion");
+                        })()}
                         onClick={() => scrollToSection(`q-${i}`)}
                         onRemove={() => removeQuestion(i)}
                         canDelete={editQuestions.length > 1}
@@ -973,8 +1046,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       <img src={brandLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
                     </div>
                   )}
-                  <RichTextEdit value={title} onChange={setTitle} singleLine className="text-3xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
-                  <RichTextEdit value={introduction} onChange={setIntroduction} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder={t("previewIntroPh")} />
+                  <RichTextEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} singleLine className="text-3xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
+                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder={t("previewIntroPh")} />
                   <div className="flex justify-center">
                     <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
                       <RichTextEdit
@@ -1029,7 +1102,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                           </select>
                         </div>
 
-                        <RichTextEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} availableVars={personalizationVars} singleLine className="text-2xl sm:text-4xl font-bold leading-tight" placeholder={t("previewQuestionPh")} />
+                        <RichTextEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-2xl sm:text-4xl font-bold leading-tight" placeholder={t("previewQuestionPh")} />
 
                         {/* Type-specific live preview + config */}
                         {qType === "rating_scale" && (() => {
@@ -1124,7 +1197,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                                     </div>
                                   )}
                                   <div className="p-5 space-y-2">
-                                    <RichTextEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} availableVars={personalizationVars} singleLine className="text-base font-medium" placeholder={t("previewOptionPh", { n: oi + 1 })} />
+                                    <RichTextEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} onAIRewrite={aiRewriteOption} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-base font-medium" placeholder={t("previewOptionPh", { n: oi + 1 })} />
                                     {qType === "image_choice" && (
                                       <input
                                         type="url"
@@ -1240,6 +1313,21 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               </div>
             </div>
           </main>
+
+          {/* Back-to-top FAB (Marie's #1, mirrored from QuizDetailClient).
+              Only renders once the preview is scrolled past one viewport,
+              keeps the editor uncluttered for short surveys. */}
+          {showBackToTop && (
+            <button
+              type="button"
+              onClick={scrollPreviewToTop}
+              aria-label={t("backToTop")}
+              title={t("backToTop")}
+              className="fixed bottom-6 right-6 z-30 w-11 h-11 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
+            >
+              <ArrowUp className="w-5 h-5" />
+            </button>
+          )}
         </div>
       )}
 

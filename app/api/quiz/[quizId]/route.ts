@@ -279,7 +279,64 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     // Update questions if provided
-    if (Array.isArray(body.questions)) {
+    //
+    // ANTI-MARIE-PAULE GUARDS (data-loss pattern observed on Tipote
+    // hosted_pages, 2026-04-29):
+    //   1. body.questions must be an explicit Array — null / undefined /
+    //      string mean "don't touch", not "wipe everything".
+    //   2. An empty array on a quiz that ALREADY has questions is treated
+    //      as a client-side hydration race, not a deliberate full-wipe.
+    //      We refuse with 400 so the editor doesn't silently destroy the
+    //      author's work. Single-question minimum is also enforced by the
+    //      editor's `removeQuestion` (canDelete = length > 1), so the
+    //      legitimate path can never produce [].
+    //   3. delete() and insert() return values are now CHECKED. The previous
+    //      code awaited them without reading `.error`, so an insert that
+    //      failed (timeout, constraint, RLS) silently left the DB empty
+    //      and returned ok:true to the client.
+    //   4. On insert failure AFTER delete succeeded, we attempt a
+    //      restore-from-snapshot of the pre-delete rows. Best-effort: if
+    //      that also fails, we surface a CATASTROPHIC error so the editor
+    //      knows nothing was saved (and its in-memory state is the only
+    //      remaining copy — the user can retry).
+    if ("questions" in body) {
+      if (!Array.isArray(body.questions)) {
+        return NextResponse.json(
+          { ok: false, error: "INVALID_QUESTIONS_PAYLOAD", message: "questions must be an array" },
+          { status: 400 },
+        );
+      }
+
+      const incoming = body.questions as Record<string, unknown>[];
+
+      // Snapshot the existing questions BEFORE any mutation, so we can
+      // restore on failure.
+      const { data: snapshot, error: snapshotErr } = await supabase
+        .from("quiz_questions")
+        .select("*")
+        .eq("quiz_id", quizId);
+      if (snapshotErr) {
+        return NextResponse.json(
+          { ok: false, error: "SNAPSHOT_FAILED", message: snapshotErr.message },
+          { status: 500 },
+        );
+      }
+      const snapshotRows = snapshot ?? [];
+
+      // Empty-array on a non-empty quiz = refuse. The editor never
+      // legitimately produces this.
+      if (incoming.length === 0 && snapshotRows.length > 0) {
+        console.error(`[quiz PATCH] REFUSED empty-array wipe of ${snapshotRows.length} questions for quiz ${quizId}`);
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "EMPTY_QUESTIONS_WIPE_REFUSED",
+            message: "Refus de remplacer toutes tes questions par une liste vide. Recharge la page pour récupérer ta dernière version.",
+          },
+          { status: 400 },
+        );
+      }
+
       const ALLOWED_TYPES = new Set([
         "multiple_choice",
         "rating_scale",
@@ -288,57 +345,173 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         "image_choice",
         "yes_no",
       ]);
-      await supabase.from("quiz_questions").delete().eq("quiz_id", quizId);
-      if ((body.questions as unknown[]).length > 0) {
-        await supabase.from("quiz_questions").insert(
-          (body.questions as Record<string, unknown>[]).map((q, i) => {
-            const rawType = typeof q.question_type === "string" ? q.question_type : "multiple_choice";
-            const question_type = ALLOWED_TYPES.has(rawType) ? rawType : "multiple_choice";
-            return {
-              quiz_id: quizId,
-              question_text: String(q.question_text ?? ""),
-              options: Array.isArray(q.options)
-                ? (q.options as Record<string, unknown>[]).map((o) => {
-                    const cleaned: Record<string, unknown> = {
-                      text: String(o?.text ?? ""),
-                      result_index: Number.isFinite(Number(o?.result_index)) ? Number(o?.result_index) : 0,
-                    };
-                    const tag = String(o?.sio_tag_name ?? "").trim();
-                    if (tag) cleaned.sio_tag_name = tag;
-                    if (typeof o?.image_url === "string" && o.image_url.trim()) {
-                      cleaned.image_url = String(o.image_url).trim();
-                    }
-                    return cleaned;
-                  })
-                : [],
-              sort_order: i,
-              question_type,
-              config: q.config && typeof q.config === "object" && !Array.isArray(q.config) ? q.config : {},
-            };
-          }),
+
+      const sanitized = incoming.map((q, i) => {
+        const rawType = typeof q.question_type === "string" ? q.question_type : "multiple_choice";
+        const question_type = ALLOWED_TYPES.has(rawType) ? rawType : "multiple_choice";
+        return {
+          quiz_id: quizId,
+          question_text: String(q.question_text ?? ""),
+          options: Array.isArray(q.options)
+            ? (q.options as Record<string, unknown>[]).map((o) => {
+                const cleaned: Record<string, unknown> = {
+                  text: String(o?.text ?? ""),
+                  result_index: Number.isFinite(Number(o?.result_index)) ? Number(o?.result_index) : 0,
+                };
+                const tag = String(o?.sio_tag_name ?? "").trim();
+                if (tag) cleaned.sio_tag_name = tag;
+                if (typeof o?.image_url === "string" && o.image_url.trim()) {
+                  cleaned.image_url = String(o.image_url).trim();
+                }
+                return cleaned;
+              })
+            : [],
+          sort_order: i,
+          question_type,
+          config: q.config && typeof q.config === "object" && !Array.isArray(q.config) ? q.config : {},
+        };
+      });
+
+      const { error: deleteErr } = await supabase
+        .from("quiz_questions")
+        .delete()
+        .eq("quiz_id", quizId);
+      if (deleteErr) {
+        return NextResponse.json(
+          { ok: false, error: "DELETE_FAILED", message: deleteErr.message },
+          { status: 500 },
         );
+      }
+
+      if (sanitized.length > 0) {
+        const { error: insertErr } = await supabase.from("quiz_questions").insert(sanitized);
+        if (insertErr) {
+          // Insert failed AFTER delete succeeded — DB is now empty. Restore
+          // from snapshot so the author's data isn't silently lost.
+          console.error(`[quiz PATCH] Insert failed for quiz ${quizId}, attempting snapshot restore:`, insertErr.message);
+          if (snapshotRows.length > 0) {
+            const { error: restoreErr } = await supabase
+              .from("quiz_questions")
+              .insert(snapshotRows.map((r: Record<string, unknown>) => {
+                // Drop generated columns the DB will repopulate; keep id so
+                // the restore is byte-identical to the pre-mutation state.
+                const { created_at: _ca, updated_at: _ua, ...rest } = r as Record<string, unknown>;
+                void _ca; void _ua;
+                return rest;
+              }));
+            if (restoreErr) {
+              console.error(`[quiz PATCH] CATASTROPHIC: snapshot restore also failed for quiz ${quizId}:`, restoreErr.message);
+              return NextResponse.json(
+                {
+                  ok: false,
+                  error: "INSERT_AND_RESTORE_FAILED",
+                  message: "Sauvegarde échouée et restauration aussi. Ton éditeur a la version actuelle — ne quitte pas la page et réessaie.",
+                  insert_error: insertErr.message,
+                  restore_error: restoreErr.message,
+                },
+                { status: 500 },
+              );
+            }
+          }
+          return NextResponse.json(
+            { ok: false, error: "INSERT_FAILED_RESTORED", message: `Sauvegarde échouée (${insertErr.message}), ta version précédente a été restaurée.` },
+            { status: 500 },
+          );
+        }
       }
     }
 
-    // Update results if provided
-    if (Array.isArray(body.results)) {
-      await supabase.from("quiz_results").delete().eq("quiz_id", quizId);
-      if ((body.results as unknown[]).length > 0) {
-        await supabase.from("quiz_results").insert(
-          (body.results as Record<string, unknown>[]).map((r, i) => ({
-            quiz_id: quizId,
-            title: String(r.title ?? ""),
-            description: typeof r.description === "string" ? sanitizeRichText(r.description) : null,
-            insight: typeof r.insight === "string" ? sanitizeRichText(r.insight) : null,
-            projection: typeof r.projection === "string" ? sanitizeRichText(r.projection) : null,
-            cta_text: r.cta_text ?? null,
-            cta_url: r.cta_url ?? null,
-            sio_tag_name: r.sio_tag_name ?? null,
-            sio_course_id: r.sio_course_id ?? null,
-            sio_community_id: r.sio_community_id ?? null,
-            sort_order: i,
-          })),
+    // Update results if provided — same anti-Marie-Paule guards as questions above.
+    if ("results" in body) {
+      if (!Array.isArray(body.results)) {
+        return NextResponse.json(
+          { ok: false, error: "INVALID_RESULTS_PAYLOAD", message: "results must be an array" },
+          { status: 400 },
         );
+      }
+
+      const incoming = body.results as Record<string, unknown>[];
+
+      const { data: snapshot, error: snapshotErr } = await supabase
+        .from("quiz_results")
+        .select("*")
+        .eq("quiz_id", quizId);
+      if (snapshotErr) {
+        return NextResponse.json(
+          { ok: false, error: "SNAPSHOT_FAILED", message: snapshotErr.message },
+          { status: 500 },
+        );
+      }
+      const snapshotRows = snapshot ?? [];
+
+      if (incoming.length === 0 && snapshotRows.length > 0) {
+        console.error(`[quiz PATCH] REFUSED empty-array wipe of ${snapshotRows.length} results for quiz ${quizId}`);
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "EMPTY_RESULTS_WIPE_REFUSED",
+            message: "Refus de remplacer tous tes résultats par une liste vide. Recharge la page pour récupérer ta dernière version.",
+          },
+          { status: 400 },
+        );
+      }
+
+      const sanitized = incoming.map((r, i) => ({
+        quiz_id: quizId,
+        title: String(r.title ?? ""),
+        description: typeof r.description === "string" ? sanitizeRichText(r.description) : null,
+        insight: typeof r.insight === "string" ? sanitizeRichText(r.insight) : null,
+        projection: typeof r.projection === "string" ? sanitizeRichText(r.projection) : null,
+        cta_text: r.cta_text ?? null,
+        cta_url: r.cta_url ?? null,
+        sio_tag_name: r.sio_tag_name ?? null,
+        sio_course_id: r.sio_course_id ?? null,
+        sio_community_id: r.sio_community_id ?? null,
+        sort_order: i,
+      }));
+
+      const { error: deleteErr } = await supabase
+        .from("quiz_results")
+        .delete()
+        .eq("quiz_id", quizId);
+      if (deleteErr) {
+        return NextResponse.json(
+          { ok: false, error: "DELETE_FAILED", message: deleteErr.message },
+          { status: 500 },
+        );
+      }
+
+      if (sanitized.length > 0) {
+        const { error: insertErr } = await supabase.from("quiz_results").insert(sanitized);
+        if (insertErr) {
+          console.error(`[quiz PATCH] Result insert failed for quiz ${quizId}, attempting snapshot restore:`, insertErr.message);
+          if (snapshotRows.length > 0) {
+            const { error: restoreErr } = await supabase
+              .from("quiz_results")
+              .insert(snapshotRows.map((r: Record<string, unknown>) => {
+                const { created_at: _ca, updated_at: _ua, ...rest } = r as Record<string, unknown>;
+                void _ca; void _ua;
+                return rest;
+              }));
+            if (restoreErr) {
+              console.error(`[quiz PATCH] CATASTROPHIC: results snapshot restore also failed for quiz ${quizId}:`, restoreErr.message);
+              return NextResponse.json(
+                {
+                  ok: false,
+                  error: "INSERT_AND_RESTORE_FAILED",
+                  message: "Sauvegarde des résultats échouée et restauration aussi. Ton éditeur a la version actuelle — ne quitte pas la page et réessaie.",
+                  insert_error: insertErr.message,
+                  restore_error: restoreErr.message,
+                },
+                { status: 500 },
+              );
+            }
+          }
+          return NextResponse.json(
+            { ok: false, error: "INSERT_FAILED_RESTORED", message: `Sauvegarde des résultats échouée (${insertErr.message}), ta version précédente a été restaurée.` },
+            { status: 500 },
+          );
+        }
       }
     }
 
