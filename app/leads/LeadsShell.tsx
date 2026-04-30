@@ -80,6 +80,12 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
     return result;
   }, [leads, filterQuiz, search]);
 
+  // Split into unlocked (rendered in the table) and locked (single blurred
+  // block with one cadenas + CTA below). Server already returned `••••••`
+  // masks for locked rows, so the eventual blur is purely decorative.
+  const unlockedFiltered = useMemo(() => filtered.filter((l) => !l.locked), [filtered]);
+  const lockedFiltered = useMemo(() => filtered.filter((l) => l.locked), [filtered]);
+
   function exportCSV() {
     const headers = [
       t("csv.email"),
@@ -149,43 +155,21 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
 
   return (
     <AppShell userEmail={userEmail} headerTitle={tNav("leads")}>
-      {/* Banner */}
+      {/* Banner — counts visible leads only; locked leads are surfaced in
+          the dedicated block below the table so they don't muddy the
+          headline. */}
       <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
         <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
           <Users className="h-5 w-5" />
         </div>
         <div className="flex-1 min-w-0">
           <h2 className="text-lg font-bold">{t("title")}</h2>
-          <p className="text-sm text-white/70">{t("captured", { count: filtered.length })}</p>
+          <p className="text-sm text-white/70">{t("captured", { count: unlockedFiltered.length })}</p>
         </div>
-        <Button onClick={exportCSV} variant="secondary" className="shrink-0" disabled={filtered.filter((l) => !l.locked).length === 0}>
+        <Button onClick={exportCSV} variant="secondary" className="shrink-0" disabled={unlockedFiltered.length === 0}>
           <Download className="h-4 w-4 mr-2" /> {t("exportCsv")}
         </Button>
       </div>
-
-      {/* Free-tier upsell — only shown if there are actually locked leads.
-          Wording is deliberately concrete ("X leads bloqués") so the value
-          of upgrading is obvious. */}
-      {lockedCount > 0 && plan === "free" && (
-        <div className="rounded-xl border border-amber-300/60 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40 px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0">
-            <Lock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-amber-900 dark:text-amber-100">
-              {lockedCount} lead{lockedCount > 1 ? "s" : ""} verrouillé{lockedCount > 1 ? "s" : ""}
-            </p>
-            <p className="text-sm text-amber-800/80 dark:text-amber-200/80">
-              Le plan gratuit affiche les 10 premiers leads par fenêtre de 30 jours. Passe en plan payant pour tout débloquer (export, sync Systeme.io, lecture).
-            </p>
-          </div>
-          <Button asChild variant="default" className="bg-amber-600 hover:bg-amber-700 text-white shrink-0">
-            <Link href="/settings?tab=billing">
-              <Sparkles className="h-4 w-4 mr-2" /> Débloquer
-            </Link>
-          </Button>
-        </div>
-      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -233,16 +217,14 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
         ))}
       </div>
 
-      {/* Table */}
+      {/* Table — only renders unlocked leads. Locked leads are corralled
+          into the dedicated blurred block below so we can show ONE cadenas
+          + ONE CTA instead of repeating per row. The empty state only
+          fires when there are NEITHER unlocked NOR locked leads matching
+          the current filter. */}
       {loading ? (
-        // Adaptive skeleton — full table height on desktop, shorter
-        // on mobile so the placeholder doesn't dominate a small
-        // viewport.
         <SkeletonCard className="h-[240px] md:h-[420px]" />
-      ) : filtered.length === 0 ? (
-        // Two distinct empty states:
-        //  - "no leads at all" → mascot waves, encouraging copy
-        //  - "filter excluded everything" → mascot in search mode + reset CTA
+      ) : unlockedFiltered.length === 0 && lockedFiltered.length === 0 ? (
         <Card>
           <CardContent className="py-14 text-center flex flex-col items-center gap-3">
             <Mascot
@@ -269,96 +251,135 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="text-left px-4 py-3 font-medium">{t("cols.email")}</th>
-                  <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">{t("cols.name")}</th>
-                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">{t("cols.quiz")}</th>
-                  <th className="text-left px-4 py-3 font-medium hidden md:table-cell">{t("cols.result")}</th>
-                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">{t("cols.sioTag")}</th>
-                  <th className="text-center px-4 py-3 font-medium">{t("cols.sync")}</th>
-                  <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">{t("cols.date")}</th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((lead) => {
-                  // The CSS blur is purely decorative — the server has already
-                  // replaced PII with `••••••` masks for locked rows, so even
-                  // a screen-reader / DOM inspection won't lift the lock.
-                  const blur = lead.locked ? "blur-sm select-none pointer-events-none" : "";
-                  return (
-                    <tr key={lead.id} className={`border-b hover:bg-muted/30 transition-colors ${lead.locked ? "opacity-80 bg-amber-50/30 dark:bg-amber-950/10" : ""}`}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          {lead.locked ? (
-                            <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                          ) : (
-                            <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          )}
-                          <span className={`font-medium truncate max-w-[200px] ${blur}`}>{lead.email}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">
-                        <span className={blur}>
-                          {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 hidden md:table-cell">
-                        <span className="truncate max-w-[150px] block text-muted-foreground">{lead.quiz_title}</span>
-                      </td>
-                      <td className="px-4 py-3 hidden md:table-cell">
-                        <Badge variant="secondary" className={`text-xs ${blur}`}>
-                          {lead.result_title ?? lead.quiz_results?.title ?? "—"}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">
-                        <span className={blur}>
-                          {lead.sio_tag_applied ?? lead.quiz_results?.sio_tag_name ?? "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {lead.locked ? (
-                          <Lock className="h-4 w-4 text-amber-500 mx-auto" />
-                        ) : lead.sio_synced ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
-                        ) : (
-                          <XCircle className="h-4 w-4 text-muted-foreground/40 mx-auto" />
-                        )}
-                      </td>
-                      <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">
-                        {new Date(lead.created_at).toLocaleDateString(localeTag)}
-                      </td>
-                      <td className="px-4 py-3">
-                        {lead.locked ? (
-                          <Button asChild variant="ghost" size="sm" className="text-xs text-amber-600 hover:text-amber-700">
-                            <Link href="/settings?tab=billing">
-                              <Sparkles className="h-3.5 w-3.5 mr-1" /> Débloquer
-                            </Link>
-                          </Button>
-                        ) : !lead.sio_synced ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => syncLead(lead.id, lead.quiz_id)}
-                            disabled={syncing.has(lead.id)}
-                            className="text-xs"
-                          >
-                            <RefreshCw className={`h-3.5 w-3.5 mr-1 ${syncing.has(lead.id) ? "animate-spin" : ""}`} />
-                            Sync
-                          </Button>
-                        ) : null}
-                      </td>
+        <>
+          {unlockedFiltered.length > 0 && (
+            <Card>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left px-4 py-3 font-medium">{t("cols.email")}</th>
+                      <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">{t("cols.name")}</th>
+                      <th className="text-left px-4 py-3 font-medium hidden md:table-cell">{t("cols.quiz")}</th>
+                      <th className="text-left px-4 py-3 font-medium hidden md:table-cell">{t("cols.result")}</th>
+                      <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">{t("cols.sioTag")}</th>
+                      <th className="text-center px-4 py-3 font-medium">{t("cols.sync")}</th>
+                      <th className="text-left px-4 py-3 font-medium hidden lg:table-cell">{t("cols.date")}</th>
+                      <th className="px-4 py-3"></th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+                  </thead>
+                  <tbody>
+                    {unlockedFiltered.map((lead) => (
+                      <tr key={lead.id} className="border-b hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="font-medium truncate max-w-[200px]">{lead.email}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">
+                          {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "—"}
+                        </td>
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          <span className="truncate max-w-[150px] block text-muted-foreground">{lead.quiz_title}</span>
+                        </td>
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          <Badge variant="secondary" className="text-xs">
+                            {lead.result_title ?? lead.quiz_results?.title ?? "—"}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">
+                          {lead.sio_tag_applied ?? lead.quiz_results?.sio_tag_name ?? "—"}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {lead.sio_synced ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500 mx-auto" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-muted-foreground/40 mx-auto" />
+                          )}
+                        </td>
+                        <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">
+                          {new Date(lead.created_at).toLocaleDateString(localeTag)}
+                        </td>
+                        <td className="px-4 py-3">
+                          {!lead.sio_synced && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => syncLead(lead.id, lead.quiz_id)}
+                              disabled={syncing.has(lead.id)}
+                              className="text-xs"
+                            >
+                              <RefreshCw className={`h-3.5 w-3.5 mr-1 ${syncing.has(lead.id) ? "animate-spin" : ""}`} />
+                              Sync
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+
+          {/* Free-tier locked block — single visual statement: 5 sample
+              rows blurred behind a centered cadenas + CTA. Server already
+              returned `••••••` masks for each row, so the blur is purely
+              decorative (DevTools / DOM inspection won't lift it). */}
+          {lockedFiltered.length > 0 && (
+            <Card className="overflow-hidden relative border-amber-300/60">
+              <div aria-hidden className="select-none pointer-events-none filter blur-md opacity-60">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left px-4 py-3 font-medium">{t("cols.email")}</th>
+                      <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">{t("cols.name")}</th>
+                      <th className="text-left px-4 py-3 font-medium hidden md:table-cell">{t("cols.quiz")}</th>
+                      <th className="text-left px-4 py-3 font-medium hidden md:table-cell">{t("cols.result")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lockedFiltered.slice(0, 5).map((lead) => (
+                      <tr key={lead.id} className="border-b">
+                        <td className="px-4 py-3 font-medium">{lead.email}</td>
+                        <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">
+                          {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "—"}
+                        </td>
+                        <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">
+                          {lead.quiz_title}
+                        </td>
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          <Badge variant="secondary" className="text-xs">
+                            {lead.result_title ?? "—"}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-amber-50/85 via-amber-50/95 to-amber-100/95 dark:from-amber-950/85 dark:via-amber-950/95 dark:to-amber-900/95">
+                <div className="text-center max-w-sm px-6 py-8">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-amber-500/15 flex items-center justify-center mb-3">
+                    <Lock className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-amber-900 dark:text-amber-50">
+                    {lockedFiltered.length} lead{lockedFiltered.length > 1 ? "s" : ""} verrouillé{lockedFiltered.length > 1 ? "s" : ""}
+                  </h3>
+                  <p className="text-sm text-amber-800/80 dark:text-amber-200/80 mt-1">
+                    Le plan gratuit affiche 10 leads par fenêtre de 30 jours. Passe en plan payant pour tout débloquer.
+                  </p>
+                  <Button asChild className="mt-4 bg-amber-600 hover:bg-amber-700 text-white">
+                    <Link href="/settings?tab=billing">
+                      <Sparkles className="h-4 w-4 mr-2" /> Débloquer tous mes leads
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
+        </>
       )}
     </AppShell>
   );
