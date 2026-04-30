@@ -6,6 +6,8 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sanitizeSlug, sanitizeShareNetworks, BRAND_FONT_CHOICES } from "@/lib/quizBranding";
 import { sanitizeRichText } from "@/lib/richText";
 import { resolveQuizAuth } from "@/lib/embed/quizAuth";
+import { computeLockedLeadIds, redactLockedLead, type LeadLike } from "@/lib/leadLock";
+import { isPaidPlan } from "@/lib/planLimits";
 
 // Fields accepting rich-text HTML (bold, italic, links, images, alignment).
 const RICH_TEXT_FIELDS = ["introduction"] as const;
@@ -58,10 +60,44 @@ export async function GET(req: NextRequest, context: RouteContext) {
       resultTitleMap.set(r.id, r.title);
     }
 
-    const leads = (leadsRes.data ?? []).map((l: Record<string, unknown>) => ({
-      ...l,
-      result_title: resultTitleMap.get(l.result_id as string) ?? null,
-    }));
+    // Free-tier lock — computed against ALL the creator's quiz_leads (across
+    // every quiz they own) so navigating between quizzes doesn't change which
+    // leads are visible. Embed (anonymous) mode never has leads to lock.
+    let lockedIds = new Set<string>();
+    let plan = "free";
+    if (auth.mode === "user") {
+      const { data: planRow } = await supabase
+        .from("profiles")
+        .select("plan")
+        .eq("user_id", auth.userId)
+        .maybeSingle();
+      plan = String((planRow as { plan?: string | null } | null)?.plan ?? "free");
+      if (!isPaidPlan(plan)) {
+        const { data: ownedQuizzes } = await supabase
+          .from("quizzes")
+          .select("id")
+          .eq("user_id", auth.userId);
+        const ownedQuizIds = (ownedQuizzes ?? []).map((q: { id: string }) => q.id);
+        if (ownedQuizIds.length > 0) {
+          const { data: timeline } = await supabase
+            .from("quiz_leads")
+            .select("id, created_at")
+            .in("quiz_id", ownedQuizIds);
+          lockedIds = computeLockedLeadIds(timeline ?? [], plan);
+        }
+      }
+    }
+
+    const leads = (leadsRes.data ?? []).map((l: Record<string, unknown>) => {
+      const enriched = {
+        ...l,
+        result_title: resultTitleMap.get(l.result_id as string) ?? null,
+      };
+      const locked = lockedIds.has(l.id as string);
+      return locked
+        ? redactLockedLead({ ...enriched, locked: true } as unknown as LeadLike & { locked: true })
+        : { ...enriched, locked: false };
+    });
 
     return NextResponse.json({
       ok: true,
@@ -74,6 +110,8 @@ export async function GET(req: NextRequest, context: RouteContext) {
         results: resultsRes.data ?? [],
       },
       leads,
+      plan,
+      locked_count: lockedIds.size,
     });
   } catch (e) {
     return NextResponse.json(

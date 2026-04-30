@@ -13,6 +13,8 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sioUserRequest } from "@/lib/sio/userApiClient";
 import { resolveApiKey } from "@/lib/sio/resolveApiKey";
+import { computeLockedLeadIds } from "@/lib/leadLock";
+import { isPaidPlan } from "@/lib/planLimits";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -55,14 +57,43 @@ export async function POST(req: NextRequest, context: RouteContext) {
     // Determine which leads to sync
     let leadsQuery = supabaseAdmin
       .from("quiz_leads")
-      .select("id, email, first_name, last_name, phone, country, result_id")
+      .select("id, email, first_name, last_name, phone, country, result_id, created_at")
       .eq("quiz_id", quizId);
 
     if (leadIds.length > 0) {
       leadsQuery = leadsQuery.in("id", leadIds);
     }
 
-    const { data: leads } = await leadsQuery;
+    const { data: leadsRaw } = await leadsQuery;
+
+    // Free-tier guard: locked leads must NOT leave the platform via SIO sync,
+    // otherwise paying for Systeme.io would let creators trivially extract
+    // the PII the leads UI is hiding behind a blur.
+    const { data: planRow } = await supabaseAdmin
+      .from("profiles")
+      .select("plan")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const plan = String((planRow as { plan?: string | null } | null)?.plan ?? "free");
+    let leads = leadsRaw;
+    let skippedLocked = 0;
+    if (!isPaidPlan(plan)) {
+      const { data: ownedQuizzes } = await supabaseAdmin
+        .from("quizzes")
+        .select("id")
+        .eq("user_id", user.id);
+      const ownedQuizIds = (ownedQuizzes ?? []).map((q: { id: string }) => q.id);
+      if (ownedQuizIds.length > 0) {
+        const { data: timeline } = await supabaseAdmin
+          .from("quiz_leads")
+          .select("id, created_at")
+          .in("quiz_id", ownedQuizIds);
+        const lockedIds = computeLockedLeadIds(timeline ?? [], plan);
+        const before = (leads ?? []).length;
+        leads = (leads ?? []).filter((l: { id: string }) => !lockedIds.has(l.id));
+        skippedLocked = before - leads.length;
+      }
+    }
 
     // For individual lead sync, get result tags
     const resultTagMap = new Map<string, string>();
@@ -159,7 +190,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
         .in("id", syncedLeadIds);
     }
 
-    return NextResponse.json({ ok: true, synced, errors, errorDetails });
+    return NextResponse.json({ ok: true, synced, errors, skipped_locked: skippedLocked, errorDetails });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
