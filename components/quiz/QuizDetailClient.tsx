@@ -39,6 +39,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { SioTagPicker } from "@/components/ui/sio-tag-picker";
 import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { interpolateText } from "@/lib/quizPersonalization";
 
@@ -553,6 +556,81 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
    * The badge is purely informative here. The "Rééquilibrer avec l'IA" CTA
    * (Session 4) reuses this signal as the trigger condition.
    */
+  // AI rebalance modal state (Marie's feedback #3 partie A, 2026-04). The
+  // creator clicks "Rééquilibrer avec l'IA" on a low-coverage result, the
+  // server asks Claude to redistribute option→result mappings, and we show
+  // the diff before applying. Nothing persists until the creator clicks
+  // "Apply" — the AI cannot silently mutate their data.
+  type RebalanceChange = { question_index: number; option_index: number; from: number; to: number };
+  type RebalanceProposal = { changes: RebalanceChange[]; rationale: string | null };
+  const [rebalanceTarget, setRebalanceTarget] = useState<number | null>(null);
+  const [rebalanceIntent, setRebalanceIntent] = useState("");
+  const [rebalanceLoading, setRebalanceLoading] = useState(false);
+  const [rebalanceProposal, setRebalanceProposal] = useState<RebalanceProposal | null>(null);
+  const [rebalanceError, setRebalanceError] = useState<string | null>(null);
+
+  const openRebalance = useCallback((resultIndex: number) => {
+    setRebalanceTarget(resultIndex);
+    setRebalanceIntent("");
+    setRebalanceProposal(null);
+    setRebalanceError(null);
+  }, []);
+
+  const closeRebalance = useCallback(() => {
+    if (rebalanceLoading) return;
+    setRebalanceTarget(null);
+    setRebalanceProposal(null);
+    setRebalanceError(null);
+    setRebalanceIntent("");
+  }, [rebalanceLoading]);
+
+  const requestRebalance = useCallback(async () => {
+    if (rebalanceTarget == null || rebalanceLoading) return;
+    setRebalanceLoading(true);
+    setRebalanceError(null);
+    setRebalanceProposal(null);
+    try {
+      const res = await fetch(`/api/quiz/${quizId}/rebalance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetResultIndex: rebalanceTarget, intent: rebalanceIntent }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.ok) {
+        setRebalanceError(data?.error ?? "Une erreur est survenue.");
+        return;
+      }
+      setRebalanceProposal({
+        changes: Array.isArray(data.changes) ? data.changes : [],
+        rationale: typeof data.rationale === "string" ? data.rationale : null,
+      });
+    } catch (e: any) {
+      setRebalanceError(e?.message ?? "Une erreur est survenue.");
+    } finally {
+      setRebalanceLoading(false);
+    }
+  }, [quizId, rebalanceTarget, rebalanceIntent, rebalanceLoading]);
+
+  const applyRebalance = useCallback(() => {
+    if (!rebalanceProposal || rebalanceProposal.changes.length === 0) return;
+    setEditQuestions((prev) => {
+      // Build a quick lookup map (questionIndex,optionIndex) → newResultIndex
+      const map = new Map<string, number>();
+      for (const c of rebalanceProposal.changes) {
+        map.set(`${c.question_index}:${c.option_index}`, c.to);
+      }
+      return prev.map((q, qi) => ({
+        ...q,
+        options: q.options.map((o, oi) => {
+          const target = map.get(`${qi}:${oi}`);
+          return target !== undefined ? { ...o, result_index: target } : o;
+        }),
+      }));
+    });
+    toast.success(t("rebalanceApplied", { count: rebalanceProposal.changes.length }));
+    closeRebalance();
+  }, [rebalanceProposal, t, closeRebalance]);
+
   type ResultCoverageSeverity = "ok" | "warn" | "danger";
   const resultCoverage = useMemo(() => {
     const N = editQuestions.length;
@@ -1459,6 +1537,16 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                               : t("coverageHeadingWarn", { count: cov.questionsLeading, total: cov.totalQuestions })}
                           </p>
                           <p className="text-xs opacity-90 mt-0.5">{t("coverageHelp")}</p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="mt-2.5 bg-white/70 dark:bg-black/20"
+                            onClick={() => openRebalance(ri)}
+                          >
+                            <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                            {t("rebalanceCta")}
+                          </Button>
                         </div>
                       </div>
                     )}
@@ -1538,6 +1626,104 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               <ArrowUp className="w-5 h-5" />
             </button>
           )}
+
+          {/* AI rebalance modal — opens from the warn/danger banner above
+              each result. Three states: input (intent + analyse), proposal
+              (diff + apply), error. The "Apply" button is the only path
+              that mutates editQuestions, so the AI never touches data
+              without an explicit click. */}
+          <Dialog open={rebalanceTarget !== null} onOpenChange={(open) => { if (!open) closeRebalance(); }}>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  {t("rebalanceDialogTitle")}
+                </DialogTitle>
+                <DialogDescription>
+                  {rebalanceTarget !== null
+                    ? t("rebalanceDialogBody", {
+                        target: cleanPlaceholdersForLabel(editResults[rebalanceTarget]?.title).replace(/<[^>]*>/g, "").trim() || t("previewResult", { n: rebalanceTarget + 1 }),
+                      })
+                    : ""}
+                </DialogDescription>
+              </DialogHeader>
+
+              {rebalanceProposal === null && (
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="rebalance-intent" className="text-xs">{t("rebalanceIntentLabel")}</Label>
+                    <Textarea
+                      id="rebalance-intent"
+                      value={rebalanceIntent}
+                      onChange={(e) => setRebalanceIntent(e.target.value.slice(0, 500))}
+                      placeholder={t("rebalanceIntentPh")}
+                      rows={3}
+                      className="text-sm mt-1.5"
+                      disabled={rebalanceLoading}
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1">{t("rebalanceIntentHint")}</p>
+                  </div>
+                  {rebalanceError && (
+                    <div className="rounded-lg border border-red-300 bg-red-50 dark:bg-red-950/40 px-3 py-2 text-xs text-red-900 dark:text-red-100">
+                      {rebalanceError}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {rebalanceProposal !== null && (
+                <div className="space-y-3">
+                  {rebalanceProposal.rationale && (
+                    <p className="text-sm text-muted-foreground italic">"{rebalanceProposal.rationale}"</p>
+                  )}
+                  {rebalanceProposal.changes.length === 0 ? (
+                    <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+                      {t("rebalanceNoChange")}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border bg-muted/30 max-h-64 overflow-y-auto">
+                      <ul className="divide-y">
+                        {rebalanceProposal.changes.map((c, i) => {
+                          const qText = cleanPlaceholdersForLabel(editQuestions[c.question_index]?.question_text).replace(/<[^>]*>/g, "").trim() || `Q${c.question_index + 1}`;
+                          const oText = cleanPlaceholdersForLabel(editQuestions[c.question_index]?.options[c.option_index]?.text).replace(/<[^>]*>/g, "").trim() || `Opt ${c.option_index + 1}`;
+                          const fromTitle = cleanPlaceholdersForLabel(editResults[c.from]?.title).replace(/<[^>]*>/g, "").trim() || `${c.from + 1}`;
+                          const toTitle = cleanPlaceholdersForLabel(editResults[c.to]?.title).replace(/<[^>]*>/g, "").trim() || `${c.to + 1}`;
+                          return (
+                            <li key={i} className="px-3 py-2 text-xs">
+                              <div className="font-medium truncate">{qText}</div>
+                              <div className="text-muted-foreground truncate">"{oText}"</div>
+                              <div className="mt-1 flex items-center gap-1.5 text-[11px]">
+                                <span className="px-1.5 py-0.5 rounded bg-muted line-through opacity-70">{fromTitle}</span>
+                                <span aria-hidden>→</span>
+                                <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">{toTitle}</span>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <DialogFooter className="gap-2 sm:gap-2">
+                <Button variant="outline" onClick={closeRebalance} disabled={rebalanceLoading}>
+                  {t("rebalanceCancel")}
+                </Button>
+                {rebalanceProposal === null ? (
+                  <Button onClick={requestRebalance} disabled={rebalanceLoading}>
+                    {rebalanceLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    {t("rebalanceAnalyse")}
+                  </Button>
+                ) : (
+                  <Button onClick={applyRebalance} disabled={rebalanceProposal.changes.length === 0}>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    {t("rebalanceApply", { count: rebalanceProposal.changes.length })}
+                  </Button>
+                )}
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
 
