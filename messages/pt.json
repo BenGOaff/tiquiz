@@ -559,6 +559,15 @@
     "cancelSub": "Cancelar a minha subscrição",
     "confirmCancelSub": "Tens a certeza que queres cancelar a tua subscrição? Voltarás ao plano gratuito (1 quiz, 10 respostas/mês).",
     "cancelInstructions": "Para cancelar, contacta-nos em hello@ethilife.fr ou gere a tua subscrição no Systeme.io.",
+    "lifetimeAccess": "Acesso vitalício",
+    "cancelRequested": "Cancelamento registado. Mantens o acesso até ao fim do teu período atual.",
+    "cancelError": "Não foi possível cancelar. Tenta de novo ou contacta hello@ethilife.fr.",
+    "cancelDialog": {
+      "title": "Cancelar a tua subscrição?",
+      "body": "Mantens o acesso completo até ao fim do teu período atual e depois passas automaticamente para o plano gratuito. Os teus quizzes, sondagens e leads atuais ficam guardados.",
+      "keep": "Manter o plano",
+      "confirm": "Confirmar o cancelamento"
+    },
     "popular": "Popular",
     "currentPlan": "Plano atual",
     "paymentsManaged": "Os pagamentos são geridos pelo Systeme.io. Podes mudar de plano em qualquer momento.",

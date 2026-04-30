@@ -7,8 +7,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createClient } from "@supabase/supabase-js";
+import { timingSafeEqual } from "crypto";
 
 const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
+
+/**
+ * Constant-time secret comparison. The previous `received !== expected`
+ * check leaked information about how many leading characters matched, so
+ * an attacker firing thousands of guesses could bisect the secret one
+ * byte at a time. timingSafeEqual returns in O(n) regardless of where
+ * the mismatch happens.
+ */
+function secretMatches(received: string | null | undefined, expected: string | undefined): boolean {
+  if (!received || !expected) return false;
+  const a = Buffer.from(received);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim();
 
 const supabaseAnon = createClient(
@@ -131,7 +147,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const secret = req.nextUrl.searchParams.get("secret");
-    if (!WEBHOOK_SECRET || secret !== WEBHOOK_SECRET) {
+    if (!secretMatches(secret, WEBHOOK_SECRET)) {
       return NextResponse.json({ error: "Invalid secret" }, { status: 401 });
     }
 

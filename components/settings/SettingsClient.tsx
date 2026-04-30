@@ -10,9 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Settings, Palette, Key, Trash2, Loader2, Save,
   CreditCard, Upload, Check, Crown, Zap, Star, ArrowRight,
-  Tag as TagIcon, Workflow, AlertTriangle, ExternalLink,
+  Tag as TagIcon, Workflow, AlertTriangle, ExternalLink, Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
@@ -101,6 +104,9 @@ export default function SettingsClient() {
   const [brandTone, setBrandTone] = useState("professionnel");
   const [brandWebsiteUrl, setBrandWebsiteUrl] = useState("");
   const [uploadingLogo, setUploadingLogo] = useState(false);
+
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     fetch("/api/profile")
@@ -197,9 +203,43 @@ export default function SettingsClient() {
     }
   }
 
+  async function handleConfirmCancel() {
+    if (cancelling) return;
+    setCancelling(true);
+    try {
+      const res = await fetch("/api/billing/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // WhenBillingCycleEnds = grace period until next billing date.
+        // SIO webhook will flip plan→free at period end (handled in
+        // app/api/systeme-io/webhook/route.ts).
+        body: JSON.stringify({ cancel: "WhenBillingCycleEnds" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data?.message ?? t("cancelError"));
+        return;
+      }
+      toast.success(t("cancelRequested"));
+      setCancelOpen(false);
+      // Refresh profile so the UI reflects any immediate downgrade
+      // (status="no_active_subscription" path in the API).
+      fetch("/api/profile")
+        .then((r) => r.json())
+        .then((d) => { if (d.ok && d.profile) setProfile(d.profile); })
+        .catch(() => {});
+    } catch {
+      toast.error(t("cancelError"));
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   if (loading) return null;
 
   const currentPlan = profile?.plan ?? "free";
+  const isLifetimePlan = currentPlan === "beta" || currentPlan === "lifetime";
+  const hasActiveSubscription = currentPlan === "monthly" || currentPlan === "yearly";
 
   return (
     <div className="space-y-5">
@@ -543,13 +583,26 @@ export default function SettingsClient() {
               <CardTitle>{t("subscriptionTitle")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <span className="text-lg font-semibold capitalize">{currentPlan}</span>
-                {currentPlan === "free" && <span className="text-sm text-muted-foreground">{t("freeInline")}</span>}
-                {(currentPlan === "monthly" || currentPlan === "yearly" || currentPlan === "lifetime") && <span className="text-sm text-muted-foreground">{t("paidInline")}</span>}
+                {currentPlan === "free" && (
+                  <span className="text-sm text-muted-foreground">{t("freeInline")}</span>
+                )}
+                {hasActiveSubscription && (
+                  <span className="text-sm text-muted-foreground">{t("paidInline")}</span>
+                )}
+                {isLifetimePlan && (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 px-2 py-1 rounded-full">
+                    <Sparkles className="h-3 w-3" /> {t("lifetimeAccess")}
+                  </span>
+                )}
               </div>
-              {(currentPlan === "monthly" || currentPlan === "yearly") && (
-                <button type="button" onClick={() => { if (confirm(t("confirmCancelSub"))) { toast.info(t("cancelInstructions")); } }} className="text-sm text-destructive hover:underline">
+              {hasActiveSubscription && (
+                <button
+                  type="button"
+                  onClick={() => setCancelOpen(true)}
+                  className="text-sm text-destructive hover:underline"
+                >
                   {t("cancelSub")}
                 </button>
               )}
@@ -618,6 +671,31 @@ export default function SettingsClient() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Cancel-subscription confirmation. Calls /api/billing/cancel which
+          tells SIO to cancel at the end of the current billing period. The
+          eventual SALE_CANCELED webhook then flips plan→free locally. */}
+      <Dialog open={cancelOpen} onOpenChange={(open) => { if (!cancelling) setCancelOpen(open); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("cancelDialog.title")}</DialogTitle>
+            <DialogDescription>{t("cancelDialog.body")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setCancelOpen(false)} disabled={cancelling}>
+              {t("cancelDialog.keep")}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmCancel}
+              disabled={cancelling}
+            >
+              {cancelling && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {t("cancelDialog.confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
