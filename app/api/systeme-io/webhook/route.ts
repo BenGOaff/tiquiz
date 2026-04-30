@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createClient } from "@supabase/supabase-js";
 import { timingSafeEqual } from "crypto";
+import { getSignatureMode, verifySioSignature } from "@/lib/sioWebhookSig";
 
 const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
 
@@ -146,12 +147,31 @@ export async function POST(req: NextRequest) {
   let eventId: string | null = null;
 
   try {
-    const secret = req.nextUrl.searchParams.get("secret");
-    if (!secretMatches(secret, WEBHOOK_SECRET)) {
-      return NextResponse.json({ error: "Invalid secret" }, { status: 401 });
+    // Read the raw body FIRST so we can HMAC-verify it before parsing.
+    let rawText: string;
+    try { rawText = await req.text(); }
+    catch { return NextResponse.json({ error: "Invalid body" }, { status: 400 }); }
+
+    // Auth: HMAC signature when SYSTEME_IO_WEBHOOK_SIGNING_SECRET is set
+    // (defense-in-depth — closes URL-secret leak vector). When it's not
+    // set we fall back to the legacy ?secret= shape so rotating SIO's
+    // webhook config isn't a hard cutover.
+    const sigMode = getSignatureMode();
+    if (sigMode.mode === "required") {
+      const sigHeader = req.headers.get("x-webhook-signature");
+      const verdict = verifySioSignature(rawText, sigHeader);
+      if (!verdict.ok) {
+        console.warn(`[Tiquiz webhook] HMAC verification failed: ${verdict.reason}`);
+        return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+      }
+    } else {
+      const secret = req.nextUrl.searchParams.get("secret");
+      if (!secretMatches(secret, WEBHOOK_SECRET)) {
+        return NextResponse.json({ error: "Invalid secret" }, { status: 401 });
+      }
     }
 
-    try { const text = await req.text(); rawBody = JSON.parse(text); }
+    try { rawBody = JSON.parse(rawText); }
     catch { return NextResponse.json({ error: "Invalid body" }, { status: 400 }); }
 
     // SIO sends the event type both in the X-Webhook-Event header and inside
