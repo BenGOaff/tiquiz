@@ -3,17 +3,27 @@
 // Aligned with the Tipote `lib/planLimits.ts` API surface so shared logic
 // (e.g. `lib/leadLock.ts`) can be ported across repos with zero friction.
 
-export type PlanId = "free" | "lifetime" | "monthly" | "yearly";
+export type PlanId = "free" | "lifetime" | "monthly" | "yearly" | "beta";
 
 export function normalizePlanId(raw: string | null | undefined): PlanId {
   const s = (raw ?? "").trim().toLowerCase();
-  if (s === "lifetime" || s === "monthly" || s === "yearly") return s;
+  if (s === "lifetime" || s === "monthly" || s === "yearly" || s === "beta") return s;
   return "free";
 }
 
-/** True if the user is on any paying tier. Used to bypass all free-tier gates. */
+/**
+ * True if the user is on any paying tier. PERMISSIVE BY DESIGN: anything
+ * that isn't explicitly "free" (or empty/null) is treated as paid. This
+ * way, if a new plan tier ships in the DB before this file is updated,
+ * paying creators don't get locked out by accident.
+ *
+ * The `free` sentinel is the only value that triggers the lock, so creators
+ * on a beta-style or one-off plan slug stay fully unblocked.
+ */
 export function isPaidPlan(plan: string | null | undefined): boolean {
-  return normalizePlanId(plan) !== "free";
+  const s = (plan ?? "").trim().toLowerCase();
+  if (s === "" || s === "free") return false;
+  return true;
 }
 
 /**
@@ -27,3 +37,4 @@ export const FREE_LIMITS = {
   /** Visible leads per rolling 30-day window — captures keep happening, the rest blur */
   visibleLeadsPerMonth: 10,
 } as const;
+
