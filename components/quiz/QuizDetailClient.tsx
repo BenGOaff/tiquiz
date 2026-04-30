@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
-  ArrowLeft, Copy, Eye, CheckCircle, Share2,
+  ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
   Gift, Sparkles,
 } from "lucide-react";
@@ -39,7 +39,26 @@ import { CSS } from "@dnd-kit/utilities";
 import { SioTagPicker } from "@/components/ui/sio-tag-picker";
 import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
+import { interpolateText } from "@/lib/quizPersonalization";
+
+/** Demo first name used when rendering placeholders in the editor preview, so
+ *  the creator sees what a real visitor would see ("Bonjour Alex" rather than
+ *  the literal "Bonjour {name}"). The raw template is preserved in the edit
+ *  buffer — only the display layer is substituted.
+ *  Choice: short, gender-neutral, works in fr/en/es/it/pt/ar without sounding off. */
+const PREVIEW_DEMO_NAME = "Alex";
+
+/** Strip `{name}` (and other personalization placeholders) cleanly from a
+ *  label so the sidebar shows a usable preview of long titles like
+ *  "Bonjour {name}, voici ton résultat" → "Bonjour, voici ton résultat".
+ *  Empty-string interpolation collapses the trailing comma+space too. */
+function cleanPlaceholdersForLabel(text: string | null | undefined): string {
+  return interpolateText(text, { name: "", gender: "x" });
+}
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTranslations, useLocale } from "next-intl";
 import {
@@ -263,6 +282,45 @@ function SortableSidebarQuestion({ id, index, label, onClick, onRemove, canDelet
   );
 }
 
+// Same shape as SortableSidebarQuestion but for the results list (Marie's
+// feedback #2, 2026-04). Kept as a separate component because it also
+// carries a coverage-severity dot — the question sidebar doesn't have an
+// equivalent signal to surface.
+function SortableSidebarResult({ id, index, label, onClick, onRemove, canDelete, severity, severityTitle }: {
+  id: string; index: number; label: string; onClick: () => void; onRemove: () => void; canDelete: boolean;
+  severity: "ok" | "warn" | "danger"; severityTitle: string;
+}) {
+  const t = useTranslations("quizEditor");
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  // Quiet ok dot, amber warn, red danger — the danger state is the one that
+  // signals "this result can never be attributed", which Marie hit head-on.
+  const dotClass = severity === "ok"
+    ? "bg-emerald-500"
+    : severity === "warn" ? "bg-amber-500" : "bg-red-500";
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center gap-1 group">
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted touch-none" aria-label={t("reorder")}>
+        <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+      </button>
+      <button onClick={onClick} className="flex-1 text-left px-2 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors truncate flex items-center gap-2">
+        <span className={`inline-block w-1.5 h-1.5 rounded-full shrink-0 ${dotClass}`} aria-hidden title={severityTitle} />
+        <span className="text-xs text-muted-foreground">{index + 1}</span>
+        <span className="truncate">{label}</span>
+      </button>
+      {canDelete && (
+        <button onClick={onRemove} className="opacity-0 group-hover:opacity-100 text-destructive p-1 rounded hover:bg-destructive/10">
+          <Trash2 className="w-3 h-3" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 // Main component
 export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDetailClientProps) {
   // Single source of truth for "is this an anonymous embed render?".
@@ -340,6 +398,24 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const bonusRef = useRef<HTMLDivElement>(null);
   const resultRefs = useRef<(HTMLDivElement | null)[]>([]);
   const previewRef = useRef<HTMLDivElement>(null);
+
+  // Back-to-top FAB: the editor's preview canvas can run dozens of screens
+  // long once a creator stacks 10+ questions and 4+ result blocks. The
+  // browser scrollbar is hard to spot on a long quiz (Marie's feedback #1).
+  // We watch scrollTop on the preview container and surface a small floating
+  // button once the creator has scrolled past the first viewport.
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  useEffect(() => {
+    const el = previewRef.current;
+    if (!el) return;
+    const onScroll = () => setShowBackToTop(el.scrollTop > 400);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+  const scrollPreviewToTop = useCallback(() => {
+    previewRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   const scrollToSection = (id: string) => {
     let el: HTMLDivElement | null = null;
@@ -451,6 +527,156 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     () => ({ name: askFirstName, gender: askGender }),
     [askFirstName, askGender],
   );
+
+  // Display-only substitution for the preview canvas: replace {name} / {m|f|x}
+  // with a demo value so the creator sees what real visitors will see. The raw
+  // template (with placeholders) is preserved in the edit buffer — clicking a
+  // field still shows the {name} text for editing. Marie's feedback (2026-04):
+  // "Je trouve dommage de voir ce type de titre en aperçu du quiz".
+  const previewInterpolate = useCallback(
+    (text: string) => interpolateText(text, { name: PREVIEW_DEMO_NAME, gender: "x" }),
+    [],
+  );
+
+  /**
+   * Result-coverage health check (Marie's feedback #3 partie B, 2026-04).
+   *
+   * The scoring engine picks the result that wins a majority vote across the
+   * questions. A result with zero "votes" (no option in the whole quiz points
+   * to it) is mathematically unreachable. A result that's covered by only a
+   * tiny fraction of the questions can theoretically win but has very poor
+   * odds — Marie ran into exactly this when she added 2 layout-themed
+   * questions for a 4th result on a 10-question / 4-result quiz.
+   *
+   * For every result we surface:
+   *   - questionsLeading: how many questions have at least one option that
+   *     points to it
+   *   - severity: ok ≥ ceil(N/R), warn between 1 and ceil(N/R)-1, danger 0
+   *
+   * The badge is purely informative here. The "Rééquilibrer avec l'IA" CTA
+   * (Session 4) reuses this signal as the trigger condition.
+   */
+  // AI rewrite (Marie's feedback #4, 2026-04): the ✨ button on RichTextEdit
+  // sends the field's plain text to /api/quiz/[id]/rewrite and gets 3
+  // reformulations back. Each field-kind binding is memoised so the
+  // RichTextEdit doesn't re-render on every parent update.
+  const aiRewrite = useCallback(async (plain: string, fieldKind: string): Promise<string[] | null> => {
+    try {
+      const res = await fetch(`/api/quiz/${quizId}/rewrite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: plain, fieldKind }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.ok) {
+        toast.error(data?.error ?? t("errGeneric"));
+        return null;
+      }
+      return Array.isArray(data.proposals) ? data.proposals : null;
+    } catch {
+      toast.error(t("errGeneric"));
+      return null;
+    }
+  }, [quizId, t]);
+  const aiRewriteTitle = useCallback((p: string) => aiRewrite(p, "title"), [aiRewrite]);
+  const aiRewriteIntro = useCallback((p: string) => aiRewrite(p, "intro"), [aiRewrite]);
+  const aiRewriteQuestion = useCallback((p: string) => aiRewrite(p, "question"), [aiRewrite]);
+  const aiRewriteOption = useCallback((p: string) => aiRewrite(p, "option"), [aiRewrite]);
+  const aiRewriteResultTitle = useCallback((p: string) => aiRewrite(p, "result_title"), [aiRewrite]);
+  const aiRewriteResultDesc = useCallback((p: string) => aiRewrite(p, "result_description"), [aiRewrite]);
+  const aiRewriteResultInsight = useCallback((p: string) => aiRewrite(p, "result_insight"), [aiRewrite]);
+  const aiRewriteResultProjection = useCallback((p: string) => aiRewrite(p, "result_projection"), [aiRewrite]);
+
+  // AI rebalance modal state (Marie's feedback #3 partie A, 2026-04). The
+  // creator clicks "Rééquilibrer avec l'IA" on a low-coverage result, the
+  // server asks Claude to redistribute option→result mappings, and we show
+  // the diff before applying. Nothing persists until the creator clicks
+  // "Apply" — the AI cannot silently mutate their data.
+  type RebalanceChange = { question_index: number; option_index: number; from: number; to: number };
+  type RebalanceProposal = { changes: RebalanceChange[]; rationale: string | null };
+  const [rebalanceTarget, setRebalanceTarget] = useState<number | null>(null);
+  const [rebalanceIntent, setRebalanceIntent] = useState("");
+  const [rebalanceLoading, setRebalanceLoading] = useState(false);
+  const [rebalanceProposal, setRebalanceProposal] = useState<RebalanceProposal | null>(null);
+  const [rebalanceError, setRebalanceError] = useState<string | null>(null);
+
+  const openRebalance = useCallback((resultIndex: number) => {
+    setRebalanceTarget(resultIndex);
+    setRebalanceIntent("");
+    setRebalanceProposal(null);
+    setRebalanceError(null);
+  }, []);
+
+  const closeRebalance = useCallback(() => {
+    if (rebalanceLoading) return;
+    setRebalanceTarget(null);
+    setRebalanceProposal(null);
+    setRebalanceError(null);
+    setRebalanceIntent("");
+  }, [rebalanceLoading]);
+
+  const requestRebalance = useCallback(async () => {
+    if (rebalanceTarget == null || rebalanceLoading) return;
+    setRebalanceLoading(true);
+    setRebalanceError(null);
+    setRebalanceProposal(null);
+    try {
+      const res = await fetch(`/api/quiz/${quizId}/rebalance`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetResultIndex: rebalanceTarget, intent: rebalanceIntent }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.ok) {
+        setRebalanceError(data?.error ?? "Une erreur est survenue.");
+        return;
+      }
+      setRebalanceProposal({
+        changes: Array.isArray(data.changes) ? data.changes : [],
+        rationale: typeof data.rationale === "string" ? data.rationale : null,
+      });
+    } catch (e: any) {
+      setRebalanceError(e?.message ?? "Une erreur est survenue.");
+    } finally {
+      setRebalanceLoading(false);
+    }
+  }, [quizId, rebalanceTarget, rebalanceIntent, rebalanceLoading]);
+
+  const applyRebalance = useCallback(() => {
+    if (!rebalanceProposal || rebalanceProposal.changes.length === 0) return;
+    setEditQuestions((prev) => {
+      // Build a quick lookup map (questionIndex,optionIndex) → newResultIndex
+      const map = new Map<string, number>();
+      for (const c of rebalanceProposal.changes) {
+        map.set(`${c.question_index}:${c.option_index}`, c.to);
+      }
+      return prev.map((q, qi) => ({
+        ...q,
+        options: q.options.map((o, oi) => {
+          const target = map.get(`${qi}:${oi}`);
+          return target !== undefined ? { ...o, result_index: target } : o;
+        }),
+      }));
+    });
+    toast.success(t("rebalanceApplied", { count: rebalanceProposal.changes.length }));
+    closeRebalance();
+  }, [rebalanceProposal, t, closeRebalance]);
+
+  type ResultCoverageSeverity = "ok" | "warn" | "danger";
+  const resultCoverage = useMemo(() => {
+    const N = editQuestions.length;
+    const R = Math.max(1, editResults.length);
+    const expected = Math.max(1, Math.ceil(N / R));
+    return editResults.map((_, ri) => {
+      const questionsLeading = editQuestions.reduce(
+        (acc, q) => acc + (q.options.some((o) => o.result_index === ri) ? 1 : 0),
+        0,
+      );
+      const severity: ResultCoverageSeverity =
+        questionsLeading === 0 ? "danger" : questionsLeading < expected ? "warn" : "ok";
+      return { questionsLeading, totalQuestions: N, expected, severity };
+    });
+  }, [editQuestions, editResults]);
 
   // Bulk-genderize every text field of the quiz in one go. Used when the
   // author toggles "Ask gender" after the quiz was already generated without
@@ -653,6 +879,15 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const publicUrl = typeof window !== "undefined"
     ? `${window.location.origin}/q/${publicSegment}${previewSuffix}`
     : `/q/${publicSegment}${previewSuffix}`;
+  // Owner-side preview URL: same as publicUrl but with ?preview_name=Alex appended
+  // so the public client pre-fills the visitor's first name and skips lead
+  // capture. We keep this URL separate from `publicUrl` (the share link) so the
+  // "Copy link" button always copies the clean public URL — never the preview
+  // variant. PREVIEW_DEMO_NAME stays in lockstep with the editor canvas demo.
+  const previewUrl = (() => {
+    const sep = previewSuffix ? "&" : "?";
+    return `${publicUrl}${sep}preview_name=${encodeURIComponent(PREVIEW_DEMO_NAME)}`;
+  })();
   const handleCopyLink = () => { navigator.clipboard.writeText(publicUrl).then(() => { setCopied(true); toast.success(t("linkCopied")); setTimeout(() => setCopied(false), 2000); }); };
 
   // Drag-and-drop sensors for the sidebar question list
@@ -669,6 +904,35 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     const newIndex = ids.indexOf(String(over.id));
     if (oldIndex < 0 || newIndex < 0) return;
     setEditQuestions((prev) => arrayMove(prev, oldIndex, newIndex).map((q, i) => ({ ...q, sort_order: i })));
+  };
+
+  // Reorder results in the sidebar AND remap every option's `result_index`
+  // to point at the result's NEW position. Without the remap, an option
+  // that previously led to "Result A" (index 0) would silently start
+  // pointing to whatever result moved into slot 0 after the drag — a
+  // catastrophic data loss for the creator's logic. Mirror of the index
+  // bookkeeping `removeResult` already does on delete.
+  const handleResultDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const ids = editResults.map((_, i) => `r-${i}`);
+    const oldIndex = ids.indexOf(String(active.id));
+    const newIndex = ids.indexOf(String(over.id));
+    if (oldIndex < 0 || newIndex < 0) return;
+    setEditResults((prev) => arrayMove(prev, oldIndex, newIndex).map((r, i) => ({ ...r, sort_order: i })));
+    // Build oldIndex → newIndex remap, then rewrite every option's result_index.
+    setEditQuestions((prev) => {
+      const remap = new Map<number, number>();
+      const order = arrayMove(editResults.map((_, i) => i), oldIndex, newIndex);
+      order.forEach((from, to) => remap.set(from, to));
+      return prev.map((q) => ({
+        ...q,
+        options: q.options.map((o) => ({
+          ...o,
+          result_index: remap.get(o.result_index) ?? o.result_index,
+        })),
+      }));
+    });
   };
 
   // Helpers
@@ -762,7 +1026,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
             <Button
               size="sm"
               variant="outline"
-              onClick={() => window.open(publicUrl, "_blank", "noopener")}
+              onClick={() => window.open(previewUrl, "_blank", "noopener")}
+              title={uiLocale === "en" ? "Open in preview mode (no lead recorded)" : "Ouvrir en mode aperçu (aucun lead enregistré)"}
             >
               <Eye className="w-4 h-4 mr-1" />
               {uiLocale === "en" ? "Preview" : "Aperçu"}
@@ -816,7 +1081,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         id={`q-${i}`}
                         index={i}
                         label={(() => {
-                          const plain = (q.question_text || "").replace(/<[^>]*>/g, "").trim();
+                          // Strip placeholders ({name}, {m|f|x}) before truncating so the
+                          // sidebar shows readable preview text rather than raw template
+                          // syntax (Marie's feedback #5, 2026-04).
+                          const plain = cleanPlaceholdersForLabel(q.question_text).replace(/<[^>]*>/g, "").trim();
                           return plain ? plain.slice(0, 35) + (plain.length > 35 ? "…" : "") : t("sidebarEmptyQuestion");
                         })()}
                         onClick={() => scrollToSection(`q-${i}`)}
@@ -836,16 +1104,33 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     <span className="text-xs text-muted-foreground mr-2">2</span>{t("sidebarShareStep")}
                   </button>
                 )}
-                {/* Résultats */}
+                {/* Résultats — réordonnables par drag (Marie's feedback #2). */}
                 <div className="flex items-center justify-between pt-2"><span className="font-semibold text-xs uppercase tracking-wider text-muted-foreground">{t("sidebarResults")}</span><button onClick={addResult} className="text-primary hover:bg-primary/10 rounded p-0.5"><Plus className="w-4 h-4" /></button></div>
-                {editResults.map((r, i) => (
-                  <div key={i} className="flex items-center gap-1 group">
-                    <button onClick={() => scrollToSection(`r-${i}`)} className="flex-1 text-left px-3 py-2 rounded-lg hover:bg-muted border border-transparent hover:border-border transition-colors truncate">
-                      <span className="text-xs text-muted-foreground mr-2">{i+1}</span>{(r.title || "").replace(/<[^>]*>/g, "").trim() || t("sidebarEmptyResult")}
-                    </button>
-                    {editResults.length > 1 && <button onClick={() => removeResult(i)} className="opacity-0 group-hover:opacity-100 text-destructive p-1 rounded hover:bg-destructive/10"><Trash2 className="w-3 h-3" /></button>}
-                  </div>
-                ))}
+                <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleResultDragEnd}>
+                  <SortableContext items={editResults.map((_, i) => `r-${i}`)} strategy={verticalListSortingStrategy}>
+                    {editResults.map((r, i) => {
+                      const cov = resultCoverage[i] ?? { questionsLeading: 0, totalQuestions: editQuestions.length, expected: 1, severity: "danger" as const };
+                      const sevTitle = cov.severity === "danger"
+                        ? t("coverageDanger", { count: cov.totalQuestions })
+                        : cov.severity === "warn"
+                          ? t("coverageWarn", { count: cov.questionsLeading, total: cov.totalQuestions })
+                          : t("coverageOk", { count: cov.questionsLeading, total: cov.totalQuestions });
+                      return (
+                        <SortableSidebarResult
+                          key={`r-${i}`}
+                          id={`r-${i}`}
+                          index={i}
+                          label={cleanPlaceholdersForLabel(r.title).replace(/<[^>]*>/g, "").trim() || t("sidebarEmptyResult")}
+                          onClick={() => scrollToSection(`r-${i}`)}
+                          onRemove={() => removeResult(i)}
+                          canDelete={editResults.length > 1}
+                          severity={cov.severity}
+                          severityTitle={sevTitle}
+                        />
+                      );
+                    })}
+                  </SortableContext>
+                </DndContext>
               </>)}
               {leftTab === "design" && (<div className="space-y-5">
                 <div className="space-y-2">
@@ -1095,8 +1380,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <img src={brandLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
                     </div>
                   )}
-                  <RichTextEdit value={title} onChange={setTitle} singleLine className="text-3xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
-                  <RichTextEdit value={introduction} onChange={setIntroduction} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder={t("previewIntroPh")} />
+                  <RichTextEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} singleLine className="text-3xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
+                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder={t("previewIntroPh")} />
                   <div className="flex justify-center">
                     <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
                       <RichTextEdit
@@ -1123,11 +1408,11 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     <div className="flex-1 flex flex-col items-center justify-center">
                       <div className="max-w-2xl w-full space-y-8">
                         <p className="text-xs font-bold uppercase tracking-widest" style={{ color: pc }}>{t("previewQuestionsCounter", { n: qi + 1, total: editQuestions.length })}</p>
-                        <RichTextEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} availableVars={personalizationVars} singleLine className="text-2xl sm:text-4xl font-bold leading-tight" placeholder={t("previewQuestionPh")} />
+                        <RichTextEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-2xl sm:text-4xl font-bold leading-tight" placeholder={t("previewQuestionPh")} />
                         <div className={`grid gap-3 ${q.options.length >= 3 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
                           {q.options.map((opt, oi) => (
                             <div key={oi} className="relative p-5 rounded-xl border-2 border-border hover:border-primary/30 transition-all group">
-                              <RichTextEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} availableVars={personalizationVars} singleLine className="text-base font-medium" placeholder={t("previewOptionPh", { n: oi + 1 })} />
+                              <RichTextEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} onAIRewrite={aiRewriteOption} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-base font-medium" placeholder={t("previewOptionPh", { n: oi + 1 })} />
                               <div className="flex items-center gap-1.5 mt-2">
                                 <span className="text-xs" style={{ color: `${pc}99` }}>{t("previewPointFor")}</span>
                                 <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
@@ -1256,11 +1541,48 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               )}
 
               {/* ── RESULTS ── */}
-              {editResults.map((r, ri) => (
+              {editResults.map((r, ri) => {
+                const cov = resultCoverage[ri] ?? { questionsLeading: 0, totalQuestions: editQuestions.length, expected: 1, severity: "danger" as const };
+                // Subtle banner above each result that tells the creator how
+                // many questions can lead a visitor here. Only renders when
+                // there's something worth flagging — green/ok stays silent so
+                // a healthy quiz is uncluttered.
+                const showCoverage = cov.severity !== "ok" && editQuestions.length > 0;
+                return (
                 <div key={ri} ref={el => { resultRefs.current[ri] = el; }} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                   <div className="max-w-2xl w-full space-y-6">
-                    <RichTextEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} availableVars={personalizationVars} singleLine className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
-                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} availableVars={personalizationVars} className="text-muted-foreground text-lg leading-relaxed" placeholder={t("previewResultDescPh")} />
+                    {showCoverage && (
+                      <div
+                        className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
+                          cov.severity === "danger"
+                            ? "border-red-300 bg-red-50 text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100"
+                            : "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100"
+                        }`}
+                        role="status"
+                      >
+                        <span className={`mt-1 inline-block w-2 h-2 rounded-full shrink-0 ${cov.severity === "danger" ? "bg-red-500" : "bg-amber-500"}`} aria-hidden />
+                        <div className="flex-1">
+                          <p className="font-semibold">
+                            {cov.severity === "danger"
+                              ? t("coverageHeadingDanger")
+                              : t("coverageHeadingWarn", { count: cov.questionsLeading, total: cov.totalQuestions })}
+                          </p>
+                          <p className="text-xs opacity-90 mt-0.5">{t("coverageHelp")}</p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="mt-2.5 bg-white/70 dark:bg-black/20"
+                            onClick={() => openRebalance(ri)}
+                          >
+                            <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                            {t("rebalanceCta")}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    <RichTextEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} onAIRewrite={aiRewriteResultTitle} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
+                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultDesc} availableVars={personalizationVars} previewTransform={previewInterpolate} className="text-muted-foreground text-lg leading-relaxed" placeholder={t("previewResultDescPh")} />
                     <div className="p-5 rounded-xl bg-muted/50 border">
                       <div className="mb-2">
                         <RichTextEdit
@@ -1271,7 +1593,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           placeholder={t("previewResultInsightHeadingPh")}
                         />
                       </div>
-                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} availableVars={personalizationVars} className="text-sm leading-relaxed" placeholder={t("previewResultInsightPh")} />
+                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultInsight} availableVars={personalizationVars} previewTransform={previewInterpolate} className="text-sm leading-relaxed" placeholder={t("previewResultInsightPh")} />
                     </div>
                     <div className="p-5 rounded-xl border" style={{ backgroundColor: `${pc}08`, borderColor: `${pc}30` }}>
                       <div className="mb-2">
@@ -1284,11 +1606,11 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           placeholder={t("previewResultProjectionHeadingPh")}
                         />
                       </div>
-                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} availableVars={personalizationVars} className="text-sm leading-relaxed" placeholder={t("previewResultProjectionPh")} />
+                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultProjection} availableVars={personalizationVars} previewTransform={previewInterpolate} className="text-sm leading-relaxed" placeholder={t("previewResultProjectionPh")} />
                     </div>
                     <div className="space-y-2">
                       <button className="w-full px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>
-                        <RichTextEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} onGenderize={genderize} availableVars={personalizationVars} singleLine className="text-white font-semibold text-center" placeholder={t("previewResultCtaPh")} />
+                        <RichTextEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} onGenderize={genderize} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-white font-semibold text-center" placeholder={t("previewResultCtaPh")} />
                       </button>
                       <InlineEdit value={r.cta_url ?? ctaUrl ?? ""} onChange={(v) => updateR(ri, "cta_url", v || null)} className="text-xs text-muted-foreground text-center" placeholder={t("previewResultCtaUrlPh")} />
                     </div>
@@ -1303,7 +1625,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
 
               {/* Footer Tiquiz — creator logo when set, Tiquiz logo otherwise */}
               <div className="text-center py-8 border-t space-y-2">
@@ -1319,6 +1642,119 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               </div>
             </div>
           </main>
+
+          {/* Back-to-top FAB. Anchored to the viewport bottom-right but only
+              visible when the creator has scrolled the preview past one
+              screen — keeps the editor uncluttered for short quizzes. */}
+          {showBackToTop && (
+            <button
+              type="button"
+              onClick={scrollPreviewToTop}
+              aria-label={t("backToTop")}
+              title={t("backToTop")}
+              className="fixed bottom-6 right-6 z-30 w-11 h-11 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
+            >
+              <ArrowUp className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* AI rebalance modal — opens from the warn/danger banner above
+              each result. Three states: input (intent + analyse), proposal
+              (diff + apply), error. The "Apply" button is the only path
+              that mutates editQuestions, so the AI never touches data
+              without an explicit click. */}
+          <Dialog open={rebalanceTarget !== null} onOpenChange={(open) => { if (!open) closeRebalance(); }}>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  {t("rebalanceDialogTitle")}
+                </DialogTitle>
+                <DialogDescription>
+                  {rebalanceTarget !== null
+                    ? t("rebalanceDialogBody", {
+                        target: cleanPlaceholdersForLabel(editResults[rebalanceTarget]?.title).replace(/<[^>]*>/g, "").trim() || t("previewResult", { n: rebalanceTarget + 1 }),
+                      })
+                    : ""}
+                </DialogDescription>
+              </DialogHeader>
+
+              {rebalanceProposal === null && (
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="rebalance-intent" className="text-xs">{t("rebalanceIntentLabel")}</Label>
+                    <Textarea
+                      id="rebalance-intent"
+                      value={rebalanceIntent}
+                      onChange={(e) => setRebalanceIntent(e.target.value.slice(0, 500))}
+                      placeholder={t("rebalanceIntentPh")}
+                      rows={3}
+                      className="text-sm mt-1.5"
+                      disabled={rebalanceLoading}
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1">{t("rebalanceIntentHint")}</p>
+                  </div>
+                  {rebalanceError && (
+                    <div className="rounded-lg border border-red-300 bg-red-50 dark:bg-red-950/40 px-3 py-2 text-xs text-red-900 dark:text-red-100">
+                      {rebalanceError}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {rebalanceProposal !== null && (
+                <div className="space-y-3">
+                  {rebalanceProposal.rationale && (
+                    <p className="text-sm text-muted-foreground italic">"{rebalanceProposal.rationale}"</p>
+                  )}
+                  {rebalanceProposal.changes.length === 0 ? (
+                    <div className="rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+                      {t("rebalanceNoChange")}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border bg-muted/30 max-h-64 overflow-y-auto">
+                      <ul className="divide-y">
+                        {rebalanceProposal.changes.map((c, i) => {
+                          const qText = cleanPlaceholdersForLabel(editQuestions[c.question_index]?.question_text).replace(/<[^>]*>/g, "").trim() || `Q${c.question_index + 1}`;
+                          const oText = cleanPlaceholdersForLabel(editQuestions[c.question_index]?.options[c.option_index]?.text).replace(/<[^>]*>/g, "").trim() || `Opt ${c.option_index + 1}`;
+                          const fromTitle = cleanPlaceholdersForLabel(editResults[c.from]?.title).replace(/<[^>]*>/g, "").trim() || `${c.from + 1}`;
+                          const toTitle = cleanPlaceholdersForLabel(editResults[c.to]?.title).replace(/<[^>]*>/g, "").trim() || `${c.to + 1}`;
+                          return (
+                            <li key={i} className="px-3 py-2 text-xs">
+                              <div className="font-medium truncate">{qText}</div>
+                              <div className="text-muted-foreground truncate">"{oText}"</div>
+                              <div className="mt-1 flex items-center gap-1.5 text-[11px]">
+                                <span className="px-1.5 py-0.5 rounded bg-muted line-through opacity-70">{fromTitle}</span>
+                                <span aria-hidden>→</span>
+                                <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">{toTitle}</span>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <DialogFooter className="gap-2 sm:gap-2">
+                <Button variant="outline" onClick={closeRebalance} disabled={rebalanceLoading}>
+                  {t("rebalanceCancel")}
+                </Button>
+                {rebalanceProposal === null ? (
+                  <Button onClick={requestRebalance} disabled={rebalanceLoading}>
+                    {rebalanceLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    {t("rebalanceAnalyse")}
+                  </Button>
+                ) : (
+                  <Button onClick={applyRebalance} disabled={rebalanceProposal.changes.length === 0}>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    {t("rebalanceApply", { count: rebalanceProposal.changes.length })}
+                  </Button>
+                )}
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
 
