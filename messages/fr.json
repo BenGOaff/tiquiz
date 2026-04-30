@@ -550,6 +550,15 @@
     "cancelSub": "Annuler mon abonnement",
     "confirmCancelSub": "Es-tu sûr de vouloir annuler ton abonnement ? Tu repasseras en plan gratuit (1 quiz, 10 réponses/mois).",
     "cancelInstructions": "Pour annuler, contacte-nous à hello@ethilife.fr ou gère ton abonnement depuis Systeme.io.",
+    "lifetimeAccess": "Accès à vie",
+    "cancelRequested": "Annulation enregistrée. Tu gardes ton accès jusqu'à la fin de ta période.",
+    "cancelError": "Impossible d'annuler. Réessaie ou contacte hello@ethilife.fr.",
+    "cancelDialog": {
+      "title": "Annuler ton abonnement ?",
+      "body": "Tu gardes ton accès complet jusqu'à la fin de ta période en cours. Ensuite tu repasseras automatiquement en plan gratuit. Tes quiz, sondages et leads existants restent enregistrés.",
+      "keep": "Je reste",
+      "confirm": "Confirmer l'annulation"
+    },
     "popular": "Populaire",
     "currentPlan": "Plan actuel",
     "paymentsManaged": "Les paiements sont gérés par Systeme.io. Tu peux changer de plan à tout moment.",
