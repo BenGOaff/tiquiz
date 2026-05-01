@@ -33,7 +33,17 @@ function detectLocaleFromHeader(req: NextRequest): string {
   return DEFAULT_LOCALE;
 }
 
-const PROTECTED_PREFIXES = ["/dashboard", "/quiz", "/quizzes", "/settings", "/leads", "/stats", "/admin"];
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  "/quiz",
+  "/quizzes",
+  "/popquiz",
+  "/popquizzes",
+  "/settings",
+  "/leads",
+  "/stats",
+  "/admin",
+];
 
 function startsWithAny(pathname: string, prefixes: string[]) {
   return prefixes.some((p) => pathname === p || pathname.startsWith(p + "/"));
@@ -45,9 +55,11 @@ export async function middleware(req: NextRequest) {
   // Public routes — never block
   if (pathname === "/") return NextResponse.next();
 
-  // Public quiz pages /q/... and API routes
+  // Public quiz pages /q/..., public popquiz pages /p/..., API,
+  // embed, _next, auth, legal, login, signup, favicon.
   if (
     pathname.startsWith("/q/") ||
+    pathname.startsWith("/p/") ||
     pathname.startsWith("/api/") ||
     pathname.startsWith("/embed/") ||
     pathname.startsWith("/_next/") ||
