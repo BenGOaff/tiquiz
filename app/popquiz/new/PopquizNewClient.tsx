@@ -13,8 +13,8 @@
 // survives in the wire format / DB. Same idea, French label.
 //
 // Publishing returns to a focused success Dialog (URL + copy +
-// open) instead of jumping the user straight to the public play
-// page — same UX Tiquiz uses for quizzes / surveys.
+// open + iframe code) instead of jumping the user straight to the
+// public play page — same UX Tiquiz uses for quizzes / surveys.
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -41,6 +41,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PopquizPlayer } from "@/components/popquiz/PopquizPlayer";
+import { buildEmbedSnippet } from "@/components/popquiz/EmbedCodeDialog";
 import { parseVideoUrl } from "@/lib/popquiz";
 import type { Popquiz, PopquizCue } from "@/lib/popquiz";
 import { toast } from "sonner";
@@ -74,9 +75,6 @@ function genId(): string {
   return `cue-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-// Click-on-track timeline editor. Sits below the live preview so
-// the creator can scrub the video, see exactly where they want a
-// marker, then drop one with a single click.
 function TimelineStrip({
   durationMs,
   cues,
@@ -136,7 +134,6 @@ function TimelineStrip({
         tabIndex={usableDuration ? 0 : -1}
         aria-label="Cliquer pour ajouter un marqueur"
       >
-        {/* Time labels */}
         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted-foreground">
           0:00
         </span>
@@ -146,7 +143,6 @@ function TimelineStrip({
           </span>
         ) : null}
 
-        {/* Hover indicator + tooltip */}
         {hoverPct !== null && usableDuration ? (
           <>
             <div
@@ -162,7 +158,6 @@ function TimelineStrip({
           </>
         ) : null}
 
-        {/* Existing markers */}
         {usableDuration
           ? cues.map((c) => {
               const pct = (c.timestampMs / usableDuration) * 100;
@@ -207,6 +202,7 @@ export default function PopquizNewClient({
   const [publishedId, setPublishedId] = useState<string | null>(null);
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedEmbed, setCopiedEmbed] = useState(false);
 
   const parsed = useMemo(() => parseVideoUrl(url), [url]);
 
@@ -249,14 +245,8 @@ export default function PopquizNewClient({
     }
     setError(null);
     setCues((prev) => {
-      // Spread by 250 ms if a cue already exists at this exact ms,
-      // otherwise the (popquiz_id, timestamp_ms) unique index will
-      // reject the insert at save time.
       let ts = timestampMs;
       while (prev.some((c) => c.timestampMs === ts)) ts += 250;
-      // Annotated explicitly so TS doesn't widen `behavior` to
-      // `string` when this object lands in an array literal that
-      // also contains spread `...prev` items.
       const next: DraftCue = {
         localId: genId(),
         quizId: quizzes[0].id,
@@ -325,12 +315,14 @@ export default function PopquizNewClient({
     }
   }
 
-  // Prefer the human-readable slug URL when available; fall back to
-  // the UUID URL.
-  const publishedUrl =
-    publishedId && typeof window !== "undefined"
-      ? `${window.location.origin}/p/${publishedSlug ?? publishedId}`
-      : "";
+  // Both URLs derive from the same handle: prefer slug, fall back to
+  // UUID. The share link goes to /p, the iframe goes to /embed/p.
+  const handle = publishedSlug ?? publishedId ?? "";
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "";
+  const publishedUrl = handle ? `${origin}/p/${handle}` : "";
+  const embedUrl = handle ? `${origin}/embed/p/${handle}` : "";
+  const embedSnippet = embedUrl ? buildEmbedSnippet(embedUrl) : "";
 
   async function copyPublishedUrl() {
     if (!publishedUrl) return;
@@ -344,8 +336,18 @@ export default function PopquizNewClient({
     }
   }
 
-  // Brand the timeline markers with the app's primary so the editor
-  // matches the live player without yet pulling a real profile here.
+  async function copyEmbed() {
+    if (!embedSnippet) return;
+    try {
+      await navigator.clipboard.writeText(embedSnippet);
+      setCopiedEmbed(true);
+      toast.success("Code copié");
+      setTimeout(() => setCopiedEmbed(false), 2000);
+    } catch {
+      toast.error("Impossible de copier");
+    }
+  }
+
   const markerColor = "hsl(var(--primary))";
 
   return (
@@ -597,38 +599,75 @@ export default function PopquizNewClient({
         </Button>
       </div>
 
-      {/* Success modal — capped width so the URL fits cleanly without
-          forcing the description onto multiple lines on desktop. */}
+      {/* Success modal — grew to sm:max-w-lg to fit both the share
+          URL and the iframe snippet without forcing the textarea
+          into an unreadable narrow column. */}
       <Dialog
         open={publishedId !== null}
         onOpenChange={(o) => {
           if (!o) setPublishedId(null);
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-base">Popquiz publié</DialogTitle>
             <DialogDescription className="text-sm">
-              Partage ce lien à ton audience. Tu peux y revenir depuis Mes
-              projets.
+              Partage le lien direct ou intègre la vidéo sur ton site.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex items-center gap-1.5 rounded-lg border bg-muted/40 p-1.5">
-            <code className="text-xs flex-1 min-w-0 truncate font-mono px-2">
-              {publishedUrl}
-            </code>
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+              Lien direct
+            </Label>
+            <div className="flex items-center gap-1.5 rounded-lg border bg-muted/40 p-1.5">
+              <code className="text-xs flex-1 min-w-0 truncate font-mono px-2">
+                {publishedUrl}
+              </code>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={copyPublishedUrl}
+                type="button"
+                className="shrink-0"
+              >
+                {copied ? (
+                  <Check className="size-4 text-green-600" />
+                ) : (
+                  <Copy className="size-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+              Code d'intégration
+            </Label>
+            <textarea
+              readOnly
+              value={embedSnippet}
+              rows={6}
+              className="w-full rounded-md border bg-muted/40 p-3 text-xs font-mono whitespace-pre-wrap break-all resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+            />
             <Button
+              onClick={copyEmbed}
               size="sm"
-              variant="ghost"
-              onClick={copyPublishedUrl}
+              variant="outline"
               type="button"
-              className="shrink-0"
+              className="w-full"
             >
-              {copied ? (
-                <Check className="size-4 text-green-600" />
+              {copiedEmbed ? (
+                <>
+                  <Check className="size-4 mr-2 text-green-600" />
+                  Code copié
+                </>
               ) : (
-                <Copy className="size-4" />
+                <>
+                  <Copy className="size-4 mr-2" />
+                  Copier le code
+                </>
               )}
             </Button>
           </div>

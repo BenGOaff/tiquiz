@@ -18,17 +18,23 @@ import {
   Pencil,
   Trash2,
   Copy,
+  Code,
   ClipboardList,
   Sparkles,
   MessageCircleQuestion,
   Video,
 } from "lucide-react";
 import { toast } from "sonner";
+import { EmbedCodeDialog } from "@/components/popquiz/EmbedCodeDialog";
 
 type ProjectMode = "quiz" | "survey" | "popquiz";
 
 type Project = {
   id: string;
+  // Slug is popquiz-only for now — used to build pretty share /
+  // embed URLs. null on quizzes / surveys (those keep their own
+  // slug story on the quiz page).
+  slug: string | null;
   title: string;
   status: string;
   mode: ProjectMode;
@@ -49,15 +55,17 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("all");
 
+  // Holds the slug-or-id of the popquiz whose embed dialog should
+  // be shown, or null. Single dialog instance, swapped target on
+  // each open — cheaper than mounting one per row.
+  const [embedHandle, setEmbedHandle] = useState<string | null>(null);
+
   useEffect(() => {
     (async () => {
       try {
-        // Fan out the two list endpoints in parallel. The popquiz
-        // call is fail-soft: a deploy that hasn't shipped the
-        // popquiz feature yet (or a transient error) won't break
-        // the rest of the page.
         const [quizRes, popquizRes] = await Promise.all([
           fetch("/api/quiz").then((r) => r.json()).catch(() => ({ ok: false })),
+          // fail-soft: an environment without popquiz API still works
           fetch("/api/popquiz").then((r) => r.json()).catch(() => ({ ok: false })),
         ]);
 
@@ -68,16 +76,13 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
           ? (popquizRes.popquizzes ?? [])
           : [];
 
-        // N+1 lead-count fetch is pre-existing on the quiz path —
-        // leave it for a perf pass. What matters here: normalise
-        // the mode field so old rows (created before the survey
-        // migration) still render correctly.
         const enriched: Project[] = [];
         for (const row of quizRows) {
           const qRes = await fetch(`/api/quiz/${row.id}`);
           const qData = await qRes.json();
           enriched.push({
             id: String(row.id),
+            slug: null,
             title: String(row.title ?? ""),
             status: String(row.status ?? "draft"),
             mode: row.mode === "survey" ? "survey" : "quiz",
@@ -90,13 +95,10 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
           });
         }
 
-        // Popquizzes don't share the leads model (no email capture
-        // inside the player) so leads_count stays 0. Same for
-        // starts/shares — their analytics live in popquiz_sessions
-        // and surface separately once the dashboard ships.
         for (const row of popquizRows) {
           enriched.push({
             id: String(row.id),
+            slug: typeof row.slug === "string" ? row.slug : null,
             title: String(row.title ?? ""),
             status: row.is_published ? "active" : "draft",
             mode: "popquiz",
@@ -109,9 +111,6 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
           });
         }
 
-        // Re-sort the merged list by recency so popquizzes interleave
-        // naturally with quizzes / surveys instead of bunching at the
-        // bottom.
         enriched.sort((a, b) => b.created_at.localeCompare(a.created_at));
         setProjects(enriched);
       } catch {
@@ -140,12 +139,13 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
     }
   }
 
-  function copyLink(projectId: string, mode: ProjectMode) {
+  function copyLink(p: Project) {
     // Public play paths diverge by type: /q/ for quiz+survey, /p/
-    // for popquiz. The two have different middleware handling and
-    // different OG metadata generators.
-    const segment = mode === "popquiz" ? "p" : "q";
-    const url = `${window.location.origin}/${segment}/${projectId}`;
+    // for popquiz (and we prefer the slug when available so the
+    // shared URL is human-readable).
+    const segment = p.mode === "popquiz" ? "p" : "q";
+    const handle = p.mode === "popquiz" ? (p.slug ?? p.id) : p.id;
+    const url = `${window.location.origin}/${segment}/${handle}`;
     navigator.clipboard.writeText(url);
     toast.success(t("linkCopied"));
   }
@@ -162,14 +162,10 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
     return projects.filter((p) => p.mode === filter);
   }, [projects, filter]);
 
-  // Identify the top-performer (highest conversion rate). Only flagged
-  // when there's a non-trivial sample size — a single quiz with 1/1 lead
-  // shouldn't claim the trophy. Returns null when nobody qualifies so
-  // the badge never lies.
   const topPerformerId = useMemo(() => {
     let best: { id: string; rate: number } | null = null;
     for (const p of projects) {
-      if (p.starts_count < 5) continue; // need a minimum sample
+      if (p.starts_count < 5) continue;
       const rate = (p.leads_count ?? 0) / p.starts_count;
       if (rate <= 0) continue;
       if (!best || rate > best.rate) best = { id: p.id, rate };
@@ -177,9 +173,6 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
     return best?.id ?? null;
   }, [projects]);
 
-  // "Trending" = a project that has earned at least one lead AND was
-  // updated in the last 7 days. Cheap heuristic; can be replaced by
-  // velocity later when we track per-day events.
   const trendingIds = useMemo(() => {
     const sevenDaysAgo = Date.now() - 7 * 24 * 3600 * 1000;
     return new Set(
@@ -193,12 +186,15 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
     );
   }, [projects]);
 
+  // Pre-compute the embed URL only when something is selected; the
+  // dialog mounts once, hidden by the open prop, and we just feed
+  // it the current target URL.
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "";
+  const embedUrl = embedHandle ? `${origin}/embed/p/${embedHandle}` : "";
+
   return (
     <AppShell userEmail={userEmail} headerTitle={tProjects("title")}>
-      {/* Banner — creation now bifurcates into quiz vs survey. The
-          "+ Popquiz" entry is intentionally NOT added here yet:
-          stealth-launch first via direct URL (/popquiz/new), promote
-          to a banner button once validated. */}
       <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
         <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
           <ClipboardList className="h-5 w-5" />
@@ -227,11 +223,6 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
         </div>
       </div>
 
-      {/* Filter pills. The Popquiz pill is conditionally rendered:
-          users with zero popquizzes don't see it at all, which keeps
-          the feature invisible until they've adopted it via the
-          stealth /popquiz/new URL. The day a popquiz exists for the
-          account, the pill (and the typed badges below) light up. */}
       {projects.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
           {(["all", "quiz", "survey", "popquiz"] as const).map((f) => {
@@ -310,11 +301,9 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
             const isSurvey = p.mode === "survey";
             const isPopquiz = p.mode === "popquiz";
 
-            // Popquizzes don't have an editor yet — the title links
-            // to the public play page instead. Once /popquiz/[id]
-            // exists, swap to that path here and re-enable the
-            // pencil button below.
-            const titleHref = isPopquiz ? `/p/${p.id}` : `/quiz/${p.id}`;
+            const titleHref = isPopquiz
+              ? `/p/${p.slug ?? p.id}`
+              : `/quiz/${p.id}`;
 
             return (
               <Card key={p.id} className="hover:shadow-md transition-shadow">
@@ -360,8 +349,6 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                         >
                           {p.status === "active" ? "Active" : "Draft"}
                         </Badge>
-                        {/* Contextual highlight badges — only on the row
-                            that earned them so they keep meaning something. */}
                         {topPerformerId === p.id && <TopPerformerBadge />}
                         {trendingIds.has(p.id) && topPerformerId !== p.id && (
                           <TrendingBadge />
@@ -407,11 +394,24 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => copyLink(p.id, p.mode)}
+                        onClick={() => copyLink(p)}
                         title={t("copyLink")}
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
+                      {/* Embed code button — popquiz-only. Quizzes
+                          have their own embed flow under /embed; this
+                          is the popquiz-specific iframe snippet. */}
+                      {isPopquiz ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setEmbedHandle(p.slug ?? p.id)}
+                          title="Code d'intégration"
+                        >
+                          <Code className="h-4 w-4" />
+                        </Button>
+                      ) : null}
                       {/* Pencil hidden for popquiz until /popquiz/[id]
                           editor exists. Re-enable here — link to that
                           path — once it does. */}
@@ -438,6 +438,14 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
           })}
         </div>
       )}
+
+      <EmbedCodeDialog
+        open={embedHandle !== null}
+        onOpenChange={(o) => {
+          if (!o) setEmbedHandle(null);
+        }}
+        embedUrl={embedUrl}
+      />
     </AppShell>
   );
 }
