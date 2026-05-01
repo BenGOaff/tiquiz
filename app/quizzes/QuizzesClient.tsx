@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { TopPerformerBadge, TrendingBadge } from "@/components/ui/highlight-badge";
 import { EmptyCanvasArt, EmptySearchArt } from "@/components/ui/illustrations";
 import {
-  Plus,
   Eye,
   Play,
   CheckCircle,
@@ -22,10 +21,11 @@ import {
   ClipboardList,
   Sparkles,
   MessageCircleQuestion,
+  Video,
 } from "lucide-react";
 import { toast } from "sonner";
 
-type ProjectMode = "quiz" | "survey";
+type ProjectMode = "quiz" | "survey" | "popquiz";
 
 type Project = {
   id: string;
@@ -52,14 +52,28 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/quiz");
-        const data = await res.json();
-        if (!data.ok) return;
-        // N+1 lead-count fetch is pre-existing — leave it for a perf pass.
-        // What matters here: normalize the mode field so old rows (created
-        // before the survey migration) still work.
+        // Fan out the two list endpoints in parallel. The popquiz
+        // call is fail-soft: a deploy that hasn't shipped the
+        // popquiz feature yet (or a transient error) won't break
+        // the rest of the page.
+        const [quizRes, popquizRes] = await Promise.all([
+          fetch("/api/quiz").then((r) => r.json()).catch(() => ({ ok: false })),
+          fetch("/api/popquiz").then((r) => r.json()).catch(() => ({ ok: false })),
+        ]);
+
+        const quizRows: Record<string, unknown>[] = quizRes.ok
+          ? (quizRes.quizzes ?? [])
+          : [];
+        const popquizRows: Record<string, unknown>[] = popquizRes.ok
+          ? (popquizRes.popquizzes ?? [])
+          : [];
+
+        // N+1 lead-count fetch is pre-existing on the quiz path —
+        // leave it for a perf pass. What matters here: normalise
+        // the mode field so old rows (created before the survey
+        // migration) still render correctly.
         const enriched: Project[] = [];
-        for (const row of data.quizzes as Record<string, unknown>[]) {
+        for (const row of quizRows) {
           const qRes = await fetch(`/api/quiz/${row.id}`);
           const qData = await qRes.json();
           enriched.push({
@@ -75,6 +89,30 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
             leads_count: qData.leads?.length ?? 0,
           });
         }
+
+        // Popquizzes don't share the leads model (no email capture
+        // inside the player) so leads_count stays 0. Same for
+        // starts/shares — their analytics live in popquiz_sessions
+        // and surface separately once the dashboard ships.
+        for (const row of popquizRows) {
+          enriched.push({
+            id: String(row.id),
+            title: String(row.title ?? ""),
+            status: row.is_published ? "active" : "draft",
+            mode: "popquiz",
+            views_count: Number(row.views_count ?? 0),
+            starts_count: 0,
+            completions_count: Number(row.completions_count ?? 0),
+            shares_count: 0,
+            created_at: String(row.created_at ?? ""),
+            leads_count: 0,
+          });
+        }
+
+        // Re-sort the merged list by recency so popquizzes interleave
+        // naturally with quizzes / surveys instead of bunching at the
+        // bottom.
+        enriched.sort((a, b) => b.created_at.localeCompare(a.created_at));
         setProjects(enriched);
       } catch {
         // fail silently
@@ -84,10 +122,14 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
     })();
   }, []);
 
-  async function handleDelete(projectId: string) {
+  async function handleDelete(projectId: string, mode: ProjectMode) {
     if (!confirm(t("confirmDelete"))) return;
     try {
-      const res = await fetch(`/api/quiz/${projectId}`, { method: "DELETE" });
+      const path =
+        mode === "popquiz"
+          ? `/api/popquiz/${projectId}`
+          : `/api/quiz/${projectId}`;
+      const res = await fetch(path, { method: "DELETE" });
       const data = await res.json();
       if (data.ok) {
         setProjects((prev) => prev.filter((q) => q.id !== projectId));
@@ -98,16 +140,21 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
     }
   }
 
-  function copyLink(projectId: string) {
-    const url = `${window.location.origin}/q/${projectId}`;
+  function copyLink(projectId: string, mode: ProjectMode) {
+    // Public play paths diverge by type: /q/ for quiz+survey, /p/
+    // for popquiz. The two have different middleware handling and
+    // different OG metadata generators.
+    const segment = mode === "popquiz" ? "p" : "q";
+    const url = `${window.location.origin}/${segment}/${projectId}`;
     navigator.clipboard.writeText(url);
     toast.success(t("linkCopied"));
   }
 
   const counts = useMemo(() => {
-    const q = projects.filter((p) => p.mode === "quiz").length;
-    const s = projects.filter((p) => p.mode === "survey").length;
-    return { quiz: q, survey: s, all: projects.length };
+    const quiz = projects.filter((p) => p.mode === "quiz").length;
+    const survey = projects.filter((p) => p.mode === "survey").length;
+    const popquiz = projects.filter((p) => p.mode === "popquiz").length;
+    return { quiz, survey, popquiz, all: projects.length };
   }, [projects]);
 
   const filtered = useMemo(() => {
@@ -137,14 +184,21 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
     const sevenDaysAgo = Date.now() - 7 * 24 * 3600 * 1000;
     return new Set(
       projects
-        .filter((p) => (p.leads_count ?? 0) >= 3 && new Date(p.created_at).getTime() > sevenDaysAgo)
+        .filter(
+          (p) =>
+            (p.leads_count ?? 0) >= 3 &&
+            new Date(p.created_at).getTime() > sevenDaysAgo,
+        )
         .map((p) => p.id),
     );
   }, [projects]);
 
   return (
     <AppShell userEmail={userEmail} headerTitle={tProjects("title")}>
-      {/* Banner — creation now bifurcates into quiz vs survey */}
+      {/* Banner — creation now bifurcates into quiz vs survey. The
+          "+ Popquiz" entry is intentionally NOT added here yet:
+          stealth-launch first via direct URL (/popquiz/new), promote
+          to a banner button once validated. */}
       <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
         <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
           <ClipboardList className="h-5 w-5" />
@@ -173,20 +227,37 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
         </div>
       </div>
 
-      {/* Filter pills */}
+      {/* Filter pills. The Popquiz pill is conditionally rendered:
+          users with zero popquizzes don't see it at all, which keeps
+          the feature invisible until they've adopted it via the
+          stealth /popquiz/new URL. The day a popquiz exists for the
+          account, the pill (and the typed badges below) light up. */}
       {projects.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
-          {(["all", "quiz", "survey"] as const).map((f) => (
-            <Button
-              key={f}
-              variant={filter === f ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilter(f)}
-              className="rounded-full"
-            >
-              {tProjects(`filter_${f}`)} ({counts[f]})
-            </Button>
-          ))}
+          {(["all", "quiz", "survey", "popquiz"] as const).map((f) => {
+            if (f === "popquiz" && counts.popquiz === 0) return null;
+            let label: string;
+            if (f === "popquiz") {
+              try {
+                label = tProjects("filter_popquiz");
+              } catch {
+                label = "Popquiz";
+              }
+            } else {
+              label = tProjects(`filter_${f}`);
+            }
+            return (
+              <Button
+                key={f}
+                variant={filter === f ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilter(f)}
+                className="rounded-full"
+              >
+                {label} ({counts[f]})
+              </Button>
+            );
+          })}
         </div>
       )}
 
@@ -195,19 +266,20 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center flex flex-col items-center">
-            {/* Custom Tipote/Tiquiz illustration — soft, friendly, on
-                brand. EmptyCanvasArt for "no project yet", EmptySearchArt
-                for "no result in this filter". */}
             {projects.length === 0 ? (
               <EmptyCanvasArt className="w-32 h-32 mb-2" />
             ) : (
               <EmptySearchArt className="w-28 h-28 mb-2" />
             )}
             <h3 className="text-lg font-semibold mb-2">
-              {projects.length === 0 ? tProjects("emptyTitle") : tProjects("emptyFilterTitle")}
+              {projects.length === 0
+                ? tProjects("emptyTitle")
+                : tProjects("emptyFilterTitle")}
             </h3>
             <p className="text-muted-foreground mb-6 max-w-md">
-              {projects.length === 0 ? tProjects("emptyDesc") : tProjects("emptyFilterDesc")}
+              {projects.length === 0
+                ? tProjects("emptyDesc")
+                : tProjects("emptyFilterDesc")}
             </p>
             {projects.length === 0 && (
               <div className="flex items-center justify-center gap-2 flex-wrap">
@@ -231,8 +303,18 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
         <div className="grid gap-4">
           {filtered.map((p) => {
             const leads = p.leads_count ?? 0;
-            const rate = p.starts_count > 0 ? Math.round((leads / p.starts_count) * 100) : 0;
+            const rate =
+              p.starts_count > 0
+                ? Math.round((leads / p.starts_count) * 100)
+                : 0;
             const isSurvey = p.mode === "survey";
+            const isPopquiz = p.mode === "popquiz";
+
+            // Popquizzes don't have an editor yet — the title links
+            // to the public play page instead. Once /popquiz/[id]
+            // exists, swap to that path here and re-enable the
+            // pencil button below.
+            const titleHref = isPopquiz ? `/p/${p.id}` : `/quiz/${p.id}`;
 
             return (
               <Card key={p.id} className="hover:shadow-md transition-shadow">
@@ -241,7 +323,7 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <Link
-                          href={`/quiz/${p.id}`}
+                          href={titleHref}
                           className="text-lg font-semibold hover:underline truncate"
                         >
                           {p.title || tProjects("untitled")}
@@ -249,12 +331,19 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                         <Badge
                           variant="outline"
                           className={
-                            isSurvey
-                              ? "bg-purple-50 text-purple-700 border-purple-200"
-                              : "bg-blue-50 text-blue-700 border-blue-200"
+                            isPopquiz
+                              ? "bg-cyan-50 text-cyan-700 border-cyan-200"
+                              : isSurvey
+                                ? "bg-purple-50 text-purple-700 border-purple-200"
+                                : "bg-blue-50 text-blue-700 border-blue-200"
                           }
                         >
-                          {isSurvey ? (
+                          {isPopquiz ? (
+                            <>
+                              <Video className="h-3 w-3 mr-1" />
+                              Popquiz
+                            </>
+                          ) : isSurvey ? (
                             <>
                               <MessageCircleQuestion className="h-3 w-3 mr-1" />
                               {tProjects("badgeSurvey")}
@@ -266,33 +355,44 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                             </>
                           )}
                         </Badge>
-                        <Badge variant={p.status === "active" ? "default" : "secondary"}>
+                        <Badge
+                          variant={p.status === "active" ? "default" : "secondary"}
+                        >
                           {p.status === "active" ? "Active" : "Draft"}
                         </Badge>
                         {/* Contextual highlight badges — only on the row
                             that earned them so they keep meaning something. */}
                         {topPerformerId === p.id && <TopPerformerBadge />}
-                        {trendingIds.has(p.id) && topPerformerId !== p.id && <TrendingBadge />}
+                        {trendingIds.has(p.id) && topPerformerId !== p.id && (
+                          <TrendingBadge />
+                        )}
                       </div>
 
                       <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
-                          <Eye className="h-3.5 w-3.5" /> {p.views_count} {t("views")}
+                          <Eye className="h-3.5 w-3.5" /> {p.views_count}{" "}
+                          {t("views")}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Play className="h-3.5 w-3.5" /> {p.starts_count} {t("starts")}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <CheckCircle className="h-3.5 w-3.5" /> {p.completions_count}{" "}
-                          {t("completions")}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Users className="h-3.5 w-3.5" /> {leads}{" "}
-                          {isSurvey ? tProjects("respondents") : t("leads")}
-                        </span>
-                        {!isSurvey && (
+                        {!isPopquiz && (
                           <span className="flex items-center gap-1">
-                            <Share2 className="h-3.5 w-3.5" /> {p.shares_count} {t("shares")}
+                            <Play className="h-3.5 w-3.5" /> {p.starts_count}{" "}
+                            {t("starts")}
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1">
+                          <CheckCircle className="h-3.5 w-3.5" />{" "}
+                          {p.completions_count} {t("completions")}
+                        </span>
+                        {!isPopquiz && (
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3.5 w-3.5" /> {leads}{" "}
+                            {isSurvey ? tProjects("respondents") : t("leads")}
+                          </span>
+                        )}
+                        {!isSurvey && !isPopquiz && (
+                          <span className="flex items-center gap-1">
+                            <Share2 className="h-3.5 w-3.5" /> {p.shares_count}{" "}
+                            {t("shares")}
                           </span>
                         )}
                         {rate > 0 && (
@@ -307,20 +407,25 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => copyLink(p.id)}
+                        onClick={() => copyLink(p.id, p.mode)}
                         title={t("copyLink")}
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/quiz/${p.id}`} title={t("editQuiz")}>
-                          <Pencil className="h-4 w-4" />
-                        </Link>
-                      </Button>
+                      {/* Pencil hidden for popquiz until /popquiz/[id]
+                          editor exists. Re-enable here — link to that
+                          path — once it does. */}
+                      {!isPopquiz && (
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link href={`/quiz/${p.id}`} title={t("editQuiz")}>
+                            <Pencil className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDelete(p.id)}
+                        onClick={() => handleDelete(p.id, p.mode)}
                         title={t("deleteQuiz")}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
