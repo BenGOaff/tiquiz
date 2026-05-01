@@ -1,16 +1,23 @@
 "use client";
 
-// Popquiz creation flow. Shipped inside <AppShell> with the same
-// chrome (sidebar, header, banner, max-width container) as every
-// other authoring page so the editor reads as part of the product.
+// Popquiz edit form. Same chrome and visual language as
+// PopquizNewClient (AppShell, gradient banner, shadcn cards) so
+// the create / edit flows feel like one product.
 //
-// Source picker: URL (YouTube / Vimeo / direct .mp4) OR direct
-// upload to Supabase Storage. Tabs make the choice explicit and
-// the save handler branches on the active tab — only one source
-// is sent to the API per popquiz.
+// Differences vs the new flow:
+//   • Loads with the existing popquiz state (title, slug, cues,
+//     publish toggle).
+//   • Video URL is read-only — swapping the source is destructive
+//     enough to warrant deleting + re-creating instead of an
+//     in-place edit. Surfaced as a small read-only display.
+//   • Save = PATCH /api/popquiz/[id]; cues are sent as a full
+//     replace-set (matches the API's PUT-style cues field).
+//   • Embed code section appears once published, with a copy
+//     button right in the page (no extra dialog).
 //
-// Vocabulary: we say "marqueur" everywhere user-facing. "Cue" only
-// survives in the wire format / DB. Same idea, French label.
+// Same TypeScript discipline as the new client — every cue object
+// constructed in client code is annotated `: DraftCue` so the
+// literal `"block" | "optional"` is preserved through array spreads.
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -20,36 +27,20 @@ import {
   Copy,
   Check,
   ExternalLink,
+  Save,
   Sparkles,
   Video,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { PopquizPlayer } from "@/components/popquiz/PopquizPlayer";
 import { buildEmbedSnippet } from "@/components/popquiz/EmbedCodeDialog";
-import {
-  VideoUploader,
-  type UploadedVideo,
-} from "@/components/popquiz/VideoUploader";
-import { parseVideoUrl } from "@/lib/popquiz";
-import type { Popquiz, PopquizCue, PopquizVideo } from "@/lib/popquiz";
+import type { Popquiz, PopquizCue } from "@/lib/popquiz";
 import { toast } from "sonner";
 
 interface QuizOption {
@@ -64,8 +55,6 @@ interface DraftCue {
   timestampMs: number;
   behavior: "block" | "optional";
 }
-
-type SourceMode = "url" | "upload";
 
 function formatMs(ms: number): string {
   const total = Math.floor(ms / 1000);
@@ -189,88 +178,41 @@ function TimelineStrip({
   );
 }
 
-export default function PopquizNewClient({
+export default function PopquizEditClient({
   userEmail,
+  popquiz,
   quizzes,
 }: {
   userEmail: string;
+  popquiz: Popquiz;
   quizzes: QuizOption[];
 }) {
   const router = useRouter();
-  const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState("");
+  const [title, setTitle] = useState(popquiz.title);
+  const [slug, setSlug] = useState(popquiz.slug ?? "");
+  const [description, setDescription] = useState(popquiz.description ?? "");
+  const [isPublished, setIsPublished] = useState(popquiz.isPublished);
 
-  // Source state — only one of (url, uploaded) is consumed at save
-  // time, controlled by the active tab.
-  const [sourceMode, setSourceMode] = useState<SourceMode>("url");
-  const [url, setUrl] = useState("");
-  const [uploaded, setUploaded] = useState<UploadedVideo | null>(null);
+  const initialCues: DraftCue[] = popquiz.cues.map<DraftCue>((c) => ({
+    localId: c.id,
+    quizId: c.quizId,
+    timestampMs: c.timestampMs,
+    behavior: c.behavior,
+  }));
+  const [cues, setCues] = useState<DraftCue[]>(initialCues);
+  const [durationMs, setDurationMs] = useState<number | null>(
+    popquiz.video.durationMs,
+  );
 
-  const [cues, setCues] = useState<DraftCue[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [durationMs, setDurationMs] = useState<number | null>(null);
-
-  const [publishedId, setPublishedId] = useState<string | null>(null);
-  const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
 
-  const parsedUrl = useMemo(() => parseVideoUrl(url), [url]);
-
-  // Build a draft Popquiz so the live preview uses the same player
-  // the public page will. Branch on the active tab so switching
-  // tabs immediately switches the preview source.
-  const draftPopquiz = useMemo<Popquiz | null>(() => {
-    let video: PopquizVideo | null = null;
-
-    if (sourceMode === "upload" && uploaded) {
-      video = {
-        id: "draft-video",
-        source: "upload",
-        externalUrl: uploaded.signedUrl,
-        externalId: null,
-        storagePath: uploaded.path,
-        hlsPath: null,
-        thumbnailUrl: null,
-        durationMs: null,
-        status: "ready",
-      };
-    } else if (sourceMode === "url" && parsedUrl) {
-      video = {
-        id: "draft-video",
-        source: parsedUrl.source,
-        externalUrl: parsedUrl.normalizedUrl,
-        externalId: parsedUrl.externalId,
-        storagePath: null,
-        hlsPath: null,
-        thumbnailUrl: null,
-        durationMs: null,
-        status: "ready",
-      };
-    }
-
-    if (!video) return null;
-
-    return {
-      id: "draft",
-      slug: null,
-      title: title || "Sans titre",
-      description: null,
-      locale: "fr",
-      isPublished: false,
-      theme: null,
-      branding: { logoUrl: null, websiteUrl: null, primaryColor: null },
-      video,
-      cues: cues.map<PopquizCue>((c, i) => ({
-        id: c.localId,
-        quizId: c.quizId,
-        timestampMs: c.timestampMs,
-        behavior: c.behavior,
-        displayOrder: i,
-      })),
-    };
-  }, [sourceMode, uploaded, parsedUrl, title, cues]);
+  // The popquiz handed in already carries hydrated branding; for
+  // the editor preview we override accent so timeline markers
+  // match the player.
+  const markerColor = popquiz.branding.primaryColor ?? "hsl(var(--primary))";
 
   function addCueAt(timestampMs: number) {
     if (quizzes.length === 0) {
@@ -303,55 +245,38 @@ export default function PopquizNewClient({
     );
   }
 
-  async function handleSave(publish: boolean) {
+  async function handleSave() {
     setError(null);
     if (!title.trim()) {
-      setError("Donne un titre à ton popquiz.");
-      return;
-    }
-    if (sourceMode === "upload" && !uploaded) {
-      setError("Importe une vidéo avant de publier.");
-      return;
-    }
-    if (sourceMode === "url" && !parsedUrl) {
-      setError("Colle une URL YouTube, Vimeo ou .mp4 valide.");
+      setError("Le titre ne peut pas être vide.");
       return;
     }
     setSaving(true);
     try {
-      const payload: Record<string, unknown> = {
-        title,
-        slug: slug.trim() || undefined,
-        is_published: publish,
-        cues: cues.map((c) => ({
-          quiz_id: c.quizId,
-          timestamp_ms: c.timestampMs,
-          behavior: c.behavior,
-        })),
-      };
-      if (sourceMode === "upload" && uploaded) {
-        payload.uploaded_path = uploaded.path;
-      } else {
-        payload.url = url;
-      }
-
-      const res = await fetch("/api/popquiz", {
-        method: "POST",
+      const res = await fetch(`/api/popquiz/${popquiz.id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          title,
+          slug: slug.trim(),
+          description: description.trim() || null,
+          is_published: isPublished,
+          cues: cues.map((c) => ({
+            quiz_id: c.quizId,
+            timestamp_ms: c.timestampMs,
+            behavior: c.behavior,
+          })),
+        }),
       });
       const json = await res.json();
       if (!json.ok) {
         setError(json.error ?? "Erreur lors de la sauvegarde");
         return;
       }
-      if (publish) {
-        setPublishedId(json.popquizId);
-        setPublishedSlug(json.slug ?? null);
-      } else {
-        toast.success("Brouillon enregistré");
-        router.push("/quizzes");
-      }
+      toast.success("Modifications enregistrées");
+      // Soft-refresh so the server-rendered shell picks up the new
+      // slug / publish state without a full reload.
+      router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur réseau");
     } finally {
@@ -359,27 +284,28 @@ export default function PopquizNewClient({
     }
   }
 
-  const handle = publishedSlug ?? publishedId ?? "";
+  // Build URLs from the latest persisted slug. We use popquiz.slug
+  // (server-supplied) instead of the current input so the URL only
+  // "updates" once the user actually saves.
+  const handle = popquiz.slug ?? popquiz.id;
   const origin =
     typeof window !== "undefined" ? window.location.origin : "";
-  const publishedUrl = handle ? `${origin}/p/${handle}` : "";
-  const embedUrl = handle ? `${origin}/embed/p/${handle}` : "";
-  const embedSnippet = embedUrl ? buildEmbedSnippet(embedUrl) : "";
+  const publicUrl = `${origin}/p/${handle}`;
+  const embedUrl = `${origin}/embed/p/${handle}`;
+  const embedSnippet = buildEmbedSnippet(embedUrl);
 
-  async function copyPublishedUrl() {
-    if (!publishedUrl) return;
+  async function copyPublicUrl() {
     try {
-      await navigator.clipboard.writeText(publishedUrl);
-      setCopied(true);
+      await navigator.clipboard.writeText(publicUrl);
+      setCopiedUrl(true);
       toast.success("Lien copié");
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopiedUrl(false), 2000);
     } catch {
-      toast.error("Impossible de copier le lien");
+      toast.error("Impossible de copier");
     }
   }
 
   async function copyEmbed() {
-    if (!embedSnippet) return;
     try {
       await navigator.clipboard.writeText(embedSnippet);
       setCopiedEmbed(true);
@@ -390,19 +316,36 @@ export default function PopquizNewClient({
     }
   }
 
-  const markerColor = "hsl(var(--primary))";
+  // Build a draft view of the popquiz so the same PopquizPlayer
+  // can render the live preview — we just feed it the current cue
+  // list (mapped back to the public PopquizCue shape).
+  const previewPopquiz: Popquiz = useMemo(
+    () => ({
+      ...popquiz,
+      title,
+      cues: cues.map<PopquizCue>((c, i) => ({
+        id: c.localId,
+        quizId: c.quizId,
+        timestampMs: c.timestampMs,
+        behavior: c.behavior,
+        displayOrder: i,
+      })),
+    }),
+    [popquiz, title, cues],
+  );
 
   return (
-    <AppShell userEmail={userEmail} headerTitle="Nouveau Popquiz">
+    <AppShell userEmail={userEmail} headerTitle="Modifier le popquiz">
       <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
         <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
           <Video className="h-5 w-5" />
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold">Popquiz</h2>
+          <h2 className="text-lg font-bold truncate">{title || "Popquiz"}</h2>
           <p className="text-sm text-white/80">
-            Charge une vidéo, place des marqueurs sur la timeline pour faire
-            apparaître un quiz au bon moment.
+            {isPublished
+              ? "Publié — visible à l'adresse partagée."
+              : "Brouillon — non visible publiquement."}
           </p>
         </div>
       </div>
@@ -415,46 +358,39 @@ export default function PopquizNewClient({
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex. Onboarding vidéo Q1"
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label>Source vidéo</Label>
-            <Tabs
-              value={sourceMode}
-              onValueChange={(v) => setSourceMode(v as SourceMode)}
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="url">Lien</TabsTrigger>
-                <TabsTrigger value="upload">Importer</TabsTrigger>
-              </TabsList>
+            <Label htmlFor="description">
+              Description{" "}
+              <span className="text-muted-foreground font-normal">
+                (optionnelle, utilisée dans les aperçus de partage)
+              </span>
+            </Label>
+            <Input
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Explique en une phrase ce que la vidéo apporte"
+            />
+          </div>
 
-              <TabsContent value="url" className="space-y-1.5 mt-3">
-                <Input
-                  id="url"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=…  •  https://vimeo.com/…  •  https://…/video.mp4"
-                />
-                {url && !parsedUrl ? (
-                  <p className="text-xs text-destructive">
-                    URL non reconnue (YouTube, Vimeo ou lien direct).
-                  </p>
-                ) : null}
-                <p className="text-[11px] text-muted-foreground">
-                  Colle l'adresse de la vidéo.
-                </p>
-              </TabsContent>
-
-              <TabsContent value="upload" className="space-y-1.5 mt-3">
-                <VideoUploader
-                  current={uploaded}
-                  onUploaded={setUploaded}
-                  onCleared={() => setUploaded(null)}
-                />
-              </TabsContent>
-            </Tabs>
+          <div className="space-y-1.5">
+            <Label>Vidéo source</Label>
+            <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
+              <Video className="size-4 text-muted-foreground shrink-0" />
+              <span className="flex-1 min-w-0 truncate text-muted-foreground">
+                {popquiz.video.externalUrl ?? popquiz.video.hlsPath ?? "—"}
+              </span>
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                {popquiz.video.source}
+              </span>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Pour changer de vidéo, supprime ce popquiz et crées-en un
+              nouveau.
+            </p>
           </div>
 
           <div className="space-y-1.5">
@@ -478,62 +414,85 @@ export default function PopquizNewClient({
               />
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Lettres minuscules, chiffres et tirets. Si vide, on utilise un
-              identifiant généré.
+              Lettres minuscules, chiffres et tirets. Vide → on retombe
+              sur l'identifiant généré.
             </p>
+          </div>
+
+          <div className="flex items-start gap-3 rounded-md border bg-muted/30 px-3 py-2">
+            <button
+              type="button"
+              onClick={() => setIsPublished((v) => !v)}
+              className={`mt-0.5 size-9 grid place-items-center rounded-full transition-colors ${
+                isPublished
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground"
+              }`}
+              aria-label={isPublished ? "Dépublier" : "Publier"}
+            >
+              {isPublished ? (
+                <Eye className="size-4" />
+              ) : (
+                <EyeOff className="size-4" />
+              )}
+            </button>
+            <div className="flex-1">
+              <p className="text-sm font-medium">
+                {isPublished ? "Publié" : "Brouillon"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {isPublished
+                  ? "Toute personne avec le lien peut voir la vidéo."
+                  : "Seul toi peux voir la vidéo tant qu'elle n'est pas publiée."}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {draftPopquiz ? (
-        <Card className="overflow-hidden">
-          <CardContent className="py-5 space-y-4">
-            <div className="flex items-baseline justify-between gap-3">
-              <Label className="text-sm">Aperçu</Label>
-              <span className="text-[11px] text-muted-foreground">
-                Le quiz lié s'affichera à chaque marqueur en lecture finale.
-              </span>
-            </div>
-            <PopquizPlayer
-              popquiz={draftPopquiz}
-              onDurationChange={setDurationMs}
-              renderOverlay={({ cue, onSkipped }) => {
-                const linked = quizzes.find((q) => q.id === cue.quizId);
-                return (
-                  <div className="absolute inset-0 grid place-items-center p-6">
-                    <div className="max-w-md w-full rounded-2xl bg-white shadow-2xl p-6 space-y-3">
-                      <h3 className="text-base font-semibold">
-                        Marqueur à {formatMs(cue.timestampMs)} —{" "}
-                        {linked?.title ?? "Quiz inconnu"}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        En lecture finale, le quiz lié s'affichera ici.
-                        Clique sur la croix pour reprendre la vidéo.
-                      </p>
-                      {cue.behavior === "optional" ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={onSkipped}
-                        >
-                          Passer
-                        </Button>
-                      ) : null}
-                    </div>
+      <Card className="overflow-hidden">
+        <CardContent className="py-5 space-y-4">
+          <div className="flex items-baseline justify-between gap-3">
+            <Label className="text-sm">Aperçu</Label>
+            <span className="text-[11px] text-muted-foreground">
+              Le quiz lié s'affichera à chaque marqueur en lecture finale.
+            </span>
+          </div>
+          <PopquizPlayer
+            popquiz={previewPopquiz}
+            onDurationChange={setDurationMs}
+            renderOverlay={({ cue, onSkipped }) => {
+              const linked = quizzes.find((q) => q.id === cue.quizId);
+              return (
+                <div className="absolute inset-0 grid place-items-center p-6">
+                  <div className="max-w-md w-full rounded-2xl bg-white shadow-2xl p-6 space-y-3">
+                    <h3 className="text-base font-semibold">
+                      Marqueur à {formatMs(cue.timestampMs)} —{" "}
+                      {linked?.title ?? "Quiz inconnu"}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      En lecture finale, le quiz lié s'affichera ici.
+                      Clique sur la croix pour reprendre la vidéo.
+                    </p>
+                    {cue.behavior === "optional" ? (
+                      <Button size="sm" variant="outline" onClick={onSkipped}>
+                        Passer
+                      </Button>
+                    ) : null}
                   </div>
-                );
-              }}
-            />
-            <TimelineStrip
-              durationMs={durationMs}
-              cues={cues}
-              onAddAt={addCueAt}
-              onRemove={removeCue}
-              primaryColor={markerColor}
-            />
-          </CardContent>
-        </Card>
-      ) : null}
+                </div>
+              );
+            }}
+          />
+          <TimelineStrip
+            durationMs={durationMs}
+            cues={cues}
+            onAddAt={addCueAt}
+            onRemove={removeCue}
+            primaryColor={markerColor}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="py-5 space-y-3">
@@ -638,6 +597,86 @@ export default function PopquizNewClient({
         </CardContent>
       </Card>
 
+      {popquiz.isPublished ? (
+        <Card>
+          <CardContent className="py-5 space-y-4">
+            <div>
+              <h2 className="text-base font-semibold">Partage & intégration</h2>
+              <p className="text-xs text-muted-foreground">
+                Lien direct à partager ou code à coller dans une page.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                Lien direct
+              </Label>
+              <div className="flex items-center gap-1.5 rounded-lg border bg-muted/40 p-1.5">
+                <code className="text-xs flex-1 min-w-0 truncate font-mono px-2">
+                  {publicUrl}
+                </code>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={copyPublicUrl}
+                  type="button"
+                  className="shrink-0"
+                >
+                  {copiedUrl ? (
+                    <Check className="size-4 text-green-600" />
+                  ) : (
+                    <Copy className="size-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                Code d'intégration
+              </Label>
+              <textarea
+                readOnly
+                value={embedSnippet}
+                rows={6}
+                className="w-full rounded-md border bg-muted/40 p-3 text-xs font-mono whitespace-pre-wrap break-all resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+              />
+              <Button
+                onClick={copyEmbed}
+                size="sm"
+                variant="outline"
+                type="button"
+                className="w-full"
+              >
+                {copiedEmbed ? (
+                  <>
+                    <Check className="size-4 mr-2 text-green-600" />
+                    Code copié
+                  </>
+                ) : (
+                  <>
+                    <Copy className="size-4 mr-2" />
+                    Copier le code
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <Button asChild size="sm" variant="outline" className="w-full">
+              <a
+                href={publicUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="size-4 mr-2" />
+                Ouvrir la page publique
+              </a>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {error ? (
         <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
           {error}
@@ -648,116 +687,20 @@ export default function PopquizNewClient({
         <Button
           variant="outline"
           disabled={saving}
-          onClick={() => handleSave(false)}
+          onClick={() => router.push("/quizzes")}
           type="button"
         >
-          Enregistrer en brouillon
+          Retour aux projets
         </Button>
-        <Button
-          disabled={saving}
-          onClick={() => handleSave(true)}
-          type="button"
-        >
-          <Sparkles className="size-4 mr-2" />
-          {saving ? "Publication…" : "Publier & obtenir le lien"}
+        <Button disabled={saving} onClick={handleSave} type="button">
+          {isPublished ? (
+            <Save className="size-4 mr-2" />
+          ) : (
+            <Sparkles className="size-4 mr-2" />
+          )}
+          {saving ? "Enregistrement…" : "Enregistrer"}
         </Button>
       </div>
-
-      <Dialog
-        open={publishedId !== null}
-        onOpenChange={(o) => {
-          if (!o) setPublishedId(null);
-        }}
-      >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader className="space-y-1">
-            <DialogTitle className="text-base">Popquiz publié</DialogTitle>
-            <DialogDescription className="text-sm">
-              Partage le lien direct ou intègre la vidéo sur ton site.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-              Lien direct
-            </Label>
-            <div className="flex items-center gap-1.5 rounded-lg border bg-muted/40 p-1.5">
-              <code className="text-xs flex-1 min-w-0 truncate font-mono px-2">
-                {publishedUrl}
-              </code>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={copyPublishedUrl}
-                type="button"
-                className="shrink-0"
-              >
-                {copied ? (
-                  <Check className="size-4 text-green-600" />
-                ) : (
-                  <Copy className="size-4" />
-                )}
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-              Code d'intégration
-            </Label>
-            <textarea
-              readOnly
-              value={embedSnippet}
-              rows={6}
-              className="w-full rounded-md border bg-muted/40 p-3 text-xs font-mono whitespace-pre-wrap break-all resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-              onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-            />
-            <Button
-              onClick={copyEmbed}
-              size="sm"
-              variant="outline"
-              type="button"
-              className="w-full"
-            >
-              {copiedEmbed ? (
-                <>
-                  <Check className="size-4 mr-2 text-green-600" />
-                  Code copié
-                </>
-              ) : (
-                <>
-                  <Copy className="size-4 mr-2" />
-                  Copier le code
-                </>
-              )}
-            </Button>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setPublishedId(null);
-                router.push("/quizzes");
-              }}
-              type="button"
-            >
-              Mes projets
-            </Button>
-            <Button asChild size="sm">
-              <a
-                href={publishedUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <ExternalLink className="size-4 mr-1.5" />
-                Voir
-              </a>
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </AppShell>
   );
 }

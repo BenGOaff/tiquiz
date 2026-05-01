@@ -31,9 +31,7 @@ type ProjectMode = "quiz" | "survey" | "popquiz";
 
 type Project = {
   id: string;
-  // Slug is popquiz-only for now — used to build pretty share /
-  // embed URLs. null on quizzes / surveys (those keep their own
-  // slug story on the quiz page).
+  // Slug is popquiz-only — used to build pretty share / embed URLs.
   slug: string | null;
   title: string;
   status: string;
@@ -55,9 +53,6 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>("all");
 
-  // Holds the slug-or-id of the popquiz whose embed dialog should
-  // be shown, or null. Single dialog instance, swapped target on
-  // each open — cheaper than mounting one per row.
   const [embedHandle, setEmbedHandle] = useState<string | null>(null);
 
   useEffect(() => {
@@ -65,7 +60,6 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
       try {
         const [quizRes, popquizRes] = await Promise.all([
           fetch("/api/quiz").then((r) => r.json()).catch(() => ({ ok: false })),
-          // fail-soft: an environment without popquiz API still works
           fetch("/api/popquiz").then((r) => r.json()).catch(() => ({ ok: false })),
         ]);
 
@@ -140,9 +134,6 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
   }
 
   function copyLink(p: Project) {
-    // Public play paths diverge by type: /q/ for quiz+survey, /p/
-    // for popquiz (and we prefer the slug when available so the
-    // shared URL is human-readable).
     const segment = p.mode === "popquiz" ? "p" : "q";
     const handle = p.mode === "popquiz" ? (p.slug ?? p.id) : p.id;
     const url = `${window.location.origin}/${segment}/${handle}`;
@@ -186,9 +177,6 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
     );
   }, [projects]);
 
-  // Pre-compute the embed URL only when something is selected; the
-  // dialog mounts once, hidden by the open prop, and we just feed
-  // it the current target URL.
   const origin =
     typeof window !== "undefined" ? window.location.origin : "";
   const embedUrl = embedHandle ? `${origin}/embed/p/${embedHandle}` : "";
@@ -301,8 +289,10 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
             const isSurvey = p.mode === "survey";
             const isPopquiz = p.mode === "popquiz";
 
-            const titleHref = isPopquiz
-              ? `/p/${p.slug ?? p.id}`
+            // Title + pencil both lead to the editor for the right
+            // type (popquiz → /popquiz/[id], quiz/survey → /quiz/[id]).
+            const editHref = isPopquiz
+              ? `/popquiz/${p.id}`
               : `/quiz/${p.id}`;
 
             return (
@@ -312,7 +302,7 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <Link
-                          href={titleHref}
+                          href={editHref}
                           className="text-lg font-semibold hover:underline truncate"
                         >
                           {p.title || tProjects("untitled")}
@@ -399,9 +389,6 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
-                      {/* Embed code button — popquiz-only. Quizzes
-                          have their own embed flow under /embed; this
-                          is the popquiz-specific iframe snippet. */}
                       {isPopquiz ? (
                         <Button
                           variant="ghost"
@@ -412,16 +399,11 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                           <Code className="h-4 w-4" />
                         </Button>
                       ) : null}
-                      {/* Pencil hidden for popquiz until /popquiz/[id]
-                          editor exists. Re-enable here — link to that
-                          path — once it does. */}
-                      {!isPopquiz && (
-                        <Button variant="ghost" size="icon" asChild>
-                          <Link href={`/quiz/${p.id}`} title={t("editQuiz")}>
-                            <Pencil className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      )}
+                      <Button variant="ghost" size="icon" asChild>
+                        <Link href={editHref} title={t("editQuiz")}>
+                          <Pencil className="h-4 w-4" />
+                        </Link>
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"

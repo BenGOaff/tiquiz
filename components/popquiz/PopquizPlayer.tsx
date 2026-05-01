@@ -5,21 +5,23 @@
 // default Vidstack layout). Visual identity comes from the
 // creator's brand colour via --pq-accent on the container.
 //
-// Layout breakdown:
+// Layout:
 //   • black rounded container with deep shadow
-//   • full-area click-to-toggle play (z-0) so tapping anywhere on
-//     the video plays/pauses, just like YouTube. The visible glass
-//     play button at the centre is decoration only (pointer-events
-//     none) so we never have a half-broken hit zone.
-//   • bottom controls auto-hide on idle via Controls.Root — scrub
-//     bar with brand-coloured fill + cue markers, slim play / time /
-//     mute / fullscreen row
-//   • overlay layer at z-20 hosts the quiz iframe (or any caller-
-//     provided slot) plus a single chrome X close button
+//   • full-area click-to-toggle play (z-1)
+//   • visible glass play button at centre (decoration only)
+//   • bottom controls auto-hide on idle via Controls.Root
+//   • overlay layer at z-20 hosts the quiz iframe + close button
 //
-// YouTube-specific: query params suppress YouTube's own chrome
-// (controls=0, modestbranding=1, rel=0, playsinline=1) so our
-// custom layer is the only player UI a viewer sees.
+// Source-specific:
+//   • YouTube / Vimeo — their native chrome is suppressed via URL
+//     params so our custom layer is the only player UI.
+//   • Upload — falls back to externalUrl when hlsPath isn't set
+//     (always-the-case until the HLS pipeline lands). The signed
+//     URL is hydrated server-side by lib/popquiz/repo.ts.
+//
+// Poster: shown before play starts and during buffering, sourced
+// from popquiz.video.thumbnailUrl (auto-extracted on upload, set
+// by oEmbed for YouTube/Vimeo when we add it).
 
 import "@vidstack/react/player/styles/default/theme.css";
 
@@ -37,6 +39,7 @@ import {
   Controls,
   FullscreenButton,
   MuteButton,
+  Poster,
   PlayButton,
   Time,
   TimeSlider,
@@ -65,8 +68,6 @@ import type {
   PopquizVideo,
 } from "@/lib/popquiz/types";
 
-// Reports duration upstream so the editor can paint a usable
-// timeline strip below the preview. Pure side-effect component.
 function DurationReporter({
   onChange,
 }: {
@@ -79,9 +80,6 @@ function DurationReporter({
   return null;
 }
 
-// Cue markers painted on the scrub. Lives inside the MediaPlayer
-// subtree so it can read duration via useMediaState. Pure visual,
-// pointer-events: none so it never steals clicks from the slider.
 function CueMarkers({ cues }: { cues: PopquizCue[] }) {
   const duration = useMediaState("duration");
   if (!duration || duration <= 0) return null;
@@ -103,18 +101,12 @@ function CueMarkers({ cues }: { cues: PopquizCue[] }) {
   );
 }
 
-// Visible glass play indicator. Pointer-events-none so the
-// underlying full-area PlayButton owns every click — this avoids
-// the "only the small visible button is clickable, the rest of the
-// video does nothing" footgun.
 function CenterPlayVisual() {
   const paused = useMediaState("paused");
   return (
     <div
       className={`absolute inset-0 grid place-items-center pointer-events-none transition-all duration-300 z-[5] ${
-        paused
-          ? "opacity-100 scale-100"
-          : "opacity-0 scale-90"
+        paused ? "opacity-100 scale-100" : "opacity-0 scale-90"
       }`}
     >
       <span className="size-16 sm:size-20 rounded-full bg-white/15 backdrop-blur-md grid place-items-center shadow-2xl">
@@ -195,15 +187,8 @@ function CustomControls({ cues }: { cues: PopquizCue[] }) {
 
 export interface PopquizPlayerProps {
   popquiz: Popquiz;
-  // Forwarded so the host can persist analytics events; the player
-  // itself stays opinion-free about where they go.
   onEvent?: (event: PlayerEvent) => void;
-  // Reports duration so the editor's timeline strip can scale to
-  // real video length. Optional — the public play page doesn't use it.
   onDurationChange?: (durationMs: number) => void;
-  // Slot for the cue overlay content. The player chrome already
-  // renders the dimmed background and X close button — callers
-  // only provide the inner surface (iframe, custom card, etc.).
   renderOverlay: (args: {
     cue: PopquizCue;
     onAnswered: (meta?: Record<string, unknown>) => void;
@@ -230,19 +215,13 @@ export function PopquizPlayer({
     [popquiz.theme],
   );
 
-  // Pause / resume the underlying player on cue open / close. Side
-  // effects stay outside the reducer so the reducer remains pure
-  // and replayable for analytics.
   useEffect(() => {
     const p = playerRef.current;
     if (!p) return;
     if (snap.state === "quiz_open" && !p.paused) {
       p.pause();
     } else if (snap.state === "resuming" && p.paused) {
-      void p.play().catch(() => {
-        // Autoplay may be blocked after an overlay; the user will
-        // tap play themselves. Nothing actionable here.
-      });
+      void p.play().catch(() => {});
     }
   }, [snap.state]);
 
@@ -273,10 +252,10 @@ export function PopquizPlayer({
 
   function dismissCue() {
     if (!activeCue) return;
-    // Treat manual dismiss as "answered" — it consumes the cue so
-    // the video doesn't immediately re-trigger it on resume.
     dispatch({ type: "QUIZ_ANSWERED", cueId: activeCue.id });
   }
+
+  const posterUrl = popquiz.video.thumbnailUrl ?? undefined;
 
   return (
     <div
@@ -300,13 +279,16 @@ export function PopquizPlayer({
           });
         }}
       >
-        <MediaProvider />
+        <MediaProvider>
+          {posterUrl ? (
+            <Poster
+              src={posterUrl}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover bg-black"
+            />
+          ) : null}
+        </MediaProvider>
 
-        {/* Click-anywhere-to-toggle. Sits at z-1 so it stays above
-            the YouTube/Vimeo iframe but below the controls layer
-            (z-10), so bottom-bar buttons keep their own click
-            handling while the rest of the video still responds to
-            taps. */}
         <PlayButton className="absolute inset-0 z-[1] cursor-pointer focus-visible:outline-none" />
 
         <CenterPlayVisual />
@@ -353,9 +335,6 @@ export function PopquizPlayer({
   );
 }
 
-// Builds the Vidstack-compatible source string. For YouTube and
-// Vimeo we tack on URL params that hide the provider's native UI
-// so our custom chrome owns the visual layer.
 function mediaSourceFor(video: PopquizVideo): string | null {
   switch (video.source) {
     case "youtube":
@@ -369,7 +348,7 @@ function mediaSourceFor(video: PopquizVideo): string | null {
     case "url":
       return video.externalUrl;
     case "upload":
-      return video.hlsPath ?? null;
+      return video.hlsPath ?? video.externalUrl ?? null;
     default:
       return null;
   }

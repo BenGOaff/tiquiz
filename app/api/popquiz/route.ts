@@ -7,6 +7,14 @@
 // nobody can attach someone else's quiz to their own popquiz.
 // Slug is sanitized via the shared sanitizeSlug helper so slug
 // validation stays consistent with the quiz codebase.
+//
+// Video source: either `url` (YouTube / Vimeo / direct .mp4) OR
+// `uploaded_path` (raw object inside the popquiz-videos bucket,
+// scoped to raw/<auth.uid>/...). Exactly one of the two must be
+// provided. Uploads land as source='upload', status='ready' —
+// the public play page mints a signed URL on demand for playback.
+// `uploaded_thumbnail_path` and `uploaded_duration_ms` are
+// optional companions to `uploaded_path` (extracted client-side).
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
@@ -86,15 +94,70 @@ export async function POST(req: NextRequest) {
   }
 
   const url = String(body.url ?? "").trim();
-  const parsed = parseVideoUrl(url);
-  if (!parsed) {
+  const uploadedPath =
+    typeof body.uploaded_path === "string" ? body.uploaded_path.trim() : "";
+  const uploadedThumbnailPath =
+    typeof body.uploaded_thumbnail_path === "string"
+      ? body.uploaded_thumbnail_path.trim()
+      : "";
+  const uploadedDurationMs =
+    typeof body.uploaded_duration_ms === "number" &&
+    Number.isFinite(body.uploaded_duration_ms) &&
+    body.uploaded_duration_ms > 0
+      ? Math.floor(body.uploaded_duration_ms)
+      : null;
+
+  let videoInsert: Record<string, unknown> | null = null;
+
+  if (uploadedPath) {
+    const expectedPrefix = `raw/${user.id}/`;
+    if (!uploadedPath.startsWith(expectedPrefix)) {
+      return NextResponse.json(
+        { ok: false, error: "Invalid upload path" },
+        { status: 400 },
+      );
+    }
+    if (
+      uploadedThumbnailPath &&
+      !uploadedThumbnailPath.startsWith(expectedPrefix)
+    ) {
+      return NextResponse.json(
+        { ok: false, error: "Invalid thumbnail path" },
+        { status: 400 },
+      );
+    }
+    videoInsert = {
+      user_id: user.id,
+      source: "upload",
+      storage_path: uploadedPath,
+      thumbnail_path: uploadedThumbnailPath || null,
+      duration_ms: uploadedDurationMs,
+      // MVP: no transcoding pipeline yet, the browser plays the raw
+      // file directly via a signed URL. status='ready' from day one.
+      status: "ready",
+    };
+  } else if (url) {
+    const parsed = parseVideoUrl(url);
+    if (!parsed) {
+      return NextResponse.json(
+        { ok: false, error: "Invalid or unsupported video URL" },
+        { status: 400 },
+      );
+    }
+    videoInsert = {
+      user_id: user.id,
+      source: parsed.source,
+      external_url: parsed.normalizedUrl,
+      external_id: parsed.externalId,
+      status: "ready",
+    };
+  } else {
     return NextResponse.json(
-      { ok: false, error: "Invalid or unsupported video URL" },
+      { ok: false, error: "Précise une URL ou importe une vidéo." },
       { status: 400 },
     );
   }
 
-  // Slug is optional. Empty string → keep null (uuid URL only).
   const rawSlug = typeof body.slug === "string" ? body.slug.trim() : "";
   const slug = rawSlug.length > 0 ? sanitizeSlug(rawSlug) : null;
   if (rawSlug.length > 0 && slug === null) {
@@ -145,13 +208,7 @@ export async function POST(req: NextRequest) {
 
   const { data: video, error: videoError } = await supabase
     .from("popquiz_videos")
-    .insert({
-      user_id: user.id,
-      source: parsed.source,
-      external_url: parsed.normalizedUrl,
-      external_id: parsed.externalId,
-      status: parsed.source === "upload" ? "pending" : "ready",
-    })
+    .insert(videoInsert)
     .select("id")
     .single();
 
@@ -178,7 +235,6 @@ export async function POST(req: NextRequest) {
 
   if (popquizError || !popquiz) {
     await supabase.from("popquiz_videos").delete().eq("id", video.id);
-    // 23505 = unique violation. Surface it as a friendly slug error.
     const isSlugConflict =
       popquizError?.message?.includes("uniq_popquizzes_slug") ||
       popquizError?.code === "23505";
