@@ -1,7 +1,3 @@
-// Server entry for the popquiz editor (create flow). Pre-loads the
-// caller's quizzes so the cue dropdown has options on first render
-// without a client roundtrip.
-
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import PopquizNewClient from "./PopquizNewClient";
@@ -15,11 +11,16 @@ export default async function NewPopquizPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // Status comes along so the editor can flag draft quizzes — the
+  // popquiz overlay currently iframes /q/[id] which only serves
+  // active quizzes, so a draft would render an empty embed.
   const { data: quizzes } = await supabase
     .from("quizzes")
-    .select("id, title")
+    .select("id, title, status")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  return <PopquizNewClient quizzes={quizzes ?? []} />;
+  return (
+    <PopquizNewClient userEmail={user.email ?? ""} quizzes={quizzes ?? []} />
+  );
 }

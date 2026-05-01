@@ -1,13 +1,18 @@
 "use client";
 
-// Client wrapper for the public play page. The overlay placeholder
-// here will be replaced by the real Tiquiz quiz renderer in the
-// next iteration; for now we just unblock the video so the
-// pause/resume mechanics can be exercised end-to-end with real DB
-// rows.
+// Client wrapper for the public play page. The overlay slot now
+// hosts the linked quiz — we iframe /q/[quizId] for guaranteed
+// style isolation (PublicQuizClient is a 100KB+ component with its
+// own full-screen layout; embedding it directly inside an absolute
+// overlay would fight the parent in a hundred subtle ways).
+//
+// The X button is rendered by PopquizPlayer's chrome (one source of
+// truth for "close the overlay"), so the slot just owns the quiz
+// surface. When iframe-to-parent messaging is wired in a follow-up,
+// quiz completion will auto-resume the video; today the viewer
+// dismisses manually with X.
 
 import { PopquizPlayer } from "@/components/popquiz/PopquizPlayer";
-import { Button } from "@/components/ui/button";
 import type { Popquiz } from "@/lib/popquiz";
 
 export default function PopquizPlayClient({
@@ -16,29 +21,17 @@ export default function PopquizPlayClient({
   popquiz: Popquiz;
 }) {
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl space-y-3">
-        <h1 className="text-white/90 text-sm font-medium">{popquiz.title}</h1>
+    <div className="min-h-screen bg-black flex items-center justify-center p-3 sm:p-6">
+      <div className="w-full max-w-5xl">
         <PopquizPlayer
           popquiz={popquiz}
-          renderOverlay={({ cue, onAnswered, onSkipped }) => (
-            <div className="p-6 space-y-4">
-              <div>
-                <h2 className="text-base font-semibold">Question — quiz lié</h2>
-                <p className="text-sm text-muted-foreground">
-                  Le rendu complet du quiz arrive dans la prochaine
-                  itération. « Reprendre la vidéo » relance la lecture.
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={() => onAnswered()}>Reprendre la vidéo</Button>
-                {cue.behavior === "optional" ? (
-                  <Button variant="outline" onClick={onSkipped}>
-                    Passer
-                  </Button>
-                ) : null}
-              </div>
-            </div>
+          renderOverlay={({ cue }) => (
+            <iframe
+              src={`/q/${cue.quizId}`}
+              className="absolute inset-0 w-full h-full border-0 bg-background"
+              title="Quiz"
+              allow="autoplay; clipboard-write"
+            />
           )}
         />
       </div>
