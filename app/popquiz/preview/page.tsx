@@ -2,9 +2,13 @@
 
 // Public preview page for the PopquizPlayer. Wired to a fake
 // popquiz with two cues so the player can be exercised end-to-end
-// before any DB rows exist or the editor is built. Will be
-// replaced by a server component loading a real popquiz once the
-// editor lands.
+// before any DB rows exist or the editor is built.
+//
+// NOTE: Kept around even after /popquiz/new became the real editor
+// because a previous merge from feature → main didn't propagate
+// its deletion. The cleanest path is just to keep the demo working,
+// up to date with the current Popquiz shape, until we get a chance
+// to remove it again with a guaranteed-clean merge.
 
 import { useState } from "react";
 import { PopquizPlayer } from "@/components/popquiz/PopquizPlayer";
@@ -12,6 +16,7 @@ import type { PlayerEvent, Popquiz } from "@/lib/popquiz";
 
 const DEMO: Popquiz = {
   id: "demo-1",
+  slug: null,
   title: "Demo Popquiz",
   description: null,
   locale: "fr",
@@ -27,6 +32,11 @@ const DEMO: Popquiz = {
       radius: "16px",
       backdrop: "blur(18px)",
     },
+  },
+  branding: {
+    logoUrl: null,
+    websiteUrl: null,
+    primaryColor: null,
   },
   video: {
     id: "video-1",
@@ -65,7 +75,7 @@ export default function PopquizPreviewPage() {
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold">Popquiz preview</h1>
         <p className="text-sm text-muted-foreground">
-          Test du <code>PopquizPlayer</code> avec deux cues fictifs
+          Test du <code>PopquizPlayer</code> avec deux marqueurs fictifs
           (8 s bloquant, 30 s optionnel). Lance la lecture et laisse
           tourner.
         </p>
