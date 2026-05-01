@@ -254,15 +254,16 @@ export default function PopquizNewClient({
       // reject the insert at save time.
       let ts = timestampMs;
       while (prev.some((c) => c.timestampMs === ts)) ts += 250;
-      return [
-        ...prev,
-        {
-          localId: genId(),
-          quizId: quizzes[0].id,
-          timestampMs: ts,
-          behavior: "block",
-        },
-      ].sort((a, b) => a.timestampMs - b.timestampMs);
+      // Annotated explicitly so TS doesn't widen `behavior` to
+      // `string` when this object lands in an array literal that
+      // also contains spread `...prev` items.
+      const next: DraftCue = {
+        localId: genId(),
+        quizId: quizzes[0].id,
+        timestampMs: ts,
+        behavior: "block",
+      };
+      return [...prev, next].sort((a, b) => a.timestampMs - b.timestampMs);
     });
   }
 
@@ -479,7 +480,9 @@ export default function PopquizNewClient({
             </div>
             <Button
               size="sm"
-              onClick={() => addCueAt(durationMs ? Math.min(5000, durationMs / 6) : 5000)}
+              onClick={() =>
+                addCueAt(durationMs ? Math.min(5000, durationMs / 6) : 5000)
+              }
               type="button"
             >
               <Plus className="size-4 mr-1" /> Ajouter
