@@ -5,10 +5,13 @@
 //
 // Cue quiz_ids are validated against the caller's owned quizzes so
 // nobody can attach someone else's quiz to their own popquiz.
+// Slug is sanitized via the shared sanitizeSlug helper so slug
+// validation stays consistent with the quiz codebase.
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { parseVideoUrl } from "@/lib/popquiz";
+import { sanitizeSlug } from "@/lib/quizBranding";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +37,8 @@ export async function GET() {
   const { data, error } = await supabase
     .from("popquizzes")
     .select(
-      `id, title, description, locale, is_published, views_count, completions_count, created_at,
+      `id, title, description, slug, locale, is_published,
+       views_count, completions_count, created_at,
        video:popquiz_videos!inner(source, thumbnail_url, duration_ms, status)`,
     )
     .eq("user_id", user.id)
@@ -90,6 +94,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Slug is optional. Empty string → keep null (uuid URL only).
+  const rawSlug = typeof body.slug === "string" ? body.slug.trim() : "";
+  const slug = rawSlug.length > 0 ? sanitizeSlug(rawSlug) : null;
+  if (rawSlug.length > 0 && slug === null) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "Slug invalide. Lettres minuscules, chiffres et tirets uniquement (3 à 50 caractères).",
+      },
+      { status: 400 },
+    );
+  }
+
   const rawCues = Array.isArray(body.cues) ? body.cues : [];
   const cues: CueInput[] = [];
   for (const c of rawCues) {
@@ -105,9 +123,6 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Cross-check ownership of every linked quiz. The DB's FK only
-  // checks existence, not ownership — we don't want users grafting
-  // someone else's quiz onto their popquiz.
   if (cues.length > 0) {
     const ids = Array.from(new Set(cues.map((c) => c.quiz_id)));
     const { data: ownedQuizzes } = await supabase
@@ -128,10 +143,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 1) Video. External providers (YouTube/Vimeo/URL direct) play
-  // back without transcoding so we mark them ready immediately.
-  // Uploads will arrive with status='pending' and the worker flips
-  // them to 'ready' once HLS is built.
   const { data: video, error: videoError } = await supabase
     .from("popquiz_videos")
     .insert({
@@ -151,30 +162,37 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 2) Popquiz row.
   const { data: popquiz, error: popquizError } = await supabase
     .from("popquizzes")
     .insert({
       user_id: user.id,
       video_id: video.id,
       title,
+      slug,
       description: body.description ? String(body.description) : null,
       locale: typeof body.locale === "string" ? body.locale : "fr",
       is_published: body.is_published === true,
     })
-    .select("id")
+    .select("id, slug")
     .single();
 
   if (popquizError || !popquiz) {
-    // Roll back the video row so we don't leave orphans.
     await supabase.from("popquiz_videos").delete().eq("id", video.id);
+    // 23505 = unique violation. Surface it as a friendly slug error.
+    const isSlugConflict =
+      popquizError?.message?.includes("uniq_popquizzes_slug") ||
+      popquizError?.code === "23505";
     return NextResponse.json(
-      { ok: false, error: popquizError?.message ?? "Failed to create popquiz" },
+      {
+        ok: false,
+        error: isSlugConflict
+          ? "Ce slug est déjà utilisé. Choisis-en un autre."
+          : (popquizError?.message ?? "Failed to create popquiz"),
+      },
       { status: 400 },
     );
   }
 
-  // 3) Cues.
   if (cues.length > 0) {
     const { error: cuesError } = await supabase.from("popquiz_cues").insert(
       cues.map((c, i) => ({
@@ -186,7 +204,6 @@ export async function POST(req: NextRequest) {
       })),
     );
     if (cuesError) {
-      // Cascade rollback. Delete popquiz → cascades cues; then video.
       await supabase.from("popquizzes").delete().eq("id", popquiz.id);
       await supabase.from("popquiz_videos").delete().eq("id", video.id);
       return NextResponse.json(
@@ -196,5 +213,9 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, popquizId: popquiz.id });
+  return NextResponse.json({
+    ok: true,
+    popquizId: popquiz.id,
+    slug: popquiz.slug,
+  });
 }

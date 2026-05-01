@@ -1,5 +1,6 @@
 // Public play page — no auth required. Loads a published popquiz
 // via the service-role client (bypasses RLS), 404s otherwise.
+// Accepts either a UUID or the custom slug, mirroring /q/[quizId].
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -15,7 +16,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const popquiz = await fetchPublishedPopquiz(popquizId);
   if (!popquiz) return { title: "Popquiz" };
   return {
-    title: `${popquiz.title} – Popquiz`,
+    title: popquiz.title,
     description: popquiz.description ?? undefined,
     openGraph: {
       title: popquiz.title,

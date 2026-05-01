@@ -46,14 +46,26 @@ export interface PopquizTheme {
   isShared: boolean;
 }
 
+// Branding resolved from the creator's profile (and, in a future
+// pass, optional per-popquiz overrides). Threaded all the way down
+// to the player so it can paint the accent colour, render an inline
+// logo, and surface the creator's site link.
+export interface PopquizBranding {
+  logoUrl: string | null;
+  websiteUrl: string | null;
+  primaryColor: string | null;
+}
+
 export interface Popquiz {
   id: string;
+  slug: string | null;
   title: string;
   description: string | null;
   locale: string;
   isPublished: boolean;
   video: PopquizVideo;
   theme: PopquizTheme | null;
+  branding: PopquizBranding;
   cues: PopquizCue[];
 }
 

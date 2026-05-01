@@ -1,7 +1,7 @@
 // Server-only data access for popquizzes. Centralised so routes
 // and pages share the same hydrated `Popquiz` shape (video + theme
-// + cues), and so the relationship-select syntax lives in one
-// place if Supabase ever changes it.
+// + cues + branding), and so the relationship-select syntax lives
+// in one place if Supabase ever changes it.
 
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -9,6 +9,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type {
   CueBehavior,
   Popquiz,
+  PopquizBranding,
   PopquizCue,
   PopquizTheme,
   PopquizVideo,
@@ -47,21 +48,28 @@ interface CueRow {
 interface PopquizRow {
   id: string;
   user_id: string | null;
+  slug: string | null;
   title: string;
   description: string | null;
   locale: string;
   is_published: boolean;
   // supabase-js returns to-one relations as either a single object
-  // or null depending on the schema; never an array. We type both
-  // sides defensively at the boundary.
+  // or null; we type both sides defensively at the boundary.
   video: VideoRow | VideoRow[] | null;
   theme: ThemeRow | ThemeRow[] | null;
   cues: CueRow[];
 }
 
+interface ProfileBrandRow {
+  brand_logo_url: string | null;
+  brand_color_primary: string | null;
+  brand_website_url: string | null;
+}
+
 const FULL_SELECT = `
   id,
   user_id,
+  slug,
   title,
   description,
   locale,
@@ -123,38 +131,103 @@ function mapCue(row: CueRow): PopquizCue {
   };
 }
 
-function rowToPopquiz(row: PopquizRow): Popquiz | null {
+function mapBranding(profile: ProfileBrandRow | null): PopquizBranding {
+  return {
+    logoUrl: profile?.brand_logo_url?.trim() || null,
+    websiteUrl: profile?.brand_website_url?.trim() || null,
+    primaryColor: profile?.brand_color_primary?.trim() || null,
+  };
+}
+
+// Mutates the popquiz in place — if the creator has a brand colour
+// set, it overrides the theme accent so the player paints in the
+// creator's identity even when no per-popquiz theme exists yet.
+function applyBrandingToTheme(
+  popquiz: Popquiz,
+  branding: PopquizBranding,
+): Popquiz {
+  if (!branding.primaryColor) return popquiz;
+  const cfg = popquiz.theme?.config ?? {};
+  return {
+    ...popquiz,
+    theme: {
+      id: popquiz.theme?.id ?? "brand-fallback",
+      name: popquiz.theme?.name ?? "Brand",
+      isPreset: false,
+      isShared: false,
+      config: { ...cfg, accent: branding.primaryColor },
+    },
+  };
+}
+
+function rowToPopquiz(
+  row: PopquizRow,
+  branding: PopquizBranding,
+): Popquiz | null {
   const video = firstOrSelf(row.video);
   if (!video) return null;
-  return {
+  const popquiz: Popquiz = {
     id: row.id,
+    slug: row.slug,
     title: row.title,
     description: row.description,
     locale: row.locale,
     isPublished: row.is_published,
     video: mapVideo(video),
     theme: mapTheme(firstOrSelf(row.theme)),
-    cues: row.cues
-      .map(mapCue)
-      .sort((a, b) => a.timestampMs - b.timestampMs),
+    branding,
+    cues: row.cues.map(mapCue).sort((a, b) => a.timestampMs - b.timestampMs),
   };
+  return applyBrandingToTheme(popquiz, branding);
+}
+
+async function fetchOwnerBranding(
+  userId: string | null,
+): Promise<PopquizBranding> {
+  if (!userId) return mapBranding(null);
+  const { data } = await supabaseAdmin
+    .from("profiles")
+    .select("brand_logo_url, brand_color_primary, brand_website_url")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return mapBranding(data ?? null);
 }
 
 // Public-facing fetch — uses the service role so the play page can
-// load a popquiz without a logged-in viewer. Only published rows are
-// returned; drafts stay invisible.
-export async function fetchPublishedPopquiz(
-  popquizId: string,
-): Promise<Popquiz | null> {
-  const { data, error } = await supabaseAdmin
-    .from("popquizzes")
-    .select(FULL_SELECT)
-    .eq("id", popquizId)
-    .eq("is_published", true)
-    .maybeSingle();
+// load a popquiz without a logged-in viewer. Only published rows
+// are returned; drafts stay invisible. Accepts either a UUID or a
+// custom slug, mirroring how /q/[quizId] resolves quizzes.
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-  if (error || !data) return null;
-  return rowToPopquiz(data as unknown as PopquizRow);
+export async function fetchPublishedPopquiz(
+  popquizIdOrSlug: string,
+): Promise<Popquiz | null> {
+  let row: PopquizRow | null = null;
+
+  if (UUID_RE.test(popquizIdOrSlug)) {
+    const { data } = await supabaseAdmin
+      .from("popquizzes")
+      .select(FULL_SELECT)
+      .eq("id", popquizIdOrSlug)
+      .eq("is_published", true)
+      .maybeSingle();
+    row = (data as unknown as PopquizRow) ?? null;
+  }
+
+  if (!row) {
+    const { data } = await supabaseAdmin
+      .from("popquizzes")
+      .select(FULL_SELECT)
+      .eq("slug", popquizIdOrSlug)
+      .eq("is_published", true)
+      .maybeSingle();
+    row = (data as unknown as PopquizRow) ?? null;
+  }
+
+  if (!row) return null;
+  const branding = await fetchOwnerBranding(row.user_id);
+  return rowToPopquiz(row, branding);
 }
 
 // Owner-scoped fetch using the caller's RLS-aware client. Used by
@@ -170,5 +243,7 @@ export async function fetchOwnedPopquiz(
     .maybeSingle();
 
   if (error || !data) return null;
-  return rowToPopquiz(data as unknown as PopquizRow);
+  const row = data as unknown as PopquizRow;
+  const branding = await fetchOwnerBranding(row.user_id);
+  return rowToPopquiz(row, branding);
 }

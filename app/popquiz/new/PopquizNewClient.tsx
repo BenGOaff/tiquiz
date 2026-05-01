@@ -1,15 +1,22 @@
 "use client";
 
-// Popquiz creation flow, wrapped in AppShell so it sits inside the
-// same chrome (sidebar, header, max-width container) as every other
-// authoring page in the app. Layout, banner and section cards mirror
-// /quizzes so the editor doesn't feel like a side-project.
+// Popquiz creation flow. Shipped inside <AppShell> with the same
+// chrome (sidebar, header, banner, max-width container) as every
+// other authoring page so the editor reads as part of the product.
 //
-// Publishing returns to a success Dialog (URL + copy + open) instead
-// of jumping the user straight to the public play page — same
-// pattern Tiquiz uses for quizzes / surveys.
+// Editing model: the timeline strip below the live preview is the
+// primary way to place markers — click anywhere on it to add a
+// marker at that exact second. Each marker can then be fine-tuned
+// in the list (timestamp, linked quiz, blocking vs optional).
+//
+// Vocabulary: we say "marqueur" everywhere user-facing. "Cue" only
+// survives in the wire format / DB. Same idea, French label.
+//
+// Publishing returns to a focused success Dialog (URL + copy +
+// open) instead of jumping the user straight to the public play
+// page — same UX Tiquiz uses for quizzes / surveys.
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -67,6 +74,120 @@ function genId(): string {
   return `cue-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// Click-on-track timeline editor. Sits below the live preview so
+// the creator can scrub the video, see exactly where they want a
+// marker, then drop one with a single click.
+function TimelineStrip({
+  durationMs,
+  cues,
+  onAddAt,
+  onRemove,
+  primaryColor,
+}: {
+  durationMs: number | null;
+  cues: DraftCue[];
+  onAddAt: (ms: number) => void;
+  onRemove: (localId: string) => void;
+  primaryColor: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [hoverPct, setHoverPct] = useState<number | null>(null);
+
+  const usableDuration = durationMs && durationMs > 0 ? durationMs : null;
+
+  function handleClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (!ref.current) return;
+    if (!usableDuration) {
+      toast.message(
+        "Lance la lecture une seconde pour que la durée de la vidéo soit détectée.",
+      );
+      return;
+    }
+    const rect = ref.current.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    onAddAt(Math.round(pct * usableDuration));
+  }
+
+  function handleMove(e: React.MouseEvent<HTMLDivElement>) {
+    if (!ref.current || !usableDuration) return;
+    const rect = ref.current.getBoundingClientRect();
+    setHoverPct(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)));
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <Label className="text-sm">Timeline</Label>
+        <span className="text-[11px] text-muted-foreground">
+          {usableDuration
+            ? "Clique sur la barre pour ajouter un marqueur"
+            : "Lance la lecture pour activer la barre"}
+        </span>
+      </div>
+      <div
+        ref={ref}
+        onClick={handleClick}
+        onMouseMove={handleMove}
+        onMouseLeave={() => setHoverPct(null)}
+        className={`relative h-12 rounded-lg ring-1 ring-border bg-gradient-to-r from-muted/60 to-muted/30 ${
+          usableDuration ? "cursor-crosshair" : "cursor-not-allowed opacity-60"
+        }`}
+        role="button"
+        tabIndex={usableDuration ? 0 : -1}
+        aria-label="Cliquer pour ajouter un marqueur"
+      >
+        {/* Time labels */}
+        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted-foreground">
+          0:00
+        </span>
+        {usableDuration ? (
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted-foreground">
+            {formatMs(usableDuration)}
+          </span>
+        ) : null}
+
+        {/* Hover indicator + tooltip */}
+        {hoverPct !== null && usableDuration ? (
+          <>
+            <div
+              className="absolute top-0 bottom-0 w-px bg-foreground/30 pointer-events-none"
+              style={{ left: `${hoverPct * 100}%` }}
+            />
+            <div
+              className="absolute -top-7 -translate-x-1/2 px-2 py-0.5 rounded bg-foreground text-background text-[10px] font-mono pointer-events-none whitespace-nowrap"
+              style={{ left: `${hoverPct * 100}%` }}
+            >
+              {formatMs(hoverPct * usableDuration)}
+            </div>
+          </>
+        ) : null}
+
+        {/* Existing markers */}
+        {usableDuration
+          ? cues.map((c) => {
+              const pct = (c.timestampMs / usableDuration) * 100;
+              if (pct < 0 || pct > 100) return null;
+              return (
+                <button
+                  key={c.localId}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove(c.localId);
+                  }}
+                  className="group absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-3 rounded-full ring-2 ring-white shadow-md hover:scale-125 transition-transform"
+                  style={{ left: `${pct}%`, background: primaryColor }}
+                  title={`Marqueur à ${formatMs(c.timestampMs)} — cliquer pour supprimer`}
+                  aria-label={`Marqueur à ${formatMs(c.timestampMs)}, cliquer pour supprimer`}
+                />
+              );
+            })
+          : null}
+      </div>
+    </div>
+  );
+}
+
 export default function PopquizNewClient({
   userEmail,
   quizzes,
@@ -76,31 +197,30 @@ export default function PopquizNewClient({
 }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
+  const [slug, setSlug] = useState("");
   const [url, setUrl] = useState("");
   const [cues, setCues] = useState<DraftCue[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [durationMs, setDurationMs] = useState<number | null>(null);
 
-  // Success state — set after a successful publish, drives the
-  // confirmation Dialog. Mirrors the share-modal flow elsewhere in
-  // the app rather than auto-redirecting.
   const [publishedId, setPublishedId] = useState<string | null>(null);
+  const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const parsed = useMemo(() => parseVideoUrl(url), [url]);
 
-  // Synthesize a Popquiz from the current draft so the same
-  // PopquizPlayer the public viewer uses can render an inline
-  // preview — WYSIWYG.
   const draftPopquiz = useMemo<Popquiz | null>(() => {
     if (!parsed) return null;
     return {
       id: "draft",
+      slug: null,
       title: title || "Sans titre",
       description: null,
       locale: "fr",
       isPublished: false,
       theme: null,
+      branding: { logoUrl: null, websiteUrl: null, primaryColor: null },
       video: {
         id: "draft-video",
         source: parsed.source,
@@ -122,24 +242,28 @@ export default function PopquizNewClient({
     };
   }, [parsed, title, cues]);
 
-  function addCue() {
+  function addCueAt(timestampMs: number) {
     if (quizzes.length === 0) {
       setError("Crée d'abord un quiz dans Mes projets.");
       return;
     }
     setError(null);
-    setCues((prev) => [
-      ...prev,
-      {
-        localId: genId(),
-        quizId: quizzes[0].id,
-        // Stagger by 5 s after the previous cue so two cues never
-        // collide on the (popquiz_id, timestamp_ms) unique index.
-        timestampMs:
-          prev.length === 0 ? 5000 : prev[prev.length - 1].timestampMs + 5000,
-        behavior: "block",
-      },
-    ]);
+    setCues((prev) => {
+      // Spread by 250 ms if a cue already exists at this exact ms,
+      // otherwise the (popquiz_id, timestamp_ms) unique index will
+      // reject the insert at save time.
+      let ts = timestampMs;
+      while (prev.some((c) => c.timestampMs === ts)) ts += 250;
+      return [
+        ...prev,
+        {
+          localId: genId(),
+          quizId: quizzes[0].id,
+          timestampMs: ts,
+          behavior: "block",
+        },
+      ].sort((a, b) => a.timestampMs - b.timestampMs);
+    });
   }
 
   function removeCue(localId: string) {
@@ -148,7 +272,9 @@ export default function PopquizNewClient({
 
   function updateCue(localId: string, patch: Partial<DraftCue>) {
     setCues((prev) =>
-      prev.map((c) => (c.localId === localId ? { ...c, ...patch } : c)),
+      prev
+        .map((c) => (c.localId === localId ? { ...c, ...patch } : c))
+        .sort((a, b) => a.timestampMs - b.timestampMs),
     );
   }
 
@@ -169,6 +295,7 @@ export default function PopquizNewClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
+          slug: slug.trim() || undefined,
           url,
           is_published: publish,
           cues: cues.map((c) => ({
@@ -185,6 +312,7 @@ export default function PopquizNewClient({
       }
       if (publish) {
         setPublishedId(json.popquizId);
+        setPublishedSlug(json.slug ?? null);
       } else {
         toast.success("Brouillon enregistré");
         router.push("/quizzes");
@@ -196,9 +324,11 @@ export default function PopquizNewClient({
     }
   }
 
+  // Prefer the human-readable slug URL when available; fall back to
+  // the UUID URL.
   const publishedUrl =
     publishedId && typeof window !== "undefined"
-      ? `${window.location.origin}/p/${publishedId}`
+      ? `${window.location.origin}/p/${publishedSlug ?? publishedId}`
       : "";
 
   async function copyPublishedUrl() {
@@ -213,11 +343,12 @@ export default function PopquizNewClient({
     }
   }
 
+  // Brand the timeline markers with the app's primary so the editor
+  // matches the live player without yet pulling a real profile here.
+  const markerColor = "hsl(var(--primary))";
+
   return (
     <AppShell userEmail={userEmail} headerTitle="Nouveau Popquiz">
-      {/* Banner — same gradient + icon-tile pattern as /quizzes so
-          the editor reads as part of the same product, not a side
-          experiment. */}
       <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
         <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
           <Video className="h-5 w-5" />
@@ -225,8 +356,8 @@ export default function PopquizNewClient({
         <div className="flex-1 min-w-0">
           <h2 className="text-lg font-bold">Popquiz</h2>
           <p className="text-sm text-white/80">
-            Charge une vidéo, place des cues sur la timeline pour faire
-            apparaître un quiz existant en plein milieu de la lecture.
+            Charge une vidéo, place des marqueurs sur la timeline pour faire
+            apparaître un quiz au bon moment.
           </p>
         </div>
       </div>
@@ -255,28 +386,57 @@ export default function PopquizNewClient({
                 URL non reconnue (YouTube, Vimeo ou lien direct).
               </p>
             ) : null}
+            <p className="text-[11px] text-muted-foreground">
+              L'upload direct de fichiers vidéo arrive bientôt.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="slug">
+              Lien personnalisé{" "}
+              <span className="text-muted-foreground font-normal">
+                (optionnel)
+              </span>
+            </Label>
+            <div className="flex items-stretch rounded-md border bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring">
+              <span className="px-2.5 flex items-center text-xs text-muted-foreground bg-muted/50 border-r">
+                /p/
+              </span>
+              <input
+                id="slug"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                placeholder="onboarding-q1"
+                className="flex-1 px-3 py-1.5 text-sm bg-transparent outline-none"
+                autoComplete="off"
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Lettres minuscules, chiffres et tirets. Si vide, on utilise un
+              identifiant généré.
+            </p>
           </div>
         </CardContent>
       </Card>
 
       {draftPopquiz ? (
         <Card className="overflow-hidden">
-          <CardContent className="py-5 space-y-3">
+          <CardContent className="py-5 space-y-4">
             <div className="flex items-baseline justify-between gap-3">
               <Label className="text-sm">Aperçu</Label>
               <span className="text-[11px] text-muted-foreground">
-                Le quiz s'affichera ici quand un cue sera atteint.
+                Le quiz lié s'affichera à chaque marqueur en lecture finale.
               </span>
             </div>
             <PopquizPlayer
               popquiz={draftPopquiz}
+              onDurationChange={setDurationMs}
               renderOverlay={({ cue, onSkipped }) => {
                 const linked = quizzes.find((q) => q.id === cue.quizId);
                 return (
                   <div className="absolute inset-0 grid place-items-center p-6">
                     <div className="max-w-md w-full rounded-2xl bg-white shadow-2xl p-6 space-y-3">
                       <h3 className="text-base font-semibold">
-                        Cue @ {formatMs(cue.timestampMs)} —{" "}
+                        Marqueur à {formatMs(cue.timestampMs)} —{" "}
                         {linked?.title ?? "Quiz inconnu"}
                       </h3>
                       <p className="text-sm text-muted-foreground">
@@ -297,6 +457,13 @@ export default function PopquizNewClient({
                 );
               }}
             />
+            <TimelineStrip
+              durationMs={durationMs}
+              cues={cues}
+              onAddAt={addCueAt}
+              onRemove={removeCue}
+              primaryColor={markerColor}
+            />
           </CardContent>
         </Card>
       ) : null}
@@ -305,19 +472,23 @@ export default function PopquizNewClient({
         <CardContent className="py-5 space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-semibold">Cues</h2>
+              <h2 className="text-base font-semibold">Marqueurs</h2>
               <p className="text-xs text-muted-foreground">
-                Le quiz se déclenche à ce timestamp.
+                Le quiz se déclenche à ce moment de la vidéo.
               </p>
             </div>
-            <Button size="sm" onClick={addCue} type="button">
+            <Button
+              size="sm"
+              onClick={() => addCueAt(durationMs ? Math.min(5000, durationMs / 6) : 5000)}
+              type="button"
+            >
               <Plus className="size-4 mr-1" /> Ajouter
             </Button>
           </div>
 
           {cues.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
-              Aucun cue pour le moment.
+              Aucun marqueur. Clique sur la timeline ou sur « Ajouter ».
             </p>
           ) : (
             <ul className="space-y-2">
@@ -423,26 +594,25 @@ export default function PopquizNewClient({
         </Button>
       </div>
 
-      {/* Success modal — stays on the editor page until the user
-          dismisses, so they can keep tweaking and re-publish without
-          losing context. */}
+      {/* Success modal — capped width so the URL fits cleanly without
+          forcing the description onto multiple lines on desktop. */}
       <Dialog
         open={publishedId !== null}
         onOpenChange={(o) => {
           if (!o) setPublishedId(null);
         }}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Popquiz publié 🎉</DialogTitle>
-            <DialogDescription>
-              Partage ce lien à ton audience. Tu peux y revenir depuis
-              Mes projets à tout moment.
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-base">Popquiz publié</DialogTitle>
+            <DialogDescription className="text-sm">
+              Partage ce lien à ton audience. Tu peux y revenir depuis Mes
+              projets.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
-            <code className="text-xs flex-1 truncate font-mono">
+          <div className="flex items-center gap-1.5 rounded-lg border bg-muted/40 p-1.5">
+            <code className="text-xs flex-1 min-w-0 truncate font-mono px-2">
               {publishedUrl}
             </code>
             <Button
@@ -450,6 +620,7 @@ export default function PopquizNewClient({
               variant="ghost"
               onClick={copyPublishedUrl}
               type="button"
+              className="shrink-0"
             >
               {copied ? (
                 <Check className="size-4 text-green-600" />
@@ -462,22 +633,23 @@ export default function PopquizNewClient({
           <DialogFooter className="gap-2 sm:gap-2">
             <Button
               variant="outline"
+              size="sm"
               onClick={() => {
                 setPublishedId(null);
                 router.push("/quizzes");
               }}
               type="button"
             >
-              Aller à mes projets
+              Mes projets
             </Button>
-            <Button asChild>
+            <Button asChild size="sm">
               <a
                 href={publishedUrl}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <ExternalLink className="size-4 mr-2" />
-                Voir le popquiz
+                <ExternalLink className="size-4 mr-1.5" />
+                Voir
               </a>
             </Button>
           </DialogFooter>

@@ -12,8 +12,8 @@ export default async function NewPopquizPage() {
   if (!user) redirect("/login");
 
   // Status comes along so the editor can flag draft quizzes — the
-  // popquiz overlay currently iframes /q/[id] which only serves
-  // active quizzes, so a draft would render an empty embed.
+  // popquiz overlay iframes /q/[id] which only serves active quizzes,
+  // so a draft would render an empty embed.
   const { data: quizzes } = await supabase
     .from("quizzes")
     .select("id, title, status")

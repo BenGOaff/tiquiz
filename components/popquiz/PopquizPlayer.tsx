@@ -1,18 +1,25 @@
 "use client";
 
 // Popquiz player — Vidstack MediaPlayer wrapped in our cue state
-// machine and dressed in a custom Apple-style chrome (no default
-// Vidstack layout). Visual identity comes from the active theme
-// via --pq-* CSS custom properties on the container.
+// machine and dressed in a custom YouTube/Vimeo-style chrome (no
+// default Vidstack layout). Visual identity comes from the
+// creator's brand colour via --pq-accent on the container.
 //
 // Layout breakdown:
-//   • black rounded container with deep shadow (Apple feel)
-//   • big centred play button while paused (auto-fades on play)
-//   • bottom controls bar with auto-fade on hover/idle: scrub +
-//     small play, time, mute, fullscreen
-//   • cue markers (accent-coloured dots) painted onto the scrub
-//   • quiz overlay with one X close button rendered by the player
-//     chrome (so every renderOverlay caller doesn't reimplement it)
+//   • black rounded container with deep shadow
+//   • full-area click-to-toggle play (z-0) so tapping anywhere on
+//     the video plays/pauses, just like YouTube. The visible glass
+//     play button at the centre is decoration only (pointer-events
+//     none) so we never have a half-broken hit zone.
+//   • bottom controls auto-hide on idle via Controls.Root — scrub
+//     bar with brand-coloured fill + cue markers, slim play / time /
+//     mute / fullscreen row
+//   • overlay layer at z-20 hosts the quiz iframe (or any caller-
+//     provided slot) plus a single chrome X close button
+//
+// YouTube-specific: query params suppress YouTube's own chrome
+// (controls=0, modestbranding=1, rel=0, playsinline=1) so our
+// custom layer is the only player UI a viewer sees.
 
 import "@vidstack/react/player/styles/default/theme.css";
 
@@ -58,6 +65,20 @@ import type {
   PopquizVideo,
 } from "@/lib/popquiz/types";
 
+// Reports duration upstream so the editor can paint a usable
+// timeline strip below the preview. Pure side-effect component.
+function DurationReporter({
+  onChange,
+}: {
+  onChange: (durationMs: number) => void;
+}) {
+  const duration = useMediaState("duration");
+  useEffect(() => {
+    if (duration && duration > 0) onChange(Math.round(duration * 1000));
+  }, [duration, onChange]);
+  return null;
+}
+
 // Cue markers painted on the scrub. Lives inside the MediaPlayer
 // subtree so it can read duration via useMediaState. Pure visual,
 // pointer-events: none so it never steals clicks from the slider.
@@ -82,20 +103,23 @@ function CueMarkers({ cues }: { cues: PopquizCue[] }) {
   );
 }
 
-// Big centred play button while paused. Faded out (and click-through
-// disabled) once playback starts so it doesn't sit on top of the
-// content during playback.
-function CenterPlay() {
+// Visible glass play indicator. Pointer-events-none so the
+// underlying full-area PlayButton owns every click — this avoids
+// the "only the small visible button is clickable, the rest of the
+// video does nothing" footgun.
+function CenterPlayVisual() {
   const paused = useMediaState("paused");
   return (
     <div
-      className={`absolute inset-0 grid place-items-center transition-opacity duration-300 ${
-        paused ? "opacity-100" : "opacity-0 pointer-events-none"
+      className={`absolute inset-0 grid place-items-center pointer-events-none transition-all duration-300 z-[5] ${
+        paused
+          ? "opacity-100 scale-100"
+          : "opacity-0 scale-90"
       }`}
     >
-      <PlayButton className="group/cpb size-20 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center transition-all duration-200 hover:bg-white/25 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
-        <Play className="size-9 text-white fill-white ml-1" />
-      </PlayButton>
+      <span className="size-16 sm:size-20 rounded-full bg-white/15 backdrop-blur-md grid place-items-center shadow-2xl">
+        <Play className="size-7 sm:size-9 text-white fill-white ml-1" />
+      </span>
     </div>
   );
 }
@@ -139,43 +163,33 @@ function FullscreenToggle() {
   );
 }
 
-// The full custom controls layout. Vidstack's <Controls.Root>
-// handles the auto-hide-on-idle behaviour for us — children get a
-// `data-visible` attribute we hook into for opacity transitions.
 function CustomControls({ cues }: { cues: PopquizCue[] }) {
   return (
-    <>
-      {/* Centre play button sits outside Controls.Root so its
-          visibility is driven by paused-state alone, not idle
-          timeout. It stays put while the user reads the page. */}
-      <CenterPlay />
-
-      <Controls.Root className="absolute inset-0 pointer-events-none">
-        <Controls.Group className="absolute bottom-0 left-0 right-0 px-3 sm:px-4 pb-2 sm:pb-3 pt-12 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-auto opacity-0 data-[visible]:opacity-100 transition-opacity duration-300">
-          <div className="relative">
-            <TimeSlider.Root className="relative h-5 flex items-center group/scrub w-full select-none">
-              <TimeSlider.Track className="relative h-1 w-full rounded-full bg-white/25 group-hover/scrub:h-1.5 transition-all">
-                <TimeSlider.TrackFill className="absolute h-full rounded-full bg-[var(--pq-accent,#5D6CDB)]" />
-                <TimeSlider.Progress className="absolute h-full rounded-full bg-white/35" />
-              </TimeSlider.Track>
-              <CueMarkers cues={cues} />
-              <TimeSlider.Thumb className="absolute size-3 rounded-full bg-white shadow-lg opacity-0 group-hover/scrub:opacity-100 transition-opacity" />
-            </TimeSlider.Root>
+    <Controls.Root className="absolute inset-0 pointer-events-none z-10">
+      <Controls.Group className="absolute bottom-0 left-0 right-0 px-3 sm:px-4 pb-2 sm:pb-3 pt-12 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-auto opacity-0 data-[visible]:opacity-100 transition-opacity duration-300">
+        <div className="relative">
+          <TimeSlider.Root className="relative h-5 flex items-center group/scrub w-full select-none">
+            <TimeSlider.Track className="relative h-1 w-full rounded-full bg-white/25 group-hover/scrub:h-1.5 transition-all">
+              <TimeSlider.TrackFill className="absolute h-full rounded-full bg-[var(--pq-accent,#5D6CDB)]" />
+              <TimeSlider.Progress className="absolute h-full rounded-full bg-white/35" />
+            </TimeSlider.Track>
+            <CueMarkers cues={cues} />
+            <TimeSlider.Thumb className="absolute size-3 rounded-full bg-white shadow-lg opacity-0 group-hover/scrub:opacity-100 transition-opacity" />
+          </TimeSlider.Root>
+        </div>
+        <div className="flex items-center gap-1.5 mt-1">
+          <PlayPauseSmall />
+          <div className="text-[11px] font-medium text-white/90 font-mono ml-1 tabular-nums">
+            <Time type="current" />
+            <span className="text-white/40 mx-1">/</span>
+            <Time type="duration" />
           </div>
-          <div className="flex items-center gap-1.5 mt-1">
-            <PlayPauseSmall />
-            <div className="text-[11px] font-medium text-white/90 font-mono ml-1 tabular-nums">
-              <Time type="current" />
-              <span className="text-white/40 mx-1">/</span>
-              <Time type="duration" />
-            </div>
-            <div className="flex-1" />
-            <MuteToggle />
-            <FullscreenToggle />
-          </div>
-        </Controls.Group>
-      </Controls.Root>
-    </>
+          <div className="flex-1" />
+          <MuteToggle />
+          <FullscreenToggle />
+        </div>
+      </Controls.Group>
+    </Controls.Root>
   );
 }
 
@@ -184,6 +198,9 @@ export interface PopquizPlayerProps {
   // Forwarded so the host can persist analytics events; the player
   // itself stays opinion-free about where they go.
   onEvent?: (event: PlayerEvent) => void;
+  // Reports duration so the editor's timeline strip can scale to
+  // real video length. Optional — the public play page doesn't use it.
+  onDurationChange?: (durationMs: number) => void;
   // Slot for the cue overlay content. The player chrome already
   // renders the dimmed background and X close button — callers
   // only provide the inner surface (iframe, custom card, etc.).
@@ -197,6 +214,7 @@ export interface PopquizPlayerProps {
 export function PopquizPlayer({
   popquiz,
   onEvent,
+  onDurationChange,
   renderOverlay,
 }: PopquizPlayerProps) {
   const playerRef = useRef<MediaPlayerInstance>(null);
@@ -228,7 +246,6 @@ export function PopquizPlayer({
     }
   }, [snap.state]);
 
-  // Forward newly-emitted events to the host.
   const emittedCountRef = useRef(0);
   useEffect(() => {
     if (!onEvent) {
@@ -284,7 +301,20 @@ export function PopquizPlayer({
         }}
       >
         <MediaProvider />
+
+        {/* Click-anywhere-to-toggle. Sits at z-1 so it stays above
+            the YouTube/Vimeo iframe but below the controls layer
+            (z-10), so bottom-bar buttons keep their own click
+            handling while the rest of the video still responds to
+            taps. */}
+        <PlayButton className="absolute inset-0 z-[1] cursor-pointer focus-visible:outline-none" />
+
+        <CenterPlayVisual />
         <CustomControls cues={cues} />
+
+        {onDurationChange ? (
+          <DurationReporter onChange={onDurationChange} />
+        ) : null}
       </MediaPlayer>
 
       {activeCue ? (
@@ -298,9 +328,6 @@ export function PopquizPlayer({
           aria-modal="true"
           aria-label="Question Popquiz"
         >
-          {/* Close button — single source of truth for "dismiss the
-              overlay" so each renderOverlay caller doesn't have to
-              reinvent it. */}
           <button
             type="button"
             onClick={dismissCue}
@@ -326,12 +353,19 @@ export function PopquizPlayer({
   );
 }
 
+// Builds the Vidstack-compatible source string. For YouTube and
+// Vimeo we tack on URL params that hide the provider's native UI
+// so our custom chrome owns the visual layer.
 function mediaSourceFor(video: PopquizVideo): string | null {
   switch (video.source) {
     case "youtube":
-      return video.externalId ? `youtube/${video.externalId}` : null;
+      return video.externalId
+        ? `youtube/${video.externalId}?controls=0&modestbranding=1&rel=0&playsinline=1`
+        : null;
     case "vimeo":
-      return video.externalId ? `vimeo/${video.externalId}` : null;
+      return video.externalId
+        ? `vimeo/${video.externalId}?controls=0&title=0&byline=0&portrait=0`
+        : null;
     case "url":
       return video.externalUrl;
     case "upload":
