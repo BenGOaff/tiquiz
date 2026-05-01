@@ -24,7 +24,7 @@ import * as tus from "tus-js-client";
 import { CheckCircle2, Loader2, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { toast } from "sonner";
 
 export interface UploadedVideo {
@@ -67,10 +67,6 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} Go`;
 }
 
-// Pulls metadata + a poster frame from the file without uploading
-// it. Best-effort — some codecs / DRM / encrypted streams will
-// fail; we just skip the thumbnail in that case (caller falls
-// back to no poster).
 async function probeFile(file: File): Promise<ProbeResult> {
   return new Promise((resolve) => {
     const video = document.createElement("video");
@@ -87,8 +83,6 @@ async function probeFile(file: File): Promise<ProbeResult> {
       durationMs = isFinite(video.duration)
         ? Math.round(video.duration * 1000)
         : null;
-      // Aim for the first interesting frame: 2 s in, or 10 % of
-      // total runtime for ultra-short clips, whichever is smaller.
       video.currentTime = Math.min(2, Math.max(0.1, video.duration * 0.1));
     };
 
@@ -147,8 +141,6 @@ export function VideoUploader({
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
-  // Abort any in-flight upload if the component unmounts (route
-  // change, etc.) so we don't leave dangling network requests.
   useEffect(() => {
     return () => {
       uploadRef.current?.abort();
@@ -164,7 +156,7 @@ export function VideoUploader({
 
     setPhase({ kind: "preparing" });
     try {
-      const supabase = supabaseBrowser();
+      const supabase = getSupabaseBrowserClient();
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -183,9 +175,6 @@ export function VideoUploader({
         ? `raw/${userId}/${videoId}/thumbnail.jpg`
         : null;
 
-      // Thumbnail upload first — it's small (typically < 100 KB),
-      // so we use the simple single-shot upload. If it fails we
-      // still try the video upload (poster is nice-to-have).
       if (thumb && thumbPath) {
         const { error: thumbError } = await supabase.storage
           .from("popquiz-videos")
@@ -194,16 +183,16 @@ export function VideoUploader({
             upsert: true,
           });
         if (thumbError) {
-          // Non-fatal — just don't reference a missing thumbnail.
           console.warn("Thumbnail upload failed:", thumbError.message);
         }
       }
 
-      // TUS resumable upload for the video itself.
       setPhase({ kind: "uploading", sent: 0, total: file.size, pct: 0 });
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       if (!supabaseUrl) {
-        throw new Error("Configuration Supabase manquante (NEXT_PUBLIC_SUPABASE_URL).");
+        throw new Error(
+          "Configuration Supabase manquante (NEXT_PUBLIC_SUPABASE_URL).",
+        );
       }
 
       await new Promise<void>((resolve, reject) => {
@@ -222,9 +211,6 @@ export function VideoUploader({
             contentType: file.type || "video/mp4",
             cacheControl: "3600",
           },
-          // 6 MB chunks — Supabase recommends multiples of 5 MB for
-          // good throughput; 6 MB stays within memory budget on
-          // mobile while keeping per-chunk overhead low.
           chunkSize: 6 * 1024 * 1024,
           onError: (err) => {
             uploadRef.current = null;
@@ -247,9 +233,6 @@ export function VideoUploader({
         upload.start();
       });
 
-      // Mint signed URLs for editor preview. Server mints fresh
-      // ones for the public play page so these expiring in 1 h is
-      // fine.
       setPhase({ kind: "finalizing" });
       const { data: signed, error: signError } = await supabase.storage
         .from("popquiz-videos")
