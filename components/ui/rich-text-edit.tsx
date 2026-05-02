@@ -11,6 +11,16 @@
 //   - Block-level tools (lists) are hidden (they don't make sense on a one-line
 //     field) — alignment is kept because it's a purely visual toggle that works
 //     on a single line too.
+//
+// Paste handling: every paste is forced to plain text (Word, Google Docs,
+// Notion all dump their own fonts/colors/sizes into contentEditable
+// otherwise). The user keeps their typed text; the editor's typography wins.
+// Combined with the toolbar, that gives the same outcome as a Tally / Typeform
+// paste flow.
+//
+// CSS: the contentEditable surface inherits the public renderer's
+// `.tiquiz-rich` class so bullet / numbered list bullets are visible while
+// editing (matches what visitors will see).
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -158,6 +168,23 @@ export function RichTextEdit({
     }
   };
 
+  // Force every paste to plain text. The browser's contentEditable
+  // default eagerly accepts inline styles from Word, Google Docs and
+  // Notion (font-family, sizes, colors, borders…) which then fight
+  // with Tiquiz's typography. The author keeps the toolbar to apply
+  // bold / italic / lists explicitly — same model as Tally / Typeform.
+  // Bonus: this also kills weird whitespace artefacts (NBSP runs,
+  // smart-paragraph breaks) that were eating French typography
+  // (e.g. spaces before `:`).
+  const onPaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const text = e.clipboardData?.getData("text/plain") ?? "";
+    if (!text) return;
+    if (typeof document !== "undefined") {
+      document.execCommand("insertText", false, text);
+    }
+  };
+
   const onInsertLink = () => {
     const url = window.prompt(t("rteLinkPrompt"));
     if (!url) return;
@@ -234,7 +261,8 @@ export function RichTextEdit({
           suppressContentEditableWarning
           onBlur={commit}
           onKeyDown={onKeyDown}
-          className={`${baseCls} w-full bg-white/90 border-2 border-primary/40 outline-none`}
+          onPaste={onPaste}
+          className={`${baseCls} tiquiz-rich w-full bg-white/90 border-2 border-primary/40 outline-none`}
           style={style}
           data-placeholder={placeholder}
         />
@@ -256,7 +284,7 @@ export function RichTextEdit({
         {isEmpty ? (
           <span className="opacity-40 italic">{placeholder}</span>
         ) : (
-          <div dangerouslySetInnerHTML={{ __html: sanitizeRichText(previewTransform ? previewTransform(value) : value) }} />
+          <div className="tiquiz-rich" dangerouslySetInnerHTML={{ __html: sanitizeRichText(previewTransform ? previewTransform(value) : value) }} />
         )}
         <Pencil className="absolute top-1 right-1 w-3 h-3 text-primary/30 opacity-0 group-hover:opacity-100 transition-opacity" />
         {onGenderize && !isEmpty && (
