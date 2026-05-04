@@ -144,11 +144,36 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
+
+    // Best-effort thumbnail derivation. YouTube exposes a deterministic
+    // URL (no API call needed) ; Vimeo requires oEmbed. If oEmbed fails
+    // (offline build, network hiccup, private video), we fall back to
+    // null thumbnail — the player has its own poster fallback. Never
+    // blocks creation.
+    let thumbnailUrl: string | null = null;
+    if (parsed.source === "youtube" && parsed.externalId) {
+      thumbnailUrl = `https://i.ytimg.com/vi/${parsed.externalId}/hqdefault.jpg`;
+    } else if (parsed.source === "vimeo" && parsed.externalId) {
+      try {
+        const oembed = await fetch(
+          `https://vimeo.com/api/oembed.json?url=${encodeURIComponent(parsed.normalizedUrl)}`,
+          { signal: AbortSignal.timeout(3000) },
+        );
+        if (oembed.ok) {
+          const data = (await oembed.json()) as { thumbnail_url?: string };
+          thumbnailUrl = typeof data.thumbnail_url === "string" ? data.thumbnail_url : null;
+        }
+      } catch {
+        // fail-open — null thumbnail is fine
+      }
+    }
+
     videoInsert = {
       user_id: user.id,
       source: parsed.source,
       external_url: parsed.normalizedUrl,
       external_id: parsed.externalId,
+      thumbnail_url: thumbnailUrl,
       status: "ready",
     };
   } else {

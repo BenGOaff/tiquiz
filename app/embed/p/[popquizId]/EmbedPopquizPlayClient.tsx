@@ -8,6 +8,7 @@
 
 import { PopquizPlayer } from "@/components/popquiz/PopquizPlayer";
 import { PopquizQuizIframe } from "@/components/popquiz/PopquizQuizIframe";
+import { usePopquizEventTracker } from "@/lib/popquiz/usePopquizEventTracker";
 import type { Popquiz } from "@/lib/popquiz";
 
 export default function EmbedPopquizPlayClient({
@@ -15,11 +16,13 @@ export default function EmbedPopquizPlayClient({
 }: {
   popquiz: Popquiz;
 }) {
+  const onEvent = usePopquizEventTracker(popquiz.id);
   return (
     <div className="fixed inset-0 bg-black flex items-center justify-center overflow-hidden">
       <div className="w-full max-h-full">
         <PopquizPlayer
           popquiz={popquiz}
+          onEvent={onEvent}
           renderOverlay={({ cue }) => <PopquizQuizIframe quizId={cue.quizId} />}
         />
       </div>

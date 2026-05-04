@@ -14,6 +14,7 @@
 import Image from "next/image";
 import { PopquizPlayer } from "@/components/popquiz/PopquizPlayer";
 import { PopquizQuizIframe } from "@/components/popquiz/PopquizQuizIframe";
+import { usePopquizEventTracker } from "@/lib/popquiz/usePopquizEventTracker";
 import type { Popquiz } from "@/lib/popquiz";
 
 function prettyHost(url: string): string {
@@ -30,6 +31,7 @@ export default function PopquizPlayClient({
   popquiz: Popquiz;
 }) {
   const { branding } = popquiz;
+  const onEvent = usePopquizEventTracker(popquiz.id);
 
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-3 sm:p-6">
@@ -51,6 +53,7 @@ export default function PopquizPlayClient({
 
         <PopquizPlayer
           popquiz={popquiz}
+          onEvent={onEvent}
           renderOverlay={({ cue }) => <PopquizQuizIframe quizId={cue.quizId} />}
         />
 
