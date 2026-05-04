@@ -190,6 +190,35 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     }
   }
 
+  // Bug Gwenn 2026-04 : « le quiz ne s'ouvre pas » quand on lance un
+  // popquiz dont l'un des quiz référencés est resté en brouillon — la
+  // page /q/[id] filtre status=active, donc l'iframe overlay 404.
+  //
+  // Garde-fou : à la publication d'un popquiz, on auto-active toutes
+  // les quizzes référencés par ses cues qui sont encore en draft. Le
+  // créateur n'a plus à publier chaque quiz un par un.
+  if (update.is_published === true) {
+    try {
+      const { data: cueRows } = await supabase
+        .from("popquiz_cues")
+        .select("quiz_id")
+        .eq("popquiz_id", popquizId);
+      const cueQuizIds = Array.from(
+        new Set((cueRows ?? []).map((r) => String((r as { quiz_id: string }).quiz_id))),
+      ).filter(Boolean);
+      if (cueQuizIds.length > 0) {
+        await supabase
+          .from("quizzes")
+          .update({ status: "active", updated_at: new Date().toISOString() })
+          .eq("user_id", user.id)
+          .in("id", cueQuizIds)
+          .neq("status", "active");
+      }
+    } catch (e) {
+      console.warn("[popquiz] auto-activate referenced quizzes failed (non-blocking):", e);
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }
 

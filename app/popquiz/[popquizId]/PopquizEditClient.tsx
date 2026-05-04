@@ -576,7 +576,7 @@ export default function PopquizEditClient({
 
                     {isDraftQuiz ? (
                       <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
-                        Publie ce quiz pour qu'il s'affiche
+                        Brouillon — sera publié automatiquement quand tu publieras ce popquiz
                       </span>
                     ) : null}
 
