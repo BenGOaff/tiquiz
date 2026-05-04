@@ -13,6 +13,7 @@
 
 import Image from "next/image";
 import { PopquizPlayer } from "@/components/popquiz/PopquizPlayer";
+import { PopquizQuizIframe } from "@/components/popquiz/PopquizQuizIframe";
 import type { Popquiz } from "@/lib/popquiz";
 
 function prettyHost(url: string): string {
@@ -50,14 +51,7 @@ export default function PopquizPlayClient({
 
         <PopquizPlayer
           popquiz={popquiz}
-          renderOverlay={({ cue }) => (
-            <iframe
-              src={`/q/${cue.quizId}`}
-              className="absolute inset-0 w-full h-full border-0 bg-background"
-              title="Quiz"
-              allow="autoplay; clipboard-write"
-            />
-          )}
+          renderOverlay={({ cue }) => <PopquizQuizIframe quizId={cue.quizId} />}
         />
 
         {branding.websiteUrl ? (

@@ -7,6 +7,7 @@
 // padding-bottom 56.25% trick, the fit is pixel-perfect.
 
 import { PopquizPlayer } from "@/components/popquiz/PopquizPlayer";
+import { PopquizQuizIframe } from "@/components/popquiz/PopquizQuizIframe";
 import type { Popquiz } from "@/lib/popquiz";
 
 export default function EmbedPopquizPlayClient({
@@ -19,14 +20,7 @@ export default function EmbedPopquizPlayClient({
       <div className="w-full max-h-full">
         <PopquizPlayer
           popquiz={popquiz}
-          renderOverlay={({ cue }) => (
-            <iframe
-              src={`/q/${cue.quizId}`}
-              className="absolute inset-0 w-full h-full border-0 bg-background"
-              title="Quiz"
-              allow="autoplay; clipboard-write"
-            />
-          )}
+          renderOverlay={({ cue }) => <PopquizQuizIframe quizId={cue.quizId} />}
         />
       </div>
     </div>

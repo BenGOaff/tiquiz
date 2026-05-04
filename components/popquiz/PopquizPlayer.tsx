@@ -47,6 +47,7 @@ import {
   type MediaPlayerInstance,
 } from "@vidstack/react";
 import {
+  Loader2,
   Maximize2,
   Minimize2,
   Pause,
@@ -89,9 +90,13 @@ function CueMarkers({ cues }: { cues: PopquizCue[] }) {
         const pct = (c.timestampMs / 1000 / duration) * 100;
         if (pct < 0 || pct > 100) return null;
         return (
+          // Bigger, brighter cue markers (Gwenn UX feedback : les
+          // anciens points 6px en bg accent étaient quasi-invisibles
+          // sur la barre de progression). 10px + ring accent + glow
+          // doux pour qu'on les repère sans loupe.
           <span
             key={c.id}
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-1.5 rounded-full bg-[var(--pq-accent,#5D6CDB)] ring-2 ring-white/80"
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-2.5 rounded-full bg-white ring-[2px] ring-[var(--pq-accent,#5D6CDB)] shadow-[0_0_0_3px_rgba(93,108,219,0.25)]"
             style={{ left: `${pct}%` }}
             aria-hidden
           />
@@ -111,6 +116,23 @@ function CenterPlayVisual() {
     >
       <span className="size-16 sm:size-20 rounded-full bg-white/15 backdrop-blur-md grid place-items-center shadow-2xl">
         <Play className="size-7 sm:size-9 text-white fill-white ml-1" />
+      </span>
+    </div>
+  );
+}
+
+// Spinner overlay pendant le buffering (waiting=true). Vidstack
+// expose cet état via useMediaState — discret, n'apparaît que quand
+// le player attend des données. Évite l'effet « le player s'est figé »
+// qu'on a sur les vidéos lourdes / connexions moyennes.
+function BufferingOverlay() {
+  const waiting = useMediaState("waiting");
+  const paused = useMediaState("paused");
+  if (!waiting || paused) return null;
+  return (
+    <div className="absolute inset-0 grid place-items-center pointer-events-none z-[6]">
+      <span className="size-12 rounded-full bg-black/50 backdrop-blur-sm grid place-items-center shadow-xl">
+        <Loader2 className="size-6 text-white animate-spin" />
       </span>
     </div>
   );
@@ -292,6 +314,7 @@ export function PopquizPlayer({
         <PlayButton className="absolute inset-0 z-[1] cursor-pointer focus-visible:outline-none" />
 
         <CenterPlayVisual />
+        <BufferingOverlay />
         <CustomControls cues={cues} />
 
         {onDurationChange ? (
