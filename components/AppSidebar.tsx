@@ -12,6 +12,7 @@ import {
   PanelLeftClose,
   HelpCircle,
   MessageCircleQuestion,
+  Video,
 } from "lucide-react";
 import {
   Sidebar,
@@ -72,6 +73,10 @@ const MENU_ITEMS = [
   // "projects" = umbrella label covering quizzes + surveys. Route stays
   // /quizzes for now; the page filters by mode (commit 6).
   { key: "projects", url: "/quizzes", icon: ClipboardList, end: false },
+  // Popquiz : quiz interactifs incrustés dans une vidéo. Route /popquizzes
+  // pour la liste, /popquiz/new pour la création — convention identique
+  // au reste du module (singulier pour la création, pluriel pour la liste).
+  { key: "popquiz", url: "/popquizzes", icon: Video, end: false },
   { key: "leads", url: "/leads", icon: Users, end: false },
   { key: "stats", url: "/stats", icon: BarChart3, end: false },
 ] as const;

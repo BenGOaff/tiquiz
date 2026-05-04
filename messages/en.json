@@ -78,7 +78,8 @@
     "settings": "Settings",
     "logout": "Log out",
     "projects": "My projects",
-    "createSurvey": "Create a survey"
+    "createSurvey": "Create a survey",
+    "popquiz": "Video Popquiz"
   },
   "stats": {
     "title": "Statistics",

@@ -78,7 +78,8 @@
     "settings": "Definições",
     "logout": "Terminar sessão",
     "projects": "Os meus projetos",
-    "createSurvey": "Criar um inquérito"
+    "createSurvey": "Criar um inquérito",
+    "popquiz": "Popquiz de vídeo"
   },
   "stats": {
     "title": "Estatísticas",

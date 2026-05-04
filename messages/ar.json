@@ -78,7 +78,8 @@
     "settings": "الإعدادات",
     "logout": "تسجيل الخروج",
     "projects": "مشاريعي",
-    "createSurvey": "إنشاء استطلاع"
+    "createSurvey": "إنشاء استطلاع",
+    "popquiz": "بوبكويز فيديو"
   },
   "stats": {
     "title": "الإحصائيات",

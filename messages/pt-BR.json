@@ -78,7 +78,8 @@
     "settings": "Configurações",
     "logout": "Sair",
     "projects": "Meus projetos",
-    "createSurvey": "Criar uma pesquisa"
+    "createSurvey": "Criar uma pesquisa",
+    "popquiz": "Popquiz de vídeo"
   },
   "stats": {
     "title": "Estatísticas",
