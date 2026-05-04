@@ -1,9 +1,13 @@
-// List page for the caller's popquizzes. Mirrors /quizzes but with
-// the popquiz-specific shape (one video per row).
+// List page for the caller's popquizzes. Mirrors /quizzes — wrapped
+// dans AppShell pour que la sidebar reste visible et que la mise en
+// page soit cohérente avec le reste de l'app (Gwenn 2026-05-04 :
+// "on GARDE une cohérence dans les apps, même mise en page").
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Sparkles, Video } from "lucide-react";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import AppShell from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 
 export const metadata = { title: "Mes Popquiz – Tiquiz" };
@@ -50,18 +54,28 @@ export default async function PopquizzesListPage() {
   const popquizzes = (data ?? []) as unknown as PopquizListRow[];
 
   return (
-    <main className="mx-auto max-w-4xl p-6 space-y-6">
-      <header className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Mes Popquiz</h1>
-          <p className="text-sm text-muted-foreground">
+    <AppShell userEmail={user.email ?? ""} headerTitle="Mes Popquiz">
+      {/* Bannière gradient — même pattern visuel que /quizzes pour
+          conserver une cohérence de UX entre les listes. */}
+      <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
+        <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
+          <Video className="h-5 w-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg font-bold">Mes Popquiz</h2>
+          <p className="text-sm text-white/70">
             Quiz qui se déclenchent dans une vidéo.
           </p>
         </div>
-        <Button asChild>
-          <Link href="/popquiz/new">Nouveau Popquiz</Link>
-        </Button>
-      </header>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button asChild variant="secondary">
+            <Link href="/popquiz/new">
+              <Sparkles className="h-4 w-4 mr-2" />
+              Nouveau Popquiz
+            </Link>
+          </Button>
+        </div>
+      </div>
 
       {popquizzes.length === 0 ? (
         <div className="rounded-lg border bg-card p-12 text-center space-y-3">
@@ -91,6 +105,9 @@ export default async function PopquizzesListPage() {
                     {p.completions_count ?? 0} terminés
                   </p>
                 </div>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/popquiz/${p.id}`}>Modifier</Link>
+                </Button>
                 {p.is_published ? (
                   <Button variant="outline" size="sm" asChild>
                     <Link href={`/p/${p.id}`} target="_blank">
@@ -103,6 +120,6 @@ export default async function PopquizzesListPage() {
           })}
         </ul>
       )}
-    </main>
+    </AppShell>
   );
 }
