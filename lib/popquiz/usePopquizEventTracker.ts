@@ -43,14 +43,20 @@ export function usePopquizEventTracker(popquizId: string) {
       sentRef.current.add(rpcType);
       try {
         const supabase = getSupabaseBrowserClient();
+        // Supabase query builders are thenables (no .catch), so we
+        // wrap in a .then(_, _) to swallow rejections without
+        // throwing — analytics never block playback.
         void supabase
           .rpc("log_popquiz_event", {
             popquiz_id_input: popquizId,
             event_type_input: rpcType,
           })
-          .catch(() => {
-            // fail-open : analytics never block playback
-          });
+          .then(
+            () => {},
+            () => {
+              // fail-open : analytics never block playback
+            },
+          );
       } catch {
         // ignore — never throw to the player
       }
