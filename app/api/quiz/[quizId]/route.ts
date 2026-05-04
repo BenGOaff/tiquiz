@@ -5,12 +5,33 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sanitizeSlug, sanitizeShareNetworks, BRAND_FONT_CHOICES } from "@/lib/quizBranding";
 import { sanitizeRichText } from "@/lib/richText";
+import {
+  applyFrenchTypography,
+  applyFrenchTypographyToHtml,
+  isFrenchLocale,
+} from "@/lib/frenchTypography";
 import { resolveQuizAuth } from "@/lib/embed/quizAuth";
 import { computeLockedLeadIds, redactLockedLead, type LeadLike } from "@/lib/leadLock";
 import { isPaidPlan } from "@/lib/planLimits";
 
-// Fields accepting rich-text HTML (bold, italic, links, images, alignment).
 const RICH_TEXT_FIELDS = ["introduction"] as const;
+
+// Plain-text quiz fields that benefit from French typography (title, CTAs,
+// headings, descriptions stored as flat text). Keep this list explicit so a
+// new column doesn't silently get the transform.
+const FR_TYPO_PLAIN_FIELDS = [
+  "title",
+  "cta_text",
+  "consent_text",
+  "share_message",
+  "bonus_description",
+  "start_button_text",
+  "result_insight_heading",
+  "result_projection_heading",
+  "capture_heading",
+  "capture_subtitle",
+  "og_description",
+] as const;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -18,7 +39,6 @@ export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ quizId: string }> };
 
-// GET — quiz with questions, results, and leads
 export async function GET(req: NextRequest, context: RouteContext) {
   try {
     const { quizId } = await context.params;
@@ -27,10 +47,6 @@ export async function GET(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    // Embed-mode visitors read through the service role (RLS doesn't
-    // grant them anything because user_id IS NULL); user-mode keeps
-    // its supabase client + RLS for defence in depth. Both paths
-    // converge on the same table, the same shape, the same response.
     const supabase = auth.mode === "user"
       ? await getSupabaseServerClient()
       : supabaseAdmin;
@@ -44,7 +60,6 @@ export async function GET(req: NextRequest, context: RouteContext) {
       quizQuery.maybeSingle(),
       supabase.from("quiz_questions").select("*").eq("quiz_id", quizId).order("sort_order"),
       supabase.from("quiz_results").select("*").eq("quiz_id", quizId).order("sort_order"),
-      // Anonymous quizzes have no leads — skip the round-trip.
       auth.mode === "user"
         ? supabase.from("quiz_leads").select("*").eq("quiz_id", quizId).order("created_at", { ascending: false })
         : Promise.resolve({ data: [] as Record<string, unknown>[], error: null }),
@@ -54,15 +69,11 @@ export async function GET(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Quiz not found" }, { status: 404 });
     }
 
-    // Build result title lookup
     const resultTitleMap = new Map<string, string>();
     for (const r of resultsRes.data ?? []) {
       resultTitleMap.set(r.id, r.title);
     }
 
-    // Free-tier lock — computed against ALL the creator's quiz_leads (across
-    // every quiz they own) so navigating between quizzes doesn't change which
-    // leads are visible. Embed (anonymous) mode never has leads to lock.
     let lockedIds = new Set<string>();
     let plan = "free";
     if (auth.mode === "user") {
@@ -91,7 +102,10 @@ export async function GET(req: NextRequest, context: RouteContext) {
     const leads = (leadsRes.data ?? []).map((l: Record<string, unknown>) => {
       const enriched = {
         ...l,
-        result_title: resultTitleMap.get(l.result_id as string) ?? l.result_title ?? null,
+        result_title:
+          resultTitleMap.get(l.result_id as string) ??
+          (l.result_title as string | null) ??
+          null,
       };
       const locked = lockedIds.has(l.id as string);
       return locked
@@ -121,7 +135,6 @@ export async function GET(req: NextRequest, context: RouteContext) {
   }
 }
 
-// PATCH — update quiz fields, questions, results
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
     const { quizId } = await context.params;
@@ -137,14 +150,17 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
     }
 
-    // user-mode keeps RLS; embed-mode operates as service role with
-    // an explicit embed_session_id filter so a forged quizId can
-    // never reach a row that isn't this session's.
     const supabase = auth.mode === "user"
       ? await getSupabaseServerClient()
       : supabaseAdmin;
 
-    const ownerCheck = supabase.from("quizzes").select("id").eq("id", quizId);
+    // Fetch the existing locale alongside the ownership check so the
+    // typography pass below knows which language to apply rules for, even
+    // when the PATCH body doesn't change the locale.
+    const ownerCheck = supabase
+      .from("quizzes")
+      .select("id, locale")
+      .eq("id", quizId);
     const { data: existing } = await (auth.mode === "user"
       ? ownerCheck.eq("user_id", auth.userId)
       : ownerCheck.eq("embed_session_id", auth.sessionToken)).maybeSingle();
@@ -153,11 +169,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Quiz not found" }, { status: 404 });
     }
 
-    // Embed visitors must not be able to publish (status=active),
-    // pick a public slug, attach SIO tags / API keys, or otherwise
-    // touch fields that only make sense once a real account owns
-    // the quiz. We strip them here as an upfront gate so the rest
-    // of the handler doesn't have to special-case the mode.
     if (auth.mode === "embed") {
       const FORBIDDEN_IN_EMBED = [
         "status", "slug", "sio_share_tag_name", "sio_api_key_id",
@@ -166,7 +177,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       for (const k of FORBIDDEN_IN_EMBED) delete body[k];
     }
 
-    // Build patch
     const allowedFields = [
       "title", "introduction", "cta_text", "cta_url", "privacy_url",
       "consent_text", "virality_enabled", "bonus_description",
@@ -187,14 +197,12 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       if (key in body) patch[key] = body[key];
     }
 
-    // Sanitize rich-text fields server-side (defence in depth, browser already sanitizes)
     for (const key of RICH_TEXT_FIELDS) {
       if (key in patch && typeof patch[key] === "string") {
         patch[key] = sanitizeRichText(patch[key] as string);
       }
     }
 
-    // Validate brand_font against whitelist (null = clear)
     if ("brand_font" in patch) {
       const val = patch.brand_font;
       if (val !== null && (typeof val !== "string" || !BRAND_FONT_CHOICES.includes(val as typeof BRAND_FONT_CHOICES[number]))) {
@@ -202,7 +210,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
     }
 
-    // Validate hex colors (null = clear, otherwise must be #rgb or #rrggbb)
     const hexRe = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
     for (const key of ["brand_color_primary", "brand_color_background"] as const) {
       if (key in patch) {
@@ -211,9 +218,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
     }
 
-    // sio_api_key_id: must be a UUID owned by this user, or null. We re-check
-    // ownership against sio_api_keys so the editor cannot smuggle a key-id
-    // belonging to another user via a forged PATCH body.
     if ("sio_api_key_id" in patch) {
       const val = patch.sio_api_key_id;
       if (val === null || val === "") {
@@ -221,10 +225,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       } else if (typeof val !== "string" || !UUID_RE.test(val)) {
         return NextResponse.json({ ok: false, error: "Invalid sio_api_key_id" }, { status: 400 });
       } else {
-        // sio_api_key_id is stripped from the body in embed mode (it's
-        // a user-only field), so this branch only ever runs with
-        // mode==="user". The narrowing here keeps TS happy without a
-        // runtime guard the user path doesn't need.
         if (auth.mode !== "user") {
           return NextResponse.json({ ok: false, error: "Forbidden in embed mode" }, { status: 403 });
         }
@@ -240,7 +240,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
     }
 
-    // Slug: sanitize, verify uniqueness (case-insensitive) against other quizzes
     if ("slug" in body) {
       const raw = body.slug;
       if (raw === null || (typeof raw === "string" && raw.trim() === "")) {
@@ -250,7 +249,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         if (!cleaned) {
           return NextResponse.json({ ok: false, error: "Invalid slug" }, { status: 400 });
         }
-        // Never allow a slug that looks like a UUID (would shadow direct /q/{id} access)
         if (/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(cleaned)) {
           return NextResponse.json({ ok: false, error: "Slug cannot look like an ID" }, { status: 400 });
         }
@@ -268,9 +266,37 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
     }
 
-    // Share networks: enum-filter + dedupe
     if ("share_networks" in body) {
       patch.share_networks = sanitizeShareNetworks(body.share_networks);
+    }
+
+    // FRENCH TYPOGRAPHY (Gwenn bug 2026-05-02): in French, a non-breaking
+    // space precedes "strong" punctuation (`:`, `;`, `!`, `?`, `»`). The
+    // regular ASCII space gets stripped or visually collapsed by
+    // contentEditable normalization and Word paste, so we substitute a
+    // hard NBSP at save time when the quiz's locale is French. Idempotent
+    // — calling the helper twice yields the same string.
+    const effectiveLocale =
+      typeof patch.locale === "string"
+        ? patch.locale
+        : ((existing as { locale?: string | null }).locale ?? null);
+    if (isFrenchLocale(effectiveLocale)) {
+      for (const field of FR_TYPO_PLAIN_FIELDS) {
+        if (typeof patch[field] === "string") {
+          patch[field] = applyFrenchTypography(
+            patch[field] as string,
+            effectiveLocale,
+          );
+        }
+      }
+      for (const field of RICH_TEXT_FIELDS) {
+        if (typeof patch[field] === "string") {
+          patch[field] = applyFrenchTypographyToHtml(
+            patch[field] as string,
+            effectiveLocale,
+          );
+        }
+      }
     }
 
     const { error } = await supabase.from("quizzes").update(patch).eq("id", quizId);
@@ -278,27 +304,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
 
-    // Update questions if provided
-    //
-    // ANTI-MARIE-PAULE GUARDS (data-loss pattern observed on Tipote
-    // hosted_pages, 2026-04-29):
-    //   1. body.questions must be an explicit Array — null / undefined /
-    //      string mean "don't touch", not "wipe everything".
-    //   2. An empty array on a quiz that ALREADY has questions is treated
-    //      as a client-side hydration race, not a deliberate full-wipe.
-    //      We refuse with 400 so the editor doesn't silently destroy the
-    //      author's work. Single-question minimum is also enforced by the
-    //      editor's `removeQuestion` (canDelete = length > 1), so the
-    //      legitimate path can never produce [].
-    //   3. delete() and insert() return values are now CHECKED. The previous
-    //      code awaited them without reading `.error`, so an insert that
-    //      failed (timeout, constraint, RLS) silently left the DB empty
-    //      and returned ok:true to the client.
-    //   4. On insert failure AFTER delete succeeded, we attempt a
-    //      restore-from-snapshot of the pre-delete rows. Best-effort: if
-    //      that also fails, we surface a CATASTROPHIC error so the editor
-    //      knows nothing was saved (and its in-memory state is the only
-    //      remaining copy — the user can retry).
     if ("questions" in body) {
       if (!Array.isArray(body.questions)) {
         return NextResponse.json(
@@ -309,8 +314,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
       const incoming = body.questions as Record<string, unknown>[];
 
-      // Snapshot the existing questions BEFORE any mutation, so we can
-      // restore on failure.
       const { data: snapshot, error: snapshotErr } = await supabase
         .from("quiz_questions")
         .select("*")
@@ -323,8 +326,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
       const snapshotRows = snapshot ?? [];
 
-      // Empty-array on a non-empty quiz = refuse. The editor never
-      // legitimately produces this.
       if (incoming.length === 0 && snapshotRows.length > 0) {
         console.error(`[quiz PATCH] REFUSED empty-array wipe of ${snapshotRows.length} questions for quiz ${quizId}`);
         return NextResponse.json(
@@ -349,13 +350,20 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       const sanitized = incoming.map((q, i) => {
         const rawType = typeof q.question_type === "string" ? q.question_type : "multiple_choice";
         const question_type = ALLOWED_TYPES.has(rawType) ? rawType : "multiple_choice";
+        const questionText = applyFrenchTypography(
+          String(q.question_text ?? ""),
+          effectiveLocale,
+        );
         return {
           quiz_id: quizId,
-          question_text: String(q.question_text ?? ""),
+          question_text: questionText,
           options: Array.isArray(q.options)
             ? (q.options as Record<string, unknown>[]).map((o) => {
                 const cleaned: Record<string, unknown> = {
-                  text: String(o?.text ?? ""),
+                  text: applyFrenchTypography(
+                    String(o?.text ?? ""),
+                    effectiveLocale,
+                  ),
                   result_index: Number.isFinite(Number(o?.result_index)) ? Number(o?.result_index) : 0,
                 };
                 const tag = String(o?.sio_tag_name ?? "").trim();
@@ -386,15 +394,11 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       if (sanitized.length > 0) {
         const { error: insertErr } = await supabase.from("quiz_questions").insert(sanitized);
         if (insertErr) {
-          // Insert failed AFTER delete succeeded — DB is now empty. Restore
-          // from snapshot so the author's data isn't silently lost.
           console.error(`[quiz PATCH] Insert failed for quiz ${quizId}, attempting snapshot restore:`, insertErr.message);
           if (snapshotRows.length > 0) {
             const { error: restoreErr } = await supabase
               .from("quiz_questions")
               .insert(snapshotRows.map((r: Record<string, unknown>) => {
-                // Drop generated columns the DB will repopulate; keep id so
-                // the restore is byte-identical to the pre-mutation state.
                 const { created_at: _ca, updated_at: _ua, ...rest } = r as Record<string, unknown>;
                 void _ca; void _ua;
                 return rest;
@@ -421,26 +425,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       }
     }
 
-    // Update results if provided.
-    //
-    // GWENN BUG (2026-05-02): the old delete-all + insert-all pattern
-    // hit the FK constraint quiz_leads.result_id → quiz_results(id)
-    // (no ON DELETE), so any save on a quiz with leads returned
-    // DELETE_FAILED. The new flow keeps existing rows alive whenever
-    // possible:
-    //   1. UPDATE rows whose id is still in the incoming payload
-    //      (preserves leads.result_id linkage).
-    //   2. INSERT rows that came in without an id, or with an id that
-    //      doesn't match anything in the DB.
-    //   3. For any existing row absent from the incoming list, NULL out
-    //      leads.result_id pointing at it (lead.result_title is already
-    //      a snapshot stored on the lead row, so the dashboard keeps
-    //      its context) and only THEN delete the orphaned result.
-    //
-    // This handles the editor whether it sends ids back or not:
-    //   - Sends ids → in-place updates, no leads disturbed.
-    //   - Doesn't send ids → INSERT new rows, NULL out + delete the old
-    //     ones, leads keep their result_title text.
     if ("results" in body) {
       if (!Array.isArray(body.results)) {
         return NextResponse.json(
@@ -461,7 +445,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           { status: 500 },
         );
       }
-      const snapshotRows = (snapshot ?? []) as Array<{ id: string }>;
+      const snapshotRows = (snapshot ?? []) as Array<{ id: string; title: string }>;
 
       if (incoming.length === 0 && snapshotRows.length > 0) {
         console.error(`[quiz PATCH] REFUSED empty-array wipe of ${snapshotRows.length} results for quiz ${quizId}`);
@@ -495,16 +479,42 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       const toInsert: SanitizedResult[] = [];
 
       incoming.forEach((r, i) => {
+        // Apply French typography to every text-bearing field. Plain
+        // strings get the simple regex; description/insight/projection
+        // are HTML and use the HTML-aware helper (same regex applied to
+        // the whole payload — see lib/frenchTypography.ts for why that's
+        // safe).
         const sanitized: SanitizedResult = {
           quiz_id: quizId,
-          title: String(r.title ?? ""),
+          title: applyFrenchTypography(
+            String(r.title ?? ""),
+            effectiveLocale,
+          ),
           description:
-            typeof r.description === "string" ? sanitizeRichText(r.description) : null,
+            typeof r.description === "string"
+              ? applyFrenchTypographyToHtml(
+                  sanitizeRichText(r.description),
+                  effectiveLocale,
+                )
+              : null,
           insight:
-            typeof r.insight === "string" ? sanitizeRichText(r.insight) : null,
+            typeof r.insight === "string"
+              ? applyFrenchTypographyToHtml(
+                  sanitizeRichText(r.insight),
+                  effectiveLocale,
+                )
+              : null,
           projection:
-            typeof r.projection === "string" ? sanitizeRichText(r.projection) : null,
-          cta_text: r.cta_text == null ? null : String(r.cta_text),
+            typeof r.projection === "string"
+              ? applyFrenchTypographyToHtml(
+                  sanitizeRichText(r.projection),
+                  effectiveLocale,
+                )
+              : null,
+          cta_text:
+            r.cta_text == null
+              ? null
+              : applyFrenchTypography(String(r.cta_text), effectiveLocale),
           cta_url: r.cta_url == null ? null : String(r.cta_url),
           sio_tag_name: r.sio_tag_name == null ? null : String(r.sio_tag_name),
           sio_course_id: r.sio_course_id == null ? null : String(r.sio_course_id),
@@ -523,11 +533,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       });
 
       const incomingIdSet = new Set(toUpdate.map((u) => u.id));
-      const toDelete = snapshotRows
-        .map((r) => r.id)
-        .filter((id) => !incomingIdSet.has(id));
+      const toDelete = snapshotRows.filter((r) => !incomingIdSet.has(r.id));
 
-      // 1) Update existing rows in place — preserves leads.result_id.
       for (const upd of toUpdate) {
         const { error: upErr } = await supabase
           .from("quiz_results")
@@ -541,7 +548,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         }
       }
 
-      // 2) Insert truly-new rows.
       if (toInsert.length > 0) {
         const { error: insErr } = await supabase
           .from("quiz_results")
@@ -554,26 +560,48 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         }
       }
 
-      // 3) Drop the rows the user removed. Null-out leads.result_id
-      //    first so the FK constraint doesn't reject the delete; the
-      //    leads keep the result_title snapshot they already carry.
-      if (toDelete.length > 0) {
-        if (auth.mode === "user") {
-          const { error: nullErr } = await supabase
+      if (toDelete.length > 0 && auth.mode === "user") {
+        for (const r of toDelete) {
+          const { error: titleErr } = await supabase
             .from("quiz_leads")
-            .update({ result_id: null })
-            .in("result_id", toDelete);
-          if (nullErr) {
+            .update({ result_title: r.title })
+            .eq("result_id", r.id)
+            .is("result_title", null);
+          if (titleErr) {
+            console.error(
+              `[quiz PATCH] result_title backfill failed for result ${r.id} on quiz ${quizId}:`,
+              titleErr.message,
+            );
             return NextResponse.json(
-              { ok: false, error: "LEADS_NULL_FAILED", message: nullErr.message },
+              {
+                ok: false,
+                error: "LEAD_BACKFILL_FAILED",
+                message: titleErr.message,
+              },
               { status: 500 },
             );
           }
         }
+
+        const deletedIds = toDelete.map((r) => r.id);
+        const { error: nullErr } = await supabase
+          .from("quiz_leads")
+          .update({ result_id: null })
+          .in("result_id", deletedIds);
+        if (nullErr) {
+          return NextResponse.json(
+            { ok: false, error: "LEADS_NULL_FAILED", message: nullErr.message },
+            { status: 500 },
+          );
+        }
+      }
+
+      if (toDelete.length > 0) {
+        const deletedIds = toDelete.map((r) => r.id);
         const { error: delErr } = await supabase
           .from("quiz_results")
           .delete()
-          .in("id", toDelete);
+          .in("id", deletedIds);
         if (delErr) {
           return NextResponse.json(
             { ok: false, error: "DELETE_FAILED", message: delErr.message },
@@ -592,10 +620,6 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   }
 }
 
-// DELETE — delete quiz (cascades to questions, results, leads)
-// Embed mode (anonymous quizzes) deliberately rejects DELETE; the
-// visitor doesn't own the row in any meaningful sense yet, and the
-// embed_quiz_sessions GC job is responsible for purging orphans.
 export async function DELETE(req: NextRequest, context: RouteContext) {
   try {
     const { quizId } = await context.params;
