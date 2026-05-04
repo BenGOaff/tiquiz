@@ -18,6 +18,7 @@ import { resolveQuizBranding } from "@/lib/quizBranding";
 import { resolveApiKey } from "@/lib/sio/resolveApiKey";
 import { isNewLeadLocked } from "@/lib/leadLock";
 import { isPaidPlan } from "@/lib/planLimits";
+import { applyFrenchTypography, isFrenchLocale } from "@/lib/frenchTypography";
 
 // No `force-dynamic`: it would make Vercel inject `Cache-Control: private, no-store`,
 // overriding the edge-SWR headers set on the GET response and forcing `cf-cache-status: DYNAMIC`.
@@ -233,7 +234,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     }
 
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,user_id,title,introduction,cta_text,cta_url,start_button_text,privacy_url,consent_text,virality_enabled,bonus_description,bonus_image_url,share_message,locale,address_form,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country,ask_first_name,ask_gender,slug,brand_font,brand_color_primary,brand_color_background,custom_footer_text,custom_footer_url,share_networks,og_description,og_image_url,mode,show_consent_checkbox").eq("id", quizId).maybeSingle(),
+      admin.from("quizzes").select("id,user_id,title,introduction,cta_text,cta_url,start_button_text,privacy_url,consent_text,virality_enabled,bonus_description,bonus_intro_text,bonus_image_url,share_message,locale,address_form,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country,ask_first_name,ask_gender,slug,brand_font,brand_color_primary,brand_color_background,custom_footer_text,custom_footer_url,share_networks,og_description,og_image_url,mode,show_consent_checkbox").eq("id", quizId).maybeSingle(),
       admin.from("quiz_questions").select("id,question_text,options,sort_order,question_type,config").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,cta_text,cta_url,sort_order").eq("quiz_id", quizId).order("sort_order"),
     ]);
@@ -308,22 +309,56 @@ export async function GET(req: NextRequest, context: RouteContext) {
           "Vercel-CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
         };
 
+    // G1 — display-time French typography for legacy data. Apply NBSP rules
+    // when the quiz locale is French so quizzes saved before the on-save
+    // typography pass landed still render correctly without a re-save.
+    const quizLocale = (quizPublic as Record<string, unknown>).locale as string | null;
+    const fr = (s: unknown) => (typeof s === "string" ? applyFrenchTypography(s, quizLocale) : s);
+    const isFr = isFrenchLocale(quizLocale);
+    const renderedQuiz = isFr
+      ? Object.fromEntries(
+          Object.entries(quizPublic).map(([k, v]) => {
+            const FR_KEYS = new Set([
+              "title", "introduction", "cta_text", "consent_text",
+              "bonus_description", "bonus_intro_text", "share_message",
+              "start_button_text", "capture_heading", "capture_subtitle",
+              "result_insight_heading", "result_projection_heading",
+              "og_description",
+            ]);
+            return [k, FR_KEYS.has(k) ? fr(v) : v];
+          }),
+        ) as typeof quizPublic
+      : quizPublic;
+    const renderedQuestions = (questionsRes.data ?? []).map((q: Record<string, unknown>) => {
+      const opts = q.options as { text: string; result_index: number }[] | null | undefined;
+      return {
+        ...q,
+        question_text: isFr ? fr(q.question_text) : q.question_text,
+        options: opts ? opts.map((o) => ({ ...o, text: isFr ? (fr(o.text) as string) : o.text })) : opts,
+        question_type: (q.question_type as string) ?? "multiple_choice",
+        config: (q.config as Record<string, unknown>) ?? {},
+      };
+    });
+    const renderedResults = (resultsRes.data ?? []).map((r: Record<string, unknown>) => ({
+      ...r,
+      title: isFr ? fr(r.title) : r.title,
+      description: isFr ? fr(r.description) : r.description,
+      insight: isFr ? fr(r.insight) : r.insight,
+      projection: isFr ? fr(r.projection) : r.projection,
+      cta_text: isFr ? fr(r.cta_text) : r.cta_text,
+    }));
+
     return NextResponse.json({
       ok: true,
       quiz: {
-        ...quizPublic,
+        ...renderedQuiz,
         address_form: addressForm,
         privacy_url: effectivePrivacyUrl || null,
-        custom_footer_text: customFooterText,
+        custom_footer_text: isFr && typeof customFooterText === "string" ? (fr(customFooterText) as string) : customFooterText,
         custom_footer_url: customFooterUrl,
       },
-      questions: (questionsRes.data ?? []).map((q: Record<string, unknown>) => ({
-        ...q,
-        options: q.options as { text: string; result_index: number }[],
-        question_type: (q.question_type as string) ?? "multiple_choice",
-        config: (q.config as Record<string, unknown>) ?? {},
-      })),
-      results: resultsRes.data ?? [],
+      questions: renderedQuestions,
+      results: renderedResults,
       branding,
     }, { headers: cacheHeaders });
   } catch (e) {

@@ -17,6 +17,10 @@ export default function Providers({ children }: { children: ReactNode }) {
       <Toaster
         richColors
         position="top-right"
+        // Gwenn feedback 2026-05-04: success toasts (e.g. "Sauvegardé !")
+        // hung around long enough to visually block the action buttons
+        // beneath them. 1.8s is enough to read, short enough to clear out.
+        duration={1800}
         toastOptions={{
           classNames: {
             toast: "rounded-xl border border-border/60 shadow-card border-l-4",
