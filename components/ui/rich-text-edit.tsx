@@ -30,6 +30,7 @@ import {
   List, ListOrdered,
   Link as LinkIcon, Image as ImageIcon, Pencil,
   Sparkles, Loader2,
+  Palette, Eraser,
 } from "lucide-react";
 import { sanitizeRichText, isSafeUrl } from "@/lib/richText";
 import { QuizVarInserter, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
@@ -87,6 +88,12 @@ export function RichTextEdit({
   // component so each field manages its own popover independently.
   const [rewriting, setRewriting] = useState(false);
   const [aiProposals, setAiProposals] = useState<string[] | null>(null);
+  // Color picker state. We snapshot the current selection range BEFORE
+  // opening the picker because clicking inside the popover blurs the
+  // contentEditable, and `restoreSelection` puts the caret back exactly
+  // where the user left it before applying foreColor.
+  const [colorOpen, setColorOpen] = useState(false);
+  const savedRangeRef = useRef<Range | null>(null);
 
   const handleAIRewrite = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -153,6 +160,77 @@ export function RichTextEdit({
     document.execCommand(cmd, false, arg);
     ref.current?.focus();
   }, []);
+
+  const saveSelection = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+    }
+  }, []);
+
+  const restoreSelection = useCallback(() => {
+    if (typeof window === "undefined" || !ref.current) return;
+    const sel = window.getSelection();
+    if (!sel) return;
+    sel.removeAllRanges();
+    if (savedRangeRef.current) {
+      sel.addRange(savedRangeRef.current);
+    } else {
+      // No saved range (e.g. user clicked the palette without selecting
+      // text first) → place the caret at the end of the field so the
+      // foreColor still has a target context.
+      const range = document.createRange();
+      range.selectNodeContents(ref.current);
+      range.collapse(false);
+      sel.addRange(range);
+    }
+    ref.current.focus();
+  }, []);
+
+  const applyColor = useCallback(
+    (color: string | null) => {
+      if (typeof document === "undefined") return;
+      restoreSelection();
+      // styleWithCSS=true makes Chromium emit `<span style="color: …">`
+      // instead of `<font color="…">`. The latter would be stripped by
+      // sanitizeRichText (no `font` in ALLOWED_TAGS), so we'd lose the
+      // colour on next save. styleWithCSS keeps the formatting safely
+      // inside an allowed `span` element.
+      try {
+        document.execCommand("styleWithCSS", false, "true");
+      } catch {
+        /* old browsers ignore this — fallback path below also covers it */
+      }
+      if (color) {
+        document.execCommand("foreColor", false, color);
+      } else {
+        // "Remove formatting" path — strips inline color styles. We use
+        // removeFormat which also drops bold/italic, so we follow up by
+        // re-applying nothing (the call is the cheapest correct way).
+        document.execCommand("removeFormat", false);
+      }
+      setColorOpen(false);
+      ref.current?.focus();
+    },
+    [restoreSelection],
+  );
+
+  // Curated swatch palette — neutrals first (most useful for contrast
+  // against branded backgrounds), then primary pop colours. Ordered for
+  // grid layout; the "+" custom picker below extends the range.
+  const SWATCHES: Array<{ hex: string; label: string }> = [
+    { hex: "#000000", label: "Noir" },
+    { hex: "#ffffff", label: "Blanc" },
+    { hex: "#6b7280", label: "Gris" },
+    { hex: "#ef4444", label: "Rouge" },
+    { hex: "#f59e0b", label: "Orange" },
+    { hex: "#10b981", label: "Vert" },
+    { hex: "#3b82f6", label: "Bleu" },
+    { hex: "#8b5cf6", label: "Violet" },
+    { hex: "#ec4899", label: "Rose" },
+    { hex: "#0ea5e9", label: "Cyan" },
+  ];
 
   const commit = useCallback(() => {
     if (!ref.current) return;
@@ -230,6 +308,63 @@ export function RichTextEdit({
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("italic"); }} title={t("rteItalic")}><Italic className="w-3.5 h-3.5" /></ToolbarBtn>
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("underline"); }} title={t("rteUnderline")}><UnderlineIcon className="w-3.5 h-3.5" /></ToolbarBtn>
           <span className="w-px h-4 bg-border mx-0.5" />
+          {/* Color picker — saves the current selection so it survives
+              the click on the popover (which would otherwise blur the
+              contentEditable). styleWithCSS in applyColor ensures the
+              output is a `<span style="color:…">` that DOMPurify keeps. */}
+          <div className="relative">
+            <ToolbarBtn
+              onMouseDown={(e) => {
+                e.preventDefault();
+                if (!colorOpen) saveSelection();
+                setColorOpen((v) => !v);
+              }}
+              title="Couleur du texte"
+            >
+              <Palette className="w-3.5 h-3.5" />
+            </ToolbarBtn>
+            {colorOpen && (
+              <div
+                className="absolute z-30 top-full left-0 mt-1 w-56 rounded-lg border bg-background shadow-lg p-2 space-y-2"
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <div className="grid grid-cols-5 gap-1">
+                  {SWATCHES.map((s) => (
+                    <button
+                      key={s.hex}
+                      type="button"
+                      onClick={() => applyColor(s.hex)}
+                      title={s.label}
+                      className="w-8 h-8 rounded-md border border-border/60 hover:scale-110 transition-transform"
+                      style={{ backgroundColor: s.hex }}
+                      aria-label={s.label}
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 pt-1 border-t">
+                  <label className="flex-1 text-xs text-muted-foreground flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="color"
+                      onChange={(e) => applyColor(e.target.value)}
+                      className="w-7 h-7 rounded cursor-pointer border-0"
+                      aria-label="Couleur personnalisée"
+                    />
+                    <span>Custom</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => applyColor(null)}
+                    className="text-xs px-2 py-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                    title="Retirer la couleur"
+                  >
+                    <Eraser className="w-3 h-3" />
+                    Reset
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          <span className="w-px h-4 bg-border mx-0.5" />
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyLeft"); }} title={t("rteAlignLeft")}><AlignLeft className="w-3.5 h-3.5" /></ToolbarBtn>
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyCenter"); }} title={t("rteAlignCenter")}><AlignCenter className="w-3.5 h-3.5" /></ToolbarBtn>
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyRight"); }} title={t("rteAlignRight")}><AlignRight className="w-3.5 h-3.5" /></ToolbarBtn>
@@ -262,8 +397,17 @@ export function RichTextEdit({
           onBlur={commit}
           onKeyDown={onKeyDown}
           onPaste={onPaste}
-          className={`${baseCls} tiquiz-rich w-full bg-white/90 border-2 border-primary/40 outline-none`}
-          style={style}
+          // Bug récurrent (Béné) : sur les CTA blancs avec backgroundColor
+          // sombre passés via className/style (text-white sur fond
+          // primaire), le mode édition affichait du blanc-sur-blanc et
+          // l'utilisateur ne voyait pas ce qu'il tapait. On override en
+          // !text-foreground pendant l'édition pour garantir un contraste
+          // lisible avec le bg-white/90, peu importe la couleur héritée.
+          className={`${baseCls} tiquiz-rich w-full bg-white/90 !text-foreground border-2 border-primary/40 outline-none`}
+          // Le `style` du parent peut contenir un `color: white` (ex.
+          // CTA blanc) — on l'override aussi via inline style pour
+          // doubler la garantie de contraste.
+          style={{ ...(style ?? {}), color: "hsl(var(--foreground))" }}
           data-placeholder={placeholder}
         />
       </div>
