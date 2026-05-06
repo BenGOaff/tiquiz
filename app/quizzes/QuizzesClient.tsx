@@ -58,16 +58,18 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
   useEffect(() => {
     (async () => {
       try {
-        const [quizRes, popquizRes] = await Promise.all([
-          fetch("/api/quiz").then((r) => r.json()).catch(() => ({ ok: false })),
-          fetch("/api/popquiz").then((r) => r.json()).catch(() => ({ ok: false })),
-        ]);
+        // Béné 2026-05-04 : les popquizzes ne sont PLUS listés ici.
+        // Ils ont leur propre page /popquizzes (sidebar « Popquiz vidéo »)
+        // et la liste dédiée gère la création / suppression / publication.
+        // /quizzes reste focalisée sur les quiz et sondages standards.
+        // Les quiz référencés DANS un popquiz (via les cues) restent
+        // listés ici comme tout autre quiz, pour qu'on puisse les éditer.
+        const quizRes = await fetch("/api/quiz")
+          .then((r) => r.json())
+          .catch(() => ({ ok: false }));
 
         const quizRows: Record<string, unknown>[] = quizRes.ok
           ? (quizRes.quizzes ?? [])
-          : [];
-        const popquizRows: Record<string, unknown>[] = popquizRes.ok
-          ? (popquizRes.popquizzes ?? [])
           : [];
 
         const enriched: Project[] = [];
@@ -86,22 +88,6 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
             shares_count: Number(row.shares_count ?? 0),
             created_at: String(row.created_at ?? ""),
             leads_count: qData.leads?.length ?? 0,
-          });
-        }
-
-        for (const row of popquizRows) {
-          enriched.push({
-            id: String(row.id),
-            slug: typeof row.slug === "string" ? row.slug : null,
-            title: String(row.title ?? ""),
-            status: row.is_published ? "active" : "draft",
-            mode: "popquiz",
-            views_count: Number(row.views_count ?? 0),
-            starts_count: 0,
-            completions_count: Number(row.completions_count ?? 0),
-            shares_count: 0,
-            created_at: String(row.created_at ?? ""),
-            leads_count: 0,
           });
         }
 
@@ -213,18 +199,8 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
 
       {projects.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
-          {(["all", "quiz", "survey", "popquiz"] as const).map((f) => {
-            if (f === "popquiz" && counts.popquiz === 0) return null;
-            let label: string;
-            if (f === "popquiz") {
-              try {
-                label = tProjects("filter_popquiz");
-              } catch {
-                label = "Popquiz";
-              }
-            } else {
-              label = tProjects(`filter_${f}`);
-            }
+          {(["all", "quiz", "survey"] as const).map((f) => {
+            const label = tProjects(`filter_${f}`);
             return (
               <Button
                 key={f}
