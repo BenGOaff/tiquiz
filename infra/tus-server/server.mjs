@@ -99,8 +99,8 @@ const tus = new Server({
     if (!c) throw httpError(401, "Missing claims");
     return relPathFromClaims(c);
   },
-  generateUrl(_req, { proto, host, baseUrl, path: p, id }) {
-    return `${proto}://${host}${baseUrl}${p}/${encodeURIComponent(id)}`;
+  generateUrl(_req, { proto, host, path: p, id }) {
+    return `${proto}://${host}${p}/${encodeURIComponent(id)}`;
   },
   getFileIdFromRequest(req) {
     const u = req.url || "";
