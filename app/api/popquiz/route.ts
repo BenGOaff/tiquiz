@@ -139,17 +139,19 @@ export async function POST(req: NextRequest) {
   let videoInsert: Record<string, unknown> | null = null;
 
   if (uploadedPath) {
-    const expectedPrefix = `raw/${user.id}/`;
-    if (!uploadedPath.startsWith(expectedPrefix)) {
+    // Two valid layouts during migration:
+    //   - self-hosted: tiquiz/raw/<uid>/...  (current pipeline)
+    //   - legacy Supabase bucket: raw/<uid>/...
+    const validPrefixes = [`tiquiz/raw/${user.id}/`, `raw/${user.id}/`];
+    const matchesScope = (p: string) =>
+      validPrefixes.some((prefix) => p.startsWith(prefix));
+    if (!matchesScope(uploadedPath)) {
       return NextResponse.json(
         { ok: false, error: "Invalid upload path" },
         { status: 400 },
       );
     }
-    if (
-      uploadedThumbnailPath &&
-      !uploadedThumbnailPath.startsWith(expectedPrefix)
-    ) {
+    if (uploadedThumbnailPath && !matchesScope(uploadedThumbnailPath)) {
       return NextResponse.json(
         { ok: false, error: "Invalid thumbnail path" },
         { status: 400 },
