@@ -34,6 +34,8 @@ export function isPaidPlan(plan: string | null | undefined): boolean {
 export const FREE_LIMITS = {
   /** Max active items per mode — i.e. up to 1 quiz AND 1 sondage allowed */
   maxQuizzesPerMode: 1,
+  /** Max popquizzes (vidéo + cuepoints) — même politique que les quiz */
+  maxPopquizzes: 1,
   /** Visible leads per rolling 30-day window — captures keep happening, the rest blur */
   visibleLeadsPerMonth: 10,
 } as const;

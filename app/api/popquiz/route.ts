@@ -20,6 +20,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { parseVideoUrl } from "@/lib/popquiz";
 import { sanitizeSlug } from "@/lib/quizBranding";
+import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
 
 export const dynamic = "force-dynamic";
 
@@ -91,6 +92,34 @@ export async function POST(req: NextRequest) {
       { ok: false, error: "title is required" },
       { status: 400 },
     );
+  }
+
+  // Free plan : 1 popquiz max (même politique que les quiz / sondages).
+  // L'user peut supprimer son popquiz pour en créer un autre, ou passer
+  // payant pour en cumuler plusieurs. Béné 2026-05-04.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("plan")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!isPaidPlan((profile as { plan?: string | null } | null)?.plan)) {
+    const { count } = await supabase
+      .from("popquizzes")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+
+    if ((count ?? 0) >= FREE_LIMITS.maxPopquizzes) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "FREE_PLAN_POPQUIZ_LIMIT",
+          message:
+            "Le plan gratuit est limité à 1 popquiz. Supprime celui en cours ou passe en plan payant pour en créer d'autres.",
+        },
+        { status: 403 },
+      );
+    }
   }
 
   const url = String(body.url ?? "").trim();

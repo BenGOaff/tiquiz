@@ -342,7 +342,14 @@ export default function PopquizNewClient({
       });
       const json = await res.json();
       if (!json.ok) {
-        setError(json.error ?? "Erreur lors de la sauvegarde");
+        // Free plan : 1 popquiz max. Le message backend explique
+        // l'option (supprimer ou upgrade), on l'affiche tel quel
+        // plutôt que le code d'erreur cryptique.
+        const friendly =
+          json.error === "FREE_PLAN_POPQUIZ_LIMIT"
+            ? json.message ?? "Limite du plan gratuit atteinte."
+            : json.error ?? "Erreur lors de la sauvegarde";
+        setError(friendly);
         return;
       }
       if (publish) {
