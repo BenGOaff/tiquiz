@@ -191,3 +191,28 @@
     background: linear-gradient(135deg, hsl(233 64% 61% / 0.95) 0%, hsl(194 79% 52% / 0.95) 100%);
   }
 }
+
+/* ───────────────────────────────────────────
+ * Popquiz player — fix YouTube/Vimeo iframe
+ * ───────────────────────────────────────────
+ *
+ * Vidstack rend la vidéo dans un <media-provider> qui contient un
+ * <iframe> (YouTube / Vimeo). Sans intervention, l'iframe capture
+ * tous les pointer events : le PlayButton qu'on superpose au-dessus
+ * (z-[1]) ne reçoit jamais le clic, donc l'utilisateur clique dans
+ * le vide et la vidéo ne démarre pas (Béné 2026-05-04 sur le quiz
+ * tiquiz-video).
+ *
+ * Fix : on désactive les pointer events sur l'iframe du provider —
+ * Vidstack contrôle de toute façon la lecture via son API (méthodes
+ * .play() / .pause() / events postMessage), donc l'iframe n'a plus
+ * besoin de recevoir directement les clics. Notre PlayButton récupère
+ * les clics et délègue à Vidstack qui orchestre YouTube/Vimeo.
+ *
+ * Limité à `.popquiz-player media-provider iframe` pour ne PAS
+ * affecter l'iframe du quiz overlay (PopquizQuizIframe) qui doit
+ * rester interactif (le visiteur clique sur les options de quiz).
+ */
+.popquiz-player media-provider iframe {
+  pointer-events: none;
+}

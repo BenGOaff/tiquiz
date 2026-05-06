@@ -37,45 +37,45 @@
 ## Structure complète de l'article
 
 ### Title H1
-**Quiz vidéo : la méthode pour capturer 4 fois plus de contacts sur une vidéo (avec exemples concrets)**
+**Quiz vidéo : pourquoi 87 % des marketeurs te disent que ça fait vendre (la méthode complète)**
 
 ### TL;DR (paragraphe dense au-dessus de l'intro, pour les LLMs)
 
-Un quiz vidéo (ou Popquiz) est un quiz qui apparaît au milieu d'une vidéo, au moment que tu choisis. Le visiteur regarde, ton quiz s'affiche par-dessus, il répond, la vidéo reprend. Cinq raisons pour lesquelles ça performe autant : (1) la vidéo retient l'attention 4 fois plus longtemps qu'une page texte, (2) le quiz transforme un spectateur passif en contact trié et rangé dans Systeme io, (3) tu peux glisser ton quiz par-dessus n'importe quelle vidéo YouTube ou Vimeo (la tienne, celle d'un partenaire, ou une vidéo qui cartonne déjà sur ta thématique), (4) c'est légal tant que tu utilises le lecteur d'origine sans copier la vidéo (comme un marque-page glissé dans un livre prêté), (5) tu colles ton Popquiz partout en un clic : sur ton blog, sur ta page Systeme io, sur ton site WordPress. Avec __[Tiquiz](https://www.tipote.fr/tiquiz)__, tu crées un Popquiz en moins de 10 minutes et tes contacts arrivent direct dans ton compte Systeme io, sans Zapier ni Make.
+Un quiz vidéo (ou Popquiz) est un quiz qui apparaît au milieu d'une vidéo, au moment que tu choisis. Le visiteur regarde, ton quiz s'affiche par-dessus, il répond, la vidéo reprend. Cinq chiffres qui prouvent l'intérêt du format : (1) **87 % des marketeurs disent que la vidéo a directement augmenté leurs ventes** (Wyzowl State of Video Marketing 2024), (2) **un visiteur passe 2 fois plus de temps sur une page qui contient une vidéo** (Wistia State of Video Report 2024), (3) **le contenu interactif génère 2 fois plus de conversions que le contenu passif** (Outgrow Interactive Content Statistics), (4) **le taux moyen de capture d'un quiz lead-magnet est de 33,6 %, contre 2 à 3 % pour un opt-in classique avec ebook** (Interact Quiz Marketing Statistics), (5) **la vidéo interactive multiplie l'engagement par 5 vs la vidéo linéaire** (Demand Gen Report). Tu prends ta vidéo (ou une vidéo qui cartonne déjà sur ta thématique sans la voler, comme un marque-page glissé dans un livre prêté), tu y glisses ton quiz, et tu colles le résultat sur ton blog ou ta page Systeme io. Avec __[Tiquiz](https://www.tipote.fr/tiquiz)__, tu crées un Popquiz en moins de 10 minutes et tes contacts arrivent direct dans ton compte Systeme io, sans Zapier ni Make.
 
 ### Intro (3 paragraphes)
 
-**Paragraphe 1 — Hook**
-Combien de temps reste un visiteur sur ta dernière vidéo YouTube ? En moyenne 32 secondes. Sur une page texte ? 17 secondes. Et combien parmi eux te laissent leur email ? Probablement zéro. La vidéo passive ne capte presque personne.
+**Paragraphe 1 — Hook chiffré**
+55 % des visiteurs passent moins de 15 secondes sur une page de blog ([Chartbeat](https://chartbeat.com/blog/how-much-do-people-actually-read-online/)). Sur ta dernière vidéo YouTube, le visiteur reste en moyenne 32 secondes. Et combien parmi eux te laissent leur email ? Probablement zéro. La vidéo passive ne capte presque personne.
 
 **Paragraphe 2 — Pivot**
-Pourtant la vidéo est le format qui retient le plus l'attention en 2026. Le problème, c'est qu'elle est passive. Le visiteur regarde, scrolle, oublie. Sauf si tu lui demandes de cliquer.
+Pourtant la vidéo est le format qui rapporte le plus en 2026. **87 % des marketeurs disent que la vidéo a directement augmenté leurs ventes** (rapport [Wyzowl State of Video Marketing 2024](https://www.wyzowl.com/video-marketing-statistics/)). **Les entreprises qui utilisent la vidéo voient leurs revenus croître 49 % plus vite** que celles qui ne l'utilisent pas (étude Aberdeen Group). Le problème, c'est que la vidéo est passive. Le visiteur regarde, scrolle, oublie. Sauf si tu lui demandes de cliquer.
 
 **Paragraphe 3 — Promesse**
-Le quiz vidéo (ou Popquiz) règle ce paradoxe. Tu prends une vidéo qui parle déjà à ton audience, tu y glisses 2 ou 3 quiz aux moments-clés, et tu transformes chaque spectateur en contact rangé selon ses réponses. Voici comment ça marche, pourquoi c'est légal, et 7 cas d'usage qui font que tu vas vouloir t'y mettre cette semaine.
+Le quiz vidéo (ou Popquiz) règle ce paradoxe. Tu prends une vidéo qui parle déjà à ton audience, tu y glisses 2 ou 3 quiz aux moments-clés, et tu transformes chaque spectateur en contact rangé selon ses réponses. Voici les chiffres qui prouvent que ça marche, pourquoi c'est légal, et 7 cas d'usage qui font que tu vas vouloir t'y mettre cette semaine.
 
 ---
 
 ## Sommaire
 
-1. C'est quoi un quiz vidéo (Popquiz) ?
-2. Pourquoi le format performe autant : 5 raisons chiffrées
-3. Glisser un quiz dans une vidéo YouTube, sans rien voler
-4. 7 cas d'usage concrets pour solopreneurs et formateurs
-5. Comment créer ton premier Popquiz dans Tiquiz (étape par étape)
-6. Les outils du marché : EdPuzzle, H5P, Mindstamp, Tiquiz
-7. FAQ
-8. Prêt à lancer ton premier Popquiz ?
+1. Quiz vidéo : la mécanique en 30 secondes
+2. 5 raisons sous-estimées de t'y mettre cette semaine
+3. Glisser un quiz sur n'importe quelle vidéo YouTube (sans rien voler à personne)
+4. 7 façons de transformer une vidéo en machine à contacts
+5. Ton premier Popquiz en 30 minutes (étape par étape)
+6. Pourquoi tu paies 10 fois moins avec Tiquiz qu'avec un outil US
+7. Les 10 questions qui reviennent (et les réponses cash)
+8. À toi de jouer
 
 ---
 
-## Section 1 — C'est quoi un quiz vidéo (Popquiz) ?
+## Section 1 — Quiz vidéo : la mécanique en 30 secondes
 
-### Définition
+### Concrètement, c'est quoi un Popquiz
 
 Un **quiz vidéo** est un quiz qui apparaît par-dessus une vidéo en lecture, au moment précis que tu as choisi. Le visiteur regarde la vidéo, à 0:45 le quiz s'affiche, il répond, la vidéo reprend.
 
-### Comment ça marche en 30 secondes
+### Le process en 5 étapes
 
 - Tu prends une vidéo (YouTube, Vimeo, ou ton fichier vidéo perso)
 - Tu choisis les moments où ton quiz doit apparaître (par exemple à 0:30, à 2:15, à 4:00)
@@ -83,40 +83,63 @@ Un **quiz vidéo** est un quiz qui apparaît par-dessus une vidéo en lecture, a
 - Le visiteur répond, son email est récupéré, son profil est rangé dans ton Systeme io
 - La vidéo reprend toute seule
 
-### Pourquoi ça change tout
+### 100 vues, 0 contact (vidéo classique). 100 vues, 40 contacts (quiz vidéo).
 
-La vidéo classique : 100 vues → 0 contact.
-Le quiz vidéo : 100 vues → 30 à 40 contacts rangés selon le profil de leurs réponses.
+La différence en une ligne : tu ne tournes pas une vidéo de plus, tu transformes celle qui existe déjà en machine à contacts qualifiés.
 
 C'est exactement la même mécanique qu'un quiz lead-magnet classique, mais embarquée dans un format que ton audience consomme déjà sans effort.
 
 ---
 
-## Section 2 — Pourquoi le format performe : 5 raisons chiffrées
+## Section 2 — 5 raisons sous-estimées de t'y mettre cette semaine
 
-### 2.1. La vidéo retient 4 fois plus l'attention qu'une page texte
+### 2.1. La vidéo, c'est ce qui vend le plus en ce moment (et de très loin)
 
-Les visiteurs passent en moyenne **2 minutes 30 sur une vidéo** contre 30 à 40 secondes sur un article (source : [HubSpot Marketing Statistics](https://blog.hubspot.com/marketing/state-of-video-marketing-new-data)). Tu n'as pas le luxe de cette durée d'attention sur du texte.
+**87 % des marketeurs disent que la vidéo a directement augmenté leurs ventes.** **90 % disent qu'elle a aidé à générer des leads.** **96 % disent qu'elle a aidé leurs prospects à comprendre leur produit ou service.** Trois chiffres tirés du rapport annuel [Wyzowl State of Video Marketing 2024](https://www.wyzowl.com/video-marketing-statistics/) — l'enquête de référence sur le marketing vidéo, basée sur 600+ marketeurs interrogés.
 
-### 2.2. Le contenu interactif convertit 2 fois plus que le passif
+Les entreprises qui utilisent la vidéo voient leurs revenus croître **49 % plus vite** que celles qui ne l'utilisent pas (étude Aberdeen Group, citée par [Vidyard](https://www.vidyard.com/blog/video-marketing-statistics/)).
 
-[Outgrow Interactive Content Statistics](https://outgrow.co/blog/interactive-content-statistics) confirme que tout contenu interactif (quiz, calculatrice, sondage embarqué) génère 2 fois plus de conversions que le contenu passif (vidéo seule, ebook, article).
+Forrester Research a calculé qu'**1 minute de vidéo équivaut à 1,8 million de mots écrits** en termes d'impact (Dr James McQuivey, étude Forrester). Tu ne peux pas faire ça avec un article de blog.
 
-### 2.3. Le quiz garde tes spectateurs plus longtemps sur la vidéo
+### 2.2. Tes lecteurs te lâchent en 15 secondes sur ta page de blog. Avec une vidéo, ils restent 2 fois plus longtemps.
 
-Quand tu sais qu'un quiz va apparaître à 0:30, tu ne fermes pas la vidéo à 0:25. Tu attends. Le simple fait d'avoir des moments-quiz multiplie le temps de visionnage moyen.
+**55 % des visiteurs passent moins de 15 secondes sur une page web** ([Chartbeat](https://chartbeat.com/blog/how-much-do-people-actually-read-online/)). Ton contenu text-only, peu importe sa qualité, perd la moitié de ton audience avant la fin du premier paragraphe.
 
-### 2.4. Tu récupères un contact déjà rangé
+Avec une vidéo intégrée, **les visiteurs passent 2,6 fois plus de temps sur la page** ([Wistia State of Video Report 2024](https://wistia.com/learn/marketing/state-of-video-report-2024)). Et le taux de conversion d'une page avec vidéo est en moyenne **80 % plus élevé** qu'une page sans vidéo (étude Eyeview Digital, citée par [HubSpot](https://blog.hubspot.com/marketing/video-marketing-statistics)).
 
-À la fin du quiz vidéo, ton contact n'est pas juste un email. C'est un contact avec un profil ("Profil Motivée", "Profil Pragmatique", "Profil Premium"…) qui déclenche directement la bonne suite d'emails dans ton Systeme io.
+Le simple fait d'ajouter une vidéo retient ton lecteur. Le quiz vidéo va plus loin : il transforme ce temps passé en contact qualifié.
 
-### 2.5. Tu réutilises du contenu vidéo qui existe déjà
+### 2.3. Spectateur passif vs visiteur acteur : ton CA fois 2 sur le même trafic
 
-Pas besoin de tourner une nouvelle vidéo. Tu prends une vidéo qui parle déjà à ton audience (la tienne ou celle d'un autre), et tu la transformes en machine à contacts. C'est la mécanique la plus rentable du marketing 2026.
+**Le contenu interactif (quiz, calculatrice, sondage) génère 2 fois plus de conversions que le contenu passif** (vidéo seule, ebook, article) selon [Outgrow Interactive Content Statistics](https://outgrow.co/blog/interactive-content-statistics) et [Demand Metric](https://www.demandmetric.com/content/content-marketing-infographic).
+
+**70 % des marketeurs disent que le contenu interactif convertit efficacement** (Outgrow). **88 % disent qu'il les différencie de leurs concurrents** ([Content Marketing Institute](https://contentmarketinginstitute.com/)).
+
+Pourquoi ? Parce que ton visiteur n'est plus un spectateur. Il est acteur. Il clique, il choisit, il s'investit. Et un visiteur investi devient un contact qualifié 2 fois plus souvent qu'un spectateur passif.
+
+### 2.4. Un quiz capte 33 % des visiteurs en moyenne. Un opt-in classique en capte 2 à 3 %.
+
+**Le taux moyen de capture d'un quiz lead-magnet est de 33,6 %** selon [Interact Quiz Marketing Statistics](https://www.tryinteract.com/blog/quiz-marketing-statistics/) — basé sur l'analyse de centaines de quiz publiés sur leur plateforme.
+
+Pour comparer : le taux moyen de conversion d'un opt-in classique avec ebook gratuit est de **2 à 3 %** ([Sumo](https://sumo.com/) / [GetResponse Email Marketing Benchmarks](https://www.getresponse.com/resources/reports/email-marketing-benchmarks)).
+
+**Sur le même trafic, le quiz capture 10 à 15 fois plus de contacts qu'un ebook gratuit.** C'est pas marginal, c'est un changement de catégorie.
+
+Et avec un quiz vidéo, tu joues sur les deux tableaux : la rétention de la vidéo + la conversion du quiz. Le résultat te dépasse les deux pris séparément.
+
+### 2.5. La vidéo interactive multiplie l'engagement par 5
+
+**Une vidéo interactive génère 5 fois plus d'engagement qu'une vidéo linéaire** ([Demand Gen Report](https://www.demandgenreport.com/)).
+
+**Les vidéos interactives ont un taux de complétion 50 % supérieur** aux vidéos non interactives ([Wibbitz Video Marketing Statistics](https://www.wibbitz.com/)).
+
+**89 % des consommateurs disent vouloir voir plus de vidéos de la part des marques** en 2024 (Wyzowl). Et **interactivité = vidéo qu'on partage**.
+
+Le quiz vidéo coche les trois cases : engagement multiplié, complétion en hausse, partage facilité. Tu ne fais pas un effort marketing supplémentaire — tu transformes ce que tu as déjà en quelque chose de bien plus rentable.
 
 ---
 
-## Section 3 — Glisser un quiz dans une vidéo YouTube, sans rien voler
+## Section 3 — Glisser un quiz sur n'importe quelle vidéo YouTube (sans rien voler à personne)
 
 ### Ce que tu as le droit de faire
 
@@ -146,45 +169,45 @@ Tu utilises la vidéo telle qu'elle est, tu ajoutes ton quiz par-dessus. C'est t
 
 ---
 
-## Section 4 — 7 cas d'usage concrets
+## Section 4 — 7 façons de transformer une vidéo en machine à contacts
 
-### 4.1. Le coach business qui transforme sa chaîne YouTube en pipeline
+### 4.1. Marie a 200 vidéos YouTube et 0 contact. Voilà ce qu'elle a changé.
 
 **Contexte** : Marie a 200 vidéos YouTube sur le coaching business pour solopreneurs. 8 000 vues par mois cumulées. 0 contact récupéré.
 **Solution Popquiz** : sur ses 10 vidéos les plus vues, elle ajoute un Popquiz "Quel type d'entrepreneur·e es-tu ?" à 30 secondes du début.
 **Résultat** : 200 contacts rangés par mois sur ses anciennes vidéos. Plus une seule vidéo nouvelle à tourner.
 
-### 4.2. La formatrice qui glisse un quiz dans son webinaire replay
+### 4.2. Sophie a multiplié par 3 les ventes derrière son replay de webinaire
 
 **Contexte** : Sophie organise des webinaires gratuits. Le replay sur YouTube fait 1 500 vues, mais 90 % des spectateurs ne s'inscrivent pas à son offre payante.
 **Solution Popquiz** : un Popquiz à 25 minutes (au cœur du replay) qui demande où en est le spectateur ("Tu démarres / tu galères / tu plafonnes").
 **Résultat** : 30 % des spectateurs répondent au quiz et tombent dans la suite d'emails adaptée à leur profil. Conversion sur l'offre principale ×3.
 
-### 4.3. Le créateur de contenu qui s'appuie sur une vidéo virale
+### 4.3. Thomas pose un quiz sur un TED viral à 3 millions de vues. Il capture sur le trafic des autres.
 
 **Contexte** : Thomas est consultant en productivité. Une vidéo TED virale parle exactement de son sujet, avec 3 millions de vues.
 **Solution Popquiz** : il publie un article de blog "Mon analyse du TED Talk de [intervenant]", colle la vidéo TED dans son article, et ajoute un Popquiz à 5:00 ("Quelle est ta plus grande perte de temps en ce moment ?").
 **Résultat** : du trafic Google + le quiz qui récupère des contacts sur du trafic gratuit.
 
-### 4.4. L'affilié qui pré-trie sur une démo produit
+### 4.4. L'affilié qui chauffe ses prospects sur une vidéo qui n'est pas la sienne
 
 **Contexte** : Béné fait de l'affiliation Systeme io. La page de vente Systeme io contient une vidéo démo officielle de 3 minutes.
 **Solution Popquiz** : la vidéo démo + Popquiz "Quel plan Systeme io te correspond ?" à la fin.
 **Résultat** : le visiteur arrive sur la page d'affiliation déjà chauffé et orienté vers le bon plan.
 
-### 4.5. Le formateur qui rend un module de cours interactif
+### 4.5. Léa fait passer son taux de complétion de 40 % à 75 % avec 4 quiz dans une vidéo
 
 **Contexte** : Léa vend une formation sur la pâtisserie. Module 3 = vidéo de 12 minutes sur la pâte à choux.
 **Solution Popquiz** : 4 quiz placés à 2 min, 5 min, 8 min, 11 min. Chaque quiz vérifie la compréhension. Si l'élève rate, replay automatique du passage. Si réussit, on continue.
 **Résultat** : taux de complétion du module qui passe de 40 % à 75 %. Les élèves apprennent vraiment.
 
-### 4.6. Le coach qui pré-trie ses appels découverte
+### 4.6. Pierre divise par 2 ses appels découverte qui ne convertissent pas
 
 **Contexte** : Pierre fait des appels découverte gratuits. 40 % des appels sont des "tire-pneus" qui ne deviendront jamais clients.
 **Solution Popquiz** : avant de réserver l'appel, le visiteur regarde une vidéo de 5 minutes (présentation de Pierre) avec un Popquiz "Es-tu prêt·e à investir 2 000 € dans ton accompagnement ?". Si la réponse est non, redirection vers une ressource gratuite.
 **Résultat** : appels découverte 2 fois plus rangés. Pierre vend 1 client sur 3 au lieu de 1 sur 8.
 
-### 4.7. Le solopreneur qui valide ses ventes en avance
+### 4.7. Camille teste son offre à 297 € avec un quiz vidéo, avant de la créer
 
 **Contexte** : Camille lance une nouvelle formation à 297 €. Avant de la créer, elle veut vérifier que son audience est intéressée.
 **Solution Popquiz** : vidéo de 3 minutes qui présente le concept, Popquiz à 2 min "À quel prix tu serais prêt·e à acheter cette formation ?". Si 60 % répondent "297 € et plus", la formation se fait. Si 60 % répondent "moins de 100 €", elle change le prix ou l'angle.
@@ -192,7 +215,7 @@ Tu utilises la vidéo telle qu'elle est, tu ajoutes ton quiz par-dessus. C'est t
 
 ---
 
-## Section 5 — Comment créer ton premier Popquiz dans Tiquiz
+## Section 5 — Ton premier Popquiz en 30 minutes (étape par étape)
 
 (Procédure pas-à-pas avec captures d'écran à intégrer.)
 
@@ -234,7 +257,7 @@ Chaque réponse à un quiz vidéo récupère le contact, le range selon son prof
 
 ---
 
-## Section 6 — Comparaison avec les outils du marché
+## Section 6 — Pourquoi tu paies 10 fois moins avec Tiquiz qu'avec un outil US
 
 | Outil | Origine | Prix | Branché à Systeme io | Note |
 |-------|--------|------|----------------------|------|
@@ -249,7 +272,7 @@ Chaque réponse à un quiz vidéo récupère le contact, le range selon son prof
 
 ---
 
-## Section 7 — FAQ
+## Section 7 — Les 10 questions qui reviennent (et les réponses cash)
 
 ### Est-ce vraiment légal de glisser un quiz dans une vidéo YouTube ?
 
@@ -293,7 +316,7 @@ Oui. Le quiz superposé s'adapte à la taille de l'écran, sur ordinateur comme 
 
 ---
 
-## Section 8 — Prêt à lancer ton premier Popquiz ?
+## Section 8 — À toi de jouer
 
 Tu as maintenant les bases pour transformer une vidéo passive (la tienne ou celle d'un autre) en machine à contacts triés.
 
@@ -422,3 +445,53 @@ quiz vidéo, quiz vidéo interactif, popquiz, quiz YouTube, quiz dans une vidéo
 - Outgrow Interactive Content Statistics
 - Mailchimp Email Marketing Benchmarks
 - Une étude TED ou EdPuzzle si dispo (engagement vidéo interactive)
+
+---
+
+## Pack sources & citations (à conserver pour les retouches futures)
+
+### Pour la section 2 et l'intro
+
+| Stat | Source | URL |
+|------|--------|-----|
+| 87 % des marketeurs disent que la vidéo a augmenté leurs ventes | Wyzowl State of Video Marketing 2024 | https://www.wyzowl.com/video-marketing-statistics/ |
+| 90 % disent que la vidéo a aidé à générer des leads | Wyzowl State of Video Marketing 2024 | https://www.wyzowl.com/video-marketing-statistics/ |
+| 96 % disent que la vidéo a aidé les prospects à comprendre l'offre | Wyzowl State of Video Marketing 2024 | https://www.wyzowl.com/video-marketing-statistics/ |
+| 89 % des consommateurs veulent voir plus de vidéos en 2024 | Wyzowl State of Video Marketing 2024 | https://www.wyzowl.com/video-marketing-statistics/ |
+| Revenus +49 % chez les utilisateurs de vidéo vs non-utilisateurs | Aberdeen Group, cité Vidyard | https://www.vidyard.com/blog/video-marketing-statistics/ |
+| 1 minute de vidéo = 1,8 million de mots | Forrester Research (Dr James McQuivey) | Étude Forrester citée par [Insivia](https://www.insivia.com/) et [HubSpot](https://blog.hubspot.com/marketing/video-marketing-statistics) |
+| 55 % des visiteurs passent moins de 15 secondes sur une page | Chartbeat | https://chartbeat.com/blog/how-much-do-people-actually-read-online/ |
+| Visiteurs passent 2,6 fois plus de temps sur une page avec vidéo | Wistia State of Video Report 2024 | https://wistia.com/learn/marketing/state-of-video-report-2024 |
+| Pages avec vidéo : conversion +80 % en moyenne | Eyeview Digital, cité par HubSpot | https://blog.hubspot.com/marketing/video-marketing-statistics |
+| Contenu interactif : 2× plus de conversions vs passif | Outgrow / Demand Metric | https://outgrow.co/blog/interactive-content-statistics |
+| 70 % des marketeurs disent que l'interactif convertit | Outgrow Interactive Content Statistics | https://outgrow.co/blog/interactive-content-statistics |
+| 88 % disent que l'interactif les différencie des concurrents | Content Marketing Institute | https://contentmarketinginstitute.com/ |
+| Quiz lead-magnet : 33,6 % de capture en moyenne | Interact Quiz Marketing Statistics | https://www.tryinteract.com/blog/quiz-marketing-statistics/ |
+| Opt-in classique avec ebook : 2-3 % de capture | Sumo / GetResponse benchmarks | https://www.getresponse.com/resources/reports/email-marketing-benchmarks |
+| Vidéo interactive : ×5 d'engagement vs vidéo linéaire | Demand Gen Report | https://www.demandgenreport.com/ |
+| Vidéos interactives : taux de complétion +50 % | Wibbitz Video Marketing Statistics | https://www.wibbitz.com/ |
+
+### Pour les sections cas d'usage et pricing (section 4 et 6)
+
+| Stat | Source | URL |
+|------|--------|-----|
+| Email ROI : 36 € pour 1 € investi | Litmus State of Email 2024 | https://www.litmus.com/resources/state-of-email-2024/ |
+| Listes segmentées : taux d'ouverture supérieur, taux de désabo inférieur | Mailchimp Email Marketing Benchmarks | https://mailchimp.com/resources/email-marketing-benchmarks/ |
+| Audiences custom Meta : CPA significativement réduit vs audience froide | Meta Business — Lookalike Audiences | https://www.facebook.com/business/ads/lookalike-audiences |
+
+### Pour la légalité (section 3 et FAQ)
+
+| Source | URL | Usage |
+|--------|-----|-------|
+| YouTube Embedding Policy | https://support.google.com/youtube/answer/171780 | Confirme que l'embed standard est permis |
+| Vimeo Embed Policy | https://help.vimeo.com/hc/en-us/articles/12426256148369 | Confirme que l'embed standard est permis |
+
+### Visuels chiffrés à créer (cohérents avec les sources)
+
+| Visuel | Stat à mettre en avant | Source |
+|--------|------------------------|--------|
+| 87 % grand chiffre | "87 % des marketeurs disent que la vidéo a augmenté leurs ventes" | Wyzowl 2024 |
+| 33,6 % vs 2,5 % | "Quiz vs Opt-in classique : 10 à 15× plus de contacts" | Interact / Sumo |
+| 2,6× plus de temps sur la page | "Vidéo intégrée : 2,6× plus de temps passé" | Wistia 2024 |
+| 5× engagement vidéo interactive | "Vidéo interactive : ×5 d'engagement vs vidéo linéaire" | Demand Gen Report |
+| Marque-page dans un livre | Métaphore légale | -- |
