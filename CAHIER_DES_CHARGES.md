@@ -1,8 +1,17 @@
-# CAHIER DES CHARGES Tiquiz — Mise à jour Avril 2026
+# CAHIER DES CHARGES Tiquiz — Mise à jour Mai 2026
 
 Application Web SaaS multilingue (FR/EN/ES/IT/AR) de création de quiz interactifs pour capture de leads, avec intégration Systeme.io et génération IA.
 
 **Tiquiz est la version allégée de Tipote**, focalisée uniquement sur les quiz, l'IA et Systeme.io. Pas de coach IA, pas de crédits IA, pas de réseaux sociaux, pas d'automations, pas de pages builder.
+
+> **Notes de version Mai 2026** — synthèse des évolutions majeures depuis Avril :
+> - **Module Popquiz** : nouveau type de contenu — vidéo (YouTube/Vimeo/upload TUS resumable jusqu'à 2 GB) avec quiz interactifs incrustés à des timestamps précis. Routes `/popquiz/new`, `/popquiz/[id]`, `/popquizzes` (liste), `/p/[id]` (page publique de lecture), `/embed/p/[id]` (iframe embed). Sidebar : nouvelle entrée « Popquiz vidéo ». Plan gratuit limité à 1 popquiz. À la publication d'un popquiz, les quiz référencés par ses cues sont auto-activés (Gwenn « le quiz ne s'ouvre pas »).
+> - **Sécurité leads (3 couches)** : FK `quiz_leads.result_id` ON DELETE SET NULL, snapshot `result_title` avant DELETE des résultats orphelins, NULL-out explicite avant DELETE. Aucun lead ne peut disparaître quand un créateur re-shuffle ses résultats.
+> - **Typographie française** : NBSP appliqué automatiquement avant `: ; ! ? »` à la fois côté save (PATCH du quiz) et côté render (route publique) pour les locales `fr*`. Idempotent. Fix de l'interpolator (`lib/quizPersonalization.ts`) qui arrachait le NBSP avec un regex `\s+` trop greedy : remplacé par `[ \t]+` pour préserver le NBSP.
+> - **Quiz éditeur** : color picker dans `RichTextEdit` (palette de swatches + input couleur custom + reset). Fix contraste invisible blanc-sur-blanc en mode édition (text-foreground forcé). Headings `result_insight_heading` / `result_projection_heading` réellement renvoyés au front (SELECT public corrigé — avant ils restaient bloqués sur les défauts « Prise de conscience » / « Et si... »). Word-paste forcé en plain text. Listes UL/OL stylées via `tiquiz-rich`.
+> - **Bonus** : nouveau champ `bonus_intro_text` (paragraphe custom qui remplace le templeté de l'étape de partage). `hasBonusFlow` accepte désormais image bonus seule. Bouton « Recommencer » sur l'étape résultat (clear sessionStorage + reload).
+> - **Toast** : Sonner réglé à 1.8 s (avant : 4 s) pour ne plus masquer les boutons d'action.
+> - **Garde-fous** : `docs/INVARIANTS.md` documente les zones cassables (5 invariants : lead-safety, typo FR, popquiz publié → quiz auto-actifs, lockfile reflète package.json, cue popquiz scopé créateur).
 
 ---
 
@@ -16,6 +25,7 @@ Tiquiz est un outil de création de quiz lead magnets, ultra simple côté utili
 
 - Création de quiz manuellement ou par **génération IA** (Claude Anthropic, streaming SSE)
 - **Brainstorm IA conversationnel** (`/api/quiz/idea-chat`, Claude Haiku) pour dégrossir un brief avant génération
+- **Module Popquiz** (Mai 2026) : vidéo (YouTube / Vimeo / upload TUS resumable jusqu'à 2 GB) avec quiz interactifs incrustés à des timestamps précis. Embed iframe `/embed/p/{id}` pour intégration externe (WordPress, Systeme.io…). Auto-activation des quiz référencés à la publication du popquiz. Plan gratuit limité à 1 popquiz
 - **Éditeur WYSIWYG live** : sidebar multi-onglets (Structure / Design / Paramètres / Partage) + preview temps réel, switch mobile/desktop, édition inline sur tous les textes, champs rich-text (gras, italique, liens, images, alignement) pour intro / description / insight / projection
 - **Branding par quiz** : police Google (whitelist), couleur principale, couleur de fond, logo — héritage du profil avec override au niveau du quiz
 - **URL courte personnalisée** par quiz (`slug` → `/q/{slug}`, sanitisée + anti-collision avec UUID)
