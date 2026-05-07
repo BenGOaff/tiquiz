@@ -23,6 +23,7 @@ import {
   Sparkles,
   MessageCircleQuestion,
   Video,
+  BarChart3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { EmbedCodeDialog } from "@/components/popquiz/EmbedCodeDialog";
@@ -380,6 +381,16 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                           <Pencil className="h-4 w-4" />
                         </Link>
                       </Button>
+                      {!isPopquiz ? (
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link
+                            href={`/quiz/${p.id}/analytics`}
+                            title="Statistiques"
+                          >
+                            <BarChart3 className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      ) : null}
                       <Button
                         variant="ghost"
                         size="icon"
