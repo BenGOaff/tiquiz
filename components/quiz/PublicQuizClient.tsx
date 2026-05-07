@@ -710,6 +710,16 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
   const [step, setStep] = useState<Step>("intro");
   const [currentQ, setCurrentQ] = useState(0);
+  // Stable session id used to group per-question funnel events on
+  // the server side without storing anything identifying.
+  const sessionIdRef = useRef<string>("");
+  if (!sessionIdRef.current && typeof window !== "undefined") {
+    sessionIdRef.current =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `s-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+  const trackedQuestionViewsRef = useRef<Set<number>>(new Set());
   // One slot per question. Undefined = not yet answered (used to gate the
   // "next" button on free_text questions, where there's no auto-advance).
   const [answers, setAnswers] = useState<(SurveyAnswer | undefined)[]>([]);
@@ -807,6 +817,32 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     },
     [quizId, previewData, trackedRef],
   );
+
+  // Per-question funnel events. Idempotent for views via the ref so
+  // a back-then-forward navigation doesn't inflate counts.
+  const trackQuestionEvent = useCallback(
+    (event: "question_view" | "question_answer", questionIndex: number) => {
+      if (previewData) return;
+      const sessionId = sessionIdRef.current;
+      if (!sessionId) return;
+      if (event === "question_view") {
+        if (trackedQuestionViewsRef.current.has(questionIndex)) return;
+        trackedQuestionViewsRef.current.add(questionIndex);
+      }
+      fetch(`/api/quiz/${quizId}/track`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event, questionIndex, sessionId }),
+        keepalive: true,
+      }).catch(() => {});
+    },
+    [quizId, previewData],
+  );
+
+  useEffect(() => {
+    if (step !== "quiz") return;
+    trackQuestionEvent("question_view", currentQ);
+  }, [step, currentQ, trackQuestionEvent]);
 
   // Per-question retention tracking. We log each question the visitor
   // *sees* exactly once per session — using a separate dedupe key
@@ -990,6 +1026,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     newAnswers[currentQ] = ans;
     setAnswers(newAnswers);
     setFreeTextDraft("");
+
+    // Funnel: record the answer for the question the visitor just
+    // committed.
+    trackQuestionEvent("question_answer", currentQ);
 
     if (quiz && currentQ < quiz.questions.length - 1) {
       setCurrentQ(currentQ + 1);
