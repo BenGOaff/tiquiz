@@ -38,7 +38,7 @@ const APP_RE = /^(tipote|tiquiz)$/;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EXT_RE = /^[a-z0-9]{1,8}$/;
-const KIND_RE = /^(source|thumbnail)$/;
+const KIND_RE = /^(source|thumbnail|thumbnail-custom)$/;
 
 function httpError(status, message) {
   const err = new Error(message);
@@ -85,7 +85,12 @@ function verifyAuth(req) {
 }
 
 function relPathFromClaims(c) {
-  const fname = c.kind === "thumbnail" ? `thumbnail.${c.ext}` : `source.${c.ext}`;
+  const filenameByKind = {
+    source: `source.${c.ext}`,
+    thumbnail: `thumbnail.${c.ext}`,
+    "thumbnail-custom": `thumbnail-custom.${c.ext}`,
+  };
+  const fname = filenameByKind[c.kind] ?? `source.${c.ext}`;
   return path.posix.join(c.app, "raw", c.sub, c.videoId, fname);
 }
 
