@@ -90,6 +90,7 @@ type QuizData = {
   capture_phone: boolean | null; capture_country: boolean | null;
   virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null;
   bonus_intro_text: string | null;
+  bonus_unlocked_message: string | null;
   share_message: string | null; locale: string | null;
   sio_share_tag_name: string | null;
   brand_font: string | null; brand_color_primary: string | null; brand_color_background: string | null;
@@ -363,6 +364,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const [viralityEnabled, setViralityEnabled] = useState(false);
   const [bonusDescription, setBonusDescription] = useState("");
   const [bonusIntroText, setBonusIntroText] = useState("");
+  const [bonusUnlockedMessage, setBonusUnlockedMessage] = useState("");
   const [bonusImageUrl, setBonusImageUrl] = useState<string | null>(null);
   const [uploadingBonusImage, setUploadingBonusImage] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
@@ -465,6 +467,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setAskGender(Boolean((q as unknown as Record<string, unknown>).ask_gender));
       setViralityEnabled(q.virality_enabled); setBonusDescription(q.bonus_description ?? "");
       setBonusIntroText(q.bonus_intro_text ?? "");
+      setBonusUnlockedMessage(q.bonus_unlocked_message ?? "");
       setBonusImageUrl(q.bonus_image_url ?? null);
       setShareMessage(q.share_message ?? ""); setLocale(q.locale ?? "");
       setSioShareTagName(q.sio_share_tag_name ?? ""); setStatus(q.status);
@@ -825,6 +828,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           capture_phone: capturePhone, capture_country: captureCountry,
           virality_enabled: viralityEnabled, bonus_description: bonusDescription,
           bonus_intro_text: bonusIntroText.trim() || null,
+          bonus_unlocked_message: bonusUnlockedMessage.trim() || null,
           bonus_image_url: bonusImageUrl,
           share_message: shareMessage, locale: locale || null,
           sio_share_tag_name: sioShareTagName || null, status,
@@ -1519,6 +1523,31 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           rows={3}
                           className="w-full text-sm bg-background border rounded-lg px-3 py-2 resize-y"
                         />
+                      </div>
+
+                      {/* Bonus unlock message — JB feedback 2026-05-07.
+                          Override for "Bonus débloqué ! Vérifie ta boîte
+                          mail." for creators who deliver inline (e.g.
+                          discount code) without an email pipeline. */}
+                      <div className="text-left space-y-1 pt-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                          Message après partage (optionnel)
+                        </p>
+                        <textarea
+                          value={bonusUnlockedMessage}
+                          onChange={(e) =>
+                            setBonusUnlockedMessage(e.target.value)
+                          }
+                          placeholder="Ex : Bonus débloqué ! Ton code promo : IMAGELYS20."
+                          rows={2}
+                          maxLength={500}
+                          className="w-full text-sm bg-background border rounded-lg px-3 py-2 resize-y"
+                        />
+                        <p className="text-[11px] text-muted-foreground">
+                          Affiché à la place du message par défaut une fois
+                          le bonus débloqué. Pratique pour livrer un code
+                          promo directement, sans email.
+                        </p>
                       </div>
                     </div>
 

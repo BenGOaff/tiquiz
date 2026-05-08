@@ -82,6 +82,10 @@ type PublicQuizData = {
   bonus_description: string | null;
   bonus_image_url: string | null;
   bonus_intro_text?: string | null;
+  // Override for "Bonus unlocked!" message shown after share. Lets a
+  // creator deliver the bonus inline (e.g. discount code) without
+  // an email side-channel. JB feedback 2026-05-07.
+  bonus_unlocked_message?: string | null;
   share_message: string | null;
   share_networks?: string[] | null;
   locale: string | null;
@@ -2190,7 +2194,9 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
           {quiz.virality_enabled && bonusUnlocked && (
             <Card className="p-4 border-dashed flex items-center gap-2 text-green-600">
               <CheckCircle2 className="w-5 h-5 shrink-0" />
-              <span className="text-sm font-medium">{t.bonusUnlocked}</span>
+              <span className="text-sm font-medium whitespace-pre-line">
+                {(quiz.bonus_unlocked_message?.trim() || t.bonusUnlocked)}
+              </span>
             </Card>
           )}
 
@@ -2216,9 +2222,27 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 }
 
 /** Renders consent text with the privacy policy phrase as a clickable link when a URL is available. */
+// Set of every locale's default consent text + the historical admin
+// pre-fills shipped by QuizForm. Used to detect "the stored consent_
+// text was just the editor's pre-fill, not a user customisation" so
+// we can fall back to the viewer-locale default. Béné regression
+// 2026-05-07: an English visitor on a French quiz would see French
+// consent because the FR pre-fill didn't match any locale default.
+const ADMIN_DEFAULT_CONSENT_PREFILLS = [
+  "En renseignant ton email, tu acceptes notre politique de confidentialité.",
+  "En renseignant votre email, vous acceptez notre politique de confidentialité.",
+] as const;
+
+const ALL_DEFAULT_CONSENTS: ReadonlySet<string> = new Set([
+  ...Object.values(translations).map((entry) => entry.defaultConsent.trim()),
+  ...ADMIN_DEFAULT_CONSENT_PREFILLS.map((s) => s.trim()),
+]);
+
 function ConsentText({ text, privacyUrl, locale }: { text: string | null; privacyUrl: string | null; locale: string | null }) {
   const t = getT(locale);
-  const raw = text || t.defaultConsent;
+  const trimmed = text?.trim() ?? "";
+  const isStoredDefault = trimmed.length === 0 || ALL_DEFAULT_CONSENTS.has(trimmed);
+  const raw = isStoredDefault ? t.defaultConsent : text!;
 
   if (!privacyUrl) return <span>{raw}</span>;
 
