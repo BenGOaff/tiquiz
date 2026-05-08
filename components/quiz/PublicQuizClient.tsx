@@ -107,6 +107,10 @@ type PublicQuizData = {
   ask_gender?: boolean | null;
   custom_footer_text?: string | null;
   custom_footer_url?: string | null;
+  // ID affilié Tipote — surfacé par /api/quiz/[id]/public depuis
+  // profiles.tipote_affiliate_id. Utilisé sur le footer Tiquiz par
+  // défaut pour ajouter ?sa=<id> au lien de découverte tipote.fr.
+  tipote_affiliate_id?: string | null;
   questions: QuizQuestion[];
   results: QuizResult[];
 };
@@ -1357,7 +1361,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               />
             </Button>
         </div>
-        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} />
+        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
       </div>
     );
   }
@@ -1843,7 +1847,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               </p>
             )}
           </div>
-        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} />
+        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
       </div>
     );
   }
@@ -2021,6 +2025,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
           customText={quiz.custom_footer_text}
           customUrl={quiz.custom_footer_url}
           logoUrl={branding.logoUrl}
+          tipoteAffiliateId={quiz.tipote_affiliate_id}
         />
       </div>
     );
@@ -2213,7 +2218,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             </p>
           )}
           </div>
-        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} />
+        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
       </div>
     );
   }
@@ -2311,8 +2316,18 @@ const legalLinkLabels: Record<string, { privacy: string; terms: string; cookies:
 };
 
 
-function TiquizFooter({ locale, customText, customUrl, logoUrl }: { locale?: string | null; customText?: string | null; customUrl?: string | null; logoUrl?: string | null }) {
-  // Paid plans: show custom footer if set
+// URL de découverte Tiquiz côté tipote.fr. Si le créateur a posé son
+// ID affilié dans Settings, on attache ?sa=<id> pour qu'il touche une
+// commission sur les inscriptions qui en découlent.
+function tiquizDiscoveryUrl(affiliateId: string | null | undefined): string {
+  const base = "https://www.tipote.fr/part-tiquiz";
+  if (!affiliateId) return base;
+  return `${base}?sa=${encodeURIComponent(affiliateId)}`;
+}
+
+function TiquizFooter({ locale, customText, customUrl, logoUrl, tipoteAffiliateId }: { locale?: string | null; customText?: string | null; customUrl?: string | null; logoUrl?: string | null; tipoteAffiliateId?: string | null }) {
+  // Paid plans avec footer custom : on respecte le choix du créateur
+  // — pas de mention Tiquiz, pas de tracking. Il a payé pour brander.
   if (customText && customUrl) {
     return (
       <div className="text-center mt-6 space-y-2">
@@ -2341,7 +2356,7 @@ function TiquizFooter({ locale, customText, customUrl, logoUrl }: { locale?: str
       />
       <p className="text-xs text-muted-foreground/60">
         <a
-          href="https://tiquiz.com"
+          href={tiquizDiscoveryUrl(tipoteAffiliateId)}
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-muted-foreground transition-colors"

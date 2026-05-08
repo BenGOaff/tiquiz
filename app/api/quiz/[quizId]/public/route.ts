@@ -253,7 +253,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     if (quizUserId) {
       const { data: bp } = await admin
         .from("profiles")
-        .select("address_form, privacy_url, brand_logo_url, brand_font, brand_color_primary, plan")
+        .select("address_form, privacy_url, brand_logo_url, brand_font, brand_color_primary, plan, tipote_affiliate_id")
         .eq("user_id", quizUserId)
         .maybeSingle();
       profileRow = (bp as Record<string, unknown>) ?? null;
@@ -356,6 +356,9 @@ export async function GET(req: NextRequest, context: RouteContext) {
         privacy_url: effectivePrivacyUrl || null,
         custom_footer_text: isFr && typeof customFooterText === "string" ? (fr(customFooterText) as string) : customFooterText,
         custom_footer_url: customFooterUrl,
+        // Surfacé pour le footer "via Tiquiz" → tipote.fr/part-tiquiz?sa=<id>
+        // (tracking commission affilié quand le créateur l'a posé en Settings).
+        tipote_affiliate_id: (String(profileRow?.tipote_affiliate_id ?? "").trim() || null),
       },
       questions: renderedQuestions,
       results: renderedResults,

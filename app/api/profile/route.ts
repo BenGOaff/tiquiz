@@ -56,6 +56,9 @@ export async function PATCH(req: NextRequest) {
       "brand_logo_url", "brand_color_primary", "brand_color_accent",
       "brand_font", "brand_tone", "brand_website_url",
       "target_audience",
+      // ID affilié Tipote — utilisé sur le footer Tiquiz public pour
+      // attribuer les commissions au créateur via ?sa=<id>.
+      "tipote_affiliate_id",
     ];
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     for (const key of allowed) {
