@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
     ]);
     const questions = Array.isArray(body.questions) ? body.questions : [];
     if (questions.length > 0) {
-      await supabase.from("quiz_questions").insert(
+      const { error: qErr } = await supabase.from("quiz_questions").insert(
         questions.map((q: Record<string, unknown>, i: number) => {
           const rawType = typeof q.question_type === "string" ? q.question_type : "multiple_choice";
           const question_type = ALLOWED_TYPES.has(rawType) ? rawType : "multiple_choice";
@@ -157,6 +157,19 @@ export async function POST(req: NextRequest) {
           };
         }),
       );
+      if (qErr) {
+        // Béné 2026-05-09 (bug Fabienne) : on ne swallow plus les
+        // échecs d'insert. Rollback du quiz orphelin et erreur au front.
+        console.error("[POST /api/quiz] Questions insert error:", qErr.message);
+        await supabase.from("quizzes").delete().eq("id", quiz.id);
+        return NextResponse.json(
+          {
+            ok: false,
+            error: `Échec de l'enregistrement des questions : ${qErr.message}`,
+          },
+          { status: 400 },
+        );
+      }
     }
 
     // Insert results — surveys never have result profiles, so we skip the
@@ -164,7 +177,7 @@ export async function POST(req: NextRequest) {
     // with zero quiz_results without ever trying to compute one.
     const results = !isSurvey && Array.isArray(body.results) ? body.results : [];
     if (results.length > 0) {
-      await supabase.from("quiz_results").insert(
+      const { error: rErr } = await supabase.from("quiz_results").insert(
         results.map((r: Record<string, unknown>, i: number) => ({
           quiz_id: quiz.id,
           title: String(r.title ?? ""),
@@ -179,6 +192,18 @@ export async function POST(req: NextRequest) {
           sort_order: i,
         })),
       );
+      if (rErr) {
+        console.error("[POST /api/quiz] Results insert error:", rErr.message);
+        await supabase.from("quiz_questions").delete().eq("quiz_id", quiz.id);
+        await supabase.from("quizzes").delete().eq("id", quiz.id);
+        return NextResponse.json(
+          {
+            ok: false,
+            error: `Échec de l'enregistrement des résultats : ${rErr.message}`,
+          },
+          { status: 400 },
+        );
+      }
     }
 
     return NextResponse.json({ ok: true, quizId: quiz.id });
