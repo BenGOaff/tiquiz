@@ -63,6 +63,17 @@ interface PopquizRow {
   description: string | null;
   locale: string;
   is_published: boolean;
+  display_title?: string | null;
+  display_subtitle?: string | null;
+  bg_style?: string | null;
+  bg_color?: string | null;
+  bg_color_2?: string | null;
+  border_width?: number | null;
+  border_color?: string | null;
+  shadow_intensity?: string | null;
+  play_button_color?: string | null;
+  play_button_shape?: string | null;
+  show_creator_branding?: boolean | null;
   video: VideoRow | VideoRow[] | null;
   theme: ThemeRow | ThemeRow[] | null;
   cues: CueRow[];
@@ -74,6 +85,10 @@ interface ProfileBrandRow {
   brand_website_url: string | null;
 }
 
+interface AffiliateRow {
+  tipote_affiliate_id: string | null;
+}
+
 const FULL_SELECT = `
   id,
   user_id,
@@ -82,6 +97,17 @@ const FULL_SELECT = `
   description,
   locale,
   is_published,
+  display_title,
+  display_subtitle,
+  bg_style,
+  bg_color,
+  bg_color_2,
+  border_width,
+  border_color,
+  shadow_intensity,
+  play_button_color,
+  play_button_shape,
+  show_creator_branding,
   video:popquiz_videos!inner(
     id, source, external_url, external_id,
     storage_path, hls_path, thumbnail_url, thumbnail_path,
@@ -141,11 +167,15 @@ function mapCue(row: CueRow): PopquizCue {
   };
 }
 
-function mapBranding(profile: ProfileBrandRow | null): PopquizBranding {
+function mapBranding(
+  profile: ProfileBrandRow | null,
+  affiliateId: string | null,
+): PopquizBranding {
   return {
     logoUrl: profile?.brand_logo_url?.trim() || null,
     websiteUrl: profile?.brand_website_url?.trim() || null,
     primaryColor: profile?.brand_color_primary?.trim() || null,
+    tipoteAffiliateId: affiliateId?.trim() || null,
   };
 }
 
@@ -180,22 +210,33 @@ async function attachUploadSignedUrls(
   storedThumbnailPath: string | null,
 ): Promise<Popquiz> {
   const v = popquiz.video;
-  if (v.source !== "upload") return popquiz;
 
-  const signedSrc = v.storagePath
-    ? await mintPlaybackUrl(v.storagePath)
-    : v.externalUrl;
+  // Custom thumbnail signing : si l'user a uploadé une vignette
+  // perso, on la signe — peu importe la source de la vidéo (YouTube,
+  // Vimeo, URL ou upload). Sinon on retombe sur la vignette par
+  // défaut (poster YouTube/Vimeo public ou auto-extracted upload).
   const signedThumb = storedThumbnailPath
     ? await mintPlaybackUrl(storedThumbnailPath)
     : v.thumbnailUrl;
 
+  // Pour les vidéos uploadées, on signe aussi la source vidéo
+  // (storagePath → secure_link nginx ou Supabase signed URL).
+  if (v.source === "upload") {
+    const signedSrc = v.storagePath
+      ? await mintPlaybackUrl(v.storagePath)
+      : v.externalUrl;
+    return {
+      ...popquiz,
+      video: { ...v, externalUrl: signedSrc, thumbnailUrl: signedThumb },
+    };
+  }
+
+  // YouTube / Vimeo / URL : la source vidéo reste telle quelle
+  // (publique, gérée par le player Vidstack), seule la vignette
+  // peut nécessiter une URL signée si elle est custom.
   return {
     ...popquiz,
-    video: {
-      ...v,
-      externalUrl: signedSrc,
-      thumbnailUrl: signedThumb,
-    },
+    video: { ...v, thumbnailUrl: signedThumb },
   };
 }
 
@@ -230,6 +271,30 @@ function rowToPopquiz(
     video: mapVideo(video),
     theme: mapTheme(firstOrSelf(row.theme)),
     branding,
+    appearance: {
+      displayTitle: row.display_title?.trim() || null,
+      displaySubtitle: row.display_subtitle?.trim() || null,
+      bgStyle:
+        row.bg_style === "solid" || row.bg_style === "gradient"
+          ? row.bg_style
+          : "transparent",
+      bgColor: row.bg_color?.trim() || null,
+      bgColor2: row.bg_color_2?.trim() || null,
+      borderWidth: typeof row.border_width === "number" ? row.border_width : 0,
+      borderColor: row.border_color?.trim() || null,
+      shadowIntensity:
+        row.shadow_intensity === "soft" ||
+        row.shadow_intensity === "medium" ||
+        row.shadow_intensity === "strong"
+          ? row.shadow_intensity
+          : "none",
+      playButtonColor: row.play_button_color?.trim() || null,
+      playButtonShape:
+        row.play_button_shape === "rounded" || row.play_button_shape === "square"
+          ? row.play_button_shape
+          : "circle",
+      showCreatorBranding: row.show_creator_branding !== false,
+    },
     cues: row.cues.map(mapCue).sort((a, b) => a.timestampMs - b.timestampMs),
   };
   return {
@@ -244,13 +309,32 @@ function rowToPopquiz(
 async function fetchOwnerBranding(
   userId: string | null,
 ): Promise<PopquizBranding> {
-  if (!userId) return mapBranding(null);
-  const { data } = await supabaseAdmin
-    .from("profiles")
-    .select("brand_logo_url, brand_color_primary, brand_website_url")
-    .eq("user_id", userId)
-    .maybeSingle();
-  return mapBranding(data ?? null);
+  if (!userId) return mapBranding(null, null);
+  // Branding (logo / couleur / site) vit sur `profiles` ; l'ID
+  // affilié Tipote vit sur `business_profiles` (à côté de la clé
+  // SIO). On fait les 2 requêtes en // pour ne pas allonger le TTFB
+  // de la page publique. Pour les users multi-projets, on prend la
+  // première ligne business_profiles avec un affiliate_id non-null —
+  // si l'user en a configuré plusieurs différents on respecte celui
+  // qui sort en premier (généralement le projet par défaut).
+  const [{ data: profile }, { data: bp }] = await Promise.all([
+    supabaseAdmin
+      .from("profiles")
+      .select("brand_logo_url, brand_color_primary, brand_website_url")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("business_profiles")
+      .select("tipote_affiliate_id")
+      .eq("user_id", userId)
+      .not("tipote_affiliate_id", "is", null)
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  return mapBranding(
+    (profile as ProfileBrandRow | null) ?? null,
+    (bp as AffiliateRow | null)?.tipote_affiliate_id ?? null,
+  );
 }
 
 const UUID_RE =

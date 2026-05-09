@@ -12,8 +12,17 @@
 // Vocabulary: we say "marqueur" everywhere user-facing. "Cue" only
 // survives in the wire format / DB. Same idea, French label.
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import * as tus from "tus-js-client";
+import {
+  autosaveKey,
+  saveAutosave,
+  loadAutosave,
+  clearAutosave,
+  blobToDataUrl,
+  dataUrlToBlob,
+} from "@/lib/popquiz/autosave";
 import {
   Plus,
   Trash2,
@@ -22,8 +31,12 @@ import {
   ExternalLink,
   Sparkles,
   Video,
+  Link as LinkIcon,
+  Square as SquareIcon,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
+import { PageBanner } from "@/components/PageBanner";
+import { PageContainer } from "@/components/ui/page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -43,7 +56,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PopquizPlayer } from "@/components/popquiz/PopquizPlayer";
+import { PopquizAppearanceForm } from "@/components/popquiz/PopquizAppearanceForm";
+import { ThumbnailPicker } from "@/components/popquiz/ThumbnailPicker";
+import {
+  buildPlayerWrapperClassName,
+  buildPlayerWrapperStyle,
+  buildPageBackgroundStyle,
+} from "@/lib/popquiz/appearance";
 import { buildEmbedSnippet } from "@/components/popquiz/EmbedCodeDialog";
+import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import {
   VideoUploader,
   type UploadedVideo,
@@ -79,6 +100,52 @@ function genId(): string {
     return crypto.randomUUID();
   }
   return `cue-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// Upload différé d'une vignette stagée localement avant la création
+// du popquiz. Reproduit le flow de ThumbnailPicker (token → tus →
+// PATCH) côté création, parce que le composant lui-même délègue au
+// parent quand `popquizId` est absent.
+async function uploadStagedThumbnail(popquizId: string, blob: Blob) {
+  const tokenRes = await fetch(`/api/popquiz/${popquizId}/thumbnail`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ fileName: "thumbnail.jpg", fileSize: blob.size }),
+  });
+  const tokenJson = (await tokenRes.json()) as {
+    ok: boolean;
+    uploadUrl?: string;
+    token?: string;
+    storagePath?: string;
+    error?: string;
+  };
+  if (!tokenRes.ok || !tokenJson.ok || !tokenJson.uploadUrl || !tokenJson.token) {
+    throw new Error(tokenJson.error || "Impossible de préparer l'envoi.");
+  }
+  await new Promise<void>((resolve, reject) => {
+    const upload = new tus.Upload(blob, {
+      endpoint: tokenJson.uploadUrl!,
+      headers: { authorization: `Bearer ${tokenJson.token!}` },
+      retryDelays: [0, 2000, 5000, 10000],
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      chunkSize: 1 * 1024 * 1024,
+      onError: (err) => reject(err),
+      onSuccess: () => resolve(),
+    });
+    upload.start();
+  });
+  const patchRes = await fetch(`/api/popquiz/${popquizId}/thumbnail`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ mode: "custom", storagePath: tokenJson.storagePath }),
+  });
+  const patchJson = (await patchRes.json()) as { ok: boolean; error?: string };
+  if (!patchRes.ok || !patchJson.ok) {
+    throw new Error(patchJson.error || "Impossible d'appliquer la vignette.");
+  }
 }
 
 function TimelineStrip({
@@ -211,10 +278,164 @@ export default function PopquizNewClient({
   const [error, setError] = useState<string | null>(null);
   const [durationMs, setDurationMs] = useState<number | null>(null);
 
+  // Apparence de la page publique — défauts cohérents avec la DB.
+  const [displayTitle, setDisplayTitle] = useState("");
+  const [displaySubtitle, setDisplaySubtitle] = useState("");
+  const [bgStyle, setBgStyle] = useState<"transparent" | "solid" | "gradient">("transparent");
+  const [bgColor, setBgColor] = useState("#0f172a");
+  const [bgColor2, setBgColor2] = useState("#1e293b");
+  const [borderWidth, setBorderWidth] = useState(0);
+  const [borderColor, setBorderColor] = useState("#ffffff");
+  const [shadowIntensity, setShadowIntensity] = useState<"none" | "soft" | "medium" | "strong">("none");
+  const [playButtonColor, setPlayButtonColor] = useState("");
+  const [playButtonShape, setPlayButtonShape] = useState<"circle" | "rounded" | "square">("circle");
+  const [showCreatorBranding, setShowCreatorBranding] = useState(true);
+
   const [publishedId, setPublishedId] = useState<string | null>(null);
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
+
+  // Aperçu : mode "lien direct" (avec titre/sous-titre/fond/branding)
+  // ou "iframe" (vidéo seule).
+  const [previewMode, setPreviewMode] = useState<"direct" | "iframe">("direct");
+
+  // Vignette stagée localement avant la première sauvegarde. Quand
+  // l'user crop son image, on garde le Blob ici et on génère une URL
+  // d'aperçu (revoked au remplacement). À la sauvegarde du popquiz,
+  // on enchaîne avec l'upload tus + PATCH côté backend.
+  const [stagedThumbBlob, setStagedThumbBlob] = useState<Blob | null>(null);
+  const [stagedThumbUrl, setStagedThumbUrl] = useState<string | null>(null);
+
+  function handleStagedThumb(blob: Blob | null) {
+    // Revoke l'URL précédente pour libérer la mémoire navigateur.
+    if (stagedThumbUrl) URL.revokeObjectURL(stagedThumbUrl);
+    if (blob) {
+      setStagedThumbBlob(blob);
+      setStagedThumbUrl(URL.createObjectURL(blob));
+    } else {
+      setStagedThumbBlob(null);
+      setStagedThumbUrl(null);
+    }
+  }
   const [copied, setCopied] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
+
+  // ─── Autosave silencieux ────────────────────────────────────────
+  // 1) Au mount : on hydrate depuis localStorage si une session
+  //    précédente n'a jamais été sauvegardée. La vignette stagée
+  //    revit via un dataURL → Blob.
+  // 2) À chaque changement d'un champ : on re-sérialise dans
+  //    localStorage (debounced 400 ms pour éviter de spammer le
+  //    storage à chaque keystroke).
+  // 3) Au save serveur réussi : on clean la clé pour ne pas écraser
+  //    le state initial à la prochaine ouverture.
+  const AUTOSAVE_KEY = autosaveKey("new");
+  const [autosaveHydrated, setAutosaveHydrated] = useState(false);
+
+  useEffect(() => {
+    type Saved = {
+      title: string;
+      slug: string;
+      sourceMode: SourceMode;
+      url: string;
+      uploaded: UploadedVideo | null;
+      cues: DraftCue[];
+      displayTitle: string;
+      displaySubtitle: string;
+      bgStyle: "transparent" | "solid" | "gradient";
+      bgColor: string;
+      bgColor2: string;
+      borderWidth: number;
+      borderColor: string;
+      shadowIntensity: "none" | "soft" | "medium" | "strong";
+      playButtonColor: string;
+      playButtonShape: "circle" | "rounded" | "square";
+      showCreatorBranding: boolean;
+      previewMode: "direct" | "iframe";
+      stagedThumbDataUrl: string | null;
+    };
+    const saved = loadAutosave<Saved>(AUTOSAVE_KEY);
+    if (saved) {
+      setTitle(saved.title);
+      setSlug(saved.slug);
+      setSourceMode(saved.sourceMode);
+      setUrl(saved.url);
+      setUploaded(saved.uploaded);
+      setCues(saved.cues);
+      setDisplayTitle(saved.displayTitle);
+      setDisplaySubtitle(saved.displaySubtitle);
+      setBgStyle(saved.bgStyle);
+      setBgColor(saved.bgColor);
+      setBgColor2(saved.bgColor2);
+      setBorderWidth(saved.borderWidth);
+      setBorderColor(saved.borderColor);
+      setShadowIntensity(saved.shadowIntensity);
+      setPlayButtonColor(saved.playButtonColor);
+      setPlayButtonShape(saved.playButtonShape);
+      setShowCreatorBranding(saved.showCreatorBranding);
+      setPreviewMode(saved.previewMode);
+      if (saved.stagedThumbDataUrl) {
+        dataUrlToBlob(saved.stagedThumbDataUrl).then((blob) => {
+          if (blob) {
+            setStagedThumbBlob(blob);
+            setStagedThumbUrl(URL.createObjectURL(blob));
+          }
+        });
+      }
+    }
+    setAutosaveHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!autosaveHydrated) return;
+    const t = setTimeout(async () => {
+      const stagedThumbDataUrl = await blobToDataUrl(stagedThumbBlob);
+      saveAutosave(AUTOSAVE_KEY, {
+        title,
+        slug,
+        sourceMode,
+        url,
+        uploaded,
+        cues,
+        displayTitle,
+        displaySubtitle,
+        bgStyle,
+        bgColor,
+        bgColor2,
+        borderWidth,
+        borderColor,
+        shadowIntensity,
+        playButtonColor,
+        playButtonShape,
+        showCreatorBranding,
+        previewMode,
+        stagedThumbDataUrl,
+      });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [
+    autosaveHydrated,
+    AUTOSAVE_KEY,
+    title,
+    slug,
+    sourceMode,
+    url,
+    uploaded,
+    cues,
+    displayTitle,
+    displaySubtitle,
+    bgStyle,
+    bgColor,
+    bgColor2,
+    borderWidth,
+    borderColor,
+    shadowIntensity,
+    playButtonColor,
+    playButtonShape,
+    showCreatorBranding,
+    previewMode,
+    stagedThumbBlob,
+  ]);
 
   const parsedUrl = useMemo(() => parseVideoUrl(url), [url]);
 
@@ -260,7 +481,20 @@ export default function PopquizNewClient({
       locale: "fr",
       isPublished: false,
       theme: null,
-      branding: { logoUrl: null, websiteUrl: null, primaryColor: null },
+      branding: { logoUrl: null, websiteUrl: null, primaryColor: null, tipoteAffiliateId: null },
+      appearance: {
+        displayTitle: displayTitle.trim() || null,
+        displaySubtitle: displaySubtitle.trim() || null,
+        bgStyle,
+        bgColor: bgStyle === "transparent" ? null : bgColor,
+        bgColor2: bgStyle === "gradient" ? bgColor2 : null,
+        borderWidth,
+        borderColor: borderWidth > 0 ? borderColor : null,
+        shadowIntensity,
+        playButtonColor: playButtonColor.trim() || null,
+        playButtonShape,
+        showCreatorBranding,
+      },
       video,
       cues: cues.map<PopquizCue>((c, i) => ({
         id: c.localId,
@@ -270,7 +504,24 @@ export default function PopquizNewClient({
         displayOrder: i,
       })),
     };
-  }, [sourceMode, uploaded, parsedUrl, title, cues]);
+  }, [
+    sourceMode,
+    uploaded,
+    parsedUrl,
+    title,
+    cues,
+    displayTitle,
+    displaySubtitle,
+    bgStyle,
+    bgColor,
+    bgColor2,
+    borderWidth,
+    borderColor,
+    shadowIntensity,
+    playButtonColor,
+    playButtonShape,
+    showCreatorBranding,
+  ]);
 
   function addCueAt(timestampMs: number) {
     if (quizzes.length === 0) {
@@ -323,6 +574,18 @@ export default function PopquizNewClient({
         title,
         slug: slug.trim() || undefined,
         is_published: publish,
+        // Apparence de la page publique (optionnels, defaults DB sinon)
+        display_title: displayTitle.trim() || undefined,
+        display_subtitle: displaySubtitle.trim() || undefined,
+        bg_style: bgStyle,
+        bg_color: bgStyle === "transparent" ? undefined : bgColor,
+        bg_color_2: bgStyle === "gradient" ? bgColor2 : undefined,
+        border_width: borderWidth,
+        border_color: borderWidth > 0 ? borderColor : undefined,
+        shadow_intensity: shadowIntensity,
+        play_button_color: playButtonColor.trim() || undefined,
+        play_button_shape: playButtonShape,
+        show_creator_branding: showCreatorBranding,
         cues: cues.map((c) => ({
           quiz_id: c.quizId,
           timestamp_ms: c.timestampMs,
@@ -342,9 +605,6 @@ export default function PopquizNewClient({
       });
       const json = await res.json();
       if (!json.ok) {
-        // Free plan : 1 popquiz max. Le message backend explique
-        // l'option (supprimer ou upgrade), on l'affiche tel quel
-        // plutôt que le code d'erreur cryptique.
         const friendly =
           json.error === "FREE_PLAN_POPQUIZ_LIMIT"
             ? json.message ?? "Limite du plan gratuit atteinte."
@@ -352,12 +612,52 @@ export default function PopquizNewClient({
         setError(friendly);
         return;
       }
-      if (publish) {
-        setPublishedId(json.popquizId);
-        setPublishedSlug(json.slug ?? null);
-      } else {
+      // UX 2026-05-08 : qu'on publie ou qu'on enregistre en brouillon,
+      // on redirige immédiatement vers la page d'édition du popquiz
+      // qui contient TOUT (titre / sous-titre / fond / bordure /
+      // ombre / bouton play / vignette custom / partage / iframe).
+      // Avant : on restait sur /popquiz/new avec juste l'URL+iframe
+      // côté publish, ou on bouclait sur /quizzes côté brouillon, et
+      // l'user devait re-cliquer pour ouvrir l'éditeur complet.
+      const newId = json.popquizId as string | undefined;
+
+      // Save serveur OK → on nettoie l'autosave local pour ne pas
+      // ré-hydrater des données obsolètes au prochain visit.
+      clearAutosave(AUTOSAVE_KEY);
+
+      // Si l'user a stagé une vignette custom AVANT la première
+      // sauvegarde (la page n'avait pas d'ID popquiz à ce moment),
+      // on l'uploade maintenant qu'on a un ID. On enchaîne sans
+      // bloquer le flow — si ça échoue, l'user peut re-essayer
+      // depuis la page d'édition.
+      if (newId && stagedThumbBlob) {
+        try {
+          await uploadStagedThumbnail(newId, stagedThumbBlob);
+        } catch (e) {
+          // Non-bloquant : on log + on toast mais on continue la
+          // redirection. L'user retrouvera son popquiz sans vignette
+          // custom (la auto sera utilisée) et pourra ré-uploader.
+          console.error("[popquiz/new] thumbnail upload failed", e);
+          toast.error(
+            "Popquiz créé, mais l'envoi de la vignette a échoué. Réessaie depuis l'éditeur.",
+          );
+        }
+      }
+
+      if (publish && newId) {
+        toast.success("Popquiz publié");
+        router.push(`/popquiz/${newId}`);
+      } else if (newId) {
         toast.success("Brouillon enregistré");
-        router.push("/quizzes");
+        router.push(`/popquiz/${newId}`);
+      } else {
+        // Fallback safety si l'API ne renvoie pas d'id
+        if (publish) {
+          setPublishedId(json.popquizId);
+          setPublishedSlug(json.slug ?? null);
+        } else {
+          router.push("/quizzes");
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur réseau");
@@ -369,8 +669,8 @@ export default function PopquizNewClient({
   const handle = publishedSlug ?? publishedId ?? "";
   const origin =
     typeof window !== "undefined" ? window.location.origin : "";
-  const publishedUrl = handle ? `${origin}/p/${handle}` : "";
-  const embedUrl = handle ? `${origin}/embed/p/${handle}` : "";
+  const publishedUrl = handle ? `${origin}/pq/${handle}` : "";
+  const embedUrl = handle ? `${origin}/embed/pq/${handle}` : "";
   const embedSnippet = embedUrl ? buildEmbedSnippet(embedUrl) : "";
 
   async function copyPublishedUrl() {
@@ -400,19 +700,13 @@ export default function PopquizNewClient({
   const markerColor = "hsl(var(--primary))";
 
   return (
-    <AppShell userEmail={userEmail} headerTitle="Nouveau Popquiz">
-      <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
-        <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
-          <Video className="h-5 w-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold">Popquiz</h2>
-          <p className="text-sm text-white/80">
-            Charge une vidéo, place des marqueurs sur la timeline pour faire
-            apparaître un quiz au bon moment.
-          </p>
-        </div>
-      </div>
+    <AppShell userEmail={userEmail} headerTitle="Nouveau Popquiz" contentClassName="flex-1">
+      <PageContainer>
+      <PageBanner
+        icon={<Video className="h-5 w-5" />}
+        title="Nouveau popquiz"
+        subtitle="Charge une vidéo, place des marqueurs pour faire apparaître un quiz au bon moment."
+      />
 
       <Card>
         <CardContent className="py-5 space-y-4">
@@ -464,6 +758,17 @@ export default function PopquizNewClient({
             </Tabs>
           </div>
 
+          {/* Vignette personnalisée — dispo dès la création.
+              Mode "stage local" : on garde le blob recadré côté
+              client et on l'envoie automatiquement après la 1ère
+              sauvegarde (gérée par uploadStagedThumbnail). */}
+          <ThumbnailPicker
+            currentUrl={stagedThumbUrl}
+            currentSource={stagedThumbBlob ? "custom" : "auto"}
+            enabled={true}
+            onBlobReady={handleStagedThumb}
+          />
+
           <div className="space-y-1.5">
             <Label htmlFor="slug">
               Lien personnalisé{" "}
@@ -473,7 +778,7 @@ export default function PopquizNewClient({
             </Label>
             <div className="flex items-stretch rounded-md border bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring">
               <span className="px-2.5 flex items-center text-xs text-muted-foreground bg-muted/50 border-r">
-                /p/
+                /pq/
               </span>
               <input
                 id="slug"
@@ -492,45 +797,144 @@ export default function PopquizNewClient({
         </CardContent>
       </Card>
 
-      {draftPopquiz ? (
+      {/* En dessous de l'info full-width : 2 colonnes — gauche
+          personnalisation, droite la vidéo unique + timeline +
+          marqueurs. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+        {/* Colonne gauche : personnalisation. */}
+        <PopquizAppearanceForm
+          idPrefix="np"
+          displayTitle={displayTitle}
+          displaySubtitle={displaySubtitle}
+          bgStyle={bgStyle}
+          bgColor={bgColor}
+          bgColor2={bgColor2}
+          borderWidth={borderWidth}
+          borderColor={borderColor}
+          shadowIntensity={shadowIntensity}
+          playButtonColor={playButtonColor}
+          playButtonShape={playButtonShape}
+          showCreatorBranding={showCreatorBranding}
+          setDisplayTitle={setDisplayTitle}
+          setDisplaySubtitle={setDisplaySubtitle}
+          setBgStyle={setBgStyle}
+          setBgColor={setBgColor}
+          setBgColor2={setBgColor2}
+          setBorderWidth={setBorderWidth}
+          setBorderColor={setBorderColor}
+          setShadowIntensity={setShadowIntensity}
+          setPlayButtonColor={setPlayButtonColor}
+          setPlayButtonShape={setPlayButtonShape}
+          setShowCreatorBranding={setShowCreatorBranding}
+        />
+
+        {/* Colonne droite : LA vidéo unique (avec apparence appliquée),
+            timeline juste en dessous, puis liste des marqueurs.
+            Si pas encore de source vidéo, on affiche un placeholder
+            mais la liste des marqueurs reste éditable. */}
         <Card className="overflow-hidden">
           <CardContent className="py-5 space-y-4">
-            <div className="flex items-baseline justify-between gap-3">
-              <Label className="text-sm">Aperçu</Label>
-              <span className="text-[11px] text-muted-foreground">
-                Le quiz lié s'affichera à chaque marqueur en lecture finale.
-              </span>
+            <div className="flex items-start justify-between gap-2 flex-wrap">
+              <div>
+                <h2 className="text-base font-semibold">Aperçu de la vidéo</h2>
+                <p className="text-[11px] text-muted-foreground">
+                  Reflète l&apos;apparence en temps réel. Place les
+                  marqueurs en cliquant sur la timeline.
+                </p>
+              </div>
+              <div className="flex items-center gap-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode("direct")}
+                  className={`rounded-md border px-2 py-1 transition flex items-center gap-1 ${
+                    previewMode === "direct"
+                      ? "border-primary bg-primary/10 text-primary font-medium"
+                      : "border-border hover:bg-muted/40"
+                  }`}
+                >
+                  <LinkIcon className="size-3" />
+                  Lien direct
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode("iframe")}
+                  className={`rounded-md border px-2 py-1 transition flex items-center gap-1 ${
+                    previewMode === "iframe"
+                      ? "border-primary bg-primary/10 text-primary font-medium"
+                      : "border-border hover:bg-muted/40"
+                  }`}
+                >
+                  <SquareIcon className="size-3" />
+                  Iframe
+                </button>
+              </div>
             </div>
-            <PopquizPlayer
-              popquiz={draftPopquiz}
-              onDurationChange={setDurationMs}
-              renderOverlay={({ cue, onSkipped }) => {
-                const linked = quizzes.find((q) => q.id === cue.quizId);
-                return (
-                  <div className="absolute inset-0 grid place-items-center p-6">
-                    <div className="max-w-md w-full rounded-2xl bg-white shadow-2xl p-6 space-y-3">
-                      <h3 className="text-base font-semibold">
-                        Marqueur à {formatMs(cue.timestampMs)} —{" "}
-                        {linked?.title ?? "Quiz inconnu"}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        En lecture finale, le quiz lié s'affichera ici.
-                        Clique sur la croix pour reprendre la vidéo.
-                      </p>
-                      {cue.behavior === "optional" ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={onSkipped}
-                        >
-                          Passer
-                        </Button>
-                      ) : null}
-                    </div>
+
+            {draftPopquiz ? (
+              <div
+                className="rounded-md p-3"
+                style={
+                  previewMode === "direct"
+                    ? buildPageBackgroundStyle(draftPopquiz.appearance)
+                    : { background: "transparent" }
+                }
+              >
+                {previewMode === "direct" ? (
+                  <div className="space-y-1 mb-2 text-center">
+                    <RichTextEdit
+                      value={displayTitle}
+                      onChange={setDisplayTitle}
+                      singleLine
+                      placeholder="Clique pour ajouter un titre"
+                      className="tiquiz-rich text-base font-bold text-white drop-shadow-sm"
+                    />
+                    <RichTextEdit
+                      value={displaySubtitle}
+                      onChange={setDisplaySubtitle}
+                      singleLine
+                      placeholder="Clique pour ajouter un sous-titre"
+                      className="tiquiz-rich text-xs text-white/80"
+                    />
                   </div>
-                );
-              }}
-            />
+                ) : null}
+                <div
+                  className={buildPlayerWrapperClassName(draftPopquiz.appearance)}
+                  style={buildPlayerWrapperStyle(draftPopquiz.appearance)}
+                >
+                  <PopquizPlayer
+                    popquiz={draftPopquiz}
+                    onDurationChange={setDurationMs}
+                    renderOverlay={({ cue, onSkipped }) => {
+                      const linked = quizzes.find((q) => q.id === cue.quizId);
+                      return (
+                        <div className="absolute inset-0 grid place-items-center p-4">
+                          <div className="max-w-sm w-full rounded-xl bg-white shadow-2xl p-4 space-y-2">
+                            <h4 className="text-sm font-semibold">
+                              Marqueur à {formatMs(cue.timestampMs)} —{" "}
+                              {linked?.title ?? "Quiz inconnu"}
+                            </h4>
+                            <p className="text-xs text-muted-foreground">
+                              En lecture finale, le quiz s&apos;affichera ici.
+                            </p>
+                            {cue.behavior === "optional" ? (
+                              <Button size="sm" variant="outline" onClick={onSkipped}>
+                                Passer
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-md border border-dashed p-8 text-center text-xs text-muted-foreground">
+                Ajoute une source vidéo (lien ou import) pour voir
+                l&apos;aperçu en temps réel.
+              </div>
+            )}
+
             <TimelineStrip
               durationMs={durationMs}
               cues={cues}
@@ -538,112 +942,106 @@ export default function PopquizNewClient({
               onRemove={removeCue}
               primaryColor={markerColor}
             />
+
+            <div className="space-y-2 pt-2 border-t">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold">Marqueurs</h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    Le quiz se déclenche à ce moment.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() =>
+                    addCueAt(durationMs ? Math.min(5000, durationMs / 6) : 5000)
+                  }
+                  type="button"
+                >
+                  <Plus className="size-4 mr-1" /> Ajouter
+                </Button>
+              </div>
+
+              {cues.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-3 text-center">
+                  Aucun marqueur. Clique sur la timeline ou sur « Ajouter ».
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {cues.map((cue) => {
+                    const linked = quizzes.find((q) => q.id === cue.quizId);
+                    const isDraftQuiz = linked && linked.status !== "active";
+                    return (
+                      <li
+                        key={cue.localId}
+                        className="flex flex-wrap items-center gap-2 rounded-md border p-2.5"
+                      >
+                        <Input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={Math.floor(cue.timestampMs / 1000)}
+                          onChange={(e) =>
+                            updateCue(cue.localId, {
+                              timestampMs:
+                                Math.max(0, Number(e.target.value) || 0) * 1000,
+                            })
+                          }
+                          className="w-20"
+                          aria-label="Timestamp en secondes"
+                        />
+                        <span className="text-xs text-muted-foreground">s</span>
+                        <select
+                          value={cue.quizId}
+                          onChange={(e) =>
+                            updateCue(cue.localId, { quizId: e.target.value })
+                          }
+                          className="flex-1 min-w-[160px] h-9 rounded-md border bg-background px-2 text-sm"
+                          aria-label="Quiz lié"
+                        >
+                          {quizzes.map((q) => (
+                            <option key={q.id} value={q.id}>
+                              {q.title}
+                              {q.status !== "active" ? " (brouillon)" : ""}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          value={cue.behavior}
+                          onChange={(e) =>
+                            updateCue(cue.localId, {
+                              behavior: e.target.value as "block" | "optional",
+                            })
+                          }
+                          className="h-9 rounded-md border bg-background px-2 text-sm"
+                          aria-label="Comportement"
+                        >
+                          <option value="block">Bloquant</option>
+                          <option value="optional">Optionnel</option>
+                        </select>
+                        {isDraftQuiz ? (
+                          <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                            Publie ce quiz pour qu&apos;il s&apos;affiche
+                          </span>
+                        ) : null}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          type="button"
+                          onClick={() => removeCue(cue.localId)}
+                          aria-label="Supprimer"
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           </CardContent>
         </Card>
-      ) : null}
-
-      <Card>
-        <CardContent className="py-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-semibold">Marqueurs</h2>
-              <p className="text-xs text-muted-foreground">
-                Le quiz se déclenche à ce moment de la vidéo.
-              </p>
-            </div>
-            <Button
-              size="sm"
-              onClick={() =>
-                addCueAt(durationMs ? Math.min(5000, durationMs / 6) : 5000)
-              }
-              type="button"
-            >
-              <Plus className="size-4 mr-1" /> Ajouter
-            </Button>
-          </div>
-
-          {cues.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4 text-center">
-              Aucun marqueur. Clique sur la timeline ou sur « Ajouter ».
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {cues.map((cue) => {
-                const linked = quizzes.find((q) => q.id === cue.quizId);
-                const isDraftQuiz = linked && linked.status !== "active";
-                return (
-                  <li
-                    key={cue.localId}
-                    className="flex flex-wrap items-center gap-2 rounded-md border p-3"
-                  >
-                    <Input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={Math.floor(cue.timestampMs / 1000)}
-                      onChange={(e) =>
-                        updateCue(cue.localId, {
-                          timestampMs:
-                            Math.max(0, Number(e.target.value) || 0) * 1000,
-                        })
-                      }
-                      className="w-24"
-                      aria-label="Timestamp en secondes"
-                    />
-                    <span className="text-xs text-muted-foreground">s</span>
-
-                    <select
-                      value={cue.quizId}
-                      onChange={(e) =>
-                        updateCue(cue.localId, { quizId: e.target.value })
-                      }
-                      className="flex-1 min-w-[200px] h-9 rounded-md border bg-background px-2 text-sm"
-                      aria-label="Quiz lié"
-                    >
-                      {quizzes.map((q) => (
-                        <option key={q.id} value={q.id}>
-                          {q.title}
-                          {q.status !== "active" ? " (brouillon)" : ""}
-                        </option>
-                      ))}
-                    </select>
-
-                    <select
-                      value={cue.behavior}
-                      onChange={(e) =>
-                        updateCue(cue.localId, {
-                          behavior: e.target.value as "block" | "optional",
-                        })
-                      }
-                      className="h-9 rounded-md border bg-background px-2 text-sm"
-                      aria-label="Comportement"
-                    >
-                      <option value="block">Bloquant</option>
-                      <option value="optional">Optionnel</option>
-                    </select>
-
-                    {isDraftQuiz ? (
-                      <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
-                        Publie ce quiz pour qu'il s'affiche
-                      </span>
-                    ) : null}
-
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      type="button"
-                      onClick={() => removeCue(cue.localId)}
-                      aria-label="Supprimer"
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      </div>
 
       {error ? (
         <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">
@@ -765,6 +1163,7 @@ export default function PopquizNewClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </PageContainer>
     </AppShell>
   );
 }

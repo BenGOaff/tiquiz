@@ -54,6 +54,27 @@ export interface PopquizBranding {
   logoUrl: string | null;
   websiteUrl: string | null;
   primaryColor: string | null;
+  /** Tipote affiliate ID (Systeme.io "sa..." identifier). Surfaced
+   *  on the public play page footer to track commissions on the
+   *  "Cette vidéo vous est proposée via Tiquiz" link. */
+  tipoteAffiliateId: string | null;
+}
+
+/** Personnalisation de la page publique d'un popquiz (= /pq/[id] et
+ *  son embed iframe). Tous les champs sont optionnels — les defaults
+ *  produisent un rendu propre et minimaliste sans aucune configuration. */
+export interface PopquizAppearance {
+  displayTitle: string | null;
+  displaySubtitle: string | null;
+  bgStyle: "transparent" | "solid" | "gradient";
+  bgColor: string | null;
+  bgColor2: string | null;
+  borderWidth: number; // px, 0-16
+  borderColor: string | null;
+  shadowIntensity: "none" | "soft" | "medium" | "strong";
+  playButtonColor: string | null;
+  playButtonShape: "circle" | "rounded" | "square";
+  showCreatorBranding: boolean;
 }
 
 export interface Popquiz {
@@ -66,6 +87,7 @@ export interface Popquiz {
   video: PopquizVideo;
   theme: PopquizTheme | null;
   branding: PopquizBranding;
+  appearance: PopquizAppearance;
   cues: PopquizCue[];
 }
 
