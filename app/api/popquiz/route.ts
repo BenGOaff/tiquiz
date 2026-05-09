@@ -18,11 +18,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { getActiveProjectId } from "@/lib/projects/activeProject";
 import { parseVideoUrl } from "@/lib/popquiz";
 import { sanitizeSlug } from "@/lib/quizBranding";
 import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -45,18 +43,15 @@ export async function GET() {
     );
   }
 
-  const projectId = await getActiveProjectId(supabase, user.id);
-
-  let listQuery = supabase
+  const { data, error } = await supabase
     .from("popquizzes")
     .select(
       `id, title, description, slug, locale, is_published,
        views_count, completions_count, created_at,
        video:popquiz_videos!inner(source, thumbnail_url, duration_ms, status)`,
     )
-    .eq("user_id", user.id);
-  if (projectId) listQuery = listQuery.eq("project_id", projectId);
-  const { data, error } = await listQuery.order("created_at", { ascending: false });
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
 
   if (error) {
     return NextResponse.json(
@@ -99,36 +94,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Free plan : 1 popquiz max par projet (même politique que les quiz /
-  // sondages / pages). L'user peut supprimer son popquiz pour en créer
-  // un autre, ou passer payant pour en cumuler. Béné 2026-05-04.
-  // Le plan vit dans `profiles` (pas `business_profiles`) — on lit via
-  // admin pour bypass RLS, comme partout ailleurs.
-  let plan: string | null = "free";
-  try {
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("plan")
-      .eq("id", user.id)
-      .maybeSingle();
-    plan = (profile as { plan?: string | null } | null)?.plan ?? "free";
-  } catch {
-    // fail-open : si la lecture casse, on laisse passer (mieux qu'un
-    // créateur payant bloqué par un glitch côté admin).
-  }
+  // Free plan : 1 popquiz max (même politique que les quiz / sondages).
+  // L'user peut supprimer son popquiz pour en créer un autre, ou passer
+  // payant pour en cumuler plusieurs. Béné 2026-05-04.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("plan")
+    .eq("user_id", user.id)
+    .maybeSingle();
 
-  if (!isPaidPlan(plan)) {
-    let countQuery = supabase
+  if (!isPaidPlan((profile as { plan?: string | null } | null)?.plan)) {
+    const { count } = await supabase
       .from("popquizzes")
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id);
-    // À ce stade projectId n'existe pas encore (on le calcule plus
-    // bas). On le recalcule ici pour scoper le compteur au projet
-    // actif — sinon un user multi-projet free pourrait être bloqué
-    // par les popquizzes des autres projets.
-    const earlyProjectId = await getActiveProjectId(supabase, user.id);
-    if (earlyProjectId) countQuery = countQuery.eq("project_id", earlyProjectId);
-    const { count } = await countQuery;
 
     if ((count ?? 0) >= FREE_LIMITS.maxPopquizzes) {
       return NextResponse.json(
@@ -161,9 +140,9 @@ export async function POST(req: NextRequest) {
 
   if (uploadedPath) {
     // Two valid layouts during migration:
-    //   - self-hosted: tipote/raw/<uid>/...  (current pipeline)
+    //   - self-hosted: tiquiz/raw/<uid>/...  (current pipeline)
     //   - legacy Supabase bucket: raw/<uid>/...
-    const validPrefixes = [`tipote/raw/${user.id}/`, `raw/${user.id}/`];
+    const validPrefixes = [`tiquiz/raw/${user.id}/`, `raw/${user.id}/`];
     const matchesScope = (p: string) =>
       validPrefixes.some((prefix) => p.startsWith(prefix));
     if (!matchesScope(uploadedPath)) {
@@ -300,8 +279,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const projectId = await getActiveProjectId(supabase, user.id);
-
   // Apparence — tous optionnels, defaults DB sinon. Permet à l'user
   // de configurer la page publique dès la création (avant de cliquer
   // Publier) plutôt que d'avoir à passer par l'éditeur d'édition.
@@ -327,8 +304,13 @@ export async function POST(req: NextRequest) {
   if (typeof body.bg_color_2 === "string" && body.bg_color_2.trim()) {
     appearancePatch.bg_color_2 = body.bg_color_2.trim().slice(0, 32);
   }
-  if (typeof body.border_width === "number") {
-    appearancePatch.border_width = Math.max(0, Math.min(16, Math.round(body.border_width)));
+  if (
+    typeof body.border_width === "number" &&
+    Number.isFinite(body.border_width) &&
+    body.border_width >= 0 &&
+    body.border_width <= 16
+  ) {
+    appearancePatch.border_width = Math.floor(body.border_width);
   }
   if (typeof body.border_color === "string" && body.border_color.trim()) {
     appearancePatch.border_color = body.border_color.trim().slice(0, 32);
@@ -356,7 +338,6 @@ export async function POST(req: NextRequest) {
     .from("popquizzes")
     .insert({
       user_id: user.id,
-      ...(projectId ? { project_id: projectId } : {}),
       video_id: video.id,
       title,
       slug,

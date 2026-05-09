@@ -85,10 +85,6 @@ interface ProfileBrandRow {
   brand_website_url: string | null;
 }
 
-interface AffiliateRow {
-  tipote_affiliate_id: string | null;
-}
-
 const FULL_SELECT = `
   id,
   user_id,
@@ -310,30 +306,20 @@ async function fetchOwnerBranding(
   userId: string | null,
 ): Promise<PopquizBranding> {
   if (!userId) return mapBranding(null, null);
-  // Branding (logo / couleur / site) vit sur `profiles` ; l'ID
-  // affilié Tipote vit sur `business_profiles` (à côté de la clé
-  // SIO). On fait les 2 requêtes en // pour ne pas allonger le TTFB
-  // de la page publique. Pour les users multi-projets, on prend la
-  // première ligne business_profiles avec un affiliate_id non-null —
-  // si l'user en a configuré plusieurs différents on respecte celui
-  // qui sort en premier (généralement le projet par défaut).
-  const [{ data: profile }, { data: bp }] = await Promise.all([
-    supabaseAdmin
-      .from("profiles")
-      .select("brand_logo_url, brand_color_primary, brand_website_url")
-      .eq("user_id", userId)
-      .maybeSingle(),
-    supabaseAdmin
-      .from("business_profiles")
-      .select("tipote_affiliate_id")
-      .eq("user_id", userId)
-      .not("tipote_affiliate_id", "is", null)
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  // Côté Tiquiz, branding ET affiliate ID vivent sur `profiles`
+  // (pas de table business_profiles séparée — cf. migration
+  // 20260508_tipote_affiliate_id.sql).
+  const { data: profile } = await supabaseAdmin
+    .from("profiles")
+    .select("brand_logo_url, brand_color_primary, brand_website_url, tipote_affiliate_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const profileRow = profile as
+    | (ProfileBrandRow & { tipote_affiliate_id: string | null })
+    | null;
   return mapBranding(
-    (profile as ProfileBrandRow | null) ?? null,
-    (bp as AffiliateRow | null)?.tipote_affiliate_id ?? null,
+    profileRow,
+    profileRow?.tipote_affiliate_id ?? null,
   );
 }
 
