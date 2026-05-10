@@ -332,29 +332,65 @@ export async function fetchPublishedPopquiz(
   let row: PopquizRow | null = null;
 
   if (UUID_RE.test(popquizIdOrSlug)) {
-    const { data } = await supabaseAdmin
+    // Capture explicite de l'erreur Supabase. Sans ce log, une
+    // jointure cassée (FK manquante, RLS, schema cache obsolète,
+    // etc.) faisait simplement renvoyer `null` ⇒ 404 silencieux
+    // côté pages /p/[id] et /embed/p/[id]. On retourne toujours
+    // null en cas d'échec — pas de changement de comportement —
+    // mais le serveur sait maintenant POURQUOI.
+    const { data, error } = await supabaseAdmin
       .from("popquizzes")
       .select(FULL_SELECT)
       .eq("id", popquizIdOrSlug)
       .eq("is_published", true)
       .maybeSingle();
+    if (error) {
+      console.error(
+        "[popquiz] fetchPublishedPopquiz: query par id a échoué",
+        { id: popquizIdOrSlug, error },
+      );
+    }
     row = (data as unknown as PopquizRow) ?? null;
   }
 
   if (!row) {
-    const { data } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from("popquizzes")
       .select(FULL_SELECT)
       .eq("slug", popquizIdOrSlug)
       .eq("is_published", true)
       .maybeSingle();
+    if (error) {
+      console.error(
+        "[popquiz] fetchPublishedPopquiz: query par slug a échoué",
+        { slug: popquizIdOrSlug, error },
+      );
+    }
     row = (data as unknown as PopquizRow) ?? null;
   }
 
-  if (!row) return null;
+  if (!row) {
+    // Pas d'erreur Supabase mais 0 row : popquiz absente, pas
+    // publiée, slug renommé, ou row filtrée par le `!inner` join
+    // (= pas de video associée). Trace pour diagnostic.
+    console.warn(
+      "[popquiz] fetchPublishedPopquiz: aucune row trouvée",
+      { input: popquizIdOrSlug },
+    );
+    return null;
+  }
   const branding = await fetchOwnerBranding(row.user_id);
   const { popquiz, thumbnailPath } = rowToPopquiz(row, branding);
-  if (!popquiz) return null;
+  if (!popquiz) {
+    // rowToPopquiz retourne null seulement si la jointure video a
+    // remonté un objet vide — théoriquement impossible avec `!inner`
+    // mais on trace au cas où PostgREST changerait de comportement.
+    console.warn(
+      "[popquiz] fetchPublishedPopquiz: row sans video associée",
+      { id: row.id, slug: row.slug },
+    );
+    return null;
+  }
   return attachUploadSignedUrls(popquiz, thumbnailPath);
 }
 
@@ -368,10 +404,32 @@ export async function fetchOwnedPopquiz(
     .eq("id", popquizId)
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (error) {
+    // Cause typique : RLS sur popquizzes ou popquiz_videos qui
+    // refuse la lecture, ou jointure `!inner` non résolue. Le
+    // 404 silencieux côté /popquiz/[id]/edit cachait ces cas.
+    console.error(
+      "[popquiz] fetchOwnedPopquiz: query a échoué",
+      { id: popquizId, error },
+    );
+    return null;
+  }
+  if (!data) {
+    console.warn(
+      "[popquiz] fetchOwnedPopquiz: aucune row (RLS ou jointure inner ?)",
+      { id: popquizId },
+    );
+    return null;
+  }
   const row = data as unknown as PopquizRow;
   const branding = await fetchOwnerBranding(row.user_id);
   const { popquiz, thumbnailPath } = rowToPopquiz(row, branding);
-  if (!popquiz) return null;
+  if (!popquiz) {
+    console.warn(
+      "[popquiz] fetchOwnedPopquiz: row sans video associée",
+      { id: row.id },
+    );
+    return null;
+  }
   return attachUploadSignedUrls(popquiz, thumbnailPath);
 }
