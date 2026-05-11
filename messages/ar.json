@@ -311,7 +311,131 @@
     "month3": "مارس",
     "month4": "أبريل",
     "month5": "مايو",
-    "month6": "يونيو"
+    "month6": "يونيو",
+    "greeting": {
+      "morning": "صباح الخير 👋",
+      "morningWithName": "صباح الخير {name} 👋",
+      "afternoon": "أهلاً ☀️",
+      "afternoonWithName": "أهلاً {name} ☀️",
+      "evening": "مساء الخير 🌙",
+      "eveningWithName": "مساء الخير {name} 🌙",
+      "lateNight": "ما زلت هنا؟ ☕",
+      "lateNightWithName": "ما زلت هنا {name}؟ ☕"
+    },
+    "subtitleRotation": {
+      "0": "هل أنت مستعد·ة لتعزيز عملك اليوم؟",
+      "1": "هل ننشئ محتوى يحقّق نتائج؟",
+      "2": "يوم جديد، فرصة جديدة ✨",
+      "3": "ماذا نطلق اليوم؟",
+      "4": "جمهورك ينتظرك — هل ننطلق؟"
+    },
+    "weeklyGoal": {
+      "objectiveLabel": "هدف الأسبوع",
+      "firstPublish": {
+        "title": "انشر أول اختبار لك",
+        "desc": "بمجرد أن يكون اختبارك جاهزاً، شاركه لجمع أول العملاء المحتملين.",
+        "cta": "أنشئ اختباراً"
+      },
+      "firstLead": {
+        "title": "استقطب أول عميل محتمل",
+        "desc": "شارك رابط اختبارك مع جمهورك لجمع أول إجابة.",
+        "cta": "عرض مشاريعي"
+      },
+      "shareAgain": {
+        "title": "أعد المشاركة هذا الأسبوع",
+        "desc": "لا توجد إجابات جديدة هذا الأسبوع — إعادة المشاركة غالباً ما تنعش التدفّق.",
+        "cta": "عرض مشاريعي"
+      },
+      "firstSurvey": {
+        "title": "أنشئ استبيان NPS",
+        "desc": "اسأل عملاءك عن رأيهم فيك في دقيقة. عزّز الاحتفاظ.",
+        "cta": "أنشئ استبياناً"
+      },
+      "hundredClub": {
+        "title": "اهدف إلى 100 عميل محتمل",
+        "desc": "تبقّى {remaining} فقط لتنضمّ إلى نادي المئة.",
+        "cta": "عرض مشاريعي"
+      },
+      "keepShipping": {
+        "title": "حافظ على الزخم",
+        "desc": "لديك أكثر من 100 عميل محتمل. أطلق اختباراً جديداً هذا الأسبوع لتوسيع جمهورك.",
+        "cta": "أنشئ اختباراً"
+      }
+    },
+    "insights": {
+      "title": "اقتراحات لك",
+      "quietProject": {
+        "title": "خمد {kind}ك «{name}»",
+        "titleQuiz": "اختبارُ",
+        "titleSurvey": "استبيانُ",
+        "body": "{days} يوماً دون إجابة جديدة. إعادة المشاركة غالباً ما تنعش التدفّق.",
+        "cta": "عرض المشروع"
+      },
+      "lowConv": {
+        "title": "«{name}»: {starts} بدايات، التقاطات قليلة",
+        "body": "معدّل الالتقاط {rate}%. تحقّق من ملاءمة CTA وطول النموذج.",
+        "cta": "تحسين"
+      },
+      "topPerformer": {
+        "title": "«{name}» يحقّق نتائج ممتازة",
+        "body": "معدّل الالتقاط {rate}% — أعلى من المتوسّط. روّج له على قنواتك لتضخيم الأثر.",
+        "cta": "مشاركة المشروع"
+      },
+      "shipDrafts": {
+        "title": "لديك مشاريع في المسوّدات",
+        "bodyOne": "{count} مشروع بانتظار النشر. هيا!",
+        "bodyMany": "{count} مشاريع بانتظار النشر. هيا!",
+        "cta": "عرض مشاريعي"
+      },
+      "firstSurvey": {
+        "title": "اسأل عملاءك المحتملين عن رأيهم",
+        "body": "استبيان NPS لمدة دقيقة من عملائك الذين تم استقطابهم هو منجم رؤى مباشر.",
+        "cta": "أنشئ استبياناً"
+      },
+      "untitled": "بدون عنوان"
+    },
+    "achievements": {
+      "first_publish": {
+        "label": "أول مشروع",
+        "hint": "انشر أول اختبار أو استبيان"
+      },
+      "launcher": {
+        "label": "المُطلِق",
+        "hint": "انشر 5 مشاريع أو أكثر"
+      },
+      "first_lead": {
+        "label": "أول عميل محتمل",
+        "hint": "استقطب أول إجابة"
+      },
+      "hundred_club": {
+        "label": "نادي المئة",
+        "hint": "اجمع 100 إجابة أو أكثر"
+      },
+      "thousand_club": {
+        "label": "ألف تحية",
+        "hint": "اجمع 1000 إجابة أو أكثر"
+      },
+      "polyglot": {
+        "label": "متعدّد اللغات",
+        "hint": "انشر بلغتين على الأقل"
+      },
+      "survey_master": {
+        "label": "محترف الاستبيانات",
+        "hint": "أن يكون لديك 3 استبيانات نشطة في الوقت نفسه"
+      },
+      "hot_streak": {
+        "label": "في أوج النشاط",
+        "hint": "احصل على 7 إجابات خلال 7 أيام"
+      },
+      "conversion_25": {
+        "label": "محوِّل ممتاز",
+        "hint": "حقّق معدّل التقاط 25%"
+      },
+      "library": {
+        "label": "مكتبة",
+        "hint": "أن يكون لديك 10 مشاريع أو أكثر"
+      }
+    }
   },
   "quizForm": {
     "createTitle": "إنشاء اختبار",
@@ -1076,5 +1200,319 @@
     "backToFolders": "العودة إلى الفئات",
     "elementOne": "عنصر",
     "elementMany": "عناصر"
+  },
+  "highlightBadge": {
+    "topPerformer": {
+      "title": "الأفضل أداءً",
+      "label": "الأفضل"
+    },
+    "trending": {
+      "title": "نشط — نشاط حديث كثير",
+      "label": "نشط"
+    },
+    "new": {
+      "title": "جديد",
+      "label": "جديد"
+    },
+    "needsAttention": {
+      "title": "يستحق الانتباه — نشاط قليل",
+      "label": "للمتابعة"
+    }
+  },
+  "sio": {
+    "keysManager": {
+      "title": "مفاتيح API الخاصة بـ Systeme.io",
+      "description": "اربط عدة حسابات Systeme.io (واحد لكل عميل). ثم تختار أي مفتاح يستخدمه كل اختبار.",
+      "loading": "جارٍ التحميل…",
+      "emptyState": "لا توجد مفاتيح مسجّلة.",
+      "defaultBadge": "افتراضي",
+      "setDefaultTitle": "تعيين كافتراضي",
+      "renameTitle": "إعادة التسمية",
+      "deleteTitle": "حذف",
+      "nameLabel": "الاسم (مذكّرة)",
+      "namePlaceholder": "مثال: حسابي، العميلة ماري",
+      "keyLabel": "مفتاح API",
+      "keyHelper": "نتحقق من المفتاح لدى Systeme.io قبل حفظه.",
+      "cancel": "إلغاء",
+      "add": "إضافة",
+      "addKey": "إضافة مفتاح",
+      "confirmDelete": "هل تريد حذف المفتاح «{name}»؟ ستنتقل الاختبارات التي كانت تستخدمه إلى مفتاحك الافتراضي.",
+      "toastLoadError": "تعذّر تحميل مفاتيحك.",
+      "toastCreated": "تمت إضافة المفتاح والتحقق منه.",
+      "toastSetDefault": "تم تعيين المفتاح كافتراضي.",
+      "toastRenamed": "تمت إعادة تسمية المفتاح.",
+      "toastDeleted": "تم حذف المفتاح.",
+      "errorNameAndKeyRequired": "أدخل الاسم والمفتاح.",
+      "errorInvalidKey": "رفض Systeme.io هذا المفتاح. أعد إنشاءه من حسابك في SIO ثم أعد المحاولة.",
+      "errorRateLimited": "يطلب منك Systeme.io الانتظار (عدد كبير من الطلبات). أعد المحاولة بعد دقيقة.",
+      "errorSioDown": "Systeme.io غير متاح مؤقتًا. أعد المحاولة بعد بضع دقائق.",
+      "errorNetwork": "تعذّر الاتصال بـ Systeme.io. تحقق من اتصالك أو أعد المحاولة.",
+      "errorServerMisconfigured": "خطأ في إعدادات الخادم. تواصل مع الدعم.",
+      "errorNameTaken": "لديك بالفعل مفتاح بهذا الاسم.",
+      "errorValidationFailed": "فشل التحقق. أعد المحاولة بعد لحظات.",
+      "errorGeneric": "حدث خطأ.",
+      "errorNetworkGeneric": "خطأ في الشبكة."
+    },
+    "keyPicker": {
+      "title": "مفتاح Systeme.io لهذا الاختبار",
+      "description": "اختر مفتاح API الذي تريد استخدامه لمزامنة العملاء المحتملين الخاصين بهذا الاختبار.",
+      "loading": "جارٍ التحميل…",
+      "configureFirst": "اضبط أولًا مفتاح Systeme.io",
+      "selectLabel": "المفتاح المستخدم",
+      "optionDefault": "مفتاحي الافتراضي",
+      "optionDefaultNamed": "مفتاحي الافتراضي ({name})",
+      "hint": "يمكنك تغييره في أي وقت.",
+      "toastUpdated": "تم تحديث مفتاح الاختبار.",
+      "toastUpdateError": "تعذّر التحديث."
+    }
+  },
+  "popquizList": {
+    "heroTitle": "Popquiz الخاصة بي",
+    "heroSubtitle": "فيديو + اختبار يظهران في لحظات محددة.",
+    "freeLimitTooltip": "الخطة المجانية محدودة بـ Popquiz واحد. احذف الحالي أو ارتقِ إلى خطة مدفوعة.",
+    "freeLimitButton": "الخطة المجانية — 1 كحدّ أقصى",
+    "newPopquiz": "Popquiz جديد",
+    "filterAll": "الكل",
+    "filterPublished": "المنشورة",
+    "filterDrafts": "المسودّات",
+    "emptyState": "لا يوجد popquiz حاليًا.",
+    "createFirst": "أنشئ الأول",
+    "untitled": "بدون عنوان",
+    "untitledFallback": "(بدون عنوان)",
+    "badgePublished": "منشور",
+    "badgeDraft": "مسودّة",
+    "viewsCount": "{count} مشاهدة",
+    "completionsCount": "{count} مكتمل",
+    "completionRate": "{rate}% نسبة الإكمال",
+    "actionCopyLink": "نسخ الرابط العام",
+    "actionEmbed": "كود تضمين iframe",
+    "actionView": "عرض على الإنترنت",
+    "actionEdit": "تعديل",
+    "actionDelete": "حذف",
+    "confirmDelete": "هل تريد حذف الـ popquiz «{title}»؟\n\nسيتم حذف الفيديو والعلامات (cues). الاختبارات المرتبطة تبقى كما هي في «مشاريعي». هذا الإجراء نهائي.",
+    "toastLinkCopied": "تم نسخ الرابط",
+    "toastDeleted": "تم حذف الـ popquiz",
+    "toastDeleteFailed": "فشل الحذف",
+    "toastNetworkError": "خطأ في الشبكة"
+  },
+  "popquizAppearance": {
+    "sectionTitle": "مظهر الصفحة العامة",
+    "sectionDescription": "للرابط المباشر <code>/pq/...</code> وكود التضمين iframe. يمكن تعديل العنوان والعنوان الفرعي مباشرة في المعاينة على اليمين (انقر للتعديل).",
+    "bgLabel": "خلفية الصفحة",
+    "bgLabelSuffix": "(للرابط المباشر فقط)",
+    "bgStyleNone": "بدون",
+    "bgStyleSolid": "لون موحّد",
+    "bgStyleGradient": "تدرّج",
+    "color": "اللون",
+    "color1": "اللون 1",
+    "color2": "اللون 2",
+    "colorBgLabel": "لون الخلفية",
+    "color1BgLabel": "اللون 1 للخلفية",
+    "color2BgLabel": "اللون 2 للخلفية",
+    "bgPreviewAria": "معاينة الخلفية",
+    "borderLabel": "إطار حول الفيديو",
+    "borderThickness": "السماكة",
+    "borderNone": "بدون",
+    "border1px": "1 بكسل (رفيع)",
+    "border2px": "2 بكسل",
+    "border4px": "4 بكسل",
+    "border8px": "8 بكسل",
+    "border12px": "12 بكسل (سميك)",
+    "borderColorLabel": "لون الإطار",
+    "shadowLabel": "الظل",
+    "shadowNone": "بدون",
+    "shadowSoft": "خفيف",
+    "shadowMedium": "متوسط",
+    "shadowStrong": "قوي",
+    "playButtonLabel": "زر التشغيل (فوق الفيديو)",
+    "shape": "الشكل",
+    "shapeCircle": "دائري",
+    "shapeRounded": "مستدير الزوايا",
+    "shapeSquare": "مربع",
+    "colorOptional": "اللون (اختياري)",
+    "playButtonColorLabel": "لون زر التشغيل",
+    "reset": "إعادة الضبط",
+    "showCreatorBranding": "إظهار شعاري ورابط موقعي في الصفحة العامة"
+  },
+  "popquizThumbnail": {
+    "title": "صورة مصغّرة للـ popquiz",
+    "badgeCustom": "مخصّصة",
+    "badgeAuto": "تلقائية (مستخرجة عند الثانية 2)",
+    "formatHint": "المقاس الموصى به: 1280×720 (16/9). PNG أو JPG أو WebP، بحدّ أقصى 5 MB.",
+    "previewAria": "معاينة الصورة المصغّرة",
+    "noThumbnail": "لا توجد صورة مصغّرة",
+    "uploading": "جارٍ الإرسال…",
+    "uploadButton": "تحميل صورتي المصغّرة",
+    "restoring": "جارٍ الاستعادة…",
+    "autoButton": "صورة تلقائية",
+    "disabledHint": "الصورة المصغّرة المخصّصة متاحة فقط للفيديوهات المرفوعة (وليس YouTube / Vimeo).",
+    "errorUnsupportedFormat": "صيغة غير مدعومة (PNG، JPG، WebP).",
+    "errorTooLarge": "الصورة كبيرة جدًا (الحدّ الأقصى 5 MB). اضغطها قبل الرفع.",
+    "errorPrepareUpload": "تعذّر تحضير الإرسال.",
+    "errorApplyThumbnail": "تعذّر تطبيق الصورة المصغّرة.",
+    "errorRestoreAuto": "تعذّر استعادة الصورة التلقائية.",
+    "errorUpload": "خطأ أثناء الإرسال",
+    "errorGeneric": "خطأ",
+    "errorCanvasUnavailable": "Canvas غير متاح",
+    "errorJpegExport": "تصدير JPEG غير ممكن",
+    "errorCrop": "خطأ في الاقتصاص",
+    "toastCustomApplied": "تم تطبيق الصورة المخصّصة",
+    "toastAutoRestored": "تمت استعادة الصورة التلقائية",
+    "cropTitle": "اقتصص صورتك بنسبة 16/9",
+    "cropDescription": "اسحب لإعادة التموضع، واستخدم شريط التمرير للتكبير. التصدير بصيغة 1280×720 JPEG.",
+    "loading": "جارٍ التحميل…",
+    "zoom": "تكبير",
+    "cancel": "إلغاء",
+    "preparing": "جارٍ التحضير…",
+    "useThisThumbnail": "استخدم هذه الصورة المصغّرة"
+  },
+  "popquizEmbed": {
+    "title": "كود التضمين",
+    "description": "الصق هذا الكود في صفحة WordPress أو Systeme.io أو أي موقع يقبل HTML. يتكيّف المشغّل مع جميع العروض مع الحفاظ على نسبة 16:9.",
+    "copyButton": "نسخ الكود",
+    "copiedLabel": "تم نسخ الكود",
+    "toastCopied": "تم نسخ الكود",
+    "toastCopyFailed": "تعذّر النسخ",
+    "widthHint": "العرض الأقصى الافتراضي 900 بكسل. احذف <code>max-width</code> للحصول على مشغّل بعرض كامل."
+  },
+  "popquizEditor": {
+    "untitled": "بدون عنوان",
+    "header": {
+      "newTitle": "Popquiz جديد",
+      "editTitle": "تعديل الـ popquiz"
+    },
+    "banner": {
+      "newTitle": "popquiz جديد",
+      "newSubtitle": "حمّل فيديو، وضع علامات لإظهار اختبار في اللحظة المناسبة.",
+      "editFallback": "Popquiz",
+      "publishedSubtitle": "منشور — مرئي عبر الرابط المشترك.",
+      "draftSubtitle": "مسودّة — غير مرئي للعموم."
+    },
+    "title": {
+      "label": "العنوان",
+      "placeholder": "مثال: فيديو الإعداد Q1"
+    },
+    "description": {
+      "label": "الوصف",
+      "optional": "(اختياري، يُستخدم في معاينات المشاركة)",
+      "placeholder": "اشرح في جملة واحدة ما يقدّمه الفيديو"
+    },
+    "source": {
+      "label": "مصدر الفيديو",
+      "tabUrl": "رابط",
+      "tabUpload": "استيراد",
+      "urlPlaceholder": "https://www.youtube.com/watch?v=…  •  https://vimeo.com/…  •  https://…/video.mp4",
+      "urlNotRecognized": "رابط غير معروف (YouTube أو Vimeo أو رابط مباشر).",
+      "urlHelp": "الصق عنوان الفيديو.",
+      "readonlyLabel": "فيديو المصدر",
+      "readonlyHelp": "لتغيير الفيديو، احذف هذا الـ popquiz وأنشئ واحدًا جديدًا."
+    },
+    "slug": {
+      "label": "رابط مخصّص",
+      "optional": "(اختياري)",
+      "placeholder": "onboarding-q1",
+      "helpNew": "حروف صغيرة وأرقام وشَرَطات. إذا تُرك فارغًا، نستخدم معرّفًا مُولَّدًا.",
+      "helpEdit": "حروف صغيرة وأرقام وشَرَطات. فارغ ← نعود إلى المعرّف المُولَّد."
+    },
+    "status": {
+      "published": "منشور",
+      "draft": "مسودّة",
+      "helpPublished": "أي شخص يملك الرابط يمكنه مشاهدة الفيديو. استخدم «إلغاء النشر» أدناه لإخفائه.",
+      "helpDraft": "لا أحد سواك يستطيع مشاهدة الفيديو. استخدم «نشر» أدناه لجعله مرئيًا."
+    },
+    "preview": {
+      "title": "معاينة الفيديو",
+      "help": "تعكس المظهر في الوقت الفعلي. ضع العلامات بالنقر على الخط الزمني.",
+      "modeDirect": "رابط مباشر",
+      "modeIframe": "Iframe",
+      "placeholder": "أضف مصدر فيديو (رابط أو استيراد) لعرض المعاينة في الوقت الفعلي.",
+      "titlePh": "انقر لإضافة عنوان",
+      "subtitlePh": "انقر لإضافة عنوان فرعي"
+    },
+    "timeline": {
+      "label": "الخط الزمني",
+      "hintActive": "انقر على الشريط لإضافة علامة",
+      "hintIdle": "ابدأ التشغيل لتفعيل الشريط",
+      "startPlayback": "شغّل الفيديو لثانية واحدة كي يتم اكتشاف مدّته.",
+      "markerTitle": "علامة عند {time} — انقر للحذف",
+      "markerAria": "علامة عند {time}، انقر للحذف",
+      "aria": {
+        "add": "انقر لإضافة علامة"
+      }
+    },
+    "markers": {
+      "title": "العلامات",
+      "help": "يُشغَّل الاختبار في هذه اللحظة.",
+      "add": "إضافة",
+      "empty": "لا توجد علامات. انقر على الخط الزمني أو على «إضافة».",
+      "secondsUnit": "ث",
+      "unknownQuiz": "اختبار غير معروف",
+      "overlayTitle": "علامة عند {time} — {quiz}",
+      "overlayHelp": "في التشغيل النهائي، سيظهر الاختبار هنا.",
+      "skip": "تخطّي",
+      "draftSuffix": "(مسودّة)",
+      "draftBadgeNew": "انشر هذا الاختبار لكي يظهر",
+      "draftBadgeEdit": "مسودّة",
+      "behavior": {
+        "block": "حاجب",
+        "optional": "اختياري"
+      },
+      "aria": {
+        "timestamp": "الطابع الزمني بالثواني",
+        "quiz": "الاختبار المرتبط",
+        "behavior": "السلوك",
+        "remove": "حذف"
+      }
+    },
+    "share": {
+      "title": "المشاركة والتضمين",
+      "help": "رابط مباشر للمشاركة أو كود لإلصاقه في صفحة.",
+      "linkLabel": "رابط مباشر",
+      "embedLabel": "كود التضمين",
+      "codeCopied": "تم نسخ الكود",
+      "copyCode": "نسخ الكود",
+      "openPublic": "فتح الصفحة العامة"
+    },
+    "publishDialog": {
+      "title": "تم نشر الـ popquiz",
+      "description": "شارك الرابط المباشر أو ضمّن الفيديو في موقعك.",
+      "myProjects": "مشاريعي",
+      "view": "عرض"
+    },
+    "actions": {
+      "saveDraft": "حفظ كمسودّة",
+      "saveDraftTitle": "حفظ كمسودّة (غير مرئي للعموم بعد)",
+      "publishWithLink": "نشر والحصول على الرابط",
+      "publish": "نشر",
+      "publishing": "جارٍ النشر…",
+      "saveModifications": "حفظ التعديلات",
+      "saving": "جارٍ الحفظ…",
+      "unpublish": "إلغاء النشر",
+      "unpublishTitle": "إعادة هذا الـ popquiz إلى مسودّة (لن يكون متاحًا للعموم)",
+      "back": "← العودة إلى popquiz الخاصة بي",
+      "shorten": "…"
+    },
+    "errors": {
+      "noQuiz": "أنشئ أولًا اختبارًا في «مشاريعي».",
+      "titleRequired": "أعطِ عنوانًا للـ popquiz الخاص بك.",
+      "titleEmpty": "لا يمكن أن يكون العنوان فارغًا.",
+      "uploadFirst": "استورد فيديو قبل النشر.",
+      "urlInvalid": "الصق رابط YouTube أو Vimeo أو .mp4 صالحًا.",
+      "saveFailed": "خطأ أثناء الحفظ",
+      "networkError": "خطأ في الشبكة",
+      "planLimit": "تم بلوغ حدّ الخطة المجانية."
+    },
+    "toasts": {
+      "linkCopied": "تم نسخ الرابط",
+      "copyLinkFailed": "تعذّر نسخ الرابط",
+      "copyFailed": "تعذّر النسخ",
+      "codeCopied": "تم نسخ الكود",
+      "published": "تم نشر الـ popquiz",
+      "draftSaved": "تم حفظ المسودّة",
+      "thumbnailFailed": "تم إنشاء الـ popquiz، لكن فشل إرسال الصورة المصغّرة. أعد المحاولة من المحرّر.",
+      "publishedWithLink": "تم نشر الـ popquiz — شارك الرابط مع جمهورك",
+      "unpublished": "تم إلغاء نشر الـ popquiz — لم يعد مرئيًا للعموم",
+      "modificationsSaved": "تم حفظ التعديلات"
+    }
   }
 }

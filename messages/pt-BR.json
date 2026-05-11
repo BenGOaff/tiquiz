@@ -311,7 +311,131 @@
     "month3": "Mar",
     "month4": "Abr",
     "month5": "Mai",
-    "month6": "Jun"
+    "month6": "Jun",
+    "greeting": {
+      "morning": "Bom dia 👋",
+      "morningWithName": "Bom dia {name} 👋",
+      "afternoon": "Olá ☀️",
+      "afternoonWithName": "Olá {name} ☀️",
+      "evening": "Boa noite 🌙",
+      "eveningWithName": "Boa noite {name} 🌙",
+      "lateNight": "Ainda por aqui? ☕",
+      "lateNightWithName": "Ainda por aqui {name}? ☕"
+    },
+    "subtitleRotation": {
+      "0": "Pronto·a para alavancar seu negócio hoje?",
+      "1": "Vamos criar conteúdo que converte?",
+      "2": "Um novo dia, uma nova oportunidade ✨",
+      "3": "O que vamos lançar hoje?",
+      "4": "Sua audiência espera — vamos lá?"
+    },
+    "weeklyGoal": {
+      "objectiveLabel": "Objetivo da semana",
+      "firstPublish": {
+        "title": "Publique seu primeiro quiz",
+        "desc": "Assim que seu quiz estiver pronto, compartilhe para captar seus primeiros leads.",
+        "cta": "Criar um quiz"
+      },
+      "firstLead": {
+        "title": "Capte seu primeiro lead",
+        "desc": "Compartilhe o link do seu quiz com sua audiência para coletar sua primeira resposta.",
+        "cta": "Ver meus projetos"
+      },
+      "shareAgain": {
+        "title": "Compartilhe novamente esta semana",
+        "desc": "Nenhuma nova resposta esta semana — recompartilhar costuma reativar o fluxo.",
+        "cta": "Ver meus projetos"
+      },
+      "firstSurvey": {
+        "title": "Crie uma pesquisa NPS",
+        "desc": "Pergunte aos seus clientes o que pensam de você em 1 minuto. Impulsione a retenção.",
+        "cta": "Criar uma pesquisa"
+      },
+      "hundredClub": {
+        "title": "Mire em 100 leads",
+        "desc": "Faltam só {remaining} para entrar no clube dos 100.",
+        "cta": "Ver meus projetos"
+      },
+      "keepShipping": {
+        "title": "Mantenha o ritmo",
+        "desc": "Você já tem 100+ leads. Lance um novo quiz esta semana para ampliar sua audiência.",
+        "cta": "Criar um quiz"
+      }
+    },
+    "insights": {
+      "title": "Sugestões para você",
+      "quietProject": {
+        "title": "Seu {kind} \"{name}\" deu uma esfriada",
+        "titleQuiz": "quiz",
+        "titleSurvey": "pesquisa",
+        "body": "{days} dias sem nova resposta. Recompartilhar costuma reativar o fluxo.",
+        "cta": "Ver o projeto"
+      },
+      "lowConv": {
+        "title": "\"{name}\": {starts} inícios, poucas capturas",
+        "body": "Taxa de captura {rate}%. Verifique a relevância do CTA e o tamanho do formulário.",
+        "cta": "Otimizar"
+      },
+      "topPerformer": {
+        "title": "\"{name}\" está convertendo muito",
+        "body": "Taxa de captura {rate}% — acima da média. Promova nos seus canais para amplificar.",
+        "cta": "Compartilhar o projeto"
+      },
+      "shipDrafts": {
+        "title": "Você tem projetos em rascunho",
+        "bodyOne": "{count} projeto aguardando publicação. Vamos lá!",
+        "bodyMany": "{count} projetos aguardando publicação. Vamos lá!",
+        "cta": "Ver meus projetos"
+      },
+      "firstSurvey": {
+        "title": "Peça a opinião dos seus leads",
+        "body": "Uma pesquisa NPS de 1 minuto com seus contatos captados é uma mina de insights direta.",
+        "cta": "Criar uma pesquisa"
+      },
+      "untitled": "Sem título"
+    },
+    "achievements": {
+      "first_publish": {
+        "label": "Primeiro projeto",
+        "hint": "Publique seu primeiro quiz ou pesquisa"
+      },
+      "launcher": {
+        "label": "Lançador",
+        "hint": "Publique 5 projetos ou mais"
+      },
+      "first_lead": {
+        "label": "Primeiro lead",
+        "hint": "Capte sua primeira resposta"
+      },
+      "hundred_club": {
+        "label": "Clube dos 100",
+        "hint": "Acumule 100 respostas ou mais"
+      },
+      "thousand_club": {
+        "label": "Mil parabéns",
+        "hint": "Acumule 1.000 respostas ou mais"
+      },
+      "polyglot": {
+        "label": "Poliglota",
+        "hint": "Publique em pelo menos 2 idiomas"
+      },
+      "survey_master": {
+        "label": "Pro de pesquisas",
+        "hint": "Tenha 3 pesquisas ativas ao mesmo tempo"
+      },
+      "hot_streak": {
+        "label": "Em forma",
+        "hint": "Receba 7 respostas em 7 dias"
+      },
+      "conversion_25": {
+        "label": "Convertedor",
+        "hint": "Atinja 25% de taxa de captura"
+      },
+      "library": {
+        "label": "Biblioteca",
+        "hint": "Tenha 10 projetos ou mais"
+      }
+    }
   },
   "quizForm": {
     "createTitle": "Criar um quiz",
@@ -1076,5 +1200,319 @@
     "backToFolders": "Voltar para as categorias",
     "elementOne": "item",
     "elementMany": "itens"
+  },
+  "highlightBadge": {
+    "topPerformer": {
+      "title": "Melhor desempenho",
+      "label": "Top"
+    },
+    "trending": {
+      "title": "Em alta — muita atividade recente",
+      "label": "Em alta"
+    },
+    "new": {
+      "title": "Novo",
+      "label": "Novo"
+    },
+    "needsAttention": {
+      "title": "Para observar — pouca atividade",
+      "label": "Para observar"
+    }
+  },
+  "sio": {
+    "keysManager": {
+      "title": "Chaves de API Systeme.io",
+      "description": "Conecte várias contas Systeme.io (uma por cliente). Depois você escolhe qual chave cada quiz vai usar.",
+      "loading": "Carregando…",
+      "emptyState": "Nenhuma chave salva.",
+      "defaultBadge": "Padrão",
+      "setDefaultTitle": "Definir como padrão",
+      "renameTitle": "Renomear",
+      "deleteTitle": "Excluir",
+      "nameLabel": "Nome (memo)",
+      "namePlaceholder": "Ex.: Minha conta, Cliente Maria",
+      "keyLabel": "Chave de API",
+      "keyHelper": "Validamos a chave junto à Systeme.io antes de salvá-la.",
+      "cancel": "Cancelar",
+      "add": "Adicionar",
+      "addKey": "Adicionar uma chave",
+      "confirmDelete": "Excluir a chave «{name}»? Os quizzes que a usavam passarão a usar sua chave padrão.",
+      "toastLoadError": "Não foi possível carregar suas chaves.",
+      "toastCreated": "Chave adicionada e validada.",
+      "toastSetDefault": "Chave definida como padrão.",
+      "toastRenamed": "Chave renomeada.",
+      "toastDeleted": "Chave excluída.",
+      "errorNameAndKeyRequired": "Preencha o nome e a chave.",
+      "errorInvalidKey": "Chave recusada pela Systeme.io. Gere novamente na sua conta SIO e tente outra vez.",
+      "errorRateLimited": "A Systeme.io pede que você aguarde (muitas requisições). Tente de novo em 1 minuto.",
+      "errorSioDown": "A Systeme.io está temporariamente indisponível. Tente novamente em alguns minutos.",
+      "errorNetwork": "Não foi possível conectar à Systeme.io. Verifique sua conexão ou tente novamente.",
+      "errorServerMisconfigured": "Erro de configuração no servidor. Entre em contato com o suporte.",
+      "errorNameTaken": "Você já tem uma chave com esse nome.",
+      "errorValidationFailed": "A validação falhou. Tente novamente em alguns instantes.",
+      "errorGeneric": "Ocorreu um erro.",
+      "errorNetworkGeneric": "Erro de rede."
+    },
+    "keyPicker": {
+      "title": "Chave Systeme.io deste quiz",
+      "description": "Escolha qual chave de API usar para sincronizar os leads deste quiz.",
+      "loading": "Carregando…",
+      "configureFirst": "Configure antes uma chave Systeme.io",
+      "selectLabel": "Chave a usar",
+      "optionDefault": "Minha chave padrão",
+      "optionDefaultNamed": "Minha chave padrão ({name})",
+      "hint": "Você pode trocar a qualquer momento.",
+      "toastUpdated": "Chave do quiz atualizada.",
+      "toastUpdateError": "Não foi possível atualizar."
+    }
+  },
+  "popquizList": {
+    "heroTitle": "Meus Popquiz",
+    "heroSubtitle": "Vídeo + quiz que aparecem em momentos específicos.",
+    "freeLimitTooltip": "O plano gratuito é limitado a 1 popquiz. Exclua o atual ou mude para um plano pago.",
+    "freeLimitButton": "Plano gratuito — 1 no máximo",
+    "newPopquiz": "Novo Popquiz",
+    "filterAll": "Todos",
+    "filterPublished": "Publicados",
+    "filterDrafts": "Rascunhos",
+    "emptyState": "Nenhum popquiz por enquanto.",
+    "createFirst": "Criar o primeiro",
+    "untitled": "Sem título",
+    "untitledFallback": "(sem título)",
+    "badgePublished": "Publicado",
+    "badgeDraft": "Rascunho",
+    "viewsCount": "{count} visualizações",
+    "completionsCount": "{count} concluídos",
+    "completionRate": "{rate}% de conclusão",
+    "actionCopyLink": "Copiar o link público",
+    "actionEmbed": "Código de incorporação iframe",
+    "actionView": "Ver online",
+    "actionEdit": "Editar",
+    "actionDelete": "Excluir",
+    "confirmDelete": "Excluir o popquiz «{title}»?\n\nO vídeo e os marcadores (cues) serão excluídos. Os quizzes referenciados continuam intactos em Meus projetos. Esta ação é definitiva.",
+    "toastLinkCopied": "Link copiado",
+    "toastDeleted": "Popquiz excluído",
+    "toastDeleteFailed": "Falha na exclusão",
+    "toastNetworkError": "Erro de rede"
+  },
+  "popquizAppearance": {
+    "sectionTitle": "Aparência da página pública",
+    "sectionDescription": "Para o link direto <code>/pq/...</code> e a incorporação por iframe. O título e o subtítulo podem ser editados diretamente na pré-visualização à direita (clique para alterar).",
+    "bgLabel": "Fundo da página",
+    "bgLabelSuffix": "(somente link direto)",
+    "bgStyleNone": "Nenhum",
+    "bgStyleSolid": "Cor sólida",
+    "bgStyleGradient": "Degradê",
+    "color": "Cor",
+    "color1": "Cor 1",
+    "color2": "Cor 2",
+    "colorBgLabel": "Cor do fundo",
+    "color1BgLabel": "Cor 1 do fundo",
+    "color2BgLabel": "Cor 2 do fundo",
+    "bgPreviewAria": "Pré-visualização do fundo",
+    "borderLabel": "Borda em volta do vídeo",
+    "borderThickness": "Espessura",
+    "borderNone": "Nenhuma",
+    "border1px": "1 px (fina)",
+    "border2px": "2 px",
+    "border4px": "4 px",
+    "border8px": "8 px",
+    "border12px": "12 px (grossa)",
+    "borderColorLabel": "Cor da borda",
+    "shadowLabel": "Sombra projetada",
+    "shadowNone": "Nenhuma",
+    "shadowSoft": "Suave",
+    "shadowMedium": "Média",
+    "shadowStrong": "Forte",
+    "playButtonLabel": "Botão play (overlay do vídeo)",
+    "shape": "Formato",
+    "shapeCircle": "Redondo",
+    "shapeRounded": "Arredondado",
+    "shapeSquare": "Quadrado",
+    "colorOptional": "Cor (opcional)",
+    "playButtonColorLabel": "Cor do botão play",
+    "reset": "redefinir",
+    "showCreatorBranding": "Exibir meu logo e link do site na página pública"
+  },
+  "popquizThumbnail": {
+    "title": "Miniatura do popquiz",
+    "badgeCustom": "Personalizada",
+    "badgeAuto": "Automática (extraída aos 2s)",
+    "formatHint": "Formato recomendado: 1280×720 (16/9). PNG, JPG ou WebP, máx. 5 MB.",
+    "previewAria": "Pré-visualização da miniatura",
+    "noThumbnail": "Nenhuma miniatura",
+    "uploading": "Enviando…",
+    "uploadButton": "Enviar minha miniatura",
+    "restoring": "Restaurando…",
+    "autoButton": "Miniatura automática",
+    "disabledHint": "Miniatura personalizada disponível apenas para vídeos enviados (não YouTube / Vimeo).",
+    "errorUnsupportedFormat": "Formato não suportado (PNG, JPG, WebP).",
+    "errorTooLarge": "Imagem muito grande (máx. 5 MB). Comprima antes.",
+    "errorPrepareUpload": "Não foi possível preparar o envio.",
+    "errorApplyThumbnail": "Não foi possível aplicar a miniatura.",
+    "errorRestoreAuto": "Não foi possível restaurar a miniatura automática.",
+    "errorUpload": "Erro no envio",
+    "errorGeneric": "Erro",
+    "errorCanvasUnavailable": "Canvas indisponível",
+    "errorJpegExport": "Exportação JPEG impossível",
+    "errorCrop": "Erro de enquadramento",
+    "toastCustomApplied": "Miniatura personalizada aplicada",
+    "toastAutoRestored": "Miniatura automática restaurada",
+    "cropTitle": "Enquadre sua miniatura em 16/9",
+    "cropDescription": "Arraste para reposicionar, use o slider para dar zoom. Exportação em 1280×720 JPEG.",
+    "loading": "Carregando…",
+    "zoom": "Zoom",
+    "cancel": "Cancelar",
+    "preparing": "Preparando…",
+    "useThisThumbnail": "Usar esta miniatura"
+  },
+  "popquizEmbed": {
+    "title": "Código de incorporação",
+    "description": "Cole este código em uma página do WordPress, Systeme.io ou qualquer site que aceite HTML. O player se adapta a todas as larguras mantendo o formato 16:9.",
+    "copyButton": "Copiar o código",
+    "copiedLabel": "Código copiado",
+    "toastCopied": "Código copiado",
+    "toastCopyFailed": "Não foi possível copiar",
+    "widthHint": "Largura máxima 900 px por padrão. Remova <code>max-width</code> para um player em largura total."
+  },
+  "popquizEditor": {
+    "untitled": "Sem título",
+    "header": {
+      "newTitle": "Novo Popquiz",
+      "editTitle": "Editar o popquiz"
+    },
+    "banner": {
+      "newTitle": "Novo popquiz",
+      "newSubtitle": "Carregue um vídeo, coloque marcadores para fazer um quiz aparecer no momento certo.",
+      "editFallback": "Popquiz",
+      "publishedSubtitle": "Publicado — visível no endereço compartilhado.",
+      "draftSubtitle": "Rascunho — não visível publicamente."
+    },
+    "title": {
+      "label": "Título",
+      "placeholder": "Ex.: Onboarding vídeo Q1"
+    },
+    "description": {
+      "label": "Descrição",
+      "optional": "(opcional, usada nas pré-visualizações de compartilhamento)",
+      "placeholder": "Explique em uma frase o que o vídeo entrega"
+    },
+    "source": {
+      "label": "Fonte do vídeo",
+      "tabUrl": "Link",
+      "tabUpload": "Importar",
+      "urlPlaceholder": "https://www.youtube.com/watch?v=…  •  https://vimeo.com/…  •  https://…/video.mp4",
+      "urlNotRecognized": "URL não reconhecida (YouTube, Vimeo ou link direto).",
+      "urlHelp": "Cole o endereço do vídeo.",
+      "readonlyLabel": "Vídeo de origem",
+      "readonlyHelp": "Para trocar de vídeo, exclua este popquiz e crie um novo."
+    },
+    "slug": {
+      "label": "Link personalizado",
+      "optional": "(opcional)",
+      "placeholder": "onboarding-q1",
+      "helpNew": "Letras minúsculas, números e hífens. Se vazio, usamos um identificador gerado.",
+      "helpEdit": "Letras minúsculas, números e hífens. Vazio → voltamos para o identificador gerado."
+    },
+    "status": {
+      "published": "Publicado",
+      "draft": "Rascunho",
+      "helpPublished": "Qualquer pessoa com o link pode ver o vídeo. Use «Despublicar» mais abaixo para escondê-lo.",
+      "helpDraft": "Ninguém além de você pode ver o vídeo. Use «Publicar» mais abaixo para torná-lo visível."
+    },
+    "preview": {
+      "title": "Pré-visualização do vídeo",
+      "help": "Reflete a aparência em tempo real. Coloque os marcadores clicando na timeline.",
+      "modeDirect": "Link direto",
+      "modeIframe": "Iframe",
+      "placeholder": "Adicione uma fonte de vídeo (link ou importação) para ver a pré-visualização em tempo real.",
+      "titlePh": "Clique para adicionar um título",
+      "subtitlePh": "Clique para adicionar um subtítulo"
+    },
+    "timeline": {
+      "label": "Timeline",
+      "hintActive": "Clique na barra para adicionar um marcador",
+      "hintIdle": "Inicie a reprodução para ativar a barra",
+      "startPlayback": "Inicie a reprodução por um segundo para que a duração do vídeo seja detectada.",
+      "markerTitle": "Marcador em {time} — clique para excluir",
+      "markerAria": "Marcador em {time}, clique para excluir",
+      "aria": {
+        "add": "Clique para adicionar um marcador"
+      }
+    },
+    "markers": {
+      "title": "Marcadores",
+      "help": "O quiz é disparado neste momento.",
+      "add": "Adicionar",
+      "empty": "Nenhum marcador. Clique na timeline ou em «Adicionar».",
+      "secondsUnit": "s",
+      "unknownQuiz": "Quiz desconhecido",
+      "overlayTitle": "Marcador em {time} — {quiz}",
+      "overlayHelp": "Na reprodução final, o quiz aparecerá aqui.",
+      "skip": "Pular",
+      "draftSuffix": "(rascunho)",
+      "draftBadgeNew": "Publique este quiz para que ele apareça",
+      "draftBadgeEdit": "Rascunho",
+      "behavior": {
+        "block": "Bloqueante",
+        "optional": "Opcional"
+      },
+      "aria": {
+        "timestamp": "Timestamp em segundos",
+        "quiz": "Quiz vinculado",
+        "behavior": "Comportamento",
+        "remove": "Excluir"
+      }
+    },
+    "share": {
+      "title": "Compartilhamento e incorporação",
+      "help": "Link direto para compartilhar ou código para colar em uma página.",
+      "linkLabel": "Link direto",
+      "embedLabel": "Código de incorporação",
+      "codeCopied": "Código copiado",
+      "copyCode": "Copiar o código",
+      "openPublic": "Abrir a página pública"
+    },
+    "publishDialog": {
+      "title": "Popquiz publicado",
+      "description": "Compartilhe o link direto ou incorpore o vídeo no seu site.",
+      "myProjects": "Meus projetos",
+      "view": "Ver"
+    },
+    "actions": {
+      "saveDraft": "Salvar como rascunho",
+      "saveDraftTitle": "Salvar como rascunho (ainda não visível publicamente)",
+      "publishWithLink": "Publicar e obter o link",
+      "publish": "Publicar",
+      "publishing": "Publicando…",
+      "saveModifications": "Salvar as modificações",
+      "saving": "Salvando…",
+      "unpublish": "Despublicar",
+      "unpublishTitle": "Voltar este popquiz a rascunho (não mais acessível publicamente)",
+      "back": "← Voltar aos meus popquiz",
+      "shorten": "…"
+    },
+    "errors": {
+      "noQuiz": "Crie antes um quiz em Meus projetos.",
+      "titleRequired": "Dê um título ao seu popquiz.",
+      "titleEmpty": "O título não pode ficar vazio.",
+      "uploadFirst": "Importe um vídeo antes de publicar.",
+      "urlInvalid": "Cole uma URL válida do YouTube, Vimeo ou .mp4.",
+      "saveFailed": "Erro ao salvar",
+      "networkError": "Erro de rede",
+      "planLimit": "Limite do plano gratuito atingido."
+    },
+    "toasts": {
+      "linkCopied": "Link copiado",
+      "copyLinkFailed": "Não foi possível copiar o link",
+      "copyFailed": "Não foi possível copiar",
+      "codeCopied": "Código copiado",
+      "published": "Popquiz publicado",
+      "draftSaved": "Rascunho salvo",
+      "thumbnailFailed": "Popquiz criado, mas o envio da miniatura falhou. Tente novamente pelo editor.",
+      "publishedWithLink": "Popquiz publicado — compartilhe o link com seu público",
+      "unpublished": "Popquiz despublicado — não está mais visível publicamente",
+      "modificationsSaved": "Modificações salvas"
+    }
   }
 }

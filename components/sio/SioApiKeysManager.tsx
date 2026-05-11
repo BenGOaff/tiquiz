@@ -10,6 +10,7 @@
 // these to messages/*.json under the `settings.sioKeys*` namespace.
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +30,7 @@ interface SioKey {
 }
 
 export default function SioApiKeysManager() {
+  const t = useTranslations("sio.keysManager");
   const [keys, setKeys] = useState<SioKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -45,7 +47,7 @@ export default function SioApiKeysManager() {
       const data = await res.json();
       if (data.ok) setKeys(data.keys ?? []);
     } catch {
-      toast.error("Impossible de charger tes clés.");
+      toast.error(t("toastLoadError"));
     } finally {
       setLoading(false);
     }
@@ -55,7 +57,7 @@ export default function SioApiKeysManager() {
 
   async function handleCreate() {
     if (!newName.trim() || !newKey.trim()) {
-      toast.error("Renseigne le nom et la clé.");
+      toast.error(t("errorNameAndKeyRequired"));
       return;
     }
     setSubmitting(true);
@@ -68,26 +70,26 @@ export default function SioApiKeysManager() {
       const data = await res.json();
       if (!data.ok) {
         const errMap: Record<string, string> = {
-          INVALID_KEY: "Clé refusée par Systeme.io. Régénère-la depuis ton compte SIO et réessaie.",
-          RATE_LIMITED: "Systeme.io te demande de patienter (trop de requêtes). Réessaie dans 1 minute.",
-          SIO_DOWN: "Systeme.io est momentanément indisponible. Réessaie dans quelques minutes.",
-          NETWORK_ERROR: "Connexion impossible à Systeme.io. Vérifie ta connexion ou réessaie.",
-          SERVER_MISCONFIGURED: "Erreur de configuration côté serveur. Contacte le support.",
-          NAME_TAKEN: "Tu as déjà une clé avec ce nom.",
-          NAME_REQUIRED: "Renseigne le nom et la clé.",
-          KEY_REQUIRED: "Renseigne le nom et la clé.",
-          VALIDATION_FAILED: "La validation a échoué. Réessaie dans quelques instants.",
+          INVALID_KEY: t("errorInvalidKey"),
+          RATE_LIMITED: t("errorRateLimited"),
+          SIO_DOWN: t("errorSioDown"),
+          NETWORK_ERROR: t("errorNetwork"),
+          SERVER_MISCONFIGURED: t("errorServerMisconfigured"),
+          NAME_TAKEN: t("errorNameTaken"),
+          NAME_REQUIRED: t("errorNameAndKeyRequired"),
+          KEY_REQUIRED: t("errorNameAndKeyRequired"),
+          VALIDATION_FAILED: t("errorValidationFailed"),
         };
-        toast.error(errMap[data.error] ?? "Une erreur est survenue.");
+        toast.error(errMap[data.error] ?? t("errorGeneric"));
         return;
       }
-      toast.success("Clé ajoutée et validée.");
+      toast.success(t("toastCreated"));
       setNewName("");
       setNewKey("");
       setAdding(false);
       await load();
     } catch {
-      toast.error("Erreur réseau.");
+      toast.error(t("errorNetworkGeneric"));
     } finally {
       setSubmitting(false);
     }
@@ -102,10 +104,10 @@ export default function SioApiKeysManager() {
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
-      toast.success("Clé définie par défaut.");
+      toast.success(t("toastSetDefault"));
       await load();
     } catch {
-      toast.error("Une erreur est survenue.");
+      toast.error(t("errorGeneric"));
     }
   }
 
@@ -122,27 +124,27 @@ export default function SioApiKeysManager() {
       });
       const data = await res.json();
       if (!data.ok) {
-        toast.error(data.error === "NAME_TAKEN" ? "Tu as déjà une clé avec ce nom." : "Une erreur est survenue.");
+        toast.error(data.error === "NAME_TAKEN" ? t("errorNameTaken") : t("errorGeneric"));
         return;
       }
-      toast.success("Clé renommée.");
+      toast.success(t("toastRenamed"));
       setEditingId(null);
       await load();
     } catch {
-      toast.error("Erreur réseau.");
+      toast.error(t("errorNetworkGeneric"));
     }
   }
 
   async function handleDelete(id: string, name: string) {
-    if (!confirm(`Supprimer la clé « ${name} » ? Les quiz qui l'utilisaient basculeront sur ta clé par défaut.`)) return;
+    if (!confirm(t("confirmDelete", { name }))) return;
     try {
       const res = await fetch(`/api/sio-api-keys/${id}`, { method: "DELETE" });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
-      toast.success("Clé supprimée.");
+      toast.success(t("toastDeleted"));
       await load();
     } catch {
-      toast.error("Une erreur est survenue.");
+      toast.error(t("errorGeneric"));
     }
   }
 
@@ -151,21 +153,21 @@ export default function SioApiKeysManager() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <KeyRound className="h-5 w-5 text-primary" />
-          Clés API Systeme.io
+          {t("title")}
         </CardTitle>
         <CardDescription>
-          Connecte plusieurs comptes Systeme.io (un par client). Tu choisis ensuite quelle clé chaque quiz utilise.
+          {t("description")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Chargement…
+            {t("loading")}
           </div>
         ) : keys.length === 0 ? (
           <div className="text-sm text-muted-foreground py-4 text-center border-2 border-dashed rounded-lg">
-            Aucune clé enregistrée.
+            {t("emptyState")}
           </div>
         ) : (
           <ul className="space-y-2">
@@ -204,7 +206,7 @@ export default function SioApiKeysManager() {
                       {k.is_default && (
                         <Badge variant="secondary" className="text-[10px]">
                           <Star className="h-3 w-3 mr-0.5" />
-                          Par défaut
+                          {t("defaultBadge")}
                         </Badge>
                       )}
                       {k.last4 && (
@@ -222,7 +224,7 @@ export default function SioApiKeysManager() {
                         size="icon"
                         variant="ghost"
                         className="h-8 w-8"
-                        title="Définir par défaut"
+                        title={t("setDefaultTitle")}
                         onClick={() => handleSetDefault(k.id)}
                       >
                         <StarOff className="h-4 w-4" />
@@ -232,7 +234,7 @@ export default function SioApiKeysManager() {
                       size="icon"
                       variant="ghost"
                       className="h-8 w-8"
-                      title="Renommer"
+                      title={t("renameTitle")}
                       onClick={() => { setEditingId(k.id); setEditName(k.name); }}
                     >
                       <Pencil className="h-4 w-4" />
@@ -241,7 +243,7 @@ export default function SioApiKeysManager() {
                       size="icon"
                       variant="ghost"
                       className="h-8 w-8 text-destructive hover:text-destructive"
-                      title="Supprimer"
+                      title={t("deleteTitle")}
                       onClick={() => handleDelete(k.id, k.name)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -256,17 +258,17 @@ export default function SioApiKeysManager() {
         {adding ? (
           <div className="space-y-3 border rounded-lg p-3 bg-muted/30">
             <div>
-              <Label>Nom (mémo)</Label>
+              <Label>{t("nameLabel")}</Label>
               <Input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="Ex : Mon compte, Client Marie"
+                placeholder={t("namePlaceholder")}
                 className="mt-1.5"
                 maxLength={80}
               />
             </div>
             <div>
-              <Label>Clé API</Label>
+              <Label>{t("keyLabel")}</Label>
               <Input
                 value={newKey}
                 onChange={(e) => setNewKey(e.target.value)}
@@ -275,23 +277,23 @@ export default function SioApiKeysManager() {
                 className="mt-1.5 font-mono"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                On vérifie la clé auprès de Systeme.io avant de l&apos;enregistrer.
+                {t("keyHelper")}
               </p>
             </div>
             <div className="flex items-center gap-2 justify-end">
               <Button variant="ghost" size="sm" onClick={() => { setAdding(false); setNewName(""); setNewKey(""); }} disabled={submitting}>
-                Annuler
+                {t("cancel")}
               </Button>
               <Button size="sm" onClick={handleCreate} disabled={submitting} className="rounded-full">
                 {submitting ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Plus className="h-4 w-4 mr-1.5" />}
-                Ajouter
+                {t("add")}
               </Button>
             </div>
           </div>
         ) : (
           <Button variant="outline" size="sm" onClick={() => setAdding(true)} className="rounded-full">
             <Plus className="h-4 w-4 mr-1.5" />
-            Ajouter une clé
+            {t("addKey")}
           </Button>
         )}
       </CardContent>

@@ -35,16 +35,12 @@ export interface UploadClaims {
   app: typeof POPQUIZ_APP;
   videoId: string;
   ext: string; // already validated against ALLOWED_EXT below
-<<<<<<< HEAD
-  kind: "source" | "thumbnail";
-=======
   // - source : the actual video file
   // - thumbnail : the auto-extracted poster (set once at upload time)
   // - thumbnail-custom : a user-uploaded poster that overrides the auto
   //   one. Stored at thumbnail-custom.<ext> so the auto poster is kept
   //   on disk and the user can revert to it without re-uploading.
   kind: "source" | "thumbnail" | "thumbnail-custom";
->>>>>>> origin/claude/setup-tipote-dev-AgOac
 }
 
 const SAFE_EXT = /^[a-z0-9]{1,8}$/;
@@ -57,14 +53,10 @@ const ALLOWED_SOURCE_EXT = new Set([
 ]);
 const ALLOWED_THUMB_EXT = new Set(["jpg", "jpeg", "png", "webp"]);
 
-<<<<<<< HEAD
-export function normalizeExt(name: string, kind: "source" | "thumbnail"): string | null {
-=======
 export function normalizeExt(
   name: string,
   kind: "source" | "thumbnail" | "thumbnail-custom",
 ): string | null {
->>>>>>> origin/claude/setup-tipote-dev-AgOac
   const i = name.lastIndexOf(".");
   if (i < 0 || i === name.length - 1) return null;
   const ext = name.slice(i + 1).toLowerCase().replace(/[^a-z0-9]/g, "");

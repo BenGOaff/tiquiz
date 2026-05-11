@@ -21,6 +21,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   autosaveKey,
   saveAutosave,
@@ -101,6 +102,7 @@ function TimelineStrip({
   onRemove: (localId: string) => void;
   primaryColor: string;
 }) {
+  const t = useTranslations("popquizEditor");
   const ref = useRef<HTMLDivElement>(null);
   const [hoverPct, setHoverPct] = useState<number | null>(null);
 
@@ -109,9 +111,7 @@ function TimelineStrip({
   function handleClick(e: React.MouseEvent<HTMLDivElement>) {
     if (!ref.current) return;
     if (!usableDuration) {
-      toast.message(
-        "Lance la lecture une seconde pour que la durée de la vidéo soit détectée.",
-      );
+      toast.message(t("timeline.startPlayback"));
       return;
     }
     const rect = ref.current.getBoundingClientRect();
@@ -128,11 +128,11 @@ function TimelineStrip({
   return (
     <div className="space-y-2">
       <div className="flex items-baseline justify-between gap-3">
-        <Label className="text-sm">Timeline</Label>
+        <Label className="text-sm">{t("timeline.label")}</Label>
         <span className="text-[11px] text-muted-foreground">
           {usableDuration
-            ? "Clique sur la barre pour ajouter un marqueur"
-            : "Lance la lecture pour activer la barre"}
+            ? t("timeline.hintActive")
+            : t("timeline.hintIdle")}
         </span>
       </div>
       <div
@@ -145,7 +145,7 @@ function TimelineStrip({
         }`}
         role="button"
         tabIndex={usableDuration ? 0 : -1}
-        aria-label="Cliquer pour ajouter un marqueur"
+        aria-label={t("timeline.aria.add")}
       >
         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted-foreground">
           0:00
@@ -185,8 +185,8 @@ function TimelineStrip({
                   }}
                   className="group absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-3 rounded-full ring-2 ring-white shadow-md hover:scale-125 transition-transform"
                   style={{ left: `${pct}%`, background: primaryColor }}
-                  title={`Marqueur à ${formatMs(c.timestampMs)} — cliquer pour supprimer`}
-                  aria-label={`Marqueur à ${formatMs(c.timestampMs)}, cliquer pour supprimer`}
+                  title={t("timeline.markerTitle", { time: formatMs(c.timestampMs) })}
+                  aria-label={t("timeline.markerAria", { time: formatMs(c.timestampMs) })}
                 />
               );
             })
@@ -205,6 +205,7 @@ export default function PopquizEditClient({
   popquiz: Popquiz;
   quizzes: QuizOption[];
 }) {
+  const t = useTranslations("popquizEditor");
   const router = useRouter();
   const [title, setTitle] = useState(popquiz.title);
   const [slug, setSlug] = useState(popquiz.slug ?? "");
@@ -372,7 +373,7 @@ export default function PopquizEditClient({
 
   function addCueAt(timestampMs: number) {
     if (quizzes.length === 0) {
-      setError("Crée d'abord un quiz dans Mes projets.");
+      setError(t("errors.noQuiz"));
       return;
     }
     setError(null);
@@ -418,7 +419,7 @@ export default function PopquizEditClient({
   async function handleSave(nextPublished?: boolean) {
     setError(null);
     if (!title.trim()) {
-      setError("Le titre ne peut pas être vide.");
+      setError(t("errors.titleEmpty"));
       return;
     }
     const willPublish = nextPublished ?? isPublished;
@@ -453,7 +454,7 @@ export default function PopquizEditClient({
       });
       const json = await res.json();
       if (!json.ok) {
-        setError(json.error ?? "Erreur lors de la sauvegarde");
+        setError(json.error ?? t("errors.saveFailed"));
         return;
       }
       // Save serveur OK → on nettoie l'autosave local pour ne pas
@@ -464,17 +465,17 @@ export default function PopquizEditClient({
       // immédiatement le nouveau statut sans attendre router.refresh().
       setIsPublished(willPublish);
       if (willPublish && !popquiz.isPublished) {
-        toast.success("Popquiz publié — partage le lien à ton audience");
+        toast.success(t("toasts.publishedWithLink"));
       } else if (!willPublish && popquiz.isPublished) {
-        toast.success("Popquiz dépublié — il n'est plus visible publiquement");
+        toast.success(t("toasts.unpublished"));
       } else {
-        toast.success("Modifications enregistrées");
+        toast.success(t("toasts.modificationsSaved"));
       }
       // Soft-refresh so the server-rendered shell picks up the new
       // slug / publish state without a full reload.
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur réseau");
+      setError(e instanceof Error ? e.message : t("errors.networkError"));
     } finally {
       setSaving(false);
     }
@@ -494,10 +495,10 @@ export default function PopquizEditClient({
     try {
       await navigator.clipboard.writeText(publicUrl);
       setCopiedUrl(true);
-      toast.success("Lien copié");
+      toast.success(t("toasts.linkCopied"));
       setTimeout(() => setCopiedUrl(false), 2000);
     } catch {
-      toast.error("Impossible de copier");
+      toast.error(t("toasts.copyFailed"));
     }
   }
 
@@ -505,10 +506,10 @@ export default function PopquizEditClient({
     try {
       await navigator.clipboard.writeText(embedSnippet);
       setCopiedEmbed(true);
-      toast.success("Code copié");
+      toast.success(t("toasts.codeCopied"));
       setTimeout(() => setCopiedEmbed(false), 2000);
     } catch {
-      toast.error("Impossible de copier");
+      toast.error(t("toasts.copyFailed"));
     }
   }
 
@@ -567,22 +568,22 @@ export default function PopquizEditClient({
   );
 
   return (
-    <AppShell userEmail={userEmail} headerTitle="Modifier le popquiz" contentClassName="flex-1">
+    <AppShell userEmail={userEmail} headerTitle={t("header.editTitle")} contentClassName="flex-1">
       <PageContainer>
       <PageBanner
         icon={<Video className="h-5 w-5" />}
-        title={title || "Popquiz"}
+        title={title || t("banner.editFallback")}
         subtitle={
           isPublished
-            ? "Publié — visible à l'adresse partagée."
-            : "Brouillon — non visible publiquement."
+            ? t("banner.publishedSubtitle")
+            : t("banner.draftSubtitle")
         }
       />
 
       <Card>
         <CardContent className="py-5 space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="title">Titre</Label>
+            <Label htmlFor="title">{t("title.label")}</Label>
             <Input
               id="title"
               value={title}
@@ -592,21 +593,21 @@ export default function PopquizEditClient({
 
           <div className="space-y-1.5">
             <Label htmlFor="description">
-              Description{" "}
+              {t("description.label")}{" "}
               <span className="text-muted-foreground font-normal">
-                (optionnelle, utilisée dans les aperçus de partage)
+                {t("description.optional")}
               </span>
             </Label>
             <Input
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Explique en une phrase ce que la vidéo apporte"
+              placeholder={t("description.placeholder")}
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label>Vidéo source</Label>
+            <Label>{t("source.readonlyLabel")}</Label>
             <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
               <Video className="size-4 text-muted-foreground shrink-0" />
               <span className="flex-1 min-w-0 truncate text-muted-foreground">
@@ -617,8 +618,7 @@ export default function PopquizEditClient({
               </span>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Pour changer de vidéo, supprime ce popquiz et crées-en un
-              nouveau.
+              {t("source.readonlyHelp")}
             </p>
           </div>
 
@@ -639,9 +639,9 @@ export default function PopquizEditClient({
 
           <div className="space-y-1.5">
             <Label htmlFor="slug">
-              Lien personnalisé{" "}
+              {t("slug.label")}{" "}
               <span className="text-muted-foreground font-normal">
-                (optionnel)
+                {t("slug.optional")}
               </span>
             </Label>
             <div className="flex items-stretch rounded-md border bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring">
@@ -652,14 +652,13 @@ export default function PopquizEditClient({
                 id="slug"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
-                placeholder="onboarding-q1"
+                placeholder={t("slug.placeholder")}
                 className="flex-1 px-3 py-1.5 text-sm bg-transparent outline-none"
                 autoComplete="off"
               />
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Lettres minuscules, chiffres et tirets. Vide → on retombe
-              sur l'identifiant généré.
+              {t("slug.helpEdit")}
             </p>
           </div>
 
@@ -683,12 +682,12 @@ export default function PopquizEditClient({
             </span>
             <div className="flex-1">
               <p className="text-sm font-medium">
-                {isPublished ? "Publié" : "Brouillon"}
+                {isPublished ? t("status.published") : t("status.draft")}
               </p>
               <p className="text-xs text-muted-foreground">
                 {isPublished
-                  ? "Toute personne avec le lien peut voir la vidéo. Utilise « Dépublier » plus bas pour la cacher."
-                  : "Personne d'autre que toi ne peut voir la vidéo. Utilise « Publier » plus bas pour la rendre visible."}
+                  ? t("status.helpPublished")
+                  : t("status.helpDraft")}
               </p>
             </div>
           </div>
@@ -735,10 +734,9 @@ export default function PopquizEditClient({
           <CardContent className="py-5 space-y-4">
             <div className="flex items-start justify-between gap-2 flex-wrap">
               <div>
-                <h2 className="text-base font-semibold">Aperçu de la vidéo</h2>
+                <h2 className="text-base font-semibold">{t("preview.title")}</h2>
                 <p className="text-[11px] text-muted-foreground">
-                  Reflète l&apos;apparence en temps réel. Place les
-                  marqueurs en cliquant sur la timeline.
+                  {t("preview.help")}
                 </p>
               </div>
               {/* Toggle direct/iframe — simule les 2 rendus côté visiteur. */}
@@ -753,7 +751,7 @@ export default function PopquizEditClient({
                   }`}
                 >
                   <LinkIcon className="size-3" />
-                  Lien direct
+                  {t("preview.modeDirect")}
                 </button>
                 <button
                   type="button"
@@ -765,7 +763,7 @@ export default function PopquizEditClient({
                   }`}
                 >
                   <SquareIcon className="size-3" />
-                  Iframe
+                  {t("preview.modeIframe")}
                 </button>
               </div>
             </div>
@@ -791,14 +789,14 @@ export default function PopquizEditClient({
                     value={displayTitle}
                     onChange={setDisplayTitle}
                     singleLine
-                    placeholder="Clique pour ajouter un titre"
+                    placeholder={t("preview.titlePh")}
                     className="tiquiz-rich text-base font-bold text-white drop-shadow-sm"
                   />
                   <RichTextEdit
                     value={displaySubtitle}
                     onChange={setDisplaySubtitle}
                     singleLine
-                    placeholder="Clique pour ajouter un sous-titre"
+                    placeholder={t("preview.subtitlePh")}
                     className="tiquiz-rich text-xs text-white/80"
                   />
                 </div>
@@ -816,15 +814,17 @@ export default function PopquizEditClient({
                       <div className="absolute inset-0 grid place-items-center p-4">
                         <div className="max-w-sm w-full rounded-xl bg-white shadow-2xl p-4 space-y-2">
                           <h4 className="text-sm font-semibold">
-                            Marqueur à {formatMs(cue.timestampMs)} —{" "}
-                            {linked?.title ?? "Quiz inconnu"}
+                            {t("markers.overlayTitle", {
+                              time: formatMs(cue.timestampMs),
+                              quiz: linked?.title ?? t("markers.unknownQuiz"),
+                            })}
                           </h4>
                           <p className="text-xs text-muted-foreground">
-                            En lecture finale, le quiz s&apos;affichera ici.
+                            {t("markers.overlayHelp")}
                           </p>
                           {cue.behavior === "optional" ? (
                             <Button size="sm" variant="outline" onClick={onSkipped}>
-                              Passer
+                              {t("markers.skip")}
                             </Button>
                           ) : null}
                         </div>
@@ -849,9 +849,9 @@ export default function PopquizEditClient({
             <div className="space-y-2 pt-2 border-t">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold">Marqueurs</h3>
+                  <h3 className="text-sm font-semibold">{t("markers.title")}</h3>
                   <p className="text-[11px] text-muted-foreground">
-                    Le quiz se déclenche à ce moment.
+                    {t("markers.help")}
                   </p>
                 </div>
                 <Button
@@ -861,13 +861,13 @@ export default function PopquizEditClient({
                   }
                   type="button"
                 >
-                  <Plus className="size-4 mr-1" /> Ajouter
+                  <Plus className="size-4 mr-1" /> {t("markers.add")}
                 </Button>
               </div>
 
               {cues.length === 0 ? (
                 <p className="text-xs text-muted-foreground py-3 text-center">
-                  Aucun marqueur. Clique sur la timeline ou sur « Ajouter ».
+                  {t("markers.empty")}
                 </p>
               ) : (
                 <ul className="space-y-2">
@@ -891,21 +891,21 @@ export default function PopquizEditClient({
                             })
                           }
                           className="w-20"
-                          aria-label="Timestamp en secondes"
+                          aria-label={t("markers.aria.timestamp")}
                         />
-                        <span className="text-xs text-muted-foreground">s</span>
+                        <span className="text-xs text-muted-foreground">{t("markers.secondsUnit")}</span>
                         <select
                           value={cue.quizId}
                           onChange={(e) =>
                             updateCue(cue.localId, { quizId: e.target.value })
                           }
                           className="flex-1 min-w-[160px] h-9 rounded-md border bg-background px-2 text-sm"
-                          aria-label="Quiz lié"
+                          aria-label={t("markers.aria.quiz")}
                         >
                           {quizzes.map((q) => (
                             <option key={q.id} value={q.id}>
                               {q.title}
-                              {q.status !== "active" ? " (brouillon)" : ""}
+                              {q.status !== "active" ? ` ${t("markers.draftSuffix")}` : ""}
                             </option>
                           ))}
                         </select>
@@ -917,14 +917,14 @@ export default function PopquizEditClient({
                             })
                           }
                           className="h-9 rounded-md border bg-background px-2 text-sm"
-                          aria-label="Comportement"
+                          aria-label={t("markers.aria.behavior")}
                         >
-                          <option value="block">Bloquant</option>
-                          <option value="optional">Optionnel</option>
+                          <option value="block">{t("markers.behavior.block")}</option>
+                          <option value="optional">{t("markers.behavior.optional")}</option>
                         </select>
                         {isDraftQuiz ? (
                           <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
-                            Brouillon
+                            {t("markers.draftBadgeEdit")}
                           </span>
                         ) : null}
                         <Button
@@ -932,7 +932,7 @@ export default function PopquizEditClient({
                           variant="ghost"
                           type="button"
                           onClick={() => removeCue(cue.localId)}
-                          aria-label="Supprimer"
+                          aria-label={t("markers.aria.remove")}
                         >
                           <Trash2 className="size-4" />
                         </Button>
@@ -953,15 +953,15 @@ export default function PopquizEditClient({
         <Card>
           <CardContent className="py-5 space-y-4">
             <div>
-              <h2 className="text-base font-semibold">Partage & intégration</h2>
+              <h2 className="text-base font-semibold">{t("share.title")}</h2>
               <p className="text-xs text-muted-foreground">
-                Lien direct à partager ou code à coller dans une page.
+                {t("share.help")}
               </p>
             </div>
 
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                Lien direct
+                {t("share.linkLabel")}
               </Label>
               <div className="flex items-center gap-1.5 rounded-lg border bg-muted/40 p-1.5">
                 <code className="text-xs flex-1 min-w-0 truncate font-mono px-2">
@@ -985,7 +985,7 @@ export default function PopquizEditClient({
 
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                Code d'intégration
+                {t("share.embedLabel")}
               </Label>
               <textarea
                 readOnly
@@ -1004,12 +1004,12 @@ export default function PopquizEditClient({
                 {copiedEmbed ? (
                   <>
                     <Check className="size-4 mr-2 text-green-600" />
-                    Code copié
+                    {t("share.codeCopied")}
                   </>
                 ) : (
                   <>
                     <Copy className="size-4 mr-2" />
-                    Copier le code
+                    {t("share.copyCode")}
                   </>
                 )}
               </Button>
@@ -1022,7 +1022,7 @@ export default function PopquizEditClient({
                 rel="noopener noreferrer"
               >
                 <ExternalLink className="size-4 mr-2" />
-                Ouvrir la page publique
+                {t("share.openPublic")}
               </a>
             </Button>
           </CardContent>
@@ -1048,7 +1048,7 @@ export default function PopquizEditClient({
           type="button"
           className="mr-auto"
         >
-          ← Retour à mes popquiz
+          {t("actions.back")}
         </Button>
 
         {isPublished ? (
@@ -1058,14 +1058,14 @@ export default function PopquizEditClient({
               disabled={saving}
               onClick={() => handleSave(false)}
               type="button"
-              title="Repasser ce popquiz en brouillon (plus accessible publiquement)"
+              title={t("actions.unpublishTitle")}
             >
               <EyeOff className="size-4 mr-2" />
-              {saving ? "…" : "Dépublier"}
+              {saving ? t("actions.shorten") : t("actions.unpublish")}
             </Button>
             <Button disabled={saving} onClick={() => handleSave(true)} type="button">
               <Save className="size-4 mr-2" />
-              {saving ? "Enregistrement…" : "Enregistrer les modifications"}
+              {saving ? t("actions.saving") : t("actions.saveModifications")}
             </Button>
           </>
         ) : (
@@ -1075,14 +1075,14 @@ export default function PopquizEditClient({
               disabled={saving}
               onClick={() => handleSave(false)}
               type="button"
-              title="Sauvegarder en brouillon (pas encore visible publiquement)"
+              title={t("actions.saveDraftTitle")}
             >
               <Save className="size-4 mr-2" />
-              {saving ? "…" : "Enregistrer brouillon"}
+              {saving ? t("actions.shorten") : t("actions.saveDraft")}
             </Button>
             <Button disabled={saving} onClick={() => handleSave(true)} type="button">
               <Sparkles className="size-4 mr-2" />
-              {saving ? "Publication…" : "Publier"}
+              {saving ? t("actions.publishing") : t("actions.publish")}
             </Button>
           </>
         )}

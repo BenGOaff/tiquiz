@@ -8,6 +8,7 @@
 // Strings hardcoded FR for now — i18n later under quizSioKey.* namespace.
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { KeyRound, Loader2, ExternalLink } from "lucide-react";
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export default function QuizSioKeyPicker({ quizId }: Props) {
+  const t = useTranslations("sio.keyPicker");
   const [keys, setKeys] = useState<SioKey[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -57,9 +59,9 @@ export default function QuizSioKeyPicker({ quizId }: Props) {
       });
       const data = await res.json();
       if (!data.ok) throw new Error(data.error);
-      toast.success("Clé du quiz mise à jour.");
+      toast.success(t("toastUpdated"));
     } catch {
-      toast.error("Impossible de mettre à jour.");
+      toast.error(t("toastUpdateError"));
     } finally {
       setSaving(false);
     }
@@ -70,7 +72,7 @@ export default function QuizSioKeyPicker({ quizId }: Props) {
       <Card>
         <CardContent className="flex items-center gap-2 text-sm text-muted-foreground py-6">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Chargement…
+          {t("loading")}
         </CardContent>
       </Card>
     );
@@ -82,15 +84,15 @@ export default function QuizSioKeyPicker({ quizId }: Props) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <KeyRound className="h-5 w-5 text-primary" />
-            Clé Systeme.io de ce quiz
+            {t("title")}
           </CardTitle>
           <CardDescription>
-            Choisis quelle clé API utiliser pour synchroniser les leads de ce quiz.
+            {t("description")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <a href="/settings?tab=systemeio" className="text-sm text-primary inline-flex items-center gap-1 hover:underline">
-            Configure d&apos;abord une clé Systeme.io <ExternalLink className="h-3.5 w-3.5" />
+            {t("configureFirst")} <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </CardContent>
       </Card>
@@ -104,14 +106,14 @@ export default function QuizSioKeyPicker({ quizId }: Props) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <KeyRound className="h-5 w-5 text-primary" />
-          Clé Systeme.io de ce quiz
+          {t("title")}
         </CardTitle>
         <CardDescription>
-          Choisis quelle clé API utiliser pour synchroniser les leads de ce quiz.
+          {t("description")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-2">
-        <Label>Clé à utiliser</Label>
+        <Label>{t("selectLabel")}</Label>
         <div className="flex items-center gap-2">
           <select
             value={selectedId}
@@ -120,7 +122,7 @@ export default function QuizSioKeyPicker({ quizId }: Props) {
             className="flex-1 border border-input rounded-lg px-3 py-2 text-sm bg-background"
           >
             <option value="">
-              {defaultKey ? `Ma clé par défaut (${defaultKey.name})` : "Ma clé par défaut"}
+              {defaultKey ? t("optionDefaultNamed", { name: defaultKey.name }) : t("optionDefault")}
             </option>
             {keys.map((k) => (
               <option key={k.id} value={k.id}>
@@ -130,7 +132,7 @@ export default function QuizSioKeyPicker({ quizId }: Props) {
           </select>
           {saving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </div>
-        <p className="text-xs text-muted-foreground">Tu peux changer à tout moment.</p>
+        <p className="text-xs text-muted-foreground">{t("hint")}</p>
       </CardContent>
     </Card>
   );

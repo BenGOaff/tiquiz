@@ -7,6 +7,7 @@
 // to both at once.
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,6 +44,7 @@ export function EmbedCodeDialog({
   onOpenChange: (open: boolean) => void;
   embedUrl: string;
 }) {
+  const t = useTranslations("popquizEmbed");
   const [copied, setCopied] = useState(false);
   const snippet = buildEmbedSnippet(embedUrl);
 
@@ -50,10 +52,10 @@ export function EmbedCodeDialog({
     try {
       await navigator.clipboard.writeText(snippet);
       setCopied(true);
-      toast.success("Code copié");
+      toast.success(t("toastCopied"));
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Impossible de copier");
+      toast.error(t("toastCopyFailed"));
     }
   }
 
@@ -61,11 +63,9 @@ export function EmbedCodeDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader className="space-y-1">
-          <DialogTitle className="text-base">Code d'intégration</DialogTitle>
+          <DialogTitle className="text-base">{t("title")}</DialogTitle>
           <DialogDescription className="text-sm">
-            Colle ce code dans une page WordPress, Systeme.io ou tout site
-            qui accepte du HTML. Le player s'adapte à toutes les largeurs en
-            gardant un format 16:9.
+            {t("description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -81,20 +81,21 @@ export function EmbedCodeDialog({
             {copied ? (
               <>
                 <Check className="size-4 mr-2 text-green-200" />
-                Code copié
+                {t("copiedLabel")}
               </>
             ) : (
               <>
                 <Copy className="size-4 mr-2" />
-                Copier le code
+                {t("copyButton")}
               </>
             )}
           </Button>
         </div>
 
         <p className="text-[11px] text-muted-foreground">
-          Largeur max 900&nbsp;px par défaut. Retire <code>max-width</code>{" "}
-          pour un player pleine largeur.
+          {t.rich("widthHint", {
+            code: (chunks) => <code>{chunks}</code>,
+          })}
         </p>
       </DialogContent>
     </Dialog>

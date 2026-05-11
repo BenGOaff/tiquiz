@@ -207,14 +207,6 @@ async function attachUploadSignedUrls(
 ): Promise<Popquiz> {
   const v = popquiz.video;
 
-<<<<<<< HEAD
-  const signedSrc = v.storagePath
-    ? await mintPlaybackUrl(v.storagePath)
-    : v.externalUrl;
-  const signedThumb = storedThumbnailPath
-    ? await mintPlaybackUrl(storedThumbnailPath)
-    : v.thumbnailUrl;
-=======
   // Custom thumbnail signing : si l'user a uploadé une vignette
   // perso, on la signe — peu importe la source de la vidéo (YouTube,
   // Vimeo, URL ou upload). Sinon on retombe sur la vignette par
@@ -234,7 +226,6 @@ async function attachUploadSignedUrls(
       video: { ...v, externalUrl: signedSrc, thumbnailUrl: signedThumb },
     };
   }
->>>>>>> origin/claude/setup-tipote-dev-AgOac
 
   // YouTube / Vimeo / URL : la source vidéo reste telle quelle
   // (publique, gérée par le player Vidstack), seule la vignette

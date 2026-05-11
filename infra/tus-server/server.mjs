@@ -38,11 +38,7 @@ const APP_RE = /^(tipote|tiquiz)$/;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EXT_RE = /^[a-z0-9]{1,8}$/;
-<<<<<<< HEAD
-const KIND_RE = /^(source|thumbnail)$/;
-=======
 const KIND_RE = /^(source|thumbnail|thumbnail-custom)$/;
->>>>>>> origin/claude/setup-tipote-dev-AgOac
 
 function httpError(status, message) {
   const err = new Error(message);
@@ -89,16 +85,12 @@ function verifyAuth(req) {
 }
 
 function relPathFromClaims(c) {
-<<<<<<< HEAD
-  const fname = c.kind === "thumbnail" ? `thumbnail.${c.ext}` : `source.${c.ext}`;
-=======
   const filenameByKind = {
     source: `source.${c.ext}`,
     thumbnail: `thumbnail.${c.ext}`,
     "thumbnail-custom": `thumbnail-custom.${c.ext}`,
   };
   const fname = filenameByKind[c.kind] ?? `source.${c.ext}`;
->>>>>>> origin/claude/setup-tipote-dev-AgOac
   return path.posix.join(c.app, "raw", c.sub, c.videoId, fname);
 }
 
@@ -112,13 +104,8 @@ const tus = new Server({
     if (!c) throw httpError(401, "Missing claims");
     return relPathFromClaims(c);
   },
-<<<<<<< HEAD
   generateUrl(_req, { proto, host, baseUrl, path: p, id }) {
     return `${proto}://${host}${baseUrl}${p}/${encodeURIComponent(id)}`;
-=======
-  generateUrl(_req, { proto, host, path: p, id }) {
-    return `${proto}://${host}${p}/${encodeURIComponent(id)}`;
->>>>>>> origin/claude/setup-tipote-dev-AgOac
   },
   getFileIdFromRequest(req) {
     const u = req.url || "";
