@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { resolveQuizBranding } from "@/lib/quizBranding";
 import { resolveApiKey } from "@/lib/sio/resolveApiKey";
 import { isNewLeadLocked } from "@/lib/leadLock";
@@ -217,7 +218,26 @@ export async function GET(req: NextRequest, context: RouteContext) {
       return raw && UUID_RE.test(raw) ? raw : null;
     })();
 
-    const quizId = await resolveQuizId(admin, slugOrId, { requireActive: !embedToken });
+    // Owner preview path : si l'user est authentifié et propriétaire
+    // du quiz, on l'autorise à voir ses brouillons via l'URL publique
+    // (clic "Aperçu" depuis l'éditeur). Avant ce fix le filtre
+    // status='active' renvoyait 404 même au créateur, donc il voyait
+    // un état vide et croyait qu'il n'y avait pas d'aperçu (bug
+    // Fabienne 2026-05-09 sur Tipote, port ici).
+    let authUserId: string | null = null;
+    try {
+      const supabase = await getSupabaseServerClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      authUserId = user?.id ?? null;
+    } catch {
+      // anonymous, fine
+    }
+
+    // Si l'user est connecté on relâche le filtre `requireActive`
+    // — la vérification d'ownership se fait juste après.
+    const quizId = await resolveQuizId(admin, slugOrId, {
+      requireActive: !embedToken && !authUserId,
+    });
     if (!quizId) {
       return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
     }
@@ -234,7 +254,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     }
 
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,user_id,title,introduction,cta_text,cta_url,start_button_text,privacy_url,consent_text,virality_enabled,bonus_description,bonus_intro_text,bonus_image_url,share_message,locale,address_form,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country,ask_first_name,ask_gender,slug,brand_font,brand_color_primary,brand_color_background,custom_footer_text,custom_footer_url,share_networks,og_description,og_image_url,result_insight_heading,result_projection_heading,mode,show_consent_checkbox").eq("id", quizId).maybeSingle(),
+      admin.from("quizzes").select("id,user_id,status,title,introduction,cta_text,cta_url,start_button_text,privacy_url,consent_text,virality_enabled,bonus_description,bonus_intro_text,bonus_image_url,bonus_unlocked_message,share_message,locale,address_form,views_count,capture_heading,capture_subtitle,capture_first_name,capture_last_name,capture_phone,capture_country,ask_first_name,ask_gender,slug,brand_font,brand_color_primary,brand_color_background,custom_footer_text,custom_footer_url,share_networks,og_description,og_image_url,result_insight_heading,result_projection_heading,mode,show_consent_checkbox").eq("id", quizId).maybeSingle(),
       admin.from("quiz_questions").select("id,question_text,options,sort_order,question_type,config").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,cta_text,cta_url,sort_order").eq("quiz_id", quizId).order("sort_order"),
     ]);
@@ -245,6 +265,23 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
     const quizRow = quizRes.data as Record<string, unknown>;
     const quizUserId = quizRow.user_id as string | undefined;
+    const quizStatus = String(quizRow.status ?? "");
+
+    // Validate status for non-embed paths : actif = public, draft =
+    // owner-preview only (l'embedToken a déjà été validé plus haut).
+    const isActive = quizStatus === "active";
+    let isOwnerPreview = false;
+    if (!isActive && !embedToken) {
+      if (authUserId && quizUserId && authUserId === quizUserId) {
+        isOwnerPreview = true;
+      } else {
+        return NextResponse.json(
+          { ok: false, error: "Quiz not found or inactive" },
+          { status: 404 },
+        );
+      }
+    }
+
     const quizAddressForm = quizRow.address_form as string | null;
     let addressForm = quizAddressForm === "tu" || quizAddressForm === "vous" ? quizAddressForm : "tu";
     let fallbackPrivacyUrl = "";
@@ -253,7 +290,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     if (quizUserId) {
       const { data: bp } = await admin
         .from("profiles")
-        .select("address_form, privacy_url, brand_logo_url, brand_font, brand_color_primary, plan")
+        .select("address_form, privacy_url, brand_logo_url, brand_font, brand_color_primary, plan, tipote_affiliate_id")
         .eq("user_id", quizUserId)
         .maybeSingle();
       profileRow = (bp as Record<string, unknown>) ?? null;
@@ -300,9 +337,14 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
     // Edge-SWR resilience for published quizzes: visitors keep seeing the quiz
     // even when origin is down (deploy / crash / DB hiccup) for up to 24h. Skip
-    // caching for embed previews (creator-only, evolving drafts).
-    const cacheHeaders: Record<string, string> = embedToken
-      ? { "Cache-Control": "private, no-store, max-age=0" }
+    // caching for embed previews + owner drafts (créateur-only,
+    // évolutifs). Sinon edge SWR comme avant.
+    const cacheHeaders: Record<string, string> = (embedToken || isOwnerPreview)
+      ? {
+          "Cache-Control": "private, no-store, max-age=0",
+          "CDN-Cache-Control": "no-store",
+          "Vercel-CDN-Cache-Control": "no-store",
+        }
       : {
           "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=86400",
           "CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
@@ -350,12 +392,19 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
     return NextResponse.json({
       ok: true,
+      // Flag remonté quand le quiz est servi en mode aperçu (créateur
+      // sur un quiz draft) — le client affiche un toast pour informer
+      // qu'il faut publier pour partager. Bug Fabienne 2026-05-09.
+      isDraftPreview: isOwnerPreview,
       quiz: {
         ...renderedQuiz,
         address_form: addressForm,
         privacy_url: effectivePrivacyUrl || null,
         custom_footer_text: isFr && typeof customFooterText === "string" ? (fr(customFooterText) as string) : customFooterText,
         custom_footer_url: customFooterUrl,
+        // Surfacé pour le footer "via Tiquiz" → tipote.fr/part-tiquiz?sa=<id>
+        // (tracking commission affilié quand le créateur l'a posé en Settings).
+        tipote_affiliate_id: (String(profileRow?.tipote_affiliate_id ?? "").trim() || null),
       },
       questions: renderedQuestions,
       results: renderedResults,

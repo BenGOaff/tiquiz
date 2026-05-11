@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Loader2, ArrowLeft, Gift, CheckCircle2, Copy, Check } from "lucide-react";
+import { toast } from "sonner";
 import {
   resolveQuizBranding,
   googleFontHref,
@@ -48,8 +49,11 @@ type QuizQuestion = {
 // can carry its native value shape (option index, numeric rating, free text).
 // Legacy multiple_choice quizzes always end up in the "option" branch, so
 // computeResult / SIO sync logic keeps working unchanged for them.
+// Multi-select is opt-in per question via config.multi_select=true; it adds
+// the "options" variant (plural) without touching the existing single path.
 type SurveyAnswer =
   | { kind: "option"; optionIndex: number }
+  | { kind: "options"; optionIndices: number[] }
   | { kind: "rating"; value: number }
   | { kind: "star"; value: number }
   | { kind: "text"; value: string };
@@ -82,6 +86,10 @@ type PublicQuizData = {
   bonus_description: string | null;
   bonus_image_url: string | null;
   bonus_intro_text?: string | null;
+  // Override for "Bonus unlocked!" message shown after share. Lets a
+  // creator deliver the bonus inline (e.g. discount code) without
+  // an email side-channel. JB feedback 2026-05-07.
+  bonus_unlocked_message?: string | null;
   share_message: string | null;
   share_networks?: string[] | null;
   locale: string | null;
@@ -103,6 +111,10 @@ type PublicQuizData = {
   ask_gender?: boolean | null;
   custom_footer_text?: string | null;
   custom_footer_url?: string | null;
+  // ID affilié Tipote — surfacé par /api/quiz/[id]/public depuis
+  // profiles.tipote_affiliate_id. Utilisé sur le footer Tiquiz par
+  // défaut pour ajouter ?sa=<id> au lien de découverte tipote.fr.
+  tipote_affiliate_id?: string | null;
   questions: QuizQuestion[];
   results: QuizResult[];
 };
@@ -710,12 +722,27 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
   const [step, setStep] = useState<Step>("intro");
   const [currentQ, setCurrentQ] = useState(0);
+  // Stable session id used to group per-question funnel events on
+  // the server side without storing anything identifying.
+  const sessionIdRef = useRef<string>("");
+  if (!sessionIdRef.current && typeof window !== "undefined") {
+    sessionIdRef.current =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `s-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+  const trackedQuestionViewsRef = useRef<Set<number>>(new Set());
   // One slot per question. Undefined = not yet answered (used to gate the
   // "next" button on free_text questions, where there's no auto-advance).
   const [answers, setAnswers] = useState<(SurveyAnswer | undefined)[]>([]);
   // Mirror state for the free_text textarea so it stays controlled while the
   // visitor types — only commits to `answers` when they tap "Next".
   const [freeTextDraft, setFreeTextDraft] = useState<string>("");
+  // Draft state for multi-select questions. Holds the currently-toggled option
+  // indices for the active question; commits to `answers` only when the user
+  // taps "Next". Reset whenever currentQ changes (handled in commitAnswer +
+  // an effect below) so each question starts blank.
+  const [multiOptionsDraft, setMultiOptionsDraft] = useState<number[]>([]);
 
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState(() => {
@@ -766,10 +793,32 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   }, [branding.font]);
 
   // ─── Root style applied to every step (font + brand color + background) ───
+  // CSS isolation: when this page is embedded on a third-party blog via
+  // iframe (srcdoc / sandbox quirks) or DOM-injected by a WordPress plugin
+  // that copies our HTML into their page, the host stylesheet can bleed in
+  // and override inherited properties — `color` in particular, which on
+  // sites with dark-mode or low-contrast brand styling renders our quiz
+  // text in faint gray (Imagelys 2026-05-10).
+  //
+  // Defensive locks:
+  //   • color   — explicit + hardcoded HSL fallback so descendants stop
+  //               inheriting from the host body even if --foreground is
+  //               overridden upstream
+  //   • --foreground / --muted-foreground — re-pinned locally so Tailwind
+  //               utility classes (text-foreground, text-muted-foreground)
+  //               on descendants resolve to OUR values, not the host's
+  //   • colorScheme — neutralises forced dark-mode at the user-agent level
+  //   • isolation — gives this subtree its own stacking context, also acts
+  //                 as a stable anchor for the explicit color rule above
   const hslPrimary = hexToHslTriplet(branding.primaryColor);
   const rootStyle: React.CSSProperties = {
     fontFamily: cssFontFamily(branding.font),
     backgroundColor: branding.backgroundColor,
+    color: "hsl(231 41% 31%)",
+    colorScheme: "light",
+    isolation: "isolate",
+    ["--foreground" as string]: "231 41% 31%",
+    ["--muted-foreground" as string]: "236 16% 50%",
     ...(hslPrimary ? ({ ["--primary" as string]: hslPrimary } as React.CSSProperties) : {}),
   };
 
@@ -807,6 +856,32 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     },
     [quizId, previewData, trackedRef],
   );
+
+  // Per-question funnel events. Idempotent for views via the ref so
+  // a back-then-forward navigation doesn't inflate counts.
+  const trackQuestionEvent = useCallback(
+    (event: "question_view" | "question_answer", questionIndex: number) => {
+      if (previewData) return;
+      const sessionId = sessionIdRef.current;
+      if (!sessionId) return;
+      if (event === "question_view") {
+        if (trackedQuestionViewsRef.current.has(questionIndex)) return;
+        trackedQuestionViewsRef.current.add(questionIndex);
+      }
+      fetch(`/api/quiz/${quizId}/track`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event, questionIndex, sessionId }),
+        keepalive: true,
+      }).catch(() => {});
+    },
+    [quizId, previewData],
+  );
+
+  useEffect(() => {
+    if (step !== "quiz") return;
+    trackQuestionEvent("question_view", currentQ);
+  }, [step, currentQ, trackQuestionEvent]);
 
   // Per-question retention tracking. We log each question the visitor
   // *sees* exactly once per session — using a separate dedupe key
@@ -862,6 +937,17 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
         if (!json?.ok || !json.quiz) {
           setError(getT(json?.quiz?.locale).quizUnavailable);
           return;
+        }
+        // Quiz draft servi à son créateur (mode aperçu) — on prévient
+        // explicitement via toast pour que l'user comprenne que la
+        // page n'est pas accessible publiquement tant qu'elle n'est
+        // pas publiée. Bug Fabienne 2026-05-09.
+        if (json.isDraftPreview) {
+          toast.message("👁️ Aperçu de ton brouillon", {
+            description:
+              "Ce quiz n'est pas encore publié. Personne ne peut y accéder via ce lien — publie-le depuis l'éditeur pour le partager.",
+            duration: 8000,
+          });
         }
         // API returns quiz, questions, results as separate fields
         const quizData: PublicQuizData = {
@@ -960,13 +1046,24 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     if (quiz.mode === "survey") return null;
     const scores: number[] = new Array(quiz.results.length).fill(0);
     answers.forEach((ans, qIdx) => {
-      if (!ans || ans.kind !== "option") return;
+      if (!ans) return;
       const q = quiz.questions[qIdx];
       if (!q) return;
-      const opt = q.options[ans.optionIndex];
-      if (!opt) return;
-      const ri = opt.result_index;
-      if (ri >= 0 && ri < scores.length) scores[ri]++;
+      // Each picked option contributes 1 point to its result_index bucket.
+      // Multi-select questions can contribute to several buckets at once;
+      // the highest-total result still wins (no weighting).
+      const picked: number[] =
+        ans.kind === "option"
+          ? [ans.optionIndex]
+          : ans.kind === "options"
+            ? ans.optionIndices
+            : [];
+      for (const oi of picked) {
+        const opt = q.options[oi];
+        if (!opt) continue;
+        const ri = opt.result_index;
+        if (ri >= 0 && ri < scores.length) scores[ri]++;
+      }
     });
     let maxScore = -1;
     let maxIdx = 0;
@@ -990,6 +1087,11 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     newAnswers[currentQ] = ans;
     setAnswers(newAnswers);
     setFreeTextDraft("");
+    setMultiOptionsDraft([]);
+
+    // Funnel: record the answer for the question the visitor just
+    // committed.
+    trackQuestionEvent("question_answer", currentQ);
 
     if (quiz && currentQ < quiz.questions.length - 1) {
       setCurrentQ(currentQ + 1);
@@ -998,6 +1100,16 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
       trackEvent("complete");
       setStep("email");
     }
+  };
+
+  // Toggle a single option in the multi-select draft. Stays sorted so the
+  // payload is deterministic across renders + matches analytics aggregation.
+  const toggleMultiOption = (optionIndex: number) => {
+    setMultiOptionsDraft((prev) =>
+      prev.includes(optionIndex)
+        ? prev.filter((i) => i !== optionIndex)
+        : [...prev, optionIndex].sort((a, b) => a - b),
+    );
   };
 
   const handleSubmitEmail = async () => {
@@ -1018,6 +1130,11 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
           if (!ans) return { question_index: qIdx };
           if (ans.kind === "option") {
             return { question_index: qIdx, option_index: ans.optionIndex };
+          }
+          if (ans.kind === "options") {
+            // Multi-select: send the full sorted array. Analytics
+            // (SurveyTrends / QuizResultsAnalytics) handle either shape.
+            return { question_index: qIdx, option_indices: ans.optionIndices };
           }
           if (ans.kind === "rating") {
             return { question_index: qIdx, rating: ans.value };
@@ -1313,7 +1430,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               />
             </Button>
         </div>
-        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} />
+        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
       </div>
     );
   }
@@ -1510,65 +1627,129 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
       // image_choice = multiple_choice with thumbnails. Falls back to text
       // when an option lacks an image_url so a half-filled question still
       // works (mobile-first: stacks 1col below sm, 2col above).
+      // Multi-select branch: clicking toggles selection in `multiOptionsDraft`
+      // and a "Next" button at the bottom commits the full array.
+      const qCfg = (q.config ?? {}) as Record<string, unknown>;
+      const multiSelect = qCfg.multi_select === true;
+      const selectedSet = multiSelect
+        ? new Set(
+            multiOptionsDraft.length > 0
+              ? multiOptionsDraft
+              : currentAnswer?.kind === "options"
+                ? currentAnswer.optionIndices
+                : [],
+          )
+        : null;
       answerBlock = (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {q.options.map((opt, oi) => {
-            const isSelected =
-              currentAnswer?.kind === "option" && currentAnswer.optionIndex === oi;
-            return (
-              <button
-                key={oi}
-                onClick={() => commitAnswer({ kind: "option", optionIndex: oi })}
-                className={`group flex flex-col rounded-xl border-2 overflow-hidden transition-all ${
-                  isSelected
-                    ? "border-primary shadow-md scale-[1.02]"
-                    : "border-border hover:border-primary/40 hover:shadow-sm"
-                }`}
-              >
-                {opt.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={opt.image_url}
-                    alt={opt.text}
-                    className="w-full aspect-video object-cover"
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {q.options.map((opt, oi) => {
+              const isSelected = multiSelect
+                ? selectedSet!.has(oi)
+                : currentAnswer?.kind === "option" && currentAnswer.optionIndex === oi;
+              return (
+                <button
+                  key={oi}
+                  onClick={() =>
+                    multiSelect
+                      ? toggleMultiOption(oi)
+                      : commitAnswer({ kind: "option", optionIndex: oi })
+                  }
+                  className={`group flex flex-col rounded-xl border-2 overflow-hidden transition-all ${
+                    isSelected
+                      ? "border-primary shadow-md scale-[1.02]"
+                      : "border-border hover:border-primary/40 hover:shadow-sm"
+                  }`}
+                >
+                  {opt.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={opt.image_url}
+                      alt={opt.text}
+                      className="w-full aspect-video object-cover"
+                    />
+                  ) : (
+                    <div className="w-full aspect-video bg-muted/40" aria-hidden />
+                  )}
+                  <span
+                    className="tiquiz-rich text-base font-medium text-left p-4"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
                   />
-                ) : (
-                  <div className="w-full aspect-video bg-muted/40" aria-hidden />
-                )}
-                <span
-                  className="tiquiz-rich text-base font-medium text-left p-4"
-                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
-                />
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </div>
+          {multiSelect && (
+            <Button
+              size="lg"
+              className="w-full h-12 rounded-full"
+              disabled={selectedSet!.size === 0}
+              onClick={() =>
+                commitAnswer({ kind: "options", optionIndices: Array.from(selectedSet!).sort((a, b) => a - b) })
+              }
+            >
+              {t.nextQuestion}
+            </Button>
+          )}
         </div>
       );
     } else {
       // multiple_choice (default): existing UI preserved verbatim so legacy
       // quizzes look identical to before the refactor.
+      // When q.config.multi_select is true, switch to the toggle-then-Next
+      // pattern (same as image_choice multi mode).
+      const qCfg = (q.config ?? {}) as Record<string, unknown>;
+      const multiSelect = qCfg.multi_select === true;
+      const selectedSet = multiSelect
+        ? new Set(
+            multiOptionsDraft.length > 0
+              ? multiOptionsDraft
+              : currentAnswer?.kind === "options"
+                ? currentAnswer.optionIndices
+                : [],
+          )
+        : null;
       answerBlock = (
-        <div className={`grid gap-3 ${hasMultipleOptions ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
-          {q.options.map((opt, oi) => {
-            const isSelected =
-              currentAnswer?.kind === "option" && currentAnswer.optionIndex === oi;
-            return (
-              <button
-                key={oi}
-                onClick={() => commitAnswer({ kind: "option", optionIndex: oi })}
-                className={`text-left p-5 rounded-xl border-2 transition-all duration-200 ${
-                  isSelected
-                    ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
-                    : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"
-                }`}
-              >
-                <span
-                  className="tiquiz-rich text-base font-medium"
-                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
-                />
-              </button>
-            );
-          })}
+        <div className="space-y-3">
+          <div className={`grid gap-3 ${hasMultipleOptions ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
+            {q.options.map((opt, oi) => {
+              const isSelected = multiSelect
+                ? selectedSet!.has(oi)
+                : currentAnswer?.kind === "option" && currentAnswer.optionIndex === oi;
+              return (
+                <button
+                  key={oi}
+                  onClick={() =>
+                    multiSelect
+                      ? toggleMultiOption(oi)
+                      : commitAnswer({ kind: "option", optionIndex: oi })
+                  }
+                  className={`text-left p-5 rounded-xl border-2 transition-all duration-200 ${
+                    isSelected
+                      ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
+                      : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"
+                  }`}
+                >
+                  <span
+                    className="tiquiz-rich text-base font-medium"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
+                  />
+                </button>
+              );
+            })}
+          </div>
+          {multiSelect && (
+            <Button
+              size="lg"
+              className="w-full h-12 rounded-full"
+              disabled={selectedSet!.size === 0}
+              onClick={() =>
+                commitAnswer({ kind: "options", optionIndices: Array.from(selectedSet!).sort((a, b) => a - b) })
+              }
+            >
+              {t.nextQuestion}
+            </Button>
+          )}
         </div>
       );
     }
@@ -1799,7 +1980,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               </p>
             )}
           </div>
-        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} />
+        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
       </div>
     );
   }
@@ -1977,6 +2158,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
           customText={quiz.custom_footer_text}
           customUrl={quiz.custom_footer_url}
           logoUrl={branding.logoUrl}
+          tipoteAffiliateId={quiz.tipote_affiliate_id}
         />
       </div>
     );
@@ -2150,7 +2332,9 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
           {quiz.virality_enabled && bonusUnlocked && (
             <Card className="p-4 border-dashed flex items-center gap-2 text-green-600">
               <CheckCircle2 className="w-5 h-5 shrink-0" />
-              <span className="text-sm font-medium">{t.bonusUnlocked}</span>
+              <span className="text-sm font-medium whitespace-pre-line">
+                {(quiz.bonus_unlocked_message?.trim() || t.bonusUnlocked)}
+              </span>
             </Card>
           )}
 
@@ -2167,7 +2351,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             </p>
           )}
           </div>
-        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} />
+        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
       </div>
     );
   }
@@ -2176,9 +2360,27 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 }
 
 /** Renders consent text with the privacy policy phrase as a clickable link when a URL is available. */
+// Set of every locale's default consent text + the historical admin
+// pre-fills shipped by QuizForm. Used to detect "the stored consent_
+// text was just the editor's pre-fill, not a user customisation" so
+// we can fall back to the viewer-locale default. Béné regression
+// 2026-05-07: an English visitor on a French quiz would see French
+// consent because the FR pre-fill didn't match any locale default.
+const ADMIN_DEFAULT_CONSENT_PREFILLS = [
+  "En renseignant ton email, tu acceptes notre politique de confidentialité.",
+  "En renseignant votre email, vous acceptez notre politique de confidentialité.",
+] as const;
+
+const ALL_DEFAULT_CONSENTS: ReadonlySet<string> = new Set([
+  ...Object.values(translations).map((entry) => entry.defaultConsent.trim()),
+  ...ADMIN_DEFAULT_CONSENT_PREFILLS.map((s) => s.trim()),
+]);
+
 function ConsentText({ text, privacyUrl, locale }: { text: string | null; privacyUrl: string | null; locale: string | null }) {
   const t = getT(locale);
-  const raw = text || t.defaultConsent;
+  const trimmed = text?.trim() ?? "";
+  const isStoredDefault = trimmed.length === 0 || ALL_DEFAULT_CONSENTS.has(trimmed);
+  const raw = isStoredDefault ? t.defaultConsent : text!;
 
   if (!privacyUrl) return <span>{raw}</span>;
 
@@ -2247,8 +2449,18 @@ const legalLinkLabels: Record<string, { privacy: string; terms: string; cookies:
 };
 
 
-function TiquizFooter({ locale, customText, customUrl, logoUrl }: { locale?: string | null; customText?: string | null; customUrl?: string | null; logoUrl?: string | null }) {
-  // Paid plans: show custom footer if set
+// URL de découverte Tiquiz côté tipote.fr. Si le créateur a posé son
+// ID affilié dans Settings, on attache ?sa=<id> pour qu'il touche une
+// commission sur les inscriptions qui en découlent.
+function tiquizDiscoveryUrl(affiliateId: string | null | undefined): string {
+  const base = "https://www.tipote.fr/part-tiquiz";
+  if (!affiliateId) return base;
+  return `${base}?sa=${encodeURIComponent(affiliateId)}`;
+}
+
+function TiquizFooter({ locale, customText, customUrl, logoUrl, tipoteAffiliateId }: { locale?: string | null; customText?: string | null; customUrl?: string | null; logoUrl?: string | null; tipoteAffiliateId?: string | null }) {
+  // Paid plans avec footer custom : on respecte le choix du créateur
+  // — pas de mention Tiquiz, pas de tracking. Il a payé pour brander.
   if (customText && customUrl) {
     return (
       <div className="text-center mt-6 space-y-2">
@@ -2277,7 +2489,7 @@ function TiquizFooter({ locale, customText, customUrl, logoUrl }: { locale?: str
       />
       <p className="text-xs text-muted-foreground/60">
         <a
-          href="https://tiquiz.com"
+          href={tiquizDiscoveryUrl(tipoteAffiliateId)}
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-muted-foreground transition-colors"

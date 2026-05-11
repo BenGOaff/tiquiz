@@ -13,6 +13,16 @@ Application Web SaaS multilingue (FR/EN/ES/IT/AR) de création de quiz interacti
 > - **Toast** : Sonner réglé à 1.8 s (avant : 4 s) pour ne plus masquer les boutons d'action.
 > - **Garde-fous** : `docs/INVARIANTS.md` documente les zones cassables (5 invariants : lead-safety, typo FR, popquiz publié → quiz auto-actifs, lockfile reflète package.json, cue popquiz scopé créateur).
 
+> **Notes de version Mi-Mai 2026** — sprint 7-8 mai (parité Tipote) :
+>
+> - **Pipeline vidéo Popquiz self-hosted** : sortie de Supabase Storage. Stack tus server Node sur `tus.quiz.tipote.com` (`@tus/server` + JWT HS256, claim `app: 'tiquiz'` pour distinguer des uploads Tipote sur le même serveur partagé) → stockage `/srv/popquiz-videos/tiquiz/raw/<userId>/<videoId>/` → lecture protégée `nginx secure_link` sur `videos.quiz.tipote.com`. **Limite 20 Go par vidéo** (vs 2 Go avant). Migration douce : path `raw/...` legacy = Supabase signed URL ; path `tiquiz/raw/...` = secure_link. Endpoints : `/api/popquiz/upload-token`, `/api/popquiz/playback-url`, `/api/popquiz/[id]/thumbnail`.
+> - **Vignette popquiz personnalisable** : composant `ThumbnailPicker` avec crop 16/9 intégré (canvas natif). Toggle vignette auto vs custom. Le revert est instantané (changement de pointeur DB, le fichier auto reste sur disque).
+> - **Player popquiz enrichi** : vitesse de lecture (0.5×–2×), skip ±10s, partage (Web Share API + fallback copie-lien), Picture-in-Picture, poster YouTube en HD (maxresdefault → hqdefault fallback). `PosterOverlay` se masque au démarrage de la lecture (fix YouTube/Vimeo iframe).
+> - **Quiz analytics par quiz** : nouvelle page `/quiz/[id]/analytics` (cards visiteurs / leads / capture rate / export SIO + chart évolution + pie distribution résultats + funnel par question). Funnel calculé via nouvelle table `quiz_question_events` (event `view` / `answer`, session anonyme côté client). Endpoint `/api/quiz/[id]/track` étendu pour accepter `question_view` / `question_answer`. Bouton 📊 dans `/quizzes`.
+> - **JB feedback** : `quizzes.bonus_unlocked_message` (TEXT, optionnel) override le « Bonus unlocked! Check your inbox. » par défaut — utilité : livrer un code promo inline. UI dans QuizDetailClient sous "Message après partage". `ALL_DEFAULT_CONSENTS` étendu : la phrase admin `"En renseignant ton email, tu acceptes notre politique de confidentialité."` (pre-fill historique) est désormais reconnue comme un default → fallback automatique sur la locale du viewer.
+> - **Bucket Supabase manquant** : création de `public-assets` (public, 10 Mo, mime types image whitelist + RLS). Avant : tous les uploads de logo + bonus image échouaient silencieusement (bucket inexistant en prod).
+> - **Trigger Postgres anti-récurrence onboarding** : `auto_complete_onboarding_when_filled()` flippe `business_profiles.onboarding_completed = true` automatiquement dès qu'une row a niche + au moins une offre. Garde-fou DB pour ne plus jamais avoir un user actif coincé sur l'onboarding (régressions Monique 2026-04 / Flo 2026-05).
+
 ---
 
 ## 1. PRÉSENTATION DU PRODUIT

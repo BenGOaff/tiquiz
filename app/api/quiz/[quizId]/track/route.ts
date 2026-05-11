@@ -1,12 +1,19 @@
 // app/api/quiz/[quizId]/track/route.ts
-// Lightweight funnel event tracking (no auth).
+// Lightweight public endpoint to track quiz funnel events (no auth required).
 //
-// Each call writes a timestamped row in quiz_events AND bumps the
-// matching cumulative counter on quizzes — both inside the same
-// log_quiz_event RPC so the two never drift. Older API code that
-// only used increment_quiz_counter still works (the counter is the
-// same column), but new code paths reading from quiz_events get
-// proper time-series data for the stats page.
+// Aggregate counters (views_count / starts_count / completions_count)
+// stay on the quizzes table for the headline KPIs. Per-question
+// events go into quiz_question_events for drop-off analysis.
+//
+// Events:
+//   - "start"          → user clicked Start, increments starts_count
+//   - "complete"       → user reached email step, increments completions_count
+//   - "question_view"  → user just landed on question N (one row in events)
+//   - "question_answer"→ user answered question N (one row in events)
+//
+// All writes are best-effort: a failed analytics call must never
+// break the visitor's path through the quiz.
+
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -14,40 +21,90 @@ export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ quizId: string }> };
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const COUNTER_EVENTS = ["start", "complete"] as const;
+const QUESTION_EVENTS = ["question_view", "question_answer"] as const;
+type CounterEvent = (typeof COUNTER_EVENTS)[number];
+type QuestionEvent = (typeof QUESTION_EVENTS)[number];
 
-async function resolveId(slugOrId: string): Promise<string | null> {
-  if (UUID_RE.test(slugOrId)) return slugOrId;
-  const { data } = await supabaseAdmin.from("quizzes").select("id").ilike("slug", slugOrId).maybeSingle();
-  return (data?.id as string) ?? null;
-}
+const COLUMN_MAP: Record<CounterEvent, string> = {
+  start: "starts_count",
+  complete: "completions_count",
+};
+
+const QUESTION_EVENT_DB: Record<QuestionEvent, "view" | "answer"> = {
+  question_view: "view",
+  question_answer: "answer",
+};
+
+const SESSION_ID_RE = /^[a-z0-9-]{8,64}$/i;
 
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
-    const { quizId: slugOrId } = await context.params;
-    const body = await req.json();
-    const { event, questionIndex } = body as { event?: string; questionIndex?: number };
+    const { quizId } = await context.params;
 
-    const quizId = await resolveId(slugOrId);
-    if (!quizId) return NextResponse.json({ ok: true });
-
-    // Only forward known event types — anything else is a noop so we
-    // don't pollute the events log with typos from older clients.
-    if (event === "start" || event === "complete") {
-      await supabaseAdmin.rpc("log_quiz_event", { quiz_id_input: quizId, event_type_input: event });
-    } else if (event === "question_view" && Number.isInteger(questionIndex) && questionIndex! >= 0) {
-      // Per-question retention — meta carries the question index so
-      // /api/stats can later compute "where did visitors drop off?".
-      await supabaseAdmin.rpc("log_quiz_event", {
-        quiz_id_input: quizId,
-        event_type_input: "question_view",
-        meta_input: { q: questionIndex },
-      });
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ ok: false }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true });
+    const event = String(body.event ?? "").trim();
+
+    if ((QUESTION_EVENTS as readonly string[]).includes(event)) {
+      const qIdx = Number(body.questionIndex);
+      const sessionId = String(body.sessionId ?? "").trim();
+      if (!Number.isInteger(qIdx) || qIdx < 0 || qIdx >= 200) {
+        return NextResponse.json({ ok: false }, { status: 400 });
+      }
+      if (!SESSION_ID_RE.test(sessionId)) {
+        return NextResponse.json({ ok: false }, { status: 400 });
+      }
+      // Ownership check is implicit: a visitor can only have a
+      // session_id we don't validate. But quiz_id must exist and be
+      // active to accept events at all (avoid spam on deleted quizzes).
+      const { data: quiz } = await supabaseAdmin
+        .from("quizzes")
+        .select("id")
+        .eq("id", quizId)
+        .eq("status", "active")
+        .maybeSingle();
+      if (!quiz) {
+        return NextResponse.json({ ok: false }, { status: 404 });
+      }
+      await supabaseAdmin.from("quiz_question_events").insert({
+        quiz_id: quizId,
+        question_index: qIdx,
+        session_id: sessionId,
+        event: QUESTION_EVENT_DB[event as QuestionEvent],
+      });
+      return NextResponse.json({ ok: true });
+    }
+
+    if ((COUNTER_EVENTS as readonly string[]).includes(event)) {
+      const column = COLUMN_MAP[event as CounterEvent];
+      const { data: quiz } = await supabaseAdmin
+        .from("quizzes")
+        .select(`id, ${column}`)
+        .eq("id", quizId)
+        .eq("status", "active")
+        .maybeSingle();
+      if (!quiz) {
+        return NextResponse.json({ ok: false }, { status: 404 });
+      }
+      await supabaseAdmin
+        .from("quizzes")
+        .update({ [column]: ((quiz as any)[column] ?? 0) + 1 })
+        .eq("id", quizId);
+      return NextResponse.json({ ok: true });
+    }
+
+    return NextResponse.json(
+      { ok: false, error: "Invalid event" },
+      { status: 400 },
+    );
   } catch {
-    // Never fail user experience
+    // Non-blocking analytics — never fail the visitor experience
     return NextResponse.json({ ok: true });
   }
 }

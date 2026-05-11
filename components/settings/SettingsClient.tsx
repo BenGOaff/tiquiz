@@ -38,6 +38,7 @@ type Profile = {
   brand_tone: string | null;
   brand_website_url: string | null;
   target_audience: string | null;
+  tipote_affiliate_id: string | null;
 };
 
 const FONTS = ["Inter", "Poppins", "Montserrat", "Playfair Display", "Lato", "Roboto", "Open Sans", "Nunito"];
@@ -108,6 +109,11 @@ export default function SettingsClient() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
+  // ID affilié Tipote — sauvegardé indépendamment du gros bouton
+  // "Save" du tab Profile (l'user le saisit depuis le tab "systemeio").
+  const [tipoteAffiliateId, setTipoteAffiliateId] = useState("");
+  const [savingAffiliate, setSavingAffiliate] = useState(false);
+
   useEffect(() => {
     fetch("/api/profile")
       .then((r) => r.json())
@@ -125,10 +131,31 @@ export default function SettingsClient() {
           setBrandFont(p.brand_font ?? "Inter");
           setBrandTone(p.brand_tone ?? "professionnel");
           setBrandWebsiteUrl(p.brand_website_url ?? "");
+          setTipoteAffiliateId(p.tipote_affiliate_id ?? "");
         }
       })
       .finally(() => setLoading(false));
   }, []);
+
+  async function handleSaveAffiliate() {
+    setSavingAffiliate(true);
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tipote_affiliate_id: tipoteAffiliateId.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) toast.success(t("saved"));
+      else toast.error(data.error ?? t("errGeneric"));
+    } catch {
+      toast.error(t("errNetwork"));
+    } finally {
+      setSavingAffiliate(false);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -479,6 +506,90 @@ export default function SettingsClient() {
 
         <TabsContent value="systemeio" className="space-y-4">
           <SioApiKeysManager />
+
+          {/* Bloc affilié Tipote — sous la clé SIO car c'est dans le
+              même contexte mental "compte Systeme.io". L'ID affilié
+              vit dans l'URL ?sa=<id> du footer "Ce quiz vous est offert
+              par Tiquiz" et permet au créateur de toucher des commissions
+              sur les inscriptions Tiquiz qui en découlent. */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                Touche des commissions sur tes quizzes
+              </CardTitle>
+              <CardDescription>
+                Sur chaque quiz publié, le footer <em>« Ce quiz vous est
+                offert par Tiquiz »</em> redirige vers la page de présentation
+                de Tiquiz. Si tu colles ton identifiant affilié Systeme.io
+                ci-dessous, chaque inscription qui en découle te rapporte
+                une commission — automatiquement.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="tipote-affiliate-id">
+                  Mon identifiant affilié Tipote
+                </Label>
+                <Input
+                  id="tipote-affiliate-id"
+                  type="text"
+                  autoComplete="off"
+                  placeholder="sa00078783172001..."
+                  value={tipoteAffiliateId}
+                  onChange={(e) => setTipoteAffiliateId(e.target.value)}
+                  disabled={loading || savingAffiliate}
+                  className="font-mono text-sm"
+                />
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>
+                    <strong>Où trouver mon ID&nbsp;?</strong> Connecte-toi à
+                    Systeme.io → <em>Tableau de bord affilié</em> → en haut à
+                    droite tu vois ton <em>identifiant affilié</em> (qui
+                    commence par <code className="px-1 py-0.5 rounded bg-muted">sa</code>).
+                    Copie-le, colle-le ici, c&apos;est tout.
+                  </p>
+                  <p>
+                    Pas encore inscrit·e ?{" "}
+                    <a
+                      href="https://www.tipote.fr/part-tiquiz"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline text-primary hover:text-primary/80"
+                    >
+                      Découvrir le programme d&apos;affiliation
+                    </a>
+                    {" · "}
+                    <a
+                      href="https://www.tipote.fr/conditions-generales-affiliation"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline text-primary hover:text-primary/80"
+                    >
+                      Conditions générales
+                    </a>
+                  </p>
+                  <p className="italic">
+                    Si tu laisses ce champ vide, le footer reste visible mais
+                    sans tracking — les inscriptions ne te rapporteront rien.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSaveAffiliate}
+                disabled={savingAffiliate || (profile?.tipote_affiliate_id ?? "") === tipoteAffiliateId.trim()}
+              >
+                {savingAffiliate ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                {t("save")}
+              </Button>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>

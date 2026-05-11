@@ -358,9 +358,12 @@ export function VideoUploader({
           </Button>
         </div>
         <Progress value={phase.pct} className="h-1.5" />
+<<<<<<< HEAD
         <p className="text-[11px] text-muted-foreground">
           Résumable en cas de coupure réseau — garde l&apos;onglet ouvert.
         </p>
+=======
+>>>>>>> origin/claude/setup-tipote-dev-AgOac
       </div>
     );
   }

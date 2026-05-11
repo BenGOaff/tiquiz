@@ -90,7 +90,12 @@
     "statusActive": "Activo",
     "statusDraft": "Borrador",
     "rangeLabel": "Periodo:",
-    "ranges": { "7d": "7 días", "30d": "30 días", "90d": "90 días", "all": "Todo" },
+    "ranges": {
+      "7d": "7 días",
+      "30d": "30 días",
+      "90d": "90 días",
+      "all": "Todo"
+    },
     "kpis": {
       "leads": "Leads",
       "conversion": "Tasa de conversión",
@@ -104,7 +109,10 @@
       "bestDay": "Mejor día: {date} ({count} leads)",
       "empty": "Ningún lead capturado en este periodo."
     },
-    "lifetime": { "title": "Totales acumulados", "badge": "Todo el tiempo" },
+    "lifetime": {
+      "title": "Totales acumulados",
+      "badge": "Todo el tiempo"
+    },
     "eventsNoticeDesc": "Las nuevas vistas, inicios y completados se registran ahora con fecha — las curvas se llenarán con la actividad. Mientras tanto los totales acumulados siguen siendo fiables.",
     "totals": {
       "views": "Vistas",
@@ -855,7 +863,9 @@
     "previewSurveyCtaUrlPh": "URL del CTA",
     "previewSurveyShare": "Compartir encuesta",
     "sidebarSurveyEnd": "Fin de la encuesta",
-    "sidebarThanks": "Pantalla de agradecimiento"
+    "sidebarThanks": "Pantalla de agradecimiento",
+    "multiSelectLabel": "Varias respuestas permitidas",
+    "multiSelectHint": "Si está activada, el visitante puede seleccionar varias opciones. Toca cada opción para marcarla y usa el botón «Siguiente» para continuar."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nueva contraseña",
@@ -1044,7 +1054,7 @@
   },
   "projects": {
     "title": "Mis proyectos",
-    "subtitle": "Tus quizzes y encuestas en un solo lugar",
+    "subtitle": "Tus quiz, encuestas y popquiz en un solo sitio",
     "createQuiz": "Crear un quiz",
     "createSurvey": "Crear una encuesta",
     "filter_all": "Todos",
@@ -1057,6 +1067,14 @@
     "emptyTitle": "Sin proyectos por ahora",
     "emptyDesc": "Crea tu primer quiz o encuesta en menos de dos minutos.",
     "emptyFilterTitle": "Sin proyectos en esta categoría",
-    "emptyFilterDesc": "Cambia a « Todos » para ver todos tus proyectos."
+    "emptyFilterDesc": "Cambia a « Todos » para ver todos tus proyectos.",
+    "createPopquiz": "Crear un popquiz",
+    "folder_quiz": "Mis Quiz",
+    "folder_survey": "Mis Encuestas",
+    "folder_popquiz": "Mis Popquiz",
+    "filter_popquiz": "Popquiz",
+    "backToFolders": "Volver a las categorías",
+    "elementOne": "elemento",
+    "elementMany": "elementos"
   }
 }

@@ -183,7 +183,11 @@ export async function POST(req: NextRequest) {
     // blocks creation.
     let thumbnailUrl: string | null = null;
     if (parsed.source === "youtube" && parsed.externalId) {
-      thumbnailUrl = `https://i.ytimg.com/vi/${parsed.externalId}/hqdefault.jpg`;
+      // maxresdefault is 1280×720 when the upload is HD, missing on
+      // older / SD videos. We fall back to hqdefault (480×360) at
+      // render time via an onError handler in the player. Lighter than
+      // making an extra request just to probe availability.
+      thumbnailUrl = `https://i.ytimg.com/vi/${parsed.externalId}/maxresdefault.jpg`;
     } else if (parsed.source === "vimeo" && parsed.externalId) {
       try {
         const oembed = await fetch(
@@ -275,6 +279,61 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Apparence — tous optionnels, defaults DB sinon. Permet à l'user
+  // de configurer la page publique dès la création (avant de cliquer
+  // Publier) plutôt que d'avoir à passer par l'éditeur d'édition.
+  const appearancePatch: Record<string, unknown> = {};
+  if (typeof body.display_title === "string" && body.display_title.trim()) {
+    // Limites larges car titre/sous-titre acceptent du HTML rich-text
+    // (gras / italique / couleur / alignement). La valeur est
+    // sanitisée côté client avant rendu sur la page publique.
+    appearancePatch.display_title = body.display_title.trim().slice(0, 2000);
+  }
+  if (typeof body.display_subtitle === "string" && body.display_subtitle.trim()) {
+    appearancePatch.display_subtitle = body.display_subtitle.trim().slice(0, 4000);
+  }
+  if (
+    typeof body.bg_style === "string" &&
+    ["transparent", "solid", "gradient"].includes(body.bg_style)
+  ) {
+    appearancePatch.bg_style = body.bg_style;
+  }
+  if (typeof body.bg_color === "string" && body.bg_color.trim()) {
+    appearancePatch.bg_color = body.bg_color.trim().slice(0, 32);
+  }
+  if (typeof body.bg_color_2 === "string" && body.bg_color_2.trim()) {
+    appearancePatch.bg_color_2 = body.bg_color_2.trim().slice(0, 32);
+  }
+  if (
+    typeof body.border_width === "number" &&
+    Number.isFinite(body.border_width) &&
+    body.border_width >= 0 &&
+    body.border_width <= 16
+  ) {
+    appearancePatch.border_width = Math.floor(body.border_width);
+  }
+  if (typeof body.border_color === "string" && body.border_color.trim()) {
+    appearancePatch.border_color = body.border_color.trim().slice(0, 32);
+  }
+  if (
+    typeof body.shadow_intensity === "string" &&
+    ["none", "soft", "medium", "strong"].includes(body.shadow_intensity)
+  ) {
+    appearancePatch.shadow_intensity = body.shadow_intensity;
+  }
+  if (typeof body.play_button_color === "string" && body.play_button_color.trim()) {
+    appearancePatch.play_button_color = body.play_button_color.trim().slice(0, 32);
+  }
+  if (
+    typeof body.play_button_shape === "string" &&
+    ["circle", "rounded", "square"].includes(body.play_button_shape)
+  ) {
+    appearancePatch.play_button_shape = body.play_button_shape;
+  }
+  if (typeof body.show_creator_branding === "boolean") {
+    appearancePatch.show_creator_branding = body.show_creator_branding;
+  }
+
   const { data: popquiz, error: popquizError } = await supabase
     .from("popquizzes")
     .insert({
@@ -285,6 +344,7 @@ export async function POST(req: NextRequest) {
       description: body.description ? String(body.description) : null,
       locale: typeof body.locale === "string" ? body.locale : "fr",
       is_published: body.is_published === true,
+      ...appearancePatch,
     })
     .select("id, slug")
     .single();

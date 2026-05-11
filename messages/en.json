@@ -846,7 +846,9 @@
     "previewSurveyCtaUrlPh": "CTA URL",
     "previewSurveyShare": "Share survey",
     "sidebarSurveyEnd": "Survey end",
-    "sidebarThanks": "Thank-you screen"
+    "sidebarThanks": "Thank-you screen",
+    "multiSelectLabel": "Multiple answers allowed",
+    "multiSelectHint": "If enabled, the visitor can pick several options. They tap each option to toggle it and use the \"Next\" button to continue."
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",
@@ -1035,7 +1037,7 @@
   },
   "projects": {
     "title": "My projects",
-    "subtitle": "Your quizzes and surveys in one place",
+    "subtitle": "All your quizzes, surveys and popquizzes in one place",
     "createQuiz": "Create a quiz",
     "createSurvey": "Create a survey",
     "filter_all": "All",
@@ -1048,6 +1050,14 @@
     "emptyTitle": "No projects yet",
     "emptyDesc": "Create your first quiz or survey in under two minutes.",
     "emptyFilterTitle": "No projects in this category",
-    "emptyFilterDesc": "Switch to « All » to see all your projects."
+    "emptyFilterDesc": "Switch to « All » to see all your projects.",
+    "createPopquiz": "Create a popquiz",
+    "folder_quiz": "My Quizzes",
+    "folder_survey": "My Surveys",
+    "folder_popquiz": "My Popquizzes",
+    "filter_popquiz": "Popquizzes",
+    "backToFolders": "Back to categories",
+    "elementOne": "item",
+    "elementMany": "items"
   }
 }

@@ -846,7 +846,9 @@
     "previewSurveyCtaUrlPh": "URL du CTA",
     "previewSurveyShare": "Partager le sondage",
     "sidebarSurveyEnd": "Fin du sondage",
-    "sidebarThanks": "Écran de remerciement"
+    "sidebarThanks": "Écran de remerciement",
+    "multiSelectLabel": "Plusieurs réponses possibles",
+    "multiSelectHint": "Si activée, le visiteur peut sélectionner plusieurs options. Il clique sur chaque option pour la cocher puis utilise le bouton « Suivant » pour continuer."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",
@@ -1035,7 +1037,7 @@
   },
   "projects": {
     "title": "Mes projets",
-    "subtitle": "Tes quiz et sondages au même endroit",
+    "subtitle": "Tes quiz, sondages et popquiz au même endroit",
     "createQuiz": "Créer un quiz",
     "createSurvey": "Créer un sondage",
     "filter_all": "Tous",
@@ -1048,6 +1050,14 @@
     "emptyTitle": "Aucun projet pour le moment",
     "emptyDesc": "Crée ton premier quiz ou sondage en moins de deux minutes.",
     "emptyFilterTitle": "Aucun projet dans cette catégorie",
-    "emptyFilterDesc": "Bascule sur « Tous » pour voir l'ensemble de tes projets."
+    "emptyFilterDesc": "Bascule sur « Tous » pour voir l'ensemble de tes projets.",
+    "createPopquiz": "Créer un popquiz",
+    "folder_quiz": "Mes Quiz",
+    "folder_survey": "Mes Sondages",
+    "folder_popquiz": "Mes Popquiz",
+    "filter_popquiz": "Popquiz",
+    "backToFolders": "Retour aux catégories",
+    "elementOne": "élément",
+    "elementMany": "éléments"
   }
 }
