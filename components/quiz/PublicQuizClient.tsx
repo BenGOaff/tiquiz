@@ -49,8 +49,11 @@ type QuizQuestion = {
 // can carry its native value shape (option index, numeric rating, free text).
 // Legacy multiple_choice quizzes always end up in the "option" branch, so
 // computeResult / SIO sync logic keeps working unchanged for them.
+// Multi-select is opt-in per question via config.multi_select=true; it adds
+// the "options" variant (plural) without touching the existing single path.
 type SurveyAnswer =
   | { kind: "option"; optionIndex: number }
+  | { kind: "options"; optionIndices: number[] }
   | { kind: "rating"; value: number }
   | { kind: "star"; value: number }
   | { kind: "text"; value: string };
@@ -735,6 +738,11 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   // Mirror state for the free_text textarea so it stays controlled while the
   // visitor types — only commits to `answers` when they tap "Next".
   const [freeTextDraft, setFreeTextDraft] = useState<string>("");
+  // Draft state for multi-select questions. Holds the currently-toggled option
+  // indices for the active question; commits to `answers` only when the user
+  // taps "Next". Reset whenever currentQ changes (handled in commitAnswer +
+  // an effect below) so each question starts blank.
+  const [multiOptionsDraft, setMultiOptionsDraft] = useState<number[]>([]);
 
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState(() => {
@@ -1016,13 +1024,24 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     if (quiz.mode === "survey") return null;
     const scores: number[] = new Array(quiz.results.length).fill(0);
     answers.forEach((ans, qIdx) => {
-      if (!ans || ans.kind !== "option") return;
+      if (!ans) return;
       const q = quiz.questions[qIdx];
       if (!q) return;
-      const opt = q.options[ans.optionIndex];
-      if (!opt) return;
-      const ri = opt.result_index;
-      if (ri >= 0 && ri < scores.length) scores[ri]++;
+      // Each picked option contributes 1 point to its result_index bucket.
+      // Multi-select questions can contribute to several buckets at once;
+      // the highest-total result still wins (no weighting).
+      const picked: number[] =
+        ans.kind === "option"
+          ? [ans.optionIndex]
+          : ans.kind === "options"
+            ? ans.optionIndices
+            : [];
+      for (const oi of picked) {
+        const opt = q.options[oi];
+        if (!opt) continue;
+        const ri = opt.result_index;
+        if (ri >= 0 && ri < scores.length) scores[ri]++;
+      }
     });
     let maxScore = -1;
     let maxIdx = 0;
@@ -1046,6 +1065,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     newAnswers[currentQ] = ans;
     setAnswers(newAnswers);
     setFreeTextDraft("");
+    setMultiOptionsDraft([]);
 
     // Funnel: record the answer for the question the visitor just
     // committed.
@@ -1058,6 +1078,16 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
       trackEvent("complete");
       setStep("email");
     }
+  };
+
+  // Toggle a single option in the multi-select draft. Stays sorted so the
+  // payload is deterministic across renders + matches analytics aggregation.
+  const toggleMultiOption = (optionIndex: number) => {
+    setMultiOptionsDraft((prev) =>
+      prev.includes(optionIndex)
+        ? prev.filter((i) => i !== optionIndex)
+        : [...prev, optionIndex].sort((a, b) => a - b),
+    );
   };
 
   const handleSubmitEmail = async () => {
@@ -1078,6 +1108,11 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
           if (!ans) return { question_index: qIdx };
           if (ans.kind === "option") {
             return { question_index: qIdx, option_index: ans.optionIndex };
+          }
+          if (ans.kind === "options") {
+            // Multi-select: send the full sorted array. Analytics
+            // (SurveyTrends / QuizResultsAnalytics) handle either shape.
+            return { question_index: qIdx, option_indices: ans.optionIndices };
           }
           if (ans.kind === "rating") {
             return { question_index: qIdx, rating: ans.value };
@@ -1570,65 +1605,129 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
       // image_choice = multiple_choice with thumbnails. Falls back to text
       // when an option lacks an image_url so a half-filled question still
       // works (mobile-first: stacks 1col below sm, 2col above).
+      // Multi-select branch: clicking toggles selection in `multiOptionsDraft`
+      // and a "Next" button at the bottom commits the full array.
+      const qCfg = (q.config ?? {}) as Record<string, unknown>;
+      const multiSelect = qCfg.multi_select === true;
+      const selectedSet = multiSelect
+        ? new Set(
+            multiOptionsDraft.length > 0
+              ? multiOptionsDraft
+              : currentAnswer?.kind === "options"
+                ? currentAnswer.optionIndices
+                : [],
+          )
+        : null;
       answerBlock = (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {q.options.map((opt, oi) => {
-            const isSelected =
-              currentAnswer?.kind === "option" && currentAnswer.optionIndex === oi;
-            return (
-              <button
-                key={oi}
-                onClick={() => commitAnswer({ kind: "option", optionIndex: oi })}
-                className={`group flex flex-col rounded-xl border-2 overflow-hidden transition-all ${
-                  isSelected
-                    ? "border-primary shadow-md scale-[1.02]"
-                    : "border-border hover:border-primary/40 hover:shadow-sm"
-                }`}
-              >
-                {opt.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={opt.image_url}
-                    alt={opt.text}
-                    className="w-full aspect-video object-cover"
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {q.options.map((opt, oi) => {
+              const isSelected = multiSelect
+                ? selectedSet!.has(oi)
+                : currentAnswer?.kind === "option" && currentAnswer.optionIndex === oi;
+              return (
+                <button
+                  key={oi}
+                  onClick={() =>
+                    multiSelect
+                      ? toggleMultiOption(oi)
+                      : commitAnswer({ kind: "option", optionIndex: oi })
+                  }
+                  className={`group flex flex-col rounded-xl border-2 overflow-hidden transition-all ${
+                    isSelected
+                      ? "border-primary shadow-md scale-[1.02]"
+                      : "border-border hover:border-primary/40 hover:shadow-sm"
+                  }`}
+                >
+                  {opt.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={opt.image_url}
+                      alt={opt.text}
+                      className="w-full aspect-video object-cover"
+                    />
+                  ) : (
+                    <div className="w-full aspect-video bg-muted/40" aria-hidden />
+                  )}
+                  <span
+                    className="tiquiz-rich text-base font-medium text-left p-4"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
                   />
-                ) : (
-                  <div className="w-full aspect-video bg-muted/40" aria-hidden />
-                )}
-                <span
-                  className="tiquiz-rich text-base font-medium text-left p-4"
-                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
-                />
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </div>
+          {multiSelect && (
+            <Button
+              size="lg"
+              className="w-full h-12 rounded-full"
+              disabled={selectedSet!.size === 0}
+              onClick={() =>
+                commitAnswer({ kind: "options", optionIndices: Array.from(selectedSet!).sort((a, b) => a - b) })
+              }
+            >
+              {t.nextQuestion}
+            </Button>
+          )}
         </div>
       );
     } else {
       // multiple_choice (default): existing UI preserved verbatim so legacy
       // quizzes look identical to before the refactor.
+      // When q.config.multi_select is true, switch to the toggle-then-Next
+      // pattern (same as image_choice multi mode).
+      const qCfg = (q.config ?? {}) as Record<string, unknown>;
+      const multiSelect = qCfg.multi_select === true;
+      const selectedSet = multiSelect
+        ? new Set(
+            multiOptionsDraft.length > 0
+              ? multiOptionsDraft
+              : currentAnswer?.kind === "options"
+                ? currentAnswer.optionIndices
+                : [],
+          )
+        : null;
       answerBlock = (
-        <div className={`grid gap-3 ${hasMultipleOptions ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
-          {q.options.map((opt, oi) => {
-            const isSelected =
-              currentAnswer?.kind === "option" && currentAnswer.optionIndex === oi;
-            return (
-              <button
-                key={oi}
-                onClick={() => commitAnswer({ kind: "option", optionIndex: oi })}
-                className={`text-left p-5 rounded-xl border-2 transition-all duration-200 ${
-                  isSelected
-                    ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
-                    : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"
-                }`}
-              >
-                <span
-                  className="tiquiz-rich text-base font-medium"
-                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
-                />
-              </button>
-            );
-          })}
+        <div className="space-y-3">
+          <div className={`grid gap-3 ${hasMultipleOptions ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
+            {q.options.map((opt, oi) => {
+              const isSelected = multiSelect
+                ? selectedSet!.has(oi)
+                : currentAnswer?.kind === "option" && currentAnswer.optionIndex === oi;
+              return (
+                <button
+                  key={oi}
+                  onClick={() =>
+                    multiSelect
+                      ? toggleMultiOption(oi)
+                      : commitAnswer({ kind: "option", optionIndex: oi })
+                  }
+                  className={`text-left p-5 rounded-xl border-2 transition-all duration-200 ${
+                    isSelected
+                      ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
+                      : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"
+                  }`}
+                >
+                  <span
+                    className="tiquiz-rich text-base font-medium"
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
+                  />
+                </button>
+              );
+            })}
+          </div>
+          {multiSelect && (
+            <Button
+              size="lg"
+              className="w-full h-12 rounded-full"
+              disabled={selectedSet!.size === 0}
+              onClick={() =>
+                commitAnswer({ kind: "options", optionIndices: Array.from(selectedSet!).sort((a, b) => a - b) })
+              }
+            >
+              {t.nextQuestion}
+            </Button>
+          )}
         </div>
       );
     }
