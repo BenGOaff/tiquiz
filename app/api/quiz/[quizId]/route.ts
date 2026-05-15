@@ -187,6 +187,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "address_form", "og_image_url", "og_description", "capture_heading", "capture_subtitle",
       "capture_first_name", "capture_last_name", "capture_phone", "capture_country",
       "show_consent_checkbox",
+      "show_results_breakdown",
       "custom_footer_text", "custom_footer_url",
       "brand_font", "brand_color_primary", "brand_color_background",
       "start_button_text",
