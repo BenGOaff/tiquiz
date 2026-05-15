@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { resolveAnthropicModel } from "@/lib/anthropicModel";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,33 +23,9 @@ function getClaudeApiKey(): string {
 }
 
 function getClaudeModel(): string {
-  // Safety net : si l'env de prod a une ID legacy / sunsetted (ex.
-  // claude-sonnet-4-20250514 ou claude-sonnet-4-5-20250929), on
-  // retombe sur Sonnet 4.6 — mirror exact du `resolveClaudeModel()`
-  // de Tipote dans /content/generate, qui rattrape les mêmes alias.
-  // Sans cette redirection, une env var ANTHROPIC_MODEL pointant un
-  // ID déprécié faisait 404 chez Anthropic, et l'éditeur affichait
-  // "Impossible de générer les variantes" sans piste de débuggage.
-  const raw = process.env.ANTHROPIC_MODEL?.trim() ?? "";
-  const v = raw.trim();
-  const DEFAULT = "claude-sonnet-4-6";
-  if (!v) return DEFAULT;
-
-  const s = v.toLowerCase();
-  if (
-    s === "sonnet" || s === "sonnet-4.5" || s === "sonnet_4_5" || s === "claude-sonnet-4.5" ||
-    s === "sonnet-4.6" || s === "sonnet_4_6" || s === "claude-sonnet-4.6"
-  ) {
-    return DEFAULT;
-  }
-  if (
-    s === "claude-3-5-sonnet-20240620" || s.includes("claude-3-5-sonnet-20240620") ||
-    s === "claude-sonnet-4-5-20250929" || s.includes("claude-sonnet-4-5-20250929") ||
-    s === "claude-sonnet-4-20250514" || s.includes("claude-sonnet-4-20250514")
-  ) {
-    return DEFAULT;
-  }
-  return v;
+  // Résolution centralisée via lib/anthropicModel : safety net pour
+  // les IDs legacy + fallback sur Sonnet 4.6 si rien n'est set.
+  return resolveAnthropicModel(process.env.ANTHROPIC_MODEL, "sonnet");
 }
 
 type Variants = { m: string; f: string; x: string };

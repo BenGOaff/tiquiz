@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { buildQuizChatSystemPrompt } from "@/lib/prompts/quiz/chat";
+import { resolveAnthropicModel } from "@/lib/anthropicModel";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +27,8 @@ function getClaudeApiKey(): string {
 
 function getChatModel(): string {
   // Haiku = cheap + fast. Chat is a structured conversation, not creative work.
-  return process.env.ANTHROPIC_CHAT_MODEL?.trim() || "claude-haiku-4-5-20251001";
+  // Safety net via lib pour rattraper d'éventuels IDs Haiku legacy.
+  return resolveAnthropicModel(process.env.ANTHROPIC_CHAT_MODEL, "haiku");
 }
 
 export async function POST(req: NextRequest) {

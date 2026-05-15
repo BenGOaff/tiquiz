@@ -17,6 +17,7 @@ import { buildQuizGenerationPrompt } from "@/lib/prompts/quiz/system";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { corsHeaders, preflight } from "@/lib/embed/cors";
 import { checkRateLimit, clientIp, hashIp } from "@/lib/embed/rateLimit";
+import { resolveAnthropicModel } from "@/lib/anthropicModel";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,11 +42,9 @@ function getClaudeApiKey(): string {
 function getClaudeModel(): string {
   // The embed runs on the public marketing surface so we default to
   // a fast/cheap model; the env var lets us promote to Sonnet if the
-  // qualitative bar drifts.
-  return (
-    process.env.ANTHROPIC_EMBED_MODEL?.trim() ||
-    "claude-haiku-4-5-20251001"
-  );
+  // qualitative bar drifts. Safety net via lib pour rattraper les
+  // IDs Haiku legacy au cas où.
+  return resolveAnthropicModel(process.env.ANTHROPIC_EMBED_MODEL, "haiku");
 }
 
 function isValidEmail(s: string): boolean {

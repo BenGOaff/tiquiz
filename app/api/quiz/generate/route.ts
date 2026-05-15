@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import {
   buildQuizGenerationPrompt,
   buildQuizImportPrompt,
@@ -26,9 +27,9 @@ function getClaudeApiKey(): string {
 }
 
 function getClaudeModel(): string {
-  return (
-    process.env.ANTHROPIC_MODEL?.trim() || "claude-sonnet-4-20250514"
-  );
+  // Sonnet 4.6 default + safety net pour rattraper les anciens IDs
+  // (claude-sonnet-4-20250514 etc.). Cf. lib/anthropicModel.
+  return resolveAnthropicModel(process.env.ANTHROPIC_MODEL, "sonnet");
 }
 
 export async function POST(req: NextRequest) {
