@@ -37,11 +37,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const data = await fetchQuizMeta(quizId);
     if (!data) return { title: "Quiz – Tiquiz" };
 
-    const description = (data.og_description?.trim() || data.introduction?.slice(0, 160))?.trim() || undefined;
-    // Le titre est édité en rich-text → strip les tags pour la balise
-    // <title> et l'OG (qui doivent être en texte plat ; un span coloré
-    // dans <title> donne "<span style=...>foo</span> – Tiquiz" dans
-    // l'onglet du browser).
+    // Description OG : le titre ET l'introduction sont éditables en
+    // rich-text → on strip avant de truncate (sinon les 160 premiers
+    // chars de l'intro peuvent être bourrés de balises HTML brutes ou
+    // d'entités `&nbsp;` qui apparaissent en clair dans l'aperçu de
+    // partage iMessage / WhatsApp). Cf. rapport Adeline (16 mai 2026).
+    const ogDescRaw = stripHtml(data.og_description);
+    const introPlain = stripHtml(data.introduction);
+    const rawDesc = ogDescRaw || introPlain.slice(0, 160);
+    const description = rawDesc.trim() || undefined;
     const plainTitle = stripHtml(data.title);
 
     return {

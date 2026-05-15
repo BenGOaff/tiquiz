@@ -607,12 +607,14 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) {
-        toast.error("Impossible de générer les variantes. Réessaie.");
+        const errCode = typeof json?.error === "string" ? ` (${json.error})` : "";
+        toast.error(`Impossible de générer les variantes${errCode}. Réessaie.`);
         return null;
       }
       return typeof json.folded === "string" ? json.folded : null;
-    } catch {
-      toast.error("Impossible de générer les variantes. Réessaie.");
+    } catch (err) {
+      console.error("[genderize] network error:", err);
+      toast.error("Impossible de générer les variantes (réseau). Réessaie.");
       return null;
     }
   }, [locale]);

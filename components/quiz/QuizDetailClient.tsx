@@ -664,17 +664,83 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       // ré-utilisées sur tous les éditeurs).
       const rawPalettes = (prof?.saved_palettes ?? []) as unknown;
       setSavedPalettes(Array.isArray(rawPalettes) ? (rawPalettes as PaletteList) : []);
-      // Autosave : si la DB contient un draft plus récent que la
-      // dernière vraie save (updated_at), on offre la restauration.
+      // Autosave : on propose la restauration UNIQUEMENT si le draft
+      // serveur diffère sémantiquement de l'état canonique tout juste
+      // hydraté. Sans cette comparaison, l'autosave qui s'exécute sur
+      // simple ouverture de l'éditeur (par debounce, sans aucune édit)
+      // recrée un draft strictement identique au quiz, dont le
+      // draft_updated_at devient > updated_at → le dialog apparaissait
+      // à chaque réouverture même quand la sauvegarde manuelle de
+      // l'user était à jour. Cf. rapport Adeline (16 mai 2026).
       const draftState = (q as { draft_state?: unknown }).draft_state ?? null;
       const draftAt = (q as { draft_updated_at?: string | null }).draft_updated_at ?? null;
       const savedAt = (q as { updated_at?: string | null }).updated_at ?? null;
-      if (draftState && draftAt && (!savedAt || new Date(draftAt).getTime() > new Date(savedAt).getTime())) {
-        setPendingDraft({
-          state: draftState as Record<string, unknown>,
-          draftUpdatedAt: draftAt,
-          updatedAt: savedAt,
-        });
+      const isNewerDraft = draftState && draftAt && (!savedAt || new Date(draftAt).getTime() > new Date(savedAt).getTime());
+      if (isNewerDraft) {
+        // Snapshot canonique reconstruit à partir des colonnes
+        // fraîchement fetchées — DOIT matcher la shape de
+        // `autosaveSnapshot` ci-dessous (sinon faux positif de diff).
+        const canonical: Record<string, unknown> = {
+          title: q.title,
+          introduction: q.introduction ?? "",
+          cta_text: q.cta_text ?? "",
+          cta_url: q.cta_url ?? "",
+          start_button_text: q.start_button_text ?? "",
+          privacy_url: q.privacy_url ?? "",
+          consent_text: q.consent_text ?? "",
+          capture_heading: q.capture_heading ?? "",
+          capture_subtitle: q.capture_subtitle ?? "",
+          result_insight_heading: q.result_insight_heading ?? "",
+          result_projection_heading: q.result_projection_heading ?? "",
+          capture_first_name: q.capture_first_name ?? false,
+          capture_last_name: q.capture_last_name ?? false,
+          capture_phone: q.capture_phone ?? false,
+          capture_country: q.capture_country ?? false,
+          show_consent_checkbox: (q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false,
+          show_results_breakdown: (q as { show_results_breakdown?: boolean | null }).show_results_breakdown === true,
+          ask_first_name: Boolean((q as unknown as Record<string, unknown>).ask_first_name),
+          ask_gender: Boolean((q as unknown as Record<string, unknown>).ask_gender),
+          virality_enabled: q.virality_enabled,
+          bonus_description: q.bonus_description ?? "",
+          bonus_intro_text: q.bonus_intro_text ?? "",
+          bonus_unlocked_message: q.bonus_unlocked_message ?? "",
+          bonus_image_url: q.bonus_image_url ?? null,
+          share_message: q.share_message ?? "",
+          locale: q.locale ?? "",
+          sio_share_tag_name: q.sio_share_tag_name ?? "",
+          status: q.status,
+          brand_font: (BRAND_FONT_CHOICES as readonly string[]).includes(q.brand_font ?? "")
+            ? (q.brand_font as BrandFontChoice)
+            : (BRAND_FONT_CHOICES as readonly string[]).includes(prof?.brand_font ?? "")
+              ? (prof!.brand_font as BrandFontChoice)
+              : DEFAULT_BRAND_FONT,
+          brand_color_primary: q.brand_color_primary || prof?.brand_color_primary || DEFAULT_BRAND_COLOR_PRIMARY,
+          brand_color_background: q.brand_color_background || DEFAULT_BRAND_COLOR_BACKGROUND,
+          slug: q.slug ?? "",
+          og_description: q.og_description ?? "",
+          custom_footer_text: q.custom_footer_text ?? "",
+          custom_footer_url: q.custom_footer_url ?? "",
+          share_networks: Array.isArray(q.share_networks) ? q.share_networks : [],
+          questions: q.questions,
+          results: q.results,
+        };
+        const sameAsCanonical =
+          JSON.stringify(draftState) === JSON.stringify(canonical);
+        if (sameAsCanonical) {
+          // Draft strictement identique au canonique → on le nettoie en
+          // silence côté serveur pour ne pas re-proposer la restauration
+          // au prochain ouverture. Best-effort, l'éventuel échec réseau
+          // est non bloquant (le dialog reste correct côté UX).
+          fetch(withEmbedToken(`/api/quiz/${quizId}/autosave`, embedSessionToken), {
+            method: "DELETE",
+          }).catch(() => { /* non-fatal */ });
+        } else {
+          setPendingDraft({
+            state: draftState as Record<string, unknown>,
+            draftUpdatedAt: draftAt,
+            updatedAt: savedAt,
+          });
+        }
       }
     } catch { toast.error(t("errLoading")); } finally { setLoading(false); }
   }, [quizId, router, isEmbed, embedSessionToken, t]);
@@ -705,12 +771,18 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) {
-        toast.error("Impossible de générer les variantes. Réessaie.");
+        // On surface le code d'erreur exact (CLAUDE_404, CLAUDE_API_KEY_MISSING,
+        // PARSE_FAILED, TIMEOUT…) pour qu'on puisse diagnostiquer plus
+        // vite quand le user re-rapporte un échec — sans dévoiler de
+        // payload sensible. Fallback générique si pas de code.
+        const errCode = typeof json?.error === "string" ? ` (${json.error})` : "";
+        toast.error(`Impossible de générer les variantes${errCode}. Réessaie.`);
         return null;
       }
       return typeof json.folded === "string" ? json.folded : null;
-    } catch {
-      toast.error("Impossible de générer les variantes. Réessaie.");
+    } catch (err) {
+      console.error("[genderize] network error:", err);
+      toast.error("Impossible de générer les variantes (réseau). Réessaie.");
       return null;
     }
   }, [locale]);

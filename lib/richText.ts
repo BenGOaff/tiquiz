@@ -41,8 +41,34 @@ export function isSafeUrl(url: string): boolean {
   return SAFE_URL_RE.test(url.trim());
 }
 
-// Strip all HTML tags — used for short previews, OpenGraph, etc.
+// Strip all HTML tags AND decode HTML entities — used for short previews,
+// OpenGraph metadata, navigator.share titles, etc. Le précédent stripHtml
+// laissait `&nbsp;`, `&amp;`, `&#39;`… visibles en clair dans les aperçus
+// de partage (cf. rapport iMessage Tiquiz, 16 mai 2026) parce qu'on rend
+// la sortie comme texte JSX et non comme HTML — les entités ne sont
+// alors jamais décodées par le browser.
 export function stripHtml(input: string | null | undefined): string {
   if (!input) return "";
-  return input.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+  return input
+    .replace(/<[^>]*>/g, "")
+    // Entités nommées les plus fréquentes du contentEditable (le browser
+    // insère systématiquement `&nbsp;` à la place des espaces protégés).
+    .replace(/&nbsp;/g, " ")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    // Décimales / hex (ex. &#39; pour l'apostrophe droite).
+    .replace(/&#(\d+);/g, (_m, n) => {
+      const code = Number(n);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    })
+    .replace(/&#x([0-9a-fA-F]+);/g, (_m, n) => {
+      const code = parseInt(n, 16);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : "";
+    })
+    // &amp; en dernier, sinon on double-decode `&amp;nbsp;`.
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
 }
