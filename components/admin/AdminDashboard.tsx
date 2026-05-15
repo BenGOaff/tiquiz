@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Search, Users, BarChart3, RefreshCw, Plus, ArrowUpDown } from "lucide-react";
+import { Loader2, Search, Users, BarChart3, RefreshCw, Plus, ArrowUpDown, Mail, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 type User = {
@@ -63,6 +63,47 @@ export default function AdminDashboard() {
       else toast.error(json.error);
     } catch { toast.error("Erreur"); }
     finally { setCreating(false); }
+  };
+
+  const [busyUserId, setBusyUserId] = useState<string | null>(null);
+
+  const resendMagicLink = async (email: string) => {
+    if (!email) return;
+    setBusyUserId(email);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const json = await res.json();
+      if (json.ok) toast.success(`Magic link renvoyé à ${email}`);
+      else toast.error(json.error || "Erreur");
+    } catch { toast.error("Erreur"); }
+    finally { setBusyUserId(null); }
+  };
+
+  // Suppression irréversible : on prévient l'admin avec un confirm()
+  // natif qui rappelle ce qui sera détruit (auth + quizs + leads).
+  // Pas de undo possible — toutes les FKs ont ON DELETE CASCADE.
+  const deleteUser = async (userId: string, email: string) => {
+    if (!userId) return;
+    const ok = window.confirm(
+      `Supprimer DÉFINITIVEMENT ${email} ?\n\nCascade : profil, quizs, popquizs, leads, projets — tout sera détruit. Action irréversible.`,
+    );
+    if (!ok) return;
+    setBusyUserId(userId);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "DELETE", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userId }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        toast.success(`${email} supprimé`);
+        setUsers(prev => prev.filter(u => (u.user_id ?? u.id) !== userId));
+      } else toast.error(json.error || "Erreur");
+    } catch { toast.error("Erreur"); }
+    finally { setBusyUserId(null); }
   };
 
   const filtered = users
@@ -163,9 +204,30 @@ export default function AdminDashboard() {
                     <td className="px-4 py-3">{u.lead_count}</td>
                     <td className="px-4 py-3 text-muted-foreground text-xs">{u.last_sign_in ? new Date(u.last_sign_in).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "Jamais"}</td>
                     <td className="px-4 py-3">
-                      <select value={u.plan} onChange={e => updatePlan(uid, e.target.value)} className="border rounded px-2 py-1 text-xs bg-background">
-                        <option value="free">Free</option><option value="monthly">Mensuel</option><option value="yearly">Annuel</option><option value="lifetime">Lifetime</option>
-                      </select>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <select value={u.plan} onChange={e => updatePlan(uid, e.target.value)} className="border rounded px-2 py-1 text-xs bg-background">
+                          <option value="free">Free</option><option value="monthly">Mensuel</option><option value="yearly">Annuel</option><option value="lifetime">Lifetime</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => resendMagicLink(u.email)}
+                          disabled={busyUserId === u.email || busyUserId === uid}
+                          title="Renvoyer un lien magique"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border hover:bg-muted disabled:opacity-50"
+                        >
+                          {busyUserId === u.email ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+                          Lien
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteUser(uid, u.email)}
+                          disabled={busyUserId === uid || busyUserId === u.email}
+                          title="Supprimer définitivement"
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                        >
+                          {busyUserId === uid ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

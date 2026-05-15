@@ -159,3 +159,63 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
   }
 }
+
+// PATCH — Admin: resend a magic link to an existing user.
+// Defensive: we DON'T create a user here (shouldCreateUser:false). If the
+// user disappeared from auth.users (rare race), the call fails silently
+// Supabase-side and we surface a clear error to the admin.
+export async function PATCH(req: NextRequest) {
+  const admin = await checkAdmin(req);
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    if (!email) return NextResponse.json({ ok: false, error: "email required" }, { status: 400 });
+
+    const { createClient } = await import("@supabase/supabase-js");
+    const anonClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { auth: { persistSession: false } },
+    );
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim();
+    const { error } = await anonClient.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: `${appUrl}/auth/callback`, shouldCreateUser: false },
+    });
+    if (error) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
+  }
+}
+
+// DELETE — Admin: hard-delete a user. Cascade-deletes everything tied
+// to auth.users (profile, quizzes, leads, popquizzes, etc.) via the
+// ON DELETE CASCADE FKs declared on each public table (001_initial,
+// 020_consent, 026_popquiz…). Irréversible — l'UI demande une
+// confirmation explicite avant d'appeler.
+export async function DELETE(req: NextRequest) {
+  const admin = await checkAdmin(req);
+  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const body = await req.json().catch(() => ({}));
+    const userId = typeof body?.user_id === "string" ? body.user_id.trim() : "";
+    if (!userId) return NextResponse.json({ ok: false, error: "user_id required" }, { status: 400 });
+
+    if (userId === admin.id) {
+      return NextResponse.json({ ok: false, error: "Cannot delete yourself" }, { status: 400 });
+    }
+
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    return NextResponse.json({ ok: false, error: (e as Error).message }, { status: 500 });
+  }
+}
