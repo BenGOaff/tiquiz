@@ -45,6 +45,7 @@ import {
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { interpolateText } from "@/lib/quizPersonalization";
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
+import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
 
@@ -1185,6 +1186,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
 
   return (
    <SioTagsProvider>
+    <UserPalettesProvider palettes={savedPalettes}>
     <RestoreDraftDialog
       open={!!pendingDraft}
       draftUpdatedAt={pendingDraft?.draftUpdatedAt ?? null}
@@ -2221,6 +2223,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
         </div>
       )}
     </div>
+    </UserPalettesProvider>
    </SioTagsProvider>
   );
 }

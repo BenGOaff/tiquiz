@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Mascot } from "@/components/ui/mascot";
 import { InsightsList } from "@/components/ui/insights-card";
 import { computeInsights } from "@/lib/insights";
+import { stripHtml } from "@/lib/richText";
 import {
   Plus, Eye, Users, TrendingUp, ClipboardList, Target, BarChart3,
   Sparkles, Mail, Link2, ArrowUpRight, Download,
@@ -125,7 +126,10 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
         .filter((q) => q.status === "active")
         .map((q) => ({
           id: q.id,
-          title: q.title,
+          // Le titre est édité via RichTextEdit → peut contenir des
+          // `<span style="color:…">`. Pour l'affichage en texte plat
+          // (cartes insight, dropdowns, charts), on strip les tags.
+          title: stripHtml(q.title),
           starts_count: q.starts_count,
           leads_count: q.leads_count ?? 0,
           shares_count: q.shares_count,
@@ -170,11 +174,14 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
   // Traffic chart data — per quiz, with placeholder if empty
   const trafficData = useMemo(() => {
     if (quizzes.length === 0) return [];
-    return quizzes.map((q) => ({
-      name: q.title.length > 15 ? q.title.slice(0, 15) + "\u2026" : q.title,
-      [t("views")]: q.views_count,
-      [t("leads")]: q.leads_count ?? 0,
-    }));
+    return quizzes.map((q) => {
+      const plain = stripHtml(q.title);
+      return {
+        name: plain.length > 15 ? plain.slice(0, 15) + "\u2026" : plain,
+        [t("views")]: q.views_count,
+        [t("leads")]: q.leads_count ?? 0,
+      };
+    });
   }, [quizzes, t]);
 
   const placeholderTraffic = [

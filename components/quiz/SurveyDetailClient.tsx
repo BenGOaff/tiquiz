@@ -42,6 +42,7 @@ import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { interpolateText } from "@/lib/quizPersonalization";
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
+import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
 
@@ -905,6 +906,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
   return (
    <SioTagsProvider>
+    <UserPalettesProvider palettes={savedPalettes}>
     <RestoreDraftDialog
       open={!!pendingDraft}
       draftUpdatedAt={pendingDraft?.draftUpdatedAt ?? null}
@@ -1629,6 +1631,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
         </div>
       )}
     </div>
+    </UserPalettesProvider>
    </SioTagsProvider>
   );
 }

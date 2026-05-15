@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { EmbedQuiz, EmbedLocale } from "./embed-types";
 import { getEmbedStrings } from "./embed-i18n";
+import { stripHtml } from "@/lib/richText";
 
 type Props = {
   locale: EmbedLocale;
@@ -31,7 +32,7 @@ export default function EmbedPaywall({
     <div className="relative h-full">
       {/* Blurred preview underneath */}
       <div className="filter blur-sm saturate-50 pointer-events-none select-none p-4 space-y-3">
-        <h3 className="text-xl font-bold">{quiz.title || t.defaultTitle}</h3>
+        <h3 className="text-xl font-bold">{stripHtml(quiz.title) || t.defaultTitle}</h3>
         <p className="text-sm text-muted-foreground">{quiz.introduction || quiz.description}</p>
         {quiz.questions.slice(0, 3).map((q, i) => (
           <Card key={i} className="bg-muted/30">

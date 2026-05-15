@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { Mascot } from "@/components/ui/mascot";
+import { stripHtml } from "@/lib/richText";
 import {
   Users, Download, RefreshCw, Search, Mail, Calendar,
   CheckCircle2, XCircle, Lock, Sparkles,
@@ -189,7 +190,7 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
         >
           <option value="all">{t("allQuizzes")}</option>
           {quizzes.map((q) => (
-            <option key={q.id} value={q.id}>{q.title}</option>
+            <option key={q.id} value={q.id}>{stripHtml(q.title)}</option>
           ))}
         </select>
       </div>

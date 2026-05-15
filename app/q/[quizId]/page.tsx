@@ -4,6 +4,7 @@
 import type { Metadata } from "next";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
+import { stripHtml } from "@/lib/richText";
 
 export const dynamic = "force-dynamic";
 
@@ -37,12 +38,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     if (!data) return { title: "Quiz – Tiquiz" };
 
     const description = (data.og_description?.trim() || data.introduction?.slice(0, 160))?.trim() || undefined;
+    // Le titre est édité en rich-text → strip les tags pour la balise
+    // <title> et l'OG (qui doivent être en texte plat ; un span coloré
+    // dans <title> donne "<span style=...>foo</span> – Tiquiz" dans
+    // l'onglet du browser).
+    const plainTitle = stripHtml(data.title);
 
     return {
-      title: `${data.title} – Tiquiz`,
+      title: `${plainTitle} – Tiquiz`,
       description,
       openGraph: {
-        title: data.title,
+        title: plainTitle,
         description,
         ...(data.og_image_url ? { images: [{ url: data.og_image_url }] } : {}),
       },

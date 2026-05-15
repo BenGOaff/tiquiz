@@ -62,6 +62,7 @@
     "rteItalic": "Italic",
     "rteAlignCenter": "Center",
     "rteInsertLink": "Add link",
+    "rteMyPalettes": "My palettes",
     "rteImagePrompt": "Image URL (https://… or /path)",
     "rteUrlInvalid": "Invalid URL.",
     "rteBulletList": "Bullet list",
