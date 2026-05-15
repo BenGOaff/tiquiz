@@ -41,6 +41,9 @@ import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { interpolateText } from "@/lib/quizPersonalization";
+import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
+import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
+import { useAutosave } from "@/hooks/use-autosave";
 
 /** Same demo name we use across the quiz editor — keeps the experience
  *  consistent between quiz mode and survey mode (Marie's feedback #6, #7). */
@@ -132,7 +135,7 @@ type QuizData = {
   completions_count: number; shares_count: number;
   questions: QuizQuestion[]; results: QuizResult[];
 };
-type ProfileBrand = { brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null; plan: string | null; privacy_url: string | null };
+type ProfileBrand = { brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null; plan: string | null; privacy_url: string | null; saved_palettes?: unknown };
 interface SurveyDetailClientProps { quizId: string; }
 
 // Inline edit: click to edit text directly on the preview.
@@ -356,6 +359,23 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState<ProfileBrand | null>(null);
+  // Palettes utilisateur (charte centralisée — partagée avec quiz et popquiz).
+  const [savedPalettes, setSavedPalettes] = useState<PaletteList>([]);
+  const handleChangePalettes = useCallback(async (next: PaletteList) => {
+    setSavedPalettes(next);
+    try {
+      await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ saved_palettes: next }),
+      });
+    } catch { /* non-fatal */ }
+  }, []);
+  // Autosave : draft serveur plus récent que la dernière save explicite
+  // → on propose la restauration. Pause de l'autosave tant que le
+  // dialog est ouvert pour ne pas écraser l'état serveur.
+  const [pendingDraft, setPendingDraft] = useState<{ state: Record<string, unknown>; draftUpdatedAt: string; updatedAt: string | null } | null>(null);
+  const [restoring, setRestoring] = useState(false);
   const isPaidPlan = (profile?.plan ?? "free") !== "free";
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -381,6 +401,108 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const scrollPreviewToTop = useCallback(() => {
     previewRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
+
+  // ─── Autosave snapshot ────────────────────────────────────────
+  const autosaveSnapshot = useMemo(() => ({
+    title,
+    introduction,
+    cta_text: ctaText,
+    cta_url: ctaUrl,
+    start_button_text: startButtonText,
+    privacy_url: privacyUrl,
+    consent_text: consentText,
+    capture_heading: captureHeading,
+    capture_subtitle: captureSubtitle,
+    result_insight_heading: resultInsightHeading,
+    result_projection_heading: resultProjectionHeading,
+    capture_first_name: captureFirstName,
+    capture_last_name: captureLastName,
+    capture_phone: capturePhone,
+    capture_country: captureCountry,
+    show_consent_checkbox: showConsentCheckbox,
+    ask_first_name: askFirstName,
+    ask_gender: askGender,
+    share_message: shareMessage,
+    locale,
+    sio_share_tag_name: sioShareTagName,
+    status,
+    brand_font: fontFamily,
+    brand_color_primary: primaryColor,
+    brand_color_background: bgColor,
+    slug,
+    og_description: ogDescription,
+    custom_footer_text: customFooterText,
+    custom_footer_url: customFooterUrl,
+    share_networks: shareNetworks,
+    questions: editQuestions,
+  }), [
+    title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
+    captureHeading, captureSubtitle, resultInsightHeading, resultProjectionHeading,
+    captureFirstName, captureLastName, capturePhone, captureCountry,
+    showConsentCheckbox, askFirstName, askGender,
+    shareMessage, locale, sioShareTagName, status,
+    fontFamily, primaryColor, bgColor,
+    slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
+    editQuestions,
+  ]);
+
+  const { savingDraft, clearDraft } = useAutosave({
+    endpoint: `/api/quiz/${quizId}/autosave`,
+    state: autosaveSnapshot,
+    enabled: !loading && !pendingDraft,
+  });
+
+  const applySnapshot = useCallback((s: Record<string, unknown>) => {
+    if (typeof s.title === "string") setTitle(s.title);
+    if (typeof s.introduction === "string") setIntroduction(s.introduction);
+    if (typeof s.cta_text === "string") setCtaText(s.cta_text);
+    if (typeof s.cta_url === "string") setCtaUrl(s.cta_url);
+    if (typeof s.start_button_text === "string") setStartButtonText(s.start_button_text);
+    if (typeof s.privacy_url === "string") setPrivacyUrl(s.privacy_url);
+    if (typeof s.consent_text === "string") setConsentText(s.consent_text);
+    if (typeof s.capture_heading === "string") setCaptureHeading(s.capture_heading);
+    if (typeof s.capture_subtitle === "string") setCaptureSubtitle(s.capture_subtitle);
+    if (typeof s.result_insight_heading === "string") setResultInsightHeading(s.result_insight_heading);
+    if (typeof s.result_projection_heading === "string") setResultProjectionHeading(s.result_projection_heading);
+    if (typeof s.capture_first_name === "boolean") setCaptureFirstName(s.capture_first_name);
+    if (typeof s.capture_last_name === "boolean") setCaptureLastName(s.capture_last_name);
+    if (typeof s.capture_phone === "boolean") setCapturePhone(s.capture_phone);
+    if (typeof s.capture_country === "boolean") setCaptureCountry(s.capture_country);
+    if (typeof s.show_consent_checkbox === "boolean") setShowConsentCheckbox(s.show_consent_checkbox);
+    if (typeof s.ask_first_name === "boolean") setAskFirstName(s.ask_first_name);
+    if (typeof s.ask_gender === "boolean") setAskGender(s.ask_gender);
+    if (typeof s.share_message === "string") setShareMessage(s.share_message);
+    if (typeof s.locale === "string") setLocale(s.locale);
+    if (typeof s.sio_share_tag_name === "string") setSioShareTagName(s.sio_share_tag_name);
+    if (typeof s.status === "string") setStatus(s.status);
+    if (typeof s.brand_font === "string" && (BRAND_FONT_CHOICES as readonly string[]).includes(s.brand_font)) {
+      setFontFamily(s.brand_font as BrandFontChoice);
+    }
+    if (typeof s.brand_color_primary === "string") setPrimaryColor(s.brand_color_primary);
+    if (typeof s.brand_color_background === "string") setBgColor(s.brand_color_background);
+    if (typeof s.slug === "string") setSlug(s.slug);
+    if (typeof s.og_description === "string") setOgDescription(s.og_description);
+    if (typeof s.custom_footer_text === "string") setCustomFooterText(s.custom_footer_text);
+    if (typeof s.custom_footer_url === "string") setCustomFooterUrl(s.custom_footer_url);
+    if (Array.isArray(s.share_networks)) setShareNetworks(s.share_networks as ShareNetwork[]);
+    if (Array.isArray(s.questions)) setEditQuestions(s.questions as QuizQuestion[]);
+  }, []);
+
+  const onRestoreDraft = useCallback(async () => {
+    if (!pendingDraft) return;
+    setRestoring(true);
+    try {
+      applySnapshot(pendingDraft.state);
+    } finally {
+      setPendingDraft(null);
+      setRestoring(false);
+    }
+  }, [pendingDraft, applySnapshot]);
+
+  const onDiscardDraft = useCallback(async () => {
+    setPendingDraft(null);
+    try { await clearDraft(); } catch { /* non-fatal */ }
+  }, [clearDraft]);
 
   const scrollToSection = (id: string) => {
     let el: HTMLDivElement | null = null;
@@ -441,8 +563,22 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setPrimaryColor(q.brand_color_primary || prof?.brand_color_primary || DEFAULT_BRAND_COLOR_PRIMARY);
       setBgColor(q.brand_color_background || DEFAULT_BRAND_COLOR_BACKGROUND);
       setBrandLogoUrl(prof?.brand_logo_url ?? null);
+      const rawPalettes = (prof?.saved_palettes ?? []) as unknown;
+      setSavedPalettes(Array.isArray(rawPalettes) ? (rawPalettes as PaletteList) : []);
+      // Restauration de draft (autosave) — même logique que
+      // QuizDetailClient : compare draft_updated_at vs updated_at.
+      const draftState = (q as { draft_state?: unknown }).draft_state ?? null;
+      const draftAt = (q as { draft_updated_at?: string | null }).draft_updated_at ?? null;
+      const savedAt = (q as { updated_at?: string | null }).updated_at ?? null;
+      if (draftState && draftAt && (!savedAt || new Date(draftAt).getTime() > new Date(savedAt).getTime())) {
+        setPendingDraft({
+          state: draftState as Record<string, unknown>,
+          draftUpdatedAt: draftAt,
+          updatedAt: savedAt,
+        });
+      }
     } catch { toast.error(t("errLoading")); } finally { setLoading(false); }
-  }, [quizId, router]);
+  }, [quizId, router, t]);
   useEffect(() => { fetchQuiz(); }, [fetchQuiz]);
 
   // Dynamic Google Font link in preview (same mechanism as public page → true WYSIWYG)
@@ -661,6 +797,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
         throw new Error(json?.error || "Error");
       }
       toast.success(t("saved"));
+      try { await clearDraft(); } catch { /* non-fatal */ }
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : t("errGeneric")); } finally { setSaving(false); }
   };
 
@@ -768,6 +905,15 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
   return (
    <SioTagsProvider>
+    <RestoreDraftDialog
+      open={!!pendingDraft}
+      draftUpdatedAt={pendingDraft?.draftUpdatedAt ?? null}
+      savedUpdatedAt={pendingDraft?.updatedAt ?? null}
+      loading={restoring}
+      onRestore={onRestoreDraft}
+      onDiscard={onDiscardDraft}
+      locale={locale || "fr"}
+    />
     <div className="h-screen flex flex-col bg-background">
       {/* TOP BAR */}
       <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-background z-10">
@@ -819,6 +965,12 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             <Eye className="w-4 h-4 mr-1" />
             {locale === "en" ? "Preview" : "Aperçu"}
           </Button>
+          {savingDraft && (
+            <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              {t("autosaveSaving")}
+            </span>
+          )}
           <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}{saving ? "" : t("save")}
           </Button>
@@ -895,6 +1047,12 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                 <div className="space-y-3"><Label className="text-xs">{t("designColors")}</Label>
                   <div className="flex items-center gap-2"><input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">{t("designPrimaryColor")}</span></div>
                   <div className="flex items-center gap-2"><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">{t("designBackgroundColor")}</span></div>
+                  <UserPalettePicker
+                    currentColor={primaryColor}
+                    onPick={setPrimaryColor}
+                    palettes={savedPalettes}
+                    onChangePalettes={handleChangePalettes}
+                  />
                   <button type="button" onClick={() => { if (profile?.brand_color_primary) setPrimaryColor(profile.brand_color_primary); else setPrimaryColor(DEFAULT_BRAND_COLOR_PRIMARY); setBgColor(DEFAULT_BRAND_COLOR_BACKGROUND); }} className="text-[11px] text-primary hover:underline">{t("designResetColors")}</button>
                 </div>
                 <div className="space-y-2">

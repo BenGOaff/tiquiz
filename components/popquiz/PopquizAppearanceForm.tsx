@@ -16,6 +16,7 @@ import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
+import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
 
 export type BgStyle = "transparent" | "solid" | "gradient";
 export type ShadowIntensity = "none" | "soft" | "medium" | "strong";
@@ -53,11 +54,18 @@ interface Props extends AppearanceValues, AppearanceSetters {
   /** Préfixe pour les ids HTML — évite les collisions si 2 instances
    *  cohabitent sur la même page. */
   idPrefix?: string;
+  /** Palettes utilisateur (charte centralisée) — surfacées dans chaque
+   *  ColorSwatchPicker + ligne récap en haut du form. */
+  palettes?: PaletteList;
+  onChangePalettes?: (next: PaletteList) => void | Promise<void>;
+  userPalettesLabel?: string;
 }
 
 export function PopquizAppearanceForm(props: Props) {
   const t = useTranslations("popquizAppearance");
   const id = props.idPrefix ?? "appear";
+  const palettes = props.palettes ?? [];
+  const userPalettesLabel = props.userPalettesLabel;
 
   return (
     <Card>
@@ -72,6 +80,18 @@ export function PopquizAppearanceForm(props: Props) {
             })}
           </p>
         </div>
+        {/* Palettes utilisateur — résumé en haut du form. Le clic sur
+            un swatch applique la couleur au fond (la plus courante des
+            modifs d'apparence popquiz). Le manage-dialog reste dispo
+            via le menu déroulant. */}
+        {props.onChangePalettes && (
+          <UserPalettePicker
+            currentColor={props.bgColor}
+            onPick={props.setBgColor}
+            palettes={palettes}
+            onChangePalettes={props.onChangePalettes}
+          />
+        )}
 
         <div className="space-y-2">
           <Label>
@@ -112,6 +132,8 @@ export function PopquizAppearanceForm(props: Props) {
                   value={props.bgColor}
                   onChange={props.setBgColor}
                   label={props.bgStyle === "gradient" ? t("color1BgLabel") : t("colorBgLabel")}
+                  userPalettes={palettes}
+                  userPalettesLabel={userPalettesLabel}
                 />
               </div>
               {props.bgStyle === "gradient" ? (
@@ -121,6 +143,8 @@ export function PopquizAppearanceForm(props: Props) {
                     value={props.bgColor2}
                     onChange={props.setBgColor2}
                     label={t("color2BgLabel")}
+                    userPalettes={palettes}
+                    userPalettesLabel={userPalettesLabel}
                   />
                 </div>
               ) : null}
@@ -163,6 +187,8 @@ export function PopquizAppearanceForm(props: Props) {
                   value={props.borderColor}
                   onChange={props.setBorderColor}
                   label={t("borderColorLabel")}
+                  userPalettes={palettes}
+                  userPalettesLabel={userPalettesLabel}
                 />
               </div>
             ) : null}
@@ -230,6 +256,8 @@ export function PopquizAppearanceForm(props: Props) {
                 value={props.playButtonColor || "#ffffff"}
                 onChange={props.setPlayButtonColor}
                 label={t("playButtonColorLabel")}
+                userPalettes={palettes}
+                userPalettesLabel={userPalettesLabel}
               />
               {props.playButtonColor ? (
                 <button

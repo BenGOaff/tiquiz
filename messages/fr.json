@@ -977,7 +977,8 @@
     "sidebarSurveyEnd": "Fin du sondage",
     "sidebarThanks": "Écran de remerciement",
     "multiSelectLabel": "Plusieurs réponses possibles",
-    "multiSelectHint": "Si activée, le visiteur peut sélectionner plusieurs options. Il clique sur chaque option pour la cocher puis utilise le bouton « Suivant » pour continuer."
+    "multiSelectHint": "Si activée, le visiteur peut sélectionner plusieurs options. Il clique sur chaque option pour la cocher puis utilise le bouton « Suivant » pour continuer.",
+    "autosaveSaving": "Brouillon enregistré"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",
@@ -1502,5 +1503,31 @@
       "unpublished": "Popquiz dépublié — il n'est plus visible publiquement",
       "modificationsSaved": "Modifications enregistrées"
     }
+  },
+  "palettes": {
+    "defaultPaletteName": "Ma charte",
+    "paletteNumberedName": "Palette {n}",
+    "selectorTitle": "Changer de palette",
+    "noPalette": "Aucune palette",
+    "manage": "Gérer mes palettes",
+    "saveCurrent": "Enregistrer",
+    "saveCurrentTitle": "Ajouter la couleur courante à la palette",
+    "manageTitle": "Mes palettes",
+    "manageDesc": "Tes couleurs réutilisables, dispos partout sur quiz, sondage et popquiz.",
+    "namePlaceholder": "Nom de la palette",
+    "deletePalette": "Supprimer la palette",
+    "removeColor": "Retirer la couleur",
+    "addColor": "Ajouter une couleur",
+    "colorCount": "{n}/{max}",
+    "newPalette": "Nouvelle palette",
+    "emptyHint": "Aucune palette pour l'instant. Crée-en une pour réutiliser tes couleurs en un clic.",
+    "cancel": "Annuler",
+    "save": "Enregistrer"
+  },
+  "autosave": {
+    "dialogTitle": "Reprendre tes dernières modifs ?",
+    "dialogBody": "Une version auto-sauvegardée existe ({draftWhen}). Tu peux la reprendre, ou repartir de ton dernier enregistrement ({savedWhen}).",
+    "restoreBtn": "Reprendre la version auto-sauvegardée",
+    "discardBtn": "Repartir de mon dernier enregistrement"
   }
 }

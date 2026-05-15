@@ -9,6 +9,36 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+// Soft limits — must match the constants in
+// components/editor/UserPalettePicker.tsx so a tampered client can't
+// stuff arbitrary blobs into the profile.
+const MAX_PALETTES = 10;
+const MAX_COLORS_PER_PALETTE = 5;
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+
+function sanitisePalettes(raw: unknown): Array<{ id: string; name: string; colors: string[] }> {
+  if (!Array.isArray(raw)) return [];
+  const out: Array<{ id: string; name: string; colors: string[] }> = [];
+  for (const p of raw.slice(0, MAX_PALETTES)) {
+    if (!p || typeof p !== "object") continue;
+    const obj = p as Record<string, unknown>;
+    const id = typeof obj.id === "string" && obj.id.length > 0 && obj.id.length <= 80
+      ? obj.id
+      : null;
+    const name = typeof obj.name === "string"
+      ? obj.name.slice(0, 60)
+      : "";
+    const colors = Array.isArray(obj.colors)
+      ? obj.colors
+          .filter((c): c is string => typeof c === "string" && HEX_RE.test(c))
+          .slice(0, MAX_COLORS_PER_PALETTE)
+      : [];
+    if (!id) continue;
+    out.push({ id, name, colors });
+  }
+  return out;
+}
+
 export async function GET() {
   try {
     const supabase = await getSupabaseServerClient();
@@ -59,10 +89,19 @@ export async function PATCH(req: NextRequest) {
       // ID affilié Tipote — utilisé sur le footer Tiquiz public pour
       // attribuer les commissions au créateur via ?sa=<id>.
       "tipote_affiliate_id",
+      // Palettes de couleurs nommées de l'user. Sanitisé ci-dessous
+      // (max 10 palettes × 5 couleurs × hex format) avant d'écrire.
+      "saved_palettes",
     ];
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     for (const key of allowed) {
       if (key in body) updates[key] = body[key];
+    }
+
+    // saved_palettes : on n'utilise pas Zod ici (cohérence avec le
+    // reste de la route), donc on valide à la main avant d'écrire.
+    if ("saved_palettes" in updates) {
+      updates.saved_palettes = sanitisePalettes(updates.saved_palettes);
     }
 
     const { data: profile, error } = await supabaseAdmin

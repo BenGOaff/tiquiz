@@ -977,7 +977,8 @@
     "sidebarSurveyEnd": "Survey end",
     "sidebarThanks": "Thank-you screen",
     "multiSelectLabel": "Multiple answers allowed",
-    "multiSelectHint": "If enabled, the visitor can pick several options. They tap each option to toggle it and use the \"Next\" button to continue."
+    "multiSelectHint": "If enabled, the visitor can pick several options. They tap each option to toggle it and use the \"Next\" button to continue.",
+    "autosaveSaving": "Draft saved"
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",
@@ -1502,5 +1503,31 @@
       "unpublished": "Popquiz unpublished — it's no longer visible publicly",
       "modificationsSaved": "Changes saved"
     }
+  },
+  "palettes": {
+    "defaultPaletteName": "My brand",
+    "paletteNumberedName": "Palette {n}",
+    "selectorTitle": "Switch palette",
+    "noPalette": "No palette",
+    "manage": "Manage palettes",
+    "saveCurrent": "Save",
+    "saveCurrentTitle": "Add the current color to this palette",
+    "manageTitle": "My palettes",
+    "manageDesc": "Your reusable colors, available on every quiz, survey and popquiz.",
+    "namePlaceholder": "Palette name",
+    "deletePalette": "Delete palette",
+    "removeColor": "Remove color",
+    "addColor": "Add color",
+    "colorCount": "{n}/{max}",
+    "newPalette": "New palette",
+    "emptyHint": "No palette yet. Create one to reuse your colors in one click.",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "autosave": {
+    "dialogTitle": "Pick up your latest edits?",
+    "dialogBody": "We have an auto-saved version ({draftWhen}). You can restore it, or start again from your last save ({savedWhen}).",
+    "restoreBtn": "Restore the auto-saved version",
+    "discardBtn": "Start from my last save"
   }
 }
