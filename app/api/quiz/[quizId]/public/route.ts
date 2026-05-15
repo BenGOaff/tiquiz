@@ -335,10 +335,17 @@ export async function GET(req: NextRequest, context: RouteContext) {
     void _uid;
     const effectivePrivacyUrl = String(quizPublic.privacy_url ?? "").trim() || fallbackPrivacyUrl;
 
-    // Edge-SWR resilience for published quizzes: visitors keep seeing the quiz
-    // even when origin is down (deploy / crash / DB hiccup) for up to 24h. Skip
-    // caching for embed previews + owner drafts (créateur-only,
-    // évolutifs). Sinon edge SWR comme avant.
+    // Edge-SWR resilience pour les visiteurs : si l'origine est down
+    // (deploy / crash / DB hiccup) on continue à servir la dernière
+    // bonne réponse. On garde 60s de fresh + 60s de stale-while-
+    // revalidate (au lieu de 86400/24h précédent) — sinon, quand le
+    // créateur édite ses couleurs / titre, un visiteur ayant déjà
+    // ouvert l'URL voyait l'ancienne version pendant 24h alors qu'un
+    // hard refresh aurait suffi. Bug remonté par Adeline (16 mai 2026,
+    // "sur mon tel la couleur du quiz n'est pas la bonne"). 60s SWR
+    // garantit que la prochaine requête après ~2 min serve le contenu
+    // à jour, le tout sans rajouter de charge significative sur
+    // l'origine.
     const cacheHeaders: Record<string, string> = (embedToken || isOwnerPreview)
       ? {
           "Cache-Control": "private, no-store, max-age=0",
@@ -346,9 +353,9 @@ export async function GET(req: NextRequest, context: RouteContext) {
           "Vercel-CDN-Cache-Control": "no-store",
         }
       : {
-          "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=86400",
-          "CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
-          "Vercel-CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=86400",
+          "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=60",
+          "CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=60",
+          "Vercel-CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=60",
         };
 
     // G1 — display-time French typography for legacy data. Apply NBSP rules
