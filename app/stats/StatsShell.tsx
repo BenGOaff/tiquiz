@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { Mascot } from "@/components/ui/mascot";
+import { stripHtml } from "@/lib/richText";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import {
   BarChart3, Eye, Play, CheckCircle, Users, Share2, TrendingUp, TrendingDown,
@@ -413,8 +414,12 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
                       <CardContent className="p-5 space-y-4">
                         <div className="flex items-start gap-3">
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold truncate text-foreground" title={q.title}>
-                              {q.title || t("untitled")}
+                            {/* Le titre du quiz est édité en rich-text (RichTextEdit) →
+                                peut contenir des `<span style="color:…">`. On strip pour
+                                cette ligne de listing (à la fois le contenu affiché ET
+                                l'attribut HTML title, qui donne le tooltip natif). */}
+                            <h3 className="font-semibold truncate text-foreground" title={stripHtml(q.title)}>
+                              {stripHtml(q.title) || t("untitled")}
                             </h3>
                             <div className="mt-1 flex items-center gap-2 text-xs flex-wrap">
                               <Badge variant={isActive ? "default" : "secondary"} className="text-[11px]">

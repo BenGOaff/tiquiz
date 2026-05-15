@@ -85,13 +85,13 @@ export default function PopquizPlayClient({
           <div className="text-center space-y-1.5">
             {heading ? (
               <h1
-                className="tiquiz-rich text-xl sm:text-2xl md:text-3xl font-bold text-white drop-shadow-sm"
+                className="tiquiz-rich tiquiz-rich-inline text-xl sm:text-2xl md:text-3xl font-bold text-white drop-shadow-sm leading-tight"
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(heading) }}
               />
             ) : null}
             {subheading ? (
               <p
-                className="tiquiz-rich text-sm sm:text-base text-white/80 max-w-2xl mx-auto"
+                className="tiquiz-rich tiquiz-rich-inline text-sm sm:text-base text-white/80 max-w-2xl mx-auto leading-snug"
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(subheading) }}
               />
             ) : null}

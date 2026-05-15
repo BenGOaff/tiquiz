@@ -73,6 +73,7 @@ import {
 import { parseVideoUrl } from "@/lib/popquiz";
 import type { Popquiz, PopquizCue, PopquizVideo } from "@/lib/popquiz";
 import { toast } from "sonner";
+import { stripHtml } from "@/lib/richText";
 
 interface QuizOption {
   id: string;
@@ -883,14 +884,14 @@ export default function PopquizNewClient({
                       onChange={setDisplayTitle}
                       singleLine
                       placeholder={t("preview.titlePh")}
-                      className="tiquiz-rich text-base font-bold text-white drop-shadow-sm"
+                      className="tiquiz-rich tiquiz-rich-inline text-base font-bold text-white drop-shadow-sm leading-tight"
                     />
                     <RichTextEdit
                       value={displaySubtitle}
                       onChange={setDisplaySubtitle}
                       singleLine
                       placeholder={t("preview.subtitlePh")}
-                      className="tiquiz-rich text-xs text-white/80"
+                      className="tiquiz-rich tiquiz-rich-inline text-xs text-white/80 leading-snug"
                     />
                   </div>
                 ) : null}
@@ -999,7 +1000,7 @@ export default function PopquizNewClient({
                         >
                           {quizzes.map((q) => (
                             <option key={q.id} value={q.id}>
-                              {q.title}
+                              {stripHtml(q.title)}
                               {q.status !== "active" ? ` ${t("markers.draftSuffix")}` : ""}
                             </option>
                           ))}

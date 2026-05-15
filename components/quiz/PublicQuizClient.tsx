@@ -1429,8 +1429,11 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                 />
               </div>
             )}
+            {/* Titre du quiz = champ COURT (1 ligne). `tiquiz-rich-inline`
+                empêche tout <p>/<div> imbriqué de modifier la taille de
+                police. */}
             <h1
-              className="tiquiz-rich text-3xl sm:text-5xl font-bold leading-tight"
+              className="tiquiz-rich tiquiz-rich-inline text-3xl sm:text-5xl font-bold leading-tight"
               dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.title)) }}
             />
 
@@ -1716,7 +1719,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                     <div className="w-full aspect-video bg-muted/40" aria-hidden />
                   )}
                   <span
-                    className="tiquiz-rich text-base font-medium text-left p-4"
+                    className="tiquiz-rich tiquiz-rich-inline text-base font-medium text-left p-4"
                     dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
                   />
                 </button>
@@ -1775,7 +1778,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                   }`}
                 >
                   <span
-                    className="tiquiz-rich text-base font-medium"
+                    className="tiquiz-rich tiquiz-rich-inline text-base font-medium"
                     dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
                   />
                 </button>
@@ -1823,8 +1826,9 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                 </span>
               </div>
 
+              {/* Question = champ court — même fix typo qu'au-dessus. */}
               <h2
-                className="tiquiz-rich text-2xl sm:text-4xl font-bold leading-tight text-center"
+                className="tiquiz-rich tiquiz-rich-inline text-2xl sm:text-4xl font-bold leading-tight text-center"
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(q.question_text)) }}
               />
 
@@ -1862,8 +1866,14 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             flow now uses the same gentle entrance keyframe so each
             step transition reads as a guided experience. */}
         <div className="max-w-lg w-full space-y-6 py-16 sm:py-24 animate-quiz-step-in">
+            {/* Heading & subtitle de la page capture = champs COURTS.
+                On utilise `tiquiz-rich-inline` en plus de `tiquiz-rich` :
+                ça neutralise les block-levels parasites (<p>, <div>,
+                headings) qui sinon font sauter la taille de police au
+                milieu d'une même phrase, sans toucher aux <span> de
+                couleur ni au <strong>/<em>. */}
             <h2
-              className="tiquiz-rich text-2xl sm:text-4xl font-bold text-center"
+              className="tiquiz-rich tiquiz-rich-inline text-2xl sm:text-4xl font-bold text-center leading-tight"
               dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.capture_heading) || "") || t.captureHeadingDefault }}
             />
             {(() => {
@@ -1876,14 +1886,14 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               if (hasHtmlTags) {
                 return (
                   <div
-                    className="tiquiz-rich text-muted-foreground text-center text-lg"
+                    className="tiquiz-rich tiquiz-rich-inline text-muted-foreground text-center text-lg leading-snug"
                     dangerouslySetInnerHTML={{ __html: sanitizeRichText(sub) }}
                   />
                 );
               }
               return (
                 <RichParagraph
-                  className="text-muted-foreground text-center text-lg"
+                  className="text-muted-foreground text-center text-lg leading-snug"
                   text={sub}
                 />
               );
@@ -2295,7 +2305,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
         <div className="max-w-2xl w-full py-16 sm:py-24 space-y-8 animate-quiz-step-in">
             <div className="space-y-3">
               <h2
-                className="tiquiz-rich text-3xl sm:text-5xl font-bold leading-tight text-primary"
+                className="tiquiz-rich tiquiz-rich-inline text-3xl sm:text-5xl font-bold leading-tight text-primary"
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(resultProfile?.title) || "") || t.resultFallback }}
               />
             </div>
@@ -2317,7 +2327,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               return (
                 <div className="p-4 rounded-xl bg-muted/50 border">
                   <p
-                    className="tiquiz-rich text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5"
+                    className="tiquiz-rich tiquiz-rich-inline text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5"
                     dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.result_insight_heading?.trim() || "") || t.insight }}
                   />
                   {isHtml(ins) ? (
@@ -2337,7 +2347,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               return (
                 <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
                   <p
-                    className="tiquiz-rich text-xs font-bold uppercase tracking-widest text-primary/70 mb-1.5"
+                    className="tiquiz-rich tiquiz-rich-inline text-xs font-bold uppercase tracking-widest text-primary/70 mb-1.5"
                     dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.result_projection_heading?.trim() || "") || t.projection }}
                   />
                   {isHtml(proj) ? (
@@ -2373,7 +2383,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                       <li key={r.id ?? i} className="space-y-1.5">
                         <div className="flex items-center justify-between gap-3 text-sm">
                           <span
-                            className={`tiquiz-rich truncate ${isMain ? "font-semibold" : ""}`}
+                            className={`tiquiz-rich tiquiz-rich-inline truncate ${isMain ? "font-semibold" : ""}`}
                             dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(r.title) || "") }}
                           />
                           <span className="flex items-center gap-2 shrink-0">

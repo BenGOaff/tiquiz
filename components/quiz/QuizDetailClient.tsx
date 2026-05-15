@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/dialog";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { interpolateText } from "@/lib/quizPersonalization";
+import { stripHtml } from "@/lib/richText";
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
 import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
@@ -1964,7 +1965,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     {!isEmbed && (
                       <div className="p-4 rounded-xl bg-muted/40 border border-dashed">
                         <div className="text-xs font-semibold text-foreground mb-1">{t("previewResultTagLabel")}</div>
-                        <p className="text-[11px] text-muted-foreground mb-2">{t("previewResultTagHint", { title: r.title || t("previewResult", { n: ri + 1 }) })}</p>
+                        <p className="text-[11px] text-muted-foreground mb-2">{t("previewResultTagHint", { title: stripHtml(r.title) || t("previewResult", { n: ri + 1 }) })}</p>
                         <SioTagPicker value={r.sio_tag_name ?? ""} onChange={(v) => updateR(ri, "sio_tag_name", v || null)} />
                       </div>
                     )}
