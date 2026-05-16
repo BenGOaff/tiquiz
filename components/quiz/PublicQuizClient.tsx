@@ -812,6 +812,18 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     [firstName, gender],
   );
 
+  // Interpolation "neutre" pour les résultats AUTRES que celui du
+  // visiteur (cf. card "Répartition complète"). Pas de prénom (on
+  // ne va pas écrire "Béné, tu es la Solopreneuse Invisible" pour
+  // un profil qui N'EST PAS celui de Béné) et gender = "x" pour
+  // afficher le wording inclusif générique. Cf. bug Adeline, 17 mai
+  // 2026 : la liste de répartition affichait le prénom du visiteur
+  // sur des profils qui ne le concernent pas.
+  const interpNeutral = useCallback(
+    (text: string | null | undefined) => makeInterpolator({ name: "", gender: "x" })(text),
+    [],
+  );
+
   // ─── Dynamic Google Font injection (WYSIWYG with editor preview) ───
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -2397,9 +2409,14 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                     return (
                       <li key={r.id ?? i} className="space-y-1.5">
                         <div className="flex items-center justify-between gap-3 text-sm">
+                          {/* isMain = c'est le résultat dominant du visiteur
+                              → on personnalise avec son prénom + genre.
+                              Sinon = c'est un AUTRE profil affiché pour
+                              référence → wording neutre (pas de "Béné,…"
+                              sur un profil qui n'est pas Béné). */}
                           <span
                             className={`tiquiz-rich tiquiz-rich-inline truncate ${isMain ? "font-semibold" : ""}`}
-                            dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(r.title) || "") }}
+                            dangerouslySetInnerHTML={{ __html: sanitizeRichText((isMain ? interp(r.title) : interpNeutral(r.title)) || "") }}
                           />
                           <span className="flex items-center gap-2 shrink-0">
                             {isMain && (
