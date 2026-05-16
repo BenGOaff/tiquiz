@@ -979,7 +979,12 @@
     "sidebarThanks": "Thank-you screen",
     "multiSelectLabel": "Multiple answers allowed",
     "multiSelectHint": "If enabled, the visitor can pick several options. They tap each option to toggle it and use the \"Next\" button to continue.",
-    "autosaveSaving": "Draft saved"
+    "autosaveSaving": "Draft saved",
+    "shareTabOgImageTitle": "Social share thumbnail",
+    "shareTabOgImageHint": "Image shown by WhatsApp, iMessage, X, etc. when your link is shared. Without upload, our logo is displayed.",
+    "shareTabOgImageUpload": "Upload an image",
+    "shareTabOgImageDimsHint": "Recommended: 1200 × 630 px (ratio 1.91:1). Max 10 MB.",
+    "ogImageUploaded": "Thumbnail saved"
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",

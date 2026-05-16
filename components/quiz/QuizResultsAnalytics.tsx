@@ -22,6 +22,7 @@ import {
 } from "recharts";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { stripHtml } from "@/lib/richText";
 import {
   Eye,
   Play,
@@ -185,14 +186,21 @@ export default function QuizResultsAnalytics({
         }
         if (countedRespondent) totalAnswered += 1;
       }
-      const data = q.options.map((opt, oIdx) => ({
-        name: truncate(opt.text || t("optionFallback", { n: oIdx + 1 })),
-        fullName: opt.text || t("optionFallback", { n: oIdx + 1 }),
-        value: optionCounts[oIdx],
-      }));
+      const data = q.options.map((opt, oIdx) => {
+        // Strip HTML tags + entités (&nbsp;, &amp;…) — ces champs sont
+        // édités en rich-text mais affichés ici comme texte plat (chart
+        // axis labels, tooltips, breakdown). Sans strip on voit
+        // littéralement `<span style=...>` ou `&nbsp;`.
+        const plain = stripHtml(opt.text) || t("optionFallback", { n: oIdx + 1 });
+        return {
+          name: truncate(plain),
+          fullName: plain,
+          value: optionCounts[oIdx],
+        };
+      });
       return {
         questionIndex: qIdx,
-        questionText: q.question_text || t("questionFallback", { n: qIdx + 1 }),
+        questionText: stripHtml(q.question_text) || t("questionFallback", { n: qIdx + 1 }),
         totalAnswered,
         data,
       };

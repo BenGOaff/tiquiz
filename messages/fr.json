@@ -979,7 +979,12 @@
     "sidebarThanks": "Écran de remerciement",
     "multiSelectLabel": "Plusieurs réponses possibles",
     "multiSelectHint": "Si activée, le visiteur peut sélectionner plusieurs options. Il clique sur chaque option pour la cocher puis utilise le bouton « Suivant » pour continuer.",
-    "autosaveSaving": "Brouillon enregistré"
+    "autosaveSaving": "Brouillon enregistré",
+    "shareTabOgImageTitle": "Vignette de partage social",
+    "shareTabOgImageHint": "Image affichée par WhatsApp, iMessage, X, etc. quand ton lien est partagé. Sans upload, c'est notre logo qui s'affiche.",
+    "shareTabOgImageUpload": "Téléverser une image",
+    "shareTabOgImageDimsHint": "Format recommandé : 1200 × 630 px (ratio 1.91:1). Max 10 Mo.",
+    "ogImageUploaded": "Vignette enregistrée"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",

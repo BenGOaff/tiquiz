@@ -45,6 +45,7 @@ import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPal
 import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
+import { stripHtml } from "@/lib/richText";
 
 /** Same demo name we use across the quiz editor — keeps the experience
  *  consistent between quiz mode and survey mode (Marie's feedback #6, #7). */
@@ -353,6 +354,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [fontFamily, setFontFamily] = useState<BrandFontChoice>(DEFAULT_BRAND_FONT);
   const [slug, setSlug] = useState("");
   const [ogDescription, setOgDescription] = useState("");
+  // Vignette OG (preview de partage social). Cf. demande Adeline.
+  const [ogImageUrl, setOgImageUrl] = useState<string | null>(null);
+  const [uploadingOgImage, setUploadingOgImage] = useState(false);
   const [customFooterText, setCustomFooterText] = useState("");
   const [customFooterUrl, setCustomFooterUrl] = useState("");
   const [shareNetworks, setShareNetworks] = useState<ShareNetwork[]>([]);
@@ -432,6 +436,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     brand_color_background: bgColor,
     slug,
     og_description: ogDescription,
+    og_image_url: ogImageUrl,
     custom_footer_text: customFooterText,
     custom_footer_url: customFooterUrl,
     share_networks: shareNetworks,
@@ -483,6 +488,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.brand_color_background === "string") setBgColor(s.brand_color_background);
     if (typeof s.slug === "string") setSlug(s.slug);
     if (typeof s.og_description === "string") setOgDescription(s.og_description);
+    if (s.og_image_url === null || typeof s.og_image_url === "string") setOgImageUrl(s.og_image_url);
     if (typeof s.custom_footer_text === "string") setCustomFooterText(s.custom_footer_text);
     if (typeof s.custom_footer_url === "string") setCustomFooterUrl(s.custom_footer_url);
     if (Array.isArray(s.share_networks)) setShareNetworks(s.share_networks as ShareNetwork[]);
@@ -551,6 +557,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setEditResults(q.results);
       setSlug(q.slug ?? "");
       setOgDescription(q.og_description ?? "");
+      setOgImageUrl(q.og_image_url ?? null);
       setCustomFooterText(q.custom_footer_text ?? "");
       setCustomFooterUrl(q.custom_footer_url ?? "");
       setShareNetworks(Array.isArray(q.share_networks) ? (q.share_networks as ShareNetwork[]) : []);
@@ -679,7 +686,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
     const queue = fields.filter((f) => {
       const raw = (f.get() ?? "").toString();
-      const text = raw.replace(/<[^>]*>/g, "").trim();
+      const text = stripHtml(raw);
       if (!text) return false;
       return !/\{[^{}]*\|[^{}]*\|[^{}]*\}/.test(raw);
     });
@@ -693,7 +700,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     let done = 0;
     for (const f of queue) {
       const raw = (f.get() ?? "").toString();
-      const text = raw.replace(/<[^>]*>/g, "").trim();
+      const text = stripHtml(raw);
       try {
         const res = await fetch("/api/quiz/gender-variants", {
           method: "POST",
@@ -745,6 +752,33 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     }
   }
 
+  // Vignette OG — même pattern que handleLogoUpload mais storage namespace
+  // distinct + persisté côté quiz (pas profil) car chaque sondage a sa
+  // propre image de partage.
+  async function handleOgImageUpload(file: File) {
+    if (!file.type.startsWith("image/")) { toast.error(t("errImageOnly")); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("errImageTooLarge10")); return; }
+    setUploadingOgImage(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error(t("errNotSignedIn")); return; }
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `og/${user.id}/${quizId}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      setOgImageUrl(urlData.publicUrl);
+      toast.success(t("ogImageUploaded"));
+    } catch (err) {
+      console.error("OG image upload failed:", err);
+      const msg = err instanceof Error ? err.message : t("errUnknown");
+      toast.error(t("errImageUpload", { msg }));
+    } finally {
+      setUploadingOgImage(false);
+    }
+  }
+
   function toggleShareNetwork(n: ShareNetwork) {
     setShareNetworks((prev) => (prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]));
   }
@@ -777,6 +811,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           // Share + SEO
           slug: slug.trim() ? cleanedSlug : null,
           og_description: ogDescription.trim() || null,
+          og_image_url: ogImageUrl,
           share_networks: shareNetworks,
           // Custom footer — ignored server-side for free plan but we still send it
           custom_footer_text: customFooterText.trim() || null,
@@ -1013,7 +1048,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                           // Strip placeholders + HTML before truncating so the
                           // sidebar shows readable preview text rather than raw
                           // template syntax (Marie's #5).
-                          const plain = cleanPlaceholdersForLabel(q.question_text).replace(/<[^>]*>/g, "").trim();
+                          const plain = stripHtml(cleanPlaceholdersForLabel(q.question_text));
                           return plain ? plain.slice(0, 35) + (plain.length > 35 ? "…" : "") : t("sidebarEmptyQuestion");
                         })()}
                         onClick={() => scrollToSection(`q-${i}`)}
@@ -1371,7 +1406,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                                     <div className="aspect-video bg-muted/30 flex items-center justify-center">
                                       {opt.image_url ? (
                                         // eslint-disable-next-line @next/next/no-img-element
-                                        <img src={opt.image_url} alt={opt.text} className="w-full h-full object-cover" />
+                                        <img src={opt.image_url} alt={stripHtml(opt.text)} className="w-full h-full object-cover" />
                                       ) : (
                                         <span className="text-xs text-muted-foreground">{t("imageEmptyHint")}</span>
                                       )}
@@ -1561,19 +1596,65 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             </div>
           </CardContent></Card>
 
-          {/* SEO / Open Graph description */}
-          <Card><CardContent className="pt-6 space-y-3">
-            <h3 className="font-semibold">{t("shareTabSeoTitle")}</h3>
-            <p className="text-xs text-muted-foreground">{t("shareTabSeoHint")}</p>
-            <Textarea
-              value={ogDescription}
-              onChange={(e) => setOgDescription(e.target.value)}
-              placeholder={t("shareTabSeoPlaceholder")}
-              rows={2}
-              maxLength={200}
-              className="text-sm"
-            />
-            <p className="text-[10px] text-muted-foreground text-right">{ogDescription.length}/200</p>
+          {/* SEO / Open Graph description + vignette de partage */}
+          <Card><CardContent className="pt-6 space-y-4">
+            <div className="space-y-3">
+              <h3 className="font-semibold">{t("shareTabSeoTitle")}</h3>
+              <p className="text-xs text-muted-foreground">{t("shareTabSeoHint")}</p>
+              <Textarea
+                value={ogDescription}
+                onChange={(e) => setOgDescription(e.target.value)}
+                placeholder={t("shareTabSeoPlaceholder")}
+                rows={2}
+                maxLength={200}
+                className="text-sm"
+              />
+              <p className="text-[10px] text-muted-foreground text-right">{ogDescription.length}/200</p>
+            </div>
+
+            {/* Vignette OG du sondage. Sans upload, c'est le logo Tiquiz
+                qui s'affiche dans les previews de partage social. */}
+            <div className="space-y-2 pt-2 border-t">
+              <h3 className="font-semibold text-sm">{t("shareTabOgImageTitle")}</h3>
+              <p className="text-xs text-muted-foreground">{t("shareTabOgImageHint")}</p>
+              {ogImageUrl ? (
+                <div className="space-y-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={ogImageUrl} alt="" className="w-full max-w-sm aspect-[1200/630] rounded-lg border bg-muted/30 object-cover" />
+                  <div className="flex gap-2">
+                    <label className="text-xs px-3 py-1.5 rounded border hover:bg-muted cursor-pointer inline-flex items-center gap-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleOgImageUpload(f); }}
+                        disabled={uploadingOgImage}
+                      />
+                      {uploadingOgImage ? t("uploading") : t("replace")}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setOgImageUrl(null)}
+                      className="text-xs px-3 py-1.5 rounded border hover:bg-destructive/10 text-destructive"
+                    >
+                      {t("remove")}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <label className="text-xs px-3 py-1.5 rounded border border-dashed hover:bg-muted cursor-pointer inline-flex items-center gap-1">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleOgImageUpload(f); }}
+                    disabled={uploadingOgImage}
+                  />
+                  {uploadingOgImage ? t("uploading") : t("shareTabOgImageUpload")}
+                </label>
+              )}
+              <p className="text-[10px] text-muted-foreground">{t("shareTabOgImageDimsHint")}</p>
+            </div>
           </CardContent></Card>
 
           {/* Custom footer — paid plans only */}

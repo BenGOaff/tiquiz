@@ -996,7 +996,12 @@
     "sidebarThanks": "Schermata di ringraziamento",
     "multiSelectLabel": "Più risposte ammesse",
     "multiSelectHint": "Se attivata, il visitatore può selezionare più opzioni. Tocca ogni opzione per attivarla e usa il pulsante \"Avanti\" per continuare.",
-    "autosaveSaving": "Bozza salvata"
+    "autosaveSaving": "Bozza salvata",
+    "shareTabOgImageTitle": "Miniatura di condivisione",
+    "shareTabOgImageHint": "Immagine mostrata da WhatsApp, iMessage, X, ecc. quando il link è condiviso. Senza upload, viene mostrato il nostro logo.",
+    "shareTabOgImageUpload": "Carica un'immagine",
+    "shareTabOgImageDimsHint": "Consigliato: 1200 × 630 px. Max 10 MB.",
+    "ogImageUploaded": "Miniatura salvata"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nuova password",

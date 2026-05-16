@@ -996,7 +996,12 @@
     "sidebarThanks": "شاشة الشكر",
     "multiSelectLabel": "السماح بعدّة إجابات",
     "multiSelectHint": "إذا فُعِّلت، يمكن للزائر اختيار عدّة خيارات. ينقر على كل خيار لتفعيله ثم يستخدم زر «التالي» للمتابعة.",
-    "autosaveSaving": "تم حفظ المسودة"
+    "autosaveSaving": "تم حفظ المسودة",
+    "shareTabOgImageTitle": "صورة مصغرة للمشاركة",
+    "shareTabOgImageHint": "الصورة التي تظهر على واتساب وآي مسج وإكس عند مشاركة الرابط. بدون رفع، يظهر شعارنا.",
+    "shareTabOgImageUpload": "رفع صورة",
+    "shareTabOgImageDimsHint": "موصى به: 1200 × 630 بكسل. الحد الأقصى 10 ميغابايت.",
+    "ogImageUploaded": "تم حفظ الصورة المصغرة"
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",

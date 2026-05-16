@@ -1490,7 +1490,11 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-16" style={rootStyle}>
         <div className="max-w-md w-full space-y-6">
-          <h2 className="text-2xl sm:text-3xl font-bold text-center">{t.personalizeTitle}</h2>
+          {/* L'écran de personnalisation respecte maintenant la charte
+              du quiz : couleur primaire sur le titre (comme la page de
+              résultats), font-family héritée de rootStyle. Tout est
+              personnalisable au même titre que les autres steps. */}
+          <h2 className="text-2xl sm:text-3xl font-bold text-center" style={{ color: branding.primaryColor }}>{t.personalizeTitle}</h2>
           <p className="text-muted-foreground text-center">{t.personalizeSubtitle}</p>
           {quiz.ask_first_name && (
             <div className="space-y-1.5">
@@ -1712,7 +1716,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={opt.image_url}
-                      alt={opt.text}
+                      alt={stripHtml(opt.text)}
                       className="w-full aspect-video object-cover"
                     />
                   ) : (
@@ -2044,10 +2048,14 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   // they unlock the bonus BY sharing, not just by seeing it next to the
   // results (where it often got missed).
   if (step === "bonus") {
-    const bonusText = (quiz.bonus_description || "").trim();
-    // When bonus_intro_text is set, it overrides the localized template
-    // entirely. Whitespace-pre-line so creators can use line breaks.
-    const customBonusIntro = (quiz.bonus_intro_text || "").trim();
+    // bonus_description et bonus_intro_text sont édités en rich-text
+    // (RichTextEdit) → contiennent du HTML + entités `&nbsp;`. Pour
+    // l'injection dans la template texte localisée, on strip vers du
+    // plain. Le custom intro est rendu via dangerouslySetInnerHTML
+    // plus bas pour préserver la mise en forme du créateur.
+    const bonusText = stripHtml(quiz.bonus_description);
+    const customBonusIntroHtml = sanitizeRichText(quiz.bonus_intro_text);
+    const hasCustomIntro = stripHtml(quiz.bonus_intro_text).length > 0;
     const allowedNetworks = (quiz.share_networks && quiz.share_networks.length > 0)
       ? quiz.share_networks
       : ["x", "facebook", "linkedin", "whatsapp", "threads"];
@@ -2070,9 +2078,16 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             <h2 className="text-2xl sm:text-3xl font-bold leading-tight">
               {t.bonusStepHeading}
             </h2>
-            <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">
-              {customBonusIntro || t.bonusStepIntro(bonusText)}
-            </p>
+            {hasCustomIntro ? (
+              <p
+                className="tiquiz-rich tiquiz-rich-inline text-muted-foreground text-base leading-relaxed whitespace-pre-line"
+                dangerouslySetInnerHTML={{ __html: customBonusIntroHtml }}
+              />
+            ) : (
+              <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">
+                {t.bonusStepIntro(bonusText)}
+              </p>
+            )}
           </div>
 
           {quiz.bonus_image_url && (

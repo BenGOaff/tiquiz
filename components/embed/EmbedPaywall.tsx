@@ -33,13 +33,16 @@ export default function EmbedPaywall({
       {/* Blurred preview underneath */}
       <div className="filter blur-sm saturate-50 pointer-events-none select-none p-4 space-y-3">
         <h3 className="text-xl font-bold">{stripHtml(quiz.title) || t.defaultTitle}</h3>
-        <p className="text-sm text-muted-foreground">{quiz.introduction || quiz.description}</p>
+        {/* Tous ces champs sont édités en rich-text → strip côté preview
+            (sinon on voit les balises <span style=...> et les entités
+            &nbsp; en clair derrière le blur). */}
+        <p className="text-sm text-muted-foreground">{stripHtml(quiz.introduction || quiz.description || "")}</p>
         {quiz.questions.slice(0, 3).map((q, i) => (
           <Card key={i} className="bg-muted/30">
             <CardContent className="p-3 space-y-2">
-              <div className="font-semibold">{i + 1}. {q.question_text}</div>
+              <div className="font-semibold">{i + 1}. {stripHtml(q.question_text)}</div>
               {q.options.map((o, j) => (
-                <div key={j} className="text-sm border rounded px-3 py-2 bg-background">{o.text}</div>
+                <div key={j} className="text-sm border rounded px-3 py-2 bg-background">{stripHtml(o.text)}</div>
               ))}
             </CardContent>
           </Card>
