@@ -49,6 +49,10 @@ function buildPrompt(text: string, locale: string): { system: string; user: stri
     "- For the inclusive variant, prefer natural neutral phrasing over typographic",
     "  tricks. Use mid-dot only if it's the most idiomatic option in the language.",
     "- Never add any new idea, CTA, or content.",
+    "- CRITICAL: each variant value must be PLAIN TEXT only — NO Markdown",
+    "  syntax (no **bold**, no *italic*, no _, no `, no #, no -). The editor",
+    "  uses real HTML for emphasis, so any Markdown you emit shows as raw",
+    "  asterisks/underscores on the public page.",
     "",
     `Target language: ${lang}.`,
     "",
@@ -60,14 +64,36 @@ function buildPrompt(text: string, locale: string): { system: string; user: stri
   return { system, user };
 }
 
+// Strip les marqueurs Markdown que Claude colle parfois autour de ses
+// variantes (**bold**, _italic_, `code`…) malgré l'interdiction dans le
+// prompt. L'éditeur Tiquiz utilise du vrai HTML pour le formatage → ces
+// marqueurs apparaissent EN CLAIR sur la page publique sinon (cf. bug
+// Adeline 17 mai 2026 : "**Béné, tu es le Solopreneur..."). Defensive,
+// idempotent, ne casse rien si l'input était déjà clean.
+function stripMarkdown(s: string): string {
+  return s
+    // **bold** → bold (et __bold__)
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    // *italic* → italic (mais on évite de matcher * isolés au milieu d'un mot
+    // ou la mid-dot ·*. on cible \w*\w pour rester safe)
+    .replace(/(^|[\s(.,;:!?«"'])\*([^*\s][^*]*?[^*\s]|[^*\s])\*(?=[\s).,;:!?»"']|$)/g, "$1$2")
+    .replace(/(^|[\s(.,;:!?«"'])_([^_\s][^_]*?[^_\s]|[^_\s])_(?=[\s).,;:!?»"']|$)/g, "$1$2")
+    // `code` → code
+    .replace(/`([^`]+)`/g, "$1")
+    // # heading → heading (en début de ligne uniquement)
+    .replace(/^#{1,6}\s+/gm, "")
+    .trim();
+}
+
 function parseVariants(raw: string): Variants | null {
   const trimmed = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
   try {
     const j = JSON.parse(trimmed);
     if (j && typeof j === "object") {
-      const m = typeof j.m === "string" ? j.m : "";
-      const f = typeof j.f === "string" ? j.f : "";
-      const x = typeof j.x === "string" ? j.x : "";
+      const m = typeof j.m === "string" ? stripMarkdown(j.m) : "";
+      const f = typeof j.f === "string" ? stripMarkdown(j.f) : "";
+      const x = typeof j.x === "string" ? stripMarkdown(j.x) : "";
       if (m && f && x) return { m, f, x };
     }
   } catch { /* fall through */ }

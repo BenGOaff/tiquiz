@@ -66,7 +66,13 @@
     "rteImagePrompt": "عنوان URL للصورة (https://… أو /path)",
     "rteUrlInvalid": "عنوان URL غير صالح.",
     "rteBulletList": "قائمة نقطية",
-    "rteNumberedList": "قائمة مرقّمة"
+    "rteNumberedList": "قائمة مرقّمة",
+    "rteUnderline": "تحته خط",
+    "rteAlignLeft": "محاذاة لليسار",
+    "rteAlignRight": "محاذاة لليمين",
+    "rteLinkPrompt": "رابط URL (https://… أو /مسار)",
+    "rteLinkInvalid": "رابط غير صالح.",
+    "rteInsertImage": "إدراج صورة"
   },
   "nav": {
     "quizzes": "اختباراتي",
@@ -1001,7 +1007,9 @@
     "shareTabOgImageHint": "الصورة التي تظهر على واتساب وآي مسج وإكس عند مشاركة الرابط. بدون رفع، يظهر شعارنا.",
     "shareTabOgImageUpload": "رفع صورة",
     "shareTabOgImageDimsHint": "موصى به: 1200 × 630 بكسل. الحد الأقصى 10 ميغابايت.",
-    "ogImageUploaded": "تم حفظ الصورة المصغرة"
+    "ogImageUploaded": "تم حفظ الصورة المصغرة",
+    "showConsentCheckboxLabel": "إظهار خانة الموافقة",
+    "showConsentCheckboxHint": "عطّلها إذا كنت تتعامل مع موافقة GDPR في مكان آخر."
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",

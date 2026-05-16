@@ -66,7 +66,13 @@
     "rteImagePrompt": "URL dell'immagine (https://… o /percorso)",
     "rteUrlInvalid": "URL non valido.",
     "rteBulletList": "Elenco puntato",
-    "rteNumberedList": "Elenco numerato"
+    "rteNumberedList": "Elenco numerato",
+    "rteUnderline": "Sottolineato",
+    "rteAlignLeft": "Allinea a sinistra",
+    "rteAlignRight": "Allinea a destra",
+    "rteLinkPrompt": "URL del link (https://… o /percorso)",
+    "rteLinkInvalid": "Link non valido.",
+    "rteInsertImage": "Inserisci immagine"
   },
   "nav": {
     "quizzes": "I miei quiz",
@@ -1001,7 +1007,9 @@
     "shareTabOgImageHint": "Immagine mostrata da WhatsApp, iMessage, X, ecc. quando il link è condiviso. Senza upload, viene mostrato il nostro logo.",
     "shareTabOgImageUpload": "Carica un'immagine",
     "shareTabOgImageDimsHint": "Consigliato: 1200 × 630 px. Max 10 MB.",
-    "ogImageUploaded": "Miniatura salvata"
+    "ogImageUploaded": "Miniatura salvata",
+    "showConsentCheckboxLabel": "Mostra la casella di consenso",
+    "showConsentCheckboxHint": "Disattivala se gestisci già il consenso GDPR altrove."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nuova password",

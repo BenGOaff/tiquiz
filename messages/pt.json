@@ -66,7 +66,13 @@
     "rteImagePrompt": "URL da imagem (https://… ou /caminho)",
     "rteUrlInvalid": "URL inválido.",
     "rteBulletList": "Lista com marcadores",
-    "rteNumberedList": "Lista numerada"
+    "rteNumberedList": "Lista numerada",
+    "rteUnderline": "Sublinhado",
+    "rteAlignLeft": "Alinhar à esquerda",
+    "rteAlignRight": "Alinhar à direita",
+    "rteLinkPrompt": "URL do link (https://… ou /caminho)",
+    "rteLinkInvalid": "Link inválido.",
+    "rteInsertImage": "Inserir imagem"
   },
   "nav": {
     "dashboard": "Painel",
@@ -1001,7 +1007,9 @@
     "shareTabOgImageHint": "Imagem mostrada por WhatsApp, iMessage, X, etc. quando o link é partilhado. Sem upload, mostra-se o nosso logo.",
     "shareTabOgImageUpload": "Carregar uma imagem",
     "shareTabOgImageDimsHint": "Recomendado: 1200 × 630 px. Máx 10 MB.",
-    "ogImageUploaded": "Miniatura guardada"
+    "ogImageUploaded": "Miniatura guardada",
+    "showConsentCheckboxLabel": "Mostrar checkbox de consentimento",
+    "showConsentCheckboxHint": "Desativa se já tratas o consentimento RGPD noutro lado."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova palavra-passe",
