@@ -17,7 +17,7 @@ import {
 } from "@/lib/quizBranding";
 import { sanitizeRichText, stripHtml } from "@/lib/richText";
 import { RichParagraph } from "@/components/ui/rich-paragraph";
-import { makeInterpolator, getGenderLabels, type QuizGender } from "@/lib/quizPersonalization";
+import { makeInterpolator, getGenderLabels, extractResultLabel, type QuizGender } from "@/lib/quizPersonalization";
 import { ensureExternalUrl } from "@/lib/url";
 
 // Rich text fields contain raw HTML tags (<p>, <b>, <a>, …). Strings without any
@@ -812,15 +812,20 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     [firstName, gender],
   );
 
-  // Interpolation "neutre" pour les résultats AUTRES que celui du
-  // visiteur (cf. card "Répartition complète"). Pas de prénom (on
-  // ne va pas écrire "Béné, tu es la Solopreneuse Invisible" pour
-  // un profil qui N'EST PAS celui de Béné) et gender = "x" pour
-  // afficher le wording inclusif générique. Cf. bug Adeline, 17 mai
-  // 2026 : la liste de répartition affichait le prénom du visiteur
-  // sur des profils qui ne le concernent pas.
-  const interpNeutral = useCallback(
-    (text: string | null | undefined) => makeInterpolator({ name: "", gender: "x" })(text),
+  // Étiquette courte pour les résultats AUTRES que celui du visiteur
+  // (cf. card "Répartition complète"). On ne veut PAS afficher la
+  // phrase personnalisée complète sur un profil qui n'est pas le
+  // visiteur — juste le nom du profil ("Solopreneur Invisible") sans
+  // "tu es le·la …" en préfixe ni marqueurs inclusifs. Cf. retour
+  // Adeline (17 mai 2026).
+  // Étapes : on développe le template via interp neutral (résout
+  // {m|f|x} en inclusif, strippe le Markdown et résout {name} en ""),
+  // puis on extrait le label court.
+  const labelForOtherResult = useCallback(
+    (text: string | null | undefined) => {
+      const neutral = makeInterpolator({ name: "", gender: "x" })(text);
+      return extractResultLabel(neutral);
+    },
     [],
   );
 
@@ -2409,15 +2414,21 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                     return (
                       <li key={r.id ?? i} className="space-y-1.5">
                         <div className="flex items-center justify-between gap-3 text-sm">
-                          {/* isMain = c'est le résultat dominant du visiteur
-                              → on personnalise avec son prénom + genre.
-                              Sinon = c'est un AUTRE profil affiché pour
-                              référence → wording neutre (pas de "Béné,…"
-                              sur un profil qui n'est pas Béné). */}
-                          <span
-                            className={`tiquiz-rich tiquiz-rich-inline truncate ${isMain ? "font-semibold" : ""}`}
-                            dangerouslySetInnerHTML={{ __html: sanitizeRichText((isMain ? interp(r.title) : interpNeutral(r.title)) || "") }}
-                          />
+                          {/* isMain = résultat dominant du visiteur → on
+                              personnalise avec son prénom + genre (phrase
+                              complète, ex. "Béné, tu es la Solopreneuse
+                              Invisible"). Sinon = AUTRE profil affiché
+                              pour référence → on extrait juste l'étiquette
+                              ("Solopreneur Invisible"), pas de prénom,
+                              pas de marqueurs inclusifs. */}
+                          {isMain ? (
+                            <span
+                              className="tiquiz-rich tiquiz-rich-inline truncate font-semibold"
+                              dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(r.title) || "") }}
+                            />
+                          ) : (
+                            <span className="truncate">{labelForOtherResult(r.title)}</span>
+                          )}
                           <span className="flex items-center gap-2 shrink-0">
                             {isMain && (
                               <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/15 text-primary">
