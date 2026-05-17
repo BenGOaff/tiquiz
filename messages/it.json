@@ -292,7 +292,6 @@
     "quizDeleted": "Quiz eliminato.",
     "copyLink": "Copia link",
     "linkCopied": "Link copiato!",
-    "iframeCopied": "Codice iframe copiato!",
     "quizzesCreated": "Quiz creati",
     "quizzesCreatedSub": "Totale dei tuoi quiz",
     "leadsCaptured": "Lead catturati",
@@ -1048,6 +1047,7 @@
     "shareTabCustomLink": "Link personalizzato",
     "shareTabCustomLinkHint": "Scegli un URL breve e memorabile. Solo minuscole, cifre e trattini.",
     "shareTabDomainLabel": "Dominio",
+    "iframeCopied": "Codice iframe copiato!",
     "shareTabNetworks": "Social di condivisione proposti",
     "shareTabNetworksHint": "Scegli i social che appaiono sulla pagina del risultato.",
     "shareTabSeoTitle": "Anteprima social (SEO)",
@@ -1579,6 +1579,7 @@
     "share": {
       "title": "Condivisione e integrazione",
       "help": "Link diretto da condividere o codice da incollare in una pagina.",
+      "domainLabel": "Dominio",
       "linkLabel": "Link diretto",
       "embedLabel": "Codice di integrazione",
       "codeCopied": "Codice copiato",

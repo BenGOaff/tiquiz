@@ -24,6 +24,8 @@ import {
   blobToDataUrl,
   dataUrlToBlob,
 } from "@/lib/popquiz/autosave";
+import { useShareDomain } from "@/hooks/useShareDomain";
+import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
 import {
   Plus,
   Trash2,
@@ -320,6 +322,7 @@ export default function PopquizNewClient({
   }
   const [copied, setCopied] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
+  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain } = useShareDomain();
 
   // ─── Autosave silencieux ────────────────────────────────────────
   // 1) Au mount : on hydrate depuis localStorage si une session
@@ -667,10 +670,8 @@ export default function PopquizNewClient({
   }
 
   const handle = publishedSlug ?? publishedId ?? "";
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : "";
-  const publishedUrl = handle ? `${origin}/pq/${handle}` : "";
-  const embedUrl = handle ? `${origin}/embed/pq/${handle}` : "";
+  const publishedUrl = handle ? `${shareOrigin}/pq/${handle}` : "";
+  const embedUrl = handle ? `${shareOrigin}/embed/pq/${handle}` : "";
   const embedSnippet = embedUrl ? buildEmbedSnippet(embedUrl) : "";
 
   async function copyPublishedUrl() {
@@ -1080,6 +1081,13 @@ export default function PopquizNewClient({
               {t("publishDialog.description")}
             </DialogDescription>
           </DialogHeader>
+
+          <ShareDomainPicker
+            label={t("share.domainLabel")}
+            value={shareDomain}
+            options={shareDomainOptions}
+            onChange={setShareDomain}
+          />
 
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wide text-muted-foreground">

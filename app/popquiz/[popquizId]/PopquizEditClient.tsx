@@ -32,6 +32,8 @@ import { useAutosave } from "@/hooks/use-autosave";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
 import { UserPalettesProvider } from "@/components/editor/PalettesContext";
+import { useShareDomain } from "@/hooks/useShareDomain";
+import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
 import {
   Plus,
   Trash2,
@@ -271,6 +273,7 @@ export default function PopquizEditClient({
   const [error, setError] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
+  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain } = useShareDomain();
 
   // ─── Palettes utilisateur (charte centralisée — chargées au mount,
   //     persistées via PATCH /api/profile dès la première édition) ──
@@ -613,10 +616,8 @@ export default function PopquizEditClient({
   // (server-supplied) instead of the current input so the URL only
   // "updates" once the user actually saves.
   const handle = popquiz.slug ?? popquiz.id;
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : "";
-  const publicUrl = `${origin}/pq/${handle}`;
-  const embedUrl = `${origin}/embed/pq/${handle}`;
+  const publicUrl = `${shareOrigin}/pq/${handle}`;
+  const embedUrl = `${shareOrigin}/embed/pq/${handle}`;
   const embedSnippet = buildEmbedSnippet(embedUrl);
 
   async function copyPublicUrl() {
@@ -1102,6 +1103,13 @@ export default function PopquizEditClient({
                 {t("share.help")}
               </p>
             </div>
+
+            <ShareDomainPicker
+              label={t("share.domainLabel")}
+              value={shareDomain}
+              options={shareDomainOptions}
+              onChange={setShareDomain}
+            />
 
             <div className="space-y-1.5">
               <Label className="text-xs uppercase tracking-wide text-muted-foreground">

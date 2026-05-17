@@ -275,7 +275,6 @@
     "quizDeleted": "Quiz deleted.",
     "copyLink": "Copy link",
     "linkCopied": "Link copied!",
-    "iframeCopied": "Iframe code copied!",
     "quizzesCreated": "Quizzes created",
     "quizzesCreatedSub": "Your total quizzes",
     "leadsCaptured": "Leads captured",
@@ -1031,6 +1030,7 @@
     "shareTabCustomLink": "Custom link",
     "shareTabCustomLinkHint": "Pick a short, memorable URL. Lowercase letters, digits and hyphens only.",
     "shareTabDomainLabel": "Domain",
+    "iframeCopied": "Iframe code copied!",
     "shareTabNetworks": "Share networks offered",
     "shareTabNetworksHint": "Pick which networks appear on the result page.",
     "shareTabSeoTitle": "Social preview (SEO)",
@@ -1562,6 +1562,7 @@
     "share": {
       "title": "Share & embed",
       "help": "Direct link to share or code to paste into a page.",
+      "domainLabel": "Domain",
       "linkLabel": "Direct link",
       "embedLabel": "Embed code",
       "codeCopied": "Code copied",

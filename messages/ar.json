@@ -292,7 +292,6 @@
     "quizDeleted": "تم حذف الاختبار.",
     "copyLink": "نسخ الرابط",
     "linkCopied": "تم نسخ الرابط!",
-    "iframeCopied": "تم نسخ كود iframe!",
     "quizzesCreated": "الاختبارات المنشأة",
     "quizzesCreatedSub": "إجمالي اختباراتك",
     "leadsCaptured": "العملاء المُلتقطون",
@@ -1048,6 +1047,7 @@
     "shareTabCustomLink": "رابط مخصص",
     "shareTabCustomLinkHint": "اختر عنوان URL قصير ولا يُنسى. أحرف صغيرة وأرقام وشرطات فقط.",
     "shareTabDomainLabel": "النطاق",
+    "iframeCopied": "تم نسخ كود iframe!",
     "shareTabNetworks": "شبكات المشاركة المقترحة",
     "shareTabNetworksHint": "اختر الشبكات التي تظهر في صفحة النتيجة.",
     "shareTabSeoTitle": "معاينة اجتماعية (SEO)",
@@ -1579,6 +1579,7 @@
     "share": {
       "title": "المشاركة والتضمين",
       "help": "رابط مباشر للمشاركة أو كود لإلصاقه في صفحة.",
+      "domainLabel": "النطاق",
       "linkLabel": "رابط مباشر",
       "embedLabel": "كود التضمين",
       "codeCopied": "تم نسخ الكود",
