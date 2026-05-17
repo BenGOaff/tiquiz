@@ -16,7 +16,10 @@ import {
   Settings, Palette, Key, Trash2, Loader2, Save,
   CreditCard, Upload, Check, Crown, Zap, Star, ArrowRight,
   Tag as TagIcon, Workflow, AlertTriangle, ExternalLink, Sparkles,
+  Globe,
 } from "lucide-react";
+import { CustomDomainsTab } from "@/components/settings/CustomDomainsTab";
+import { isPaidPlan } from "@/lib/planLimits";
 import { toast } from "sonner";
 import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -289,6 +292,7 @@ export default function SettingsClient() {
         <TabsList className="h-auto p-1 gap-1 flex-wrap sticky top-14 z-10">
           <TabsTrigger value="general" className="gap-1.5 px-4 py-2"><Settings className="h-4 w-4" />{t("tabGeneral")}</TabsTrigger>
           <TabsTrigger value="branding" className="gap-1.5 px-4 py-2"><Palette className="h-4 w-4" />{t("tabBranding")}</TabsTrigger>
+          <TabsTrigger value="domain" className="gap-1.5 px-4 py-2"><Globe className="h-4 w-4" />{t("tabDomain")}</TabsTrigger>
           <TabsTrigger value="systemeio" className="gap-1.5 px-4 py-2"><Key className="h-4 w-4" />{t("tabSystemeio")}</TabsTrigger>
           <TabsTrigger value="account" className="gap-1.5 px-4 py-2"><CreditCard className="h-4 w-4" />{t("tabAccount")}</TabsTrigger>
         </TabsList>
@@ -502,6 +506,10 @@ export default function SettingsClient() {
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="domain" className="space-y-4">
+          <CustomDomainsTab isPaid={isPaidPlan(profile?.plan)} />
         </TabsContent>
 
         <TabsContent value="systemeio" className="space-y-4">

@@ -741,7 +741,92 @@
     "toneFormal": "Formel (vous)",
     "toneFun": "Fun & décalé",
     "toneInspiring": "Inspirant",
-    "save": "Enregistrer"
+    "save": "Enregistrer",
+    "tabDomain": "Domaine",
+    "customDomainsTitle": "Votre domaine personnalisé",
+    "customDomainsDesc": "Utilisez une URL à votre marque, du genre quiz.votre-business.com, au lieu de l'adresse Tiquiz par défaut. Vos quiz s'ouvrent sur votre propre domaine.",
+    "customDomainsEmpty": "Aucun domaine connecté pour l'instant. Ajoutez-en un pour commencer.",
+    "customDomainsUpsellTitle": "Les domaines personnalisés sont une feature Pro",
+    "customDomainsUpsellDesc": "Passez à un plan supérieur pour connecter votre domaine et servir vos quiz depuis une URL à votre marque.",
+    "customDomainsUpsellCta": "Voir les plans",
+    "domainAddBtn": "Ajouter un domaine",
+    "domainAddTitle": "Connecter un domaine personnalisé",
+    "domainAddDesc": "Je vais vous guider étape par étape pour pointer votre domaine vers Tiquiz.",
+    "domainConfirmBtn": "Confirmer et ajouter",
+    "domainDetectBtn": "Continuer",
+    "domainVerifyBtn": "Vérifier",
+    "domainOpenBtn": "Ouvrir",
+    "domainDeleteBtn": "Supprimer le domaine",
+    "domainDeleteTitle": "Supprimer ce domaine personnalisé ?",
+    "domainDeleteDesc": "Les visiteurs de {hostname} n'arriveront plus sur votre espace Tiquiz. Vous pouvez le rajouter quand vous voulez.",
+    "domainDeleteConfirm": "Supprimer",
+    "domainHostnameLabel": "Votre domaine",
+    "domainHostnamePh": "ex: quiz.votre-marque.com",
+    "domainHostnameHint": "Utilisez un sous-domaine que vous contrôlez (recommandé) ou votre domaine principal. N'importe quoi dont vous gérez le DNS.",
+    "domainStatusPending": "DNS en attente",
+    "domainStatusVerified": "Vérifié",
+    "domainStatusFailed": "Échec de la vérification DNS",
+    "domainVerifiedSince": "Vérifié le {date}",
+    "domainPendingHint": "Ajoutez l'enregistrement DNS ci-dessous, nous le détecterons automatiquement.",
+    "domainPollingProgress": "Vérification du DNS… ({n}/{total})",
+    "domainPollingExhausted": "Le DNS ne s'est pas encore propagé. Cliquez sur Vérifier une fois prêt.",
+    "registrarDetectedLabel": "Hébergeur DNS détecté :",
+    "registrarOpenConsole": "Ouvrir la console DNS",
+    "dnsRecordToCreate": "Ajoutez cet enregistrement DNS",
+    "dnsFieldType": "Type",
+    "dnsFieldName": "Nom",
+    "dnsFieldTarget": "Cible",
+    "registrarSteps": {
+      "cloudflare": {
+        "s1": "Ouvrez l'onglet DNS de {root} dans votre tableau de bord Cloudflare.",
+        "s2": "Cliquez sur \"Ajouter un enregistrement\".",
+        "s3": "Choisissez CNAME, mettez Nom = \"{name}\" et Cible = \"{cnameTarget}\".",
+        "s4": "IMPORTANT : basculez le proxy sur \"DNS only\" (nuage gris), puis enregistrez."
+      },
+      "ovh": {
+        "s1": "Ouvrez le manager OVH, allez sur votre domaine {root}, puis dans l'onglet \"Zone DNS\".",
+        "s2": "Cliquez sur \"Ajouter une entrée\" et choisissez CNAME.",
+        "s3": "Mettez le sous-domaine sur \"{name}\" et la cible sur \"{cnameTarget}.\" (avec le point final).",
+        "s4": "Validez et attendez quelques minutes pour la propagation."
+      },
+      "godaddy": {
+        "s1": "Ouvrez la page DNS Management de GoDaddy pour {root}.",
+        "s2": "Cliquez sur \"Add New Record\".",
+        "s3": "Type = CNAME, Name = \"{name}\", Value = \"{cnameTarget}\", TTL = 1 Hour.",
+        "s4": "Enregistrez."
+      },
+      "namecheap": {
+        "s1": "Ouvrez Namecheap → Advanced DNS pour {root}.",
+        "s2": "Cliquez sur \"Add New Record\" puis choisissez \"CNAME Record\".",
+        "s3": "Host = \"{name}\", Target = \"{cnameTarget}\", TTL = Automatic.",
+        "s4": "Cliquez sur la coche verte pour enregistrer."
+      },
+      "gandi": {
+        "s1": "Ouvrez votre page Enregistrements DNS Gandi pour {root}.",
+        "s2": "Cliquez sur \"Ajouter un enregistrement\".",
+        "s3": "Type CNAME, Name = \"{name}\", Hostname = \"{cnameTarget}.\" (avec le point final).",
+        "s4": "Enregistrez et attendez la propagation."
+      },
+      "google": {
+        "s1": "Ouvrez les paramètres DNS de {root}.",
+        "s2": "Ajoutez un nouvel enregistrement personnalisé.",
+        "s3": "Type = CNAME, Host = \"{name}\", Data = \"{cnameTarget}\".",
+        "s4": "Enregistrez."
+      },
+      "generic": {
+        "s1": "Ouvrez la gestion DNS de {root} chez votre hébergeur.",
+        "s2": "Trouvez l'option pour ajouter un nouvel enregistrement DNS.",
+        "s3": "Créez un CNAME avec Nom = \"{name}\" et Cible/Valeur = \"{cnameTarget}\".",
+        "s4": "Enregistrez. Nous détecterons le changement automatiquement."
+      }
+    },
+    "toastCopied": "Copié dans le presse-papiers",
+    "toastCopyFailed": "Copie impossible. Sélectionnez la valeur manuellement.",
+    "toastDomainAdded": "Domaine ajouté. Je surveille votre DNS pendant 10 minutes.",
+    "toastDomainVerified": "{hostname} est en ligne ✨",
+    "toastDomainStillPending": "Pas encore détecté. Je continue à vérifier.",
+    "toastDomainDeleted": "Domaine supprimé.",
+    "cancelBtn": "Annuler"
   },
   "languageSwitcher": {
     "label": "Langue"
