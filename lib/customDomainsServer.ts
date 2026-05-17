@@ -22,7 +22,7 @@ export type DnsCheckResult = {
 /**
  * Resolves the A records for `hostname` and checks one matches our VPS
  * IP. Works for both apex domains (A record straight to us) and
- * subdomains CNAMEd to our `connect.tiquiz.com` — the OS resolver
+ * subdomains CNAMEd to our `connect.tipote.com` — the OS resolver
  * follows the CNAME chain transparently.
  *
  * Returns the resolved IPs alongside the verdict so the UI can show

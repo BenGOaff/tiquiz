@@ -30,14 +30,19 @@ export type CustomDomainRow = {
 // Hostnames we control directly. A request whose Host matches one of
 // these bypasses the custom-domain lookup entirely (normal routing).
 // Keep this list in sync with the Caddyfile vhosts.
+//
+// The marketing tipote.com / .fr live on Systeme.io and never reach
+// this server, so they are intentionally absent from this list — a
+// request landing here with that Host would have to be spoofed.
 export const OWN_HOSTS: ReadonlySet<string> = new Set([
-  "app.tiquiz.com",
-  "tiquiz.com",
-  "www.tiquiz.com",
   "quiz.tipote.com",
-  "tus.tiquiz.com",
-  "videos.tiquiz.com",
-  "connect.tiquiz.com",
+  "app.tipote.com",
+  "n8n.tipote.com",
+  "tus.tipote.com",
+  "tus.quiz.tipote.com",
+  "videos.tipote.com",
+  "videos.quiz.tipote.com",
+  "connect.tipote.com",
   // dev / preview
   "localhost",
   "127.0.0.1",
@@ -72,7 +77,7 @@ export function isValidHostname(raw: string): boolean {
 export const DNS_TARGET_IP =
   process.env.CUSTOM_DOMAIN_TARGET_IP ?? "82.25.115.166";
 export const DNS_TARGET_CNAME =
-  process.env.CUSTOM_DOMAIN_TARGET_CNAME ?? "connect.tiquiz.com";
+  process.env.CUSTOM_DOMAIN_TARGET_CNAME ?? "connect.tipote.com";
 
 /**
  * Feature gate. Until the VPS has Caddy + on-demand TLS configured,
