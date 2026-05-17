@@ -757,7 +757,8 @@
     "toneFriendly": "Amigável (você)",
     "toneFormal": "Formal (senhor(a))",
     "toneFun": "Divertido & descontraído",
-    "toneInspiring": "Inspirador"
+    "toneInspiring": "Inspirador",
+    "save": "Salvar"
   },
   "languageSwitcher": {
     "label": "Idioma"

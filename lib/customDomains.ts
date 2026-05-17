@@ -6,10 +6,10 @@
 // the types without pulling Node-only modules.
 //
 // The middleware imports from this file and runs on the Edge runtime,
-// where `node:dns` does not exist. Any Node-only API used by API
-// routes (e.g. verifyDomainDns) is loaded via `await import(...)`
-// inside the function body so the static module graph the Edge
-// bundler walks stays clean.
+// where `node:dns` (and the rest of node:*) is unavailable. Turbopack
+// traces dynamic imports too, so the DNS verification helper lives in
+// the sibling file lib/customDomainsServer.ts — only API routes (Node
+// runtime) import that one.
 
 export type CustomDomainStatus = "pending_dns" | "verified" | "failed";
 
@@ -73,34 +73,6 @@ export const DNS_TARGET_IP =
   process.env.CUSTOM_DOMAIN_TARGET_IP ?? "82.25.115.166";
 export const DNS_TARGET_CNAME =
   process.env.CUSTOM_DOMAIN_TARGET_CNAME ?? "connect.tiquiz.com";
-
-export type DnsCheckResult = {
-  ok: boolean;
-  resolvedIps: string[];
-  error?: string;
-};
-
-/**
- * Resolves the A records for `hostname` and checks one matches our VPS
- * IP. Works for both apex domains (A record straight to us) and
- * subdomains CNAMEd to our `connect.tiquiz.com` — the OS resolver
- * follows the CNAME chain transparently.
- *
- * Returns the resolved IPs alongside the verdict so the UI can show
- * "you pointed it to X instead of Y" when the check fails.
- */
-export async function verifyDomainDns(hostname: string): Promise<DnsCheckResult> {
-  try {
-    // Lazy-loaded so the Edge bundler used by middleware.ts never sees
-    // a static `node:dns` import. API routes calling this run on the
-    // Node runtime where the dynamic import resolves normally.
-    const { promises: dns } = await import("node:dns");
-    const resolvedIps = await dns.resolve4(hostname);
-    return { ok: resolvedIps.includes(DNS_TARGET_IP), resolvedIps };
-  } catch (e) {
-    return { ok: false, resolvedIps: [], error: (e as Error).message };
-  }
-}
 
 /**
  * Feature gate. Until the VPS has Caddy + on-demand TLS configured,
