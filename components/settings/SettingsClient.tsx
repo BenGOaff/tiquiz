@@ -722,7 +722,17 @@ export default function SettingsClient() {
 
           <div className="grid gap-4 md:grid-cols-3">
             {PLANS.map((plan) => {
-              const isCurrent = currentPlan === plan.id || (currentPlan === "free" && plan.id === "free") || (currentPlan === "monthly" && plan.id === "pro_monthly") || (currentPlan === "yearly" && plan.id === "pro_yearly") || (currentPlan === "lifetime" && plan.id === "pro_monthly");
+              // Strict match only. We used to map "lifetime" → "pro_monthly"
+              // which falsely surfaced "Plan actuel" on the monthly card for
+              // lifetime users — making it look like they were on a 9€/mo
+              // billing they could downgrade or cancel. Lifetime users get
+              // their own "included" pill below instead (no CTA, no charge
+              // implication).
+              const isCurrent =
+                (currentPlan === "free" && plan.id === "free") ||
+                (currentPlan === "monthly" && plan.id === "pro_monthly") ||
+                (currentPlan === "yearly" && plan.id === "pro_yearly");
+              const isPaidPlanCard = plan.id === "pro_monthly" || plan.id === "pro_yearly";
               return (
                 <Card key={plan.id} className={`relative overflow-visible ${('popular' in plan && plan.popular) ? "border-primary ring-1 ring-primary" : ""}`}>
                   {('popular' in plan && plan.popular) && (
@@ -747,7 +757,15 @@ export default function SettingsClient() {
                     <ul className="space-y-2">
                       {plan.featureKeys.map((fk) => (<li key={fk} className="flex items-center gap-2 text-sm"><Check className="h-4 w-4 text-primary shrink-0" />{t(fk)}</li>))}
                     </ul>
-                    {isCurrent ? (
+                    {isLifetimePlan && isPaidPlanCard ? (
+                      // Lifetime / beta users already have every Pro feature.
+                      // No upgrade or downgrade is possible, and we must NOT
+                      // imply a recurring charge. A neutral "included" pill
+                      // confirms they're covered without faking a state.
+                      <div className="text-center text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/30 py-2 rounded-full">
+                        {t("lifetimeIncluded")}
+                      </div>
+                    ) : isCurrent ? (
                       <div className="text-center text-sm font-medium text-muted-foreground py-2 border rounded-full">{t("currentPlan")}</div>
                     ) : plan.ctaKey ? (
                       <Button className="w-full rounded-full" variant={('popular' in plan && plan.popular) ? "default" : "outline"} asChild>
@@ -759,7 +777,11 @@ export default function SettingsClient() {
               );
             })}
           </div>
-          <p className="text-xs text-muted-foreground text-center">{t("paymentsManaged")}</p>
+          {isLifetimePlan ? (
+            <p className="text-xs text-muted-foreground text-center">{t("lifetimeNote")}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center">{t("paymentsManaged")}</p>
+          )}
 
           <PasswordSection />
 

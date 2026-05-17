@@ -704,6 +704,8 @@
     "confirmCancelSub": "Sei sicuro di voler annullare il tuo abbonamento? Tornerai al piano gratuito (1 quiz + 1 sondaggio + 1 popquiz, 10 risposte/mese).",
     "cancelInstructions": "Per annullare, contattaci a hello@ethilife.fr o gestisci il tuo abbonamento da Systeme.io.",
     "lifetimeAccess": "Accesso a vita",
+    "lifetimeIncluded": "Incluso nel tuo accesso a vita",
+    "lifetimeNote": "Hai accesso a vita a tutte le funzionalità Pro. Nessun rinnovo, nessun addebito.",
     "cancelRequested": "Annullamento registrato. Mantieni l'accesso fino alla fine del tuo periodo attuale.",
     "cancelError": "Impossibile annullare. Riprova o contatta hello@ethilife.fr.",
     "cancelDialog": {

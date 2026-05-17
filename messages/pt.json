@@ -704,6 +704,8 @@
     "confirmCancelSub": "Tens a certeza que queres cancelar a tua subscrição? Voltarás ao plano gratuito (1 quiz + 1 sondagem + 1 popquiz, 10 respostas/mês).",
     "cancelInstructions": "Para cancelar, contacta-nos em hello@ethilife.fr ou gere a tua subscrição no Systeme.io.",
     "lifetimeAccess": "Acesso vitalício",
+    "lifetimeIncluded": "Incluído no teu acesso vitalício",
+    "lifetimeNote": "Tens acesso vitalício a todas as funcionalidades Pro. Sem renovação, sem cobrança.",
     "cancelRequested": "Cancelamento registado. Mantens o acesso até ao fim do teu período atual.",
     "cancelError": "Não foi possível cancelar. Tenta de novo ou contacta hello@ethilife.fr.",
     "cancelDialog": {
