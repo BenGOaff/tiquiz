@@ -292,6 +292,7 @@
     "quizDeleted": "تم حذف الاختبار.",
     "copyLink": "نسخ الرابط",
     "linkCopied": "تم نسخ الرابط!",
+    "iframeCopied": "تم نسخ كود iframe!",
     "quizzesCreated": "الاختبارات المنشأة",
     "quizzesCreatedSub": "إجمالي اختباراتك",
     "leadsCaptured": "العملاء المُلتقطون",
