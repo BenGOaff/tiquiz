@@ -1,0 +1,237 @@
+# ------------------------------------------------------------------
+# Tipote VPS — Caddy front (replaces nginx + certbot)
+# ------------------------------------------------------------------
+# What lives behind:
+#   * Tipote        next-server  → 127.0.0.1:3000
+#   * Tiquiz        next-server  → 127.0.0.1:3001
+#   * popquiz-tus   node          → 127.0.0.1:1080   (tus uploads + /_validate-secure-link)
+#   * n8n           docker        → 127.0.0.1:5678
+#   * Self-hosted videos          → /srv/popquiz-videos (served by Caddy file_server)
+#
+# Custom domains for paid Tiquiz creators ride the catchall :443 block
+# at the very bottom — on-demand Let's Encrypt issuance is gated by the
+# Next API endpoint at /api/internal/caddy-ask.
+#
+# Cutover from nginx is documented in infra/caddy/README.md.
+
+{
+        # Let's Encrypt registration. Keep in sync with whatever email
+        # is on the existing certbot account so renewals stay attached
+        # to one identity.
+        email hello@ethilife.fr
+
+        # Per-host on-demand TLS for creator custom domains. Caddy
+        # consults the Tiquiz API before issuing each new cert — the
+        # endpoint returns 200 only when a `verified` row exists in
+        # custom_domains, which prevents anyone from burning our Let's
+        # Encrypt quota by pointing arbitrary hostnames at us.
+        #
+        # The secret is interpolated from $CADDY_ASK_SECRET at startup;
+        # set it in /etc/caddy/caddy.env (loaded via the systemd unit
+        # EnvironmentFile=) and keep it out of git.
+        on_demand_tls {
+                ask http://127.0.0.1:3001/api/internal/caddy-ask?secret={$CADDY_ASK_SECRET}
+                # Conservative rate limit so a misconfigured ask endpoint
+                # can't trigger a Let's Encrypt rate-limit ban.
+                interval 2m
+                burst    5
+        }
+}
+
+# ------------------------------------------------------------------
+# Reusable snippets
+# ------------------------------------------------------------------
+
+# Forward the original Host downstream so Next.js can detect the
+# tenant (critical for the custom-domain middleware in Tiquiz). Without
+# this, Caddy replaces Host with the upstream address (127.0.0.1:3001)
+# and every request looks like it came from our own server.
+(proxy_headers) {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+}
+
+# Block the usual probes (Wordpress, .env, .git) the same way nginx's
+# security.conf did. Returns 444 (drop connection — no response body,
+# no log noise) so bots stop hitting us.
+(block_bad_paths) {
+        @bad path_regexp bad ^/(\.env|\.git|wp-admin|wp-login|xmlrpc\.php|vendor|phpunit|cgi-bin|eval-stdin\.php)
+        respond @bad 444
+}
+
+# CORS for the videos.* vhosts. Video player runs on quiz.tipote.com,
+# files are on videos.*.tipote.com → cross-origin needs explicit allow.
+(videos_cors) {
+        header {
+                Access-Control-Allow-Origin "*"
+                Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+                Access-Control-Allow-Headers "Range, If-None-Match, If-Modified-Since"
+                Access-Control-Expose-Headers "Content-Length, Content-Range, Accept-Ranges"
+                Cache-Control "private, max-age=300"
+                X-Content-Type-Options "nosniff"
+                # Drop the auto-added Server: Caddy header on these
+                # public file responses — no point telling botnets.
+                -Server
+        }
+}
+
+# ------------------------------------------------------------------
+# Tipote dashboard (app.tipote.com)
+# ------------------------------------------------------------------
+app.tipote.com {
+        encode zstd gzip
+        import block_bad_paths
+
+        request_body { max_size 20MB }
+
+        # Hashed static assets: aggressive immutable cache (mirrors the
+        # explicit /_next/static/ location nginx had).
+        @next_static path /_next/static/*
+        header @next_static Cache-Control "public, max-age=31536000, immutable"
+
+        # Everything else: no-cache HTML so Next route updates land
+        # immediately on the next navigation.
+        @not_next_static {
+                not path /_next/static/*
+        }
+        header @not_next_static Cache-Control "private, no-cache, no-store, max-age=0, must-revalidate"
+
+        reverse_proxy 127.0.0.1:3000 {
+                import proxy_headers
+        }
+}
+
+# ------------------------------------------------------------------
+# Tipote marketing site (tipote.com / www.tipote.com)
+# ------------------------------------------------------------------
+tipote.com, www.tipote.com {
+        encode zstd gzip
+        import block_bad_paths
+
+        reverse_proxy 127.0.0.1:3000 {
+                import proxy_headers
+        }
+}
+
+# Legacy .fr → .com permanent redirect (same as the nginx block).
+tipote.fr, www.tipote.fr {
+        redir https://tipote.com{uri} 301
+}
+
+# ------------------------------------------------------------------
+# n8n (n8n.tipote.com)
+# ------------------------------------------------------------------
+n8n.tipote.com {
+        import block_bad_paths
+
+        reverse_proxy 127.0.0.1:5678 {
+                import proxy_headers
+                # n8n uses WebSockets for the editor; reverse_proxy
+                # handles Upgrade automatically, but we disable buffering
+                # so push notifications arrive in real time.
+                flush_interval -1
+        }
+}
+
+# ------------------------------------------------------------------
+# Tiquiz (quiz.tipote.com)
+# ------------------------------------------------------------------
+quiz.tipote.com {
+        encode zstd gzip
+        import block_bad_paths
+
+        reverse_proxy 127.0.0.1:3001 {
+                import proxy_headers
+                # The 5-min read_timeout the existing nginx vhost set
+                # is preserved here — long quiz preview generation can
+                # take that long.
+                transport http {
+                        read_timeout 5m
+                }
+        }
+}
+
+# ------------------------------------------------------------------
+# tus uploads (tus.tipote.com + tus.quiz.tipote.com)
+# ------------------------------------------------------------------
+# Both names front the same popquiz-tus node server; the JWT's `app`
+# claim picks the right secret server-side.
+tus.tipote.com, tus.quiz.tipote.com {
+        request_body { max_size 20GB }
+
+        reverse_proxy 127.0.0.1:1080 {
+                import proxy_headers
+                # tus PATCH requests stream chunked bodies that can run
+                # for an hour on flaky connections. Match the nginx
+                # timeouts so we don't drop mid-upload.
+                flush_interval -1
+                transport http {
+                        read_timeout 1h
+                        write_timeout 1h
+                        response_header_timeout 1h
+                }
+        }
+}
+
+# ------------------------------------------------------------------
+# Self-hosted video playback (videos.*)
+# ------------------------------------------------------------------
+# Auth: every request must carry the signed `md5` + `expires` query
+# params minted by lib/popquiz/playback.ts in Tiquiz / Tipote. Caddy
+# defers the validation to popquiz-tus' /_validate-secure-link via
+# forward_auth — see infra/tus-server/server.mjs.
+#
+# Range requests Just Work with file_server. CORS lives in a snippet
+# above so preflight + actual response stay in sync.
+videos.tipote.com, videos.quiz.tipote.com {
+        root * /srv/popquiz-videos
+
+        # CORS preflight short-circuit so OPTIONS never hits the
+        # validator (no signed params on preflight).
+        @options method OPTIONS
+        handle @options {
+                header {
+                        Access-Control-Allow-Origin "*"
+                        Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+                        Access-Control-Allow-Headers "Range, If-None-Match, If-Modified-Since"
+                        Access-Control-Max-Age 86400
+                }
+                respond 204
+        }
+
+        # Block dotfiles + tus state JSONs explicitly, even though a
+        # bad actor would also need a valid signature to fetch them.
+        # Defense in depth costs nothing here.
+        @blocked {
+                path */.* /*.json
+        }
+        respond @blocked 403
+
+        handle {
+                forward_auth 127.0.0.1:1080 {
+                        uri /_validate-secure-link
+                }
+                import videos_cors
+                file_server {
+                        precompressed gzip
+                }
+        }
+}
+
+# ------------------------------------------------------------------
+# Catchall — creator custom domains (Tiquiz, paid plans)
+# ------------------------------------------------------------------
+# Any host that didn't match a named block above lands here. The
+# on_demand_tls in the global options decides whether to issue a cert
+# (asks the Tiquiz API). If the ask returns non-2xx, Caddy refuses
+# the TLS handshake and the visitor sees a generic browser error,
+# which is exactly what should happen for an unconfigured hostname.
+:443 {
+        tls {
+                on_demand
+        }
+        reverse_proxy 127.0.0.1:3001 {
+                import proxy_headers
+        }
+}
