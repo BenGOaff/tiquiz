@@ -5,6 +5,12 @@ const config = {
   darkMode: ["class", ".dark"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
+  // Scope `hover:` styles to devices that actually have a hover-capable
+  // pointer. Without this, iOS Safari and other touch browsers keep the
+  // last-tapped element in `:hover` until the user taps elsewhere, which
+  // looks like a pre-selected answer on the next quiz question (Adeline
+  // 2026-05-17). Tailwind v3.5+ defaults to this; we opt-in on 3.4.
+  future: { hoverOnlyWhenSupported: true },
   theme: {
     container: {
       center: true,

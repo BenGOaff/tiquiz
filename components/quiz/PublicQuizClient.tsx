@@ -1432,9 +1432,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
     return (
       <div
-        className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        className="min-h-screen flex flex-col"
         style={rootStyle}
       >
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         <div className="max-w-2xl w-full space-y-8 text-center py-16 sm:py-24">
             {branding.logoUrl && (
               <div className="flex justify-center">
@@ -1493,6 +1494,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.start_button_text?.trim() || "") || t.start }}
               />
             </Button>
+        </div>
         </div>
         <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
       </div>
@@ -1880,12 +1882,13 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   if (step === "email") {
     return (
       <div
-        className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        className="min-h-screen flex flex-col"
         style={rootStyle}
       >
         {/* Slide-in for the email capture step too — full visitor
             flow now uses the same gentle entrance keyframe so each
             step transition reads as a guided experience. */}
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         <div className="max-w-lg w-full space-y-6 py-16 sm:py-24 animate-quiz-step-in">
             {/* Heading & subtitle de la page capture = champs COURTS.
                 On utilise `tiquiz-rich-inline` en plus de `tiquiz-rich` :
@@ -2042,19 +2045,11 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               </p>
             )}
 
-            {quiz.privacy_url && (
-              <p className="text-xs text-center text-muted-foreground">
-                <a
-                  href={ensureExternalUrl(quiz.privacy_url)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline"
-                >
-                  {t.privacyPolicy}
-                </a>
-              </p>
-            )}
+            {/* Privacy policy link lives only inside the consent checkbox
+                above (see <ConsentText>). Per product decision 2026-05-17:
+                no separate legal mention block on quiz/survey pages. */}
           </div>
+        </div>
         <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
       </div>
     );
@@ -2082,9 +2077,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
     return (
       <div
-        className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        className="min-h-screen flex flex-col"
         style={rootStyle}
       >
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         <div className="max-w-lg w-full py-12 sm:py-16 space-y-6">
           <div className="text-center space-y-3">
             <div className="flex justify-center">
@@ -2226,18 +2222,9 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             </Button>
           )}
 
-          {quiz.privacy_url && (
-            <p className="text-xs text-center text-muted-foreground">
-              <a
-                href={ensureExternalUrl(quiz.privacy_url)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
-                {t.privacyPolicy}
-              </a>
-            </p>
-          )}
+          {/* Privacy mention is shown only via the consent checkbox at
+              email capture (product decision 2026-05-17). */}
+        </div>
         </div>
         <TiquizFooter
           locale={quiz.locale}
@@ -2257,12 +2244,13 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     const ctaText = interp(quiz.cta_text || "") || t.resultCtaDefault;
     return (
       <div
-        className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        className="min-h-screen flex flex-col"
         style={rootStyle}
       >
         {/* Soft slide-in for the thank-you payoff screen — same
             keyframe as the quiz questions so the entire visitor flow
             feels coordinated. */}
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         <div className="max-w-lg w-full py-16 sm:py-24 space-y-6 text-center animate-quiz-step-in">
           {/* Soft success halo behind the heading — visual reward for
               the visitor finishing the survey, no confetti
@@ -2321,6 +2309,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             )}
           </Button>
         </div>
+        </div>
       </div>
     );
   }
@@ -2329,9 +2318,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
   if (step === "result") {
     return (
       <div
-        className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6"
+        className="min-h-screen flex flex-col"
         style={rootStyle}
       >
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         {/* Slide-in for the result reveal — final payoff of the
             quiz, deserves more than a content swap. */}
         <div className="max-w-2xl w-full py-16 sm:py-24 space-y-8 animate-quiz-step-in">
@@ -2481,19 +2471,10 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             </Card>
           )}
 
-          {quiz.privacy_url && (
-            <p className="text-xs text-center text-muted-foreground">
-              <a
-                href={ensureExternalUrl(quiz.privacy_url)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline"
-              >
-                {t.privacyPolicy}
-              </a>
-            </p>
-          )}
+          {/* Privacy mention sits only inside the consent checkbox at
+              email capture (product decision 2026-05-17). */}
           </div>
+        </div>
         <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
       </div>
     );
@@ -2580,17 +2561,6 @@ const tiquizFooterTexts: Record<string, string> = {
   ar: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u0645\u0642\u062f\u0645 \u0644\u0643\u0645 \u0645\u0646 Tiquiz",
 };
 
-// Short labels for legal footer links, one per UI locale.
-const legalLinkLabels: Record<string, { privacy: string; terms: string; cookies: string; legal: string }> = {
-  fr: { privacy: "Confidentialité", terms: "CGV", cookies: "Cookies", legal: "Mentions légales" },
-  en: { privacy: "Privacy", terms: "Terms", cookies: "Cookies", legal: "Legal" },
-  es: { privacy: "Privacidad", terms: "Términos", cookies: "Cookies", legal: "Aviso legal" },
-  de: { privacy: "Datenschutz", terms: "AGB", cookies: "Cookies", legal: "Impressum" },
-  pt: { privacy: "Privacidade", terms: "Termos", cookies: "Cookies", legal: "Aviso legal" },
-  it: { privacy: "Privacy", terms: "Condizioni", cookies: "Cookie", legal: "Note legali" },
-  ar: { privacy: "الخصوصية", terms: "الشروط", cookies: "الكوكيز", legal: "إشعار قانوني" },
-};
-
 
 // URL de découverte Tiquiz côté tipote.fr. Si le créateur a posé son
 // ID affilié dans Settings, on attache ?sa=<id> pour qu'il touche une
@@ -2606,7 +2576,7 @@ function TiquizFooter({ locale, customText, customUrl, logoUrl, tipoteAffiliateI
   // — pas de mention Tiquiz, pas de tracking. Il a payé pour brander.
   if (customText && customUrl) {
     return (
-      <div className="text-center mt-6 space-y-2">
+      <div className="text-center mt-6 pb-6 px-4 space-y-2">
         {logoUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={logoUrl} alt="" className="max-h-10 w-auto object-contain mx-auto" />
@@ -2620,10 +2590,13 @@ function TiquizFooter({ locale, customText, customUrl, logoUrl, tipoteAffiliateI
     );
   }
   // Free plan or no custom: show Tiquiz branding (with creator logo, or Tiquiz fallback)
+  // Legal links (privacy / terms / cookies / mentions légales) used to
+  // sit here but were explicitly removed — creators don't want Tiquiz's
+  // legal pages exposed on their own quizzes. The visitor-facing privacy
+  // policy is now surfaced only inside the consent checkbox.
   const text = tiquizFooterTexts[locale ?? "fr"] ?? tiquizFooterTexts.fr;
-  const links = legalLinkLabels[locale ?? "fr"] ?? legalLinkLabels.fr;
   return (
-    <div className="text-center mt-6 space-y-2">
+    <div className="text-center mt-6 pb-6 px-4 space-y-2">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={logoUrl || "/tiquiz-logo.png"}
@@ -2639,15 +2612,6 @@ function TiquizFooter({ locale, customText, customUrl, logoUrl, tipoteAffiliateI
         >
           {text}
         </a>
-      </p>
-      <p className="text-[10px] text-muted-foreground/50 space-x-2">
-        <a href="/privacy" className="hover:text-muted-foreground transition-colors">{links.privacy}</a>
-        <span aria-hidden>·</span>
-        <a href="/terms" className="hover:text-muted-foreground transition-colors">{links.terms}</a>
-        <span aria-hidden>·</span>
-        <a href="/cookies" className="hover:text-muted-foreground transition-colors">{links.cookies}</a>
-        <span aria-hidden>·</span>
-        <a href="/legal" className="hover:text-muted-foreground transition-colors">{links.legal}</a>
       </p>
     </div>
   );

@@ -37,6 +37,11 @@ type Quiz = {
   shares_count: number;
   created_at: string;
   leads_count?: number;
+  // Latest `quiz_leads.created_at` — drives the "your project went
+  // quiet for N days" insight. Using `created_at` of the QUIZ itself
+  // produced false positives (Adeline 2026-05-17: card said "14 jours
+  // sans nouvelle réponse" while she'd just collected new leads).
+  last_lead_at?: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -75,7 +80,14 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
         for (const quiz of data.quizzes) {
           const qRes = await fetch(`/api/quiz/${quiz.id}`);
           const qData = await qRes.json();
-          enriched.push({ ...quiz, leads_count: qData.leads?.length ?? 0 });
+          // `/api/quiz/[id]` returns leads ordered by created_at desc,
+          // so `leads[0]` is the most recent capture.
+          const leads = Array.isArray(qData.leads) ? qData.leads : [];
+          const lastLeadAt =
+            leads.length > 0 && typeof leads[0]?.created_at === "string"
+              ? leads[0].created_at
+              : null;
+          enriched.push({ ...quiz, leads_count: leads.length, last_lead_at: lastLeadAt });
         }
         setQuizzes(enriched);
       }
@@ -133,10 +145,14 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
           starts_count: q.starts_count,
           leads_count: q.leads_count ?? 0,
           shares_count: q.shares_count,
-          // Approximation: use created_at as a proxy for "last activity"
-          // until we track per-day events.
-          daysSinceActive: q.created_at
-            ? Math.floor((now - new Date(q.created_at).getTime()) / 86400000)
+          // "Last activity" = most recent lead capture. Falls back to
+          // null when the quiz has no leads yet, so the quietProject
+          // rule (which requires leads_count > 0) self-disables.
+          daysSinceActive: q.last_lead_at
+            ? Math.max(
+                0,
+                Math.floor((now - new Date(q.last_lead_at).getTime()) / 86400000),
+              )
             : null,
           mode: null,
         })),
