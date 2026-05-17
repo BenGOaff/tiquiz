@@ -21,16 +21,21 @@
         email hello@ethilife.fr
 
         # Per-host on-demand TLS for creator custom domains. Caddy
-        # consults the Tiquiz API before issuing each new cert — the
-        # endpoint returns 200 only when a `verified` row exists in
-        # custom_domains, which prevents anyone from burning our Let's
-        # Encrypt quota by pointing arbitrary hostnames at us.
+        # consults a tiny localhost dispatcher (infra/dispatcher in
+        # the Tipote repo) which in turn fans out to BOTH apps'
+        # /api/internal/caddy-ask endpoints — the cert is issued iff
+        # either Tipote or Tiquiz has a `verified` row for the host.
+        # This is what lets the same Caddy serve custom domains for
+        # both apps without merging their databases.
         #
-        # The secret is interpolated from $CADDY_ASK_SECRET at startup;
-        # set it in /etc/caddy/caddy.env (loaded via the systemd unit
-        # EnvironmentFile=) and keep it out of git.
+        # Two distinct secrets here:
+        #   - $DISPATCHER_ASK_SECRET: Caddy ↔ dispatcher (this line)
+        #   - each app's CADDY_ASK_SECRET: dispatcher ↔ that app
+        # All three live in /etc/caddy/caddy.env (loaded via the
+        # systemd unit EnvironmentFile=) and in /etc/default/dispatcher.env
+        # — never in git.
         on_demand_tls {
-                ask http://127.0.0.1:3001/api/internal/caddy-ask?secret={$CADDY_ASK_SECRET}
+                ask http://127.0.0.1:4000/caddy-ask?secret={$DISPATCHER_ASK_SECRET}
         }
 }
 
@@ -212,18 +217,52 @@ videos.tipote.com, videos.quiz.tipote.com {
 }
 
 # ------------------------------------------------------------------
-# Catchall — creator custom domains (Tiquiz, paid plans)
+# Catchall — creator custom domains (Tipote + Tiquiz, paid plans)
 # ------------------------------------------------------------------
 # Any host that didn't match a named block above lands here. The
 # on_demand_tls in the global options decides whether to issue a cert
-# (asks the Tiquiz API). If the ask returns non-2xx, Caddy refuses
-# the TLS handshake and the visitor sees a generic browser error,
-# which is exactly what should happen for an unconfigured hostname.
+# (asks the dispatcher, which fans out to both apps). If the ask
+# returns non-2xx the TLS handshake fails and the visitor sees a
+# generic browser error — correct outcome for an unconfigured host.
+#
+# Dispatch (live requests):
+#   1. forward_auth → dispatcher /lookup → returns a header
+#      X-Dispatch-To: tipote | tiquiz indicating which backend owns
+#      the hostname.
+#   2. matcher reads that header and reverse_proxies to the right
+#      port (3000 = Tipote, 3001 = Tiquiz).
+#   3. If for any reason the header is missing (dispatcher down,
+#      misconfigured), we default to Tiquiz — that's the historical
+#      behaviour, so existing Tiquiz custom domains keep working
+#      even if Tipote-side infra hiccups.
 :443 {
         tls {
                 on_demand
         }
-        reverse_proxy 127.0.0.1:3001 {
-                import proxy_headers
+
+        # Explicit route block so the directives below run in source
+        # order — forward_auth must execute BEFORE the matchers that
+        # read its copied header, and Caddy's default directive order
+        # doesn't guarantee that for the alias forms.
+        route {
+                forward_auth 127.0.0.1:4000 {
+                        uri /lookup
+                        copy_headers X-Dispatch-To
+                }
+
+                @tipote header X-Dispatch-To tipote
+                handle @tipote {
+                        reverse_proxy 127.0.0.1:3000 {
+                                import proxy_headers
+                        }
+                }
+
+                # Default = Tiquiz (legacy + safety fallback when
+                # dispatcher is unreachable or X-Dispatch-To wasn't
+                # set for any reason — existing Tiquiz custom domains
+                # keep working even if Tipote-side infra hiccups).
+                reverse_proxy 127.0.0.1:3001 {
+                        import proxy_headers
+                }
         }
 }
