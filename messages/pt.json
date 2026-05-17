@@ -1186,6 +1186,8 @@
     "tabManual": "Manual",
     "aiTitle": "Gera o teu inquérito com IA",
     "aiHint": "Escolhe uma metodologia, descreve o teu público: a IA constrói um inquérito pronto a partilhar.",
+    "aiGeneratingTitle": "A IA está a criar o teu inquérito…",
+    "aiGeneratingSubtitle": "Demora alguns segundos. Estamos a preparar perguntas claras para analisar tendências.",
     "aiObjectiveLabel": "Objetivo do inquérito",
     "aiTargetLabel": "Público do inquérito",
     "aiTargetHint": "A quem se destina? Quanto mais específico, mais relevante.",

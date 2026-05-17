@@ -1169,6 +1169,8 @@
     "tabManual": "Manual",
     "aiTitle": "Generate your survey with AI",
     "aiHint": "Pick a methodology, describe your audience: AI builds a ready-to-share survey.",
+    "aiGeneratingTitle": "AI is crafting your survey...",
+    "aiGeneratingSubtitle": "Just a few seconds. We're preparing clear questions to analyse trends.",
     "aiObjectiveLabel": "Survey objective",
     "aiTargetLabel": "Survey audience",
     "aiTargetHint": "Who is it for? The more specific, the more relevant the survey.",

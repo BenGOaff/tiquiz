@@ -1186,6 +1186,8 @@
     "tabManual": "Manual",
     "aiTitle": "Gere sua pesquisa com IA",
     "aiHint": "Escolha uma metodologia, descreva seu público: a IA monta uma pesquisa pronta para compartilhar.",
+    "aiGeneratingTitle": "A IA está criando sua pesquisa…",
+    "aiGeneratingSubtitle": "Demora alguns segundos. Estamos preparando perguntas claras para analisar tendências.",
     "aiObjectiveLabel": "Objetivo da pesquisa",
     "aiTargetLabel": "Público da pesquisa",
     "aiTargetHint": "Para quem é? Quanto mais específico, mais relevante.",
