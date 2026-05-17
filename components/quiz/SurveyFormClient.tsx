@@ -272,7 +272,12 @@ export default function SurveyFormClient() {
   // a stripped-down modal.
   return (
     <div className="space-y-4 w-full">
-      {(generating || importing) && <AIGeneratingOverlay />}
+      {(generating || importing) && (
+        <AIGeneratingOverlay
+          message={t("aiGeneratingTitle")}
+          submessage={t("aiGeneratingSubtitle")}
+        />
+      )}
 
       {/* Pill tabs (kawaak / tipote settings style) — replaces the previous
           underline tabs which felt dated. The default <TabsList> /

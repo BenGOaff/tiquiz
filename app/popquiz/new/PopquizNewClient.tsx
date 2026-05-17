@@ -322,7 +322,7 @@ export default function PopquizNewClient({
   }
   const [copied, setCopied] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
-  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain } = useShareDomain();
+  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, buildPublicUrl } = useShareDomain();
 
   // ─── Autosave silencieux ────────────────────────────────────────
   // 1) Au mount : on hydrate depuis localStorage si une session
@@ -670,8 +670,10 @@ export default function PopquizNewClient({
   }
 
   const handle = publishedSlug ?? publishedId ?? "";
-  const publishedUrl = handle ? `${shareOrigin}/pq/${handle}` : "";
-  const embedUrl = handle ? `${shareOrigin}/embed/pq/${handle}` : "";
+  // Same prefix rules as the edit screen: public URL is clean on a
+  // custom domain, embed URL keeps /embed/p/ regardless.
+  const publishedUrl = handle ? buildPublicUrl("p", handle) : "";
+  const embedUrl = handle ? `${shareOrigin}/embed/p/${handle}` : "";
   const embedSnippet = embedUrl ? buildEmbedSnippet(embedUrl) : "";
 
   async function copyPublishedUrl() {
@@ -779,7 +781,7 @@ export default function PopquizNewClient({
             </Label>
             <div className="flex items-stretch rounded-md border bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring">
               <span className="px-2.5 flex items-center text-xs text-muted-foreground bg-muted/50 border-r">
-                /pq/
+                /p/
               </span>
               <input
                 id="slug"

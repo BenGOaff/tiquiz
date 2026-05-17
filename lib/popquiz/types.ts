@@ -60,7 +60,7 @@ export interface PopquizBranding {
   tipoteAffiliateId: string | null;
 }
 
-/** Personnalisation de la page publique d'un popquiz (= /pq/[id] et
+/** Personnalisation de la page publique d'un popquiz (= /p/[id] et
  *  son embed iframe). Tous les champs sont optionnels — les defaults
  *  produisent un rendu propre et minimaliste sans aucune configuration. */
 export interface PopquizAppearance {

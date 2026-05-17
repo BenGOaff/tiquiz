@@ -409,7 +409,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const [customFooterText, setCustomFooterText] = useState("");
   const [customFooterUrl, setCustomFooterUrl] = useState("");
   const [shareNetworks, setShareNetworks] = useState<ShareNetwork[]>([]);
-  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain } = useShareDomain();
+  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
   const [brandLogoUrl, setBrandLogoUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -1195,9 +1195,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // embed token so /q/[id] renders it via its own preview gate.
   const publicSegment = slug.trim() ? sanitizeSlug(slug) ?? quizId : quizId;
   const previewSuffix = isEmbed && embedSessionToken ? `?embed=${encodeURIComponent(embedSessionToken)}` : "";
-  const publicUrl = shareOrigin
-    ? `${shareOrigin}/q/${publicSegment}${previewSuffix}`
-    : `/q/${publicSegment}${previewSuffix}`;
+  const publicUrl = buildPublicUrl("q", publicSegment, previewSuffix);
   // Owner-side preview URL: same as publicUrl but with ?preview_name=Alex appended
   // so the public client pre-fills the visitor's first name and skips lead
   // capture. We keep this URL separate from `publicUrl` (the share link) so the
@@ -2240,7 +2238,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               <div className="flex items-center border rounded-lg bg-muted/30 pl-3 pr-1 py-1 flex-1 min-w-0">
                 <span className="text-sm text-muted-foreground font-mono whitespace-nowrap shrink-0">
                   {shareDomain
-                    ? `https://${shareDomain}/q/`
+                    ? (isCustomDomain ? `https://${shareDomain}/` : `https://${shareDomain}/q/`)
                     : (typeof window !== "undefined" ? `${window.location.origin}/q/` : "/q/")}
                 </span>
                 <input

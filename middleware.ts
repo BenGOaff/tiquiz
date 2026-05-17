@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { customDomainsEnabled, isOwnHost, normaliseHost } from "@/lib/customDomains";
+import { isReservedPublicSlug } from "@/lib/publicSlug";
 
 const UI_LOCALE_COOKIE = "ui_locale";
 const SUPPORTED_LOCALES = ["en", "fr", "es", "it", "ar", "pt", "pt-BR"];
@@ -20,20 +21,38 @@ const DEFAULT_LOCALE = "en";
 // that the resolved quiz/popquiz actually belongs to that domain.
 const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
 
+// Slug shape the public catch-all route handles at the root of a
+// custom domain. Mirrors lib/quizBranding.sanitizeSlug's regex so
+// the middleware never lets a path through that the page would then
+// 404 on a malformed slug — keeps the 404 surface small.
+const BARE_SLUG_RE = /^\/[a-z0-9](?:[a-z0-9-]{1,48}[a-z0-9])?$/;
+
 // Paths a custom-domain visitor is allowed to hit. Anything else
 // returns 404 — we never expose the creator dashboard, admin, login,
 // signup, marketing pages, etc. on a creator's branded domain.
 function isPublicTenantPath(pathname: string): boolean {
-  return (
+  if (
     pathname.startsWith("/q/") ||
     pathname.startsWith("/p/") ||
+    pathname.startsWith("/embed/") ||
     pathname.startsWith("/api/quiz/") ||
     pathname.startsWith("/api/popquiz/") ||
     pathname.startsWith("/api/leads") ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico" ||
     pathname === "/robots.txt"
-  );
+  ) {
+    return true;
+  }
+  // Bare-slug shape served by app/[publicSlug]/page.tsx so creators
+  // can share `test.ethilife.fr/<slug>` without the /q/ or /p/ prefix.
+  // Reserved words are pre-rejected here so the catch-all never has
+  // to deal with them.
+  if (BARE_SLUG_RE.test(pathname)) {
+    const segment = pathname.slice(1);
+    if (!isReservedPublicSlug(segment)) return true;
+  }
+  return false;
 }
 
 // Two-pass match: try the full BCP 47 tag first ("pt-BR" → "pt-BR"),

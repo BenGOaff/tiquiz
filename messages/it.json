@@ -1186,6 +1186,8 @@
     "tabManual": "Manuale",
     "aiTitle": "Genera il tuo sondaggio con l'IA",
     "aiHint": "Scegli una metodologia, descrivi il pubblico: l'IA costruisce un sondaggio pronto per essere condiviso.",
+    "aiGeneratingTitle": "L'IA sta creando il tuo sondaggio...",
+    "aiGeneratingSubtitle": "Solo qualche secondo. Stiamo preparando domande chiare per analizzare le tendenze.",
     "aiObjectiveLabel": "Obiettivo del sondaggio",
     "aiTargetLabel": "Pubblico del sondaggio",
     "aiTargetHint": "A chi è rivolto? Più è specifico, più sarà pertinente.",

@@ -387,7 +387,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedIframe, setCopiedIframe] = useState(false);
-  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain } = useShareDomain();
+  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
 
   // Section refs for scroll-to
   const introRef = useRef<HTMLDivElement>(null);
@@ -859,7 +859,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
   // Public URL — prefer custom slug when set, fall back to UUID
   const publicSegment = slug.trim() ? sanitizeSlug(slug) ?? quizId : quizId;
-  const publicUrl = shareOrigin ? `${shareOrigin}/q/${publicSegment}` : `/q/${publicSegment}`;
+  const publicUrl = buildPublicUrl("q", publicSegment);
   // Owner-side preview URL (#7, mirrored from quiz). Kept separate from
   // publicUrl so "Copy link" never copies the preview variant.
   const previewUrl = `${publicUrl}?preview_name=${encodeURIComponent(PREVIEW_DEMO_NAME)}`;
@@ -1572,7 +1572,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               <div className="flex items-center border rounded-lg bg-muted/30 pl-3 pr-1 py-1 flex-1 min-w-0">
                 <span className="text-sm text-muted-foreground font-mono whitespace-nowrap shrink-0">
                   {shareDomain
-                    ? `https://${shareDomain}/q/`
+                    ? (isCustomDomain ? `https://${shareDomain}/` : `https://${shareDomain}/q/`)
                     : (typeof window !== "undefined" ? `${window.location.origin}/q/` : "/q/")}
                 </span>
                 <input

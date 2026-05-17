@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sanitizeSlug, sanitizeShareNetworks, BRAND_FONT_CHOICES } from "@/lib/quizBranding";
+import { isReservedPublicSlug } from "@/lib/publicSlug";
+import { isSlugTakenByPopquiz } from "@/lib/publicSlugServer";
 import { sanitizeRichText } from "@/lib/richText";
 import {
   applyFrenchTypography,
@@ -255,6 +257,12 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         if (/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(cleaned)) {
           return NextResponse.json({ ok: false, error: "Slug cannot look like an ID" }, { status: 400 });
         }
+        // Reserved root paths (api, embed, robots.txt, dashboard…) —
+        // on a creator's custom domain the slug sits at the URL root,
+        // so anything in this list would shadow real routes.
+        if (isReservedPublicSlug(cleaned)) {
+          return NextResponse.json({ ok: false, error: "SLUG_RESERVED" }, { status: 409 });
+        }
         const { data: conflict } = await supabase
           .from("quizzes")
           .select("id")
@@ -263,6 +271,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           .limit(1)
           .maybeSingle();
         if (conflict) {
+          return NextResponse.json({ ok: false, error: "SLUG_TAKEN" }, { status: 409 });
+        }
+        // Cross-type collision: a popquiz of the same user owning
+        // this slug would make the custom-domain catch-all ambiguous
+        // (test.ethilife.fr/foo could be either). Refuse the rename.
+        // Only meaningful in user mode — embed-flow drafts are
+        // anonymous and don't yet belong to a creator account.
+        if (auth.mode === "user" && await isSlugTakenByPopquiz(auth.userId, cleaned)) {
           return NextResponse.json({ ok: false, error: "SLUG_TAKEN" }, { status: 409 });
         }
         patch.slug = cleaned;

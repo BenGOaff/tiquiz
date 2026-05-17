@@ -1186,6 +1186,8 @@
     "tabManual": "Manual",
     "aiTitle": "Genera tu encuesta con IA",
     "aiHint": "Elige una metodología, describe tu público: la IA crea una encuesta lista para compartir.",
+    "aiGeneratingTitle": "La IA está creando tu encuesta...",
+    "aiGeneratingSubtitle": "Solo unos segundos. Preparamos preguntas claras para analizar tendencias.",
     "aiObjectiveLabel": "Objetivo de la encuesta",
     "aiTargetLabel": "Público de la encuesta",
     "aiTargetHint": "¿A quién va dirigida? Cuanto más específico, más relevante.",

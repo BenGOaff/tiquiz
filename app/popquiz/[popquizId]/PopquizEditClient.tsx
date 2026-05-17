@@ -273,7 +273,7 @@ export default function PopquizEditClient({
   const [error, setError] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
-  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain } = useShareDomain();
+  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, buildPublicUrl } = useShareDomain();
 
   // ─── Palettes utilisateur (charte centralisée — chargées au mount,
   //     persistées via PATCH /api/profile dès la première édition) ──
@@ -616,8 +616,12 @@ export default function PopquizEditClient({
   // (server-supplied) instead of the current input so the URL only
   // "updates" once the user actually saves.
   const handle = popquiz.slug ?? popquiz.id;
-  const publicUrl = `${shareOrigin}/pq/${handle}`;
-  const embedUrl = `${shareOrigin}/embed/pq/${handle}`;
+  // Public URL drops the /p/ prefix on a custom domain (catch-all
+  // serves it from the root). Embed URL keeps the /embed/p/ prefix
+  // — it's iframe-internal so no visitor sees it, and the embed
+  // route is keyed by /embed/p/ on both hosts.
+  const publicUrl = buildPublicUrl("p", handle);
+  const embedUrl = `${shareOrigin}/embed/p/${handle}`;
   const embedSnippet = buildEmbedSnippet(embedUrl);
 
   async function copyPublicUrl() {
@@ -785,7 +789,7 @@ export default function PopquizEditClient({
             </Label>
             <div className="flex items-stretch rounded-md border bg-background overflow-hidden focus-within:ring-2 focus-within:ring-ring">
               <span className="px-2.5 flex items-center text-xs text-muted-foreground bg-muted/50 border-r">
-                /pq/
+                /p/
               </span>
               <input
                 id="slug"
