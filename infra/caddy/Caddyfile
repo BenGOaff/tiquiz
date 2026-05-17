@@ -102,22 +102,12 @@ app.tipote.com {
         }
 }
 
-# ------------------------------------------------------------------
-# Tipote marketing site (tipote.com / www.tipote.com)
-# ------------------------------------------------------------------
-tipote.com, www.tipote.com {
-        encode zstd gzip
-        import block_bad_paths
-
-        reverse_proxy 127.0.0.1:3000 {
-                import proxy_headers
-        }
-}
-
-# Legacy .fr → .com permanent redirect (same as the nginx block).
-tipote.fr, www.tipote.fr {
-        redir https://tipote.com{uri} 301
-}
+# NOTE: tipote.com, www.tipote.com, tipote.fr and www.tipote.fr are
+# NOT served from this VPS — they live on Systeme.io / CloudFront for
+# the marketing pages. Their DNS doesn't even resolve to us, so trying
+# to claim them here just made Let's Encrypt fail the HTTP-01 challenge
+# for those names. Keep this Caddyfile scoped to the hosts we actually
+# control (app.tipote.com plus the *.tipote.com infra subdomains).
 
 # ------------------------------------------------------------------
 # n8n (n8n.tipote.com)
