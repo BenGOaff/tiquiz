@@ -1,13 +1,40 @@
 // middleware.ts
-// Auth protection + locale detection for Tiquiz.
+// Auth protection + locale detection for Tiquiz, plus custom-domain
+// host gating (Caddy on-demand TLS routes any creator-owned hostname
+// to us; we restrict what paths that hostname can serve and pass the
+// host down to route handlers via a request header for ownership
+// checks).
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isAdminEmail } from "@/lib/adminEmails";
+import { customDomainsEnabled, isOwnHost, normaliseHost } from "@/lib/customDomains";
 
 const UI_LOCALE_COOKIE = "ui_locale";
 const SUPPORTED_LOCALES = ["en", "fr", "es", "it", "ar", "pt", "pt-BR"];
 const DEFAULT_LOCALE = "en";
+
+// Header forwarded to route handlers when the request arrived through
+// a creator's custom domain. Route handlers read it (via `headers()`
+// in server components, or `req.headers` in route handlers) to validate
+// that the resolved quiz/popquiz actually belongs to that domain.
+const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
+
+// Paths a custom-domain visitor is allowed to hit. Anything else
+// returns 404 — we never expose the creator dashboard, admin, login,
+// signup, marketing pages, etc. on a creator's branded domain.
+function isPublicTenantPath(pathname: string): boolean {
+  return (
+    pathname.startsWith("/q/") ||
+    pathname.startsWith("/p/") ||
+    pathname.startsWith("/api/quiz/") ||
+    pathname.startsWith("/api/popquiz/") ||
+    pathname.startsWith("/api/leads") ||
+    pathname.startsWith("/_next/") ||
+    pathname === "/favicon.ico" ||
+    pathname === "/robots.txt"
+  );
+}
 
 // Two-pass match: try the full BCP 47 tag first ("pt-BR" → "pt-BR"),
 // then fall back to the language-only prefix ("pt-BR" → "pt"). This is
@@ -51,6 +78,33 @@ function startsWithAny(pathname: string, prefixes: string[]) {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // -------------------------------------------------------------------
+  // Custom-domain gate. Runs first so a creator-owned hostname can
+  // never accidentally land on /dashboard, /login, /admin, etc.
+  //
+  // We do NOT touch the database here — Edge runtime, latency-sensitive
+  // path. We just detect "Host is not one of ours" and forward the
+  // hostname to route handlers, which already use supabaseAdmin and
+  // can validate ownership without a second hop.
+  //
+  // Gated behind CUSTOM_DOMAINS_ENABLED so this code is dormant until
+  // the VPS-side Caddy config is in place (Step 2+). The hostname
+  // never matches a creator domain before that, but extra belt-and-
+  // braces costs nothing.
+  // -------------------------------------------------------------------
+  if (customDomainsEnabled()) {
+    const rawHost = req.headers.get("host");
+    if (!isOwnHost(rawHost)) {
+      const host = normaliseHost(rawHost)!;
+      if (!isPublicTenantPath(pathname) && pathname !== "/") {
+        return new NextResponse("Not found", { status: 404 });
+      }
+      const requestHeaders = new Headers(req.headers);
+      requestHeaders.set(CUSTOM_HOST_HEADER, host);
+      return NextResponse.next({ request: { headers: requestHeaders } });
+    }
+  }
 
   // Public routes — never block
   if (pathname === "/") return NextResponse.next();
