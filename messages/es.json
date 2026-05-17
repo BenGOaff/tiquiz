@@ -1044,6 +1044,7 @@
     "previewPoweredByLink": "Este quiz es ofrecido por Tiquiz",
     "shareTabCustomLink": "Enlace personalizado",
     "shareTabCustomLinkHint": "Elige una URL corta y memorable. Minúsculas, dígitos y guiones.",
+    "shareTabDomainLabel": "Dominio",
     "shareTabNetworks": "Redes de compartir propuestas",
     "shareTabNetworksHint": "Elige las redes que aparecen en la página de resultados.",
     "shareTabSeoTitle": "Vista previa en redes (SEO)",

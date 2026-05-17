@@ -1,0 +1,127 @@
+// app/api/profile/share-domain/route.ts
+// Per-user preference: which hostname to surface as the default share
+// URL across the dashboard. The "Partage" tab of the quiz editor reads
+// from GET to populate its domain selector, and writes via PATCH every
+// time the creator picks a different domain so the choice sticks.
+//
+// Validation rule: the chosen hostname must be either the main app host
+// or one of the caller's own custom_domains in `verified` state. Never
+// trust the client — a tampered request that points to someone else's
+// domain would otherwise let an attacker poison their own dashboard
+// links and confuse their own UI (low impact, but trivially preventable).
+//
+// `domain: null` resets the preference to "let the UI pick the default"
+// (verified custom domain if any, else the main host).
+
+import { NextRequest, NextResponse } from "next/server";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+// The hostname the public quiz/popquiz pages live on by default. Kept
+// in sync with the `quiz.tipote.com` block in infra/caddy/Caddyfile and
+// with OWN_HOSTS in lib/customDomains.ts.
+const MAIN_SHARE_HOST = "quiz.tipote.com";
+
+export async function GET() {
+  const supabase = await getSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const [{ data: profile }, { data: domains }] = await Promise.all([
+    supabaseAdmin
+      .from("profiles")
+      .select("default_share_domain")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("custom_domains")
+      .select("hostname")
+      .eq("user_id", user.id)
+      .eq("status", "verified")
+      .order("verified_at", { ascending: false }),
+  ]);
+
+  const verified = (domains ?? [])
+    .map((d) => (d as { hostname?: string | null }).hostname?.toLowerCase().trim())
+    .filter((h): h is string => !!h);
+
+  // Options the UI lets the user pick from. Verified custom domains
+  // come first (creator paid for them — surface them prominently).
+  const options = [...verified, MAIN_SHARE_HOST];
+
+  // Effective default the UI should pre-select. Honour the stored
+  // preference iff it's still a valid option (the stored domain might
+  // have been deleted or de-verified since the last save).
+  const stored = (profile as { default_share_domain?: string | null } | null)?.default_share_domain ?? null;
+  const storedLower = stored?.toLowerCase() ?? null;
+  const effectiveDefault = storedLower && options.includes(storedLower)
+    ? storedLower
+    : (verified[0] ?? MAIN_SHARE_HOST);
+
+  return NextResponse.json({
+    ok: true,
+    options,
+    mainHost: MAIN_SHARE_HOST,
+    storedDefault: storedLower,
+    effectiveDefault,
+  });
+}
+
+export async function PATCH(req: NextRequest) {
+  const supabase = await getSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await req.json().catch(() => ({}));
+  const raw = body?.domain;
+
+  if (raw !== null && typeof raw !== "string") {
+    return NextResponse.json(
+      { ok: false, error: "Expected `domain` to be a string or null." },
+      { status: 400 },
+    );
+  }
+
+  const domain = raw === null ? null : raw.toLowerCase().trim();
+
+  if (domain !== null && domain !== MAIN_SHARE_HOST) {
+    // Cross-check ownership against the caller's verified custom
+    // domains. We don't allow picking another user's domain (even
+    // verified) because that would silently break their share links
+    // when our UI later renders that hostname.
+    const { data: match } = await supabaseAdmin
+      .from("custom_domains")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("status", "verified")
+      .ilike("hostname", domain)
+      .maybeSingle();
+    if (!match) {
+      return NextResponse.json(
+        { ok: false, error: "This domain is not one of your verified custom domains." },
+        { status: 400 },
+      );
+    }
+  }
+
+  const { error } = await supabaseAdmin
+    .from("profiles")
+    .update({
+      default_share_domain: domain,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", user.id);
+
+  if (error) {
+    return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+  }
+
+  return NextResponse.json({ ok: true, default: domain });
+}
