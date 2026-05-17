@@ -758,7 +758,92 @@
     "toneFormal": "رسمي",
     "toneFun": "مرح وخارج عن المألوف",
     "toneInspiring": "مُلهِم",
-    "save": "حفظ"
+    "save": "حفظ",
+    "tabDomain": "النطاق",
+    "customDomainsTitle": "نطاقك المخصص",
+    "customDomainsDesc": "استخدم رابطًا بعلامتك التجارية مثل quiz.your-business.com بدلاً من عنوان Tiquiz الافتراضي.",
+    "customDomainsEmpty": "لا يوجد نطاق متصل بعد. أضف نطاقًا للبدء.",
+    "customDomainsUpsellTitle": "النطاقات المخصصة ميزة Pro",
+    "customDomainsUpsellDesc": "قم بترقية خطتك لربط نطاقك الخاص.",
+    "customDomainsUpsellCta": "عرض الخطط",
+    "domainAddBtn": "إضافة نطاق",
+    "domainAddTitle": "ربط نطاق مخصص",
+    "domainAddDesc": "سأرشدك خطوة بخطوة لتوجيه نطاقك إلى Tiquiz.",
+    "domainConfirmBtn": "تأكيد وإضافة",
+    "domainDetectBtn": "متابعة",
+    "domainVerifyBtn": "تحقق",
+    "domainOpenBtn": "افتح",
+    "domainDeleteBtn": "إزالة النطاق",
+    "domainDeleteTitle": "إزالة هذا النطاق المخصص؟",
+    "domainDeleteDesc": "سيتوقف زوار {hostname} عن الوصول إلى مساحتك في Tiquiz. يمكنك إعادة إضافته في أي وقت.",
+    "domainDeleteConfirm": "إزالة",
+    "domainHostnameLabel": "نطاقك",
+    "domainHostnamePh": "مثال: quiz.your-brand.com",
+    "domainHostnameHint": "استخدم نطاقًا فرعيًا تتحكم به (موصى به) أو النطاق الجذر.",
+    "domainStatusPending": "DNS قيد الانتظار",
+    "domainStatusVerified": "تم التحقق",
+    "domainStatusFailed": "فشل التحقق من DNS",
+    "domainVerifiedSince": "تم التحقق في {date}",
+    "domainPendingHint": "أضف سجل DNS أدناه، وسنكتشفه تلقائيًا.",
+    "domainPollingProgress": "جارٍ التحقق من DNS… ({n}/{total})",
+    "domainPollingExhausted": "لم ينتشر DNS بعد. اضغط تحقق عندما يكون جاهزًا.",
+    "registrarDetectedLabel": "المسجل المكتشف:",
+    "registrarOpenConsole": "افتح وحدة تحكم DNS",
+    "dnsRecordToCreate": "أضف هذا السجل DNS",
+    "dnsFieldType": "النوع",
+    "dnsFieldName": "الاسم",
+    "dnsFieldTarget": "الهدف",
+    "registrarSteps": {
+      "cloudflare": {
+        "s1": "افتح علامة تبويب DNS لـ {root} في لوحة تحكم Cloudflare.",
+        "s2": "اضغط على \"إضافة سجل\".",
+        "s3": "اختر CNAME، اضبط الاسم على \"{name}\" والهدف على \"{cnameTarget}\".",
+        "s4": "هام: غيّر حالة Proxy إلى \"DNS only\" (السحابة الرمادية) واحفظ."
+      },
+      "ovh": {
+        "s1": "افتح مدير OVH وانتقل إلى نطاقك {root} ثم علامة تبويب منطقة DNS.",
+        "s2": "اضغط \"إضافة إدخال\" واختر CNAME.",
+        "s3": "اضبط النطاق الفرعي على \"{name}\" والهدف على \"{cnameTarget}.\" (مع النقطة في النهاية).",
+        "s4": "أكّد وانتظر بضع دقائق للانتشار."
+      },
+      "godaddy": {
+        "s1": "افتح صفحة إدارة DNS في GoDaddy لـ {root}.",
+        "s2": "اضغط على \"Add New Record\".",
+        "s3": "Type = CNAME, Name = \"{name}\", Value = \"{cnameTarget}\", TTL = 1 Hour.",
+        "s4": "احفظ."
+      },
+      "namecheap": {
+        "s1": "افتح Namecheap → Advanced DNS لـ {root}.",
+        "s2": "اضغط على \"Add New Record\" واختر \"CNAME Record\".",
+        "s3": "Host = \"{name}\", Target = \"{cnameTarget}\", TTL = Automatic.",
+        "s4": "اضغط على علامة الاختيار الخضراء للحفظ."
+      },
+      "gandi": {
+        "s1": "افتح صفحة سجلات DNS في Gandi لـ {root}.",
+        "s2": "اضغط على \"إضافة سجل\".",
+        "s3": "Type CNAME, Name = \"{name}\", Hostname = \"{cnameTarget}.\" (مع النقطة في النهاية).",
+        "s4": "احفظ وانتظر الانتشار."
+      },
+      "google": {
+        "s1": "افتح إعدادات DNS لـ {root}.",
+        "s2": "أضف سجلًا مخصصًا جديدًا.",
+        "s3": "Type = CNAME, Host = \"{name}\", Data = \"{cnameTarget}\".",
+        "s4": "احفظ."
+      },
+      "generic": {
+        "s1": "افتح إدارة DNS لـ {root} في لوحة المسجل.",
+        "s2": "ابحث عن خيار إضافة سجل DNS جديد.",
+        "s3": "أنشئ CNAME باسم \"{name}\" والهدف/القيمة \"{cnameTarget}\".",
+        "s4": "احفظ السجل. سنكتشف التغيير تلقائيًا."
+      }
+    },
+    "toastCopied": "تم النسخ إلى الحافظة",
+    "toastCopyFailed": "تعذّر النسخ. حدد القيمة يدويًا.",
+    "toastDomainAdded": "تمت إضافة النطاق. سنراقب DNS الخاص بك خلال 10 دقائق.",
+    "toastDomainVerified": "{hostname} متصل ✨",
+    "toastDomainStillPending": "لم يكتشف بعد. سأستمر بالتحقق.",
+    "toastDomainDeleted": "تمت إزالة النطاق.",
+    "cancelBtn": "إلغاء"
   },
   "languageSwitcher": {
     "label": "اللغة"

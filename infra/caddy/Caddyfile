@@ -31,10 +31,6 @@
         # EnvironmentFile=) and keep it out of git.
         on_demand_tls {
                 ask http://127.0.0.1:3001/api/internal/caddy-ask?secret={$CADDY_ASK_SECRET}
-                # Conservative rate limit so a misconfigured ask endpoint
-                # can't trigger a Let's Encrypt rate-limit ban.
-                interval 2m
-                burst    5
         }
 }
 
@@ -46,10 +42,12 @@
 # tenant (critical for the custom-domain middleware in Tiquiz). Without
 # this, Caddy replaces Host with the upstream address (127.0.0.1:3001)
 # and every request looks like it came from our own server.
+#
+# X-Forwarded-Proto is set by reverse_proxy by default, so we don't
+# repeat it here (Caddy 2.11 warns when we do).
 (proxy_headers) {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-Proto {scheme}
 }
 
 # Block the usual probes (Wordpress, .env, .git) the same way nginx's
@@ -83,7 +81,9 @@ app.tipote.com {
         encode zstd gzip
         import block_bad_paths
 
-        request_body { max_size 20MB }
+        request_body {
+                max_size 20MB
+        }
 
         # Hashed static assets: aggressive immutable cache (mirrors the
         # explicit /_next/static/ location nginx had).
@@ -102,22 +102,12 @@ app.tipote.com {
         }
 }
 
-# ------------------------------------------------------------------
-# Tipote marketing site (tipote.com / www.tipote.com)
-# ------------------------------------------------------------------
-tipote.com, www.tipote.com {
-        encode zstd gzip
-        import block_bad_paths
-
-        reverse_proxy 127.0.0.1:3000 {
-                import proxy_headers
-        }
-}
-
-# Legacy .fr → .com permanent redirect (same as the nginx block).
-tipote.fr, www.tipote.fr {
-        redir https://tipote.com{uri} 301
-}
+# NOTE: tipote.com, www.tipote.com, tipote.fr and www.tipote.fr are
+# NOT served from this VPS — they live on Systeme.io / CloudFront for
+# the marketing pages. Their DNS doesn't even resolve to us, so trying
+# to claim them here just made Let's Encrypt fail the HTTP-01 challenge
+# for those names. Keep this Caddyfile scoped to the hosts we actually
+# control (app.tipote.com plus the *.tipote.com infra subdomains).
 
 # ------------------------------------------------------------------
 # n8n (n8n.tipote.com)
@@ -158,7 +148,9 @@ quiz.tipote.com {
 # Both names front the same popquiz-tus node server; the JWT's `app`
 # claim picks the right secret server-side.
 tus.tipote.com, tus.quiz.tipote.com {
-        request_body { max_size 20GB }
+        request_body {
+                max_size 20GB
+        }
 
         reverse_proxy 127.0.0.1:1080 {
                 import proxy_headers

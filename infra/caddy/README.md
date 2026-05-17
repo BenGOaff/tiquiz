@@ -143,7 +143,7 @@ you see them for all six hosts, prod is fully back on Caddy.
 ### B.3 — Smoke-test from your laptop
 
 ```bash
-for host in tipote.com www.tipote.com app.tipote.com quiz.tipote.com \
+for host in app.tipote.com quiz.tipote.com \
             n8n.tipote.com tus.tipote.com tus.quiz.tipote.com \
             videos.tipote.com videos.quiz.tipote.com; do
   echo "=== $host ==="

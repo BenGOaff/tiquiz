@@ -741,7 +741,92 @@
     "toneFormal": "Formal",
     "toneFun": "Fun & quirky",
     "toneInspiring": "Inspiring",
-    "save": "Save"
+    "save": "Save",
+    "tabDomain": "Domain",
+    "customDomainsTitle": "Your custom domain",
+    "customDomainsDesc": "Use a branded URL like quiz.your-business.com instead of the default Tiquiz address. Your quizzes load on your own domain.",
+    "customDomainsEmpty": "No domain connected yet. Add one to start using your own URL.",
+    "customDomainsUpsellTitle": "Custom domains are a Pro feature",
+    "customDomainsUpsellDesc": "Upgrade your plan to connect your own domain and serve your quizzes from a branded URL.",
+    "customDomainsUpsellCta": "See plans",
+    "domainAddBtn": "Add a domain",
+    "domainAddTitle": "Connect a custom domain",
+    "domainAddDesc": "We'll guide you through pointing your domain at Tiquiz step by step.",
+    "domainConfirmBtn": "Confirm and add",
+    "domainDetectBtn": "Continue",
+    "domainVerifyBtn": "Check again",
+    "domainOpenBtn": "Open",
+    "domainDeleteBtn": "Remove domain",
+    "domainDeleteTitle": "Remove this custom domain?",
+    "domainDeleteDesc": "Visitors of {hostname} will stop reaching your Tiquiz space. You can re-add it any time.",
+    "domainDeleteConfirm": "Remove",
+    "domainHostnameLabel": "Your domain",
+    "domainHostnamePh": "e.g. quiz.your-brand.com",
+    "domainHostnameHint": "Use a subdomain you control (recommended) or your apex domain. Anything you can edit DNS for.",
+    "domainStatusPending": "Pending DNS",
+    "domainStatusVerified": "Verified",
+    "domainStatusFailed": "DNS check failed",
+    "domainVerifiedSince": "Verified on {date}",
+    "domainPendingHint": "Add the DNS record below, then we'll detect it automatically.",
+    "domainPollingProgress": "Checking DNS… ({n}/{total})",
+    "domainPollingExhausted": "DNS hasn't propagated yet. Click Check again when ready.",
+    "registrarDetectedLabel": "Detected registrar:",
+    "registrarOpenConsole": "Open DNS console",
+    "dnsRecordToCreate": "Add this DNS record",
+    "dnsFieldType": "Type",
+    "dnsFieldName": "Name",
+    "dnsFieldTarget": "Target",
+    "registrarSteps": {
+      "cloudflare": {
+        "s1": "Open the DNS tab of {root} in your Cloudflare dashboard.",
+        "s2": "Click \"Add record\".",
+        "s3": "Pick CNAME, set Name to \"{name}\" and Target to \"{cnameTarget}\".",
+        "s4": "IMPORTANT: switch Proxy status to \"DNS only\" (gray cloud), then save."
+      },
+      "ovh": {
+        "s1": "Open the OVH manager, go to your domain {root}, then the DNS zone tab.",
+        "s2": "Click \"Add an entry\" and choose CNAME.",
+        "s3": "Set the sub-domain to \"{name}\" and the target to \"{cnameTarget}.\" (with the trailing dot).",
+        "s4": "Validate and wait a few minutes for propagation."
+      },
+      "godaddy": {
+        "s1": "Open the GoDaddy DNS Management page for {root}.",
+        "s2": "Click \"Add New Record\".",
+        "s3": "Type = CNAME, Name = \"{name}\", Value = \"{cnameTarget}\", TTL = 1 Hour.",
+        "s4": "Save."
+      },
+      "namecheap": {
+        "s1": "Open Namecheap → Advanced DNS for {root}.",
+        "s2": "Click \"Add New Record\" and choose \"CNAME Record\".",
+        "s3": "Host = \"{name}\", Target = \"{cnameTarget}\", TTL = Automatic.",
+        "s4": "Click the green check to save."
+      },
+      "gandi": {
+        "s1": "Open your Gandi DNS records page for {root}.",
+        "s2": "Click \"Add a record\".",
+        "s3": "Type CNAME, Name = \"{name}\", Hostname = \"{cnameTarget}.\" (with the trailing dot).",
+        "s4": "Save and wait for propagation."
+      },
+      "google": {
+        "s1": "Open the DNS settings for {root}.",
+        "s2": "Add a new custom resource record.",
+        "s3": "Type = CNAME, Host = \"{name}\", Data = \"{cnameTarget}\".",
+        "s4": "Save."
+      },
+      "generic": {
+        "s1": "Open the DNS management for {root} in your registrar's dashboard.",
+        "s2": "Find the option to add a new DNS record.",
+        "s3": "Create a CNAME with Name = \"{name}\" and Target/Value = \"{cnameTarget}\".",
+        "s4": "Save the record. We'll detect the change automatically."
+      }
+    },
+    "toastCopied": "Copied to clipboard",
+    "toastCopyFailed": "Couldn't copy. Try selecting it manually.",
+    "toastDomainAdded": "Domain added. We'll watch your DNS for the next 10 minutes.",
+    "toastDomainVerified": "{hostname} is live ✨",
+    "toastDomainStillPending": "Not detected yet. I'll keep checking.",
+    "toastDomainDeleted": "Domain removed.",
+    "cancelBtn": "Cancel"
   },
   "languageSwitcher": {
     "label": "Language"
