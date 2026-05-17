@@ -4,6 +4,8 @@ Application Web SaaS multilingue (FR/EN/ES/IT/AR) de création de quiz interacti
 
 **Tiquiz est la version allégée de Tipote**, focalisée uniquement sur les quiz, l'IA et Systeme.io. Pas de coach IA, pas de crédits IA, pas de réseaux sociaux, pas d'automations, pas de pages builder.
 
+> **Note** — Ce document est figé sur l'état d'avril 2026. Pour le détail des évolutions depuis (notamment **domaines personnalisés**, URLs propres, sélecteur de domaine de partage, infra dispatcher Caddy cross-app), voir `CAHIER_DES_CHARGES.md` à la racine du repo.
+
 ---
 
 ## 1. PRÉSENTATION DU PRODUIT

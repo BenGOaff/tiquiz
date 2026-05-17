@@ -171,6 +171,14 @@ Variations selon le canal :
 - NULL-out explicite avant DELETE
 - → **Aucun lead ne peut disparaître** quand le créateur re-shuffle ses résultats
 
+### 7.9. Domaines personnalisés (Pro+)
+- **Connecte ton propre domaine** à Tiquiz : `quiz.ma-marque.com`, `test.mon-business.fr`, n'importe quel sous-domaine que tu contrôles
+- **Setup en 2 minutes** : un seul enregistrement CNAME chez ton registrar (Cloudflare, OVH, GoDaddy, Namecheap, Gandi… détecté automatiquement avec instructions sur-mesure), Tiquiz vérifie le DNS dans la foulée et émet ton certif SSL Let's Encrypt sans aucune action supplémentaire
+- **URLs propres** sur ton domaine : `ma-marque.com/mon-quiz` au lieu de `quiz.tipote.com/q/mon-quiz` — sans préfixe, sans paraître "hébergé chez Tiquiz"
+- **Un seul domaine pour tous tes contenus** : quiz, sondages, popquiz, tout est servi depuis ton hostname. L'éditeur de chaque contenu te laisse choisir entre tes domaines via un dropdown (ton custom est pré-sélectionné puisque tu l'as payé)
+- **Sécurité par défaut** : un autre créateur ne peut pas réclamer un domaine déjà connecté chez toi, ni servir son propre contenu via ton hostname (vérification ownership automatique)
+- **Backwards-compat** : les URLs déjà partagées (`quiz.tipote.com/q/...`, `/p/...`) continuent de fonctionner — personne ne perd l'accès à un lien existant
+
 ## 8. Plans & tarification
 
 ### Free — 0€
