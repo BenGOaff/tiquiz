@@ -4,8 +4,12 @@
 // middleware and (soon) the Settings UI. Kept dependency-light so the
 // middleware bundle stays small and so server components can import
 // the types without pulling Node-only modules.
-
-import { promises as dns } from "node:dns";
+//
+// The middleware imports from this file and runs on the Edge runtime,
+// where `node:dns` does not exist. Any Node-only API used by API
+// routes (e.g. verifyDomainDns) is loaded via `await import(...)`
+// inside the function body so the static module graph the Edge
+// bundler walks stays clean.
 
 export type CustomDomainStatus = "pending_dns" | "verified" | "failed";
 
@@ -87,6 +91,10 @@ export type DnsCheckResult = {
  */
 export async function verifyDomainDns(hostname: string): Promise<DnsCheckResult> {
   try {
+    // Lazy-loaded so the Edge bundler used by middleware.ts never sees
+    // a static `node:dns` import. API routes calling this run on the
+    // Node runtime where the dynamic import resolves normally.
+    const { promises: dns } = await import("node:dns");
     const resolvedIps = await dns.resolve4(hostname);
     return { ok: resolvedIps.includes(DNS_TARGET_IP), resolvedIps };
   } catch (e) {
