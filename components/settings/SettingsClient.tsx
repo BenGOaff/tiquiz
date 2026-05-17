@@ -751,7 +751,7 @@ export default function SettingsClient() {
                       <div className="text-center text-sm font-medium text-muted-foreground py-2 border rounded-full">{t("currentPlan")}</div>
                     ) : plan.ctaKey ? (
                       <Button className="w-full rounded-full" variant={('popular' in plan && plan.popular) ? "default" : "outline"} asChild>
-                        <a href={plan.id === "pro_monthly" ? "https://www.tipote.fr/tiquiz-mensuel" : "https://www.tipote.fr/tiquiz-annuel"} target="_blank" rel="noopener noreferrer">{t(plan.ctaKey)} <ArrowRight className="h-4 w-4 ml-1.5" /></a>
+                        <a href={plan.id === "pro_monthly" ? "https://www.tipote.fr/part-tiquiz-mensuel" : "https://www.tipote.fr/part-tiquiz-annuel"} target="_blank" rel="noopener noreferrer">{t(plan.ctaKey)} <ArrowRight className="h-4 w-4 ml-1.5" /></a>
                       </Button>
                     ) : null}
                   </CardContent>
