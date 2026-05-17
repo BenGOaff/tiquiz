@@ -42,9 +42,8 @@ import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { useShareDomain } from "@/hooks/useShareDomain";
+import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { interpolateText } from "@/lib/quizPersonalization";
 import { stripHtml } from "@/lib/richText";
@@ -410,13 +409,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const [customFooterText, setCustomFooterText] = useState("");
   const [customFooterUrl, setCustomFooterUrl] = useState("");
   const [shareNetworks, setShareNetworks] = useState<ShareNetwork[]>([]);
-  // Domain used to build the share link. `null` while we wait for
-  // /api/profile/share-domain to land, then either a verified custom
-  // domain or the main app host. `options` is empty until the same
-  // fetch completes — when its length is 1 we don't bother rendering
-  // the selector (no choice to make).
-  const [shareDomain, setShareDomain] = useState<string | null>(null);
-  const [shareDomainOptions, setShareDomainOptions] = useState<string[]>([]);
+  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain } = useShareDomain();
   const [brandLogoUrl, setBrandLogoUrl] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -764,36 +757,6 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     } catch { toast.error(t("errLoading")); } finally { setLoading(false); }
   }, [quizId, router, isEmbed, embedSessionToken, t]);
   useEffect(() => { fetchQuiz(); }, [fetchQuiz]);
-
-  // Load the creator's share-domain preference + list of pickable
-  // hosts (their verified custom domains + the main app host). The
-  // selector only renders when there's more than one option, so until
-  // this lands the legacy `window.location.origin` is what publicUrl
-  // falls back to — no flicker for the no-custom-domain majority.
-  useEffect(() => {
-    let aborted = false;
-    fetch("/api/profile/share-domain")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (aborted || !data?.ok) return;
-        setShareDomainOptions(Array.isArray(data.options) ? data.options : []);
-        setShareDomain(typeof data.effectiveDefault === "string" ? data.effectiveDefault : null);
-      })
-      .catch(() => { /* silent — selector just won't appear */ });
-    return () => { aborted = true; };
-  }, []);
-
-  const handleShareDomainChange = useCallback((next: string) => {
-    setShareDomain(next);
-    // Fire-and-forget. The selection is already reflected locally; if
-    // the PATCH fails (network, race with deletion) we don't block the
-    // UI — next page load will reconcile via GET.
-    fetch("/api/profile/share-domain", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ domain: next }),
-    }).catch(() => { /* silent */ });
-  }, []);
 
   // Dynamic Google Font link in preview (same mechanism as public page → true WYSIWYG)
   useEffect(() => {
@@ -1232,14 +1195,6 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // embed token so /q/[id] renders it via its own preview gate.
   const publicSegment = slug.trim() ? sanitizeSlug(slug) ?? quizId : quizId;
   const previewSuffix = isEmbed && embedSessionToken ? `?embed=${encodeURIComponent(embedSessionToken)}` : "";
-  // Share link origin: prefer the creator's chosen domain (custom or
-  // main host) once /api/profile/share-domain has resolved; fall back
-  // to window.location.origin in the meantime so the link is never
-  // momentarily blank or rooted at "/q/…". On the server side (no
-  // window) we emit a relative URL — same as before.
-  const shareOrigin = shareDomain
-    ? `https://${shareDomain}`
-    : (typeof window !== "undefined" ? window.location.origin : "");
   const publicUrl = shareOrigin
     ? `${shareOrigin}/q/${publicSegment}${previewSuffix}`
     : `/q/${publicSegment}${previewSuffix}`;
@@ -2272,26 +2227,12 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           <Card><CardContent className="pt-6 space-y-3">
             <h3 className="font-semibold flex items-center gap-2"><Copy className="w-4 h-4 text-primary" /> {t("shareTabCustomLink")}</h3>
             <p className="text-xs text-muted-foreground">{t("shareTabCustomLinkHint")}</p>
-            {/* Domain picker — only meaningful when the creator has at
-                least one verified custom domain (otherwise there's
-                nothing to choose between). */}
-            {shareDomainOptions.length > 1 && shareDomain && (
-              <div className="flex items-center gap-2">
-                <Label className="text-xs text-muted-foreground shrink-0">{t("shareTabDomainLabel")}</Label>
-                <Select value={shareDomain} onValueChange={handleShareDomainChange}>
-                  <SelectTrigger className="h-9 text-sm font-mono flex-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {shareDomainOptions.map((host) => (
-                      <SelectItem key={host} value={host} className="font-mono text-sm">
-                        {host}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <ShareDomainPicker
+              label={t("shareTabDomainLabel")}
+              value={shareDomain}
+              options={shareDomainOptions}
+              onChange={setShareDomain}
+            />
             {/* Single-line link editor: prefix + slug input + save +
                 copy. Inspired by Systeme.io's URL bar — one row, no
                 redundant readonly mirror underneath. */}

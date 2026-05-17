@@ -56,6 +56,8 @@ function cleanPlaceholdersForLabel(text: string | null | undefined): string {
 }
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTranslations } from "next-intl";
+import { useShareDomain } from "@/hooks/useShareDomain";
+import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
 import {
   ALLOWED_SHARE_NETWORKS,
   BRAND_FONT_CHOICES,
@@ -384,6 +386,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const isPaidPlan = (profile?.plan ?? "free") !== "free";
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedIframe, setCopiedIframe] = useState(false);
+  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain } = useShareDomain();
 
   // Section refs for scroll-to
   const introRef = useRef<HTMLDivElement>(null);
@@ -855,11 +859,13 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
   // Public URL — prefer custom slug when set, fall back to UUID
   const publicSegment = slug.trim() ? sanitizeSlug(slug) ?? quizId : quizId;
-  const publicUrl = typeof window !== "undefined" ? `${window.location.origin}/q/${publicSegment}` : `/q/${publicSegment}`;
+  const publicUrl = shareOrigin ? `${shareOrigin}/q/${publicSegment}` : `/q/${publicSegment}`;
   // Owner-side preview URL (#7, mirrored from quiz). Kept separate from
   // publicUrl so "Copy link" never copies the preview variant.
   const previewUrl = `${publicUrl}?preview_name=${encodeURIComponent(PREVIEW_DEMO_NAME)}`;
   const handleCopyLink = () => { navigator.clipboard.writeText(publicUrl).then(() => { setCopied(true); toast.success(t("linkCopied")); setTimeout(() => setCopied(false), 2000); }); };
+  const iframeCode = `<iframe src="${publicUrl}" width="100%" height="700" frameborder="0" style="border:none;border-radius:12px;max-width:640px;margin:0 auto;display:block;"></iframe>`;
+  const handleCopyIframe = () => { navigator.clipboard.writeText(iframeCode).then(() => { setCopiedIframe(true); toast.success(t("iframeCopied")); setTimeout(() => setCopiedIframe(false), 2000); }); };
 
   // Drag-and-drop sensors for the sidebar question list
   const dndSensors = useSensors(
@@ -1550,29 +1556,51 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       {/* SHARE TAB */}
       {mainTab === "share" && (
         <div className="flex-1 overflow-y-auto p-6"><div className="max-w-3xl mx-auto space-y-4">
-          {/* Custom URL slug */}
+          {/* Custom URL slug — same one-row pattern as the quiz editor.
+              Domain picker only renders if the user has at least one
+              verified custom domain. */}
           <Card><CardContent className="pt-6 space-y-3">
             <h3 className="font-semibold flex items-center gap-2"><Copy className="w-4 h-4 text-primary" /> {t("shareTabCustomLink")}</h3>
             <p className="text-xs text-muted-foreground">{t("shareTabCustomLinkHint")}</p>
+            <ShareDomainPicker
+              label={t("shareTabDomainLabel")}
+              value={shareDomain}
+              options={shareDomainOptions}
+              onChange={setShareDomain}
+            />
             <div className="flex items-center gap-2">
-              <div className="flex items-center border rounded-lg bg-muted/30 pl-3 pr-1 py-1 flex-1">
-                <span className="text-sm text-muted-foreground font-mono whitespace-nowrap">
-                  {typeof window !== "undefined" ? `${window.location.origin}/q/` : "/q/"}
+              <div className="flex items-center border rounded-lg bg-muted/30 pl-3 pr-1 py-1 flex-1 min-w-0">
+                <span className="text-sm text-muted-foreground font-mono whitespace-nowrap shrink-0">
+                  {shareDomain
+                    ? `https://${shareDomain}/q/`
+                    : (typeof window !== "undefined" ? `${window.location.origin}/q/` : "/q/")}
                 </span>
                 <input
                   value={slug}
                   onChange={(e) => setSlug(e.target.value)}
                   placeholder={quizId}
-                  className="flex-1 bg-transparent outline-none text-sm font-mono px-1 py-1"
+                  className="flex-1 min-w-0 bg-transparent outline-none text-sm font-mono px-1 py-1"
                 />
               </div>
-              <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enregistrer"}</Button>
+              <Button size="sm" onClick={handleSave} disabled={saving}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t("save")}
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleCopyLink} title={t("copy")} aria-label={t("copy")}>
+                {copied ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+              </Button>
             </div>
-            <div className="flex items-center gap-2">
-              <Input value={publicUrl} readOnly className="font-mono text-sm bg-muted flex-1" />
-              <Button variant="outline" size="icon" onClick={handleCopyLink}>{copied ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}</Button>
+            <div className="relative">
+              <pre className="text-xs font-mono bg-muted rounded-lg p-3 pr-24 overflow-x-auto border mt-3">{iframeCode}</pre>
+              <Button
+                size="sm"
+                variant="outline"
+                className="absolute top-5 right-2 h-7 px-2"
+                onClick={handleCopyIframe}
+              >
+                {copiedIframe ? <CheckCircle className="w-3.5 h-3.5 mr-1 text-green-500" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
+                {copiedIframe ? t("copied") : t("copy")}
+              </Button>
             </div>
-            <pre className="text-xs font-mono bg-muted rounded-lg p-3 overflow-x-auto border mt-3">{`<iframe src="${publicUrl}" width="100%" height="700" frameborder="0" style="border:none;border-radius:12px;max-width:640px;margin:0 auto;display:block;"></iframe>`}</pre>
           </CardContent></Card>
 
           {/* Share networks */}
