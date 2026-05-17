@@ -8,7 +8,8 @@
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { DNS_TARGET_IP, verifyDomainDns } from "@/lib/customDomains";
+import { DNS_TARGET_IP } from "@/lib/customDomains";
+import { verifyDomainDns } from "@/lib/customDomainsServer";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
