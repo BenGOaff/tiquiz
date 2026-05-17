@@ -1,6 +1,6 @@
 "use client";
 
-// Page publique d'un popquiz — `/pq/[id]`. C'est là qu'atterrit
+// Page publique d'un popquiz — `/p/[id]`. C'est là qu'atterrit
 // quelqu'un qui clique sur le lien partagé par le créateur. La
 // page DOIT être :
 //   • plein écran, responsive, jolie même sans config

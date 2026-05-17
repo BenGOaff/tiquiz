@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmbedCodeDialog } from "@/components/popquiz/EmbedCodeDialog";
+import { useShareDomain } from "@/hooks/useShareDomain";
 import { toast } from "sonner";
 
 export interface PopquizListItem {
@@ -59,6 +60,7 @@ export function PopquizzesClient({
   const [filter, setFilter] = useState<Filter>("all");
   const [embedHandle, setEmbedHandle] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const { shareOrigin, buildPublicUrl } = useShareDomain();
 
   const counts = useMemo(() => {
     const active = popquizzes.filter((p) => p.is_published).length;
@@ -79,7 +81,9 @@ export function PopquizzesClient({
 
   function copyLink(p: PopquizListItem) {
     const handle = p.slug ?? p.id;
-    const url = `${window.location.origin}/p/${handle}`;
+    // Honour the creator's chosen share domain (custom domain or
+    // main host) — same source of truth as the editor's share tab.
+    const url = buildPublicUrl("p", handle);
     void navigator.clipboard.writeText(url);
     toast.success(t("toastLinkCopied"));
   }
@@ -298,7 +302,7 @@ export function PopquizzesClient({
         onOpenChange={(o) => !o && setEmbedHandle(null)}
         embedUrl={
           embedHandle
-            ? `${typeof window !== "undefined" ? window.location.origin : ""}/embed/p/${embedHandle}`
+            ? `${shareOrigin}/embed/p/${embedHandle}`
             : ""
         }
       />

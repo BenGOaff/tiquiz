@@ -1,7 +1,7 @@
 // lib/popquiz/appearance.ts
 //
 // Helpers de rendu de l'apparence d'un popquiz public — partagés
-// entre la page directe (/pq/[id]) et l'embed iframe (/embed/pq/[id])
+// entre la page directe (/p/[id]) et l'embed iframe (/embed/p/[id])
 // pour garantir un rendu identique. Toute la logique de mapping
 // "user settings → CSS" vit ici.
 

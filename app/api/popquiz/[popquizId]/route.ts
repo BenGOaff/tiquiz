@@ -10,6 +10,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { sanitizeSlug } from "@/lib/quizBranding";
+import { isReservedPublicSlug } from "@/lib/publicSlug";
+import { isSlugTakenByQuiz } from "@/lib/publicSlugServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 
@@ -98,6 +101,40 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
               "Slug invalide. Lettres minuscules, chiffres et tirets uniquement (3 à 50 caractères).",
           },
           { status: 400 },
+        );
+      }
+      // Reserved root paths — a popquiz with slug "api" or "embed"
+      // would shadow real routes on a creator's custom domain.
+      if (isReservedPublicSlug(slug)) {
+        return NextResponse.json(
+          { ok: false, error: "SLUG_RESERVED" },
+          { status: 409 },
+        );
+      }
+      // Within-popquiz uniqueness (was missing — the catch-all and the
+      // legacy /p/<slug> route both rely on slug being unique per
+      // user). Surfaced as the same SLUG_TAKEN code as the quiz route.
+      const { data: ownConflict } = await supabaseAdmin
+        .from("popquizzes")
+        .select("id")
+        .eq("user_id", user.id)
+        .ilike("slug", slug)
+        .neq("id", popquizId)
+        .limit(1)
+        .maybeSingle();
+      if (ownConflict) {
+        return NextResponse.json(
+          { ok: false, error: "SLUG_TAKEN" },
+          { status: 409 },
+        );
+      }
+      // Cross-type collision with a quiz of the same user — same
+      // rationale as in /api/quiz/[id]: the catch-all has to be
+      // unambiguous.
+      if (await isSlugTakenByQuiz(user.id, slug)) {
+        return NextResponse.json(
+          { ok: false, error: "SLUG_TAKEN" },
+          { status: 409 },
         );
       }
       update.slug = slug;
