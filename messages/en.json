@@ -740,7 +740,8 @@
     "toneFriendly": "Friendly (informal)",
     "toneFormal": "Formal",
     "toneFun": "Fun & quirky",
-    "toneInspiring": "Inspiring"
+    "toneInspiring": "Inspiring",
+    "save": "Save"
   },
   "languageSwitcher": {
     "label": "Language"
