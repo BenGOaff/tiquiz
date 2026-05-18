@@ -1118,7 +1118,16 @@
     "consentTextLabel": "نص خانة الاختيار",
     "consentTextPlaceholder": "أوافق على سياسة الخصوصية…",
     "resultAddImage": "إضافة صورة",
-    "resultAddImageHint": "ستضاف الصورة في أعلى الوصف. يمكنك أيضًا سحب وإفلات ملف في أي مكان داخل منطقة النص."
+    "resultAddImageHint": "ستضاف الصورة في أعلى الوصف. يمكنك أيضًا سحب وإفلات ملف في أي مكان داخل منطقة النص.",
+    "resultImagePosLabel": "الموقع:",
+    "resultImagePos_top": "الأعلى",
+    "resultImagePos_after_title": "بعد العنوان",
+    "resultImagePos_after_description": "بعد الوصف",
+    "resultImagePos_after_insight": "بعد الرؤية",
+    "resultImagePos_bottom": "الأسفل",
+    "resultImageRemove": "إزالة الصورة",
+    "resultImageDropzone": "إضافة صورة إلى النتيجة",
+    "resultImageHint": "انقر أو اسحب ملفًا (PNG/JPG/GIF، الحد الأقصى 10 ميجابايت)"
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",

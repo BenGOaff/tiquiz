@@ -252,7 +252,19 @@ export function RichTextEdit({
     { hex: "#0ea5e9", label: "Cyan" },
   ];
 
+  // Bug Adeline (Tipote, 18 mai 2026) : "j'ai du cliquer plusieurs fois
+  // pour insérer un lien". Root cause : quand on ouvre le Dialog
+  // link/image, Radix steal le focus du contentEditable, ce qui
+  // déclenche onBlur → commit() → setEditing(false), le contentEditable
+  // est démonté avant que commitLink() puisse poser son <a> via
+  // restoreSelection() + exec("createLink"). Le user devait re-cliquer
+  // dans le champ + re-cliquer le bouton link pour que ça passe.
+  // Fix : un ref `dialogPausedRef` qu'on flip BEFORE l'ouverture du
+  // dialog, pour bloquer le commit synchrone du blur. On le reset
+  // quand le dialog ferme.
+  const dialogPausedRef = useRef(false);
   const commit = useCallback(() => {
+    if (dialogPausedRef.current) return;
     if (!ref.current) return;
     const clean = sanitizeRichText(ref.current.innerHTML);
     if (clean !== value) onChange(clean);
@@ -368,6 +380,7 @@ export function RichTextEdit({
 
   const onInsertLink = () => {
     saveSelection();
+    dialogPausedRef.current = true;
     setLinkDraftUrl("");
     setLinkError(null);
     setLinkDialogOpen(true);
@@ -378,6 +391,7 @@ export function RichTextEdit({
     if (!url) { setLinkError(t("rteLinkInvalid")); return; }
     if (!isSafeUrl(url)) { setLinkError(t("rteLinkInvalid")); return; }
     setLinkDialogOpen(false);
+    dialogPausedRef.current = false;
     restoreSelection();
     exec("createLink", url);
     const el = ref.current;
@@ -396,12 +410,14 @@ export function RichTextEdit({
   // → fallback Dialog URL pour les champs non liés à un upload.
   const fileInputRef = useRef<HTMLInputElement>(null);
   const onInsertImage = () => {
+    saveSelection();
     if (onImageUpload) {
-      saveSelection();
+      // File picker (OS dialog) volera aussi le focus mais ne déclenche
+      // pas le mount d'un Radix dialog, donc on n'a pas besoin de pause.
       fileInputRef.current?.click();
       return;
     }
-    saveSelection();
+    dialogPausedRef.current = true;
     setImageDraftUrl("");
     setImageError(null);
     setImageDialogOpen(true);
@@ -435,6 +451,7 @@ export function RichTextEdit({
     if (!url) { setImageError(t("rteUrlInvalid")); return; }
     if (!isSafeUrl(url)) { setImageError(t("rteUrlInvalid")); return; }
     setImageDialogOpen(false);
+    dialogPausedRef.current = false;
     restoreSelection();
     exec("insertImage", url);
     const el = ref.current;
@@ -699,7 +716,7 @@ export function RichTextEdit({
 
       {/* Link insertion dialog — styled per Tiquiz design system,
           replaces window.prompt() (Adeline, 18 mai 2026). */}
-      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+      <Dialog open={linkDialogOpen} onOpenChange={(open) => { setLinkDialogOpen(open); if (!open) dialogPausedRef.current = false; }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t("rteLinkDialogTitle")}</DialogTitle>
@@ -725,7 +742,7 @@ export function RichTextEdit({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
+      <Dialog open={imageDialogOpen} onOpenChange={(open) => { setImageDialogOpen(open); if (!open) dialogPausedRef.current = false; }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t("rteImageDialogTitle")}</DialogTitle>
