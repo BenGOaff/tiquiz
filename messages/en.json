@@ -854,7 +854,10 @@
     "menu": {
       "settings": "Settings",
       "systemeio": "Systeme.io Key",
-      "account": "My account"
+      "account": "My account",
+      "branding": "Branding",
+      "domain": "Domain",
+      "tracking": "Tracking"
     }
   },
   "tutorial": {
