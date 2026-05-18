@@ -83,6 +83,53 @@ Toujours faire les 7 étapes, dans l'ordre, sinon la feature est cassée silenci
 
 ---
 
+## H bis) Sync UI : nouvelle tab Settings ⇒ UserAvatarMenu
+
+Quand j'ajoute un onglet à `app/settings/SettingsClient.tsx`, je
+DOIS aussi l'ajouter dans le dropdown `components/UserAvatarMenu.tsx`
+(menu déroulant photo de profil). Adeline (19 mai 2026) a remonté
+qu'il manquait des entrées — j'avais ajouté Tracking sans toucher
+le menu. Idem si je rename / réordonne / supprime un onglet.
+
+Checklist 2-points : (1) SettingsClient TabsTrigger + TabsContent ;
+(2) UserAvatarMenu `menuItems[]` + `header.menu.*` i18n keys × 7 locales.
+
+## H ter) OG metadata : strip HTML sur TOUS les chemins
+
+Chaque page exposant des meta OpenGraph aux previews sociaux (iMessage,
+WhatsApp, FB, LinkedIn) doit appliquer `stripHtml` sur title +
+description, sinon le rich-text HTML du créateur fuit en `<span style=…>`
+dans l'aperçu de partage. Tiquiz a 2 routes qui servent un quiz :
+- `/q/[id]/page.tsx` (main host, legacy) — stripHtml ✓ depuis 16 mai
+- `/[publicSlug]/page.tsx` (custom domain catch-all) — stripHtml
+  ajouté seulement le 19 mai (rapport Adeline)
+
+À chaque nouvelle route publique avec `generateMetadata`, vérifier
+que stripHtml est appliqué.
+
+## H quater) i18n nested keys : check le SHAPE avant d'ajouter
+
+Quand j'écris à `header.menu.foo`, je dois d'abord vérifier que
+`header.menu` est un DICT, pas un STRING. Sur Tipote pt + pt-BR,
+`header.menu` valait `"Menu"` (string raw jamais traduit) — un
+`setdefault('menu', {})` retournait alors le string et le `menu[k]=…`
+crashait. Python : `isinstance(menu, dict)` avant d'écrire ; ou
+réécrire la sous-arbo complète si elle est mal typée.
+
+## I) Typographie française au render — NBSP devant `:;!?»`
+
+`lib/quizPersonalization.ts:interpolateText` cleanait les espaces
+ASCII devant TOUTES les ponctuations avant ce fix (Adeline 19 mai
+2026). Bug : "reçu?" et "passé:" en français.
+
+Maintenant :
+- `,` `.` `)` → strip l'espace devant (anglais & français ok)
+- `: ; ! ? »` → REMPLACE l'espace ASCII par U+00A0 (NBSP) — typo
+  française. Le NBSP existant déjà reste intouché.
+
+Si je touche à cette fonction, ne PAS revenir au regex unifié
+`[ \t]+([.,;:!?»)])` → "$1" — c'est la régression V1.
+
 ## H) Placement UI — visibilité, pas hasard
 
 - **Toujours demander la place exacte** quand j'ajoute une section Settings / Paramètres. Adeline (mai 2026) m'a fait déplacer 2× la même Card "Tracking & Pubs" parce que je l'avais collée "à la fin du tab actuel" sans réfléchir.
