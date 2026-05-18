@@ -78,12 +78,9 @@ export function useAutosave<T>({
         } else {
           let bodyText = "";
           try { bodyText = await res.text(); } catch { /* ignore */ }
-          console.error("[autosave] non-OK response", {
-            status: res.status,
-            statusText: res.statusText,
-            body: bodyText.slice(0, 500),
-            stateSize: serialized.length,
-          });
+          console.error(
+            `[autosave] non-OK ${res.status} ${res.statusText} — body=${bodyText.slice(0, 800)} — stateSize=${serialized.length}`,
+          );
         }
       } catch (err) {
         if (err instanceof Error && err.name !== "AbortError") {
