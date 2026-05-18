@@ -621,10 +621,7 @@
     "optionFallback": "Opzione {n}",
     "questionFallback": "Domanda {n}",
     "showConsentCheckboxLabel": "Mostra la casella di consenso",
-    "showConsentCheckboxHint": "Disattiva se gestisci già il consenso GDPR altrove (CRM, altra pagina).",
-    "fieldPhoneRequired": "Telefono obbligatorio",
-    "previewAddOptionImage": "Aggiungi un'immagine",
-    "previewRemoveImage": "Rimuovi immagine"
+    "showConsentCheckboxHint": "Disattiva se gestisci già il consenso GDPR altrove (CRM, altra pagina)."
   },
   "settings": {
     "title": "Impostazioni",
@@ -1104,7 +1101,13 @@
     "shareTabOgImageDimsHint": "Consigliato: 1200 × 630 px. Max 10 MB.",
     "ogImageUploaded": "Miniatura salvata",
     "showConsentCheckboxLabel": "Mostra la casella di consenso",
-    "showConsentCheckboxHint": "Disattivala se gestisci già il consenso GDPR altrove."
+    "showConsentCheckboxHint": "Disattivala se gestisci già il consenso GDPR altrove.",
+    "fieldPhoneRequired": "Telefono obbligatorio",
+    "previewAddOptionImage": "Aggiungi un'immagine",
+    "previewRemoveImage": "Rimuovi immagine",
+    "fieldFirstNameRequiredToggle": "Rendi obbligatorio il nome",
+    "fieldLastNameRequiredToggle": "Rendi obbligatorio il cognome",
+    "fieldCountryRequiredToggle": "Rendi obbligatorio il paese"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nuova password",

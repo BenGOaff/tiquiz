@@ -37,10 +37,41 @@ const QUESTION_EVENT_DB: Record<QuestionEvent, "view" | "answer"> = {
 };
 
 const SESSION_ID_RE = /^[a-z0-9-]{8,64}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Adeline (18 mai 2026) : sur testetstes (slug, pas UUID) le tracker
+// renvoyait 404 systématiquement. Les autres routes publiques résolvent
+// déjà slug→id (public/route.ts:resolveQuizId), on duplique la logique
+// minimale ici plutôt que d'extraire un helper (le tracker ne fait
+// qu'un seul appel, et il doit rester *léger* — best-effort).
+async function resolveQuizIdFromSlugOrId(slugOrId: string): Promise<string | null> {
+  const needle = slugOrId.trim();
+  if (!needle) return null;
+  if (UUID_RE.test(needle)) {
+    const { data } = await supabaseAdmin
+      .from("quizzes")
+      .select("id")
+      .eq("id", needle)
+      .eq("status", "active")
+      .maybeSingle();
+    return data?.id ?? null;
+  }
+  const { data } = await supabaseAdmin
+    .from("quizzes")
+    .select("id")
+    .ilike("slug", needle)
+    .eq("status", "active")
+    .maybeSingle();
+  return data?.id ?? null;
+}
 
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
-    const { quizId } = await context.params;
+    const { quizId: slugOrId } = await context.params;
+    const quizId = await resolveQuizIdFromSlugOrId(slugOrId);
+    if (!quizId) {
+      return NextResponse.json({ ok: false }, { status: 404 });
+    }
 
     let body: any;
     try {
@@ -60,18 +91,6 @@ export async function POST(req: NextRequest, context: RouteContext) {
       if (!SESSION_ID_RE.test(sessionId)) {
         return NextResponse.json({ ok: false }, { status: 400 });
       }
-      // Ownership check is implicit: a visitor can only have a
-      // session_id we don't validate. But quiz_id must exist and be
-      // active to accept events at all (avoid spam on deleted quizzes).
-      const { data: quiz } = await supabaseAdmin
-        .from("quizzes")
-        .select("id")
-        .eq("id", quizId)
-        .eq("status", "active")
-        .maybeSingle();
-      if (!quiz) {
-        return NextResponse.json({ ok: false }, { status: 404 });
-      }
       await supabaseAdmin.from("quiz_question_events").insert({
         quiz_id: quizId,
         question_index: qIdx,
@@ -87,7 +106,6 @@ export async function POST(req: NextRequest, context: RouteContext) {
         .from("quizzes")
         .select(`id, ${column}`)
         .eq("id", quizId)
-        .eq("status", "active")
         .maybeSingle();
       if (!quiz) {
         return NextResponse.json({ ok: false }, { status: 404 });
