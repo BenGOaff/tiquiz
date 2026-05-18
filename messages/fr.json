@@ -604,10 +604,7 @@
     "optionFallback": "Option {n}",
     "questionFallback": "Question {n}",
     "showConsentCheckboxLabel": "Afficher la case à cocher de consentement",
-    "showConsentCheckboxHint": "Désactive si tu gères déjà le consentement RGPD ailleurs (ton CRM, une autre page).",
-    "fieldPhoneRequired": "Téléphone obligatoire",
-    "previewAddOptionImage": "Ajouter une image",
-    "previewRemoveImage": "Retirer l'image"
+    "showConsentCheckboxHint": "Désactive si tu gères déjà le consentement RGPD ailleurs (ton CRM, une autre page)."
   },
   "settings": {
     "title": "Paramètres",
@@ -1087,7 +1084,13 @@
     "shareTabOgImageDimsHint": "Format recommandé : 1200 × 630 px (ratio 1.91:1). Max 10 Mo.",
     "ogImageUploaded": "Vignette enregistrée",
     "showConsentCheckboxLabel": "Afficher la case à cocher de consentement",
-    "showConsentCheckboxHint": "Désactive si tu gères déjà le consentement RGPD ailleurs (ton CRM, une autre page)."
+    "showConsentCheckboxHint": "Désactive si tu gères déjà le consentement RGPD ailleurs (ton CRM, une autre page).",
+    "fieldPhoneRequired": "Téléphone obligatoire",
+    "previewAddOptionImage": "Ajouter une image",
+    "previewRemoveImage": "Retirer l'image",
+    "fieldFirstNameRequiredToggle": "Rendre le prénom obligatoire",
+    "fieldLastNameRequiredToggle": "Rendre le nom obligatoire",
+    "fieldCountryRequiredToggle": "Rendre le pays obligatoire"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",

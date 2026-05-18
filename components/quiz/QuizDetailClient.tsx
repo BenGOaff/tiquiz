@@ -104,7 +104,8 @@ type QuizData = {
   result_insight_heading: string | null; result_projection_heading: string | null;
   address_form: string | null;
   capture_first_name: boolean | null; capture_last_name: boolean | null;
-  capture_phone: boolean | null; capture_country: boolean | null; phone_required?: boolean | null;
+  capture_phone: boolean | null; capture_country: boolean | null;
+  phone_required?: boolean | null; first_name_required?: boolean | null; last_name_required?: boolean | null; country_required?: boolean | null;
   virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null;
   bonus_intro_text: string | null;
   bonus_unlocked_message: string | null;
@@ -372,11 +373,17 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const [captureFirstName, setCaptureFirstName] = useState(false);
   const [captureLastName, setCaptureLastName] = useState(false);
   const [capturePhone, setCapturePhone] = useState(false);
-  // Sub-toggle: when phone is captured, the creator can flip it to
-  // required. Default false = preserves the historical "always optional"
-  // behaviour for every existing quiz (Hugo, 18 mai 2026).
-  const [phoneRequired, setPhoneRequired] = useState(false);
   const [captureCountry, setCaptureCountry] = useState(false);
+  // Sub-toggles "obligatoire" pour chaque champ de capture (sauf
+  // email, toujours obligatoire). Default false partout → tous les
+  // quiz existants gardent leur comportement (champs optionnels).
+  // Côté visiteur : un asterisk apparait sur les champs flippés,
+  // pas de mention "(optionnel)" sur les autres (convention SaaS
+  // classique). Adeline + Hugo, 18 mai 2026.
+  const [firstNameRequired, setFirstNameRequired] = useState(false);
+  const [lastNameRequired, setLastNameRequired] = useState(false);
+  const [phoneRequired, setPhoneRequired] = useState(false);
+  const [countryRequired, setCountryRequired] = useState(false);
   // Defaults to true so older quizzes (no column value yet) keep showing the
   // GDPR-style checkbox. Only flips when the creator explicitly opts out.
   const [showConsentCheckbox, setShowConsentCheckbox] = useState(true);
@@ -497,8 +504,11 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     capture_first_name: captureFirstName,
     capture_last_name: captureLastName,
     capture_phone: capturePhone,
-    phone_required: phoneRequired,
     capture_country: captureCountry,
+    first_name_required: firstNameRequired,
+    last_name_required: lastNameRequired,
+    phone_required: phoneRequired,
+    country_required: countryRequired,
     show_consent_checkbox: showConsentCheckbox,
     show_results_breakdown: showResultsBreakdown,
     ask_first_name: askFirstName,
@@ -527,6 +537,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
     captureHeading, captureSubtitle, resultInsightHeading, resultProjectionHeading,
     captureFirstName, captureLastName, capturePhone, captureCountry,
+    firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
     showConsentCheckbox, showResultsBreakdown, askFirstName, askGender,
     viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl,
     shareMessage, locale, sioShareTagName, status,
@@ -561,8 +572,11 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     if (typeof s.capture_first_name === "boolean") setCaptureFirstName(s.capture_first_name);
     if (typeof s.capture_last_name === "boolean") setCaptureLastName(s.capture_last_name);
     if (typeof s.capture_phone === "boolean") setCapturePhone(s.capture_phone);
-    if (typeof s.phone_required === "boolean") setPhoneRequired(s.phone_required);
     if (typeof s.capture_country === "boolean") setCaptureCountry(s.capture_country);
+    if (typeof s.first_name_required === "boolean") setFirstNameRequired(s.first_name_required);
+    if (typeof s.last_name_required === "boolean") setLastNameRequired(s.last_name_required);
+    if (typeof s.phone_required === "boolean") setPhoneRequired(s.phone_required);
+    if (typeof s.country_required === "boolean") setCountryRequired(s.country_required);
     if (typeof s.show_consent_checkbox === "boolean") setShowConsentCheckbox(s.show_consent_checkbox);
     if (typeof s.show_results_breakdown === "boolean") setShowResultsBreakdown(s.show_results_breakdown);
     if (typeof s.ask_first_name === "boolean") setAskFirstName(s.ask_first_name);
@@ -652,7 +666,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
       setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
       setShowResultsBreakdown((q as { show_results_breakdown?: boolean | null }).show_results_breakdown === true);
-      setCapturePhone(q.capture_phone ?? false); setPhoneRequired(q.phone_required ?? false); setCaptureCountry(q.capture_country ?? false);
+      setCapturePhone(q.capture_phone ?? false); setCaptureCountry(q.capture_country ?? false);
+      setFirstNameRequired(q.first_name_required ?? false); setLastNameRequired(q.last_name_required ?? false);
+      setPhoneRequired(q.phone_required ?? false); setCountryRequired(q.country_required ?? false);
       setAskFirstName(Boolean((q as unknown as Record<string, unknown>).ask_first_name));
       setAskGender(Boolean((q as unknown as Record<string, unknown>).ask_gender));
       setViralityEnabled(q.virality_enabled); setBonusDescription(q.bonus_description ?? "");
@@ -1173,7 +1189,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           result_projection_heading: resultProjectionHeading.trim() || null,
           capture_first_name: captureFirstName, capture_last_name: captureLastName,
           ask_first_name: askFirstName, ask_gender: askGender,
-          capture_phone: capturePhone, phone_required: phoneRequired, capture_country: captureCountry,
+          capture_phone: capturePhone, capture_country: captureCountry,
+          first_name_required: firstNameRequired, last_name_required: lastNameRequired,
+          phone_required: phoneRequired, country_required: countryRequired,
           virality_enabled: viralityEnabled, bonus_description: bonusDescription,
           bonus_intro_text: bonusIntroText.trim() || null,
           bonus_unlocked_message: bonusUnlockedMessage.trim() || null,
@@ -1618,19 +1636,37 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     <CapturePill label={t("fieldPhone")} active={capturePhone} onToggle={() => setCapturePhone(!capturePhone)} />
                     <CapturePill label={t("fieldCountry")} active={captureCountry} onToggle={() => setCaptureCountry(!captureCountry)} />
                   </div>
-                  {/* Sub-toggle for phone: required vs optional. Only
-                      visible when phone capture is on. Default false
-                      preserves the historical "always optional" UX. */}
-                  {capturePhone && (
-                    <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={phoneRequired}
-                        onChange={(e) => setPhoneRequired(e.target.checked)}
-                        className="h-3.5 w-3.5 accent-primary"
-                      />
-                      <span>{t("fieldPhoneRequired")}</span>
-                    </label>
+                  {/* Sub-toggles "obligatoire" pour chaque champ capturé.
+                      Convention SaaS : asterisk côté visiteur sur les
+                      cases cochées ici, rien sur les autres. L'email
+                      reste obligatoire d'office (pas de toggle). */}
+                  {(captureFirstName || captureLastName || capturePhone || captureCountry) && (
+                    <div className="flex flex-col gap-1.5 pt-1">
+                      {captureFirstName && (
+                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                          <input type="checkbox" checked={firstNameRequired} onChange={(e) => setFirstNameRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
+                          <span>{t("fieldFirstNameRequiredToggle")}</span>
+                        </label>
+                      )}
+                      {captureLastName && (
+                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                          <input type="checkbox" checked={lastNameRequired} onChange={(e) => setLastNameRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
+                          <span>{t("fieldLastNameRequiredToggle")}</span>
+                        </label>
+                      )}
+                      {capturePhone && (
+                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                          <input type="checkbox" checked={phoneRequired} onChange={(e) => setPhoneRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
+                          <span>{t("fieldPhoneRequired")}</span>
+                        </label>
+                      )}
+                      {captureCountry && (
+                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                          <input type="checkbox" checked={countryRequired} onChange={(e) => setCountryRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
+                          <span>{t("fieldCountryRequiredToggle")}</span>
+                        </label>
+                      )}
+                    </div>
                   )}
                   {(!captureFirstName || !captureLastName || !capturePhone || !captureCountry) && (
                     <button

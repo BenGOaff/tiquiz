@@ -621,10 +621,7 @@
     "optionFallback": "الخيار {n}",
     "questionFallback": "السؤال {n}",
     "showConsentCheckboxLabel": "إظهار خانة الموافقة",
-    "showConsentCheckboxHint": "أوقف الخيار إذا كنت تتعامل مع موافقة GDPR في مكان آخر (CRM أو صفحة أخرى).",
-    "fieldPhoneRequired": "الهاتف مطلوب",
-    "previewAddOptionImage": "إضافة صورة",
-    "previewRemoveImage": "إزالة الصورة"
+    "showConsentCheckboxHint": "أوقف الخيار إذا كنت تتعامل مع موافقة GDPR في مكان آخر (CRM أو صفحة أخرى)."
   },
   "settings": {
     "title": "الإعدادات",
@@ -1104,7 +1101,13 @@
     "shareTabOgImageDimsHint": "موصى به: 1200 × 630 بكسل. الحد الأقصى 10 ميغابايت.",
     "ogImageUploaded": "تم حفظ الصورة المصغرة",
     "showConsentCheckboxLabel": "إظهار خانة الموافقة",
-    "showConsentCheckboxHint": "عطّلها إذا كنت تتعامل مع موافقة GDPR في مكان آخر."
+    "showConsentCheckboxHint": "عطّلها إذا كنت تتعامل مع موافقة GDPR في مكان آخر.",
+    "fieldPhoneRequired": "الهاتف مطلوب",
+    "previewAddOptionImage": "إضافة صورة",
+    "previewRemoveImage": "إزالة الصورة",
+    "fieldFirstNameRequiredToggle": "جعل الاسم الأول مطلوبًا",
+    "fieldLastNameRequiredToggle": "جعل اسم العائلة مطلوبًا",
+    "fieldCountryRequiredToggle": "جعل البلد مطلوبًا"
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",
