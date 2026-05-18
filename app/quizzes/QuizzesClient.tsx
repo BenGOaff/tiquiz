@@ -9,6 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TopPerformerBadge, TrendingBadge } from "@/components/ui/highlight-badge";
 import { EmptyCanvasArt, EmptySearchArt } from "@/components/ui/illustrations";
+import { stripHtml } from "@/lib/richText";
+import { interpolateText } from "@/lib/quizPersonalization";
 import {
   Eye,
   Play,
@@ -495,7 +497,7 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                               href={editHref}
                               className="text-lg font-semibold hover:underline truncate"
                             >
-                              {p.title || tProjects("untitled")}
+                              {stripHtml(interpolateText(p.title, { name: "", gender: "x" })) || tProjects("untitled")}
                             </Link>
                             <Badge
                               variant="outline"

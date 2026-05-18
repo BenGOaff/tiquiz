@@ -939,7 +939,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     );
   const handleExportCSV = () => {
     if (!leads.length) return;
-    const csv = [t("csvHeader"), ...leads.map(l => [l.email, l.first_name ?? "", l.last_name ?? "", l.result_title ?? "", l.created_at ? new Date(l.created_at).toLocaleDateString() : ""].map(c => `"${String(c).replace(/"/g,'""')}"`).join(","))].join("\n");
+    // Strip rich-text formatting before CSV — raw `<span style=…>` markup
+    // would otherwise leak (cf. rapport Adeline, 17 mai 2026).
+    const csv = [t("csvHeader"), ...leads.map(l => [l.email, l.first_name ?? "", l.last_name ?? "", stripHtml(l.result_title ?? ""), l.created_at ? new Date(l.created_at).toLocaleDateString() : ""].map(c => `"${String(c).replace(/"/g,'""')}"`).join(","))].join("\n");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = `leads-${quizId}.csv`; a.click();
   };
 
