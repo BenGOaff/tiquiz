@@ -389,11 +389,45 @@ export function RichTextEdit({
     }
   };
 
+  // Toolbar Image button (Adeline, 18 mai 2026 : "je ne vois pas où
+  // ajouter une image sur le résultat"). Quand un onImageUpload est
+  // fourni → on ouvre un file picker direct (UX visible + immédiate
+  // pour les utilisateurs qui ne pensent pas au drag-and-drop). Sinon
+  // → fallback Dialog URL pour les champs non liés à un upload.
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const onInsertImage = () => {
+    if (onImageUpload) {
+      saveSelection();
+      fileInputRef.current?.click();
+      return;
+    }
     saveSelection();
     setImageDraftUrl("");
     setImageError(null);
     setImageDialogOpen(true);
+  };
+
+  const onPickedImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // reset so re-picking same file fires onChange
+    if (!file || !onImageUpload) return;
+    if (!file.type.startsWith("image/")) return;
+    setUploadingDrop(true);
+    try {
+      const url = await onImageUpload(file);
+      if (!url) return;
+      restoreSelection();
+      exec("insertImage", url);
+      const el = ref.current;
+      if (el) {
+        el.querySelectorAll("img").forEach((img) => {
+          img.style.maxWidth = "100%";
+          img.style.height = "auto";
+        });
+      }
+    } finally {
+      setUploadingDrop(false);
+    }
   };
 
   const commitImage = () => {
@@ -528,7 +562,8 @@ export function RichTextEdit({
           </>}
           <span className="w-px h-4 bg-border mx-0.5" />
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertLink(); }} title={t("rteInsertLink")}><LinkIcon className="w-3.5 h-3.5" /></ToolbarBtn>
-          {!singleLine && <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertImage(); }} title={t("rteInsertImage")}><ImageIcon className="w-3.5 h-3.5" /></ToolbarBtn>}
+          {!singleLine && <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertImage(); }} title={onImageUpload ? t("rteUploadImage") : t("rteInsertImage")}>{uploadingDrop ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}</ToolbarBtn>}
+          <input ref={fileInputRef} type="file" accept="image/*,image/gif" className="sr-only" onChange={onPickedImageFile} />
           {hasVars && (
             <>
               <span className="w-px h-4 bg-border mx-0.5" />

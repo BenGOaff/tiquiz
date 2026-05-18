@@ -78,7 +78,8 @@
     "rteImageDialogTitle": "إدراج صورة",
     "rteImageDialogHint": "الصق عنوان URL للصورة المراد تضمينها.",
     "rteDialogConfirm": "إدراج",
-    "rteDialogCancel": "إلغاء"
+    "rteDialogCancel": "إلغاء",
+    "rteUploadImage": "تحميل صورة (السحب والإفلات مدعوم)"
   },
   "nav": {
     "quizzes": "اختباراتي",
@@ -1115,7 +1116,9 @@
     "fieldLastNameRequiredToggle": "جعل اسم العائلة مطلوبًا",
     "fieldCountryRequiredToggle": "جعل البلد مطلوبًا",
     "consentTextLabel": "نص خانة الاختيار",
-    "consentTextPlaceholder": "أوافق على سياسة الخصوصية…"
+    "consentTextPlaceholder": "أوافق على سياسة الخصوصية…",
+    "resultAddImage": "إضافة صورة",
+    "resultAddImageHint": "ستضاف الصورة في أعلى الوصف. يمكنك أيضًا سحب وإفلات ملف في أي مكان داخل منطقة النص."
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",
