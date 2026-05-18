@@ -1048,7 +1048,7 @@
     "previewResultCtaPh": "Texto del CTA…",
     "previewResultCtaUrlPh": "URL del CTA (https://…)",
     "previewResultTagLabel": "Tag Systeme.io para este resultado",
-    "previewResultTagHint": "Aplicado al lead que obtiene « {title} ». Úsalo para segmentar automatizaciones.",
+    "previewResultTagHint": "Esta etiqueta se añadirá al visitante que obtenga el resultado « {title} ».",
     "previewPoweredByLink": "Este quiz es ofrecido por Tiquiz",
     "shareTabCustomLink": "Enlace personalizado",
     "shareTabCustomLinkHint": "Elige una URL corta y memorable. Minúsculas, dígitos y guiones.",

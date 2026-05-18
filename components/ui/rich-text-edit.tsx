@@ -79,11 +79,20 @@ interface RichTextEditProps {
    * reformule dans le ton du quiz".
    */
   onAIRewrite?: (plainText: string) => Promise<string[] | null>;
+  /**
+   * Drag-and-drop file upload (Adeline, 18 mai 2026 : "possible de drag
+   * and drop à l'emplacement voulu"). When provided, dropping an image
+   * file onto the editing surface triggers an upload via this callback,
+   * and the returned URL is inserted as <img> at the drop position.
+   * Without this callback, drops fall back to the browser default
+   * (typically a navigation), so we explicitly block that.
+   */
+  onImageUpload?: (file: File) => Promise<string | null>;
 }
 
 export function RichTextEdit({
   value, onChange, className, placeholder, style, singleLine, onGenderize, availableVars,
-  previewTransform, onAIRewrite,
+  previewTransform, onAIRewrite, onImageUpload,
 }: RichTextEditProps) {
   const t = useTranslations("common");
   const ref = useRef<HTMLDivElement>(null);
@@ -271,6 +280,75 @@ export function RichTextEdit({
     if (!text) return;
     if (typeof document !== "undefined") {
       document.execCommand("insertText", false, text);
+    }
+  };
+
+  // Drag-and-drop image upload (Adeline, mai 2026). On capture le drop
+  // sur la surface contentEditable et on intercepte les fichiers image
+  // pour les uploader via le callback parent. Le drop par défaut du
+  // navigateur essaie de naviguer vers le fichier (ou de l'embarquer
+  // en base64 monstrueux), on bloque les deux. Caret repositionné sur
+  // le point de drop avant insertImage pour respecter "à l'emplacement
+  // voulu". Sans onImageUpload (champ non lié à un upload), on laisse
+  // remonter pour ne pas casser un éventuel drag-and-drop natif d'un
+  // composant parent.
+  const [dropping, setDropping] = useState(false);
+  const [uploadingDrop, setUploadingDrop] = useState(false);
+  const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!onImageUpload) return;
+    if (!Array.from(e.dataTransfer?.types ?? []).includes("Files")) return;
+    e.preventDefault();
+    setDropping(true);
+  };
+  const onDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!onImageUpload) return;
+    e.preventDefault();
+    setDropping(false);
+  };
+  const onDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    if (!onImageUpload) return;
+    const files = Array.from(e.dataTransfer?.files ?? []);
+    const image = files.find((f) => f.type.startsWith("image/"));
+    if (!image) return;
+    e.preventDefault();
+    setDropping(false);
+    // Pose le caret là où le user a lâché le fichier — Firefox &
+    // Chromium n'exposent pas la même API alors on essaie les deux.
+    type CaretHost = Document & {
+      caretRangeFromPoint?: (x: number, y: number) => Range | null;
+      caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+    };
+    const doc = document as CaretHost;
+    if (typeof doc.caretRangeFromPoint === "function") {
+      const range = doc.caretRangeFromPoint(e.clientX, e.clientY);
+      if (range) {
+        const sel = window.getSelection();
+        if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+      }
+    } else if (typeof doc.caretPositionFromPoint === "function") {
+      const pos = doc.caretPositionFromPoint(e.clientX, e.clientY);
+      if (pos) {
+        const range = document.createRange();
+        range.setStart(pos.offsetNode, pos.offset);
+        range.collapse(true);
+        const sel = window.getSelection();
+        if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+      }
+    }
+    setUploadingDrop(true);
+    try {
+      const url = await onImageUpload(image);
+      if (!url) return;
+      exec("insertImage", url);
+      const el = ref.current;
+      if (el) {
+        el.querySelectorAll("img").forEach((img) => {
+          img.style.maxWidth = "100%";
+          img.style.height = "auto";
+        });
+      }
+    } finally {
+      setUploadingDrop(false);
     }
   };
 
@@ -472,13 +550,16 @@ export function RichTextEdit({
           onBlur={commit}
           onKeyDown={onKeyDown}
           onPaste={onPaste}
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
           // Bug récurrent (Béné) : sur les CTA blancs avec backgroundColor
           // sombre passés via className/style (text-white sur fond
           // primaire), le mode édition affichait du blanc-sur-blanc et
           // l'utilisateur ne voyait pas ce qu'il tapait. On override en
           // !text-foreground pendant l'édition pour garantir un contraste
           // lisible avec le bg-white/90, peu importe la couleur héritée.
-          className={`${baseCls} tiquiz-rich w-full bg-white/90 !text-foreground border-2 border-primary/40 outline-none`}
+          className={`${baseCls} tiquiz-rich w-full bg-white/90 !text-foreground border-2 outline-none ${dropping ? "border-primary border-dashed bg-primary/5" : "border-primary/40"}`}
           // Le `style` du parent peut contenir un `color: white` (ex.
           // CTA blanc) — on l'override aussi via inline style pour
           // doubler la garantie de contraste.

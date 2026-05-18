@@ -841,6 +841,31 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     }));
   }
 
+  // Drag-and-drop upload pour les RichTextEdit (Adeline, mai 2026).
+  // Cf. QuizDetailClient pour le détail — même contrat ici. Permet
+  // d'incruster une image n'importe où dans le titre/intro/capture
+  // d'un sondage en draggant le fichier à l'emplacement voulu.
+  async function handleRichTextImageUpload(file: File): Promise<string | null> {
+    if (!file.type.startsWith("image/")) { toast.error(t("errImageOnly")); return null; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("errImageTooLarge10")); return null; }
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error(t("errNotSignedIn")); return null; }
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `rich-content/${user.id}/${quizId}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      return urlData.publicUrl;
+    } catch (err) {
+      console.error("Rich text image upload failed:", err);
+      const msg = err instanceof Error ? err.message : t("errUnknown");
+      toast.error(t("errImageUpload", { msg }));
+      return null;
+    }
+  }
+
   // Save
   const handleSave = async () => {
     if (!title.trim()) { toast.error(t("errTitleRequired")); return; }
@@ -1335,8 +1360,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       <img src={brandLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
                     </div>
                   )}
-                  <RichTextEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} singleLine className="text-3xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
-                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder={t("previewIntroPh")} />
+                  <RichTextEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} onImageUpload={handleRichTextImageUpload} singleLine className="text-3xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
+                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} onImageUpload={handleRichTextImageUpload} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder={t("previewIntroPh")} />
                   <div className="flex justify-center">
                     <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
                       <RichTextEdit
@@ -1555,8 +1580,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               {/* ── CAPTURE / LEAD FORM ── */}
               <div ref={captureRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                 <div className="max-w-lg w-full space-y-6">
-                  <RichTextEdit value={captureHeading || t("previewCaptureHeadingDefault")} onChange={setCaptureHeading} singleLine className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("previewCaptureHeadingPh")} />
-                  <RichTextEdit value={captureSubtitle || t("previewCaptureSubtitleDefault")} onChange={setCaptureSubtitle} className="text-muted-foreground text-base text-center" placeholder={t("previewCaptureSubtitlePh")} />
+                  <RichTextEdit value={captureHeading || t("previewCaptureHeadingDefault")} onChange={setCaptureHeading} onImageUpload={handleRichTextImageUpload} singleLine className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("previewCaptureHeadingPh")} />
+                  <RichTextEdit value={captureSubtitle || t("previewCaptureSubtitleDefault")} onChange={setCaptureSubtitle} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-base text-center" placeholder={t("previewCaptureSubtitlePh")} />
                   <div className="space-y-3 max-w-md mx-auto">
                     {(captureFirstName || captureLastName) && <div className="grid grid-cols-2 gap-3">
                       {captureFirstName && <div><label className="text-sm text-muted-foreground">{t("previewCaptureFirstName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}

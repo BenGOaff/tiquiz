@@ -45,7 +45,7 @@ import {
 import { useShareDomain } from "@/hooks/useShareDomain";
 import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
-import { interpolateText } from "@/lib/quizPersonalization";
+import { interpolateText, extractResultLabel } from "@/lib/quizPersonalization";
 import { stripHtml } from "@/lib/richText";
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
 import { UserPalettesProvider } from "@/components/editor/PalettesContext";
@@ -1169,6 +1169,34 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     }));
   }
 
+  // Drag-and-drop upload pour les RichTextEdit (Adeline, mai 2026 :
+  // "ajoute la possibilité d'ajouter une image dans les résultats,
+  // 10Mo max, gif acceptés et possible de drag and drop à l'emplacement
+  // voulu"). Pattern identique à handleBonusImageUpload mais générique :
+  // upload anywhere et retourne l'URL au RichTextEdit qui se charge
+  // d'insérer le <img> au point de drop. Bucket dédié `rich-content/`
+  // pour ne pas mélanger avec les autres images du quiz.
+  async function handleRichTextImageUpload(file: File): Promise<string | null> {
+    if (!file.type.startsWith("image/")) { toast.error(t("errImageOnly")); return null; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("errImageTooLarge10")); return null; }
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error(t("errNotSignedIn")); return null; }
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `rich-content/${user.id}/${quizId}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      return urlData.publicUrl;
+    } catch (err) {
+      console.error("Rich text image upload failed:", err);
+      const msg = err instanceof Error ? err.message : t("errUnknown");
+      toast.error(t("errImageUpload", { msg }));
+      return null;
+    }
+  }
+
   // Save
   const handleSave = async () => {
     if (!title.trim()) { toast.error(t("errTitleRequired")); return; }
@@ -1868,8 +1896,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <img src={brandLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
                     </div>
                   )}
-                  <RichTextEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} singleLine className="text-3xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
-                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder={t("previewIntroPh")} />
+                  <RichTextEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} onImageUpload={handleRichTextImageUpload} singleLine className="text-3xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
+                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} onImageUpload={handleRichTextImageUpload} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder={t("previewIntroPh")} />
                   <div className="flex justify-center">
                     <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
                       <RichTextEdit
@@ -1994,8 +2022,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               {/* ── CAPTURE / LEAD FORM ── */}
               <div ref={captureRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                 <div className="max-w-lg w-full space-y-6">
-                  <RichTextEdit value={captureHeading || t("previewCaptureHeadingDefault")} onChange={setCaptureHeading} singleLine className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("previewCaptureHeadingPh")} />
-                  <RichTextEdit value={captureSubtitle || t("previewCaptureSubtitleDefault")} onChange={setCaptureSubtitle} className="text-muted-foreground text-base text-center" placeholder={t("previewCaptureSubtitlePh")} />
+                  <RichTextEdit value={captureHeading || t("previewCaptureHeadingDefault")} onChange={setCaptureHeading} onImageUpload={handleRichTextImageUpload} singleLine className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("previewCaptureHeadingPh")} />
+                  <RichTextEdit value={captureSubtitle || t("previewCaptureSubtitleDefault")} onChange={setCaptureSubtitle} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-base text-center" placeholder={t("previewCaptureSubtitlePh")} />
                   <div className="space-y-3 max-w-md mx-auto">
                     {(captureFirstName || captureLastName) && <div className="grid grid-cols-2 gap-3">
                       {captureFirstName && <div><label className="text-sm text-muted-foreground">{t("previewCaptureFirstName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
@@ -2204,8 +2232,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         </div>
                       </div>
                     )}
-                    <RichTextEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} onAIRewrite={aiRewriteResultTitle} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
-                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultDesc} availableVars={personalizationVars} previewTransform={previewInterpolate} className="text-muted-foreground text-lg leading-relaxed" placeholder={t("previewResultDescPh")} />
+                    <RichTextEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} onAIRewrite={aiRewriteResultTitle} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} singleLine className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
+                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultDesc} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-lg leading-relaxed" placeholder={t("previewResultDescPh")} />
                     <div className="p-5 rounded-xl bg-muted/50 border">
                       <div className="mb-2">
                         <RichTextEdit
@@ -2216,7 +2244,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           placeholder={t("previewResultInsightHeadingPh")}
                         />
                       </div>
-                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultInsight} availableVars={personalizationVars} previewTransform={previewInterpolate} className="text-sm leading-relaxed" placeholder={t("previewResultInsightPh")} />
+                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultInsight} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder={t("previewResultInsightPh")} />
                     </div>
                     <div className="p-5 rounded-xl border" style={{ backgroundColor: `${pc}08`, borderColor: `${pc}30` }}>
                       <div className="mb-2">
@@ -2229,7 +2257,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           placeholder={t("previewResultProjectionHeadingPh")}
                         />
                       </div>
-                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultProjection} availableVars={personalizationVars} previewTransform={previewInterpolate} className="text-sm leading-relaxed" placeholder={t("previewResultProjectionPh")} />
+                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultProjection} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder={t("previewResultProjectionPh")} />
                     </div>
                     <div className="space-y-2">
                       <button className="w-full px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>
@@ -2242,7 +2270,17 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     {!isEmbed && (
                       <div className="p-4 rounded-xl bg-muted/40 border border-dashed">
                         <div className="text-xs font-semibold text-foreground mb-1">{t("previewResultTagLabel")}</div>
-                        <p className="text-[11px] text-muted-foreground mb-2">{t("previewResultTagHint", { title: stripHtml(r.title) || t("previewResult", { n: ri + 1 }) })}</p>
+                        {/* Adeline (18 mai 2026) : auparavant on injectait
+                            `stripHtml(r.title)` brut dans le hint, ce qui
+                            laissait visibles les placeholders gendrés et
+                            le `{name}` non résolus (ex. "obtient « {**{name},
+                            tu es le·la Solopreneur·se Invisible**} »").
+                            On combine maintenant cleanPlaceholdersForLabel
+                            (interpole {name}→"" + {a|b|c}→inclusif + strip
+                            markdown) puis extractResultLabel (vire le ", tu
+                            es le·la" + les `·xx` inclusifs) pour ne garder
+                            que le label court "Solopreneur Invisible". */}
+                        <p className="text-[11px] text-muted-foreground mb-2">{t("previewResultTagHint", { title: extractResultLabel(cleanPlaceholdersForLabel(r.title)) || t("previewResult", { n: ri + 1 }) })}</p>
                         <SioTagPicker value={r.sio_tag_name ?? ""} onChange={(v) => updateR(ri, "sio_tag_name", v || null)} />
                       </div>
                     )}
