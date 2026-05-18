@@ -1252,20 +1252,6 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     checked={showConsentCheckbox}
                     onChange={setShowConsentCheckbox}
                   />
-                  {showConsentCheckbox && (
-                    <div className="space-y-1 pt-1">
-                      <label className="text-[11px] font-medium text-muted-foreground">
-                        {t("consentTextLabel")}
-                      </label>
-                      <RichTextEdit
-                        value={consentText}
-                        onChange={setConsentText}
-                        singleLine={false}
-                        className="text-xs"
-                        placeholder={t("consentTextPlaceholder")}
-                      />
-                    </div>
-                  )}
                 </section>
 
                 <Separator />
@@ -1579,6 +1565,19 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     <div><label className="text-sm text-muted-foreground">Email</label><Input readOnly className="mt-1 bg-muted/20" /></div>
                     {capturePhone && <div><label className="text-sm text-muted-foreground">{t("previewCapturePhone")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
                   </div>
+                  {showConsentCheckbox && (
+                    <div className="max-w-md mx-auto flex items-start gap-2 text-sm text-muted-foreground">
+                      <input type="checkbox" readOnly className="mt-1 h-4 w-4 accent-primary cursor-default" />
+                      <div className="flex-1">
+                        <RichTextEdit
+                          value={consentText}
+                          onChange={setConsentText}
+                          className="text-sm"
+                          placeholder={t("consentTextPlaceholder")}
+                        />
+                      </div>
+                    </div>
+                  )}
                   <button className="w-full max-w-md mx-auto block px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>{t("previewCaptureSubmit")}</button>
                 </div>
               </div>
