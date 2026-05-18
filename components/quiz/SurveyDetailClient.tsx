@@ -984,6 +984,43 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // Public URL — prefer custom slug when set, fall back to UUID
   const publicSegment = slug.trim() ? sanitizeSlug(slug) ?? quizId : quizId;
   const publicUrl = buildPublicUrl("q", publicSegment);
+
+  // Auto-save du slug (Gwenn, 19 mai 2026). Debounce 1s, toast sur
+  // 409 SLUG_TAKEN, met à jour `quiz.slug` local sur succès pour que
+  // publicUrl reflète immédiatement la nouvelle valeur.
+  useEffect(() => {
+    if (!quiz) return;
+    const trimmed = slug.trim();
+    const canonical = quiz.slug ?? "";
+    if (trimmed === canonical) return;
+    const timer = setTimeout(async () => {
+      const cleanedSlug = trimmed ? sanitizeSlug(trimmed) : null;
+      if (trimmed && !cleanedSlug) {
+        toast.error(t("errSlugInvalid"));
+        return;
+      }
+      try {
+        const res = await fetch(`/api/quiz/${quizId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug: cleanedSlug }),
+        });
+        const json = await res.json().catch(() => null);
+        if (res.status === 409 && json?.error === "SLUG_TAKEN") {
+          toast.error(t("errSlugTaken"));
+          return;
+        }
+        if (!json?.ok) {
+          console.error("[slug autosave] save failed", json?.error);
+          return;
+        }
+        setQuiz((prev) => prev ? { ...prev, slug: cleanedSlug } : prev);
+      } catch (err) {
+        console.error("[slug autosave] network error", err);
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [slug, quiz, quizId, t]);
   // Owner-side preview URL (#7, mirrored from quiz). Kept separate from
   // publicUrl so "Copy link" never copies the preview variant.
   const previewUrl = `${publicUrl}?preview_name=${encodeURIComponent(PREVIEW_DEMO_NAME)}`;
@@ -1817,6 +1854,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               options={shareDomainOptions}
               onChange={setShareDomain}
             />
+            {/* Gwenn (19 mai 2026) : autosave du slug 1s après le
+                dernier input, plus de bouton "Enregistrer" séparé. */}
             <div className="flex items-center gap-2">
               <div className="flex items-center border rounded-lg bg-muted/30 pl-3 pr-1 py-1 flex-1 min-w-0">
                 <span className="text-sm text-muted-foreground font-mono whitespace-nowrap shrink-0">
@@ -1831,9 +1870,6 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                   className="flex-1 min-w-0 bg-transparent outline-none text-sm font-mono px-1 py-1"
                 />
               </div>
-              <Button size="sm" onClick={handleSave} disabled={saving}>
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t("save")}
-              </Button>
               <Button size="sm" variant="outline" onClick={handleCopyLink} title={t("copy")} aria-label={t("copy")}>
                 {copied ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
               </Button>
