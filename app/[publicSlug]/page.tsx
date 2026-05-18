@@ -27,6 +27,7 @@ import PublicQuizClient from "@/components/quiz/PublicQuizClient";
 import PopquizPlayClient from "@/app/p/[popquizId]/PopquizPlayClient";
 import { isReservedPublicSlug } from "@/lib/publicSlug";
 import { stripHtml } from "@/lib/richText";
+import { buildCanonicalUrl } from "@/lib/publicUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +91,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const r = await resolve(publicSlug, owner);
   if (!r) return {};
 
+  // Canonical = current request URL on the creator's custom domain.
+  // Drives og:url so iMessage / WhatsApp / Slack display the branded
+  // hostname under the share preview instead of the multi-tenant main
+  // host. See lib/publicUrl.ts for the why.
+  const canonical = await buildCanonicalUrl(`/${publicSlug}`);
+
   if (r.kind === "quiz") {
     // Adeline (19 mai 2026) : sur custom domain le preview iMessage /
     // WhatsApp affichait le code HTML brut (`<span style="color:rgb(82,
@@ -104,9 +111,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
       title: plainTitle || "Quiz",
       description,
+      ...(canonical ? { alternates: { canonical } } : {}),
       openGraph: {
         title: plainTitle || "Quiz",
         description,
+        ...(canonical ? { url: canonical } : {}),
         ...(r.meta.og_image_url
           ? { images: [{ url: r.meta.og_image_url }] }
           : {}),
@@ -119,9 +128,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: p.title,
     description: p.description ?? undefined,
+    ...(canonical ? { alternates: { canonical } } : {}),
     openGraph: {
       title: p.title,
       description: p.description ?? undefined,
+      ...(canonical ? { url: canonical } : {}),
       ...(p.video.thumbnailUrl ? { images: [{ url: p.video.thumbnailUrl }] } : {}),
     },
   };

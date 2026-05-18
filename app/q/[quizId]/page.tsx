@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
 import { stripHtml } from "@/lib/richText";
+import { buildCanonicalUrl } from "@/lib/publicUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -78,12 +79,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const description = rawDesc.trim() || undefined;
     const plainTitle = stripHtml(data.title);
 
+    // Canonical = current request URL. Critical when served via a
+    // creator custom domain: without this, og:url falls back to the
+    // global metadataBase (quiz.tipote.com) and iMessage / WhatsApp
+    // display "quiz.tipote.com" under the share preview even though
+    // the visitor landed on customdomain.com.
+    const canonical = await buildCanonicalUrl(`/q/${quizId}`);
+
     return {
       title: `${plainTitle} – Tiquiz`,
       description,
+      ...(canonical ? { alternates: { canonical } } : {}),
       openGraph: {
         title: plainTitle,
         description,
+        ...(canonical ? { url: canonical } : {}),
         ...(data.og_image_url ? { images: [{ url: data.og_image_url }] } : {}),
       },
     };
