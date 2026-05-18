@@ -38,3 +38,22 @@ Intent auto-detection, hybrid ranking, session memory, auto-expanding budget.
 ### Multi-Repo
 `run_pipeline` auto-queries all indexed repos. Use `repos: ["alias"]` to scope. Run `index_status` to see aliases.
 <!-- /vexp -->
+
+## Claude personal notes — pitfalls + conventions
+
+**Avant de coder, lire `CLAUDE_PITFALLS.md` (pense-bête perso).**
+Bugs récurrents identifiés + conventions implicites à respecter pour
+ne pas casser l'existant. Ce fichier doit être mis à jour quand un
+bug remonte plusieurs fois.
+
+Checklist minimum :
+- Migration SQL → `IF NOT EXISTS` + `NOTIFY pgrst, 'reload schema';` en fin.
+- Nouvelle colonne sur `quizzes` → 7 endroits à toucher (cf. section A du pitfalls).
+- Storage upload → bucket `public-assets`, path `<topic>/<auth.uid()>/<file>`.
+- Image visiteur → `w-full h-auto`, jamais `max-h-* object-cover`.
+- `RichTextEdit` Dialogs → rendre dans LES DEUX branches (editing + display).
+- i18n namespace → **Tiquiz `quizEditor`**, **Tipote `quizDetail`**. Vérifier.
+- `extractResultLabel(cleanPlaceholdersForLabel(text))` pour les labels admin.
+- Compteurs `quizzes.*_count` auto-bumpés par trigger → ne JAMAIS UPDATE direct.
+- Endpoints `/track` retournent 200 toujours (`{ok: false, reason}` pour soft fail).
+- Typecheck `npx tsc --noEmit` avant chaque commit, exit 0 obligatoire.

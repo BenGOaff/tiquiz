@@ -322,14 +322,15 @@ export async function GET(req: NextRequest, context: RouteContext) {
     const customFooterText = isPaidPlan(ownerPlan) ? (quizRow.custom_footer_text as string | null) : null;
     const customFooterUrl = isPaidPlan(ownerPlan) ? (quizRow.custom_footer_url as string | null) : null;
 
-    // log_quiz_event bumps the cumulative counter AND writes a dated
-    // row in quiz_events — both transactional, so the stats page can
-    // do real time-series analysis (per-day views, week-over-week
-    // trends, etc.) on top of the same data the lifetime counters use.
-    admin
-      .rpc("log_quiz_event", { quiz_id_input: quizId, event_type_input: "view" })
-      .then(() => {})
-      .then(undefined, () => {});
+    // Refonte tracking (Adeline, 19 mai 2026) : le view tracking
+    // n'est PLUS fait ici (server-side, à chaque GET) parce que :
+    //   - bots qui n'exécutent pas JS comptaient quand même
+    //   - refreshes / preloads gonflaient les chiffres
+    //   - le créateur qui partageait son lien le voyait compté
+    // Le visiteur fire maintenant un event "view" via POST /track
+    // depuis useEffect au mount → bot filtering + cookie dédup +
+    // owner exclusion + insert via log_quiz_event RPC qui passe par
+    // le trigger pour bumper le compteur. Source de vérité unique.
 
     const { user_id: _uid, ...quizPublic } = quizRow;
     void _uid;
