@@ -621,7 +621,10 @@
     "optionFallback": "Opção {n}",
     "questionFallback": "Pergunta {n}",
     "showConsentCheckboxLabel": "Mostrar a caixa de consentimento",
-    "showConsentCheckboxHint": "Desativa se já tratas o consentimento RGPD noutro local (CRM, outra página)."
+    "showConsentCheckboxHint": "Desativa se já tratas o consentimento RGPD noutro local (CRM, outra página).",
+    "fieldPhoneRequired": "Telefone obrigatório",
+    "previewAddOptionImage": "Adicionar imagem",
+    "previewRemoveImage": "Remover imagem"
   },
   "settings": {
     "title": "Definições",

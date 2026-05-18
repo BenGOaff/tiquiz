@@ -621,7 +621,10 @@
     "optionFallback": "Opzione {n}",
     "questionFallback": "Domanda {n}",
     "showConsentCheckboxLabel": "Mostra la casella di consenso",
-    "showConsentCheckboxHint": "Disattiva se gestisci già il consenso GDPR altrove (CRM, altra pagina)."
+    "showConsentCheckboxHint": "Disattiva se gestisci già il consenso GDPR altrove (CRM, altra pagina).",
+    "fieldPhoneRequired": "Telefono obbligatorio",
+    "previewAddOptionImage": "Aggiungi un'immagine",
+    "previewRemoveImage": "Rimuovi immagine"
   },
   "settings": {
     "title": "Impostazioni",

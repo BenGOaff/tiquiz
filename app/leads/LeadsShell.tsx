@@ -103,14 +103,18 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
     // Locked rows are skipped — exporting `••••••` masks would only pollute
     // the file with rows the creator can't act on. The server-side export
     // does the same on /api/leads/export.
+    // Strip rich-text formatting from titles before they hit a CSV
+    // cell — the field stores `<span style="color:…">Ton mode…</span>`
+    // markup so the raw value would leak HTML into a spreadsheet (cf.
+    // rapport Adeline, 17 mai 2026). Idem pour le tableau ci-dessous.
     const rows = filtered.filter((l) => !l.locked).map((l) => [
       l.email,
       l.first_name ?? "",
       l.last_name ?? "",
       l.phone ?? "",
       l.country ?? "",
-      l.quiz_title,
-      l.result_title ?? l.quiz_results?.title ?? "",
+      stripHtml(l.quiz_title),
+      stripHtml(l.result_title ?? l.quiz_results?.title ?? ""),
       l.sio_tag_applied ?? l.quiz_results?.sio_tag_name ?? "",
       l.sio_synced ? t("csv.yes") : t("csv.no"),
       new Date(l.created_at).toLocaleDateString(localeTag),
@@ -282,11 +286,11 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
                           {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "—"}
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell">
-                          <span className="truncate max-w-[150px] block text-muted-foreground">{lead.quiz_title}</span>
+                          <span className="truncate max-w-[150px] block text-muted-foreground">{stripHtml(lead.quiz_title)}</span>
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell">
                           <Badge variant="secondary" className="text-xs">
-                            {lead.result_title ?? lead.quiz_results?.title ?? "—"}
+                            {stripHtml(lead.result_title ?? lead.quiz_results?.title ?? "") || "—"}
                           </Badge>
                         </td>
                         <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">
@@ -348,11 +352,11 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
                           {[lead.first_name, lead.last_name].filter(Boolean).join(" ") || "—"}
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">
-                          {lead.quiz_title}
+                          {stripHtml(lead.quiz_title)}
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell">
                           <Badge variant="secondary" className="text-xs">
-                            {lead.result_title ?? "—"}
+                            {stripHtml(lead.result_title ?? "") || "—"}
                           </Badge>
                         </td>
                       </tr>

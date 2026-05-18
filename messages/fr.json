@@ -604,7 +604,10 @@
     "optionFallback": "Option {n}",
     "questionFallback": "Question {n}",
     "showConsentCheckboxLabel": "Afficher la case à cocher de consentement",
-    "showConsentCheckboxHint": "Désactive si tu gères déjà le consentement RGPD ailleurs (ton CRM, une autre page)."
+    "showConsentCheckboxHint": "Désactive si tu gères déjà le consentement RGPD ailleurs (ton CRM, une autre page).",
+    "fieldPhoneRequired": "Téléphone obligatoire",
+    "previewAddOptionImage": "Ajouter une image",
+    "previewRemoveImage": "Retirer l'image"
   },
   "settings": {
     "title": "Paramètres",
