@@ -622,7 +622,9 @@
     "questionFallback": "السؤال {n}",
     "showConsentCheckboxLabel": "إظهار خانة الموافقة",
     "showConsentCheckboxHint": "أوقف الخيار إذا كنت تتعامل مع موافقة GDPR في مكان آخر (CRM أو صفحة أخرى).",
-    "fieldPhoneRequired": "الهاتف مطلوب"
+    "fieldPhoneRequired": "الهاتف مطلوب",
+    "previewAddOptionImage": "إضافة صورة",
+    "previewRemoveImage": "إزالة الصورة"
   },
   "settings": {
     "title": "الإعدادات",

@@ -81,7 +81,7 @@ import {
 } from "@/lib/quizBranding";
 
 // Types
-type QuizOption = { text: string; result_index: number };
+type QuizOption = { text: string; result_index: number; image_url?: string | null };
 type QuizQuestion = {
   id?: string;
   question_text: string;
@@ -1114,6 +1114,45 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     setShareNetworks((prev) => (prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]));
   }
 
+  // Per-option image upload (Hugo, 18 mai 2026 : gamifier le quiz en
+  // associant une vignette à chaque réponse). Même pattern Supabase
+  // Storage que bonus / OG, namespace dédié pour ne pas mélanger les
+  // images d'options avec les autres assets. Max 10 Mo, formats image/*
+  // incluant GIF.
+  const [uploadingOptionKey, setUploadingOptionKey] = useState<string | null>(null);
+  async function handleOptionImageUpload(file: File, qi: number, oi: number) {
+    if (!file.type.startsWith("image/")) { toast.error(t("errImageOnly")); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error(t("errImageTooLarge10")); return; }
+    const key = `${qi}-${oi}`;
+    setUploadingOptionKey(key);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { toast.error(t("errNotSignedIn")); return; }
+      const ext = file.name.split(".").pop() ?? "png";
+      const path = `quiz-options/${user.id}/${quizId}-q${qi}-o${oi}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      setEditQuestions((p) => p.map((q, i) => i !== qi ? q : {
+        ...q,
+        options: q.options.map((o, j) => j === oi ? { ...o, image_url: urlData.publicUrl } : o),
+      }));
+    } catch (err) {
+      console.error("Option image upload failed:", err);
+      const msg = err instanceof Error ? err.message : t("errUnknown");
+      toast.error(t("errImageUpload", { msg }));
+    } finally {
+      setUploadingOptionKey(null);
+    }
+  }
+  function clearOptionImage(qi: number, oi: number) {
+    setEditQuestions((p) => p.map((q, i) => i !== qi ? q : {
+      ...q,
+      options: q.options.map((o, j) => j === oi ? { ...o, image_url: null } : o),
+    }));
+  }
+
   // Save
   const handleSave = async () => {
     if (!title.trim()) { toast.error(t("errTitleRequired")); return; }
@@ -1837,6 +1876,43 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         <div className={`grid gap-3 ${q.options.length >= 3 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
                           {q.options.map((opt, oi) => (
                             <div key={oi} className="relative p-5 rounded-xl border-2 border-border hover:border-primary/30 transition-all group">
+                              {/* Image facultative pour gamifier la réponse (Hugo,
+                                  mai 2026). Vignette si présente + bouton Retirer ;
+                                  sinon petit bouton "+ Image" qui ouvre le picker. */}
+                              {opt.image_url ? (
+                                <div className="relative mb-3 rounded-lg overflow-hidden border border-border bg-muted/30">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={opt.image_url} alt={stripHtml(opt.text)} className="w-full aspect-video object-cover" />
+                                  <button
+                                    type="button"
+                                    onClick={() => clearOptionImage(qi, oi)}
+                                    className="absolute top-1.5 right-1.5 bg-background/90 hover:bg-destructive hover:text-white rounded p-1 shadow"
+                                    aria-label={t("previewRemoveImage")}
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <label className="mb-3 inline-flex items-center gap-1.5 cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors">
+                                  <input
+                                    type="file"
+                                    accept="image/*,image/gif"
+                                    className="sr-only"
+                                    disabled={uploadingOptionKey === `${qi}-${oi}`}
+                                    onChange={(e) => {
+                                      const f = e.target.files?.[0];
+                                      if (f) void handleOptionImageUpload(f, qi, oi);
+                                      e.target.value = "";
+                                    }}
+                                  />
+                                  {uploadingOptionKey === `${qi}-${oi}` ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <Plus className="w-3.5 h-3.5" />
+                                  )}
+                                  {t("previewAddOptionImage")}
+                                </label>
+                              )}
                               <RichTextEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} onAIRewrite={aiRewriteOption} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-base font-medium" placeholder={t("previewOptionPh", { n: oi + 1 })} />
                               <div className="flex items-center gap-1.5 mt-2">
                                 <span className="text-xs" style={{ color: `${pc}99` }}>{t("previewPointFor")}</span>
