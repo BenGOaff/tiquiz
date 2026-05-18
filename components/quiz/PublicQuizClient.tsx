@@ -16,6 +16,7 @@ import {
   type QuizBranding,
 } from "@/lib/quizBranding";
 import { sanitizeRichText, stripHtml } from "@/lib/richText";
+import { fireQuizPixel } from "@/lib/clientPixels";
 import { RichParagraph } from "@/components/ui/rich-paragraph";
 import { makeInterpolator, getGenderLabels, extractResultLabel, type QuizGender } from "@/lib/quizPersonalization";
 import { ensureExternalUrl } from "@/lib/url";
@@ -122,6 +123,13 @@ type PublicQuizData = {
   // profils" sous le résultat du visiteur. Rendu non personnalisé
   // (name vide, gender inclusif). Off par défaut.
   show_other_results?: boolean | null;
+  // Phase B (Adeline, 19 mai 2026) : Meta + Google tracking pixels.
+  // Les scripts sont injectés via useEffect APRÈS le visiteur a coché
+  // la case de consentement (si show_consent_checkbox=true).
+  meta_pixel_id?: string | null;
+  ga4_measurement_id?: string | null;
+  google_ads_conversion_id?: string | null;
+  google_ads_conversion_label?: string | null;
   ask_first_name?: boolean | null;
   ask_gender?: boolean | null;
   custom_footer_text?: string | null;
@@ -994,14 +1002,26 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     (event: "view" | "start" | "complete" | "share") => {
       if (previewData || trackedRef.has(event)) return;
       trackedRef.add(event);
+      // 1) Tracking interne (quiz_events table)
       fetch(`/api/quiz/${quizId}/track`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ event }),
-        credentials: "same-origin", // important : envoie + reçoit le cookie session
+        credentials: "same-origin",
       }).catch(() => {});
+      // 2) Tracking externe (Meta Pixel + GA4 + Google Ads — Phase B).
+      // Silencieux si les scripts pixels ne sont pas chargés (consent
+      // pas donné, IDs pas configurés, ad-blocker actif).
+      if (quiz) {
+        fireQuizPixel(event, {
+          meta_pixel_id: quiz.meta_pixel_id,
+          ga4_measurement_id: quiz.ga4_measurement_id,
+          google_ads_conversion_id: quiz.google_ads_conversion_id,
+          google_ads_conversion_label: quiz.google_ads_conversion_label,
+        });
+      }
     },
-    [quizId, previewData, trackedRef],
+    [quizId, previewData, trackedRef, quiz],
   );
 
   // Per-question funnel events. Le sessionId est désormais géré par
@@ -1034,6 +1054,62 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     if (!quiz) return;
     trackEvent("view");
   }, [quiz, trackEvent]);
+
+  // Tracking pixels Meta + Google (Adeline, 19 mai 2026, Phase B) :
+  // injection des scripts dans <head> via DOM API, indépendamment des
+  // branches de step. Strict consent gating : on attend que le visiteur
+  // ait coché la case (sauf si show_consent_checkbox=false côté quiz,
+  // dans ce cas on considère le consent implicite).
+  useEffect(() => {
+    if (!quiz || previewData) return;
+    const pixelsConsentGiven = quiz.show_consent_checkbox === false || consent;
+    if (!pixelsConsentGiven) return;
+    const metaId = quiz.meta_pixel_id?.trim();
+    const ga4Id = quiz.ga4_measurement_id?.trim();
+    const adsId = quiz.google_ads_conversion_id?.trim();
+    const gtagPrimaryId = ga4Id || adsId;
+    if (!metaId && !gtagPrimaryId) return;
+
+    const injected: HTMLScriptElement[] = [];
+
+    // Meta Pixel — ne ré-injecte pas si déjà loadé (visiteur multi-step).
+    if (metaId && !window.fbq) {
+      const initScript = document.createElement("script");
+      initScript.innerHTML = `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${metaId}');fbq('track','PageView');`;
+      document.head.appendChild(initScript);
+      injected.push(initScript);
+    }
+
+    // Google gtag.js (sert GA4 ET Google Ads via un seul script).
+    if (gtagPrimaryId && !window.gtag) {
+      const libScript = document.createElement("script");
+      libScript.src = `https://www.googletagmanager.com/gtag/js?id=${gtagPrimaryId}`;
+      libScript.async = true;
+      document.head.appendChild(libScript);
+      injected.push(libScript);
+
+      const initScript = document.createElement("script");
+      const configs: string[] = [];
+      if (ga4Id) configs.push(`gtag('config','${ga4Id}');`);
+      if (adsId) configs.push(`gtag('config','${adsId}');`);
+      initScript.innerHTML = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());${configs.join("")}`;
+      document.head.appendChild(initScript);
+      injected.push(initScript);
+    }
+
+    // Cleanup : retire les <script> du head si la condition change
+    // (consent retiré → on délègue à un futur reload, on ne désinit
+    // pas fbq/gtag manuellement, c'est trop fragile).
+    return () => {
+      injected.forEach((s) => {
+        if (s.parentNode) s.parentNode.removeChild(s);
+      });
+    };
+  }, [
+    quiz,
+    consent,
+    previewData,
+  ]);
 
   useEffect(() => {
     if (step !== "quiz") return;
@@ -1412,6 +1488,16 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     if (isPreviewMode) {
       setBonusUnlocked(true);
       return;
+    }
+    // Fire Meta Pixel + GA4 "share" event client-side (le share PATCH
+    // serveur log déjà l'event interne via log_quiz_event RPC).
+    if (quiz) {
+      fireQuizPixel("share", {
+        meta_pixel_id: quiz.meta_pixel_id,
+        ga4_measurement_id: quiz.ga4_measurement_id,
+        google_ads_conversion_id: quiz.google_ads_conversion_id,
+        google_ads_conversion_label: quiz.google_ads_conversion_label,
+      });
     }
     try {
       const res = await fetch(`/api/quiz/${quizId}/public`, {

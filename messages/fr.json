@@ -833,7 +833,16 @@
     "toastDomainVerified": "{hostname} est en ligne ✨",
     "toastDomainStillPending": "Pas encore détecté. Je continue à vérifier.",
     "toastDomainDeleted": "Domaine supprimé.",
-    "cancelBtn": "Annuler"
+    "cancelBtn": "Annuler",
+    "trackingDefaultsTitle": "Tracking & Publicités — valeurs par défaut",
+    "trackingDefaultsDesc": "Ces IDs Meta Pixel et Google sont automatiquement appliqués sur tes nouveaux quizzes. Tu peux toujours les surcharger dans l'éditeur d'un quiz.",
+    "trackingDefaultsMetaLabel": "Meta (Facebook) Pixel ID",
+    "trackingDefaultsMetaHelp": "Trouver mon Pixel ID dans Meta Events Manager",
+    "trackingDefaultsGa4Label": "Google Analytics 4 — Measurement ID",
+    "trackingDefaultsGa4Help": "Trouver mon ID dans Google Analytics",
+    "trackingDefaultsAdsIdLabel": "Google Ads — ID de conversion",
+    "trackingDefaultsAdsLabelLabel": "Google Ads — Label de conversion",
+    "trackingDefaultsAdsHelp": "Trouver mes IDs Google Ads"
   },
   "languageSwitcher": {
     "label": "Langue"
@@ -1116,7 +1125,18 @@
     "tieWarningFallback": "En cas d'ex-æquo, le visiteur verra toujours le premier résultat dans l'ordre. Ajuste les points d'une option pour briser l'égalité.",
     "tieWarningTruncated": "(quiz volumineux, analyse partielle — il peut y avoir d'autres ex-æquo non listés).",
     "optionShowOtherResults": "Montrer les autres profils au visiteur",
-    "optionShowOtherResultsHint": "Ajoute un accordéon sous le résultat avec tous les autres profils possibles, en version neutre (sans prénom ni variantes de genre). Le visiteur curieux peut découvrir ce qu'il a manqué."
+    "optionShowOtherResultsHint": "Ajoute un accordéon sous le résultat avec tous les autres profils possibles, en version neutre (sans prénom ni variantes de genre). Le visiteur curieux peut découvrir ce qu'il a manqué.",
+    "trackingPixelsTitle": "Tracking & Publicités",
+    "trackingPixelsHint": "Ajoute ton pixel Meta et tes tags Google pour suivre tes campagnes pub. Les pixels ne chargent qu'après le consentement du visiteur.",
+    "trackingApplyDefaults": "↺ Appliquer mes valeurs par défaut (depuis Réglages)",
+    "trackingMetaLabel": "Meta (Facebook) Pixel ID",
+    "trackingMetaHelp": "Où trouver mon Pixel ID ? Events Manager →",
+    "trackingGa4Label": "Google Analytics 4 — Measurement ID",
+    "trackingGa4Help": "Où trouver mon ID GA4 ? Google Analytics Admin →",
+    "trackingAdsIdLabel": "Google Ads — ID de conversion",
+    "trackingAdsLabelLabel": "Google Ads — Label de conversion (lead capturé)",
+    "trackingAdsHelp": "Où trouver mes IDs Google Ads ? Conversions →",
+    "trackingInvalidFormat": "Format invalide"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",

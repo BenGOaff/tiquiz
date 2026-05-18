@@ -92,6 +92,10 @@ export async function PATCH(req: NextRequest) {
       // Palettes de couleurs nommées de l'user. Sanitisé ci-dessous
       // (max 10 palettes × 5 couleurs × hex format) avant d'écrire.
       "saved_palettes",
+      // Défauts Meta + Google pixels (Phase B, mai 2026) — pré-remplis
+      // sur les nouveaux quizzes du créateur. Modifiables per-quiz.
+      "default_meta_pixel_id", "default_ga4_measurement_id",
+      "default_google_ads_conversion_id", "default_google_ads_conversion_label",
     ];
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     for (const key of allowed) {

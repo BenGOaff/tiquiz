@@ -42,6 +42,11 @@ type Profile = {
   brand_website_url: string | null;
   target_audience: string | null;
   tipote_affiliate_id: string | null;
+  // Phase B (Adeline, 19 mai 2026) : défauts user pour les pixels Meta + Google.
+  default_meta_pixel_id?: string | null;
+  default_ga4_measurement_id?: string | null;
+  default_google_ads_conversion_id?: string | null;
+  default_google_ads_conversion_label?: string | null;
 };
 
 const FONTS = ["Inter", "Poppins", "Montserrat", "Playfair Display", "Lato", "Roboto", "Open Sans", "Nunito"];
@@ -101,6 +106,14 @@ export default function SettingsClient() {
   const [privacyUrl, setPrivacyUrl] = useState("");
   const [targetAudience, setTargetAudience] = useState("");
 
+  // Phase B (Adeline, 19 mai 2026) : défauts user pixels Meta + Google.
+  // Auto-remplis sur les nouveaux quizzes (à la création) et applicables
+  // à un quiz existant via un bouton dans l'éditeur.
+  const [defaultMetaPixelId, setDefaultMetaPixelId] = useState("");
+  const [defaultGa4MeasurementId, setDefaultGa4MeasurementId] = useState("");
+  const [defaultGoogleAdsConversionId, setDefaultGoogleAdsConversionId] = useState("");
+  const [defaultGoogleAdsConversionLabel, setDefaultGoogleAdsConversionLabel] = useState("");
+
   const [brandLogoUrl, setBrandLogoUrl] = useState("");
   const [brandColorPrimary, setBrandColorPrimary] = useState("#5D6CDB");
   const [brandColorAccent, setBrandColorAccent] = useState("#20BBE6");
@@ -135,6 +148,10 @@ export default function SettingsClient() {
           setBrandTone(p.brand_tone ?? "professionnel");
           setBrandWebsiteUrl(p.brand_website_url ?? "");
           setTipoteAffiliateId(p.tipote_affiliate_id ?? "");
+          setDefaultMetaPixelId(p.default_meta_pixel_id ?? "");
+          setDefaultGa4MeasurementId(p.default_ga4_measurement_id ?? "");
+          setDefaultGoogleAdsConversionId(p.default_google_ads_conversion_id ?? "");
+          setDefaultGoogleAdsConversionLabel(p.default_google_ads_conversion_label ?? "");
         }
       })
       .finally(() => setLoading(false));
@@ -177,6 +194,10 @@ export default function SettingsClient() {
           brand_font: brandFont,
           brand_tone: brandTone,
           brand_website_url: brandWebsiteUrl.trim() || null,
+          default_meta_pixel_id: defaultMetaPixelId.trim() || null,
+          default_ga4_measurement_id: defaultGa4MeasurementId.trim() || null,
+          default_google_ads_conversion_id: defaultGoogleAdsConversionId.trim() || null,
+          default_google_ads_conversion_label: defaultGoogleAdsConversionLabel.trim() || null,
         }),
       });
       const data = await res.json();
@@ -686,6 +707,68 @@ export default function SettingsClient() {
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Tracking & Pubs — Phase B (Adeline, 19 mai 2026).
+              Défauts pixels Meta + Google appliqués automatiquement
+              aux nouveaux quizzes du créateur. Modifiables par quiz
+              dans l'éditeur. */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("trackingDefaultsTitle")}</CardTitle>
+              <CardDescription>{t("trackingDefaultsDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">{t("trackingDefaultsMetaLabel")}</label>
+                <Input
+                  value={defaultMetaPixelId}
+                  onChange={(e) => setDefaultMetaPixelId(e.target.value)}
+                  placeholder="1234567890123456"
+                />
+                <p className="text-xs text-muted-foreground">
+                  <a href="https://business.facebook.com/events_manager" target="_blank" rel="noopener noreferrer" className="hover:underline inline-flex items-center gap-1">
+                    {t("trackingDefaultsMetaHelp")} <ExternalLink className="h-3 w-3" />
+                  </a>
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">{t("trackingDefaultsGa4Label")}</label>
+                <Input
+                  value={defaultGa4MeasurementId}
+                  onChange={(e) => setDefaultGa4MeasurementId(e.target.value)}
+                  placeholder="G-XXXXXXXXXX"
+                />
+                <p className="text-xs text-muted-foreground">
+                  <a href="https://analytics.google.com/" target="_blank" rel="noopener noreferrer" className="hover:underline inline-flex items-center gap-1">
+                    {t("trackingDefaultsGa4Help")} <ExternalLink className="h-3 w-3" />
+                  </a>
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">{t("trackingDefaultsAdsIdLabel")}</label>
+                  <Input
+                    value={defaultGoogleAdsConversionId}
+                    onChange={(e) => setDefaultGoogleAdsConversionId(e.target.value)}
+                    placeholder="AW-1234567890"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">{t("trackingDefaultsAdsLabelLabel")}</label>
+                  <Input
+                    value={defaultGoogleAdsConversionLabel}
+                    onChange={(e) => setDefaultGoogleAdsConversionLabel(e.target.value)}
+                    placeholder="abcDEF123"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                <a href="https://ads.google.com/" target="_blank" rel="noopener noreferrer" className="hover:underline inline-flex items-center gap-1">
+                  {t("trackingDefaultsAdsHelp")} <ExternalLink className="h-3 w-3" />
+                </a>
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
