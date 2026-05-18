@@ -842,7 +842,8 @@
     "trackingDefaultsGa4Help": "Trouver mon ID dans Google Analytics",
     "trackingDefaultsAdsIdLabel": "Google Ads — ID de conversion",
     "trackingDefaultsAdsLabelLabel": "Google Ads — Label de conversion",
-    "trackingDefaultsAdsHelp": "Trouver mes IDs Google Ads"
+    "trackingDefaultsAdsHelp": "Trouver mes IDs Google Ads",
+    "tabTracking": "Tracking"
   },
   "languageSwitcher": {
     "label": "Langue"
