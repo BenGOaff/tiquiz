@@ -493,6 +493,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         sio_course_id: string | null;
         sio_community_id: string | null;
         sort_order: number;
+        image_url: string | null;
+        image_position: string;
       }
 
       const toUpdate: Array<{ id: string; data: SanitizedResult }> = [];
@@ -541,6 +543,20 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
           sio_community_id:
             r.sio_community_id == null ? null : String(r.sio_community_id),
           sort_order: i,
+          // Hero image of the result (Adeline, mai 2026). Stored
+          // as its own column on quiz_results — NOT inline in the
+          // rich-text description. Position is one of 5 logical
+          // slots (top / after_title / after_description /
+          // after_insight / bottom).
+          image_url:
+            typeof r.image_url === "string" && r.image_url.trim()
+              ? r.image_url.trim()
+              : null,
+          image_position: (() => {
+            const allowed = ["top", "after_title", "after_description", "after_insight", "bottom"];
+            const v = typeof r.image_position === "string" ? r.image_position : "top";
+            return allowed.includes(v) ? v : "top";
+          })(),
         };
 
         const incomingId =

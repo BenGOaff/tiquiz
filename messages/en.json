@@ -1101,7 +1101,16 @@
     "consentTextLabel": "Consent checkbox text",
     "consentTextPlaceholder": "I agree to the privacy policy…",
     "resultAddImage": "Add an image",
-    "resultAddImageHint": "The image will be added at the top of the description. You can also drag-and-drop a file anywhere in the text area."
+    "resultAddImageHint": "The image will be added at the top of the description. You can also drag-and-drop a file anywhere in the text area.",
+    "resultImagePosLabel": "Position:",
+    "resultImagePos_top": "Top",
+    "resultImagePos_after_title": "After title",
+    "resultImagePos_after_description": "After description",
+    "resultImagePos_after_insight": "After insight",
+    "resultImagePos_bottom": "Bottom",
+    "resultImageRemove": "Remove image",
+    "resultImageDropzone": "Add an image to this result",
+    "resultImageHint": "Click or drag-and-drop a file (PNG/JPG/GIF, max 10 MB)"
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",

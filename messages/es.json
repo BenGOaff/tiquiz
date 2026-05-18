@@ -1118,7 +1118,16 @@
     "consentTextLabel": "Texto de la casilla de consentimiento",
     "consentTextPlaceholder": "Acepto la política de privacidad…",
     "resultAddImage": "Añadir una imagen",
-    "resultAddImageHint": "La imagen se añadirá al principio de la descripción. También puedes arrastrar y soltar un archivo en cualquier parte del área de texto."
+    "resultAddImageHint": "La imagen se añadirá al principio de la descripción. También puedes arrastrar y soltar un archivo en cualquier parte del área de texto.",
+    "resultImagePosLabel": "Posición:",
+    "resultImagePos_top": "Arriba",
+    "resultImagePos_after_title": "Tras título",
+    "resultImagePos_after_description": "Tras descripción",
+    "resultImagePos_after_insight": "Tras insight",
+    "resultImagePos_bottom": "Abajo",
+    "resultImageRemove": "Quitar imagen",
+    "resultImageDropzone": "Añadir una imagen al resultado",
+    "resultImageHint": "Haz clic o arrastra un archivo (PNG/JPG/GIF, 10 MB máx.)"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nueva contraseña",

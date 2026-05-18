@@ -1118,7 +1118,16 @@
     "consentTextLabel": "Texto da caixa de consentimento",
     "consentTextPlaceholder": "Concordo com a política de privacidade…",
     "resultAddImage": "Adicionar imagem",
-    "resultAddImageHint": "A imagem será adicionada no topo da descrição. Também pode arrastar e largar um ficheiro em qualquer lugar da área de texto."
+    "resultAddImageHint": "A imagem será adicionada no topo da descrição. Também pode arrastar e largar um ficheiro em qualquer lugar da área de texto.",
+    "resultImagePosLabel": "Posição:",
+    "resultImagePos_top": "Topo",
+    "resultImagePos_after_title": "Após título",
+    "resultImagePos_after_description": "Após descrição",
+    "resultImagePos_after_insight": "Após insight",
+    "resultImagePos_bottom": "Fundo",
+    "resultImageRemove": "Remover imagem",
+    "resultImageDropzone": "Adicionar uma imagem a este resultado",
+    "resultImageHint": "Clica ou arrasta um ficheiro (PNG/JPG/GIF, 10 MB máx.)"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova palavra-passe",

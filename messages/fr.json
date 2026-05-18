@@ -1101,7 +1101,16 @@
     "consentTextLabel": "Texte de la case à cocher",
     "consentTextPlaceholder": "J'accepte la politique de confidentialité…",
     "resultAddImage": "Ajouter une image",
-    "resultAddImageHint": "L'image sera ajoutée en haut de la description. Tu peux aussi drag-and-drop un fichier n'importe où dans la zone de texte."
+    "resultAddImageHint": "L'image sera ajoutée en haut de la description. Tu peux aussi drag-and-drop un fichier n'importe où dans la zone de texte.",
+    "resultImagePosLabel": "Position :",
+    "resultImagePos_top": "Haut",
+    "resultImagePos_after_title": "Après le titre",
+    "resultImagePos_after_description": "Après la description",
+    "resultImagePos_after_insight": "Après la prise de conscience",
+    "resultImagePos_bottom": "Bas",
+    "resultImageRemove": "Retirer l'image",
+    "resultImageDropzone": "Ajouter une image au résultat",
+    "resultImageHint": "Clique ici ou drag-and-drop un fichier (PNG/JPG/GIF, 10 Mo max)"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",

@@ -93,7 +93,9 @@ type QuizQuestion = {
   // in supabase/migrations/019_survey_mode.sql.
   config?: Record<string, unknown> | null;
 };
-type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number };
+type ResultImagePosition = "top" | "after_title" | "after_description" | "after_insight" | "bottom";
+const RESULT_IMAGE_POSITIONS: ResultImagePosition[] = ["top", "after_title", "after_description", "after_insight", "bottom"];
+type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null };
 type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; option_index?: number; option_indices?: number[] }[] | null; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
 type QuizData = {
   id: string; title: string; slug: string | null;
@@ -1197,14 +1199,16 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     }
   }
 
-  // "+ Image" button on each result preview (Adeline, 18 mai 2026 :
-  // "je ne vois pas où ajouter une image sur le résultat ?"). Cible
-  // visible et explicite — le drag-and-drop sur les RichTextEdit
-  // reste possible mais il fallait un point d'entrée évident. Click
-  // → file picker système. L'image est ensuite préfixée à la
-  // description du résultat correspondant. Si la description était
-  // vide, on crée juste le <img>. L'utilisateur peut ensuite la
-  // déplacer via le contentEditable standard.
+  // Image dédiée par résultat (Adeline, 18 mai 2026, V2). Itération
+  // précédente injectait un `<img>` au début de la description (donc
+  // dans un champ RICH-TEXT) — Adeline a explicitement refusé :
+  // l'image doit être un BLOC SÉPARÉ du texte, et le créateur doit
+  // pouvoir choisir où elle s'affiche dans la page de résultat
+  // (drag-and-drop logique entre 5 emplacements). On stocke
+  // maintenant ça dans deux colonnes dédiées sur `quiz_results` :
+  //   - `image_url`       (TEXT nullable, URL Supabase Storage)
+  //   - `image_position`  (TEXT, slot logique parmi 5 valeurs)
+  // Migration : 20260519_quiz_results_image.sql.
   const resultImageInputRef = useRef<HTMLInputElement>(null);
   const [resultImageTargetRi, setResultImageTargetRi] = useState<number | null>(null);
   const [resultImageUploading, setResultImageUploading] = useState<number | null>(null);
@@ -1222,15 +1226,33 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     try {
       const url = await handleRichTextImageUpload(file);
       if (!url) return;
-      const imgHtml = `<p><img src="${url}" alt="" style="max-width:100%;height:auto;" /></p>`;
       setEditResults((p) => p.map((r, i) => i !== ri ? r : {
         ...r,
-        description: imgHtml + (r.description ?? ""),
+        image_url: url,
+        image_position: r.image_position ?? "top",
       }));
     } finally {
       setResultImageUploading(null);
     }
   };
+  const updateResultImagePosition = (ri: number, pos: ResultImagePosition) => {
+    setEditResults((p) => p.map((r, i) => i !== ri ? r : { ...r, image_position: pos }));
+  };
+  const clearResultImage = (ri: number) => {
+    setEditResults((p) => p.map((r, i) => i !== ri ? r : { ...r, image_url: null }));
+  };
+  // Drag-and-drop file upload directly on a result panel slot. Avoid
+  // the file picker click if the user prefers to drag from their OS.
+  async function handleResultImageDrop(file: File, ri: number, pos: ResultImagePosition) {
+    setResultImageUploading(ri);
+    try {
+      const url = await handleRichTextImageUpload(file);
+      if (!url) return;
+      setEditResults((p) => p.map((r, i) => i !== ri ? r : { ...r, image_url: url, image_position: pos }));
+    } finally {
+      setResultImageUploading(null);
+    }
+  }
 
   // Save
   const handleSave = async () => {
@@ -1289,7 +1311,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
             // so unknown fields are passed through without validation.
             config: q.config ?? {},
           })),
-          results: editResults.map((r, i) => ({ title: r.title, description: r.description, insight: r.insight, projection: r.projection, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: r.sio_tag_name || null, sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i })),
+          results: editResults.map((r, i) => ({ title: r.title, description: r.description, insight: r.insight, projection: r.projection, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: r.sio_tag_name || null, sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i, image_url: r.image_url ?? null, image_position: r.image_position ?? "top" })),
         }),
       });
       const json = await res.json();
@@ -2248,20 +2270,59 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 return (
                 <div key={ri} ref={el => { resultRefs.current[ri] = el; }} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                   <div className="max-w-2xl w-full space-y-6">
-                    <div className="flex justify-end">
+                    {/* Image dédiée du résultat (Adeline V2, mai 2026)
+                        — bloc séparé du texte, position parmi 5 slots
+                        logiques choisis explicitement par le créateur.
+                        Le panneau de contrôle est en haut, l'image
+                        elle-même rend à sa vraie position dans le
+                        preview ci-dessous (WYSIWYG : ce que voit le
+                        créateur === ce que voit le visiteur). */}
+                    {r.image_url ? (
+                      <div className="rounded-xl border border-border bg-muted/30 p-2 flex items-center justify-between gap-3 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[11px] text-muted-foreground font-medium">{t("resultImagePosLabel")}</span>
+                          {RESULT_IMAGE_POSITIONS.map((pos) => {
+                            const active = (r.image_position ?? "top") === pos;
+                            return (
+                              <button
+                                key={pos}
+                                type="button"
+                                onClick={() => updateResultImagePosition(ri, pos)}
+                                className={`text-[11px] px-2 py-1 rounded-md transition-colors border ${active ? "border-primary bg-primary text-white" : "border-transparent hover:bg-muted text-muted-foreground"}`}
+                              >
+                                {t(`resultImagePos_${pos}`)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => clearResultImage(ri)}
+                          className="text-xs text-destructive hover:underline px-2"
+                        >
+                          {t("resultImageRemove")}
+                        </button>
+                      </div>
+                    ) : (
                       <button
                         type="button"
                         onClick={() => openResultImagePicker(ri)}
                         disabled={resultImageUploading === ri}
-                        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-primary/50 rounded-full px-3 py-1.5 transition-colors disabled:opacity-50"
-                        title={t("resultAddImageHint")}
+                        onDragOver={(e) => { e.preventDefault(); }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const f = Array.from(e.dataTransfer?.files ?? []).find(x => x.type.startsWith("image/"));
+                          if (f) void handleResultImageDrop(f, ri, "top");
+                        }}
+                        className="w-full py-8 rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground disabled:opacity-50"
                       >
                         {resultImageUploading === ri
-                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          : <ImagePlus className="w-3.5 h-3.5" />}
-                        {t("resultAddImage")}
+                          ? <Loader2 className="w-6 h-6 animate-spin" />
+                          : <ImagePlus className="w-6 h-6" />}
+                        <span className="text-xs">{t("resultImageDropzone")}</span>
+                        <span className="text-[10px] text-muted-foreground/70">{t("resultImageHint")}</span>
                       </button>
-                    </div>
+                    )}
                     {showCoverage && (
                       <div
                         className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
@@ -2292,8 +2353,22 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         </div>
                       </div>
                     )}
+                    {/* Helper inline : rend l'image full-size si la
+                        slot demandée match la position choisie. */}
+                    {r.image_url && (r.image_position ?? "top") === "top" && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={r.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                    )}
                     <RichTextEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} onAIRewrite={aiRewriteResultTitle} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} singleLine className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
+                    {r.image_url && r.image_position === "after_title" && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={r.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                    )}
                     <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultDesc} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-lg leading-relaxed" placeholder={t("previewResultDescPh")} />
+                    {r.image_url && r.image_position === "after_description" && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={r.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                    )}
                     <div className="p-5 rounded-xl bg-muted/50 border">
                       <div className="mb-2">
                         <RichTextEdit
@@ -2306,6 +2381,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       </div>
                       <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultInsight} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder={t("previewResultInsightPh")} />
                     </div>
+                    {r.image_url && r.image_position === "after_insight" && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={r.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                    )}
                     <div className="p-5 rounded-xl border" style={{ backgroundColor: `${pc}08`, borderColor: `${pc}30` }}>
                       <div className="mb-2">
                         <RichTextEdit
@@ -2319,6 +2398,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       </div>
                       <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultProjection} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder={t("previewResultProjectionPh")} />
                     </div>
+                    {r.image_url && r.image_position === "bottom" && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={r.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                    )}
                     <div className="space-y-2">
                       <button className="w-full px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>
                         <RichTextEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} onGenderize={genderize} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-white font-semibold text-center" placeholder={t("previewResultCtaPh")} />
