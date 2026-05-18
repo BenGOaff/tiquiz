@@ -1107,7 +1107,9 @@
     "previewRemoveImage": "Rimuovi immagine",
     "fieldFirstNameRequiredToggle": "Rendi obbligatorio il nome",
     "fieldLastNameRequiredToggle": "Rendi obbligatorio il cognome",
-    "fieldCountryRequiredToggle": "Rendi obbligatorio il paese"
+    "fieldCountryRequiredToggle": "Rendi obbligatorio il paese",
+    "consentTextLabel": "Testo della casella di consenso",
+    "consentTextPlaceholder": "Accetto l'informativa sulla privacy…"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nuova password",

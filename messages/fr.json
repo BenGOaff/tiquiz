@@ -1090,7 +1090,9 @@
     "previewRemoveImage": "Retirer l'image",
     "fieldFirstNameRequiredToggle": "Rendre le prénom obligatoire",
     "fieldLastNameRequiredToggle": "Rendre le nom obligatoire",
-    "fieldCountryRequiredToggle": "Rendre le pays obligatoire"
+    "fieldCountryRequiredToggle": "Rendre le pays obligatoire",
+    "consentTextLabel": "Texte de la case à cocher",
+    "consentTextPlaceholder": "J'accepte la politique de confidentialité…"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",

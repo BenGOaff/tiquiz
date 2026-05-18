@@ -1107,7 +1107,9 @@
     "previewRemoveImage": "Quitar imagen",
     "fieldFirstNameRequiredToggle": "Hacer el nombre obligatorio",
     "fieldLastNameRequiredToggle": "Hacer el apellido obligatorio",
-    "fieldCountryRequiredToggle": "Hacer el país obligatorio"
+    "fieldCountryRequiredToggle": "Hacer el país obligatorio",
+    "consentTextLabel": "Texto de la casilla de consentimiento",
+    "consentTextPlaceholder": "Acepto la política de privacidad…"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nueva contraseña",

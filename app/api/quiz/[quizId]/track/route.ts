@@ -65,19 +65,28 @@ async function resolveQuizIdFromSlugOrId(slugOrId: string): Promise<string | nul
   return data?.id ?? null;
 }
 
+// Adeline (18 mai 2026) : un tracker d'analytics ne doit JAMAIS
+// remonter de 4xx dans la console du visiteur — ça pollue le devtools
+// du créateur quand il preview son quiz et donne l'impression que
+// quelque chose est cassé alors que l'event a juste été ignoré (slug
+// inconnu, body mal formé, sessionId périmé, etc.). On répond donc
+// systématiquement en 200 avec `ok:false` + une raison dans le body
+// pour le debug serveur. Le client ne lit pas le body (fire & forget),
+// donc le comportement applicatif est identique.
+function ok() { return NextResponse.json({ ok: true }); }
+function silent(reason: string) { return NextResponse.json({ ok: false, reason }); }
+
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
     const { quizId: slugOrId } = await context.params;
     const quizId = await resolveQuizIdFromSlugOrId(slugOrId);
-    if (!quizId) {
-      return NextResponse.json({ ok: false }, { status: 404 });
-    }
+    if (!quizId) return silent("quiz_not_found");
 
     let body: any;
     try {
       body = await req.json();
     } catch {
-      return NextResponse.json({ ok: false }, { status: 400 });
+      return silent("bad_json");
     }
 
     const event = String(body.event ?? "").trim();
@@ -85,19 +94,15 @@ export async function POST(req: NextRequest, context: RouteContext) {
     if ((QUESTION_EVENTS as readonly string[]).includes(event)) {
       const qIdx = Number(body.questionIndex);
       const sessionId = String(body.sessionId ?? "").trim();
-      if (!Number.isInteger(qIdx) || qIdx < 0 || qIdx >= 200) {
-        return NextResponse.json({ ok: false }, { status: 400 });
-      }
-      if (!SESSION_ID_RE.test(sessionId)) {
-        return NextResponse.json({ ok: false }, { status: 400 });
-      }
+      if (!Number.isInteger(qIdx) || qIdx < 0 || qIdx >= 200) return silent("bad_question_index");
+      if (!SESSION_ID_RE.test(sessionId)) return silent("bad_session_id");
       await supabaseAdmin.from("quiz_question_events").insert({
         quiz_id: quizId,
         question_index: qIdx,
         session_id: sessionId,
         event: QUESTION_EVENT_DB[event as QuestionEvent],
       });
-      return NextResponse.json({ ok: true });
+      return ok();
     }
 
     if ((COUNTER_EVENTS as readonly string[]).includes(event)) {
@@ -107,22 +112,17 @@ export async function POST(req: NextRequest, context: RouteContext) {
         .select(`id, ${column}`)
         .eq("id", quizId)
         .maybeSingle();
-      if (!quiz) {
-        return NextResponse.json({ ok: false }, { status: 404 });
-      }
+      if (!quiz) return silent("quiz_lookup_failed");
       await supabaseAdmin
         .from("quizzes")
         .update({ [column]: ((quiz as any)[column] ?? 0) + 1 })
         .eq("id", quizId);
-      return NextResponse.json({ ok: true });
+      return ok();
     }
 
-    return NextResponse.json(
-      { ok: false, error: "Invalid event" },
-      { status: 400 },
-    );
+    return silent("unknown_event");
   } catch {
-    // Non-blocking analytics — never fail the visitor experience
-    return NextResponse.json({ ok: true });
+    // Best-effort analytics — never fail the visitor experience
+    return ok();
   }
 }

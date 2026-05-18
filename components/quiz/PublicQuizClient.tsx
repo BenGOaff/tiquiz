@@ -2609,6 +2609,39 @@ function ConsentText({ text, privacyUrl, locale }: { text: string | null; privac
   const isStoredDefault = trimmed.length === 0 || ALL_DEFAULT_CONSENTS.has(trimmed);
   const raw = isStoredDefault ? t.defaultConsent : text!;
 
+  // Adeline (18 mai 2026) : le consent text peut maintenant être
+  // rich-text (gras / couleur / taille / police). Si on détecte du
+  // HTML on rend via sanitizeRichText + dangerouslySetInnerHTML —
+  // c'est l'éditeur qui pose le lien <a> directement, donc on n'a
+  // plus besoin de patcher le needle. Le défaut localisé reste plain
+  // text et passe par l'ancien code (needle-link injection).
+  const looksLikeHtml = /<[a-z][\s\S]*?>/i.test(raw);
+  if (looksLikeHtml) {
+    const alreadyHasLink = /<a\s[^>]*href=/i.test(raw);
+    return (
+      <span className="tiquiz-rich tiquiz-rich-inline">
+        <span dangerouslySetInnerHTML={{ __html: sanitizeRichText(raw) }} />
+        {/* Si l'auteur n'a pas inséré son propre lien et qu'on a un
+            privacy_url renseigné, on l'affiche en suffixe pour ne pas
+            faire disparaître la politique de confidentialité. */}
+        {!alreadyHasLink && privacyUrl && (
+          <>
+            {" "}
+            <a
+              href={ensureExternalUrl(privacyUrl)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline text-primary hover:text-primary/80 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {t.privacyPolicy}
+            </a>
+          </>
+        )}
+      </span>
+    );
+  }
+
   if (!privacyUrl) return <span>{raw}</span>;
 
   const needle = t.consentNeedle;

@@ -1252,6 +1252,20 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     checked={showConsentCheckbox}
                     onChange={setShowConsentCheckbox}
                   />
+                  {showConsentCheckbox && (
+                    <div className="space-y-1 pt-1">
+                      <label className="text-[11px] font-medium text-muted-foreground">
+                        {t("consentTextLabel")}
+                      </label>
+                      <RichTextEdit
+                        value={consentText}
+                        onChange={setConsentText}
+                        singleLine={false}
+                        className="text-xs"
+                        placeholder={t("consentTextPlaceholder")}
+                      />
+                    </div>
+                  )}
                 </section>
 
                 <Separator />

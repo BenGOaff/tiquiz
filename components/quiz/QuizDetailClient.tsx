@@ -1210,9 +1210,15 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           custom_footer_url: customFooterUrl.trim() || null,
           questions: editQuestions.map((q, i) => ({
             question_text: q.question_text,
+            // Bug Hugo (18 mai 2026) : avant ce fix, le payload ne
+            // remontait que {text, result_index} et écrasait silencieusement
+            // l'image_url uploadée par l'éditeur. L'image n'arrivait
+            // donc jamais en base — d'où l'absence côté visiteur.
+            // SurveyDetailClient l'avait déjà, on aligne ici.
             options: q.options.map((o) => ({
               text: o.text,
               result_index: o.result_index,
+              ...(o.image_url ? { image_url: o.image_url } : {}),
             })),
             sort_order: i,
             // Per-question config (multi_select, future knobs). The API
@@ -1691,6 +1697,29 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     checked={showConsentCheckbox}
                     onChange={setShowConsentCheckbox}
                   />
+                  {/* Adeline (18 mai 2026) : le texte de la case à
+                      cocher RGPD doit être totalement personnalisable
+                      — texte libre + formatting (gras, couleur, taille,
+                      police) — via le même RichTextEdit que le titre/
+                      intro. Visible uniquement quand la case est
+                      activée. Stocke du HTML sanitisé, le visiteur
+                      le rend via dangerouslySetInnerHTML (cf. fix
+                      ConsentText plus bas). Si vide, on retombe sur
+                      le défaut localisé t.defaultConsent. */}
+                  {showConsentCheckbox && (
+                    <div className="space-y-1 pt-1">
+                      <label className="text-[11px] font-medium text-muted-foreground">
+                        {t("consentTextLabel")}
+                      </label>
+                      <RichTextEdit
+                        value={consentText}
+                        onChange={setConsentText}
+                        singleLine={false}
+                        className="text-xs"
+                        placeholder={t("consentTextPlaceholder")}
+                      />
+                    </div>
+                  )}
                 </section>
 
                 <Separator />
