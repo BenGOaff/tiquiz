@@ -72,7 +72,13 @@
     "rteAlignRight": "Alinhar à direita",
     "rteLinkPrompt": "URL do link (https://… ou /caminho)",
     "rteLinkInvalid": "Link inválido.",
-    "rteInsertImage": "Inserir imagem"
+    "rteInsertImage": "Inserir imagem",
+    "rteLinkDialogTitle": "Inserir link",
+    "rteLinkDialogHint": "Cole a URL para a qual o texto selecionado deve apontar.",
+    "rteImageDialogTitle": "Inserir imagem",
+    "rteImageDialogHint": "Cole a URL da imagem a incorporar.",
+    "rteDialogConfirm": "Inserir",
+    "rteDialogCancel": "Cancelar"
   },
   "nav": {
     "dashboard": "Painel",
@@ -1101,7 +1107,7 @@
     "shareTabOgImageDimsHint": "Recomendado: 1200 × 630 px. Máx 10 MB.",
     "ogImageUploaded": "Miniatura guardada",
     "showConsentCheckboxLabel": "Mostrar checkbox de consentimento",
-    "showConsentCheckboxHint": "Desativa se já tratas o consentimento RGPD noutro lado.",
+    "showConsentCheckboxHint": "",
     "fieldPhoneRequired": "Telefone obrigatório",
     "previewAddOptionImage": "Adicionar imagem",
     "previewRemoveImage": "Remover imagem",
