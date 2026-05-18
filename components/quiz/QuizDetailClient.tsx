@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
-  Gift, Sparkles, Shuffle, ChevronUp, ChevronDown,
+  Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, ImagePlus,
 } from "lucide-react";
 import QuizResultsAnalytics from "@/components/quiz/QuizResultsAnalytics";
 import { ReadinessRing } from "@/components/ui/readiness-ring";
@@ -1197,6 +1197,41 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     }
   }
 
+  // "+ Image" button on each result preview (Adeline, 18 mai 2026 :
+  // "je ne vois pas où ajouter une image sur le résultat ?"). Cible
+  // visible et explicite — le drag-and-drop sur les RichTextEdit
+  // reste possible mais il fallait un point d'entrée évident. Click
+  // → file picker système. L'image est ensuite préfixée à la
+  // description du résultat correspondant. Si la description était
+  // vide, on crée juste le <img>. L'utilisateur peut ensuite la
+  // déplacer via le contentEditable standard.
+  const resultImageInputRef = useRef<HTMLInputElement>(null);
+  const [resultImageTargetRi, setResultImageTargetRi] = useState<number | null>(null);
+  const [resultImageUploading, setResultImageUploading] = useState<number | null>(null);
+  const openResultImagePicker = (ri: number) => {
+    setResultImageTargetRi(ri);
+    resultImageInputRef.current?.click();
+  };
+  const onResultImagePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    const ri = resultImageTargetRi;
+    setResultImageTargetRi(null);
+    if (!file || ri === null) return;
+    setResultImageUploading(ri);
+    try {
+      const url = await handleRichTextImageUpload(file);
+      if (!url) return;
+      const imgHtml = `<p><img src="${url}" alt="" style="max-width:100%;height:auto;" /></p>`;
+      setEditResults((p) => p.map((r, i) => i !== ri ? r : {
+        ...r,
+        description: imgHtml + (r.description ?? ""),
+      }));
+    } finally {
+      setResultImageUploading(null);
+    }
+  };
+
   // Save
   const handleSave = async () => {
     if (!title.trim()) { toast.error(t("errTitleRequired")); return; }
@@ -1582,7 +1617,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           key={`r-${i}`}
                           id={`r-${i}`}
                           index={i}
-                          label={stripHtml(cleanPlaceholdersForLabel(r.title)) || t("sidebarEmptyResult")}
+                          label={extractResultLabel(cleanPlaceholdersForLabel(r.title)) || t("sidebarEmptyResult")}
                           onClick={() => scrollToSection(`r-${i}`)}
                           onRemove={() => removeResult(i)}
                           canDelete={editResults.length > 1}
@@ -2191,6 +2226,17 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 </div>
               )}
 
+              {/* Shared hidden file input for the "+ Image" button on
+                  each result panel. One input is enough — the target
+                  result index is tracked in `resultImageTargetRi`. */}
+              <input
+                ref={resultImageInputRef}
+                type="file"
+                accept="image/*,image/gif"
+                className="sr-only"
+                onChange={onResultImagePicked}
+              />
+
               {/* ── RESULTS ── */}
               {editResults.map((r, ri) => {
                 const cov = resultCoverage[ri] ?? { questionsLeading: 0, totalQuestions: editQuestions.length, expected: 1, severity: "danger" as const };
@@ -2202,6 +2248,20 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 return (
                 <div key={ri} ref={el => { resultRefs.current[ri] = el; }} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                   <div className="max-w-2xl w-full space-y-6">
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => openResultImagePicker(ri)}
+                        disabled={resultImageUploading === ri}
+                        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-primary/50 rounded-full px-3 py-1.5 transition-colors disabled:opacity-50"
+                        title={t("resultAddImageHint")}
+                      >
+                        {resultImageUploading === ri
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <ImagePlus className="w-3.5 h-3.5" />}
+                        {t("resultAddImage")}
+                      </button>
+                    </div>
                     {showCoverage && (
                       <div
                         className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${

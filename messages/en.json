@@ -78,7 +78,8 @@
     "rteImageDialogTitle": "Insert image",
     "rteImageDialogHint": "Paste the URL of the image to embed.",
     "rteDialogConfirm": "Insert",
-    "rteDialogCancel": "Cancel"
+    "rteDialogCancel": "Cancel",
+    "rteUploadImage": "Upload an image (drag-and-drop supported)"
   },
   "nav": {
     "quizzes": "My quizzes",
@@ -1098,7 +1099,9 @@
     "fieldLastNameRequiredToggle": "Make last name required",
     "fieldCountryRequiredToggle": "Make country required",
     "consentTextLabel": "Consent checkbox text",
-    "consentTextPlaceholder": "I agree to the privacy policy…"
+    "consentTextPlaceholder": "I agree to the privacy policy…",
+    "resultAddImage": "Add an image",
+    "resultAddImageHint": "The image will be added at the top of the description. You can also drag-and-drop a file anywhere in the text area."
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",

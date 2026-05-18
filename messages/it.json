@@ -78,7 +78,8 @@
     "rteImageDialogTitle": "Inserisci immagine",
     "rteImageDialogHint": "Incolla l'URL dell'immagine da incorporare.",
     "rteDialogConfirm": "Inserisci",
-    "rteDialogCancel": "Annulla"
+    "rteDialogCancel": "Annulla",
+    "rteUploadImage": "Carica un'immagine (drag-and-drop accettato)"
   },
   "nav": {
     "quizzes": "I miei quiz",
@@ -1115,7 +1116,9 @@
     "fieldLastNameRequiredToggle": "Rendi obbligatorio il cognome",
     "fieldCountryRequiredToggle": "Rendi obbligatorio il paese",
     "consentTextLabel": "Testo della casella di consenso",
-    "consentTextPlaceholder": "Accetto l'informativa sulla privacy…"
+    "consentTextPlaceholder": "Accetto l'informativa sulla privacy…",
+    "resultAddImage": "Aggiungi un'immagine",
+    "resultAddImageHint": "L'immagine verrà aggiunta in cima alla descrizione. Puoi anche trascinare un file ovunque nell'area di testo."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nuova password",

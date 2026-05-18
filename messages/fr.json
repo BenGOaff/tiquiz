@@ -78,7 +78,8 @@
     "rteImageDialogTitle": "Insérer une image",
     "rteImageDialogHint": "Colle l'URL de l'image à intégrer.",
     "rteDialogConfirm": "Insérer",
-    "rteDialogCancel": "Annuler"
+    "rteDialogCancel": "Annuler",
+    "rteUploadImage": "Téléverser une image (drag-and-drop accepté)"
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -1098,7 +1099,9 @@
     "fieldLastNameRequiredToggle": "Rendre le nom obligatoire",
     "fieldCountryRequiredToggle": "Rendre le pays obligatoire",
     "consentTextLabel": "Texte de la case à cocher",
-    "consentTextPlaceholder": "J'accepte la politique de confidentialité…"
+    "consentTextPlaceholder": "J'accepte la politique de confidentialité…",
+    "resultAddImage": "Ajouter une image",
+    "resultAddImageHint": "L'image sera ajoutée en haut de la description. Tu peux aussi drag-and-drop un fichier n'importe où dans la zone de texte."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",
