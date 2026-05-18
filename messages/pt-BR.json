@@ -621,7 +621,8 @@
     "optionFallback": "Opção {n}",
     "questionFallback": "Pergunta {n}",
     "showConsentCheckboxLabel": "Mostrar a caixa de consentimento",
-    "showConsentCheckboxHint": "Desative se você já trata o consentimento LGPD/GDPR em outro lugar (CRM, outra página)."
+    "showConsentCheckboxHint": "Desative se você já trata o consentimento LGPD/GDPR em outro lugar (CRM, outra página).",
+    "fieldPhoneRequired": "Telefone obrigatório"
   },
   "settings": {
     "title": "Configurações",

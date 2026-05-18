@@ -604,7 +604,8 @@
     "optionFallback": "Option {n}",
     "questionFallback": "Question {n}",
     "showConsentCheckboxLabel": "Show the consent checkbox",
-    "showConsentCheckboxHint": "Turn off if you already handle GDPR consent elsewhere (your CRM, another page)."
+    "showConsentCheckboxHint": "Turn off if you already handle GDPR consent elsewhere (your CRM, another page).",
+    "fieldPhoneRequired": "Phone required"
   },
   "settings": {
     "title": "Settings",

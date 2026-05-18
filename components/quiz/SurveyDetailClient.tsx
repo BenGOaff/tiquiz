@@ -128,7 +128,7 @@ type QuizData = {
   result_insight_heading: string | null; result_projection_heading: string | null;
   address_form: string | null;
   capture_first_name: boolean | null; capture_last_name: boolean | null;
-  capture_phone: boolean | null; capture_country: boolean | null;
+  capture_phone: boolean | null; capture_country: boolean | null; phone_required?: boolean | null;
   virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null;
   share_message: string | null; locale: string | null;
   sio_share_tag_name: string | null;
@@ -326,6 +326,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [captureFirstName, setCaptureFirstName] = useState(false);
   const [captureLastName, setCaptureLastName] = useState(false);
   const [capturePhone, setCapturePhone] = useState(false);
+  const [phoneRequired, setPhoneRequired] = useState(false);
   const [captureCountry, setCaptureCountry] = useState(false);
   // Defaults to true so older quizzes (no column value yet) keep showing the
   // GDPR-style checkbox. Only flips when the creator explicitly opts out.
@@ -427,6 +428,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     capture_first_name: captureFirstName,
     capture_last_name: captureLastName,
     capture_phone: capturePhone,
+    phone_required: phoneRequired,
     capture_country: captureCountry,
     show_consent_checkbox: showConsentCheckbox,
     ask_first_name: askFirstName,
@@ -477,6 +479,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.capture_first_name === "boolean") setCaptureFirstName(s.capture_first_name);
     if (typeof s.capture_last_name === "boolean") setCaptureLastName(s.capture_last_name);
     if (typeof s.capture_phone === "boolean") setCapturePhone(s.capture_phone);
+    if (typeof s.phone_required === "boolean") setPhoneRequired(s.phone_required);
     if (typeof s.capture_country === "boolean") setCaptureCountry(s.capture_country);
     if (typeof s.show_consent_checkbox === "boolean") setShowConsentCheckbox(s.show_consent_checkbox);
     if (typeof s.ask_first_name === "boolean") setAskFirstName(s.ask_first_name);
@@ -546,7 +549,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setResultInsightHeading(q.result_insight_heading ?? ""); setResultProjectionHeading(q.result_projection_heading ?? "");
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
       setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
-      setCapturePhone(q.capture_phone ?? false); setCaptureCountry(q.capture_country ?? false);
+      setCapturePhone(q.capture_phone ?? false); setPhoneRequired(q.phone_required ?? false); setCaptureCountry(q.capture_country ?? false);
       setAskFirstName(Boolean((q as unknown as Record<string, unknown>).ask_first_name));
       setAskGender(Boolean((q as unknown as Record<string, unknown>).ask_gender));
       setShareMessage(q.share_message ?? ""); setLocale(q.locale ?? "");
@@ -806,7 +809,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           result_projection_heading: resultProjectionHeading.trim() || null,
           capture_first_name: captureFirstName, capture_last_name: captureLastName,
           ask_first_name: askFirstName, ask_gender: askGender,
-          capture_phone: capturePhone, capture_country: captureCountry,
+          capture_phone: capturePhone, phone_required: phoneRequired, capture_country: captureCountry,
           // Surveys never gate on virality / bonus → keep server-side defaults.
           share_message: shareMessage, locale: locale || null,
           sio_share_tag_name: sioShareTagName || null, status,
@@ -1145,6 +1148,17 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     <CapturePill label={t("fieldPhone")} active={capturePhone} onToggle={() => setCapturePhone(!capturePhone)} />
                     <CapturePill label={t("fieldCountry")} active={captureCountry} onToggle={() => setCaptureCountry(!captureCountry)} />
                   </div>
+                  {capturePhone && (
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={phoneRequired}
+                        onChange={(e) => setPhoneRequired(e.target.checked)}
+                        className="h-3.5 w-3.5 accent-primary"
+                      />
+                      <span>{t("fieldPhoneRequired")}</span>
+                    </label>
+                  )}
                   {(!captureFirstName || !captureLastName || !capturePhone || !captureCountry) && (
                     <button
                       onClick={() => {

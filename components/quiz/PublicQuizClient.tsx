@@ -101,6 +101,7 @@ type PublicQuizData = {
   capture_first_name?: boolean | null;
   capture_last_name?: boolean | null;
   capture_phone?: boolean | null;
+  phone_required?: boolean | null;
   capture_country?: boolean | null;
   // Some creators want to drop the GDPR-style checkbox under the email
   // capture form (e.g. when their CRM already handles consent upstream).
@@ -154,6 +155,7 @@ type QuizTranslations = {
   phonePlaceholder: string;
   countryPlaceholder: string;
   optional: string;
+  phoneRequiredError: string;
   viewResult: string;
   privacyPolicy: string;
   defaultConsent: string;
@@ -224,6 +226,7 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "T\u00e9l\u00e9phone",
     countryPlaceholder: "Pays",
     optional: "optionnel",
+    phoneRequiredError: "Le numéro de téléphone est obligatoire.",
     viewResult: "Acc\u00e9der aux r\u00e9sultats",
     privacyPolicy: "Politique de confidentialit\u00e9",
     defaultConsent: "J\u2019accepte la politique de confidentialit\u00e9.",
@@ -284,6 +287,7 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "T\u00e9l\u00e9phone",
     countryPlaceholder: "Pays",
     optional: "optionnel",
+    phoneRequiredError: "Le numéro de téléphone est obligatoire.",
     viewResult: "Acc\u00e9der aux r\u00e9sultats",
     privacyPolicy: "Politique de confidentialit\u00e9",
     defaultConsent: "J\u2019accepte la politique de confidentialit\u00e9.",
@@ -344,6 +348,7 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "Phone",
     countryPlaceholder: "Country",
     optional: "optional",
+    phoneRequiredError: "Phone number is required.",
     viewResult: "See my results",
     privacyPolicy: "Privacy policy",
     defaultConsent: "I accept the privacy policy.",
@@ -404,6 +409,7 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "Tel\u00e9fono",
     countryPlaceholder: "Pa\u00eds",
     optional: "opcional",
+    phoneRequiredError: "El número de teléfono es obligatorio.",
     viewResult: "Ver mis resultados",
     privacyPolicy: "Pol\u00edtica de privacidad",
     defaultConsent: "Acepto la pol\u00edtica de privacidad.",
@@ -464,6 +470,7 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "Telefon",
     countryPlaceholder: "Land",
     optional: "optional",
+    phoneRequiredError: "Telefonnummer ist erforderlich.",
     viewResult: "Mein Ergebnis sehen",
     privacyPolicy: "Datenschutzerkl\u00e4rung",
     defaultConsent: "Ich akzeptiere die Datenschutzerkl\u00e4rung.",
@@ -524,6 +531,7 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "Telefone",
     countryPlaceholder: "Pa\u00eds",
     optional: "opcional",
+    phoneRequiredError: "O número de telefone é obrigatório.",
     viewResult: "Ver meu resultado",
     privacyPolicy: "Pol\u00edtica de privacidade",
     defaultConsent: "Aceito a pol\u00edtica de privacidade.",
@@ -584,6 +592,7 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "Telefono",
     countryPlaceholder: "Paese",
     optional: "opzionale",
+    phoneRequiredError: "Il numero di telefono è obbligatorio.",
     viewResult: "Vedi il mio risultato",
     privacyPolicy: "Informativa sulla privacy",
     defaultConsent: "Accetto l\u2019informativa sulla privacy.",
@@ -644,6 +653,7 @@ const translations: Record<string, QuizTranslations> = {
     phonePlaceholder: "\u0627\u0644\u0647\u0627\u062a\u0641",
     countryPlaceholder: "\u0627\u0644\u0628\u0644\u062f",
     optional: "\u0627\u062e\u062a\u064a\u0627\u0631\u064a",
+    phoneRequiredError: "رقم الهاتف مطلوب.",
     viewResult: "\u0639\u0631\u0636 \u0627\u0644\u0646\u062a\u0627\u0626\u062c",
     privacyPolicy: "\u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u062e\u0635\u0648\u0635\u064a\u0629",
     defaultConsent: "\u0623\u0648\u0627\u0641\u0642 \u0639\u0644\u0649 \u0633\u064a\u0627\u0633\u0629 \u0627\u0644\u062e\u0635\u0648\u0635\u064a\u0629.",
@@ -1174,6 +1184,14 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
   const handleSubmitEmail = async () => {
     if (!email.trim()) return;
+    // Guard: phone mandatory if the creator flipped phone_required ON
+    // (Hugo, mai 2026). Block the submit and surface a clear error
+    // — HTML5 `required` doesn't trigger via this button (no form
+    // wrapper / submit event).
+    if (quiz?.capture_phone && quiz?.phone_required && !phone.trim()) {
+      setSubmitError(t.phoneRequiredError);
+      return;
+    }
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -1965,12 +1983,22 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
               {quiz.capture_phone && (
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium">{t.phonePlaceholder} <span className="text-muted-foreground font-normal">({t.optional})</span></label>
+                  {/* Hide the "(optionnel)" hint when the creator
+                      flipped phone_required ON. Hugo (mai 2026)
+                      reported the badge always showed even though
+                      he wanted phone mandatory. */}
+                  <label className="text-sm font-medium">
+                    {t.phonePlaceholder}
+                    {!quiz.phone_required && (
+                      <span className="text-muted-foreground font-normal"> ({t.optional})</span>
+                    )}
+                  </label>
                   <Input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     className="h-11"
+                    required={!!quiz.phone_required}
                   />
                 </div>
               )}
