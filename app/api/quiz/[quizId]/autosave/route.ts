@@ -78,11 +78,14 @@ export async function PUT(req: NextRequest, context: RouteContext) {
       .update({ draft_state: state, draft_updated_at: now })
       .eq("id", quizId);
     if (updErr) {
+      console.error("[autosave PUT] supabase update failed",
+        { quizId, code: updErr.code, message: updErr.message, details: updErr.details });
       return NextResponse.json({ ok: false, error: updErr.message }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true, draft_updated_at: now });
   } catch (e) {
+    console.error("[autosave PUT] unhandled exception", e);
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
       { status: 500 },

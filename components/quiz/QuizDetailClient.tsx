@@ -252,6 +252,64 @@ function CapturePill({ label, active, locked, onToggle }: {
 }
 
 // Row with label + hint + toggle switch for settings panel
+// Hero image draggable d'un résultat (Adeline V3, mai 2026). HTML5
+// drag-and-drop natif : l'image est `draggable`, l'utilisateur clique
+// dessus et la traîne vers un des slots de position (drop-zones
+// affichées entre les sections). w-full + h-auto = ratio d'origine
+// préservé, responsive mobile/tablette sans crop.
+function ResultDraggableImage({ url, ri, onDragStart, onDragEnd, onRemove }: {
+  url: string;
+  ri: number;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="relative group">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={url}
+        alt=""
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", `result-image-${ri}`);
+          onDragStart();
+        }}
+        onDragEnd={onDragEnd}
+        className="w-full h-auto rounded-xl cursor-grab active:cursor-grabbing select-none"
+      />
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute top-2 right-2 bg-background/90 hover:bg-destructive hover:text-white rounded-full p-1.5 shadow opacity-0 group-hover:opacity-100 transition-opacity"
+        aria-label="Retirer l'image"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
+// Drop-zone affichée à chaque position alternative quand l'image est
+// en cours de drag. Le drop déclenche le changement de slot.
+function ResultPositionDropZone({ label, onDrop }: {
+  label: string;
+  onDrop: () => void;
+}) {
+  const [hover, setHover] = useState(false);
+  return (
+    <div
+      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setHover(true); }}
+      onDragLeave={() => setHover(false)}
+      onDrop={(e) => { e.preventDefault(); setHover(false); onDrop(); }}
+      className={`h-14 rounded-xl border-2 border-dashed transition-colors flex items-center justify-center text-xs font-medium pointer-events-auto ${hover ? "border-primary bg-primary/10 text-primary" : "border-primary/40 bg-primary/5 text-muted-foreground"}`}
+    >
+      ↓ {label} ↓
+    </div>
+  );
+}
+
 function SettingsToggle({ label, hint, checked, onChange, disabled }: {
   label: string; hint?: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean;
 }) {
@@ -1253,6 +1311,12 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setResultImageUploading(null);
     }
   }
+  // Drag-and-drop natif HTML5 sur l'image (Adeline V3, 18 mai 2026 :
+  // "drag and drop = je prends l'image en cliquant dessus, je reste
+  // cliqué pour la positionner à l'endroit voulu"). On track le
+  // résultat dont l'image est en cours de drag pour afficher les
+  // drop-zones aux 4 autres positions du même résultat.
+  const [draggingResultImageRi, setDraggingResultImageRi] = useState<number | null>(null);
 
   // Save
   const handleSave = async () => {
@@ -2277,33 +2341,12 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         elle-même rend à sa vraie position dans le
                         preview ci-dessous (WYSIWYG : ce que voit le
                         créateur === ce que voit le visiteur). */}
-                    {r.image_url ? (
-                      <div className="rounded-xl border border-border bg-muted/30 p-2 flex items-center justify-between gap-3 flex-wrap">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-[11px] text-muted-foreground font-medium">{t("resultImagePosLabel")}</span>
-                          {RESULT_IMAGE_POSITIONS.map((pos) => {
-                            const active = (r.image_position ?? "top") === pos;
-                            return (
-                              <button
-                                key={pos}
-                                type="button"
-                                onClick={() => updateResultImagePosition(ri, pos)}
-                                className={`text-[11px] px-2 py-1 rounded-md transition-colors border ${active ? "border-primary bg-primary text-white" : "border-transparent hover:bg-muted text-muted-foreground"}`}
-                              >
-                                {t(`resultImagePos_${pos}`)}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => clearResultImage(ri)}
-                          className="text-xs text-destructive hover:underline px-2"
-                        >
-                          {t("resultImageRemove")}
-                        </button>
-                      </div>
-                    ) : (
+                    {/* Dropzone d'upload — visible UNIQUEMENT quand
+                        aucune image n'est encore définie. Une fois
+                        l'image en place, elle se déplace dans la
+                        page de résultat (rendue à sa position) et
+                        est elle-même draggable via HTML5 D&D. */}
+                    {!r.image_url && (
                       <button
                         type="button"
                         onClick={() => openResultImagePicker(ri)}
@@ -2353,21 +2396,43 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         </div>
                       </div>
                     )}
-                    {/* Helper inline : rend l'image full-size si la
-                        slot demandée match la position choisie. */}
+                    {/* Helpers inline — rendent (1) l'image draggable
+                        au slot ACTUEL, et (2) une drop-zone aux 4 AUTRES
+                        slots quand un drag est en cours sur ce résultat.
+                        L'image garde son ratio d'origine (w-full h-auto)
+                        et n'est jamais redimensionnée — assure juste
+                        un rendu responsive mobile/tablette via w-full. */}
                     {r.image_url && (r.image_position ?? "top") === "top" && (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={r.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                      <ResultDraggableImage url={r.image_url} ri={ri}
+                        onDragStart={() => setDraggingResultImageRi(ri)}
+                        onDragEnd={() => setDraggingResultImageRi(null)}
+                        onRemove={() => clearResultImage(ri)} />
+                    )}
+                    {draggingResultImageRi === ri && (r.image_position ?? "top") !== "top" && (
+                      <ResultPositionDropZone label={t("resultImagePos_top")}
+                        onDrop={() => { updateResultImagePosition(ri, "top"); setDraggingResultImageRi(null); }} />
                     )}
                     <RichTextEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} onAIRewrite={aiRewriteResultTitle} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} singleLine className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
                     {r.image_url && r.image_position === "after_title" && (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={r.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                      <ResultDraggableImage url={r.image_url} ri={ri}
+                        onDragStart={() => setDraggingResultImageRi(ri)}
+                        onDragEnd={() => setDraggingResultImageRi(null)}
+                        onRemove={() => clearResultImage(ri)} />
+                    )}
+                    {draggingResultImageRi === ri && r.image_position !== "after_title" && (
+                      <ResultPositionDropZone label={t("resultImagePos_after_title")}
+                        onDrop={() => { updateResultImagePosition(ri, "after_title"); setDraggingResultImageRi(null); }} />
                     )}
                     <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultDesc} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-lg leading-relaxed" placeholder={t("previewResultDescPh")} />
                     {r.image_url && r.image_position === "after_description" && (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={r.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                      <ResultDraggableImage url={r.image_url} ri={ri}
+                        onDragStart={() => setDraggingResultImageRi(ri)}
+                        onDragEnd={() => setDraggingResultImageRi(null)}
+                        onRemove={() => clearResultImage(ri)} />
+                    )}
+                    {draggingResultImageRi === ri && r.image_position !== "after_description" && (
+                      <ResultPositionDropZone label={t("resultImagePos_after_description")}
+                        onDrop={() => { updateResultImagePosition(ri, "after_description"); setDraggingResultImageRi(null); }} />
                     )}
                     <div className="p-5 rounded-xl bg-muted/50 border">
                       <div className="mb-2">
@@ -2382,8 +2447,14 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultInsight} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder={t("previewResultInsightPh")} />
                     </div>
                     {r.image_url && r.image_position === "after_insight" && (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={r.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                      <ResultDraggableImage url={r.image_url} ri={ri}
+                        onDragStart={() => setDraggingResultImageRi(ri)}
+                        onDragEnd={() => setDraggingResultImageRi(null)}
+                        onRemove={() => clearResultImage(ri)} />
+                    )}
+                    {draggingResultImageRi === ri && r.image_position !== "after_insight" && (
+                      <ResultPositionDropZone label={t("resultImagePos_after_insight")}
+                        onDrop={() => { updateResultImagePosition(ri, "after_insight"); setDraggingResultImageRi(null); }} />
                     )}
                     <div className="p-5 rounded-xl border" style={{ backgroundColor: `${pc}08`, borderColor: `${pc}30` }}>
                       <div className="mb-2">
@@ -2399,8 +2470,14 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultProjection} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder={t("previewResultProjectionPh")} />
                     </div>
                     {r.image_url && r.image_position === "bottom" && (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={r.image_url} alt="" className="w-full rounded-xl object-cover max-h-96" />
+                      <ResultDraggableImage url={r.image_url} ri={ri}
+                        onDragStart={() => setDraggingResultImageRi(ri)}
+                        onDragEnd={() => setDraggingResultImageRi(null)}
+                        onRemove={() => clearResultImage(ri)} />
+                    )}
+                    {draggingResultImageRi === ri && r.image_position !== "bottom" && (
+                      <ResultPositionDropZone label={t("resultImagePos_bottom")}
+                        onDrop={() => { updateResultImagePosition(ri, "bottom"); setDraggingResultImageRi(null); }} />
                     )}
                     <div className="space-y-2">
                       <button className="w-full px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>

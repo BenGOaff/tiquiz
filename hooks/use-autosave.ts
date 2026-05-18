@@ -75,9 +75,20 @@ export function useAutosave<T>({
         if (res.ok) {
           lastSerializedRef.current = serialized;
           setLastSavedAt(Date.now());
+        } else {
+          let bodyText = "";
+          try { bodyText = await res.text(); } catch { /* ignore */ }
+          console.error("[autosave] non-OK response", {
+            status: res.status,
+            statusText: res.statusText,
+            body: bodyText.slice(0, 500),
+            stateSize: serialized.length,
+          });
         }
-      } catch {
-        // Network blip — next state change reattempts.
+      } catch (err) {
+        if (err instanceof Error && err.name !== "AbortError") {
+          console.error("[autosave] fetch failed", err);
+        }
       } finally {
         if (inFlightRef.current === ctrl) inFlightRef.current = null;
         setSavingDraft(false);
