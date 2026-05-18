@@ -859,7 +859,8 @@
     "trackingDefaultsGa4Help": "العثور على المعرّف في Google Analytics",
     "trackingDefaultsAdsIdLabel": "Google Ads — معرّف التحويل",
     "trackingDefaultsAdsLabelLabel": "Google Ads — تسمية التحويل",
-    "trackingDefaultsAdsHelp": "العثور على معرّفات Google Ads"
+    "trackingDefaultsAdsHelp": "العثور على معرّفات Google Ads",
+    "tabTracking": "التتبع"
   },
   "languageSwitcher": {
     "label": "اللغة"

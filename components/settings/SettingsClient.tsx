@@ -16,7 +16,7 @@ import {
   Settings, Palette, Key, Trash2, Loader2, Save,
   CreditCard, Upload, Check, Crown, Zap, Star, ArrowRight,
   Tag as TagIcon, Workflow, AlertTriangle, ExternalLink, Sparkles,
-  Globe,
+  Globe, BarChart3,
 } from "lucide-react";
 import { CustomDomainsTab } from "@/components/settings/CustomDomainsTab";
 import { isPaidPlan } from "@/lib/planLimits";
@@ -315,6 +315,7 @@ export default function SettingsClient() {
           <TabsTrigger value="branding" className="gap-1.5 px-4 py-2"><Palette className="h-4 w-4" />{t("tabBranding")}</TabsTrigger>
           <TabsTrigger value="domain" className="gap-1.5 px-4 py-2"><Globe className="h-4 w-4" />{t("tabDomain")}</TabsTrigger>
           <TabsTrigger value="systemeio" className="gap-1.5 px-4 py-2"><Key className="h-4 w-4" />{t("tabSystemeio")}</TabsTrigger>
+          <TabsTrigger value="tracking" className="gap-1.5 px-4 py-2"><BarChart3 className="h-4 w-4" />{t("tabTracking")}</TabsTrigger>
           <TabsTrigger value="account" className="gap-1.5 px-4 py-2"><CreditCard className="h-4 w-4" />{t("tabAccount")}</TabsTrigger>
         </TabsList>
 
@@ -709,11 +710,15 @@ export default function SettingsClient() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
 
-          {/* Tracking & Pubs — Phase B (Adeline, 19 mai 2026).
-              Défauts pixels Meta + Google appliqués automatiquement
-              aux nouveaux quizzes du créateur. Modifiables par quiz
-              dans l'éditeur. */}
+        {/* Tracking & Pubs — Phase B (Adeline + Gwenn, 19 mai 2026).
+            Onglet dédié entre Systeme.io et Compte & Tarifs pour la
+            visibilité (avant c'était noyé en bas du tab Branding).
+            Défauts pixels Meta + Google appliqués automatiquement aux
+            nouveaux quizzes du créateur. Modifiables par quiz dans
+            l'éditeur. */}
+        <TabsContent value="tracking" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>{t("trackingDefaultsTitle")}</CardTitle>
