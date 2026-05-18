@@ -72,7 +72,13 @@
     "rteAlignRight": "Aligner à droite",
     "rteLinkPrompt": "URL du lien (https://… ou /chemin)",
     "rteLinkInvalid": "Lien invalide.",
-    "rteInsertImage": "Insérer une image"
+    "rteInsertImage": "Insérer une image",
+    "rteLinkDialogTitle": "Insérer un lien",
+    "rteLinkDialogHint": "Colle l'URL vers laquelle pointer le texte sélectionné.",
+    "rteImageDialogTitle": "Insérer une image",
+    "rteImageDialogHint": "Colle l'URL de l'image à intégrer.",
+    "rteDialogConfirm": "Insérer",
+    "rteDialogCancel": "Annuler"
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -1084,7 +1090,7 @@
     "shareTabOgImageDimsHint": "Format recommandé : 1200 × 630 px (ratio 1.91:1). Max 10 Mo.",
     "ogImageUploaded": "Vignette enregistrée",
     "showConsentCheckboxLabel": "Afficher la case à cocher de consentement",
-    "showConsentCheckboxHint": "Désactive si tu gères déjà le consentement RGPD ailleurs (ton CRM, une autre page).",
+    "showConsentCheckboxHint": "",
     "fieldPhoneRequired": "Téléphone obligatoire",
     "previewAddOptionImage": "Ajouter une image",
     "previewRemoveImage": "Retirer l'image",
