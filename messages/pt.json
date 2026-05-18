@@ -871,7 +871,10 @@
     "menu": {
       "settings": "Definições",
       "systemeio": "Chave Systeme.io",
-      "account": "A minha conta"
+      "account": "A minha conta",
+      "branding": "Branding",
+      "domain": "Domínio",
+      "tracking": "Tracking"
     }
   },
   "tutorial": {

@@ -871,7 +871,10 @@
     "menu": {
       "settings": "الإعدادات",
       "systemeio": "مفتاح Systeme.io",
-      "account": "حسابي"
+      "account": "حسابي",
+      "branding": "العلامة التجارية",
+      "domain": "النطاق",
+      "tracking": "التتبع"
     }
   },
   "tutorial": {
