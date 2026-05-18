@@ -833,7 +833,16 @@
     "toastDomainVerified": "{hostname} is live ✨",
     "toastDomainStillPending": "Not detected yet. I'll keep checking.",
     "toastDomainDeleted": "Domain removed.",
-    "cancelBtn": "Cancel"
+    "cancelBtn": "Cancel",
+    "trackingDefaultsTitle": "Tracking & Ads — defaults",
+    "trackingDefaultsDesc": "These Meta Pixel and Google IDs are automatically applied to your new quizzes. You can always override them in the quiz editor.",
+    "trackingDefaultsMetaLabel": "Meta (Facebook) Pixel ID",
+    "trackingDefaultsMetaHelp": "Find my Pixel ID in Meta Events Manager",
+    "trackingDefaultsGa4Label": "Google Analytics 4 — Measurement ID",
+    "trackingDefaultsGa4Help": "Find my ID in Google Analytics",
+    "trackingDefaultsAdsIdLabel": "Google Ads — Conversion ID",
+    "trackingDefaultsAdsLabelLabel": "Google Ads — Conversion Label",
+    "trackingDefaultsAdsHelp": "Find my Google Ads IDs"
   },
   "languageSwitcher": {
     "label": "Language"
@@ -1116,7 +1125,18 @@
     "tieWarningFallback": "In case of a tie, the visitor will always see the first result in order. Adjust points on an option to break the tie.",
     "tieWarningTruncated": "(large quiz, partial analysis — there may be other ties not listed).",
     "optionShowOtherResults": "Show other profiles to the visitor",
-    "optionShowOtherResultsHint": "Adds an accordion below the result with all the other possible profiles, in a neutral version (no first name or gender variants). Lets curious visitors discover what they missed."
+    "optionShowOtherResultsHint": "Adds an accordion below the result with all the other possible profiles, in a neutral version (no first name or gender variants). Lets curious visitors discover what they missed.",
+    "trackingPixelsTitle": "Tracking & Ads",
+    "trackingPixelsHint": "Add your Meta Pixel and Google tags to track your ad campaigns. Pixels only load after visitor consent.",
+    "trackingApplyDefaults": "↺ Apply my defaults (from Settings)",
+    "trackingMetaLabel": "Meta (Facebook) Pixel ID",
+    "trackingMetaHelp": "Where to find my Pixel ID? Events Manager →",
+    "trackingGa4Label": "Google Analytics 4 — Measurement ID",
+    "trackingGa4Help": "Where to find my GA4 ID? Google Analytics Admin →",
+    "trackingAdsIdLabel": "Google Ads — Conversion ID",
+    "trackingAdsLabelLabel": "Google Ads — Conversion Label (lead captured)",
+    "trackingAdsHelp": "Where to find my Google Ads IDs? Conversions →",
+    "trackingInvalidFormat": "Invalid format"
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",

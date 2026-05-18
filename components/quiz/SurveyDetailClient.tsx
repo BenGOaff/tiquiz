@@ -46,6 +46,7 @@ import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
 import { stripHtml } from "@/lib/richText";
+import { isPixelFieldValid } from "@/lib/clientPixels";
 
 /** Same demo name we use across the quiz editor — keeps the experience
  *  consistent between quiz mode and survey mode (Marie's feedback #6, #7). */
@@ -140,7 +141,12 @@ type QuizData = {
   completions_count: number; shares_count: number;
   questions: QuizQuestion[]; results: QuizResult[];
 };
-type ProfileBrand = { brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null; plan: string | null; privacy_url: string | null; saved_palettes?: unknown };
+type ProfileBrand = {
+  brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null;
+  plan: string | null; privacy_url: string | null; saved_palettes?: unknown;
+  default_meta_pixel_id?: string | null; default_ga4_measurement_id?: string | null;
+  default_google_ads_conversion_id?: string | null; default_google_ads_conversion_label?: string | null;
+};
 interface SurveyDetailClientProps { quizId: string; }
 
 // Inline edit: click to edit text directly on the preview.
@@ -337,6 +343,17 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // Defaults to true so older quizzes (no column value yet) keep showing the
   // GDPR-style checkbox. Only flips when the creator explicitly opts out.
   const [showConsentCheckbox, setShowConsentCheckbox] = useState(true);
+  // Phase B (Adeline, 19 mai 2026) : Meta Pixel + Google tags per-survey.
+  const [metaPixelId, setMetaPixelId] = useState("");
+  const [ga4MeasurementId, setGa4MeasurementId] = useState("");
+  const [googleAdsConversionId, setGoogleAdsConversionId] = useState("");
+  const [googleAdsConversionLabel, setGoogleAdsConversionLabel] = useState("");
+  const [pixelDefaults, setPixelDefaults] = useState<{
+    meta_pixel_id: string | null;
+    ga4_measurement_id: string | null;
+    google_ads_conversion_id: string | null;
+    google_ads_conversion_label: string | null;
+  } | null>(null);
   const [askFirstName, setAskFirstName] = useState(false);
   const [askGender, setAskGender] = useState(false);
   // Surveys force virality_enabled=false on creation so the bonus / share-
@@ -440,6 +457,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     phone_required: phoneRequired,
     country_required: countryRequired,
     show_consent_checkbox: showConsentCheckbox,
+    meta_pixel_id: metaPixelId,
+    ga4_measurement_id: ga4MeasurementId,
+    google_ads_conversion_id: googleAdsConversionId,
+    google_ads_conversion_label: googleAdsConversionLabel,
     ask_first_name: askFirstName,
     ask_gender: askGender,
     share_message: shareMessage,
@@ -461,7 +482,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     captureHeading, captureSubtitle, resultInsightHeading, resultProjectionHeading,
     captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
-    showConsentCheckbox, askFirstName, askGender,
+    showConsentCheckbox, metaPixelId, ga4MeasurementId, googleAdsConversionId,
+    googleAdsConversionLabel, askFirstName, askGender,
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor,
     slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
@@ -495,6 +517,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.country_required === "boolean") setCountryRequired(s.country_required);
     if (typeof s.capture_country === "boolean") setCaptureCountry(s.capture_country);
     if (typeof s.show_consent_checkbox === "boolean") setShowConsentCheckbox(s.show_consent_checkbox);
+    if (typeof s.meta_pixel_id === "string") setMetaPixelId(s.meta_pixel_id);
+    if (typeof s.ga4_measurement_id === "string") setGa4MeasurementId(s.ga4_measurement_id);
+    if (typeof s.google_ads_conversion_id === "string") setGoogleAdsConversionId(s.google_ads_conversion_id);
+    if (typeof s.google_ads_conversion_label === "string") setGoogleAdsConversionLabel(s.google_ads_conversion_label);
     if (typeof s.ask_first_name === "boolean") setAskFirstName(s.ask_first_name);
     if (typeof s.ask_gender === "boolean") setAskGender(s.ask_gender);
     if (typeof s.share_message === "string") setShareMessage(s.share_message);
@@ -553,6 +579,14 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       const q: QuizData = { ...quizRes.quiz, questions: quizRes.quiz.questions ?? [], results: quizRes.quiz.results ?? [] };
       const prof = profileRes?.ok ? (profileRes.profile as ProfileBrand) : null;
       setProfile(prof);
+      if (prof) {
+        setPixelDefaults({
+          meta_pixel_id: prof.default_meta_pixel_id ?? null,
+          ga4_measurement_id: prof.default_ga4_measurement_id ?? null,
+          google_ads_conversion_id: prof.default_google_ads_conversion_id ?? null,
+          google_ads_conversion_label: prof.default_google_ads_conversion_label ?? null,
+        });
+      }
       setQuiz(q); setLeads(quizRes.leads ?? []);
       setTitle(q.title); setIntroduction(q.introduction ?? "");
       setCtaText(q.cta_text ?? ""); setCtaUrl(q.cta_url ?? "");
@@ -562,6 +596,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setResultInsightHeading(q.result_insight_heading ?? ""); setResultProjectionHeading(q.result_projection_heading ?? "");
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
       setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
+      // Phase B pixels (Adeline, 19 mai 2026)
+      setMetaPixelId((q as { meta_pixel_id?: string | null }).meta_pixel_id ?? "");
+      setGa4MeasurementId((q as { ga4_measurement_id?: string | null }).ga4_measurement_id ?? "");
+      setGoogleAdsConversionId((q as { google_ads_conversion_id?: string | null }).google_ads_conversion_id ?? "");
+      setGoogleAdsConversionLabel((q as { google_ads_conversion_label?: string | null }).google_ads_conversion_label ?? "");
       setCapturePhone(q.capture_phone ?? false); setCaptureCountry(q.capture_country ?? false);
       setFirstNameRequired(q.first_name_required ?? false); setLastNameRequired(q.last_name_required ?? false);
       setPhoneRequired(q.phone_required ?? false); setCountryRequired(q.country_required ?? false);
@@ -880,6 +919,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           start_button_text: startButtonText || null,
           privacy_url: privacyUrl || null, consent_text: consentText,
           show_consent_checkbox: showConsentCheckbox,
+          meta_pixel_id: metaPixelId.trim() || null,
+          ga4_measurement_id: ga4MeasurementId.trim() || null,
+          google_ads_conversion_id: googleAdsConversionId.trim() || null,
+          google_ads_conversion_label: googleAdsConversionLabel.trim() || null,
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
           result_insight_heading: resultInsightHeading.trim() || null,
           result_projection_heading: resultProjectionHeading.trim() || null,
@@ -1277,6 +1320,70 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     checked={showConsentCheckbox}
                     onChange={setShowConsentCheckbox}
                   />
+                </section>
+
+                <Separator />
+
+                {/* Tracking & Pubs — Phase B (Adeline, 19 mai 2026) */}
+                <section className="space-y-2.5">
+                  <div>
+                    <h3 className="text-sm font-semibold">{t("trackingPixelsTitle")}</h3>
+                    <p className="text-[11px] text-muted-foreground leading-snug">{t("trackingPixelsHint")}</p>
+                  </div>
+                  {pixelDefaults &&
+                    !metaPixelId && !ga4MeasurementId && !googleAdsConversionId && !googleAdsConversionLabel &&
+                    (pixelDefaults.meta_pixel_id || pixelDefaults.ga4_measurement_id ||
+                     pixelDefaults.google_ads_conversion_id || pixelDefaults.google_ads_conversion_label) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMetaPixelId(pixelDefaults.meta_pixel_id ?? "");
+                        setGa4MeasurementId(pixelDefaults.ga4_measurement_id ?? "");
+                        setGoogleAdsConversionId(pixelDefaults.google_ads_conversion_id ?? "");
+                        setGoogleAdsConversionLabel(pixelDefaults.google_ads_conversion_label ?? "");
+                      }}
+                      className="text-[11px] text-primary hover:underline self-start"
+                    >
+                      {t("trackingApplyDefaults")}
+                    </button>
+                  )}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-medium block">{t("trackingMetaLabel")}</label>
+                    <Input value={metaPixelId} onChange={(e) => setMetaPixelId(e.target.value)} placeholder="1234567890123456" className="text-xs h-8" />
+                    {metaPixelId && !isPixelFieldValid("meta_pixel_id", metaPixelId) && (
+                      <p className="text-[10px] text-destructive">{t("trackingInvalidFormat")}</p>
+                    )}
+                    <p className="text-[10px] text-muted-foreground">
+                      <a href="https://business.facebook.com/events_manager" target="_blank" rel="noopener noreferrer" className="hover:underline">{t("trackingMetaHelp")}</a>
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-medium block">{t("trackingGa4Label")}</label>
+                    <Input value={ga4MeasurementId} onChange={(e) => setGa4MeasurementId(e.target.value)} placeholder="G-XXXXXXXXXX" className="text-xs h-8" />
+                    {ga4MeasurementId && !isPixelFieldValid("ga4_measurement_id", ga4MeasurementId) && (
+                      <p className="text-[10px] text-destructive">{t("trackingInvalidFormat")}</p>
+                    )}
+                    <p className="text-[10px] text-muted-foreground">
+                      <a href="https://analytics.google.com/" target="_blank" rel="noopener noreferrer" className="hover:underline">{t("trackingGa4Help")}</a>
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-medium block">{t("trackingAdsIdLabel")}</label>
+                    <Input value={googleAdsConversionId} onChange={(e) => setGoogleAdsConversionId(e.target.value)} placeholder="AW-1234567890" className="text-xs h-8" />
+                    {googleAdsConversionId && !isPixelFieldValid("google_ads_conversion_id", googleAdsConversionId) && (
+                      <p className="text-[10px] text-destructive">{t("trackingInvalidFormat")}</p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-medium block">{t("trackingAdsLabelLabel")}</label>
+                    <Input value={googleAdsConversionLabel} onChange={(e) => setGoogleAdsConversionLabel(e.target.value)} placeholder="abcDEF123" className="text-xs h-8" />
+                    {googleAdsConversionLabel && !isPixelFieldValid("google_ads_conversion_label", googleAdsConversionLabel) && (
+                      <p className="text-[10px] text-destructive">{t("trackingInvalidFormat")}</p>
+                    )}
+                    <p className="text-[10px] text-muted-foreground">
+                      <a href="https://ads.google.com/" target="_blank" rel="noopener noreferrer" className="hover:underline">{t("trackingAdsHelp")}</a>
+                    </p>
+                  </div>
                 </section>
 
                 <Separator />
