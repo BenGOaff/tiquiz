@@ -1493,6 +1493,47 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const publicSegment = slug.trim() ? sanitizeSlug(slug) ?? quizId : quizId;
   const previewSuffix = isEmbed && embedSessionToken ? `?embed=${encodeURIComponent(embedSessionToken)}` : "";
   const publicUrl = buildPublicUrl("q", publicSegment, previewSuffix);
+
+  // Auto-save du slug (Gwenn, 19 mai 2026). Le slug n'attend plus le
+  // global "Save" pour être persisté — debounce 1s après dernier
+  // input. Sur 409 SLUG_TAKEN, toast d'erreur et on ne touche pas
+  // le canonical (l'auteur peut continuer à taper). Sur succès, on
+  // met à jour `quiz.slug` local pour que publicUrl + copyLink
+  // utilisent immédiatement la nouvelle valeur.
+  useEffect(() => {
+    if (!quiz || isEmbed) return;
+    const trimmed = slug.trim();
+    const canonical = quiz.slug ?? "";
+    if (trimmed === canonical) return;
+    const timer = setTimeout(async () => {
+      const cleanedSlug = trimmed ? sanitizeSlug(trimmed) : null;
+      if (trimmed && !cleanedSlug) {
+        toast.error(t("errSlugInvalid"));
+        return;
+      }
+      try {
+        const res = await fetch(withEmbedToken(`/api/quiz/${quizId}`, embedSessionToken), {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug: cleanedSlug }),
+        });
+        const json = await res.json().catch(() => null);
+        if (res.status === 409 && json?.error === "SLUG_TAKEN") {
+          toast.error(t("errSlugTaken"));
+          return;
+        }
+        if (!json?.ok) {
+          console.error("[slug autosave] save failed", json?.error);
+          return;
+        }
+        // Update local quiz so future renders use the new slug.
+        setQuiz((prev) => prev ? { ...prev, slug: cleanedSlug } : prev);
+      } catch (err) {
+        console.error("[slug autosave] network error", err);
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [slug, quiz, isEmbed, quizId, embedSessionToken, t]);
   // Owner-side preview URL: same as publicUrl but with ?preview_name=Alex appended
   // so the public client pre-fills the visitor's first name and skips lead
   // capture. We keep this URL separate from `publicUrl` (the share link) so the
@@ -2862,9 +2903,12 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               options={shareDomainOptions}
               onChange={setShareDomain}
             />
-            {/* Single-line link editor: prefix + slug input + save +
-                copy. Inspired by Systeme.io's URL bar — one row, no
-                redundant readonly mirror underneath. */}
+            {/* Single-line link editor : prefix + slug input + copy.
+                Gwenn (19 mai 2026) : le bouton "Enregistrer" séparé a
+                été retiré — le slug s'autosave maintenant 1s après le
+                dernier input (cf. useEffect plus haut). Le bouton
+                Copier reste, il copie l'URL complète (custom domain
+                sans préfixe `/q/`, main host avec). */}
             <div className="flex items-center gap-2">
               <div className="flex items-center border rounded-lg bg-muted/30 pl-3 pr-1 py-1 flex-1 min-w-0">
                 <span className="text-sm text-muted-foreground font-mono whitespace-nowrap shrink-0">
@@ -2879,9 +2923,6 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                   className="flex-1 min-w-0 bg-transparent outline-none text-sm font-mono px-1 py-1"
                 />
               </div>
-              <Button size="sm" onClick={handleSave} disabled={saving}>
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t("save")}
-              </Button>
               <Button size="sm" variant="outline" onClick={handleCopyLink} title={t("copy")} aria-label={t("copy")}>
                 {copied ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
               </Button>

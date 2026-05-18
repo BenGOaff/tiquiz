@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { TopPerformerBadge, TrendingBadge } from "@/components/ui/highlight-badge";
 import { EmptyCanvasArt, EmptySearchArt } from "@/components/ui/illustrations";
 import { stripHtml } from "@/lib/richText";
+import { useShareDomain } from "@/hooks/useShareDomain";
 import { interpolateText } from "@/lib/quizPersonalization";
 import {
   Eye,
@@ -93,6 +94,10 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
   const [view, setView] = useState<View>("folders");
 
   const [embedHandle, setEmbedHandle] = useState<string | null>(null);
+  // Hook qui résout le custom-domain du créateur — buildPublicUrl
+  // renvoie soit `domain.com/<slug>` (custom) soit `mainHost/q/<slug>`
+  // (catch-all racine inactif sur main pour éviter shadow /dashboard).
+  const { buildPublicUrl } = useShareDomain();
 
   useEffect(() => {
     (async () => {
@@ -123,7 +128,10 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
           const qData = await qRes.json();
           enriched.push({
             id: String(row.id),
-            slug: null,
+            // Gwenn (19 mai 2026) : avant ce fix, `slug: null` était
+            // codé en dur ici → la copyLink retombait sur l'UUID
+            // même quand l'auteur avait défini un slug propre.
+            slug: typeof row.slug === "string" && row.slug.trim() ? row.slug : null,
             title: String(row.title ?? ""),
             status: String(row.status ?? "draft"),
             mode: row.mode === "survey" ? "survey" : "quiz",
@@ -184,9 +192,17 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
   }
 
   function copyLink(p: Project) {
-    const segment = p.mode === "popquiz" ? "p" : "q";
-    const handle = p.mode === "popquiz" ? (p.slug ?? p.id) : p.id;
-    const url = `${window.location.origin}/${segment}/${handle}`;
+    // Gwenn (19 mai 2026) : avant ce fix, on copiait toujours
+    // `domain.com/q/<uuid>` pour les quizzes — ignorant le slug
+    // custom même quand l'auteur en avait défini un. Maintenant on
+    // utilise `p.slug ?? p.id` et `buildPublicUrl` qui :
+    //   - sur custom domain (test.ethilife.fr) → `domain.com/<slug>`
+    //   - sur main host (quiz.tipote.com) → `domain.com/q/<slug>` ou
+    //     `/p/<slug>` selon le mode (catch-all root non actif sur
+    //     main host pour éviter de shadow /dashboard, /settings, etc.)
+    const handle = p.slug || p.id;
+    const kind: "q" | "p" = p.mode === "popquiz" ? "p" : "q";
+    const url = buildPublicUrl(kind, handle);
     navigator.clipboard.writeText(url);
     toast.success(t("linkCopied"));
   }
