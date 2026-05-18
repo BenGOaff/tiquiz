@@ -1107,7 +1107,9 @@
     "previewRemoveImage": "إزالة الصورة",
     "fieldFirstNameRequiredToggle": "جعل الاسم الأول مطلوبًا",
     "fieldLastNameRequiredToggle": "جعل اسم العائلة مطلوبًا",
-    "fieldCountryRequiredToggle": "جعل البلد مطلوبًا"
+    "fieldCountryRequiredToggle": "جعل البلد مطلوبًا",
+    "consentTextLabel": "نص خانة الاختيار",
+    "consentTextPlaceholder": "أوافق على سياسة الخصوصية…"
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",

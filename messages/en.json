@@ -1090,7 +1090,9 @@
     "previewRemoveImage": "Remove image",
     "fieldFirstNameRequiredToggle": "Make first name required",
     "fieldLastNameRequiredToggle": "Make last name required",
-    "fieldCountryRequiredToggle": "Make country required"
+    "fieldCountryRequiredToggle": "Make country required",
+    "consentTextLabel": "Consent checkbox text",
+    "consentTextPlaceholder": "I agree to the privacy policy…"
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",
