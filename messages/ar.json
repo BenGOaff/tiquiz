@@ -1048,7 +1048,7 @@
     "previewResultCtaPh": "نص CTA…",
     "previewResultCtaUrlPh": "رابط CTA (https://…)",
     "previewResultTagLabel": "Tag Systeme.io لهذه النتيجة",
-    "previewResultTagHint": "يُطبق على العميل الذي يحصل على « {title} ». استخدمه لتجزئة الأتمتة.",
+    "previewResultTagHint": "ستضاف هذه العلامة إلى الزائر الذي حصل على نتيجة « {title} ».",
     "previewPoweredByLink": "هذا الاختبار مقدم من Tiquiz",
     "shareTabCustomLink": "رابط مخصص",
     "shareTabCustomLinkHint": "اختر عنوان URL قصير ولا يُنسى. أحرف صغيرة وأرقام وشرطات فقط.",
