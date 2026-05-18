@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, ArrowLeft, Gift, CheckCircle2, Copy, Check } from "lucide-react";
+import { Loader2, ArrowLeft, Gift, CheckCircle2, Copy, Check, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import {
   resolveQuizBranding,
@@ -118,6 +118,10 @@ type PublicQuizData = {
   // résultat principal. Quand true, on rend une card "Répartition
   // complète" sur la page de résultat. Off par défaut.
   show_results_breakdown?: boolean | null;
+  // Adeline (19 mai 2026) : si true, accordéon "Découvre les autres
+  // profils" sous le résultat du visiteur. Rendu non personnalisé
+  // (name vide, gender inclusif). Off par défaut.
+  show_other_results?: boolean | null;
   ask_first_name?: boolean | null;
   ask_gender?: boolean | null;
   custom_footer_text?: string | null;
@@ -216,6 +220,9 @@ type QuizTranslations = {
   breakdownTitle: string;
   breakdownSubtitle: string;
   breakdownMainBadge: string;
+  // Opt-in "Découvre les autres profils" accordion (Adeline, 19 mai 2026)
+  otherProfilesTitle: string;
+  otherProfilesSubtitle: string;
 };
 
 const translations: Record<string, QuizTranslations> = {
@@ -282,6 +289,8 @@ const translations: Record<string, QuizTranslations> = {
     breakdownTitle: "Répartition complète de tes réponses",
     breakdownSubtitle: "La plupart des gens se reconnaissent dans plusieurs profils — voici ton profil dominant et tes traits secondaires.",
     breakdownMainBadge: "Ton résultat",
+    otherProfilesTitle: "Découvre les autres profils",
+    otherProfilesSubtitle: "Tu n'as pas obtenu ces profils, mais tu peux voir ce qu'ils racontent.",
   },
   fr_vous: {
     quizUnavailable: "Ce quiz n\u2019est pas disponible.",
@@ -346,6 +355,8 @@ const translations: Record<string, QuizTranslations> = {
     breakdownTitle: "Répartition complète de vos réponses",
     breakdownSubtitle: "La plupart des gens se reconnaissent dans plusieurs profils — voici votre profil dominant et vos traits secondaires.",
     breakdownMainBadge: "Votre résultat",
+    otherProfilesTitle: "Découvrez les autres profils",
+    otherProfilesSubtitle: "Vous n'avez pas obtenu ces profils, mais vous pouvez voir ce qu'ils racontent.",
   },
   en: {
     quizUnavailable: "This quiz is not available.",
@@ -410,6 +421,8 @@ const translations: Record<string, QuizTranslations> = {
     breakdownTitle: "Full breakdown of your answers",
     breakdownSubtitle: "Most people recognise themselves in several profiles — here's your main type and your secondary traits.",
     breakdownMainBadge: "Your result",
+    otherProfilesTitle: "Discover the other profiles",
+    otherProfilesSubtitle: "You didn't get these profiles, but you can see what they say.",
   },
   es: {
     quizUnavailable: "Este quiz no est\u00e1 disponible.",
@@ -474,6 +487,8 @@ const translations: Record<string, QuizTranslations> = {
     breakdownTitle: "Desglose completo de tus respuestas",
     breakdownSubtitle: "La mayoría de las personas se reconocen en varios perfiles — aquí tienes tu perfil principal y tus rasgos secundarios.",
     breakdownMainBadge: "Tu resultado",
+    otherProfilesTitle: "Descubre los otros perfiles",
+    otherProfilesSubtitle: "No has obtenido estos perfiles, pero puedes ver lo que dicen.",
   },
   de: {
     quizUnavailable: "Dieses Quiz ist nicht verf\u00fcgbar.",
@@ -538,6 +553,8 @@ const translations: Record<string, QuizTranslations> = {
     breakdownTitle: "Vollständige Aufschlüsselung deiner Antworten",
     breakdownSubtitle: "Die meisten erkennen sich in mehreren Profilen wieder — hier ist dein Hauptprofil und deine Nebenausprägungen.",
     breakdownMainBadge: "Dein Ergebnis",
+    otherProfilesTitle: "Entdecke die anderen Profile",
+    otherProfilesSubtitle: "Du hast diese Profile nicht erhalten, kannst aber sehen, was sie aussagen.",
   },
   pt: {
     quizUnavailable: "Este quiz n\u00e3o est\u00e1 dispon\u00edvel.",
@@ -602,6 +619,8 @@ const translations: Record<string, QuizTranslations> = {
     breakdownTitle: "Distribuição completa das tuas respostas",
     breakdownSubtitle: "A maioria das pessoas reconhece-se em vários perfis — aqui está o teu perfil principal e os teus traços secundários.",
     breakdownMainBadge: "O teu resultado",
+    otherProfilesTitle: "Descubre os outros perfis",
+    otherProfilesSubtitle: "Não obtiveste estes perfis, mas podes ver o que eles dizem.",
   },
   it: {
     quizUnavailable: "Questo quiz non \u00e8 disponibile.",
@@ -666,6 +685,8 @@ const translations: Record<string, QuizTranslations> = {
     breakdownTitle: "Distribuzione completa delle tue risposte",
     breakdownSubtitle: "La maggior parte delle persone si riconosce in più profili — ecco il tuo profilo principale e i tuoi tratti secondari.",
     breakdownMainBadge: "Il tuo risultato",
+    otherProfilesTitle: "Scopri gli altri profili",
+    otherProfilesSubtitle: "Non hai ottenuto questi profili, ma puoi vedere cosa raccontano.",
   },
   ar: {
     quizUnavailable: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d.",
@@ -730,6 +751,8 @@ const translations: Record<string, QuizTranslations> = {
     breakdownTitle: "التوزيع الكامل لإجاباتك",
     breakdownSubtitle: "يتعرّف معظم الأشخاص على أنفسهم في عدة ملفات — هذا هو ملفك الرئيسي وسماتك الثانوية.",
     breakdownMainBadge: "نتيجتك",
+    otherProfilesTitle: "اكتشف الملفات الشخصية الأخرى",
+    otherProfilesSubtitle: "لم تحصل على هذه الملفات، لكن يمكنك رؤية ما تقوله.",
   },
 };
 
@@ -871,6 +894,21 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     },
     [],
   );
+
+  // Interpolation neutre (sans prénom, genre inclusif) pour rendre les
+  // champs rich-text dans l'accordéon "Découvre les autres profils"
+  // (Adeline, 19 mai 2026). À la différence de `interp`, on ne pousse
+  // PAS le prénom du visiteur ni son genre — les autres profils ne
+  // sont pas pour lui, c'est juste de la curiosité.
+  const interpNeutral = useCallback(
+    (text: string | null | undefined) => makeInterpolator({ name: "", gender: "x" })(text),
+    [],
+  );
+
+  // Quel autre profil est expandé dans l'accordéon. Single index ;
+  // null = tous fermés. On laisse l'utilisateur en ouvrir un seul à
+  // la fois pour garder la page propre.
+  const [expandedOtherIdx, setExpandedOtherIdx] = useState<number | null>(null);
 
   // ─── Dynamic Google Font injection (WYSIWYG with editor preview) ───
   useEffect(() => {
@@ -2587,6 +2625,127 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                     );
                   })}
                 </ul>
+              </div>
+            );
+          })()}
+
+          {/* "Découvre les autres profils" (Adeline, 19 mai 2026) — accordéon
+              optionnel sous le breakdown. Chaque card révèle le contenu d'un
+              autre résultat en version NEUTRE (sans prénom, genre inclusif).
+              Ça donne au visiteur la possibilité de voir ce qu'il a manqué,
+              tout en gardant son propre résultat visible plus haut. Les
+              champs rich-text passent par `interpNeutral` (pas `interp`) pour
+              que rien ne soit faussement personnalisé. */}
+          {quiz.show_other_results && (() => {
+            const others = quiz.results
+              .map((r, i) => ({ r, i }))
+              .filter(({ r }) => r.id !== resultProfile?.id);
+            if (others.length === 0) return null;
+            return (
+              <div className="space-y-3">
+                <h3 className="text-base font-semibold">{t.otherProfilesTitle}</h3>
+                <p className="text-xs text-muted-foreground -mt-1 leading-snug">{t.otherProfilesSubtitle}</p>
+                <div className="space-y-2">
+                  {others.map(({ r, i }) => {
+                    const expanded = expandedOtherIdx === i;
+                    const shortLabel = labelForOtherResult(r.title) || t.resultFallback;
+                    const slot = (r.image_position ?? "top") as ResultImagePosition;
+                    return (
+                      <div key={r.id ?? i} className="rounded-xl border bg-card overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedOtherIdx(expanded ? null : i)}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
+                          aria-expanded={expanded}
+                        >
+                          {r.image_url && (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img src={r.image_url} alt="" className="w-12 h-12 object-cover rounded-lg shrink-0" />
+                          )}
+                          <span className="flex-1 font-medium text-sm">{shortLabel}</span>
+                          <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />
+                        </button>
+                        {expanded && (
+                          <div className="border-t bg-background p-4 space-y-4">
+                            {r.image_url && slot === "top" && (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={r.image_url} alt="" className="w-full h-auto rounded-lg" />
+                            )}
+                            {r.title && (
+                              <h4
+                                className="tiquiz-rich tiquiz-rich-inline text-xl font-bold leading-tight"
+                                style={{ color: "hsl(var(--primary))" }}
+                                dangerouslySetInnerHTML={{ __html: sanitizeRichText(interpNeutral(r.title)) }}
+                              />
+                            )}
+                            {r.image_url && slot === "after_title" && (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={r.image_url} alt="" className="w-full h-auto rounded-lg" />
+                            )}
+                            {r.description && (() => {
+                              const desc = interpNeutral(r.description);
+                              return isHtml(desc) ? (
+                                <div className="tiquiz-rich text-muted-foreground text-sm leading-relaxed"
+                                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(desc) }}
+                                />
+                              ) : (
+                                <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{desc}</p>
+                              );
+                            })()}
+                            {r.image_url && slot === "after_description" && (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={r.image_url} alt="" className="w-full h-auto rounded-lg" />
+                            )}
+                            {r.insight && (() => {
+                              const ins = interpNeutral(r.insight);
+                              return (
+                                <div className="p-3 rounded-lg bg-muted/40 border">
+                                  <p
+                                    className="tiquiz-rich tiquiz-rich-inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1"
+                                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.result_insight_heading?.trim() || "") || t.insight }}
+                                  />
+                                  {isHtml(ins) ? (
+                                    <div className="tiquiz-rich text-sm leading-relaxed"
+                                      dangerouslySetInnerHTML={{ __html: sanitizeRichText(ins) }}
+                                    />
+                                  ) : (
+                                    <p className="text-sm leading-relaxed whitespace-pre-line">{ins}</p>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                            {r.image_url && slot === "after_insight" && (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={r.image_url} alt="" className="w-full h-auto rounded-lg" />
+                            )}
+                            {r.projection && (() => {
+                              const proj = interpNeutral(r.projection);
+                              return (
+                                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                                  <p
+                                    className="tiquiz-rich tiquiz-rich-inline text-[10px] font-bold uppercase tracking-widest text-primary/70 mb-1"
+                                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.result_projection_heading?.trim() || "") || t.projection }}
+                                  />
+                                  {isHtml(proj) ? (
+                                    <div className="tiquiz-rich text-sm leading-relaxed"
+                                      dangerouslySetInnerHTML={{ __html: sanitizeRichText(proj) }}
+                                    />
+                                  ) : (
+                                    <p className="text-sm leading-relaxed whitespace-pre-line">{proj}</p>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                            {r.image_url && slot === "bottom" && (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={r.image_url} alt="" className="w-full h-auto rounded-lg" />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })()}
