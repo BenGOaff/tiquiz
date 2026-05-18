@@ -26,6 +26,7 @@ import { fetchPublishedPopquiz } from "@/lib/popquiz/repo";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
 import PopquizPlayClient from "@/app/p/[popquizId]/PopquizPlayClient";
 import { isReservedPublicSlug } from "@/lib/publicSlug";
+import { stripHtml } from "@/lib/richText";
 
 export const dynamic = "force-dynamic";
 
@@ -90,12 +91,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!r) return {};
 
   if (r.kind === "quiz") {
+    // Adeline (19 mai 2026) : sur custom domain le preview iMessage /
+    // WhatsApp affichait le code HTML brut (`<span style="color:rgb(82,
+    // 152,152);">…`) au lieu du texte propre, parce que cette route
+    // catch-all n'appliquait pas stripHtml — contrairement à /q/[id]
+    // qui le faisait déjà depuis le 16 mai. On strip les deux champs
+    // ici aussi (title + og_description) pour parité.
+    const plainTitle = stripHtml(r.meta.title);
+    const ogDescRaw = stripHtml(r.meta.og_description);
+    const introPlain = stripHtml(r.meta.introduction);
+    const description = (ogDescRaw || introPlain.slice(0, 160)).trim() || undefined;
     return {
-      title: r.meta.title ?? "Quiz",
-      description: r.meta.og_description ?? undefined,
+      title: plainTitle || "Quiz",
+      description,
       openGraph: {
-        title: r.meta.title ?? "Quiz",
-        description: r.meta.og_description ?? undefined,
+        title: plainTitle || "Quiz",
+        description,
         ...(r.meta.og_image_url
           ? { images: [{ url: r.meta.og_image_url }] }
           : {}),
