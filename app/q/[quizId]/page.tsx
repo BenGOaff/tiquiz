@@ -119,6 +119,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         ...(canonical ? { url: canonical } : {}),
         ...(data.og_image_url ? { images: [{ url: data.og_image_url }] } : {}),
       },
+      // Override des twitter:* aussi sinon le layout global laisse
+      // « Tiquiz » dans twitter:title et la description marketing dans
+      // twitter:description (Telegram, Slack, Discord lisent souvent
+      // twitter:* en priorité).
+      twitter: {
+        card: "summary_large_image",
+        title: plainTitle,
+        ...(description ? { description } : {}),
+        ...(data.og_image_url ? { images: [data.og_image_url] } : {}),
+      },
     };
   } catch {
     return { title: "Quiz" };

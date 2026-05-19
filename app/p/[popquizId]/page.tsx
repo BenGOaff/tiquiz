@@ -99,6 +99,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         ? { images: [{ url: popquiz.video.thumbnailUrl }] }
         : {}),
     },
+    twitter: {
+      card: "summary_large_image",
+      title: popquiz.title,
+      ...(popquiz.description ? { description: popquiz.description } : {}),
+      ...(popquiz.video.thumbnailUrl ? { images: [popquiz.video.thumbnailUrl] } : {}),
+    },
   };
 }
 
