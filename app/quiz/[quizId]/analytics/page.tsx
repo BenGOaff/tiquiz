@@ -1,12 +1,18 @@
 // /quiz/[quizId]/analytics
 //
-// SSR loads the initial analytics snapshot (default period = 30j) so
-// the page renders charts on first paint instead of flashing a
-// spinner. The QuizAnalyticsClient takes over for period switches
-// and refetches via the same JSON endpoint.
+// Page server-side : auth + ownership uniquement. La donnée est
+// chargée côté client par QuizAnalyticsClient.
+//
+// Historique : la version précédente faisait un fetch SSR self-hostname
+// vers /api/quiz/.../analytics pour pré-renderer les charts. Le
+// self-fetch est fragile (Caddy → Next loop, headers / cookies mal
+// propagés, host inconnu sur certains setups) — quand il échouait
+// silencieusement le `notFound()` faisait 404 sur des quiz parfaitement
+// valides (Gwenn 19 mai 2026). On accepte un flash de spinner au mount
+// en échange d'une fiabilité totale ; les données arrivent < 500 ms en
+// pratique.
 
 import { notFound, redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { QuizAnalyticsClient } from "@/components/quiz/QuizAnalyticsClient";
 
@@ -23,8 +29,8 @@ export default async function QuizAnalyticsPage({ params }: RouteContext) {
   if (!session?.user) redirect("/");
 
   // Confirm ownership server-side. If the quiz isn't theirs, 404 — the
-  // analytics endpoint would return 404 anyway, but this lets the
-  // server skip the JSON dance.
+  // analytics endpoint would also refuse but this saves a roundtrip
+  // and keeps unowned quizzes off the URL space.
   const { data: quiz } = await supabase
     .from("quizzes")
     .select("id")
@@ -33,23 +39,9 @@ export default async function QuizAnalyticsPage({ params }: RouteContext) {
     .maybeSingle();
   if (!quiz) notFound();
 
-  // Reuse the public analytics endpoint so SSR and client refetches
-  // are guaranteed to return the exact same shape. No risk of drift
-  // between two duplicated query implementations.
-  const h = await headers();
-  const proto = h.get("x-forwarded-proto") ?? "https";
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost";
-  const cookie = h.get("cookie") ?? "";
-  const res = await fetch(
-    `${proto}://${host}/api/quiz/${encodeURIComponent(quizId)}/analytics?period=30`,
-    { headers: { cookie }, cache: "no-store" },
-  );
-  const initial = await res.json().catch(() => null);
-  if (!initial?.ok) notFound();
-
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-6xl mx-auto">
-      <QuizAnalyticsClient quizId={quizId} initial={initial} />
+      <QuizAnalyticsClient quizId={quizId} />
     </div>
   );
 }
