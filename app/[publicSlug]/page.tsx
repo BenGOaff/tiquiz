@@ -132,6 +132,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           ? { images: [{ url: r.meta.og_image_url }] }
           : {}),
       },
+      twitter: {
+        card: "summary_large_image",
+        title: plainTitle || "Quiz",
+        ...(description ? { description } : {}),
+        ...(r.meta.og_image_url ? { images: [r.meta.og_image_url] } : {}),
+      },
     };
   }
 
@@ -151,6 +157,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ...(siteName ? { siteName } : {}),
       ...(canonical ? { url: canonical } : {}),
       ...(p.video.thumbnailUrl ? { images: [{ url: p.video.thumbnailUrl }] } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: p.title,
+      ...(p.description ? { description: p.description } : {}),
+      ...(p.video.thumbnailUrl ? { images: [p.video.thumbnailUrl] } : {}),
     },
   };
 }
