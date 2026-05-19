@@ -38,7 +38,7 @@ async function fetchQuizMeta(slugOrId: string) {
   if (UUID_RE.test(slugOrId)) {
     const { data } = await supabaseAdmin
       .from("quizzes")
-      .select("user_id, title, introduction, og_image_url, og_description")
+      .select("user_id, slug, title, introduction, og_image_url, og_description")
       .eq("id", slugOrId)
       .eq("status", "active")
       .maybeSingle();
@@ -46,11 +46,30 @@ async function fetchQuizMeta(slugOrId: string) {
   }
   const { data } = await supabaseAdmin
     .from("quizzes")
-    .select("user_id, title, introduction, og_image_url, og_description")
+    .select("user_id, slug, title, introduction, og_image_url, og_description")
     .ilike("slug", slugOrId)
     .eq("status", "active")
     .maybeSingle();
   return data;
+}
+
+// Resolve the owner's preferred public hostname so og:url + canonical
+// point to their custom domain (when verified) regardless of which URL
+// the creator actually shared. Without this, sharing a `quiz.tipote.com`
+// URL would leave the iMessage / WhatsApp preview showing tipote in the
+// hostname slot even when the owner has paid for a branded domain
+// (Adeline 19 mai 2026).
+async function fetchOwnerCustomHost(userId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from("custom_domains")
+    .select("hostname")
+    .eq("user_id", userId)
+    .eq("status", "verified")
+    .order("verified_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const h = (data as { hostname?: string | null } | null)?.hostname;
+  return h ? h.toLowerCase().trim() : null;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -79,12 +98,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const description = rawDesc.trim() || undefined;
     const plainTitle = stripHtml(data.title);
 
-    // Canonical = current request URL. Critical when served via a
-    // creator custom domain: without this, og:url falls back to the
-    // global metadataBase (quiz.tipote.com) and iMessage / WhatsApp
-    // display "quiz.tipote.com" under the share preview even though
-    // the visitor landed on customdomain.com.
-    const canonical = await buildCanonicalUrl(`/q/${quizId}`);
+    // Canonical = the owner's branded URL when they have a verified
+    // custom domain ; otherwise the actual request URL. This decouples
+    // "which URL was shared" from "what hostname iMessage shows under
+    // the preview" — a creator who shared `quiz.tipote.com/q/abc` from
+    // their dashboard still gets `monsite.fr/abc` in the preview if
+    // their domain is verified. Falls back to buildCanonicalUrl(host)
+    // when no custom domain exists.
+    const ownerHost = data.user_id ? await fetchOwnerCustomHost(String(data.user_id)) : null;
+    const ownerSlug = (data as { slug?: string | null }).slug?.trim() ?? "";
+    const canonical = ownerHost && ownerSlug
+      ? `https://${ownerHost}/${ownerSlug}`
+      : await buildCanonicalUrl(`/q/${quizId}`);
 
     return {
       title: `${plainTitle} – Tiquiz`,

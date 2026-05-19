@@ -615,7 +615,13 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                               <Pencil className="h-4 w-4" />
                             </Link>
                           </Button>
-                          {!isPopquiz ? (
+                          {/* Bouton stats : réservé aux vrais quiz. La
+                              page /quiz/[id]/analytics n'existe pas pour
+                              les surveys ni les popquiz (Gwenn 19 mai
+                              2026 : "le bouton stats mène à une page
+                              404"). À termes : ajouter une page dédiée
+                              pour les surveys. */}
+                          {!isPopquiz && !isSurvey ? (
                             <Button variant="ghost" size="icon" asChild>
                               <Link
                                 href={`/quiz/${p.id}/analytics`}

@@ -212,20 +212,47 @@ export async function GET(req: NextRequest) {
     const cur = sumEvents(events);
     const prev = sumEvents(prevEvents);
 
+    // ── Lifetime totals (computed once, reused below) ───────────────
+    const lifetime = (quizzes ?? []).reduce(
+      (acc, q) => ({
+        views: acc.views + (Number(q.views_count) || 0),
+        starts: acc.starts + (Number(q.starts_count) || 0),
+        completions: acc.completions + (Number(q.completions_count) || 0),
+        shares: acc.shares + (Number(q.shares_count) || 0),
+      }),
+      { views: 0, starts: 0, completions: 0, shares: 0 },
+    );
+
+    // Period fallback : la migration 20260521_tracking_foundation a
+    // introduit `quiz_events` mais les vues/starts/completes/shares
+    // antérieurs vivent UNIQUEMENT sur les compteurs `quizzes.*_count`
+    // (lifetime). Si le créateur sélectionne "30 jours" et que les
+    // events de la période sont vides ALORS que les compteurs lifetime
+    // contiennent de la donnée, on affiche le lifetime (sinon les
+    // tuiles affichent 0 alors que la section "Lifetime" plus bas
+    // montre les vraies valeurs — Gwenn 19 mai 2026 : "Vues 0 mais
+    // mon quiz a 117 vues sur sa carte"). Quand quiz_events finit par
+    // se remplir (toutes les nouvelles vues passent par /track), le
+    // fallback s'estompe naturellement.
+    const periodOrLifetime = (periodVal: number, lifetimeVal: number) =>
+      periodVal > 0 ? periodVal : lifetimeVal;
+
     // Same defensive math as the per-quiz card: when starts is missing
     // we fall back to views as the conversion denominator.
     const conversionRate = (e: Record<CumulativeEventType, number>, leadCount: number) => {
-      const denom = e.start > 0 ? e.start : e.view;
+      const denom = e.start > 0 ? e.start : (e.view > 0 ? e.view : lifetime.views);
       return denom > 0 ? Math.min(100, Math.round((leadCount / denom) * 100)) : 0;
     };
 
     const totals = {
-      // Period — what happened inside the selected window
+      // Period — what happened inside the selected window. Falls back
+      // to lifetime counters when the event log is empty (pre-migration
+      // data, cf. 20260521_tracking_foundation).
       period: {
-        views: cur.view,
-        starts: cur.start,
-        completions: cur.complete,
-        shares: cur.share,
+        views: periodOrLifetime(cur.view, lifetime.views),
+        starts: periodOrLifetime(cur.start, lifetime.starts),
+        completions: periodOrLifetime(cur.complete, lifetime.completions),
+        shares: periodOrLifetime(cur.share, lifetime.shares),
         leads: leads.length,
         conversionPct: conversionRate(cur, leads.length),
       },
@@ -240,15 +267,7 @@ export async function GET(req: NextRequest) {
       },
       // Lifetime — from the cumulative counters on quizzes (covers
       // pre-migration data we don't have events for)
-      lifetime: (quizzes ?? []).reduce(
-        (acc, q) => ({
-          views: acc.views + (q.views_count ?? 0),
-          starts: acc.starts + (q.starts_count ?? 0),
-          completions: acc.completions + (q.completions_count ?? 0),
-          shares: acc.shares + (q.shares_count ?? 0),
-        }),
-        { views: 0, starts: 0, completions: 0, shares: 0 }
-      ),
+      lifetime,
     };
 
     // ── PER-QUIZ breakdown for the selected range ───────────────────

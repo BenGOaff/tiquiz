@@ -54,6 +54,22 @@ async function fetchPopquizOwner(slugOrId: string): Promise<string | null> {
   return (data?.user_id as string | undefined) ?? null;
 }
 
+// Cf. app/q/[quizId]/page.tsx for the rationale — keep iMessage
+// previews on the owner's branded hostname even when the share URL is
+// quiz.tipote.com.
+async function fetchOwnerCustomHost(userId: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from("custom_domains")
+    .select("hostname")
+    .eq("user_id", userId)
+    .eq("status", "verified")
+    .order("verified_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const h = (data as { hostname?: string | null } | null)?.hostname;
+  return h ? h.toLowerCase().trim() : null;
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { popquizId } = await params;
   const popquiz = await fetchPublishedPopquiz(popquizId);
@@ -67,10 +83,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     if (ownerId && ownerId !== customOwner) return { title: "Popquiz" };
   }
 
-  // og:url + canonical = current request URL so creators on a custom
-  // domain see their own hostname in iMessage / WhatsApp previews
-  // (instead of the global metadataBase). See lib/publicUrl.ts.
-  const canonical = await buildCanonicalUrl(`/p/${popquizId}`);
+  // og:url + canonical = the owner's branded URL when they have a
+  // verified custom domain, else the current request URL. Branded URL
+  // wins even when the creator shared the main host URL — iMessage and
+  // WhatsApp will then display the brand hostname under the preview.
+  const ownerId = await fetchPopquizOwner(popquizId);
+  const ownerHost = ownerId ? await fetchOwnerCustomHost(ownerId) : null;
+  const popquizSlug = (popquiz as { slug?: string | null }).slug?.trim() ?? "";
+  const canonical = ownerHost && popquizSlug
+    ? `https://${ownerHost}/${popquizSlug}`
+    : await buildCanonicalUrl(`/p/${popquizId}`);
 
   return {
     title: popquiz.title,

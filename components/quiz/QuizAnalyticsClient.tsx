@@ -96,17 +96,40 @@ const PIE_COLORS = [
 
 interface Props {
   quizId: string;
-  /** Initial data fetched server-side so the page renders immediately. */
-  initial: AnalyticsResponse;
+  /** Optionnel : si fourni, la page rend immédiatement sans flash de
+   *  spinner. Sinon (cas par défaut depuis le fix Gwenn 19 mai 2026),
+   *  le client fetch les données au mount. */
+  initial?: AnalyticsResponse;
 }
 
+// Placeholder vide qui satisfait le shape AnalyticsResponse pour le
+// premier rendu quand on n'a pas de pré-fetch SSR. Le client fetch
+// immédiatement et remplace ce placeholder ; tous les charts gèrent
+// déjà des tableaux vides correctement.
+const EMPTY_DATA: AnalyticsResponse = {
+  ok: true,
+  quiz: { id: "", title: "", created_at: new Date(0).toISOString() },
+  period: "30",
+  metrics: {
+    viewsCount: 0,
+    completionsCount: 0,
+    leadsCount: 0,
+    exportedSioCount: 0,
+    captureRate: 0,
+    exportRate: 0,
+  },
+  resultDistribution: [],
+  leadsByDay: [],
+  funnel: [],
+  totalFunnelSessions: 0,
+};
+
 export function QuizAnalyticsClient({ quizId, initial }: Props) {
-  const [period, setPeriod] = useState<Period>(initial.period);
-  const [data, setData] = useState<AnalyticsResponse>(initial);
-  const [loading, setLoading] = useState(false);
+  const [period, setPeriod] = useState<Period>(initial?.period ?? "30");
+  const [data, setData] = useState<AnalyticsResponse>(initial ?? EMPTY_DATA);
+  const [loading, setLoading] = useState(!initial);
 
   useEffect(() => {
-    if (period === initial.period && data === initial) return;
     let cancelled = false;
     setLoading(true);
     void (async () => {
