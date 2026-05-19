@@ -107,7 +107,16 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
     const starts = quizzes.reduce((s, q) => s + q.starts_count, 0);
     const completions = quizzes.reduce((s, q) => s + q.completions_count, 0);
     const leads = quizzes.reduce((s, q) => s + (q.leads_count ?? 0), 0);
-    const conversionRate = starts > 0 ? Math.round((leads / starts) * 100) : 0;
+    // Conversion : on préfère leads/starts (vrai funnel) mais on
+    // retombe sur leads/views quand `starts` n'a jamais été tracké
+    // (quiz pré-migration tracking 21 mai 2026 où le start n'était
+    // pas loggé). Cap à 100 % au cas où leads > denom (peut arriver
+    // si quiz_leads contient des entrées issues d'un import / d'un
+    // ancien flow qui ne passait pas par le tracking front).
+    const denom = starts > 0 ? starts : views;
+    const conversionRate = denom > 0
+      ? Math.min(100, Math.round((leads / denom) * 100))
+      : 0;
     return { views, starts, completions, leads, conversionRate, quizCount: quizzes.length };
   }, [quizzes]);
 
@@ -161,22 +170,23 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
     });
   }, [quizzes, totals.leads]);
 
-  // Prospects donut data — always show, with placeholder if empty
+  // Prospects donut data : on prend `starts` comme dénominateur quand
+  // dispo, sinon `views` (cf. fallback de la card conversion). Les
+  // 3 segments restent : leads (capturés), completed-sans-lead, et
+  // abandoned (= dénom - completions). Quand starts=0 mais views>0 +
+  // leads>0, on synthétise un funnel views=base / leads / abandoned
+  // (le reste des vues qui n'ont pas converti).
   const prospectsData = useMemo(() => {
-    if (totals.starts === 0) {
-      return [
-        { name: t("leads"), value: 0, color: COLORS.primary },
-        { name: t("completions"), value: 0, color: COLORS.primaryLight },
-        { name: t("abandoned"), value: 0, color: COLORS.navy },
-      ];
-    }
-    const leads = totals.leads;
-    const completed = totals.completions - leads;
-    const abandoned = totals.starts - totals.completions;
+    const leads = Math.max(totals.leads, 0);
+    const completedNonLead = Math.max(totals.completions - leads, 0);
+    // Si starts a été tracké, on utilise vraiment le funnel.
+    // Sinon : fallback sur views pour avoir au moins 2 segments.
+    const denom = totals.starts > 0 ? totals.starts : totals.views;
+    const abandoned = Math.max(denom - totals.completions - leads, 0);
     return [
-      { name: t("leads"), value: Math.max(leads, 0), color: COLORS.primary },
-      { name: t("completions"), value: Math.max(completed, 0), color: COLORS.primaryLight },
-      { name: t("abandoned"), value: Math.max(abandoned, 0), color: COLORS.navy },
+      { name: t("leads"), value: leads, color: COLORS.primary },
+      { name: t("completions"), value: completedNonLead, color: COLORS.primaryLight },
+      { name: t("abandoned"), value: abandoned, color: COLORS.navy },
     ].filter((d) => d.value > 0);
   }, [totals, t]);
 
@@ -211,7 +221,11 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
 
   const hasRealTraffic = trafficData.length > 0;
   const chartTrafficData = hasRealTraffic ? trafficData : placeholderTraffic;
-  const hasRealProspects = totals.starts > 0;
+  // Le donut s'affiche dès qu'il y a une vue ou un lead — pas seulement
+  // un "start". Sinon les quizzes pré-migration tracking (starts=0)
+  // restent à "Pas encore de données" alors que des leads existent
+  // (Gwenn 19 mai 2026 : 34 vues + 8 leads → donut vide à tort).
+  const hasRealProspects = totals.starts > 0 || totals.views > 0 || totals.leads > 0;
   const chartProspectsData = hasRealProspects ? prospectsData : placeholderDonut;
 
   // ---------------------------------------------------------------------------

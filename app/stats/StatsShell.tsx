@@ -50,7 +50,7 @@ type StatsResponse = {
   totals: {
     period: { views: number; starts: number; completions: number; shares: number; leads: number; conversionPct: number };
     previous: { views: number; starts: number; completions: number; shares: number; leads: number; conversionPct: number };
-    lifetime: { views: number; starts: number; completions: number; shares: number };
+    lifetime: { views: number; starts: number; completions: number; shares: number; leads: number; conversionPct: number };
   };
   perQuiz: Array<{
     id: string;
@@ -66,6 +66,7 @@ type StatsResponse = {
     lifetimeStarts: number;
     lifetimeCompletions: number;
     lifetimeShares: number;
+    lifetimeLeads: number;
   }>;
   questionFunnels: Array<{
     quizId: string;
@@ -178,11 +179,15 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
         </Card>
       ) : (
         <>
-          {/* KPI cards with vs-previous-period deltas */}
+          {/* KPI cards — VALEURS LIFETIME comme source de vérité (cohérent
+              avec les compteurs auto-bumpés sur quizzes.*_count et les
+              cards per-quiz). Les deltas vs période précédente utilisent
+              les events filtrés (non-backfill) pour rester informatifs
+              malgré le mix de données pré/post migration tracking. */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <KpiCard
               label={t("kpis.leads")}
-              value={data.totals.period.leads}
+              value={data.totals.lifetime.leads}
               delta={pctDelta(data.totals.period.leads, data.totals.previous.leads)}
               icon={Users}
               tone="primary"
@@ -191,7 +196,7 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
             />
             <KpiCard
               label={t("kpis.conversion")}
-              value={`${data.totals.period.conversionPct}%`}
+              value={`${data.totals.lifetime.conversionPct}%`}
               delta={pctDelta(data.totals.period.conversionPct, data.totals.previous.conversionPct)}
               deltaUnit="pt"
               icon={TrendingUp}
@@ -201,7 +206,7 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
             />
             <KpiCard
               label={t("kpis.views")}
-              value={data.totals.period.views}
+              value={data.totals.lifetime.views}
               delta={pctDelta(data.totals.period.views, data.totals.previous.views)}
               icon={Eye}
               tone="sky"
@@ -210,7 +215,7 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
             />
             <KpiCard
               label={t("kpis.shares")}
-              value={data.totals.period.shares}
+              value={data.totals.lifetime.shares}
               delta={pctDelta(data.totals.period.shares, data.totals.previous.shares)}
               icon={Share2}
               tone="amber"
@@ -396,17 +401,19 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {data.perQuiz
                 .slice()
-                .sort((a, b) => b.leads - a.leads)
+                .sort((a, b) => b.lifetimeLeads - a.lifetimeLeads)
                 .map((q) => {
-                  // Show period figures by default. When the period is
-                  // "all" or there's no event data yet, fall back to
-                  // lifetime so the card is never blank.
-                  const useLifetime = !data.hasEventData || range === "all";
-                  const views = useLifetime ? q.lifetimeViews : q.views;
-                  const starts = useLifetime ? q.lifetimeStarts : q.starts;
-                  const completions = useLifetime ? q.lifetimeCompletions : q.completions;
-                  const shares = useLifetime ? q.lifetimeShares : q.shares;
-                  const leads = q.leads;
+                  // SOURCE DE VÉRITÉ = lifetime. Les events filtrés par
+                  // période servent uniquement aux deltas / time-series,
+                  // pas aux KPI affichés. Sinon on retombe sur le bug
+                  // "leads (8) > démarrages (0)" parce que les leads
+                  // sont lifetime alors que starts est filtré période
+                  // sans backfill (Gwenn 19 mai 2026).
+                  const views = q.lifetimeViews;
+                  const starts = q.lifetimeStarts;
+                  const completions = q.lifetimeCompletions;
+                  const shares = q.lifetimeShares;
+                  const leads = q.lifetimeLeads;
                   const rate = leadRate(starts, views, leads);
                   const isActive = q.status === "active";
                   return (

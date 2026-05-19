@@ -128,20 +128,39 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
   const [period, setPeriod] = useState<Period>(initial?.period ?? "30");
   const [data, setData] = useState<AnalyticsResponse>(initial ?? EMPTY_DATA);
   const [loading, setLoading] = useState(!initial);
+  // Tracks fetch failure so we show an error state at top of page rather
+  // than silently displaying zeros (Gwenn 19 mai 2026 : "données toutes
+  // à zéro" — le fetch silencieux failait sans aucun signal visuel).
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setFetchError(null);
     void (async () => {
       try {
         const res = await fetch(
           `/api/quiz/${encodeURIComponent(quizId)}/analytics?period=${period}`,
           { credentials: "include" },
         );
-        const json = (await res.json()) as AnalyticsResponse;
-        if (!cancelled && json.ok) setData(json);
-      } catch {
-        /* ignore — we keep the previous state */
+        const json = (await res.json().catch(() => ({ ok: false, error: "Invalid JSON" }))) as
+          { ok: boolean; error?: string } & Partial<AnalyticsResponse>;
+        if (cancelled) return;
+        if (json.ok) {
+          setData(json as AnalyticsResponse);
+        } else {
+          // Visible error so the user knows the page failed loading
+          // (instead of trusting the placeholder zeros)
+          setFetchError(
+            json.error
+              ? `${res.status} — ${json.error}`
+              : `HTTP ${res.status}`,
+          );
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setFetchError(e instanceof Error ? e.message : "Network error");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -156,6 +175,12 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
 
   return (
     <div className="space-y-6">
+      {fetchError && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive flex items-start gap-2">
+          <span className="font-medium">Impossible de charger les statistiques.</span>
+          <span className="font-mono text-xs opacity-80">({fetchError})</span>
+        </div>
+      )}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
           <Button variant="ghost" size="icon" asChild>

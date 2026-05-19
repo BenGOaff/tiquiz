@@ -31,8 +31,8 @@ function parsePeriod(raw: string | null): { key: PeriodKey; sinceISO: string | n
 
 interface LeadRow {
   created_at: string;
-  quiz_result_title: string | null;
-  exported_sio: boolean | null;
+  result_title: string | null;
+  sio_synced: boolean | null;
 }
 
 export async function GET(
@@ -68,17 +68,21 @@ export async function GET(
     );
   }
 
-  // Pull all leads for this quiz scoped to the period. Capping at 5000
-  // is plenty for a single quiz on the free / paid plans, but if a
-  // power user blows past it the aggregations stay sane (under-count
-  // rather than crash). Drop-off is for V2 — for now we just need
-  // counts + distribution + daily series.
+  // Pull all leads for this quiz. SOURCE = `quiz_leads` (avec quiz_id
+  // direct), pas la table `leads` qui a un schéma différent (source,
+  // source_id, user_id) et qui n'est JAMAIS populée pour les quizzes
+  // — donc la page analytics affichait tout à zéro (Gwenn 19 mai 2026).
+  //
+  // Period filter : on garde le filtre sur created_at pour la
+  // time-series + pour la distribution par résultat (afin qu'elles
+  // soient cohérentes avec le sélecteur de période). Les KPI lifetime
+  // (viewsCount, completionsCount) restent sur les compteurs quizzes
+  // car ils sont auto-bumpés par trigger et incluent l'historique
+  // pré-migration tracking.
   let leadsQuery = supabase
-    .from("leads")
-    .select("created_at, quiz_result_title, exported_sio")
-    .eq("user_id", user.id)
-    .eq("source", "quiz")
-    .eq("source_id", quizId)
+    .from("quiz_leads")
+    .select("created_at, result_title, sio_synced")
+    .eq("quiz_id", quizId)
     .order("created_at", { ascending: true })
     .limit(5000);
   if (period.sinceISO) leadsQuery = leadsQuery.gte("created_at", period.sinceISO);
@@ -93,13 +97,13 @@ export async function GET(
 
   const leads = (leadsRaw ?? []) as LeadRow[];
   const leadsCount = leads.length;
-  const exportedSio = leads.filter((l) => l.exported_sio === true).length;
+  const exportedSio = leads.filter((l) => l.sio_synced === true).length;
 
   // Aggregate per result title — strip empty titles into a single
   // "Sans résultat" bucket so the pie chart isn't full of "(null)".
   const byResult = new Map<string, number>();
   for (const l of leads) {
-    const key = (l.quiz_result_title ?? "").trim() || "Sans résultat";
+    const key = (l.result_title ?? "").trim() || "Sans résultat";
     byResult.set(key, (byResult.get(key) ?? 0) + 1);
   }
   const resultDistribution = Array.from(byResult.entries())

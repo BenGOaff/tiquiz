@@ -156,6 +156,14 @@ export async function GET(req: NextRequest) {
     const { data: rawLeads } = await leadsQ;
     const leads = (rawLeads ?? []) as LeadRow[];
 
+    // ── LEADS lifetime (total, sans filtre période) — pour la
+    // conversion lifetime cohérente avec les compteurs auto-bumpés
+    // par le trigger quiz_events.
+    const { count: leadsAll } = await supabaseAdmin
+      .from("quiz_leads")
+      .select("quiz_id", { count: "exact", head: true })
+      .in("quiz_id", quizIds);
+
     // ── LEADS in previous window ────────────────────────────────────
     let prevLeads: LeadRow[] = [];
     if (prevFrom && prevTo) {
@@ -231,9 +239,20 @@ export async function GET(req: NextRequest) {
       { views: 0, starts: 0, completions: 0, shares: 0 },
     );
 
-    // Conversion : starts comme dénominateur quand dispo (le plus
-    // honnête : "X% des gens qui ont DÉMARRÉ ont laissé leur email"),
-    // sinon views (les vues, c'est plus large mais c'est ce qu'on a).
+    // Conversion (cumulé) : leads totaux / starts totaux (ou views à
+    // défaut). On utilise les lifetime counters comme source de vérité
+    // car les events backfillés sont tous datés à quiz.created_at —
+    // le compteur lifetime est le seul truc cohérent quand la donnée
+    // pré-migration et post-migration coexiste.
+    const lifetimeLeadsTotal = (leadsAll ?? 0);
+    const lifetimeConversionPct = (() => {
+      const denom = lifetime.starts > 0 ? lifetime.starts : lifetime.views;
+      return denom > 0 ? Math.min(100, Math.round((lifetimeLeadsTotal / denom) * 100)) : 0;
+    })();
+
+    // Conversion (période) : seulement les leads + démarrages tombés
+    // dans la fenêtre — pour le delta vs période précédente. Pas
+    // affiché sur les KPI principaux (qui sont lifetime maintenant).
     const conversionRate = (e: Record<CumulativeEventType, number>, leadCount: number) => {
       const denom = e.start > 0 ? e.start : e.view;
       return denom > 0 ? Math.min(100, Math.round((leadCount / denom) * 100)) : 0;
@@ -244,7 +263,8 @@ export async function GET(req: NextRequest) {
       // vérité = quiz_events filtré sur la période, excluant les events
       // backfillés (cf. migration backfill 19 mai 2026, qui daterait
       // tous les historiques à quiz.created_at et fausserait les filtres
-      // temporels). Le total lifetime ci-dessous reste exhaustif.
+      // temporels). UTILISÉ POUR LES DELTAS (vs période précédente) et
+      // pour la time-series des leads — PAS pour les KPI principaux.
       period: {
         views: cur.view,
         starts: cur.start,
@@ -262,27 +282,41 @@ export async function GET(req: NextRequest) {
         leads: prevLeads.length,
         conversionPct: conversionRate(prev, prevLeads.length),
       },
-      // Lifetime — from the cumulative counters on quizzes (covers
-      // pre-migration data we don't have events for)
-      lifetime,
+      // Lifetime — SOURCE DE VÉRITÉ unique pour les KPI affichés sur le
+      // dashboard et le bloc "À vie" de /stats. Toujours cohérent
+      // avec les compteurs auto-bumpés par le trigger quiz_events.
+      // Inclut les data pré-migration (avant 21 mai 2026) ET les
+      // events backfillés.
+      lifetime: {
+        ...lifetime,
+        leads: lifetimeLeadsTotal,
+        conversionPct: lifetimeConversionPct,
+      },
     };
 
-    // ── PER-QUIZ breakdown for the selected range ───────────────────
+    // ── PER-QUIZ breakdown ──────────────────────────────────────────
+    // Période : events non-backfillés dans la fenêtre + leads dans
+    //   la fenêtre. Utilisé pour les deltas + time-series.
+    // Lifetime : compteurs auto-bumpés sur quizzes.*_count + COUNT
+    //   sur quiz_leads (sans filtre période). SOURCE DE VÉRITÉ pour
+    //   les KPI per-quiz affichés dans la liste.
     const perQuizMap = new Map<string, {
       id: string;
       title: string;
       status: string;
       mode: string | null;
+      // Period counters (filtered, used for deltas)
       views: number;
       starts: number;
       completions: number;
       shares: number;
       leads: number;
-      // Lifetime counters from quizzes
+      // Lifetime counters — affichés sur les cards quiz
       lifetimeViews: number;
       lifetimeStarts: number;
       lifetimeCompletions: number;
       lifetimeShares: number;
+      lifetimeLeads: number;
     }>();
     for (const q of quizzes ?? []) {
       perQuizMap.set(q.id as string, {
@@ -295,6 +329,7 @@ export async function GET(req: NextRequest) {
         lifetimeStarts: (q.starts_count as number) ?? 0,
         lifetimeCompletions: (q.completions_count as number) ?? 0,
         lifetimeShares: (q.shares_count as number) ?? 0,
+        lifetimeLeads: 0,  // rempli ci-dessous via leadsAllByQuiz
       });
     }
     for (const e of events) {
@@ -308,6 +343,20 @@ export async function GET(req: NextRequest) {
     for (const l of leads) {
       const row = perQuizMap.get(l.quiz_id);
       if (row) row.leads++;
+    }
+
+    // Lifetime leads par quiz (sans filtre période) — pour que les
+    // cards affichent un nombre cohérent avec les compteurs lifetime.
+    // Sans ça : leads=8 (période) + views=34 (lifetime) → conversion
+    // visible mais incorrecte (cf. Gwenn screenshot avec 127 % en
+    // conversion = leads lifetime / starts période).
+    const { data: rawLeadsAllByQuiz } = await supabaseAdmin
+      .from("quiz_leads")
+      .select("quiz_id")
+      .in("quiz_id", quizIds);
+    for (const row of rawLeadsAllByQuiz ?? []) {
+      const pq = perQuizMap.get((row as { quiz_id: string }).quiz_id);
+      if (pq) pq.lifetimeLeads += 1;
     }
 
     // ── PER-QUESTION drop-off funnel ────────────────────────────────
@@ -367,7 +416,7 @@ function emptyTotals() {
   return {
     period: { views: 0, starts: 0, completions: 0, shares: 0, leads: 0, conversionPct: 0 },
     previous: { views: 0, starts: 0, completions: 0, shares: 0, leads: 0, conversionPct: 0 },
-    lifetime: { views: 0, starts: 0, completions: 0, shares: 0 },
+    lifetime: { views: 0, starts: 0, completions: 0, shares: 0, leads: 0, conversionPct: 0 },
   };
 }
 

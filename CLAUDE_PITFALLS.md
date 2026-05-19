@@ -182,6 +182,42 @@ domain mais voit l'URL Tiquiz partout. Bug d'image de marque sévère.
 Routes concernées actuellement : `/q/[quizId]`, `/p/[popquizId]`,
 `/[publicSlug]`.
 
+## M) STATS — `quiz_leads` est la SEULE table de leads, pas `leads`
+
+Deux tables peuvent porter à confusion :
+- `quiz_leads` (quiz_id, email, result_title, sio_synced, …) → **utilisée
+  en prod par tout le code de capture** (`app/api/quiz/[quizId]/public/route.ts`).
+  C'est la source réelle.
+- `leads` (user_id, source, source_id, exported_sio, …) → **legacy /
+  jamais populée pour les quizzes** côté Tiquiz.
+
+`/api/quiz/[quizId]/analytics` interrogeait à tort `leads` → page affichait
+tout à zéro (Gwenn 19 mai 2026). Fix : pointer sur `quiz_leads` avec
+`eq("quiz_id", quizId)` directement et mapper `result_title` / `sio_synced`
+au lieu de `quiz_result_title` / `exported_sio`.
+
+Avant de coder un nouvel endpoint d'analytics, **toujours grep
+`grep -rn "from(\"quiz_leads\")\.insert\|upsert" app/`** pour confirmer
+quelle table est populée par le flow capture.
+
+## N) STATS — LIFETIME est la source de vérité pour les KPI affichés
+
+Mix entre données pré-migration (counters auto-bumpés sur `quizzes.*_count`)
+et post-migration (events dans `quiz_events`) crée des incohérences si on
+affiche du période-filtré sur le dashboard / per-quiz card :
+- "Leads (lifetime) 19 > Démarrages (période filtrée) 15" → impossible visuel
+- "Vues (période, hors backfill) 0" mais per-quiz card affiche "Vues 34"
+
+**Règle** : les KPI tiles + per-quiz cards affichent TOUJOURS les valeurs
+lifetime (`quizzes.*_count` + `COUNT(quiz_leads WHERE quiz_id=…)` sans
+filtre). Le filtre période sert uniquement aux **deltas vs période
+précédente** et à la **time-series de leads** (qui a un created_at fiable
+par ligne).
+
+Conversion = lifetime leads / lifetime starts (ou views si starts=0,
+e.g. quiz pré-migration). Cap à 100 % car certains comptes ont plus
+de quiz_leads (legacy / import) que de starts trackés.
+
 ## L) WORKFLOW DE DÉPLOIEMENT — comprendre où vit vraiment mon code
 
 **Mon code ne va JAMAIS direct en prod.** Il passe par 4 étapes :
