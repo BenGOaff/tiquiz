@@ -137,6 +137,30 @@ Si je touche à cette fonction, ne PAS revenir au regex unifié
 - **Tiquiz** : onglet "Tracking" entre Systeme.io et Compte & Tarifs.
 - **Tipote** : Card "Tracking & Pubs" sous Systeme.io dans le tab "Connexions" (cohérent : c'est une "connexion à un service externe").
 
+## K) Backfill quiz_events : filtrer `session_id LIKE 'backfill_%'` côté période
+
+Migration backfill (19 mai 2026) synthétise les events historiques
+depuis `quizzes.*_count` pour aligner le log avec les compteurs.
+Convention : les events synthétiques portent `session_id = 'backfill_<quizId>_<event>_<n>'`
+et `created_at = quiz.created_at + N ms` (tous concentrés au moment
+de la création du quiz).
+
+**Important** : pour TOUTE query qui filtre `quiz_events` par
+période (`30j`, `7j`, etc.), il faut ajouter `.not("session_id",
+"like", "backfill_%")` sinon les compteurs historiques se retrouvent
+agglutinés dans une fenêtre récente et faussent le rendu temporel.
+
+Le total lifetime continue de les inclure via les compteurs auto-
+bumpés sur `quizzes.*_count` — c'est le point de la separation.
+
+Si une nouvelle route consomme `quiz_events` à fin d'agrégat
+temporel, **ajouter le filtre dès le SELECT**. Routes actuellement
+concernées :
+- `app/api/stats/route.ts` (events + prevEvents)
+
+`quiz_question_events` n'est PAS backfillé (pas de compteurs
+historiques à recouvrer) → pas de filtre nécessaire.
+
 ## J) OG metadata sur custom domain → toujours utiliser `buildCanonicalUrl`
 
 Next.js `metadataBase` dans `app/layout.tsx` est UNE URL statique. Si je

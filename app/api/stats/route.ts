@@ -119,10 +119,17 @@ export async function GET(req: NextRequest) {
     // ── EVENTS in current window ────────────────────────────────────
     // Pull meta along — we need it to compute the per-question
     // drop-off funnel further down.
+    //
+    // EXCLUDE backfilled events from period queries : ils sont datés à
+    // `quiz.created_at` (cf. migration backfill 19 mai 2026) et fausse-
+    // raient les filtres "7 j" / "30 j" en y agglutinant des stats
+    // historiques. Le total lifetime continue de les inclure via
+    // quizzes.*_count.
     let eventsQ = supabaseAdmin
       .from("quiz_events")
       .select("quiz_id, event_type, created_at, meta")
-      .in("quiz_id", quizIds);
+      .in("quiz_id", quizIds)
+      .not("session_id", "like", "backfill_%");
     if (from) eventsQ = eventsQ.gte("created_at", from.toISOString());
     const { data: rawEvents } = await eventsQ;
     const events = (rawEvents ?? []) as EventRow[];
@@ -134,6 +141,7 @@ export async function GET(req: NextRequest) {
         .from("quiz_events")
         .select("quiz_id, event_type, created_at")
         .in("quiz_id", quizIds)
+        .not("session_id", "like", "backfill_%")
         .gte("created_at", prevFrom.toISOString())
         .lt("created_at", prevTo.toISOString());
       prevEvents = (prev ?? []) as EventRow[];
@@ -223,36 +231,25 @@ export async function GET(req: NextRequest) {
       { views: 0, starts: 0, completions: 0, shares: 0 },
     );
 
-    // Period fallback : la migration 20260521_tracking_foundation a
-    // introduit `quiz_events` mais les vues/starts/completes/shares
-    // antérieurs vivent UNIQUEMENT sur les compteurs `quizzes.*_count`
-    // (lifetime). Si le créateur sélectionne "30 jours" et que les
-    // events de la période sont vides ALORS que les compteurs lifetime
-    // contiennent de la donnée, on affiche le lifetime (sinon les
-    // tuiles affichent 0 alors que la section "Lifetime" plus bas
-    // montre les vraies valeurs — Gwenn 19 mai 2026 : "Vues 0 mais
-    // mon quiz a 117 vues sur sa carte"). Quand quiz_events finit par
-    // se remplir (toutes les nouvelles vues passent par /track), le
-    // fallback s'estompe naturellement.
-    const periodOrLifetime = (periodVal: number, lifetimeVal: number) =>
-      periodVal > 0 ? periodVal : lifetimeVal;
-
-    // Same defensive math as the per-quiz card: when starts is missing
-    // we fall back to views as the conversion denominator.
+    // Conversion : starts comme dénominateur quand dispo (le plus
+    // honnête : "X% des gens qui ont DÉMARRÉ ont laissé leur email"),
+    // sinon views (les vues, c'est plus large mais c'est ce qu'on a).
     const conversionRate = (e: Record<CumulativeEventType, number>, leadCount: number) => {
-      const denom = e.start > 0 ? e.start : (e.view > 0 ? e.view : lifetime.views);
+      const denom = e.start > 0 ? e.start : e.view;
       return denom > 0 ? Math.min(100, Math.round((leadCount / denom) * 100)) : 0;
     };
 
     const totals = {
-      // Period — what happened inside the selected window. Falls back
-      // to lifetime counters when the event log is empty (pre-migration
-      // data, cf. 20260521_tracking_foundation).
+      // Period — what happened inside the selected window. Source de
+      // vérité = quiz_events filtré sur la période, excluant les events
+      // backfillés (cf. migration backfill 19 mai 2026, qui daterait
+      // tous les historiques à quiz.created_at et fausserait les filtres
+      // temporels). Le total lifetime ci-dessous reste exhaustif.
       period: {
-        views: periodOrLifetime(cur.view, lifetime.views),
-        starts: periodOrLifetime(cur.start, lifetime.starts),
-        completions: periodOrLifetime(cur.complete, lifetime.completions),
-        shares: periodOrLifetime(cur.share, lifetime.shares),
+        views: cur.view,
+        starts: cur.start,
+        completions: cur.complete,
+        shares: cur.share,
         leads: leads.length,
         conversionPct: conversionRate(cur, leads.length),
       },
