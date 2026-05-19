@@ -76,7 +76,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { quizId } = await params;
   try {
     const data = await fetchQuizMeta(quizId);
-    if (!data) return { title: "Quiz – Tiquiz" };
+    if (!data) return { title: "Quiz" };
 
     // Custom-domain ownership: when serving through a creator's branded
     // hostname, the loaded quiz must belong to them. Mismatch = 404 so
@@ -84,7 +84,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // domain (phishing / impersonation protection).
     const customOwner = await resolveCustomDomainOwner();
     if (customOwner && data.user_id !== customOwner) {
-      return { title: "Quiz – Tiquiz" };
+      return { title: "Quiz" };
     }
 
     // Description OG : le titre ET l'introduction sont éditables en
@@ -111,8 +111,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? `https://${ownerHost}/${ownerSlug}`
       : await buildCanonicalUrl(`/q/${quizId}`);
 
+    // `title: plainTitle` — pas de " – Tiquiz" suffixé : le template
+    // global `%s · ${siteTitle}` dans app/layout.tsx ajoute déjà
+    // "· Tiquiz" en bout de chaîne. Avant ce fix l'onglet affichait
+    // "X – Tiquiz · Tiquiz" (doublon, Adeline 19 mai 2026).
     return {
-      title: `${plainTitle} – Tiquiz`,
+      title: plainTitle,
       description,
       ...(canonical ? { alternates: { canonical } } : {}),
       openGraph: {
@@ -123,7 +127,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       },
     };
   } catch {
-    return { title: "Quiz – Tiquiz" };
+    return { title: "Quiz" };
   }
 }
 
