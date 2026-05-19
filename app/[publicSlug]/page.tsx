@@ -27,7 +27,7 @@ import PublicQuizClient from "@/components/quiz/PublicQuizClient";
 import PopquizPlayClient from "@/app/p/[popquizId]/PopquizPlayClient";
 import { isReservedPublicSlug } from "@/lib/publicSlug";
 import { stripHtml } from "@/lib/richText";
-import { buildCanonicalUrl } from "@/lib/publicUrl";
+import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -97,6 +97,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // host. See lib/publicUrl.ts for the why.
   const canonical = await buildCanonicalUrl(`/${publicSlug}`);
 
+  // Branding owner (custom domain + share_site_name).
+  // Cette route est forcément sur un custom domain — sinon `owner` est
+  // null et on a déjà return {} plus haut — donc branding est rarement
+  // null ici, sauf race condition (domain dé-vérifié entre les 2 lookups).
+  const branding = await fetchOwnerBranding(owner);
+  const siteName = branding ? (branding.siteName || branding.customHost) : null;
+
   if (r.kind === "quiz") {
     // Adeline (19 mai 2026) : sur custom domain le preview iMessage /
     // WhatsApp affichait le code HTML brut (`<span style="color:rgb(82,
@@ -108,13 +115,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const ogDescRaw = stripHtml(r.meta.og_description);
     const introPlain = stripHtml(r.meta.introduction);
     const description = (ogDescRaw || introPlain.slice(0, 160)).trim() || undefined;
+    const titleOverride = siteName
+      ? { absolute: `${plainTitle || "Quiz"} · ${siteName}` }
+      : (plainTitle || "Quiz");
     return {
-      title: plainTitle || "Quiz",
+      title: titleOverride,
       description,
+      ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
       openGraph: {
         title: plainTitle || "Quiz",
         description,
+        ...(siteName ? { siteName } : {}),
         ...(canonical ? { url: canonical } : {}),
         ...(r.meta.og_image_url
           ? { images: [{ url: r.meta.og_image_url }] }
@@ -125,13 +137,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   // popquiz
   const p = r.popquiz;
+  const titleOverridePq = siteName
+    ? { absolute: `${p.title} · ${siteName}` }
+    : p.title;
   return {
-    title: p.title,
+    title: titleOverridePq,
     description: p.description ?? undefined,
+    ...(siteName ? { applicationName: siteName } : {}),
     ...(canonical ? { alternates: { canonical } } : {}),
     openGraph: {
       title: p.title,
       description: p.description ?? undefined,
+      ...(siteName ? { siteName } : {}),
       ...(canonical ? { url: canonical } : {}),
       ...(p.video.thumbnailUrl ? { images: [{ url: p.video.thumbnailUrl }] } : {}),
     },

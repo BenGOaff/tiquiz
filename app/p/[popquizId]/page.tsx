@@ -13,7 +13,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { fetchPublishedPopquiz } from "@/lib/popquiz/repo";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { buildCanonicalUrl } from "@/lib/publicUrl";
+import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 import PopquizPlayClient from "./PopquizPlayClient";
 
 export const dynamic = "force-dynamic";
@@ -54,21 +54,9 @@ async function fetchPopquizOwner(slugOrId: string): Promise<string | null> {
   return (data?.user_id as string | undefined) ?? null;
 }
 
-// Cf. app/q/[quizId]/page.tsx for the rationale — keep iMessage
-// previews on the owner's branded hostname even when the share URL is
-// quiz.tipote.com.
-async function fetchOwnerCustomHost(userId: string): Promise<string | null> {
-  const { data } = await supabaseAdmin
-    .from("custom_domains")
-    .select("hostname")
-    .eq("user_id", userId)
-    .eq("status", "verified")
-    .order("verified_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const h = (data as { hostname?: string | null } | null)?.hostname;
-  return h ? h.toLowerCase().trim() : null;
-}
+// Note : la résolution custom domain + share_site_name de l'owner vit
+// dans `fetchOwnerBranding` (lib/publicUrl.ts) — partagé entre les 3
+// routes publiques pour rester cohérent.
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { popquizId } = await params;
@@ -83,24 +71,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     if (ownerId && ownerId !== customOwner) return { title: "Popquiz" };
   }
 
-  // og:url + canonical = the owner's branded URL when they have a
-  // verified custom domain, else the current request URL. Branded URL
-  // wins even when the creator shared the main host URL — iMessage and
-  // WhatsApp will then display the brand hostname under the preview.
+  // Branding owner (custom domain + share_site_name) — null = main host
+  // → on garde "Tiquiz" via le template layout (comportement historique).
   const ownerId = await fetchPopquizOwner(popquizId);
-  const ownerHost = ownerId ? await fetchOwnerCustomHost(ownerId) : null;
+  const branding = ownerId ? await fetchOwnerBranding(ownerId) : null;
   const popquizSlug = (popquiz as { slug?: string | null }).slug?.trim() ?? "";
-  const canonical = ownerHost && popquizSlug
-    ? `https://${ownerHost}/${popquizSlug}`
+  const canonical = branding && popquizSlug
+    ? `https://${branding.customHost}/${popquizSlug}`
     : await buildCanonicalUrl(`/p/${popquizId}`);
 
+  const siteName = branding ? (branding.siteName || branding.customHost) : null;
+  const titleOverride = siteName
+    ? { absolute: `${popquiz.title} · ${siteName}` }
+    : popquiz.title;
+
   return {
-    title: popquiz.title,
+    title: titleOverride,
     description: popquiz.description ?? undefined,
+    ...(siteName ? { applicationName: siteName } : {}),
     ...(canonical ? { alternates: { canonical } } : {}),
     openGraph: {
       title: popquiz.title,
       description: popquiz.description ?? undefined,
+      ...(siteName ? { siteName } : {}),
       ...(canonical ? { url: canonical } : {}),
       ...(popquiz.video.thumbnailUrl
         ? { images: [{ url: popquiz.video.thumbnailUrl }] }

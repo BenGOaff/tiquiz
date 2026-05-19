@@ -860,7 +860,10 @@
     "trackingDefaultsAdsIdLabel": "Google Ads — ID de conversão",
     "trackingDefaultsAdsLabelLabel": "Google Ads — Etiqueta de conversão",
     "trackingDefaultsAdsHelp": "Encontrar os meus IDs Google Ads",
-    "tabTracking": "Tracking"
+    "tabTracking": "Tracking",
+    "shareSiteNameTitle": "Nome da marca nas partilhas",
+    "shareSiteNameDesc": "Substitui «Tiquiz» na pré-visualização do iMessage / WhatsApp / redes sociais.",
+    "shareSiteNameHint": "Vazio → mostraremos o teu domínio ({fallback})."
   },
   "languageSwitcher": {
     "label": "Idioma"

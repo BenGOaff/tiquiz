@@ -7,7 +7,7 @@ import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
 import { stripHtml } from "@/lib/richText";
-import { buildCanonicalUrl } from "@/lib/publicUrl";
+import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -53,24 +53,9 @@ async function fetchQuizMeta(slugOrId: string) {
   return data;
 }
 
-// Resolve the owner's preferred public hostname so og:url + canonical
-// point to their custom domain (when verified) regardless of which URL
-// the creator actually shared. Without this, sharing a `quiz.tipote.com`
-// URL would leave the iMessage / WhatsApp preview showing tipote in the
-// hostname slot even when the owner has paid for a branded domain
-// (Adeline 19 mai 2026).
-async function fetchOwnerCustomHost(userId: string): Promise<string | null> {
-  const { data } = await supabaseAdmin
-    .from("custom_domains")
-    .select("hostname")
-    .eq("user_id", userId)
-    .eq("status", "verified")
-    .order("verified_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const h = (data as { hostname?: string | null } | null)?.hostname;
-  return h ? h.toLowerCase().trim() : null;
-}
+// Note : la résolution du custom domain + share_site_name de l'owner
+// vit dans `fetchOwnerBranding` (lib/publicUrl.ts) — partagé entre les
+// 3 routes publiques pour rester cohérent.
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { quizId } = await params;
@@ -98,30 +83,39 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const description = rawDesc.trim() || undefined;
     const plainTitle = stripHtml(data.title);
 
-    // Canonical = the owner's branded URL when they have a verified
-    // custom domain ; otherwise the actual request URL. This decouples
-    // "which URL was shared" from "what hostname iMessage shows under
-    // the preview" — a creator who shared `quiz.tipote.com/q/abc` from
-    // their dashboard still gets `monsite.fr/abc` in the preview if
-    // their domain is verified. Falls back to buildCanonicalUrl(host)
-    // when no custom domain exists.
-    const ownerHost = data.user_id ? await fetchOwnerCustomHost(String(data.user_id)) : null;
+    // Branding owner : custom domain vérifié + share_site_name (optionnel).
+    // Permet de virer toute trace de "Tiquiz" des meta sociales quand
+    // l'user a payé pour un domain brandé.
+    const branding = data.user_id ? await fetchOwnerBranding(String(data.user_id)) : null;
     const ownerSlug = (data as { slug?: string | null }).slug?.trim() ?? "";
-    const canonical = ownerHost && ownerSlug
-      ? `https://${ownerHost}/${ownerSlug}`
+
+    // Canonical = brand URL si custom domain ; sinon URL réelle de la requête.
+    const canonical = branding && ownerSlug
+      ? `https://${branding.customHost}/${ownerSlug}`
       : await buildCanonicalUrl(`/q/${quizId}`);
 
-    // `title: plainTitle` — pas de " – Tiquiz" suffixé : le template
-    // global `%s · ${siteTitle}` dans app/layout.tsx ajoute déjà
-    // "· Tiquiz" en bout de chaîne. Avant ce fix l'onglet affichait
-    // "X – Tiquiz · Tiquiz" (doublon, Adeline 19 mai 2026).
+    // site_name affiché par iMessage / WhatsApp / FB sous l'aperçu.
+    // Sur main host : "Tiquiz" (via le template layout, comportement
+    // historique). Sur custom domain : share_site_name si rempli sinon
+    // le hostname brandé. Plus aucun "Tiquiz" qui leak.
+    const siteName = branding ? (branding.siteName || branding.customHost) : null;
+
+    // Title : sur custom domain on construit un `absolute` qui shunte
+    // le template global `%s · Tiquiz` de app/layout.tsx. Sur main host
+    // on retourne juste plainTitle et le template ajoute "· Tiquiz".
+    const titleOverride = siteName
+      ? { absolute: `${plainTitle} · ${siteName}` }
+      : plainTitle;
+
     return {
-      title: plainTitle,
+      title: titleOverride,
       description,
+      ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
       openGraph: {
         title: plainTitle,
         description,
+        ...(siteName ? { siteName } : {}),
         ...(canonical ? { url: canonical } : {}),
         ...(data.og_image_url ? { images: [{ url: data.og_image_url }] } : {}),
       },

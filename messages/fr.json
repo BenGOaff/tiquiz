@@ -843,7 +843,10 @@
     "trackingDefaultsAdsIdLabel": "Google Ads — ID de conversion",
     "trackingDefaultsAdsLabelLabel": "Google Ads — Label de conversion",
     "trackingDefaultsAdsHelp": "Trouver mes IDs Google Ads",
-    "tabTracking": "Tracking"
+    "tabTracking": "Tracking",
+    "shareSiteNameTitle": "Nom de marque dans les partages",
+    "shareSiteNameDesc": "Remplace « Tiquiz » dans l'aperçu iMessage / WhatsApp / réseaux sociaux. Affiché sous le titre du quiz.",
+    "shareSiteNameHint": "Vide → on affichera ton domaine ({fallback})."
   },
   "languageSwitcher": {
     "label": "Langue"

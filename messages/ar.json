@@ -860,7 +860,10 @@
     "trackingDefaultsAdsIdLabel": "Google Ads — معرّف التحويل",
     "trackingDefaultsAdsLabelLabel": "Google Ads — تسمية التحويل",
     "trackingDefaultsAdsHelp": "العثور على معرّفات Google Ads",
-    "tabTracking": "التتبع"
+    "tabTracking": "التتبع",
+    "shareSiteNameTitle": "اسم العلامة في المشاركات",
+    "shareSiteNameDesc": "يحل محل «Tiquiz» في معاينة iMessage / WhatsApp / الشبكات الاجتماعية.",
+    "shareSiteNameHint": "فارغ → سنعرض نطاقك ({fallback})."
   },
   "languageSwitcher": {
     "label": "اللغة"
