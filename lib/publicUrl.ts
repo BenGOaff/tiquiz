@@ -18,6 +18,7 @@
 // metadataBase do its thing.
 
 import { headers } from "next/headers";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function buildCanonicalUrl(path: string): Promise<string | null> {
   const h = await headers();
@@ -30,4 +31,50 @@ export async function buildCanonicalUrl(path: string): Promise<string | null> {
   const proto = h.get("x-forwarded-proto") || "https";
   const p = path.startsWith("/") ? path : `/${path}`;
   return `${proto}://${host}${p}`;
+}
+
+// ─── Branding override pour les meta sociales ──────────────────────
+// Quand un creator a un custom domain vérifié, on ne veut PLUS aucune
+// mention "Tiquiz" dans les aperçus iMessage / WhatsApp / FB / etc.
+// (Adeline, 19 mai 2026 : "si l'user met son domaine il ne veut plus
+// voir de trace de tiquiz"). Cette fonction résout l'override par
+// owner : son `share_site_name` s'il l'a renseigné, sinon le hostname
+// vérifié comme fallback intelligent. Retourne `null` quand l'user
+// n'a pas de custom domain → la route applique le siteName par défaut
+// "Tiquiz" via app/layout.tsx (comportement historique préservé).
+
+export type OwnerBranding = {
+  /** Hostname custom domain (lower-case, sans port) — ex: "quiz.adelinecirade.com". */
+  customHost: string;
+  /** Nom de marque user-éditable (ex: "Adeline Cirade"). Null si pas rempli. */
+  siteName: string | null;
+};
+
+/** Lookup owner branding from the user_id of a quiz/popquiz owner. */
+export async function fetchOwnerBranding(userId: string): Promise<OwnerBranding | null> {
+  const [{ data: cd }, { data: profile }] = await Promise.all([
+    supabaseAdmin
+      .from("custom_domains")
+      .select("hostname")
+      .eq("user_id", userId)
+      .eq("status", "verified")
+      .order("verified_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("profiles")
+      .select("share_site_name")
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
+  const host = (cd as { hostname?: string | null } | null)?.hostname?.toLowerCase().trim();
+  if (!host) return null;
+  const siteName = (profile as { share_site_name?: string | null } | null)?.share_site_name?.trim() ?? null;
+  return { customHost: host, siteName: siteName && siteName.length > 0 ? siteName : null };
+}
+
+/** Compute the effective site_name to display in og:site_name + <title> suffix. */
+export function effectiveSiteName(branding: OwnerBranding | null, fallbackHost: string): string {
+  if (!branding) return "Tiquiz"; // owner on main host → historical behaviour
+  return branding.siteName || branding.customHost || fallbackHost;
 }

@@ -843,7 +843,10 @@
     "trackingDefaultsAdsIdLabel": "Google Ads — Conversion ID",
     "trackingDefaultsAdsLabelLabel": "Google Ads — Conversion Label",
     "trackingDefaultsAdsHelp": "Find my Google Ads IDs",
-    "tabTracking": "Tracking"
+    "tabTracking": "Tracking",
+    "shareSiteNameTitle": "Brand name in shares",
+    "shareSiteNameDesc": "Replaces \"Tiquiz\" under the share preview on iMessage / WhatsApp / social networks.",
+    "shareSiteNameHint": "Leave empty → we'll show your domain ({fallback})."
   },
   "languageSwitcher": {
     "label": "Language"

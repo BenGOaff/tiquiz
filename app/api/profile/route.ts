@@ -96,6 +96,9 @@ export async function PATCH(req: NextRequest) {
       // sur les nouveaux quizzes du créateur. Modifiables per-quiz.
       "default_meta_pixel_id", "default_ga4_measurement_id",
       "default_google_ads_conversion_id", "default_google_ads_conversion_label",
+      // Override de `og:site_name` + suffix du <title> pour les quiz
+      // servis via un custom domain. Cf. migration 20260519.
+      "share_site_name",
     ];
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     for (const key of allowed) {
@@ -106,6 +109,24 @@ export async function PATCH(req: NextRequest) {
     // reste de la route), donc on valide à la main avant d'écrire.
     if ("saved_palettes" in updates) {
       updates.saved_palettes = sanitisePalettes(updates.saved_palettes);
+    }
+
+    // share_site_name : trim + cap 60 chars + null si vide. Pas de HTML
+    // sanitization avancée (on l'injecte tel quel dans og:site_name et
+    // le <title> — Next.js l'escape automatiquement, donc safe).
+    if ("share_site_name" in updates) {
+      const raw = updates.share_site_name;
+      if (raw === null || raw === undefined) {
+        updates.share_site_name = null;
+      } else if (typeof raw !== "string") {
+        return NextResponse.json(
+          { ok: false, error: "share_site_name doit être une string ou null" },
+          { status: 400 },
+        );
+      } else {
+        const trimmed = raw.trim().slice(0, 60);
+        updates.share_site_name = trimmed.length > 0 ? trimmed : null;
+      }
     }
 
     const { data: profile, error } = await supabaseAdmin
