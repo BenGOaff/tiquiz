@@ -657,6 +657,7 @@
     "faviconTitle": "Favicon",
     "faviconDesc": "Upload your favicon (shown in the browser tab on your custom domain). Square image, 256×256 px recommended.",
     "faviconUploadBtn": "Upload favicon",
+    "faviconRemoveBtn": "Remove",
     "faviconUrlPh": "or paste your favicon URL",
     "colorsTitle": "Colors",
     "colorsDesc": "Brand colors for your quizzes",

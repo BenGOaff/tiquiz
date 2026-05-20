@@ -54,30 +54,58 @@ export type OwnerBranding = {
   faviconUrl: string | null;
 };
 
-/** Lookup owner branding from the user_id of a quiz/popquiz owner. */
-export async function fetchOwnerBranding(userId: string): Promise<OwnerBranding | null> {
+/** Lookup owner branding for a public page.
+ *
+ *  When `hostname` is provided (normal case — the page knows its custom
+ *  host via the x-tiquiz-custom-host header), the favicon is read from
+ *  THAT specific custom_domains row, so users with multiple branded
+ *  domains get one favicon per domain.
+ *
+ *  When `hostname` is omitted we fall back to the first verified domain
+ *  for the user (legacy behaviour, used in contexts where the host is
+ *  not available — e.g. server-side share previews built outside a
+ *  request scope). */
+export async function fetchOwnerBranding(
+  userId: string,
+  hostname?: string | null,
+): Promise<OwnerBranding | null> {
+  const host = hostname?.toLowerCase().trim() || null;
+
+  const domainQuery = host
+    ? supabaseAdmin
+        .from("custom_domains")
+        .select("hostname, favicon_url")
+        .eq("user_id", userId)
+        .ilike("hostname", host)
+        .eq("status", "verified")
+        .maybeSingle()
+    : supabaseAdmin
+        .from("custom_domains")
+        .select("hostname, favicon_url")
+        .eq("user_id", userId)
+        .eq("status", "verified")
+        .order("verified_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
   const [{ data: cd }, { data: profile }] = await Promise.all([
-    supabaseAdmin
-      .from("custom_domains")
-      .select("hostname")
-      .eq("user_id", userId)
-      .eq("status", "verified")
-      .order("verified_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+    domainQuery,
     supabaseAdmin
       .from("profiles")
-      .select("share_site_name, brand_favicon_url")
+      .select("share_site_name")
       .eq("user_id", userId)
       .maybeSingle(),
   ]);
-  const host = (cd as { hostname?: string | null } | null)?.hostname?.toLowerCase().trim();
-  if (!host) return null;
-  const p = profile as { share_site_name?: string | null; brand_favicon_url?: string | null } | null;
+
+  const cdRow = cd as { hostname?: string | null; favicon_url?: string | null } | null;
+  const matchedHost = cdRow?.hostname?.toLowerCase().trim() || null;
+  if (!matchedHost) return null;
+
+  const p = profile as { share_site_name?: string | null } | null;
   const siteName = p?.share_site_name?.trim() ?? null;
-  const favicon = p?.brand_favicon_url?.trim() ?? null;
+  const favicon = cdRow?.favicon_url?.trim() ?? null;
   return {
-    customHost: host,
+    customHost: matchedHost,
     siteName: siteName && siteName.length > 0 ? siteName : null,
     faviconUrl: favicon && favicon.length > 0 ? favicon : null,
   };

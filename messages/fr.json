@@ -657,6 +657,7 @@
     "faviconTitle": "Favicon",
     "faviconDesc": "Charge ton favicon (s'affiche dans l'onglet du navigateur sur ton domaine personnalisé). Image carrée, 256×256 px recommandé.",
     "faviconUploadBtn": "Charger un favicon",
+    "faviconRemoveBtn": "Retirer",
     "faviconUrlPh": "ou colle l'URL de ton favicon",
     "colorsTitle": "Couleurs",
     "colorsDesc": "Couleurs de marque pour tes quiz",

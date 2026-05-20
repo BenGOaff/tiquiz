@@ -101,7 +101,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Cette route est forcément sur un custom domain — sinon `owner` est
   // null et on a déjà return {} plus haut — donc branding est rarement
   // null ici, sauf race condition (domain dé-vérifié entre les 2 lookups).
-  const branding = await fetchOwnerBranding(owner);
+  const customHost = (await headers()).get(CUSTOM_HOST_HEADER);
+  const branding = await fetchOwnerBranding(owner, customHost);
   const siteName = branding ? (branding.siteName || branding.customHost) : null;
 
   if (r.kind === "quiz") {
