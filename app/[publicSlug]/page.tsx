@@ -122,6 +122,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: titleOverride,
       description,
       ...(siteName ? { applicationName: siteName } : {}),
+      ...(branding?.faviconUrl ? { icons: { icon: branding.faviconUrl, shortcut: branding.faviconUrl, apple: branding.faviconUrl } } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
       openGraph: {
         title: plainTitle || "Quiz",

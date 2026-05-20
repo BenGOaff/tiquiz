@@ -96,6 +96,7 @@ export default function SettingsClient() {
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") || "general";
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -115,6 +116,11 @@ export default function SettingsClient() {
   const [defaultGoogleAdsConversionLabel, setDefaultGoogleAdsConversionLabel] = useState("");
 
   const [brandLogoUrl, setBrandLogoUrl] = useState("");
+  // Favicon custom (Gwenn, 23 mai 2026) — affiché dans l'onglet navigateur
+  // sur les pages publiques. S'applique UNIQUEMENT quand l'user a un
+  // custom domain vérifié (sinon on garde le favicon Tiquiz par défaut).
+  const [brandFaviconUrl, setBrandFaviconUrl] = useState("");
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [brandColorPrimary, setBrandColorPrimary] = useState("#5D6CDB");
   const [brandColorAccent, setBrandColorAccent] = useState("#20BBE6");
   const [brandFont, setBrandFont] = useState("Inter");
@@ -142,6 +148,7 @@ export default function SettingsClient() {
           setPrivacyUrl(p.privacy_url ?? "");
           setTargetAudience(p.target_audience ?? "");
           setBrandLogoUrl(p.brand_logo_url ?? "");
+          setBrandFaviconUrl(p.brand_favicon_url ?? "");
           setBrandColorPrimary(p.brand_color_primary ?? "#5D6CDB");
           setBrandColorAccent(p.brand_color_accent ?? "#20BBE6");
           setBrandFont(p.brand_font ?? "Inter");
@@ -189,6 +196,7 @@ export default function SettingsClient() {
           privacy_url: privacyUrl.trim() || null,
           target_audience: targetAudience.trim() || null,
           brand_logo_url: brandLogoUrl.trim() || null,
+          brand_favicon_url: brandFaviconUrl.trim() || null,
           brand_color_primary: brandColorPrimary,
           brand_color_accent: brandColorAccent,
           brand_font: brandFont,
@@ -237,6 +245,40 @@ export default function SettingsClient() {
       toast.error(t("errLogoUpload", { msg }));
     } finally {
       setUploadingLogo(false);
+    }
+  }
+
+  // Upload favicon — mêmes contraintes que le logo. On suffixe le nom
+  // de fichier d'un timestamp parce que les navigateurs cachent le
+  // favicon très agressivement : sans changement d'URL, le nouveau ne
+  // s'afficherait jamais avant un hard refresh.
+  async function handleFaviconUpload(file: File) {
+    if (!file.type.startsWith("image/") && !file.name.toLowerCase().endsWith(".ico")) {
+      toast.error(t("errImageOnly"));
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error(t("errImageTooLarge2"));
+      return;
+    }
+    setUploadingFavicon(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const ext = file.name.split(".").pop()?.toLowerCase() ?? "png";
+      const path = `favicons/${user.id}/favicon-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      setBrandFaviconUrl(urlData.publicUrl);
+      toast.success(t("faviconUploaded"));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Favicon upload failed:", err);
+      toast.error(t("errFaviconUpload", { msg }));
+    } finally {
+      setUploadingFavicon(false);
     }
   }
 
@@ -430,6 +472,60 @@ export default function SettingsClient() {
                     value={brandLogoUrl}
                     onChange={(e) => setBrandLogoUrl(e.target.value)}
                     placeholder={t("logoUrlPh")}
+                    className="text-xs"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Favicon (Gwenn, 23 mai 2026) — affiché dans l'onglet
+              navigateur des pages publiques quand l'user a un custom
+              domain vérifié. Sans custom domain, on garde le favicon
+              Tiquiz par défaut (décision Béné). */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("faviconTitle")}</CardTitle>
+              <CardDescription>{t("faviconDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-4">
+                {brandFaviconUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={brandFaviconUrl} alt="Favicon" className="h-14 w-14 object-contain rounded-lg border bg-white p-1" />
+                ) : (
+                  <div className="h-14 w-14 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+                    <Upload className="h-5 w-5 text-muted-foreground/50" />
+                  </div>
+                )}
+                <div className="flex-1 space-y-2">
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full"
+                      disabled={uploadingFavicon}
+                      onClick={() => faviconInputRef.current?.click()}
+                    >
+                      {uploadingFavicon ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Upload className="h-4 w-4 mr-1.5" />}
+                      {t("faviconUploadBtn")}
+                    </Button>
+                    <input
+                      ref={faviconInputRef}
+                      type="file"
+                      accept="image/*,.ico"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) handleFaviconUpload(f);
+                      }}
+                    />
+                  </div>
+                  <Input
+                    value={brandFaviconUrl}
+                    onChange={(e) => setBrandFaviconUrl(e.target.value)}
+                    placeholder={t("faviconUrlPh")}
                     className="text-xs"
                   />
                 </div>

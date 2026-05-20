@@ -83,7 +83,7 @@ export async function PATCH(req: NextRequest) {
 
     const allowed = [
       "full_name", "ui_locale", "content_locale", "address_form", "privacy_url",
-      "brand_logo_url", "brand_color_primary", "brand_color_accent",
+      "brand_logo_url", "brand_favicon_url", "brand_color_primary", "brand_color_accent",
       "brand_font", "brand_tone", "brand_website_url",
       "target_audience",
       // ID affilié Tipote — utilisé sur le footer Tiquiz public pour

@@ -48,6 +48,10 @@ export type OwnerBranding = {
   customHost: string;
   /** Nom de marque user-éditable (ex: "Adeline Cirade"). Null si pas rempli. */
   siteName: string | null;
+  /** Favicon custom à afficher dans l'onglet navigateur. Null = on retombe
+   *  sur le favicon Tiquiz par défaut (app/layout.tsx). Décision Béné
+   *  (23 mai 2026) : favicon custom UNIQUEMENT quand custom domain. */
+  faviconUrl: string | null;
 };
 
 /** Lookup owner branding from the user_id of a quiz/popquiz owner. */
@@ -63,14 +67,20 @@ export async function fetchOwnerBranding(userId: string): Promise<OwnerBranding 
       .maybeSingle(),
     supabaseAdmin
       .from("profiles")
-      .select("share_site_name")
+      .select("share_site_name, brand_favicon_url")
       .eq("user_id", userId)
       .maybeSingle(),
   ]);
   const host = (cd as { hostname?: string | null } | null)?.hostname?.toLowerCase().trim();
   if (!host) return null;
-  const siteName = (profile as { share_site_name?: string | null } | null)?.share_site_name?.trim() ?? null;
-  return { customHost: host, siteName: siteName && siteName.length > 0 ? siteName : null };
+  const p = profile as { share_site_name?: string | null; brand_favicon_url?: string | null } | null;
+  const siteName = p?.share_site_name?.trim() ?? null;
+  const favicon = p?.brand_favicon_url?.trim() ?? null;
+  return {
+    customHost: host,
+    siteName: siteName && siteName.length > 0 ? siteName : null,
+    faviconUrl: favicon && favicon.length > 0 ? favicon : null,
+  };
 }
 
 /** Compute the effective site_name to display in og:site_name + <title> suffix. */
@@ -78,3 +88,4 @@ export function effectiveSiteName(branding: OwnerBranding | null, fallbackHost: 
   if (!branding) return "Tiquiz"; // owner on main host → historical behaviour
   return branding.siteName || branding.customHost || fallbackHost;
 }
+
