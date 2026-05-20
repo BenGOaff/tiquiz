@@ -11,16 +11,15 @@
 // the form upfront with a friendly upsell, rather than letting the
 // user fill it in and bump into a 403.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Globe, Loader2, Sparkles, Upload } from "lucide-react";
+import { Globe, Loader2, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import type { CustomDomainRow } from "@/lib/customDomains";
 import type { RegistrarInfo } from "@/lib/registrarDetect";
-import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { AddCustomDomainDialog } from "./AddCustomDomainDialog";
 import { CustomDomainCard } from "./CustomDomainCard";
 
@@ -51,16 +50,6 @@ export function CustomDomainsTab({ isPaid }: Props) {
   const [shareSiteNameOriginal, setShareSiteNameOriginal] = useState("");
   const [savingShareSiteName, setSavingShareSiteName] = useState(false);
 
-  // Favicon — Gwenn, 23 mai 2026. Servi dans l'onglet navigateur sur
-  // les routes publiques quand l'user a un custom domain vérifié.
-  // Sans custom domain, le navigateur charge tiquiz.com/favicon.ico,
-  // donc on planque le réglage : il ne sert à rien.
-  const faviconInputRef = useRef<HTMLInputElement>(null);
-  const [brandFaviconUrl, setBrandFaviconUrl] = useState("");
-  const [brandFaviconUrlOriginal, setBrandFaviconUrlOriginal] = useState("");
-  const [uploadingFavicon, setUploadingFavicon] = useState(false);
-  const [savingFavicon, setSavingFavicon] = useState(false);
-
   useEffect(() => {
     if (!isPaid) {
       setLoading(false);
@@ -88,9 +77,6 @@ export function CustomDomainsTab({ isPaid }: Props) {
           const value = (profData.profile?.share_site_name ?? "") as string;
           setShareSiteName(value);
           setShareSiteNameOriginal(value);
-          const fav = (profData.profile?.brand_favicon_url ?? "") as string;
-          setBrandFaviconUrl(fav);
-          setBrandFaviconUrlOriginal(fav);
         }
       } catch {
         if (!cancelled) toast.error(t("errNetwork"));
@@ -102,61 +88,6 @@ export function CustomDomainsTab({ isPaid }: Props) {
       cancelled = true;
     };
   }, [isPaid, t]);
-
-  async function handleFaviconUpload(file: File) {
-    if (!file.type.startsWith("image/") && !file.name.toLowerCase().endsWith(".ico")) {
-      toast.error(t("errImageOnly"));
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error(t("errImageTooLarge2"));
-      return;
-    }
-    setUploadingFavicon(true);
-    try {
-      const supabase = getSupabaseBrowserClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const ext = file.name.split(".").pop()?.toLowerCase() ?? "png";
-      const path = `favicons/${user.id}/favicon-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
-      setBrandFaviconUrl(urlData.publicUrl);
-      toast.success(t("faviconUploaded"));
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("Favicon upload failed:", err);
-      toast.error(t("errFaviconUpload", { msg }));
-    } finally {
-      setUploadingFavicon(false);
-    }
-  }
-
-  async function handleSaveFavicon() {
-    setSavingFavicon(true);
-    try {
-      const trimmed = brandFaviconUrl.trim();
-      const res = await fetch("/api/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brand_favicon_url: trimmed || null }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        const next = (data.profile?.brand_favicon_url ?? "") as string;
-        setBrandFaviconUrl(next);
-        setBrandFaviconUrlOriginal(next);
-        toast.success(t("saved"));
-      } else {
-        toast.error(data.error ?? t("errGeneric"));
-      }
-    } catch {
-      toast.error(t("errNetwork"));
-    } finally {
-      setSavingFavicon(false);
-    }
-  }
 
   async function handleSaveShareSiteName() {
     setSavingShareSiteName(true);
@@ -234,7 +165,6 @@ export function CustomDomainsTab({ isPaid }: Props) {
   const hasVerifiedDomain = domains.some((d) => d.status === "verified");
   const firstVerifiedHost = domains.find((d) => d.status === "verified")?.hostname || "";
   const shareSiteNameDirty = shareSiteName.trim() !== shareSiteNameOriginal.trim();
-  const faviconDirty = brandFaviconUrl.trim() !== brandFaviconUrlOriginal.trim();
 
   return (
     <div className="space-y-4">
@@ -277,66 +207,6 @@ export function CustomDomainsTab({ isPaid }: Props) {
           )}
         </CardContent>
       </Card>
-
-      {hasVerifiedDomain && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("faviconTitle")}</CardTitle>
-            <CardDescription>{t("faviconDesc")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-4">
-              {brandFaviconUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={brandFaviconUrl} alt="Favicon" className="h-14 w-14 object-contain rounded-lg border bg-white p-1" />
-              ) : (
-                <div className="h-14 w-14 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
-                  <Upload className="h-5 w-5 text-muted-foreground/50" />
-                </div>
-              )}
-              <div className="flex-1 space-y-2">
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full"
-                    disabled={uploadingFavicon}
-                    onClick={() => faviconInputRef.current?.click()}
-                  >
-                    {uploadingFavicon ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Upload className="h-4 w-4 mr-1.5" />}
-                    {t("faviconUploadBtn")}
-                  </Button>
-                  <input
-                    ref={faviconInputRef}
-                    type="file"
-                    accept="image/*,.ico"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleFaviconUpload(f);
-                    }}
-                  />
-                </div>
-                <Input
-                  value={brandFaviconUrl}
-                  onChange={(e) => setBrandFaviconUrl(e.target.value)}
-                  placeholder={t("faviconUrlPh")}
-                  className="text-xs"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end">
-              <Button
-                onClick={handleSaveFavicon}
-                disabled={!faviconDirty || savingFavicon}
-              >
-                {savingFavicon ? <Loader2 className="h-4 w-4 animate-spin" /> : t("save")}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {hasVerifiedDomain && (
         <Card>

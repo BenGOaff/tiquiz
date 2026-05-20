@@ -86,7 +86,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // Branding owner : custom domain vérifié + share_site_name (optionnel).
     // Permet de virer toute trace de "Tiquiz" des meta sociales quand
     // l'user a payé pour un domain brandé.
-    const branding = data.user_id ? await fetchOwnerBranding(String(data.user_id)) : null;
+    const customHost = (await headers()).get(CUSTOM_HOST_HEADER);
+    const branding = data.user_id
+      ? await fetchOwnerBranding(String(data.user_id), customHost)
+      : null;
     const ownerSlug = (data as { slug?: string | null }).slug?.trim() ?? "";
 
     // Canonical = brand URL si custom domain ; sinon URL réelle de la requête.

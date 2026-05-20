@@ -74,7 +74,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Branding owner (custom domain + share_site_name) — null = main host
   // → on garde "Tiquiz" via le template layout (comportement historique).
   const ownerId = await fetchPopquizOwner(popquizId);
-  const branding = ownerId ? await fetchOwnerBranding(ownerId) : null;
+  const customHost = (await headers()).get(CUSTOM_HOST_HEADER);
+  const branding = ownerId ? await fetchOwnerBranding(ownerId, customHost) : null;
   const popquizSlug = (popquiz as { slug?: string | null }).slug?.trim() ?? "";
   const canonical = branding && popquizSlug
     ? `https://${branding.customHost}/${popquizSlug}`
