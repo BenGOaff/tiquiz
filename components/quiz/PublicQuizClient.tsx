@@ -89,6 +89,10 @@ type PublicQuizData = {
   virality_enabled: boolean;
   bonus_description: string | null;
   bonus_image_url: string | null;
+  // Image dédiée à la PAGE D'INTRO (Hugo, 19 mai 2026). Slot logique
+  // parmi top / after_title / after_intro / bottom.
+  intro_image_url?: string | null;
+  intro_image_position?: "top" | "after_title" | "after_intro" | "bottom" | null;
   bonus_intro_text?: string | null;
   // Override for "Bonus unlocked!" message shown after share. Lets a
   // creator deliver the bonus inline (e.g. discount code) without
@@ -1659,6 +1663,12 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                 />
               </div>
             )}
+            {/* Image d'intro — slot TOP (entre logo et titre). On garde
+                w-full h-auto pour préserver le ratio (CLAUDE_PITFALLS B). */}
+            {quiz.intro_image_url && (quiz.intro_image_position ?? "top") === "top" && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={quiz.intro_image_url} alt="" className="w-full h-auto rounded-xl" />
+            )}
             {/* Titre du quiz = champ COURT (1 ligne). `tiquiz-rich-inline`
                 empêche tout <p>/<div> imbriqué de modifier la taille de
                 police. */}
@@ -1666,6 +1676,12 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               className="tiquiz-rich tiquiz-rich-inline text-3xl sm:text-5xl font-bold leading-tight"
               dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.title)) }}
             />
+
+            {/* Image d'intro — slot AFTER_TITLE */}
+            {quiz.intro_image_url && quiz.intro_image_position === "after_title" && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={quiz.intro_image_url} alt="" className="w-full h-auto rounded-xl" />
+            )}
 
             {introRich ? (
               <div
@@ -1693,6 +1709,12 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
               </>
             )}
 
+            {/* Image d'intro — slot AFTER_INTRO */}
+            {quiz.intro_image_url && quiz.intro_image_position === "after_intro" && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={quiz.intro_image_url} alt="" className="w-full h-auto rounded-xl" />
+            )}
+
             <Button size="lg" className="h-14 px-12 text-lg rounded-full shadow-lg" onClick={() => {
               trackEvent("start");
               // Preview mode with a pre-filled name skips the personalize
@@ -1706,6 +1728,12 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.start_button_text?.trim() || "") || t.start }}
               />
             </Button>
+
+            {/* Image d'intro — slot BOTTOM */}
+            {quiz.intro_image_url && quiz.intro_image_position === "bottom" && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={quiz.intro_image_url} alt="" className="w-full h-auto rounded-xl" />
+            )}
         </div>
         </div>
         <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />

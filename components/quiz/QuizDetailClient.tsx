@@ -97,6 +97,10 @@ type QuizQuestion = {
 };
 type ResultImagePosition = "top" | "after_title" | "after_description" | "after_insight" | "bottom";
 const RESULT_IMAGE_POSITIONS: ResultImagePosition[] = ["top", "after_title", "after_description", "after_insight", "bottom"];
+// 4 slots logiques sur la page d'intro du quiz, dans l'ordre d'apparition
+// vertical sous le logo : au-dessus du titre, entre titre et intro text,
+// entre intro et bouton "Démarrer", sous le bouton.
+type IntroImagePosition = "top" | "after_title" | "after_intro" | "bottom";
 type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null };
 type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; option_index?: number; option_indices?: number[] }[] | null; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
 type QuizData = {
@@ -111,6 +115,7 @@ type QuizData = {
   capture_phone: boolean | null; capture_country: boolean | null;
   phone_required?: boolean | null; first_name_required?: boolean | null; last_name_required?: boolean | null; country_required?: boolean | null;
   virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null;
+  intro_image_url: string | null; intro_image_position: IntroImagePosition | null;
   bonus_intro_text: string | null;
   bonus_unlocked_message: string | null;
   share_message: string | null; locale: string | null;
@@ -483,6 +488,14 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const [bonusIntroText, setBonusIntroText] = useState("");
   const [bonusUnlockedMessage, setBonusUnlockedMessage] = useState("");
   const [bonusImageUrl, setBonusImageUrl] = useState<string | null>(null);
+  // Image dédiée à la page d'INTRO du quiz (Hugo, 19 mai 2026). Même
+  // pattern que les images de résultats : URL + slot logique parmi 4
+  // positions, drag-and-drop natif HTML5 dans le live preview.
+  const [introImageUrl, setIntroImageUrl] = useState<string | null>(null);
+  const [introImagePosition, setIntroImagePosition] = useState<IntroImagePosition>("top");
+  const [introImageUploading, setIntroImageUploading] = useState(false);
+  const [draggingIntroImage, setDraggingIntroImage] = useState(false);
+  const introImageInputRef = useRef<HTMLInputElement>(null);
   const [uploadingBonusImage, setUploadingBonusImage] = useState(false);
   // Vignette OG (image affichée par WhatsApp / iMessage / Twitter quand
   // le quiz est partagé). Override le logo Tiquiz par défaut. Cf. demande
@@ -611,6 +624,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     bonus_intro_text: bonusIntroText,
     bonus_unlocked_message: bonusUnlockedMessage,
     bonus_image_url: bonusImageUrl,
+    intro_image_url: introImageUrl,
+    intro_image_position: introImagePosition,
     share_message: shareMessage,
     locale,
     sio_share_tag_name: sioShareTagName,
@@ -635,6 +650,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     metaPixelId, ga4MeasurementId, googleAdsConversionId, googleAdsConversionLabel,
     askFirstName, askGender,
     viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl,
+    introImageUrl, introImagePosition,
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor,
     slug, ogDescription, ogImageUrl, customFooterText, customFooterUrl, shareNetworks,
@@ -686,6 +702,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     if (typeof s.bonus_intro_text === "string") setBonusIntroText(s.bonus_intro_text);
     if (typeof s.bonus_unlocked_message === "string") setBonusUnlockedMessage(s.bonus_unlocked_message);
     if (s.bonus_image_url === null || typeof s.bonus_image_url === "string") setBonusImageUrl(s.bonus_image_url);
+    if (s.intro_image_url === null || typeof s.intro_image_url === "string") setIntroImageUrl(s.intro_image_url);
+    if (s.intro_image_position === "top" || s.intro_image_position === "after_title" || s.intro_image_position === "after_intro" || s.intro_image_position === "bottom") {
+      setIntroImagePosition(s.intro_image_position);
+    }
     if (typeof s.share_message === "string") setShareMessage(s.share_message);
     if (typeof s.locale === "string") setLocale(s.locale);
     if (typeof s.sio_share_tag_name === "string") setSioShareTagName(s.sio_share_tag_name);
@@ -793,6 +813,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setBonusIntroText(q.bonus_intro_text ?? "");
       setBonusUnlockedMessage(q.bonus_unlocked_message ?? "");
       setBonusImageUrl(q.bonus_image_url ?? null);
+      setIntroImageUrl(q.intro_image_url ?? null);
+      setIntroImagePosition((q.intro_image_position as IntroImagePosition | null) ?? "top");
       setOgImageUrl(q.og_image_url ?? null);
       setShareMessage(q.share_message ?? ""); setLocale(q.locale ?? "");
       setSioShareTagName(q.sio_share_tag_name ?? ""); setStatus(q.status);
@@ -858,6 +880,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           bonus_intro_text: q.bonus_intro_text ?? "",
           bonus_unlocked_message: q.bonus_unlocked_message ?? "",
           bonus_image_url: q.bonus_image_url ?? null,
+          intro_image_url: q.intro_image_url ?? null,
+          intro_image_position: q.intro_image_position ?? "top",
           share_message: q.share_message ?? "",
           locale: q.locale ?? "",
           sio_share_tag_name: q.sio_share_tag_name ?? "",
@@ -1392,6 +1416,37 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // drop-zones aux 4 autres positions du même résultat.
   const [draggingResultImageRi, setDraggingResultImageRi] = useState<number | null>(null);
 
+  // Image d'INTRO du quiz — même pattern qu'au-dessus, mais un seul
+  // exemplaire par quiz (pas indexé par ri). Reuse handleRichTextImageUpload
+  // pour le storage (path quiz-intro/<auth.uid()>/…).
+  const openIntroImagePicker = () => introImageInputRef.current?.click();
+  const onIntroImagePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setIntroImageUploading(true);
+    try {
+      const url = await handleRichTextImageUpload(file);
+      if (!url) return;
+      setIntroImageUrl(url);
+      if (!introImagePosition) setIntroImagePosition("top");
+    } finally {
+      setIntroImageUploading(false);
+    }
+  };
+  const clearIntroImage = () => setIntroImageUrl(null);
+  async function handleIntroImageDrop(file: File, pos: IntroImagePosition) {
+    setIntroImageUploading(true);
+    try {
+      const url = await handleRichTextImageUpload(file);
+      if (!url) return;
+      setIntroImageUrl(url);
+      setIntroImagePosition(pos);
+    } finally {
+      setIntroImageUploading(false);
+    }
+  }
+
   // Save
   const handleSave = async () => {
     if (!title.trim()) { toast.error(t("errTitleRequired")); return; }
@@ -1424,6 +1479,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           bonus_intro_text: bonusIntroText.trim() || null,
           bonus_unlocked_message: bonusUnlockedMessage.trim() || null,
           bonus_image_url: bonusImageUrl,
+          intro_image_url: introImageUrl,
+          intro_image_position: introImageUrl ? introImagePosition : null,
           share_message: shareMessage, locale: locale || null,
           sio_share_tag_name: sioShareTagName || null, status,
           // Branding
@@ -2216,14 +2273,86 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               {/* ── INTRO SECTION ── */}
               <div ref={introRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 text-center">
                 <div className="max-w-2xl w-full space-y-6">
+                  {/* Hidden file input partagé pour le picker intro image.
+                      Une seule instance, déclenchée par openIntroImagePicker. */}
+                  <input
+                    ref={introImageInputRef}
+                    type="file"
+                    accept="image/*,image/gif"
+                    className="sr-only"
+                    onChange={onIntroImagePicked}
+                  />
+                  {/* Dropzone d'upload — visible UNIQUEMENT quand aucune
+                      image d'intro n'est définie. Une fois posée, l'image
+                      apparaît dans son slot et devient draggable. */}
+                  {!introImageUrl && (
+                    <button
+                      type="button"
+                      onClick={openIntroImagePicker}
+                      disabled={introImageUploading}
+                      onDragOver={(e) => { e.preventDefault(); }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const f = Array.from(e.dataTransfer?.files ?? []).find(x => x.type.startsWith("image/"));
+                        if (f) void handleIntroImageDrop(f, "top");
+                      }}
+                      className="w-full py-8 rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground disabled:opacity-50"
+                    >
+                      {introImageUploading
+                        ? <Loader2 className="w-6 h-6 animate-spin" />
+                        : <ImagePlus className="w-6 h-6" />}
+                      <span className="text-xs">{t("introImageDropzone")}</span>
+                      <span className="text-[10px] text-muted-foreground/70">{t("introImageHint")}</span>
+                    </button>
+                  )}
+
                   {brandLogoUrl && (
                     <div className="flex justify-center">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={brandLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
                     </div>
                   )}
+
+                  {/* slot TOP — entre logo et titre */}
+                  {introImageUrl && (introImagePosition ?? "top") === "top" && (
+                    <ResultDraggableImage url={introImageUrl} ri={-1}
+                      onDragStart={() => setDraggingIntroImage(true)}
+                      onDragEnd={() => setDraggingIntroImage(false)}
+                      onRemove={clearIntroImage} />
+                  )}
+                  {draggingIntroImage && (introImagePosition ?? "top") !== "top" && (
+                    <ResultPositionDropZone label={t("introImagePos_top")}
+                      onDrop={() => { setIntroImagePosition("top"); setDraggingIntroImage(false); }} />
+                  )}
+
                   <RichTextEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} onImageUpload={handleRichTextImageUpload} singleLine className="text-3xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
+
+                  {/* slot AFTER_TITLE — entre titre et intro text */}
+                  {introImageUrl && introImagePosition === "after_title" && (
+                    <ResultDraggableImage url={introImageUrl} ri={-1}
+                      onDragStart={() => setDraggingIntroImage(true)}
+                      onDragEnd={() => setDraggingIntroImage(false)}
+                      onRemove={clearIntroImage} />
+                  )}
+                  {draggingIntroImage && introImagePosition !== "after_title" && (
+                    <ResultPositionDropZone label={t("introImagePos_after_title")}
+                      onDrop={() => { setIntroImagePosition("after_title"); setDraggingIntroImage(false); }} />
+                  )}
+
                   <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} onImageUpload={handleRichTextImageUpload} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder={t("previewIntroPh")} />
+
+                  {/* slot AFTER_INTRO — entre intro text et bouton */}
+                  {introImageUrl && introImagePosition === "after_intro" && (
+                    <ResultDraggableImage url={introImageUrl} ri={-1}
+                      onDragStart={() => setDraggingIntroImage(true)}
+                      onDragEnd={() => setDraggingIntroImage(false)}
+                      onRemove={clearIntroImage} />
+                  )}
+                  {draggingIntroImage && introImagePosition !== "after_intro" && (
+                    <ResultPositionDropZone label={t("introImagePos_after_intro")}
+                      onDrop={() => { setIntroImagePosition("after_intro"); setDraggingIntroImage(false); }} />
+                  )}
+
                   <div className="flex justify-center">
                     <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
                       <RichTextEdit
@@ -2235,6 +2364,18 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       />
                     </div>
                   </div>
+
+                  {/* slot BOTTOM — sous le bouton */}
+                  {introImageUrl && introImagePosition === "bottom" && (
+                    <ResultDraggableImage url={introImageUrl} ri={-1}
+                      onDragStart={() => setDraggingIntroImage(true)}
+                      onDragEnd={() => setDraggingIntroImage(false)}
+                      onRemove={clearIntroImage} />
+                  )}
+                  {draggingIntroImage && introImagePosition !== "bottom" && (
+                    <ResultPositionDropZone label={t("introImagePos_bottom")}
+                      onDrop={() => { setIntroImagePosition("bottom"); setDraggingIntroImage(false); }} />
+                  )}
                 </div>
               </div>
 
