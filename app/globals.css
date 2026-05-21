@@ -204,11 +204,61 @@
 .tiquiz-rich-inline h5,
 .tiquiz-rich-inline h6 {
   /* `font-weight: inherit` SUR LES HEADINGS uniquement — sinon on
-   * écraserait <strong>/<b> qui doivent rester en gras. */
+   * écraserait <strong>/<b> qui doivent rester en gras. On enlève le
+   * `display: inline` historique car il empêchait les sauts de ligne
+   * que les users veulent dans leur titre (cf. Adeline 21 mai 2026
+   * "est-ce qu'il y aurait moyen de pouvoir passer à la ligne dans le
+   * titre ?"). Display:block reste le default natif des headings et
+   * permet le wrapping multi-ligne propre. */
   font-weight: inherit;
   margin: 0;
   padding: 0;
-  display: inline;
+}
+
+/* ─── Tailles de typographie quiz : bétonnage anti-override ────────
+ * Cas Adeline (21 mai 2026) : sur iPhone Safari elle voit son titre
+ * à ~18px alors que le composant a `text-4xl sm:text-5xl`. Cause
+ * probable : règle `.tiquiz-rich h1 { font-size: 1.5rem }` plus
+ * spécifique que le utility Tailwind. On force ici la taille du
+ * titre / question / result-title avec des classes dédiées qui
+ * battent toute autre règle, y compris un éventuel `style="font-size"`
+ * inline (déjà stripped par DOMPurify, mais belt-and-suspenders).
+ *
+ * Les sizes correspondent EXACTEMENT à text-4xl (36px), text-3xl
+ * (30px) et text-5xl (48px) Tailwind — on duplique côté CSS pour
+ * être sûrs qu'elles s'appliquent en prod même avec un build qui
+ * purgerait Tailwind. */
+.tiquiz-quiz-title {
+  /* `pre-wrap` préserve les `\n` saisis dans le titre tout en gardant
+   * le word-wrap naturel — Adeline veut pouvoir passer à la ligne. */
+  white-space: pre-wrap;
+}
+.tiquiz-quiz-title,
+.tiquiz-quiz-title * {
+  font-size: 2.25rem !important; /* text-4xl mobile */
+  line-height: 1.1 !important;
+}
+.tiquiz-quiz-question,
+.tiquiz-quiz-question * {
+  font-size: 1.875rem !important; /* text-3xl mobile */
+  line-height: 1.15 !important;
+}
+.tiquiz-quiz-result-title,
+.tiquiz-quiz-result-title * {
+  font-size: 2.25rem !important; /* text-4xl mobile */
+  line-height: 1.1 !important;
+}
+@media (min-width: 640px) {
+  .tiquiz-quiz-title,
+  .tiquiz-quiz-title *,
+  .tiquiz-quiz-result-title,
+  .tiquiz-quiz-result-title * {
+    font-size: 3rem !important; /* text-5xl */
+  }
+  .tiquiz-quiz-question,
+  .tiquiz-quiz-question * {
+    font-size: 2.25rem !important; /* text-4xl */
+  }
 }
 
 @layer utilities {
