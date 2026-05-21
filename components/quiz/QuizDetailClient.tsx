@@ -2325,7 +2325,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       onDrop={() => { setIntroImagePosition("top"); setDraggingIntroImage(false); }} />
                   )}
 
-                  <RichTextEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} onImageUpload={handleRichTextImageUpload} singleLine className="text-3xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
+                  <RichTextEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} onImageUpload={handleRichTextImageUpload} singleLine className="text-4xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
 
                   {/* slot AFTER_TITLE — entre titre et intro text */}
                   {introImageUrl && introImagePosition === "after_title" && (
@@ -2391,7 +2391,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     <div className="flex-1 flex flex-col items-center justify-center">
                       <div className="max-w-2xl w-full space-y-8">
                         <p className="text-xs font-bold uppercase tracking-widest" style={{ color: pc }}>{t("previewQuestionsCounter", { n: qi + 1, total: editQuestions.length })}</p>
-                        <RichTextEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-2xl sm:text-4xl font-bold leading-tight" placeholder={t("previewQuestionPh")} />
+                        <RichTextEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-3xl sm:text-4xl font-bold leading-tight" placeholder={t("previewQuestionPh")} />
                         {/* Multi-select toggle (Typeform/Tally pattern):
                             quiz mode lets the creator allow multiple picks
                             per question. Each picked option scores its
@@ -2804,7 +2804,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <ResultPositionDropZone label={t("resultImagePos_top")}
                         onDrop={() => { updateResultImagePosition(ri, "top"); setDraggingResultImageRi(null); }} />
                     )}
-                    <RichTextEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} onAIRewrite={aiRewriteResultTitle} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} singleLine className="text-3xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
+                    <RichTextEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} onAIRewrite={aiRewriteResultTitle} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} singleLine className="text-4xl sm:text-5xl font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
                     {r.image_url && r.image_position === "after_title" && (
                       <ResultDraggableImage url={r.image_url} ri={ri}
                         onDragStart={() => setDraggingResultImageRi(ri)}

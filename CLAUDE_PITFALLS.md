@@ -277,3 +277,61 @@ non, c'est un problème de pipeline déploiement, pas de code.
 **Toujours finir une migration par `NOTIFY pgrst, 'reload schema';`** quand on a touché à des colonnes/policies/RPC.
 
 **Typecheck systématique** avant commit : `npx tsc --noEmit`. Exit 0 ou je fix.
+
+## O) FAVICON — NE JAMAIS supprimer `app/favicon.ico` (21 mai 2026)
+
+**Erreur faite** : j'ai supprimé `app/favicon.ico` pour résoudre un bug
+de priorité de `<link rel="icon">` sur les pages publiques custom
+domain (le favicon static écrasait celui du branding via le `sizes`
+attribute). Résultat : sur l'app Tiquiz elle-même, plus de favicon
+custom, retour au triangle Next.js par défaut.
+
+**Règle absolue** : `app/favicon.ico` est la source du favicon Tiquiz
+historique pour TOUTES les routes non-brandées (login, dashboard,
+settings, etc.). Le supprimer = perdre l'identité visuelle de l'app.
+
+**Si je veux fixer le conflit sur custom domains**, NE PAS toucher ce
+fichier. Solutions acceptables uniquement :
+- Émettre le brand favicon avec `sizes="any"` (wildcard) via
+  generateMetadata sur les pages publiques.
+- Convertir vers un route handler dynamique (`app/icon.tsx` ou
+  `app/favicon.ico/route.ts`) qui sert le bon favicon selon le Host
+  header — mais ce refactor doit être validé par Béné avant d'être fait.
+
+**Si la prod sert le mauvais favicon** : ne PAS spéculer, vérifier
+d'abord :
+1. `ls -la app/favicon.ico` sur le VPS — le fichier existe-t-il ?
+2. `curl -sI https://<host>/favicon.ico` → status 200 et taille
+   attendue ?
+3. `curl -sL https://<host>/ | grep "rel=\"icon\""` → quels `<link>` ?
+
+## P) IFRAME EMBED — ne JAMAIS poser `X-Frame-Options` sur `/q/`, `/p/`, `/embed/` (21 mai 2026)
+
+**Erreur récurrente** : un commit "security headers" pose
+`X-Frame-Options: SAMEORIGIN` sur les routes publiques `/q/` et `/p/`
+dans `middleware.ts`. Conséquence : les users qui embed leur quiz via
+iframe sur leur blog (Systeme.io, WordPress, etc.) cassent. Le
+navigateur affiche "`<host>` n'autorise pas la connexion".
+
+**Précédent** : commit `056ddfb1` (Tipote, 9 mai 2026) — JB
+(imagelys.com) s'est plaint que ses quiz ne s'affichaient plus sur son
+blog. Fix dans commit `8b41d898` (21 mai).
+
+**Règle absolue** : sur les routes publiques d'un quiz/popquiz, **ne
+PAS poser `X-Frame-Options`**. Utiliser à la place :
+```ts
+res.headers.set("Content-Security-Policy", "frame-ancestors *");
+res.headers.delete("X-Frame-Options");
+```
+
+Si on veut restreindre l'embedding plus tard, le faire par un allowlist
+explicite (la liste des domaines des users payants par exemple), pas
+par un blocage générique.
+
+**Test de non-régression** : après tout commit qui touche
+`middleware.ts`, lancer en local ou sur staging :
+```bash
+curl -sI https://<host>/q/<un-quiz-actif> | grep -iE 'frame|content-security'
+```
+Doit retourner `content-security-policy: frame-ancestors *` (ou absent
+mais surtout PAS de `x-frame-options: SAMEORIGIN`).

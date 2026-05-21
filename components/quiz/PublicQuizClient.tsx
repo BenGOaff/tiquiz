@@ -1673,7 +1673,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
                 empêche tout <p>/<div> imbriqué de modifier la taille de
                 police. */}
             <h1
-              className="tiquiz-rich tiquiz-rich-inline text-3xl sm:text-5xl font-bold leading-tight"
+              className="tiquiz-rich tiquiz-rich-inline text-4xl sm:text-5xl font-bold leading-tight"
               dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.title)) }}
             />
 
@@ -2105,7 +2105,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
 
               {/* Question = champ court — même fix typo qu'au-dessus. */}
               <h2
-                className="tiquiz-rich tiquiz-rich-inline text-2xl sm:text-4xl font-bold leading-tight text-center"
+                className="tiquiz-rich tiquiz-rich-inline text-3xl sm:text-4xl font-bold leading-tight text-center"
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(q.question_text)) }}
               />
 
@@ -2619,7 +2619,7 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
             })()}
             <div className="space-y-3">
               <h2
-                className="tiquiz-rich tiquiz-rich-inline text-3xl sm:text-5xl font-bold leading-tight text-primary"
+                className="tiquiz-rich tiquiz-rich-inline text-4xl sm:text-5xl font-bold leading-tight text-primary"
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(resultProfile?.title) || "") || t.resultFallback }}
               />
             </div>
