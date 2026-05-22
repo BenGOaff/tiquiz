@@ -122,6 +122,7 @@ type QuizData = {
   sio_share_tag_name: string | null;
   brand_font: string | null; brand_color_primary: string | null; brand_color_background: string | null;
   share_networks: string[] | null; og_description: string | null; og_image_url: string | null;
+  seo_noindex: boolean | null;
   custom_footer_text: string | null; custom_footer_url: string | null;
   status: string; views_count: number; starts_count: number;
   completions_count: number; shares_count: number;
@@ -518,6 +519,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const [fontFamily, setFontFamily] = useState<BrandFontChoice>(DEFAULT_BRAND_FONT);
   const [slug, setSlug] = useState("");
   const [ogDescription, setOgDescription] = useState("");
+  const [seoNoindex, setSeoNoindex] = useState(false);
   const [customFooterText, setCustomFooterText] = useState("");
   const [customFooterUrl, setCustomFooterUrl] = useState("");
   const [shareNetworks, setShareNetworks] = useState<ShareNetwork[]>([]);
@@ -718,6 +720,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     if (typeof s.slug === "string") setSlug(s.slug);
     if (typeof s.og_description === "string") setOgDescription(s.og_description);
     if (s.og_image_url === null || typeof s.og_image_url === "string") setOgImageUrl(s.og_image_url);
+    if (typeof s.seo_noindex === "boolean") setSeoNoindex(s.seo_noindex);
     if (typeof s.custom_footer_text === "string") setCustomFooterText(s.custom_footer_text);
     if (typeof s.custom_footer_url === "string") setCustomFooterUrl(s.custom_footer_url);
     if (Array.isArray(s.share_networks)) setShareNetworks(s.share_networks as ShareNetwork[]);
@@ -821,6 +824,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setEditQuestions(q.questions); setEditResults(q.results);
       setSlug(q.slug ?? "");
       setOgDescription(q.og_description ?? "");
+      setSeoNoindex(!!(q as { seo_noindex?: boolean }).seo_noindex);
       setCustomFooterText(q.custom_footer_text ?? "");
       setCustomFooterUrl(q.custom_footer_url ?? "");
       setShareNetworks(Array.isArray(q.share_networks) ? (q.share_networks as ShareNetwork[]) : []);
@@ -1489,6 +1493,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           slug: slug.trim() ? cleanedSlug : null,
           og_description: ogDescription.trim() || null,
           og_image_url: ogImageUrl,
+          seo_noindex: seoNoindex,
           share_networks: shareNetworks,
           // Custom footer — ignored server-side for free plan but we still send it
           custom_footer_text: customFooterText.trim() || null,
@@ -3163,6 +3168,25 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 </label>
               )}
               <p className="text-[10px] text-muted-foreground">{t("shareTabOgImageDimsHint")}</p>
+            </div>
+
+            {/* Toggle "masquer aux moteurs de recherche" — pendant CWS
+                review j'ai vu que Systeme.io a une checkbox équivalente.
+                Quand cochée, le quiz est exclu du sitemap.xml + llms.txt
+                et la page sert un <meta name="robots" content="noindex">. */}
+            <div className="pt-3 border-t space-y-2">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={seoNoindex}
+                  onChange={(e) => setSeoNoindex(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-medium">{t("seoNoindexLabel")}</div>
+                  <p className="text-xs text-muted-foreground">{t("seoNoindexHint")}</p>
+                </div>
+              </label>
             </div>
           </CardContent></Card>
 

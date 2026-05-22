@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
+import QuizJsonLd from "@/components/quiz/QuizJsonLd";
 import { stripHtml } from "@/lib/richText";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
@@ -38,7 +39,7 @@ async function fetchQuizMeta(slugOrId: string) {
   if (UUID_RE.test(slugOrId)) {
     const { data } = await supabaseAdmin
       .from("quizzes")
-      .select("user_id, slug, title, introduction, og_image_url, og_description")
+      .select("id, user_id, slug, title, introduction, og_image_url, og_description, seo_noindex")
       .eq("id", slugOrId)
       .eq("status", "active")
       .maybeSingle();
@@ -46,7 +47,7 @@ async function fetchQuizMeta(slugOrId: string) {
   }
   const { data } = await supabaseAdmin
     .from("quizzes")
-    .select("user_id, slug, title, introduction, og_image_url, og_description")
+    .select("id, user_id, slug, title, introduction, og_image_url, og_description, seo_noindex")
     .ilike("slug", slugOrId)
     .eq("status", "active")
     .maybeSingle();
@@ -110,9 +111,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? { absolute: `${plainTitle} · ${siteName}` }
       : plainTitle;
 
+    // Respecte le toggle "masquer aux moteurs de recherche" côté éditeur.
+    // Quand activé, on émet `<meta name="robots" content="noindex,nofollow">`
+    // et la row est exclue du sitemap.xml + llms.txt.
+    const robotsMeta = (data as { seo_noindex?: boolean }).seo_noindex
+      ? { robots: { index: false, follow: false, googleBot: { index: false, follow: false } } }
+      : {};
+
     return {
       title: titleOverride,
       description,
+      ...robotsMeta,
       ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
       ...(branding?.faviconUrl ? { icons: { icon: branding.faviconUrl, shortcut: branding.faviconUrl, apple: branding.faviconUrl } } : {}),
@@ -147,10 +156,68 @@ export default async function PublicQuizPage({ params }: Props) {
   // here so a wrong-tenant request short-circuits before the client
   // bundle even loads.
   const customOwner = await resolveCustomDomainOwner();
+  const meta = await fetchQuizMeta(quizId);
   if (customOwner) {
-    const data = await fetchQuizMeta(quizId);
-    if (!data || data.user_id !== customOwner) notFound();
+    if (!meta || meta.user_id !== customOwner) notFound();
   }
 
-  return <PublicQuizClient quizId={quizId} />;
+  // ─── JSON-LD pour SEO + indexation IA ─────────────────────────────
+  // On lookup le nom de l'auteur côté `profiles` + compte les questions
+  // pour enrichir les données structurées. Best-effort : si une query
+  // échoue, on render quand même la page (le JSON-LD reste sans ces
+  // champs optionnels).
+  let authorName: string | null = null;
+  let authorUrl: string | null = null;
+  let questionCount: number | null = null;
+  let createdAt: string | null = null;
+  let updatedAt: string | null = null;
+  let language: string | null = null;
+  if (meta?.user_id) {
+    const [profileRes, fullQuizRes] = await Promise.all([
+      supabaseAdmin
+        .from("profiles")
+        .select("brand_website_url, full_name")
+        .eq("user_id", meta.user_id)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("quizzes")
+        .select("questions, created_at, updated_at, content_locale")
+        .eq("id", (meta as { id?: string }).id ?? quizId)
+        .maybeSingle(),
+    ]);
+    const profile = profileRes.data as
+      | { brand_website_url?: string | null; full_name?: string | null }
+      | null;
+    authorName = profile?.full_name ?? null;
+    authorUrl = profile?.brand_website_url ?? null;
+    const q = fullQuizRes.data as
+      | { questions?: unknown[]; created_at?: string; updated_at?: string; content_locale?: string }
+      | null;
+    if (Array.isArray(q?.questions)) questionCount = q!.questions.length;
+    createdAt = q?.created_at ?? null;
+    updatedAt = q?.updated_at ?? null;
+    language = q?.content_locale ?? null;
+  }
+
+  const canonical = (await buildCanonicalUrl(`/q/${quizId}`)) ?? "";
+
+  return (
+    <>
+      {meta && canonical && (
+        <QuizJsonLd
+          canonicalUrl={canonical}
+          title={meta.title}
+          description={meta.og_description || meta.introduction || null}
+          imageUrl={meta.og_image_url || null}
+          createdAt={createdAt}
+          updatedAt={updatedAt}
+          authorName={authorName}
+          authorUrl={authorUrl}
+          numberOfQuestions={questionCount}
+          inLanguage={language}
+        />
+      )}
+      <PublicQuizClient quizId={quizId} />
+    </>
+  );
 }
