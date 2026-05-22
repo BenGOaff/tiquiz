@@ -376,6 +376,55 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // 3.5 Attribution affiliée — fire-and-forget vers l'endpoint Tipote
+    // qui centralise les commissions. Best-effort, ne bloque pas le flow
+    // d'ouverture d'accès si ça plante.
+    try {
+      const totalPriceRaw =
+        extractStr(rawBody, ["order.total_price", "data.order.total_price"]) ??
+        extractStr(rawBody, ["amount", "data.amount"]);
+      const saleAmountCents = totalPriceRaw ? parseInt(String(totalPriceRaw), 10) : 0;
+      const tipoteAffEndpoint =
+        process.env.TIPOTE_AFFILIATE_ENDPOINT ??
+        "https://app.tipote.com/api/affiliate/attribute-sale";
+      const internalSecret = process.env.AFFILIATE_INTERNAL_SECRET;
+      if (saleAmountCents > 0 && orderId && email && internalSecret) {
+        const productName =
+          extractStr(rawBody, [
+            "price_plan.name",
+            "data.price_plan.name",
+            "offer_price_plan.name",
+            "data.offer_price_plan.name",
+          ]) ?? null;
+        const currency =
+          extractStr(rawBody, ["price_plan.currency", "data.price_plan.currency"]) ?? "EUR";
+        // Pas d'await — on ne fait pas attendre l'user pour ça. En cas
+        // d'échec réseau on log juste, le webhook reste OK.
+        fetch(tipoteAffEndpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Affiliate-Secret": internalSecret,
+          },
+          body: JSON.stringify({
+            customer_email: email,
+            sale_amount_cents: saleAmountCents,
+            currency: currency.toUpperCase(),
+            source_app: "tiquiz",
+            sio_order_id: String(orderId),
+            product_name: productName,
+            sale_at: new Date().toISOString(),
+            raw_payload: rawBody,
+          }),
+          keepalive: true,
+        }).catch((err) => {
+          console.error("[Tiquiz webhook] affiliate attribute-sale failed:", err);
+        });
+      }
+    } catch (err) {
+      console.error("[Tiquiz webhook] affiliate attribution prep failed:", err);
+    }
+
     // 4. Magic link — await + surface errors instead of swallowing them.
     // If the send fails (SMTP down, rate limit), we record it so you can
     // see the failure in webhook_logs AND return 5xx so SIO retries.
