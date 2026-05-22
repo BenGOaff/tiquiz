@@ -124,7 +124,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ...robotsMeta,
       ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
-      ...(branding?.faviconUrl ? { icons: { icon: branding.faviconUrl, shortcut: branding.faviconUrl, apple: branding.faviconUrl } } : {}),
+      ...(branding?.faviconUrl
+        ? {
+            icons: {
+              // sizes="any" pour battre le <link sizes="any"> auto-injecté
+              // par Next.js depuis app/favicon.ico. Sans cet attribut explicite,
+              // Firefox préfère le link avec sizes (= favicon Tiquiz) au nôtre.
+              // Cf. CLAUDE_PITFALLS.md section O.
+              icon: [{ url: branding.faviconUrl, sizes: "any" }],
+              shortcut: branding.faviconUrl,
+              apple: branding.faviconUrl,
+            },
+          }
+        : {}),
       openGraph: {
         title: plainTitle,
         description,
