@@ -107,6 +107,34 @@ app.tipote.com {
         }
 }
 
+# ------------------------------------------------------------------
+# Affiliate dashboard (affiliate.tipote.com)
+# ------------------------------------------------------------------
+# Sous-domaine dédié au dashboard des affiliés Tipote × Tiquiz. Sert le
+# même Next.js que app.tipote.com (port 3000) — le middleware Next.js
+# rewrite affiliate.tipote.com/* → /affiliate/* pour isoler ces routes
+# du dashboard principal. Cf. middleware.ts dans tipote-app.
+affiliate.tipote.com {
+        encode zstd gzip
+        import block_bad_paths
+
+        request_body {
+                max_size 5MB
+        }
+
+        @next_static path /_next/static/*
+        header @next_static Cache-Control "public, max-age=31536000, immutable"
+
+        @not_next_static {
+                not path /_next/static/*
+        }
+        header @not_next_static Cache-Control "private, no-cache, no-store, max-age=0, must-revalidate"
+
+        reverse_proxy 127.0.0.1:3000 {
+                import proxy_headers
+        }
+}
+
 # NOTE: tipote.com, www.tipote.com, tipote.fr and www.tipote.fr are
 # NOT served from this VPS — they live on Systeme.io / CloudFront for
 # the marketing pages. Their DNS doesn't even resolve to us, so trying
