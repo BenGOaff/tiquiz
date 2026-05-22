@@ -1,7 +1,30 @@
+// app/sitemap.ts
+//
+// Sitemap dynamique HOST-AWARE.
+//
+// Deux cas, dispatch sur l'en-tête `x-tiquiz-custom-host` que le
+// middleware pose quand la requête vient d'un domaine personnalisé
+// d'un user :
+//
+//   1. tiquiz.com (host principal) → sitemap global : pages statiques
+//      + tous les quiz publiés sur la plateforme (cap 10000).
+//
+//   2. quiz.adelinecirade.com (custom domain user) → sitemap ne listant
+//      QUE les quiz de CE user, avec des URLs en bare-slug
+//      (https://quiz.adelinecirade.com/<slug>) — c'est l'URL que voit
+//      le visiteur sur ce host, donc l'URL qu'on veut indexer Google.
+//      Chaque user peut ainsi soumettre son propre sitemap dans sa
+//      Google Search Console et indexer ses créations.
+//
+// `revalidate = 3600` → régen 1h. Sans ça les nouveaux quiz publiés
+// attendent le prochain deploy pour être indexables.
+
 import type { MetadataRoute } from "next";
+import { headers } from "next/headers";
 import { SUPPORTED_LOCALES } from "@/i18n/config";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
 const PUBLIC_ROUTES = [
   "",
   "/login",
@@ -14,15 +37,72 @@ const PUBLIC_ROUTES = [
   "/affiliate",
 ];
 
-/** Indique à Next que le sitemap est dynamique et doit être régénéré
- *  régulièrement. Sans ça, Next pourrait le bake en SSG au build et
- *  les nouveaux quiz ne seraient indexés qu'au prochain deploy. */
 export const revalidate = 3600; // 1h
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const h = await headers();
+  const customHost = h.get(CUSTOM_HOST_HEADER);
+
+  // ─── Cas custom domain : sitemap user-scoped ─────────────────────
+  if (customHost) {
+    return buildCustomDomainSitemap(customHost.toLowerCase().trim());
+  }
+
+  // ─── Cas host principal (tiquiz.com) : sitemap global ────────────
+  return buildMainHostSitemap();
+}
+
+async function buildCustomDomainSitemap(host: string): Promise<MetadataRoute.Sitemap> {
+  // Lookup user owner of the custom domain
+  const { data: cd } = await supabaseAdmin
+    .from("custom_domains")
+    .select("user_id")
+    .ilike("hostname", host)
+    .eq("status", "verified")
+    .maybeSingle();
+  const userId = (cd as { user_id?: string } | null)?.user_id;
+  if (!userId) return [];
+
+  const base = `https://${host}`;
+
+  // Tous les quiz publiés de cet user
+  let quizEntries: MetadataRoute.Sitemap = [];
+  try {
+    const { data } = await supabaseAdmin
+      .from("quizzes")
+      .select("id, slug, updated_at")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .order("updated_at", { ascending: false })
+      .limit(10000);
+    if (Array.isArray(data)) {
+      quizEntries = (data as Array<{ id: string; slug: string | null; updated_at: string }>).map((q) => ({
+        // Sur custom domain l'URL canonique est en bare-slug
+        // (cf. app/[publicSlug]/page.tsx). Si pas de slug, /q/<id>.
+        url: q.slug ? `${base}/${q.slug}` : `${base}/q/${q.id}`,
+        lastModified: new Date(q.updated_at),
+        changeFrequency: "weekly" as const,
+        priority: 0.8,
+      }));
+    }
+  } catch (err) {
+    console.warn("[sitemap/custom-domain] fetch error", err);
+  }
+
+  return [
+    {
+      url: `${base}/`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 1,
+    },
+    ...quizEntries,
+  ];
+}
+
+async function buildMainHostSitemap(): Promise<MetadataRoute.Sitemap> {
   const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://tiquiz.com").replace(/\/$/, "");
 
-  // ─── Pages statiques (landing, légales) ──────────────────────────
   const staticEntries: MetadataRoute.Sitemap = PUBLIC_ROUTES.map((route) => {
     const url = `${base}${route || "/"}`;
     const languages: Record<string, string> = {};
@@ -39,13 +119,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     };
   });
 
-  // ─── Quiz publics indexables (Omar, 21 mai 2026) ─────────────────
-  // Le sitemap d'origine ne listait QUE les pages de l'app — aucun quiz
-  // user n'était découvrable par Google sauf via backlinks. On expose
-  // maintenant tous les quiz publiés avec un slug ou un id stable.
-  //
-  // Cap à 10000 pour rester sous la limite par-sitemap de Google
-  // (50000 entries, 50 MB). À 10000 quiz/sitemap on a 5× de marge.
   let quizEntries: MetadataRoute.Sitemap = [];
   try {
     const { data: quizzes } = await supabaseAdmin
@@ -56,24 +129,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .limit(10000);
 
     if (Array.isArray(quizzes)) {
-      quizEntries = (quizzes as Array<{ id: string; slug: string | null; updated_at: string }>).map((q) => {
-        // URL canonique : si un slug existe, on l'utilise (URL propre),
-        // sinon on retombe sur /q/<id>. Côté custom domain, les visiteurs
-        // accèdent au quiz via /<slug> — pour le sitemap du host principal,
-        // on garde /q/<id-ou-slug> qui marche dans tous les cas.
-        const pathSegment = q.slug || q.id;
-        return {
-          url: `${base}/q/${pathSegment}`,
-          lastModified: new Date(q.updated_at),
-          changeFrequency: "weekly" as const,
-          priority: 0.8,
-        };
-      });
+      quizEntries = (quizzes as Array<{ id: string; slug: string | null; updated_at: string }>).map((q) => ({
+        url: `${base}/q/${q.slug || q.id}`,
+        lastModified: new Date(q.updated_at),
+        changeFrequency: "weekly" as const,
+        priority: 0.8,
+      }));
     }
   } catch (err) {
-    // Si Supabase tombe au build du sitemap, on continue sans les quiz
-    // plutôt que de renvoyer une 500 (cas où Google retry indéfiniment).
-    console.warn("[sitemap] failed to fetch quizzes, returning static only", err);
+    console.warn("[sitemap/main] fetch error", err);
   }
 
   return [...staticEntries, ...quizEntries];

@@ -28,6 +28,7 @@ export const RESERVED_PUBLIC_SLUGS: ReadonlySet<string> = new Set([
   "favicon.ico",
   "robots.txt",
   "sitemap.xml",
+  "llms.txt",
   "manifest.json",
   "manifest.webmanifest",
   // Existing app paths (would shadow them on the main host, or look
