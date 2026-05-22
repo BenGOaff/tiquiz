@@ -278,32 +278,41 @@ non, c'est un problème de pipeline déploiement, pas de code.
 
 **Typecheck systématique** avant commit : `npx tsc --noEmit`. Exit 0 ou je fix.
 
-## O) FAVICON — NE JAMAIS supprimer `app/favicon.ico` (21 mai 2026)
+## O) FAVICON — route handler dynamique `/favicon.ico` (22 mai 2026, refactor validé)
 
-**Erreur faite** : j'ai supprimé `app/favicon.ico` pour résoudre un bug
-de priorité de `<link rel="icon">` sur les pages publiques custom
-domain (le favicon static écrasait celui du branding via le `sizes`
-attribute). Résultat : sur l'app Tiquiz elle-même, plus de favicon
-custom, retour au triangle Next.js par défaut.
+**État actuel** : `app/favicon.ico/route.ts` est un route handler qui
+sert le favicon adapté au Host de la requête :
+- Domaine propre (tiquiz.com, quiz.tipote.com, app.tipote.com, localhost…) :
+  lit `public/favicon.ico` et le sert.
+- Domaine custom vérifié avec `favicon_url` configuré : fetch ce fichier
+  côté supabase storage et le proxie avec Content-Type approprié.
+- Domaine custom sans favicon ou fetch échoué : fallback favicon Tiquiz.
 
-**Règle absolue** : `app/favicon.ico` est la source du favicon Tiquiz
-historique pour TOUTES les routes non-brandées (login, dashboard,
-settings, etc.). Le supprimer = perdre l'identité visuelle de l'app.
+**Pourquoi ce refactor** (22 mai 2026, Gwenn cas Firefox) : la solution
+"sizes=any" sur la metadata par-page ne suffisait pas. Firefox tab favicon
+= sélection imprévisible quand on a plusieurs `<link rel="icon">` même
+tous avec sizes=any. Avec un route handler à `/favicon.ico`, la mécanique
+d'élection du `<link>` devient non pertinente : peu importe quel link le
+navigateur choisit, il finit toujours par requêter `/favicon.ico` en
+fallback automatique, et notre handler retourne le bon fichier selon le Host.
 
-**Si je veux fixer le conflit sur custom domains**, NE PAS toucher ce
-fichier. Solutions acceptables uniquement :
-- Émettre le brand favicon avec `sizes="any"` (wildcard) via
-  generateMetadata sur les pages publiques.
-- Convertir vers un route handler dynamique (`app/icon.tsx` ou
-  `app/favicon.ico/route.ts`) qui sert le bon favicon selon le Host
-  header — mais ce refactor doit être validé par Béné avant d'être fait.
+**Règles à respecter** :
+- NE JAMAIS recréer un fichier `app/favicon.ico` (statique). Ça
+  shadowerait le route handler et casserait le multi-tenant.
+- `public/favicon.ico` doit rester (utilisé en fallback par le handler).
+- Le handler force `dynamic = "force-dynamic"` + runtime nodejs. Sans ça
+  Next.js cache la 1ère réponse et la sert à tous les Hosts.
+- Le middleware exclut `/favicon.ico` de son matcher (config). Donc le
+  handler doit faire SA propre lookup custom_domains (déjà câblé).
 
-**Si la prod sert le mauvais favicon** : ne PAS spéculer, vérifier
-d'abord :
-1. `ls -la app/favicon.ico` sur le VPS — le fichier existe-t-il ?
-2. `curl -sI https://<host>/favicon.ico` → status 200 et taille
-   attendue ?
-3. `curl -sL https://<host>/ | grep "rel=\"icon\""` → quels `<link>` ?
+**Si la prod sert le mauvais favicon** :
+1. `curl -sI https://<host>/favicon.ico` → vérifier Content-Type + taille.
+2. `curl -s https://<host>/favicon.ico -o /tmp/f.ico && file /tmp/f.ico` →
+   c'est bien une image ICO ou PNG ?
+3. Vérifier dans `custom_domains` que `favicon_url` est bien set pour ce host.
+4. Test cache : `curl -sI -H "X-Test: 1" https://...` même résultat ? Le
+   route handler force-dynamic donc aucun cache Next.js. Si même favicon
+   pour 2 hosts différents → bug dans le handler, pas dans le cache.
 
 ## P) IFRAME EMBED — ne JAMAIS poser `X-Frame-Options` sur `/q/`, `/p/`, `/embed/` (21 mai 2026)
 
