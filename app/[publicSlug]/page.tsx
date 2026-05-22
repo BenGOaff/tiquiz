@@ -123,7 +123,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: titleOverride,
       description,
       ...(siteName ? { applicationName: siteName } : {}),
-      ...(branding?.faviconUrl ? { icons: { icon: branding.faviconUrl, shortcut: branding.faviconUrl, apple: branding.faviconUrl } } : {}),
+      ...(branding?.faviconUrl
+        ? {
+            icons: {
+              // sizes="any" pour battre Firefox qui préfère le link avec sizes
+              // (le favicon Tiquiz par défaut) au nôtre. Cf. CLAUDE_PITFALLS.md O.
+              icon: [{ url: branding.faviconUrl, sizes: "any" }],
+              shortcut: branding.faviconUrl,
+              apple: branding.faviconUrl,
+            },
+          }
+        : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
       openGraph: {
         title: plainTitle || "Quiz",
