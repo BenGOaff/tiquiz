@@ -1082,6 +1082,8 @@
     "shareTabSeoTitle": "Vista previa en redes (SEO)",
     "shareTabSeoHint": "Descripción usada cuando un visitante comparte el enlace.",
     "shareTabSeoPlaceholder": "Gancho breve mostrado debajo del título del enlace compartido…",
+    "seoNoindexLabel": "Ocultar este quiz a los motores de búsqueda",
+    "seoNoindexHint": "Marca esta casilla si no quieres que Google, Bing o las IA (ChatGPT, Perplexity…) indexen este quiz. Tu enlace directo sigue funcionando.",
     "shareTabCustomFooter": "Pie de página personalizado",
     "shareTabPaidBadge": "De pago",
     "shareTabCustomFooterPaidHint": "Reemplaza « Este quiz es ofrecido por Tiquiz » por tu firma.",

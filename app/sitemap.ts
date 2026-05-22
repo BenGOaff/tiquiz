@@ -64,40 +64,56 @@ async function buildCustomDomainSitemap(host: string): Promise<MetadataRoute.Sit
   if (!userId) return [];
 
   const base = `https://${host}`;
+  const entries: MetadataRoute.Sitemap = [
+    { url: `${base}/`, lastModified: new Date(), changeFrequency: "weekly" as const, priority: 1 },
+  ];
 
-  // Tous les quiz publiés de cet user
-  let quizEntries: MetadataRoute.Sitemap = [];
+  // Quizzes — exclus si seo_noindex=true (toggle "masquer aux moteurs"
+  // côté éditeur).
   try {
     const { data } = await supabaseAdmin
       .from("quizzes")
-      .select("id, slug, updated_at")
+      .select("id, slug, updated_at, seo_noindex")
       .eq("user_id", userId)
       .eq("status", "active")
+      .eq("seo_noindex", false)
       .order("updated_at", { ascending: false })
       .limit(10000);
-    if (Array.isArray(data)) {
-      quizEntries = (data as Array<{ id: string; slug: string | null; updated_at: string }>).map((q) => ({
-        // Sur custom domain l'URL canonique est en bare-slug
-        // (cf. app/[publicSlug]/page.tsx). Si pas de slug, /q/<id>.
+    for (const q of (data ?? []) as Array<{ id: string; slug: string | null; updated_at: string }>) {
+      entries.push({
         url: q.slug ? `${base}/${q.slug}` : `${base}/q/${q.id}`,
         lastModified: new Date(q.updated_at),
         changeFrequency: "weekly" as const,
         priority: 0.8,
-      }));
+      });
     }
   } catch (err) {
-    console.warn("[sitemap/custom-domain] fetch error", err);
+    console.warn("[sitemap/custom-domain] quizzes fetch error", err);
   }
 
-  return [
-    {
-      url: `${base}/`,
-      lastModified: new Date(),
-      changeFrequency: "weekly" as const,
-      priority: 1,
-    },
-    ...quizEntries,
-  ];
+  // Popquizzes — exclus si seo_noindex=true.
+  try {
+    const { data } = await supabaseAdmin
+      .from("popquizzes")
+      .select("id, slug, updated_at, seo_noindex")
+      .eq("user_id", userId)
+      .eq("is_published", true)
+      .eq("seo_noindex", false)
+      .order("updated_at", { ascending: false })
+      .limit(2000);
+    for (const p of (data ?? []) as Array<{ id: string; slug: string | null; updated_at: string }>) {
+      entries.push({
+        url: p.slug ? `${base}/${p.slug}` : `${base}/p/${p.id}`,
+        lastModified: new Date(p.updated_at),
+        changeFrequency: "weekly" as const,
+        priority: 0.7,
+      });
+    }
+  } catch (err) {
+    console.warn("[sitemap/custom-domain] popquizzes fetch error", err);
+  }
+
+  return entries;
 }
 
 async function buildMainHostSitemap(): Promise<MetadataRoute.Sitemap> {
@@ -119,26 +135,47 @@ async function buildMainHostSitemap(): Promise<MetadataRoute.Sitemap> {
     };
   });
 
-  let quizEntries: MetadataRoute.Sitemap = [];
+  const entries: MetadataRoute.Sitemap = [...staticEntries];
+
   try {
-    const { data: quizzes } = await supabaseAdmin
+    const { data } = await supabaseAdmin
       .from("quizzes")
-      .select("id, slug, updated_at, status")
+      .select("id, slug, updated_at, seo_noindex")
       .eq("status", "active")
+      .eq("seo_noindex", false)
       .order("updated_at", { ascending: false })
       .limit(10000);
-
-    if (Array.isArray(quizzes)) {
-      quizEntries = (quizzes as Array<{ id: string; slug: string | null; updated_at: string }>).map((q) => ({
+    for (const q of (data ?? []) as Array<{ id: string; slug: string | null; updated_at: string }>) {
+      entries.push({
         url: `${base}/q/${q.slug || q.id}`,
         lastModified: new Date(q.updated_at),
         changeFrequency: "weekly" as const,
         priority: 0.8,
-      }));
+      });
     }
   } catch (err) {
-    console.warn("[sitemap/main] fetch error", err);
+    console.warn("[sitemap/main] quizzes fetch error", err);
   }
 
-  return [...staticEntries, ...quizEntries];
+  try {
+    const { data } = await supabaseAdmin
+      .from("popquizzes")
+      .select("id, slug, updated_at, seo_noindex")
+      .eq("is_published", true)
+      .eq("seo_noindex", false)
+      .order("updated_at", { ascending: false })
+      .limit(2000);
+    for (const p of (data ?? []) as Array<{ id: string; slug: string | null; updated_at: string }>) {
+      entries.push({
+        url: `${base}/p/${p.slug || p.id}`,
+        lastModified: new Date(p.updated_at),
+        changeFrequency: "weekly" as const,
+        priority: 0.7,
+      });
+    }
+  } catch (err) {
+    console.warn("[sitemap/main] popquizzes fetch error", err);
+  }
+
+  return entries;
 }

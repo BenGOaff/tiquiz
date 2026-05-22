@@ -1066,6 +1066,8 @@
     "shareTabSeoTitle": "Social preview (SEO)",
     "shareTabSeoHint": "Description used when a visitor shares the link.",
     "shareTabSeoPlaceholder": "Short hook shown below the shared link title…",
+    "seoNoindexLabel": "Hide this quiz from search engines",
+    "seoNoindexHint": "Check this box if you don't want Google, Bing or AI tools (ChatGPT, Perplexity…) to index this quiz. Your direct link still works as a private share.",
     "shareTabCustomFooter": "Custom footer",
     "shareTabPaidBadge": "Paid",
     "shareTabCustomFooterPaidHint": "Replace « This quiz is powered by Tiquiz » with your own signature.",

@@ -39,7 +39,7 @@ async function fetchQuizMeta(slugOrId: string) {
   if (UUID_RE.test(slugOrId)) {
     const { data } = await supabaseAdmin
       .from("quizzes")
-      .select("id, user_id, slug, title, introduction, og_image_url, og_description")
+      .select("id, user_id, slug, title, introduction, og_image_url, og_description, seo_noindex")
       .eq("id", slugOrId)
       .eq("status", "active")
       .maybeSingle();
@@ -47,7 +47,7 @@ async function fetchQuizMeta(slugOrId: string) {
   }
   const { data } = await supabaseAdmin
     .from("quizzes")
-    .select("id, user_id, slug, title, introduction, og_image_url, og_description")
+    .select("id, user_id, slug, title, introduction, og_image_url, og_description, seo_noindex")
     .ilike("slug", slugOrId)
     .eq("status", "active")
     .maybeSingle();
@@ -111,9 +111,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? { absolute: `${plainTitle} · ${siteName}` }
       : plainTitle;
 
+    // Respecte le toggle "masquer aux moteurs de recherche" côté éditeur.
+    // Quand activé, on émet `<meta name="robots" content="noindex,nofollow">`
+    // et la row est exclue du sitemap.xml + llms.txt.
+    const robotsMeta = (data as { seo_noindex?: boolean }).seo_noindex
+      ? { robots: { index: false, follow: false, googleBot: { index: false, follow: false } } }
+      : {};
+
     return {
       title: titleOverride,
       description,
+      ...robotsMeta,
       ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
       ...(branding?.faviconUrl ? { icons: { icon: branding.faviconUrl, shortcut: branding.faviconUrl, apple: branding.faviconUrl } } : {}),
