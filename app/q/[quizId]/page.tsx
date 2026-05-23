@@ -8,6 +8,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
 import QuizJsonLd from "@/components/quiz/QuizJsonLd";
 import { TrackingPixels } from "@/components/tracking/TrackingPixels";
+import { resolveEffectivePixels } from "@/lib/effectivePixels";
 import { stripHtml } from "@/lib/richText";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
@@ -218,6 +219,13 @@ export default async function PublicQuizPage({ params }: Props) {
 
   const canonical = (await buildCanonicalUrl(`/q/${quizId}`)) ?? "";
 
+  // Config pixel effective : valeur par quiz, sinon fallback sur le
+  // défaut du profil (sinon poser le pixel dans /settings n'a aucun
+  // effet sur les quiz existants — bug Gwenn).
+  const pixels = meta
+    ? await resolveEffectivePixels(meta, (meta as { user_id?: string }).user_id)
+    : null;
+
   return (
     <>
       {meta && canonical && (
@@ -237,11 +245,11 @@ export default async function PublicQuizPage({ params }: Props) {
       {/* Pixel Meta + GA + Google Ads server-rendered. Visible
           immédiatement par les extensions de détection (Pixel Helper,
           Tag Assistant) sans attendre le mount React. */}
-      {meta && (
+      {pixels && (
         <TrackingPixels
-          metaPixelId={(meta as { meta_pixel_id?: string | null }).meta_pixel_id}
-          ga4MeasurementId={(meta as { ga4_measurement_id?: string | null }).ga4_measurement_id}
-          googleAdsConversionId={(meta as { google_ads_conversion_id?: string | null }).google_ads_conversion_id}
+          metaPixelId={pixels.metaPixelId}
+          ga4MeasurementId={pixels.ga4MeasurementId}
+          googleAdsConversionId={pixels.googleAdsConversionId}
         />
       )}
       <PublicQuizClient quizId={quizId} />

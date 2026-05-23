@@ -26,6 +26,7 @@ import { fetchPublishedPopquiz } from "@/lib/popquiz/repo";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
 import PopquizPlayClient from "@/app/p/[popquizId]/PopquizPlayClient";
 import { TrackingPixels } from "@/components/tracking/TrackingPixels";
+import { resolveEffectivePixels } from "@/lib/effectivePixels";
 import { isReservedPublicSlug } from "@/lib/publicSlug";
 import { stripHtml } from "@/lib/richText";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
@@ -191,12 +192,13 @@ export default async function PublicCatchAll({ params }: Props) {
   if (!r) notFound();
 
   if (r.kind === "quiz") {
+    const pixels = await resolveEffectivePixels(r.meta, owner);
     return (
       <>
         <TrackingPixels
-          metaPixelId={r.meta.meta_pixel_id}
-          ga4MeasurementId={r.meta.ga4_measurement_id}
-          googleAdsConversionId={r.meta.google_ads_conversion_id}
+          metaPixelId={pixels.metaPixelId}
+          ga4MeasurementId={pixels.ga4MeasurementId}
+          googleAdsConversionId={pixels.googleAdsConversionId}
         />
         <PublicQuizClient quizId={publicSlug} />
       </>

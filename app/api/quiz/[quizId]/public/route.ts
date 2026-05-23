@@ -290,7 +290,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     if (quizUserId) {
       const { data: bp } = await admin
         .from("profiles")
-        .select("address_form, privacy_url, brand_logo_url, brand_font, brand_color_primary, plan, tipote_affiliate_id")
+        .select("address_form, privacy_url, brand_logo_url, brand_font, brand_color_primary, plan, tipote_affiliate_id, default_meta_pixel_id, default_ga4_measurement_id, default_google_ads_conversion_id, default_google_ads_conversion_label")
         .eq("user_id", quizUserId)
         .maybeSingle();
       profileRow = (bp as Record<string, unknown>) ?? null;
@@ -334,6 +334,21 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
     const { user_id: _uid, ...quizPublic } = quizRow;
     void _uid;
+
+    // Pixel effectif : si le quiz n'a aucun ID, on fallback sur les
+    // défauts du profil. Sinon poser le pixel dans /settings n'aurait
+    // aucun effet sur les events conversion (Lead/share) côté client.
+    // Le pixel server-rendered (PageView) applique la même logique.
+    const quizHasPixel =
+      String(quizPublic.meta_pixel_id ?? "").trim() ||
+      String(quizPublic.ga4_measurement_id ?? "").trim() ||
+      String(quizPublic.google_ads_conversion_id ?? "").trim();
+    if (!quizHasPixel && profileRow) {
+      quizPublic.meta_pixel_id = (String(profileRow.default_meta_pixel_id ?? "").trim() || null);
+      quizPublic.ga4_measurement_id = (String(profileRow.default_ga4_measurement_id ?? "").trim() || null);
+      quizPublic.google_ads_conversion_id = (String(profileRow.default_google_ads_conversion_id ?? "").trim() || null);
+      quizPublic.google_ads_conversion_label = (String(profileRow.default_google_ads_conversion_label ?? "").trim() || null);
+    }
     const effectivePrivacyUrl = String(quizPublic.privacy_url ?? "").trim() || fallbackPrivacyUrl;
 
     // Edge-SWR resilience pour les visiteurs : si l'origine est down
