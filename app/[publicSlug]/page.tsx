@@ -211,5 +211,16 @@ export default async function PublicCatchAll({ params }: Props) {
     popquiz_id_input: r.popquiz.id,
     event_type_input: "view",
   });
-  return <PopquizPlayClient popquiz={r.popquiz} />;
+  // Popquiz hérite du pixel par défaut du créateur (owner = domain owner).
+  const pqPixels = await resolveEffectivePixels({}, owner);
+  return (
+    <>
+      <TrackingPixels
+        metaPixelId={pqPixels.metaPixelId}
+        ga4MeasurementId={pqPixels.ga4MeasurementId}
+        googleAdsConversionId={pqPixels.googleAdsConversionId}
+      />
+      <PopquizPlayClient popquiz={r.popquiz} />
+    </>
+  );
 }
