@@ -37,8 +37,13 @@ export const dynamic = "force-dynamic";
 // si l'user change son favicon, max 5 min d'attente pour les visiteurs.
 const CACHE_HEADER = "public, max-age=300, s-maxage=300";
 
-async function readDefaultFavicon(): Promise<Buffer> {
-  return readFile(join(process.cwd(), "public", "favicon.ico"));
+// Le favicon Tiquiz par défaut. On lit `favicon-tiquiz.png` (pas
+// `favicon.ico` qui était resté le triangle noir Next.js par défaut).
+// Les navigateurs acceptent un PNG servi pour /favicon.ico tant que
+// le Content-Type est correct.
+async function readDefaultFavicon(): Promise<{ buf: Buffer; contentType: string }> {
+  const buf = await readFile(join(process.cwd(), "public", "favicon-tiquiz.png"));
+  return { buf, contentType: "image/png" };
 }
 
 export async function GET(): Promise<NextResponse> {
@@ -47,10 +52,10 @@ export async function GET(): Promise<NextResponse> {
 
   // Domaine propre Tiquiz / localhost / preview → favicon par défaut.
   if (!host || isOwnHost(host)) {
-    const buf = await readDefaultFavicon();
+    const { buf, contentType } = await readDefaultFavicon();
     return new NextResponse(new Uint8Array(buf), {
       headers: {
-        "Content-Type": "image/x-icon",
+        "Content-Type": contentType,
         "Cache-Control": CACHE_HEADER,
       },
     });
@@ -88,10 +93,10 @@ export async function GET(): Promise<NextResponse> {
   }
 
   // Pas de favicon custom configuré, ou fetch échoué → défaut.
-  const buf = await readDefaultFavicon();
+  const { buf, contentType } = await readDefaultFavicon();
   return new NextResponse(new Uint8Array(buf), {
     headers: {
-      "Content-Type": "image/x-icon",
+      "Content-Type": contentType,
       "Cache-Control": CACHE_HEADER,
     },
   });
