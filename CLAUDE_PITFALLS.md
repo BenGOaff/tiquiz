@@ -344,3 +344,35 @@ curl -sI https://<host>/q/<un-quiz-actif> | grep -iE 'frame|content-security'
 ```
 Doit retourner `content-security-policy: frame-ancestors *` (ou absent
 mais surtout PAS de `x-frame-options: SAMEORIGIN`).
+
+## U) Pixel Meta : server-render obligatoire pour la détection (23 mai 2026)
+
+**Bug Gwenn (23/05)** : extension Pixel Helper affiche "no pixel" sur
+toutes les pages de son quiz alors que `meta_pixel_id` est configuré.
+
+**Cause** : l'injection se faisait client-side via useEffect dans
+PublicQuizClient, après mount React + gated sur consent. Pixel Helper
+scanne au premier paint → ne le voit pas.
+
+**Fix** : `<TrackingPixels>` server-rendered dans la route page,
+script dans le HTML envoyé au browser. Détection instantanée.
+
+```tsx
+// app/q/[quizId]/page.tsx
+import { TrackingPixels } from "@/components/tracking/TrackingPixels";
+return (
+  <>
+    <TrackingPixels
+      metaPixelId={meta.meta_pixel_id}
+      ga4MeasurementId={meta.ga4_measurement_id}
+    />
+    <PublicQuizClient quizId={quizId} />
+  </>
+);
+```
+
+**À NE PAS oublier** : retirer l'injection client-side dans
+PublicQuizClient (sinon double init) + ne pas re-fire "view" event
+côté client (l'init fire déjà PageView).
+
+**Routes couvertes Tiquiz** : `/q/[quizId]` + `/[publicSlug]`.

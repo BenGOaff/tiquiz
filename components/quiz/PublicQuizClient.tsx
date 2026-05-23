@@ -1014,9 +1014,12 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
         credentials: "same-origin",
       }).catch(() => {});
       // 2) Tracking externe (Meta Pixel + GA4 + Google Ads — Phase B).
-      // Silencieux si les scripts pixels ne sont pas chargés (consent
-      // pas donné, IDs pas configurés, ad-blocker actif).
-      if (quiz) {
+      // On NE fire PAS "view" depuis le client : l'init script du
+      // pixel (server-rendered) fire déjà PageView au load, donc
+      // re-fire ici causerait un doublon dans les rapports Meta/GA.
+      // Les autres events (start, complete, share) restent à fire
+      // depuis le client puisqu'ils ne sont pas dans l'init.
+      if (quiz && event !== "view") {
         fireQuizPixel(event, {
           meta_pixel_id: quiz.meta_pixel_id,
           ga4_measurement_id: quiz.ga4_measurement_id,
@@ -1059,61 +1062,17 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     trackEvent("view");
   }, [quiz, trackEvent]);
 
-  // Tracking pixels Meta + Google (Adeline, 19 mai 2026, Phase B) :
-  // injection des scripts dans <head> via DOM API, indépendamment des
-  // branches de step. Strict consent gating : on attend que le visiteur
-  // ait coché la case (sauf si show_consent_checkbox=false côté quiz,
-  // dans ce cas on considère le consent implicite).
-  useEffect(() => {
-    if (!quiz || previewData) return;
-    const pixelsConsentGiven = quiz.show_consent_checkbox === false || consent;
-    if (!pixelsConsentGiven) return;
-    const metaId = quiz.meta_pixel_id?.trim();
-    const ga4Id = quiz.ga4_measurement_id?.trim();
-    const adsId = quiz.google_ads_conversion_id?.trim();
-    const gtagPrimaryId = ga4Id || adsId;
-    if (!metaId && !gtagPrimaryId) return;
-
-    const injected: HTMLScriptElement[] = [];
-
-    // Meta Pixel — ne ré-injecte pas si déjà loadé (visiteur multi-step).
-    if (metaId && !window.fbq) {
-      const initScript = document.createElement("script");
-      initScript.innerHTML = `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${metaId}');fbq('track','PageView');`;
-      document.head.appendChild(initScript);
-      injected.push(initScript);
-    }
-
-    // Google gtag.js (sert GA4 ET Google Ads via un seul script).
-    if (gtagPrimaryId && !window.gtag) {
-      const libScript = document.createElement("script");
-      libScript.src = `https://www.googletagmanager.com/gtag/js?id=${gtagPrimaryId}`;
-      libScript.async = true;
-      document.head.appendChild(libScript);
-      injected.push(libScript);
-
-      const initScript = document.createElement("script");
-      const configs: string[] = [];
-      if (ga4Id) configs.push(`gtag('config','${ga4Id}');`);
-      if (adsId) configs.push(`gtag('config','${adsId}');`);
-      initScript.innerHTML = `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());${configs.join("")}`;
-      document.head.appendChild(initScript);
-      injected.push(initScript);
-    }
-
-    // Cleanup : retire les <script> du head si la condition change
-    // (consent retiré → on délègue à un futur reload, on ne désinit
-    // pas fbq/gtag manuellement, c'est trop fragile).
-    return () => {
-      injected.forEach((s) => {
-        if (s.parentNode) s.parentNode.removeChild(s);
-      });
-    };
-  }, [
-    quiz,
-    consent,
-    previewData,
-  ]);
+  // Les scripts pixels (Meta + GA + Google Ads) sont désormais
+  // server-rendered par <TrackingPixels> dans app/q/[quizId]/page.tsx.
+  // Bénéfices :
+  //   - Pixel Helper de Meta les détecte dès le premier paint (avant
+  //     c'était client-side via useEffect, ce qui faisait que Gwenn
+  //     voyait "no pixel" sur sa pub Meta — bug du 23/05).
+  //   - Plus de race condition consent / mount / fbq init.
+  //   - PageView fire immédiatement, AVANT le bundle JS lourd.
+  // Le code client se contente désormais de fire les events
+  // conversion via fireQuizPixel() au moment où ils arrivent (start,
+  // complete, share). Cf. PITFALLS.md section U.
 
   useEffect(() => {
     if (step !== "quiz") return;

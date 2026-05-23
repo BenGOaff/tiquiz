@@ -25,6 +25,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { fetchPublishedPopquiz } from "@/lib/popquiz/repo";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
 import PopquizPlayClient from "@/app/p/[popquizId]/PopquizPlayClient";
+import { TrackingPixels } from "@/components/tracking/TrackingPixels";
 import { isReservedPublicSlug } from "@/lib/publicSlug";
 import { stripHtml } from "@/lib/richText";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
@@ -50,7 +51,7 @@ async function resolveCustomDomainOwner(): Promise<string | null> {
 
 type ResolvedPopquiz = NonNullable<Awaited<ReturnType<typeof fetchPublishedPopquiz>>>;
 type Resolved =
-  | { kind: "quiz"; meta: { title?: string | null; introduction?: string | null; og_image_url?: string | null; og_description?: string | null } }
+  | { kind: "quiz"; meta: { title?: string | null; introduction?: string | null; og_image_url?: string | null; og_description?: string | null; meta_pixel_id?: string | null; ga4_measurement_id?: string | null; google_ads_conversion_id?: string | null } }
   | { kind: "popquiz"; popquiz: ResolvedPopquiz }
   | null;
 
@@ -59,7 +60,7 @@ type Resolved =
 async function resolve(slug: string, ownerId: string): Promise<Resolved> {
   const { data: quiz } = await supabaseAdmin
     .from("quizzes")
-    .select("title, introduction, og_image_url, og_description")
+    .select("title, introduction, og_image_url, og_description, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id")
     .eq("user_id", ownerId)
     .ilike("slug", slug)
     .eq("status", "active")
@@ -190,7 +191,16 @@ export default async function PublicCatchAll({ params }: Props) {
   if (!r) notFound();
 
   if (r.kind === "quiz") {
-    return <PublicQuizClient quizId={publicSlug} />;
+    return (
+      <>
+        <TrackingPixels
+          metaPixelId={r.meta.meta_pixel_id}
+          ga4MeasurementId={r.meta.ga4_measurement_id}
+          googleAdsConversionId={r.meta.google_ads_conversion_id}
+        />
+        <PublicQuizClient quizId={publicSlug} />
+      </>
+    );
   }
   // Fire-and-forget view bump — mirrors /p/[popquizId] so analytics
   // stay consistent whether the URL was the prefixed legacy shape or

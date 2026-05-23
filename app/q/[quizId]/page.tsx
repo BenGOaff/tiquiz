@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import PublicQuizClient from "@/components/quiz/PublicQuizClient";
 import QuizJsonLd from "@/components/quiz/QuizJsonLd";
+import { TrackingPixels } from "@/components/tracking/TrackingPixels";
 import { stripHtml } from "@/lib/richText";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
@@ -35,11 +36,15 @@ async function resolveCustomDomainOwner(): Promise<string | null> {
   return (data?.user_id as string | undefined) ?? null;
 }
 
+// Champs sélectionnés sur quizzes — étendre ici si on ajoute des
+// colonnes (ex : pixel ids) dont on a besoin server-side.
+const QUIZ_META_FIELDS = "id, user_id, slug, title, introduction, og_image_url, og_description, seo_noindex, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id";
+
 async function fetchQuizMeta(slugOrId: string) {
   if (UUID_RE.test(slugOrId)) {
     const { data } = await supabaseAdmin
       .from("quizzes")
-      .select("id, user_id, slug, title, introduction, og_image_url, og_description, seo_noindex")
+      .select(QUIZ_META_FIELDS)
       .eq("id", slugOrId)
       .eq("status", "active")
       .maybeSingle();
@@ -47,7 +52,7 @@ async function fetchQuizMeta(slugOrId: string) {
   }
   const { data } = await supabaseAdmin
     .from("quizzes")
-    .select("id, user_id, slug, title, introduction, og_image_url, og_description, seo_noindex")
+    .select(QUIZ_META_FIELDS)
     .ilike("slug", slugOrId)
     .eq("status", "active")
     .maybeSingle();
@@ -227,6 +232,16 @@ export default async function PublicQuizPage({ params }: Props) {
           authorUrl={authorUrl}
           numberOfQuestions={questionCount}
           inLanguage={language}
+        />
+      )}
+      {/* Pixel Meta + GA + Google Ads server-rendered. Visible
+          immédiatement par les extensions de détection (Pixel Helper,
+          Tag Assistant) sans attendre le mount React. */}
+      {meta && (
+        <TrackingPixels
+          metaPixelId={(meta as { meta_pixel_id?: string | null }).meta_pixel_id}
+          ga4MeasurementId={(meta as { ga4_measurement_id?: string | null }).ga4_measurement_id}
+          googleAdsConversionId={(meta as { google_ads_conversion_id?: string | null }).google_ads_conversion_id}
         />
       )}
       <PublicQuizClient quizId={quizId} />
