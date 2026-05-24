@@ -5,7 +5,7 @@
 // Flow:
 //   1. user picks an image file (PNG/JPG/WebP)
 //   2. crop dialog opens — pinch/drag to position, slider to zoom
-//   3. on validate, we render the visible 16:9 viewport into a 1280×720
+//   3. on validate, we render the visible 16:9 viewport into a 1920×1080
 //      JPEG via canvas, upload it through the existing tus pipeline as
 //      kind="thumbnail-custom", then PATCH the popquiz to point its
 //      thumbnail_path at the new file
@@ -38,8 +38,8 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
-const FINAL_W = 1280;
-const FINAL_H = 720;
+const FINAL_W = 1920;
+const FINAL_H = 1080;
 const PREVIEW_W = 480;
 const PREVIEW_H = 270;
 const MIN_SCALE = 1;
