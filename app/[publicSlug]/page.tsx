@@ -58,6 +58,9 @@ type Resolved =
 
 // Single resolver used by both generateMetadata and the page body so
 // we don't hit the DB twice per request.
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function resolve(slug: string, ownerId: string): Promise<Resolved> {
   const { data: quiz } = await supabaseAdmin
     .from("quizzes")
@@ -71,13 +74,18 @@ async function resolve(slug: string, ownerId: string): Promise<Resolved> {
   // Popquiz path: owner-gate first (cheap), then fetch the full object
   // only if it belongs to this domain's owner. fetchPublishedPopquiz
   // does not expose user_id on the returned shape, hence the split.
-  const { data: pqOwner } = await supabaseAdmin
+  // Le `slug` peut être l'ID (UUID) : quand un popquiz n'a pas de slug
+  // custom, l'éditeur construit l'URL live avec `popquiz.id` (handle =
+  // slug ?? id) → sur custom domain ça donne `/<uuid>`. On matche donc
+  // par id si c'est un UUID, sinon par slug (sinon 404 systématique).
+  const ownerGate = supabaseAdmin
     .from("popquizzes")
     .select("id")
     .eq("user_id", ownerId)
-    .ilike("slug", slug)
-    .eq("is_published", true)
-    .maybeSingle();
+    .eq("is_published", true);
+  const { data: pqOwner } = await (
+    UUID_RE.test(slug) ? ownerGate.eq("id", slug) : ownerGate.ilike("slug", slug)
+  ).maybeSingle();
   if (!pqOwner) return null;
 
   const popquiz = await fetchPublishedPopquiz(slug);
