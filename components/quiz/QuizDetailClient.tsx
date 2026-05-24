@@ -38,6 +38,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { SioTagPicker } from "@/components/ui/sio-tag-picker";
 import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
+import QuizSioKeyPicker from "@/components/sio/QuizSioKeyPicker";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -2251,6 +2252,13 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         <SioTagPicker value={sioShareTagName} onChange={setSioShareTagName} />
                       </div>
                     )}
+
+                    {/* Clé API Systeme.io par quiz : permet (ex: freelance)
+                        d'envoyer les leads de CE quiz vers le compte SIO du
+                        client. Le picker fetch les clés + PATCH /api/quiz/[id]
+                        de façon autonome (l'éditeur ne gère pas sio_api_key_id,
+                        donc pas de conflit avec l'autosave). */}
+                    {!isEmbed && <QuizSioKeyPicker quizId={quizId} />}
                   </section>
                 )}
 

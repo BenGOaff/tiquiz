@@ -310,6 +310,17 @@
  * Tailles en `vmin` → s'adaptent AUTOMATIQUEMENT à la fenêtre vidéo,
  * qu'elle soit paysage (1920×1080) ou portrait (1080×1920).
  * ────────────────────────────────────────────────────────────── */
+/* Centrage vertical : en iframe, 100vh est souvent mal calculé →
+ * le contenu se colle en haut avec du vide en bas. On force la
+ * hauteur pleine via height:100% (chaîne html>body>step) pour que
+ * le `justify-center` existant centre vraiment dans la fenêtre vidéo. */
+html[data-pq-compact],
+html[data-pq-compact] body {
+  height: 100% !important;
+}
+[data-pq-compact] .min-h-screen {
+  min-height: 100% !important;
+}
 [data-pq-compact] .py-16,
 [data-pq-compact] .py-24 {
   padding-top: clamp(0.4rem, 2vh, 1.1rem) !important;
