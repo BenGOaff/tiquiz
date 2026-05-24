@@ -16,7 +16,7 @@ import {
   type QuizBranding,
 } from "@/lib/quizBranding";
 import { sanitizeRichText, stripHtml } from "@/lib/richText";
-import { fireQuizPixel } from "@/lib/clientPixels";
+import { fireQuizPixel, newEventId } from "@/lib/clientPixels";
 import { RichParagraph } from "@/components/ui/rich-paragraph";
 import { makeInterpolator, getGenderLabels, extractResultLabel, type QuizGender } from "@/lib/quizPersonalization";
 import { ensureExternalUrl } from "@/lib/url";
@@ -842,6 +842,9 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
   // browser pose le cookie au premier fetch /track et le renvoie
   // automatiquement aux suivants.
   const trackedQuestionViewsRef = useRef<Set<number>>(new Set());
+  // event_id du Lead, partagé entre le pixel navigateur ("complete") et
+  // l'appel Conversions API serveur (capture email) → Meta dédoublonne.
+  const leadEventIdRef = useRef<string | null>(null);
   // One slot per question. Undefined = not yet answered (used to gate the
   // "next" button on free_text questions, where there's no auto-advance).
   const [answers, setAnswers] = useState<(SurveyAnswer | undefined)[]>([]);
@@ -1027,12 +1030,20 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
       // Les autres events (start, complete, share) restent à fire
       // depuis le client puisqu'ils ne sont pas dans l'init.
       if (quiz && event !== "view") {
+        // Lead : on fige un event_id partagé avec l'appel CAPI serveur
+        // (capture email) pour que Meta fusionne les 2 sources en 1 event.
+        if (event === "complete" && !leadEventIdRef.current) {
+          leadEventIdRef.current = newEventId();
+        }
         fireQuizPixel(event, {
           meta_pixel_id: quiz.meta_pixel_id,
           ga4_measurement_id: quiz.ga4_measurement_id,
           google_ads_conversion_id: quiz.google_ads_conversion_id,
           google_ads_conversion_label: quiz.google_ads_conversion_label,
-        }, { contentName: stripHtml(quiz.title) });
+        }, {
+          contentName: stripHtml(quiz.title),
+          eventId: event === "complete" ? leadEventIdRef.current : undefined,
+        });
       }
     },
     [quizId, previewData, trackedRef, quiz],
@@ -1390,6 +1401,8 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
             result_id: profile?.id ?? null,
             consent_given: consent,
             answers: answersPayload,
+            // event_id partagé avec le pixel navigateur → dédup CAPI.
+            meta_event_id: leadEventIdRef.current ?? undefined,
           }),
         });
 

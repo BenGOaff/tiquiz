@@ -96,6 +96,9 @@ export async function PATCH(req: NextRequest) {
       // sur les nouveaux quizzes du créateur. Modifiables per-quiz.
       "default_meta_pixel_id", "default_ga4_measurement_id",
       "default_google_ads_conversion_id", "default_google_ads_conversion_label",
+      // Token Conversions API Meta (secret server-side) — apparié au
+      // pixel par défaut pour l'envoi des Lead côté serveur (dédup).
+      "default_meta_capi_token",
       // Override de `og:site_name` + suffix du <title> pour les quiz
       // servis via un custom domain. Cf. migration 20260519.
       "share_site_name",

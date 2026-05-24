@@ -44,6 +44,7 @@ type Profile = {
   tipote_affiliate_id: string | null;
   // Phase B (Adeline, 19 mai 2026) : défauts user pour les pixels Meta + Google.
   default_meta_pixel_id?: string | null;
+  default_meta_capi_token?: string | null;
   default_ga4_measurement_id?: string | null;
   default_google_ads_conversion_id?: string | null;
   default_google_ads_conversion_label?: string | null;
@@ -110,6 +111,7 @@ export default function SettingsClient() {
   // Auto-remplis sur les nouveaux quizzes (à la création) et applicables
   // à un quiz existant via un bouton dans l'éditeur.
   const [defaultMetaPixelId, setDefaultMetaPixelId] = useState("");
+  const [defaultMetaCapiToken, setDefaultMetaCapiToken] = useState("");
   const [defaultGa4MeasurementId, setDefaultGa4MeasurementId] = useState("");
   const [defaultGoogleAdsConversionId, setDefaultGoogleAdsConversionId] = useState("");
   const [defaultGoogleAdsConversionLabel, setDefaultGoogleAdsConversionLabel] = useState("");
@@ -149,6 +151,7 @@ export default function SettingsClient() {
           setBrandWebsiteUrl(p.brand_website_url ?? "");
           setTipoteAffiliateId(p.tipote_affiliate_id ?? "");
           setDefaultMetaPixelId(p.default_meta_pixel_id ?? "");
+          setDefaultMetaCapiToken(p.default_meta_capi_token ?? "");
           setDefaultGa4MeasurementId(p.default_ga4_measurement_id ?? "");
           setDefaultGoogleAdsConversionId(p.default_google_ads_conversion_id ?? "");
           setDefaultGoogleAdsConversionLabel(p.default_google_ads_conversion_label ?? "");
@@ -195,6 +198,7 @@ export default function SettingsClient() {
           brand_tone: brandTone,
           brand_website_url: brandWebsiteUrl.trim() || null,
           default_meta_pixel_id: defaultMetaPixelId.trim() || null,
+          default_meta_capi_token: defaultMetaCapiToken.trim() || null,
           default_ga4_measurement_id: defaultGa4MeasurementId.trim() || null,
           default_google_ads_conversion_id: defaultGoogleAdsConversionId.trim() || null,
           default_google_ads_conversion_label: defaultGoogleAdsConversionLabel.trim() || null,
@@ -736,6 +740,18 @@ export default function SettingsClient() {
                   <a href="https://business.facebook.com/events_manager" target="_blank" rel="noopener noreferrer" className="hover:underline inline-flex items-center gap-1">
                     {t("trackingDefaultsMetaHelp")} <ExternalLink className="h-3 w-3" />
                   </a>
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Token Conversions API Meta (optionnel)</label>
+                <Input
+                  value={defaultMetaCapiToken}
+                  onChange={(e) => setDefaultMetaCapiToken(e.target.value)}
+                  placeholder="EAAG… (token d'accès Conversions API)"
+                  autoComplete="off"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {"Active l'envoi serveur des conversions (résiste aux bloqueurs de pub, améliore le matching, dédupliqué avec le pixel). Events Manager → ton dataset → Paramètres → Conversions API → « Générer un token d'accès ». À utiliser avec le pixel ci-dessus."}
                 </p>
               </div>
               <div className="space-y-1.5">
