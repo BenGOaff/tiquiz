@@ -326,15 +326,20 @@ html[data-pq-compact] body {
   padding-top: clamp(0.4rem, 2vh, 1.1rem) !important;
   padding-bottom: clamp(0.4rem, 2vh, 1.1rem) !important;
 }
+/* Espacement INTER-ÉLÉMENTS. Auparavant scopé en `vh` → sur un popup
+ * mobile court, vh est petit → les marges s'effondraient au minimum et
+ * tout se retrouvait collé (« trop tassé »). On remonte nettement les
+ * planchers (min) pour garantir de l'air même sur petit écran, et on
+ * garde un peu de fluidité via vh pour respirer sur grand popup. */
 [data-pq-compact] .space-y-8 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: clamp(0.55rem, 2.2vh, 1.3rem) !important;
+  margin-top: clamp(1rem, 3vh, 1.6rem) !important;
 }
 [data-pq-compact] .space-y-6 > :not([hidden]) ~ :not([hidden]),
 [data-pq-compact] .space-y-3 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: clamp(0.4rem, 1.5vh, 0.9rem) !important;
+  margin-top: clamp(0.75rem, 2.2vh, 1.1rem) !important;
 }
 [data-pq-compact] .gap-3 {
-  gap: clamp(0.4rem, 1.5vmin, 0.85rem) !important;
+  gap: clamp(0.65rem, 2vmin, 1rem) !important;
 }
 /* Écran d'INTRO : titre + description. Le titre était figé à 2.25rem
  * (mobile) / 3rem (PC) en !important et N'ÉTAIT PAS couvert par les
