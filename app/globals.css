@@ -336,6 +336,21 @@ html[data-pq-compact] body {
 [data-pq-compact] .gap-3 {
   gap: clamp(0.4rem, 1.5vmin, 0.85rem) !important;
 }
+/* Écran d'INTRO : titre + description. Le titre était figé à 2.25rem
+ * (mobile) / 3rem (PC) en !important et N'ÉTAIT PAS couvert par les
+ * règles question/résultat ci-dessous → énorme sur le popup mobile.
+ * On le passe en vmin comme le reste. Spécificité (0,2,1) > la règle
+ * @media 640px (0,1,1) → gagne sans media query, quelle que soit la
+ * largeur de l'iframe. */
+[data-pq-compact] .tiquiz-quiz-title,
+[data-pq-compact] .tiquiz-quiz-title * {
+  font-size: clamp(1rem, 4.6vmin, 1.85rem) !important;
+  line-height: 1.18 !important;
+}
+[data-pq-compact] .text-lg {
+  font-size: clamp(0.78rem, 2.6vmin, 1.05rem) !important;
+  line-height: 1.35 !important;
+}
 /* Titre de question : plus petit + fluide selon l'espace dispo */
 [data-pq-compact] .tiquiz-quiz-question,
 [data-pq-compact] .tiquiz-quiz-question * {
