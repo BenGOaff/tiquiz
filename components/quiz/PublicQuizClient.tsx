@@ -152,6 +152,9 @@ interface PublicQuizClientProps {
   quizId: string;
   /** If provided, skip the API fetch and use this data directly (preview mode). */
   previewData?: PublicQuizData | null;
+  /** Mode compact : quiz affiché dans l'overlay popquiz (iframe). Réduit
+   *  marges/typo + CTA collé en bas pour tenir dans la fenêtre vidéo. */
+  compact?: boolean;
 }
 
 export type { PublicQuizData };
@@ -784,7 +787,7 @@ function getT(locale: string | null | undefined, addressForm?: string | null): Q
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function PublicQuizClient({ quizId, previewData }: PublicQuizClientProps) {
+export default function PublicQuizClient({ quizId, previewData, compact = false }: PublicQuizClientProps) {
   const [quiz, setQuiz] = useState<PublicQuizData | null>(previewData ?? null);
   const [loading, setLoading] = useState(!previewData);
   const [error, setError] = useState<string | null>(null);
@@ -975,11 +978,15 @@ export default function PublicQuizClient({ quizId, previewData }: PublicQuizClie
     const prevBody = document.body.style.backgroundColor;
     document.documentElement.style.backgroundColor = branding.backgroundColor;
     document.body.style.backgroundColor = branding.backgroundColor;
+    // Mode compact (quiz dans l'overlay popquiz) : marqueur sur <html>
+    // pour scoper les overrides CSS (cf. globals.css [data-pq-compact]).
+    if (compact) document.documentElement.setAttribute("data-pq-compact", "");
     return () => {
       document.documentElement.style.backgroundColor = prevHtml;
       document.body.style.backgroundColor = prevBody;
+      if (compact) document.documentElement.removeAttribute("data-pq-compact");
     };
-  }, [branding.backgroundColor]);
+  }, [branding.backgroundColor, compact]);
 
   // ─── Funnel tracking (fire & forget, non-blocking) ───
   //

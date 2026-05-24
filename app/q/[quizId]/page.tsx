@@ -14,7 +14,10 @@ import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ quizId: string }> };
+type Props = {
+  params: Promise<{ quizId: string }>;
+  searchParams: Promise<{ compact?: string }>;
+};
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -166,8 +169,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function PublicQuizPage({ params }: Props) {
+export default async function PublicQuizPage({ params, searchParams }: Props) {
   const { quizId } = await params;
+  const { compact } = await searchParams;
+  const isCompact = compact === "1";
 
   // Same ownership check as in generateMetadata: a custom domain may
   // only render quizzes belonging to its owner. We do it server-side
@@ -252,7 +257,7 @@ export default async function PublicQuizPage({ params }: Props) {
           googleAdsConversionId={pixels.googleAdsConversionId}
         />
       )}
-      <PublicQuizClient quizId={quizId} />
+      <PublicQuizClient quizId={quizId} compact={isCompact} />
     </>
   );
 }
