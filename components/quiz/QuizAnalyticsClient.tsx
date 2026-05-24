@@ -140,7 +140,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
     void (async () => {
       try {
         const res = await fetch(
-          `/api/quiz/${encodeURIComponent(quizId)}/analytics?period=${period}`,
+          `/api/quiz/${encodeURIComponent(quizId)}/analytics?period=${period}&tz=${new Date().getTimezoneOffset()}`,
           { credentials: "include" },
         );
         const json = (await res.json().catch(() => ({ ok: false, error: "Invalid JSON" }))) as

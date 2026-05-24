@@ -104,7 +104,10 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/stats?range=${range}`)
+    // tz : on passe l'offset du navigateur pour que le serveur
+    // bucketise les time-series sur le jour LOCAL du créateur.
+    const tz = new Date().getTimezoneOffset();
+    fetch(`/api/stats?range=${range}&tz=${tz}`)
       .then((r) => r.json())
       .then((j: StatsResponse) => { if (j.ok) setData(j); })
       .catch(() => {})

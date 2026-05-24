@@ -376,3 +376,34 @@ PublicQuizClient (sinon double init) + ne pas re-fire "view" event
 côté client (l'init fire déjà PageView).
 
 **Routes couvertes Tiquiz** : `/q/[quizId]` + `/[publicSlug]`.
+
+## V) STATS time-series : TOUJOURS bucketiser par jour LOCAL du créateur (24 mai 2026)
+
+**Bug récurrent (Adeline 24/05)** : 6 leads faits aujourd'hui, mais le
+graphe "Leads sur les 30 derniers jours" du quiz affichait ZÉRO pour
+aujourd'hui. La liste des leads, elle, montrait bien les 6.
+
+**Cause** : mélange de conventions de fuseau dans le bucketing par jour.
+`QuizResultsAnalytics.tsx` générait les clés de jours via
+`d.toISOString().slice(0,10)` (= jour UTC) mais bucketisait les leads
+via `lead.created_at.slice(0,10)` (jour brut). Décalé d'un cran de
+fuseau → les leads d'aujourd'hui ne tombaient dans AUCUN bucket.
+
+**RÈGLE DÉFINITIVE** : tout bucketing par jour des time-series stats
+(leads/events sur N jours) se fait selon le **jour LOCAL du créateur
+qui regarde**, via les helpers de `lib/dateKeys.ts` :
+- Côté client (graphe rendu navigateur) → `localDateKey(date)`.
+  L'utiliser pour LES CLÉS DE JOURS *et* pour chaque ligne. Jamais
+  `toISOString().slice()` d'un côté et `.slice()` de l'autre.
+- Côté serveur (agrégation API) → le client passe
+  `&tz=${new Date().getTimezoneOffset()}`, le serveur bucketise via
+  `dateKeyForOffset(date, tzOffset)` (+ `parseTzOffset` pour lire le
+  param). Voir `/api/stats` et `/api/quiz/[id]/analytics`.
+
+**Checklist quand tu touches une stat datée** :
+1. Clés de jours ET lignes bucketisées avec le MÊME helper.
+2. Jamais `toISOString().slice(0,10)` pour un bucket affiché à l'user
+   (c'est de l'UTC, pas son jour local).
+3. Si c'est un endpoint serveur consommé par un client → accepter `tz`.
+4. Surfaces existantes à garder cohérentes : QuizResultsAnalytics
+   (quiz Résultats), /api/stats (dashboard), /api/quiz/[id]/analytics.

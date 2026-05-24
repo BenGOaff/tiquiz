@@ -27,6 +27,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { dateKeyForOffset, parseTzOffset } from "@/lib/dateKeys";
 
 export const dynamic = "force-dynamic";
 
@@ -46,11 +47,12 @@ type EventRow = {
 };
 type LeadRow = { quiz_id: string; created_at: string };
 
-/** Local-day key (YYYY-MM-DD) so the chart doesn't lump hours in the
- * wrong day on the client. We use UTC here for determinism — the
- * client converts back to its locale. */
-function toDayKey(iso: string): string {
-  return iso.slice(0, 10);
+/** Day key (YYYY-MM-DD) dans le fuseau LOCAL du créateur (offset passé
+ * par le client). Avant on slicait l'ISO en UTC → le dashboard et le
+ * graphe du quiz pouvaient afficher des jours différents. Désormais
+ * tout est bucketisé sur le même jour local. Cf. lib/dateKeys. */
+function toDayKey(iso: string, tzOffset: number): string {
+  return dateKeyForOffset(new Date(iso), tzOffset);
 }
 
 /** Range presets we accept on the query string. "all" = no lower bound. */
@@ -65,17 +67,25 @@ function rangeToWindow(range: Range): { from: Date | null; durationDays: number 
   return { from, durationDays: days };
 }
 
-/** Fill a Map<dayKey, count> with zeros for every day in [start, end]
- * so the resulting array has no gaps — important for the line chart. */
-function fillDailyZeros(start: Date, end: Date): Map<string, number> {
+/** Fill a Map<dayKey, count> with zeros for every LOCAL day (tzOffset)
+ * in [start, end] so the resulting array has no gaps — important for
+ * the line chart. Les clés sont en jour local du créateur, cohérent
+ * avec toDayKey. */
+function fillDailyZeros(start: Date, end: Date, tzOffset: number): Map<string, number> {
   const out = new Map<string, number>();
-  const cur = new Date(start);
-  cur.setUTCHours(0, 0, 0, 0);
-  const last = new Date(end);
-  last.setUTCHours(0, 0, 0, 0);
-  while (cur.getTime() <= last.getTime()) {
-    out.set(cur.toISOString().slice(0, 10), 0);
-    cur.setUTCDate(cur.getUTCDate() + 1);
+  // On itère jour par jour en pas de 24h à partir de `start`. Lire la
+  // clé via dateKeyForOffset garantit le même découpage que le
+  // bucketing des lignes.
+  let t = start.getTime();
+  const endT = end.getTime();
+  // Marge d'un jour pour ne pas tronquer le dernier bucket local.
+  const guard = endT + 24 * 3600 * 1000;
+  let seen = "";
+  while (t <= guard) {
+    const key = dateKeyForOffset(new Date(t), tzOffset);
+    if (key !== seen) { out.set(key, 0); seen = key; }
+    if (key === dateKeyForOffset(new Date(endT), tzOffset)) break;
+    t += 24 * 3600 * 1000;
   }
   return out;
 }
@@ -89,6 +99,9 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const rawRange = (url.searchParams.get("range") ?? "30d") as Range;
     const range: Range = (["7d", "30d", "90d", "all"] as Range[]).includes(rawRange) ? rawRange : "30d";
+    // Fuseau du client (minutes, getTimezoneOffset) pour bucketiser les
+    // time-series sur SON jour local. 0 = UTC si absent.
+    const tzOffset = parseTzOffset(url.searchParams.get("tz"));
     const { from, durationDays } = rangeToWindow(range);
 
     // Previous-period window — same length, shifted back. Used for the
@@ -184,20 +197,23 @@ export async function GET(req: NextRequest) {
       ...leads.map((l) => new Date(l.created_at)),
       new Date(),
     ]);
+    // `today` = instant courant (PAS arrondi UTC) : fillDailyZeros en
+    // dérive le jour LOCAL du client via dateKeyForOffset, donc le
+    // dernier bucket est bien l'aujourd'hui du créateur (et pas
+    // l'aujourd'hui UTC qui peut être en retard d'un jour le soir).
     const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
 
     const eventBuckets: Record<CumulativeEventType, Map<string, number>> = {
-      view: fillDailyZeros(anchorStart, today),
-      start: fillDailyZeros(anchorStart, today),
-      complete: fillDailyZeros(anchorStart, today),
-      share: fillDailyZeros(anchorStart, today),
+      view: fillDailyZeros(anchorStart, today, tzOffset),
+      start: fillDailyZeros(anchorStart, today, tzOffset),
+      complete: fillDailyZeros(anchorStart, today, tzOffset),
+      share: fillDailyZeros(anchorStart, today, tzOffset),
     };
     for (const e of events) {
       // Skip question_view here — it's not cumulative funnel data,
       // it's per-question retention handled separately below.
       if (e.event_type === "question_view") continue;
-      const d = toDayKey(e.created_at);
+      const d = toDayKey(e.created_at, tzOffset);
       const bucket = eventBuckets[e.event_type];
       if (bucket && bucket.has(d)) bucket.set(d, (bucket.get(d) ?? 0) + 1);
     }
@@ -209,9 +225,9 @@ export async function GET(req: NextRequest) {
       share: eventBuckets.share.get(day) ?? 0,
     }));
 
-    const leadBuckets = fillDailyZeros(anchorStart, today);
+    const leadBuckets = fillDailyZeros(anchorStart, today, tzOffset);
     for (const l of leads) {
-      const d = toDayKey(l.created_at);
+      const d = toDayKey(l.created_at, tzOffset);
       if (leadBuckets.has(d)) leadBuckets.set(d, (leadBuckets.get(d) ?? 0) + 1);
     }
     const leadsByDay = Array.from(leadBuckets.entries()).map(([day, count]) => ({ day, count }));
