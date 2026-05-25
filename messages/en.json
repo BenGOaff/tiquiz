@@ -1764,5 +1764,20 @@
       "body1": "If you want to keep a quiz private (link-only, no risk of it appearing in Google), check the box \"Hide this quiz from search engines\" in the SEO tab of the quiz editor.",
       "body2": "The quiz stays active and shareable via its direct link, but is excluded from your sitemap and AI manifest. Ideal for internal content or public drafts shared with a limited circle."
     }
+  },
+  "colorPicker": {
+    "pick": "Pick a color",
+    "myPalettes": "My palettes",
+    "savedColors": "Saved colors",
+    "black": "Black",
+    "white": "White",
+    "gray": "Gray",
+    "red": "Red",
+    "orange": "Orange",
+    "green": "Green",
+    "blue": "Blue",
+    "purple": "Purple",
+    "pink": "Pink",
+    "cyan": "Cyan"
   }
 }

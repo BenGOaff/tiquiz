@@ -1726,5 +1726,20 @@
     "dialogBody": "Existe uma versão auto-salva ({draftWhen}). Você pode restaurá-la ou partir do último salvamento ({savedWhen}).",
     "restoreBtn": "Restaurar a versão auto-salva",
     "discardBtn": "Partir do meu último salvamento"
+  },
+  "colorPicker": {
+    "pick": "Escolher uma cor",
+    "myPalettes": "Minhas paletas",
+    "savedColors": "Cores salvas",
+    "black": "Preto",
+    "white": "Branco",
+    "gray": "Cinza",
+    "red": "Vermelho",
+    "orange": "Laranja",
+    "green": "Verde",
+    "blue": "Azul",
+    "purple": "Roxo",
+    "pink": "Rosa",
+    "cyan": "Ciano"
   }
 }

@@ -1780,5 +1780,20 @@
       "body1": "Se queres manter um quiz privado (apenas via link, sem risco de aparecer no Google), seleciona a caixa «Ocultar este quiz dos motores de busca» na aba SEO do editor do quiz.",
       "body2": "O quiz mantém-se ativo e partilhável via link direto, mas é excluído do teu sitemap e do ficheiro IA. Ideal para conteúdo interno ou drafts públicos partilhados a um círculo limitado."
     }
+  },
+  "colorPicker": {
+    "pick": "Escolher uma cor",
+    "myPalettes": "As minhas paletas",
+    "savedColors": "Cores guardadas",
+    "black": "Preto",
+    "white": "Branco",
+    "gray": "Cinzento",
+    "red": "Vermelho",
+    "orange": "Laranja",
+    "green": "Verde",
+    "blue": "Azul",
+    "purple": "Roxo",
+    "pink": "Rosa",
+    "cyan": "Ciano"
   }
 }

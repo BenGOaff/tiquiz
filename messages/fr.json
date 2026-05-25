@@ -1764,5 +1764,20 @@
       "body1": "Si tu veux garder un quiz privé (lien-only, sans risque qu'il apparaisse dans Google), coche la case « Masquer ce quiz aux moteurs de recherche » dans le tab SEO de l'éditeur du quiz.",
       "body2": "Le quiz reste actif et partageable via son lien direct, mais il est exclu de ton sitemap et du fichier IA. Idéal pour les contenus internes ou les drafts publics qu'on partage à un cercle fermé."
     }
+  },
+  "colorPicker": {
+    "pick": "Choisir une couleur",
+    "myPalettes": "Mes palettes",
+    "savedColors": "Couleurs enregistrées",
+    "black": "Noir",
+    "white": "Blanc",
+    "gray": "Gris",
+    "red": "Rouge",
+    "orange": "Orange",
+    "green": "Vert",
+    "blue": "Bleu",
+    "purple": "Violet",
+    "pink": "Rose",
+    "cyan": "Cyan"
   }
 }
