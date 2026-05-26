@@ -58,9 +58,11 @@ Toujours faire les 7 étapes, dans l'ordre, sinon la feature est cassée silenci
 
 ## F) Compteurs et événements (post-Phase A tracking)
 
-- **Source de vérité = `quiz_events`** (table log time-series). Les compteurs sur `quizzes` (views_count, etc.) sont **auto-bumpés par trigger** `trg_quiz_events_bump_counter`. **Ne JAMAIS UPDATE les compteurs directement** — utiliser `log_quiz_event` RPC ou INSERT direct dans `quiz_events`.
+- **Source de vérité = `quiz_events`** (table log time-series). Les compteurs sur `quizzes` (views_count, etc.) sont **auto-bumpés par trigger** `trg_quiz_events_bump_counter`. **Ne JAMAIS UPDATE les compteurs directement** — faire un **INSERT direct dans `quiz_events`** (le trigger bumpe).
+- **⚠️ NE PAS appeler la RPC `log_quiz_event`** (bug 26/05 : Démarrages/Complétés/Partages bloqués à 0). Sur Tiquiz, 3 surcharges coexistent (2/3/4 args — migrations 021/022/20260521 sans DROP) → l'appel échoue/est ambigu, et `await rpc(...)` **ne lit jamais `error`** → échec SILENCIEUX → events jamais insérés (`views_count` figé sur sa valeur pré-refonte, starts/completes=0 alors que les leads et `quiz_question_events` — en INSERT direct — marchent). **Fix : INSERT direct dans `quiz_events` partout** (track route + share dans public route), et toujours lire `{ error }`. Vérifier en prod : `SELECT proname, pg_get_function_identity_arguments(oid) FROM pg_proc WHERE proname='log_quiz_event';` + s'assurer que le trigger + la colonne `session_id` existent (migration 20260521).
 - **Dedup via cookie session** : cookie `tquiz_visit` HttpOnly 30j, généré server-side au premier load. Le tracking serveur check `(quiz_id, event_type, session_id, created_at > NOW() - 24h)` avant INSERT.
-- **Client `trackedRef`** : Set en mémoire pour éviter les doublons IN-tab. Combiné avec le cookie côté serveur, on dédupe correctement même si l'utilisateur ouvre 5 onglets.
+- **Client `trackedRef`** : Set en mémoire pour éviter les doublons IN-tab. Combiné avec le cookie côté serveur, on dédupe correctement même si l'utilisateur ouvre 5 onglets. **DOIT être un `useRef` STABLE** (`useRef<Set>(null)` + `??=`), PAS `useCallback(() => new Set(), [])()` (l'IIFE recrée un Set vide à chaque render → dédup morte → spam de fetchs).
+- **Funnel par question** : un SEUL tracker `question_view` (keepalive, déduplé par `trackedQuestionViewsRef`). Le bug 26/05 ("funnel limité aux 4 premières questions") venait d'un 2e tracker redondant qui spammait `quiz_question_events` sur les 1res questions ; combiné à `analytics` triant par `question_index` ASC + `.limit(50000)`, les questions de fin étaient tronquées. La requête analytics trie désormais par `created_at` DESC.
 
 ## G) Tracking pixels Meta + Google (post-Phase B)
 

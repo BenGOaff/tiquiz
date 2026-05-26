@@ -1007,10 +1007,12 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
   // Le `trackedRef` reste pour dédupe IN-TAB (évite d'envoyer 10 fois
   // l'event si l'utilisateur clique 10× sur "Démarrer"). Le serveur
   // dédupe entre tabs / refreshes via le cookie.
-  const trackedRef = useCallback(() => {
-    const s = new Set<string>();
-    return s;
-  }, [])();
+  // Set STABLE de dédup in-tab. Avant : `useCallback(() => new Set(), [])()` —
+  // l'IIFE se ré-exécutait à CHAQUE render → un nouveau Set vide à chaque fois
+  // → dédup inopérante (et fetch de tracking re-fire en boucle). Un useRef
+  // garde la même instance pour toute la vie du composant.
+  const trackedSetRef = useRef<Set<string> | null>(null);
+  const trackedRef = (trackedSetRef.current ??= new Set<string>());
 
   const trackEvent = useCallback(
     (event: "view" | "start" | "complete" | "share") => {
@@ -1092,40 +1094,17 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
   // conversion via fireQuizPixel() au moment où ils arrivent (start,
   // complete, share). Cf. PITFALLS.md section U.
 
+  // UNIQUE source du tracking question_view (déduplé par session via
+  // trackedQuestionViewsRef, envoyé en keepalive). Avant, un SECOND tracker
+  // redondant (trackQuestionView) refirait l'event à chaque render (sa dédup
+  // reposait sur le Set instable) → quiz_question_events explosait en lignes
+  // sur les 1res questions, et la requête analytics `.order(question_index)
+  // .limit(50000)` tronquait alors les questions suivantes → "seulement les 4
+  // premières". On garde donc un seul tracker propre.
   useEffect(() => {
     if (step !== "quiz") return;
     trackQuestionEvent("question_view", currentQ);
   }, [step, currentQ, trackQuestionEvent]);
-
-  // Per-question retention tracking. We log each question the visitor
-  // *sees* exactly once per session — using a separate dedupe key
-  // ("q:<index>") so a visitor going back-and-forth between questions
-  // doesn't inflate the count. The stats page later compares
-  // question_view counts to compute drop-off per question.
-  const trackQuestionView = useCallback(
-    (questionIndex: number) => {
-      if (previewData) return;
-      const key = `q:${questionIndex}`;
-      if (trackedRef.has(key)) return;
-      trackedRef.add(key);
-      fetch(`/api/quiz/${quizId}/track`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event: "question_view", questionIndex }),
-      }).catch(() => {});
-    },
-    [quizId, previewData, trackedRef],
-  );
-
-  // Fire per-question tracking each time the visitor lands on a
-  // question (quiz step active). The dedupe inside trackQuestionView
-  // means a visitor going Back→Forward only counts once per question.
-  useEffect(() => {
-    if (step !== "quiz") return;
-    if (!quiz?.questions?.length) return;
-    if (currentQ < 0 || currentQ >= quiz.questions.length) return;
-    trackQuestionView(currentQ);
-  }, [step, currentQ, quiz, trackQuestionView]);
 
   useEffect(() => {
     // In preview mode, data is already provided via props

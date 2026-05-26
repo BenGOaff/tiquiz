@@ -741,10 +741,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       .maybeSingle();
 
     if (quiz) {
-      // log_quiz_event = counter + dated row so share velocity is
-      // visible in the stats time-series, not just the lifetime total.
-      await admin
-        .rpc("log_quiz_event", { quiz_id_input: quizId, event_type_input: "share" });
+      // INSERT direct dans quiz_events → trigger bumpe shares_count. On évite
+      // la RPC log_quiz_event : l'appel à 2 args était ambigu entre les
+      // surcharges (2/3/4 args) → échec silencieux → 0 partage compté.
+      const { error: shareErr } = await admin
+        .from("quiz_events")
+        .insert({ quiz_id: quizId, event_type: "share", meta: null, session_id: null });
+      if (shareErr) console.error("[public/share] quiz_events insert failed", shareErr);
 
       const quizRow = quiz as { sio_share_tag_name?: string | null; user_id?: string; sio_api_key_id?: string | null };
       const shareTagName = String(quizRow.sio_share_tag_name ?? "").trim();

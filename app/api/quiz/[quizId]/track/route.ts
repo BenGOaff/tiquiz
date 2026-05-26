@@ -189,13 +189,19 @@ export async function POST(req: NextRequest, context: RouteContext) {
         if (needSetCookie) attachSessionCookie(res, sessionId);
         return res;
       }
-      // Insert via RPC → trigger auto-bump du compteur
-      await supabaseAdmin.rpc("log_quiz_event", {
-        quiz_id_input: quizId,
-        event_type_input: event as ProjectEvent,
-        meta_input: body.meta ?? null,
-        session_id_input: sessionId,
+      // INSERT direct dans quiz_events → le trigger trg_quiz_events_bump_counter
+      // bumpe le compteur. On NE passe PLUS par la RPC log_quiz_event : sur
+      // Tiquiz, 3 surcharges de cette fonction coexistent (2/3/4 args, cf.
+      // migrations 021/022/20260521) → l'appel RPC pouvait échouer en silence
+      // (l'erreur n'était jamais lue) → 0 démarrage/complétion/partage compté.
+      // L'insert direct est le MÊME chemin fiable que quiz_question_events.
+      const { error: insErr } = await supabaseAdmin.from("quiz_events").insert({
+        quiz_id: quizId,
+        event_type: event as ProjectEvent,
+        meta: body.meta ?? null,
+        session_id: sessionId,
       });
+      if (insErr) console.error("[track] quiz_events insert failed", event, insErr);
       const res = ok({ event });
       if (needSetCookie) attachSessionCookie(res, sessionId);
       return res;
