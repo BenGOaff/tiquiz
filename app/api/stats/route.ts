@@ -390,18 +390,36 @@ export async function GET(req: NextRequest) {
     //
     // Empty for projects that have not received any question_view
     // event (legacy data + projects published pre-migration).
+    //
+    // ⚠️ Source = `quiz_question_events` (le player y écrit les vues de
+    // question). On NE lit PLUS quiz_events.meta.q : depuis la refonte
+    // tracking, plus aucune ligne question_view n'atterrit dans quiz_events
+    // → ce funnel était TOUJOURS vide. On compte les sessions DISTINCTES
+    // par (quiz, question), cohérent avec la page analytics par quiz.
+    let qqQuery = supabaseAdmin
+      .from("quiz_question_events")
+      .select("quiz_id, question_index, session_id")
+      .in("quiz_id", quizIds)
+      .eq("event", "view")
+      .order("created_at", { ascending: false })
+      .limit(100000);
+    if (from) qqQuery = qqQuery.gte("created_at", from.toISOString());
+    const { data: qqRows } = await qqQuery;
+    const qqByQuiz = new Map<string, Map<number, Set<string>>>();
+    for (const r of (qqRows ?? []) as { quiz_id: string; question_index: number; session_id: string }[]) {
+      let perQ = qqByQuiz.get(r.quiz_id);
+      if (!perQ) { perQ = new Map(); qqByQuiz.set(r.quiz_id, perQ); }
+      let s = perQ.get(r.question_index);
+      if (!s) { s = new Set(); perQ.set(r.question_index, s); }
+      s.add(r.session_id);
+    }
     const questionFunnels = (quizzes ?? []).map((q) => {
-      const counts = new Map<number, number>();
-      for (const e of events) {
-        if (e.event_type !== "question_view") continue;
-        if (e.quiz_id !== q.id) continue;
-        const idx = typeof e.meta?.q === "number" ? e.meta.q : null;
-        if (idx === null) continue;
-        counts.set(idx, (counts.get(idx) ?? 0) + 1);
-      }
-      const sorted = Array.from(counts.entries())
-        .sort((a, b) => a[0] - b[0])
-        .map(([index, views]) => ({ index, views }));
+      const perQ = qqByQuiz.get(q.id as string);
+      const sorted = perQ
+        ? Array.from(perQ.entries())
+            .sort((a, b) => a[0] - b[0])
+            .map(([index, set]) => ({ index, views: set.size }))
+        : [];
       return {
         quizId: q.id as string,
         title: (q.title as string) ?? "",
