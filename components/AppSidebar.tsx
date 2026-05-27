@@ -13,6 +13,7 @@ import {
   HelpCircle,
   MessageCircleQuestion,
   Video,
+  HandCoins,
 } from "lucide-react";
 import {
   Sidebar,
@@ -157,6 +158,20 @@ export function AppSidebar() {
               >
                 <HelpCircle className="w-5 h-5" />
                 <span>{t("support")}</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          {/* Programme affilié — accessible à tout moment depuis chaque app. */}
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <a
+                href="https://affiliate.tipote.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={MENU_ITEM_CLASS}
+              >
+                <HandCoins className="w-5 h-5" />
+                <span>Devenir affilié</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
