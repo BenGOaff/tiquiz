@@ -337,7 +337,7 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
                 {data.questionFunnels.map((qf) => (
                   <QuestionFunnelCard
                     key={qf.quizId}
-                    title={qf.title || t("untitled")}
+                    title={stripHtml(qf.title) || t("untitled")}
                     questions={qf.questions}
                     questionLabel={t("questionFunnel.questionLabel")}
                     visitorsLabel={t("questionFunnel.visitors")}

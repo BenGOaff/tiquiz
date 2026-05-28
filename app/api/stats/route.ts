@@ -405,26 +405,41 @@ export async function GET(req: NextRequest) {
       .limit(100000);
     if (from) qqQuery = qqQuery.gte("created_at", from.toISOString());
     const { data: qqRows } = await qqQuery;
-    const qqByQuiz = new Map<string, Map<number, Set<string>>>();
+
+    // Funnel monotone : per session, on garde la question la PLUS LOIN
+    // atteinte (max index vu). views(N) = count des sessions dont maxQ >= N.
+    // Un visiteur arrivé à Q5 a forcément passé Q1-Q4, même si l'event
+    // d'une question intermédiaire a été perdu (réseau) ou exclu par le
+    // filtre de période. Avant on comptait les sessions distinctes par
+    // question_index brut → Q3 pouvait afficher plus de sessions que Q1
+    // (cf. rapport Gwenn 27 mai 2026, screenshots Q3=24 / Q1=23).
+    const sessionMaxByQuiz = new Map<string, Map<string, number>>();
+    const qsByQuiz = new Map<string, Set<number>>();
     for (const r of (qqRows ?? []) as { quiz_id: string; question_index: number; session_id: string }[]) {
-      let perQ = qqByQuiz.get(r.quiz_id);
-      if (!perQ) { perQ = new Map(); qqByQuiz.set(r.quiz_id, perQ); }
-      let s = perQ.get(r.question_index);
-      if (!s) { s = new Set(); perQ.set(r.question_index, s); }
-      s.add(r.session_id);
+      let sm = sessionMaxByQuiz.get(r.quiz_id);
+      if (!sm) { sm = new Map(); sessionMaxByQuiz.set(r.quiz_id, sm); }
+      const prev = sm.get(r.session_id);
+      if (prev === undefined || r.question_index > prev) {
+        sm.set(r.session_id, r.question_index);
+      }
+      let qs = qsByQuiz.get(r.quiz_id);
+      if (!qs) { qs = new Set(); qsByQuiz.set(r.quiz_id, qs); }
+      qs.add(r.question_index);
     }
     const questionFunnels = (quizzes ?? []).map((q) => {
-      const perQ = qqByQuiz.get(q.id as string);
-      const sorted = perQ
-        ? Array.from(perQ.entries())
-            .sort((a, b) => a[0] - b[0])
-            .map(([index, set]) => ({ index, views: set.size }))
-        : [];
-      return {
-        quizId: q.id as string,
-        title: (q.title as string) ?? "",
-        questions: sorted,
-      };
+      const qid = q.id as string;
+      const qsSet = qsByQuiz.get(qid);
+      const sm = sessionMaxByQuiz.get(qid);
+      if (!qsSet || qsSet.size === 0 || !sm) {
+        return { quizId: qid, title: (q.title as string) ?? "", questions: [] as { index: number; views: number }[] };
+      }
+      const sortedQs = Array.from(qsSet).sort((a, b) => a - b);
+      const questions = sortedQs.map((index) => {
+        let count = 0;
+        for (const maxQ of sm.values()) if (maxQ >= index) count++;
+        return { index, views: count };
+      });
+      return { quizId: qid, title: (q.title as string) ?? "", questions };
     }).filter((f) => f.questions.length > 0);
 
     return NextResponse.json({

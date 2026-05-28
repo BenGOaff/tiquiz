@@ -194,27 +194,42 @@ export async function GET(
       event: "view" | "answer";
     }[];
 
-    // Distinct sessions per (qIdx, event). Sets are O(1) hash inserts
-    // and fit comfortably in memory at our volume (50k rows cap).
-    const viewsByQ = new Map<number, Set<string>>();
+    // Per session : la question la PLUS LOIN atteinte (max index vu). Le
+    // funnel se déduit ensuite par count(session.maxQ >= N). Garantit une
+    // courbe monotone décroissante : un visiteur arrivé à Q5 a forcément
+    // passé Q1-Q4, même si l'event d'une question intermédiaire a été
+    // perdu (réseau) ou exclu par le filtre de période (session démarrée
+    // hors fenêtre, qui continue dedans). Avant, on comptait directement
+    // les sessions distinctes par question_index → Q3 pouvait afficher
+    // 24 sessions là où Q1 en affichait 23 (cf. rapport Gwenn 27 mai 2026).
+    const sessionMaxView = new Map<string, number>();
     const answersByQ = new Map<number, Set<string>>();
+    const allQsSet = new Set<number>();
     for (const r of rows) {
-      const targetMap = r.event === "answer" ? answersByQ : viewsByQ;
-      let bucket = targetMap.get(r.question_index);
-      if (!bucket) {
-        bucket = new Set();
-        targetMap.set(r.question_index, bucket);
+      allQsSet.add(r.question_index);
+      if (r.event === "answer") {
+        let bucket = answersByQ.get(r.question_index);
+        if (!bucket) {
+          bucket = new Set();
+          answersByQ.set(r.question_index, bucket);
+        }
+        bucket.add(r.session_id);
+      } else {
+        const prev = sessionMaxView.get(r.session_id);
+        if (prev === undefined || r.question_index > prev) {
+          sessionMaxView.set(r.session_id, r.question_index);
+        }
       }
-      bucket.add(r.session_id);
     }
 
-    const allQs = Array.from(
-      new Set([...viewsByQ.keys(), ...answersByQ.keys()]),
-    ).sort((a, b) => a - b);
+    const allQs = Array.from(allQsSet).sort((a, b) => a - b);
 
     let prevViews = 0;
     for (const qIdx of allQs) {
-      const v = viewsByQ.get(qIdx)?.size ?? 0;
+      let v = 0;
+      for (const maxQ of sessionMaxView.values()) {
+        if (maxQ >= qIdx) v++;
+      }
       const a = answersByQ.get(qIdx)?.size ?? 0;
       const drop =
         qIdx === allQs[0] || prevViews === 0
