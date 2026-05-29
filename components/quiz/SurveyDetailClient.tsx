@@ -394,6 +394,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [ogDescription, setOgDescription] = useState("");
   // Vignette OG (preview de partage social). Cf. demande Adeline.
   const [ogImageUrl, setOgImageUrl] = useState<string | null>(null);
+  // Image de COUVERTURE du sondage (réutilise intro_image_url de la table
+  // quizzes ; rendue publiquement par PublicQuizClient en position "top").
+  const [introImageUrl, setIntroImageUrl] = useState<string | null>(null);
   const [uploadingOgImage, setUploadingOgImage] = useState(false);
   const [customFooterText, setCustomFooterText] = useState("");
   const [customFooterUrl, setCustomFooterUrl] = useState("");
@@ -485,6 +488,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     slug,
     og_description: ogDescription,
     og_image_url: ogImageUrl,
+    intro_image_url: introImageUrl,
     custom_footer_text: customFooterText,
     custom_footer_url: customFooterUrl,
     share_networks: shareNetworks,
@@ -499,7 +503,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor,
     slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
-    editQuestions,
+    editQuestions, introImageUrl,
   ]);
 
   const { savingDraft, clearDraft } = useAutosave({
@@ -547,6 +551,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.slug === "string") setSlug(s.slug);
     if (typeof s.og_description === "string") setOgDescription(s.og_description);
     if (s.og_image_url === null || typeof s.og_image_url === "string") setOgImageUrl(s.og_image_url);
+    if (s.intro_image_url === null || typeof s.intro_image_url === "string") setIntroImageUrl(s.intro_image_url as string | null);
     if (typeof s.custom_footer_text === "string") setCustomFooterText(s.custom_footer_text);
     if (typeof s.custom_footer_url === "string") setCustomFooterUrl(s.custom_footer_url);
     if (Array.isArray(s.share_networks)) setShareNetworks(s.share_networks as ShareNetwork[]);
@@ -631,6 +636,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setSlug(q.slug ?? "");
       setOgDescription(q.og_description ?? "");
       setOgImageUrl(q.og_image_url ?? null);
+      setIntroImageUrl((q as { intro_image_url?: string | null }).intro_image_url ?? null);
       setCustomFooterText(q.custom_footer_text ?? "");
       setCustomFooterUrl(q.custom_footer_url ?? "");
       setShareNetworks(Array.isArray(q.share_networks) ? (q.share_networks as ShareNetwork[]) : []);
@@ -952,6 +958,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           slug: slug.trim() ? cleanedSlug : null,
           og_description: ogDescription.trim() || null,
           og_image_url: ogImageUrl,
+          // Couverture du sondage (position "top" → rendue par PublicQuizClient).
+          intro_image_url: introImageUrl,
+          intro_image_position: introImageUrl ? "top" : null,
           share_networks: shareNetworks,
           // Custom footer — ignored server-side for free plan but we still send it
           custom_footer_text: customFooterText.trim() || null,
@@ -1518,6 +1527,45 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       <img src={brandLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
                     </div>
                   )}
+
+                  {/* Image de COUVERTURE du sondage (IA designée + GIF + recadrage).
+                      Rendue côté visiteur par PublicQuizClient (position "top"). */}
+                  {introImageUrl ? (
+                    <div className="relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={introImageUrl} alt="" className="w-full h-auto rounded-xl" />
+                      <div className="absolute top-1.5 right-1.5 flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })}
+                          className="bg-background/90 hover:bg-primary hover:text-white rounded p-1 shadow"
+                          aria-label="Recadrer l'image"
+                        >
+                          <Crop className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIntroImageUrl(null)}
+                          className="bg-background/90 hover:bg-destructive hover:text-white rounded p-1 shadow"
+                          aria-label={t("previewRemoveImage")}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <TiquizStudioButton
+                        intent={[titleForVisual(title), stripHtml(cleanPlaceholdersForLabel(introduction))].filter(Boolean).join(" — ")}
+                        titleText={titleForVisual(title)}
+                        contentId={quizId}
+                        label="Générer (IA)"
+                        onApplyImage={(img) => setIntroImageUrl(img.url)}
+                      />
+                      <GifPickerButton label="GIF" onPick={(url) => setIntroImageUrl(url)} />
+                    </div>
+                  )}
+
                   <RichTextEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} onImageUpload={handleRichTextImageUpload} singleLine className="text-3xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
                   <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} onImageUpload={handleRichTextImageUpload} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder={t("previewIntroPh")} />
                   <div className="flex justify-center">

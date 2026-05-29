@@ -477,3 +477,13 @@ Les visuels Tiquiz servent à ILLUSTRER (pas de pub stop-scroll) :
 - ImageStudio : boutons "Ajouter une image" (FileReader→dataURL, pas de canvas
   tainted) + "Ajouter le logo" (brandKit.logoUrl). i18n: visualStudio.overlay*
   (overlayLabel/AddImage/AddLogo/Hint) dans les 7 locales.
+
+## Sondages Tiquiz : image de COUVERTURE (parité avec Tipote) (juin 2026)
+Les sondages Tiquiz sont des lignes de la table `quizzes` (comme les quiz) →
+`intro_image_url`/`intro_image_position` existent DÉJÀ + la PATCH /api/quiz/[id]
+les whiteliste (route ligne 201) + /api/quiz/[id]/public les sélectionne (ligne
+258) + PublicQuizClient les rend. DONC : aucune migration, aucun code public.
+Côté éditeur SurveyDetailClient : state introImageUrl, hydratation (q + draft s),
+snapshot autosave (+dep), payload PATCH (intro_image_url + intro_image_position
+"top"), et bloc UI couverture dans l'INTRO SECTION (IA illustration + GIF +
+recadrage). Position "top" uniquement (le hero sondage est centré).
