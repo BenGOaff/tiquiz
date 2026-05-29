@@ -13,8 +13,11 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
-  Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, ImagePlus,
+  Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, ImagePlus, Crop,
 } from "lucide-react";
+import { GifPickerButton } from "@/components/quiz/GifPicker";
+import { ImageCropDialog } from "@/components/quiz/ImageCropDialog";
+import { TiquizStudioButton } from "@/components/visual-studio/TiquizStudioButton";
 import QuizResultsAnalytics from "@/components/quiz/QuizResultsAnalytics";
 import { ReadinessRing } from "@/components/ui/readiness-ring";
 import { computeReadiness } from "@/lib/quiz-readiness";
@@ -274,12 +277,13 @@ function CapturePill({ label, active, locked, onToggle }: {
 // dessus et la traîne vers un des slots de position (drop-zones
 // affichées entre les sections). w-full + h-auto = ratio d'origine
 // préservé, responsive mobile/tablette sans crop.
-function ResultDraggableImage({ url, ri, onDragStart, onDragEnd, onRemove }: {
+function ResultDraggableImage({ url, ri, onDragStart, onDragEnd, onRemove, onCrop }: {
   url: string;
   ri: number;
   onDragStart: () => void;
   onDragEnd: () => void;
   onRemove: () => void;
+  onCrop?: () => void;
 }) {
   return (
     <div className="relative group">
@@ -296,14 +300,26 @@ function ResultDraggableImage({ url, ri, onDragStart, onDragEnd, onRemove }: {
         onDragEnd={onDragEnd}
         className="w-full h-auto rounded-xl cursor-grab active:cursor-grabbing select-none"
       />
-      <button
-        type="button"
-        onClick={onRemove}
-        className="absolute top-2 right-2 bg-background/90 hover:bg-destructive hover:text-white rounded-full p-1.5 shadow opacity-0 group-hover:opacity-100 transition-opacity"
-        aria-label="Retirer l'image"
-      >
-        <X className="w-3.5 h-3.5" />
-      </button>
+      <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        {onCrop && (
+          <button
+            type="button"
+            onClick={onCrop}
+            className="bg-background/90 hover:bg-primary hover:text-white rounded-full p-1.5 shadow"
+            aria-label="Recadrer l'image"
+          >
+            <Crop className="w-3.5 h-3.5" />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onRemove}
+          className="bg-background/90 hover:bg-destructive hover:text-white rounded-full p-1.5 shadow"
+          aria-label="Retirer l'image"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -484,6 +500,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     google_ads_conversion_label: string | null;
   } | null>(null);
   const [askFirstName, setAskFirstName] = useState(false);
+  // Recadrage : image en cours + callback qui pose l'URL recadrée dans le bon slot.
+  const [cropTarget, setCropTarget] = useState<{ url: string; apply: (u: string) => void } | null>(null);
   const [askGender, setAskGender] = useState(false);
   const [viralityEnabled, setViralityEnabled] = useState(false);
   const [bonusDescription, setBonusDescription] = useState("");
@@ -2318,6 +2336,23 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <span className="text-[10px] text-muted-foreground/70">{t("introImageHint")}</span>
                     </button>
                   )}
+                  {/* Génération IA (couverture brandée) + GIFs — visibles tant qu'aucune image posée. */}
+                  {!introImageUrl && (
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <TiquizStudioButton
+                        intent={[stripHtml(title), stripHtml(introduction)].filter(Boolean).join(" — ")}
+                        contentId={quizId}
+                        formats={["4:5", "1:1", "9:16"]}
+                        defaultFormat="4:5"
+                        label="Générer (IA)"
+                        onApplyImage={(img) => { setIntroImageUrl(img.url); setIntroImagePosition("top"); }}
+                      />
+                      <GifPickerButton
+                        label="GIF"
+                        onPick={(url) => { setIntroImageUrl(url); setIntroImagePosition("top"); }}
+                      />
+                    </div>
+                  )}
 
                   {brandLogoUrl && (
                     <div className="flex justify-center">
@@ -2331,7 +2366,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     <ResultDraggableImage url={introImageUrl} ri={-1}
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
-                      onRemove={clearIntroImage} />
+                      onRemove={clearIntroImage}
+                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} />
                   )}
                   {draggingIntroImage && (introImagePosition ?? "top") !== "top" && (
                     <ResultPositionDropZone label={t("introImagePos_top")}
@@ -2345,7 +2381,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     <ResultDraggableImage url={introImageUrl} ri={-1}
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
-                      onRemove={clearIntroImage} />
+                      onRemove={clearIntroImage}
+                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} />
                   )}
                   {draggingIntroImage && introImagePosition !== "after_title" && (
                     <ResultPositionDropZone label={t("introImagePos_after_title")}
@@ -2359,7 +2396,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     <ResultDraggableImage url={introImageUrl} ri={-1}
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
-                      onRemove={clearIntroImage} />
+                      onRemove={clearIntroImage}
+                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} />
                   )}
                   {draggingIntroImage && introImagePosition !== "after_intro" && (
                     <ResultPositionDropZone label={t("introImagePos_after_intro")}
@@ -2383,7 +2421,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     <ResultDraggableImage url={introImageUrl} ri={-1}
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
-                      onRemove={clearIntroImage} />
+                      onRemove={clearIntroImage}
+                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} />
                   )}
                   {draggingIntroImage && introImagePosition !== "bottom" && (
                     <ResultPositionDropZone label={t("introImagePos_bottom")}
@@ -2771,6 +2810,23 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         <span className="text-[10px] text-muted-foreground/70">{t("resultImageHint")}</span>
                       </button>
                     )}
+                    {/* Génération IA (image de résultat brandée) + GIFs — visible si vide. */}
+                    {!r.image_url && (
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <TiquizStudioButton
+                          intent={[stripHtml(title), stripHtml(r.title), stripHtml(r.description ?? ""), stripHtml(r.insight ?? "")].filter(Boolean).join(" — ")}
+                          contentId={quizId}
+                          formats={["4:5", "1:1", "9:16"]}
+                          defaultFormat="4:5"
+                          label="Générer (IA)"
+                          onApplyImage={(img) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: img.url, image_position: rr.image_position ?? "top" }))}
+                        />
+                        <GifPickerButton
+                          label="GIF"
+                          onPick={(url) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: url, image_position: rr.image_position ?? "top" }))}
+                        />
+                      </div>
+                    )}
                     {showCoverage && (
                       <div
                         className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
@@ -2811,7 +2867,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <ResultDraggableImage url={r.image_url} ri={ri}
                         onDragStart={() => setDraggingResultImageRi(ri)}
                         onDragEnd={() => setDraggingResultImageRi(null)}
-                        onRemove={() => clearResultImage(ri)} />
+                        onRemove={() => clearResultImage(ri)}
+                        onCrop={() => r.image_url && setCropTarget({ url: r.image_url, apply: (u) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: u })) })} />
                     )}
                     {draggingResultImageRi === ri && (r.image_position ?? "top") !== "top" && (
                       <ResultPositionDropZone label={t("resultImagePos_top")}
@@ -2822,7 +2879,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <ResultDraggableImage url={r.image_url} ri={ri}
                         onDragStart={() => setDraggingResultImageRi(ri)}
                         onDragEnd={() => setDraggingResultImageRi(null)}
-                        onRemove={() => clearResultImage(ri)} />
+                        onRemove={() => clearResultImage(ri)}
+                        onCrop={() => r.image_url && setCropTarget({ url: r.image_url, apply: (u) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: u })) })} />
                     )}
                     {draggingResultImageRi === ri && r.image_position !== "after_title" && (
                       <ResultPositionDropZone label={t("resultImagePos_after_title")}
@@ -2833,7 +2891,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <ResultDraggableImage url={r.image_url} ri={ri}
                         onDragStart={() => setDraggingResultImageRi(ri)}
                         onDragEnd={() => setDraggingResultImageRi(null)}
-                        onRemove={() => clearResultImage(ri)} />
+                        onRemove={() => clearResultImage(ri)}
+                        onCrop={() => r.image_url && setCropTarget({ url: r.image_url, apply: (u) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: u })) })} />
                     )}
                     {draggingResultImageRi === ri && r.image_position !== "after_description" && (
                       <ResultPositionDropZone label={t("resultImagePos_after_description")}
@@ -2855,7 +2914,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <ResultDraggableImage url={r.image_url} ri={ri}
                         onDragStart={() => setDraggingResultImageRi(ri)}
                         onDragEnd={() => setDraggingResultImageRi(null)}
-                        onRemove={() => clearResultImage(ri)} />
+                        onRemove={() => clearResultImage(ri)}
+                        onCrop={() => r.image_url && setCropTarget({ url: r.image_url, apply: (u) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: u })) })} />
                     )}
                     {draggingResultImageRi === ri && r.image_position !== "after_insight" && (
                       <ResultPositionDropZone label={t("resultImagePos_after_insight")}
@@ -2878,7 +2938,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <ResultDraggableImage url={r.image_url} ri={ri}
                         onDragStart={() => setDraggingResultImageRi(ri)}
                         onDragEnd={() => setDraggingResultImageRi(null)}
-                        onRemove={() => clearResultImage(ri)} />
+                        onRemove={() => clearResultImage(ri)}
+                        onCrop={() => r.image_url && setCropTarget({ url: r.image_url, apply: (u) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: u })) })} />
                     )}
                     {draggingResultImageRi === ri && r.image_position !== "bottom" && (
                       <ResultPositionDropZone label={t("resultImagePos_bottom")}
@@ -3043,6 +3104,15 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           </Dialog>
         </div>
       )}
+
+      {/* Recadrage d'image (couverture / résultats) — GIF animé ou upload. */}
+      <ImageCropDialog
+        open={cropTarget !== null}
+        onOpenChange={(o) => { if (!o) setCropTarget(null); }}
+        srcUrl={cropTarget?.url ?? null}
+        contentId={quizId}
+        onCropped={(u) => { cropTarget?.apply(u); setCropTarget(null); }}
+      />
 
       {/* SHARE TAB */}
       {mainTab === "share" && (

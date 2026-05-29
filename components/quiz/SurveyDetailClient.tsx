@@ -13,8 +13,11 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
-  Sparkles, TrendingUp, Star, MessageCircle,
+  Sparkles, TrendingUp, Star, MessageCircle, Crop,
 } from "lucide-react";
+import { GifPickerButton } from "@/components/quiz/GifPicker";
+import { ImageCropDialog } from "@/components/quiz/ImageCropDialog";
+import { TiquizStudioButton } from "@/components/visual-studio/TiquizStudioButton";
 import { SurveyTrends } from "@/components/quiz/SurveyTrends";
 import { ReadinessRing } from "@/components/ui/readiness-ring";
 import { computeReadiness } from "@/lib/quiz-readiness";
@@ -365,6 +368,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [sioShareTagName, setSioShareTagName] = useState("");
   const [status, setStatus] = useState("draft");
   const [editQuestions, setEditQuestions] = useState<QuizQuestion[]>([]);
+  // Recadrage : image d'option en cours + callback de pose.
+  const [cropTarget, setCropTarget] = useState<{ url: string; apply: (u: string) => void } | null>(null);
   // editResults stays declared so the rest of the QuizDetailClient logic
   // still typechecks, but in survey mode it always stays empty (no result
   // profiles exist in the DB for survey rows).
@@ -1047,6 +1052,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // Helpers
   const updateQ = (i: number, v: string) => setEditQuestions(p => p.map((q, qi) => qi === i ? { ...q, question_text: v } : q));
   const updateOpt = (qi: number, oi: number, v: string) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, text: v } : o) }));
+  // Pose une image (GIF / IA / recadrée) sur une option de sondage.
+  const setOptImage = (qi: number, oi: number, url: string) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, image_url: url } : o) }));
   const updateOptResult = (qi: number, oi: number, ri: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, result_index: ri } : o) }));
   const addOpt = (qi: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: [...q.options, { text: "", result_index: 0 }] }));
   const removeOpt = (qi: number, oi: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.filter((_, j) => j !== oi) }));
@@ -1672,14 +1679,24 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                                     <div className="relative aspect-video bg-muted/30">
                                       {/* eslint-disable-next-line @next/next/no-img-element */}
                                       <img src={opt.image_url} alt={stripHtml(opt.text)} className="w-full h-full object-cover" />
-                                      <button
-                                        type="button"
-                                        onClick={() => clearOptionImage(qi, oi)}
-                                        className="absolute top-1.5 right-1.5 bg-background/90 hover:bg-destructive hover:text-white rounded p-1 shadow"
-                                        aria-label={t("previewRemoveImage")}
-                                      >
-                                        <X className="w-3.5 h-3.5" />
-                                      </button>
+                                      <div className="absolute top-1.5 right-1.5 flex gap-1">
+                                        <button
+                                          type="button"
+                                          onClick={() => opt.image_url && setCropTarget({ url: opt.image_url, apply: (u) => setOptImage(qi, oi, u) })}
+                                          className="bg-background/90 hover:bg-primary hover:text-white rounded p-1 shadow"
+                                          aria-label="Recadrer l'image"
+                                        >
+                                          <Crop className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => clearOptionImage(qi, oi)}
+                                          className="bg-background/90 hover:bg-destructive hover:text-white rounded p-1 shadow"
+                                          aria-label={t("previewRemoveImage")}
+                                        >
+                                          <X className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
                                     </div>
                                   ) : null}
                                   <div className="p-5 space-y-2">
@@ -1703,6 +1720,19 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                                         )}
                                         {t("previewAddOptionImage")}
                                       </label>
+                                    )}
+                                    {!opt.image_url && (
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <TiquizStudioButton
+                                          intent={[stripHtml(q.question_text), stripHtml(opt.text)].filter(Boolean).join(" — ")}
+                                          contentId={quizId}
+                                          formats={["1:1", "4:5"]}
+                                          defaultFormat="1:1"
+                                          label="Générer (IA)"
+                                          onApplyImage={(img) => setOptImage(qi, oi, img.url)}
+                                        />
+                                        <GifPickerButton label="GIF" onPick={(url) => setOptImage(qi, oi, url)} />
+                                      </div>
                                     )}
                                     <RichTextEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} onAIRewrite={aiRewriteOption} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-base font-medium" placeholder={t("previewOptionPh", { n: oi + 1 })} />
                                   </div>
@@ -1838,6 +1868,15 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           )}
         </div>
       )}
+
+      {/* Recadrage d'image d'option (GIF animé, upload ou IA). */}
+      <ImageCropDialog
+        open={cropTarget !== null}
+        onOpenChange={(o) => { if (!o) setCropTarget(null); }}
+        srcUrl={cropTarget?.url ?? null}
+        contentId={quizId}
+        onCropped={(u) => { cropTarget?.apply(u); setCropTarget(null); }}
+      />
 
       {/* SHARE TAB */}
       {mainTab === "share" && (

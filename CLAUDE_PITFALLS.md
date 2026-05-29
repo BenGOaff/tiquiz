@@ -426,3 +426,28 @@ qui regarde**, via les helpers de `lib/dateKeys.ts` :
 - Tiquiz n'a PAS `business_profiles` (archi `profiles` : `brand_tone`,
   `target_audience`). Pas de couche "voix de marque" complète comme Tipote pour
   l'instant — seulement le bloc anti-IA + le `brand_tone`/`target` existants.
+
+## AK) Studio d'images porté depuis Tipote (génération IA + GIF + recadrage) (juin 2026)
+
+Port du Visual Studio Tipote (IMAGE SEULE — pas de carrousel). S'applique aux
+quiz (couverture + résultats) et aux sondages (images d'options).
+
+- **Déps installées** : `fabric`, `openai`, `jspdf` (jspdf requis car ImageStudio
+  importe exportPdf.ts même si le carrousel est désactivé). `openai` installé avec
+  `--legacy-peer-deps` (peerOptional zod3 vs zod4 du repo — sans effet, on n'utilise
+  pas le helper zod).
+- **Fichiers portés** : `lib/visualStudio/*` (sauf brandLoader/networkFormats/
+  uploadVisual), `components/visual-studio/{ImageStudio,StudioCanvas}.tsx`,
+  `lib/openaiClient.ts`, routes `/api/visual-studio/{generate-copy,generate-background}`.
+- **Différences Tiquiz** (NE PAS recopier bêtement Tipote) :
+  - `lib/openaiClient.ts` lit `OPENAI_API_KEY` (Tipote = OPENAI_API_KEY_OWNER).
+  - `brand-kit/route.ts` RÉÉCRIT pour le schéma `profiles` (brand_color_primary/
+    accent, brand_font, brand_logo_url, brand_tone, target_audience) — pas de
+    business_profiles/personas/projects.
+  - Bouton = `TiquizStudioButton` : PAS de crédits (`onChargeCredit` → toujours
+    true ; Tiquiz n'a pas de système de crédits), upload navigateur vers
+    `public-assets` (path `studio/<uid>/<ts>.png`), `enableCarousel={false}`,
+    `enableStylePrefs={false}` (donc routes styles/vote/charge NON portées).
+  - i18n : namespace `visualStudio` (87 clés) copié depuis Tipote dans les 7 locales.
+- Le reste (GIF KLIPY + recadrage sharp) = identique à Tipote, cf. section
+  équivalente. Recadrage : bucket `public-assets`, `cropped/<uid>/<file>`.
