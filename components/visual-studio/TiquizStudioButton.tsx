@@ -126,7 +126,7 @@ export function TiquizStudioButton({
         formats={formats}
         defaultFormat={defaultFormat}
         enableCarousel={false}
-        enableStylePrefs={false}
+        enableStylePrefs={true}
         upload={upload}
         // Pas de crédits côté Tiquiz : génération autorisée d'office.
         onChargeCredit={async () => true}
