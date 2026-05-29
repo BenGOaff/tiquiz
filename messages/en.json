@@ -1868,6 +1868,10 @@
     "styleApply": "Apply this style",
     "styleDelete": "Delete",
     "styleNamePrompt": "Name this style:",
-    "formatLandscape": "Landscape 16:9"
+    "formatLandscape": "Landscape 16:9",
+    "overlayLabel": "Image / logo",
+    "overlayAddImage": "Add an image",
+    "overlayAddLogo": "Add logo",
+    "overlayHint": "Drag to move, pull the corners to resize. Select then 🗑 to remove."
   }
 }

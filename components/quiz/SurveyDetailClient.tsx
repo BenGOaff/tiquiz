@@ -58,6 +58,13 @@ const PREVIEW_DEMO_NAME = "Alex";
 function cleanPlaceholdersForLabel(text: string | null | undefined): string {
   return interpolateText(text, { name: "", gender: "x" });
 }
+// Titre pour un VISUEL généré (image statique) : pas de placeholder gravé en
+// dur ({name}…), ni ponctuation orpheline ; on capitalise. Cf. QuizDetailClient.
+function titleForVisual(text: string | null | undefined): string {
+  let t = stripHtml(cleanPlaceholdersForLabel(text)).replace(/\s+/g, " ").trim();
+  t = t.replace(/^[\s,;:.!?–—-]+/, "").trim();
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : "";
+}
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTranslations } from "next-intl";
 import { useShareDomain } from "@/hooks/useShareDomain";
@@ -1724,8 +1731,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                                     {!opt.image_url && (
                                       <div className="flex flex-wrap items-center gap-2">
                                         <TiquizStudioButton
-                                          intent={[stripHtml(q.question_text), stripHtml(opt.text)].filter(Boolean).join(" — ")}
-                                          titleText={stripHtml(opt.text)}
+                                          intent={[titleForVisual(q.question_text), titleForVisual(opt.text)].filter(Boolean).join(" — ")}
+                                          titleText={titleForVisual(opt.text)}
                                           contentId={quizId}
                                           label="Générer (IA)"
                                           onApplyImage={(img) => setOptImage(qi, oi, img.url)}

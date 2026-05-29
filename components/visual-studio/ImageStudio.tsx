@@ -148,7 +148,8 @@ export function ImageStudio({
     color2: brandKit.primaryColor,
     imageUrl: null,
   });
-  const [showLogo, setShowLogo] = useState(true);
+  // Pas de logo automatique : l'user ajoute lui-même image/logo en overlay libre.
+  const [showLogo, setShowLogo] = useState(false);
   const [logoScale, setLogoScale] = useState(0.22);
   const [logoPosition, setLogoPosition] = useState<
     "top-left" | "top-center" | "top-right" | "bottom-left" | "bottom-right"
@@ -239,7 +240,7 @@ export function ImageStudio({
       color2: brandKit.primaryColor,
       imageUrl: initialImageUrl ?? null,
     });
-    setShowLogo(true);
+    setShowLogo(false);
     setLogoScale(0.22);
     setLogoPosition("top-center");
     setSelection(null);
@@ -338,6 +339,21 @@ export function ImageStudio({
     objectUrlsRef.current.push(url);
     setBgTreatment("none"); // upload utilisateur → on garde la couleur d'origine
     setBackground((b) => ({ ...b, mode: "image", imageUrl: url }));
+  }
+
+  // Ajoute une image/logo en OVERLAY libre (déplaçable + redimensionnable). On
+  // passe par un dataURL (FileReader) → pas de canvas "tainted" à l'export PNG.
+  function handleOverlayFile(file: File | undefined) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error(t("imageExpected"));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") handleRef.current?.addImage(reader.result);
+    };
+    reader.readAsDataURL(file);
   }
 
   // ── Mémoire de style ───────────────────────────────────────────
@@ -1241,57 +1257,36 @@ export function ImageStudio({
 
               <Separator />
 
-              {/* Logo */}
-              <div className="flex items-center justify-between">
-                <Label htmlFor="studio-logo" className="text-sm">{t("showLogo")}</Label>
-                <Switch id="studio-logo" checked={showLogo} onCheckedChange={setShowLogo} />
-              </div>
-              {showLogo && (
-                <div className="space-y-2.5 rounded-lg border border-border/60 p-2.5">
-                  {/* Position du logo */}
-                  <div className="space-y-1">
-                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("logoPosition")}</Label>
-                    <div className="grid grid-cols-3 gap-1">
-                      {([
-                        ["top-left", "↖"], ["top-center", "↑"], ["top-right", "↗"],
-                        ["bottom-left", "↙"], ["bottom-center-spacer", ""], ["bottom-right", "↘"],
-                      ] as const).map(([pos, icon]) =>
-                        pos === "bottom-center-spacer" ? (
-                          <span key={pos} />
-                        ) : (
-                          <button
-                            key={pos}
-                            type="button"
-                            onClick={() => setLogoPosition(pos as typeof logoPosition)}
-                            className={`rounded-md border py-1 text-sm transition-colors ${
-                              logoPosition === pos
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-border text-muted-foreground hover:bg-muted"
-                            }`}
-                          >
-                            {icon}
-                          </button>
-                        ),
-                      )}
-                    </div>
-                  </div>
-                  {/* Taille du logo */}
-                  <div className="space-y-1">
-                    <Label htmlFor="logo-size" className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      {t("logoSize")}
-                    </Label>
+              {/* Image / logo en OVERLAY libre : l'user ajoute ce qu'il veut, puis
+                  déplace au drag et redimensionne en tirant les coins/bords. Pas
+                  de logo automatique. */}
+              <div className="space-y-2">
+                <Label className="text-sm">{t("overlayLabel")}</Label>
+                <div className="flex flex-wrap gap-2">
+                  <label className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted cursor-pointer">
+                    <Upload className="h-4 w-4" />
+                    {t("overlayAddImage")}
                     <input
-                      id="logo-size"
-                      type="range"
-                      min={8}
-                      max={45}
-                      value={Math.round(logoScale * 100)}
-                      onChange={(e) => setLogoScale(Number(e.target.value) / 100)}
-                      className="w-full accent-primary"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => { handleOverlayFile(e.target.files?.[0]); e.target.value = ""; }}
                     />
-                  </div>
+                  </label>
+                  {brandKit.logoUrl && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { if (brandKit.logoUrl) handleRef.current?.addImage(brandKit.logoUrl); }}
+                    >
+                      <ImageIcon className="h-4 w-4 mr-1.5" />
+                      {t("overlayAddLogo")}
+                    </Button>
+                  )}
                 </div>
-              )}
+                <p className="text-[11px] text-muted-foreground">{t("overlayHint")}</p>
+              </div>
 
               {/* Voile de contraste — lisibilité du texte sur fond photo/IA */}
               <div className="flex items-center justify-between gap-2">
@@ -1440,11 +1435,17 @@ function FloatingToolbar({
     if (r) savedRange.current = r;
   };
 
+  // Sélection = image/logo en overlay → les contrôles de TEXTE n'ont aucun sens
+  // (on déplace/redimensionne au canvas) : on ne montre que la suppression.
+  const isImage = info.layerId.startsWith("overlay-");
+
   return (
     <div
       className="absolute z-10 flex items-center gap-0.5 rounded-lg border border-border bg-popover px-1 py-1 shadow-lg"
       style={{ top, left }}
     >
+      {!isImage && (
+       <>
       <select
         value={FONT_OPTIONS.find((f) => f.value === info.fontFamily)?.value ?? info.fontFamily}
         onMouseDown={captureRange}
@@ -1498,6 +1499,8 @@ function FloatingToolbar({
       </span>
 
       <ToolbarBtn title={t("tbEditText")} onClick={() => handle.enterEdit()}>Aa</ToolbarBtn>
+       </>
+      )}
       <ToolbarBtn title={t("tbDelete")} onClick={() => handle.deleteActive()}>
         <Trash2 className="h-3.5 w-3.5" />
       </ToolbarBtn>

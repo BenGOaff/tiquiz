@@ -1868,6 +1868,10 @@
     "styleApply": "Appliquer ce style",
     "styleDelete": "Supprimer",
     "styleNamePrompt": "Nom de ce style :",
-    "formatLandscape": "Paysage 16:9"
+    "formatLandscape": "Paysage 16:9",
+    "overlayLabel": "Image / logo",
+    "overlayAddImage": "Ajouter une image",
+    "overlayAddLogo": "Ajouter le logo",
+    "overlayHint": "Glisse pour déplacer, tire les coins pour redimensionner. Sélectionne puis 🗑 pour retirer."
   }
 }

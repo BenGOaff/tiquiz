@@ -1884,6 +1884,10 @@
     "styleApply": "Applica questo stile",
     "styleDelete": "Elimina",
     "styleNamePrompt": "Nome di questo stile:",
-    "formatLandscape": "Orizzontale 16:9"
+    "formatLandscape": "Orizzontale 16:9",
+    "overlayLabel": "Immagine / logo",
+    "overlayAddImage": "Aggiungi un'immagine",
+    "overlayAddLogo": "Aggiungi il logo",
+    "overlayHint": "Trascina per spostare, tira gli angoli per ridimensionare. Seleziona e 🗑 per rimuovere."
   }
 }

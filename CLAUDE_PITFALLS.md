@@ -466,3 +466,14 @@ Les visuels Tiquiz servent à ILLUSTRER (pas de pub stop-scroll) :
   un format, penser à TOUS ces endroits (Record<StudioFormatId> = clés exhaustives).
 - Appels : passer `titleText` (titre résultat / texte option / titre quiz) en plus
   d'`intent` (contexte plus riche pour l'image IA).
+
+### AK ter) Studio : plus de logo auto → overlay image/logo libre (juin 2026)
+- Le logo AUTOMATIQUE est désactivé (`showLogo` défaut false, état conservé mais
+  plus d'UI position/taille). L'effet logo de StudioCanvas reste dormant.
+- Nouvelle méthode `addImage(url)` sur le handle StudioCanvas : ajoute une
+  FabricImage `selectable/evented` (poignées coins/bords) = déplaçable au drag +
+  redimensionnable. `layerId = overlay-*` (≠ undefined → reportSelection l'affiche,
+  la toolbar 🗑 = deleteActive() la supprime ; incluse dans toBlob).
+- ImageStudio : boutons "Ajouter une image" (FileReader→dataURL, pas de canvas
+  tainted) + "Ajouter le logo" (brandKit.logoUrl). i18n: visualStudio.overlay*
+  (overlayLabel/AddImage/AddLogo/Hint) dans les 7 locales.

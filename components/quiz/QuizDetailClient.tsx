@@ -72,6 +72,15 @@ const PREVIEW_DEMO_NAME = "Alex";
 function cleanPlaceholdersForLabel(text: string | null | undefined): string {
   return interpolateText(text, { name: "", gender: "x" });
 }
+// Titre destiné à un VISUEL généré (image statique, créée une seule fois) : on
+// NE peut PAS y laisser de placeholder ({name}…) car il serait gravé en dur au
+// lieu d'être interpolé à chaque visite. On retire les placeholders, la
+// ponctuation orpheline qu'ils laissent ("{name}, …" → "…") et on capitalise.
+function titleForVisual(text: string | null | undefined): string {
+  let t = stripHtml(cleanPlaceholdersForLabel(text)).replace(/\s+/g, " ").trim();
+  t = t.replace(/^[\s,;:.!?–—-]+/, "").trim();
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : "";
+}
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTranslations, useLocale } from "next-intl";
 import {
@@ -2340,8 +2349,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                   {!introImageUrl && (
                     <div className="flex flex-wrap items-center justify-center gap-2">
                       <TiquizStudioButton
-                        intent={[stripHtml(title), stripHtml(introduction)].filter(Boolean).join(" — ")}
-                        titleText={stripHtml(title)}
+                        intent={[titleForVisual(title), stripHtml(cleanPlaceholdersForLabel(introduction))].filter(Boolean).join(" — ")}
+                        titleText={titleForVisual(title)}
                         contentId={quizId}
                         label="Générer (IA)"
                         onApplyImage={(img) => { setIntroImageUrl(img.url); setIntroImagePosition("top"); }}
@@ -2813,8 +2822,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     {!r.image_url && (
                       <div className="flex flex-wrap items-center justify-center gap-2">
                         <TiquizStudioButton
-                          intent={[stripHtml(title), stripHtml(r.title), stripHtml(r.description ?? ""), stripHtml(r.insight ?? "")].filter(Boolean).join(" — ")}
-                          titleText={stripHtml(r.title)}
+                          intent={[titleForVisual(title), titleForVisual(r.title), stripHtml(cleanPlaceholdersForLabel(r.description ?? "")), stripHtml(cleanPlaceholdersForLabel(r.insight ?? ""))].filter(Boolean).join(" — ")}
+                          titleText={titleForVisual(r.title)}
                           contentId={quizId}
                           label="Générer (IA)"
                           onApplyImage={(img) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: img.url, image_position: rr.image_position ?? "top" }))}

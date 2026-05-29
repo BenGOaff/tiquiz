@@ -1884,6 +1884,10 @@
     "styleApply": "تطبيق هذا النمط",
     "styleDelete": "حذف",
     "styleNamePrompt": "اسم هذا النمط:",
-    "formatLandscape": "أفقي 16:9"
+    "formatLandscape": "أفقي 16:9",
+    "overlayLabel": "صورة / شعار",
+    "overlayAddImage": "إضافة صورة",
+    "overlayAddLogo": "إضافة الشعار",
+    "overlayHint": "اسحب للتحريك، واسحب الزوايا لتغيير الحجم. حدّد ثم 🗑 للحذف."
   }
 }
