@@ -451,3 +451,18 @@ quiz (couverture + résultats) et aux sondages (images d'options).
   - i18n : namespace `visualStudio` (87 clés) copié depuis Tipote dans les 7 locales.
 - Le reste (GIF KLIPY + recadrage sharp) = identique à Tipote, cf. section
   équivalente. Recadrage : bucket `public-assets`, `cropped/<uid>/<file>`.
+
+### AK bis) Studio en mode ILLUSTRATION (Tiquiz) (juin 2026)
+Les visuels Tiquiz servent à ILLUSTRER (pas de pub stop-scroll) :
+- `ImageStudio` a un prop `illustrationMode` : `generateVisual` ne génère QUE le
+  fond (pas d'appel /generate-copy, pas de hook/sous-titre/CTA inventés). Le calque
+  titre garde `initialText.headline` (titre du résultat) en police de marque.
+- `TiquizStudioButton` câble ça : `illustrationMode`, `initialText` avec tous les
+  calques vides sauf `headline = titleText`, formats par défaut `["16:9","1:1"]`
+  (paysage par défaut, plus de portrait/story).
+- Nouveau format `"16:9"` (1920×1080) ajouté dans `StudioFormatId` (types.ts),
+  `FORMATS`/`ALL_FORMATS` (presets.ts), `FORMAT_LABEL_KEY`/`FORMAT_ICON`
+  (ImageStudio) + clé i18n `visualStudio.formatLandscape` (7 locales). Si on ajoute
+  un format, penser à TOUS ces endroits (Record<StudioFormatId> = clés exhaustives).
+- Appels : passer `titleText` (titre résultat / texte option / titre quiz) en plus
+  d'`intent` (contexte plus riche pour l'image IA).

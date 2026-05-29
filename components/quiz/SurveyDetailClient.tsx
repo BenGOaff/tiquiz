@@ -1725,9 +1725,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                                       <div className="flex flex-wrap items-center gap-2">
                                         <TiquizStudioButton
                                           intent={[stripHtml(q.question_text), stripHtml(opt.text)].filter(Boolean).join(" — ")}
+                                          titleText={stripHtml(opt.text)}
                                           contentId={quizId}
-                                          formats={["1:1", "4:5"]}
-                                          defaultFormat="1:1"
                                           label="Générer (IA)"
                                           onApplyImage={(img) => setOptImage(qi, oi, img.url)}
                                         />

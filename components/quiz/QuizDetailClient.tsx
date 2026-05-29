@@ -2341,9 +2341,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     <div className="flex flex-wrap items-center justify-center gap-2">
                       <TiquizStudioButton
                         intent={[stripHtml(title), stripHtml(introduction)].filter(Boolean).join(" — ")}
+                        titleText={stripHtml(title)}
                         contentId={quizId}
-                        formats={["4:5", "1:1", "9:16"]}
-                        defaultFormat="4:5"
                         label="Générer (IA)"
                         onApplyImage={(img) => { setIntroImageUrl(img.url); setIntroImagePosition("top"); }}
                       />
@@ -2815,9 +2814,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <div className="flex flex-wrap items-center justify-center gap-2">
                         <TiquizStudioButton
                           intent={[stripHtml(title), stripHtml(r.title), stripHtml(r.description ?? ""), stripHtml(r.insight ?? "")].filter(Boolean).join(" — ")}
+                          titleText={stripHtml(r.title)}
                           contentId={quizId}
-                          formats={["4:5", "1:1", "9:16"]}
-                          defaultFormat="4:5"
                           label="Générer (IA)"
                           onApplyImage={(img) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: img.url, image_position: rr.image_position ?? "top" }))}
                         />

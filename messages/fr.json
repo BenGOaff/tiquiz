@@ -1867,6 +1867,7 @@
     "styleSaved": "Style enregistré",
     "styleApply": "Appliquer ce style",
     "styleDelete": "Supprimer",
-    "styleNamePrompt": "Nom de ce style :"
+    "styleNamePrompt": "Nom de ce style :",
+    "formatLandscape": "Paysage 16:9"
   }
 }

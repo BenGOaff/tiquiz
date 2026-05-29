@@ -19,6 +19,7 @@ import {
   Image as ImageIcon,
   Square,
   RectangleVertical,
+  RectangleHorizontal,
   Smartphone,
   Sparkles,
   Loader2,
@@ -56,7 +57,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
 
-import { ALL_FORMATS, FONT_OPTIONS, FORMATS, fitDisplay } from "@/lib/visualStudio/presets";
+import { ALL_FORMATS, FONT_OPTIONS, FORMATS, fitDisplay, fontStackFor } from "@/lib/visualStudio/presets";
 import { AI_STYLES, STYLE_HEADING_FONT, type AiStyleId } from "@/lib/visualStudio/aiPrompt";
 import { analyzeForText } from "@/lib/visualStudio/imageAnalysis";
 import { slideStyle, type CarouselSlide } from "@/lib/visualStudio/carousel";
@@ -89,12 +90,14 @@ const FORMAT_LABEL_KEY: Record<StudioFormatId, string> = {
   "1:1": "formatSquare",
   "4:5": "formatPortrait",
   "9:16": "formatStory",
+  "16:9": "formatLandscape",
 };
 
 const FORMAT_ICON: Record<StudioFormatId, React.ComponentType<{ className?: string }>> = {
   "1:1": Square,
   "4:5": RectangleVertical,
   "9:16": Smartphone,
+  "16:9": RectangleHorizontal,
 };
 
 const PREVIEW_MAX_W = 420;
@@ -122,6 +125,7 @@ export function ImageStudio({
   enableCarousel = true,
   enableSave = true,
   enableStylePrefs = true,
+  illustrationMode = false,
   onChargeCredit,
   onApplyMany,
   title,
@@ -438,6 +442,49 @@ export function ImageStudio({
     genCountRef.current += 1;
     const gen = genCountRef.current;
     let anyOk = false;
+
+    // MODE ILLUSTRATION (Tiquiz) : on génère UNIQUEMENT le fond image. Pas de
+    // copy IA : le calque titre garde le texte fourni par l'hôte (titre du
+    // résultat) en police de marque (sobre). Le reste des calques est vide.
+    if (illustrationMode) {
+      const chosen: AiStyleId = aiStyle === "auto" ? "abstract" : aiStyle;
+      lastBgStyleRef.current = chosen;
+      try {
+        const bg = await fetch("/api/visual-studio/generate-background", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ intent, style: chosen, ratio, brandColors }),
+        })
+          .then((r) => r.json())
+          .catch(() => ({}));
+        if (bg?.ok && bg.dataUrl) {
+          const placement = await analyzeForText(String(bg.dataUrl)).catch(() => null);
+          setBgTreatment(chosen === "photoPerson" ? "mono" : "none");
+          setBackground((b) => ({ ...b, mode: "image", imageUrl: String(bg.dataUrl) }));
+          const h = handleRef.current;
+          if (placement) {
+            setScrim(placement.scrim);
+            setScrimSide(placement.brighterSide);
+            h?.setTextPlacement(placement.anchor, placement.textColor, placement.textSide);
+          } else {
+            setScrim("dark");
+            setScrimSide("none");
+          }
+          h?.setTemplate("auto");
+          // Titre sobre = police de marque (pas le display lourd "accroche").
+          h?.setHeadingFont(fontStackFor(brandKit.font));
+        } else {
+          toast.error(t("aiError"));
+        }
+      } catch (e) {
+        console.error("[ImageStudio] illustration generate failed", e);
+        toast.error(t("aiError"));
+      } finally {
+        setVisualBusy(false);
+      }
+      return;
+    }
+
     try {
       // 1) Analyse + copy (l'IA décide format + style d'image en rapport au post)
       const copy = await fetch("/api/visual-studio/generate-copy", {

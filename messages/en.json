@@ -1867,6 +1867,7 @@
     "styleSaved": "Style saved",
     "styleApply": "Apply this style",
     "styleDelete": "Delete",
-    "styleNamePrompt": "Name this style:"
+    "styleNamePrompt": "Name this style:",
+    "formatLandscape": "Landscape 16:9"
   }
 }

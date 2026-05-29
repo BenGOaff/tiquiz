@@ -38,16 +38,20 @@ function toSaved(r: StudioResult): StudioSavedImage {
 
 export function TiquizStudioButton({
   intent,
+  titleText,
   contentId,
-  formats,
-  defaultFormat,
+  // Visuels d'ILLUSTRATION : paysage par défaut + carré. Pas de portrait/story.
+  formats = ["16:9", "1:1"],
+  defaultFormat = "16:9",
   label = "Générer un visuel",
   size = "sm",
   variant = "outline",
   onApplyImage,
 }: {
-  /** Texte source (titre + intro, ou texte d'un résultat) → la copy IA s'y adapte. */
+  /** Contexte pour guider l'IA (titre + intro, ou texte du résultat). */
   intent?: string;
+  /** Titre posé SUR l'image (ex: titre du résultat). Pas de hook IA inventé. */
+  titleText?: string;
   /** Id du quiz → range les visuels sous son dossier. */
   contentId?: string;
   formats?: StudioFormatId[];
@@ -116,6 +120,9 @@ export function TiquizStudioButton({
         brandOptions={brandOptions}
         brandVoice={brandVoice}
         initialIntent={intent}
+        // Le titre du résultat est le SEUL texte ; les autres calques restent vides.
+        initialText={{ kicker: "", headline: titleText ?? "", accent: "", subline: "", cta: "" }}
+        illustrationMode
         formats={formats}
         defaultFormat={defaultFormat}
         enableCarousel={false}

@@ -1883,6 +1883,7 @@
     "styleSaved": "تم حفظ النمط",
     "styleApply": "تطبيق هذا النمط",
     "styleDelete": "حذف",
-    "styleNamePrompt": "اسم هذا النمط:"
+    "styleNamePrompt": "اسم هذا النمط:",
+    "formatLandscape": "أفقي 16:9"
   }
 }

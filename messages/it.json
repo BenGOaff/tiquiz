@@ -1883,6 +1883,7 @@
     "styleSaved": "Stile salvato",
     "styleApply": "Applica questo stile",
     "styleDelete": "Elimina",
-    "styleNamePrompt": "Nome di questo stile:"
+    "styleNamePrompt": "Nome di questo stile:",
+    "formatLandscape": "Orizzontale 16:9"
   }
 }
