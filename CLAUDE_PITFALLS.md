@@ -409,3 +409,20 @@ qui regarde**, via les helpers de `lib/dateKeys.ts` :
 3. Si c'est un endpoint serveur consommé par un client → accepter `tz`.
 4. Surfaces existantes à garder cohérentes : QuizResultsAnalytics
    (quiz Résultats), /api/stats (dashboard), /api/quiz/[id]/analytics.
+
+## AH) PROMPT QUIZ/SONDAGE — écriture naturelle 2026 (juin 2026)
+
+`lib/prompts/quiz/system.ts` est quasi identique à celui de Tipote — toute
+évolution du style doit être reportée DES DEUX CÔTÉS.
+
+- **NATURAL_WRITING_BLOCK** : constante exportée, injectée dans la génération
+  quiz + sondage. Bannit les tics IA (« ce n'est pas X c'est Y », tirets
+  cadratins, mots brochure, triades lisses, faux-profond, emojis déco, formules
+  de coach) ; exige phrases variées, spécifique/sensoriel, vocabulaire réel,
+  point de vue assumé. Synchronisé avec Tipote.
+- **Modèle = Opus** pour `quiz/generate` (rédaction fine ; override
+  `TIQUIZ_QUIZ_MODEL`). L'embed (`api/embed/quiz/generate`) reste sur haiku mais
+  hérite du bloc anti-IA via le prompt partagé.
+- Tiquiz n'a PAS `business_profiles` (archi `profiles` : `brand_tone`,
+  `target_audience`). Pas de couche "voix de marque" complète comme Tipote pour
+  l'instant — seulement le bloc anti-IA + le `brand_tone`/`target` existants.

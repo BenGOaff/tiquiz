@@ -27,9 +27,10 @@ function getClaudeApiKey(): string {
 }
 
 function getClaudeModel(): string {
-  // Sonnet 4.6 default + safety net pour rattraper les anciens IDs
-  // (claude-sonnet-4-20250514 etc.). Cf. lib/anthropicModel.
-  return resolveAnthropicModel(process.env.ANTHROPIC_MODEL, "sonnet");
+  // Génération de quiz/sondage = rédaction fine → Opus par défaut (qualité
+  // d'écriture max). Override possible via env dédiée, fallback "opus".
+  // Cf. lib/anthropicModel pour le safety net des anciens IDs.
+  return resolveAnthropicModel(process.env.TIQUIZ_QUIZ_MODEL || process.env.ANTHROPIC_MODEL, "opus");
 }
 
 export async function POST(req: NextRequest) {
