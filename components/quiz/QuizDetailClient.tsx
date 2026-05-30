@@ -115,6 +115,9 @@ const RESULT_IMAGE_POSITIONS: ResultImagePosition[] = ["top", "after_title", "af
 // vertical sous le logo : au-dessus du titre, entre titre et intro text,
 // entre intro et bouton "Démarrer", sous le bouton.
 type IntroImagePosition = "top" | "after_title" | "after_intro" | "bottom";
+// Mêmes 4 slots que l'intro, sur l'écran de partage : "top" (avant le
+// titre du bonus) | "after_heading" | "after_intro" | "bottom".
+type BonusImagePosition = "top" | "after_heading" | "after_intro" | "bottom";
 type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null };
 type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; option_index?: number; option_indices?: number[] }[] | null; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
 type QuizData = {
@@ -128,7 +131,7 @@ type QuizData = {
   capture_first_name: boolean | null; capture_last_name: boolean | null;
   capture_phone: boolean | null; capture_country: boolean | null;
   phone_required?: boolean | null; first_name_required?: boolean | null; last_name_required?: boolean | null; country_required?: boolean | null;
-  virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null;
+  virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null; bonus_image_position: BonusImagePosition | null;
   intro_image_url: string | null; intro_image_position: IntroImagePosition | null;
   bonus_intro_text: string | null;
   bonus_unlocked_message: string | null;
@@ -523,6 +526,11 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const [bonusIntroText, setBonusIntroText] = useState("");
   const [bonusUnlockedMessage, setBonusUnlockedMessage] = useState("");
   const [bonusImageUrl, setBonusImageUrl] = useState<string | null>(null);
+  // Position de l'image bonus sur l'écran de partage. Default "top"
+  // (compat avec les quiz existants qui rendaient au-dessus).
+  const [bonusImagePosition, setBonusImagePosition] = useState<BonusImagePosition>("top");
+  // Drapeau pendant un drag pour révéler les dropzones aux autres slots.
+  const [draggingBonusImage, setDraggingBonusImage] = useState(false);
   // Image dédiée à la page d'INTRO du quiz (Hugo, 19 mai 2026). Même
   // pattern que les images de résultats : URL + slot logique parmi 4
   // positions, drag-and-drop natif HTML5 dans le live preview.
@@ -672,6 +680,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     bonus_intro_text: bonusIntroText,
     bonus_unlocked_message: bonusUnlockedMessage,
     bonus_image_url: bonusImageUrl,
+    bonus_image_position: bonusImagePosition,
     intro_image_url: introImageUrl,
     intro_image_position: introImagePosition,
     share_message: shareMessage,
@@ -699,7 +708,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     showConsentCheckbox, showResultsBreakdown, showOtherResults,
     metaPixelId, ga4MeasurementId, googleAdsConversionId, googleAdsConversionLabel,
     askFirstName, askGender,
-    viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl,
+    viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl, bonusImagePosition,
     introImageUrl, introImagePosition,
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor, quizBrandLogoUrl, hideBrandLogo,
@@ -753,6 +762,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     if (typeof s.bonus_intro_text === "string") setBonusIntroText(s.bonus_intro_text);
     if (typeof s.bonus_unlocked_message === "string") setBonusUnlockedMessage(s.bonus_unlocked_message);
     if (s.bonus_image_url === null || typeof s.bonus_image_url === "string") setBonusImageUrl(s.bonus_image_url);
+    if (s.bonus_image_position === "top" || s.bonus_image_position === "after_heading" || s.bonus_image_position === "after_intro" || s.bonus_image_position === "bottom") {
+      setBonusImagePosition(s.bonus_image_position);
+    }
     if (s.intro_image_url === null || typeof s.intro_image_url === "string") setIntroImageUrl(s.intro_image_url);
     if (s.intro_image_position === "top" || s.intro_image_position === "after_title" || s.intro_image_position === "after_intro" || s.intro_image_position === "bottom") {
       setIntroImagePosition(s.intro_image_position);
@@ -868,6 +880,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setBonusIntroText(q.bonus_intro_text ?? "");
       setBonusUnlockedMessage(q.bonus_unlocked_message ?? "");
       setBonusImageUrl(q.bonus_image_url ?? null);
+      setBonusImagePosition((q.bonus_image_position as BonusImagePosition | null) ?? "top");
       setIntroImageUrl(q.intro_image_url ?? null);
       setIntroImagePosition((q.intro_image_position as IntroImagePosition | null) ?? "top");
       setOgImageUrl(q.og_image_url ?? null);
@@ -939,6 +952,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           bonus_intro_text: q.bonus_intro_text ?? "",
           bonus_unlocked_message: q.bonus_unlocked_message ?? "",
           bonus_image_url: q.bonus_image_url ?? null,
+          bonus_image_position: (q.bonus_image_position as BonusImagePosition | null) ?? "top",
           intro_image_url: q.intro_image_url ?? null,
           intro_image_position: q.intro_image_position ?? "top",
           share_message: q.share_message ?? "",
@@ -1524,6 +1538,38 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     }
   }
 
+  // Bonus image — miroir exact du pattern intro image (upload / IA / GIF /
+  // drag-and-drop sur 4 slots / crop), pour cohérence avec le reste de
+  // l'éditeur (Adeline 30 mai 2026 : "l'image bonus de partage doit être
+  // exactement pareil que les autres").
+  const openBonusImagePicker = () => bonusImageInputRef.current?.click();
+  const onBonusImagePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploadingBonusImage(true);
+    try {
+      const url = await handleRichTextImageUpload(file);
+      if (!url) return;
+      setBonusImageUrl(url);
+      if (!bonusImagePosition) setBonusImagePosition("top");
+    } finally {
+      setUploadingBonusImage(false);
+    }
+  };
+  const clearBonusImage = () => setBonusImageUrl(null);
+  async function handleBonusImageDrop(file: File, pos: BonusImagePosition) {
+    setUploadingBonusImage(true);
+    try {
+      const url = await handleRichTextImageUpload(file);
+      if (!url) return;
+      setBonusImageUrl(url);
+      setBonusImagePosition(pos);
+    } finally {
+      setUploadingBonusImage(false);
+    }
+  }
+
   // Save
   const handleSave = async () => {
     if (!title.trim()) { toast.error(t("errTitleRequired")); return; }
@@ -1557,6 +1603,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           bonus_intro_text: bonusIntroText.trim() || null,
           bonus_unlocked_message: bonusUnlockedMessage.trim() || null,
           bonus_image_url: bonusImageUrl,
+          bonus_image_position: bonusImageUrl ? bonusImagePosition : null,
           intro_image_url: introImageUrl,
           intro_image_position: introImageUrl ? introImagePosition : null,
           share_message: shareMessage, locale: locale || null,
@@ -2357,69 +2404,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     </div>
                     <Input value={bonusDescription} onChange={e => setBonusDescription(e.target.value)} placeholder={t("bonusPlaceholder")} className="text-xs" />
 
-                    <div>
-                      <Label className="text-[11px] font-semibold">{t("bonusVisualLabel")}</Label>
-                      <p className="text-[10px] text-muted-foreground mb-1.5">{t("bonusVisualHint")}</p>
-                      {bonusImageUrl ? (
-                        <div className="flex items-center gap-2">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={bonusImageUrl} alt="" className="w-14 h-14 rounded-lg object-cover border" />
-                          <div className="flex-1 space-y-1">
-                            <button
-                              type="button"
-                              onClick={() => bonusImageInputRef.current?.click()}
-                              disabled={uploadingBonusImage}
-                              className="text-xs text-primary hover:underline block"
-                            >
-                              {uploadingBonusImage ? t("uploading") : t("replace")}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setBonusImageUrl(null)}
-                              className="text-xs text-destructive hover:underline block"
-                            >
-                              {t("remove")}
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => bonusImageInputRef.current?.click()}
-                          disabled={uploadingBonusImage}
-                          className="w-full border-2 border-dashed rounded-lg p-3 text-xs text-muted-foreground hover:border-primary/30 transition-colors flex items-center justify-center gap-2"
-                        >
-                          <Plus className="w-3 h-3" />
-                          {uploadingBonusImage ? t("uploading") : t("addBonusVisual")}
-                        </button>
-                      )}
-                      <input
-                        ref={bonusImageInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBonusImageUpload(f); e.target.value = ""; }}
-                      />
-                      {/* Génération IA (illustration via Studio, mêmes
-                          presets que la couverture) + bibliothèque GIFs.
-                          Surface uniquement tant qu'aucune image n'est
-                          posée — mêmes slots que l'upload. */}
-                      {!bonusImageUrl && (
-                        <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
-                          <TiquizStudioButton
-                            intent={[titleForVisual(title), bonusDescription || stripHtml(cleanPlaceholdersForLabel(introduction))].filter(Boolean).join(" - ")}
-                            titleText={bonusDescription || titleForVisual(title)}
-                            contentId={`${quizId}-bonus`}
-                            label={t("introImageAi")}
-                            onApplyImage={(img) => setBonusImageUrl(img.url)}
-                          />
-                          <GifPickerButton
-                            label={t("introImageGif")}
-                            onPick={(url) => setBonusImageUrl(url)}
-                          />
-                        </div>
-                      )}
-                    </div>
+                    {/* Visuel bonus : édité directement dans le preview
+                        (WYSIWYG, miroir de la couverture intro) → dropzone
+                        d'upload + génération IA + GIF + drag-and-drop sur
+                        4 slots + crop. Plus rien à gérer dans la sidebar. */}
 
                     <div>
                       <Label className="text-[11px] font-semibold">{t("shareMessageLabel")}</Label>
@@ -2761,69 +2749,119 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                   Share tab. */}
               {viralityEnabled && (
                 <div ref={bonusRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-20">
-                  <div className="max-w-lg w-full space-y-10 text-center">
-                    {/* Hero visuel — bonus image (IA, GIF ou upload) si
-                        configurée ; sinon icône cadeau de marque. Cliquer
-                        ouvre l'upload, et les boutons IA / GIF sont
-                        accessibles juste en dessous tant qu'aucune image
-                        n'est posée. */}
-                    <div className="flex flex-col items-center gap-3">
-                      {bonusImageUrl ? (
-                        <button
-                          type="button"
-                          onClick={() => bonusImageInputRef.current?.click()}
-                          disabled={uploadingBonusImage}
-                          className="group relative rounded-2xl overflow-hidden border bg-white shadow-sm hover:shadow transition"
-                          title={t("bonusImageClickHint")}
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={bonusImageUrl} alt={t("bonusImageAlt")} className="block max-h-64 w-auto object-contain" />
-                          <span className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white text-[10px] px-2 py-1 rounded">
-                            {uploadingBonusImage ? t("uploading") : t("bonusImageClickHint")}
-                          </span>
-                        </button>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => bonusImageInputRef.current?.click()}
-                            disabled={uploadingBonusImage}
-                            className="w-20 h-20 rounded-full flex items-center justify-center hover:scale-105 transition-transform"
-                            style={{ backgroundColor: `${pc}15`, color: pc }}
-                            title={t("addBonusVisual")}
-                          >
-                            <Gift className="w-10 h-10" />
-                          </button>
-                          <div className="flex flex-wrap items-center justify-center gap-2">
-                            <TiquizStudioButton
-                              intent={[titleForVisual(title), bonusDescription || stripHtml(cleanPlaceholdersForLabel(introduction))].filter(Boolean).join(" - ")}
-                              titleText={bonusDescription || titleForVisual(title)}
-                              contentId={`${quizId}-bonus`}
-                              label={t("introImageAi")}
-                              onApplyImage={(img) => setBonusImageUrl(img.url)}
-                            />
-                            <GifPickerButton
-                              label={t("introImageGif")}
-                              onPick={(url) => setBonusImageUrl(url)}
-                            />
-                          </div>
-                        </>
-                      )}
-                    </div>
+                  <div className="max-w-lg w-full space-y-8 text-center">
+                    {/* Hidden file input partagé pour le picker bonus image,
+                        miroir exact du intro image. */}
+                    <input
+                      ref={bonusImageInputRef}
+                      type="file"
+                      accept="image/*,image/gif"
+                      className="sr-only"
+                      onChange={onBonusImagePicked}
+                    />
+                    {/* Dropzone d'upload — visible UNIQUEMENT quand aucune
+                        image bonus n'est définie. Une fois posée, l'image
+                        apparaît dans son slot et devient draggable + crop. */}
+                    {!bonusImageUrl && (
+                      <button
+                        type="button"
+                        onClick={openBonusImagePicker}
+                        disabled={uploadingBonusImage}
+                        onDragOver={(e) => { e.preventDefault(); }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const f = Array.from(e.dataTransfer?.files ?? []).find(x => x.type.startsWith("image/"));
+                          if (f) void handleBonusImageDrop(f, "top");
+                        }}
+                        className="w-full py-8 rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground disabled:opacity-50"
+                      >
+                        {uploadingBonusImage
+                          ? <Loader2 className="w-6 h-6 animate-spin" />
+                          : <ImagePlus className="w-6 h-6" />}
+                        <span className="text-xs">{t("bonusImageDropzone")}</span>
+                        <span className="text-[10px] text-muted-foreground/70">{t("bonusImageHint")}</span>
+                      </button>
+                    )}
+                    {/* Génération IA (illustration via Studio) + bibliothèque
+                        GIFs — visibles tant qu'aucune image posée, miroir
+                        exact des boutons couverture intro. */}
+                    {!bonusImageUrl && (
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <TiquizStudioButton
+                          intent={[titleForVisual(title), bonusDescription || stripHtml(cleanPlaceholdersForLabel(introduction))].filter(Boolean).join(" - ")}
+                          titleText={bonusDescription || titleForVisual(title)}
+                          contentId={`${quizId}-bonus`}
+                          label={t("introImageAi")}
+                          onApplyImage={(img) => { setBonusImageUrl(img.url); setBonusImagePosition("top"); }}
+                        />
+                        <GifPickerButton
+                          label={t("introImageGif")}
+                          onPick={(url) => { setBonusImageUrl(url); setBonusImagePosition("top"); }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Icône cadeau de marque — visible UNIQUEMENT s'il n'y
+                        a aucune image bonus. Quand l'user pose une image,
+                        elle remplace l'icône au slot "top" par défaut. */}
+                    {!bonusImageUrl && (
+                      <div className="flex justify-center">
+                        <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: `${pc}15`, color: pc }}>
+                          <Gift className="w-10 h-10" />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* slot TOP — au-dessus du titre bonus */}
+                    {bonusImageUrl && (bonusImagePosition ?? "top") === "top" && (
+                      <ResultDraggableImage url={bonusImageUrl} ri={-2}
+                        onDragStart={() => setDraggingBonusImage(true)}
+                        onDragEnd={() => setDraggingBonusImage(false)}
+                        onRemove={clearBonusImage}
+                        onCrop={() => bonusImageUrl && setCropTarget({ url: bonusImageUrl, apply: (u) => setBonusImageUrl(u) })} />
+                    )}
+                    {draggingBonusImage && (bonusImagePosition ?? "top") !== "top" && (
+                      <ResultPositionDropZone label={t("bonusImagePos_top")}
+                        onDrop={() => { setBonusImagePosition("top"); setDraggingBonusImage(false); }} />
+                    )}
 
                     <h2 className="text-2xl sm:text-4xl font-bold leading-tight">
                       {t("previewBonusHeadingDefault")}
                     </h2>
+
+                    {/* slot AFTER_HEADING — entre titre et intro */}
+                    {bonusImageUrl && bonusImagePosition === "after_heading" && (
+                      <ResultDraggableImage url={bonusImageUrl} ri={-2}
+                        onDragStart={() => setDraggingBonusImage(true)}
+                        onDragEnd={() => setDraggingBonusImage(false)}
+                        onRemove={clearBonusImage}
+                        onCrop={() => bonusImageUrl && setCropTarget({ url: bonusImageUrl, apply: (u) => setBonusImageUrl(u) })} />
+                    )}
+                    {draggingBonusImage && bonusImagePosition !== "after_heading" && (
+                      <ResultPositionDropZone label={t("bonusImagePos_after_heading")}
+                        onDrop={() => { setBonusImagePosition("after_heading"); setDraggingBonusImage(false); }} />
+                    )}
+
                     <p className="text-muted-foreground text-base leading-relaxed">
                       {t("previewBonusIntro")}
                     </p>
 
-                    {/* Bonus card — image + description are inline-editable */}
-                    {/* Bonus card — l'image vit désormais dans le hero
-                        ci-dessus (cadeau si vide, image IA/GIF/upload si
-                        configurée). La card ne porte plus que les textes
-                        éditables : description, message override avant /
-                        après partage. */}
+                    {/* slot AFTER_INTRO — entre intro et bonus card */}
+                    {bonusImageUrl && bonusImagePosition === "after_intro" && (
+                      <ResultDraggableImage url={bonusImageUrl} ri={-2}
+                        onDragStart={() => setDraggingBonusImage(true)}
+                        onDragEnd={() => setDraggingBonusImage(false)}
+                        onRemove={clearBonusImage}
+                        onCrop={() => bonusImageUrl && setCropTarget({ url: bonusImageUrl, apply: (u) => setBonusImageUrl(u) })} />
+                    )}
+                    {draggingBonusImage && bonusImagePosition !== "after_intro" && (
+                      <ResultPositionDropZone label={t("bonusImagePos_after_intro")}
+                        onDrop={() => { setBonusImagePosition("after_intro"); setDraggingBonusImage(false); }} />
+                    )}
+
+                    {/* Bonus card — textes éditables uniquement (l'image
+                        bonus vit désormais dans un slot draggable ci-dessus
+                        ou ci-dessous, comme l'image d'intro). */}
                     <div className="rounded-xl border p-5 bg-muted/20 space-y-4 text-left">
                       <RichTextEdit
                         value={bonusDescription}
@@ -2909,6 +2947,19 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     <p className="text-xs text-muted-foreground underline-offset-2 underline cursor-default">
                       {t("previewBonusContinueWithout")}
                     </p>
+
+                    {/* slot BOTTOM — tout en bas de l'écran de partage */}
+                    {bonusImageUrl && bonusImagePosition === "bottom" && (
+                      <ResultDraggableImage url={bonusImageUrl} ri={-2}
+                        onDragStart={() => setDraggingBonusImage(true)}
+                        onDragEnd={() => setDraggingBonusImage(false)}
+                        onRemove={clearBonusImage}
+                        onCrop={() => bonusImageUrl && setCropTarget({ url: bonusImageUrl, apply: (u) => setBonusImageUrl(u) })} />
+                    )}
+                    {draggingBonusImage && bonusImagePosition !== "bottom" && (
+                      <ResultPositionDropZone label={t("bonusImagePos_bottom")}
+                        onDrop={() => { setBonusImagePosition("bottom"); setDraggingBonusImage(false); }} />
+                    )}
                   </div>
                 </div>
               )}
