@@ -531,6 +531,44 @@ formulaire email.
 CSS dans `globals.css` matche déjà `[style*="text-align: center"]`,
 donc rien à toucher côté styles.
 
+## AO) Logo : override par quiz via quizzes.brand_logo_url + hide_brand_logo (30 mai 2026)
+
+Avant : le logo vivait UNIQUEMENT sur `profiles.brand_logo_url` (Tiquiz)
+ou `business_profiles.brand_logo_url` (Tipote) — un seul logo pour tous
+les quiz du user. Le bouton "Retirer" du design tab effaçait le logo du
+profil → tous les quiz perdaient leur logo en même temps.
+
+Maintenant deux colonnes sur `quizzes` :
+- `brand_logo_url` (TEXT, NULL = fallback profil)
+- `hide_brand_logo` (BOOLEAN, default FALSE = compat)
+
+Migration Tiquiz : `supabase/migrations/20260530_quizzes_brand_logo_override.sql`
+Migration Tipote : `supabase/migrations/20260603_quizzes_brand_logo_override.sql`
+
+Resolver `lib/quizBranding.ts → resolveQuizBranding` :
+```ts
+logoUrl = quiz.hide_brand_logo ? null : (quiz.brand_logo_url ?? profile.brand_logo_url)
+```
+
+Trois états UI dans le design tab :
+1. `hideBrandLogo` true → encart "Logo masqué" + bouton réactiver.
+2. `quizBrandLogoUrl` set → override visible + boutons "Changer / Revenir
+   au profil / Masquer".
+3. Logo profil utilisé → boutons "Utiliser un autre logo / Masquer".
+
+Upload : `handleLogoUpload(file, scope: "quiz" | "profile")`. Default
+`"quiz"` dans l'éditeur — l'upload vise `logos/<uid>/quiz-<quizId>.<ext>`
+et alimente `quizBrandLogoUrl`, sans toucher au profil. Le bouton
+SettingsClient garde `scope: "profile"` pour le logo global.
+
+**À ne JAMAIS faire** : remettre un bouton "Retirer" qui appelle
+`/api/profile` avec `brand_logo_url: null` depuis l'éditeur quiz. C'est
+exactement le bug qu'on a corrigé.
+
+i18n : 8 nouvelles clés `designLogo*` dans `quizEditor` (7 locales :
+fr/en/es/pt/pt-BR/it/ar). Tipote utilise des strings inline en FR (pas
+de namespace dédié).
+
 ## AK ter) Studio : plus de logo auto → overlay image/logo libre (juin 2026)
 - Le logo AUTOMATIQUE est désactivé (`showLogo` défaut false, état conservé mais
   plus d'UI position/taille). L'effet logo de StudioCanvas reste dormant.

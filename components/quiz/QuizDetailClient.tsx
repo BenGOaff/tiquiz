@@ -135,6 +135,7 @@ type QuizData = {
   share_message: string | null; locale: string | null;
   sio_share_tag_name: string | null;
   brand_font: string | null; brand_color_primary: string | null; brand_color_background: string | null;
+  brand_logo_url: string | null; hide_brand_logo: boolean | null;
   share_networks: string[] | null; og_description: string | null; og_image_url: string | null;
   seo_noindex: boolean | null;
   custom_footer_text: string | null; custom_footer_url: string | null;
@@ -557,7 +558,18 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const [customFooterUrl, setCustomFooterUrl] = useState("");
   const [shareNetworks, setShareNetworks] = useState<ShareNetwork[]>([]);
   const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
+  // brandLogoUrl = logo du PROFIL (source de vérité globale, partagée
+  // entre tous les quiz). Reste piloté par /api/profile (changement
+  // global). Pour un override par quiz (cas "je crée un quiz pour un
+  // client" ou "je veux pas de logo sur celui-ci"), voir
+  // quizBrandLogoUrl + hideBrandLogo plus bas.
   const [brandLogoUrl, setBrandLogoUrl] = useState<string | null>(null);
+  // Override par quiz. NULL = on hérite du logo profil. URL = on a posé
+  // un logo SPÉCIFIQUE à ce quiz. Sauvegardé dans quizzes.brand_logo_url.
+  const [quizBrandLogoUrl, setQuizBrandLogoUrl] = useState<string | null>(null);
+  // Si TRUE, masque tout logo sur ce quiz (ni override, ni profil).
+  // Sauvegardé dans quizzes.hide_brand_logo. Default FALSE (compat).
+  const [hideBrandLogo, setHideBrandLogo] = useState<boolean>(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bonusImageInputRef = useRef<HTMLInputElement>(null);
@@ -669,6 +681,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     brand_font: fontFamily,
     brand_color_primary: primaryColor,
     brand_color_background: bgColor,
+    brand_logo_url: quizBrandLogoUrl,
+    hide_brand_logo: hideBrandLogo,
     slug,
     og_description: ogDescription,
     og_image_url: ogImageUrl,
@@ -688,7 +702,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl,
     introImageUrl, introImagePosition,
     shareMessage, locale, sioShareTagName, status,
-    fontFamily, primaryColor, bgColor,
+    fontFamily, primaryColor, bgColor, quizBrandLogoUrl, hideBrandLogo,
     slug, ogDescription, ogImageUrl, customFooterText, customFooterUrl, shareNetworks,
     editQuestions, editResults,
   ]);
@@ -752,6 +766,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     }
     if (typeof s.brand_color_primary === "string") setPrimaryColor(s.brand_color_primary);
     if (typeof s.brand_color_background === "string") setBgColor(s.brand_color_background);
+    if (s.brand_logo_url === null || typeof s.brand_logo_url === "string") setQuizBrandLogoUrl(s.brand_logo_url);
+    if (typeof s.hide_brand_logo === "boolean") setHideBrandLogo(s.hide_brand_logo);
     if (typeof s.slug === "string") setSlug(s.slug);
     if (typeof s.og_description === "string") setOgDescription(s.og_description);
     if (s.og_image_url === null || typeof s.og_image_url === "string") setOgImageUrl(s.og_image_url);
@@ -873,6 +889,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setFontFamily(resolvedFont);
       setPrimaryColor(q.brand_color_primary || prof?.brand_color_primary || DEFAULT_BRAND_COLOR_PRIMARY);
       setBgColor(q.brand_color_background || DEFAULT_BRAND_COLOR_BACKGROUND);
+      setQuizBrandLogoUrl((q as { brand_logo_url?: string | null }).brand_logo_url ?? null);
+      setHideBrandLogo((q as { hide_brand_logo?: boolean | null }).hide_brand_logo === true);
       setBrandLogoUrl(prof?.brand_logo_url ?? null);
       // Palettes utilisateur (charte centralisée — chargées une fois,
       // ré-utilisées sur tous les éditeurs).
@@ -934,6 +952,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               : DEFAULT_BRAND_FONT,
           brand_color_primary: q.brand_color_primary || prof?.brand_color_primary || DEFAULT_BRAND_COLOR_PRIMARY,
           brand_color_background: q.brand_color_background || DEFAULT_BRAND_COLOR_BACKGROUND,
+          brand_logo_url: (q as { brand_logo_url?: string | null }).brand_logo_url ?? null,
+          hide_brand_logo: (q as { hide_brand_logo?: boolean | null }).hide_brand_logo === true,
           slug: q.slug ?? "",
           og_description: q.og_description ?? "",
           custom_footer_text: q.custom_footer_text ?? "",
@@ -1240,8 +1260,12 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     else toast.warning(t("genderizeAllPartial", { done, total: queue.length }));
   }, [bulkGenderizing, editQuestions, editResults, locale, t]);
 
-  // Logo upload (reuses public-assets bucket, same layout as SettingsClient)
-  async function handleLogoUpload(file: File) {
+  // Logo upload. `scope` détermine si on touche au logo GLOBAL (profil)
+  // ou seulement au logo POUR CE QUIZ (override). Par défaut "quiz" :
+  // l'éditeur quiz est l'endroit où Adeline veut overrider sans toucher
+  // au profil (cas "quiz pour un client"). Le bouton SettingsClient
+  // reste sur scope="profile" pour le logo global.
+  async function handleLogoUpload(file: File, scope: "quiz" | "profile" = "quiz") {
     if (!file.type.startsWith("image/")) { toast.error(t("errImageOnly")); return; }
     if (file.size > 2 * 1024 * 1024) { toast.error(t("errImageTooLarge2")); return; }
     setUploadingLogo(true);
@@ -1250,18 +1274,30 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error(t("errNotSignedIn")); return; }
       const ext = file.name.split(".").pop() ?? "png";
-      const path = `logos/${user.id}/logo.${ext}`;
+      // Path différent par scope pour ne pas écraser le logo de profil
+      // quand on upload un logo override pour un quiz spécifique.
+      const path = scope === "profile"
+        ? `logos/${user.id}/logo.${ext}`
+        : `logos/${user.id}/quiz-${quizId}.${ext}`;
       const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       const publicUrl = urlData.publicUrl;
-      // Persist at the profile level (single source of truth) + optimistic UI
-      await fetch("/api/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brand_logo_url: publicUrl }),
-      });
-      setBrandLogoUrl(publicUrl);
+      if (scope === "profile") {
+        // Persist at the profile level (single source of truth) + optimistic UI
+        await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ brand_logo_url: publicUrl }),
+        });
+        setBrandLogoUrl(publicUrl);
+      } else {
+        // Override quiz-only — autosave PATCH gère la persistance sur
+        // quizzes.brand_logo_url + on désactive le toggle hide pour
+        // éviter qu'un user clique "hide" puis "upload" et ne voie rien.
+        setQuizBrandLogoUrl(publicUrl);
+        setHideBrandLogo(false);
+      }
       toast.success(t("logoUploaded"));
     } catch (err) {
       console.error("Logo upload failed:", err);
@@ -1527,6 +1563,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           sio_share_tag_name: sioShareTagName || null, status,
           // Branding
           brand_font: fontFamily, brand_color_primary: primaryColor, brand_color_background: bgColor,
+          brand_logo_url: quizBrandLogoUrl, hide_brand_logo: hideBrandLogo,
           // Share + SEO
           slug: slug.trim() ? cleanedSlug : null,
           og_description: ogDescription.trim() || null,
@@ -1739,6 +1776,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;
   if (!quiz) return null;
   const pc = primaryColor;
+  // Logo finalement affiché côté visiteur — même résolution que
+  // resolveQuizBranding (override quiz > profil > rien, sauf si
+  // hideBrandLogo). Utilisé dans le preview pour le WYSIWYG.
+  const effectiveLogoUrl: string | null = hideBrandLogo ? null : (quizBrandLogoUrl || brandLogoUrl || null);
 
   return (
    <SioTagsProvider>
@@ -2003,15 +2044,70 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs">{t("designLogo")}</Label>
-                  {brandLogoUrl ? (
+                  {/* Trois états :
+                      • hideBrandLogo TRUE → aucun logo, on montre la zone
+                        "Logo masqué" + bouton réactiver.
+                      • Un override quiz est posé (quizBrandLogoUrl)
+                        → on montre l'override + bouton revenir au logo profil.
+                      • Sinon → logo profil (fallback) ; bouton "Utiliser un
+                        autre logo pour ce quiz" + "Masquer". Le bouton
+                        "Supprimer" qui effaçait le logo profil est retiré
+                        (cf. Adeline 30 mai 2026 : on touchait à TOUS les
+                        quiz au lieu d'overrider celui en cours). */}
+                  {hideBrandLogo ? (
+                    <div className="space-y-2">
+                      <div className="rounded border border-dashed bg-muted/20 p-3 text-center text-[11px] text-muted-foreground">
+                        {t("designLogoHidden")}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setHideBrandLogo(false)}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        {t("designLogoShow")}
+                      </button>
+                    </div>
+                  ) : quizBrandLogoUrl ? (
                     <div className="space-y-2">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={brandLogoUrl} alt="Logo" className="max-h-16 w-auto object-contain rounded border bg-white p-1" />
-                      <div className="flex items-center gap-2">
+                      <img src={quizBrandLogoUrl} alt="Logo" className="max-h-16 w-auto object-contain rounded border bg-white p-1" />
+                      <p className="text-[10px] text-primary">{t("designLogoOverride")}</p>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <button type="button" onClick={() => logoInputRef.current?.click()} className="text-xs text-primary hover:underline" disabled={uploadingLogo}>
                           {uploadingLogo ? t("designUploading") : t("designChange")}
                         </button>
-                        <button type="button" onClick={async () => { await fetch("/api/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brand_logo_url: null }) }); setBrandLogoUrl(null); }} className="text-xs text-destructive hover:underline">{t("designRemove")}</button>
+                        <button
+                          type="button"
+                          onClick={() => setQuizBrandLogoUrl(null)}
+                          className="text-xs text-muted-foreground hover:underline"
+                        >
+                          {t("designLogoResetProfile")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setHideBrandLogo(true)}
+                          className="text-xs text-destructive hover:underline"
+                        >
+                          {t("designLogoHide")}
+                        </button>
+                      </div>
+                    </div>
+                  ) : brandLogoUrl ? (
+                    <div className="space-y-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={brandLogoUrl} alt="Logo" className="max-h-16 w-auto object-contain rounded border bg-white p-1" />
+                      <p className="text-[10px] text-muted-foreground">{t("designLogoFromProfile")}</p>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <button type="button" onClick={() => logoInputRef.current?.click()} className="text-xs text-primary hover:underline" disabled={uploadingLogo}>
+                          {uploadingLogo ? t("designUploading") : t("designLogoUseDifferent")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setHideBrandLogo(true)}
+                          className="text-xs text-destructive hover:underline"
+                        >
+                          {t("designLogoHide")}
+                        </button>
                       </div>
                     </div>
                   ) : (
@@ -2025,7 +2121,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ""; }}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f, "quiz"); e.target.value = ""; }}
                   />
                   <p className="text-[10px] text-muted-foreground">{t("designLogoShared")}</p>
                 </div>
@@ -2424,10 +2520,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     </div>
                   )}
 
-                  {brandLogoUrl && (
+                  {effectiveLogoUrl && (
                     <div className="flex justify-center">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={brandLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
+                      <img src={effectiveLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
                     </div>
                   )}
 
@@ -3088,7 +3184,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               <div className="text-center py-8 border-t space-y-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={brandLogoUrl || "/tiquiz-logo.png"}
+                  src={effectiveLogoUrl || "/tiquiz-logo.png"}
                   alt=""
                   className="max-h-10 w-auto object-contain mx-auto"
                 />
