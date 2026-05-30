@@ -33,6 +33,7 @@ const FR_TYPO_PLAIN_FIELDS = [
   "result_projection_heading",
   "capture_heading",
   "capture_subtitle",
+  "capture_submit_text",
   "og_description",
 ] as const;
 
@@ -186,7 +187,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "bonus_intro_text",
       "share_message", "bonus_image_url", "bonus_unlocked_message", "status", "sio_share_tag_name", "locale",
       "ask_first_name", "ask_gender",
-      "address_form", "og_image_url", "og_description", "capture_heading", "capture_subtitle",
+      "address_form", "og_image_url", "og_description", "capture_heading", "capture_subtitle", "capture_submit_text",
       "capture_first_name", "capture_last_name", "capture_phone", "capture_country",
       "phone_required", "first_name_required", "last_name_required", "country_required",
       "show_other_results",

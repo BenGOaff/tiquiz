@@ -54,6 +54,7 @@ import { analyzeTies, type TieConflict } from "@/lib/quizTieAnalysis";
 import { stripHtml } from "@/lib/richText";
 import { isPixelFieldValid } from "@/lib/clientPixels";
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
+import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
 import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
@@ -121,7 +122,7 @@ type QuizData = {
   introduction: string | null; cta_text: string | null; cta_url: string | null;
   start_button_text: string | null;
   privacy_url: string | null; consent_text: string | null;
-  capture_heading: string | null; capture_subtitle: string | null;
+  capture_heading: string | null; capture_subtitle: string | null; capture_submit_text: string | null;
   result_insight_heading: string | null; result_projection_heading: string | null;
   address_form: string | null;
   capture_first_name: boolean | null; capture_last_name: boolean | null;
@@ -470,6 +471,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const [consentText, setConsentText] = useState("");
   const [captureHeading, setCaptureHeading] = useState("");
   const [captureSubtitle, setCaptureSubtitle] = useState("");
+  // Bouton submit du formulaire email — éditable WYSIWYG comme tout
+  // autre texte du quiz. NULL en DB tant qu'on ne le touche pas → le
+  // visiteur voit la string i18n par défaut (`previewCaptureSubmit`).
+  const [captureSubmitText, setCaptureSubmitText] = useState("");
   const [resultInsightHeading, setResultInsightHeading] = useState("");
   const [resultProjectionHeading, setResultProjectionHeading] = useState("");
   const [captureFirstName, setCaptureFirstName] = useState(false);
@@ -630,6 +635,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     consent_text: consentText,
     capture_heading: captureHeading,
     capture_subtitle: captureSubtitle,
+    capture_submit_text: captureSubmitText,
     result_insight_heading: resultInsightHeading,
     result_projection_heading: resultProjectionHeading,
     capture_first_name: captureFirstName,
@@ -673,7 +679,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     results: editResults,
   }), [
     title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
-    captureHeading, captureSubtitle, resultInsightHeading, resultProjectionHeading,
+    captureHeading, captureSubtitle, captureSubmitText, resultInsightHeading, resultProjectionHeading,
     captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
     showConsentCheckbox, showResultsBreakdown, showOtherResults,
@@ -708,6 +714,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     if (typeof s.consent_text === "string") setConsentText(s.consent_text);
     if (typeof s.capture_heading === "string") setCaptureHeading(s.capture_heading);
     if (typeof s.capture_subtitle === "string") setCaptureSubtitle(s.capture_subtitle);
+    if (typeof s.capture_submit_text === "string") setCaptureSubmitText(s.capture_submit_text);
     if (typeof s.result_insight_heading === "string") setResultInsightHeading(s.result_insight_heading);
     if (typeof s.result_projection_heading === "string") setResultProjectionHeading(s.result_projection_heading);
     if (typeof s.capture_first_name === "boolean") setCaptureFirstName(s.capture_first_name);
@@ -824,6 +831,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setStartButtonText(q.start_button_text ?? "");
       setPrivacyUrl(q.privacy_url ?? ""); setConsentText(q.consent_text ?? "");
       setCaptureHeading(q.capture_heading ?? ""); setCaptureSubtitle(q.capture_subtitle ?? "");
+      setCaptureSubmitText(q.capture_submit_text ?? "");
       setResultInsightHeading(q.result_insight_heading ?? ""); setResultProjectionHeading(q.result_projection_heading ?? "");
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
       setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
@@ -896,6 +904,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           consent_text: q.consent_text ?? "",
           capture_heading: q.capture_heading ?? "",
           capture_subtitle: q.capture_subtitle ?? "",
+          capture_submit_text: q.capture_submit_text ?? "",
           result_insight_heading: q.result_insight_heading ?? "",
           result_projection_heading: q.result_projection_heading ?? "",
           capture_first_name: q.capture_first_name ?? false,
@@ -1500,6 +1509,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           google_ads_conversion_id: googleAdsConversionId.trim() || null,
           google_ads_conversion_label: googleAdsConversionLabel.trim() || null,
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
+          capture_submit_text: captureSubmitText || null,
           result_insight_heading: resultInsightHeading.trim() || null,
           result_projection_heading: resultProjectionHeading.trim() || null,
           capture_first_name: captureFirstName, capture_last_name: captureLastName,
@@ -1956,13 +1966,31 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                   <p className="text-[10px] text-muted-foreground">{t("designFontPreviewHint")}</p>
                 </div>
                 <div className="space-y-3"><Label className="text-xs">{t("designColors")}</Label>
-                  <div className="flex items-center gap-2"><input type="color" value={primaryColor} onChange={e => setPrimaryColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">{t("designPrimaryColor")}</span></div>
-                  <div className="flex items-center gap-2"><input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)} className="w-8 h-8 rounded border cursor-pointer" /><span className="text-xs text-muted-foreground">{t("designBackgroundColor")}</span></div>
-                  {/* Palettes utilisateur — charte centralisée, dispo
-                      sur tous les éditeurs. La couleur courante prise
-                      en compte est la couleur primaire (le user peut
-                      tout de même cliquer un swatch sur l'autre input
-                      via le picker du bg ci-dessous). */}
+                  {/* Picker "à la systeme.io" — carré HSV + slider hue +
+                      hex input + palette curée + mes palettes personnelles.
+                      Beaucoup plus précis que <input type="color"> et
+                      surface les palettes branding enregistrées (un clic). */}
+                  <div className="flex items-center gap-2">
+                    <ColorSwatchPicker
+                      value={primaryColor}
+                      onChange={setPrimaryColor}
+                      label={t("designPrimaryColor")}
+                      userPalettes={savedPalettes}
+                    />
+                    <span className="text-xs text-muted-foreground">{t("designPrimaryColor")}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ColorSwatchPicker
+                      value={bgColor}
+                      onChange={setBgColor}
+                      label={t("designBackgroundColor")}
+                      userPalettes={savedPalettes}
+                    />
+                    <span className="text-xs text-muted-foreground">{t("designBackgroundColor")}</span>
+                  </div>
+                  {/* Palettes utilisateur — gestionnaire complet (créer,
+                      renommer, ajouter des swatches). Les swatches eux-mêmes
+                      sont déjà accessibles depuis les pickers ci-dessus. */}
                   {!isEmbed && (
                     <UserPalettePicker
                       currentColor={primaryColor}
@@ -2276,6 +2304,25 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         className="hidden"
                         onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBonusImageUpload(f); e.target.value = ""; }}
                       />
+                      {/* Génération IA (illustration via Studio, mêmes
+                          presets que la couverture) + bibliothèque GIFs.
+                          Surface uniquement tant qu'aucune image n'est
+                          posée — mêmes slots que l'upload. */}
+                      {!bonusImageUrl && (
+                        <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+                          <TiquizStudioButton
+                            intent={[titleForVisual(title), bonusDescription || stripHtml(cleanPlaceholdersForLabel(introduction))].filter(Boolean).join(" - ")}
+                            titleText={bonusDescription || titleForVisual(title)}
+                            contentId={`${quizId}-bonus`}
+                            label={t("introImageAi")}
+                            onApplyImage={(img) => setBonusImageUrl(img.url)}
+                          />
+                          <GifPickerButton
+                            label={t("introImageGif")}
+                            onPick={(url) => setBonusImageUrl(url)}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     <div>
@@ -2596,7 +2643,18 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       </div>
                     </div>
                   )}
-                  <button className="w-full max-w-md mx-auto block px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>{t("previewCaptureSubmit")}</button>
+                  {/* Bouton submit — éditable WYSIWYG comme tout le reste.
+                      Vide = string i18n par défaut côté visiteur (capture
+                      pour les quiz existants strictement préservée). */}
+                  <button className="w-full max-w-md mx-auto block min-h-[48px] h-auto px-8 py-3 rounded-full text-white font-semibold text-lg whitespace-normal leading-snug" style={{ backgroundColor: pc }}>
+                    <RichTextEdit
+                      value={captureSubmitText || t("previewCaptureSubmit")}
+                      onChange={setCaptureSubmitText}
+                      singleLine
+                      className="text-white font-semibold text-center w-full"
+                      placeholder={t("previewCaptureSubmit")}
+                    />
+                  </button>
                 </div>
               </div>
 
@@ -2606,12 +2664,55 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                   (networks, Systeme.io tag, consent) remain in the sidebar
                   Share tab. */}
               {viralityEnabled && (
-                <div ref={bonusRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
-                  <div className="max-w-lg w-full space-y-6 text-center">
-                    <div className="flex justify-center">
-                      <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: `${pc}15`, color: pc }}>
-                        <Gift className="w-7 h-7" />
-                      </div>
+                <div ref={bonusRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-20">
+                  <div className="max-w-lg w-full space-y-10 text-center">
+                    {/* Hero visuel — bonus image (IA, GIF ou upload) si
+                        configurée ; sinon icône cadeau de marque. Cliquer
+                        ouvre l'upload, et les boutons IA / GIF sont
+                        accessibles juste en dessous tant qu'aucune image
+                        n'est posée. */}
+                    <div className="flex flex-col items-center gap-3">
+                      {bonusImageUrl ? (
+                        <button
+                          type="button"
+                          onClick={() => bonusImageInputRef.current?.click()}
+                          disabled={uploadingBonusImage}
+                          className="group relative rounded-2xl overflow-hidden border bg-white shadow-sm hover:shadow transition"
+                          title={t("bonusImageClickHint")}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={bonusImageUrl} alt={t("bonusImageAlt")} className="block max-h-64 w-auto object-contain" />
+                          <span className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white text-[10px] px-2 py-1 rounded">
+                            {uploadingBonusImage ? t("uploading") : t("bonusImageClickHint")}
+                          </span>
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => bonusImageInputRef.current?.click()}
+                            disabled={uploadingBonusImage}
+                            className="w-20 h-20 rounded-full flex items-center justify-center hover:scale-105 transition-transform"
+                            style={{ backgroundColor: `${pc}15`, color: pc }}
+                            title={t("addBonusVisual")}
+                          >
+                            <Gift className="w-10 h-10" />
+                          </button>
+                          <div className="flex flex-wrap items-center justify-center gap-2">
+                            <TiquizStudioButton
+                              intent={[titleForVisual(title), bonusDescription || stripHtml(cleanPlaceholdersForLabel(introduction))].filter(Boolean).join(" - ")}
+                              titleText={bonusDescription || titleForVisual(title)}
+                              contentId={`${quizId}-bonus`}
+                              label={t("introImageAi")}
+                              onApplyImage={(img) => setBonusImageUrl(img.url)}
+                            />
+                            <GifPickerButton
+                              label={t("introImageGif")}
+                              onPick={(url) => setBonusImageUrl(url)}
+                            />
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     <h2 className="text-2xl sm:text-4xl font-bold leading-tight">
@@ -2622,29 +2723,12 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     </p>
 
                     {/* Bonus card — image + description are inline-editable */}
+                    {/* Bonus card — l'image vit désormais dans le hero
+                        ci-dessus (cadeau si vide, image IA/GIF/upload si
+                        configurée). La card ne porte plus que les textes
+                        éditables : description, message override avant /
+                        après partage. */}
                     <div className="rounded-xl border p-5 bg-muted/20 space-y-4 text-left">
-                      <button
-                        type="button"
-                        onClick={() => bonusImageInputRef.current?.click()}
-                        disabled={uploadingBonusImage}
-                        className="group w-full rounded-lg border-2 border-dashed border-border hover:border-primary/40 transition-colors overflow-hidden relative"
-                        title={bonusImageUrl ? t("bonusImageClickHint") : undefined}
-                      >
-                        {bonusImageUrl ? (
-                          <>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={bonusImageUrl} alt={t("bonusImageAlt")} className="w-full max-h-56 object-contain bg-white" />
-                            <span className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 text-white text-[10px] px-2 py-1 rounded">
-                              {uploadingBonusImage ? t("uploading") : t("bonusImageClickHint")}
-                            </span>
-                          </>
-                        ) : (
-                          <div className="py-10 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
-                            <Plus className="w-5 h-5" />
-                            <span className="text-xs font-medium">{uploadingBonusImage ? t("uploading") : t("addBonusVisual")}</span>
-                          </div>
-                        )}
-                      </button>
                       <RichTextEdit
                         value={bonusDescription}
                         onChange={setBonusDescription}
@@ -2968,8 +3052,11 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         onDrop={() => { updateResultImagePosition(ri, "bottom"); setDraggingResultImageRi(null); }} />
                     )}
                     <div className="space-y-2">
-                      <button className="w-full px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>
-                        <RichTextEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} onGenderize={genderize} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-white font-semibold text-center" placeholder={t("previewResultCtaPh")} />
+                      {/* CTA button — `whitespace-normal leading-snug`
+                          so a longer CTA wraps gracefully instead of
+                          overflowing the rounded button. */}
+                      <button className="w-full min-h-[48px] h-auto px-8 py-3 rounded-full text-white font-semibold text-lg whitespace-normal leading-snug" style={{ backgroundColor: pc }}>
+                        <RichTextEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} onGenderize={genderize} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-white font-semibold text-center w-full" placeholder={t("previewResultCtaPh")} />
                       </button>
                       <InlineEdit value={r.cta_url ?? ctaUrl ?? ""} onChange={(v) => updateR(ri, "cta_url", v || null)} className="text-xs text-muted-foreground text-center" placeholder={t("previewResultCtaUrlPh")} />
                     </div>

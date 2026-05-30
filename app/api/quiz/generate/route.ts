@@ -11,6 +11,7 @@ import {
   buildSurveyGenerationPrompt,
   buildSurveyImportPrompt,
 } from "@/lib/prompts/quiz/system";
+import { sanitizeAiQuizPayload } from "@/lib/aiTextSanitizer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -280,7 +281,13 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        sendSSE("result", { ok: true, quiz });
+        // Strip residual AI tics (em dashes used in incise, decorative
+        // emojis, double-spaces) before handing the payload to the editor.
+        // Belt-and-suspenders on top of NATURAL_WRITING_BLOCK in the prompt.
+        const cleanedQuiz = quiz && typeof quiz === "object"
+          ? sanitizeAiQuizPayload(quiz as Record<string, unknown>)
+          : quiz;
+        sendSSE("result", { ok: true, quiz: cleanedQuiz });
       } catch (e) {
         console.error("[quiz/generate] SSE stream error:", e);
         sendSSE("error", { ok: false, error: e instanceof Error ? e.message : "Unknown error" });

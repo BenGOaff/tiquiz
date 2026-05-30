@@ -14,6 +14,7 @@
 
 import { NextRequest } from "next/server";
 import { buildQuizGenerationPrompt } from "@/lib/prompts/quiz/system";
+import { sanitizeAiQuizPayload } from "@/lib/aiTextSanitizer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { corsHeaders, preflight } from "@/lib/embed/cors";
 import { checkRateLimit, clientIp, hashIp } from "@/lib/embed/rateLimit";
@@ -263,6 +264,13 @@ export async function POST(req: NextRequest) {
         } catch {
           sse("error", { ok: false, error: "JSON IA invalide. Réessaie." });
           return;
+        }
+
+        // Strip residual AI tics (em dashes, decorative emojis…) before
+        // materializing the draft. Mirrors the post-process applied in
+        // /api/quiz/generate so embed flow keeps parity.
+        if (quiz && typeof quiz === "object") {
+          quiz = sanitizeAiQuizPayload(quiz as Record<string, unknown>);
         }
 
         // Materialize the AI draft as a REAL anonymous quiz row

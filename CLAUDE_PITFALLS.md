@@ -467,7 +467,71 @@ Les visuels Tiquiz servent à ILLUSTRER (pas de pub stop-scroll) :
 - Appels : passer `titleText` (titre résultat / texte option / titre quiz) en plus
   d'`intent` (contexte plus riche pour l'image IA).
 
-### AK ter) Studio : plus de logo auto → overlay image/logo libre (juin 2026)
+### AL) Anti-IA : NATURAL_WRITING_BLOCK + sanitizer post-process (30 mai 2026)
+
+Toute génération / réécriture IA doit respecter les règles anti-IA (pas de
+tiret cadratin, pas de "ce n'est pas X c'est Y", pas de verbes brochure,
+pas d'emojis déco). Deux niveaux :
+
+1. **Prompt** : injecter `NATURAL_WRITING_BLOCK` (`lib/prompts/quiz/system.ts`)
+   dans chaque `system` prompt qui produit du texte final visible (génération
+   quiz, génération sondage, import quiz, import sondage, rewrite ✨).
+2. **Post-process** : `sanitizeAiText(s)` / `sanitizeAiQuizPayload(payload)`
+   (`lib/aiTextSanitizer.ts`) — strip em dashes en incise, emojis déco
+   leaders, collapse double-spaces. **Belt-and-suspenders** : les prompts
+   leakent encore parfois.
+
+Routes actuellement câblées (Tiquiz + Tipote miroir) :
+- `/api/quiz/generate` (génération + sondage) → `sanitizeAiQuizPayload`
+- `/api/quiz/[id]/rewrite` → `sanitizeAiText` sur chaque proposal
+- `/api/embed/quiz/generate` (Tiquiz) → `sanitizeAiQuizPayload`
+- `/api/quiz/import` (Tipote) → `sanitizeAiQuizPayload`
+
+Si je crée une **nouvelle route IA qui produit du texte visible** :
+1. Importer `NATURAL_WRITING_BLOCK` + l'injecter dans le system prompt.
+2. Importer `sanitizeAiText` ou `sanitizeAiQuizPayload` + l'appliquer
+   AVANT de renvoyer au client.
+
+Le format CTA est aussi cappé à 3-6 mots dans le system prompt de
+génération quiz (le modèle générait sinon des phrases longues qui
+débordaient du bouton).
+
+## AM) Bouton submit du formulaire email = WYSIWYG (30 mai 2026)
+
+Colonne `quizzes.capture_submit_text` (rich-text HTML, NULL = fallback
+i18n). Visible / éditable dans le preview du quiz à la place du `<button>`
+hardcodé "Voir mes résultats" / "Accéder aux résultats".
+
+Migrations :
+- Tiquiz : `supabase/migrations/20260530_quizzes_capture_submit_text.sql`
+- Tipote : `supabase/migrations/20260603_quizzes_capture_submit_text.sql`
+
+7 endroits touchés (cf. section A) : migration, PATCH whitelist, public
+SELECT chain, FR_KEYS interpolation, editor state (load + save +
+autosave snapshot deps), visitor render dans `PublicQuizClient.tsx`.
+
+Côté visiteur : si `capture_submit_text` est null/vide → string i18n
+par défaut (comportement strict des quiz existants préservé). Sinon →
+`<span className="(tipote|tiquiz)-quiz-rich tipote-quiz-rich-inline block w-full">`
+avec sanitizeRichText + interp (text-align center / left / right du
+RichText utilisateur propagé via `block w-full`).
+
+## AN) CTA résultat : `block w-full` sur le span sinon text-align ignoré (30 mai 2026)
+
+`PublicQuizClient.tsx` rend chaque CTA dans un `<Button>` avec une
+`<span className="tiquiz-rich" ...>`. Sans `block w-full`, le span reste
+inline → la `text-align: center / left / right` posée par RichTextEdit
+dans l'HTML interne (style="text-align: center" sur un `<p>` / `<div>`)
+n'a aucun effet, et le visiteur voit toujours le CTA aligné à gauche.
+
+Fix : `<span className="tiquiz-rich block w-full" ...>`. Mêmes locations
+sur l'écran de résultat (quiz + sondage) ET pour le bouton submit du
+formulaire email.
+
+CSS dans `globals.css` matche déjà `[style*="text-align: center"]`,
+donc rien à toucher côté styles.
+
+## AK ter) Studio : plus de logo auto → overlay image/logo libre (juin 2026)
 - Le logo AUTOMATIQUE est désactivé (`showLogo` défaut false, état conservé mais
   plus d'UI position/taille). L'effet logo de StudioCanvas reste dormant.
 - Nouvelle méthode `addImage(url)` sur le handle StudioCanvas : ajoute une

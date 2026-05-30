@@ -104,6 +104,7 @@ type PublicQuizData = {
   address_form?: string | null;
   capture_heading: string | null;
   capture_subtitle: string | null;
+  capture_submit_text: string | null;
   result_insight_heading?: string | null;
   result_projection_heading?: string | null;
   capture_first_name?: boolean | null;
@@ -2261,7 +2262,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
 
             <Button
               size="lg"
-              className="w-full h-12 text-base rounded-full"
+              className="w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug"
               onClick={handleSubmitEmail}
               disabled={
                 submitting ||
@@ -2272,9 +2273,20 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
               }
             >
               {submitting ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                <Loader2 className="w-4 h-4 animate-spin mr-2 shrink-0" />
               ) : null}
-              {t.viewResult}
+              {/* Bouton submit — surcharge rich-text par quiz si la
+                  créatrice a saisi quelque chose, sinon la string i18n
+                  par défaut. Le span block w-full laisse text-align
+                  (left / center / right) du RichText utilisateur prendre. */}
+              {quiz.capture_submit_text && stripHtml(quiz.capture_submit_text).trim() ? (
+                <span
+                  className="tiquiz-rich tiquiz-rich-inline block w-full"
+                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.capture_submit_text)) }}
+                />
+              ) : (
+                t.viewResult
+              )}
             </Button>
 
             {submitError && (
@@ -2319,12 +2331,26 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         style={rootStyle}
       >
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
-        <div className="max-w-lg w-full py-12 sm:py-16 space-y-6">
-          <div className="text-center space-y-3">
+        <div className="max-w-lg w-full py-16 sm:py-20 space-y-10">
+          <div className="text-center space-y-4">
+            {/* Hero visuel — image bonus (IA, GIF ou upload) si configurée,
+                sinon l'icône cadeau de marque. Le créateur choisit dans
+                l'éditeur quelle "tête" porter sur l'écran de partage. */}
             <div className="flex justify-center">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <Gift className="w-8 h-8 text-primary" />
-              </div>
+              {quiz.bonus_image_url ? (
+                <div className="rounded-2xl overflow-hidden border bg-white shadow-sm">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={quiz.bonus_image_url}
+                    alt=""
+                    className="block max-h-64 w-auto object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Gift className="w-10 h-10 text-primary" />
+                </div>
+              )}
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold leading-tight">
               {t.bonusStepHeading}
@@ -2340,17 +2366,6 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
               </p>
             )}
           </div>
-
-          {quiz.bonus_image_url && (
-            <div className="flex justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={quiz.bonus_image_url}
-                alt=""
-                className="max-w-full max-h-64 rounded-xl shadow-sm object-contain"
-              />
-            </div>
-          )}
 
           {!hasShared ? (
             <div className="space-y-3">
@@ -2512,7 +2527,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
             >
               <a href={ensureExternalUrl(ctaUrl)} target="_blank" rel="noopener noreferrer">
                 <span
-                  className="tiquiz-rich"
+                  className="tiquiz-rich block w-full"
                   dangerouslySetInnerHTML={{ __html: sanitizeRichText(ctaText) }}
                 />
               </a>
