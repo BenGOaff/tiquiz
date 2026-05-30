@@ -1032,6 +1032,8 @@
     "designChange": "تغيير",
     "designRemove": "إزالة",
     "designAddLogo": "أضف شعاري",
+    "introImageAi": "إنشاء (IA)",
+    "introImageGif": "GIF",
     "designLogoShared": "تم التغيير هنا: يُطبَّق على هذا الاختبار فقط. شعار ملفك الشخصي يبقى كما هو.",
     "designLogoFromProfile": "يتم استخدام شعار ملفك الشخصي.",
     "designLogoOverride": "شعار خاص بهذا الاختبار.",

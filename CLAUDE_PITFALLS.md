@@ -531,6 +531,26 @@ formulaire email.
 CSS dans `globals.css` matche déjà `[style*="text-align: center"]`,
 donc rien à toucher côté styles.
 
+## AP) AVANT d'écrire `t("...")` : grep la clé dans messages/fr.json (30 mai 2026)
+
+Bug Adeline (30 mai 2026) : screenshot avec "quizEditor.introImageAi" et
+"quizEditor.introImageGif" affichés RAW à côté de l'icône cadeau. Cause :
+j'ai écrit `label={t("introImageAi")}` côté Tiquiz sans vérifier que la
+clé existait dans le namespace `quizEditor` — elle existait sur Tipote
+(namespace `quizDetail`) mais pas sur Tiquiz.
+
+**Règle absolue** : avant d'introduire `t("foo.bar")` ou `t("foo")` dans
+un composant, faire :
+```
+grep -n "\"foo\"" messages/fr.json
+```
+Si la clé n'existe pas → AJOUTER dans **les 7 locales** (fr / en / es /
+pt / pt-BR / it / ar) AVANT de commit. Tipote a 7 locales aussi.
+
+Hint visuel : le rendu `quizEditor.foo` (le namespace préfixé) côté UI
+est le canari "clé manquante". Si je le vois en preview, je grep
+immédiatement.
+
 ## AO) Logo : override par quiz via quizzes.brand_logo_url + hide_brand_logo (30 mai 2026)
 
 Avant : le logo vivait UNIQUEMENT sur `profiles.brand_logo_url` (Tiquiz)

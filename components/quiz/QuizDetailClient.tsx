@@ -2510,11 +2510,11 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         intent={[titleForVisual(title), stripHtml(cleanPlaceholdersForLabel(introduction))].filter(Boolean).join(" — ")}
                         titleText={titleForVisual(title)}
                         contentId={quizId}
-                        label="Générer (IA)"
+                        label={t("introImageAi")}
                         onApplyImage={(img) => { setIntroImageUrl(img.url); setIntroImagePosition("top"); }}
                       />
                       <GifPickerButton
-                        label="GIF"
+                        label={t("introImageGif")}
                         onPick={(url) => { setIntroImageUrl(url); setIntroImagePosition("top"); }}
                       />
                     </div>

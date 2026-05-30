@@ -1032,6 +1032,8 @@
     "designChange": "Cambia",
     "designRemove": "Rimuovi",
     "designAddLogo": "Aggiungi il mio logo",
+    "introImageAi": "Genera (IA)",
+    "introImageGif": "GIF",
     "designLogoShared": "Modificato qui: si applica solo a questo quiz. Il logo del profilo resta invariato.",
     "designLogoFromProfile": "Stai usando il logo del profilo.",
     "designLogoOverride": "Logo specifico per questo quiz.",
