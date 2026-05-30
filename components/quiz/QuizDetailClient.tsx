@@ -1753,7 +1753,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               preview canvas drives it). Plain-text rendering here
               would surface the raw markup — strip tags before
               showing it in the chrome. */}
-          <span className="font-semibold text-sm truncate max-w-[200px]">
+          <span className="font-semibold text-sm truncate max-w-[120px] sm:max-w-[200px]">
             {stripHtml(title) || t("titleFallback")}
           </span>
         </div>
@@ -1764,7 +1764,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
             </button>
           ))}
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Readiness ring — passive nudge showing how close the project
               is to publishable. Hidden once the quiz is already
               published: the score is a pre-publish gauge, not a quality
@@ -1809,8 +1809,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               {t("autosaveSaving")}
             </span>
           ) : null)}
-          <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}{saving ? "" : t("save")}
+          {/* Sur mobile : Save réduit à son icône (l'autosave couvre déjà la
+              sauvegarde) pour laisser la place au bouton Publier. Desktop intact. */}
+          <Button size="sm" variant="outline" onClick={handleSave} disabled={saving} className="shrink-0 px-2 sm:px-3">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 sm:mr-1" />}<span className="hidden sm:inline">{saving ? "" : t("save")}</span>
           </Button>
           {isEmbed && (
             // 'Aperçu' button: opens the public quiz player in a new
@@ -1841,10 +1843,23 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               {uiLocale === "en" ? "Unlock Tiquiz →" : "Débloquer Tiquiz →"}
             </Button>
           ) : (
-            <Button size="sm" onClick={handleToggleStatus}>{status === "active" ? t("deactivate") : t("publish")}</Button>
+            <Button size="sm" onClick={handleToggleStatus} className="shrink-0">{status === "active" ? t("deactivate") : t("publish")}</Button>
           )}
         </div>
       </header>
+      {/* Onglets en 2e ligne sur MOBILE uniquement : la nav d'onglets de l'en-tête
+          est `hidden sm:flex` (donc absente sur téléphone), ce qui empêchait
+          d'atteindre l'onglet Partager (le lien) et masquait le parcours. Ici on
+          la réaffiche en pleine largeur sous l'en-tête, < sm seulement. */}
+      {!isEmbed && (
+        <nav className="sm:hidden flex items-stretch border-b shrink-0 bg-background z-10">
+          {(["create","share","results"] as const).map(tab => (
+            <button key={tab} onClick={() => setMainTab(tab)} className={`flex-1 px-2 py-2.5 text-sm font-medium transition-colors inline-flex items-center justify-center gap-1.5 ${mainTab === tab ? "text-foreground border-b-2 border-primary" : "text-muted-foreground"}`}>
+              {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : <><Eye className="w-3.5 h-3.5" />{t("tabResults")}</>}
+            </button>
+          ))}
+        </nav>
+      )}
 
       {/* MAIN: CRÉER TAB */}
       {mainTab === "create" && (

@@ -1150,7 +1150,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-background z-10">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild><Link href="/dashboard"><ArrowLeft className="w-5 h-5" /></Link></Button>
-          <span className="font-semibold text-sm truncate max-w-[200px]">{title || t("titleFallback")}</span>
+          <span className="font-semibold text-sm truncate max-w-[120px] sm:max-w-[200px]">{title || t("titleFallback")}</span>
         </div>
         <nav className="hidden sm:flex items-center bg-muted rounded-lg p-0.5">
           {(["create","share","trends"] as const).map(tab => (
@@ -1159,7 +1159,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             </button>
           ))}
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Readiness ring — passive nudge for surveys (mode='survey'
               tweaks the checks: thank-you CTA replaces result profiles). */}
           {/* Pre-publish readiness gauge only — once the survey is
@@ -1192,9 +1192,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             variant="outline"
             onClick={() => window.open(previewUrl, "_blank", "noopener")}
             title={locale === "en" ? "Open in preview mode (no response recorded)" : "Ouvrir en mode aperçu (aucune réponse enregistrée)"}
+            className="shrink-0 px-2 sm:px-3"
           >
-            <Eye className="w-4 h-4 mr-1" />
-            {locale === "en" ? "Preview" : "Aperçu"}
+            <Eye className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">{locale === "en" ? "Preview" : "Aperçu"}</span>
           </Button>
           {savingDraft && (
             <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
@@ -1202,12 +1203,24 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               {t("autosaveSaving")}
             </span>
           )}
-          <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}{saving ? "" : t("save")}
+          {/* Mobile : Save en icône seule (autosave couvre déjà la sauvegarde)
+              pour garder Publier visible. Desktop inchangé. */}
+          <Button size="sm" variant="outline" onClick={handleSave} disabled={saving} className="shrink-0 px-2 sm:px-3">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 sm:mr-1" />}<span className="hidden sm:inline">{saving ? "" : t("save")}</span>
           </Button>
-          <Button size="sm" onClick={handleToggleStatus}>{status === "active" ? t("deactivate") : t("publish")}</Button>
+          <Button size="sm" onClick={handleToggleStatus} className="shrink-0">{status === "active" ? t("deactivate") : t("publish")}</Button>
         </div>
       </header>
+      {/* Onglets en 2e ligne sur MOBILE : la nav d'en-tête est `hidden sm:flex`
+          (absente sur téléphone) → on la réaffiche pleine largeur sous l'en-tête
+          pour atteindre Partager (le lien) + Tendances. < sm seulement. */}
+      <nav className="sm:hidden flex items-stretch border-b shrink-0 bg-background z-10">
+        {(["create","share","trends"] as const).map(tab => (
+          <button key={tab} onClick={() => setMainTab(tab)} className={`flex-1 px-2 py-2.5 text-sm font-medium transition-colors inline-flex items-center justify-center gap-1.5 ${mainTab === tab ? "text-foreground border-b-2 border-primary" : "text-muted-foreground"}`}>
+            {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : <><TrendingUp className="w-3.5 h-3.5" />{t("tabTrends")}</>}
+          </button>
+        ))}
+      </nav>
 
       {/* MAIN: CRÉER TAB */}
       {mainTab === "create" && (
