@@ -145,6 +145,10 @@ type QuizData = {
   share_message: string | null; locale: string | null;
   sio_share_tag_name: string | null;
   brand_font: string | null; brand_color_primary: string | null; brand_color_background: string | null;
+  brand_logo_url: string | null;
+  hide_brand_logo: boolean | null;
+  capture_enabled: boolean | null;
+  show_aggregate_responses: boolean | null;
   share_networks: string[] | null; og_description: string | null; og_image_url: string | null;
   custom_footer_text: string | null; custom_footer_url: string | null;
   status: string; views_count: number; starts_count: number;
@@ -402,9 +406,28 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [customFooterText, setCustomFooterText] = useState("");
   const [customFooterUrl, setCustomFooterUrl] = useState("");
   const [shareNetworks, setShareNetworks] = useState<ShareNetwork[]>([]);
+  // brandLogoUrl = logo du PROFIL (source de vérité globale, partagée
+  // entre tous les contenus). Reste piloté par /api/profile. Pour un
+  // override par sondage (cas "je crée un sondage pour un client" ou
+  // "je veux pas de logo sur celui-ci"), voir quizBrandLogoUrl +
+  // hideBrandLogo plus bas.
   const [brandLogoUrl, setBrandLogoUrl] = useState<string | null>(null);
+  // Override par sondage. NULL = on hérite du logo profil. URL = on a
+  // posé un logo SPÉCIFIQUE à ce sondage. Sauvegardé dans
+  // quizzes.brand_logo_url.
+  const [quizBrandLogoUrl, setQuizBrandLogoUrl] = useState<string | null>(null);
+  // Si TRUE, masque tout logo sur ce sondage (ni override, ni profil).
+  // Sauvegardé dans quizzes.hide_brand_logo. Default FALSE (compat).
+  const [hideBrandLogo, setHideBrandLogo] = useState<boolean>(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  // Capture lead activée — si FALSE, le visiteur saute l'étape email
+  // après la dernière question et accède directement au remerciement.
+  // Default TRUE pour préserver le comportement des sondages existants.
+  const [captureEnabled, setCaptureEnabled] = useState<boolean>(true);
+  // Si TRUE, on affiche les pourcentages de réponses des autres
+  // participants sur la page de remerciement. Default FALSE.
+  const [showAggregateResponses, setShowAggregateResponses] = useState<boolean>(false);
   const [profile, setProfile] = useState<ProfileBrand | null>(null);
   // Palettes utilisateur (charte centralisée — partagée avec quiz et popquiz).
   const [savedPalettes, setSavedPalettes] = useState<PaletteList>([]);
@@ -486,6 +509,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     brand_font: fontFamily,
     brand_color_primary: primaryColor,
     brand_color_background: bgColor,
+    brand_logo_url: quizBrandLogoUrl,
+    hide_brand_logo: hideBrandLogo,
+    capture_enabled: captureEnabled,
+    show_aggregate_responses: showAggregateResponses,
     slug,
     og_description: ogDescription,
     og_image_url: ogImageUrl,
@@ -502,7 +529,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     showConsentCheckbox, metaPixelId, ga4MeasurementId, googleAdsConversionId,
     googleAdsConversionLabel, askFirstName, askGender,
     shareMessage, locale, sioShareTagName, status,
-    fontFamily, primaryColor, bgColor,
+    fontFamily, primaryColor, bgColor, quizBrandLogoUrl, hideBrandLogo,
+    captureEnabled, showAggregateResponses,
     slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
     editQuestions, introImageUrl,
   ]);
@@ -549,6 +577,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     }
     if (typeof s.brand_color_primary === "string") setPrimaryColor(s.brand_color_primary);
     if (typeof s.brand_color_background === "string") setBgColor(s.brand_color_background);
+    if (s.brand_logo_url === null || typeof s.brand_logo_url === "string") setQuizBrandLogoUrl(s.brand_logo_url);
+    if (typeof s.hide_brand_logo === "boolean") setHideBrandLogo(s.hide_brand_logo);
+    if (typeof s.capture_enabled === "boolean") setCaptureEnabled(s.capture_enabled);
+    if (typeof s.show_aggregate_responses === "boolean") setShowAggregateResponses(s.show_aggregate_responses);
     if (typeof s.slug === "string") setSlug(s.slug);
     if (typeof s.og_description === "string") setOgDescription(s.og_description);
     if (s.og_image_url === null || typeof s.og_image_url === "string") setOgImageUrl(s.og_image_url);
@@ -650,7 +682,14 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setFontFamily(resolvedFont);
       setPrimaryColor(q.brand_color_primary || prof?.brand_color_primary || DEFAULT_BRAND_COLOR_PRIMARY);
       setBgColor(q.brand_color_background || DEFAULT_BRAND_COLOR_BACKGROUND);
+      setQuizBrandLogoUrl((q as { brand_logo_url?: string | null }).brand_logo_url ?? null);
+      setHideBrandLogo((q as { hide_brand_logo?: boolean | null }).hide_brand_logo === true);
       setBrandLogoUrl(prof?.brand_logo_url ?? null);
+      // Default TRUE (compat) : sondages existants conservent l'étape
+      // email. NULL en base = TRUE côté éditeur (la migration default
+      // est TRUE, mais ceinture+bretelle).
+      setCaptureEnabled((q as { capture_enabled?: boolean | null }).capture_enabled !== false);
+      setShowAggregateResponses((q as { show_aggregate_responses?: boolean | null }).show_aggregate_responses === true);
       const rawPalettes = (prof?.saved_palettes ?? []) as unknown;
       setSavedPalettes(Array.isArray(rawPalettes) ? (rawPalettes as PaletteList) : []);
       // Restauration de draft (autosave) — même logique que
@@ -668,6 +707,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     } catch { toast.error(t("errLoading")); } finally { setLoading(false); }
   }, [quizId, router, t]);
   useEffect(() => { fetchQuiz(); }, [fetchQuiz]);
+
+  // Logo effectif rendu dans le preview : override sondage > logo profil,
+  // null si masqué. Mirroir de QuizDetailClient.effectiveLogoUrl.
+  const effectiveLogoUrl: string | null = hideBrandLogo ? null : (quizBrandLogoUrl || brandLogoUrl || null);
 
   // Dynamic Google Font link in preview (same mechanism as public page → true WYSIWYG)
   useEffect(() => {
@@ -800,8 +843,12 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     else toast.warning(t("genderizeAllPartial", { done, total: queue.length }));
   }, [bulkGenderizing, editQuestions, editResults, locale, t]);
 
-  // Logo upload (reuses public-assets bucket, same layout as SettingsClient)
-  async function handleLogoUpload(file: File) {
+  // Logo upload. `scope` détermine si on touche au logo GLOBAL (profil)
+  // ou seulement au logo POUR CE SONDAGE (override). Par défaut "quiz" :
+  // l'éditeur sondage est l'endroit où on overrider sans toucher au
+  // profil (cas "sondage pour un client"). Le bouton SettingsClient
+  // reste sur scope="profile" pour le logo global.
+  async function handleLogoUpload(file: File, scope: "quiz" | "profile" = "quiz") {
     if (!file.type.startsWith("image/")) { toast.error(t("errImageOnly")); return; }
     if (file.size > 2 * 1024 * 1024) { toast.error(t("errImageTooLarge2")); return; }
     setUploadingLogo(true);
@@ -810,18 +857,30 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error(t("errNotSignedIn")); return; }
       const ext = file.name.split(".").pop() ?? "png";
-      const path = `logos/${user.id}/logo.${ext}`;
+      // Path différent par scope pour ne pas écraser le logo de profil
+      // quand on upload un logo override pour un sondage spécifique.
+      const path = scope === "profile"
+        ? `logos/${user.id}/logo.${ext}`
+        : `logos/${user.id}/quiz-${quizId}.${ext}`;
       const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       const publicUrl = urlData.publicUrl;
-      // Persist at the profile level (single source of truth) + optimistic UI
-      await fetch("/api/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brand_logo_url: publicUrl }),
-      });
-      setBrandLogoUrl(publicUrl);
+      if (scope === "profile") {
+        // Persist at the profile level (single source of truth) + optimistic UI
+        await fetch("/api/profile", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ brand_logo_url: publicUrl }),
+        });
+        setBrandLogoUrl(publicUrl);
+      } else {
+        // Override sondage-only — autosave PATCH gère la persistance sur
+        // quizzes.brand_logo_url + on désactive le toggle hide pour
+        // éviter qu'un user clique "hide" puis "upload" et ne voie rien.
+        setQuizBrandLogoUrl(publicUrl);
+        setHideBrandLogo(false);
+      }
       toast.success(t("logoUploaded"));
     } catch (err) {
       console.error("Logo upload failed:", err);
@@ -955,6 +1014,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           sio_share_tag_name: sioShareTagName || null, status,
           // Branding
           brand_font: fontFamily, brand_color_primary: primaryColor, brand_color_background: bgColor,
+          brand_logo_url: quizBrandLogoUrl, hide_brand_logo: hideBrandLogo,
+          // Sondage : options de capture et d'affichage agrégé
+          capture_enabled: captureEnabled,
+          show_aggregate_responses: showAggregateResponses,
           // Share + SEO
           slug: slug.trim() ? cleanedSlug : null,
           og_description: ogDescription.trim() || null,
@@ -1302,15 +1365,68 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs">{t("designLogo")}</Label>
-                  {brandLogoUrl ? (
+                  {/* Trois états (mirroir QuizDetailClient) :
+                      • hideBrandLogo TRUE → aucun logo, zone "Logo masqué"
+                        + bouton réactiver.
+                      • Un override sondage (quizBrandLogoUrl) → override
+                        visible + bouton revenir au logo profil.
+                      • Sinon → logo profil (fallback) ; bouton "Utiliser un
+                        autre logo pour ce sondage" + "Masquer". Pas de
+                        bouton "Supprimer" qui effaçait le logo profil. */}
+                  {hideBrandLogo ? (
+                    <div className="space-y-2">
+                      <div className="rounded border border-dashed bg-muted/20 p-3 text-center text-[11px] text-muted-foreground">
+                        {t("designLogoHidden")}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setHideBrandLogo(false)}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        {t("designLogoShow")}
+                      </button>
+                    </div>
+                  ) : quizBrandLogoUrl ? (
                     <div className="space-y-2">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={brandLogoUrl} alt="Logo" className="max-h-16 w-auto object-contain rounded border bg-white p-1" />
-                      <div className="flex items-center gap-2">
+                      <img src={quizBrandLogoUrl} alt="Logo" className="max-h-16 w-auto object-contain rounded border bg-white p-1" />
+                      <p className="text-[10px] text-primary">{t("designLogoOverride")}</p>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <button type="button" onClick={() => logoInputRef.current?.click()} className="text-xs text-primary hover:underline" disabled={uploadingLogo}>
                           {uploadingLogo ? t("designUploading") : t("designChange")}
                         </button>
-                        <button type="button" onClick={async () => { await fetch("/api/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ brand_logo_url: null }) }); setBrandLogoUrl(null); }} className="text-xs text-destructive hover:underline">{t("designRemove")}</button>
+                        <button
+                          type="button"
+                          onClick={() => setQuizBrandLogoUrl(null)}
+                          className="text-xs text-muted-foreground hover:underline"
+                        >
+                          {t("designLogoResetProfile")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setHideBrandLogo(true)}
+                          className="text-xs text-destructive hover:underline"
+                        >
+                          {t("designLogoHide")}
+                        </button>
+                      </div>
+                    </div>
+                  ) : brandLogoUrl ? (
+                    <div className="space-y-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={brandLogoUrl} alt="Logo" className="max-h-16 w-auto object-contain rounded border bg-white p-1" />
+                      <p className="text-[10px] text-muted-foreground">{t("designLogoFromProfile")}</p>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <button type="button" onClick={() => logoInputRef.current?.click()} className="text-xs text-primary hover:underline" disabled={uploadingLogo}>
+                          {uploadingLogo ? t("designUploading") : t("designLogoUseDifferent")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setHideBrandLogo(true)}
+                          className="text-xs text-destructive hover:underline"
+                        >
+                          {t("designLogoHide")}
+                        </button>
                       </div>
                     </div>
                   ) : (
@@ -1324,7 +1440,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); e.target.value = ""; }}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f, "quiz"); e.target.value = ""; }}
                   />
                   <p className="text-[10px] text-muted-foreground">{t("designLogoShared")}</p>
                 </div>
@@ -1336,6 +1452,17 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     <h3 className="text-sm font-semibold">{t("captureFormTitle")}</h3>
                     <p className="text-[11px] text-muted-foreground leading-snug">{t("captureFormHint")}</p>
                   </div>
+                  {/* Capture entièrement optionnelle (Adeline, 30 mai 2026) :
+                      certains sondages sont publics/anonymes, l'auteur veut
+                      sauter l'email + champs et envoyer direct au
+                      remerciement après la dernière question. */}
+                  <SettingsToggle
+                    label={t("surveyCaptureEnabledLabel")}
+                    hint={t("surveyCaptureEnabledHint")}
+                    checked={captureEnabled}
+                    onChange={setCaptureEnabled}
+                  />
+                  {captureEnabled && (<>
                   <div className="flex flex-wrap gap-1.5">
                     <CapturePill label={t("fieldEmailRequired")} active locked />
                     <CapturePill label={t("fieldFirstNameRequired")} active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />
@@ -1393,6 +1520,25 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     hint={t("showConsentCheckboxHint")}
                     checked={showConsentCheckbox}
                     onChange={setShowConsentCheckbox}
+                  />
+                  </>)}
+                </section>
+
+                <Separator />
+
+                {/* Affichage des réponses agrégées (Adeline, 30 mai 2026) :
+                    sur le remerciement du sondage, montrer le % de chaque
+                    option choisi par les autres participants. */}
+                <section className="space-y-2.5">
+                  <div>
+                    <h3 className="text-sm font-semibold">{t("surveyAggregateTitle")}</h3>
+                    <p className="text-[11px] text-muted-foreground leading-snug">{t("surveyAggregateHint")}</p>
+                  </div>
+                  <SettingsToggle
+                    label={t("surveyShowAggregateLabel")}
+                    hint={t("surveyShowAggregateHint")}
+                    checked={showAggregateResponses}
+                    onChange={setShowAggregateResponses}
                   />
                 </section>
 
@@ -1535,10 +1681,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               {/* ── INTRO SECTION ── */}
               <div ref={introRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 text-center">
                 <div className="max-w-2xl w-full space-y-6">
-                  {brandLogoUrl && (
+                  {effectiveLogoUrl && (
                     <div className="flex justify-center">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={brandLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
+                      <img src={effectiveLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
                     </div>
                   )}
 
@@ -1909,7 +2055,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               <div className="text-center py-8 border-t space-y-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={brandLogoUrl || "/tiquiz-logo.png"}
+                  src={effectiveLogoUrl || "/tiquiz-logo.png"}
                   alt=""
                   className="max-h-10 w-auto object-contain mx-auto"
                 />

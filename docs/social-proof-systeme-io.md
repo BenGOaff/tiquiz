@@ -5,7 +5,7 @@ d'une page Systeme.io (ou n'importe quel autre builder qui accepte du HTML
 brut).
 
 Les chiffres se rafraîchissent à chaque chargement de page. L'endpoint
-`https://app.tiquiz.com/api/public/stats` est mis en cache 5 minutes côté
+`https://quiz.tipote.com/api/public/stats` est mis en cache 5 minutes côté
 CDN → fetch ultra-rapide même sous trafic publicitaire intense.
 
 ## Snippet final (recommandé) — 2 cartes, police Inter, couleurs Tiquiz, animation count-up, skeleton de chargement
@@ -74,7 +74,7 @@ CDN → fetch ultra-rapide même sous trafic publicitaire intense.
   };
   // Timeout de sécurité : si la requête bloque plus de 5 s, fallback discret.
   var fallbackTimer = setTimeout(showFallback, 5000);
-  fetch('https://app.tiquiz.com/api/public/stats')
+  fetch('https://quiz.tipote.com/api/public/stats')
     .then(function (r) { return r.json(); })
     .then(function (j) {
       clearTimeout(fallbackTimer);
@@ -110,7 +110,7 @@ Si tu préfères une phrase en ligne plutôt que 2 cartes :
 </p>
 <script>
 (function () {
-  fetch('https://app.tiquiz.com/api/public/stats')
+  fetch('https://quiz.tipote.com/api/public/stats')
     .then(function (r) { return r.json(); })
     .then(function (j) {
       if (!j || !j.ok) return;
@@ -132,7 +132,7 @@ Si tu préfères une phrase en ligne plutôt que 2 cartes :
 Si tu veux fetch toi-même depuis ailleurs (n8n, Make, autre site…) :
 
 ```
-GET https://app.tiquiz.com/api/public/stats
+GET https://quiz.tipote.com/api/public/stats
 ```
 
 Réponse :
@@ -149,12 +149,12 @@ Réponse :
 - CORS ouvert (`Access-Control-Allow-Origin: *`)
 - Cache 5 minutes (CDN + `s-maxage=300`)
 - `updated_at` = heure à laquelle le cache a été refresh (utile pour debug)
-- `quizzes` = quiz avec `status = 'published'` uniquement
+- `quizzes` = quiz avec `status = 'active'` uniquement (= publié dans Tiquiz)
 - `leads` = toutes les lignes de la table `quiz_leads`
 
 ## Test rapide
 
 Avant de coller dans Systeme.io, teste l'endpoint en ouvrant
-[https://app.tiquiz.com/api/public/stats](https://app.tiquiz.com/api/public/stats)
+[https://quiz.tipote.com/api/public/stats](https://quiz.tipote.com/api/public/stats)
 dans ton navigateur. Tu dois voir le JSON ci-dessus.
 

@@ -197,6 +197,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "custom_footer_text", "custom_footer_url",
       "brand_font", "brand_color_primary", "brand_color_background",
       "brand_logo_url", "hide_brand_logo",
+      "capture_enabled",
+      "show_aggregate_responses",
       "start_button_text",
       "result_insight_heading", "result_projection_heading",
       "sio_api_key_id",

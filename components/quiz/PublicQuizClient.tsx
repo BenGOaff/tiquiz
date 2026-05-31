@@ -129,6 +129,14 @@ type PublicQuizData = {
   // profils" sous le résultat du visiteur. Rendu non personnalisé
   // (name vide, gender inclusif). Off par défaut.
   show_other_results?: boolean | null;
+  // Sondage uniquement (30 mai 2026) : si FALSE, on skippe l'étape
+  // email/capture et on envoie le visiteur directement au remerciement
+  // après la dernière question. Default TRUE → comportement historique.
+  capture_enabled?: boolean | null;
+  // Sondage uniquement (30 mai 2026) : si TRUE, on affiche un encart
+  // "Comparé aux autres participants" sur la page de remerciement avec
+  // les % de chaque option choisie. Default FALSE.
+  show_aggregate_responses?: boolean | null;
   // Phase B (Adeline, 19 mai 2026) : Meta + Google tracking pixels.
   // Les scripts sont injectés via useEffect APRÈS le visiteur a coché
   // la case de consentement (si show_consent_checkbox=true).
@@ -240,6 +248,9 @@ type QuizTranslations = {
   // Opt-in "Découvre les autres profils" accordion (Adeline, 19 mai 2026)
   otherProfilesTitle: string;
   otherProfilesSubtitle: string;
+  // Sondage : encart "% des autres participants" (Adeline, 30 mai 2026)
+  aggregateHeading: string;
+  aggregateSubtitle: (n: number) => string;
 };
 
 const translations: Record<string, QuizTranslations> = {
@@ -308,6 +319,8 @@ const translations: Record<string, QuizTranslations> = {
     breakdownMainBadge: "Ton résultat",
     otherProfilesTitle: "Découvre les autres profils",
     otherProfilesSubtitle: "Tu n'as pas obtenu ces profils, mais tu peux voir ce qu'ils racontent.",
+    aggregateHeading: "Comparé aux autres participants",
+    aggregateSubtitle: (n) => `Sur ${n} participant${n > 1 ? "s" : ""} jusqu'ici.`,
   },
   fr_vous: {
     quizUnavailable: "Ce quiz n\u2019est pas disponible.",
@@ -374,6 +387,8 @@ const translations: Record<string, QuizTranslations> = {
     breakdownMainBadge: "Votre résultat",
     otherProfilesTitle: "Découvrez les autres profils",
     otherProfilesSubtitle: "Vous n'avez pas obtenu ces profils, mais vous pouvez voir ce qu'ils racontent.",
+    aggregateHeading: "Comparé aux autres participants",
+    aggregateSubtitle: (n) => `Sur ${n} participant${n > 1 ? "s" : ""} jusqu'ici.`,
   },
   en: {
     quizUnavailable: "This quiz is not available.",
@@ -440,6 +455,8 @@ const translations: Record<string, QuizTranslations> = {
     breakdownMainBadge: "Your result",
     otherProfilesTitle: "Discover the other profiles",
     otherProfilesSubtitle: "You didn't get these profiles, but you can see what they say.",
+    aggregateHeading: "Compared with other participants",
+    aggregateSubtitle: (n) => `Out of ${n} participant${n > 1 ? "s" : ""} so far.`,
   },
   es: {
     quizUnavailable: "Este quiz no est\u00e1 disponible.",
@@ -506,6 +523,8 @@ const translations: Record<string, QuizTranslations> = {
     breakdownMainBadge: "Tu resultado",
     otherProfilesTitle: "Descubre los otros perfiles",
     otherProfilesSubtitle: "No has obtenido estos perfiles, pero puedes ver lo que dicen.",
+    aggregateHeading: "Comparado con otros participantes",
+    aggregateSubtitle: (n) => `Sobre ${n} participante${n > 1 ? "s" : ""} hasta ahora.`,
   },
   de: {
     quizUnavailable: "Dieses Quiz ist nicht verf\u00fcgbar.",
@@ -572,6 +591,8 @@ const translations: Record<string, QuizTranslations> = {
     breakdownMainBadge: "Dein Ergebnis",
     otherProfilesTitle: "Entdecke die anderen Profile",
     otherProfilesSubtitle: "Du hast diese Profile nicht erhalten, kannst aber sehen, was sie aussagen.",
+    aggregateHeading: "Im Vergleich mit anderen Teilnehmenden",
+    aggregateSubtitle: (n) => `Von ${n} Teilnehmenden bisher.`,
   },
   pt: {
     quizUnavailable: "Este quiz n\u00e3o est\u00e1 dispon\u00edvel.",
@@ -638,6 +659,8 @@ const translations: Record<string, QuizTranslations> = {
     breakdownMainBadge: "O teu resultado",
     otherProfilesTitle: "Descubre os outros perfis",
     otherProfilesSubtitle: "Não obtiveste estes perfis, mas podes ver o que eles dizem.",
+    aggregateHeading: "Comparado com outros participantes",
+    aggregateSubtitle: (n) => `Em ${n} participante${n > 1 ? "s" : ""} até agora.`,
   },
   it: {
     quizUnavailable: "Questo quiz non \u00e8 disponibile.",
@@ -704,6 +727,8 @@ const translations: Record<string, QuizTranslations> = {
     breakdownMainBadge: "Il tuo risultato",
     otherProfilesTitle: "Scopri gli altri profili",
     otherProfilesSubtitle: "Non hai ottenuto questi profili, ma puoi vedere cosa raccontano.",
+    aggregateHeading: "Confrontato con altri partecipanti",
+    aggregateSubtitle: (n) => `Su ${n} ${n > 1 ? "partecipanti" : "partecipante"} finora.`,
   },
   ar: {
     quizUnavailable: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u063a\u064a\u0631 \u0645\u062a\u0627\u062d.",
@@ -770,6 +795,8 @@ const translations: Record<string, QuizTranslations> = {
     breakdownMainBadge: "نتيجتك",
     otherProfilesTitle: "اكتشف الملفات الشخصية الأخرى",
     otherProfilesSubtitle: "لم تحصل على هذه الملفات، لكن يمكنك رؤية ما تقوله.",
+    aggregateHeading: "بالمقارنة مع المشاركين الآخرين",
+    aggregateSubtitle: (n) => `من بين ${n} مشاركًا حتى الآن.`,
   },
 };
 
@@ -872,6 +899,13 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
   const [gender, setGender] = useState<"m" | "f" | "x" | null>(null);
   const [consent, setConsent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Agrégation des réponses des autres participants (Adeline, 30 mai 2026).
+  // Chargée à la demande sur la page de remerciement du sondage quand
+  // l'auteur a activé show_aggregate_responses. Shape :
+  // totals[questionIdx][optionIdx] = count.
+  const [aggregateTotals, setAggregateTotals] = useState<Record<number, Record<number, number>> | null>(null);
+  const [aggregateTotalResponses, setAggregateTotalResponses] = useState<number>(0);
 
   const [resultProfile, setResultProfile] = useState<QuizResult | null>(null);
   // Per-profile points used by the optional "Répartition complète" card.
@@ -1277,6 +1311,62 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     return { profile: quiz.results[maxIdx] ?? null, scores };
   }, [quiz, answers]);
 
+  // Charge les réponses agrégées des autres participants à l'arrivée sur
+  // l'écran de remerciement du sondage, uniquement si l'auteur a activé
+  // l'option. Best-effort : si l'endpoint répond une erreur ou un 403,
+  // on garde l'écran sans encart "%".
+  useEffect(() => {
+    if (!quiz || quiz.mode !== "survey") return;
+    if (quiz.show_aggregate_responses !== true) return;
+    if (step !== "result") return;
+    if (aggregateTotals !== null) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/quiz/${quizId}/aggregate-responses`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (cancelled) return;
+        if (json?.ok && json.totals) {
+          setAggregateTotals(json.totals as Record<number, Record<number, number>>);
+          setAggregateTotalResponses(typeof json.total_responses === "number" ? json.total_responses : 0);
+        }
+      } catch {
+        // Non-fatal : l'agrégat reste optionnel.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [quiz, step, quizId, aggregateTotals]);
+
+  // Sondage anonyme (Adeline, 30 mai 2026) : envoie les réponses au
+  // serveur SANS email, pour alimenter l'agrégation "% des autres
+  // participants" sur la page de remerciement. Le serveur exige le
+  // flag `anonymous: true` ET vérifie que le quiz est bien un sondage
+  // avec capture_enabled === false avant d'insérer. Pas de sync SIO,
+  // pas de Lead pixel — l'auteur a renoncé à la capture.
+  const submitAnonymousSurvey = useCallback(async (finalAnswers: (SurveyAnswer | null | undefined)[]) => {
+    if (!quiz || isPreviewMode) return;
+    try {
+      const payload = finalAnswers.map((ans, qIdx) => {
+        if (!ans) return { question_index: qIdx };
+        if (ans.kind === "option") return { question_index: qIdx, option_index: ans.optionIndex };
+        if (ans.kind === "options") return { question_index: qIdx, option_indices: ans.optionIndices };
+        if (ans.kind === "rating") return { question_index: qIdx, rating: ans.value };
+        if (ans.kind === "star") return { question_index: qIdx, stars: ans.value };
+        return { question_index: qIdx, text: ans.value };
+      });
+      await fetch(`/api/quiz/${quizId}/public`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ anonymous: true, answers: payload }),
+      });
+    } catch {
+      // Non-fatal : on garde le visiteur sur le remerciement même si
+      // l'insert anonyme échoue (rien à montrer comme erreur, le
+      // sondage est censé être "fire-and-forget" pour le visiteur).
+    }
+  }, [quiz, quizId, isPreviewMode]);
+
   // Single answer-commit pathway for every question type. Auto-advances to
   // the next question (or to email capture on the last one) so the existing
   // multiple_choice UX stays untouched and rating/star/yes_no/image inherit
@@ -1299,7 +1389,17 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     } else {
       // Visitor completed all questions → track funnel event
       trackEvent("complete");
-      setStep("email");
+      // Sondage anonyme (Adeline, 30 mai 2026) : si l'auteur a désactivé
+      // la capture, on skippe l'étape email. On envoie quand même les
+      // réponses au serveur (flag anonymous=true) pour alimenter
+      // l'agrégation des % vue par les autres participants, puis direct
+      // au remerciement.
+      if (quiz && quiz.mode === "survey" && quiz.capture_enabled === false) {
+        void submitAnonymousSurvey(newAnswers);
+        setStep("result");
+      } else {
+        setStep("email");
+      }
     }
   };
 
@@ -2577,6 +2677,58 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                 />
               </a>
             </Button>
+          )}
+
+          {/* Réponses des autres participants (Adeline, 30 mai 2026).
+              Affiché si l'auteur a activé show_aggregate_responses ET
+              que l'endpoint a renvoyé des totaux. Une carte par question
+              avec un pourcentage par option. Free-text / rating / stars
+              ne sont pas agrégés (pas de bucket discret côté serveur). */}
+          {quiz.show_aggregate_responses === true && aggregateTotals && aggregateTotalResponses > 0 && (
+            <div className="text-left space-y-4 pt-2">
+              <div className="text-center">
+                <p className="text-sm font-semibold">{t.aggregateHeading}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {t.aggregateSubtitle(aggregateTotalResponses)}
+                </p>
+              </div>
+              {quiz.questions.map((q, qi) => {
+                const perOption = aggregateTotals[qi] ?? {};
+                const total = Object.values(perOption).reduce((a, b) => a + b, 0);
+                if (total === 0) return null;
+                return (
+                  <div key={`agg-${qi}`} className="rounded-xl border bg-card/40 p-3 space-y-2">
+                    <p
+                      className="text-sm font-medium tiquiz-rich"
+                      dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(q.question_text)) }}
+                    />
+                    <div className="space-y-1.5">
+                      {q.options.map((opt, oi) => {
+                        const count = perOption[oi] ?? 0;
+                        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                        return (
+                          <div key={`agg-${qi}-${oi}`} className="space-y-0.5">
+                            <div className="flex items-center justify-between gap-2 text-xs">
+                              <span
+                                className="tiquiz-rich truncate"
+                                dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text || "")) }}
+                              />
+                              <span className="tabular-nums text-muted-foreground shrink-0">{pct}%</span>
+                            </div>
+                            <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{ width: `${pct}%`, backgroundColor: branding.primaryColor }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
 
           {/* Surveys still get a share button — just no gating, no bonus.

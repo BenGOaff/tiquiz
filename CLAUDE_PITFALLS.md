@@ -551,6 +551,46 @@ Hint visuel : le rendu `quizEditor.foo` (le namespace préfixé) côté UI
 est le canari "clé manquante". Si je le vois en preview, je grep
 immédiatement.
 
+## AR) DOMAINES DE PROD — à connaître par cœur (30 mai 2026)
+
+Adeline m'a remonté plusieurs fois que je mélange les noms de domaine.
+Notation définitive :
+
+| Surface | Domaine | Détail |
+|---|---|---|
+| **App Tiquiz** (dashboard, éditeur, API, quizzes des users) | `https://quiz.tipote.com` | C'est le host primaire de l'app Tiquiz. La marque s'appelle Tiquiz mais le domaine appartient à Tipote. PAS `app.tiquiz.com`, PAS `tiquiz.com`, PAS `app.tipote.com`. |
+| **Page de vente Tiquiz** (sales page Systeme.io) | `https://tipote.fr/tiquiz` | Hébergée chez Systeme.io, c'est là qu'on colle les snippets HTML custom (preuve sociale, etc.). |
+| **App Tipote** (autopilot) | `https://app.tipote.com` | Repo tipote-app, autre app. |
+| **Custom domains des users** | divers | Cf. pitfall H ter et J : OG metadata via `buildCanonicalUrl`, favicon via route handler. |
+
+**Conséquence pratique** :
+- Tout snippet/intégration qui fetch l'API Tiquiz doit cibler
+  `https://quiz.tipote.com/api/...` — JAMAIS `app.tiquiz.com` ni
+  `tiquiz.com`.
+- Quand je suggère une URL de prod ou de test, je relis cette ligne
+  AVANT de cliquer push.
+- `lib/publicUrl.ts` mentionne `tiquiz.com / quiz.tipote.com` —
+  le 2e est le bon. Le 1er reste là pour des raisons historiques
+  d'aperçu OG mais n'est PAS le host primaire.
+
+## AS) Status d'un quiz "publié" = `'active'`, JAMAIS `'published'` (30 mai 2026)
+
+L'enum `quizzes.status` côté Tiquiz utilise `'active'` pour les quiz
+publiés. Le mot `'published'` n'existe pas dans la DB.
+
+**Source de vérité** : `app/api/quiz/[quizId]/public/route.ts` ligne 46 :
+```ts
+opts.requireActive ? await q.eq("status", "active").maybeSingle() : ...
+```
+
+J'ai planté en écrivant `eq("status", "published")` dans
+`app/api/public/stats/route.ts` → COUNT retournait toujours 0. Adeline
+me l'a remonté.
+
+**Reminder** : avant tout `.eq("status", X)`, grep `status` dans
+`app/api/` pour vérifier la valeur attendue. Les autres valeurs
+possibles (cf. SurveyDetailClient et autres) : `draft`, `archived`.
+
 ## AQ) TOUJOURS porter les corrections Quiz aux Sondages (30 mai 2026)
 
 Les sondages Tiquiz sont des lignes de la table `quizzes` avec

@@ -45,11 +45,15 @@ export async function GET() {
     // aucune ligne — uniquement le count. Performance OK sur les volumes
     // actuels ; si ça devient lent (>500ms), switcher vers une table
     // d'agrégats refreshée par cron OU pg_class.reltuples (approximatif).
+    //
+    // ⚠️ Le status "publié" dans Tiquiz vaut "active", pas "published"
+    // (cf. la condition `status='active'` partout dans le code public).
+    // Avoir mis "published" ici donnait COUNT=0 systématiquement.
     const [quizzesRes, leadsRes] = await Promise.all([
       supabaseAdmin
         .from("quizzes")
         .select("id", { count: "exact", head: true })
-        .eq("status", "published"),
+        .eq("status", "active"),
       supabaseAdmin
         .from("quiz_leads")
         .select("id", { count: "exact", head: true }),

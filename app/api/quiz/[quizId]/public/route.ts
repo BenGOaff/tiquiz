@@ -255,7 +255,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     }
 
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,user_id,status,title,introduction,cta_text,cta_url,start_button_text,privacy_url,consent_text,virality_enabled,bonus_description,bonus_intro_text,bonus_image_url,bonus_image_position,bonus_unlocked_message,share_message,locale,address_form,views_count,capture_heading,capture_subtitle,capture_submit_text,capture_first_name,capture_last_name,capture_phone,capture_country,phone_required,first_name_required,last_name_required,country_required,ask_first_name,ask_gender,slug,brand_font,brand_color_primary,brand_color_background,brand_logo_url,hide_brand_logo,custom_footer_text,custom_footer_url,share_networks,og_description,og_image_url,result_insight_heading,result_projection_heading,mode,show_consent_checkbox,show_results_breakdown,show_other_results,meta_pixel_id,ga4_measurement_id,google_ads_conversion_id,google_ads_conversion_label,intro_image_url,intro_image_position").eq("id", quizId).maybeSingle(),
+      admin.from("quizzes").select("id,user_id,status,title,introduction,cta_text,cta_url,start_button_text,privacy_url,consent_text,virality_enabled,bonus_description,bonus_intro_text,bonus_image_url,bonus_image_position,bonus_unlocked_message,share_message,locale,address_form,views_count,capture_heading,capture_subtitle,capture_submit_text,capture_first_name,capture_last_name,capture_phone,capture_country,phone_required,first_name_required,last_name_required,country_required,ask_first_name,ask_gender,slug,brand_font,brand_color_primary,brand_color_background,brand_logo_url,hide_brand_logo,capture_enabled,show_aggregate_responses,custom_footer_text,custom_footer_url,share_networks,og_description,og_image_url,result_insight_heading,result_projection_heading,mode,show_consent_checkbox,show_results_breakdown,show_other_results,meta_pixel_id,ga4_measurement_id,google_ads_conversion_id,google_ads_conversion_label,intro_image_url,intro_image_position").eq("id", quizId).maybeSingle(),
       admin.from("quiz_questions").select("id,question_text,options,sort_order,question_type,config").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,cta_text,cta_url,sort_order,image_url,image_position").eq("quiz_id", quizId).order("sort_order"),
     ]);
@@ -458,8 +458,16 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
     }
 
-    const email = String(body.email ?? "").trim().toLowerCase();
-    if (!EMAIL_RE.test(email)) {
+    const rawEmail = String(body.email ?? "").trim().toLowerCase();
+    const isAnonymousSubmit = body.anonymous === true;
+
+    // Sondage anonyme : capture désactivée par l'auteur. Le visiteur
+    // envoie quand même ses réponses pour alimenter l'agrégation, mais
+    // sans email valide. On synthétise un email unique pour respecter
+    // la contrainte NOT NULL + UNIQUE(quiz_id,email). Pas de sync SIO,
+    // pas de Lead pixel — l'anonyme ne génère aucune piste commerciale.
+    let email = rawEmail;
+    if (!isAnonymousSubmit && !EMAIL_RE.test(email)) {
       return NextResponse.json({ ok: false, error: "Valid email required" }, { status: 400 });
     }
 
@@ -470,15 +478,32 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     // Pull sio_api_key_id alongside user_id so the right SIO workspace
     // gets the lead. Reading both in one query avoids any race where the
-    // editor changes the attached key between SELECT and sync.
+    // editor changes the attached key between SELECT and sync. On lit
+    // aussi capture_enabled pour valider la branche anonyme.
     const { data: quiz } = await admin
       .from("quizzes")
-      .select("id, user_id, title, sio_api_key_id, meta_pixel_id")
+      .select("id, user_id, title, sio_api_key_id, meta_pixel_id, mode, capture_enabled")
       .eq("id", quizId)
       .maybeSingle();
 
     if (!quiz) {
       return NextResponse.json({ ok: false, error: "Quiz not found or inactive" }, { status: 404 });
+    }
+
+    // Validation de la branche anonyme : seulement pour les sondages
+    // dont l'auteur a explicitement décoché la capture. Sinon on rejette
+    // pour empêcher un bot de polluer la table avec des leads sans email.
+    if (isAnonymousSubmit) {
+      const isSurvey = (quiz as { mode?: string | null }).mode === "survey";
+      const captureOff = (quiz as { capture_enabled?: boolean | null }).capture_enabled === false;
+      if (!isSurvey || !captureOff) {
+        return NextResponse.json({ ok: false, error: "Anonymous submit not allowed for this quiz" }, { status: 403 });
+      }
+      // Email synthétique : pas une vraie adresse, unique par soumission.
+      // anon-<timestamp>-<random>@anon.tiquiz pour rester reconnaissable
+      // dans la table sans pouvoir être confondu avec une vraie adresse.
+      const rand = Math.random().toString(36).slice(2, 10);
+      email = `anon-${Date.now().toString(36)}-${rand}@anon.tiquiz`;
     }
 
     try {
@@ -536,7 +561,10 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
 
-    if (lead?.id) {
+    // Sondage anonyme : on a inséré la ligne pour alimenter l'agrégation,
+    // mais on ne déclenche AUCUN side-effect commercial (pas de sync SIO,
+    // pas de Lead CAPI Meta). Le visiteur n'a pas consenti à être contacté.
+    if (lead?.id && !isAnonymousSubmit) {
       const leadId = lead.id;
       const quizUserId = quiz.user_id;
       const quizSioApiKeyId = (quiz as { sio_api_key_id?: string | null }).sio_api_key_id ?? null;
