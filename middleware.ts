@@ -150,7 +150,9 @@ export async function middleware(req: NextRequest) {
     // and set a permissive frame-ancestors so the iframe can render.
     // This is safe: the page only exposes anonymous-session draft data
     // already gated by the opaque session_token.
-    if (pathname.startsWith("/embed/")) {
+    // Same treatment for /widgets/* (social proof counter etc.) which
+    // are designed to be embedded on the Tiquiz sales page (tipote.fr).
+    if (pathname.startsWith("/embed/") || pathname.startsWith("/widgets/")) {
       res.headers.set("Content-Security-Policy", "frame-ancestors *");
       res.headers.delete("X-Frame-Options");
     }

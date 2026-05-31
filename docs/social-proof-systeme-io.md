@@ -1,12 +1,44 @@
-# Compteur de preuve sociale — snippet Systeme.io
+# Compteur de preuve sociale — intégration Systeme.io
 
-Snippet HTML + JS prêt à coller dans un bloc **"Code HTML personnalisé"**
-d'une page Systeme.io (ou n'importe quel autre builder qui accepte du HTML
-brut).
+**⚠️ Important** : Systeme.io strippe les `<script>` dans les blocs
+"Code HTML personnalisé" pour des raisons de sécurité (testé le
+31 mai 2026). Les snippets HTML/JS directs ne marchent donc PAS sur
+Systeme.io — le HTML est rendu mais le fetch des chiffres ne se
+déclenche jamais.
 
-Les chiffres se rafraîchissent à chaque chargement de page. L'endpoint
-`https://quiz.tipote.com/api/public/stats` est mis en cache 5 minutes côté
-CDN → fetch ultra-rapide même sous trafic publicitaire intense.
+## Solution officielle : iframe vers le widget hébergé sur quiz.tipote.com
+
+Une page autonome `https://quiz.tipote.com/widgets/social-proof` est
+servie côté Tiquiz avec tout le widget (HTML + JS + CSS) dans un layout
+minimal et un `frame-ancestors *` permissif. Tu colles juste un `<iframe>`
+dans Systeme.io et le widget se débrouille tout seul.
+
+### Snippet à coller dans le bloc "Code HTML personnalisé" Systeme.io
+
+```html
+<iframe
+  src="https://quiz.tipote.com/widgets/social-proof"
+  title="Tiquiz en chiffres"
+  loading="lazy"
+  style="width:100%; max-width:42rem; height:260px; border:0; display:block; margin:0 auto; background:transparent;"
+></iframe>
+```
+
+C'est tout. Pas de JS à exécuter chez Systeme.io.
+
+### Réglages possibles
+- `max-width: 42rem` → largeur max du widget (ajuste si besoin)
+- `height: 260px` → hauteur de l'iframe (260 px couvre 2 cartes côte à côte ;
+  monte à `420px` si tu veux que sur mobile <480 px les 2 cartes s'empilent
+  proprement sans scroll interne)
+- `background: transparent` → le fond de ta page Systeme.io transparaît
+  derrière les cartes (les cartes ont leur propre fond blanc + ombre)
+
+## Endpoint brut (pour intégrations custom : n8n, autre site, etc.)
+
+Les chiffres se rafraîchissent à chaque chargement. L'endpoint
+`https://quiz.tipote.com/api/public/stats` est mis en cache 5 minutes
+côté CDN → fetch ultra-rapide même sous trafic publicitaire intense.
 
 ## Snippet final (recommandé) — 2 cartes, police Inter, couleurs Tiquiz, animation count-up, skeleton de chargement
 

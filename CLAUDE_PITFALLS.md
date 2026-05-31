@@ -551,6 +551,32 @@ Hint visuel : le rendu `quizEditor.foo` (le namespace préfixé) côté UI
 est le canari "clé manquante". Si je le vois en preview, je grep
 immédiatement.
 
+## AT) Systeme.io strippe les `<script>` — iframe obligatoire (31 mai 2026)
+
+Pour la preuve sociale embarquée sur `tipote.fr/tiquiz` (sales page),
+Systeme.io rend le HTML d'un bloc "Code HTML personnalisé" MAIS
+supprime / désactive les `<script>` à l'intérieur. Conséquence : un
+snippet HTML+JS direct affiche les cartes mais le fetch ne se
+déclenche jamais, les chiffres restent en skeleton.
+
+**Symptôme** : aucun appel à `quiz.tipote.com/api/public/stats` dans
+le Network du navigateur quand on est sur la sales page, alors qu'un
+`fetch('https://quiz.tipote.com/api/public/stats')` tapé direct
+dans la console renvoie bien le JSON. Ça veut dire : l'API marche,
+CORS OK, c'est le `<script>` qui ne s'exécute pas.
+
+**Workaround officiel** : héberger une page widget standalone côté
+Tiquiz et l'embarquer via iframe. C'est ce qu'on a fait pour la
+preuve sociale :
+- Route : `app/widgets/social-proof/page.tsx` (+ layout minimal et
+  Client Component `SocialProofWidget.tsx`)
+- Middleware : `app/middleware.ts` ajoute `/widgets/*` à la liste des
+  routes iframe-friendly (`Content-Security-Policy: frame-ancestors *`)
+- Snippet Systeme.io : juste un `<iframe src="https://quiz.tipote.com/widgets/social-proof">`
+
+**Règle** : toute nouvelle intégration sur Systeme.io qui nécessite
+du JS DOIT passer par un iframe, pas par un snippet HTML+JS.
+
 ## AR) DOMAINES DE PROD — à connaître par cœur (30 mai 2026)
 
 Adeline m'a remonté plusieurs fois que je mélange les noms de domaine.
