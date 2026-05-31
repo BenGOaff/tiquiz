@@ -551,6 +551,36 @@ Hint visuel : le rendu `quizEditor.foo` (le namespace préfixé) côté UI
 est le canari "clé manquante". Si je le vois en preview, je grep
 immédiatement.
 
+## AQ) TOUJOURS porter les corrections Quiz aux Sondages (30 mai 2026)
+
+Les sondages Tiquiz sont des lignes de la table `quizzes` avec
+`mode='survey'`. Mais l'éditeur sondage vit dans
+`components/quiz/SurveyDetailClient.tsx` (parallèle à `QuizDetailClient.tsx`).
+**Toute correction faite côté quiz doit être miroir-portée côté sondage**,
+sinon Adeline remonte le bug. Récurrents qu'on a manqué :
+
+- Logo override (`brand_logo_url` + `hide_brand_logo`) : fait sur quiz le
+  30/05, oublié sur survey → re-corrigé le même jour suite à retour Adeline.
+- Visual Studio + GIF picker pour bonus image : fait sur quiz, à vérifier
+  sur survey à chaque évolution.
+- Image bonus draggable 4 slots : pareil.
+- Submit button WYSIWYG (`capture_submit_text`) : déjà miroir.
+- Toute future colonne ajoutée à `quizzes` : touche les 2 clients.
+
+**Checklist quand je modifie QuizDetailClient.tsx** :
+1. Le changement concerne aussi le mode survey ? Si oui → port immédiat dans
+   SurveyDetailClient.tsx avec le même nom de state, même handler, même UI.
+2. Si le changement concerne le rendu visiteur (couverture, logo, bonus,
+   submit button) → port aussi dans le rendu visiteur Survey de
+   `PublicQuizClient.tsx` (les 2 modes y cohabitent).
+3. Si nouvelle clé i18n → namespace `quizEditor` valable pour les 2 modes.
+
+**Convention** : avant de commit une feature quiz, faire un grep miroir :
+```
+grep -n "<feature-state>" components/quiz/SurveyDetailClient.tsx
+```
+Si ça remonte rien, je vais devoir porter.
+
 ## AO) Logo : override par quiz via quizzes.brand_logo_url + hide_brand_logo (30 mai 2026)
 
 Avant : le logo vivait UNIQUEMENT sur `profiles.brand_logo_url` (Tiquiz)
