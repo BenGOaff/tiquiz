@@ -13,7 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
-  Sparkles, TrendingUp, Star, MessageCircle, Crop,
+  Sparkles, TrendingUp, Star, MessageCircle, Crop, Settings2,
 } from "lucide-react";
 import { GifPickerButton } from "@/components/quiz/GifPicker";
 import { ImageCropDialog } from "@/components/quiz/ImageCropDialog";
@@ -1850,11 +1850,19 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                           const maxLength = typeof cfg.maxLength === "number" ? cfg.maxLength : 500;
                           return (
                             <div className="space-y-3">
-                              <textarea readOnly placeholder={t("previewFreeTextPh")} rows={5} className="w-full rounded-xl border-2 border-border px-4 py-3 text-base resize-none bg-muted/10" style={{ borderColor: `${pc}30` }} />
-                              <div className="flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t">
-                                <label className="inline-flex items-center gap-1">
-                                  {t("textMaxLength")}
-                                  <input type="number" min={50} max={5000} value={maxLength} onChange={(e) => updateQuestionConfig(qi, { maxLength: Math.min(5000, Math.max(50, Number(e.target.value) || 500)) })} className="w-20 border rounded px-1.5 py-0.5 text-center" />
+                              <textarea readOnly placeholder={t("previewFreeTextPh")} rows={5} maxLength={maxLength} className="w-full rounded-xl border-2 border-border px-4 py-3 text-base resize-none bg-muted/10" style={{ borderColor: `${pc}30` }} />
+                              {/* Réglage créateur — discret, clairement
+                                  hors du visuel participant. Adeline (31
+                                  mai 2026) : "ne pas faire flotter ce
+                                  champ comme s'il faisait partie du
+                                  preview". On le pose dans une pill
+                                  grise avec une icône de réglage. */}
+                              <div className="flex justify-end">
+                                <label className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-muted/60 rounded-full px-2.5 py-1 cursor-pointer" title={t("textMaxLengthHint")}>
+                                  <Settings2 className="w-3 h-3 opacity-60" />
+                                  <span>{t("textMaxLengthShort")}</span>
+                                  <input type="number" min={50} max={5000} value={maxLength} onChange={(e) => updateQuestionConfig(qi, { maxLength: Math.min(5000, Math.max(50, Number(e.target.value) || 500)) })} className="w-14 bg-background border border-border/60 rounded px-1.5 py-0.5 text-center text-[11px] font-medium" />
+                                  <span>{t("textMaxLengthChars")}</span>
                                 </label>
                               </div>
                             </div>
@@ -1965,11 +1973,21 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                 );
               })}
 
-              {/* ── CAPTURE / LEAD FORM ── */}
+              {/* ── CAPTURE / LEAD FORM ──
+                  Adeline (31 mai 2026) : si la créatrice a désactivé
+                  "Demander les coordonnées" dans les réglages, on cache
+                  TOUT le bloc capture du preview (sinon c'est trompeur :
+                  on voit le form alors qu'il ne sera jamais affiché au
+                  visiteur). Côté visiteur, PublicQuizClient skippe déjà
+                  l'étape email quand capture_enabled=false. */}
+              {captureEnabled && (
               <div ref={captureRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                 <div className="max-w-lg w-full space-y-6">
-                  <RichTextEdit value={captureHeading || t("previewCaptureHeadingDefault")} onChange={setCaptureHeading} onImageUpload={handleRichTextImageUpload} singleLine className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("previewCaptureHeadingPh")} />
-                  <RichTextEdit value={captureSubtitle || t("previewCaptureSubtitleDefault")} onChange={setCaptureSubtitle} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-base text-center" placeholder={t("previewCaptureSubtitlePh")} />
+                  {/* Defaults survey-spécifiques : sur un sondage il n'y a
+                      pas de "profil" à révéler, le visiteur valide juste
+                      ses réponses. */}
+                  <RichTextEdit value={captureHeading || t("previewCaptureHeadingDefaultSurvey")} onChange={setCaptureHeading} onImageUpload={handleRichTextImageUpload} singleLine className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("previewCaptureHeadingPh")} />
+                  <RichTextEdit value={captureSubtitle || t("previewCaptureSubtitleDefaultSurvey")} onChange={setCaptureSubtitle} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-base text-center" placeholder={t("previewCaptureSubtitlePh")} />
                   <div className="space-y-3 max-w-md mx-auto">
                     {(captureFirstName || captureLastName) && <div className="grid grid-cols-2 gap-3">
                       {captureFirstName && <div><label className="text-sm text-muted-foreground">{t("previewCaptureFirstName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
@@ -1994,6 +2012,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                   <button className="w-full max-w-md mx-auto block px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>{t("previewCaptureSubmit")}</button>
                 </div>
               </div>
+              )}
 
               {/* ── THANK-YOU (survey end screen) ──
                   Replaces the quiz "results" / "bonus" screens. Surveys
