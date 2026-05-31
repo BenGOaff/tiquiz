@@ -1943,6 +1943,13 @@
     "toastUnavailableTitle": "Crop unavailable",
     "toastUnavailableHint": "Check your connection."
   },
+  "socialProof": {
+    "heading": "Tiquiz in numbers",
+    "quizzesLabel": "quizzes published",
+    "leadsLabel": "qualified emails captured",
+    "inline": "To date, {quizzes} quizzes have been created on Tiquiz and they've captured {leads} qualified emails.",
+    "ariaLabel": "Tiquiz global statistics"
+  },
   "gifPicker": {
     "title": "Pick a GIF",
     "description": "Search a quality GIF to use as a cover or illustration.",

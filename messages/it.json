@@ -1959,6 +1959,13 @@
     "toastUnavailableTitle": "Ritaglio non disponibile",
     "toastUnavailableHint": "Controlla la connessione."
   },
+  "socialProof": {
+    "heading": "Tiquiz in numeri",
+    "quizzesLabel": "quiz pubblicati",
+    "leadsLabel": "email qualificate raccolte",
+    "inline": "Ad oggi, sono stati creati {quizzes} quiz su Tiquiz e hanno raccolto {leads} email qualificate.",
+    "ariaLabel": "Statistiche globali Tiquiz"
+  },
   "gifPicker": {
     "title": "Scegli una GIF",
     "description": "Cerca una GIF di qualità da usare come copertina o illustrazione.",

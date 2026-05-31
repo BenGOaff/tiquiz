@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Mascot } from "@/components/ui/mascot";
 import { InsightsList } from "@/components/ui/insights-card";
+import { SocialProofCounter } from "@/components/SocialProofCounter";
 import { computeInsights } from "@/lib/insights";
 import { stripHtml } from "@/lib/richText";
 import {
@@ -396,6 +397,13 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
               top performers, surveys to launch. Renders nothing when
               no rule matches, so it's never noise. */}
           {insights.length > 0 && <InsightsList insights={insights} />}
+
+          {/* Preuve sociale globale Tiquiz : nb quiz publiés + nb leads
+              capturés sur toute la plateforme. Source = /api/public/stats
+              (même endpoint que celui qui alimente le snippet Systeme.io
+              sur la sales page, donc chiffres strictement identiques entre
+              app et marketing). Cache 5 min côté CDN. */}
+          <SocialProofCounter variant="card" />
 
           {/* Row 2: Welcome banner when no quizzes — anchored by the
               mascot waving "celebrate" so the cold-start moment feels

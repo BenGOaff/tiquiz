@@ -1959,6 +1959,13 @@
     "toastUnavailableTitle": "الاقتصاص غير متاح",
     "toastUnavailableHint": "تحقق من اتصالك."
   },
+  "socialProof": {
+    "heading": "Tiquiz بالأرقام",
+    "quizzesLabel": "اختبار منشور",
+    "leadsLabel": "بريد إلكتروني مؤهَّل تم جمعه",
+    "inline": "حتى اليوم، تم إنشاء {quizzes} اختبارًا على Tiquiz وجمعت {leads} بريدًا إلكترونيًا مؤهَّلًا.",
+    "ariaLabel": "إحصائيات Tiquiz العامة"
+  },
   "gifPicker": {
     "title": "اختر GIF",
     "description": "ابحث عن GIF عالي الجودة لاستخدامه كغلاف أو رسم توضيحي.",
