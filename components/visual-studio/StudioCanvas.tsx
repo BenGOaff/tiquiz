@@ -71,7 +71,7 @@ export interface StudioCanvasHandle {
   getSelectionRange: () => { start: number; end: number } | null;
   enterEdit: () => void;
   deleteActive: () => void;
-  addText: () => void;
+  addText: (defaultText?: string) => void;
   /** Ajoute une IMAGE/LOGO en overlay LIBRE : objet Fabric sélectionnable,
    *  déplaçable au drag et redimensionnable en tirant les coins/bords.
    *  Inclus tel quel dans l'export PNG. Supprimable via deleteActive(). */
@@ -1185,7 +1185,7 @@ export function StudioCanvas({
     const handle: StudioCanvasHandle = {
       async toBlob() {
         const c = fcRef.current;
-        if (!c) throw new Error("Canvas non prêt");
+        if (!c) throw new Error("CANVAS_NOT_READY");
         if (c.getActiveObject()) c.discardActiveObject();
         // NB : on NE relance PAS la mise en page ici — l'utilisateur a pu
         // déplacer le texte à la main après génération, on respecte ses
@@ -1272,11 +1272,11 @@ export function StudioCanvas({
         c.requestRenderAll();
         selCbRef.current(null);
       },
-      addText() {
+      addText(defaultText?: string) {
         const c = fcRef.current;
         if (!c) return;
         const W2 = dimsRef.current.w;
-        const tb = new Textbox("Nouveau texte", {
+        const tb = new Textbox(defaultText || "New text", {
           left: W2 * 0.12,
           top: dimsRef.current.h * 0.45,
           width: W2 * 0.76,

@@ -6,13 +6,18 @@
 // icônes d'action) pour que la traversée Quizzes ↔ Popquizzes se
 // sente comme une seule app.
 
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
 import AppShell from "@/components/AppShell";
 import { PopquizzesClient, type PopquizListItem } from "./PopquizzesClient";
 
-export const metadata = { title: "Mes Popquiz – Tiquiz" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("metadata.pages");
+  return { title: t("myPopquizzes") };
+}
 
 interface VideoLite {
   source: string;
@@ -62,9 +67,10 @@ export default async function PopquizzesListPage() {
   });
 
   const isPaid = isPaidPlan((profile as { plan?: string | null } | null)?.plan);
+  const tHeader = await getTranslations("metadata.pages");
 
   return (
-    <AppShell userEmail={user.email ?? ""} headerTitle="Mes Popquiz">
+    <AppShell userEmail={user.email ?? ""} headerTitle={tHeader("myPopquizzesShort")}>
       <PopquizzesClient
         popquizzes={popquizzes}
         isPaid={isPaid}

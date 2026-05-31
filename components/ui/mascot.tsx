@@ -17,7 +17,10 @@
 //   <Mascot expression="thinking" />          // inherits sizing from CSS
 //   <Mascot expression="celebrate" tone="accent" />
 
+"use client";
+
 import * as React from "react";
+import { useTranslations } from "next-intl";
 
 export type MascotExpression =
   | "hello"      // default — neutral happy face, mouth in soft smile
@@ -38,16 +41,6 @@ export type MascotProps = {
   ariaLabel?: string;
 };
 
-const ARIA_DEFAULTS: Record<MascotExpression, string> = {
-  hello: "Mascotte qui dit bonjour",
-  thinking: "Mascotte qui réfléchit",
-  happy: "Mascotte tout sourire",
-  wave: "Mascotte qui salue de la main",
-  sleepy: "Mascotte qui dort",
-  celebrate: "Mascotte qui célèbre",
-  search: "Mascotte qui cherche",
-};
-
 export function Mascot({
   expression = "hello",
   size = 56,
@@ -55,6 +48,16 @@ export function Mascot({
   className,
   ariaLabel,
 }: MascotProps) {
+  const t = useTranslations("mascot");
+  const ARIA_DEFAULTS: Record<MascotExpression, string> = {
+    hello: t("hello"),
+    thinking: t("thinking"),
+    happy: t("happy"),
+    wave: t("wave"),
+    sleepy: t("sleepy"),
+    celebrate: t("celebrate"),
+    search: t("search"),
+  };
   // Body fill — uses the brand primary token by default so the mascot
   // stays consistent with the rest of the app's color system.
   const bodyFill = tone === "primary" ? "hsl(var(--primary))" : "hsl(var(--surface-soft))";

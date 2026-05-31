@@ -11,7 +11,14 @@
       "stats": "الإحصائيات",
       "settings": "الإعدادات",
       "admin": "المسؤول",
-      "projects": "مشاريعي"
+      "projects": "مشاريعي",
+      "editProject": "تعديل المشروع – Tiquiz",
+      "editPopquiz": "تعديل Popquiz – Tiquiz",
+      "newQuiz": "اختبار جديد – Tiquiz",
+      "newSurvey": "استطلاع جديد – Tiquiz",
+      "newPopquiz": "Popquiz جديد – Tiquiz",
+      "myPopquizzes": "Popquiz الخاصة بي – Tiquiz",
+      "myPopquizzesShort": "Popquiz الخاصة بي"
     }
   },
   "common": {
@@ -79,7 +86,14 @@
     "rteImageDialogHint": "الصق عنوان URL للصورة المراد تضمينها.",
     "rteDialogConfirm": "إدراج",
     "rteDialogCancel": "إلغاء",
-    "rteUploadImage": "تحميل صورة (السحب والإفلات مدعوم)"
+    "rteUploadImage": "تحميل صورة (السحب والإفلات مدعوم)",
+    "rteCustomColor": "لون مخصّص",
+    "rteGenderizeTitle": "إنشاء صيغ الجنس (هو / هي / هم)",
+    "readinessSteps": "{passed} من أصل {total} خطوات",
+    "rteTextColor": "لون النص",
+    "rteRemoveColor": "إزالة اللون",
+    "rteReset": "إعادة ضبط",
+    "rteCustom": "مخصّص"
   },
   "nav": {
     "quizzes": "اختباراتي",
@@ -93,7 +107,8 @@
     "logout": "تسجيل الخروج",
     "projects": "مشاريعي",
     "createSurvey": "إنشاء استطلاع",
-    "popquiz": "بوبكويز فيديو"
+    "popquiz": "بوبكويز فيديو",
+    "becomeAffiliate": "كن شريكاً"
   },
   "stats": {
     "title": "الإحصائيات",
@@ -205,7 +220,10 @@
       "date": "التاريخ",
       "yes": "نعم",
       "no": "لا"
-    }
+    },
+    "lockedCount": "{count, plural, =0 {لا عملاء مقفلون} one {عميل واحد مقفل} other {# عملاء مقفلون}}",
+    "lockedDescription": "تعرض الخطة المجانية 10 عملاء كل 30 يوماً. ارقَ إلى خطة مدفوعة لفتحهم جميعاً.",
+    "lockedUnlockCta": "افتح كل عملائي"
   },
   "loginPage": {
     "tagline": "أنشئ اختبارات جذابة واجمع العملاء المحتملين",
@@ -449,7 +467,11 @@
         "label": "مكتبة",
         "hint": "أن يكون لديك 10 مشاريع أو أكثر"
       }
-    }
+    },
+    "statisticsTitle": "الإحصائيات",
+    "embedClaimSuccess": "اختبارك كان بانتظارك — أصبح الآن في حسابك ✨",
+    "embedClaimOpen": "افتح",
+    "deleteError": "حدث خطأ ما."
   },
   "quizForm": {
     "createTitle": "إنشاء اختبار",
@@ -579,7 +601,10 @@
     "importSelectFile": "اختر ملفًا",
     "importInProgress": "جاري الاستيراد...",
     "importAnalyze": "تحليل واستيراد",
-    "importQuizLocale": "لغة الاختبار المستورد"
+    "importQuizLocale": "لغة الاختبار المستورد",
+    "importEmptyFile": "ملف فارغ.",
+    "importError": "خطأ في الاستيراد",
+    "defaultQuizTitle": "اختباري"
   },
   "quizDetail": {
     "backToList": "العودة إلى الاختبارات",
@@ -869,7 +894,17 @@
     "tabTracking": "التتبع",
     "shareSiteNameTitle": "اسم العلامة في المشاركات",
     "shareSiteNameDesc": "يحل محل «Tiquiz» في معاينة iMessage / WhatsApp / الشبكات الاجتماعية.",
-    "shareSiteNameHint": "فارغ → سنعرض نطاقك ({fallback})."
+    "shareSiteNameHint": "فارغ → سنعرض نطاقك ({fallback}).",
+    "trackingDefaultsMetaCapiLabel": "رمز Conversions API من Meta (اختياري)",
+    "trackingDefaultsMetaCapiPlaceholder": "EAAG… (رمز وصول Conversions API)",
+    "trackingDefaultsMetaCapiHelp": "يفعّل إرسال التحويلات من الخادم (يقاوم مانعي الإعلانات، يحسّن المطابقة، ويُلغى تكراره مع البكسل). Events Manager ← مجموعة بياناتك ← الإعدادات ← Conversions API ← «إنشاء رمز وصول». استخدمه مع البكسل أعلاه.",
+    "affiliateWhereId": "<strong>أين أجد المعرف الخاص بي؟</strong> سجل الدخول إلى Systeme.io ← <em>لوحة الشريك</em> ← في الأعلى يميناً سترى <em>معرف الشريك</em> (يبدأ بـ <code>sa</code>). انسخه، الصقه هنا، انتهى.",
+    "affiliateNotRegistered": "لم تسجل بعد؟",
+    "affiliateDiscoverProgram": "اكتشف برنامج الشراكة",
+    "affiliateTerms": "الشروط العامة",
+    "affiliateEmptyFieldNote": "إذا تركت هذا الحقل فارغاً، سيبقى التذييل ظاهراً لكن دون تتبع — لن تحصل على أي عمولة من التسجيلات.",
+    "achievementsTitle": "شاراتي",
+    "shareSiteNamePlaceholder": "استوديو الخاص بي"
   },
   "languageSwitcher": {
     "label": "اللغة"
@@ -1043,6 +1078,19 @@
     "designLogoShow": "إظهار الشعار",
     "designLogoHidden": "تم إخفاء الشعار على هذا الاختبار.",
     "previewTitlePh": "عنوان الاختبار…",
+    "previewStartBtnPh": "ابدأ الاختبار",
+    "genderizeBtnTitle": "إنشاء صيغ النوع (هو / هي / محايد)",
+    "genderizeFailed": "تعذّر إنشاء الصيغ{code}. حاول مرة أخرى.",
+    "genderizeFailedNetwork": "تعذّر إنشاء الصيغ (شبكة). حاول مرة أخرى.",
+    "bonusIntroLabel": "رسالة مخصّصة (اختياري)",
+    "bonusIntroPh": "اتركها فارغة للإبقاء على الرسالة الافتراضية، أو اكتب رسالتك هنا.",
+    "bonusUnlockedLabel": "رسالة بعد المشاركة (اختياري)",
+    "bonusUnlockedPh": "مثال: تم فتح المكافأة! رمز العرض الخاص بك: IMAGELYS20.",
+    "bonusUnlockedHint": "تظهر بدلاً من الرسالة الافتراضية بمجرد فتح المكافأة. مفيدة لتسليم رمز عرض مباشرة بدون بريد إلكتروني.",
+    "previewModeTitle": "فتح في وضع المعاينة (لا يتم تسجيل أي lead)",
+    "previewModeTitleSurvey": "فتح في وضع المعاينة (لا يتم تسجيل أي إجابة)",
+    "previewModeBtn": "معاينة",
+    "readinessTitle": "{passed}/{total} خطوات — {percent}% جاهز",
     "previewIntroPh": "نص المقدمة…",
     "previewQuestionsCounter": "السؤال {n}/{total}",
     "previewQuestionPh": "نص السؤال…",
@@ -1189,7 +1237,11 @@
     "trackingAdsIdLabel": "Google Ads — معرّف التحويل",
     "trackingAdsLabelLabel": "Google Ads — تسمية التحويل (تم التقاط العميل)",
     "trackingAdsHelp": "أين أجد معرّفات Google Ads؟ Conversions →",
-    "trackingInvalidFormat": "تنسيق غير صالح"
+    "trackingInvalidFormat": "تنسيق غير صالح",
+    "generateAiShort": "توليد (ذكاء اصطناعي)",
+    "unlockTiquizCta": "افتح Tiquiz ←",
+    "ariaCropImage": "اقتصاص الصورة",
+    "ariaRemoveImage": "إزالة الصورة"
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",
@@ -1718,6 +1770,91 @@
       "modificationsSaved": "تم حفظ التعديلات"
     }
   },
+  "popquiz": {
+    "player": {
+      "exitPip": "الخروج من وضع النافذة المصغّرة",
+      "enterPip": "وضع النافذة المصغّرة",
+      "resumeVideo": "استئناف الفيديو",
+      "playbackRate": "سرعة التشغيل",
+      "share": "مشاركة",
+      "linkCopied": "تم نسخ الرابط",
+      "skipBack10": "ارجع 10 ثوان",
+      "skipForward10": "تقدم 10 ثوان",
+      "questionDialog": "سؤال Popquiz"
+    },
+    "iframeLoading": "جارٍ تحميل الاختبار…"
+  },
+  "videoUploader": {
+    "ready": "الفيديو جاهز",
+    "removeVideo": "إزالة الفيديو",
+    "uploading": "جارٍ الرفع…",
+    "cancel": "إلغاء",
+    "resumableHint": "قابل للاستئناف في حال انقطاع الشبكة — أبقِ علامة التبويب مفتوحة.",
+    "preparing": "تحضير (استخراج الصورة المصغّرة…)",
+    "finalizing": "إنهاء…",
+    "dropzoneTitle": "اسحب فيديو هنا أو انقر لاختياره",
+    "dropzoneHint": "MP4 و WebM و MOV — حتى 20 غيغابايت.",
+    "toasts": {
+      "imported": "تم رفع الفيديو"
+    },
+    "errors": {
+      "notVideo": "اختر فيديو (.mp4 أو .webm أو .mov…).",
+      "prepareImport": "تعذّر تحضير الرفع.",
+      "playbackLink": "تعذّر إنشاء رابط تشغيل.",
+      "generic": "حدث خطأ أثناء الرفع",
+      "tooLarge": "الملف كبير جدًا. الحد الأقصى المسموح به هو 20 غيغابايت.",
+      "aborted": "تم إلغاء الرفع."
+    }
+  },
+  "admin": {
+    "title": "إدارة Tiquiz",
+    "refresh": "تحديث",
+    "inviteLabel": "دعوة مستخدم",
+    "createMagicLink": "إنشاء + Magic Link",
+    "searchPlaceholder": "بحث بالبريد الإلكتروني…",
+    "filterAll": "الكل",
+    "sortLabel": "ترتيب: {sort}",
+    "never": "أبدًا",
+    "noUsersFound": "لم يُعثر على أي مستخدم",
+    "confirmDelete": "حذف {email} نهائيًا؟\n\nبشكل تتابعي: الملف الشخصي، الاختبارات، popquizs، العملاء المحتملون، المشاريع — سيُمسح كل شيء. إجراء لا رجعة فيه.",
+    "stats": {
+      "totalUsers": "إجمالي المستخدمين",
+      "free": "Free",
+      "monthly": "شهري",
+      "yearly": "سنوي",
+      "lifetime": "Lifetime",
+      "totalQuiz": "إجمالي الاختبارات",
+      "totalLeads": "إجمالي العملاء المحتملين"
+    },
+    "plans": {
+      "free": "Free",
+      "monthly": "شهري",
+      "yearly": "سنوي",
+      "lifetime": "Lifetime"
+    },
+    "columns": {
+      "email": "البريد الإلكتروني",
+      "name": "الاسم",
+      "plan": "الخطة",
+      "quiz": "الاختبار",
+      "leads": "العملاء المحتملون",
+      "lastLogin": "آخر تسجيل دخول",
+      "actions": "إجراءات"
+    },
+    "actions": {
+      "link": "رابط",
+      "resendMagicLinkTitle": "إعادة إرسال رابط سحري",
+      "deletePermanently": "حذف نهائي"
+    },
+    "toasts": {
+      "loadError": "خطأ في التحميل",
+      "error": "خطأ",
+      "planUpdated": "تم تحديث الخطة: {plan}",
+      "userCreated": "تم إنشاء المستخدم + إرسال magic link",
+      "magicLinkResent": "تمت إعادة إرسال magic link إلى {email}",
+      "userDeleted": "تم حذف {email}"
+    }
+  },
   "palettes": {
     "defaultPaletteName": "علامتي",
     "paletteNumberedName": "لوحة {n}",
@@ -1811,6 +1948,26 @@
     "pink": "وردي",
     "cyan": "سماوي"
   },
+  "imageCrop": {
+    "title": "اقتصاص الصورة",
+    "description": "حرّك الإطار وغيّر حجمه، ثم اضبط الحجم. تُحفظ حركة صور GIF.",
+    "widthLabel": "عرض الصورة",
+    "cancel": "إلغاء",
+    "apply": "تطبيق",
+    "toastFailedTitle": "فشل الاقتصاص",
+    "toastFailedRetry": "حاول مرة أخرى.",
+    "toastUnavailableTitle": "الاقتصاص غير متاح",
+    "toastUnavailableHint": "تحقق من اتصالك."
+  },
+  "gifPicker": {
+    "title": "اختر GIF",
+    "description": "ابحث عن GIF عالي الجودة لاستخدامه كغلاف أو رسم توضيحي.",
+    "searchPlaceholder": "ابحث عن GIF…",
+    "notConfigured": "مكتبة GIF غير مفعّلة بعد.",
+    "notConfiguredHint": "أضف المتغير البيئي <code>KLIPY_API_KEY</code> لتفعيلها.",
+    "errorGeneric": "البحث غير متاح حاليًا. حاول مرة أخرى بعد قليل.",
+    "noResults": "لم يتم العثور على GIF. جرّب كلمة مفتاحية أخرى."
+  },
   "visualStudio": {
     "title": "الأستوديو المرئي",
     "description": "انقر نقرًا مزدوجًا على نص لإعادة كتابته، حدّد كلمة لتنسيقها، اسحب لإعادة وضعه.",
@@ -1888,6 +2045,8 @@
     "pdfDone": "تم تنزيل PDF",
     "navKeysTip": "نصيحة: استخدم ← → أو اسحب للتنقل.",
     "brandLabel": "العلامة",
+    "myBrand": "علامتي",
+    "applyInsert": "إدراج",
     "logoPosition": "موضع الشعار",
     "logoSize": "حجم الشعار",
     "aiNewBackground": "خلفية جديدة",
@@ -1903,6 +2062,60 @@
     "overlayLabel": "صورة / شعار",
     "overlayAddImage": "إضافة صورة",
     "overlayAddLogo": "إضافة الشعار",
-    "overlayHint": "اسحب للتحريك، واسحب الزوايا لتغيير الحجم. حدّد ثم 🗑 للحذف."
+    "overlayHint": "اسحب للتحريك، واسحب الزوايا لتغيير الحجم. حدّد ثم 🗑 للحذف.",
+    "buttonDefaultLabel": "توليد صورة",
+    "placeholderHeadline": "العنوان الرئيسي هنا",
+    "placeholderSubline": "عنوان فرعي قصير يدعم الفائدة.",
+    "placeholderCta": "اكتشف الآن ←",
+    "retryFallback": "حاول مرة أخرى.",
+    "backgroundColorLabel": "لون الخلفية",
+    "gradientEndColorLabel": "لون النهاية",
+    "newTextDefault": "نص جديد"
+  },
+  "quizAnalytics": {
+    "loadError": "تعذر تحميل الإحصائيات.",
+    "backToEditor": "العودة إلى المحرر",
+    "statsHeader": "إحصائيات",
+    "period7": "آخر 7 أيام",
+    "period30": "آخر 30 يوماً",
+    "period90": "آخر 90 يوماً",
+    "periodAll": "منذ البداية",
+    "periodShortAll": "الكل",
+    "periodShortDays": "{n}ي",
+    "kpiViews": "المشاهدات",
+    "kpiViewsHint": "إجمالي الزوار (تراكمياً منذ البداية)",
+    "kpiLeads": "العملاء المحتملون",
+    "kpiLeadsHint": "{count} تم تصديرهم إلى Systeme.io",
+    "kpiCaptureRate": "معدل الالتقاط",
+    "kpiCaptureRateHint": "العملاء / المشاهدات (تراكمياً)",
+    "kpiExportSio": "تصدير Systeme.io",
+    "kpiExportSioHint": "نسبة العملاء الموسومين في SIO",
+    "leadsEvolutionTitle": "تطور العملاء المحتملين",
+    "emptyLeadsPeriod": "لم يتم التقاط أي عميل في هذه الفترة.",
+    "distributionTitle": "التوزيع حسب النتيجة",
+    "emptyResults": "لا توجد نتائج للعرض.",
+    "funnelTitle": "القمع حسب السؤال",
+    "funnelEmpty": "لا توجد بيانات لهذه الفترة. يبدأ التتبع لكل سؤال بالتسجيل عند الزيارة التالية.",
+    "funnelSubtitle": "عدد الجلسات المتميزة التي رأت كل سؤال. يتقلص الشريط مع كل انسحاب.",
+    "sessionsStarted": "{count, plural, =0 {لا توجد جلسات} one {جلسة واحدة بدأت} other {# جلسة بدأت}}",
+    "worstDropWarning": "السؤال {q} يتسبب في فقدان <bold>{pct}%</bold> من الزوار مقارنة بالسؤال السابق. هذه هي النقطة الساخنة التي يجب إعادة صياغتها أولاً.",
+    "leadsCount": "{count, plural, =0 {لا عملاء} one {عميل واحد} other {# عملاء}}",
+    "leadsCountWithPct": "{count} عملاء · {pct}%"
+  },
+  "illustrations": {
+    "emptyInbox": "صندوق الوارد فارغ",
+    "emptyCanvas": "لوحة فارغة — جاهزة للملء",
+    "emptyChart": "لا توجد بيانات بعد",
+    "emptySearch": "لا توجد نتائج",
+    "welcome": "أهلاً!"
+  },
+  "mascot": {
+    "hello": "تميمة تلقي التحية",
+    "thinking": "تميمة تفكر",
+    "happy": "تميمة مبتسمة",
+    "wave": "تميمة تلوح",
+    "sleepy": "تميمة نائمة",
+    "celebrate": "تميمة تحتفل",
+    "search": "تميمة تبحث"
   }
 }

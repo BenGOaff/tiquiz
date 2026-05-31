@@ -3,13 +3,19 @@
 // can reach it), 404s otherwise, and ships everything to the
 // client component for rendering.
 
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { fetchOwnedPopquiz } from "@/lib/popquiz/repo";
 import PopquizEditClient from "./PopquizEditClient";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Modifier le popquiz – Tiquiz" };
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("metadata.pages");
+  return { title: t("editPopquiz") };
+}
 
 type Props = { params: Promise<{ popquizId: string }> };
 

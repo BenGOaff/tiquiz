@@ -49,11 +49,11 @@ type Props = {
 };
 
 const DEFAULT_STRINGS = {
-  placeholder: "Choisis une langue",
-  searchPlaceholder: "Rechercher une langue…",
-  popularHeading: "Populaires",
-  allHeading: "Toutes les langues",
-  noResults: "Aucune langue ne correspond.",
+  placeholder: "Pick a language",
+  searchPlaceholder: "Search a language…",
+  popularHeading: "Popular",
+  allHeading: "All languages",
+  noResults: "No language matches.",
 };
 
 // Min height we want to keep visible inside the panel (search bar + a few

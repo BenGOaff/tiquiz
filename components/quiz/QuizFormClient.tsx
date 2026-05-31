@@ -342,7 +342,7 @@ export default function QuizFormClient() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: "Mon quiz",
+          title: t("defaultQuizTitle"),
           locale: "fr",
           questions: [
             { question_text: "", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }] },
@@ -812,7 +812,7 @@ export default function QuizFormClient() {
     try {
       const text = await importFile.text();
       if (!text.trim()) {
-        toast.error("Fichier vide.");
+        toast.error(t("importEmptyFile"));
         setImporting(false);
         return;
       }
@@ -874,7 +874,7 @@ export default function QuizFormClient() {
       toast.success(t("quizImported"));
       setActiveTab("manual");
     } catch {
-      toast.error("Erreur lors de l'import");
+      toast.error(t("importError"));
     } finally {
       setImporting(false);
     }

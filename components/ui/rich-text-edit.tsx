@@ -551,7 +551,7 @@ export function RichTextEdit({
                 if (!colorOpen) saveSelection();
                 setColorOpen((v) => !v);
               }}
-              title="Couleur du texte"
+              title={t("rteTextColor")}
             >
               <Palette className="w-3.5 h-3.5" />
             </ToolbarBtn>
@@ -617,18 +617,18 @@ export function RichTextEdit({
                       type="color"
                       onChange={(e) => applyColor(e.target.value)}
                       className="w-7 h-7 rounded cursor-pointer border-0"
-                      aria-label="Couleur personnalisée"
+                      aria-label={t("rteCustomColor")}
                     />
-                    <span>Custom</span>
+                    <span>{t("rteCustom")}</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => applyColor(null)}
                     className="text-xs px-2 py-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                    title="Retirer la couleur"
+                    title={t("rteRemoveColor")}
                   >
                     <Eraser className="w-3 h-3" />
-                    Reset
+                    {t("rteReset")}
                   </button>
                 </div>
               </div>
@@ -718,7 +718,7 @@ export function RichTextEdit({
             type="button"
             onClick={handleGenderize}
             disabled={genderizing}
-            title="Générer les variantes de genre (Il / Elle / Iel)"
+            title={t("rteGenderizeTitle")}
             className="absolute top-1 right-6 p-0.5 text-primary/40 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity"
           >
             {genderizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}

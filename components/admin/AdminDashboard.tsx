@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ type User = {
 };
 
 export default function AdminDashboard() {
+  const t = useTranslations("admin");
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -30,7 +32,7 @@ export default function AdminDashboard() {
       const json = await res.json();
       if (json.ok) setUsers(json.users ?? []);
       else toast.error(json.error);
-    } catch { toast.error("Erreur chargement"); }
+    } catch { toast.error(t("toasts.loadError")); }
     finally { setLoading(false); }
   };
 
@@ -44,10 +46,10 @@ export default function AdminDashboard() {
       });
       const json = await res.json();
       if (json.ok) {
-        toast.success(`Plan mis à jour: ${plan}`);
+        toast.success(t("toasts.planUpdated", { plan }));
         setUsers(prev => prev.map(u => (u.user_id ?? u.id) === userId ? { ...u, plan } : u));
       } else toast.error(json.error);
-    } catch { toast.error("Erreur"); }
+    } catch { toast.error(t("toasts.error")); }
   };
 
   const createUser = async () => {
@@ -59,9 +61,9 @@ export default function AdminDashboard() {
         body: JSON.stringify({ email: newEmail.trim(), plan: newPlan, send_magic_link: true }),
       });
       const json = await res.json();
-      if (json.ok) { toast.success(`User créé + magic link envoyé`); setNewEmail(""); fetchUsers(); }
+      if (json.ok) { toast.success(t("toasts.userCreated")); setNewEmail(""); fetchUsers(); }
       else toast.error(json.error);
-    } catch { toast.error("Erreur"); }
+    } catch { toast.error(t("toasts.error")); }
     finally { setCreating(false); }
   };
 
@@ -76,9 +78,9 @@ export default function AdminDashboard() {
         body: JSON.stringify({ email }),
       });
       const json = await res.json();
-      if (json.ok) toast.success(`Magic link renvoyé à ${email}`);
-      else toast.error(json.error || "Erreur");
-    } catch { toast.error("Erreur"); }
+      if (json.ok) toast.success(t("toasts.magicLinkResent", { email }));
+      else toast.error(json.error || t("toasts.error"));
+    } catch { toast.error(t("toasts.error")); }
     finally { setBusyUserId(null); }
   };
 
@@ -87,9 +89,7 @@ export default function AdminDashboard() {
   // Pas de undo possible — toutes les FKs ont ON DELETE CASCADE.
   const deleteUser = async (userId: string, email: string) => {
     if (!userId) return;
-    const ok = window.confirm(
-      `Supprimer DÉFINITIVEMENT ${email} ?\n\nCascade : profil, quizs, popquizs, leads, projets — tout sera détruit. Action irréversible.`,
-    );
+    const ok = window.confirm(t("confirmDelete", { email }));
     if (!ok) return;
     setBusyUserId(userId);
     try {
@@ -99,10 +99,10 @@ export default function AdminDashboard() {
       });
       const json = await res.json();
       if (json.ok) {
-        toast.success(`${email} supprimé`);
+        toast.success(t("toasts.userDeleted", { email }));
         setUsers(prev => prev.filter(u => (u.user_id ?? u.id) !== userId));
-      } else toast.error(json.error || "Erreur");
-    } catch { toast.error("Erreur"); }
+      } else toast.error(json.error || t("toasts.error"));
+    } catch { toast.error(t("toasts.error")); }
     finally { setBusyUserId(null); }
   };
 
@@ -133,20 +133,20 @@ export default function AdminDashboard() {
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Admin Tiquiz</h1>
-        <Button variant="outline" size="sm" onClick={fetchUsers}><RefreshCw className="w-4 h-4 mr-1" />Rafraîchir</Button>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <Button variant="outline" size="sm" onClick={fetchUsers}><RefreshCw className="w-4 h-4 mr-1" />{t("refresh")}</Button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         {[
-          { label: "Total users", value: stats.total, icon: Users },
-          { label: "Free", value: stats.free, icon: Users },
-          { label: "Mensuel", value: stats.monthly, icon: Users },
-          { label: "Annuel", value: stats.yearly, icon: Users },
-          { label: "Lifetime", value: stats.lifetime, icon: Users },
-          { label: "Total quiz", value: stats.totalQuizzes, icon: BarChart3 },
-          { label: "Total leads", value: stats.totalLeads, icon: BarChart3 },
+          { label: t("stats.totalUsers"), value: stats.total, icon: Users },
+          { label: t("stats.free"), value: stats.free, icon: Users },
+          { label: t("stats.monthly"), value: stats.monthly, icon: Users },
+          { label: t("stats.yearly"), value: stats.yearly, icon: Users },
+          { label: t("stats.lifetime"), value: stats.lifetime, icon: Users },
+          { label: t("stats.totalQuiz"), value: stats.totalQuizzes, icon: BarChart3 },
+          { label: t("stats.totalLeads"), value: stats.totalLeads, icon: BarChart3 },
         ].map(({ label, value, icon: Icon }) => (
           <Card key={label}><CardContent className="pt-4 pb-3">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Icon className="w-3.5 h-3.5" />{label}</div>
@@ -157,25 +157,25 @@ export default function AdminDashboard() {
 
       {/* Create user */}
       <Card><CardContent className="pt-4 flex items-end gap-3">
-        <div className="flex-1 space-y-1"><label className="text-xs font-medium">Inviter un user</label><Input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="email@example.com" /></div>
+        <div className="flex-1 space-y-1"><label className="text-xs font-medium">{t("inviteLabel")}</label><Input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="email@example.com" /></div>
         <select value={newPlan} onChange={e => setNewPlan(e.target.value)} className="border rounded-lg px-2 py-2 text-sm">
-          <option value="free">Free</option><option value="monthly">Mensuel</option><option value="yearly">Annuel</option><option value="lifetime">Lifetime</option>
+          <option value="free">{t("plans.free")}</option><option value="monthly">{t("plans.monthly")}</option><option value="yearly">{t("plans.yearly")}</option><option value="lifetime">{t("plans.lifetime")}</option>
         </select>
-        <Button onClick={createUser} disabled={creating}>{creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-1" />Créer + Magic Link</>}</Button>
+        <Button onClick={createUser} disabled={creating}>{creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-1" />{t("createMagicLink")}</>}</Button>
       </CardContent></Card>
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 max-w-sm"><Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par email…" className="pl-9" /></div>
+        <div className="relative flex-1 max-w-sm"><Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t("searchPlaceholder")} className="pl-9" /></div>
         <div className="flex gap-1">
           {["all", "free", "monthly", "yearly", "lifetime"].map(p => (
             <button key={p} onClick={() => setPlanFilter(p)} className={`px-3 py-1.5 rounded-full text-xs font-medium ${planFilter === p ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>
-              {p === "all" ? "Tous" : p}
+              {p === "all" ? t("filterAll") : p}
             </button>
           ))}
         </div>
         <button onClick={() => setSortBy(s => s === "date" ? "leads" : s === "leads" ? "quizzes" : "date")} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-          <ArrowUpDown className="w-3.5 h-3.5" />Tri: {sortBy}
+          <ArrowUpDown className="w-3.5 h-3.5" />{t("sortLabel", { sort: sortBy })}
         </button>
       </div>
 
@@ -184,13 +184,13 @@ export default function AdminDashboard() {
         <Card><div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="border-b bg-muted/50 text-left">
-              <th className="px-4 py-3 font-medium">Email</th>
-              <th className="px-4 py-3 font-medium">Nom</th>
-              <th className="px-4 py-3 font-medium">Plan</th>
-              <th className="px-4 py-3 font-medium">Quiz</th>
-              <th className="px-4 py-3 font-medium">Leads</th>
-              <th className="px-4 py-3 font-medium">Dernière co.</th>
-              <th className="px-4 py-3 font-medium">Actions</th>
+              <th className="px-4 py-3 font-medium">{t("columns.email")}</th>
+              <th className="px-4 py-3 font-medium">{t("columns.name")}</th>
+              <th className="px-4 py-3 font-medium">{t("columns.plan")}</th>
+              <th className="px-4 py-3 font-medium">{t("columns.quiz")}</th>
+              <th className="px-4 py-3 font-medium">{t("columns.leads")}</th>
+              <th className="px-4 py-3 font-medium">{t("columns.lastLogin")}</th>
+              <th className="px-4 py-3 font-medium">{t("columns.actions")}</th>
             </tr></thead>
             <tbody>
               {filtered.map(u => {
@@ -202,27 +202,27 @@ export default function AdminDashboard() {
                     <td className="px-4 py-3">{planBadge(u.plan)}</td>
                     <td className="px-4 py-3">{u.quiz_count}</td>
                     <td className="px-4 py-3">{u.lead_count}</td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">{u.last_sign_in ? new Date(u.last_sign_in).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "Jamais"}</td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs">{u.last_sign_in ? new Date(u.last_sign_in).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : t("never")}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <select value={u.plan} onChange={e => updatePlan(uid, e.target.value)} className="border rounded px-2 py-1 text-xs bg-background">
-                          <option value="free">Free</option><option value="monthly">Mensuel</option><option value="yearly">Annuel</option><option value="lifetime">Lifetime</option>
+                          <option value="free">{t("plans.free")}</option><option value="monthly">{t("plans.monthly")}</option><option value="yearly">{t("plans.yearly")}</option><option value="lifetime">{t("plans.lifetime")}</option>
                         </select>
                         <button
                           type="button"
                           onClick={() => resendMagicLink(u.email)}
                           disabled={busyUserId === u.email || busyUserId === uid}
-                          title="Renvoyer un lien magique"
+                          title={t("actions.resendMagicLinkTitle")}
                           className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border hover:bg-muted disabled:opacity-50"
                         >
                           {busyUserId === u.email ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
-                          Lien
+                          {t("actions.link")}
                         </button>
                         <button
                           type="button"
                           onClick={() => deleteUser(uid, u.email)}
                           disabled={busyUserId === uid || busyUserId === u.email}
-                          title="Supprimer définitivement"
+                          title={t("actions.deletePermanently")}
                           className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-50"
                         >
                           {busyUserId === uid ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
@@ -234,7 +234,7 @@ export default function AdminDashboard() {
               })}
             </tbody>
           </table>
-          {filtered.length === 0 && <p className="text-center py-8 text-sm text-muted-foreground">Aucun utilisateur trouvé</p>}
+          {filtered.length === 0 && <p className="text-center py-8 text-sm text-muted-foreground">{t("noUsersFound")}</p>}
         </div></Card>
       )}
     </div>

@@ -11,7 +11,14 @@
       "stats": "Estatísticas",
       "settings": "Configurações",
       "admin": "Admin",
-      "projects": "Meus projetos"
+      "projects": "Meus projetos",
+      "editProject": "Editar projeto – Tiquiz",
+      "editPopquiz": "Editar popquiz – Tiquiz",
+      "newQuiz": "Novo quiz – Tiquiz",
+      "newSurvey": "Nova pesquisa – Tiquiz",
+      "newPopquiz": "Novo Popquiz – Tiquiz",
+      "myPopquizzes": "Meus Popquiz – Tiquiz",
+      "myPopquizzesShort": "Meus Popquiz"
     }
   },
   "common": {
@@ -79,7 +86,14 @@
     "rteImageDialogHint": "Cole a URL da imagem a incorporar.",
     "rteDialogConfirm": "Inserir",
     "rteDialogCancel": "Cancelar",
-    "rteUploadImage": "Carregar imagem (arrastar e soltar aceito)"
+    "rteUploadImage": "Carregar imagem (arrastar e soltar aceito)",
+    "rteCustomColor": "Cor personalizada",
+    "rteGenderizeTitle": "Gerar as variantes de gênero (Ele / Ela / Elu)",
+    "readinessSteps": "{passed} de {total} etapas",
+    "rteTextColor": "Cor do texto",
+    "rteRemoveColor": "Remover cor",
+    "rteReset": "Redefinir",
+    "rteCustom": "Personalizado"
   },
   "nav": {
     "dashboard": "Painel",
@@ -93,7 +107,8 @@
     "logout": "Sair",
     "projects": "Meus projetos",
     "createSurvey": "Criar uma pesquisa",
-    "popquiz": "Popquiz de vídeo"
+    "popquiz": "Popquiz de vídeo",
+    "becomeAffiliate": "Seja um afiliado"
   },
   "stats": {
     "title": "Estatísticas",
@@ -205,7 +220,10 @@
       "date": "Data",
       "yes": "Sim",
       "no": "Não"
-    }
+    },
+    "lockedCount": "{count, plural, =0 {0 leads bloqueados} one {# lead bloqueado} other {# leads bloqueados}}",
+    "lockedDescription": "O plano gratuito mostra 10 leads por janela de 30 dias. Faça upgrade para um plano pago para desbloquear todos.",
+    "lockedUnlockCta": "Desbloquear todos os meus leads"
   },
   "loginPage": {
     "tagline": "Crie quizzes envolventes e capture leads",
@@ -449,7 +467,11 @@
         "label": "Biblioteca",
         "hint": "Tenha 10 projetos ou mais"
       }
-    }
+    },
+    "statisticsTitle": "Estatísticas",
+    "embedClaimSuccess": "Seu quiz estava esperando — agora está na sua conta ✨",
+    "embedClaimOpen": "Abrir",
+    "deleteError": "Algo deu errado."
   },
   "quizForm": {
     "createTitle": "Criar um quiz",
@@ -579,7 +601,10 @@
     "importSelectFile": "Selecionar um arquivo",
     "importInProgress": "Importação em andamento...",
     "importAnalyze": "Analisar e importar",
-    "importQuizLocale": "Idioma do quiz importado"
+    "importQuizLocale": "Idioma do quiz importado",
+    "importEmptyFile": "Arquivo vazio.",
+    "importError": "Erro na importação",
+    "defaultQuizTitle": "Meu quiz"
   },
   "quizDetail": {
     "backToList": "Voltar aos quizzes",
@@ -869,7 +894,17 @@
     "tabTracking": "Tracking",
     "shareSiteNameTitle": "Nome da marca nos compartilhamentos",
     "shareSiteNameDesc": "Substitui «Tiquiz» na pré-visualização do iMessage / WhatsApp / redes sociais.",
-    "shareSiteNameHint": "Vazio → mostraremos seu domínio ({fallback})."
+    "shareSiteNameHint": "Vazio → mostraremos seu domínio ({fallback}).",
+    "trackingDefaultsMetaCapiLabel": "Token da API de Conversões do Meta (opcional)",
+    "trackingDefaultsMetaCapiPlaceholder": "EAAG… (token de acesso da API de Conversões)",
+    "trackingDefaultsMetaCapiHelp": "Ativa o envio das conversões pelo servidor (resiste a bloqueadores de anúncios, melhora a correspondência, deduplicado com o pixel). Events Manager → seu dataset → Configurações → API de Conversões → «Gerar um token de acesso». Para usar com o pixel acima.",
+    "affiliateWhereId": "<strong>Onde encontro meu ID?</strong> Entre no Systeme.io → <em>Painel de afiliado</em> → no canto superior direito você vê seu <em>identificador de afiliado</em> (começa com <code>sa</code>). Copie, cole aqui, pronto.",
+    "affiliateNotRegistered": "Ainda não se cadastrou?",
+    "affiliateDiscoverProgram": "Conheça o programa de afiliados",
+    "affiliateTerms": "Termos e condições",
+    "affiliateEmptyFieldNote": "Se deixar este campo vazio, o rodapé continua visível mas sem tracking — os cadastros não vão te render nada.",
+    "achievementsTitle": "Minhas medalhas",
+    "shareSiteNamePlaceholder": "Meu estúdio"
   },
   "languageSwitcher": {
     "label": "Idioma"
@@ -1043,6 +1078,19 @@
     "designLogoShow": "Mostrar o logo",
     "designLogoHidden": "Logo ocultado neste quiz.",
     "previewTitlePh": "Título do quiz…",
+    "previewStartBtnPh": "Começar o teste",
+    "genderizeBtnTitle": "Gerar variantes de gênero (Ele / Ela / Elu)",
+    "genderizeFailed": "Não foi possível gerar as variantes{code}. Tente novamente.",
+    "genderizeFailedNetwork": "Não foi possível gerar as variantes (rede). Tente novamente.",
+    "bonusIntroLabel": "Mensagem personalizada (opcional)",
+    "bonusIntroPh": "Deixe vazio para manter a mensagem padrão, ou escreva a sua aqui.",
+    "bonusUnlockedLabel": "Mensagem após compartilhamento (opcional)",
+    "bonusUnlockedPh": "Ex: Bônus desbloqueado! Seu código promocional: IMAGELYS20.",
+    "bonusUnlockedHint": "Exibida em vez da mensagem padrão assim que o bônus é desbloqueado. Útil para entregar um código promocional diretamente, sem e-mail.",
+    "previewModeTitle": "Abrir em modo de pré-visualização (nenhum lead registrado)",
+    "previewModeTitleSurvey": "Abrir em modo de pré-visualização (nenhuma resposta registrada)",
+    "previewModeBtn": "Pré-visualizar",
+    "readinessTitle": "{passed}/{total} etapas — {percent}% pronto",
     "previewIntroPh": "Texto de introdução…",
     "previewQuestionsCounter": "Pergunta {n}/{total}",
     "previewQuestionPh": "Texto da pergunta…",
@@ -1187,7 +1235,11 @@
     "trackingAdsIdLabel": "Google Ads — ID de conversão",
     "trackingAdsLabelLabel": "Google Ads — Etiqueta de conversão (lead capturado)",
     "trackingAdsHelp": "Onde encontro meus IDs Google Ads? Conversions →",
-    "trackingInvalidFormat": "Formato inválido"
+    "trackingInvalidFormat": "Formato inválido",
+    "generateAiShort": "Gerar (IA)",
+    "unlockTiquizCta": "Desbloquear Tiquiz →",
+    "ariaCropImage": "Recortar imagem",
+    "ariaRemoveImage": "Remover imagem"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova senha",
@@ -1716,6 +1768,91 @@
       "modificationsSaved": "Modificações salvas"
     }
   },
+  "popquiz": {
+    "player": {
+      "exitPip": "Sair do modo picture-in-picture",
+      "enterPip": "Modo picture-in-picture",
+      "resumeVideo": "Retomar o vídeo",
+      "playbackRate": "Velocidade de reprodução",
+      "share": "Compartilhar",
+      "linkCopied": "Link copiado",
+      "skipBack10": "Voltar 10 segundos",
+      "skipForward10": "Avançar 10 segundos",
+      "questionDialog": "Pergunta Popquiz"
+    },
+    "iframeLoading": "Carregando o quiz…"
+  },
+  "videoUploader": {
+    "ready": "vídeo pronto",
+    "removeVideo": "Remover o vídeo",
+    "uploading": "Importação em andamento…",
+    "cancel": "Cancelar",
+    "resumableHint": "Retomável em caso de queda de rede — mantenha a aba aberta.",
+    "preparing": "Preparação (extração da miniatura…)",
+    "finalizing": "Finalizando…",
+    "dropzoneTitle": "Arraste um vídeo aqui ou clique para escolher",
+    "dropzoneHint": "MP4, WebM, MOV — até 20 GB.",
+    "toasts": {
+      "imported": "Vídeo importado"
+    },
+    "errors": {
+      "notVideo": "Escolha um vídeo (.mp4, .webm, .mov…).",
+      "prepareImport": "Não foi possível preparar a importação.",
+      "playbackLink": "Não foi possível gerar um link de reprodução.",
+      "generic": "Erro durante a importação",
+      "tooLarge": "Arquivo muito grande. O tamanho máximo aceito é 20 GB.",
+      "aborted": "Importação cancelada."
+    }
+  },
+  "admin": {
+    "title": "Admin Tiquiz",
+    "refresh": "Atualizar",
+    "inviteLabel": "Convidar um usuário",
+    "createMagicLink": "Criar + Magic Link",
+    "searchPlaceholder": "Pesquisar por email…",
+    "filterAll": "Todos",
+    "sortLabel": "Ordem: {sort}",
+    "never": "Nunca",
+    "noUsersFound": "Nenhum usuário encontrado",
+    "confirmDelete": "Excluir DEFINITIVAMENTE {email}?\n\nEm cascata: perfil, quizzes, popquizzes, leads, projetos — tudo será destruído. Ação irreversível.",
+    "stats": {
+      "totalUsers": "Total de usuários",
+      "free": "Free",
+      "monthly": "Mensal",
+      "yearly": "Anual",
+      "lifetime": "Lifetime",
+      "totalQuiz": "Total quizzes",
+      "totalLeads": "Total leads"
+    },
+    "plans": {
+      "free": "Free",
+      "monthly": "Mensal",
+      "yearly": "Anual",
+      "lifetime": "Lifetime"
+    },
+    "columns": {
+      "email": "Email",
+      "name": "Nome",
+      "plan": "Plano",
+      "quiz": "Quiz",
+      "leads": "Leads",
+      "lastLogin": "Último login",
+      "actions": "Ações"
+    },
+    "actions": {
+      "link": "Link",
+      "resendMagicLinkTitle": "Reenviar um magic link",
+      "deletePermanently": "Excluir definitivamente"
+    },
+    "toasts": {
+      "loadError": "Erro ao carregar",
+      "error": "Erro",
+      "planUpdated": "Plano atualizado: {plan}",
+      "userCreated": "Usuário criado + magic link enviado",
+      "magicLinkResent": "Magic link reenviado para {email}",
+      "userDeleted": "{email} excluído"
+    }
+  },
   "palettes": {
     "defaultPaletteName": "Minha marca",
     "paletteNumberedName": "Paleta {n}",
@@ -1756,6 +1893,26 @@
     "purple": "Roxo",
     "pink": "Rosa",
     "cyan": "Ciano"
+  },
+  "imageCrop": {
+    "title": "Recortar a imagem",
+    "description": "Mova e redimensione o quadro, depois ajuste o tamanho. A animação dos GIF é preservada.",
+    "widthLabel": "Largura da imagem",
+    "cancel": "Cancelar",
+    "apply": "Aplicar",
+    "toastFailedTitle": "Falha ao recortar",
+    "toastFailedRetry": "Tente novamente.",
+    "toastUnavailableTitle": "Recorte indisponível",
+    "toastUnavailableHint": "Verifique sua conexão."
+  },
+  "gifPicker": {
+    "title": "Escolher um GIF",
+    "description": "Procure um GIF de qualidade para usar como capa ou ilustração.",
+    "searchPlaceholder": "Pesquisar um GIF…",
+    "notConfigured": "A biblioteca de GIFs ainda não está ativada.",
+    "notConfiguredHint": "Adicione a variável de ambiente <code>KLIPY_API_KEY</code> para ativá-la.",
+    "errorGeneric": "Pesquisa indisponível no momento. Tente novamente em instantes.",
+    "noResults": "Nenhum GIF encontrado. Tente outra palavra-chave."
   },
   "visualStudio": {
     "title": "Estúdio visual",
@@ -1834,6 +1991,8 @@
     "pdfDone": "PDF baixado",
     "navKeysTip": "Dica: setas ← → ou deslize para navegar.",
     "brandLabel": "Marca",
+    "myBrand": "Minha marca",
+    "applyInsert": "Inserir",
     "logoPosition": "Posição do logo",
     "logoSize": "Tamanho do logo",
     "aiNewBackground": "Novo fundo",
@@ -1849,6 +2008,60 @@
     "overlayLabel": "Imagem / logo",
     "overlayAddImage": "Adicionar uma imagem",
     "overlayAddLogo": "Adicionar o logo",
-    "overlayHint": "Arraste para mover, puxe os cantos para redimensionar. Selecione e 🗑 para remover."
+    "overlayHint": "Arraste para mover, puxe os cantos para redimensionar. Selecione e 🗑 para remover.",
+    "buttonDefaultLabel": "Gerar um visual",
+    "placeholderHeadline": "Seu título aqui",
+    "placeholderSubline": "Um subtítulo curto que reforça o benefício.",
+    "placeholderCta": "Descubra agora →",
+    "retryFallback": "Tente novamente.",
+    "backgroundColorLabel": "Cor de fundo",
+    "gradientEndColorLabel": "Cor final",
+    "newTextDefault": "Novo texto"
+  },
+  "quizAnalytics": {
+    "loadError": "Não foi possível carregar as estatísticas.",
+    "backToEditor": "Voltar ao editor",
+    "statsHeader": "Estatísticas",
+    "period7": "Últimos 7 dias",
+    "period30": "Últimos 30 dias",
+    "period90": "Últimos 90 dias",
+    "periodAll": "Desde o início",
+    "periodShortAll": "Tudo",
+    "periodShortDays": "{n}d",
+    "kpiViews": "Visualizações",
+    "kpiViewsHint": "Total de visitantes (acumulado desde o início)",
+    "kpiLeads": "Leads",
+    "kpiLeadsHint": "{count} exportados para o Systeme.io",
+    "kpiCaptureRate": "Taxa de captura",
+    "kpiCaptureRateHint": "Leads / visualizações (acumulado)",
+    "kpiExportSio": "Exportação Systeme.io",
+    "kpiExportSioHint": "% dos leads marcados no SIO",
+    "leadsEvolutionTitle": "Evolução dos leads",
+    "emptyLeadsPeriod": "Nenhum lead capturado neste período.",
+    "distributionTitle": "Distribuição por resultado",
+    "emptyResults": "Nenhum resultado para mostrar.",
+    "funnelTitle": "Funil por pergunta",
+    "funnelEmpty": "Sem dados para este período. O rastreamento por pergunta começa a registrar na próxima visita.",
+    "funnelSubtitle": "Número de sessões distintas que viram cada pergunta. A barra diminui a cada abandono.",
+    "sessionsStarted": "{count, plural, =0 {0 sessões iniciadas} one {# sessão iniciada} other {# sessões iniciadas}}",
+    "worstDropWarning": "A pergunta {q} faz você perder <bold>{pct}%</bold> dos visitantes em relação à anterior. É o ponto a reescrever primeiro.",
+    "leadsCount": "{count, plural, =0 {0 leads} one {# lead} other {# leads}}",
+    "leadsCountWithPct": "{count} leads · {pct}%"
+  },
+  "illustrations": {
+    "emptyInbox": "Caixa de entrada vazia",
+    "emptyCanvas": "Tela em branco — pronta para ser preenchida",
+    "emptyChart": "Ainda sem dados",
+    "emptySearch": "Nenhum resultado encontrado",
+    "welcome": "Bem-vindo!"
+  },
+  "mascot": {
+    "hello": "Mascote dizendo olá",
+    "thinking": "Mascote pensando",
+    "happy": "Mascote sorrindo",
+    "wave": "Mascote acenando",
+    "sleepy": "Mascote dormindo",
+    "celebrate": "Mascote comemorando",
+    "search": "Mascote procurando"
   }
 }

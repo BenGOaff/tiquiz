@@ -10,9 +10,11 @@
 // identical across hosting contexts.
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 
 export function PopquizQuizIframe({ quizId }: { quizId: string }) {
+  const t = useTranslations("popquiz");
   // The iframe is recreated when quizId changes (key prop), so the
   // loading flag is correctly reset between cues without us having
   // to track quizId in a useEffect.
@@ -34,7 +36,7 @@ export function PopquizQuizIframe({ quizId }: { quizId: string }) {
         >
           <div className="flex flex-col items-center gap-3 text-muted-foreground">
             <Loader2 className="size-7 animate-spin text-[var(--pq-accent,#5D6CDB)]" />
-            <span className="text-xs font-medium">Chargement du quiz…</span>
+            <span className="text-xs font-medium">{t("iframeLoading")}</span>
           </div>
         </div>
       ) : null}

@@ -223,7 +223,7 @@ export function CustomDomainsTab({ isPaid }: Props) {
                 <Input
                   value={shareSiteName}
                   onChange={(e) => setShareSiteName(e.target.value.slice(0, 60))}
-                  placeholder={firstVerifiedHost || "Mon studio"}
+                  placeholder={firstVerifiedHost || t("shareSiteNamePlaceholder")}
                   maxLength={60}
                 />
                 <p className="text-xs text-muted-foreground">

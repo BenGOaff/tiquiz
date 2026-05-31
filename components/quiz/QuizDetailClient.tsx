@@ -187,6 +187,7 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
   /** Personalization placeholders the user can insert. Driven by quiz.ask_* flags. */
   availableVars?: QuizVarFlags;
 }) {
+  const t = useTranslations("quizEditor");
   const [editing, setEditing] = useState(false);
   const [genderizing, setGenderizing] = useState(false);
   const ref = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
@@ -252,7 +253,7 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
           type="button"
           onClick={handleGenderize}
           disabled={genderizing || !value?.trim()}
-          title="Générer les variantes de genre (Il / Elle / Iel)"
+          title={t("genderizeBtnTitle")}
           className="absolute top-1 right-6 p-0.5 text-primary/40 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity"
         >
           {genderizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
@@ -299,6 +300,7 @@ function ResultDraggableImage({ url, ri, onDragStart, onDragEnd, onRemove, onCro
   onRemove: () => void;
   onCrop?: () => void;
 }) {
+  const t = useTranslations("quizEditor");
   return (
     <div className="relative group">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -320,7 +322,7 @@ function ResultDraggableImage({ url, ri, onDragStart, onDragEnd, onRemove, onCro
             type="button"
             onClick={onCrop}
             className="bg-background/90 hover:bg-primary hover:text-white rounded-full p-1.5 shadow"
-            aria-label="Recadrer l'image"
+            aria-label={t("ariaCropImage")}
           >
             <Crop className="w-3.5 h-3.5" />
           </button>
@@ -329,7 +331,7 @@ function ResultDraggableImage({ url, ri, onDragStart, onDragEnd, onRemove, onCro
           type="button"
           onClick={onRemove}
           className="bg-background/90 hover:bg-destructive hover:text-white rounded-full p-1.5 shadow"
-          aria-label="Retirer l'image"
+          aria-label={t("ariaRemoveImage")}
         >
           <X className="w-3.5 h-3.5" />
         </button>
@@ -1028,13 +1030,13 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
         // vite quand le user re-rapporte un échec — sans dévoiler de
         // payload sensible. Fallback générique si pas de code.
         const errCode = typeof json?.error === "string" ? ` (${json.error})` : "";
-        toast.error(`Impossible de générer les variantes${errCode}. Réessaie.`);
+        toast.error(t("genderizeFailed", { code: errCode }));
         return null;
       }
       return typeof json.folded === "string" ? json.folded : null;
     } catch (err) {
       console.error("[genderize] network error:", err);
-      toast.error("Impossible de générer les variantes (réseau). Réessaie.");
+      toast.error(t("genderizeFailedNetwork"));
       return null;
     }
   }, [locale]);
@@ -1889,7 +1891,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               status,
             });
             return (
-              <div className="hidden md:block" title={`${r.passedCount}/${r.totalCount} étapes — ${r.percent}% prêt`}>
+              <div className="hidden md:block" title={t("readinessTitle", { passed: r.passedCount, total: r.totalCount, percent: r.percent })}>
                 <ReadinessRing percent={r.percent} passed={r.passedCount} total={r.totalCount} size="sm" />
               </div>
             );
@@ -1920,10 +1922,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               size="sm"
               variant="outline"
               onClick={() => window.open(previewUrl, "_blank", "noopener")}
-              title={uiLocale === "en" ? "Open in preview mode (no lead recorded)" : "Ouvrir en mode aperçu (aucun lead enregistré)"}
+              title={t("previewModeTitle")}
             >
               <Eye className="w-4 h-4 mr-1" />
-              {uiLocale === "en" ? "Preview" : "Aperçu"}
+              {t("previewModeBtn")}
             </Button>
           )}
           {isEmbed ? (
@@ -1938,7 +1940,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 catch { /* sandboxed iframe — host page handles fallback */ }
               }}
             >
-              {uiLocale === "en" ? "Unlock Tiquiz →" : "Débloquer Tiquiz →"}
+              {t("unlockTiquizCta")}
             </Button>
           ) : (
             <Button size="sm" onClick={handleToggleStatus} className="shrink-0">{status === "active" ? t("deactivate") : t("publish")}</Button>
@@ -2565,7 +2567,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         onChange={setStartButtonText}
                         singleLine
                         className="text-white font-semibold text-center"
-                        placeholder="Commencer le test"
+                        placeholder={t("previewStartBtnPh")}
                       />
                     </div>
                   </div>
@@ -2876,12 +2878,12 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           message. Empty = keep the default. */}
                       <div className="text-left space-y-1 pt-1">
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                          Message personnalisé (optionnel)
+                          {t("bonusIntroLabel")}
                         </p>
                         <textarea
                           value={bonusIntroText}
                           onChange={(e) => setBonusIntroText(e.target.value)}
-                          placeholder="Laisse vide pour garder le message par défaut, ou écris ton propre message ici."
+                          placeholder={t("bonusIntroPh")}
                           rows={3}
                           className="w-full text-sm bg-background border rounded-lg px-3 py-2 resize-y"
                         />
@@ -2893,22 +2895,20 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           discount code) without an email pipeline. */}
                       <div className="text-left space-y-1 pt-3">
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                          Message après partage (optionnel)
+                          {t("bonusUnlockedLabel")}
                         </p>
                         <textarea
                           value={bonusUnlockedMessage}
                           onChange={(e) =>
                             setBonusUnlockedMessage(e.target.value)
                           }
-                          placeholder="Ex : Bonus débloqué ! Ton code promo : IMAGELYS20."
+                          placeholder={t("bonusUnlockedPh")}
                           rows={2}
                           maxLength={500}
                           className="w-full text-sm bg-background border rounded-lg px-3 py-2 resize-y"
                         />
                         <p className="text-[11px] text-muted-foreground">
-                          Affiché à la place du message par défaut une fois
-                          le bonus débloqué. Pratique pour livrer un code
-                          promo directement, sans email.
+                          {t("bonusUnlockedHint")}
                         </p>
                       </div>
                     </div>
@@ -3071,7 +3071,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           intent={[titleForVisual(title), titleForVisual(r.title), stripHtml(cleanPlaceholdersForLabel(r.description ?? "")), stripHtml(cleanPlaceholdersForLabel(r.insight ?? ""))].filter(Boolean).join(" — ")}
                           titleText={titleForVisual(r.title)}
                           contentId={quizId}
-                          label="Générer (IA)"
+                          label={t("generateAiShort")}
                           onApplyImage={(img) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: img.url, image_position: rr.image_position ?? "top" }))}
                         />
                         <GifPickerButton

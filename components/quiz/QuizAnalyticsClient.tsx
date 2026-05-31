@@ -17,6 +17,7 @@
 // table — flagged as v2.
 
 import { useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Area,
   AreaChart,
@@ -75,12 +76,6 @@ interface AnalyticsResponse {
   error?: string;
 }
 
-const PERIOD_LABELS: Record<Period, string> = {
-  "7": "7 derniers jours",
-  "30": "30 derniers jours",
-  "90": "90 derniers jours",
-  all: "Depuis le début",
-};
 
 // Pie palette — 6 colors that read well stacked. We loop if the user
 // has more buckets than colors (rare, but happens for very segmented
@@ -125,6 +120,14 @@ const EMPTY_DATA: AnalyticsResponse = {
 };
 
 export function QuizAnalyticsClient({ quizId, initial }: Props) {
+  const t = useTranslations("quizAnalytics");
+  const locale = useLocale();
+  const PERIOD_LABELS: Record<Period, string> = {
+    "7": t("period7"),
+    "30": t("period30"),
+    "90": t("period90"),
+    all: t("periodAll"),
+  };
   const [period, setPeriod] = useState<Period>(initial?.period ?? "30");
   const [data, setData] = useState<AnalyticsResponse>(initial ?? EMPTY_DATA);
   const [loading, setLoading] = useState(!initial);
@@ -177,7 +180,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
     <div className="space-y-6">
       {fetchError && (
         <div className="rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm text-destructive flex items-start gap-2">
-          <span className="font-medium">Impossible de charger les statistiques.</span>
+          <span className="font-medium">{t("loadError")}</span>
           <span className="font-mono text-xs opacity-80">({fetchError})</span>
         </div>
       )}
@@ -186,7 +189,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
           <Button variant="ghost" size="icon" asChild>
             <Link
               href={`/quiz/${quizId}`}
-              aria-label="Retour à l'éditeur"
+              aria-label={t("backToEditor")}
             >
               <ArrowLeft className="size-5" />
             </Link>
@@ -197,7 +200,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
               <span className="truncate">{stripHtml(data.quiz.title)}</span>
             </h1>
             <p className="text-xs text-muted-foreground">
-              Statistiques · {PERIOD_LABELS[data.period]}
+              {t("statsHeader")} · {PERIOD_LABELS[data.period]}
             </p>
           </div>
         </div>
@@ -214,7 +217,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {p === "all" ? "Tout" : `${p}j`}
+              {p === "all" ? t("periodShortAll") : t("periodShortDays", { n: p })}
             </button>
           ))}
         </div>
@@ -224,28 +227,28 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard
           icon={<Eye className="size-4" />}
-          label="Vues"
-          value={m.viewsCount.toLocaleString("fr-FR")}
-          hint="Nombre total de visiteurs (cumulé depuis le début)"
+          label={t("kpiViews")}
+          value={m.viewsCount.toLocaleString(locale)}
+          hint={t("kpiViewsHint")}
         />
         <KpiCard
           icon={<Users className="size-4" />}
-          label="Leads"
-          value={m.leadsCount.toLocaleString("fr-FR")}
-          hint={`${m.exportedSioCount} exportés vers Systeme.io`}
+          label={t("kpiLeads")}
+          value={m.leadsCount.toLocaleString(locale)}
+          hint={t("kpiLeadsHint", { count: m.exportedSioCount })}
         />
         <KpiCard
           icon={<Activity className="size-4" />}
-          label="Taux de capture"
+          label={t("kpiCaptureRate")}
           value={`${m.captureRate}%`}
-          hint="Leads / vues (cumulé)"
+          hint={t("kpiCaptureRateHint")}
           accent="primary"
         />
         <KpiCard
           icon={<Send className="size-4" />}
-          label="Export Systeme.io"
+          label={t("kpiExportSio")}
           value={`${m.exportRate}%`}
-          hint="% des leads taggés dans SIO"
+          hint={t("kpiExportSioHint")}
         />
       </div>
 
@@ -253,13 +256,13 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2 p-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold">Évolution des leads</h2>
+            <h2 className="text-sm font-semibold">{t("leadsEvolutionTitle")}</h2>
             {loading ? (
               <Loader2 className="size-4 animate-spin text-muted-foreground" />
             ) : null}
           </div>
           {data.leadsByDay.length === 0 ? (
-            <EmptyState message="Aucun lead capturé sur cette période." />
+            <EmptyState message={t("emptyLeadsPeriod")} />
           ) : (
             <ResponsiveContainer width="100%" height={240}>
               <AreaChart data={data.leadsByDay} margin={{ top: 4, left: -12, right: 8 }}>
@@ -272,7 +275,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis
                   dataKey="date"
-                  tickFormatter={shortDate}
+                  tickFormatter={(s: string) => shortDate(s, locale)}
                   fontSize={10}
                   tick={{ fill: "hsl(var(--muted-foreground))" }}
                 />
@@ -295,9 +298,9 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
         </Card>
 
         <Card className="p-4">
-          <h2 className="text-sm font-semibold mb-3">Distribution par résultat</h2>
+          <h2 className="text-sm font-semibold mb-3">{t("distributionTitle")}</h2>
           {data.resultDistribution.length === 0 ? (
-            <EmptyState message="Aucun résultat à afficher." />
+            <EmptyState message={t("emptyResults")} />
           ) : (
             <>
               <ResponsiveContainer width="100%" height={180}>
@@ -364,16 +367,16 @@ function FunnelSection({
   funnel: FunnelStep[];
   totalSessions: number;
 }) {
+  const t = useTranslations("quizAnalytics");
   if (funnel.length === 0) {
     return (
       <Card className="p-4">
         <h2 className="text-sm font-semibold mb-1 flex items-center gap-2">
           <TrendingDown className="size-4 text-primary" />
-          Funnel par question
+          {t("funnelTitle")}
         </h2>
         <p className="text-xs text-muted-foreground">
-          Aucune donnée pour cette période. Le tracking par question
-          commence à enregistrer dès la prochaine visite.
+          {t("funnelEmpty")}
         </p>
       </Card>
     );
@@ -397,15 +400,14 @@ function FunnelSection({
         <div>
           <h2 className="text-sm font-semibold flex items-center gap-2">
             <TrendingDown className="size-4 text-primary" />
-            Funnel par question
+            {t("funnelTitle")}
           </h2>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            Nombre de sessions distinctes qui ont vu chaque question.
-            La barre rétrécit à chaque abandon.
+            {t("funnelSubtitle")}
           </p>
         </div>
         <div className="text-xs text-muted-foreground tabular-nums">
-          {totalSessions} session{totalSessions > 1 ? "s" : ""} commencées
+          {t("sessionsStarted", { count: totalSessions })}
         </div>
       </div>
 
@@ -413,10 +415,11 @@ function FunnelSection({
         <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 px-3 py-2 flex items-start gap-2">
           <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-900 dark:text-amber-100">
-            Question {funnel[worstIdx]!.questionIndex + 1} fait perdre{" "}
-            <span className="font-bold">{worstDrop}%</span> des visiteurs
-            par rapport à la précédente. C&apos;est le point chaud à
-            reformuler en priorité.
+            {t.rich("worstDropWarning", {
+              q: funnel[worstIdx]!.questionIndex + 1,
+              pct: worstDrop,
+              bold: (chunks) => <span className="font-bold">{chunks}</span>,
+            })}
           </p>
         </div>
       ) : null}
@@ -511,36 +514,39 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
-function shortDate(s: string): string {
+function shortDate(s: string, locale: string): string {
   // 2026-05-07 → 7 mai
   try {
     const d = new Date(s);
-    return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+    return d.toLocaleDateString(locale, { day: "numeric", month: "short" });
   } catch {
     return s;
   }
 }
 
 function DayTooltip({ active, payload, label }: any) {
+  const t = useTranslations("quizAnalytics");
+  const locale = useLocale();
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-md border bg-background shadow-lg px-3 py-2 text-xs">
-      <div className="font-semibold">{shortDate(label)}</div>
+      <div className="font-semibold">{shortDate(label, locale)}</div>
       <div className="text-muted-foreground tabular-nums">
-        {payload[0].value} lead{payload[0].value > 1 ? "s" : ""}
+        {t("leadsCount", { count: payload[0].value })}
       </div>
     </div>
   );
 }
 
 function ResultTooltip({ active, payload }: any) {
+  const t = useTranslations("quizAnalytics");
   if (!active || !payload?.length) return null;
   const p = payload[0];
   return (
     <div className="rounded-md border bg-background shadow-lg px-3 py-2 text-xs">
       <div className="font-semibold">{stripHtml(p.payload.title)}</div>
       <div className="text-muted-foreground tabular-nums">
-        {p.value} leads · {p.payload.pct}%
+        {t("leadsCountWithPct", { count: p.value, pct: p.payload.pct })}
       </div>
     </div>
   );

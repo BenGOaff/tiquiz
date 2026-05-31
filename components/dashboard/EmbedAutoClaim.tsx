@@ -21,12 +21,14 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 const STORAGE_KEY = "tiquiz_embed_session";
 const URL_PARAM = "tq_session";
 
 export default function EmbedAutoClaim() {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const searchParams = useSearchParams();
   // Guard against double-firing in React strict mode dev re-renders.
@@ -63,9 +65,9 @@ export default function EmbedAutoClaim() {
         }
 
         if (res.ok && json?.ok && json?.quiz_id) {
-          toast.success("Ton quiz t'attendait — il est dans ton compte ✨", {
+          toast.success(t("embedClaimSuccess"), {
             action: {
-              label: "Ouvrir",
+              label: t("embedClaimOpen"),
               onClick: () => router.push(`/quiz/${json.quiz_id}`),
             },
           });

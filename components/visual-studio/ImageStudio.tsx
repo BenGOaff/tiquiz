@@ -846,7 +846,7 @@ export function ImageStudio({
     const a = document.createElement("a");
     const suffix = index != null ? `-${String(index + 1).padStart(2, "0")}` : "";
     a.href = href;
-    a.download = `${brandKit.name.toLowerCase().replace(/\s+/g, "-")}-${result.format.replace(":", "x")}${suffix}-${Date.now()}.png`;
+    a.download = `${(brandKit.name || "my-brand").toLowerCase().replace(/\s+/g, "-")}-${result.format.replace(":", "x")}${suffix}-${Date.now()}.png`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -874,7 +874,8 @@ export function ImageStudio({
       onOpenChange(false);
     } catch (e) {
       console.error("[ImageStudio] save failed", e);
-      const msg = e instanceof Error ? e.message : "Réessaie.";
+      const raw = e instanceof Error ? e.message : "";
+      const msg = raw === "CANVAS_NOT_READY" ? t("canvasNotReady") : (raw || t("retryFallback"));
       toast.error(t("exportFailed", { msg }));
     } finally {
       setBusy(false);
@@ -898,7 +899,7 @@ export function ImageStudio({
       toast.success(t("downloaded"));
     } catch (e) {
       console.error("[ImageStudio] download failed", e);
-      const msg = e instanceof Error ? e.message : "Réessaie.";
+      const msg = e instanceof Error ? e.message : t("retryFallback");
       toast.error(t("exportFailed", { msg }));
     } finally {
       setDownloading(false);
@@ -920,7 +921,7 @@ export function ImageStudio({
       const href = URL.createObjectURL(pdf);
       const a = document.createElement("a");
       a.href = href;
-      a.download = `${brandKit.name.toLowerCase().replace(/\s+/g, "-")}-carrousel-${Date.now()}.pdf`;
+      a.download = `${(brandKit.name || "my-brand").toLowerCase().replace(/\s+/g, "-")}-carrousel-${Date.now()}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -928,7 +929,7 @@ export function ImageStudio({
       toast.success(t("pdfDone"));
     } catch (e) {
       console.error("[ImageStudio] pdf export failed", e);
-      const msg = e instanceof Error ? e.message : "Réessaie.";
+      const msg = e instanceof Error ? e.message : t("retryFallback");
       toast.error(t("exportFailed", { msg }));
     } finally {
       setPdfBusy(false);
@@ -978,7 +979,10 @@ export function ImageStudio({
                             : "border-border text-muted-foreground hover:bg-muted"
                         }`}
                       >
-                        {b.label}
+                        {/* Si le serveur renvoie un label vide (marque
+                            perso sans nom), on affiche le label traduit
+                            "Ma marque" / "My brand" / etc. selon la locale. */}
+                        {b.label || t("myBrand")}
                       </button>
                     ))}
                   </div>
@@ -1230,9 +1234,9 @@ export function ImageStudio({
                       <ColorSwatchPicker
                         value={background.color}
                         onChange={(c) => setBackground((b) => ({ ...b, color: c }))}
-                        label="Couleur de fond"
+                        label={t("backgroundColorLabel")}
                         userPalettes={brandPalette}
-                        userPalettesLabel={`Palette ${brandKit.name}`}
+                        userPalettesLabel={`Palette ${brandKit.name || t("myBrand")}`}
                       />
                       {background.mode === "gradient" ? t("gradientStart") : t("color")}
                     </div>
@@ -1241,9 +1245,9 @@ export function ImageStudio({
                         <ColorSwatchPicker
                           value={background.color2 || brandKit.primaryColor}
                           onChange={(c) => setBackground((b) => ({ ...b, color2: c }))}
-                          label="Couleur de fin"
+                          label={t("gradientEndColorLabel")}
                           userPalettes={brandPalette}
-                          userPalettesLabel={`Palette ${brandKit.name}`}
+                          userPalettesLabel={`Palette ${brandKit.name || t("myBrand")}`}
                         />
                         {t("gradientEnd")}
                       </div>
@@ -1328,7 +1332,7 @@ export function ImageStudio({
                 type="button"
                 variant="outline"
                 className="w-full"
-                onClick={() => handleRef.current?.addText()}
+                onClick={() => handleRef.current?.addText(t("newTextDefault"))}
               >
                 <Type className="h-4 w-4 mr-1.5" />
                 {t("addText")}
@@ -1360,7 +1364,7 @@ export function ImageStudio({
                   scrim={scrim}
                   scrimSide={scrimSide}
                   bgTreatment={bgTreatment}
-                  initialText={initialText}
+                  initialText={initialText ?? { headline: t("placeholderHeadline"), subline: t("placeholderSubline"), cta: t("placeholderCta") }}
                   onSelectionChange={onSelectionChange}
                   onReady={onCanvasReady}
                 />

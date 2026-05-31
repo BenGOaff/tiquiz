@@ -10,6 +10,7 @@
 // gymnastics for an infrequently-visited page).
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AchievementList, AchievementSummary } from "@/components/ui/achievement-list";
 import { detectAchievements, type AchievementInput } from "@/lib/achievements";
@@ -26,6 +27,7 @@ type QuizSummary = {
 };
 
 export function SettingsAchievements() {
+  const t = useTranslations("settings");
   const [quizzes, setQuizzes] = useState<QuizSummary[]>([]);
   const [loaded, setLoaded] = useState(false);
 
@@ -98,7 +100,7 @@ export function SettingsAchievements() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <CardTitle>Mes badges</CardTitle>
+        <CardTitle>{t("achievementsTitle")}</CardTitle>
         {loaded && <AchievementSummary items={achievements} />}
       </CardHeader>
       <CardContent>

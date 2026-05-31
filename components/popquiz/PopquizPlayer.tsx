@@ -34,6 +34,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { useTranslations } from "next-intl";
 import {
   MediaPlayer,
   MediaProvider,
@@ -241,6 +242,7 @@ const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 // state-machine stays the source of truth. The current rate is read
 // from the same remote — no local state to drift out of sync.
 function PlaybackRateMenu() {
+  const t = useTranslations("popquiz");
   const remote = useMediaRemote();
   const rate = useMediaState("playbackRate");
   const [open, setOpen] = useState(false);
@@ -250,7 +252,7 @@ function PlaybackRateMenu() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Vitesse de lecture"
+        aria-label={t("player.playbackRate")}
         aria-expanded={open}
         className="size-9 grid place-items-center rounded-full hover:bg-white/15 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 relative"
       >
@@ -328,6 +330,7 @@ function SkipButton({
 // flash a dead button on browsers that don't support it (mobile Safari
 // + Firefox Linux for now).
 function PiPButton() {
+  const t = useTranslations("popquiz");
   const remote = useMediaRemote();
   const can = useMediaState("canPictureInPicture");
   const isOn = useMediaState("pictureInPicture");
@@ -336,7 +339,7 @@ function PiPButton() {
     <button
       type="button"
       onClick={() => remote.togglePictureInPicture()}
-      aria-label={isOn ? "Quitter le mode mini-fenêtre" : "Mode mini-fenêtre"}
+      aria-label={isOn ? t("player.exitPip") : t("player.enterPip")}
       aria-pressed={isOn}
       className="size-9 grid place-items-center rounded-full hover:bg-white/15 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 hidden sm:grid"
     >
@@ -349,6 +352,7 @@ function PiPButton() {
 // Title falls back to popquiz title; URL is the page URL — that's the
 // public play page, which is exactly what we want shared.
 function ShareButton({ title }: { title: string }) {
+  const t = useTranslations("popquiz");
   const [feedback, setFeedback] = useState<"idle" | "copied">("idle");
 
   async function onClick() {
@@ -378,13 +382,13 @@ function ShareButton({ title }: { title: string }) {
     <button
       type="button"
       onClick={onClick}
-      aria-label="Partager"
+      aria-label={t("player.share")}
       className="size-9 grid place-items-center rounded-full hover:bg-white/15 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 relative"
     >
       <Share2 className="size-4 text-white" />
       {feedback === "copied" ? (
         <span className="absolute -top-8 right-0 whitespace-nowrap text-[11px] bg-black/90 text-white rounded px-2 py-1 shadow-lg pointer-events-none">
-          Lien copié
+          {t("player.linkCopied")}
         </span>
       ) : null}
     </button>
@@ -398,6 +402,7 @@ function CustomControls({
   cues: PopquizCue[];
   shareTitle: string;
 }) {
+  const t = useTranslations("popquiz");
   return (
     <Controls.Root className="absolute inset-0 pointer-events-none z-10">
       <Controls.Group className="absolute bottom-0 left-0 right-0 px-3 sm:px-4 pb-2 sm:pb-3 pt-12 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-auto opacity-0 data-[visible]:opacity-100 transition-opacity duration-300">
@@ -413,8 +418,8 @@ function CustomControls({
         </div>
         <div className="flex items-center gap-1.5 mt-1">
           <PlayPauseSmall />
-          <SkipButton delta={-10} label="Reculer de 10 secondes" />
-          <SkipButton delta={10} label="Avancer de 10 secondes" />
+          <SkipButton delta={-10} label={t("player.skipBack10")} />
+          <SkipButton delta={10} label={t("player.skipForward10")} />
           <div className="text-[11px] font-medium text-white/90 font-mono ml-1 tabular-nums">
             <Time type="current" />
             <span className="text-white/40 mx-1">/</span>
@@ -449,6 +454,7 @@ export function PopquizPlayer({
   onDurationChange,
   renderOverlay,
 }: PopquizPlayerProps) {
+  const t = useTranslations("popquiz");
   const playerRef = useRef<MediaPlayerInstance>(null);
   const [snap, dispatch] = useReducer(reducer, undefined, initialSnapshot);
   // Affiché si la vidéo ne charge pas (réseau, ou lien signé expiré sur
@@ -577,13 +583,13 @@ export function PopquizPlayer({
           }}
           role="dialog"
           aria-modal="true"
-          aria-label="Question Popquiz"
+          aria-label={t("player.questionDialog")}
         >
           <button
             type="button"
             onClick={dismissCue}
             className="absolute top-3 right-3 z-30 size-9 rounded-full bg-white/95 hover:bg-white grid place-items-center text-foreground shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-            aria-label="Reprendre la vidéo"
+            aria-label={t("player.resumeVideo")}
           >
             <X className="size-4" />
           </button>

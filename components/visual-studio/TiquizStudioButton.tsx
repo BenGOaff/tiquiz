@@ -10,6 +10,7 @@
 // ou image de résultat). Le composant gère la génération + l'upload storage.
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Wand2, Loader2 } from "lucide-react";
 import { ImageStudio } from "@/components/visual-studio/ImageStudio";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -43,7 +44,7 @@ export function TiquizStudioButton({
   // Visuels d'ILLUSTRATION : paysage par défaut + carré. Pas de portrait/story.
   formats = ["16:9", "1:1"],
   defaultFormat = "16:9",
-  label = "Générer un visuel",
+  label,
   size = "sm",
   variant = "outline",
   onApplyImage,
@@ -61,6 +62,7 @@ export function TiquizStudioButton({
   variant?: "default" | "outline" | "secondary" | "ghost";
   onApplyImage?: (img: StudioSavedImage) => void;
 }) {
+  const t = useTranslations("visualStudio");
   const [open, setOpen] = useState(false);
   const [brandKit, setBrandKit] = useState<BrandKit>(BRAND_PRESETS.tiquiz);
   const [brandOptions, setBrandOptions] = useState<{ label: string; kit: BrandKit }[] | undefined>(undefined);
@@ -111,7 +113,7 @@ export function TiquizStudioButton({
         ) : (
           <Wand2 className="h-4 w-4 mr-1.5" />
         )}
-        {label}
+        {label ?? t("buttonDefaultLabel")}
       </Button>
       <ImageStudio
         open={open}
@@ -130,7 +132,7 @@ export function TiquizStudioButton({
         upload={upload}
         // Pas de crédits côté Tiquiz : génération autorisée d'office.
         onChargeCredit={async () => true}
-        applyLabel="Insérer"
+        applyLabel={t("applyInsert")}
         onApply={(r) => onApplyImage?.(toSaved(r))}
       />
     </>

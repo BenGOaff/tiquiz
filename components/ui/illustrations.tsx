@@ -18,7 +18,10 @@
 // classes or a numeric `size` (in px) on the wrapper. They use
 // preserveAspectRatio so they always stay proportional.
 
+"use client";
+
 import * as React from "react";
+import { useTranslations } from "next-intl";
 
 type IllustrationProps = {
   className?: string;
@@ -56,8 +59,9 @@ function wrap(
 // might land.
 
 export function EmptyInboxArt({ className, size, ariaLabel }: IllustrationProps) {
+  const t = useTranslations("illustrations");
   return wrap(
-    "Boîte de réception vide",
+    t("emptyInbox"),
     ariaLabel,
     className,
     size,
@@ -94,8 +98,9 @@ export function EmptyInboxArt({ className, size, ariaLabel }: IllustrationProps)
 // A blank canvas with a friendly pencil that's about to get to work.
 
 export function EmptyCanvasArt({ className, size, ariaLabel }: IllustrationProps) {
+  const t = useTranslations("illustrations");
   return wrap(
-    "Toile vierge — prête à être remplie",
+    t("emptyCanvas"),
     ariaLabel,
     className,
     size,
@@ -142,8 +147,9 @@ export function EmptyCanvasArt({ className, size, ariaLabel }: IllustrationProps
 // nobody's answered, Stats page on first visit.
 
 export function EmptyChartArt({ className, size, ariaLabel }: IllustrationProps) {
+  const t = useTranslations("illustrations");
   return wrap(
-    "Pas encore de données",
+    t("emptyChart"),
     ariaLabel,
     className,
     size,
@@ -171,8 +177,9 @@ export function EmptyChartArt({ className, size, ariaLabel }: IllustrationProps)
 // Use for "no search results" states — filtered lists with no match.
 
 export function EmptySearchArt({ className, size, ariaLabel }: IllustrationProps) {
+  const t = useTranslations("illustrations");
   return wrap(
-    "Aucun résultat trouvé",
+    t("emptySearch"),
     ariaLabel,
     className,
     size,
@@ -199,8 +206,9 @@ export function EmptySearchArt({ className, size, ariaLabel }: IllustrationProps
 // completion. A bit more energetic: confetti + a starting flag.
 
 export function WelcomeArt({ className, size, ariaLabel }: IllustrationProps) {
+  const t = useTranslations("illustrations");
   return wrap(
-    "Bienvenue !",
+    t("welcome"),
     ariaLabel,
     className,
     size,

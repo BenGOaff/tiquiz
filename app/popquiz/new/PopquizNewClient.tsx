@@ -125,7 +125,7 @@ async function uploadStagedThumbnail(popquizId: string, blob: Blob) {
     error?: string;
   };
   if (!tokenRes.ok || !tokenJson.ok || !tokenJson.uploadUrl || !tokenJson.token) {
-    throw new Error(tokenJson.error || "Impossible de préparer l'envoi.");
+    throw new Error(tokenJson.error || "THUMBNAIL_PREPARE_FAILED");
   }
   await new Promise<void>((resolve, reject) => {
     const upload = new tus.Upload(blob, {

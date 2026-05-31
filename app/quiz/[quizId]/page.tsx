@@ -1,10 +1,15 @@
 // app/quiz/[quizId]/page.tsx
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import QuizEditShell from "./QuizEditShell";
 import SurveyEditShell from "./SurveyEditShell";
 
-export const metadata = { title: "Modifier le projet – Tiquiz" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("metadata.pages");
+  return { title: t("editProject") };
+}
 
 type Props = { params: Promise<{ quizId: string }> };
 

@@ -370,14 +370,14 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
                     <Lock className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                   </div>
                   <h3 className="text-lg font-bold text-amber-900 dark:text-amber-50">
-                    {lockedFiltered.length} lead{lockedFiltered.length > 1 ? "s" : ""} verrouillé{lockedFiltered.length > 1 ? "s" : ""}
+                    {t("lockedCount", { count: lockedFiltered.length })}
                   </h3>
                   <p className="text-sm text-amber-800/80 dark:text-amber-200/80 mt-1">
-                    Le plan gratuit affiche 10 leads par fenêtre de 30 jours. Passe en plan payant pour tout débloquer.
+                    {t("lockedDescription")}
                   </p>
                   <Button asChild className="mt-4 bg-amber-600 hover:bg-amber-700 text-white">
                     <Link href="/settings?tab=billing">
-                      <Sparkles className="h-4 w-4 mr-2" /> Débloquer tous mes leads
+                      <Sparkles className="h-4 w-4 mr-2" /> {t("lockedUnlockCta")}
                     </Link>
                   </Button>
                 </div>

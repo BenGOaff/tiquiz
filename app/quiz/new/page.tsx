@@ -1,9 +1,14 @@
 // app/quiz/new/page.tsx
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import QuizNewShell from "./QuizNewShell";
 
-export const metadata = { title: "Nouveau quiz – Tiquiz" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("metadata.pages");
+  return { title: t("newQuiz") };
+}
 
 export default async function NewQuizPage() {
   const supabase = await getSupabaseServerClient();

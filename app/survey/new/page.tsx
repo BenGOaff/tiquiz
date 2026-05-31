@@ -1,9 +1,14 @@
 // app/survey/new/page.tsx
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import SurveyNewShell from "./SurveyNewShell";
 
-export const metadata = { title: "Nouveau sondage – Tiquiz" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("metadata.pages");
+  return { title: t("newSurvey") };
+}
 
 export default async function NewSurveyPage() {
   const supabase = await getSupabaseServerClient();

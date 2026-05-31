@@ -89,6 +89,7 @@ const FOLDERS: Array<{
 export default function QuizzesClient({ userEmail }: { userEmail: string }) {
   const t = useTranslations("dashboard");
   const tProjects = useTranslations("projects");
+  const tEmbed = useTranslations("popquizEmbed");
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>("folders");
@@ -187,7 +188,7 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
         toast.success(t("quizDeleted"));
       }
     } catch {
-      toast.error("Error");
+      toast.error(t("deleteError"));
     }
   }
 
@@ -254,12 +255,7 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
   // sur des libellés FR si la clé i18n n'existe pas (le déploiement
   // peut précéder l'ajout des locales).
   function folderLabel(id: ProjectMode): string {
-    const fallback =
-      id === "quiz"
-        ? "Mes Quiz"
-        : id === "survey"
-          ? "Mes Sondages"
-          : "Mes Popquiz";
+    const fallback = id === "quiz" ? tProjects("folder_quiz") : id === "survey" ? tProjects("folder_survey") : tProjects("folder_popquiz");
     try {
       return tProjects(`folder_${id}` as "folder_quiz");
     } catch {
@@ -301,13 +297,7 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
           >
             <Link href="/popquiz/new">
               <Video className="h-4 w-4 mr-2" />
-              {(() => {
-                try {
-                  return tProjects("createPopquiz" as "createQuiz");
-                } catch {
-                  return "Créer un popquiz";
-                }
-              })()}
+              {tProjects("createPopquiz")}
             </Link>
           </Button>
         </div>
@@ -347,13 +337,7 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                   <Button asChild variant="outline" className="rounded-full">
                     <Link href="/popquiz/new">
                       <Video className="h-4 w-4 mr-2" />
-                      {(() => {
-                        try {
-                          return tProjects("createPopquiz" as "createQuiz");
-                        } catch {
-                          return "Créer un popquiz";
-                        }
-                      })()}
+                      {tProjects("createPopquiz")}
                     </Link>
                   </Button>
                 </div>
@@ -385,23 +369,7 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                       </div>
                       <div className="text-xs text-muted-foreground mt-1">
                         {count}{" "}
-                        {count <= 1 ? (
-                          (() => {
-                            try {
-                              return tProjects("elementOne" as "untitled");
-                            } catch {
-                              return "élément";
-                            }
-                          })()
-                        ) : (
-                          (() => {
-                            try {
-                              return tProjects("elementMany" as "untitled");
-                            } catch {
-                              return "éléments";
-                            }
-                          })()
-                        )}
+                        {count <= 1 ? tProjects("elementOne") : tProjects("elementMany")}
                       </div>
                     </Card>
                   </button>
@@ -423,13 +391,7 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
               className="-ml-2"
             >
               <ArrowLeft className="h-4 w-4 mr-1.5" />
-              {(() => {
-                try {
-                  return tProjects("backToFolders" as "title");
-                } catch {
-                  return "Retour aux catégories";
-                }
-              })()}
+              {tProjects("backToFolders")}
             </Button>
             <h3 className="text-lg font-semibold">
               {folderLabel(view)} ({counts[view]})
@@ -463,13 +425,7 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                     {view === "popquiz" ? (
                       <>
                         <Video className="h-4 w-4 mr-2" />
-                        {(() => {
-                          try {
-                            return tProjects("createPopquiz" as "createQuiz");
-                          } catch {
-                            return "Créer un popquiz";
-                          }
-                        })()}
+                        {tProjects("createPopquiz")}
                       </>
                     ) : view === "survey" ? (
                       <>
@@ -605,7 +561,7 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                               variant="ghost"
                               size="icon"
                               onClick={() => setEmbedHandle(p.slug ?? p.id)}
-                              title="Code d'intégration"
+                              title={tEmbed("title")}
                             >
                               <Code className="h-4 w-4" />
                             </Button>
@@ -625,7 +581,7 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                             <Button variant="ghost" size="icon" asChild>
                               <Link
                                 href={`/quiz/${p.id}/analytics`}
-                                title="Statistiques"
+                                title={t("statisticsTitle")}
                               >
                                 <BarChart3 className="h-4 w-4" />
                               </Link>

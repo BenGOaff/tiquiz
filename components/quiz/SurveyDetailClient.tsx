@@ -168,6 +168,7 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
   /** Personalization placeholders the user can insert. Driven by quiz.ask_* flags. */
   availableVars?: QuizVarFlags;
 }) {
+  const t = useTranslations("quizEditor");
   const [editing, setEditing] = useState(false);
   const [genderizing, setGenderizing] = useState(false);
   const ref = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
@@ -233,7 +234,7 @@ function InlineEdit({ value, onChange, multiline, className, placeholder, style,
           type="button"
           onClick={handleGenderize}
           disabled={genderizing || !value?.trim()}
-          title="Générer les variantes de genre (Il / Elle / Iel)"
+          title={t("genderizeBtnTitle")}
           className="absolute top-1 right-6 p-0.5 text-primary/40 opacity-0 group-hover:opacity-100 hover:text-primary disabled:opacity-100 transition-opacity"
         >
           {genderizing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
@@ -694,13 +695,13 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json?.ok) {
         const errCode = typeof json?.error === "string" ? ` (${json.error})` : "";
-        toast.error(`Impossible de générer les variantes${errCode}. Réessaie.`);
+        toast.error(t("genderizeFailed", { code: errCode }));
         return null;
       }
       return typeof json.folded === "string" ? json.folded : null;
     } catch (err) {
       console.error("[genderize] network error:", err);
-      toast.error("Impossible de générer les variantes (réseau). Réessaie.");
+      toast.error(t("genderizeFailedNetwork"));
       return null;
     }
   }, [locale]);
@@ -1178,7 +1179,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               status,
             });
             return (
-              <div className="hidden md:block" title={`${r.passedCount}/${r.totalCount} étapes — ${r.percent}% prêt`}>
+              <div className="hidden md:block" title={t("readinessTitle", { passed: r.passedCount, total: r.totalCount, percent: r.percent })}>
                 <ReadinessRing percent={r.percent} passed={r.passedCount} total={r.totalCount} size="sm" />
               </div>
             );
@@ -1191,11 +1192,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             size="sm"
             variant="outline"
             onClick={() => window.open(previewUrl, "_blank", "noopener")}
-            title={locale === "en" ? "Open in preview mode (no response recorded)" : "Ouvrir en mode aperçu (aucune réponse enregistrée)"}
+            title={t("previewModeTitleSurvey")}
             className="shrink-0 px-2 sm:px-3"
           >
             <Eye className="w-4 h-4 sm:mr-1" />
-            <span className="hidden sm:inline">{locale === "en" ? "Preview" : "Aperçu"}</span>
+            <span className="hidden sm:inline">{t("previewModeBtn")}</span>
           </Button>
           {savingDraft && (
             <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
@@ -1552,7 +1553,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                           type="button"
                           onClick={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })}
                           className="bg-background/90 hover:bg-primary hover:text-white rounded p-1 shadow"
-                          aria-label="Recadrer l'image"
+                          aria-label={t("ariaCropImage")}
                         >
                           <Crop className="w-3.5 h-3.5" />
                         </button>
@@ -1572,7 +1573,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                         intent={[titleForVisual(title), stripHtml(cleanPlaceholdersForLabel(introduction))].filter(Boolean).join(" — ")}
                         titleText={titleForVisual(title)}
                         contentId={quizId}
-                        label="Générer (IA)"
+                        label={t("generateAiShort")}
                         onApplyImage={(img) => setIntroImageUrl(img.url)}
                       />
                       <GifPickerButton label="GIF" onPick={(url) => setIntroImageUrl(url)} />
@@ -1588,7 +1589,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                         onChange={setStartButtonText}
                         singleLine
                         className="text-white font-semibold text-center"
-                        placeholder="Commencer le test"
+                        placeholder={t("previewStartBtnPh")}
                       />
                     </div>
                   </div>
@@ -1752,7 +1753,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                                           type="button"
                                           onClick={() => opt.image_url && setCropTarget({ url: opt.image_url, apply: (u) => setOptImage(qi, oi, u) })}
                                           className="bg-background/90 hover:bg-primary hover:text-white rounded p-1 shadow"
-                                          aria-label="Recadrer l'image"
+                                          aria-label={t("ariaCropImage")}
                                         >
                                           <Crop className="w-3.5 h-3.5" />
                                         </button>
@@ -1795,7 +1796,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                                           intent={[titleForVisual(q.question_text), titleForVisual(opt.text)].filter(Boolean).join(" — ")}
                                           titleText={titleForVisual(opt.text)}
                                           contentId={quizId}
-                                          label="Générer (IA)"
+                                          label={t("generateAiShort")}
                                           onApplyImage={(img) => setOptImage(qi, oi, img.url)}
                                         />
                                         <GifPickerButton label="GIF" onPick={(url) => setOptImage(qi, oi, url)} />

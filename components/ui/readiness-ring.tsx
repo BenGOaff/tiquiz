@@ -9,6 +9,7 @@
 // don't pull a chart lib for what amounts to one arc.
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -22,6 +23,7 @@ type Props = {
 };
 
 export function ReadinessRing({ percent, passed, total, size = "md", className }: Props) {
+  const t = useTranslations("common");
   const dim = size === "sm" ? 32 : 44;
   const stroke = size === "sm" ? 3 : 4;
   const radius = (dim - stroke) / 2;
@@ -34,7 +36,7 @@ export function ReadinessRing({ percent, passed, total, size = "md", className }
   const labelColor = isReady ? "text-emerald-600" : "text-foreground";
 
   return (
-    <div className={cn("inline-flex items-center gap-2", className)} aria-label={`${passed} sur ${total} étapes`}>
+    <div className={cn("inline-flex items-center gap-2", className)} aria-label={t("readinessSteps", { passed, total })}>
       <svg width={dim} height={dim} viewBox={`0 0 ${dim} ${dim}`} className="shrink-0">
         {/* Track */}
         <circle

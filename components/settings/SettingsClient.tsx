@@ -577,21 +577,21 @@ export default function SettingsClient() {
                 />
                 <div className="text-xs text-muted-foreground space-y-1">
                   <p>
-                    <strong>Où trouver mon ID&nbsp;?</strong> Connecte-toi à
-                    Systeme.io → <em>Tableau de bord affilié</em> → en haut à
-                    droite tu vois ton <em>identifiant affilié</em> (qui
-                    commence par <code className="px-1 py-0.5 rounded bg-muted">sa</code>).
-                    Copie-le, colle-le ici, c&apos;est tout.
+                    {t.rich("affiliateWhereId", {
+                      strong: (chunks) => <strong>{chunks}</strong>,
+                      em: (chunks) => <em>{chunks}</em>,
+                      code: (chunks) => <code className="px-1 py-0.5 rounded bg-muted">{chunks}</code>,
+                    })}
                   </p>
                   <p>
-                    Pas encore inscrit·e ?{" "}
+                    {t("affiliateNotRegistered")}{" "}
                     <a
                       href="https://www.tipote.fr/part-tiquiz"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="underline text-primary hover:text-primary/80"
                     >
-                      Découvrir le programme d&apos;affiliation
+                      {t("affiliateDiscoverProgram")}
                     </a>
                     {" · "}
                     <a
@@ -600,12 +600,11 @@ export default function SettingsClient() {
                       rel="noopener noreferrer"
                       className="underline text-primary hover:text-primary/80"
                     >
-                      Conditions générales
+                      {t("affiliateTerms")}
                     </a>
                   </p>
                   <p className="italic">
-                    Si tu laisses ce champ vide, le footer reste visible mais
-                    sans tracking — les inscriptions ne te rapporteront rien.
+                    {t("affiliateEmptyFieldNote")}
                   </p>
                 </div>
               </div>
@@ -743,15 +742,15 @@ export default function SettingsClient() {
                 </p>
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium">Token Conversions API Meta (optionnel)</label>
+                <label className="text-sm font-medium">{t("trackingDefaultsMetaCapiLabel")}</label>
                 <Input
                   value={defaultMetaCapiToken}
                   onChange={(e) => setDefaultMetaCapiToken(e.target.value)}
-                  placeholder="EAAG… (token d'accès Conversions API)"
+                  placeholder={t("trackingDefaultsMetaCapiPlaceholder")}
                   autoComplete="off"
                 />
                 <p className="text-xs text-muted-foreground">
-                  {"Active l'envoi serveur des conversions (résiste aux bloqueurs de pub, améliore le matching, dédupliqué avec le pixel). Events Manager → ton dataset → Paramètres → Conversions API → « Générer un token d'accès ». À utiliser avec le pixel ci-dessus."}
+                  {t("trackingDefaultsMetaCapiHelp")}
                 </p>
               </div>
               <div className="space-y-1.5">

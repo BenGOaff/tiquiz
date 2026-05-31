@@ -29,13 +29,18 @@ export async function GET() {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("brand_color_primary, brand_color_accent, brand_font, brand_logo_url, brand_tone, target_audience")
+      .select("full_name, brand_color_primary, brand_color_accent, brand_font, brand_logo_url, brand_tone, target_audience")
       .eq("user_id", user.id)
       .maybeSingle();
 
     const p = (profile ?? {}) as Record<string, string | null>;
+    // Si l'user a un full_name, on l'utilise comme nom de marque par défaut
+    // (ex: "Marie Dupont" → "marie-dupont" dans le filename). Sinon on
+    // laisse vide : le CLIENT affiche un label traduit (t("myBrand")) côté
+    // UI, et un fallback "my-brand" côté filename. Ça évite d'avoir
+    // "Ma marque" en français dur dans une UI espagnole / anglaise.
     const brand: BrandKit = {
-      name: "Ma marque",
+      name: (p.full_name && p.full_name.trim()) || "",
       logoUrl: p.brand_logo_url || null,
       primaryColor: p.brand_color_primary || BRAND_PRESETS.tiquiz.primaryColor,
       textColor: DEFAULT_TEXT,
