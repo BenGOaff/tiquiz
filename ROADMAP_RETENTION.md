@@ -62,11 +62,42 @@ Inactivité > 7j / > 14j / > 30j + détection "quiz à 0 vue depuis 14j".
 Templates adaptés (proposer un quiz template métier, ouvrir le brainstorm
 IA, etc.).
 
-### Phase 5 — Templates par métier (gros chantier Tiquiz)
+### Phase 5 — Templates par métier — V1 FAIT (juin 2026)
 
-15 templates de quiz métier (coach business, prof yoga, formateur, etc.)
-+ galerie publique SEO `/templates`. Optionnel : A/B testing natif des
-titres / questions.
+8 templates de quiz métier soignés (écrits à la main, ton humain, pas
+"trop IA" — exigence Béné) :
+- profil-entrepreneur (coach business)
+- moteur-interieur (coach de vie)
+- style-yoga (prof de yoga)
+- terrain-naturo (naturopathe)
+- pret-a-lancer-formation (formateur en ligne)
+- levier-croissance-marketing (consultant marketing)
+- style-photo (photographe)
+- pret-premier-achat-immo (immobilier)
+
+Archi : **données statiques TS** (`lib/templates/catalog.ts` + `types.ts`),
+PAS de table DB (versionné, facile à éditer, zéro migration). Chaque
+template a un `payload` qui calque EXACTEMENT la shape POST /api/quiz.
+
+Instanciation : le bouton "Utiliser ce modèle" POST le payload vers
+`/api/quiz` EXISTANT → zéro code d'INSERT custom, zéro divergence,
+aucun risque pour les quiz existants. Au succès → redirection éditeur.
+
+Galerie publique SEO :
+- `/templates` : grille + filtre par métier (indexable, OG tags)
+- `/templates/[slug]` : aperçu complet (intro + questions + résultats)
+  + CTA. generateStaticParams pour le pré-rendu SEO. metadata par
+  template.
+- Non connecté → CTA renvoie vers /signup (acquisition).
+- Connecté → instancie + édite.
+- Entrée discrète depuis `/quiz/new` (bandeau, ne touche pas au form).
+
+**Reste à faire (V2)** :
+- A/B testing natif des titres/questions (5.C) — non commencé.
+- Flux post-signup : auto-instancier le template choisi après
+  inscription (V1 = le visiteur revient choisir manuellement).
+- Plus de templates (objectif 15+) si V1 convertit bien.
+- i18n : templates FR uniquement V1.
 
 ### Phase 6 — Nouveau pricing 19€/190€ futurs users
 
