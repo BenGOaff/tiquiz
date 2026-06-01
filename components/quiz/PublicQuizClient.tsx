@@ -137,6 +137,10 @@ type PublicQuizData = {
   // "Comparé aux autres participants" sur la page de remerciement avec
   // les % de chaque option choisie. Default FALSE.
   show_aggregate_responses?: boolean | null;
+  // Sondage uniquement (1er juin 2026) : overrides rich-text pour la
+  // page de remerciement. NULL = string i18n par défaut.
+  survey_thanks_heading?: string | null;
+  survey_thanks_body?: string | null;
   // Phase B (Adeline, 19 mai 2026) : Meta + Google tracking pixels.
   // Les scripts sont injectés via useEffect APRÈS le visiteur a coché
   // la case de consentement (si show_consent_checkbox=true).
@@ -2680,10 +2684,22 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
             </div>
           </div>
 
-          <h2 className="text-3xl sm:text-4xl font-bold leading-tight">
-            {t.surveyThanksHeading}
-          </h2>
-          <p className="text-muted-foreground text-lg">{t.surveyThanksBody}</p>
+          <h2
+            className="tiquiz-rich text-3xl sm:text-4xl font-bold leading-tight"
+            dangerouslySetInnerHTML={{
+              __html:
+                sanitizeRichText(interp(quiz.survey_thanks_heading?.trim() || "")) ||
+                t.surveyThanksHeading,
+            }}
+          />
+          <div
+            className="tiquiz-rich text-muted-foreground text-lg"
+            dangerouslySetInnerHTML={{
+              __html:
+                sanitizeRichText(interp(quiz.survey_thanks_body?.trim() || "")) ||
+                t.surveyThanksBody,
+            }}
+          />
 
           {ctaUrl && (
             <Button

@@ -149,6 +149,8 @@ type QuizData = {
   hide_brand_logo: boolean | null;
   capture_enabled: boolean | null;
   show_aggregate_responses: boolean | null;
+  survey_thanks_heading: string | null;
+  survey_thanks_body: string | null;
   share_networks: string[] | null; og_description: string | null; og_image_url: string | null;
   custom_footer_text: string | null; custom_footer_url: string | null;
   status: string; views_count: number; starts_count: number;
@@ -343,6 +345,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [consentText, setConsentText] = useState("");
   const [captureHeading, setCaptureHeading] = useState("");
   const [captureSubtitle, setCaptureSubtitle] = useState("");
+  // Adeline (1er juin 2026) : page de remerciement éditable WYSIWYG.
+  // "" = on affiche la string i18n par défaut côté visiteur.
+  const [surveyThanksHeading, setSurveyThanksHeading] = useState("");
+  const [surveyThanksBody, setSurveyThanksBody] = useState("");
   const [resultInsightHeading, setResultInsightHeading] = useState("");
   const [resultProjectionHeading, setResultProjectionHeading] = useState("");
   const [captureFirstName, setCaptureFirstName] = useState(false);
@@ -513,6 +519,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     hide_brand_logo: hideBrandLogo,
     capture_enabled: captureEnabled,
     show_aggregate_responses: showAggregateResponses,
+    survey_thanks_heading: surveyThanksHeading,
+    survey_thanks_body: surveyThanksBody,
     slug,
     og_description: ogDescription,
     og_image_url: ogImageUrl,
@@ -531,6 +539,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor, quizBrandLogoUrl, hideBrandLogo,
     captureEnabled, showAggregateResponses,
+    surveyThanksHeading, surveyThanksBody,
     slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
     editQuestions, introImageUrl,
   ]);
@@ -581,6 +590,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.hide_brand_logo === "boolean") setHideBrandLogo(s.hide_brand_logo);
     if (typeof s.capture_enabled === "boolean") setCaptureEnabled(s.capture_enabled);
     if (typeof s.show_aggregate_responses === "boolean") setShowAggregateResponses(s.show_aggregate_responses);
+    if (typeof s.survey_thanks_heading === "string") setSurveyThanksHeading(s.survey_thanks_heading);
+    if (typeof s.survey_thanks_body === "string") setSurveyThanksBody(s.survey_thanks_body);
     if (typeof s.slug === "string") setSlug(s.slug);
     if (typeof s.og_description === "string") setOgDescription(s.og_description);
     if (s.og_image_url === null || typeof s.og_image_url === "string") setOgImageUrl(s.og_image_url);
@@ -690,6 +701,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       // est TRUE, mais ceinture+bretelle).
       setCaptureEnabled((q as { capture_enabled?: boolean | null }).capture_enabled !== false);
       setShowAggregateResponses((q as { show_aggregate_responses?: boolean | null }).show_aggregate_responses === true);
+      setSurveyThanksHeading((q as { survey_thanks_heading?: string | null }).survey_thanks_heading ?? "");
+      setSurveyThanksBody((q as { survey_thanks_body?: string | null }).survey_thanks_body ?? "");
       const rawPalettes = (prof?.saved_palettes ?? []) as unknown;
       setSavedPalettes(Array.isArray(rawPalettes) ? (rawPalettes as PaletteList) : []);
       // Restauration de draft (autosave) — même logique que
@@ -1018,6 +1031,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           // Sondage : options de capture et d'affichage agrégé
           capture_enabled: captureEnabled,
           show_aggregate_responses: showAggregateResponses,
+          survey_thanks_heading: surveyThanksHeading.trim() || null,
+          survey_thanks_body: surveyThanksBody.trim() || null,
           // Share + SEO
           slug: slug.trim() ? cleanedSlug : null,
           og_description: ogDescription.trim() || null,
@@ -2029,11 +2044,22 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     </div>
                   </div>
                   <h2 className="text-2xl sm:text-4xl font-bold leading-tight">
-                    {t("surveyThanksHeading")}
+                    <RichTextEdit
+                      value={surveyThanksHeading}
+                      onChange={setSurveyThanksHeading}
+                      singleLine
+                      className="text-2xl sm:text-4xl font-bold text-center"
+                      placeholder={t("surveyThanksHeading")}
+                    />
                   </h2>
-                  <p className="text-muted-foreground text-base leading-relaxed">
-                    {t("surveyThanksBody")}
-                  </p>
+                  <div className="text-muted-foreground text-base leading-relaxed">
+                    <RichTextEdit
+                      value={surveyThanksBody}
+                      onChange={setSurveyThanksBody}
+                      className="text-muted-foreground text-base text-center"
+                      placeholder={t("surveyThanksBody")}
+                    />
+                  </div>
 
                   {/* Inline-editable CTA — same pattern as quiz CTA, but
                       survey-wide (not per result). */}
