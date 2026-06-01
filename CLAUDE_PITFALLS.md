@@ -706,7 +706,31 @@ snapshot autosave (+dep), payload PATCH (intro_image_url + intro_image_position
 "top"), et bloc UI couverture dans l'INTRO SECTION (IA illustration + GIF +
 recadrage). Position "top" uniquement (le hero sondage est centré).
 
-## Contraintes business validées Béné — 1er juin 2026
+## profiles.id ≠ auth user id sur Tiquiz (≠ Tipote) — piège de port (1er juin 2026)
+
+**Différence structurelle critique entre les 2 apps** :
+- **Tipote** : `profiles.id` EST l'auth user id (PK = auth.users.id).
+- **Tiquiz** : `profiles.id` est une PK auto-générée (`gen_random_uuid()`),
+  et `profiles.user_id` est l'auth user id (FK vers auth.users, UNIQUE).
+  Cf. `supabase/migrations/001_initial_schema.sql`.
+
+Donc tout ce qui matche un user (quizzes.user_id, quiz_leads via quizzes,
+business_events.user_id, etc.) doit utiliser **`profiles.user_id`**, JAMAIS
+`profiles.id`.
+
+**Bug réel (port rétention, 1er juin 2026)** : le cron
+`/api/cron/backfill-milestones` itérait sur `profiles.id` puis appelait
+`countOutcomes(profile.id)` → `quizzes.eq("user_id", profile.id)` ne
+matchait jamais rien → 0 milestone backfillé sur 84 users. Fix : itérer
+sur `profiles.user_id`.
+
+**Règle** : quand je porte du code Tipote→Tiquiz qui lit `profiles`,
+TOUJOURS vérifier si le code source utilise `profiles.id` comme user id.
+Sur Tiquiz, remplacer par `profiles.user_id`. Pattern de référence : la
+route `app/api/leads/route.ts` fait bien `.from("profiles").eq("user_id",
+user.id)`.
+
+
 
 Audit global du 1er juin 2026 → roadmap rétention dans
 `ROADMAP_RETENTION.md` (copie locale, canonique côté `tipote-app/`).

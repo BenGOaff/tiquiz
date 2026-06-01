@@ -59,11 +59,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  // Tous les users avec un profil. Tiquiz = mono-user, on itère sur
-  // profiles.id.
+  // Tous les users avec un profil. ⚠️ Tiquiz : profiles.id est la PK
+  // propre de la table, profiles.user_id est l'auth user id (FK vers
+  // auth.users) — c'est CE dernier qui matche quizzes.user_id. Ne PAS
+  // confondre avec Tipote où profiles.id = auth user id.
   const { data: profiles, error } = await supabaseAdmin
     .from("profiles")
-    .select("id");
+    .select("user_id");
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
   }
@@ -72,15 +74,16 @@ export async function GET(req: NextRequest) {
   let totalInserted = 0;
   let totalSkipped = 0;
 
-  for (const profile of ((profiles ?? []) as Array<{ id: string }>)) {
+  for (const profile of ((profiles ?? []) as Array<{ user_id: string }>)) {
+    if (!profile.user_id) continue;
     try {
-      const r = await backfillForUser(profile.id);
+      const r = await backfillForUser(profile.user_id);
       results.push(r);
       totalInserted += r.inserted;
       totalSkipped += r.skipped;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      results.push({ userId: profile.id, inserted: 0, skipped: 0, error: message });
+      results.push({ userId: profile.user_id, inserted: 0, skipped: 0, error: message });
     }
   }
 
