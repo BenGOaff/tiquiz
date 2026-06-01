@@ -7,6 +7,7 @@
 // (Béné : meilleur Claude dispo).
 
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const SURVEY_AI_MIN_RESPONSES = 5;
@@ -210,13 +211,18 @@ export async function generateSurveyAnalysis(
         "anthropic-version": "2023-06-01",
       },
       signal: controller.signal,
-      body: JSON.stringify({
-        model,
-        max_tokens: 1500,
-        temperature: 0.4,
-        system,
-        messages: [{ role: "user", content: lines.join("\n") }],
-      }),
+      // buildClaudeMessageBody retire temperature pour Opus 4.7+ (sinon
+      // 400 "temperature is deprecated for this model"). L'analyse de
+      // sondage tape sur le tier opus → c'est obligatoire ici.
+      body: JSON.stringify(
+        buildClaudeMessageBody({
+          model,
+          max_tokens: 1500,
+          temperature: 0.4,
+          system,
+          messages: [{ role: "user", content: lines.join("\n") }],
+        }),
+      ),
     });
   } finally {
     clearTimeout(timeout);

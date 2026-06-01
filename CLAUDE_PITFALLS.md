@@ -7,6 +7,26 @@
 
 ---
 
+## ⚠️ Opus 4.7+ rejette `temperature` / `top_p` / `top_k` (1er juin 2026)
+
+Anthropic a RETIRÉ les paramètres de sampling sur Opus 4.7 et 4.8 — les
+envoyer renvoie `400 invalid_request_error: "temperature is deprecated
+for this model"`. Constaté en prod sur Tipote après bump du tier opus
+de 4.7 → 4.8 (même bug porte également côté Tiquiz : génération de quiz
+IA + analyse IA des résultats de sondage sont sur le tier opus).
+
+**Source de vérité unique** : `lib/claudeRequest.ts → buildClaudeMessageBody`.
+Tous les call-sites qui appellent l'API Anthropic en direct DOIVENT
+construire leur body via ce helper plutôt que poser `temperature` à
+la main. Détecte Opus 4.7+ via regex et omet les params interdits.
+
+Call-sites Tiquiz concernés (déjà fixés) :
+- `app/api/quiz/generate/route.ts` (génération IA des quiz, tier opus)
+- `lib/survey/analysis.ts` (analyse IA des résultats sondage, tier opus)
+
+Les autres modèles (sonnet 4.6, haiku 4.5, opus 4.6) acceptent toujours
+`temperature` — le helper laisse passer normalement.
+
 ## ⚠️ MULTIPROFILS Tiquiz — backward-compat AVANT tout filtre (juin 2026)
 
 Tiquiz est mono-user (`quizzes.user_id`, pas de `project_id`). Si/quand

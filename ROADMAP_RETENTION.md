@@ -7,6 +7,39 @@
 
 ---
 
+## 🔖 POINT D'ÉTAPE TIQUIZ — reprendre ici (dernière session : 1er juin 2026)
+
+> Point d'étape complet (2 apps) dans `tipote-app/ROADMAP_RETENTION.md`.
+> Tout est poussé sur `claude/busy-wright-501xR`.
+
+### ✅ FAIT côté Tiquiz
+- Rétention : milestones + Wall of Wins (phases 0-2, backfill ✅ 60
+  milestones), 8 templates métier + galerie SEO `/templates`, smoke tests.
+- Sondages : export CSV + PDF brandé Tiquiz, analyse IA des résultats
+  (Claude Opus 4.8, gate plan `canUseSurveyAI`).
+- Tier Opus → 4.8.
+
+### ⚠️ À DÉPLOYER (Béné)
+- **Run migration `supabase/migrations/20260605_survey_ai_analysis.sql`**
+  (nouvelle, pour l'analyse IA sondage). La 20260604 (business_events)
+  est déjà appliquée.
+- Build + restart pm2 `tiquiz-prod` (PDF refonte + analyse IA).
+- Pour TESTER l'analyse IA : se mettre en plan `beta` OU ajouter son
+  email dans l'env `TIQUIZ_SURVEY_AI_ALLOWLIST`.
+
+### 📋 À REPRENDRE
+1. **Multiprofils** : DESIGN backward-compat documenté plus bas (section
+   "Multiprofils Tiquiz — DESIGN") + pitfall en tête de CLAUDE_PITFALLS.
+   NON codé — à construire sans casser les quiz actifs existants.
+2. **Plan premium** : brancher son slug dans `canUseSurveyAI` (et plus
+   tard gate multiprofils) quand le pricing reprend.
+3. **Pricing 19/190** (phase 6) : EN PAUSE.
+4. **Templates V2** : 15+ modèles, A/B testing, auto-instanciation
+   post-signup.
+5. Retour Béné attendu sur templates + PDF.
+
+---
+
 ## Contraintes business validées Béné (1er juin 2026)
 
 - **Lifetime 57€ TERMINÉ** depuis longtemps. Plans actifs : Free /
