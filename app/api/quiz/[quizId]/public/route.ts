@@ -21,6 +21,7 @@ import { isNewLeadLocked } from "@/lib/leadLock";
 import { isPaidPlan } from "@/lib/planLimits";
 import { applyFrenchTypography, isFrenchLocale } from "@/lib/frenchTypography";
 import { sendCapiLead } from "@/lib/metaCapi";
+import { logBusinessEvent, dedupeKeys } from "@/lib/businessEvents";
 
 // No `force-dynamic`: it would make Vercel inject `Cache-Control: private, no-store`,
 // overriding the edge-SWR headers set on the GET response and forcing `cf-cache-status: DYNAMIC`.
@@ -562,6 +563,21 @@ export async function POST(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
 
+    // Log business_event (fire-and-forget, non bloquant). On loggue
+    // aussi pour les sondages anonymes : un lead capturé reste un lead
+    // pour les milestones/stats du créateur (le side-effect commercial
+    // — SIO, CAPI — est ce qu'on skippe pour l'anonyme, pas le tracking
+    // interne). Dedup par email → 1 event par email par quiz.
+    if (lead?.id && quiz.user_id) {
+      logBusinessEvent({
+        userId: quiz.user_id,
+        kind: "lead_captured",
+        source: "internal",
+        payload: { quizId, quizTitle: quiz.title, leadId: lead.id },
+        dedupeKey: dedupeKeys.quizLead(quizId, email),
+      }).catch(() => {});
+    }
+
     // Sondage anonyme : on a inséré la ligne pour alimenter l'agrégation,
     // mais on ne déclenche AUCUN side-effect commercial (pas de sync SIO,
     // pas de Lead CAPI Meta). Le visiteur n'a pas consenti à être contacté.
@@ -781,6 +797,18 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       if (shareErr) console.error("[public/share] quiz_events insert failed", shareErr);
 
       const quizRow = quiz as { sio_share_tag_name?: string | null; user_id?: string; sio_api_key_id?: string | null };
+
+      // Log business_event (fire-and-forget). Dedup par email → pas de
+      // double comptage si le visiteur partage depuis 2 onglets.
+      if (!shareErr && quizRow.user_id) {
+        logBusinessEvent({
+          userId: quizRow.user_id,
+          kind: "quiz_share",
+          source: "internal",
+          payload: { quizId, side: "server", email },
+          dedupeKey: dedupeKeys.quizShare(quizId, email.toLowerCase()),
+        }).catch(() => {});
+      }
       const shareTagName = String(quizRow.sio_share_tag_name ?? "").trim();
       const quizUserId = quizRow.user_id;
       const quizSioApiKeyId = quizRow.sio_api_key_id ?? null;

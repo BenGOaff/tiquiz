@@ -6,6 +6,8 @@ import { useTranslations } from "next-intl";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Greeting } from "@/components/ui/greeting";
 import { WeeklyGoalCard } from "@/components/ui/weekly-goal-card";
+import { WallOfWins } from "@/components/dashboard/WallOfWins";
+import { MilestoneToastListener } from "@/components/dashboard/MilestoneToastListener";
 import { pickWeeklyGoal } from "@/lib/weekly-goal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -386,6 +388,15 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
             </Button>
             </div>
           </div>
+
+          {/* Toasts de milestones débloqués (port phase 1). Lu client-side
+              au mount, fire-and-forget, jamais bloquant. */}
+          <MilestoneToastListener />
+
+          {/* Wall of Wins — port phase 2 rétention. Auto-caché si aucun
+              résultat sur la période (règle Béné "motivant ou rien").
+              Fetch indépendant, non bloquant. */}
+          <WallOfWins />
 
           {/* Weekly goal — picks the most relevant next-step automatically.
               Renders nothing when the user has hit every milestone we

@@ -40,6 +40,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { isBot } from "@/lib/userAgent";
 import { randomUUID } from "node:crypto";
+import { logBusinessEvent } from "@/lib/businessEvents";
 
 export const dynamic = "force-dynamic";
 
@@ -149,6 +150,36 @@ async function isQuizOwner(quizId: string): Promise<boolean> {
   }
 }
 
+/**
+ * Log un business_event pour complete / share. Fait 1 fetch pour
+ * récupérer le user_id du créateur (Tiquiz = pas de project_id).
+ * DedupeKey = <kind>:<quizId>:<sessionId> → idempotent.
+ */
+async function logBusinessEventForQuizFunnel(
+  quizId: string,
+  event: "complete" | "share",
+  sessionId: string,
+): Promise<void> {
+  const { data: quiz } = await supabaseAdmin
+    .from("quizzes")
+    .select("user_id, title")
+    .eq("id", quizId)
+    .maybeSingle();
+  if (!quiz?.user_id) return;
+  const kind = event === "complete" ? "quiz_complete" : "quiz_share";
+  await logBusinessEvent({
+    userId: quiz.user_id as string,
+    kind,
+    source: "internal",
+    payload: {
+      quizId,
+      quizTitle: (quiz.title as string | null) ?? null,
+      sessionId,
+    },
+    dedupeKey: `${kind}:${quizId}:${sessionId}`,
+  });
+}
+
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
     const { quizId: slugOrId } = await context.params;
@@ -202,6 +233,16 @@ export async function POST(req: NextRequest, context: RouteContext) {
         session_id: sessionId,
       });
       if (insErr) console.error("[track] quiz_events insert failed", event, insErr);
+
+      // Log business_event pour les events à valeur (complete, share).
+      // view/start non loggés (haute fréquence — Wall of Wins les lit
+      // via countOutcomes/quiz_events). Fire-and-forget, non bloquant.
+      if ((event === "complete" || event === "share") && !insErr) {
+        void logBusinessEventForQuizFunnel(quizId, event, sessionId).catch(
+          (err) => console.error("[track] logBusinessEvent failed", event, err),
+        );
+      }
+
       const res = ok({ event });
       if (needSetCookie) attachSessionCookie(res, sessionId);
       return res;

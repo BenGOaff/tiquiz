@@ -705,3 +705,50 @@ Côté éditeur SurveyDetailClient : state introImageUrl, hydratation (q + draft
 snapshot autosave (+dep), payload PATCH (intro_image_url + intro_image_position
 "top"), et bloc UI couverture dans l'INTRO SECTION (IA illustration + GIF +
 recadrage). Position "top" uniquement (le hero sondage est centré).
+
+## Contraintes business validées Béné — 1er juin 2026
+
+Audit global du 1er juin 2026 → roadmap rétention dans
+`ROADMAP_RETENTION.md` (copie locale, canonique côté `tipote-app/`).
+Hors-scope explicite à NE PAS confondre :
+
+- **Lifetime 57€ TERMINÉ depuis longtemps**. Plans actifs Tiquiz :
+  Free / Monthly 9€ / Yearly 90€. Lifetime existants grandfathérés à
+  vie côté DB. Ne JAMAIS proposer une nouvelle vente lifetime ni
+  retirer les lifetime existants.
+- **Nouveau pricing à venir** : 19€/mois et 190€/an pour les futurs
+  users uniquement. Mécanique = `profiles.pricing_grandfathered_at`
+  TIMESTAMPTZ. NULL = nouveau prix, NOT NULL = ancien prix. Backfill
+  `now()` au moment du switch pour tous les users existants. Stripe :
+  nouveaux Price IDs, anciens gardés actifs pour les grandfathérés.
+- **Pas de CTA "upgrade vers Tipote" dans Tiquiz** : Systeme.io a
+  bloqué le whitelabel Tipote, donc on ne peut plus vendre Tipote
+  depuis l'écosystème actuel. Garder l'archi compatible mais ne rien
+  exposer en UI tant que le blocage n'est pas levé.
+- **Affiliate (commissions / payouts / leaderboard) = Systeme.io**.
+  Aucune mécanique financière côté Tiquiz.
+- **Monitoring uptime VPS** : déjà couvert par UptimeRobot côté Béné.
+  Pas besoin de re-coder un healthcheck custom.
+
+## Foundation `business_events` — table unique log (planifiée roadmap phase 0)
+
+Quand on attaque la phase 0 de `ROADMAP_RETENTION.md` côté Tiquiz :
+
+- **Une seule helper d'INSERT côté serveur** : `lib/businessEvents.ts →
+  logBusinessEvent({userId, kind, payload, source, occurredAt?,
+  dedupeKey?})`. INSERT direct, lecture `{ error }`. PAS de RPC.
+- **`dedupe_key` UNIQUE partiel** pour idempotence (ex
+  `systemeio:order_yyy`). `INSERT … ON CONFLICT (user_id, dedupe_key)
+  DO NOTHING WHERE dedupe_key IS NOT NULL`.
+- **Bucketing temps via `lib/dateKeys.ts`** (jour LOCAL du créateur,
+  jamais UTC pour l'affichage).
+- **Trigger AFTER INSERT → `evaluate_milestones(user_id)`** : insère
+  dans `user_milestones` UNIQUE `(user_id, milestone_key)`. Pas
+  d'UPDATE de compteur direct.
+- **Kinds Tiquiz** : `lead_captured`, `quiz_view`, `quiz_start`,
+  `quiz_complete`, `quiz_share`, `quiz_published`, `popquiz_published`,
+  `account_connected`, `account_disconnected`.
+- **RLS** : user lit ses events. Service role bypass.
+- **Index** : `(user_id, occurred_at DESC)`, `(user_id, kind,
+  occurred_at DESC)`. Sans ça les agrégats Wall of Wins traînent dès
+  1000 events / user.
