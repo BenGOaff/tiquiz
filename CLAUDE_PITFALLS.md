@@ -7,6 +7,18 @@
 
 ---
 
+## ⚠️ MULTIPROFILS Tiquiz — backward-compat AVANT tout filtre (juin 2026)
+
+Tiquiz est mono-user (`quizzes.user_id`, pas de `project_id`). Si/quand
+on ajoute les multiprofils, NE JAMAIS activer un filtre `project_id`
+avant d'avoir : (1) ajouté la colonne nullable, (2) créé un projet
+`is_default` par user, (3) backfillé tous les quiz existants
+(project_id NULL → projet par défaut). Sinon TOUS les quiz actuels
+disparaissent du dashboard des users. Routes publiques `/q/`, `/p/`
+résolvent par id/slug, JAMAIS par projet (zéro impact visiteur / embed).
+Plan complet : voir `ROADMAP_RETENTION.md` section "Multiprofils Tiquiz
+— DESIGN". Gate = plan premium (même palier que canUseSurveyAI).
+
 ## A) Checklist quand j'ajoute une COLONNE sur `quizzes`
 
 Toujours faire les 7 étapes, dans l'ordre, sinon la feature est cassée silencieusement :

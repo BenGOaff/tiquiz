@@ -7,7 +7,8 @@
     "build": "next build",
     "postbuild": "node scripts/postbuild-standalone-static.cjs",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "smoke": "bash scripts/smoke-public-routes.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

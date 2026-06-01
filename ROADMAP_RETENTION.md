@@ -146,3 +146,101 @@ directement sur Tiquiz, sans attendre Tipote — elles n'ont pas
 d'équivalent côté Tipote.
 
 Cf. `tipote-app/ROADMAP_RETENTION.md` pour le contexte complet.
+
+---
+
+## Chantier Sondages — export + analyse IA (juin 2026)
+
+### Export résultats (CSV + PDF) — FAIT ✅
+Route `GET /api/quiz/[id]/survey-results?format=csv|json` (owner-scoped).
+- CSV : réponses brutes, 1 ligne/participant.
+- PDF : rapport agrégé, généré client-side via jspdf (dynamic import).
+Panneau `SurveyResultsPanel` monté dans le tab "trends" du sondage.
+
+### Analyse IA des résultats — FAIT ✅ (gate à finaliser)
+Route `GET|POST /api/quiz/[id]/survey-analysis`. Min 5 réponses.
+- Sortie : ce que disent les résultats / à retenir / actions.
+- Claude Opus 4.8 (contenu = meilleur Claude, Béné).
+- Tiquiz n'a PAS de crédits → gate par PLAN via `canUseSurveyAI(plan)`
+  (lib/planLimits). Stocké sur quizzes.survey_ai_analysis (re-runs
+  gratuits).
+
+⚠️ **RESTE À FAIRE quand le pricing reprend** :
+- `canUseSurveyAI` n'autorise QUE le plan "beta" + une allowlist env
+  (TIQUIZ_SURVEY_AI_ALLOWLIST) pour l'instant. Quand le plan premium
+  (avec multiprofils) sortira, ajouter son slug dans `canUseSurveyAI`.
+- Brancher le multiprofils (mentionné par Béné comme partie du même
+  plan premium) — NON commencé.
+- i18n : textes FR en dur dans SurveyResultsPanel (à externaliser si
+  besoin EN).
+
+⚠️ À run en prod : migration `20260605_survey_ai_analysis.sql`.
+
+---
+
+## Multiprofils Tiquiz — DESIGN (NON implémenté, juin 2026)
+
+> Béné : "on ne crée pas encore les multiprofils, mais on commence à y
+> penser pour le mettre en place sans tout casser pour les users actuels
+> qui ont des quiz actifs."
+>
+> Tiquiz est aujourd'hui MONO-USER : `quizzes.user_id` uniquement, pas de
+> `project_id` (contrairement à Tipote qui a le multi-projet Elite). Le
+> risque n°1 en ajoutant les multiprofils = un filtre `project_id` qui
+> MASQUE d'un coup tous les quiz existants (ils n'ont pas de projet).
+
+### Invariant absolu à respecter le jour J
+
+**Aucun user existant ne doit perdre la visibilité de ses quiz / sondages
+/ popquiz / leads actifs.** Un quiz publié et embarqué sur un blog tiers
+doit continuer à répondre exactement pareil. Zéro régression visiteur.
+
+### Plan de migration sûr (à exécuter quand on construira la feature)
+
+1. **Colonne nullable d'abord** : `ALTER TABLE quizzes ADD COLUMN
+   IF NOT EXISTS project_id UUID` (NULL autorisé). Idem sur toute table
+   scopée par user qui devra l'être (popquizzes, business_events,
+   user_milestones, etc.). NULL = "projet par défaut".
+   → À ce stade, RIEN ne change pour personne (colonne ignorée partout).
+
+2. **Table `projects`** (id, user_id, name, is_default, created_at).
+   Migration de données : pour CHAQUE user existant, créer 1 projet
+   `is_default = true` nommé p.ex. "Mon espace".
+
+3. **Backfill** : `UPDATE quizzes SET project_id = <default project du
+   user> WHERE project_id IS NULL` (idem autres tables). Après backfill,
+   plus aucun NULL → on peut filtrer sans rien masquer.
+   ⚠️ Le backfill DOIT tourner AVANT d'activer le moindre filtre UI.
+
+4. **Lecture tolérante pendant la transition** : tant que le backfill
+   n'est pas 100% garanti, le filtre doit être
+   `project_id = :active OR project_id IS NULL` quand `:active` est le
+   projet par défaut. (Filet ceinture-bretelles : un quiz oublié au
+   backfill reste visible dans le projet par défaut, jamais perdu.)
+
+5. **Sélecteur de projet UI** : le projet par défaut est pré-sélectionné.
+   Un user qui n'a jamais créé de 2e projet ne voit AUCUN changement
+   (un seul projet = pas de switcher visible, ou switcher inerte).
+
+6. **Routes publiques INCHANGÉES** : `/q/[id]`, `/p/[slug]` résolvent par
+   quiz id/slug, JAMAIS par projet. Un visiteur ne sait pas ce qu'est un
+   projet. Le `project_id` ne sert QU'au scoping dashboard créateur.
+   → Garantit zéro impact sur les quiz embarqués existants.
+
+7. **business_events / milestones / Wall of Wins** : aujourd'hui scopés
+   user_id seul côté Tiquiz. Le jour du multiprofils, soit on garde
+   l'agrégation au niveau user (tous projets confondus) — plus simple et
+   sans risque — soit on ajoute un filtre projet optionnel. Décision à
+   prendre à ce moment ; par défaut : agrégation user-level conservée.
+
+### Gate produit
+
+Le multiprofils Tiquiz est lié au plan premium (même palier que l'analyse
+IA des sondages, cf. `canUseSurveyAI`). Réutiliser le même mécanisme de
+gate plan. NE PAS l'ouvrir aux plans actuels.
+
+### Ce qui est DÉJÀ prêt côté Tipote (à copier le moment venu)
+
+Tipote a déjà le multi-projet (`business_profiles.project_id`,
+`getActiveProjectId`, `ProjectSwitcher`). Le port Tiquiz s'inspirera de
+cette archi éprouvée plutôt que de réinventer.

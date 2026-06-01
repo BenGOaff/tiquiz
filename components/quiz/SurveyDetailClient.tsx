@@ -19,6 +19,7 @@ import { GifPickerButton } from "@/components/quiz/GifPicker";
 import { ImageCropDialog } from "@/components/quiz/ImageCropDialog";
 import { TiquizStudioButton } from "@/components/visual-studio/TiquizStudioButton";
 import { SurveyTrends } from "@/components/quiz/SurveyTrends";
+import SurveyResultsPanel from "@/components/quiz/SurveyResultsPanel";
 import { ReadinessRing } from "@/components/ui/readiness-ring";
 import { computeReadiness } from "@/lib/quiz-readiness";
 import { toast } from "sonner";
@@ -2321,6 +2322,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                 created_at: l.created_at,
               }))}
             />
+
+            {/* Export (CSV/PDF) + analyse IA des résultats du sondage. */}
+            <div className="mt-6">
+              <SurveyResultsPanel quizId={quizId} surveyTitle={title} />
+            </div>
           </div>
         </div>
       )}

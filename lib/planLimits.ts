@@ -27,6 +27,42 @@ export function isPaidPlan(plan: string | null | undefined): boolean {
 }
 
 /**
+ * Analyse IA des sondages — option PAYANTE d'un plan plus cher (Béné,
+ * juin 2026). Le plan premium dédié n'existe PAS ENCORE (pricing en
+ * pause). En attendant :
+ *   - on autorise le plan "beta" (accès accordé manuellement) pour que
+ *     Béné puisse tester la feature en prod ;
+ *   - on autorise aussi une allowlist d'IDs/emails via env
+ *     TIQUIZ_SURVEY_AI_ALLOWLIST (séparés par virgule) pour des tests
+ *     ciblés sans toucher au code.
+ *
+ * ⚠️ QUAND LE PLAN PREMIUM SORTIRA : ajouter son slug ici (ex.
+ * `s === "pro"`). NE PAS ouvrir à isPaidPlan() — ce serait offrir la
+ * feature à tous les lifetime/monthly/yearly actuels, ce qui n'est PAS
+ * l'intention (c'est un palier au-dessus).
+ */
+export function canUseSurveyAI(
+  plan: string | null | undefined,
+  opts?: { userId?: string | null; email?: string | null },
+): boolean {
+  const s = (plan ?? "").trim().toLowerCase();
+  if (s === "beta") return true;
+
+  const allowlist = (process.env.TIQUIZ_SURVEY_AI_ALLOWLIST ?? "")
+    .split(",")
+    .map((x) => x.trim().toLowerCase())
+    .filter(Boolean);
+  if (allowlist.length > 0) {
+    const uid = (opts?.userId ?? "").trim().toLowerCase();
+    const mail = (opts?.email ?? "").trim().toLowerCase();
+    if ((uid && allowlist.includes(uid)) || (mail && allowlist.includes(mail))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Free-tier ceilings. Captures keep coming when the cap is hit; only the
  * UI-visible portion is gated (see `lib/leadLock.ts` for the lock logic
  * and `app/api/quiz/route.ts` for the creation gate).
