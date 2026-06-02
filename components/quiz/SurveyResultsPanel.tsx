@@ -28,6 +28,8 @@ interface AnalysisState {
   minResponses: number;
   hasEnough: boolean;
   eligible: boolean;
+  /** True pour plans monthly/yearly — affiche un CTA upgrade dédié. */
+  showUpsell: boolean;
 }
 
 export default function SurveyResultsPanel({
@@ -53,6 +55,7 @@ export default function SurveyResultsPanel({
           minResponses: d.minResponses ?? 5,
           hasEnough: !!d.hasEnough,
           eligible: !!d.eligible,
+          showUpsell: !!d.showUpsell,
         });
       })
       .catch(() => {});
@@ -160,13 +163,30 @@ export default function SurveyResultsPanel({
         </div>
 
         {state && !state.eligible && !state.analysis ? (
-          <div className="mt-1 flex items-start gap-2">
-            <Lock className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-            <p className="text-sm text-muted-foreground">
-              L&apos;analyse IA des résultats est une fonctionnalité d&apos;un plan
-              supérieur : ce que disent vraiment tes réponses, ce qu&apos;il faut en
-              retenir et les actions à mettre en place. Bientôt disponible.
-            </p>
+          <div className="mt-1 space-y-2">
+            <div className="flex items-start gap-2">
+              <Lock className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+              <p className="text-sm text-muted-foreground">
+                L&apos;analyse IA décode ce que disent vraiment tes réponses,
+                résume ce qu&apos;il faut en retenir et te propose les actions
+                concrètes à mettre en place. Mises à jour gratuites.
+              </p>
+            </div>
+            {state.showUpsell ? (
+              <p className="text-sm text-foreground pl-6">
+                Disponible dans les plans{" "}
+                <span className="font-semibold">Tiquiz mensuel+</span> et{" "}
+                <span className="font-semibold">annuel+</span>, qui incluent
+                aussi les multiprofils.{" "}
+                <span className="italic text-muted-foreground">
+                  Les bons de commande sont en préparation — on te prévient.
+                </span>
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground pl-6 italic">
+                Bientôt disponible dans un plan supérieur.
+              </p>
+            )}
           </div>
         ) : state && !state.hasEnough && !state.analysis ? (
           <p className="text-sm text-muted-foreground mt-1">

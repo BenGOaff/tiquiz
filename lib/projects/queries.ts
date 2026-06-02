@@ -7,6 +7,10 @@
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import type { Project, ProjectSummary } from "@/lib/projects/types";
+import { isValidAccentColor, isValidEmoji } from "@/lib/projects/visualIdentity";
+
+const PROJECT_SUMMARY_SELECT =
+  "id, name, is_default, created_at, accent_color, icon_emoji, use_branding_logo";
 
 /**
  * Liste tous les projets d'un user, projet par défaut en tête.
@@ -16,7 +20,7 @@ export async function listProjectsForUser(userId: string): Promise<ProjectSummar
   if (!userId) return [];
   const { data, error } = await supabaseAdmin
     .from("projects")
-    .select("id, name, is_default, created_at")
+    .select(PROJECT_SUMMARY_SELECT)
     .eq("user_id", userId)
     .order("is_default", { ascending: false })
     .order("created_at", { ascending: true });
@@ -131,6 +135,63 @@ export async function renameProject(
     .eq("id", projectId);
   if (error) return { ok: false, error: error.message };
   return { ok: true };
+}
+
+/**
+ * Update arbitraire du nom + visual identity d'un projet (alignement
+ * Tipote — accent_color, icon_emoji, use_branding_logo). Tous les
+ * champs sont optionnels — l'appelant peut update 1 seul ou les 4.
+ * Valide accent_color / icon_emoji contre la palette TS pour éviter
+ * une valeur custom qui passerait à travers la CHECK constraint.
+ */
+export interface UpdateProjectPatch {
+  name?: string;
+  accent_color?: string | null;
+  icon_emoji?: string | null;
+  use_branding_logo?: boolean;
+}
+
+export async function updateProject(
+  projectId: string,
+  patch: UpdateProjectPatch,
+): Promise<{ ok: boolean; error?: string; project?: Project }> {
+  const update: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (patch.name !== undefined) {
+    const cleanName = patch.name.trim().slice(0, 80);
+    if (!cleanName) return { ok: false, error: "name_required" };
+    update.name = cleanName;
+  }
+
+  if (patch.accent_color !== undefined) {
+    if (patch.accent_color !== null && !isValidAccentColor(patch.accent_color)) {
+      return { ok: false, error: "invalid_accent_color" };
+    }
+    update.accent_color = patch.accent_color;
+  }
+
+  if (patch.icon_emoji !== undefined) {
+    if (patch.icon_emoji !== null && !isValidEmoji(patch.icon_emoji)) {
+      return { ok: false, error: "invalid_icon_emoji" };
+    }
+    update.icon_emoji = patch.icon_emoji;
+  }
+
+  if (patch.use_branding_logo !== undefined) {
+    update.use_branding_logo = patch.use_branding_logo;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("projects")
+    .update(update)
+    .eq("id", projectId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, project: (data ?? undefined) as Project | undefined };
 }
 
 /**

@@ -8,6 +8,7 @@ import { UserAvatarMenu } from "@/components/UserAvatarMenu";
 import { Button } from "@/components/ui/button";
 import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
+import { SessionResetGate } from "@/components/projects/SessionResetGate";
 
 interface AppShellProps {
   children: ReactNode;
@@ -75,6 +76,11 @@ export default function AppShell({
 
         {/* Tutorial system */}
         <TutorialOverlay />
+
+        {/* Au démarrage d'une nouvelle session navigateur, force le
+            cookie sur le projet par défaut (parité Tipote — évite que
+            l'user reprenne sur un side project la veille). */}
+        <SessionResetGate />
       </div>
     </SidebarProvider>
   );

@@ -1,11 +1,17 @@
 // app/api/projects/active/route.ts
 //
 // POST { projectId } → bascule le user sur ce projet.
-// Pose un cookie HTTP-only `tiquiz_project` lu par getActiveProjectId
-// dans les routes scopées (phase 3).
+// Pose un cookie `tiquiz_active_project` (non httpOnly volontairement
+// pour parité avec le pattern Tipote — le ProjectSwitcher UI lit le
+// cookie côté client pour synchroniser son état sans aller-retour).
 //
 // GET → renvoie l'ID du projet actif courant (pour synchroniser le UI
 // au mount sans devoir relister tous les projets).
+//
+// Note : ce endpoint POST coexiste avec switchProject() côté client
+// (lib/projects/client.ts) qui pose le cookie directement. Les deux
+// chemins fonctionnent ; le POST API existe pour les cas où on a déjà
+// le contexte serveur sous la main et qu'on évite un round-trip JS.
 
 import { NextRequest, NextResponse } from "next/server";
 
@@ -57,7 +63,7 @@ export async function POST(req: NextRequest) {
   res.cookies.set({
     name: ACTIVE_PROJECT_COOKIE,
     value: projectId,
-    httpOnly: true,
+    httpOnly: false, // lisible client-side par ProjectSwitcher (parité Tipote)
     secure: true,
     sameSite: "lax",
     path: "/",

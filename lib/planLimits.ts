@@ -3,12 +3,60 @@
 // Aligned with the Tipote `lib/planLimits.ts` API surface so shared logic
 // (e.g. `lib/leadLock.ts`) can be ported across repos with zero friction.
 
-export type PlanId = "free" | "lifetime" | "monthly" | "yearly" | "beta";
+export type PlanId =
+  | "free"
+  | "lifetime"
+  | "monthly"
+  | "yearly"
+  | "monthly_plus"
+  | "yearly_plus"
+  | "beta";
 
 export function normalizePlanId(raw: string | null | undefined): PlanId {
   const s = (raw ?? "").trim().toLowerCase();
-  if (s === "lifetime" || s === "monthly" || s === "yearly" || s === "beta") return s;
+  if (
+    s === "lifetime" ||
+    s === "monthly" ||
+    s === "yearly" ||
+    s === "monthly_plus" ||
+    s === "yearly_plus" ||
+    s === "beta"
+  ) {
+    return s;
+  }
   return "free";
+}
+
+/**
+ * Plans qui ont accès aux features premium Tiquiz (multiprofils +
+ * analyse IA des sondages). Béné 2 juin 2026 :
+ *   - "beta"          → accès accordé manuellement (test interne, partenaires)
+ *   - "lifetime"      → early adopters 57€ (Béné : "lifetime = beta", récompense)
+ *   - "monthly_plus"  → nouveau palier « + » (commande Systeme.io à créer)
+ *   - "yearly_plus"   → idem en annuel
+ */
+export function isPremiumPlan(plan: string | null | undefined): boolean {
+  const s = (plan ?? "").trim().toLowerCase();
+  return (
+    s === "beta" ||
+    s === "lifetime" ||
+    s === "monthly_plus" ||
+    s === "yearly_plus"
+  );
+}
+
+/**
+ * True si l'user a un plan payant qui doit VOIR les features premium
+ * mais ne peut PAS y accéder (= cible des CTA upsell vers « + »).
+ * Concrètement : monthly, yearly (sans suffixe « + »).
+ *
+ * Les free ne voient rien (statu quo, Béné : "free ne bouge pas").
+ * Les beta / lifetime / monthly_plus / yearly_plus ne voient pas non
+ * plus l'upsell (ils ont déjà l'accès).
+ */
+export function shouldShowPlusUpsell(plan: string | null | undefined): boolean {
+  const s = (plan ?? "").trim().toLowerCase();
+  return s === "monthly" || s === "yearly";
 }
 
 /**
@@ -27,26 +75,23 @@ export function isPaidPlan(plan: string | null | undefined): boolean {
 }
 
 /**
- * Analyse IA des sondages — option PAYANTE d'un plan plus cher (Béné,
- * juin 2026). Le plan premium dédié n'existe PAS ENCORE (pricing en
- * pause). En attendant :
- *   - on autorise le plan "beta" (accès accordé manuellement) pour que
- *     Béné puisse tester la feature en prod ;
- *   - on autorise aussi une allowlist d'IDs/emails via env
- *     TIQUIZ_SURVEY_AI_ALLOWLIST (séparés par virgule) pour des tests
- *     ciblés sans toucher au code.
+ * Analyse IA des sondages — feature PREMIUM Tiquiz (Béné juin 2026).
  *
- * ⚠️ QUAND LE PLAN PREMIUM SORTIRA : ajouter son slug ici (ex.
- * `s === "pro"`). NE PAS ouvrir à isPaidPlan() — ce serait offrir la
- * feature à tous les lifetime/monthly/yearly actuels, ce qui n'est PAS
- * l'intention (c'est un palier au-dessus).
+ * Accès via :
+ *   - plans premium = beta, lifetime, monthly_plus, yearly_plus
+ *     (cf. isPremiumPlan)
+ *   - allowlist env TIQUIZ_SURVEY_AI_ALLOWLIST (IDs/emails séparés par
+ *     virgule) pour tests ciblés sans toucher au code.
+ *
+ * Les plans monthly/yearly VOIENT la feature dans l'UI mais ne peuvent
+ * pas l'utiliser (CTA upgrade vers monthly_plus/yearly_plus). Cf.
+ * shouldShowPlusUpsell.
  */
 export function canUseSurveyAI(
   plan: string | null | undefined,
   opts?: { userId?: string | null; email?: string | null },
 ): boolean {
-  const s = (plan ?? "").trim().toLowerCase();
-  if (s === "beta") return true;
+  if (isPremiumPlan(plan)) return true;
 
   const allowlist = (process.env.TIQUIZ_SURVEY_AI_ALLOWLIST ?? "")
     .split(",")
@@ -63,13 +108,16 @@ export function canUseSurveyAI(
 }
 
 /**
- * Multiprofils — option PAYANTE d'un plan supérieur (Béné, juin 2026).
- * Même palier que canUseSurveyAI : le plan premium n'existe pas encore
- * (pricing en pause). En attendant : plan "beta" + allowlist env
- * `TIQUIZ_MULTIPROJECTS_ALLOWLIST` pour tester.
+ * Multiprofils — feature PREMIUM Tiquiz (Béné juin 2026).
  *
- * ⚠️ QUAND LE PLAN PREMIUM SORTIRA : ajouter son slug ici. NE PAS
- * ouvrir à isPaidPlan() — c'est un palier au-dessus.
+ * Accès via :
+ *   - plans premium = beta, lifetime, monthly_plus, yearly_plus
+ *     (cf. isPremiumPlan)
+ *   - allowlist env TIQUIZ_MULTIPROJECTS_ALLOWLIST pour tests ciblés.
+ *
+ * Les plans monthly/yearly VOIENT le ProjectSwitcher mais ne peuvent
+ * pas créer de nouveaux projets (CTA upgrade vers monthly_plus/yearly_plus).
+ * Cf. shouldShowPlusUpsell.
  *
  * Cf. ROADMAP_RETENTION "Multiprofils Tiquiz — DESIGN" et le pitfall
  * en tête de CLAUDE_PITFALLS.md.
@@ -78,8 +126,7 @@ export function canUseMultiProjects(
   plan: string | null | undefined,
   opts?: { userId?: string | null; email?: string | null },
 ): boolean {
-  const s = (plan ?? "").trim().toLowerCase();
-  if (s === "beta") return true;
+  if (isPremiumPlan(plan)) return true;
 
   const allowlist = (process.env.TIQUIZ_MULTIPROJECTS_ALLOWLIST ?? "")
     .split(",")

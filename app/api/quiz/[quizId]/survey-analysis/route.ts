@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { canUseSurveyAI } from "@/lib/planLimits";
+import { canUseSurveyAI, shouldShowPlusUpsell } from "@/lib/planLimits";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
@@ -32,14 +32,19 @@ async function loadOwnedSurvey(quizId: string, userId: string) {
   return quiz;
 }
 
-async function resolvePlanEligibility(userId: string, email: string | null) {
+async function resolvePlanContext(userId: string, email: string | null) {
   const { data: profile } = await supabaseAdmin
     .from("profiles")
     .select("plan")
     .eq("user_id", userId)
     .maybeSingle();
   const plan = (profile as { plan?: string | null } | null)?.plan ?? null;
-  return canUseSurveyAI(plan, { userId, email });
+  return {
+    eligible: canUseSurveyAI(plan, { userId, email }),
+    // True pour monthly/yearly → UI affiche un upsell vers mensuel+/annuel+
+    // au lieu du simple "Bientôt disponible".
+    showUpsell: shouldShowPlusUpsell(plan),
+  };
 }
 
 export async function GET(
@@ -62,7 +67,7 @@ export async function GET(
 
   const aggregate = await aggregateSurvey(quizId, user.id);
   const totalResponses = aggregate?.totalResponses ?? 0;
-  const eligible = await resolvePlanEligibility(user.id, user.email ?? null);
+  const planCtx = await resolvePlanContext(user.id, user.email ?? null);
 
   return NextResponse.json({
     ok: true,
@@ -71,7 +76,8 @@ export async function GET(
     totalResponses,
     minResponses: SURVEY_AI_MIN_RESPONSES,
     hasEnough: totalResponses >= SURVEY_AI_MIN_RESPONSES,
-    eligible,
+    eligible: planCtx.eligible,
+    showUpsell: planCtx.showUpsell,
   });
 }
 
@@ -93,14 +99,15 @@ export async function POST(
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
 
-  // Gate par plan (option payante).
-  const eligible = await resolvePlanEligibility(user.id, user.email ?? null);
-  if (!eligible) {
+  // Gate par plan (feature premium : mensuel+ / annuel+).
+  const planCtx = await resolvePlanContext(user.id, user.email ?? null);
+  if (!planCtx.eligible) {
     return NextResponse.json(
       {
         ok: false,
         error: "PLAN_REQUIRED",
-        message: "L'analyse IA des résultats est disponible dans un plan supérieur.",
+        message:
+          "L'analyse IA des résultats est réservée aux plans Tiquiz mensuel+ et annuel+. Passe au palier supérieur pour débloquer.",
       },
       { status: 403 },
     );

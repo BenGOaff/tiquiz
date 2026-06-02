@@ -11,7 +11,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { canUseMultiProjects } from "@/lib/planLimits";
+import {
+  canUseMultiProjects,
+  shouldShowPlusUpsell,
+} from "@/lib/planLimits";
 import {
   createProject,
   listProjectsForUser,
@@ -22,14 +25,21 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-async function getPlanEligibility(userId: string, email: string | null) {
+async function getPlanContext(userId: string, email: string | null) {
   const { data: profile } = await supabaseAdmin
     .from("profiles")
     .select("plan")
     .eq("user_id", userId)
     .maybeSingle();
   const plan = (profile as { plan?: string | null } | null)?.plan ?? null;
-  return canUseMultiProjects(plan, { userId, email });
+  return {
+    plan,
+    canCreateMore: canUseMultiProjects(plan, { userId, email }),
+    // True pour monthly/yearly — l'UI doit afficher le switcher avec
+    // un CTA upgrade vers monthly_plus/yearly_plus. False pour free
+    // (statu quo) ET pour les plans premium (déjà accès).
+    showUpsell: shouldShowPlusUpsell(plan),
+  };
 }
 
 export async function GET() {
@@ -42,12 +52,16 @@ export async function GET() {
   }
 
   const projects = await listProjectsForUser(user.id);
-  const eligible = await getPlanEligibility(user.id, user.email ?? null);
+  const ctx = await getPlanContext(user.id, user.email ?? null);
 
   return NextResponse.json({
     ok: true,
     projects,
-    canCreateMore: eligible,
+    canCreateMore: ctx.canCreateMore,
+    // Pour l'UI : si true on affiche le switcher même avec 1 projet et
+    // un CTA upgrade vers mensuel+ / annuel+ (cible monthly / yearly).
+    showUpsell: ctx.showUpsell,
+    plan: ctx.plan,
   });
 }
 
@@ -60,13 +74,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  const eligible = await getPlanEligibility(user.id, user.email ?? null);
-  if (!eligible) {
+  const ctx = await getPlanContext(user.id, user.email ?? null);
+  if (!ctx.canCreateMore) {
     return NextResponse.json(
       {
         ok: false,
         error: "PLAN_REQUIRED",
-        message: "La création de plusieurs projets est disponible dans un plan supérieur.",
+        message:
+          "La création de plusieurs projets est réservée aux plans Tiquiz mensuel+ et annuel+. Passe au palier supérieur pour débloquer.",
       },
       { status: 403 },
     );
