@@ -101,6 +101,31 @@ Pattern :
 { migration: "<filename>", table: "<table>", columns: ["c1","c2"] }
 ```
 
+## ⚠️ Playwright config à la racine = bombe à retardement pour le build prod (2 juin 2026 après-midi)
+
+**Symptôme** : `next build` plante en prod avec
+`Failed to type check. Cannot find module '@playwright/test'`
+sur `./playwright.config.ts` → pm2 boucle de restart.
+
+**Cause** : Next.js 16 typecheck strict pendant `next build` traverse
+TOUS les .ts inclus par tsconfig (par défaut `**/*.ts`). Si
+playwright.config.ts est à la racine ET que @playwright/test est en
+devDep ET que la prod prune les devDeps → import non résolu → build KO.
+
+**Fix** : ajouter au `tsconfig.json` `exclude` :
+```json
+"exclude": [
+  "node_modules",
+  "playwright.config.ts",
+  "tests/e2e"
+]
+```
+
+**Règle absolue** : à chaque ajout d'un fichier .ts à la racine qui
+importe une devDep, vérifier que `next build` passe AVANT push. Pas
+juste `npx tsc --noEmit` (qui peut être moins strict que le typecheck
+embedded de Next.js 16). Tester `npm run build` en local au minimum.
+
 ## A) Checklist quand j'ajoute une COLONNE sur `quizzes`
 
 Toujours faire les 7 étapes, dans l'ordre, sinon la feature est cassée silencieusement :
