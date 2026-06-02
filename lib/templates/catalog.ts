@@ -971,6 +971,874 @@ export const TEMPLATE_CATALOG: QuizTemplate[] = [
       ],
     },
   },
+
+  // ─────────────────────────────────────────────────────────────────
+  // 9. Coach mindset / développement personnel
+  // ─────────────────────────────────────────────────────────────────
+  {
+    slug: "croyance-limitante",
+    metier: "Coach mindset",
+    emoji: "🧠",
+    cardTitle: "Quelle croyance limitante te freine vraiment ?",
+    tagline: "Le quiz qui met le doigt sur ce qui te bloque sans que tu le voies.",
+    whoFor:
+      "Coachs mindset, thérapeutes brèves et accompagnateurs en développement personnel qui veulent que leurs prospects identifient eux-mêmes le frein avant la séance découverte.",
+    whyItWorks:
+      "Quand quelqu'un met un mot sur ce qui le bloque, il devient demandeur d'une solution. C'est le moment idéal pour proposer un accompagnement.",
+    estimatedMinutes: 2,
+    payload: {
+      title: "Quelle croyance limitante te freine vraiment ?",
+      introduction:
+        "En 6 questions honnêtes, on identifie la petite voix qui te freine au quotidien — et la façon de la calmer. Pas de blabla psy, juste ce qui est vrai pour toi.",
+      cta_text: "Identifier ma croyance",
+      share_message:
+        "Je viens d'identifier la croyance qui me bloquait depuis des années 🧠 Et toi, c'est quoi la tienne ?",
+      virality_enabled: true,
+      address_form: "tu",
+      questions: [
+        {
+          question_text: "Quand tu veux te lancer dans un projet, la petite voix dans ta tête te dit :",
+          options: [
+            { text: "« Tu n'es pas assez bon·ne pour ça »", result_index: 0 },
+            { text: "« Tu vas finir par décevoir tout le monde »", result_index: 1 },
+            { text: "« Tu n'as pas le droit de réussir alors que d'autres galèrent »", result_index: 2 },
+            { text: "« Tu vas te planter et tout le monde va le voir »", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Quand on te fait un compliment sincère, tu :",
+          options: [
+            { text: "Le minimises immédiatement (« non c'est rien »)", result_index: 0 },
+            { text: "Le reçois mais culpabilises de ne pas en faire plus", result_index: 1 },
+            { text: "Es mal à l'aise, tu détournes la conversation", result_index: 2 },
+            { text: "L'accueilles puis te demandes ce qu'ils veulent vraiment", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Devant une opportunité qui te dépasse un peu, ton premier réflexe :",
+          options: [
+            { text: "« Je dois encore me former avant d'oser y aller »", result_index: 0 },
+            { text: "« Et si je n'arrive pas à tenir ce qu'on attend de moi ? »", result_index: 1 },
+            { text: "« Ce n'est pas pour les gens comme moi »", result_index: 2 },
+            { text: "« Et si je rate devant tout le monde ? »", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Quand tu te compares aux autres sur les réseaux :",
+          options: [
+            { text: "Tu te dis qu'ils sont juste plus compétents que toi", result_index: 0 },
+            { text: "Tu te dis que tu devrais en faire autant", result_index: 1 },
+            { text: "Tu te dis qu'ils ont eu plus de chance ou de soutien", result_index: 2 },
+            { text: "Tu te dis qu'eux savent gérer la pression, pas toi", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Quand quelqu'un te dit non, tu :",
+          options: [
+            { text: "Te dis que c'est parce que tu n'es pas assez bon·ne", result_index: 0 },
+            { text: "Te promets d'en faire plus la prochaine fois", result_index: 1 },
+            { text: "Te dis que c'était trop beau pour toi", result_index: 2 },
+            { text: "Repenses à ce moment pendant des jours", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Le déclic que tu attends sans vraiment y croire :",
+          options: [
+            { text: "Me sentir enfin légitime de prendre ma place", result_index: 0 },
+            { text: "Arrêter de m'oublier en m'occupant des autres", result_index: 1 },
+            { text: "Me donner le droit de réussir vraiment", result_index: 2 },
+            { text: "Oser être vu·e sans avoir peur du regard", result_index: 3 },
+          ],
+        },
+      ],
+      results: [
+        {
+          title: "L'imposture",
+          description:
+            "Tu fais souvent semblant d'être à ta place, en attendant qu'on te démasque. Tu as l'impression de te faire passer pour quelqu'un de plus compétent que tu n'es. Cette voix est si forte qu'elle peut t'empêcher de candidater, oser, parler.",
+          insight:
+            "Le syndrome de l'imposteur ne disparaît pas parce qu'on accumule des diplômes — il disparaît quand on apprend à reconnaître ses vraies compétences. Tu sais probablement bien plus que tu ne te le permets.",
+          projection:
+            "Imagine te lever le matin sans cette boule au ventre, en sachant que ta place est exactement là où tu es. C'est ce qu'on installe ensemble.",
+          cta_text: "M'autoriser à exister",
+        },
+        {
+          title: "La sur-responsabilité",
+          description:
+            "Tu portes les autres avant toi, tout le temps. Tu sens que si tu ne tiens pas la barre, tout va s'effondrer. Résultat : tu t'épuises et tu n'avances jamais sur tes propres projets.",
+          insight:
+            "Ce n'est pas de l'altruisme — c'est une croyance que ta valeur dépend de ce que tu donnes. Mais quand on donne sans frein, on finit par ne plus rien avoir à donner.",
+          projection:
+            "Imagine poser un cadre clair sur ce que tu prends en charge et ce que tu laisses aux autres. Et te sentir libre, pas coupable.",
+          cta_text: "Apprendre à dire non",
+        },
+        {
+          title: "Le plafond de verre intérieur",
+          description:
+            "Tu te coupes l'élan dès que tu approches du succès. Comme si tu n'avais pas le droit de réussir alors que d'autres autour de toi galèrent. Cette loyauté invisible te ramène toujours au point de départ.",
+          insight:
+            "Tu n'as PAS à porter la culpabilité de réussir. Ton succès n'enlève rien à personne — au contraire, il peut inspirer ceux que tu aimes.",
+          projection:
+            "Imagine atteindre tes objectifs sans cette petite voix qui te chuchote « tu ne mérites pas ». C'est exactement ce qu'on déconstruit ensemble.",
+          cta_text: "Briser mon plafond",
+        },
+        {
+          title: "La peur du regard",
+          description:
+            "Tu portes en permanence le poids de ce que les gens vont penser. Tu modères tes prises de parole, tu refuses des opportunités visibles, tu restes dans l'ombre par sécurité. Et ça te ronge.",
+          insight:
+            "La peur du regard n'a pas besoin d'être éliminée — elle a juste besoin d'être plus petite que ton envie d'avancer. Et ça se travaille très concrètement.",
+          projection:
+            "Imagine prendre la parole sans trembler, publier sans relire 10 fois, vivre ta vie sans te demander ce qu'on va en dire. C'est possible.",
+          cta_text: "Reprendre ma place",
+        },
+      ],
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────
+  // 10. Coach nutrition / rapport au corps
+  // ─────────────────────────────────────────────────────────────────
+  {
+    slug: "rapport-nourriture",
+    metier: "Coach nutrition",
+    emoji: "🥗",
+    cardTitle: "Quel est ton vrai rapport à la nourriture ?",
+    tagline: "Le quiz qui dépasse les régimes pour comprendre ce qui se joue à table.",
+    whoFor:
+      "Diététiciennes, coachs nutrition, thérapeutes spécialisé·es dans le rapport au corps. Pour qualifier des prospects qui ne cherchent pas un énième régime mais une vraie transformation.",
+    whyItWorks:
+      "Les gens en surpoids ont essayé 10 régimes. Ce qu'ils veulent vraiment, c'est comprendre POURQUOI ça ne marche pas. Ton quiz les place dans une posture de découverte, pas de jugement.",
+    estimatedMinutes: 2,
+    payload: {
+      title: "Quel est ton vrai rapport à la nourriture ?",
+      introduction:
+        "En 6 questions sans jugement, on identifie ce qui se passe vraiment quand tu manges. Spoiler : ce n'est pas une question de volonté.",
+      cta_text: "Comprendre mon profil",
+      share_message:
+        "Je viens enfin de comprendre mon rapport à la nourriture 🥗 Pas de régime, juste de la clarté.",
+      virality_enabled: true,
+      address_form: "tu",
+      questions: [
+        {
+          question_text: "Quand tu manges, le plus souvent tu :",
+          options: [
+            { text: "Comptes mentalement les calories ou les portions", result_index: 0 },
+            { text: "Manges très vite, sans vraiment savoir ce que tu as avalé", result_index: 1 },
+            { text: "Te récompenses ou te consoles avec ce que tu choisis", result_index: 2 },
+            { text: "Es perdu·e entre ce qui est « bien » et ce dont tu as envie", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Tu te trouves devant un placard plein le soir, tu :",
+          options: [
+            { text: "Te raisonnes en pensant à demain matin sur la balance", result_index: 0 },
+            { text: "Grignotes plusieurs choses sans vraiment t'en rendre compte", result_index: 1 },
+            { text: "Cherches précisément le truc sucré/salé qui va te réconforter", result_index: 2 },
+            { text: "Hésites longtemps puis prends « un peu de tout »", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Après un repas où tu as « craqué », tu te sens :",
+          options: [
+            { text: "Coupable, tu te promets de compenser demain", result_index: 0 },
+            { text: "Étonnamment vide, comme si tu n'avais pas profité", result_index: 1 },
+            { text: "Bizarrement triste ou en colère contre toi", result_index: 2 },
+            { text: "En guerre intérieure entre plaisir et raison", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Sur une journée de stress important, tu manges :",
+          options: [
+            { text: "Très peu, tu n'as plus faim du tout", result_index: 0 },
+            { text: "Sans t'en rendre compte, en pilote automatique", result_index: 1 },
+            { text: "Beaucoup, et plutôt sucré ou gras", result_index: 2 },
+            { text: "N'importe comment, des fois rien, des fois trop", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Ton rapport à ton corps en ce moment :",
+          options: [
+            { text: "Je le contrôle, je le surveille, je le pèse", result_index: 0 },
+            { text: "Je l'oublie, je le découvre dans le miroir parfois", result_index: 1 },
+            { text: "Je m'en veux et je le punis quand il « déborde »", result_index: 2 },
+            { text: "Je suis fatigué·e de cette relation conflictuelle avec lui", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Ce que tu attends d'un accompagnement, c'est :",
+          options: [
+            { text: "Un plan clair que je peux suivre sans réfléchir", result_index: 0 },
+            { text: "Réapprendre à écouter mon corps et mes signaux", result_index: 1 },
+            { text: "Comprendre POURQUOI je mange comme je mange", result_index: 2 },
+            { text: "Sortir enfin de cette spirale et trouver mon équilibre", result_index: 3 },
+          ],
+        },
+      ],
+      results: [
+        {
+          title: "La gestionnaire (contrôle)",
+          description:
+            "Tu es dans la maîtrise. Tu connais probablement les calories de tes aliments par cœur. Cette stratégie t'a tenue debout, mais elle te coûte une charge mentale énorme — et elle finit par craquer.",
+          insight:
+            "Le contrôle alimentaire ressemble à de la volonté, mais c'est en réalité une cage qui se resserre à chaque écart. La sortie n'est pas dans plus de contrôle — elle est ailleurs.",
+          projection:
+            "Imagine manger sans calculer, sans surveiller, et te sentir EN PAIX devant ton assiette. C'est exactement le voyage qu'on fait ensemble.",
+          cta_text: "Sortir du contrôle",
+        },
+        {
+          title: "La déconnectée (pilote auto)",
+          description:
+            "Tu manges plus par habitude que par faim. Tu peux finir un paquet sans t'en rendre compte. Ton corps t'envoie des signaux mais ils n'arrivent plus jusqu'à ta conscience.",
+          insight:
+            "Tu n'es pas « sans volonté » — tu es juste coupé·e de tes sensations. C'est un mécanisme de protection qui s'est installé pour de très bonnes raisons. Et qui se déprogramme.",
+          projection:
+            "Imagine retrouver les sensations de faim et de satiété, et qu'elles te guident naturellement. Ton corps redevient ton allié.",
+          cta_text: "Me reconnecter à mon corps",
+        },
+        {
+          title: "L'émotionnelle (réconfort)",
+          description:
+            "Tu manges pour combler autre chose que la faim — un stress, une tristesse, un vide. La nourriture est devenue ta réponse à tout ce qui te traverse. Ça t'apaise sur le moment, et te culpabilise après.",
+          insight:
+            "Il n'y a RIEN de mal à chercher du réconfort. Le souci n'est pas que tu manges tes émotions, c'est que tu n'as pas d'autres outils pour les accueillir. On peut en installer.",
+          projection:
+            "Imagine traverser une journée difficile sans que ton premier réflexe soit d'ouvrir le placard. Et te sentir capable de faire face autrement.",
+          cta_text: "Trouver d'autres outils",
+        },
+        {
+          title: "L'épuisée (chaos)",
+          description:
+            "Tu as essayé tellement de choses que tu ne sais plus où tu en es. Tu navigues entre régimes, craquages, culpabilité et reprises. Tu en as marre, vraiment marre, de cette relation conflictuelle.",
+          insight:
+            "L'épuisement est le signe que tu as suffisamment cherché toute seule. Tu n'as pas besoin d'une méthode de plus — tu as besoin de quelqu'un qui regarde TON cas en particulier.",
+          projection:
+            "Imagine sortir de cette spirale, pas avec une énième promesse miracle, mais avec un accompagnement qui regarde VRAIMENT ce qui se joue chez toi.",
+          cta_text: "Trouver ma sortie",
+        },
+      ],
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────
+  // 11. Coach sommeil / énergie
+  // ─────────────────────────────────────────────────────────────────
+  {
+    slug: "fuites-energie",
+    metier: "Coach sommeil & énergie",
+    emoji: "⚡",
+    cardTitle: "Où sont tes vraies fuites d'énergie ?",
+    tagline: "Le quiz qui identifie ce qui te vide vraiment au quotidien.",
+    whoFor:
+      "Coachs énergie, naturopathes spécialisé·es sommeil/fatigue, sophrologues. Pour qualifier des prospects qui se disent « épuisé·es sans raison ».",
+    whyItWorks:
+      "« Je suis fatigué·e » est trop vague. En identifiant LA VRAIE source de fatigue (physique, mentale, émotionnelle, relationnelle), ton prospect comprend qu'il faut une approche ciblée — pas un café de plus.",
+    estimatedMinutes: 2,
+    payload: {
+      title: "Où sont tes vraies fuites d'énergie ?",
+      introduction:
+        "En 6 questions, on identifie où ton énergie part vraiment. Indice : ce n'est probablement pas là où tu crois.",
+      cta_text: "Identifier mes fuites",
+      share_message:
+        "Je viens de comprendre où mon énergie partait vraiment ⚡ Spoiler : ce n'était pas le manque de sommeil.",
+      virality_enabled: true,
+      address_form: "tu",
+      questions: [
+        {
+          question_text: "Le matin au réveil, le plus souvent tu te sens :",
+          options: [
+            { text: "Comme si tu n'avais pas dormi, le corps lourd", result_index: 0 },
+            { text: "Déjà fatigué·e mentalement avant même la première tâche", result_index: 1 },
+            { text: "Submergé·e par tout ce que tu vas devoir gérer émotionnellement", result_index: 2 },
+            { text: "Pressé·e d'avoir un moment à toi avant que ça commence", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "En milieu d'après-midi, ton creux d'énergie ressemble à :",
+          options: [
+            { text: "Un coup de barre physique, tu rêves d'une sieste", result_index: 0 },
+            { text: "Une saturation mentale, tu ne peux plus réfléchir", result_index: 1 },
+            { text: "Un trop-plein émotionnel, tu as besoin de t'isoler", result_index: 2 },
+            { text: "Une lassitude des interactions, tu sursaute au moindre bruit", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Tes nuits :",
+          options: [
+            { text: "Sont agitées, je me réveille fatigué·e même après 8h", result_index: 0 },
+            { text: "Le cerveau tourne, je rumine, je n'arrive pas à m'endormir", result_index: 1 },
+            { text: "Je dors mal après des journées chargées émotionnellement", result_index: 2 },
+            { text: "Je m'endors épuisé·e d'avoir trop interagi dans la journée", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Quand tu as un week-end libre, tu as envie de :",
+          options: [
+            { text: "Dormir, ne rien faire, récupérer physiquement", result_index: 0 },
+            { text: "Vider ta tête, marcher, déconnecter du mental", result_index: 1 },
+            { text: "Être seul·e en silence, sans aucune sollicitation", result_index: 2 },
+            { text: "Ne plus avoir personne à gérer ou à supporter", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Ta plus grosse difficulté en ce moment :",
+          options: [
+            { text: "Mon corps ne suit plus, j'ai mal partout, je tombe malade souvent", result_index: 0 },
+            { text: "Ma tête est en surchauffe permanente, je perds en clarté", result_index: 1 },
+            { text: "Je porte les autres et je n'en peux plus émotionnellement", result_index: 2 },
+            { text: "Mes proches/collègues me pompent toute mon énergie", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Ce que tu attends vraiment :",
+          options: [
+            { text: "Récupérer une vitalité physique stable", result_index: 0 },
+            { text: "Calmer mon cerveau et retrouver de la clarté", result_index: 1 },
+            { text: "Apprendre à protéger mon énergie émotionnelle", result_index: 2 },
+            { text: "Poser des limites avec les gens qui me vident", result_index: 3 },
+          ],
+        },
+      ],
+      results: [
+        {
+          title: "Fuite physique",
+          description:
+            "Ton corps porte des années de surcharge. Tu dors peut-être bien sur le papier mais tu ne récupères plus. Tes signaux : douleurs chroniques, infections à répétition, sensation de batterie à plat dès le matin.",
+          insight:
+            "Le sommeil seul ne suffit plus à compenser. Ton corps a besoin d'un protocole spécifique pour relancer ses mécanismes de récupération — pas juste « se reposer plus ».",
+          projection:
+            "Imagine te lever en te sentant vraiment reposé·e, avec un corps qui répond. C'est exactement le chemin qu'on fait ensemble.",
+          cta_text: "Récupérer ma vitalité",
+        },
+        {
+          title: "Fuite mentale",
+          description:
+            "Ton cerveau ne s'arrête jamais. Tu rumines la nuit, tu fais 10 choses en parallèle, tu ne sais plus prioriser. Ce n'est pas de la fatigue physique — c'est une saturation cognitive.",
+          insight:
+            "Tu ne peux pas penser pour te sortir d'une fatigue mentale (sinon tu y serais déjà arrivé·e). Il faut une approche par le corps et le souffle pour calmer le système nerveux.",
+          projection:
+            "Imagine retrouver une tête claire, capable de réfléchir sereinement sans cette saturation permanente. C'est ce qu'on installe.",
+          cta_text: "Calmer ma tête",
+        },
+        {
+          title: "Fuite émotionnelle",
+          description:
+            "Tu portes tout, tout le temps, et tu n'as plus de place pour toi. Tu absorbes les émotions des autres, tu anticipes leurs besoins, et personne ne remarque que tu craques toi-même.",
+          insight:
+            "Ton hyper-empathie est un super-pouvoir mal protégé. Il ne s'agit pas de l'éteindre — il s'agit de te donner des frontières pour qu'elle ne te vide pas.",
+          projection:
+            "Imagine continuer à aimer les gens autour de toi, mais en ayant gardé suffisamment d'énergie pour TOI aussi. C'est possible.",
+          cta_text: "Protéger mon énergie",
+        },
+        {
+          title: "Fuite relationnelle",
+          description:
+            "Certaines personnes te vident à chaque interaction. Tu sors d'un repas de famille comme d'un marathon, d'une réunion comme d'une bataille. Tu confonds peut-être obligation et choix.",
+          insight:
+            "Ce n'est pas toi qui as un problème — ce sont certaines relations qui drainent disproportionnellement. Identifier précisément lesquelles change tout.",
+          projection:
+            "Imagine sortir de tes interactions sans cette sensation d'avoir été vidé·e. Avec des limites claires, posées sans culpabilité.",
+          cta_text: "Reprendre le contrôle",
+        },
+      ],
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────
+  // 12. Coach parentalité positive
+  // ─────────────────────────────────────────────────────────────────
+  {
+    slug: "style-parental",
+    metier: "Coach parentalité",
+    emoji: "👨‍👩‍👧",
+    cardTitle: "Quel parent es-tu vraiment ?",
+    tagline: "Le quiz bienveillant qui révèle ton style éducatif (sans jugement).",
+    whoFor:
+      "Coachs en parentalité positive, accompagnant·es des parents, thérapeutes familiaux. Pour qualifier des prospects qui veulent comprendre leur fonctionnement parental.",
+    whyItWorks:
+      "Tout parent doute. Le quiz pose un cadre rassurant (« il n'y a pas de mauvaise réponse ») qui les met immédiatement à l'aise — et te positionne comme un·e allié·e, pas un·e juge.",
+    estimatedMinutes: 2,
+    payload: {
+      title: "Quel parent es-tu vraiment ?",
+      introduction:
+        "En 6 questions sans jugement, on identifie ton style éducatif et le petit ajustement qui peut tout changer dans ta relation avec ton enfant.",
+      cta_text: "Découvrir mon profil",
+      share_message:
+        "Je viens de comprendre mon style parental 👨‍👩‍👧 Et toi, tu te reconnais dans lequel ?",
+      virality_enabled: true,
+      address_form: "tu",
+      questions: [
+        {
+          question_text: "Quand ton enfant fait une crise en public, tu :",
+          options: [
+            { text: "Poses fermement les limites, peu importe le regard des autres", result_index: 0 },
+            { text: "Cherches à comprendre ce qui se passe pour lui à ce moment", result_index: 1 },
+            { text: "Cèdes pour éviter le drame, tu lui parleras après", result_index: 2 },
+            { text: "Te sens débordé·e et tu réagis comme tu peux", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Ton enfant rapporte une mauvaise note de l'école :",
+          options: [
+            { text: "Tu fixes un cadre pour travailler plus sérieusement", result_index: 0 },
+            { text: "Tu lui demandes comment IL se sent par rapport à ça", result_index: 1 },
+            { text: "Tu lui dis que ce n'est pas grave et le rassures", result_index: 2 },
+            { text: "Tu réagis selon TON état du moment (déçu·e, énervé·e, indifférent·e)", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Le plus gros défi avec ton enfant en ce moment :",
+          options: [
+            { text: "Il ne respecte pas les règles et c'est un combat permanent", result_index: 0 },
+            { text: "Il vit des émotions intenses que je ne sais pas accueillir", result_index: 1 },
+            { text: "Je suis trop indulgent·e et je ne sais pas dire non", result_index: 2 },
+            { text: "Je m'énerve trop facilement et je culpabilise après", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Quand tu compares ta parentalité à celle de tes propres parents :",
+          options: [
+            { text: "Je fais comme eux, ça a fonctionné pour moi", result_index: 0 },
+            { text: "Je fais TOUT l'inverse, je ne veux pas reproduire", result_index: 1 },
+            { text: "Je suis plus doux/douce, mais peut-être trop", result_index: 2 },
+            { text: "Je me retrouve à faire des trucs que je m'étais juré de ne pas faire", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Quand ton enfant te dit « tu es méchant·e », tu :",
+          options: [
+            { text: "Lui rappelles que c'est toi le parent et que tu as des règles", result_index: 0 },
+            { text: "Te poses la question : est-ce que mon action était vraiment juste ?", result_index: 1 },
+            { text: "T'effondres intérieurement, tu culpabilises beaucoup", result_index: 2 },
+            { text: "T'énerves, ça te touche mais tu ne sais pas l'exprimer", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Ce que tu voudrais améliorer dans ta parentalité :",
+          options: [
+            { text: "Tenir mon cadre sans crier ni m'épuiser", result_index: 0 },
+            { text: "Mieux accompagner les émotions de mon enfant", result_index: 1 },
+            { text: "Oser poser des limites sans culpabiliser", result_index: 2 },
+            { text: "Sortir du cycle où je m'énerve puis je m'en veux", result_index: 3 },
+          ],
+        },
+      ],
+      results: [
+        {
+          title: "Le parent cadre",
+          description:
+            "Tu poses des règles claires et tu y tiens. Ta force : ton enfant sait à quoi s'attendre. Ton piège : tu peux confondre fermeté et sévérité, et louper les besoins émotionnels qui se cachent derrière les comportements.",
+          insight:
+            "Un cadre solide est essentiel — mais sans accueil de l'émotion, il devient un mur. Apprendre à dire OUI aux émotions tout en disant NON au comportement, c'est le vrai art.",
+          projection:
+            "Imagine garder ton cadre clair tout en accueillant ce que ton enfant traverse vraiment. Sans crier, sans céder.",
+          cta_text: "Allier cadre et bienveillance",
+        },
+        {
+          title: "Le parent émotionnel",
+          description:
+            "Tu accueilles les émotions, tu prends le temps de comprendre. Ta force : ton enfant se sent entendu. Ton piège : tu peux te perdre dans son monde émotionnel et oublier ton propre cadre.",
+          insight:
+            "L'écoute émotionnelle est ton super-pouvoir. Ce qu'il te manque parfois, c'est l'autorité tranquille qui sécurise sans étouffer.",
+          projection:
+            "Imagine poser un cadre clair tout en gardant cette belle qualité d'écoute. Ton enfant a besoin des deux.",
+          cta_text: "Trouver mon autorité juste",
+        },
+        {
+          title: "Le parent permissif (par amour)",
+          description:
+            "Tu détestes voir ton enfant en colère ou triste, alors tu cèdes pour préserver l'harmonie. Ta force : il sent ton amour inconditionnel. Ton piège : sans cadre, il navigue dans le flou et finit par tester les limites de plus en plus loin.",
+          insight:
+            "Dire NON n'est pas un manque d'amour — c'est l'inverse. Un enfant a besoin de buter contre des limites pour se construire en sécurité.",
+          projection:
+            "Imagine poser un NON ferme et bienveillant sans culpabiliser, et voir ton enfant grandir plus apaisé. C'est ce qu'on installe.",
+          cta_text: "Apprendre à dire non",
+        },
+        {
+          title: "Le parent réactif",
+          description:
+            "Tu navigues entre amour et colère, patience et explosion. Ta force : tu n'es pas dans le contrôle, tu es authentique. Ton piège : ton enfant ne sait jamais sur quel pied danser, et toi tu culpabilises après chaque réaction.",
+          insight:
+            "Ce n'est pas une question de volonté — c'est un système nerveux qui sature. La parentalité positive ne se gagne pas par effort, elle s'installe par des outils CONCRETS pour ne plus exploser.",
+          projection:
+            "Imagine garder ton calme dans les situations qui te déclenchent aujourd'hui. Sans masquer, juste avec d'autres outils.",
+          cta_text: "Sortir du cycle",
+        },
+      ],
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────
+  // 13. Coach couple / relations amoureuses
+  // ─────────────────────────────────────────────────────────────────
+  {
+    slug: "schema-amoureux",
+    metier: "Coach couple",
+    emoji: "💞",
+    cardTitle: "Quel est ton schéma amoureux dominant ?",
+    tagline: "Le quiz qui révèle ce qui se rejoue dans chacune de tes histoires.",
+    whoFor:
+      "Coachs en relations amoureuses, thérapeutes de couple, accompagnant·es après rupture. Pour des prospects qui sentent que « ça recommence à chaque fois » et veulent comprendre.",
+    whyItWorks:
+      "Personne ne veut entendre « tu reproduis tes schémas ». Mais tout le monde veut savoir QUEL est son schéma. Le quiz transforme un sujet tabou en une découverte de soi.",
+    estimatedMinutes: 2,
+    payload: {
+      title: "Quel est ton schéma amoureux dominant ?",
+      introduction:
+        "En 6 questions honnêtes, on identifie ce qui se rejoue à chaque histoire — et le déclic qui peut tout changer dans ta prochaine relation.",
+      cta_text: "Identifier mon schéma",
+      share_message:
+        "Je viens d'identifier mon schéma amoureux 💞 Et toi, tu te reconnais dans lequel ?",
+      virality_enabled: true,
+      address_form: "tu",
+      questions: [
+        {
+          question_text: "Au début d'une relation, tu :",
+          options: [
+            { text: "Tombe vite, fort, et tu donnes tout très vite", result_index: 0 },
+            { text: "Restes méfiant·e, tu observes longtemps avant de t'engager", result_index: 1 },
+            { text: "T'investis modérément, tu protèges ton indépendance", result_index: 2 },
+            { text: "Vis des montagnes russes émotionnelles intenses", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Quand l'autre prend ses distances quelques jours :",
+          options: [
+            { text: "Tu paniques, tu cherches à comprendre, tu relances", result_index: 0 },
+            { text: "Tu te dis « voilà, c'est fini, j'ai toujours raison de me méfier »", result_index: 1 },
+            { text: "Tu en profites pour respirer, ça te soulage presque", result_index: 2 },
+            { text: "Tu passes de la rage à la tristesse plusieurs fois par jour", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Tes histoires se terminent souvent parce que :",
+          options: [
+            { text: "L'autre dit que tu en demandes trop ou que tu étouffes", result_index: 0 },
+            { text: "Tu n'as jamais vraiment fait confiance et ça a fini par se voir", result_index: 1 },
+            { text: "Tu décroches au moment où ça devient sérieux", result_index: 2 },
+            { text: "Vous vous êtes déchiré·es plusieurs fois avant de craquer", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Ton plus grand besoin en couple :",
+          options: [
+            { text: "Être rassuré·e en permanence sur l'amour de l'autre", result_index: 0 },
+            { text: "Garder le contrôle pour ne pas être blessé·e à nouveau", result_index: 1 },
+            { text: "Garder mon espace, mon autonomie, mes activités", result_index: 2 },
+            { text: "Vivre des émotions intenses, sinon ça me paraît plat", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Ce que tu reproduis sans t'en rendre compte :",
+          options: [
+            { text: "Je tombe sur des gens qui ne peuvent pas me donner ce que je demande", result_index: 0 },
+            { text: "Je teste l'autre en permanence pour voir s'il va rester", result_index: 1 },
+            { text: "Je finis par fuir quand ça devient « trop sérieux »", result_index: 2 },
+            { text: "Je m'attache à des gens compliqués qui me font vivre des hauts et des bas", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Ce que tu cherches vraiment, c'est :",
+          options: [
+            { text: "Une relation où je n'ai plus besoin de réclamer", result_index: 0 },
+            { text: "Apprendre à faire confiance sans avoir peur d'être trahi·e", result_index: 1 },
+            { text: "Aimer profondément sans perdre qui je suis", result_index: 2 },
+            { text: "Sortir de la spirale des relations toxiques", result_index: 3 },
+          ],
+        },
+      ],
+      results: [
+        {
+          title: "L'attachement anxieux",
+          description:
+            "Tu donnes beaucoup, tu attends beaucoup, et tu paniques dès que l'autre s'éloigne. Tes histoires sont intenses au début et te laissent vidé·e à la fin. Tu confonds parfois amour et peur de l'abandon.",
+          insight:
+            "Tu n'es pas « trop » — tu as juste un système d'alerte sur-actif. Ça se calme avec les bons outils, et ça change radicalement la qualité de tes relations.",
+          projection:
+            "Imagine vivre une relation où tu n'as plus besoin de réclamer, parce que tu te sens enfin solide à l'intérieur. C'est le travail qu'on fait ensemble.",
+          cta_text: "Apaiser mon anxiété",
+        },
+        {
+          title: "L'évitement protecteur",
+          description:
+            "Tu testes, tu observes, tu protèges ton cœur. Tu te dis souvent que les gens finissent toujours par décevoir. Ta carapace t'a sauvé·e — mais elle t'empêche aujourd'hui de vivre ce que tu mérites.",
+          insight:
+            "La méfiance n'est pas un défaut, c'est une compétence de survie. Mais quand elle s'applique aux mauvaises personnes, elle te coupe d'amours qui auraient pu être bons.",
+          projection:
+            "Imagine pouvoir baisser ta garde avec quelqu'un qui le mérite vraiment, sans te sentir en danger. Ça se travaille.",
+          cta_text: "Faire confiance à nouveau",
+        },
+        {
+          title: "L'indépendant·e qui fuit",
+          description:
+            "Tu aimes ton autonomie plus que tout. Tu fuis dès que ça devient « sérieux » sans toujours comprendre pourquoi. Tu enchaînes des histoires qui ressemblent à des promesses non tenues.",
+          insight:
+            "Aimer profondément ne veut pas dire perdre qui tu es. Ce que tu fuis n'est pas l'engagement — c'est la peur de te diluer. Et ça se déconstruit.",
+          projection:
+            "Imagine pouvoir t'engager pleinement tout en gardant ton espace, ton identité, tes passions. Ce n'est pas l'un ou l'autre.",
+          cta_text: "Apprendre à m'engager",
+        },
+        {
+          title: "Le tumulte (cycles intenses)",
+          description:
+            "Tes relations sont des montagnes russes. Tu t'attaches à des gens compliqués, tu vis intensément, tu te déchires, tu reviens. Tu confonds passion et chaos.",
+          insight:
+            "L'intensité n'est pas la profondeur. Une relation saine peut être TOUT AUSSI vibrante — sans les déchirures. Ça nécessite de comprendre ce qui te scotche au tumulte.",
+          projection:
+            "Imagine vivre un amour à la fois intense ET paisible. Pas plat — paisible. C'est très différent, et c'est accessible.",
+          cta_text: "Sortir du tumulte",
+        },
+      ],
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────
+  // 14. Coach reconversion / carrière
+  // ─────────────────────────────────────────────────────────────────
+  {
+    slug: "blocage-reconversion",
+    metier: "Coach reconversion",
+    emoji: "🚪",
+    cardTitle: "Qu'est-ce qui te bloque vraiment dans ta reconversion ?",
+    tagline: "Le quiz qui dépasse le « je n'ai pas le temps » pour identifier le vrai frein.",
+    whoFor:
+      "Coachs en reconversion professionnelle, bilans de compétences, accompagnant·es de transition. Pour qualifier des prospects qui pensent à changer depuis des mois sans passer à l'action.",
+    whyItWorks:
+      "Tout le monde se dit « bloqué par le temps ou l'argent ». La vraie cause est presque toujours ailleurs (peur, identité, légitimité). Le quiz fait émerger cette vraie cause — et te place comme la personne qui peut aider.",
+    estimatedMinutes: 2,
+    payload: {
+      title: "Qu'est-ce qui te bloque vraiment dans ta reconversion ?",
+      introduction:
+        "En 6 questions sincères, on identifie ce qui te freine vraiment (et ce n'est probablement pas ce que tu crois).",
+      cta_text: "Identifier mon blocage",
+      share_message:
+        "Je viens enfin de comprendre ce qui me bloquait dans ma reconversion 🚪 Et toi ?",
+      virality_enabled: true,
+      address_form: "tu",
+      questions: [
+        {
+          question_text: "Quand tu penses à ton job actuel, tu ressens surtout :",
+          options: [
+            { text: "Du vide, comme si tu passais à côté de ta vie", result_index: 0 },
+            { text: "De la peur de perdre ta sécurité si tu changeais", result_index: 1 },
+            { text: "Du doute sur ce que tu pourrais bien faire d'autre", result_index: 2 },
+            { text: "De l'impuissance face au regard des autres", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Quand quelqu'un te demande « tu fais quoi dans la vie ? », tu :",
+          options: [
+            { text: "Réponds avec un petit pincement, tu n'es plus aligné·e", result_index: 0 },
+            { text: "Réponds avec fierté en surface, mais ça sonne creux pour toi", result_index: 1 },
+            { text: "Réponds par défaut, sans savoir ce que tu ferais d'autre", result_index: 2 },
+            { text: "Évites le sujet parce que tu sens le jugement venir", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Le matin avant d'aller bosser :",
+          options: [
+            { text: "Tu pars résigné·e, tu coches les jours", result_index: 0 },
+            { text: "Tu fais le calcul des ans qu'il te reste à tenir", result_index: 1 },
+            { text: "Tu rêves d'autre chose mais sans savoir quoi vraiment", result_index: 2 },
+            { text: "Tu te demandes ce que les gens diraient si tu démissionnais", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Ce qui te freine vraiment d'oser sauter :",
+          options: [
+            { text: "Je ne sens pas que ce job a un sens, mais je ne sais pas ce qui en aurait", result_index: 0 },
+            { text: "J'ai peur de ne plus pouvoir maintenir mon niveau de vie", result_index: 1 },
+            { text: "Je n'arrive pas à identifier ce qui me ferait vraiment vibrer", result_index: 2 },
+            { text: "Ma famille / mon entourage compte sur ma stabilité actuelle", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Tu as déjà essayé quoi pour avancer sur ta reconversion ?",
+          options: [
+            { text: "Beaucoup réfléchi, mais sans vraiment passer à l'action", result_index: 0 },
+            { text: "Fait des simulations financières en boucle qui me freinent", result_index: 1 },
+            { text: "Passé des tests d'orientation qui me laissent encore plus perdu·e", result_index: 2 },
+            { text: "Évité d'en parler autour de moi pour ne pas inquiéter", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Si tu avais un coup de pouce, ce serait pour :",
+          options: [
+            { text: "Trouver un cap qui ait du sens pour moi", result_index: 0 },
+            { text: "Sécuriser la transition financièrement", result_index: 1 },
+            { text: "Identifier précisément ce qui me correspond", result_index: 2 },
+            { text: "M'autoriser à le faire malgré le regard des autres", result_index: 3 },
+          ],
+        },
+      ],
+      results: [
+        {
+          title: "Le blocage sens",
+          description:
+            "Tu sens que ton travail actuel ne te correspond plus, mais tu manques d'un cap clair vers où aller. Tu n'es pas paresseux/se — tu es en quête. Et chaque journée sans direction te pèse de plus en plus.",
+          insight:
+            "Le sens ne se découvre pas par la réflexion seule — il émerge en confrontant tes valeurs profondes à des projets concrets. C'est exactement ce sur quoi on travaille en accompagnement.",
+          projection:
+            "Imagine te lever le matin en sachant POURQUOI tu fais ce que tu fais. Sans plus jamais ce vide qui te ronge.",
+          cta_text: "Trouver mon cap",
+        },
+        {
+          title: "Le blocage sécurité",
+          description:
+            "Tu rêves de changer mais l'argent te tient en otage. Tu fais des simulations Excel à n'en plus finir, tu compares les scénarios, et tu finis toujours par te dire « pas maintenant ». Tu confonds prudence et paralysie.",
+          insight:
+            "La sécurité financière ne se gagne pas en restant à son poste — elle se construit AVEC une stratégie de transition adaptée. Et ça, c'est planifiable concrètement.",
+          projection:
+            "Imagine avancer vers ta nouvelle vie SANS sacrifier ta sécurité. C'est exactement la roadmap qu'on construit ensemble.",
+          cta_text: "Sécuriser ma transition",
+        },
+        {
+          title: "Le blocage clarté",
+          description:
+            "Tu sais que tu veux changer mais tu n'arrives pas à mettre le doigt sur QUOI. Les tests d'orientation t'enferment dans des cases, les amis te suggèrent des trucs qui ne te ressemblent pas. Tu es perdu·e dans le possible.",
+          insight:
+            "La clarté ne vient pas en lisant 30 articles « top métiers ». Elle vient en explorant ta singularité avec quelqu'un qui te pose les bonnes questions.",
+          projection:
+            "Imagine voir clairement le chemin qui te correspond — pas un métier abstrait, mais TON projet précis et incarné.",
+          cta_text: "Y voir clair",
+        },
+        {
+          title: "Le blocage regard",
+          description:
+            "Tu sais ce que tu veux mais tu es paralysé·e par ce que les autres vont dire. Ta famille a investi dans tes études, ton entourage compte sur ton statut, tu as l'impression de trahir. C'est une cage invisible.",
+          insight:
+            "Tu ne peux pas vivre la vie de quelqu'un d'autre par loyauté. Ceux qui t'aiment vraiment préfèrent un toi épanoui à un toi conforme. Reste à oser le leur prouver.",
+          projection:
+            "Imagine assumer pleinement ton choix sans porter le regard des autres comme un poids. Et voir tes proches s'adapter, plus vite que tu ne le crois.",
+          cta_text: "Reprendre ma place",
+        },
+      ],
+    },
+  },
+
+  // ─────────────────────────────────────────────────────────────────
+  // 15. Coach finance personnelle
+  // ─────────────────────────────────────────────────────────────────
+  {
+    slug: "rapport-argent",
+    metier: "Coach finance",
+    emoji: "💸",
+    cardTitle: "Quel est ton vrai rapport à l'argent ?",
+    tagline: "Le quiz qui révèle ce qui se joue (vraiment) quand tu regardes ton compte.",
+    whoFor:
+      "Coachs en finance personnelle, conseillers en gestion de patrimoine pédagogues, money coachs. Pour des prospects qui veulent comprendre leurs blocages avant les chiffres.",
+    whyItWorks:
+      "Personne n'aime parler de ses problèmes d'argent. Mais tout le monde veut savoir « quel rapport j'ai à l'argent ». Le quiz transforme un tabou en self-discovery.",
+    estimatedMinutes: 2,
+    payload: {
+      title: "Quel est ton vrai rapport à l'argent ?",
+      introduction:
+        "En 6 questions honnêtes, on identifie ce qui se joue quand tu gères ton argent — et le déclic qui peut tout changer.",
+      cta_text: "Découvrir mon profil",
+      share_message:
+        "Je viens enfin de comprendre mon rapport à l'argent 💸 Et toi, tu te reconnais dans lequel ?",
+      virality_enabled: true,
+      address_form: "tu",
+      questions: [
+        {
+          question_text: "Quand tu reçois ton salaire / ton chiffre du mois, tu :",
+          options: [
+            { text: "T'attends déjà aux dépenses qui vont l'avaler", result_index: 0 },
+            { text: "Mets tout sur le côté, tu ne touches à rien", result_index: 1 },
+            { text: "Te fais plaisir tout de suite, on verra après", result_index: 2 },
+            { text: "Évites de regarder précisément combien il reste", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Devant un compte qui descend, tu ressens :",
+          options: [
+            { text: "Une boule au ventre familière, comme depuis toujours", result_index: 0 },
+            { text: "Une raideur, tu te promets de NE PLUS RIEN dépenser", result_index: 1 },
+            { text: "Un peu d'inquiétude vite balayée par autre chose", result_index: 2 },
+            { text: "Une envie de fermer l'appli et de penser à autre chose", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Quand tu vois quelqu'un dépenser plus que toi, tu te dis :",
+          options: [
+            { text: "« Il/elle ne se rend pas compte, ça va lui retomber dessus »", result_index: 0 },
+            { text: "« Moi je préfère mettre de côté pour la sécurité »", result_index: 1 },
+            { text: "« Pourquoi pas moi aussi, je vis qu'une fois »", result_index: 2 },
+            { text: "Tu détournes le regard, le sujet te met mal à l'aise", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Demander à être mieux payé·e :",
+          options: [
+            { text: "Te paraît mal vu, on ne fait pas ça dans ma famille / mon milieu", result_index: 0 },
+            { text: "T'angoisse, tu préfères économiser plutôt que négocier", result_index: 1 },
+            { text: "Te tente, mais tu ne sais pas comment t'y prendre", result_index: 2 },
+            { text: "Te paraît hors d'atteinte, on ne te dira jamais oui", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Quand tu reçois une rentrée d'argent imprévue (cadeau, prime, vente), tu :",
+          options: [
+            { text: "L'utilises pour combler un retard ou une dette qui traîne", result_index: 0 },
+            { text: "La planques sur un compte « sécurité », tu n'y touches pas", result_index: 1 },
+            { text: "T'autorises un plaisir que tu repoussais", result_index: 2 },
+            { text: "Ne réalises pas vraiment, elle s'évapore sans projet précis", result_index: 3 },
+          ],
+        },
+        {
+          question_text: "Ce que tu attends d'un accompagnement money, c'est :",
+          options: [
+            { text: "Casser la croyance que l'argent est forcément un combat", result_index: 0 },
+            { text: "Sortir de la peur permanente et oser dépenser pour vivre", result_index: 1 },
+            { text: "Apprendre à gérer sans m'oublier sur mes envies", result_index: 2 },
+            { text: "Reprendre le contrôle au lieu de subir mon compte", result_index: 3 },
+          ],
+        },
+      ],
+      results: [
+        {
+          title: "L'angoisse familiale",
+          description:
+            "Tu as grandi avec l'idée que l'argent était difficile, qu'il fallait se battre, que ça finit toujours par manquer. Aujourd'hui, même quand tu en as, tu vis comme si tu en manquais.",
+          insight:
+            "Tes croyances sur l'argent ne sont PAS tes croyances — ce sont celles de la génération d'avant, héritées sans qu'on te demande ton avis. Et elles se déconstruisent.",
+          projection:
+            "Imagine te sentir en paix avec ton argent, sans cette boule au ventre familiale. Et transmettre autre chose à tes enfants que ce que tu as reçu.",
+          cta_text: "Libérer mes croyances",
+        },
+        {
+          title: "La gardienne (peur de manquer)",
+          description:
+            "Tu mets tout de côté, tu te prives sur tes plaisirs, tu vis avec une épargne « au cas où ». Tu confonds gestion saine et privation chronique. Tu protèges si fort que tu en oublies de vivre.",
+          insight:
+            "L'argent qu'on amasse sans jamais utiliser n'est pas une protection — c'est une cage dorée. La sécurité véritable n'est pas dans le montant, elle est dans ta capacité à FAIRE confiance.",
+          projection:
+            "Imagine te faire plaisir SANS culpabilité, tout en gardant une vraie sécurité financière. C'est ce qu'on construit ensemble.",
+          cta_text: "Sortir de la privation",
+        },
+        {
+          title: "L'impulsive (carpe diem)",
+          description:
+            "Tu vis pleinement, tu te fais plaisir, tu détestes les calculs. Ta force : tu profites de la vie. Ton piège : tu finis le mois en stress, tu accumules les petites dettes, et tu n'as aucune visibilité long terme.",
+          insight:
+            "Le plaisir n'est pas l'ennemi de la rigueur financière. Tu peux garder ta joie de vivre tout en construisant une vraie tranquillité — il faut juste les bons outils, pas des restrictions punitives.",
+          projection:
+            "Imagine continuer à profiter sans le stress de fin de mois, et voir ta sécurité grandir doucement en parallèle.",
+          cta_text: "Concilier plaisir et tranquillité",
+        },
+        {
+          title: "L'évitante",
+          description:
+            "Tu détestes regarder ton compte. Tu ouvres les enveloppes en travers, tu fermes les apps quand ça t'inquiète. L'argent te met mal à l'aise, alors tu détournes les yeux — mais ça ne disparaît pas.",
+          insight:
+            "L'évitement est une protection émotionnelle, pas une stratégie financière. Et la bonne nouvelle, c'est qu'on peut reprendre le contrôle SANS devoir devenir un·e expert·e des chiffres.",
+          projection:
+            "Imagine ouvrir tes comptes sans angoisse, savoir où tu vas, et te sentir enfin actrice/acteur de ton argent. C'est ce qu'on installe pas à pas.",
+          cta_text: "Reprendre le contrôle",
+        },
+      ],
+    },
+  },
 ];
 
 // ---------------------------------------------------------------------------

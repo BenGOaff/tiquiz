@@ -27,17 +27,79 @@ Call-sites Tiquiz concernés (déjà fixés) :
 Les autres modèles (sonnet 4.6, haiku 4.5, opus 4.6) acceptent toujours
 `temperature` — le helper laisse passer normalement.
 
-## ⚠️ MULTIPROFILS Tiquiz — backward-compat AVANT tout filtre (juin 2026)
+## ✅ MULTIPROFILS Tiquiz — chantier LIVRÉ en 7 phases (juin 2026)
 
-Tiquiz est mono-user (`quizzes.user_id`, pas de `project_id`). Si/quand
-on ajoute les multiprofils, NE JAMAIS activer un filtre `project_id`
-avant d'avoir : (1) ajouté la colonne nullable, (2) créé un projet
-`is_default` par user, (3) backfillé tous les quiz existants
-(project_id NULL → projet par défaut). Sinon TOUS les quiz actuels
-disparaissent du dashboard des users. Routes publiques `/q/`, `/p/`
-résolvent par id/slug, JAMAIS par projet (zéro impact visiteur / embed).
-Plan complet : voir `ROADMAP_RETENTION.md` section "Multiprofils Tiquiz
-— DESIGN". Gate = plan premium (même palier que canUseSurveyAI).
+**Statut** : entièrement livré sur `claude/busy-wright-501xR` (juin 2026).
+Validation prod : `npm run diag:multiprofils` (11/11 ✓),
+`npm run check:schema` (9/9 ✓), `npm run smoke:multiprofils` (11/11 ✓).
+
+**Phases livrées** :
+1. Fondations DB (`projects` + `project_id` sur quizzes/popquizzes/
+   business_events/user_milestones + backfill all-existing-to-default)
+2. API CRUD + ProjectSwitcher UI (cookie `tiquiz_active_project`)
+3a. INSERT tagués (`resolveProjectIdForInsert` sur tout INSERT)
+3b. Lectures filtrées (`getActiveProjectScope`, gate `canUseMultiProjects`)
+4. `business_profiles` per-projet (branding + positionnement + pixels)
+5. Viewer public + IA branchés (`mergeOwnerBranding` triple-fallback)
+6. `sio_api_keys` per-projet (UNIQUE composite user/project/name)
++ alignement Tipote (visual identity, danger-zone delete, SessionResetGate)
++ paliers `monthly_plus` / `yearly_plus` + upsell vers monthly/yearly
++ scripts smoke E2E + diag DB
+
+**Patterns canoniques** quand on ajoute une feature qui doit être
+isolée par projet :
+- **Écriture** : `lib/projects/scopeFilter.ts:resolveProjectIdForInsert(userId)`
+  (lecture cookie + fallback default).
+- **Lecture user-facing** : `getActiveProjectScope(userId, email)` (gate
+  `canUseMultiProjects` inclus → non-multiprofils voient TOUT comme
+  avant, pas de régression).
+- **Override branding** : `lib/projects/businessProfile.ts:mergeOwnerBranding(fallback, ownerUserId, projectId)`
+  pour les call-sites publics (viewer, IA générative). Override
+  non-null + triple safety (gate plan, projet absent, business_profile
+  absent, erreur DB) → ZÉRO risque de couper les quiz en ligne.
+
+**Champs qui RESTENT GLOBAUX (compte abonnement)** — ne PAS les passer
+per-projet :
+- `plan`, `product_id`, `sio_contact_id` (abonnement)
+- `full_name`, `first_name`, `last_name`, `email` (identité)
+- `ui_locale`, `content_locale`, `address_form` (préférences user)
+- `tipote_affiliate_id` (lien unique vers Tipote affiliate)
+- `responses_used_this_month`, `responses_reset_at` (compteurs plan)
+
+**Sémantique projet secondaire** (Béné 2 juin) : "Comme un compte
+neuf, avec ses spécificités." business_profile créé VIDE
+(onboarding_completed=false). Settings UI override TOTAL (l'user voit
+les champs vides à remplir). Viewer public override NON-NULL (filet de
+sécurité : tant que l'user n'a pas customisé, le quiz reste joli avec
+le branding global). `sio_api_keys` NE SONT PAS DUPLIQUÉES (chaque
+projet a sa propre intégration SIO à configurer).
+
+**Workflow validation Béné** après chaque déploiement multiprofils :
+```bash
+set -a; . .env.local; set +a
+npm run check:schema       # 9 migrations multiprofils en prod
+npm run diag:multiprofils  # 11 invariants DB (intégrité)
+# Optionnel avec user beta :
+npm run smoke:multiprofils  # E2E workflow Settings + isolation
+```
+
+## ⚠️ check:schema — éviter de réintroduire la panne du 2 juin matin
+
+La panne du 2 juin 2026 (404 généralisé sur les quizzes publics
+Tipote) venait d'une migration en retard
+(`20260603_quizzes_survey_thanks.sql` non appliquée → colonne
+manquante → SELECT public KO).
+
+**Plus jamais**. `npm run check:schema` détecte automatiquement.
+
+**À chaque nouvelle migration** qui ajoute une colonne/table critique,
+ajouter une entrée dans `EXPECTED` de `scripts/check-schema.mjs`. **Lire
+le contenu RÉEL du .sql** (`grep "CREATE TABLE\|ADD COLUMN" file.sql`)
+— j'ai généré 2 faux positifs côté Tipote en supposant les noms.
+Pattern :
+```js
+{ migration: "<filename>", table: "<table>", columns: ["c1","c2"] }
+```
 
 ## A) Checklist quand j'ajoute une COLONNE sur `quizzes`
 
