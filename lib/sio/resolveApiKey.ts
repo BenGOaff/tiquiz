@@ -2,17 +2,20 @@
 // Resolves which Systeme.io API key to use for a given operation.
 //
 // CASCADE — first non-null wins:
-//   1. explicit keyId (e.g. quiz.sio_api_key_id, or ?keyId=… from editor)
-//   2. user's default key in sio_api_keys (is_default=true)
-//   3. any key the user has (oldest first)
+//   1. explicit keyId (e.g. quiz.sio_api_key_id) — lookup direct par id,
+//      pas de filtre projet (préserve la compat des quizzes en ligne
+//      qui pointent vers une clé spécifique, même cross-projet)
+//   2. user's default key DU PROJET (is_default=true filtered by project)
+//      Phase 6 multiprofils : chaque projet a SON default → un nouveau
+//      quiz sur projet B utilise la clé default de B, pas celle de A
+//   3. any key DU PROJET (oldest first)
 //   4. legacy profiles.sio_user_api_key (plaintext) — backwards compat
 //   5. null (no key configured)
 //
-// Step 4 is critical: it lets users who never opened the new Settings UI
-// keep syncing leads on their existing live quizzes. As soon as they
-// open Settings (or hit POST /api/sio-api-keys), keysRepo.ensureLegacyMigrated
-// moves the legacy value into the new table and clears the column, after
-// which step 4 stops contributing.
+// Note : on filtre par projet UNIQUEMENT pour les étapes 2 et 3 (lookup
+// "smart default"). L'étape 1 (explicit) reste cross-projet pour ne pas
+// casser les quizzes existants. Le projectId est passé depuis le quiz
+// dans les contextes publics (track/lead capture) — cf. callers.
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { decryptApiKey } from "@/lib/sio/keyCrypto";
@@ -23,13 +26,29 @@ export interface ResolvedKey {
   source: "explicit" | "default" | "any" | "legacy";
 }
 
+export interface ResolveApiKeyOpts {
+  /** Si fourni, lookup direct (cross-project) — priorité maximale. */
+  explicitKeyId?: string | null;
+  /**
+   * Si fourni, filtre les étapes "default" et "any" sur ce projet.
+   * Quand absent, on ne filtre pas (= comportement legacy avant phase 6).
+   * Cas d'usage typique : quiz.project_id passé depuis les routes
+   * publiques (track, lead capture) pour que le sync utilise la clé
+   * default du PROJET du quiz, pas celle d'un autre projet.
+   */
+  projectId?: string | null;
+}
+
 export async function resolveApiKey(
   userId: string,
-  opts: { explicitKeyId?: string | null } = {},
+  opts: ResolveApiKeyOpts = {},
 ): Promise<ResolvedKey | null> {
   const explicit = opts.explicitKeyId?.trim();
+  const projectId = opts.projectId?.trim() ?? null;
 
-  // 1. explicit
+  // 1. explicit — lookup direct par id (cross-project autorisé, sinon
+  //    on casserait les quizzes en ligne qui pointent vers une clé
+  //    "migrée" sur un autre projet).
   if (explicit) {
     const { data } = await supabaseAdmin
       .from("sio_api_keys")
@@ -47,14 +66,15 @@ export async function resolveApiKey(
     }
   }
 
-  // 2. default
+  // 2. default DU PROJET (si projectId fourni — sinon any default user)
   {
-    const { data } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("sio_api_keys")
       .select("id, api_key_encrypted")
       .eq("user_id", userId)
-      .eq("is_default", true)
-      .maybeSingle();
+      .eq("is_default", true);
+    if (projectId) query = query.eq("project_id", projectId);
+    const { data } = await query.maybeSingle();
     const row = data as { id?: string; api_key_encrypted?: string } | null;
     if (row?.api_key_encrypted) {
       try {
@@ -63,15 +83,16 @@ export async function resolveApiKey(
     }
   }
 
-  // 3. any
+  // 3. any DU PROJET (si projectId fourni — sinon any key user)
   {
-    const { data } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("sio_api_keys")
       .select("id, api_key_encrypted")
       .eq("user_id", userId)
       .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
+    if (projectId) query = query.eq("project_id", projectId);
+    const { data } = await query.maybeSingle();
     const row = data as { id?: string; api_key_encrypted?: string } | null;
     if (row?.api_key_encrypted) {
       try {

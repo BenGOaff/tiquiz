@@ -41,13 +41,18 @@ export async function POST(req: NextRequest, context: RouteContext) {
     // different Systeme.io workspace.
     const { data: quizRow } = await supabaseAdmin
       .from("quizzes")
-      .select("sio_api_key_id")
+      .select("sio_api_key_id, project_id")
       .eq("id", quizId)
       .eq("user_id", user.id)
       .maybeSingle();
 
+    const typedQuizRow = quizRow as {
+      sio_api_key_id?: string | null;
+      project_id?: string | null;
+    } | null;
     const resolved = await resolveApiKey(user.id, {
-      explicitKeyId: (quizRow as { sio_api_key_id?: string | null } | null)?.sio_api_key_id ?? null,
+      explicitKeyId: typedQuizRow?.sio_api_key_id ?? null,
+      projectId: typedQuizRow?.project_id ?? null,
     });
     if (!resolved) {
       return NextResponse.json({ ok: false, error: "No Systeme.io API key configured" }, { status: 400 });

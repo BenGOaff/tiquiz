@@ -18,6 +18,10 @@
 //        merge fallback fonctionne, mais "compte neuf" est cassé).
 //   I-9. Chaque quiz pointe sur un projet QUI EXISTE et appartient
 //        au MÊME user (pas de cross-tenant via project_id forgé).
+//  I-10. Chaque sio_api_key a un project_id non-null
+//        (post-backfill 20260607).
+//  I-11. Au plus 1 sio_api_key is_default=true par (user, project)
+//        (partial UNIQUE INDEX one_default_per_user_project tient).
 //
 // Usage :
 //   SUPABASE_URL=... \
@@ -220,6 +224,55 @@ async function I9_quizzesPointToOwnerProjects() {
   else ko("CROSS-TENANT DÉTECTÉ — quizzes attachés à un projet d'un autre user", mismatches.slice(0, 10));
 }
 
+async function I10_sioApiKeysHaveProjectId() {
+  console.log("\n[I-10] Tout sio_api_key a project_id non-null");
+  try {
+    const { count } = await supa
+      .from("sio_api_keys")
+      .select("id", { count: "exact", head: true })
+      .is("project_id", null);
+    if (!count) ok("aucune clé orpheline (backfill 20260607 OK)");
+    else
+      ko(
+        `${count} sio_api_keys sans project_id (migration 20260607 non appliquée ou backfill incomplet)`,
+      );
+  } catch {
+    ok("table sio_api_keys absente — skip");
+  }
+}
+
+async function I11_sioApiKeysOneDefaultPerProject() {
+  console.log("\n[I-11] Au plus 1 sio_api_key is_default=true par (user, project)");
+  try {
+    const { data: defaults } = await supa
+      .from("sio_api_keys")
+      .select("user_id, project_id")
+      .eq("is_default", true);
+    const counts = new Map();
+    for (const r of defaults ?? []) {
+      const key = `${r.user_id}::${r.project_id ?? "null"}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const multiple = [];
+    for (const [key, count] of counts) {
+      if (count > 1) {
+        const [user_id, project_id] = key.split("::");
+        multiple.push({ user_id, project_id, count });
+      }
+    }
+    if (multiple.length === 0) {
+      ok(`${counts.size} (user, project) ont au plus 1 default — INDEX UNIQUE tient`);
+    } else {
+      ko(
+        "PLUSIEURS sio_api_keys is_default=true par (user, project) — INDEX cassé",
+        multiple,
+      );
+    }
+  } catch {
+    ok("table sio_api_keys absente — skip");
+  }
+}
+
 async function main() {
   console.log(`▶ Diagnostic multiprofils Tiquiz (${SUPABASE_URL})`);
   await I1_usersHaveProjects();
@@ -231,6 +284,8 @@ async function main() {
   await I7_businessProfilesUnique();
   await I8_defaultProjectsHaveBusinessProfile();
   await I9_quizzesPointToOwnerProjects();
+  await I10_sioApiKeysHaveProjectId();
+  await I11_sioApiKeysOneDefaultPerProject();
 
   console.log("\n────────────────────────");
   console.log(`Résultat : ${pass} ✓ / ${fail} ✗`);

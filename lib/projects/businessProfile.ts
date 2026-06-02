@@ -187,7 +187,7 @@ export async function upsertBrandingForProject(
 // Liste des clés branding/positionnement qu'on merge. Centralisée ici
 // pour que les call-sites (overlay GET /profile, merge owner branding
 // pour viewer public, etc.) restent cohérents.
-const PROJECT_BRANDING_KEYS: readonly (keyof BrandingFields)[] = [
+export const PROJECT_BRANDING_KEYS: readonly (keyof BrandingFields)[] = [
   "brand_logo_url",
   "brand_color_primary",
   "brand_color_accent",
@@ -206,17 +206,47 @@ const PROJECT_BRANDING_KEYS: readonly (keyof BrandingFields)[] = [
 ] as const;
 
 /**
+ * Lit le plan de l'owner d'un quiz (cache court possible plus tard).
+ * Utilisé pour gater le merge per-projet : seuls les users multiprofils
+ * voient l'isolation effective ; les non-multiprofils gardent le
+ * comportement legacy = lecture profile globale.
+ */
+async function isOwnerMultiprofils(userId: string): Promise<boolean> {
+  if (!userId) return false;
+  try {
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("plan, email")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const plan = (profile as { plan?: string | null } | null)?.plan ?? null;
+    const email = (profile as { email?: string | null } | null)?.email ?? null;
+    return canUseMultiProjects(plan, { userId, email });
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Merge le business_profile (owner, project) PAR DESSUS un fallback
- * record (typiquement la row profiles de l'owner). Les champs branding
- * non-null du business_profile écrasent ceux du fallback.
+ * record (typiquement la row profiles de l'owner). Utilisé par le
+ * VIEWER PUBLIC + popquiz + IA générative (generate, idea-chat, brand-kit).
  *
- * SAFE POUR LES VIEWERS PUBLICS :
- * - Ne dépend PAS du cookie / plan du requester (le viewer est anonyme).
- * - Lit directement par (ownerUserId, projectId) côté serveur.
- * - Si projectId null OU business_profile absent OU erreur DB →
- *   retourne fallback INCHANGÉ. Garantit que le quiz public continue
- *   d'afficher le branding "défaut global" de l'owner — donc zéro
- *   risque de couper les quiz en ligne sur les blogs des users.
+ * SÉMANTIQUE PRUDENTE — FILET DE SÉCURITÉ POUR LES QUIZ EN LIGNE :
+ * - Override NON-NULL seulement → si business_profile.brand_logo_url
+ *   est null, on garde le profile.brand_logo_url global. Évite qu'un
+ *   projet secondaire sans logo affiche un quiz "moche" (sans logo)
+ *   alors que l'user avait un logo configuré globalement.
+ *
+ * - "Compte neuf strict" (override total) est appliqué UNIQUEMENT
+ *   côté Settings UI (via GET /api/profile) pour que l'user voie ses
+ *   champs vides à customiser pour projet B. Mais le viewer public
+ *   préserve un branding fonctionnel jusqu'à la customisation.
+ *
+ * TRIPLE SAFETY (garantit zéro coupure des quiz en ligne) :
+ *   1. projectId null/undefined → fallback inchangé
+ *   2. owner non multiprofils → fallback inchangé (gate plan)
+ *   3. business_profile absent OU erreur DB → fallback inchangé
  */
 export async function mergeOwnerBranding<T extends Record<string, unknown>>(
   fallback: T,
@@ -225,8 +255,14 @@ export async function mergeOwnerBranding<T extends Record<string, unknown>>(
 ): Promise<T> {
   if (!projectId || !ownerUserId) return fallback;
   try {
+    const eligible = await isOwnerMultiprofils(ownerUserId);
+    if (!eligible) return fallback; // gate plan : préserve les non-multiprofils
+
     const bp = await readBusinessProfile(ownerUserId, projectId);
     if (!bp) return fallback;
+
+    // Override NON-NULL : on prend business_profile en priorité, mais
+    // on garde le fallback profile pour les champs vides (filet).
     const merged: Record<string, unknown> = { ...fallback };
     for (const key of PROJECT_BRANDING_KEYS) {
       const v = (bp as unknown as Record<string, unknown>)[key];
@@ -242,11 +278,20 @@ export async function mergeOwnerBranding<T extends Record<string, unknown>>(
 }
 
 /**
- * Crée un business_profile vide (onboarding_completed=false) pour un
- * (user, project) qui vient d'être créé. Utilisé par POST /api/projects.
- * Idempotent. Best-effort : si l'INSERT échoue, on log et on continue
- * (le helper resolveBrandingForRequest retombera sur null → l'UI fait
- * son fallback sur profiles, fonctionnel mais sans branding neuf).
+ * Crée un business_profile VIDE pour un projet secondaire.
+ *
+ * Sémantique Béné (2 juin 2026, clarification) : un projet secondaire
+ * = nouveau compte = profil VIDE. Il a la même STRUCTURE de réglages
+ * (mêmes champs disponibles : branding, positionnement, pixel defaults)
+ * que le projet par défaut, mais avec des VALEURS vides à remplir.
+ *
+ * L'user verra dans Settings tous les champs vides et les remplira
+ * comme s'il configurait un compte neuf — sans hériter du logo, des
+ * couleurs ou de l'audience cible du projet principal.
+ *
+ * Best-effort : si l'INSERT échoue (table absente, erreur DB), on log
+ * et on continue. Le projet est utilisable même sans business_profile
+ * (resolveBrandingForRequest retombe sur null → fallback profile).
  */
 export async function createEmptyBusinessProfileForProject(
   userId: string,

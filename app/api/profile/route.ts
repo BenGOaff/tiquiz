@@ -96,14 +96,22 @@ export async function GET() {
     // business_profile du projet actif (= "nouveau projet = nouveau
     // branding"). Pour les autres plans, on retourne profiles tel quel
     // → zéro régression pour free / monthly / yearly.
+    // Sémantique "projet secondaire = compte neuf VIDE" (Béné 2 juin 2026) :
+    // Settings UI affiche les champs branding/positionnement VIDES sur
+    // un projet secondaire jamais customisé. L'user remplit comme s'il
+    // configurait un nouveau compte.
+    //
+    // Override TOTAL (null inclus) côté Settings = "compte neuf" effectif.
+    // Note : le viewer public garde un fallback NON-NULL via
+    // mergeOwnerBranding → les quiz en ligne ne sont jamais cassés
+    // (le branding par défaut reste affiché jusqu'à customisation).
     const bp = await resolveBrandingForRequest(user.id, user.email ?? null);
     if (bp) {
       const merged: Record<string, unknown> = { ...profile };
       for (const key of PROJECT_SCOPED_FIELDS) {
-        // override seulement si le business_profile a une valeur
-        // non-null (sinon on garde celle de profiles comme défaut).
-        const v = (bp as unknown as Record<string, unknown>)[key];
-        if (v !== null && v !== undefined) merged[key] = v;
+        // OVERRIDE TOTAL : projet secondaire avec business_profile vide
+        // affiche VIDE dans Settings (l'user voit ce qu'il doit remplir).
+        merged[key] = (bp as unknown as Record<string, unknown>)[key];
       }
       merged.business_profile_onboarding_completed = bp.onboarding_completed;
       merged.business_profile_project_id = bp.project_id;
@@ -248,13 +256,11 @@ export async function PATCH(req: NextRequest) {
           if (!result.ok) {
             console.error("[profile PATCH] business_profile write failed", result.error);
           } else if (result.row && profile) {
-            // Merge le résultat dans la réponse pour que le client voie
-            // immédiatement les nouvelles valeurs (overlay synchrone),
-            // sans devoir re-fetch GET /api/profile.
+            // Overlay synchrone : le client voit les nouvelles valeurs
+            // sans re-fetch GET. OVERRIDE TOTAL cohérent avec GET overlay.
             const merged: Record<string, unknown> = { ...(profile as Record<string, unknown>) };
             for (const key of PROJECT_SCOPED_FIELDS) {
-              const v = (result.row as unknown as Record<string, unknown>)[key];
-              if (v !== null && v !== undefined) merged[key] = v;
+              merged[key] = (result.row as unknown as Record<string, unknown>)[key];
             }
             merged.business_profile_onboarding_completed = result.row.onboarding_completed;
             merged.business_profile_project_id = result.row.project_id;

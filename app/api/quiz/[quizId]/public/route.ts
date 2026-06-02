@@ -610,6 +610,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
       const leadId = lead.id;
       const quizUserId = quiz.user_id;
       const quizSioApiKeyId = (quiz as { sio_api_key_id?: string | null }).sio_api_key_id ?? null;
+      const quizProjectId = (quiz as { project_id?: string | null }).project_id ?? null;
 
       (async () => {
         try {
@@ -640,12 +641,15 @@ export async function POST(req: NextRequest, context: RouteContext) {
             }
           }
 
-          // Cascade: explicit quiz key → user default → any user key →
-          // legacy plaintext. The user_id scoping inside resolveApiKey
-          // guarantees we can NEVER pick a key belonging to another user,
-          // even if a corrupted FK pointed somewhere foreign.
+          // Cascade: explicit quiz key → DEFAULT DU PROJET DU QUIZ →
+          // any key DU PROJET → legacy plaintext. Le projectId scope
+          // les étapes default/any sur le bon projet (Phase 6 multiprofils).
+          // La résolution par explicitKeyId reste cross-project pour
+          // préserver les quizzes en ligne qui pointent vers une clé
+          // spécifique (sans coupure des sync existants).
           const resolved = await resolveApiKey(quizUserId, {
             explicitKeyId: quizSioApiKeyId,
+            projectId: quizProjectId,
           });
           if (!resolved) return;
           const apiKey = resolved.apiKey;
@@ -843,14 +847,15 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       const shareTagName = String(quizRow.sio_share_tag_name ?? "").trim();
       const quizUserId = quizRow.user_id;
       const quizSioApiKeyId = quizRow.sio_api_key_id ?? null;
+      const quizProjectId = quizRow.project_id ?? null;
 
       if (shareTagName && quizUserId) {
         (async () => {
           try {
-            // Same cascade as POST so the share tag lands in the same
-            // workspace where the lead lives.
+            // Même cascade que POST avec scope projet (Phase 6).
             const resolved = await resolveApiKey(quizUserId, {
               explicitKeyId: quizSioApiKeyId,
+              projectId: quizProjectId,
             });
             if (!resolved) return;
             await applyTagToContact(resolved.apiKey, email, shareTagName);
