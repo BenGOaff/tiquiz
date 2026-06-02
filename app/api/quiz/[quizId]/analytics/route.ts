@@ -72,17 +72,41 @@ export async function GET(
     );
   }
 
-  // Pull all leads for this quiz. SOURCE = `quiz_leads` (avec quiz_id
-  // direct), pas la table `leads` qui a un schéma différent (source,
-  // source_id, user_id) et qui n'est JAMAIS populée pour les quizzes
-  // — donc la page analytics affichait tout à zéro (Gwenn 19 mai 2026).
+  // ════════════════════════════════════════════════════════════════
+  // STATISTIQUES — refonte fiabilité (Béné 2 juin 2026)
   //
-  // Period filter : on garde le filtre sur created_at pour la
-  // time-series + pour la distribution par résultat (afin qu'elles
-  // soient cohérentes avec le sélecteur de période). Les KPI lifetime
-  // (viewsCount, completionsCount) restent sur les compteurs quizzes
-  // car ils sont auto-bumpés par trigger et incluent l'historique
-  // pré-migration tracking.
+  // RÈGLE D'OR : on ne mélange JAMAIS deux fenêtres temporelles ni deux
+  // sources dans un même ratio. Avant, le bug était double :
+  //   1. leadsCount filtré sur la période (30j) MAIS viewsCount lifetime
+  //      → ratio incohérent (pommes / poires).
+  //   2. vues depuis quiz_events (aucun backfill avant 21 mai 2026) vs
+  //      leads depuis quiz_leads (lifetime) → pour un vieux quiz, vues
+  //      structurellement < leads → taux > 100% absurde (794% chez Gwenn).
+  //
+  // NOUVELLE ARCHITECTURE :
+  //   - Les KPI cards (labellées "cumulé depuis le début") = LIFETIME,
+  //     vues ET leads sur la même base lifetime.
+  //   - La time-series + distribution = filtrées par la période choisie.
+  //   - Le taux de capture est HONNÊTE : si les vues trackées sont
+  //     inférieures aux leads (= vues incomplètes, quiz embarqué ou
+  //     antérieur au tracking), on ne fabrique PAS un faux 100% — on
+  //     renvoie viewsReliable=false et captureRate=null, l'UI affiche
+  //     un état explicite au lieu d'un chiffre mensonger.
+  // ════════════════════════════════════════════════════════════════
+
+  // ── A) LEADS — deux comptes distincts ──
+  // Lifetime (pour les KPI) + période (pour la time-series + distribution).
+  const { count: lifetimeLeadsCount } = await supabase
+    .from("quiz_leads")
+    .select("id", { count: "exact", head: true })
+    .eq("quiz_id", quizId);
+  const { count: lifetimeExportedSio } = await supabase
+    .from("quiz_leads")
+    .select("id", { count: "exact", head: true })
+    .eq("quiz_id", quizId)
+    .eq("sio_synced", true);
+
+  // Leads de la PÉRIODE (pour time-series + distribution uniquement).
   let leadsQuery = supabase
     .from("quiz_leads")
     .select("created_at, result_title, sio_synced")
@@ -98,28 +122,18 @@ export async function GET(
       { status: 400 },
     );
   }
-
   const leads = (leadsRaw ?? []) as LeadRow[];
-  const leadsCount = leads.length;
-  const exportedSio = leads.filter((l) => l.sio_synced === true).length;
 
-  // ── Vues + complétions : recompte DIRECT depuis quiz_events ──
-  //
-  // BUG GWENN 2 juin 2026 : son quiz affichait 270 leads pour 34 vues =
-  // 794% de taux de capture, mathématiquement impossible. Cause : on
-  // lisait `quiz.views_count` (compteur dénormalisé bumpé par trigger
-  // sur quiz_events), qui avait DRIFT chez elle — soit reset par
-  // accident, soit trigger qui a raté des events. Le compteur peut
-  // diverger silencieusement de la table source.
-  //
-  // FIX : on recompte TOUJOURS depuis quiz_events qui est la source de
-  // vérité. Légèrement plus cher (1 query head:true par KPI) mais
-  // garantit que viewsCount >= leadsCount (= mathématiquement valide).
-  //
-  // INCLUT les events backfillés (session_id LIKE 'backfill_%') :
-  // l'utilisateur attend "depuis le début" = lifetime complet, donc
-  // on garde l'historique pré-refonte tracking (19 mai 2026).
-  const [viewsCountRes, completionsCountRes] = await Promise.all([
+  // Compte lifetime des leads (KPI). leadsCount = lifetime, PAS période.
+  const leadsCount = lifetimeLeadsCount ?? 0;
+  const exportedSio = lifetimeExportedSio ?? 0;
+
+  // ── B) VUES + COMPLÉTIONS lifetime — double source réconciliée ──
+  // On prend le MAX entre le compteur dénormalisé quizzes.views_count
+  // (qui inclut l'historique pré-refonte, server-side) et le compte réel
+  // quiz_events (fiable mais seulement depuis le 21 mai 2026). Le max
+  // donne la meilleure estimation lifetime disponible.
+  const [viewsEventsRes, completesEventsRes] = await Promise.all([
     supabaseAdmin
       .from("quiz_events")
       .select("id", { count: "exact", head: true })
@@ -131,30 +145,43 @@ export async function GET(
       .eq("quiz_id", quizId)
       .eq("event_type", "complete"),
   ]);
-  // Fallback sur le compteur dénormalisé si la query échoue (résilience).
-  const viewsCount = viewsCountRes.error
-    ? quiz.views_count ?? 0
-    : viewsCountRes.count ?? 0;
-  const completionsCount = completionsCountRes.error
-    ? quiz.completions_count ?? 0
-    : completionsCountRes.count ?? 0;
-  // Garde-fou : si on a plus de leads que de vues (ex. quiz historique
-  // avec vues server-side non backfillées), viewsCount = max(leads).
-  // Évite les ratios > 100% qui n'ont aucun sens.
-  const viewsCountSafe = Math.max(viewsCount, leadsCount);
+  const viewsFromEvents = viewsEventsRes.error ? 0 : viewsEventsRes.count ?? 0;
+  const completesFromEvents = completesEventsRes.error ? 0 : completesEventsRes.count ?? 0;
+
+  const trackedViews = Math.max(quiz.views_count ?? 0, viewsFromEvents);
+  const completionsCount = Math.max(quiz.completions_count ?? 0, completesFromEvents);
+
+  // ── C) Taux de capture HONNÊTE ──
+  // viewsReliable = false si on a plus de leads que de vues trackées
+  // (impossible physiquement → vues incomplètes pour ce quiz).
+  const viewsReliable = trackedViews >= leadsCount;
+  // viewsCount affiché : on ne montre jamais moins de vues que de leads
+  // (incohérent visuellement). Plancher à leadsCount.
+  const viewsCount = Math.max(trackedViews, leadsCount);
+  // captureRate : calculé UNIQUEMENT quand les vues sont fiables.
+  // Sinon null → l'UI affiche "—" + note "vues partiellement trackées".
+  const captureRate =
+    viewsReliable && viewsCount > 0
+      ? Math.round((leadsCount / viewsCount) * 1000) / 10
+      : null;
 
   // Aggregate per result title — strip empty titles into a single
   // "Sans résultat" bucket so the pie chart isn't full of "(null)".
+  // (Sur la période sélectionnée — répond au sélecteur.)
   const byResult = new Map<string, number>();
   for (const l of leads) {
     const key = (l.result_title ?? "").trim() || "Sans résultat";
     byResult.set(key, (byResult.get(key) ?? 0) + 1);
   }
+  // pct sur le total des leads DE LA PÉRIODE (leads.length), pas sur le
+  // lifetime — sinon la somme des pct ne ferait pas 100% quand le
+  // sélecteur de période réduit l'échantillon.
+  const periodLeadsTotal = leads.length;
   const resultDistribution = Array.from(byResult.entries())
     .map(([title, count]) => ({
       title,
       count,
-      pct: leadsCount > 0 ? Math.round((count / leadsCount) * 1000) / 10 : 0,
+      pct: periodLeadsTotal > 0 ? Math.round((count / periodLeadsTotal) * 1000) / 10 : 0,
     }))
     .sort((a, b) => b.count - a.count);
 
@@ -192,12 +219,8 @@ export async function GET(
     return out.slice(-365);
   })();
 
-  // captureRate utilise viewsCountSafe (= max(views réelles, leads)) →
-  // mathématiquement borné à 100%, plus jamais de 794%.
-  const captureRate =
-    viewsCountSafe > 0
-      ? Math.round((leadsCount / viewsCountSafe) * 1000) / 10
-      : 0;
+  // exportRate = % des leads taggés dans SIO (lifetime, cohérent avec
+  // les KPI). captureRate déjà calculé plus haut (honnête, nullable).
   const exportRate =
     leadsCount > 0
       ? Math.round((exportedSio / leadsCount) * 1000) / 10
@@ -301,13 +324,17 @@ export async function GET(
     },
     period: period.key,
     metrics: {
-      // viewsCount/completionsCount viennent de quiz_events (source de
-      // vérité), pas de quiz.views_count qui peut drift (bug Gwenn).
-      viewsCount: viewsCountSafe,
+      // LIFETIME, source réconciliée max(compteur dénormalisé, quiz_events).
+      viewsCount,
       completionsCount,
       leadsCount,
       exportedSioCount: exportedSio,
+      // captureRate est NULL quand les vues sont incomplètes (viewsReliable
+      // false) — l'UI affiche alors "—" + note honnête au lieu d'un 100% bidon.
       captureRate,
+      // viewsReliable : false = ce quiz a capté des leads sans vue trackée
+      // (embarqué/funnel/antérieur au tracking). Le taux n'est pas fiable.
+      viewsReliable,
       exportRate,
     },
     resultDistribution,

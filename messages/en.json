@@ -2116,6 +2116,7 @@
     "kpiLeadsHint": "{count} exported to Systeme.io",
     "kpiCaptureRate": "Capture rate",
     "kpiCaptureRateHint": "Leads / views (cumulative)",
+    "kpiCaptureRateUnreliable": "Views partially tracked (embedded quiz or predates tracking) — rate reliable on new views",
     "kpiExportSio": "Systeme.io export",
     "kpiExportSioHint": "% of leads tagged in SIO",
     "leadsEvolutionTitle": "Leads over time",

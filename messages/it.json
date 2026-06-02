@@ -2132,6 +2132,7 @@
     "kpiLeadsHint": "{count} esportati su Systeme.io",
     "kpiCaptureRate": "Tasso di conversione",
     "kpiCaptureRateHint": "Lead / visite (cumulativo)",
+    "kpiCaptureRateUnreliable": "Visite tracciate parzialmente (quiz incorporato o precedente al tracciamento) — tasso affidabile sulle nuove visite",
     "kpiExportSio": "Export Systeme.io",
     "kpiExportSioHint": "% di lead taggati su SIO",
     "leadsEvolutionTitle": "Andamento dei lead",

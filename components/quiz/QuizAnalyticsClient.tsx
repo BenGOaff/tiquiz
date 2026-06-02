@@ -66,7 +66,11 @@ interface AnalyticsResponse {
     completionsCount: number;
     leadsCount: number;
     exportedSioCount: number;
-    captureRate: number;
+    // null = vues incomplètes pour ce quiz → on n'affiche pas un faux taux.
+    captureRate: number | null;
+    // false = ce quiz a capté des leads sans vue trackée (embarqué/funnel/
+    // antérieur au tracking) → le taux de capture n'est pas fiable.
+    viewsReliable?: boolean;
     exportRate: number;
   };
   resultDistribution: { title: string; count: number; pct: number }[];
@@ -111,6 +115,7 @@ const EMPTY_DATA: AnalyticsResponse = {
     leadsCount: 0,
     exportedSioCount: 0,
     captureRate: 0,
+    viewsReliable: true,
     exportRate: 0,
   },
   resultDistribution: [],
@@ -240,8 +245,14 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
         <KpiCard
           icon={<Activity className="size-4" />}
           label={t("kpiCaptureRate")}
-          value={`${m.captureRate}%`}
-          hint={t("kpiCaptureRateHint")}
+          // Taux honnête : si les vues sont incomplètes (captureRate null),
+          // on affiche "—" et un hint explicite plutôt qu'un faux 100%.
+          value={m.captureRate === null ? "—" : `${m.captureRate}%`}
+          hint={
+            m.captureRate === null
+              ? t("kpiCaptureRateUnreliable")
+              : t("kpiCaptureRateHint")
+          }
           accent="primary"
         />
         <KpiCard

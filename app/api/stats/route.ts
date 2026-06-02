@@ -252,7 +252,7 @@ export async function GET(req: NextRequest) {
     const prev = sumEvents(prevEvents);
 
     // ── Lifetime totals (computed once, reused below) ───────────────
-    const lifetime = (quizzes ?? []).reduce(
+    const lifetimeRaw = (quizzes ?? []).reduce(
       (acc, q) => ({
         views: acc.views + (Number(q.views_count) || 0),
         starts: acc.starts + (Number(q.starts_count) || 0),
@@ -262,12 +262,23 @@ export async function GET(req: NextRequest) {
       { views: 0, starts: 0, completions: 0, shares: 0 },
     );
 
-    // Conversion (cumulé) : leads totaux / starts totaux (ou views à
-    // défaut). On utilise les lifetime counters comme source de vérité
-    // car les events backfillés sont tous datés à quiz.created_at —
-    // le compteur lifetime est le seul truc cohérent quand la donnée
-    // pré-migration et post-migration coexiste.
     const lifetimeLeadsTotal = (leadsAll ?? 0);
+
+    // Cohérence du funnel : vues >= starts >= completions >= leads.
+    // Si les compteurs sont incomplets (quiz embarqué/funnel où le
+    // tracking de vues échoue), on plancher chaque étage pour ne JAMAIS
+    // afficher un funnel inversé (ex. 34 vues / 270 leads = 794% — bug
+    // Gwenn 2 juin 2026). Le plancher garantit des chiffres cohérents.
+    const lifetime = {
+      completions: Math.max(lifetimeRaw.completions, lifetimeLeadsTotal),
+      starts: Math.max(lifetimeRaw.starts, lifetimeRaw.completions, lifetimeLeadsTotal),
+      views: Math.max(lifetimeRaw.views, lifetimeRaw.starts, lifetimeRaw.completions, lifetimeLeadsTotal),
+      shares: lifetimeRaw.shares,
+    };
+
+    // Conversion (cumulé) : leads totaux / starts totaux (ou views à
+    // défaut). Bornée à 100% via le plancher ci-dessus (views/starts >=
+    // leads), donc plus jamais de ratio absurde.
     const lifetimeConversionPct = (() => {
       const denom = lifetime.starts > 0 ? lifetime.starts : lifetime.views;
       return denom > 0 ? Math.min(100, Math.round((lifetimeLeadsTotal / denom) * 100)) : 0;

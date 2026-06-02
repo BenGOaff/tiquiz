@@ -2116,6 +2116,7 @@
     "kpiLeadsHint": "{count} تم تصديرهم إلى Systeme.io",
     "kpiCaptureRate": "معدل الالتقاط",
     "kpiCaptureRateHint": "العملاء / المشاهدات (تراكمياً)",
+    "kpiCaptureRateUnreliable": "تم تتبع المشاهدات جزئياً (اختبار مضمّن أو سابق للتتبع) — النسبة موثوقة على المشاهدات الجديدة",
     "kpiExportSio": "تصدير Systeme.io",
     "kpiExportSioHint": "نسبة العملاء الموسومين في SIO",
     "leadsEvolutionTitle": "تطور العملاء المحتملين",
