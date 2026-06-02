@@ -77,14 +77,28 @@ export async function POST(req: NextRequest) {
 
     // Fetch profile context to pre-seed the assistant
     const { supabaseAdmin } = await import("@/lib/supabaseAdmin");
-    const { data: profile } = await supabaseAdmin
+    const { data: profileRaw } = await supabaseAdmin
       .from("profiles")
       .select("address_form, target_audience")
       .eq("user_id", user.id)
       .maybeSingle();
 
+    // Multiprofils Tiquiz phase 5 : merge le positionnement du projet
+    // actif (target_audience) au-dessus du défaut global profiles.
+    // Pour les non-multiprofils → no-op effectif.
+    const { resolveProjectIdForInsert } = await import("@/lib/projects/scopeFilter");
+    const { mergeOwnerBranding } = await import("@/lib/projects/businessProfile");
+    const activeProjectId = await resolveProjectIdForInsert(user.id);
+    const profile = profileRaw
+      ? await mergeOwnerBranding(
+          profileRaw as Record<string, unknown>,
+          user.id,
+          activeProjectId,
+        )
+      : null;
+
     const addressForm = profile?.address_form === "vous" ? "vous" : "tu";
-    const targetAudience = String(profile?.target_audience ?? "").trim();
+    const targetAudience = String((profile?.target_audience as string | undefined) ?? "").trim();
     const locale = String(body.locale ?? "fr");
 
     system = buildQuizChatSystemPrompt({ locale, addressForm, targetAudience });

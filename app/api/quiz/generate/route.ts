@@ -77,17 +77,32 @@ export async function POST(req: NextRequest) {
 
     // Fetch user's branding profile for tone + target personalization
     const { supabaseAdmin } = await import("@/lib/supabaseAdmin");
-    const { data: profile } = await supabaseAdmin
+    const { data: profileRaw } = await supabaseAdmin
       .from("profiles")
       .select("brand_tone, address_form, target_audience")
       .eq("user_id", user.id)
       .maybeSingle();
 
+    // Multiprofils Tiquiz phase 5 : override le ton + audience avec
+    // ceux du projet actif (per-project positionnement). Pour les
+    // non-multiprofils OU si business_profile vide, on retombe sur
+    // profiles → comportement actuel exact.
+    const { resolveProjectIdForInsert } = await import("@/lib/projects/scopeFilter");
+    const { mergeOwnerBranding } = await import("@/lib/projects/businessProfile");
+    const activeProjectId = await resolveProjectIdForInsert(user.id);
+    const profile = profileRaw
+      ? await mergeOwnerBranding(
+          profileRaw as Record<string, unknown>,
+          user.id,
+          activeProjectId,
+        )
+      : null;
+
     const toneFromBody = String(body.tone ?? "").trim();
-    const resolvedTone = toneFromBody || profile?.brand_tone || "inspirant";
+    const resolvedTone = toneFromBody || (profile?.brand_tone as string | undefined) || "inspirant";
     const resolvedAddressForm = body.addressForm === "vous" || body.addressForm === "tu"
       ? body.addressForm
-      : (profile?.address_form ?? "tu");
+      : ((profile?.address_form as string | undefined) ?? "tu");
 
     if (isImport) {
       const content = String(body.content ?? "").trim();

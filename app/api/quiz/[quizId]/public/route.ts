@@ -22,6 +22,7 @@ import { isPaidPlan } from "@/lib/planLimits";
 import { applyFrenchTypography, isFrenchLocale } from "@/lib/frenchTypography";
 import { sendCapiLead } from "@/lib/metaCapi";
 import { logBusinessEvent, dedupeKeys } from "@/lib/businessEvents";
+import { mergeOwnerBranding } from "@/lib/projects/businessProfile";
 
 // No `force-dynamic`: it would make Vercel inject `Cache-Control: private, no-store`,
 // overriding the edge-SWR headers set on the GET response and forcing `cf-cache-status: DYNAMIC`.
@@ -256,7 +257,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     }
 
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,user_id,status,title,introduction,cta_text,cta_url,start_button_text,privacy_url,consent_text,virality_enabled,bonus_description,bonus_intro_text,bonus_image_url,bonus_image_position,bonus_unlocked_message,share_message,locale,address_form,views_count,capture_heading,capture_subtitle,capture_submit_text,survey_thanks_heading,survey_thanks_body,capture_first_name,capture_last_name,capture_phone,capture_country,phone_required,first_name_required,last_name_required,country_required,ask_first_name,ask_gender,slug,brand_font,brand_color_primary,brand_color_background,brand_logo_url,hide_brand_logo,capture_enabled,show_aggregate_responses,custom_footer_text,custom_footer_url,share_networks,og_description,og_image_url,result_insight_heading,result_projection_heading,mode,show_consent_checkbox,show_results_breakdown,show_other_results,meta_pixel_id,ga4_measurement_id,google_ads_conversion_id,google_ads_conversion_label,intro_image_url,intro_image_position").eq("id", quizId).maybeSingle(),
+      admin.from("quizzes").select("id,user_id,project_id,status,title,introduction,cta_text,cta_url,start_button_text,privacy_url,consent_text,virality_enabled,bonus_description,bonus_intro_text,bonus_image_url,bonus_image_position,bonus_unlocked_message,share_message,locale,address_form,views_count,capture_heading,capture_subtitle,capture_submit_text,survey_thanks_heading,survey_thanks_body,capture_first_name,capture_last_name,capture_phone,capture_country,phone_required,first_name_required,last_name_required,country_required,ask_first_name,ask_gender,slug,brand_font,brand_color_primary,brand_color_background,brand_logo_url,hide_brand_logo,capture_enabled,show_aggregate_responses,custom_footer_text,custom_footer_url,share_networks,og_description,og_image_url,result_insight_heading,result_projection_heading,mode,show_consent_checkbox,show_results_breakdown,show_other_results,meta_pixel_id,ga4_measurement_id,google_ads_conversion_id,google_ads_conversion_label,intro_image_url,intro_image_position").eq("id", quizId).maybeSingle(),
       admin.from("quiz_questions").select("id,question_text,options,sort_order,question_type,config").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,cta_text,cta_url,sort_order,image_url,image_position").eq("quiz_id", quizId).order("sort_order"),
     ]);
@@ -296,6 +297,23 @@ export async function GET(req: NextRequest, context: RouteContext) {
         .eq("user_id", quizUserId)
         .maybeSingle();
       profileRow = (bp as Record<string, unknown>) ?? null;
+
+      // Multiprofils Tiquiz phase 5 : si le quiz est attaché à un
+      // projet précis (quiz.project_id), on merge le business_profile
+      // de ce projet PAR DESSUS le row profiles. Garantit "nouveau
+      // projet = nouveau branding" sur le viewer public.
+      //
+      // SAFE POUR LES QUIZ EN LIGNE : si business_profile absent OU
+      // project_id null OU table inexistante → on retombe sur profileRow
+      // INCHANGÉ (= comportement actuel exact). JAMAIS de coupure.
+      if (profileRow) {
+        profileRow = await mergeOwnerBranding(
+          profileRow,
+          quizUserId,
+          (quizRow.project_id as string | null) ?? null,
+        );
+      }
+
       if (!quizAddressForm) {
         addressForm = profileRow?.address_form === "vous" ? "vous" : "tu";
       }

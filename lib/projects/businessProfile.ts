@@ -184,6 +184,63 @@ export async function upsertBrandingForProject(
   }
 }
 
+// Liste des clés branding/positionnement qu'on merge. Centralisée ici
+// pour que les call-sites (overlay GET /profile, merge owner branding
+// pour viewer public, etc.) restent cohérents.
+const PROJECT_BRANDING_KEYS: readonly (keyof BrandingFields)[] = [
+  "brand_logo_url",
+  "brand_color_primary",
+  "brand_color_accent",
+  "brand_font",
+  "brand_website_url",
+  "saved_palettes",
+  "brand_tone",
+  "target_audience",
+  "default_meta_pixel_id",
+  "default_ga4_measurement_id",
+  "default_google_ads_conversion_id",
+  "default_google_ads_conversion_label",
+  "default_meta_capi_token",
+  "default_share_domain",
+  "share_site_name",
+] as const;
+
+/**
+ * Merge le business_profile (owner, project) PAR DESSUS un fallback
+ * record (typiquement la row profiles de l'owner). Les champs branding
+ * non-null du business_profile écrasent ceux du fallback.
+ *
+ * SAFE POUR LES VIEWERS PUBLICS :
+ * - Ne dépend PAS du cookie / plan du requester (le viewer est anonyme).
+ * - Lit directement par (ownerUserId, projectId) côté serveur.
+ * - Si projectId null OU business_profile absent OU erreur DB →
+ *   retourne fallback INCHANGÉ. Garantit que le quiz public continue
+ *   d'afficher le branding "défaut global" de l'owner — donc zéro
+ *   risque de couper les quiz en ligne sur les blogs des users.
+ */
+export async function mergeOwnerBranding<T extends Record<string, unknown>>(
+  fallback: T,
+  ownerUserId: string,
+  projectId: string | null | undefined,
+): Promise<T> {
+  if (!projectId || !ownerUserId) return fallback;
+  try {
+    const bp = await readBusinessProfile(ownerUserId, projectId);
+    if (!bp) return fallback;
+    const merged: Record<string, unknown> = { ...fallback };
+    for (const key of PROJECT_BRANDING_KEYS) {
+      const v = (bp as unknown as Record<string, unknown>)[key];
+      if (v !== null && v !== undefined) merged[key] = v;
+    }
+    return merged as T;
+  } catch {
+    // Fail-open : on retourne le fallback inchangé. Le viewer public
+    // continue d'afficher le branding défaut global de l'owner. JAMAIS
+    // de coupure des quiz en ligne.
+    return fallback;
+  }
+}
+
 /**
  * Crée un business_profile vide (onboarding_completed=false) pour un
  * (user, project) qui vient d'être créé. Utilisé par POST /api/projects.

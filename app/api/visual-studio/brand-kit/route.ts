@@ -27,11 +27,24 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    const { data: profileRaw } = await supabase
       .from("profiles")
       .select("full_name, brand_color_primary, brand_color_accent, brand_font, brand_logo_url, brand_tone, target_audience")
       .eq("user_id", user.id)
       .maybeSingle();
+
+    // Multiprofils Tiquiz phase 5 : merge le branding du projet actif
+    // pour que le brand-kit du Visual Studio reflète le projet courant.
+    const { resolveProjectIdForInsert } = await import("@/lib/projects/scopeFilter");
+    const { mergeOwnerBranding } = await import("@/lib/projects/businessProfile");
+    const activeProjectId = await resolveProjectIdForInsert(user.id);
+    const profile = profileRaw
+      ? await mergeOwnerBranding(
+          profileRaw as Record<string, unknown>,
+          user.id,
+          activeProjectId,
+        )
+      : null;
 
     const p = (profile ?? {}) as Record<string, string | null>;
     // Si l'user a un full_name, on l'utilise comme nom de marque par défaut

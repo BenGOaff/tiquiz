@@ -14,6 +14,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { mergeOwnerBranding } from "@/lib/projects/businessProfile";
 import { isSelfHostedPath, signedPlaybackUrl } from "./playback";
 import type {
   CueBehavior,
@@ -58,6 +59,7 @@ interface CueRow {
 interface PopquizRow {
   id: string;
   user_id: string | null;
+  project_id?: string | null;
   slug: string | null;
   title: string;
   description: string | null;
@@ -91,6 +93,7 @@ interface ProfileBrandRow {
 const FULL_SELECT = `
   id,
   user_id,
+  project_id,
   slug,
   title,
   description,
@@ -313,11 +316,13 @@ function rowToPopquiz(
 
 async function fetchOwnerBranding(
   userId: string | null,
+  projectId?: string | null,
 ): Promise<PopquizBranding> {
   if (!userId) return mapBranding(null, null);
-  // Côté Tiquiz, branding ET affiliate ID vivent sur `profiles`
-  // (pas de table business_profiles séparée — cf. migration
-  // 20260508_tipote_affiliate_id.sql).
+  // Côté Tiquiz, branding défaut vit sur `profiles` (champ historique).
+  // L'override per-projet (multiprofils) vit sur `business_profiles`
+  // depuis 20260606_business_profiles_per_project. tipote_affiliate_id
+  // reste sur profiles (global par user, pas per-projet).
   const { data: profile } = await supabaseAdmin
     .from("profiles")
     .select("brand_logo_url, brand_color_primary, brand_website_url, tipote_affiliate_id")
@@ -326,9 +331,24 @@ async function fetchOwnerBranding(
   const profileRow = profile as
     | (ProfileBrandRow & { tipote_affiliate_id: string | null })
     | null;
+
+  // Multiprofils Tiquiz phase 5 : si le popquiz est attaché à un
+  // projet précis, on merge le branding du business_profile de ce
+  // projet PAR DESSUS le défaut profiles. SAFE pour les popquiz en
+  // ligne : si business_profile absent → fallback profiles inchangé.
+  const merged = profileRow
+    ? await mergeOwnerBranding(
+        profileRow as unknown as Record<string, unknown>,
+        userId,
+        projectId ?? null,
+      )
+    : null;
+  const finalRow = merged as
+    | (ProfileBrandRow & { tipote_affiliate_id: string | null })
+    | null;
   return mapBranding(
-    profileRow,
-    profileRow?.tipote_affiliate_id ?? null,
+    finalRow,
+    finalRow?.tipote_affiliate_id ?? null,
   );
 }
 
@@ -388,7 +408,7 @@ export async function fetchPublishedPopquiz(
     );
     return null;
   }
-  const branding = await fetchOwnerBranding(row.user_id);
+  const branding = await fetchOwnerBranding(row.user_id, row.project_id ?? null);
   const { popquiz, thumbnailPath } = rowToPopquiz(row, branding);
   if (!popquiz) {
     // rowToPopquiz retourne null seulement si la jointure video a
@@ -431,7 +451,7 @@ export async function fetchOwnedPopquiz(
     return null;
   }
   const row = data as unknown as PopquizRow;
-  const branding = await fetchOwnerBranding(row.user_id);
+  const branding = await fetchOwnerBranding(row.user_id, row.project_id ?? null);
   const { popquiz, thumbnailPath } = rowToPopquiz(row, branding);
   if (!popquiz) {
     console.warn(
