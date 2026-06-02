@@ -174,7 +174,7 @@ export default function SurveyResultsPanel({
             </div>
             {state.showUpsell ? (
               <p className="text-sm text-foreground pl-6">
-                Disponible dans les plans{" "}
+                Disponible (pour tes quiz ET tes sondages) dans les plans{" "}
                 <span className="font-semibold">Tiquiz mensuel+</span>
                 {" "}(<span className="font-semibold">29€/mois</span>) ou{" "}
                 <span className="font-semibold">annuel+</span>{" "}

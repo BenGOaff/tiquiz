@@ -9,25 +9,36 @@
 
 ## 📝 TODO BÉNÉ — MISE À JOUR DOCUMENTATION PRODUIT (2 juin 2026)
 
-Suite aux changements pricing + features du 2 juin, à mettre à jour
-manuellement (copywriting, pas du code) :
+Suite aux changements pricing + features du 2 juin (corrigés après-midi),
+à mettre à jour manuellement (copywriting, pas du code).
 
-- **`PRODUCT_BRIEF.md`** : ajouter les paliers Tiquiz mensuel+ (29€/mois)
-  et Tiquiz annuel+ (290€/an). Mentionner que ces paliers incluent
-  multiprofils + analyse IA des sondages + clés API SIO illimitées.
-  Le mensuel normal (9€) ne peut connecter qu'**1 seule clé** Systeme.io.
-  Beta et lifetime = équivalent monthly_plus / yearly_plus (tout débloqué).
+### Matrice features par plan (source vérité CODE = lib/planLimits.ts) :
+
+| Feature | free | monthly (9€) | yearly (90€) | **monthly+ (29€)** | **yearly+ (290€)** | lifetime / beta |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| Quiz actifs | 1 | illim | illim | illim | illim | illim |
+| Sondages actifs | 1 | illim | illim | illim | illim | illim |
+| Popquizz | 1 | illim | illim | illim | illim | illim |
+| Réponses captées visibles | 10 / mois | illim | illim | illim | illim | illim |
+| Custom footer | ✗ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Clés Systeme.io | 1 max | **1 max** | **1 max** | illim | illim | illim |
+| Multiprofils (plusieurs comptes) | ✗ | ✗ | ✗ | **✓** | **✓** | ✓ |
+| **Analyse IA des résultats** (quiz ET sondages) | ✗ | ✗ | ✗ | **✓** | **✓** | ✓ |
+
+### Fichiers à mettre à jour :
+
+- **`PRODUCT_BRIEF.md`** : ajouter les 2 paliers + (29€/290€) avec la
+  matrice ci-dessus. Le mensuel ET l'annuel normaux ne peuvent
+  connecter qu'**1 seule clé** Systeme.io. L'analyse IA couvre
+  désormais quiz ET sondages. Beta et lifetime = équivalent + (tout débloqué).
 - **`copywriting-claude/Sequence-activation-testeurs-gratuits-Tiquiz.md`** :
   mettre à jour la grille de prix dans la séquence email.
 - **`copywriting-claude/article-blog-affiliation-tiquiz.md`** : recalculer
   les rentes affiliés en intégrant les nouveaux paliers 29/290.
 - **Pages /pricing et /upgrade** côté UI marketing : ajouter monthly+ /
   yearly+ avec les bénéfices comparatifs.
-- **Cahier des charges** : documenter la matrice features par plan
-  (multiprofils, analyse IA, multi-clés SIO) et la sémantique
-  "compte secondaire = compte neuf" (cf. CLAUDE_PITFALLS.md).
-
-Source de vérité prix CODE = `lib/planLimits.ts:PRICING_PLUS`.
+- **Cahier des charges** : documenter la matrice complète et la
+  sémantique "compte secondaire = compte neuf" (cf. CLAUDE_PITFALLS.md).
 
 ---
 

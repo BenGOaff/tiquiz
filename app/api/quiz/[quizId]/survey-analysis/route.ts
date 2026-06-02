@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import {
-  canUseSurveyAI,
+  canUseAIAnalysis,
   shouldShowPlusUpsell,
   PRICING_PLUS,
 } from "@/lib/planLimits";
@@ -44,7 +44,7 @@ async function resolvePlanContext(userId: string, email: string | null) {
     .maybeSingle();
   const plan = (profile as { plan?: string | null } | null)?.plan ?? null;
   return {
-    eligible: canUseSurveyAI(plan, { userId, email }),
+    eligible: canUseAIAnalysis(plan, { userId, email }),
     // True pour monthly/yearly → UI affiche un upsell vers mensuel+/annuel+
     // au lieu du simple "Bientôt disponible".
     showUpsell: shouldShowPlusUpsell(plan),
@@ -110,7 +110,7 @@ export async function POST(
       {
         ok: false,
         error: "PLAN_REQUIRED",
-        message: `L'analyse IA des résultats est réservée aux plans ${PRICING_PLUS.monthlyPlus.label} (${PRICING_PLUS.monthlyPlus.price}) et ${PRICING_PLUS.yearlyPlus.label} (${PRICING_PLUS.yearlyPlus.price}).`,
+        message: `L'analyse IA des résultats (quiz et sondages) est réservée aux plans ${PRICING_PLUS.monthlyPlus.label} (${PRICING_PLUS.monthlyPlus.price}) et ${PRICING_PLUS.yearlyPlus.label} (${PRICING_PLUS.yearlyPlus.price}).`,
       },
       { status: 403 },
     );

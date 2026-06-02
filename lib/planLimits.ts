@@ -75,7 +75,9 @@ export function isPaidPlan(plan: string | null | undefined): boolean {
 }
 
 /**
- * Analyse IA des sondages — feature PREMIUM Tiquiz (Béné juin 2026).
+ * Analyse IA des résultats — feature PREMIUM Tiquiz couvrant
+ * SONDAGES et QUIZ (Béné 2 juin 2026, après-midi : "Analyse IA c'est
+ * pour les sondages ET les quiz").
  *
  * Accès via :
  *   - plans premium = beta, lifetime, monthly_plus, yearly_plus
@@ -83,11 +85,11 @@ export function isPaidPlan(plan: string | null | undefined): boolean {
  *   - allowlist env TIQUIZ_SURVEY_AI_ALLOWLIST (IDs/emails séparés par
  *     virgule) pour tests ciblés sans toucher au code.
  *
- * Les plans monthly/yearly VOIENT la feature dans l'UI mais ne peuvent
- * pas l'utiliser (CTA upgrade vers monthly_plus/yearly_plus). Cf.
- * shouldShowPlusUpsell.
+ * Les plans free/monthly/yearly VOIENT la feature dans l'UI mais ne
+ * peuvent pas l'utiliser (CTA upgrade vers monthly_plus/yearly_plus).
+ * Cf. shouldShowPlusUpsell.
  */
-export function canUseSurveyAI(
+export function canUseAIAnalysis(
   plan: string | null | undefined,
   opts?: { userId?: string | null; email?: string | null },
 ): boolean {
@@ -106,6 +108,13 @@ export function canUseSurveyAI(
   }
   return false;
 }
+
+/**
+ * @deprecated Renommé en canUseAIAnalysis (l'analyse IA couvre maintenant
+ * quiz ET sondages, plus seulement les sondages). Alias conservé pour
+ * compat des call-sites qui n'auraient pas encore été mis à jour.
+ */
+export const canUseSurveyAI = canUseAIAnalysis;
 
 /**
  * Multiprofils — feature PREMIUM Tiquiz (Béné juin 2026).
@@ -157,22 +166,22 @@ export const FREE_LIMITS = {
 } as const;
 
 /**
- * Limite du nombre de clés Systeme.io connectées par USER (Béné 2 juin 2026 :
- * "Le mensuel normal ne peut connecter qu'une seule clé API Systeme.io").
+ * Limite du nombre de clés Systeme.io connectées par USER (Béné 2 juin 2026
+ * — correction du 2/06 après-midi : "Yearly normal : une seule clé api
+ * systeme io aussi").
  *
  * Renvoie true si le plan permet PLUSIEURS clés API SIO.
- *   - free, monthly → false (= 1 clé max, refus à la 2e via POST /api/sio-api-keys)
- *   - yearly → true (l'annuel garde les multi-clés, statu quo)
+ *   - free, monthly, yearly → false (= 1 clé max, refus à la 2e via
+ *     POST /api/sio-api-keys)
  *   - lifetime, beta, monthly_plus, yearly_plus → true (premium tout débloqué)
  *
- * Cohérent avec l'esprit "engagement = bonus features" (annuel et premium
- * ont l'extra). Le multi-clés reste utile pour les funnel-builders qui
- * gèrent plusieurs workspaces Systeme.io (un par client, par exemple).
+ * Le multi-clés reste l'apanage des plans PREMIUM (+) — pour les
+ * funnel-builders qui gèrent plusieurs workspaces Systeme.io (un par
+ * client, par exemple).
  */
 export function canConnectMultipleSioKeys(plan: string | null | undefined): boolean {
   const s = (plan ?? "").trim().toLowerCase();
-  if (s === "" || s === "free" || s === "monthly") return false;
-  return true;
+  return isPremiumPlan(s);
 }
 
 /**

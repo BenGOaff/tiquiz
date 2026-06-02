@@ -163,6 +163,14 @@ const EXPECTED = [
     table: "sio_api_keys",
     columns: ["project_id"],
   },
+
+  // ── Plan + CHECK constraint étendu (paliers mensuel+ / annuel+) ─
+  // On ne peut pas tester directement une CHECK constraint via SELECT.
+  // Le seul test pratique : tenter d'INSERT/UPDATE plan='monthly_plus'
+  // sur un row dummy et constater 23514 = constraint pas appliquée.
+  // Comme un INSERT casse l'idempotence, on documente seulement ici —
+  // l'invariant DB est verifié manuellement par Béné en testant un
+  // achat SIO sur le bon de commande mensuel+ (voir webhook).
 ];
 
 /**

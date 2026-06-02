@@ -491,8 +491,9 @@ export function ProjectSwitcher() {
               <span className="font-semibold">Tiquiz mensuel+</span>
               {" "}(<span className="font-semibold">29€/mois</span>) ou{" "}
               <span className="font-semibold">annuel+</span>{" "}
-              (<span className="font-semibold">290€/an</span>), qui incluent
-              aussi l&apos;analyse IA des sondages.
+              (<span className="font-semibold">290€/an</span>), qui
+              incluent aussi l&apos;analyse IA des résultats (quiz et
+              sondages) et plusieurs clés API Systeme.io.
             </p>
             <p className="text-[12px] italic text-muted-foreground/80">
               Les bons de commande sont en préparation — on te prévient dès
