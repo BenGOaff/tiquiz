@@ -12,6 +12,7 @@
     "smoke:multiprofils": "node scripts/smoke-multiprofils.mjs",
     "diag:multiprofils": "node scripts/diagnose-multiprofils.mjs",
     "check:schema": "node scripts/check-schema.mjs",
+    "check:migrations-pending": "node scripts/check-pending-migrations.mjs",
     "test:webhook": "node scripts/test-webhook-routing.mjs",
     "audit:stats": "node scripts/audit-stats.mjs"
   },
