@@ -45,6 +45,11 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterQuiz, setFilterQuiz] = useState<string>("all");
+  // Filtre KPI clic-sur-card (Gwenn 2 juin 2026 : "c'est possible de
+  // cliquer sur Non synchronisés et que ça nous montre les leads
+  // concernés ?"). Toggle : 2e clic sur la même card revient à "all".
+  type KpiFilter = "all" | "synced" | "not_synced" | "this_month";
+  const [kpiFilter, setKpiFilter] = useState<KpiFilter>("all");
   const [quizzes, setQuizzes] = useState<{ id: string; title: string }[]>([]);
   const [syncing, setSyncing] = useState<Set<string>>(new Set());
   const [plan, setPlan] = useState<string>("free");
@@ -69,6 +74,17 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
     if (filterQuiz !== "all") {
       result = result.filter((l) => l.quiz_id === filterQuiz);
     }
+    if (kpiFilter === "synced") {
+      result = result.filter((l) => l.sio_synced === true);
+    } else if (kpiFilter === "not_synced") {
+      result = result.filter((l) => l.sio_synced !== true);
+    } else if (kpiFilter === "this_month") {
+      const now = new Date();
+      result = result.filter((l) => {
+        const d = new Date(l.created_at);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      });
+    }
     if (search.trim()) {
       const s = search.toLowerCase();
       result = result.filter(
@@ -79,7 +95,7 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
       );
     }
     return result;
-  }, [leads, filterQuiz, search]);
+  }, [leads, filterQuiz, kpiFilter, search]);
 
   // Split into unlocked (rendered in the table) and locked (single blurred
   // block with one cadenas + CTA below). Server already returned `••••••`
@@ -199,27 +215,48 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
         </select>
       </div>
 
-      {/* Stats cards — tinted by category so the eye lands on
-          actionable rows (not-synced) immediately. */}
+      {/* Stats cards — cliquables pour filtrer la liste en dessous
+          (Gwenn 2 juin 2026). Toggle : 2e clic sur la même card
+          enlève le filtre. Card active = ring colorée. */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: t("stats.total"), value: leads.length, icon: Users, bg: "bg-primary/10", fg: "text-primary" },
-          { label: t("stats.syncedSio"), value: leads.filter((l) => l.sio_synced).length, icon: CheckCircle2, bg: "bg-emerald-100 dark:bg-emerald-900/30", fg: "text-emerald-600 dark:text-emerald-300" },
-          { label: t("stats.notSynced"), value: leads.filter((l) => !l.sio_synced).length, icon: XCircle, bg: "bg-amber-100 dark:bg-amber-900/30", fg: "text-amber-600 dark:text-amber-300" },
-          { label: t("stats.thisMonth"), value: leads.filter((l) => new Date(l.created_at).getMonth() === new Date().getMonth()).length, icon: Calendar, bg: "bg-sky-100 dark:bg-sky-900/30", fg: "text-sky-600 dark:text-sky-300" },
-        ].map(({ label, value, icon: Icon, bg, fg }) => (
-          <Card key={label} className="hover:shadow-card-hover transition-shadow">
-            <CardContent className="py-4 flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center`}>
-                <Icon className={`h-4 w-4 ${fg}`} />
-              </div>
-              <div>
-                <p className="text-2xl font-bold tabular-nums">{value}</p>
-                <p className="text-xs text-muted-foreground">{label}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {(
+          [
+            { key: "all" as KpiFilter, label: t("stats.total"), value: leads.length, icon: Users, bg: "bg-primary/10", fg: "text-primary", ring: "ring-primary" },
+            { key: "synced" as KpiFilter, label: t("stats.syncedSio"), value: leads.filter((l) => l.sio_synced).length, icon: CheckCircle2, bg: "bg-emerald-100 dark:bg-emerald-900/30", fg: "text-emerald-600 dark:text-emerald-300", ring: "ring-emerald-500" },
+            { key: "not_synced" as KpiFilter, label: t("stats.notSynced"), value: leads.filter((l) => !l.sio_synced).length, icon: XCircle, bg: "bg-amber-100 dark:bg-amber-900/30", fg: "text-amber-600 dark:text-amber-300", ring: "ring-amber-500" },
+            { key: "this_month" as KpiFilter, label: t("stats.thisMonth"), value: leads.filter((l) => new Date(l.created_at).getMonth() === new Date().getMonth() && new Date(l.created_at).getFullYear() === new Date().getFullYear()).length, icon: Calendar, bg: "bg-sky-100 dark:bg-sky-900/30", fg: "text-sky-600 dark:text-sky-300", ring: "ring-sky-500" },
+          ]
+        ).map(({ key, label, value, icon: Icon, bg, fg, ring }) => {
+          const isActive = kpiFilter === key;
+          return (
+            <Card
+              key={label}
+              role="button"
+              tabIndex={0}
+              aria-pressed={isActive}
+              onClick={() => setKpiFilter(isActive ? "all" : key)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setKpiFilter(isActive ? "all" : key);
+                }
+              }}
+              className={`hover:shadow-card-hover transition-all cursor-pointer ${
+                isActive ? `ring-2 ${ring} ring-offset-2` : ""
+              }`}
+            >
+              <CardContent className="py-4 flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center`}>
+                  <Icon className={`h-4 w-4 ${fg}`} />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold tabular-nums">{value}</p>
+                  <p className="text-xs text-muted-foreground">{label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Table — only renders unlocked leads. Locked leads are corralled
@@ -248,7 +285,7 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
                 variant="outline"
                 size="sm"
                 className="rounded-full mt-2"
-                onClick={() => { setSearch(""); setFilterQuiz("all"); }}
+                onClick={() => { setSearch(""); setFilterQuiz("all"); setKpiFilter("all"); }}
               >
                 {t("clearFilters")}
               </Button>

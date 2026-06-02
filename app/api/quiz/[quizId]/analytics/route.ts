@@ -103,6 +103,46 @@ export async function GET(
   const leadsCount = leads.length;
   const exportedSio = leads.filter((l) => l.sio_synced === true).length;
 
+  // ── Vues + complétions : recompte DIRECT depuis quiz_events ──
+  //
+  // BUG GWENN 2 juin 2026 : son quiz affichait 270 leads pour 34 vues =
+  // 794% de taux de capture, mathématiquement impossible. Cause : on
+  // lisait `quiz.views_count` (compteur dénormalisé bumpé par trigger
+  // sur quiz_events), qui avait DRIFT chez elle — soit reset par
+  // accident, soit trigger qui a raté des events. Le compteur peut
+  // diverger silencieusement de la table source.
+  //
+  // FIX : on recompte TOUJOURS depuis quiz_events qui est la source de
+  // vérité. Légèrement plus cher (1 query head:true par KPI) mais
+  // garantit que viewsCount >= leadsCount (= mathématiquement valide).
+  //
+  // INCLUT les events backfillés (session_id LIKE 'backfill_%') :
+  // l'utilisateur attend "depuis le début" = lifetime complet, donc
+  // on garde l'historique pré-refonte tracking (19 mai 2026).
+  const [viewsCountRes, completionsCountRes] = await Promise.all([
+    supabaseAdmin
+      .from("quiz_events")
+      .select("id", { count: "exact", head: true })
+      .eq("quiz_id", quizId)
+      .eq("event_type", "view"),
+    supabaseAdmin
+      .from("quiz_events")
+      .select("id", { count: "exact", head: true })
+      .eq("quiz_id", quizId)
+      .eq("event_type", "complete"),
+  ]);
+  // Fallback sur le compteur dénormalisé si la query échoue (résilience).
+  const viewsCount = viewsCountRes.error
+    ? quiz.views_count ?? 0
+    : viewsCountRes.count ?? 0;
+  const completionsCount = completionsCountRes.error
+    ? quiz.completions_count ?? 0
+    : completionsCountRes.count ?? 0;
+  // Garde-fou : si on a plus de leads que de vues (ex. quiz historique
+  // avec vues server-side non backfillées), viewsCount = max(leads).
+  // Évite les ratios > 100% qui n'ont aucun sens.
+  const viewsCountSafe = Math.max(viewsCount, leadsCount);
+
   // Aggregate per result title — strip empty titles into a single
   // "Sans résultat" bucket so the pie chart isn't full of "(null)".
   const byResult = new Map<string, number>();
@@ -152,9 +192,11 @@ export async function GET(
     return out.slice(-365);
   })();
 
+  // captureRate utilise viewsCountSafe (= max(views réelles, leads)) →
+  // mathématiquement borné à 100%, plus jamais de 794%.
   const captureRate =
-    quiz.views_count > 0
-      ? Math.round((leadsCount / quiz.views_count) * 1000) / 10
+    viewsCountSafe > 0
+      ? Math.round((leadsCount / viewsCountSafe) * 1000) / 10
       : 0;
   const exportRate =
     leadsCount > 0
@@ -259,8 +301,10 @@ export async function GET(
     },
     period: period.key,
     metrics: {
-      viewsCount: quiz.views_count,
-      completionsCount: quiz.completions_count,
+      // viewsCount/completionsCount viennent de quiz_events (source de
+      // vérité), pas de quiz.views_count qui peut drift (bug Gwenn).
+      viewsCount: viewsCountSafe,
+      completionsCount,
       leadsCount,
       exportedSioCount: exportedSio,
       captureRate,

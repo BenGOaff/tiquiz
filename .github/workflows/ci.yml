@@ -47,6 +47,23 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+      - name: Build production (next build)
+        # ⚠️ CRITIQUE — la panne 2 juin après-midi (Tiquiz prod en boucle
+        # de restart à cause d'un Cannot find module @playwright/test
+        # pendant le build) AURAIT été détectée ici. Sans cette étape,
+        # un fichier .ts qui passe `tsc --noEmit` peut quand même casser
+        # `next build` (typecheck Next 16 est plus strict + résolution
+        # modules différente). Le CI ne fait CONFIANCE qu'à un vrai build.
+        #
+        # Env vars dummy pour les vars NEXT_PUBLIC requises au build —
+        # à compléter si Next 16 demande explicitement quelque chose.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
       - name: Validate .mjs script syntax
         run: |
           for f in scripts/*.mjs; do
