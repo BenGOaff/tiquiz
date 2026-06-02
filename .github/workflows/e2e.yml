@@ -1,0 +1,67 @@
+name: E2E Playwright
+
+# Tests Playwright sur les routes publiques critiques Tiquiz (/q/, /p/,
+# /pq/). Port du workflow Tipote. Pas dans le CI principal car install
+# Chromium = 2 min : trop cher pour chaque push. À la place :
+#
+#   - schedule : 1x/jour à 3h UTC (= 4h Paris hiver / 5h été)
+#     → détecte les régressions silencieuses (Supabase schema cache,
+#       CDN, migration en retard, etc.) même quand on n'a rien pushé.
+#       LE FILET QUI AURAIT ATTRAPÉ LA PANNE 2 JUIN MATIN.
+#   - workflow_dispatch : Béné peut lancer manuellement depuis
+#     l'onglet Actions de GitHub (utile post-deploy)
+#
+# Secrets à configurer dans GitHub → Settings → Secrets and variables
+# → Actions :
+#   - SMOKE_QUIZ_ID         (slug ou UUID d'un quiz actif en prod Tiquiz)
+#   - SMOKE_POPQUIZ_ID      (id d'un popquiz actif)
+#   - SMOKE_PAGE_SLUG       (slug d'une page active)
+#   - BASE_URL              (https://quiz.tipote.com par défaut, override)
+#
+# Si un secret manque : tests correspondants SKIPPÉS — pas d'échec.
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "URL cible (par défaut https://quiz.tipote.com)"
+        required: false
+        default: ""
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        env:
+          BASE_URL: ${{ inputs.base_url || secrets.BASE_URL || 'https://quiz.tipote.com' }}
+          SMOKE_QUIZ_ID: ${{ secrets.SMOKE_QUIZ_ID }}
+          SMOKE_POPQUIZ_ID: ${{ secrets.SMOKE_POPQUIZ_ID }}
+          SMOKE_PAGE_SLUG: ${{ secrets.SMOKE_PAGE_SLUG }}
+        run: npm run test:e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
