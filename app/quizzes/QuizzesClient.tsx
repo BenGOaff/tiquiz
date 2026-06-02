@@ -227,7 +227,13 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
     let best: { id: string; rate: number } | null = null;
     for (const p of projects) {
       if (p.starts_count < 5) continue;
-      const rate = (p.leads_count ?? 0) / p.starts_count;
+      const leads = p.leads_count ?? 0;
+      // Garde-fou cohérence (cf. Béné 2 juin) : si starts < leads, le
+      // tracking de starts a raté → le ratio leads/starts donnerait un
+      // chiffre absurde (5520% chez Gwenn). On exclut ces quiz du classement
+      // "TOP" plutôt que de les couronner sur des données fausses.
+      if (p.starts_count < leads) continue;
+      const rate = leads / p.starts_count;
       if (rate <= 0) continue;
       if (!best || rate > best.rate) best = { id: p.id, rate };
     }
@@ -446,8 +452,15 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
             <div className="grid gap-4">
               {filteredList.map((p) => {
                 const leads = p.leads_count ?? 0;
+                // Taux de conversion = leads / starts. AVANT, on affichait
+                // bêtement le ratio même quand starts << leads (tracking
+                // raté → starts_count = 5 alors que 276 leads avaient été
+                // captés → 5520% absurde). MAINTENANT, on n'affiche le
+                // taux QUE si starts >= leads (cohérent physiquement) ;
+                // sinon on cache complètement la mention (même posture
+                // honnête que le captureRate de la page analytics).
                 const rate =
-                  p.starts_count > 0
+                  p.starts_count > 0 && p.starts_count >= leads
                     ? Math.round((leads / p.starts_count) * 100)
                     : 0;
                 const isSurvey = p.mode === "survey";

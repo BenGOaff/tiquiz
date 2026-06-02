@@ -32,6 +32,7 @@ function parsePeriod(raw: string | null): { key: PeriodKey; sinceISO: string | n
 
 interface LeadRow {
   created_at: string;
+  result_id: string | null;
   result_title: string | null;
   sio_synced: boolean | null;
 }
@@ -107,9 +108,13 @@ export async function GET(
     .eq("sio_synced", true);
 
   // Leads de la PÉRIODE (pour time-series + distribution uniquement).
+  // On select result_id pour pouvoir grouper sur la clé STABLE (pas le
+  // titre figé à la capture) — cf. bug 2 juin 2026 : 233/276 leads
+  // bucketisés "Sans résultat" parce que result_title était null en base,
+  // et profils renommés non répercutés sur les stats.
   let leadsQuery = supabase
     .from("quiz_leads")
-    .select("created_at, result_title, sio_synced")
+    .select("created_at, result_id, result_title, sio_synced")
     .eq("quiz_id", quizId)
     .order("created_at", { ascending: true })
     .limit(5000);
@@ -165,24 +170,64 @@ export async function GET(
       ? Math.round((leadsCount / viewsCount) * 1000) / 10
       : null;
 
-  // Aggregate per result title — strip empty titles into a single
-  // "Sans résultat" bucket so the pie chart isn't full of "(null)".
-  // (Sur la période sélectionnée — répond au sélecteur.)
-  const byResult = new Map<string, number>();
+  // Distribution par résultat — refonte 2 juin 2026 (Béné).
+  //
+  // AVANT : on groupait par result_title (snapshot stocké au moment de la
+  // capture). Deux conséquences fausses observées en prod :
+  //   1. Si un lead a result_id rempli mais result_title null/vide (bug
+  //      historique sur certains parcours), il tombait dans "Sans résultat"
+  //      alors qu'il a en fait un résultat → chez Gwenn 233/276 = 84% bucketisés
+  //      "Sans résultat" alors que tous ont un profil.
+  //   2. Si Béné renomme un profil dans l'éditeur, les leads passés gardent
+  //      leur ancien titre figé → la légende du donut affiche l'ancien nom.
+  //
+  // FIX : on groupe par result_id (clé STABLE), et on résout le titre
+  // actuel depuis quiz_results au moment du rendu. Le snapshot result_title
+  // ne sert plus que de fallback pour les leads orphelins (result_id null
+  // = profil supprimé depuis, ON DELETE SET NULL — cf. migration 030).
+  const { data: currentResults } = await supabaseAdmin
+    .from("quiz_results")
+    .select("id, title")
+    .eq("quiz_id", quizId);
+  const currentTitleById = new Map<string, string>(
+    (currentResults ?? []).map((r) => [r.id as string, (r.title as string) ?? ""]),
+  );
+
+  const NO_RESULT_KEY = "__no_result__";
+  // Une entrée par bucket : count + libellé courant + le snapshot le plus
+  // récent (pour les leads dont le profil a été supprimé depuis).
+  type Bucket = { count: number; snapshotTitle: string | null };
+  const byResult = new Map<string, Bucket>();
   for (const l of leads) {
-    const key = (l.result_title ?? "").trim() || "Sans résultat";
-    byResult.set(key, (byResult.get(key) ?? 0) + 1);
+    const key = l.result_id ?? NO_RESULT_KEY;
+    const b = byResult.get(key) ?? { count: 0, snapshotTitle: null };
+    b.count += 1;
+    if (!b.snapshotTitle && l.result_title && l.result_title.trim()) {
+      b.snapshotTitle = l.result_title.trim();
+    }
+    byResult.set(key, b);
   }
+
   // pct sur le total des leads DE LA PÉRIODE (leads.length), pas sur le
   // lifetime — sinon la somme des pct ne ferait pas 100% quand le
   // sélecteur de période réduit l'échantillon.
   const periodLeadsTotal = leads.length;
   const resultDistribution = Array.from(byResult.entries())
-    .map(([title, count]) => ({
-      title,
-      count,
-      pct: periodLeadsTotal > 0 ? Math.round((count / periodLeadsTotal) * 1000) / 10 : 0,
-    }))
+    .map(([key, b]) => {
+      // Priorité au titre LIVE (depuis quiz_results) ; fallback sur le
+      // snapshot stocké à la capture pour les profils supprimés depuis.
+      const live = key !== NO_RESULT_KEY ? currentTitleById.get(key) : undefined;
+      const title =
+        (live && live.trim()) || b.snapshotTitle || "Sans résultat";
+      return {
+        title,
+        count: b.count,
+        pct:
+          periodLeadsTotal > 0
+            ? Math.round((b.count / periodLeadsTotal) * 1000) / 10
+            : 0,
+      };
+    })
     .sort((a, b) => b.count - a.count);
 
   // Daily series. Bucketing en jour LOCAL du créateur (tzOffset) — clés
