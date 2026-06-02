@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   canUseMultiProjects,
   shouldShowPlusUpsell,
+  PRICING_PLUS,
 } from "@/lib/planLimits";
 import { createEmptyBusinessProfileForProject } from "@/lib/projects/businessProfile";
 import {
@@ -81,8 +82,7 @@ export async function POST(req: NextRequest) {
       {
         ok: false,
         error: "PLAN_REQUIRED",
-        message:
-          "La création de plusieurs projets est réservée aux plans Tiquiz mensuel+ et annuel+. Passe au palier supérieur pour débloquer.",
+        message: `La création de plusieurs projets est réservée aux plans ${PRICING_PLUS.monthlyPlus.label} (${PRICING_PLUS.monthlyPlus.price}) et ${PRICING_PLUS.yearlyPlus.label} (${PRICING_PLUS.yearlyPlus.price}).`,
       },
       { status: 403 },
     );

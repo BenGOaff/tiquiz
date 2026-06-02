@@ -9,7 +9,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { canUseSurveyAI, shouldShowPlusUpsell } from "@/lib/planLimits";
+import {
+  canUseSurveyAI,
+  shouldShowPlusUpsell,
+  PRICING_PLUS,
+} from "@/lib/planLimits";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
@@ -106,8 +110,7 @@ export async function POST(
       {
         ok: false,
         error: "PLAN_REQUIRED",
-        message:
-          "L'analyse IA des résultats est réservée aux plans Tiquiz mensuel+ et annuel+. Passe au palier supérieur pour débloquer.",
+        message: `L'analyse IA des résultats est réservée aux plans ${PRICING_PLUS.monthlyPlus.label} (${PRICING_PLUS.monthlyPlus.price}) et ${PRICING_PLUS.yearlyPlus.label} (${PRICING_PLUS.yearlyPlus.price}).`,
       },
       { status: 403 },
     );

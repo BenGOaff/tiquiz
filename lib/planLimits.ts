@@ -156,3 +156,40 @@ export const FREE_LIMITS = {
   visibleLeadsPerMonth: 10,
 } as const;
 
+/**
+ * Limite du nombre de clés Systeme.io connectées par USER (Béné 2 juin 2026 :
+ * "Le mensuel normal ne peut connecter qu'une seule clé API Systeme.io").
+ *
+ * Renvoie true si le plan permet PLUSIEURS clés API SIO.
+ *   - free, monthly → false (= 1 clé max, refus à la 2e via POST /api/sio-api-keys)
+ *   - yearly → true (l'annuel garde les multi-clés, statu quo)
+ *   - lifetime, beta, monthly_plus, yearly_plus → true (premium tout débloqué)
+ *
+ * Cohérent avec l'esprit "engagement = bonus features" (annuel et premium
+ * ont l'extra). Le multi-clés reste utile pour les funnel-builders qui
+ * gèrent plusieurs workspaces Systeme.io (un par client, par exemple).
+ */
+export function canConnectMultipleSioKeys(plan: string | null | undefined): boolean {
+  const s = (plan ?? "").trim().toLowerCase();
+  if (s === "" || s === "free" || s === "monthly") return false;
+  return true;
+}
+
+/**
+ * Prix publics des paliers premium « + » (Béné 2 juin 2026). Utilisés
+ * dans les messages d'upsell (PATCH /api/projects 403, POST
+ * /api/sio-api-keys 403, dialog ProjectSwitcher, panneau Survey AI).
+ *
+ * Source de vérité unique pour ne pas que les prix divergent entre les
+ * différents messages d'erreur côté API et l'UI.
+ */
+export const PRICING_PLUS = {
+  monthlyPlus: { label: "Tiquiz mensuel+", price: "29€/mois" },
+  yearlyPlus: { label: "Tiquiz annuel+", price: "290€/an" },
+} as const;
+
+/** Texte standard pour les messages d'upsell vers les plans + */
+export function plusUpsellText(): string {
+  return `Passe en ${PRICING_PLUS.monthlyPlus.label} (${PRICING_PLUS.monthlyPlus.price}) ou ${PRICING_PLUS.yearlyPlus.label} (${PRICING_PLUS.yearlyPlus.price}) pour débloquer.`;
+}
+

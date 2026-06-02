@@ -9,8 +9,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { sioUserRequest } from "@/lib/sio/userApiClient";
 import { createKey, listKeys } from "@/lib/sio/keysRepo";
+import { canConnectMultipleSioKeys, PRICING_PLUS } from "@/lib/planLimits";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +44,41 @@ export async function POST(req: NextRequest) {
 
     if (!name) return NextResponse.json({ ok: false, error: "NAME_REQUIRED" }, { status: 400 });
     if (!apiKey) return NextResponse.json({ ok: false, error: "KEY_REQUIRED" }, { status: 400 });
+
+    // Plan gate (Béné 2 juin 2026) : free + monthly = 1 clé Systeme.io
+    // max. Yearly et plus = illimité. On compte les clés EXISTANTES de
+    // l'user (toutes projets confondus — pour empêcher le contournement
+    // via la création de projets multiples, qui de toute façon est
+    // bloqué pour ces plans via canUseMultiProjects).
+    try {
+      const { data: planRow } = await supabaseAdmin
+        .from("profiles")
+        .select("plan")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      const plan = (planRow as { plan?: string | null } | null)?.plan ?? null;
+      if (!canConnectMultipleSioKeys(plan)) {
+        const { count } = await supabaseAdmin
+          .from("sio_api_keys")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id);
+        if ((count ?? 0) >= 1) {
+          return NextResponse.json(
+            {
+              ok: false,
+              error: "PLAN_REQUIRED",
+              message: `Le plan mensuel est limité à 1 clé Systeme.io connectée. Passe en ${PRICING_PLUS.monthlyPlus.label} (${PRICING_PLUS.monthlyPlus.price}) ou ${PRICING_PLUS.yearlyPlus.label} (${PRICING_PLUS.yearlyPlus.price}) pour en connecter plusieurs.`,
+              limit: 1,
+            },
+            { status: 403 },
+          );
+        }
+      }
+    } catch (planErr) {
+      // Fail-open : si on n'arrive pas à vérifier le plan, on laisse
+      // créer (mieux que bloquer un user payant par erreur).
+      console.error("[sio-api-keys POST] plan check failed", planErr);
+    }
 
     // Live-validate against Systeme.io. /tags is cheap, paginated, and
     // returns 401 on a bad key — perfect canary endpoint.

@@ -175,9 +175,11 @@ export default function SurveyResultsPanel({
             {state.showUpsell ? (
               <p className="text-sm text-foreground pl-6">
                 Disponible dans les plans{" "}
-                <span className="font-semibold">Tiquiz mensuel+</span> et{" "}
-                <span className="font-semibold">annuel+</span>, qui incluent
-                aussi les multiprofils.{" "}
+                <span className="font-semibold">Tiquiz mensuel+</span>
+                {" "}(<span className="font-semibold">29€/mois</span>) ou{" "}
+                <span className="font-semibold">annuel+</span>{" "}
+                (<span className="font-semibold">290€/an</span>), qui
+                incluent aussi les multiprofils.{" "}
                 <span className="italic text-muted-foreground">
                   Les bons de commande sont en préparation — on te prévient.
                 </span>

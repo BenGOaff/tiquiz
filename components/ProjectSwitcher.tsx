@@ -487,8 +487,11 @@ export function ProjectSwitcher() {
               (coaching, formation, e-commerce) que tu ne veux pas mélanger.
             </p>
             <p className="text-foreground">
-              Disponible dans les plans <span className="font-semibold">Tiquiz mensuel+</span>{" "}
-              et <span className="font-semibold">annuel+</span>, qui incluent
+              Disponible dans les plans{" "}
+              <span className="font-semibold">Tiquiz mensuel+</span>
+              {" "}(<span className="font-semibold">29€/mois</span>) ou{" "}
+              <span className="font-semibold">annuel+</span>{" "}
+              (<span className="font-semibold">290€/an</span>), qui incluent
               aussi l&apos;analyse IA des sondages.
             </p>
             <p className="text-[12px] italic text-muted-foreground/80">

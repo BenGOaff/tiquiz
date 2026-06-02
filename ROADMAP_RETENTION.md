@@ -7,6 +7,30 @@
 
 ---
 
+## 📝 TODO BÉNÉ — MISE À JOUR DOCUMENTATION PRODUIT (2 juin 2026)
+
+Suite aux changements pricing + features du 2 juin, à mettre à jour
+manuellement (copywriting, pas du code) :
+
+- **`PRODUCT_BRIEF.md`** : ajouter les paliers Tiquiz mensuel+ (29€/mois)
+  et Tiquiz annuel+ (290€/an). Mentionner que ces paliers incluent
+  multiprofils + analyse IA des sondages + clés API SIO illimitées.
+  Le mensuel normal (9€) ne peut connecter qu'**1 seule clé** Systeme.io.
+  Beta et lifetime = équivalent monthly_plus / yearly_plus (tout débloqué).
+- **`copywriting-claude/Sequence-activation-testeurs-gratuits-Tiquiz.md`** :
+  mettre à jour la grille de prix dans la séquence email.
+- **`copywriting-claude/article-blog-affiliation-tiquiz.md`** : recalculer
+  les rentes affiliés en intégrant les nouveaux paliers 29/290.
+- **Pages /pricing et /upgrade** côté UI marketing : ajouter monthly+ /
+  yearly+ avec les bénéfices comparatifs.
+- **Cahier des charges** : documenter la matrice features par plan
+  (multiprofils, analyse IA, multi-clés SIO) et la sémantique
+  "compte secondaire = compte neuf" (cf. CLAUDE_PITFALLS.md).
+
+Source de vérité prix CODE = `lib/planLimits.ts:PRICING_PLUS`.
+
+---
+
 ## 🔖 POINT D'ÉTAPE TIQUIZ — reprendre ici (dernière session : 1er juin 2026)
 
 > Point d'étape complet (2 apps) dans `tipote-app/ROADMAP_RETENTION.md`.
