@@ -84,6 +84,26 @@ function ko(label, detail) {
  * Format : { migration: filename, table: name, columns: string[] }
  */
 const EXPECTED = [
+  // ── Tracking foundation (CAUSE PANNE STATS 18 mai → 2 juin 2026) ─
+  // Le /track fait un INSERT direct dans quiz_events avec meta +
+  // session_id. Si ces colonnes manquent (migration en retard), AUCUNE
+  // vue/start/complete n'est trackée en silence → stats fausses.
+  {
+    migration: "022_quiz_events_meta",
+    table: "quiz_events",
+    columns: ["meta"],
+  },
+  {
+    migration: "20260521_tracking_foundation",
+    table: "quiz_events",
+    columns: ["session_id"],
+  },
+  {
+    migration: "20260507_quiz_question_events",
+    table: "quiz_question_events",
+    columns: ["quiz_id", "question_index", "session_id", "event"],
+  },
+
   // ── Multiprofils foundation (juin 2026) ─────────────────────────
   {
     migration: "20260603_multiprofils_foundation",

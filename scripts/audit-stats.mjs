@@ -195,18 +195,55 @@ async function main() {
     }
     await auditOne(quiz);
   } else {
-    // Top 20 quiz par views_count (les plus actifs = les plus à risque)
+    // Top quiz par NOMBRE DE LEADS (pas par views_count !). Le quiz de
+    // Gwenn a 270 leads mais seulement 34 views_count — trier par views
+    // ne le ferait PAS remonter. On agrège les leads par quiz_id côté JS
+    // (PostgREST ne fait pas de GROUP BY simple), en paginant quiz_leads
+    // pour rester robuste même avec beaucoup de leads.
+    console.log("  Recherche des quiz avec le plus de leads…");
+    const leadCounts = new Map(); // quiz_id -> count
+    const PAGE = 1000;
+    let offset = 0;
+    for (;;) {
+      const { data: page, error } = await supa
+        .from("quiz_leads")
+        .select("quiz_id")
+        .range(offset, offset + PAGE - 1);
+      if (error) {
+        console.error("Erreur lecture quiz_leads :", error.message);
+        break;
+      }
+      if (!page || page.length === 0) break;
+      for (const row of page) {
+        if (!row.quiz_id) continue;
+        leadCounts.set(row.quiz_id, (leadCounts.get(row.quiz_id) ?? 0) + 1);
+      }
+      if (page.length < PAGE) break;
+      offset += PAGE;
+    }
+
+    const topQuizIds = Array.from(leadCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([id]) => id);
+
+    if (topQuizIds.length === 0) {
+      console.log("Aucun lead trouvé dans quiz_leads.");
+      process.exit(0);
+    }
+
     const { data: quizzes } = await supa
       .from("quizzes")
       .select("id, title, slug, mode, status, created_at, views_count, starts_count, completions_count, shares_count")
-      .order("views_count", { ascending: false, nullsFirst: false })
-      .limit(20);
-    if (!quizzes || quizzes.length === 0) {
-      console.log("Aucun quiz trouvé.");
-      process.exit(0);
-    }
-    console.log(`  Audit des ${quizzes.length} quiz les plus actifs.`);
-    for (const q of quizzes) {
+      .in("id", topQuizIds);
+
+    // Re-trier dans l'ordre du nombre de leads (le .in ne préserve pas l'ordre).
+    const byId = new Map((quizzes ?? []).map((q) => [q.id, q]));
+    const ordered = topQuizIds.map((id) => byId.get(id)).filter(Boolean);
+
+    console.log(`  Audit des ${ordered.length} quiz avec le PLUS DE LEADS (= les plus à risque d'incohérence).`);
+    for (const q of ordered) {
+      console.log(`\n  >>> ${leadCounts.get(q.id)} leads pour ce quiz <<<`);
       await auditOne(q);
     }
   }

@@ -117,7 +117,7 @@ async function isDuplicate(
   sessionId: string,
 ): Promise<boolean> {
   const since = new Date(Date.now() - DEDUP_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("quiz_events")
     .select("id")
     .eq("quiz_id", quizId)
@@ -126,6 +126,10 @@ async function isDuplicate(
     .gte("created_at", since)
     .limit(1)
     .maybeSingle();
+  // Si la colonne session_id manque (migration en retard), cette query
+  // erreure. On retourne false (= pas un doublon) pour laisser l'INSERT
+  // se faire : mieux vaut un éventuel double-comptage que zéro tracking.
+  if (error) return false;
   return !!data;
 }
 
@@ -230,13 +234,42 @@ export async function POST(req: NextRequest, context: RouteContext) {
       // migrations 021/022/20260521) → l'appel RPC pouvait échouer en silence
       // (l'erreur n'était jamais lue) → 0 démarrage/complétion/partage compté.
       // L'insert direct est le MÊME chemin fiable que quiz_question_events.
-      const { error: insErr } = await supabaseAdmin.from("quiz_events").insert({
-        quiz_id: quizId,
-        event_type: event as ProjectEvent,
-        meta: body.meta ?? null,
-        session_id: sessionId,
-      });
-      if (insErr) console.error("[track] quiz_events insert failed", event, insErr);
+      //
+      // RÉSILIENCE MIGRATION (bug 18 mai → 2 juin 2026) : les colonnes
+      // `meta` (022) et `session_id` (20260521) sont ajoutées par migration.
+      // Si une migration est EN RETARD en prod, l'INSERT complet échoue
+      // (column does not exist) → 0 vue/start/complete trackés EN SILENCE
+      // pendant des semaines (c'est exactement ce qui s'est passé : aucune
+      // vue trackée après le 18 mai). On retombe maintenant sur un INSERT
+      // MINIMAL (quiz_id + event_type, colonnes garanties depuis 021) pour
+      // que le tracking fonctionne TOUJOURS, même si une migration manque.
+      let insErr: { message?: string; code?: string } | null = null;
+      {
+        const full = await supabaseAdmin.from("quiz_events").insert({
+          quiz_id: quizId,
+          event_type: event as ProjectEvent,
+          meta: body.meta ?? null,
+          session_id: sessionId,
+        });
+        if (full.error) {
+          // Fallback : INSERT minimal (sans meta/session_id). Le trigger
+          // bumpe quand même views_count. On perd la dédup par session
+          // mais c'est INFINIMENT mieux que zéro tracking.
+          console.error(
+            "[track] insert complet KO (colonne manquante ? migration en retard) →",
+            event,
+            full.error.message,
+          );
+          const minimal = await supabaseAdmin.from("quiz_events").insert({
+            quiz_id: quizId,
+            event_type: event as ProjectEvent,
+          });
+          if (minimal.error) {
+            insErr = minimal.error;
+            console.error("[track] insert minimal KO aussi", event, minimal.error.message);
+          }
+        }
+      }
 
       // Log business_event pour les events à valeur (complete, share).
       // view/start non loggés (haute fréquence — Wall of Wins les lit
