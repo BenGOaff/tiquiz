@@ -10,7 +10,8 @@
     "lint": "eslint",
     "smoke": "bash scripts/smoke-public-routes.sh",
     "smoke:multiprofils": "node scripts/smoke-multiprofils.mjs",
-    "diag:multiprofils": "node scripts/diagnose-multiprofils.mjs"
+    "diag:multiprofils": "node scripts/diagnose-multiprofils.mjs",
+    "check:schema": "node scripts/check-schema.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
