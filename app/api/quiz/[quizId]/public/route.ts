@@ -354,8 +354,12 @@ export async function GET(req: NextRequest, context: RouteContext) {
     // owner exclusion + insert via log_quiz_event RPC qui passe par
     // le trigger pour bumper le compteur. Source de vérité unique.
 
-    const { user_id: _uid, ...quizPublic } = quizRow;
+    // Strip user_id ET project_id : ce sont des infos internes
+    // (multiprofils) qui n'ont rien à faire dans la réponse publique
+    // servie aux visiteurs anonymes des quiz en ligne.
+    const { user_id: _uid, project_id: _pid, ...quizPublic } = quizRow;
     void _uid;
+    void _pid;
 
     // Pixel effectif : si le quiz n'a aucun ID, on fallback sur les
     // défauts du profil. Sinon poser le pixel dans /settings n'aurait

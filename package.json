@@ -8,7 +8,9 @@
     "postbuild": "node scripts/postbuild-standalone-static.cjs",
     "start": "next start",
     "lint": "eslint",
-    "smoke": "bash scripts/smoke-public-routes.sh"
+    "smoke": "bash scripts/smoke-public-routes.sh",
+    "smoke:multiprofils": "node scripts/smoke-multiprofils.mjs",
+    "diag:multiprofils": "node scripts/diagnose-multiprofils.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

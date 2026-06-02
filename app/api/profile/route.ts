@@ -149,51 +149,12 @@ export async function PATCH(req: NextRequest) {
       // servis via un custom domain. Cf. migration 20260519.
       "share_site_name",
     ];
-    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
-    for (const key of allowed) {
-      if (key in body) updates[key] = body[key];
-    }
-
-    // saved_palettes : on n'utilise pas Zod ici (cohérence avec le
-    // reste de la route), donc on valide à la main avant d'écrire.
-    if ("saved_palettes" in updates) {
-      updates.saved_palettes = sanitisePalettes(updates.saved_palettes);
-    }
-
-    // share_site_name : trim + cap 60 chars + null si vide. Pas de HTML
-    // sanitization avancée (on l'injecte tel quel dans og:site_name et
-    // le <title> — Next.js l'escape automatiquement, donc safe).
-    if ("share_site_name" in updates) {
-      const raw = updates.share_site_name;
-      if (raw === null || raw === undefined) {
-        updates.share_site_name = null;
-      } else if (typeof raw !== "string") {
-        return NextResponse.json(
-          { ok: false, error: "share_site_name doit être une string ou null" },
-          { status: 400 },
-        );
-      } else {
-        const trimmed = raw.trim().slice(0, 60);
-        updates.share_site_name = trimmed.length > 0 ? trimmed : null;
-      }
-    }
-
-    const { data: profile, error } = await supabaseAdmin
-      .from("profiles")
-      .update(updates)
-      .eq("user_id", user.id)
-      .select("*")
-      .single();
-
-    if (error) {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
-    }
-
-    // Multiprofils Tiquiz : si l'user a multiprofils débloqué ET que
-    // le patch contient des champs branding/positioning, on écrit AUSSI
-    // dans business_profiles du projet actif → "nouveau branding" par
-    // projet. On garde le write sur profiles (single source of truth
-    // pour les non-multiprofils + défaut de fallback).
+    // Multiprofils Tiquiz : on lit le plan UNE FOIS pour décider où
+    // route chaque champ. Les champs branding/positioning vont sur
+    // business_profile du projet actif (pour les multiprofils) OU sur
+    // profiles (pour les autres plans). Les autres champs (full_name,
+    // locale, etc.) vont TOUJOURS sur profiles (= global par user).
+    let isMultiprofils = false;
     try {
       const { data: planRow } = await supabaseAdmin
         .from("profiles")
@@ -201,29 +162,109 @@ export async function PATCH(req: NextRequest) {
         .eq("user_id", user.id)
         .maybeSingle();
       const plan = (planRow as { plan?: string | null } | null)?.plan ?? null;
-      const eligible = canUseMultiProjects(plan, {
+      isMultiprofils = canUseMultiProjects(plan, {
         userId: user.id,
         email: user.email ?? null,
       });
-      if (eligible) {
-        const bpPatch: Record<string, unknown> = {};
-        for (const key of PROJECT_SCOPED_FIELDS) {
-          if (key in updates) bpPatch[key] = updates[key];
-        }
-        if (Object.keys(bpPatch).length > 0) {
-          const projectId = await resolveProjectIdForInsert(user.id);
-          if (projectId) {
-            // L'edit explicite des champs branding marque l'onboarding
-            // de ce projet comme effectué (l'user a customisé).
-            bpPatch.onboarding_completed = true;
-            await upsertBrandingForProject(user.id, projectId, bpPatch);
-          }
+    } catch {
+      // Fail-open : si on n'arrive pas à lire le plan, on agit comme
+      // non-multiprofils (= comportement legacy, écrit dans profiles).
+      isMultiprofils = false;
+    }
+
+    const profilesUpdates: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+    const bpUpdates: Record<string, unknown> = {};
+    const isBrandingKey = (k: string) =>
+      (PROJECT_SCOPED_FIELDS as readonly string[]).includes(k);
+
+    for (const key of allowed) {
+      if (!(key in body)) continue;
+      let val = body[key];
+
+      // saved_palettes : sanitisation hex/forme.
+      if (key === "saved_palettes") val = sanitisePalettes(val);
+
+      // share_site_name : trim + cap 60 chars + null si vide.
+      if (key === "share_site_name") {
+        if (val === null || val === undefined) {
+          val = null;
+        } else if (typeof val !== "string") {
+          return NextResponse.json(
+            { ok: false, error: "share_site_name doit être une string ou null" },
+            { status: 400 },
+          );
+        } else {
+          const trimmed = (val as string).trim().slice(0, 60);
+          val = trimmed.length > 0 ? trimmed : null;
         }
       }
-    } catch (err) {
-      // Best-effort : on n'échoue pas l'API profile si le write
-      // business_profile a un souci. profile reste à jour côté legacy.
-      console.error("[profile PATCH] business_profile write failed", err);
+
+      // ROUTING : multiprofils + champ branding → business_profile only.
+      // Sinon → profiles. JAMAIS de double-write : un seul "source of
+      // truth" par (user, projet) pour les champs branding.
+      if (isMultiprofils && isBrandingKey(key)) {
+        bpUpdates[key] = val;
+      } else {
+        profilesUpdates[key] = val;
+      }
+    }
+
+    // Écrire profiles uniquement si on a des champs à modifier au-delà
+    // de updated_at (sinon on bumpe updated_at à vide → polluant).
+    let profile: unknown = null;
+    if (Object.keys(profilesUpdates).length > 1) {
+      const { data, error } = await supabaseAdmin
+        .from("profiles")
+        .update(profilesUpdates)
+        .eq("user_id", user.id)
+        .select("*")
+        .single();
+
+      if (error) {
+        return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+      }
+      profile = data;
+    } else {
+      // Aucun champ profiles à modifier : on relit pour avoir la row
+      // courante (utile au client pour l'overlay côté UI).
+      const { data } = await supabaseAdmin
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      profile = data ?? null;
+    }
+
+    // Écrire business_profile du projet actif si patch branding.
+    if (isMultiprofils && Object.keys(bpUpdates).length > 0) {
+      try {
+        const projectId = await resolveProjectIdForInsert(user.id);
+        if (projectId) {
+          // L'edit explicite marque l'onboarding du projet comme fait.
+          bpUpdates.onboarding_completed = true;
+          const result = await upsertBrandingForProject(user.id, projectId, bpUpdates);
+          if (!result.ok) {
+            console.error("[profile PATCH] business_profile write failed", result.error);
+          } else if (result.row && profile) {
+            // Merge le résultat dans la réponse pour que le client voie
+            // immédiatement les nouvelles valeurs (overlay synchrone),
+            // sans devoir re-fetch GET /api/profile.
+            const merged: Record<string, unknown> = { ...(profile as Record<string, unknown>) };
+            for (const key of PROJECT_SCOPED_FIELDS) {
+              const v = (result.row as unknown as Record<string, unknown>)[key];
+              if (v !== null && v !== undefined) merged[key] = v;
+            }
+            merged.business_profile_onboarding_completed = result.row.onboarding_completed;
+            merged.business_profile_project_id = result.row.project_id;
+            profile = merged;
+          }
+        }
+      } catch (err) {
+        console.error("[profile PATCH] business_profile write threw", err);
+        // Best-effort : on n'échoue pas l'API. Le client refetchera.
+      }
     }
 
     return NextResponse.json({ ok: true, profile });
