@@ -1,8 +1,23 @@
-# CAHIER DES CHARGES Tiquiz — Mise à jour Mai 2026
+# CAHIER DES CHARGES Tiquiz — Mise à jour Juin 2026
 
 Application Web SaaS multilingue (FR/EN/ES/IT/AR) de création de quiz interactifs pour capture de leads, avec intégration Systeme.io et génération IA.
 
 **Tiquiz est la version allégée de Tipote**, focalisée uniquement sur les quiz, l'IA et Systeme.io. Pas de coach IA, pas de crédits IA, pas de réseaux sociaux, pas d'automations, pas de pages builder.
+
+> **Notes de version Juin 2026** — sprint multiprofils + paliers + + outillage défensif :
+>
+> - **Multiprofils Tiquiz (7 phases livrées)** : un utilisateur peut désormais gérer plusieurs "projets" (= comptes virtuels isolés). Nouvelle table `projects` (id, user_id, name, is_default, accent_color, icon_emoji, use_branding_logo). Colonne `project_id UUID NULL` ajoutée à `quizzes`, `popquizzes`, `business_events`, `user_milestones` (FK `ON DELETE SET NULL` pour préserver les contenus publiés quand un projet est supprimé). `business_profiles` est désormais per `(user, project)` et porte tout le branding (logo, couleurs, palettes sauvées) + positionnement (ton de marque, audience cible) + pixels par défaut (Meta pixel, GA4, Google Ads, Meta CAPI, share domain, OG site name). `sio_api_keys` étendu avec `project_id` + `UNIQUE(user_id, project_id, name)` + index partiel "1 default par (user, project) WHERE is_default=true". Cookie `tiquiz_active_project` (httpOnly=false pour parité Tipote + lecture client). Sémantique stricte (Béné 2 juin) : **un nouveau projet démarre VIDE** (stats à zéro, branding vierge, pas d'héritage des réglages des autres comptes). Filtrage actif via `getActiveProjectScope(userId, email)` gate par `canUseMultiProjects(plan)` — seuls les paliers premium débloquent l'isolation, le free/monthly/yearly conserve le comportement legacy mono-projet.
+> - **Paliers premium "+"** : ajout des plans **monthly_plus (29€/mois)** et **yearly_plus (290€/an)** qui débloquent multiprofils + analyse IA des résultats + multi-clés Systeme.io. Le plan `lifetime` (57€, offre fermée) reste équivalent à monthly_plus / yearly_plus pour récompenser les early adopters. Le plan `beta` est accordé manuellement par Béné et débloque tout. Source de vérité prix : `lib/planLimits.ts:PRICING_PLUS`. Helpers : `isPremiumPlan()` (beta + lifetime + monthly_plus + yearly_plus), `canUseMultiProjects(plan)`, `canUseAIAnalysis(plan)` (anciennement `canUseSurveyAI`, alias conservé), `canConnectMultipleSioKeys(plan)`, `shouldShowPlusUpsell(plan)` (true pour monthly/yearly → affiche CTA upgrade). Migration `20260608_plan_plus_check.sql` étend `profiles_plan_check` pour accepter `monthly_plus`, `yearly_plus`, `beta` (avant : free/monthly/yearly/lifetime uniquement).
+> - **Webhook SIO upgrade/downgrade auto (1 clic)** : depuis Settings → Abonnement, l'utilisateur clique "Passer à Mensuel+" → checkout SIO du nouveau plan. Le webhook `ORDER_NEW` upsert `profiles.plan = nouveau`, déclenche un **auto-cancel des anciens subs SIO** via l'API (`cancelSubscription` "Now"), et pose `profiles.expected_sio_cancel_until = NOW() + 24h`. Le `SALE_CANCELED` de l'ancien sub arrive plus tard et est **ignoré** par le webhook tant que le flag est dans le futur (anti double-downgrade). Migration `20260609_profiles_expected_sio_cancel.sql`. Tous les sens couverts (free → +, monthly → +, monthly+ → yearly+, downgrade…). Logique d'inférence dans `lib/sio/webhookInference.ts` (module pur, testable) : **URL d'abord** (source de vérité depuis juin 2026, ex. `tipote.fr/tiquiz-mensuel-plus`), `offer-price-id` en fallback (anciens bons numériques uniques). Tous les nouveaux bons SIO partagent le même `offerprice-dc9c3e75` → matching par URL obligatoire.
+> - **Templates v2** : passage de 8 à **15 templates** dans `lib/templates/catalog.ts`. 7 nouveaux modèles coachs : croyance-limitante (mindset), rapport-nourriture (nutrition), fuites-energie (sommeil & énergie), style-parental (parentalité), schema-amoureux (couple), blocage-reconversion, rapport-argent (finance). Format constant : 6 questions × 4 options + 4 résultats, ton chaleureux, tutoiement, pas de jargon coach.
+> - **Auto-instanciation post-signup** : nouveau composant `components/dashboard/FirstQuizOnboarding.tsx` affiché dans le dashboard quand `quizzes.length === 0`. 6 templates phares en cartes (emoji + titre + métier + tagline). 1 clic → `POST /api/quiz` avec le payload du template → redirect `/quiz/[id]` en édition. Fallbacks "Voir les 15 modèles" (`/templates`) et "Partir de zéro" (`/quiz/new`). Effet : passage de "signup → éditeur vide intimidant" à "signup → quiz prêt à publier en 10 secondes".
+> - **Fix bug stats Gwenn (2 juin)** : `/api/quiz/[id]/analytics/route.ts` recompte désormais `viewsCount` et `completionsCount` **directement depuis `quiz_events`** au lieu de lire `quizzes.views_count` (compteur dénormalisé qui drift dans le temps). Garde-fou : `viewsCount = max(events.view, leadsCount)` pour éviter des ratios > 100% (Gwenn voyait 270 leads pour 34 vues = 794%).
+> - **KPI cards cliquables dans `/leads`** : clic sur "Non synchronisés" / "Synchronisés SIO" / "Ce mois" / "Total" filtre la liste. 2e clic enlève le filtre. Ring colorée quand actif.
+> - **Hotfix Opus 4.7+ rejette `temperature`** (1er juin) : Anthropic a retiré les sampling params sur Opus 4.7/4.8. Centralisation dans `lib/claudeRequest.ts:buildClaudeMessageBody()` (source unique). Tier Opus bumpé 4.7 → 4.8 dans `lib/anthropicModel.ts`.
+> - **Hotfix Playwright build prod (2 juin)** : `tsconfig.json` exclut désormais `playwright.config.ts` et `tests/e2e/**` (sinon `@playwright/test` non installé en prod fait planter `npm run build`). CI Tiquiz lance maintenant `npm run build` complet en plus du typecheck (filet anti-régression).
+> - **Renommage `canUseSurveyAI` → `canUseAIAnalysis`** : couvre désormais quiz ET sondages (Béné 2 juin : "Analyse IA c'est pour les sondages ET les quiz"). Alias rétrocompat conservé. Le helper `lib/survey/analysis.ts` est conservé et sera étendu côté quiz prochainement (roadmap).
+> - **Outillage défensif (scripts npm)** : `check:schema` (détecte les migrations en retard, 9 migrations multiprofils vérifiées), `diag:multiprofils` (11 invariants DB), `smoke:multiprofils` (11 tests E2E workflow Settings → isolation projets), `test:webhook` (28 cas de routing webhook sans payer 1€), `test:e2e` (Playwright sur `/q/`, `/p/`, `/pq/`), `smoke` (routes publiques legacy bash). Nouvel endpoint admin `POST /api/admin/webhook-dry-run` (header `X-Dry-Run-Secret = SYSTEME_IO_WEBHOOK_SECRET`) pour rejouer un payload SIO sans toucher la DB.
+> - **CI GitHub Actions** : `.github/workflows/ci.yml` (typecheck + `npm run build` + smoke syntax scripts à chaque push) ; `.github/workflows/e2e.yml` (Playwright en schedule daily 3h UTC + `workflow_dispatch`). Variables GitHub non-secrets : `SMOKE_QUIZ_ID`, `SMOKE_POPQUIZ_ID`, `SMOKE_PAGE_SLUG`, `BASE_URL`.
 
 > **Notes de version 17 mai 2026** — sprint custom-domains :
 >
@@ -47,7 +62,11 @@ Tiquiz est un outil de création de quiz lead magnets, ultra simple côté utili
 
 - Création de quiz manuellement ou par **génération IA** (Claude Anthropic, streaming SSE)
 - **Brainstorm IA conversationnel** (`/api/quiz/idea-chat`, Claude Haiku) pour dégrossir un brief avant génération
-- **Module Popquiz** (Mai 2026) : vidéo (YouTube / Vimeo / upload TUS resumable jusqu'à 2 GB) avec quiz interactifs incrustés à des timestamps précis. Embed iframe `/embed/p/{id}` pour intégration externe (WordPress, Systeme.io…). Auto-activation des quiz référencés à la publication du popquiz. Plan gratuit limité à 1 popquiz
+- **Multiprofils** (juin 2026 — paliers + uniquement) : 1 user → N projets isolés (quiz, leads, stats, branding, clés SIO indépendants). Switch en 1 clic via header. Voir §4bis
+- **Analyse IA des résultats** (juin 2026 — paliers + uniquement) : synthèse Claude des réponses agrégées, quiz + sondages. Helper `lib/survey/analysis.ts`
+- **15 templates métier** (`lib/templates/catalog.ts`, juin 2026) : 7 nouveaux modèles coachs (croyance-limitante, rapport-nourriture, fuites-energie, style-parental, schema-amoureux, blocage-reconversion, rapport-argent) + 8 historiques (profil-entrepreneur, moteur-interieur, style-yoga, terrain-naturo, pret-a-lancer-formation, levier-croissance-marketing, style-photo, pret-premier-achat-immo). Format : 6 questions × 4 options + 4 résultats
+- **Auto-instanciation post-signup** : dashboard vide → 6 templates phares en cartes → 1 clic publie le premier quiz (composant `components/dashboard/FirstQuizOnboarding.tsx`)
+- **Module Popquiz** (Mai 2026) : vidéo (YouTube / Vimeo / upload TUS resumable jusqu'à 20 GB depuis 8 mai) avec quiz interactifs incrustés à des timestamps précis. Embed iframe `/embed/p/{id}` pour intégration externe (WordPress, Systeme.io…). Auto-activation des quiz référencés à la publication du popquiz. Plan gratuit limité à 1 popquiz
 - **Éditeur WYSIWYG live** : sidebar multi-onglets (Structure / Design / Paramètres / Partage) + preview temps réel, switch mobile/desktop, édition inline sur tous les textes, champs rich-text (gras, italique, liens, images, alignement) pour intro / description / insight / projection
 - **Branding par quiz** : police Google (whitelist), couleur principale, couleur de fond, logo — héritage du profil avec override au niveau du quiz
 - **URL courte personnalisée** par quiz (`slug` → `/q/{slug}`, sanitisée + anti-collision avec UUID)
@@ -64,7 +83,7 @@ Tiquiz est un outil de création de quiz lead magnets, ultra simple côté utili
 - Back-office admin minimaliste (`/admin` réservé aux emails whitelistés)
 - Monétisation freemium via webhooks Systeme.io
 
-### 1.3. Ce que Tiquiz N'A PAS (vs Tipote)
+### 1.3. Ce que Tiquiz N'A PAS (vs Tipote) — mis à jour juin 2026
 
 - Pas de coach IA
 - Pas de crédits IA / consommation
@@ -74,11 +93,11 @@ Tiquiz est un outil de création de quiz lead magnets, ultra simple côté utili
 - Pas de stratégie / plan d'action
 - Pas de clients / accompagnements
 - Pas de widgets (toast, partage social)
-- Pas d'analytics avancés
 - Pas de templates Systeme.io
-- Pas d'admin backoffice
 - Pas de notifications
 - Pas de pépites
+- Tiquiz hérite désormais (juin 2026) du **multiprofils** (paliers premium uniquement) et d'une **analyse IA des résultats** (paliers premium uniquement) — alignement de feature avec Tipote sur le périmètre quiz/sondage, mais Tiquiz reste focalisé sur le module quiz+popquiz+sondage uniquement (pas de coach, pas de pages, pas de réseaux)
+- **Admin backoffice existant** (`/admin` + `/api/admin/users` + `/api/admin/webhook-dry-run`) — réservé aux emails whitelistés
 
 ---
 
@@ -246,19 +265,32 @@ Quand un lead soumet le quiz, l'API `POST /api/quiz/[quizId]/public` effectue en
 
 Quand un lead valide un partage (anti-triche passé : navigator.share / popup dwell / copy-confirm), l'API `PATCH /api/quiz/[quizId]/public` applique `quizzes.sio_share_tag_name` au contact, déclenchant l'automation de bonus côté Systeme.io. Le lead est marqué `has_shared = true` et `bonus_unlocked = true`.
 
-### 4.4. Webhooks entrants
+### 4.4. Webhooks entrants (mis à jour juin 2026)
 
 **Webhook ventes (`/api/systeme-io/webhook?secret=XXX`) :**
 
-- Événements : `NEW_SALE`, `SALE_CANCELED`
-- NEW_SALE : crée compte Supabase + profil avec plan + envoie magic link
-- SALE_CANCELED : downgrade vers free (sauf lifetime, jamais downgrade)
-- Mapping offer_id → plan (à configurer avec les vrais IDs SIO)
+- Événements : `NEW_SALE` (alias `ORDER_NEW`), `SALE_CANCELED`
+- `NEW_SALE` :
+  1. Inférence du plan via `lib/sio/webhookInference.ts` : URL d'abord (source de vérité), `offer-price-id` en fallback (tous les nouveaux bons partagent `offerprice-dc9c3e75` — voir §5.3)
+  2. Crée le compte Supabase (si nouveau) + envoie magic link
+  3. Upsert `profiles.plan = nouveau`
+  4. **Auto-cancel des anciens subs SIO** du même user via `cancelSubscription("Now")` (anti double-facturation)
+  5. Pose `profiles.expected_sio_cancel_until = NOW() + 24h`
+- `SALE_CANCELED` :
+  - Si `profiles.expected_sio_cancel_until` est dans le futur → **ignoré** (c'est le cancel attendu de l'ancien sub suite à un upgrade en 1 clic, on ne touche pas au plan)
+  - Sinon : downgrade selon règles (jamais downgrade `lifetime`, etc.)
+- Module `lib/sio/webhookInference.ts` : module pur, testable, 28 cas couverts par `npm run test:webhook` (sans toucher la DB)
+- Endpoint admin `POST /api/admin/webhook-dry-run` (header `X-Dry-Run-Secret = SYSTEME_IO_WEBHOOK_SECRET`) pour rejouer un payload SIO sans toucher la DB — utilisé pour reproduire les cas terrain
 
 **Webhook optin gratuit (`/api/systeme-io/free-optin?secret=XXX`) :**
 
 - Crée compte en plan "free" + envoie magic link
 - Ne downgrade jamais un utilisateur payant
+
+**Migrations associées :**
+
+- `20260608_plan_plus_check.sql` — étend `profiles_plan_check` pour accepter `monthly_plus | yearly_plus | beta` (avant : `free | monthly | yearly | lifetime` uniquement)
+- `20260609_profiles_expected_sio_cancel.sql` — `ALTER TABLE profiles ADD COLUMN expected_sio_cancel_until TIMESTAMPTZ`
 
 ### 4.5. Client API SIO
 
@@ -269,18 +301,164 @@ Quand un lead valide un partage (anti-triche passé : navigator.share / popup dw
 
 ---
 
-## 5. MONÉTISATION
+## 4bis. MULTIPROFILS (juin 2026)
+
+### 4bis.1. Modèle de données
+
+**Nouvelle table `projects`** (1 row par projet, ≥ 1 par user) :
+
+```sql
+projects (
+  id          uuid PK default gen_random_uuid(),
+  user_id     uuid NOT NULL REFERENCES auth.users ON DELETE CASCADE,
+  name        text NOT NULL,
+  is_default  boolean NOT NULL DEFAULT false,
+  accent_color text,         -- palette 10 couleurs (lib/projects/visualIdentity.ts)
+  icon_emoji  text,          -- palette 20 emojis (lib/projects/visualIdentity.ts)
+  use_branding_logo boolean DEFAULT false,
+  created_at  timestamptz DEFAULT now()
+);
+-- Index partiel : 1 seul projet par défaut par user
+CREATE UNIQUE INDEX projects_one_default_per_user
+  ON projects (user_id) WHERE is_default = true;
+```
+
+**Colonne `project_id UUID NULL` ajoutée sur** :
+
+- `quizzes`
+- `popquizzes`
+- `business_events`
+- `user_milestones`
+
+FK `ON DELETE SET NULL` — préserve les contenus en ligne quand un projet est supprimé (le quiz repasse sur le projet par défaut sans casser son URL publique).
+
+**`business_profiles`** : devient per `(user_id, project_id)` (UNIQUE composite). Porte désormais tout le branding **et** le positionnement **et** les défauts pixel :
+
+- Branding : `brand_logo_url`, `brand_color_primary`, `brand_color_accent`, `brand_font`, `brand_website_url`, `saved_palettes`
+- Positionnement : `brand_tone`, `target_audience`
+- Pixels defaults : `default_meta_pixel_id`, `default_ga4_measurement_id`, `default_google_ads_conversion_id`, `default_google_ads_conversion_label`, `default_meta_capi_token`
+- Partage : `default_share_domain`, `share_site_name`
+
+**`sio_api_keys`** étendu :
+
+- Nouvelle colonne `project_id`
+- `UNIQUE(user_id, project_id, name)`
+- Index partiel "1 default par (user, project) WHERE is_default=true"
+
+### 4bis.2. Sémantique critique (Béné 2 juin 2026)
+
+> « Comme sur Tipote — nouveau projet = nouveau compte. Stats à zéro, nouveau branding, nouveau positionnement, etc. Les comptes secondaires ne doivent PAS hériter des réglages des autres comptes. Profil normal VIDE. »
+
+- Settings UI pour un projet multiprofils → **override TOTAL** des champs branding (compte secondaire = vide à customiser)
+- Viewer public (`/q/`, `/p/`) → override **NON-NULL** uniquement via `mergeOwnerBranding` (filet de sécurité, un quiz en ligne ne doit jamais perdre son branding visuellement même si le projet associé est vide)
+
+### 4bis.3. Cookie & session
+
+- Cookie : `tiquiz_active_project` (httpOnly=false pour lecture client + parité avec `tipote_active_project`)
+- `SessionResetGate` : force le cookie sur le projet `is_default = true` à chaque nouvelle session navigateur (filet anti-erreur — pas de "je me suis trompé de projet hier soir et je travaille dessus sans m'en rendre compte ce matin")
+
+### 4bis.4. UI
+
+- `ProjectSwitcher` dans le header — dropdown avec identité visuelle (`accent_color` + `icon_emoji`)
+- `ProjectIdentityBadge` (affichage compact) + `ProjectIdentityEditor` (Dialog "Modifier")
+- Palettes : 10 couleurs d'accent + 20 emojis (`lib/projects/visualIdentity.ts`)
+- Danger-zone delete : recopie obligatoire du nom du projet
+
+### 4bis.5. API
+
+| Route | Méthode | Description |
+|:------|:--------|:------------|
+| `/api/projects` | GET | Liste les projets de l'user |
+| `/api/projects` | POST | Crée un projet |
+| `/api/projects/[projectId]` | PATCH | Rename + visual identity (couleur + emoji) |
+| `/api/projects/[projectId]` | DELETE | Supprime (les contenus en ligne passent en projet par défaut) |
+| `/api/projects/active` | GET | Renvoie le projet actif (cookie) |
+| `/api/projects/active` | POST | Switch projet actif |
+
+### 4bis.6. Helpers
+
+`lib/projects/` :
+
+- `client.ts` — appels API depuis le client
+- `activeProject.ts` — lecture/écriture du cookie côté serveur
+- `ensureDefaultProject.ts` — garantit qu'un user a toujours au moins 1 projet `is_default`
+- `upsertByProject.ts` — patterns d'upsert scopé par projet
+- `visualIdentity.ts` — palettes (10 couleurs + 20 emojis)
+- `businessProfile.ts` — lecture/écriture du business_profile per (user, project)
+- `scopeFilter.ts` — `getActiveProjectScope(userId, email)` : retourne le projet actif gate par `canUseMultiProjects(plan)`. Free/monthly/yearly = comportement legacy (pas de filtrage). Premium = isolation stricte par projet
+- `queries.ts` — helpers query Supabase project-aware
+
+### 4bis.7. Gates plan
+
+Seuls les paliers premium débloquent l'isolation multiprofils (cf. §5.2). Les paliers non-premium voient toujours **tous** leurs contenus comme avant (rétrocompat 100%).
+
+### 4bis.8. Diagnostic & smoke
+
+- `npm run diag:multiprofils` — 11 invariants DB :
+  - Tous les users ont au moins 1 projet
+  - Exactement 1 `is_default = true` par user
+  - Tout `quiz.project_id` pointe sur un projet du même user
+  - `sio_api_keys` UNIQUE par `(user, project, name)`
+  - … (cf. script pour la liste complète)
+- `npm run smoke:multiprofils` — 11 tests E2E workflow Settings → isolation projets
+- `npm run check:schema` — détecte les migrations en retard (9 migrations multiprofils vérifiées)
+
+---
+
+## 5. MONÉTISATION (mis à jour juin 2026)
 
 ### 5.1. Plans
 
-| Plan | Prix | Limites |
-|:-----|:-----|:--------|
-| Free | 0€ | 1 quiz max, 10 réponses/mois (auto-reset 30j) |
-| Lifetime | 57€ | Illimité |
-| Monthly | 9€/mois | Illimité |
-| Yearly | 90€/an | Illimité |
+Valeur `profiles.plan` ∈ `{ free, monthly, yearly, monthly_plus, yearly_plus, lifetime, beta }` (CHECK constraint étendu par `20260608_plan_plus_check.sql`).
 
-### 5.2. Quota free
+| Plan | Prix | Quiz / sondages / popquiz | Réponses visibles | Clés SIO | Multiprofils | Analyse IA |
+|:-----|:-----|:--------------------------|:------------------|:---------|:-------------|:-----------|
+| `free` | 0€ | 1 max chaque | 10/mois (auto-reset 30j) | 1 max | ✗ | ✗ |
+| `monthly` | 9€/mois | illimité | illimité | **1 max** | ✗ | ✗ |
+| `yearly` | 90€/an | illimité | illimité | **1 max** | ✗ | ✗ |
+| `monthly_plus` | **29€/mois** | illimité | illimité | illimité | ✓ | ✓ |
+| `yearly_plus` | **290€/an** | illimité | illimité | illimité | ✓ | ✓ |
+| `lifetime` | 57€ (offre fermée) | illimité | illimité | illimité | ✓ | ✓ |
+| `beta` | accordé manuellement | illimité | illimité | illimité | ✓ | ✓ |
+
+### 5.2. Source de vérité prix (code)
+
+- `lib/planLimits.ts:PRICING_PLUS` — prix affichables (UI Settings → Abonnement, upsells)
+- `lib/planLimits.ts:isPremiumPlan(plan)` → `true` pour `beta | lifetime | monthly_plus | yearly_plus`
+- `lib/planLimits.ts:canUseMultiProjects(plan)` → équivalent à `isPremiumPlan()`
+- `lib/planLimits.ts:canUseAIAnalysis(plan)` → idem (anciennement `canUseSurveyAI`, alias conservé pour rétrocompat)
+- `lib/planLimits.ts:canConnectMultipleSioKeys(plan)` → équivalent à `isPremiumPlan()`
+- `lib/planLimits.ts:shouldShowPlusUpsell(plan)` → `true` pour `monthly | yearly` (affichage CTA upgrade dans l'UI)
+
+### 5.3. Bons de commande Systeme.io
+
+Tous les bons partagent désormais le même `offer-price-id` (`offerprice-dc9c3e75`) → matching par URL obligatoire :
+
+| URL Systeme.io | Plan cible |
+|:---|:---|
+| `tipote.fr/tiquiz-gratuit` | `free` |
+| `tipote.fr/tiquiz-mensuel` | `monthly` |
+| `tipote.fr/tiquiz-annuel` | `yearly` |
+| `tipote.fr/tiquiz-mensuel-plus` | `monthly_plus` |
+| `tipote.fr/tiquiz-annuel-plus` | `yearly_plus` |
+
+Logique d'inférence dans `lib/sio/webhookInference.ts` (module pur, testable, 28 cas couverts par `npm run test:webhook`) :
+
+1. URL d'abord (source de vérité depuis juin 2026)
+2. `offer-price-id` en fallback (anciens bons numériques uniques)
+
+### 5.4. Switch d'abonnement en 1 clic
+
+Depuis Settings → Abonnement, l'utilisateur clique le plan cible → checkout SIO. À réception du `ORDER_NEW` :
+
+1. `profiles.plan = nouveau plan`
+2. Auto-cancel des anciens subs SIO du même user via `cancelSubscription("Now")`
+3. `profiles.expected_sio_cancel_until = NOW() + 24h` (migration `20260609_profiles_expected_sio_cancel.sql`)
+4. Le `SALE_CANCELED` de l'ancien sub arrive plus tard → **ignoré** tant que `expected_sio_cancel_until` est dans le futur (anti double-downgrade)
+
+Tous les sens couverts : free → +, monthly → +, monthly+ → yearly+, downgrade. Pas de double-facturation. Pas de chevauchement.
+
+### 5.5. Quota free
 
 - RPC `increment_response_count()` : incrémente le compteur + vérifie la limite
 - RPC `reset_monthly_responses()` : reset admin
@@ -378,7 +556,14 @@ Systeme.io (webhook vente/optin) → Supabase Auth + profiles
 
 **Profil :**
 
-- `profiles` — user_id, email, full_name, first_name, last_name, ui_locale, address_form, privacy_url, sio_user_api_key, sio_api_key_name, plan, product_id, sio_contact_id, responses_used_this_month, responses_reset_at, **brand_font, brand_color_primary, brand_logo_url** (branding par défaut utilisé en fallback par les quiz)
+- `profiles` — user_id, email, full_name, first_name, last_name, ui_locale, address_form, privacy_url, sio_user_api_key, sio_api_key_name, plan (∈ `free | monthly | yearly | monthly_plus | yearly_plus | lifetime | beta`), product_id, sio_contact_id, responses_used_this_month, responses_reset_at, **brand_font, brand_color_primary, brand_logo_url** (branding par défaut utilisé en fallback par les quiz), **expected_sio_cancel_until** (juin 2026, anti double-downgrade lors d'un upgrade 1-clic, cf. §4.4)
+
+**Multiprofils (juin 2026) — cf. §4bis pour le détail :**
+
+- `projects` — id, user_id, name, is_default (unique partial index), accent_color, icon_emoji, use_branding_logo, created_at
+- `business_profiles` — UNIQUE`(user_id, project_id)` ; porte branding (brand_logo_url, brand_color_primary/accent, brand_font, brand_website_url, saved_palettes) + positionnement (brand_tone, target_audience) + pixels defaults (default_meta_pixel_id, default_ga4_measurement_id, default_google_ads_conversion_id/label, default_meta_capi_token) + partage (default_share_domain, share_site_name)
+- `sio_api_keys` — étendu avec project_id, UNIQUE(user_id, project_id, name), 1 default par (user, project) WHERE is_default=true
+- Colonne `project_id UUID NULL` (FK `ON DELETE SET NULL`) sur `quizzes`, `popquizzes`, `business_events`, `user_milestones`
 
 **Quiz :**
 
@@ -438,6 +623,12 @@ Systeme.io (webhook vente/optin) → Supabase Auth + profiles
 | `/api/systeme-io/tags` | GET | oui | Liste les tags SIO de l'utilisateur (pour le picker) |
 | `/api/settings/ui-locale` | POST | oui | Change la langue UI |
 | `/api/admin/users` | GET/POST/PATCH | admin | Liste/crée/met à jour les utilisateurs (emails whitelistés) |
+| `/api/admin/webhook-dry-run` | POST | secret | Rejoue un payload SIO sans toucher la DB (header `X-Dry-Run-Secret`) |
+| `/api/projects` | GET / POST | oui | Liste / crée un projet multiprofils (juin 2026) |
+| `/api/projects/[projectId]` | PATCH / DELETE | oui | Rename + visual identity / supprime |
+| `/api/projects/active` | GET / POST | oui | Lit / switch le projet actif (cookie `tiquiz_active_project`) |
+| `/api/profile/share-domain` | GET / PATCH | oui | Préférence domaine de partage par défaut (per user, persisté DB) |
+| `/api/quiz/[id]/analytics` | GET | oui | Funnel par quiz — depuis juin 2026, recompte `viewsCount`/`completionsCount` directement depuis `quiz_events` avec garde-fou `viewsCount = max(events.view, leadsCount)` (fix bug Gwenn 794%) |
 
 ### 8.4. IA et prompts
 
@@ -459,6 +650,18 @@ Systeme.io (webhook vente/optin) → Supabase Auth + profiles
 **Sanitisation rich-text**
 
 - `lib/richText.ts` : `sanitizeRichText(html)` appliqué côté client (éditeur) et serveur (API PATCH quiz, route `/api/quiz/[quizId]`) sur `introduction`, `results.description`, `results.insight`, `results.projection`.
+
+**Centralisation des appels Claude (juin 2026)**
+
+- Source unique : `lib/claudeRequest.ts:buildClaudeMessageBody()` — toutes les routes IA passent par ce helper.
+- Hotfix Opus 4.7+ (1er juin 2026) : Anthropic a retiré les sampling params (`temperature`, `top_p`, `top_k`) sur Opus 4.7 / 4.8. Le helper les omet quand le modèle cible est Opus ≥ 4.7. Sinon ils sont passés normalement (Haiku, Sonnet).
+- Tier Opus bumpé 4.7 → 4.8 dans `lib/anthropicModel.ts`.
+
+**Analyse IA des résultats (juin 2026 — paliers + uniquement)**
+
+- Helper `lib/survey/analysis.ts` — synthèse Claude des réponses agrégées.
+- Renommage `canUseSurveyAI` → `canUseAIAnalysis` car couvre désormais quiz ET sondages (Béné 2 juin : "Analyse IA c'est pour les sondages ET les quiz"). Alias rétrocompat conservé.
+- Pas encore branché côté quiz (roadmap) — déjà actif côté sondage.
 
 ### 8.5. Système de didacticiel interactif
 
@@ -530,6 +733,68 @@ Le support est **mutualisé** avec Tipote. Le bouton "Aide" dans la sidebar de T
   6. Plans et tarifs Tiquiz
 - Chatbot IA + système de tickets partagés avec Tipote
 - Pas de duplication : un seul centre d'aide, un seul système de tickets
+
+---
+
+## 8bis. TEMPLATES, ONBOARDING & OUTILLAGE (juin 2026)
+
+### 8bis.1. Catalogue de templates
+
+`lib/templates/catalog.ts` — **15 templates** (vs 8 avant juin 2026), format constant : 6 questions × 4 options + 4 résultats, ton chaleureux, tutoiement, pas de jargon coach.
+
+| Slug | Métier | Emoji |
+|:---|:---|:---:|
+| croyance-limitante | coach mindset | 🧠 |
+| rapport-nourriture | coach nutrition | 🥗 |
+| fuites-energie | coach sommeil & énergie | ⚡ |
+| style-parental | coach parentalité | 👨‍👩‍👧 |
+| schema-amoureux | coach couple | 💞 |
+| blocage-reconversion | coach reconversion | 🚪 |
+| rapport-argent | coach finance | 💸 |
+| profil-entrepreneur | (historique) | — |
+| moteur-interieur | (historique) | — |
+| style-yoga | (historique) | — |
+| terrain-naturo | (historique) | — |
+| pret-a-lancer-formation | (historique) | — |
+| levier-croissance-marketing | (historique) | — |
+| style-photo | (historique) | — |
+| pret-premier-achat-immo | (historique) | — |
+
+### 8bis.2. Auto-instanciation post-signup
+
+Composant `components/dashboard/FirstQuizOnboarding.tsx` :
+
+- Affiché dans le dashboard quand `quizzes.length === 0`
+- 6 templates phares en cartes (emoji + titre + métier + tagline)
+- 1 clic → `POST /api/quiz` avec le payload du template → redirect vers `/quiz/[id]` dans l'éditeur
+- Fallbacks : « Voir les 15 modèles » (`/templates`), « Partir de zéro » (`/quiz/new`)
+
+Effet mesurable : passage de "signup → éditeur vide intimidant" à "signup → quiz prêt à publier en 10 secondes".
+
+### 8bis.3. KPI cards cliquables dans `/leads`
+
+Les 4 cards en haut de la page leads (Non synchronisés / Synchronisés SIO / Ce mois / Total) sont désormais cliquables — chaque clic filtre la liste sur le critère. 2e clic enlève le filtre. Ring colorée quand le filtre est actif.
+
+### 8bis.4. Scripts npm (outillage défensif)
+
+| Script | Rôle |
+|:---|:---|
+| `npm run check:schema` | Détecte les migrations en retard (9 migrations multiprofils vérifiées) |
+| `npm run diag:multiprofils` | 11 invariants DB (au moins 1 projet par user, exactement 1 is_default par user, `quiz.project_id` pointe sur projet du même user, `sio_api_keys` UNIQUE par (user, project, name), etc.) |
+| `npm run smoke:multiprofils` | 11 tests E2E workflow Settings → isolation projets |
+| `npm run test:webhook` | 28 cas de routing webhook SIO (sans payer 1€) |
+| `npm run test:e2e` | Playwright sur `/q/`, `/p/`, `/pq/` |
+| `npm run smoke` | Smoke routes publiques legacy bash |
+
+### 8bis.5. CI GitHub Actions
+
+- `.github/workflows/ci.yml` : à chaque push → `tsc --noEmit` + `npm run build` + smoke syntax des scripts
+- `.github/workflows/e2e.yml` : Playwright en schedule daily 3h UTC + `workflow_dispatch`
+- Variables GitHub non-secrets : `SMOKE_QUIZ_ID`, `SMOKE_POPQUIZ_ID`, `SMOKE_PAGE_SLUG`, `BASE_URL`
+
+### 8bis.6. Hotfix build prod Playwright (2 juin 2026)
+
+`tsconfig.json` exclut désormais `playwright.config.ts` + `tests/e2e/**`. Sinon `@playwright/test` (non installé en prod) faisait planter `npm run build`. La CI lance maintenant `npm run build` complet (filet anti-régression).
 
 ---
 
@@ -612,11 +877,21 @@ pm2 restart tiquiz-prod --update-env
 - Email templates Tiquiz (invite, magic link, reset password, confirm signup)
 - **Didacticiel interactif** (tour guidé 7 étapes — inspiré de Tipote, adapté Tiquiz)
 - **Centre d'aide** mutualisé avec Tipote (catégorie Tiquiz + chatbot + tickets partagés)
+- **Multiprofils** (juin 2026, paliers + uniquement) — 7 phases livrées : table `projects`, scope DB, business_profiles per (user, project), sio_api_keys per project, ProjectSwitcher UI, SessionResetGate, danger-zone delete
+- **Paliers premium "+"** (juin 2026) : `monthly_plus` (29€/mois) + `yearly_plus` (290€/an), migration `profiles_plan_check`, helpers gates dans `lib/planLimits.ts`
+- **Switch d'abonnement en 1 clic** (juin 2026) — webhook SIO upgrade/downgrade auto, anti double-facturation via `expected_sio_cancel_until`
+- **Templates v2** (juin 2026) — 15 modèles métier dans `lib/templates/catalog.ts`
+- **Auto-instanciation post-signup** (juin 2026) — `FirstQuizOnboarding.tsx`
+- **Analyse IA des résultats** (juin 2026, sondages — quiz en roadmap) — helper `lib/survey/analysis.ts`
+- **Fix bug stats Gwenn** (2 juin 2026) — recompute depuis `quiz_events` + garde-fou ratio
+- **KPI cards cliquables** dans `/leads` — filtres rapides
+- **Outillage défensif** : `check:schema`, `diag:multiprofils`, `smoke:multiprofils`, `test:webhook`, endpoint admin `/api/admin/webhook-dry-run`
+- **CI GitHub Actions** : workflow `ci` (typecheck + build + smoke à chaque push) + workflow `e2e` (Playwright daily)
+- **Hotfix Opus 4.7+** : centralisation des appels Claude dans `lib/claudeRequest.ts`, omission des sampling params sur Opus ≥ 4.7
+- **Hotfix Playwright build prod** : exclusion des fichiers Playwright du `tsconfig.json`
 
 ### À faire 🔄
 
 - Import de quiz (CSV/JSON) — onglet placeholder
-- Analytics détaillés par quiz (graphiques, tendances) au-delà des compteurs bruts
-- Mapping offer_id SIO (remplacer les placeholders par les vrais IDs)
-- Tests automatisés
-- Configuration Nginx pour `quiz.tipote.com` → Tiquiz (port 3001)
+- Branchement de l'analyse IA côté quiz (déjà actif côté sondage)
+- Configuration Nginx pour `quiz.tipote.com` → Tiquiz (port 3001) — héritée du sprint custom-domains, à valider en prod
