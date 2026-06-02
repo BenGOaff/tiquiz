@@ -34,92 +34,15 @@ const supabaseAnon = createClient(
   { auth: { persistSession: false } },
 );
 
-// Plans Tiquiz DB (cf. migration 20260608_plan_plus_check.sql qui
-// étend la CHECK constraint) :
-//   - free / monthly / yearly / lifetime (paliers d'origine)
-//   - beta (accès accordé manuellement par Béné)
-//   - monthly_plus / yearly_plus (paliers premium « + » 29€/290€,
-//     débloquent multiprofils + analyse IA + multi-clés SIO)
-type TiquizPlan =
-  | "free"
-  | "monthly"
-  | "yearly"
-  | "lifetime"
-  | "beta"
-  | "monthly_plus"
-  | "yearly_plus";
-
-// Mapping des offer price IDs Systeme.io vers plan Tiquiz.
-//
-// HISTORIQUE : les anciens bons de commande Tiquiz (mensuel/annuel/
-// lifetime) ont chacun un offer-price-id NUMÉRIQUE UNIQUE. Le mapping
-// par ID fonctionne pour eux.
-//
-// NOUVEAUTÉ (Béné 2 juin 2026 après-midi) : les nouveaux bons de
-// commande Tipote.fr partagent TOUS le même offer-price-id
-// (offerprice-dc9c3e75 — c'est la config par défaut Systeme.io pour un
-// tunnel). Impossible de distinguer mensuel+ vs annuel+ par cet ID.
-// → On bascule sur le matching par URL du bon de commande (cf.
-// URL_TO_PLAN ci-dessous) qui est l'info FIABLE et UNIQUE par offre.
-//
-// L'ID continue d'être tenté en fallback pour les ANCIENS bons.
-const OFFER_TO_PLAN: Record<string, TiquizPlan> = {
-  // ── Mensuel 9€/mois — ancien ID numérique unique ──
-  "offer-price-3198235": "monthly",
-  "3198235": "monthly",
-  // ── Annuel 90€/an ──
-  "offer-price-3198261": "yearly",
-  "3198261": "yearly",
-  // ── Lifetime 57€ (terminé pour les nouveaux mais existant en prod) ──
-  "offer-price-3198280": "lifetime",
-  "3198280": "lifetime",
-  // NB : pas d'entrée pour offerprice-dc9c3e75 — il est partagé entre
-  // mensuel+ et annuel+ (et probablement tous les nouveaux tunnels),
-  // donc ambigu. Distinction par URL (URL_TO_PLAN).
-};
-
-/**
- * Mapping URL du bon de commande Systeme.io → plan Tiquiz.
- * Source de vérité pour TOUS les nouveaux bons de commande Tipote.fr
- * (Béné 2 juin 2026 après-midi). Chaque URL est unique = chaque plan
- * est distinguable, même quand les offer-price-id sont identiques.
- *
- * Format normalisé : `<host>/<path>` sans protocole, sans www., sans
- * trailing slash, sans query string, lowercase. Cf. normalizeFunnelUrl.
- */
-const URL_TO_PLAN: Record<string, TiquizPlan> = {
-  "tipote.fr/tiquiz-gratuit": "free",
-  "tipote.fr/tiquiz-mensuel": "monthly",
-  "tipote.fr/tiquiz-annuel": "yearly",
-  "tipote.fr/tiquiz-mensuel-plus": "monthly_plus",
-  "tipote.fr/tiquiz-annuel-plus": "yearly_plus",
-};
-
-/**
- * Normalise une URL pour comparaison dans URL_TO_PLAN.
- * Strip protocole, www, query string, trailing slash, lowercase.
- */
-function normalizeFunnelUrl(url: string | null | undefined): string | null {
-  if (!url) return null;
-  const trimmed = String(url).trim().toLowerCase();
-  if (!trimmed) return null;
-  return trimmed
-    .replace(/^https?:\/\//, "")
-    .replace(/^www\./, "")
-    .replace(/[?#].*$/, "")
-    .replace(/\/+$/, "");
-}
-
-/**
- * Cherche le plan associé à une URL de bon de commande. Retourne null
- * si l'URL n'est pas connue (cas typique : un funnel parallèle non
- * encore ajouté dans URL_TO_PLAN).
- */
-function inferPlanFromUrl(url: string | null | undefined): TiquizPlan | null {
-  const normalized = normalizeFunnelUrl(url);
-  if (!normalized) return null;
-  return URL_TO_PLAN[normalized] ?? null;
-}
+// Logique d'inférence du plan extraite dans lib/sio/webhookInference.ts
+// (module pur, testable sans Next.js et réutilisable par le script de
+// test + l'endpoint admin dry-run). Source unique de vérité pour le
+// mapping URL/offer-id → plan Tiquiz.
+import {
+  inferPlanFromOfferId as inferPlan,
+  inferPlanFromUrl,
+  type TiquizPlan,
+} from "@/lib/sio/webhookInference";
 
 // Plans Tiquiz refuses to downgrade automatically. `beta` is granted manually
 // by Ben for lifetime access; `lifetime` is the paid one-time tier. Both must
@@ -145,19 +68,6 @@ const TERMINAL_EVENT_RE = /CANCEL|REFUND|EXPIR|CHARGEBACK/i;
 // improve. Treating these as "no-op" prevents flapping users from being
 // downgraded mid-retry-cycle.
 const TRANSIENT_FAILURE_RE = /FAIL|DECLIN|DISPUT/i;
-
-function inferPlan(offerId: string): TiquizPlan | null {
-  if (!offerId) return null;
-  const id = String(offerId).trim().toLowerCase();
-  if (id in OFFER_TO_PLAN) return OFFER_TO_PLAN[id];
-  if (`offer-price-${id}` in OFFER_TO_PLAN) return OFFER_TO_PLAN[`offer-price-${id}`];
-  const num = id.match(/(\d{5,})/);
-  if (num) {
-    if (num[1] in OFFER_TO_PLAN) return OFFER_TO_PLAN[num[1]];
-    if (`offer-price-${num[1]}` in OFFER_TO_PLAN) return OFFER_TO_PLAN[`offer-price-${num[1]}`];
-  }
-  return null;
-}
 
 function deepGet(obj: any, path: string): any {
   return path.split(".").reduce((o, k) => o?.[k], obj);
