@@ -15,6 +15,7 @@ import {
   canUseMultiProjects,
   shouldShowPlusUpsell,
 } from "@/lib/planLimits";
+import { createEmptyBusinessProfileForProject } from "@/lib/projects/businessProfile";
 import {
   createProject,
   listProjectsForUser,
@@ -100,5 +101,13 @@ export async function POST(req: NextRequest) {
   if ("error" in result) {
     return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
   }
+
+  // Multiprofils Tiquiz : un nouveau projet = compte neuf. On crée un
+  // business_profile VIDE (onboarding_completed=false) pour que le
+  // ProjectSwitcher / Settings sachent qu'il faut un mini-onboarding
+  // sur ce projet. Best-effort : si l'INSERT échoue, le user peut
+  // toujours utiliser le projet (fallback profiles côté lecture).
+  await createEmptyBusinessProfileForProject(user.id, result.id);
+
   return NextResponse.json({ ok: true, project: result }, { status: 201 });
 }
