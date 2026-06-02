@@ -21,6 +21,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { parseVideoUrl } from "@/lib/popquiz";
 import { sanitizeSlug } from "@/lib/quizBranding";
 import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
+import { resolveProjectIdForInsert } from "@/lib/projects/scopeFilter";
 
 export const dynamic = "force-dynamic";
 
@@ -334,10 +335,12 @@ export async function POST(req: NextRequest) {
     appearancePatch.show_creator_branding = body.show_creator_branding;
   }
 
+  const projectId = await resolveProjectIdForInsert(user.id);
   const { data: popquiz, error: popquizError } = await supabase
     .from("popquizzes")
     .insert({
       user_id: user.id,
+      project_id: projectId,
       video_id: video.id,
       title,
       slug,

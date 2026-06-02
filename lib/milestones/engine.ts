@@ -11,6 +11,7 @@
 import type { BusinessEventKind } from "@/lib/businessEvents";
 import { countOutcomes } from "@/lib/businessOutcomes";
 import { milestonesForKind } from "@/lib/milestones/catalog";
+import { resolveProjectIdForInsert } from "@/lib/projects/scopeFilter";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export interface EvaluateMilestonesArgs {
@@ -48,6 +49,12 @@ export async function evaluateMilestonesForUser(
 
   const totalCount = await countOutcomes(args.userId, args.eventKind);
 
+  // Multiprofils Tiquiz phase 3a : taguer le projet actif (fallback
+  // projet par défaut). Si résolution échoue, project_id=NULL — la
+  // colonne est nullable, l'insert continue, la lecture tolérante
+  // ramènera la ligne via fallback.
+  const projectId = await resolveProjectIdForInsert(args.userId);
+
   const unlocked: string[] = [];
   for (const milestone of toEvaluate) {
     if (totalCount < milestone.trigger.threshold) {
@@ -57,6 +64,7 @@ export async function evaluateMilestonesForUser(
       .from("user_milestones")
       .insert({
         user_id: args.userId,
+        project_id: projectId,
         milestone_key: milestone.key,
         payload: {
           count: totalCount,

@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
+import { resolveProjectIdForInsert } from "@/lib/projects/scopeFilter";
 
 export const dynamic = "force-dynamic";
 
@@ -89,10 +90,12 @@ export async function POST(req: NextRequest) {
     // Insert quiz / survey row. Surveys force virality_enabled=false because
     // the visible UI flow doesn't have a bonus-on-share gate — the user
     // explicitly asked for "no viral but share at end".
+    const projectId = await resolveProjectIdForInsert(user.id);
     const { data: quiz, error: quizError } = await supabase
       .from("quizzes")
       .insert({
         user_id: user.id,
+        project_id: projectId,
         mode,
         title,
         introduction: body.introduction ?? null,

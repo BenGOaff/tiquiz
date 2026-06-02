@@ -11,6 +11,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { resolveProjectIdForInsert } from "@/lib/projects/scopeFilter";
 
 export type BusinessEventKind =
   | "lead_captured"
@@ -55,8 +56,14 @@ export async function logBusinessEvent(
       ? input.occurredAt.toISOString()
       : (input.occurredAt ?? null);
 
+  // Multiprofils Tiquiz phase 3a : taguer le projet actif. Helper
+  // ne jette JAMAIS — si rien à résoudre on insère project_id=NULL
+  // (colonne nullable depuis 20260603).
+  const projectId = await resolveProjectIdForInsert(input.userId);
+
   const row = {
     user_id: input.userId,
+    project_id: projectId,
     kind: input.kind,
     payload: input.payload ?? {},
     source: input.source ?? "internal",

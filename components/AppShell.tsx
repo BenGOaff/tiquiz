@@ -7,6 +7,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { UserAvatarMenu } from "@/components/UserAvatarMenu";
 import { Button } from "@/components/ui/button";
 import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
+import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 
 interface AppShellProps {
   children: ReactNode;
@@ -55,6 +56,10 @@ export default function AppShell({
               ) : null}
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              {/* Multiprofils — auto-caché si user a 1 seul projet et
+                  qu'il n'est pas éligible canCreateMore (cf. phase 2
+                  chantier multiprofils ROADMAP_RETENTION). */}
+              <ProjectSwitcher />
               {headerRight}
               <UserAvatarMenu userEmail={userEmail} />
             </div>

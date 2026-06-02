@@ -16,6 +16,7 @@ import { NextRequest } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { corsHeaders, preflight } from "@/lib/embed/cors";
+import { resolveProjectIdForInsert } from "@/lib/projects/scopeFilter";
 
 export const runtime = "nodejs";
 
@@ -58,10 +59,12 @@ async function importDraftIntoQuizzes(args: {
   const brandPrimaryRaw = typeof draftRecord.brand_color_primary === "string" ? draftRecord.brand_color_primary : "";
   const brandBgRaw = typeof draftRecord.brand_color_background === "string" ? draftRecord.brand_color_background : "";
 
+  const projectId = await resolveProjectIdForInsert(args.userId);
   const { data: quiz, error: quizErr } = await supabaseAdmin
     .from("quizzes")
     .insert({
       user_id: args.userId,
+      project_id: projectId,
       mode: "quiz",
       title,
       introduction,
@@ -226,9 +229,13 @@ export async function POST(req: NextRequest) {
   let imported: { ok: true; quizId: string } | { ok: false; error: string };
 
   if (anonQuiz?.id) {
+    // Multiprofils Tiquiz phase 3a : au moment du transfert d'ownership
+    // (quiz anonyme généré par /embed/quiz/generate puis revendiqué),
+    // on assigne aussi le projet actif/par défaut du user qui claim.
+    const projectId = await resolveProjectIdForInsert(userId);
     const { error: transferErr } = await supabaseAdmin
       .from("quizzes")
-      .update({ user_id: userId, embed_session_id: null })
+      .update({ user_id: userId, project_id: projectId, embed_session_id: null })
       .eq("id", anonQuiz.id)
       .is("user_id", null);
     if (transferErr) {

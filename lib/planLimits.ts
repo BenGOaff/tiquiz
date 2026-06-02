@@ -63,6 +63,39 @@ export function canUseSurveyAI(
 }
 
 /**
+ * Multiprofils — option PAYANTE d'un plan supérieur (Béné, juin 2026).
+ * Même palier que canUseSurveyAI : le plan premium n'existe pas encore
+ * (pricing en pause). En attendant : plan "beta" + allowlist env
+ * `TIQUIZ_MULTIPROJECTS_ALLOWLIST` pour tester.
+ *
+ * ⚠️ QUAND LE PLAN PREMIUM SORTIRA : ajouter son slug ici. NE PAS
+ * ouvrir à isPaidPlan() — c'est un palier au-dessus.
+ *
+ * Cf. ROADMAP_RETENTION "Multiprofils Tiquiz — DESIGN" et le pitfall
+ * en tête de CLAUDE_PITFALLS.md.
+ */
+export function canUseMultiProjects(
+  plan: string | null | undefined,
+  opts?: { userId?: string | null; email?: string | null },
+): boolean {
+  const s = (plan ?? "").trim().toLowerCase();
+  if (s === "beta") return true;
+
+  const allowlist = (process.env.TIQUIZ_MULTIPROJECTS_ALLOWLIST ?? "")
+    .split(",")
+    .map((x) => x.trim().toLowerCase())
+    .filter(Boolean);
+  if (allowlist.length > 0) {
+    const uid = (opts?.userId ?? "").trim().toLowerCase();
+    const mail = (opts?.email ?? "").trim().toLowerCase();
+    if ((uid && allowlist.includes(uid)) || (mail && allowlist.includes(mail))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Free-tier ceilings. Captures keep coming when the cap is hit; only the
  * UI-visible portion is gated (see `lib/leadLock.ts` for the lock logic
  * and `app/api/quiz/route.ts` for the creation gate).
