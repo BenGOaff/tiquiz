@@ -12,7 +12,7 @@ import { pickWeeklyGoal } from "@/lib/weekly-goal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Mascot } from "@/components/ui/mascot";
+import { FirstQuizOnboarding } from "@/components/dashboard/FirstQuizOnboarding";
 import { InsightsList } from "@/components/ui/insights-card";
 import { SocialProofCounter } from "@/components/SocialProofCounter";
 import { computeInsights } from "@/lib/insights";
@@ -416,34 +416,11 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
               app et marketing). Cache 5 min côté CDN. */}
           <SocialProofCounter variant="card" />
 
-          {/* Row 2: Welcome banner when no quizzes — anchored by the
-              mascot waving "celebrate" so the cold-start moment feels
-              warm, not pressuring. The hero is sided with the same
-              gradient banner; we just slot a Mascot card on the left
-              for personality. */}
-          {quizzes.length === 0 && (
-            <div className="rounded-2xl gradient-primary p-6 text-white">
-              <div className="flex items-center gap-5">
-                <div className="hidden sm:flex shrink-0 w-20 h-20 rounded-2xl bg-white/15 items-center justify-center">
-                  <Mascot expression="celebrate" size={64} tone="soft" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-xl font-bold mb-1">{t("welcomeTitle")}</h2>
-                  <p className="text-white/80 text-sm max-w-lg">{t("welcomeDesc")}</p>
-                </div>
-                <Button
-                  asChild
-                  variant="secondary"
-                  className="rounded-full bg-white/20 hover:bg-white/30 text-white border-white/30 shrink-0"
-                >
-                  <Link href="/quiz/new">
-                    <Plus className="h-4 w-4 mr-1.5" />
-                    {t("createFirstQuiz")}
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          )}
+          {/* Premier quiz : onboarding avec 6 templates phares (1 clic =
+              quiz prêt à éditer). Remplace l'ancien bandeau générique
+              "Créer mon premier quiz" qui envoyait vers /quiz/new vide
+              (friction inutile maintenant qu'on a 15 templates V2). */}
+          {quizzes.length === 0 && <FirstQuizOnboarding />}
 
           {/* Row 3: KPI stat cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
