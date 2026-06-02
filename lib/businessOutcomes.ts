@@ -12,37 +12,55 @@
 //   - quiz_view       → quiz_events event_type='view' via JOIN
 //   - quiz_published  → quizzes status='active' (mode='quiz')
 //   - popquiz_published → popquizzes status='active' si la table existe
+//
+// MULTIPROFILS (phase 3b, juin 2026) : opts.projectId permet de
+// SCOPER les compteurs au projet actif. Effet "nouveau projet =
+// compte neuf" — "premier lead", "10 leads" se redéclenchent par
+// projet. Quand opts.projectId est absent ou null → comptage global
+// (comportement historique préservé).
 
 import { countUserEvents, type BusinessEventKind } from "@/lib/businessEvents";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+export interface CountOutcomesOpts {
+  /** Project scope. null/undefined = comptage global (legacy). */
+  projectId?: string | null;
+}
+
 export async function countOutcomes(
   userId: string,
   kind: BusinessEventKind,
+  opts: CountOutcomesOpts = {},
 ): Promise<number> {
   switch (kind) {
     case "lead_captured":
-      return countLeadsForUser(userId);
+      return countLeadsForUser(userId, opts);
     case "quiz_complete":
-      return countQuizEventsForUser(userId, "complete");
+      return countQuizEventsForUser(userId, "complete", opts);
     case "quiz_share":
-      return countQuizEventsForUser(userId, "share");
+      return countQuizEventsForUser(userId, "share", opts);
     case "quiz_view":
-      return countQuizEventsForUser(userId, "view");
+      return countQuizEventsForUser(userId, "view", opts);
     case "quiz_published":
-      return countPublishedQuizzesForUser(userId);
+      return countPublishedQuizzesForUser(userId, opts);
     case "popquiz_published":
-      return countPublishedPopquizzesForUser(userId);
+      return countPublishedPopquizzesForUser(userId, opts);
     default:
       return countUserEvents(userId, kind);
   }
 }
 
-async function userQuizIds(userId: string): Promise<string[]> {
-  const { data, error } = await supabaseAdmin
+async function userQuizIds(
+  userId: string,
+  opts: CountOutcomesOpts,
+): Promise<string[]> {
+  let q = supabaseAdmin
     .from("quizzes")
     .select("id")
     .eq("user_id", userId);
+  if (opts.projectId) q = q.eq("project_id", opts.projectId);
+
+  const { data, error } = await q;
   if (error) {
     console.error("[outcomes] quizzes select failed", error.message);
     return [];
@@ -50,8 +68,11 @@ async function userQuizIds(userId: string): Promise<string[]> {
   return (data ?? []).map((r) => r.id as string);
 }
 
-async function countLeadsForUser(userId: string): Promise<number> {
-  const quizIds = await userQuizIds(userId);
+async function countLeadsForUser(
+  userId: string,
+  opts: CountOutcomesOpts,
+): Promise<number> {
+  const quizIds = await userQuizIds(userId, opts);
   if (quizIds.length === 0) return 0;
   const CHUNK = 500;
   let total = 0;
@@ -73,8 +94,9 @@ async function countLeadsForUser(userId: string): Promise<number> {
 async function countQuizEventsForUser(
   userId: string,
   eventType: "view" | "start" | "complete" | "share",
+  opts: CountOutcomesOpts,
 ): Promise<number> {
-  const quizIds = await userQuizIds(userId);
+  const quizIds = await userQuizIds(userId, opts);
   if (quizIds.length === 0) return 0;
   const CHUNK = 500;
   let total = 0;
@@ -94,12 +116,18 @@ async function countQuizEventsForUser(
   return total;
 }
 
-async function countPublishedQuizzesForUser(userId: string): Promise<number> {
-  const { count, error } = await supabaseAdmin
+async function countPublishedQuizzesForUser(
+  userId: string,
+  opts: CountOutcomesOpts,
+): Promise<number> {
+  let q = supabaseAdmin
     .from("quizzes")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .eq("status", "active");
+  if (opts.projectId) q = q.eq("project_id", opts.projectId);
+
+  const { count, error } = await q;
   if (error) {
     console.error("[outcomes] quizzes published count failed", error.message);
     return 0;
@@ -107,14 +135,20 @@ async function countPublishedQuizzesForUser(userId: string): Promise<number> {
   return count ?? 0;
 }
 
-async function countPublishedPopquizzesForUser(userId: string): Promise<number> {
+async function countPublishedPopquizzesForUser(
+  userId: string,
+  opts: CountOutcomesOpts,
+): Promise<number> {
   // popquizzes peut ne pas exister sur tous les déploiements — on tente,
   // et en cas d'erreur (table absente) on retourne 0 silencieusement.
-  const { count, error } = await supabaseAdmin
+  let q = supabaseAdmin
     .from("popquizzes")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .eq("status", "active");
+  if (opts.projectId) q = q.eq("project_id", opts.projectId);
+
+  const { count, error } = await q;
   if (error) {
     return 0;
   }

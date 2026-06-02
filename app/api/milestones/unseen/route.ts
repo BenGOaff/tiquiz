@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 
 import { getMilestoneByKey } from "@/lib/milestones/catalog";
+import { getActiveProjectScope } from "@/lib/projects/scopeFilter";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
@@ -27,13 +28,18 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  const { data, error } = await supabase
+  // Phase 3b multiprofils : un nouveau projet démarre avec 0 milestones.
+  const scope = await getActiveProjectScope(user.id, user.email ?? null);
+  let query = supabase
     .from("user_milestones")
     .select("id,milestone_key,unlocked_at")
     .eq("user_id", user.id)
     .is("seen_at", null)
     .order("unlocked_at", { ascending: true })
     .limit(20);
+  if (scope) query = query.eq("project_id", scope);
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("[milestones/unseen] read failed", error.message);

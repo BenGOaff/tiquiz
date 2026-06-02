@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { lockAndRedact, type LeadLike } from "@/lib/leadLock";
+import { getActiveProjectScope } from "@/lib/projects/scopeFilter";
 
 export async function GET() {
   try {
@@ -12,11 +13,17 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Get all quiz IDs owned by user
-    const { data: quizzes } = await supabase
+    // Phase 3b multiprofils : leads sont scopés indirectement via les
+    // quizzes du projet actif (quiz_leads n'a pas project_id direct).
+    const scope = await getActiveProjectScope(user.id, user.email ?? null);
+
+    // Get all quiz IDs owned by user (scopés par projet si débloqué)
+    let quizQuery = supabase
       .from("quizzes")
       .select("id, title")
       .eq("user_id", user.id);
+    if (scope) quizQuery = quizQuery.eq("project_id", scope);
+    const { data: quizzes } = await quizQuery;
 
     if (!quizzes || quizzes.length === 0) {
       return NextResponse.json({ ok: true, leads: [], quizzes: [], plan: "free" });

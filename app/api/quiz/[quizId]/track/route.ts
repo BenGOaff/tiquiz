@@ -160,9 +160,12 @@ async function logBusinessEventForQuizFunnel(
   event: "complete" | "share",
   sessionId: string,
 ): Promise<void> {
+  // Lire le project_id du quiz pour que l'event soit attaché AU BON
+  // projet de l'owner (le cookie du visiteur public est celui du
+  // visiteur, pas du créateur — pas exploitable).
   const { data: quiz } = await supabaseAdmin
     .from("quizzes")
-    .select("user_id, title")
+    .select("user_id, title, project_id")
     .eq("id", quizId)
     .maybeSingle();
   if (!quiz?.user_id) return;
@@ -170,6 +173,7 @@ async function logBusinessEventForQuizFunnel(
   await logBusinessEvent({
     userId: quiz.user_id as string,
     kind,
+    projectId: (quiz.project_id as string | null) ?? null,
     source: "internal",
     payload: {
       quizId,

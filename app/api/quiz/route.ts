@@ -3,7 +3,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
-import { resolveProjectIdForInsert } from "@/lib/projects/scopeFilter";
+import {
+  getActiveProjectScope,
+  resolveProjectIdForInsert,
+} from "@/lib/projects/scopeFilter";
 
 export const dynamic = "force-dynamic";
 
@@ -16,11 +19,19 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    // Phase 3b multiprofils : si l'user a multiprofils débloqué, on
+    // filtre par project_id actif → "nouveau projet = stats à zéro".
+    // Sinon (free / monthly / yearly) : scope=null, pas de filtre.
+    const scope = await getActiveProjectScope(user.id, user.email ?? null);
+
+    let query = supabase
       .from("quizzes")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
+    if (scope) query = query.eq("project_id", scope);
+
+    const { data, error } = await query;
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });

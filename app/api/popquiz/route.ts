@@ -21,7 +21,10 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { parseVideoUrl } from "@/lib/popquiz";
 import { sanitizeSlug } from "@/lib/quizBranding";
 import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
-import { resolveProjectIdForInsert } from "@/lib/projects/scopeFilter";
+import {
+  getActiveProjectScope,
+  resolveProjectIdForInsert,
+} from "@/lib/projects/scopeFilter";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +47,10 @@ export async function GET() {
     );
   }
 
-  const { data, error } = await supabase
+  // Phase 3b multiprofils : scope par project_id si user débloqué.
+  const scope = await getActiveProjectScope(user.id, user.email ?? null);
+
+  let query = supabase
     .from("popquizzes")
     .select(
       `id, title, description, slug, locale, is_published,
@@ -53,6 +59,9 @@ export async function GET() {
     )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
+  if (scope) query = query.eq("project_id", scope);
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json(

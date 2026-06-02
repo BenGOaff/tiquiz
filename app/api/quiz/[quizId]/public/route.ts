@@ -484,7 +484,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     // aussi capture_enabled pour valider la branche anonyme.
     const { data: quiz } = await admin
       .from("quizzes")
-      .select("id, user_id, title, sio_api_key_id, meta_pixel_id, mode, capture_enabled")
+      .select("id, user_id, title, sio_api_key_id, meta_pixel_id, mode, capture_enabled, project_id")
       .eq("id", quizId)
       .maybeSingle();
 
@@ -571,6 +571,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
     if (lead?.id && quiz.user_id) {
       logBusinessEvent({
         userId: quiz.user_id,
+        // Multiprofils : lead taggué au projet du quiz, pas au cookie
+        // du visiteur (qui ne nous appartient pas).
+        projectId: (quiz as { project_id?: string | null }).project_id ?? null,
         kind: "lead_captured",
         source: "internal",
         payload: { quizId, quizTitle: quiz.title, leadId: lead.id },
@@ -783,7 +786,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     // workspace as the lead's original capture sync.
     const { data: quiz } = await admin
       .from("quizzes")
-      .select("sio_share_tag_name, user_id, sio_api_key_id")
+      .select("sio_share_tag_name, user_id, sio_api_key_id, project_id")
       .eq("id", quizId)
       .maybeSingle();
 
@@ -796,13 +799,19 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         .insert({ quiz_id: quizId, event_type: "share", meta: null, session_id: null });
       if (shareErr) console.error("[public/share] quiz_events insert failed", shareErr);
 
-      const quizRow = quiz as { sio_share_tag_name?: string | null; user_id?: string; sio_api_key_id?: string | null };
+      const quizRow = quiz as {
+        sio_share_tag_name?: string | null;
+        user_id?: string;
+        sio_api_key_id?: string | null;
+        project_id?: string | null;
+      };
 
       // Log business_event (fire-and-forget). Dedup par email → pas de
       // double comptage si le visiteur partage depuis 2 onglets.
       if (!shareErr && quizRow.user_id) {
         logBusinessEvent({
           userId: quizRow.user_id,
+          projectId: quizRow.project_id ?? null,
           kind: "quiz_share",
           source: "internal",
           payload: { quizId, side: "server", email },

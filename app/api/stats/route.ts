@@ -28,6 +28,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { dateKeyForOffset, parseTzOffset } from "@/lib/dateKeys";
+import { getActiveProjectScope } from "@/lib/projects/scopeFilter";
 
 export const dynamic = "force-dynamic";
 
@@ -110,11 +111,17 @@ export async function GET(req: NextRequest) {
     if (prevFrom && durationDays) prevFrom.setUTCDate(prevFrom.getUTCDate() - durationDays);
     const prevTo = from ? new Date(from) : null;
 
-    // Owned quizzes — bound the queries to the current user's projects.
-    const { data: quizzes } = await supabaseAdmin
+    // Owned quizzes — scopés au projet actif si multiprofils débloqué
+    // (phase 3b : "nouveau projet = stats à zéro"). Tout le cascade
+    // de stats (events, leads, question_events) hérite de ce filtre
+    // via le `in("quiz_id", quizIds)` plus bas.
+    const scope = await getActiveProjectScope(user.id, user.email ?? null);
+    let quizzesQuery = supabaseAdmin
       .from("quizzes")
       .select("id, title, status, mode, views_count, starts_count, completions_count, shares_count, created_at")
       .eq("user_id", user.id);
+    if (scope) quizzesQuery = quizzesQuery.eq("project_id", scope);
+    const { data: quizzes } = await quizzesQuery;
 
     const quizIds = (quizzes ?? []).map((q) => q.id as string);
     if (quizIds.length === 0) {

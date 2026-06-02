@@ -17,6 +17,15 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export interface EvaluateMilestonesArgs {
   userId: string;
   eventKind: BusinessEventKind;
+  /**
+   * Project ID SCOPE pour le milestone (multiprofils phase 3b).
+   * Quand fourni : les compteurs sont mesurés UNIQUEMENT sur ce projet
+   * (ex. "premier lead" se redéclenche par projet) et le user_milestones
+   * inséré est lié à ce projet.
+   * Quand absent : fallback resolveProjectIdForInsert (projet actif via
+   * cookie ou projet par défaut).
+   */
+  projectId?: string | null;
 }
 
 export async function evaluateMilestonesForUser(
@@ -27,12 +36,23 @@ export async function evaluateMilestonesForUser(
     return { unlocked: [], ok: true };
   }
 
+  // Résoudre le projet d'évaluation : explicit > cookie/default.
+  const projectId =
+    args.projectId !== undefined
+      ? args.projectId
+      : await resolveProjectIdForInsert(args.userId);
+
   const candidateKeys = candidates.map((c) => c.key);
-  const { data: existing, error: existingErr } = await supabaseAdmin
+  // Existing milestones scopés au projet : "premier lead" peut se
+  // redéclencher dans le projet B même s'il a été débloqué dans le A.
+  let existingQuery = supabaseAdmin
     .from("user_milestones")
     .select("milestone_key")
     .eq("user_id", args.userId)
     .in("milestone_key", candidateKeys);
+  if (projectId) existingQuery = existingQuery.eq("project_id", projectId);
+
+  const { data: existing, error: existingErr } = await existingQuery;
 
   if (existingErr) {
     console.error("[milestones] read existing failed", existingErr.message);
@@ -47,13 +67,11 @@ export async function evaluateMilestonesForUser(
     return { unlocked: [], ok: true };
   }
 
-  const totalCount = await countOutcomes(args.userId, args.eventKind);
-
-  // Multiprofils Tiquiz phase 3a : taguer le projet actif (fallback
-  // projet par défaut). Si résolution échoue, project_id=NULL — la
-  // colonne est nullable, l'insert continue, la lecture tolérante
-  // ramènera la ligne via fallback.
-  const projectId = await resolveProjectIdForInsert(args.userId);
+  // Compteur scopé au projet pour que "10 leads" se compte projet par
+  // projet (cf. countOutcomes opts.projectId).
+  const totalCount = await countOutcomes(args.userId, args.eventKind, {
+    projectId: projectId ?? null,
+  });
 
   const unlocked: string[] = [];
   for (const milestone of toEvaluate) {

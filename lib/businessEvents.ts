@@ -32,6 +32,15 @@ export interface LogBusinessEventInput {
   source?: BusinessEventSource;
   occurredAt?: string | Date | null;
   dedupeKey?: string | null;
+  /**
+   * Project ID explicite pour cet event. À FOURNIR depuis tout contexte
+   * où le user owner n'est PAS l'auteur de la requête (track, lead
+   * captured depuis viewer public) — sinon resolveProjectIdForInsert
+   * tomberait sur le cookie du VISITEUR, ce qui est faux. Pour les
+   * routes authentifiées de l'owner (création quiz, etc.), laisser
+   * undefined → resolve auto via cookie.
+   */
+  projectId?: string | null;
 }
 
 export interface LogBusinessEventResult {
@@ -56,10 +65,17 @@ export async function logBusinessEvent(
       ? input.occurredAt.toISOString()
       : (input.occurredAt ?? null);
 
-  // Multiprofils Tiquiz phase 3a : taguer le projet actif. Helper
-  // ne jette JAMAIS — si rien à résoudre on insère project_id=NULL
+  // Multiprofils Tiquiz : taguer le projet de l'event.
+  // - Si l'appelant fournit input.projectId (track, lead capture depuis
+  //   viewer public) → on l'utilise (le quiz dicte le projet, pas le
+  //   visiteur).
+  // - Sinon → resolve via cookie de l'owner (resolveProjectIdForInsert).
+  // Helper ne jette JAMAIS — si rien à résoudre on insère project_id=NULL
   // (colonne nullable depuis 20260603).
-  const projectId = await resolveProjectIdForInsert(input.userId);
+  const projectId =
+    input.projectId !== undefined
+      ? input.projectId
+      : await resolveProjectIdForInsert(input.userId);
 
   const row = {
     user_id: input.userId,
@@ -90,9 +106,15 @@ export async function logBusinessEvent(
   }
 
   // Post-hook milestones (dynamic import pour casser la circular dep).
+  // Propage projectId pour que les milestones soient SCOPÉS au projet
+  // de l'event ("nouveau projet = premier lead se redéclenche").
   void import("@/lib/milestones/engine")
     .then(({ evaluateMilestonesForUser }) =>
-      evaluateMilestonesForUser({ userId: input.userId, eventKind: input.kind }),
+      evaluateMilestonesForUser({
+        userId: input.userId,
+        eventKind: input.kind,
+        projectId: projectId ?? null,
+      }),
     )
     .catch((err) => {
       console.error("[businessEvents] evaluate milestones failed", err);
