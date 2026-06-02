@@ -59,6 +59,15 @@ const TONES = [
   { value: "inspirant", labelKey: "toneInspiring" },
 ] as const;
 
+// Catalogue des plans affichés dans Settings → Abonnement.
+// Chaque carte a un CTA "Passer en X" qui ouvre le checkout SIO du
+// plan correspondant. Le webhook fait le reste automatiquement :
+//   - upsert profiles.plan = nouveau plan
+//   - auto-cancel les anciens subs SIO (cf. webhook route.ts)
+//   - flag expected_sio_cancel_until = NOW + 24h pour ignorer le
+//     SALE_CANCELED de l'ancien sub qui arrivera plus tard
+// Donc upgrade ET downgrade marchent en 1 clic, sans intervention user
+// côté SIO ni double-facturation.
 const PLANS = [
   {
     id: "free",
@@ -68,6 +77,7 @@ const PLANS = [
     periodKey: null as string | null,
     featureKeys: ["planFreeF1", "planFreeF2", "planFreeF3", "planFreeF4"],
     ctaKey: null as string | null,
+    checkoutUrl: null as string | null,
   },
   {
     id: "pro_monthly",
@@ -77,7 +87,7 @@ const PLANS = [
     periodKey: "planProPeriod" as string | null,
     featureKeys: ["planProF1", "planProF2", "planProF3", "planProF4", "planProF5", "planProF6"],
     ctaKey: "planProCta" as string | null,
-    popular: true,
+    checkoutUrl: "https://www.tipote.fr/tiquiz-mensuel" as string | null,
   },
   {
     id: "pro_yearly",
@@ -88,6 +98,40 @@ const PLANS = [
     badge: "−17%",
     featureKeys: ["planYearlyF1", "planYearlyF2", "planYearlyF3", "planYearlyF4"],
     ctaKey: "planYearlyCta" as string | null,
+    checkoutUrl: "https://www.tipote.fr/tiquiz-annuel" as string | null,
+  },
+  {
+    id: "pro_monthly_plus",
+    nameKey: "planMonthlyPlusName",
+    icon: Sparkles,
+    priceKey: "planMonthlyPlusPrice",
+    periodKey: "planMonthlyPlusPeriod" as string | null,
+    badge: "+",
+    featureKeys: [
+      "planMonthlyPlusF1",
+      "planMonthlyPlusF2",
+      "planMonthlyPlusF3",
+      "planMonthlyPlusF4",
+    ],
+    ctaKey: "planMonthlyPlusCta" as string | null,
+    checkoutUrl: "https://www.tipote.fr/tiquiz-mensuel-plus" as string | null,
+    popular: true,
+  },
+  {
+    id: "pro_yearly_plus",
+    nameKey: "planYearlyPlusName",
+    icon: Crown,
+    priceKey: "planYearlyPlusPrice",
+    periodKey: "planYearlyPlusPeriod" as string | null,
+    badge: "+ −17%",
+    featureKeys: [
+      "planYearlyPlusF1",
+      "planYearlyPlusF2",
+      "planYearlyPlusF3",
+      "planYearlyPlusF4",
+    ],
+    ctaKey: "planYearlyPlusCta" as string | null,
+    checkoutUrl: "https://www.tipote.fr/tiquiz-annuel-plus" as string | null,
   },
 ] as const;
 
@@ -839,11 +883,20 @@ export default function SettingsClient() {
               // billing they could downgrade or cancel. Lifetime users get
               // their own "included" pill below instead (no CTA, no charge
               // implication).
+              // Detection plan actuel — couvre TOUS les paliers (Béné
+              // 2 juin 2026). Lifetime/beta ne matchent AUCUNE carte
+              // (ils ont accès à tout, on affiche un pill "Inclus").
               const isCurrent =
                 (currentPlan === "free" && plan.id === "free") ||
                 (currentPlan === "monthly" && plan.id === "pro_monthly") ||
-                (currentPlan === "yearly" && plan.id === "pro_yearly");
-              const isPaidPlanCard = plan.id === "pro_monthly" || plan.id === "pro_yearly";
+                (currentPlan === "yearly" && plan.id === "pro_yearly") ||
+                (currentPlan === "monthly_plus" && plan.id === "pro_monthly_plus") ||
+                (currentPlan === "yearly_plus" && plan.id === "pro_yearly_plus");
+              const isPaidPlanCard =
+                plan.id === "pro_monthly" ||
+                plan.id === "pro_yearly" ||
+                plan.id === "pro_monthly_plus" ||
+                plan.id === "pro_yearly_plus";
               return (
                 <Card key={plan.id} className={`relative overflow-visible ${('popular' in plan && plan.popular) ? "border-primary ring-1 ring-primary" : ""}`}>
                   {('popular' in plan && plan.popular) && (
@@ -878,9 +931,13 @@ export default function SettingsClient() {
                       </div>
                     ) : isCurrent ? (
                       <div className="text-center text-sm font-medium text-muted-foreground py-2 border rounded-full">{t("currentPlan")}</div>
-                    ) : plan.ctaKey ? (
+                    ) : plan.ctaKey && plan.checkoutUrl ? (
+                      // CTA universel : peu importe upgrade OU downgrade,
+                      // c'est le même flow (checkout SIO du nouveau plan).
+                      // Le webhook auto-cancel l'ancien sub côté SIO et
+                      // upsert profiles.plan. Cf. webhook route.ts.
                       <Button className="w-full rounded-full" variant={('popular' in plan && plan.popular) ? "default" : "outline"} asChild>
-                        <a href={plan.id === "pro_monthly" ? "https://www.tipote.fr/part-tiquiz-mensuel" : "https://www.tipote.fr/part-tiquiz-annuel"} target="_blank" rel="noopener noreferrer">{t(plan.ctaKey)} <ArrowRight className="h-4 w-4 ml-1.5" /></a>
+                        <a href={plan.checkoutUrl} target="_blank" rel="noopener noreferrer">{t(plan.ctaKey)} <ArrowRight className="h-4 w-4 ml-1.5" /></a>
                       </Button>
                     ) : null}
                   </CardContent>

@@ -9,6 +9,11 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createClient } from "@supabase/supabase-js";
 import { timingSafeEqual } from "crypto";
 import { getSignatureMode, verifySioSignature } from "@/lib/sioWebhookSig";
+import {
+  cancelSubscription,
+  findContactByEmail,
+  listSubscriptionsForContact,
+} from "@/lib/systemeIoClient";
 
 const WEBHOOK_SECRET = process.env.SYSTEME_IO_WEBHOOK_SECRET;
 
@@ -216,8 +221,31 @@ export async function POST(req: NextRequest) {
       }
 
       const { data: priorProfile } = await supabaseAdmin
-        .from("profiles").select("plan").eq("user_id", found.id).maybeSingle();
+        .from("profiles").select("plan, expected_sio_cancel_until").eq("user_id", found.id).maybeSingle();
       const oldPlan = String((priorProfile as { plan?: string | null } | null)?.plan ?? "free").trim().toLowerCase();
+      const expectedCancelUntil = (priorProfile as { expected_sio_cancel_until?: string | null } | null)
+        ?.expected_sio_cancel_until ?? null;
+
+      // Auto-cancel attendu (l'user a upgrade/downgrade vers un autre
+      // palier — on a annulé son ancien sub côté SIO). Le SALE_CANCELED
+      // qui arrive est l'écho de cette annulation, PAS une vraie volonté
+      // de l'user de retomber en free. Ignore si le flag est dans le futur.
+      if (expectedCancelUntil && new Date(expectedCancelUntil) > new Date()) {
+        console.log(`[Tiquiz webhook] IGNORED expected cancel for ${cancelEmail} (current plan=${oldPlan}, expected_until=${expectedCancelUntil})`);
+        await logWebhook({
+          event_id: eventId,
+          event_type: eventType,
+          payload: rawBody,
+          status: "processed",
+          error: `ignored_expected_cancel:${oldPlan}`,
+        });
+        return NextResponse.json({
+          ok: true,
+          skipped: "expected_cancel",
+          email: cancelEmail,
+          current_plan: oldPlan,
+        });
+      }
 
       if (!oldPlan || oldPlan === "free") {
         // Already free — nothing to revoke. Mark processed so retries skip.
@@ -364,11 +392,80 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Upsert profile
-    const { error: upsertErr } = await supabaseAdmin.from("profiles").upsert({
-      user_id: userId, email, first_name: firstName, last_name: lastName,
-      plan: finalPlan, updated_at: new Date().toISOString(),
-    }, { onConflict: "user_id" });
+    // ── Auto-cancel des anciens subs SIO sur upgrade/downgrade ──
+    //
+    // Si l'user passait d'un plan PAYANT à un AUTRE plan payant
+    // (ex: monthly → monthly_plus, ou monthly_plus → yearly), on a
+    // MAINTENANT 2 subs actifs côté SIO : l'ancien + le nouveau qui
+    // vient d'être payé. On cancel l'ancien EN ARRIÈRE-PLAN pour éviter
+    // que l'user soit facturé 2 fois.
+    //
+    // Le SALE_CANCELED de l'ancien sub va arriver plus tard — il sera
+    // ignoré par la logique terminal-event (cf. expected_sio_cancel_until
+    // posé ci-dessous).
+    //
+    // Cas couverts :
+    //   - monthly → monthly_plus (upgrade)
+    //   - monthly_plus → monthly (downgrade)
+    //   - monthly → yearly_plus (cross)
+    //   - free → monthly_plus (pas de cancel, juste flag inutile)
+    //   - lifetime/beta → monthly_plus : déjà court-circuité plus haut
+    //     (refus de upgrade overwrite pour lifetime)
+    let didAutoCancel = false;
+    const isCrossPaidTransition =
+      oldPlan && oldPlan !== "free" && oldPlan !== finalPlan && !LIFETIME_PLANS.has(oldPlan);
+
+    if (isCrossPaidTransition) {
+      try {
+        const contact = await findContactByEmail(email);
+        if (contact?.id) {
+          const subs = await listSubscriptionsForContact(contact.id, { limit: 20, order: "desc" });
+          // On garde le sub le PLUS RÉCENT (= le nouveau qui vient
+          // d'être créé par cet achat) et on cancel tout le reste.
+          const activeOrTrialing = subs.filter((s) => {
+            const st = String(s.status ?? "").toLowerCase();
+            return st === "active" || st === "trialing" || st === "" || !st;
+          });
+          // Trier par created (ou id par défaut) desc → keep[0] = le plus récent
+          const toCancel = activeOrTrialing.slice(1);
+          await Promise.all(
+            toCancel.map((s) =>
+              cancelSubscription({ id: s.id, cancel: "Now" }).catch((e) => {
+                console.error(`[Tiquiz webhook] cancel old sub ${s.id} failed`, e);
+              }),
+            ),
+          );
+          if (toCancel.length > 0) {
+            didAutoCancel = true;
+            console.log(`[Tiquiz webhook] Auto-cancelled ${toCancel.length} old sub(s) for ${email} (transition ${oldPlan} → ${finalPlan})`);
+          }
+        }
+      } catch (e) {
+        // Fail-open : si l'auto-cancel plante, on ne bloque PAS l'upgrade.
+        // L'user a au pire 2 facturations en attendant qu'il cancel à
+        // la main. Béné peut traiter ces cas via support.
+        console.error("[Tiquiz webhook] auto-cancel old subs failed", e);
+      }
+    }
+
+    // Upsert profile (+ flag expected_sio_cancel_until si on a auto-cancel,
+    // pour que le SALE_CANCELED de l'ancien sub ne flippe pas plan→free).
+    const upsertPayload: Record<string, unknown> = {
+      user_id: userId,
+      email,
+      first_name: firstName,
+      last_name: lastName,
+      plan: finalPlan,
+      updated_at: new Date().toISOString(),
+    };
+    if (didAutoCancel) {
+      // 24h de fenêtre — SIO peut prendre quelques heures entre le
+      // cancel API et le webhook SALE_CANCELED. 24h couvre largement.
+      upsertPayload.expected_sio_cancel_until = new Date(
+        Date.now() + 24 * 60 * 60 * 1000,
+      ).toISOString();
+    }
+    const { error: upsertErr } = await supabaseAdmin.from("profiles").upsert(upsertPayload, { onConflict: "user_id" });
     if (upsertErr) {
       await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "error", error: `upsert:${upsertErr.message}` });
       throw upsertErr;

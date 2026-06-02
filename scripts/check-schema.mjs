@@ -164,6 +164,13 @@ const EXPECTED = [
     columns: ["project_id"],
   },
 
+  // ── Flag expected_sio_cancel_until (upgrade/downgrade auto) ─────
+  {
+    migration: "20260609_profiles_expected_sio_cancel",
+    table: "profiles",
+    columns: ["expected_sio_cancel_until"],
+  },
+
   // ── Plan + CHECK constraint étendu (paliers mensuel+ / annuel+) ─
   // On ne peut pas tester directement une CHECK constraint via SELECT.
   // Le seul test pratique : tenter d'INSERT/UPDATE plan='monthly_plus'
