@@ -1997,7 +1997,10 @@
     "toastUnavailableHint": "Comprueba tu conexión."
   },
   "socialProof": {
-    "heading": "Tiquiz en cifras",
+    "heading": "Formas parte de la comunidad Tiquiz",
+    "subhead": "Aquí es donde estamos",
+    "sentence": "Los usuarios de Tiquiz han creado {quizzes} quizzes y captado {leads} leads.",
+    "encouragement": "Funciona para nosotros, no te rindas 🚀",
     "quizzesLabel": "quizzes publicados",
     "leadsLabel": "emails cualificados capturados",
     "inline": "Hasta hoy, se han creado {quizzes} quizzes en Tiquiz y han capturado {leads} emails cualificados.",

@@ -14,6 +14,11 @@
 //
 // À programmer quotidien (≈09:00) sur le scheduler Tiquiz.
 // Auth : Bearer CRON_SECRET (pattern habituel).
+//
+// Ligne crontab à coller (`crontab -e` sur le VPS, sous user `tipote`) :
+//   0 9 * * * cd /home/tipote/tiquiz-app && set -a; . .env; set +a; curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://quiz.tipote.com/api/cron/affiliate-trial-expiry >> /tmp/affiliate-trial-expiry.log 2>&1
+//
+// Vérif que c'est bien planifié : `crontab -l | grep affiliate-trial-expiry`
 
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";

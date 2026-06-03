@@ -420,13 +420,6 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
               no rule matches, so it's never noise. */}
           {insights.length > 0 && <InsightsList insights={insights} />}
 
-          {/* Preuve sociale globale Tiquiz : nb quiz publiés + nb leads
-              capturés sur toute la plateforme. Source = /api/public/stats
-              (même endpoint que celui qui alimente le snippet Systeme.io
-              sur la sales page, donc chiffres strictement identiques entre
-              app et marketing). Cache 5 min côté CDN. */}
-          <SocialProofCounter variant="card" />
-
           {/* Premier quiz : onboarding avec 6 templates phares (1 clic =
               quiz prêt à éditer). Remplace l'ancien bandeau générique
               "Créer mon premier quiz" qui envoyait vers /quiz/new vide
@@ -608,6 +601,12 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
               ))}
             </div>
           </div>
+
+          {/* Preuve sociale globale Tiquiz, en bandeau de fin (Béné 3 juin
+              2026 — auparavant placé entre les insights et les KPI perso,
+              ce qui prêtait à confusion avec les stats de l'user). Ici, ça
+              ferme la session sur un encouragement communautaire. */}
+          <SocialProofCounter variant="hero" />
         </div>
       )}
     </DashboardLayout>

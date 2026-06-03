@@ -1981,7 +1981,10 @@
     "toastUnavailableHint": "Check your connection."
   },
   "socialProof": {
-    "heading": "Tiquiz in numbers",
+    "heading": "You're part of the Tiquiz community",
+    "subhead": "Here's where we stand",
+    "sentence": "Tiquiz users have created {quizzes} quizzes and captured {leads} leads.",
+    "encouragement": "It's working for us, don't give up 🚀",
     "quizzesLabel": "quizzes published",
     "leadsLabel": "qualified emails captured",
     "inline": "To date, {quizzes} quizzes have been created on Tiquiz and they've captured {leads} qualified emails.",

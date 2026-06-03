@@ -20,7 +20,7 @@ import { Users, FileText } from "lucide-react";
 type Stats = { quizzes: number; leads: number; updated_at?: string };
 
 interface Props {
-  variant?: "card" | "inline";
+  variant?: "card" | "inline" | "hero";
   className?: string;
 }
 
@@ -60,6 +60,37 @@ export function SocialProofCounter({ variant = "card", className = "" }: Props) 
       <p className={`text-sm text-muted-foreground ${className}`.trim()}>
         {t("inline", { quizzes: qLabel, leads: lLabel })}
       </p>
+    );
+  }
+
+  if (variant === "hero") {
+    // Bandeau "communauté" placé en bas du dashboard (Béné 3 juin 2026 —
+    // confusion avec les chiffres de l'user dans le placement précédent).
+    // Background dégradé distinct des cartes user, chiffres en accent
+    // (pas en primary qui sert aux KPI perso), encouragement final.
+    return (
+      <div
+        className={`rounded-2xl border bg-gradient-to-br from-cyan-50 via-sky-50 to-indigo-50 dark:from-cyan-950/30 dark:via-sky-950/30 dark:to-indigo-950/30 p-6 sm:p-8 ${className}`.trim()}
+        aria-label={t("ariaLabel")}
+      >
+        <div className="flex items-start gap-3 mb-3">
+          <span className="text-2xl leading-none" aria-hidden="true">🌍</span>
+          <div className="min-w-0">
+            <h3 className="text-base sm:text-lg font-bold leading-tight">
+              {t("heading")}
+            </h3>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+              {t("subhead")}
+            </p>
+          </div>
+        </div>
+        <p className="text-base sm:text-lg leading-relaxed mt-4">
+          {t("sentence", { quizzes: qLabel, leads: lLabel })}
+        </p>
+        <p className="text-sm text-muted-foreground mt-3">
+          {t("encouragement")}
+        </p>
+      </div>
     );
   }
 

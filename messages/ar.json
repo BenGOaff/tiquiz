@@ -1981,7 +1981,10 @@
     "toastUnavailableHint": "تحقق من اتصالك."
   },
   "socialProof": {
-    "heading": "Tiquiz بالأرقام",
+    "heading": "أنت جزء من مجتمع Tiquiz",
+    "subhead": "إليك أين وصلنا",
+    "sentence": "أنشأ مستخدمو Tiquiz {quizzes} اختبارًا والتقطوا {leads} عميلًا محتملًا.",
+    "encouragement": "ينجح معنا، لا تستسلم 🚀",
     "quizzesLabel": "اختبار منشور",
     "leadsLabel": "بريد إلكتروني مؤهَّل تم جمعه",
     "inline": "حتى اليوم، تم إنشاء {quizzes} اختبارًا على Tiquiz وجمعت {leads} بريدًا إلكترونيًا مؤهَّلًا.",

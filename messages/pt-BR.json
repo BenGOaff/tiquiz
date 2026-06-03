@@ -1927,7 +1927,10 @@
     "toastUnavailableHint": "Verifique sua conexão."
   },
   "socialProof": {
-    "heading": "Tiquiz em números",
+    "heading": "Você faz parte da comunidade Tiquiz",
+    "subhead": "É aqui que estamos",
+    "sentence": "Os usuários do Tiquiz criaram {quizzes} quizzes e capturaram {leads} leads.",
+    "encouragement": "Funciona para nós, não desista 🚀",
     "quizzesLabel": "quizzes publicados",
     "leadsLabel": "e-mails qualificados capturados",
     "inline": "Até hoje, {quizzes} quizzes foram criados no Tiquiz e capturaram {leads} e-mails qualificados.",
