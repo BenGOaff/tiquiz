@@ -28,6 +28,21 @@ export async function GET() {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
+  // Rate-limit serveur (Béné 3 juin 2026, mirror Tipote) : 1 batch /
+  // semaine max. Si profiles.next_milestone_toast_at est dans le futur,
+  // on retourne 0 milestones. Sinon, le batch est servi et le client
+  // appelle /seen qui programme next à now() + 7d.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("next_milestone_toast_at")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const nextAt =
+    (profile as { next_milestone_toast_at: string | null } | null)?.next_milestone_toast_at;
+  if (nextAt && new Date(nextAt) > new Date()) {
+    return NextResponse.json({ ok: true, milestones: [] });
+  }
+
   // Phase 3b multiprofils : un nouveau projet démarre avec 0 milestones.
   const scope = await getActiveProjectScope(user.id, user.email ?? null);
   let query = supabase

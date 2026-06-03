@@ -1,0 +1,346 @@
+<!-- ============================================================
+  PAGE MAÎTRE — Cas client Jocelyne Bacquet (TDAH)
+  À coller dans un bloc HTML personnalisé Systeme.io
+  Palette Tiquiz · Mobile-first · CSS scopé .jb-wrap
+============================================================ -->
+
+<style>
+.jb-wrap { font-family: 'Open Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #2E386E; max-width: 1080px; margin: 0 auto; padding: 0 16px; box-sizing: border-box; line-height: 1.6; }
+.jb-wrap * { box-sizing: border-box; }
+
+/* HERO */
+.jb-hero { background: linear-gradient(135deg, #5A6EF6 0%, #20BBE6 100%); color: #FFFFFF; border-radius: 24px; padding: 48px 32px; margin: 32px 0; text-align: center; box-shadow: 0 12px 40px rgba(46, 56, 110, 0.18); }
+.jb-hero-eyebrow { display: inline-block; background: rgba(255,255,255,0.18); color: #FFFFFF; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; padding: 6px 14px; border-radius: 999px; margin-bottom: 18px; text-transform: uppercase; }
+.jb-hero-number { font-size: 56px; font-weight: 900; line-height: 1; margin: 0 0 8px 0; letter-spacing: -0.03em; }
+.jb-hero-sub { font-size: 18px; font-weight: 600; opacity: 0.95; margin: 0 0 24px 0; }
+.jb-hero-context { font-size: 15px; font-weight: 500; opacity: 0.92; max-width: 640px; margin: 0 auto; line-height: 1.55; }
+
+/* INTRO BLOCK */
+.jb-intro { background: #FFFFFF; border: 1px solid #E6E8F0; border-radius: 18px; padding: 32px; margin: 32px 0; display: grid; grid-template-columns: 200px 1fr; gap: 28px; align-items: center; box-shadow: 0 6px 24px rgba(46, 56, 110, 0.06); }
+.jb-photo { width: 200px; height: 200px; border-radius: 16px; background: linear-gradient(135deg, #EEF0FE 0%, #E3F5FC 100%); display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 900; color: #5A6EF6; }
+.jb-photo img { width: 100%; height: 100%; border-radius: 16px; object-fit: cover; }
+.jb-intro-name { font-size: 24px; font-weight: 900; color: #2E386E; margin: 0 0 4px 0; }
+.jb-intro-role { font-size: 14px; font-weight: 600; color: #5A6EF6; margin: 0 0 16px 0; letter-spacing: 0.02em; }
+.jb-intro-text { font-size: 15px; color: #2E386E; line-height: 1.65; margin: 0; }
+.jb-intro-links { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+.jb-intro-links a { display: inline-block; padding: 6px 12px; background: #EEF0FE; color: #5A6EF6; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: 700; transition: all 0.2s; }
+.jb-intro-links a:hover { background: #5A6EF6; color: #FFFFFF; }
+
+/* PULL QUOTE */
+.jb-pullquote { background: linear-gradient(135deg, #EEF0FE 0%, #E3F5FC 100%); border-left: 6px solid #5A6EF6; padding: 32px 36px; margin: 40px 0; border-radius: 18px; position: relative; }
+.jb-pullquote::before { content: "\201C"; position: absolute; top: -8px; left: 16px; font-size: 80px; color: #5A6EF6; opacity: 0.18; font-family: Georgia, serif; line-height: 1; }
+.jb-pullquote p { font-size: 22px; font-weight: 700; color: #2E386E; line-height: 1.4; margin: 0 0 12px 0; font-style: italic; }
+.jb-pullquote-author { font-size: 14px; font-weight: 700; color: #5A6EF6; letter-spacing: 0.02em; }
+
+/* SECTIONS */
+.jb-section { margin: 48px 0; }
+.jb-section h2 { font-size: 28px; font-weight: 900; color: #2E386E; letter-spacing: -0.02em; margin: 0 0 8px 0; }
+.jb-section-eyebrow { display: inline-block; font-size: 12px; font-weight: 800; color: #20BBE6; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px; }
+.jb-section p { font-size: 16px; color: #2E386E; line-height: 1.7; margin: 12px 0; }
+.jb-section strong { color: #2E386E; font-weight: 800; }
+.jb-section em { color: #5A6EF6; font-style: italic; }
+
+/* STAT GRID */
+.jb-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 32px 0; }
+.jb-stat { background: #FFFFFF; border: 2px solid #E6E8F0; border-radius: 16px; padding: 24px 20px; text-align: center; transition: all 0.25s; }
+.jb-stat:hover { border-color: #5A6EF6; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(90, 110, 246, 0.15); }
+.jb-stat-number { font-size: 36px; font-weight: 900; color: #5A6EF6; line-height: 1; letter-spacing: -0.02em; margin: 0 0 6px 0; }
+.jb-stat-label { font-size: 12px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.06em; }
+.jb-stat-highlight { background: linear-gradient(135deg, #5A6EF6 0%, #20BBE6 100%); border-color: transparent; color: #FFFFFF; }
+.jb-stat-highlight .jb-stat-number { color: #FFFFFF; }
+.jb-stat-highlight .jb-stat-label { color: rgba(255,255,255,0.85); }
+
+/* THREE COLUMNS - GWENN */
+.jb-three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 32px 0; }
+.jb-three-card { background: #FFFFFF; border: 2px solid #E6E8F0; border-radius: 16px; padding: 26px; }
+.jb-three-card-icon { width: 48px; height: 48px; background: linear-gradient(135deg, #5A6EF6 0%, #20BBE6 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-size: 24px; font-weight: 900; margin: 0 0 16px 0; }
+.jb-three-card h3 { font-size: 17px; font-weight: 800; color: #2E386E; margin: 0 0 10px 0; }
+.jb-three-card p { font-size: 14px; color: #2E386E; line-height: 1.6; margin: 0; }
+
+/* PLAY STEPS */
+.jb-play { background: #F8F9FC; border-radius: 18px; padding: 32px; margin: 32px 0; }
+.jb-step { display: grid; grid-template-columns: 48px 1fr; gap: 18px; margin: 18px 0; align-items: start; }
+.jb-step-num { width: 36px; height: 36px; background: #5A6EF6; color: #FFFFFF; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 16px; }
+.jb-step-content { padding-top: 6px; }
+.jb-step-title { font-size: 16px; font-weight: 800; color: #2E386E; margin: 0 0 4px 0; }
+.jb-step-text { font-size: 14px; color: #4B5563; line-height: 1.6; margin: 0; }
+
+/* TAKEAWAYS */
+.jb-takeaways { background: #FFFFFF; border: 2px solid #5A6EF6; border-radius: 18px; padding: 32px; margin: 40px 0; }
+.jb-takeaway { display: grid; grid-template-columns: 32px 1fr; gap: 14px; margin: 16px 0; align-items: start; }
+.jb-check { color: #20BBE6; font-size: 22px; font-weight: 900; line-height: 1.4; }
+.jb-takeaway p { margin: 0; font-size: 15px; color: #2E386E; line-height: 1.6; }
+.jb-takeaway strong { color: #2E386E; }
+
+/* CTA DOUBLE */
+.jb-cta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 40px 0; }
+.jb-cta-card { background: #FFFFFF; border: 2px solid #E6E8F0; border-radius: 18px; padding: 32px; text-align: center; }
+.jb-cta-card.indigo { background: linear-gradient(135deg, #5A6EF6 0%, #4F5FE3 100%); border-color: transparent; color: #FFFFFF; }
+.jb-cta-card.cyan { background: linear-gradient(135deg, #5DD5F0 0%, #20BBE6 100%); border-color: transparent; color: #FFFFFF; }
+.jb-cta-card h3 { font-size: 20px; font-weight: 900; margin: 0 0 8px 0; }
+.jb-cta-card p { font-size: 14px; margin: 0 0 20px 0; opacity: 0.92; }
+.jb-cta-button { display: inline-block; background: #FFFFFF; color: #5A6EF6; padding: 14px 28px; border-radius: 12px; font-weight: 800; text-decoration: none; font-size: 15px; transition: all 0.2s; }
+.jb-cta-button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
+.jb-cta-card.cyan .jb-cta-button { color: #0EA2CB; }
+
+/* MOBILE */
+@media (max-width: 720px) {
+  .jb-hero { padding: 32px 20px; }
+  .jb-hero-number { font-size: 40px; }
+  .jb-hero-sub { font-size: 16px; }
+  .jb-intro { grid-template-columns: 1fr; gap: 20px; padding: 24px; text-align: center; }
+  .jb-photo { width: 160px; height: 160px; margin: 0 auto; }
+  .jb-pullquote p { font-size: 18px; }
+  .jb-section h2 { font-size: 22px; }
+  .jb-stats { grid-template-columns: repeat(2, 1fr); }
+  .jb-stat-number { font-size: 28px; }
+  .jb-three { grid-template-columns: 1fr; }
+  .jb-cta-grid { grid-template-columns: 1fr; }
+  .jb-play { padding: 22px; }
+}
+</style>
+
+<div class="jb-wrap">
+
+  <!-- HERO -->
+  <section class="jb-hero">
+    <span class="jb-hero-eyebrow">Étude de cas · Mai-Juin 2026</span>
+    <h1 class="jb-hero-number">285 leads en 9 jours</h1>
+    <p class="jb-hero-sub">à 0,18 € par lead, sans audience préalable, avec 63,50 € de budget pub</p>
+    <p class="jb-hero-context">Comment Jocelyne Bacquet, autrice d'environ 70 romans, a démarré une nouvelle niche sur le TDAH adulte depuis zéro grâce à un quiz Tiquiz et une campagne Meta pilotée par Gwenn.</p>
+  </section>
+
+  <!-- INTRO PERSONNE -->
+  <section class="jb-intro">
+    <div class="jb-photo">
+      <!-- Remplacer par : <img src="URL_PHOTO_JOCELYNE" alt="Jocelyne Bacquet"> -->
+      JB
+    </div>
+    <div>
+      <h2 class="jb-intro-name">Jocelyne Bacquet</h2>
+      <p class="jb-intro-role">Autrice · Orthophoniste pendant 40 ans</p>
+      <p class="jb-intro-text">Après environ 70 romans publiés et 40 années de travail comme orthophoniste sur les troubles du neurodéveloppement, Jocelyne se lance dans une nouvelle aventure : la non-fiction sur le TDAH adulte. Comptes sociaux créés pour les besoins du lancement, audience à zéro, premier livre tout juste sorti sur Amazon.</p>
+      <div class="jb-intro-links">
+        <a href="https://www.jocelyne-bacquet-auteur.fr/blog-jocelyne-bacquet" target="_blank">Son blog</a>
+        <a href="https://www.amazon.fr/dp/B0H1GP7CJP" target="_blank">Son livre</a>
+        <a href="https://www.instagram.com/j_bacquet.1/" target="_blank">Instagram</a>
+        <a href="https://www.facebook.com/profile.php?id=61590539094570" target="_blank">Facebook</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- PULL QUOTE -->
+  <div class="jb-pullquote">
+    <p>Un accompagnement sur mesure et humain, grâce à la complicité de deux expertes, à l'écoute constante des besoins de leur client.</p>
+    <p class="jb-pullquote-author">— Jocelyne Bacquet</p>
+  </div>
+
+  <!-- LE CONTEXTE -->
+  <section class="jb-section">
+    <span class="jb-section-eyebrow">Le contexte</span>
+    <h2>Pivoter vers une nouvelle niche, depuis zéro</h2>
+    <p>Jocelyne a passé 40 ans à travailler comme orthophoniste sur les troubles du neurodéveloppement. Elle a aussi écrit, beaucoup : environ 70 romans publiés avant ce nouveau chapitre.</p>
+    <p>En 2026, lors d'un coaching sur la création d'un livre de non-fiction de niche, elle décide, comme elle le raconte elle-même, <em>« de mettre à profit ses 40 années de travail en tant qu'orthophoniste sur les troubles du neuro-développement pour aider les personnes à apaiser les conséquences de leur trouble »</em>. Le sujet : chez l'adulte, comprendre son TDAH ou celui d'un proche et proposer des aides pour apaiser les symptômes.</p>
+    <p>Au moment du lancement, ses comptes Facebook et Instagram dédiés à ce nouveau projet viennent d'être créés. Aucune audience préexistante, aucune liste e-mail. Le livre sort sur Amazon, mais sans personne pour le lire.</p>
+    <p>Plutôt que d'attendre la construction d'une audience organique, Jocelyne choisit une autre voie : <strong>un quiz Tiquiz pour qualifier ses futurs lecteurs, et une campagne Meta pilotée par Gwenn pour amener le trafic.</strong></p>
+  </section>
+
+  <!-- LE PLAY -->
+  <section class="jb-section">
+    <span class="jb-section-eyebrow">La méthode</span>
+    <h2>Le quiz Tiquiz : « Quel type de cerveau TDAH êtes-vous ? »</h2>
+    <p>Pourquoi ce sujet précis ? Parce que <em>« le TDAH est un sujet en vue aujourd'hui, mais de nombreux livres n'apportent rien ou sont écrits sous IA »</em>, comme le dit Jocelyne elle-même. Son atout : 40 années d'expérience clinique à parler de neurodéveloppement avec des familles concernées. Un quiz où chaque question, chaque option, chaque profil est ancré dans une vraie expertise.</p>
+
+    <div class="jb-play">
+      <div class="jb-step">
+        <div class="jb-step-num">1</div>
+        <div class="jb-step-content">
+          <p class="jb-step-title">5 questions, 5 profils TDAH</p>
+          <p class="jb-step-text">Le répondant découvre lequel des 5 profils correspond à son cerveau, comprend ses points forts et ses points de friction, et reçoit quelques conseils rapides pour apaiser ses difficultés du quotidien.</p>
+        </div>
+      </div>
+      <div class="jb-step">
+        <div class="jb-step-num">2</div>
+        <div class="jb-step-content">
+          <p class="jb-step-title">Génération assistée par IA</p>
+          <p class="jb-step-text">Pour la conception du quiz, Gwenn a utilisé Claude pour structurer les questions et les profils, en s'appuyant sur l'expertise clinique de Jocelyne. Temps de création estimé hors phase de bêta : 1 h à 1 h 30.</p>
+        </div>
+      </div>
+      <div class="jb-step">
+        <div class="jb-step-num">3</div>
+        <div class="jb-step-content">
+          <p class="jb-step-title">Branchement Systeme.io natif</p>
+          <p class="jb-step-text">Un tag est posé par profil de réponse au moment du résultat du quiz. Ce tag déclenche dans Systeme.io un workflow qui ajoute un tag générique « TDAH » et envoie un email de résultat adapté au profil. Pas de Zapier, pas de bricolage.</p>
+        </div>
+      </div>
+      <div class="jb-step">
+        <div class="jb-step-num">4</div>
+        <div class="jb-step-content">
+          <p class="jb-step-title">Email de résultat ciselé</p>
+          <p class="jb-step-text">Présentation de Jocelyne, rappel du résultat pour que la personne puisse le relire, puis un paragraphe qui invite à découvrir le livre sur Amazon. <em>« Trop d'infos tue l'info »</em>, comme dit Jocelyne. Court, clair, suffisant.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LE RÔLE DE GWENN -->
+  <section class="jb-section">
+    <span class="jb-section-eyebrow">La freelance qui a tout orchestré</span>
+    <h2>Gwenn : technicienne, stratège, partenaire humaine</h2>
+    <p>Jocelyne avait l'expertise clinique. Gwenn a apporté l'expertise marketing. Cette complémentarité est ce qui distingue ce cas : ni l'une ni l'autre n'aurait pu obtenir ces chiffres en solo. Elles l'ont fait ensemble, chacune sur son terrain.</p>
+
+    <div class="jb-three">
+      <div class="jb-three-card">
+        <div class="jb-three-card-icon">⚙️</div>
+        <h3>Technique</h3>
+        <p>Pixel Meta installé sur le quiz, ciblage Facebook et Instagram, optimisation continue, raccord entre Tiquiz et Systeme.io. <em>« Un sacré bazar sur le plan technique »</em>, reconnaît Jocelyne — Gwenn a tout débroussaillé.</p>
+      </div>
+      <div class="jb-three-card">
+        <div class="jb-three-card-icon">🎯</div>
+        <h3>Stratégique</h3>
+        <p>Choix du lead magnet, conception du look du tunnel, formulation du hook publicitaire, structuration de l'angle créatif. Le quiz aurait pu rester invisible. Gwenn l'a mis en orbite.</p>
+      </div>
+      <div class="jb-three-card">
+        <div class="jb-three-card-icon">🤝</div>
+        <h3>Humain</h3>
+        <p>Présence constante, vidéos explicatives utiles et claires, capacité à <em>« comprendre entre les lignes »</em> et à calmer les ardeurs quand Jocelyne voulait foncer trop vite. Un accompagnement qui rassure et qui cadre.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- LES CHIFFRES -->
+  <section class="jb-section">
+    <span class="jb-section-eyebrow">Les résultats sur 9 jours</span>
+    <h2>Du 26 mai au 3 juin 2026</h2>
+    <p>Données arrêtées au 3 juin 2026 à 13h15. Campagne toujours active à la date de publication.</p>
+
+    <div class="jb-stats">
+      <div class="jb-stat">
+        <p class="jb-stat-number">24 417</p>
+        <p class="jb-stat-label">Impressions</p>
+      </div>
+      <div class="jb-stat">
+        <p class="jb-stat-number">683</p>
+        <p class="jb-stat-label">Clics</p>
+      </div>
+      <div class="jb-stat jb-stat-highlight">
+        <p class="jb-stat-number">285</p>
+        <p class="jb-stat-label">Leads via pub</p>
+      </div>
+      <div class="jb-stat jb-stat-highlight">
+        <p class="jb-stat-number">0,18 €</p>
+        <p class="jb-stat-label">Coût par lead</p>
+      </div>
+    </div>
+
+    <div class="jb-stats">
+      <div class="jb-stat">
+        <p class="jb-stat-number">63,50 €</p>
+        <p class="jb-stat-label">Budget pub total</p>
+      </div>
+      <div class="jb-stat">
+        <p class="jb-stat-number">7 €</p>
+        <p class="jb-stat-label">Budget journalier</p>
+      </div>
+      <div class="jb-stat">
+        <p class="jb-stat-number">9 jours</p>
+        <p class="jb-stat-label">Durée campagne</p>
+      </div>
+      <div class="jb-stat">
+        <p class="jb-stat-number">325</p>
+        <p class="jb-stat-label">Leads totaux (pub + distribution organique)</p>
+      </div>
+    </div>
+
+    <p style="font-size: 14px; color: #6B7280; margin-top: 20px;"><strong>Audience ciblée :</strong> femmes 30-55 ans, centres d'intérêt régulation émotionnelle, développement personnel (psychologie), livres de non-fiction, productivité.</p>
+    <p style="font-size: 14px; color: #6B7280;"><strong>Hook publicitaire :</strong> <em>« 🧠 Vous avez déjà lu des articles sur le TDAH en vous disant que ça ne vous ressemblait pas vraiment ? »</em></p>
+  </section>
+
+  <!-- POINT DE COMPARAISON -->
+  <section class="jb-section">
+    <span class="jb-section-eyebrow">Mise en perspective</span>
+    <h2>Le coût par lead obtenu dans ce cas</h2>
+    <p>Le coût par lead atteint dans cette campagne est de <strong>0,18 €</strong>.</p>
+    <p>Pour mettre cette valeur en contexte : les rapports d'industrie 2026 sur la conversion des lead magnets (Interact <em>Quiz Conversion Rate Report 2026</em>, Kyleads <em>Quiz Funnels vs Lead Magnets 2026</em>, Dashform <em>Quiz Funnels vs Static Lead Magnets 2026</em>) documentent un écart structurel : les quiz convertissent en moyenne 2,4 à 10 fois mieux qu'un PDF statique, et les outils de quiz alimentés par l'IA enregistrent un gain de capture allant jusqu'à 78 %.</p>
+    <p>Ces chiffres sectoriels expliquent en partie pourquoi un quiz qualifiant comme celui de Jocelyne peut atteindre un CPL très bas. Voici, à mon analyse, trois facteurs précis qui contribuent à ce résultat dans ce cas spécifique :</p>
+    <div class="jb-takeaways">
+      <div class="jb-takeaway">
+        <span class="jb-check">→</span>
+        <p>Le quiz est un format plus engageant que le PDF, ce qui se traduit par un meilleur taux de clic sur la publicité et donc un coût par clic plus bas (mécanique documentée par Interact 2026).</p>
+      </div>
+      <div class="jb-takeaway">
+        <span class="jb-check">→</span>
+        <p>La complétion du quiz est un signal positif fort pour le pixel Meta, qui optimise ensuite vers des audiences similaires (mécanique d'optimisation Meta classique).</p>
+      </div>
+      <div class="jb-takeaway">
+        <span class="jb-check">→</span>
+        <p>Le hook publicitaire conçu par Gwenn — <em>« Vous avez déjà lu des articles sur le TDAH en vous disant que ça ne vous ressemblait pas vraiment ? »</em> — touche directement une frustration documentée chez les personnes concernées par le TDAH adulte, ce qui amène un meilleur taux de clic qualifié.</p>
+      </div>
+    </div>
+    <p style="font-size: 13px; color: #6B7280; margin-top: 16px;"><strong>Sources des benchmarks 2026 :</strong> tryinteract.com/blog/quiz-conversion-rate-report, kyleads.com/blog/quiz-funnels-vs-lead-magnets, getaiform.com/blog/quiz-funnels-vs-static-lead-magnets.</p>
+  </section>
+
+  <!-- TÉMOIGNAGE LONG -->
+  <section class="jb-section">
+    <span class="jb-section-eyebrow">Côté Jocelyne</span>
+    <h2>Le moment où elle s'est dit « ça marche »</h2>
+    <div class="jb-pullquote">
+      <p>Surtout de très beaux retours de bêta-lectrices. Le plus marquant m'a fait venir les larmes aux yeux. Encore un ce matin, qui m'a bluffée, tellement je ne pensais pas que mon livre allait si loin pour aider les lecteurs.</p>
+      <p class="jb-pullquote-author">— Jocelyne Bacquet</p>
+    </div>
+    <p>Sa plus grande surprise dans cette aventure : <em>« la facilité avec laquelle j'ai écrit ce livre. J'étais chez moi. »</em> Quarante ans d'expertise qui se déversent enfin sur le papier, dans une niche où l'authenticité fait la différence face aux livres écrits par IA sans vrai vécu derrière.</p>
+    <p>Ce qu'elle apprécie dans Tiquiz : <em>« la présentation, la facilité pour les utilisateurs, la clarté et la présentation des résultats. »</em> Côté création du quiz, Gwenn s'en est occupée — Jocelyne testera elle-même un prochain quiz dans la suite de son projet.</p>
+  </section>
+
+  <!-- LE CONSEIL DE JOCELYNE -->
+  <section class="jb-section">
+    <span class="jb-section-eyebrow">Son message aux femmes qui veulent pivoter</span>
+    <h2>« Y croire. Comme un pitbull sur son os. »</h2>
+    <p>À la question <em>« qu'est-ce que tu dirais à une autre femme expérimentée qui voudrait pivoter son activité en partant de zéro ? »</em>, Jocelyne répond sans détour :</p>
+    <div class="jb-pullquote">
+      <p>Y croire. Car elle est la seule personne à savoir ce qu'elle veut, à pouvoir trouver sa route et à ne jamais vouloir lâcher. L'image est peut-être particulière, mais c'est un peu comme un pitbull sur son os : ne lâche pas, ne laisse personne lui prendre, et le ronge jusqu'à ce que tout le positif en ait été extrait.</p>
+      <p class="jb-pullquote-author">— Jocelyne Bacquet</p>
+    </div>
+    <p>Ce qui vient ensuite pour elle : <strong>d'autres quiz, une communauté d'échange, d'autres livres, des ateliers d'aide, des entretiens individuels</strong>. Tout ce qui, dit-elle, <em>« interpellera son cerveau »</em>.</p>
+  </section>
+
+  <!-- CE QUE CE CAS ENSEIGNE -->
+  <section class="jb-section">
+    <span class="jb-section-eyebrow">À retenir pour votre business</span>
+    <h2>Trois leçons à appliquer dès cette semaine</h2>
+
+    <div class="jb-takeaways">
+      <div class="jb-takeaway">
+        <span class="jb-check">1.</span>
+        <p><strong>Démarrer une niche sans audience préexistante est possible.</strong> Avec 63,50 € de budget pub et un quiz qualifiant, Jocelyne a constitué une base de 285 leads en 9 jours, en partant de comptes sociaux créés pour le lancement.</p>
+      </div>
+      <div class="jb-takeaway">
+        <span class="jb-check">2.</span>
+        <p><strong>La complémentarité expertise + marketing change l'équation.</strong> Jocelyne apporte 40 années d'expérience clinique sur les troubles du neurodéveloppement. Gwenn apporte la compétence pub Meta. Le résultat est le produit de leurs deux savoir-faire combinés.</p>
+      </div>
+      <div class="jb-takeaway">
+        <span class="jb-check">3.</span>
+        <p><strong>L'authenticité a un effet mesurable dans une niche où le contenu IA prolifère.</strong> Comme Jocelyne le dit elle-même au sujet du marché du TDAH : <em>« C'est un sujet en vue aujourd'hui, mais de nombreux livres n'apportent rien ou sont écrits sous IA. »</em> Le quiz porte 40 ans de pratique, et les retours de bêta-lectrices le confirment.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA DOUBLE -->
+  <section class="jb-section">
+    <h2 style="text-align: center; margin-bottom: 32px;">À vous de jouer</h2>
+
+    <div class="jb-cta-grid">
+      <div class="jb-cta-card indigo">
+        <h3>Tester Tiquiz gratuitement</h3>
+        <p>Créez votre propre quiz qualifiant pour Systeme.io en moins d'une heure, sans Zapier.</p>
+        <a href="https://www.tipote.fr/tiquiz" class="jb-cta-button">Démarrer mon quiz →</a>
+      </div>
+      <div class="jb-cta-card cyan">
+        <h3>Travailler avec Gwenn</h3>
+        <p>Vous voulez confier votre campagne Meta à une freelance qui sait associer pub et tunnel ?</p>
+        <a href="#contact-gwenn" class="jb-cta-button">Contacter Gwenn →</a>
+      </div>
+    </div>
+  </section>
+
+</div>
