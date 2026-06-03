@@ -393,6 +393,19 @@ export async function GET(req: NextRequest) {
       if (pq) pq.lifetimeLeads += 1;
     }
 
+    // ── Réconciliation par quiz (Béné 2 juin 2026 — retour Gwenn) ──
+    // Mêmes garde-fous que sur les totaux globaux (lignes ~272) : pour
+    // CHAQUE quiz, vues >= starts >= completions >= leads. Sans ça, la
+    // carte "Performances par quiz" affichait "44 Vues / 7 Démarrés /
+    // 6 Complétés / 276 Leads" — visuellement absurde. On planche
+    // chaque étage sur le supérieur, puis sur les leads lifetime de
+    // ce quiz.
+    for (const pq of perQuizMap.values()) {
+      pq.lifetimeCompletions = Math.max(pq.lifetimeCompletions, pq.lifetimeLeads);
+      pq.lifetimeStarts = Math.max(pq.lifetimeStarts, pq.lifetimeCompletions);
+      pq.lifetimeViews = Math.max(pq.lifetimeViews, pq.lifetimeStarts);
+    }
+
     // ── PER-QUESTION drop-off funnel ────────────────────────────────
     // For each quiz we count how many distinct visitors saw each
     // question_index. Because question_view is deduped client-side

@@ -226,13 +226,12 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
   const topPerformerId = useMemo(() => {
     let best: { id: string; rate: number } | null = null;
     for (const p of projects) {
-      if (p.starts_count < 5) continue;
       const leads = p.leads_count ?? 0;
-      // Garde-fou cohérence (cf. Béné 2 juin) : si starts < leads, le
-      // tracking de starts a raté → le ratio leads/starts donnerait un
-      // chiffre absurde (5520% chez Gwenn). On exclut ces quiz du classement
-      // "TOP" plutôt que de les couronner sur des données fausses.
-      if (p.starts_count < leads) continue;
+      // Réconciliation : starts >= leads (cf. fix carte). On exclut les
+      // quiz dont le tracking de starts a raté en silence (starts_count
+      // < leads) plutôt que de les couronner sur des données fausses.
+      if ((p.starts_count ?? 0) < leads) continue;
+      if (p.starts_count < 5) continue;
       const rate = leads / p.starts_count;
       if (rate <= 0) continue;
       if (!best || rate > best.rate) best = { id: p.id, rate };
@@ -452,17 +451,22 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
             <div className="grid gap-4">
               {filteredList.map((p) => {
                 const leads = p.leads_count ?? 0;
+                // Réconciliation des compteurs (Béné 2 juin 2026 — retour
+                // Gwenn) : vues >= starts >= completions >= leads. Sinon
+                // la carte affichait "44 Vues / 7 Démarrés / 6 Complétés
+                // / 276 Leads" — physiquement impossible (tracking
+                // d'événements raté en silence avant les fixes). On
+                // planche chaque étage sur le supérieur.
+                const completions = Math.max(p.completions_count ?? 0, leads);
+                const starts = Math.max(p.starts_count ?? 0, completions);
+                const views = Math.max(p.views_count ?? 0, starts);
                 // Taux de conversion = leads / starts. AVANT, on affichait
                 // bêtement le ratio même quand starts << leads (tracking
                 // raté → starts_count = 5 alors que 276 leads avaient été
                 // captés → 5520% absurde). MAINTENANT, on n'affiche le
-                // taux QUE si starts >= leads (cohérent physiquement) ;
-                // sinon on cache complètement la mention (même posture
-                // honnête que le captureRate de la page analytics).
-                const rate =
-                  p.starts_count > 0 && p.starts_count >= leads
-                    ? Math.round((leads / p.starts_count) * 100)
-                    : 0;
+                // taux QUE si starts (réconcilié) > 0 ; sinon on cache
+                // (même posture honnête que captureRate côté analytics).
+                const rate = starts > 0 ? Math.round((leads / starts) * 100) : 0;
                 const isSurvey = p.mode === "survey";
                 const isPopquiz = p.mode === "popquiz";
 
@@ -525,18 +529,18 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
 
                           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">
-                              <Eye className="h-3.5 w-3.5" /> {p.views_count}{" "}
+                              <Eye className="h-3.5 w-3.5" /> {views}{" "}
                               {t("views")}
                             </span>
                             {!isPopquiz && (
                               <span className="flex items-center gap-1">
-                                <Play className="h-3.5 w-3.5" /> {p.starts_count}{" "}
+                                <Play className="h-3.5 w-3.5" /> {starts}{" "}
                                 {t("starts")}
                               </span>
                             )}
                             <span className="flex items-center gap-1">
                               <CheckCircle className="h-3.5 w-3.5" />{" "}
-                              {p.completions_count} {t("completions")}
+                              {completions} {t("completions")}
                             </span>
                             {!isPopquiz && (
                               <span className="flex items-center gap-1">

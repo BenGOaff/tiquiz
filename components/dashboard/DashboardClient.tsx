@@ -106,10 +106,21 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
   // ---------------------------------------------------------------------------
 
   const totals = useMemo(() => {
-    const views = quizzes.reduce((s, q) => s + q.views_count, 0);
-    const starts = quizzes.reduce((s, q) => s + q.starts_count, 0);
-    const completions = quizzes.reduce((s, q) => s + q.completions_count, 0);
-    const leads = quizzes.reduce((s, q) => s + (q.leads_count ?? 0), 0);
+    // Réconciliation PAR QUIZ avant d'additionner (Béné 2 juin 2026 —
+    // retour Gwenn) : sur chaque ligne, vues >= starts >= completions
+    // >= leads. Sans ça, un quiz à 44 vues / 276 leads tirait le total
+    // de vues vers le bas et le taux global devenait incohérent.
+    let views = 0, starts = 0, completions = 0, leads = 0;
+    for (const q of quizzes) {
+      const qLeads = q.leads_count ?? 0;
+      const qCompletions = Math.max(q.completions_count, qLeads);
+      const qStarts = Math.max(q.starts_count, qCompletions);
+      const qViews = Math.max(q.views_count, qStarts);
+      views += qViews;
+      starts += qStarts;
+      completions += qCompletions;
+      leads += qLeads;
+    }
     // Conversion : on préfère leads/starts (vrai funnel) mais on
     // retombe sur leads/views quand `starts` n'a jamais été tracké
     // (quiz pré-migration tracking 21 mai 2026 où le start n'était
