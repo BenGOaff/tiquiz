@@ -8,6 +8,9 @@
 
 @layer base {
   :root {
+    /* color-scheme : Force-Dark de Brave/Chrome respecte cette
+       declaration et ne tente pas d'inverser nos couleurs. */
+    color-scheme: light;
     /* ── Core palette ──
        Inverted: page bg is the brightest surface (white), recessed
        surfaces (sidebar, cards) carry the gray-blue tint. Cards

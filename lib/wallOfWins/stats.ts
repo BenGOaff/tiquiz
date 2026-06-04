@@ -8,6 +8,7 @@
 // = false → le composant rend NULL (carte invisible). "Motivant ou rien".
 
 import { countUserEvents } from "@/lib/businessEvents";
+import { stripHtml } from "@/lib/richText";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export interface WallOfWinsStats {
@@ -144,7 +145,11 @@ async function fetchTopQuizInRange(
       .maybeSingle();
     title = (quizRow?.title as string | undefined) ?? "Quiz sans titre";
   }
-  return { id: topId, title, completes: topCount };
+  // Strip HTML cote serveur : les titres quiz sont du rich-text editor
+  // (peuvent contenir <span style=...>), on les rend en texte plat ici
+  // pour eviter les fuites HTML dans le payload (Adeline 4 juin 2026 :
+  // "<div style=text-align:center>..." affiche tel quel sur mobile).
+  return { id: topId, title: stripHtml(title) || title, completes: topCount };
 }
 
 async function fetchMilestonesUnlockedInRange(

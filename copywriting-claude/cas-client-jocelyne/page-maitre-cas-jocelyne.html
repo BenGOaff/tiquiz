@@ -40,15 +40,34 @@
 .jb-section strong { color: #2E386E; font-weight: 800; }
 .jb-section em { color: #5A6EF6; font-style: italic; }
 
+/* STAT HERO (le chiffre vedette) */
+.jb-stat-hero { background: linear-gradient(135deg, #5A6EF6 0%, #20BBE6 100%); border-radius: 24px; padding: 48px 32px; text-align: center; color: #FFFFFF; margin: 32px 0; box-shadow: 0 12px 40px rgba(46, 56, 110, 0.18); }
+.jb-stat-hero-eyebrow { font-size: 13px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.92; margin-bottom: 12px; }
+.jb-stat-hero-number { font-size: 96px; font-weight: 900; line-height: 1; letter-spacing: -0.04em; margin: 0; }
+.jb-stat-hero-unit { font-size: 28px; font-weight: 800; opacity: 0.95; margin-top: 8px; }
+.jb-stat-hero-context { font-size: 14px; opacity: 0.92; margin-top: 14px; max-width: 520px; margin-left: auto; margin-right: auto; line-height: 1.5; }
+
 /* STAT GRID */
-.jb-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 32px 0; }
+.jb-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 24px 0; }
 .jb-stat { background: #FFFFFF; border: 2px solid #E6E8F0; border-radius: 16px; padding: 24px 20px; text-align: center; transition: all 0.25s; }
 .jb-stat:hover { border-color: #5A6EF6; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(90, 110, 246, 0.15); }
 .jb-stat-number { font-size: 36px; font-weight: 900; color: #5A6EF6; line-height: 1; letter-spacing: -0.02em; margin: 0 0 6px 0; }
 .jb-stat-label { font-size: 12px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.06em; }
-.jb-stat-highlight { background: linear-gradient(135deg, #5A6EF6 0%, #20BBE6 100%); border-color: transparent; color: #FFFFFF; }
-.jb-stat-highlight .jb-stat-number { color: #FFFFFF; }
-.jb-stat-highlight .jb-stat-label { color: rgba(255,255,255,0.85); }
+.jb-stat-sub { font-size: 11px; font-weight: 500; color: #9AA0B5; margin-top: 6px; line-height: 1.3; }
+.jb-stat-highlight { background: linear-gradient(135deg, #EEF0FE 0%, #E3F5FC 100%); border-color: rgba(90,110,246,0.3); }
+.jb-stat-highlight .jb-stat-number { color: #5A6EF6; }
+
+/* CARDS LECTURE PAR PROFIL */
+.jb-reading { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 32px 0; }
+.jb-reading-card { background: #FFFFFF; border: 2px solid #E6E8F0; border-radius: 16px; padding: 26px; }
+.jb-reading-card.pro { border-color: #5A6EF6; background: linear-gradient(135deg, #FFFFFF 0%, #F3F4FE 100%); }
+.jb-reading-card.beginner { border-color: #20BBE6; background: linear-gradient(135deg, #FFFFFF 0%, #EAF7FC 100%); }
+.jb-reading-tag { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 12px; }
+.jb-reading-tag.pro { background: #5A6EF6; color: #FFFFFF; }
+.jb-reading-tag.beginner { background: #20BBE6; color: #FFFFFF; }
+.jb-reading-card h3 { font-size: 18px; font-weight: 800; color: #2E386E; margin: 0 0 10px 0; line-height: 1.3; }
+.jb-reading-card p { font-size: 14px; color: #2E386E; line-height: 1.6; margin: 8px 0; }
+.jb-reading-card strong { color: #5A6EF6; }
 
 /* THREE COLUMNS - GWENN */
 .jb-three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 32px 0; }
@@ -59,11 +78,12 @@
 
 /* PLAY STEPS */
 .jb-play { background: #F8F9FC; border-radius: 18px; padding: 32px; margin: 32px 0; }
-.jb-step { display: grid; grid-template-columns: 48px 1fr; gap: 18px; margin: 18px 0; align-items: start; }
-.jb-step-num { width: 36px; height: 36px; background: #5A6EF6; color: #FFFFFF; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 16px; }
-.jb-step-content { padding-top: 6px; }
-.jb-step-title { font-size: 16px; font-weight: 800; color: #2E386E; margin: 0 0 4px 0; }
-.jb-step-text { font-size: 14px; color: #4B5563; line-height: 1.6; margin: 0; }
+.jb-step { display: flex; align-items: flex-start; gap: 18px; margin-bottom: 26px; }
+.jb-step:last-child { margin-bottom: 0; }
+.jb-step-num { width: 36px; height: 36px; background: #5A6EF6; color: #FFFFFF; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 16px; flex-shrink: 0; line-height: 1; }
+.jb-step-content { flex: 1; min-width: 0; padding-top: 4px; }
+.jb-step-title { font-size: 17px; font-weight: 800; color: #2E386E; margin: 0 0 8px 0; line-height: 1.3; }
+.jb-step-text { font-size: 15px; color: #2E386E; line-height: 1.6; margin: 0; }
 
 /* TAKEAWAYS */
 .jb-takeaways { background: #FFFFFF; border: 2px solid #5A6EF6; border-radius: 18px; padding: 32px; margin: 40px 0; }
@@ -72,16 +92,27 @@
 .jb-takeaway p { margin: 0; font-size: 15px; color: #2E386E; line-height: 1.6; }
 .jb-takeaway strong { color: #2E386E; }
 
-/* CTA DOUBLE */
+/* CTA DOUBLE — contraste corrigé */
 .jb-cta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 40px 0; }
-.jb-cta-card { background: #FFFFFF; border: 2px solid #E6E8F0; border-radius: 18px; padding: 32px; text-align: center; }
-.jb-cta-card.indigo { background: linear-gradient(135deg, #5A6EF6 0%, #4F5FE3 100%); border-color: transparent; color: #FFFFFF; }
-.jb-cta-card.cyan { background: linear-gradient(135deg, #5DD5F0 0%, #20BBE6 100%); border-color: transparent; color: #FFFFFF; }
-.jb-cta-card h3 { font-size: 20px; font-weight: 900; margin: 0 0 8px 0; }
-.jb-cta-card p { font-size: 14px; margin: 0 0 20px 0; opacity: 0.92; }
+.jb-cta-card { border-radius: 18px; padding: 32px; text-align: center; box-shadow: 0 6px 20px rgba(46, 56, 110, 0.08); }
+.jb-cta-card.indigo { background: linear-gradient(135deg, #5A6EF6 0%, #4F5FE3 100%); color: #FFFFFF; }
+.jb-cta-card.navy { background: linear-gradient(135deg, #2E386E 0%, #1F2855 100%); color: #FFFFFF; }
+.jb-cta-card h3 { font-size: 22px; font-weight: 900; margin: 0 0 10px 0; line-height: 1.2; }
+.jb-cta-card p { font-size: 15px; margin: 0 0 24px 0; line-height: 1.55; color: rgba(255,255,255,0.92); }
 .jb-cta-button { display: inline-block; background: #FFFFFF; color: #5A6EF6; padding: 14px 28px; border-radius: 12px; font-weight: 800; text-decoration: none; font-size: 15px; transition: all 0.2s; }
 .jb-cta-button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
-.jb-cta-card.cyan .jb-cta-button { color: #0EA2CB; }
+.jb-cta-card.navy .jb-cta-button { color: #2E386E; }
+
+/* DECOUVRIR JOCELYNE — section dédiée avec liens prominents */
+.jb-discover { background: linear-gradient(135deg, #F8F9FC 0%, #EEF0FE 100%); border-radius: 22px; padding: 40px 32px; margin: 40px 0; text-align: center; }
+.jb-discover h2 { font-size: 26px; font-weight: 900; color: #2E386E; margin: 0 0 8px 0; letter-spacing: -0.02em; }
+.jb-discover p { font-size: 16px; color: #2E386E; margin: 0 0 28px 0; max-width: 580px; margin-left: auto; margin-right: auto; line-height: 1.55; }
+.jb-discover-links { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; max-width: 720px; margin: 0 auto; }
+.jb-discover-link { background: #FFFFFF; border: 2px solid #E6E8F0; border-radius: 14px; padding: 22px 16px; text-decoration: none; color: #2E386E; transition: all 0.25s; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.jb-discover-link:hover { border-color: #5A6EF6; transform: translateY(-3px); box-shadow: 0 8px 24px rgba(90, 110, 246, 0.18); }
+.jb-discover-icon { font-size: 28px; line-height: 1; }
+.jb-discover-label { font-size: 13px; font-weight: 800; color: #5A6EF6; }
+.jb-discover-sublabel { font-size: 11px; font-weight: 600; color: #6B7280; }
 
 /* MOBILE */
 @media (max-width: 720px) {
@@ -97,6 +128,13 @@
   .jb-three { grid-template-columns: 1fr; }
   .jb-cta-grid { grid-template-columns: 1fr; }
   .jb-play { padding: 22px; }
+  .jb-stat-hero { padding: 32px 20px; }
+  .jb-stat-hero-number { font-size: 64px; }
+  .jb-stat-hero-unit { font-size: 22px; }
+  .jb-reading { grid-template-columns: 1fr; }
+  .jb-discover { padding: 28px 20px; }
+  .jb-discover h2 { font-size: 22px; }
+  .jb-discover-links { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
 
@@ -208,76 +246,114 @@
     </div>
   </section>
 
-  <!-- LES CHIFFRES -->
+  <!-- LES CHIFFRES — section refondée avec mise en avant du CPL -->
   <section class="jb-section">
     <span class="jb-section-eyebrow">Les résultats sur 9 jours</span>
     <h2>Du 26 mai au 3 juin 2026</h2>
-    <p>Données arrêtées au 3 juin 2026 à 13h15. Campagne toujours active à la date de publication.</p>
+    <p>Données arrêtées au 3 juin 2026 à 13h15, sourcées depuis le compte ads Meta de la campagne et le dashboard Tiquiz de Jocelyne. Campagne toujours active à la date de publication.</p>
 
+    <!-- CHIFFRE VEDETTE : LE CPL (styles inline pour bypasser Systeme.io) -->
+    <div style="background: linear-gradient(135deg, #5A6EF6 0%, #20BBE6 100%); border-radius: 24px; padding: 56px 32px; margin: 32px 0; box-shadow: 0 12px 40px rgba(46, 56, 110, 0.18); text-align: center;">
+      <p style="color: #FFFFFF !important; font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; margin: 0 0 16px 0; text-align: center; opacity: 0.95;">Coût par lead atteint</p>
+      <p style="color: #FFFFFF !important; font-size: 88px; font-weight: 900; line-height: 1; letter-spacing: -0.04em; margin: 0; text-align: center;">0,18 €</p>
+      <p style="color: #FFFFFF !important; font-size: 22px; font-weight: 700; margin: 12px 0 0 0; text-align: center; opacity: 0.95;">par lead capturé</p>
+      <p style="color: #FFFFFF !important; font-size: 15px; margin: 24px auto 0 auto; max-width: 520px; line-height: 1.55; text-align: center; opacity: 0.92;">285 leads collectés via la pub Meta pour 63,50 € de budget total dépensés en 9 jours.</p>
+    </div>
+
+    <!-- STATS PERFORMANCE -->
     <div class="jb-stats">
       <div class="jb-stat">
         <p class="jb-stat-number">24 417</p>
         <p class="jb-stat-label">Impressions</p>
+        <p class="jb-stat-sub">vues totales de la pub</p>
       </div>
       <div class="jb-stat">
         <p class="jb-stat-number">683</p>
-        <p class="jb-stat-label">Clics</p>
+        <p class="jb-stat-label">Clics sur lien</p>
+        <p class="jb-stat-sub">vers le quiz Tiquiz</p>
       </div>
       <div class="jb-stat jb-stat-highlight">
         <p class="jb-stat-number">285</p>
         <p class="jb-stat-label">Leads via pub</p>
+        <p class="jb-stat-sub">emails capturés sur le quiz</p>
       </div>
       <div class="jb-stat jb-stat-highlight">
-        <p class="jb-stat-number">0,18 €</p>
-        <p class="jb-stat-label">Coût par lead</p>
+        <p class="jb-stat-number">325</p>
+        <p class="jb-stat-label">Leads totaux</p>
+        <p class="jb-stat-sub">pub + distribution organique</p>
       </div>
     </div>
 
+    <!-- STATS BUDGET / DURÉE -->
     <div class="jb-stats">
       <div class="jb-stat">
         <p class="jb-stat-number">63,50 €</p>
         <p class="jb-stat-label">Budget pub total</p>
+        <p class="jb-stat-sub">dépensé sur la période</p>
       </div>
       <div class="jb-stat">
         <p class="jb-stat-number">7 €</p>
         <p class="jb-stat-label">Budget journalier</p>
+        <p class="jb-stat-sub">paramétré sur Meta</p>
       </div>
       <div class="jb-stat">
         <p class="jb-stat-number">9 jours</p>
         <p class="jb-stat-label">Durée campagne</p>
+        <p class="jb-stat-sub">du 26 mai au 3 juin 2026</p>
       </div>
       <div class="jb-stat">
-        <p class="jb-stat-number">325</p>
-        <p class="jb-stat-label">Leads totaux (pub + distribution organique)</p>
+        <p class="jb-stat-number">5</p>
+        <p class="jb-stat-label">Profils du quiz</p>
+        <p class="jb-stat-sub">5 questions, 5 résultats</p>
       </div>
     </div>
 
     <p style="font-size: 14px; color: #6B7280; margin-top: 20px;"><strong>Audience ciblée :</strong> femmes 30-55 ans, centres d'intérêt régulation émotionnelle, développement personnel (psychologie), livres de non-fiction, productivité.</p>
     <p style="font-size: 14px; color: #6B7280;"><strong>Hook publicitaire :</strong> <em>« 🧠 Vous avez déjà lu des articles sur le TDAH en vous disant que ça ne vous ressemblait pas vraiment ? »</em></p>
+
+    <!-- LECTURE DES CHIFFRES PAR PROFIL DE LECTEUR -->
+    <h3 style="font-size: 22px; font-weight: 900; color: #2E386E; margin: 40px 0 16px 0;">Comment lire ces chiffres ?</h3>
+
+    <div class="jb-reading">
+      <div class="jb-reading-card pro">
+        <span class="jb-reading-tag pro">Si vous êtes pro de la pub Meta</span>
+        <h3>Les ratios clés à retenir</h3>
+        <p><strong>CTR ≈ 2,8 %</strong> (683 clics sur 24 417 impressions) : un taux de clic supérieur à la moyenne francophone du marché B2C selon Interact 2026.</p>
+        <p><strong>Conversion clic → lead ≈ 41,7 %</strong> (285 leads sur 683 clics) : un taux dans le haut des benchmarks publics pour un funnel quiz, selon le rapport Interact 2026.</p>
+        <p><strong>CPL 0,18 €</strong> : à comparer aux ratios sectoriels documentés par Dashform 2026 sur la conversion quiz vs PDF (écart 2,4 à 10x en faveur du quiz).</p>
+      </div>
+
+      <div class="jb-reading-card beginner">
+        <span class="jb-reading-tag beginner">Si vous découvrez la pub Meta</span>
+        <h3>Ce que ça veut dire concrètement</h3>
+        <p><strong>0,18 € par lead</strong>, c'est le prix payé pour qu'une personne intéressée laisse son email à Jocelyne via le quiz.</p>
+        <p>Avec <strong>63,50 €</strong> de budget pub étalé sur 9 jours, Jocelyne a obtenu <strong>285 lectrices intéressées</strong> qui se sont identifiées dans un profil TDAH précis.</p>
+        <p>Sans connaître les rouages de la pub Meta, et sans audience préexistante, c'est un point de départ qui aurait demandé des mois en organique pour atteindre la même base qualifiée.</p>
+      </div>
+    </div>
+
+    <p style="font-size: 12px; color: #9AA0B5; margin-top: 16px;"><strong>Sources des benchmarks 2026 :</strong> tryinteract.com/blog/quiz-conversion-rate-report, kyleads.com/blog/quiz-funnels-vs-lead-magnets, getaiform.com/blog/quiz-funnels-vs-static-lead-magnets.</p>
   </section>
 
-  <!-- POINT DE COMPARAISON -->
+  <!-- 3 FACTEURS D'ANALYSE -->
   <section class="jb-section">
-    <span class="jb-section-eyebrow">Mise en perspective</span>
-    <h2>Le coût par lead obtenu dans ce cas</h2>
-    <p>Le coût par lead atteint dans cette campagne est de <strong>0,18 €</strong>.</p>
-    <p>Pour mettre cette valeur en contexte : les rapports d'industrie 2026 sur la conversion des lead magnets (Interact <em>Quiz Conversion Rate Report 2026</em>, Kyleads <em>Quiz Funnels vs Lead Magnets 2026</em>, Dashform <em>Quiz Funnels vs Static Lead Magnets 2026</em>) documentent un écart structurel : les quiz convertissent en moyenne 2,4 à 10 fois mieux qu'un PDF statique, et les outils de quiz alimentés par l'IA enregistrent un gain de capture allant jusqu'à 78 %.</p>
-    <p>Ces chiffres sectoriels expliquent en partie pourquoi un quiz qualifiant comme celui de Jocelyne peut atteindre un CPL très bas. Voici, à mon analyse, trois facteurs précis qui contribuent à ce résultat dans ce cas spécifique :</p>
+    <span class="jb-section-eyebrow">À mon analyse</span>
+    <h2>Trois facteurs qui contribuent à ce CPL</h2>
+    <p>Au-delà des benchmarks sectoriels, voici les trois éléments qui me semblent expliquer ce résultat précis sur la campagne de Jocelyne :</p>
     <div class="jb-takeaways">
       <div class="jb-takeaway">
         <span class="jb-check">→</span>
-        <p>Le quiz est un format plus engageant que le PDF, ce qui se traduit par un meilleur taux de clic sur la publicité et donc un coût par clic plus bas (mécanique documentée par Interact 2026).</p>
+        <p>Le format quiz est intrinsèquement plus engageant qu'un PDF statique, ce qui se traduit par un meilleur taux de clic dans la pub (mécanique documentée par le rapport Interact 2026).</p>
       </div>
       <div class="jb-takeaway">
         <span class="jb-check">→</span>
-        <p>La complétion du quiz est un signal positif fort pour le pixel Meta, qui optimise ensuite vers des audiences similaires (mécanique d'optimisation Meta classique).</p>
+        <p>La complétion du quiz envoie un signal positif fort au pixel Meta, qui optimise ensuite vers des audiences similaires et fait baisser le coût d'acquisition au fil de la campagne (mécanique d'optimisation Meta classique).</p>
       </div>
       <div class="jb-takeaway">
         <span class="jb-check">→</span>
-        <p>Le hook publicitaire conçu par Gwenn — <em>« Vous avez déjà lu des articles sur le TDAH en vous disant que ça ne vous ressemblait pas vraiment ? »</em> — touche directement une frustration documentée chez les personnes concernées par le TDAH adulte, ce qui amène un meilleur taux de clic qualifié.</p>
+        <p>Le hook publicitaire conçu par Gwenn — <em>« Vous avez déjà lu des articles sur le TDAH en vous disant que ça ne vous ressemblait pas vraiment ? »</em> — touche une frustration spécifique aux personnes concernées par le TDAH adulte, ce qui qualifie le clic dès la pub.</p>
       </div>
     </div>
-    <p style="font-size: 13px; color: #6B7280; margin-top: 16px;"><strong>Sources des benchmarks 2026 :</strong> tryinteract.com/blog/quiz-conversion-rate-report, kyleads.com/blog/quiz-funnels-vs-lead-magnets, getaiform.com/blog/quiz-funnels-vs-static-lead-magnets.</p>
   </section>
 
   <!-- TÉMOIGNAGE LONG -->
@@ -325,7 +401,36 @@
     </div>
   </section>
 
-  <!-- CTA DOUBLE -->
+  <!-- DECOUVRIR JOCELYNE — section dédiée -->
+  <section class="jb-discover">
+    <h2>Découvrir Jocelyne et son travail</h2>
+    <p>Jocelyne accepte d'être contactée et de partager son parcours. Voici les liens qu'elle a souhaité mettre en avant.</p>
+
+    <div class="jb-discover-links">
+      <a class="jb-discover-link" href="https://www.amazon.fr/dp/B0H1GP7CJP" target="_blank" rel="noopener">
+        <span class="jb-discover-icon">📖</span>
+        <span class="jb-discover-label">Le livre</span>
+        <span class="jb-discover-sublabel">Sur Amazon</span>
+      </a>
+      <a class="jb-discover-link" href="https://www.jocelyne-bacquet-auteur.fr/blog-jocelyne-bacquet" target="_blank" rel="noopener">
+        <span class="jb-discover-icon">✍️</span>
+        <span class="jb-discover-label">Le blog</span>
+        <span class="jb-discover-sublabel">jocelyne-bacquet-auteur.fr</span>
+      </a>
+      <a class="jb-discover-link" href="https://www.instagram.com/j_bacquet.1/" target="_blank" rel="noopener">
+        <span class="jb-discover-icon">📷</span>
+        <span class="jb-discover-label">Instagram</span>
+        <span class="jb-discover-sublabel">@j_bacquet.1</span>
+      </a>
+      <a class="jb-discover-link" href="https://www.facebook.com/profile.php?id=61590539094570" target="_blank" rel="noopener">
+        <span class="jb-discover-icon">👥</span>
+        <span class="jb-discover-label">Facebook</span>
+        <span class="jb-discover-sublabel">Sa page auteur</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- CTA DOUBLE — contraste amélioré -->
   <section class="jb-section">
     <h2 style="text-align: center; margin-bottom: 32px;">À vous de jouer</h2>
 
@@ -335,7 +440,7 @@
         <p>Créez votre propre quiz qualifiant pour Systeme.io en moins d'une heure, sans Zapier.</p>
         <a href="https://www.tipote.fr/tiquiz" class="jb-cta-button">Démarrer mon quiz →</a>
       </div>
-      <div class="jb-cta-card cyan">
+      <div class="jb-cta-card navy">
         <h3>Travailler avec Gwenn</h3>
         <p>Vous voulez confier votre campagne Meta à une freelance qui sait associer pub et tunnel ?</p>
         <a href="#contact-gwenn" class="jb-cta-button">Contacter Gwenn →</a>

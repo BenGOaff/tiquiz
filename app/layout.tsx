@@ -62,6 +62,14 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} dir={dir}>
+      <head>
+        {/* color-scheme : empeche les browsers (Brave Force Dark, Chrome
+            force-dark flag, Edge "dark mode pour les sites web") d'appliquer
+            un filtre d'inversion qui tinte la page en gris uniforme.
+            Drame Monique 3 juin 2026 cote Tipote, on prevent le meme
+            symptome cote Tiquiz. */}
+        <meta name="color-scheme" content="light" />
+      </head>
       <body className="font-sans antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>{children}</Providers>

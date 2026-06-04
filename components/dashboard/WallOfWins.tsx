@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { stripHtml } from "@/lib/richText";
 
 type Period = "month" | "30d" | "90d";
 
@@ -190,7 +191,9 @@ export function WallOfWins() {
               <div className="flex items-center gap-1.5 min-w-0 text-sm">
                 <span aria-hidden="true">🏆</span>
                 <span className="text-xs text-muted-foreground">Top :</span>
-                <span className="font-medium truncate">{c.topQuiz.title}</span>
+                <span className="font-medium truncate">
+                  {stripHtml(c.topQuiz.title) || c.topQuiz.title}
+                </span>
                 <span className="text-xs text-muted-foreground shrink-0">
                   ({NUM_FMT.format(c.topQuiz.completes)})
                 </span>
