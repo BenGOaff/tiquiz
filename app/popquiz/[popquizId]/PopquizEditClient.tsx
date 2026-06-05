@@ -29,6 +29,7 @@ import {
   clearAutosave,
 } from "@/lib/popquiz/autosave";
 import { useAutosave } from "@/hooks/use-autosave";
+import { QrCodeCard } from "@/components/share/QrCodeCard";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
 import { UserPalettesProvider } from "@/components/editor/PalettesContext";
@@ -1248,6 +1249,11 @@ export default function PopquizEditClient({
             </Button>
           </CardContent>
         </Card>
+      ) : null}
+
+      {/* QR code popquiz — utile pour print, livre, flyer */}
+      {publicUrl ? (
+        <QrCodeCard url={publicUrl} filename={handle || "popquiz"} />
       ) : null}
 
       {error ? (

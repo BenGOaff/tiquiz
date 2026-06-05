@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" preserveAspectRatio="xMidYMid meet" style="font-family: Inter, 'Segoe UI', Arial, sans-serif;" role="img" aria-labelledby="lect-title lect-desc">
+  <title id="lect-title">Comment lire les chiffres : 2 lectures selon votre profil</title>
+  <desc id="lect-desc">Carte pour les pros de la pub Meta et carte pour les débutants, avec les ratios clés et leur signification.</desc>
+  <defs>
+    <linearGradient id="bgProG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F3F4FE"/>
+    </linearGradient>
+    <linearGradient id="bgBegG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#EAF7FC"/>
+    </linearGradient>
+    <filter id="lectShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#2E386E" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <!-- ============ CARTE 1 — PRO PUB META ============ -->
+  <g transform="translate(20, 20)">
+    <rect width="560" height="380" rx="16" fill="url(#bgProG)" stroke="#5A6EF6" stroke-width="2" filter="url(#lectShadow)"/>
+
+    <!-- Pill badge indigo -->
+    <rect x="32" y="32" width="280" height="32" rx="16" fill="#5A6EF6"/>
+    <text x="172" y="53" text-anchor="middle" font-family="Inter,'Segoe UI',Arial,sans-serif" font-size="11" font-weight="800" fill="#FFFFFF" letter-spacing="1.2">SI VOUS ÊTES PRO DE LA PUB META</text>
+
+    <!-- Title -->
+    <text x="32" y="110" font-family="Inter,'Segoe UI',Arial,sans-serif" font-size="22" font-weight="800" fill="#2E386E">Les ratios clés à retenir</text>
+
+    <!-- Paragraphe 1 : CTR -->
+    <text xml:space="preserve" x="32" y="158" font-family="Inter,'Segoe UI',Arial,sans-serif" font-size="16" fill="#2E386E"><tspan font-weight="700" fill="#5A6EF6">CTR ≈ 2,8 %</tspan> (683/24 417) : supérieur à la moyenne</text>
+    <text x="32" y="186" font-family="Inter,'Segoe UI',Arial,sans-serif" font-size="16" fill="#2E386E">francophone B2C selon Interact 2026.</text>
+
+    <!-- Paragraphe 2 : Conversion -->
+    <text xml:space="preserve" x="32" y="226" font-family="Inter,'Segoe UI',Arial,sans-serif" font-size="16" fill="#2E386E"><tspan font-weight="700" fill="#5A6EF6">Conversion clic → lead ≈ 41,7 %</tspan> (285/683) : haut</text>
+    <text x="32" y="254" font-family="Inter,'Segoe UI',Arial,sans-serif" font-size="16" fill="#2E386E">des benchmarks publics pour un funnel quiz.</text>
+
+    <!-- Paragraphe 3 : CPL -->
+    <text xml:space="preserve" x="32" y="294" font-family="Inter,'Segoe UI',Arial,sans-serif" font-size="16" fill="#2E386E"><tspan font-weight="700" fill="#5A6EF6">CPL 0,18 €</tspan> : écart documenté Dashform 2026 (2,4</text>
+    <text x="32" y="322" font-family="Inter,'Segoe UI',Arial,sans-serif" font-size="16" fill="#2E386E">à 10× vs PDF).</text>
+  </g>
+
+  <!-- ============ CARTE 2 — DÉBUTANT PUB META ============ -->
+  <g transform="translate(620, 20)">
+    <rect width="560" height="380" rx="16" fill="url(#bgBegG)" stroke="#20BBE6" stroke-width="2" filter="url(#lectShadow)"/>
+
+    <!-- Pill badge cyan -->
+    <rect x="32" y="32" width="280" height="32" rx="16" fill="#20BBE6"/>
+    <text x="172" y="53" text-anchor="middle" font-family="Inter,'Segoe UI',Arial,sans-serif" font-size="11" font-weight="800" fill="#FFFFFF" letter-spacing="1.2">SI VOUS DÉCOUVREZ LA PUB META</text>
+
+    <!-- Title -->
+    <text x="32" y="110" font-family="Inter,'Segoe UI',Arial,sans-serif" font-size="22" font-weight="800" fill="#2E386E">Ce que ça veut dire concrètement</text>
+
+    <!-- Paragraphe 1 : 0,18 € par lead -->
+    <text xml:space="preserve" x="32" y="158" font-family="Inter,'Segoe UI',Arial,sans-serif" font-size="16" fill="#2E386E"><tspan font-weight="700" fill="#0EA2CB">0,18 € par lead</tspan>, c'est le prix payé pour qu'une</text>
+    <text x="32" y="186" font-family="Inter,'Segoe UI',Arial,sans-serif" font-size="16" fill="#2E386E">personne intéressée laisse son email à Jocelyne</text>
+    <text x="32" y="214" font-family="Inter,'Segoe UI',Arial,sans-serif" font-size="16" fill="#2E386E">via le quiz.</text>
+
+    <!-- Paragraphe 2 : 63,50 € + 285 lectrices -->
+    <text xml:space="preserve" x="32" y="254" font-family="Inter,'Segoe UI',Arial,sans-serif" font-size="16" fill="#2E386E">Avec <tspan font-weight="700" fill="#0EA2CB">63,50 €</tspan> de budget pub sur 9 jours, Jocelyne a</text>
+    <text xml:space="preserve" x="32" y="282" font-family="Inter,'Segoe UI',Arial,sans-serif" font-size="16" fill="#2E386E">obtenu <tspan font-weight="700" fill="#0EA2CB">285 lectrices qualifiées</tspan>.</text>
+
+    <!-- Paragraphe 3 : Sans audience préalable -->
+    <text x="32" y="322" font-family="Inter,'Segoe UI',Arial,sans-serif" font-size="16" fill="#2E386E">Sans audience préalable, un point de départ qui</text>
+    <text x="32" y="350" font-family="Inter,'Segoe UI',Arial,sans-serif" font-size="16" fill="#2E386E">aurait demandé des mois en organique.</text>
+  </g>
+</svg>

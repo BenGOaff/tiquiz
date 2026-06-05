@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 850" preserveAspectRatio="xMidYMid meet" style="font-family: Inter, 'Segoe UI', Arial, sans-serif;" role="img" aria-labelledby="lect-en-m-t lect-en-m-d">
+  <title id="lect-en-m-t">How to read the numbers (mobile): 2 cards stacked</title>
+  <desc id="lect-en-m-d">Card for Meta ads pros and card for beginners stacked vertically.</desc>
+  <defs>
+    <linearGradient id="bgProGenM" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F3F4FE"/>
+    </linearGradient>
+    <linearGradient id="bgBegGenM" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#EAF7FC"/>
+    </linearGradient>
+    <filter id="lectShadowEnM" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#2E386E" flood-opacity="0.08"/>
+    </filter>
+  </defs>
+
+  <!-- CARD 1 : PRO -->
+  <g transform="translate(20, 20)">
+    <rect width="360" height="370" rx="16" fill="url(#bgProGenM)" stroke="#5A6EF6" stroke-width="2" filter="url(#lectShadowEnM)"/>
+    <rect x="24" y="28" width="220" height="30" rx="15" fill="#5A6EF6"/>
+    <text x="134" y="48" text-anchor="middle" font-size="10" font-weight="800" fill="#FFFFFF" letter-spacing="1">IF YOU'RE A META ADS PRO</text>
+    <text x="24" y="100" font-size="20" font-weight="800" fill="#2E386E">Key ratios to remember</text>
+
+    <text xml:space="preserve" x="24" y="140" font-size="15" fill="#2E386E"><tspan font-weight="700" fill="#5A6EF6">CTR ≈ 2.8%</tspan> (683/24,417):</text>
+    <text x="24" y="164" font-size="15" fill="#2E386E">above the French-speaking</text>
+    <text x="24" y="188" font-size="15" fill="#2E386E">B2C average per Interact 2026.</text>
+
+    <text xml:space="preserve" x="24" y="226" font-size="15" fill="#2E386E"><tspan font-weight="700" fill="#5A6EF6">Click-to-lead ≈ 41.7%</tspan></text>
+    <text x="24" y="250" font-size="15" fill="#2E386E">(285/683): top of public benchmarks</text>
+    <text x="24" y="274" font-size="15" fill="#2E386E">for a quiz funnel.</text>
+
+    <text xml:space="preserve" x="24" y="312" font-size="15" fill="#2E386E"><tspan font-weight="700" fill="#5A6EF6">CPL €0.18</tspan>: gap documented</text>
+    <text x="24" y="336" font-size="15" fill="#2E386E">by Dashform 2026 (2.4× to 10× vs PDF).</text>
+  </g>
+
+  <!-- CARD 2 : BEGINNER -->
+  <g transform="translate(20, 410)">
+    <rect width="360" height="420" rx="16" fill="url(#bgBegGenM)" stroke="#20BBE6" stroke-width="2" filter="url(#lectShadowEnM)"/>
+    <rect x="24" y="28" width="220" height="30" rx="15" fill="#20BBE6"/>
+    <text x="134" y="48" text-anchor="middle" font-size="10" font-weight="800" fill="#FFFFFF" letter-spacing="1">IF YOU'RE NEW TO META ADS</text>
+    <text x="24" y="100" font-size="20" font-weight="800" fill="#2E386E">What this means</text>
+    <text x="24" y="124" font-size="20" font-weight="800" fill="#2E386E">in plain terms</text>
+
+    <text xml:space="preserve" x="24" y="164" font-size="15" fill="#2E386E"><tspan font-weight="700" fill="#0EA2CB">€0.18 per lead</tspan> means that's the</text>
+    <text x="24" y="188" font-size="15" fill="#2E386E">cost paid for an interested person to</text>
+    <text x="24" y="212" font-size="15" fill="#2E386E">leave their email via the quiz.</text>
+
+    <text xml:space="preserve" x="24" y="248" font-size="15" fill="#2E386E">With <tspan font-weight="700" fill="#0EA2CB">€63.50</tspan> of ad budget over 9 days,</text>
+    <text xml:space="preserve" x="24" y="272" font-size="15" fill="#2E386E">Jocelyne got <tspan font-weight="700" fill="#0EA2CB">285 qualified</tspan></text>
+    <text xml:space="preserve" x="24" y="296" font-size="15" fill="#2E386E"><tspan font-weight="700" fill="#0EA2CB">readers</tspan>.</text>
+
+    <text x="24" y="332" font-size="15" fill="#2E386E">Without an existing audience, a starting</text>
+    <text x="24" y="356" font-size="15" fill="#2E386E">point that would have taken months</text>
+    <text x="24" y="380" font-size="15" fill="#2E386E">organically.</text>
+  </g>
+</svg>

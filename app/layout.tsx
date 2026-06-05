@@ -62,14 +62,14 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} dir={dir}>
-      <head>
-        {/* color-scheme : empeche les browsers (Brave Force Dark, Chrome
-            force-dark flag, Edge "dark mode pour les sites web") d'appliquer
-            un filtre d'inversion qui tinte la page en gris uniforme.
-            Drame Monique 3 juin 2026 cote Tipote, on prevent le meme
-            symptome cote Tiquiz. */}
-        <meta name="color-scheme" content="light" />
-      </head>
+      {/* color-scheme : empeche les browsers (Brave Force Dark, Chrome
+          force-dark flag, Edge "dark mode pour les sites web") d'appliquer
+          un filtre d'inversion qui tinte la page en gris uniforme.
+          Place directement dans <html> sans wrapper <head> : en App Router
+          Next.js gere automatiquement le head via Metadata API. Un <head>
+          litteral cassait le rendu metadata sur prod (E2E Playwright failed
+          le 4 juin 2026 sur les tests og:url + body content). */}
+      <meta name="color-scheme" content="light" />
       <body className="font-sans antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>{children}</Providers>
