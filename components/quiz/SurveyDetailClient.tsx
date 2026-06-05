@@ -2188,13 +2188,12 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             </div>
           </CardContent></Card>
 
-          {/* QR code — utile pour print, livre, flyer, slide */}
-          {status === "active" && (
-            <QrCodeCard
-              url={buildPublicUrl("q", publicSegment)}
-              filename={publicSegment}
-            />
-          )}
+          {/* QR code — affiche meme en draft (cf. note QuizDetailClient).
+              Permet de generer le QR a l'avance pour preparer un print. */}
+          <QrCodeCard
+            url={buildPublicUrl("q", publicSegment)}
+            filename={publicSegment}
+          />
 
           {/* Share networks */}
           <Card><CardContent className="pt-6 space-y-3">

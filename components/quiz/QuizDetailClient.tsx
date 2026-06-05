@@ -3422,13 +3422,16 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
             </div>
           </CardContent></Card>
 
-          {/* QR code — utile pour print, livre, flyer, slide */}
-          {status === "active" && (
-            <QrCodeCard
-              url={buildPublicUrl("q", publicSegment)}
-              filename={publicSegment}
-            />
-          )}
+          {/* QR code — utile pour print, livre, flyer, slide. Affiche
+              meme en draft : Bene 4 juin 2026 veut pouvoir generer le
+              QR AVANT de publier (preparation print livre). L'URL est
+              valide pour l'owner meme en draft, et le visitor qui scan
+              avant publication tombera sur la page draft (handled
+              proprement cote Tiquiz). */}
+          <QrCodeCard
+            url={buildPublicUrl("q", publicSegment)}
+            filename={publicSegment}
+          />
 
           {/* Share networks */}
           <Card><CardContent className="pt-6 space-y-3">
