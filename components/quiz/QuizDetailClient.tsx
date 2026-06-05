@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/dialog";
 import { useShareDomain } from "@/hooks/useShareDomain";
 import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
+import { QrCodeCard } from "@/components/share/QrCodeCard";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { interpolateText, extractResultLabel } from "@/lib/quizPersonalization";
 import { analyzeTies, type TieConflict } from "@/lib/quizTieAnalysis";
@@ -3420,6 +3421,14 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               </Button>
             </div>
           </CardContent></Card>
+
+          {/* QR code — utile pour print, livre, flyer, slide */}
+          {status === "active" && (
+            <QrCodeCard
+              url={buildPublicUrl("q", publicSegment)}
+              filename={publicSegment}
+            />
+          )}
 
           {/* Share networks */}
           <Card><CardContent className="pt-6 space-y-3">

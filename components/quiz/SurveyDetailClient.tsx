@@ -70,6 +70,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTranslations } from "next-intl";
 import { useShareDomain } from "@/hooks/useShareDomain";
 import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
+import { QrCodeCard } from "@/components/share/QrCodeCard";
 import {
   ALLOWED_SHARE_NETWORKS,
   BRAND_FONT_CHOICES,
@@ -2186,6 +2187,14 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
               </Button>
             </div>
           </CardContent></Card>
+
+          {/* QR code — utile pour print, livre, flyer, slide */}
+          {status === "active" && (
+            <QrCodeCard
+              url={buildPublicUrl("q", publicSegment)}
+              filename={publicSegment}
+            />
+          )}
 
           {/* Share networks */}
           <Card><CardContent className="pt-6 space-y-3">

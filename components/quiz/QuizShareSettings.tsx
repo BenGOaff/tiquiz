@@ -11,7 +11,6 @@ import {
   Copy, ExternalLink, Globe, Image, Link2, Check, Code,
 } from "lucide-react";
 import { toast } from "sonner";
-import { QrCodeCard } from "@/components/share/QrCodeCard";
 
 const SOCIAL_NETWORKS = [
   { id: "facebook", label: "Facebook", icon: "f" },
@@ -136,9 +135,6 @@ export default function QuizShareSettings({
           </CardContent>
         </Card>
       )}
-
-      {/* QR code — utile pour print, livre, flyer, slide */}
-      {quizId && status === "active" && <QrCodeCard url={publicUrl} filename={effectiveSlug} />}
 
       {/* Iframe embed */}
       {quizId && (
