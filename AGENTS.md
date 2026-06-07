@@ -4,6 +4,42 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+## Distribution par résultat — RÈGLE UNIQUE (drame Gwenn 7 juin 2026)
+
+Tout endroit qui affiche la distribution des leads par résultat de quiz
+DOIT suivre cette règle exacte. La répétition de bugs (entrées
+dupliquées, résultats oubliés, anciens noms) vient TOUJOURS d'un
+ré-implémentation partielle qui zappe une étape.
+
+**Algorithme obligatoire :**
+1. Groupe les leads par `result_id` (clé stable, ON DELETE SET NULL)
+2. Résout le titre via `quiz_results.title` (LIVE — répercute les renames),
+   fallback sur le snapshot `result_title` du lead (pour les result_ids
+   orphans depuis suppression)
+3. **MERGE** les buckets avec le même titre résolu (dédoublonne les
+   fantômes : ancien nom + nouveau nom après rename, ou 2 result_ids
+   distincts qui résolvent au même titre)
+4. Filter les zéros, sort par count desc
+
+**Endroits à respecter (Tiquiz) :**
+- `app/api/quiz/[quizId]/analytics/route.ts` — donut page Analytics
+- `components/quiz/QuizResultsAnalytics.tsx` — donut dans l'éditeur quiz
+- Toute nouvelle UI qui affiche des compteurs par résultat
+
+**Endroits à respecter (Tipote) :**
+- `app/api/quiz/[quizId]/analytics/route.ts` — utilise `leads.quiz_result_id`
+  (migration 20260607_leads_quiz_result_id.sql) + fallback `quiz_result_title`
+- `components/quiz/QuizResultsAnalytics.tsx` — lit depuis `quiz_leads`
+  (table dédiée, déjà `result_id` + `result_title`)
+- `app/api/quiz/[quizId]/public/route.ts` (capture) DOIT écrire
+  ET `quiz_result_id` ET `quiz_result_title`
+
+**Si je vois `iterate results.map(r => counts.get(r.id))` quelque part,
+c'est CASSÉ** (oublie les leads orphans). Si je vois `groupBy(result_title)`
+sans dédup par titre résolu, c'est CASSÉ (anciens noms apparaissent en
+double après rename). Toute autre forme = je viole la règle et un user
+va remonter un bug. Suis l'algorithme à la lettre.
+
 ## Fichier env sur le serveur prod — À NE PAS CONFONDRE (drame 3 juin 2026)
 
 Sur le serveur prod, **les deux apps utilisent `.env`** (pas `.env.local`).

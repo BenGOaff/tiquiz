@@ -212,22 +212,32 @@ export async function GET(
   // lifetime — sinon la somme des pct ne ferait pas 100% quand le
   // sélecteur de période réduit l'échantillon.
   const periodLeadsTotal = leads.length;
-  const resultDistribution = Array.from(byResult.entries())
-    .map(([key, b]) => {
-      // Priorité au titre LIVE (depuis quiz_results) ; fallback sur le
-      // snapshot stocké à la capture pour les profils supprimés depuis.
-      const live = key !== NO_RESULT_KEY ? currentTitleById.get(key) : undefined;
-      const title =
-        (live && live.trim()) || b.snapshotTitle || "Sans résultat";
-      return {
-        title,
-        count: b.count,
-        pct:
-          periodLeadsTotal > 0
-            ? Math.round((b.count / periodLeadsTotal) * 1000) / 10
-            : 0,
-      };
-    })
+
+  // ─── Distribution par titre RESOLU (Gwenn 7 juin 2026) ──────────────
+  // Bug remonte par Gwenn : 2 entrees "L'Hyper adaptation" dans le donut
+  // avec 71.4% et 7.9%. Cause : 2 result_ids differents resolvent au
+  // MEME titre courant (cas typique : user rename + ancien result_id
+  // orphan dont le snapshot title est le meme que le nouveau). On
+  // groupe une 2eme fois par TITRE pour merger les entrees doublons.
+  // Sans cette etape, chaque rename / delete-recreate cree un fantome
+  // dans le donut.
+  const byTitle = new Map<string, number>();
+  for (const [key, b] of byResult) {
+    const live = key !== NO_RESULT_KEY ? currentTitleById.get(key) : undefined;
+    const title =
+      (live && live.trim()) || b.snapshotTitle || "Sans résultat";
+    byTitle.set(title, (byTitle.get(title) ?? 0) + b.count);
+  }
+
+  const resultDistribution = Array.from(byTitle.entries())
+    .map(([title, count]) => ({
+      title,
+      count,
+      pct:
+        periodLeadsTotal > 0
+          ? Math.round((count / periodLeadsTotal) * 1000) / 10
+          : 0,
+    }))
     .sort((a, b) => b.count - a.count);
 
   // Daily series. Bucketing en jour LOCAL du créateur (tzOffset) — clés
