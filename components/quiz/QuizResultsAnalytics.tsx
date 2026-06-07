@@ -112,8 +112,21 @@ export default function QuizResultsAnalytics({
   const t = useTranslations("quizDetail");
   const locale = useLocale();
 
+  // ─── Réconciliation des compteurs (invariant AGENTS.md) ────────────────
+  // vues >= starts >= completions >= leads. Sans ça, le tracking d'events
+  // raté donnait des affichages absurdes (44 vues pour 276 leads ; taux de
+  // conversion à 627 %). Cf. drame Béné 2 juin 2026 — la règle est
+  // documentée dans AGENTS.md section "Distribution par résultat".
+  const reconciledCompletions = Math.max(completionsCount, leads.length);
+  const reconciledStarts = Math.max(startsCount, reconciledCompletions);
+  const reconciledViews = Math.max(viewsCount, reconciledStarts);
+
+  // Taux de conversion HONNÊTE : null si starts < leads (tracking foireux),
+  // sinon leads/starts plafonné à 100 %.
   const conversionRate =
-    viewsCount > 0 ? (leads.length / viewsCount) * 100 : 0;
+    startsCount >= leads.length && startsCount > 0
+      ? Math.round((leads.length / startsCount) * 100)
+      : null;
 
   // ─── Results distribution ────────────────────────────────────────────────
   // Gwenn 7 juin 2026 : avant ce fix, on iterait sur `results` (les results
@@ -243,10 +256,12 @@ export default function QuizResultsAnalytics({
   const hasAnyAnswers = questionStats.some((q) => q.totalAnswered > 0);
 
   // ─── KPI card config ─────────────────────────────────────────────────────
+  // Utilise les compteurs RÉCONCILIÉS (cf. invariant supra) — on ne montre
+  // jamais 44 vues face à 276 leads, c'est impossible physiquement.
   const kpis = [
-    { icon: Eye, label: t("kpiViews"), value: viewsCount },
-    { icon: Play, label: t("kpiStarts"), value: startsCount },
-    { icon: CheckCircle, label: t("kpiCompletions"), value: completionsCount },
+    { icon: Eye, label: t("kpiViews"), value: reconciledViews },
+    { icon: Play, label: t("kpiStarts"), value: reconciledStarts },
+    { icon: CheckCircle, label: t("kpiCompletions"), value: reconciledCompletions },
     { icon: Users, label: t("kpiLeads"), value: leads.length },
     { icon: Share2, label: t("kpiShares"), value: sharesCount },
   ];
@@ -276,12 +291,13 @@ export default function QuizResultsAnalytics({
               {t("conversionRate")}
             </h3>
             <div className="text-4xl font-bold">
-              {conversionRate.toFixed(1)}%
+              {conversionRate === null ? "—" : `${conversionRate}%`}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
+              {/* Compteur réconcilié pour cohérence avec le KPI vues. */}
               {t("conversionSubtitle", {
                 leads: leads.length,
-                views: viewsCount,
+                views: reconciledViews,
               })}
             </p>
           </CardContent>
