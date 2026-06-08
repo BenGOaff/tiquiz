@@ -2,24 +2,53 @@
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+
+## Anti-IA writing — JAMAIS de tiret long (drame 7 juin 2026)
+
+Béné a une règle absolue dans tout le contenu user-visible (i18n
+messages, copy UI, descriptions) : **aucun em-dash `—` ni en-dash `–`**.
+Ces caractères sont une signature stylistique des LLM qui trahit
+immédiatement le texte généré par IA et casse la crédibilité.
+
+À utiliser à la place :
+- Bullets : `-` (hyphen simple)
+- Parenthèse stylistique : `,` ou `:` ou `(...)`
+- Pause forte : `.` (nouvelle phrase)
+- Plage : `à` ou `-` simple
+
+Scan rapide avant tout commit qui touche au contenu user-visible :
+```bash
+grep -rn "—\|–" messages
+```
+Doit retourner ZÉRO ligne. Sinon, `sed -i 's/—/-/g; s/–/-/g' fichier`.
+
+Cette règle s'applique aux contenus USER-VISIBLE uniquement. Les
+commentaires de code peuvent en contenir, le user ne les voit jamais.
 <!-- END:nextjs-agent-rules -->
 
-## Distribution par résultat — RÈGLE UNIQUE (drame Gwenn 7 juin 2026)
+## Distribution par résultat — RÈGLE UNIQUE (drame Gwenn 8 juin 2026)
 
 Tout endroit qui affiche la distribution des leads par résultat de quiz
 DOIT suivre cette règle exacte. La répétition de bugs (entrées
-dupliquées, résultats oubliés, anciens noms) vient TOUJOURS d'un
+dupliquées, résultats oubliés, anciens noms) vient TOUJOURS d'une
 ré-implémentation partielle qui zappe une étape.
 
+**Citation Béné 8 juin :** "je veux que mes users voient leur quiz
+EXISTANT, en temps réel, pas des anciennes versions ou des versions
+tronquées." → source de vérité = `quiz_results` actuel.
+
 **Algorithme obligatoire :**
-1. Groupe les leads par `result_id` (clé stable, ON DELETE SET NULL)
-2. Résout le titre via `quiz_results.title` (LIVE — répercute les renames),
-   fallback sur le snapshot `result_title` du lead (pour les result_ids
-   orphans depuis suppression)
-3. **MERGE** les buckets avec le même titre résolu (dédoublonne les
-   fantômes : ancien nom + nouveau nom après rename, ou 2 result_ids
-   distincts qui résolvent au même titre)
-4. Filter les zéros, sort par count desc
+1. **SEED** `byTitle` avec TOUS les profils actuels de `quiz_results`,
+   `count = 0` inclus (pas de filtre zero). Source de vérité.
+2. Pour chaque lead, tenter d'attribuer à un profil current :
+   - via `result_id` → `quiz_results.title` LIVE (suit les renames)
+   - sinon via le snapshot `result_title` SI ce titre existe encore
+     dans `currentTitles`
+   - **sinon : on EXCLUT silencieusement** (orphan / ancien nom après
+     rename / profil supprimé). Pas de bucket "Anciens profils" affiché.
+3. Le dénominateur des `%` = somme des leads MATCHÉS (pas `leads.length`),
+   pour que les pourcentages affichés somment exactement à 100%.
+4. Sort par count desc.
 
 **Endroits à respecter (Tiquiz) :**
 - `app/api/quiz/[quizId]/analytics/route.ts` — donut page Analytics
@@ -34,11 +63,14 @@ ré-implémentation partielle qui zappe une étape.
 - `app/api/quiz/[quizId]/public/route.ts` (capture) DOIT écrire
   ET `quiz_result_id` ET `quiz_result_title`
 
-**Si je vois `iterate results.map(r => counts.get(r.id))` quelque part,
-c'est CASSÉ** (oublie les leads orphans). Si je vois `groupBy(result_title)`
-sans dédup par titre résolu, c'est CASSÉ (anciens noms apparaissent en
-double après rename). Toute autre forme = je viole la règle et un user
-va remonter un bug. Suis l'algorithme à la lettre.
+**Anti-patterns INTERDITS :**
+- Ne PAS seeder avec `quiz_results` actuels → profils à 0 lead absents.
+- Afficher un bucket "Anciens profils" ou "Sans résultat" → bruit visuel
+  que Béné refuse.
+- Calculer le `%` sur `leads.length` au lieu de `matchedTotal` → la
+  somme ne fait pas 100% quand il y a des orphans exclus.
+- `groupBy(result_title)` sans match au titre LIVE → anciens noms
+  apparaissent en double après rename.
 
 ## Fichier env sur le serveur prod — À NE PAS CONFONDRE (drame 3 juin 2026)
 

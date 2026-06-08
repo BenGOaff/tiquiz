@@ -8,6 +8,7 @@
 
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const SURVEY_AI_MIN_RESPONSES = 5;
@@ -263,13 +264,13 @@ function parseAnalysisJson(raw: string): {
   try {
     const obj = JSON.parse(jsonStr) as Record<string, unknown>;
     const toStringArray = (v: unknown): string[] =>
-      Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : [];
+      Array.isArray(v) ? v.map((x) => sanitizeAiText(String(x).trim())).filter(Boolean) : [];
     return {
-      summary: typeof obj.summary === "string" ? obj.summary.trim() : "",
+      summary: typeof obj.summary === "string" ? sanitizeAiText(obj.summary.trim()) : "",
       takeaways: toStringArray(obj.takeaways),
       actions: toStringArray(obj.actions),
     };
   } catch {
-    return { summary: raw.trim().slice(0, 1000), takeaways: [], actions: [] };
+    return { summary: sanitizeAiText(raw.trim().slice(0, 1000)), takeaways: [], actions: [] };
   }
 }

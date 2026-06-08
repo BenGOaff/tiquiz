@@ -12,12 +12,12 @@
       "settings": "الإعدادات",
       "admin": "المسؤول",
       "projects": "مشاريعي",
-      "editProject": "تعديل المشروع – Tiquiz",
-      "editPopquiz": "تعديل Popquiz – Tiquiz",
-      "newQuiz": "اختبار جديد – Tiquiz",
-      "newSurvey": "استطلاع جديد – Tiquiz",
-      "newPopquiz": "Popquiz جديد – Tiquiz",
-      "myPopquizzes": "Popquiz الخاصة بي – Tiquiz",
+      "editProject": "تعديل المشروع - Tiquiz",
+      "editPopquiz": "تعديل Popquiz - Tiquiz",
+      "newQuiz": "اختبار جديد - Tiquiz",
+      "newSurvey": "استطلاع جديد - Tiquiz",
+      "newPopquiz": "Popquiz جديد - Tiquiz",
+      "myPopquizzes": "Popquiz الخاصة بي - Tiquiz",
       "myPopquizzesShort": "Popquiz الخاصة بي"
     }
   },
@@ -57,14 +57,14 @@
     "sioNewTagPlaceholder": "اسم الوسم الجديد",
     "sioTagsLoading": "جارٍ التحميل…",
     "sioLoadTags": "تحميل وسومي",
-    "sioNoTag": "— بدون وسم —",
+    "sioNoTag": "- بدون وسم -",
     "sioCreateTag": "إنشاء وسم جديد",
     "sioLoadingAll": "جارٍ تحميل بيانات Systeme.io...",
     "sioConfigurePrompt": "قم بتكوين مفتاح API لـ Systeme.io في الإعدادات لرؤية الوسوم والدورات والمجتمعات هنا.",
     "sioSettingsLink": "الإعدادات",
-    "sioNoTagOpt": "— لا يوجد وسم —",
-    "sioNoCourseOpt": "— لا توجد دورة —",
-    "sioNoCommunityOpt": "— لا يوجد مجتمع —",
+    "sioNoTagOpt": "- لا يوجد وسم -",
+    "sioNoCourseOpt": "- لا توجد دورة -",
+    "sioNoCommunityOpt": "- لا يوجد مجتمع -",
     "rteBold": "عريض",
     "rteItalic": "مائل",
     "rteAlignCenter": "توسيط",
@@ -142,7 +142,7 @@
       "title": "الإجماليات التراكمية",
       "badge": "كل الأوقات"
     },
-    "eventsNoticeDesc": "المشاهدات والبدء والإكمال الجديدة موثقة الآن بالتاريخ — ستمتلئ الرسوم البيانية مع تدفق النشاط. وفي الوقت نفسه، تظل الإجماليات التراكمية موثوقة.",
+    "eventsNoticeDesc": "المشاهدات والبدء والإكمال الجديدة موثقة الآن بالتاريخ - ستمتلئ الرسوم البيانية مع تدفق النشاط. وفي الوقت نفسه، تظل الإجماليات التراكمية موثوقة.",
     "totals": {
       "views": "المشاهدات",
       "starts": "بدأوا",
@@ -359,7 +359,7 @@
       "1": "هل ننشئ محتوى يحقّق نتائج؟",
       "2": "يوم جديد، فرصة جديدة ✨",
       "3": "ماذا نطلق اليوم؟",
-      "4": "جمهورك ينتظرك — هل ننطلق؟"
+      "4": "جمهورك ينتظرك - هل ننطلق؟"
     },
     "weeklyGoal": {
       "objectiveLabel": "هدف الأسبوع",
@@ -375,7 +375,7 @@
       },
       "shareAgain": {
         "title": "أعد المشاركة هذا الأسبوع",
-        "desc": "لا توجد إجابات جديدة هذا الأسبوع — إعادة المشاركة غالباً ما تنعش التدفّق.",
+        "desc": "لا توجد إجابات جديدة هذا الأسبوع - إعادة المشاركة غالباً ما تنعش التدفّق.",
         "cta": "عرض مشاريعي"
       },
       "firstSurvey": {
@@ -410,7 +410,7 @@
       },
       "topPerformer": {
         "title": "«{name}» يحقّق نتائج ممتازة",
-        "body": "معدّل الالتقاط {rate}% — أعلى من المتوسّط. روّج له على قنواتك لتضخيم الأثر.",
+        "body": "معدّل الالتقاط {rate}% - أعلى من المتوسّط. روّج له على قنواتك لتضخيم الأثر.",
         "cta": "مشاركة المشروع"
       },
       "shipDrafts": {
@@ -469,7 +469,7 @@
       }
     },
     "statisticsTitle": "الإحصائيات",
-    "embedClaimSuccess": "اختبارك كان بانتظارك — أصبح الآن في حسابك ✨",
+    "embedClaimSuccess": "اختبارك كان بانتظارك - أصبح الآن في حسابك ✨",
     "embedClaimOpen": "افتح",
     "deleteError": "حدث خطأ ما."
   },
@@ -546,7 +546,7 @@
     "aiCtaPlaceholder": "مثال: حجز مكالمة استكشافية…",
     "aiIntentionLabel": "لماذا تنشئ هذا الاختبار؟",
     "aiIntentionPlaceholder": "مثال: دعوة لتجربة Tiquiz، تقديم تدقيق مجاني، اقتراح تدريب يناسب الملف، التوجيه إلى مجتمعي…",
-    "aiIntentionHint": "هدفك التجاري الملموس — سينشئ الذكاء الاصطناعي CTA خاصًا بكل نتيجة لتوجيه زوارك بشكل طبيعي.",
+    "aiIntentionHint": "هدفك التجاري الملموس - سينشئ الذكاء الاصطناعي CTA خاصًا بكل نتيجة لتوجيه زوارك بشكل طبيعي.",
     "aiBonusLabel": "المكافأة المقدمة",
     "aiBonusPlaceholder": "مثال: دليل PDF مجاني…",
     "aiGenerateError": "فشلت عملية الإنشاء. تحقق من اتصالك وحاول مرة أخرى.",
@@ -555,13 +555,13 @@
     "aiGenerate": "إنشاء الاختبار",
     "aiGenerating": "جاري الإنشاء…",
     "aiGenerated": "تم إنشاء الاختبار! يمكنك تعديله قبل الحفظ.",
-    "aiObjectivePick": "— اختر هدفاً —",
+    "aiObjectivePick": "- اختر هدفاً -",
     "aiObjectiveMulti": "اختر هدفاً واحداً أو أكثر لاختبارك",
     "aiFormatLabel": "صيغة الاختبار",
     "aiFormatShort": "قصير",
-    "aiFormatShortDesc": "3-5 أسئلة — تحويلات سريعة",
+    "aiFormatShortDesc": "3-5 أسئلة - تحويلات سريعة",
     "aiFormatLong": "طويل",
-    "aiFormatLongDesc": "8-12 سؤال — قيمة أكبر",
+    "aiFormatLongDesc": "8-12 سؤال - قيمة أكبر",
     "aiSegmentationLabel": "نوع التقسيم",
     "aiSegProfile": "حسب الملف الشخصي",
     "aiSegProfileDesc": "أنماط الشخصية، النماذج الأصلية…",
@@ -569,7 +569,7 @@
     "aiSegLevelDesc": "مبتدئ، متوسط، خبير…",
     "aiChatEntryLabel": "لا تملك فكرة؟ ناقش مع الذكاء الاصطناعي →",
     "aiChatTitle": "ناقش فكرة الاختبار",
-    "aiChatDescription": "أجب ببضع جمل — سأقترح لك زوايا مناسبة لنشاطك.",
+    "aiChatDescription": "أجب ببضع جمل - سأقترح لك زوايا مناسبة لنشاطك.",
     "aiChatKickoff": "ساعدني في إيجاد فكرة جيدة لاختبار لعملي.",
     "aiChatPlaceholder": "إجابتك…",
     "aiChatError": "حدث خطأ. حاول مرة أخرى أو استخدم النموذج المباشر.",
@@ -594,7 +594,7 @@
     "tabVirality": "الانتشار",
     "importFormatsNotice": "تنسيق غير مدعوم. المقبول: .txt و.docx و.pdf (حتى 10 ميغابايت).",
     "importIntro": "استورد ملف .txt أو .docx أو .pdf يحتوي على أسئلتك وأجوبتك (أو استبيان). سيقوم الذكاء الاصطناعي بتنظيم المحتوى في اختبار أو استبيان (أسئلة وخيارات ونتائج).",
-    "importFormatsAccepted": ".txt · .docx · .pdf — حتى 10 ميغابايت / 50,000 حرف",
+    "importFormatsAccepted": ".txt · .docx · .pdf - حتى 10 ميغابايت / 50,000 حرف",
     "quizImported": "تم استيراد الاختبار بنجاح!",
     "creatingQuiz": "جارٍ إنشاء اختبارك…",
     "importQuiz": "استيراد اختبار",
@@ -690,7 +690,7 @@
     "addressTu": "غير رسمية (أنت)",
     "addressVous": "رسمية (حضرتك)",
     "audienceTitle": "الجمهور المستهدف",
-    "audienceDesc": "اوصف جمهورك — يُستخدم تلقائيًا عند إنشاء اختبارات بالذكاء الاصطناعي",
+    "audienceDesc": "اوصف جمهورك - يُستخدم تلقائيًا عند إنشاء اختبارات بالذكاء الاصطناعي",
     "audiencePh": "مثال: أساعد المصمّمين المستقلّين على كسب عملاء بميزانيات عالية",
     "privacyTitle": "سياسة الخصوصية",
     "privacyDesc": "الرابط الافتراضي المستخدم في اختباراتك",
@@ -716,7 +716,7 @@
     "sioConnNamePh": "مشروعي",
     "sioApiKeyLabel": "مفتاح API",
     "autoTitle": "أتمتة ما يحدث بعد جمع العميل",
-    "autoDesc": "بمجرد أن يلتقط اختبارك عميلًا محتملًا، يضع Tiquiz وسمًا على جهة الاتصال في Systeme.io. هذا الوسم يمكن أن يُفعِّل أتمتة — التسجيل في حملة، الوصول إلى دورة، الانضمام إلى مجتمع، إلخ. كل شيء يُضبط في Systeme.io، بدون برمجة.",
+    "autoDesc": "بمجرد أن يلتقط اختبارك عميلًا محتملًا، يضع Tiquiz وسمًا على جهة الاتصال في Systeme.io. هذا الوسم يمكن أن يُفعِّل أتمتة - التسجيل في حملة، الوصول إلى دورة، الانضمام إلى مجتمع، إلخ. كل شيء يُضبط في Systeme.io، بدون برمجة.",
     "autoStep1Title": "أنشئ وسومك في Systeme.io قبل بناء اختبارك",
     "autoStep1P1": "في Systeme.io > جهات الاتصال > الوسوم، أنشئ وسمًا لكل نتيجة اختبار تريد أتمتتها. أمثلة: quiz-visionary، quiz-strategist، quiz-share (للمشاركين الذين يُشاركون الاختبار).",
     "autoStep1P2": "ثم، عند إنشاء اختبارك في Tiquiz، اربط هذه الوسوم بكل نتيجة من نتائجك عبر تبويب Systeme.io.",
@@ -732,12 +732,12 @@
     "autoStep3Title": "ما يحدث عندما يُجيب العميل المحتمل",
     "autoStep3P": "يُدخل المشارك بريده الإلكتروني ← يُنشئ Tiquiz (أو يُحدِّث) جهة الاتصال في Systeme.io ويضع الوسم المقابل لنتيجته. يكتشف Systeme.io الوسم ويُفعِّل جميع إجراءات قاعدتك. لا تحتاج لأي نقرة.",
     "autoTestTitle": "مهم عند اختبار الـ quiz",
-    "autoTestP": "لن يُعيد Systeme.io تشغيل الأتمتة إذا كان الوسم موجودًا بالفعل على بريدك التجريبي. قبل كل اختبار جديد، اذهب إلى «جهات الاتصال»، افتح جهة الاتصال التجريبية، وأزل الوسم يدويًا — وإلا سترى جهة الاتصال في Systeme.io لكن القاعدة لن تعمل وستظن أن هناك خللًا.",
-    "autoLinkSio": "الدليل الرسمي لـ Systeme.io — سير العمل والأتمتة",
-    "autoLinkTiquiz": "مساعدة Tiquiz — ربط Systeme.io",
+    "autoTestP": "لن يُعيد Systeme.io تشغيل الأتمتة إذا كان الوسم موجودًا بالفعل على بريدك التجريبي. قبل كل اختبار جديد، اذهب إلى «جهات الاتصال»، افتح جهة الاتصال التجريبية، وأزل الوسم يدويًا - وإلا سترى جهة الاتصال في Systeme.io لكن القاعدة لن تعمل وستظن أن هناك خللًا.",
+    "autoLinkSio": "الدليل الرسمي لـ Systeme.io - سير العمل والأتمتة",
+    "autoLinkTiquiz": "مساعدة Tiquiz - ربط Systeme.io",
     "subscriptionTitle": "اشتراكي",
-    "freeInline": "— اختبار واحد + استطلاع واحد + بوب-كويز واحد، 10 ردود/شهر",
-    "paidInline": "— اختبارات وردود غير محدودة",
+    "freeInline": "- اختبار واحد + استطلاع واحد + بوب-كويز واحد، 10 ردود/شهر",
+    "paidInline": "- اختبارات وردود غير محدودة",
     "cancelSub": "إلغاء اشتراكي",
     "confirmCancelSub": "هل أنت متأكد من إلغاء اشتراكك؟ ستعود إلى الخطة المجانية (اختبار واحد + استطلاع واحد + بوب-كويز واحد، 10 ردود/شهر).",
     "cancelInstructions": "للإلغاء، تواصل معنا على hello@ethilife.fr أو أدِر اشتراكك من Systeme.io.",
@@ -884,14 +884,14 @@
     "toastDomainStillPending": "لم يكتشف بعد. سأستمر بالتحقق.",
     "toastDomainDeleted": "تمت إزالة النطاق.",
     "cancelBtn": "إلغاء",
-    "trackingDefaultsTitle": "التتبع والإعلانات — الافتراضيات",
+    "trackingDefaultsTitle": "التتبع والإعلانات - الافتراضيات",
     "trackingDefaultsDesc": "تُطبق معرّفات Meta Pixel وGoogle هذه تلقائيًا على اختباراتك الجديدة. يمكنك دائمًا تجاوزها في محرر الاختبار.",
     "trackingDefaultsMetaLabel": "معرّف Meta (Facebook) Pixel",
     "trackingDefaultsMetaHelp": "العثور على معرّف Pixel في Meta Events Manager",
-    "trackingDefaultsGa4Label": "Google Analytics 4 — Measurement ID",
+    "trackingDefaultsGa4Label": "Google Analytics 4 - Measurement ID",
     "trackingDefaultsGa4Help": "العثور على المعرّف في Google Analytics",
-    "trackingDefaultsAdsIdLabel": "Google Ads — معرّف التحويل",
-    "trackingDefaultsAdsLabelLabel": "Google Ads — تسمية التحويل",
+    "trackingDefaultsAdsIdLabel": "Google Ads - معرّف التحويل",
+    "trackingDefaultsAdsLabelLabel": "Google Ads - تسمية التحويل",
     "trackingDefaultsAdsHelp": "العثور على معرّفات Google Ads",
     "tabTracking": "التتبع",
     "shareSiteNameTitle": "اسم العلامة في المشاركات",
@@ -904,7 +904,7 @@
     "affiliateNotRegistered": "لم تسجل بعد؟",
     "affiliateDiscoverProgram": "اكتشف برنامج الشراكة",
     "affiliateTerms": "الشروط العامة",
-    "affiliateEmptyFieldNote": "إذا تركت هذا الحقل فارغاً، سيبقى التذييل ظاهراً لكن دون تتبع — لن تحصل على أي عمولة من التسجيلات.",
+    "affiliateEmptyFieldNote": "إذا تركت هذا الحقل فارغاً، سيبقى التذييل ظاهراً لكن دون تتبع - لن تحصل على أي عمولة من التسجيلات.",
     "achievementsTitle": "شاراتي",
     "shareSiteNamePlaceholder": "استوديو الخاص بي"
   },
@@ -955,21 +955,21 @@
     "helpRestart": "إعادة الجولة الإرشادية",
     "skipTour": "الخروج من الجولة",
     "next": "التالي",
-    "tooltipDashboard": "لوحة التحكم — صفحتك الرئيسية. اعثر على اختباراتك وإحصائياتك الرئيسية وأنشئ اختباراً جديداً بنقرة واحدة.",
-    "tooltipCreate": "إنشاء اختبار — أنشئه يدوياً أو دع الذكاء الاصطناعي يولّده لك. قم بإعداد الأسئلة والنتائج وتكاملات SIO.",
-    "tooltipQuizzes": "اختباراتي — اعثر على جميع اختباراتك هنا. فعّل أو عدّل أو احذف، وانسخ الرابط العام بنقرة واحدة.",
-    "tooltipLeads": "عملائي — جميع جهات الاتصال التي التقطتها اختباراتك. صدّرها أو زامنها مع Systeme.io.",
-    "tooltipStats": "الإحصائيات — تابع أداء اختباراتك: المشاهدات ومعدل الإكمال والتحويلات والمشاركات.",
-    "tooltipSettings": "الإعدادات — قم بتهيئة لغتك ومفتاح API لـ Systeme.io والتفضيلات الافتراضية.",
+    "tooltipDashboard": "لوحة التحكم - صفحتك الرئيسية. اعثر على اختباراتك وإحصائياتك الرئيسية وأنشئ اختباراً جديداً بنقرة واحدة.",
+    "tooltipCreate": "إنشاء اختبار - أنشئه يدوياً أو دع الذكاء الاصطناعي يولّده لك. قم بإعداد الأسئلة والنتائج وتكاملات SIO.",
+    "tooltipQuizzes": "اختباراتي - اعثر على جميع اختباراتك هنا. فعّل أو عدّل أو احذف، وانسخ الرابط العام بنقرة واحدة.",
+    "tooltipLeads": "عملائي - جميع جهات الاتصال التي التقطتها اختباراتك. صدّرها أو زامنها مع Systeme.io.",
+    "tooltipStats": "الإحصائيات - تابع أداء اختباراتك: المشاهدات ومعدل الإكمال والتحويلات والمشاركات.",
+    "tooltipSettings": "الإعدادات - قم بتهيئة لغتك ومفتاح API لـ Systeme.io والتفضيلات الافتراضية.",
     "tooltipComplete": "انتهت الجولة! أنشئ أول اختبار، وقم بإعداد Systeme.io، وشارك رابطك."
   },
   "quizEditor": {
     "backToTop": "العودة إلى الأعلى",
-    "coverageOk": "{count} من {total} سؤال يقود هنا — متوازن",
+    "coverageOk": "{count} من {total} سؤال يقود هنا - متوازن",
     "coverageWarn": "فقط {count} من {total} سؤال يقود هنا",
     "coverageDanger": "لا يوجد سؤال يقود إلى هذه النتيجة ({count} سؤال إجمالاً)",
     "coverageHeadingDanger": "لا يمكن أبدًا تعيين هذه النتيجة",
-    "coverageHeadingWarn": "احتمال ضعيف للتعيين — {count}/{total} سؤال يقود هنا",
+    "coverageHeadingWarn": "احتمال ضعيف للتعيين - {count}/{total} سؤال يقود هنا",
     "coverageHelp": "لكي يتم اختيار نتيجة، يجب أن تقود إليها عدة أسئلة. اضبط خيارات أسئلتك أو اطلب من الذكاء الاصطناعي إعادة التوازن.",
     "rebalanceCta": "إعادة التوازن بالذكاء الاصطناعي",
     "rebalanceDialogTitle": "إعادة موازنة اختبارك",
@@ -1101,7 +1101,7 @@
     "previewModeTitle": "فتح في وضع المعاينة (لا يتم تسجيل أي lead)",
     "previewModeTitleSurvey": "فتح في وضع المعاينة (لا يتم تسجيل أي إجابة)",
     "previewModeBtn": "معاينة",
-    "readinessTitle": "{passed}/{total} خطوات — {percent}% جاهز",
+    "readinessTitle": "{passed}/{total} خطوات - {percent}% جاهز",
     "previewIntroPh": "نص المقدمة…",
     "previewQuestionsCounter": "السؤال {n}/{total}",
     "previewQuestionPh": "نص السؤال…",
@@ -1237,7 +1237,7 @@
     "tieWarningTitle": "{count} تعادلات محتملة بين النتائج",
     "tieWarningHint": "بعض مجموعات الإجابات تنتج نفس النتيجة لنتيجتين. الأزواج المكتشفة:",
     "tieWarningFallback": "في حالة التعادل، سيرى الزائر دائمًا النتيجة الأولى بالترتيب. عدّل النقاط في خيار لكسر التعادل.",
-    "tieWarningTruncated": "(اختبار كبير، تحليل جزئي — قد توجد تعادلات أخرى غير مذكورة).",
+    "tieWarningTruncated": "(اختبار كبير، تحليل جزئي - قد توجد تعادلات أخرى غير مذكورة).",
     "optionShowOtherResults": "إظهار الملفات الأخرى للزائر",
     "optionShowOtherResultsHint": "يضيف قائمة قابلة للطي أسفل النتيجة بجميع الملفات الأخرى الممكنة، في نسخة محايدة (دون اسم أو متغيرات جنس).",
     "trackingPixelsTitle": "التتبع والإعلانات",
@@ -1245,10 +1245,10 @@
     "trackingApplyDefaults": "↺ تطبيق إعداداتي الافتراضية (من الإعدادات)",
     "trackingMetaLabel": "معرّف Meta (Facebook) Pixel",
     "trackingMetaHelp": "أين أجد معرّف Pixel؟ Events Manager →",
-    "trackingGa4Label": "Google Analytics 4 — Measurement ID",
+    "trackingGa4Label": "Google Analytics 4 - Measurement ID",
     "trackingGa4Help": "أين أجد معرّف GA4؟ Google Analytics Admin →",
-    "trackingAdsIdLabel": "Google Ads — معرّف التحويل",
-    "trackingAdsLabelLabel": "Google Ads — تسمية التحويل (تم التقاط العميل)",
+    "trackingAdsIdLabel": "Google Ads - معرّف التحويل",
+    "trackingAdsLabelLabel": "Google Ads - تسمية التحويل (تم التقاط العميل)",
     "trackingAdsHelp": "أين أجد معرّفات Google Ads؟ Conversions →",
     "trackingInvalidFormat": "تنسيق غير صالح",
     "generateAiShort": "توليد (ذكاء اصطناعي)",
@@ -1340,7 +1340,7 @@
   },
   "quizVars": {
     "insertNameTitle": "إدراج اسم الزائر ({name})",
-    "insertGenderTitle": "إدراج صياغة تتغيّر حسب الجنس — مذكر | مؤنث | محايد"
+    "insertGenderTitle": "إدراج صياغة تتغيّر حسب الجنس - مذكر | مؤنث | محايد"
   },
   "survey": {
     "createTitle": "استطلاع جديد",
@@ -1377,7 +1377,7 @@
     "importingButton": "جارٍ الاستيراد…",
     "importDone": "تم استيراد الاستطلاع بنجاح!",
     "importDropHint": "اسحب ملفك هنا أو انقر للتحديد",
-    "importFormatsAccepted": ".txt · .docx · .pdf — حتى 10 ميغابايت / 50,000 حرف",
+    "importFormatsAccepted": ".txt · .docx · .pdf - حتى 10 ميغابايت / 50,000 حرف",
     "importFormatsNotice": "تنسيق غير مدعوم. المقبول: .txt و.docx و.pdf (حتى 10 ميغابايت).",
     "importFileTooLarge": "حجم الملف يتجاوز 10 ميغابايت.",
     "importSelectFile": "اختر ملفًا",
@@ -1492,7 +1492,7 @@
       "label": "الأفضل"
     },
     "trending": {
-      "title": "نشط — نشاط حديث كثير",
+      "title": "نشط - نشاط حديث كثير",
       "label": "نشط"
     },
     "new": {
@@ -1500,7 +1500,7 @@
       "label": "جديد"
     },
     "needsAttention": {
-      "title": "يستحق الانتباه — نشاط قليل",
+      "title": "يستحق الانتباه - نشاط قليل",
       "label": "للمتابعة"
     }
   },
@@ -1555,7 +1555,7 @@
     "heroTitle": "Popquiz الخاصة بي",
     "heroSubtitle": "فيديو + اختبار يظهران في لحظات محددة.",
     "freeLimitTooltip": "الخطة المجانية محدودة بـ Popquiz واحد. احذف الحالي أو ارتقِ إلى خطة مدفوعة.",
-    "freeLimitButton": "الخطة المجانية — 1 كحدّ أقصى",
+    "freeLimitButton": "الخطة المجانية - 1 كحدّ أقصى",
     "newPopquiz": "Popquiz جديد",
     "filterAll": "الكل",
     "filterPublished": "المنشورة",
@@ -1670,8 +1670,8 @@
       "newTitle": "popquiz جديد",
       "newSubtitle": "حمّل فيديو، وضع علامات لإظهار اختبار في اللحظة المناسبة.",
       "editFallback": "Popquiz",
-      "publishedSubtitle": "منشور — مرئي عبر الرابط المشترك.",
-      "draftSubtitle": "مسودّة — غير مرئي للعموم."
+      "publishedSubtitle": "منشور - مرئي عبر الرابط المشترك.",
+      "draftSubtitle": "مسودّة - غير مرئي للعموم."
     },
     "title": {
       "label": "العنوان",
@@ -1719,7 +1719,7 @@
       "hintActive": "انقر على الشريط لإضافة علامة",
       "hintIdle": "ابدأ التشغيل لتفعيل الشريط",
       "startPlayback": "شغّل الفيديو لثانية واحدة كي يتم اكتشاف مدّته.",
-      "markerTitle": "علامة عند {time} — انقر للحذف",
+      "markerTitle": "علامة عند {time} - انقر للحذف",
       "markerAria": "علامة عند {time}، انقر للحذف",
       "aria": {
         "add": "انقر لإضافة علامة"
@@ -1732,7 +1732,7 @@
       "empty": "لا توجد علامات. انقر على الخط الزمني أو على «إضافة».",
       "secondsUnit": "ث",
       "unknownQuiz": "اختبار غير معروف",
-      "overlayTitle": "علامة عند {time} — {quiz}",
+      "overlayTitle": "علامة عند {time} - {quiz}",
       "overlayHelp": "في التشغيل النهائي، سيظهر الاختبار هنا.",
       "skip": "تخطّي",
       "draftSuffix": "(مسودّة)",
@@ -1796,8 +1796,8 @@
       "published": "تم نشر الـ popquiz",
       "draftSaved": "تم حفظ المسودّة",
       "thumbnailFailed": "تم إنشاء الـ popquiz، لكن فشل إرسال الصورة المصغّرة. أعد المحاولة من المحرّر.",
-      "publishedWithLink": "تم نشر الـ popquiz — شارك الرابط مع جمهورك",
-      "unpublished": "تم إلغاء نشر الـ popquiz — لم يعد مرئيًا للعموم",
+      "publishedWithLink": "تم نشر الـ popquiz - شارك الرابط مع جمهورك",
+      "unpublished": "تم إلغاء نشر الـ popquiz - لم يعد مرئيًا للعموم",
       "modificationsSaved": "تم حفظ التعديلات"
     }
   },
@@ -1820,11 +1820,11 @@
     "removeVideo": "إزالة الفيديو",
     "uploading": "جارٍ الرفع…",
     "cancel": "إلغاء",
-    "resumableHint": "قابل للاستئناف في حال انقطاع الشبكة — أبقِ علامة التبويب مفتوحة.",
+    "resumableHint": "قابل للاستئناف في حال انقطاع الشبكة - أبقِ علامة التبويب مفتوحة.",
     "preparing": "تحضير (استخراج الصورة المصغّرة…)",
     "finalizing": "إنهاء…",
     "dropzoneTitle": "اسحب فيديو هنا أو انقر لاختياره",
-    "dropzoneHint": "MP4 و WebM و MOV — حتى 20 غيغابايت.",
+    "dropzoneHint": "MP4 و WebM و MOV - حتى 20 غيغابايت.",
     "toasts": {
       "imported": "تم رفع الفيديو"
     },
@@ -1847,7 +1847,7 @@
     "sortLabel": "ترتيب: {sort}",
     "never": "أبدًا",
     "noUsersFound": "لم يُعثر على أي مستخدم",
-    "confirmDelete": "حذف {email} نهائيًا؟\n\nبشكل تتابعي: الملف الشخصي، الاختبارات، popquizs، العملاء المحتملون، المشاريع — سيُمسح كل شيء. إجراء لا رجعة فيه.",
+    "confirmDelete": "حذف {email} نهائيًا؟\n\nبشكل تتابعي: الملف الشخصي، الاختبارات، popquizs، العملاء المحتملون، المشاريع - سيُمسح كل شيء. إجراء لا رجعة فيه.",
     "stats": {
       "totalUsers": "إجمالي المستخدمين",
       "free": "Free",
@@ -1913,36 +1913,36 @@
     "discardBtn": "الانطلاق من آخر حفظ"
   },
   "helpSeo": {
-    "metaTitle": "فهرسة الاختبارات على Google — مساعدة Tiquiz",
+    "metaTitle": "فهرسة الاختبارات على Google - مساعدة Tiquiz",
     "metaDescription": "كيفية جعل اختباراتك مرئية على Google Search و ChatGPT و Perplexity ومحركات البحث والذكاء الاصطناعي الأخرى. دليل خطوة بخطوة.",
     "title": "فهرسة اختباراتي على Google والذكاء الاصطناعي",
-    "subtitle": "اجعل اختباراتك تظهر في Google Search و ChatGPT و Perplexity و Claude search — 5 إلى 10 دقائق من الإعداد، ثم يصبح تلقائيًا.",
+    "subtitle": "اجعل اختباراتك تظهر في Google Search و ChatGPT و Perplexity و Claude search - 5 إلى 10 دقائق من الإعداد، ثم يصبح تلقائيًا.",
     "s1": {
       "heading": "لماذا الفهرسة؟",
       "body1": "عندما يقوم Google أو ذكاء اصطناعي بفهرسة اختبارك، يمكن لأي شخص العثور عليه بالبحث عن موضوعك. ثلاث فوائد ملموسة:",
-      "li1": "حركة مرور مجانية متكررة من Google Search — كل بحث ذي صلة هو فرصة لجذب عميل محتمل.",
+      "li1": "حركة مرور مجانية متكررة من Google Search - كل بحث ذي صلة هو فرصة لجذب عميل محتمل.",
       "li2": "عندما يسأل شخص ما ChatGPT أو Perplexity أو Claude «اقترح علي اختبارًا حول X»، يمكن أن يظهر اختبارك.",
       "li3": "مشاركات اجتماعية أكثر: الزوار الذين يجدونك عبر البحث يميلون إلى المشاركة مع شبكتهم."
     },
     "s2": {
-      "heading": "الخطوة 1 — إرسال خريطة الموقع إلى Google",
+      "heading": "الخطوة 1 - إرسال خريطة الموقع إلى Google",
       "body1": "يحتاج Google إلى «خريطة موقع» (قائمة باختباراتك) لفهرستها. ينشئها Tiquiz تلقائيًا.",
       "li1": "اذهب إلى Google Search Console: https://search.google.com/search-console",
       "li2": "انقر «إضافة موقع» وأدخل نطاقك (مثل tiquiz.com أو نطاقك المخصص إن وجد).",
-      "li3": "تحقق من الملكية (عبر سجل DNS TXT — يرشدك Google).",
+      "li3": "تحقق من الملكية (عبر سجل DNS TXT - يرشدك Google).",
       "li4": "في القائمة اليسرى، اذهب إلى «Sitemaps» وأدخل: sitemap.xml",
       "li5": "انقر «إرسال». سيقوم Google بزحف اختباراتك خلال 1 إلى 7 أيام.",
-      "note": "لا تحتاج إلى إعادة الإرسال لكل اختبار جديد — تتم إعادة إنشاء خريطة الموقع تلقائيًا كل ساعة."
+      "note": "لا تحتاج إلى إعادة الإرسال لكل اختبار جديد - تتم إعادة إنشاء خريطة الموقع تلقائيًا كل ساعة."
     },
     "s3": {
-      "heading": "الخطوة 2 — مع نطاق مخصص",
+      "heading": "الخطوة 2 - مع نطاق مخصص",
       "body1": "إذا كان لديك نطاق خاص (مثل quiz.yoursite.com)، يمكنك فهرسة اختباراتك على نطاقك بدلاً من tiquiz.com. أقوى لـ SEO الخاص بك.",
       "li1": "أضف نطاقك المخصص إلى Google Search Console كـ «خاصية نطاق».",
       "li2": "تحقق من الملكية عبر سجل DNS TXT (يعطيك Google القيمة لنسخها).",
-      "li3": "أرسل خريطة الموقع: https://your-domain.com/sitemap.xml — ستسرد اختباراتك فقط، على عنوان URL الخاص بك."
+      "li3": "أرسل خريطة الموقع: https://your-domain.com/sitemap.xml - ستسرد اختباراتك فقط، على عنوان URL الخاص بك."
     },
     "s4": {
-      "heading": "الخطوة 3 — تحسين كل اختبار لـ SEO",
+      "heading": "الخطوة 3 - تحسين كل اختبار لـ SEO",
       "body1": "كلما كان عنوان ووصف اختبارك أفضل، زاد إبراز Google والذكاء الاصطناعي له. أفضل الممارسات:",
       "li1Title": "عنوان واضح (≤60 حرفًا)",
       "li1Body": "هو النص الذي يعرضه Google في النتائج. أدرج كلمتك الرئيسية الرئيسية.",
@@ -1954,12 +1954,12 @@
       "li4Body": "تظهر في Google Images ومعاينات iMessage / WhatsApp. صورة رائعة = +20-30% نقرات."
     },
     "s5": {
-      "heading": "الخطوة 4 — الظهور على الذكاء الاصطناعي (ChatGPT, Perplexity, Claude)",
+      "heading": "الخطوة 4 - الظهور على الذكاء الاصطناعي (ChatGPT, Perplexity, Claude)",
       "body1": "ليس عليك إعداد أي شيء إضافي. تقوم الذكاءات الاصطناعية تلقائيًا بزحف المواقع عبر ملفنا `llms.txt` (بيان ننشئه لك) الذي يسرد اختباراتك ووصفها وعنوان URL بتنسيق محسّن لنماذج LLM.",
       "note": "كلما ملأت العنوان والوصف وصورة OG في المحرر، يمكن للذكاء الاصطناعي أن يوصي باختبارك بدقة أكبر للمستخدمين المناسبين."
     },
     "s6": {
-      "heading": "الخطوة 5 — إخفاء اختبار عن محركات البحث",
+      "heading": "الخطوة 5 - إخفاء اختبار عن محركات البحث",
       "body1": "إذا كنت تريد الاحتفاظ باختبار خاص (عبر الرابط فقط، دون مخاطر ظهوره في Google)، حدد المربع «إخفاء هذا الاختبار عن محركات البحث» في علامة تبويب SEO في محرر الاختبار.",
       "body2": "يظل الاختبار نشطًا وقابلاً للمشاركة عبر رابطه المباشر، ولكنه مستبعد من خريطة الموقع وملف الذكاء الاصطناعي. مثالي للمحتوى الداخلي أو المسودات العامة المشاركة لدائرة محدودة."
     }
@@ -2129,7 +2129,7 @@
     "kpiLeadsHint": "{count} تم تصديرهم إلى Systeme.io",
     "kpiCaptureRate": "معدل الالتقاط",
     "kpiCaptureRateHint": "العملاء / المشاهدات (تراكمياً)",
-    "kpiCaptureRateUnreliable": "تم تتبع المشاهدات جزئياً (اختبار مضمّن أو سابق للتتبع) — النسبة موثوقة على المشاهدات الجديدة",
+    "kpiCaptureRateUnreliable": "تم تتبع المشاهدات جزئياً (اختبار مضمّن أو سابق للتتبع) - النسبة موثوقة على المشاهدات الجديدة",
     "kpiExportSio": "تصدير Systeme.io",
     "kpiExportSioHint": "نسبة العملاء الموسومين في SIO",
     "leadsEvolutionTitle": "تطور العملاء المحتملين",
@@ -2146,7 +2146,7 @@
   },
   "illustrations": {
     "emptyInbox": "صندوق الوارد فارغ",
-    "emptyCanvas": "لوحة فارغة — جاهزة للملء",
+    "emptyCanvas": "لوحة فارغة - جاهزة للملء",
     "emptyChart": "لا توجد بيانات بعد",
     "emptySearch": "لا توجد نتائج",
     "welcome": "أهلاً!"

@@ -12,12 +12,12 @@
       "settings": "Definições",
       "admin": "Admin",
       "projects": "Os meus projetos",
-      "editProject": "Editar projeto – Tiquiz",
-      "editPopquiz": "Editar popquiz – Tiquiz",
-      "newQuiz": "Novo quiz – Tiquiz",
-      "newSurvey": "Novo inquérito – Tiquiz",
-      "newPopquiz": "Novo Popquiz – Tiquiz",
-      "myPopquizzes": "Os meus Popquiz – Tiquiz",
+      "editProject": "Editar projeto - Tiquiz",
+      "editPopquiz": "Editar popquiz - Tiquiz",
+      "newQuiz": "Novo quiz - Tiquiz",
+      "newSurvey": "Novo inquérito - Tiquiz",
+      "newPopquiz": "Novo Popquiz - Tiquiz",
+      "myPopquizzes": "Os meus Popquiz - Tiquiz",
       "myPopquizzesShort": "Os meus Popquiz"
     }
   },
@@ -57,14 +57,14 @@
     "sioNewTagPlaceholder": "Nome da nova tag",
     "sioTagsLoading": "A carregar…",
     "sioLoadTags": "Carregar as minhas tags",
-    "sioNoTag": "— Nenhuma tag —",
+    "sioNoTag": "- Nenhuma tag -",
     "sioCreateTag": "Criar uma nova tag",
     "sioLoadingAll": "A carregar dados Systeme.io...",
     "sioConfigurePrompt": "Configura a tua chave API Systeme.io nas Definições para ver aqui as tuas tags, formações e comunidades.",
     "sioSettingsLink": "Definições",
-    "sioNoTagOpt": "— Nenhuma tag —",
-    "sioNoCourseOpt": "— Nenhuma formação —",
-    "sioNoCommunityOpt": "— Nenhuma comunidade —",
+    "sioNoTagOpt": "- Nenhuma tag -",
+    "sioNoCourseOpt": "- Nenhuma formação -",
+    "sioNoCommunityOpt": "- Nenhuma comunidade -",
     "rteBold": "Negrito",
     "rteItalic": "Itálico",
     "rteAlignCenter": "Centrar",
@@ -142,7 +142,7 @@
       "title": "Totais acumulados",
       "badge": "Sempre"
     },
-    "eventsNoticeDesc": "As novas visualizações, inícios e conclusões são agora datadas — os gráficos vão encher-se com a atividade. Entretanto os totais acumulados continuam fiáveis.",
+    "eventsNoticeDesc": "As novas visualizações, inícios e conclusões são agora datadas - os gráficos vão encher-se com a atividade. Entretanto os totais acumulados continuam fiáveis.",
     "totals": {
       "views": "Visualizações",
       "starts": "Iniciados",
@@ -359,7 +359,7 @@
       "1": "Vamos criar conteúdo que converte?",
       "2": "Um novo dia, uma nova oportunidade ✨",
       "3": "O que vamos lançar hoje?",
-      "4": "A tua audiência espera — vamos?"
+      "4": "A tua audiência espera - vamos?"
     },
     "weeklyGoal": {
       "objectiveLabel": "Objetivo da semana",
@@ -375,7 +375,7 @@
       },
       "shareAgain": {
         "title": "Volta a partilhar esta semana",
-        "desc": "Nenhuma resposta nova esta semana — voltar a partilhar costuma reativar o fluxo.",
+        "desc": "Nenhuma resposta nova esta semana - voltar a partilhar costuma reativar o fluxo.",
         "cta": "Ver os meus projetos"
       },
       "firstSurvey": {
@@ -410,7 +410,7 @@
       },
       "topPerformer": {
         "title": "«{name}» está a converter forte",
-        "body": "Taxa de captura {rate}% — acima da média. Empurra-o nos teus canais para amplificar.",
+        "body": "Taxa de captura {rate}% - acima da média. Empurra-o nos teus canais para amplificar.",
         "cta": "Partilhar o projeto"
       },
       "shipDrafts": {
@@ -469,7 +469,7 @@
       }
     },
     "statisticsTitle": "Estatísticas",
-    "embedClaimSuccess": "O teu quiz estava à espera — já está na tua conta ✨",
+    "embedClaimSuccess": "O teu quiz estava à espera - já está na tua conta ✨",
     "embedClaimOpen": "Abrir",
     "deleteError": "Algo correu mal."
   },
@@ -546,7 +546,7 @@
     "aiCtaPlaceholder": "Ex.: Marcar uma chamada de descoberta…",
     "aiIntentionLabel": "Porque estás a criar este quiz?",
     "aiIntentionPlaceholder": "Ex.: Levar a experimentar o Tiquiz, oferecer uma auditoria gratuita, propor uma formação adaptada ao perfil, encaminhar para a minha comunidade…",
-    "aiIntentionHint": "O teu objetivo de negócio concreto — a IA gera um CTA específico para cada resultado para encaminhar os teus visitantes naturalmente.",
+    "aiIntentionHint": "O teu objetivo de negócio concreto - a IA gera um CTA específico para cada resultado para encaminhar os teus visitantes naturalmente.",
     "aiBonusLabel": "Bónus a oferecer",
     "aiBonusPlaceholder": "Ex.: Guia PDF gratuito…",
     "aiGenerateError": "A geração falhou. Verifica a tua ligação e tenta novamente.",
@@ -555,13 +555,13 @@
     "aiGenerate": "Gerar o quiz",
     "aiGenerating": "Geração em curso…",
     "aiGenerated": "Quiz gerado! Podes editá-lo antes de guardar.",
-    "aiObjectivePick": "— Escolhe um objetivo —",
+    "aiObjectivePick": "- Escolhe um objetivo -",
     "aiObjectiveMulti": "Seleciona um ou mais objetivos para o teu quiz",
     "aiFormatLabel": "Formato do quiz",
     "aiFormatShort": "Curto",
-    "aiFormatShortDesc": "3 a 5 perguntas — conversões rápidas",
+    "aiFormatShortDesc": "3 a 5 perguntas - conversões rápidas",
     "aiFormatLong": "Longo",
-    "aiFormatLongDesc": "6 a 10 perguntas — mais valor",
+    "aiFormatLongDesc": "6 a 10 perguntas - mais valor",
     "aiSegmentationLabel": "Tipo de segmentação",
     "aiSegProfile": "Por perfil",
     "aiSegProfileDesc": "Tipos de personalidade, arquétipos…",
@@ -594,7 +594,7 @@
     "tabVirality": "Viralidade",
     "importFormatsNotice": "Formato não suportado. Aceites: .txt, .docx, .pdf (até 10 MB).",
     "importIntro": "Importa um ficheiro .txt, .docx ou .pdf com as tuas perguntas e respostas (ou um questionário). A IA vai estruturar o conteúdo num quiz ou questionário (perguntas, opções, resultados).",
-    "importFormatsAccepted": ".txt · .docx · .pdf — até 10 MB / 50 000 caracteres",
+    "importFormatsAccepted": ".txt · .docx · .pdf - até 10 MB / 50 000 caracteres",
     "quizImported": "Quiz importado com sucesso!",
     "creatingQuiz": "A criar o teu quiz…",
     "importQuiz": "Importar um quiz",
@@ -690,7 +690,7 @@
     "addressTu": "Informal (tu)",
     "addressVous": "Formal (você)",
     "audienceTitle": "Público-alvo",
-    "audienceDesc": "Descreve a tua audiência — pré-preenchido na criação de quizzes IA",
+    "audienceDesc": "Descreve a tua audiência - pré-preenchido na criação de quizzes IA",
     "audiencePh": "Ex.: Ajudo as mampreneurs a vender pelo Instagram",
     "privacyTitle": "Política de privacidade",
     "privacyDesc": "URL predefinido usado nos teus quizzes",
@@ -716,7 +716,7 @@
     "sioConnNamePh": "O meu projeto",
     "sioApiKeyLabel": "Chave API",
     "autoTitle": "Automatizar o que acontece após a captura",
-    "autoDesc": "Assim que o lead é captado pelo teu quiz, o Tiquiz coloca uma tag no contacto no Systeme.io. Esta tag pode despoletar uma automatização — inscrição numa campanha, acesso a uma formação, adição a uma comunidade, etc. Tudo se configura no Systeme.io, não tens de programar nada.",
+    "autoDesc": "Assim que o lead é captado pelo teu quiz, o Tiquiz coloca uma tag no contacto no Systeme.io. Esta tag pode despoletar uma automatização - inscrição numa campanha, acesso a uma formação, adição a uma comunidade, etc. Tudo se configura no Systeme.io, não tens de programar nada.",
     "autoStep1Title": "Cria as tuas tags no Systeme.io antes de criares o teu quiz",
     "autoStep1P1": "No Systeme.io > Contactos > Tags, cria uma tag por resultado de quiz que queres poder automatizar. Exemplos: quiz-visionario, quiz-estrategico, quiz-partilha (para os participantes que partilham).",
     "autoStep1P2": "Depois, ao criar o teu quiz no Tiquiz, associa estas tags a cada um dos teus resultados no separador Systeme.io do quiz.",
@@ -732,12 +732,12 @@
     "autoStep3Title": "O que acontece quando um lead responde",
     "autoStep3P": "O participante introduz o seu email → o Tiquiz cria (ou atualiza) o contacto no Systeme.io e coloca a tag correspondente ao seu resultado. O Systeme.io deteta a tag e despoleta todas as ações da tua regra. Zero cliques da tua parte.",
     "autoTestTitle": "Importante quando testas o teu quiz",
-    "autoTestP": "O Systeme.io não despoleta novamente uma automatização se a tag já estiver colocada no teu email de teste. Antes de cada novo teste, vai a Contactos, abre o teu contacto de teste e remove manualmente a tag — caso contrário verás o teu contacto no Systeme.io mas a regra não será despoletada e vais pensar que está partido.",
-    "autoLinkSio": "Guia oficial Systeme.io — workflows e automatizações",
-    "autoLinkTiquiz": "Ajuda Tiquiz — ligar o Systeme.io",
+    "autoTestP": "O Systeme.io não despoleta novamente uma automatização se a tag já estiver colocada no teu email de teste. Antes de cada novo teste, vai a Contactos, abre o teu contacto de teste e remove manualmente a tag - caso contrário verás o teu contacto no Systeme.io mas a regra não será despoletada e vais pensar que está partido.",
+    "autoLinkSio": "Guia oficial Systeme.io - workflows e automatizações",
+    "autoLinkTiquiz": "Ajuda Tiquiz - ligar o Systeme.io",
     "subscriptionTitle": "A minha subscrição",
-    "freeInline": "— 1 quiz + 1 sondagem + 1 popquiz, 10 respostas/mês",
-    "paidInline": "— Quizzes e respostas ilimitados",
+    "freeInline": "- 1 quiz + 1 sondagem + 1 popquiz, 10 respostas/mês",
+    "paidInline": "- Quizzes e respostas ilimitados",
     "cancelSub": "Cancelar a minha subscrição",
     "confirmCancelSub": "Tens a certeza que queres cancelar a tua subscrição? Voltarás ao plano gratuito (1 quiz + 1 sondagem + 1 popquiz, 10 respostas/mês).",
     "cancelInstructions": "Para cancelar, contacta-nos em hello@ethilife.fr ou gere a tua subscrição no Systeme.io.",
@@ -900,14 +900,14 @@
     "toastDomainStillPending": "Ainda não detetado. Continuo a verificar.",
     "toastDomainDeleted": "Domínio removido.",
     "cancelBtn": "Cancelar",
-    "trackingDefaultsTitle": "Tracking e Anúncios — valores padrão",
+    "trackingDefaultsTitle": "Tracking e Anúncios - valores padrão",
     "trackingDefaultsDesc": "Estes IDs Meta Pixel e Google são aplicados automaticamente aos teus novos quizzes. Podes sempre substituí-los no editor do quiz.",
     "trackingDefaultsMetaLabel": "Meta (Facebook) Pixel ID",
     "trackingDefaultsMetaHelp": "Encontrar o meu Pixel ID no Meta Events Manager",
-    "trackingDefaultsGa4Label": "Google Analytics 4 — Measurement ID",
+    "trackingDefaultsGa4Label": "Google Analytics 4 - Measurement ID",
     "trackingDefaultsGa4Help": "Encontrar o meu ID no Google Analytics",
-    "trackingDefaultsAdsIdLabel": "Google Ads — ID de conversão",
-    "trackingDefaultsAdsLabelLabel": "Google Ads — Etiqueta de conversão",
+    "trackingDefaultsAdsIdLabel": "Google Ads - ID de conversão",
+    "trackingDefaultsAdsLabelLabel": "Google Ads - Etiqueta de conversão",
     "trackingDefaultsAdsHelp": "Encontrar os meus IDs Google Ads",
     "tabTracking": "Tracking",
     "shareSiteNameTitle": "Nome da marca nas partilhas",
@@ -920,7 +920,7 @@
     "affiliateNotRegistered": "Ainda não te inscreveste?",
     "affiliateDiscoverProgram": "Descobre o programa de afiliação",
     "affiliateTerms": "Condições gerais",
-    "affiliateEmptyFieldNote": "Se deixares este campo vazio, o rodapé continua visível mas sem tracking — as inscrições não te darão nada.",
+    "affiliateEmptyFieldNote": "Se deixares este campo vazio, o rodapé continua visível mas sem tracking - as inscrições não te darão nada.",
     "achievementsTitle": "As minhas medalhas",
     "shareSiteNamePlaceholder": "O meu estúdio"
   },
@@ -971,21 +971,21 @@
     "helpRestart": "Refazer a visita guiada",
     "skipTour": "Sair da visita",
     "next": "Seguinte",
-    "tooltipDashboard": "Painel — a tua página inicial. Encontra os teus quizzes, as estatísticas-chave e cria um novo quiz num clique.",
-    "tooltipCreate": "Criar um quiz — gera um quiz manualmente ou deixa a IA criá-lo por ti. Configura as tuas perguntas, resultados e integrações SIO.",
-    "tooltipQuizzes": "Os meus quizzes — encontra todos os teus quizzes aqui. Ativa, edita ou elimina os teus quizzes, e copia o link público num clique.",
-    "tooltipLeads": "Os meus leads — todos os contactos captados pelos teus quizzes. Exporta-os ou sincroniza-os com o Systeme.io.",
-    "tooltipStats": "Estatísticas — acompanha o desempenho dos teus quizzes: visualizações, taxa de conclusão, conversões e partilhas.",
-    "tooltipSettings": "Definições — configura o teu idioma, a tua chave API Systeme.io e as tuas predefinições.",
+    "tooltipDashboard": "Painel - a tua página inicial. Encontra os teus quizzes, as estatísticas-chave e cria um novo quiz num clique.",
+    "tooltipCreate": "Criar um quiz - gera um quiz manualmente ou deixa a IA criá-lo por ti. Configura as tuas perguntas, resultados e integrações SIO.",
+    "tooltipQuizzes": "Os meus quizzes - encontra todos os teus quizzes aqui. Ativa, edita ou elimina os teus quizzes, e copia o link público num clique.",
+    "tooltipLeads": "Os meus leads - todos os contactos captados pelos teus quizzes. Exporta-os ou sincroniza-os com o Systeme.io.",
+    "tooltipStats": "Estatísticas - acompanha o desempenho dos teus quizzes: visualizações, taxa de conclusão, conversões e partilhas.",
+    "tooltipSettings": "Definições - configura o teu idioma, a tua chave API Systeme.io e as tuas predefinições.",
     "tooltipComplete": "Visita terminada! Cria o teu primeiro quiz, configura o Systeme.io e partilha o teu link."
   },
   "quizEditor": {
     "backToTop": "Voltar ao topo",
-    "coverageOk": "{count} de {total} perguntas levam aqui — bem equilibrado",
+    "coverageOk": "{count} de {total} perguntas levam aqui - bem equilibrado",
     "coverageWarn": "Apenas {count} de {total} perguntas levam aqui",
     "coverageDanger": "Nenhuma pergunta leva a este resultado ({count} perguntas no total)",
     "coverageHeadingDanger": "Este resultado nunca pode ser atribuído",
-    "coverageHeadingWarn": "Baixa probabilidade de ser atribuído — {count}/{total} perguntas levam aqui",
+    "coverageHeadingWarn": "Baixa probabilidade de ser atribuído - {count}/{total} perguntas levam aqui",
     "coverageHelp": "Para que um resultado seja escolhido, várias perguntas devem levar a ele. Ajusta as opções das tuas perguntas ou pede à IA para reequilibrar.",
     "rebalanceCta": "Reequilibrar com a IA",
     "rebalanceDialogTitle": "Reequilibrar o teu quiz",
@@ -1117,7 +1117,7 @@
     "previewModeTitle": "Abrir em modo de pré-visualização (nenhum lead registado)",
     "previewModeTitleSurvey": "Abrir em modo de pré-visualização (nenhuma resposta registada)",
     "previewModeBtn": "Pré-visualizar",
-    "readinessTitle": "{passed}/{total} etapas — {percent}% pronto",
+    "readinessTitle": "{passed}/{total} etapas - {percent}% pronto",
     "previewIntroPh": "Texto de introdução…",
     "previewQuestionsCounter": "Pergunta {n}/{total}",
     "previewQuestionPh": "Texto da pergunta…",
@@ -1253,7 +1253,7 @@
     "tieWarningTitle": "{count} empates possíveis entre os teus resultados",
     "tieWarningHint": "Algumas combinações de respostas produzem a mesma pontuação para 2 resultados. Pares detetados:",
     "tieWarningFallback": "Em caso de empate, o visitante verá sempre o primeiro resultado pela ordem. Ajusta os pontos de uma opção para desfazer o empate.",
-    "tieWarningTruncated": "(quiz extenso, análise parcial — pode haver outros empates não listados).",
+    "tieWarningTruncated": "(quiz extenso, análise parcial - pode haver outros empates não listados).",
     "optionShowOtherResults": "Mostrar outros perfis ao visitante",
     "optionShowOtherResultsHint": "Adiciona um acordeão abaixo do resultado com todos os outros perfis possíveis, em versão neutra (sem nome nem variantes de género).",
     "trackingPixelsTitle": "Tracking e Anúncios",
@@ -1261,10 +1261,10 @@
     "trackingApplyDefaults": "↺ Aplicar os meus padrões (das Definições)",
     "trackingMetaLabel": "Meta (Facebook) Pixel ID",
     "trackingMetaHelp": "Onde encontro o meu Pixel ID? Events Manager →",
-    "trackingGa4Label": "Google Analytics 4 — Measurement ID",
+    "trackingGa4Label": "Google Analytics 4 - Measurement ID",
     "trackingGa4Help": "Onde encontro o meu ID GA4? Google Analytics Admin →",
-    "trackingAdsIdLabel": "Google Ads — ID de conversão",
-    "trackingAdsLabelLabel": "Google Ads — Etiqueta de conversão (lead capturado)",
+    "trackingAdsIdLabel": "Google Ads - ID de conversão",
+    "trackingAdsLabelLabel": "Google Ads - Etiqueta de conversão (lead capturado)",
     "trackingAdsHelp": "Onde encontro os meus IDs Google Ads? Conversions →",
     "trackingInvalidFormat": "Formato inválido",
     "generateAiShort": "Gerar (IA)",
@@ -1356,7 +1356,7 @@
   },
   "quizVars": {
     "insertNameTitle": "Inserir o nome próprio do visitante ({name})",
-    "insertGenderTitle": "Inserir uma variante consoante o género — masculino | feminino | não binário (ex.: querido | querida | querid*)"
+    "insertGenderTitle": "Inserir uma variante consoante o género - masculino | feminino | não binário (ex.: querido | querida | querid*)"
   },
   "survey": {
     "createTitle": "Novo inquérito",
@@ -1393,7 +1393,7 @@
     "importingButton": "A importar…",
     "importDone": "Inquérito importado com sucesso!",
     "importDropHint": "Arrasta o teu ficheiro aqui ou clica para selecionar",
-    "importFormatsAccepted": ".txt · .docx · .pdf — até 10 MB / 50 000 caracteres",
+    "importFormatsAccepted": ".txt · .docx · .pdf - até 10 MB / 50 000 caracteres",
     "importFormatsNotice": "Formato não suportado. Aceites: .txt, .docx, .pdf (até 10 MB).",
     "importFileTooLarge": "O ficheiro excede 10 MB.",
     "importSelectFile": "Selecionar um ficheiro",
@@ -1508,7 +1508,7 @@
       "label": "Top"
     },
     "trending": {
-      "title": "Em alta — muita atividade recente",
+      "title": "Em alta - muita atividade recente",
       "label": "Em alta"
     },
     "new": {
@@ -1516,7 +1516,7 @@
       "label": "Novo"
     },
     "needsAttention": {
-      "title": "A acompanhar — pouca atividade",
+      "title": "A acompanhar - pouca atividade",
       "label": "A acompanhar"
     }
   },
@@ -1571,7 +1571,7 @@
     "heroTitle": "Os meus Popquiz",
     "heroSubtitle": "Vídeo + quiz que aparecem em momentos precisos.",
     "freeLimitTooltip": "O plano gratuito está limitado a 1 popquiz. Elimina o atual ou passa para um plano pago.",
-    "freeLimitButton": "Plano gratuito — máx. 1",
+    "freeLimitButton": "Plano gratuito - máx. 1",
     "newPopquiz": "Novo Popquiz",
     "filterAll": "Todos",
     "filterPublished": "Publicados",
@@ -1686,8 +1686,8 @@
       "newTitle": "Novo popquiz",
       "newSubtitle": "Carrega um vídeo e coloca marcadores para fazer aparecer um quiz no momento certo.",
       "editFallback": "Popquiz",
-      "publishedSubtitle": "Publicado — visível no endereço partilhado.",
-      "draftSubtitle": "Rascunho — não visível publicamente."
+      "publishedSubtitle": "Publicado - visível no endereço partilhado.",
+      "draftSubtitle": "Rascunho - não visível publicamente."
     },
     "title": {
       "label": "Título",
@@ -1735,7 +1735,7 @@
       "hintActive": "Clica na barra para adicionar um marcador",
       "hintIdle": "Inicia a reprodução para ativar a barra",
       "startPlayback": "Inicia a reprodução durante um segundo para que a duração do vídeo seja detetada.",
-      "markerTitle": "Marcador em {time} — clica para eliminar",
+      "markerTitle": "Marcador em {time} - clica para eliminar",
       "markerAria": "Marcador em {time}, clica para eliminar",
       "aria": {
         "add": "Clica para adicionar um marcador"
@@ -1748,7 +1748,7 @@
       "empty": "Nenhum marcador. Clica na timeline ou em «Adicionar».",
       "secondsUnit": "s",
       "unknownQuiz": "Quiz desconhecido",
-      "overlayTitle": "Marcador em {time} — {quiz}",
+      "overlayTitle": "Marcador em {time} - {quiz}",
       "overlayHelp": "Na reprodução final, o quiz aparecerá aqui.",
       "skip": "Saltar",
       "draftSuffix": "(rascunho)",
@@ -1812,8 +1812,8 @@
       "published": "Popquiz publicado",
       "draftSaved": "Rascunho guardado",
       "thumbnailFailed": "Popquiz criado, mas o envio da miniatura falhou. Tenta de novo no editor.",
-      "publishedWithLink": "Popquiz publicado — partilha o link com a tua audiência",
-      "unpublished": "Popquiz despublicado — já não está visível publicamente",
+      "publishedWithLink": "Popquiz publicado - partilha o link com a tua audiência",
+      "unpublished": "Popquiz despublicado - já não está visível publicamente",
       "modificationsSaved": "Alterações guardadas"
     }
   },
@@ -1836,11 +1836,11 @@
     "removeVideo": "Remover o vídeo",
     "uploading": "Importação em curso…",
     "cancel": "Cancelar",
-    "resumableHint": "Retomável em caso de quebra de rede — mantém o separador aberto.",
+    "resumableHint": "Retomável em caso de quebra de rede - mantém o separador aberto.",
     "preparing": "Preparação (extração da miniatura…)",
     "finalizing": "A finalizar…",
     "dropzoneTitle": "Arrasta um vídeo aqui ou clica para escolher",
-    "dropzoneHint": "MP4, WebM, MOV — até 20 GB.",
+    "dropzoneHint": "MP4, WebM, MOV - até 20 GB.",
     "toasts": {
       "imported": "Vídeo importado"
     },
@@ -1863,7 +1863,7 @@
     "sortLabel": "Ordem: {sort}",
     "never": "Nunca",
     "noUsersFound": "Nenhum utilizador encontrado",
-    "confirmDelete": "Eliminar DEFINITIVAMENTE {email}?\n\nEm cascata: perfil, quizzes, popquizzes, leads, projetos — tudo será destruído. Ação irreversível.",
+    "confirmDelete": "Eliminar DEFINITIVAMENTE {email}?\n\nEm cascata: perfil, quizzes, popquizzes, leads, projetos - tudo será destruído. Ação irreversível.",
     "stats": {
       "totalUsers": "Total de utilizadores",
       "free": "Free",
@@ -1929,36 +1929,36 @@
     "discardBtn": "Partir do meu último guardado"
   },
   "helpSeo": {
-    "metaTitle": "Indexar os meus quizzes no Google — Ajuda Tiquiz",
+    "metaTitle": "Indexar os meus quizzes no Google - Ajuda Tiquiz",
     "metaDescription": "Como tornar os teus quizzes visíveis no Google Search, ChatGPT, Perplexity e outros motores de busca / IA. Guia passo a passo.",
     "title": "Indexar os meus quizzes no Google e nas IA",
-    "subtitle": "Faz com que os teus quizzes apareçam no Google Search, ChatGPT, Perplexity e Claude search — 5 a 10 minutos de configuração, depois é automático.",
+    "subtitle": "Faz com que os teus quizzes apareçam no Google Search, ChatGPT, Perplexity e Claude search - 5 a 10 minutos de configuração, depois é automático.",
     "s1": {
       "heading": "Porquê indexar?",
       "body1": "Quando o Google ou uma IA indexa o teu quiz, qualquer pessoa pode encontrá-lo procurando o teu tema. Três benefícios concretos:",
-      "li1": "Tráfego gratuito recorrente do Google Search — cada pesquisa relevante é uma oportunidade de captar um lead.",
+      "li1": "Tráfego gratuito recorrente do Google Search - cada pesquisa relevante é uma oportunidade de captar um lead.",
       "li2": "Quando alguém pergunta ao ChatGPT, Perplexity ou Claude «recomenda-me um quiz sobre X», o teu quiz pode aparecer.",
       "li3": "Mais partilhas sociais: os visitantes que te encontram via pesquisa partilham frequentemente à sua rede."
     },
     "s2": {
-      "heading": "Passo 1 — Submeter o teu sitemap ao Google",
+      "heading": "Passo 1 - Submeter o teu sitemap ao Google",
       "body1": "O Google precisa de um «sitemap» (lista dos teus quizzes) para os indexar. O Tiquiz gera-o automaticamente.",
       "li1": "Vai ao Google Search Console: https://search.google.com/search-console",
       "li2": "Clica em «Adicionar propriedade» e insere o teu domínio (ex. tiquiz.com OU o teu domínio personalizado).",
-      "li3": "Verifica a propriedade (via registo DNS TXT — o Google orienta-te).",
+      "li3": "Verifica a propriedade (via registo DNS TXT - o Google orienta-te).",
       "li4": "No menu à esquerda, vai a «Sitemaps» e insere: sitemap.xml",
       "li5": "Clica em «Enviar». O Google rastreará os teus quizzes em 1 a 7 dias.",
-      "note": "Não precisas reenviar a cada novo quiz — o sitemap é regenerado automaticamente a cada hora."
+      "note": "Não precisas reenviar a cada novo quiz - o sitemap é regenerado automaticamente a cada hora."
     },
     "s3": {
-      "heading": "Passo 2 — Com um domínio personalizado",
+      "heading": "Passo 2 - Com um domínio personalizado",
       "body1": "Se tens um domínio próprio (ex. quiz.teusite.com), podes indexar os teus quizzes no TEU domínio em vez de tiquiz.com. Mais poderoso para o teu SEO.",
       "li1": "Adiciona o teu domínio personalizado ao Google Search Console como «propriedade de domínio».",
       "li2": "Verifica a propriedade via um registo DNS TXT (o Google dá-te o valor a colar).",
-      "li3": "Submete o sitemap: https://teu-dominio.com/sitemap.xml — listará APENAS os teus quizzes, no TEU URL."
+      "li3": "Submete o sitemap: https://teu-dominio.com/sitemap.xml - listará APENAS os teus quizzes, no TEU URL."
     },
     "s4": {
-      "heading": "Passo 3 — Otimizar cada quiz para SEO",
+      "heading": "Passo 3 - Otimizar cada quiz para SEO",
       "body1": "Quanto melhor for o título e a descrição do teu quiz, mais o Google e as IA o destacam. Boas práticas:",
       "li1Title": "Título claro (≤60 caracteres)",
       "li1Body": "É o texto que o Google mostra nos resultados. Inclui a tua palavra-chave principal.",
@@ -1970,12 +1970,12 @@
       "li4Body": "Aparece no Google Images e nas pré-visualizações iMessage / WhatsApp. Uma boa imagem = +20-30% cliques."
     },
     "s5": {
-      "heading": "Passo 4 — Visibilidade nas IA (ChatGPT, Perplexity, Claude)",
+      "heading": "Passo 4 - Visibilidade nas IA (ChatGPT, Perplexity, Claude)",
       "body1": "Não precisas configurar nada extra. As IA rastreiam os sites automaticamente via o nosso ficheiro `llms.txt` (um manifesto que geramos por ti) que lista os teus quizzes, a sua descrição e URL num formato otimizado para LLMs.",
       "note": "Quanto mais preencheres o título, a descrição e a imagem OG no editor, mais precisamente uma IA poderá recomendar o teu quiz aos utilizadores certos."
     },
     "s6": {
-      "heading": "Passo 5 — Ocultar um quiz dos motores",
+      "heading": "Passo 5 - Ocultar um quiz dos motores",
       "body1": "Se queres manter um quiz privado (apenas via link, sem risco de aparecer no Google), seleciona a caixa «Ocultar este quiz dos motores de busca» na aba SEO do editor do quiz.",
       "body2": "O quiz mantém-se ativo e partilhável via link direto, mas é excluído do teu sitemap e do ficheiro IA. Ideal para conteúdo interno ou drafts públicos partilhados a um círculo limitado."
     }
@@ -2145,7 +2145,7 @@
     "kpiLeadsHint": "{count} exportados para o Systeme.io",
     "kpiCaptureRate": "Taxa de captura",
     "kpiCaptureRateHint": "Leads / visitas (acumulado)",
-    "kpiCaptureRateUnreliable": "Visitas parcialmente registadas (quiz incorporado ou anterior ao rastreio) — taxa fiável nas novas visitas",
+    "kpiCaptureRateUnreliable": "Visitas parcialmente registadas (quiz incorporado ou anterior ao rastreio) - taxa fiável nas novas visitas",
     "kpiExportSio": "Exportação Systeme.io",
     "kpiExportSioHint": "% de leads etiquetados no SIO",
     "leadsEvolutionTitle": "Evolução dos leads",
@@ -2162,7 +2162,7 @@
   },
   "illustrations": {
     "emptyInbox": "Caixa de entrada vazia",
-    "emptyCanvas": "Tela em branco — pronta para ser preenchida",
+    "emptyCanvas": "Tela em branco - pronta para ser preenchida",
     "emptyChart": "Ainda sem dados",
     "emptySearch": "Nenhum resultado encontrado",
     "welcome": "Bem-vindo!"

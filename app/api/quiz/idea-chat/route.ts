@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { buildQuizChatSystemPrompt } from "@/lib/prompts/quiz/chat";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -184,7 +185,11 @@ export async function POST(req: NextRequest) {
               if (parsed.type === "content_block_delta") {
                 const delta = parsed.delta as Record<string, unknown> | undefined;
                 if (delta?.type === "text_delta") {
-                  const text = String(delta.text ?? "");
+                  // Strip em-dash/en-dash char a la volee (Bene 7 juin 2026 :
+                  // aucun tiret long ne doit survivre cote user, meme pendant
+                  // le streaming). La sanitization complete est appliquee sur
+                  // `full` au moment du `done`.
+                  const text = String(delta.text ?? "").replace(/[—–]/g, "-");
                   if (text) {
                     full += text;
                     sendSSE("delta", { text });
@@ -208,7 +213,7 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        sendSSE("done", { full, brief });
+        sendSSE("done", { full: sanitizeAiText(full), brief });
       } catch (e) {
         console.error("[idea-chat] SSE stream error:", e);
         sendSSE("error", { ok: false, error: e instanceof Error ? e.message : "Unknown error" });

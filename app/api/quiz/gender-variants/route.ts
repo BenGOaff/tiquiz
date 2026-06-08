@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -91,9 +92,9 @@ function parseVariants(raw: string): Variants | null {
   try {
     const j = JSON.parse(trimmed);
     if (j && typeof j === "object") {
-      const m = typeof j.m === "string" ? stripMarkdown(j.m) : "";
-      const f = typeof j.f === "string" ? stripMarkdown(j.f) : "";
-      const x = typeof j.x === "string" ? stripMarkdown(j.x) : "";
+      const m = typeof j.m === "string" ? sanitizeAiText(stripMarkdown(j.m)) : "";
+      const f = typeof j.f === "string" ? sanitizeAiText(stripMarkdown(j.f)) : "";
+      const x = typeof j.x === "string" ? sanitizeAiText(stripMarkdown(j.x)) : "";
       if (m && f && x) return { m, f, x };
     }
   } catch { /* fall through */ }

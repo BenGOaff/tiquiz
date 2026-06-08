@@ -208,34 +208,56 @@ export async function GET(
     byResult.set(key, b);
   }
 
-  // pct sur le total des leads DE LA PÉRIODE (leads.length), pas sur le
-  // lifetime — sinon la somme des pct ne ferait pas 100% quand le
-  // sélecteur de période réduit l'échantillon.
-  const periodLeadsTotal = leads.length;
 
-  // ─── Distribution par titre RESOLU (Gwenn 7 juin 2026) ──────────────
-  // Bug remonte par Gwenn : 2 entrees "L'Hyper adaptation" dans le donut
-  // avec 71.4% et 7.9%. Cause : 2 result_ids differents resolvent au
-  // MEME titre courant (cas typique : user rename + ancien result_id
-  // orphan dont le snapshot title est le meme que le nouveau). On
-  // groupe une 2eme fois par TITRE pour merger les entrees doublons.
-  // Sans cette etape, chaque rename / delete-recreate cree un fantome
-  // dans le donut.
+  // ─── Distribution par titre RESOLU (refonte Gwenn 8 juin 2026) ──────
+  // Bene 8 juin (DRAME final) : "je veux que mes users voient leur quiz
+  // EXISTANT, en temps reel, pas des anciennes versions ou des versions
+  // tronquees". Concretement :
+  //   - tous les profils actuels visibles (meme a 0 lead) - drame compte 1
+  //   - aucun ancien nom de profil affiche (snapshot orphan apres rename
+  //     ne doit jamais apparaitre comme bucket distinct) - drame compte 2
+  //   - aucun bucket "Anciens profils" non plus
+  //
+  // Algo :
+  //   1. Seed byTitle avec TOUS les profils current de quiz_results
+  //      (count = 0 inclus) - source de verite = le quiz actuel.
+  //   2. Pour chaque bucket de leads, tenter de matcher a un profil
+  //      current via id-live OU snapshot-title-qui-existe-encore.
+  //      Les leads orphelins sont silencieusement EXCLUS du donut.
+  //   3. Pourcentages calcules sur le total des leads MATCHES (sum = 100%).
+  //   4. Sort par count desc, pas de filtre zero (profils a 0 affiches).
   const byTitle = new Map<string, number>();
+  const currentTitles = new Set<string>();
+  for (const r of currentResults ?? []) {
+    const title = ((r.title as string) ?? "").trim();
+    if (title && !byTitle.has(title)) {
+      byTitle.set(title, 0);
+      currentTitles.add(title);
+    }
+  }
+
   for (const [key, b] of byResult) {
     const live = key !== NO_RESULT_KEY ? currentTitleById.get(key) : undefined;
-    const title =
-      (live && live.trim()) || b.snapshotTitle || "Sans résultat";
-    byTitle.set(title, (byTitle.get(title) ?? 0) + b.count);
+    const liveTitle = live?.trim();
+    if (liveTitle && currentTitles.has(liveTitle)) {
+      byTitle.set(liveTitle, (byTitle.get(liveTitle) ?? 0) + b.count);
+    } else if (b.snapshotTitle && currentTitles.has(b.snapshotTitle.trim())) {
+      const snap = b.snapshotTitle.trim();
+      byTitle.set(snap, (byTitle.get(snap) ?? 0) + b.count);
+    }
+    // else: orphan / ancien profil -> exclu silencieusement.
   }
+
+  let matchedTotal = 0;
+  for (const v of byTitle.values()) matchedTotal += v;
 
   const resultDistribution = Array.from(byTitle.entries())
     .map(([title, count]) => ({
       title,
       count,
       pct:
-        periodLeadsTotal > 0
-          ? Math.round((count / periodLeadsTotal) * 1000) / 10
+        matchedTotal > 0
+          ? Math.round((count / matchedTotal) * 1000) / 10
           : 0,
     }))
     .sort((a, b) => b.count - a.count);
