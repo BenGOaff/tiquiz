@@ -32,10 +32,9 @@ import {
   Sparkles, Loader2,
   Palette, Eraser, Wand2,
 } from "lucide-react";
-import { sanitizeRichText, isSafeUrl, RICH_TEXT_FONT_SIZE_OPTIONS } from "@/lib/richText";
+import { sanitizeRichText, isSafeUrl } from "@/lib/richText";
 import { QuizVarInserter, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { useUserPalettes } from "@/components/editor/PalettesContext";
-import { useEditorPreviewDevice } from "@/components/editor/EditorPreviewDeviceContext";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -104,11 +103,6 @@ export function RichTextEdit({
   // popquiz). Sinon `[]` → la section "Mes palettes" est masquée, la
   // palette curée seule reste affichée.
   const userPalettes = useUserPalettes();
-  // Device courant choisi par l'user via le toggle Monitor/Smartphone
-  // dans QuizDetailClient. Pilote sur quelle CSS variable la toolbar
-  // font-size ecrit (--fs-m mobile, --fs-d desktop). Drame Bene 8 juin
-  // 2026 : "je veux deux tailles differentes sur mobile et pc".
-  const previewDevice = useEditorPreviewDevice();
   // AI rewrite state: a small popover-like list of proposals shown right
   // under the field after the creator clicks ✨. We keep it local to the
   // component so each field manages its own popover independently.
@@ -119,7 +113,6 @@ export function RichTextEdit({
   // contentEditable, and `restoreSelection` puts the caret back exactly
   // where the user left it before applying foreColor.
   const [colorOpen, setColorOpen] = useState(false);
-  const [fontSizeOpen, setFontSizeOpen] = useState(false);
   // Image selectionnee (pour resize). On track le <img> courant dans le
   // contentEditable et on affiche un popover avec une dropdown de tailles.
   const [selectedImg, setSelectedImg] = useState<HTMLImageElement | null>(null);
@@ -246,80 +239,6 @@ export function RichTextEdit({
     [restoreSelection],
   );
 
-  // Applique une taille de police a la selection courante. Drame Bene 8
-  // juin 2026 : "je veux deux tailles differentes sur mobile et pc". Le
-  // device courant est lu depuis EditorPreviewDeviceContext, et la taille
-  // est ecrite sur la CSS variable correspondante :
-  //   - device="mobile"  -> --fs-m (rendu sur ecrans <640px)
-  //   - device="desktop" -> --fs-d (rendu sur ecrans >=640px, fallback --fs-m)
-  // Le sanitizer ne laisse passer que 9 tailles curees (cf. richText.ts
-  // ALLOWED_FONT_SIZES). Si rien n'est selectionne, on no-op pour eviter
-  // un span vide qui piegerait le caret.
-  const applyFontSize = useCallback(
-    (sizePx: string | null) => {
-      if (typeof document === "undefined") return;
-      restoreSelection();
-      const sel = window.getSelection();
-      if (!sel || sel.rangeCount === 0) {
-        setFontSizeOpen(false);
-        return;
-      }
-      const range = sel.getRangeAt(0);
-      if (range.collapsed) {
-        setFontSizeOpen(false);
-        return;
-      }
-      const cssVar = previewDevice === "mobile" ? "--fs-m" : "--fs-d";
-      if (sizePx === null) {
-        // Reset : on retire les CSS variables --fs-m et --fs-d ET le
-        // legacy font-size inline (compat avec les spans crees avant
-        // ce refactor). Si la span n'a plus aucun style, on retire
-        // class et style pour eviter un span "fantome".
-        const frag = range.cloneContents();
-        frag.querySelectorAll<HTMLElement>(
-          "span[style*='--fs-m'], span[style*='--fs-d'], span[style*='font-size']",
-        ).forEach((el) => {
-          el.style.removeProperty("--fs-m");
-          el.style.removeProperty("--fs-d");
-          el.style.removeProperty("font-size");
-          if (!el.getAttribute("style")) el.removeAttribute("style");
-          if (el.classList.contains("rt-fs") && !el.getAttribute("style")) {
-            el.classList.remove("rt-fs");
-            if (!el.getAttribute("class")) el.removeAttribute("class");
-          }
-        });
-        range.deleteContents();
-        range.insertNode(frag);
-      } else {
-        // Wrap la selection dans un span class="rt-fs" et set la CSS
-        // variable du device courant. Si l'autre device n'a pas encore
-        // de taille, le rendering fallback hierarchy fait le job :
-        // mobile fallback inherit, desktop fallback mobile ou inherit.
-        const span = document.createElement("span");
-        span.classList.add("rt-fs");
-        span.style.setProperty(cssVar, sizePx);
-        try {
-          range.surroundContents(span);
-        } catch {
-          // surroundContents echoue si la selection traverse des
-          // boundaries de tags (ex. mi-paragraphe a mi-liste). Fallback :
-          // extract + wrap + insert. Moins propre mais ne crashe pas.
-          const frag = range.extractContents();
-          span.appendChild(frag);
-          range.insertNode(span);
-        }
-        // Repose la selection sur le contenu wrapped pour que l'user
-        // puisse enchainer (ex. toggle device puis re-set l'autre taille).
-        sel.removeAllRanges();
-        const newRange = document.createRange();
-        newRange.selectNodeContents(span);
-        sel.addRange(newRange);
-      }
-      setFontSizeOpen(false);
-      ref.current?.focus();
-    },
-    [restoreSelection, previewDevice],
-  );
 
   // Applique une largeur (en %) a l'image actuellement selectionnee.
   // Drame Christelle 8 juin 2026 : "impossible de redimensionner le GIF
@@ -735,53 +654,6 @@ export function RichTextEdit({
                     {t("rteReset")}
                   </button>
                 </div>
-              </div>
-            )}
-          </div>
-          <span className="w-px h-4 bg-border mx-0.5" />
-          {/* Font size dropdown — drame Christelle 8 juin 2026 : "je n'ai
-              pas acces a la taille de la police". Liste curee partagee
-              avec le sanitizer (RICH_TEXT_FONT_SIZE_OPTIONS). */}
-          <div className="relative">
-            <ToolbarBtn
-              onMouseDown={(e) => {
-                e.preventDefault();
-                if (!fontSizeOpen) saveSelection();
-                setFontSizeOpen((v) => !v);
-              }}
-              title={t("rteFontSize")}
-            >
-              <span className="text-[10px] font-semibold leading-none">Aa</span>
-            </ToolbarBtn>
-            {fontSizeOpen && (
-              <div
-                className="absolute z-30 top-full left-0 mt-1 w-36 rounded-lg border bg-background shadow-lg py-1"
-                onMouseDown={(e) => e.preventDefault()}
-              >
-                {/* Indicateur du device courant. La taille choisie ci-
-                    dessous s'applique UNIQUEMENT a ce device. Le toggle
-                    Monitor/Smartphone en haut de l'editeur change ce mode. */}
-                <div className="px-3 py-1 text-[10px] uppercase tracking-wide text-muted-foreground border-b mb-1">
-                  {previewDevice === "mobile" ? t("rteFontSizeForMobile") : t("rteFontSizeForDesktop")}
-                </div>
-                {RICH_TEXT_FONT_SIZE_OPTIONS.map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => applyFontSize(size)}
-                    className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted tabular-nums"
-                  >
-                    {size.replace("px", "")}
-                  </button>
-                ))}
-                <div className="border-t my-1" />
-                <button
-                  type="button"
-                  onClick={() => applyFontSize(null)}
-                  className="w-full text-left px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted"
-                >
-                  {t("rteFontSizeReset")}
-                </button>
               </div>
             )}
           </div>

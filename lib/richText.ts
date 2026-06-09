@@ -20,27 +20,24 @@ const ALLOWED_ATTR = [
   "class",
 ];
 
-// Propriétés CSS qu'on RETIRE inconditionnellement des `style="..."`
-// collés par l'user (typiquement quand il copie/colle depuis Notion ou
-// Google Docs). Laisser passer un `font-family: Calibri` inline casse
-// l'identité visuelle du quiz visiteur (cf. report Adeline 21 mai 2026).
+// Propriétés CSS qu'on RETIRE inconditionnellement des `style="..."`.
+// Drame Bene 8 juin 2026 : la taille de police PAR MOT (spans avec
+// font-size / --fs-m / --fs-d inseres par la toolbar) cassait le rendu
+// des titres/questions - des mots a des tailles differentes au hasard,
+// parce que ces spans survivaient dans le HTML sauvegarde et entraient
+// en conflit avec la taille FIELD-LEVEL du composant. Decision : la
+// taille par mot dans un titre rich-text est fondamentalement non
+// fiable (les SaaS premium ne le font jamais). On STRIP donc toute
+// taille inline ici, ce qui nettoie AUSSI les contenus deja sauvegardes
+// au moment du rendu (pas besoin de migration DB).
 //
-// Important : `font-size` n'est PAS dans ce set — il est traité a part
-// (cf. ALLOWED_FONT_SIZES ci-dessous) pour autoriser un choix CURE
-// depuis la toolbar (drame Christelle 8 juin 2026 : "je n'ai pas
-// acces a la taille de la police"), tout en strippant les valeurs
-// arbitraires qui viennent du paste.
+// Ce qu'on garde : color, background, text-align, font-weight,
+// text-decoration - les proprietes que l'user personnalise legitimement
+// via la toolbar (gras, couleur, alignement). La TAILLE est geree au
+// niveau du champ par le design system (responsive mobile/PC).
 const STRIPPED_CSS_PROPS = new Set([
-  "font-family", "line-height", "letter-spacing",
+  "font-size", "font-family", "line-height", "letter-spacing",
   "word-spacing", "font-stretch",
-]);
-
-// Tailles de police EXPLICITEMENT autorisees depuis la toolbar.
-// Toute autre valeur de font-size = strippee (paste defense).
-// Pixels uniquement pour rester predictible (les pt/em/% varient selon
-// le contexte parent dans le rendu visiteur).
-const ALLOWED_FONT_SIZES = new Set([
-  "12px", "14px", "16px", "18px", "20px", "24px", "30px", "36px", "48px",
 ]);
 
 // Sur les <img>, on autorise une largeur en % ou en px (drame Christelle :
@@ -54,6 +51,23 @@ let _hookInstalled = false;
 function installStyleStripperHook(): void {
   if (_hookInstalled) return;
   _hookInstalled = true;
+
+  // Hook 1 : nettoie les classes legacy de l'ancien systeme font-size
+  // par mot (`rt-fs`). Sans ca, les spans deja sauvegardes garderaient
+  // la classe et le CSS .rt-fs (s'il existait) s'appliquerait. On retire
+  // la classe ; si l'element n'a plus aucune classe utile, DOMPurify le
+  // garde tel quel (un span sans style ni classe = no-op au rendu).
+  DOMPurify.addHook("uponSanitizeAttribute", (_node: Element, data: { attrName: string; attrValue: string }) => {
+    if (data.attrName !== "class" || typeof data.attrValue !== "string") return;
+    const kept = data.attrValue
+      .split(/\s+/)
+      .filter((c) => c && c !== "rt-fs");
+    data.attrValue = kept.join(" ");
+  });
+
+  // Hook 2 : filtre les declarations `style`. Strip les proprietes
+  // interdites (cf. STRIPPED_CSS_PROPS) + toutes les CSS custom
+  // properties (--fs-m, --fs-d, et autres --x venant d'un paste).
   DOMPurify.addHook("uponSanitizeAttribute", (node: Element, data: { attrName: string; attrValue: string }) => {
     if (data.attrName !== "style" || typeof data.attrValue !== "string") return;
     const isImg = node?.tagName?.toLowerCase?.() === "img";
@@ -67,18 +81,8 @@ function installStyleStripperHook(): void {
         const prop = decl.slice(0, colonIdx).trim().toLowerCase();
         const value = decl.slice(colonIdx + 1).trim().toLowerCase();
         if (STRIPPED_CSS_PROPS.has(prop)) return false;
-        // font-size legacy : on accepte un font-size inline (forme
-        // ancienne) UNIQUEMENT pour les 9 tailles curees. Defense
-        // anti-paste Notion preservee.
-        if (prop === "font-size") return ALLOWED_FONT_SIZES.has(value);
-        // CSS variables per-device pour la taille de police (drame
-        // Bene 8 juin 2026 : "je veux deux tailles differentes sur
-        // mobile et pc"). On accepte --fs-m / --fs-d UNIQUEMENT avec
-        // une valeur dans la whitelist. Les autres customs --vars sont
-        // strippes pour eviter du noise dans le HTML stocke.
-        if (prop === "--fs-m" || prop === "--fs-d") {
-          return ALLOWED_FONT_SIZES.has(value);
-        }
+        // Toute CSS custom property (--xxx) est strippee : --fs-m / --fs-d
+        // de l'ancien systeme + le noise de paste Notion/Docs.
         if (prop.startsWith("--")) return false;
         // width / height sur <img> : on tolère des unités explicites
         // (px / %) pour permettre le redimensionnement utilisateur du
@@ -101,16 +105,6 @@ function installStyleStripperHook(): void {
 }
 
 const SAFE_URL_RE = /^(https?:\/\/|mailto:|tel:|\/)/i;
-
-/** Liste des tailles de police autorisees depuis la toolbar Rich Text.
- *  Reexportee pour que la toolbar UI partage la meme source de verite
- *  que le sanitizer (eviter le drift entre "ce que la UI propose" et
- *  "ce que le sanitizer garde apres save"). */
-export const RICH_TEXT_FONT_SIZE_OPTIONS = [
-  "12px", "14px", "16px", "18px", "20px", "24px", "30px", "36px", "48px",
-] as const;
-
-export type RichTextFontSize = (typeof RICH_TEXT_FONT_SIZE_OPTIONS)[number];
 
 export function sanitizeRichText(input: string | null | undefined): string {
   if (!input) return "";

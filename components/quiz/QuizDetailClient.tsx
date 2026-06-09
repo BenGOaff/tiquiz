@@ -57,7 +57,6 @@ import { isPixelFieldValid } from "@/lib/clientPixels";
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
 import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
 import { UserPalettesProvider } from "@/components/editor/PalettesContext";
-import { EditorPreviewDeviceProvider } from "@/components/editor/EditorPreviewDeviceContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
 
@@ -1835,7 +1834,6 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   return (
    <SioTagsProvider>
     <UserPalettesProvider palettes={savedPalettes}>
-    <EditorPreviewDeviceProvider device={device}>
     <RestoreDraftDialog
       open={!!pendingDraft}
       draftUpdatedAt={pendingDraft?.draftUpdatedAt ?? null}
@@ -2459,10 +2457,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
 
           {/* RIGHT: LIVE PREVIEW — all sections stacked, exactly as visitor sees it */}
           <main ref={previewRef} className="flex-1 overflow-y-auto" style={{ backgroundColor: bgColor, fontFamily }}>
-            <div
-              data-device-preview={device}
-              className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-sm" : "w-full"}`}
-            >
+            <div className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-sm" : "w-full"}`}>
 
               {/* ── INTRO SECTION ── */}
               <div ref={introRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 text-center">
@@ -3597,7 +3592,6 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
         </div>
       )}
     </div>
-    </EditorPreviewDeviceProvider>
     </UserPalettesProvider>
    </SioTagsProvider>
   );
