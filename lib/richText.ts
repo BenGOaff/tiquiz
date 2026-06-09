@@ -45,6 +45,17 @@ const STRIPPED_CSS_PROPS = new Set([
 // gardent leur comportement responsive du design system.
 const IMG_WIDTH_RE = /^\d{1,3}(?:\.\d+)?%$|^\d{1,4}px$/i;
 
+// Taille de police AU NIVEAU DU CHAMP (drame Bene 8 juin 2026). Un seul
+// wrapper <div class="rt-field-fs" style="--rt-fs: Xpx"> par champ, UNE
+// taille pour tout le bloc (jamais par mot -> rendu fiable). On
+// whiteliste la classe `rt-field-fs` et la valeur de --rt-fs.
+// IMPORTANT : c'est DIFFERENT de l'ancien systeme par mot (rt-fs,
+// --fs-m, --fs-d) qui reste strippe pour nettoyer les contenus casses.
+const FIELD_FS_CLASS = "rt-field-fs";
+const FIELD_ALLOWED_SIZES = new Set([
+  "14px", "16px", "18px", "20px", "24px", "28px", "32px", "40px", "48px", "56px", "64px",
+]);
+
 // Hook DOMPurify enregistré une seule fois au load du module. S'applique
 // à toutes les sanitisations suivantes (server + client).
 let _hookInstalled = false;
@@ -61,6 +72,8 @@ function installStyleStripperHook(): void {
     if (data.attrName !== "class" || typeof data.attrValue !== "string") return;
     const kept = data.attrValue
       .split(/\s+/)
+      // Strip l'ancienne classe par mot `rt-fs`. Garde `rt-field-fs`
+      // (nouveau systeme field-level) et toute autre classe legitime.
       .filter((c) => c && c !== "rt-fs");
     data.attrValue = kept.join(" ");
   });
@@ -81,8 +94,16 @@ function installStyleStripperHook(): void {
         const prop = decl.slice(0, colonIdx).trim().toLowerCase();
         const value = decl.slice(colonIdx + 1).trim().toLowerCase();
         if (STRIPPED_CSS_PROPS.has(prop)) return false;
-        // Toute CSS custom property (--xxx) est strippee : --fs-m / --fs-d
-        // de l'ancien systeme + le noise de paste Notion/Docs.
+        // --rt-fs : taille de police FIELD-LEVEL (nouveau systeme). On
+        // l'autorise UNIQUEMENT pour les tailles curees, et UNIQUEMENT
+        // sur le wrapper .rt-field-fs (defense supplementaire pour eviter
+        // qu'un paste pose un --rt-fs sur n'importe quel element).
+        if (prop === "--rt-fs") {
+          const onWrapper = (node as Element)?.classList?.contains?.(FIELD_FS_CLASS);
+          return onWrapper && FIELD_ALLOWED_SIZES.has(value);
+        }
+        // Toute autre CSS custom property (--xxx) est strippee : --fs-m /
+        // --fs-d de l'ancien systeme par mot + le noise de paste Notion.
         if (prop.startsWith("--")) return false;
         // width / height sur <img> : on tolère des unités explicites
         // (px / %) pour permettre le redimensionnement utilisateur du

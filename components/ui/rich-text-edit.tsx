@@ -41,6 +41,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
+// Tailles de police au niveau du champ (px). Source de verite partagee
+// avec le sanitizer (lib/richText.ts FIELD_ALLOWED_SIZES) et le CSS
+// (.rt-field-fs). Une seule taille par champ, jamais par mot.
+const FIELD_FONT_SIZES = [
+  "14px", "16px", "18px", "20px", "24px", "28px", "32px", "40px", "48px", "56px", "64px",
+] as const;
+
 interface RichTextEditProps {
   value: string;
   onChange: (html: string) => void;
@@ -113,6 +120,7 @@ export function RichTextEdit({
   // contentEditable, and `restoreSelection` puts the caret back exactly
   // where the user left it before applying foreColor.
   const [colorOpen, setColorOpen] = useState(false);
+  const [fontSizeOpen, setFontSizeOpen] = useState(false);
   // Image selectionnee (pour resize). On track le <img> courant dans le
   // contentEditable et on affiche un popover avec une dropdown de tailles.
   const [selectedImg, setSelectedImg] = useState<HTMLImageElement | null>(null);
@@ -257,6 +265,68 @@ export function RichTextEdit({
       // modification DOM (img.style.width) est visible immediatement.
     },
     [selectedImg],
+  );
+
+  // Commit IMMEDIAT (live) : sanitize l'innerHTML courant et remonte au
+  // parent sans attendre le blur. Utilise par la taille de police pour
+  // que le changement soit persiste en WYSIWYG des le clic.
+  const commitNow = useCallback(() => {
+    if (!ref.current) return;
+    const clean = sanitizeRichText(ref.current.innerHTML);
+    if (clean !== value) onChange(clean);
+  }, [onChange, value]);
+
+  // ─── Taille de police AU NIVEAU DU CHAMP ──────────────────────────
+  // Drame Bene 8 juin 2026 : la taille PAR MOT (ancien systeme) cassait
+  // le rendu (mots a tailles aleatoires). Approche premium : UNE taille
+  // pour TOUT le champ. On enveloppe l'integralite du contenu dans un
+  // UNIQUE <div class="rt-field-fs" style="--rt-fs: Xpx">. Jamais de
+  // span par mot -> rendu uniforme garanti. Le CSS (.rt-field-fs)
+  // applique --rt-fs avec une priorite qui bat le defaut field-level.
+  // WYSIWYG : l'editeur rend le meme HTML que le viewer public.
+  const FIELD_FS_CLASS = "rt-field-fs";
+
+  const getCurrentFieldSize = useCallback((): string | null => {
+    const el = ref.current;
+    if (!el) return null;
+    const wrapper = el.querySelector<HTMLElement>(`:scope > .${FIELD_FS_CLASS}`);
+    const v = wrapper?.style.getPropertyValue("--rt-fs").trim();
+    return v || null;
+  }, []);
+
+  const applyFieldFontSize = useCallback(
+    (sizePx: string | null) => {
+      const el = ref.current;
+      if (!el) {
+        setFontSizeOpen(false);
+        return;
+      }
+      let wrapper = el.querySelector<HTMLElement>(`:scope > .${FIELD_FS_CLASS}`);
+      if (sizePx === null) {
+        // Reset : on sort le contenu du wrapper et on le supprime.
+        if (wrapper) {
+          while (wrapper.firstChild) el.insertBefore(wrapper.firstChild, wrapper);
+          el.removeChild(wrapper);
+        }
+      } else {
+        if (!wrapper) {
+          // Premiere taille : on enveloppe TOUT le contenu existant dans
+          // un seul div. Si le champ est vide, on cree un wrapper vide
+          // (la frappe suivante ira dedans).
+          wrapper = document.createElement("div");
+          wrapper.className = FIELD_FS_CLASS;
+          while (el.firstChild) wrapper.appendChild(el.firstChild);
+          el.appendChild(wrapper);
+        }
+        wrapper.style.setProperty("--rt-fs", sizePx);
+      }
+      setFontSizeOpen(false);
+      // Commit live : le parent enregistre le nouveau HTML immediatement
+      // (WYSIWYG + persistance sans attendre le blur).
+      commitNow();
+      ref.current?.focus();
+    },
+    [commitNow],
   );
 
   // Curated swatch palette — neutrals first (most useful for contrast
@@ -654,6 +724,43 @@ export function RichTextEdit({
                     {t("rteReset")}
                   </button>
                 </div>
+              </div>
+            )}
+          </div>
+          <span className="w-px h-4 bg-border mx-0.5" />
+          {/* Taille de police AU NIVEAU DU CHAMP (drame Bene 8 juin 2026).
+              Applique UNE taille a tout le bloc (pas par mot) -> rendu
+              fiable. Live + WYSIWYG. "Auto" = taille responsive defaut. */}
+          <div className="relative">
+            <ToolbarBtn
+              onMouseDown={(e) => { e.preventDefault(); setFontSizeOpen((v) => !v); }}
+              title={t("rteFontSize")}
+            >
+              <span className="text-[11px] font-bold leading-none">A<span className="text-[8px]">A</span></span>
+            </ToolbarBtn>
+            {fontSizeOpen && (
+              <div
+                className="absolute z-30 top-full left-0 mt-1 w-28 rounded-lg border bg-background shadow-lg py-1 max-h-64 overflow-y-auto"
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <button
+                  type="button"
+                  onClick={() => applyFieldFontSize(null)}
+                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted ${getCurrentFieldSize() === null ? "font-semibold text-primary" : ""}`}
+                >
+                  {t("rteFontSizeAuto")}
+                </button>
+                <div className="border-t my-1" />
+                {FIELD_FONT_SIZES.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => applyFieldFontSize(size)}
+                    className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted tabular-nums ${getCurrentFieldSize() === size ? "font-semibold text-primary" : ""}`}
+                  >
+                    {size.replace("px", "")} px
+                  </button>
+                ))}
               </div>
             )}
           </div>

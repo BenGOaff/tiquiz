@@ -95,6 +95,7 @@
     "rteReset": "Reset",
     "rteCustom": "Custom",
     "rteFontSize": "Font size",
+    "rteFontSizeAuto": "Auto (responsive)",
     "rteFontSizeReset": "Default size",
     "rteFontSizeForMobile": "📱 For mobile",
     "rteFontSizeForDesktop": "💻 For desktop",

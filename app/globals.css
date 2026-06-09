@@ -271,6 +271,23 @@
   }
 }
 
+/* ─── Taille de police AU NIVEAU DU CHAMP (drame Bene 8 juin 2026) ───
+ * L'editeur enveloppe tout le contenu d'un champ dans un UNIQUE
+ * <div class="rt-field-fs" style="--rt-fs: Xpx">. UNE taille pour tout
+ * le bloc, jamais par mot -> rendu fiable et uniforme.
+ *
+ * CES REGLES DOIVENT VENIR APRES les blocs .tiquiz-quiz-title/question/
+ * result-title ci-dessus (y compris la media query). Specificite egale
+ * (.rt-field-fs * = 0,1,0 == .tiquiz-quiz-title * = 0,1,0), donc c'est
+ * l'ORDRE SOURCE qui departage : etant plus bas, .rt-field-fs gagne et
+ * impose la taille choisie par l'user, sur le wrapper ET ses enfants,
+ * mobile ET desktop. Si l'user ne choisit pas de taille (pas de wrapper),
+ * le defaut responsive .tiquiz-quiz-* s'applique normalement. */
+.rt-field-fs,
+.rt-field-fs * {
+  font-size: var(--rt-fs) !important;
+}
+
 @layer utilities {
   .font-display {
     font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans",

@@ -95,6 +95,7 @@
     "rteReset": "إعادة ضبط",
     "rteCustom": "مخصّص",
     "rteFontSize": "حجم الخط",
+    "rteFontSizeAuto": "تلقائي (متجاوب)",
     "rteFontSizeReset": "الحجم الافتراضي",
     "rteFontSizeForMobile": "📱 للجوال",
     "rteFontSizeForDesktop": "💻 لسطح المكتب",
