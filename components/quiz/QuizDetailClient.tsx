@@ -1732,7 +1732,22 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     return `${publicUrl}${sep}preview_name=${encodeURIComponent(PREVIEW_DEMO_NAME)}`;
   })();
   const handleCopyLink = () => { navigator.clipboard.writeText(publicUrl).then(() => { setCopied(true); toast.success(t("linkCopied")); setTimeout(() => setCopied(false), 2000); }); };
-  const iframeCode = `<iframe src="${publicUrl}" width="100%" height="700" frameborder="0" style="border:none;border-radius:12px;max-width:640px;margin:0 auto;display:block;"></iframe>`;
+  // Snippet embed avec AUTO-RESIZE (retour Emilie 9 juin 2026 : "seule
+  // une partie s'affiche, double scroll, le CTA n'est pas visible").
+  // Handshake : le quiz envoie "hello", ce script repond "ack" (-> le
+  // quiz active son mode adaptatif), puis ajuste l'iframe a la hauteur
+  // postMessage par le quiz -> l'iframe colle exactement au contenu, pas
+  // de scroll interne, CTA toujours visible (comportement Typeform/Tally).
+  // - `e.source === f.contentWindow` : on ne reagit qu'aux messages de
+  //   NOTRE iframe (multi-embed safe sur une meme page).
+  // - PAS de scrolling="no" : si l'hote a JS desactive (rare), l'iframe
+  //   garde sa hauteur de depart -> aucune regression. Avec JS, la
+  //   hauteur est exacte donc aucune barre de scroll n'apparait.
+  // - height de depart = 640 le temps que le handshake aboutisse.
+  const embedId = `tiquiz-${String(publicSegment).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40) || "embed"}`;
+  const iframeCode =
+    `<iframe id="${embedId}" src="${publicUrl}" width="100%" height="640" frameborder="0" style="border:none;border-radius:12px;max-width:640px;margin:0 auto;display:block;"></iframe>\n` +
+    `<script>(function(){var f=document.getElementById("${embedId}");if(!f)return;window.addEventListener("message",function(e){if(!e.data||e.source!==f.contentWindow)return;if(e.data.type==="tiquiz-embed-hello"){f.contentWindow.postMessage({type:"tiquiz-embed-ack"},"*");}else if(e.data.type==="tiquiz-embed-height"&&e.data.height){f.style.height=e.data.height+"px";}});})();</script>`;
   const handleCopyIframe = () => { navigator.clipboard.writeText(iframeCode).then(() => { setCopiedIframe(true); toast.success(t("iframeCopied")); setTimeout(() => setCopiedIframe(false), 2000); }); };
 
   // Drag-and-drop sensors for the sidebar question list

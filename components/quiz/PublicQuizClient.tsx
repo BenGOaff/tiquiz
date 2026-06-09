@@ -1052,6 +1052,105 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     };
   }, [branding.backgroundColor, compact]);
 
+  // ─── Embed iframe : detection via HANDSHAKE (retour Emilie 9 juin 2026)
+  // Pour ZERO regression sur les embeds DEJA en prod (ancien snippet sans
+  // script), le mode adaptatif ne s'active QUE si le parent confirme qu'il
+  // sait gerer l'auto-resize. Protocole :
+  //   1. Le quiz (iframe) envoie "tiquiz-embed-hello" au parent (avec
+  //      retries, le script parent peut charger apres l'iframe).
+  //   2. Le snippet NOUVEAU repond "tiquiz-embed-ack".
+  //   3. A la reception du ack -> on active data-quiz-embed + auto-resize.
+  // Ancien snippet = pas de ack -> mode adaptatif JAMAIS active -> rendu
+  // strictement identique a aujourd'hui. Quiz direct (hors iframe) = pas
+  // de parent distinct -> jamais de ack non plus -> inchange.
+  // EXCLUSION compact (popquiz overlay) : layout fixe gere par le mode
+  // compact, on ne touche pas.
+  const [isEmbedded, setIsEmbedded] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || compact) return;
+    let inIframe = false;
+    try {
+      inIframe = window.self !== window.top;
+    } catch {
+      inIframe = true;
+    }
+    if (!inIframe) return;
+
+    let acked = false;
+    const onAck = (e: MessageEvent) => {
+      if (e?.data?.type !== "tiquiz-embed-ack" || acked) return;
+      acked = true;
+      setIsEmbedded(true);
+      document.documentElement.setAttribute("data-quiz-embed", "");
+    };
+    window.addEventListener("message", onAck);
+
+    // Envoie hello au parent, avec quelques retries jusqu'a obtenir le ack.
+    const sendHello = () => {
+      if (acked) return;
+      try {
+        window.parent.postMessage({ type: "tiquiz-embed-hello" }, "*");
+      } catch { /* parent cross-origin, postMessage marche quand meme */ }
+    };
+    sendHello();
+    const interval = window.setInterval(() => {
+      if (acked) { window.clearInterval(interval); return; }
+      sendHello();
+    }, 250);
+    // On arrete les retries au bout de 3s (si pas de ack = ancien snippet).
+    const stop = window.setTimeout(() => window.clearInterval(interval), 3000);
+
+    return () => {
+      window.removeEventListener("message", onAck);
+      window.clearInterval(interval);
+      window.clearTimeout(stop);
+      document.documentElement.removeAttribute("data-quiz-embed");
+    };
+  }, [compact]);
+
+  // ─── Embed iframe : auto-resize ─────────────────────────────────────
+  // Mesure la hauteur reelle du contenu et la postMessage au parent
+  // (l'hote cross-origin de l'embed, ex. blog WordPress). Le snippet
+  // iframe (cf. QuizDetailClient iframeCode) ecoute et redimensionne
+  // l'iframe -> plus aucun scroll interne, CTA toujours visible
+  // (comportement standard Typeform/Tally). Gate sur `!loading && quiz`
+  // pour ne PAS poster la hauteur minuscule du spinner de chargement
+  // (sinon l'iframe flash a 30px puis grandit). Re-run sur `step` pour
+  // suivre intro -> questions -> resultat.
+  useEffect(() => {
+    if (!isEmbedded || typeof window === "undefined") return;
+    if (loading || !quiz) return;
+
+    const postHeight = () => {
+      const h = Math.ceil(
+        Math.max(
+          document.documentElement.scrollHeight,
+          document.body.scrollHeight,
+        ),
+      );
+      if (h > 0) window.parent.postMessage({ type: "tiquiz-embed-height", height: h }, "*");
+    };
+
+    postHeight();
+    const ro = new ResizeObserver(() => postHeight());
+    ro.observe(document.body);
+    // Le parent peut demander la hauteur (ex. apres son propre resize).
+    const onMsg = (e: MessageEvent) => {
+      if (e?.data?.type === "tiquiz-embed-request-height") postHeight();
+    };
+    window.addEventListener("message", onMsg);
+    // Filet : images / fonts qui finissent de charger apres le 1er paint.
+    const t1 = window.setTimeout(postHeight, 300);
+    const t2 = window.setTimeout(postHeight, 1200);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("message", onMsg);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [isEmbedded, loading, quiz, step]);
+
   // ─── Funnel tracking (fire & forget, non-blocking) ───
   //
   // Refonte (Adeline, 19 mai 2026) : tous les events passent par le

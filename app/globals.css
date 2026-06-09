@@ -429,3 +429,41 @@ html[data-pq-compact] body {
     padding-bottom: clamp(0.4rem, 2vh, 1.25rem) !important;
   }
 }
+
+/* ═══ Embed iframe : layout adaptatif (retour Emilie 9 juin 2026) ═══
+ * Quand un quiz est integre via <iframe> sur un site tiers (blog, page
+ * de vente...), PublicQuizClient detecte l'iframe et pose data-quiz-embed
+ * sur <html>. Probleme resolu : les ecrans du quiz utilisent min-h-screen
+ * (= 100vh = hauteur de l'iframe, souvent figee a 700px par le snippet),
+ * donc le contenu deborde -> double scroll + CTA sous la ligne de
+ * flottaison. En neutralisant min-h-screen ici, le contenu prend sa
+ * hauteur NATURELLE ; le JS postMessage redimensionne l'iframe a cette
+ * hauteur exacte -> plus aucun scroll interne, CTA toujours visible.
+ * Comportement standard Typeform/Tally.
+ *
+ * GATE STRICT : ces regles n'existent QUE sous [data-quiz-embed], pose
+ * uniquement en iframe. Les quiz directs (quiz.tipote.com/q/, custom
+ * domains) ne voient JAMAIS cet attribut -> zero changement, zero
+ * regression sur les mises en page existantes. */
+[data-quiz-embed] .min-h-screen {
+  /* 100vh -> hauteur naturelle. flex justify-center devient inoperant
+   * (plus d'espace a distribuer) -> le contenu s'empile en haut, compact. */
+  min-height: 0 !important;
+}
+/* Padding vertical des ecrans : geant en plein viewport (py-16/py-24 =
+ * jusqu'a 6rem), inutile et encombrant en embed. On reduit pour un rendu
+ * dense mais aere. */
+[data-quiz-embed] .py-16 {
+  padding-top: 2rem !important;
+  padding-bottom: 2rem !important;
+}
+@media (min-width: 640px) {
+  [data-quiz-embed] .sm\:py-24 {
+    padding-top: 2.5rem !important;
+    padding-bottom: 2.5rem !important;
+  }
+}
+/* Les ecrans question/result utilisent souvent py-16 sur leur container
+ * principal ; meme traitement (couvert par .py-16 ci-dessus). Le scroll
+ * interne residuel (si un quiz tres long) reste possible mais l'iframe
+ * grandit d'abord pour tout afficher, donc en pratique pas de scroll. */
