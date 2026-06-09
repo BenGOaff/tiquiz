@@ -96,6 +96,8 @@
     "rteCustom": "Personalizzato",
     "rteFontSize": "Dimensione testo",
     "rteFontSizeReset": "Dimensione predefinita",
+    "rteFontSizeForMobile": "📱 Per mobile",
+    "rteFontSizeForDesktop": "💻 Per PC",
     "rteImageSize": "Dimensione immagine:",
     "rteImageSizeReset": "100%"
   },

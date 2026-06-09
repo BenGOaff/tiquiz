@@ -96,6 +96,8 @@
     "rteCustom": "مخصّص",
     "rteFontSize": "حجم الخط",
     "rteFontSizeReset": "الحجم الافتراضي",
+    "rteFontSizeForMobile": "📱 للجوال",
+    "rteFontSizeForDesktop": "💻 لسطح المكتب",
     "rteImageSize": "حجم الصورة:",
     "rteImageSizeReset": "100%"
   },

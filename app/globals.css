@@ -180,6 +180,36 @@
 .tiquiz-rich [style*="text-align: right"] { text-align: right; }
 .tiquiz-rich [style*="text-align: left"] { text-align: left; }
 
+/* Taille de police per-device (drame Bene 8 juin 2026 : "je veux deux
+ * tailles differentes sur mobile et pc"). La toolbar font-size wrap le
+ * texte selectionne dans un <span class="rt-fs" style="--fs-m: 18px;
+ * --fs-d: 24px;">. Le rendu picks la bonne variable :
+ *   - mobile (par defaut media-query first) : --fs-m, fallback inherit
+ *   - desktop (>=640px) : --fs-d, fallback --fs-m, fallback inherit
+ * Fallback chain garantit que si l'user ne set qu'UNE des deux tailles,
+ * l'autre device herite gracieusement (= comme avant le fix). Aucune
+ * coupure des quiz existants : les spans sans .rt-fs ne sont pas
+ * touches. */
+.rt-fs {
+  font-size: var(--fs-m, inherit);
+}
+@media (min-width: 640px) {
+  .rt-fs {
+    font-size: var(--fs-d, var(--fs-m, inherit));
+  }
+}
+/* Override pour l'editeur quand l'user choisit "preview mobile" sur un
+ * ecran large. data-device-preview est pose par QuizDetailClient sur le
+ * container preview (cf. toggle Monitor/Smartphone). Specificite 0,2,0
+ * gagne sur la media query 0,1,0 -> le preview affiche la VRAIE taille
+ * du device choisi meme sur un ecran qui n'est pas a la bonne largeur. */
+[data-device-preview="mobile"] .rt-fs {
+  font-size: var(--fs-m, inherit);
+}
+[data-device-preview="desktop"] .rt-fs {
+  font-size: var(--fs-d, var(--fs-m, inherit));
+}
+
 /* Variante "inline" — pour les champs courts (heading, subtitle de
  * la capture, headings de résultats…). Neutralise les block-levels
  * (p, div, headings) qui apparaîtraient dans le HTML produit par le
@@ -235,32 +265,32 @@
   /* `pre-wrap` préserve les `\n` saisis dans le titre tout en gardant
    * le word-wrap naturel — Adeline veut pouvoir passer à la ligne. */
   white-space: pre-wrap;
+  font-size: 2.25rem; /* text-4xl mobile */
+  line-height: 1.1;
 }
-.tiquiz-quiz-title,
-.tiquiz-quiz-title * {
-  font-size: 2.25rem !important; /* text-4xl mobile */
-  line-height: 1.1 !important;
+.tiquiz-quiz-question {
+  font-size: 1.875rem; /* text-3xl mobile */
+  line-height: 1.15;
 }
-.tiquiz-quiz-question,
-.tiquiz-quiz-question * {
-  font-size: 1.875rem !important; /* text-3xl mobile */
-  line-height: 1.15 !important;
+.tiquiz-quiz-result-title {
+  font-size: 2.25rem; /* text-4xl mobile */
+  line-height: 1.1;
 }
-.tiquiz-quiz-result-title,
-.tiquiz-quiz-result-title * {
-  font-size: 2.25rem !important; /* text-4xl mobile */
-  line-height: 1.1 !important;
-}
+/* Drame Christelle 8 juin 2026 : avant ce fix, les regles avaient
+ * `* { font-size: 2.25rem !important }` qui ecrasait les inline styles
+ * des spans inseres par la toolbar font-size. Resultat : selectionner
+ * "Taille 18px" dans le dropdown ne changeait visiblement rien. Le
+ * !important etait un garde-fou contre le paste Notion ; on s'appuie
+ * maintenant sur le sanitizer (lib/richText.ts : ALLOWED_FONT_SIZES)
+ * qui ne laisse passer que 9 tailles curees. Donc retirer !important
+ * est sur, et permet aux spans toolbar de prendre le dessus. */
 @media (min-width: 640px) {
   .tiquiz-quiz-title,
-  .tiquiz-quiz-title *,
-  .tiquiz-quiz-result-title,
-  .tiquiz-quiz-result-title * {
-    font-size: 3rem !important; /* text-5xl */
+  .tiquiz-quiz-result-title {
+    font-size: 3rem; /* text-5xl */
   }
-  .tiquiz-quiz-question,
-  .tiquiz-quiz-question * {
-    font-size: 2.25rem !important; /* text-4xl */
+  .tiquiz-quiz-question {
+    font-size: 2.25rem; /* text-4xl */
   }
 }
 

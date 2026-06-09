@@ -67,8 +67,19 @@ function installStyleStripperHook(): void {
         const prop = decl.slice(0, colonIdx).trim().toLowerCase();
         const value = decl.slice(colonIdx + 1).trim().toLowerCase();
         if (STRIPPED_CSS_PROPS.has(prop)) return false;
-        // font-size : autorisé UNIQUEMENT si valeur dans la whitelist.
+        // font-size legacy : on accepte un font-size inline (forme
+        // ancienne) UNIQUEMENT pour les 9 tailles curees. Defense
+        // anti-paste Notion preservee.
         if (prop === "font-size") return ALLOWED_FONT_SIZES.has(value);
+        // CSS variables per-device pour la taille de police (drame
+        // Bene 8 juin 2026 : "je veux deux tailles differentes sur
+        // mobile et pc"). On accepte --fs-m / --fs-d UNIQUEMENT avec
+        // une valeur dans la whitelist. Les autres customs --vars sont
+        // strippes pour eviter du noise dans le HTML stocke.
+        if (prop === "--fs-m" || prop === "--fs-d") {
+          return ALLOWED_FONT_SIZES.has(value);
+        }
+        if (prop.startsWith("--")) return false;
         // width / height sur <img> : on tolère des unités explicites
         // (px / %) pour permettre le redimensionnement utilisateur du
         // GIF d'intro (drame Christelle 8 juin 2026). Sur les autres
