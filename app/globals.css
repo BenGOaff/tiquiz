@@ -192,6 +192,17 @@
  * touches. */
 .rt-fs {
   font-size: var(--fs-m, inherit);
+  /* line-height: 1 sur le span empeche l'effet "ligne fantome" quand
+   * la selection est wrappee dans un span plus petit dans un container
+   * a grande font-size (drame Bene 8 juin 2026 : "il y a un espace
+   * avant le texte" / "trop gros espaces sur mobile"). Le inline-box
+   * layout du browser utilise le line-height de l'element parent pour
+   * dimensionner la ligne, donc forcer 1 au span n'aide que partiellement
+   * - on force aussi display: inline-block + vertical-align: middle pour
+   * que le span ait sa propre boite et ne soit pas centre dans une ligne
+   * 2x plus haute que lui. */
+  line-height: 1.15;
+  vertical-align: baseline;
 }
 @media (min-width: 640px) {
   .rt-fs {
@@ -266,15 +277,22 @@
    * le word-wrap naturel — Adeline veut pouvoir passer à la ligne. */
   white-space: pre-wrap;
   font-size: 2.25rem; /* text-4xl mobile */
-  line-height: 1.1;
+  /* line-height: !important UNIQUEMENT (pas la font-size). Tailwind
+   * applique `leading-tight` (1.25) sur le RichTextEdit du titre, ce
+   * qui creait ~20px de gap entre les lignes wrappees sur mobile.
+   * Drame Bene 8 juin 2026 : "trop gros espaces sur mobile". On force
+   * un line-height tighter pour les titres (1.1 = baseline a baseline
+   * = 110% font-size). La font-size reste sans !important pour que la
+   * toolbar font-size puisse override via la classe .rt-fs. */
+  line-height: 1.1 !important;
 }
 .tiquiz-quiz-question {
   font-size: 1.875rem; /* text-3xl mobile */
-  line-height: 1.15;
+  line-height: 1.15 !important;
 }
 .tiquiz-quiz-result-title {
   font-size: 2.25rem; /* text-4xl mobile */
-  line-height: 1.1;
+  line-height: 1.1 !important;
 }
 /* Drame Christelle 8 juin 2026 : avant ce fix, les regles avaient
  * `* { font-size: 2.25rem !important }` qui ecrasait les inline styles
