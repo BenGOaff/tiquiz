@@ -1065,7 +1065,12 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
   // de parent distinct -> jamais de ack non plus -> inchange.
   // EXCLUSION compact (popquiz overlay) : layout fixe gere par le mode
   // compact, on ne touche pas.
+  // isEmbedded = mode AUTO-RESIZE (parent ack, nouveau snippet) -> l'iframe
+  // grandit. isFit = mode FIT-TO-IFRAME (pas de ack, ancien snippet) -> le
+  // quiz se compacte pour rentrer dans l'iframe figee, SANS re-collage.
+  // Mutuellement exclusifs : ack -> resize ; pas de ack -> fit.
   const [isEmbedded, setIsEmbedded] = useState(false);
+  const [isFit, setIsFit] = useState(false);
   useEffect(() => {
     if (typeof window === "undefined" || compact) return;
     let inIframe = false;
@@ -1080,6 +1085,10 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     const onAck = (e: MessageEvent) => {
       if (e?.data?.type !== "tiquiz-embed-ack" || acked) return;
       acked = true;
+      // Le parent gere le resize -> on passe en mode auto-resize et on
+      // annule un eventuel fit deja applique (reset du font-size racine).
+      setIsFit(false);
+      document.documentElement.style.fontSize = "";
       setIsEmbedded(true);
       document.documentElement.setAttribute("data-quiz-embed", "");
     };
@@ -1099,14 +1108,61 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     }, 250);
     // On arrete les retries au bout de 3s (si pas de ack = ancien snippet).
     const stop = window.setTimeout(() => window.clearInterval(interval), 3000);
+    // Pas de ack apres 600ms = ancien snippet (iframe figee) -> on bascule
+    // en mode fit pour que le contenu se compacte et reste visible SANS
+    // re-collage. 600ms laisse largement le temps a un nouveau snippet
+    // de repondre (il ack en <300ms).
+    const fitTimer = window.setTimeout(() => {
+      if (!acked) setIsFit(true);
+    }, 600);
 
     return () => {
       window.removeEventListener("message", onAck);
       window.clearInterval(interval);
       window.clearTimeout(stop);
+      window.clearTimeout(fitTimer);
       document.documentElement.removeAttribute("data-quiz-embed");
+      document.documentElement.style.fontSize = "";
     };
   }, [compact]);
+
+  // ─── Embed iframe : FIT-TO-IFRAME (ancien snippet, sans re-collage) ──
+  // Quand le contenu DEBORDE de l'iframe figee, on reduit la taille de
+  // police RACINE (<html>). Tout le quiz etant en rem (Tailwind), ca
+  // scale l'ensemble proportionnellement (texte + paddings + boutons) ->
+  // l'intro + le CTA rentrent dans l'iframe, plus de scroll interne.
+  // REGRESSION-SAFE : on ne touche RIEN si le contenu rentre deja
+  // (scrollHeight <= innerHeight). On ne descend pas sous 62% (floor)
+  // pour garder un texte lisible ; si un quiz est intrinsequement trop
+  // long pour l'iframe, un peu de scroll subsiste (mieux que de couper).
+  useEffect(() => {
+    if (!isFit || typeof window === "undefined" || loading || !quiz) return;
+    const html = document.documentElement;
+    const fits = () => html.scrollHeight <= window.innerHeight + 4;
+    const fit = () => {
+      html.style.fontSize = ""; // reset -> mesure a taille par defaut
+      if (fits()) return; // rentre deja -> aucun scaling (zero regression)
+      let scale = 1;
+      for (let i = 0; i < 12 && scale > 0.62; i++) {
+        scale -= 0.05;
+        html.style.fontSize = `${16 * scale}px`;
+        if (fits()) break;
+      }
+    };
+    const raf = requestAnimationFrame(fit);
+    // Re-mesure apres chargement des images / fonts (qui changent la hauteur).
+    const t1 = window.setTimeout(fit, 400);
+    const t2 = window.setTimeout(fit, 1200);
+    const onResize = () => fit();
+    window.addEventListener("resize", onResize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.removeEventListener("resize", onResize);
+      html.style.fontSize = ""; // reset avant la re-mesure de l'etape suivante
+    };
+  }, [isFit, loading, quiz, step]);
 
   // ─── Embed iframe : auto-resize ─────────────────────────────────────
   // Mesure la hauteur reelle du contenu et la postMessage au parent
