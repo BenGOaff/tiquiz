@@ -35,6 +35,7 @@ import {
 import { sanitizeRichText, isSafeUrl } from "@/lib/richText";
 import { QuizVarInserter, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { useUserPalettes } from "@/components/editor/PalettesContext";
+import { useEditorPreviewDevice } from "@/components/editor/EditorPreviewDeviceContext";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
@@ -110,6 +111,12 @@ export function RichTextEdit({
   // popquiz). Sinon `[]` → la section "Mes palettes" est masquée, la
   // palette curée seule reste affichée.
   const userPalettes = useUserPalettes();
+  // Device courant choisi par l'user via le toggle Monitor/Smartphone de
+  // QuizDetailClient. Pilote a quelle CSS variable la toolbar font-size
+  // ecrit (--rt-fs-m mobile, --rt-fs-d desktop). Drame Bene 8 juin 2026 :
+  // tailles independantes par device, editables en passant d'un mode a
+  // l'autre.
+  const previewDevice = useEditorPreviewDevice();
   // AI rewrite state: a small popover-like list of proposals shown right
   // under the field after the creator clicks ✨. We keep it local to the
   // component so each field manages its own popover independently.
@@ -276,23 +283,24 @@ export function RichTextEdit({
     if (clean !== value) onChange(clean);
   }, [onChange, value]);
 
-  // ─── Taille de police AU NIVEAU DU CHAMP ──────────────────────────
-  // Drame Bene 8 juin 2026 : la taille PAR MOT (ancien systeme) cassait
-  // le rendu (mots a tailles aleatoires). Approche premium : UNE taille
-  // pour TOUT le champ. On enveloppe l'integralite du contenu dans un
-  // UNIQUE <div class="rt-field-fs" style="--rt-fs: Xpx">. Jamais de
-  // span par mot -> rendu uniforme garanti. Le CSS (.rt-field-fs)
-  // applique --rt-fs avec une priorite qui bat le defaut field-level.
-  // WYSIWYG : l'editeur rend le meme HTML que le viewer public.
+  // ─── Taille de police FIELD-LEVEL, INDEPENDANTE MOBILE/DESKTOP ────
+  // Drame Bene 8 juin 2026 : "je veux pouvoir editer la taille mobile
+  // et la taille PC separement". On enveloppe l'integralite du contenu
+  // dans un UNIQUE <div class="rt-field-fs" style="--rt-fs-m: Xpx;
+  // --rt-fs-d: Ypx">. Le device courant (du toggle Monitor/Smartphone
+  // dans QuizDetailClient) decide a quelle variable on ecrit. Le CSS
+  // (cf. globals.css) picke la bonne variable selon la media query +
+  // l'override data-device-preview pour le preview WYSIWYG.
   const FIELD_FS_CLASS = "rt-field-fs";
+  const FS_VAR = previewDevice === "mobile" ? "--rt-fs-m" : "--rt-fs-d";
 
   const getCurrentFieldSize = useCallback((): string | null => {
     const el = ref.current;
     if (!el) return null;
     const wrapper = el.querySelector<HTMLElement>(`:scope > .${FIELD_FS_CLASS}`);
-    const v = wrapper?.style.getPropertyValue("--rt-fs").trim();
+    const v = wrapper?.style.getPropertyValue(FS_VAR).trim();
     return v || null;
-  }, []);
+  }, [FS_VAR]);
 
   const applyFieldFontSize = useCallback(
     (sizePx: string | null) => {
@@ -303,22 +311,31 @@ export function RichTextEdit({
       }
       let wrapper = el.querySelector<HTMLElement>(`:scope > .${FIELD_FS_CLASS}`);
       if (sizePx === null) {
-        // Reset : on sort le contenu du wrapper et on le supprime.
+        // Reset UNIQUEMENT le device courant. Si l'autre device a
+        // toujours une valeur, on garde le wrapper. Sinon (wrapper
+        // devient vide en CSS variables), on degage le wrapper -> retour
+        // au defaut responsive du design system.
         if (wrapper) {
-          while (wrapper.firstChild) el.insertBefore(wrapper.firstChild, wrapper);
-          el.removeChild(wrapper);
+          wrapper.style.removeProperty(FS_VAR);
+          const other = previewDevice === "mobile" ? "--rt-fs-d" : "--rt-fs-m";
+          const hasOther = wrapper.style.getPropertyValue(other).trim();
+          if (!hasOther) {
+            // Plus de taille custom -> on degage le wrapper, contenu remis a plat.
+            while (wrapper.firstChild) el.insertBefore(wrapper.firstChild, wrapper);
+            el.removeChild(wrapper);
+          }
         }
       } else {
         if (!wrapper) {
-          // Premiere taille : on enveloppe TOUT le contenu existant dans
-          // un seul div. Si le champ est vide, on cree un wrapper vide
-          // (la frappe suivante ira dedans).
+          // Premiere taille (pour ce device ou globalement) : on enveloppe
+          // TOUT le contenu existant dans un seul div. Si le champ est
+          // vide, on cree un wrapper vide (la frappe suivante ira dedans).
           wrapper = document.createElement("div");
           wrapper.className = FIELD_FS_CLASS;
           while (el.firstChild) wrapper.appendChild(el.firstChild);
           el.appendChild(wrapper);
         }
-        wrapper.style.setProperty("--rt-fs", sizePx);
+        wrapper.style.setProperty(FS_VAR, sizePx);
       }
       setFontSizeOpen(false);
       // Commit live : le parent enregistre le nouveau HTML immediatement
@@ -326,7 +343,7 @@ export function RichTextEdit({
       commitNow();
       ref.current?.focus();
     },
-    [commitNow],
+    [commitNow, FS_VAR, previewDevice],
   );
 
   // Curated swatch palette — neutrals first (most useful for contrast
@@ -740,9 +757,16 @@ export function RichTextEdit({
             </ToolbarBtn>
             {fontSizeOpen && (
               <div
-                className="absolute z-30 top-full left-0 mt-1 w-28 rounded-lg border bg-background shadow-lg py-1 max-h-64 overflow-y-auto"
+                className="absolute z-30 top-full left-0 mt-1 w-40 rounded-lg border bg-background shadow-lg py-1 max-h-64 overflow-y-auto"
                 onMouseDown={(e) => e.preventDefault()}
               >
+                {/* Indicateur du device courant. La taille modifiee
+                    s'applique UNIQUEMENT a ce device. Toggle Monitor/
+                    Smartphone (en haut de l'editeur) bascule entre les
+                    deux modes. */}
+                <div className="px-3 py-1 text-[10px] uppercase tracking-wide text-muted-foreground border-b mb-1">
+                  {previewDevice === "mobile" ? t("rteFontSizeForMobile") : t("rteFontSizeForDesktop")}
+                </div>
                 <button
                   type="button"
                   onClick={() => applyFieldFontSize(null)}
