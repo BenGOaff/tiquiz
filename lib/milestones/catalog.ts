@@ -64,7 +64,7 @@ export const MILESTONE_CATALOG: MilestoneDefinition[] = [
   {
     key: "leads_100",
     emoji: "🏆",
-    title: "100 leads — ton lead magnet tourne",
+    title: "100 leads, ton lead magnet tourne",
     body: "100 prospects taggés. Ta machine à leads est lancée.",
     ctaLabel: "Voir mes leads",
     ctaUrl: "/leads",
@@ -73,7 +73,7 @@ export const MILESTONE_CATALOG: MilestoneDefinition[] = [
   {
     key: "leads_1000",
     emoji: "👑",
-    title: "1000 leads — palier de pro",
+    title: "1000 leads, palier de pro",
     body: "C'est rare. Tu as construit une vraie audience avec tes quiz.",
     ctaLabel: "Voir mes leads",
     ctaUrl: "/leads",
