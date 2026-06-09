@@ -62,22 +62,26 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 async function resolve(slug: string, ownerId: string): Promise<Resolved> {
-  const { data: quiz } = await supabaseAdmin
+  // Le `slug` peut être l'ID (UUID) du quiz : quand un quiz n'a pas de
+  // slug custom, l'éditeur construit l'URL live avec `quiz.id` (handle
+  // = slug ?? id) → sur custom domain ça donne `/<uuid>`. Sans le
+  // match par id ci-dessous, le quiz publie un lien qui 404 (drame
+  // Christelle 8 juin 2026, quiz.vacge.com/<uuid> mort silencieusement).
+  // On matche d'abord par id si c'est un UUID, sinon par slug.
+  const quizBase = supabaseAdmin
     .from("quizzes")
     .select("title, introduction, og_image_url, og_description, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id")
     .eq("user_id", ownerId)
-    .ilike("slug", slug)
-    .eq("status", "active")
-    .maybeSingle();
+    .eq("status", "active");
+  const { data: quiz } = await (
+    UUID_RE.test(slug) ? quizBase.eq("id", slug) : quizBase.ilike("slug", slug)
+  ).maybeSingle();
   if (quiz) return { kind: "quiz", meta: quiz };
 
   // Popquiz path: owner-gate first (cheap), then fetch the full object
   // only if it belongs to this domain's owner. fetchPublishedPopquiz
   // does not expose user_id on the returned shape, hence the split.
-  // Le `slug` peut être l'ID (UUID) : quand un popquiz n'a pas de slug
-  // custom, l'éditeur construit l'URL live avec `popquiz.id` (handle =
-  // slug ?? id) → sur custom domain ça donne `/<uuid>`. On matche donc
-  // par id si c'est un UUID, sinon par slug (sinon 404 systématique).
+  // Même règle UUID-or-slug que pour quizzes (cf. supra).
   const ownerGate = supabaseAdmin
     .from("popquizzes")
     .select("id")

@@ -253,12 +253,38 @@ export async function mergeOwnerBranding<T extends Record<string, unknown>>(
   ownerUserId: string,
   projectId: string | null | undefined,
 ): Promise<T> {
-  if (!projectId || !ownerUserId) return fallback;
+  if (!ownerUserId) return fallback;
   try {
     const eligible = await isOwnerMultiprofils(ownerUserId);
     if (!eligible) return fallback; // gate plan : préserve les non-multiprofils
 
-    const bp = await readBusinessProfile(ownerUserId, projectId);
+    // Drame Christelle 8 juin 2026 : les couleurs de branding ne
+    // remontaient pas au public viewer. Cause probable : quiz cree
+    // avant le wire du project_id, donc quiz.project_id = NULL alors
+    // que l'user a configure son branding dans le business_profile de
+    // son projet actif. Avant ce fix, on retournait directement
+    // fallback (= profiles, souvent vide pour les multiprofils car ils
+    // ecrivent sur business_profile). Maintenant : si projectId est
+    // null, on cherche le projet PAR DEFAUT de l'user et on prend son
+    // business_profile en backup. Garantit "1 utilisateur 1 branding"
+    // meme sur les quiz orphelins.
+    let resolvedProjectId = projectId?.trim() || null;
+    if (!resolvedProjectId) {
+      try {
+        const { data } = await supabaseAdmin
+          .from("projects")
+          .select("id")
+          .eq("user_id", ownerUserId)
+          .eq("is_default", true)
+          .maybeSingle();
+        resolvedProjectId = (data as { id?: string } | null)?.id ?? null;
+      } catch {
+        // Best effort : si projects table indispo, on retombe sur fallback.
+      }
+    }
+    if (!resolvedProjectId) return fallback;
+
+    const bp = await readBusinessProfile(ownerUserId, resolvedProjectId);
     if (!bp) return fallback;
 
     // Override NON-NULL : on prend business_profile en priorité, mais

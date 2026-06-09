@@ -93,7 +93,11 @@
     "rteTextColor": "لون النص",
     "rteRemoveColor": "إزالة اللون",
     "rteReset": "إعادة ضبط",
-    "rteCustom": "مخصّص"
+    "rteCustom": "مخصّص",
+    "rteFontSize": "حجم الخط",
+    "rteFontSizeReset": "الحجم الافتراضي",
+    "rteImageSize": "حجم الصورة:",
+    "rteImageSizeReset": "100%"
   },
   "nav": {
     "quizzes": "اختباراتي",

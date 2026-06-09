@@ -93,7 +93,11 @@
     "rteTextColor": "Cor do texto",
     "rteRemoveColor": "Remover cor",
     "rteReset": "Repor",
-    "rteCustom": "Personalizado"
+    "rteCustom": "Personalizado",
+    "rteFontSize": "Tamanho do texto",
+    "rteFontSizeReset": "Tamanho por defeito",
+    "rteImageSize": "Tamanho da imagem:",
+    "rteImageSizeReset": "100%"
   },
   "nav": {
     "dashboard": "Painel",

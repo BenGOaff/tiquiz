@@ -32,7 +32,7 @@ import {
   Sparkles, Loader2,
   Palette, Eraser, Wand2,
 } from "lucide-react";
-import { sanitizeRichText, isSafeUrl } from "@/lib/richText";
+import { sanitizeRichText, isSafeUrl, RICH_TEXT_FONT_SIZE_OPTIONS } from "@/lib/richText";
 import { QuizVarInserter, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { useUserPalettes } from "@/components/editor/PalettesContext";
 import {
@@ -113,6 +113,10 @@ export function RichTextEdit({
   // contentEditable, and `restoreSelection` puts the caret back exactly
   // where the user left it before applying foreColor.
   const [colorOpen, setColorOpen] = useState(false);
+  const [fontSizeOpen, setFontSizeOpen] = useState(false);
+  // Image selectionnee (pour resize). On track le <img> courant dans le
+  // contentEditable et on affiche un popover avec une dropdown de tailles.
+  const [selectedImg, setSelectedImg] = useState<HTMLImageElement | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
 
   const handleAIRewrite = useCallback(async (e: React.MouseEvent) => {
@@ -234,6 +238,87 @@ export function RichTextEdit({
       ref.current?.focus();
     },
     [restoreSelection],
+  );
+
+  // Applique une taille de police a la selection courante. Drame Christelle
+  // 8 juin 2026 : "je n'ai pas acces a la taille de la police". On enveloppe
+  // la selection dans un <span style="font-size: Xpx"> et on s'appuie sur
+  // la whitelist sanitizer (RICH_TEXT_FONT_SIZE_OPTIONS) pour garantir que
+  // la valeur survit au save. Si rien n'est selectionne, on no-op (sinon
+  // on inserait un span vide qui pourrait piéger le caret).
+  const applyFontSize = useCallback(
+    (sizePx: string | null) => {
+      if (typeof document === "undefined") return;
+      restoreSelection();
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) {
+        setFontSizeOpen(false);
+        return;
+      }
+      const range = sel.getRangeAt(0);
+      if (range.collapsed) {
+        setFontSizeOpen(false);
+        return;
+      }
+      if (sizePx === null) {
+        // Reset : retire les font-size des spans dans la selection.
+        // execCommand("removeFormat") strippe aussi bold/italic, donc on
+        // fait manuellement : on entoure la selection d'un span vide
+        // (no-op) et on laisse le sanitizer s'occuper du reste au save.
+        // Ici, on retire l'inline font-size des spans concernes.
+        const frag = range.cloneContents();
+        frag.querySelectorAll<HTMLElement>("span[style*='font-size']").forEach((el) => {
+          el.style.fontSize = "";
+          if (!el.getAttribute("style")) el.removeAttribute("style");
+        });
+        range.deleteContents();
+        range.insertNode(frag);
+      } else {
+        // Wrap la selection dans un span avec font-size inline. styleWithCSS
+        // + execCommand n'existe pas pour font-size en CSS, donc on fait
+        // l'insertion DOM manuelle qui est en plus plus fiable.
+        const span = document.createElement("span");
+        span.style.fontSize = sizePx;
+        try {
+          range.surroundContents(span);
+        } catch {
+          // surroundContents echoue si la selection traverse des
+          // boundaries de tags (ex. mi-paragraphe a mi-liste). Fallback :
+          // extract + wrap + insert. Moins propre mais ne crashe pas.
+          const frag = range.extractContents();
+          span.appendChild(frag);
+          range.insertNode(span);
+        }
+        // Repose la selection sur le contenu wrapped pour que l'user
+        // puisse continuer a taper en gardant la taille.
+        sel.removeAllRanges();
+        const newRange = document.createRange();
+        newRange.selectNodeContents(span);
+        sel.addRange(newRange);
+      }
+      setFontSizeOpen(false);
+      ref.current?.focus();
+    },
+    [restoreSelection],
+  );
+
+  // Applique une largeur (en %) a l'image actuellement selectionnee.
+  // Drame Christelle 8 juin 2026 : "impossible de redimensionner le GIF
+  // ajoute a la page d'intro". On set width directement en inline style ;
+  // le sanitizer accepte width sur <img> en px ou % (cf. richText.ts).
+  const applyImageWidth = useCallback(
+    (widthPct: string | null) => {
+      if (!selectedImg) return;
+      if (widthPct === null) {
+        selectedImg.style.width = "";
+      } else {
+        selectedImg.style.width = widthPct;
+      }
+      // Le commit du nouveau HTML se fait au prochain onBlur du
+      // contentEditable (pattern Tiquiz : commit paresseux). La
+      // modification DOM (img.style.width) est visible immediatement.
+    },
+    [selectedImg],
   );
 
   // Curated swatch palette — neutrals first (most useful for contrast
@@ -635,6 +720,48 @@ export function RichTextEdit({
             )}
           </div>
           <span className="w-px h-4 bg-border mx-0.5" />
+          {/* Font size dropdown — drame Christelle 8 juin 2026 : "je n'ai
+              pas acces a la taille de la police". Liste curee partagee
+              avec le sanitizer (RICH_TEXT_FONT_SIZE_OPTIONS). */}
+          <div className="relative">
+            <ToolbarBtn
+              onMouseDown={(e) => {
+                e.preventDefault();
+                if (!fontSizeOpen) saveSelection();
+                setFontSizeOpen((v) => !v);
+              }}
+              title={t("rteFontSize")}
+            >
+              <span className="text-[10px] font-semibold leading-none">Aa</span>
+            </ToolbarBtn>
+            {fontSizeOpen && (
+              <div
+                className="absolute z-30 top-full left-0 mt-1 w-24 rounded-lg border bg-background shadow-lg py-1"
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                {RICH_TEXT_FONT_SIZE_OPTIONS.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => applyFontSize(size)}
+                    className="w-full text-left px-2.5 py-1 text-xs hover:bg-muted"
+                    style={{ fontSize: size }}
+                  >
+                    {size.replace("px", "")}
+                  </button>
+                ))}
+                <div className="border-t my-1" />
+                <button
+                  type="button"
+                  onClick={() => applyFontSize(null)}
+                  className="w-full text-left px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted"
+                >
+                  {t("rteFontSizeReset")}
+                </button>
+              </div>
+            )}
+          </div>
+          <span className="w-px h-4 bg-border mx-0.5" />
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyLeft"); }} title={t("rteAlignLeft")}><AlignLeft className="w-3.5 h-3.5" /></ToolbarBtn>
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyCenter"); }} title={t("rteAlignCenter")}><AlignCenter className="w-3.5 h-3.5" /></ToolbarBtn>
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); exec("justifyRight"); }} title={t("rteAlignRight")}><AlignRight className="w-3.5 h-3.5" /></ToolbarBtn>
@@ -647,6 +774,35 @@ export function RichTextEdit({
           <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertLink(); }} title={t("rteInsertLink")}><LinkIcon className="w-3.5 h-3.5" /></ToolbarBtn>
           {!singleLine && <ToolbarBtn onMouseDown={(e) => { e.preventDefault(); onInsertImage(); }} title={onImageUpload ? t("rteUploadImage") : t("rteInsertImage")}>{uploadingDrop ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}</ToolbarBtn>}
           <input ref={fileInputRef} type="file" accept="image/*,image/gif" className="sr-only" onChange={onPickedImageFile} />
+          {/* Resize image popover — apparait UNIQUEMENT quand une <img>
+              est selectionnee (drame Christelle 8 juin 2026 : impossible
+              de redimensionner le GIF d'intro). 5 tailles cures (25 / 40
+              / 60 / 80 / 100 %), defaut "100% (auto)" en bas. */}
+          {selectedImg && !singleLine && (
+            <>
+              <span className="w-px h-4 bg-border mx-0.5" />
+              <span className="text-[10px] text-muted-foreground">{t("rteImageSize")}</span>
+              {["25%", "40%", "60%", "80%", "100%"].map((pct) => (
+                <button
+                  key={pct}
+                  type="button"
+                  onMouseDown={(e) => { e.preventDefault(); applyImageWidth(pct); }}
+                  className="text-[10px] px-1.5 py-0.5 rounded hover:bg-muted border border-border/50"
+                  title={pct}
+                >
+                  {pct}
+                </button>
+              ))}
+              <button
+                type="button"
+                onMouseDown={(e) => { e.preventDefault(); applyImageWidth(null); }}
+                className="text-[10px] px-1.5 py-0.5 rounded hover:bg-muted text-muted-foreground"
+                title={t("rteImageSizeReset")}
+              >
+                {t("rteReset")}
+              </button>
+            </>
+          )}
           {hasVars && (
             <>
               <span className="w-px h-4 bg-border mx-0.5" />
@@ -671,6 +827,16 @@ export function RichTextEdit({
           onDragOver={onDragOver}
           onDragLeave={onDragLeave}
           onDrop={onDrop}
+          // Click sur une <img> : track la cible pour afficher le popover
+          // de resize. Click ailleurs : reset. Bubbling natif suffit.
+          onClick={(e) => {
+            const target = e.target as HTMLElement | null;
+            if (target && target.tagName === "IMG") {
+              setSelectedImg(target as HTMLImageElement);
+            } else {
+              setSelectedImg(null);
+            }
+          }}
           // Bug récurrent (Béné) : sur les CTA blancs avec backgroundColor
           // sombre passés via className/style (text-white sur fond
           // primaire), le mode édition affichait du blanc-sur-blanc et

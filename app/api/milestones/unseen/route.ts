@@ -66,7 +66,8 @@ export async function GET() {
     if (!def) return [];
     return [
       {
-        id: row.id,
+        // BIGSERIAL -> string (cf. seen route, drame Gwenn 8 juin 2026).
+        id: String(row.id),
         key: row.milestone_key,
         emoji: def.emoji,
         title: def.title,

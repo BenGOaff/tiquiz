@@ -93,7 +93,11 @@
     "rteTextColor": "Colore del testo",
     "rteRemoveColor": "Rimuovi colore",
     "rteReset": "Reimposta",
-    "rteCustom": "Personalizzato"
+    "rteCustom": "Personalizzato",
+    "rteFontSize": "Dimensione testo",
+    "rteFontSizeReset": "Dimensione predefinita",
+    "rteImageSize": "Dimensione immagine:",
+    "rteImageSizeReset": "100%"
   },
   "nav": {
     "quizzes": "I miei quiz",

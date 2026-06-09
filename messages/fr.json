@@ -93,7 +93,11 @@
     "rteTextColor": "Couleur du texte",
     "rteRemoveColor": "Retirer la couleur",
     "rteReset": "Réinitialiser",
-    "rteCustom": "Personnalisée"
+    "rteCustom": "Personnalisée",
+    "rteFontSize": "Taille du texte",
+    "rteFontSizeReset": "Taille par défaut",
+    "rteImageSize": "Taille image :",
+    "rteImageSizeReset": "100%"
   },
   "nav": {
     "dashboard": "Tableau de bord",
