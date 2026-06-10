@@ -21,7 +21,11 @@ export function TutorialOverlay() {
   if (isBlockedRoute) return null;
 
   const isInSpotlight =
-    phase === "tour_dashboard" || phase === "tour_create" || phase === "tour_quizzes";
+    phase === "tour_dashboard" ||
+    phase === "tour_create" ||
+    phase === "tour_create_survey" ||
+    phase === "tour_quizzes" ||
+    phase === "tour_popquiz";
 
   return (
     <>

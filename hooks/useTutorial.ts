@@ -16,10 +16,11 @@ export type TutorialPhase =
   | "welcome"
   | "tour_dashboard"
   | "tour_create"
+  | "tour_create_survey"
   | "tour_quizzes"
+  | "tour_popquiz"
   | "tour_leads"
   | "tour_stats"
-  | "tour_settings"
   | "tour_complete"
   | "completed";
 
@@ -56,14 +57,24 @@ const TutorialContext = createContext<TutorialContextType | undefined>(undefined
 
 const FIRST_DAYS_WINDOW = 7;
 
+// Drame Gwenn 10 juin 2026 : page "Mes projets" grisée pendant le tour
+// mais AUCUN popup pour avancer → user bloqué. Cause : les étapes du
+// tour doivent matcher les keys RÉELLES de MENU_ITEMS (AppSidebar).
+// L'item "quizzes" a été renommé "projects" (fusion quiz + sondages
+// sous "Mes projets") et "settings" a été retiré de la sidebar (menu
+// avatar) SANS mettre à jour le tour. Règle : toute modif des keys de
+// MENU_ITEMS doit être répercutée ici (shouldHighlight + PHASE_ORDER).
+// Ordre = ordre des items dans la sidebar (MENU_ITEMS d'AppSidebar) :
+// dashboard, create, createSurvey, projects, popquiz, leads, stats.
 const PHASE_ORDER: TutorialPhase[] = [
   "welcome",
   "tour_dashboard",
   "tour_create",
+  "tour_create_survey",
   "tour_quizzes",
+  "tour_popquiz",
   "tour_leads",
   "tour_stats",
-  "tour_settings",
   "tour_complete",
   "completed",
 ];
@@ -71,10 +82,11 @@ const PHASE_ORDER: TutorialPhase[] = [
 export const PHASE_TO_URL: Partial<Record<TutorialPhase, string>> = {
   tour_dashboard: "/dashboard",
   tour_create: "/quiz/new",
+  tour_create_survey: "/survey/new",
   tour_quizzes: "/quizzes",
+  tour_popquiz: "/popquizzes",
   tour_leads: "/leads",
   tour_stats: "/stats",
-  tour_settings: "/settings",
   tour_complete: "/dashboard",
 };
 
@@ -154,10 +166,26 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
           false,
         );
 
-        const savedPhase = safeParseJson<TutorialPhase | null>(
+        const savedPhaseRaw = safeParseJson<string | null>(
           localStorage.getItem(userKey(user.id, "phase")),
           null,
         );
+        // Migration : l'étape "tour_settings" n'existe plus (Paramètres
+        // a quitté la sidebar pour le menu avatar). Un user resté bloqué
+        // dessus voit l'écran de fin une dernière fois, puis terminé.
+        let savedPhase = savedPhaseRaw as TutorialPhase | null;
+        if (savedPhaseRaw === "tour_settings") {
+          savedPhase = "tour_complete";
+          try {
+            localStorage.setItem(userKey(user.id, "done"), "true");
+            localStorage.setItem(
+              userKey(user.id, "phase"),
+              JSON.stringify("tour_complete"),
+            );
+          } catch {
+            // ignore
+          }
+        }
 
         const storedFirstSeen = localStorage.getItem(
           userKey(user.id, "first_seen_at"),
@@ -282,6 +310,9 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
   }, [phase, persistDone, setPhase]);
 
   const skipTutorial = useCallback(() => {
+    // "Pas maintenant" n'est PAS définitif (choix produit, miroir
+    // Tipote) : le welcome peut revenir pendant la fenêtre 7 jours.
+    // Le refus définitif passe par setTutorialOptOut (lien opt-out).
     setPhase("completed");
     setShowWelcome(false);
   }, [setPhase]);
@@ -314,10 +345,13 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
 
       if (phase === "tour_dashboard") return element === "dashboard";
       if (phase === "tour_create") return element === "create";
-      if (phase === "tour_quizzes") return element === "quizzes";
+      if (phase === "tour_create_survey") return element === "createSurvey";
+      // "projects" = key sidebar de la page /quizzes ("Mes projets",
+      // quiz + sondages fusionnés). PAS "quizzes" (drame Gwenn 10 juin).
+      if (phase === "tour_quizzes") return element === "projects";
+      if (phase === "tour_popquiz") return element === "popquiz";
       if (phase === "tour_leads") return element === "leads";
       if (phase === "tour_stats") return element === "stats";
-      if (phase === "tour_settings") return element === "settings";
 
       return false;
     },
@@ -328,13 +362,14 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     if (tutorialOptOut) return null;
 
     switch (phase) {
-      case "tour_dashboard":  return tTutorial("tooltipDashboard");
-      case "tour_create":     return tTutorial("tooltipCreate");
-      case "tour_quizzes":    return tTutorial("tooltipQuizzes");
-      case "tour_leads":      return tTutorial("tooltipLeads");
-      case "tour_stats":      return tTutorial("tooltipStats");
-      case "tour_settings":   return tTutorial("tooltipSettings");
-      case "tour_complete":   return tTutorial("tooltipComplete");
+      case "tour_dashboard":      return tTutorial("tooltipDashboard");
+      case "tour_create":         return tTutorial("tooltipCreate");
+      case "tour_create_survey":  return tTutorial("tooltipCreateSurvey");
+      case "tour_quizzes":        return tTutorial("tooltipQuizzes");
+      case "tour_popquiz":        return tTutorial("tooltipPopquiz");
+      case "tour_leads":          return tTutorial("tooltipLeads");
+      case "tour_stats":          return tTutorial("tooltipStats");
+      case "tour_complete":       return tTutorial("tooltipComplete");
       default:                return null;
     }
   }, [phase, tutorialOptOut, tTutorial]);

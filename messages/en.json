@@ -964,10 +964,11 @@
     "next": "Next",
     "tooltipDashboard": "Dashboard - your home page. Find your quizzes, key stats, and create a new quiz in one click.",
     "tooltipCreate": "Create a quiz - build one manually or let AI generate it for you. Set up questions, results, and SIO integrations.",
-    "tooltipQuizzes": "My quizzes - find all your quizzes here. Activate, edit, or delete them, and copy the public link in one click.",
+    "tooltipCreateSurvey": "Create a survey - ask your audience questions and collect their answers. Perfect for understanding your subscribers' needs.",
+    "tooltipQuizzes": "My projects - find all your quizzes and surveys here. Activate, edit, or delete your projects, and copy the public link in one click.",
+    "tooltipPopquiz": "Video popquiz - embed an interactive quiz in a video to capture leads while they watch.",
     "tooltipLeads": "My leads - all contacts captured by your quizzes. Export them or sync with Systeme.io.",
     "tooltipStats": "Statistics - track your quiz performance: views, completion rate, conversions, and shares.",
-    "tooltipSettings": "Settings - configure your language, Systeme.io API key, and default preferences.",
     "tooltipComplete": "Tour complete! Create your first quiz, set up Systeme.io, and share your link."
   },
   "quizEditor": {

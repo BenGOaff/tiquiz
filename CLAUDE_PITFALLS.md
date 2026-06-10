@@ -927,3 +927,35 @@ et tout re-pop à la session suivante (sessionStorage vidé).
 **Règle générale :** tout flag "déjà montré / déjà envoyé" qui
 conditionne une notification user DOIT être écrit en service-role par
 la route qui SERT le contenu, jamais en différé par le client.
+
+## Tour guidé : chaque phase tour_* DOIT avoir une ancre sidebar VIVANTE (10 juin 2026)
+
+Retour Gwenn 10 juin : pendant le tour guidé, la page "Mes projets"
+était grisée par l'overlay mais AUCUN popup pour continuer → user
+bloqué sur un écran gris. Cause : le tour (hooks/useTutorial.ts)
+référençait des keys d'items sidebar qui n'existaient plus :
+- `tour_quizzes` cherchait l'ancre "quizzes", renommée "projects"
+  quand quiz + sondages ont fusionné sous "Mes projets".
+- `tour_settings` cherchait "settings", retiré de la sidebar
+  (Paramètres vit dans le menu avatar). Étape supprimée du tour,
+  migration localStorage : phase sauvée "tour_settings" → écran de
+  fin + done.
+
+**Règle structurelle :** les `MENU_ITEMS` keys d'AppSidebar sont la
+source de vérité des ancres (`TutorialSpotlight elementId={item.key}`).
+TOUTE modif de la sidebar (rename, ajout, retrait d'item) DOIT être
+répercutée dans `hooks/useTutorial.ts` :
+1. `PHASE_ORDER` (ordre = ordre sidebar) + type `TutorialPhase`
+2. `PHASE_TO_URL`
+3. `shouldHighlight` (phase → key d'item)
+4. `currentTooltip` + clé i18n `tutorial.tooltip*` dans LES 7 LOCALES
+5. `TutorialOverlay.isInSpotlight` si l'étape doit griser la page
+6. Migration localStorage si une phase disparaît (sinon les users en
+   cours de tour retombent sur welcome ou restent bloqués)
+
+Tour actuel (7 étapes, miroir sidebar) : dashboard, create,
+createSurvey, projects, popquiz, leads, stats.
+
+Symptôme à reconnaître : "écran grisé sans popup" pendant le tour =
+phase sans ancre. Vérif rapide : chaque `tour_x` de shouldHighlight
+doit matcher une key de MENU_ITEMS.

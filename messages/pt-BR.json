@@ -964,10 +964,11 @@
     "next": "Próximo",
     "tooltipDashboard": "Painel - sua página inicial. Encontre seus quizzes, as estatísticas-chave e crie um novo quiz com um clique.",
     "tooltipCreate": "Criar um quiz - gere um quiz manualmente ou deixe a IA criá-lo para você. Configure suas perguntas, resultados e integrações SIO.",
-    "tooltipQuizzes": "Meus quizzes - encontre todos os seus quizzes aqui. Ative, edite ou exclua seus quizzes, e copie o link público com um clique.",
+    "tooltipCreateSurvey": "Criar uma pesquisa - faça perguntas à sua audiência e colete as respostas. Perfeito para conhecer as necessidades dos seus assinantes.",
+    "tooltipQuizzes": "Meus projetos - encontre todos os seus quizzes e pesquisas aqui. Ative, edite ou exclua seus projetos, e copie o link público com um clique.",
+    "tooltipPopquiz": "Popquiz de vídeo - incorpore um quiz interativo em um vídeo para capturar leads durante a exibição.",
     "tooltipLeads": "Meus leads - todos os contatos capturados pelos seus quizzes. Exporte-os ou sincronize com o Systeme.io.",
     "tooltipStats": "Estatísticas - acompanhe a performance dos seus quizzes: visualizações, taxa de conclusão, conversões e compartilhamentos.",
-    "tooltipSettings": "Configurações - configure seu idioma, sua chave API Systeme.io e suas preferências padrão.",
     "tooltipComplete": "Tour finalizado! Crie seu primeiro quiz, configure o Systeme.io e compartilhe seu link."
   },
   "quizEditor": {
