@@ -1,10 +1,17 @@
 // app/api/milestones/seen/route.ts (Tiquiz)
 //
 // POST { ids: string[] } : marque les milestones vus (seen_at = now()).
-// RLS force user_id = auth.uid() → impossible de marquer ceux d'autrui.
+//
+// Depuis le retour Gwenn 10 juin 2026, /unseen marque déjà seen_at au
+// moment où il sert le batch (at-most-once). Cette route reste comme
+// filet idempotent. Elle utilise le client SERVICE-ROLE scopé sur
+// user_id = auth.uid() : avant, l'UPDATE passait par le client RLS et
+// échouait en silence (0 ligne) si la policy UPDATE manquait en prod
+// → seen_at restait NULL → mêmes toasts à chaque connexion.
 
 import { NextRequest, NextResponse } from "next/server";
 
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +48,7 @@ export async function POST(req: NextRequest) {
   }
 
   const now = new Date();
-  const { error, count } = await supabase
+  const { error, count } = await supabaseAdmin
     .from("user_milestones")
     .update({ seen_at: now.toISOString() }, { count: "exact" })
     .eq("user_id", user.id)
@@ -55,11 +62,16 @@ export async function POST(req: NextRequest) {
 
   // Rate-limit serveur (Béné 3 juin 2026) : programme le prochain batch
   // dans 7 jours. La route /unseen filtre dessus → max 1×/semaine.
+  // Best-effort : colonne absente tant que la migration 20260611 n'est
+  // pas appliquée, on log sans bloquer.
   const nextAt = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
-  await supabase
+  const { error: rlErr } = await supabaseAdmin
     .from("profiles")
     .update({ next_milestone_toast_at: nextAt.toISOString() })
     .eq("user_id", user.id);
+  if (rlErr) {
+    console.error("[milestones/seen] rate-limit update failed", rlErr.message);
+  }
 
   return NextResponse.json({ ok: true, updated: count ?? 0 });
 }
