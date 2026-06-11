@@ -1108,3 +1108,28 @@ sont des comptes Tiquiz 100% standards sur l'infra de Béné.
   actor = revendeur). Le revendeur "garde la main" comme demandé.
 - Aperçu BDC pour Béné : /order/preview/<plan> (admin uniquement,
   données d'exemple).
+
+## Quiz public mobile : comportement tactile Typeform/Tally (12 juin 2026)
+
+Retour Béné : sur mobile, des réponses semblaient "préselectionnées"
+(surbrillance) sur les quiz. Deux causes cumulées :
+1. `commitAnswer` avançait INSTANTANÉMENT à la question suivante : le
+   bouton de la nouvelle question se rendait sous le doigt du visiteur
+   et récupérait le tap-highlight natif iOS/Android.
+2. Aucun `-webkit-tap-highlight-color` dans le CSS : voile gris natif
+   du navigateur à chaque tap.
+(Le hover collé, 3e cause classique, était déjà réglé par
+`future: { hoverOnlyWhenSupported: true }` dans tailwind.config,
+Adeline 17 mai.)
+
+**Standard verrouillé (NE PAS revenir en arrière) :**
+- Types à UN tap (option simple, oui/non, image, rating, star) : la
+  réponse s'affiche sélectionnée pendant ONE_TAP_ADVANCE_DELAY_MS
+  (350 ms) PUIS on avance. Re-tap pendant le délai = dernier choix
+  gagne (timer resetté, advanceTimerRef). Le tracking question_answer
+  part au moment de l'avance, pas du tap.
+- Commits via bouton "Suivant" (texte libre, multi-choix) : instantanés.
+- `html { -webkit-tap-highlight-color: transparent }` dans globals.css.
+- Boutons de réponse : `select-none` partout + `active:scale-[0.98]`
+  sur les gros boutons (press feedback).
+- Appliqué en MIROIR dans Tipote (même composant PublicQuizClient).
