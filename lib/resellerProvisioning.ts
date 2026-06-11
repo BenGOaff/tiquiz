@@ -16,9 +16,14 @@ import {
   logResellerAction,
   type ResellerRow,
 } from "@/lib/reseller";
+import { sendResellerAccessEmail } from "@/lib/resellerEmail";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim();
+/** Identité minimale du revendeur pour provisionner + envoyer l'email
+ * d'accès personnalisé (name + support_email, cf. lib/resellerEmail). */
+export type ProvisionReseller = Pick<ResellerRow, "id" | "name"> & {
+  support_email?: string | null;
+};
 
 export interface ProvisionResult {
   ok: boolean;
@@ -36,26 +41,12 @@ export interface ProvisionResult {
   newPlan?: string;
 }
 
-async function sendAccessEmail(email: string): Promise<boolean> {
-  const { createClient } = await import("@supabase/supabase-js");
-  const anonClient = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false } },
-  );
-  const { error } = await anonClient.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: `${APP_URL}/auth/callback`, shouldCreateUser: false },
-  });
-  return !error;
-}
-
 /**
  * Active (ou met à jour) le compte d'un client du revendeur sur le plan
  * donné. Crée le compte + envoie le magic link si l'email est nouveau.
  */
 export async function activateResellerClient(args: {
-  reseller: Pick<ResellerRow, "id">;
+  reseller: ProvisionReseller;
   email: string;
   plan: string;
   source: string; // ex. "webhook", "panel" — pour l'audit
@@ -164,7 +155,7 @@ export async function activateResellerClient(args: {
       reason: `reseller_${source}:${args.reseller.id}`,
     });
 
-    const sent = await sendAccessEmail(email);
+    const sent = await sendResellerAccessEmail({ reseller: args.reseller, email });
 
     await logResellerAction({
       resellerId: args.reseller.id,
@@ -187,7 +178,7 @@ export async function activateResellerClient(args: {
  * Le compte et ses contenus sont conservés (jamais de suppression auto).
  */
 export async function cancelResellerClient(args: {
-  reseller: Pick<ResellerRow, "id">;
+  reseller: ProvisionReseller;
   email: string;
   source: string;
   actorUserId?: string | null;

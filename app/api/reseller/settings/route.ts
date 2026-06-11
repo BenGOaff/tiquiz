@@ -38,6 +38,7 @@ export async function GET() {
     pricing: session.reseller.pricing ?? {},
     webhook_token: session.reseller.webhook_token ?? null,
     slug: session.reseller.slug ?? null,
+    support_email: session.reseller.support_email ?? null,
   });
 }
 
@@ -117,7 +118,27 @@ export async function PUT(req: NextRequest) {
       actions.push("update_pricing");
     }
 
-    // 3. Rotation du secret webhook (si le token a fuité).
+    // 3. Contact support du revendeur : affiché dans les emails d'accès
+    //    de ses clients (reply-to). Chaîne vide = retour au template
+    //    Supabase par défaut.
+    if (body?.support_email !== undefined) {
+      const raw = body.support_email;
+      if (raw === null || raw === "") {
+        updates.support_email = null;
+        actions.push("update_support_email");
+      } else if (
+        typeof raw === "string" &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(raw.trim()) &&
+        raw.trim().length <= 120
+      ) {
+        updates.support_email = raw.trim().toLowerCase();
+        actions.push("update_support_email");
+      } else {
+        return NextResponse.json({ ok: false, error: "invalid_support_email" }, { status: 400 });
+      }
+    }
+
+    // 4. Rotation du secret webhook (si le token a fuité).
     if (body?.regenerate_webhook_token === true) {
       updates.webhook_token =
         crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
@@ -132,7 +153,7 @@ export async function PUT(req: NextRequest) {
       .from("resellers")
       .update(updates)
       .eq("id", session.reseller.id)
-      .select("checkout_urls,pricing,webhook_token,slug")
+      .select("checkout_urls,pricing,webhook_token,slug,support_email")
       .single();
     if (error) throw error;
 
@@ -151,6 +172,7 @@ export async function PUT(req: NextRequest) {
       pricing: updated.pricing ?? {},
       webhook_token: updated.webhook_token ?? null,
       slug: updated.slug ?? null,
+      support_email: updated.support_email ?? null,
     });
   } catch (e) {
     console.error("[reseller/settings] PUT failed", (e as Error).message);

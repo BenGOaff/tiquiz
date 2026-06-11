@@ -36,6 +36,9 @@ export interface ResellerRow {
   webhook_token: string | null;
   /** Identifiant public des bons de commande hébergés (/order/<slug>/<plan>). */
   slug: string | null;
+  /** Contact support du revendeur, affiché dans les emails d'accès de
+   * ses clients (reply-to). NULL = template Supabase par défaut. */
+  support_email: string | null;
   /** Tarifs du revendeur par plan.
    * - label : texte libre affiché sur le bon de commande hébergé
    *   (ex. "19 € / mois"). Affichage uniquement.
@@ -66,7 +69,7 @@ export async function getResellerSession(): Promise<ResellerSession | null> {
   const { data, error } = await supabaseAdmin
     .from("resellers")
     .select(
-      "id,user_id,name,status,commission_tiers,checkout_urls,webhook_token,slug,pricing,created_at",
+      "id,user_id,name,status,commission_tiers,checkout_urls,webhook_token,slug,pricing,support_email,created_at",
     )
     .eq("user_id", user.id)
     .maybeSingle();

@@ -1855,6 +1855,12 @@
     "poweredBy": "Powered by Tiquiz"
   },
   "reseller": {
+    "support": {
+      "title": "Your support contact",
+      "desc": "This email appears in the access emails sent to your clients: they contact you if anything goes wrong, not Tiquiz.",
+      "label": "Support email",
+      "hint": "While this field is empty, your clients receive the standard Tiquiz access email. Once filled, they receive an email in your name with your contact, and their replies land directly in your inbox."
+    },
     "title": "Reseller area",
     "subtitle": "{name} area: your clients, your order forms and your billing, all automated.",
     "refresh": "Refresh",

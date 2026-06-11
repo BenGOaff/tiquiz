@@ -103,14 +103,19 @@ async function findResellerByToken(token: string) {
   if (!token || token.length < 16) return null;
   const { data, error } = await supabaseAdmin
     .from("resellers")
-    .select("id,name,status")
+    .select("id,name,status,support_email")
     .eq("webhook_token", token)
     .maybeSingle();
   if (error) {
     console.error("[reseller-webhook] lookup failed", error.message);
     return null;
   }
-  return data as { id: string; name: string; status: string } | null;
+  return data as {
+    id: string;
+    name: string;
+    status: string;
+    support_email: string | null;
+  } | null;
 }
 
 // GET — ping de test (à utiliser depuis le navigateur ou curl pour

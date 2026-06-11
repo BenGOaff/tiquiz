@@ -1071,6 +1071,22 @@ sont des comptes Tiquiz 100% standards sur l'infra de Béné.
 - Le tarif déclaré (amount_cents) se saisit dans l'onglet Modes de
   paiement, le label affiché dans l'onglet Bons de commande.
 
+**Email d'accès personnalisé par revendeur (12 juin) :**
+- `lib/resellerEmail.ts` : sendResellerAccessEmail. Si RESEND_API_KEY
+  ET resellers.support_email sont renseignés -> generateLink (magic
+  link SANS email Supabase) + envoi Resend (pattern lib/email.ts de
+  Tipote, fetch direct) : nom du revendeur dans le corps, reply-to =
+  son support_email, bilingue FR+EN (locale client inconnue à la
+  création). SINON fallback automatique signInWithOtp (template
+  Supabase global signé Béné) : rien ne casse jamais.
+- support_email saisi dans l'onglet Mes clients du panel (migration
+  20260612_resellers_support_email.sql).
+- Env Tiquiz requis pour activer : RESEND_API_KEY (+ optionnel
+  RESELLER_FROM_EMAIL, défaut SUPPORT_FROM_EMAIL puis hello@tipote.com,
+  le domaine doit être vérifié dans Resend).
+- Tous les canaux passent par sendResellerAccessEmail (provisioning
+  lib + routes clients). L'admin Béné garde le flux OTP standard.
+
 **Phase 2 livrée (12 juin, nuit) : commission mensuelle automatique.**
 - Table `reseller_invoices` (migration 20260611_resellers_v3_invoices) :
   1 facture / revendeur / mois (period YYYY-MM, index unique, montants

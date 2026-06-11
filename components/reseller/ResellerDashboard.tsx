@@ -108,6 +108,8 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
   const [pricingAmounts, setPricingAmounts] = useState<Record<string, string>>({});
   const [webhookToken, setWebhookToken] = useState<string | null>(null);
   const [slug, setSlug] = useState<string | null>(null);
+  const [supportEmail, setSupportEmail] = useState("");
+  const [savingSupport, setSavingSupport] = useState(false);
 
   // ----- état UI -----
   const [search, setSearch] = useState("");
@@ -179,9 +181,34 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
         setPricingAmounts(amounts);
         setWebhookToken(json.webhook_token ?? null);
         setSlug(json.slug ?? null);
+        setSupportEmail(json.support_email ?? "");
       }
     } catch {
       /* silencieux */
+    }
+  };
+
+  const saveSupportEmail = async () => {
+    setSavingSupport(true);
+    try {
+      const res = await fetch("/api/reseller/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ support_email: supportEmail.trim() }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setSupportEmail(json.support_email ?? "");
+        toast.success(t("saved"));
+      } else if (json.error === "invalid_support_email") {
+        toast.error(t("toasts.invalidEmail"));
+      } else {
+        toast.error(t("toasts.error"));
+      }
+    } catch {
+      toast.error(t("toasts.error"));
+    } finally {
+      setSavingSupport(false);
     }
   };
 
@@ -551,6 +578,32 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
                   )}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-4">
+              <h2 className="text-sm font-semibold mb-1">{t("support.title")}</h2>
+              <p className="text-xs text-muted-foreground mb-3">{t("support.desc")}</p>
+              <div className="flex items-end gap-3 flex-wrap">
+                <div className="flex-1 min-w-[220px] space-y-1">
+                  <label className="text-xs font-medium">{t("support.label")}</label>
+                  <Input
+                    type="email"
+                    value={supportEmail}
+                    onChange={(e) => setSupportEmail(e.target.value)}
+                    placeholder="support@monsite.com"
+                  />
+                </div>
+                <Button onClick={saveSupportEmail} disabled={savingSupport} size="sm">
+                  {savingSupport ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    t("saveBtn")
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">{t("support.hint")}</p>
             </CardContent>
           </Card>
 

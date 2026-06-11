@@ -1871,6 +1871,12 @@
     "poweredBy": "Impulsado por Tiquiz"
   },
   "reseller": {
+    "support": {
+      "title": "Tu contacto de soporte",
+      "desc": "Este email aparece en los emails de acceso enviados a tus clientes: te contactan a ti si hay algún problema, no a Tiquiz.",
+      "label": "Email de soporte",
+      "hint": "Mientras este campo esté vacío, tus clientes reciben el email de acceso estándar de Tiquiz. Una vez completado, reciben un email a tu nombre con tu contacto, y sus respuestas llegan directamente a ti."
+    },
     "title": "Espacio revendedor",
     "subtitle": "Espacio {name}: tus clientes, tus páginas de pedido y tu facturación, todo automatizado.",
     "refresh": "Actualizar",

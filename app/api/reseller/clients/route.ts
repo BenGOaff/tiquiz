@@ -22,6 +22,7 @@ import {
   isResellerAllowedPlan,
   logResellerAction,
 } from "@/lib/reseller";
+import { sendResellerAccessEmail } from "@/lib/resellerEmail";
 import {
   activateResellerClient,
   cancelResellerClient,
@@ -31,8 +32,6 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim();
-
 interface ClientProfileRow {
   user_id: string;
   email: string | null;
@@ -40,23 +39,6 @@ interface ClientProfileRow {
   last_name: string | null;
   plan: string;
   created_at: string;
-}
-
-async function sendAccessEmail(email: string): Promise<{ ok: boolean; error?: string }> {
-  // Magic link via le flux OTP standard Tiquiz (même pattern que
-  // l'admin Béné : shouldCreateUser false, l'user doit déjà exister).
-  const { createClient } = await import("@supabase/supabase-js");
-  const anonClient = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false } },
-  );
-  const { error } = await anonClient.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: `${APP_URL}/auth/callback`, shouldCreateUser: false },
-  });
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
 }
 
 // GET — clients du revendeur + agrégats d'usage (compteurs uniquement)
@@ -210,7 +192,8 @@ export async function POST(req: NextRequest) {
 
     if (existingProfile && existingProfile.reseller_id === session.reseller.id) {
       // Déjà dans son portefeuille : idempotent, on renvoie juste l'accès.
-      const sent = await sendAccessEmail(email);
+      const sentOk = await sendResellerAccessEmail({ reseller: session.reseller, email });
+      const sent = { ok: sentOk };
       await logResellerAction({
         resellerId: session.reseller.id,
         actorUserId: session.userId,
@@ -262,7 +245,8 @@ export async function POST(req: NextRequest) {
       reason: `reseller_create:${session.reseller.id}`,
     });
 
-    const sent = await sendAccessEmail(email);
+    const sentOk = await sendResellerAccessEmail({ reseller: session.reseller, email });
+      const sent = { ok: sentOk };
 
     await logResellerAction({
       resellerId: session.reseller.id,
@@ -342,7 +326,8 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "unknown_op" }, { status: 400 });
     }
 
-    const sent = await sendAccessEmail(profile.email);
+    const sentOk = await sendResellerAccessEmail({ reseller: session.reseller, email: profile.email });
+    const sent = { ok: sentOk };
     if (!sent.ok) {
       return NextResponse.json({ ok: false, error: "send_failed" }, { status: 400 });
     }

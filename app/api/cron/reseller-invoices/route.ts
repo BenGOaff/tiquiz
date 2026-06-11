@@ -4,7 +4,13 @@
 // Tipote de chaque revendeur actif pour le mois en cours.
 //
 // À lancer le 1er de chaque mois (ou n'importe quand : idempotent, une
-// seule facture par revendeur et par mois grâce à l'index unique) :
+// seule facture par revendeur et par mois grâce à l'index unique).
+//
+// Crontab VPS (pattern maison, cf. affiliate-trial-expiry) :
+//   0 6 1 * * cd /home/tipote/tiquiz-app && set -a; . .env; set +a; curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://quiz.tipote.com/api/cron/reseller-invoices >> /tmp/reseller-invoices.log 2>&1
+//
+// Vérif que c'est bien planifié : `crontab -l | grep reseller-invoices`
+// Test manuel :
 //   curl -fsS -H "Authorization: Bearer $CRON_SECRET" \
 //     https://quiz.tipote.com/api/cron/reseller-invoices
 //
