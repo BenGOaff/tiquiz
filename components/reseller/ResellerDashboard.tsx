@@ -51,6 +51,12 @@ type Client = {
 
 const CREATABLE_PLANS = ["free", "monthly", "yearly", "monthly_plus", "yearly_plus"] as const;
 
+// Plans payants pour lesquels le revendeur configure SES bons de
+// commande. Ses clients voient ces URLs dans Réglages -> Abonnement à
+// la place des BDC tipote.fr : ils le payent LUI, pas Béné. Plan sans
+// URL = pas de CTA affiché chez ses clients.
+const CHECKOUT_PLAN_KEYS = ["monthly", "yearly", "monthly_plus", "yearly_plus"] as const;
+
 const DAY_MS = 24 * 3600 * 1000;
 
 function daysAgo(iso: string | null): number | null {
@@ -72,6 +78,9 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
   const [newPlan, setNewPlan] = useState<string>("free");
   const [creating, setCreating] = useState(false);
 
+  const [checkoutUrls, setCheckoutUrls] = useState<Record<string, string>>({});
+  const [savingCheckout, setSavingCheckout] = useState(false);
+
   const fetchClients = async () => {
     setLoading(true);
     try {
@@ -88,8 +97,38 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
 
   useEffect(() => {
     fetchClients();
+    fetch("/api/reseller/settings", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (json?.ok) setCheckoutUrls(json.checkout_urls ?? {});
+      })
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const saveCheckoutUrls = async () => {
+    setSavingCheckout(true);
+    try {
+      const res = await fetch("/api/reseller/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ checkout_urls: checkoutUrls }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setCheckoutUrls(json.checkout_urls ?? {});
+        toast.success(t("checkout.saved"));
+      } else if (json.error === "invalid_url") {
+        toast.error(t("checkout.invalidUrl", { plan: json.plan ?? "" }));
+      } else {
+        toast.error(t("toasts.error"));
+      }
+    } catch {
+      toast.error(t("toasts.error"));
+    } finally {
+      setSavingCheckout(false);
+    }
+  };
 
   const createClient = async () => {
     const email = newEmail.trim();
@@ -303,6 +342,36 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-2">{t("create.hint")}</p>
+        </CardContent>
+      </Card>
+
+      {/* Bons de commande du revendeur */}
+      <Card>
+        <CardContent className="pt-4 space-y-3">
+          <h2 className="text-sm font-semibold">{t("checkout.title")}</h2>
+          <p className="text-xs text-muted-foreground">{t("checkout.desc")}</p>
+          <div className="grid gap-3 md:grid-cols-2">
+            {CHECKOUT_PLAN_KEYS.map((key) => (
+              <div key={key} className="space-y-1">
+                <label className="text-xs font-medium">{t(`checkout.plans.${key}`)}</label>
+                <Input
+                  type="url"
+                  value={checkoutUrls[key] ?? ""}
+                  onChange={(e) =>
+                    setCheckoutUrls((prev) => ({ ...prev, [key]: e.target.value }))
+                  }
+                  placeholder="https://..."
+                />
+              </div>
+            ))}
+          </div>
+          <Button onClick={saveCheckoutUrls} disabled={savingCheckout} size="sm">
+            {savingCheckout ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              t("checkout.saveBtn")
+            )}
+          </Button>
         </CardContent>
       </Card>
 

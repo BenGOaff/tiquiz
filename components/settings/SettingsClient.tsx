@@ -176,6 +176,24 @@ export default function SettingsClient() {
   const [tipoteAffiliateId, setTipoteAffiliateId] = useState("");
   const [savingAffiliate, setSavingAffiliate] = useState(false);
 
+  // Clients gérés par un revendeur : leurs CTA d'achat pointent vers les
+  // bons de commande du REVENDEUR, jamais vers les BDC tipote.fr (sinon
+  // ils payeraient Béné au lieu de leur revendeur). managed=true sans URL
+  // pour un plan = pas de CTA du tout (pas de fallback, volontairement).
+  const [managedBilling, setManagedBilling] = useState<{
+    managed: boolean;
+    urls: Record<string, string>;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/billing/checkout-urls", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.ok) setManagedBilling({ managed: !!data.managed, urls: data.urls ?? {} });
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     fetch("/api/profile")
       .then((r) => r.json())
@@ -897,6 +915,21 @@ export default function SettingsClient() {
                 plan.id === "pro_yearly" ||
                 plan.id === "pro_monthly_plus" ||
                 plan.id === "pro_yearly_plus";
+              // URL effective du CTA : BDC tipote.fr par défaut, BDC du
+              // revendeur si le compte est dans un portefeuille. Client
+              // géré + plan non configuré par son revendeur = pas de CTA
+              // (surtout PAS de fallback vers les BDC Béné).
+              const planKey = (
+                {
+                  pro_monthly: "monthly",
+                  pro_yearly: "yearly",
+                  pro_monthly_plus: "monthly_plus",
+                  pro_yearly_plus: "yearly_plus",
+                } as Record<string, string>
+              )[plan.id];
+              const effectiveCheckoutUrl = managedBilling?.managed
+                ? (planKey ? managedBilling.urls[planKey] ?? null : null)
+                : plan.checkoutUrl;
               return (
                 <Card key={plan.id} className={`relative overflow-visible ${('popular' in plan && plan.popular) ? "border-primary ring-1 ring-primary" : ""}`}>
                   {('popular' in plan && plan.popular) && (
@@ -931,13 +964,13 @@ export default function SettingsClient() {
                       </div>
                     ) : isCurrent ? (
                       <div className="text-center text-sm font-medium text-muted-foreground py-2 border rounded-full">{t("currentPlan")}</div>
-                    ) : plan.ctaKey && plan.checkoutUrl ? (
+                    ) : plan.ctaKey && effectiveCheckoutUrl ? (
                       // CTA universel : peu importe upgrade OU downgrade,
                       // c'est le même flow (checkout SIO du nouveau plan).
                       // Le webhook auto-cancel l'ancien sub côté SIO et
                       // upsert profiles.plan. Cf. webhook route.ts.
                       <Button className="w-full rounded-full" variant={('popular' in plan && plan.popular) ? "default" : "outline"} asChild>
-                        <a href={plan.checkoutUrl} target="_blank" rel="noopener noreferrer">{t(plan.ctaKey)} <ArrowRight className="h-4 w-4 ml-1.5" /></a>
+                        <a href={effectiveCheckoutUrl} target="_blank" rel="noopener noreferrer">{t(plan.ctaKey)} <ArrowRight className="h-4 w-4 ml-1.5" /></a>
                       </Button>
                     ) : null}
                   </CardContent>
@@ -948,7 +981,9 @@ export default function SettingsClient() {
           {isLifetimePlan ? (
             <p className="text-xs text-muted-foreground text-center">{t("lifetimeNote")}</p>
           ) : (
-            <p className="text-xs text-muted-foreground text-center">{t("paymentsManaged")}</p>
+            <p className="text-xs text-muted-foreground text-center">
+              {managedBilling?.managed ? t("paymentsManagedReseller") : t("paymentsManaged")}
+            </p>
           )}
 
           <PasswordSection />

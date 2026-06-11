@@ -103,6 +103,7 @@
     "rteImageSizeReset": "100%"
   },
   "nav": {
+    "resellerAdmin": "Admin",
     "dashboard": "Painel",
     "quizzes": "Os meus quizzes",
     "create": "Criar um quiz",
@@ -762,6 +763,7 @@
     "popular": "Popular",
     "currentPlan": "Plano atual",
     "paymentsManaged": "Os pagamentos são geridos pelo Systeme.io. Podes mudar de plano em qualquer momento.",
+    "paymentsManagedReseller": "Os teus pagamentos são geridos pelo teu fornecedor. Contacta-o para qualquer questão de faturação.",
     "dangerZone": "Zona de perigo",
     "dangerZoneDesc": "Estas ações são irreversíveis",
     "deleteAccount": "Eliminar a minha conta",
@@ -1862,12 +1864,25 @@
     }
   },
   "reseller": {
+    "checkout": {
+      "title": "As minhas páginas de pagamento",
+      "desc": "Indica aqui os URLs das TUAS páginas de pagamento (Stripe, PayPal...), um por plano. Os teus clientes verão estes links nas suas Definições em vez das páginas Tiquiz: pagam-te diretamente a ti. Um plano sem URL não mostra nenhum botão de compra aos teus clientes.",
+      "plans": {
+        "monthly": "Plano mensal",
+        "yearly": "Plano anual",
+        "monthly_plus": "Plano mensal plus",
+        "yearly_plus": "Plano anual plus"
+      },
+      "saveBtn": "Guardar as minhas páginas de pagamento",
+      "saved": "Páginas de pagamento guardadas.",
+      "invalidUrl": "URL inválido para o plano {plan}: é necessário um endereço https completo."
+    },
     "title": "Espaço revendedor",
     "subtitle": "Carteira {name}: os teus clientes Tiquiz, as suas contas e a sua atividade.",
     "refresh": "Atualizar",
     "stats": {
       "totalClients": "Clientes",
-      "paidClients": "Clientes pagantes",
+      "paidClients": "Licenças (pagantes)",
       "active30": "Ativos 30 dias",
       "totalLeads": "Leads captados"
     },
@@ -1928,11 +1943,15 @@
       "nameLabel": "Nome do revendedor",
       "namePlaceholder": "Nome apresentado",
       "promoteBtn": "Promover a revendedor",
-      "hint": "O utilizador já deve ter uma conta Tiquiz. Depois de promovido, acede ao seu painel em /reseller e pode criar contas de clientes.",
+      "hint": "Colocar um email na lista = torna-se revendedor. Se o email ainda não tiver conta Tiquiz, a conta é criada e o email de acesso enviado automaticamente. O revendedor passa a ver uma entrada Admin na sua barra lateral.",
       "columns": {
         "name": "Nome",
         "email": "Email",
-        "clients": "Clientes",
+        "accounts": "Contas",
+        "licences": "Licenças",
+        "free": "Gratuitos",
+        "plans": "Detalhe planos",
+        "rate": "Taxa atual",
         "status": "Estado",
         "actions": "Ações"
       },
@@ -1942,6 +1961,7 @@
       "activateBtn": "Reativar",
       "toasts": {
         "promoted": "{email} é agora revendedor.",
+        "promotedNew": "Conta criada e {email} promovido a revendedor. Email de acesso enviado.",
         "userNotFound": "Nenhuma conta Tiquiz com este email.",
         "alreadyReseller": "Este utilizador já é revendedor.",
         "suspended": "Revendedor suspenso. Os seus clientes não são afetados.",

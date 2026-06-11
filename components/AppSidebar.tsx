@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   LayoutDashboard,
@@ -12,6 +13,7 @@ import {
   PanelLeftClose,
   HelpCircle,
   MessageCircleQuestion,
+  ShieldCheck,
   Video,
   HandCoins,
 } from "lucide-react";
@@ -82,6 +84,51 @@ const MENU_ITEMS = [
   { key: "stats", url: "/stats", icon: BarChart3, end: false },
 ] as const;
 
+// Entrée "Admin" visible UNIQUEMENT pour les revendeurs (lien vers leur
+// panel /reseller). Le statut vient de /api/reseller/me, vérifié SERVEUR
+// à chaque mount (table resellers + status active, lié au compte auth,
+// pas à un cache navigateur) : un client normal reçoit false et ne voit
+// rien. Pas de cache volontairement (exigence "super safe" Béné) : la
+// sécurité réelle reste de toute façon côté serveur, la page /reseller
+// et toutes les API re-vérifient la session.
+function ResellerAdminItem() {
+  const t = useTranslations("nav");
+  const [isReseller, setIsReseller] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch("/api/reseller/me", { credentials: "same-origin", cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (cancelled) return;
+        setIsReseller(Boolean(json?.ok && json?.is_reseller));
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!isReseller) return null;
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild>
+        <NavLink
+          to="/reseller"
+          className={MENU_ITEM_CLASS}
+          activeClassName={MENU_ITEM_ACTIVE_CLASS}
+        >
+          <ShieldCheck className="w-5 h-5" />
+          <span>{t("resellerAdmin")}</span>
+        </NavLink>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
 function SidebarCollapseButton() {
   const { toggleSidebar } = useSidebar();
   const t = useTranslations("common");
@@ -139,6 +186,7 @@ export function AppSidebar() {
                   </TutorialSpotlight>
                 </SidebarMenuItem>
               ))}
+              <ResellerAdminItem />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

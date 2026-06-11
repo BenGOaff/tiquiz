@@ -24,6 +24,12 @@ type Reseller = {
   email: string | null;
   status: "active" | "suspended";
   client_count: number;
+  // Licence = compte payant (mensuel, annuel, plus ou normal). Un
+  // compte gratuit n'est PAS une licence (définition Béné 11 juin 2026).
+  licence_count: number;
+  free_count: number;
+  by_plan: Record<string, number>;
+  current_rate: number;
   created_at: string;
 };
 
@@ -64,7 +70,11 @@ export default function ResellersCard() {
       });
       const json = await res.json();
       if (json.ok) {
-        toast.success(t("toasts.promoted", { email: email.trim() }));
+        toast.success(
+          json.account_created
+            ? t("toasts.promotedNew", { email: email.trim() })
+            : t("toasts.promoted", { email: email.trim() }),
+        );
         setEmail("");
         setName("");
         fetchResellers();
@@ -154,7 +164,11 @@ export default function ResellersCard() {
               <tr className="border-b bg-muted/50 text-left">
                 <th className="px-3 py-2 font-medium">{t("columns.name")}</th>
                 <th className="px-3 py-2 font-medium">{t("columns.email")}</th>
-                <th className="px-3 py-2 font-medium">{t("columns.clients")}</th>
+                <th className="px-3 py-2 font-medium">{t("columns.accounts")}</th>
+                <th className="px-3 py-2 font-medium">{t("columns.licences")}</th>
+                <th className="px-3 py-2 font-medium">{t("columns.free")}</th>
+                <th className="px-3 py-2 font-medium">{t("columns.plans")}</th>
+                <th className="px-3 py-2 font-medium">{t("columns.rate")}</th>
                 <th className="px-3 py-2 font-medium">{t("columns.status")}</th>
                 <th className="px-3 py-2 font-medium">{t("columns.actions")}</th>
               </tr>
@@ -165,6 +179,19 @@ export default function ResellersCard() {
                   <td className="px-3 py-2 font-medium">{r.name}</td>
                   <td className="px-3 py-2 text-muted-foreground">{r.email}</td>
                   <td className="px-3 py-2">{r.client_count}</td>
+                  <td className="px-3 py-2">
+                    <Badge className="bg-green-100 text-green-700">{r.licence_count}</Badge>
+                  </td>
+                  <td className="px-3 py-2 text-muted-foreground">{r.free_count}</td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground">
+                    {Object.entries(r.by_plan)
+                      .filter(([plan]) => plan !== "free")
+                      .map(([plan, n]) => `${plan}: ${n}`)
+                      .join(", ") || "-"}
+                  </td>
+                  <td className="px-3 py-2 font-medium">
+                    {Math.round(r.current_rate * 100)}%
+                  </td>
                   <td className="px-3 py-2">
                     <Badge
                       className={

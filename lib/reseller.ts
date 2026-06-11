@@ -22,6 +22,10 @@ export interface ResellerRow {
   name: string;
   status: "active" | "suspended";
   commission_tiers: Array<{ max_active: number | null; rate: number }>;
+  /** URLs des bons de commande du revendeur, une par plan payant
+   * (monthly, yearly, monthly_plus, yearly_plus). Affichées à SES
+   * clients à la place des BDC tipote.fr. */
+  checkout_urls: Partial<Record<string, string>>;
   created_at: string;
 }
 
@@ -44,7 +48,7 @@ export async function getResellerSession(): Promise<ResellerSession | null> {
 
   const { data, error } = await supabaseAdmin
     .from("resellers")
-    .select("id,user_id,name,status,commission_tiers,created_at")
+    .select("id,user_id,name,status,commission_tiers,checkout_urls,created_at")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -102,8 +106,10 @@ export function isResellerAllowedPlan(plan: unknown): plan is ResellerAllowedPla
   );
 }
 
-/** Plans payants = clients "actifs" au sens commission (Béné ne touche
- * que si le revendeur touche). */
+/** LICENCE (définition Béné 11 juin 2026) : un compte PAYANT, quel que
+ * soit le plan (mensuel, annuel, plus ou normal). Un compte gratuit
+ * n'est PAS une licence. Béné ne prend commission que sur les licences :
+ * "je ne touche que s'il touche". */
 export const PAID_PLANS = [
   "monthly",
   "yearly",
@@ -114,4 +120,24 @@ export const PAID_PLANS = [
 
 export function isPaidPlan(plan: string | null | undefined): boolean {
   return Boolean(plan && (PAID_PLANS as readonly string[]).includes(plan));
+}
+
+/** Barème Béné (11 juin 2026), paliers sur le nombre de LICENCES :
+ * 1 à 200 -> 40%, 201 à 1000 -> 35%, 1001 à 2000 -> 30%,
+ * 2001 à 3000 -> 25%, 3001 et plus -> 20%.
+ * Le palier s'applique en fonction du nombre de licences actives
+ * (bornes incluses : 200 licences -> 40%, 201 -> 35%). */
+export function commissionRateFor(
+  licences: number,
+  tiers: ResellerRow["commission_tiers"],
+): number {
+  const sorted = [...(tiers ?? [])].sort((a, b) => {
+    if (a.max_active === null) return 1;
+    if (b.max_active === null) return -1;
+    return a.max_active - b.max_active;
+  });
+  for (const tier of sorted) {
+    if (tier.max_active === null || licences <= tier.max_active) return tier.rate;
+  }
+  return sorted.length > 0 ? sorted[sorted.length - 1].rate : 0;
 }

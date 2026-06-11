@@ -31,8 +31,12 @@ CREATE TABLE IF NOT EXISTS public.resellers (
   name TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended')),
   -- Barème de commission validé par Béné le 11 juin 2026. Paliers sur le
-  -- nombre de clients ACTIFS (= payants) : max_active NULL = palier final.
-  -- Exploité en phase 2 (facturation auto). Modifiable par revendeur.
+  -- nombre de LICENCES : licence = compte PAYANT quel que soit le plan
+  -- (mensuel, annuel, plus ou normal). Un compte gratuit n'est PAS une
+  -- licence. Bornes incluses : 1 à 200 licences -> 40%, 201 à 1000 ->
+  -- 35%, 1001 à 2000 -> 30%, 2001 à 3000 -> 25%, 3001+ -> 20%
+  -- (max_active NULL = palier final). Exploité en phase 2 (facturation
+  -- auto). Modifiable par revendeur.
   commission_tiers JSONB NOT NULL DEFAULT '[
     {"max_active": 200,  "rate": 0.40},
     {"max_active": 1000, "rate": 0.35},
@@ -40,6 +44,14 @@ CREATE TABLE IF NOT EXISTS public.resellers (
     {"max_active": 3000, "rate": 0.25},
     {"max_active": null, "rate": 0.20}
   ]'::jsonb,
+  -- Bons de commande du revendeur (ses propres pages de paiement
+  -- Stripe/PayPal/SIO, une URL par plan payant). Les clients de son
+  -- portefeuille voient CES URLs dans Réglages -> Abonnement à la place
+  -- des BDC tipote.fr : ils payent le revendeur, jamais Béné. Plan sans
+  -- URL configurée = pas de CTA affiché (PAS de fallback vers les BDC
+  -- Béné, sinon le client payerait la mauvaise personne).
+  -- Clés attendues : monthly, yearly, monthly_plus, yearly_plus.
+  checkout_urls JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

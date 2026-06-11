@@ -998,6 +998,40 @@ sont des comptes Tiquiz 100% standards sur l'infra de Béné.
 5. Suspension d'un revendeur = il perd son panel, ses clients
    continuent de fonctionner normalement.
 
+**Précisions Béné 11 juin (après-midi) :**
+- LICENCE = compte PAYANT quel que soit le plan (mensuel, annuel, plus
+  ou normal). Un compte gratuit n'est PAS une licence. Barème sur le
+  nombre de licences, bornes incluses : 1 à 200 -> 40%, 201 à 1000 ->
+  35%, 1001 à 2000 -> 30%, 2001 à 3000 -> 25%, 3001+ -> 20%.
+  Helper : commissionRateFor() dans lib/reseller.ts.
+- Whitelist admin = revendeur : si l'email n'a pas de compte Tiquiz,
+  le POST /api/admin/resellers le crée à la volée (magic link envoyé).
+- Sidebar : entrée "Admin" (ShieldCheck) vers /reseller, affichée
+  UNIQUEMENT si /api/reseller/me renvoie is_reseller true (vérif
+  serveur à chaque mount, pas de cache navigateur volontairement).
+  Les clients normaux ne voient rien.
+- Vue de contrôle Béné : ResellersCard affiche par revendeur comptes /
+  licences / gratuits / détail par plan / taux du palier courant.
+
+**Bons de commande revendeur (11 juin, soir) :**
+- `resellers.checkout_urls` JSONB : URLs des pages de paiement du
+  revendeur (clés monthly/yearly/monthly_plus/yearly_plus), éditées
+  dans son panel (carte "Mes bons de commande", PUT
+  /api/reseller/settings).
+- `/api/billing/checkout-urls` : résout les URLs d'achat du user
+  CONNECTÉ. Client direct -> managed=false (BDC tipote.fr par défaut).
+  Client de revendeur -> managed=true + URLs du revendeur.
+- **RÈGLE CRITIQUE : JAMAIS de fallback vers les BDC tipote.fr pour un
+  client de revendeur.** Plan sans URL configurée = pas de CTA du tout
+  dans Réglages -> Abonnement. Sinon le client payerait Béné au lieu de
+  payer son revendeur. Revendeur suspendu = aucune URL servie.
+- SettingsClient : seule surface d'achat in-app (tous les autres CTA
+  upgrade renvoient vers /settings). Footer paymentsManagedReseller
+  pour les clients gérés (le footer par défaut mentionne Systeme.io).
+- Reste ouvert (phase 2/3) : si un client de revendeur paye quand même
+  via un BDC tipote.fr (vieux lien), le webhook SIO upgradera son plan
+  chez Béné -> détection de mismatch à prévoir dans la réconciliation.
+
 **À venir (validé Béné) :**
 - Phase 2 : actions de plan depuis le panel (avec plan_change_log),
   calcul mensuel de commission + facture auto + lien de paiement.

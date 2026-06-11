@@ -103,6 +103,7 @@
     "rteImageSizeReset": "100%"
   },
   "nav": {
+    "resellerAdmin": "Admin",
     "quizzes": "My quizzes",
     "create": "Create a quiz",
     "leads": "My leads",
@@ -746,6 +747,7 @@
     "popular": "Popular",
     "currentPlan": "Current plan",
     "paymentsManaged": "Payments are handled by Systeme.io. You can change plan at any time.",
+    "paymentsManagedReseller": "Your payments are handled by your provider. Contact them for any billing question.",
     "dangerZone": "Danger zone",
     "dangerZoneDesc": "These actions are irreversible",
     "deleteAccount": "Delete my account",
@@ -1846,12 +1848,25 @@
     }
   },
   "reseller": {
+    "checkout": {
+      "title": "My order forms",
+      "desc": "Enter the URLs of YOUR payment pages here (Stripe, PayPal...), one per plan. Your clients will see these links in their Settings instead of the Tiquiz pages: they pay you directly. A plan without a URL shows no purchase button to your clients.",
+      "plans": {
+        "monthly": "Monthly plan",
+        "yearly": "Yearly plan",
+        "monthly_plus": "Monthly plus plan",
+        "yearly_plus": "Yearly plus plan"
+      },
+      "saveBtn": "Save my order forms",
+      "saved": "Order forms saved.",
+      "invalidUrl": "Invalid URL for the {plan} plan: a full https address is required."
+    },
     "title": "Reseller area",
     "subtitle": "{name} portfolio: your Tiquiz clients, their accounts and activity.",
     "refresh": "Refresh",
     "stats": {
       "totalClients": "Clients",
-      "paidClients": "Paying clients",
+      "paidClients": "Licences (paying)",
       "active30": "Active last 30 days",
       "totalLeads": "Leads captured"
     },
@@ -1912,11 +1927,15 @@
       "nameLabel": "Reseller name",
       "namePlaceholder": "Display name",
       "promoteBtn": "Promote to reseller",
-      "hint": "The user must already have a Tiquiz account. Once promoted, they access their panel at /reseller and can create client accounts.",
+      "hint": "Whitelisting an email makes them a reseller. If the email has no Tiquiz account yet, the account is created and the access email sent automatically. The reseller then sees an Admin entry in their sidebar.",
       "columns": {
         "name": "Name",
         "email": "Email",
-        "clients": "Clients",
+        "accounts": "Accounts",
+        "licences": "Licences",
+        "free": "Free",
+        "plans": "Plan detail",
+        "rate": "Current rate",
         "status": "Status",
         "actions": "Actions"
       },
@@ -1926,6 +1945,7 @@
       "activateBtn": "Reactivate",
       "toasts": {
         "promoted": "{email} is now a reseller.",
+        "promotedNew": "Account created and {email} promoted to reseller. Access email sent.",
         "userNotFound": "No Tiquiz account with this email.",
         "alreadyReseller": "This user is already a reseller.",
         "suspended": "Reseller suspended. Their clients are not affected.",
