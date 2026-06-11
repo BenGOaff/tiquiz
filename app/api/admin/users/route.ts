@@ -67,12 +67,28 @@ export async function GET(req: NextRequest) {
     const authMap: Record<string, any> = {};
     for (const u of authUsers) authMap[u.id] = u;
 
+    // Map reseller_id -> nom du revendeur pour le badge admin. Soft-fail :
+    // tant que la migration resellers n'est pas appliquée en prod, la
+    // table n'existe pas et on continue sans badge (admin intact).
+    const resellerNames: Record<string, string> = {};
+    {
+      const { data: resellers, error: resErr } = await supabaseAdmin
+        .from("resellers")
+        .select("id,name");
+      if (!resErr) {
+        for (const r of (resellers ?? []) as Array<{ id: string; name: string }>) {
+          resellerNames[r.id] = r.name;
+        }
+      }
+    }
+
     // Merge
     const users = (profiles ?? []).map((p: any) => ({
       ...p,
       quiz_count: quizCountMap[p.user_id ?? p.id] ?? 0,
       lead_count: leadCounts[p.user_id ?? p.id] ?? 0,
       last_sign_in: authMap[p.user_id ?? p.id]?.last_sign_in_at ?? null,
+      reseller_name: p.reseller_id ? resellerNames[p.reseller_id] ?? null : null,
     }));
 
     return NextResponse.json({ ok: true, users });

@@ -8,10 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Search, Users, BarChart3, RefreshCw, Plus, ArrowUpDown, Mail, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import ResellersCard from "@/components/admin/ResellersCard";
+
 type User = {
   user_id?: string; id?: string; email: string; first_name?: string; last_name?: string;
   plan: string; quiz_count: number; lead_count: number; last_sign_in: string | null;
   created_at?: string;
+  // Renseigné si le compte appartient au portefeuille d'un revendeur.
+  reseller_name?: string | null;
 };
 
 export default function AdminDashboard() {
@@ -197,7 +201,14 @@ export default function AdminDashboard() {
                 const uid = u.user_id ?? u.id ?? "";
                 return (
                   <tr key={uid} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="px-4 py-3 font-medium">{u.email}</td>
+                    <td className="px-4 py-3 font-medium">
+                      {u.email}
+                      {u.reseller_name ? (
+                        <Badge className="ml-2 bg-indigo-100 text-indigo-700">
+                          {u.reseller_name}
+                        </Badge>
+                      ) : null}
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground">{[u.first_name, u.last_name].filter(Boolean).join(" ") || "—"}</td>
                     <td className="px-4 py-3">{planBadge(u.plan)}</td>
                     <td className="px-4 py-3">{u.quiz_count}</td>
@@ -237,6 +248,9 @@ export default function AdminDashboard() {
           {filtered.length === 0 && <p className="text-center py-8 text-sm text-muted-foreground">{t("noUsersFound")}</p>}
         </div></Card>
       )}
+
+      {/* Revendeurs */}
+      <ResellersCard />
     </div>
   );
 }

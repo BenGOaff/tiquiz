@@ -959,3 +959,48 @@ createSurvey, projects, popquiz, leads, stats.
 Symptôme à reconnaître : "écran grisé sans popup" pendant le tour =
 phase sans ancre. Vérif rapide : chaque `tour_x` de shouldHighlight
 doit matcher une key de MENU_ITEMS.
+
+## Modèle REVENDEUR : fondation phase 1 (11 juin 2026)
+
+Option A validée par Béné : le revendeur encaisse ses clients sur SES
+clés Stripe/PayPal, Béné facture sa commission (phase 2). Ses clients
+sont des comptes Tiquiz 100% standards sur l'infra de Béné.
+
+**Architecture (NE PAS dévier) :**
+- `resellers` : 1 ligne = 1 revendeur, rattaché à son compte Tiquiz via
+  `user_id` (= auth uid, PAS profiles.id). `commission_tiers` JSONB
+  stocke le barème dégressif (40/35/30/25/20% selon clients actifs),
+  exploité en phase 2.
+- `profiles.reseller_id` NULL = client direct Béné (tout l'existant).
+  Renseigné = portefeuille revendeur. AUCUN changement de comportement
+  du compte : mêmes RLS, mêmes features.
+- `reseller_actions` : audit de chaque action revendeur.
+- Panel : `/reseller` (gate `getResellerSession()` de lib/reseller.ts,
+  status active obligatoire). API `/api/reseller/clients` (GET/POST/
+  PATCH), service-role TOUJOURS scopé `reseller_id`.
+- Admin Béné : `/api/admin/resellers` + ResellersCard dans
+  AdminDashboard (promouvoir/suspendre) + badge indigo portefeuille
+  dans la table users.
+
+**Règles de sécurité non négociables :**
+1. RGPD : le revendeur ne voit QUE des compteurs (nb quiz/sondages/
+   popquiz/leads, dernière connexion). JAMAIS le contenu des quiz ni
+   les données des leads de ses clients.
+2. Anti-captation : POST création refuse (409 email_taken) tout email
+   qui correspond à un compte Tiquiz hors portefeuille. Un revendeur ne
+   peut pas s'approprier un client direct de Béné ni d'un autre
+   revendeur.
+3. Plans attribuables par le revendeur : free/monthly/yearly/
+   monthly_plus/yearly_plus. Lifetime (offre terminée) et beta exclus
+   (RESELLER_ALLOWED_PLANS dans lib/reseller.ts).
+4. Commission uniquement sur clients PAYANTS (isPaidPlan) : "je ne
+   touche que s'il touche" (Béné). Les free/désabonnés ne comptent pas.
+5. Suspension d'un revendeur = il perd son panel, ses clients
+   continuent de fonctionner normalement.
+
+**À venir (validé Béné) :**
+- Phase 2 : actions de plan depuis le panel (avec plan_change_log),
+  calcul mensuel de commission + facture auto + lien de paiement.
+- Phase 3 : bons de commande publics du revendeur (modèle des BDC
+  Tipote.fr) branchés sur SES clés Stripe/PayPal, avec provisioning
+  auto (création compte, upgrade/downgrade/annulation via webhooks).

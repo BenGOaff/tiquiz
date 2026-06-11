@@ -1843,7 +1843,94 @@
       "aborted": "Importação cancelada."
     }
   },
+  "reseller": {
+    "title": "Espaço revendedor",
+    "subtitle": "Carteira {name}: seus clientes Tiquiz, suas contas e sua atividade.",
+    "refresh": "Atualizar",
+    "stats": {
+      "totalClients": "Clientes",
+      "paidClients": "Clientes pagantes",
+      "active30": "Ativos 30 dias",
+      "totalLeads": "Leads capturados"
+    },
+    "activation": {
+      "title": "Quem realmente usa a ferramenta?",
+      "withProject": "Criaram pelo menos um quiz, pesquisa ou popquiz",
+      "active7": "Conectados nos últimos 7 dias",
+      "active30": "Conectados nos últimos 30 dias",
+      "never": "Nunca conectados"
+    },
+    "create": {
+      "title": "Criar uma conta de cliente",
+      "email": "Email",
+      "firstName": "Nome",
+      "firstNamePlaceholder": "Nome",
+      "plan": "Plano",
+      "btn": "Criar conta",
+      "hint": "O cliente recebe imediatamente o email de acesso (link mágico, sem senha)."
+    },
+    "searchPlaceholder": "Buscar por email ou nome…",
+    "sortLabel": "Ordenar: {sort}",
+    "sort": {
+      "date": "data",
+      "leads": "leads",
+      "projects": "projetos"
+    },
+    "columns": {
+      "client": "Cliente",
+      "plan": "Plano",
+      "quiz": "Quizzes",
+      "surveys": "Pesquisas",
+      "popquiz": "Popquiz",
+      "leads": "Leads",
+      "lastLogin": "Último acesso",
+      "actions": "Ações"
+    },
+    "never": "Nunca",
+    "actions": {
+      "resendAccess": "Reenviar acesso",
+      "resendAccessTitle": "Reenviar o email de acesso (link mágico)"
+    },
+    "emptyState": "Nenhum cliente ainda. Crie sua primeira conta acima.",
+    "noResults": "Nenhum cliente corresponde à sua busca.",
+    "toasts": {
+      "loadError": "Não foi possível carregar seus clientes.",
+      "created": "Conta criada. Email de acesso enviado para {email}.",
+      "alreadyExists": "Este cliente já está na sua carteira. Email de acesso reenviado.",
+      "emailTaken": "Este email já pertence a uma conta Tiquiz existente fora da sua carteira.",
+      "invalidEmail": "Email inválido.",
+      "accessSent": "Email de acesso reenviado para {email}.",
+      "error": "Ocorreu um erro. Tente novamente."
+    }
+  },
   "admin": {
+    "resellers": {
+      "title": "Revendedores",
+      "emailLabel": "Email da conta Tiquiz",
+      "nameLabel": "Nome do revendedor",
+      "namePlaceholder": "Nome exibido",
+      "promoteBtn": "Promover a revendedor",
+      "hint": "O usuário já deve ter uma conta Tiquiz. Depois de promovido, ele acessa seu painel em /reseller e pode criar contas de clientes.",
+      "columns": {
+        "name": "Nome",
+        "email": "Email",
+        "clients": "Clientes",
+        "status": "Status",
+        "actions": "Ações"
+      },
+      "statusActive": "Ativo",
+      "statusSuspended": "Suspenso",
+      "suspendBtn": "Suspender",
+      "activateBtn": "Reativar",
+      "toasts": {
+        "promoted": "{email} agora é revendedor.",
+        "userNotFound": "Nenhuma conta Tiquiz com este email.",
+        "alreadyReseller": "Este usuário já é revendedor.",
+        "suspended": "Revendedor suspenso. Seus clientes não são afetados.",
+        "activated": "Revendedor reativado.",
+        "error": "Ocorreu um erro."
+      }
+    },
     "title": "Admin Tiquiz",
     "refresh": "Atualizar",
     "inviteLabel": "Convidar um usuário",

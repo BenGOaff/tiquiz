@@ -1845,7 +1845,94 @@
       "aborted": "Upload cancelled."
     }
   },
+  "reseller": {
+    "title": "Reseller area",
+    "subtitle": "{name} portfolio: your Tiquiz clients, their accounts and activity.",
+    "refresh": "Refresh",
+    "stats": {
+      "totalClients": "Clients",
+      "paidClients": "Paying clients",
+      "active30": "Active last 30 days",
+      "totalLeads": "Leads captured"
+    },
+    "activation": {
+      "title": "Who really uses the tool?",
+      "withProject": "Created at least one quiz, survey or popquiz",
+      "active7": "Signed in within the last 7 days",
+      "active30": "Signed in within the last 30 days",
+      "never": "Never signed in"
+    },
+    "create": {
+      "title": "Create a client account",
+      "email": "Email",
+      "firstName": "First name",
+      "firstNamePlaceholder": "First name",
+      "plan": "Plan",
+      "btn": "Create account",
+      "hint": "The client immediately receives their access email (magic link, no password)."
+    },
+    "searchPlaceholder": "Search by email or name…",
+    "sortLabel": "Sort: {sort}",
+    "sort": {
+      "date": "date",
+      "leads": "leads",
+      "projects": "projects"
+    },
+    "columns": {
+      "client": "Client",
+      "plan": "Plan",
+      "quiz": "Quizzes",
+      "surveys": "Surveys",
+      "popquiz": "Popquiz",
+      "leads": "Leads",
+      "lastLogin": "Last sign-in",
+      "actions": "Actions"
+    },
+    "never": "Never",
+    "actions": {
+      "resendAccess": "Resend access",
+      "resendAccessTitle": "Resend the access email (magic link)"
+    },
+    "emptyState": "No clients yet. Create your first account above.",
+    "noResults": "No client matches your search.",
+    "toasts": {
+      "loadError": "Could not load your clients.",
+      "created": "Account created. Access email sent to {email}.",
+      "alreadyExists": "This client is already in your portfolio. Access email resent.",
+      "emailTaken": "This email already belongs to an existing Tiquiz account outside your portfolio.",
+      "invalidEmail": "Invalid email.",
+      "accessSent": "Access email resent to {email}.",
+      "error": "Something went wrong. Try again."
+    }
+  },
   "admin": {
+    "resellers": {
+      "title": "Resellers",
+      "emailLabel": "Tiquiz account email",
+      "nameLabel": "Reseller name",
+      "namePlaceholder": "Display name",
+      "promoteBtn": "Promote to reseller",
+      "hint": "The user must already have a Tiquiz account. Once promoted, they access their panel at /reseller and can create client accounts.",
+      "columns": {
+        "name": "Name",
+        "email": "Email",
+        "clients": "Clients",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "statusActive": "Active",
+      "statusSuspended": "Suspended",
+      "suspendBtn": "Suspend",
+      "activateBtn": "Reactivate",
+      "toasts": {
+        "promoted": "{email} is now a reseller.",
+        "userNotFound": "No Tiquiz account with this email.",
+        "alreadyReseller": "This user is already a reseller.",
+        "suspended": "Reseller suspended. Their clients are not affected.",
+        "activated": "Reseller reactivated.",
+        "error": "Something went wrong."
+      }
+    },
     "title": "Tiquiz Admin",
     "refresh": "Refresh",
     "inviteLabel": "Invite a user",
