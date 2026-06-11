@@ -52,43 +52,66 @@ export async function PUT(req: NextRequest) {
     const updates: Record<string, unknown> = {};
     const actions: string[] = [];
 
-    // 1. URLs de paiement (pages Stripe/PayPal du revendeur).
+    // 1. Config de paiement par plan : { stripe?, paypal?, sio? }
+    //    (lien Stripe Payment Link, lien PayPal, URL du BDC Systeme.io).
     if (body?.checkout_urls && typeof body.checkout_urls === "object") {
-      const next: Record<string, string> = {};
+      const next: Record<string, { stripe?: string; paypal?: string; sio?: string }> = {};
       for (const key of CHECKOUT_PLAN_KEYS) {
         const value = (body.checkout_urls as Record<string, unknown>)[key];
-        if (value === undefined || value === null || value === "") continue;
-        if (typeof value !== "string" || !isValidHttpsUrl(value.trim())) {
-          return NextResponse.json(
-            { ok: false, error: "invalid_url", plan: key },
-            { status: 400 },
-          );
+        if (!value || typeof value !== "object") continue;
+        const entry: { stripe?: string; paypal?: string; sio?: string } = {};
+        for (const kind of ["stripe", "paypal", "sio"] as const) {
+          const url = (value as Record<string, unknown>)[kind];
+          if (url === undefined || url === null || url === "") continue;
+          if (typeof url !== "string" || !isValidHttpsUrl(url.trim())) {
+            return NextResponse.json(
+              { ok: false, error: "invalid_url", plan: key, kind },
+              { status: 400 },
+            );
+          }
+          entry[kind] = url.trim();
         }
-        next[key] = value.trim();
+        if (Object.keys(entry).length > 0) next[key] = entry;
       }
       updates.checkout_urls = next;
       actions.push("update_checkout_urls");
     }
 
-    // 2. Tarifs affichés sur les bons de commande hébergés (texte libre,
-    //    affichage uniquement : le montant réel est celui de sa page de
-    //    paiement).
+    // 2. Tarifs : label affiché sur le bon de commande hébergé (texte
+    //    libre) + montant déclaré en euros (base du calcul de commission,
+    //    stocké en centimes). Le montant réel encaissé reste celui de sa
+    //    page de paiement.
     if (body?.pricing && typeof body.pricing === "object") {
-      const next: Record<string, { label: string }> = {};
+      const next: Record<string, { label?: string; amount_cents?: number }> = {};
       for (const key of CHECKOUT_PLAN_KEYS) {
         const value = (body.pricing as Record<string, unknown>)[key];
-        const label =
-          value && typeof value === "object"
-            ? (value as { label?: unknown }).label
-            : value;
-        if (label === undefined || label === null || label === "") continue;
-        if (typeof label !== "string" || label.trim().length > 80) {
-          return NextResponse.json(
-            { ok: false, error: "invalid_price", plan: key },
-            { status: 400 },
-          );
+        if (!value || typeof value !== "object") continue;
+        const { label, amount } = value as { label?: unknown; amount?: unknown };
+        const entry: { label?: string; amount_cents?: number } = {};
+
+        if (label !== undefined && label !== null && label !== "") {
+          if (typeof label !== "string" || label.trim().length > 80) {
+            return NextResponse.json(
+              { ok: false, error: "invalid_price", plan: key },
+              { status: 400 },
+            );
+          }
+          entry.label = label.trim();
         }
-        next[key] = { label: label.trim() };
+
+        if (amount !== undefined && amount !== null && amount !== "") {
+          const parsed =
+            typeof amount === "number" ? amount : Number(String(amount).replace(",", "."));
+          if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100000) {
+            return NextResponse.json(
+              { ok: false, error: "invalid_amount", plan: key },
+              { status: 400 },
+            );
+          }
+          entry.amount_cents = Math.round(parsed * 100);
+        }
+
+        if (Object.keys(entry).length > 0) next[key] = entry;
       }
       updates.pricing = next;
       actions.push("update_pricing");

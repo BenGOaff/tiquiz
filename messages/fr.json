@@ -1849,65 +1849,40 @@
   },
   "order": {
     "soldBy": "Vendu par {name}",
-    "payCta": "Payer et activer mon compte",
+    "payCardCta": "Payer par carte",
+    "payPaypalCta": "Payer avec PayPal",
     "accessNote": "Ton accès est envoyé par email juste après le paiement. Pense à vérifier tes spams.",
     "poweredBy": "Propulsé par Tiquiz"
   },
   "reseller": {
-    "copied": "Copié !",
-    "automation": {
-      "title": "Automatisation des accès",
-      "desc": "Colle ces URLs dans les webhooks de ton outil de paiement (Systeme.io, Stripe, PayPal...). À chaque vente, le compte de ton client est créé ou mis à jour automatiquement, avec envoi de l'email d'accès. À chaque annulation, il repasse en gratuit. Le système doit juste envoyer l'email de l'acheteur dans le contenu du webhook.",
-      "activateFor": "Activer {plan}",
-      "cancelLabel": "Annulation (tout plan)",
-      "hint": "Astuce : ouvre l'URL dans ton navigateur pour vérifier le branchement (réponse ping, rien n'est créé). Les comptes ouverts par ce webhook sont automatiquement tagués comme tes clients.",
-      "regenerateBtn": "Régénérer le secret du webhook",
-      "regenerateConfirm": "Régénérer le secret ? Les anciennes URLs ne fonctionneront plus, il faudra recoller les nouvelles dans ton outil de paiement.",
-      "regenerated": "Nouveau secret généré. Mets à jour les URLs dans ton outil de paiement.",
-      "noToken": "Ton secret webhook n'est pas encore généré. Demande à l'équipe Tiquiz d'appliquer la mise à jour."
-    },
-    "checkout": {
-      "urlLabel": "URL de ta page de paiement (Stripe, PayPal...)",
-      "priceLabel": "Tarif affiché sur ton bon de commande",
-      "pricePlaceholder": "ex. 19 € / mois",
-      "copyOrderPage": "Copier le lien de mon bon de commande hébergé",
-      "orderPageHint": "Le bon de commande hébergé rappelle le contenu du plan et ton tarif, puis envoie vers ta page de paiement. Partage son lien à tes prospects, ou utilise directement tes propres pages si tu préfères.",
-      "title": "Mes bons de commande",
-      "desc": "Renseigne ici les URLs de TES pages de paiement (Stripe, PayPal...), une par plan. Tes clients verront ces liens dans leurs Réglages, à la place des pages Tiquiz : ils te payent toi, directement. Un plan sans URL n'affiche aucun bouton d'achat chez tes clients.",
-      "plans": {
-        "monthly": "Plan mensuel",
-        "yearly": "Plan annuel",
-        "monthly_plus": "Plan mensuel plus",
-        "yearly_plus": "Plan annuel plus"
-      },
-      "saveBtn": "Enregistrer mes bons de commande",
-      "saved": "Bons de commande enregistrés.",
-      "invalidUrl": "URL invalide pour le plan {plan} : il faut une adresse https complète."
-    },
     "title": "Espace revendeur",
-    "subtitle": "Portefeuille {name} : tes clients Tiquiz, leurs comptes et leur activité.",
+    "subtitle": "Espace {name} : tes clients, tes bons de commande et ta facturation, tout est automatisé.",
     "refresh": "Rafraîchir",
-    "stats": {
-      "totalClients": "Clients",
-      "paidClients": "Licences (payants)",
-      "active30": "Actifs 30 jours",
-      "totalLeads": "Leads capturés"
+    "copied": "Copié !",
+    "saved": "Réglages enregistrés.",
+    "invalidUrl": "URL invalide pour le plan {plan} : il faut une adresse https complète.",
+    "saveBtn": "Enregistrer",
+    "tabs": {
+      "clients": "Mes clients",
+      "activity": "Activité",
+      "orders": "Bons de commande",
+      "payments": "Modes de paiement",
+      "billing": "Facturation Tipote"
     },
-    "activation": {
-      "title": "Qui utilise vraiment l'outil ?",
-      "withProject": "Ont créé au moins un quiz, sondage ou popquiz",
-      "active7": "Connectés ces 7 derniers jours",
-      "active30": "Connectés ces 30 derniers jours",
-      "never": "Jamais connectés"
+    "plans": {
+      "monthly": "Plan mensuel",
+      "yearly": "Plan annuel",
+      "monthly_plus": "Plan mensuel plus",
+      "yearly_plus": "Plan annuel plus"
     },
     "create": {
       "title": "Créer un compte client",
+      "hint": "Pour ouvrir un compte à la main. Le client reçoit immédiatement son email d'accès (lien magique, sans mot de passe). Pour l'ouverture automatique à la vente, configure tes bons de commande.",
       "email": "Email",
       "firstName": "Prénom",
       "firstNamePlaceholder": "Prénom",
       "plan": "Plan",
-      "btn": "Créer le compte",
-      "hint": "Le client reçoit immédiatement son email d'accès (lien magique, sans mot de passe)."
+      "btn": "Créer le compte"
     },
     "searchPlaceholder": "Rechercher par email ou nom…",
     "sortLabel": "Tri : {sort}",
@@ -1927,12 +1902,95 @@
       "actions": "Actions"
     },
     "never": "Jamais",
+    "emptyState": "Aucun client pour le moment. Crée un compte ci-dessus ou configure tes bons de commande pour que tout soit automatique.",
+    "noResults": "Aucun client ne correspond à ta recherche.",
     "actions": {
       "resendAccess": "Renvoyer l'accès",
-      "resendAccessTitle": "Renvoyer l'email d'accès (lien magique)"
+      "resendAccessTitle": "Renvoyer l'email d'accès (lien magique)",
+      "setPlanTitle": "Changer le plan de ce client (free = fermer l'accès payant, son compte et ses contenus sont conservés)"
     },
-    "emptyState": "Aucun client pour le moment. Crée ton premier compte ci-dessus.",
-    "noResults": "Aucun client ne correspond à ta recherche.",
+    "stats": {
+      "totalClients": "Clients",
+      "paidClients": "Licences (payants)",
+      "active30": "Actifs 30 jours",
+      "totalLeads": "Leads capturés"
+    },
+    "activation": {
+      "title": "Qui utilise vraiment l'outil ?",
+      "desc": "Un client qui crée des quiz et capture des leads est un client qui reste. Surveille ceux qui ne se connectent jamais : un petit message de ta part peut tout changer.",
+      "withProject": "Ont créé au moins un quiz, sondage ou popquiz",
+      "active7": "Connectés ces 7 derniers jours",
+      "active30": "Connectés ces 30 derniers jours",
+      "never": "Jamais connectés"
+    },
+    "orders": {
+      "introTitle": "Comment vendre Tiquiz à tes clients ?",
+      "intro": "Deux façons de vendre, selon tes outils (tu peux mélanger les deux selon les plans). Dans les deux cas tout est automatique : à chaque vente, le compte de ton client est créé et son email d'accès envoyé. À chaque annulation, son compte repasse en gratuit.",
+      "sioTitle": "Option 1 : tu utilises Systeme.io",
+      "sioStep1": "Crée ton bon de commande dans Systeme.io, avec ton tunnel et ton prix, comme d'habitude.",
+      "sioStep2": "Colle l'URL de ton bon de commande ci-dessous : tes clients la retrouveront dans leur espace Tiquiz quand ils voudront s'abonner ou changer de plan.",
+      "sioStep3": "Dans Systeme.io, ajoute une règle d'automatisation à la vente, de type webhook, et colle le lien d'activation du plan. Fais pareil au remboursement ou désabonnement avec le lien d'annulation.",
+      "sioUrlLabel": "URL de ton bon de commande Systeme.io",
+      "sioWebhookLabel": "Lien à coller dans ton automatisation de vente :",
+      "copyActivate": "Copier le lien d'activation",
+      "sioCancelLabel": "Annulation (tous les plans) :",
+      "copyCancel": "Copier le lien d'annulation",
+      "sioNote": "C'est tout : les accès sont livrés automatiquement à chaque vente, sans aucune action de ta part.",
+      "tiquizTitle": "Option 2 : tu utilises le bon de commande Tiquiz (hébergé chez nous)",
+      "tiquizStep1": "Connecte ton Stripe ou ton PayPal dans l'onglet Modes de paiement (2 minutes).",
+      "tiquizStep2": "Indique le tarif à afficher pour chaque plan ci-dessous.",
+      "tiquizStep3": "Partage le lien de ta page de commande : elle présente le plan, ton tarif, et le paiement arrive directement sur TON Stripe ou TON PayPal.",
+      "priceLabel": "Tarif affiché sur la page",
+      "pricePlaceholder": "ex. 19 € / mois",
+      "copyLink": "Copier le lien à partager",
+      "openPage": "Voir la page",
+      "needPayment": "Connecte d'abord Stripe ou PayPal dans l'onglet Modes de paiement pour activer cette page."
+    },
+    "payments": {
+      "introTitle": "Tes modes de paiement",
+      "intro": "Ici tu connectes TES comptes Stripe et PayPal : tes clients te payent directement, l'argent arrive sur TES comptes. Tiquiz ne touche jamais ton argent. Ces moyens de paiement apparaissent ensuite sur tes bons de commande Tiquiz.",
+      "linksTitle": "Tes liens de paiement par plan",
+      "linksHelp": "Dans Stripe : crée un lien de paiement (menu Produits puis Liens de paiement) pour chaque plan, avec ton prix et la bonne récurrence, et colle-le ici. Dans PayPal : crée un lien ou un bouton de paiement et colle-le ici. Le tarif déclaré sert au calcul de ta commission Tipote.",
+      "stripeLabel": "Lien de paiement Stripe",
+      "paypalLabel": "Lien de paiement PayPal",
+      "amountLabel": "Tarif déclaré (en euros, prix de la période)",
+      "amountPlaceholder": "ex. 19 (mensuel) ou 190 (annuel)",
+      "webhookTitle": "Livraison automatique des accès",
+      "webhookHelp": "Pour que l'accès parte tout seul après un paiement Stripe ou PayPal, ajoute un webhook dans ton outil (Stripe : Développeurs puis Webhooks, événement checkout.session.completed ; PayPal : notifications webhooks) et colle le lien du plan vendu. Pour les annulations d'abonnement, utilise le lien d'annulation.",
+      "webhookTest": "Astuce : ouvre un lien dans ton navigateur pour vérifier qu'il répond (rien n'est créé). Les comptes ouverts par ces liens sont automatiquement marqués comme tes clients.",
+      "regenerateBtn": "Régénérer mon lien secret",
+      "regenerateConfirm": "Régénérer ? Tes anciens liens webhook ne fonctionneront plus, il faudra recoller les nouveaux dans Systeme.io, Stripe ou PayPal.",
+      "regenerated": "Nouveau lien secret généré. Mets à jour tes webhooks.",
+      "noToken": "Ton lien secret n'est pas encore généré. Contacte le support Tiquiz."
+    },
+    "billing": {
+      "howTitle": "Comment ça marche ?",
+      "howText": "Tu vends Tiquiz à tes clients et tu encaisses directement sur tes comptes. En échange, Tipote prend une commission sur tes licences actives (licence = client payant ; les comptes gratuits ne comptent jamais). Le 1er de chaque mois, ta facture est générée automatiquement : nombre de licences x tarif déclaré x ton taux du moment. Plus tu as de licences, plus ton taux baisse. Tu règles en un clic via Stripe ou PayPal.",
+      "rateTitle": "Ton taux actuel",
+      "rateNote": "{licences} licences actives",
+      "estimateTitle": "Ton solde en cours",
+      "estimateNote": "Estimation du mois en cours, figée sur ta facture le 1er du mois prochain.",
+      "pendingTitle": "À régler",
+      "pendingNote": "Total de tes factures en attente de paiement.",
+      "tiersTitle": "Ton barème",
+      "tierRange": "{from} à {to} licences",
+      "tierLast": "{from} licences et plus",
+      "tiersNote": "La ligne en surbrillance est ton palier actuel.",
+      "invoicesTitle": "Tes factures",
+      "period": "Mois",
+      "licences": "Licences",
+      "rate": "Taux",
+      "total": "Total",
+      "status": "Statut",
+      "actions": "Paiement",
+      "statusPending": "À régler",
+      "statusPaid": "Payée",
+      "payStripe": "Payer via Stripe",
+      "payPaypal": "Payer via PayPal",
+      "paidOn": "Payée le {date}",
+      "missingPrice": "Tarif déclaré manquant sur certains plans : complète-le dans Modes de paiement pour un calcul exact.",
+      "empty": "Aucune facture pour le moment. La première arrivera le 1er du mois prochain."
+    },
     "toasts": {
       "loadError": "Impossible de charger tes clients.",
       "created": "Compte créé. Email d'accès envoyé à {email}.",
@@ -1940,11 +1998,32 @@
       "emailTaken": "Cet email correspond déjà à un compte Tiquiz existant hors de ton portefeuille.",
       "invalidEmail": "Email invalide.",
       "accessSent": "Email d'accès renvoyé à {email}.",
+      "planUpdated": "Plan mis à jour : {plan}.",
       "error": "Une erreur est survenue. Réessaie."
     }
   },
   "admin": {
     "resellers": {
+      "invoices": {
+        "title": "Factures de commission",
+        "generateBtn": "Générer les factures du mois",
+        "generated": "Génération lancée. Les factures du mois sont à jour.",
+        "empty": "Aucune facture générée pour le moment.",
+        "reseller": "Revendeur",
+        "period": "Mois",
+        "licences": "Licences",
+        "rate": "Taux",
+        "total": "Total dû",
+        "status": "Statut",
+        "actions": "Actions",
+        "statusPending": "À payer",
+        "statusPaid": "Payée",
+        "markPaid": "Marquer payée",
+        "markPending": "Repasser à payer",
+        "markedPaid": "Facture marquée payée.",
+        "markedPending": "Facture repassée à payer.",
+        "missingPrice": "* Tarif déclaré manquant sur certains plans : la commission de ces lignes est à 0, vois ça avec le revendeur."
+      },
       "title": "Revendeurs",
       "emailLabel": "Email du compte Tiquiz",
       "nameLabel": "Nom du revendeur",

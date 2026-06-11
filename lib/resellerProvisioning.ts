@@ -58,7 +58,10 @@ export async function activateResellerClient(args: {
   reseller: Pick<ResellerRow, "id">;
   email: string;
   plan: string;
-  source: string; // ex. "webhook:sio", "webhook:stripe" — pour l'audit
+  source: string; // ex. "webhook", "panel" — pour l'audit
+  /** user id du revendeur quand l'action vient de son panel, null pour
+   * les actions automatiques (webhook). */
+  actorUserId?: string | null;
 }): Promise<ProvisionResult> {
   const email = args.email.trim().toLowerCase();
   const { plan, source } = args;
@@ -78,9 +81,9 @@ export async function activateResellerClient(args: {
     if (existing && existing.reseller_id !== args.reseller.id) {
       await logResellerAction({
         resellerId: args.reseller.id,
-        actorUserId: null,
+        actorUserId: args.actorUserId ?? null,
         targetEmail: email,
-        action: "webhook_rejected_email_taken",
+        action: "provision_rejected_email_taken",
         meta: { source, plan },
       });
       return { ok: false, outcome: "rejected_email_taken" };
@@ -98,7 +101,7 @@ export async function activateResellerClient(args: {
       if (updErr) throw updErr;
 
       await supabaseAdmin.from("plan_change_log").insert({
-        actor_user_id: null,
+        actor_user_id: args.actorUserId ?? null,
         target_user_id: existing.user_id,
         target_email: email,
         old_plan: oldPlan,
@@ -107,10 +110,10 @@ export async function activateResellerClient(args: {
       });
       await logResellerAction({
         resellerId: args.reseller.id,
-        actorUserId: null,
+        actorUserId: args.actorUserId ?? null,
         targetUserId: existing.user_id,
         targetEmail: email,
-        action: "webhook_plan_change",
+        action: "provision_plan_change",
         meta: { source, old_plan: oldPlan, new_plan: plan },
       });
       return {
@@ -136,9 +139,9 @@ export async function activateResellerClient(args: {
       // on ne s'approprie pas un compte qu'on ne connaît pas.
       await logResellerAction({
         resellerId: args.reseller.id,
-        actorUserId: null,
+        actorUserId: args.actorUserId ?? null,
         targetEmail: email,
-        action: "webhook_rejected_email_taken",
+        action: "provision_rejected_email_taken",
         meta: { source, plan, reason: "auth_exists_no_profile" },
       });
       return { ok: false, outcome: "rejected_email_taken" };
@@ -153,7 +156,7 @@ export async function activateResellerClient(args: {
     if (upsertErr) throw upsertErr;
 
     await supabaseAdmin.from("plan_change_log").insert({
-      actor_user_id: null,
+      actor_user_id: args.actorUserId ?? null,
       target_user_id: userId,
       target_email: email,
       old_plan: null,
@@ -165,10 +168,10 @@ export async function activateResellerClient(args: {
 
     await logResellerAction({
       resellerId: args.reseller.id,
-      actorUserId: null,
+      actorUserId: args.actorUserId ?? null,
       targetUserId: userId,
       targetEmail: email,
-      action: "webhook_create_client",
+      action: "provision_create_client",
       meta: { source, plan, access_sent: sent },
     });
 
@@ -187,6 +190,7 @@ export async function cancelResellerClient(args: {
   reseller: Pick<ResellerRow, "id">;
   email: string;
   source: string;
+  actorUserId?: string | null;
 }): Promise<ProvisionResult> {
   const email = args.email.trim().toLowerCase();
 
@@ -214,7 +218,7 @@ export async function cancelResellerClient(args: {
     if (updErr) throw updErr;
 
     await supabaseAdmin.from("plan_change_log").insert({
-      actor_user_id: null,
+      actor_user_id: args.actorUserId ?? null,
       target_user_id: existing.user_id,
       target_email: email,
       old_plan: oldPlan,
@@ -223,10 +227,10 @@ export async function cancelResellerClient(args: {
     });
     await logResellerAction({
       resellerId: args.reseller.id,
-      actorUserId: null,
+      actorUserId: args.actorUserId ?? null,
       targetUserId: existing.user_id,
       targetEmail: email,
-      action: "webhook_cancel",
+      action: "provision_cancel",
       meta: { source: args.source, old_plan: oldPlan },
     });
 

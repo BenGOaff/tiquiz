@@ -1057,6 +1057,38 @@ sont des comptes Tiquiz 100% standards sur l'infra de Béné.
   slug, pricing + re-ALTER checkout_urls (le CREATE TABLE IF NOT EXISTS
   de la foundation n'ajoute pas les colonnes si la table existait déjà).
 
-**À venir (validé Béné) :**
-- Phase 2 : actions de plan depuis le panel (avec plan_change_log),
-  calcul mensuel de commission + facture auto + lien de paiement.
+**Refonte panel en onglets (12 juin, demande Béné) :**
+- 5 onglets (pattern Tabs des Réglages) : Mes clients / Activité /
+  Bons de commande / Modes de paiement / Facturation Tipote. Tout est
+  expliqué en langage simple (étapes numérotées, zéro jargon).
+- ⚠️ `resellers.checkout_urls[plan]` est maintenant un OBJET
+  `{ stripe?, paypal?, sio? }` (legacy: string nue = stripe, normalisée
+  par normalizePlanPayment de lib/reseller.ts). Le BDC hébergé
+  /order/<slug>/<plan> affiche un bouton par moyen connecté (carte +
+  PayPal) et 404 si aucun des deux. Pour les clients gérés, le CTA
+  d'abonnement résout : sio_url > page hébergée > rien (toujours AUCUN
+  fallback tipote.fr).
+- Le tarif déclaré (amount_cents) se saisit dans l'onglet Modes de
+  paiement, le label affiché dans l'onglet Bons de commande.
+
+**Phase 2 livrée (12 juin, nuit) : commission mensuelle automatique.**
+- Table `reseller_invoices` (migration 20260611_resellers_v3_invoices) :
+  1 facture / revendeur / mois (period YYYY-MM, index unique, montants
+  en CENTIMES). Cron idempotent `/api/cron/reseller-invoices`
+  (CRON_SECRET, à planifier le 1er du mois) + déclenchement manuel
+  depuis l'admin (POST /api/admin/reseller-invoices).
+- Calcul : licences par plan x prix DÉCLARÉ mensualisé (annuels /12) x
+  taux du palier (commissionRateFor). Prix déclaré =
+  resellers.pricing[plan].amount_cents, saisi par le revendeur dans son
+  panel. Manquant -> ligne missing_price à 0, signalée des deux côtés.
+  0 licence -> pas de facture.
+- Paiement de la commission : env `RESELLER_PAYOUT_STRIPE_URL` /
+  `RESELLER_PAYOUT_PAYPAL_URL` (pages d'encaissement de Béné, montant
+  libre) -> boutons "Payer via..." sur les factures pending du panel.
+  À AJOUTER AU .env PROD, sinon pas de bouton de paiement.
+- Béné marque payée/à payer dans ResellersCard (PATCH admin).
+- Panel : gestion manuelle des plans par client (select, free = fermer)
+  via PATCH op:"set_plan" -> lib resellerProvisioning (source "panel",
+  actor = revendeur). Le revendeur "garde la main" comme demandé.
+- Aperçu BDC pour Béné : /order/preview/<plan> (admin uniquement,
+  données d'exemple).

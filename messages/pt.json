@@ -1865,65 +1865,40 @@
   },
   "order": {
     "soldBy": "Vendido por {name}",
-    "payCta": "Pagar e ativar a minha conta",
+    "payCardCta": "Pagar com cartão",
+    "payPaypalCta": "Pagar com PayPal",
     "accessNote": "O teu acesso é enviado por email logo após o pagamento. Lembra-te de verificar o spam.",
     "poweredBy": "Criado com Tiquiz"
   },
   "reseller": {
-    "copied": "Copiado!",
-    "automation": {
-      "title": "Automatização dos acessos",
-      "desc": "Cola estes URLs nos webhooks da tua ferramenta de pagamento (Systeme.io, Stripe, PayPal...). Em cada venda, a conta do teu cliente é criada ou atualizada automaticamente, com envio do email de acesso. Em cada cancelamento, volta ao plano gratuito. O sistema só precisa de enviar o email do comprador no conteúdo do webhook.",
-      "activateFor": "Ativar {plan}",
-      "cancelLabel": "Cancelamento (qualquer plano)",
-      "hint": "Dica: abre o URL no navegador para verificar a ligação (resposta ping, nada é criado). As contas abertas por este webhook são automaticamente marcadas como teus clientes.",
-      "regenerateBtn": "Regenerar o segredo do webhook",
-      "regenerateConfirm": "Regenerar o segredo? Os URLs antigos deixarão de funcionar, terás de colar os novos na tua ferramenta de pagamento.",
-      "regenerated": "Novo segredo gerado. Atualiza os URLs na tua ferramenta de pagamento.",
-      "noToken": "O teu segredo webhook ainda não foi gerado. Pede à equipa Tiquiz para aplicar a atualização."
-    },
-    "checkout": {
-      "urlLabel": "URL da tua página de pagamento (Stripe, PayPal...)",
-      "priceLabel": "Preço apresentado no teu formulário de encomenda",
-      "pricePlaceholder": "ex. 19 € / mês",
-      "copyOrderPage": "Copiar o link do meu formulário de encomenda alojado",
-      "orderPageHint": "O formulário de encomenda alojado mostra o conteúdo do plano e o teu preço, e depois envia para a tua página de pagamento. Partilha o link com os teus prospetos, ou usa diretamente as tuas páginas se preferires.",
-      "title": "As minhas páginas de pagamento",
-      "desc": "Indica aqui os URLs das TUAS páginas de pagamento (Stripe, PayPal...), um por plano. Os teus clientes verão estes links nas suas Definições em vez das páginas Tiquiz: pagam-te diretamente a ti. Um plano sem URL não mostra nenhum botão de compra aos teus clientes.",
-      "plans": {
-        "monthly": "Plano mensal",
-        "yearly": "Plano anual",
-        "monthly_plus": "Plano mensal plus",
-        "yearly_plus": "Plano anual plus"
-      },
-      "saveBtn": "Guardar as minhas páginas de pagamento",
-      "saved": "Páginas de pagamento guardadas.",
-      "invalidUrl": "URL inválido para o plano {plan}: é necessário um endereço https completo."
-    },
     "title": "Espaço revendedor",
-    "subtitle": "Carteira {name}: os teus clientes Tiquiz, as suas contas e a sua atividade.",
+    "subtitle": "Espaço {name}: os teus clientes, os teus formulários de encomenda e a tua faturação, tudo automatizado.",
     "refresh": "Atualizar",
-    "stats": {
-      "totalClients": "Clientes",
-      "paidClients": "Licenças (pagantes)",
-      "active30": "Ativos 30 dias",
-      "totalLeads": "Leads captados"
+    "copied": "Copiado!",
+    "saved": "Definições guardadas.",
+    "invalidUrl": "URL inválido para o plano {plan}: é necessário um endereço https completo.",
+    "saveBtn": "Guardar",
+    "tabs": {
+      "clients": "Os meus clientes",
+      "activity": "Atividade",
+      "orders": "Formulários de encomenda",
+      "payments": "Métodos de pagamento",
+      "billing": "Faturação Tipote"
     },
-    "activation": {
-      "title": "Quem usa mesmo a ferramenta?",
-      "withProject": "Criaram pelo menos um quiz, sondagem ou popquiz",
-      "active7": "Ligados nos últimos 7 dias",
-      "active30": "Ligados nos últimos 30 dias",
-      "never": "Nunca se ligaram"
+    "plans": {
+      "monthly": "Plano mensal",
+      "yearly": "Plano anual",
+      "monthly_plus": "Plano mensal plus",
+      "yearly_plus": "Plano anual plus"
     },
     "create": {
       "title": "Criar uma conta de cliente",
+      "hint": "Para abrir uma conta manualmente. O cliente recebe de imediato o email de acesso (link mágico, sem palavra-passe). Para a abertura automática na venda, configura os teus formulários de encomenda.",
       "email": "Email",
       "firstName": "Nome",
       "firstNamePlaceholder": "Nome",
       "plan": "Plano",
-      "btn": "Criar conta",
-      "hint": "O cliente recebe de imediato o email de acesso (link mágico, sem palavra-passe)."
+      "btn": "Criar conta"
     },
     "searchPlaceholder": "Pesquisar por email ou nome…",
     "sortLabel": "Ordenar: {sort}",
@@ -1943,12 +1918,95 @@
       "actions": "Ações"
     },
     "never": "Nunca",
+    "emptyState": "Ainda não tens clientes. Cria uma conta acima ou configura os teus formulários de encomenda para que tudo seja automático.",
+    "noResults": "Nenhum cliente corresponde à tua pesquisa.",
     "actions": {
       "resendAccess": "Reenviar acesso",
-      "resendAccessTitle": "Reenviar o email de acesso (link mágico)"
+      "resendAccessTitle": "Reenviar o email de acesso (link mágico)",
+      "setPlanTitle": "Mudar o plano deste cliente (free = fechar o acesso pago, a conta e os conteúdos são conservados)"
     },
-    "emptyState": "Ainda não tens clientes. Cria a tua primeira conta acima.",
-    "noResults": "Nenhum cliente corresponde à tua pesquisa.",
+    "stats": {
+      "totalClients": "Clientes",
+      "paidClients": "Licenças (pagantes)",
+      "active30": "Ativos 30 dias",
+      "totalLeads": "Leads captados"
+    },
+    "activation": {
+      "title": "Quem usa mesmo a ferramenta?",
+      "desc": "Um cliente que cria quizzes e capta leads é um cliente que fica. Atenção aos que nunca se ligam: uma mensagem tua pode mudar tudo.",
+      "withProject": "Criaram pelo menos um quiz, sondagem ou popquiz",
+      "active7": "Ligados nos últimos 7 dias",
+      "active30": "Ligados nos últimos 30 dias",
+      "never": "Nunca se ligaram"
+    },
+    "orders": {
+      "introTitle": "Como vender o Tiquiz aos teus clientes?",
+      "intro": "Duas formas de vender, conforme as tuas ferramentas (podes misturar as duas por plano). Em ambos os casos tudo é automático: em cada venda, a conta do teu cliente é criada e o email de acesso enviado. Em cada cancelamento, a conta volta ao gratuito.",
+      "sioTitle": "Opção 1: usas o Systeme.io",
+      "sioStep1": "Cria o teu formulário de encomenda no Systeme.io, com o teu funil e o teu preço, como habitualmente.",
+      "sioStep2": "Cola abaixo o URL do teu formulário: os teus clientes vão encontrá-lo no espaço Tiquiz deles quando quiserem subscrever ou mudar de plano.",
+      "sioStep3": "No Systeme.io, adiciona uma regra de automatização na venda, de tipo webhook, e cola o link de ativação do plano. Faz o mesmo no reembolso ou cancelamento com o link de anulação.",
+      "sioUrlLabel": "URL do teu formulário de encomenda Systeme.io",
+      "sioWebhookLabel": "Link a colar na tua automatização de venda:",
+      "copyActivate": "Copiar o link de ativação",
+      "sioCancelLabel": "Anulação (todos os planos):",
+      "copyCancel": "Copiar o link de anulação",
+      "sioNote": "É tudo: os acessos são entregues automaticamente em cada venda, sem qualquer ação da tua parte.",
+      "tiquizTitle": "Opção 2: usas o formulário de encomenda Tiquiz (alojado por nós)",
+      "tiquizStep1": "Liga primeiro o teu Stripe ou o teu PayPal no separador Métodos de pagamento (2 minutos).",
+      "tiquizStep2": "Indica abaixo o preço a mostrar para cada plano.",
+      "tiquizStep3": "Partilha o link da tua página de encomenda: apresenta o plano, o teu preço, e o pagamento chega diretamente ao TEU Stripe ou ao TEU PayPal.",
+      "priceLabel": "Preço mostrado na página",
+      "pricePlaceholder": "ex. 19 € / mês",
+      "copyLink": "Copiar o link para partilhar",
+      "openPage": "Ver a página",
+      "needPayment": "Liga primeiro o Stripe ou o PayPal no separador Métodos de pagamento para ativar esta página."
+    },
+    "payments": {
+      "introTitle": "Os teus métodos de pagamento",
+      "intro": "Aqui ligas as TUAS contas Stripe e PayPal: os teus clientes pagam-te diretamente, o dinheiro chega às TUAS contas. O Tiquiz nunca toca no teu dinheiro. Estes métodos aparecem depois nos teus formulários de encomenda Tiquiz.",
+      "linksTitle": "Os teus links de pagamento por plano",
+      "linksHelp": "No Stripe: cria um link de pagamento (Produtos e depois Links de pagamento) para cada plano, com o teu preço e a recorrência certa, e cola-o aqui. No PayPal: cria um link ou botão de pagamento e cola-o aqui. O preço declarado serve para calcular a tua comissão Tipote.",
+      "stripeLabel": "Link de pagamento Stripe",
+      "paypalLabel": "Link de pagamento PayPal",
+      "amountLabel": "Preço declarado (em euros, preço do período)",
+      "amountPlaceholder": "ex. 19 (mensal) ou 190 (anual)",
+      "webhookTitle": "Entrega automática dos acessos",
+      "webhookHelp": "Para que o acesso parta sozinho após um pagamento Stripe ou PayPal, adiciona um webhook na tua ferramenta (Stripe: Developers e depois Webhooks, evento checkout.session.completed; PayPal: notificações webhook) e cola o link do plano vendido. Para cancelamentos de subscrição, usa o link de anulação.",
+      "webhookTest": "Dica: abre um link no navegador para verificar que responde (nada é criado). As contas abertas por estes links são automaticamente marcadas como teus clientes.",
+      "regenerateBtn": "Regenerar o meu link secreto",
+      "regenerateConfirm": "Regenerar? Os teus antigos links webhook deixarão de funcionar, terás de colar os novos no Systeme.io, Stripe ou PayPal.",
+      "regenerated": "Novo link secreto gerado. Atualiza os teus webhooks.",
+      "noToken": "O teu link secreto ainda não foi gerado. Contacta o suporte Tiquiz."
+    },
+    "billing": {
+      "howTitle": "Como funciona?",
+      "howText": "Vendes o Tiquiz aos teus clientes e recebes diretamente nas tuas contas. Em troca, a Tipote cobra uma comissão sobre as tuas licenças ativas (licença = cliente pagante; as contas gratuitas nunca contam). No dia 1 de cada mês a tua fatura é gerada automaticamente: número de licenças x preço declarado x a tua taxa atual. Quantas mais licenças tiveres, menor é a tua taxa. Pagas num clique via Stripe ou PayPal.",
+      "rateTitle": "A tua taxa atual",
+      "rateNote": "{licences} licenças ativas",
+      "estimateTitle": "O teu saldo em curso",
+      "estimateNote": "Estimativa do mês em curso, fixada na tua fatura no dia 1 do próximo mês.",
+      "pendingTitle": "Por pagar",
+      "pendingNote": "Total das tuas faturas à espera de pagamento.",
+      "tiersTitle": "A tua tabela",
+      "tierRange": "{from} a {to} licenças",
+      "tierLast": "{from} licenças ou mais",
+      "tiersNote": "A linha destacada é o teu escalão atual.",
+      "invoicesTitle": "As tuas faturas",
+      "period": "Mês",
+      "licences": "Licenças",
+      "rate": "Taxa",
+      "total": "Total",
+      "status": "Estado",
+      "actions": "Pagamento",
+      "statusPending": "Por pagar",
+      "statusPaid": "Paga",
+      "payStripe": "Pagar com Stripe",
+      "payPaypal": "Pagar com PayPal",
+      "paidOn": "Paga a {date}",
+      "missingPrice": "Falta o preço declarado nalguns planos: completa-o em Métodos de pagamento para um cálculo exato.",
+      "empty": "Ainda não há faturas. A primeira chega no dia 1 do próximo mês."
+    },
     "toasts": {
       "loadError": "Não foi possível carregar os teus clientes.",
       "created": "Conta criada. Email de acesso enviado para {email}.",
@@ -1956,11 +2014,32 @@
       "emailTaken": "Este email já pertence a uma conta Tiquiz existente fora da tua carteira.",
       "invalidEmail": "Email inválido.",
       "accessSent": "Email de acesso reenviado para {email}.",
+      "planUpdated": "Plano atualizado: {plan}.",
       "error": "Ocorreu um erro. Tenta novamente."
     }
   },
   "admin": {
     "resellers": {
+      "invoices": {
+        "title": "Faturas de comissão",
+        "generateBtn": "Gerar as faturas do mês",
+        "generated": "Geração iniciada. As faturas do mês estão atualizadas.",
+        "empty": "Ainda não foi gerada nenhuma fatura.",
+        "reseller": "Revendedor",
+        "period": "Mês",
+        "licences": "Licenças",
+        "rate": "Taxa",
+        "total": "Total devido",
+        "status": "Estado",
+        "actions": "Ações",
+        "statusPending": "Por pagar",
+        "statusPaid": "Paga",
+        "markPaid": "Marcar paga",
+        "markPending": "Voltar a por pagar",
+        "markedPaid": "Fatura marcada como paga.",
+        "markedPending": "Fatura devolvida a por pagar.",
+        "missingPrice": "* Falta o preço declarado nalguns planos: essas linhas estão a 0, esclarece com o revendedor."
+      },
       "title": "Revendedores",
       "emailLabel": "Email da conta Tiquiz",
       "nameLabel": "Nome do revendedor",

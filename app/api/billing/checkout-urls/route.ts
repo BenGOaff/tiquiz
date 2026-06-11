@@ -15,6 +15,7 @@
 
 import { NextResponse } from "next/server";
 
+import { normalizePlanPayment } from "@/lib/reseller";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
@@ -48,14 +49,30 @@ export async function GET() {
 
   const { data: reseller } = await supabaseAdmin
     .from("resellers")
-    .select("status,checkout_urls")
+    .select("status,checkout_urls,slug")
     .eq("id", resellerId)
     .maybeSingle();
 
-  const urls =
-    reseller && reseller.status === "active"
-      ? ((reseller.checkout_urls ?? {}) as Record<string, string>)
-      : {};
+  // Résolution par plan, dans l'ordre :
+  // 1. BDC Systeme.io du revendeur (s'il en a configuré un)
+  // 2. BDC Tiquiz hébergé (/order/<slug>/<plan>) si Stripe ou PayPal
+  //    est connecté
+  // 3. rien (pas de CTA, JAMAIS de fallback vers les BDC tipote.fr)
+  const urls: Record<string, string> = {};
+  if (reseller && reseller.status === "active") {
+    const config = (reseller.checkout_urls ?? {}) as Record<string, unknown>;
+    const slug = (reseller as { slug?: string | null }).slug ?? null;
+    for (const [plan, raw] of Object.entries(config)) {
+      const p = normalizePlanPayment(
+        raw as { stripe?: string; paypal?: string; sio?: string } | string | undefined,
+      );
+      if (p.sio) {
+        urls[plan] = p.sio;
+      } else if ((p.stripe || p.paypal) && slug) {
+        urls[plan] = `/order/${slug}/${plan}`;
+      }
+    }
+  }
 
   return NextResponse.json({ ok: true, managed: true, urls });
 }

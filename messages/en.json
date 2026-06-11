@@ -1849,65 +1849,40 @@
   },
   "order": {
     "soldBy": "Sold by {name}",
-    "payCta": "Pay and activate my account",
+    "payCardCta": "Pay by card",
+    "payPaypalCta": "Pay with PayPal",
     "accessNote": "Your access is emailed right after payment. Remember to check your spam folder.",
     "poweredBy": "Powered by Tiquiz"
   },
   "reseller": {
-    "copied": "Copied!",
-    "automation": {
-      "title": "Access automation",
-      "desc": "Paste these URLs into your payment tool's webhooks (Systeme.io, Stripe, PayPal...). On every sale, your client's account is created or updated automatically, with the access email sent. On every cancellation, they go back to free. The system just needs to send the buyer's email in the webhook payload.",
-      "activateFor": "Activate {plan}",
-      "cancelLabel": "Cancellation (any plan)",
-      "hint": "Tip: open the URL in your browser to check the wiring (ping response, nothing gets created). Accounts opened by this webhook are automatically tagged as your clients.",
-      "regenerateBtn": "Regenerate the webhook secret",
-      "regenerateConfirm": "Regenerate the secret? The old URLs will stop working, you will need to paste the new ones into your payment tool.",
-      "regenerated": "New secret generated. Update the URLs in your payment tool.",
-      "noToken": "Your webhook secret is not generated yet. Ask the Tiquiz team to apply the update."
-    },
-    "checkout": {
-      "urlLabel": "URL of your payment page (Stripe, PayPal...)",
-      "priceLabel": "Price shown on your order form",
-      "pricePlaceholder": "e.g. $19 / month",
-      "copyOrderPage": "Copy my hosted order form link",
-      "orderPageHint": "The hosted order form shows the plan content and your price, then sends to your payment page. Share its link with your prospects, or use your own pages directly if you prefer.",
-      "title": "My order forms",
-      "desc": "Enter the URLs of YOUR payment pages here (Stripe, PayPal...), one per plan. Your clients will see these links in their Settings instead of the Tiquiz pages: they pay you directly. A plan without a URL shows no purchase button to your clients.",
-      "plans": {
-        "monthly": "Monthly plan",
-        "yearly": "Yearly plan",
-        "monthly_plus": "Monthly plus plan",
-        "yearly_plus": "Yearly plus plan"
-      },
-      "saveBtn": "Save my order forms",
-      "saved": "Order forms saved.",
-      "invalidUrl": "Invalid URL for the {plan} plan: a full https address is required."
-    },
     "title": "Reseller area",
-    "subtitle": "{name} portfolio: your Tiquiz clients, their accounts and activity.",
+    "subtitle": "{name} area: your clients, your order forms and your billing, all automated.",
     "refresh": "Refresh",
-    "stats": {
-      "totalClients": "Clients",
-      "paidClients": "Licences (paying)",
-      "active30": "Active last 30 days",
-      "totalLeads": "Leads captured"
+    "copied": "Copied!",
+    "saved": "Settings saved.",
+    "invalidUrl": "Invalid URL for the {plan} plan: a full https address is required.",
+    "saveBtn": "Save",
+    "tabs": {
+      "clients": "My clients",
+      "activity": "Activity",
+      "orders": "Order forms",
+      "payments": "Payment methods",
+      "billing": "Tipote billing"
     },
-    "activation": {
-      "title": "Who really uses the tool?",
-      "withProject": "Created at least one quiz, survey or popquiz",
-      "active7": "Signed in within the last 7 days",
-      "active30": "Signed in within the last 30 days",
-      "never": "Never signed in"
+    "plans": {
+      "monthly": "Monthly plan",
+      "yearly": "Yearly plan",
+      "monthly_plus": "Monthly plus plan",
+      "yearly_plus": "Yearly plus plan"
     },
     "create": {
       "title": "Create a client account",
+      "hint": "To open an account manually. The client immediately receives their access email (magic link, no password). For automatic opening on sale, set up your order forms.",
       "email": "Email",
       "firstName": "First name",
       "firstNamePlaceholder": "First name",
       "plan": "Plan",
-      "btn": "Create account",
-      "hint": "The client immediately receives their access email (magic link, no password)."
+      "btn": "Create account"
     },
     "searchPlaceholder": "Search by email or name…",
     "sortLabel": "Sort: {sort}",
@@ -1927,12 +1902,95 @@
       "actions": "Actions"
     },
     "never": "Never",
+    "emptyState": "No clients yet. Create an account above or set up your order forms so everything runs automatically.",
+    "noResults": "No client matches your search.",
     "actions": {
       "resendAccess": "Resend access",
-      "resendAccessTitle": "Resend the access email (magic link)"
+      "resendAccessTitle": "Resend the access email (magic link)",
+      "setPlanTitle": "Change this client's plan (free = close paid access, their account and content are kept)"
     },
-    "emptyState": "No clients yet. Create your first account above.",
-    "noResults": "No client matches your search.",
+    "stats": {
+      "totalClients": "Clients",
+      "paidClients": "Licences (paying)",
+      "active30": "Active last 30 days",
+      "totalLeads": "Leads captured"
+    },
+    "activation": {
+      "title": "Who really uses the tool?",
+      "desc": "A client who builds quizzes and captures leads is a client who stays. Keep an eye on those who never sign in: a quick message from you can change everything.",
+      "withProject": "Created at least one quiz, survey or popquiz",
+      "active7": "Signed in within the last 7 days",
+      "active30": "Signed in within the last 30 days",
+      "never": "Never signed in"
+    },
+    "orders": {
+      "introTitle": "How to sell Tiquiz to your clients?",
+      "intro": "Two ways to sell, depending on your tools (you can mix both across plans). In both cases everything is automatic: on every sale your client's account is created and their access email sent. On every cancellation their account goes back to free.",
+      "sioTitle": "Option 1: you use Systeme.io",
+      "sioStep1": "Create your order form in Systeme.io with your funnel and your price, as usual.",
+      "sioStep2": "Paste your order form URL below: your clients will find it in their Tiquiz area when they want to subscribe or change plan.",
+      "sioStep3": "In Systeme.io, add an automation rule on sale, type webhook, and paste the plan's activation link. Do the same on refund or unsubscribe with the cancellation link.",
+      "sioUrlLabel": "Your Systeme.io order form URL",
+      "sioWebhookLabel": "Link to paste in your sale automation:",
+      "copyActivate": "Copy the activation link",
+      "sioCancelLabel": "Cancellation (all plans):",
+      "copyCancel": "Copy the cancellation link",
+      "sioNote": "That's it: access is delivered automatically on every sale, no action needed on your side.",
+      "tiquizTitle": "Option 2: you use the Tiquiz order form (hosted by us)",
+      "tiquizStep1": "First connect your Stripe or PayPal in the Payment methods tab (2 minutes).",
+      "tiquizStep2": "Set the price to display for each plan below.",
+      "tiquizStep3": "Share your order page link: it presents the plan, your price, and the payment goes straight to YOUR Stripe or YOUR PayPal.",
+      "priceLabel": "Price shown on the page",
+      "pricePlaceholder": "e.g. $19 / month",
+      "copyLink": "Copy the link to share",
+      "openPage": "View the page",
+      "needPayment": "Connect Stripe or PayPal in the Payment methods tab first to enable this page."
+    },
+    "payments": {
+      "introTitle": "Your payment methods",
+      "intro": "Here you connect YOUR Stripe and PayPal accounts: your clients pay you directly, the money lands on YOUR accounts. Tiquiz never touches your money. These payment methods then appear on your Tiquiz order forms.",
+      "linksTitle": "Your payment links per plan",
+      "linksHelp": "In Stripe: create a payment link (Products then Payment links) for each plan, with your price and the right recurrence, and paste it here. In PayPal: create a payment link or button and paste it here. The declared price is used to compute your Tipote commission.",
+      "stripeLabel": "Stripe payment link",
+      "paypalLabel": "PayPal payment link",
+      "amountLabel": "Declared price (in euros, price of the period)",
+      "amountPlaceholder": "e.g. 19 (monthly) or 190 (yearly)",
+      "webhookTitle": "Automatic access delivery",
+      "webhookHelp": "So access ships by itself after a Stripe or PayPal payment, add a webhook in your tool (Stripe: Developers then Webhooks, event checkout.session.completed; PayPal: webhook notifications) and paste the link of the plan sold. For subscription cancellations, use the cancellation link.",
+      "webhookTest": "Tip: open a link in your browser to check it responds (nothing gets created). Accounts opened by these links are automatically tagged as your clients.",
+      "regenerateBtn": "Regenerate my secret link",
+      "regenerateConfirm": "Regenerate? Your old webhook links will stop working, you will need to paste the new ones into Systeme.io, Stripe or PayPal.",
+      "regenerated": "New secret link generated. Update your webhooks.",
+      "noToken": "Your secret link is not generated yet. Contact Tiquiz support."
+    },
+    "billing": {
+      "howTitle": "How does it work?",
+      "howText": "You sell Tiquiz to your clients and collect payments directly on your accounts. In return, Tipote takes a commission on your active licences (licence = paying client; free accounts never count). On the 1st of each month your invoice is generated automatically: number of licences x declared price x your current rate. The more licences you have, the lower your rate. You settle in one click via Stripe or PayPal.",
+      "rateTitle": "Your current rate",
+      "rateNote": "{licences} active licences",
+      "estimateTitle": "Your running balance",
+      "estimateNote": "Current month estimate, locked into your invoice on the 1st of next month.",
+      "pendingTitle": "To settle",
+      "pendingNote": "Total of your invoices awaiting payment.",
+      "tiersTitle": "Your tiers",
+      "tierRange": "{from} to {to} licences",
+      "tierLast": "{from} licences and above",
+      "tiersNote": "The highlighted row is your current tier.",
+      "invoicesTitle": "Your invoices",
+      "period": "Month",
+      "licences": "Licences",
+      "rate": "Rate",
+      "total": "Total",
+      "status": "Status",
+      "actions": "Payment",
+      "statusPending": "To settle",
+      "statusPaid": "Paid",
+      "payStripe": "Pay via Stripe",
+      "payPaypal": "Pay via PayPal",
+      "paidOn": "Paid on {date}",
+      "missingPrice": "Declared price missing on some plans: fill it in under Payment methods for an exact calculation.",
+      "empty": "No invoice yet. The first one arrives on the 1st of next month."
+    },
     "toasts": {
       "loadError": "Could not load your clients.",
       "created": "Account created. Access email sent to {email}.",
@@ -1940,11 +1998,32 @@
       "emailTaken": "This email already belongs to an existing Tiquiz account outside your portfolio.",
       "invalidEmail": "Invalid email.",
       "accessSent": "Access email resent to {email}.",
+      "planUpdated": "Plan updated: {plan}.",
       "error": "Something went wrong. Try again."
     }
   },
   "admin": {
     "resellers": {
+      "invoices": {
+        "title": "Commission invoices",
+        "generateBtn": "Generate this month's invoices",
+        "generated": "Generation started. This month's invoices are up to date.",
+        "empty": "No invoice generated yet.",
+        "reseller": "Reseller",
+        "period": "Month",
+        "licences": "Licences",
+        "rate": "Rate",
+        "total": "Total due",
+        "status": "Status",
+        "actions": "Actions",
+        "statusPending": "To pay",
+        "statusPaid": "Paid",
+        "markPaid": "Mark paid",
+        "markPending": "Mark to pay",
+        "markedPaid": "Invoice marked paid.",
+        "markedPending": "Invoice set back to pending.",
+        "missingPrice": "* Declared price missing on some plans: those lines are at 0, sort it out with the reseller."
+      },
       "title": "Resellers",
       "emailLabel": "Tiquiz account email",
       "nameLabel": "Reseller name",

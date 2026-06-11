@@ -22,6 +22,10 @@ import {
   isResellerAllowedPlan,
   logResellerAction,
 } from "@/lib/reseller";
+import {
+  activateResellerClient,
+  cancelResellerClient,
+} from "@/lib/resellerProvisioning";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
@@ -276,7 +280,12 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PATCH — renvoyer l'email d'accès à un client du portefeuille
+// PATCH — actions manuelles sur un client du portefeuille ("il garde la
+// main") : { user_id, op: "resend" | "set_plan", plan? }.
+// - resend (défaut) : renvoyer l'email d'accès (magic link).
+// - set_plan : upgrade/downgrade manuel. plan="free" = fermer l'accès
+//   payant (le compte et ses contenus sont conservés).
+// Tout passe par la lib de provisioning (audit + anti-captation).
 export async function PATCH(req: NextRequest) {
   const session = await getResellerSession();
   if (!session) {
@@ -287,6 +296,7 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const targetUserId =
       typeof body?.user_id === "string" ? body.user_id.trim() : "";
+    const op = typeof body?.op === "string" ? body.op : "resend";
     if (!targetUserId) {
       return NextResponse.json({ ok: false, error: "user_id_required" }, { status: 400 });
     }
@@ -300,6 +310,36 @@ export async function PATCH(req: NextRequest) {
 
     if (!profile || profile.reseller_id !== session.reseller.id || !profile.email) {
       return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+    }
+
+    if (op === "set_plan") {
+      const plan = typeof body?.plan === "string" ? body.plan : "";
+      if (plan !== "free" && !isResellerAllowedPlan(plan)) {
+        return NextResponse.json({ ok: false, error: "invalid_plan" }, { status: 400 });
+      }
+      const result =
+        plan === "free"
+          ? await cancelResellerClient({
+              reseller: session.reseller,
+              email: profile.email,
+              source: "panel",
+              actorUserId: session.userId,
+            })
+          : await activateResellerClient({
+              reseller: session.reseller,
+              email: profile.email,
+              plan,
+              source: "panel",
+              actorUserId: session.userId,
+            });
+      if (!result.ok) {
+        return NextResponse.json({ ok: false, error: result.outcome }, { status: 400 });
+      }
+      return NextResponse.json({ ok: true, outcome: result.outcome, plan });
+    }
+
+    if (op !== "resend") {
+      return NextResponse.json({ ok: false, error: "unknown_op" }, { status: 400 });
     }
 
     const sent = await sendAccessEmail(profile.email);

@@ -22,18 +22,27 @@ export interface ResellerRow {
   name: string;
   status: "active" | "suspended";
   commission_tiers: Array<{ max_active: number | null; rate: number }>;
-  /** URLs des bons de commande du revendeur, une par plan payant
-   * (monthly, yearly, monthly_plus, yearly_plus). Affichées à SES
-   * clients à la place des BDC tipote.fr. */
-  checkout_urls: Partial<Record<string, string>>;
+  /** Config de paiement par plan payant (monthly, yearly, monthly_plus,
+   * yearly_plus) :
+   * - stripe : lien de paiement Stripe du revendeur (Payment Link)
+   * - paypal : lien de paiement PayPal du revendeur
+   * - sio    : URL de SON bon de commande Systeme.io (s'il préfère SIO)
+   * Stripe/PayPal alimentent le bon de commande Tiquiz hébergé
+   * (/order/<slug>/<plan>). Legacy : une string nue = stripe. */
+  checkout_urls: Partial<
+    Record<string, { stripe?: string; paypal?: string; sio?: string } | string>
+  >;
   /** Secret du webhook entrant générique (provisioning auto). */
   webhook_token: string | null;
   /** Identifiant public des bons de commande hébergés (/order/<slug>/<plan>). */
   slug: string | null;
-  /** Tarifs affichés sur les bons de commande hébergés, texte libre
-   * saisi par le revendeur (ex. "19 € / mois"). Affichage uniquement,
-   * le paiement réel se fait sur checkout_urls. */
-  pricing: Partial<Record<string, { label: string }>>;
+  /** Tarifs du revendeur par plan.
+   * - label : texte libre affiché sur le bon de commande hébergé
+   *   (ex. "19 € / mois"). Affichage uniquement.
+   * - amount_cents : prix déclaré en CENTIMES, base du calcul de la
+   *   commission mensuelle (cron reseller-invoices). Plans annuels :
+   *   prix de l'année, mensualisé par le cron (/12). */
+  pricing: Partial<Record<string, { label?: string; amount_cents?: number }>>;
   created_at: string;
 }
 
@@ -115,6 +124,21 @@ export function isResellerAllowedPlan(plan: unknown): plan is ResellerAllowedPla
     typeof plan === "string" &&
     (RESELLER_ALLOWED_PLANS as readonly string[]).includes(plan)
   );
+}
+
+export interface PlanPayment {
+  stripe?: string;
+  paypal?: string;
+  sio?: string;
+}
+
+/** Normalise une entrée checkout_urls (legacy string = lien stripe). */
+export function normalizePlanPayment(
+  value: { stripe?: string; paypal?: string; sio?: string } | string | undefined,
+): PlanPayment {
+  if (!value) return {};
+  if (typeof value === "string") return { stripe: value };
+  return value;
 }
 
 /** LICENCE (définition Béné 11 juin 2026) : un compte PAYANT, quel que

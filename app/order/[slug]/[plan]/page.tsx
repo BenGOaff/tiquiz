@@ -17,7 +17,10 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ArrowRight, Check } from "lucide-react";
 
+import { isAdminEmail } from "@/lib/adminEmails";
+import { normalizePlanPayment } from "@/lib/reseller";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
 
@@ -64,12 +67,33 @@ const PLAN_CONTENT: Record<
 interface OrderReseller {
   name: string;
   status: string;
-  checkout_urls: Record<string, string>;
+  checkout_urls: Record<
+    string,
+    { stripe?: string; paypal?: string; sio?: string } | string
+  >;
   pricing: Record<string, { label?: string }>;
 }
 
 async function loadOrder(slug: string, plan: string) {
   if (!PLAN_CONTENT[plan]) return null;
+
+  // Mode APERÇU pour Béné (admin uniquement) : /order/preview/<plan>
+  // affiche le bon de commande avec des données d'exemple, sans créer
+  // de revendeur. Permet d'ajuster textes et design.
+  if (slug === "preview") {
+    const supabase = await getSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user || !isAdminEmail(user.email)) return null;
+    return {
+      name: "Aperçu revendeur",
+      stripeUrl: "#",
+      paypalUrl: "#",
+      priceLabel: "19 € / mois",
+    };
+  }
+
   if (!slug || slug.length < 6) return null;
 
   const { data, error } = await supabaseAdmin
@@ -82,12 +106,16 @@ async function loadOrder(slug: string, plan: string) {
   const reseller = data as unknown as OrderReseller;
   if (reseller.status !== "active") return null;
 
-  const checkoutUrl = (reseller.checkout_urls ?? {})[plan];
-  if (!checkoutUrl) return null;
+  // Le BDC hébergé n'existe que si le revendeur a connecté Stripe ou
+  // PayPal pour ce plan. S'il n'utilise que Systeme.io, c'est SON BDC
+  // SIO qui sert, pas cette page.
+  const payment = normalizePlanPayment((reseller.checkout_urls ?? {})[plan]);
+  if (!payment.stripe && !payment.paypal) return null;
 
   return {
     name: reseller.name,
-    checkoutUrl,
+    stripeUrl: payment.stripe ?? null,
+    paypalUrl: payment.paypal ?? null,
     priceLabel: (reseller.pricing ?? {})[plan]?.label ?? null,
   };
 }
@@ -140,15 +168,30 @@ export default async function ResellerOrderPage({ params }: PageProps) {
             ))}
           </ul>
 
-          <a
-            href={order.checkoutUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full rounded-full bg-primary text-primary-foreground font-semibold py-3 hover:opacity-90 transition-opacity"
-          >
-            {tOrder("payCta")}
-            <ArrowRight className="h-4 w-4" />
-          </a>
+          <div className="space-y-2">
+            {order.stripeUrl ? (
+              <a
+                href={order.stripeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full rounded-full bg-primary text-primary-foreground font-semibold py-3 hover:opacity-90 transition-opacity"
+              >
+                {tOrder("payCardCta")}
+                <ArrowRight className="h-4 w-4" />
+              </a>
+            ) : null}
+            {order.paypalUrl ? (
+              <a
+                href={order.paypalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full rounded-full border border-primary text-primary font-semibold py-3 hover:bg-primary/5 transition-colors"
+              >
+                {tOrder("payPaypalCta")}
+                <ArrowRight className="h-4 w-4" />
+              </a>
+            ) : null}
+          </div>
 
           <p className="text-xs text-muted-foreground text-center">
             {tOrder("accessNote")}
