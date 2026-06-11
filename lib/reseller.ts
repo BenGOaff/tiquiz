@@ -26,6 +26,14 @@ export interface ResellerRow {
    * (monthly, yearly, monthly_plus, yearly_plus). Affichées à SES
    * clients à la place des BDC tipote.fr. */
   checkout_urls: Partial<Record<string, string>>;
+  /** Secret du webhook entrant générique (provisioning auto). */
+  webhook_token: string | null;
+  /** Identifiant public des bons de commande hébergés (/order/<slug>/<plan>). */
+  slug: string | null;
+  /** Tarifs affichés sur les bons de commande hébergés, texte libre
+   * saisi par le revendeur (ex. "19 € / mois"). Affichage uniquement,
+   * le paiement réel se fait sur checkout_urls. */
+  pricing: Partial<Record<string, { label: string }>>;
   created_at: string;
 }
 
@@ -48,7 +56,9 @@ export async function getResellerSession(): Promise<ResellerSession | null> {
 
   const { data, error } = await supabaseAdmin
     .from("resellers")
-    .select("id,user_id,name,status,commission_tiers,checkout_urls,created_at")
+    .select(
+      "id,user_id,name,status,commission_tiers,checkout_urls,webhook_token,slug,pricing,created_at",
+    )
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -68,7 +78,8 @@ export async function getResellerSession(): Promise<ResellerSession | null> {
  */
 export async function logResellerAction(args: {
   resellerId: string;
-  actorUserId: string;
+  /** null pour les actions automatiques (webhook, cron). */
+  actorUserId?: string | null;
   targetUserId?: string | null;
   targetEmail?: string | null;
   action: string;
@@ -76,7 +87,7 @@ export async function logResellerAction(args: {
 }): Promise<void> {
   const { error } = await supabaseAdmin.from("reseller_actions").insert({
     reseller_id: args.resellerId,
-    actor_user_id: args.actorUserId,
+    actor_user_id: args.actorUserId ?? null,
     target_user_id: args.targetUserId ?? null,
     target_email: args.targetEmail ?? null,
     action: args.action,

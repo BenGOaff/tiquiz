@@ -1847,8 +1847,31 @@
       "aborted": "Upload cancelled."
     }
   },
+  "order": {
+    "soldBy": "Sold by {name}",
+    "payCta": "Pay and activate my account",
+    "accessNote": "Your access is emailed right after payment. Remember to check your spam folder.",
+    "poweredBy": "Powered by Tiquiz"
+  },
   "reseller": {
+    "copied": "Copied!",
+    "automation": {
+      "title": "Access automation",
+      "desc": "Paste these URLs into your payment tool's webhooks (Systeme.io, Stripe, PayPal...). On every sale, your client's account is created or updated automatically, with the access email sent. On every cancellation, they go back to free. The system just needs to send the buyer's email in the webhook payload.",
+      "activateFor": "Activate {plan}",
+      "cancelLabel": "Cancellation (any plan)",
+      "hint": "Tip: open the URL in your browser to check the wiring (ping response, nothing gets created). Accounts opened by this webhook are automatically tagged as your clients.",
+      "regenerateBtn": "Regenerate the webhook secret",
+      "regenerateConfirm": "Regenerate the secret? The old URLs will stop working, you will need to paste the new ones into your payment tool.",
+      "regenerated": "New secret generated. Update the URLs in your payment tool.",
+      "noToken": "Your webhook secret is not generated yet. Ask the Tiquiz team to apply the update."
+    },
     "checkout": {
+      "urlLabel": "URL of your payment page (Stripe, PayPal...)",
+      "priceLabel": "Price shown on your order form",
+      "pricePlaceholder": "e.g. $19 / month",
+      "copyOrderPage": "Copy my hosted order form link",
+      "orderPageHint": "The hosted order form shows the plan content and your price, then sends to your payment page. Share its link with your prospects, or use your own pages directly if you prefer.",
       "title": "My order forms",
       "desc": "Enter the URLs of YOUR payment pages here (Stripe, PayPal...), one per plan. Your clients will see these links in their Settings instead of the Tiquiz pages: they pay you directly. A plan without a URL shows no purchase button to your clients.",
       "plans": {

@@ -35,6 +35,9 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     checkout_urls: session.reseller.checkout_urls ?? {},
+    pricing: session.reseller.pricing ?? {},
+    webhook_token: session.reseller.webhook_token ?? null,
+    slug: session.reseller.slug ?? null,
   });
 }
 
@@ -46,38 +49,86 @@ export async function PUT(req: NextRequest) {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const raw = body?.checkout_urls;
-    if (!raw || typeof raw !== "object") {
+    const updates: Record<string, unknown> = {};
+    const actions: string[] = [];
+
+    // 1. URLs de paiement (pages Stripe/PayPal du revendeur).
+    if (body?.checkout_urls && typeof body.checkout_urls === "object") {
+      const next: Record<string, string> = {};
+      for (const key of CHECKOUT_PLAN_KEYS) {
+        const value = (body.checkout_urls as Record<string, unknown>)[key];
+        if (value === undefined || value === null || value === "") continue;
+        if (typeof value !== "string" || !isValidHttpsUrl(value.trim())) {
+          return NextResponse.json(
+            { ok: false, error: "invalid_url", plan: key },
+            { status: 400 },
+          );
+        }
+        next[key] = value.trim();
+      }
+      updates.checkout_urls = next;
+      actions.push("update_checkout_urls");
+    }
+
+    // 2. Tarifs affichés sur les bons de commande hébergés (texte libre,
+    //    affichage uniquement : le montant réel est celui de sa page de
+    //    paiement).
+    if (body?.pricing && typeof body.pricing === "object") {
+      const next: Record<string, { label: string }> = {};
+      for (const key of CHECKOUT_PLAN_KEYS) {
+        const value = (body.pricing as Record<string, unknown>)[key];
+        const label =
+          value && typeof value === "object"
+            ? (value as { label?: unknown }).label
+            : value;
+        if (label === undefined || label === null || label === "") continue;
+        if (typeof label !== "string" || label.trim().length > 80) {
+          return NextResponse.json(
+            { ok: false, error: "invalid_price", plan: key },
+            { status: 400 },
+          );
+        }
+        next[key] = { label: label.trim() };
+      }
+      updates.pricing = next;
+      actions.push("update_pricing");
+    }
+
+    // 3. Rotation du secret webhook (si le token a fuité).
+    if (body?.regenerate_webhook_token === true) {
+      updates.webhook_token =
+        crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+      actions.push("regenerate_webhook_token");
+    }
+
+    if (Object.keys(updates).length === 0) {
       return NextResponse.json({ ok: false, error: "invalid_payload" }, { status: 400 });
     }
 
-    const next: Record<string, string> = {};
-    for (const key of CHECKOUT_PLAN_KEYS) {
-      const value = (raw as Record<string, unknown>)[key];
-      if (value === undefined || value === null || value === "") continue;
-      if (typeof value !== "string" || !isValidHttpsUrl(value.trim())) {
-        return NextResponse.json(
-          { ok: false, error: "invalid_url", plan: key },
-          { status: 400 },
-        );
-      }
-      next[key] = value.trim();
-    }
-
-    const { error } = await supabaseAdmin
+    const { data: updated, error } = await supabaseAdmin
       .from("resellers")
-      .update({ checkout_urls: next })
-      .eq("id", session.reseller.id);
+      .update(updates)
+      .eq("id", session.reseller.id)
+      .select("checkout_urls,pricing,webhook_token,slug")
+      .single();
     if (error) throw error;
 
-    await logResellerAction({
-      resellerId: session.reseller.id,
-      actorUserId: session.userId,
-      action: "update_checkout_urls",
-      meta: { plans: Object.keys(next) },
-    });
+    for (const action of actions) {
+      await logResellerAction({
+        resellerId: session.reseller.id,
+        actorUserId: session.userId,
+        action,
+        meta: {},
+      });
+    }
 
-    return NextResponse.json({ ok: true, checkout_urls: next });
+    return NextResponse.json({
+      ok: true,
+      checkout_urls: updated.checkout_urls ?? {},
+      pricing: updated.pricing ?? {},
+      webhook_token: updated.webhook_token ?? null,
+      slug: updated.slug ?? null,
+    });
   } catch (e) {
     console.error("[reseller/settings] PUT failed", (e as Error).message);
     return NextResponse.json({ ok: false, error: "update_failed" }, { status: 500 });

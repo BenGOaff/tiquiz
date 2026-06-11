@@ -1847,8 +1847,31 @@
       "aborted": "Import annulé."
     }
   },
+  "order": {
+    "soldBy": "Vendu par {name}",
+    "payCta": "Payer et activer mon compte",
+    "accessNote": "Ton accès est envoyé par email juste après le paiement. Pense à vérifier tes spams.",
+    "poweredBy": "Propulsé par Tiquiz"
+  },
   "reseller": {
+    "copied": "Copié !",
+    "automation": {
+      "title": "Automatisation des accès",
+      "desc": "Colle ces URLs dans les webhooks de ton outil de paiement (Systeme.io, Stripe, PayPal...). À chaque vente, le compte de ton client est créé ou mis à jour automatiquement, avec envoi de l'email d'accès. À chaque annulation, il repasse en gratuit. Le système doit juste envoyer l'email de l'acheteur dans le contenu du webhook.",
+      "activateFor": "Activer {plan}",
+      "cancelLabel": "Annulation (tout plan)",
+      "hint": "Astuce : ouvre l'URL dans ton navigateur pour vérifier le branchement (réponse ping, rien n'est créé). Les comptes ouverts par ce webhook sont automatiquement tagués comme tes clients.",
+      "regenerateBtn": "Régénérer le secret du webhook",
+      "regenerateConfirm": "Régénérer le secret ? Les anciennes URLs ne fonctionneront plus, il faudra recoller les nouvelles dans ton outil de paiement.",
+      "regenerated": "Nouveau secret généré. Mets à jour les URLs dans ton outil de paiement.",
+      "noToken": "Ton secret webhook n'est pas encore généré. Demande à l'équipe Tiquiz d'appliquer la mise à jour."
+    },
     "checkout": {
+      "urlLabel": "URL de ta page de paiement (Stripe, PayPal...)",
+      "priceLabel": "Tarif affiché sur ton bon de commande",
+      "pricePlaceholder": "ex. 19 € / mois",
+      "copyOrderPage": "Copier le lien de mon bon de commande hébergé",
+      "orderPageHint": "Le bon de commande hébergé rappelle le contenu du plan et ton tarif, puis envoie vers ta page de paiement. Partage son lien à tes prospects, ou utilise directement tes propres pages si tu préfères.",
       "title": "Mes bons de commande",
       "desc": "Renseigne ici les URLs de TES pages de paiement (Stripe, PayPal...), une par plan. Tes clients verront ces liens dans leurs Réglages, à la place des pages Tiquiz : ils te payent toi, directement. Un plan sans URL n'affiche aucun bouton d'achat chez tes clients.",
       "plans": {

@@ -220,11 +220,27 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true, skipped: "unknown_user", email: cancelEmail });
       }
 
+      // select("*") volontaire : reseller_id peut ne pas encore exister
+      // en prod (migration resellers). Un select nominatif sur une
+      // colonne absente ferait planter TOUT le branch cancel.
       const { data: priorProfile } = await supabaseAdmin
-        .from("profiles").select("plan, expected_sio_cancel_until").eq("user_id", found.id).maybeSingle();
+        .from("profiles").select("*").eq("user_id", found.id).maybeSingle();
       const oldPlan = String((priorProfile as { plan?: string | null } | null)?.plan ?? "free").trim().toLowerCase();
       const expectedCancelUntil = (priorProfile as { expected_sio_cancel_until?: string | null } | null)
         ?.expected_sio_cancel_until ?? null;
+
+      // Clients de REVENDEUR : immunisés contre le webhook SIO de Béné,
+      // même pattern que l'immunité lifetime ci-dessous. Leur cycle de
+      // vie passe par le webhook revendeur (/api/reseller-webhook), pas
+      // par les funnels tipote.fr. Sans ce garde-fou, un event SIO sur
+      // le même email mélangerait les deux mondes.
+      const cancelResellerId =
+        (priorProfile as { reseller_id?: string | null } | null)?.reseller_id ?? null;
+      if (cancelResellerId) {
+        console.warn(`[Tiquiz webhook] REFUSED cancel for reseller client email=${cancelEmail} reseller=${cancelResellerId} event=${eventType}`);
+        await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "processed", error: `refused_reseller_client:${cancelResellerId}` });
+        return NextResponse.json({ ok: true, skipped: "reseller_client", email: cancelEmail });
+      }
 
       // Auto-cancel attendu (l'user a upgrade/downgrade vers un autre
       // palier — on a annulé son ancien sub côté SIO). Le SALE_CANCELED
@@ -357,10 +373,24 @@ export async function POST(req: NextRequest) {
     }
 
     // Capture the old plan BEFORE upsert so we can audit plan transitions.
+    // select("*") volontaire : reseller_id peut ne pas encore exister en
+    // prod (migration resellers), un select nominatif planterait ici.
     const { data: priorProfile } = await supabaseAdmin
-      .from("profiles").select("plan").eq("user_id", userId).maybeSingle();
+      .from("profiles").select("*").eq("user_id", userId).maybeSingle();
     const oldPlanRaw = String((priorProfile as { plan?: string | null } | null)?.plan ?? "").trim().toLowerCase();
     const oldPlan = (oldPlanRaw || null) as TiquizPlan | "beta" | null;
+
+    // Clients de REVENDEUR : immunisés contre le webhook SIO de Béné
+    // (même pattern que l'immunité lifetime ci-dessous). Si un client
+    // d'un revendeur achète par erreur sur un funnel tipote.fr, on ne
+    // touche PAS à son plan : Béné voit le log et rembourse/redirige.
+    const upgradeResellerId =
+      (priorProfile as { reseller_id?: string | null } | null)?.reseller_id ?? null;
+    if (upgradeResellerId) {
+      console.warn(`[Tiquiz webhook] REFUSED plan change for reseller client email=${email} reseller=${upgradeResellerId} event=${eventType}`);
+      await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "processed", error: `refused_reseller_client:${upgradeResellerId}` });
+      return NextResponse.json({ ok: true, skipped: "reseller_client", email });
+    }
 
     // Beta + lifetime are immune to webhook plan changes — they paid (or were
     // granted) lifetime access. If a SIO event somehow lands for one of them

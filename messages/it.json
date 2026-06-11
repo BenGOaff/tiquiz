@@ -1863,8 +1863,31 @@
       "aborted": "Caricamento annullato."
     }
   },
+  "order": {
+    "soldBy": "Venduto da {name}",
+    "payCta": "Paga e attiva il mio account",
+    "accessNote": "Il tuo accesso viene inviato via email subito dopo il pagamento. Ricorda di controllare lo spam.",
+    "poweredBy": "Realizzato con Tiquiz"
+  },
   "reseller": {
+    "copied": "Copiato!",
+    "automation": {
+      "title": "Automazione degli accessi",
+      "desc": "Incolla questi URL nei webhook del tuo strumento di pagamento (Systeme.io, Stripe, PayPal...). A ogni vendita, l'account del tuo cliente viene creato o aggiornato automaticamente, con invio dell'email di accesso. A ogni annullamento, torna al piano gratuito. Il sistema deve solo inviare l'email dell'acquirente nel contenuto del webhook.",
+      "activateFor": "Attiva {plan}",
+      "cancelLabel": "Annullamento (qualsiasi piano)",
+      "hint": "Suggerimento: apri l'URL nel browser per verificare il collegamento (risposta ping, non viene creato nulla). Gli account aperti da questo webhook sono automaticamente etichettati come tuoi clienti.",
+      "regenerateBtn": "Rigenera il segreto del webhook",
+      "regenerateConfirm": "Rigenerare il segreto? I vecchi URL smetteranno di funzionare, dovrai incollare i nuovi nel tuo strumento di pagamento.",
+      "regenerated": "Nuovo segreto generato. Aggiorna gli URL nel tuo strumento di pagamento.",
+      "noToken": "Il tuo segreto webhook non è ancora generato. Chiedi al team Tiquiz di applicare l'aggiornamento."
+    },
     "checkout": {
+      "urlLabel": "URL della tua pagina di pagamento (Stripe, PayPal...)",
+      "priceLabel": "Prezzo mostrato sul tuo modulo d'ordine",
+      "pricePlaceholder": "es. 19 € / mese",
+      "copyOrderPage": "Copia il link del mio modulo d'ordine ospitato",
+      "orderPageHint": "Il modulo d'ordine ospitato mostra il contenuto del piano e il tuo prezzo, poi invia alla tua pagina di pagamento. Condividi il link con i tuoi prospect, o usa direttamente le tue pagine se preferisci.",
       "title": "Le mie pagine di pagamento",
       "desc": "Inserisci qui gli URL delle TUE pagine di pagamento (Stripe, PayPal...), uno per piano. I tuoi clienti vedranno questi link nelle loro Impostazioni al posto delle pagine Tiquiz: pagano direttamente te. Un piano senza URL non mostra alcun pulsante di acquisto ai tuoi clienti.",
       "plans": {

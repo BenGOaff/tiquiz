@@ -177,9 +177,15 @@ export async function POST(req: NextRequest) {
         .catch(() => {});
     }
 
+    // Token webhook + slug public générés à la promotion (les defaults
+    // SQL ne couvrent que le backfill de la migration v2).
+    const webhookToken =
+      crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+    const slug = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+
     const { data: created, error } = await supabaseAdmin
       .from("resellers")
-      .insert({ user_id: resellerUserId, name })
+      .insert({ user_id: resellerUserId, name, webhook_token: webhookToken, slug })
       .select("id")
       .single();
 

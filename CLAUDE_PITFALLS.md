@@ -1032,9 +1032,31 @@ sont des comptes Tiquiz 100% standards sur l'infra de Béné.
   via un BDC tipote.fr (vieux lien), le webhook SIO upgradera son plan
   chez Béné -> détection de mismatch à prévoir dans la réconciliation.
 
+**Phase 3 livrée (11 juin, nuit) : provisioning AUTOMATIQUE.**
+- `lib/resellerProvisioning.ts` : activateResellerClient /
+  cancelResellerClient. Anti-captation, plan_change_log,
+  reseller_actions, idempotent. TOUT canal de provisioning revendeur
+  DOIT passer par ces deux fonctions.
+- Webhook entrant générique : POST
+  `/api/reseller-webhook/<webhook_token>?plan=X&action=activate|cancel`.
+  Compatible SIO/Stripe/PayPal/Zapier (extraction email tolérante :
+  chemins connus + scan récursif). Token validé = réponse TOUJOURS 200
+  (soft fail) pour éviter les retry storms. GET = ping de test.
+  Rotation du token depuis le panel.
+- Bon de commande hébergé : `/order/<slug>/<plan>` (public). Contenu du
+  plan depuis les clés i18n settings (source unique), tarif = texte
+  libre du revendeur (resellers.pricing), CTA vers SA page de paiement.
+  404 si slug inconnu / suspendu / plan sans URL. Jamais de fallback
+  tipote.fr.
+- **Garde-fou webhook SIO Béné** : les profiles avec reseller_id sont
+  IMMUNISÉS contre le webhook SIO (upgrade ET cancel), même pattern que
+  l'immunité lifetime. ⚠️ les selects priorProfile sont passés en
+  select("*") versions nominatives : une colonne absente (migration pas
+  appliquée) ferait planter tout le branch. NE PAS re-nominaliser.
+- Migration `20260611_resellers_v2_automation.sql` : webhook_token,
+  slug, pricing + re-ALTER checkout_urls (le CREATE TABLE IF NOT EXISTS
+  de la foundation n'ajoute pas les colonnes si la table existait déjà).
+
 **À venir (validé Béné) :**
 - Phase 2 : actions de plan depuis le panel (avec plan_change_log),
   calcul mensuel de commission + facture auto + lien de paiement.
-- Phase 3 : bons de commande publics du revendeur (modèle des BDC
-  Tipote.fr) branchés sur SES clés Stripe/PayPal, avec provisioning
-  auto (création compte, upgrade/downgrade/annulation via webhooks).

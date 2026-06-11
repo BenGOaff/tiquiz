@@ -19,6 +19,7 @@ import { useTranslations } from "next-intl";
 import {
   ArrowUpDown,
   BarChart3,
+  Copy,
   Loader2,
   Mail,
   Plus,
@@ -79,7 +80,11 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
   const [creating, setCreating] = useState(false);
 
   const [checkoutUrls, setCheckoutUrls] = useState<Record<string, string>>({});
+  const [pricingLabels, setPricingLabels] = useState<Record<string, string>>({});
+  const [webhookToken, setWebhookToken] = useState<string | null>(null);
+  const [slug, setSlug] = useState<string | null>(null);
   const [savingCheckout, setSavingCheckout] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   const fetchClients = async () => {
     setLoading(true);
@@ -100,7 +105,18 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
     fetch("/api/reseller/settings", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((json) => {
-        if (json?.ok) setCheckoutUrls(json.checkout_urls ?? {});
+        if (json?.ok) {
+          setCheckoutUrls(json.checkout_urls ?? {});
+          const labels: Record<string, string> = {};
+          for (const [k, v] of Object.entries(
+            (json.pricing ?? {}) as Record<string, { label?: string }>,
+          )) {
+            if (v?.label) labels[k] = v.label;
+          }
+          setPricingLabels(labels);
+          setWebhookToken(json.webhook_token ?? null);
+          setSlug(json.slug ?? null);
+        }
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -109,10 +125,14 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
   const saveCheckoutUrls = async () => {
     setSavingCheckout(true);
     try {
+      const pricing: Record<string, { label: string }> = {};
+      for (const [k, v] of Object.entries(pricingLabels)) {
+        if (v.trim()) pricing[k] = { label: v.trim() };
+      }
       const res = await fetch("/api/reseller/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ checkout_urls: checkoutUrls }),
+        body: JSON.stringify({ checkout_urls: checkoutUrls, pricing }),
       });
       const json = await res.json();
       if (json.ok) {
@@ -129,6 +149,43 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
       setSavingCheckout(false);
     }
   };
+
+  const regenerateToken = async () => {
+    if (!window.confirm(t("automation.regenerateConfirm"))) return;
+    setRegenerating(true);
+    try {
+      const res = await fetch("/api/reseller/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ regenerate_webhook_token: true }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setWebhookToken(json.webhook_token ?? null);
+        toast.success(t("automation.regenerated"));
+      } else {
+        toast.error(t("toasts.error"));
+      }
+    } catch {
+      toast.error(t("toasts.error"));
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  const copyText = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(t("copied"));
+    } catch {
+      toast.error(t("toasts.error"));
+    }
+  };
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const webhookBase = webhookToken
+    ? `${origin}/api/reseller-webhook/${webhookToken}`
+    : null;
 
   const createClient = async () => {
     const email = newEmail.trim();
@@ -350,20 +407,50 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
         <CardContent className="pt-4 space-y-3">
           <h2 className="text-sm font-semibold">{t("checkout.title")}</h2>
           <p className="text-xs text-muted-foreground">{t("checkout.desc")}</p>
-          <div className="grid gap-3 md:grid-cols-2">
-            {CHECKOUT_PLAN_KEYS.map((key) => (
-              <div key={key} className="space-y-1">
-                <label className="text-xs font-medium">{t(`checkout.plans.${key}`)}</label>
-                <Input
-                  type="url"
-                  value={checkoutUrls[key] ?? ""}
-                  onChange={(e) =>
-                    setCheckoutUrls((prev) => ({ ...prev, [key]: e.target.value }))
-                  }
-                  placeholder="https://..."
-                />
-              </div>
-            ))}
+          <div className="grid gap-4 md:grid-cols-2">
+            {CHECKOUT_PLAN_KEYS.map((key) => {
+              const orderUrl =
+                slug && (checkoutUrls[key] ?? "").trim()
+                  ? `${origin}/order/${slug}/${key}`
+                  : null;
+              return (
+                <div key={key} className="space-y-1.5 rounded-lg border p-3">
+                  <div className="text-xs font-semibold">{t(`checkout.plans.${key}`)}</div>
+                  <label className="text-[11px] text-muted-foreground block">
+                    {t("checkout.urlLabel")}
+                  </label>
+                  <Input
+                    type="url"
+                    value={checkoutUrls[key] ?? ""}
+                    onChange={(e) =>
+                      setCheckoutUrls((prev) => ({ ...prev, [key]: e.target.value }))
+                    }
+                    placeholder="https://..."
+                  />
+                  <label className="text-[11px] text-muted-foreground block">
+                    {t("checkout.priceLabel")}
+                  </label>
+                  <Input
+                    value={pricingLabels[key] ?? ""}
+                    onChange={(e) =>
+                      setPricingLabels((prev) => ({ ...prev, [key]: e.target.value }))
+                    }
+                    placeholder={t("checkout.pricePlaceholder")}
+                  />
+                  {orderUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => copyText(orderUrl)}
+                      className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                      title={orderUrl}
+                    >
+                      <Copy className="w-3 h-3" />
+                      {t("checkout.copyOrderPage")}
+                    </button>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
           <Button onClick={saveCheckoutUrls} disabled={savingCheckout} size="sm">
             {savingCheckout ? (
@@ -372,6 +459,64 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
               t("checkout.saveBtn")
             )}
           </Button>
+          <p className="text-xs text-muted-foreground">{t("checkout.orderPageHint")}</p>
+        </CardContent>
+      </Card>
+
+      {/* Automatisation : webhook de provisioning */}
+      <Card>
+        <CardContent className="pt-4 space-y-3">
+          <h2 className="text-sm font-semibold">{t("automation.title")}</h2>
+          <p className="text-xs text-muted-foreground">{t("automation.desc")}</p>
+          {webhookBase ? (
+            <>
+              <div className="space-y-2">
+                {CHECKOUT_PLAN_KEYS.map((key) => (
+                  <div key={key} className="flex items-center justify-between gap-2 text-xs">
+                    <span className="font-medium shrink-0">
+                      {t("automation.activateFor", { plan: t(`checkout.plans.${key}`) })}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => copyText(`${webhookBase}?plan=${key}&action=activate`)}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded border hover:bg-muted text-[11px] font-mono truncate max-w-[60%]"
+                      title={`${webhookBase}?plan=${key}&action=activate`}
+                    >
+                      <Copy className="w-3 h-3 shrink-0" />
+                      <span className="truncate">{`...?plan=${key}&action=activate`}</span>
+                    </button>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="font-medium shrink-0">{t("automation.cancelLabel")}</span>
+                  <button
+                    type="button"
+                    onClick={() => copyText(`${webhookBase}?action=cancel`)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded border hover:bg-muted text-[11px] font-mono truncate max-w-[60%]"
+                    title={`${webhookBase}?action=cancel`}
+                  >
+                    <Copy className="w-3 h-3 shrink-0" />
+                    <span className="truncate">...?action=cancel</span>
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">{t("automation.hint")}</p>
+              <button
+                type="button"
+                onClick={regenerateToken}
+                disabled={regenerating}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-50"
+              >
+                {regenerating ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  t("automation.regenerateBtn")
+                )}
+              </button>
+            </>
+          ) : (
+            <p className="text-xs text-muted-foreground">{t("automation.noToken")}</p>
+          )}
         </CardContent>
       </Card>
 
