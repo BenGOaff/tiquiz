@@ -65,6 +65,8 @@ type QuizResult = {
   description: string | null;
   insight: string | null;
   projection: string | null;
+  insight_heading?: string | null;
+  projection_heading?: string | null;
   cta_text: string | null;
   cta_url: string | null;
   sort_order: number;
@@ -3003,7 +3005,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                 <div className="p-4 rounded-xl bg-muted/50 border">
                   <p
                     className="tiquiz-rich tiquiz-rich-inline text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1.5"
-                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.result_insight_heading?.trim() || "") || t.insight }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(resultProfile.insight_heading?.trim() || quiz.result_insight_heading?.trim() || "") || t.insight }}
                   />
                   {isHtml(ins) ? (
                     <div
@@ -3031,7 +3033,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                 <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
                   <p
                     className="tiquiz-rich tiquiz-rich-inline text-xs font-bold uppercase tracking-widest text-primary/70 mb-1.5"
-                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.result_projection_heading?.trim() || "") || t.projection }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(resultProfile.projection_heading?.trim() || quiz.result_projection_heading?.trim() || "") || t.projection }}
                   />
                   {isHtml(proj) ? (
                     <div
@@ -3183,7 +3185,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                                 <div className="p-3 rounded-lg bg-muted/40 border">
                                   <p
                                     className="tiquiz-rich tiquiz-rich-inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1"
-                                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.result_insight_heading?.trim() || "") || t.insight }}
+                                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(r.insight_heading?.trim() || quiz.result_insight_heading?.trim() || "") || t.insight }}
                                   />
                                   {isHtml(ins) ? (
                                     <div className="tiquiz-rich text-sm leading-relaxed"
@@ -3205,7 +3207,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                                 <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
                                   <p
                                     className="tiquiz-rich tiquiz-rich-inline text-[10px] font-bold uppercase tracking-widest text-primary/70 mb-1"
-                                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.result_projection_heading?.trim() || "") || t.projection }}
+                                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(r.projection_heading?.trim() || quiz.result_projection_heading?.trim() || "") || t.projection }}
                                   />
                                   {isHtml(proj) ? (
                                     <div className="tiquiz-rich text-sm leading-relaxed"

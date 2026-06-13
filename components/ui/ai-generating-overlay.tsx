@@ -31,7 +31,12 @@ export function AIGeneratingOverlay({ message, submessage }: AIGeneratingOverlay
       role="dialog"
       aria-modal="true"
       aria-label={message ?? t("aiGeneratingTitle")}
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-background/80 backdrop-blur-sm px-4"
+      // Voile quasi opaque (95%) : à 80% + blur-sm, le texte de la page
+      // restait lisible sous l'overlay et se mélangeait au message
+      // (retour Béné 12 juin 2026, miroir Tipote). Règle aussi les
+      // artefacts des extensions d'inversion type Dark Reader sur les
+      // grandes zones translucides en backdrop-filter.
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-background/95 backdrop-blur-md px-4"
     >
       <div className="flex flex-col items-center max-w-md text-center">
         {/* Animated icon */}

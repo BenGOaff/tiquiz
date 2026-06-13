@@ -1133,3 +1133,33 @@ Adeline 17 mai.)
 - Boutons de réponse : `select-none` partout + `active:scale-[0.98]`
   sur les gros boutons (press feedback).
 - Appliqué en MIROIR dans Tipote (même composant PublicQuizClient).
+
+## Titres de blocs résultat personnalisables par profil (Gwenn 13 juin 2026)
+
+Les 2 titres de blocs résultat (insight "Prise de conscience" +
+projection "Et si...") sont au niveau du QUIZ
+(quizzes.result_insight_heading / result_projection_heading), donc
+PARTAGÉS. Gwenn voulait un titre différent par profil tout en gardant
+le fill-once quand ils sont identiques.
+
+**Solution : override nullable par résultat** (quiz_results.
+insight_heading / projection_heading, migration
+20260613_quiz_results_heading_overrides). NULL/vide = titre commun.
+Mode "personnalisé" DÉRIVÉ (au moins un override non-null sur le bloc),
+pas de flag en base. Activer le mode = pré-remplir chaque profil avec
+le titre commun (point de départ). Désactiver = effacer tous les
+overrides. Toggle exposé sous chaque titre de bloc dans l'éditeur
+("Titre différent pour ce profil" / "Revenir au titre commun"),
+block-level même s'il apparaît par profil.
+
+Rendu public : `result.X_heading?.trim() || quiz.result_X_heading?.trim()
+|| défaut traduit`. Appliqué AUX 2 emplacements de PublicQuizClient
+(résultat principal + breakdown "autres résultats").
+
+Endroits touchés (override sur quiz_results, pas quizzes) : migration,
+QuizDetailClient (type QuizResult + handlers + booleans dérivés + 2
+blocs UI + payload save), api/quiz/[id]/route.ts (SanitizedResult +
+sanitize), api/quiz/[id]/public/route.ts (select + FR passthrough),
+PublicQuizClient (type + 4 renders). PORTÉ À L'IDENTIQUE SUR TIPOTE
+(InlineEdit au lieu de RichTextEdit, libellés FR en dur, classes
+tipote-quiz-rich).
