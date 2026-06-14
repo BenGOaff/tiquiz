@@ -1163,3 +1163,32 @@ sanitize), api/quiz/[id]/public/route.ts (select + FR passthrough),
 PublicQuizClient (type + 4 renders). PORTÉ À L'IDENTIQUE SUR TIPOTE
 (InlineEdit au lieu de RichTextEdit, libellés FR en dur, classes
 tipote-quiz-rich).
+
+## Liens d'abonnement = tunnels "part" (affiliation SIO) (Béné 14 juin 2026)
+
+Dans Réglages -> Abonnement (SettingsClient PLANS), les CTA d'upgrade
+DOIVENT pointer vers les tunnels `part` (tagués affiliation côté SIO),
+PAS les tunnels nus (`tiquiz-mensuel`...). Sinon un user free amené par
+un affilié qui upgrade depuis son compte ne crédite PERSONNE : les
+tunnels nus ne sont pas configurés pour l'affiliation dans SIO.
+
+**Pas de `?sa=` à ajouter** : SIO dépose un cookie / attribue au sponsor
+du contact (contact-level) dès le premier clic affilié. Il suffit
+d'envoyer sur le bon tunnel `part`. Un user direct (sans sponsor) ->
+aucune commission, Béné garde 100%. Donc `part` est safe pour tous.
+
+Mapping officiel (rappel admin affilié, /affiliate/admin/links) :
+- Mensuel : `/part-tiquiz-mensuel`
+- Annuel : `/part-tiquiz-annuel`
+- Mensuel Plus : `/tiquiz-mensuel-plus-part` (ORDRE INVERSE côté SIO)
+- Annuel Plus : `/tiquiz-annuel-plus-part` (ORDRE INVERSE)
+- Principal/Gratuit : `/part-tiquiz`, `/part-tiquiz-gratuit`
+
+⚠️ Ne touche PAS au flux revendeur : les clients managed gardent les
+checkout_urls du revendeur (effectiveCheckoutUrl), les tunnels part ne
+s'appliquent qu'aux clients directs Béné (managed=false).
+
+UI abonnement (même date) : toggle Mensuel/Annuel (parité page de vente,
+"2 mois offerts"), badges inline "−17%"/"+" supprimés, noms alignés sur
+la page de vente (Mensuel/Annuel/Mensuel Plus/Annuel Plus, CTA "Accès
+X"), sous-titre "sans engagement". Toggle caché pour lifetime/beta.

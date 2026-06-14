@@ -87,7 +87,7 @@ const PLANS = [
     periodKey: "planProPeriod" as string | null,
     featureKeys: ["planProF1", "planProF2", "planProF3", "planProF4", "planProF5", "planProF6"],
     ctaKey: "planProCta" as string | null,
-    checkoutUrl: "https://www.tipote.fr/tiquiz-mensuel" as string | null,
+    checkoutUrl: "https://www.tipote.fr/part-tiquiz-mensuel" as string | null,
   },
   {
     id: "pro_yearly",
@@ -95,10 +95,9 @@ const PLANS = [
     icon: Crown,
     priceKey: "planYearlyPrice",
     periodKey: "planYearlyPeriod" as string | null,
-    badge: "−17%",
     featureKeys: ["planYearlyF1", "planYearlyF2", "planYearlyF3", "planYearlyF4"],
     ctaKey: "planYearlyCta" as string | null,
-    checkoutUrl: "https://www.tipote.fr/tiquiz-annuel" as string | null,
+    checkoutUrl: "https://www.tipote.fr/part-tiquiz-annuel" as string | null,
   },
   {
     id: "pro_monthly_plus",
@@ -106,7 +105,6 @@ const PLANS = [
     icon: Sparkles,
     priceKey: "planMonthlyPlusPrice",
     periodKey: "planMonthlyPlusPeriod" as string | null,
-    badge: "+",
     featureKeys: [
       "planMonthlyPlusF1",
       "planMonthlyPlusF2",
@@ -114,7 +112,7 @@ const PLANS = [
       "planMonthlyPlusF4",
     ],
     ctaKey: "planMonthlyPlusCta" as string | null,
-    checkoutUrl: "https://www.tipote.fr/tiquiz-mensuel-plus" as string | null,
+    checkoutUrl: "https://www.tipote.fr/tiquiz-mensuel-plus-part" as string | null,
     popular: true,
   },
   {
@@ -123,7 +121,6 @@ const PLANS = [
     icon: Crown,
     priceKey: "planYearlyPlusPrice",
     periodKey: "planYearlyPlusPeriod" as string | null,
-    badge: "+ −17%",
     featureKeys: [
       "planYearlyPlusF1",
       "planYearlyPlusF2",
@@ -131,7 +128,7 @@ const PLANS = [
       "planYearlyPlusF4",
     ],
     ctaKey: "planYearlyPlusCta" as string | null,
-    checkoutUrl: "https://www.tipote.fr/tiquiz-annuel-plus" as string | null,
+    checkoutUrl: "https://www.tipote.fr/tiquiz-annuel-plus-part" as string | null,
   },
 ] as const;
 
@@ -185,6 +182,10 @@ export default function SettingsClient() {
     urls: Record<string, string>;
   } | null>(null);
 
+  // Toggle Mensuel / Annuel (parité page de vente, Béné 14 juin 2026).
+  // 3 colonnes affichées : Gratuit + les 2 plans du cycle choisi.
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+
   useEffect(() => {
     fetch("/api/billing/checkout-urls", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
@@ -193,6 +194,13 @@ export default function SettingsClient() {
       })
       .catch(() => {});
   }, []);
+
+  // Si l'user est déjà sur un plan annuel, on ouvre le toggle sur Annuel
+  // pour qu'il voie son plan courant directement.
+  useEffect(() => {
+    const p = profile?.plan;
+    if (p === "yearly" || p === "yearly_plus") setBillingCycle("yearly");
+  }, [profile?.plan]);
 
   useEffect(() => {
     fetch("/api/profile")
@@ -893,8 +901,47 @@ export default function SettingsClient() {
             </CardContent>
           </Card>
 
+          {/* Toggle Mensuel / Annuel (parité page de vente). Caché pour
+              les comptes lifetime/beta (rien à upgrader) et les clients
+              de revendeur en mode géré (tarifs gérés ailleurs). */}
+          {!isLifetimePlan && (
+            <div className="flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setBillingCycle("monthly")}
+                className={`text-sm font-semibold transition-colors ${billingCycle === "monthly" ? "text-foreground" : "text-muted-foreground"}`}
+              >
+                {t("billingMonthly")}
+              </button>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={billingCycle === "yearly"}
+                onClick={() => setBillingCycle((c) => (c === "monthly" ? "yearly" : "monthly"))}
+                className="relative w-12 h-6 rounded-full bg-primary/20 transition-colors"
+              >
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-primary shadow transition-transform ${billingCycle === "yearly" ? "translate-x-6" : ""}`} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setBillingCycle("yearly")}
+                className={`text-sm font-semibold transition-colors ${billingCycle === "yearly" ? "text-foreground" : "text-muted-foreground"}`}
+              >
+                {t("billingYearly")}
+              </button>
+              <span className="text-xs font-semibold bg-primary/10 text-primary px-2.5 py-1 rounded-full">
+                {t("billingYearlySave")}
+              </span>
+            </div>
+          )}
+
           <div className="grid gap-4 md:grid-cols-3">
-            {PLANS.map((plan) => {
+            {PLANS.filter((plan) =>
+              plan.id === "free" ||
+              (billingCycle === "monthly"
+                ? plan.id === "pro_monthly" || plan.id === "pro_monthly_plus"
+                : plan.id === "pro_yearly" || plan.id === "pro_yearly_plus")
+            ).map((plan) => {
               // Strict match only. We used to map "lifetime" → "pro_monthly"
               // which falsely surfaced "Plan actuel" on the monthly card for
               // lifetime users — making it look like they were on a 9€/mo
@@ -942,14 +989,16 @@ export default function SettingsClient() {
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${('popular' in plan && plan.popular) ? "bg-primary/10" : "bg-muted"}`}>
                         <plan.icon className={`h-4 w-4 ${('popular' in plan && plan.popular) ? "text-primary" : "text-muted-foreground"}`} />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold">{t(plan.nameKey)}</h3>
-                        {('badge' in plan && plan.badge) && <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">{plan.badge}</span>}
-                      </div>
+                      <h3 className="font-bold">{t(plan.nameKey)}</h3>
                     </div>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-bold">{t(plan.priceKey)}</span>
-                      {plan.periodKey && <span className="text-sm text-muted-foreground">{t(plan.periodKey)}</span>}
+                    <div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-bold">{t(plan.priceKey)}</span>
+                        {plan.periodKey && <span className="text-sm text-muted-foreground">{t(plan.periodKey)}</span>}
+                      </div>
+                      {isPaidPlanCard && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{t("planNoCommitment")}</p>
+                      )}
                     </div>
                     <ul className="space-y-2">
                       {plan.featureKeys.map((fk) => (<li key={fk} className="flex items-center gap-2 text-sm"><Check className="h-4 w-4 text-primary shrink-0" />{t(fk)}</li>))}
