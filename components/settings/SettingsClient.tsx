@@ -864,12 +864,6 @@ export default function SettingsClient() {
         </TabsContent>
 
         <TabsContent value="account" className="space-y-6">
-          {/* Achievements gallery — gamified summary of what the user
-              has earned. Computed live on mount from /api/quiz so it
-              always reflects the current state without a separate
-              tracking system. */}
-          <SettingsAchievements />
-
           <Card>
             <CardHeader>
               <CardTitle>{t("subscriptionTitle")}</CardTitle>
@@ -901,11 +895,10 @@ export default function SettingsClient() {
             </CardContent>
           </Card>
 
-          {/* Toggle Mensuel / Annuel (parité page de vente). Caché pour
-              les comptes lifetime/beta (rien à upgrader) et les clients
-              de revendeur en mode géré (tarifs gérés ailleurs). */}
-          {!isLifetimePlan && (
-            <div className="flex items-center justify-center gap-3">
+          {/* Toggle Mensuel / Annuel (parité page de vente). Affiché
+              pour TOUS (y compris lifetime/beta : les cartes montrent
+              "Inclus" mais Béné doit pouvoir vérifier le switch). */}
+          <div className="flex items-center justify-center gap-3">
               <button
                 type="button"
                 onClick={() => setBillingCycle("monthly")}
@@ -933,7 +926,6 @@ export default function SettingsClient() {
                 {t("billingYearlySave")}
               </span>
             </div>
-          )}
 
           <div className="grid gap-4 md:grid-cols-3">
             {PLANS.filter((plan) =>
@@ -1034,6 +1026,11 @@ export default function SettingsClient() {
               {managedBilling?.managed ? t("paymentsManagedReseller") : t("paymentsManaged")}
             </p>
           )}
+
+          {/* Mes badges (gamification) — déplacé SOUS les tarifs : peu
+              prioritaire dans les paramètres de compte (retour Béné
+              14 juin 2026). Calculé au mount depuis /api/quiz. */}
+          <SettingsAchievements />
 
           <PasswordSection />
 
