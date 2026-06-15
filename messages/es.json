@@ -1889,6 +1889,8 @@
     "copied": "¡Copiado!",
     "saved": "Ajustes guardados.",
     "invalidUrl": "URL no válida para el plan {plan}: se necesita una dirección https completa.",
+    "invalidAmount": "Importe no válido para el plan {plan}: indica un precio en números, por ejemplo 19 o 19,90.",
+    "invalidPrice": "Precio no válido para el plan {plan}.",
     "saveBtn": "Guardar",
     "tabs": {
       "clients": "Mis clientes",

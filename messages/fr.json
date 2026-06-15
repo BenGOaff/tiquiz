@@ -1873,6 +1873,8 @@
     "copied": "Copié !",
     "saved": "Réglages enregistrés.",
     "invalidUrl": "URL invalide pour le plan {plan} : il faut une adresse https complète.",
+    "invalidAmount": "Montant invalide pour le plan {plan} : indique un prix en chiffres, par exemple 19 ou 19,90.",
+    "invalidPrice": "Tarif invalide pour le plan {plan}.",
     "saveBtn": "Enregistrer",
     "tabs": {
       "clients": "Mes clients",

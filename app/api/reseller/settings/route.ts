@@ -91,18 +91,31 @@ export async function PUT(req: NextRequest) {
         const entry: { label?: string; amount_cents?: number } = {};
 
         if (label !== undefined && label !== null && label !== "") {
-          if (typeof label !== "string" || label.trim().length > 80) {
+          if (typeof label !== "string") {
             return NextResponse.json(
               { ok: false, error: "invalid_price", plan: key },
               { status: 400 },
             );
           }
-          entry.label = label.trim();
+          // Tolérant : on tronque au lieu de bloquer toute la sauvegarde.
+          entry.label = label.trim().slice(0, 80);
         }
 
         if (amount !== undefined && amount !== null && amount !== "") {
-          const parsed =
-            typeof amount === "number" ? amount : Number(String(amount).replace(",", "."));
+          // Parsing tolérant : un revendeur tape souvent "19,90 €", "1 999"
+          // ou "19.90€". On retire devise et espaces, on gère la virgule
+          // décimale FR (et le point comme séparateur de milliers quand les
+          // deux sont présents). Sinon Number() renvoyait NaN -> rejet ->
+          // "Une erreur est survenue" opaque (drame Sebastien 15 juin 2026).
+          let parsed: number;
+          if (typeof amount === "number") {
+            parsed = amount;
+          } else {
+            let raw = String(amount).trim().replace(/[^\d.,-]/g, "");
+            if (raw.includes(",") && raw.includes(".")) raw = raw.replace(/\./g, "");
+            raw = raw.replace(",", ".");
+            parsed = Number(raw);
+          }
           if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100000) {
             return NextResponse.json(
               { ok: false, error: "invalid_amount", plan: key },
@@ -175,7 +188,9 @@ export async function PUT(req: NextRequest) {
       support_email: updated.support_email ?? null,
     });
   } catch (e) {
-    console.error("[reseller/settings] PUT failed", (e as Error).message);
+    // Log complet (message + details + code + hint Supabase) pour pouvoir
+    // diagnostiquer un echec specifique a un compte sans deviner.
+    console.error("[reseller/settings] PUT failed", JSON.stringify(e));
     return NextResponse.json({ ok: false, error: "update_failed" }, { status: 500 });
   }
 }

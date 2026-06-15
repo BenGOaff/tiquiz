@@ -83,6 +83,16 @@ type Billing = {
 const CREATABLE_PLANS = ["free", "monthly", "yearly", "monthly_plus", "yearly_plus"] as const;
 const PAID_PLAN_KEYS = ["monthly", "yearly", "monthly_plus", "yearly_plus"] as const;
 
+// Montant suggéré par plan, affiché en placeholder du champ "Tarif déclaré"
+// pour guider le revendeur. Chiffre SEUL (pas de "(mensuel)" qui poussait a
+// recopier le texte dans le champ -> NaN, drame Sebastien 15 juin 2026).
+const AMOUNT_PLACEHOLDER: Record<string, string> = {
+  monthly: "9",
+  monthly_plus: "29",
+  yearly: "90",
+  yearly_plus: "290",
+};
+
 const DAY_MS = 24 * 3600 * 1000;
 
 function daysAgo(iso: string | null): number | null {
@@ -244,8 +254,14 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
         fetchBilling();
       } else if (json.error === "invalid_url") {
         toast.error(t("invalidUrl", { plan: json.plan ?? "" }));
+      } else if (json.error === "invalid_amount") {
+        toast.error(t("invalidAmount", { plan: json.plan ?? "" }));
+      } else if (json.error === "invalid_price") {
+        toast.error(t("invalidPrice", { plan: json.plan ?? "" }));
       } else {
-        toast.error(t("toasts.error"));
+        // Dernier recours : on expose le code serveur pour ne plus avoir
+        // un message opaque impossible a diagnostiquer (drame Sebastien).
+        toast.error(t("toasts.error") + (json.error ? ` (${json.error})` : ""));
       }
     } catch {
       toast.error(t("toasts.error"));
@@ -906,7 +922,7 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
                       onChange={(e) =>
                         setPricingAmounts((prev) => ({ ...prev, [key]: e.target.value }))
                       }
-                      placeholder={t("payments.amountPlaceholder")}
+                      placeholder={AMOUNT_PLACEHOLDER[key] ?? ""}
                     />
                   </div>
                 ))}
