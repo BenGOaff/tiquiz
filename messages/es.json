@@ -1286,7 +1286,9 @@
     "generateAiShort": "Generar (IA)",
     "unlockTiquizCta": "Desbloquear Tiquiz →",
     "ariaCropImage": "Recortar imagen",
-    "ariaRemoveImage": "Quitar imagen"
+    "ariaRemoveImage": "Quitar imagen",
+    "surveyLeadTagLabel": "Etiqueta de leads (opcional)",
+    "surveyLeadTagHint": "Aplica esta etiqueta en Systeme.io cuando alguien responde la encuesta."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nueva contraseña",

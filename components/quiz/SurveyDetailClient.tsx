@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
@@ -146,6 +147,7 @@ type QuizData = {
   virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null;
   share_message: string | null; locale: string | null;
   sio_share_tag_name: string | null;
+  sio_capture_tag: string | null;
   brand_font: string | null; brand_color_primary: string | null; brand_color_background: string | null;
   brand_logo_url: string | null;
   hide_brand_logo: boolean | null;
@@ -386,6 +388,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [shareMessage, setShareMessage] = useState("");
   const [locale, setLocale] = useState("");
   const [sioShareTagName, setSioShareTagName] = useState("");
+  const [sioCaptureTag, setSioCaptureTag] = useState("");
   const [status, setStatus] = useState("draft");
   const [editQuestions, setEditQuestions] = useState<QuizQuestion[]>([]);
   // Recadrage : image d'option en cours + callback de pose.
@@ -513,6 +516,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     share_message: shareMessage,
     locale,
     sio_share_tag_name: sioShareTagName,
+    sio_capture_tag: sioCaptureTag,
     status,
     brand_font: fontFamily,
     brand_color_primary: primaryColor,
@@ -538,7 +542,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
     showConsentCheckbox, metaPixelId, ga4MeasurementId, googleAdsConversionId,
     googleAdsConversionLabel, askFirstName, askGender,
-    shareMessage, locale, sioShareTagName, status,
+    shareMessage, locale, sioShareTagName, sioCaptureTag, status,
     fontFamily, primaryColor, bgColor, quizBrandLogoUrl, hideBrandLogo,
     captureEnabled, showAggregateResponses,
     surveyThanksHeading, surveyThanksBody,
@@ -582,6 +586,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.share_message === "string") setShareMessage(s.share_message);
     if (typeof s.locale === "string") setLocale(s.locale);
     if (typeof s.sio_share_tag_name === "string") setSioShareTagName(s.sio_share_tag_name);
+    if (typeof s.sio_capture_tag === "string") setSioCaptureTag(s.sio_capture_tag);
     if (typeof s.status === "string") setStatus(s.status);
     if (typeof s.brand_font === "string" && (BRAND_FONT_CHOICES as readonly string[]).includes(s.brand_font)) {
       setFontFamily(s.brand_font as BrandFontChoice);
@@ -670,7 +675,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setAskFirstName(Boolean((q as unknown as Record<string, unknown>).ask_first_name));
       setAskGender(Boolean((q as unknown as Record<string, unknown>).ask_gender));
       setShareMessage(q.share_message ?? ""); setLocale(q.locale ?? "");
-      setSioShareTagName(q.sio_share_tag_name ?? ""); setStatus(q.status);
+      setSioShareTagName(q.sio_share_tag_name ?? ""); setSioCaptureTag(q.sio_capture_tag ?? ""); setStatus(q.status);
       // Hydrate question_type + config defaults so older multiple_choice rows
       // (created before the survey migration) stay valid.
       setEditQuestions(q.questions.map((qq) => ({
@@ -1026,7 +1031,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           phone_required: phoneRequired, country_required: countryRequired,
           // Surveys never gate on virality / bonus → keep server-side defaults.
           share_message: shareMessage, locale: locale || null,
-          sio_share_tag_name: sioShareTagName || null, status,
+          sio_share_tag_name: sioShareTagName || null, sio_capture_tag: sioCaptureTag || null, status,
           // Branding
           brand_font: fontFamily, brand_color_primary: primaryColor, brand_color_background: bgColor,
           brand_logo_url: quizBrandLogoUrl, hide_brand_logo: hideBrandLogo,
@@ -1463,6 +1468,25 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                 </div>
               </div>)}
               {leftTab === "settings" && (<div className="space-y-6">
+                {/* ── Langue du sondage ──
+                    Pilote quiz.locale : la langue des textes d'interface du
+                    sondage public (boutons, placeholders...). Le rendu public
+                    lit deja quiz.locale ; il manquait juste le selecteur cote
+                    editeur (le quiz l'a, pas le sondage). */}
+                <section className="space-y-2.5">
+                  <LanguageCombobox
+                    value={locale || "fr"}
+                    onValueChange={setLocale}
+                    label={t("localeLabel")}
+                    strings={{
+                      placeholder: t("localePlaceholder"),
+                      searchPlaceholder: t("localeSearchPlaceholder"),
+                      popularHeading: t("localePopularHeading"),
+                      allHeading: t("localeAllHeading"),
+                      noResults: t("localeNoResults"),
+                    }}
+                  />
+                </section>
                 {/* ── Formulaire de prise de contact ── */}
                 <section className="space-y-2.5">
                   <div>
@@ -1480,6 +1504,19 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     onChange={setCaptureEnabled}
                   />
                   {captureEnabled && (<>
+                  {/* Tag Systeme.io applique a chaque lead du sondage
+                      (les sondages n'ont pas de resultat, donc pas de tag
+                      par profil comme les quiz). */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">{t("surveyLeadTagLabel")}</Label>
+                    <Input
+                      value={sioCaptureTag}
+                      onChange={(e) => setSioCaptureTag(e.target.value)}
+                      placeholder="lead-sondage"
+                      className="text-xs"
+                    />
+                    <p className="text-[10px] text-muted-foreground">{t("surveyLeadTagHint")}</p>
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
                     <CapturePill label={t("fieldEmailRequired")} active locked />
                     <CapturePill label={t("fieldFirstNameRequired")} active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />

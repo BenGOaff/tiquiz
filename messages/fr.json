@@ -1270,7 +1270,9 @@
     "generateAiShort": "Générer (IA)",
     "unlockTiquizCta": "Débloquer Tiquiz →",
     "ariaCropImage": "Recadrer l'image",
-    "ariaRemoveImage": "Retirer l'image"
+    "ariaRemoveImage": "Retirer l'image",
+    "surveyLeadTagLabel": "Tag des leads (optionnel)",
+    "surveyLeadTagHint": "Applique ce tag dans Systeme.io quand quelqu'un répond au sondage."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",

@@ -201,6 +201,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "brand_font", "brand_color_primary", "brand_color_background",
       "brand_logo_url", "hide_brand_logo",
       "capture_enabled",
+      "sio_capture_tag",
       "show_aggregate_responses",
       "start_button_text",
       "result_insight_heading", "result_projection_heading",

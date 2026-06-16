@@ -1274,7 +1274,9 @@
     "generateAiShort": "توليد (ذكاء اصطناعي)",
     "unlockTiquizCta": "افتح Tiquiz ←",
     "ariaCropImage": "اقتصاص الصورة",
-    "ariaRemoveImage": "إزالة الصورة"
+    "ariaRemoveImage": "إزالة الصورة",
+    "surveyLeadTagLabel": "وسم جهات الاتصال (اختياري)",
+    "surveyLeadTagHint": "يُطبَّق هذا الوسم في Systeme.io عند إرسال المشارِك للاستبيان."
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",

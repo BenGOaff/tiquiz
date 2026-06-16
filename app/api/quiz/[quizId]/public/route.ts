@@ -508,7 +508,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
     // aussi capture_enabled pour valider la branche anonyme.
     const { data: quiz } = await admin
       .from("quizzes")
-      .select("id, user_id, title, sio_api_key_id, meta_pixel_id, mode, capture_enabled, project_id")
+      .select("id, user_id, title, sio_api_key_id, meta_pixel_id, mode, capture_enabled, project_id, sio_capture_tag")
       .eq("id", quizId)
       .maybeSingle();
 
@@ -680,7 +680,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
           });
           if (!sioContactId) return;
 
-          const tagsToApply = sioTagName ? [sioTagName] : [];
+          // Sondage : pas de resultat, donc on applique le tag de capture
+          // defini au niveau du sondage (quizzes.sio_capture_tag). Les quiz
+          // gardent leur tag par resultat inchange.
+          const isSurveyLead = (quiz as { mode?: string | null }).mode === "survey";
+          const surveyCaptureTag = isSurveyLead
+            ? String((quiz as { sio_capture_tag?: string | null }).sio_capture_tag ?? "").trim()
+            : "";
+          const tagsToApply = [sioTagName, surveyCaptureTag].filter(Boolean);
 
           for (const tagName of tagsToApply) {
             try {
