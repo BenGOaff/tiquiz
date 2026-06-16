@@ -1,7 +1,10 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
+# node_modules a N'IMPORTE QUELLE profondeur (pas seulement la racine).
+# Sinon `git add .` plante sur les liens symboliques de
+# copywriting-claude/en-build/node_modules sous Windows (Function not implemented).
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -19,6 +22,9 @@
 
 # production
 /build
+
+# Dossier de build du livre/copywriting (artefacts + deps), pas du code app
+/copywriting-claude/en-build/
 
 # misc
 .DS_Store

@@ -1509,12 +1509,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       par profil comme les quiz). */}
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold">{t("surveyLeadTagLabel")}</Label>
-                    <Input
-                      value={sioCaptureTag}
-                      onChange={(e) => setSioCaptureTag(e.target.value)}
-                      placeholder="lead-sondage"
-                      className="text-xs"
-                    />
+                    <SioTagPicker value={sioCaptureTag} onChange={setSioCaptureTag} />
                     <p className="text-[10px] text-muted-foreground">{t("surveyLeadTagHint")}</p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">

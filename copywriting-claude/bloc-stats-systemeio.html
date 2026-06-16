@@ -1,0 +1,111 @@
+<!-- ════ BLOC PREUVE SOCIALE : à coller dans un élément HTML ou Code de Systeme.io ════ -->
+<div class="tqz-proof">
+  <div class="tqz-grid">
+    <div class="tqz-card">
+      <div class="tqz-num" data-prefix="+" data-target="100" data-suffix=" M$">+100 M$</div>
+      <div class="tqz-lab">de ventes générées avec la méthode</div>
+    </div>
+    <div class="tqz-card">
+      <div class="tqz-num" data-target="23">23</div>
+      <div class="tqz-lab">marchés différents où elle a été testée</div>
+    </div>
+    <div class="tqz-card">
+      <div class="tqz-num" data-prefix="N°" data-target="1">N°1</div>
+      <div class="tqz-lab">meilleur livre marketing 2015 selon Inc. Magazine</div>
+    </div>
+    <div class="tqz-card">
+      <div class="tqz-num" data-target="7" data-suffix="×">7×</div>
+      <div class="tqz-lab">classée au Inc. 5000 des sociétés à plus forte croissance</div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .tqz-proof{
+    --tqz-primary:#5D6CDB; --tqz-ink:#2E386E; --tqz-card:#F4F5FA;
+    --tqz-border:#E5E8F2; --tqz-muted:#6B72A0;
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    max-width:1120px;margin:0 auto;padding:8px 0;box-sizing:border-box;
+  }
+  .tqz-proof *{box-sizing:border-box}
+  .tqz-grid{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:18px;
+  }
+  .tqz-card{
+    background:var(--tqz-card);border:1px solid var(--tqz-border);border-radius:16px;
+    padding:26px 18px;text-align:center;
+    opacity:0;transform:translateY(22px);
+    transition:opacity .6s ease,transform .6s ease;
+  }
+  .tqz-card.tqz-in{opacity:1;transform:none}
+  .tqz-num{
+    font-size:32px;font-weight:800;color:var(--tqz-primary);
+    letter-spacing:-.02em;line-height:1.1;
+  }
+  .tqz-lab{
+    font-size:13.5px;color:var(--tqz-muted);margin-top:8px;line-height:1.45;
+  }
+  @media(max-width:760px){
+    .tqz-grid{grid-template-columns:repeat(2,1fr);gap:12px}
+    .tqz-num{font-size:28px}
+  }
+  @media(max-width:360px){
+    .tqz-grid{grid-template-columns:1fr}
+  }
+  @media(prefers-reduced-motion:reduce){
+    .tqz-card{transition:none}
+  }
+</style>
+
+<script>
+(function(){
+  var root=document.currentScript ? document.currentScript.previousElementSibling : null;
+  var proof=document.querySelector('.tqz-proof');
+  if(!proof) return;
+  var cards=proof.querySelectorAll('.tqz-card');
+  var reduce=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function countUp(el){
+    var target=parseInt(el.getAttribute('data-target'),10);
+    var prefix=el.getAttribute('data-prefix')||'';
+    var suffix=el.getAttribute('data-suffix')||'';
+    if(isNaN(target)){return;}
+    if(reduce){el.textContent=prefix+target+suffix;return;}
+    var dur=1200, start=null;
+    function step(ts){
+      if(!start) start=ts;
+      var p=Math.min((ts-start)/dur,1);
+      var eased=1-Math.pow(1-p,3); // ease-out cubic
+      var val=Math.round(eased*target);
+      el.textContent=prefix+val+suffix;
+      if(p<1) requestAnimationFrame(step);
+      else el.textContent=prefix+target+suffix;
+    }
+    el.textContent=prefix+'0'+suffix;
+    requestAnimationFrame(step);
+  }
+
+  function reveal(card,i){
+    setTimeout(function(){
+      card.classList.add('tqz-in');
+      var num=card.querySelector('.tqz-num');
+      if(num) countUp(num);
+    }, reduce?0:i*120);
+  }
+
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(entries,obs){
+      entries.forEach(function(e){
+        if(e.isIntersecting){
+          var idx=Array.prototype.indexOf.call(cards,e.target);
+          reveal(e.target, idx<0?0:idx);
+          obs.unobserve(e.target);
+        }
+      });
+    },{threshold:0.35});
+    cards.forEach(function(c){io.observe(c);});
+  } else {
+    cards.forEach(reveal);
+  }
+})();
+</script>
