@@ -43,5 +43,14 @@ export async function POST(req: NextRequest) {
   });
   if (error) return NextResponse.json({ ok: false, reason: "db" }, { status: 500 });
 
-  return NextResponse.json({ ok: true, token, user_id: row.user_id });
+  // Email du compte (pour que FormaQuiz affiche quel Tiquiz est connecte).
+  let email: string | null = null;
+  try {
+    const { data: u } = await supabaseAdmin.auth.admin.getUserById(row.user_id as string);
+    email = u?.user?.email ?? null;
+  } catch {
+    /* email optionnel */
+  }
+
+  return NextResponse.json({ ok: true, token, user_id: row.user_id, email });
 }
