@@ -15,7 +15,7 @@ import {
   hexToHslTriplet,
   type QuizBranding,
 } from "@/lib/quizBranding";
-import { sanitizeRichText, stripHtml } from "@/lib/richText";
+import { sanitizeRichText, stripHtml, decodeHtmlEntities } from "@/lib/richText";
 import { fireQuizPixel, newEventId } from "@/lib/clientPixels";
 import { RichParagraph } from "@/components/ui/rich-paragraph";
 import { makeInterpolator, getGenderLabels, extractResultLabel, type QuizGender } from "@/lib/quizPersonalization";
@@ -1859,7 +1859,11 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     const introRich = isHtml(quiz.introduction);
     // Split introduction into lines — lines starting with ✓/✔/- become checkmarks
     // (legacy plain-text rendering kept for quizzes created before the rich-text editor)
-    const introLines = introRich ? [] : (quiz.introduction ?? "").split("\n").filter((l) => l.trim());
+    // Décode les entités (`&nbsp;` etc.) AVANT de découper : en rendu plain
+    // text (JSX children), une entité non décodée s'afficherait en clair.
+    const introLines = introRich
+      ? []
+      : decodeHtmlEntities(quiz.introduction).split("\n").filter((l) => l.trim());
     const bulletLines: string[] = [];
     const descLines: string[] = [];
     introLines.forEach((line) => {
@@ -3029,7 +3033,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                   dangerouslySetInnerHTML={{ __html: sanitizeRichText(desc) }}
                 />
               ) : (
-                <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">{desc}</p>
+                <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">{decodeHtmlEntities(desc)}</p>
               );
             })()}
 
@@ -3055,7 +3059,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                       dangerouslySetInnerHTML={{ __html: sanitizeRichText(ins) }}
                     />
                   ) : (
-                    <p className="text-sm leading-relaxed whitespace-pre-line">{ins}</p>
+                    <p className="text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(ins)}</p>
                   )}
                 </div>
               );
@@ -3083,7 +3087,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                       dangerouslySetInnerHTML={{ __html: sanitizeRichText(proj) }}
                     />
                   ) : (
-                    <p className="text-sm leading-relaxed whitespace-pre-line">{proj}</p>
+                    <p className="text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(proj)}</p>
                   )}
                 </div>
               );
@@ -3214,7 +3218,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                                   dangerouslySetInnerHTML={{ __html: sanitizeRichText(desc) }}
                                 />
                               ) : (
-                                <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{desc}</p>
+                                <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(desc)}</p>
                               );
                             })()}
                             {r.image_url && slot === "after_description" && (
@@ -3234,7 +3238,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                                       dangerouslySetInnerHTML={{ __html: sanitizeRichText(ins) }}
                                     />
                                   ) : (
-                                    <p className="text-sm leading-relaxed whitespace-pre-line">{ins}</p>
+                                    <p className="text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(ins)}</p>
                                   )}
                                 </div>
                               );
@@ -3256,7 +3260,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                                       dangerouslySetInnerHTML={{ __html: sanitizeRichText(proj) }}
                                     />
                                   ) : (
-                                    <p className="text-sm leading-relaxed whitespace-pre-line">{proj}</p>
+                                    <p className="text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(proj)}</p>
                                   )}
                                 </div>
                               );
@@ -3300,7 +3304,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
             <Card className="p-4 border-dashed flex items-center gap-2 text-green-600">
               <CheckCircle2 className="w-5 h-5 shrink-0" />
               <span className="text-sm font-medium whitespace-pre-line">
-                {(quiz.bonus_unlocked_message?.trim() || t.bonusUnlocked)}
+                {decodeHtmlEntities(quiz.bonus_unlocked_message?.trim() || "") || t.bonusUnlocked}
               </span>
             </Card>
           )}
