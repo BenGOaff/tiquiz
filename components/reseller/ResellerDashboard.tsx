@@ -19,16 +19,19 @@ import { useTranslations } from "next-intl";
 import {
   ArrowUpDown,
   BarChart3,
+  CheckCircle2,
   Copy,
   CreditCard,
   ExternalLink,
   FileText,
   Loader2,
+  Lock,
   Mail,
   Plus,
   ReceiptText,
   RefreshCw,
   Search,
+  ShieldCheck,
   Users,
   Wallet,
 } from "lucide-react";
@@ -56,6 +59,13 @@ type Client = {
 };
 
 type PlanPayment = { stripe?: string; paypal?: string; sio?: string };
+
+type ProviderStatus = { connected: boolean; env: string | null; label: string | null };
+type PaymentConn = {
+  cryptoReady: boolean;
+  stripe: ProviderStatus;
+  paypal: ProviderStatus;
+};
 
 type BillingInvoice = {
   id: string;
@@ -120,6 +130,15 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
   const [slug, setSlug] = useState<string | null>(null);
   const [supportEmail, setSupportEmail] = useState("");
   const [savingSupport, setSavingSupport] = useState(false);
+
+  // ----- connexion paiement native (checkout Tiquiz) -----
+  const [conn, setConn] = useState<PaymentConn | null>(null);
+  const [stripeKeyInput, setStripeKeyInput] = useState("");
+  const [paypalIdInput, setPaypalIdInput] = useState("");
+  const [paypalSecretInput, setPaypalSecretInput] = useState("");
+  const [connBusy, setConnBusy] = useState<
+    null | "stripe" | "paypal" | "stripe-off" | "paypal-off"
+  >(null);
 
   // ----- état UI -----
   const [search, setSearch] = useState("");
@@ -198,6 +217,104 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
     }
   };
 
+  const fetchPaymentConn = async () => {
+    try {
+      const res = await fetch("/api/reseller/payment-keys", { cache: "no-store" });
+      const json = await res.json();
+      if (json?.ok) {
+        setConn({ cryptoReady: !!json.crypto_ready, stripe: json.stripe, paypal: json.paypal });
+      }
+    } catch {
+      /* silencieux */
+    }
+  };
+
+  const applyConn = (json: { stripe: ProviderStatus; paypal: ProviderStatus }) => {
+    setConn((c) => ({ cryptoReady: c?.cryptoReady ?? true, stripe: json.stripe, paypal: json.paypal }));
+  };
+
+  const connectStripe = async () => {
+    const secret = stripeKeyInput.trim();
+    if (!secret) return;
+    setConnBusy("stripe");
+    try {
+      const res = await fetch("/api/reseller/payment-keys", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "stripe", secret }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        applyConn(json);
+        setStripeKeyInput("");
+        toast.success(t("connect.toastConnected"));
+      } else if (json.error === "stripe_invalid") {
+        toast.error(t("connect.errStripe"));
+      } else if (json.error === "crypto_unavailable") {
+        toast.error(t("connect.errCrypto"));
+      } else {
+        toast.error(t("connect.errGeneric"));
+      }
+    } catch {
+      toast.error(t("connect.errGeneric"));
+    } finally {
+      setConnBusy(null);
+    }
+  };
+
+  const connectPaypal = async () => {
+    const client_id = paypalIdInput.trim();
+    const secret = paypalSecretInput.trim();
+    if (!client_id || !secret) return;
+    setConnBusy("paypal");
+    try {
+      const res = await fetch("/api/reseller/payment-keys", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "paypal", client_id, secret }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        applyConn(json);
+        setPaypalIdInput("");
+        setPaypalSecretInput("");
+        toast.success(t("connect.toastConnected"));
+      } else if (json.error === "paypal_invalid") {
+        toast.error(t("connect.errPaypal"));
+      } else if (json.error === "crypto_unavailable") {
+        toast.error(t("connect.errCrypto"));
+      } else {
+        toast.error(t("connect.errGeneric"));
+      }
+    } catch {
+      toast.error(t("connect.errGeneric"));
+    } finally {
+      setConnBusy(null);
+    }
+  };
+
+  const disconnectProvider = async (provider: "stripe" | "paypal") => {
+    setConnBusy(provider === "stripe" ? "stripe-off" : "paypal-off");
+    try {
+      const res = await fetch("/api/reseller/payment-keys", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, disconnect: true }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        applyConn(json);
+        toast.success(t("connect.toastDisconnected"));
+      } else {
+        toast.error(t("connect.errGeneric"));
+      }
+    } catch {
+      toast.error(t("connect.errGeneric"));
+    } finally {
+      setConnBusy(null);
+    }
+  };
+
   const saveSupportEmail = async () => {
     setSavingSupport(true);
     try {
@@ -226,6 +343,7 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
     fetchClients();
     fetchSettings();
     fetchBilling();
+    fetchPaymentConn();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -884,6 +1002,197 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
             <CardContent className="pt-4 space-y-2">
               <h2 className="text-sm font-semibold">{t("payments.introTitle")}</h2>
               <p className="text-sm text-muted-foreground">{t("payments.intro")}</p>
+            </CardContent>
+          </Card>
+
+          {/* Connexion native Stripe / PayPal (checkout Tiquiz, sans lien
+              ni webhook a creer). Remplacera les sections plus bas. */}
+          <Card>
+            <CardContent className="pt-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold">{t("connect.title")}</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">{t("connect.intro")}</p>
+              <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                <Lock className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                {t("connect.secureNote")}
+              </p>
+              {conn && !conn.cryptoReady ? (
+                <p className="text-xs text-amber-600">{t("connect.needAdmin")}</p>
+              ) : null}
+            </CardContent>
+          </Card>
+
+          {/* Stripe */}
+          <Card>
+            <CardContent className="pt-4 space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <h3 className="text-sm font-semibold">{t("connect.stripeTitle")}</h3>
+                {conn?.stripe.connected ? (
+                  <Badge className="bg-green-100 text-green-700 gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    {t("connect.statusConnected")}
+                  </Badge>
+                ) : (
+                  <Badge className="bg-gray-100 text-gray-600">{t("connect.statusOff")}</Badge>
+                )}
+              </div>
+
+              {conn?.stripe.connected ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    {t("connect.connectedAs", { label: conn.stripe.label ?? "Stripe" })}
+                  </p>
+                  {conn.stripe.env === "test" ? (
+                    <p className="text-xs text-amber-600">{t("connect.testWarning")}</p>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => disconnectProvider("stripe")}
+                    disabled={connBusy === "stripe-off"}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                  >
+                    {connBusy === "stripe-off" ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      t("connect.disconnectBtn")
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-[11px] text-muted-foreground block">
+                    {t("connect.stripeSecretLabel")}
+                  </label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Input
+                      type="password"
+                      autoComplete="off"
+                      value={stripeKeyInput}
+                      onChange={(e) => setStripeKeyInput(e.target.value)}
+                      placeholder={t("connect.stripeSecretPlaceholder")}
+                      className="flex-1 min-w-[220px]"
+                    />
+                    <Button
+                      onClick={connectStripe}
+                      disabled={
+                        connBusy === "stripe" ||
+                        !stripeKeyInput.trim() ||
+                        (conn ? !conn.cryptoReady : false)
+                      }
+                      size="sm"
+                    >
+                      {connBusy === "stripe" ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        t("connect.connectBtn")
+                      )}
+                    </Button>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+                    <p className="text-[11px] font-semibold">{t("connect.stripeStepsTitle")}</p>
+                    <ol className="list-decimal list-inside space-y-0.5 text-[11px] text-muted-foreground">
+                      <li>{t("connect.stripeStep1")}</li>
+                      <li>{t("connect.stripeStep2")}</li>
+                      <li>{t("connect.stripeStep3")}</li>
+                      <li>{t("connect.stripeStep4")}</li>
+                      <li>{t("connect.stripeStep5")}</li>
+                    </ol>
+                    <p className="text-[11px] text-muted-foreground">{t("connect.stripeStepAlt")}</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* PayPal */}
+          <Card>
+            <CardContent className="pt-4 space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <h3 className="text-sm font-semibold">{t("connect.paypalTitle")}</h3>
+                {conn?.paypal.connected ? (
+                  <Badge className="bg-green-100 text-green-700 gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    {t("connect.statusConnected")}
+                  </Badge>
+                ) : (
+                  <Badge className="bg-gray-100 text-gray-600">{t("connect.statusOff")}</Badge>
+                )}
+              </div>
+
+              {conn?.paypal.connected ? (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    {t("connect.connectedAs", { label: conn.paypal.label ?? "PayPal" })}
+                  </p>
+                  {conn.paypal.env === "sandbox" ? (
+                    <p className="text-xs text-amber-600">{t("connect.testWarning")}</p>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => disconnectProvider("paypal")}
+                    disabled={connBusy === "paypal-off"}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                  >
+                    {connBusy === "paypal-off" ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      t("connect.disconnectBtn")
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-[11px] text-muted-foreground block">
+                    {t("connect.paypalIdLabel")}
+                  </label>
+                  <Input
+                    autoComplete="off"
+                    value={paypalIdInput}
+                    onChange={(e) => setPaypalIdInput(e.target.value)}
+                    placeholder="AeA1QIZ..."
+                  />
+                  <label className="text-[11px] text-muted-foreground block">
+                    {t("connect.paypalSecretLabel")}
+                  </label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Input
+                      type="password"
+                      autoComplete="off"
+                      value={paypalSecretInput}
+                      onChange={(e) => setPaypalSecretInput(e.target.value)}
+                      placeholder="EFa1c..."
+                      className="flex-1 min-w-[220px]"
+                    />
+                    <Button
+                      onClick={connectPaypal}
+                      disabled={
+                        connBusy === "paypal" ||
+                        !paypalIdInput.trim() ||
+                        !paypalSecretInput.trim() ||
+                        (conn ? !conn.cryptoReady : false)
+                      }
+                      size="sm"
+                    >
+                      {connBusy === "paypal" ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        t("connect.connectBtn")
+                      )}
+                    </Button>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 p-3 space-y-1">
+                    <p className="text-[11px] font-semibold">{t("connect.paypalStepsTitle")}</p>
+                    <ol className="list-decimal list-inside space-y-0.5 text-[11px] text-muted-foreground">
+                      <li>{t("connect.paypalStep1")}</li>
+                      <li>{t("connect.paypalStep2")}</li>
+                      <li>{t("connect.paypalStep3")}</li>
+                      <li>{t("connect.paypalStep4")}</li>
+                    </ol>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
