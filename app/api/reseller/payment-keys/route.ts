@@ -5,6 +5,10 @@
 // par un appel reel au provider, puis on chiffre et on stocke. On ne
 // renvoie JAMAIS un secret au client (que des statuts + libelles).
 //
+// A la connexion, Tiquiz cree AUSSI le webhook de cycle de vie dans le
+// compte du revendeur (resiliations / echecs de paiement) : il n'a donc
+// rien a cabler. A la deconnexion, on supprime ce webhook (best-effort).
+//
 // GET : statut de connexion Stripe / PayPal.
 // PUT : { provider: "stripe", secret }
 //       { provider: "paypal", client_id, secret }
@@ -13,12 +17,23 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getResellerSession, logResellerAction } from "@/lib/reseller";
-import { verifyPaypalCreds, verifyStripeKey } from "@/lib/resellerPayments";
+import {
+  deletePaypalWebhook,
+  ensurePaypalWebhook,
+} from "@/lib/paypalRest";
+import {
+  loadResellerPaymentSecrets,
+  verifyPaypalCreds,
+  verifyStripeKey,
+} from "@/lib/resellerPayments";
+import { deleteStripeWebhook, ensureStripeWebhook } from "@/lib/stripeRest";
 import { encryptSecret, isSecretsCryptoConfigured } from "@/lib/secretsCrypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim();
 
 interface StatusRow {
   stripe_secret_key_enc: string | null;
@@ -81,6 +96,7 @@ export async function PUT(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const provider = String(body?.provider ?? "").toLowerCase();
   const resellerId = session.reseller.id;
+  const token = session.reseller.webhook_token;
 
   if (provider !== "stripe" && provider !== "paypal") {
     return NextResponse.json({ ok: false, error: "invalid_provider" }, { status: 400 });
@@ -89,25 +105,57 @@ export async function PUT(req: NextRequest) {
   try {
     // ----- Deconnexion -----
     if (body?.disconnect === true) {
-      const updates =
-        provider === "stripe"
-          ? {
-              stripe_secret_key_enc: null,
-              stripe_env: null,
-              stripe_account_label: null,
-              stripe_price_ids: {},
-            }
-          : {
-              paypal_client_id_enc: null,
-              paypal_secret_enc: null,
-              paypal_env: null,
-              paypal_account_label: null,
-            };
-      const { error } = await supabaseAdmin
+      // On supprime d'abord le webhook chez le provider (best-effort),
+      // tant qu'on a encore les secrets.
+      const secrets = await loadResellerPaymentSecrets(resellerId);
+      const { data: ids } = await supabaseAdmin
         .from("resellers")
-        .update(updates)
-        .eq("id", resellerId);
-      if (error) throw error;
+        .select("stripe_webhook_id,paypal_webhook_id")
+        .eq("id", resellerId)
+        .maybeSingle();
+
+      if (provider === "stripe") {
+        if (secrets.stripeKey && ids?.stripe_webhook_id) {
+          await deleteStripeWebhook(secrets.stripeKey, ids.stripe_webhook_id);
+        }
+        const { error } = await supabaseAdmin
+          .from("resellers")
+          .update({
+            stripe_secret_key_enc: null,
+            stripe_env: null,
+            stripe_account_label: null,
+            stripe_price_ids: {},
+            stripe_webhook_id: null,
+            stripe_webhook_secret_enc: null,
+          })
+          .eq("id", resellerId);
+        if (error) throw error;
+      } else {
+        if (
+          secrets.paypalClientId &&
+          secrets.paypalSecret &&
+          ids?.paypal_webhook_id
+        ) {
+          await deletePaypalWebhook({
+            clientId: secrets.paypalClientId,
+            secret: secrets.paypalSecret,
+            env: secrets.paypalEnv,
+            webhookId: ids.paypal_webhook_id,
+          });
+        }
+        const { error } = await supabaseAdmin
+          .from("resellers")
+          .update({
+            paypal_client_id_enc: null,
+            paypal_secret_enc: null,
+            paypal_env: null,
+            paypal_account_label: null,
+            paypal_webhook_id: null,
+          })
+          .eq("id", resellerId);
+        if (error) throw error;
+      }
+
       await logResellerAction({
         resellerId,
         actorUserId: session.userId,
@@ -127,6 +175,11 @@ export async function PUT(req: NextRequest) {
       if (!check.ok) {
         return NextResponse.json({ ok: false, error: "stripe_invalid", detail: check.error });
       }
+      // Webhook de cycle de vie (best-effort : la connexion reussit meme
+      // si la creation echoue, le checkout marche sans).
+      const wh = token
+        ? await ensureStripeWebhook(secret, `${APP_URL}/api/payments/stripe/${token}`)
+        : { ok: false as const };
       const { error } = await supabaseAdmin
         .from("resellers")
         .update({
@@ -134,6 +187,8 @@ export async function PUT(req: NextRequest) {
           stripe_env: check.env ?? null,
           stripe_account_label: check.label ?? null,
           stripe_price_ids: {},
+          stripe_webhook_id: wh.ok ? wh.id : null,
+          stripe_webhook_secret_enc: wh.ok && wh.secret ? encryptSecret(wh.secret) : null,
         })
         .eq("id", resellerId);
       if (error) throw error;
@@ -141,7 +196,7 @@ export async function PUT(req: NextRequest) {
         resellerId,
         actorUserId: session.userId,
         action: "payment_connect_stripe",
-        meta: { env: check.env },
+        meta: { env: check.env, webhook: wh.ok },
       });
       return NextResponse.json({ ok: true, ...(await loadStatus(resellerId)) });
     }
@@ -156,6 +211,14 @@ export async function PUT(req: NextRequest) {
     if (!check.ok) {
       return NextResponse.json({ ok: false, error: "paypal_invalid", detail: check.error });
     }
+    const wh = token
+      ? await ensurePaypalWebhook({
+          clientId,
+          secret,
+          env: check.env ?? null,
+          url: `${APP_URL}/api/payments/paypal/${token}`,
+        })
+      : { ok: false as const };
     const { error } = await supabaseAdmin
       .from("resellers")
       .update({
@@ -163,6 +226,7 @@ export async function PUT(req: NextRequest) {
         paypal_secret_enc: encryptSecret(secret),
         paypal_env: check.env ?? null,
         paypal_account_label: check.label ?? null,
+        paypal_webhook_id: wh.ok ? wh.id : null,
       })
       .eq("id", resellerId);
     if (error) throw error;
@@ -170,7 +234,7 @@ export async function PUT(req: NextRequest) {
       resellerId,
       actorUserId: session.userId,
       action: "payment_connect_paypal",
-      meta: { env: check.env },
+      meta: { env: check.env, webhook: wh.ok },
     });
     return NextResponse.json({ ok: true, ...(await loadStatus(resellerId)) });
   } catch (e) {

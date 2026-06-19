@@ -151,6 +151,108 @@ export async function createPaypalSubscriptionCheckout(args: {
   }
 }
 
+/** Events d'abonnement suivis par le webhook de cycle de vie. */
+export const PAYPAL_WEBHOOK_EVENTS = [
+  "BILLING.SUBSCRIPTION.ACTIVATED",
+  "BILLING.SUBSCRIPTION.CANCELLED",
+  "BILLING.SUBSCRIPTION.EXPIRED",
+  "BILLING.SUBSCRIPTION.SUSPENDED",
+];
+
+/**
+ * Cree le webhook de cycle de vie dans le compte PayPal du revendeur.
+ * Si l'URL existe deja, on retrouve l'id du webhook existant.
+ */
+export async function ensurePaypalWebhook(args: {
+  clientId: string;
+  secret: string;
+  env: string | null;
+  url: string;
+}): Promise<{ ok: boolean; id?: string; error?: string }> {
+  const base = paypalApiBase(args.env);
+  try {
+    const token = await paypalAccessToken(base, args.clientId, args.secret);
+    if (!token) return { ok: false, error: "auth" };
+
+    const created = await ppPost(base, token, "/v1/notifications/webhooks", {
+      url: args.url,
+      event_types: PAYPAL_WEBHOOK_EVENTS.map((name) => ({ name })),
+    });
+    const id = created.json.id as string | undefined;
+    if (created.ok && id) return { ok: true, id };
+
+    // URL deja enregistree : on relit la liste pour recuperer l'id.
+    const list = await fetch(`${base}/v1/notifications/webhooks`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (list.ok) {
+      const json = (await list.json()) as {
+        webhooks?: Array<{ id: string; url: string }>;
+      };
+      const existing = (json.webhooks ?? []).find((w) => w.url === args.url);
+      if (existing) return { ok: true, id: existing.id };
+    }
+    return { ok: false, error: "webhook_failed" };
+  } catch (e) {
+    console.error("[paypalRest] ensureWebhook failed", (e as Error).message);
+    return { ok: false, error: "network" };
+  }
+}
+
+/** Supprime un webhook PayPal (best-effort, a la deconnexion). */
+export async function deletePaypalWebhook(args: {
+  clientId: string;
+  secret: string;
+  env: string | null;
+  webhookId: string;
+}): Promise<void> {
+  const base = paypalApiBase(args.env);
+  try {
+    const token = await paypalAccessToken(base, args.clientId, args.secret);
+    if (!token) return;
+    await fetch(`${base}/v1/notifications/webhooks/${encodeURIComponent(args.webhookId)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch (e) {
+    console.error("[paypalRest] deleteWebhook failed", (e as Error).message);
+  }
+}
+
+/**
+ * Verifie la signature d'un event PayPal via l'API officielle de
+ * verification (la seule methode fiable cote serveur).
+ */
+export async function verifyPaypalWebhookSignature(args: {
+  clientId: string;
+  secret: string;
+  env: string | null;
+  webhookId: string;
+  headers: Headers;
+  rawBody: string;
+}): Promise<boolean> {
+  const base = paypalApiBase(args.env);
+  try {
+    const token = await paypalAccessToken(base, args.clientId, args.secret);
+    if (!token) return false;
+    const h = (name: string) => args.headers.get(name) ?? "";
+    const payload = {
+      auth_algo: h("paypal-auth-algo"),
+      cert_url: h("paypal-cert-url"),
+      transmission_id: h("paypal-transmission-id"),
+      transmission_sig: h("paypal-transmission-sig"),
+      transmission_time: h("paypal-transmission-time"),
+      webhook_id: args.webhookId,
+      webhook_event: JSON.parse(args.rawBody),
+    };
+    const res = await ppPost(base, token, "/v1/notifications/verify-webhook-signature", payload);
+    return res.ok && res.json.verification_status === "SUCCESS";
+  } catch (e) {
+    console.error("[paypalRest] verifySignature failed", (e as Error).message);
+    return false;
+  }
+}
+
 export interface PaypalSubscriptionInfo {
   active: boolean;
   plan: string | null;
