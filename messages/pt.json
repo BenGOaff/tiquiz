@@ -1876,7 +1876,17 @@
     "payCardCta": "Pagar com cartão",
     "payPaypalCta": "Pagar com PayPal",
     "accessNote": "O teu acesso é enviado por email logo após o pagamento. Lembra-te de verificar o spam.",
-    "poweredBy": "Criado com Tiquiz"
+    "poweredBy": "Criado com Tiquiz",
+    "emailLabel": "O teu email",
+    "emailPlaceholder": "email@exemplo.com",
+    "emailRequired": "Introduz um email valido.",
+    "checkoutError": "O pagamento nao pode iniciar. Tenta de novo daqui a um instante.",
+    "perMonth": "/ mes",
+    "perYear": "/ ano",
+    "successTitle": "Pagamento concluido",
+    "successBody": "O teu acesso acabou de ser enviado por email. Verifica tambem o spam.",
+    "pendingTitle": "Pagamento em validacao",
+    "pendingBody": "Se acabaste de pagar, o teu acesso chega por email dentro de alguns minutos. Em caso de problema, contacta o teu vendedor."
   },
   "reseller": {
     "support": {
@@ -1976,7 +1986,11 @@
       "pricePlaceholder": "ex. 19 € / mês",
       "copyLink": "Copiar o link para partilhar",
       "openPage": "Ver a página",
-      "needPayment": "Liga primeiro o Stripe ou o PayPal no separador Métodos de pagamento para ativar esta página."
+      "needPayment": "Liga primeiro o Stripe ou o PayPal no separador Métodos de pagamento para ativar esta página.",
+      "nativeTitle": "Os teus formularios de encomenda",
+      "nativeIntro": "Define o teu preco por plano. A Tiquiz cria uma pagina de pagamento segura por plano: partilhas o link, o teu cliente paga e o acesso abre sozinho. Precisas de Stripe ou PayPal ligado (separador Metodos de pagamento).",
+      "amountLabel": "Preco (em euros, preco do periodo)",
+      "needPriceOrPay": "Define um preco e liga o Stripe ou o PayPal para ativar este link."
     },
     "payments": {
       "introTitle": "Os teus métodos de pagamento",

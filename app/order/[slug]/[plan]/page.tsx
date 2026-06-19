@@ -1,24 +1,24 @@
 // app/order/[slug]/[plan]/page.tsx
 //
-// Bon de commande HÉBERGÉ d'un revendeur (phase 3, Béné 11 juin 2026).
-// Page publique : rappelle le contenu du plan commandé + le tarif du
-// revendeur, et envoie vers SA page de paiement (Stripe/PayPal,
-// resellers.checkout_urls). Tiquiz n'encaisse rien ici.
+// Bon de commande HOSTE d'un revendeur, version checkout NATIF (Bene 19
+// juin 2026). Page publique : rappelle le plan + le tarif du revendeur,
+// puis tunnel de paiement integre (composant ResellerCheckout) qui cree
+// l'abonnement sur le compte Stripe/PayPal du revendeur. Le compte client
+// s'ouvre automatiquement au retour (page success).
 //
 // URL : /order/<slug>/<plan> avec slug = resellers.slug (12 hex non
 // devinables) et plan = monthly | yearly | monthly_plus | yearly_plus.
 //
-// 404 si : slug inconnu, revendeur suspendu, plan invalide ou sans URL
-// de paiement configurée. JAMAIS de fallback vers les BDC tipote.fr
-// (règle critique : le client du revendeur paye le revendeur).
+// 404 si : slug inconnu, revendeur suspendu, plan invalide, tarif non
+// fixe, ou aucun moyen de paiement connecte.
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { ArrowRight, Check } from "lucide-react";
+import { Check } from "lucide-react";
 
+import ResellerCheckout from "@/components/order/ResellerCheckout";
 import { isAdminEmail } from "@/lib/adminEmails";
-import { normalizePlanPayment } from "@/lib/reseller";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
@@ -26,8 +26,8 @@ export const dynamic = "force-dynamic";
 
 type PageProps = { params: Promise<{ slug: string; plan: string }> };
 
-// Mapping plan -> clés i18n du namespace settings (mêmes cartes que
-// Réglages -> Abonnement, source de vérité unique du contenu des plans).
+// Mapping plan -> cles i18n du namespace settings (memes cartes que
+// Reglages -> Abonnement, source de verite unique du contenu des plans).
 const PLAN_CONTENT: Record<
   string,
   { nameKey: string; periodKey: string; featureKeys: string[] }
@@ -64,22 +64,26 @@ const PLAN_CONTENT: Record<
   },
 };
 
+const PLAN_PERIOD_SUFFIX: Record<string, "month" | "year"> = {
+  monthly: "month",
+  monthly_plus: "month",
+  yearly: "year",
+  yearly_plus: "year",
+};
+
 interface OrderReseller {
   name: string;
   status: string;
-  checkout_urls: Record<
-    string,
-    { stripe?: string; paypal?: string; sio?: string } | string
-  >;
-  pricing: Record<string, { label?: string }>;
+  pricing: Record<string, { label?: string; amount_cents?: number }>;
+  stripe_secret_key_enc: string | null;
+  paypal_client_id_enc: string | null;
+  paypal_secret_enc: string | null;
 }
 
 async function loadOrder(slug: string, plan: string) {
   if (!PLAN_CONTENT[plan]) return null;
 
-  // Mode APERÇU pour Béné (admin uniquement) : /order/preview/<plan>
-  // affiche le bon de commande avec des données d'exemple, sans créer
-  // de revendeur. Permet d'ajuster textes et design.
+  // Mode APERCU pour Bene (admin uniquement) : /order/preview/<plan>.
   if (slug === "preview") {
     const supabase = await getSupabaseServerClient();
     const {
@@ -87,10 +91,10 @@ async function loadOrder(slug: string, plan: string) {
     } = await supabase.auth.getUser();
     if (!user || !isAdminEmail(user.email)) return null;
     return {
-      name: "Aperçu revendeur",
-      stripeUrl: "#",
-      paypalUrl: "#",
-      priceLabel: "19 € / mois",
+      name: "Apercu revendeur",
+      priceLabel: "19 EUR / mois",
+      stripeAvailable: true,
+      paypalAvailable: true,
     };
   }
 
@@ -98,7 +102,9 @@ async function loadOrder(slug: string, plan: string) {
 
   const { data, error } = await supabaseAdmin
     .from("resellers")
-    .select("name,status,checkout_urls,pricing")
+    .select(
+      "name,status,pricing,stripe_secret_key_enc,paypal_client_id_enc,paypal_secret_enc",
+    )
     .eq("slug", slug)
     .maybeSingle();
   if (error || !data) return null;
@@ -106,18 +112,30 @@ async function loadOrder(slug: string, plan: string) {
   const reseller = data as unknown as OrderReseller;
   if (reseller.status !== "active") return null;
 
-  // Le BDC hébergé n'existe que si le revendeur a connecté Stripe ou
-  // PayPal pour ce plan. S'il n'utilise que Systeme.io, c'est SON BDC
-  // SIO qui sert, pas cette page.
-  const payment = normalizePlanPayment((reseller.checkout_urls ?? {})[plan]);
-  if (!payment.stripe && !payment.paypal) return null;
+  const amountCents = (reseller.pricing ?? {})[plan]?.amount_cents;
+  // Sans tarif fixe, on ne peut rien facturer : pas de page.
+  if (!amountCents || amountCents <= 0) return null;
+
+  const stripeAvailable = Boolean(reseller.stripe_secret_key_enc);
+  const paypalAvailable = Boolean(
+    reseller.paypal_client_id_enc && reseller.paypal_secret_enc,
+  );
+  // Aucun moyen de paiement connecte : pas de page.
+  if (!stripeAvailable && !paypalAvailable) return null;
 
   return {
     name: reseller.name,
-    stripeUrl: payment.stripe ?? null,
-    paypalUrl: payment.paypal ?? null,
+    amountCents,
+    stripeAvailable,
+    paypalAvailable,
     priceLabel: (reseller.pricing ?? {})[plan]?.label ?? null,
   };
+}
+
+function formatPrice(amountCents: number, plan: string, perMonth: string, perYear: string) {
+  const amount = (amountCents / 100).toFixed(2).replace(/\.00$/, "").replace(".", ",");
+  const suffix = PLAN_PERIOD_SUFFIX[plan] === "year" ? perYear : perMonth;
+  return `${amount} EUR ${suffix}`;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -137,6 +155,12 @@ export default async function ResellerOrderPage({ params }: PageProps) {
   const tOrder = await getTranslations("order");
   const content = PLAN_CONTENT[plan];
 
+  const priceLabel =
+    order.priceLabel ??
+    ("amountCents" in order && order.amountCents
+      ? formatPrice(order.amountCents, plan, tOrder("perMonth"), tOrder("perYear"))
+      : null);
+
   return (
     <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
@@ -153,9 +177,9 @@ export default async function ResellerOrderPage({ params }: PageProps) {
             </p>
           </div>
 
-          {order.priceLabel ? (
+          {priceLabel ? (
             <div className="text-center">
-              <span className="text-3xl font-bold">{order.priceLabel}</span>
+              <span className="text-3xl font-bold">{priceLabel}</span>
             </div>
           ) : null}
 
@@ -168,34 +192,12 @@ export default async function ResellerOrderPage({ params }: PageProps) {
             ))}
           </ul>
 
-          <div className="space-y-2">
-            {order.stripeUrl ? (
-              <a
-                href={order.stripeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full rounded-full bg-primary text-primary-foreground font-semibold py-3 hover:opacity-90 transition-opacity"
-              >
-                {tOrder("payCardCta")}
-                <ArrowRight className="h-4 w-4" />
-              </a>
-            ) : null}
-            {order.paypalUrl ? (
-              <a
-                href={order.paypalUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full rounded-full border border-primary text-primary font-semibold py-3 hover:bg-primary/5 transition-colors"
-              >
-                {tOrder("payPaypalCta")}
-                <ArrowRight className="h-4 w-4" />
-              </a>
-            ) : null}
-          </div>
-
-          <p className="text-xs text-muted-foreground text-center">
-            {tOrder("accessNote")}
-          </p>
+          <ResellerCheckout
+            slug={slug}
+            plan={plan}
+            stripeAvailable={order.stripeAvailable}
+            paypalAvailable={order.paypalAvailable}
+          />
         </div>
 
         <p className="text-[11px] text-muted-foreground text-center">

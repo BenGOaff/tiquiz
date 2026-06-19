@@ -1876,7 +1876,17 @@
     "payCardCta": "Paga con carta",
     "payPaypalCta": "Paga con PayPal",
     "accessNote": "Il tuo accesso viene inviato via email subito dopo il pagamento. Ricorda di controllare lo spam.",
-    "poweredBy": "Realizzato con Tiquiz"
+    "poweredBy": "Realizzato con Tiquiz",
+    "emailLabel": "La tua email",
+    "emailPlaceholder": "email@esempio.com",
+    "emailRequired": "Inserisci un'email valida.",
+    "checkoutError": "Il pagamento non e potuto partire. Riprova tra un istante.",
+    "perMonth": "/ mese",
+    "perYear": "/ anno",
+    "successTitle": "Pagamento riuscito",
+    "successBody": "Il tuo accesso ti e appena stato inviato via email. Controlla anche lo spam.",
+    "pendingTitle": "Pagamento in conferma",
+    "pendingBody": "Se hai appena pagato, il tuo accesso arrivera via email tra pochi minuti. Per problemi, contatta il tuo venditore."
   },
   "reseller": {
     "support": {
@@ -1976,7 +1986,11 @@
       "pricePlaceholder": "es. 19 € / mese",
       "copyLink": "Copia il link da condividere",
       "openPage": "Vedi la pagina",
-      "needPayment": "Collega prima Stripe o PayPal nella scheda Metodi di pagamento per attivare questa pagina."
+      "needPayment": "Collega prima Stripe o PayPal nella scheda Metodi di pagamento per attivare questa pagina.",
+      "nativeTitle": "I tuoi moduli d'ordine",
+      "nativeIntro": "Imposta il prezzo per piano. Tiquiz crea una pagina di pagamento sicura per piano: condividi il link, il cliente paga e il suo accesso si apre da solo. Serve Stripe o PayPal collegato (scheda Metodi di pagamento).",
+      "amountLabel": "Prezzo (in euro, prezzo del periodo)",
+      "needPriceOrPay": "Imposta un prezzo e collega Stripe o PayPal per attivare questo link."
     },
     "payments": {
       "introTitle": "I tuoi metodi di pagamento",

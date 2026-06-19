@@ -1860,7 +1860,17 @@
     "payCardCta": "Pay by card",
     "payPaypalCta": "Pay with PayPal",
     "accessNote": "Your access is emailed right after payment. Remember to check your spam folder.",
-    "poweredBy": "Powered by Tiquiz"
+    "poweredBy": "Powered by Tiquiz",
+    "emailLabel": "Your email",
+    "emailPlaceholder": "email@example.com",
+    "emailRequired": "Enter a valid email.",
+    "checkoutError": "Payment could not start. Please try again in a moment.",
+    "perMonth": "/ month",
+    "perYear": "/ year",
+    "successTitle": "Payment successful",
+    "successBody": "Your access has just been emailed to you. Remember to check your spam folder.",
+    "pendingTitle": "Payment being confirmed",
+    "pendingBody": "If you just paid, your access will arrive by email within a few minutes. If anything is off, contact your seller."
   },
   "reseller": {
     "support": {
@@ -1960,7 +1970,11 @@
       "pricePlaceholder": "e.g. $19 / month",
       "copyLink": "Copy the link to share",
       "openPage": "View the page",
-      "needPayment": "Connect Stripe or PayPal in the Payment methods tab first to enable this page."
+      "needPayment": "Connect Stripe or PayPal in the Payment methods tab first to enable this page.",
+      "nativeTitle": "Your order forms",
+      "nativeIntro": "Set your price per plan. Tiquiz creates a secure payment page per plan: you share the link, your client pays, their access opens automatically. You need Stripe or PayPal connected (Payment methods tab).",
+      "amountLabel": "Price (in euros, price of the period)",
+      "needPriceOrPay": "Set a price and connect Stripe or PayPal to activate this link."
     },
     "payments": {
       "introTitle": "Your payment methods",

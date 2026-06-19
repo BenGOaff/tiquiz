@@ -58,8 +58,6 @@ type Client = {
   last_sign_in: string | null;
 };
 
-type PlanPayment = { stripe?: string; paypal?: string; sio?: string };
-
 type ProviderStatus = { connected: boolean; env: string | null; label: string | null };
 type PaymentConn = {
   cryptoReady: boolean;
@@ -122,11 +120,8 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
   const [loading, setLoading] = useState(true);
   const [billing, setBilling] = useState<Billing | null>(null);
 
-  // réglages paiement / BDC (un objet par plan)
-  const [payment, setPayment] = useState<Record<string, PlanPayment>>({});
-  const [pricingLabels, setPricingLabels] = useState<Record<string, string>>({});
+  // tarifs (un montant par plan) + slug des bons de commande hostes
   const [pricingAmounts, setPricingAmounts] = useState<Record<string, string>>({});
-  const [webhookToken, setWebhookToken] = useState<string | null>(null);
   const [slug, setSlug] = useState<string | null>(null);
   const [supportEmail, setSupportEmail] = useState("");
   const [savingSupport, setSavingSupport] = useState(false);
@@ -149,7 +144,6 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
   const [newPlan, setNewPlan] = useState<string>("free");
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [regenerating, setRegenerating] = useState(false);
 
   const fetchClients = async () => {
     setLoading(true);
@@ -191,24 +185,13 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
       const res = await fetch("/api/reseller/settings", { cache: "no-store" });
       const json = await res.json();
       if (json?.ok) {
-        const pay: Record<string, PlanPayment> = {};
-        for (const [k, v] of Object.entries(
-          (json.checkout_urls ?? {}) as Record<string, PlanPayment | string>,
-        )) {
-          pay[k] = typeof v === "string" ? { stripe: v } : (v ?? {});
-        }
-        setPayment(pay);
-        const labels: Record<string, string> = {};
         const amounts: Record<string, string> = {};
         for (const [k, v] of Object.entries(
-          (json.pricing ?? {}) as Record<string, { label?: string; amount_cents?: number }>,
+          (json.pricing ?? {}) as Record<string, { amount_cents?: number }>,
         )) {
-          if (v?.label) labels[k] = v.label;
           if (typeof v?.amount_cents === "number") amounts[k] = String(v.amount_cents / 100);
         }
-        setPricingLabels(labels);
         setPricingAmounts(amounts);
-        setWebhookToken(json.webhook_token ?? null);
         setSlug(json.slug ?? null);
         setSupportEmail(json.support_email ?? "");
       }
@@ -352,19 +335,16 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
   const saveSettings = async () => {
     setSaving(true);
     try {
-      const pricing: Record<string, { label?: string; amount?: string }> = {};
+      const pricing: Record<string, { amount?: string }> = {};
       for (const key of PAID_PLAN_KEYS) {
-        const label = (pricingLabels[key] ?? "").trim();
         const amount = (pricingAmounts[key] ?? "").trim();
-        if (!label && !amount) continue;
-        pricing[key] = {};
-        if (label) pricing[key].label = label;
-        if (amount) pricing[key].amount = amount;
+        if (!amount) continue;
+        pricing[key] = { amount };
       }
       const res = await fetch("/api/reseller/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ checkout_urls: payment, pricing }),
+        body: JSON.stringify({ pricing }),
       });
       const json = await res.json();
       if (json.ok) {
@@ -467,29 +447,6 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
     }
   };
 
-  const regenerateToken = async () => {
-    if (!window.confirm(t("payments.regenerateConfirm"))) return;
-    setRegenerating(true);
-    try {
-      const res = await fetch("/api/reseller/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ regenerate_webhook_token: true }),
-      });
-      const json = await res.json();
-      if (json.ok) {
-        setWebhookToken(json.webhook_token ?? null);
-        toast.success(t("payments.regenerated"));
-      } else {
-        toast.error(t("toasts.error"));
-      }
-    } catch {
-      toast.error(t("toasts.error"));
-    } finally {
-      setRegenerating(false);
-    }
-  };
-
   const copyText = async (value: string) => {
     try {
       await navigator.clipboard.writeText(value);
@@ -502,7 +459,6 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
   // ----- dérivés -----
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const webhookBase = webhookToken ? `${origin}/api/reseller-webhook/${webhookToken}` : null;
 
   const stats = useMemo(() => {
     const total = clients.length;
@@ -570,10 +526,6 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
       return row;
     });
   }, [billing, t]);
-
-  const setPaymentField = (plan: string, kind: keyof PlanPayment, value: string) => {
-    setPayment((prev) => ({ ...prev, [plan]: { ...(prev[plan] ?? {}), [kind]: value } }));
-  };
 
   const planBadge = (plan: string, isPaid: boolean) => (
     <Badge className={isPaid ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}>
@@ -892,82 +844,34 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
         <TabsContent value="orders" className="space-y-4">
           <Card>
             <CardContent className="pt-4 space-y-2">
-              <h2 className="text-sm font-semibold">{t("orders.introTitle")}</h2>
-              <p className="text-sm text-muted-foreground">{t("orders.intro")}</p>
+              <h2 className="text-sm font-semibold">{t("orders.nativeTitle")}</h2>
+              <p className="text-sm text-muted-foreground">{t("orders.nativeIntro")}</p>
             </CardContent>
           </Card>
 
-          {/* Option 1 : Systeme.io */}
           <Card>
             <CardContent className="pt-4 space-y-3">
-              <h3 className="text-sm font-semibold">{t("orders.sioTitle")}</h3>
-              <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                <li>{t("orders.sioStep1")}</li>
-                <li>{t("orders.sioStep2")}</li>
-                <li>{t("orders.sioStep3")}</li>
-              </ol>
-              <div className="grid gap-3 md:grid-cols-2">
-                {PAID_PLAN_KEYS.map((key) => (
-                  <div key={key} className="space-y-1.5 rounded-lg border p-3">
-                    <div className="text-xs font-semibold">{t(`plans.${key}`)}</div>
-                    <label className="text-[11px] text-muted-foreground block">
-                      {t("orders.sioUrlLabel")}
-                    </label>
-                    <Input
-                      type="url"
-                      value={payment[key]?.sio ?? ""}
-                      onChange={(e) => setPaymentField(key, "sio", e.target.value)}
-                      placeholder="https://www.monsite.com/commande"
-                    />
-                    {webhookBase ? (
-                      <div className="flex flex-col gap-1 pt-1">
-                        <span className="text-[11px] text-muted-foreground">
-                          {t("orders.sioWebhookLabel")}
-                        </span>
-                        {copyButton(
-                          `${webhookBase}?plan=${key}&action=activate`,
-                          t("orders.copyActivate"),
-                        )}
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-              {webhookBase ? (
-                <div className="flex items-center gap-2 flex-wrap text-xs">
-                  <span className="text-muted-foreground">{t("orders.sioCancelLabel")}</span>
-                  {copyButton(`${webhookBase}?action=cancel`, t("orders.copyCancel"))}
-                </div>
-              ) : null}
-              <p className="text-xs text-muted-foreground">{t("orders.sioNote")}</p>
-            </CardContent>
-          </Card>
-
-          {/* Option 2 : BDC Tiquiz hébergé */}
-          <Card>
-            <CardContent className="pt-4 space-y-3">
-              <h3 className="text-sm font-semibold">{t("orders.tiquizTitle")}</h3>
-              <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                <li>{t("orders.tiquizStep1")}</li>
-                <li>{t("orders.tiquizStep2")}</li>
-                <li>{t("orders.tiquizStep3")}</li>
-              </ol>
               <div className="grid gap-3 md:grid-cols-2">
                 {PAID_PLAN_KEYS.map((key) => {
-                  const hasPayment = Boolean(payment[key]?.stripe || payment[key]?.paypal);
-                  const orderUrl = slug && hasPayment ? `${origin}/order/${slug}/${key}` : null;
+                  const hasAmount = Boolean((pricingAmounts[key] ?? "").trim());
+                  const anyProvider = Boolean(
+                    conn?.stripe.connected || conn?.paypal.connected,
+                  );
+                  const orderUrl =
+                    slug && hasAmount && anyProvider ? `${origin}/order/${slug}/${key}` : null;
                   return (
                     <div key={key} className="space-y-1.5 rounded-lg border p-3">
                       <div className="text-xs font-semibold">{t(`plans.${key}`)}</div>
                       <label className="text-[11px] text-muted-foreground block">
-                        {t("orders.priceLabel")}
+                        {t("orders.amountLabel")}
                       </label>
                       <Input
-                        value={pricingLabels[key] ?? ""}
+                        inputMode="decimal"
+                        value={pricingAmounts[key] ?? ""}
                         onChange={(e) =>
-                          setPricingLabels((prev) => ({ ...prev, [key]: e.target.value }))
+                          setPricingAmounts((prev) => ({ ...prev, [key]: e.target.value }))
                         }
-                        placeholder={t("orders.pricePlaceholder")}
+                        placeholder={AMOUNT_PLACEHOLDER[key] ?? ""}
                       />
                       {orderUrl ? (
                         <div className="flex items-center gap-2 flex-wrap pt-1">
@@ -983,7 +887,7 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
                           </a>
                         </div>
                       ) : (
-                        <p className="text-[11px] text-amber-600">{t("orders.needPayment")}</p>
+                        <p className="text-[11px] text-amber-600">{t("orders.needPriceOrPay")}</p>
                       )}
                     </div>
                   );
@@ -1196,94 +1100,6 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="pt-4 space-y-3">
-              <h3 className="text-sm font-semibold">{t("payments.linksTitle")}</h3>
-              <p className="text-xs text-muted-foreground">{t("payments.linksHelp")}</p>
-              <div className="grid gap-3 md:grid-cols-2">
-                {PAID_PLAN_KEYS.map((key) => (
-                  <div key={key} className="space-y-1.5 rounded-lg border p-3">
-                    <div className="text-xs font-semibold">{t(`plans.${key}`)}</div>
-                    <label className="text-[11px] text-muted-foreground block">
-                      {t("payments.stripeLabel")}
-                    </label>
-                    <Input
-                      type="url"
-                      value={payment[key]?.stripe ?? ""}
-                      onChange={(e) => setPaymentField(key, "stripe", e.target.value)}
-                      placeholder="https://buy.stripe.com/..."
-                    />
-                    <label className="text-[11px] text-muted-foreground block">
-                      {t("payments.paypalLabel")}
-                    </label>
-                    <Input
-                      type="url"
-                      value={payment[key]?.paypal ?? ""}
-                      onChange={(e) => setPaymentField(key, "paypal", e.target.value)}
-                      placeholder="https://www.paypal.com/..."
-                    />
-                    <label className="text-[11px] text-muted-foreground block">
-                      {t("payments.amountLabel")}
-                    </label>
-                    <Input
-                      inputMode="decimal"
-                      value={pricingAmounts[key] ?? ""}
-                      onChange={(e) =>
-                        setPricingAmounts((prev) => ({ ...prev, [key]: e.target.value }))
-                      }
-                      placeholder={AMOUNT_PLACEHOLDER[key] ?? ""}
-                    />
-                  </div>
-                ))}
-              </div>
-              <Button onClick={saveSettings} disabled={saving} size="sm">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : t("saveBtn")}
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-4 space-y-3">
-              <h3 className="text-sm font-semibold">{t("payments.webhookTitle")}</h3>
-              <p className="text-xs text-muted-foreground">{t("payments.webhookHelp")}</p>
-              {webhookBase ? (
-                <>
-                  <div className="space-y-2">
-                    {PAID_PLAN_KEYS.map((key) => (
-                      <div key={key} className="flex items-center gap-2 flex-wrap text-xs">
-                        <span className="font-medium w-40 shrink-0">{t(`plans.${key}`)}</span>
-                        {copyButton(
-                          `${webhookBase}?plan=${key}&action=activate`,
-                          t("orders.copyActivate"),
-                        )}
-                      </div>
-                    ))}
-                    <div className="flex items-center gap-2 flex-wrap text-xs">
-                      <span className="font-medium w-40 shrink-0">
-                        {t("orders.sioCancelLabel")}
-                      </span>
-                      {copyButton(`${webhookBase}?action=cancel`, t("orders.copyCancel"))}
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{t("payments.webhookTest")}</p>
-                  <button
-                    type="button"
-                    onClick={regenerateToken}
-                    disabled={regenerating}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-50"
-                  >
-                    {regenerating ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      t("payments.regenerateBtn")
-                    )}
-                  </button>
-                </>
-              ) : (
-                <p className="text-xs text-muted-foreground">{t("payments.noToken")}</p>
-              )}
-            </CardContent>
-          </Card>
         </TabsContent>
 
         {/* ================= ONGLET 5 : FACTURATION TIPOTE ================= */}
