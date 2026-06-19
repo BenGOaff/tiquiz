@@ -13,6 +13,7 @@ import { CheckCircle2, Clock } from "lucide-react";
 import { getPaypalSubscription } from "@/lib/paypalRest";
 import { activateResellerClient } from "@/lib/resellerProvisioning";
 import { loadResellerPaymentSecrets } from "@/lib/resellerPayments";
+import { logPaymentEvent } from "@/lib/resellerPaymentLog";
 import { isResellerAllowedPlan } from "@/lib/reseller";
 import { retrieveStripeSession } from "@/lib/stripeRest";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -42,7 +43,7 @@ async function provision(
   if (!reseller || reseller.status !== "active") return false;
 
   const secrets = await loadResellerPaymentSecrets(reseller.id);
-  const provider = (sp.provider ?? "").toLowerCase();
+  const provider = (sp.provider ?? "").toLowerCase() as "stripe" | "paypal";
 
   let plan: string | null = null;
   let email: string | null = null;
@@ -50,7 +51,17 @@ async function provision(
 
   if (provider === "stripe" && sp.session_id && secrets.stripeKey) {
     const info = await retrieveStripeSession(secrets.stripeKey, sp.session_id);
-    if (!info || !info.paid) return false;
+    if (!info || !info.paid) {
+      await logPaymentEvent({
+        resellerId: reseller.id,
+        provider,
+        stage: "provision",
+        event: "provision_not_paid",
+        ok: false,
+        detail: "Retour Stripe : paiement non confirme.",
+      });
+      return false;
+    }
     ({ plan, email, resellerId } = info);
   } else if (
     provider === "paypal" &&
@@ -64,21 +75,61 @@ async function provision(
       env: secrets.paypalEnv,
       subscriptionId: sp.subscription_id,
     });
-    if (!info || !info.active) return false;
+    if (!info || !info.active) {
+      await logPaymentEvent({
+        resellerId: reseller.id,
+        provider,
+        stage: "provision",
+        event: "provision_not_active",
+        ok: false,
+        detail: "Retour PayPal : abonnement non actif.",
+      });
+      return false;
+    }
     ({ plan, email, resellerId } = info);
   } else {
+    await logPaymentEvent({
+      resellerId: reseller.id,
+      provider: provider || null,
+      stage: "provision",
+      event: "provision_bad_return",
+      ok: false,
+      detail: "Retour de paiement incomplet (provider ou identifiant manquant).",
+    });
     return false;
   }
 
   // Anti-falsification : le paiement doit appartenir a CE revendeur.
-  if (resellerId !== reseller.id) return false;
-  if (!email || !plan || !isResellerAllowedPlan(plan)) return false;
+  if (resellerId !== reseller.id || !email || !plan || !isResellerAllowedPlan(plan)) {
+    await logPaymentEvent({
+      resellerId: reseller.id,
+      provider,
+      stage: "provision",
+      event: "provision_invalid_data",
+      ok: false,
+      email,
+      plan,
+      detail: "Donnees de paiement invalides (revendeur, email ou plan).",
+    });
+    return false;
+  }
 
   const result = await activateResellerClient({
     reseller: { id: reseller.id, name: reseller.name, support_email: reseller.support_email },
     email,
     plan,
     source: "checkout",
+  });
+  await logPaymentEvent({
+    resellerId: reseller.id,
+    provider,
+    stage: "provision",
+    event: result.ok ? "provision_success" : "provision_failed",
+    ok: result.ok,
+    email,
+    plan,
+    detail: `Resultat : ${result.outcome}.`,
+    meta: { outcome: result.outcome },
   });
   return result.ok;
 }

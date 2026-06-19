@@ -1893,7 +1893,8 @@
       "activity": "Activité",
       "orders": "Bons de commande",
       "payments": "Modes de paiement",
-      "billing": "Facturation Tipote"
+      "billing": "Facturation Tipote",
+      "events": "Suivi paiements"
     },
     "plans": {
       "monthly": "Plan mensuel",
@@ -2068,6 +2069,17 @@
       "errPaypal": "Identifiants PayPal invalides. Verifie le Client ID et le Secret.",
       "errCrypto": "Connexion des paiements pas encore activee cote serveur. Contacte Tiquiz.",
       "errGeneric": "Une erreur est survenue."
+    },
+    "events": {
+      "title": "Suivi de tes paiements",
+      "intro": "L'historique de tes paiements et de l'ouverture des acces. En cas de souci, la raison est indiquee ici, pas besoin de chercher ailleurs.",
+      "empty": "Aucun paiement pour le moment.",
+      "colDate": "Date",
+      "colStatus": "Statut",
+      "colClient": "Client",
+      "colDetail": "Detail",
+      "statusOk": "OK",
+      "statusFail": "Echec"
     }
   },
   "admin": {

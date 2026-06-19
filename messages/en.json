@@ -1893,7 +1893,8 @@
       "activity": "Activity",
       "orders": "Order forms",
       "payments": "Payment methods",
-      "billing": "Tipote billing"
+      "billing": "Tipote billing",
+      "events": "Payment log"
     },
     "plans": {
       "monthly": "Monthly plan",
@@ -2068,6 +2069,17 @@
       "errPaypal": "Invalid PayPal credentials. Check the Client ID and Secret.",
       "errCrypto": "Payment connection not enabled on the server yet. Contact Tiquiz.",
       "errGeneric": "Something went wrong."
+    },
+    "events": {
+      "title": "Your payment log",
+      "intro": "The history of your payments and access delivery. If something goes wrong, the reason is shown here, no need to look elsewhere.",
+      "empty": "No payment yet.",
+      "colDate": "Date",
+      "colStatus": "Status",
+      "colClient": "Client",
+      "colDetail": "Detail",
+      "statusOk": "OK",
+      "statusFail": "Failed"
     }
   },
   "admin": {

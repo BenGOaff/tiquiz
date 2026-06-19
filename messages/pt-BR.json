@@ -1895,7 +1895,8 @@
       "activity": "Atividade",
       "orders": "Formulários de pedido",
       "payments": "Métodos de pagamento",
-      "billing": "Faturamento Tipote"
+      "billing": "Faturamento Tipote",
+      "events": "Registo de pagamentos"
     },
     "plans": {
       "monthly": "Plano mensal",
@@ -2070,6 +2071,17 @@
       "errPaypal": "Credenciais PayPal invalidas. Confirma o Client ID e o Secret.",
       "errCrypto": "Ligacao de pagamentos ainda nao ativada no servidor. Contacta a Tiquiz.",
       "errGeneric": "Ocorreu um erro."
+    },
+    "events": {
+      "title": "Registo dos teus pagamentos",
+      "intro": "O historico dos teus pagamentos e da abertura dos acessos. Se algo correr mal, o motivo aparece aqui, sem procurar noutro lado.",
+      "empty": "Ainda sem pagamentos.",
+      "colDate": "Data",
+      "colStatus": "Estado",
+      "colClient": "Cliente",
+      "colDetail": "Detalhe",
+      "statusOk": "OK",
+      "statusFail": "Falha"
     }
   },
   "admin": {

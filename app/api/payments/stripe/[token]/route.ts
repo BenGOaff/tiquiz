@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { isResellerAllowedPlan } from "@/lib/reseller";
+import { logPaymentEvent } from "@/lib/resellerPaymentLog";
 import {
   activateResellerClient,
   cancelResellerClient,
@@ -54,6 +55,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
     return NextResponse.json({ ok: false, error: "decrypt" }, { status: 400 });
   }
   if (!verifyStripeSignature(rawBody, sig, secret)) {
+    await logPaymentEvent({
+      resellerId: reseller.id,
+      provider: "stripe",
+      stage: "webhook",
+      event: "webhook_bad_signature",
+      ok: false,
+      detail: "Signature Stripe invalide (event rejete).",
+    });
     return NextResponse.json({ ok: false, error: "bad_signature" }, { status: 400 });
   }
 
@@ -91,16 +100,39 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
   if (event.type === "checkout.session.completed") {
     if (obj.payment_status === "paid" && email && isResellerAllowedPlan(plan)) {
-      await activateResellerClient({
+      const result = await activateResellerClient({
         reseller: provReseller,
         email,
         plan,
         source: "stripe_webhook",
       });
+      await logPaymentEvent({
+        resellerId: reseller.id,
+        provider: "stripe",
+        stage: "webhook",
+        event: result.ok ? "webhook_activate" : "webhook_activate_failed",
+        ok: result.ok,
+        email,
+        plan,
+        detail: `checkout.session.completed -> ${result.outcome}.`,
+      });
     }
   } else if (event.type === "customer.subscription.deleted") {
     if (email) {
-      await cancelResellerClient({ reseller: provReseller, email, source: "stripe_webhook" });
+      const result = await cancelResellerClient({
+        reseller: provReseller,
+        email,
+        source: "stripe_webhook",
+      });
+      await logPaymentEvent({
+        resellerId: reseller.id,
+        provider: "stripe",
+        stage: "webhook",
+        event: "webhook_cancel",
+        ok: result.ok,
+        email,
+        detail: `subscription.deleted -> ${result.outcome}.`,
+      });
     }
   }
 

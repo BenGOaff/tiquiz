@@ -22,8 +22,10 @@ import {
   CheckCircle2,
   Copy,
   CreditCard,
+  AlertTriangle,
   ExternalLink,
   FileText,
+  History,
   Loader2,
   Lock,
   Mail,
@@ -135,6 +137,21 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
     null | "stripe" | "paypal" | "stripe-off" | "paypal-off"
   >(null);
 
+  // ----- suivi paiements (journal) -----
+  type PayEvent = {
+    id: number;
+    provider: string | null;
+    stage: string;
+    event: string;
+    ok: boolean;
+    email: string | null;
+    plan: string | null;
+    detail: string | null;
+    created_at: string;
+  };
+  const [payEvents, setPayEvents] = useState<PayEvent[]>([]);
+  const [payEventsLoading, setPayEventsLoading] = useState(true);
+
   // ----- état UI -----
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"date" | "leads" | "projects">("date");
@@ -209,6 +226,19 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
       }
     } catch {
       /* silencieux */
+    }
+  };
+
+  const fetchPayEvents = async () => {
+    setPayEventsLoading(true);
+    try {
+      const res = await fetch("/api/reseller/payment-events", { cache: "no-store" });
+      const json = await res.json();
+      if (json?.ok) setPayEvents(json.events ?? []);
+    } catch {
+      /* silencieux */
+    } finally {
+      setPayEventsLoading(false);
     }
   };
 
@@ -327,6 +357,7 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
     fetchSettings();
     fetchBilling();
     fetchPaymentConn();
+    fetchPayEvents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -612,6 +643,10 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
           <TabsTrigger value="billing" className="gap-1.5 px-4 py-2">
             <ReceiptText className="h-4 w-4" />
             {t("tabs.billing")}
+          </TabsTrigger>
+          <TabsTrigger value="events" className="gap-1.5 px-4 py-2">
+            <History className="h-4 w-4" />
+            {t("tabs.events")}
           </TabsTrigger>
         </TabsList>
 
@@ -1269,6 +1304,75 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
               <Loader2 className="w-5 h-5 animate-spin mx-auto" />
             </div>
           )}
+        </TabsContent>
+
+        {/* ================= ONGLET 6 : SUIVI PAIEMENTS ================= */}
+        <TabsContent value="events" className="space-y-4">
+          <Card>
+            <CardContent className="pt-4 space-y-2">
+              <h2 className="text-sm font-semibold">{t("events.title")}</h2>
+              <p className="text-sm text-muted-foreground">{t("events.intro")}</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-4">
+              {payEventsLoading ? (
+                <div className="text-center py-8">
+                  <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+                </div>
+              ) : payEvents.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-4 text-center">
+                  {t("events.empty")}
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b bg-muted/50 text-left">
+                        <th className="px-2 py-2 font-medium">{t("events.colDate")}</th>
+                        <th className="px-2 py-2 font-medium">{t("events.colStatus")}</th>
+                        <th className="px-2 py-2 font-medium">{t("events.colClient")}</th>
+                        <th className="px-2 py-2 font-medium">{t("events.colDetail")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payEvents.map((e) => (
+                        <tr
+                          key={e.id}
+                          className={`border-b last:border-0 ${e.ok ? "" : "bg-red-50"}`}
+                        >
+                          <td className="px-2 py-2 whitespace-nowrap text-muted-foreground">
+                            {new Date(e.created_at).toLocaleString(undefined, {
+                              day: "2-digit",
+                              month: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </td>
+                          <td className="px-2 py-2">
+                            {e.ok ? (
+                              <Badge className="bg-green-100 text-green-700 gap-1">
+                                <CheckCircle2 className="w-3 h-3" />
+                                {t("events.statusOk")}
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-red-100 text-red-700 gap-1">
+                                <AlertTriangle className="w-3 h-3" />
+                                {t("events.statusFail")}
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="px-2 py-2 text-muted-foreground">{e.email ?? "-"}</td>
+                          <td className="px-2 py-2 text-muted-foreground">{e.detail ?? "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

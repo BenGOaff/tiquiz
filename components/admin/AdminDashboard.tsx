@@ -9,6 +9,7 @@ import { Loader2, Search, Users, BarChart3, RefreshCw, Plus, ArrowUpDown, Mail, 
 import { toast } from "sonner";
 
 import ResellersCard from "@/components/admin/ResellersCard";
+import ResellerPaymentEventsCard from "@/components/admin/ResellerPaymentEventsCard";
 
 type User = {
   user_id?: string; id?: string; email: string; first_name?: string; last_name?: string;
@@ -251,6 +252,9 @@ export default function AdminDashboard() {
 
       {/* Revendeurs */}
       <ResellersCard />
+
+      {/* Suivi des paiements revendeurs (diagnostic) */}
+      <ResellerPaymentEventsCard />
     </div>
   );
 }

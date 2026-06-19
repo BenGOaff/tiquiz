@@ -17,6 +17,7 @@ import {
   cancelResellerClient,
 } from "@/lib/resellerProvisioning";
 import { loadResellerPaymentSecrets } from "@/lib/resellerPayments";
+import { logPaymentEvent } from "@/lib/resellerPaymentLog";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
@@ -64,6 +65,14 @@ export async function POST(req: NextRequest, context: RouteContext) {
     rawBody,
   });
   if (!valid) {
+    await logPaymentEvent({
+      resellerId: reseller.id,
+      provider: "paypal",
+      stage: "webhook",
+      event: "webhook_bad_signature",
+      ok: false,
+      detail: "Signature PayPal invalide (event rejete).",
+    });
     return NextResponse.json({ ok: false, error: "bad_signature" }, { status: 400 });
   }
 
@@ -104,16 +113,39 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
   if (event.event_type === "BILLING.SUBSCRIPTION.ACTIVATED") {
     if (email && isResellerAllowedPlan(plan)) {
-      await activateResellerClient({
+      const result = await activateResellerClient({
         reseller: provReseller,
         email,
         plan,
         source: "paypal_webhook",
       });
+      await logPaymentEvent({
+        resellerId: reseller.id,
+        provider: "paypal",
+        stage: "webhook",
+        event: result.ok ? "webhook_activate" : "webhook_activate_failed",
+        ok: result.ok,
+        email,
+        plan,
+        detail: `SUBSCRIPTION.ACTIVATED -> ${result.outcome}.`,
+      });
     }
   } else if (event.event_type && CANCEL_EVENTS.includes(event.event_type)) {
     if (email) {
-      await cancelResellerClient({ reseller: provReseller, email, source: "paypal_webhook" });
+      const result = await cancelResellerClient({
+        reseller: provReseller,
+        email,
+        source: "paypal_webhook",
+      });
+      await logPaymentEvent({
+        resellerId: reseller.id,
+        provider: "paypal",
+        stage: "webhook",
+        event: "webhook_cancel",
+        ok: result.ok,
+        email,
+        detail: `${event.event_type} -> ${result.outcome}.`,
+      });
     }
   }
 

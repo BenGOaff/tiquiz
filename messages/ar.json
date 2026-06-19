@@ -1897,7 +1897,8 @@
       "activity": "النشاط",
       "orders": "نماذج الطلب",
       "payments": "وسائل الدفع",
-      "billing": "فوترة Tipote"
+      "billing": "فوترة Tipote",
+      "events": "سجل المدفوعات"
     },
     "plans": {
       "monthly": "الخطة الشهرية",
@@ -2072,6 +2073,17 @@
       "errPaypal": "بيانات PayPal غير صالحة. تأكد من Client ID وSecret.",
       "errCrypto": "ربط المدفوعات غير مُفعّل بعد على الخادم. تواصل مع Tiquiz.",
       "errGeneric": "حدث خطأ ما."
+    },
+    "events": {
+      "title": "سجل مدفوعاتك",
+      "intro": "سجل مدفوعاتك وفتح الوصول. عند حدوث مشكلة، يظهر السبب هنا دون البحث في مكان آخر.",
+      "empty": "لا توجد مدفوعات بعد.",
+      "colDate": "التاريخ",
+      "colStatus": "الحالة",
+      "colClient": "العميل",
+      "colDetail": "التفاصيل",
+      "statusOk": "تم",
+      "statusFail": "فشل"
     }
   },
   "admin": {

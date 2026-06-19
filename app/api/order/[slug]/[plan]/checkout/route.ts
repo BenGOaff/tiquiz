@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { loadResellerPaymentSecrets } from "@/lib/resellerPayments";
+import { logPaymentEvent } from "@/lib/resellerPaymentLog";
 import { createPaypalSubscriptionCheckout } from "@/lib/paypalRest";
 import { createStripeSubscriptionCheckout } from "@/lib/stripeRest";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -54,6 +55,16 @@ export async function POST(req: NextRequest, context: RouteContext) {
   const pricing = (reseller.pricing ?? {}) as Record<string, { amount_cents?: number }>;
   const amountCents = pricing[plan]?.amount_cents;
   if (!amountCents || amountCents <= 0) {
+    await logPaymentEvent({
+      resellerId: reseller.id,
+      provider: provider as "stripe" | "paypal",
+      stage: "checkout",
+      event: "checkout_no_price",
+      ok: false,
+      email,
+      plan,
+      detail: "Aucun tarif fixe pour ce plan.",
+    });
     return NextResponse.json({ ok: false, error: "no_price" }, { status: 400 });
   }
 
@@ -64,6 +75,16 @@ export async function POST(req: NextRequest, context: RouteContext) {
   try {
     if (provider === "stripe") {
       if (!secrets.stripeKey) {
+        await logPaymentEvent({
+          resellerId: reseller.id,
+          provider: "stripe",
+          stage: "checkout",
+          event: "checkout_not_connected",
+          ok: false,
+          email,
+          plan,
+          detail: "Stripe n'est pas connecte.",
+        });
         return NextResponse.json({ ok: false, error: "not_connected" }, { status: 400 });
       }
       const result = await createStripeSubscriptionCheckout({
@@ -77,13 +98,41 @@ export async function POST(req: NextRequest, context: RouteContext) {
         cancelUrl,
       });
       if (!result.ok || !result.url) {
+        await logPaymentEvent({
+          resellerId: reseller.id,
+          provider: "stripe",
+          stage: "checkout",
+          event: "checkout_provider_error",
+          ok: false,
+          email,
+          plan,
+          detail: result.error ?? "Stripe a refuse la creation du paiement.",
+        });
         return NextResponse.json({ ok: false, error: "stripe_failed" }, { status: 502 });
       }
+      await logPaymentEvent({
+        resellerId: reseller.id,
+        provider: "stripe",
+        stage: "checkout",
+        event: "checkout_start",
+        email,
+        plan,
+      });
       return NextResponse.json({ ok: true, url: result.url });
     }
 
     // PayPal
     if (!secrets.paypalClientId || !secrets.paypalSecret) {
+      await logPaymentEvent({
+        resellerId: reseller.id,
+        provider: "paypal",
+        stage: "checkout",
+        event: "checkout_not_connected",
+        ok: false,
+        email,
+        plan,
+        detail: "PayPal n'est pas connecte.",
+      });
       return NextResponse.json({ ok: false, error: "not_connected" }, { status: 400 });
     }
     const result = await createPaypalSubscriptionCheckout({
@@ -99,10 +148,38 @@ export async function POST(req: NextRequest, context: RouteContext) {
       cancelUrl,
     });
     if (!result.ok || !result.url) {
+      await logPaymentEvent({
+        resellerId: reseller.id,
+        provider: "paypal",
+        stage: "checkout",
+        event: "checkout_provider_error",
+        ok: false,
+        email,
+        plan,
+        detail: result.error ?? "PayPal a refuse la creation du paiement.",
+      });
       return NextResponse.json({ ok: false, error: "paypal_failed" }, { status: 502 });
     }
+    await logPaymentEvent({
+      resellerId: reseller.id,
+      provider: "paypal",
+      stage: "checkout",
+      event: "checkout_start",
+      email,
+      plan,
+    });
     return NextResponse.json({ ok: true, url: result.url });
   } catch (e) {
+    await logPaymentEvent({
+      resellerId: reseller.id,
+      provider: provider as "stripe" | "paypal",
+      stage: "checkout",
+      event: "checkout_exception",
+      ok: false,
+      email,
+      plan,
+      detail: (e as Error).message,
+    });
     console.error("[order/checkout] failed", (e as Error).message);
     return NextResponse.json({ ok: false, error: "server_error" }, { status: 500 });
   }

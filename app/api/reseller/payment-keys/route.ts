@@ -21,6 +21,7 @@ import {
   deletePaypalWebhook,
   ensurePaypalWebhook,
 } from "@/lib/paypalRest";
+import { logPaymentEvent } from "@/lib/resellerPaymentLog";
 import {
   loadResellerPaymentSecrets,
   verifyPaypalCreds,
@@ -198,6 +199,16 @@ export async function PUT(req: NextRequest) {
         action: "payment_connect_stripe",
         meta: { env: check.env, webhook: wh.ok },
       });
+      await logPaymentEvent({
+        resellerId,
+        provider: "stripe",
+        stage: "connect",
+        event: wh.ok ? "connect_stripe" : "connect_stripe_no_webhook",
+        ok: wh.ok,
+        detail: wh.ok
+          ? `Stripe connecte (${check.env}).`
+          : "Stripe connecte, mais le webhook n'a pas pu etre cree : les resiliations auto seront inactives. Reconnecte pour reessayer.",
+      });
       return NextResponse.json({ ok: true, ...(await loadStatus(resellerId)) });
     }
 
@@ -235,6 +246,16 @@ export async function PUT(req: NextRequest) {
       actorUserId: session.userId,
       action: "payment_connect_paypal",
       meta: { env: check.env, webhook: wh.ok },
+    });
+    await logPaymentEvent({
+      resellerId,
+      provider: "paypal",
+      stage: "connect",
+      event: wh.ok ? "connect_paypal" : "connect_paypal_no_webhook",
+      ok: wh.ok,
+      detail: wh.ok
+        ? `PayPal connecte (${check.env}).`
+        : "PayPal connecte, mais le webhook n'a pas pu etre cree : les resiliations auto seront inactives. Reconnecte pour reessayer.",
     });
     return NextResponse.json({ ok: true, ...(await loadStatus(resellerId)) });
   } catch (e) {
