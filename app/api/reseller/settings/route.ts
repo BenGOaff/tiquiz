@@ -38,6 +38,7 @@ export async function GET() {
     pricing: session.reseller.pricing ?? {},
     webhook_token: session.reseller.webhook_token ?? null,
     slug: session.reseller.slug ?? null,
+    handle: session.reseller.handle ?? null,
     support_email: session.reseller.support_email ?? null,
   });
 }
@@ -151,6 +152,28 @@ export async function PUT(req: NextRequest) {
       }
     }
 
+    // 3b. Handle de la page de vente (/<handle>/tiquiz) : a-z 0-9 et
+    //     tirets, 3 a 40 caracteres, unique. On normalise avant de tester.
+    if (body?.handle !== undefined) {
+      const raw = typeof body.handle === "string" ? body.handle.trim().toLowerCase() : "";
+      const normalized = raw.replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
+      if (normalized.length < 3 || normalized.length > 40) {
+        return NextResponse.json({ ok: false, error: "invalid_handle" }, { status: 400 });
+      }
+      // Unicite (hors sa propre ligne).
+      const { data: clash } = await supabaseAdmin
+        .from("resellers")
+        .select("id")
+        .eq("handle", normalized)
+        .neq("id", session.reseller.id)
+        .maybeSingle();
+      if (clash) {
+        return NextResponse.json({ ok: false, error: "handle_taken" }, { status: 409 });
+      }
+      updates.handle = normalized;
+      actions.push("update_handle");
+    }
+
     // 4. Rotation du secret webhook (si le token a fuité).
     if (body?.regenerate_webhook_token === true) {
       updates.webhook_token =
@@ -166,7 +189,7 @@ export async function PUT(req: NextRequest) {
       .from("resellers")
       .update(updates)
       .eq("id", session.reseller.id)
-      .select("checkout_urls,pricing,webhook_token,slug,support_email")
+      .select("checkout_urls,pricing,webhook_token,slug,handle,support_email")
       .single();
     if (error) throw error;
 
@@ -185,6 +208,7 @@ export async function PUT(req: NextRequest) {
       pricing: updated.pricing ?? {},
       webhook_token: updated.webhook_token ?? null,
       slug: updated.slug ?? null,
+      handle: updated.handle ?? null,
       support_email: updated.support_email ?? null,
     });
   } catch (e) {

@@ -125,6 +125,10 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
   // tarifs (un montant par plan) + slug des bons de commande hostes
   const [pricingAmounts, setPricingAmounts] = useState<Record<string, string>>({});
   const [slug, setSlug] = useState<string | null>(null);
+  // page de vente repliquee : identifiant lisible /<handle>/tiquiz
+  const [handle, setHandle] = useState<string | null>(null);
+  const [handleInput, setHandleInput] = useState("");
+  const [savingHandle, setSavingHandle] = useState(false);
   const [supportEmail, setSupportEmail] = useState("");
   const [savingSupport, setSavingSupport] = useState(false);
 
@@ -210,6 +214,8 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
         }
         setPricingAmounts(amounts);
         setSlug(json.slug ?? null);
+        setHandle(json.handle ?? null);
+        setHandleInput(json.handle ?? "");
         setSupportEmail(json.support_email ?? "");
       }
     } catch {
@@ -349,6 +355,33 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
       toast.error(t("toasts.error"));
     } finally {
       setSavingSupport(false);
+    }
+  };
+
+  const saveHandle = async () => {
+    setSavingHandle(true);
+    try {
+      const res = await fetch("/api/reseller/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handle: handleInput.trim() }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setHandle(json.handle ?? null);
+        setHandleInput(json.handle ?? "");
+        toast.success(t("saved"));
+      } else if (json.error === "handle_taken") {
+        toast.error(t("salesPage.handleTaken"));
+      } else if (json.error === "invalid_handle") {
+        toast.error(t("salesPage.invalidHandle"));
+      } else {
+        toast.error(t("toasts.error"));
+      }
+    } catch {
+      toast.error(t("toasts.error"));
+    } finally {
+      setSavingHandle(false);
     }
   };
 
@@ -877,6 +910,47 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
 
         {/* ================= ONGLET 3 : BONS DE COMMANDE ================= */}
         <TabsContent value="orders" className="space-y-4">
+          {/* Page de vente repliquee */}
+          <Card>
+            <CardContent className="pt-4 space-y-3">
+              <h2 className="text-sm font-semibold">{t("salesPage.title")}</h2>
+              <p className="text-sm text-muted-foreground">{t("salesPage.intro")}</p>
+              {handle ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {copyButton(`${origin}/${handle}/tiquiz`, t("orders.copyLink"))}
+                  <a
+                    href={`${origin}/${handle}/tiquiz`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    {t("orders.openPage")}
+                  </a>
+                </div>
+              ) : null}
+              <div className="space-y-1.5">
+                <label className="text-[11px] text-muted-foreground block">
+                  {t("salesPage.handleLabel")}
+                </label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-muted-foreground">{origin}/</span>
+                  <Input
+                    value={handleInput}
+                    onChange={(e) => setHandleInput(e.target.value)}
+                    placeholder="mon-nom"
+                    className="w-48"
+                  />
+                  <span className="text-xs text-muted-foreground">/tiquiz</span>
+                  <Button onClick={saveHandle} disabled={savingHandle} size="sm">
+                    {savingHandle ? <Loader2 className="w-4 h-4 animate-spin" /> : t("saveBtn")}
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">{t("salesPage.handleHint")}</p>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardContent className="pt-4 space-y-2">
               <h2 className="text-sm font-semibold">{t("orders.nativeTitle")}</h2>

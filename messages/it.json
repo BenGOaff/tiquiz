@@ -2096,6 +2096,14 @@
       "colDetail": "Dettaglio",
       "statusOk": "OK",
       "statusFail": "Errore"
+    },
+    "salesPage": {
+      "title": "La tua pagina di vendita",
+      "intro": "Una replica della pagina di vendita Tiquiz a tuo nome. I pulsanti dei prezzi portano ai TUOI moduli d'ordine, con i TUOI prezzi. Condividi questo link.",
+      "handleLabel": "Scegli il tuo identificativo (nell'URL)",
+      "handleHint": "Lettere, numeri e trattini. Es. mio-nome da /mio-nome/tiquiz.",
+      "invalidHandle": "Identificativo non valido (3 a 40 caratteri, lettere, numeri e trattini).",
+      "handleTaken": "Questo identificativo e gia in uso, scegline un altro."
     }
   },
   "admin": {

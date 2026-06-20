@@ -2080,6 +2080,14 @@
       "colDetail": "Detail",
       "statusOk": "OK",
       "statusFail": "Failed"
+    },
+    "salesPage": {
+      "title": "Your sales page",
+      "intro": "A replica of the Tiquiz sales page under your name. The pricing buttons lead to YOUR order forms, with YOUR prices. Share this link.",
+      "handleLabel": "Choose your identifier (in the URL)",
+      "handleHint": "Letters, numbers and hyphens. E.g. my-name gives /my-name/tiquiz.",
+      "invalidHandle": "Invalid identifier (3 to 40 chars, letters, numbers and hyphens).",
+      "handleTaken": "This identifier is already taken, choose another."
     }
   },
   "admin": {

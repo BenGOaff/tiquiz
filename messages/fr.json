@@ -2080,6 +2080,14 @@
       "colDetail": "Detail",
       "statusOk": "OK",
       "statusFail": "Echec"
+    },
+    "salesPage": {
+      "title": "Ta page de vente",
+      "intro": "Une replique de la page de vente Tiquiz a ton nom. Les boutons tarifs menent a TES bons de commande, avec TES prix. Partage ce lien.",
+      "handleLabel": "Choisis ton identifiant (dans l'URL)",
+      "handleHint": "Lettres, chiffres et tirets. Ex. mon-nom donne /mon-nom/tiquiz.",
+      "invalidHandle": "Identifiant invalide (3 a 40 caracteres, lettres, chiffres et tirets).",
+      "handleTaken": "Cet identifiant est deja pris, choisis-en un autre."
     }
   },
   "admin": {
