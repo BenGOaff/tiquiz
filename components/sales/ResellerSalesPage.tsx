@@ -10,7 +10,7 @@
 //
 // Couleurs marque : #2B3264 (navy), #20BBE6 (cyan), #5A6EF6 (indigo).
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { memo, useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, ChevronDown, Loader2, Play } from "lucide-react";
 
 import AnimatedBlock, { type BlockBehavior } from "@/components/sales/AnimatedBlock";
@@ -54,7 +54,10 @@ export interface ResellerSalesPageProps {
 
 /* ----------------------------- Animations hero ----------------------------- */
 
-function useTypewriter() {
+// Composant isole : seul lui re-rend a chaque frappe du typewriter, donc le
+// reste de la page (et tous les <AnimatedBlock>) n'est pas reconcilie en
+// boucle. C'etait la cause des animations qui repartaient de zero.
+const HeroTitle = memo(function HeroTitle() {
   const [text, setText] = useState("");
   useEffect(() => {
     let wordIndex = 0;
@@ -85,8 +88,16 @@ function useTypewriter() {
     timer = setTimeout(tick, 300);
     return () => clearTimeout(timer);
   }, []);
-  return text;
-}
+  return (
+    <h1
+      className="text-4xl font-black leading-tight sm:text-6xl"
+      style={{ color: NAVY, minHeight: "1.1em" }}
+    >
+      {text}
+      <span style={{ color: CYAN, animation: "rspBlink .8s infinite" }}>|</span>
+    </h1>
+  );
+});
 
 function BubbleButton({ href, children }: { href: string; children: ReactNode }) {
   const layerRef = useRef<HTMLSpanElement>(null);
@@ -311,7 +322,6 @@ export default function ResellerSalesPage({
   hasProvider,
   prices,
 }: ResellerSalesPageProps) {
-  const typed = useTypewriter();
   const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
 
   const [freeEmail, setFreeEmail] = useState("");
@@ -419,13 +429,7 @@ export default function ResellerSalesPage({
       {/* Hero */}
       <section className="px-5 pb-10 pt-14 text-center" style={{ background: LIGHT }}>
         <div className="mx-auto max-w-3xl">
-          <h1
-            className="text-4xl font-black leading-tight sm:text-6xl"
-            style={{ color: NAVY, minHeight: "1.1em" }}
-          >
-            {typed}
-            <span style={{ color: CYAN, animation: "rspBlink .8s infinite" }}>|</span>
-          </h1>
+          <HeroTitle />
           <p className="mt-3 text-lg font-semibold text-slate-500">grâce à la viralité des quiz</p>
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-slate-600">
             Crée des quiz viraux qui attirent du trafic qualifié sur tes offres et transforment
@@ -677,7 +681,7 @@ export default function ResellerSalesPage({
 
       {/* FAQ */}
       <section id="faq" className="mx-auto max-w-2xl px-5 py-12">
-        <Heading>Questions frequentes</Heading>
+        <Heading>Questions fréquentes</Heading>
         <div className="mt-8">
           {FAQ.map(([q, a]) => (
             <FaqItem key={q} q={q} a={a} />
