@@ -13,6 +13,7 @@ import { notFound } from "next/navigation";
 import ResellerSalesPage, {
   type SalesPlanKey,
 } from "@/components/sales/ResellerSalesPage";
+import "@/components/sales/sales-animations.css";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const dynamic = "force-dynamic";
