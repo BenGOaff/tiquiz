@@ -42,6 +42,28 @@ const TYPE_WORDS = [
   "Démarque-toi",
 ];
 
+const CAROUSEL_ITEMS = [
+  "Quiz IA illimités",
+  "Sondages illimités",
+  "Popquiz",
+  "Connexion Systeme.io",
+  "Capture de leads",
+  "Résultats personnalisés",
+  "Scoring intelligent",
+  "Partage viral",
+  "Tags automatiques",
+  "Branding personnalisé",
+  "Statistiques détaillées",
+  "Intégration embed",
+  "Lien partageable",
+  "Nom de domaine personnalisé",
+  "Design responsive",
+  "5 langues",
+  "Zéro code",
+  "Mini-tunnels de vente",
+  "Données exploitables",
+];
+
 export type SalesPlanKey = "monthly" | "yearly" | "monthly_plus" | "yearly_plus";
 
 export interface ResellerSalesPageProps {
@@ -537,6 +559,18 @@ export default function ResellerSalesPage({
         .rsp-c3{width:250px;height:100px;bottom:-10px;left:30%;animation:rspFloat 10s ease-in-out infinite 3s}
         .rsp-c4{width:350px;height:130px;top:-20px;right:20%;opacity:.4;animation:rspFloat 18s ease-in-out infinite 5s}
         @keyframes rspFloat{0%,100%{transform:translateX(0) translateY(0)}50%{transform:translateX(20px) translateY(-10px)}}
+        /* Carrousel de mots-cles defilant (repris de l'original) */
+        .tpr-carousel{width:100%;overflow:hidden;position:relative;padding:20px 0}
+        .tpr-carousel::before,.tpr-carousel::after{content:'';position:absolute;top:0;bottom:0;width:60px;z-index:2;pointer-events:none}
+        .tpr-carousel::before{left:0;background:linear-gradient(to right,var(--tpr-bg,#fff),transparent)}
+        .tpr-carousel::after{right:0;background:linear-gradient(to left,var(--tpr-bg,#fff),transparent)}
+        .tpr-track{display:flex;gap:32px;width:max-content;animation:tprScroll 45s linear infinite}
+        .tpr-track:hover{animation-play-state:paused}
+        .tpr-item{display:flex;align-items:center;gap:32px;white-space:nowrap;font-size:.92rem;font-weight:600;color:rgba(44,55,108,.8);letter-spacing:-.01em;flex-shrink:0}
+        .tpr-item::after{content:'';display:inline-block;width:5px;height:5px;border-radius:50%;background:rgba(32,187,230,.4);flex-shrink:0}
+        .tpr-item:last-child::after{display:none}
+        @keyframes tprScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+        @media(max-width:768px){.tpr-item{font-size:.78rem;gap:24px}.tpr-track{gap:24px}.tpr-carousel{padding:14px 0}.tpr-carousel::before,.tpr-carousel::after{width:30px}}
         @media (max-width:768px){html,body{overflow-x:clip}}
       `}</style>
 
@@ -600,22 +634,11 @@ export default function ResellerSalesPage({
         </div>
       </section>
 
-      {/* Bandeau de mots-cles fonctionnalites (comme l'original) */}
-      <div className="overflow-hidden border-y border-slate-100 bg-white py-3">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-5 gap-y-1 px-5 text-center text-xs font-semibold text-slate-400">
-          {[
-            "Quiz IA illimités",
-            "Sondages illimités",
-            "Popquiz",
-            "Connexion Systeme.io",
-            "Capture de leads",
-            "Résultats personnalisés",
-            "Scoring intelligent",
-            "Partage viral",
-            "Tags automatiques",
-          ].map((kw, i) => (
-            <span key={kw} className="inline-flex items-center gap-x-5">
-              {i > 0 ? <span style={{ color: CYAN }}>•</span> : null}
+      {/* Carrousel defile auto de mots-cles fonctionnalites (comme l'original) */}
+      <div className="tpr-carousel" style={{ ["--tpr-bg" as string]: "#ffffff" }}>
+        <div className="tpr-track">
+          {[...CAROUSEL_ITEMS, ...CAROUSEL_ITEMS].map((kw, i) => (
+            <span key={`${kw}-${i}`} className="tpr-item">
               {kw}
             </span>
           ))}
@@ -692,41 +715,48 @@ export default function ResellerSalesPage({
         widget={POLL_PIE}
       />
 
-      {/* Mini-tunnels : mockup 3 ecrans */}
-      <section className="px-5 py-20" style={{ background: LIGHT }}>
-        <Heading>
-          Transforme tes quiz en <span style={{ color: INDIGO }}>mini-tunnels de vente</span>
-        </Heading>
-        <p className="mx-auto mt-4 max-w-2xl text-center text-slate-600">
-          Une expérience fraîche et amusante qui mène tes prospects jusqu'à l'achat, en douceur.
-        </p>
-        <div className="mt-8">
-          <AnimatedBlock html={PHONE_MOCKUP} />
-        </div>
-      </section>
+      {/* Mini-tunnels : mockup 3 ecrans (2 colonnes, comme l'original) */}
+      <FeatureRow
+        bg={LIGHT}
+        reverse
+        title="Transforme tes quiz en"
+        highlight="mini-tunnels de vente"
+        paragraph="Fais vivre à tes prospects une expérience fraîche et amusante qui les mène plus facilement à l'achat. Pendant qu'ils s'amusent à répondre à tes questions :"
+        bullets={[
+          "Ils découvrent tes offres dans un contexte ludique, interactif et captivant",
+          "Tu augmentes tes ventes en organique : une expérience agréable qui les pousse naturellement à cliquer sur tes boutons d'appel à l'action",
+        ]}
+        widget={PHONE_MOCKUP}
+      />
 
-      {/* Demarque-toi : contenu frais et engageant */}
+      {/* Demarque-toi : contenu frais et engageant (2 colonnes, comme l'original) */}
       <section className="px-5 py-20">
-        <Heading>
-          Démarque-toi avec du <span style={{ color: INDIGO }}>contenu frais et engageant</span>
-        </Heading>
-        <p className="mx-auto mt-4 max-w-2xl text-center text-slate-600">
-          Un quiz, c'est vivant et interactif. Tes prospects jouent, s'impliquent et se souviennent
-          de toi, la ou un ebook finit oublie au fond d'un dossier.
-        </p>
-        <div className="rsp-card relative mx-auto mt-8 max-w-3xl overflow-hidden rounded-2xl border border-slate-200">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="https://d1yei2z3i6k35z.cloudfront.net/473100/69da24f77f3320.05446922_tiquiz-social.png"
-            alt="Tiquiz, du contenu frais et engageant"
-            className="h-auto w-full"
-          />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="https://d1yei2z3i6k35z.cloudfront.net/473100/69da267b3193d2.99002292_giphy15.gif"
-            alt=""
-            className="pointer-events-none absolute left-1/2 top-1/2 w-1/2 max-w-xs -translate-x-1/2 -translate-y-1/2 rounded-xl shadow-2xl"
-          />
+        <div className="mx-auto grid max-w-5xl items-center gap-8 md:grid-cols-2">
+          <div>
+            <h2 className="text-4xl font-black leading-tight sm:text-5xl" style={{ color: NAVY }}>
+              Démarque-toi avec du{" "}
+              <span style={{ color: INDIGO }}>contenu frais et engageant</span>
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-slate-600">
+              Un quiz, c'est vivant et interactif. Tes prospects jouent, s'impliquent et se
+              souviennent de toi, la ou un ebook finit oublié au fond d'un dossier.
+            </p>
+          </div>
+          <div className="relative mx-auto w-full max-w-[550px]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://d1yei2z3i6k35z.cloudfront.net/473100/69da24f77f3320.05446922_tiquiz-social.png"
+              alt="Tiquiz, du contenu frais et engageant"
+              className="h-auto w-full"
+            />
+            {/* GIF de reactions superpose (217px sur 550px dans l'original ~40%) */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://d1yei2z3i6k35z.cloudfront.net/473100/69da267b3193d2.99002292_giphy15.gif"
+              alt=""
+              className="pointer-events-none absolute left-1/2 top-[58%] w-[40%] -translate-x-1/2 -translate-y-1/2"
+            />
+          </div>
         </div>
       </section>
 
@@ -787,7 +817,7 @@ export default function ResellerSalesPage({
 
       {/* Le 1er outil connecte a Systeme.io (scenes en boucle) */}
       <section className="px-5 py-20">
-        <AnimatedBlock html={SIO_SCOOP} />
+        <AnimatedBlock html={SIO_SCOOP} behavior="loop-sc" />
       </section>
 
       {/* Nouveau : creation de sondages */}
@@ -927,7 +957,7 @@ export default function ResellerSalesPage({
 
       {/* CTA final */}
       <div
-        className="relative overflow-hidden px-5 py-16 text-center text-white"
+        className="relative overflow-hidden px-5 py-24 text-center text-white"
         style={{
           background: "linear-gradient(180deg,#5772F5 0%,#3D94EE 40%,#20B9E6 100%)",
         }}

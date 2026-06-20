@@ -19,7 +19,7 @@
 
 import { memo, useEffect, useRef } from "react";
 
-export type BlockBehavior = "type-qb" | "type-sh" | "count-fb";
+export type BlockBehavior = "type-qb" | "type-sh" | "count-fb" | "loop-sc";
 
 const QB_TEXT =
   "Je veux un quiz pour qualifier mes visiteurs prêts à commander ma formation sur l'éducation canine";
@@ -79,6 +79,19 @@ function AnimatedBlock({
       } else if (behavior === "count-fb") {
         const el = root.querySelector<HTMLElement>("#tqz-fb-count");
         if (el) timers.push(window.setTimeout(() => countTo(el, 541, 1200), 1200));
+      } else if (behavior === "loop-sc") {
+        // Animation Systeme.io a scenes : on (re)joue la sequence en boucle
+        // via la classe .tqz-visible posee sur le widget (cycle ~13.5s).
+        const el = root.querySelector<HTMLElement>("#tqz-scoop-widget");
+        if (el) {
+          const loop = () => {
+            el.classList.remove("tqz-visible");
+            void el.offsetWidth; // reflow pour relancer les animations
+            el.classList.add("tqz-visible");
+            timers.push(window.setTimeout(loop, 13500));
+          };
+          loop();
+        }
       }
     };
 

@@ -307,37 +307,89 @@ export const FACEBOOK = `
 
 export const SIO_SCOOP = `
 <div class="tqz-sc" id="tqz-scoop-widget">
+  <div class="tqz-sc-conf tqz-sc-c1"></div>
+  <div class="tqz-sc-conf tqz-sc-c2"></div>
+  <div class="tqz-sc-conf tqz-sc-c3"></div>
+  <div class="tqz-sc-conf tqz-sc-c4"></div>
+  <div class="tqz-sc-conf tqz-sc-c5"></div>
+  <div class="tqz-sc-conf tqz-sc-c6"></div>
+  <div class="tqz-sc-conf tqz-sc-c7"></div>
+  <div class="tqz-sc-conf tqz-sc-c8"></div>
+  <div class="tqz-sc-conf tqz-sc-c9"></div>
+  <div class="tqz-sc-conf tqz-sc-c10"></div>
+  <div class="tqz-sc-conf tqz-sc-c11"></div>
+  <div class="tqz-sc-conf tqz-sc-c12"></div>
+  <div class="tqz-sc-conf tqz-sc-c13"></div>
+  <div class="tqz-sc-conf tqz-sc-c14"></div>
+  <div class="tqz-sc-conf tqz-sc-c15"></div>
+  <div class="tqz-sc-conf tqz-sc-c16"></div>
+  <div class="tqz-sc-conf tqz-sc-c17"></div>
+  <div class="tqz-sc-conf tqz-sc-c18"></div>
   <div class="tqz-sc-s tqz-sc-s1">
-    <div class="tqz-sc-badge">Exclusivité Tiquiz</div>
+    <div class="tqz-sc-badge">&#9889; Exclusivité Tiquiz</div>
     <div class="tqz-sc-h1">Le 1er outil quiz<br>connecté à <em>Systeme.io</em></div>
     <div class="tqz-sc-sub1">Tes leads atterrissent directement dans ton business. Automatiquement.</div>
   </div>
   <div class="tqz-sc-s tqz-sc-s2">
-    <div class="tqz-sc-s2-left"><div class="tqz-sc-s2-txt">Un lead remplit<br>ton quiz...</div><div class="tqz-sc-s2-small">Tiquiz capture tout automatiquement</div></div>
+    <div class="tqz-sc-s2-left">
+      <div class="tqz-sc-s2-txt">Un lead remplit<br>ton quiz...</div>
+      <div class="tqz-sc-s2-small">Tiquiz capture tout automatiquement</div>
+    </div>
     <div class="tqz-sc-mock">
       <div class="tqz-sc-mq">Quel est ton plus grand défi ?</div>
       <div class="tqz-sc-mo"><div class="tqz-sc-md"></div>Trouver des clients</div>
       <div class="tqz-sc-mo tqz-sel"><div class="tqz-sc-md"></div>Automatiser mon business</div>
       <div class="tqz-sc-mo"><div class="tqz-sc-md"></div>Créer du contenu</div>
-      <div class="tqz-sc-ml"><div class="tqz-sc-mlav"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="tqz-sc-mli">Marie D. - Score: 87/100<span>Tag: prospect-chaud</span></div></div>
+      <div class="tqz-sc-ml">
+        <div class="tqz-sc-mlav"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div class="tqz-sc-mli">Marie D. - Score: 87/100<span>Tag: prospect-chaud</span></div>
+      </div>
     </div>
   </div>
-  <div class="tqz-sc-s tqz-sc-s3"><div class="tqz-sc-big">Envoyé !</div><div class="tqz-sc-sub3">Lead synchronisé avec Systeme.io</div><div class="tqz-sc-dots"><div class="tqz-sc-dt"></div><div class="tqz-sc-dt"></div><div class="tqz-sc-dt"></div></div></div>
+  <div class="tqz-sc-s tqz-sc-s3">
+    <div class="tqz-sc-big">Envoyé !</div>
+    <div class="tqz-sc-sub3">Lead synchronisé avec Systeme.io</div>
+    <div class="tqz-sc-dots"><div class="tqz-sc-dt"></div><div class="tqz-sc-dt"></div><div class="tqz-sc-dt"></div></div>
+  </div>
   <div class="tqz-sc-s tqz-sc-s4">
     <div class="tqz-sc-s4h">Tes leads débarquent dans...</div>
     <div class="tqz-sc-cards">
-      <div class="tqz-sc-card tqz-sc-cd1"><div class="tqz-sc-cav tqz-sc-ca1"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="tqz-sc-cn">Marie D.</div><div class="tqz-sc-ct tqz-sc-ct1">prospect-chaud</div></div>
-      <div class="tqz-sc-card tqz-sc-cd2"><div class="tqz-sc-cav tqz-sc-ca2"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="tqz-sc-cn">Lucas T.</div><div class="tqz-sc-ct tqz-sc-ct2">quiz-terminé</div></div>
-      <div class="tqz-sc-card tqz-sc-cd3"><div class="tqz-sc-cav tqz-sc-ca3"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="tqz-sc-cn">Sophie M.</div><div class="tqz-sc-ct tqz-sc-ct3">score-élevé</div></div>
+      <div class="tqz-sc-card tqz-sc-cd1">
+        <div class="tqz-sc-cav tqz-sc-ca1"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div class="tqz-sc-cn">Marie D.</div>
+        <div class="tqz-sc-ct tqz-sc-ct1">prospect-chaud</div>
+      </div>
+      <div class="tqz-sc-card tqz-sc-cd2">
+        <div class="tqz-sc-cav tqz-sc-ca2"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div class="tqz-sc-cn">Lucas T.</div>
+        <div class="tqz-sc-ct tqz-sc-ct2">quiz-terminé</div>
+      </div>
+      <div class="tqz-sc-card tqz-sc-cd3">
+        <div class="tqz-sc-cav tqz-sc-ca3"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div class="tqz-sc-cn">Sophie M.</div>
+        <div class="tqz-sc-ct tqz-sc-ct3">score-élevé</div>
+      </div>
     </div>
     <div class="tqz-sc-arw">&#8595;</div>
-    <div class="tqz-sc-tgt"><div class="tqz-sc-sio"><img src="https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://systeme.io&size=128" alt="S"></div><div class="tqz-sc-siot"><b>Systeme.io</b></div></div>
+    <div class="tqz-sc-tgt">
+      <div class="tqz-sc-sio"><img src="https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://systeme.io&size=128" alt="S"></div>
+      <div class="tqz-sc-siot"><b>Systeme.io</b></div>
+    </div>
   </div>
   <div class="tqz-sc-s tqz-sc-s5">
     <div class="tqz-sc-s5t">Tout est automatique</div>
-    <div class="tqz-sc-feat tqz-sc-f1"><div class="tqz-sc-fi tqz-sc-fi1"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></div>Sync en temps réel, zéro manip</div>
-    <div class="tqz-sc-feat tqz-sc-f2"><div class="tqz-sc-fi tqz-sc-fi2"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></div>Tags automatiques sur chaque lead</div>
-    <div class="tqz-sc-feat tqz-sc-f3"><div class="tqz-sc-fi tqz-sc-fi3"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></div>Automatisations depuis Tiquiz</div>
+    <div class="tqz-sc-feat tqz-sc-f1">
+      <div class="tqz-sc-fi tqz-sc-fi1"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></div>
+      Sync en temps réel, zéro manip
+    </div>
+    <div class="tqz-sc-feat tqz-sc-f2">
+      <div class="tqz-sc-fi tqz-sc-fi2"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></div>
+      Tags automatiques sur chaque lead
+    </div>
+    <div class="tqz-sc-feat tqz-sc-f3">
+      <div class="tqz-sc-fi tqz-sc-fi3"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg></div>
+      Automatisations depuis Tiquiz
+    </div>
     <div class="tqz-sc-csv">Tu n'utilises pas Systeme.io ?<br>Exporte tes leads en <b>1 clic au format CSV</b> vers l'autorépondeur de ton choix.</div>
   </div>
 </div>
