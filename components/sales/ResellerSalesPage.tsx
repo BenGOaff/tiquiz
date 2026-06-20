@@ -271,6 +271,121 @@ function Heading({ children, light }: { children: ReactNode; light?: boolean }) 
   );
 }
 
+// Titre surligne facon marqueur (repris de l'originale Systeme.io) : une barre
+// cyan se trace de gauche a droite derriere le texte quand le titre entre dans
+// le viewport, avec un badge "Tiquiz" qui suit la pointe. Mémoise pour ne pas
+// rejouer a chaque re-render.
+const MarkerHeading = memo(function MarkerHeading({
+  children,
+  light,
+  badge = "Tiquiz",
+}: {
+  children: ReactNode;
+  light?: boolean;
+  badge?: string;
+}) {
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const wrapRef = useRef<HTMLSpanElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const hlRef = useRef<HTMLSpanElement>(null);
+  const cursorRef = useRef<HTMLSpanElement>(null);
+  const stickRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const title = titleRef.current;
+    const wrap = wrapRef.current;
+    const text = textRef.current;
+    const hl = hlRef.current;
+    const cursor = cursorRef.current;
+    const stick = stickRef.current;
+    if (!title || !wrap || !text || !hl || !cursor || !stick) return;
+
+    let played = false;
+    let raf = 0;
+
+    const run = () => {
+      if (played) return;
+      const wrapRect = wrap.getBoundingClientRect();
+      const textRect = text.getBoundingClientRect();
+      const finalWidth = Math.ceil(textRect.width);
+      if (finalWidth < 4) return; // pas encore mis en page, on retentera
+      played = true;
+
+      const extraLeft = 12;
+      const left = Math.round(textRect.left - wrapRect.left) - extraLeft;
+      const height = Math.ceil(textRect.height) + 6;
+      const top = Math.round((wrapRect.height - height) / 2);
+      const width = finalWidth + extraLeft;
+
+      hl.style.left = `${left}px`;
+      hl.style.top = `${top}px`;
+      hl.style.height = `${height}px`;
+      hl.style.width = "0px";
+      stick.style.height = `${height}px`;
+      cursor.style.left = `${left}px`;
+      cursor.style.top = `${top}px`;
+      cursor.classList.add("on");
+
+      const duration = 1300;
+      let start: number | null = null;
+      const frame = (ts: number) => {
+        if (start === null) start = ts;
+        const p = Math.min((ts - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        const w = width * eased;
+        hl.style.width = `${w}px`;
+        cursor.style.left = `${left + w}px`;
+        if (p < 1) raf = requestAnimationFrame(frame);
+        else cursor.classList.remove("on"); // le badge s'efface une fois trace
+      };
+      raf = requestAnimationFrame(frame);
+    };
+
+    let observer: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver !== "undefined") {
+      observer = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            if (e.isIntersecting) {
+              run();
+              observer?.disconnect();
+              break;
+            }
+          }
+        },
+        { threshold: 0.5 },
+      );
+      observer.observe(title);
+    }
+    const safety = window.setTimeout(run, 5000);
+
+    return () => {
+      observer?.disconnect();
+      window.clearTimeout(safety);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  return (
+    <h2
+      ref={titleRef}
+      className="text-center text-3xl font-black sm:text-4xl"
+      style={{ color: light ? "#fff" : NAVY }}
+    >
+      <span ref={wrapRef} className="rsp-mk-wrap">
+        <span ref={hlRef} className="rsp-mk-hl" aria-hidden />
+        <span ref={textRef} className="rsp-mk-text">
+          {children}
+        </span>
+        <span ref={cursorRef} className="rsp-mk-cursor" aria-hidden>
+          <span className="rsp-mk-label">{badge}</span>
+          <span ref={stickRef} className="rsp-mk-stick" />
+        </span>
+      </span>
+    </h2>
+  );
+});
+
 /* ----------------------------- FAQ ----------------------------- */
 
 const FAQ: Array<[string, string]> = [
@@ -365,7 +480,7 @@ export default function ResellerSalesPage({
     const features = plus ? [...PAID_FEATURES, ...PLUS_EXTRAS] : PAID_FEATURES;
     return (
       <div
-        className="flex flex-1 flex-col rounded-3xl border bg-white p-7 shadow-sm"
+        className="rsp-card flex flex-1 flex-col rounded-3xl border bg-white p-7"
         style={plus ? { borderColor: INDIGO, borderWidth: 2 } : { borderColor: "#e2e8f0" }}
       >
         <div className="text-sm font-bold uppercase tracking-wide" style={{ color: CYAN }}>
@@ -403,6 +518,18 @@ export default function ResellerSalesPage({
         @keyframes rspMove{from{transform:translate(0,0)}to{transform:translate(var(--dx),var(--dy))}}
         @keyframes rspScale{0%{transform:scale(0);opacity:0}18%{transform:scale(1);opacity:1}75%{opacity:.9}100%{transform:scale(.2);opacity:0}}
         @keyframes rspPulse{0%{transform:scale(1);box-shadow:0 4px 14px rgba(90,110,246,.28)}30%{transform:scale(1.04);box-shadow:0 10px 30px rgba(90,110,246,.45)}100%{transform:scale(1);box-shadow:0 4px 14px rgba(90,110,246,.28)}}
+        /* Titre surligne facon marqueur, avec badge "Tiquiz" qui suit la pointe */
+        .rsp-mk-wrap{position:relative;display:inline-block;overflow:visible;line-height:inherit}
+        .rsp-mk-text{position:relative;z-index:2}
+        .rsp-mk-hl{position:absolute;left:0;top:0;width:0;background:rgba(32,187,230,.22);border-radius:12px 4px 4px 12px;z-index:1;pointer-events:none}
+        .rsp-mk-cursor{position:absolute;left:0;top:0;z-index:4;pointer-events:none;opacity:0;transition:opacity .5s ease .2s}
+        .rsp-mk-cursor.on{opacity:1}
+        .rsp-mk-label{position:absolute;left:0;top:-40px;background:#20BBE6;color:#fff;font-weight:700;font-size:13px;line-height:1;white-space:nowrap;padding:8px 14px;border-radius:10px;box-shadow:0 10px 22px rgba(32,187,230,.35)}
+        .rsp-mk-label::after{content:"";position:absolute;left:10px;bottom:-5px;width:10px;height:10px;background:#20BBE6;transform:rotate(45deg);border-radius:2px}
+        .rsp-mk-stick{position:absolute;left:0;top:0;width:4px;background:#20BBE6;border-radius:10px}
+        /* Cartes avec halo cyan + leger soulevement au survol (style original) */
+        .rsp-card{box-shadow:0 12px 40px rgba(32,187,230,.12);transition:box-shadow .5s ease,transform .5s ease}
+        .rsp-card:hover{box-shadow:0 16px 50px rgba(32,187,230,.18);transform:translateY(-2px)}
         @media (max-width:768px){html,body{overflow-x:clip}}
       `}</style>
 
@@ -450,7 +577,7 @@ export default function ResellerSalesPage({
 
       {/* Video demo */}
       <section id="demo" className="px-5 py-12" style={{ background: LIGHT }}>
-        <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-slate-200 shadow-lg">
+        <div className="rsp-card mx-auto max-w-3xl overflow-hidden rounded-2xl border border-slate-200">
           <div className="relative" style={{ paddingTop: "56.25%" }}>
             <iframe
               className="absolute inset-0 h-full w-full"
@@ -512,14 +639,37 @@ export default function ResellerSalesPage({
         </div>
       </section>
 
+      {/* Demarque-toi : contenu frais et engageant */}
+      <section className="px-5 py-14">
+        <Heading>
+          Démarque-toi avec du <span style={{ color: INDIGO }}>contenu frais et engageant</span>
+        </Heading>
+        <p className="mx-auto mt-4 max-w-2xl text-center text-slate-600">
+          Un quiz, c'est vivant et interactif. Tes prospects jouent, s'impliquent et se souviennent
+          de toi, la ou un ebook finit oublie au fond d'un dossier.
+        </p>
+        <div className="rsp-card relative mx-auto mt-8 max-w-3xl overflow-hidden rounded-2xl border border-slate-200">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://d1yei2z3i6k35z.cloudfront.net/473100/69da24f77f3320.05446922_tiquiz-social.png"
+            alt="Tiquiz, du contenu frais et engageant"
+            className="h-auto w-full"
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://d1yei2z3i6k35z.cloudfront.net/473100/69da267b3193d2.99002292_giphy15.gif"
+            alt=""
+            className="pointer-events-none absolute left-1/2 top-1/2 w-1/2 max-w-xs -translate-x-1/2 -translate-y-1/2 rounded-xl shadow-2xl"
+          />
+        </div>
+      </section>
+
       {/* Popquiz (section auto-portee, 2 colonnes interne) */}
       <AnimatedBlock html={POPQUIZ} />
 
       {/* Comparatif */}
       <section className="px-5 py-14">
-        <Heading>
-          Prends <span style={{ color: INDIGO }}>5 ans d'avance</span> sur tes concurrents
-        </Heading>
+        <MarkerHeading>Prends 5 ans d'avance sur tes concurrents</MarkerHeading>
         <div className="mt-8">
           <AnimatedBlock html={COMPARISON} />
         </div>
@@ -527,7 +677,7 @@ export default function ResellerSalesPage({
 
       {/* Comment marche : creation IA + partage */}
       <section className="px-5 pt-14" style={{ background: LIGHT }}>
-        <Heading>Comment marche Tiquiz ?</Heading>
+        <MarkerHeading>Comment marche Tiquiz ?</MarkerHeading>
       </section>
       <FeatureRow
         bg={LIGHT}
@@ -549,11 +699,12 @@ export default function ResellerSalesPage({
         behavior="type-sh"
       />
 
-      {/* Viralite : partage social */}
-      <section className="px-5 pt-14">
-        <Heading>
-          Propage ta marque <span style={{ color: INDIGO }}>comme une traînée de poudre</span>
-        </Heading>
+      {/* Etape 3 : viralite / partage social */}
+      <section className="px-5 pt-14" style={{ background: LIGHT }}>
+        <p className="mb-3 text-center text-xs font-bold uppercase tracking-wider" style={{ color: CYAN }}>
+          Étape 3
+        </p>
+        <MarkerHeading>Propage ta marque comme une traînée de poudre</MarkerHeading>
         <p className="mx-auto mt-4 max-w-2xl text-center text-slate-600">
           Pour voir leurs résultats, tes prospects partagent ton quiz. Il devient viral, sans
           dépenser un centime en publicité.
@@ -561,11 +712,16 @@ export default function ResellerSalesPage({
         <AnimatedBlock html={FACEBOOK} behavior="count-fb" />
       </section>
 
-      {/* Capture / opt-in */}
+      {/* Etape 4 : capture / opt-in */}
       <section className="px-5 py-6" style={{ background: LIGHT }}>
-        <Heading>
-          Capture, exporte, <span style={{ color: INDIGO }}>automatise</span>
-        </Heading>
+        <p className="mb-3 text-center text-xs font-bold uppercase tracking-wider" style={{ color: CYAN }}>
+          Étape 4
+        </p>
+        <MarkerHeading>Capture, exporte, automatise</MarkerHeading>
+        <p className="mx-auto mt-4 max-w-2xl text-center text-slate-600">
+          Tes leads sont capturés puis envoyés, taggués, directement dans Systeme.io. Sans Zapier,
+          sans manip, en temps réel.
+        </p>
         <AnimatedBlock html={OPTIN} />
       </section>
 
@@ -574,9 +730,29 @@ export default function ResellerSalesPage({
         <AnimatedBlock html={SIO_SCOOP} />
       </section>
 
+      {/* Nouveau : creation de sondages */}
+      <section className="px-5 py-14" style={{ background: LIGHT }}>
+        <Heading>
+          <span style={{ color: CYAN }}>Nouveau.</span> Retrouve la{" "}
+          <span style={{ color: INDIGO }}>création de sondages</span> dans Tiquiz
+        </Heading>
+        <p className="mx-auto mt-4 max-w-2xl text-center text-slate-600">
+          Pose une question, recueille les réponses en un instant et transforme chaque avis en lead
+          taggué dans Systeme.io.
+        </p>
+        <div className="rsp-card mx-auto mt-8 max-w-3xl overflow-hidden rounded-2xl border border-slate-200">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://d1yei2z3i6k35z.cloudfront.net/473100/69efa9d51c05a7.08540153_sondage-tiquiz.gif"
+            alt="Création de sondages dans Tiquiz"
+            className="h-auto w-full"
+          />
+        </div>
+      </section>
+
       {/* Temoignages */}
       <section className="px-5 py-14" style={{ background: "#f1f5f9" }}>
-        <Heading>Il y a un avant ... et un après Tiquiz</Heading>
+        <MarkerHeading>Il y a un avant ... et un après Tiquiz</MarkerHeading>
         <div className="mt-8">
           <AnimatedBlock html={TESTIMONIALS} />
         </div>
@@ -625,7 +801,7 @@ export default function ResellerSalesPage({
         </div>
 
         {/* Essai gratuit */}
-        <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
+        <div className="rsp-card mt-8 rounded-3xl border border-slate-200 bg-white p-7">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="text-sm font-bold uppercase tracking-wide" style={{ color: CYAN }}>
