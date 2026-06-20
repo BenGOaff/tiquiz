@@ -84,16 +84,16 @@ const MENU_ITEMS = [
   { key: "stats", url: "/stats", icon: BarChart3, end: false },
 ] as const;
 
-// Entrée "Admin" visible UNIQUEMENT pour les revendeurs (lien vers leur
-// panel /reseller). Le statut vient de /api/reseller/me, vérifié SERVEUR
-// à chaque mount (table resellers + status active, lié au compte auth,
-// pas à un cache navigateur) : un client normal reçoit false et ne voit
-// rien. Pas de cache volontairement (exigence "super safe" Béné) : la
-// sécurité réelle reste de toute façon côté serveur, la page /reseller
-// et toutes les API re-vérifient la session.
+// Entrees admin / revendeur de la sidebar. Le statut vient de
+// /api/reseller/me, verifie SERVEUR a chaque mount (pas de cache) :
+//  - is_admin    -> lien "Admin" vers /admin (gestion des revendeurs)
+//  - is_reseller -> lien "Espace revendeur" vers /reseller (son panel)
+// Un client normal recoit false sur les deux et ne voit rien. La
+// securite reelle reste cote serveur (page + API re-verifient).
 function ResellerAdminItem() {
   const t = useTranslations("nav");
   const [isReseller, setIsReseller] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,6 +103,7 @@ function ResellerAdminItem() {
       .then((json) => {
         if (cancelled) return;
         setIsReseller(Boolean(json?.ok && json?.is_reseller));
+        setIsAdmin(Boolean(json?.ok && json?.is_admin));
       })
       .catch(() => {});
 
@@ -111,21 +112,39 @@ function ResellerAdminItem() {
     };
   }, []);
 
-  if (!isReseller) return null;
+  if (!isReseller && !isAdmin) return null;
 
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton asChild>
-        <NavLink
-          to="/reseller"
-          className={MENU_ITEM_CLASS}
-          activeClassName={MENU_ITEM_ACTIVE_CLASS}
-        >
-          <ShieldCheck className="w-5 h-5" />
-          <span>{t("resellerAdmin")}</span>
-        </NavLink>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+    <>
+      {isAdmin ? (
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild>
+            <NavLink
+              to="/admin"
+              className={MENU_ITEM_CLASS}
+              activeClassName={MENU_ITEM_ACTIVE_CLASS}
+            >
+              <ShieldCheck className="w-5 h-5" />
+              <span>{t("adminPanel")}</span>
+            </NavLink>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ) : null}
+      {isReseller ? (
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild>
+            <NavLink
+              to="/reseller"
+              className={MENU_ITEM_CLASS}
+              activeClassName={MENU_ITEM_ACTIVE_CLASS}
+            >
+              <ShieldCheck className="w-5 h-5" />
+              <span>{t("resellerAdmin")}</span>
+            </NavLink>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ) : null}
+    </>
   );
 }
 

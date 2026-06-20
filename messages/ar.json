@@ -103,7 +103,7 @@
     "rteImageSizeReset": "100%"
   },
   "nav": {
-    "resellerAdmin": "الإدارة",
+    "resellerAdmin": "مساحة الموزّع",
     "quizzes": "اختباراتي",
     "create": "إنشاء اختبار",
     "leads": "عملائي",
@@ -116,7 +116,8 @@
     "projects": "مشاريعي",
     "createSurvey": "إنشاء استطلاع",
     "popquiz": "بوبكويز فيديو",
-    "becomeAffiliate": "كن شريكاً"
+    "becomeAffiliate": "كن شريكاً",
+    "adminPanel": "المشرف"
   },
   "stats": {
     "title": "الإحصائيات",

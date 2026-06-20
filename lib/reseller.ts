@@ -36,8 +36,6 @@ export interface ResellerRow {
   webhook_token: string | null;
   /** Identifiant public des bons de commande hébergés (/order/<slug>/<plan>). */
   slug: string | null;
-  /** Identifiant lisible de la page de vente (/<handle>/tiquiz). */
-  handle: string | null;
   /** Contact support du revendeur, affiché dans les emails d'accès de
    * ses clients (reply-to). NULL = template Supabase par défaut. */
   support_email: string | null;
@@ -71,7 +69,11 @@ export async function getResellerSession(): Promise<ResellerSession | null> {
   const { data, error } = await supabaseAdmin
     .from("resellers")
     .select(
-      "id,user_id,name,status,commission_tiers,checkout_urls,webhook_token,slug,handle,pricing,support_email,created_at",
+      // NB : ne JAMAIS ajouter ici une colonne recente sans garantir la
+      // migration. Si une colonne manque, ce SELECT plante et le user
+      // n'est plus reconnu revendeur (drame /reseller -> dashboard).
+      // Les colonnes recentes (handle, paiement...) sont lues separement.
+      "id,user_id,name,status,commission_tiers,checkout_urls,webhook_token,slug,pricing,support_email,created_at",
     )
     .eq("user_id", user.id)
     .maybeSingle();

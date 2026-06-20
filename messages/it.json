@@ -103,7 +103,7 @@
     "rteImageSizeReset": "100%"
   },
   "nav": {
-    "resellerAdmin": "Admin",
+    "resellerAdmin": "Spazio rivenditore",
     "quizzes": "I miei quiz",
     "create": "Crea un quiz",
     "leads": "I miei lead",
@@ -116,7 +116,8 @@
     "projects": "I miei progetti",
     "createSurvey": "Crea un sondaggio",
     "popquiz": "Popquiz video",
-    "becomeAffiliate": "Diventa affiliato"
+    "becomeAffiliate": "Diventa affiliato",
+    "adminPanel": "Admin"
   },
   "stats": {
     "title": "Statistiche",

@@ -1,26 +1,31 @@
 // app/api/reseller/me/route.ts
 //
-// GET : le user connecté est-il un revendeur ACTIF ? Utilisé par la
-// sidebar pour afficher (ou pas) l'entrée "Admin" vers /reseller.
-// Ne révèle rien d'autre que le booléen + le nom du portefeuille :
-// pour les clients normaux la réponse est is_reseller: false, sans
-// différence observable avec un compte quelconque.
+// GET : statut du user connecte pour la sidebar.
+//  - is_admin    : email super-admin (gere les revendeurs, page /admin)
+//  - is_reseller : revendeur ACTIF (son panel /reseller)
+// Un client normal recoit les deux a false, sans difference observable.
 
 import { NextResponse } from "next/server";
 
+import { isAdminEmail } from "@/lib/adminEmails";
 import { getResellerSession } from "@/lib/reseller";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET() {
+  const supabase = await getSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const session = await getResellerSession();
-  if (!session) {
-    return NextResponse.json({ ok: true, is_reseller: false });
-  }
+
   return NextResponse.json({
     ok: true,
-    is_reseller: true,
-    name: session.reseller.name,
+    is_admin: isAdminEmail(user?.email),
+    is_reseller: Boolean(session),
+    name: session?.reseller.name ?? null,
   });
 }

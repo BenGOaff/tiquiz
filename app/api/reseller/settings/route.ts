@@ -32,13 +32,20 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
+  // handle lu separement : si la migration n'est pas passee, on degrade
+  // sans casser (handle null) au lieu de planter toute la session.
+  const { data: extra } = await supabaseAdmin
+    .from("resellers")
+    .select("handle")
+    .eq("id", session.reseller.id)
+    .maybeSingle();
   return NextResponse.json({
     ok: true,
     checkout_urls: session.reseller.checkout_urls ?? {},
     pricing: session.reseller.pricing ?? {},
     webhook_token: session.reseller.webhook_token ?? null,
     slug: session.reseller.slug ?? null,
-    handle: session.reseller.handle ?? null,
+    handle: (extra as { handle?: string | null } | null)?.handle ?? null,
     support_email: session.reseller.support_email ?? null,
   });
 }
