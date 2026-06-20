@@ -36,10 +36,10 @@ const LIGHT = "linear-gradient(180deg,#F4F7FE 0%,#EBF5FF 100%)";
 
 const TYPE_WORDS = [
   "Booste ton trafic",
-  "Genere plus de leads",
-  "Ameliore tes offres",
+  "Génère plus de leads",
+  "Améliore tes offres",
   "Booste tes ventes",
-  "Demarque-toi",
+  "Démarque-toi",
 ];
 
 export type SalesPlanKey = "monthly" | "yearly" | "monthly_plus" | "yearly_plus";
@@ -167,24 +167,24 @@ function BubbleButton({ href, children }: { href: string; children: ReactNode })
 /* ----------------------------- Donnees plans ----------------------------- */
 
 const PAID_FEATURES = [
-  "Quiz, sondages et Popquiz illimites",
-  "Reponses illimitees",
-  "Generation IA des questions et resultats",
+  "Quiz, sondages et Popquiz illimités",
+  "Réponses illimitées",
+  "Génération IA des questions et résultats",
   "Connexion native Systeme.io",
   "Capture de leads automatique avec tags",
   "Design professionnel et responsive",
   "Personnalisation du branding (logo, couleurs)",
-  "Lien partageable et integration embed",
-  "Statistiques de completion",
+  "Lien partageable et intégration embed",
+  "Statistiques de complétion",
   "Retrait du watermark Tiquiz",
-  "Nom de domaine personnalise",
+  "Nom de domaine personnalisé",
 ];
 
 const PLUS_EXTRAS = [
-  "Multiprofils : autant de profils que de clients accompagnes",
-  "Analyse IA des resultats : des insights sur ton audience",
-  "Multi-cles API Systeme.io : autant de comptes que besoin",
-  "Templates de quiz prets a personnaliser",
+  "Multiprofils : autant de profils que de clients accompagnés",
+  "Analyse IA des résultats : des insights sur ton audience",
+  "Multi-clés API Systeme.io : autant de comptes que besoin",
+  "Templates de quiz prêts à personnaliser",
 ];
 
 function formatPrice(cents: number): string {
@@ -265,22 +265,22 @@ function Heading({ children, light }: { children: ReactNode; light?: boolean }) 
 const FAQ: Array<[string, string]> = [
   [
     "J'ai absolument besoin d'un compte Systeme.io ?",
-    "Non. Mais Tiquiz est optimise pour synchroniser tes contacts avec Systeme.io. Tu peux aussi exporter tes leads en CSV pour ton autorepondeur.",
+    "Non. Mais Tiquiz est optimisé pour synchroniser tes contacts avec Systeme.io. Tu peux aussi exporter tes leads en CSV pour ton autorépondeur.",
   ],
   [
-    "Est-ce que j'aurai quelque chose a telecharger ?",
+    "Est-ce que j'aurai quelque chose à télécharger ?",
     "Non, rien. Tiquiz est un logiciel 100% en ligne (SaaS). Un navigateur et une connexion suffisent.",
   ],
   ["Ai-je besoin d'une carte bancaire pour essayer ?", "Non. La version gratuite est accessible sans carte bancaire."],
-  ["Y a-t-il des frais caches ?", "Aucun. Le prix affiche est le prix que tu paies, tout est compris."],
-  ["Comment resilier mon abonnement ?", "En un clic depuis ton espace, dans tes parametres. Pas d'engagement."],
+  ["Y a-t-il des frais cachés ?", "Aucun. Le prix affiché est le prix que tu paies, tout est compris."],
+  ["Comment résilier mon abonnement ?", "En un clic depuis ton espace, dans tes paramètres. Pas d'engagement."],
   [
     "Ai-je besoin de Zapier, Make ou Google Sheets ?",
-    "Non. Tiquiz se connecte directement a Systeme.io, sans outil tiers.",
+    "Non. Tiquiz se connecte directement à Systeme.io, sans outil tiers.",
   ],
   [
-    "Je suis debutant(e), est-ce que ca peut m'aider ?",
-    "Absolument. Tiquiz est pense pour les solopreneurs, coachs, consultants et createurs, meme sans competence technique.",
+    "Je suis débutant(e), est-ce que ça peut m'aider ?",
+    "Absolument. Tiquiz est pensé pour les solopreneurs, coachs, consultants et créateurs, même sans compétence technique.",
   ],
 ];
 
@@ -335,14 +335,14 @@ export default function ResellerSalesPage({
       const json = await res.json();
       if (json.ok) {
         setFreeEmail("");
-        setFreeMsg({ ok: true, text: "C'est bon ! Ton acces vient de t'etre envoye par email." });
+        setFreeMsg({ ok: true, text: "C'est bon ! Ton accès vient de t'être envoyé par email." });
       } else if (json.error === "rejected_email_taken") {
-        setFreeMsg({ ok: false, text: "Cet email a deja un compte. Connecte-toi directement." });
+        setFreeMsg({ ok: false, text: "Cet email a déjà un compte. Connecte-toi directement." });
       } else {
-        setFreeMsg({ ok: false, text: "Une erreur est survenue. Reessaie dans un instant." });
+        setFreeMsg({ ok: false, text: "Une erreur est survenue. Réessaie dans un instant." });
       }
     } catch {
-      setFreeMsg({ ok: false, text: "Une erreur est survenue. Reessaie dans un instant." });
+      setFreeMsg({ ok: false, text: "Une erreur est survenue. Réessaie dans un instant." });
     } finally {
       setFreeBusy(false);
     }
@@ -377,9 +377,9 @@ export default function ResellerSalesPage({
         </ul>
         <div className="mt-6 text-center">
           {hasProvider ? (
-            <BubbleButton href={`/order/${slug}/${key}`}>Acces {name}</BubbleButton>
+            <BubbleButton href={`/order/${slug}/${key}`}>Accès {name}</BubbleButton>
           ) : (
-            <span className="text-xs text-slate-400">Bientot disponible</span>
+            <span className="text-xs text-slate-400">Bientôt disponible</span>
           )}
         </div>
       </div>
@@ -426,10 +426,10 @@ export default function ResellerSalesPage({
             {typed}
             <span style={{ color: CYAN, animation: "rspBlink .8s infinite" }}>|</span>
           </h1>
-          <p className="mt-3 text-lg font-semibold text-slate-500">grace a la viralite des quiz</p>
+          <p className="mt-3 text-lg font-semibold text-slate-500">grâce à la viralité des quiz</p>
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-slate-600">
-            Cree des quiz viraux qui attirent du trafic qualifie sur tes offres et transforment
-            tes visiteurs en clients payants. Connecte directement a Systeme.io, sans Zapier.
+            Crée des quiz viraux qui attirent du trafic qualifié sur tes offres et transforment
+            tes visiteurs en clients payants. Connecté directement à Systeme.io, sans Zapier.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <BubbleButton href="#tarifs">C'est parti !</BubbleButton>
@@ -438,7 +438,7 @@ export default function ResellerSalesPage({
               className="inline-flex items-center gap-2 rounded-full border-2 px-7 py-4 text-base font-bold"
               style={{ borderColor: INDIGO, color: NAVY }}
             >
-              <Play className="h-4 w-4" /> Voir la demo
+              <Play className="h-4 w-4" /> Voir la démo
             </a>
           </div>
         </div>
@@ -462,8 +462,8 @@ export default function ResellerSalesPage({
       {/* Viralite + dashboard stats */}
       <FeatureRow
         title="Booste ton trafic"
-        highlight="grace a la viralite des quiz"
-        paragraph="Pour decouvrir leurs resultats, tes prospects partagent d'abord le quiz sur leurs reseaux. Chaque partage expose ta marque a un nouveau public : plus de trafic, plus de visibilite, sans redoubler d'efforts."
+        highlight="grâce à la viralité des quiz"
+        paragraph="Pour découvrir leurs résultats, tes prospects partagent d'abord le quiz sur leurs réseaux. Chaque partage expose ta marque à un nouveau public : plus de trafic, plus de visibilité, sans redoubler d'efforts."
         widget={STATS_DASH}
       />
 
@@ -472,11 +472,11 @@ export default function ResellerSalesPage({
         bg={LIGHT}
         reverse
         title="Capture des"
-        highlight="leads qualifies"
-        paragraph="Oublie les inscrits qui ne passent jamais a l'action. Quand un prospect prend le temps de remplir ton quiz, c'est qu'il est vraiment interesse."
+        highlight="leads qualifiés"
+        paragraph="Oublie les inscrits qui ne passent jamais à l'action. Quand un prospect prend le temps de remplir ton quiz, c'est qu'il est vraiment intéressé."
         bullets={[
           "Des prospects chauds, pas des touristes",
-          "Bien plus qualifies que ceux qui telechargent un ebook",
+          "Bien plus qualifiés que ceux qui téléchargent un ebook",
           "C'est avec eux que tu veux remplir ta liste",
         ]}
         widget={LEADS_LIST}
@@ -484,13 +484,13 @@ export default function ResellerSalesPage({
 
       {/* Offres irresistibles */}
       <FeatureRow
-        title="Cree des"
-        highlight="offres irresistibles"
-        paragraph="Un quiz ne recueille pas que des emails : il te donne des informations precieuses sur ton audience pour creer des offres qu'elle va s'arracher."
+        title="Crée des"
+        highlight="offres irrésistibles"
+        paragraph="Un quiz ne recueille pas que des emails : il te donne des informations précieuses sur ton audience pour créer des offres qu'elle va s'arracher."
         bullets={[
-          "Les difficultes et desirs actuels de ton audience",
-          "Leurs objectifs, preferences et problemes non resolus",
-          "Les solutions deja essayees et leur satisfaction",
+          "Les difficultés et désirs actuels de ton audience",
+          "Leurs objectifs, préférences et problèmes non résolus",
+          "Les solutions déjà essayées et leur satisfaction",
         ]}
         widget={POLL_PIE}
       />
@@ -501,7 +501,7 @@ export default function ResellerSalesPage({
           Transforme tes quiz en <span style={{ color: INDIGO }}>mini-tunnels de vente</span>
         </Heading>
         <p className="mx-auto mt-4 max-w-2xl text-center text-slate-600">
-          Une experience fraiche et amusante qui mene tes prospects jusqu'a l'achat, en douceur.
+          Une expérience fraîche et amusante qui mène tes prospects jusqu'à l'achat, en douceur.
         </p>
         <div className="mt-8">
           <AnimatedBlock html={PHONE_MOCKUP} />
@@ -527,20 +527,20 @@ export default function ResellerSalesPage({
       </section>
       <FeatureRow
         bg={LIGHT}
-        eyebrow="Etape 1"
-        title="Cree le quiz parfait"
-        highlight="a partir d'un simple prompt"
-        paragraph="L'IA de Tiquiz te genere un quiz complet en quelques secondes. Tu n'as plus qu'a le personnaliser avec ta personnalite et ton offre."
+        eyebrow="Étape 1"
+        title="Crée le quiz parfait"
+        highlight="à partir d'un simple prompt"
+        paragraph="L'IA de Tiquiz te génère un quiz complet en quelques secondes. Tu n'as plus qu'à le personnaliser avec ta personnalité et ton offre."
         widget={QUIZ_BUILDER}
         behavior="type-qb"
       />
       <FeatureRow
         bg={LIGHT}
         reverse
-        eyebrow="Etape 2"
+        eyebrow="Étape 2"
         title="Partage ton quiz"
         highlight="en 1 clic"
-        paragraph="Copie le lien (avec ton nom de domaine) ou le code embed, et diffuse-le partout : page d'accueil, article de blog, pop-up, reseaux."
+        paragraph="Copie le lien (avec ton nom de domaine) ou le code embed, et diffuse-le partout : page d'accueil, article de blog, pop-up, réseaux."
         widget={SHARE_EMBED}
         behavior="type-sh"
       />
@@ -548,11 +548,11 @@ export default function ResellerSalesPage({
       {/* Viralite : partage social */}
       <section className="px-5 pt-14">
         <Heading>
-          Propage ta marque <span style={{ color: INDIGO }}>comme une trainee de poudre</span>
+          Propage ta marque <span style={{ color: INDIGO }}>comme une traînée de poudre</span>
         </Heading>
         <p className="mx-auto mt-4 max-w-2xl text-center text-slate-600">
-          Pour voir leurs resultats, tes prospects partagent ton quiz. Il devient viral, sans
-          depenser un centime en publicite.
+          Pour voir leurs résultats, tes prospects partagent ton quiz. Il devient viral, sans
+          dépenser un centime en publicité.
         </p>
         <AnimatedBlock html={FACEBOOK} behavior="count-fb" />
       </section>
@@ -567,12 +567,12 @@ export default function ResellerSalesPage({
 
       {/* Le 1er outil connecte a Systeme.io (scenes en boucle) */}
       <section className="px-5 py-14">
-        <AnimatedBlock html={SIO_SCOOP} behavior="loop-sc" />
+        <AnimatedBlock html={SIO_SCOOP} />
       </section>
 
       {/* Temoignages */}
       <section className="px-5 py-14" style={{ background: "#f1f5f9" }}>
-        <Heading>Il y a un avant ... et un apres Tiquiz</Heading>
+        <Heading>Il y a un avant ... et un après Tiquiz</Heading>
         <div className="mt-8">
           <AnimatedBlock html={TESTIMONIALS} />
         </div>
@@ -582,7 +582,7 @@ export default function ResellerSalesPage({
       <section id="tarifs" className="mx-auto max-w-4xl px-5 py-14">
         <Heading>Un tarif unique avantageux</Heading>
         <p className="mx-auto mt-3 max-w-xl text-center text-slate-600">
-          Vendu par {resellerName}. Choisis ta formule, ton acces s'ouvre juste apres le paiement.
+          Vendu par {resellerName}. Choisis ta formule, ton accès s'ouvre juste après le paiement.
         </p>
 
         <div className="mt-8 flex items-center justify-center gap-3">
@@ -625,10 +625,10 @@ export default function ResellerSalesPage({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="text-sm font-bold uppercase tracking-wide" style={{ color: CYAN }}>
-                Gratuit a vie
+                Gratuit à vie
               </div>
               <p className="mt-1 text-sm text-slate-600">
-                Teste sans carte bancaire. 1 quiz actif, 10 reponses par mois.
+                Teste sans carte bancaire. 1 quiz actif, 10 réponses par mois.
               </p>
             </div>
             <span className="text-3xl font-black" style={{ color: NAVY }}>
@@ -689,7 +689,7 @@ export default function ResellerSalesPage({
       <div style={{ background: NAVY }} className="px-5 py-14 text-center text-white">
         <Heading light>Ta liste emails ne va pas se construire toute seule</Heading>
         <p className="mx-auto mt-4 max-w-xl text-slate-200">
-          Pendant que tu hesites, tes visiteurs quittent ton site sans laisser leur email. Un quiz
+          Pendant que tu hésites, tes visiteurs quittent ton site sans laisser leur email. Un quiz
           change tout.
         </p>
         <div className="mt-8 flex justify-center">
@@ -698,7 +698,7 @@ export default function ResellerSalesPage({
       </div>
 
       <footer className="px-5 py-8 text-center text-xs text-slate-400">
-        Propulse par Tiquiz. Vendu par {resellerName}.
+        Propulsé par Tiquiz. Vendu par {resellerName}.
       </footer>
     </div>
   );
