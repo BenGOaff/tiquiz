@@ -49,7 +49,9 @@ export async function GET() {
 
   const { data: reseller } = await supabaseAdmin
     .from("resellers")
-    .select("status,checkout_urls,slug")
+    .select(
+      "status,checkout_urls,slug,pricing,stripe_secret_key_enc,paypal_client_id_enc,paypal_secret_enc",
+    )
     .eq("id", resellerId)
     .maybeSingle();
 
@@ -58,6 +60,7 @@ export async function GET() {
   // 2. BDC Tiquiz hébergé (/order/<slug>/<plan>) si Stripe ou PayPal
   //    est connecté
   // 3. rien (pas de CTA, JAMAIS de fallback vers les BDC tipote.fr)
+  const NATIVE_PLANS = ["monthly", "yearly", "monthly_plus", "yearly_plus"];
   const urls: Record<string, string> = {};
   if (reseller && reseller.status === "active") {
     const config = (reseller.checkout_urls ?? {}) as Record<string, unknown>;
@@ -70,6 +73,22 @@ export async function GET() {
         urls[plan] = p.sio;
       } else if ((p.stripe || p.paypal) && slug) {
         urls[plan] = `/order/${slug}/${plan}`;
+      }
+    }
+    // Modele natif (le revendeur a connecte Stripe/PayPal + fixe ses prix) :
+    // le bon de commande hebergé suffit, meme sans entree checkout_urls.
+    const pricing = (reseller.pricing ?? {}) as Record<string, { amount_cents?: number }>;
+    const hasProvider = Boolean(
+      (reseller as { stripe_secret_key_enc?: string | null }).stripe_secret_key_enc ||
+        ((reseller as { paypal_client_id_enc?: string | null }).paypal_client_id_enc &&
+          (reseller as { paypal_secret_enc?: string | null }).paypal_secret_enc),
+    );
+    if (slug && hasProvider) {
+      for (const plan of NATIVE_PLANS) {
+        const cents = pricing[plan]?.amount_cents;
+        if (!urls[plan] && typeof cents === "number" && cents > 0) {
+          urls[plan] = `/order/${slug}/${plan}`;
+        }
       }
     }
   }

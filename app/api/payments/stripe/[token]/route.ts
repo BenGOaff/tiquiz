@@ -121,6 +121,29 @@ export async function POST(req: NextRequest, context: RouteContext) {
         detail: `checkout.session.completed -> ${result.outcome}.`,
       });
     }
+  } else if (event.type === "customer.subscription.updated") {
+    // Changement de formule en place (proration). On resynchronise le plan
+    // du client. obj.id = id de l'abonnement, obj.metadata.plan = nouveau plan.
+    if (email && isResellerAllowedPlan(plan)) {
+      const result = await activateResellerClient({
+        reseller: provReseller,
+        email,
+        plan,
+        source: "stripe_webhook_update",
+        provider: "stripe",
+        subscriptionId: obj.id ?? null,
+      });
+      await logPaymentEvent({
+        resellerId: reseller.id,
+        provider: "stripe",
+        stage: "webhook",
+        event: result.ok ? "webhook_update" : "webhook_update_failed",
+        ok: result.ok,
+        email,
+        plan,
+        detail: `subscription.updated -> ${result.outcome}.`,
+      });
+    }
   } else if (event.type === "customer.subscription.deleted") {
     if (email) {
       const result = await cancelResellerClient({

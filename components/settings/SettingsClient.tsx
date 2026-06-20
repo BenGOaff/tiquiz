@@ -181,6 +181,8 @@ export default function SettingsClient() {
     managed: boolean;
     urls: Record<string, string>;
   } | null>(null);
+  // Changement de formule en cours (client de revendeur).
+  const [changingPlan, setChangingPlan] = useState<string | null>(null);
 
   // Toggle Mensuel / Annuel (parité page de vente, Béné 14 juin 2026).
   // 3 colonnes affichées : Gratuit + les 2 plans du cycle choisi.
@@ -194,6 +196,39 @@ export default function SettingsClient() {
       })
       .catch(() => {});
   }, []);
+
+  // Changement de formule pour un client de revendeur. Stripe : mise a jour
+  // en place avec proration (rien d'autre a faire). PayPal / pas d'abo :
+  // l'endpoint renvoie l'URL du bon de commande du revendeur.
+  const changePlan = async (planKey: string) => {
+    setChangingPlan(planKey);
+    try {
+      const res = await fetch("/api/reseller/client/change-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planKey }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data?.ok && data.redirectUrl) {
+        window.location.assign(data.redirectUrl);
+        return;
+      }
+      if (data?.ok && data.mode === "updated") {
+        toast.success(t("planChanged"));
+        setTimeout(() => window.location.reload(), 1200);
+        return;
+      }
+      if (data?.ok) {
+        window.location.reload();
+        return;
+      }
+      toast.error(t("errGeneric"));
+    } catch {
+      toast.error(t("errNetwork"));
+    } finally {
+      setChangingPlan(null);
+    }
+  };
 
   // Si l'user est déjà sur un plan annuel, on ouvre le toggle sur Annuel
   // pour qu'il voie son plan courant directement.
@@ -1005,11 +1040,29 @@ export default function SettingsClient() {
                       </div>
                     ) : isCurrent ? (
                       <div className="text-center text-sm font-medium text-muted-foreground py-2 border rounded-full">{t("currentPlan")}</div>
+                    ) : plan.ctaKey && managedBilling?.managed && planKey && effectiveCheckoutUrl ? (
+                      // Client de revendeur : changement de formule en place.
+                      // Stripe -> proration immediate (un clic). PayPal / pas
+                      // d'abo -> redirection vers le bon de commande. Cf.
+                      // /api/reseller/client/change-plan.
+                      <Button
+                        className="w-full rounded-full"
+                        variant={('popular' in plan && plan.popular) ? "default" : "outline"}
+                        onClick={() => changePlan(planKey)}
+                        disabled={changingPlan !== null}
+                      >
+                        {changingPlan === planKey ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            {t(plan.ctaKey)} <ArrowRight className="h-4 w-4 ml-1.5" />
+                          </>
+                        )}
+                      </Button>
                     ) : plan.ctaKey && effectiveCheckoutUrl ? (
-                      // CTA universel : peu importe upgrade OU downgrade,
-                      // c'est le même flow (checkout SIO du nouveau plan).
-                      // Le webhook auto-cancel l'ancien sub côté SIO et
-                      // upsert profiles.plan. Cf. webhook route.ts.
+                      // Client direct Tiquiz : CTA universel (checkout SIO du
+                      // nouveau plan). Le webhook auto-cancel l'ancien sub cote
+                      // SIO et upsert profiles.plan. Cf. webhook route.ts.
                       <Button className="w-full rounded-full" variant={('popular' in plan && plan.popular) ? "default" : "outline"} asChild>
                         <a href={effectiveCheckoutUrl} target="_blank" rel="noopener noreferrer">{t(plan.ctaKey)} <ArrowRight className="h-4 w-4 ml-1.5" /></a>
                       </Button>

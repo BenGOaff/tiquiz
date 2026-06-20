@@ -747,6 +747,7 @@
     },
     "popular": "Popular",
     "currentPlan": "Current plan",
+    "planChanged": "Plan updated.",
     "paymentsManaged": "Payments are handled by Systeme.io. You can change plan at any time.",
     "paymentsManagedReseller": "Your payments are handled by your provider. Contact them for any billing question.",
     "dangerZone": "Danger zone",

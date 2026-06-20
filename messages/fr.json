@@ -747,6 +747,7 @@
     },
     "popular": "Populaire",
     "currentPlan": "Plan actuel",
+    "planChanged": "Formule mise à jour.",
     "paymentsManaged": "Les paiements sont gérés par Systeme.io. Tu peux changer de plan à tout moment.",
     "paymentsManagedReseller": "Tes paiements sont gérés par ton prestataire. Contacte-le pour toute question de facturation.",
     "dangerZone": "Zone de danger",

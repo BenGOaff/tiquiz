@@ -763,6 +763,7 @@
     },
     "popular": "Popular",
     "currentPlan": "Plano atual",
+    "planChanged": "Plano atualizado.",
     "paymentsManaged": "Os pagamentos são gerenciados pelo Systeme.io. Você pode mudar de plano a qualquer momento.",
     "paymentsManagedReseller": "Seus pagamentos são gerenciados pelo seu fornecedor. Entre em contato com ele para qualquer dúvida de cobrança.",
     "dangerZone": "Zona de perigo",

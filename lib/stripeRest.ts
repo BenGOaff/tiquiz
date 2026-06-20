@@ -14,6 +14,7 @@ const STRIPE_API = "https://api.stripe.com";
 /** Events du webhook de cycle de vie (crees auto dans le compte revendeur). */
 export const STRIPE_WEBHOOK_EVENTS = [
   "checkout.session.completed",
+  "customer.subscription.updated",
   "customer.subscription.deleted",
 ];
 
@@ -169,6 +170,66 @@ export async function cancelStripeSubscription(key: string, subId: string): Prom
   } catch (e) {
     console.error("[stripeRest] cancelSubscription failed", (e as Error).message);
     return false;
+  }
+}
+
+/**
+ * Change la formule d'un abonnement Stripe EN PLACE, avec proration
+ * automatique (Stripe credite le temps non consomme de l'ancien plan et
+ * facture la difference du nouveau, immediatement). Aucune action de
+ * l'acheteur : sa carte est deja enregistree.
+ *
+ * On recupere d'abord l'item de l'abonnement, puis on remplace son prix
+ * par le price_data du nouveau plan. metadata[plan] est mis a jour (fusion,
+ * on garde reseller_id + email pour les webhooks).
+ */
+export async function updateStripeSubscription(args: {
+  key: string;
+  subscriptionId: string;
+  plan: string;
+  amountCents: number;
+}): Promise<{ ok: boolean; error?: string }> {
+  const interval = PLAN_INTERVAL[args.plan];
+  if (!interval) return { ok: false, error: "invalid_plan" };
+  if (!Number.isInteger(args.amountCents) || args.amountCents <= 0) {
+    return { ok: false, error: "invalid_amount" };
+  }
+  const headers = { Authorization: `Bearer ${args.key}` };
+  try {
+    const getRes = await fetch(
+      `${STRIPE_API}/v1/subscriptions/${encodeURIComponent(args.subscriptionId)}`,
+      { headers },
+    );
+    if (!getRes.ok) return { ok: false, error: "not_found" };
+    const sub = (await getRes.json()) as { items?: { data?: Array<{ id?: string }> } };
+    const itemId = sub.items?.data?.[0]?.id;
+    if (!itemId) return { ok: false, error: "no_item" };
+
+    const params: Record<string, string | number> = {
+      "items[0][id]": itemId,
+      "items[0][price_data][currency]": "eur",
+      "items[0][price_data][unit_amount]": args.amountCents,
+      "items[0][price_data][recurring][interval]": interval,
+      "items[0][price_data][product_data][name]": PLAN_LABEL[args.plan] ?? "Tiquiz",
+      // Facture la proration tout de suite (changement effectif immediat).
+      proration_behavior: "always_invoice",
+      payment_behavior: "allow_incomplete",
+      "metadata[plan]": args.plan,
+    };
+    const res = await fetch(
+      `${STRIPE_API}/v1/subscriptions/${encodeURIComponent(args.subscriptionId)}`,
+      {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/x-www-form-urlencoded" },
+        body: toForm(params),
+      },
+    );
+    const json = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+    if (!res.ok) return { ok: false, error: json.error?.message ?? "stripe_error" };
+    return { ok: true };
+  } catch (e) {
+    console.error("[stripeRest] updateSubscription failed", (e as Error).message);
+    return { ok: false, error: "network" };
   }
 }
 
