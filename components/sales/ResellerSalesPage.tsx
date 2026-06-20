@@ -32,7 +32,7 @@ import {
 const NAVY = "#2B3264";
 const CYAN = "#20BBE6";
 const INDIGO = "#5A6EF6";
-const LIGHT = "linear-gradient(180deg,#F4F7FE 0%,#EBF5FF 100%)";
+const LIGHT = "linear-gradient(180deg,#F8F9FC 0%,#F4F5FB 100%)";
 
 const TYPE_WORDS = [
   "Booste ton trafic",
@@ -227,7 +227,7 @@ function FeatureRow({
   behavior?: BlockBehavior;
 }) {
   return (
-    <section style={bg ? { background: bg } : undefined} className="px-5 py-14">
+    <section style={bg ? { background: bg } : undefined} className="px-5 py-20">
       <div className="mx-auto grid max-w-5xl items-center gap-8 md:grid-cols-2">
         <div className={reverse ? "md:order-2" : ""}>
           {eyebrow ? (
@@ -235,7 +235,7 @@ function FeatureRow({
               {eyebrow}
             </p>
           ) : null}
-          <h2 className="text-3xl font-black leading-tight sm:text-4xl" style={{ color: NAVY }}>
+          <h2 className="text-4xl font-black leading-tight sm:text-5xl" style={{ color: NAVY }}>
             {title} {highlight ? <span style={{ color: INDIGO }}>{highlight}</span> : null}
           </h2>
           {paragraph ? (
@@ -263,7 +263,7 @@ function FeatureRow({
 function Heading({ children, light }: { children: ReactNode; light?: boolean }) {
   return (
     <h2
-      className="text-center text-3xl font-black sm:text-4xl"
+      className="text-center text-4xl font-black sm:text-5xl"
       style={{ color: light ? "#fff" : NAVY }}
     >
       {children}
@@ -369,7 +369,7 @@ const MarkerHeading = memo(function MarkerHeading({
   return (
     <h2
       ref={titleRef}
-      className="text-center text-3xl font-black sm:text-4xl"
+      className="text-center text-4xl font-black sm:text-5xl"
       style={{ color: light ? "#fff" : NAVY }}
     >
       <span ref={wrapRef} className="rsp-mk-wrap">
@@ -546,7 +546,7 @@ export default function ResellerSalesPage({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/tiquiz-logo.png" alt="Tiquiz" className="h-8 w-auto" />
           <nav className="hidden items-center gap-6 text-sm font-medium text-slate-600 sm:flex">
-            <a href="#demo" className="hover:text-slate-900">Demo</a>
+            <a href="#demo" className="hover:text-slate-900">Démo</a>
             <a href="#tarifs" className="hover:text-slate-900">Tarifs</a>
             <a href="#faq" className="hover:text-slate-900">FAQ</a>
           </nav>
@@ -561,10 +561,17 @@ export default function ResellerSalesPage({
       </header>
 
       {/* Hero */}
-      <section className="px-5 pb-10 pt-14 text-center" style={{ background: LIGHT }}>
+      <section className="px-5 pb-12 pt-20 text-center" style={{ background: LIGHT }}>
         <div className="mx-auto max-w-3xl">
           <HeroTitle />
-          <p className="mt-3 text-lg font-semibold text-slate-500">grâce à la viralité des quiz</p>
+          <h2 className="mt-2 text-3xl font-black leading-tight sm:text-5xl" style={{ color: NAVY }}>
+            <span
+              className="box-decoration-clone rounded-lg px-2"
+              style={{ background: "rgba(32,187,230,.22)" }}
+            >
+              Grâce aux quiz interactifs
+            </span>
+          </h2>
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-slate-600">
             Crée des quiz viraux qui attirent du trafic qualifié sur tes offres et transforment
             tes visiteurs en clients payants. Connecté directement à Systeme.io, sans Zapier.
@@ -578,6 +585,58 @@ export default function ResellerSalesPage({
             >
               <Play className="h-4 w-4" /> Voir la démo
             </a>
+          </div>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm font-medium text-slate-500">
+            <span className="inline-flex items-center gap-1">
+              <Check className="h-4 w-4" style={{ color: CYAN }} /> Connecté à Systeme.io
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Check className="h-4 w-4" style={{ color: CYAN }} /> Quiz illimités
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Check className="h-4 w-4" style={{ color: CYAN }} /> IA intégrée
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* Bandeau de mots-cles fonctionnalites (comme l'original) */}
+      <div className="overflow-hidden border-y border-slate-100 bg-white py-3">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-5 gap-y-1 px-5 text-center text-xs font-semibold text-slate-400">
+          {[
+            "Quiz IA illimités",
+            "Sondages illimités",
+            "Popquiz",
+            "Connexion Systeme.io",
+            "Capture de leads",
+            "Résultats personnalisés",
+            "Scoring intelligent",
+            "Partage viral",
+            "Tags automatiques",
+          ].map((kw, i) => (
+            <span key={kw} className="inline-flex items-center gap-x-5">
+              {i > 0 ? <span style={{ color: CYAN }}>•</span> : null}
+              {kw}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Stats sociales (comme l'original) */}
+      <section className="px-5 pt-12 text-center" style={{ background: LIGHT }}>
+        <p className="text-sm font-semibold text-slate-500">
+          À ce jour, les utilisateurs de Tiquiz ont :
+        </p>
+        <div className="mx-auto mt-5 flex max-w-md flex-wrap items-stretch justify-center gap-4">
+          <div className="rsp-card flex-1 rounded-2xl border border-slate-200 bg-white px-6 py-5">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Publié</div>
+            <div className="text-4xl font-black" style={{ color: INDIGO }}>61</div>
+            <div className="text-xs text-slate-500">quiz</div>
+          </div>
+          <div className="rsp-card flex-1 rounded-2xl border border-slate-200 bg-white px-6 py-5">
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Capturé</div>
+            <div className="text-4xl font-black" style={{ color: INDIGO }}>1 161</div>
+            <div className="text-xs text-slate-500">leads qualifiés</div>
           </div>
         </div>
       </section>
@@ -634,7 +693,7 @@ export default function ResellerSalesPage({
       />
 
       {/* Mini-tunnels : mockup 3 ecrans */}
-      <section className="px-5 py-14" style={{ background: LIGHT }}>
+      <section className="px-5 py-20" style={{ background: LIGHT }}>
         <Heading>
           Transforme tes quiz en <span style={{ color: INDIGO }}>mini-tunnels de vente</span>
         </Heading>
@@ -647,7 +706,7 @@ export default function ResellerSalesPage({
       </section>
 
       {/* Demarque-toi : contenu frais et engageant */}
-      <section className="px-5 py-14">
+      <section className="px-5 py-20">
         <Heading>
           Démarque-toi avec du <span style={{ color: INDIGO }}>contenu frais et engageant</span>
         </Heading>
@@ -675,7 +734,7 @@ export default function ResellerSalesPage({
       <AnimatedBlock html={POPQUIZ} />
 
       {/* Comparatif */}
-      <section className="px-5 py-14">
+      <section className="px-5 py-20">
         <MarkerHeading>Prends 5 ans d'avance sur tes concurrents</MarkerHeading>
         <div className="mt-8">
           <AnimatedBlock html={COMPARISON} />
@@ -727,12 +786,12 @@ export default function ResellerSalesPage({
       />
 
       {/* Le 1er outil connecte a Systeme.io (scenes en boucle) */}
-      <section className="px-5 py-14">
+      <section className="px-5 py-20">
         <AnimatedBlock html={SIO_SCOOP} />
       </section>
 
       {/* Nouveau : creation de sondages */}
-      <section className="px-5 py-14" style={{ background: LIGHT }}>
+      <section className="px-5 py-20" style={{ background: LIGHT }}>
         <Heading>
           <span style={{ color: CYAN }}>Nouveau.</span> Retrouve la{" "}
           <span style={{ color: INDIGO }}>création de sondages</span> dans Tiquiz
@@ -752,7 +811,7 @@ export default function ResellerSalesPage({
       </section>
 
       {/* Temoignages */}
-      <section className="px-5 py-14" style={{ background: "#f1f5f9" }}>
+      <section className="px-5 py-20" style={{ background: "#f1f5f9" }}>
         <MarkerHeading>Il y a un avant ... et un après Tiquiz</MarkerHeading>
         <div className="mt-8">
           <AnimatedBlock html={TESTIMONIALS} />
@@ -760,7 +819,7 @@ export default function ResellerSalesPage({
       </section>
 
       {/* Tarifs */}
-      <section id="tarifs" className="mx-auto max-w-4xl px-5 py-14">
+      <section id="tarifs" className="mx-auto max-w-4xl px-5 py-20">
         <Heading>Un tarif unique avantageux</Heading>
         <p className="mx-auto mt-3 max-w-xl text-center text-slate-600">
           Vendu par {resellerName}. Choisis ta formule, ton accès s'ouvre juste après le paiement.

@@ -166,6 +166,70 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ ok: true, ...(await loadStatus(resellerId)) });
     }
 
+    // ----- Resynchronisation du webhook -----
+    // Recree le webhook de cycle de vie chez le provider a partir des
+    // secrets DEJA stockes (sans re-saisie). Utile pour les revendeurs
+    // connectes avant l'ajout d'un nouvel event (ex. subscription.updated).
+    if (body?.resync === true) {
+      const secrets = await loadResellerPaymentSecrets(resellerId);
+      if (!token) {
+        return NextResponse.json({ ok: false, error: "no_token" }, { status: 400 });
+      }
+      if (provider === "stripe") {
+        if (!secrets.stripeKey) {
+          return NextResponse.json({ ok: false, error: "not_connected" }, { status: 400 });
+        }
+        const wh = await ensureStripeWebhook(
+          secrets.stripeKey,
+          `${APP_URL}/api/payments/stripe/${token}`,
+        );
+        if (!wh.ok || !wh.id || !wh.secret) {
+          return NextResponse.json({ ok: false, error: "webhook_failed" }, { status: 502 });
+        }
+        const { error } = await supabaseAdmin
+          .from("resellers")
+          .update({
+            stripe_webhook_id: wh.id,
+            stripe_webhook_secret_enc: encryptSecret(wh.secret),
+          })
+          .eq("id", resellerId);
+        if (error) throw error;
+      } else {
+        if (!secrets.paypalClientId || !secrets.paypalSecret) {
+          return NextResponse.json({ ok: false, error: "not_connected" }, { status: 400 });
+        }
+        const wh = await ensurePaypalWebhook({
+          clientId: secrets.paypalClientId,
+          secret: secrets.paypalSecret,
+          env: secrets.paypalEnv,
+          url: `${APP_URL}/api/payments/paypal/${token}`,
+        });
+        if (!wh.ok || !wh.id) {
+          return NextResponse.json({ ok: false, error: "webhook_failed" }, { status: 502 });
+        }
+        const { error } = await supabaseAdmin
+          .from("resellers")
+          .update({ paypal_webhook_id: wh.id })
+          .eq("id", resellerId);
+        if (error) throw error;
+      }
+      await logResellerAction({
+        resellerId,
+        actorUserId: session.userId,
+        action: `payment_resync_webhook_${provider}`,
+        meta: {},
+      });
+      await logPaymentEvent({
+        resellerId,
+        provider: provider as "stripe" | "paypal",
+        stage: "connect",
+        event: "resync_webhook",
+        ok: true,
+        detail: "Webhook de cycle de vie resynchronise.",
+      });
+      return NextResponse.json({ ok: true, resynced: true, ...(await loadStatus(resellerId)) });
+    }
+
     // ----- Connexion Stripe -----
     if (provider === "stripe") {
       const secret = String(body?.secret ?? "").trim();

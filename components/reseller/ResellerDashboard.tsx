@@ -138,7 +138,13 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
   const [paypalIdInput, setPaypalIdInput] = useState("");
   const [paypalSecretInput, setPaypalSecretInput] = useState("");
   const [connBusy, setConnBusy] = useState<
-    null | "stripe" | "paypal" | "stripe-off" | "paypal-off"
+    | null
+    | "stripe"
+    | "paypal"
+    | "stripe-off"
+    | "paypal-off"
+    | "stripe-sync"
+    | "paypal-sync"
   >(null);
 
   // ----- suivi paiements (journal) -----
@@ -324,6 +330,28 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
       if (json.ok) {
         applyConn(json);
         toast.success(t("connect.toastDisconnected"));
+      } else {
+        toast.error(t("connect.errGeneric"));
+      }
+    } catch {
+      toast.error(t("connect.errGeneric"));
+    } finally {
+      setConnBusy(null);
+    }
+  };
+
+  const resyncWebhook = async (provider: "stripe" | "paypal") => {
+    setConnBusy(provider === "stripe" ? "stripe-sync" : "paypal-sync");
+    try {
+      const res = await fetch("/api/reseller/payment-keys", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, resync: true }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        applyConn(json);
+        toast.success(t("connect.toastResynced"));
       } else {
         toast.error(t("connect.errGeneric"));
       }
@@ -1060,18 +1088,33 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
                   {conn.stripe.env === "test" ? (
                     <p className="text-xs text-amber-600">{t("connect.testWarning")}</p>
                   ) : null}
-                  <button
-                    type="button"
-                    onClick={() => disconnectProvider("stripe")}
-                    disabled={connBusy === "stripe-off"}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-50"
-                  >
-                    {connBusy === "stripe-off" ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      t("connect.disconnectBtn")
-                    )}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => resyncWebhook("stripe")}
+                      disabled={connBusy === "stripe-sync"}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-input hover:bg-muted disabled:opacity-50"
+                    >
+                      {connBusy === "stripe-sync" ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        t("connect.resyncBtn")
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => disconnectProvider("stripe")}
+                      disabled={connBusy === "stripe-off"}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                    >
+                      {connBusy === "stripe-off" ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        t("connect.disconnectBtn")
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">{t("connect.resyncHint")}</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -1142,18 +1185,33 @@ export default function ResellerDashboard({ resellerName }: { resellerName: stri
                   {conn.paypal.env === "sandbox" ? (
                     <p className="text-xs text-amber-600">{t("connect.testWarning")}</p>
                   ) : null}
-                  <button
-                    type="button"
-                    onClick={() => disconnectProvider("paypal")}
-                    disabled={connBusy === "paypal-off"}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-50"
-                  >
-                    {connBusy === "paypal-off" ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      t("connect.disconnectBtn")
-                    )}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => resyncWebhook("paypal")}
+                      disabled={connBusy === "paypal-sync"}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-input hover:bg-muted disabled:opacity-50"
+                    >
+                      {connBusy === "paypal-sync" ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        t("connect.resyncBtn")
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => disconnectProvider("paypal")}
+                      disabled={connBusy === "paypal-off"}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-destructive/40 text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                    >
+                      {connBusy === "paypal-off" ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        t("connect.disconnectBtn")
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">{t("connect.resyncHint")}</p>
                 </div>
               ) : (
                 <div className="space-y-2">
