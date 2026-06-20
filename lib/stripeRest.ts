@@ -153,6 +153,26 @@ export async function deleteStripeWebhook(key: string, id: string): Promise<void
 }
 
 /**
+ * Annule immediatement un abonnement Stripe (DELETE /v1/subscriptions/:id).
+ * Utilise quand un client change de formule : on annule l'ancien abo pour
+ * eviter le double-prelevement. Best-effort : renvoie true si Stripe a
+ * accepte. Un 404 (abo deja annule / inexistant) est traite comme ok.
+ */
+export async function cancelStripeSubscription(key: string, subId: string): Promise<boolean> {
+  if (!subId) return false;
+  try {
+    const res = await fetch(`${STRIPE_API}/v1/subscriptions/${encodeURIComponent(subId)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    return res.ok || res.status === 404;
+  } catch (e) {
+    console.error("[stripeRest] cancelSubscription failed", (e as Error).message);
+    return false;
+  }
+}
+
+/**
  * Verifie la signature d'un event Stripe (header Stripe-Signature) sans
  * SDK : HMAC-SHA256 de `${timestamp}.${rawBody}`, comparaison constante,
  * tolerance de 5 minutes contre le rejeu.
@@ -191,6 +211,7 @@ export interface StripeSessionInfo {
   plan: string | null;
   email: string | null;
   resellerId: string | null;
+  subscriptionId: string | null;
 }
 
 /**
@@ -210,6 +231,7 @@ export async function retrieveStripeSession(
     const json = (await res.json()) as {
       payment_status?: string;
       status?: string;
+      subscription?: string | null;
       customer_details?: { email?: string | null } | null;
       metadata?: Record<string, string> | null;
     };
@@ -219,6 +241,7 @@ export async function retrieveStripeSession(
       plan: meta.plan ?? null,
       email: meta.email ?? json.customer_details?.email ?? null,
       resellerId: meta.reseller_id ?? null,
+      subscriptionId: json.subscription ?? null,
     };
   } catch (e) {
     console.error("[stripeRest] retrieveSession failed", (e as Error).message);

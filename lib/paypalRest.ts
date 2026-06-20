@@ -151,6 +151,40 @@ export async function createPaypalSubscriptionCheckout(args: {
   }
 }
 
+/**
+ * Annule un abonnement PayPal (POST .../cancel). Utilise quand un client
+ * change de formule : on annule l'ancien abo pour eviter le double-
+ * prelevement. Best-effort : true si PayPal accepte (204) ou si l'abo est
+ * deja annule / introuvable (404 / 422).
+ */
+export async function cancelPaypalSubscription(args: {
+  clientId: string;
+  secret: string;
+  env: string | null;
+  subscriptionId: string;
+  reason?: string;
+}): Promise<boolean> {
+  if (!args.subscriptionId) return false;
+  const base = paypalApiBase(args.env);
+  try {
+    const token = await paypalAccessToken(base, args.clientId, args.secret);
+    if (!token) return false;
+    const res = await fetch(
+      `${base}/v1/billing/subscriptions/${encodeURIComponent(args.subscriptionId)}/cancel`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: args.reason ?? "Changement de formule" }),
+      },
+    );
+    // 204 = annule. 404/422 = deja annule ou non actif : on considere ok.
+    return res.ok || res.status === 404 || res.status === 422;
+  } catch (e) {
+    console.error("[paypalRest] cancelSubscription failed", (e as Error).message);
+    return false;
+  }
+}
+
 /** Events d'abonnement suivis par le webhook de cycle de vie. */
 export const PAYPAL_WEBHOOK_EVENTS = [
   "BILLING.SUBSCRIPTION.ACTIVATED",

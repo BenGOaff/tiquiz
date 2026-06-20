@@ -80,6 +80,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
   }
 
   const obj = (event.data?.object ?? {}) as {
+    id?: string;
+    subscription?: string | null;
     payment_status?: string;
     metadata?: Record<string, string> | null;
   };
@@ -105,6 +107,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
         email,
         plan,
         source: "stripe_webhook",
+        provider: "stripe",
+        subscriptionId: obj.subscription ?? null,
       });
       await logPaymentEvent({
         resellerId: reseller.id,
@@ -123,6 +127,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
         reseller: provReseller,
         email,
         source: "stripe_webhook",
+        subscriptionId: obj.id ?? null,
       });
       await logPaymentEvent({
         resellerId: reseller.id,

@@ -88,6 +88,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
   }
 
   const resource = (event.resource ?? {}) as {
+    id?: string;
     custom_id?: string;
     subscriber?: { email_address?: string } | null;
   };
@@ -118,6 +119,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
         email,
         plan,
         source: "paypal_webhook",
+        provider: "paypal",
+        subscriptionId: resource.id ?? null,
       });
       await logPaymentEvent({
         resellerId: reseller.id,
@@ -136,6 +139,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
         reseller: provReseller,
         email,
         source: "paypal_webhook",
+        subscriptionId: resource.id ?? null,
       });
       await logPaymentEvent({
         resellerId: reseller.id,

@@ -48,6 +48,7 @@ async function provision(
   let plan: string | null = null;
   let email: string | null = null;
   let resellerId: string | null = null;
+  let subscriptionId: string | null = null;
 
   if (provider === "stripe" && sp.session_id && secrets.stripeKey) {
     const info = await retrieveStripeSession(secrets.stripeKey, sp.session_id);
@@ -63,6 +64,7 @@ async function provision(
       return false;
     }
     ({ plan, email, resellerId } = info);
+    subscriptionId = info.subscriptionId;
   } else if (
     provider === "paypal" &&
     sp.subscription_id &&
@@ -87,6 +89,7 @@ async function provision(
       return false;
     }
     ({ plan, email, resellerId } = info);
+    subscriptionId = sp.subscription_id ?? null;
   } else {
     await logPaymentEvent({
       resellerId: reseller.id,
@@ -119,6 +122,8 @@ async function provision(
     email,
     plan,
     source: "checkout",
+    provider,
+    subscriptionId,
   });
   await logPaymentEvent({
     resellerId: reseller.id,

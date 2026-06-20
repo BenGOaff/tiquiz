@@ -530,6 +530,13 @@ export default function ResellerSalesPage({
         /* Cartes avec halo cyan + leger soulevement au survol (style original) */
         .rsp-card{box-shadow:0 12px 40px rgba(32,187,230,.12);transition:box-shadow .5s ease,transform .5s ease}
         .rsp-card:hover{box-shadow:0 16px 50px rgba(32,187,230,.18);transform:translateY(-2px)}
+        /* Nuages flottants flous de la section finale (repris de l'original) */
+        .rsp-cld{position:absolute;border-radius:50%;background:rgba(255,255,255,.6);filter:blur(40px);pointer-events:none;z-index:0}
+        .rsp-c1{width:400px;height:150px;bottom:-30px;left:-50px;animation:rspFloat 12s ease-in-out infinite}
+        .rsp-c2{width:300px;height:120px;bottom:20px;right:-30px;animation:rspFloat 15s ease-in-out infinite reverse}
+        .rsp-c3{width:250px;height:100px;bottom:-10px;left:30%;animation:rspFloat 10s ease-in-out infinite 3s}
+        .rsp-c4{width:350px;height:130px;top:-20px;right:20%;opacity:.4;animation:rspFloat 18s ease-in-out infinite 5s}
+        @keyframes rspFloat{0%,100%{transform:translateX(0) translateY(0)}50%{transform:translateX(20px) translateY(-10px)}}
         @media (max-width:768px){html,body{overflow-x:clip}}
       `}</style>
 
@@ -700,30 +707,24 @@ export default function ResellerSalesPage({
       />
 
       {/* Etape 3 : viralite / partage social */}
-      <section className="px-5 pt-14" style={{ background: LIGHT }}>
-        <p className="mb-3 text-center text-xs font-bold uppercase tracking-wider" style={{ color: CYAN }}>
-          Étape 3
-        </p>
-        <MarkerHeading>Propage ta marque comme une traînée de poudre</MarkerHeading>
-        <p className="mx-auto mt-4 max-w-2xl text-center text-slate-600">
-          Pour voir leurs résultats, tes prospects partagent ton quiz. Il devient viral, sans
-          dépenser un centime en publicité.
-        </p>
-        <AnimatedBlock html={FACEBOOK} behavior="count-fb" />
-      </section>
-
-      {/* Etape 4 : capture / opt-in */}
-      <section className="px-5 py-6" style={{ background: LIGHT }}>
-        <p className="mb-3 text-center text-xs font-bold uppercase tracking-wider" style={{ color: CYAN }}>
-          Étape 4
-        </p>
-        <MarkerHeading>Capture, exporte, automatise</MarkerHeading>
-        <p className="mx-auto mt-4 max-w-2xl text-center text-slate-600">
-          Tes leads sont capturés puis envoyés, taggués, directement dans Systeme.io. Sans Zapier,
-          sans manip, en temps réel.
-        </p>
-        <AnimatedBlock html={OPTIN} />
-      </section>
+      <FeatureRow
+        bg={LIGHT}
+        eyebrow="Étape 3"
+        title="Propage ta marque"
+        highlight="comme une traînée de poudre"
+        paragraph="Pour découvrir leurs résultats, tes prospects partagent d'abord ton quiz sur leurs réseaux. Ta marque s'expose à de nouvelles personnes qui leur ressemblent. Ton quiz devient viral, sans dépenser un centime en publicité."
+        widget={FACEBOOK}
+        behavior="count-fb"
+      />
+      <FeatureRow
+        bg={LIGHT}
+        reverse
+        eyebrow="Étape 4"
+        title="Capture, exporte,"
+        highlight="automatise"
+        paragraph="Capture tes leads directement dans Tiquiz, exporte-les en 1 clic vers ton autorépondeur, puis déclenche les automatisations de ton choix. Taggué dans Systeme.io, en temps réel, sans Zapier."
+        widget={OPTIN}
+      />
 
       {/* Le 1er outil connecte a Systeme.io (scenes en boucle) */}
       <section className="px-5 py-14">
@@ -866,14 +867,25 @@ export default function ResellerSalesPage({
       </section>
 
       {/* CTA final */}
-      <div style={{ background: NAVY }} className="px-5 py-14 text-center text-white">
-        <Heading light>Ta liste emails ne va pas se construire toute seule</Heading>
-        <p className="mx-auto mt-4 max-w-xl text-slate-200">
-          Pendant que tu hésites, tes visiteurs quittent ton site sans laisser leur email. Un quiz
-          change tout.
-        </p>
-        <div className="mt-8 flex justify-center">
-          <BubbleButton href="#tarifs">C'est parti !</BubbleButton>
+      <div
+        className="relative overflow-hidden px-5 py-16 text-center text-white"
+        style={{
+          background: "linear-gradient(180deg,#5772F5 0%,#3D94EE 40%,#20B9E6 100%)",
+        }}
+      >
+        <div className="rsp-cld rsp-c1" aria-hidden />
+        <div className="rsp-cld rsp-c2" aria-hidden />
+        <div className="rsp-cld rsp-c3" aria-hidden />
+        <div className="rsp-cld rsp-c4" aria-hidden />
+        <div className="relative z-10">
+          <Heading light>Ta liste emails ne va pas se construire toute seule</Heading>
+          <p className="mx-auto mt-4 max-w-xl text-white/90">
+            Pendant que tu hésites, tes visiteurs quittent ton site sans laisser leur email. Un quiz
+            change tout.
+          </p>
+          <div className="mt-8 flex justify-center">
+            <BubbleButton href="#tarifs">C'est parti !</BubbleButton>
+          </div>
         </div>
       </div>
 
