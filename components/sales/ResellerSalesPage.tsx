@@ -4,16 +4,16 @@
 // components/sales/ResellerSalesPage.tsx
 //
 // Replique React de la page de vente Tiquiz, dynamique par revendeur :
-// memes sections et animations (typewriter, toggle mensuel/annuel, CTA a
-// bulles), mais les boutons tarifs menent aux bons de commande du
-// revendeur (/order/<slug>/<plan>) avec SES prix.
+// sections a deux colonnes (texte + visuel anime) sur fonds en degrade,
+// alternees gauche/droite, comme l'original. Les boutons tarifs menent aux
+// bons de commande du revendeur (/order/<slug>/<plan>) avec SES prix.
 //
 // Couleurs marque : #2B3264 (navy), #20BBE6 (cyan), #5A6EF6 (indigo).
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, ChevronDown, Loader2, Play } from "lucide-react";
 
-import AnimatedBlock from "@/components/sales/AnimatedBlock";
+import AnimatedBlock, { type BlockBehavior } from "@/components/sales/AnimatedBlock";
 import {
   COMPARISON,
   FACEBOOK,
@@ -32,6 +32,7 @@ import {
 const NAVY = "#2B3264";
 const CYAN = "#20BBE6";
 const INDIGO = "#5A6EF6";
+const LIGHT = "linear-gradient(180deg,#F4F7FE 0%,#EBF5FF 100%)";
 
 const TYPE_WORDS = [
   "Booste ton trafic",
@@ -48,10 +49,10 @@ export interface ResellerSalesPageProps {
   slug: string;
   youtubeId: string;
   hasProvider: boolean;
-  prices: Partial<Record<SalesPlanKey, number>>; // amount_cents
+  prices: Partial<Record<SalesPlanKey, number>>;
 }
 
-/* ----------------------------- Animations ----------------------------- */
+/* ----------------------------- Animations hero ----------------------------- */
 
 function useTypewriter() {
   const [text, setText] = useState("");
@@ -87,18 +88,8 @@ function useTypewriter() {
   return text;
 }
 
-/** Bouton CTA avec pulsation + bulles qui jaillissent (effet de la page). */
-function BubbleButton({
-  href,
-  children,
-  variant = "solid",
-}: {
-  href: string;
-  children: ReactNode;
-  variant?: "solid" | "ghost";
-}) {
+function BubbleButton({ href, children }: { href: string; children: ReactNode }) {
   const layerRef = useRef<HTMLSpanElement>(null);
-
   useEffect(() => {
     const layer = layerRef.current;
     if (!layer) return;
@@ -108,7 +99,6 @@ function BubbleButton({
     const maxDist = mobile ? 30 : 70;
     const perBurst = mobile ? 8 : 14;
     const rand = (a: number, b: number) => Math.random() * (b - a) + a;
-
     const burst = () => {
       if (!layer.isConnected) return;
       for (let i = 0; i < perBurst; i++) {
@@ -162,16 +152,12 @@ function BubbleButton({
       clearInterval(interval);
     };
   }, []);
-
-  const base =
-    "relative inline-flex items-center justify-center overflow-visible rounded-full px-8 py-4 text-base font-bold transition-transform active:scale-95";
-  const style =
-    variant === "solid"
-      ? { background: INDIGO, color: "#fff", animation: "rspPulse 1.4s ease-in-out infinite" }
-      : { background: "#fff", color: NAVY, border: `2px solid ${INDIGO}` };
-
   return (
-    <a href={href} className={base} style={style}>
+    <a
+      href={href}
+      className="relative inline-flex items-center justify-center overflow-visible rounded-full px-8 py-4 text-base font-bold text-white transition-transform active:scale-95"
+      style={{ background: INDIGO, animation: "rspPulse 1.4s ease-in-out infinite" }}
+    >
       <span ref={layerRef} aria-hidden className="pointer-events-none absolute inset-0" />
       <span className="relative z-10 flex items-center gap-2">{children}</span>
     </a>
@@ -206,47 +192,75 @@ function formatPrice(cents: number): string {
   return `${v}EUR`;
 }
 
-/* ----------------------------- Sections ----------------------------- */
+/* ----------------------------- Helpers layout ----------------------------- */
 
-function ValueSection({
+function FeatureRow({
+  bg,
+  reverse,
   eyebrow,
   title,
   highlight,
-  children,
+  paragraph,
   bullets,
+  widget,
+  behavior,
 }: {
+  bg?: string;
+  reverse?: boolean;
   eyebrow?: string;
   title: string;
   highlight?: string;
-  children?: ReactNode;
+  paragraph?: string;
   bullets?: string[];
+  widget: string;
+  behavior?: BlockBehavior;
 }) {
   return (
-    <section className="mx-auto max-w-3xl px-5 py-12 text-center">
-      {eyebrow ? (
-        <p className="mb-3 text-xs font-bold uppercase tracking-wider" style={{ color: CYAN }}>
-          {eyebrow}
-        </p>
-      ) : null}
-      <h2 className="text-3xl font-black sm:text-4xl" style={{ color: NAVY }}>
-        {title} {highlight ? <span style={{ color: INDIGO }}>{highlight}</span> : null}
-      </h2>
-      {children ? (
-        <div className="mt-4 text-base leading-relaxed text-slate-600">{children}</div>
-      ) : null}
-      {bullets ? (
-        <ul className="mx-auto mt-6 max-w-xl space-y-2 text-left">
-          {bullets.map((b) => (
-            <li key={b} className="flex items-start gap-2 text-slate-700">
-              <Check className="mt-0.5 h-5 w-5 shrink-0" style={{ color: CYAN }} />
-              <span>{b}</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+    <section style={bg ? { background: bg } : undefined} className="px-5 py-14">
+      <div className="mx-auto grid max-w-5xl items-center gap-8 md:grid-cols-2">
+        <div className={reverse ? "md:order-2" : ""}>
+          {eyebrow ? (
+            <p className="mb-3 text-xs font-bold uppercase tracking-wider" style={{ color: CYAN }}>
+              {eyebrow}
+            </p>
+          ) : null}
+          <h2 className="text-3xl font-black leading-tight sm:text-4xl" style={{ color: NAVY }}>
+            {title} {highlight ? <span style={{ color: INDIGO }}>{highlight}</span> : null}
+          </h2>
+          {paragraph ? (
+            <p className="mt-4 text-base leading-relaxed text-slate-600">{paragraph}</p>
+          ) : null}
+          {bullets ? (
+            <ul className="mt-5 space-y-2">
+              {bullets.map((b) => (
+                <li key={b} className="flex items-start gap-2 text-slate-700">
+                  <Check className="mt-0.5 h-5 w-5 shrink-0" style={{ color: CYAN }} />
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+        <div className={reverse ? "md:order-1" : ""}>
+          <AnimatedBlock html={widget} behavior={behavior} />
+        </div>
+      </div>
     </section>
   );
 }
+
+function Heading({ children, light }: { children: ReactNode; light?: boolean }) {
+  return (
+    <h2
+      className="text-center text-3xl font-black sm:text-4xl"
+      style={{ color: light ? "#fff" : NAVY }}
+    >
+      {children}
+    </h2>
+  );
+}
+
+/* ----------------------------- FAQ ----------------------------- */
 
 const FAQ: Array<[string, string]> = [
   [
@@ -257,18 +271,9 @@ const FAQ: Array<[string, string]> = [
     "Est-ce que j'aurai quelque chose a telecharger ?",
     "Non, rien. Tiquiz est un logiciel 100% en ligne (SaaS). Un navigateur et une connexion suffisent.",
   ],
-  [
-    "Ai-je besoin d'une carte bancaire pour essayer ?",
-    "Non. La version gratuite est accessible sans carte bancaire.",
-  ],
-  [
-    "Y a-t-il des frais caches ?",
-    "Aucun. Le prix affiche est le prix que tu paies, tout est compris.",
-  ],
-  [
-    "Comment resilier mon abonnement ?",
-    "En un clic depuis ton espace, dans tes parametres. Pas d'engagement.",
-  ],
+  ["Ai-je besoin d'une carte bancaire pour essayer ?", "Non. La version gratuite est accessible sans carte bancaire."],
+  ["Y a-t-il des frais caches ?", "Aucun. Le prix affiche est le prix que tu paies, tout est compris."],
+  ["Comment resilier mon abonnement ?", "En un clic depuis ton espace, dans tes parametres. Pas d'engagement."],
   [
     "Ai-je besoin de Zapier, Make ou Google Sheets ?",
     "Non. Tiquiz se connecte directement a Systeme.io, sans outil tiers.",
@@ -290,9 +295,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
         style={{ color: NAVY }}
       >
         {q}
-        <ChevronDown
-          className={`h-5 w-5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
-        />
+        <ChevronDown className={`h-5 w-5 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open ? <p className="pb-4 text-slate-600">{a}</p> : null}
     </div>
@@ -311,7 +314,6 @@ export default function ResellerSalesPage({
   const typed = useTypewriter();
   const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
 
-  // Essai gratuit
   const [freeEmail, setFreeEmail] = useState("");
   const [freeBusy, setFreeBusy] = useState(false);
   const [freeMsg, setFreeMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -349,9 +351,8 @@ export default function ResellerSalesPage({
   const planCard = (key: SalesPlanKey, name: string, plus: boolean) => {
     const cents = prices[key];
     if (!cents) return null;
-    const period_label = key.startsWith("yearly") ? "/ an" : "/ mois";
+    const periodLabel = key.startsWith("yearly") ? "/ an" : "/ mois";
     const features = plus ? [...PAID_FEATURES, ...PLUS_EXTRAS] : PAID_FEATURES;
-    const orderUrl = `/order/${slug}/${key}`;
     return (
       <div
         className="flex flex-1 flex-col rounded-3xl border bg-white p-7 shadow-sm"
@@ -364,7 +365,7 @@ export default function ResellerSalesPage({
           <span className="text-4xl font-black" style={{ color: NAVY }}>
             {formatPrice(cents)}
           </span>
-          <span className="mb-1 text-sm text-slate-500">{period_label}</span>
+          <span className="mb-1 text-sm text-slate-500">{periodLabel}</span>
         </div>
         <ul className="mt-5 flex-1 space-y-2 text-sm">
           {features.map((f) => (
@@ -376,7 +377,7 @@ export default function ResellerSalesPage({
         </ul>
         <div className="mt-6 text-center">
           {hasProvider ? (
-            <BubbleButton href={orderUrl}>Acces {name}</BubbleButton>
+            <BubbleButton href={`/order/${slug}/${key}`}>Acces {name}</BubbleButton>
           ) : (
             <span className="text-xs text-slate-400">Bientot disponible</span>
           )}
@@ -398,9 +399,8 @@ export default function ResellerSalesPage({
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-slate-100 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
-          <span className="text-lg font-black" style={{ color: NAVY }}>
-            Tiquiz
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/tiquiz-logo.png" alt="Tiquiz" className="h-8 w-auto" />
           <nav className="hidden items-center gap-6 text-sm font-medium text-slate-600 sm:flex">
             <a href="#demo" className="hover:text-slate-900">Demo</a>
             <a href="#tarifs" className="hover:text-slate-900">Tarifs</a>
@@ -417,34 +417,36 @@ export default function ResellerSalesPage({
       </header>
 
       {/* Hero */}
-      <section className="mx-auto max-w-3xl px-5 pb-10 pt-14 text-center">
-        <h1
-          className="text-4xl font-black leading-tight sm:text-6xl"
-          style={{ color: NAVY, minHeight: "1.1em" }}
-        >
-          {typed}
-          <span style={{ color: CYAN, animation: "rspBlink .8s infinite" }}>|</span>
-        </h1>
-        <p className="mt-3 text-lg font-semibold text-slate-500">grace a la viralite des quiz</p>
-        <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-slate-600">
-          Cree des quiz viraux qui attirent du trafic qualifie sur tes offres et transforment
-          tes visiteurs en clients payants. Connecte directement a Systeme.io, sans Zapier.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <BubbleButton href="#tarifs">C'est parti !</BubbleButton>
-          <a
-            href="#demo"
-            className="inline-flex items-center gap-2 rounded-full border-2 px-7 py-4 text-base font-bold"
-            style={{ borderColor: INDIGO, color: NAVY }}
+      <section className="px-5 pb-10 pt-14 text-center" style={{ background: LIGHT }}>
+        <div className="mx-auto max-w-3xl">
+          <h1
+            className="text-4xl font-black leading-tight sm:text-6xl"
+            style={{ color: NAVY, minHeight: "1.1em" }}
           >
-            <Play className="h-4 w-4" /> Voir la demo
-          </a>
+            {typed}
+            <span style={{ color: CYAN, animation: "rspBlink .8s infinite" }}>|</span>
+          </h1>
+          <p className="mt-3 text-lg font-semibold text-slate-500">grace a la viralite des quiz</p>
+          <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-slate-600">
+            Cree des quiz viraux qui attirent du trafic qualifie sur tes offres et transforment
+            tes visiteurs en clients payants. Connecte directement a Systeme.io, sans Zapier.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <BubbleButton href="#tarifs">C'est parti !</BubbleButton>
+            <a
+              href="#demo"
+              className="inline-flex items-center gap-2 rounded-full border-2 px-7 py-4 text-base font-bold"
+              style={{ borderColor: INDIGO, color: NAVY }}
+            >
+              <Play className="h-4 w-4" /> Voir la demo
+            </a>
+          </div>
         </div>
       </section>
 
       {/* Video demo */}
-      <section id="demo" className="mx-auto max-w-3xl px-5 pb-14">
-        <div className="overflow-hidden rounded-2xl border border-slate-200 shadow-lg">
+      <section id="demo" className="px-5 py-12" style={{ background: LIGHT }}>
+        <div className="mx-auto max-w-3xl overflow-hidden rounded-2xl border border-slate-200 shadow-lg">
           <div className="relative" style={{ paddingTop: "56.25%" }}>
             <iframe
               className="absolute inset-0 h-full w-full"
@@ -457,141 +459,132 @@ export default function ResellerSalesPage({
         </div>
       </section>
 
-      {/* Bandeau viralite */}
-      <div style={{ background: NAVY }} className="px-5 py-12 text-center text-white">
-        <div className="mx-auto max-w-3xl">
-          <h2 className="text-3xl font-black sm:text-4xl">
-            Booste ton trafic <span style={{ color: CYAN }}>grace a la viralite des quiz</span>
-          </h2>
-          <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-slate-200">
-            Pour decouvrir leurs resultats, tes prospects partagent d'abord le quiz sur leurs
-            reseaux. Chaque partage expose ta marque a un nouveau public : plus de trafic, plus
-            de visibilite, sans redoubler d'efforts.
-          </p>
-        </div>
-      </div>
+      {/* Viralite + dashboard stats */}
+      <FeatureRow
+        title="Booste ton trafic"
+        highlight="grace a la viralite des quiz"
+        paragraph="Pour decouvrir leurs resultats, tes prospects partagent d'abord le quiz sur leurs reseaux. Chaque partage expose ta marque a un nouveau public : plus de trafic, plus de visibilite, sans redoubler d'efforts."
+        widget={STATS_DASH}
+      />
 
-      <AnimatedBlock html={STATS_DASH} />
-
-      <div className="px-5">
-        <iframe
-          src="/widgets/social-proof"
-          title="Tiquiz en chiffres"
-          loading="lazy"
-          style={{
-            width: "100%",
-            maxWidth: "42rem",
-            height: "260px",
-            border: 0,
-            display: "block",
-            margin: "0 auto",
-            background: "transparent",
-          }}
-        />
-      </div>
-
-      <ValueSection
+      {/* Leads qualifies */}
+      <FeatureRow
+        bg={LIGHT}
+        reverse
         title="Capture des"
         highlight="leads qualifies"
+        paragraph="Oublie les inscrits qui ne passent jamais a l'action. Quand un prospect prend le temps de remplir ton quiz, c'est qu'il est vraiment interesse."
         bullets={[
-          "Des prospects vraiment interesses, pas des touristes",
-          "Ils prennent le temps de repondre : ils sont chauds",
+          "Des prospects chauds, pas des touristes",
           "Bien plus qualifies que ceux qui telechargent un ebook",
+          "C'est avec eux que tu veux remplir ta liste",
         ]}
-      >
-        Oublie les inscrits qui ne passent jamais a l'action. Remplis ta liste avec ceux qui
-        s'interessent vraiment a ce que tu proposes.
-      </ValueSection>
+        widget={LEADS_LIST}
+      />
 
-      <AnimatedBlock html={LEADS_LIST} />
-
-      <ValueSection
+      {/* Offres irresistibles */}
+      <FeatureRow
         title="Cree des"
         highlight="offres irresistibles"
+        paragraph="Un quiz ne recueille pas que des emails : il te donne des informations precieuses sur ton audience pour creer des offres qu'elle va s'arracher."
         bullets={[
           "Les difficultes et desirs actuels de ton audience",
           "Leurs objectifs, preferences et problemes non resolus",
-          "Les solutions deja essayees et leur niveau de satisfaction",
+          "Les solutions deja essayees et leur satisfaction",
         ]}
-      >
-        Un quiz ne recueille pas que des emails : il te donne des informations precieuses pour
-        creer des offres que tes prospects vont s'arracher.
-      </ValueSection>
+        widget={POLL_PIE}
+      />
 
-      <AnimatedBlock html={POLL_PIE} />
+      {/* Mini-tunnels : mockup 3 ecrans */}
+      <section className="px-5 py-14" style={{ background: LIGHT }}>
+        <Heading>
+          Transforme tes quiz en <span style={{ color: INDIGO }}>mini-tunnels de vente</span>
+        </Heading>
+        <p className="mx-auto mt-4 max-w-2xl text-center text-slate-600">
+          Une experience fraiche et amusante qui mene tes prospects jusqu'a l'achat, en douceur.
+        </p>
+        <div className="mt-8">
+          <AnimatedBlock html={PHONE_MOCKUP} />
+        </div>
+      </section>
 
-      <AnimatedBlock html={PHONE_MOCKUP} />
-
+      {/* Popquiz (section auto-portee, 2 colonnes interne) */}
       <AnimatedBlock html={POPQUIZ} />
 
       {/* Comparatif */}
-      <section className="mx-auto max-w-4xl px-5 py-12">
-        <h2 className="text-center text-3xl font-black sm:text-4xl" style={{ color: NAVY }}>
+      <section className="px-5 py-14">
+        <Heading>
           Prends <span style={{ color: INDIGO }}>5 ans d'avance</span> sur tes concurrents
-        </h2>
+        </Heading>
         <div className="mt-8">
           <AnimatedBlock html={COMPARISON} />
         </div>
       </section>
 
-      {/* Comment ca marche */}
-      <section className="mx-auto max-w-4xl px-5 py-12">
-        <h2 className="text-center text-3xl font-black sm:text-4xl" style={{ color: NAVY }}>
-          Comment marche Tiquiz ?
-        </h2>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2">
-          {[
-            ["Etape 1", "Cree le quiz parfait a partir d'un simple prompt", "L'IA de Tiquiz te genere un quiz en quelques secondes. Tu n'as plus qu'a le personnaliser."],
-            ["Etape 2", "Partage ton quiz en 1 clic", "Copie le lien (avec ton nom de domaine) ou le code embed, et diffuse-le partout."],
-            ["Etape 3", "Propage ta marque comme une trainee de poudre", "Pour voir leurs resultats, tes prospects partagent ton quiz. Il devient viral, sans pub."],
-            ["Etape 4", "Capture, exporte, automatise", "Tes leads sont captures dans Tiquiz et synchronises vers Systeme.io, automatiquement."],
-          ].map(([step, title, desc]) => (
-            <div key={step} className="rounded-2xl border border-slate-200 bg-white p-6">
-              <div className="text-xs font-bold uppercase tracking-wider" style={{ color: CYAN }}>
-                {step}
-              </div>
-              <h3 className="mt-2 text-lg font-bold" style={{ color: NAVY }}>
-                {title}
-              </h3>
-              <p className="mt-2 text-sm text-slate-600">{desc}</p>
-            </div>
-          ))}
-        </div>
+      {/* Comment marche : creation IA + partage */}
+      <section className="px-5 pt-14" style={{ background: LIGHT }}>
+        <Heading>Comment marche Tiquiz ?</Heading>
+      </section>
+      <FeatureRow
+        bg={LIGHT}
+        eyebrow="Etape 1"
+        title="Cree le quiz parfait"
+        highlight="a partir d'un simple prompt"
+        paragraph="L'IA de Tiquiz te genere un quiz complet en quelques secondes. Tu n'as plus qu'a le personnaliser avec ta personnalite et ton offre."
+        widget={QUIZ_BUILDER}
+        behavior="type-qb"
+      />
+      <FeatureRow
+        bg={LIGHT}
+        reverse
+        eyebrow="Etape 2"
+        title="Partage ton quiz"
+        highlight="en 1 clic"
+        paragraph="Copie le lien (avec ton nom de domaine) ou le code embed, et diffuse-le partout : page d'accueil, article de blog, pop-up, reseaux."
+        widget={SHARE_EMBED}
+        behavior="type-sh"
+      />
+
+      {/* Viralite : partage social */}
+      <section className="px-5 pt-14">
+        <Heading>
+          Propage ta marque <span style={{ color: INDIGO }}>comme une trainee de poudre</span>
+        </Heading>
+        <p className="mx-auto mt-4 max-w-2xl text-center text-slate-600">
+          Pour voir leurs resultats, tes prospects partagent ton quiz. Il devient viral, sans
+          depenser un centime en publicite.
+        </p>
+        <AnimatedBlock html={FACEBOOK} behavior="count-fb" />
       </section>
 
-      {/* Etapes illustrees : creation IA + partage / embed */}
-      <AnimatedBlock html={QUIZ_BUILDER} behavior="type-qb" />
-      <AnimatedBlock html={SHARE_EMBED} behavior="type-sh" />
+      {/* Capture / opt-in */}
+      <section className="px-5 py-6" style={{ background: LIGHT }}>
+        <Heading>
+          Capture, exporte, <span style={{ color: INDIGO }}>automatise</span>
+        </Heading>
+        <AnimatedBlock html={OPTIN} />
+      </section>
 
-      {/* Viralite : le partage social */}
-      <AnimatedBlock html={FACEBOOK} behavior="count-fb" />
-
-      {/* Capture / opt-in : tag, campagne, formation */}
-      <AnimatedBlock html={OPTIN} />
-
-      {/* Le 1er outil quiz connecte a Systeme.io (scenes en boucle) */}
-      <AnimatedBlock html={SIO_SCOOP} behavior="loop-sc" />
+      {/* Le 1er outil connecte a Systeme.io (scenes en boucle) */}
+      <section className="px-5 py-14">
+        <AnimatedBlock html={SIO_SCOOP} behavior="loop-sc" />
+      </section>
 
       {/* Temoignages */}
-      <div style={{ background: "#f1f5f9" }} className="px-5 py-12">
-        <h2 className="text-center text-3xl font-black sm:text-4xl" style={{ color: NAVY }}>
-          Il y a un avant ... et un apres Tiquiz
-        </h2>
+      <section className="px-5 py-14" style={{ background: "#f1f5f9" }}>
+        <Heading>Il y a un avant ... et un apres Tiquiz</Heading>
         <div className="mt-8">
           <AnimatedBlock html={TESTIMONIALS} />
         </div>
-      </div>
+      </section>
 
       {/* Tarifs */}
       <section id="tarifs" className="mx-auto max-w-4xl px-5 py-14">
-        <h2 className="text-center text-3xl font-black sm:text-4xl" style={{ color: NAVY }}>
-          Un tarif unique avantageux
-        </h2>
+        <Heading>Un tarif unique avantageux</Heading>
         <p className="mx-auto mt-3 max-w-xl text-center text-slate-600">
           Vendu par {resellerName}. Choisis ta formule, ton acces s'ouvre juste apres le paiement.
         </p>
 
-        {/* Toggle */}
         <div className="mt-8 flex items-center justify-center gap-3">
           <button
             type="button"
@@ -657,11 +650,7 @@ export default function ResellerSalesPage({
               className="inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-bold text-white disabled:opacity-60"
               style={{ background: INDIGO }}
             >
-              {freeBusy ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "Commencer gratuitement"
-              )}
+              {freeBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Commencer gratuitement"}
             </button>
           </div>
           {freeMsg ? (
@@ -688,9 +677,7 @@ export default function ResellerSalesPage({
 
       {/* FAQ */}
       <section id="faq" className="mx-auto max-w-2xl px-5 py-12">
-        <h2 className="text-center text-3xl font-black sm:text-4xl" style={{ color: NAVY }}>
-          Questions frequentes
-        </h2>
+        <Heading>Questions frequentes</Heading>
         <div className="mt-8">
           {FAQ.map(([q, a]) => (
             <FaqItem key={q} q={q} a={a} />
@@ -700,9 +687,7 @@ export default function ResellerSalesPage({
 
       {/* CTA final */}
       <div style={{ background: NAVY }} className="px-5 py-14 text-center text-white">
-        <h2 className="text-3xl font-black sm:text-4xl">
-          Ta liste emails ne va pas se construire toute seule
-        </h2>
+        <Heading light>Ta liste emails ne va pas se construire toute seule</Heading>
         <p className="mx-auto mt-4 max-w-xl text-slate-200">
           Pendant que tu hesites, tes visiteurs quittent ton site sans laisser leur email. Un quiz
           change tout.

@@ -3,10 +3,9 @@
 // components/sales/AnimatedBlock.tsx
 //
 // Rend un bloc HTML d'animation (lib/salesAnimations) et declenche le
-// scroll-reveal : quand le bloc entre dans le viewport, on ajoute la
-// classe `tqz-visible` aux elements qui pilotent les animations CSS
-// (meme principe que les scripts Systeme.io d'origine). Le prop `behavior`
-// porte les comportements JS specifiques (typing, compteur, boucle).
+// scroll-reveal de facon FIABLE : revele immediatement si deja visible,
+// via IntersectionObserver sinon, et avec un filet de securite (timeout)
+// pour ne JAMAIS laisser un bloc invisible (opacity:0) si l'observer rate.
 
 import { useEffect, useRef } from "react";
 
@@ -19,7 +18,7 @@ const QB_TEXT =
   "Je veux un quiz pour qualifier mes visiteurs prets a commander ma formation sur l'education canine";
 const SH_URL = "https://app.tiquiz.com/sandra-costa/formation-canine";
 
-function typeInto(el: HTMLElement, text: string, speed: number) {
+function typeInto(el: HTMLElement, text: string, speed: number, timers: number[]) {
   let i = 0;
   el.textContent = "";
   const id = window.setInterval(() => {
@@ -30,7 +29,7 @@ function typeInto(el: HTMLElement, text: string, speed: number) {
       window.clearInterval(id);
     }
   }, speed);
-  return id;
+  timers.push(id);
 }
 
 function countTo(el: HTMLElement, target: number, duration: number) {
@@ -61,14 +60,15 @@ export default function AnimatedBlock({
     if (!root) return;
     const timers: number[] = [];
     let looper: number | undefined;
+    let revealed = false;
 
     const runBehavior = () => {
       if (behavior === "type-qb") {
         const el = root.querySelector<HTMLElement>("#tqz-qb-typed");
-        if (el) timers.push(window.setTimeout(() => typeInto(el, QB_TEXT, 28), 600));
+        if (el) timers.push(window.setTimeout(() => typeInto(el, QB_TEXT, 28, timers), 600));
       } else if (behavior === "type-sh") {
         const el = root.querySelector<HTMLElement>("#tqz-sh-url");
-        if (el) timers.push(window.setTimeout(() => typeInto(el, SH_URL, 22), 800));
+        if (el) timers.push(window.setTimeout(() => typeInto(el, SH_URL, 22, timers), 800));
       } else if (behavior === "count-fb") {
         const el = root.querySelector<HTMLElement>("#tqz-fb-count");
         if (el) timers.push(window.setTimeout(() => countTo(el, 541, 1200), 1400));
@@ -77,7 +77,6 @@ export default function AnimatedBlock({
         if (sc) {
           const loop = () => {
             sc.classList.remove("tqz-visible");
-            // force reflow puis re-add pour relancer les animations
             void sc.offsetWidth;
             sc.classList.add("tqz-visible");
           };
@@ -87,36 +86,44 @@ export default function AnimatedBlock({
       }
     };
 
-    const reveal = () => {
+    const doReveal = () => {
+      if (revealed) return;
+      revealed = true;
       root.querySelectorAll(REVEAL_SELECTOR).forEach((el) => el.classList.add("tqz-visible"));
-      if (behavior === "loop-sc") return; // gere son propre cycle
       runBehavior();
     };
 
-    if (typeof IntersectionObserver === "undefined") {
-      reveal();
-      if (behavior === "loop-sc") runBehavior();
-      return;
+    // 1. Deja visible au montage ?
+    const r = root.getBoundingClientRect();
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    if (r.top < vh * 0.9 && r.bottom > 0) doReveal();
+
+    // 2. Sinon, a l'entree dans le viewport.
+    let io: IntersectionObserver | undefined;
+    if (!revealed && typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) {
+            if (e.isIntersecting) {
+              doReveal();
+              io?.disconnect();
+              break;
+            }
+          }
+        },
+        { threshold: 0, rootMargin: "0px 0px -5% 0px" },
+      );
+      io.observe(root);
     }
 
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            if (behavior === "loop-sc") runBehavior();
-            else reveal();
-            io.disconnect();
-            break;
-          }
-        }
-      },
-      { threshold: 0.15 },
-    );
-    io.observe(root);
+    // 3. Filet de securite : on revele quoi qu'il arrive.
+    const fb = window.setTimeout(doReveal, 2000);
+    timers.push(fb);
 
     return () => {
-      io.disconnect();
+      io?.disconnect();
       timers.forEach((t) => window.clearTimeout(t));
+      timers.forEach((t) => window.clearInterval(t));
       if (looper) window.clearInterval(looper);
     };
   }, [behavior]);
