@@ -120,7 +120,7 @@ type IntroImagePosition = "top" | "after_title" | "after_intro" | "bottom";
 // Mêmes 4 slots que l'intro, sur l'écran de partage : "top" (avant le
 // titre du bonus) | "after_heading" | "after_intro" | "bottom".
 type BonusImagePosition = "top" | "after_heading" | "after_intro" | "bottom";
-type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; insight_heading?: string | null; projection_heading?: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null; min_score?: number | null; max_score?: number | null };
+type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; insight_heading?: string | null; projection_heading?: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null; image_width?: number | null; min_score?: number | null; max_score?: number | null };
 type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; option_index?: number; option_indices?: number[] }[] | null; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
 type QuizData = {
   id: string; title: string; slug: string | null;
@@ -133,7 +133,7 @@ type QuizData = {
   capture_first_name: boolean | null; capture_last_name: boolean | null;
   capture_phone: boolean | null; capture_country: boolean | null;
   phone_required?: boolean | null; first_name_required?: boolean | null; last_name_required?: boolean | null; country_required?: boolean | null;
-  virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null; bonus_image_position: BonusImagePosition | null;
+  virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null; bonus_image_position: BonusImagePosition | null; bonus_image_width?: number | null;
   intro_image_url: string | null; intro_image_position: IntroImagePosition | null; intro_image_width?: number | null;
   bonus_intro_text: string | null;
   bonus_unlocked_message: string | null;
@@ -541,6 +541,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // Position de l'image bonus sur l'écran de partage. Default "top"
   // (compat avec les quiz existants qui rendaient au-dessus).
   const [bonusImagePosition, setBonusImagePosition] = useState<BonusImagePosition>("top");
+  const [bonusImageWidth, setBonusImageWidth] = useState<number | null>(null);
   // Drapeau pendant un drag pour révéler les dropzones aux autres slots.
   const [draggingBonusImage, setDraggingBonusImage] = useState(false);
   // Image dédiée à la page d'INTRO du quiz (Hugo, 19 mai 2026). Même
@@ -695,6 +696,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     bonus_unlocked_message: bonusUnlockedMessage,
     bonus_image_url: bonusImageUrl,
     bonus_image_position: bonusImagePosition,
+    bonus_image_width: bonusImageWidth,
     intro_image_url: introImageUrl,
     intro_image_position: introImagePosition,
     intro_image_width: introImageWidth,
@@ -723,7 +725,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     showConsentCheckbox, showResultsBreakdown, showOtherResults,
     metaPixelId, ga4MeasurementId, googleAdsConversionId, googleAdsConversionLabel,
     askFirstName, askGender,
-    viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl, bonusImagePosition,
+    viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl, bonusImagePosition, bonusImageWidth,
     introImageUrl, introImagePosition, introImageWidth,
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor, quizBrandLogoUrl, hideBrandLogo,
@@ -777,6 +779,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     if (typeof s.bonus_intro_text === "string") setBonusIntroText(s.bonus_intro_text);
     if (typeof s.bonus_unlocked_message === "string") setBonusUnlockedMessage(s.bonus_unlocked_message);
     if (s.bonus_image_url === null || typeof s.bonus_image_url === "string") setBonusImageUrl(s.bonus_image_url);
+    if (s.bonus_image_width === null || typeof s.bonus_image_width === "number") setBonusImageWidth(s.bonus_image_width as number | null);
     if (s.bonus_image_position === "top" || s.bonus_image_position === "after_heading" || s.bonus_image_position === "after_intro" || s.bonus_image_position === "bottom") {
       setBonusImagePosition(s.bonus_image_position);
     }
@@ -896,6 +899,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setBonusIntroText(q.bonus_intro_text ?? "");
       setBonusUnlockedMessage(q.bonus_unlocked_message ?? "");
       setBonusImageUrl(q.bonus_image_url ?? null);
+      setBonusImageWidth(q.bonus_image_width ?? null);
       setBonusImagePosition((q.bonus_image_position as BonusImagePosition | null) ?? "top");
       setIntroImageUrl(q.intro_image_url ?? null);
       setIntroImagePosition((q.intro_image_position as IntroImagePosition | null) ?? "top");
@@ -969,6 +973,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           bonus_intro_text: q.bonus_intro_text ?? "",
           bonus_unlocked_message: q.bonus_unlocked_message ?? "",
           bonus_image_url: q.bonus_image_url ?? null,
+          bonus_image_width: q.bonus_image_width ?? null,
           bonus_image_position: (q.bonus_image_position as BonusImagePosition | null) ?? "top",
           intro_image_url: q.intro_image_url ?? null,
           intro_image_position: q.intro_image_position ?? "top",
@@ -1652,6 +1657,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           bonus_unlocked_message: bonusUnlockedMessage.trim() || null,
           bonus_image_url: bonusImageUrl,
           bonus_image_position: bonusImageUrl ? bonusImagePosition : null,
+          bonus_image_width: bonusImageUrl ? bonusImageWidth : null,
           intro_image_url: introImageUrl,
           intro_image_position: introImageUrl ? introImagePosition : null,
           intro_image_width: introImageUrl ? introImageWidth : null,
@@ -1691,7 +1697,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
             // so unknown fields are passed through without validation.
             config: q.config ?? {},
           })),
-          results: editResults.map((r, i) => ({ title: r.title, description: r.description, insight: r.insight, projection: r.projection, insight_heading: r.insight_heading ?? null, projection_heading: r.projection_heading ?? null, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: r.sio_tag_name || null, sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i, image_url: r.image_url ?? null, image_position: r.image_position ?? "top", min_score: r.min_score ?? null, max_score: r.max_score ?? null })),
+          results: editResults.map((r, i) => ({ title: r.title, description: r.description, insight: r.insight, projection: r.projection, insight_heading: r.insight_heading ?? null, projection_heading: r.projection_heading ?? null, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: r.sio_tag_name || null, sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i, image_url: r.image_url ?? null, image_position: r.image_position ?? "top", image_width: r.image_width ?? null, min_score: r.min_score ?? null, max_score: r.max_score ?? null })),
         }),
       });
       const json = await res.json();
@@ -2970,6 +2976,13 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         />
                       </div>
                     )}
+                    {bonusImageUrl && (
+                      <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                        <span>Taille de l&apos;image</span>
+                        <input type="range" min={25} max={100} step={5} value={bonusImageWidth ?? 100} onChange={(e) => { const v = Number(e.target.value); setBonusImageWidth(v >= 100 ? null : v); }} className="w-40 cursor-pointer accent-primary" />
+                        <span className="w-9 text-right tabular-nums">{bonusImageWidth ?? 100}%</span>
+                      </div>
+                    )}
 
                     {/* Icône cadeau de marque — visible UNIQUEMENT s'il n'y
                         a aucune image bonus. Quand l'user pose une image,
@@ -2988,7 +3001,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         onDragStart={() => setDraggingBonusImage(true)}
                         onDragEnd={() => setDraggingBonusImage(false)}
                         onRemove={clearBonusImage}
-                        onCrop={() => bonusImageUrl && setCropTarget({ url: bonusImageUrl, apply: (u) => setBonusImageUrl(u) })} />
+                        onCrop={() => bonusImageUrl && setCropTarget({ url: bonusImageUrl, apply: (u) => setBonusImageUrl(u) })} widthPct={bonusImageWidth} />
                     )}
                     {draggingBonusImage && (bonusImagePosition ?? "top") !== "top" && (
                       <ResultPositionDropZone label={t("bonusImagePos_top")}
@@ -3005,7 +3018,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         onDragStart={() => setDraggingBonusImage(true)}
                         onDragEnd={() => setDraggingBonusImage(false)}
                         onRemove={clearBonusImage}
-                        onCrop={() => bonusImageUrl && setCropTarget({ url: bonusImageUrl, apply: (u) => setBonusImageUrl(u) })} />
+                        onCrop={() => bonusImageUrl && setCropTarget({ url: bonusImageUrl, apply: (u) => setBonusImageUrl(u) })} widthPct={bonusImageWidth} />
                     )}
                     {draggingBonusImage && bonusImagePosition !== "after_heading" && (
                       <ResultPositionDropZone label={t("bonusImagePos_after_heading")}
@@ -3022,7 +3035,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         onDragStart={() => setDraggingBonusImage(true)}
                         onDragEnd={() => setDraggingBonusImage(false)}
                         onRemove={clearBonusImage}
-                        onCrop={() => bonusImageUrl && setCropTarget({ url: bonusImageUrl, apply: (u) => setBonusImageUrl(u) })} />
+                        onCrop={() => bonusImageUrl && setCropTarget({ url: bonusImageUrl, apply: (u) => setBonusImageUrl(u) })} widthPct={bonusImageWidth} />
                     )}
                     {draggingBonusImage && bonusImagePosition !== "after_intro" && (
                       <ResultPositionDropZone label={t("bonusImagePos_after_intro")}
@@ -3122,7 +3135,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         onDragStart={() => setDraggingBonusImage(true)}
                         onDragEnd={() => setDraggingBonusImage(false)}
                         onRemove={clearBonusImage}
-                        onCrop={() => bonusImageUrl && setCropTarget({ url: bonusImageUrl, apply: (u) => setBonusImageUrl(u) })} />
+                        onCrop={() => bonusImageUrl && setCropTarget({ url: bonusImageUrl, apply: (u) => setBonusImageUrl(u) })} widthPct={bonusImageWidth} />
                     )}
                     {draggingBonusImage && bonusImagePosition !== "bottom" && (
                       <ResultPositionDropZone label={t("bonusImagePos_bottom")}
@@ -3251,6 +3264,13 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         />
                       </div>
                     )}
+                    {r.image_url && (
+                      <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                        <span>Taille de l&apos;image</span>
+                        <input type="range" min={25} max={100} step={5} value={r.image_width ?? 100} onChange={(e) => { const v = Number(e.target.value); setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_width: v >= 100 ? null : v })); }} className="w-40 cursor-pointer accent-primary" />
+                        <span className="w-9 text-right tabular-nums">{r.image_width ?? 100}%</span>
+                      </div>
+                    )}
                     {showCoverage && (
                       <div
                         className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
@@ -3292,7 +3312,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         onDragStart={() => setDraggingResultImageRi(ri)}
                         onDragEnd={() => setDraggingResultImageRi(null)}
                         onRemove={() => clearResultImage(ri)}
-                        onCrop={() => r.image_url && setCropTarget({ url: r.image_url, apply: (u) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: u })) })} />
+                        onCrop={() => r.image_url && setCropTarget({ url: r.image_url, apply: (u) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: u })) })} widthPct={r.image_width} />
                     )}
                     {draggingResultImageRi === ri && (r.image_position ?? "top") !== "top" && (
                       <ResultPositionDropZone label={t("resultImagePos_top")}
@@ -3326,7 +3346,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         onDragStart={() => setDraggingResultImageRi(ri)}
                         onDragEnd={() => setDraggingResultImageRi(null)}
                         onRemove={() => clearResultImage(ri)}
-                        onCrop={() => r.image_url && setCropTarget({ url: r.image_url, apply: (u) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: u })) })} />
+                        onCrop={() => r.image_url && setCropTarget({ url: r.image_url, apply: (u) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: u })) })} widthPct={r.image_width} />
                     )}
                     {draggingResultImageRi === ri && r.image_position !== "after_title" && (
                       <ResultPositionDropZone label={t("resultImagePos_after_title")}
@@ -3338,7 +3358,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         onDragStart={() => setDraggingResultImageRi(ri)}
                         onDragEnd={() => setDraggingResultImageRi(null)}
                         onRemove={() => clearResultImage(ri)}
-                        onCrop={() => r.image_url && setCropTarget({ url: r.image_url, apply: (u) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: u })) })} />
+                        onCrop={() => r.image_url && setCropTarget({ url: r.image_url, apply: (u) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: u })) })} widthPct={r.image_width} />
                     )}
                     {draggingResultImageRi === ri && r.image_position !== "after_description" && (
                       <ResultPositionDropZone label={t("resultImagePos_after_description")}
@@ -3370,7 +3390,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         onDragStart={() => setDraggingResultImageRi(ri)}
                         onDragEnd={() => setDraggingResultImageRi(null)}
                         onRemove={() => clearResultImage(ri)}
-                        onCrop={() => r.image_url && setCropTarget({ url: r.image_url, apply: (u) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: u })) })} />
+                        onCrop={() => r.image_url && setCropTarget({ url: r.image_url, apply: (u) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: u })) })} widthPct={r.image_width} />
                     )}
                     {draggingResultImageRi === ri && r.image_position !== "after_insight" && (
                       <ResultPositionDropZone label={t("resultImagePos_after_insight")}
@@ -3404,7 +3424,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         onDragStart={() => setDraggingResultImageRi(ri)}
                         onDragEnd={() => setDraggingResultImageRi(null)}
                         onRemove={() => clearResultImage(ri)}
-                        onCrop={() => r.image_url && setCropTarget({ url: r.image_url, apply: (u) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: u })) })} />
+                        onCrop={() => r.image_url && setCropTarget({ url: r.image_url, apply: (u) => setEditResults((p) => p.map((rr, i) => i !== ri ? rr : { ...rr, image_url: u })) })} widthPct={r.image_width} />
                     )}
                     {draggingResultImageRi === ri && r.image_position !== "bottom" && (
                       <ResultPositionDropZone label={t("resultImagePos_bottom")}

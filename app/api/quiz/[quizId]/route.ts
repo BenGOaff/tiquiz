@@ -187,7 +187,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "title", "introduction", "cta_text", "cta_url", "privacy_url",
       "consent_text", "virality_enabled", "bonus_description",
       "bonus_intro_text",
-      "share_message", "bonus_image_url", "bonus_image_position", "bonus_unlocked_message", "status", "sio_share_tag_name", "locale",
+      "share_message", "bonus_image_url", "bonus_image_position", "bonus_image_width", "bonus_unlocked_message", "status", "sio_share_tag_name", "locale",
       "ask_first_name", "ask_gender",
       "address_form", "og_image_url", "og_description", "capture_heading", "capture_subtitle", "capture_submit_text",
       "survey_thanks_heading", "survey_thanks_body",
@@ -516,6 +516,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         sort_order: number;
         image_url: string | null;
         image_position: string;
+        image_width: number | null;
         min_score: number | null;
         max_score: number | null;
       }
@@ -591,6 +592,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             const v = typeof r.image_position === "string" ? r.image_position : "top";
             return allowed.includes(v) ? v : "top";
           })(),
+          // Largeur d'affichage de l'image de resultat (%).
+          image_width: Number.isFinite(r.image_width as number) ? Math.trunc(r.image_width as number) : null,
           // Mode scoring : tranche de score (NULL en mode profil).
           min_score: Number.isFinite(r.min_score as number) ? Math.trunc(r.min_score as number) : null,
           max_score: Number.isFinite(r.max_score as number) ? Math.trunc(r.max_score as number) : null,

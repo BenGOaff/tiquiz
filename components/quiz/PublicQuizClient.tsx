@@ -74,6 +74,7 @@ type QuizResult = {
   image_position?: ResultImagePosition | null;
   // Mode "scoring" : tranche de score [min_score, max_score] (bornes
   // incluses, NULL = ouverte) qui declenche ce resultat.
+  image_width?: number | null;
   min_score?: number | null;
   max_score?: number | null;
 };
@@ -96,6 +97,7 @@ type PublicQuizData = {
   bonus_description: string | null;
   bonus_image_url: string | null;
   bonus_image_position: "top" | "after_heading" | "after_intro" | "bottom" | null;
+  bonus_image_width?: number | null;
   // Image dédiée à la PAGE D'INTRO (Hugo, 19 mai 2026). Slot logique
   // parmi top / after_title / after_intro / bottom.
   intro_image_url?: string | null;
@@ -2682,7 +2684,8 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                   <img
                     src={quiz.bonus_image_url}
                     alt=""
-                    className="w-full h-auto max-h-80 object-contain"
+                    className={`h-auto max-h-80 object-contain ${quiz.bonus_image_width ? "mx-auto block" : "w-full"}`}
+                  style={quiz.bonus_image_width ? { width: `${quiz.bonus_image_width}%` } : undefined}
                   />
                 </div>
               </div>
@@ -2847,7 +2850,8 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                 <img
                   src={quiz.bonus_image_url}
                   alt=""
-                  className="w-full h-auto max-h-80 object-contain"
+                  className={`h-auto max-h-80 object-contain ${quiz.bonus_image_width ? "mx-auto block" : "w-full"}`}
+                  style={quiz.bonus_image_width ? { width: `${quiz.bonus_image_width}%` } : undefined}
                 />
               </div>
             </div>
@@ -3082,7 +3086,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
               const slot = (resultProfile?.image_position ?? "top") as ResultImagePosition;
               return (slot === "top" && resultProfile?.image_url) ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={resultProfile.image_url} alt="" className="w-full h-auto rounded-xl" />
+                <img src={resultProfile.image_url} alt="" className={`h-auto rounded-xl ${resultProfile.image_width ? "mx-auto block" : "w-full"}`} style={resultProfile.image_width ? { width: `${resultProfile.image_width}%` } : undefined} />
               ) : null;
             })()}
             <div className="space-y-3">
@@ -3096,7 +3100,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
               const slot = (resultProfile?.image_position ?? "top") as ResultImagePosition;
               return (slot === "after_title" && resultProfile?.image_url) ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={resultProfile.image_url} alt="" className="w-full h-auto rounded-xl" />
+                <img src={resultProfile.image_url} alt="" className={`h-auto rounded-xl ${resultProfile.image_width ? "mx-auto block" : "w-full"}`} style={resultProfile.image_width ? { width: `${resultProfile.image_width}%` } : undefined} />
               ) : null;
             })()}
 
@@ -3116,7 +3120,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
               const slot = (resultProfile?.image_position ?? "top") as ResultImagePosition;
               return (slot === "after_description" && resultProfile?.image_url) ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={resultProfile.image_url} alt="" className="w-full h-auto rounded-xl" />
+                <img src={resultProfile.image_url} alt="" className={`h-auto rounded-xl ${resultProfile.image_width ? "mx-auto block" : "w-full"}`} style={resultProfile.image_width ? { width: `${resultProfile.image_width}%` } : undefined} />
               ) : null;
             })()}
 
@@ -3144,7 +3148,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
               const slot = (resultProfile?.image_position ?? "top") as ResultImagePosition;
               return (slot === "after_insight" && resultProfile?.image_url) ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={resultProfile.image_url} alt="" className="w-full h-auto rounded-xl" />
+                <img src={resultProfile.image_url} alt="" className={`h-auto rounded-xl ${resultProfile.image_width ? "mx-auto block" : "w-full"}`} style={resultProfile.image_width ? { width: `${resultProfile.image_width}%` } : undefined} />
               ) : null;
             })()}
 
@@ -3172,7 +3176,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
               const slot = (resultProfile?.image_position ?? "top") as ResultImagePosition;
               return (slot === "bottom" && resultProfile?.image_url) ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={resultProfile.image_url} alt="" className="w-full h-auto rounded-xl" />
+                <img src={resultProfile.image_url} alt="" className={`h-auto rounded-xl ${resultProfile.image_width ? "mx-auto block" : "w-full"}`} style={resultProfile.image_width ? { width: `${resultProfile.image_width}%` } : undefined} />
               ) : null;
             })()}
 
