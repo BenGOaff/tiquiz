@@ -2383,6 +2383,17 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                 </span>
               </div>
 
+              {/* Image de la question (au-dessus de l'enonce). Stockee dans
+                  quiz_questions.config.image_url. */}
+              {(() => {
+                const cfg = (q.config ?? {}) as Record<string, unknown>;
+                const imgUrl = cfg.image_url;
+                const w = typeof cfg.image_width === "number" ? cfg.image_width : null;
+                return typeof imgUrl === "string" && imgUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={imgUrl} alt="" className={`h-auto rounded-xl mb-4 ${w ? "mx-auto block" : "w-full"}`} style={w ? { width: `${w}%` } : undefined} />
+                ) : null;
+              })()}
               {/* Question = champ court — même fix typo qu'au-dessus. */}
               <h2
                 className="tiquiz-rich tiquiz-rich-inline tiquiz-quiz-question font-bold leading-tight text-center"
