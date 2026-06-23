@@ -206,7 +206,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "start_button_text",
       "result_insight_heading", "result_projection_heading",
       "sio_api_key_id",
-      "intro_image_url", "intro_image_position",
+      "intro_image_url", "intro_image_position", "intro_image_width",
     ];
 
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };

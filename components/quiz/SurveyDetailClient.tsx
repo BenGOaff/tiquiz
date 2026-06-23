@@ -413,6 +413,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // Image de COUVERTURE du sondage (réutilise intro_image_url de la table
   // quizzes ; rendue publiquement par PublicQuizClient en position "top").
   const [introImageUrl, setIntroImageUrl] = useState<string | null>(null);
+  // Largeur d'affichage de l'image de couverture en % (null = pleine largeur).
+  const [introImageWidth, setIntroImageWidth] = useState<number | null>(null);
   const [uploadingOgImage, setUploadingOgImage] = useState(false);
   const [customFooterText, setCustomFooterText] = useState("");
   const [customFooterUrl, setCustomFooterUrl] = useState("");
@@ -531,6 +533,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     og_description: ogDescription,
     og_image_url: ogImageUrl,
     intro_image_url: introImageUrl,
+    intro_image_width: introImageWidth,
     custom_footer_text: customFooterText,
     custom_footer_url: customFooterUrl,
     share_networks: shareNetworks,
@@ -547,7 +550,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     captureEnabled, showAggregateResponses,
     surveyThanksHeading, surveyThanksBody,
     slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
-    editQuestions, introImageUrl,
+    editQuestions, introImageUrl, introImageWidth,
   ]);
 
   const { savingDraft, clearDraft } = useAutosave({
@@ -603,6 +606,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.og_description === "string") setOgDescription(s.og_description);
     if (s.og_image_url === null || typeof s.og_image_url === "string") setOgImageUrl(s.og_image_url);
     if (s.intro_image_url === null || typeof s.intro_image_url === "string") setIntroImageUrl(s.intro_image_url as string | null);
+    if (s.intro_image_width === null || typeof s.intro_image_width === "number") setIntroImageWidth(s.intro_image_width as number | null);
     if (typeof s.custom_footer_text === "string") setCustomFooterText(s.custom_footer_text);
     if (typeof s.custom_footer_url === "string") setCustomFooterUrl(s.custom_footer_url);
     if (Array.isArray(s.share_networks)) setShareNetworks(s.share_networks as ShareNetwork[]);
@@ -688,6 +692,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setOgDescription(q.og_description ?? "");
       setOgImageUrl(q.og_image_url ?? null);
       setIntroImageUrl((q as { intro_image_url?: string | null }).intro_image_url ?? null);
+      setIntroImageWidth((q as { intro_image_width?: number | null }).intro_image_width ?? null);
       setCustomFooterText(q.custom_footer_text ?? "");
       setCustomFooterUrl(q.custom_footer_url ?? "");
       setShareNetworks(Array.isArray(q.share_networks) ? (q.share_networks as ShareNetwork[]) : []);
@@ -1047,6 +1052,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           // Couverture du sondage (position "top" → rendue par PublicQuizClient).
           intro_image_url: introImageUrl,
           intro_image_position: introImageUrl ? "top" : null,
+          intro_image_width: introImageUrl ? introImageWidth : null,
           share_networks: shareNetworks,
           // Custom footer — ignored server-side for free plan but we still send it
           custom_footer_text: customFooterText.trim() || null,
@@ -1740,9 +1746,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                   {/* Image de COUVERTURE du sondage (IA designée + GIF + recadrage).
                       Rendue côté visiteur par PublicQuizClient (position "top"). */}
                   {introImageUrl ? (
+                    <>
                     <div className="relative">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={introImageUrl} alt="" className="w-full h-auto rounded-xl" />
+                      <img src={introImageUrl} alt="" className={`h-auto rounded-xl ${introImageWidth ? "mx-auto block" : "w-full"}`} style={introImageWidth ? { width: `${introImageWidth}%` } : undefined} />
                       <div className="absolute top-1.5 right-1.5 flex gap-1">
                         <button
                           type="button"
@@ -1762,6 +1769,20 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                         </button>
                       </div>
                     </div>
+                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground mt-2">
+                      <span>Taille de l&apos;image</span>
+                      <input
+                        type="range"
+                        min={25}
+                        max={100}
+                        step={5}
+                        value={introImageWidth ?? 100}
+                        onChange={(e) => { const v = Number(e.target.value); setIntroImageWidth(v >= 100 ? null : v); }}
+                        className="w-40 cursor-pointer accent-primary"
+                      />
+                      <span className="w-9 text-right tabular-nums">{introImageWidth ?? 100}%</span>
+                    </div>
+                    </>
                   ) : (
                     <div className="flex flex-wrap items-center justify-center gap-2">
                       <TiquizStudioButton

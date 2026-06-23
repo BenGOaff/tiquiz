@@ -134,7 +134,7 @@ type QuizData = {
   capture_phone: boolean | null; capture_country: boolean | null;
   phone_required?: boolean | null; first_name_required?: boolean | null; last_name_required?: boolean | null; country_required?: boolean | null;
   virality_enabled: boolean; bonus_description: string | null; bonus_image_url: string | null; bonus_image_position: BonusImagePosition | null;
-  intro_image_url: string | null; intro_image_position: IntroImagePosition | null;
+  intro_image_url: string | null; intro_image_position: IntroImagePosition | null; intro_image_width?: number | null;
   bonus_intro_text: string | null;
   bonus_unlocked_message: string | null;
   share_message: string | null; locale: string | null;
@@ -297,13 +297,15 @@ function CapturePill({ label, active, locked, onToggle }: {
 // dessus et la traîne vers un des slots de position (drop-zones
 // affichées entre les sections). w-full + h-auto = ratio d'origine
 // préservé, responsive mobile/tablette sans crop.
-function ResultDraggableImage({ url, ri, onDragStart, onDragEnd, onRemove, onCrop }: {
+function ResultDraggableImage({ url, ri, onDragStart, onDragEnd, onRemove, onCrop, widthPct }: {
   url: string;
   ri: number;
   onDragStart: () => void;
   onDragEnd: () => void;
   onRemove: () => void;
   onCrop?: () => void;
+  // Largeur d'affichage en % (intro image resize). undefined = pleine largeur.
+  widthPct?: number | null;
 }) {
   const t = useTranslations("quizEditor");
   return (
@@ -319,7 +321,8 @@ function ResultDraggableImage({ url, ri, onDragStart, onDragEnd, onRemove, onCro
           onDragStart();
         }}
         onDragEnd={onDragEnd}
-        className="w-full h-auto rounded-xl cursor-grab active:cursor-grabbing select-none"
+        className={`h-auto rounded-xl cursor-grab active:cursor-grabbing select-none ${widthPct ? "mx-auto block" : "w-full"}`}
+        style={widthPct ? { width: `${widthPct}%` } : undefined}
       />
       <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
         {onCrop && (
@@ -545,6 +548,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // positions, drag-and-drop natif HTML5 dans le live preview.
   const [introImageUrl, setIntroImageUrl] = useState<string | null>(null);
   const [introImagePosition, setIntroImagePosition] = useState<IntroImagePosition>("top");
+  // Largeur d'affichage de l'image d'intro en % (null = pleine largeur).
+  const [introImageWidth, setIntroImageWidth] = useState<number | null>(null);
   const [introImageUploading, setIntroImageUploading] = useState(false);
   const [draggingIntroImage, setDraggingIntroImage] = useState(false);
   const introImageInputRef = useRef<HTMLInputElement>(null);
@@ -692,6 +697,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     bonus_image_position: bonusImagePosition,
     intro_image_url: introImageUrl,
     intro_image_position: introImagePosition,
+    intro_image_width: introImageWidth,
     share_message: shareMessage,
     locale,
     sio_share_tag_name: sioShareTagName,
@@ -718,7 +724,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     metaPixelId, ga4MeasurementId, googleAdsConversionId, googleAdsConversionLabel,
     askFirstName, askGender,
     viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl, bonusImagePosition,
-    introImageUrl, introImagePosition,
+    introImageUrl, introImagePosition, introImageWidth,
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor, quizBrandLogoUrl, hideBrandLogo,
     slug, ogDescription, ogImageUrl, customFooterText, customFooterUrl, shareNetworks,
@@ -778,6 +784,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     if (s.intro_image_position === "top" || s.intro_image_position === "after_title" || s.intro_image_position === "after_intro" || s.intro_image_position === "bottom") {
       setIntroImagePosition(s.intro_image_position);
     }
+    if (s.intro_image_width === null || typeof s.intro_image_width === "number") setIntroImageWidth(s.intro_image_width as number | null);
     if (typeof s.share_message === "string") setShareMessage(s.share_message);
     if (typeof s.locale === "string") setLocale(s.locale);
     if (typeof s.sio_share_tag_name === "string") setSioShareTagName(s.sio_share_tag_name);
@@ -892,6 +899,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setBonusImagePosition((q.bonus_image_position as BonusImagePosition | null) ?? "top");
       setIntroImageUrl(q.intro_image_url ?? null);
       setIntroImagePosition((q.intro_image_position as IntroImagePosition | null) ?? "top");
+      setIntroImageWidth(q.intro_image_width ?? null);
       setOgImageUrl(q.og_image_url ?? null);
       setShareMessage(q.share_message ?? ""); setLocale(q.locale ?? "");
       setSioShareTagName(q.sio_share_tag_name ?? ""); setStatus(q.status);
@@ -964,6 +972,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           bonus_image_position: (q.bonus_image_position as BonusImagePosition | null) ?? "top",
           intro_image_url: q.intro_image_url ?? null,
           intro_image_position: q.intro_image_position ?? "top",
+          intro_image_width: q.intro_image_width ?? null,
           share_message: q.share_message ?? "",
           locale: q.locale ?? "",
           sio_share_tag_name: q.sio_share_tag_name ?? "",
@@ -1615,6 +1624,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           bonus_image_position: bonusImageUrl ? bonusImagePosition : null,
           intro_image_url: introImageUrl,
           intro_image_position: introImageUrl ? introImagePosition : null,
+          intro_image_width: introImageUrl ? introImageWidth : null,
           share_message: shareMessage, locale: locale || null,
           sio_share_tag_name: sioShareTagName || null, status,
           // Branding
@@ -2558,6 +2568,24 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       />
                     </div>
                   )}
+                  {/* Largeur de l'image d'intro (agrandir / retrecir). 100% =
+                      pleine largeur (defaut). Drame Christelle : impossible de
+                      redimensionner le GIF d'intro. */}
+                  {introImageUrl && (
+                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                      <span>Taille de l&apos;image</span>
+                      <input
+                        type="range"
+                        min={25}
+                        max={100}
+                        step={5}
+                        value={introImageWidth ?? 100}
+                        onChange={(e) => { const v = Number(e.target.value); setIntroImageWidth(v >= 100 ? null : v); }}
+                        className="w-40 cursor-pointer accent-primary"
+                      />
+                      <span className="w-9 text-right tabular-nums">{introImageWidth ?? 100}%</span>
+                    </div>
+                  )}
 
                   {effectiveLogoUrl && (
                     <div className="flex justify-center">
@@ -2572,7 +2600,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
                       onRemove={clearIntroImage}
-                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} />
+                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} widthPct={introImageWidth} />
                   )}
                   {draggingIntroImage && (introImagePosition ?? "top") !== "top" && (
                     <ResultPositionDropZone label={t("introImagePos_top")}
@@ -2587,7 +2615,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
                       onRemove={clearIntroImage}
-                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} />
+                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} widthPct={introImageWidth} />
                   )}
                   {draggingIntroImage && introImagePosition !== "after_title" && (
                     <ResultPositionDropZone label={t("introImagePos_after_title")}
@@ -2602,7 +2630,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
                       onRemove={clearIntroImage}
-                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} />
+                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} widthPct={introImageWidth} />
                   )}
                   {draggingIntroImage && introImagePosition !== "after_intro" && (
                     <ResultPositionDropZone label={t("introImagePos_after_intro")}
@@ -2627,7 +2655,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
                       onRemove={clearIntroImage}
-                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} />
+                      onCrop={() => introImageUrl && setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })} widthPct={introImageWidth} />
                   )}
                   {draggingIntroImage && introImagePosition !== "bottom" && (
                     <ResultPositionDropZone label={t("introImagePos_bottom")}
