@@ -70,7 +70,8 @@ export async function POST(req: NextRequest) {
     // Surveys reuse the quizzes table (mode='survey'). The free-plan cap is
     // ONE PER MODE — i.e. a free creator can run 1 quiz and 1 sondage in
     // parallel (previously: 1 total, which forced an unwanted choice).
-    const mode = body.mode === "survey" ? "survey" : "quiz";
+    const mode =
+      body.mode === "survey" ? "survey" : body.mode === "scoring" ? "scoring" : "quiz";
     const isSurvey = mode === "survey";
 
     const { data: profile } = await supabase
@@ -204,6 +205,9 @@ export async function POST(req: NextRequest) {
           sio_course_id: r.sio_course_id ?? null,
           sio_community_id: r.sio_community_id ?? null,
           sort_order: i,
+          // Mode scoring : tranche de score (NULL en mode profil).
+          min_score: Number.isFinite(r.min_score as number) ? Math.trunc(r.min_score as number) : null,
+          max_score: Number.isFinite(r.max_score as number) ? Math.trunc(r.max_score as number) : null,
         })),
       );
       if (rErr) {

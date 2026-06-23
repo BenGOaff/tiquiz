@@ -335,26 +335,44 @@ export default function QuizFormClient() {
   const [activeTab, setActiveTab] = useState("ai");
 
   // Create empty quiz and redirect to WYSIWYG editor
-  async function handleCreateManual() {
+  async function handleCreateManual(mode?: "scoring") {
     setCreatingManual(true);
     try {
+      // Mode "scoring" (vrai quiz note) : chaque question a une bonne
+      // reponse (points: 1) et les resultats sont des tranches de score.
+      const scoringBody = {
+        title: t("defaultQuizTitle"),
+        locale: "fr",
+        mode: "scoring",
+        questions: [
+          { question_text: "", options: [{ text: "", result_index: 0, points: 1 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }] },
+          { question_text: "", options: [{ text: "", result_index: 0, points: 1 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }] },
+          { question_text: "", options: [{ text: "", result_index: 0, points: 1 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }] },
+        ],
+        results: [
+          { title: t("result1Default"), description: null, min_score: 0, max_score: 1 },
+          { title: t("result2Default"), description: null, min_score: 2, max_score: 2 },
+          { title: t("result3Default"), description: null, min_score: 3, max_score: 3 },
+        ],
+      };
+      const profileBody = {
+        title: t("defaultQuizTitle"),
+        locale: "fr",
+        questions: [
+          { question_text: "", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }] },
+          { question_text: "", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }] },
+          { question_text: "", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }] },
+        ],
+        results: [
+          { title: t("result1Default"), description: null },
+          { title: t("result2Default"), description: null },
+          { title: t("result3Default"), description: null },
+        ],
+      };
       const res = await fetch("/api/quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: t("defaultQuizTitle"),
-          locale: "fr",
-          questions: [
-            { question_text: "", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }] },
-            { question_text: "", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }] },
-            { question_text: "", options: [{ text: "", result_index: 0 }, { text: "", result_index: 1 }, { text: "", result_index: 2 }, { text: "", result_index: 0 }] },
-          ],
-          results: [
-            { title: t("result1Default"), description: null },
-            { title: t("result2Default"), description: null },
-            { title: t("result3Default"), description: null },
-          ],
-        }),
+        body: JSON.stringify(mode === "scoring" ? scoringBody : profileBody),
       });
       const data = await res.json();
       if (data.ok && data.quizId) {
@@ -988,6 +1006,10 @@ export default function QuizFormClient() {
               <FileText className="h-4 w-4" />
               {creatingManual ? <Loader2 className="h-4 w-4 animate-spin" /> : t("tabManual")}
             </TabsTrigger>
+            <TabsTrigger value="scoring" className="gap-1.5 px-4 py-2" onClick={(e) => { e.preventDefault(); handleCreateManual("scoring"); }}>
+              <Award className="h-4 w-4" />
+              Quiz noté
+            </TabsTrigger>
             <TabsTrigger value="ai" className="gap-1.5 px-4 py-2">
               <Sparkles className="h-4 w-4" />
               {t("tabAI")}
@@ -1001,7 +1023,7 @@ export default function QuizFormClient() {
       </div>
 
       {/* MANUAL TAB — creates quiz and redirects to WYSIWYG editor */}
-      {activeTab === "manual" && (
+      {(activeTab === "manual" || activeTab === "scoring") && (
         <div className="flex items-center justify-center min-h-[40vh]">
           <div className="text-center space-y-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />

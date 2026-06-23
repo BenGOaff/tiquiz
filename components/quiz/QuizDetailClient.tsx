@@ -99,7 +99,7 @@ import {
 } from "@/lib/quizBranding";
 
 // Types
-type QuizOption = { text: string; result_index: number; image_url?: string | null };
+type QuizOption = { text: string; result_index: number; image_url?: string | null; points?: number | null };
 type QuizQuestion = {
   id?: string;
   question_text: string;
@@ -120,7 +120,7 @@ type IntroImagePosition = "top" | "after_title" | "after_intro" | "bottom";
 // Mêmes 4 slots que l'intro, sur l'écran de partage : "top" (avant le
 // titre du bonus) | "after_heading" | "after_intro" | "bottom".
 type BonusImagePosition = "top" | "after_heading" | "after_intro" | "bottom";
-type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; insight_heading?: string | null; projection_heading?: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null };
+type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; insight_heading?: string | null; projection_heading?: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null; min_score?: number | null; max_score?: number | null };
 type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; option_index?: number; option_indices?: number[] }[] | null; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
 type QuizData = {
   id: string; title: string; slug: string | null;
@@ -147,6 +147,9 @@ type QuizData = {
   status: string; views_count: number; starts_count: number;
   completions_count: number; shares_count: number;
   questions: QuizQuestion[]; results: QuizResult[];
+  // 'quiz' (par profil) | 'scoring' (vrai quiz note). 'survey' part sur
+  // SurveyDetailClient, donc jamais ici.
+  mode?: string | null;
 };
 type ProfileBrand = {
   brand_font: string | null; brand_color_primary: string | null; brand_logo_url: string | null;
@@ -467,6 +470,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
 
   const [loading, setLoading] = useState(true);
   const [quiz, setQuiz] = useState<QuizData | null>(null);
+  // Mode "scoring" : vrai quiz note (points par option + tranches de score).
+  const isScoring = quiz?.mode === "scoring";
   const [leads, setLeads] = useState<QuizLead[]>([]);
 
   // Form state
@@ -1635,6 +1640,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               text: o.text,
               result_index: o.result_index,
               ...(o.image_url ? { image_url: o.image_url } : {}),
+              // Mode scoring : points de l'option (bonne reponse = 1).
+              ...(o.points != null ? { points: o.points } : {}),
             })),
             sort_order: i,
             // Per-question config (multi_select, future knobs). The API
@@ -1642,7 +1649,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
             // so unknown fields are passed through without validation.
             config: q.config ?? {},
           })),
-          results: editResults.map((r, i) => ({ title: r.title, description: r.description, insight: r.insight, projection: r.projection, insight_heading: r.insight_heading ?? null, projection_heading: r.projection_heading ?? null, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: r.sio_tag_name || null, sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i, image_url: r.image_url ?? null, image_position: r.image_position ?? "top" })),
+          results: editResults.map((r, i) => ({ title: r.title, description: r.description, insight: r.insight, projection: r.projection, insight_heading: r.insight_heading ?? null, projection_heading: r.projection_heading ?? null, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: r.sio_tag_name || null, sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i, image_url: r.image_url ?? null, image_position: r.image_position ?? "top", min_score: r.min_score ?? null, max_score: r.max_score ?? null })),
         }),
       });
       const json = await res.json();
@@ -1799,6 +1806,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const updateQ = (i: number, v: string) => setEditQuestions(p => p.map((q, qi) => qi === i ? { ...q, question_text: v } : q));
   const updateOpt = (qi: number, oi: number, v: string) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, text: v } : o) }));
   const updateOptResult = (qi: number, oi: number, ri: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, result_index: ri } : o) }));
+  // Mode scoring : points portes par l'option (bonne reponse = 1 par defaut).
+  const updateOptPoints = (qi: number, oi: number, pts: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, points: pts } : o) }));
   const addOpt = (qi: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: [...q.options, { text: "", result_index: 0 }] }));
   const removeOpt = (qi: number, oi: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.filter((_, j) => j !== oi) }));
   // Gwenn (2026-05-14) : "noter dans l'ordre, puis mélanger". Le bouton
@@ -2699,12 +2708,38 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                                 </label>
                               )}
                               <RichTextEdit value={opt.text} onChange={(v) => updateOpt(qi, oi, v)} onGenderize={genderize} onAIRewrite={aiRewriteOption} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-base font-medium" placeholder={t("previewOptionPh", { n: oi + 1 })} />
-                              <div className="flex items-center gap-1.5 mt-2">
-                                <span className="text-xs" style={{ color: `${pc}99` }}>{t("previewPointFor")}</span>
-                                <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
-                                  {editResults.map((_, ri) => <option key={ri} value={ri}>{t("previewResult", { n: ri + 1 })}</option>)}
-                                </select>
-                              </div>
+                              {isScoring ? (
+                                <div className="flex items-center gap-3 mt-2 flex-wrap">
+                                  <label className="flex items-center gap-1.5 text-xs cursor-pointer font-medium" style={{ color: pc }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={(opt.points ?? 0) > 0}
+                                      onChange={(e) => updateOptPoints(qi, oi, e.target.checked ? 1 : 0)}
+                                      className="cursor-pointer accent-current"
+                                    />
+                                    Bonne réponse
+                                  </label>
+                                  {(opt.points ?? 0) > 0 && (
+                                    <label className="flex items-center gap-1 text-xs" style={{ color: `${pc}99` }}>
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        value={opt.points ?? 1}
+                                        onChange={(e) => updateOptPoints(qi, oi, Math.max(0, Math.trunc(Number(e.target.value) || 0)))}
+                                        className="w-14 text-xs border rounded px-1.5 py-0.5 bg-background"
+                                      />
+                                      points
+                                    </label>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 mt-2">
+                                  <span className="text-xs" style={{ color: `${pc}99` }}>{t("previewPointFor")}</span>
+                                  <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
+                                    {editResults.map((_, ri) => <option key={ri} value={ri}>{t("previewResult", { n: ri + 1 })}</option>)}
+                                  </select>
+                                </div>
+                              )}
                               {/* Gwenn (2026-05-14) : remontée d'option pour fine-tune
                                   l'ordre d'affichage après un Mélanger global, sans
                                   toucher au result_index porté par chaque option. */}
@@ -3169,6 +3204,28 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     {draggingResultImageRi === ri && (r.image_position ?? "top") !== "top" && (
                       <ResultPositionDropZone label={t("resultImagePos_top")}
                         onDrop={() => { updateResultImagePosition(ri, "top"); setDraggingResultImageRi(null); }} />
+                    )}
+                    {isScoring && (
+                      <div className="flex items-center gap-2 mb-3 flex-wrap text-xs">
+                        <span className="font-semibold" style={{ color: pc }}>Tranche de score :</span>
+                        <span className="text-muted-foreground">de</span>
+                        <input
+                          type="number"
+                          value={r.min_score ?? ""}
+                          onChange={(e) => updateR(ri, "min_score", e.target.value === "" ? null : Math.trunc(Number(e.target.value)))}
+                          className="w-16 text-sm border rounded px-1.5 py-0.5 bg-background"
+                          placeholder="0"
+                        />
+                        <span className="text-muted-foreground">à</span>
+                        <input
+                          type="number"
+                          value={r.max_score ?? ""}
+                          onChange={(e) => updateR(ri, "max_score", e.target.value === "" ? null : Math.trunc(Number(e.target.value)))}
+                          className="w-16 text-sm border rounded px-1.5 py-0.5 bg-background"
+                          placeholder="max"
+                        />
+                        <span className="text-muted-foreground">points</span>
+                      </div>
                     )}
                     <RichTextEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} onAIRewrite={aiRewriteResultTitle} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="tiquiz-quiz-result-title font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
                     {r.image_url && r.image_position === "after_title" && (
