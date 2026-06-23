@@ -406,6 +406,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
                 if (Number.isFinite(Number(o?.points))) {
                   cleaned.points = Math.trunc(Number(o.points));
                 }
+                // Largeur d'affichage de l'image de reponse (%).
+                if (Number.isFinite(Number(o?.image_width))) {
+                  cleaned.image_width = Math.trunc(Number(o.image_width));
+                }
                 return cleaned;
               })
             : [],
