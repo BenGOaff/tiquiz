@@ -729,6 +729,7 @@
     "autoStep1Title": "Cria as tuas tags no Systeme.io antes de criares o teu quiz",
     "autoStep1P1": "No Systeme.io > Contactos > Tags, cria uma tag por resultado de quiz que queres poder automatizar. Exemplos: quiz-visionario, quiz-estrategico, quiz-partilha (para os participantes que partilham).",
     "autoStep1P2": "Depois, ao criar o teu quiz no Tiquiz, associa estas tags a cada um dos teus resultados no separador Systeme.io do quiz.",
+    "autoSurveyNote": "Estás a criar um questionário? Os questionários não têm resultados: existe um único tag, que defines no formulário de contacto do questionário (campo « Tag dos leads »). É aplicado a todas as pessoas que respondem. Os passos 2 e 3 funcionam da mesma forma.",
     "autoStep2Title": "Cria uma automatização no Systeme.io",
     "autoStep2P1": "No Systeme.io > Automatizações > Regras, clica em Criar uma regra.",
     "autoStep2Trigger": "Despoletador: «Tag adicionada a um contacto» → escolhe a tua tag (ex.: quiz-visionario)",
@@ -1290,7 +1291,7 @@
     "ariaCropImage": "Recortar imagem",
     "ariaRemoveImage": "Remover imagem",
     "surveyLeadTagLabel": "Tag dos leads (opcional)",
-    "surveyLeadTagHint": "Aplica esta tag no Systeme.io quando alguém responde ao questionário."
+    "surveyLeadTagHint": "Os questionários não têm resultados: este tag único é aplicado a todas as pessoas que respondem. Usa-o para acionar uma automatização no Systeme.io."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova palavra-passe",

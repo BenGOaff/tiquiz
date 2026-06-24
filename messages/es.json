@@ -729,6 +729,7 @@
     "autoStep1Title": "Crea tus etiquetas en Systeme.io antes de crear tu quiz",
     "autoStep1P1": "En Systeme.io > Contactos > Etiquetas, crea una etiqueta por cada resultado de quiz que quieras automatizar. Ejemplos: quiz-visionario, quiz-estratega, quiz-compartir (para los participantes que comparten).",
     "autoStep1P2": "Después, al crear tu quiz en Tiquiz, asocia estas etiquetas a cada uno de tus resultados desde la pestaña Systeme.io.",
+    "autoSurveyNote": "¿Haces una encuesta? Las encuestas no tienen resultados: hay una sola etiqueta, que defines en el formulario de contacto de la encuesta (campo « Etiqueta de leads »). Se aplica a todas las personas que responden. Los pasos 2 y 3 funcionan igual.",
     "autoStep2Title": "Crea una automatización en Systeme.io",
     "autoStep2P1": "En Systeme.io > Automatizaciones > Reglas, haz clic en Crear una regla.",
     "autoStep2Trigger": "Disparador: «Etiqueta añadida a un contacto» → elige tu etiqueta (p. ej. quiz-visionario)",
@@ -1290,7 +1291,7 @@
     "ariaCropImage": "Recortar imagen",
     "ariaRemoveImage": "Quitar imagen",
     "surveyLeadTagLabel": "Etiqueta de leads (opcional)",
-    "surveyLeadTagHint": "Aplica esta etiqueta en Systeme.io cuando alguien responde la encuesta."
+    "surveyLeadTagHint": "Las encuestas no tienen resultados: esta única etiqueta se aplica a todas las personas que responden. Úsala para activar una automatización en Systeme.io."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nueva contraseña",

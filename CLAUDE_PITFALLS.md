@@ -1192,3 +1192,19 @@ UI abonnement (même date) : toggle Mensuel/Annuel (parité page de vente,
 "2 mois offerts"), badges inline "−17%"/"+" supprimés, noms alignés sur
 la page de vente (Mensuel/Annuel/Mensuel Plus/Annuel Plus, CTA "Accès
 X"), sous-titre "sans engagement". Toggle caché pour lifetime/beta.
+
+---
+
+## Tags sondages — bien les EXPLIQUER (24 juin 2026)
+
+Le tag de capture sondage (`quizzes.sio_capture_tag`, migration
+`20260616`) était fonctionnel mais sous-expliqué : un user s'y perdait.
+Rappel de la logique à garder cohérente partout :
+- Quiz = 1 tag par RÉSULTAT (`quiz_results.sio_tag_name`).
+- Sondage = pas de résultat → 1 tag UNIQUE, dans le formulaire de contact
+  (`SurveyDetailClient`, visible quand capture activée).
+
+Le tuto Réglages > Systeme.io ne parlait QUE des tags par résultat →
+ajout d'une note "sondage" après l'étape 1 (`settings.autoSurveyNote`) +
+hint enrichi (`surveyLeadTagHint`). Si on retouche ce tuto, garder le cas
+sondage visible : c'est le point qui perdait les users.
