@@ -55,7 +55,9 @@ export async function GET(
     return NextResponse.json({ ok: true, title: quiz.title, ...aggregate });
   }
 
-  if (format === "csv") {
+  // Export brut par répondant : CSV ou Excel (.xlsx). Même matrice, deux
+  // sérialisations → une seule source de vérité (fini les divergences).
+  if (format === "csv" || format === "xlsx") {
     const locale = (quiz as { locale?: string | null }).locale ?? "fr";
 
     // Les réponses sont indexées par question_index = position 0-based dans
@@ -70,12 +72,13 @@ export async function GET(
 
     const { data: leads } = await supabaseAdmin
       .from("quiz_leads")
-      .select("created_at, email, first_name, last_name, phone, country, answers")
+      .select("created_at, email, first_name, last_name, phone, country, flagged, answers")
       .eq("quiz_id", quizId)
       .order("created_at", { ascending: true });
 
     // Identité du répondant EN PREMIER (la demande #1 : savoir qui a répondu
-    // quoi), puis une colonne par question avec le VRAI libellé de réponse.
+    // quoi) + colonne "Marqué", puis une colonne par question avec le VRAI
+    // libellé de réponse.
     const headers = [
       "Date",
       "Email",
@@ -83,6 +86,7 @@ export async function GET(
       "Nom",
       "Téléphone",
       "Pays",
+      "Marqué",
       ...questions.map((q) => stripHtml(String(q.question_text ?? "")).trim() || "Question"),
     ];
     const rows: string[][] = [];
@@ -95,6 +99,7 @@ export async function GET(
         last_name?: string | null;
         phone?: string | null;
         country?: string | null;
+        flagged?: boolean | null;
         answers?: SurveyAnswerLike[] | null;
       };
       const byQ = indexAnswers(l.answers);
@@ -105,19 +110,40 @@ export async function GET(
         l.last_name ?? "",
         l.phone ?? "",
         l.country ?? "",
+        l.flagged ? "Oui" : "",
         ...questions.map((q, qi) => formatSurveyAnswer(q, byQ.get(qi), locale)),
-      ].map(escapeCsv));
+      ]);
     }
 
-    const csv = [headers.map(escapeCsv).join(","), ...rows.map((r) => r.join(","))].join("\n");
-    const bom = "﻿";
     const safeTitle = String(quiz.title ?? "sondage").replace(/[^a-z0-9]+/gi, "-").slice(0, 40);
+    const stamp = new Date().toISOString().slice(0, 10);
 
+    if (format === "xlsx") {
+      // SheetJS : colonnes prêtes, pas de conversion côté user.
+      const XLSX = await import("xlsx");
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      // Largeurs de colonnes lisibles (identité fine, réponses larges).
+      ws["!cols"] = headers.map((h, i) => ({ wch: i < 7 ? Math.max(10, h.length + 2) : 32 }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Réponses");
+      const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
+      return new NextResponse(new Uint8Array(buf), {
+        status: 200,
+        headers: {
+          "Content-Type":
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "Content-Disposition": `attachment; filename="${safeTitle}-${stamp}.xlsx"`,
+        },
+      });
+    }
+
+    const csv = [headers.map(escapeCsv).join(","), ...rows.map((r) => r.map(escapeCsv).join(","))].join("\n");
+    const bom = "﻿";
     return new NextResponse(bom + csv, {
       status: 200,
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="${safeTitle}-${new Date().toISOString().slice(0, 10)}.csv"`,
+        "Content-Disposition": `attachment; filename="${safeTitle}-${stamp}.csv"`,
       },
     });
   }

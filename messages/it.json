@@ -1505,7 +1505,11 @@
     "responsesAnonymous": "Anonimo",
     "colRespondent": "Rispondente",
     "colDate": "Data",
-    "exportCsv": "Esporta CSV"
+    "exportCsv": "Esporta CSV",
+    "responsesFlaggedOnly": "Contrassegnati",
+    "exportExcel": "Esporta Excel",
+    "flagAction": "Contrassegna questo rispondente",
+    "unflagAction": "Rimuovi contrassegno"
   },
   "projects": {
     "title": "I miei progetti",

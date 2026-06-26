@@ -1255,3 +1255,21 @@ retirer ces garde-fous.
 - `lib/survey/analysis.ts` (aggregateSurvey + prompt)
 - `app/api/quiz/[quizId]/survey-results/route.ts` (CSV)
 - `components/quiz/SurveyResponsesTable.tsx` + branchement SurveyDetailClient
+
+### Exports sondage + marquage (suite, 26 juin 2026)
+
+- **Marquage** : colonne `quiz_leads.flagged` (migration
+  `20260626_survey_lead_flagged.sql`). Toggle étoile dans
+  SurveyResponsesTable → POST `/api/quiz/[quizId]/survey-flag`
+  {leadId, flagged} (owner-scoped). State `leads` mis à jour côté
+  SurveyDetailClient (optimiste + revert) → tableau ET PDF reflètent.
+  Filtre "Marqués" + colonne "Marqué" dans tous les exports.
+- **Excel** : `?format=xlsx` sur la route survey-results, MÊME matrice que
+  le CSV (lib `xlsx`/SheetJS, déjà présente Tipote, ajoutée Tiquiz).
+  Body NextResponse = `new Uint8Array(buf)` (un Buffer brut n'est PAS un
+  BodyInit valide → erreur TS).
+- **PDF** : `renderSurveyPdf` accepte `respondents` (optionnel) → section
+  "Détail des répondants" (qui a répondu quoi). Construit côté client dans
+  SurveyResultsPanel via formatSurveyAnswer. pdfReport.ts est IDENTIQUE
+  Tiquiz/Tipote → modifier les deux à l'identique.
+- Pas de glyphe étoile dans le PDF (encodage helvetica) : préfixe "* ".
