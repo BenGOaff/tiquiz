@@ -1496,7 +1496,16 @@
     "trendAverage": "Promedio",
     "trendResponseCount": "respuestas",
     "yesLabel": "Sí",
-    "noLabel": "No"
+    "noLabel": "No",
+    "viewSummary": "Resumen",
+    "viewResponses": "Respuestas",
+    "responsesEmpty": "Aún no hay respuestas.",
+    "responsesSearchPlaceholder": "Busca un encuestado o una respuesta…",
+    "responsesNoMatch": "Sin resultados para esta búsqueda.",
+    "responsesAnonymous": "Anónimo",
+    "colRespondent": "Encuestado",
+    "colDate": "Fecha",
+    "exportCsv": "Exportar CSV"
   },
   "projects": {
     "title": "Mis proyectos",

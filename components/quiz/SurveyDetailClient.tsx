@@ -20,6 +20,7 @@ import { GifPickerButton } from "@/components/quiz/GifPicker";
 import { ImageCropDialog } from "@/components/quiz/ImageCropDialog";
 import { TiquizStudioButton } from "@/components/visual-studio/TiquizStudioButton";
 import { SurveyTrends } from "@/components/quiz/SurveyTrends";
+import { SurveyResponsesTable } from "@/components/quiz/SurveyResponsesTable";
 import SurveyResultsPanel from "@/components/quiz/SurveyResultsPanel";
 import { ReadinessRing } from "@/components/ui/readiness-ring";
 import { computeReadiness } from "@/lib/quiz-readiness";
@@ -333,6 +334,7 @@ function SortableSidebarQuestion({ id, index, label, onClick, onRemove, canDelet
 // Main component
 export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) {
   const t = useTranslations("quizEditor");
+  const st = useTranslations("survey");
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -401,6 +403,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
   // Editor state
   const [mainTab, setMainTab] = useState<"create" | "share" | "trends">("create");
+  // Sous-vue de l'onglet Tendances : agrégat (Synthèse) ou tableau par
+  // répondant (Réponses, style Typeform / Tally).
+  const [trendsView, setTrendsView] = useState<"summary" | "responses">("summary");
   const [leftTab, setLeftTab] = useState<"edition" | "design" | "settings">("edition");
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [primaryColor, setPrimaryColor] = useState<string>(DEFAULT_BRAND_COLOR_PRIMARY);
@@ -2436,16 +2441,39 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       {mainTab === "trends" && (
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-5xl mx-auto">
-            <SurveyTrends
-              questions={editQuestions}
-              leads={leads.map((l) => ({
-                id: l.id,
-                email: l.email,
-                first_name: l.first_name,
-                answers: l.answers,
-                created_at: l.created_at,
-              }))}
-            />
+            {/* Sous-toggle Synthèse | Réponses (pattern Typeform : Summary /
+                Responses sous l'onglet Résultats). */}
+            <div className="inline-flex items-center bg-muted rounded-lg p-0.5 mb-4">
+              {(["summary", "responses"] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setTrendsView(v)}
+                  className={`px-3.5 py-1.5 rounded-md text-sm font-medium transition-colors ${trendsView === v ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  {v === "summary" ? st("viewSummary") : st("viewResponses")}
+                </button>
+              ))}
+            </div>
+
+            {trendsView === "summary" ? (
+              <SurveyTrends
+                questions={editQuestions}
+                leads={leads.map((l) => ({
+                  id: l.id,
+                  email: l.email,
+                  first_name: l.first_name,
+                  answers: l.answers,
+                  created_at: l.created_at,
+                }))}
+              />
+            ) : (
+              <SurveyResponsesTable
+                quizId={quizId}
+                questions={editQuestions}
+                leads={leads}
+                locale={locale}
+              />
+            )}
 
             {/* Export (CSV/PDF) + analyse IA des résultats du sondage. */}
             <div className="mt-6">

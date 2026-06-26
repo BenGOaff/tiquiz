@@ -1208,3 +1208,50 @@ Le tuto Réglages > Systeme.io ne parlait QUE des tags par résultat →
 ajout d'une note "sondage" après l'étape 1 (`settings.autoSurveyNote`) +
 hint enrichi (`surveyLeadTagHint`). Si on retouche ce tuto, garder le cas
 sondage visible : c'est le point qui perdait les users.
+
+## AI) RÉPONSES SONDAGE — formateur type-aware OBLIGATOIRE (drame Béné 26 juin 2026)
+
+Trois bugs simultanés sur les sondages, tous issus d'une lecture des
+réponses AVEUGLE au `question_type` :
+1. Export CSV anonyme (ne sélectionnait que `created_at, answers`) → Béné
+   ne pouvait pas savoir QUI a donné QUELLE réponse (cas : récompenser les
+   bonnes réponses).
+2. Export affichait `Option 1` au lieu de `Oui`. Les questions `yes_no` ne
+   stockent AUCUNE option en base (Oui/Non rendu depuis la locale dans
+   PublicQuizClient via `t.yesLabel/noLabel`). Lire `options[idx].text`
+   renvoyait vide → fallback `Option N`.
+3. Analyse IA "personne n'a répondu" : `aggregateSurvey` construisait les
+   compteurs depuis `q.options` → `yes_no` (options vides) = AUCUN chiffre
+   envoyé à Claude → il croyait la question vide. Et le texte libre
+   n'envoyait que 10 exemples sans le total → "10 sur 25" halluciné.
+
+**Source de vérité unique : `lib/survey/format.ts`**
+- `formatSurveyAnswer(question, answer, locale)` : SEUL endroit qui
+  transforme une réponse brute en libellé. yes_no → Oui/Non localisé,
+  rating/stars → nombre, free_text → texte, choix → `options[i].text`.
+- `localizedYesNo(locale)`, `isAnswered(answer)`, `indexAnswers(answers)`.
+- TOUTE nouvelle UI/export qui affiche des réponses DOIT passer par ce
+  helper. Ne JAMAIS relire `options[idx]` à la main pour un yes_no.
+
+**Modèle de données** (rappel) : réponses dans `quiz_leads.answers`
+(JSONB array `{question_index, option_index?|option_indices?|rating?|
+stars?|text?}`), sur la MÊME ligne que l'identité (email/prénom/nom/
+téléphone). `question_index` = position 0-based dans l'ordre `sort_order`
+(= index tableau, comme PublicQuizClient + SurveyTrends). NE PAS keyer sur
+`sort_order` brut.
+
+**Agrégat IA** : `aggregateSurvey` calcule `answeredCount` par question, et
+les `%` sont sur les répondants à CETTE question (somme = 100% en choix
+unique). Le prompt affiche `[N/T ont répondu]` + le total des réponses
+libres → garde-fous anti "question vide" / anti "X sur Y". Ne pas
+retirer ces garde-fous.
+
+**Vue "Réponses"** : `components/quiz/SurveyResponsesTable.tsx`, sous-onglet
+`Synthèse | Réponses` dans l'onglet Tendances (pattern Typeform/Tally).
+1 ligne = 1 répondant (identité + réponses), recherche + export CSV.
+
+**Endroits à garder synchrones (Tiquiz ET Tipote)** :
+- `lib/survey/format.ts` (helper partagé)
+- `lib/survey/analysis.ts` (aggregateSurvey + prompt)
+- `app/api/quiz/[quizId]/survey-results/route.ts` (CSV)
+- `components/quiz/SurveyResponsesTable.tsx` + branchement SurveyDetailClient

@@ -1484,7 +1484,16 @@
     "trendAverage": "المتوسط",
     "trendResponseCount": "إجابة",
     "yesLabel": "نعم",
-    "noLabel": "لا"
+    "noLabel": "لا",
+    "viewSummary": "ملخص",
+    "viewResponses": "الردود",
+    "responsesEmpty": "لا توجد ردود بعد.",
+    "responsesSearchPlaceholder": "ابحث عن مشارك أو إجابة…",
+    "responsesNoMatch": "لا نتائج لهذا البحث.",
+    "responsesAnonymous": "مجهول",
+    "colRespondent": "المشارك",
+    "colDate": "التاريخ",
+    "exportCsv": "تصدير CSV"
   },
   "projects": {
     "title": "مشاريعي",
