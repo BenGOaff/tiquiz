@@ -45,11 +45,20 @@ export const OFFER_TO_PLAN: Record<string, TiquizPlan> = {
  * protocole, sans www., sans trailing slash, sans query string, lowercase.
  */
 export const URL_TO_PLAN: Record<string, TiquizPlan> = {
+  // Tunnels PERSO de Béné (sans commission affiliée).
   "tipote.fr/tiquiz-gratuit": "free",
   "tipote.fr/tiquiz-mensuel": "monthly",
   "tipote.fr/tiquiz-annuel": "yearly",
   "tipote.fr/tiquiz-mensuel-plus": "monthly_plus",
   "tipote.fr/tiquiz-annuel-plus": "yearly_plus",
+  // Tunnels AFFILIÉS (avec "part", commission affiliée). MÊME plan ouvert
+  // que le tunnel perso. Sans ces entrées, une vente Tiquiz via lien affilié
+  // ne routait sur aucun plan -> mauvais accès (drame Béné 27 juin 2026).
+  "tipote.fr/part-tiquiz-gratuit": "free",
+  "tipote.fr/part-tiquiz-mensuel": "monthly",
+  "tipote.fr/part-tiquiz-annuel": "yearly",
+  "tipote.fr/tiquiz-mensuel-plus-part": "monthly_plus",
+  "tipote.fr/tiquiz-annuel-plus-part": "yearly_plus",
 };
 
 /**
