@@ -2179,13 +2179,17 @@
       "yearly": "Yearly",
       "lifetime": "Lifetime",
       "totalQuiz": "Total quizzes",
-      "totalLeads": "Total leads"
+      "totalLeads": "Total leads",
+      "monthlyPlus": "Monthly+",
+      "yearlyPlus": "Yearly+"
     },
     "plans": {
       "free": "Free",
       "monthly": "Monthly",
       "yearly": "Yearly",
-      "lifetime": "Lifetime"
+      "lifetime": "Lifetime",
+      "monthlyPlus": "Monthly+",
+      "yearlyPlus": "Yearly+"
     },
     "columns": {
       "email": "Email",

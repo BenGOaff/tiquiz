@@ -124,16 +124,29 @@ export default function AdminDashboard() {
     total: users.length,
     free: users.filter(u => u.plan === "free").length,
     monthly: users.filter(u => u.plan === "monthly").length,
+    monthlyPlus: users.filter(u => u.plan === "monthly_plus").length,
     yearly: users.filter(u => u.plan === "yearly").length,
+    yearlyPlus: users.filter(u => u.plan === "yearly_plus").length,
     lifetime: users.filter(u => u.plan === "lifetime").length,
     totalLeads: users.reduce((s, u) => s + u.lead_count, 0),
     totalQuizzes: users.reduce((s, u) => s + u.quiz_count, 0),
   };
 
   const planBadge = (plan: string) => {
-    const cls = plan === "lifetime" ? "bg-purple-100 text-purple-700" : (plan === "monthly" || plan === "yearly") ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600";
+    const paid = plan === "monthly" || plan === "monthly_plus" || plan === "yearly" || plan === "yearly_plus";
+    const cls = plan === "lifetime" ? "bg-purple-100 text-purple-700" : paid ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600";
     return <Badge className={cls}>{plan}</Badge>;
   };
+
+  // Plans disponibles (ordre logique). Source unique pour les selects.
+  const PLAN_OPTIONS: Array<{ value: string; key: string }> = [
+    { value: "free", key: "plans.free" },
+    { value: "monthly", key: "plans.monthly" },
+    { value: "monthly_plus", key: "plans.monthlyPlus" },
+    { value: "yearly", key: "plans.yearly" },
+    { value: "yearly_plus", key: "plans.yearlyPlus" },
+    { value: "lifetime", key: "plans.lifetime" },
+  ];
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
@@ -148,7 +161,9 @@ export default function AdminDashboard() {
           { label: t("stats.totalUsers"), value: stats.total, icon: Users },
           { label: t("stats.free"), value: stats.free, icon: Users },
           { label: t("stats.monthly"), value: stats.monthly, icon: Users },
+          { label: t("stats.monthlyPlus"), value: stats.monthlyPlus, icon: Users },
           { label: t("stats.yearly"), value: stats.yearly, icon: Users },
+          { label: t("stats.yearlyPlus"), value: stats.yearlyPlus, icon: Users },
           { label: t("stats.lifetime"), value: stats.lifetime, icon: Users },
           { label: t("stats.totalQuiz"), value: stats.totalQuizzes, icon: BarChart3 },
           { label: t("stats.totalLeads"), value: stats.totalLeads, icon: BarChart3 },
@@ -164,7 +179,7 @@ export default function AdminDashboard() {
       <Card><CardContent className="pt-4 flex items-end gap-3">
         <div className="flex-1 space-y-1"><label className="text-xs font-medium">{t("inviteLabel")}</label><Input value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="email@example.com" /></div>
         <select value={newPlan} onChange={e => setNewPlan(e.target.value)} className="border rounded-lg px-2 py-2 text-sm">
-          <option value="free">{t("plans.free")}</option><option value="monthly">{t("plans.monthly")}</option><option value="yearly">{t("plans.yearly")}</option><option value="lifetime">{t("plans.lifetime")}</option>
+          {PLAN_OPTIONS.map(o => <option key={o.value} value={o.value}>{t(o.key)}</option>)}
         </select>
         <Button onClick={createUser} disabled={creating}>{creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-1" />{t("createMagicLink")}</>}</Button>
       </CardContent></Card>
@@ -173,7 +188,7 @@ export default function AdminDashboard() {
       <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 max-w-sm"><Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder={t("searchPlaceholder")} className="pl-9" /></div>
         <div className="flex gap-1">
-          {["all", "free", "monthly", "yearly", "lifetime"].map(p => (
+          {["all", "free", "monthly", "monthly_plus", "yearly", "yearly_plus", "lifetime"].map(p => (
             <button key={p} onClick={() => setPlanFilter(p)} className={`px-3 py-1.5 rounded-full text-xs font-medium ${planFilter === p ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>
               {p === "all" ? t("filterAll") : p}
             </button>
@@ -218,7 +233,7 @@ export default function AdminDashboard() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <select value={u.plan} onChange={e => updatePlan(uid, e.target.value)} className="border rounded px-2 py-1 text-xs bg-background">
-                          <option value="free">{t("plans.free")}</option><option value="monthly">{t("plans.monthly")}</option><option value="yearly">{t("plans.yearly")}</option><option value="lifetime">{t("plans.lifetime")}</option>
+                          {PLAN_OPTIONS.map(o => <option key={o.value} value={o.value}>{t(o.key)}</option>)}
                         </select>
                         <button
                           type="button"

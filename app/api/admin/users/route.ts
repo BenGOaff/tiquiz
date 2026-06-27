@@ -14,58 +14,73 @@ async function checkAdmin(req: NextRequest) {
   return user;
 }
 
+// Récupère TOUTES les lignes d'une table en paginant. Indispensable : un
+// `.select()` simple est plafonné à 1000 lignes côté PostgREST, ce qui
+// figeait "Total leads" à 1000 dès qu'il y avait plus de 1000 leads (stat
+// fausse, drame 27 juin 2026). On ordonne sur une colonne stable pour que
+// la pagination ne saute / ne duplique aucune ligne.
+async function fetchAllRows(
+  table: string,
+  columns: string,
+  orderCol: string,
+  ascending = true,
+): Promise<Record<string, unknown>[]> {
+  const pageSize = 1000;
+  const all: Record<string, unknown>[] = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabaseAdmin
+      .from(table)
+      .select(columns)
+      .order(orderCol, { ascending })
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    const batch = (data ?? []) as unknown as Record<string, unknown>[];
+    all.push(...batch);
+    if (batch.length < pageSize) break;
+  }
+  return all;
+}
+
 // GET — list all users with their profiles, quiz count, lead count
 export async function GET(req: NextRequest) {
   const admin = await checkAdmin(req);
   if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    // Get all profiles
-    const { data: profiles, error } = await supabaseAdmin
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
+    // Tout est paginé (voir fetchAllRows) : sinon "Total leads" plafonne à
+    // 1000 et la liste users se tronque silencieusement passé 1000 comptes.
+    const profiles = await fetchAllRows("profiles", "*", "user_id", true);
+    const allQuizzes = await fetchAllRows("quizzes", "id, user_id", "id");
+    const allLeads = await fetchAllRows("quiz_leads", "quiz_id", "id");
 
-    if (error) throw error;
-
-    // Get quiz counts per user
-    const { data: quizCounts } = await supabaseAdmin
-      .from("quizzes")
-      .select("user_id");
-
-    // Get lead counts per user (via quizzes)
-    const { data: allQuizzes } = await supabaseAdmin
-      .from("quizzes")
-      .select("id, user_id");
-
-    const quizIds = (allQuizzes ?? []).map(q => q.id);
-    let leadCounts: Record<string, number> = {};
-
-    if (quizIds.length > 0) {
-      const { data: leads } = await supabaseAdmin
-        .from("quiz_leads")
-        .select("quiz_id");
-
-      const quizToUser: Record<string, string> = {};
-      for (const q of allQuizzes ?? []) quizToUser[q.id] = q.user_id;
-
-      for (const lead of leads ?? []) {
-        const userId = quizToUser[lead.quiz_id];
-        if (userId) leadCounts[userId] = (leadCounts[userId] ?? 0) + 1;
-      }
-    }
-
-    // Count quizzes per user
+    // Quiz par user + map quiz->user en une seule passe (plus de double
+    // requête `quizzes` redondante).
     const quizCountMap: Record<string, number> = {};
-    for (const q of quizCounts ?? []) {
-      quizCountMap[q.user_id] = (quizCountMap[q.user_id] ?? 0) + 1;
+    const quizToUser: Record<string, string> = {};
+    for (const q of allQuizzes) {
+      const uid = String(q.user_id);
+      quizToUser[String(q.id)] = uid;
+      quizCountMap[uid] = (quizCountMap[uid] ?? 0) + 1;
     }
 
-    // Get auth users for last sign in
-    const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-    const authUsers = (authData as any)?.users ?? [];
-    const authMap: Record<string, any> = {};
-    for (const u of authUsers) authMap[u.id] = u;
+    // Leads par user (via quiz_id → user). Compte TOUS les leads (quiz +
+    // sondages, qui vivent dans la même table quiz_leads).
+    const leadCounts: Record<string, number> = {};
+    for (const lead of allLeads) {
+      const userId = quizToUser[String(lead.quiz_id)];
+      if (userId) leadCounts[userId] = (leadCounts[userId] ?? 0) + 1;
+    }
+
+    // Auth users (last sign in) — paginé aussi : listUsers plafonne à perPage
+    // par page, donc on boucle tant qu'une page est pleine.
+    type AuthUserLite = { id: string; last_sign_in_at?: string | null };
+    const authMap: Record<string, AuthUserLite> = {};
+    for (let page = 1; ; page++) {
+      const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
+      const batch = (authData?.users ?? []) as AuthUserLite[];
+      for (const u of batch) authMap[u.id] = u;
+      if (batch.length < 1000) break;
+    }
 
     // Map reseller_id -> nom du revendeur pour le badge admin. Soft-fail :
     // tant que la migration resellers n'est pas appliquée en prod, la
@@ -106,7 +121,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { user_id, email, plan } = body;
 
-    if (!plan || !["free", "monthly", "yearly", "lifetime"].includes(plan)) {
+    if (!plan || !["free", "monthly", "monthly_plus", "yearly", "yearly_plus", "lifetime"].includes(plan)) {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 

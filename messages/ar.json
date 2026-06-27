@@ -2183,13 +2183,17 @@
       "yearly": "سنوي",
       "lifetime": "Lifetime",
       "totalQuiz": "إجمالي الاختبارات",
-      "totalLeads": "إجمالي العملاء المحتملين"
+      "totalLeads": "إجمالي العملاء المحتملين",
+      "monthlyPlus": "شهري+",
+      "yearlyPlus": "سنوي+"
     },
     "plans": {
       "free": "Free",
       "monthly": "شهري",
       "yearly": "سنوي",
-      "lifetime": "Lifetime"
+      "lifetime": "Lifetime",
+      "monthlyPlus": "شهري+",
+      "yearlyPlus": "سنوي+"
     },
     "columns": {
       "email": "البريد الإلكتروني",
