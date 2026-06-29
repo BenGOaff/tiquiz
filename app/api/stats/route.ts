@@ -18,6 +18,14 @@
 // dashboard load. Aggregating server-side keeps the UI snappy and the
 // math single-source-of-truth.
 //
+// Scalabilité (29 juin 2026) : toutes les agrégations events/leads sont
+// faites DANS Postgres via des RPCs (stats_events_daily, _leads_daily,
+// _events_counts, _leads_counts, _question_funnel). Avant, on tirait les
+// lignes brutes et PostgREST plafonnait à 1000 → au-delà de 1000 events
+// ou leads dans la fenêtre, les totaux/graphes étaient sous-comptés. Le
+// GROUP BY SQL renvoie une poignée de lignes quel que soit le volume
+// (1k, 1M, 10M), donc plus aucun plafond. Pensé gros volumes / viral.
+//
 // Backwards compatibility: quiz_events only fills up from the migration
 // onward. Older quizzes still have lifetime counters on the quizzes
 // table; the stats UI surfaces both — "this period" pulls from events,
@@ -35,26 +43,16 @@ export const dynamic = "force-dynamic";
 // "Cumulative" types are the four funnel events that have a column on
 // quizzes (views_count, starts_count, etc.) — they go into the daily
 // time-series + KPI tiles. "question_view" is per-question retention
-// only and is handled separately further down.
+// only and is handled separately (RPC stats_question_funnel).
 type CumulativeEventType = "view" | "start" | "complete" | "share";
-type EventType = CumulativeEventType | "question_view";
 const EVENT_TYPES: CumulativeEventType[] = ["view", "start", "complete", "share"];
 
-type EventRow = {
-  quiz_id: string;
-  event_type: EventType;
-  created_at: string;
-  meta?: { q?: number } | null;
-};
-type LeadRow = { quiz_id: string; created_at: string };
-
-/** Day key (YYYY-MM-DD) dans le fuseau LOCAL du créateur (offset passé
- * par le client). Avant on slicait l'ISO en UTC → le dashboard et le
- * graphe du quiz pouvaient afficher des jours différents. Désormais
- * tout est bucketisé sur le même jour local. Cf. lib/dateKeys. */
-function toDayKey(iso: string, tzOffset: number): string {
-  return dateKeyForOffset(new Date(iso), tzOffset);
-}
+// Rows returned by the aggregation RPCs (grouped, never capped).
+type EventDailyRow = { day: string; event_type: CumulativeEventType; n: number };
+type LeadDailyRow = { day: string; n: number };
+type EventCountRow = { quiz_id: string; event_type: CumulativeEventType; n: number };
+type LeadCountRow = { quiz_id: string; n: number };
+type FunnelRow = { quiz_id: string; question_index: number; views: number };
 
 /** Range presets we accept on the query string. "all" = no lower bound. */
 type Range = "7d" | "30d" | "90d" | "all";
@@ -71,12 +69,9 @@ function rangeToWindow(range: Range): { from: Date | null; durationDays: number 
 /** Fill a Map<dayKey, count> with zeros for every LOCAL day (tzOffset)
  * in [start, end] so the resulting array has no gaps — important for
  * the line chart. Les clés sont en jour local du créateur, cohérent
- * avec toDayKey. */
+ * avec le bucketing SQL des RPCs (même formule dateKeyForOffset). */
 function fillDailyZeros(start: Date, end: Date, tzOffset: number): Map<string, number> {
   const out = new Map<string, number>();
-  // On itère jour par jour en pas de 24h à partir de `start`. Lire la
-  // clé via dateKeyForOffset garantit le même découpage que le
-  // bucketing des lignes.
   let t = start.getTime();
   const endT = end.getTime();
   // Marge d'un jour pour ne pas tronquer le dernier bucket local.
@@ -114,16 +109,39 @@ export async function GET(req: NextRequest) {
     // Owned quizzes — scopés au projet actif si multiprofils débloqué
     // (phase 3b : "nouveau projet = stats à zéro"). Tout le cascade
     // de stats (events, leads, question_events) hérite de ce filtre
-    // via le `in("quiz_id", quizIds)` plus bas.
+    // via le `p_quiz_ids` passé aux RPCs.
     const scope = await getActiveProjectScope(user.id, user.email ?? null);
-    let quizzesQuery = supabaseAdmin
-      .from("quizzes")
-      .select("id, title, status, mode, views_count, starts_count, completions_count, shares_count, created_at")
-      .eq("user_id", user.id);
-    if (scope) quizzesQuery = quizzesQuery.eq("project_id", scope);
-    const { data: quizzes } = await quizzesQuery;
+    // Liste des quiz du créateur, PAGINÉE pour ne jamais être plafonnée à
+    // 1000 (défaut PostgREST). Un compte premium peut dépasser ce seuil ;
+    // on boucle par pages de 1000 jusqu'à épuisement.
+    type QuizRow = {
+      id: string;
+      title: string;
+      status: string | null;
+      mode: string | null;
+      views_count: number | null;
+      starts_count: number | null;
+      completions_count: number | null;
+      shares_count: number | null;
+      created_at: string;
+    };
+    const quizzes: QuizRow[] = [];
+    const QUIZ_PAGE = 1000;
+    for (let offset = 0; ; offset += QUIZ_PAGE) {
+      let page = supabaseAdmin
+        .from("quizzes")
+        .select("id, title, status, mode, views_count, starts_count, completions_count, shares_count, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true })
+        .range(offset, offset + QUIZ_PAGE - 1);
+      if (scope) page = page.eq("project_id", scope);
+      const { data, error } = await page;
+      if (error || !data || data.length === 0) break;
+      quizzes.push(...(data as QuizRow[]));
+      if (data.length < QUIZ_PAGE) break;
+    }
 
-    const quizIds = (quizzes ?? []).map((q) => q.id as string);
+    const quizIds = quizzes.map((q) => q.id);
     if (quizIds.length === 0) {
       return NextResponse.json({
         ok: true,
@@ -136,79 +154,61 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // ── EVENTS in current window ────────────────────────────────────
-    // Pull meta along — we need it to compute the per-question
-    // drop-off funnel further down.
-    //
-    // EXCLUDE backfilled events from period queries : ils sont datés à
-    // `quiz.created_at` (cf. migration backfill 19 mai 2026) et fausse-
-    // raient les filtres "7 j" / "30 j" en y agglutinant des stats
-    // historiques. Le total lifetime continue de les inclure via
-    // quizzes.*_count.
-    let eventsQ = supabaseAdmin
-      .from("quiz_events")
-      .select("quiz_id, event_type, created_at, meta")
-      .in("quiz_id", quizIds)
-      .not("session_id", "like", "backfill_%");
-    if (from) eventsQ = eventsQ.gte("created_at", from.toISOString());
-    const { data: rawEvents } = await eventsQ;
-    const events = (rawEvents ?? []) as EventRow[];
+    const sinceISO = from ? from.toISOString() : null;
+    const prevSinceISO = prevFrom ? prevFrom.toISOString() : null;
+    const prevUntilISO = prevTo ? prevTo.toISOString() : null;
+    const hasPrev = prevSinceISO !== null && prevUntilISO !== null;
 
-    // ── EVENTS in previous window (for trend deltas) ────────────────
-    let prevEvents: EventRow[] = [];
-    if (prevFrom && prevTo) {
-      const { data: prev } = await supabaseAdmin
-        .from("quiz_events")
-        .select("quiz_id, event_type, created_at")
-        .in("quiz_id", quizIds)
-        .not("session_id", "like", "backfill_%")
-        .gte("created_at", prevFrom.toISOString())
-        .lt("created_at", prevTo.toISOString());
-      prevEvents = (prev ?? []) as EventRow[];
-    }
+    // ── Toutes les agrégations en SQL (aucune lecture de lignes brutes,
+    //    donc aucun plafond PostgREST 1000). Lancées en parallèle. ──
+    const [
+      evDailyRes,
+      leadDailyRes,
+      curCountsRes,
+      curLeadsRes,
+      lifeLeadsRes,
+      funnelRes,
+    ] = await Promise.all([
+      supabaseAdmin.rpc("stats_events_daily", { p_quiz_ids: quizIds, p_tz_offset: tzOffset, p_since: sinceISO }),
+      supabaseAdmin.rpc("stats_leads_daily", { p_quiz_ids: quizIds, p_tz_offset: tzOffset, p_since: sinceISO }),
+      supabaseAdmin.rpc("stats_events_counts", { p_quiz_ids: quizIds, p_since: sinceISO, p_until: null }),
+      supabaseAdmin.rpc("stats_leads_counts", { p_quiz_ids: quizIds, p_since: sinceISO, p_until: null }),
+      // Leads lifetime par quiz (aucune borne) — somme = leads à vie.
+      supabaseAdmin.rpc("stats_leads_counts", { p_quiz_ids: quizIds, p_since: null, p_until: null }),
+      supabaseAdmin.rpc("stats_question_funnel", { p_quiz_ids: quizIds, p_since: sinceISO }),
+    ]);
 
-    // ── LEADS in current window ─────────────────────────────────────
-    let leadsQ = supabaseAdmin
-      .from("quiz_leads")
-      .select("quiz_id, created_at")
-      .in("quiz_id", quizIds);
-    if (from) leadsQ = leadsQ.gte("created_at", from.toISOString());
-    const { data: rawLeads } = await leadsQ;
-    const leads = (rawLeads ?? []) as LeadRow[];
+    // Période précédente (deltas) — seulement si la fenêtre existe.
+    const [prevCountsRes, prevLeadsRes] = hasPrev
+      ? await Promise.all([
+          supabaseAdmin.rpc("stats_events_counts", { p_quiz_ids: quizIds, p_since: prevSinceISO, p_until: prevUntilISO }),
+          supabaseAdmin.rpc("stats_leads_counts", { p_quiz_ids: quizIds, p_since: prevSinceISO, p_until: prevUntilISO }),
+        ])
+      : [{ data: [] }, { data: [] }];
 
-    // ── LEADS lifetime (total, sans filtre période) — pour la
-    // conversion lifetime cohérente avec les compteurs auto-bumpés
-    // par le trigger quiz_events.
-    const { count: leadsAll } = await supabaseAdmin
-      .from("quiz_leads")
-      .select("quiz_id", { count: "exact", head: true })
-      .in("quiz_id", quizIds);
-
-    // ── LEADS in previous window ────────────────────────────────────
-    let prevLeads: LeadRow[] = [];
-    if (prevFrom && prevTo) {
-      const { data: prev } = await supabaseAdmin
-        .from("quiz_leads")
-        .select("quiz_id, created_at")
-        .in("quiz_id", quizIds)
-        .gte("created_at", prevFrom.toISOString())
-        .lt("created_at", prevTo.toISOString());
-      prevLeads = (prev ?? []) as LeadRow[];
-    }
+    const evDaily = (evDailyRes.data ?? []) as EventDailyRow[];
+    const leadDaily = (leadDailyRes.data ?? []) as LeadDailyRow[];
+    const curCounts = (curCountsRes.data ?? []) as EventCountRow[];
+    const prevCounts = (prevCountsRes.data ?? []) as EventCountRow[];
+    const curLeads = (curLeadsRes.data ?? []) as LeadCountRow[];
+    const prevLeadsRows = (prevLeadsRes.data ?? []) as LeadCountRow[];
+    const lifeLeads = (lifeLeadsRes.data ?? []) as LeadCountRow[];
+    const funnelRows = (funnelRes.data ?? []) as FunnelRow[];
 
     // ── TIME-SERIES (events by day, leads by day) ───────────────────
     // Use the requested window when range !== "all". For "all", anchor
-    // on the earliest event/lead so the chart spans real activity.
-    const anchorStart = from ?? earliest([
-      ...events.map((e) => new Date(e.created_at)),
-      ...leads.map((l) => new Date(l.created_at)),
-      new Date(),
-    ]);
-    // `today` = instant courant (PAS arrondi UTC) : fillDailyZeros en
-    // dérive le jour LOCAL du client via dateKeyForOffset, donc le
-    // dernier bucket est bien l'aujourd'hui du créateur (et pas
-    // l'aujourd'hui UTC qui peut être en retard d'un jour le soir).
+    // on the earliest day that actually has an event or a lead. On situe
+    // l'ancre à minuit UTC de ce jour : pour tout fuseau réel (±12h) la
+    // première clé générée est <= ce jour, donc on ne perd jamais le jour
+    // le plus ancien (au pire une journée vide en tête, sans gravité).
     const today = new Date();
+    const anchorStart = (() => {
+      if (from) return from;
+      let min = "";
+      for (const r of evDaily) if (!min || r.day < min) min = r.day;
+      for (const r of leadDaily) if (!min || r.day < min) min = r.day;
+      return min ? new Date(min + "T00:00:00Z") : today;
+    })();
 
     const eventBuckets: Record<CumulativeEventType, Map<string, number>> = {
       view: fillDailyZeros(anchorStart, today, tzOffset),
@@ -216,13 +216,9 @@ export async function GET(req: NextRequest) {
       complete: fillDailyZeros(anchorStart, today, tzOffset),
       share: fillDailyZeros(anchorStart, today, tzOffset),
     };
-    for (const e of events) {
-      // Skip question_view here — it's not cumulative funnel data,
-      // it's per-question retention handled separately below.
-      if (e.event_type === "question_view") continue;
-      const d = toDayKey(e.created_at, tzOffset);
-      const bucket = eventBuckets[e.event_type];
-      if (bucket && bucket.has(d)) bucket.set(d, (bucket.get(d) ?? 0) + 1);
+    for (const r of evDaily) {
+      const bucket = eventBuckets[r.event_type];
+      if (bucket && bucket.has(r.day)) bucket.set(r.day, (bucket.get(r.day) ?? 0) + Number(r.n));
     }
     const eventsByDay = Array.from(eventBuckets.view.keys()).map((day) => ({
       day,
@@ -233,26 +229,26 @@ export async function GET(req: NextRequest) {
     }));
 
     const leadBuckets = fillDailyZeros(anchorStart, today, tzOffset);
-    for (const l of leads) {
-      const d = toDayKey(l.created_at, tzOffset);
-      if (leadBuckets.has(d)) leadBuckets.set(d, (leadBuckets.get(d) ?? 0) + 1);
+    for (const r of leadDaily) {
+      if (leadBuckets.has(r.day)) leadBuckets.set(r.day, (leadBuckets.get(r.day) ?? 0) + Number(r.n));
     }
     const leadsByDay = Array.from(leadBuckets.entries()).map(([day, count]) => ({ day, count }));
 
     // ── TOTALS for the period + previous-period deltas ──────────────
-    const sumEvents = (rows: EventRow[]) => {
+    const sumByType = (rows: EventCountRow[]) => {
       const acc: Record<CumulativeEventType, number> = { view: 0, start: 0, complete: 0, share: 0 };
-      for (const e of rows) {
-        if (e.event_type === "question_view") continue;
-        acc[e.event_type] = (acc[e.event_type] ?? 0) + 1;
-      }
+      for (const r of rows) acc[r.event_type] = (acc[r.event_type] ?? 0) + Number(r.n);
       return acc;
     };
-    const cur = sumEvents(events);
-    const prev = sumEvents(prevEvents);
+    const sumLeads = (rows: LeadCountRow[]) => rows.reduce((s, r) => s + Number(r.n), 0);
+    const cur = sumByType(curCounts);
+    const prev = sumByType(prevCounts);
+    const periodLeadsTotal = sumLeads(curLeads);
+    const prevLeadsTotal = sumLeads(prevLeadsRows);
+    const lifetimeLeadsTotal = sumLeads(lifeLeads);
 
     // ── Lifetime totals (computed once, reused below) ───────────────
-    const lifetimeRaw = (quizzes ?? []).reduce(
+    const lifetimeRaw = quizzes.reduce(
       (acc, q) => ({
         views: acc.views + (Number(q.views_count) || 0),
         starts: acc.starts + (Number(q.starts_count) || 0),
@@ -261,8 +257,6 @@ export async function GET(req: NextRequest) {
       }),
       { views: 0, starts: 0, completions: 0, shares: 0 },
     );
-
-    const lifetimeLeadsTotal = (leadsAll ?? 0);
 
     // Cohérence du funnel : vues >= starts >= completions >= leads.
     // Si les compteurs sont incomplets (quiz embarqué/funnel où le
@@ -295,17 +289,16 @@ export async function GET(req: NextRequest) {
     const totals = {
       // Period — what happened inside the selected window. Source de
       // vérité = quiz_events filtré sur la période, excluant les events
-      // backfillés (cf. migration backfill 19 mai 2026, qui daterait
-      // tous les historiques à quiz.created_at et fausserait les filtres
-      // temporels). UTILISÉ POUR LES DELTAS (vs période précédente) et
-      // pour la time-series des leads — PAS pour les KPI principaux.
+      // backfillés (cf. migration backfill 19 mai 2026). UTILISÉ POUR LES
+      // DELTAS (vs période précédente) et pour la time-series des leads —
+      // PAS pour les KPI principaux.
       period: {
         views: cur.view,
         starts: cur.start,
         completions: cur.complete,
         shares: cur.share,
-        leads: leads.length,
-        conversionPct: conversionRate(cur, leads.length),
+        leads: periodLeadsTotal,
+        conversionPct: conversionRate(cur, periodLeadsTotal),
       },
       // Previous period — same length, shifted back
       previous: {
@@ -313,14 +306,12 @@ export async function GET(req: NextRequest) {
         starts: prev.start,
         completions: prev.complete,
         shares: prev.share,
-        leads: prevLeads.length,
-        conversionPct: conversionRate(prev, prevLeads.length),
+        leads: prevLeadsTotal,
+        conversionPct: conversionRate(prev, prevLeadsTotal),
       },
       // Lifetime — SOURCE DE VÉRITÉ unique pour les KPI affichés sur le
       // dashboard et le bloc "À vie" de /stats. Toujours cohérent
       // avec les compteurs auto-bumpés par le trigger quiz_events.
-      // Inclut les data pré-migration (avant 21 mai 2026) ET les
-      // events backfillés.
       lifetime: {
         ...lifetime,
         leads: lifetimeLeadsTotal,
@@ -330,29 +321,27 @@ export async function GET(req: NextRequest) {
 
     // ── PER-QUIZ breakdown ──────────────────────────────────────────
     // Période : events non-backfillés dans la fenêtre + leads dans
-    //   la fenêtre. Utilisé pour les deltas + time-series.
-    // Lifetime : compteurs auto-bumpés sur quizzes.*_count + COUNT
-    //   sur quiz_leads (sans filtre période). SOURCE DE VÉRITÉ pour
-    //   les KPI per-quiz affichés dans la liste.
+    //   la fenêtre (RPCs _events_counts / _leads_counts). Deltas + UI.
+    // Lifetime : compteurs auto-bumpés sur quizzes.*_count + leads
+    //   lifetime par quiz (RPC _leads_counts sans borne). SOURCE DE
+    //   VÉRITÉ pour les KPI per-quiz affichés dans la liste.
     const perQuizMap = new Map<string, {
       id: string;
       title: string;
       status: string;
       mode: string | null;
-      // Period counters (filtered, used for deltas)
       views: number;
       starts: number;
       completions: number;
       shares: number;
       leads: number;
-      // Lifetime counters — affichés sur les cards quiz
       lifetimeViews: number;
       lifetimeStarts: number;
       lifetimeCompletions: number;
       lifetimeShares: number;
       lifetimeLeads: number;
     }>();
-    for (const q of quizzes ?? []) {
+    for (const q of quizzes) {
       perQuizMap.set(q.id as string, {
         id: q.id as string,
         title: (q.title as string) ?? "",
@@ -363,43 +352,30 @@ export async function GET(req: NextRequest) {
         lifetimeStarts: (q.starts_count as number) ?? 0,
         lifetimeCompletions: (q.completions_count as number) ?? 0,
         lifetimeShares: (q.shares_count as number) ?? 0,
-        lifetimeLeads: 0,  // rempli ci-dessous via leadsAllByQuiz
+        lifetimeLeads: 0,
       });
     }
-    for (const e of events) {
-      const row = perQuizMap.get(e.quiz_id);
+    for (const r of curCounts) {
+      const row = perQuizMap.get(r.quiz_id);
       if (!row) continue;
-      if (e.event_type === "view") row.views++;
-      else if (e.event_type === "start") row.starts++;
-      else if (e.event_type === "complete") row.completions++;
-      else if (e.event_type === "share") row.shares++;
+      if (r.event_type === "view") row.views += Number(r.n);
+      else if (r.event_type === "start") row.starts += Number(r.n);
+      else if (r.event_type === "complete") row.completions += Number(r.n);
+      else if (r.event_type === "share") row.shares += Number(r.n);
     }
-    for (const l of leads) {
-      const row = perQuizMap.get(l.quiz_id);
-      if (row) row.leads++;
+    for (const r of curLeads) {
+      const row = perQuizMap.get(r.quiz_id);
+      if (row) row.leads += Number(r.n);
     }
-
-    // Lifetime leads par quiz (sans filtre période) — pour que les
-    // cards affichent un nombre cohérent avec les compteurs lifetime.
-    // Sans ça : leads=8 (période) + views=34 (lifetime) → conversion
-    // visible mais incorrecte (cf. Gwenn screenshot avec 127 % en
-    // conversion = leads lifetime / starts période).
-    const { data: rawLeadsAllByQuiz } = await supabaseAdmin
-      .from("quiz_leads")
-      .select("quiz_id")
-      .in("quiz_id", quizIds);
-    for (const row of rawLeadsAllByQuiz ?? []) {
-      const pq = perQuizMap.get((row as { quiz_id: string }).quiz_id);
-      if (pq) pq.lifetimeLeads += 1;
+    for (const r of lifeLeads) {
+      const row = perQuizMap.get(r.quiz_id);
+      if (row) row.lifetimeLeads += Number(r.n);
     }
 
     // ── Réconciliation par quiz (Béné 2 juin 2026 — retour Gwenn) ──
-    // Mêmes garde-fous que sur les totaux globaux (lignes ~272) : pour
-    // CHAQUE quiz, vues >= starts >= completions >= leads. Sans ça, la
-    // carte "Performances par quiz" affichait "44 Vues / 7 Démarrés /
-    // 6 Complétés / 276 Leads" — visuellement absurde. On planche
-    // chaque étage sur le supérieur, puis sur les leads lifetime de
-    // ce quiz.
+    // Mêmes garde-fous que sur les totaux globaux : pour CHAQUE quiz,
+    // vues >= starts >= completions >= leads. Sans ça, la carte
+    // "Performances par quiz" pouvait afficher un funnel inversé.
     for (const pq of perQuizMap.values()) {
       pq.lifetimeCompletions = Math.max(pq.lifetimeCompletions, pq.lifetimeLeads);
       pq.lifetimeStarts = Math.max(pq.lifetimeStarts, pq.lifetimeCompletions);
@@ -407,69 +383,18 @@ export async function GET(req: NextRequest) {
     }
 
     // ── PER-QUESTION drop-off funnel ────────────────────────────────
-    // For each quiz we count how many distinct visitors saw each
-    // question_index. Because question_view is deduped client-side
-    // per session, the count is "unique sessions that reached this
-    // question". The drop-off is implicit — the stats UI just shows
-    // the descending bars and the entrepreneur sees where they
-    // collapse.
-    //
-    // Schema: questionFunnels = [{
-    //   quizId, title,
-    //   questions: [{ index: 0, views: 120 }, { index: 1, views: 88 }, ...]
-    // }]
-    //
-    // Empty for projects that have not received any question_view
-    // event (legacy data + projects published pre-migration).
-    //
-    // ⚠️ Source = `quiz_question_events` (le player y écrit les vues de
-    // question). On NE lit PLUS quiz_events.meta.q : depuis la refonte
-    // tracking, plus aucune ligne question_view n'atterrit dans quiz_events
-    // → ce funnel était TOUJOURS vide. On compte les sessions DISTINCTES
-    // par (quiz, question), cohérent avec la page analytics par quiz.
-    let qqQuery = supabaseAdmin
-      .from("quiz_question_events")
-      .select("quiz_id, question_index, session_id")
-      .in("quiz_id", quizIds)
-      .eq("event", "view")
-      .order("created_at", { ascending: false })
-      .limit(100000);
-    if (from) qqQuery = qqQuery.gte("created_at", from.toISOString());
-    const { data: qqRows } = await qqQuery;
-
-    // Funnel monotone : per session, on garde la question la PLUS LOIN
-    // atteinte (max index vu). views(N) = count des sessions dont maxQ >= N.
-    // Un visiteur arrivé à Q5 a forcément passé Q1-Q4, même si l'event
-    // d'une question intermédiaire a été perdu (réseau) ou exclu par le
-    // filtre de période. Avant on comptait les sessions distinctes par
-    // question_index brut → Q3 pouvait afficher plus de sessions que Q1
-    // (cf. rapport Gwenn 27 mai 2026, screenshots Q3=24 / Q1=23).
-    const sessionMaxByQuiz = new Map<string, Map<string, number>>();
-    const qsByQuiz = new Map<string, Set<number>>();
-    for (const r of (qqRows ?? []) as { quiz_id: string; question_index: number; session_id: string }[]) {
-      let sm = sessionMaxByQuiz.get(r.quiz_id);
-      if (!sm) { sm = new Map(); sessionMaxByQuiz.set(r.quiz_id, sm); }
-      const prev = sm.get(r.session_id);
-      if (prev === undefined || r.question_index > prev) {
-        sm.set(r.session_id, r.question_index);
-      }
-      let qs = qsByQuiz.get(r.quiz_id);
-      if (!qs) { qs = new Set(); qsByQuiz.set(r.quiz_id, qs); }
-      qs.add(r.question_index);
+    // Source = quiz_question_events, agrégé en SQL (RPC, monotone : pour
+    // chaque session l'index max atteint, puis views(N) = sessions dont
+    // max_q >= N). Plus de plafond 100000 ni de logique JS.
+    const funnelByQuiz = new Map<string, { index: number; views: number }[]>();
+    for (const r of funnelRows) {
+      let arr = funnelByQuiz.get(r.quiz_id);
+      if (!arr) { arr = []; funnelByQuiz.set(r.quiz_id, arr); }
+      arr.push({ index: r.question_index, views: Number(r.views) });
     }
-    const questionFunnels = (quizzes ?? []).map((q) => {
+    const questionFunnels = quizzes.map((q) => {
       const qid = q.id as string;
-      const qsSet = qsByQuiz.get(qid);
-      const sm = sessionMaxByQuiz.get(qid);
-      if (!qsSet || qsSet.size === 0 || !sm) {
-        return { quizId: qid, title: (q.title as string) ?? "", questions: [] as { index: number; views: number }[] };
-      }
-      const sortedQs = Array.from(qsSet).sort((a, b) => a - b);
-      const questions = sortedQs.map((index) => {
-        let count = 0;
-        for (const maxQ of sm.values()) if (maxQ >= index) count++;
-        return { index, views: count };
-      });
+      const questions = funnelByQuiz.get(qid) ?? [];
       return { quizId: qid, title: (q.title as string) ?? "", questions };
     }).filter((f) => f.questions.length > 0);
 
@@ -482,10 +407,10 @@ export async function GET(req: NextRequest) {
       totals,
       perQuiz: Array.from(perQuizMap.values()),
       questionFunnels,
-      // Tip: tells the UI whether quiz_events has *any* row yet, so
-      // it can warn the creator that the time-series only reflects
+      // Tip: tells the UI whether quiz_events has *any* row in the window
+      // yet, so it can warn the creator that the time-series only reflects
       // post-migration activity for legacy projects.
-      hasEventData: events.length > 0,
+      hasEventData: evDaily.length > 0,
     });
   } catch {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
@@ -498,12 +423,6 @@ function emptyTotals() {
     previous: { views: 0, starts: 0, completions: 0, shares: 0, leads: 0, conversionPct: 0 },
     lifetime: { views: 0, starts: 0, completions: 0, shares: 0, leads: 0, conversionPct: 0 },
   };
-}
-
-function earliest(dates: Date[]): Date {
-  let m = dates[0];
-  for (const d of dates) if (d < m) m = d;
-  return m;
 }
 
 // Used in EVENT_TYPES export — referenced in tests / future endpoints.
