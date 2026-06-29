@@ -145,7 +145,8 @@
     "acquisition": {
       "title": "اكتساب العملاء",
       "bestDay": "أفضل يوم: {date} ({count} عميل)",
-      "empty": "لم يتم اكتساب أي عميل في هذه الفترة."
+      "empty": "لم يتم اكتساب أي عميل في هذه الفترة.",
+      "tipConversion": "التحويل: {pct}%"
     },
     "lifetime": {
       "title": "الإجماليات التراكمية",
@@ -2474,7 +2475,11 @@
     "sessionsStarted": "{count, plural, =0 {لا توجد جلسات} one {جلسة واحدة بدأت} other {# جلسة بدأت}}",
     "worstDropWarning": "السؤال {q} يتسبب في فقدان <bold>{pct}%</bold> من الزوار مقارنة بالسؤال السابق. هذه هي النقطة الساخنة التي يجب إعادة صياغتها أولاً.",
     "leadsCount": "{count, plural, =0 {لا عملاء} one {عميل واحد} other {# عملاء}}",
-    "leadsCountWithPct": "{count} عملاء · {pct}%"
+    "leadsCountWithPct": "{count} عملاء · {pct}%",
+    "seriesViews": "المشاهدات",
+    "seriesLeads": "المسجّلون",
+    "tooltipViews": "{count} مشاهدة",
+    "tooltipConversion": "التحويل: {pct}%"
   },
   "illustrations": {
     "emptyInbox": "صندوق الوارد فارغ",

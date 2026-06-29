@@ -145,7 +145,8 @@
     "acquisition": {
       "title": "Acquisizione lead",
       "bestDay": "Giorno migliore: {date} ({count} lead)",
-      "empty": "Nessun lead acquisito in questo periodo."
+      "empty": "Nessun lead acquisito in questo periodo.",
+      "tipConversion": "Conversione: {pct}%"
     },
     "lifetime": {
       "title": "Totali cumulati",
@@ -2486,7 +2487,11 @@
     "sessionsStarted": "{count, plural, =0 {0 sessioni avviate} one {# sessione avviata} other {# sessioni avviate}}",
     "worstDropWarning": "La domanda {q} fa perdere il <bold>{pct}%</bold> dei visitatori rispetto alla precedente. È il punto critico da riscrivere per primo.",
     "leadsCount": "{count, plural, =0 {0 lead} one {# lead} other {# lead}}",
-    "leadsCountWithPct": "{count} lead · {pct}%"
+    "leadsCountWithPct": "{count} lead · {pct}%",
+    "seriesViews": "Visite",
+    "seriesLeads": "Iscritti",
+    "tooltipViews": "{count} visite",
+    "tooltipConversion": "Conversione: {pct}%"
   },
   "illustrations": {
     "emptyInbox": "Casella vuota",

@@ -73,7 +73,8 @@ interface AnalyticsResponse {
     exportRate: number;
   };
   resultDistribution: { title: string; count: number; pct: number }[];
-  leadsByDay: { date: string; count: number }[];
+  // count = inscrits du jour, views = visites du jour (source quiz_events).
+  leadsByDay: { date: string; count: number; views?: number }[];
   funnel?: FunnelStep[];
   totalFunnelSessions?: number;
   error?: string;
@@ -179,6 +180,9 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
   }, [period]);
 
   const m = data.metrics;
+  // On n'affiche la ligne "vues" + la conversion par jour QUE si les vues
+  // sont fiables pour ce quiz (sinon = vues incomplètes → trompeur).
+  const showViews = m.viewsReliable !== false;
 
   return (
     <div className="space-y-6">
@@ -265,11 +269,23 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="lg:col-span-2 p-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-3 gap-2">
             <h2 className="text-sm font-semibold">{t("leadsEvolutionTitle")}</h2>
-            {loading ? (
-              <Loader2 className="size-4 animate-spin text-muted-foreground" />
-            ) : null}
+            <div className="flex items-center gap-3">
+              {showViews && (
+                <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <span className="size-2.5 rounded-full" style={{ backgroundColor: "#94A3B8" }} />
+                    {t("seriesViews")}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="size-2.5 rounded-full" style={{ backgroundColor: "#5D6CDB" }} />
+                    {t("seriesLeads")}
+                  </span>
+                </div>
+              )}
+              {loading ? <Loader2 className="size-4 animate-spin text-muted-foreground" /> : null}
+            </div>
           </div>
           {data.leadsByDay.length === 0 ? (
             <EmptyState message={t("emptyLeadsPeriod")} />
@@ -280,6 +296,10 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
                   <linearGradient id="qaLeadFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#5D6CDB" stopOpacity={0.35} />
                     <stop offset="100%" stopColor="#5D6CDB" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="qaViewFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#94A3B8" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#94A3B8" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -294,7 +314,18 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
                   fontSize={10}
                   tick={{ fill: "hsl(var(--muted-foreground))" }}
                 />
-                <Tooltip content={<DayTooltip />} />
+                <Tooltip content={<DayTooltip showViews={showViews} />} />
+                {/* Vues en fond (gris) — visible seulement si les vues sont
+                    fiables pour ce quiz. Les inscrits par-dessus (indigo). */}
+                {showViews && (
+                  <Area
+                    type="monotone"
+                    dataKey="views"
+                    stroke="#94A3B8"
+                    strokeWidth={2}
+                    fill="url(#qaViewFill)"
+                  />
+                )}
                 <Area
                   type="monotone"
                   dataKey="count"
@@ -532,29 +563,50 @@ function shortDate(s: string, locale: string): string {
   }
 }
 
-function DayTooltip({ active, payload, label }: any) {
+type TooltipEntry = { value?: number; dataKey?: string; payload?: Record<string, unknown> };
+type TooltipProps = { active?: boolean; label?: string; payload?: TooltipEntry[] };
+
+function DayTooltip({ active, payload, label, showViews }: TooltipProps & { showViews?: boolean }) {
   const t = useTranslations("quizAnalytics");
   const locale = useLocale();
   if (!active || !payload?.length) return null;
+  // payload contient les séries présentes ce jour-là. On lit par dataKey
+  // pour ne pas dépendre de l'ordre de rendu.
+  const byKey: Record<string, number> = {};
+  for (const p of payload) if (p.dataKey) byKey[p.dataKey] = Number(p.value) || 0;
+  const leads = byKey.count ?? 0;
+  const views = byKey.views ?? 0;
+  // Conversion du jour : inscrits / vues. Seulement si fiable (vues >= leads
+  // et vues > 0) — sinon on n'invente pas un taux faux.
+  const conv = showViews && views > 0 && views >= leads ? Math.round((leads / views) * 1000) / 10 : null;
   return (
     <div className="rounded-md border bg-background shadow-lg px-3 py-2 text-xs">
-      <div className="font-semibold">{shortDate(label, locale)}</div>
-      <div className="text-muted-foreground tabular-nums">
-        {t("leadsCount", { count: payload[0].value })}
+      <div className="font-semibold">{shortDate(label ?? "", locale)}</div>
+      {showViews && (
+        <div className="tabular-nums" style={{ color: "#64748B" }}>
+          {t("tooltipViews", { count: views })}
+        </div>
+      )}
+      <div className="tabular-nums" style={{ color: "#5D6CDB" }}>
+        {t("leadsCount", { count: leads })}
       </div>
+      {conv !== null && (
+        <div className="mt-0.5 font-medium tabular-nums">{t("tooltipConversion", { pct: conv })}</div>
+      )}
     </div>
   );
 }
 
-function ResultTooltip({ active, payload }: any) {
+function ResultTooltip({ active, payload }: TooltipProps) {
   const t = useTranslations("quizAnalytics");
   if (!active || !payload?.length) return null;
-  const p = payload[0];
+  const p = payload[0]!;
+  const row = p.payload ?? {};
   return (
     <div className="rounded-md border bg-background shadow-lg px-3 py-2 text-xs">
-      <div className="font-semibold">{stripHtml(p.payload.title)}</div>
+      <div className="font-semibold">{stripHtml(String(row.title ?? ""))}</div>
       <div className="text-muted-foreground tabular-nums">
-        {t("leadsCountWithPct", { count: p.value, pct: p.payload.pct })}
+        {t("leadsCountWithPct", { count: p.value ?? 0, pct: Number(row.pct ?? 0) })}
       </div>
     </div>
   );

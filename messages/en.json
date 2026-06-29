@@ -145,7 +145,8 @@
     "acquisition": {
       "title": "Lead acquisition",
       "bestDay": "Best day: {date} ({count} leads)",
-      "empty": "No leads captured in this range."
+      "empty": "No leads captured in this range.",
+      "tipConversion": "Conversion: {pct}%"
     },
     "lifetime": {
       "title": "Lifetime totals",
@@ -2470,7 +2471,11 @@
     "sessionsStarted": "{count, plural, =0 {0 sessions started} one {# session started} other {# sessions started}}",
     "worstDropWarning": "Question {q} loses <bold>{pct}%</bold> of visitors compared to the previous one. That's the hotspot to rewrite first.",
     "leadsCount": "{count, plural, =0 {0 leads} one {# lead} other {# leads}}",
-    "leadsCountWithPct": "{count} leads · {pct}%"
+    "leadsCountWithPct": "{count} leads · {pct}%",
+    "seriesViews": "Views",
+    "seriesLeads": "Sign-ups",
+    "tooltipViews": "{count} views",
+    "tooltipConversion": "Conversion: {pct}%"
   },
   "illustrations": {
     "emptyInbox": "Empty inbox",

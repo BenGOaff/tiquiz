@@ -145,7 +145,8 @@
     "acquisition": {
       "title": "Acquisition de leads",
       "bestDay": "Meilleur jour : {date} ({count} leads)",
-      "empty": "Aucun lead capturé sur cette période."
+      "empty": "Aucun lead capturé sur cette période.",
+      "tipConversion": "Conversion : {pct}%"
     },
     "lifetime": {
       "title": "Cumul depuis la création",
@@ -2470,7 +2471,11 @@
     "sessionsStarted": "{count, plural, =0 {0 session commencée} one {# session commencée} other {# sessions commencées}}",
     "worstDropWarning": "Question {q} fait perdre <bold>{pct}%</bold> des visiteurs par rapport à la précédente. C'est le point chaud à reformuler en priorité.",
     "leadsCount": "{count, plural, =0 {0 lead} one {# lead} other {# leads}}",
-    "leadsCountWithPct": "{count} leads · {pct}%"
+    "leadsCountWithPct": "{count} leads · {pct}%",
+    "seriesViews": "Vues",
+    "seriesLeads": "Inscrits",
+    "tooltipViews": "{count} vues",
+    "tooltipConversion": "Conversion : {pct}%"
   },
   "illustrations": {
     "emptyInbox": "Boîte de réception vide",

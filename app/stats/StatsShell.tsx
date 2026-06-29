@@ -134,6 +134,19 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
     return best;
   }, [data?.leadsByDay]);
 
+  // Série quotidienne fusionnée vues + inscrits (demande Gwenn 29 juin 2026).
+  // Les vues viennent de eventsByDay (quiz_events), déjà bucketisées au même
+  // jour local que les leads → alignement parfait + conversion par jour.
+  // Consts simples (pas de useMemo) : le calcul est léger et on évite de
+  // perturber la mémoïsation gérée par le React Compiler.
+  const hasDailyViews = (data?.eventsByDay ?? []).some((e) => e.view > 0);
+  const viewsByDayKey = new Map((data?.eventsByDay ?? []).map((e) => [e.day, e.view]));
+  const chartData = (data?.leadsByDay ?? []).map((d) => ({
+    ...d,
+    views: viewsByDayKey.get(d.day) ?? 0,
+    label: dateFormatter.format(new Date(d.day)),
+  }));
+
   return (
     <AppShell userEmail={userEmail} headerTitle={tNav("stats")}>
       {/* Banner */}
@@ -248,61 +261,66 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
             </CardHeader>
             <CardContent>
               {data.leadsByDay.length > 0 ? (
-                <div className="h-[260px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={data.leadsByDay.map((d) => ({
-                        ...d,
-                        // Pre-format here so the axis tick labels stay
-                        // light — Recharts re-runs tick formatters
-                        // every render otherwise.
-                        label: dateFormatter.format(new Date(d.day)),
-                      }))}
-                      margin={{ top: 10, right: 10, left: -16, bottom: 0 }}
-                    >
-                      <defs>
-                        <linearGradient id="leadFill" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.45} />
-                          <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis
-                        dataKey="label"
-                        stroke="hsl(var(--muted-foreground))"
-                        tick={{ fontSize: 11 }}
-                        // Don't render every label — gets noisy beyond
-                        // ~14 days. Recharts picks an interval if we
-                        // don't fix one, but the auto-pick is
-                        // inconsistent across viewport widths.
-                        interval="preserveStartEnd"
-                        minTickGap={24}
-                      />
-                      <YAxis
-                        stroke="hsl(var(--muted-foreground))"
-                        tick={{ fontSize: 11 }}
-                        allowDecimals={false}
-                        width={32}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          borderRadius: 8,
-                          border: "1px solid hsl(var(--border))",
-                          background: "hsl(var(--card))",
-                          fontSize: 12,
-                        }}
-                        labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
-                        formatter={(v: number) => [`${v}`, t("kpis.leads")]}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="count"
-                        stroke="hsl(var(--primary))"
-                        strokeWidth={2}
-                        fill="url(#leadFill)"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                <div className="space-y-2">
+                  {hasDailyViews && (
+                    <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <span className="size-2.5 rounded-full" style={{ backgroundColor: "#94A3B8" }} />
+                        {t("kpis.views")}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="size-2.5 rounded-full" style={{ backgroundColor: "hsl(var(--primary))" }} />
+                        {t("kpis.leads")}
+                      </span>
+                    </div>
+                  )}
+                  <div className="h-[260px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -16, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="leadFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.45} />
+                            <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="viewFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#94A3B8" stopOpacity={0.28} />
+                            <stop offset="100%" stopColor="#94A3B8" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                        <XAxis
+                          dataKey="label"
+                          stroke="hsl(var(--muted-foreground))"
+                          tick={{ fontSize: 11 }}
+                          interval="preserveStartEnd"
+                          minTickGap={24}
+                        />
+                        <YAxis
+                          stroke="hsl(var(--muted-foreground))"
+                          tick={{ fontSize: 11 }}
+                          allowDecimals={false}
+                          width={32}
+                        />
+                        <Tooltip content={<AcqTooltip showViews={hasDailyViews} />} />
+                        {hasDailyViews && (
+                          <Area
+                            type="monotone"
+                            dataKey="views"
+                            stroke="#94A3B8"
+                            strokeWidth={2}
+                            fill="url(#viewFill)"
+                          />
+                        )}
+                        <Area
+                          type="monotone"
+                          dataKey="count"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth={2}
+                          fill="url(#leadFill)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground py-6 text-center">{t("acquisition.empty")}</p>
@@ -716,6 +734,45 @@ function FunnelStat({
         <span className="text-sm text-muted-foreground">{label}</span>
         <span className="text-base font-bold tabular-nums">{value}</span>
       </div>
+    </div>
+  );
+}
+
+// Tooltip du graphe acquisition : vues + inscrits + conversion du jour.
+// La conversion n'est affichée que si elle est fiable (vues >= leads et
+// vues > 0) — sinon on n'invente pas un taux.
+function AcqTooltip({
+  active,
+  payload,
+  label,
+  showViews,
+}: {
+  active?: boolean;
+  label?: string;
+  payload?: Array<{ value?: number; dataKey?: string }>;
+  showViews?: boolean;
+}) {
+  const t = useTranslations("stats");
+  if (!active || !payload?.length) return null;
+  const byKey: Record<string, number> = {};
+  for (const p of payload) if (p.dataKey) byKey[p.dataKey] = Number(p.value) || 0;
+  const leads = byKey.count ?? 0;
+  const views = byKey.views ?? 0;
+  const conv = showViews && views > 0 && views >= leads ? Math.round((leads / views) * 1000) / 10 : null;
+  return (
+    <div className="rounded-md border bg-card shadow-lg px-3 py-2 text-xs">
+      <div className="font-semibold text-foreground">{label}</div>
+      {showViews && (
+        <div className="tabular-nums" style={{ color: "#64748B" }}>
+          {t("kpis.views")}: {views}
+        </div>
+      )}
+      <div className="tabular-nums" style={{ color: "hsl(var(--primary))" }}>
+        {t("kpis.leads")}: {leads}
+      </div>
+      {conv !== null && (
+        <div className="mt-0.5 font-medium tabular-nums">{t("acquisition.tipConversion", { pct: conv })}</div>
+      )}
     </div>
   );
 }

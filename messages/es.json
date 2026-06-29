@@ -145,7 +145,8 @@
     "acquisition": {
       "title": "Captación de leads",
       "bestDay": "Mejor día: {date} ({count} leads)",
-      "empty": "Ningún lead capturado en este periodo."
+      "empty": "Ningún lead capturado en este periodo.",
+      "tipConversion": "Conversión: {pct}%"
     },
     "lifetime": {
       "title": "Totales acumulados",
@@ -2486,7 +2487,11 @@
     "sessionsStarted": "{count, plural, =0 {0 sesiones iniciadas} one {# sesión iniciada} other {# sesiones iniciadas}}",
     "worstDropWarning": "La pregunta {q} pierde el <bold>{pct}%</bold> de los visitantes respecto a la anterior. Es el punto caliente que hay que reescribir primero.",
     "leadsCount": "{count, plural, =0 {0 leads} one {# lead} other {# leads}}",
-    "leadsCountWithPct": "{count} leads · {pct}%"
+    "leadsCountWithPct": "{count} leads · {pct}%",
+    "seriesViews": "Visitas",
+    "seriesLeads": "Registros",
+    "tooltipViews": "{count} visitas",
+    "tooltipConversion": "Conversión: {pct}%"
   },
   "illustrations": {
     "emptyInbox": "Bandeja de entrada vacía",
