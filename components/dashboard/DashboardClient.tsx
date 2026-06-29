@@ -76,23 +76,19 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
 
   async function fetchQuizzes() {
     try {
+      // `/api/quiz` renvoie désormais `leads_count` et `last_lead_at` par
+      // quiz, agrégés en SQL (fiables à tout volume). Plus de fetch par
+      // quiz (N+1) ni de comptage plafonné à 1000 (bug Gwenn gros volume).
       const res = await fetch("/api/quiz");
       const data = await res.json();
-      if (data.ok) {
-        const enriched: Quiz[] = [];
-        for (const quiz of data.quizzes) {
-          const qRes = await fetch(`/api/quiz/${quiz.id}`);
-          const qData = await qRes.json();
-          // `/api/quiz/[id]` returns leads ordered by created_at desc,
-          // so `leads[0]` is the most recent capture.
-          const leads = Array.isArray(qData.leads) ? qData.leads : [];
-          const lastLeadAt =
-            leads.length > 0 && typeof leads[0]?.created_at === "string"
-              ? leads[0].created_at
-              : null;
-          enriched.push({ ...quiz, leads_count: leads.length, last_lead_at: lastLeadAt });
-        }
-        setQuizzes(enriched);
+      if (data.ok && Array.isArray(data.quizzes)) {
+        setQuizzes(
+          data.quizzes.map((quiz: Quiz) => ({
+            ...quiz,
+            leads_count: typeof quiz.leads_count === "number" ? quiz.leads_count : 0,
+            last_lead_at: quiz.last_lead_at ?? null,
+          })),
+        );
       }
     } catch {
       // fail silently

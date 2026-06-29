@@ -37,12 +37,6 @@ async function resolveQuizId(slugOrId: string): Promise<string | null> {
   return (data?.id as string) ?? null;
 }
 
-type SurveyAnswer = {
-  question_index?: number;
-  option_index?: number;
-  option_indices?: number[];
-};
-
 export async function GET(_req: NextRequest, ctx: RouteContext) {
   const { quizId: rawQuizId } = await ctx.params;
   const quizId = await resolveQuizId(rawQuizId);
@@ -68,42 +62,26 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ ok: false, error: "AGGREGATE_DISABLED" }, { status: 403 });
   }
 
-  // On lit le minimum nécessaire — uniquement la colonne answers.
-  const { data: leads, error: leadsErr } = await supabaseAdmin
-    .from("quiz_leads")
-    .select("answers")
-    .eq("quiz_id", quizId);
-
-  if (leadsErr) {
+  // Agrégation DANS la base (RPCs) — plus de lecture ligne par ligne
+  // plafonnée à 1000. survey_answer_totals reproduit la même logique
+  // (multi-select +1 par option cochée, sinon single +1) sur tout le
+  // volume ; survey_response_count = nb de répondants (answers array).
+  const [totalsRes, countRes] = await Promise.all([
+    supabaseAdmin.rpc("survey_answer_totals", { p_quiz_id: quizId }),
+    supabaseAdmin.rpc("survey_response_count", { p_quiz_id: quizId }),
+  ]);
+  if (totalsRes.error) {
     return NextResponse.json({ ok: false, error: "LOAD_FAILED" }, { status: 500 });
   }
 
   // totals[questionIdx][optionIdx] = count
   const totals: Record<number, Record<number, number>> = {};
-  let totalResponses = 0;
-
-  for (const lead of leads ?? []) {
-    const answers = (lead as { answers?: SurveyAnswer[] | null }).answers;
-    if (!Array.isArray(answers)) continue;
-    totalResponses += 1;
-    for (const ans of answers) {
-      const qi = typeof ans.question_index === "number" ? ans.question_index : null;
-      if (qi === null) continue;
-      if (!totals[qi]) totals[qi] = {};
-      // Multi-select : on incrémente une fois par option cochée.
-      if (Array.isArray(ans.option_indices)) {
-        for (const oi of ans.option_indices) {
-          if (typeof oi === "number") {
-            totals[qi][oi] = (totals[qi][oi] ?? 0) + 1;
-          }
-        }
-      } else if (typeof ans.option_index === "number") {
-        totals[qi][ans.option_index] = (totals[qi][ans.option_index] ?? 0) + 1;
-      }
-      // free_text / rating / stars : pas d'option discrète, on ne les agrège
-      // pas ici (le client peut afficher autre chose ou simplement skip).
-    }
+  for (const r of (totalsRes.data ?? []) as { question_index: number; option_index: number; n: number }[]) {
+    const qi = r.question_index;
+    if (!totals[qi]) totals[qi] = {};
+    totals[qi][r.option_index] = Number(r.n) || 0;
   }
+  const totalResponses = Number(countRes.data ?? 0) || 0;
 
   return NextResponse.json(
     { ok: true, totals, total_responses: totalResponses },

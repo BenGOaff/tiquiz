@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { lockAndRedact, type LeadLike } from "@/lib/leadLock";
 import { getActiveProjectScope } from "@/lib/projects/scopeFilter";
+import { fetchAllRows } from "@/lib/db/fetchAllRows";
 
 export async function GET() {
   try {
@@ -31,14 +32,21 @@ export async function GET() {
 
     const quizIds = quizzes.map((q: { id: string }) => q.id);
 
-    // Get all leads for those quizzes
-    const { data: leads, error } = await supabase
-      .from("quiz_leads")
-      .select("*, quiz_results(title, sio_tag_name)")
-      .in("quiz_id", quizIds)
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
+    // Get all leads for those quizzes — paginé pour ne plus être plafonné
+    // à 1000 (la page "Mes leads" + son export CSV étaient tronqués).
+    // Borne haute de sécurité pour protéger le rendu navigateur ; au-delà,
+    // l'export serveur dédié (/survey-results, /quiz/[id] exports) reste
+    // complet sans limite.
+    const leads = await fetchAllRows<Record<string, unknown>>(
+      (from, to) =>
+        supabase
+          .from("quiz_leads")
+          .select("*, quiz_results(title, sio_tag_name)")
+          .in("quiz_id", quizIds)
+          .order("created_at", { ascending: false })
+          .range(from, to),
+      { max: 50000 },
+    );
 
     const { data: profileRow } = await supabase
       .from("profiles")

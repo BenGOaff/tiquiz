@@ -23,17 +23,20 @@ export async function getPartnerMetrics(userId: string): Promise<PartnerMetrics>
   const rows = quizzes ?? [];
   const ids = rows.map((q) => q.id as string);
 
+  // Comptage leads par quiz agrégé DANS la base (RPC stats_leads_counts,
+  // sans borne = lifetime) — plus de fetch ligne par ligne plafonné à 1000.
   const leadsByQuiz = new Map<string, number>();
   let leads = 0;
   if (ids.length > 0) {
-    const { data: leadRows } = await supabaseAdmin
-      .from("quiz_leads")
-      .select("quiz_id")
-      .in("quiz_id", ids);
-    for (const r of leadRows ?? []) {
-      const qid = (r as { quiz_id: string }).quiz_id;
-      leads += 1;
-      leadsByQuiz.set(qid, (leadsByQuiz.get(qid) ?? 0) + 1);
+    const { data: leadCounts } = await supabaseAdmin.rpc("stats_leads_counts", {
+      p_quiz_ids: ids,
+      p_since: null,
+      p_until: null,
+    });
+    for (const r of (leadCounts ?? []) as { quiz_id: string; n: number }[]) {
+      const c = Number(r.n) || 0;
+      leads += c;
+      leadsByQuiz.set(r.quiz_id, c);
     }
   }
 

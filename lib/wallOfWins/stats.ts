@@ -105,38 +105,21 @@ async function fetchTopQuizInRange(
   since: Date,
   until: Date,
 ): Promise<WallOfWinsStats["topQuiz"]> {
-  const { data, error } = await supabaseAdmin
-    .from("business_events")
-    .select("payload")
-    .eq("user_id", userId)
-    .eq("kind", "quiz_complete")
-    .gte("occurred_at", since.toISOString())
-    .lt("occurred_at", until.toISOString())
-    .limit(5000);
+  // Top quiz agrégé DANS la base (RPC), sans plafond (avant : cap 5000 →
+  // au-delà, des complétions étaient silencieusement ignorées du calcul).
+  const { data, error } = await supabaseAdmin.rpc("wall_top_quiz_completes", {
+    p_user_id: userId,
+    p_since: since.toISOString(),
+    p_until: until.toISOString(),
+  });
   if (error) return null;
+  const top = ((data ?? []) as Array<{ quiz_id: string; completes: number; quiz_title: string | null }>)[0];
+  if (!top || !top.quiz_id) return null;
 
-  const counts = new Map<string, number>();
-  const titles = new Map<string, string>();
-  for (const row of (data ?? []) as Array<{ payload: Record<string, unknown> | null }>) {
-    const quizId = (row.payload?.quizId as string | undefined) ?? null;
-    if (!quizId) continue;
-    counts.set(quizId, (counts.get(quizId) ?? 0) + 1);
-    const title = row.payload?.quizTitle as string | undefined;
-    if (title && !titles.has(quizId)) titles.set(quizId, title);
-  }
-  if (counts.size === 0) return null;
+  const topId = top.quiz_id;
+  const topCount = Number(top.completes) || 0;
 
-  let topId = "";
-  let topCount = 0;
-  for (const [id, count] of counts.entries()) {
-    if (count > topCount) {
-      topCount = count;
-      topId = id;
-    }
-  }
-  if (!topId) return null;
-
-  let title = titles.get(topId) ?? "";
+  let title = top.quiz_title ?? "";
   if (!title) {
     const { data: quizRow } = await supabaseAdmin
       .from("quizzes")

@@ -37,7 +37,25 @@ export async function GET() {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ ok: true, quizzes: data ?? [] });
+    // Récap leads (count + dernier lead) par quiz, agrégé en SQL en UN
+    // appel — le dashboard n'a plus besoin de faire un fetch par quiz
+    // (N+1) ni de compter des leads plafonnés à 1000.
+    const quizzes = (data ?? []) as Array<Record<string, unknown>>;
+    const ids = quizzes.map((q) => q.id as string);
+    if (ids.length > 0) {
+      const { data: summary } = await supabase.rpc("quiz_leads_summary", { p_quiz_ids: ids });
+      const byQuiz = new Map<string, { n: number; last_at: string | null }>();
+      for (const r of (summary ?? []) as { quiz_id: string; n: number; last_at: string | null }[]) {
+        byQuiz.set(r.quiz_id, { n: Number(r.n) || 0, last_at: r.last_at });
+      }
+      for (const q of quizzes) {
+        const s = byQuiz.get(q.id as string);
+        q.leads_count = s?.n ?? 0;
+        q.last_lead_at = s?.last_at ?? null;
+      }
+    }
+
+    return NextResponse.json({ ok: true, quizzes });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "Unknown error" },

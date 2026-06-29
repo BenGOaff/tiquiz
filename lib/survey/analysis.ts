@@ -12,6 +12,7 @@ import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
 import { localizedYesNo, isAnswered } from "@/lib/survey/format";
+import { fetchAllRows } from "@/lib/db/fetchAllRows";
 
 export const SURVEY_AI_MIN_RESPONSES = 5;
 
@@ -101,10 +102,16 @@ export async function aggregateSurvey(
     .order("sort_order", { ascending: true });
   const questions = (questionsRaw ?? []) as QuestionRow[];
 
-  const { data: leads } = await supabaseAdmin
-    .from("quiz_leads")
-    .select("answers")
-    .eq("quiz_id", quizId);
+  // Analyse COMPLÈTE (pas de plafond 1000) : pagination serveur, sinon
+  // l'IA analyse un échantillon tronqué et fausse ses conclusions.
+  const leads = await fetchAllRows<{ answers?: SurveyAnswerRaw[] | null }>((from, to) =>
+    supabaseAdmin
+      .from("quiz_leads")
+      .select("answers")
+      .eq("quiz_id", quizId)
+      .order("created_at", { ascending: true })
+      .range(from, to),
+  );
 
   const totals: Record<number, Record<number, number>> = {};
   const ratingSums: Record<number, { sum: number; n: number }> = {};
