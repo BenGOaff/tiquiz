@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { Mascot } from "@/components/ui/mascot";
 import { stripHtml } from "@/lib/richText";
 import { SkeletonCard } from "@/components/ui/skeleton";
+import GlobalInsightsPanel from "@/components/insights/GlobalInsightsPanel";
 import {
   BarChart3, Eye, Play, CheckCircle, Users, Share2, TrendingUp, TrendingDown,
   Sparkles, ArrowRight, Info,
@@ -195,6 +196,10 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
         </Card>
       ) : (
         <>
+          {/* Analyse IA stratégique globale (tous les projets). Gatée par
+              plan côté endpoint : free voit l'upsell, premium l'analyse. */}
+          <GlobalInsightsPanel />
+
           {/* KPI cards — VALEURS LIFETIME comme source de vérité (cohérent
               avec les compteurs auto-bumpés sur quizzes.*_count et les
               cards per-quiz). Les deltas vs période précédente utilisent

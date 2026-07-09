@@ -45,6 +45,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { stripHtml } from "@/lib/richText";
+import QuizInsightsPanel from "@/components/quiz/QuizInsightsPanel";
 
 type Period = "7" | "30" | "90" | "all";
 
@@ -395,6 +396,10 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
         funnel={data.funnel ?? []}
         totalSessions={data.totalFunnelSessions ?? 0}
       />
+
+      {/* Analyse IA strategique de ce quiz (funnel + capture + profils +
+          axes d'amelioration + actions). Gatee par plan cote endpoint. */}
+      <QuizInsightsPanel quizId={quizId} />
     </div>
   );
 }
