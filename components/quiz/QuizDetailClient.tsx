@@ -19,6 +19,7 @@ import { GifPickerButton } from "@/components/quiz/GifPicker";
 import { ImageCropDialog } from "@/components/quiz/ImageCropDialog";
 import { TiquizStudioButton } from "@/components/visual-studio/TiquizStudioButton";
 import QuizResultsAnalytics from "@/components/quiz/QuizResultsAnalytics";
+import QuizInsightsPanel from "@/components/quiz/QuizInsightsPanel";
 import { ReadinessRing } from "@/components/ui/readiness-ring";
 import { computeReadiness } from "@/lib/quiz-readiness";
 import { toast } from "sonner";
@@ -3819,6 +3820,12 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               results={editResults}
               onExportCSV={handleExportCSV}
             />
+
+            {/* Analyse IA strategique (funnel, capture, profils, axes
+                d'amelioration, actions) sous les statistiques du quiz. */}
+            <div className="mt-6">
+              <QuizInsightsPanel quizId={quizId} />
+            </div>
           </div>
         </div>
       )}
