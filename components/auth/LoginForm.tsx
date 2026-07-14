@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTranslations } from "next-intl";
@@ -273,8 +272,12 @@ export default function LoginForm() {
             {mode === "password" && (
               <div className="mt-6 pt-6 border-t border-border">
                 <p className="text-center text-sm text-muted-foreground mb-3">{t("noAccount")}</p>
+                {/* Inscription directe desactivee : on envoie vers la page
+                    de capture Systeme.io (Bene 14 juillet 2026). */}
                 <Button variant="outline" className="w-full" asChild>
-                  <Link href="/signup">{t("createAccount")}</Link>
+                  <a href={process.env.NEXT_PUBLIC_TIQUIZ_SIGNUP_URL ?? "https://www.tipote.fr/part-tiquiz-gratuit"}>
+                    {t("createAccount")}
+                  </a>
                 </Button>
               </div>
             )}

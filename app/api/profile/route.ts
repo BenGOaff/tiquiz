@@ -85,6 +85,10 @@ export async function GET() {
           user_id: user.id,
           email: user.email,
           full_name: user.user_metadata?.full_name ?? null,
+          // Users provisionnes via Systeme.io ont deja first_name/last_name
+          // en metadata auth : on les backfill pour un prenom/nom corrects.
+          first_name: user.user_metadata?.first_name ?? null,
+          last_name: user.user_metadata?.last_name ?? null,
         })
         .select("*")
         .single();
@@ -136,6 +140,11 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
 
     const allowed = [
+      // Identite du titulaire du compte, editable dans Reglages (retour
+      // Bene 14 juillet 2026 : les users doivent pouvoir corriger leur
+      // prenom / nom saisis a l'envers a l'inscription). full_name est
+      // recalcule serveur-side a partir de first_name + last_name plus bas.
+      "first_name", "last_name",
       "full_name", "ui_locale", "content_locale", "address_form", "privacy_url",
       "brand_logo_url", "brand_favicon_url", "brand_color_primary", "brand_color_accent",
       "brand_font", "brand_tone", "brand_website_url",
@@ -216,6 +225,26 @@ export async function PATCH(req: NextRequest) {
         bpUpdates[key] = val;
       } else {
         profilesUpdates[key] = val;
+      }
+    }
+
+    // Identite : si prenom/nom fournis, on normalise (trim + cap) et on
+    // recalcule full_name (source d'affichage legacy + admin) pour rester
+    // coherent. Corrige les noms saisis a l'envers a l'inscription.
+    if ("first_name" in profilesUpdates || "last_name" in profilesUpdates) {
+      const fn = typeof profilesUpdates.first_name === "string" ? (profilesUpdates.first_name as string).trim().slice(0, 80) : "";
+      const ln = typeof profilesUpdates.last_name === "string" ? (profilesUpdates.last_name as string).trim().slice(0, 80) : "";
+      profilesUpdates.first_name = fn || null;
+      profilesUpdates.last_name = ln || null;
+      profilesUpdates.full_name = [fn, ln].filter(Boolean).join(" ") || null;
+      // Miroir best-effort vers auth metadata (outils externes / re-login).
+      // Merge shallow : on ne touche pas aux autres cles (sub, email...).
+      try {
+        await supabaseAdmin.auth.admin.updateUserById(user.id, {
+          user_metadata: { first_name: fn || null, last_name: ln || null, full_name: profilesUpdates.full_name },
+        });
+      } catch {
+        /* non-fatal : la source de verite reste profiles */
       }
     }
 

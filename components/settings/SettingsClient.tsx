@@ -28,6 +28,8 @@ import SioApiKeysManager from "@/components/sio/SioApiKeysManager";
 
 type Profile = {
   full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   email: string | null;
   ui_locale: string | null;
   content_locale: string | null;
@@ -143,6 +145,9 @@ export default function SettingsClient() {
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
 
+  // Identite du titulaire (editable — retour Bene 14 juillet 2026).
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [addressForm, setAddressForm] = useState("tu");
   const [contentLocale, setContentLocale] = useState("fr");
   const [privacyUrl, setPrivacyUrl] = useState("");
@@ -244,6 +249,12 @@ export default function SettingsClient() {
         if (data.ok && data.profile) {
           const p = data.profile;
           setProfile(p);
+          // Prenom / Nom : on prefere les colonnes dediees ; fallback sur
+          // full_name (1er mot = prenom, reste = nom) pour les comptes
+          // legacy self-signup ou seul full_name est rempli.
+          const fullParts = typeof p.full_name === "string" ? p.full_name.trim().split(/\s+/) : [];
+          setFirstName(p.first_name ?? (fullParts.length > 0 ? fullParts[0] : ""));
+          setLastName(p.last_name ?? (fullParts.length > 1 ? fullParts.slice(1).join(" ") : ""));
           setAddressForm(p.address_form ?? "tu");
           setContentLocale(p.content_locale ?? "fr");
           setPrivacyUrl(p.privacy_url ?? "");
@@ -292,6 +303,8 @@ export default function SettingsClient() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          first_name: firstName.trim() || null,
+          last_name: lastName.trim() || null,
           address_form: addressForm,
           content_locale: contentLocale,
           privacy_url: privacyUrl.trim() || null,
@@ -429,6 +442,37 @@ export default function SettingsClient() {
         </TabsList>
 
         <TabsContent value="general" className="space-y-4">
+          {/* Identite du titulaire — editable (retour Bene 14 juillet 2026 :
+              corriger prenom / nom saisis a l'envers a l'inscription). */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("identityTitle")}</CardTitle>
+              <CardDescription>{t("identityDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="settings-first-name">{t("identityFirstName")}</Label>
+                <Input
+                  id="settings-first-name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder={t("identityFirstNamePh")}
+                  autoComplete="given-name"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="settings-last-name">{t("identityLastName")}</Label>
+                <Input
+                  id="settings-last-name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder={t("identityLastNamePh")}
+                  autoComplete="family-name"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>{t("contentLocaleTitle")}</CardTitle>
