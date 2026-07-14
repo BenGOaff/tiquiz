@@ -2480,7 +2480,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
               })()}
               {/* Question = champ court — même fix typo qu'au-dessus. */}
               <h2
-                className="tiquiz-rich tiquiz-rich-inline tiquiz-quiz-question font-bold leading-tight text-center"
+                className="tiquiz-rich tiquiz-rich-inline tiquiz-quiz-question font-bold leading-tight text-center text-primary"
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(q.question_text)) }}
               />
 
