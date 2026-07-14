@@ -208,7 +208,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "show_consent_checkbox",
       "show_results_breakdown",
       "custom_footer_text", "custom_footer_url",
-      "brand_font", "brand_color_primary", "brand_color_background",
+      "brand_font", "brand_color_primary", "brand_color_background", "brand_color_text",
       "brand_logo_url", "hide_brand_logo",
       "capture_enabled",
       "capture_before_questions",
@@ -239,7 +239,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     const hexRe = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
-    for (const key of ["brand_color_primary", "brand_color_background"] as const) {
+    // brand_color_text est nullable (null = "autres textes" au défaut). Un
+    // hex invalide devient null, ce qui restaure le comportement par défaut
+    // plutôt que de casser le rendu.
+    for (const key of ["brand_color_primary", "brand_color_background", "brand_color_text"] as const) {
       if (key in patch) {
         const val = patch[key];
         if (val !== null && (typeof val !== "string" || !hexRe.test(val))) patch[key] = null;

@@ -24,11 +24,26 @@ export type BrandFontChoice = (typeof BRAND_FONT_CHOICES)[number];
 export const DEFAULT_BRAND_FONT: BrandFontChoice = "Inter";
 export const DEFAULT_BRAND_COLOR_PRIMARY = "#5D6CDB";
 export const DEFAULT_BRAND_COLOR_BACKGROUND = "#ffffff";
+// Couleur des "autres textes" (réponses, descriptions, corps) par défaut :
+// le navy `--foreground` du design system (231 41% 31% == #2E386E). Sert
+// UNIQUEMENT de valeur d'affichage dans le picker quand l'user n'a rien
+// choisi. En base, la colonne reste NULL tant que l'user n'a pas choisi
+// une couleur -> les quiz existants (dont ceux sous pub) sont rendus
+// STRICTEMENT comme avant (aucun override émis). Drame Béné 14 juil 2026 :
+// "ne rien casser sur les quiz existants".
+export const DEFAULT_BRAND_COLOR_TEXT = "#2E386E";
 
 export type QuizBranding = {
   font: BrandFontChoice;
   primaryColor: string;
   backgroundColor: string;
+  /**
+   * Couleur des "autres textes" (réponses, corps). NULL = non défini par
+   * l'user -> le rendu garde le foreground par défaut (aucun override).
+   * On NE remplace JAMAIS ce null par une valeur par défaut côté resolver,
+   * sinon on changerait le rendu de tous les quiz existants.
+   */
+  textColor: string | null;
   logoUrl: string | null;
 };
 
@@ -38,6 +53,15 @@ function sanitizeHex(raw: unknown, fallback: string): string {
   if (typeof raw !== "string") return fallback;
   const trimmed = raw.trim();
   return HEX_RE.test(trimmed) ? trimmed : fallback;
+}
+
+// Variante nullable : renvoie le hex validé, ou null si absent/invalide.
+// Utilisée pour les couleurs optionnelles (textColor) où "non défini" doit
+// rester distinct d'une valeur par défaut.
+function sanitizeHexOrNull(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  return HEX_RE.test(trimmed) ? trimmed : null;
 }
 
 function sanitizeFont(raw: unknown, fallback: BrandFontChoice): BrandFontChoice {
@@ -50,6 +74,8 @@ type QuizInput = {
   brand_font?: string | null;
   brand_color_primary?: string | null;
   brand_color_background?: string | null;
+  /** Couleur des autres textes — NULL = non défini, aucun override. */
+  brand_color_text?: string | null;
   /** Override par quiz — NULL = fallback sur le logo du profil. */
   brand_logo_url?: string | null;
   /** Si TRUE, aucun logo affiché (ni override, ni profil). */
@@ -82,6 +108,9 @@ export function resolveQuizBranding(quiz: QuizInput, profile: ProfileInput): Qui
     font: sanitizeFont(quiz?.brand_font, profileFont),
     primaryColor: sanitizeHex(quiz?.brand_color_primary, profilePrimary),
     backgroundColor: sanitizeHex(quiz?.brand_color_background, DEFAULT_BRAND_COLOR_BACKGROUND),
+    // Nullable exprès : un quiz sans couleur de texte choisie garde le
+    // foreground par défaut (aucun override émis côté rendu).
+    textColor: sanitizeHexOrNull(quiz?.brand_color_text),
     logoUrl,
   };
 }

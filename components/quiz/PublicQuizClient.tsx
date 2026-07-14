@@ -1056,13 +1056,20 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
   //   • isolation — gives this subtree its own stacking context, also acts
   //                 as a stable anchor for the explicit color rule above
   const hslPrimary = hexToHslTriplet(branding.primaryColor);
+  // Couleur des "autres textes" (réponses, corps). NULL = non choisie par
+  // l'user -> on n'émet AUCUN override, le navy par défaut est conservé
+  // (rendu strictement identique aux quiz existants, dont ceux sous pub).
+  // Quand elle est définie, on repint `color` + `--foreground` (les titres
+  // en text-primary et les boutons en text-white ne sont pas touchés, les
+  // textes muted gardent --muted-foreground).
+  const hslText = branding.textColor ? hexToHslTriplet(branding.textColor) : null;
   const rootStyle: React.CSSProperties = {
     fontFamily: cssFontFamily(branding.font),
     backgroundColor: branding.backgroundColor,
-    color: "hsl(231 41% 31%)",
+    color: branding.textColor ?? "hsl(231 41% 31%)",
     colorScheme: "light",
     isolation: "isolate",
-    ["--foreground" as string]: "231 41% 31%",
+    ["--foreground" as string]: hslText ?? "231 41% 31%",
     ["--muted-foreground" as string]: "236 16% 50%",
     ...(hslPrimary ? ({ ["--primary" as string]: hslPrimary } as React.CSSProperties) : {}),
   };
