@@ -1503,7 +1503,11 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         const opt = q.options[oi];
         if (!opt) continue;
         const ri = opt.result_index;
-        if (ri >= 0 && ri < scores.length) scores[ri]++;
+        // Poids de la reponse : `points` si defini (permet de privilegier
+        // un profil, retour Adeline 14 juillet 2026), sinon 1 (comportement
+        // historique, 100% retro-compatible pour les quiz existants).
+        const weight = typeof opt.points === "number" ? opt.points : 1;
+        if (ri >= 0 && ri < scores.length) scores[ri] += weight;
       }
     });
     let maxScore = -1;
