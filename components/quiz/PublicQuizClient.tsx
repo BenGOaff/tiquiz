@@ -144,6 +144,9 @@ type PublicQuizData = {
   // email/capture et on envoie le visiteur directement au remerciement
   // après la dernière question. Default TRUE → comportement historique.
   capture_enabled?: boolean | null;
+  // Sondage : demander l'email AVANT les questions (Christelle 12 juillet
+  // 2026). Off par defaut -> flux inchange (capture apres les questions).
+  capture_before_questions?: boolean | null;
   // Sondage uniquement (30 mai 2026) : si TRUE, on affiche un encart
   // "Comparé aux autres participants" sur la page de remerciement avec
   // les % de chaque option choisie. Default FALSE.
@@ -910,6 +913,13 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
   }, [isPreviewMode, previewName]);
 
   const [step, setStep] = useState<Step>("intro");
+  // Capture AVANT les questions (sondage only). Actif seulement si le flag
+  // est ON, mode sondage, et capture activee. Off -> flux historique
+  // (capture APRES les questions), 100% inchange pour les sondages existants.
+  const captureBefore =
+    quiz?.mode === "survey" &&
+    Boolean(quiz?.capture_before_questions) &&
+    quiz?.capture_enabled !== false;
   const [currentQ, setCurrentQ] = useState(0);
   // NOTE (19 mai 2026) : le sessionIdRef client a été retiré — le
   // serveur gère maintenant la session via cookie HttpOnly
@@ -1613,6 +1623,11 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         if (quiz && quiz.mode === "survey" && quiz.capture_enabled === false) {
           void submitAnonymousSurvey(newAnswers);
           setStep("result");
+        } else if (captureBefore) {
+          // Email deja capture avant les questions -> on envoie email +
+          // reponses en UNE fois (upsert) puis remerciement. handleSubmitEmail
+          // passe a "result" a la fin.
+          void handleSubmitEmail(newAnswers);
         } else {
           setStep("email");
         }
@@ -1642,7 +1657,21 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     );
   };
 
-  const handleSubmitEmail = async () => {
+  // Validation + passage aux questions quand la capture est AVANT (sondage).
+  // On ne soumet PAS ici : l'email/prenom restent en state et sont envoyes
+  // en UNE seule fois avec les reponses a la fin (pas de double POST, donc
+  // pas de double tag SIO / double event Meta).
+  const handleCaptureContinue = () => {
+    if (!email.trim()) return;
+    if (quiz?.capture_first_name && quiz?.first_name_required && !firstName.trim()) { setSubmitError(t.firstNameRequiredError); return; }
+    if (quiz?.capture_last_name && quiz?.last_name_required && !lastName.trim()) { setSubmitError(t.lastNameRequiredError); return; }
+    if (quiz?.capture_phone && quiz?.phone_required && !phone.trim()) { setSubmitError(t.phoneRequiredError); return; }
+    if (quiz?.capture_country && quiz?.country_required && !country.trim()) { setSubmitError(t.countryRequiredError); return; }
+    setSubmitError(null);
+    setStep("quiz");
+  };
+
+  const handleSubmitEmail = async (finalAnswers?: (SurveyAnswer | null | undefined)[]) => {
     if (!email.trim()) return;
     // Guard: phone mandatory if the creator flipped phone_required ON
     // (Hugo, mai 2026). Block the submit and surface a clear error
@@ -1692,7 +1721,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         // Build per-question answers for analytics / export. Each shape is
         // small but distinct so Tendances (survey) and lead-export (quiz)
         // can render the right widget without re-deriving the type.
-        const answersPayload = answers.map((ans, qIdx) => {
+        const answersPayload = (finalAnswers ?? answers).map((ans, qIdx) => {
           if (!ans) return { question_index: qIdx };
           if (ans.kind === "option") {
             return { question_index: qIdx, option_index: ans.optionIndex };
@@ -2048,7 +2077,9 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
               // screen so the creator goes straight to the questions —
               // typing "Alex" again would only add friction.
               const skipPersonalize = isPreviewMode && firstName.trim().length > 0;
-              setStep(!skipPersonalize && (quiz.ask_first_name || quiz.ask_gender) ? "personalize" : "quiz");
+              // captureBefore : apres l'intro (et l'eventuelle personnalisation)
+              // on va a la capture email AVANT les questions.
+              setStep(!skipPersonalize && (quiz.ask_first_name || quiz.ask_gender) ? "personalize" : (captureBefore ? "email" : "quiz"));
             }}>
               <span
                 className="tiquiz-rich"
@@ -2120,7 +2151,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
             size="lg"
             className="w-full h-12 rounded-full"
             disabled={!canContinue}
-            onClick={() => setStep("quiz")}
+            onClick={() => setStep(captureBefore ? "email" : "quiz")}
           >
             {t.personalizeContinue}
           </Button>
@@ -2644,7 +2675,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
             <Button
               size="lg"
               className="w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug"
-              onClick={handleSubmitEmail}
+              onClick={() => (captureBefore ? handleCaptureContinue() : handleSubmitEmail())}
               disabled={
                 submitting ||
                 !email.trim() ||
@@ -2665,6 +2696,8 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                   className="tiquiz-rich tiquiz-rich-inline block w-full"
                   dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.capture_submit_text)) }}
                 />
+              ) : captureBefore ? (
+                t.personalizeContinue
               ) : quiz.mode === "survey" ? (
                 t.surveySubmit ?? t.viewResult
               ) : (

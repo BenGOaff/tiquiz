@@ -608,6 +608,21 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // Save séparé pour les palettes → c'est une charte centralisée,
   // on veut qu'elle persiste à la première interaction).
   const [savedPalettes, setSavedPalettes] = useState<PaletteList>([]);
+  // Charte du quiz : palette synthetique (couleur principale + fond du
+  // design) injectee EN TETE des palettes, pour que le picker "Mes
+  // palettes" reprenne les couleurs du branding sans que l'user doive
+  // recreer une palette a la main. Retour Christelle 12 juillet 2026 :
+  // "les couleurs personnalisees ne reprennent pas les couleurs du
+  // branding". On ne l'ajoute PAS au gestionnaire de palettes (editable).
+  const palettesWithBrand = useMemo<PaletteList>(() => {
+    const brand = [primaryColor, bgColor].filter(
+      (c): c is string => typeof c === "string" && /^#[0-9a-fA-F]{3,8}$/.test(c),
+    );
+    const uniq = [...new Set(brand.map((c) => c.toLowerCase()))];
+    return uniq.length > 0
+      ? [{ id: "__brand__", name: t("designBrandPaletteName"), colors: uniq }, ...savedPalettes]
+      : savedPalettes;
+  }, [primaryColor, bgColor, savedPalettes, t]);
   const handleChangePalettes = useCallback(async (next: PaletteList) => {
     setSavedPalettes(next);
     try {
@@ -1929,8 +1944,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const effectiveLogoUrl: string | null = hideBrandLogo ? null : (quizBrandLogoUrl || brandLogoUrl || null);
 
   return (
-   <SioTagsProvider>
-    <UserPalettesProvider palettes={savedPalettes}>
+   <SioTagsProvider quizId={quizId}>
+    <UserPalettesProvider palettes={palettesWithBrand}>
     <EditorPreviewDeviceProvider device={device}>
     <RestoreDraftDialog
       open={!!pendingDraft}

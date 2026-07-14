@@ -412,7 +412,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [mainTab, setMainTab] = useState<"create" | "share" | "trends">("create");
   // Sous-vue de l'onglet Tendances : agrégat (Synthèse) ou tableau par
   // répondant (Réponses, style Typeform / Tally).
-  const [trendsView, setTrendsView] = useState<"summary" | "responses">("summary");
+  // Defaut "responses" : l'onglet s'appelle "Réponses" pour un sondage, on
+  // montre donc directement le tableau des reponses (retour Christelle
+  // 12 juillet 2026 : "ou sont enregistrees les reponses ?"). La synthese
+  // reste accessible via le sous-toggle.
+  const [trendsView, setTrendsView] = useState<"summary" | "responses">("responses");
 
   // Marquage d'un répondant (étoile). Optimiste, revert si l'API échoue.
   // Met à jour le state `leads` → le tableau ET le PDF reflètent le marquage.
@@ -467,6 +471,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // après la dernière question et accède directement au remerciement.
   // Default TRUE pour préserver le comportement des sondages existants.
   const [captureEnabled, setCaptureEnabled] = useState<boolean>(true);
+  // Demander l'email AVANT les questions (Christelle 12 juillet 2026). Off
+  // par defaut = capture apres les questions (comportement historique).
+  const [captureBeforeQuestions, setCaptureBeforeQuestions] = useState<boolean>(false);
   // Si TRUE, on affiche les pourcentages de réponses des autres
   // participants sur la page de remerciement. Default FALSE.
   const [showAggregateResponses, setShowAggregateResponses] = useState<boolean>(false);
@@ -556,6 +563,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     brand_logo_url: quizBrandLogoUrl,
     hide_brand_logo: hideBrandLogo,
     capture_enabled: captureEnabled,
+    capture_before_questions: captureBeforeQuestions,
     show_aggregate_responses: showAggregateResponses,
     survey_thanks_heading: surveyThanksHeading,
     survey_thanks_body: surveyThanksBody,
@@ -577,7 +585,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     googleAdsConversionLabel, askFirstName, askGender,
     shareMessage, locale, sioShareTagName, sioCaptureTag, status,
     fontFamily, primaryColor, bgColor, quizBrandLogoUrl, hideBrandLogo,
-    captureEnabled, showAggregateResponses,
+    captureEnabled, captureBeforeQuestions, showAggregateResponses,
     surveyThanksHeading, surveyThanksBody,
     slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
     editQuestions, introImageUrl, introImageWidth,
@@ -630,6 +638,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (s.brand_logo_url === null || typeof s.brand_logo_url === "string") setQuizBrandLogoUrl(s.brand_logo_url);
     if (typeof s.hide_brand_logo === "boolean") setHideBrandLogo(s.hide_brand_logo);
     if (typeof s.capture_enabled === "boolean") setCaptureEnabled(s.capture_enabled);
+    if (typeof s.capture_before_questions === "boolean") setCaptureBeforeQuestions(s.capture_before_questions);
     if (typeof s.show_aggregate_responses === "boolean") setShowAggregateResponses(s.show_aggregate_responses);
     if (typeof s.survey_thanks_heading === "string") setSurveyThanksHeading(s.survey_thanks_heading);
     if (typeof s.survey_thanks_body === "string") setSurveyThanksBody(s.survey_thanks_body);
@@ -743,6 +752,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       // email. NULL en base = TRUE côté éditeur (la migration default
       // est TRUE, mais ceinture+bretelle).
       setCaptureEnabled((q as { capture_enabled?: boolean | null }).capture_enabled !== false);
+      setCaptureBeforeQuestions(Boolean((q as { capture_before_questions?: boolean | null }).capture_before_questions));
       setShowAggregateResponses((q as { show_aggregate_responses?: boolean | null }).show_aggregate_responses === true);
       setSurveyThanksHeading((q as { survey_thanks_heading?: string | null }).survey_thanks_heading ?? "");
       setSurveyThanksBody((q as { survey_thanks_body?: string | null }).survey_thanks_body ?? "");
@@ -1102,6 +1112,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           brand_logo_url: quizBrandLogoUrl, hide_brand_logo: hideBrandLogo,
           // Sondage : options de capture et d'affichage agrégé
           capture_enabled: captureEnabled,
+          capture_before_questions: captureBeforeQuestions,
           show_aggregate_responses: showAggregateResponses,
           survey_thanks_heading: surveyThanksHeading.trim() || null,
           survey_thanks_body: surveyThanksBody.trim() || null,
@@ -1288,7 +1299,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const pc = primaryColor;
 
   return (
-   <SioTagsProvider>
+   <SioTagsProvider quizId={quizId}>
     <UserPalettesProvider palettes={savedPalettes}>
     <RestoreDraftDialog
       open={!!pendingDraft}
@@ -1309,7 +1320,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
         <nav className="hidden sm:flex items-center bg-muted rounded-lg p-0.5">
           {(["create","share","trends"] as const).map(tab => (
             <button key={tab} onClick={() => setMainTab(tab)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mainTab === tab ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : <><TrendingUp className="w-3.5 h-3.5 inline mr-1.5" />{t("tabTrends")}</>}
+              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : <><TrendingUp className="w-3.5 h-3.5 inline mr-1.5" />{t("tabTrendsSurvey")}</>}
             </button>
           ))}
         </nav>
@@ -1371,7 +1382,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       <nav className="sm:hidden flex items-stretch border-b shrink-0 bg-background z-10">
         {(["create","share","trends"] as const).map(tab => (
           <button key={tab} onClick={() => setMainTab(tab)} className={`flex-1 px-2 py-2.5 text-sm font-medium transition-colors inline-flex items-center justify-center gap-1.5 ${mainTab === tab ? "text-foreground border-b-2 border-primary" : "text-muted-foreground"}`}>
-            {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : <><TrendingUp className="w-3.5 h-3.5" />{t("tabTrends")}</>}
+            {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : <><TrendingUp className="w-3.5 h-3.5" />{t("tabTrendsSurvey")}</>}
           </button>
         ))}
       </nav>
@@ -1572,6 +1583,15 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     onChange={setCaptureEnabled}
                   />
                   {captureEnabled && (<>
+                  {/* Position de la capture : avant ou apres les questions.
+                      Christelle 12 juillet 2026 : "je voudrais demander
+                      emails + prenom AVANT les questions". */}
+                  <SettingsToggle
+                    label={t("surveyCaptureBeforeLabel")}
+                    hint={t("surveyCaptureBeforeHint")}
+                    checked={captureBeforeQuestions}
+                    onChange={setCaptureBeforeQuestions}
+                  />
                   {/* Tag Systeme.io applique a chaque lead du sondage
                       (les sondages n'ont pas de resultat, donc pas de tag
                       par profil comme les quiz). */}

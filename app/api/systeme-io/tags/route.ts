@@ -25,8 +25,31 @@ export async function GET(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
 
-    const explicitKeyId = req.nextUrl.searchParams.get("keyId");
-    const projectId = await getActiveProjectId(supabase, user.id);
+    let explicitKeyId = req.nextUrl.searchParams.get("keyId");
+    let projectId = await getActiveProjectId(supabase, user.id);
+
+    // Si un quizId est fourni, on resout la cle DETERMINISTIQUEMENT depuis
+    // le quiz (la cle qu'il utilise vraiment pour syncer ses leads), et non
+    // depuis le cookie de projet actif. Corrige le retour Christelle
+    // (12 juillet 2026) : les tags de son sous-compte SIO n'apparaissaient
+    // pas quand le cookie de projet actif pointait un autre projet que
+    // celui du quiz. La cle choisie par quiz (QuizSioKeyPicker) prime.
+    const quizId = req.nextUrl.searchParams.get("quizId");
+    if (quizId) {
+      const { data: quizRow } = await supabase
+        .from("quizzes")
+        .select("sio_api_key_id, project_id")
+        .eq("id", quizId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (quizRow) {
+        const qKey = (quizRow as { sio_api_key_id?: string | null }).sio_api_key_id;
+        const qProject = (quizRow as { project_id?: string | null }).project_id;
+        if (!explicitKeyId && qKey) explicitKeyId = String(qKey);
+        if (qProject) projectId = String(qProject);
+      }
+    }
+
     const resolved = await resolveApiKey(user.id, { explicitKeyId, projectId });
     if (!resolved) {
       return NextResponse.json({ ok: false, error: "NO_API_KEY", tags: [] });
