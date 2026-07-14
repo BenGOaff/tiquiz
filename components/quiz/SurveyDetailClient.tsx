@@ -44,6 +44,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { SioTagPicker } from "@/components/ui/sio-tag-picker";
+import QuizSioKeyPicker from "@/components/sio/QuizSioKeyPicker";
 import { SioTagsProvider } from "@/components/ui/sio-tags-provider";
 import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
@@ -1600,6 +1601,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     <SioTagPicker value={sioCaptureTag} onChange={setSioCaptureTag} />
                     <p className="text-[10px] text-muted-foreground">{t("surveyLeadTagHint")}</p>
                   </div>
+                  {/* Cle API Systeme.io du sondage : permet d'envoyer les
+                      leads du sondage vers un sous-compte SIO (retour
+                      Christelle 14 juillet 2026). Le picker PATCH
+                      sio_api_key_id de facon autonome. */}
+                  <QuizSioKeyPicker quizId={quizId} />
                   <div className="flex flex-wrap gap-1.5">
                     <CapturePill label={t("fieldEmailRequired")} active locked />
                     <CapturePill label={t("fieldFirstNameRequired")} active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />

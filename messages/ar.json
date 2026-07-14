@@ -1293,7 +1293,10 @@
     "ariaCropImage": "اقتصاص الصورة",
     "ariaRemoveImage": "إزالة الصورة",
     "surveyLeadTagLabel": "وسم جهات الاتصال (اختياري)",
-    "surveyLeadTagHint": "الاستبيانات ليس لها نتائج، لذلك يُطبَّق هذا الوسم الوحيد على كل من يرسل الاستبيان. استخدمه لتشغيل أتمتة في Systeme.io."
+    "surveyLeadTagHint": "الاستبيانات ليس لها نتائج، لذلك يُطبَّق هذا الوسم الوحيد على كل من يرسل الاستبيان. استخدمه لتشغيل أتمتة في Systeme.io.",
+    "previewPointsAssign": "امنح",
+    "previewPointsFor": "نقطة/نقاط لـ",
+    "previewPointsHint": "عدد النقاط الممنوحة لهذا الملف عند اختيار هذه الإجابة. ضع نقاطاً أكثر لترجيح ملف معين."
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",

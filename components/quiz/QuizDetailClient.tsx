@@ -1245,7 +1245,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const tieAnalysis = useMemo(() => {
     return analyzeTies(
       editQuestions.map((q) => ({
-        options: q.options.map((o) => ({ result_index: o.result_index })),
+        options: q.options.map((o) => ({ result_index: o.result_index, points: o.points })),
         config: (q.config ?? null) as { multi_select?: boolean } | null,
       })),
       editResults.length,
@@ -1871,7 +1871,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const updateQ = (i: number, v: string) => setEditQuestions(p => p.map((q, qi) => qi === i ? { ...q, question_text: v } : q));
   const updateOpt = (qi: number, oi: number, v: string) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, text: v } : o) }));
   const updateOptResult = (qi: number, oi: number, ri: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, result_index: ri } : o) }));
-  // Mode scoring : points portes par l'option (bonne reponse = 1 par defaut).
+  // Points portes par l'option. Mode scoring : bonne reponse = 1 par defaut.
+  // Mode profil : poids attribue au profil (defaut 1, > 1 pour privilegier
+  // un profil, retour Adeline 14 juillet 2026). Meme champ, meme updater.
   const updateOptPoints = (qi: number, oi: number, pts: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.map((o, j) => j === oi ? { ...o, points: pts } : o) }));
   const addOpt = (qi: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: [...q.options, { text: "", result_index: 0 }] }));
   const removeOpt = (qi: number, oi: number) => setEditQuestions(p => p.map((q, i) => i !== qi ? q : { ...q, options: q.options.filter((_, j) => j !== oi) }));
@@ -2849,8 +2851,22 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                                   )}
                                 </div>
                               ) : (
-                                <div className="flex items-center gap-1.5 mt-2">
-                                  <span className="text-xs" style={{ color: `${pc}99` }}>{t("previewPointFor")}</span>
+                                <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                                  {/* Poids editable : nb de points attribues au profil.
+                                      Defaut 1. > 1 pour privilegier ce profil (Adeline
+                                      14 juillet 2026). Titre = explication au survol. */}
+                                  <span className="text-xs" style={{ color: `${pc}99` }}>{t("previewPointsAssign")}</span>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={99}
+                                    value={typeof opt.points === "number" ? opt.points : 1}
+                                    onChange={(e) => updateOptPoints(qi, oi, Math.max(0, Math.min(99, Math.round(Number(e.target.value) || 0))))}
+                                    title={t("previewPointsHint")}
+                                    className="w-12 text-xs border rounded px-1.5 py-0.5 bg-background font-medium tabular-nums"
+                                    style={{ color: pc }}
+                                  />
+                                  <span className="text-xs" style={{ color: `${pc}99` }}>{t("previewPointsFor")}</span>
                                   <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
                                     {editResults.map((_, ri) => <option key={ri} value={ri}>{t("previewResult", { n: ri + 1 })}</option>)}
                                   </select>

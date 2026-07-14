@@ -1305,7 +1305,10 @@
     "ariaCropImage": "Ritaglia immagine",
     "ariaRemoveImage": "Rimuovi immagine",
     "surveyLeadTagLabel": "Tag dei lead (opzionale)",
-    "surveyLeadTagHint": "I sondaggi non hanno risultati: questo unico tag viene applicato a chiunque risponde. Usalo per attivare un'automazione in Systeme.io."
+    "surveyLeadTagHint": "I sondaggi non hanno risultati: questo unico tag viene applicato a chiunque risponde. Usalo per attivare un'automazione in Systeme.io.",
+    "previewPointsAssign": "Assegna",
+    "previewPointsFor": "punto/i a",
+    "previewPointsHint": "Numero di punti assegnati a questo profilo quando si sceglie questa risposta. Metti più punti per favorire un profilo."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nuova password",
