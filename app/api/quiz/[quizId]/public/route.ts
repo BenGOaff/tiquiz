@@ -96,6 +96,18 @@ async function ensureSioTag(apiKey: string, tagName: string): Promise<number | n
   return null;
 }
 
+// Label lisible d'une URL (hostname sans www) — sert de texte de footer
+// par défaut quand seule l'URL du branding est fournie.
+function hostnameLabel(url: string): string {
+  const raw = url.trim();
+  try {
+    const withProto = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    return new URL(withProto).hostname.replace(/^www\./i, "");
+  } catch {
+    return raw.replace(/^https?:\/\//i, "").replace(/^www\./i, "").replace(/\/.*$/, "");
+  }
+}
+
 function buildSioFields(
   fields: { firstName?: string; surname?: string; phoneNumber?: string; country?: string } | undefined,
   includeCountry: boolean,
@@ -293,7 +305,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     if (quizUserId) {
       const { data: bp } = await admin
         .from("profiles")
-        .select("address_form, privacy_url, brand_logo_url, brand_font, brand_color_primary, plan, tipote_affiliate_id, default_meta_pixel_id, default_ga4_measurement_id, default_google_ads_conversion_id, default_google_ads_conversion_label")
+        .select("address_form, privacy_url, brand_logo_url, brand_font, brand_color_primary, plan, reseller_id, tipote_affiliate_id, default_meta_pixel_id, default_ga4_measurement_id, default_google_ads_conversion_id, default_google_ads_conversion_label")
         .eq("user_id", quizUserId)
         .maybeSingle();
       profileRow = (bp as Record<string, unknown>) ?? null;
@@ -340,9 +352,34 @@ export async function GET(req: NextRequest, context: RouteContext) {
     // Permissive check via isPaidPlan: anything that isn't `free` counts as
     // paid, so future plan slugs don't accidentally lose the custom footer
     // until this file is updated.
+    //
+    // WHITE-LABEL REVENDEURS (Béné 14 juillet 2026) : un sous-compte
+    // revendeur (profiles.reseller_id non nul) voit SON footer même en
+    // gratuit — le revendeur gère sa propre marque, pas de "offert par
+    // Tiquiz" imposé à ses clients.
     const ownerPlan = String(profileRow?.plan ?? "free").trim();
-    const customFooterText = isPaidPlan(ownerPlan) ? (quizRow.custom_footer_text as string | null) : null;
-    const customFooterUrl = isPaidPlan(ownerPlan) ? (quizRow.custom_footer_url as string | null) : null;
+    const isResellerSub = Boolean(profileRow?.reseller_id);
+    const footerAllowed = isPaidPlan(ownerPlan) || isResellerSub;
+
+    // Résolution du footer : priorité au champ PAR QUIZ (onglet Partager),
+    // sinon fallback sur l'URL du Branding profil (brand_website_url) +
+    // son nom de site (share_site_name). Gwenn 12 juillet 2026 : "j'ai mis
+    // l'url du site dans le branding" -> elle s'attend à la voir dans le
+    // footer sans repasser par le champ par-quiz.
+    const perQuizFooterText = String(quizRow.custom_footer_text ?? "").trim();
+    const perQuizFooterUrl = String(quizRow.custom_footer_url ?? "").trim();
+    const brandSiteUrl = String(profileRow?.brand_website_url ?? "").trim();
+    const brandSiteName = String(profileRow?.share_site_name ?? "").trim();
+    const resolvedFooterUrl = perQuizFooterUrl || brandSiteUrl || "";
+    let resolvedFooterText = perQuizFooterText;
+    if (resolvedFooterUrl && !resolvedFooterText) {
+      // Pas de texte fourni : on prend le nom du site du branding, sinon le
+      // hostname de l'URL (lisible), pour que TiquizFooter (qui exige texte
+      // ET url) affiche bien le footer perso.
+      resolvedFooterText = brandSiteName || hostnameLabel(resolvedFooterUrl);
+    }
+    const customFooterText = footerAllowed && resolvedFooterText ? resolvedFooterText : null;
+    const customFooterUrl = footerAllowed && resolvedFooterUrl ? resolvedFooterUrl : null;
 
     // Refonte tracking (Adeline, 19 mai 2026) : le view tracking
     // n'est PLUS fait ici (server-side, à chaque GET) parce que :
@@ -656,17 +693,25 @@ export async function POST(req: NextRequest, context: RouteContext) {
           if (!resolved) return;
           const apiKey = resolved.apiKey;
 
-          let sioTagName = "";
+          let resultTags: string[] = [];
           let courseId = "";
           let communityId = "";
           let resultTitle = "";
           if (resultId) {
             const { data: result } = await admin
               .from("quiz_results")
-              .select("sio_tag_name, sio_course_id, sio_community_id, title")
+              .select("sio_tag_name, sio_tag_names, sio_course_id, sio_community_id, title")
               .eq("id", resultId)
               .maybeSingle();
-            sioTagName = String((result as Record<string, unknown>)?.sio_tag_name ?? "").trim();
+            // Multi-tags par profil (Gwenn 12 juillet 2026) : on applique
+            // TOUS les tags de sio_tag_names ; fallback sur l'ancien
+            // sio_tag_name single si le tableau est vide (profils existants).
+            const rawTags = (result as Record<string, unknown>)?.sio_tag_names;
+            const arrTags = Array.isArray(rawTags)
+              ? rawTags.map((v) => String(v ?? "").trim()).filter(Boolean)
+              : [];
+            const singleTag = String((result as Record<string, unknown>)?.sio_tag_name ?? "").trim();
+            resultTags = arrTags.length > 0 ? arrTags : (singleTag ? [singleTag] : []);
             courseId = String((result as Record<string, unknown>)?.sio_course_id ?? "").trim();
             communityId = String((result as Record<string, unknown>)?.sio_community_id ?? "").trim();
             resultTitle = String((result as Record<string, unknown>)?.title ?? "").trim();
@@ -687,7 +732,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
           const surveyCaptureTag = isSurveyLead
             ? String((quiz as { sio_capture_tag?: string | null }).sio_capture_tag ?? "").trim()
             : "";
-          const tagsToApply = [sioTagName, surveyCaptureTag].filter(Boolean);
+          const tagsToApply = [...resultTags, surveyCaptureTag]
+            .map((t) => t.trim())
+            .filter((t, i, arr) => t && arr.findIndex((x) => x.toLowerCase() === t.toLowerCase()) === i);
 
           for (const tagName of tagsToApply) {
             try {

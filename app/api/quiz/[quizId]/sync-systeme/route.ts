@@ -100,17 +100,23 @@ export async function POST(req: NextRequest, context: RouteContext) {
       }
     }
 
-    // For individual lead sync, get result tags
-    const resultTagMap = new Map<string, string>();
+    // For individual lead sync, get result tags. Multi-tags par profil
+    // (Gwenn 12 juillet 2026) : chaque profil peut avoir plusieurs tags
+    // (sio_tag_names) ; fallback sur l'ancien sio_tag_name single.
+    const resultTagMap = new Map<string, string[]>();
     if (!tagName && leadIds.length > 0) {
       const resultIds = [...new Set((leads ?? []).map((l) => l.result_id).filter(Boolean))];
       if (resultIds.length > 0) {
         const { data: results } = await supabaseAdmin
           .from("quiz_results")
-          .select("id, sio_tag_name")
+          .select("id, sio_tag_name, sio_tag_names")
           .in("id", resultIds);
         for (const r of results ?? []) {
-          if (r.sio_tag_name) resultTagMap.set(r.id, r.sio_tag_name);
+          const arr = Array.isArray((r as { sio_tag_names?: unknown }).sio_tag_names)
+            ? ((r as { sio_tag_names: unknown[] }).sio_tag_names).map((v) => String(v ?? "").trim()).filter(Boolean)
+            : [];
+          const tags = arr.length > 0 ? arr : (r.sio_tag_name ? [String(r.sio_tag_name).trim()] : []);
+          if (tags.length > 0) resultTagMap.set(r.id, tags);
         }
       }
     }
@@ -122,26 +128,33 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     for (const lead of leads ?? []) {
       try {
-        // Determine tag for this lead
-        const effectiveTag = tagName || (lead.result_id ? resultTagMap.get(lead.result_id) : null);
-        if (!effectiveTag) {
+        // Determine tag(s) for this lead — un bouton "tag global" force un
+        // seul tag ; sinon on prend TOUS les tags du profil.
+        const effectiveTags = tagName
+          ? [tagName]
+          : (lead.result_id ? (resultTagMap.get(lead.result_id) ?? []) : []);
+        if (effectiveTags.length === 0) {
           errors++;
           if (errorDetails.length < 10) errorDetails.push(`No tag for ${lead.email}`);
           continue;
         }
 
-        // Find or create tag in Systeme.io
-        let tagId: number | null = null;
-        const searchRes = await sioUserRequest<{ items: { id: number; name: string }[] }>(apiKey, `/tags?query=${encodeURIComponent(effectiveTag)}&limit=100`);
-        if (searchRes.ok && searchRes.data?.items) {
-          const match = searchRes.data.items.find((t) => t.name.toLowerCase() === effectiveTag.toLowerCase());
-          if (match) tagId = match.id;
+        // Find or create each tag in Systeme.io.
+        const tagIds: number[] = [];
+        for (const effectiveTag of effectiveTags) {
+          let tagId: number | null = null;
+          const searchRes = await sioUserRequest<{ items: { id: number; name: string }[] }>(apiKey, `/tags?query=${encodeURIComponent(effectiveTag)}&limit=100`);
+          if (searchRes.ok && searchRes.data?.items) {
+            const match = searchRes.data.items.find((t) => t.name.toLowerCase() === effectiveTag.toLowerCase());
+            if (match) tagId = match.id;
+          }
+          if (!tagId) {
+            const createRes = await sioUserRequest<{ id: number }>(apiKey, "/tags", { method: "POST", body: { name: effectiveTag } });
+            if (createRes.ok && createRes.data) tagId = createRes.data.id;
+          }
+          if (tagId) tagIds.push(tagId);
         }
-        if (!tagId) {
-          const createRes = await sioUserRequest<{ id: number }>(apiKey, "/tags", { method: "POST", body: { name: effectiveTag } });
-          if (createRes.ok && createRes.data) tagId = createRes.data.id;
-        }
-        if (!tagId) {
+        if (tagIds.length === 0) {
           errors++;
           if (errorDetails.length < 10) errorDetails.push(`Failed to create tag for ${lead.email}`);
           continue;
@@ -167,7 +180,9 @@ export async function POST(req: NextRequest, context: RouteContext) {
         }
 
         if (contactId) {
-          await sioUserRequest(apiKey, `/contacts/${contactId}/tags`, { method: "POST", body: { tagId } });
+          for (const tagId of tagIds) {
+            await sioUserRequest(apiKey, `/contacts/${contactId}/tags`, { method: "POST", body: { tagId } });
+          }
           synced++;
           syncedLeadIds.push(lead.id);
         } else {

@@ -141,7 +141,7 @@ type QuizData = {
   introduction: string | null; cta_text: string | null; cta_url: string | null;
   start_button_text: string | null;
   privacy_url: string | null; consent_text: string | null;
-  capture_heading: string | null; capture_subtitle: string | null;
+  capture_heading: string | null; capture_subtitle: string | null; capture_submit_text: string | null;
   result_insight_heading: string | null; result_projection_heading: string | null;
   address_form: string | null;
   capture_first_name: boolean | null; capture_last_name: boolean | null;
@@ -353,6 +353,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [consentText, setConsentText] = useState("");
   const [captureHeading, setCaptureHeading] = useState("");
   const [captureSubtitle, setCaptureSubtitle] = useState("");
+  // Texte du bouton de validation de la capture (sondage). Vide = string
+  // i18n par defaut cote visiteur. Demande Gwenn 12 juillet 2026 : un
+  // sondage n'a pas de "resultats", elle veut pouvoir mettre "Valider ma
+  // reponse" a la place de "Acceder aux resultats".
+  const [captureSubmitText, setCaptureSubmitText] = useState("");
   // Adeline (1er juin 2026) : page de remerciement éditable WYSIWYG.
   // "" = on affiche la string i18n par défaut côté visiteur.
   const [surveyThanksHeading, setSurveyThanksHeading] = useState("");
@@ -522,6 +527,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     consent_text: consentText,
     capture_heading: captureHeading,
     capture_subtitle: captureSubtitle,
+    capture_submit_text: captureSubmitText,
     result_insight_heading: resultInsightHeading,
     result_projection_heading: resultProjectionHeading,
     capture_first_name: captureFirstName,
@@ -564,7 +570,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     questions: editQuestions,
   }), [
     title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
-    captureHeading, captureSubtitle, resultInsightHeading, resultProjectionHeading,
+    captureHeading, captureSubtitle, captureSubmitText, resultInsightHeading, resultProjectionHeading,
     captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
     showConsentCheckbox, metaPixelId, ga4MeasurementId, googleAdsConversionId,
@@ -593,6 +599,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.consent_text === "string") setConsentText(s.consent_text);
     if (typeof s.capture_heading === "string") setCaptureHeading(s.capture_heading);
     if (typeof s.capture_subtitle === "string") setCaptureSubtitle(s.capture_subtitle);
+    if (typeof s.capture_submit_text === "string") setCaptureSubmitText(s.capture_submit_text);
     if (typeof s.result_insight_heading === "string") setResultInsightHeading(s.result_insight_heading);
     if (typeof s.result_projection_heading === "string") setResultProjectionHeading(s.result_projection_heading);
     if (typeof s.capture_first_name === "boolean") setCaptureFirstName(s.capture_first_name);
@@ -688,7 +695,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setCtaText(q.cta_text ?? ""); setCtaUrl(q.cta_url ?? "");
       setStartButtonText(q.start_button_text ?? "");
       setPrivacyUrl(q.privacy_url ?? ""); setConsentText(q.consent_text ?? "");
-      setCaptureHeading(q.capture_heading ?? ""); setCaptureSubtitle(q.capture_subtitle ?? "");
+      setCaptureHeading(q.capture_heading ?? ""); setCaptureSubtitle(q.capture_subtitle ?? ""); setCaptureSubmitText(q.capture_submit_text ?? "");
       setResultInsightHeading(q.result_insight_heading ?? ""); setResultProjectionHeading(q.result_projection_heading ?? "");
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
       setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
@@ -1079,6 +1086,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           google_ads_conversion_id: googleAdsConversionId.trim() || null,
           google_ads_conversion_label: googleAdsConversionLabel.trim() || null,
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
+          capture_submit_text: captureSubmitText || null,
           result_insight_heading: resultInsightHeading.trim() || null,
           result_projection_heading: resultProjectionHeading.trim() || null,
           capture_first_name: captureFirstName, capture_last_name: captureLastName,
@@ -2166,7 +2174,19 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       </div>
                     </div>
                   )}
-                  <button className="w-full max-w-md mx-auto block px-8 py-4 rounded-full text-white font-semibold text-lg" style={{ backgroundColor: pc }}>{t("previewCaptureSubmit")}</button>
+                  {/* Bouton de validation editable (demande Gwenn 12 juillet
+                      2026). Un sondage n'a pas de "resultats" : defaut
+                      survey-approprie ("Valider mes reponses"), surchargeable
+                      WYSIWYG. Vide = string i18n par defaut cote visiteur. */}
+                  <button className="w-full max-w-md mx-auto block min-h-[48px] h-auto px-8 py-3 rounded-full text-white font-semibold text-lg whitespace-normal leading-snug" style={{ backgroundColor: pc }}>
+                    <RichTextEdit
+                      value={captureSubmitText || t("previewCaptureSubmitSurvey")}
+                      onChange={setCaptureSubmitText}
+                      singleLine
+                      className="text-white font-semibold text-center w-full"
+                      placeholder={t("previewCaptureSubmitSurvey")}
+                    />
+                  </button>
                 </div>
               </div>
               )}
