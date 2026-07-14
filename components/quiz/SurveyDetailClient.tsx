@@ -1940,7 +1940,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                           </select>
                         </div>
 
-                        <RichTextEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-2xl sm:text-4xl font-bold leading-tight" placeholder={t("previewQuestionPh")} />
+                        <RichTextEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-2xl sm:text-4xl font-bold leading-tight" style={{ color: pc }} placeholder={t("previewQuestionPh")} />
                         {/* Image de la question (au-dessus de l'enonce) + resize. */}
                         {(() => {
                           const cfg = (q.config ?? {}) as Record<string, unknown>;
