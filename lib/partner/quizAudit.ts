@@ -18,6 +18,11 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export interface PartnerQuizResultProfile {
   title: string;
   description: string;
+  // CTA du resultat (bouton d'action montre au visiteur). Sert cote Atelier
+  // a orienter l'email de ce profil vers la vraie destination de l'user
+  // (code promo, formation, rdv, lead magnet...).
+  ctaText: string;
+  ctaUrl: string;
 }
 
 export interface PartnerQuizStruct {
@@ -68,15 +73,22 @@ export async function getPartnerQuizAudit(userId: string): Promise<PartnerQuizSt
     }
   }
 
-  // Profils de resultat par quiz (titre + description + image), ordonnes.
+  // Profils de resultat par quiz (titre + description + image + CTA), ordonnes.
   const resultsByQuiz = new Map<
     string,
-    { title: string; description: string; hasImage: boolean; sort: number }[]
+    {
+      title: string;
+      description: string;
+      hasImage: boolean;
+      ctaText: string;
+      ctaUrl: string;
+      sort: number;
+    }[]
   >();
   {
     const { data: results } = await supabaseAdmin
       .from("quiz_results")
-      .select("quiz_id, title, description, image_url, sort_order")
+      .select("quiz_id, title, description, image_url, cta_text, cta_url, sort_order")
       .in("quiz_id", ids);
     for (const r of results ?? []) {
       const qid = r.quiz_id as string;
@@ -85,6 +97,8 @@ export async function getPartnerQuizAudit(userId: string): Promise<PartnerQuizSt
         title: (r.title as string) ?? "",
         description: (r.description as string) ?? "",
         hasImage: nonEmpty(r.image_url),
+        ctaText: (r.cta_text as string) ?? "",
+        ctaUrl: (r.cta_url as string) ?? "",
         sort: Number(r.sort_order) || 0,
       });
       resultsByQuiz.set(qid, arr);
@@ -108,7 +122,12 @@ export async function getPartnerQuizAudit(userId: string): Promise<PartnerQuizSt
       hasBonus: nonEmpty(q.bonus_description) || nonEmpty(q.bonus_image_url),
       hasOgImage: nonEmpty(q.og_image_url),
       views: Number(q.views_count) || 0,
-      resultProfiles: rs.map((r) => ({ title: r.title, description: r.description })),
+      resultProfiles: rs.map((r) => ({
+        title: r.title,
+        description: r.description,
+        ctaText: r.ctaText,
+        ctaUrl: r.ctaUrl,
+      })),
     };
   });
 }
