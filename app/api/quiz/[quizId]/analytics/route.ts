@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { dateKeyForOffset, parseTzOffset } from "@/lib/dateKeys";
+import { stripHtml } from "@/lib/richText";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -188,59 +189,52 @@ export async function GET(
     (currentResults ?? []).map((r) => [r.id as string, (r.title as string) ?? ""]),
   );
 
-  const NO_RESULT_KEY = "__no_result__";
-  // Une entrée par bucket : count + libellé courant + le snapshot le plus
-  // récent (pour les leads dont le profil a été supprimé depuis).
-  type Bucket = { count: number; snapshotTitle: string | null };
-  const byResult = new Map<string, Bucket>();
-  for (const r of leadsByResultRows) {
-    const key = r.result_id ?? NO_RESULT_KEY;
-    const b = byResult.get(key) ?? { count: 0, snapshotTitle: null };
-    b.count += Number(r.n);
-    if (!b.snapshotTitle && r.result_title && r.result_title.trim()) {
-      b.snapshotTitle = r.result_title.trim();
-    }
-    byResult.set(key, b);
-  }
-
-
-  // ─── Distribution par titre RESOLU (refonte Gwenn 8 juin 2026) ──────
-  // Bene 8 juin (DRAME final) : "je veux que mes users voient leur quiz
-  // EXISTANT, en temps reel, pas des anciennes versions ou des versions
-  // tronquees". Concretement :
-  //   - tous les profils actuels visibles (meme a 0 lead) - drame compte 1
-  //   - aucun ancien nom de profil affiche (snapshot orphan apres rename
-  //     ne doit jamais apparaitre comme bucket distinct) - drame compte 2
-  //   - aucun bucket "Anciens profils" non plus
+  // ─── Distribution par titre RESOLU (refonte fiabilite 16 juillet 2026) ─
+  // Bene 8 juin : "je veux que mes users voient leur quiz EXISTANT, en
+  // temps reel". Source de verite = quiz_results actuel.
   //
-  // Algo :
-  //   1. Seed byTitle avec TOUS les profils current de quiz_results
-  //      (count = 0 inclus) - source de verite = le quiz actuel.
-  //   2. Pour chaque bucket de leads, tenter de matcher a un profil
-  //      current via id-live OU snapshot-title-qui-existe-encore.
-  //      Les leads orphelins sont silencieusement EXCLUS du donut.
-  //   3. Pourcentages calcules sur le total des leads MATCHES (sum = 100%).
-  //   4. Sort par count desc, pas de filtre zero (profils a 0 affiches).
-  const byTitle = new Map<string, number>();
-  const currentTitles = new Set<string>();
+  // BUG CORRIGE (drame Adeline 16 juillet) : avant, tous les leads a
+  // result_id null (orphelins apres qu'un save a recree les profils) etaient
+  // regroupes sous UNE cle unique, puis TOUT le paquet etait attribue au
+  // PREMIER titre-snapshot vu. Resultat : 127 leads sautaient d'un profil a
+  // l'autre d'un jour a l'autre selon l'ordre des lignes du RPC. On resout
+  // desormais le titre LIGNE PAR LIGNE (le RPC groupe deja par
+  // (result_id, result_title)), donc chaque snapshot garde son compte.
+  //
+  // Algo (inchange) :
+  //   1. Seed byTitle avec TOUS les profils current (count = 0 inclus).
+  //   2. Par ligne : match via result_id -> titre LIVE (suit les renames),
+  //      sinon via le snapshot result_title s'il existe encore. Sinon exclu.
+  //   3. Pourcentages sur le total MATCHE. Sort par count desc.
+  // Match sur le titre NORMALISE (stripHtml : sans balises, nbsp/espaces
+  // ecrases, entites decodees) pour reunir les leads captes sous des mises
+  // en forme differentes du MEME profil (drame Adeline : 3 leads captes quand
+  // "L'Hyper-adaptation" etait en texte simple, avant qu'elle lui ajoute une
+  // couleur -> en brut ils ne matchaient plus). L'affichage garde le titre
+  // courant BRUT (la page gere le HTML). Aligne sur QuizResultsAnalytics.
+  const byTitle = new Map<string, number>(); // cle = titre courant brut (affichage)
+  const normToRaw = new Map<string, string>(); // titre normalise -> titre courant brut
   for (const r of currentResults ?? []) {
-    const title = ((r.title as string) ?? "").trim();
-    if (title && !byTitle.has(title)) {
-      byTitle.set(title, 0);
-      currentTitles.add(title);
-    }
+    const raw = ((r.title as string) ?? "").trim();
+    if (!raw) continue;
+    const key = stripHtml(raw);
+    if (!key) continue;
+    if (!byTitle.has(raw)) byTitle.set(raw, 0);
+    if (!normToRaw.has(key)) normToRaw.set(key, raw);
   }
 
-  for (const [key, b] of byResult) {
-    const live = key !== NO_RESULT_KEY ? currentTitleById.get(key) : undefined;
-    const liveTitle = live?.trim();
-    if (liveTitle && currentTitles.has(liveTitle)) {
-      byTitle.set(liveTitle, (byTitle.get(liveTitle) ?? 0) + b.count);
-    } else if (b.snapshotTitle && currentTitles.has(b.snapshotTitle.trim())) {
-      const snap = b.snapshotTitle.trim();
-      byTitle.set(snap, (byTitle.get(snap) ?? 0) + b.count);
+  for (const row of leadsByResultRows) {
+    const n = Number(row.n) || 0;
+    if (n <= 0) continue;
+    // 1) titre LIVE via result_id (suit les renames), 2) sinon snapshot.
+    let raw: string | undefined;
+    if (row.result_id) {
+      const live = currentTitleById.get(row.result_id);
+      if (live) raw = normToRaw.get(stripHtml(live));
     }
-    // else: orphan / ancien profil -> exclu silencieusement.
+    if (!raw && row.result_title) raw = normToRaw.get(stripHtml(row.result_title));
+    if (raw) byTitle.set(raw, (byTitle.get(raw) ?? 0) + n);
+    // sinon: orphelin / ancien nom -> exclu silencieusement.
   }
 
   let matchedTotal = 0;
