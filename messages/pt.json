@@ -483,7 +483,10 @@
     "statisticsTitle": "Estatísticas",
     "embedClaimSuccess": "O teu quiz estava à espera - já está na tua conta ✨",
     "embedClaimOpen": "Abrir",
-    "deleteError": "Algo correu mal."
+    "deleteError": "Algo correu mal.",
+    "duplicateQuiz": "Duplicar",
+    "quizDuplicated": "Quiz duplicado. Já podes editá-lo.",
+    "duplicateError": "A duplicação falhou."
   },
   "quizForm": {
     "createTitle": "Criar um quiz",
@@ -949,7 +952,10 @@
     "billingMonthly": "Mensal",
     "billingYearly": "Anual",
     "billingYearlySave": "2 meses grátis",
-    "planNoCommitment": "sem compromisso"
+    "planNoCommitment": "sem compromisso",
+    "notifyResponsesTitle": "Notificações de respostas",
+    "notifyResponsesDesc": "Recebe um email a cada nova resposta nos teus quizzes e questionários.",
+    "notifyResponsesLabel": "Enviar-me um email a cada nova resposta"
   },
   "languageSwitcher": {
     "label": "Idioma"
@@ -1313,7 +1319,9 @@
     "ariaCropImage": "Recortar imagem",
     "ariaRemoveImage": "Remover imagem",
     "surveyLeadTagLabel": "Tag dos leads (opcional)",
-    "surveyLeadTagHint": "Os questionários não têm resultados: este tag único é aplicado a todas as pessoas que respondem. Usa-o para acionar uma automatização no Systeme.io."
+    "surveyLeadTagHint": "Os questionários não têm resultados: este tag único é aplicado a todas as pessoas que respondem. Usa-o para acionar uma automatização no Systeme.io.",
+    "optionHideResponseCounts": "Ocultar o número de respostas",
+    "optionHideResponseCountsHint": "Mostra apenas as percentagens na síntese. As exportações mantêm os números."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova palavra-passe",
@@ -1531,7 +1539,8 @@
     "responsesFlaggedOnly": "Marcados",
     "exportExcel": "Exportar Excel",
     "flagAction": "Marcar este respondente",
-    "unflagAction": "Remover marca"
+    "unflagAction": "Remover marca",
+    "radarTitle": "Visão geral das notas"
   },
   "projects": {
     "title": "Os meus projetos",

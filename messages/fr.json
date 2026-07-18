@@ -466,7 +466,10 @@
     "statisticsTitle": "Statistiques",
     "embedClaimSuccess": "Ton quiz t'attendait - il est dans ton compte ✨",
     "embedClaimOpen": "Ouvrir",
-    "deleteError": "Une erreur est survenue."
+    "deleteError": "Une erreur est survenue.",
+    "duplicateQuiz": "Dupliquer",
+    "quizDuplicated": "Quiz dupliqué. Tu peux le modifier.",
+    "duplicateError": "La duplication a échoué."
   },
   "quizForm": {
     "createTitle": "Créer un quiz",
@@ -933,7 +936,10 @@
     "billingMonthly": "Mensuel",
     "billingYearly": "Annuel",
     "billingYearlySave": "2 mois offerts",
-    "planNoCommitment": "sans engagement"
+    "planNoCommitment": "sans engagement",
+    "notifyResponsesTitle": "Notifications de réponses",
+    "notifyResponsesDesc": "Reçois un email à chaque nouvelle réponse sur tes quiz et sondages.",
+    "notifyResponsesLabel": "M'envoyer un email à chaque nouvelle réponse"
   },
   "languageSwitcher": {
     "label": "Langue"
@@ -1297,7 +1303,9 @@
     "ariaCropImage": "Recadrer l'image",
     "ariaRemoveImage": "Retirer l'image",
     "surveyLeadTagLabel": "Tag des leads (optionnel)",
-    "surveyLeadTagHint": "Les sondages n'ont pas de résultats : ce tag unique s'applique à toute personne qui répond. Sers-t'en pour déclencher une automatisation dans Systeme.io."
+    "surveyLeadTagHint": "Les sondages n'ont pas de résultats : ce tag unique s'applique à toute personne qui répond. Sers-t'en pour déclencher une automatisation dans Systeme.io.",
+    "optionHideResponseCounts": "Masquer le nombre de réponses",
+    "optionHideResponseCountsHint": "Affiche seulement les pourcentages dans la synthèse. Les exports gardent les chiffres."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",
@@ -1515,7 +1523,8 @@
     "responsesFlaggedOnly": "Marqués",
     "exportExcel": "Export Excel",
     "flagAction": "Marquer ce répondant",
-    "unflagAction": "Retirer le marquage"
+    "unflagAction": "Retirer le marquage",
+    "radarTitle": "Vue d'ensemble des notes"
   },
   "projects": {
     "title": "Mes projets",

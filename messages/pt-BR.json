@@ -483,7 +483,10 @@
     "statisticsTitle": "Estatísticas",
     "embedClaimSuccess": "Seu quiz estava esperando - agora está na sua conta ✨",
     "embedClaimOpen": "Abrir",
-    "deleteError": "Algo deu errado."
+    "deleteError": "Algo deu errado.",
+    "duplicateQuiz": "Duplicar",
+    "quizDuplicated": "Quiz duplicado. Você já pode editá-lo.",
+    "duplicateError": "A duplicação falhou."
   },
   "quizForm": {
     "createTitle": "Criar um quiz",
@@ -937,7 +940,10 @@
     "billingMonthly": "Mensal",
     "billingYearly": "Anual",
     "billingYearlySave": "2 meses grátis",
-    "planNoCommitment": "sem compromisso"
+    "planNoCommitment": "sem compromisso",
+    "notifyResponsesTitle": "Notificações de respostas",
+    "notifyResponsesDesc": "Receba um email a cada nova resposta nos seus quizzes e pesquisas.",
+    "notifyResponsesLabel": "Enviar-me um email a cada nova resposta"
   },
   "languageSwitcher": {
     "label": "Idioma"
@@ -1299,7 +1305,9 @@
     "ariaCropImage": "Recortar imagem",
     "ariaRemoveImage": "Remover imagem",
     "surveyLeadTagLabel": "Tag dos leads (opcional)",
-    "surveyLeadTagHint": "As pesquisas não têm resultados: esta tag única é aplicada a todas as pessoas que respondem. Use-a para acionar uma automação no Systeme.io."
+    "surveyLeadTagHint": "As pesquisas não têm resultados: esta tag única é aplicada a todas as pessoas que respondem. Use-a para acionar uma automação no Systeme.io.",
+    "optionHideResponseCounts": "Ocultar o número de respostas",
+    "optionHideResponseCountsHint": "Mostra apenas as porcentagens na síntese. As exportações mantêm os números."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova senha",
@@ -1517,7 +1525,8 @@
     "responsesFlaggedOnly": "Marcados",
     "exportExcel": "Exportar Excel",
     "flagAction": "Marcar este respondente",
-    "unflagAction": "Remover marca"
+    "unflagAction": "Remover marca",
+    "radarTitle": "Visão geral das notas"
   },
   "projects": {
     "title": "Meus projetos",

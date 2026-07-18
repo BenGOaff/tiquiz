@@ -146,6 +146,9 @@ export async function PATCH(req: NextRequest) {
       // recalcule serveur-side a partir de first_name + last_name plus bas.
       "first_name", "last_name",
       "full_name", "ui_locale", "content_locale", "address_form", "privacy_url",
+      // Notifications email a chaque nouvelle reponse (opt-out). Cf.
+      // migration 20260718_profiles_notify_responses.sql.
+      "notify_responses",
       "brand_logo_url", "brand_favicon_url", "brand_color_primary", "brand_color_accent",
       "brand_font", "brand_tone", "brand_website_url",
       "target_audience",
@@ -202,6 +205,9 @@ export async function PATCH(req: NextRequest) {
 
       // saved_palettes : sanitisation hex/forme.
       if (key === "saved_palettes") val = sanitisePalettes(val);
+
+      // notify_responses : booléen strict (colonne NOT NULL).
+      if (key === "notify_responses") val = Boolean(val);
 
       // share_site_name : trim + cap 60 chars + null si vide.
       if (key === "share_site_name") {

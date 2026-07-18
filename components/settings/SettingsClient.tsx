@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { SettingsAchievements } from "@/components/settings/SettingsAchievements";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -149,6 +150,7 @@ export default function SettingsClient() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [addressForm, setAddressForm] = useState("tu");
+  const [notifyResponses, setNotifyResponses] = useState(true);
   const [contentLocale, setContentLocale] = useState("fr");
   const [privacyUrl, setPrivacyUrl] = useState("");
   const [targetAudience, setTargetAudience] = useState("");
@@ -256,6 +258,7 @@ export default function SettingsClient() {
           setFirstName(p.first_name ?? (fullParts.length > 0 ? fullParts[0] : ""));
           setLastName(p.last_name ?? (fullParts.length > 1 ? fullParts.slice(1).join(" ") : ""));
           setAddressForm(p.address_form ?? "tu");
+          setNotifyResponses(p.notify_responses ?? true);
           setContentLocale(p.content_locale ?? "fr");
           setPrivacyUrl(p.privacy_url ?? "");
           setTargetAudience(p.target_audience ?? "");
@@ -306,6 +309,7 @@ export default function SettingsClient() {
           first_name: firstName.trim() || null,
           last_name: lastName.trim() || null,
           address_form: addressForm,
+          notify_responses: notifyResponses,
           content_locale: contentLocale,
           privacy_url: privacyUrl.trim() || null,
           target_audience: targetAudience.trim() || null,
@@ -507,6 +511,19 @@ export default function SettingsClient() {
                 <option value="tu">{t("addressTu")}</option>
                 <option value="vous">{t("addressVous")}</option>
               </select>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("notifyResponsesTitle")}</CardTitle>
+              <CardDescription>{t("notifyResponsesDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <Switch checked={notifyResponses} onCheckedChange={setNotifyResponses} />
+                <span className="text-sm">{t("notifyResponsesLabel")}</span>
+              </label>
             </CardContent>
           </Card>
 
