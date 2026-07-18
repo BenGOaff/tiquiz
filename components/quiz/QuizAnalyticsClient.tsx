@@ -100,6 +100,9 @@ interface Props {
    *  spinner. Sinon (cas par défaut depuis le fix Gwenn 19 mai 2026),
    *  le client fetch les données au mount. */
   initial?: AnalyticsResponse;
+  /** quizzes.hide_response_counts : masque les nombres bruts dans la
+   *  distribution par résultat (garde les %). N'affecte pas les exports. */
+  hideCounts?: boolean;
 }
 
 // Placeholder vide qui satisfait le shape AnalyticsResponse pour le
@@ -125,7 +128,7 @@ const EMPTY_DATA: AnalyticsResponse = {
   totalFunnelSessions: 0,
 };
 
-export function QuizAnalyticsClient({ quizId, initial }: Props) {
+export function QuizAnalyticsClient({ quizId, initial, hideCounts = false }: Props) {
   const t = useTranslations("quizAnalytics");
   const locale = useLocale();
   const PERIOD_LABELS: Record<Period, string> = {
@@ -359,7 +362,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
                       <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip content={<ResultTooltip />} />
+                  <Tooltip content={<ResultTooltip hideCounts={hideCounts} />} />
                   {/* La légende recharts a été retirée (Béné 2 juin 2026) :
                       elle chevauchait visuellement la liste custom ci-dessous,
                       surtout quand les titres de profils sont longs. La <ul>
@@ -382,7 +385,7 @@ export function QuizAnalyticsClient({ quizId, initial }: Props) {
                       <span className="truncate">{stripHtml(r.title)}</span>
                     </span>
                     <span className="font-mono tabular-nums text-muted-foreground">
-                      {r.count} · {r.pct}%
+                      {hideCounts ? `${r.pct}%` : `${r.count} · ${r.pct}%`}
                     </span>
                   </li>
                 ))}
@@ -602,7 +605,7 @@ function DayTooltip({ active, payload, label, showViews }: TooltipProps & { show
   );
 }
 
-function ResultTooltip({ active, payload }: TooltipProps) {
+function ResultTooltip({ active, payload, hideCounts }: TooltipProps & { hideCounts?: boolean }) {
   const t = useTranslations("quizAnalytics");
   if (!active || !payload?.length) return null;
   const p = payload[0]!;
@@ -611,7 +614,9 @@ function ResultTooltip({ active, payload }: TooltipProps) {
     <div className="rounded-md border bg-background shadow-lg px-3 py-2 text-xs">
       <div className="font-semibold">{stripHtml(String(row.title ?? ""))}</div>
       <div className="text-muted-foreground tabular-nums">
-        {t("leadsCountWithPct", { count: p.value ?? 0, pct: Number(row.pct ?? 0) })}
+        {hideCounts
+          ? `${Number(row.pct ?? 0)}%`
+          : t("leadsCountWithPct", { count: p.value ?? 0, pct: Number(row.pct ?? 0) })}
       </div>
     </div>
   );

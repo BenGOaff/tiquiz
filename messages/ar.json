@@ -483,7 +483,10 @@
     "statisticsTitle": "الإحصائيات",
     "embedClaimSuccess": "اختبارك كان بانتظارك - أصبح الآن في حسابك ✨",
     "embedClaimOpen": "افتح",
-    "deleteError": "حدث خطأ ما."
+    "deleteError": "حدث خطأ ما.",
+    "duplicateQuiz": "تكرار",
+    "quizDuplicated": "تم تكرار الاختبار. يمكنك تعديله الآن.",
+    "duplicateError": "فشل التكرار."
   },
   "quizForm": {
     "createTitle": "إنشاء اختبار",
@@ -937,7 +940,10 @@
     "billingMonthly": "شهري",
     "billingYearly": "سنوي",
     "billingYearlySave": "شهران مجانًا",
-    "planNoCommitment": "دون التزام"
+    "planNoCommitment": "دون التزام",
+    "notifyResponsesTitle": "إشعارات الردود",
+    "notifyResponsesDesc": "احصل على بريد إلكتروني عند كل رد جديد على اختباراتك واستطلاعاتك.",
+    "notifyResponsesLabel": "أرسل لي بريدًا عند كل رد جديد"
   },
   "languageSwitcher": {
     "label": "اللغة"
@@ -1301,7 +1307,9 @@
     "surveyLeadTagHint": "الاستبيانات ليس لها نتائج، لذلك يُطبَّق هذا الوسم الوحيد على كل من يرسل الاستبيان. استخدمه لتشغيل أتمتة في Systeme.io.",
     "previewPointsAssign": "امنح",
     "previewPointsFor": "نقطة/نقاط لـ",
-    "previewPointsHint": "عدد النقاط الممنوحة لهذا الملف عند اختيار هذه الإجابة. ضع نقاطاً أكثر لترجيح ملف معين."
+    "previewPointsHint": "عدد النقاط الممنوحة لهذا الملف عند اختيار هذه الإجابة. ضع نقاطاً أكثر لترجيح ملف معين.",
+    "optionHideResponseCounts": "إخفاء عدد الردود",
+    "optionHideResponseCountsHint": "إظهار النسب المئوية فقط في الملخص. تحتفظ التصديرات بالأرقام."
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",
@@ -1519,7 +1527,8 @@
     "responsesFlaggedOnly": "المعلّمة",
     "exportExcel": "تصدير Excel",
     "flagAction": "تعليم هذا المشارك",
-    "unflagAction": "إزالة العلامة"
+    "unflagAction": "إزالة العلامة",
+    "radarTitle": "نظرة عامة على التقييمات"
   },
   "projects": {
     "title": "مشاريعي",

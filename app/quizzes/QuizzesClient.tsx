@@ -21,6 +21,7 @@ import {
   Pencil,
   Trash2,
   Copy,
+  CopyPlus,
   Code,
   ClipboardList,
   Sparkles,
@@ -93,6 +94,7 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>("folders");
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   const [embedHandle, setEmbedHandle] = useState<string | null>(null);
   // Hook qui résout le custom-domain du créateur — buildPublicUrl
@@ -189,6 +191,29 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
       }
     } catch {
       toast.error(t("deleteError"));
+    }
+  }
+
+  async function handleDuplicate(projectId: string) {
+    // Duplicate is quiz/survey only (popquiz has no such endpoint). We
+    // POST to the deep-copy route and jump straight into the new draft's
+    // editor on success, matching "clone then tweak" expectations.
+    if (duplicatingId) return;
+    setDuplicatingId(projectId);
+    try {
+      const res = await fetch(`/api/quiz/${projectId}/duplicate`, { method: "POST" });
+      const data = await res.json();
+      if (data.ok && data.id) {
+        toast.success(t("quizDuplicated"));
+        window.location.href = `/quiz/${data.id}`;
+        return;
+      }
+      // Surface the free-plan cap message (or any server message) when present.
+      toast.error(data.message || t("duplicateError"));
+    } catch {
+      toast.error(t("duplicateError"));
+    } finally {
+      setDuplicatingId(null);
     }
   }
 
@@ -588,6 +613,20 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                               <Pencil className="h-4 w-4" />
                             </Link>
                           </Button>
+                          {/* Dupliquer : quiz/sondage uniquement. Le
+                              popquiz a son propre pipeline (vidéo) sans
+                              endpoint de clone. */}
+                          {!isPopquiz ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDuplicate(p.id)}
+                              disabled={duplicatingId === p.id}
+                              title={t("duplicateQuiz")}
+                            >
+                              <CopyPlus className="h-4 w-4" />
+                            </Button>
+                          ) : null}
                           {/* Bouton stats : réservé aux vrais quiz. La
                               page /quiz/[id]/analytics n'existe pas pour
                               les surveys ni les popquiz (Gwenn 19 mai

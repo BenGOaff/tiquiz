@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>L'Atelier du Quiz · Présentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --primary:#5D6CDB;--primary-dark:#4856c0;--ink:#2E386E;--muted:#6b73a0;
+    --surface:#F4F5FA;--line:#e6e8f5;--ok:#2bb673;--gold:#f5b301;
+    --shadow:0 18px 50px rgba(46,56,110,.14);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,sans-serif;color:var(--ink);line-height:1.55;
+    background:radial-gradient(120% 90% at 50% 0%, #eef0fb 0%, #ffffff 55%);
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 18px;
+    -webkit-font-smoothing:antialiased;}
+  .stage{width:100%;max-width:680px}
+
+  .dots{display:flex;gap:7px;justify-content:center;margin-bottom:18px;flex-wrap:wrap}
+  .dots i{width:26px;height:5px;border-radius:99px;background:var(--line);transition:background .3s}
+  .dots i.on{background:var(--primary)}
+
+  .card{background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);
+    padding:38px 36px;position:relative;overflow:hidden}
+  .card::before{content:"";position:absolute;top:-60px;right:-60px;width:160px;height:160px;
+    border-radius:50%;background:#eaecfb;opacity:.55}
+
+  .slide{display:none;animation:fade .45s ease both;position:relative;z-index:1}
+  .slide.show{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  .eyebrow{display:inline-block;background:#eaecfb;color:var(--primary);font-weight:800;font-size:12px;
+    letter-spacing:.1em;text-transform:uppercase;padding:6px 13px;border-radius:99px;margin-bottom:16px}
+  h1{font-size:clamp(23px,4.4vw,31px);font-weight:900;letter-spacing:-.02em;line-height:1.12;margin-bottom:16px}
+  p{font-size:16.5px;color:var(--muted);margin-bottom:13px}
+  p:last-child{margin-bottom:0}
+  p b{color:var(--ink);font-weight:700}
+  .lead-in{font-size:16.5px;color:var(--ink);font-weight:600;margin-bottom:12px}
+
+  .steps{display:grid;gap:11px;margin:4px 0}
+  .li{display:flex;gap:12px;align-items:flex-start;font-size:15.5px;color:var(--ink)}
+  .li .ic{flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:#eafaf2;color:var(--ok);
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
+  .li .num{flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
+  .li .bn{flex:0 0 auto;font-weight:800;color:var(--gold);font-size:12.5px;min-width:64px;padding-top:1px}
+  .li b{font-weight:700}
+
+  .foot{font-size:15px;color:var(--ink);background:var(--surface);border-radius:12px;padding:13px 16px;margin-top:16px}
+  .foot b{font-weight:700}
+
+  /* order */
+  .price{display:flex;align-items:baseline;gap:10px;margin:4px 0 14px}
+  .price .now{font-size:34px;font-weight:900;color:var(--ink)}
+  .price .old{font-size:18px;color:var(--muted);text-decoration:line-through}
+  .guarantee{display:flex;gap:12px;align-items:flex-start;background:#eafaf2;border:1px solid #c7ecd9;
+    border-radius:12px;padding:14px 16px;margin-top:4px;font-size:15px;color:var(--ink)}
+  .guarantee .ic{flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--ok);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:800}
+  .reassure{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:16px;font-size:13px;color:var(--muted)}
+  .reassure span{display:inline-flex;gap:6px;align-items:center}
+
+  .nav{display:flex;align-items:center;justify-content:space-between;margin-top:24px;gap:14px}
+  .btn{display:inline-flex;align-items:center;gap:8px;justify-content:center;background:var(--primary);
+    color:#fff;border:none;cursor:pointer;font:inherit;font-weight:800;padding:14px 30px;border-radius:99px;
+    box-shadow:0 8px 22px rgba(93,108,219,.35);transition:transform .15s,background .2s;font-size:16px}
+  .btn:hover{background:var(--primary-dark);transform:translateY(-1px)}
+  .btn.big{font-size:17px;padding:16px 34px}
+  .back{background:none;border:none;color:var(--muted);font:inherit;font-weight:700;cursor:pointer;
+    padding:10px 6px;font-size:15px;visibility:hidden}
+  .back.show{visibility:visible}
+  .grow{flex:1}
+  .note{background:#fff8e6;border:1px solid #f3e3b3;border-radius:12px;padding:11px 14px;font-size:12.5px;color:#7a6a2f;margin-top:16px}
+
+  @media(max-width:560px){.card{padding:30px 22px}}
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="dots" id="dots"></div>
+
+    <div class="card">
+      <!-- 1 — ATTENTION -->
+      <div class="slide show">
+        <span class="eyebrow">Bienvenue</span>
+        <h1>Bienvenue dans l'Atelier du Quiz 🎉</h1>
+        <p>Mélange de formation et de quiz, le <b>quizing est un nouveau concept</b>.</p>
+        <p>Je l'ai conçu pour t'aider à maîtriser rapidement tous les éléments dont tu as besoin pour <b>créer et lancer ton quiz interactif, ludique et viral</b>.</p>
+        <p>Mais aussi pour que tu passes très facilement à l'action et que tu obtiennes rapidement les résultats que tu vises.</p>
+        <p>Ce nouveau format <b>100% inédit</b> est le fruit d'années de recherches et de tests autour des formations et des quiz.</p>
+      </div>
+
+      <!-- 2 — INTÉRÊT -->
+      <div class="slide">
+        <span class="eyebrow">En pratique</span>
+        <h1>Comment ça marche ?</h1>
+        <p>Rien de plus simple : tu valides ta commande, tu reçois tes accès à la plateforme de quizing et tu te laisses guider.</p>
+        <p>Tu auras quelques infos à compléter pour <b>personnaliser ton parcours</b> et l'adapter à ton niveau, ton domaine et tes besoins.</p>
+        <p>Chaque personne reçoit un parcours adapté à sa niche et ses envies, afin que tu sois sûr.e que l'Atelier du Quiz te soit utile à <b>TOI</b> et à <b>TON activité</b>.</p>
+      </div>
+
+      <!-- 3 — INTÉRÊT -->
+      <div class="slide">
+        <span class="eyebrow">Ton parcours</span>
+        <h1>Ce qui se passe ensuite</h1>
+        <p class="lead-in">Une fois que tu as répondu aux questions, tu accèdes à ton parcours personnalisé. Il te suffit ensuite de cliquer sur chaque jour pour :</p>
+        <div class="steps">
+          <div class="li"><span class="ic">&#10003;</span><span>Découvrir la <b>compétence du jour</b> en vidéo, texte et document.</span></div>
+          <div class="li"><span class="ic">&#10003;</span><span>Suivre le <b>quizing du jour</b> : compétences à valider et actions courtes et concrètes à mener.</span></div>
+          <div class="li"><span class="ic">&#10003;</span><span>Valider chaque étape avec l'appui d'un <b>coach</b> qui a accès à ton quiz et à ses données pour te guider, te conseiller et corriger tes potentielles erreurs.</span></div>
+        </div>
+        <div class="foot">Ton parcours est rapide, fluide, personnalisé et il te garantit de toujours avancer en sécurité. <b>Le coach sait exactement où tu en es</b> et il peut te débloquer et répondre à tes questions à tout moment.</div>
+      </div>
+
+      <!-- 4 — DÉSIR -->
+      <div class="slide">
+        <span class="eyebrow">Le résultat</span>
+        <h1>Au final, en 7 jours</h1>
+        <p>Tu as appris et mis en pratique <b>tout ce qu'il faut pour créer ton quiz marketing</b>.</p>
+        <p>Et tu as mis en place tout ce qu'il faut pour <b>le rendre viral</b> et lui permettre de t'apporter des milliers de leads qualifiés.</p>
+        <p>Mais en plus : tu as synchronisé ton autorépondeur pour <b>automatiser tout ce qui doit se passer pour tes visiteurs</b> après avoir complété ton quiz.</p>
+        <div class="foot"><b>Ta machine tourne toute seule</b> et tu vends en automatique grâce à un système simple et ludique.</div>
+      </div>
+
+      <!-- 5 — ACTION -->
+      <div class="slide">
+        <span class="eyebrow">On y est</span>
+        <h1>Et maintenant ?</h1>
+        <p>Il ne te reste plus qu'à <b>valider ta commande</b> pour débuter ton quizing l'Atelier du Quiz.</p>
+        <p>Voici exactement ce que tu reçois.</p>
+      </div>
+
+      <!-- 6 — PROMESSES -->
+      <div class="slide">
+        <span class="eyebrow">Ce que tu reçois</span>
+        <h1>Tout ce qu'il te faut pour réussir</h1>
+        <div class="steps">
+          <div class="li"><span class="ic">&#10003;</span><span>Ton <b>quiz publié et qui capte dès le 4e jour</b>, pendant que les autres formations en sont encore à la théorie.</span></div>
+          <div class="li"><span class="ic">&#10003;</span><span>Le <b>réglage gratuit</b> qui fait grimper ton taux de capture de 2% à 30%, et que presque personne ne connaît.</span></div>
+          <div class="li"><span class="ic">&#10003;</span><span>La <b>Méthode CAPTO&reg;</b> qui transforme un simple quiz en flux de leads et de ventes, étape par étape.</span></div>
+          <div class="li"><span class="ic">&#10003;</span><span>Le <b>mécanisme de viralité</b> qui transforme chaque personne qui fait ton quiz en source de nouvelles personnes, sans pub.</span></div>
+          <div class="li"><span class="ic">&#10003;</span><span>Un <b>coach dispo jour et nuit</b> pour ne jamais rester bloqué et aller jusqu'au bout.</span></div>
+        </div>
+      </div>
+
+      <!-- 7 — BONUS -->
+      <div class="slide">
+        <span class="eyebrow">En cadeau</span>
+        <h1>Et tu reçois 5 bonus en plus</h1>
+        <div class="steps">
+          <div class="li"><span class="bn">BONUS 1</span><span>Lance une <b>pub</b> sur ton quiz pour un max de résultats sur un mini budget.</span></div>
+          <div class="li"><span class="bn">BONUS 2</span><span><b>Vends directement depuis un quiz</b> en évitant les détours (et les risques de perdre tes prospects).</span></div>
+          <div class="li"><span class="bn">BONUS 3</span><span>Maîtrise l'art du <b>sondage</b> pour mieux comprendre tes clients et améliorer tes offres (et tes ventes).</span></div>
+          <div class="li"><span class="bn">BONUS 4</span><span><b>Détourne n'importe quelle vidéo publique</b> pour y insérer un quiz et performer au-delà de toutes tes espérances.</span></div>
+          <div class="li"><span class="bn">BONUS 5</span><span>Rends ton quiz <b>viral sur les réseaux</b> et profite à fond des géants où se trouvent déjà tes clients.</span></div>
+        </div>
+      </div>
+
+      <!-- 8 — BON DE COMMANDE -->
+      <div class="slide">
+        <span class="eyebrow">Ta commande</span>
+        <h1>Valide ta commande et commence</h1>
+        <div class="price">
+          <span class="now">[PRIX]&nbsp;&euro;</span>
+          <span class="old">[PRIX BARRÉ]&nbsp;&euro;</span>
+        </div>
+        <div class="guarantee">
+          <span class="ic">&#10003;</span>
+          <span><b>Garantie zéro risque :</b> si au bout d'un mois tu n'as pas capté de lead avec ton quiz, alors que tu as appliqué tous les conseils, je te rembourse.</span>
+        </div>
+        <div class="reassure">
+          <span>&#128274; Paiement sécurisé</span>
+          <span>&#9201; Accès immédiat</span>
+          <span>&#8734; Accès à vie</span>
+        </div>
+        <div class="note">À remplacer : [PRIX], [PRIX BARRÉ], et le lien du bouton "Je commande" par ta page de commande Systeme.io. Pense à déposer "L'Atelier du Quiz" et "CAPTO®" avant d'afficher le ®.</div>
+      </div>
+
+      <!-- nav -->
+      <div class="nav">
+        <button class="back" id="back">&#8592; Précédent</button>
+        <span class="grow"></span>
+        <button class="btn" id="next">Suivant</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var dotsBox = document.getElementById('dots');
+  var next = document.getElementById('next');
+  var back = document.getElementById('back');
+  var i = 0;
+
+  slides.forEach(function(){ var d=document.createElement('i'); dotsBox.appendChild(d); });
+  var dots = Array.prototype.slice.call(dotsBox.children);
+
+  function render(){
+    slides.forEach(function(s,k){ s.classList.toggle('show', k===i); });
+    dots.forEach(function(d,k){ d.classList.toggle('on', k===i); });
+    back.classList.toggle('show', i>0);
+    if(i===slides.length-1){ next.textContent='Je commande'; next.classList.add('big'); }
+    else { next.textContent='Suivant'; next.classList.remove('big'); }
+  }
+  next.addEventListener('click', function(){
+    if(i<slides.length-1){ i++; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+    else { /* ICI : mets le lien de ta page de commande Systeme.io */ window.location.href='#commande'; }
+  });
+  back.addEventListener('click', function(){ if(i>0){ i--; render(); } });
+  render();
+})();
+</script>
+</body>
+</html>

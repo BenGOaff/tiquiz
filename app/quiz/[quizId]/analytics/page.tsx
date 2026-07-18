@@ -33,7 +33,7 @@ export default async function QuizAnalyticsPage({ params }: RouteContext) {
   // and keeps unowned quizzes off the URL space.
   const { data: quiz } = await supabase
     .from("quizzes")
-    .select("id")
+    .select("id, hide_response_counts")
     .eq("id", quizId)
     .eq("user_id", session.user.id)
     .maybeSingle();
@@ -41,7 +41,10 @@ export default async function QuizAnalyticsPage({ params }: RouteContext) {
 
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-6xl mx-auto">
-      <QuizAnalyticsClient quizId={quizId} />
+      <QuizAnalyticsClient
+        quizId={quizId}
+        hideCounts={(quiz as { hide_response_counts?: boolean | null }).hide_response_counts === true}
+      />
     </div>
   );
 }

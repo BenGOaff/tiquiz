@@ -42,12 +42,15 @@ interface PlusTrialEmailArgs {
   prePlanLabel?: string | null;
   /** Lien d'action (invite/magiclink) pour entrer dans l'espace. */
   actionLink?: string | null;
+  /** Durée de l'offre, formatée (ex: "2 mois", "60 jours"). */
+  durationLabel?: string | null;
 }
 
 function buildContent(args: PlusTrialEmailArgs): { subject: string; html: string; text: string } {
   const dateStr = formatFrDate(args.expiresAt);
   const cta = args.actionLink || `${APP_URL}/login`;
   const ctaLabel = args.createdAccount ? "Activer mon compte Tiquiz" : "Ouvrir mon espace Tiquiz";
+  const duration = (args.durationLabel ?? "").trim() || "1 mois";
 
   // Ce qui se passe à la fin du mois, selon le cas.
   const afterLine = args.createdAccount
@@ -56,7 +59,7 @@ function buildContent(args: PlusTrialEmailArgs): { subject: string; html: string
         args.prePlanLabel ? ` (${args.prePlanLabel})` : ""
       }. Rien à faire, aucun prélèvement lié à cette offre.`;
 
-  const subject = "Ton mois Tiquiz Plus offert est activé";
+  const subject = "Ton accès Tiquiz Plus offert est activé";
 
   const html = `<!doctype html>
 <html lang="fr">
@@ -66,11 +69,11 @@ function buildContent(args: PlusTrialEmailArgs): { subject: string; html: string
       <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(31,36,48,0.08);">
         <tr><td style="background:linear-gradient(135deg,#4f46e5,#06b6d4);padding:28px 32px;">
           <div style="color:#ffffff;font-size:13px;letter-spacing:.08em;text-transform:uppercase;opacity:.85;">Atelier du Quiz</div>
-          <div style="color:#ffffff;font-size:22px;font-weight:700;margin-top:6px;">Un mois de Tiquiz Plus, offert</div>
+          <div style="color:#ffffff;font-size:22px;font-weight:700;margin-top:6px;">${duration} de Tiquiz Plus, offert</div>
         </td></tr>
         <tr><td style="padding:28px 32px;">
-          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Bonne nouvelle : tu fais partie des premiers inscrits à l'Atelier du Quiz, et tu reçois <strong>1 mois au meilleur plan de Tiquiz (Plus), gratuitement</strong>.</p>
-          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Tu as accès à tout ce que Plus débloque : multiprofils, analyse IA des résultats, et le reste, sans aucune limite pendant 30 jours.</p>
+          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Bonne nouvelle : tu fais partie des premiers inscrits à l'Atelier du Quiz, et tu reçois <strong>${duration} au meilleur plan de Tiquiz (Plus), gratuitement</strong>.</p>
+          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Tu as accès à tout ce que Plus débloque : multiprofils, analyse IA des résultats, et le reste, sans aucune limite pendant ${duration}.</p>
           <div style="background:#f1f5ff;border:1px solid #e0e7ff;border-radius:12px;padding:16px 18px;margin:0 0 20px;">
             <p style="margin:0;font-size:14px;line-height:1.6;color:#3730a3;"><strong>Ce qui se passe ensuite.</strong> ${afterLine}</p>
           </div>
@@ -89,10 +92,10 @@ function buildContent(args: PlusTrialEmailArgs): { subject: string; html: string
 </html>`;
 
   const text = [
-    "Un mois de Tiquiz Plus, offert",
+    `${duration} de Tiquiz Plus, offert`,
     "",
-    "Tu fais partie des premiers inscrits a l'Atelier du Quiz, et tu recois 1 mois au meilleur plan de Tiquiz (Plus), gratuitement.",
-    "Tu as acces a tout ce que Plus debloque (multiprofils, analyse IA des resultats, et le reste) sans limite pendant 30 jours.",
+    `Tu fais partie des premiers inscrits a l'Atelier du Quiz, et tu recois ${duration} au meilleur plan de Tiquiz (Plus), gratuitement.`,
+    `Tu as acces a tout ce que Plus debloque (multiprofils, analyse IA des resultats, et le reste) sans limite pendant ${duration}.`,
     "",
     `Ce qui se passe ensuite : ${afterLine}`,
     "",

@@ -160,6 +160,7 @@ type QuizData = {
   hide_brand_logo: boolean | null;
   capture_enabled: boolean | null;
   show_aggregate_responses: boolean | null;
+  hide_response_counts: boolean | null;
   survey_thanks_heading: string | null;
   survey_thanks_body: string | null;
   share_networks: string[] | null; og_description: string | null; og_image_url: string | null;
@@ -484,6 +485,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // Si TRUE, on affiche les pourcentages de réponses des autres
   // participants sur la page de remerciement. Default FALSE.
   const [showAggregateResponses, setShowAggregateResponses] = useState<boolean>(false);
+  // Masquer le nombre brut de reponses dans la synthese (onglet Tendances)
+  // et n'afficher que les %. Default false = compteurs visibles (compat).
+  const [hideResponseCounts, setHideResponseCounts] = useState<boolean>(false);
   const [profile, setProfile] = useState<ProfileBrand | null>(null);
   // Palettes utilisateur (charte centralisée — partagée avec quiz et popquiz).
   const [savedPalettes, setSavedPalettes] = useState<PaletteList>([]);
@@ -573,6 +577,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     capture_enabled: captureEnabled,
     capture_before_questions: captureBeforeQuestions,
     show_aggregate_responses: showAggregateResponses,
+    hide_response_counts: hideResponseCounts,
     survey_thanks_heading: surveyThanksHeading,
     survey_thanks_body: surveyThanksBody,
     slug,
@@ -593,7 +598,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     googleAdsConversionLabel, askFirstName, askGender,
     shareMessage, locale, sioShareTagName, sioCaptureTag, status,
     fontFamily, primaryColor, bgColor, textColor, quizBrandLogoUrl, hideBrandLogo,
-    captureEnabled, captureBeforeQuestions, showAggregateResponses,
+    captureEnabled, captureBeforeQuestions, showAggregateResponses, hideResponseCounts,
     surveyThanksHeading, surveyThanksBody,
     slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
     editQuestions, introImageUrl, introImageWidth,
@@ -649,6 +654,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.capture_enabled === "boolean") setCaptureEnabled(s.capture_enabled);
     if (typeof s.capture_before_questions === "boolean") setCaptureBeforeQuestions(s.capture_before_questions);
     if (typeof s.show_aggregate_responses === "boolean") setShowAggregateResponses(s.show_aggregate_responses);
+    if (typeof s.hide_response_counts === "boolean") setHideResponseCounts(s.hide_response_counts);
     if (typeof s.survey_thanks_heading === "string") setSurveyThanksHeading(s.survey_thanks_heading);
     if (typeof s.survey_thanks_body === "string") setSurveyThanksBody(s.survey_thanks_body);
     if (typeof s.slug === "string") setSlug(s.slug);
@@ -764,6 +770,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setCaptureEnabled((q as { capture_enabled?: boolean | null }).capture_enabled !== false);
       setCaptureBeforeQuestions(Boolean((q as { capture_before_questions?: boolean | null }).capture_before_questions));
       setShowAggregateResponses((q as { show_aggregate_responses?: boolean | null }).show_aggregate_responses === true);
+      setHideResponseCounts((q as { hide_response_counts?: boolean | null }).hide_response_counts === true);
       setSurveyThanksHeading((q as { survey_thanks_heading?: string | null }).survey_thanks_heading ?? "");
       setSurveyThanksBody((q as { survey_thanks_body?: string | null }).survey_thanks_body ?? "");
       const rawPalettes = (prof?.saved_palettes ?? []) as unknown;
@@ -1124,6 +1131,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           capture_enabled: captureEnabled,
           capture_before_questions: captureBeforeQuestions,
           show_aggregate_responses: showAggregateResponses,
+          hide_response_counts: hideResponseCounts,
           survey_thanks_heading: surveyThanksHeading.trim() || null,
           survey_thanks_body: surveyThanksBody.trim() || null,
           // Share + SEO
@@ -1701,6 +1709,14 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     hint={t("surveyShowAggregateHint")}
                     checked={showAggregateResponses}
                     onChange={setShowAggregateResponses}
+                  />
+                  {/* Masque le nombre brut de reponses dans la synthese
+                      (onglet Tendances) et n'affiche que les %. */}
+                  <SettingsToggle
+                    label={t("optionHideResponseCounts")}
+                    hint={t("optionHideResponseCountsHint")}
+                    checked={hideResponseCounts}
+                    onChange={setHideResponseCounts}
                   />
                 </section>
 
@@ -2542,6 +2558,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             {trendsView === "summary" ? (
               <SurveyTrends
                 questions={editQuestions}
+                hideCounts={hideResponseCounts}
                 leads={leads.map((l) => ({
                   id: l.id,
                   email: l.email,

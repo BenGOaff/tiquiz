@@ -23,6 +23,7 @@ import { applyFrenchTypography, isFrenchLocale } from "@/lib/frenchTypography";
 import { sendCapiLead } from "@/lib/metaCapi";
 import { logBusinessEvent, dedupeKeys } from "@/lib/businessEvents";
 import { mergeOwnerBranding } from "@/lib/projects/businessProfile";
+import { notifyCreatorOfResponse } from "@/lib/email/responseNotification";
 
 // No `force-dynamic`: it would make Vercel inject `Cache-Control: private, no-store`,
 // overriding the edge-SWR headers set on the GET response and forcing `cf-cache-status: DYNAMIC`.
@@ -618,7 +619,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
         },
         { onConflict: "quiz_id,email" },
       )
-      .select("id")
+      .select("id, created_at")
       .single();
 
     if (error) {
@@ -641,6 +642,27 @@ export async function POST(req: NextRequest, context: RouteContext) {
         payload: { quizId, quizTitle: quiz.title, leadId: lead.id },
         dedupeKey: dedupeKeys.quizLead(quizId, email),
       }).catch(() => {});
+    }
+
+    // Notification créateur (best-effort, non bloquant) : email au
+    // propriétaire quand une NOUVELLE réponse arrive, s'il n'a pas coupé
+    // l'option (profiles.notify_responses). On ne notifie que sur un lead
+    // fraîchement créé (created_at récent) pour éviter les doublons quand
+    // un même email re-répond (upsert = update, created_at inchangé).
+    if (lead?.id && quiz.user_id) {
+      const createdAt = (lead as { created_at?: string | null }).created_at;
+      const isNewLead = !createdAt || Date.now() - new Date(createdAt).getTime() < 15000;
+      if (isNewLead) {
+        notifyCreatorOfResponse({
+          ownerUserId: quiz.user_id,
+          quizId,
+          quizTitle: quiz.title,
+          quizMode: (quiz as { mode?: string | null }).mode ?? null,
+          respondentEmail: isAnonymousSubmit ? null : email,
+          respondentName: [firstName, lastName].filter(Boolean).join(" ") || null,
+          resultId,
+        }).catch(() => {});
+      }
     }
 
     // Sondage anonyme : on a inséré la ligne pour alimenter l'agrégation,

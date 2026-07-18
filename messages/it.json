@@ -483,7 +483,10 @@
     "statisticsTitle": "Statistiche",
     "embedClaimSuccess": "Il tuo quiz ti aspettava - ora è nel tuo account ✨",
     "embedClaimOpen": "Apri",
-    "deleteError": "Qualcosa è andato storto."
+    "deleteError": "Qualcosa è andato storto.",
+    "duplicateQuiz": "Duplica",
+    "quizDuplicated": "Quiz duplicato. Ora puoi modificarlo.",
+    "duplicateError": "Duplicazione non riuscita."
   },
   "quizForm": {
     "createTitle": "Crea un quiz",
@@ -949,7 +952,10 @@
     "billingMonthly": "Mensile",
     "billingYearly": "Annuale",
     "billingYearlySave": "2 mesi gratis",
-    "planNoCommitment": "senza impegno"
+    "planNoCommitment": "senza impegno",
+    "notifyResponsesTitle": "Notifiche di risposta",
+    "notifyResponsesDesc": "Ricevi un'email a ogni nuova risposta ai tuoi quiz e sondaggi.",
+    "notifyResponsesLabel": "Inviami un'email a ogni nuova risposta"
   },
   "languageSwitcher": {
     "label": "Lingua"
@@ -1313,7 +1319,9 @@
     "surveyLeadTagHint": "I sondaggi non hanno risultati: questo unico tag viene applicato a chiunque risponde. Usalo per attivare un'automazione in Systeme.io.",
     "previewPointsAssign": "Assegna",
     "previewPointsFor": "punto/i a",
-    "previewPointsHint": "Numero di punti assegnati a questo profilo quando si sceglie questa risposta. Metti più punti per favorire un profilo."
+    "previewPointsHint": "Numero di punti assegnati a questo profilo quando si sceglie questa risposta. Metti più punti per favorire un profilo.",
+    "optionHideResponseCounts": "Nascondere il numero di risposte",
+    "optionHideResponseCountsHint": "Mostra solo le percentuali nella sintesi. Le esportazioni mantengono i numeri."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nuova password",
@@ -1531,7 +1539,8 @@
     "responsesFlaggedOnly": "Contrassegnati",
     "exportExcel": "Esporta Excel",
     "flagAction": "Contrassegna questo rispondente",
-    "unflagAction": "Rimuovi contrassegno"
+    "unflagAction": "Rimuovi contrassegno",
+    "radarTitle": "Panoramica dei voti"
   },
   "projects": {
     "title": "I miei progetti",

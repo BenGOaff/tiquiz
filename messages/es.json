@@ -483,7 +483,10 @@
     "statisticsTitle": "Estadísticas",
     "embedClaimSuccess": "Tu quiz te esperaba - ya está en tu cuenta ✨",
     "embedClaimOpen": "Abrir",
-    "deleteError": "Algo salió mal."
+    "deleteError": "Algo salió mal.",
+    "duplicateQuiz": "Duplicar",
+    "quizDuplicated": "Quiz duplicado. Ya puedes editarlo.",
+    "duplicateError": "La duplicación falló."
   },
   "quizForm": {
     "createTitle": "Crear un quiz",
@@ -949,7 +952,10 @@
     "billingMonthly": "Mensual",
     "billingYearly": "Anual",
     "billingYearlySave": "2 meses gratis",
-    "planNoCommitment": "sin compromiso"
+    "planNoCommitment": "sin compromiso",
+    "notifyResponsesTitle": "Notificaciones de respuestas",
+    "notifyResponsesDesc": "Recibe un email por cada nueva respuesta en tus quizzes y encuestas.",
+    "notifyResponsesLabel": "Enviarme un email por cada nueva respuesta"
   },
   "languageSwitcher": {
     "label": "Idioma"
@@ -1313,7 +1319,9 @@
     "ariaCropImage": "Recortar imagen",
     "ariaRemoveImage": "Quitar imagen",
     "surveyLeadTagLabel": "Etiqueta de leads (opcional)",
-    "surveyLeadTagHint": "Las encuestas no tienen resultados: esta única etiqueta se aplica a todas las personas que responden. Úsala para activar una automatización en Systeme.io."
+    "surveyLeadTagHint": "Las encuestas no tienen resultados: esta única etiqueta se aplica a todas las personas que responden. Úsala para activar una automatización en Systeme.io.",
+    "optionHideResponseCounts": "Ocultar el número de respuestas",
+    "optionHideResponseCountsHint": "Muestra solo los porcentajes en la síntesis. Las exportaciones conservan los números."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nueva contraseña",
@@ -1531,7 +1539,8 @@
     "responsesFlaggedOnly": "Marcados",
     "exportExcel": "Exportar Excel",
     "flagAction": "Marcar este encuestado",
-    "unflagAction": "Quitar marca"
+    "unflagAction": "Quitar marca",
+    "radarTitle": "Resumen de las valoraciones"
   },
   "projects": {
     "title": "Mis proyectos",

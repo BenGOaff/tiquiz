@@ -466,7 +466,10 @@
     "statisticsTitle": "Statistics",
     "embedClaimSuccess": "Your quiz was waiting - it's now in your account ✨",
     "embedClaimOpen": "Open",
-    "deleteError": "Something went wrong."
+    "deleteError": "Something went wrong.",
+    "duplicateQuiz": "Duplicate",
+    "quizDuplicated": "Quiz duplicated. You can now edit it.",
+    "duplicateError": "Duplication failed."
   },
   "quizForm": {
     "createTitle": "Create a quiz",
@@ -933,7 +936,10 @@
     "billingMonthly": "Monthly",
     "billingYearly": "Yearly",
     "billingYearlySave": "2 months free",
-    "planNoCommitment": "no commitment"
+    "planNoCommitment": "no commitment",
+    "notifyResponsesTitle": "Response notifications",
+    "notifyResponsesDesc": "Get an email for every new response on your quizzes and surveys.",
+    "notifyResponsesLabel": "Email me on every new response"
   },
   "languageSwitcher": {
     "label": "Language"
@@ -1297,7 +1303,9 @@
     "ariaCropImage": "Crop image",
     "ariaRemoveImage": "Remove image",
     "surveyLeadTagLabel": "Lead tag (optional)",
-    "surveyLeadTagHint": "Surveys have no results, so this single tag is applied to everyone who submits. Use it to trigger an automation in Systeme.io."
+    "surveyLeadTagHint": "Surveys have no results, so this single tag is applied to everyone who submits. Use it to trigger an automation in Systeme.io.",
+    "optionHideResponseCounts": "Hide the number of responses",
+    "optionHideResponseCountsHint": "Show only percentages in the synthesis. Exports keep the numbers."
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",
@@ -1515,7 +1523,8 @@
     "responsesFlaggedOnly": "Flagged",
     "exportExcel": "Export Excel",
     "flagAction": "Flag this respondent",
-    "unflagAction": "Remove flag"
+    "unflagAction": "Remove flag",
+    "radarTitle": "Ratings overview"
   },
   "projects": {
     "title": "My projects",

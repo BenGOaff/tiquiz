@@ -106,6 +106,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const now = new Date();
   const expiresAt = new Date(now.getTime() + days * 24 * 3600 * 1000);
+  // Libellé de durée pour l'email (ex: "2 mois", "60 jours").
+  const durationLabel = days % 30 === 0 ? `${days / 30} mois` : `${days} jours`;
 
   // ── 1. Lire le profile existant (par email, case-insensitive) ──
   const { data: existing, error: readErr } = await supabaseAdmin
@@ -183,6 +185,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       createdAccount: false,
       prePlanLabel: PRE_PLAN_LABELS[currentPlan] ?? null,
       actionLink,
+      durationLabel,
     });
 
     return NextResponse.json({
@@ -262,6 +265,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     createdAccount,
     prePlanLabel: "gratuit",
     actionLink,
+    durationLabel,
   });
 
   return NextResponse.json({
