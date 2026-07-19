@@ -1305,7 +1305,9 @@
     "surveyLeadTagLabel": "Lead tag (optional)",
     "surveyLeadTagHint": "Surveys have no results, so this single tag is applied to everyone who submits. Use it to trigger an automation in Systeme.io.",
     "optionHideResponseCounts": "Hide the number of responses",
-    "optionHideResponseCountsHint": "Show only percentages in the synthesis. Exports keep the numbers."
+    "optionHideResponseCountsHint": "Show only percentages in the synthesis. Exports keep the numbers.",
+    "optionNotifyResponses": "Email notifications",
+    "optionNotifyResponsesHint": "Get an email for each new response on this quiz. Turn it off here if you prefer silence for this quiz."
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",

@@ -62,7 +62,19 @@ export async function notifyCreatorOfResponse(args: ResponseNotificationArgs): P
     const apiKey = process.env.RESEND_API_KEY?.trim();
     if (!apiKey) return false;
 
-    // Lire le profil du créateur : email + opt-out.
+    // Opt-out PAR QUIZ (demande Gwenn 19 juil 2026) : chaque quiz/sondage peut
+    // couper ses notifications indépendamment du réglage global du compte.
+    // Défaut = activé (null/absent). Ne bloque pas si le quiz est introuvable.
+    const { data: quizRow } = await supabaseAdmin
+      .from("quizzes")
+      .select("notify_responses")
+      .eq("id", args.quizId)
+      .maybeSingle();
+    if ((quizRow as { notify_responses?: boolean | null } | null)?.notify_responses === false) {
+      return false;
+    }
+
+    // Lire le profil du créateur : email + opt-out global.
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("email, notify_responses, first_name")
@@ -74,7 +86,7 @@ export async function notifyCreatorOfResponse(args: ResponseNotificationArgs): P
       first_name: string | null;
     } | null;
     if (!p?.email) return false;
-    // Opt-out : seul false coupe (null/undefined = comportement par défaut activé).
+    // Opt-out global : seul false coupe (null/undefined = défaut activé).
     if (p.notify_responses === false) return false;
 
     const isSurvey = (args.quizMode ?? "") === "survey";

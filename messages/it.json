@@ -1321,7 +1321,9 @@
     "previewPointsFor": "punto/i a",
     "previewPointsHint": "Numero di punti assegnati a questo profilo quando si sceglie questa risposta. Metti più punti per favorire un profilo.",
     "optionHideResponseCounts": "Nascondere il numero di risposte",
-    "optionHideResponseCountsHint": "Mostra solo le percentuali nella sintesi. Le esportazioni mantengono i numeri."
+    "optionHideResponseCountsHint": "Mostra solo le percentuali nella sintesi. Le esportazioni mantengono i numeri.",
+    "optionNotifyResponses": "Notifiche via email",
+    "optionNotifyResponsesHint": "Ricevi un'email per ogni nuova risposta a questo quiz. Disattivala qui se preferisci il silenzio per questo quiz."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nuova password",

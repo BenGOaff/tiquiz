@@ -208,6 +208,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "show_consent_checkbox",
       "show_results_breakdown",
       "hide_response_counts",
+      "notify_responses",
       "custom_footer_text", "custom_footer_url",
       "brand_font", "brand_color_primary", "brand_color_background", "brand_color_text",
       "brand_logo_url", "hide_brand_logo",

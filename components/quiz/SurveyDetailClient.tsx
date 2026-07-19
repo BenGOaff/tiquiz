@@ -161,6 +161,7 @@ type QuizData = {
   capture_enabled: boolean | null;
   show_aggregate_responses: boolean | null;
   hide_response_counts: boolean | null;
+  notify_responses?: boolean | null;
   survey_thanks_heading: string | null;
   survey_thanks_body: string | null;
   share_networks: string[] | null; og_description: string | null; og_image_url: string | null;
@@ -488,6 +489,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // Masquer le nombre brut de reponses dans la synthese (onglet Tendances)
   // et n'afficher que les %. Default false = compteurs visibles (compat).
   const [hideResponseCounts, setHideResponseCounts] = useState<boolean>(false);
+  // Notifications email par sondage (Gwenn 19 juil 2026). Default true.
+  const [notifyResponses, setNotifyResponses] = useState<boolean>(true);
   const [profile, setProfile] = useState<ProfileBrand | null>(null);
   // Palettes utilisateur (charte centralisée — partagée avec quiz et popquiz).
   const [savedPalettes, setSavedPalettes] = useState<PaletteList>([]);
@@ -578,6 +581,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     capture_before_questions: captureBeforeQuestions,
     show_aggregate_responses: showAggregateResponses,
     hide_response_counts: hideResponseCounts,
+    notify_responses: notifyResponses,
     survey_thanks_heading: surveyThanksHeading,
     survey_thanks_body: surveyThanksBody,
     slug,
@@ -598,7 +602,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     googleAdsConversionLabel, askFirstName, askGender,
     shareMessage, locale, sioShareTagName, sioCaptureTag, status,
     fontFamily, primaryColor, bgColor, textColor, quizBrandLogoUrl, hideBrandLogo,
-    captureEnabled, captureBeforeQuestions, showAggregateResponses, hideResponseCounts,
+    captureEnabled, captureBeforeQuestions, showAggregateResponses, hideResponseCounts, notifyResponses,
     surveyThanksHeading, surveyThanksBody,
     slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
     editQuestions, introImageUrl, introImageWidth,
@@ -655,6 +659,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (typeof s.capture_before_questions === "boolean") setCaptureBeforeQuestions(s.capture_before_questions);
     if (typeof s.show_aggregate_responses === "boolean") setShowAggregateResponses(s.show_aggregate_responses);
     if (typeof s.hide_response_counts === "boolean") setHideResponseCounts(s.hide_response_counts);
+    if (typeof s.notify_responses === "boolean") setNotifyResponses(s.notify_responses);
     if (typeof s.survey_thanks_heading === "string") setSurveyThanksHeading(s.survey_thanks_heading);
     if (typeof s.survey_thanks_body === "string") setSurveyThanksBody(s.survey_thanks_body);
     if (typeof s.slug === "string") setSlug(s.slug);
@@ -771,6 +776,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setCaptureBeforeQuestions(Boolean((q as { capture_before_questions?: boolean | null }).capture_before_questions));
       setShowAggregateResponses((q as { show_aggregate_responses?: boolean | null }).show_aggregate_responses === true);
       setHideResponseCounts((q as { hide_response_counts?: boolean | null }).hide_response_counts === true);
+      setNotifyResponses((q as { notify_responses?: boolean | null }).notify_responses !== false);
       setSurveyThanksHeading((q as { survey_thanks_heading?: string | null }).survey_thanks_heading ?? "");
       setSurveyThanksBody((q as { survey_thanks_body?: string | null }).survey_thanks_body ?? "");
       const rawPalettes = (prof?.saved_palettes ?? []) as unknown;
@@ -1132,6 +1138,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           capture_before_questions: captureBeforeQuestions,
           show_aggregate_responses: showAggregateResponses,
           hide_response_counts: hideResponseCounts,
+          notify_responses: notifyResponses,
           survey_thanks_heading: surveyThanksHeading.trim() || null,
           survey_thanks_body: surveyThanksBody.trim() || null,
           // Share + SEO
@@ -1717,6 +1724,13 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                     hint={t("optionHideResponseCountsHint")}
                     checked={hideResponseCounts}
                     onChange={setHideResponseCounts}
+                  />
+                  {/* Notifications email par sondage (Gwenn 19 juil 2026). */}
+                  <SettingsToggle
+                    label={t("optionNotifyResponses")}
+                    hint={t("optionNotifyResponsesHint")}
+                    checked={notifyResponses}
+                    onChange={setNotifyResponses}
                   />
                 </section>
 
