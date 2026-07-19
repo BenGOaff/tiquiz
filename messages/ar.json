@@ -1309,7 +1309,10 @@
     "previewPointsFor": "نقطة/نقاط لـ",
     "previewPointsHint": "عدد النقاط الممنوحة لهذا الملف عند اختيار هذه الإجابة. ضع نقاطاً أكثر لترجيح ملف معين.",
     "optionHideResponseCounts": "إخفاء عدد الردود",
-    "optionHideResponseCountsHint": "إظهار النسب المئوية فقط في الملخص. تحتفظ التصديرات بالأرقام."
+    "optionHideResponseCountsHint": "إظهار النسب المئوية فقط في الملخص. تحتفظ التصديرات بالأرقام.",
+    "optionNotifyResponses": "إشعارات البريد الإلكتروني",
+    "optionNotifyResponsesHint": "تصلك رسالة بريد إلكتروني عند كل رد جديد على هذا الاختبار. أوقفها هنا إذا كنت تفضل الصمت لهذا الاختبار.",
+    "optionSioTagLabel": "وسم Systeme.io لهذه الإجابة"
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",

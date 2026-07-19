@@ -1307,7 +1307,10 @@
     "surveyLeadTagLabel": "Tag dos leads (opcional)",
     "surveyLeadTagHint": "As pesquisas não têm resultados: esta tag única é aplicada a todas as pessoas que respondem. Use-a para acionar uma automação no Systeme.io.",
     "optionHideResponseCounts": "Ocultar o número de respostas",
-    "optionHideResponseCountsHint": "Mostra apenas as porcentagens na síntese. As exportações mantêm os números."
+    "optionHideResponseCountsHint": "Mostra apenas as porcentagens na síntese. As exportações mantêm os números.",
+    "optionNotifyResponses": "Notificações por email",
+    "optionNotifyResponsesHint": "Receba um email a cada nova resposta neste quiz. Desligue aqui se preferir silêncio para este quiz.",
+    "optionSioTagLabel": "Tag Systeme.io para esta resposta"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova senha",

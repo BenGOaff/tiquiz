@@ -1321,7 +1321,10 @@
     "surveyLeadTagLabel": "Etiqueta de leads (opcional)",
     "surveyLeadTagHint": "Las encuestas no tienen resultados: esta única etiqueta se aplica a todas las personas que responden. Úsala para activar una automatización en Systeme.io.",
     "optionHideResponseCounts": "Ocultar el número de respuestas",
-    "optionHideResponseCountsHint": "Muestra solo los porcentajes en la síntesis. Las exportaciones conservan los números."
+    "optionHideResponseCountsHint": "Muestra solo los porcentajes en la síntesis. Las exportaciones conservan los números.",
+    "optionNotifyResponses": "Notificaciones por email",
+    "optionNotifyResponsesHint": "Recibe un email por cada nueva respuesta en este quiz. Desactívalo aquí si prefieres silencio para este quiz.",
+    "optionSioTagLabel": "Etiqueta Systeme.io para esta respuesta"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nueva contraseña",

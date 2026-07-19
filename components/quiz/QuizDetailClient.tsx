@@ -152,6 +152,7 @@ type QuizData = {
   status: string; views_count: number; starts_count: number;
   completions_count: number; shares_count: number;
   hide_response_counts?: boolean | null;
+  notify_responses?: boolean | null;
   questions: QuizQuestion[]; results: QuizResult[];
   // 'quiz' (par profil) | 'scoring' (vrai quiz note). 'survey' part sur
   // SurveyDetailClient, donc jamais ici.
@@ -520,6 +521,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // Masquer le nombre brut de réponses dans la synthèse (Résultats) et
   // n'afficher que les %. Default false = compteurs visibles (compat).
   const [hideResponseCounts, setHideResponseCounts] = useState(false);
+  // Notifications email par quiz (Gwenn 19 juil 2026). Default true = activé.
+  const [notifyResponses, setNotifyResponses] = useState(true);
   // Active la section "Découvre les autres profils" côté visiteur
   // (Adeline, 19 mai 2026). Default false = comportement historique.
   const [showOtherResults, setShowOtherResults] = useState(false);
@@ -711,6 +714,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     show_consent_checkbox: showConsentCheckbox,
     show_results_breakdown: showResultsBreakdown,
     hide_response_counts: hideResponseCounts,
+    notify_responses: notifyResponses,
     show_other_results: showOtherResults,
     meta_pixel_id: metaPixelId,
     ga4_measurement_id: ga4MeasurementId,
@@ -751,7 +755,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     captureHeading, captureSubtitle, captureSubmitText, resultInsightHeading, resultProjectionHeading,
     captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
-    showConsentCheckbox, showResultsBreakdown, hideResponseCounts, showOtherResults,
+    showConsentCheckbox, showResultsBreakdown, hideResponseCounts, notifyResponses, showOtherResults,
     metaPixelId, ga4MeasurementId, googleAdsConversionId, googleAdsConversionLabel,
     askFirstName, askGender,
     viralityEnabled, bonusDescription, bonusIntroText, bonusUnlockedMessage, bonusImageUrl, bonusImagePosition, bonusImageWidth,
@@ -797,6 +801,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     if (typeof s.show_consent_checkbox === "boolean") setShowConsentCheckbox(s.show_consent_checkbox);
     if (typeof s.show_results_breakdown === "boolean") setShowResultsBreakdown(s.show_results_breakdown);
     if (typeof s.hide_response_counts === "boolean") setHideResponseCounts(s.hide_response_counts);
+    if (typeof s.notify_responses === "boolean") setNotifyResponses(s.notify_responses);
     if (typeof s.show_other_results === "boolean") setShowOtherResults(s.show_other_results);
     if (typeof s.meta_pixel_id === "string") setMetaPixelId(s.meta_pixel_id);
     if (typeof s.ga4_measurement_id === "string") setGa4MeasurementId(s.ga4_measurement_id);
@@ -915,6 +920,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
       setShowResultsBreakdown((q as { show_results_breakdown?: boolean | null }).show_results_breakdown === true);
       setHideResponseCounts((q as { hide_response_counts?: boolean | null }).hide_response_counts === true);
+      setNotifyResponses((q as { notify_responses?: boolean | null }).notify_responses !== false);
       setShowOtherResults((q as { show_other_results?: boolean | null }).show_other_results === true);
       // Phase B pixels — chargés depuis la DB (chaîne vide si null
       // pour que le placeholder s'affiche dans l'input).
@@ -1000,6 +1006,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           show_consent_checkbox: (q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false,
           show_results_breakdown: (q as { show_results_breakdown?: boolean | null }).show_results_breakdown === true,
           hide_response_counts: (q as { hide_response_counts?: boolean | null }).hide_response_counts === true,
+          notify_responses: (q as { notify_responses?: boolean | null }).notify_responses !== false,
           show_other_results: (q as { show_other_results?: boolean | null }).show_other_results === true,
           ask_first_name: Boolean((q as unknown as Record<string, unknown>).ask_first_name),
           ask_gender: Boolean((q as unknown as Record<string, unknown>).ask_gender),
@@ -1675,6 +1682,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           show_consent_checkbox: showConsentCheckbox,
           show_results_breakdown: showResultsBreakdown,
           hide_response_counts: hideResponseCounts,
+          notify_responses: notifyResponses,
           show_other_results: showOtherResults,
           meta_pixel_id: metaPixelId.trim() || null,
           ga4_measurement_id: ga4MeasurementId.trim() || null,
@@ -2493,6 +2501,14 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     hint={t("optionHideResponseCountsHint")}
                     checked={hideResponseCounts}
                     onChange={v => setHideResponseCounts(v)}
+                  />
+                  {/* Notifications email par quiz (Gwenn 19 juil 2026) : chaque
+                      quiz peut couper ses emails de notification. On/off. */}
+                  <SettingsToggle
+                    label={t("optionNotifyResponses")}
+                    hint={t("optionNotifyResponsesHint")}
+                    checked={notifyResponses}
+                    onChange={v => setNotifyResponses(v)}
                   />
                 </section>
 

@@ -21,6 +21,25 @@ function esc(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/**
+ * Titres de quiz / résultats stockés en HTML riche (styles inline, spans
+ * colorés). Dans l'email on veut le TEXTE seul : sinon le destinataire voit
+ * le balisage brut (drame Gwenn 19 juil 2026). Ne change RIEN au rendu de
+ * l'app, qui continue d'afficher le HTML stylé.
+ */
+function stripHtml(input: string | null | undefined): string {
+  return String(input ?? "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0*39;|&apos;|&rsquo;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export interface ResponseNotificationArgs {
   ownerUserId: string;
   quizId: string;
@@ -43,7 +62,19 @@ export async function notifyCreatorOfResponse(args: ResponseNotificationArgs): P
     const apiKey = process.env.RESEND_API_KEY?.trim();
     if (!apiKey) return false;
 
-    // Lire le profil du créateur : email + opt-out.
+    // Opt-out PAR QUIZ (demande Gwenn 19 juil 2026) : chaque quiz/sondage peut
+    // couper ses notifications indépendamment du réglage global du compte.
+    // Défaut = activé (null/absent). Ne bloque pas si le quiz est introuvable.
+    const { data: quizRow } = await supabaseAdmin
+      .from("quizzes")
+      .select("notify_responses")
+      .eq("id", args.quizId)
+      .maybeSingle();
+    if ((quizRow as { notify_responses?: boolean | null } | null)?.notify_responses === false) {
+      return false;
+    }
+
+    // Lire le profil du créateur : email + opt-out global.
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("email, notify_responses, first_name")
@@ -55,12 +86,12 @@ export async function notifyCreatorOfResponse(args: ResponseNotificationArgs): P
       first_name: string | null;
     } | null;
     if (!p?.email) return false;
-    // Opt-out : seul false coupe (null/undefined = comportement par défaut activé).
+    // Opt-out global : seul false coupe (null/undefined = défaut activé).
     if (p.notify_responses === false) return false;
 
     const isSurvey = (args.quizMode ?? "") === "survey";
     const kind = isSurvey ? "ton sondage" : "ton quiz";
-    const title = args.quizTitle?.trim() || (isSurvey ? "ton sondage" : "ton quiz");
+    const title = stripHtml(args.quizTitle) || (isSurvey ? "ton sondage" : "ton quiz");
 
     // Titre du profil de résultat (quiz uniquement), résolu à la volée.
     let resultTitle = "";
@@ -70,7 +101,7 @@ export async function notifyCreatorOfResponse(args: ResponseNotificationArgs): P
         .select("title")
         .eq("id", args.resultId)
         .maybeSingle();
-      resultTitle = String((r as { title?: string | null } | null)?.title ?? "").trim();
+      resultTitle = stripHtml((r as { title?: string | null } | null)?.title);
     }
 
     // Qui a répondu.

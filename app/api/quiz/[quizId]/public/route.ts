@@ -755,7 +755,38 @@ export async function POST(req: NextRequest, context: RouteContext) {
           const surveyCaptureTag = isSurveyLead
             ? String((quiz as { sio_capture_tag?: string | null }).sio_capture_tag ?? "").trim()
             : "";
-          const tagsToApply = [...resultTags, surveyCaptureTag]
+
+          // Tags PAR RÉPONSE de sondage (Gwenn 19 juil 2026) : chaque option
+          // choisie peut porter un tag Systeme.io (choix simple ou multiple).
+          // Les réponses sont indexées (question_index + option_indices), on
+          // relie donc chaque index d'option à son sio_tag_name.
+          const answerTags: string[] = [];
+          if (isSurveyLead && Array.isArray(answers) && answers.length > 0) {
+            try {
+              const { data: qRows } = await admin
+                .from("quiz_questions")
+                .select("options, sort_order")
+                .eq("quiz_id", quizId)
+                .order("sort_order", { ascending: true });
+              const questionOptions = (qRows ?? []).map(
+                (r) => ((r as { options?: unknown }).options as Array<{ sio_tag_name?: string | null }> | null) ?? [],
+              );
+              for (const a of answers as Array<{ question_index?: number; option_indices?: number[] }>) {
+                const qIdx = Number(a?.question_index);
+                const opts = Number.isInteger(qIdx) ? questionOptions[qIdx] : null;
+                if (!opts) continue;
+                const chosen = Array.isArray(a?.option_indices) ? a.option_indices : [];
+                for (const oIdx of chosen) {
+                  const tag = String(opts[Number(oIdx)]?.sio_tag_name ?? "").trim();
+                  if (tag) answerTags.push(tag);
+                }
+              }
+            } catch (e) {
+              console.error("[survey answer tags] error:", e);
+            }
+          }
+
+          const tagsToApply = [...resultTags, surveyCaptureTag, ...answerTags]
             .map((t) => t.trim())
             .filter((t, i, arr) => t && arr.findIndex((x) => x.toLowerCase() === t.toLowerCase()) === i);
 
