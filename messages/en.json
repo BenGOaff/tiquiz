@@ -1307,7 +1307,8 @@
     "optionHideResponseCounts": "Hide the number of responses",
     "optionHideResponseCountsHint": "Show only percentages in the synthesis. Exports keep the numbers.",
     "optionNotifyResponses": "Email notifications",
-    "optionNotifyResponsesHint": "Get an email for each new response on this quiz. Turn it off here if you prefer silence for this quiz."
+    "optionNotifyResponsesHint": "Get an email for each new response on this quiz. Turn it off here if you prefer silence for this quiz.",
+    "optionSioTagLabel": "Systeme.io tag for this answer"
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",
