@@ -14,11 +14,26 @@ export interface PartnerMetrics {
   topQuiz: { title: string; leads: number } | null;
 }
 
-export async function getPartnerMetrics(userId: string): Promise<PartnerMetrics> {
-  const { data: quizzes } = await supabaseAdmin
+export interface PartnerMetricsScope {
+  /** Ne garder que ce quiz. */
+  quizId?: string | null;
+  /** Ne garder que les quiz de ce projet. */
+  projectId?: string | null;
+}
+
+export async function getPartnerMetrics(
+  userId: string,
+  scope?: PartnerMetricsScope,
+): Promise<PartnerMetrics> {
+  let query = supabaseAdmin
     .from("quizzes")
     .select("id, title, views_count, completions_count, shares_count")
     .eq("user_id", userId);
+  // Filtre optionnel (sélecteur projet/quiz de l'Atelier). On garde le
+  // gate user_id : un quiz/projet d'un autre compte ne remonte jamais.
+  if (scope?.quizId) query = query.eq("id", scope.quizId);
+  else if (scope?.projectId) query = query.eq("project_id", scope.projectId);
+  const { data: quizzes } = await query;
 
   const rows = quizzes ?? [];
   const ids = rows.map((q) => q.id as string);

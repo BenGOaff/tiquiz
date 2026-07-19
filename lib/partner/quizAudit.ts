@@ -47,14 +47,25 @@ function nonEmpty(v: unknown): boolean {
   return typeof v === "string" && v.trim().length > 0;
 }
 
-export async function getPartnerQuizAudit(userId: string): Promise<PartnerQuizStruct[]> {
-  const { data: quizzes } = await supabaseAdmin
+export interface PartnerAuditScope {
+  quizId?: string | null;
+  projectId?: string | null;
+}
+
+export async function getPartnerQuizAudit(
+  userId: string,
+  scope?: PartnerAuditScope,
+): Promise<PartnerQuizStruct[]> {
+  let query = supabaseAdmin
     .from("quizzes")
     .select(
       "id, title, status, mode, capture_enabled, ask_first_name, virality_enabled, og_image_url, bonus_description, bonus_image_url, views_count",
     )
     .eq("user_id", userId)
     .in("mode", ["quiz", "scoring"]);
+  if (scope?.quizId) query = query.eq("id", scope.quizId);
+  else if (scope?.projectId) query = query.eq("project_id", scope.projectId);
+  const { data: quizzes } = await query;
 
   const rows = quizzes ?? [];
   const ids = rows.map((q) => q.id as string);
