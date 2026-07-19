@@ -21,6 +21,25 @@ function esc(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/**
+ * Titres de quiz / résultats stockés en HTML riche (styles inline, spans
+ * colorés). Dans l'email on veut le TEXTE seul : sinon le destinataire voit
+ * le balisage brut (drame Gwenn 19 juil 2026). Ne change RIEN au rendu de
+ * l'app, qui continue d'afficher le HTML stylé.
+ */
+function stripHtml(input: string | null | undefined): string {
+  return String(input ?? "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0*39;|&apos;|&rsquo;/gi, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export interface ResponseNotificationArgs {
   ownerUserId: string;
   quizId: string;
@@ -60,7 +79,7 @@ export async function notifyCreatorOfResponse(args: ResponseNotificationArgs): P
 
     const isSurvey = (args.quizMode ?? "") === "survey";
     const kind = isSurvey ? "ton sondage" : "ton quiz";
-    const title = args.quizTitle?.trim() || (isSurvey ? "ton sondage" : "ton quiz");
+    const title = stripHtml(args.quizTitle) || (isSurvey ? "ton sondage" : "ton quiz");
 
     // Titre du profil de résultat (quiz uniquement), résolu à la volée.
     let resultTitle = "";
@@ -70,7 +89,7 @@ export async function notifyCreatorOfResponse(args: ResponseNotificationArgs): P
         .select("title")
         .eq("id", args.resultId)
         .maybeSingle();
-      resultTitle = String((r as { title?: string | null } | null)?.title ?? "").trim();
+      resultTitle = stripHtml((r as { title?: string | null } | null)?.title);
     }
 
     // Qui a répondu.
