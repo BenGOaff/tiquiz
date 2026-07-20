@@ -15,11 +15,19 @@
 export interface TemplateQuestionOption {
   text: string;
   result_index: number;
+  // Points portes par l'option (mode scoring, ou poids de profil). Optionnel.
+  points?: number;
 }
 
 export interface TemplateQuestion {
   question_text: string;
   options: TemplateQuestionOption[];
+  // Type de question (defaut "multiple_choice"). Les types echelle/etoiles/
+  // texte libre n'ont pas d'options ; yes_no en a 2 (Oui/Non).
+  question_type?: string;
+  // Config par type (min/max/labels pour l'echelle, max pour les etoiles,
+  // maxLength pour le texte libre, multi_select/optional pour les choix).
+  config?: Record<string, unknown>;
 }
 
 export interface TemplateResult {
