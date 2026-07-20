@@ -173,7 +173,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       const { data } = await supabaseAdmin.auth.admin.generateLink({
         type: "magiclink",
         email,
-        options: { redirectTo: `${APP_URL}/dashboard` },
+        options: { redirectTo: `${APP_URL}/auth/callback` },
       });
       actionLink = data?.properties?.action_link ?? null;
     } catch {
@@ -214,7 +214,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       const { data } = await supabaseAdmin.auth.admin.generateLink({
         type: "magiclink",
         email,
-        options: { redirectTo: `${APP_URL}/dashboard` },
+        options: { redirectTo: `${APP_URL}/auth/callback` },
       });
       actionLink = data?.properties?.action_link ?? null;
     } else {
@@ -223,7 +223,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       const { data, error } = await supabaseAdmin.auth.admin.generateLink({
         type: "invite",
         email,
-        options: { redirectTo: `${APP_URL}/bienvenue` },
+        options: { redirectTo: `${APP_URL}/auth/callback` },
       });
       if (error || !data?.user) {
         console.error("[grant-plus-trial] invite failed:", error?.message);
