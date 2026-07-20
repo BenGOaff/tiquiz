@@ -24,8 +24,17 @@ export default function CallbackClient() {
   const searchParams = useSearchParams();
   const ranRef = useRef(false);
 
-  const [status, setStatus] = useState<"loading" | "error">("loading");
+  // "expired" : le lien a expiré ou est invalide (Supabase renvoie une erreur
+  // dans le hash, ex. #error=access_denied&error_code=otp_expired). On propose
+  // alors de renvoyer un lien, au lieu d'un 404 / cul-de-sac.
+  const [status, setStatus] = useState<"loading" | "error" | "expired">("loading");
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Formulaire "renvoyer un lien" (état expiré).
+  const [resendEmail, setResendEmail] = useState("");
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
+  const [resendError, setResendError] = useState("");
 
   const code = useMemo(() => (searchParams?.get("code") || "").trim(), [searchParams]);
   const tokenHash = useMemo(() => (searchParams?.get("token_hash") || "").trim(), [searchParams]);
@@ -38,6 +47,15 @@ export default function CallbackClient() {
     (async () => {
       try {
         const supabase = getSupabaseBrowserClient();
+
+        // Lien expiré / invalide : Supabase pose l'erreur dans le hash SANS
+        // access_token. On bascule sur l'écran "renvoyer un lien" au lieu de
+        // tenter une consommation qui échouerait (ou d'un cul-de-sac 404).
+        const errHash = parseHashParams(window.location.hash || "");
+        if (errHash["error"] || errHash["error_code"] || searchParams?.get("error")) {
+          setStatus("expired");
+          return;
+        }
 
         // OTP flow (token_hash)
         if (tokenHash) {
@@ -71,14 +89,46 @@ export default function CallbackClient() {
           return;
         }
 
-        router.replace("/login?auth_error=missing_code");
+        // Aucun jeton et aucune erreur explicite : lien incomplet, on propose
+        // aussi de renvoyer un lien plutôt que de rebondir sèchement au login.
+        setStatus("expired");
       } catch (e) {
         const msg = e instanceof Error ? e.message : t("errUnknown");
-        setStatus("error");
-        setErrorMsg(msg);
+        // Les erreurs typiques de jeton (expiré / déjà utilisé) basculent sur
+        // l'écran "renvoyer un lien" ; le reste sur l'écran d'erreur générique.
+        if (/expire|invalid|otp|token/i.test(msg)) {
+          setStatus("expired");
+        } else {
+          setStatus("error");
+          setErrorMsg(msg);
+        }
       }
     })();
-  }, [router, code, tokenHash, type, t]);
+  }, [router, code, tokenHash, type, t, searchParams]);
+
+  async function handleResend(e: React.FormEvent) {
+    e.preventDefault();
+    setResendError("");
+    const email = resendEmail.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setResendError(t("errInvalidEmail"));
+      return;
+    }
+    setResending(true);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      });
+      if (error) throw error;
+      setResent(true);
+    } catch {
+      setResendError(t("errResendFailed"));
+    } finally {
+      setResending(false);
+    }
+  }
 
   if (status === "loading") {
     return (
@@ -89,6 +139,47 @@ export default function CallbackClient() {
           <div className="mt-4 h-2 w-full bg-muted rounded-full overflow-hidden">
             <div className="h-full w-2/3 bg-primary/30 rounded-full animate-pulse" />
           </div>
+        </div>
+      </main>
+    );
+  }
+
+  // Lien expiré / invalide : message clair + formulaire pour recevoir un
+  // nouveau lien (le drame Cath du 20 juil 2026 : lien invitation périmé qui
+  // tombait sur une page 404 inexistante).
+  if (status === "expired") {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-background px-4">
+        <div className="w-full max-w-md rounded-2xl border border-border p-8">
+          <h1 className="text-xl font-semibold mb-2 text-center">{t("errorHeading")}</h1>
+          {resent ? (
+            <p className="text-sm text-emerald-600 text-center">{t("successResent")}</p>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground text-center">{t("errExpired")}</p>
+              <p className="text-sm text-muted-foreground text-center mt-1">{t("resendInfo")}</p>
+              <form onSubmit={handleResend} className="mt-6 space-y-3">
+                <label className="block text-sm font-medium" htmlFor="resend-email">{t("labelEmail")}</label>
+                <input
+                  id="resend-email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={resendEmail}
+                  onChange={(e) => setResendEmail(e.target.value)}
+                  placeholder={t("placeholderEmail")}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                />
+                {resendError && <p className="text-sm text-destructive">{resendError}</p>}
+                <Button type="submit" className="w-full" disabled={resending}>
+                  {resending ? t("sending") : t("sendLink")}
+                </Button>
+              </form>
+            </>
+          )}
+          <Button className="mt-4 w-full" variant="ghost" onClick={() => router.replace("/login")}>
+            {t("backToLogin")}
+          </Button>
         </div>
       </main>
     );
