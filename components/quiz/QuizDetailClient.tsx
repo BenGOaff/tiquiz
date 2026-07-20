@@ -2802,7 +2802,21 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     </div>
                     <div className="flex-1 flex flex-col items-center justify-center">
                       <div className="max-w-2xl w-full space-y-8">
-                        <p className="text-xs font-bold uppercase tracking-widest" style={{ color: pc }}>{t("previewQuestionsCounter", { n: qi + 1, total: editQuestions.length })}</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: pc }}>{t("previewQuestionsCounter", { n: qi + 1, total: editQuestions.length })}</p>
+                          {/* Question facultative (Gwenn 20 juil 2026) : le
+                              visiteur peut la passer ; une question sautée ne
+                              compte pas dans le profil / le score. */}
+                          <label className="inline-flex items-center gap-1.5 text-xs bg-muted/60 rounded-full px-2.5 py-1 cursor-pointer" title={t("optionalQuestionHint")}>
+                            <input
+                              type="checkbox"
+                              checked={((q.config ?? {}) as Record<string, unknown>).optional === true}
+                              onChange={(e) => setEditQuestions((p) => p.map((qq, i) => i !== qi ? qq : { ...qq, config: { ...(qq.config ?? {}), optional: e.target.checked } }))}
+                              className="h-3.5 w-3.5 rounded border-border accent-primary cursor-pointer"
+                            />
+                            <span>{t("optionalQuestionLabel")}</span>
+                          </label>
+                        </div>
                         <RichTextEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} availableVars={personalizationVars} previewTransform={previewInterpolate} className="tiquiz-quiz-question font-bold leading-tight" style={{ color: pc }} placeholder={t("previewQuestionPh")} />
                         {/* Image de la question (au-dessus de l'enonce) + resize. */}
                         {(() => {
