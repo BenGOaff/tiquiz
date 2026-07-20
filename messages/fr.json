@@ -1221,6 +1221,10 @@
     "typeFreeText": "Réponse libre",
     "typeMultipleChoice": "Choix multiple",
     "typeImageChoice": "Choix avec image",
+    "questionTypeLabel": "Type de question",
+    "scaleScoringHint": "Le score de cette question est la valeur choisie (jusqu'à {max} points).",
+    "scaleProfilHint": "Cette question est collectée mais ne change pas le profil obtenu.",
+    "freeTextNotCounted": "Réponse libre. Collectée mais non comptée dans le résultat.",
     "ratingMinDefault": "Pas du tout",
     "ratingMaxDefault": "Tout à fait",
     "scaleConfig": "Échelle",
@@ -1308,7 +1312,9 @@
     "optionHideResponseCountsHint": "Affiche seulement les pourcentages dans la synthèse. Les exports gardent les chiffres.",
     "optionNotifyResponses": "Notifications par email",
     "optionNotifyResponsesHint": "Reçois un email à chaque nouvelle réponse sur ce quiz. Coupe-le ici si tu préfères le silence pour ce quiz.",
-    "optionSioTagLabel": "Tag Systeme.io pour cette réponse"
+    "optionSioTagLabel": "Tag Systeme.io pour cette réponse",
+    "optionalQuestionLabel": "Facultative",
+    "optionalQuestionHint": "Le visiteur peut passer cette question. Une question sautée ne compte pas dans le résultat."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",

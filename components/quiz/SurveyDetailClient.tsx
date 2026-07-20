@@ -1991,6 +1991,21 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                             <option value="multiple_choice">{t("typeMultipleChoice")}</option>
                             <option value="image_choice">{t("typeImageChoice")}</option>
                           </select>
+                          {/* Question facultative (Gwenn 20 juil 2026) : le
+                              visiteur peut la passer ; une question sautée ne
+                              compte pas dans le résultat. */}
+                          <label
+                            className="inline-flex items-center gap-1.5 text-xs bg-muted/60 rounded-full px-2.5 py-1 cursor-pointer"
+                            title={t("optionalQuestionHint")}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={(cfg.optional as boolean | undefined) === true}
+                              onChange={(e) => updateQuestionConfig(qi, { optional: e.target.checked })}
+                              className="h-3.5 w-3.5 rounded border-border accent-primary cursor-pointer"
+                            />
+                            <span>{t("optionalQuestionLabel")}</span>
+                          </label>
                         </div>
 
                         <RichTextEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-2xl sm:text-4xl font-bold leading-tight" style={{ color: pc }} placeholder={t("previewQuestionPh")} />
