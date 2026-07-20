@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, ArrowLeft, Gift, CheckCircle2, Copy, Check, ChevronDown } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, Gift, CheckCircle2, Copy, Check, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import {
   resolveQuizBranding,
@@ -261,6 +261,7 @@ type QuizTranslations = {
   // Free-text question UX
   freeTextPlaceholder: string;
   nextQuestion: string;
+  skipQuestion: string;
   // Yes/no question buttons
   yesLabel: string;
   noLabel: string;
@@ -339,6 +340,7 @@ const translations: Record<string, QuizTranslations> = {
     surveyShareCta: "Partager ce sondage",
     freeTextPlaceholder: "Ta réponse…",
     nextQuestion: "Suivant",
+    skipQuestion: "Passer",
     yesLabel: "Oui",
     noLabel: "Non",
     ratingScaleMinLabel: "Pas du tout",
@@ -410,6 +412,7 @@ const translations: Record<string, QuizTranslations> = {
     surveyShareCta: "Partager ce sondage",
     freeTextPlaceholder: "Votre réponse…",
     nextQuestion: "Suivant",
+    skipQuestion: "Passer",
     yesLabel: "Oui",
     noLabel: "Non",
     ratingScaleMinLabel: "Pas du tout",
@@ -481,6 +484,7 @@ const translations: Record<string, QuizTranslations> = {
     surveyShareCta: "Share this survey",
     freeTextPlaceholder: "Your answer…",
     nextQuestion: "Next",
+    skipQuestion: "Skip",
     yesLabel: "Yes",
     noLabel: "No",
     ratingScaleMinLabel: "Not at all",
@@ -552,6 +556,7 @@ const translations: Record<string, QuizTranslations> = {
     surveyShareCta: "Compartir esta encuesta",
     freeTextPlaceholder: "Tu respuesta…",
     nextQuestion: "Siguiente",
+    skipQuestion: "Saltar",
     yesLabel: "Sí",
     noLabel: "No",
     ratingScaleMinLabel: "Nada",
@@ -623,6 +628,7 @@ const translations: Record<string, QuizTranslations> = {
     surveyShareCta: "Diese Umfrage teilen",
     freeTextPlaceholder: "Deine Antwort…",
     nextQuestion: "Weiter",
+    skipQuestion: "Überspringen",
     yesLabel: "Ja",
     noLabel: "Nein",
     ratingScaleMinLabel: "Gar nicht",
@@ -694,6 +700,7 @@ const translations: Record<string, QuizTranslations> = {
     surveyShareCta: "Partilhar este inquérito",
     freeTextPlaceholder: "A sua resposta…",
     nextQuestion: "Seguinte",
+    skipQuestion: "Ignorar",
     yesLabel: "Sim",
     noLabel: "Não",
     ratingScaleMinLabel: "Nada",
@@ -765,6 +772,7 @@ const translations: Record<string, QuizTranslations> = {
     surveyShareCta: "Condividi questo sondaggio",
     freeTextPlaceholder: "La tua risposta…",
     nextQuestion: "Avanti",
+    skipQuestion: "Salta",
     yesLabel: "Sì",
     noLabel: "No",
     ratingScaleMinLabel: "Per niente",
@@ -836,6 +844,7 @@ const translations: Record<string, QuizTranslations> = {
     surveyShareCta: "شارك هذا الاستطلاع",
     freeTextPlaceholder: "إجابتك…",
     nextQuestion: "التالي",
+    skipQuestion: "تخطي",
     yesLabel: "نعم",
     noLabel: "لا",
     ratingScaleMinLabel: "إطلاقاً",
@@ -1658,6 +1667,34 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     }
   };
 
+  // Passer une question FACULTATIVE (Gwenn 20 juil 2026) : on avance sans
+  // enregistrer de réponse (answers[currentQ] reste undefined). Le moteur de
+  // résultat et les analytics ignorent déjà les questions non répondues.
+  const skipQuestion = () => {
+    if (advanceTimerRef.current) {
+      window.clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = null;
+    }
+    const newAnswers = [...answers];
+    newAnswers[currentQ] = undefined;
+    setAnswers(newAnswers);
+    setFreeTextDraft("");
+    setMultiOptionsDraft([]);
+    if (quiz && currentQ < quiz.questions.length - 1) {
+      setCurrentQ(currentQ + 1);
+    } else {
+      trackEvent("complete");
+      if (quiz && quiz.mode === "survey" && quiz.capture_enabled === false) {
+        void submitAnonymousSurvey(newAnswers);
+        setStep("result");
+      } else if (captureBefore) {
+        void handleSubmitEmail(newAnswers);
+      } else {
+        setStep("email");
+      }
+    }
+  };
+
   // Toggle a single option in the multi-select draft. Stays sorted so the
   // payload is deterministic across renders + matches analytics aggregation.
   const toggleMultiOption = (optionIndex: number) => {
@@ -2179,6 +2216,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     const hasMultipleOptions = q.options.length >= 3;
     const qType: QuestionType = (q.question_type as QuestionType) ?? "multiple_choice";
     const currentAnswer = answers[currentQ];
+    const isOptional = ((q.config ?? {}) as Record<string, unknown>).optional === true;
 
     // Per-type renderer. Each branch returns the answer-collection block;
     // header / progress / "previous" footer stay shared so visual rhythm is
@@ -2506,6 +2544,11 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                     <ArrowLeft className="w-4 h-4 mr-1" /> {t.previous}
                   </Button>
                 ) : <div />}
+                {isOptional ? (
+                  <Button variant="ghost" size="sm" onClick={skipQuestion} className="text-muted-foreground">
+                    {t.skipQuestion} <ArrowRight className="w-4 h-4 ml-1" />
+                  </Button>
+                ) : null}
                 <span className="text-sm text-muted-foreground tabular-nums">{Math.round(progress)}%</span>
               </div>
             </div>

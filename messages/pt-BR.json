@@ -1310,7 +1310,9 @@
     "optionHideResponseCountsHint": "Mostra apenas as porcentagens na síntese. As exportações mantêm os números.",
     "optionNotifyResponses": "Notificações por email",
     "optionNotifyResponsesHint": "Receba um email a cada nova resposta neste quiz. Desligue aqui se preferir silêncio para este quiz.",
-    "optionSioTagLabel": "Tag Systeme.io para esta resposta"
+    "optionSioTagLabel": "Tag Systeme.io para esta resposta",
+    "optionalQuestionLabel": "Opcional",
+    "optionalQuestionHint": "O visitante pode pular esta pergunta. Uma pergunta pulada não conta no resultado."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova senha",

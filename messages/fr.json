@@ -1308,7 +1308,9 @@
     "optionHideResponseCountsHint": "Affiche seulement les pourcentages dans la synthèse. Les exports gardent les chiffres.",
     "optionNotifyResponses": "Notifications par email",
     "optionNotifyResponsesHint": "Reçois un email à chaque nouvelle réponse sur ce quiz. Coupe-le ici si tu préfères le silence pour ce quiz.",
-    "optionSioTagLabel": "Tag Systeme.io pour cette réponse"
+    "optionSioTagLabel": "Tag Systeme.io pour cette réponse",
+    "optionalQuestionLabel": "Facultative",
+    "optionalQuestionHint": "Le visiteur peut passer cette question. Une question sautée ne compte pas dans le résultat."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",

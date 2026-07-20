@@ -1308,7 +1308,9 @@
     "optionHideResponseCountsHint": "Show only percentages in the synthesis. Exports keep the numbers.",
     "optionNotifyResponses": "Email notifications",
     "optionNotifyResponsesHint": "Get an email for each new response on this quiz. Turn it off here if you prefer silence for this quiz.",
-    "optionSioTagLabel": "Systeme.io tag for this answer"
+    "optionSioTagLabel": "Systeme.io tag for this answer",
+    "optionalQuestionLabel": "Optional",
+    "optionalQuestionHint": "Visitors can skip this question. A skipped question is not counted in the result."
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",
