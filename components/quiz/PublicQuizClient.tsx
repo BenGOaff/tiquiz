@@ -1477,14 +1477,29 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
       let scoreValue = 0;
       let scoreMax = 0;
       quiz.questions.forEach((q, qIdx) => {
+        const qType = q.question_type ?? "multiple_choice";
+        const ans = answers[qIdx];
+        // Échelle / étoiles : la note choisie EST le score de la question,
+        // le max atteignable = la borne haute (config.max, défaut 10 / 5).
+        if (qType === "rating_scale" || qType === "star_rating") {
+          const cfg = (q.config ?? {}) as Record<string, unknown>;
+          const qMax = typeof cfg.max === "number" ? cfg.max : qType === "star_rating" ? 5 : 10;
+          if (qMax > 0) scoreMax += qMax;
+          if (ans && (ans.kind === "rating" || ans.kind === "star")) scoreValue += ans.value;
+          return;
+        }
+        // Réponse libre : jamais comptée (ni score, ni max).
+        if (qType === "free_text") return;
+        // Choix (simple / multiple / image / oui-non) : somme des points des
+        // options choisies ; max = meilleure option (ou somme des positives
+        // en multi-select).
         const opts = q.options ?? [];
         const pts = opts.map((o) => (typeof o.points === "number" ? o.points : 0));
-        const isMulti = answers[qIdx]?.kind === "options";
+        const isMulti = ans?.kind === "options";
         const qMax = isMulti
           ? pts.reduce((a, p) => a + (p > 0 ? p : 0), 0)
           : pts.reduce((a, p) => Math.max(a, p), 0);
         if (qMax > 0) scoreMax += qMax;
-        const ans = answers[qIdx];
         if (!ans) return;
         const picked: number[] =
           ans.kind === "option" ? [ans.optionIndex] : ans.kind === "options" ? ans.optionIndices : [];
