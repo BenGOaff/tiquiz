@@ -39,6 +39,8 @@ export async function GET(req: NextRequest) {
     .update({ last_used_at: new Date().toISOString() })
     .eq("token_hash", tokenHash);
 
-  const quizzes = await getPartnerQuizAudit(conn.user_id as string);
+  const quizId = req.nextUrl.searchParams.get("quizId")?.trim() || null;
+  const projectId = req.nextUrl.searchParams.get("projectId")?.trim() || null;
+  const quizzes = await getPartnerQuizAudit(conn.user_id as string, { quizId, projectId });
   return NextResponse.json({ ok: true, quizzes });
 }
