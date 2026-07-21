@@ -1226,6 +1226,9 @@
     "scaleScoringHint": "نتيجة هذا السؤال هي القيمة المختارة (حتى {max} نقطة).",
     "scaleProfilHint": "يتم جمع هذا السؤال لكنه لا يغيّر الملف الناتج.",
     "freeTextNotCounted": "إجابة حرة. يتم جمعها لكن لا تُحتسب في النتيجة.",
+    "quizLanguageLabel": "لغة الاختبار",
+    "quizLanguageHint": "لغة الواجهة التي يراها زوّارك (الأزرار، شاشة التخصيص، النموذج). مستقلة عن لغة حسابك.",
+    "quizLanguagePick": "اختر اللغة",
     "ratingMinDefault": "إطلاقاً",
     "ratingMaxDefault": "تماماً",
     "scaleConfig": "مقياس",
@@ -1889,9 +1892,13 @@
       "linkCopied": "تم نسخ الرابط",
       "skipBack10": "ارجع 10 ثوان",
       "skipForward10": "تقدم 10 ثوان",
-      "questionDialog": "سؤال Popquiz"
+      "questionDialog": "سؤال Popquiz",
+      "srcUnavailable": "مصدر الفيديو غير متاح.",
+      "loadErrorTitle": "تعذّر تحميل الفيديو.",
+      "loadErrorBody": "ربما انتهت صلاحية رابط التشغيل. أعد تحميل الصفحة للمحاولة مرة أخرى."
     },
-    "iframeLoading": "جارٍ تحميل الاختبار…"
+    "iframeLoading": "جارٍ تحميل الاختبار…",
+    "poweredByVideo": "هذا الفيديو مقدَّم لك عبر Tiquiz"
   },
   "videoUploader": {
     "ready": "الفيديو جاهز",

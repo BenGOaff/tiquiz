@@ -909,7 +909,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
       "padding:8px 16px", "text-align:center",
       "box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1)",
     ].join(";");
-    const namePart = previewName ? ` — Bonjour ${previewName}` : "";
+    const namePart = previewName ? `, Bonjour ${previewName}` : "";
     el.textContent = `\u{1F441}️ Mode aperçu${namePart} · rien n'est enregistré`;
     document.body.appendChild(el);
     // Push the page content down so the banner doesn't cover the first row
@@ -3656,6 +3656,7 @@ const tiquizFooterTexts: Record<string, string> = {
   es: "Este quiz es ofrecido por Tiquiz",
   de: "Dieses Quiz wird Ihnen von Tiquiz bereitgestellt",
   pt: "Este quiz \u00e9 oferecido por Tiquiz",
+  "pt-BR": "Este quiz \u00e9 oferecido pela Tiquiz",
   it: "Questo quiz \u00e8 offerto da Tiquiz",
   ar: "\u0647\u0630\u0627 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u0645\u0642\u062f\u0645 \u0644\u0643\u0645 \u0645\u0646 Tiquiz",
 };
@@ -3693,7 +3694,10 @@ function TiquizFooter({ locale, customText, customUrl, logoUrl, tipoteAffiliateI
   // sit here but were explicitly removed — creators don't want Tiquiz's
   // legal pages exposed on their own quizzes. The visitor-facing privacy
   // policy is now surfaced only inside the consent checkbox.
-  const text = tiquizFooterTexts[locale ?? "fr"] ?? tiquizFooterTexts.fr;
+  // Fallback BCP-47 : pt-BR -> pt, etc., avant de retomber sur fr (comme getT),
+  // pour qu'aucune locale régionale ne réaffiche le français par accident.
+  const code = locale ?? "fr";
+  const text = tiquizFooterTexts[code] ?? tiquizFooterTexts[code.split("-")[0]] ?? tiquizFooterTexts.fr;
   return (
     <div className="text-center mt-6 pb-6 px-4 space-y-2">
       {/* eslint-disable-next-line @next/next/no-img-element */}
