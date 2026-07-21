@@ -306,7 +306,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     if (quizUserId) {
       const { data: bp } = await admin
         .from("profiles")
-        .select("address_form, privacy_url, brand_logo_url, brand_font, brand_color_primary, plan, reseller_id, tipote_affiliate_id, default_meta_pixel_id, default_ga4_measurement_id, default_google_ads_conversion_id, default_google_ads_conversion_label")
+        .select("address_form, privacy_url, brand_logo_url, brand_font, brand_color_primary, plan, reseller_id, tipote_affiliate_id, default_meta_pixel_id, default_ga4_measurement_id, default_google_ads_conversion_id, default_google_ads_conversion_label, ui_locale, default_content_locale")
         .eq("user_id", quizUserId)
         .maybeSingle();
       profileRow = (bp as Record<string, unknown>) ?? null;
@@ -442,7 +442,18 @@ export async function GET(req: NextRequest, context: RouteContext) {
     // G1 — display-time French typography for legacy data. Apply NBSP rules
     // when the quiz locale is French so quizzes saved before the on-save
     // typography pass landed still render correctly without a re-save.
-    const quizLocale = (quizPublic as Record<string, unknown>).locale as string | null;
+    // Locale effective du joueur. La langue explicite du quiz gagne ; sinon on
+    // retombe sur la langue de CONTENU par défaut du créateur, puis sur la
+    // langue de son INTERFACE (compte). Un créateur anglophone a donc un joueur
+    // en anglais même s'il n'a jamais réglé la langue du quiz (retour
+    // utilisatrice anglophone, 21 juil 2026 : "si mon interface est en anglais,
+    // tout doit être en anglais"). On écrit la valeur résolue dans quizPublic
+    // pour qu'elle traverse jusqu'au client (getT(quiz.locale)).
+    const rawQuizLocale = String((quizPublic as Record<string, unknown>).locale ?? "").trim();
+    const ownerContentLocale = String(profileRow?.default_content_locale ?? "").trim();
+    const ownerUiLocale = String(profileRow?.ui_locale ?? "").trim();
+    const quizLocale = rawQuizLocale || ownerContentLocale || ownerUiLocale || null;
+    (quizPublic as Record<string, unknown>).locale = quizLocale;
     const fr = (s: unknown) => (typeof s === "string" ? applyFrenchTypography(s, quizLocale) : s);
     const isFr = isFrenchLocale(quizLocale);
     const renderedQuiz = isFr
