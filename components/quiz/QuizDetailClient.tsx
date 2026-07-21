@@ -87,6 +87,7 @@ function titleForVisual(text: string | null | undefined): string {
   return t ? t.charAt(0).toUpperCase() + t.slice(1) : "";
 }
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
+import { SUPPORTED_LOCALES, LOCALE_LABELS } from "@/i18n/config";
 import { useTranslations, useLocale } from "next-intl";
 import {
   ALLOWED_SHARE_NETWORKS,
@@ -2414,6 +2415,30 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 </div>
               </div>)}
               {leftTab === "settings" && (<div className="space-y-6">
+                {/* ── Langue du quiz (langue du joueur public) ──
+                    Pilote quizzes.locale, qui détermine TOUTE la langue de
+                    l'interface vue par le visiteur (écran de personnalisation,
+                    boutons Suivant/Précédent, capture email, etc.) via
+                    getT(quiz.locale) dans PublicQuizClient. Sans ce sélecteur,
+                    un quiz au contenu anglais restait affiché avec le chrome
+                    en français (retour utilisatrice anglophone, 21 juil 2026). */}
+                <section className="space-y-2">
+                  <div>
+                    <h3 className="text-sm font-semibold">{t("quizLanguageLabel")}</h3>
+                    <p className="text-[11px] text-muted-foreground leading-snug">{t("quizLanguageHint")}</p>
+                  </div>
+                  <select
+                    value={locale}
+                    onChange={(e) => setLocale(e.target.value)}
+                    className="w-full text-sm bg-background border border-input rounded-md px-2 py-1.5 cursor-pointer"
+                    aria-label={t("quizLanguageLabel")}
+                  >
+                    {!locale && <option value="">{t("quizLanguagePick")}</option>}
+                    {SUPPORTED_LOCALES.map((loc) => (
+                      <option key={loc} value={loc}>{LOCALE_LABELS[loc] ?? loc}</option>
+                    ))}
+                  </select>
+                </section>
                 {/* ── Formulaire de prise de contact ── */}
                 <section className="space-y-2.5">
                   <div>

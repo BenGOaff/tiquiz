@@ -1225,6 +1225,9 @@
     "scaleScoringHint": "This question's score is the value chosen (up to {max} points).",
     "scaleProfilHint": "This question is collected but does not change the profile.",
     "freeTextNotCounted": "Free text. Collected but not counted in the result.",
+    "quizLanguageLabel": "Quiz language",
+    "quizLanguageHint": "The language of the interface your visitors see (buttons, personalization screen, form). Independent from your account language.",
+    "quizLanguagePick": "Choose a language",
     "ratingMinDefault": "Not at all",
     "ratingMaxDefault": "Absolutely",
     "scaleConfig": "Scale",
@@ -1885,9 +1888,13 @@
       "linkCopied": "Link copied",
       "skipBack10": "Skip back 10 seconds",
       "skipForward10": "Skip forward 10 seconds",
-      "questionDialog": "Popquiz question"
+      "questionDialog": "Popquiz question",
+      "srcUnavailable": "Video source unavailable.",
+      "loadErrorTitle": "The video could not load.",
+      "loadErrorBody": "The playback link may have expired. Reload the page to try again."
     },
-    "iframeLoading": "Loading the quiz…"
+    "iframeLoading": "Loading the quiz…",
+    "poweredByVideo": "This video is brought to you via Tiquiz"
   },
   "videoUploader": {
     "ready": "video ready",

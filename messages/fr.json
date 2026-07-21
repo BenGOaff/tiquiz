@@ -1225,6 +1225,9 @@
     "scaleScoringHint": "Le score de cette question est la valeur choisie (jusqu'à {max} points).",
     "scaleProfilHint": "Cette question est collectée mais ne change pas le profil obtenu.",
     "freeTextNotCounted": "Réponse libre. Collectée mais non comptée dans le résultat.",
+    "quizLanguageLabel": "Langue du quiz",
+    "quizLanguageHint": "Langue de l'interface vue par tes visiteurs (boutons, écran de personnalisation, formulaire). Indépendante de la langue de ton compte.",
+    "quizLanguagePick": "Choisir la langue",
     "ratingMinDefault": "Pas du tout",
     "ratingMaxDefault": "Tout à fait",
     "scaleConfig": "Échelle",
@@ -1885,9 +1888,13 @@
       "linkCopied": "Lien copié",
       "skipBack10": "Reculer de 10 secondes",
       "skipForward10": "Avancer de 10 secondes",
-      "questionDialog": "Question Popquiz"
+      "questionDialog": "Question Popquiz",
+      "srcUnavailable": "Source vidéo indisponible.",
+      "loadErrorTitle": "La vidéo n'a pas pu se charger.",
+      "loadErrorBody": "Le lien de lecture a peut-être expiré. Recharge la page pour réessayer."
     },
-    "iframeLoading": "Chargement du quiz…"
+    "iframeLoading": "Chargement du quiz…",
+    "poweredByVideo": "Cette vidéo vous est proposée via Tiquiz"
   },
   "videoUploader": {
     "ready": "vidéo prête",
