@@ -437,7 +437,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       if (!res.ok) throw new Error("flag failed");
     } catch {
       setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, flagged: !flagged } : l)));
-      toast.error("Le marquage n'a pas pu être enregistré.");
+      toast.error(t("errFlagSave"));
     }
   };
   const [leftTab, setLeftTab] = useState<"edition" | "design" | "settings">("edition");

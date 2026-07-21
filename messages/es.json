@@ -102,7 +102,8 @@
     "rteFontSizeForMobile": "📱 Para móvil",
     "rteFontSizeForDesktop": "💻 Para PC",
     "rteImageSize": "Tamaño imagen:",
-    "rteImageSizeReset": "100%"
+    "rteImageSizeReset": "100%",
+    "openSidebar": "Abrir el menú"
   },
   "nav": {
     "resellerAdmin": "Espacio revendedor",
@@ -641,7 +642,8 @@
     "importQuizLocale": "Idioma del quiz importado",
     "importEmptyFile": "Archivo vacío.",
     "importError": "Error en la importación",
-    "defaultQuizTitle": "Mi quiz"
+    "defaultQuizTitle": "Mi quiz",
+    "importErrorPrefix": "Error de importación: "
   },
   "quizDetail": {
     "backToList": "Volver a los quiz",
@@ -975,7 +977,10 @@
     "planNoCommitment": "sin compromiso",
     "notifyResponsesTitle": "Notificaciones de respuestas",
     "notifyResponsesDesc": "Recibe un email por cada nueva respuesta en tus quizzes y encuestas.",
-    "notifyResponsesLabel": "Enviarme un email por cada nueva respuesta"
+    "notifyResponsesLabel": "Enviarme un email por cada nueva respuesta",
+    "affCommTitle": "Gana comisiones con tus quizzes",
+    "affCommDesc": "En cada quiz publicado, el pie «Este quiz es ofrecido por Tiquiz» enlaza con la página de presentación de Tiquiz. Si pegas tu identificador de afiliado de Systeme.io abajo, cada registro que se genere te da una comisión, automáticamente.",
+    "affIdLabel": "Mi identificador de afiliado Tipote"
   },
   "languageSwitcher": {
     "label": "Idioma"
@@ -1353,7 +1358,8 @@
     "optionNotifyResponsesHint": "Recibe un email por cada nueva respuesta en este quiz. Desactívalo aquí si prefieres silencio para este quiz.",
     "optionSioTagLabel": "Etiqueta Systeme.io para esta respuesta",
     "optionalQuestionLabel": "Opcional",
-    "optionalQuestionHint": "El visitante puede saltar esta pregunta. Una pregunta omitida no cuenta en el resultado."
+    "optionalQuestionHint": "El visitante puede saltar esta pregunta. Una pregunta omitida no cuenta en el resultado.",
+    "errFlagSave": "No se pudo guardar la marca."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nueva contraseña",
@@ -1572,7 +1578,8 @@
     "exportExcel": "Exportar Excel",
     "flagAction": "Marcar este encuestado",
     "unflagAction": "Quitar marca",
-    "radarTitle": "Resumen de las valoraciones"
+    "radarTitle": "Resumen de las valoraciones",
+    "errFlagSave": "No se pudo guardar la marca."
   },
   "projects": {
     "title": "Mis proyectos",
@@ -2651,6 +2658,18 @@
     "quizSectionFunnel": "Tu embudo (visitas, finalización, captación)",
     "quizSectionAudience": "Perfil de tus visitantes",
     "quizSectionImprove": "Áreas de mejora",
-    "quizSectionActions": "Acciones para captar y vender más"
+    "quizSectionActions": "Acciones para captar y vender más",
+    "surveyExportTitle": "Exportar los resultados",
+    "surveyExportBody": "A elegir: CSV o Excel (una fila por encuestado, columnas listas: identidad + respuestas), o PDF (informe agregado + detalle de encuestados, listo para presentar).",
+    "surveyAnalysisTitle": "Análisis con IA de los resultados",
+    "surveyLock": "El análisis con IA descifra lo que dicen realmente tus respuestas, resume lo esencial y te propone acciones concretas a implementar. Actualizaciones gratuitas.",
+    "surveyNotEnough": "No hay suficientes respuestas para un análisis pertinente ({total}/{min}). Vuelve cuando tengas al menos {min} respuestas.",
+    "surveyIntro": "Lo que dicen realmente tus resultados, lo esencial y las acciones a implementar. Actualizaciones gratuitas.",
+    "surveySectionSay": "Lo que dicen los resultados",
+    "surveySectionKeep": "Para recordar",
+    "surveySectionActions": "Acciones a implementar",
+    "surveyErrLoad": "No se pudieron cargar los resultados.",
+    "surveyErrPdf": "Error al generar el PDF.",
+    "surveyErrNotEnough": "No hay suficientes respuestas para un análisis pertinente."
   }
 }

@@ -887,7 +887,7 @@ export default function QuizFormClient() {
 
       if (!res.ok) {
         const errText = await res.text().catch(() => "");
-        toast.error(`Erreur lors de l'import${errText ? ` : ${errText.slice(0, 150)}` : ""}`);
+        toast.error(errText ? `${t("importErrorPrefix")}${errText.slice(0, 150)}` : t("importErrorPrefix").trim());
         setImporting(false);
         return;
       }

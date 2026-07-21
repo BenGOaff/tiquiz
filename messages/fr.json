@@ -102,7 +102,8 @@
     "rteFontSizeForMobile": "📱 Pour mobile",
     "rteFontSizeForDesktop": "💻 Pour PC",
     "rteImageSize": "Taille image :",
-    "rteImageSizeReset": "100%"
+    "rteImageSizeReset": "100%",
+    "openSidebar": "Ouvrir le menu"
   },
   "nav": {
     "resellerAdmin": "Espace revendeur",
@@ -624,7 +625,8 @@
     "importQuizLocale": "Langue du quiz importé",
     "importEmptyFile": "Fichier vide.",
     "importError": "Erreur lors de l'import",
-    "defaultQuizTitle": "Mon quiz"
+    "defaultQuizTitle": "Mon quiz",
+    "importErrorPrefix": "Erreur lors de l'import : "
   },
   "quizDetail": {
     "backToList": "Retour aux quiz",
@@ -959,7 +961,10 @@
     "planNoCommitment": "sans engagement",
     "notifyResponsesTitle": "Notifications de réponses",
     "notifyResponsesDesc": "Reçois un email à chaque nouvelle réponse sur tes quiz et sondages.",
-    "notifyResponsesLabel": "M'envoyer un email à chaque nouvelle réponse"
+    "notifyResponsesLabel": "M'envoyer un email à chaque nouvelle réponse",
+    "affCommTitle": "Touche des commissions sur tes quizzes",
+    "affCommDesc": "Sur chaque quiz publié, le footer « Ce quiz vous est offert par Tiquiz » redirige vers la page de présentation de Tiquiz. Si tu colles ton identifiant affilié Systeme.io ci-dessous, chaque inscription qui en découle te rapporte une commission, automatiquement.",
+    "affIdLabel": "Mon identifiant affilié Tipote"
   },
   "languageSwitcher": {
     "label": "Langue"
@@ -1337,7 +1342,8 @@
     "optionNotifyResponsesHint": "Reçois un email à chaque nouvelle réponse sur ce quiz. Coupe-le ici si tu préfères le silence pour ce quiz.",
     "optionSioTagLabel": "Tag Systeme.io pour cette réponse",
     "optionalQuestionLabel": "Facultative",
-    "optionalQuestionHint": "Le visiteur peut passer cette question. Une question sautée ne compte pas dans le résultat."
+    "optionalQuestionHint": "Le visiteur peut passer cette question. Une question sautée ne compte pas dans le résultat.",
+    "errFlagSave": "Le marquage n'a pas pu être enregistré."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",
@@ -1556,7 +1562,8 @@
     "exportExcel": "Export Excel",
     "flagAction": "Marquer ce répondant",
     "unflagAction": "Retirer le marquage",
-    "radarTitle": "Vue d'ensemble des notes"
+    "radarTitle": "Vue d'ensemble des notes",
+    "errFlagSave": "Le marquage n'a pas pu être enregistré."
   },
   "projects": {
     "title": "Mes projets",
@@ -2635,6 +2642,18 @@
     "quizSectionFunnel": "Ton funnel (vues, complétion, capture)",
     "quizSectionAudience": "Profil de tes visiteurs",
     "quizSectionImprove": "Axes d'amélioration",
-    "quizSectionActions": "Actions pour capter et vendre plus"
+    "quizSectionActions": "Actions pour capter et vendre plus",
+    "surveyExportTitle": "Exporter les résultats",
+    "surveyExportBody": "Au choix : CSV ou Excel (une ligne par répondant, colonnes prêtes : identité + réponses), ou PDF (rapport agrégé + détail des répondants, prêt à présenter).",
+    "surveyAnalysisTitle": "Analyse IA des résultats",
+    "surveyLock": "L'analyse IA décode ce que disent vraiment tes réponses, résume ce qu'il faut en retenir et te propose les actions concrètes à mettre en place. Mises à jour gratuites.",
+    "surveyNotEnough": "Il n'y a pas assez de réponses pour une analyse pertinente ({total}/{min}). Reviens quand tu auras au moins {min} réponses.",
+    "surveyIntro": "Ce que disent vraiment tes résultats, ce qu'il faut en retenir, et les actions à mettre en place. Mises à jour gratuites.",
+    "surveySectionSay": "Ce que disent les résultats",
+    "surveySectionKeep": "À retenir",
+    "surveySectionActions": "Actions à mettre en place",
+    "surveyErrLoad": "Impossible de charger les résultats.",
+    "surveyErrPdf": "Erreur lors de la génération du PDF.",
+    "surveyErrNotEnough": "Pas assez de réponses pour une analyse pertinente."
   }
 }

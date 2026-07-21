@@ -716,20 +716,16 @@ export default function SettingsClient() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
-                Touche des commissions sur tes quizzes
+                {t("affCommTitle")}
               </CardTitle>
               <CardDescription>
-                Sur chaque quiz publié, le footer <em>« Ce quiz vous est
-                offert par Tiquiz »</em> redirige vers la page de présentation
-                de Tiquiz. Si tu colles ton identifiant affilié Systeme.io
-                ci-dessous, chaque inscription qui en découle te rapporte
-                une commission — automatiquement.
+                {t("affCommDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="space-y-2">
                 <Label htmlFor="tipote-affiliate-id">
-                  Mon identifiant affilié Tipote
+                  {t("affIdLabel")}
                 </Label>
                 <Input
                   id="tipote-affiliate-id"

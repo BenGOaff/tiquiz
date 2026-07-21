@@ -102,7 +102,8 @@
     "rteFontSizeForMobile": "📱 For mobile",
     "rteFontSizeForDesktop": "💻 For desktop",
     "rteImageSize": "Image size:",
-    "rteImageSizeReset": "100%"
+    "rteImageSizeReset": "100%",
+    "openSidebar": "Open sidebar"
   },
   "nav": {
     "resellerAdmin": "Reseller space",
@@ -624,7 +625,8 @@
     "importQuizLocale": "Imported quiz language",
     "importEmptyFile": "Empty file.",
     "importError": "Import failed",
-    "defaultQuizTitle": "My quiz"
+    "defaultQuizTitle": "My quiz",
+    "importErrorPrefix": "Import error: "
   },
   "quizDetail": {
     "backToList": "Back to quizzes",
@@ -959,7 +961,10 @@
     "planNoCommitment": "no commitment",
     "notifyResponsesTitle": "Response notifications",
     "notifyResponsesDesc": "Get an email for every new response on your quizzes and surveys.",
-    "notifyResponsesLabel": "Email me on every new response"
+    "notifyResponsesLabel": "Email me on every new response",
+    "affCommTitle": "Earn commissions on your quizzes",
+    "affCommDesc": "On every published quiz, the footer \"This quiz is powered by Tiquiz\" links to the Tiquiz presentation page. If you paste your Systeme.io affiliate ID below, every sign-up that results earns you a commission, automatically.",
+    "affIdLabel": "My Tipote affiliate ID"
   },
   "languageSwitcher": {
     "label": "Language"
@@ -1337,7 +1342,8 @@
     "optionNotifyResponsesHint": "Get an email for each new response on this quiz. Turn it off here if you prefer silence for this quiz.",
     "optionSioTagLabel": "Systeme.io tag for this answer",
     "optionalQuestionLabel": "Optional",
-    "optionalQuestionHint": "Visitors can skip this question. A skipped question is not counted in the result."
+    "optionalQuestionHint": "Visitors can skip this question. A skipped question is not counted in the result.",
+    "errFlagSave": "The flag could not be saved."
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",
@@ -1556,7 +1562,8 @@
     "exportExcel": "Export Excel",
     "flagAction": "Flag this respondent",
     "unflagAction": "Remove flag",
-    "radarTitle": "Ratings overview"
+    "radarTitle": "Ratings overview",
+    "errFlagSave": "The flag could not be saved."
   },
   "projects": {
     "title": "My projects",
@@ -2635,6 +2642,18 @@
     "quizSectionFunnel": "Your funnel (views, completion, capture)",
     "quizSectionAudience": "Your visitors' profile",
     "quizSectionImprove": "Areas for improvement",
-    "quizSectionActions": "Actions to capture and sell more"
+    "quizSectionActions": "Actions to capture and sell more",
+    "surveyExportTitle": "Export the results",
+    "surveyExportBody": "Your choice: CSV or Excel (one row per respondent, ready columns: identity + answers), or PDF (aggregated report + respondent details, ready to present).",
+    "surveyAnalysisTitle": "AI analysis of the results",
+    "surveyLock": "The AI analysis decodes what your answers really say, sums up the key takeaways and suggests concrete actions to put in place. Free updates.",
+    "surveyNotEnough": "There aren't enough responses for a meaningful analysis ({total}/{min}). Come back when you have at least {min} responses.",
+    "surveyIntro": "What your results really say, the key takeaways, and the actions to put in place. Free updates.",
+    "surveySectionSay": "What the results say",
+    "surveySectionKeep": "Key takeaways",
+    "surveySectionActions": "Actions to put in place",
+    "surveyErrLoad": "Could not load the results.",
+    "surveyErrPdf": "Error while generating the PDF.",
+    "surveyErrNotEnough": "Not enough responses for a meaningful analysis."
   }
 }

@@ -102,7 +102,8 @@
     "rteFontSizeForMobile": "📱 للجوال",
     "rteFontSizeForDesktop": "💻 لسطح المكتب",
     "rteImageSize": "حجم الصورة:",
-    "rteImageSizeReset": "100%"
+    "rteImageSizeReset": "100%",
+    "openSidebar": "فتح القائمة"
   },
   "nav": {
     "resellerAdmin": "مساحة الموزّع",
@@ -641,7 +642,8 @@
     "importQuizLocale": "لغة الاختبار المستورد",
     "importEmptyFile": "ملف فارغ.",
     "importError": "خطأ في الاستيراد",
-    "defaultQuizTitle": "اختباري"
+    "defaultQuizTitle": "اختباري",
+    "importErrorPrefix": "خطأ في الاستيراد: "
   },
   "quizDetail": {
     "backToList": "العودة إلى الاختبارات",
@@ -963,7 +965,10 @@
     "planNoCommitment": "دون التزام",
     "notifyResponsesTitle": "إشعارات الردود",
     "notifyResponsesDesc": "احصل على بريد إلكتروني عند كل رد جديد على اختباراتك واستطلاعاتك.",
-    "notifyResponsesLabel": "أرسل لي بريدًا عند كل رد جديد"
+    "notifyResponsesLabel": "أرسل لي بريدًا عند كل رد جديد",
+    "affCommTitle": "اكسب عمولات على اختباراتك",
+    "affCommDesc": "في كل اختبار منشور، يوجّه التذييل «هذا الاختبار مقدم لكم من Tiquiz» إلى صفحة تعريف Tiquiz. إذا لصقت معرّف الإحالة الخاص بك في Systeme.io أدناه، فكل تسجيل ينتج عن ذلك يمنحك عمولة تلقائيًا.",
+    "affIdLabel": "معرّف الإحالة الخاص بي في Tipote"
   },
   "languageSwitcher": {
     "label": "اللغة"
@@ -1341,7 +1346,8 @@
     "optionNotifyResponsesHint": "تصلك رسالة بريد إلكتروني عند كل رد جديد على هذا الاختبار. أوقفها هنا إذا كنت تفضل الصمت لهذا الاختبار.",
     "optionSioTagLabel": "وسم Systeme.io لهذه الإجابة",
     "optionalQuestionLabel": "اختياري",
-    "optionalQuestionHint": "يمكن للزائر تخطي هذا السؤال. السؤال المتخطى لا يُحتسب في النتيجة."
+    "optionalQuestionHint": "يمكن للزائر تخطي هذا السؤال. السؤال المتخطى لا يُحتسب في النتيجة.",
+    "errFlagSave": "تعذّر حفظ التمييز."
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",
@@ -1560,7 +1566,8 @@
     "exportExcel": "تصدير Excel",
     "flagAction": "تعليم هذا المشارك",
     "unflagAction": "إزالة العلامة",
-    "radarTitle": "نظرة عامة على التقييمات"
+    "radarTitle": "نظرة عامة على التقييمات",
+    "errFlagSave": "تعذّر حفظ التمييز."
   },
   "projects": {
     "title": "مشاريعي",
@@ -2639,6 +2646,18 @@
     "quizSectionFunnel": "مسارك (المشاهدات، الإكمال، الالتقاط)",
     "quizSectionAudience": "ملف زوّارك",
     "quizSectionImprove": "محاور التحسين",
-    "quizSectionActions": "إجراءات لجذب المزيد والبيع أكثر"
+    "quizSectionActions": "إجراءات لجذب المزيد والبيع أكثر",
+    "surveyExportTitle": "تصدير النتائج",
+    "surveyExportBody": "حسب اختيارك: CSV أو Excel (صف لكل مجيب، أعمدة جاهزة: الهوية + الإجابات)، أو PDF (تقرير مجمّع + تفاصيل المجيبين، جاهز للعرض).",
+    "surveyAnalysisTitle": "تحليل النتائج بالذكاء الاصطناعي",
+    "surveyLock": "يفك تحليل الذكاء الاصطناعي شفرة ما تقوله إجاباتك حقًا، ويلخص أهم النقاط، ويقترح إجراءات ملموسة للتنفيذ. تحديثات مجانية.",
+    "surveyNotEnough": "لا توجد إجابات كافية لتحليل ذي معنى ({total}/{min}). عد عندما يكون لديك {min} إجابة على الأقل.",
+    "surveyIntro": "ما تقوله نتائجك حقًا، وأهم النقاط، والإجراءات الواجب تنفيذها. تحديثات مجانية.",
+    "surveySectionSay": "ماذا تقول النتائج",
+    "surveySectionKeep": "أهم النقاط",
+    "surveySectionActions": "إجراءات للتنفيذ",
+    "surveyErrLoad": "تعذّر تحميل النتائج.",
+    "surveyErrPdf": "خطأ أثناء إنشاء ملف PDF.",
+    "surveyErrNotEnough": "إجابات غير كافية لتحليل ذي معنى."
   }
 }

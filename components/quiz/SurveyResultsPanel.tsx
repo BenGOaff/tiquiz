@@ -10,6 +10,7 @@
 //   - Toast via sonner (toaster Tiquiz).
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { toast } from "sonner";
 import { Download, FileText, FileSpreadsheet, Sparkles, Loader2, RefreshCw, Lock } from "lucide-react";
 
@@ -54,7 +55,7 @@ export default function SurveyResultsPanel({
   surveyTitle,
   leads,
   questions,
-  locale,
+  locale: localeProp,
 }: {
   quizId: string;
   surveyTitle: string;
@@ -63,6 +64,8 @@ export default function SurveyResultsPanel({
   questions?: SurveyQuestionLike[];
   locale?: string | null;
 }) {
+  const t = useTranslations("insights");
+  const locale = useLocale();
   const [state, setState] = useState<AnalysisState | null>(null);
   const [generating, setGenerating] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -104,19 +107,19 @@ export default function SurveyResultsPanel({
     return leads.map((l) => ({
       name: [l.first_name, l.last_name].filter(Boolean).join(" ").trim(),
       email: l.email ?? "",
-      date: l.created_at ? new Date(l.created_at).toLocaleDateString("fr-FR") : "",
+      date: l.created_at ? new Date(l.created_at).toLocaleDateString(locale) : "",
       flagged: !!l.flagged,
       answers: (() => {
         const byQ = indexAnswers(l.answers);
         return questions
           .map((q, qi) => ({
             q: stripHtml(String(q.question_text ?? "")).trim() || `Q${qi + 1}`,
-            a: formatSurveyAnswer(q, byQ.get(qi), locale),
+            a: formatSurveyAnswer(q, byQ.get(qi), localeProp),
           }))
           .filter((x) => x.a);
       })(),
     }));
-  }, [leads, questions, locale]);
+  }, [leads, questions, localeProp, locale]);
 
   const handleExportPdf = useCallback(async () => {
     setExportingPdf(true);
@@ -124,7 +127,7 @@ export default function SurveyResultsPanel({
       const res = await fetch(`/api/quiz/${quizId}/survey-results?format=json`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok || !data?.ok) {
-        toast.error("Impossible de charger les résultats.");
+        toast.error(t("surveyErrLoad"));
         return;
       }
       // jspdf + renderer chargés en dynamic import (client-only).
@@ -148,11 +151,11 @@ export default function SurveyResultsPanel({
       doc.save(`${safe}-${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (err) {
       console.error("[survey pdf]", err);
-      toast.error("Erreur lors de la génération du PDF.");
+      toast.error(t("surveyErrPdf"));
     } finally {
       setExportingPdf(false);
     }
-  }, [quizId, surveyTitle, state?.analysis, buildRespondents]);
+  }, [quizId, surveyTitle, state?.analysis, buildRespondents, t]);
 
   const handleGenerate = useCallback(async () => {
     setGenerating(true);
@@ -161,22 +164,22 @@ export default function SurveyResultsPanel({
       const data = await res.json();
       if (!res.ok || !data?.ok) {
         if (data?.error === "NOT_ENOUGH_RESPONSES") {
-          toast.error(data.message ?? "Pas assez de réponses pour une analyse pertinente.");
+          toast.error(data.message ?? t("surveyErrNotEnough"));
         } else if (data?.error === "PLAN_REQUIRED") {
-          toast.error(data.message ?? "Disponible dans un plan supérieur.");
+          toast.error(data.message ?? t("errPlan"));
         } else {
-          toast.error("L'analyse a échoué. Réessaie dans un instant.");
+          toast.error(t("errGeneric"));
         }
         return;
       }
       setState((prev) => (prev ? { ...prev, analysis: data.analysis } : prev));
-      toast.success("Analyse prête !");
+      toast.success(t("ready"));
     } catch {
-      toast.error("Erreur réseau.");
+      toast.error(t("errNetwork"));
     } finally {
       setGenerating(false);
     }
-  }, [quizId]);
+  }, [quizId, t]);
 
   return (
     <div className="space-y-4">
@@ -184,12 +187,10 @@ export default function SurveyResultsPanel({
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-1">
           <Download className="w-4 h-4 text-muted-foreground" />
-          <h3 className="text-sm font-semibold">Exporter les résultats</h3>
+          <h3 className="text-sm font-semibold">{t("surveyExportTitle")}</h3>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Au choix : CSV ou Excel (une ligne par répondant, colonnes prêtes :
-          identité + réponses), ou PDF (rapport agrégé + détail des répondants,
-          prêt à présenter).
+          {t("surveyExportBody")}
         </p>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={handleExportCsv}>
@@ -215,7 +216,7 @@ export default function SurveyResultsPanel({
       <Card className="p-5 border-primary/30 bg-primary/5">
         <div className="flex items-center gap-2 mb-1">
           <Sparkles className="w-4 h-4 text-primary" />
-          <h3 className="text-sm font-semibold">Analyse IA des résultats</h3>
+          <h3 className="text-sm font-semibold">{t("surveyAnalysisTitle")}</h3>
         </div>
 
         {state && !state.eligible && !state.analysis ? (
@@ -223,54 +224,41 @@ export default function SurveyResultsPanel({
             <div className="flex items-start gap-2">
               <Lock className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
               <p className="text-sm text-muted-foreground">
-                L&apos;analyse IA décode ce que disent vraiment tes réponses,
-                résume ce qu&apos;il faut en retenir et te propose les actions
-                concrètes à mettre en place. Mises à jour gratuites.
+                {t("surveyLock")}
               </p>
             </div>
             {state.showUpsell ? (
               <p className="text-sm text-foreground pl-6">
-                Disponible (pour tes quiz ET tes sondages) dans les plans{" "}
-                <span className="font-semibold">Tiquiz mensuel+</span>
-                {" "}(<span className="font-semibold">29€/mois</span>) ou{" "}
-                <span className="font-semibold">annuel+</span>{" "}
-                (<span className="font-semibold">290€/an</span>), qui
-                incluent aussi les multiprofils.{" "}
-                <span className="italic text-muted-foreground">
-                  Les bons de commande sont en préparation — on te prévient.
-                </span>
+                {t("quizUpsell")}
               </p>
             ) : (
               <p className="text-sm text-muted-foreground pl-6 italic">
-                Bientôt disponible dans un plan supérieur.
+                {t("comingSoon")}
               </p>
             )}
           </div>
         ) : state && !state.hasEnough && !state.analysis ? (
           <p className="text-sm text-muted-foreground mt-1">
-            Il n&apos;y a pas assez de réponses pour une analyse pertinente
-            ({state.totalResponses}/{state.minResponses}). Reviens quand tu auras
-            au moins {state.minResponses} réponses.
+            {t("surveyNotEnough", { total: state.totalResponses, min: state.minResponses })}
           </p>
         ) : (
           <>
             <p className="text-xs text-muted-foreground mb-3">
-              Ce que disent vraiment tes résultats, ce qu&apos;il faut en retenir,
-              et les actions à mettre en place. Mises à jour gratuites.
+              {t("surveyIntro")}
             </p>
 
             {state?.analysis && (
               <div className="space-y-3 mb-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Ce que disent les résultats
+                    {t("surveySectionSay")}
                   </p>
                   <p className="text-sm mt-1">{state.analysis.summary}</p>
                 </div>
                 {state.analysis.takeaways.length > 0 && (
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      À retenir
+                      {t("surveySectionKeep")}
                     </p>
                     <ul className="mt-1 space-y-1">
                       {state.analysis.takeaways.map((t, i) => (
@@ -285,7 +273,7 @@ export default function SurveyResultsPanel({
                 {state.analysis.actions.length > 0 && (
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Actions à mettre en place
+                      {t("surveySectionActions")}
                     </p>
                     <ul className="mt-1 space-y-1">
                       {state.analysis.actions.map((a, i) => (
@@ -308,17 +296,17 @@ export default function SurveyResultsPanel({
               {generating ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                  Analyse en cours…
+                  {t("btnGenerating")}
                 </>
               ) : state?.analysis ? (
                 <>
                   <RefreshCw className="w-4 h-4 mr-1.5" />
-                  Mettre à jour l&apos;analyse
+                  {t("btnRefresh")}
                 </>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4 mr-1.5" />
-                  Lancer l&apos;analyse
+                  {t("btnRun")}
                 </>
               )}
             </Button>
