@@ -219,7 +219,8 @@
     },
     "lockedCount": "{count, plural, =0 {0 locked leads} one {# locked lead} other {# locked leads}}",
     "lockedDescription": "The free plan shows 10 leads per rolling 30-day window. Upgrade to a paid plan to unlock them all.",
-    "lockedUnlockCta": "Unlock all my leads"
+    "lockedUnlockCta": "Unlock all my leads",
+    "syncAction": "Sync"
   },
   "loginPage": {
     "tagline": "Create engaging quizzes and capture leads",
@@ -490,7 +491,11 @@
     "fqoCreating": "Creating…",
     "fqoUseTemplate": "Use this template",
     "fqoSeeAll": "See the 15 templates",
-    "fqoFromScratch": "Start from scratch"
+    "fqoFromScratch": "Start from scratch",
+    "statusActive": "Active",
+    "statusDraft": "Draft",
+    "chartProspects": "Prospects",
+    "chartTraffic": "Traffic"
   },
   "quizForm": {
     "createTitle": "Create a quiz",
@@ -1633,7 +1638,17 @@
     "useBrandLogoHint": "If enabled, your brand logo will replace the emoji.",
     "logoPreview": "Logo preview",
     "noLogo": "No logo set on this project.",
-    "noLogoHint": "Add a logo in your settings to use it here."
+    "noLogoHint": "Add a logo in your settings to use it here.",
+    "color_indigo": "Indigo (Tiquiz)",
+    "color_violet": "Violet",
+    "color_rose": "Pink",
+    "color_raspberry": "Raspberry",
+    "color_orange": "Orange",
+    "color_gold": "Gold",
+    "color_green": "Green",
+    "color_teal": "Teal",
+    "color_sky": "Sky",
+    "color_slate": "Slate"
   },
   "highlightBadge": {
     "topPerformer": {

@@ -236,7 +236,8 @@
     },
     "lockedCount": "{count, plural, =0 {0 leads bloqueados} one {# lead bloqueado} other {# leads bloqueados}}",
     "lockedDescription": "El plan gratuito muestra 10 leads por ventana de 30 días. Pasa a un plan de pago para desbloquearlos todos.",
-    "lockedUnlockCta": "Desbloquear todos mis leads"
+    "lockedUnlockCta": "Desbloquear todos mis leads",
+    "syncAction": "Sinc."
   },
   "loginPage": {
     "tagline": "Crea quiz atractivos y captura leads",
@@ -507,7 +508,11 @@
     "fqoCreating": "Creando…",
     "fqoUseTemplate": "Usar esta plantilla",
     "fqoSeeAll": "Ver las 15 plantillas",
-    "fqoFromScratch": "Empezar de cero"
+    "fqoFromScratch": "Empezar de cero",
+    "statusActive": "Activo",
+    "statusDraft": "Borrador",
+    "chartProspects": "Prospectos",
+    "chartTraffic": "Tráfico"
   },
   "quizForm": {
     "createTitle": "Crear un quiz",
@@ -1649,7 +1654,17 @@
     "useBrandLogoHint": "Si se activa, el logo de tu marca sustituirá al emoji.",
     "logoPreview": "Vista previa del logo",
     "noLogo": "No hay logo definido en este proyecto.",
-    "noLogoHint": "Añade un logo en tus ajustes para usarlo aquí."
+    "noLogoHint": "Añade un logo en tus ajustes para usarlo aquí.",
+    "color_indigo": "Índigo (Tiquiz)",
+    "color_violet": "Violeta",
+    "color_rose": "Rosa",
+    "color_raspberry": "Frambuesa",
+    "color_orange": "Naranja",
+    "color_gold": "Oro",
+    "color_green": "Verde",
+    "color_teal": "Turquesa",
+    "color_sky": "Cielo",
+    "color_slate": "Pizarra"
   },
   "highlightBadge": {
     "topPerformer": {

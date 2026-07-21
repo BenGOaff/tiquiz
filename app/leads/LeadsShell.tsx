@@ -353,7 +353,7 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
                               className="text-xs"
                             >
                               <RefreshCw className={`h-3.5 w-3.5 mr-1 ${syncing.has(lead.id) ? "animate-spin" : ""}`} />
-                              Sync
+                              {t("syncAction")}
                             </Button>
                           )}
                         </td>

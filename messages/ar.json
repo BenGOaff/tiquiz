@@ -236,7 +236,8 @@
     },
     "lockedCount": "{count, plural, =0 {لا عملاء مقفلون} one {عميل واحد مقفل} other {# عملاء مقفلون}}",
     "lockedDescription": "تعرض الخطة المجانية 10 عملاء كل 30 يوماً. ارقَ إلى خطة مدفوعة لفتحهم جميعاً.",
-    "lockedUnlockCta": "افتح كل عملائي"
+    "lockedUnlockCta": "افتح كل عملائي",
+    "syncAction": "مزامنة"
   },
   "loginPage": {
     "tagline": "أنشئ اختبارات جذابة واجمع العملاء المحتملين",
@@ -507,7 +508,11 @@
     "fqoCreating": "جارٍ الإنشاء…",
     "fqoUseTemplate": "استخدام هذا القالب",
     "fqoSeeAll": "عرض القوالب الـ15",
-    "fqoFromScratch": "البدء من الصفر"
+    "fqoFromScratch": "البدء من الصفر",
+    "statusActive": "نشط",
+    "statusDraft": "مسودة",
+    "chartProspects": "العملاء المحتملون",
+    "chartTraffic": "الزيارات"
   },
   "quizForm": {
     "createTitle": "إنشاء اختبار",
@@ -1637,7 +1642,17 @@
     "useBrandLogoHint": "إذا فُعّل، سيحل شعار علامتك محل الإيموجي.",
     "logoPreview": "معاينة الشعار",
     "noLogo": "لا يوجد شعار محدد لهذا المشروع.",
-    "noLogoHint": "أضف شعارًا في إعداداتك لاستخدامه هنا."
+    "noLogoHint": "أضف شعارًا في إعداداتك لاستخدامه هنا.",
+    "color_indigo": "نيلي (Tiquiz)",
+    "color_violet": "بنفسجي",
+    "color_rose": "وردي",
+    "color_raspberry": "توتي",
+    "color_orange": "برتقالي",
+    "color_gold": "ذهبي",
+    "color_green": "أخضر",
+    "color_teal": "أزرق مخضر",
+    "color_sky": "سماوي",
+    "color_slate": "إردوازي"
   },
   "highlightBadge": {
     "topPerformer": {
