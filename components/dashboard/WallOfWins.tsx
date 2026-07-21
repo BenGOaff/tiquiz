@@ -11,6 +11,7 @@
 // design system.
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, TrendingUp, TrendingDown, Minus } from "lucide-react";
@@ -35,22 +36,20 @@ interface Resp {
   previous: Stats;
 }
 
-const PERIOD_LABELS: Record<Period, string> = {
-  month: "Ce mois",
-  "30d": "30 derniers jours",
-  "90d": "90 derniers jours",
-};
+const PERIOD_KEYS: Period[] = ["month", "30d", "90d"];
 
-const NUM_FMT = new Intl.NumberFormat("fr-FR");
-
-function delta(current: number, previous: number): {
+function delta(
+  current: number,
+  previous: number,
+  t: (key: string) => string,
+): {
   label: string;
   direction: "up" | "down" | "flat";
 } {
-  if (previous === 0 && current === 0) return { label: "—", direction: "flat" };
-  if (previous === 0) return { label: "Nouveau", direction: "up" };
+  if (previous === 0 && current === 0) return { label: "-", direction: "flat" };
+  if (previous === 0) return { label: t("wowDeltaNew"), direction: "up" };
   const diff = current - previous;
-  if (diff === 0) return { label: "= préc.", direction: "flat" };
+  if (diff === 0) return { label: t("wowDeltaSame"), direction: "flat" };
   const pct = Math.round((diff / previous) * 100);
   return { label: `${diff > 0 ? "+" : ""}${pct} %`, direction: diff > 0 ? "up" : "down" };
 }
@@ -97,9 +96,19 @@ function StatTile({
 }
 
 export function WallOfWins() {
+  const t = useTranslations("dashboard");
+  const locale = useLocale();
   const [period, setPeriod] = useState<Period>("month");
   const [payload, setPayload] = useState<Resp | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const numFmt = useMemo(() => new Intl.NumberFormat(locale), [locale]);
+  const periodLabel = (p: Period) =>
+    p === "month"
+      ? t("wowPeriodMonth")
+      : p === "30d"
+        ? t("wowPeriod30")
+        : t("wowPeriod90");
 
   useEffect(() => {
     let cancelled = false;
@@ -126,12 +135,12 @@ export function WallOfWins() {
   const deltas = useMemo(() => {
     if (!payload?.current || !payload?.previous) return null;
     return {
-      leads: delta(payload.current.leadsCaptured, payload.previous.leadsCaptured),
-      views: delta(payload.current.quizViews, payload.previous.quizViews),
-      completes: delta(payload.current.quizCompletes, payload.previous.quizCompletes),
-      shares: delta(payload.current.quizShares, payload.previous.quizShares),
+      leads: delta(payload.current.leadsCaptured, payload.previous.leadsCaptured, t),
+      views: delta(payload.current.quizViews, payload.previous.quizViews, t),
+      completes: delta(payload.current.quizCompletes, payload.previous.quizCompletes, t),
+      shares: delta(payload.current.quizShares, payload.previous.quizShares, t),
     };
-  }, [payload]);
+  }, [payload, t]);
 
   if (loading) return null;
   if (!payload?.ok || !payload.hasResults) return null;
@@ -144,14 +153,14 @@ export function WallOfWins() {
           <div className="flex items-center gap-2 min-w-0">
             <Sparkles className="w-4 h-4 text-primary shrink-0" />
             <h3 className="text-sm font-semibold text-foreground leading-tight">
-              Ce que tes quiz t&apos;ont apporté
+              {t("wowHeading")}
               <span className="text-muted-foreground font-normal ml-1">
-                · {PERIOD_LABELS[payload.period]}
+                · {periodLabel(payload.period)}
               </span>
             </h3>
           </div>
           <div className="flex items-center gap-1">
-            {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
+            {PERIOD_KEYS.map((p) => (
               <Button
                 key={p}
                 variant={p === period ? "default" : "ghost"}
@@ -159,7 +168,7 @@ export function WallOfWins() {
                 className="h-7 px-2.5 text-xs"
                 onClick={() => setPeriod(p)}
               >
-                {PERIOD_LABELS[p]}
+                {periodLabel(p)}
               </Button>
             ))}
           </div>
@@ -170,16 +179,16 @@ export function WallOfWins() {
             actives (vs grid-cols-4 qui imposait 4 colonnes mortes). */}
         <div className="flex flex-wrap gap-2">
           {c.leadsCaptured > 0 && (
-            <StatTile label="Leads" value={NUM_FMT.format(c.leadsCaptured)} deltaValue={deltas?.leads} />
+            <StatTile label="Leads" value={numFmt.format(c.leadsCaptured)} deltaValue={deltas?.leads} />
           )}
           {c.quizViews > 0 && (
-            <StatTile label="Vues" value={NUM_FMT.format(c.quizViews)} deltaValue={deltas?.views} />
+            <StatTile label={t("wowViews")} value={numFmt.format(c.quizViews)} deltaValue={deltas?.views} />
           )}
           {c.quizCompletes > 0 && (
-            <StatTile label="Quiz finis" value={NUM_FMT.format(c.quizCompletes)} deltaValue={deltas?.completes} />
+            <StatTile label={t("wowFinished")} value={numFmt.format(c.quizCompletes)} deltaValue={deltas?.completes} />
           )}
           {c.quizShares > 0 && (
-            <StatTile label="Partages" value={NUM_FMT.format(c.quizShares)} deltaValue={deltas?.shares} />
+            <StatTile label={t("wowShares")} value={numFmt.format(c.quizShares)} deltaValue={deltas?.shares} />
           )}
         </div>
 
@@ -190,12 +199,12 @@ export function WallOfWins() {
             {c.topQuiz && (
               <div className="flex items-center gap-1.5 min-w-0 text-sm">
                 <span aria-hidden="true">🏆</span>
-                <span className="text-xs text-muted-foreground">Top :</span>
+                <span className="text-xs text-muted-foreground">{t("wowTop")}</span>
                 <span className="font-medium truncate">
                   {stripHtml(c.topQuiz.title) || c.topQuiz.title}
                 </span>
                 <span className="text-xs text-muted-foreground shrink-0">
-                  ({NUM_FMT.format(c.topQuiz.completes)})
+                  ({numFmt.format(c.topQuiz.completes)})
                 </span>
               </div>
             )}
