@@ -4146,7 +4146,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               <Input
                 value={customFooterUrl}
                 onChange={(e) => setCustomFooterUrl(e.target.value)}
-                placeholder="https://monsite.com"
+                placeholder="https://example.com"
                 className="text-sm"
                 disabled={!isPaidPlan}
               />
