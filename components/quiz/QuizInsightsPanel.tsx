@@ -9,6 +9,7 @@
 // etats plan/pas-assez-de-donnees/analyse).
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { toast } from "sonner";
 import { Sparkles, Loader2, RefreshCw, Lock, TrendingUp, Users, Wrench, Rocket } from "lucide-react";
 
@@ -35,6 +36,8 @@ interface PanelState {
 }
 
 export default function QuizInsightsPanel({ quizId }: { quizId: string }) {
+  const t = useTranslations("insights");
+  const locale = useLocale();
   const [state, setState] = useState<PanelState | null>(null);
   const [generating, setGenerating] = useState(false);
 
@@ -66,19 +69,19 @@ export default function QuizInsightsPanel({ quizId }: { quizId: string }) {
       const res = await fetch(`/api/quiz/${quizId}/insights`, { method: "POST" });
       const data = await res.json();
       if (!res.ok || !data?.ok) {
-        if (data?.error === "NOT_ENOUGH_DATA") toast.error(data.message ?? "Pas assez d'activite.");
-        else if (data?.error === "PLAN_REQUIRED") toast.error(data.message ?? "Disponible dans un plan superieur.");
-        else toast.error("L'analyse a echoue. Reessaie dans un instant.");
+        if (data?.error === "NOT_ENOUGH_DATA") toast.error(data.message ?? t("errNotEnough"));
+        else if (data?.error === "PLAN_REQUIRED") toast.error(data.message ?? t("errPlan"));
+        else toast.error(t("errGeneric"));
         return;
       }
       setState((prev) => (prev ? { ...prev, analysis: data.analysis, analysisAt: data.analysisAt } : prev));
-      toast.success("Analyse prete !");
+      toast.success(t("ready"));
     } catch {
-      toast.error("Erreur reseau.");
+      toast.error(t("errNetwork"));
     } finally {
       setGenerating(false);
     }
-  }, [quizId]);
+  }, [quizId, t]);
 
   const a = state?.analysis ?? null;
 
@@ -86,64 +89,46 @@ export default function QuizInsightsPanel({ quizId }: { quizId: string }) {
     <Card className="p-5 border-primary/30 bg-primary/5">
       <div className="flex items-center gap-2 mb-1">
         <Sparkles className="w-4 h-4 text-primary" />
-        <h3 className="text-sm font-semibold">Analyse IA de tes statistiques</h3>
+        <h3 className="text-sm font-semibold">{t("quizTitle")}</h3>
       </div>
 
       {state && !state.eligible && !a ? (
         <div className="mt-1 space-y-2">
           <div className="flex items-start gap-2">
             <Lock className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-            <p className="text-sm text-muted-foreground">
-              L&apos;analyse IA lit tes visites, ta completion et ton taux de capture, deduit le profil
-              de tes visiteurs, repere le point de fuite et te donne les actions concretes pour capter
-              et vendre plus. Mises a jour gratuites.
-            </p>
+            <p className="text-sm text-muted-foreground">{t("quizLock")}</p>
           </div>
           {state.showUpsell ? (
-            <p className="text-sm text-foreground pl-6">
-              Disponible (pour tes quiz ET tes sondages) dans les plans{" "}
-              <span className="font-semibold">Tiquiz mensuel+</span> (
-              <span className="font-semibold">29€/mois</span>) ou{" "}
-              <span className="font-semibold">annuel+</span> (
-              <span className="font-semibold">290€/an</span>), qui incluent aussi les multiprofils.{" "}
-              <span className="italic text-muted-foreground">
-                Les bons de commande sont en preparation, on te previent.
-              </span>
-            </p>
+            <p className="text-sm text-foreground pl-6">{t("quizUpsell")}</p>
           ) : (
-            <p className="text-sm text-muted-foreground pl-6 italic">Bientot disponible dans un plan superieur.</p>
+            <p className="text-sm text-muted-foreground pl-6 italic">{t("comingSoon")}</p>
           )}
         </div>
       ) : state && !state.hasEnough && !a ? (
         <p className="text-sm text-muted-foreground mt-1">
-          Pas encore assez d&apos;activite pour une analyse fiable. Reviens quand tu auras au moins{" "}
-          {state.minLeads} leads ou {state.minViews} vues : l&apos;IA a besoin de vrais chiffres pour
-          te donner des conclusions justes.
+          {t("quizNotEnough", { minLeads: state.minLeads, minViews: state.minViews })}
         </p>
       ) : (
         <>
-          <p className="text-xs text-muted-foreground mb-3">
-            Ton diagnostic complet : ce qui marche, ou tu perds des gens, qui sont tes visiteurs, et
-            quoi faire pour capter et vendre plus. Mises a jour gratuites.
-          </p>
+          <p className="text-xs text-muted-foreground mb-3">{t("quizIntro")}</p>
 
           {a && (
             <div className="space-y-3 mb-3">
-              <Section icon={<TrendingUp className="w-3.5 h-3.5" />} label="Diagnostic">
+              <Section icon={<TrendingUp className="w-3.5 h-3.5" />} label={t("quizSectionDiag")}>
                 <p className="text-sm">{a.summary}</p>
               </Section>
               {a.funnel && (
-                <Section icon={<TrendingUp className="w-3.5 h-3.5" />} label="Ton funnel (vues, completion, capture)">
+                <Section icon={<TrendingUp className="w-3.5 h-3.5" />} label={t("quizSectionFunnel")}>
                   <p className="text-sm">{a.funnel}</p>
                 </Section>
               )}
               {a.audience && (
-                <Section icon={<Users className="w-3.5 h-3.5" />} label="Profil de tes visiteurs">
+                <Section icon={<Users className="w-3.5 h-3.5" />} label={t("quizSectionAudience")}>
                   <p className="text-sm">{a.audience}</p>
                 </Section>
               )}
               {a.improvements.length > 0 && (
-                <Section icon={<Wrench className="w-3.5 h-3.5" />} label="Axes d'amelioration">
+                <Section icon={<Wrench className="w-3.5 h-3.5" />} label={t("quizSectionImprove")}>
                   <ul className="mt-1 space-y-1">
                     {a.improvements.map((t, i) => (
                       <li key={i} className="text-sm flex items-start gap-2">
@@ -155,7 +140,7 @@ export default function QuizInsightsPanel({ quizId }: { quizId: string }) {
                 </Section>
               )}
               {a.actions.length > 0 && (
-                <Section icon={<Rocket className="w-3.5 h-3.5" />} label="Actions pour capter et vendre plus">
+                <Section icon={<Rocket className="w-3.5 h-3.5" />} label={t("quizSectionActions")}>
                   <ul className="mt-1 space-y-1">
                     {a.actions.map((t, i) => (
                       <li key={i} className="text-sm flex items-start gap-2">
@@ -173,23 +158,23 @@ export default function QuizInsightsPanel({ quizId }: { quizId: string }) {
             {generating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                Analyse en cours…
+                {t("btnGenerating")}
               </>
             ) : a ? (
               <>
                 <RefreshCw className="w-4 h-4 mr-1.5" />
-                Mettre a jour l&apos;analyse
+                {t("btnRefresh")}
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4 mr-1.5" />
-                Lancer l&apos;analyse
+                {t("btnRun")}
               </>
             )}
           </Button>
           {a?.generated_at && (
             <p className="text-[11px] text-muted-foreground mt-2">
-              Derniere analyse : {new Date(a.generated_at).toLocaleString("fr-FR")}
+              {t("lastRun")}{new Date(a.generated_at).toLocaleString(locale)}
             </p>
           )}
         </>
