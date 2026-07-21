@@ -7,6 +7,7 @@
 // modifier ensuite). Endpoint /api/insights/global. Gatee par plan.
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { toast } from "sonner";
 import { Sparkles, Loader2, RefreshCw, Lock, CheckCircle2, AlertTriangle, Rocket } from "lucide-react";
 
@@ -33,6 +34,8 @@ interface PanelState {
 export default function GlobalInsightsPanel() {
   const [state, setState] = useState<PanelState | null>(null);
   const [generating, setGenerating] = useState(false);
+  const t = useTranslations("insights");
+  const locale = useLocale();
 
   useEffect(() => {
     let cancelled = false;
@@ -62,15 +65,15 @@ export default function GlobalInsightsPanel() {
       const data = await res.json();
       if (!res.ok || !data?.ok) {
         if (data?.error === "NOT_ENOUGH_DATA" || data?.error === "NO_PROJECTS")
-          toast.error(data.message ?? "Pas assez d'activite.");
-        else if (data?.error === "PLAN_REQUIRED") toast.error(data.message ?? "Disponible dans un plan superieur.");
-        else toast.error("L'analyse a echoue. Reessaie dans un instant.");
+          toast.error(data.message ?? t("errNotEnough"));
+        else if (data?.error === "PLAN_REQUIRED") toast.error(data.message ?? t("errPlan"));
+        else toast.error(t("errGeneric"));
         return;
       }
       setState((prev) => (prev ? { ...prev, analysis: data.analysis, analysisAt: data.analysisAt } : prev));
-      toast.success("Analyse strategique prete !");
+      toast.success(t("globalReady"));
     } catch {
-      toast.error("Erreur reseau.");
+      toast.error(t("errNetwork"));
     } finally {
       setGenerating(false);
     }
@@ -82,68 +85,52 @@ export default function GlobalInsightsPanel() {
     <Card className="p-5 border-primary/30 bg-primary/5">
       <div className="flex items-center gap-2 mb-1">
         <Sparkles className="w-4 h-4 text-primary" />
-        <h3 className="text-sm font-semibold">Analyse IA strategique (tous tes projets)</h3>
+        <h3 className="text-sm font-semibold">{t("globalTitle")}</h3>
       </div>
 
       {state && !state.eligible && !a ? (
         <div className="mt-1 space-y-2">
           <div className="flex items-start gap-2">
             <Lock className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
-            <p className="text-sm text-muted-foreground">
-              L&apos;IA lit les stats de TOUS tes quiz et sondages et te dit quoi garder, quoi corriger
-              et quoi lancer ensuite pour capter et vendre plus. Ta strategie, en un coup d&apos;oeil.
-              Mises a jour gratuites.
-            </p>
+            <p className="text-sm text-muted-foreground">{t("globalLock")}</p>
           </div>
           {state.showUpsell ? (
-            <p className="text-sm text-foreground pl-6">
-              Disponible dans les plans <span className="font-semibold">Tiquiz mensuel+</span> (
-              <span className="font-semibold">29€/mois</span>) ou{" "}
-              <span className="font-semibold">annuel+</span> (
-              <span className="font-semibold">290€/an</span>).{" "}
-              <span className="italic text-muted-foreground">
-                Les bons de commande sont en preparation, on te previent.
-              </span>
-            </p>
+            <p className="text-sm text-foreground pl-6">{t("globalUpsell")}</p>
           ) : (
-            <p className="text-sm text-muted-foreground pl-6 italic">Bientot disponible dans un plan superieur.</p>
+            <p className="text-sm text-muted-foreground pl-6 italic">{t("comingSoon")}</p>
           )}
         </div>
       ) : state && !state.hasEnough && !a ? (
         <p className="text-sm text-muted-foreground mt-1">
-          Pas encore assez d&apos;activite globale. Reviens quand tu auras au moins {state.minLeads}{" "}
-          leads cumules sur l&apos;ensemble de tes projets.
+          {t("globalNotEnough", { minLeads: state.minLeads })}
         </p>
       ) : (
         <>
-          <p className="text-xs text-muted-foreground mb-3">
-            Le pilotage de ton acquisition : ce qui marche a amplifier, ce qui bloque a corriger, et
-            tes prochains mouvements. Base sur les chiffres reels de tous tes projets.
-          </p>
+          <p className="text-xs text-muted-foreground mb-3">{t("globalIntro")}</p>
 
           {a && (
             <div className="space-y-3 mb-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Etat des lieux
+                  {t("globalSectionState")}
                 </p>
                 <p className="text-sm mt-1">{a.summary}</p>
               </div>
               <ReportList
                 icon={<CheckCircle2 className="w-3.5 h-3.5" />}
-                label="Ce qui marche"
+                label={t("globalSectionWorks")}
                 items={a.whatWorks}
                 accent="text-emerald-600 dark:text-emerald-400"
               />
               <ReportList
                 icon={<AlertTriangle className="w-3.5 h-3.5" />}
-                label="A corriger"
+                label={t("globalSectionFix")}
                 items={a.toFix}
                 accent="text-amber-600 dark:text-amber-400"
               />
               <ReportList
                 icon={<Rocket className="w-3.5 h-3.5" />}
-                label="Prochains mouvements"
+                label={t("globalSectionNext")}
                 items={a.nextMoves}
                 accent="text-primary"
                 numbered
@@ -155,23 +142,23 @@ export default function GlobalInsightsPanel() {
             {generating ? (
               <>
                 <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                Analyse en cours…
+                {t("btnGenerating")}
               </>
             ) : a ? (
               <>
                 <RefreshCw className="w-4 h-4 mr-1.5" />
-                Mettre a jour l&apos;analyse
+                {t("btnRefresh")}
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4 mr-1.5" />
-                Lancer l&apos;analyse strategique
+                {t("globalBtnRun")}
               </>
             )}
           </Button>
           {a?.generated_at && (
             <p className="text-[11px] text-muted-foreground mt-2">
-              Derniere analyse : {new Date(a.generated_at).toLocaleString("fr-FR")}
+              {t("lastRun")} {new Date(a.generated_at).toLocaleString(locale)}
             </p>
           )}
         </>

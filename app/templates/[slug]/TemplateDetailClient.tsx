@@ -14,6 +14,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { ArrowLeft, Check, Loader2 } from "lucide-react";
 
 import type { QuizTemplate } from "@/lib/templates/types";
@@ -26,6 +27,7 @@ export default function TemplateDetailClient({
   template: QuizTemplate;
   isLoggedIn: boolean;
 }) {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const [creating, setCreating] = useState(false);
   const p = template.payload;
@@ -62,21 +64,18 @@ export default function TemplateDetailClient({
 
       if (!res.ok || !data?.ok) {
         if (data?.error === "FREE_PLAN_QUIZ_LIMIT") {
-          toast.error(
-            data.message ??
-              "Le plan gratuit est limité à 1 quiz. Passe en plan payant pour en créer plus.",
-          );
+          toast.error(data.message ?? t("fqoLimitFree"));
         } else {
-          toast.error("Impossible de créer le quiz. Réessaie dans un instant.");
+          toast.error(t("fqoCreateFailed"));
         }
         setCreating(false);
         return;
       }
 
-      toast.success("Ton quiz est prêt — à toi de le personnaliser !");
+      toast.success(t("fqoReady"));
       router.push(`/quiz/${data.quizId}`);
     } catch {
-      toast.error("Erreur réseau. Réessaie dans un instant.");
+      toast.error(t("fqoNetworkErr"));
       setCreating(false);
     }
   }

@@ -12,6 +12,7 @@
 // (encore) next-intl côté UI projets → labels FR hardcodés.
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Check, ImageOff, RotateCcw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +44,7 @@ export function ProjectIdentityEditor({
   onChange,
   disabled,
 }: Props) {
+  const t = useTranslations("projects");
   const [value, setValue] = useState<ProjectIdentityValue>(initial);
 
   // Si `initial` change (parent qui re-fetch), resync.
@@ -60,21 +62,21 @@ export function ProjectIdentityEditor({
     <div className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="project-name" className="text-xs">
-          Nom du projet
+          {t("fieldName")}
         </Label>
         <Input
           id="project-name"
           value={value.name}
           onChange={(e) => update({ name: e.target.value })}
           disabled={disabled}
-          placeholder="Mon espace"
+          placeholder={t("defaultSpace")}
           maxLength={80}
         />
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <Label className="text-xs">Couleur d&apos;accent</Label>
+          <Label className="text-xs">{t("fieldAccent")}</Label>
           {value.accent_color ? (
             <button
               type="button"
@@ -96,8 +98,8 @@ export function ProjectIdentityEditor({
                 type="button"
                 onClick={() => update({ accent_color: c.hex })}
                 disabled={disabled}
-                title={c.label}
-                aria-label={c.label}
+                title={t(`color_${c.key}`)}
+                aria-label={t(`color_${c.key}`)}
                 aria-pressed={active}
                 className={`relative size-7 rounded-md border-2 transition-all ${
                   active
@@ -117,7 +119,7 @@ export function ProjectIdentityEditor({
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <Label className="text-xs">Icône</Label>
+          <Label className="text-xs">{t("fieldIcon")}</Label>
           {value.icon_emoji ? (
             <button
               type="button"
@@ -162,10 +164,10 @@ export function ProjectIdentityEditor({
               htmlFor="use-branding-logo"
               className="text-xs font-semibold"
             >
-              Utiliser mon logo de marque
+              {t("useBrandLogo")}
             </Label>
             <p className="text-[11px] text-muted-foreground">
-              Si activé, le logo de ton brand remplacera l&apos;emoji.
+              {t("useBrandLogoHint")}
             </p>
           </div>
           <Switch
@@ -185,19 +187,19 @@ export function ProjectIdentityEditor({
                 className="size-10 rounded border bg-background object-cover"
               />
               <span className="text-[11px] text-muted-foreground">
-                Aperçu du logo
+                {t("logoPreview")}
               </span>
             </div>
           ) : (
             <div className="flex items-center gap-2 text-[11px] text-amber-700 dark:text-amber-300">
               <ImageOff className="size-3.5" />
-              Aucun logo défini sur ce projet.
+              {t("noLogo")}
             </div>
           )
         ) : null}
         {!brandingLogoUrl && !value.use_branding_logo ? (
           <p className="text-[11px] text-muted-foreground">
-            Ajoute un logo dans tes réglages pour l&apos;utiliser ici.
+            {t("noLogoHint")}
           </p>
         ) : null}
       </div>

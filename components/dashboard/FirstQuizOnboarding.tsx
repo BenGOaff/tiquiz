@@ -19,6 +19,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ArrowRight, Plus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,6 +44,7 @@ const FIRST_QUIZ_SLUGS = [
 
 export function FirstQuizOnboarding() {
   const router = useRouter();
+  const t = useTranslations("dashboard");
   const [instantiating, setInstantiating] = useState<string | null>(null);
 
   const recommended = FIRST_QUIZ_SLUGS.map(getTemplateBySlug).filter(
@@ -77,20 +79,17 @@ export function FirstQuizOnboarding() {
 
       if (!res.ok || !data?.ok || !data?.quizId) {
         if (data?.error === "FREE_PLAN_QUIZ_LIMIT") {
-          toast.error(
-            data.message ??
-              "Le plan gratuit est limité à 1 quiz. Passe en plan payant pour en créer plus.",
-          );
+          toast.error(data.message ?? t("fqoLimitFree"));
         } else {
-          toast.error("Impossible de créer le quiz.");
+          toast.error(t("fqoCreateFailed"));
         }
         return;
       }
 
-      toast.success("Ton quiz est prêt — à toi de le personnaliser !");
+      toast.success(t("fqoReady"));
       router.push(`/quiz/${data.quizId}`);
     } catch {
-      toast.error("Erreur réseau. Réessaie dans un instant.");
+      toast.error(t("fqoNetworkErr"));
     } finally {
       setInstantiating(null);
     }
@@ -103,13 +102,8 @@ export function FirstQuizOnboarding() {
           <Mascot expression="celebrate" size={64} tone="soft" />
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-xl font-bold mb-1">
-            Pour ton premier quiz, par quoi commencer ?
-          </h2>
-          <p className="text-white/80 text-sm max-w-2xl">
-            Choisis un modèle qui colle à ton audience. Tu pourras tout
-            modifier (titre, questions, résultats, couleurs) en 2 clics.
-          </p>
+          <h2 className="text-xl font-bold mb-1">{t("fqoHeading")}</h2>
+          <p className="text-white/80 text-sm max-w-2xl">{t("fqoSubtitle")}</p>
         </div>
       </div>
 
@@ -137,11 +131,11 @@ export function FirstQuizOnboarding() {
               {instantiating === tpl.slug ? (
                 <span className="inline-flex items-center gap-1">
                   <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                  Création…
+                  {t("fqoCreating")}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 group-hover:gap-1.5 transition-all">
-                  Utiliser ce modèle
+                  {t("fqoUseTemplate")}
                   <ArrowRight className="w-3.5 h-3.5" />
                 </span>
               )}
@@ -157,7 +151,7 @@ export function FirstQuizOnboarding() {
           size="sm"
           className="rounded-full bg-white/15 hover:bg-white/25 text-white border-white/25"
         >
-          <Link href="/templates">Voir les 15 modèles</Link>
+          <Link href="/templates">{t("fqoSeeAll")}</Link>
         </Button>
         <Button
           asChild
@@ -167,7 +161,7 @@ export function FirstQuizOnboarding() {
         >
           <Link href="/quiz/new">
             <Plus className="w-4 h-4 mr-1" />
-            Partir de zéro
+            {t("fqoFromScratch")}
           </Link>
         </Button>
       </div>

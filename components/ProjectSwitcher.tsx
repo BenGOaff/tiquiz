@@ -31,6 +31,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 import {
   DropdownMenu,
@@ -79,6 +80,7 @@ interface ProjectsResponse {
 }
 
 export function ProjectSwitcher() {
+  const t = useTranslations("projects");
   const [projects, setProjects] = useState<Project[]>([]);
   const [canCreateMore, setCanCreateMore] = useState(false);
   const [showUpsell, setShowUpsell] = useState(false);
@@ -178,11 +180,11 @@ export function ProjectSwitcher() {
           setShowUpsellDialog(true);
           return;
         }
-        throw new Error(json.message || json.error || "Erreur");
+        throw new Error(json.message || json.error || "");
       }
 
-      toast.success("Projet créé", {
-        description: `« ${trimmed} » est prêt.`,
+      toast.success(t("toastCreated"), {
+        description: t("toastCreatedDesc", { name: trimmed }),
       });
       setShowCreateDialog(false);
 
@@ -195,8 +197,8 @@ export function ProjectSwitcher() {
         void loadProjects();
       }
     } catch (e) {
-      toast.error("Impossible de créer le projet", {
-        description: e instanceof Error ? e.message : undefined,
+      toast.error(t("toastCreateFailed"), {
+        description: e instanceof Error && e.message ? e.message : undefined,
       });
     } finally {
       setSubmitting(false);
@@ -235,7 +237,7 @@ export function ProjectSwitcher() {
         }),
       });
       const json = await res.json();
-      if (!json.ok) throw new Error(json.error || "Erreur");
+      if (!json.ok) throw new Error(json.error || "");
 
       setProjects((prev) =>
         prev.map((p) =>
@@ -250,11 +252,11 @@ export function ProjectSwitcher() {
             : p,
         ),
       );
-      toast.success("Projet modifié");
+      toast.success(t("toastUpdated"));
       setShowRenameDialog(false);
     } catch (e) {
-      toast.error("Impossible de modifier", {
-        description: e instanceof Error ? e.message : undefined,
+      toast.error(t("toastUpdateFailed"), {
+        description: e instanceof Error && e.message ? e.message : undefined,
       });
     } finally {
       setSubmitting(false);
@@ -276,9 +278,9 @@ export function ProjectSwitcher() {
         credentials: "same-origin",
       });
       const json = await res.json();
-      if (!json.ok) throw new Error(json.message || json.error || "Erreur");
+      if (!json.ok) throw new Error(json.message || json.error || "");
 
-      toast.success("Projet supprimé");
+      toast.success(t("toastDeleted"));
       setShowDeleteDialog(false);
 
       // Si on supprime le projet actif, switch sur le default
@@ -292,8 +294,8 @@ export function ProjectSwitcher() {
 
       setProjects((prev) => prev.filter((p) => p.id !== targetProject.id));
     } catch (e) {
-      toast.error("Impossible de supprimer", {
-        description: e instanceof Error ? e.message : undefined,
+      toast.error(t("toastDeleteFailed"), {
+        description: e instanceof Error && e.message ? e.message : undefined,
       });
     } finally {
       setSubmitting(false);
@@ -325,7 +327,7 @@ export function ProjectSwitcher() {
         <DropdownMenuTrigger asChild>
           <button
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg border bg-background hover:bg-accent transition-colors text-sm font-medium max-w-[240px]"
-            title="Changer de projet"
+            title={t("switchTitle")}
             style={
               activeProject?.accent_color
                 ? {
@@ -339,12 +341,12 @@ export function ProjectSwitcher() {
               <ProjectIdentityBadge
                 project={activeProject}
                 size="md"
-                nameOverride={activeProject.name || "Mon espace"}
+                nameOverride={activeProject.name || t("defaultSpace")}
               />
             ) : (
               <span className="flex items-center gap-2">
                 <FolderOpen className="w-4 h-4 text-muted-foreground" />
-                <span className="truncate">Mon espace</span>
+                <span className="truncate">{t("defaultSpace")}</span>
               </span>
             )}
             <ChevronDown className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
@@ -373,7 +375,7 @@ export function ProjectSwitcher() {
                 <ProjectIdentityBadge project={proj} size="sm" />
                 {proj.is_default && (
                   <span className="text-[10px] text-muted-foreground bg-muted px-1 rounded flex-shrink-0">
-                    Défaut
+                    {t("defaultBadge")}
                   </span>
                 )}
               </div>
@@ -382,7 +384,7 @@ export function ProjectSwitcher() {
                 <button
                   data-action="rename"
                   className="p-1 rounded hover:bg-accent"
-                  title="Modifier"
+                  title={t("renameAction")}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleRenameClick(proj);
@@ -394,7 +396,7 @@ export function ProjectSwitcher() {
                   <button
                     data-action="delete"
                     className="p-1 rounded hover:bg-destructive/10"
-                    title="Supprimer"
+                    title={t("deleteAction")}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteClick(proj);
@@ -409,7 +411,7 @@ export function ProjectSwitcher() {
 
           {!projects.length && (
             <div className="px-2 py-3 text-xs text-muted-foreground text-center">
-              Aucun projet pour le moment.
+              {t("emptyMenu")}
             </div>
           )}
 
@@ -417,7 +419,7 @@ export function ProjectSwitcher() {
 
           <DropdownMenuItem onSelect={handleNewProjectClick} className="gap-2">
             <Plus className="w-4 h-4" />
-            <span>Nouveau projet</span>
+            <span>{t("newProject")}</span>
             {!canCreateMore && (
               <Crown className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 ml-auto" />
             )}
@@ -429,18 +431,17 @@ export function ProjectSwitcher() {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Nouveau projet</DialogTitle>
+            <DialogTitle>{t("newProject")}</DialogTitle>
             <DialogDescription className="sr-only">
-              Crée un nouvel espace de travail.
+              {t("createSrDesc")}
             </DialogDescription>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Chaque projet a ses propres quizzes, leads et stats. Tu pourras
-            switcher entre tes projets depuis ce menu.
+            {t("createBody")}
           </p>
           <Input
             ref={inputRef}
-            placeholder="Ex : Coaching yoga, Audience B2B…"
+            placeholder={t("namePlaceholder")}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => {
@@ -450,7 +451,7 @@ export function ProjectSwitcher() {
           />
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Annuler</Button>
+              <Button variant="outline">{t("cancelBtn")}</Button>
             </DialogClose>
             <Button
               onClick={handleCreateProject}
@@ -461,7 +462,7 @@ export function ProjectSwitcher() {
               ) : (
                 <Plus className="w-4 h-4 mr-2" />
               )}
-              Créer
+              {t("createBtn")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -473,36 +474,22 @@ export function ProjectSwitcher() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Crown className="w-5 h-5 text-amber-500 dark:text-amber-400" />
-              Débloque les multiprofils
+              {t("upsellTitle")}
             </DialogTitle>
             <DialogDescription className="sr-only">
-              La création de plusieurs projets est réservée aux plans
-              Tiquiz mensuel+ et annuel+.
+              {t("upsellSrDesc")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm text-muted-foreground">
-            <p>
-              Gère plusieurs profils dans Tiquiz — chacun avec ses propres
-              quizzes, leads et stats. Idéal si tu as plusieurs audiences
-              (coaching, formation, e-commerce) que tu ne veux pas mélanger.
-            </p>
-            <p className="text-foreground">
-              Disponible dans les plans{" "}
-              <span className="font-semibold">Tiquiz mensuel+</span>
-              {" "}(<span className="font-semibold">29€/mois</span>) ou{" "}
-              <span className="font-semibold">annuel+</span>{" "}
-              (<span className="font-semibold">290€/an</span>), qui
-              incluent aussi l&apos;analyse IA des résultats (quiz et
-              sondages) et plusieurs clés API Systeme.io.
-            </p>
+            <p>{t("upsellBody")}</p>
+            <p className="text-foreground">{t("upsellPlans")}</p>
             <p className="text-[12px] italic text-muted-foreground/80">
-              Les bons de commande sont en préparation — on te prévient dès
-              qu&apos;ils sont prêts.
+              {t("upsellPending")}
             </p>
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Fermer</Button>
+              <Button variant="outline">{t("closeBtn")}</Button>
             </DialogClose>
           </DialogFooter>
         </DialogContent>
@@ -512,9 +499,9 @@ export function ProjectSwitcher() {
       <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
         <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Modifier le projet</DialogTitle>
+            <DialogTitle>{t("editTitle")}</DialogTitle>
             <DialogDescription className="sr-only">
-              Personnalise le nom, la couleur et l&apos;icône.
+              {t("editSrDesc")}
             </DialogDescription>
           </DialogHeader>
           <ProjectIdentityEditor
@@ -525,14 +512,14 @@ export function ProjectSwitcher() {
           />
           <DialogFooter className="gap-2">
             <DialogClose asChild>
-              <Button variant="outline">Annuler</Button>
+              <Button variant="outline">{t("cancelBtn")}</Button>
             </DialogClose>
             <Button
               onClick={handleRename}
               disabled={!identityDraft.name.trim() || submitting}
             >
               {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Enregistrer
+              {t("saveBtn")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -553,35 +540,30 @@ export function ProjectSwitcher() {
                 <AlertTriangle className="size-5 text-destructive" />
               </span>
               <DialogTitle className="text-destructive">
-                Zone de danger
+                {t("dangerZone")}
               </DialogTitle>
             </div>
             <DialogDescription className="sr-only">
-              Confirmation requise pour supprimer le projet.
+              {t("deleteSrDesc")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm">
-              Tu es sur le point de supprimer le projet{" "}
-              <span className="font-bold">{targetProject?.name}</span>. Les
-              quizzes et popquizzes attachés à ce projet basculeront sur ton
-              projet principal — ils ne disparaissent pas, ni leurs liens
-              publics en ligne (sécurité : on ne casse jamais les liens dans
-              la nature).
+              {t("deleteBody", { name: targetProject?.name ?? "" })}
             </p>
             <div className="rounded-md border border-amber-300/40 bg-amber-50/40 dark:bg-amber-950/20 p-3 space-y-1">
               <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
-                Ce qui se passera :
+                {t("deleteWhatHappens")}
               </p>
               <ul className="text-xs text-foreground/80 space-y-0.5 list-disc ml-4">
-                <li>Le projet et son nom disparaîtront du switcher.</li>
-                <li>Ses quizzes / popquizzes restent en ligne et passent sur le projet principal.</li>
-                <li>L&apos;historique business (leads, events) reste accessible.</li>
+                <li>{t("deleteItem1")}</li>
+                <li>{t("deleteItem2")}</li>
+                <li>{t("deleteItem3")}</li>
               </ul>
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium">
-                Pour confirmer, recopie le nom du projet :{" "}
+                {t("deleteConfirmLabel")}{" "}
                 <span className="font-mono font-bold">
                   {targetProject?.name}
                 </span>
@@ -597,7 +579,7 @@ export function ProjectSwitcher() {
           </div>
           <DialogFooter className="gap-2">
             <DialogClose asChild>
-              <Button variant="outline">Annuler</Button>
+              <Button variant="outline">{t("cancelBtn")}</Button>
             </DialogClose>
             <Button
               variant="destructive"
@@ -608,7 +590,7 @@ export function ProjectSwitcher() {
               }
             >
               {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Supprimer définitivement
+              {t("deleteConfirmBtn")}
             </Button>
           </DialogFooter>
         </DialogContent>

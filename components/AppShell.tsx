@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { PanelLeftOpen } from "lucide-react";
 import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -20,6 +21,7 @@ interface AppShellProps {
 
 /** Reopen button — only visible when sidebar is collapsed (desktop) or on mobile */
 function SidebarOpenButton() {
+  const t = useTranslations("common");
   const { open, toggleSidebar, isMobile } = useSidebar();
   if (!isMobile && open) return null;
   return (
@@ -28,7 +30,7 @@ function SidebarOpenButton() {
       size="icon"
       className="h-8 w-8 shrink-0"
       onClick={toggleSidebar}
-      aria-label="Open sidebar"
+      aria-label={t("openSidebar")}
     >
       <PanelLeftOpen className="h-5 w-5 text-muted-foreground" />
     </Button>

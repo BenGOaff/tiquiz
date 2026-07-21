@@ -13,24 +13,26 @@
 export interface AccentColor {
   /** Hex code stocké dans projects.accent_color */
   hex: string;
-  /** Label UI pour le picker */
+  /** Label UI pour le picker (fallback si la clé i18n manque) */
   label: string;
+  /** Clé i18n stable : projects.color_<key> (traduit le tooltip). */
+  key: string;
 }
 
 // 10 accent colors — choisies pour s'harmoniser avec le primary
 // Tiquiz (#5D6CDB, identique à Tipote). Évite les jaunes/blancs
 // ambigus et reste lisible sur fonds clairs et sombres.
 export const ACCENT_COLORS: AccentColor[] = [
-  { hex: "#5D6CDB", label: "Indigo (Tiquiz)" },
-  { hex: "#8B5CF6", label: "Violet" },
-  { hex: "#EC4899", label: "Rose" },
-  { hex: "#F43F5E", label: "Framboise" },
-  { hex: "#F97316", label: "Orange" },
-  { hex: "#EAB308", label: "Or" },
-  { hex: "#22C55E", label: "Vert" },
-  { hex: "#14B8A6", label: "Teal" },
-  { hex: "#0EA5E9", label: "Ciel" },
-  { hex: "#64748B", label: "Ardoise" },
+  { hex: "#5D6CDB", label: "Indigo (Tiquiz)", key: "indigo" },
+  { hex: "#8B5CF6", label: "Violet", key: "violet" },
+  { hex: "#EC4899", label: "Rose", key: "rose" },
+  { hex: "#F43F5E", label: "Framboise", key: "raspberry" },
+  { hex: "#F97316", label: "Orange", key: "orange" },
+  { hex: "#EAB308", label: "Or", key: "gold" },
+  { hex: "#22C55E", label: "Vert", key: "green" },
+  { hex: "#14B8A6", label: "Teal", key: "teal" },
+  { hex: "#0EA5E9", label: "Ciel", key: "sky" },
+  { hex: "#64748B", label: "Ardoise", key: "slate" },
 ];
 
 export const DEFAULT_ACCENT_COLOR = ACCENT_COLORS[0]!.hex;

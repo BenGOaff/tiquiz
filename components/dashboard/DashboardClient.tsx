@@ -451,7 +451,7 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
                   <Target className="h-4 w-4 text-primary" />
-                  Prospects
+                  {t("chartProspects")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -507,7 +507,7 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
                   <BarChart3 className="h-4 w-4 text-primary" />
-                  Traffic
+                  {t("chartTraffic")}
                 </CardTitle>
               </CardHeader>
               <CardContent>

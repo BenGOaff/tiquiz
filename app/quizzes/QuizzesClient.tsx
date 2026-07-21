@@ -545,7 +545,7 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                                 p.status === "active" ? "default" : "secondary"
                               }
                             >
-                              {p.status === "active" ? "Active" : "Draft"}
+                              {p.status === "active" ? t("statusActive") : t("statusDraft")}
                             </Badge>
                             {topPerformerId === p.id && <TopPerformerBadge />}
                             {trendingIds.has(p.id) &&
