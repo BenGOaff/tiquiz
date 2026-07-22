@@ -270,7 +270,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     }
 
     const [quizRes, questionsRes, resultsRes] = await Promise.all([
-      admin.from("quizzes").select("id,user_id,project_id,status,title,introduction,cta_text,cta_url,start_button_text,privacy_url,consent_text,virality_enabled,bonus_description,bonus_intro_text,bonus_image_url,bonus_image_position,bonus_image_width,bonus_unlocked_message,share_message,locale,address_form,views_count,capture_heading,capture_subtitle,capture_submit_text,survey_thanks_heading,survey_thanks_body,capture_first_name,capture_last_name,capture_phone,capture_country,phone_required,first_name_required,last_name_required,country_required,ask_first_name,ask_gender,slug,brand_font,brand_color_primary,brand_color_background,brand_color_text,brand_logo_url,hide_brand_logo,capture_enabled,capture_before_questions,show_aggregate_responses,custom_footer_text,custom_footer_url,share_networks,og_description,og_image_url,result_insight_heading,result_projection_heading,mode,show_consent_checkbox,show_results_breakdown,show_other_results,meta_pixel_id,ga4_measurement_id,google_ads_conversion_id,google_ads_conversion_label,intro_image_url,intro_image_position,intro_image_width").eq("id", quizId).maybeSingle(),
+      admin.from("quizzes").select("id,user_id,project_id,status,title,introduction,cta_text,cta_url,start_button_text,privacy_url,consent_text,virality_enabled,bonus_description,bonus_intro_text,bonus_image_url,bonus_image_position,bonus_image_width,bonus_unlocked_message,share_message,locale,address_form,views_count,capture_heading,capture_subtitle,capture_submit_text,survey_thanks_heading,survey_thanks_body,capture_first_name,capture_last_name,capture_phone,capture_country,phone_required,first_name_required,last_name_required,country_required,ask_first_name,ask_gender,slug,brand_font,brand_color_primary,brand_color_background,brand_color_text,brand_logo_url,hide_brand_logo,capture_enabled,capture_before_questions,show_aggregate_responses,custom_footer_text,custom_footer_url,share_networks,og_description,og_image_url,result_insight_heading,result_projection_heading,mode,show_consent_checkbox,show_results_breakdown,show_other_results,meta_pixel_id,ga4_measurement_id,google_ads_conversion_id,google_ads_conversion_label,intro_image_url,intro_image_position,intro_image_width,background_style,background_gradient,background_image_url,intro_layout,button_shape,close_enabled,close_action,close_redirect_url,close_message,close_cta_text,close_cta_url").eq("id", quizId).maybeSingle(),
       admin.from("quiz_questions").select("id,question_text,options,sort_order,question_type,config").eq("quiz_id", quizId).order("sort_order"),
       admin.from("quiz_results").select("id,title,description,insight,projection,insight_heading,projection_heading,cta_text,cta_url,sort_order,image_url,image_position,image_width,min_score,max_score").eq("quiz_id", quizId).order("sort_order"),
     ]);
@@ -341,6 +341,11 @@ export async function GET(req: NextRequest, context: RouteContext) {
         brand_color_text: quizRow.brand_color_text as string | null,
         brand_logo_url: quizRow.brand_logo_url as string | null,
         hide_brand_logo: quizRow.hide_brand_logo as boolean | null,
+        background_style: quizRow.background_style as string | null,
+        background_gradient: quizRow.background_gradient as string | null,
+        background_image_url: quizRow.background_image_url as string | null,
+        intro_layout: quizRow.intro_layout as string | null,
+        button_shape: quizRow.button_shape as string | null,
       },
       {
         brand_font: profileRow?.brand_font as string | null,
@@ -507,6 +512,14 @@ export async function GET(req: NextRequest, context: RouteContext) {
         // Surfacé pour le footer "via Tiquiz" → tipote.fr/part-tiquiz?sa=<id>
         // (tracking commission affilié quand le créateur l'a posé en Settings).
         tipote_affiliate_id: (String(profileRow?.tipote_affiliate_id ?? "").trim() || null),
+        // Fermeture du quiz (createur). Renvoye tel quel : le client
+        // redirige ou affiche le message de fermeture.
+        close_enabled: quizRow.close_enabled === true,
+        close_action: (quizRow.close_action as string | null) ?? null,
+        close_redirect_url: (quizRow.close_redirect_url as string | null) ?? null,
+        close_message: (quizRow.close_message as string | null) ?? null,
+        close_cta_text: (quizRow.close_cta_text as string | null) ?? null,
+        close_cta_url: (quizRow.close_cta_url as string | null) ?? null,
       },
       questions: renderedQuestions,
       results: renderedResults,

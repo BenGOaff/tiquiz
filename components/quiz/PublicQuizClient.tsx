@@ -13,6 +13,9 @@ import {
   googleFontHref,
   cssFontFamily,
   hexToHslTriplet,
+  quizBackgroundCss,
+  quizBackgroundIsDark,
+  buttonShapeRadiusClass,
   type QuizBranding,
 } from "@/lib/quizBranding";
 import { sanitizeRichText, stripHtml, decodeHtmlEntities } from "@/lib/richText";
@@ -20,6 +23,8 @@ import { fireQuizPixel, newEventId } from "@/lib/clientPixels";
 import { RichParagraph } from "@/components/ui/rich-paragraph";
 import { makeInterpolator, getGenderLabels, extractResultLabel, type QuizGender } from "@/lib/quizPersonalization";
 import { ensureExternalUrl } from "@/lib/url";
+import { celebrate } from "@/lib/celebrate";
+import { generateResultCard } from "@/lib/resultCard";
 
 // Rich text fields contain raw HTML tags (<p>, <b>, <a>, …). Strings without any
 // tag are treated as legacy plain text so the old ✓/•/- bullet rendering still
@@ -166,6 +171,13 @@ type PublicQuizData = {
   ask_gender?: boolean | null;
   custom_footer_text?: string | null;
   custom_footer_url?: string | null;
+  // Fermeture du quiz (createur) : redirige ou affiche un message.
+  close_enabled?: boolean | null;
+  close_action?: string | null;
+  close_redirect_url?: string | null;
+  close_message?: string | null;
+  close_cta_text?: string | null;
+  close_cta_url?: string | null;
   // ID affilié Tipote — surfacé par /api/quiz/[id]/public depuis
   // profiles.tipote_affiliate_id. Utilisé sur le footer Tiquiz par
   // défaut pour ajouter ?sa=<id> au lien de découverte tipote.fr.
@@ -253,6 +265,9 @@ type QuizTranslations = {
   personalizeGender: string;
   personalizeContinue: string;
   resultCtaDefault: string;
+  resultCardLabel: string;
+  resultCardShare: string;
+  quizClosedDefault: string;
   // Survey-specific copy. Falls back to neutral wording so surveys feel
   // distinct from quizzes (no "result", no "profile").
   surveyThanksHeading: string;
@@ -352,6 +367,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Comment préfères-tu être désigné·e ?",
     personalizeContinue: "Commencer le quiz",
     resultCtaDefault: "Découvrir",
+    resultCardLabel: "Mon résultat",
+    resultCardShare: "Partager mon résultat",
+    quizClosedDefault: "Ce quiz n’est plus disponible.",
     surveyThanksHeading: "Merci pour ta participation !",
     surveyThanksBody: "Tes réponses ont bien été enregistrées. Tu peux fermer cette page ou continuer ci-dessous.",
     surveyShareCta: "Partager ce sondage",
@@ -424,6 +442,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Comment préférez-vous être désigné·e ?",
     personalizeContinue: "Commencer le quiz",
     resultCtaDefault: "Découvrir",
+    resultCardLabel: "Mon résultat",
+    resultCardShare: "Partager mon résultat",
+    quizClosedDefault: "Ce quiz n’est plus disponible.",
     surveyThanksHeading: "Merci pour votre participation !",
     surveyThanksBody: "Vos réponses ont bien été enregistrées. Vous pouvez fermer cette page ou continuer ci-dessous.",
     surveyShareCta: "Partager ce sondage",
@@ -496,6 +517,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "How should we refer to you?",
     personalizeContinue: "Start the quiz",
     resultCtaDefault: "Discover",
+    resultCardLabel: "My result",
+    resultCardShare: "Share my result",
+    quizClosedDefault: "This quiz is no longer available.",
     surveyThanksHeading: "Thanks for your responses!",
     surveyThanksBody: "Your answers have been recorded. You can close this page or continue below.",
     surveyShareCta: "Share this survey",
@@ -568,6 +592,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "¿Cómo prefieres que te tratemos?",
     personalizeContinue: "Empezar el quiz",
     resultCtaDefault: "Descubrir",
+    resultCardLabel: "Mi resultado",
+    resultCardShare: "Compartir mi resultado",
+    quizClosedDefault: "Este quiz ya no está disponible.",
     surveyThanksHeading: "¡Gracias por tu participación!",
     surveyThanksBody: "Tus respuestas se han registrado. Puedes cerrar esta página o continuar abajo.",
     surveyShareCta: "Compartir esta encuesta",
@@ -640,6 +667,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Wie sollen wir dich ansprechen?",
     personalizeContinue: "Quiz starten",
     resultCtaDefault: "Entdecken",
+    resultCardLabel: "Mein Ergebnis",
+    resultCardShare: "Mein Ergebnis teilen",
+    quizClosedDefault: "Dieses Quiz ist nicht mehr verfügbar.",
     surveyThanksHeading: "Danke für deine Teilnahme!",
     surveyThanksBody: "Deine Antworten wurden gespeichert. Du kannst diese Seite schließen oder unten weitermachen.",
     surveyShareCta: "Diese Umfrage teilen",
@@ -712,6 +742,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Como prefere que te chamemos?",
     personalizeContinue: "Começar o quiz",
     resultCtaDefault: "Descobrir",
+    resultCardLabel: "Meu resultado",
+    resultCardShare: "Partilhar o meu resultado",
+    quizClosedDefault: "Este quiz já não está disponível.",
     surveyThanksHeading: "Obrigado pela sua participação!",
     surveyThanksBody: "As suas respostas foram registadas. Pode fechar esta página ou continuar abaixo.",
     surveyShareCta: "Partilhar este inquérito",
@@ -784,6 +817,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "Come preferisci essere chiamat·a?",
     personalizeContinue: "Inizia il quiz",
     resultCtaDefault: "Scopri",
+    resultCardLabel: "Il mio risultato",
+    resultCardShare: "Condividi il mio risultato",
+    quizClosedDefault: "Questo quiz non è più disponibile.",
     surveyThanksHeading: "Grazie per la partecipazione!",
     surveyThanksBody: "Le tue risposte sono state registrate. Puoi chiudere questa pagina o continuare qui sotto.",
     surveyShareCta: "Condividi questo sondaggio",
@@ -856,6 +892,9 @@ const translations: Record<string, QuizTranslations> = {
     personalizeGender: "كيف تُفضّل أن نخاطبك؟",
     personalizeContinue: "ابدأ الاختبار",
     resultCtaDefault: "اكتشف",
+    resultCardLabel: "نتيجتي",
+    resultCardShare: "شارك نتيجتي",
+    quizClosedDefault: "هذا الاختبار لم يعد متاحًا.",
     surveyThanksHeading: "شكراً على مشاركتك!",
     surveyThanksBody: "تم تسجيل إجاباتك. يمكنك إغلاق هذه الصفحة أو المتابعة أدناه.",
     surveyShareCta: "شارك هذا الاستطلاع",
@@ -948,6 +987,10 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     Boolean(quiz?.capture_before_questions) &&
     quiz?.capture_enabled !== false;
   const [currentQ, setCurrentQ] = useState(0);
+  // Sens de navigation pour la transition directionnelle (facon Typeform) :
+  // "forward" -> la question glisse depuis la droite, "back" -> depuis la
+  // gauche. Purement visuel.
+  const [navDir, setNavDir] = useState<"forward" | "back">("forward");
   // NOTE (19 mai 2026) : le sessionIdRef client a été retiré — le
   // serveur gère maintenant la session via cookie HttpOnly
   // `tquiz_visit` (cf. app/api/quiz/[id]/track/route.ts). Le client
@@ -1093,14 +1136,25 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
   // en text-primary et les boutons en text-white ne sont pas touchés, les
   // textes muted gardent --muted-foreground).
   const hslText = branding.textColor ? hexToHslTriplet(branding.textColor) : null;
+  // Fond riche (dégradé / image). null = fond plein historique -> aucun
+  // changement pour les quiz existants.
+  const richBackground = quizBackgroundCss(branding);
+  // Un dégradé sombre demande des textes clairs pour rester lisible. On ne
+  // bascule QUE si l'user a explicitement choisi un fond sombre (jamais sur
+  // un quiz existant).
+  const bgIsDark = quizBackgroundIsDark(branding);
+  // Override d'arrondi des boutons/réponses. Vide sur 'pill' (défaut) ->
+  // aucun changement pour les quiz existants.
+  const btnShapeClass = buttonShapeRadiusClass(branding.buttonShape);
   const rootStyle: React.CSSProperties = {
     fontFamily: cssFontFamily(branding.font),
     backgroundColor: branding.backgroundColor,
-    color: branding.textColor ?? "hsl(231 41% 31%)",
+    ...(richBackground ? { background: richBackground } : {}),
+    color: bgIsDark ? "#ffffff" : (branding.textColor ?? "hsl(231 41% 31%)"),
     colorScheme: "light",
     isolation: "isolate",
-    ["--foreground" as string]: hslText ?? "231 41% 31%",
-    ["--muted-foreground" as string]: "236 16% 50%",
+    ["--foreground" as string]: bgIsDark ? "0 0% 100%" : (hslText ?? "231 41% 31%"),
+    ["--muted-foreground" as string]: bgIsDark ? "0 0% 100%" : "236 16% 50%",
     ...(hslPrimary ? ({ ["--primary" as string]: hslPrimary } as React.CSSProperties) : {}),
   };
 
@@ -1746,6 +1800,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     setAnswers(newAnswers);
     setFreeTextDraft("");
     setMultiOptionsDraft([]);
+    setNavDir("forward");
 
     const advance = () => {
       // Funnel: record the answer for the question the visitor just
@@ -1803,6 +1858,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     setAnswers(newAnswers);
     setFreeTextDraft("");
     setMultiOptionsDraft([]);
+    setNavDir("forward");
     if (quiz && currentQ < quiz.questions.length - 1) {
       setCurrentQ(currentQ + 1);
     } else {
@@ -1826,6 +1882,142 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         ? prev.filter((i) => i !== optionIndex)
         : [...prev, optionIndex].sort((a, b) => a - b),
     );
+  };
+
+  // ─── Raccourcis clavier (desktop, facon Typeform) ───────────────────
+  // Chiffres 1..9 / lettres a..i choisissent une reponse, fleche gauche
+  // revient. On n'intercepte JAMAIS quand le visiteur tape dans un champ,
+  // ni avec une touche de modification (copier-coller, etc.).
+  useEffect(() => {
+    if (step !== "quiz" || !quiz) return;
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const q = quiz.questions[currentQ];
+      if (!q) return;
+      if (e.key === "ArrowLeft" && currentQ > 0) {
+        e.preventDefault();
+        setFreeTextDraft("");
+        setNavDir("back");
+        setCurrentQ(currentQ - 1);
+        return;
+      }
+      const qType = (q.question_type as QuestionType) ?? "multiple_choice";
+      const isChoice = qType === "multiple_choice" || qType === "image_choice" || qType === "yes_no";
+      if (!isChoice) return;
+      let idx = -1;
+      if (/^[1-9]$/.test(e.key)) idx = parseInt(e.key, 10) - 1;
+      else {
+        const c = e.key.toLowerCase();
+        if (c >= "a" && c <= "z") idx = c.charCodeAt(0) - 97;
+      }
+      const optCount = qType === "yes_no" ? 2 : q.options.length;
+      if (idx < 0 || idx >= optCount) return;
+      e.preventDefault();
+      const multiSelect = ((q.config ?? {}) as Record<string, unknown>).multi_select === true;
+      if (multiSelect) toggleMultiOption(idx);
+      else commitAnswer({ kind: "option", optionIndex: idx });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // commitAnswer / toggleMultiOption capturent l'etat frais via currentQ
+    // (re-bind a chaque changement de question).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, currentQ, quiz]);
+
+  // ─── Gestes tactiles (mobile) ───────────────────────────────────────
+  // Swipe gauche = question suivante (si repondue ou optionnelle, jamais la
+  // derniere pour ne pas soumettre par accident), swipe droite = precedente.
+  // On exige un mouvement franchement horizontal pour ne pas gener le scroll.
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const onQuizTouchStart = (e: React.TouchEvent) => {
+    const t0 = e.touches[0];
+    touchStartRef.current = { x: t0.clientX, y: t0.clientY };
+  };
+  const onQuizTouchEnd = (e: React.TouchEvent) => {
+    const s = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!s || !quiz) return;
+    const t0 = e.changedTouches[0];
+    const dx = t0.clientX - s.x;
+    const dy = t0.clientY - s.y;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    if (dx < 0) {
+      const answered = answers[currentQ] !== undefined;
+      const isOptional = ((quiz.questions[currentQ]?.config ?? {}) as Record<string, unknown>).optional === true;
+      if ((answered || isOptional) && currentQ < quiz.questions.length - 1) {
+        setNavDir("forward");
+        setCurrentQ(currentQ + 1);
+      }
+    } else if (currentQ > 0) {
+      setFreeTextDraft("");
+      setNavDir("back");
+      setCurrentQ(currentQ - 1);
+    }
+  };
+
+  // ─── Confetti a l'arrivee sur le resultat (profil) ──────────────────
+  // Petit moment de plaisir quand le visiteur decouvre son profil. Pas sur
+  // les sondages (pas de profil a feter). Respecte prefers-reduced-motion
+  // (gere dans celebrate()). Ne tire qu'une fois par revelation.
+  const celebratedResultRef = useRef(false);
+  useEffect(() => {
+    if (step === "result" && quiz && quiz.mode !== "survey" && !celebratedResultRef.current) {
+      celebratedResultRef.current = true;
+      celebrate({ intensity: "normal" });
+    }
+    if (step !== "result") celebratedResultRef.current = false;
+  }, [step, quiz]);
+
+  // ─── Fermeture du quiz : redirection ────────────────────────────────
+  // Si le createur a ferme le quiz en mode redirection, on envoie le
+  // visiteur vers l'URL choisie. Jamais en mode apercu (le createur doit
+  // pouvoir continuer a editer).
+  useEffect(() => {
+    if (!quiz || isPreviewMode) return;
+    if (quiz.close_enabled !== true || quiz.close_action !== "redirect") return;
+    const url = ensureExternalUrl(quiz.close_redirect_url || "");
+    if (url && typeof window !== "undefined") window.location.replace(url);
+  }, [quiz, isPreviewMode]);
+
+  // ─── Carte de resultat partageable ──────────────────────────────────
+  // Genere une image "Je suis [profil]" et la partage (fichier via
+  // navigator.share sur mobile) ou la telecharge. Sert la viralite.
+  const [sharingCard, setSharingCard] = useState(false);
+  const handleShareResultCard = async () => {
+    if (!quiz || !resultProfile) return;
+    setSharingCard(true);
+    try {
+      const resultTitle = stripHtml(interp(resultProfile.title || "")).trim();
+      const quizTitle = stripHtml(interp(quiz.title || "")).trim();
+      const blob = await generateResultCard({
+        primaryColor: branding.primaryColor,
+        logoUrl: branding.logoUrl,
+        label: t.resultCardLabel,
+        resultTitle,
+        quizTitle,
+        footer: quiz.custom_footer_text?.trim() || null,
+      });
+      if (!blob) return;
+      const file = new File([blob], "mon-resultat.png", { type: "image/png" });
+      const nav = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean };
+      if (typeof navigator.share === "function" && nav.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: quizTitle });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "mon-resultat.png";
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      }
+    } catch {
+      /* annulation utilisateur ou partage indisponible : silencieux */
+    } finally {
+      setSharingCard(false);
+    }
   };
 
   // Validation + passage aux questions quand la capture est AVANT (sondage).
@@ -2150,6 +2342,45 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     );
   }
 
+  // ─── Quiz ferme par le createur ─────────────────────────────────────
+  // En mode apercu (createur), on ignore la fermeture. En redirection, un
+  // loader s'affiche pendant que l'effet ci-dessus renvoie le visiteur.
+  // Sinon, message de fermeture + CTA optionnel.
+  if (!isPreviewMode && quiz.close_enabled === true) {
+    const closeRedirect = ensureExternalUrl(quiz.close_redirect_url || "");
+    if (quiz.close_action === "redirect" && closeRedirect) {
+      return (
+        <div className="min-h-screen flex items-center justify-center" style={rootStyle}>
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
+    const closeCtaUrl = ensureExternalUrl(quiz.close_cta_url || "");
+    return (
+      <div className="min-h-screen flex flex-col" style={rootStyle}>
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 text-center">
+          <div className="max-w-lg w-full space-y-6 py-16 sm:py-24">
+            {branding.logoUrl && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={branding.logoUrl} alt="" className="max-h-16 w-auto object-contain mx-auto" />
+            )}
+            <p className="text-lg leading-relaxed whitespace-pre-line">
+              {quiz.close_message?.trim() || t.quizClosedDefault}
+            </p>
+            {closeCtaUrl && (
+              <Button size="lg" className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full ${btnShapeClass}`} asChild>
+                <a href={closeCtaUrl} target="_blank" rel="noopener noreferrer">
+                  {quiz.close_cta_text?.trim() || t.resultCtaDefault}
+                </a>
+              </Button>
+            )}
+          </div>
+        </div>
+        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
+      </div>
+    );
+  }
+
   const totalQ = quiz.questions.length;
 
   // STEP: Intro
@@ -2172,6 +2403,66 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         descLines.push(trimmed);
       }
     });
+
+    // Fonction de démarrage partagée entre l'accueil "carte" et "cover".
+    const onStart = () => {
+      trackEvent("start");
+      const skipPersonalize = isPreviewMode && firstName.trim().length > 0;
+      setStep(!skipPersonalize && (quiz.ask_first_name || quiz.ask_gender) ? "personalize" : (captureBefore ? "email" : "quiz"));
+    };
+
+    // Accueil "cover" (welcome screen façon Typeform) : l'image d'intro
+    // devient un fond plein cadre, titre + intro + CTA en surimpression.
+    // N'est actif que si l'user a choisi la disposition cover ET fourni une
+    // image -> sinon on garde la carte historique (aucune régression).
+    const coverMode = branding.introLayout === "cover" && !!quiz.intro_image_url;
+    if (coverMode) {
+      return (
+        <div className="min-h-screen flex flex-col" style={rootStyle}>
+          <div
+            className="relative flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 text-center"
+            style={{
+              backgroundImage: `linear-gradient(rgba(15,23,42,0.55), rgba(15,23,42,0.55)), url("${quiz.intro_image_url}")`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              color: "#ffffff",
+            }}
+          >
+            <div className="max-w-2xl w-full space-y-8 py-16 sm:py-24">
+              {branding.logoUrl && (
+                <div className="flex justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={branding.logoUrl} alt="" className="max-h-16 w-auto object-contain" />
+                </div>
+              )}
+              <h1
+                className="tiquiz-rich tiquiz-rich-inline tiquiz-quiz-title font-bold leading-tight text-white"
+                dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.title)) }}
+              />
+              {isHtml(quiz.introduction) ? (
+                <div
+                  className="tiquiz-rich text-white/90 text-lg leading-relaxed max-w-xl mx-auto"
+                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.introduction) }}
+                />
+              ) : (
+                descLines.length > 0 && (
+                  <p className="text-white/90 text-lg leading-relaxed whitespace-pre-line max-w-xl mx-auto">
+                    {descLines.join("\n")}
+                  </p>
+                )
+              )}
+              <Button size="lg" className={`h-14 px-12 text-lg rounded-full shadow-lg ${btnShapeClass}`} onClick={onStart}>
+                <span
+                  className="tiquiz-rich"
+                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.start_button_text?.trim() || "") || t.start }}
+                />
+              </Button>
+            </div>
+          </div>
+          <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
+        </div>
+      );
+    }
 
     return (
       <div
@@ -2242,16 +2533,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
               <img src={quiz.intro_image_url} alt="" className={`h-auto rounded-xl ${quiz.intro_image_width ? "mx-auto block" : "w-full"}`} style={quiz.intro_image_width ? { width: `${quiz.intro_image_width}%` } : undefined} />
             )}
 
-            <Button size="lg" className="h-14 px-12 text-lg rounded-full shadow-lg" onClick={() => {
-              trackEvent("start");
-              // Preview mode with a pre-filled name skips the personalize
-              // screen so the creator goes straight to the questions —
-              // typing "Alex" again would only add friction.
-              const skipPersonalize = isPreviewMode && firstName.trim().length > 0;
-              // captureBefore : apres l'intro (et l'eventuelle personnalisation)
-              // on va a la capture email AVANT les questions.
-              setStep(!skipPersonalize && (quiz.ask_first_name || quiz.ask_gender) ? "personalize" : (captureBefore ? "email" : "quiz"));
-            }}>
+            <Button size="lg" className={`h-14 px-12 text-lg rounded-full shadow-lg ${btnShapeClass}`} onClick={onStart}>
               <span
                 className="tiquiz-rich"
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.start_button_text?.trim() || "") || t.start }}
@@ -2320,7 +2602,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
           )}
           <Button
             size="lg"
-            className="w-full h-12 rounded-full"
+            className={`w-full h-12 rounded-full ${btnShapeClass}`}
             disabled={!canContinue}
             onClick={() => setStep(captureBefore ? "email" : "quiz")}
           >
@@ -2416,7 +2698,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <button
             onClick={() => commitAnswer({ kind: "option", optionIndex: 0 })}
-            className={`select-none active:scale-[0.98] h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${
+            className={`select-none active:scale-[0.98] h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${btnShapeClass} ${
               selectedYes
                 ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
                 : "border-border hover:border-primary/40 hover:bg-muted/30"
@@ -2426,7 +2708,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
           </button>
           <button
             onClick={() => commitAnswer({ kind: "option", optionIndex: 1 })}
-            className={`select-none active:scale-[0.98] h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${
+            className={`select-none active:scale-[0.98] h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${btnShapeClass} ${
               selectedNo
                 ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
                 : "border-border hover:border-primary/40 hover:bg-muted/30"
@@ -2455,7 +2737,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
           </div>
           <Button
             size="lg"
-            className="w-full h-12 rounded-full"
+            className={`w-full h-12 rounded-full ${btnShapeClass}`}
             disabled={trimmed.length === 0}
             onClick={() => commitAnswer({ kind: "text", value: trimmed })}
           >
@@ -2495,7 +2777,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                       ? toggleMultiOption(oi)
                       : commitAnswer({ kind: "option", optionIndex: oi })
                   }
-                  className={`select-none active:scale-[0.98] group flex flex-col rounded-xl border-2 overflow-hidden transition-all ${
+                  className={`select-none active:scale-[0.98] group flex flex-col rounded-xl border-2 overflow-hidden transition-all ${btnShapeClass} ${
                     isSelected
                       ? "border-primary shadow-md scale-[1.02]"
                       : "border-border hover:border-primary/40 hover:shadow-sm"
@@ -2523,7 +2805,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
           {multiSelect && (
             <Button
               size="lg"
-              className="w-full h-12 rounded-full"
+              className={`w-full h-12 rounded-full ${btnShapeClass}`}
               disabled={selectedSet!.size === 0}
               onClick={() =>
                 commitAnswer({ kind: "options", optionIndices: Array.from(selectedSet!).sort((a, b) => a - b) })
@@ -2565,7 +2847,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                       ? toggleMultiOption(oi)
                       : commitAnswer({ kind: "option", optionIndex: oi })
                   }
-                  className={`text-left rounded-xl border-2 overflow-hidden transition-all duration-200 select-none active:scale-[0.98] ${
+                  className={`text-left rounded-xl border-2 overflow-hidden transition-all duration-200 select-none active:scale-[0.98] ${btnShapeClass} ${
                     isSelected
                       ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
                       : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"
@@ -2597,7 +2879,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
           {multiSelect && (
             <Button
               size="lg"
-              className="w-full h-12 rounded-full"
+              className={`w-full h-12 rounded-full ${btnShapeClass}`}
               disabled={selectedSet!.size === 0}
               onClick={() =>
                 commitAnswer({ kind: "options", optionIndices: Array.from(selectedSet!).sort((a, b) => a - b) })
@@ -2618,13 +2900,13 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
             <Progress value={progress} className="h-1.5 rounded-none" />
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-16">
+          <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-16" onTouchStart={onQuizTouchStart} onTouchEnd={onQuizTouchEnd}>
             {/* key={currentQ} re-mounts this block each time the
                 visitor moves to a new question, which retriggers the
                 quiz-step-in keyframe → the new question rises in
                 rather than popping. Subtle but transforms the feel
                 from "form" to "guided experience". */}
-            <div key={currentQ} className="max-w-2xl w-full space-y-8 animate-quiz-step-in">
+            <div key={currentQ} className={`max-w-2xl w-full space-y-8 ${navDir === "back" ? "animate-quiz-slide-in-left" : "animate-quiz-slide-in-right"}`}>
               {/* Pill-style step indicator — sits more confidently than
                   the previous tracking-widest paragraph and keeps the
                   primary brand color in view at every step. */}
@@ -2680,6 +2962,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                     size="sm"
                     onClick={() => {
                       setFreeTextDraft("");
+                      setNavDir("back");
                       setCurrentQ(currentQ - 1);
                     }}
                   >
@@ -2870,7 +3153,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
 
             <Button
               size="lg"
-              className="w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug"
+              className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug ${btnShapeClass}`}
               onClick={() => (captureBefore ? handleCaptureContinue() : handleSubmitEmail())}
               disabled={
                 submitting ||
@@ -3013,7 +3296,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
               {canWebShare && (
                 <Button
                   size="lg"
-                  className="w-full h-12 rounded-full"
+                  className={`w-full h-12 rounded-full ${btnShapeClass}`}
                   onClick={() => shareOn("native")}
                 >
                   {t.shareToUnlock}
@@ -3109,7 +3392,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
             <Button
               onClick={proceedToResult}
               size="lg"
-              className="w-full h-12 rounded-full"
+              className={`w-full h-12 rounded-full ${btnShapeClass}`}
             >
               <CheckCircle2 className="w-4 h-4 mr-2" />
               {bonusUnlocked ? t.bonusUnlockedContinue : t.continueToResult}
@@ -3192,7 +3475,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
           {ctaUrl && (
             <Button
               size="lg"
-              className="w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug"
+              className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug ${btnShapeClass}`}
               asChild
             >
               <a href={ensureExternalUrl(ctaUrl)} target="_blank" rel="noopener noreferrer">
@@ -3641,7 +3924,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
             const rawCtaText = interp(resultProfile?.cta_text || quiz.cta_text || "");
             const ctaText = rawCtaText || t.resultCtaDefault;
             return ctaUrl ? (
-              <Button size="lg" className="w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug" asChild>
+              <Button size="lg" className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug ${btnShapeClass}`} asChild>
                 <a href={ensureExternalUrl(ctaUrl)} target="_blank" rel="noopener noreferrer">
                   <span
                     className="tiquiz-rich"
@@ -3651,6 +3934,22 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
               </Button>
             ) : null;
           })()}
+
+          {/* Carte de resultat partageable (image) — sert la viralite : le
+              visiteur partage "Je suis [profil]" sur ses reseaux. Uniquement
+              en mode profil (resultProfile present). */}
+          {resultProfile && (
+            <Button
+              variant="outline"
+              size="lg"
+              className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full ${btnShapeClass}`}
+              disabled={sharingCard}
+              onClick={handleShareResultCard}
+            >
+              {sharingCard ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ArrowRight className="w-4 h-4 mr-2" />}
+              {t.resultCardShare}
+            </Button>
+          )}
 
           {/* Confirm bonus unlock (if the visitor shared on the previous step).
               The full share UI now lives in step="bonus", so here we only
