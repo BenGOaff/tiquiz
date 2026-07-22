@@ -278,6 +278,23 @@ type QuizTranslations = {
   // Sondage : encart "% des autres participants" (Adeline, 30 mai 2026)
   aggregateHeading: string;
   aggregateSubtitle: (n: number) => string;
+  // Auto-save / reprise (comme Tally) : bandeau quand on restaure un brouillon
+  // de réponses local. Fusionnés dans getT pour les 7 locales (RESUME_COPY).
+  resumeNotice?: string;
+  resumeRestart?: string;
+};
+
+// Reprise "type Tally" : phrases du bandeau de restauration, par locale.
+// Fusionnées dans getT() pour couvrir toutes les langues sans dupliquer
+// dans chaque bloc de traduction.
+const RESUME_COPY: Record<string, { resumeNotice: string; resumeRestart: string }> = {
+  fr: { resumeNotice: "Tu reprends là où tu t'étais arrêté.", resumeRestart: "Tout recommencer" },
+  en: { resumeNotice: "Picking up where you left off.", resumeRestart: "Start over" },
+  es: { resumeNotice: "Retomas donde lo dejaste.", resumeRestart: "Empezar de nuevo" },
+  de: { resumeNotice: "Du machst da weiter, wo du aufgehört hast.", resumeRestart: "Neu starten" },
+  pt: { resumeNotice: "Você retoma de onde parou.", resumeRestart: "Recomeçar" },
+  it: { resumeNotice: "Riprendi da dove avevi lasciato.", resumeRestart: "Ricomincia" },
+  ar: { resumeNotice: "تُكمل من حيث توقفت.", resumeRestart: "البدء من جديد" },
 };
 
 const translations: Record<string, QuizTranslations> = {
@@ -346,7 +363,7 @@ const translations: Record<string, QuizTranslations> = {
     ratingScaleMinLabel: "Pas du tout",
     ratingScaleMaxLabel: "Tout à fait",
     breakdownTitle: "Répartition complète de tes réponses",
-    breakdownSubtitle: "La plupart des gens se reconnaissent dans plusieurs profils — voici ton profil dominant et tes traits secondaires.",
+    breakdownSubtitle: "La plupart des gens se reconnaissent dans plusieurs profils, voici ton profil dominant et tes traits secondaires.",
     breakdownMainBadge: "Ton résultat",
     otherProfilesTitle: "Découvre les autres profils",
     otherProfilesSubtitle: "Tu n'as pas obtenu ces profils, mais tu peux voir ce qu'ils racontent.",
@@ -418,7 +435,7 @@ const translations: Record<string, QuizTranslations> = {
     ratingScaleMinLabel: "Pas du tout",
     ratingScaleMaxLabel: "Tout à fait",
     breakdownTitle: "Répartition complète de vos réponses",
-    breakdownSubtitle: "La plupart des gens se reconnaissent dans plusieurs profils — voici votre profil dominant et vos traits secondaires.",
+    breakdownSubtitle: "La plupart des gens se reconnaissent dans plusieurs profils, voici votre profil dominant et vos traits secondaires.",
     breakdownMainBadge: "Votre résultat",
     otherProfilesTitle: "Découvrez les autres profils",
     otherProfilesSubtitle: "Vous n'avez pas obtenu ces profils, mais vous pouvez voir ce qu'ils racontent.",
@@ -490,7 +507,7 @@ const translations: Record<string, QuizTranslations> = {
     ratingScaleMinLabel: "Not at all",
     ratingScaleMaxLabel: "Absolutely",
     breakdownTitle: "Full breakdown of your answers",
-    breakdownSubtitle: "Most people recognise themselves in several profiles — here's your main type and your secondary traits.",
+    breakdownSubtitle: "Most people recognise themselves in several profiles, here's your main type and your secondary traits.",
     breakdownMainBadge: "Your result",
     otherProfilesTitle: "Discover the other profiles",
     otherProfilesSubtitle: "You didn't get these profiles, but you can see what they say.",
@@ -562,7 +579,7 @@ const translations: Record<string, QuizTranslations> = {
     ratingScaleMinLabel: "Nada",
     ratingScaleMaxLabel: "Totalmente",
     breakdownTitle: "Desglose completo de tus respuestas",
-    breakdownSubtitle: "La mayoría de las personas se reconocen en varios perfiles — aquí tienes tu perfil principal y tus rasgos secundarios.",
+    breakdownSubtitle: "La mayoría de las personas se reconocen en varios perfiles, aquí tienes tu perfil principal y tus rasgos secundarios.",
     breakdownMainBadge: "Tu resultado",
     otherProfilesTitle: "Descubre los otros perfiles",
     otherProfilesSubtitle: "No has obtenido estos perfiles, pero puedes ver lo que dicen.",
@@ -634,7 +651,7 @@ const translations: Record<string, QuizTranslations> = {
     ratingScaleMinLabel: "Gar nicht",
     ratingScaleMaxLabel: "Voll und ganz",
     breakdownTitle: "Vollständige Aufschlüsselung deiner Antworten",
-    breakdownSubtitle: "Die meisten erkennen sich in mehreren Profilen wieder — hier ist dein Hauptprofil und deine Nebenausprägungen.",
+    breakdownSubtitle: "Die meisten erkennen sich in mehreren Profilen wieder, hier ist dein Hauptprofil und deine Nebenausprägungen.",
     breakdownMainBadge: "Dein Ergebnis",
     otherProfilesTitle: "Entdecke die anderen Profile",
     otherProfilesSubtitle: "Du hast diese Profile nicht erhalten, kannst aber sehen, was sie aussagen.",
@@ -706,7 +723,7 @@ const translations: Record<string, QuizTranslations> = {
     ratingScaleMinLabel: "Nada",
     ratingScaleMaxLabel: "Totalmente",
     breakdownTitle: "Distribuição completa das tuas respostas",
-    breakdownSubtitle: "A maioria das pessoas reconhece-se em vários perfis — aqui está o teu perfil principal e os teus traços secundários.",
+    breakdownSubtitle: "A maioria das pessoas reconhece-se em vários perfis, aqui está o teu perfil principal e os teus traços secundários.",
     breakdownMainBadge: "O teu resultado",
     otherProfilesTitle: "Descubre os outros perfis",
     otherProfilesSubtitle: "Não obtiveste estes perfis, mas podes ver o que eles dizem.",
@@ -778,7 +795,7 @@ const translations: Record<string, QuizTranslations> = {
     ratingScaleMinLabel: "Per niente",
     ratingScaleMaxLabel: "Assolutamente",
     breakdownTitle: "Distribuzione completa delle tue risposte",
-    breakdownSubtitle: "La maggior parte delle persone si riconosce in più profili — ecco il tuo profilo principale e i tuoi tratti secondari.",
+    breakdownSubtitle: "La maggior parte delle persone si riconosce in più profili, ecco il tuo profilo principale e i tuoi tratti secondari.",
     breakdownMainBadge: "Il tuo risultato",
     otherProfilesTitle: "Scopri gli altri profili",
     otherProfilesSubtitle: "Non hai ottenuto questi profili, ma puoi vedere cosa raccontano.",
@@ -850,7 +867,7 @@ const translations: Record<string, QuizTranslations> = {
     ratingScaleMinLabel: "إطلاقاً",
     ratingScaleMaxLabel: "تماماً",
     breakdownTitle: "التوزيع الكامل لإجاباتك",
-    breakdownSubtitle: "يتعرّف معظم الأشخاص على أنفسهم في عدة ملفات — هذا هو ملفك الرئيسي وسماتك الثانوية.",
+    breakdownSubtitle: "يتعرّف معظم الأشخاص على أنفسهم في عدة ملفات, هذا هو ملفك الرئيسي وسماتك الثانوية.",
     breakdownMainBadge: "نتيجتك",
     otherProfilesTitle: "اكتشف الملفات الشخصية الأخرى",
     otherProfilesSubtitle: "لم تحصل على هذه الملفات، لكن يمكنك رؤية ما تقوله.",
@@ -861,16 +878,17 @@ const translations: Record<string, QuizTranslations> = {
 
 function getT(locale: string | null | undefined, addressForm?: string | null): QuizTranslations {
   // For French locale: use "fr_vous" variant when creator prefers vouvoiement
+  const resume = RESUME_COPY[locale ?? "fr"] ?? RESUME_COPY.fr;
   if ((locale ?? "fr") === "fr" && addressForm === "vous") {
-    return translations.fr_vous;
+    return { ...translations.fr_vous, ...resume };
   }
   const code = locale ?? "fr";
   // BCP-47 fallback chain: pt-BR / pt-PT → pt; zh-Hant → zh; etc.
   // Avoids landing back on French for any locale that just adds a region.
-  if (translations[code]) return translations[code];
+  if (translations[code]) return { ...translations[code], ...resume };
   const base = code.split("-")[0];
-  if (translations[base]) return translations[base];
-  return translations.fr;
+  if (translations[base]) return { ...translations[base], ...resume };
+  return { ...translations.fr, ...resume };
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -983,6 +1001,9 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
   const [resultScore, setResultScore] = useState<{ value: number; max: number } | null>(null);
   const [hasShared, setHasShared] = useState(false);
   const [bonusUnlocked, setBonusUnlocked] = useState(false);
+  // Reprise "type Tally" : true quand on vient de restaurer un brouillon de
+  // réponses depuis le stockage local (affiche un bandeau + bouton recommencer).
+  const [resumed, setResumed] = useState(false);
   // Surfaced to the visitor when the lead POST fails so they know their
   // answers weren't saved and can retry, instead of silently landing on
   // the result screen while the creator's lead list stays empty.
@@ -1357,7 +1378,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         if (json.isDraftPreview) {
           toast.message("👁️ Aperçu de ton brouillon", {
             description:
-              "Ce quiz n'est pas encore publié. Personne ne peut y accéder via ce lien — publie-le depuis l'éditeur pour le partager.",
+              "Ce quiz n'est pas encore publié. Personne ne peut y accéder via ce lien, publie-le depuis l'éditeur pour le partager.",
             duration: 8000,
           });
         }
@@ -1455,6 +1476,93 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
       // quota exceeded or storage disabled — non-fatal
     }
   }, [previewData, sessionKey, step, resultProfile, resultScores, hasShared, bonusUnlocked, email]);
+
+  // ─── Auto-save + reprise mid-quiz (comportement "type Tally") ───
+  // Contrairement au bloc ci-dessus (sessionStorage, post-capture, scope
+  // onglet), on persiste ICI les réponses EN COURS dans localStorage : ça
+  // survit à la fermeture de l'onglet / du navigateur, donc le visiteur qui
+  // revient plus tard (même appareil, même navigateur) retrouve sa
+  // progression. Pas de reprise cross-appareil (ça demanderait un brouillon
+  // serveur + lien de reprise par email) : c'est le 90% des cas.
+  //
+  // Garde-fous : version, TTL 30 jours, et signature = nombre de questions.
+  // Si la créatrice a ajouté/supprimé une question depuis, on jette le
+  // brouillon (les index ne correspondraient plus). Effacé dès la capture.
+  const draftKey = `tiquiz:draft:${quizId}`;
+  const draftRestoredRef = useRef(false);
+  const DRAFT_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+
+  const clearDraft = useCallback(() => {
+    if (typeof window === "undefined") return;
+    try { localStorage.removeItem(draftKey); } catch { /* ignore */ }
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (previewData) return;
+    if (!quiz || draftRestoredRef.current) return;
+    draftRestoredRef.current = true;
+    if (typeof window === "undefined") return;
+    // Ne jamais écraser une reprise post-capture (bonus/result déjà restauré).
+    if (step === "bonus" || step === "result" || step === "email") return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as {
+        v?: number;
+        ts?: number;
+        qCount?: number;
+        currentQ?: number;
+        answers?: (SurveyAnswer | undefined)[];
+        firstName?: string;
+      };
+      if (!saved || saved.v !== 1) { clearDraft(); return; }
+      if (!saved.ts || Date.now() - saved.ts > DRAFT_TTL_MS) { clearDraft(); return; }
+      // Structure du quiz modifiée depuis le brouillon -> on repart de zéro.
+      if (saved.qCount !== quiz.questions.length) { clearDraft(); return; }
+      if (!Array.isArray(saved.answers)) return;
+      const answered = saved.answers.filter(Boolean).length;
+      if (answered === 0) return;
+      setAnswers(saved.answers);
+      const idx = Math.min(Math.max(0, saved.currentQ ?? 0), quiz.questions.length - 1);
+      setCurrentQ(idx);
+      if (typeof saved.firstName === "string" && saved.firstName) setFirstName(saved.firstName);
+      setResumed(true);
+      setStep("quiz");
+    } catch {
+      clearDraft();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quiz, previewData, draftKey]);
+
+  useEffect(() => {
+    if (previewData) return;
+    if (typeof window === "undefined" || !quiz) return;
+    // Dès la capture (ou au-delà), le brouillon a fait son travail : le lead
+    // est enregistré côté serveur. On nettoie pour ne pas re-proposer une
+    // reprise sur un quiz déjà terminé.
+    if (step === "email" || step === "result" || step === "bonus") {
+      clearDraft();
+      return;
+    }
+    if (step !== "quiz") return;
+    const answered = answers.filter(Boolean).length;
+    if (answered === 0) return;
+    try {
+      localStorage.setItem(
+        draftKey,
+        JSON.stringify({
+          v: 1,
+          ts: Date.now(),
+          qCount: quiz.questions.length,
+          currentQ,
+          answers,
+          firstName,
+        }),
+      );
+    } catch {
+      // quota dépassé / stockage désactivé — non bloquant
+    }
+  }, [previewData, quiz, draftKey, clearDraft, step, answers, currentQ, firstName]);
 
   // Returns the winning profile + the per-profile scores array so the
   // optional "Répartition complète" card can be rendered alongside the
@@ -2526,6 +2634,25 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                   <span className="opacity-70">{currentQ + 1} / {totalQ}</span>
                 </span>
               </div>
+
+              {/* Reprise "type Tally" : brouillon local restauré. Bandeau
+                  discret + option de tout recommencer. Se masque au 1er clic. */}
+              {resumed && !previewData && (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">{t.resumeNotice}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearDraft();
+                      try { sessionStorage.removeItem(sessionKey); } catch { /* ignore */ }
+                      if (typeof window !== "undefined") window.location.reload();
+                    }}
+                    className="shrink-0 font-medium text-primary underline underline-offset-4 hover:opacity-80"
+                  >
+                    {t.resumeRestart}
+                  </button>
+                </div>
+              )}
 
               {/* Image de la question (au-dessus de l'enonce). Stockee dans
                   quiz_questions.config.image_url. */}
