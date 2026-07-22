@@ -1572,6 +1572,7 @@
     "flagAction": "تعليم هذا المشارك",
     "unflagAction": "إزالة العلامة",
     "radarTitle": "نظرة عامة على التقييمات",
+    "radarTooltip": "المتوسط {avg}/{max} ({pct}%)",
     "errFlagSave": "تعذّر حفظ التمييز."
   },
   "projects": {
@@ -2663,7 +2664,7 @@
     "quizSectionImprove": "محاور التحسين",
     "quizSectionActions": "إجراءات لجذب المزيد والبيع أكثر",
     "surveyExportTitle": "تصدير النتائج",
-    "surveyExportBody": "حسب اختيارك: CSV أو Excel (صف لكل مجيب، أعمدة جاهزة: الهوية + الإجابات)، أو PDF (تقرير مجمّع + تفاصيل المجيبين، جاهز للعرض).",
+    "surveyExportBody": "حسب اختيارك: CSV أو Excel (صف لكل مجيب)، أو ملخص PDF (تقرير مجمّع، بدون المجيبين) أو PDF مفصّل (مع تفاصيل كل مجيب).",
     "surveyAnalysisTitle": "تحليل النتائج بالذكاء الاصطناعي",
     "surveyLock": "يفك تحليل الذكاء الاصطناعي شفرة ما تقوله إجاباتك حقًا، ويلخص أهم النقاط، ويقترح إجراءات ملموسة للتنفيذ. تحديثات مجانية.",
     "surveyNotEnough": "لا توجد إجابات كافية لتحليل ذي معنى ({total}/{min}). عد عندما يكون لديك {min} إجابة على الأقل.",
@@ -2673,6 +2674,8 @@
     "surveySectionActions": "إجراءات للتنفيذ",
     "surveyErrLoad": "تعذّر تحميل النتائج.",
     "surveyErrPdf": "خطأ أثناء إنشاء ملف PDF.",
-    "surveyErrNotEnough": "إجابات غير كافية لتحليل ذي معنى."
+    "surveyErrNotEnough": "إجابات غير كافية لتحليل ذي معنى.",
+    "surveyExportPdfGlobal": "ملخص PDF",
+    "surveyExportPdfFull": "PDF مفصّل"
   }
 }
