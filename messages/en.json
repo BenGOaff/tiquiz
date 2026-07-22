@@ -2660,7 +2660,7 @@
     "quizSectionImprove": "Areas for improvement",
     "quizSectionActions": "Actions to capture and sell more",
     "surveyExportTitle": "Export the results",
-    "surveyExportBody": "Your choice: CSV or Excel (one row per respondent, ready columns: identity + answers), or PDF (aggregated report + respondent details, ready to present).",
+    "surveyExportBody": "Your choice: CSV or Excel (one row per respondent), or Summary PDF (aggregated report, without respondents) or Detailed PDF (with each respondent's detail).",
     "surveyAnalysisTitle": "AI analysis of the results",
     "surveyLock": "The AI analysis decodes what your answers really say, sums up the key takeaways and suggests concrete actions to put in place. Free updates.",
     "surveyNotEnough": "There aren't enough responses for a meaningful analysis ({total}/{min}). Come back when you have at least {min} responses.",
@@ -2670,6 +2670,8 @@
     "surveySectionActions": "Actions to put in place",
     "surveyErrLoad": "Could not load the results.",
     "surveyErrPdf": "Error while generating the PDF.",
-    "surveyErrNotEnough": "Not enough responses for a meaningful analysis."
+    "surveyErrNotEnough": "Not enough responses for a meaningful analysis.",
+    "surveyExportPdfGlobal": "Summary PDF",
+    "surveyExportPdfFull": "Detailed PDF"
   }
 }

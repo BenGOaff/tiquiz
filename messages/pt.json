@@ -2676,7 +2676,7 @@
     "quizSectionImprove": "Áreas de melhoria",
     "quizSectionActions": "Ações para captar e vender mais",
     "surveyExportTitle": "Exportar os resultados",
-    "surveyExportBody": "À escolha: CSV ou Excel (uma linha por respondente, colunas prontas: identidade + respostas), ou PDF (relatório agregado + detalhe dos respondentes, pronto a apresentar).",
+    "surveyExportBody": "À escolha: CSV ou Excel (uma linha por respondente), ou PDF síntese (relatório agregado, sem os respondentes) ou PDF detalhado (com o detalhe de cada respondente).",
     "surveyAnalysisTitle": "Análise por IA dos resultados",
     "surveyLock": "A análise por IA descodifica o que as tuas respostas dizem realmente, resume o essencial e propõe-te ações concretas a implementar. Atualizações gratuitas.",
     "surveyNotEnough": "Não há respostas suficientes para uma análise pertinente ({total}/{min}). Volta quando tiveres pelo menos {min} respostas.",
@@ -2686,6 +2686,8 @@
     "surveySectionActions": "Ações a implementar",
     "surveyErrLoad": "Não foi possível carregar os resultados.",
     "surveyErrPdf": "Erro ao gerar o PDF.",
-    "surveyErrNotEnough": "Respostas insuficientes para uma análise pertinente."
+    "surveyErrNotEnough": "Respostas insuficientes para uma análise pertinente.",
+    "surveyExportPdfGlobal": "PDF síntese",
+    "surveyExportPdfFull": "PDF detalhado"
   }
 }
