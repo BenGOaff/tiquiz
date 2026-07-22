@@ -1568,6 +1568,7 @@
     "flagAction": "Flag this respondent",
     "unflagAction": "Remove flag",
     "radarTitle": "Ratings overview",
+    "radarTooltip": "Average {avg}/{max} ({pct}%)",
     "errFlagSave": "The flag could not be saved."
   },
   "projects": {

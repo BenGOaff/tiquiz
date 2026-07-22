@@ -1584,6 +1584,7 @@
     "flagAction": "Marcar este encuestado",
     "unflagAction": "Quitar marca",
     "radarTitle": "Resumen de las valoraciones",
+    "radarTooltip": "Media {avg}/{max} ({pct}%)",
     "errFlagSave": "No se pudo guardar la marca."
   },
   "projects": {

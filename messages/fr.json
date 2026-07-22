@@ -1568,6 +1568,7 @@
     "flagAction": "Marquer ce répondant",
     "unflagAction": "Retirer le marquage",
     "radarTitle": "Vue d'ensemble des notes",
+    "radarTooltip": "Moyenne {avg}/{max} ({pct}%)",
     "errFlagSave": "Le marquage n'a pas pu être enregistré."
   },
   "projects": {

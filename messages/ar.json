@@ -1572,6 +1572,7 @@
     "flagAction": "تعليم هذا المشارك",
     "unflagAction": "إزالة العلامة",
     "radarTitle": "نظرة عامة على التقييمات",
+    "radarTooltip": "المتوسط {avg}/{max} ({pct}%)",
     "errFlagSave": "تعذّر حفظ التمييز."
   },
   "projects": {

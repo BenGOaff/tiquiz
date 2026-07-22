@@ -1584,6 +1584,7 @@
     "flagAction": "Marcar este respondente",
     "unflagAction": "Remover marca",
     "radarTitle": "Visão geral das notas",
+    "radarTooltip": "Média {avg}/{max} ({pct}%)",
     "errFlagSave": "Não foi possível guardar a marcação."
   },
   "projects": {

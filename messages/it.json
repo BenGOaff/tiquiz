@@ -1584,6 +1584,7 @@
     "flagAction": "Contrassegna questo rispondente",
     "unflagAction": "Rimuovi contrassegno",
     "radarTitle": "Panoramica dei voti",
+    "radarTooltip": "Media {avg}/{max} ({pct}%)",
     "errFlagSave": "Impossibile salvare il contrassegno."
   },
   "projects": {
