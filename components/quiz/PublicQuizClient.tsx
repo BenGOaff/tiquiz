@@ -16,8 +16,10 @@ import {
   quizBackgroundCss,
   quizBackgroundIsDark,
   buttonShapeRadiusClass,
+  resolvePanelMedia,
   type QuizBranding,
 } from "@/lib/quizBranding";
+import { QuizPanelMedia } from "@/components/quiz/QuizPanelMedia";
 import { sanitizeRichText, stripHtml, decodeHtmlEntities } from "@/lib/richText";
 import { fireQuizPixel, newEventId } from "@/lib/clientPixels";
 import { RichParagraph } from "@/components/ui/rich-paragraph";
@@ -2413,34 +2415,26 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
       ? " md:flex-row-reverse"
       : " md:flex-row"
     : "";
-  // Panneau média/marque du mode 'split'. Bannière en haut sur mobile
-  // (hauteur fixe), colonne latérale plein hauteur >= md. Toujours quelque
-  // chose a l'ecran : une image en cover, ou un panneau de marque.
-  const renderMediaPanel = (): React.ReactNode => {
+  // Panneau média du mode 'split'. Bannière en haut sur mobile (hauteur
+  // fixe), colonne latérale plein hauteur >= md. TOUJOURS rempli (motif,
+  // couleur, dégradé ou image) et ne contient JAMAIS le titre : seul un
+  // discret logo/wordmark de marque en haut à gauche, comme le mockup.
+  // Le visuel est résolu PAR PAGE via `resolvePanelMedia` (clé de page).
+  const renderMediaPanel = (pageKey: string): React.ReactNode => {
     if (!layoutIsSplit) return null;
-    const img = branding.splitImageUrl;
+    const item = resolvePanelMedia(
+      branding.panelMedia,
+      pageKey,
+      branding.primaryColor,
+      branding.splitImageUrl,
+    );
     return (
-      <div
-        className="relative w-full h-44 sm:h-56 md:h-auto md:w-2/5 lg:w-[44%] shrink-0 md:min-h-screen overflow-hidden"
-        style={
-          img
-            ? { backgroundImage: `url("${img}")`, backgroundSize: "cover", backgroundPosition: "center" }
-            : { background: richBackground ?? branding.primaryColor }
-        }
-      >
-        {!img && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 md:p-10 text-center" style={{ color: "#ffffff" }}>
-            {branding.logoUrl && (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={branding.logoUrl} alt="" className="max-h-14 md:max-h-20 w-auto object-contain" />
-            )}
-            <span
-              className="tiquiz-rich tiquiz-rich-inline text-lg md:text-3xl font-bold leading-tight text-white"
-              dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.title)) }}
-            />
-          </div>
-        )}
-      </div>
+      <QuizPanelMedia
+        item={item}
+        brandColor={branding.primaryColor}
+        logoUrl={branding.logoUrl}
+        className="w-full h-44 sm:h-56 md:h-auto md:w-2/5 lg:w-[44%] shrink-0 md:min-h-screen"
+      />
     );
   };
 
@@ -2527,7 +2521,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
 
     return (
       <div className={`min-h-screen flex flex-col${layoutOuterClass}`} style={rootStyle}>
-        {renderMediaPanel()}
+        {renderMediaPanel("intro")}
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         {/* Un seul conteneur pour titre + intro + bouton : mêmes bornes et
             même alignement, donc l'intro est TOUJOURS calée sur le titre. */}
@@ -2619,14 +2613,16 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     const canContinue = (!quiz.ask_first_name || firstName.trim().length > 0)
                      && (!quiz.ask_gender || gender !== null);
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 py-16" style={rootStyle}>
-        <div className="max-w-md w-full space-y-6">
+      <div className={`min-h-screen flex flex-col${layoutOuterClass}`} style={rootStyle}>
+        {renderMediaPanel("capture")}
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-16">
+        <div className={`max-w-md w-full space-y-6 ${layoutAlignText}`}>
           {/* L'écran de personnalisation respecte maintenant la charte
               du quiz : couleur primaire sur le titre (comme la page de
               résultats), font-family héritée de rootStyle. Tout est
               personnalisable au même titre que les autres steps. */}
-          <h2 className="text-2xl sm:text-3xl font-bold text-center" style={{ color: branding.primaryColor }}>{t.personalizeTitle}</h2>
-          <p className="text-muted-foreground text-center">{t.personalizeSubtitle}</p>
+          <h2 className={`text-2xl sm:text-3xl font-bold ${qLayout === "centered" ? "text-center" : "text-left"}`} style={{ color: branding.primaryColor }}>{t.personalizeTitle}</h2>
+          <p className={`text-muted-foreground ${qLayout === "centered" ? "text-center" : "text-left"}`}>{t.personalizeSubtitle}</p>
           {quiz.ask_first_name && (
             <div className="space-y-1.5">
               <label className="text-sm font-medium">{t.personalizeFirstName}</label>
@@ -2670,6 +2666,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
             {t.personalizeContinue}
           </Button>
         </div>
+        </div>
       </div>
     );
   }
@@ -2688,6 +2685,23 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     // header / progress / "previous" footer stay shared so visual rhythm is
     // consistent across question types (mobile-first, generous tap targets).
     let answerBlock: React.ReactNode;
+
+    // Badge lettre (A / B / C ...) sur chaque option de choix, façon mockup.
+    // Purement additif : le raccourci clavier existant sélectionne déjà par
+    // lettre/chiffre, ce badge le rend juste visible. Filled quand sélectionné.
+    const renderLetterKey = (i: number, isSelected: boolean): React.ReactNode => (
+      <span
+        aria-hidden
+        className="shrink-0 grid place-items-center w-7 h-7 rounded-lg text-xs font-extrabold transition-colors"
+        style={
+          isSelected
+            ? { color: "#ffffff", background: branding.primaryColor, border: `1px solid ${branding.primaryColor}` }
+            : { color: branding.primaryColor, background: `${branding.primaryColor}1f`, border: `1px solid ${branding.primaryColor}38` }
+        }
+      >
+        {i < 26 ? String.fromCharCode(65 + i) : String(i + 1)}
+      </span>
+    );
 
     if (qType === "rating_scale") {
       // NPS-style 0-10 scale. Config lets the creator override the bounds
@@ -2759,22 +2773,24 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <button
             onClick={() => commitAnswer({ kind: "option", optionIndex: 0 })}
-            className={`select-none active:scale-[0.98] h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${btnShapeClass} ${
+            className={`select-none active:scale-[0.98] h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all flex items-center justify-center gap-3 ${btnShapeClass} ${
               selectedYes
                 ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
                 : "border-border hover:border-primary/40 hover:bg-muted/30"
             }`}
           >
+            {renderLetterKey(0, selectedYes)}
             {t.yesLabel}
           </button>
           <button
             onClick={() => commitAnswer({ kind: "option", optionIndex: 1 })}
-            className={`select-none active:scale-[0.98] h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all ${btnShapeClass} ${
+            className={`select-none active:scale-[0.98] h-20 sm:h-24 rounded-2xl border-2 text-xl sm:text-2xl font-bold transition-all flex items-center justify-center gap-3 ${btnShapeClass} ${
               selectedNo
                 ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
                 : "border-border hover:border-primary/40 hover:bg-muted/30"
             }`}
           >
+            {renderLetterKey(1, selectedNo)}
             {t.noLabel}
           </button>
         </div>
@@ -2855,10 +2871,13 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                   ) : (
                     <div className="w-full aspect-video bg-muted/40" aria-hidden />
                   )}
-                  <span
-                    className="tiquiz-rich tiquiz-rich-inline text-base font-medium text-left p-4"
-                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
-                  />
+                  <div className="flex items-center gap-3 p-4">
+                    {renderLetterKey(oi, isSelected)}
+                    <span
+                      className="tiquiz-rich tiquiz-rich-inline text-base font-medium text-left"
+                      dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
+                    />
+                  </div>
                 </button>
               );
             })}
@@ -2929,10 +2948,13 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                       style={typeof opt.image_width === "number" ? { width: `${opt.image_width}%` } : undefined}
                     />
                   )}
-                  <span
-                    className="block tiquiz-rich tiquiz-rich-inline text-base font-medium p-5"
-                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
-                  />
+                  <div className="flex items-center gap-3.5 p-4">
+                    {renderLetterKey(oi, isSelected)}
+                    <span
+                      className="block tiquiz-rich tiquiz-rich-inline text-base font-medium"
+                      dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(opt.text)) }}
+                    />
+                  </div>
                 </button>
               );
             })}
@@ -2961,8 +2983,9 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
             <Progress value={progress} className="h-1.5 rounded-none" />
           </div>
 
-          {/* Panneau média/marque en disposition 'split' (toujours rempli). */}
-          {renderMediaPanel()}
+          {/* Panneau média en disposition 'split' (toujours rempli, visuel
+              propre à cette question via la clé "q:"+id). */}
+          {renderMediaPanel("q:" + q.id)}
 
           {/* Colonne contenu : le bloc reste CENTRE sur la page (items-center),
               seul le texte s'aligne selon la disposition. En 'left', pas de
@@ -3053,7 +3076,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
   if (step === "email") {
     return (
       <div className={`min-h-screen flex flex-col${layoutOuterClass}`} style={rootStyle}>
-        {renderMediaPanel()}
+        {renderMediaPanel("capture")}
         {/* Slide-in for the email capture step too — full visitor
             flow now uses the same gentle entrance keyframe so each
             step transition reads as a guided experience. */}
@@ -3683,9 +3706,10 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
   if (step === "result") {
     return (
       <div
-        className="min-h-screen flex flex-col"
+        className={`min-h-screen flex flex-col${layoutOuterClass}`}
         style={rootStyle}
       >
+        {renderMediaPanel("r:" + (resultProfile?.id ?? ""))}
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         {/* Slide-in for the result reveal — final payoff of the
             quiz, deserves more than a content swap. */}

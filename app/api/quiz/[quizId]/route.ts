@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { sanitizeSlug, sanitizeShareNetworks, BRAND_FONT_CHOICES, QUIZ_GRADIENTS } from "@/lib/quizBranding";
+import { sanitizeSlug, sanitizeShareNetworks, BRAND_FONT_CHOICES, QUIZ_GRADIENTS, sanitizePanelMediaConfig } from "@/lib/quizBranding";
 import { isReservedPublicSlug } from "@/lib/publicSlug";
 import { isSlugTakenByPopquiz } from "@/lib/publicSlugServer";
 import { sanitizeRichText } from "@/lib/richText";
@@ -222,7 +222,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "intro_image_url", "intro_image_position", "intro_image_width",
       "background_style", "background_gradient", "background_image_url",
       "intro_layout", "button_shape", "theme_id",
-      "question_layout", "split_image_url", "split_side",
+      "question_layout", "split_image_url", "split_side", "panel_media",
       "close_enabled", "close_action", "close_redirect_url", "close_message",
       "close_cta_text", "close_cta_url",
     ];
@@ -273,6 +273,12 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if ("split_image_url" in patch) {
       const v = patch.split_image_url;
       if (v !== null && typeof v !== "string") patch.split_image_url = null;
+    }
+    // Panneau media split par page : on ne stocke JAMAIS le JSON brut. On le
+    // fait passer par le sanitizer (ensembles fermes type/motif/gradient, hex,
+    // url http(s)). Resultat null -> on ecrit null (fallback historique).
+    if ("panel_media" in patch) {
+      patch.panel_media = sanitizePanelMediaConfig(patch.panel_media);
     }
 
     for (const key of RICH_TEXT_FIELDS) {
