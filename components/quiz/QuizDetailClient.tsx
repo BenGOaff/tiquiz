@@ -110,7 +110,10 @@ import {
   sanitizePanelMediaConfig,
   type QuizQuestionLayout,
   type QuizSplitSide,
+  type QuizAnswerLayout,
   type PanelMediaConfig,
+  type QuizBranding,
+  quizContentIsDark,
 } from "@/lib/quizBranding";
 import { QuizPanelMedia } from "@/components/quiz/QuizPanelMedia";
 import { PanelMediaEditor } from "@/components/quiz/PanelMediaEditor";
@@ -643,6 +646,13 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // Visuel du panneau decoratif (disposition split), par page. NULL = fallback
   // historique (split_image_url puis motif mesh sur la couleur de marque).
   const [panelMedia, setPanelMedia] = useState<PanelMediaConfig | null>(null);
+  // Disposition des reponses (colonnes vs liste). 'auto' = rendu historique.
+  const [answerLayout, setAnswerLayout] = useState<QuizAnswerLayout>("auto");
+  // Cartes de la page resultat masquables + bouton de partage optionnel.
+  // Default TRUE partout -> quiz existants inchanges.
+  const [showResultInsight, setShowResultInsight] = useState<boolean>(true);
+  const [showResultProjection, setShowResultProjection] = useState<boolean>(true);
+  const [showResultShare, setShowResultShare] = useState<boolean>(true);
   // Fermeture du quiz (redirection OU message + CTA).
   const [closeEnabled, setCloseEnabled] = useState(false);
   const [closeAction, setCloseAction] = useState<"redirect" | "message">("message");
@@ -803,6 +813,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     split_image_url: splitImageUrl,
     split_side: splitSide,
     panel_media: panelMedia,
+    answer_layout: answerLayout,
+    show_result_insight: showResultInsight,
+    show_result_projection: showResultProjection,
+    show_result_share: showResultShare,
     close_enabled: closeEnabled,
     close_action: closeAction,
     close_redirect_url: closeRedirectUrl,
@@ -839,6 +853,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     introImageUrl, introImagePosition, introImageWidth,
     backgroundStyle, backgroundGradient, backgroundImageUrl, introLayout, buttonShape, themeId,
     questionLayout, splitImageUrl, splitSide, panelMedia,
+    answerLayout, showResultInsight, showResultProjection, showResultShare,
     closeEnabled, closeAction, closeRedirectUrl, closeMessage, closeCtaText, closeCtaUrl,
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor, textColor, quizBrandLogoUrl, hideBrandLogo,
@@ -913,6 +928,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     if (s.split_image_url === null || typeof s.split_image_url === "string") setSplitImageUrl(s.split_image_url as string | null);
     if (s.split_side === "left" || s.split_side === "right") setSplitSide(s.split_side);
     if ("panel_media" in s) setPanelMedia(sanitizePanelMediaConfig(s.panel_media));
+    if (s.answer_layout === "auto" || s.answer_layout === "grid" || s.answer_layout === "list") setAnswerLayout(s.answer_layout);
+    if (typeof s.show_result_insight === "boolean") setShowResultInsight(s.show_result_insight);
+    if (typeof s.show_result_projection === "boolean") setShowResultProjection(s.show_result_projection);
+    if (typeof s.show_result_share === "boolean") setShowResultShare(s.show_result_share);
     if (typeof s.close_enabled === "boolean") setCloseEnabled(s.close_enabled);
     if (s.close_action === "redirect" || s.close_action === "message") setCloseAction(s.close_action);
     if (typeof s.close_redirect_url === "string") setCloseRedirectUrl(s.close_redirect_url);
@@ -1057,6 +1076,15 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
         setSplitSide((q as { split_side?: string | null }).split_side === "right" ? "right" : "left");
         setPanelMedia(sanitizePanelMediaConfig((q as { panel_media?: unknown }).panel_media));
         {
+          const al = (q as { answer_layout?: string | null }).answer_layout;
+          setAnswerLayout(al === "grid" || al === "list" ? al : "auto");
+        }
+        // Cartes resultat + partage : default TRUE (lu en !== false) -> quiz
+        // existants (colonne absente/NULL) gardent insight+projection+partage.
+        setShowResultInsight((q as { show_result_insight?: boolean | null }).show_result_insight !== false);
+        setShowResultProjection((q as { show_result_projection?: boolean | null }).show_result_projection !== false);
+        setShowResultShare((q as { show_result_share?: boolean | null }).show_result_share !== false);
+        {
           const cq = q as Record<string, unknown>;
           setCloseEnabled(cq.close_enabled === true);
           setCloseAction(cq.close_action === "redirect" ? "redirect" : "message");
@@ -1154,6 +1182,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           split_image_url: (q as { split_image_url?: string | null }).split_image_url ?? null,
           split_side: (q as { split_side?: string | null }).split_side === "right" ? "right" : "left",
           panel_media: sanitizePanelMediaConfig((q as { panel_media?: unknown }).panel_media),
+          answer_layout: ((q as { answer_layout?: string | null }).answer_layout === "grid" || (q as { answer_layout?: string | null }).answer_layout === "list") ? (q as { answer_layout?: string }).answer_layout! : "auto",
+          show_result_insight: (q as { show_result_insight?: boolean | null }).show_result_insight !== false,
+          show_result_projection: (q as { show_result_projection?: boolean | null }).show_result_projection !== false,
+          show_result_share: (q as { show_result_share?: boolean | null }).show_result_share !== false,
           close_enabled: (q as { close_enabled?: boolean | null }).close_enabled === true,
           close_action: (q as { close_action?: string | null }).close_action === "redirect" ? "redirect" : "message",
           close_redirect_url: (q as { close_redirect_url?: string | null }).close_redirect_url ?? "",
@@ -1924,6 +1956,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           split_image_url: questionLayout === "split" ? splitImageUrl : null,
           split_side: splitSide,
           panel_media: panelMedia,
+          answer_layout: answerLayout,
+          show_result_insight: showResultInsight,
+          show_result_projection: showResultProjection,
+          show_result_share: showResultShare,
           close_enabled: closeEnabled,
           close_action: closeAction,
           close_redirect_url: closeRedirectUrl.trim() || null,
@@ -2253,7 +2289,35 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       : backgroundStyle === "image" && backgroundImageUrl
         ? `linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url("${backgroundImageUrl}") center/cover no-repeat`
         : null;
-  const previewBgIsDark = backgroundStyle === "gradient" && backgroundGradient === "nuit";
+  // Système de contraste de l'apercu, aligné sur le rendu public : le sol de
+  // contenu (couleur pleine sombre, dégradé sombre, ou image via reader
+  // surface) déclenche la bascule de TOUTE la palette en clair. Sur fond
+  // image, l'apercu conserve un scrim clair (previewBackgroundCss) donc le sol
+  // reste jugé sur bgColor (clair par défaut) -> le chrome d'édition reste
+  // lisible.
+  const previewContentIsDark = quizContentIsDark({
+    questionLayout,
+    backgroundStyle,
+    backgroundColor: bgColor,
+    backgroundGradient:
+      backgroundGradient && backgroundGradient in QUIZ_GRADIENTS
+        ? (backgroundGradient as never)
+        : null,
+  } as QuizBranding);
+  // Palette sombre appliquée au conteneur d'apercu quand le sol est sombre :
+  // textes ET surfaces (bg-card / bg-muted / bordures) basculent, pour que le
+  // chrome d'édition (ex. l'aide "Plusieurs reponses possibles") reste lisible
+  // et ne soit plus foncé-sur-foncé.
+  const previewDarkTokens: React.CSSProperties = {
+    color: "#ffffff",
+    ["--foreground" as string]: "0 0% 100%",
+    ["--muted-foreground" as string]: "0 0% 82%",
+    ["--card" as string]: "230 28% 22%",
+    ["--card-foreground" as string]: "0 0% 100%",
+    ["--muted" as string]: "230 24% 28%",
+    ["--border" as string]: "230 20% 40%",
+    ["--input" as string]: "230 20% 40%",
+  };
   // Forme des boutons dans l'apercu (WYSIWYG). Vide sur 'pill' -> inchange.
   const previewBtnShapeClass = buttonShape === "square" ? "!rounded-md" : buttonShape === "rounded" ? "!rounded-xl" : "";
 
@@ -2669,6 +2733,28 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                   )}
                 </div>
 
+                {/* ── Disposition des reponses (colonnes / liste) ── */}
+                <div className="space-y-2">
+                  <Label className="text-xs">{t("designAnswerLayout")}</Label>
+                  <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1">
+                    {([
+                      ["auto", t("designAnswerLayoutAuto")],
+                      ["grid", t("designAnswerLayoutGrid")],
+                      ["list", t("designAnswerLayoutList")],
+                    ] as const).map(([val, label]) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setAnswerLayout(val)}
+                        className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${answerLayout === val ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">{t("designAnswerLayoutHint")}</p>
+                </div>
+
                 {/* ── Forme des boutons ── */}
                 <div className="space-y-2">
                   <Label className="text-xs">{t("designButtons")}</Label>
@@ -3059,6 +3145,28 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     checked={showOtherResults}
                     onChange={v => setShowOtherResults(v)}
                   />
+                  {/* Atelier juillet 2026 : personnaliser la page de resultat
+                      facon Tally. Cartes insight / projection masquables +
+                      bouton de partage optionnel. Default TRUE -> quiz
+                      existants inchanges. */}
+                  <SettingsToggle
+                    label={t("optionShowResultInsight")}
+                    hint={t("optionShowResultInsightHint")}
+                    checked={showResultInsight}
+                    onChange={v => setShowResultInsight(v)}
+                  />
+                  <SettingsToggle
+                    label={t("optionShowResultProjection")}
+                    hint={t("optionShowResultProjectionHint")}
+                    checked={showResultProjection}
+                    onChange={v => setShowResultProjection(v)}
+                  />
+                  <SettingsToggle
+                    label={t("optionShowResultShare")}
+                    hint={t("optionShowResultShareHint")}
+                    checked={showResultShare}
+                    onChange={v => setShowResultShare(v)}
+                  />
                   {/* Masque le nombre brut de reponses dans l'onglet
                       Resultats (donut + barres) et n'affiche que les %.
                       Off par defaut = compteurs visibles. */}
@@ -3207,7 +3315,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           </aside>
 
           {/* RIGHT: LIVE PREVIEW — all sections stacked, exactly as visitor sees it */}
-          <main ref={previewRef} className="flex-1 overflow-y-auto" style={{ backgroundColor: bgColor, ...(previewBackgroundCss ? { background: previewBackgroundCss } : {}), fontFamily, ...(previewBgIsDark ? { color: "#ffffff", ["--foreground" as string]: "0 0% 100%" } : (textColor ? { color: textColor, ["--foreground" as string]: hexToHslTriplet(textColor) ?? undefined } : {})) }}>
+          <main ref={previewRef} className="flex-1 overflow-y-auto" style={{ backgroundColor: bgColor, ...(previewBackgroundCss ? { background: previewBackgroundCss } : {}), fontFamily, ...(previewContentIsDark ? previewDarkTokens : (textColor ? { color: textColor, ["--foreground" as string]: hexToHslTriplet(textColor) ?? undefined } : {})) }}>
             <div data-device-preview={device} className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-sm" : "w-full"}`}>
 
               {/* ── INTRO SECTION ── */}

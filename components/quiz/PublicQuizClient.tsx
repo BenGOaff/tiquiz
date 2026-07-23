@@ -14,7 +14,7 @@ import {
   cssFontFamily,
   hexToHslTriplet,
   quizBackgroundCss,
-  quizBackgroundIsDark,
+  quizContentIsDark,
   buttonShapeRadiusClass,
   resolvePanelMedia,
   type QuizBranding,
@@ -126,6 +126,11 @@ type PublicQuizData = {
   capture_submit_text: string | null;
   result_insight_heading?: string | null;
   result_projection_heading?: string | null;
+  // Atelier juillet 2026 : cartes resultat masquables + partage optionnel.
+  // Default TRUE partout (lu en !== false) -> quiz existants inchanges.
+  show_result_insight?: boolean | null;
+  show_result_projection?: boolean | null;
+  show_result_share?: boolean | null;
   capture_first_name?: boolean | null;
   capture_last_name?: boolean | null;
   capture_phone?: boolean | null;
@@ -1141,10 +1146,35 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
   // Fond riche (dégradé / image). null = fond plein historique -> aucun
   // changement pour les quiz existants.
   const richBackground = quizBackgroundCss(branding);
-  // Un dégradé sombre demande des textes clairs pour rester lisible. On ne
-  // bascule QUE si l'user a explicitement choisi un fond sombre (jamais sur
-  // un quiz existant).
-  const bgIsDark = quizBackgroundIsDark(branding);
+  // ── Système de contraste (lisibilité sur N'IMPORTE quel fond) ──
+  // On calcule si le SOL DE CONTENU est sombre (couleur pleine sombre,
+  // dégradé sombre, ou reader surface teintée pour les fonds image). Quand
+  // c'est le cas, on bascule TOUTE la palette (texte + surfaces) en clair via
+  // les tokens CSS -> titre, question, réponses, hints, footer, résultats,
+  // tous lisibles. Fond blanc par défaut -> jamais sombre -> quiz existants
+  // rendus à l'identique.
+  const contentIsDark = quizContentIsDark(branding);
+  // Fond image : le texte ne repose JAMAIS sur la photo brute, il vit dans une
+  // "reader surface" translucide teintée de backgroundColor (approche
+  // Apple/Tally) posée par-dessus l'image plein cadre.
+  const useReaderSurface = branding.backgroundStyle === "image" && !!branding.backgroundImageUrl;
+  const readerSurfaceStyle: React.CSSProperties | undefined = useReaderSurface
+    ? {
+        background: `color-mix(in srgb, ${branding.backgroundColor} 92%, transparent)`,
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        borderRadius: "1.5rem",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+        paddingLeft: "clamp(1rem, 4vw, 2rem)",
+        paddingRight: "clamp(1rem, 4vw, 2rem)",
+      }
+    : undefined;
+  // Backing translucide clair pour les cartes de réponse NON sélectionnées sur
+  // un sol sombre (la sélection garde la couleur de marque). Garantit un texte
+  // d'option lisible sans dépendre des tokens de bordure.
+  const darkCardStyle: React.CSSProperties | undefined = contentIsDark
+    ? { background: "rgba(255,255,255,0.08)", borderColor: "rgba(255,255,255,0.22)", color: "#ffffff" }
+    : undefined;
   // Override d'arrondi des boutons/réponses. Vide sur 'pill' (défaut) ->
   // aucun changement pour les quiz existants.
   const btnShapeClass = buttonShapeRadiusClass(branding.buttonShape);
@@ -1152,11 +1182,30 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     fontFamily: cssFontFamily(branding.font),
     backgroundColor: branding.backgroundColor,
     ...(richBackground ? { background: richBackground } : {}),
-    color: bgIsDark ? "#ffffff" : (branding.textColor ?? "hsl(231 41% 31%)"),
-    colorScheme: "light",
+    color: contentIsDark ? "#ffffff" : (branding.textColor ?? "hsl(231 41% 31%)"),
+    colorScheme: contentIsDark ? "dark" : "light",
     isolation: "isolate",
-    ["--foreground" as string]: bgIsDark ? "0 0% 100%" : (hslText ?? "231 41% 31%"),
-    ["--muted-foreground" as string]: bgIsDark ? "0 0% 100%" : "236 16% 50%",
+    // Bascule COMPLÈTE de la palette du design-system quand le sol est sombre :
+    // les surfaces (bg-card / bg-muted / bg-background), les bordures et les
+    // textes muted deviennent cohérents en sombre -> les cartes internes
+    // (breakdown, autres profils, insight/projection) restent lisibles.
+    ...(contentIsDark
+      ? {
+          ["--foreground" as string]: "0 0% 100%",
+          ["--muted-foreground" as string]: "0 0% 82%",
+          ["--background" as string]: "230 30% 14%",
+          ["--card" as string]: "230 28% 22%",
+          ["--card-foreground" as string]: "0 0% 100%",
+          ["--muted" as string]: "230 24% 28%",
+          ["--accent" as string]: "230 24% 30%",
+          ["--accent-foreground" as string]: "0 0% 100%",
+          ["--border" as string]: "230 20% 40%",
+          ["--input" as string]: "230 20% 40%",
+        }
+      : {
+          ["--foreground" as string]: hslText ?? "231 41% 31%",
+          ["--muted-foreground" as string]: "236 16% 50%",
+        }),
     ...(hslPrimary ? ({ ["--primary" as string]: hslPrimary } as React.CSSProperties) : {}),
   };
 
@@ -2375,7 +2424,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     return (
       <div className="min-h-screen flex flex-col" style={rootStyle}>
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 text-center">
-          <div className="max-w-lg w-full space-y-6 py-16 sm:py-24">
+          <div className="max-w-lg w-full space-y-6 py-16 sm:py-24" style={readerSurfaceStyle}>
             {branding.logoUrl && (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img src={branding.logoUrl} alt="" className="max-h-16 w-auto object-contain mx-auto" />
@@ -2525,7 +2574,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         {/* Un seul conteneur pour titre + intro + bouton : mêmes bornes et
             même alignement, donc l'intro est TOUJOURS calée sur le titre. */}
-        <div className={`max-w-2xl w-full space-y-8 ${layoutAlignText} py-16 sm:py-24`}>
+        <div className={`max-w-2xl w-full space-y-8 ${layoutAlignText} py-16 sm:py-24`} style={readerSurfaceStyle}>
             {branding.logoUrl && (
               <div className={`flex ${qLayout === "centered" ? "justify-center" : "justify-start"}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -2616,7 +2665,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
       <div className={`min-h-screen flex flex-col${layoutOuterClass}`} style={rootStyle}>
         {renderMediaPanel("capture")}
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-16">
-        <div className={`max-w-md w-full space-y-6 ${layoutAlignText}`}>
+        <div className={`max-w-md w-full space-y-6 ${layoutAlignText}`} style={readerSurfaceStyle}>
           {/* L'écran de personnalisation respecte maintenant la charte
               du quiz : couleur primaire sur le titre (comme la page de
               résultats), font-family héritée de rootStyle. Tout est
@@ -2677,6 +2726,19 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     if (!q) return null;
     const progress = ((currentQ + 1) / totalQ) * 100;
     const hasMultipleOptions = q.options.length >= 3;
+    // Disposition des réponses (colonnes vs liste). 'auto' = rendu historique
+    // (multiple_choice >= 3 options -> 2 colonnes). 'grid' = toujours 2
+    // colonnes >= sm. 'list' = toujours une seule colonne empilée.
+    const answerLayout = branding.answerLayout;
+    const mcGridClass =
+      answerLayout === "list"
+        ? "grid-cols-1"
+        : answerLayout === "grid"
+          ? "grid-cols-1 sm:grid-cols-2"
+          : hasMultipleOptions
+            ? "grid-cols-1 sm:grid-cols-2"
+            : "grid-cols-1";
+    const imgGridClass = answerLayout === "list" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2";
     const qType: QuestionType = (q.question_type as QuestionType) ?? "multiple_choice";
     const currentAnswer = answers[currentQ];
     const isOptional = ((q.config ?? {}) as Record<string, unknown>).optional === true;
@@ -2758,7 +2820,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                 onClick={() => commitAnswer({ kind: "star", value: v })}
                 className="select-none text-5xl sm:text-6xl leading-none transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
                 aria-label={`${v}/${max}`}
-                style={{ color: filled ? "var(--primary)" : "rgba(0,0,0,0.15)" }}
+                style={{ color: filled ? "var(--primary)" : (contentIsDark ? "rgba(255,255,255,0.28)" : "rgba(0,0,0,0.15)") }}
               >
                 ★
               </button>
@@ -2778,6 +2840,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                 ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
                 : "border-border hover:border-primary/40 hover:bg-muted/30"
             }`}
+            style={selectedYes ? undefined : darkCardStyle}
           >
             {renderLetterKey(0, selectedYes)}
             {t.yesLabel}
@@ -2789,6 +2852,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                 ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
                 : "border-border hover:border-primary/40 hover:bg-muted/30"
             }`}
+            style={selectedNo ? undefined : darkCardStyle}
           >
             {renderLetterKey(1, selectedNo)}
             {t.noLabel}
@@ -2841,7 +2905,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         : null;
       answerBlock = (
         <div className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className={`grid ${imgGridClass} gap-3`}>
             {q.options.map((opt, oi) => {
               const isSelected = multiSelect
                 ? selectedSet!.has(oi)
@@ -2859,6 +2923,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                       ? "border-primary shadow-md scale-[1.02]"
                       : "border-border hover:border-primary/40 hover:shadow-sm"
                   }`}
+                  style={isSelected ? undefined : darkCardStyle}
                 >
                   {opt.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -2914,7 +2979,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         : null;
       answerBlock = (
         <div className="space-y-3">
-          <div className={`grid gap-3 ${hasMultipleOptions ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
+          <div className={`grid gap-3 ${mcGridClass}`}>
             {q.options.map((opt, oi) => {
               const isSelected = multiSelect
                 ? selectedSet!.has(oi)
@@ -2932,6 +2997,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                       ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
                       : "border-border hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm"
                   }`}
+                  style={isSelected ? undefined : darkCardStyle}
                 >
                   {/* Per-option image (Hugo, mai 2026 — gamification).
                       Render whenever image_url is set, regardless of
@@ -2996,7 +3062,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                 quiz-step-in keyframe → the new question rises in
                 rather than popping. Subtle but transforms the feel
                 from "form" to "guided experience". */}
-            <div key={currentQ} className={`max-w-2xl w-full space-y-8 ${layoutAlignText} ${navDir === "back" ? "animate-quiz-slide-in-left" : "animate-quiz-slide-in-right"}`}>
+            <div key={currentQ} className={`max-w-2xl w-full space-y-8 ${layoutAlignText} ${navDir === "back" ? "animate-quiz-slide-in-left" : "animate-quiz-slide-in-right"}`} style={readerSurfaceStyle}>
               {/* Pill-style step indicator — sits more confidently than
                   the previous tracking-widest paragraph and keeps the
                   primary brand color in view at every step. */}
@@ -3081,7 +3147,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
             flow now uses the same gentle entrance keyframe so each
             step transition reads as a guided experience. */}
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
-        <div className="max-w-lg w-full space-y-6 py-16 sm:py-24 animate-quiz-step-in">
+        <div className="max-w-lg w-full space-y-6 py-16 sm:py-24 animate-quiz-step-in" style={readerSurfaceStyle}>
             {/* Heading & subtitle de la page capture = champs COURTS.
                 On utilise `tiquiz-rich-inline` en plus de `tiquiz-rich` :
                 ça neutralise les block-levels parasites (<p>, <div>,
@@ -3314,7 +3380,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         style={rootStyle}
       >
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
-        <div className="max-w-lg w-full py-16 sm:py-20 space-y-10">
+        <div className="max-w-lg w-full py-16 sm:py-20 space-y-10" style={readerSurfaceStyle}>
           {/* Image bonus — positionnée selon `bonus_image_position`
               (top / after_heading / after_intro / bottom). Si pas
               d'image OU position défaut (top sans image), on tombe
@@ -3533,7 +3599,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
             keyframe as the quiz questions so the entire visitor flow
             feels coordinated. */}
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
-        <div className="max-w-lg w-full py-16 sm:py-24 space-y-6 text-center animate-quiz-step-in">
+        <div className="max-w-lg w-full py-16 sm:py-24 space-y-6 text-center animate-quiz-step-in" style={readerSurfaceStyle}>
           {/* Soft success halo behind the heading — visual reward for
               the visitor finishing the survey, no confetti
               distraction. */}
@@ -3713,7 +3779,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         {/* Slide-in for the result reveal — final payoff of the
             quiz, deserves more than a content swap. */}
-        <div className="max-w-2xl w-full py-16 sm:py-24 space-y-8 animate-quiz-step-in">
+        <div className="max-w-2xl w-full py-16 sm:py-24 space-y-8 animate-quiz-step-in" style={readerSurfaceStyle}>
             {/* Score (mode scoring) : "X / Y" + pourcentage en tete. */}
             {quiz.mode === "scoring" && resultScore && resultScore.max > 0 && (
               <div className="text-center space-y-2">
@@ -3772,7 +3838,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
               ) : null;
             })()}
 
-            {resultProfile?.insight && stripHtml(resultProfile.insight).trim() && (() => {
+            {quiz.show_result_insight !== false && resultProfile?.insight && stripHtml(resultProfile.insight).trim() && (() => {
               const ins = interp(resultProfile.insight);
               return (
                 <div className="p-4 rounded-xl bg-muted/50 border">
@@ -3800,7 +3866,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
               ) : null;
             })()}
 
-            {resultProfile?.projection && stripHtml(resultProfile.projection).trim() && (() => {
+            {quiz.show_result_projection !== false && resultProfile?.projection && stripHtml(resultProfile.projection).trim() && (() => {
               const proj = interp(resultProfile.projection);
               return (
                 <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
@@ -3874,7 +3940,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                         <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
                           <div
                             className="h-full rounded-full transition-[width] duration-500"
-                            style={{ width: `${pct}%`, backgroundColor: isMain ? undefined : "currentColor", color: isMain ? undefined : "rgba(0,0,0,0.18)", backgroundImage: isMain ? "linear-gradient(to right, hsl(var(--primary)), hsl(var(--primary)))" : undefined }}
+                            style={{ width: `${pct}%`, backgroundColor: isMain ? undefined : "currentColor", color: isMain ? undefined : (contentIsDark ? "rgba(255,255,255,0.28)" : "rgba(0,0,0,0.18)"), backgroundImage: isMain ? "linear-gradient(to right, hsl(var(--primary)), hsl(var(--primary)))" : undefined }}
                           />
                         </div>
                       </li>
@@ -4027,7 +4093,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
           {/* Carte de resultat partageable (image) — sert la viralite : le
               visiteur partage "Je suis [profil]" sur ses reseaux. Uniquement
               en mode profil (resultProfile present). */}
-          {resultProfile && (
+          {resultProfile && quiz.show_result_share !== false && (
             <Button
               variant="outline"
               size="lg"
