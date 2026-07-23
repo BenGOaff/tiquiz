@@ -1390,7 +1390,19 @@
     "optionSioTagLabel": "Tag Systeme.io per questa risposta",
     "optionalQuestionLabel": "Facoltativa",
     "optionalQuestionHint": "Il visitatore può saltare questa domanda. Una domanda saltata non conta nel risultato.",
-    "errFlagSave": "Impossibile salvare il contrassegno."
+    "errFlagSave": "Impossibile salvare il contrassegno.",
+    "designQuestionLayout": "Disposizione delle domande",
+    "designQuestionLayoutCentered": "Centrato",
+    "designQuestionLayoutLeft": "Allineato a sinistra",
+    "designQuestionLayoutSplit": "Colonne",
+    "designQuestionLayoutHint": "La domanda e le risposte restano su una colonna. La disposizione Colonne aggiunge un pannello visivo di fianco.",
+    "designSplitImageAdd": "Scegli un'immagine",
+    "designSplitImageGif": "GIF",
+    "designSplitImageRemove": "Rimuovi l'immagine",
+    "designSplitSide": "Lato del visual",
+    "designSplitSideLeft": "Sinistra",
+    "designSplitSideRight": "Destra",
+    "designSplitImageHint": "Il visual appare accanto alla domanda su computer, e sopra su cellulare."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nuova password",

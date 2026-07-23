@@ -1376,7 +1376,19 @@
     "optionSioTagLabel": "Tag Systeme.io para esta resposta",
     "optionalQuestionLabel": "Opcional",
     "optionalQuestionHint": "O visitante pode pular esta pergunta. Uma pergunta pulada não conta no resultado.",
-    "errFlagSave": "Não foi possível salvar a marcação."
+    "errFlagSave": "Não foi possível salvar a marcação.",
+    "designQuestionLayout": "Disposição das perguntas",
+    "designQuestionLayoutCentered": "Centralizado",
+    "designQuestionLayoutLeft": "Alinhado à esquerda",
+    "designQuestionLayoutSplit": "Colunas",
+    "designQuestionLayoutHint": "A pergunta e as respostas ficam numa coluna. A disposição Colunas adiciona um painel visual ao lado.",
+    "designSplitImageAdd": "Escolher uma imagem",
+    "designSplitImageGif": "GIF",
+    "designSplitImageRemove": "Remover a imagem",
+    "designSplitSide": "Lado do visual",
+    "designSplitSideLeft": "Esquerda",
+    "designSplitSideRight": "Direita",
+    "designSplitImageHint": "O visual aparece ao lado da pergunta no computador, e acima no celular."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova senha",

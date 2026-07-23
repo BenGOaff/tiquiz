@@ -1378,7 +1378,19 @@
     "optionSioTagLabel": "وسم Systeme.io لهذه الإجابة",
     "optionalQuestionLabel": "اختياري",
     "optionalQuestionHint": "يمكن للزائر تخطي هذا السؤال. السؤال المتخطى لا يُحتسب في النتيجة.",
-    "errFlagSave": "تعذّر حفظ التمييز."
+    "errFlagSave": "تعذّر حفظ التمييز.",
+    "designQuestionLayout": "تخطيط الأسئلة",
+    "designQuestionLayoutCentered": "توسيط",
+    "designQuestionLayoutLeft": "محاذاة إلى اليسار",
+    "designQuestionLayoutSplit": "أعمدة",
+    "designQuestionLayoutHint": "يبقى السؤال والإجابات في عمود واحد. يضيف تخطيط الأعمدة لوحة مرئية بجانبها.",
+    "designSplitImageAdd": "اختيار صورة",
+    "designSplitImageGif": "GIF",
+    "designSplitImageRemove": "إزالة الصورة",
+    "designSplitSide": "جهة الصورة",
+    "designSplitSideLeft": "يسار",
+    "designSplitSideRight": "يمين",
+    "designSplitImageHint": "تظهر الصورة بجانب السؤال على الكمبيوتر، وفوقها على الهاتف."
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",

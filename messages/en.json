@@ -1374,7 +1374,19 @@
     "optionSioTagLabel": "Systeme.io tag for this answer",
     "optionalQuestionLabel": "Optional",
     "optionalQuestionHint": "Visitors can skip this question. A skipped question is not counted in the result.",
-    "errFlagSave": "The flag could not be saved."
+    "errFlagSave": "The flag could not be saved.",
+    "designQuestionLayout": "Question layout",
+    "designQuestionLayoutCentered": "Centered",
+    "designQuestionLayoutLeft": "Left aligned",
+    "designQuestionLayoutSplit": "Columns",
+    "designQuestionLayoutHint": "The question and answers stay in one column. The Columns layout adds a visual panel beside them.",
+    "designSplitImageAdd": "Choose an image",
+    "designSplitImageGif": "GIF",
+    "designSplitImageRemove": "Remove image",
+    "designSplitSide": "Visual side",
+    "designSplitSideLeft": "Left",
+    "designSplitSideRight": "Right",
+    "designSplitImageHint": "The visual sits beside the question on desktop, and above it on mobile."
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",

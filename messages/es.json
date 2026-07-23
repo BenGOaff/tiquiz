@@ -1390,7 +1390,19 @@
     "optionSioTagLabel": "Etiqueta Systeme.io para esta respuesta",
     "optionalQuestionLabel": "Opcional",
     "optionalQuestionHint": "El visitante puede saltar esta pregunta. Una pregunta omitida no cuenta en el resultado.",
-    "errFlagSave": "No se pudo guardar la marca."
+    "errFlagSave": "No se pudo guardar la marca.",
+    "designQuestionLayout": "Disposición de las preguntas",
+    "designQuestionLayoutCentered": "Centrado",
+    "designQuestionLayoutLeft": "Alineado a la izquierda",
+    "designQuestionLayoutSplit": "Columnas",
+    "designQuestionLayoutHint": "La pregunta y las respuestas quedan en una columna. La disposición Columnas añade un panel visual al lado.",
+    "designSplitImageAdd": "Elegir una imagen",
+    "designSplitImageGif": "GIF",
+    "designSplitImageRemove": "Quitar la imagen",
+    "designSplitSide": "Lado del visual",
+    "designSplitSideLeft": "Izquierda",
+    "designSplitSideRight": "Derecha",
+    "designSplitImageHint": "El visual aparece junto a la pregunta en el ordenador, y encima en el móvil."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nueva contraseña",

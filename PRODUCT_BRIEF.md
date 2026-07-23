@@ -1,349 +1,315 @@
-# Brief produit Tiquiz — pour génération de contenu de vente
+# Brief produit Tiquiz, pour génération de contenu de vente
 
-> Ce document est destiné à un agent IA qui doit produire des landing pages, séquences emails, posts sociaux, scripts vidéo, ads ou pages de vente pour Tiquiz. Il est rédigé pour être consommé directement par une IA générative — structuré, factuel, sans verbiage.
+> Ce document est destiné à un agent IA qui produit des landing pages, séquences emails, posts sociaux, scripts vidéo, ads ou pages de vente pour Tiquiz. Il est rédigé pour être consommé directement par une IA générative : structuré, factuel, sans verbiage.
 >
-> Pour la documentation technique destinée aux développeurs : voir `CAHIER_DES_CHARGES.md` et `docs/INVARIANTS.md`.
-
----
-
-> **Note de version — Juin 2026** (à intégrer dans toute com produite à partir de cette date) :
->
-> - **Multiprofils** : un compte Tiquiz peut désormais gérer plusieurs "projets" (= comptes virtuels). Chaque projet a ses propres quiz, leads, stats, branding, positionnement, clés Systeme.io. **Un nouveau projet démarre VIDE** (stats à zéro, branding vierge à customiser). Disponible sur les nouveaux plans Tiquiz Mensuel+ et Tiquiz Annuel+ (et conservé sur lifetime / beta).
-> - **Nouveaux paliers premium** : **Mensuel+ à 29€/mois** et **Annuel+ à 290€/an**, qui débloquent multiprofils + analyse IA des résultats (quiz et sondages) + multi-clés Systeme.io. Les plans Mensuel (9€) et Annuel (90€) restent inchangés sur le périmètre historique.
-> - **Analyse IA des résultats** : nouvelle feature premium qui analyse les réponses agrégées (quiz ET sondages).
-> - **Switch d'abonnement en 1 clic** : depuis Settings → Abonnement, l'utilisateur change de plan, l'ancien est auto-annulé chez Systeme.io, pas de double-facturation.
-> - **15 templates de quiz métier** (au lieu de 8) : 7 nouveaux modèles coachs (mindset, nutrition, sommeil, parentalité, couple, reconversion, finance).
-> - **Auto-instanciation post-signup** : à l'inscription, l'utilisateur voit 6 templates phares et publie son premier quiz en 10 secondes au lieu de tomber dans un éditeur vide.
-> - **Lifetime 57€ terminé en vente directe** : conservé en récompense early adopters (équivalent Mensuel+ / Annuel+ à vie). Ne plus mettre en avant comme CTA dans les nouveaux contenus.
+> Pour la documentation technique destinée aux développeurs, voir `CAHIER_DES_CHARGES.md` et `docs/INVARIANTS.md`.
 
 ---
 
 ## 1. Identité
 
 - **Nom du produit** : Tiquiz
-- **Domaine principal** : quiz.tipote.com (sous-domaine de Tipote, mais vendu comme produit autonome)
+- **Domaine** : quiz.tipote.com (sous-domaine de Tipote, mais vendu comme produit autonome)
 - **Tagline courte** : « Le quiz lead-magnet le plus simple à créer »
-- **Pitch en une phrase** : Tiquiz est l'outil qui transforme un quiz interactif en machine à leads, intégrée à Systeme.io en un clic.
-- **Pitch en trois phrases** : Créer un quiz lead-magnet qui convertit demande normalement 2 jours de boulot et 3 outils branchés ensemble. Avec Tiquiz, tu donnes 3 mots à l'IA, tu as un quiz complet en 30 secondes, branché à Systeme.io en automatique. Et tes prospects qui partagent leur résultat te ramènent leurs amis taggés.
-- **Positionnement vis-à-vis de Tipote** : Tiquiz est le **module quiz autonome** de la plateforme Tipote. Pour les créateurs qui ne veulent QUE du quiz (pas de stratégie, pas de réseaux sociaux, pas de pages), Tiquiz est l'offre dédiée — moins cher, focalisé.
+- **Pitch en une phrase** : Tiquiz transforme un quiz interactif en machine à leads, branchée à Systeme.io en un clic.
+- **Pitch en trois phrases** : Créer un quiz lead-magnet qui convertit demande normalement deux jours de travail et trois outils branchés ensemble. Avec Tiquiz, tu donnes trois mots à l'IA, tu as un quiz complet en 30 secondes, branché à Systeme.io en automatique. Et tes prospects qui partagent leur résultat te ramènent leurs amis, déjà taggés.
+- **Positionnement vis-à-vis de Tipote** : Tiquiz est le module quiz autonome de la plateforme Tipote. Pour les créateurs qui ne veulent QUE du quiz (pas de stratégie, pas de réseaux sociaux, pas de pages), Tiquiz est l'offre dédiée : moins chère, focalisée.
 
 ## 2. Public cible
 
-### 2.1. Cible principale (persona prioritaire)
+### 2.1. Cible principale
 
-- **Solopreneur francophone** (FR / BE / CH / CA), 25-50 ans, déjà sur Systeme.io
-- Vend des **prestations de service** (coaching, conseil, formations) ou anime une **communauté payante**
-- A déjà essayé : Typeform, Tally, Outgrow, ScoreApp, AnswerThePublic — soit trop cher, soit trop tech, soit pas connecté à Systeme.io
-- A besoin d'un **lead magnet renouvelable** (quiz « Quel type de X es-tu ? ») pour son funnel d'acquisition
-- Niveau technique : **non-tech**. Doit pouvoir créer + publier en 5 minutes sans tutoriel
+- **Solopreneur francophone** (FR, BE, CH, CA), 25 à 50 ans, déjà sur Systeme.io.
+- Vend des **prestations de service** (coaching, conseil, formations) ou anime une **communauté payante**.
+- A déjà essayé Typeform, Tally, Outgrow, ScoreApp : soit trop cher, soit trop technique, soit pas connecté à Systeme.io.
+- A besoin d'un **lead magnet renouvelable** (« Quel type de X es-tu ? ») pour son funnel d'acquisition.
+- Niveau technique **non-tech** : doit pouvoir créer et publier en 5 minutes sans tutoriel.
 
 ### 2.2. Cibles secondaires
 
-- **Affiliés Systeme.io** qui veulent un outil dédié et léger pour leurs lead magnets
-- **Coachs internationaux** (EN / ES / IT / DE / PT / AR) qui veulent un quiz multilingue clé-en-main
-- **Créateurs de contenus YouTube / TikTok** qui veulent embarquer un quiz dans leurs vidéos (cas d'usage Popquiz)
-- **Solopreneurs multi-activités** (cible Mensuel+ / Annuel+, juin 2026) : un même créateur qui anime plusieurs marques ou niches en parallèle (ex. coach mindset + coach finance ; consultant B2B + side-project info-produit). Un seul compte Tiquiz, plusieurs projets isolés, plusieurs clés Systeme.io. Persona type : "j'ai 3 audiences différentes et je ne veux pas mélanger leurs tags, leur branding ni leurs stats."
+- **Coachs internationaux** (EN, ES, IT, PT, AR) qui veulent un quiz multilingue clé en main.
+- **Créateurs de contenus vidéo** (YouTube, TikTok) qui veulent embarquer un quiz dans leurs vidéos (cas d'usage Popquiz).
+- **Solopreneurs multi-activités** (cible des paliers premium) : un même créateur qui anime plusieurs marques ou niches en parallèle, veut un seul compte, plusieurs projets isolés, plusieurs clés Systeme.io. Type : « j'ai trois audiences différentes et je ne veux pas mélanger leurs tags, leur branding ni leurs stats. »
+- **Revendeurs et partenaires** qui veulent proposer Tiquiz en marque grise à leurs propres clients (programme revendeur en gros).
 
 ### 2.3. Anti-cible
 
-- Grandes entreprises avec des process de validation marketing complexes
-- Agences (qui revendraient — outil pas multi-tenant, multi-marque)
-- Marketers qui veulent un constructeur de quiz ultra-personnalisable avec logique conditionnelle complexe (Tiquiz est volontairement simple)
+- Grandes entreprises avec des process de validation marketing complexes.
+- Marketers qui veulent un constructeur de quiz ultra-personnalisable avec logique conditionnelle avancée (Tiquiz est volontairement simple).
 
 ## 3. Promesse principale
 
-**« Un quiz qui capture, qualifie et tague tes leads — créé en 5 minutes. »**
+**« Un quiz qui capture, qualifie et tague tes leads, créé en 5 minutes. »**
 
 Variations selon le canal :
-- *(Email/landing)* : « Crée ton quiz, partage le lien, regarde les leads taggés arriver dans Systeme.io. C'est tout. »
-- *(Ads court)* : « Le quiz lead-magnet branché à Systeme.io, 5 min chrono. »
-- *(Social)* : « Tu donnes 3 mots à l'IA, tu as un quiz prêt à capturer des leads. »
+- *(Email, landing)* : « Crée ton quiz, partage le lien, regarde les leads taggés arriver dans Systeme.io. C'est tout. »
+- *(Ads court)* : « Le quiz lead-magnet branché à Systeme.io, 5 minutes chrono. »
+- *(Social)* : « Tu donnes trois mots à l'IA, tu as un quiz prêt à capturer des leads. »
 
 ## 4. Pain points résolus
 
 | Pain | Ressenti | Réponse Tiquiz |
 |---|---|---|
-| « Typeform, c'est joli mais ça segmente pas mes leads » | Tu collectes des emails sans contexte | Tag Systeme.io différent par résultat de quiz → tu sais qui pense quoi |
-| « ScoreApp marche bien mais c'est 60€/mois et c'est anglais » | Cher + barrière de langue | Tiquiz : 9€/mois, FR, intégration Systeme.io native |
-| « J'arrive pas à passer le quiz à mes prospects sans copier-coller le lien partout » | Friction de partage | Slug court personnalisé (`/q/mon-quiz`), bouton de partage natif sur le quiz public, viralité via étape « Partage = bonus » |
-| « Mes leads sont dans Systeme.io mais je sais pas qui a fait quel quiz » | Aveugle | Tag SIO différent par capture + par share + par option de réponse |
-| « Je veux un quiz dans MA langue avec MA marque » | Outils anglais, pas brandable | Tiquiz UI en 5 langues admin + quiz public en 8 variantes (FR/FR-vous/EN/ES/IT/DE/PT/AR) + branding par quiz (police Google + couleur primaire + couleur de fond + logo) |
-| « Mes prospects abandonnent à mi-quiz » | Taux de complétion faible | Mode « bonus de partage » (anti-triche réelle, pas du fake), résultats riches avec storytelling personnalisé qui retient |
-| « J'ai pas envie de coder un embed sur mon site » | Tech-friction | URL courte + iframe embed prêt à coller (notamment Popquiz vidéo, voir §7) |
-| « J'ai 2 marques et tout est mélangé dans le même compte » | Comptes séparés ingérables | **Multiprofils** (juin 2026) : un seul login, plusieurs projets isolés (stats, branding, clés SIO indépendants) — switch en 1 clic depuis le header (plans Mensuel+ / Annuel+) |
-| « Mes leads viennent en masse, j'ai pas le temps d'analyser » | Données mortes | **Analyse IA des résultats** (juin 2026) : Claude synthétise les réponses, fait ressortir patterns et segments saillants (plans Mensuel+ / Annuel+) |
-| « Je veux changer de plan sans me prendre la tête avec la double facturation » | Friction d'upgrade | Switch en 1 clic depuis Settings → Abonnement : l'ancien sub Systeme.io est auto-annulé, pas de chevauchement |
+| « Typeform c'est joli mais ça segmente pas mes leads » | Tu collectes des emails sans contexte | Tag Systeme.io différent par résultat, par réponse, à la capture et au partage : tu sais qui pense quoi |
+| « ScoreApp marche bien mais c'est cher et c'est en anglais » | Prix élevé, barrière de langue | Tiquiz : à partir de 9 €/mois, en français, intégration Systeme.io native |
+| « J'arrive pas à faire circuler mon quiz » | Friction de partage | Slug court personnalisé, boutons de partage natifs, étape « partage = bonus », carte de résultat partageable |
+| « Mes leads sont dans Systeme.io mais je sais pas qui a fait quoi » | Aveugle | Tag par capture, par partage, par résultat, par option de réponse |
+| « Je veux un quiz dans MA langue avec MA marque » | Outils anglais, pas brandables | UI en 7 langues, quiz public multilingue (dont tu/vous et arabe RTL), branding par quiz (police, couleurs, logo, favicon), thèmes et fonds riches |
+| « Mes prospects abandonnent à mi-quiz » | Taux de complétion faible | Présentation soignée type Typeform, transitions fluides, mode « bonus de partage » avec anti-triche réelle, résultats riches et personnalisés |
+| « J'ai pas envie de coder un embed sur mon site » | Friction technique | URL courte, domaine perso, iframe prête à coller (notamment Popquiz vidéo) |
+| « J'ai deux marques et tout est mélangé » | Comptes séparés ingérables | Multiprofils : un seul login, plusieurs projets isolés (stats, branding, clés Systeme.io), switch en un clic (paliers premium) |
+| « Mes leads viennent en masse, j'ai pas le temps d'analyser » | Données mortes | Analyse IA des réponses agrégées : Claude fait ressortir patterns et segments (paliers premium) |
+| « Je veux changer de plan sans double facturation » | Friction d'upgrade | Changement de plan en un clic : l'ancien abonnement Systeme.io est auto-annulé, aucun chevauchement |
+| « Je veux vendre Tiquiz à mes clients sous ma marque » | Pas d'outil de revente | Programme revendeur : comptes isolés, facturation automatisée, taux dégressif au volume |
 
 ## 5. Différenciateurs
 
 ### vs Typeform
-- **Tag Systeme.io natif** par résultat — pas besoin de Zapier
-- **5 fois moins cher** (9€/mois vs 25-83€)
-- **Génération IA** : tu décris ton quiz en une phrase, l'IA crée tout
-- **Mode lead magnet pensé pour ça** : viralité, partage, anti-triche
+- **Tag Systeme.io natif** par résultat, sans Zapier.
+- **Nettement moins cher** (à partir de 9 €/mois).
+- **Génération IA** : tu décris ton quiz en une phrase, l'IA crée tout.
+- **Pensé lead magnet** : viralité, partage, anti-triche, résultats personnalisés.
 
-### vs ScoreApp / Interact
-- **Français, intégration Systeme.io native**
-- **UI 5 langues + quiz public 8 variantes** (incl. arabe RTL)
-- **Module Popquiz vidéo** (vidéo + quiz incrustés à des timestamps) que personne d'autre ne fait
+### vs ScoreApp, Interact
+- **Français, intégration Systeme.io native.**
+- **UI en 7 langues, quiz public multilingue** (dont arabe RTL).
+- **Module Popquiz vidéo** (vidéo avec quiz incrustés à des timestamps) que les concurrents ne proposent pas.
 
-### vs Tally / Google Forms
-- **Pas un formulaire, un quiz** : résultats personnalisés, mécaniques de gamification, mémo persistant via cookies
-- **Branding par quiz** (police, couleurs, logo) sans toucher au CSS
+### vs Tally, Google Forms
+- **Pas un formulaire, un quiz** : résultats personnalisés, quiz noté, sondage, mécaniques de gamification, mémo persistant.
+- **Branding par quiz** (police, couleurs, logo, thème, fond) sans toucher au CSS.
 
 ### vs Tipote (la plateforme parente)
-- Tiquiz **N'A PAS** : coach IA, crédits IA, réseaux sociaux, automations, pages builder, stratégie, contenus génériques (post, email, article)
-- Tiquiz **A** : tout le module quiz + popquiz, plus simple à appréhender pour qui ne veut QUE du quiz
-- Pricing Tiquiz beaucoup plus bas (9€/mois vs 19-99€/mois Tipote)
-- Tiquiz hérite aussi du **multiprofils** de Tipote (juin 2026) : même mécanique (nouveau projet = nouveau compte virtuel vide), mais réservée aux paliers + (Mensuel+ 29€/mois, Annuel+ 290€/an)
+- Tiquiz **n'a pas** : coach IA, crédits IA, réseaux sociaux, automations, constructeur de pages, contenus génériques.
+- Tiquiz **a** : tout le module quiz, sondage et popquiz, plus simple à appréhender pour qui ne veut QUE du quiz.
+- Pricing Tiquiz plus bas.
+- Tiquiz partage avec Tipote le multiprofils et l'analyse IA, sur son périmètre.
 
 ## 6. Workflow utilisateur (storytelling produit)
 
-### Création d'un quiz (5 min chrono)
-1. L'user va sur `/quiz/new` — ou, en arrivant tout juste sur le dashboard sans quiz (juin 2026), choisit directement un des **6 templates phares** affichés en grand sur l'écran d'accueil → quiz pré-rempli en 1 clic
-2. Trois choix manuels : **IA** (décrit le quiz en 1 phrase), **Import** (CSV/JSON existant), **Manuel** (vierge), **Templates** (15 modèles métier : coach mindset, nutrition, sommeil, parentalité, couple, reconversion, finance, entrepreneur, yoga, naturo, formation, marketing, photo, immo…)
-3. Le mode IA déclenche un brainstorm conversationnel (Claude Haiku) qui pose 3-4 questions ciblées
-4. Génération en streaming (~30s) : titre, intro, 5-7 questions, 3-4 résultats avec storytelling personnalisé
-5. Édition WYSIWYG inline : tous les textes sont éditables au clic, polices Google, couleurs personnalisables, images
-6. Onglet « Partage » : tag SIO par résultat (`quiz-visionnaire`, `quiz-strategique`…), tag share, bonus de viralité, anti-triche
-7. Publier en un clic → URL courte personnalisée (`/q/mon-slug`)
+### Créer un quiz (5 minutes chrono)
+1. À l'inscription, sans quiz existant, l'utilisateur voit six templates phares sur son dashboard et publie son premier quiz en un clic.
+2. Sinon, il va sur la page de création et choisit : **IA** (décrit le quiz en une phrase), **Import** (un document .txt, .docx ou .pdf existant), **Manuel** (vierge) ou **Templates** (15 modèles métier).
+3. Le mode IA peut déclencher un brainstorm conversationnel qui cadre l'idée avant la génération.
+4. Génération en streaming (environ 30 secondes) : titre, intro, questions, résultats avec storytelling personnalisé.
+5. Édition WYSIWYG inline : tous les textes sont éditables au clic ; polices Google, couleurs, thèmes, fonds, images.
+6. Onglet Partage : tags Systeme.io par résultat, tag de partage, bonus de viralité, anti-triche.
+7. Publier en un clic vers une URL courte personnalisée (ou son propre domaine).
 
 ### Le visiteur prend le quiz
-1. Page publique responsive avec branding du créateur
-2. Étape personnalisation (prénom, genre) si activée → injecté dans tous les textes (`{name}`, `{m|f|x}`)
-3. Questions une par une, transitions douces
-4. Capture email + champs additionnels configurables (prénom / nom / téléphone / pays)
-5. Étape « Bonus de partage » optionnelle (« Partage pour débloquer ton bonus ») avec image, mockup ou GIF
-6. Résultats personnalisés avec CTA propre par résultat
-7. **En coulisses** : tag Systeme.io appliqué automatiquement → déclencheurs d'automatisation chez le créateur
+1. Page publique responsive au branding du créateur (fond, thème, couleurs, logo).
+2. Personnalisation (prénom, forme grammaticale) injectée dans les textes si activée.
+3. Questions une par une, transitions fluides, navigation clavier et swipe mobile.
+4. Capture email et champs additionnels configurables, avant ou après les questions.
+5. Étape « bonus de partage » optionnelle (« partage pour débloquer ton bonus »), avec image, mockup ou GIF.
+6. Résultat personnalisé, CTA propre par résultat, carte de résultat partageable et confettis.
+7. En coulisses : tags Systeme.io appliqués automatiquement, qui déclenchent les automatisations du créateur.
 
-### Création d'un Popquiz (Mai 2026)
-1. L'user va sur `/popquiz/new`
-2. Importe une vidéo : URL YouTube / Vimeo / upload TUS resumable jusqu'à 2 GB
-3. Choisit dans son catalogue de quiz existants ceux à incruster
-4. Place les cues sur la timeline (« à 0:30 → quiz X, à 1:15 → quiz Y »)
-5. Publie → URL courte + snippet d'embed iframe à coller sur son site
-6. Le visiteur regarde la vidéo, à chaque cue le quiz s'affiche par-dessus, la vidéo reprend après réponse
-7. **Auto-activation** : à la publication du popquiz, les quiz référencés en brouillon deviennent automatiquement publiés
+### Créer un Popquiz (vidéo interactive)
+1. L'utilisateur va sur la page de création popquiz.
+2. Il importe une vidéo (YouTube, Vimeo ou upload propre jusqu'à 20 Go).
+3. Il choisit dans son catalogue les quiz à incruster et place les cues sur la timeline.
+4. Il publie : URL courte et snippet d'embed iframe à coller sur son site.
+5. Le visiteur regarde la vidéo, chaque cue affiche le quiz par-dessus, la vidéo reprend après réponse.
+6. Les quiz référencés sont automatiquement activés à la publication.
 
-## 7. Catalogue de fonctionnalités (organisé par bénéfice)
+## 7. Catalogue de fonctionnalités (par bénéfice)
 
 ### 7.1. Création
-- **3 modes d'entrée** : génération IA / import CSV-JSON / manuel
-- **Brainstorm IA conversationnel** pour dégrossir un brief (Claude Haiku, gratuit)
-- **Génération complète** via streaming SSE (titre, questions, options, résultats, storytelling)
-- **Éditeur WYSIWYG** : édition inline, sidebar 4 onglets (Structure / Design / Paramètres / Partage), preview live
-- **Rich text** : gras, italique, soulignement, alignement, listes, liens, images, **color picker** (Mai 2026 — palette de couleurs + custom)
-- **Personnalisation dynamique** : `{name}`, `{m|f|x}` injectés à partir des données capturées
-- **Brainstorm avant génération** pour éviter de cramer un crédit sur un brief flou
+- **Cinq façons de démarrer** : génération IA, import de document (.txt, .docx, .pdf), manuel, template, ou quiz phare en un clic à l'inscription.
+- **Brainstorm IA conversationnel** pour cadrer un brief flou.
+- **Génération complète** en streaming (titre, questions, options, résultats, storytelling).
+- **Trois formats** : quiz par profil, quiz noté (score et tranches), sondage.
+- **Types de questions variés** : choix multiple, échelle, étoiles, oui/non, choix par image, réponse libre.
+- **Éditeur WYSIWYG** : édition inline, sidebar à onglets, preview live, autosave.
+- **Rich text** : gras, italique, alignement, listes, liens, images, color picker.
+- **Outils IA dans l'éditeur** : réécriture d'un texte, rééquilibrage des résultats, variantes grammaticales, duplication.
+- **Personnalisation dynamique** : prénom et forme grammaticale injectés dans les textes.
 
-### 7.2. Branding
-- Police Google parmi une whitelist (rapide, performant)
-- Couleur primaire / couleur de fond
-- Logo
-- OG image / OG description par quiz
-- Footer customisable (texte + URL)
-- **Modes d'adresse** par quiz : tu / vous (forme grammaticale française appliquée partout)
+### 7.2. Branding et présentation
+- Police Google (whitelist), couleur primaire, couleur de fond, couleur de texte, logo, favicon.
+- **Thèmes prêts à l'emploi** et fonds riches (dégradé ou image).
+- Écran d'accueil en carte ou en couverture plein écran, formes de boutons.
+- Image et description OG par quiz, footer personnalisable.
+- **Formes d'adresse** par quiz : tu ou vous.
 
-### 7.3. Capture & viralité
-- **Lead magnet** : email + prénom + nom + téléphone + pays (toggles configurables)
-- **Tag Systeme.io capture** + **tag share** + **tag par résultat** + **tag par option de réponse** (« answer tags »)
-- **Étape de viralité** : entre capture et résultats, partage sur 6 réseaux (Facebook, X, LinkedIn, WhatsApp, Telegram, email, copy-link)
-- **Anti-triche** : navigator.share sur mobile, polling de fenêtre popup sur desktop, dwell time + confirmation pour copy-link → impossible de fake un partage
-- **Visuel du bonus** : image ou mockup ou GIF
-- **Message bonus personnalisable** (Mai 2026) : texte custom qui remplace le templeté
-- **Restart** : bouton pour recommencer le quiz depuis l'étape résultat
+### 7.3. Capture et viralité
+- **Lead magnet** : email, prénom, nom, téléphone, pays (champs activables), capture avant ou après les questions.
+- **Tags Systeme.io** : capture, partage, par résultat (plusieurs possibles), par réponse.
+- **Étape de viralité** : partage sur Facebook, X, LinkedIn, WhatsApp, Telegram, email, copie de lien.
+- **Anti-triche réelle** : partage natif sur mobile, polling de fenêtre sur desktop, durée minimale et confirmation pour la copie de lien.
+- **Visuel de bonus** : image, mockup ou GIF ; message de bonus personnalisable.
+- **Carte de résultat partageable** et confettis.
+- **Recommencer** et **fermeture de quiz** (redirection ou message avec CTA).
 
-### 7.4. Module Popquiz (Mai 2026)
-- **Vidéo source** : YouTube / Vimeo / URL directe / upload propre (TUS resumable jusqu'à 2 GB)
-- **Cuepoints** : placer un quiz à un timestamp précis sur la timeline
-- **Comportement** : bloquant (le visiteur DOIT répondre) ou optionnel (peut skipper)
-- **Embed iframe** : snippet copiable pour intégrer le popquiz sur n'importe quel site (WordPress, Systeme.io, etc.)
-- **Auto-activation** : publier un popquiz active automatiquement les quiz référencés
-- **Thumbnail auto** : extrait de la vidéo (upload) ou oEmbed (YouTube/Vimeo) à la création
-- **Branding hérité** du profil créateur (logo + couleur)
+### 7.4. Module Popquiz
+- Vidéo source YouTube, Vimeo ou upload propre (jusqu'à 20 Go).
+- Cuepoints à un timestamp précis, comportement bloquant ou optionnel.
+- Embed iframe copiable pour n'importe quel site.
+- Auto-activation des quiz référencés à la publication.
+- Vignette automatique ou personnalisée, player enrichi (vitesse, saut, Picture-in-Picture).
 
 ### 7.5. Intégration Systeme.io
-- **Clé API utilisateur** (chiffrée at rest depuis Mai 2026 sur Tipote, en plain text + masquée UI sur Tiquiz)
-- **Auto-tagging** à la conversion : capture + share + résultat + option
-- **Création/maj du contact** dans Systeme.io en temps réel
-- **Webhook entrant** : ventes Systeme.io qui upgrade automatiquement le plan Tiquiz du créateur (free → lifetime)
-- **Documentation in-app** : explication pas-à-pas pour créer les tags + automatisations Systeme.io
+- Clé API utilisateur (une par plan de base, plusieurs sur les paliers premium).
+- Auto-tagging à la conversion : capture, partage, résultat, réponse.
+- Création et mise à jour du contact en temps réel, inscription formation, ajout communauté.
+- Webhook entrant qui gère automatiquement le plan du créateur.
+- Documentation in-app pour créer tags et automatisations.
 
 ### 7.6. Multilingue
-- **UI admin** : 5 langues (FR / EN / ES / IT / AR avec RTL)
-- **Quiz public** : 8 variantes (fr / fr_vous / en / es / it / de / pt / ar)
-- Switch d'adresse tu/vous par quiz indépendamment de la locale système
-- Typographie française correcte (NBSP avant `: ; ! ? »`) appliquée à la fois au save et au render
+- **UI admin en 7 langues** (FR, EN, ES, IT, AR, PT Portugal, PT Brésil), avec RTL arabe.
+- **Quiz public multilingue**, dont formes tu et vous du français.
+- Typographie française correcte (espaces insécables) appliquée au save et au render.
 
 ### 7.7. Analytics
-- **Funnel par quiz** : vues, démarrages, complétions, partages, conversions
-- **Stats dashboard** par période
-- **Export CSV** des leads
-- **Source tracking** : on sait d'où vient chaque lead (quiz, popquiz, partage)
+- **Funnel par quiz** : vues, démarrages, complétions, partages, conversions.
+- **Drop-off par question** et distribution des leads par résultat.
+- **Insights et analyse IA** (paliers premium) sur les réponses agrégées.
+- **Export** des leads, filtres KPI sur la page leads, source de chaque lead.
 
-### 7.8. Sécurité leads (3 couches)
-- FK `quiz_leads.result_id` ON DELETE SET NULL au niveau DB
-- Snapshot `result_title` avant DELETE des résultats
-- NULL-out explicite avant DELETE
-- → **Aucun lead ne peut disparaître** quand le créateur re-shuffle ses résultats
+### 7.8. Sécurité des leads
+- Trois couches indépendantes garantissent qu'aucun lead ne disparaît, même si le créateur efface des résultats.
+- Auth Supabase et RLS sur toutes les tables.
+- Webhooks Systeme.io signés (HMAC), secrets sensibles chiffrés at rest.
 
-### 7.9. Multiprofils (Mensuel+ / Annuel+ — juin 2026)
+### 7.9. Multiprofils (paliers premium)
+- **Plusieurs projets dans un seul compte** : chaque projet est un espace autonome (quiz, leads, stats, branding, positionnement, clés Systeme.io isolés).
+- **Switch en un clic** depuis le header, avec identité visuelle (couleur et emoji).
+- **Un nouveau projet démarre vide** : stats à zéro, branding à customiser, pas d'héritage.
+- **Multi-clés Systeme.io** : une clé différente par projet.
+- **Filet de sécurité** : un quiz en ligne ne perd jamais son branding visuellement.
 
-- **Plusieurs projets dans un seul compte** : chaque projet = compte virtuel autonome (quiz, leads, stats, branding, positionnement, clés Systeme.io 100 % isolés)
-- **Switch en 1 clic** : sélecteur de projet dans le header avec identité visuelle (couleur d'accent parmi 10 + emoji parmi 20)
-- **Sémantique critique** : un nouveau projet démarre **VIDE** — stats à zéro, branding vierge à customiser, pas d'héritage des réglages des autres projets
-- **Filet de sécurité quiz publics** : si un quiz est servi sur un projet sans branding, les valeurs non-NULL du profil par défaut prennent le relais — un quiz en ligne n'est jamais cassé visuellement par un changement de projet actif
-- **Multi-clés Systeme.io** : une clé API SIO différente par projet (cas typique : 1 marque = 1 compte SIO)
-- **Persistance** : le projet actif est mémorisé entre sessions ; la première session du jour reposition sur le projet par défaut (filet anti-erreur)
-- **Suppression sécurisée** : danger-zone avec recopie obligatoire du nom du projet ; les quiz en ligne d'un projet supprimé restent accessibles (passent en projet par défaut)
-- **Réservé aux paliers +** : Mensuel+ (29€/mois), Annuel+ (290€/an), Lifetime (57€, terminé), Beta — les plans Mensuel (9€) et Annuel (90€) conservent le comportement mono-compte historique
+### 7.10. Analyse IA des résultats (paliers premium)
+- Synthèse automatique des réponses agrégées par Claude, sur quiz et sondages.
+- Cas d'usage : « 200 personnes ont fait mon quiz, qu'est-ce qui ressort vraiment ? » L'IA dégage patterns, segments et insights actionnables.
 
-### 7.10. Analyse IA des résultats (Mensuel+ / Annuel+ — juin 2026)
+### 7.11. Templates métier (15 modèles)
+15 templates prêts à publier, chacun structuré en 6 questions de 4 options et 4 résultats, ton chaleureux, tutoiement, pas de jargon :
 
-- **Synthèse automatique** des réponses agrégées par Claude
-- Couvre **quiz ET sondages** (Tiquiz inclut le module Sondage en plus du quiz)
-- Réservé aux paliers + (cf. §7.9 pour la liste des plans débloqués)
-- Cas d'usage : « 200 personnes ont fait mon quiz, qu'est-ce qui ressort vraiment ? » → l'IA dégage les patterns, segments saillants et insights actionnables
+**Coaching et développement personnel** : croyance limitante (mindset), rapport à la nourriture (nutrition), fuites d'énergie (sommeil et énergie), style parental (parentalité), schéma amoureux (couple), blocage en reconversion, rapport à l'argent (finance).
 
-### 7.11. Templates de quiz métier (juin 2026 — 15 modèles)
+**Business et créatif** : profil entrepreneur, moteur intérieur, style yoga, terrain naturopathie, prêt à lancer ta formation, levier de croissance marketing, style photo, prêt pour ton premier achat immobilier.
 
-15 templates prêts à publier, chacun structuré en 6 questions × 4 options + 4 résultats, ton chaleureux, tutoiement, pas de jargon coach :
+### 7.12. Changement de plan en un clic
+- Depuis Paramètres, l'utilisateur choisit un plan cible, passe au checkout Systeme.io.
+- L'ancien abonnement Systeme.io est auto-annulé, sans double facturation ni chevauchement.
+- Couvre tous les sens (montée et descente de gamme).
 
-**Coaching & développement personnel**
-- Croyance limitante (mindset)
-- Rapport à la nourriture (nutrition)
-- Fuites d'énergie (sommeil & énergie)
-- Style parental (parentalité)
-- Schéma amoureux (couple)
-- Blocage en reconversion
-- Rapport à l'argent (finance)
+### 7.13. Domaines personnalisés
+- **Connecte ton propre domaine** : n'importe quel sous-domaine que tu contrôles.
+- **Setup rapide** : un seul CNAME chez ton registrar (détecté automatiquement avec instructions sur-mesure), Tiquiz vérifie le DNS et émet le certificat SSL sans action supplémentaire.
+- **URLs propres** sur ton domaine, sans préfixe et sans paraître hébergé chez Tiquiz.
+- **Un seul domaine pour tous tes contenus** (quiz, sondages, popquiz), avec sélecteur de domaine dans l'éditeur.
+- **Sécurité** : un autre créateur ne peut pas réclamer ton domaine ni servir son contenu via ton hostname.
+- **Rétrocompatibilité** : les liens déjà partagés continuent de fonctionner.
 
-**Business & créatif**
-- Profil entrepreneur
-- Moteur intérieur
-- Style yoga
-- Terrain naturopathie
-- Prêt à lancer ta formation
-- Levier de croissance marketing
-- Style photo
-- Prêt pour ton premier achat immo
+### 7.14. Studio visuel
+- Génération IA d'images de fond et de textes courts pour promouvoir un quiz.
+- Formats prêts pour chaque réseau (carré, portrait, story, paysage), canvas d'édition, export PDF, brand kit.
 
-### 7.12. Switch d'abonnement en 1 clic (juin 2026)
+### 7.15. Gamification
+- Jalons (premier quiz publié, premier lead, paliers de leads), mur des réussites, objectif hebdomadaire, confettis.
 
-- Settings → Abonnement → "Passer à Mensuel+" (ou tout autre plan) → checkout Systeme.io
-- À la confirmation du paiement, l'**ancien abonnement Systeme.io est auto-annulé**
-- Pas de double-facturation, pas de chevauchement, pas de besoin de contacter le support
-- Couvre tous les sens : free → +, monthly → +, monthly+ → yearly+, downgrades inclus
+### 7.16. Programme revendeur
+- Un partenaire revend Tiquiz en gros à ses propres clients : chaque client a un compte isolé qui connecte son propre Systeme.io.
+- Interface revendeur : créer et gérer des accès clients, compteur de comptes actifs, taux de reversement dégressif au volume, estimation de facture.
+- Facturation automatisée, paiements via les propres clés Stripe ou PayPal du revendeur.
 
-### 7.13. Domaines personnalisés (Pro+)
-- **Connecte ton propre domaine** à Tiquiz : `quiz.ma-marque.com`, `test.mon-business.fr`, n'importe quel sous-domaine que tu contrôles
-- **Setup en 2 minutes** : un seul enregistrement CNAME chez ton registrar (Cloudflare, OVH, GoDaddy, Namecheap, Gandi… détecté automatiquement avec instructions sur-mesure), Tiquiz vérifie le DNS dans la foulée et émet ton certif SSL Let's Encrypt sans aucune action supplémentaire
-- **URLs propres** sur ton domaine : `ma-marque.com/mon-quiz` au lieu de `quiz.tipote.com/q/mon-quiz` — sans préfixe, sans paraître "hébergé chez Tiquiz"
-- **Un seul domaine pour tous tes contenus** : quiz, sondages, popquiz, tout est servi depuis ton hostname. L'éditeur de chaque contenu te laisse choisir entre tes domaines via un dropdown (ton custom est pré-sélectionné puisque tu l'as payé)
-- **Sécurité par défaut** : un autre créateur ne peut pas réclamer un domaine déjà connecté chez toi, ni servir son propre contenu via ton hostname (vérification ownership automatique)
-- **Backwards-compat** : les URLs déjà partagées (`quiz.tipote.com/q/...`, `/p/...`) continuent de fonctionner — personne ne perd l'accès à un lien existant
-
-## 8. Plans & tarification (mis à jour juin 2026)
+## 8. Plans et tarification
 
 ### Matrice features par plan
 
-| Feature | Free | Mensuel (9€) | Annuel (90€) | **Mensuel+ (29€)** | **Annuel+ (290€)** | Lifetime / Beta |
+| Feature | Free | Mensuel (9 €) | Annuel (90 €) | Mensuel+ (29 €) | Annuel+ (290 €) | Lifetime / Beta |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | Quiz actifs | 1 | illimité | illimité | illimité | illimité | illimité |
 | Sondages actifs | 1 | illimité | illimité | illimité | illimité | illimité |
 | Popquiz actifs | 1 | illimité | illimité | illimité | illimité | illimité |
 | Réponses captées visibles | 10/mois | illimité | illimité | illimité | illimité | illimité |
-| Footer custom | ✗ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Clés Systeme.io | 1 max | **1 max** | **1 max** | illimité | illimité | illimité |
-| Multiprofils | ✗ | ✗ | ✗ | **✓** | **✓** | ✓ |
-| Analyse IA des résultats (quiz + sondages) | ✗ | ✗ | ✗ | **✓** | **✓** | ✓ |
+| Footer et branding | limité | complet | complet | complet | complet | complet |
+| Clés Systeme.io | 1 | 1 | 1 | plusieurs | plusieurs | plusieurs |
+| Multiprofils | non | non | non | oui | oui | oui |
+| Analyse IA des résultats | non | non | non | oui | oui | oui |
 
-### Free — 0€
-- **1 quiz max** + 1 sondage max + **1 popquiz max**
-- 10 réponses (leads) visibles par mois — les suivantes restent capturées mais en flou jusqu'à upgrade
-- Auto-reset 30 jours
-- Tous les modules de création accessibles (génération IA, embed, partage, Systeme.io)
-- **Idéal pour** : tester un premier lead-magnet
+### Free, 0 €
+- 1 quiz, 1 sondage, 1 popquiz.
+- 10 réponses visibles par mois ; les suivantes restent captées mais floutées jusqu'à la montée en gamme.
+- Auto-reset tous les 30 jours.
+- Tous les modules de création accessibles (génération IA, embed, partage, Systeme.io).
+- **Idéal pour** : tester un premier lead-magnet.
 
-### Mensuel — 9€/mois
-- Quiz / sondages / popquiz illimités, leads illimités
-- 1 clé Systeme.io
-- Annulable à tout moment
-- **Idéal pour** : un créateur en démarrage qui veut juste un outil de quiz lead-magnet branché à Systeme.io
+### Mensuel, 9 €/mois
+- Quiz, sondages, popquiz illimités, leads illimités.
+- 1 clé Systeme.io. Annulable à tout moment.
+- **Idéal pour** : un créateur en démarrage qui veut un outil de quiz lead-magnet branché à Systeme.io.
 
-### Annuel — 90€/an
-- Idem Mensuel, économie de 18€/an
-- **Idéal pour** : un usage régulier sans s'engager à vie
+### Annuel, 90 €/an
+- Identique au Mensuel, avec l'économie de l'engagement annuel.
+- **Idéal pour** : un usage régulier sans engagement à vie.
 
-### Mensuel+ — 29€/mois (juin 2026)
-- Tout Mensuel + **multiprofils** + **analyse IA des résultats** + **multi-clés Systeme.io**
-- **Idéal pour** : créateurs multi-marques / multi-niches, ou solopreneurs qui veulent l'analyse IA pour exploiter leurs réponses captées
-- CTA upsell typique depuis Mensuel : « Débloque les multiprofils + l'analyse IA pour 20€ de plus par mois »
+### Mensuel+, 29 €/mois
+- Tout le Mensuel, plus **multiprofils**, **analyse IA des résultats** et **multi-clés Systeme.io**.
+- **Idéal pour** : créateurs multi-marques ou multi-niches, ou solopreneurs qui veulent exploiter leurs réponses par l'IA.
+- CTA d'upsell typique : « Débloque les multiprofils et l'analyse IA pour 20 € de plus par mois. »
 
-### Annuel+ — 290€/an (juin 2026)
-- Tout Mensuel+ en annuel, économie de 58€/an
-- **Idéal pour** : créateurs multi-marques installés qui veulent la stabilité d'un engagement annuel
+### Annuel+, 290 €/an
+- Tout le Mensuel+ en annuel, avec l'économie de l'engagement.
+- **Idéal pour** : créateurs multi-marques installés qui veulent la stabilité de l'annuel.
 
-### Lifetime — 57€ (offre terminée en vente directe — conservée pour early adopters)
-- **Quiz / sondages / popquiz illimités, leads illimités**
-- Inclut multiprofils + analyse IA + multi-clés SIO (équivalent Annuel+)
-- Pas d'abonnement, pas de renouvellement
-- **Ne plus pousser comme CTA dans les nouveaux contenus** (offre fermée)
+### Lifetime et Beta
+- Le plan Lifetime n'est plus proposé à la vente directe. Il reste équivalent aux paliers premium (multiprofils, analyse IA, multi-clés) pour les comptes qui le détiennent.
+- Le plan Beta est accordé manuellement. Ne pas mettre Lifetime ou Beta en avant comme CTA.
 
 ### Pricing rationale (à utiliser dans la com)
-- Tiquiz est **5 à 7 fois moins cher** que les concurrents anglais (Typeform 25-83€/mois, ScoreApp 60-200€/mois) sur le plan Mensuel — et reste 2 fois moins cher en Mensuel+
-- Le palier + à 29€/mois ouvre les usages "agence-light" (plusieurs marques, plusieurs comptes SIO) qui demandent normalement un Pro à 99-300€/mois ailleurs
-- Aucun crédit IA — la génération IA reste illimitée à tous les niveaux payants
-- **Source de vérité prix dans le code** : `lib/planLimits.ts:PRICING_PLUS` (à ne jamais diverger entre code et com)
+- Tiquiz est nettement moins cher que les concurrents anglais sur le plan Mensuel, et reste compétitif en Mensuel+.
+- Le palier + à 29 €/mois ouvre les usages multi-marques (plusieurs comptes Systeme.io) qui coûtent bien plus cher ailleurs.
+- Aucun crédit IA : la génération IA reste illimitée à tous les niveaux payants.
+- **Source de vérité prix dans le code** : `lib/planLimits.ts`. Ne jamais faire diverger la com du code.
 
-## 9. Voix de marque & ton
+## 9. Voix de marque et ton
 
-### Vocabulaire Tiquiz
-- **Mots-clés à utiliser** : quiz, lead, capture, partage, tag, simple, vraiment, en un clic, sans coder, branché à Systeme.io
-- **Mots à BANNIR** : conversion funnel, lead generation (terme générique), saas, plateforme, solution, expertise
-- **Tutoiement obligatoire**
-- **Métaphores** : Tiquiz comme un copilote du quiz, comme un mini-Tipote dédié, comme l'extension naturelle de Systeme.io
+### Vocabulaire
+- **Mots-clés à utiliser** : quiz, lead, capture, partage, tag, simple, vraiment, en un clic, sans coder, branché à Systeme.io.
+- **Mots à bannir** : conversion funnel, lead generation (terme générique), saas, plateforme, solution, expertise.
+- **Tutoiement obligatoire.**
+- **Métaphores** : Tiquiz comme un copilote du quiz, comme un mini-Tipote dédié, comme l'extension naturelle de Systeme.io.
 
 ### Ton
-- **Direct, presque sec** : on parle au point, on ne raconte pas la genèse de l'outil
-- **Démontrable** : toujours « tu fais X et tu obtiens Y », jamais « tu pourrais imaginer faire X »
-- **Humble** : Tiquiz fait UNE chose, bien. Pas un tous-en-un. C'est un argument de vente, pas un défaut
-- **Anti-bullshit marketing** : pas de « engagement », pas de « ROI », pas de « scaling »
+- **Direct, presque sec** : on va au point, on ne raconte pas la genèse de l'outil.
+- **Démontrable** : toujours « tu fais X et tu obtiens Y », jamais « tu pourrais imaginer faire X ».
+- **Humble** : Tiquiz fait une chose, bien. C'est un argument de vente, pas un défaut.
+- **Anti-bullshit marketing** : pas de « engagement », pas de « ROI », pas de « scaling ».
 
-### Exemples de phrases dans la voix
-- ✅ « En 5 minutes tu as un quiz qui tague tes leads dans Systeme.io. C'est tout ce que ça fait. C'est tout ce qu'il faut. »
-- ✅ « Tu donnes 3 mots à l'IA, elle te sort 5 questions et 4 résultats. Tu édites ce qui ne te plaît pas. Tu publies. »
-- ❌ « Découvrez la solution n°1 de génération de leads par quiz interactifs. »
-- ❌ « Boostez votre engagement avec nos quiz IA-driven. »
+### Exemples dans la voix
+- OUI : « En 5 minutes tu as un quiz qui tague tes leads dans Systeme.io. C'est tout ce que ça fait. C'est tout ce qu'il faut. »
+- OUI : « Tu donnes trois mots à l'IA, elle te sort tes questions et tes résultats. Tu édites ce qui ne te plaît pas. Tu publies. »
+- NON : « Découvrez la solution numéro 1 de génération de leads par quiz interactifs. »
+- NON : « Boostez votre engagement avec nos quiz IA-driven. »
 
-## 10. Preuves & garanties
+## 10. Preuves et garanties
 
 ### Sécurité
-- **Lead safety** : 3 couches indépendantes garantissent qu'aucun lead n'est perdu, même si le créateur efface des résultats par erreur
-- **Auth Supabase** + RLS sur toutes les tables
-- **Webhook signing** sécurisé pour les événements Systeme.io entrants
+- **Lead safety** : trois couches indépendantes garantissent qu'aucun lead n'est perdu, même en cas d'erreur du créateur.
+- Auth Supabase et RLS sur toutes les tables.
+- Webhooks Systeme.io signés, secrets sensibles chiffrés.
 
 ### Fiabilité
-- 5 langues UI
-- 8 variantes pour les quiz publics
-- Tests de non-régression documentés (`docs/INVARIANTS.md`)
+- 7 langues UI, quiz public multilingue.
+- Tests de non-régression documentés.
 
 ### Service client
-- Centre d'aide + tickets partagés avec Tipote
-- Pas de duplication : un seul SAV Tipote/Tiquiz, en français
+- Centre d'aide et tickets partagés avec Tipote, en français. Un seul SAV pour les deux produits.
 
-## 11. Objections fréquentes + réponses
+## 11. Objections fréquentes et réponses
 
 | Objection | Réponse type |
 |---|---|
-| « Encore un outil de quiz, j'ai déjà Typeform » | Typeform ne tague pas tes leads dans Systeme.io. Tiquiz oui. Et Tiquiz est en français. Et Tiquiz est 5x moins cher. |
-| « Pourquoi pas Tipote tant qu'à faire ? » | Tipote a 7 modules. Si tu ne veux QUE du quiz, Tiquiz est moins cher (9€/mois vs 19-99€/mois) et focalisé. Tu peux toujours upgrader vers Tipote plus tard. |
-| « Je suis pas tech, je vais pas y arriver » | Onboarding 5 minutes, pas de prompts à écrire, pas d'API à configurer. À l'inscription tu choisis un template parmi 15, ton quiz est prêt en 10 secondes. |
-| « Mes leads vont être perdus si vous fermez ? » | Export CSV à tout moment. Et chaque lead est aussi poussé dans Systeme.io en temps réel — donc tu as une copie chez Systeme.io de toute façon. |
-| « Le quiz IA va sortir n'importe quoi » | Étape brainstorm conversationnel avant génération pour cadrer. Et tu peux modifier chaque texte inline. La génération est un point de départ, pas un point final. |
-| « Pourquoi payer 29€/mois pour Mensuel+ plutôt que rester à 9€ ? » | Si tu n'as qu'une marque, reste à 9€ — c'est conçu pour ça. Le + se justifie dès que tu gères plusieurs marques/audiences (multiprofils = 1 compte SIO différent par projet) ou que tu veux faire parler tes réponses (analyse IA). |
-| « Si je passe de 9€ à 29€ je vais être facturé deux fois ? » | Non : le switch est automatique. Tu cliques "Passer à Mensuel+" depuis Settings, le nouveau plan démarre, l'ancien est annulé chez Systeme.io en même temps. Aucun chevauchement. |
+| « Encore un outil de quiz, j'ai déjà Typeform » | Typeform ne tague pas tes leads dans Systeme.io. Tiquiz oui. Et Tiquiz est en français, et moins cher. |
+| « Pourquoi pas Tipote tant qu'à faire ? » | Tipote a plusieurs modules. Si tu ne veux QUE du quiz, Tiquiz est moins cher et focalisé. Tu peux upgrader vers Tipote plus tard. |
+| « Je suis pas tech, je vais pas y arriver » | Onboarding en 5 minutes, pas de prompts à écrire, pas d'API à configurer. À l'inscription tu choisis un template et ton quiz est prêt en un clic. |
+| « Mes leads vont être perdus si vous fermez ? » | Export à tout moment. Et chaque lead est aussi poussé dans Systeme.io en temps réel : tu en as une copie de toute façon. |
+| « Le quiz IA va sortir n'importe quoi » | Brainstorm conversationnel avant génération pour cadrer, et tu modifies chaque texte inline. La génération est un point de départ, pas un point final. |
+| « Pourquoi payer 29 €/mois plutôt que 9 € ? » | Si tu n'as qu'une marque, reste à 9 €. Le + se justifie dès que tu gères plusieurs marques (multiprofils, une clé Systeme.io par projet) ou que tu veux faire parler tes réponses (analyse IA). |
+| « Si je passe de 9 € à 29 € je vais être facturé deux fois ? » | Non. Le switch est automatique : le nouveau plan démarre, l'ancien est annulé chez Systeme.io en même temps. Aucun chevauchement. |
 
 ## 12. CTAs
 
@@ -357,44 +323,44 @@ Variations selon le canal :
 - « Voir le mode Popquiz vidéo »
 - « Comparer avec Typeform »
 
-### CTAs upsell (free → payant)
+### CTAs upsell (free vers payant)
 - « Débloquer les leads cachés »
-- « Passer à l'illimité — 9€/mois »
+- « Passer à l'illimité, 9 €/mois »
 - « Annuler à tout moment »
 
-### CTAs upsell (Mensuel/Annuel → +)
-- « Débloquer les multiprofils — 29€/mois »
+### CTAs upsell (Mensuel ou Annuel vers +)
+- « Débloquer les multiprofils, 29 €/mois »
 - « Gérer plusieurs marques dans un seul compte »
 - « Activer l'analyse IA de mes réponses »
 - « Connecter plusieurs comptes Systeme.io »
 
 ## 13. Données chiffrées à mentionner
 
-- **10 secondes** pour publier son premier quiz à l'inscription (template + 1 clic)
-- **5 minutes** pour créer un quiz custom de A à Z
-- **30 secondes** de génération IA
-- **5 fois moins cher** que les concurrents anglais (9€/mois vs 25-83€)
-- **15 templates métier** prêts à publier (juin 2026)
-- **5 langues UI** + **8 variantes quiz public** + RTL arabe
-- **20 Go max** par upload vidéo (popquiz, depuis mai 2026)
-- **6 réseaux** de partage (Facebook, X, LinkedIn, WhatsApp, Telegram, email)
-- **3 couches de sécurité** sur les leads (DB + app + défense)
-- **Multiprofils illimités** sur Mensuel+ / Annuel+ (juin 2026)
+- **Un clic** pour publier son premier quiz à l'inscription (template phare).
+- **5 minutes** pour créer un quiz custom de A à Z.
+- **30 secondes** de génération IA.
+- **15 templates métier** prêts à publier.
+- **7 langues UI**, quiz public multilingue, RTL arabe.
+- **20 Go max** par upload vidéo (popquiz).
+- **6 réseaux** de partage (Facebook, X, LinkedIn, WhatsApp, Telegram, email).
+- **3 couches de sécurité** sur les leads.
+- **Multiprofils** sur les paliers Mensuel+ et Annuel+.
 
-## 14. Slogans / accroches déjà utilisées (réutilisables)
+## 14. Slogans réutilisables
 
 - « Le quiz lead-magnet le plus simple à créer »
-- « Tu donnes 3 mots, l'IA fait le reste »
+- « Tu donnes trois mots, l'IA fait le reste »
 - « Branché à Systeme.io en un clic »
 - « Le quiz que tes prospects partagent vraiment »
 - « 5 minutes pour créer, 5 secondes pour publier »
 
-## 15. Ce qu'il NE FAUT PAS faire dans la com
+## 15. Ce qu'il ne faut pas faire dans la com
 
-- ❌ Vendre Tiquiz comme un challenger Typeform en frontal — positionnement « la version simple + intégrée Systeme.io » plutôt que « l'alternative »
-- ❌ Promettre des taux de conversion garantis (« 80 % de complétion » — dépend du quiz, pas de l'outil)
-- ❌ Cacher la limite free (1 quiz / 10 leads) — au contraire mettre en avant que c'est volontaire pour un test honnête
-- ❌ Vouvoyer le prospect (B2C tutoiement strict)
-- ❌ Comparer en frontal aux outils Tipote concurrents (Tipote = produit cousin, pas concurrent)
-- ❌ Faire des promesses « tu vas exploser tes leads » — promesse outil, pas promesse résultat
-- ❌ Utiliser des screenshots avec une UI obsolète (UI évolue souvent — vérifier la date des assets)
+- Ne pas vendre Tiquiz comme un challenger frontal de Typeform : positionnement « la version simple et intégrée à Systeme.io » plutôt que « l'alternative ».
+- Ne pas promettre de taux de conversion garantis (cela dépend du quiz, pas de l'outil).
+- Ne pas cacher la limite free (1 quiz, 10 leads) : au contraire, la présenter comme un test honnête assumé.
+- Ne pas vouvoyer le prospect (tutoiement strict).
+- Ne pas comparer frontalement aux modules Tipote (produit cousin, pas concurrent).
+- Ne pas faire de promesse « tu vas exploser tes leads » : promesse outil, pas promesse résultat.
+- Ne pas utiliser de screenshots avec une UI obsolète : vérifier la fraîcheur des assets.
+</content>

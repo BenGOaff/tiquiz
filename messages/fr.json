@@ -1374,7 +1374,19 @@
     "optionSioTagLabel": "Tag Systeme.io pour cette réponse",
     "optionalQuestionLabel": "Facultative",
     "optionalQuestionHint": "Le visiteur peut passer cette question. Une question sautée ne compte pas dans le résultat.",
-    "errFlagSave": "Le marquage n'a pas pu être enregistré."
+    "errFlagSave": "Le marquage n'a pas pu être enregistré.",
+    "designQuestionLayout": "Disposition des questions",
+    "designQuestionLayoutCentered": "Centré",
+    "designQuestionLayoutLeft": "Aligné à gauche",
+    "designQuestionLayoutSplit": "Colonnes",
+    "designQuestionLayoutHint": "La question et les réponses restent sur une colonne. La disposition Colonnes ajoute un panneau visuel à côté.",
+    "designSplitImageAdd": "Choisir une image",
+    "designSplitImageGif": "GIF",
+    "designSplitImageRemove": "Retirer l'image",
+    "designSplitSide": "Côté du visuel",
+    "designSplitSideLeft": "Gauche",
+    "designSplitSideRight": "Droite",
+    "designSplitImageHint": "Le visuel s'affiche à côté de la question sur ordinateur, et au-dessus sur mobile."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",
