@@ -1386,7 +1386,7 @@
     "designSplitSide": "Côté du visuel",
     "designSplitSideLeft": "Gauche",
     "designSplitSideRight": "Droite",
-    "designSplitImageHint": "Le visuel s'affiche à côté de la question sur ordinateur, et au-dessus sur mobile."
+    "designSplitImageHint": "Le visuel s'affiche à côté de la question sur ordinateur, et au-dessus sur mobile. Sans image, on remplit le panneau avec ta couleur, ton logo et ton titre : jamais un côté vide."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",

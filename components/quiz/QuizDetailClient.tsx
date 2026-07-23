@@ -3352,22 +3352,33 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 // WYSIWYG disposition (façon Tally). 'centered' = rendu
                 // historique du preview. 'left'/'split' alignent à gauche ;
                 // 'split' ajoute le panneau média latéral.
-                const previewSplit = questionLayout === "split" && !!splitImageUrl;
-                const previewContentAlign = questionLayout === "centered" ? "items-center" : "items-start";
+                // Disposition (aligné sur le rendu public) : 'split' montre
+                // TOUJOURS un panneau (image, sinon panneau de marque), 'left'
+                // garde le bloc centré (items-center) avec texte à gauche, donc
+                // jamais de demi-écran vide.
+                const previewSplit = questionLayout === "split";
+                const previewAlignText = questionLayout === "centered" ? "text-center" : "text-left";
                 return (
                   <div key={qi} ref={el => { questionRefs.current[qi] = el; }} className="min-h-screen flex flex-col px-6 sm:px-12 py-8">
                     {/* Progress bar */}
                     <div className="w-full max-w-2xl mx-auto mb-8">
                       <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${progress}%`, backgroundColor: pc }} /></div>
                     </div>
-                    <div className={`flex-1 flex ${previewSplit ? (splitSide === "right" ? "flex-col md:flex-row-reverse md:items-center gap-6" : "flex-col md:flex-row md:items-center gap-6") : `flex-col ${previewContentAlign} justify-center`}`}>
+                    <div className={`flex-1 flex ${previewSplit ? (splitSide === "right" ? "flex-col md:flex-row-reverse gap-6" : "flex-col md:flex-row gap-6") : "flex-col items-center justify-center"}`}>
                       {previewSplit && (
-                        <div className="w-full md:w-[42%] shrink-0 flex items-center justify-center">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={splitImageUrl!} alt="" className="w-full h-auto rounded-2xl shadow-sm" />
+                        <div className="relative w-full h-40 md:h-auto md:w-2/5 shrink-0 md:self-stretch overflow-hidden rounded-2xl flex items-center justify-center" style={splitImageUrl ? { backgroundImage: `url("${splitImageUrl}")`, backgroundSize: "cover", backgroundPosition: "center" } : { background: previewBackgroundCss ?? pc }}>
+                          {!splitImageUrl && (
+                            <div className="flex flex-col items-center justify-center gap-2 p-4 text-center text-white">
+                              {effectiveLogoUrl && (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img src={effectiveLogoUrl} alt="" className="max-h-12 w-auto object-contain" />
+                              )}
+                              <span className="text-base font-bold leading-tight">{title.replace(/<[^>]+>/g, "")}</span>
+                            </div>
+                          )}
                         </div>
                       )}
-                      <div className={`${previewSplit ? "flex-1 min-w-0 " : ""}max-w-2xl w-full space-y-8`}>
+                      <div className={`${previewSplit ? "flex-1 min-w-0 flex flex-col justify-center " : ""}max-w-2xl w-full space-y-8 ${previewAlignText}`}>
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: pc }}>{t("previewQuestionsCounter", { n: qi + 1, total: editQuestions.length })}</p>
                           <div className="flex items-center gap-2">

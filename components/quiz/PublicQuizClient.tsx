@@ -2397,6 +2397,53 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
 
   const totalQ = quiz.questions.length;
 
+  // ─── Disposition (façon Tally), partagée par tous les écrans ─────────
+  // 'centered' (défaut, rendu historique) : colonne centrée, texte centré.
+  // 'left' : MEME colonne centrée sur la page (marges équilibrées, aucun
+  //   demi-écran vide), mais texte aligné à gauche facon Tally.
+  // 'split' : deux panneaux plein écran. Le panneau média est TOUJOURS
+  //   rempli (image plein cadre, sinon panneau de marque : dégradé/couleur
+  //   + logo + titre). Jamais un côté vide.
+  const qLayout = branding.questionLayout;
+  const layoutIsSplit = qLayout === "split";
+  const layoutAlignText = qLayout === "centered" ? "text-center" : "text-left";
+  const layoutIndicatorJustify = qLayout === "centered" ? "justify-center" : "justify-start";
+  const layoutOuterClass = layoutIsSplit
+    ? branding.splitSide === "right"
+      ? " md:flex-row-reverse"
+      : " md:flex-row"
+    : "";
+  // Panneau média/marque du mode 'split'. Bannière en haut sur mobile
+  // (hauteur fixe), colonne latérale plein hauteur >= md. Toujours quelque
+  // chose a l'ecran : une image en cover, ou un panneau de marque.
+  const renderMediaPanel = (): React.ReactNode => {
+    if (!layoutIsSplit) return null;
+    const img = branding.splitImageUrl;
+    return (
+      <div
+        className="relative w-full h-44 sm:h-56 md:h-auto md:w-2/5 lg:w-[44%] shrink-0 md:min-h-screen overflow-hidden"
+        style={
+          img
+            ? { backgroundImage: `url("${img}")`, backgroundSize: "cover", backgroundPosition: "center" }
+            : { background: richBackground ?? branding.primaryColor }
+        }
+      >
+        {!img && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 md:p-10 text-center" style={{ color: "#ffffff" }}>
+            {branding.logoUrl && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={branding.logoUrl} alt="" className="max-h-14 md:max-h-20 w-auto object-contain" />
+            )}
+            <span
+              className="tiquiz-rich tiquiz-rich-inline text-lg md:text-3xl font-bold leading-tight text-white"
+              dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.title)) }}
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // STEP: Intro
   if (step === "intro") {
     const introRich = isHtml(quiz.introduction);
@@ -2479,14 +2526,14 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     }
 
     return (
-      <div
-        className="min-h-screen flex flex-col"
-        style={rootStyle}
-      >
+      <div className={`min-h-screen flex flex-col${layoutOuterClass}`} style={rootStyle}>
+        {renderMediaPanel()}
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
-        <div className="max-w-2xl w-full space-y-8 text-center py-16 sm:py-24">
+        {/* Un seul conteneur pour titre + intro + bouton : mêmes bornes et
+            même alignement, donc l'intro est TOUJOURS calée sur le titre. */}
+        <div className={`max-w-2xl w-full space-y-8 ${layoutAlignText} py-16 sm:py-24`}>
             {branding.logoUrl && (
-              <div className="flex justify-center">
+              <div className={`flex ${qLayout === "centered" ? "justify-center" : "justify-start"}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={branding.logoUrl}
@@ -2517,19 +2564,19 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
 
             {introRich ? (
               <div
-                className="tiquiz-rich text-muted-foreground text-lg leading-relaxed max-w-xl mx-auto"
+                className={`tiquiz-rich text-muted-foreground text-lg leading-relaxed ${qLayout === "centered" ? "max-w-xl mx-auto" : ""}`}
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.introduction) }}
               />
             ) : (
               <>
                 {descLines.length > 0 && (
-                  <p className="text-muted-foreground text-lg leading-relaxed whitespace-pre-line max-w-xl mx-auto">
+                  <p className={`text-muted-foreground text-lg leading-relaxed whitespace-pre-line ${qLayout === "centered" ? "max-w-xl mx-auto" : ""}`}>
                     {descLines.join("\n")}
                   </p>
                 )}
 
                 {bulletLines.length > 0 && (
-                  <ul className="space-y-3 text-left max-w-md mx-auto">
+                  <ul className={`space-y-3 text-left max-w-md ${qLayout === "centered" ? "mx-auto" : ""}`}>
                     {bulletLines.map((line, i) => (
                       <li key={i} className="flex items-start gap-3">
                         <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 shrink-0" />
@@ -2906,52 +2953,31 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
       );
     }
 
-    // ─── Disposition (façon Tally) ───
-    // 'centered' (défaut/NULL) : rendu STRICTEMENT identique aux quiz
-    // existants (items-center + text-center + outer flex-col inchangés).
-    // 'left' : contenu aligné à gauche. 'split' : panneau média + colonne
-    // question (deux colonnes >= md, empilé sur mobile). Le panneau média
-    // n'apparaît que si une image est fournie, sinon on retombe sur le
-    // rendu simple d'une seule colonne.
-    const qLayout = branding.questionLayout;
-    const splitImg = branding.splitImageUrl;
-    const useSplit = qLayout === "split" && !!splitImg;
-    const contentAlignClass = qLayout === "centered" ? "items-center" : "items-start";
-    const questionColumnClass = `flex-1 flex flex-col ${contentAlignClass} justify-center px-4 sm:px-6 py-16`;
-    const outerSplitClass = useSplit
-      ? branding.splitSide === "right"
-        ? " md:flex-row-reverse"
-        : " md:flex-row"
-      : "";
     return (
-      <div className={`min-h-screen flex flex-col${outerSplitClass}`} style={rootStyle}>
+      <div className={`min-h-screen flex flex-col${layoutOuterClass}`} style={rootStyle}>
           {/* Progress bar fixed top — visible at any scroll position
               so the visitor always knows how far they are. */}
           <div className="fixed top-0 left-0 right-0 z-10">
             <Progress value={progress} className="h-1.5 rounded-none" />
           </div>
 
-          {/* Panneau média/marque (disposition 'split'). Plein largeur en
-              mobile (empilé au-dessus), colonne latérale >= md. L'image est
-              en w-full h-auto : aucun crop object-cover (cf. pitfalls). */}
-          {useSplit && (
-            <div className="w-full md:w-[42%] lg:w-[45%] shrink-0 flex items-center justify-center p-5 sm:p-8 md:min-h-screen">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={splitImg!} alt="" className="w-full h-auto rounded-2xl shadow-sm" />
-            </div>
-          )}
+          {/* Panneau média/marque en disposition 'split' (toujours rempli). */}
+          {renderMediaPanel()}
 
-          <div className={questionColumnClass} onTouchStart={onQuizTouchStart} onTouchEnd={onQuizTouchEnd}>
+          {/* Colonne contenu : le bloc reste CENTRE sur la page (items-center),
+              seul le texte s'aligne selon la disposition. En 'left', pas de
+              demi-écran vide : marges équilibrées, texte à gauche (façon Tally). */}
+          <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-16" onTouchStart={onQuizTouchStart} onTouchEnd={onQuizTouchEnd}>
             {/* key={currentQ} re-mounts this block each time the
                 visitor moves to a new question, which retriggers the
                 quiz-step-in keyframe → the new question rises in
                 rather than popping. Subtle but transforms the feel
                 from "form" to "guided experience". */}
-            <div key={currentQ} className={`max-w-2xl w-full space-y-8 ${navDir === "back" ? "animate-quiz-slide-in-left" : "animate-quiz-slide-in-right"}`}>
+            <div key={currentQ} className={`max-w-2xl w-full space-y-8 ${layoutAlignText} ${navDir === "back" ? "animate-quiz-slide-in-left" : "animate-quiz-slide-in-right"}`}>
               {/* Pill-style step indicator — sits more confidently than
                   the previous tracking-widest paragraph and keeps the
                   primary brand color in view at every step. */}
-              <div className={`flex items-center ${qLayout === "centered" ? "justify-center" : "justify-start"}`}>
+              <div className={`flex items-center ${layoutIndicatorJustify}`}>
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold tabular-nums">
                   {t.questions.charAt(0).toUpperCase() + t.questions.slice(1)}
                   <span className="opacity-70">{currentQ + 1} / {totalQ}</span>
@@ -3026,10 +3052,8 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
   // STEP: Email capture
   if (step === "email") {
     return (
-      <div
-        className="min-h-screen flex flex-col"
-        style={rootStyle}
-      >
+      <div className={`min-h-screen flex flex-col${layoutOuterClass}`} style={rootStyle}>
+        {renderMediaPanel()}
         {/* Slide-in for the email capture step too — full visitor
             flow now uses the same gentle entrance keyframe so each
             step transition reads as a guided experience. */}

@@ -1402,7 +1402,7 @@
     "designSplitSide": "Lato del visual",
     "designSplitSideLeft": "Sinistra",
     "designSplitSideRight": "Destra",
-    "designSplitImageHint": "Il visual appare accanto alla domanda su computer, e sopra su cellulare."
+    "designSplitImageHint": "Il visual appare accanto alla domanda su computer, e sopra su cellulare. Senza immagine, il pannello si riempie con il tuo colore, il tuo logo e il tuo titolo, mai vuoto."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nuova password",

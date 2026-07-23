@@ -1390,7 +1390,7 @@
     "designSplitSide": "جهة الصورة",
     "designSplitSideLeft": "يسار",
     "designSplitSideRight": "يمين",
-    "designSplitImageHint": "تظهر الصورة بجانب السؤال على الكمبيوتر، وفوقها على الهاتف."
+    "designSplitImageHint": "تظهر الصورة بجانب السؤال على الكمبيوتر، وفوقها على الهاتف. بدون صورة، يُملأ الجانب بلونك وشعارك وعنوانك، ولا يبقى فارغًا أبدًا."
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",
