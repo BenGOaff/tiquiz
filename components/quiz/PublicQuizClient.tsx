@@ -1672,7 +1672,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
   // Returns the winning profile + the per-profile scores array so the
   // optional "Répartition complète" card can be rendered alongside the
   // primary result. Surveys still short-circuit (no result page).
-  const computeResult = useCallback((): {
+  const computeResult = useCallback((answersOverride?: (SurveyAnswer | null | undefined)[]): {
     profile: QuizResult | null;
     scores: number[];
     scoreValue?: number;
@@ -1680,6 +1680,11 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
   } => {
     if (!quiz) return { profile: null, scores: [] };
     if (quiz.mode === "survey") return { profile: null, scores: [] };
+    // Permet de calculer sur un jeu de réponses fraîchement construit
+    // (ex. capture désactivée : on finalise juste après la dernière
+    // question, avant que le state `answers` ne soit re-render). Fallback
+    // sur le state pour le flux email classique (inchangé).
+    const src = answersOverride ?? answers;
 
     // ── Mode "scoring" (vrai quiz note) ──────────────────────────────
     // Chaque option porte des `points` (bonne reponse = 1 par defaut,
@@ -1691,7 +1696,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
       let scoreMax = 0;
       quiz.questions.forEach((q, qIdx) => {
         const qType = q.question_type ?? "multiple_choice";
-        const ans = answers[qIdx];
+        const ans = src[qIdx];
         // Échelle / étoiles : la note choisie EST le score de la question,
         // le max atteignable = la borne haute (config.max, défaut 10 / 5).
         if (qType === "rating_scale" || qType === "star_rating") {
@@ -1736,7 +1741,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     // ponderation (tous points = 1), ce tableau est uniforme -> aucune
     // difference avec l'ancien comportement (retro-compatible strict).
     const strongest: number[] = new Array(quiz.results.length).fill(0);
-    answers.forEach((ans, qIdx) => {
+    src.forEach((ans, qIdx) => {
       if (!ans) return;
       const q = quiz.questions[qIdx];
       if (!q) return;
@@ -1778,6 +1783,30 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     }
     return { profile: quiz.results[maxIdx] ?? null, scores };
   }, [quiz, answers]);
+
+  // Capture email désactivée en mode quiz (juillet 2026) : le créateur a
+  // choisi de montrer le résultat SANS demander d'email. On calcule le
+  // profil depuis les réponses, on affiche le résultat directement. AUCUN
+  // lead inséré, AUCUNE synchro Systeme.io, AUCUN email. Le tracking
+  // "complete" est déjà émis par l'appelant (commitAnswer / skipQuestion).
+  // Si un bonus-on-partage est configuré, on garde l'étape bonus (elle ne
+  // dépend pas de l'email, juste du partage).
+  const finishQuizWithoutCapture = useCallback((finalAnswers: (SurveyAnswer | null | undefined)[]) => {
+    const { profile, scores, scoreValue, scoreMax } = computeResult(finalAnswers);
+    if (quiz?.mode === "scoring") {
+      setResultScore({ value: scoreValue ?? 0, max: scoreMax ?? 0 });
+    }
+    setResultProfile(profile);
+    setResultScores(scores);
+    const hasBonusFlow = Boolean(
+      quiz?.virality_enabled && (
+        (quiz?.bonus_description || "").trim() ||
+        (quiz?.bonus_image_url || "").trim() ||
+        (quiz?.bonus_intro_text || "").trim()
+      ),
+    );
+    setStep(hasBonusFlow ? "bonus" : "result");
+  }, [quiz, computeResult]);
 
   // Charge les réponses agrégées des autres participants à l'arrivée sur
   // l'écran de remerciement du sondage, uniquement si l'auteur a activé
@@ -1886,6 +1915,11 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         if (quiz && quiz.mode === "survey" && quiz.capture_enabled === false) {
           void submitAnonymousSurvey(newAnswers);
           setStep("result");
+        } else if (quiz && quiz.capture_enabled === false) {
+          // Quiz (ou scoring) avec capture désactivée : on montre le
+          // résultat sans email. Pas de lead, pas de SIO. captureBefore est
+          // déjà neutralisé quand capture_enabled === false.
+          finishQuizWithoutCapture(newAnswers);
         } else if (captureBefore) {
           // Email deja capture avant les questions -> on envoie email +
           // reponses en UNE fois (upsert) puis remerciement. handleSubmitEmail
@@ -1931,6 +1965,8 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
       if (quiz && quiz.mode === "survey" && quiz.capture_enabled === false) {
         void submitAnonymousSurvey(newAnswers);
         setStep("result");
+      } else if (quiz && quiz.capture_enabled === false) {
+        finishQuizWithoutCapture(newAnswers);
       } else if (captureBefore) {
         void handleSubmitEmail(newAnswers);
       } else {
@@ -2729,7 +2765,14 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     // Disposition des réponses (colonnes vs liste). 'auto' = rendu historique
     // (multiple_choice >= 3 options -> 2 colonnes). 'grid' = toujours 2
     // colonnes >= sm. 'list' = toujours une seule colonne empilée.
-    const answerLayout = branding.answerLayout;
+    // Override PAR QUESTION : q.config.answer_layout ('grid'|'list') prime sur
+    // le réglage quiz-level. Absent ou 'auto' -> on hérite du quiz. Sanitize
+    // sur lecture (set fermé : seuls 'grid'/'list' surchargent).
+    const qAnswerLayoutOverride = ((q.config ?? {}) as Record<string, unknown>).answer_layout;
+    const answerLayout =
+      qAnswerLayoutOverride === "grid" || qAnswerLayoutOverride === "list"
+        ? qAnswerLayoutOverride
+        : branding.answerLayout;
     const mcGridClass =
       answerLayout === "list"
         ? "grid-cols-1"

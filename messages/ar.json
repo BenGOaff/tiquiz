@@ -1425,7 +1425,13 @@
     "designPanelPageCapture": "النموذج (البريد)",
     "designPanelPageQuestion": "السؤال {n}",
     "designPanelPageResult": "النتيجة {n}",
-    "designPanelHint": "لا تُظهر اللوحة العنوان أبداً، فقط شعارك في الأعلى. تبقى دائماً ممتلئة، ولا يبقى جانب فارغ أبداً."
+    "designPanelHint": "لا تُظهر اللوحة العنوان أبداً، فقط شعارك في الأعلى. تبقى دائماً ممتلئة، ولا يبقى جانب فارغ أبداً.",
+    "quizCaptureEnabledLabel": "طلب البريد الإلكتروني",
+    "quizCaptureEnabledHint": "عند التفعيل، تجمع البريد الإلكتروني للزائر مقابل مورد يظهر في النهاية. عند الإيقاف، يرى الزائر نتيجته دون ترك بريده الإلكتروني (لا يتم جمع أي جهة اتصال).",
+    "answerLayoutPerQuestionHint": "تخطيط الإجابات لهذا السؤال. تلقائي يتبع الإعداد العام للاختبار.",
+    "designThemeLabel": "السمة",
+    "designThemeCustom": "مخصص",
+    "designAdvancedTitle": "تخصيص التصميم"
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",

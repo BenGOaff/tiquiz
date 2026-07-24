@@ -48,6 +48,9 @@ import { RichTextEdit } from "@/components/ui/rich-text-edit";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { useShareDomain } from "@/hooks/useShareDomain";
 import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
 import { QrCodeCard } from "@/components/share/QrCodeCard";
@@ -537,6 +540,11 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const [captureSubmitText, setCaptureSubmitText] = useState("");
   const [resultInsightHeading, setResultInsightHeading] = useState("");
   const [resultProjectionHeading, setResultProjectionHeading] = useState("");
+  // Capture email optionnelle en mode quiz (juillet 2026). Default true
+  // = comportement historique (l'email est demandé avant le résultat).
+  // Off → le visiteur voit son résultat sans donner d'email (aucun lead,
+  // aucune sync Systeme.io). Colonne quizzes.capture_enabled déjà en DB.
+  const [captureEnabled, setCaptureEnabled] = useState<boolean>(true);
   const [captureFirstName, setCaptureFirstName] = useState(false);
   const [captureLastName, setCaptureLastName] = useState(false);
   const [capturePhone, setCapturePhone] = useState(false);
@@ -648,6 +656,11 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const [panelMedia, setPanelMedia] = useState<PanelMediaConfig | null>(null);
   // Disposition des reponses (colonnes vs liste). 'auto' = rendu historique.
   const [answerLayout, setAnswerLayout] = useState<QuizAnswerLayout>("auto");
+  // Onglet Design facon Tally (juillet 2026) : le theme est un menu deroulant,
+  // et les reglages fins (couleurs, fond, dispositions, boutons, police, logo)
+  // sont repliés sous une section "Personnaliser le design" fermée par defaut.
+  // Aucune fonctionnalite retiree, juste rangee pour une vue par defaut propre.
+  const [designAdvancedOpen, setDesignAdvancedOpen] = useState(false);
   // Cartes de la page resultat masquables + bouton de partage optionnel.
   // Default TRUE partout -> quiz existants inchanges.
   const [showResultInsight, setShowResultInsight] = useState<boolean>(true);
@@ -774,6 +787,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     capture_submit_text: captureSubmitText,
     result_insight_heading: resultInsightHeading,
     result_projection_heading: resultProjectionHeading,
+    capture_enabled: captureEnabled,
     capture_first_name: captureFirstName,
     capture_last_name: captureLastName,
     capture_phone: capturePhone,
@@ -844,7 +858,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   }), [
     title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
     captureHeading, captureSubtitle, captureSubmitText, resultInsightHeading, resultProjectionHeading,
-    captureFirstName, captureLastName, capturePhone, captureCountry,
+    captureEnabled, captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
     showConsentCheckbox, showResultsBreakdown, hideResponseCounts, notifyResponses, showOtherResults,
     metaPixelId, ga4MeasurementId, googleAdsConversionId, googleAdsConversionLabel,
@@ -885,6 +899,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     if (typeof s.capture_submit_text === "string") setCaptureSubmitText(s.capture_submit_text);
     if (typeof s.result_insight_heading === "string") setResultInsightHeading(s.result_insight_heading);
     if (typeof s.result_projection_heading === "string") setResultProjectionHeading(s.result_projection_heading);
+    if (typeof s.capture_enabled === "boolean") setCaptureEnabled(s.capture_enabled);
     if (typeof s.capture_first_name === "boolean") setCaptureFirstName(s.capture_first_name);
     if (typeof s.capture_last_name === "boolean") setCaptureLastName(s.capture_last_name);
     if (typeof s.capture_phone === "boolean") setCapturePhone(s.capture_phone);
@@ -1031,6 +1046,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setCaptureHeading(q.capture_heading ?? ""); setCaptureSubtitle(q.capture_subtitle ?? "");
       setCaptureSubmitText(q.capture_submit_text ?? "");
       setResultInsightHeading(q.result_insight_heading ?? ""); setResultProjectionHeading(q.result_projection_heading ?? "");
+      setCaptureEnabled((q as { capture_enabled?: boolean | null }).capture_enabled !== false);
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
       setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
       setShowResultsBreakdown((q as { show_results_breakdown?: boolean | null }).show_results_breakdown === true);
@@ -1929,6 +1945,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           capture_submit_text: captureSubmitText || null,
           result_insight_heading: resultInsightHeading.trim() || null,
           result_projection_heading: resultProjectionHeading.trim() || null,
+          capture_enabled: captureEnabled,
           capture_first_name: captureFirstName, capture_last_name: captureLastName,
           ask_first_name: askFirstName, ask_gender: askGender,
           capture_phone: capturePhone, capture_country: captureCountry,
@@ -2533,35 +2550,84 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 </DndContext>
               </>)}
               {leftTab === "design" && (<div className="space-y-5">
-                {/* ── Thèmes prêts à l'emploi ── */}
-                <div className="space-y-2">
-                  <Label className="text-xs">{t("designThemes")}</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {QUIZ_THEMES.map((th) => {
-                      const swatch = th.backgroundStyle === "gradient" && th.backgroundGradient
-                        ? QUIZ_GRADIENTS[th.backgroundGradient]
-                        : th.backgroundColor;
-                      const active = themeId === th.id;
-                      return (
-                        <button
-                          key={th.id}
-                          type="button"
-                          onClick={() => applyTheme(th)}
-                          className={`group relative rounded-lg border p-2 text-left transition-all ${active ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/50"}`}
-                          title={th.name}
-                        >
-                          <span className="block h-8 w-full rounded-md" style={{ background: swatch }}>
-                            <span className="flex h-full items-center justify-center rounded-md" style={{ color: th.primaryColor }}>
-                              <span className="text-sm font-bold" style={{ fontFamily: th.font }}>Aa</span>
+                {/* ── Theme : menu deroulant (facon Tally) ──
+                    Un seul point d'entree, propre. Chaque entree montre le nom
+                    + une pastille de couleur. "Personnalise" bascule sur un
+                    theme libre et ouvre les reglages fins ci-dessous. Radix
+                    DropdownMenu = accessible au clavier (fleches + Entree). */}
+                {(() => {
+                  const swatchOf = (th: (typeof QUIZ_THEMES)[number]) =>
+                    th.backgroundStyle === "gradient" && th.backgroundGradient
+                      ? QUIZ_GRADIENTS[th.backgroundGradient]
+                      : th.backgroundColor;
+                  const currentTheme = QUIZ_THEMES.find((th) => th.id === themeId) ?? null;
+                  return (
+                    <div className="space-y-2">
+                      <Label className="text-xs">{t("designThemeLabel")}</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 rounded-lg border border-border bg-background px-2.5 py-2 text-left text-sm transition-colors hover:border-primary/50"
+                          >
+                            <span
+                              className="h-5 w-5 shrink-0 rounded-md border border-border"
+                              style={{ background: currentTheme ? swatchOf(currentTheme) : "linear-gradient(135deg,#5D6CDB,#EC4899)" }}
+                            />
+                            <span className="flex-1 truncate font-medium">
+                              {currentTheme ? currentTheme.name : t("designThemeCustom")}
                             </span>
-                          </span>
-                          <span className="mt-1 block truncate text-[10px] text-muted-foreground">{th.name}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground">{t("designThemesHint")}</p>
-                </div>
+                            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="max-h-72 w-56 overflow-y-auto">
+                          {QUIZ_THEMES.map((th) => (
+                            <DropdownMenuItem key={th.id} onSelect={() => applyTheme(th)} className="gap-2">
+                              <span
+                                className="grid h-5 w-5 shrink-0 place-items-center rounded-md border border-border"
+                                style={{ background: swatchOf(th) }}
+                              >
+                                <span className="text-[9px] font-bold" style={{ color: th.primaryColor, fontFamily: th.font }}>Aa</span>
+                              </span>
+                              <span className="flex-1 truncate">{th.name}</span>
+                              {themeId === th.id && <CheckCircle className="h-4 w-4 text-primary" />}
+                            </DropdownMenuItem>
+                          ))}
+                          <DropdownMenuItem
+                            onSelect={() => { setThemeId(null); setDesignAdvancedOpen(true); }}
+                            className="gap-2"
+                          >
+                            <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md border border-dashed border-border">
+                              <Settings2 className="h-3 w-3 text-muted-foreground" />
+                            </span>
+                            <span className="flex-1 truncate">{t("designThemeCustom")}</span>
+                            {themeId === null && <CheckCircle className="h-4 w-4 text-primary" />}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <p className="text-[10px] text-muted-foreground">{t("designThemesHint")}</p>
+                    </div>
+                  );
+                })()}
+
+                {/* ── Personnaliser le design (reglages fins, replies) ──
+                    Disclosure facon Tally : ferme par defaut pour une vue
+                    epuree. Tout est conserve a l'interieur, rien retire. */}
+                <div className="rounded-lg border border-border">
+                  <button
+                    type="button"
+                    onClick={() => setDesignAdvancedOpen((v) => !v)}
+                    aria-expanded={designAdvancedOpen}
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left"
+                  >
+                    <span className="flex items-center gap-2 text-xs font-semibold">
+                      <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      {t("designAdvancedTitle")}
+                    </span>
+                    <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${designAdvancedOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {designAdvancedOpen && (
+                  <div className="space-y-5 border-t border-border p-3">
 
                 {/* ── Fond (couleur / dégradé / image) ── */}
                 <div className="space-y-2">
@@ -2930,6 +2996,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                   />
                   <p className="text-[10px] text-muted-foreground">{t("designLogoShared")}</p>
                 </div>
+                  </div>
+                  )}
+                </div>
               </div>)}
               {leftTab === "settings" && (<div className="space-y-6">
                 {/* ── Fermeture du quiz ── */}
@@ -3003,6 +3072,19 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     <h3 className="text-sm font-semibold">{t("captureFormTitle")}</h3>
                     <p className="text-[11px] text-muted-foreground leading-snug">{t("captureFormHint")}</p>
                   </div>
+                  {/* Capture email optionnelle en mode quiz (juillet 2026).
+                      Activée = le créateur récupère l'email du visiteur en
+                      échange d'une ressource affichée à la fin. Désactivée =
+                      le visiteur voit son résultat sans donner d'email (aucun
+                      lead, aucune synchro Systeme.io). Default ON → les quiz
+                      existants ne changent pas. */}
+                  <SettingsToggle
+                    label={t("quizCaptureEnabledLabel")}
+                    hint={t("quizCaptureEnabledHint")}
+                    checked={captureEnabled}
+                    onChange={setCaptureEnabled}
+                  />
+                  {captureEnabled && (<>
                   <div className="flex flex-wrap gap-1.5">
                     <CapturePill label={t("fieldEmailRequired")} active locked />
                     <CapturePill label={t("fieldFirstNameRequired")} active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />
@@ -3065,6 +3147,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     checked={showConsentCheckbox}
                     onChange={setShowConsentCheckbox}
                   />
+                  </>)}
                 </section>
 
                 <Separator />
@@ -3526,6 +3609,24 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                               />
                               <span>{t("optionalQuestionLabel")}</span>
                             </label>
+                            {/* Disposition des réponses PAR QUESTION (juillet
+                                2026). 'auto' = hérite du réglage quiz-level
+                                (onglet Design). 'grid'/'list' surchargent juste
+                                cette question. Stocké dans config.answer_layout.
+                                Pertinent uniquement pour les types à réponses
+                                multiples (choix simple, choix image). */}
+                            {(qType === "multiple_choice" || qType === "image_choice") && (
+                              <select
+                                value={cfg.answer_layout === "grid" || cfg.answer_layout === "list" ? cfg.answer_layout : "auto"}
+                                onChange={(e) => updateQuestionConfig(qi, { answer_layout: e.target.value })}
+                                className="text-xs border rounded-lg px-2 py-1 bg-background font-medium cursor-pointer"
+                                title={t("answerLayoutPerQuestionHint")}
+                              >
+                                <option value="auto">{t("designAnswerLayoutAuto")}</option>
+                                <option value="grid">{t("designAnswerLayoutGrid")}</option>
+                                <option value="list">{t("designAnswerLayoutList")}</option>
+                              </select>
+                            )}
                           </div>
                         </div>
                         <RichTextEdit value={q.question_text} onChange={(v) => updateQ(qi, v)} onGenderize={genderize} onAIRewrite={aiRewriteQuestion} availableVars={personalizationVars} previewTransform={previewInterpolate} className="tiquiz-quiz-question font-bold leading-tight" style={{ color: pc }} placeholder={t("previewQuestionPh")} />
@@ -3816,7 +3917,13 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 );
               })}
 
-              {/* ── CAPTURE / LEAD FORM ── */}
+              {/* ── CAPTURE / LEAD FORM ──
+                  Si le créateur a désactivé "Demander l'email" dans les
+                  réglages, on masque tout le bloc capture du preview (sinon
+                  trompeur : on verrait le form alors qu'il ne sera jamais
+                  affiché au visiteur). Côté visiteur, PublicQuizClient skippe
+                  déjà l'étape email quand capture_enabled=false. */}
+              {captureEnabled && (
               <div ref={captureRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                 <div className="max-w-lg w-full space-y-6">
                   <RichTextEdit value={captureHeading || t("previewCaptureHeadingDefault")} onChange={setCaptureHeading} onImageUpload={handleRichTextImageUpload} singleLine className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("previewCaptureHeadingPh")} />
@@ -3865,6 +3972,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                   </button>
                 </div>
               </div>
+              )}
 
               {/* ── BONUS / SHARE STEP (only if viralityEnabled) ──
                   Inline-editable: click the image slot to upload, click the

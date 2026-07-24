@@ -1421,7 +1421,13 @@
     "designPanelPageCapture": "Form (email)",
     "designPanelPageQuestion": "Question {n}",
     "designPanelPageResult": "Result {n}",
-    "designPanelHint": "The panel never shows the title, just your logo at the top. It always stays filled, never an empty side."
+    "designPanelHint": "The panel never shows the title, just your logo at the top. It always stays filled, never an empty side.",
+    "quizCaptureEnabledLabel": "Ask for the email",
+    "quizCaptureEnabledHint": "On, you collect the visitor's email in exchange for a resource shown at the end. Off, the visitor sees their result without leaving an email (no contact collected).",
+    "answerLayoutPerQuestionHint": "Answer layout for this question. Auto follows the quiz-wide setting.",
+    "designThemeLabel": "Theme",
+    "designThemeCustom": "Custom",
+    "designAdvancedTitle": "Customize the design"
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",

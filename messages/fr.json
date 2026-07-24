@@ -1421,7 +1421,13 @@
     "designPanelPageCapture": "Formulaire (email)",
     "designPanelPageQuestion": "Question {n}",
     "designPanelPageResult": "Résultat {n}",
-    "designPanelHint": "Le panneau ne montre jamais le titre : juste ton logo en haut. Il reste toujours rempli, jamais un côté vide."
+    "designPanelHint": "Le panneau ne montre jamais le titre : juste ton logo en haut. Il reste toujours rempli, jamais un côté vide.",
+    "quizCaptureEnabledLabel": "Demander l'email",
+    "quizCaptureEnabledHint": "Activé, tu récupères l'email du visiteur en échange d'une ressource affichée à la fin. Désactivé, le visiteur voit son résultat sans laisser d'email (aucun contact collecté).",
+    "answerLayoutPerQuestionHint": "Disposition des réponses pour cette question. Auto suit le réglage global du quiz.",
+    "designThemeLabel": "Thème",
+    "designThemeCustom": "Personnalisé",
+    "designAdvancedTitle": "Personnaliser le design"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",

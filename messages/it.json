@@ -1437,7 +1437,13 @@
     "designPanelPageCapture": "Modulo (email)",
     "designPanelPageQuestion": "Domanda {n}",
     "designPanelPageResult": "Risultato {n}",
-    "designPanelHint": "Il pannello non mostra mai il titolo, solo il tuo logo in alto. Resta sempre pieno, mai un lato vuoto."
+    "designPanelHint": "Il pannello non mostra mai il titolo, solo il tuo logo in alto. Resta sempre pieno, mai un lato vuoto.",
+    "quizCaptureEnabledLabel": "Chiedi l'email",
+    "quizCaptureEnabledHint": "Attivo, raccogli l'email del visitatore in cambio di una risorsa mostrata alla fine. Disattivo, il visitatore vede il suo risultato senza lasciare l'email (nessun contatto raccolto).",
+    "answerLayoutPerQuestionHint": "Disposizione delle risposte per questa domanda. Auto segue l'impostazione globale del quiz.",
+    "designThemeLabel": "Tema",
+    "designThemeCustom": "Personalizzato",
+    "designAdvancedTitle": "Personalizza il design"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nuova password",
