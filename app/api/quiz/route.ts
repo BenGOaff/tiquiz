@@ -7,6 +7,8 @@ import {
   getActiveProjectScope,
   resolveProjectIdForInsert,
 } from "@/lib/projects/scopeFilter";
+import { resolveBrandingForRequest } from "@/lib/projects/businessProfile";
+import { designDefaultsToQuizColumns } from "@/lib/quizBranding";
 
 export const dynamic = "force-dynamic";
 
@@ -121,11 +123,32 @@ export async function POST(req: NextRequest) {
     // the visible UI flow doesn't have a bonus-on-share gate — the user
     // explicitly asked for "no viral but share at end".
     const projectId = await resolveProjectIdForInsert(user.id);
+
+    // Modele de design du projet -> estampille sur ce nouveau quiz/sondage.
+    // On respecte le meme gating que le branding : business_profiles (par
+    // projet) pour les multiprofils, sinon fallback profiles (par user).
+    // Vide si rien defini -> colonnes NULL = rendu historique inchange.
+    const bpRow = await resolveBrandingForRequest(user.id, user.email ?? null);
+    let designSource: Record<string, unknown> | null =
+      bpRow as unknown as Record<string, unknown> | null;
+    if (!designSource) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select(
+          "default_question_layout, default_intro_layout, default_button_shape, default_answer_layout, default_background_style, default_background_gradient",
+        )
+        .eq("user_id", user.id)
+        .maybeSingle();
+      designSource = (prof as Record<string, unknown> | null) ?? null;
+    }
+    const designCols = designDefaultsToQuizColumns(designSource);
+
     const { data: quiz, error: quizError } = await supabase
       .from("quizzes")
       .insert({
         user_id: user.id,
         project_id: projectId,
+        ...designCols,
         mode,
         title,
         introduction: body.introduction ?? null,

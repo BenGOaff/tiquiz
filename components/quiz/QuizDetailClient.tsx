@@ -734,6 +734,36 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     }
   }, []);
 
+  // ─── "Enregistrer ce design comme mon modele" (Brique 1) ───────────
+  // Capture la mise en forme du quiz courant (disposition, accueil, forme
+  // des boutons, reponses, fond) dans le modele du projet actif via
+  // /api/profile. Ce modele est ensuite estampille sur CHAQUE nouveau
+  // quiz/sondage a la creation. N'affecte pas les quiz existants. Le fond
+  // image ne s'enregistre pas comme modele (propre a ce quiz) -> on retombe
+  // sur solid.
+  const [savingModel, setSavingModel] = useState<"idle" | "saving" | "saved">("idle");
+  const handleSaveAsDefaultModel = useCallback(async () => {
+    setSavingModel("saving");
+    try {
+      await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          default_question_layout: questionLayout,
+          default_intro_layout: introLayout,
+          default_button_shape: buttonShape,
+          default_answer_layout: answerLayout,
+          default_background_style: backgroundStyle === "gradient" ? "gradient" : "solid",
+          default_background_gradient: backgroundStyle === "gradient" ? backgroundGradient : null,
+        }),
+      });
+      setSavingModel("saved");
+      setTimeout(() => setSavingModel("idle"), 2500);
+    } catch {
+      setSavingModel("idle");
+    }
+  }, [questionLayout, introLayout, buttonShape, answerLayout, backgroundStyle, backgroundGradient]);
+
   // ─── Autosave ──────────────────────────────────────────────────
   // pendingDraft : draft serveur plus récent que la dernière save
   // explicite → on propose la restauration au visiteur de l'éditeur
@@ -2996,6 +3026,24 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                   />
                   <p className="text-[10px] text-muted-foreground">{t("designLogoShared")}</p>
                 </div>
+                {/* ── Enregistrer ce design comme modele par defaut du projet ── */}
+                {!isEmbed && (
+                  <div className="space-y-1.5 border-t border-border pt-4">
+                    <button
+                      type="button"
+                      onClick={handleSaveAsDefaultModel}
+                      disabled={savingModel === "saving"}
+                      className="w-full rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/10 disabled:opacity-60"
+                    >
+                      {savingModel === "saved"
+                        ? t("designSaveModelSaved")
+                        : savingModel === "saving"
+                          ? t("designSaveModelSaving")
+                          : t("designSaveModel")}
+                    </button>
+                    <p className="text-[10px] text-muted-foreground">{t("designSaveModelHint")}</p>
+                  </div>
+                )}
                   </div>
                   )}
                 </div>

@@ -14,6 +14,7 @@ import {
 } from "@/lib/projects/businessProfile";
 import { resolveProjectIdForInsert } from "@/lib/projects/scopeFilter";
 import { canUseMultiProjects } from "@/lib/planLimits";
+import { QUIZ_GRADIENTS } from "@/lib/quizBranding";
 
 // Champs portés par le business_profile per-projet (multiprofils). Les
 // autres (full_name, plan, ui_locale, etc.) restent sur profiles =
@@ -34,7 +35,31 @@ const PROJECT_SCOPED_FIELDS = [
   "default_meta_capi_token",
   "default_share_domain",
   "share_site_name",
+  // Modele de design par projet (Brique 1). Route sur business_profile pour
+  // les multiprofils -> un design distinct par projet.
+  "default_question_layout",
+  "default_intro_layout",
+  "default_button_shape",
+  "default_answer_layout",
+  "default_background_style",
+  "default_background_gradient",
 ] as const;
+
+// Valeurs autorisees pour le modele de design (sets fermes). Toute valeur
+// hors set ou vide -> null (= pas de preference). Aucune injection possible.
+const DESIGN_DEFAULT_SETS: Record<string, ReadonlySet<string>> = {
+  default_question_layout: new Set(["centered", "left", "split"]),
+  default_intro_layout: new Set(["card", "cover"]),
+  default_button_shape: new Set(["pill", "rounded", "square"]),
+  default_answer_layout: new Set(["auto", "grid", "list"]),
+  default_background_style: new Set(["solid", "gradient"]),
+  default_background_gradient: new Set(Object.keys(QUIZ_GRADIENTS)),
+};
+function sanitizeDesignDefault(key: string, val: unknown): string | null {
+  const set = DESIGN_DEFAULT_SETS[key];
+  if (!set) return null;
+  return typeof val === "string" && set.has(val) ? val : null;
+}
 
 // Soft limits — must match the constants in
 // components/editor/UserPalettePicker.tsx so a tampered client can't
@@ -168,6 +193,10 @@ export async function PATCH(req: NextRequest) {
       // Override de `og:site_name` + suffix du <title> pour les quiz
       // servis via un custom domain. Cf. migration 20260519.
       "share_site_name",
+      // Modele de design par projet (Brique 1) — estampille sur les
+      // nouveaux quiz/sondages. Sets fermes valides ci-dessous.
+      "default_question_layout", "default_intro_layout", "default_button_shape",
+      "default_answer_layout", "default_background_style", "default_background_gradient",
     ];
     // Multiprofils Tiquiz : on lit le plan UNE FOIS pour décider où
     // route chaque champ. Les champs branding/positioning vont sur
@@ -205,6 +234,9 @@ export async function PATCH(req: NextRequest) {
 
       // saved_palettes : sanitisation hex/forme.
       if (key === "saved_palettes") val = sanitisePalettes(val);
+
+      // Modele de design : set ferme, sinon null (= pas de preference).
+      if (key in DESIGN_DEFAULT_SETS) val = sanitizeDesignDefault(key, val);
 
       // notify_responses : booléen strict (colonne NOT NULL).
       if (key === "notify_responses") val = Boolean(val);

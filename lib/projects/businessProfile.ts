@@ -38,6 +38,13 @@ export interface BrandingFields {
   default_meta_capi_token: string | null;
   default_share_domain: string | null;
   share_site_name: string | null;
+  // Modele de design par projet (estampille sur les nouveaux quiz).
+  default_question_layout: string | null;
+  default_intro_layout: string | null;
+  default_button_shape: string | null;
+  default_answer_layout: string | null;
+  default_background_style: string | null;
+  default_background_gradient: string | null;
 }
 
 export interface BusinessProfileRow extends BrandingFields {
@@ -56,6 +63,8 @@ const BUSINESS_PROFILE_SELECT =
   "default_meta_pixel_id, default_ga4_measurement_id, " +
   "default_google_ads_conversion_id, default_google_ads_conversion_label, " +
   "default_meta_capi_token, default_share_domain, share_site_name, " +
+  "default_question_layout, default_intro_layout, default_button_shape, " +
+  "default_answer_layout, default_background_style, default_background_gradient, " +
   "created_at, updated_at";
 
 /**
