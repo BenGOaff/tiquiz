@@ -120,6 +120,39 @@ export async function GET() {
       return NextResponse.json({ ok: true, profile: newProfile });
     }
 
+    // ── Démarrage DIFFÉRÉ de l'essai Plus Atelier ──────────────────────
+    // L'essai est octroyé à l'achat mais son compte à rebours ne démarre qu'à
+    // la PREMIÈRE connexion réelle (retour Béné : un élève qui commande
+    // maintenant et suit dans un mois ne doit perdre aucun jour). Cette lecture
+    // authentifiée du profil EST cette première connexion. On pose la date de
+    // fin = maintenant + jours en attente, puis on efface le marqueur. Le
+    // garde-fou `.is(expires_at, null)` empêche tout double démarrage (course).
+    {
+      const pRow = profile as Record<string, unknown>;
+      const pendingDays = pRow.affiliate_trial_pending_days;
+      if (
+        typeof pendingDays === "number" &&
+        pendingDays > 0 &&
+        !pRow.affiliate_trial_expires_at
+      ) {
+        const startedAt = new Date();
+        const expiresAt = new Date(startedAt.getTime() + pendingDays * 24 * 3600 * 1000);
+        const { error: startErr } = await supabaseAdmin
+          .from("profiles")
+          .update({
+            affiliate_trial_expires_at: expiresAt.toISOString(),
+            affiliate_trial_pending_days: null,
+            updated_at: startedAt.toISOString(),
+          })
+          .eq("user_id", user.id)
+          .is("affiliate_trial_expires_at", null);
+        if (!startErr) {
+          pRow.affiliate_trial_expires_at = expiresAt.toISOString();
+          pRow.affiliate_trial_pending_days = null;
+        }
+      }
+    }
+
     // Multiprofils Tiquiz : pour les users avec plan premium, on
     // OVERRIDE les champs branding/positionnement avec les valeurs du
     // business_profile du projet actif (= "nouveau projet = nouveau

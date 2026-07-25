@@ -34,8 +34,11 @@ function formatFrDate(iso: string): string {
 
 interface PlusTrialEmailArgs {
   email: string;
-  /** ISO date de fin du trial (affiliate_trial_expires_at). */
-  expiresAt: string;
+  /** ISO date de fin du trial (affiliate_trial_expires_at). null si l'essai
+   *  démarre à la première connexion (pas encore de date de fin). */
+  expiresAt: string | null;
+  /** true = l'essai démarre à la première connexion (démarrage différé). */
+  startsOnFirstLogin?: boolean;
   /** true = compte fraîchement créé (revient en gratuit). */
   createdAccount: boolean;
   /** Plan d'avant le trial (pour un compte existant payant). */
@@ -47,17 +50,26 @@ interface PlusTrialEmailArgs {
 }
 
 function buildContent(args: PlusTrialEmailArgs): { subject: string; html: string; text: string } {
-  const dateStr = formatFrDate(args.expiresAt);
+  const deferred = !!args.startsOnFirstLogin || !args.expiresAt;
+  const dateStr = args.expiresAt ? formatFrDate(args.expiresAt) : "";
   const cta = args.actionLink || `${APP_URL}/login`;
   const ctaLabel = args.createdAccount ? "Activer mon compte Tiquiz" : "Ouvrir mon espace Tiquiz";
   const duration = (args.durationLabel ?? "").trim() || "1 mois";
 
-  // Ce qui se passe à la fin du mois, selon le cas.
+  // Ce qui se passe à la fin de l'offre, selon le cas. Quand l'essai démarre
+  // à la première connexion, on ne donne pas de date fixe (elle dépend du jour
+  // où l'élève se connecte) : on dit "au bout de X".
+  const whenPrefix = deferred ? `Au bout de ${duration} (à compter de ta première connexion)` : `Le ${dateStr}`;
   const afterLine = args.createdAccount
-    ? `Le ${dateStr}, ton compte repassera automatiquement en formule gratuite. Tu ne seras jamais débité, et tu gardes ton compte et tout ce que tu as créé.`
-    : `Le ${dateStr}, ton compte reviendra automatiquement à ta formule précédente${
+    ? `${whenPrefix}, ton compte repassera automatiquement en formule gratuite. Tu ne seras jamais débité, et tu gardes ton compte et tout ce que tu as créé.`
+    : `${whenPrefix}, ton compte reviendra automatiquement à ta formule précédente${
         args.prePlanLabel ? ` (${args.prePlanLabel})` : ""
       }. Rien à faire, aucun prélèvement lié à cette offre.`;
+
+  // Message clé : les jours ne commencent qu'à la première connexion.
+  const startLine = deferred
+    ? `Bon à savoir : tes ${duration} démarrent le jour de ta première connexion, pas à l'achat. Tu peux commencer l'Atelier quand tu veux, tu ne perds aucun jour.`
+    : "";
 
   const subject = "Ton accès Tiquiz Plus offert est activé";
 
@@ -74,6 +86,7 @@ function buildContent(args: PlusTrialEmailArgs): { subject: string; html: string
         <tr><td style="padding:28px 32px;">
           <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Bonne nouvelle : tu fais partie des premiers inscrits à l'Atelier du Quiz, et tu reçois <strong>${duration} au meilleur plan de Tiquiz (Plus), gratuitement</strong>.</p>
           <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Tu as accès à tout ce que Plus débloque : multiprofils, analyse IA des résultats, et le reste, sans aucune limite pendant ${duration}.</p>
+          ${startLine ? `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3730a3;"><strong>${startLine}</strong></p>` : ""}
           <div style="background:#f1f5ff;border:1px solid #e0e7ff;border-radius:12px;padding:16px 18px;margin:0 0 20px;">
             <p style="margin:0;font-size:14px;line-height:1.6;color:#3730a3;"><strong>Ce qui se passe ensuite.</strong> ${afterLine}</p>
           </div>
@@ -96,6 +109,7 @@ function buildContent(args: PlusTrialEmailArgs): { subject: string; html: string
     "",
     `Tu fais partie des premiers inscrits a l'Atelier du Quiz, et tu recois ${duration} au meilleur plan de Tiquiz (Plus), gratuitement.`,
     `Tu as acces a tout ce que Plus debloque (multiprofils, analyse IA des resultats, et le reste) sans limite pendant ${duration}.`,
+    ...(startLine ? ["", startLine] : []),
     "",
     `Ce qui se passe ensuite : ${afterLine}`,
     "",

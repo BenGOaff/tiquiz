@@ -81,6 +81,7 @@ type ProfileRow = {
   plan: string | null;
   affiliate_trial_pre_plan: string | null;
   affiliate_trial_expires_at: string | null;
+  affiliate_trial_pending_days: number | null;
 };
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
@@ -105,14 +106,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const source = typeof body.source === "string" ? body.source.trim().slice(0, 64) : "atelier_plus_trial";
 
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + days * 24 * 3600 * 1000);
+  // DEMARRAGE DIFFERE : on ne pose PAS de date de fin ici. Le compte a rebours
+  // ne demarrera qu'a la premiere connexion (cf. /api/profile GET). On memorise
+  // seulement le nombre de jours a poser ce jour-la (affiliate_trial_pending_days).
   // Libellé de durée pour l'email (ex: "2 mois", "60 jours").
   const durationLabel = days % 30 === 0 ? `${days / 30} mois` : `${days} jours`;
 
   // ── 1. Lire le profile existant (par email, case-insensitive) ──
   const { data: existing, error: readErr } = await supabaseAdmin
     .from("profiles")
-    .select("user_id, email, plan, affiliate_trial_pre_plan, affiliate_trial_expires_at")
+    .select("user_id, email, plan, affiliate_trial_pre_plan, affiliate_trial_expires_at, affiliate_trial_pending_days")
     .ilike("email", email)
     .maybeSingle();
   if (readErr) {
@@ -132,19 +135,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     });
   }
 
-  // ── 3. Trial déjà actif sur ce compte -> idempotent, on ne réécrit pas ──
-  if (
-    profile?.affiliate_trial_expires_at &&
-    new Date(profile.affiliate_trial_expires_at) > now &&
-    (profile.plan === "monthly_plus" || profile.plan === "yearly_plus")
-  ) {
+  // ── 3. Trial déjà actif OU déjà en attente sur ce compte -> idempotent ──
+  // "En attente" = octroyé mais pas encore démarré (pending_days posé,
+  // expires_at NULL). Dans les deux cas on ne réécrit rien.
+  const isPlusPlan = profile?.plan === "monthly_plus" || profile?.plan === "yearly_plus";
+  const trialLive =
+    !!profile?.affiliate_trial_expires_at &&
+    new Date(profile.affiliate_trial_expires_at) > now;
+  const trialPending =
+    typeof profile?.affiliate_trial_pending_days === "number" &&
+    profile.affiliate_trial_pending_days > 0;
+  if (isPlusPlan && (trialLive || trialPending)) {
     return NextResponse.json({
       ok: true,
       granted: true,
-      reason: "already_active",
-      granted_plan: profile.plan,
-      pre_plan: profile.affiliate_trial_pre_plan,
-      expires_at: profile.affiliate_trial_expires_at,
+      reason: trialPending ? "already_pending" : "already_active",
+      granted_plan: profile!.plan,
+      pre_plan: profile!.affiliate_trial_pre_plan,
+      expires_at: profile!.affiliate_trial_expires_at,
+      pending_days: profile!.affiliate_trial_pending_days,
       created: false,
     });
   }
@@ -158,7 +167,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       .update({
         plan: trialPlan,
         affiliate_trial_pre_plan: currentPlan,
-        affiliate_trial_expires_at: expiresAt.toISOString(),
+        // Démarrage différé : jours en attente, pas de date de fin encore.
+        affiliate_trial_pending_days: days,
+        affiliate_trial_expires_at: null,
         updated_at: now.toISOString(),
       })
       .eq("user_id", profile.user_id);
@@ -181,7 +192,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
     void sendPlusTrialEmail({
       email,
-      expiresAt: expiresAt.toISOString(),
+      expiresAt: null,
+      startsOnFirstLogin: true,
       createdAccount: false,
       prePlanLabel: PRE_PLAN_LABELS[currentPlan] ?? null,
       actionLink,
@@ -194,7 +206,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       reason: "upgraded",
       granted_plan: trialPlan,
       pre_plan: currentPlan,
-      expires_at: expiresAt.toISOString(),
+      expires_at: null,
+      pending_days: days,
       created: false,
       source,
     });
@@ -242,14 +255,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "no_user" }, { status: 500 });
   }
 
-  // Profile Plus avec pre_plan="free" -> revert en gratuit à J+days.
+  // Profile Plus avec pre_plan="free". Démarrage différé : revert en gratuit
+  // à J+days A COMPTER DE LA PREMIERE CONNEXION (pending_days), pas maintenant.
   const { error: upsertErr } = await supabaseAdmin.from("profiles").upsert(
     {
       user_id: userId,
       email,
       plan: "monthly_plus",
       affiliate_trial_pre_plan: "free",
-      affiliate_trial_expires_at: expiresAt.toISOString(),
+      affiliate_trial_pending_days: days,
+      affiliate_trial_expires_at: null,
       updated_at: now.toISOString(),
     },
     { onConflict: "user_id" },
@@ -261,7 +276,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   void sendPlusTrialEmail({
     email,
-    expiresAt: expiresAt.toISOString(),
+    expiresAt: null,
+    startsOnFirstLogin: true,
     createdAccount,
     prePlanLabel: "gratuit",
     actionLink,
@@ -274,7 +290,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     reason: createdAccount ? "created" : "upgraded_orphan",
     granted_plan: "monthly_plus",
     pre_plan: "free",
-    expires_at: expiresAt.toISOString(),
+    expires_at: null,
+    pending_days: days,
     created: createdAccount,
     source,
   });
