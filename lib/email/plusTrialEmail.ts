@@ -59,7 +59,7 @@ function buildContent(args: PlusTrialEmailArgs): { subject: string; html: string
   // Ce qui se passe à la fin de l'offre, selon le cas. Quand l'essai démarre
   // à la première connexion, on ne donne pas de date fixe (elle dépend du jour
   // où l'élève se connecte) : on dit "au bout de X".
-  const whenPrefix = deferred ? `Au bout de ${duration} (à compter de ta première connexion)` : `Le ${dateStr}`;
+  const whenPrefix = deferred ? `Au bout de ${duration} (à compter de la création de ton premier quiz)` : `Le ${dateStr}`;
   const afterLine = args.createdAccount
     ? `${whenPrefix}, ton compte repassera automatiquement en formule gratuite. Tu ne seras jamais débité, et tu gardes ton compte et tout ce que tu as créé.`
     : `${whenPrefix}, ton compte reviendra automatiquement à ta formule précédente${
@@ -68,7 +68,7 @@ function buildContent(args: PlusTrialEmailArgs): { subject: string; html: string
 
   // Message clé : les jours ne commencent qu'à la première connexion.
   const startLine = deferred
-    ? `Bon à savoir : tes ${duration} démarrent le jour de ta première connexion, pas à l'achat. Tu peux commencer l'Atelier quand tu veux, tu ne perds aucun jour.`
+    ? `Bon à savoir : tes ${duration} démarrent quand tu crées ton premier quiz, pas à l'achat. Tu peux suivre l'Atelier tranquillement et commencer quand tu veux, tu ne perds aucun jour.`
     : "";
 
   const subject = "Ton accès Tiquiz Plus offert est activé";

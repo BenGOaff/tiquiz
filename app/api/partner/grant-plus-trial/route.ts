@@ -107,8 +107,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const now = new Date();
   // DEMARRAGE DIFFERE : on ne pose PAS de date de fin ici. Le compte a rebours
-  // ne demarrera qu'a la premiere connexion (cf. /api/profile GET). On memorise
-  // seulement le nombre de jours a poser ce jour-la (affiliate_trial_pending_days).
+  // ne demarrera qu'a la CREATION du premier quiz/sondage (cf. POST /api/quiz,
+  // startPendingAtelierTrial). On memorise seulement le nombre de jours a poser
+  // ce jour-la (affiliate_trial_pending_days).
   // Libellé de durée pour l'email (ex: "2 mois", "60 jours").
   const durationLabel = days % 30 === 0 ? `${days / 30} mois` : `${days} jours`;
 

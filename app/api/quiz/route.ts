@@ -9,6 +9,7 @@ import {
 } from "@/lib/projects/scopeFilter";
 import { resolveBrandingForRequest } from "@/lib/projects/businessProfile";
 import { designDefaultsToQuizColumns } from "@/lib/quizBranding";
+import { startPendingAtelierTrial } from "@/lib/plusTrial/startPending";
 
 export const dynamic = "force-dynamic";
 
@@ -184,6 +185,12 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
+
+    // Démarrage différé de l'essai Plus Atelier : le compte à rebours démarre
+    // ICI, à la création du premier quiz/sondage (pas à la connexion). Un élève
+    // qui arrive sur l'Atelier sans commencer son quiz ne perd aucun jour.
+    // Best-effort + idempotent : ne bloque jamais la création.
+    await startPendingAtelierTrial(user.id);
 
     // Insert questions. Survey questions carry question_type + config so the
     // public renderer knows which widget to mount; legacy quiz inserts that
