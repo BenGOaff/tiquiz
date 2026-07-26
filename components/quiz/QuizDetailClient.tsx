@@ -14,7 +14,7 @@ import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
   Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, ImagePlus, Crop, Star, Settings2,
-  Link2,
+  Link2, AlertCircle,
 } from "lucide-react";
 import { GifPickerButton } from "@/components/quiz/GifPicker";
 import { ImageCropDialog } from "@/components/quiz/ImageCropDialog";
@@ -4771,6 +4771,12 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 {copied ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
               </Button>
             </div>
+            {status !== "active" && (
+              <p className="text-xs text-amber-600 dark:text-amber-500 flex items-start gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                <span>{t("mustPublishHint")}</span>
+              </p>
+            )}
             <div className="relative">
               <pre className="text-xs font-mono bg-muted rounded-lg p-3 pr-24 overflow-x-auto border mt-3">{iframeCode}</pre>
               <Button

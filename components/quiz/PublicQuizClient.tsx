@@ -1181,6 +1181,12 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
         paddingLeft: "clamp(1rem, 4vw, 2rem)",
         paddingRight: "clamp(1rem, 4vw, 2rem)",
+        // Padding vertical INTERNE de la carte (le py Tailwind est retire des
+        // cartes pour unifier le centrage vertical facon Tally : l'espace
+        // "hors carte" vient desormais du bloc de centrage, l'espace "dans la
+        // carte" vient d'ici).
+        paddingTop: "clamp(1.5rem, 5vw, 2.75rem)",
+        paddingBottom: "clamp(1.5rem, 5vw, 2.75rem)",
       }
     : undefined;
   // Backing translucide clair pour les cartes de réponse NON sélectionnées sur
@@ -2474,7 +2480,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     return (
       <div className="min-h-screen flex flex-col" style={rootStyle}>
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 text-center">
-          <div className="max-w-lg w-full space-y-6 py-16 sm:py-24" style={readerSurfaceStyle}>
+          <div className="max-w-lg w-full space-y-6" style={readerSurfaceStyle}>
             {branding.logoUrl && (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img src={branding.logoUrl} alt="" className="max-h-16 w-auto object-contain mx-auto" />
@@ -2574,7 +2580,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
       return (
         <div className="min-h-screen flex flex-col" style={rootStyle}>
           <div
-            className="relative flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 text-center"
+            className="relative flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16 text-center"
             style={{
               backgroundImage: `linear-gradient(rgba(15,23,42,0.55), rgba(15,23,42,0.55)), url("${quiz.intro_image_url}")`,
               backgroundSize: "cover",
@@ -2582,7 +2588,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
               color: "#ffffff",
             }}
           >
-            <div className="max-w-2xl w-full space-y-8 py-16 sm:py-24">
+            <div className="max-w-2xl w-full space-y-8">
               {branding.logoUrl && (
                 <div className="flex justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -2634,10 +2640,10 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     return (
       <div className={`min-h-screen flex flex-col${layoutOuterClass}`} style={rootStyle}>
         {renderMediaPanel("intro")}
-        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
         {/* Un seul conteneur pour titre + intro + bouton : mêmes bornes et
             même alignement, donc l'intro est TOUJOURS calée sur le titre. */}
-        <div className={`max-w-2xl w-full space-y-8 ${introTextClass} py-16 sm:py-24`} style={readerSurfaceStyle}>
+        <div className={`max-w-2xl w-full space-y-8 ${introTextClass}`} style={readerSurfaceStyle}>
             {branding.logoUrl && (
               <div className={`flex ${introJustify}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -2727,7 +2733,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     return (
       <div className={`min-h-screen flex flex-col${layoutOuterClass}`} style={rootStyle}>
         {renderMediaPanel("capture")}
-        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-16">
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
         <div className={`max-w-md w-full space-y-6 ${layoutAlignText}`} style={readerSurfaceStyle}>
           {/* L'écran de personnalisation respecte maintenant la charte
               du quiz : couleur primaire sur le titre (comme la page de
@@ -3126,7 +3132,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
           {/* Colonne contenu : le bloc reste CENTRE sur la page (items-center),
               seul le texte s'aligne selon la disposition. En 'left', pas de
               demi-écran vide : marges équilibrées, texte à gauche (façon Tally). */}
-          <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-16" onTouchStart={onQuizTouchStart} onTouchEnd={onQuizTouchEnd}>
+          <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-10 sm:py-16" onTouchStart={onQuizTouchStart} onTouchEnd={onQuizTouchEnd}>
             {/* key={currentQ} re-mounts this block each time the
                 visitor moves to a new question, which retriggers the
                 quiz-step-in keyframe → the new question rises in
@@ -3216,8 +3222,8 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         {/* Slide-in for the email capture step too — full visitor
             flow now uses the same gentle entrance keyframe so each
             step transition reads as a guided experience. */}
-        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
-        <div className="max-w-lg w-full space-y-6 py-16 sm:py-24 animate-quiz-step-in" style={readerSurfaceStyle}>
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
+        <div className="max-w-lg w-full space-y-6 animate-quiz-step-in" style={readerSurfaceStyle}>
             {/* Heading & subtitle de la page capture = champs COURTS.
                 On utilise `tiquiz-rich-inline` en plus de `tiquiz-rich` :
                 ça neutralise les block-levels parasites (<p>, <div>,
@@ -3270,7 +3276,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                         type="text"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
-                        className="h-11"
+                        className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
                         required={!!quiz.first_name_required}
                       />
                     </div>
@@ -3285,7 +3291,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                         type="text"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
-                        className="h-11"
+                        className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
                         required={!!quiz.last_name_required}
                       />
                     </div>
@@ -3304,7 +3310,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleSubmitEmail()}
-                  className="h-11"
+                  className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
                   required
                 />
               </div>
@@ -3319,7 +3325,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="h-11"
+                    className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
                     required={!!quiz.phone_required}
                   />
                 </div>
@@ -3335,7 +3341,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                     type="text"
                     value={country}
                     onChange={(e) => setCountry(e.target.value)}
-                    className="h-11"
+                    className="h-11 bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 dark:bg-white dark:text-slate-900 dark:border-slate-300"
                     required={!!quiz.country_required}
                   />
                 </div>
@@ -3449,7 +3455,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         className="min-h-screen flex flex-col"
         style={rootStyle}
       >
-        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
         <div className="max-w-lg w-full py-16 sm:py-20 space-y-10" style={readerSurfaceStyle}>
           {/* Image bonus — positionnée selon `bonus_image_position`
               (top / after_heading / after_intro / bottom). Si pas
@@ -3668,8 +3674,8 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         {/* Soft slide-in for the thank-you payoff screen — same
             keyframe as the quiz questions so the entire visitor flow
             feels coordinated. */}
-        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
-        <div className="max-w-lg w-full py-16 sm:py-24 space-y-6 text-center animate-quiz-step-in" style={readerSurfaceStyle}>
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
+        <div className="max-w-lg w-full space-y-6 text-center animate-quiz-step-in" style={readerSurfaceStyle}>
           {/* Soft success halo behind the heading — visual reward for
               the visitor finishing the survey, no confetti
               distraction. */}
@@ -3846,10 +3852,10 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         style={rootStyle}
       >
         {renderMediaPanel("r:" + (resultProfile?.id ?? ""))}
-        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
+        <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
         {/* Slide-in for the result reveal — final payoff of the
             quiz, deserves more than a content swap. */}
-        <div className="max-w-2xl w-full py-16 sm:py-24 space-y-8 animate-quiz-step-in" style={readerSurfaceStyle}>
+        <div className="max-w-2xl w-full space-y-8 animate-quiz-step-in" style={readerSurfaceStyle}>
             {/* Score (mode scoring) : "X / Y" + pourcentage en tete. */}
             {quiz.mode === "scoring" && resultScore && resultScore.max > 0 && (
               <div className="text-center space-y-2">
