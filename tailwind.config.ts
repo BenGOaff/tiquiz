@@ -1,26 +1,20 @@
 import type { Config } from "tailwindcss";
 import animate from "tailwindcss-animate";
 
-// Design system répliqué de Tiquiz (indigo #5D6CDB). La couleur
-// d'accent vit dans UNE variable CSS (--primary dans globals.css) pour
-// pouvoir différencier L'Atelier du Quiz en une ligne plus tard si besoin.
 const config = {
   darkMode: ["class", ".dark"],
-  content: [
-    "./components/**/*.{ts,tsx}",
-    "./app/**/*.{ts,tsx}",
-    "./lib/**/*.{ts,tsx}",
-  ],
+  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
-  // Hover seulement sur les pointeurs qui le supportent : évite l'effet
-  // "réponse présélectionnée" sur mobile après un tap (cf. Tiquiz).
+  // Scope `hover:` styles to devices that actually have a hover-capable
+  // pointer. Without this, iOS Safari and other touch browsers keep the
+  // last-tapped element in `:hover` until the user taps elsewhere, which
+  // looks like a pre-selected answer on the next quiz question (Adeline
+  // 2026-05-17). Tailwind v3.5+ defaults to this; we opt-in on 3.4.
   future: { hoverOnlyWhenSupported: true },
   theme: {
     container: {
       center: true,
-      // Marges laterales : ~20px sur mobile (confort + largeur preservee),
-      // 40px a partir de tablette/desktop.
-      padding: { DEFAULT: "1.25rem", md: "2.5rem" },
+      padding: "2rem",
       screens: { "2xl": "1400px" },
     },
     extend: {
@@ -58,10 +52,17 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        success: {
-          DEFAULT: "hsl(var(--success))",
-          foreground: "hsl(var(--success-foreground))",
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar-background))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          primary: "hsl(var(--sidebar-primary))",
+          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
+          accent: "hsl(var(--sidebar-accent))",
+          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+          border: "hsl(var(--sidebar-border))",
+          ring: "hsl(var(--sidebar-ring))",
         },
+        // Surface scale — used by SectionCard / StatCard / EmptyState.
         surface: {
           DEFAULT: "hsl(var(--surface))",
           muted: "hsl(var(--surface-muted))",
@@ -73,6 +74,8 @@ const config = {
         display: ["Inter", "system-ui", "sans-serif"],
       },
       borderRadius: {
+        // 4px / 6px / 8px / 12px (default --radius) / 16px / 24px
+        // Used by Card (lg), Pill / CTA (full), Hero block (2xl).
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
@@ -80,6 +83,7 @@ const config = {
         "2xl": "calc(var(--radius) + 12px)",
       },
       boxShadow: {
+        // SaaS-grade defaults for cards / interactive surfaces.
         soft: "var(--shadow-soft)",
         card: "var(--shadow-card)",
         "card-hover": "var(--shadow-card-hover)",
@@ -93,15 +97,29 @@ const config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        // Shimmer used by <Skeleton> / <SkeletonText> / <SkeletonCard>.
+        // Sweeps a soft white-to-transparent band across the surface.
         shimmer: {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(100%)" },
         },
-        // Question qui monte et apparaît en douceur — le feeling guidé
-        // du flux de quiz, repris tel quel de Tiquiz.
+        // Question slide-in for the public quiz flow. Each new
+        // question rises a touch and fades in — gives the answering
+        // experience a subtle "guided" feel instead of an abrupt
+        // content swap.
         "quiz-step-in": {
           "0%": { opacity: "0", transform: "translateY(12px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        // Transitions directionnelles facon Typeform : la question suivante
+        // glisse depuis la droite, la precedente depuis la gauche.
+        "quiz-slide-in-right": {
+          "0%": { opacity: "0", transform: "translateX(28px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        "quiz-slide-in-left": {
+          "0%": { opacity: "0", transform: "translateX(-28px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
         },
       },
       animation: {
@@ -109,6 +127,8 @@ const config = {
         "accordion-up": "accordion-up 0.2s ease-out",
         shimmer: "shimmer 1.6s infinite",
         "quiz-step-in": "quiz-step-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both",
+        "quiz-slide-in-right": "quiz-slide-in-right 320ms cubic-bezier(0.22, 1, 0.36, 1) both",
+        "quiz-slide-in-left": "quiz-slide-in-left 320ms cubic-bezier(0.22, 1, 0.36, 1) both",
       },
     },
   },

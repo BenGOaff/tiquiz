@@ -1,7 +1,14 @@
-import { redirect } from "next/navigation";
+// app/page.tsx
+// Rôle : page d'accueil qui affiche LoginForm (comme Tipote).
+// Pas de landing page — toute la vente est sur Systeme.io.
 
-// La racine renvoie vers le tableau de bord (le middleware redirige
-// vers /login si pas de session).
-export default function Home() {
-  redirect("/dashboard");
+import { Suspense } from "react";
+import LoginForm from "@/components/auth/LoginForm";
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
 }

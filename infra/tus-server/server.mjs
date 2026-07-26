@@ -32,12 +32,6 @@ const MAX_SIZE = Number(process.env.MAX_SIZE_BYTES || 20 * 1024 ** 3);
 const SECRETS = {
   tipote: process.env.TIPOTE_JWT_SECRET || "",
   tiquiz: process.env.TIQUIZ_JWT_SECRET || "",
-  // "formaquiz" = namespace HISTORIQUE de l'Atelier du Quiz (celui que
-  // l'app émet et celui des chemins de stockage). "quizing" accepté
-  // aussi par tolérance. Les deux préfixes d'env sont acceptés pour la
-  // même raison (le .env du VPS utilise FORMAQUIZ_*).
-  formaquiz: process.env.FORMAQUIZ_JWT_SECRET || process.env.QUIZING_JWT_SECRET || "",
-  quizing: process.env.QUIZING_JWT_SECRET || process.env.FORMAQUIZ_JWT_SECRET || "",
 };
 
 // Per-app secret for signed video playback URLs. Must match the value
@@ -47,8 +41,6 @@ const SECRETS = {
 const VIDEO_SECRETS = {
   tipote: process.env.TIPOTE_VIDEO_SECRET || "",
   tiquiz: process.env.TIQUIZ_VIDEO_SECRET || "",
-  formaquiz: process.env.FORMAQUIZ_VIDEO_SECRET || process.env.QUIZING_VIDEO_SECRET || "",
-  quizing: process.env.QUIZING_VIDEO_SECRET || process.env.FORMAQUIZ_VIDEO_SECRET || "",
 };
 
 if (!SECRETS.tipote && !SECRETS.tiquiz) {
@@ -64,7 +56,7 @@ if (!VIDEO_SECRETS.tipote && !VIDEO_SECRETS.tiquiz) {
   );
 }
 
-const APP_RE = /^(tipote|tiquiz|formaquiz|quizing)$/;
+const APP_RE = /^(tipote|tiquiz)$/;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EXT_RE = /^[a-z0-9]{1,8}$/;
@@ -124,7 +116,7 @@ function handleValidateSecureLink(req, res) {
   // The storage layout always namespaces by app (e.g. /tipote/raw/...
   // or /tiquiz/raw/...), so the first path segment tells us which
   // secret to validate against.
-  const appMatch = pathOnly.match(/^\/(tipote|tiquiz|formaquiz|quizing)\//);
+  const appMatch = pathOnly.match(/^\/(tipote|tiquiz)\//);
   if (!appMatch) {
     res.statusCode = 403;
     res.end("forbidden");
@@ -229,12 +221,8 @@ const tus = new Server({
     if (!c) throw httpError(401, "Missing claims");
     return relPathFromClaims(c);
   },
-  generateUrl(_req, { proto, host, id }) {
-    // On force le mount connu ("/files") au lieu de dependre de baseUrl,
-    // qui peut etre undefined selon la version de @tus/server (sinon l'URL
-    // de suivi devient "host" + "undefined" + "/files/..."). Robuste pour
-    // toutes les apps (popquiz inclus).
-    return `${proto}://${host}/files/${encodeURIComponent(id)}`;
+  generateUrl(_req, { proto, host, baseUrl, path: p, id }) {
+    return `${proto}://${host}${baseUrl}${p}/${encodeURIComponent(id)}`;
   },
   getFileIdFromRequest(req) {
     const u = req.url || "";

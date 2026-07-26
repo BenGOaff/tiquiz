@@ -1,12 +1,30 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
 # dependencies
-/node_modules
+# node_modules a N'IMPORTE QUELLE profondeur (pas seulement la racine).
+# Sinon `git add .` plante sur les liens symboliques de
+# copywriting-claude/en-build/node_modules sous Windows (Function not implemented).
+node_modules/
 /.pnp
 .pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
 
 # next.js
 /.next/
 /out/
+
+# production
 /build
+
+# Dossier de build du livre/copywriting (artefacts + deps), pas du code app
+/copywriting-claude/en-build/
 
 # misc
 .DS_Store
@@ -15,11 +33,14 @@
 # debug
 npm-debug.log*
 yarn-debug.log*
+yarn-error.log*
 .pnpm-debug.log*
 
-# env files
+# env files (can opt-in for committing if needed)
 .env*
-!.env.example
+
+# vercel
+.vercel
 
 # typescript
 *.tsbuildinfo
