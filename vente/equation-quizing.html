@@ -1,0 +1,28 @@
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  .aqx-eq{ display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:10px;
+    font-family:'Inter',system-ui,sans-serif; padding:8px 0; }
+  .aqx-eq .aqx-tag{ display:inline-flex; align-items:center; font-family:'Bricolage Grotesque',sans-serif; font-weight:700;
+    font-size:clamp(14px,3vw,20px); color:#2A2F5B; background:#F1F3FC; border:1.6px solid #E1E6F4; border-radius:999px;
+    padding:9px 17px; white-space:nowrap; box-shadow:none;
+    opacity:1; transform:none; animation:aqxIn .6s cubic-bezier(.16,.84,.44,1) backwards; animation-delay:calc(var(--d)*.08s); }
+  .aqx-eq .aqx-tag.hot{ background:#5A6EF6; border-color:#5A6EF6; color:#fff; font-size:clamp(15px,3.3vw,22px); }
+  .aqx-eq .aqx-op{ font-family:'Bricolage Grotesque',sans-serif; font-weight:800; font-size:clamp(16px,3.2vw,23px); color:#B4B8CE;
+    opacity:1; animation:aqxIn .6s cubic-bezier(.16,.84,.44,1) backwards; animation-delay:calc(var(--d)*.08s); }
+  .aqx-eq .aqx-live{ width:9px; height:9px; border-radius:50%; background:#22C58B; margin-right:9px; position:relative; flex:none; }
+  .aqx-eq .aqx-live::after{ content:""; position:absolute; inset:-4px; border-radius:50%; border:2px solid #22C58B; animation:aqxPulse 1.7s ease-out infinite; }
+  @keyframes aqxPulse{0%{transform:scale(.55);opacity:.85}100%{transform:scale(1.7);opacity:0}}
+  @keyframes aqxIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.aqx-eq .aqx-tag,.aqx-eq .aqx-op{animation:none!important}.aqx-eq .aqx-live::after{animation:none}}
+</style>
+<div class="aqx-eq">
+  <span class="aqx-tag" style="--d:0">Ton quiz</span>
+  <span class="aqx-op"  style="--d:1">+</span>
+  <span class="aqx-tag" style="--d:2"><span class="aqx-live"></span>Coach IA</span>
+  <span class="aqx-op"  style="--d:3">+</span>
+  <span class="aqx-tag" style="--d:4">Quiz Doctor</span>
+  <span class="aqx-op"  style="--d:5">+</span>
+  <span class="aqx-tag" style="--d:6">Communauté</span>
+  <span class="aqx-op"  style="--d:7">=</span>
+  <span class="aqx-tag hot" style="--d:8">Quizing</span>
+</div>

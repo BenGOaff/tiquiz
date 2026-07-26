@@ -1,32 +1,31 @@
 // lib/celebrate.ts
-// Zero-dep confetti — fired on milestones (first quiz published, first
-// lead captured, etc.) without pulling a 30 KB library.
+// Confetti zero-dependance, tire sur les vrais jalons (jour valide, badge
+// reel debloque). Porte depuis Tiquiz pour garder la meme sensation de
+// recompense d'une app a l'autre, sans embarquer de librairie.
 //
 // USAGE
-// ─────
 //   import { celebrate } from "@/lib/celebrate";
-//   celebrate();                       // burst from viewport centre
-//   celebrate({ origin: "top-right" }); // useful from a save toast
-//   celebrate({ intensity: "subtle" }); // fewer particles for everyday wins
+//   celebrate();                        // burst depuis le centre
+//   celebrate({ intensity: "huge" });   // gros jalon (badge, diplome)
 //
-// The helper is SSR-safe (no-op when window is undefined). Each call
-// spawns a fresh DOM container that auto-removes after the animation,
-// so multiple rapid calls don't pile up forever.
+// SSR-safe (no-op si window absent). Respecte prefers-reduced-motion :
+// la fete est du plaisir, jamais une fonction, donc on la coupe si l'OS
+// demande moins d'animation. Chaque appel cree son propre container
+// auto-nettoye, donc plusieurs appels rapprochés ne s'empilent pas.
 
 export type CelebrateOptions = {
-  /** Where the burst originates from. Default: "center". */
   origin?: "center" | "top-right" | "bottom-center";
-  /** Intensity tier — picks a particle count + spread. */
   intensity?: "subtle" | "normal" | "huge";
 };
 
+// Palette L'Atelier du Quiz : indigo primaire + couleurs gaies.
 const COLORS = [
-  "#5D6CDB", // primary blue
-  "#C1FF6F", // accent green
-  "#F472B6", // pink
-  "#FBBF24", // amber
-  "#34D399", // emerald
-  "#A78BFA", // violet
+  "#5D6CDB", // indigo primaire
+  "#8B5CF6", // violet
+  "#F472B6", // rose
+  "#FBBF24", // ambre
+  "#34D399", // emeraude
+  "#38BDF8", // ciel
 ];
 
 const INTENSITY_PRESETS = {
@@ -35,21 +34,13 @@ const INTENSITY_PRESETS = {
   huge: { count: 70, spread: 220, durationMs: 1800 },
 } as const;
 
-/**
- * Fire a confetti burst. Call from any client component (button onClick,
- * post-save callback, etc.). Safe to call repeatedly — each call gets its
- * own self-cleaning DOM container.
- */
 export function celebrate(options: CelebrateOptions = {}): void {
   if (typeof window === "undefined" || typeof document === "undefined") return;
-  // Respect users' system-level "reduced motion" preference — confetti
-  // is delight, not function. Keep accessibility intact.
   if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
 
   const { origin = "center", intensity = "normal" } = options;
   const preset = INTENSITY_PRESETS[intensity];
 
-  // Resolve origin to viewport coordinates.
   let originX = window.innerWidth / 2;
   let originY = window.innerHeight / 2;
   if (origin === "top-right") {
@@ -60,7 +51,6 @@ export function celebrate(options: CelebrateOptions = {}): void {
     originY = window.innerHeight - 80;
   }
 
-  // Single container per burst so cleanup is trivial.
   const container = document.createElement("div");
   container.setAttribute("data-celebrate", "");
   container.style.cssText =
@@ -72,7 +62,7 @@ export function celebrate(options: CelebrateOptions = {}): void {
     const angle = (Math.PI * 2 * i) / preset.count + (Math.random() - 0.5) * 0.4;
     const distance = preset.spread + Math.random() * preset.spread;
     const dx = Math.cos(angle) * distance;
-    // Add gravity bias so particles fall slightly faster than they rise.
+    // Biais de gravite : les particules tombent un peu plus vite qu'elles ne montent.
     const dy = Math.sin(angle) * distance + 60 + Math.random() * 60;
     const rotate = Math.random() * 720 - 360;
     const color = COLORS[Math.floor(Math.random() * COLORS.length)];
@@ -92,15 +82,12 @@ export function celebrate(options: CelebrateOptions = {}): void {
     `;
     container.appendChild(piece);
 
-    // Trigger transition on next frame so the browser registers the
-    // initial state before applying the animation.
     requestAnimationFrame(() => {
       piece.style.transform = `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) rotate(${rotate}deg)`;
       piece.style.opacity = "0";
     });
   }
 
-  // Self-clean after the animation finishes.
   setTimeout(() => {
     container.remove();
   }, preset.durationMs + 100);

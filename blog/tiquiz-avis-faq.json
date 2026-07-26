@@ -1,0 +1,62 @@
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Tiquiz est-il vraiment gratuit, ou y a-t-il un piège ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "La version gratuite est réellement gratuite : tu crées ton premier quiz, tu le connectes à Systeme io et tu le publies, sans carte bleue et sans limite de durée. Tu ne paies que le jour où tu veux plus de volume, plus de projets ou ton domaine personnalisé. Autrement dit, tu peux valider que ça te ramène des leads avant de dépenser un centime."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Est-ce que mes contacts arrivent bien dans Systeme io, avec le bon tag ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Oui, c'est le cœur de l'outil. L'intégration est native : dès qu'une personne répond, son email part dans Systeme io avec le tag que tu as défini, sans Zapier ni Make. Tu peux ensuite déclencher la séquence email adaptée à son profil. Les tags arrivent sans délai ni contact perdu."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Je ne suis pas du tout technique, je vais galérer avec Tiquiz ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Non. Il n'y a rien à coder. L'IA rédige une première version de ton quiz à partir de ton objectif, tu ajustes en cliquant, et la connexion à Systeme io est guidée étape par étape. La plupart des utilisateurs montent leur premier quiz en moins d'une heure."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Un quiz convertit-il vraiment mieux qu'un formulaire classique ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "En général, oui, et de loin. Un quiz engage la personne, la fait répondre et lui donne un résultat utile en échange de son email. Tu récupères un contact plus qualifié qu'avec un simple champ email, parce que tu sais qui il est et ce qu'il veut. Les rapports de conversion sur les quiz interactifs le confirment année après année."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Puis-je mettre Tiquiz à ma marque ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "En partie. Tu règles tes couleurs, ton logo et ta police, et le rendu est propre. En revanche, si tu as une charte graphique très pointue et que tu veux un design sur-mesure au pixel, tu sentiras des limites aujourd'hui. C'est un point que l'outil améliore régulièrement."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Quelle différence entre Tiquiz et l'Atelier du Quiz ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Tiquiz est l'outil qui crée le quiz. L'Atelier du Quiz est la méthode en 7 jours pour construire tout le système autour : amener du trafic, trier les leads, les relancer et vendre. L'un ne remplace pas l'autre. L'Atelier inclut d'ailleurs l'accès Tiquiz gratuit, donc tu peux commencer sans rien payer de plus."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Est-ce que Tiquiz fait aussi des sondages et des quiz sur vidéo ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Oui. En plus des quiz, tu peux créer des sondages pour recueillir des avis, et des pop quiz vidéo, c'est-à-dire un quiz qui s'affiche pendant ta vidéo YouTube pour capter des leads au moment où l'attention est au maximum."
+      }
+    }
+  ]
+}

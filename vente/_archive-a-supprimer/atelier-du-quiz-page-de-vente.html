@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>L'Atelier du Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --primary:#5D6CDB;
+    --primary-dark:#4856c0;
+    --ink:#2E386E;
+    --muted:#6b73a0;
+    --surface:#F4F5FA;
+    --line:#e6e8f5;
+    --ok:#2bb673;
+    --radius:18px;
+    --shadow:0 10px 30px rgba(46,56,110,.12);
+    --shadow-lg:0 24px 60px rgba(46,56,110,.18);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Inter',system-ui,sans-serif;color:var(--ink);
+    background:radial-gradient(120% 90% at 50% 0%, #eef0fb 0%, #ffffff 50%);
+    -webkit-font-smoothing:antialiased;line-height:1.5;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:0 22px}
+  .center{text-align:center}
+
+  /* Topbar */
+  .topbar{
+    position:sticky;top:0;z-index:50;backdrop-filter:saturate(140%) blur(8px);
+    background:rgba(255,255,255,.82);border-bottom:1px solid var(--line);
+  }
+  .topbar .wrap{display:flex;align-items:center;justify-content:space-between;padding:14px 22px}
+  .brand{font-weight:800;font-size:20px;letter-spacing:-.02em}
+  .brand span{color:var(--primary)}
+  .btn{
+    display:inline-flex;align-items:center;gap:9px;justify-content:center;
+    background:var(--primary);color:#fff;border:none;cursor:pointer;text-decoration:none;
+    font:inherit;font-weight:700;padding:14px 26px;border-radius:99px;
+    box-shadow:0 8px 22px rgba(93,108,219,.35);transition:transform .15s, background .2s;
+  }
+  .btn:hover{background:var(--primary-dark);transform:translateY(-1px)}
+  .btn.big{font-size:18px;padding:17px 34px}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none}
+  .btn-mini{font-size:14px;padding:10px 18px}
+
+  /* Hero / landing */
+  .hero{padding:54px 0 30px}
+  .eyebrow{display:inline-block;background:#eaecfb;color:var(--primary);font-weight:700;font-size:13px;
+    letter-spacing:.06em;text-transform:uppercase;padding:7px 14px;border-radius:99px;margin-bottom:20px}
+  h1{font-size:clamp(30px,6.2vw,52px);font-weight:900;letter-spacing:-.025em;line-height:1.05;margin-bottom:18px}
+  .pitch{font-size:clamp(17px,2.6vw,21px);color:var(--muted);max-width:660px;margin:0 auto 26px}
+  .pitch b{color:var(--ink)}
+
+  /* Puces promesses */
+  .promises{display:grid;gap:12px;max-width:640px;margin:30px auto 0;text-align:left}
+  .promise{display:flex;gap:13px;align-items:flex-start;background:#fff;border:1px solid var(--line);
+    border-radius:14px;padding:15px 17px;box-shadow:0 2px 10px rgba(46,56,110,.05)}
+  .promise .tick{flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:#eafaf2;color:var(--ok);
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px}
+  .promise p{font-size:15.5px}
+  .promise b{color:var(--ink)}
+
+  .cta-row{margin-top:34px}
+  .cta-row .hint{display:block;margin-top:12px;font-size:13px;color:var(--muted)}
+
+  /* Social proof */
+  .proof{margin-top:46px;padding:30px 0 8px;border-top:1px solid var(--line)}
+  .proof h3{font-size:15px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:20px}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;text-align:left;box-shadow:0 2px 10px rgba(46,56,110,.05)}
+  .card .stars{color:#f5b301;font-size:15px;margin-bottom:8px}
+  .card p{font-size:14.5px;color:var(--ink)}
+  .card .who{margin-top:10px;font-size:13px;color:var(--muted);font-weight:600}
+  .ph{color:#9aa0c9;font-style:italic}
+
+  /* Reveal section */
+  #more{display:none}
+  #more.open{display:block;animation:fade .5s ease both}
+  @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+  .block{padding:44px 0;border-top:1px solid var(--line)}
+  .tag{display:inline-block;font-weight:800;color:var(--primary);font-size:13px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px}
+  h2{font-size:clamp(24px,4.6vw,36px);font-weight:800;letter-spacing:-.02em;line-height:1.15;margin-bottom:16px}
+  .block p.lead{font-size:17px;color:var(--muted);max-width:680px;margin-bottom:14px}
+  .block p.lead b{color:var(--ink)}
+
+  .steps{display:grid;gap:12px;margin-top:18px;max-width:680px}
+  .step{display:flex;gap:14px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px 17px}
+  .step .n{flex:0 0 auto;width:30px;height:30px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800}
+  .step b{color:var(--ink)}
+
+  .capto{display:grid;gap:10px;max-width:680px;margin-top:16px}
+  .capto .row{display:flex;gap:12px;align-items:baseline;background:var(--surface);border-radius:12px;padding:12px 15px}
+  .capto .row .l{font-weight:900;color:var(--primary);font-size:18px;width:22px;flex:0 0 auto}
+
+  /* Order block */
+  .order{margin:0 auto;max-width:560px;background:#fff;border:2px solid var(--primary);border-radius:24px;
+    box-shadow:var(--shadow-lg);padding:30px 26px;text-align:left}
+  .order .kicker{color:var(--primary);font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:.06em}
+  .order h3{font-size:26px;font-weight:900;margin:6px 0 18px}
+  .order ul{list-style:none;display:grid;gap:11px;margin-bottom:22px}
+  .order li{display:flex;gap:11px;align-items:flex-start;font-size:15px}
+  .order li .tick{flex:0 0 auto;color:var(--ok);font-weight:800}
+  .price{display:flex;align-items:baseline;gap:10px;margin:6px 0 4px}
+  .price .now{font-size:34px;font-weight:900}
+  .price .old{font-size:18px;color:var(--muted);text-decoration:line-through}
+  .order .btn{width:100%;margin-top:14px}
+  .reassure{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:16px;font-size:13px;color:var(--muted)}
+  .reassure span{display:inline-flex;gap:6px;align-items:center}
+
+  .note{background:#fff8e6;border:1px solid #f3e3b3;border-radius:12px;padding:12px 15px;font-size:13px;color:#7a6a2f;margin:18px auto 0;max-width:680px}
+
+  footer{padding:40px 0;text-align:center;color:var(--muted);font-size:13px;border-top:1px solid var(--line);margin-top:30px}
+
+  @media (max-width:620px){
+    .cards{grid-template-columns:1fr}
+    .hero{padding:40px 0 24px}
+  }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="wrap">
+      <div class="brand">L'Atelier du <span>Quiz</span></div>
+      <a href="#order" class="btn btn-mini">Je commande</a>
+    </div>
+  </div>
+
+  <!-- LANDING -->
+  <header class="hero">
+    <div class="wrap center">
+      <span class="eyebrow">Nouveau</span>
+      <h1>Lance un quiz qui te ramène des leads et des ventes, en 7 jours.</h1>
+      <p class="pitch">L'Atelier du Quiz, c'est un <b>quizing</b> : tu apprends par des quiz courts, un par jour, et tu valides chaque étape. À la fin, tu repars avec un quiz viral branché à ton Systeme.io. <b>Même si tu pars de zéro et que tu n'es pas tech.</b></p>
+
+      <div class="promises">
+        <div class="promise"><span class="tick">&#10003;</span><p><b>Ton quiz publié et qui capte dès le 4e jour</b>, pendant que les autres formations en sont encore à la théorie.</p></div>
+        <div class="promise"><span class="tick">&#10003;</span><p>Le réglage gratuit qui fait <b>grimper ton taux de capture de 2% à 30%</b>, et que presque personne ne connaît.</p></div>
+        <div class="promise"><span class="tick">&#10003;</span><p>La <b>Méthode CAPTO®</b> qui transforme un simple quiz en flux de leads et de ventes, étape par étape.</p></div>
+        <div class="promise"><span class="tick">&#10003;</span><p>Le <b>mécanisme de viralité</b> qui transforme chaque personne qui fait ton quiz en source de nouvelles personnes, sans pub.</p></div>
+        <div class="promise"><span class="tick">&#10003;</span><p>Un <b>coach dispo jour et nuit</b> pour ne jamais rester bloqué et aller jusqu'au bout.</p></div>
+      </div>
+
+      <div class="cta-row">
+        <button class="btn big" id="discover">Découvrir l'Atelier <span aria-hidden="true">&darr;</span></button>
+        <span class="hint">2 minutes pour comprendre comment ça marche</span>
+      </div>
+
+      <!-- PREUVE SOCIALE -->
+      <div class="proof">
+        <h3>Ils ont lancé leur quiz</h3>
+        <div class="cards">
+          <div class="card">
+            <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <p class="ph">[Témoignage à insérer : un participant, son résultat concret en une ou deux phrases.]</p>
+            <div class="who ph">[Prénom, activité]</div>
+          </div>
+          <div class="card">
+            <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <p class="ph">[Témoignage à insérer : ce qui a changé pour cette personne grâce à son quiz.]</p>
+            <div class="who ph">[Prénom, activité]</div>
+          </div>
+        </div>
+        <!-- Tu peux ajouter le cas reel Jocelyne ici, avec ses vrais chiffres -->
+      </div>
+    </div>
+  </header>
+
+  <!-- ARGUMENTAIRE AIDA (revele au clic) -->
+  <main id="more">
+
+    <!-- ATTENTION -->
+    <section class="block">
+      <div class="wrap">
+        <span class="tag">Le vrai problème</span>
+        <h2>Tu crées du contenu, tu captes trois curieux, et rien ne décolle.</h2>
+        <p class="lead">Tu postes, tu offres un PDF, tu lances une story. Quelques likes, et puis plus rien. Pas de leads qualifiés, pas de conversations, pas de ventes régulières. Une liste email qui existe mais qui ne vit pas.</p>
+        <p class="lead"><b>Le problème, ce n'est pas toi. C'est le format.</b> Un PDF, on le télécharge et on l'oublie. Personne ne te dit qui il est, ni ce qu'il veut.</p>
+      </div>
+    </section>
+
+    <!-- INTERET -->
+    <section class="block">
+      <div class="wrap">
+        <span class="tag">Ce qui change</span>
+        <h2>Un quiz, lui, on le finit. Et on le partage.</h2>
+        <p class="lead">Répondre est plus fort que donner son email à froid. Un quiz capte <b>5 à 10 fois mieux</b> qu'une page classique, il qualifie ton prospect pendant qu'il répond, et il se partage tout seul.</p>
+        <p class="lead">Et la façon la plus rapide de l'apprendre, c'est de le vivre. L'Atelier est un quizing : un quiz court par jour qui te fait passer à l'action sur ton propre projet.</p>
+        <div class="steps">
+          <div class="step"><span class="n">1</span><p>Une <b>vidéo courte</b> t'enseigne l'essentiel du jour.</p></div>
+          <div class="step"><span class="n">2</span><p>Un <b>quiz</b> te fait agir sur ton projet et valide l'étape.</p></div>
+          <div class="step"><span class="n">3</span><p>Tu <b>débloques le jour suivant</b>. Ton quiz est en ligne dès le 4e jour.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DESIR -->
+    <section class="block">
+      <div class="wrap">
+        <span class="tag">La méthode</span>
+        <h2>CAPTO®, le système qui transforme un quiz en clients.</h2>
+        <p class="lead">Tu ne bricoles pas. Tu suis une méthode en 5 étapes, dans l'ordre :</p>
+        <div class="capto">
+          <div class="row"><span class="l">C</span><span><b>Capter</b> : concevoir le quiz qui donne envie de répondre.</span></div>
+          <div class="row"><span class="l">A</span><span><b>Attirer</b> : amener du trafic qualifié, gratuitement.</span></div>
+          <div class="row"><span class="l">P</span><span><b>Profiler</b> : segmenter et taguer chaque lead selon ses réponses.</span></div>
+          <div class="row"><span class="l">T</span><span><b>Transformer</b> : convertir tes leads en ventes.</span></div>
+          <div class="row"><span class="l">O</span><span><b>Optimiser</b> : mesurer, ajuster, et faire tourner en boucle.</span></div>
+        </div>
+        <p class="lead" style="margin-top:20px">Au bout des 7 jours, tu n'as pas suivi une formation. Tu as <b>construit un actif</b> : un quiz qui capte, qualifie et tague tes leads pendant que tu dors.</p>
+      </div>
+    </section>
+
+    <!-- ACTION : recap + bon de commande -->
+    <section class="block" id="order">
+      <div class="wrap center">
+        <span class="tag">Passe à l'action</span>
+        <h2>Tout ce que tu reçois en rejoignant l'Atelier</h2>
+
+        <div class="order">
+          <div class="kicker">L'Atelier du Quiz</div>
+          <h3>Ton quiz qui rapporte, en 7 jours.</h3>
+          <ul>
+            <li><span class="tick">&#10003;</span><span>Le <b>quizing en 7 jours</b> : un quiz court par jour qui te fait avancer pas à pas jusqu'à ton quiz publié.</span></li>
+            <li><span class="tick">&#10003;</span><span>La <b>Méthode CAPTO®</b> complète pour transformer ton quiz en flux de leads et de ventes.</span></li>
+            <li><span class="tick">&#10003;</span><span>Le <b>coach spécialisé, jour et nuit</b>, qui te débloque à chaque étape.</span></li>
+            <li><span class="tick">&#10003;</span><span><b>15 templates de quiz métier</b> et <b>7 séquences email</b> à copier-coller, pour gagner des heures.</span></li>
+            <li><span class="tick">&#10003;</span><span>Le <b>swipe file des 36 growth hacks</b> pour la viralité, le trafic et la vente.</span></li>
+            <li><span class="tick">&#10003;</span><span>La <b>communauté</b>, les <b>bonus</b> (trafic, sondages, popquiz, vente) et <b>l'accès Tiquiz gratuit</b> pour démarrer.</span></li>
+          </ul>
+
+          <div class="price">
+            <span class="now">[PRIX]&nbsp;&euro;</span>
+            <span class="old">[PRIX BARRÉ]&nbsp;&euro;</span>
+          </div>
+
+          <!-- ZONE A REMPLACER : mets ici le lien de ta page de commande Systeme.io -->
+          <a href="#" class="btn big" id="buy">Je rejoins l'Atelier du Quiz</a>
+
+          <div class="reassure">
+            <span>&#128274; Paiement sécurisé</span>
+            <span>&#9989; Garantie [X] jours</span>
+            <span>&#9201; Accès immédiat</span>
+          </div>
+        </div>
+
+        <div class="note">Notes pour toi (à retirer) : remplace [PRIX], [PRIX BARRÉ], [X] jours de garantie, et le lien du bouton par ta page de commande Systeme.io. Insère tes vrais témoignages dans la zone preuve sociale. Pense à déposer "L'Atelier du Quiz" et "CAPTO®" avant d'afficher le symbole ®.</div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    L'Atelier du Quiz &middot; Méthode CAPTO® &middot; Propulsé par Tiquiz
+  </footer>
+
+<script>
+(function(){
+  var btn = document.getElementById('discover');
+  var more = document.getElementById('more');
+  btn.addEventListener('click', function(){
+    more.classList.add('open');
+    btn.style.display = 'none';
+    setTimeout(function(){
+      more.scrollIntoView({behavior:'smooth', block:'start'});
+    }, 60);
+  });
+})();
+</script>
+</body>
+</html>

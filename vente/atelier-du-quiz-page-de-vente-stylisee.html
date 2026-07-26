@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L'Atelier du Quiz · en 7 jours, ton quiz qui capte des leads</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#16182E;--paper:#fff;--bleu:#5A6EF6;--cyan:#20BBE6;--cyan-clair:#8FE5F5;--jaune:#FFE24B;--gris:#6A6F8C;--gris-clair:#F4F5FB;--vert:#22C58B;--ligne:#E6EAF3;}
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{font-family:'Inter',system-ui,sans-serif;color:var(--ink);background:var(--paper);line-height:1.55;-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 clamp(20px,5vw,40px);}
+  h1,h2,h3{font-family:'Bricolage Grotesque',sans-serif;letter-spacing:-.025em;line-height:1.06;}
+  .mark{position:relative;white-space:nowrap;z-index:0;}
+  .mark::before{content:"";position:absolute;z-index:-1;left:-.06em;right:-.06em;top:24%;bottom:12%;background:var(--jaune);transform:rotate(-1deg);border-radius:2px 6px 3px 5px;}
+  .strike{text-decoration:line-through;text-decoration-color:var(--cyan);text-decoration-thickness:3px;color:var(--gris);}
+  .hl{color:var(--bleu);} a{color:inherit;}
+  .ul{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 12' preserveAspectRatio='none'%3E%3Cpath d='M3 8 C 55 2 145 2 197 7' stroke='%2320BBE6' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:0 100%;background-size:100% .32em;padding-bottom:.05em;white-space:nowrap;}
+
+  .btn{display:inline-flex;align-items:center;gap:9px;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(16px,2.2vw,18px);color:#fff;background:var(--bleu);border:2.5px solid var(--ink);border-radius:12px;padding:15px 30px;box-shadow:6px 6px 0 var(--ink);cursor:pointer;text-decoration:none;transition:transform .09s,box-shadow .09s;}
+  .btn:hover{transform:translate(2px,2px);box-shadow:4px 4px 0 var(--ink);}
+  .btn:active{transform:translate(6px,6px);box-shadow:0 0 0 var(--ink);}
+  .btn.sm{font-size:15px;padding:10px 18px;box-shadow:4px 4px 0 var(--ink);}
+  .btn.sm:hover{transform:translate(2px,2px);box-shadow:2px 2px 0 var(--ink);}
+  .sticker{display:inline-block;transform:rotate(-1.6deg);background:var(--ink);color:#fff;font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:7px 14px;border-radius:6px;}
+  .microtrust{font-size:13.5px;color:var(--gris);font-weight:600;} .microtrust b{color:var(--ink);}
+
+  .nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.9);backdrop-filter:blur(8px);border-bottom:2px solid var(--ink);}
+  .nav .wrap{display:flex;align-items:center;justify-content:space-between;height:62px;}
+  .brand{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;} .brand b{color:var(--bleu);}
+
+  section{padding:clamp(52px,8vw,88px) 0;}
+  .kicker{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--bleu);margin-bottom:12px;}
+  .hook{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(26px,4.4vw,42px);line-height:1.08;margin-bottom:14px;}
+  .sub2{font-size:clamp(15px,2.1vw,17px);color:#3A3E5C;max-width:56ch;margin-bottom:38px;}
+  .center{text-align:center;} .center .sub2{margin-left:auto;margin-right:auto;}
+
+  /* HERO */
+  .hero{background:radial-gradient(rgba(22,24,46,.06) 1.3px,transparent 1.3px);background-size:22px 22px;background-color:#F6F5FE;border-bottom:2.5px solid var(--ink);text-align:center;padding:clamp(44px,7vw,76px) 0;}
+  .hero .sticker{margin-bottom:22px;}
+  .hero h1{font-size:clamp(30px,5.6vw,58px);font-weight:800;max-width:15ch;margin:0 auto 20px;line-height:1.07;}
+  .hero .lead{font-size:clamp(16px,2.3vw,20px);color:#3A3E5C;font-weight:500;max-width:50ch;margin:0 auto 28px;}
+  .hero .lead b{color:var(--ink);font-weight:800;}
+  .hero .microtrust{margin-top:14px;}
+  .eqx{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;font-family:'Bricolage Grotesque',sans-serif;margin-top:42px;}
+  .eqt{font-weight:800;font-size:clamp(14px,2.4vw,18px);color:#16182E;background:#fff;border:2.5px solid #16182E;border-radius:12px;padding:11px 16px;box-shadow:4px 4px 0 #16182E;display:inline-flex;align-items:center;gap:8px;line-height:1;}
+  .eqt.r1{transform:rotate(-2.2deg)} .eqt.r2{transform:rotate(1.8deg)} .eqt.r3{transform:rotate(-1.4deg)} .eqt.r4{transform:rotate(2deg)}
+  .eqt.blue{background:var(--bleu);color:#fff;font-size:clamp(15px,2.7vw,20px);box-shadow:5px 5px 0 #16182E;transform:rotate(-1.6deg);}
+  .eqt .ld{width:9px;height:9px;border-radius:50%;background:var(--vert);position:relative;flex:none;}
+  .eqt .ld::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--vert);animation:pulse 1.7s ease-out infinite;}
+  .eqt .star{color:var(--jaune);font-size:1.1em;margin-left:2px;-webkit-text-stroke:1.5px #16182E;}
+  .eqo{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(18px,3vw,24px);color:#16182E;}
+  @keyframes pulse{0%{transform:scale(.5);opacity:.8}100%{transform:scale(1.7);opacity:0}}
+
+  /* VS */
+  .vs-hook{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(26px,4.6vw,44px);line-height:1.1;text-align:center;max-width:22ch;margin:0 auto 42px;}
+  .duel{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:900px;margin:0 auto;position:relative;}
+  .panel{border:2.5px solid var(--ink);border-radius:18px;padding:clamp(22px,3vw,30px);box-shadow:6px 6px 0 var(--ink);}
+  .panel .ph{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(17px,2.4vw,22px);margin-bottom:18px;}
+  .panel.old{background:var(--gris-clair);} .panel.old .ph{color:var(--gris);}
+  .panel.new{background:var(--bleu);color:#fff;}
+  .li{display:flex;gap:11px;align-items:flex-start;font-size:clamp(14px,1.9vw,15.5px);font-weight:600;line-height:1.4;margin-bottom:13px;}
+  .li:last-child{margin-bottom:0;}
+  .li .m{flex:none;width:23px;height:23px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;}
+  .old .m{background:#E4E6F0;color:var(--gris);} .new .m{background:rgba(255,255,255,.2);color:#fff;} .li.win{font-weight:800;}
+  .vs-badge{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-6deg);width:60px;height:60px;border-radius:50%;background:var(--jaune);border:2.5px solid var(--ink);box-shadow:3px 3px 0 var(--ink);display:flex;align-items:center;justify-content:center;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:18px;z-index:3;}
+  @media (max-width:640px){.duel{grid-template-columns:1fr;gap:34px;}}
+
+  /* TEAM */
+  .cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  .fcard{border:2.5px solid var(--ink);border-radius:16px;padding:24px 22px;background:#fff;box-shadow:6px 6px 0 var(--ink);}
+  .fcard .tagline{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:14px;color:var(--bleu);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+  .fcard .tagline .dot{width:9px;height:9px;border-radius:50%;background:var(--vert);flex:none;position:relative;}
+  .fcard .tagline .dot::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--vert);animation:pulse 1.7s ease-out infinite;}
+  .fcard h3{font-size:20px;margin-bottom:8px;} .fcard p{font-size:14.5px;color:#3A3E5C;}
+  .fcard.hot{background:var(--bleu);color:#fff;} .fcard.hot .tagline{color:var(--cyan-clair);} .fcard.hot p{color:#EAF0FF;}
+
+  /* CAPTO */
+  .capto{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;}
+  .cstep{display:flex;flex-direction:column;border:2.5px solid var(--ink);border-radius:14px;padding:18px 16px;background:#fff;box-shadow:5px 5px 0 var(--ink);text-align:left;}
+  .cstep .cl{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:32px;color:var(--bleu);line-height:1;}
+  .cstep .cw{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:16px;margin:9px 0 6px;}
+  .cstep .cp{font-size:12.5px;color:#3A3E5C;line-height:1.42;margin-bottom:13px;}
+  .cstep .cb{margin-top:auto;display:flex;gap:7px;align-items:flex-start;background:#E7F7EF;border-radius:10px;padding:9px 10px;}
+  .cstep .cb .k{flex:none;width:16px;height:16px;border-radius:50%;background:#12A968;color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:1px;}
+  .cstep .cb span.t{font-size:12px;line-height:1.38;color:#0E5E3D;font-weight:600;}
+
+  /* 7 JOURS · calendrier */
+  .cal{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:1000px;margin:0 auto;}
+  .cal .day{display:flex;flex-direction:column;border:2.5px solid var(--ink);border-radius:16px;background:#fff;box-shadow:5px 5px 0 var(--ink);overflow:hidden;text-align:left;}
+  .cal .top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 15px;border-bottom:2.5px solid var(--ink);background:#F4F5FB;}
+  .cal .jour{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:13px;color:var(--ink);}
+  .cal .theme{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--bleu);}
+  .cal .body{padding:16px 15px 18px;display:flex;flex-direction:column;gap:6px;}
+  .cal .act{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:16px;line-height:1.15;color:var(--ink);}
+  .cal .res{font-size:13px;line-height:1.45;color:#3A3E5C;}
+  .cal .day.hot{background:var(--bleu);}
+  .cal .day.hot .top{background:rgba(255,255,255,.12);border-bottom-color:rgba(255,255,255,.35);}
+  .cal .day.hot .jour,.cal .day.hot .act{color:#fff;} .cal .day.hot .theme{color:var(--cyan-clair);} .cal .day.hot .res{color:#EAF0FF;}
+  .astuce{margin:26px auto 0;max-width:1000px;display:flex;gap:15px;align-items:center;border:2.5px solid var(--ink);border-radius:14px;background:var(--jaune);padding:16px 22px;box-shadow:5px 5px 0 var(--ink);}
+  .astuce .em{flex:none;font-size:26px;line-height:1;}
+  .astuce p{font-size:clamp(14px,2vw,15.5px);color:var(--ink);font-weight:600;line-height:1.4;}
+  .astuce b{font-weight:800;}
+
+  /* BONUS */
+  .bonusgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-top:6px;}
+  .bcard{position:relative;display:flex;flex-direction:column;border:2.5px solid var(--ink);border-radius:18px;padding:22px 18px 20px;background:#fff;box-shadow:5px 5px 0 var(--ink);text-align:left;transition:transform .12s ease,box-shadow .12s ease;}
+  .bcard:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 var(--ink);}
+  .bcard .emo{width:52px;height:52px;border-radius:14px;border:2.5px solid var(--ink);background:var(--ac);box-shadow:3px 3px 0 var(--ink);display:flex;align-items:center;justify-content:center;font-size:27px;transform:rotate(-4deg);margin-bottom:15px;}
+  .bcard .btag{position:absolute;top:16px;right:16px;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);background:var(--ac);border:2px solid var(--ink);border-radius:99px;padding:3px 9px;}
+  .bcard h3{font-size:17px;line-height:1.12;margin-bottom:8px;}
+  .bcard p{font-size:13.5px;color:#3A3E5C;line-height:1.5;}
+  .bcard p b{color:var(--ink);font-weight:700;}
+
+  /* PROMESSES */
+  .promesses{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px;max-width:920px;margin:0 auto;}
+  .pz{display:flex;gap:12px;align-items:flex-start;font-size:15px;line-height:1.45;}
+  .pz .c{flex:none;width:24px;height:24px;border-radius:7px;border:2px solid var(--ink);background:var(--jaune);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;margin-top:1px;}
+  .pz b{font-weight:800;}
+
+  /* OFFER */
+  .offer{background:var(--ink);color:#fff;border-top:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink);background-image:radial-gradient(rgba(255,255,255,.05) 1.3px,transparent 1.3px);background-size:22px 22px;}
+  .offer-card{background:#fff;color:var(--ink);border:2.5px solid var(--ink);border-radius:20px;box-shadow:10px 10px 0 var(--cyan);max-width:760px;margin:0 auto;padding:clamp(28px,5vw,44px);}
+  .offer-card h2{font-size:clamp(24px,4vw,36px);margin-bottom:4px;}
+  .offer-card .price{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:46px;margin:10px 0 4px;}
+  .offer-card .price small{font-size:15px;color:var(--gris);font-weight:700;}
+  .vlist{display:flex;flex-direction:column;gap:10px;margin:10px 0 22px;}
+  .vhead{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--bleu);margin:20px 0 4px;display:flex;align-items:center;gap:9px;}
+  .vhead::after{content:"";flex:1;height:2px;background:var(--ligne);border-radius:2px;}
+  .vhead:first-child{margin-top:0;}
+  .v{display:flex;align-items:flex-start;gap:11px;font-size:15px;line-height:1.45;}
+  .v .tk{flex:none;width:22px;height:22px;border:2px solid var(--ink);border-radius:6px;background:var(--cyan);color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;margin-top:2px;}
+  .v b{font-weight:800;}
+  .bonus{display:flex;flex-wrap:wrap;gap:7px;margin:6px 0 22px;}
+  .bonus span{font-family:'Bricolage Grotesque',sans-serif;font-size:12px;font-weight:700;border:2px solid var(--ink);background:var(--jaune);padding:5px 10px;border-radius:7px;}
+  .offer-card .btn{width:100%;justify-content:center;font-size:19px;}
+  .guarline{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;font-size:13.5px;font-weight:700;color:var(--gris);}
+
+  /* GUARANTEE */
+  .guar{max-width:760px;margin:0 auto;background:#fff;border:2.5px solid var(--ink);border-radius:22px;box-shadow:9px 9px 0 var(--vert);padding:clamp(26px,5vw,44px);text-align:left;}
+  .guar .ghead{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-bottom:22px;}
+  .guar .seal{flex:none;width:112px;height:112px;border-radius:50%;background:var(--vert);border:2.5px solid var(--ink);box-shadow:4px 4px 0 var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center;transform:rotate(-5deg);}
+  .guar .seal svg{width:30px;height:30px;margin-bottom:2px;}
+  .guar .seal .n{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:24px;line-height:.95;}
+  .guar .seal .u{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-top:1px;}
+  .guar h3{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(23px,3.6vw,33px);line-height:1.08;flex:1;min-width:240px;}
+  .guar p{font-size:clamp(15px,2vw,16.5px);color:#3A3E5C;line-height:1.6;margin-bottom:15px;} .guar p b{color:var(--ink);font-weight:700;}
+  .guar .wink{display:inline-block;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(16px,2.4vw,19px);color:var(--ink);background:var(--jaune);border:2px solid var(--ink);border-radius:8px;padding:6px 14px;transform:rotate(-1.4deg);box-shadow:3px 3px 0 var(--ink);margin-bottom:15px;}
+  .guar .mail{display:inline-flex;align-items:center;gap:7px;font-weight:700;color:var(--ink);background:#E7F7EF;border:2px solid var(--vert);border-radius:8px;padding:2px 9px;text-decoration:none;white-space:nowrap;}
+  .guar .gfoot{display:flex;align-items:center;gap:9px;margin-top:6px;padding-top:18px;border-top:2px solid #EDEFF6;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:14.5px;color:var(--vert);}
+
+  /* FAQ */
+  .faq{max-width:760px;margin:0 auto;}
+  .qa{border:2.5px solid var(--ink);border-radius:14px;margin-bottom:12px;background:#fff;overflow:hidden;box-shadow:4px 4px 0 var(--ink);}
+  .qa summary{list-style:none;cursor:pointer;padding:18px 22px;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(15px,2.2vw,18px);display:flex;justify-content:space-between;align-items:center;gap:14px;}
+  .qa summary::-webkit-details-marker{display:none;}
+  .qa summary .plus{flex:none;width:26px;height:26px;border:2px solid var(--ink);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:18px;transition:transform .2s;}
+  .qa[open] summary .plus{transform:rotate(45deg);background:var(--bleu);color:#fff;}
+  .qa .ans{padding:0 22px 20px;font-size:15px;color:#3A3E5C;line-height:1.6;}
+
+  /* PS */
+  .ps{max-width:780px;margin:0 auto;border:2.5px solid var(--ink);border-radius:18px;padding:clamp(24px,4vw,38px);background:var(--gris-clair);box-shadow:6px 6px 0 var(--ink);}
+  .ps h3{font-size:22px;margin-bottom:12px;} .ps p{font-size:15.5px;color:#3A3E5C;line-height:1.65;margin-bottom:20px;} .ps b{color:var(--ink);font-weight:800;}
+
+  /* FINAL */
+  .final{text-align:center;background:var(--bleu);color:#fff;border-top:2.5px solid var(--ink);background-image:radial-gradient(rgba(255,255,255,.08) 1.3px,transparent 1.3px);background-size:22px 22px;}
+  .final h2{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(28px,5vw,48px);max-width:20ch;margin:0 auto 24px;color:#fff;line-height:1.06;}
+  .final .btn{background:#fff;color:var(--ink);} .final .microtrust{color:#DDE3FF;margin-top:16px;}
+
+  footer{background:var(--ink);color:#B9BDD6;text-align:center;padding:34px 0;font-size:13.5px;} footer a{color:#fff;text-decoration:none;font-weight:600;}
+
+  @media (max-width:1000px){ .capto{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:900px){ .cal,.bonusgrid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:760px){ .cards3,.promesses{grid-template-columns:1fr;} .offer-card{box-shadow:6px 6px 0 var(--cyan);} }
+  @media (max-width:560px){ .capto,.cal,.bonusgrid{grid-template-columns:1fr;} }
+  @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} }
+</style>
+</head>
+<body>
+
+  <div class="nav"><div class="wrap">
+    <div class="brand">Atelier du <b>Quiz</b></div>
+    <a class="btn sm" data-open="quizing">Je lance mon quiz →</a>
+  </div></div>
+
+  <!-- ATTENTION · HERO -->
+  <header class="hero"><div class="wrap">
+    <span class="sticker">Coachs · consultants · créateurs · affiliés</span>
+    <h1>7 jours pour lancer ton <span class="ul">quiz marketing</span> et collecter des <span class="mark">milliers d'emails</span>.</h1>
+    <p class="lead">L'Atelier du Quiz n'est pas une énième formation. Ce programme innovant te <b>prend par la main</b> pour que tu crées ton quiz, que tu attires naturellement du trafic dessus et que tu <b>remplisses ta mailing list de futurs acheteurs</b>.</p>
+    <a class="btn" data-open="quizing">🚀 Je lance mon quiz</a>
+    <div class="microtrust"><b>47€</b> · paiement unique · accès à vie · <b>garantie 30 jours</b></div>
+    <div class="eqx">
+      <span class="eqt r1">Ton quiz</span><span class="eqo">+</span>
+      <span class="eqt r2"><span class="ld"></span>Coach IA</span><span class="eqo">+</span>
+      <span class="eqt r3">Quiz Doctor</span><span class="eqo">+</span>
+      <span class="eqt r4">Communauté</span><span class="eqo">=</span>
+      <span class="eqt blue">Quizing <span class="star">★</span></span>
+    </div>
+  </div></header>
+
+  <!-- INTÉRÊT · le face-à-face -->
+  <section><div class="wrap">
+    <h2 class="vs-hook">Une <span class="strike">formation</span> de plus ? Surtout pas.</h2>
+    <div class="duel">
+      <div class="panel old">
+        <div class="ph">La formation classique</div>
+        <div class="li"><span class="m">✕</span>Des heures de vidéo que tu regardes en accéléré.</div>
+        <div class="li"><span class="m">✕</span>Des PDF que tu n'ouvriras jamais.</div>
+        <div class="li"><span class="m">✕</span>Tu appliqueras « quand tu auras le temps ».</div>
+        <div class="li"><span class="m">✕</span>Six mois plus tard : toujours zéro lead.</div>
+      </div>
+      <div class="panel new">
+        <div class="ph">Le Quizing</div>
+        <div class="li win"><span class="m">✓</span>Une mission par jour. Tu fais, tu ne regardes pas.</div>
+        <div class="li win"><span class="m">✓</span>Tu bosses sur TON vrai quiz, pas un exercice bidon.</div>
+        <div class="li win"><span class="m">✓</span>Ton quiz est en ligne dès le 4ᵉ jour.</div>
+        <div class="li win"><span class="m">✓</span>Des leads qualifiés qui tombent en automatique.</div>
+      </div>
+      <div class="vs-badge">VS</div>
+    </div>
+  </div></section>
+
+  <!-- INTÉRÊT · l'équipe -->
+  <section style="background:var(--gris-clair);border-top:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink);"><div class="wrap">
+    <div class="kicker">Tu n'es jamais seul</div>
+    <h2 class="hook" style="max-width:20ch;">Une vraie <span class="mark">équipe</span> bosse sur ton quiz avec toi.</h2>
+    <p class="sub2">Le quiz, c'est toi qui le crées. Mais tu es épaulé à chaque étape par un système basé sur tes vrais chiffres. Tu échanges avec un coach disponible 24h/24, 7j/7, pour t'accompagner à chaque étape.</p>
+    <div class="cards3">
+      <div class="fcard hot"><div class="tagline"><span class="dot"></span>Coach IA · 24/7</div><h3>Il te dit quoi faire, maintenant</h3><p>Il lit tes vrais chiffres Tiquiz et te donne la prochaine action. Un conseil, pas un cours. Même à 2h du matin.</p></div>
+      <div class="fcard"><div class="tagline">Quiz Doctor</div><h3>Il traque les fuites</h3><p>Avant publication, il passe ton quiz au scanner et repère ce qui te fait perdre des leads : capture, questions, images.</p></div>
+      <div class="fcard"><div class="tagline">Communauté</div><h3>Elle te porte</h3><p>Des créateurs qui avancent en même temps que toi. Tu ne lâches pas à mi-chemin, tu vas au bout.</p></div>
+    </div>
+  </div></section>
+
+  <!-- DÉSIR · CAPTO -->
+  <section class="center"><div class="wrap">
+    <div class="kicker">La méthode unique</div>
+    <h2 class="hook" style="text-align:center;">Ton plan tient en 5 lettres : <span class="hl">CAPTO®</span>.</h2>
+    <p class="sub2" style="margin-left:auto;margin-right:auto;">De l'idée du quiz jusqu'aux ventes, tu sais quoi faire, dans l'ordre. Les vidéos te guident, les quiz valident tes avancées, les templates te font gagner du temps.</p>
+    <div class="capto">
+      <div class="cstep"><div class="cl">C</div><div class="cw">Capter</div><div class="cp">Un quiz qui donne envie de cliquer et de répondre jusqu'au bout.</div><div class="cb"><span class="k">✓</span><span class="t">Tu récupères 2 à 3 fois plus d'emails qu'avec une page de capture classique.</span></div></div>
+      <div class="cstep"><div class="cl">A</div><div class="cw">Attirer</div><div class="cp">Un quiz que les gens ont envie de partager autour d'eux.</div><div class="cb"><span class="k">✓</span><span class="t">Du trafic qualifié qui vient à toi tout seul, sans dépenser un euro en pub.</span></div></div>
+      <div class="cstep"><div class="cl">P</div><div class="cw">Profiler</div><div class="cp">Chaque lead est taggé automatiquement selon ses réponses.</div><div class="cb"><span class="k">✓</span><span class="t">Tu sais quoi vendre à qui : le bon message tombe sur la bonne personne.</span></div></div>
+      <div class="cstep"><div class="cl">T</div><div class="cw">Transformer</div><div class="cp">Le quiz enchaîne sur tes emails, tes offres et tes coupons.</div><div class="cb"><span class="k">✓</span><span class="t">Tes leads deviennent des acheteurs en automatique, même pendant que tu dors.</span></div></div>
+      <div class="cstep"><div class="cl">O</div><div class="cw">Optimiser</div><div class="cp">Tu mesures, tu ajustes, tu relances ce qui marche.</div><div class="cb"><span class="k">✓</span><span class="t">Chaque semaine ton quiz vend un peu plus, sans jamais repartir de zéro.</span></div></div>
+    </div>
+  </div></section>
+
+  <!-- DÉSIR · les 7 jours -->
+  <section style="background:var(--gris-clair);border-top:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink);"><div class="wrap">
+    <div class="center"><div class="kicker">Ton parcours</div><h2 class="hook" style="text-align:center;">7 jours pour des résultats concrets.</h2>
+    <p class="sub2" style="margin-left:auto;margin-right:auto;">Chaque jour tu apprends une étape ET tu la mets en oeuvre pour atteindre tes objectifs : facile à suivre, pratique à appliquer. Et tu peux reproduire à l'infini pour démultiplier tes résultats.</p></div>
+    <div class="cal">
+      <div class="day"><div class="top"><span class="jour">Jour 1</span><span class="theme">Cadrage</span></div><div class="body"><span class="act">Ton angle est validé</span><span class="res">Celui qui donne envie à TON audience de cliquer sur ton quiz.</span></div></div>
+      <div class="day"><div class="top"><span class="jour">Jour 2</span><span class="theme">Questions</span></div><div class="body"><span class="act">Un quiz qu'on finit</span><span class="res">Les gens répondent jusqu'au bout au lieu d'abandonner en route.</span></div></div>
+      <div class="day"><div class="top"><span class="jour">Jour 3</span><span class="theme">Capture</span></div><div class="body"><span class="act">2% → 30% de capture</span><span class="res">Le réglage qui multiplie par 15 le nombre d'emails que tu récoltes.</span></div></div>
+      <div class="day hot"><div class="top"><span class="jour">Jour 4</span><span class="theme">En ligne</span></div><div class="body"><span class="act">Ton quiz est publié</span><span class="res">Branché à Systeme.io, il capte et tague déjà tes premiers leads.</span></div></div>
+      <div class="day"><div class="top"><span class="jour">Jour 5</span><span class="theme">Trafic</span></div><div class="body"><span class="act">Des visiteurs qualifiés</span><span class="res">Des centaines de personnes arrivent sur ton quiz, sans un euro de pub.</span></div></div>
+      <div class="day"><div class="top"><span class="jour">Jour 6</span><span class="theme">Viralité</span></div><div class="body"><span class="act">Ton quiz tourne seul</span><span class="res">Chaque participant t'en ramène d'autres, en boucle.</span></div></div>
+      <div class="day hot"><div class="top"><span class="jour">Jour 7</span><span class="theme">Ventes</span></div><div class="body"><span class="act">Ça se transforme en ventes</span><span class="res">Tes leads deviennent des clients, en automatique, à ta place.</span></div></div>
+      <div class="day"><div class="top"><span class="jour">Et après</span><span class="theme">À l'infini</span></div><div class="body"><span class="act">Tu reproduis, tu démultiplies</span><span class="res">Un quiz qui marche ? Tu en relances un autre et tu empiles les résultats.</span></div></div>
+    </div>
+    <div class="astuce"><span class="em">💡</span><p><b>Et chaque jour, une astuce bonus pour aller plus loin.</b> Tu n'apprends pas juste à faire ton quiz : tu apprends à le faire mieux que les autres, pour pousser tes résultats à chaque étape.</p></div>
+  </div></section>
+
+  <!-- DÉSIR · les bonus -->
+  <section class="center"><div class="wrap">
+    <div class="kicker">Les bonus pour aller plus loin</div>
+    <h2 class="hook" style="text-align:center;">Tu sais qu'un quiz fait vendre. On te montre <span class="hl">exactement comment</span>.</h2>
+    <p class="sub2" style="margin-left:auto;margin-right:auto;">5 modules bonus à débloquer quand tu es prêt, à ton rythme. Pour passer devant ceux qui se contentent du minimum.</p>
+    <div class="bonusgrid">
+      <div class="bcard" style="--ac:#C7D0FF"><span class="emo">🎯</span><span class="btag">Bonus 1</span><h3>Trafic payant sans risque</h3><p>Et si ta pub se remboursait <b>toute seule</b> ? Tu ouvres les vannes du trafic sans jamais jouer ton budget.</p></div>
+      <div class="bcard" style="--ac:#BFEFD8"><span class="emo">💰</span><span class="btag">Bonus 2</span><h3>Vendre avec ton quiz</h3><p>Ton quiz ne fait pas que capturer des emails : il <b>déclenche l'envie d'acheter</b>, pile au bon moment.</p></div>
+      <div class="bcard" style="--ac:#E6D2FF"><span class="emo">🔮</span><span class="btag">Bonus 3</span><h3>Les sondages</h3><p>Arrête de deviner. Ton audience va te dire <b>elle-même</b> ce qu'elle rêve d'acheter.</p></div>
+      <div class="bcard" style="--ac:#FFD9B0"><span class="emo">⚡</span><span class="btag">Bonus 4</span><h3>Les popquiz</h3><p>Ta liste s'endort ? Réveille-la en 2 minutes et <b>transforme le silence en clics</b>.</p></div>
+      <div class="bcard" style="--ac:#B9EBFA"><span class="emo">📱</span><span class="btag">Bonus 5</span><h3>Réseaux sociaux</h3><p>1 quiz, tous tes réseaux. Tu sais <b>quoi poster où</b>, même quand les algos changent.</p></div>
+    </div>
+  </div></section>
+
+  <!-- ACTION · offre -->
+  <section class="offer"><div class="wrap">
+    <div class="offer-card">
+      <div class="kicker">L'offre complète</div>
+      <h2>Tout ça, pour 47€. Une fois. À vie.</h2>
+      <div class="price">47€ <small>· paiement unique, accès à vie</small></div>
+
+      <div class="vhead">Le programme complet</div>
+      <div class="vlist">
+        <div class="v"><div class="tk">✓</div><div>Le <b>parcours 7 jours</b>, une mission par jour, ton quiz en ligne dès le 4ᵉ jour.</div></div>
+        <div class="v"><div class="tk">✓</div><div>Le <b>coach IA 24/7</b> branché sur les vraies données de ton quiz et tes avancées : il adapte ta stratégie, te débloque à chaque étape et t'emmène à tes objectifs, quel que soit ton domaine.</div></div>
+        <div class="v"><div class="tk">✓</div><div>Le <b>Quiz Doctor</b> qui audite ton quiz avant publication, corrige les erreurs et booste ses performances.</div></div>
+        <div class="v"><div class="tk">✓</div><div>La <b>Méthode CAPTO®</b> qui transforme un simple quiz en flux de leads et de ventes.</div></div>
+        <div class="v"><div class="tk">✓</div><div>Un <b>générateur d'emails</b> connecté à ton quiz qui rédige tes emails sur mesure, plus des <b>templates Systeme.io</b> à importer en un clic et personnaliser.</div></div>
+        <div class="v"><div class="tk">✓</div><div><b>Comment brancher ton quiz à Systeme.io</b> pour que tes leads arrivent déjà tagués, et tout automatiser (emails, bonus...) pour vendre en full automatique.</div></div>
+        <div class="v"><div class="tk">✓</div><div>La <b>communauté</b> et l'<b>accès Tiquiz gratuit</b> pour démarrer sans rien payer.</div></div>
+      </div>
+
+      <div class="vhead">Ce que tu obtiens concrètement</div>
+      <div class="vlist">
+        <div class="v"><div class="tk">✓</div><div>La <b>méthode du miroir</b> qui met ton prospect en confiance et le fait passer commande, sans forcer.</div></div>
+        <div class="v"><div class="tk">✓</div><div>Ce qu'il ne faut <b>JAMAIS demander en premier</b> dans ton quiz, et qui fait fuir la moitié de tes prospects.</div></div>
+        <div class="v"><div class="tk">✓</div><div>Le <b>réglage gratuit</b> qui fait grimper ton taux de capture de 2% à 30%.</div></div>
+        <div class="v"><div class="tk">✓</div><div>La <b>stratégie de recyclage</b> qui transforme un seul quiz en dizaines de contenus, sans repartir de zéro.</div></div>
+        <div class="v"><div class="tk">✓</div><div>Le <b>mécanisme de viralité</b> qui transforme chaque participant en source de nouveaux visiteurs, sans pub.</div></div>
+        <div class="v"><div class="tk">✓</div><div>Le <b>réglage tout bête</b> qui fait exploser ton taux d'ouverture, pour que tes emails soient vraiment lus.</div></div>
+        <div class="v"><div class="tk">✓</div><div>L'<b>astuce qui déclenche des ventes en cascade</b> directement depuis ton quiz.</div></div>
+      </div>
+
+      <div class="vhead">Les 5 bonus pour aller plus loin</div>
+      <div class="bonus"><span>🎁 Trafic payant sans risque</span><span>🎁 Vendre avec un quiz</span><span>🎁 Sondages</span><span>🎁 Popquiz</span><span>🎁 Réseaux sociaux</span></div>
+      <a class="btn" data-open="quizing">Je lance mon quiz aujourd'hui →</a>
+      <div class="guarline">🛡️ Garantie 30 jours satisfait ou remboursé</div>
+    </div>
+  </div></section>
+
+  <!-- GARANTIE -->
+  <section><div class="wrap">
+    <div class="guar">
+      <div class="ghead">
+        <div class="seal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 2.5v5.5c0 4.6-3 7.6-7 9.5-4-1.9-7-4.9-7-9.5V5.5z"/><path d="M9 12l2 2 4-4"/></svg>
+          <span class="n">30</span><span class="u">jours</span>
+        </div>
+        <h3>30 jours pour tester sans risque !</h3>
+      </div>
+      <p>J'ai tellement confiance dans la qualité de l'Atelier du Quiz que je te propose une <b>garantie 100% satisfait ou remboursé pendant 30 jours</b>.</p>
+      <span class="wink">Oui, tu as bien lu !</span>
+      <p>Si après un mois et après avoir appliqué tous mes conseils tu n'as pas réussi à attirer des clients grâce à ton quiz, je te rembourse ton investissement de <b>47€</b>, sans poser de questions.</p>
+      <p>Il te suffira d'envoyer un simple email à <a class="mail" href="mailto:hello@tipote.com">✉️ hello@tipote.com</a> et tu recevras ton remboursement dans la semaine, sur le même mode de paiement qui a servi à passer commande.</p>
+      <div class="gfoot">🛡️ C'est moi qui prends le risque, pas toi.</div>
+    </div>
+  </div></section>
+
+  <!-- FAQ -->
+  <section><div class="wrap">
+    <div class="center"><div class="kicker">On lève les doutes</div><h2 class="hook" style="text-align:center;">Ce que tu te demandes sûrement.</h2></div>
+    <div class="faq" style="margin-top:36px;">
+      <details class="qa"><summary>Je débute complètement et la technique me fait peur. <span class="plus">+</span></summary><div class="ans">C'est justement pensé pour les débutants. Tu n'as besoin d'<b>aucune compétence technique</b> : chaque étape est guidée écran par écran, et la connexion à Systeme.io se fait en suivant des captures, sans jamais toucher à une ligne de code. Si tu bloques, le <b>coach IA est là 24/7</b> pour te débloquer en langage simple. Des personnes qui "n'y connaissaient rien" ont déjà lancé leur quiz comme ça.</div></details>
+      <details class="qa"><summary>Combien de temps ça va me prendre par jour ? <span class="plus">+</span></summary><div class="ans">Compte <b>30 à 60 minutes par jour</b>, pas plus. Chaque mission est courte et concrète : tu ne regardes pas des heures de vidéo, tu avances directement sur TON quiz. Et comme tu as l'<b>accès à vie</b>, si une journée saute, tu reprends à ton rythme, sans pression. En 7 jours de travail réel, ton quiz est en ligne.</div></details>
+      <details class="qa"><summary>C'est un abonnement ? Il y a des frais cachés ? <span class="plus">+</span></summary><div class="ans">Non, <b>aucun abonnement et aucun frais caché</b>. Tu paies 47€ une seule fois et tu gardes l'accès à vie, mises à jour comprises. Pas de prélèvement mensuel, pas de surprise sur ta carte. Et l'accès à Tiquiz pour créer ton quiz est inclus gratuitement pour démarrer.</div></details>
+      <details class="qa"><summary>Est-ce que ça marche dans mon domaine ? <span class="plus">+</span></summary><div class="ans">Oui. Que tu sois <b>coach, consultant, formateur, affilié, créateur ou freelance</b>, le système est le même : tu pars de templates de quiz métier et tu adaptes tout à ta niche, ton offre et ton audience. Le coach IA connaît ton contexte et personnalise la stratégie pour toi. Un quiz bien fait parle à ton audience précise, et ça fonctionne dans presque tous les domaines.</div></details>
+      <details class="qa"><summary>Je pars de zéro, sans liste ni grosse audience. C'est possible ? <span class="plus">+</span></summary><div class="ans">Oui, c'est même l'idéal pour démarrer. Le but de l'Atelier, c'est justement de <b>remplir ta liste à partir de rien</b> : tu découvres les sources de trafic gratuites et le mécanisme de viralité qui amènent des visiteurs sur ton quiz sans budget pub. Tu n'as pas besoin d'une audience existante pour commencer, tu la construis avec ton quiz.</div></details>
+      <details class="qa"><summary>Et si je bloque ou que je perds ma motivation en route ? <span class="plus">+</span></summary><div class="ans">Tu n'es jamais seul. Le <b>coach IA lit tes vraies données</b> et te donne la prochaine action à faire, à n'importe quelle heure, même à 2h du matin. La <b>communauté des participants</b> est là pour t'entraider et te tirer vers le haut. Et comme chaque journée est courte et donne un résultat concret, tu vois ton quiz avancer, ce qui te garde motivé jusqu'au bout.</div></details>
+      <details class="qa"><summary>C'est quoi le "quizing", concrètement ? <span class="plus">+</span></summary><div class="ans">Le quizing, c'est <b>apprendre en faisant</b>. Au lieu d'empiler des vidéos que tu ne regarderas jamais, tu suis un quiz journalier court qui te fait avancer étape par étape sur ton vrai projet. À la fin, tu ne repars pas avec des notes : tu repars avec un <b>quiz publié</b>, branché à Systeme.io, qui capte déjà des leads. C'est la méthode CAPTO® (Capter, Attirer, Profiler, Transformer, Optimiser) appliquée en 7 jours.</div></details>
+      <details class="qa"><summary>Et si vraiment ça ne marche pas pour moi ? <span class="plus">+</span></summary><div class="ans">Tu ne prends <b>aucun risque</b>. Tu as 30 jours pour tout tester. Si après avoir appliqué la méthode tu n'as pas réussi à attirer de clients grâce à ton quiz, tu envoies un simple email à <a href="mailto:hello@tipote.com">hello@tipote.com</a> et je te rembourse tes 47€ intégralement, sans poser de questions. Le seul vrai risque, c'est de ne pas essayer.</div></details>
+    </div>
+  </div></section>
+
+  <!-- P.S. -->
+  <section><div class="wrap">
+    <div class="ps">
+      <h3>P.S. Si tu aimes les résumés :</h3>
+      <p>En 7 jours, tu lances un <b>quiz viral branché à Systeme.io</b> qui <b>capte des leads qualifiés</b> et les <b>transforme en clients</b>, en automatique. Un <b>coach IA</b> te guide à chaque étape, un <b>Quiz Doctor</b> sécurise ton lancement, une <b>communauté</b> te porte jusqu'au bout. Ton quiz peut être en ligne dans <b>4 jours</b>. Le tout pour <b>47€, une fois</b>, et si tu ne collectes aucun lead en 30 jours, je te rembourse sans poser de questions.</p>
+      <a class="btn" data-open="quizing">🚀 Je lance mon quiz</a>
+    </div>
+  </div></section>
+
+  <footer>© Atelier du Quiz · <a href="https://www.tipote.fr">tipote.fr</a> · Un produit signé Béné.</footer>
+
+<!-- ===============  (copie tout ce bloc <script>)  ============== -->
+<!-- ============================================================= -->
+<script>
+(function () {
+  'use strict';
+
+  /* ═══════════════════ RÉGLAGES (à personnaliser) ═══════════════════ */
+
+  /* 1. ID(s) du/des bouton(s) qui OUVRENT le popup. */
+  var TRIGGER_IDS = ['button-1d810d22', 'button-71d88887'];
+
+  /* 2. Bouton EXISTANT qui ouvre déjà ton popup de commande.
+        (vérifié en direct : un clic dessus ouvre bien le popup) */
+  var CHECKOUT_TRIGGER_ID = 'button-536cb07f';   /* ou 'button-3baa4dd1' */
+  var CHECKOUT_URL        = '';                   /* alternative : redirection vers une URL */
+
+  /* 3. Ouvrir automatiquement au chargement de la page ?  (0 = non, sinon délai en ms) */
+  var AUTO_OPEN_DELAY = 0;
+
+  /* 4. Autoriser la fermeture en cliquant sur le fond ? (true/false) */
+  var CLOSE_ON_BACKDROP = false;
+
+  /* ═══════════════════════ (fin des réglages) ═══════════════════════ */
+
+
+  if (window.__AQ_LOADED__) return; window.__AQ_LOADED__ = true;
+
+  /* ---- polices (Bricolage Grotesque + Inter) ---- */
+  var f = document.createElement('link');
+  f.rel = 'stylesheet';
+  f.href = 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Inter:wght@400;500;600;700;800&display=swap';
+  document.head.appendChild(f);
+
+  /* ---- styles ---- */
+  var css = `
+  #aq-overlay{position:fixed;inset:0;z-index:2147483000;display:none;align-items:center;justify-content:center;
+    padding:24px;background:rgba(22,24,46,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+    -webkit-tap-highlight-color:transparent;}
+  #aq-overlay.aq-open{display:flex;animation:aqFade .25s ease both;}
+  @keyframes aqFade{from{opacity:0}to{opacity:1}}
+  #aq-overlay *{box-sizing:border-box;}
+  .aq-card *{margin:0;padding:0;}
+
+  .aq-card{position:relative;width:100%;max-width:min(1120px,94vw);max-height:90vh;display:flex;flex-direction:column;
+    background:#fff;border:2.5px solid #16182E;border-radius:22px;box-shadow:8px 8px 0 #16182E;
+    font-family:'Inter',system-ui,sans-serif;color:#16182E;animation:aqPop .35s cubic-bezier(.16,.84,.44,1) both;}
+  @keyframes aqPop{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
+
+  .aq-head{flex:none;display:flex;align-items:center;gap:12px;padding:22px clamp(22px,5vw,34px) 4px;}
+  .aq-segs{display:flex;gap:5px;flex:1;max-width:380px;}
+  .aq-seg{height:7px;flex:1;border:2px solid #16182E;border-radius:2px;background:#fff;transition:background .3s;}
+  .aq-seg.on{background:#5A6EF6;}
+  .aq-count{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:13px;white-space:nowrap;color:#6A6F8C;}
+  .aq-count b{color:#5A6EF6;font-size:16px;}
+  .aq-x{flex:none;width:32px;height:32px;border:2px solid #16182E;border-radius:9px;background:#fff;cursor:pointer;
+    font-size:17px;line-height:1;color:#16182E;font-weight:700;display:flex;align-items:center;justify-content:center;
+    transition:transform .1s,background .15s;}
+  .aq-x:hover{background:#16182E;color:#fff;transform:rotate(90deg);}
+
+  .aq-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;padding:clamp(22px,4vw,48px) clamp(22px,5vw,64px);}
+  .aq-slide{display:none;animation:aqIn .4s cubic-bezier(.16,.84,.44,1) both;}
+  .aq-slide.on{display:block;margin:auto;max-width:900px;width:100%;}
+  @keyframes aqIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+
+  .aq-sticker{display:inline-block;transform:rotate(-1.8deg);background:#16182E;color:#fff;
+    font-size:clamp(9.5px,2.2vw,11px);font-weight:800;letter-spacing:.11em;text-transform:uppercase;
+    padding:6px 11px;border-radius:6px;margin-bottom:clamp(16px,3.5vw,22px);}
+  .aq-h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;line-height:1.12;letter-spacing:-.015em;
+    font-size:clamp(23px,4.9vw,33px);margin-bottom:clamp(16px,3.4vw,20px);}
+  .aq-h1.c{text-align:center;}
+  .aq-hl{color:#5A6EF6;}
+
+  .aq-mark{position:relative;white-space:nowrap;z-index:0;}
+  .aq-mark::before{content:"";position:absolute;z-index:-1;left:-.06em;right:-.06em;top:24%;bottom:15%;
+    background:#FFE24B;transform:rotate(-1deg);border-radius:2px 6px 3px 5px;}
+  .aq-circ{position:relative;color:#5A6EF6;white-space:nowrap;}
+  .aq-circ svg{position:absolute;left:-8%;top:-18%;width:116%;height:146%;overflow:visible;pointer-events:none;}
+  .aq-circ svg path{fill:none;stroke:#20BBE6;stroke-width:3.2;stroke-linecap:round;
+    stroke-dasharray:640;stroke-dashoffset:640;}
+  #aq-overlay.aq-open .aq-slide.on .aq-circ svg path{animation:aqDraw 1s ease .35s forwards;}
+  @keyframes aqDraw{to{stroke-dashoffset:0}}
+
+  .aq-sub{font-size:clamp(13.5px,3.1vw,15px);line-height:1.6;color:#3A3E5C;font-weight:500;max-width:44ch;}
+  .aq-sub.c{text-align:center;margin-left:auto;margin-right:auto;}
+  .aq-sub b{font-weight:800;color:#16182E;}
+
+  .aq-eq{display:flex;align-items:center;justify-content:flex-start;gap:8px;flex-wrap:wrap;margin:2px 0 20px;}
+  .aq-eq.c{justify-content:center;}
+  .aq-tag{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:clamp(12.5px,3vw,15px);
+    padding:6px 12px;border:2px solid #16182E;border-radius:8px;background:#fff;box-shadow:2.5px 2.5px 0 #16182E;}
+  .aq-tag.hot{background:#5A6EF6;color:#fff;}
+  .aq-op{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(16px,3.8vw,20px);color:#6A6F8C;}
+
+  .aq-steps{display:flex;flex-direction:column;gap:12px;margin-top:6px;}
+  .aq-step{display:flex;align-items:center;gap:16px;padding:14px 16px;border:2.5px solid #16182E;border-radius:13px;
+    background:#fff;box-shadow:4px 4px 0 #16182E;transition:transform .15s;}
+  .aq-step:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 #16182E;}
+  .aq-num{flex:none;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:26px;color:#5A6EF6;min-width:34px;}
+  .aq-step h3{font-family:'Bricolage Grotesque',sans-serif;font-size:clamp(15px,3.6vw,17px);font-weight:800;margin-bottom:2px;}
+  .aq-step p{font-size:clamp(13px,3.2vw,14px);color:#3A3E5C;line-height:1.4;}
+
+  .aq-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:6px;}
+  .aq-cell{padding:16px 12px;border:2.5px solid #16182E;border-radius:13px;background:#fff;box-shadow:4px 4px 0 #16182E;
+    transition:transform .15s;}
+  .aq-cell:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 #16182E;}
+  .aq-cell.hot{background:#5A6EF6;color:#fff;}
+  .aq-cell .k{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(15px,3.6vw,17px);margin-bottom:5px;}
+  .aq-cell p{font-size:clamp(12px,3vw,13px);line-height:1.4;color:#3A3E5C;}
+  .aq-cell.hot p{color:#EAF9FE;}
+
+  .aq-val{display:flex;align-items:flex-start;gap:10px;font-size:clamp(13.5px,3.3vw,15px);line-height:1.42;padding:3px 0;}
+  .aq-val .tk{flex:none;width:22px;height:22px;border:2px solid #16182E;border-radius:6px;background:#20BBE6;color:#16182E;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;margin-top:1px;}
+  .aq-val b{font-weight:800;}
+  .aq-bonus{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
+  .aq-bonus span{font-family:'Bricolage Grotesque',sans-serif;font-size:11.5px;font-weight:700;color:#16182E;
+    border:2px solid #16182E;background:#FFE24B;padding:5px 10px;border-radius:7px;}
+  .aq-price{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:16px;
+    padding:14px 16px;border:2.5px solid #16182E;border-radius:13px;background:#EEF2FE;box-shadow:4px 4px 0 #16182E;}
+  .aq-amt{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:28px;}
+  .aq-amt small{font-size:14px;font-weight:700;color:#3A3E5C;margin-left:6px;}
+  .aq-guar{font-weight:800;font-size:13px;color:#16182E;}
+  .aq-trust{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:12px;font-size:11.5px;color:#6A6F8C;font-weight:700;}
+
+  /* ---- checkout compact (slide 5 : une seule vue, tous les champs) ---- */
+  .aq-cohdr{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
+  .aq-cohdr .price{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:15px;color:#16182E;}
+  .aq-cohdr .price b{color:#5A6EF6;font-size:22px;}
+  .aq-co{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start;}
+  .aq-lbl2{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#5A6EF6;margin:0 0 7px;display:flex;align-items:center;gap:8px;}
+  .aq-lbl2::after{content:"";flex:1;height:2px;background:#E6EAF3;border-radius:2px;}
+  .aq-seg2{display:flex;gap:16px;margin-bottom:9px;font-size:13px;font-weight:600;}
+  .aq-seg2 label{display:flex;align-items:center;gap:7px;}
+  .aq-rdo{flex:none;width:16px;height:16px;border:2px solid #16182E;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;}
+  .aq-rdo.on::after{content:"";width:8px;height:8px;border-radius:50%;background:#5A6EF6;}
+  .aq-fg{margin-bottom:8px;}
+  .aq-in{border:2px solid #E6EAF3;border-radius:8px;padding:9px 11px;font-size:12.5px;color:#9AA0B8;background:#fff;line-height:1.2;}
+  .aq-two{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .aq-pay{border:2px solid #E6EAF3;border-radius:12px;overflow:hidden;}
+  .aq-pay-opt{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 13px;font-size:13px;font-weight:600;}
+  .aq-pay-opt.sel{background:#F7F8FE;}
+  .aq-pay-opt.line{border-top:2px solid #E6EAF3;}
+  .aq-pay-opt .l{display:flex;align-items:center;gap:9px;}
+  .aq-pay-body{padding:12px 13px;border-top:2px solid #E6EAF3;}
+  .aq-brands{display:flex;gap:5px;} .aq-brands span{font-size:9px;font-weight:800;color:#8A90A8;border:1.5px solid #E6EAF3;border-radius:3px;padding:2px 4px;}
+  .aq-total{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding:11px 14px;border:2.5px solid #16182E;border-radius:11px;background:#F4F5FB;box-shadow:3px 3px 0 #16182E;}
+  .aq-total .p{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:14px;}
+  .aq-total .a{text-align:right;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:19px;}
+  .aq-total .a small{display:block;font-size:10px;color:#6A6F8C;font-weight:700;}
+  .aq-cgv{display:flex;gap:8px;align-items:flex-start;margin-top:10px;font-size:11.5px;color:#3A3E5C;line-height:1.4;}
+  .aq-cgv .bx{flex:none;width:16px;height:16px;border:2px solid #16182E;border-radius:4px;margin-top:1px;}
+  .aq-cgv a{color:#5A6EF6;font-weight:700;text-decoration:none;}
+  .aq-reassure{display:flex;gap:22px;flex-wrap:wrap;justify-content:center;margin-top:11px;padding-top:11px;border-top:2px solid #EEF0F7;}
+  .aq-reassure div{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#6A6F8C;}
+  .aq-reassure .ic{color:#12A968;font-weight:800;font-size:13px;}
+  @media(max-width:640px){.aq-co{grid-template-columns:1fr;}}
+
+  .aq-foot{flex:none;display:flex;align-items:center;justify-content:space-between;gap:14px;
+    padding:clamp(14px,3vw,18px) clamp(22px,5vw,34px);border-top:2px solid #EEF0F7;}
+  .aq-prev{font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:800;color:#6A6F8C;background:none;border:none;
+    cursor:pointer;padding:8px 6px;}
+  .aq-prev:hover{color:#16182E;}
+  .aq-prev[hidden]{visibility:hidden;}
+  .aq-next{font-family:'Bricolage Grotesque',sans-serif;font-size:clamp(15px,3.5vw,17px);font-weight:800;color:#fff;background:#5A6EF6;
+    border:2.5px solid #16182E;border-radius:11px;padding:12px clamp(20px,4.5vw,26px);cursor:pointer;box-shadow:5px 5px 0 #16182E;
+    transition:transform .08s,box-shadow .08s;display:inline-flex;align-items:center;gap:8px;}
+  .aq-next:hover{transform:translate(2px,2px);box-shadow:4px 4px 0 #16182E;}
+  .aq-next:active{transform:translate(6px,6px);box-shadow:0 0 0 #16182E;}
+  .aq-next.buy{background:#20BBE6;}
+
+  @media (min-width:760px){
+    .aq-h1{font-size:44px;}
+    .aq-sub{font-size:17.5px;max-width:60ch;}
+    .aq-sticker{font-size:12px;}
+    .aq-tag{font-size:18px;padding:8px 15px;}
+    .aq-op{font-size:24px;}
+    .aq-steps{gap:16px;}
+    .aq-step{padding:20px 22px;}
+    .aq-step h3{font-size:20px;}
+    .aq-step p{font-size:15.5px;}
+    .aq-num{font-size:32px;min-width:44px;}
+    .aq-grid{gap:16px;}
+    .aq-cell{padding:24px 20px;}
+    .aq-cell .k{font-size:20px;}
+    .aq-cell p{font-size:14.5px;}
+    .aq-next{font-size:18px;padding:15px 32px;}
+    .aq-prev{font-size:16px;}
+  }
+
+  @media (max-width:560px){
+    .aq-card{box-shadow:6px 6px 0 #16182E;max-height:94vh;}
+    .aq-grid{grid-template-columns:1fr;}
+    .aq-cell{display:flex;align-items:baseline;gap:10px;}
+    .aq-cell .k{margin-bottom:0;min-width:96px;}
+    .aq-count b{font-size:17px;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    #aq-overlay,.aq-card,.aq-slide{animation:none!important;}
+    .aq-circ svg path{stroke-dashoffset:0!important;}
+  }
+  `;
+  var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+
+  /* ---- contenu des 4 slides (le bon de commande = ton popup 6 natif) ---- */
+  var CIRC = '<svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M50 6 C82 6 96 22 96 48 C96 78 74 94 48 94 C18 94 4 74 6 46 C8 20 26 6 52 7"/></svg>';
+  var slides = [
+    '<span class="aq-sticker">C\'est quoi l\'Atelier du Quiz ?</span>'+
+    '<h1 class="aq-h1">Ce n\'est pas une formation. C\'est un <span class="aq-circ">quizing'+CIRC+'</span>.</h1>'+
+    '<div class="aq-eq"><span class="aq-tag">Ton quiz</span><span class="aq-op">+</span><span class="aq-tag">Coach IA</span><span class="aq-op">+</span><span class="aq-tag">Quiz Doctor</span><span class="aq-op">+</span><span class="aq-tag">Communauté</span><span class="aq-op">=</span><span class="aq-tag hot">Quizing</span></div>'+
+    '<p class="aq-sub">Tu sais qu\'un quiz peut remplir ta liste et vendre pour toi. Ici, on te donne tout pour le faire : la méthode, les outils et une équipe qui bosse avec toi. Tu construis ton quiz en le faisant.</p>',
+
+    '<span class="aq-sticker">Comment ça marche ?</span>'+
+    '<h1 class="aq-h1">3 étapes, <span class="aq-hl">zéro prise de tête</span>.</h1>'+
+    '<div class="aq-steps">'+
+      '<div class="aq-step"><div class="aq-num">01</div><div><h3>Tu valides ton accès</h3><p>Accès à vie, tout de suite. Zéro compétence technique requise.</p></div></div>'+
+      '<div class="aq-step"><div class="aq-num">02</div><div><h3>Tu réponds à quelques questions</h3><p>On adapte la stratégie à ta niche, ton offre et ton audience.</p></div></div>'+
+      '<div class="aq-step"><div class="aq-num">03</div><div><h3>Tu te laisses guider, jour après jour</h3><p>Une mission courte par jour. Tu fais, tu valides, tu avances sur TON vrai quiz.</p></div></div>'+
+    '</div>',
+
+    '<span class="aq-sticker">Tu n\'avances jamais seul</span>'+
+    '<h1 class="aq-h1">Une vraie <span class="aq-mark">équipe</span> derrière ton quiz.</h1>'+
+    '<div class="aq-grid">'+
+      '<div class="aq-cell hot"><div class="k">Coach IA 24/7</div><p>Branché sur les vraies données de ton quiz, il adapte ta stratégie et te donne la prochaine action, même à 2h du matin.</p></div>'+
+      '<div class="aq-cell"><div class="k">Quiz Doctor</div><p>Il audite ton quiz avant publication, corrige les erreurs et booste ses performances.</p></div>'+
+      '<div class="aq-cell"><div class="k">Communauté</div><p>Des créateurs qui avancent avec toi. Tu ne lâches pas à mi-chemin, tu vas au bout.</p></div>'+
+    '</div>',
+
+    '<span class="aq-sticker">Le résultat, au bout de 7 jours</span>'+
+    '<h1 class="aq-h1 c">Ton quiz tourne, <span class="aq-mark">et il vend</span>.</h1>'+
+    '<p class="aq-sub c">Le quiz est le moyen. Les leads, les ventes et la liberté sont la destination.</p>'+
+    '<div class="aq-grid" style="margin-top:16px">'+
+      '<div class="aq-cell hot"><div class="k">Publié &amp; viral</div><p>Pensé pour se partager tout seul, sans budget pub.</p></div>'+
+      '<div class="aq-cell hot"><div class="k">Leads qualifiés</div><p>Branchés à ton Systeme.io, taggés automatiquement.</p></div>'+
+      '<div class="aq-cell hot"><div class="k">Ça vend en auto</div><p>Un générateur d\'emails connecté à ton quiz relance et vend à ta place.</p></div>'+
+    '</div>',
+
+    '<div class="aq-cohdr"><span class="aq-sticker" style="margin-bottom:0">Commande sécurisée</span><span class="price">Atelier du Quiz · <b>47€</b></span></div>'+
+    '<div class="aq-co">'+
+      '<div>'+
+        '<div class="aq-lbl2">Facturation</div>'+
+        '<div class="aq-seg2"><label><span class="aq-rdo on"></span>Particulier</label><label><span class="aq-rdo"></span>Entreprise</label></div>'+
+        '<div class="aq-two"><div class="aq-fg"><div class="aq-in">Prénom</div></div><div class="aq-fg"><div class="aq-in">Nom de famille</div></div></div>'+
+        '<div class="aq-fg"><div class="aq-in">Adresse</div></div>'+
+        '<div class="aq-two"><div class="aq-fg"><div class="aq-in">Code postal</div></div><div class="aq-fg"><div class="aq-in">Ville</div></div></div>'+
+        '<div class="aq-fg"><div class="aq-in">France ▾</div></div>'+
+        '<div class="aq-fg"><div class="aq-in">Adresse email valide</div></div>'+
+      '</div>'+
+      '<div>'+
+        '<div class="aq-lbl2">Paiement</div>'+
+        '<div class="aq-pay">'+
+          '<div class="aq-pay-opt sel"><span class="l"><span class="aq-rdo on"></span>Carte de crédit</span><span class="aq-brands"><span>VISA</span><span>MC</span><span>AMEX</span></span></div>'+
+          '<div class="aq-pay-body">'+
+            '<div class="aq-fg"><div class="aq-in">Numéro de carte</div></div>'+
+            '<div class="aq-two"><div class="aq-fg" style="margin-bottom:0"><div class="aq-in">MM / AA</div></div><div class="aq-fg" style="margin-bottom:0"><div class="aq-in">CVC</div></div></div>'+
+          '</div>'+
+          '<div class="aq-pay-opt line"><span class="l"><span class="aq-rdo"></span>PayPal</span><span style="font-weight:800;color:#123B86;font-size:14px;">Pay<span style="color:#009CDE;">Pal</span></span></div>'+
+        '</div>'+
+        '<div class="aq-total"><span class="p">Atelier du Quiz</span><span class="a">47,00 €<small>TVA incluse (20%)</small></span></div>'+
+        '<div class="aq-cgv"><span class="bx"></span><div>Je certifie avoir lu et accepté les <a>CGV</a> et la <a>politique de confidentialité</a>.</div></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="aq-reassure"><div><span class="ic">🔒</span>Paiement sécurisé</div><div><span class="ic">🛡️</span>Garantie 30 jours</div><div><span class="ic">♾️</span>Accès à vie</div></div>'
+  ];
+  var TOTAL = slides.length;
+
+  /* ---- DOM ---- */
+  var ov = document.createElement('div');
+  ov.id = 'aq-overlay';
+  ov.setAttribute('role','dialog');
+  ov.setAttribute('aria-modal','true');
+  var segs = '';
+  for (var i=0;i<TOTAL;i++){ segs += '<i class="aq-seg' + (i===0?' on':'') + '"></i>'; }
+  ov.innerHTML =
+    '<div class="aq-card">'+
+      '<div class="aq-head">'+
+        '<div class="aq-segs">'+segs+'</div>'+
+        '<div class="aq-count"><b id="aq-num">01</b> / 0'+TOTAL+'</div>'+
+        '<button class="aq-x" id="aq-x" aria-label="Fermer">✕</button>'+
+      '</div>'+
+      '<div class="aq-body" id="aq-body"></div>'+
+      '<div class="aq-foot">'+
+        '<button class="aq-prev" id="aq-prev" hidden>← Précédent</button>'+
+        '<button class="aq-next" id="aq-next">C\'est parti →</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+
+  var body = ov.querySelector('#aq-body');
+  var segEls, numEl = ov.querySelector('#aq-num');
+  var prevBtn = ov.querySelector('#aq-prev');
+  var nextBtn = ov.querySelector('#aq-next');
+  var cur = 0;
+
+  /* injecte les slides */
+  for (var s=0;s<TOTAL;s++){
+    var d = document.createElement('div');
+    d.className = 'aq-slide' + (s===0?' on':'');
+    d.innerHTML = slides[s];
+    body.appendChild(d);
+  }
+  var slideEls = body.querySelectorAll('.aq-slide');
+  segEls = ov.querySelectorAll('.aq-seg');
+
+  var LABELS = ['C\'est parti →','La suite →','Et après ? →','Voir l\'offre →','🔒 Valider ma commande'];
+
+  function render(){
+    slideEls.forEach(function(el,idx){ el.classList.toggle('on', idx===cur); });
+    segEls.forEach(function(el,idx){ el.classList.toggle('on', idx<=cur); });
+    numEl.textContent = ('0'+(cur+1)).slice(-2);
+    prevBtn.hidden = (cur===0);
+    nextBtn.textContent = LABELS[cur];
+    nextBtn.classList.toggle('buy', cur===TOTAL-1);
+    body.scrollTop = 0;
+  }
+  function open(){ ov.classList.add('aq-open'); document.body.style.overflow='hidden'; cur=0; render(); }
+  function close(){ ov.classList.remove('aq-open'); document.body.style.overflow=''; }
+
+  function goCheckout(){
+    close();                                    /* ferme le popup des 4 slides */
+    var el = CHECKOUT_TRIGGER_ID && document.getElementById(CHECKOUT_TRIGGER_ID);
+    if (el){ el.click(); return; }              /* → clique ton bouton "Commander" existant → ouvre le popup */
+    if (CHECKOUT_URL){ window.location.href = CHECKOUT_URL; }
+  }
+  nextBtn.addEventListener('click', function(){
+    if (cur < TOTAL-1){ cur++; render(); }
+    else { goCheckout(); }
+  });
+  prevBtn.addEventListener('click', function(){ if (cur>0){ cur--; render(); } });
+  ov.querySelector('#aq-x').addEventListener('click', close);
+  ov.addEventListener('click', function(e){ if (e.target===ov && CLOSE_ON_BACKDROP) close(); });
+  document.addEventListener('keydown', function(e){ if (e.key==='Escape' && ov.classList.contains('aq-open')) close(); });
+
+  /* ---- déclencheurs (délégation : marche même si le bouton est ajouté après) ---- */
+  var trigSel = TRIGGER_IDS.map(function(id){ return '#'+id; }).join(',');
+  trigSel += (trigSel?',':'') + '[data-open="quizing"],.js-open-quizing';
+  document.addEventListener('click', function(e){
+    var t = e.target.closest(trigSel);
+    if (t){ e.preventDefault(); open(); }
+  });
+
+  /* API publique + auto-open éventuel */
+  window.AQ = { open: open, close: close };
+  if (AUTO_OPEN_DELAY > 0){ setTimeout(open, AUTO_OPEN_DELAY); }
+})();
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Je débute complètement et la technique me fait peur.",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "C'est justement pensé pour les débutants. Tu n'as besoin d'aucune compétence technique : chaque étape est guidée écran par écran, et la connexion à Systeme.io se fait en suivant des captures, sans jamais toucher à une ligne de code. Si tu bloques, le coach IA est là 24/7 pour te débloquer en langage simple."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Combien de temps ça va me prendre par jour ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Compte 30 à 60 minutes par jour, pas plus. Chaque mission est courte et concrète : tu ne regardes pas des heures de vidéo, tu avances directement sur ton quiz. Et comme tu as l'accès à vie, si une journée saute, tu reprends à ton rythme. En 7 jours de travail réel, ton quiz est en ligne."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "C'est un abonnement ? Il y a des frais cachés ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Non, aucun abonnement et aucun frais caché. Tu paies 47€ une seule fois et tu gardes l'accès à vie, mises à jour comprises. Pas de prélèvement mensuel. L'accès à Tiquiz pour créer ton quiz est inclus gratuitement pour démarrer."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Est-ce que ça marche dans mon domaine ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Oui. Que tu sois coach, consultant, formateur, affilié, créateur ou freelance, le système est le même : tu pars de templates de quiz métier et tu adaptes tout à ta niche, ton offre et ton audience. Le coach IA personnalise la stratégie pour toi. Un quiz bien fait fonctionne dans presque tous les domaines."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Je pars de zéro, sans liste ni grosse audience. C'est possible ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Oui, c'est même l'idéal pour démarrer. Le but de l'Atelier est justement de remplir ta liste à partir de rien : tu découvres les sources de trafic gratuites et le mécanisme de viralité qui amènent des visiteurs sur ton quiz sans budget pub. Tu n'as pas besoin d'une audience existante, tu la construis avec ton quiz."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Et si je bloque ou que je perds ma motivation en route ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Tu n'es jamais seul. Le coach IA lit tes vraies données et te donne la prochaine action à faire, à n'importe quelle heure. La communauté des participants est là pour t'entraider. Et comme chaque journée est courte et donne un résultat concret, tu vois ton quiz avancer, ce qui te garde motivé jusqu'au bout."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "C'est quoi le quizing, concrètement ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Le quizing, c'est apprendre en faisant. Au lieu d'empiler des vidéos, tu suis un quiz journalier court qui te fait avancer étape par étape sur ton vrai projet. À la fin, tu repars avec un quiz publié, branché à Systeme.io, qui capte déjà des leads. C'est la méthode CAPTO (Capter, Attirer, Profiler, Transformer, Optimiser) appliquée en 7 jours."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Et si vraiment ça ne marche pas pour moi ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Tu ne prends aucun risque. Tu as 30 jours pour tout tester. Si après avoir appliqué la méthode tu n'as pas réussi à attirer de clients grâce à ton quiz, tu envoies un email à hello@tipote.com et je te rembourse tes 47€ intégralement, sans poser de questions."
+      }
+    }
+  ]
+}
+</script>
+</body>
+</html>

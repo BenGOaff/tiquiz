@@ -27,7 +27,7 @@ export async function getSupabaseServerClient(): Promise<SupabaseClient> {
             cookieStore.set(name, value, options);
           });
         } catch {
-          // Read-only context (some Server Components) — ignore.
+          // Contexte read-only (certains Server Components) — on ignore.
         }
       },
     },

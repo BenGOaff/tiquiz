@@ -1,0 +1,285 @@
+<!-- ===============  (copie tout ce bloc <script>)  ============== -->
+<!-- ============================================================= -->
+<script>
+(function () {
+  'use strict';
+
+  /* ═══════════════════ RÉGLAGES (à personnaliser) ═══════════════════ */
+
+  /* 1. ID(s) du/des bouton(s) qui OUVRENT le popup. */
+  var TRIGGER_IDS = ['button-71d88887', 'button-1d810d22'];
+
+  /* 2. Bouton EXISTANT qui ouvre déjà ton popup de commande.
+        (vérifié en direct : un clic dessus ouvre bien le popup) */
+  var CHECKOUT_TRIGGER_ID = 'button-3baa4dd1';   /* ou 'button-3baa4dd1' */
+  var CHECKOUT_URL        = '';                   /* alternative : redirection vers une URL */
+
+  /* 3. Ouvrir automatiquement au chargement de la page ?  (0 = non, sinon délai en ms) */
+  var AUTO_OPEN_DELAY = 0;
+
+  /* 4. Autoriser la fermeture en cliquant sur le fond ? (true/false) */
+  var CLOSE_ON_BACKDROP = false;
+
+  /* ═══════════════════════ (fin des réglages) ═══════════════════════ */
+
+
+  if (window.__AQ_LOADED__) return; window.__AQ_LOADED__ = true;
+
+  /* ---- polices (Bricolage Grotesque + Inter) ---- */
+  var f = document.createElement('link');
+  f.rel = 'stylesheet';
+  f.href = 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Inter:wght@400;500;600;700;800&display=swap';
+  document.head.appendChild(f);
+
+  /* ---- styles ---- */
+  var css = `
+  #aq-overlay{position:fixed;inset:0;z-index:2147483000;display:none;align-items:center;justify-content:center;
+    padding:24px;background:rgba(22,24,46,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+    -webkit-tap-highlight-color:transparent;}
+  #aq-overlay.aq-open{display:flex;animation:aqFade .25s ease both;}
+  @keyframes aqFade{from{opacity:0}to{opacity:1}}
+  #aq-overlay *{box-sizing:border-box;}
+  .aq-card *{margin:0;padding:0;}
+
+  .aq-card{position:relative;width:100%;max-width:min(1120px,94vw);max-height:90vh;display:flex;flex-direction:column;
+    background:#fff;border:2.5px solid #16182E;border-radius:22px;box-shadow:8px 8px 0 #16182E;
+    font-family:'Inter',system-ui,sans-serif;color:#16182E;animation:aqPop .35s cubic-bezier(.16,.84,.44,1) both;}
+  @keyframes aqPop{from{opacity:0;transform:translateY(16px) scale(.98)}to{opacity:1;transform:none}}
+
+  .aq-head{flex:none;display:flex;align-items:center;gap:12px;padding:22px clamp(22px,5vw,34px) 4px;}
+  .aq-segs{display:flex;gap:5px;flex:1;max-width:380px;}
+  .aq-seg{height:7px;flex:1;border:2px solid #16182E;border-radius:2px;background:#fff;transition:background .3s;}
+  .aq-seg.on{background:#5A6EF6;}
+  .aq-count{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:13px;white-space:nowrap;color:#6A6F8C;}
+  .aq-count b{color:#5A6EF6;font-size:16px;}
+  .aq-x{flex:none;width:32px;height:32px;border:2px solid #16182E;border-radius:9px;background:#fff;cursor:pointer;
+    font-size:17px;line-height:1;color:#16182E;font-weight:700;display:flex;align-items:center;justify-content:center;
+    transition:transform .1s,background .15s;}
+  .aq-x:hover{background:#16182E;color:#fff;transform:rotate(90deg);}
+
+  .aq-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;padding:clamp(22px,4vw,48px) clamp(22px,5vw,64px);}
+  .aq-slide{display:none;animation:aqIn .4s cubic-bezier(.16,.84,.44,1) both;}
+  .aq-slide.on{display:block;margin:auto;max-width:900px;width:100%;}
+  @keyframes aqIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+
+  .aq-sticker{display:inline-block;transform:rotate(-1.8deg);background:#16182E;color:#fff;
+    font-size:clamp(9.5px,2.2vw,11px);font-weight:800;letter-spacing:.11em;text-transform:uppercase;
+    padding:6px 11px;border-radius:6px;margin-bottom:clamp(16px,3.5vw,22px);}
+  .aq-h1{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;line-height:1.12;letter-spacing:-.015em;
+    font-size:clamp(23px,4.9vw,33px);margin-bottom:clamp(16px,3.4vw,20px);}
+  .aq-h1.c{text-align:center;}
+  .aq-hl{color:#5A6EF6;}
+
+  .aq-mark{position:relative;white-space:nowrap;z-index:0;}
+  .aq-mark::before{content:"";position:absolute;z-index:-1;left:-.06em;right:-.06em;top:24%;bottom:15%;
+    background:#FFE24B;transform:rotate(-1deg);border-radius:2px 6px 3px 5px;}
+  .aq-circ{position:relative;color:#5A6EF6;white-space:nowrap;}
+  .aq-circ svg{position:absolute;left:-8%;top:-18%;width:116%;height:146%;overflow:visible;pointer-events:none;}
+  .aq-circ svg path{fill:none;stroke:#20BBE6;stroke-width:3.2;stroke-linecap:round;
+    stroke-dasharray:640;stroke-dashoffset:640;}
+  #aq-overlay.aq-open .aq-slide.on .aq-circ svg path{animation:aqDraw 1s ease .35s forwards;}
+  @keyframes aqDraw{to{stroke-dashoffset:0}}
+
+  .aq-sub{font-size:clamp(13.5px,3.1vw,15px);line-height:1.6;color:#3A3E5C;font-weight:500;max-width:44ch;}
+  .aq-sub.c{text-align:center;margin-left:auto;margin-right:auto;}
+  .aq-sub b{font-weight:800;color:#16182E;}
+
+  .aq-eq{display:flex;align-items:center;justify-content:flex-start;gap:8px;flex-wrap:wrap;margin:2px 0 20px;}
+  .aq-eq.c{justify-content:center;}
+  .aq-tag{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:clamp(12.5px,3vw,15px);
+    padding:6px 12px;border:2px solid #16182E;border-radius:8px;background:#fff;box-shadow:2.5px 2.5px 0 #16182E;}
+  .aq-tag.hot{background:#5A6EF6;color:#fff;}
+  .aq-op{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(16px,3.8vw,20px);color:#6A6F8C;}
+
+  .aq-steps{display:flex;flex-direction:column;gap:12px;margin-top:6px;}
+  .aq-step{display:flex;align-items:center;gap:16px;padding:14px 16px;border:2.5px solid #16182E;border-radius:13px;
+    background:#fff;box-shadow:4px 4px 0 #16182E;transition:transform .15s;}
+  .aq-step:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 #16182E;}
+  .aq-num{flex:none;font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:26px;color:#5A6EF6;min-width:34px;}
+  .aq-step h3{font-family:'Bricolage Grotesque',sans-serif;font-size:clamp(15px,3.6vw,17px);font-weight:800;margin-bottom:2px;}
+  .aq-step p{font-size:clamp(13px,3.2vw,14px);color:#3A3E5C;line-height:1.4;}
+
+  .aq-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:6px;}
+  .aq-cell{padding:16px 12px;border:2.5px solid #16182E;border-radius:13px;background:#fff;box-shadow:4px 4px 0 #16182E;
+    transition:transform .15s;}
+  .aq-cell:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 #16182E;}
+  .aq-cell.hot{background:#5A6EF6;color:#fff;}
+  .aq-cell .k{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:clamp(15px,3.6vw,17px);margin-bottom:5px;}
+  .aq-cell p{font-size:clamp(12px,3vw,13px);line-height:1.4;color:#3A3E5C;}
+  .aq-cell.hot p{color:#EAF9FE;}
+
+  .aq-val{display:flex;align-items:flex-start;gap:10px;font-size:clamp(13.5px,3.3vw,15px);line-height:1.42;padding:3px 0;}
+  .aq-val .tk{flex:none;width:22px;height:22px;border:2px solid #16182E;border-radius:6px;background:#20BBE6;color:#16182E;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;margin-top:1px;}
+  .aq-val b{font-weight:800;}
+  .aq-bonus{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;}
+  .aq-bonus span{font-family:'Bricolage Grotesque',sans-serif;font-size:11.5px;font-weight:700;color:#16182E;
+    border:2px solid #16182E;background:#FFE24B;padding:5px 10px;border-radius:7px;}
+  .aq-price{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:16px;
+    padding:14px 16px;border:2.5px solid #16182E;border-radius:13px;background:#EEF2FE;box-shadow:4px 4px 0 #16182E;}
+  .aq-amt{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:28px;}
+  .aq-amt small{font-size:14px;font-weight:700;color:#3A3E5C;margin-left:6px;}
+  .aq-guar{font-weight:800;font-size:13px;color:#16182E;}
+  .aq-trust{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:12px;font-size:11.5px;color:#6A6F8C;font-weight:700;}
+
+  .aq-foot{flex:none;display:flex;align-items:center;justify-content:space-between;gap:14px;
+    padding:clamp(14px,3vw,18px) clamp(22px,5vw,34px);border-top:2px solid #EEF0F7;}
+  .aq-prev{font-family:'Bricolage Grotesque',sans-serif;font-size:15px;font-weight:800;color:#6A6F8C;background:none;border:none;
+    cursor:pointer;padding:8px 6px;}
+  .aq-prev:hover{color:#16182E;}
+  .aq-prev[hidden]{visibility:hidden;}
+  .aq-next{font-family:'Bricolage Grotesque',sans-serif;font-size:clamp(15px,3.5vw,17px);font-weight:800;color:#fff;background:#5A6EF6;
+    border:2.5px solid #16182E;border-radius:11px;padding:12px clamp(20px,4.5vw,26px);cursor:pointer;box-shadow:5px 5px 0 #16182E;
+    transition:transform .08s,box-shadow .08s;display:inline-flex;align-items:center;gap:8px;}
+  .aq-next:hover{transform:translate(2px,2px);box-shadow:4px 4px 0 #16182E;}
+  .aq-next:active{transform:translate(6px,6px);box-shadow:0 0 0 #16182E;}
+  .aq-next.buy{background:#20BBE6;}
+
+  @media (min-width:760px){
+    .aq-h1{font-size:44px;}
+    .aq-sub{font-size:17.5px;max-width:60ch;}
+    .aq-sticker{font-size:12px;}
+    .aq-tag{font-size:18px;padding:8px 15px;}
+    .aq-op{font-size:24px;}
+    .aq-steps{gap:16px;}
+    .aq-step{padding:20px 22px;}
+    .aq-step h3{font-size:20px;}
+    .aq-step p{font-size:15.5px;}
+    .aq-num{font-size:32px;min-width:44px;}
+    .aq-grid{gap:16px;}
+    .aq-cell{padding:24px 20px;}
+    .aq-cell .k{font-size:20px;}
+    .aq-cell p{font-size:14.5px;}
+    .aq-next{font-size:18px;padding:15px 32px;}
+    .aq-prev{font-size:16px;}
+  }
+
+  @media (max-width:560px){
+    .aq-card{box-shadow:6px 6px 0 #16182E;max-height:94vh;}
+    .aq-grid{grid-template-columns:1fr;}
+    .aq-cell{display:flex;align-items:baseline;gap:10px;}
+    .aq-cell .k{margin-bottom:0;min-width:96px;}
+    .aq-count b{font-size:17px;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    #aq-overlay,.aq-card,.aq-slide{animation:none!important;}
+    .aq-circ svg path{stroke-dashoffset:0!important;}
+  }
+  `;
+  var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+
+  /* ---- contenu des 4 slides (le bon de commande = ton popup 6 natif) ---- */
+  var CIRC = '<svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M50 6 C82 6 96 22 96 48 C96 78 74 94 48 94 C18 94 4 74 6 46 C8 20 26 6 52 7"/></svg>';
+  var slides = [
+    '<span class="aq-sticker">C\'est quoi l\'Atelier du Quiz ?</span>'+
+    '<h1 class="aq-h1">Ce n\'est pas une formation. C\'est un <span class="aq-circ">quizing'+CIRC+'</span>.</h1>'+
+    '<div class="aq-eq"><span class="aq-tag">Ton quiz</span><span class="aq-op">+</span><span class="aq-tag">Coach IA</span><span class="aq-op">+</span><span class="aq-tag">Quiz Doctor</span><span class="aq-op">+</span><span class="aq-tag">Communauté</span><span class="aq-op">=</span><span class="aq-tag hot">Quizing</span></div>'+
+    '<p class="aq-sub">Tu construis ton quiz en le faisant, épaulé par une IA qui lit tes vraies données. À la clé : un quiz viral qui te ramène des leads et des ventes, en automatique.</p>',
+
+    '<span class="aq-sticker">Comment ça marche ?</span>'+
+    '<h1 class="aq-h1">3 étapes, <span class="aq-hl">zéro prise de tête</span>.</h1>'+
+    '<div class="aq-steps">'+
+      '<div class="aq-step"><div class="aq-num">01</div><div><h3>Tu valides</h3><p>Accès à vie à ta plateforme, tout de suite.</p></div></div>'+
+      '<div class="aq-step"><div class="aq-num">02</div><div><h3>Tu réponds à quelques questions</h3><p>On adapte tout à ta niche, ton offre et ton audience.</p></div></div>'+
+      '<div class="aq-step"><div class="aq-num">03</div><div><h3>Tu te laisses guider</h3><p>Un quizing journalier court : tu fais, tu valides, tu avances.</p></div></div>'+
+    '</div>',
+
+    '<span class="aq-sticker">Tu n\'avances jamais seul</span>'+
+    '<h1 class="aq-h1">Une vraie <span class="aq-mark">équipe</span> derrière ton quiz.</h1>'+
+    '<div class="aq-grid">'+
+      '<div class="aq-cell hot"><div class="k">Coach IA</div><p>Il lit tes vrais chiffres Tiquiz et te donne la prochaine action. Un conseil sûr, pas du blabla.</p></div>'+
+      '<div class="aq-cell"><div class="k">Quiz Doctor</div><p>Il audite ton quiz avant publication et repère les fuites qui te font perdre des leads.</p></div>'+
+      '<div class="aq-cell"><div class="k">Communauté</div><p>L\'entraide et l\'émulation pour aller jusqu\'au bout.</p></div>'+
+    '</div>',
+
+    '<span class="aq-sticker">Le résultat, au bout de 7 jours</span>'+
+    '<h1 class="aq-h1 c">Ton quiz tourne, <span class="aq-mark">et il vend</span>.</h1>'+
+    '<p class="aq-sub c">Le quiz est le moyen. Les leads, les ventes et la liberté sont la destination.</p>'+
+    '<div class="aq-grid" style="margin-top:16px">'+
+      '<div class="aq-cell hot"><div class="k">Publié &amp; viral</div><p>Pensé pour se partager tout seul, sans budget pub.</p></div>'+
+      '<div class="aq-cell hot"><div class="k">Leads qualifiés</div><p>Branchés à ton Systeme.io, taggés automatiquement.</p></div>'+
+      '<div class="aq-cell hot"><div class="k">Ça vend en auto</div><p>Tes séquences email post-quiz relancent à ta place.</p></div>'+
+    '</div>'
+  ];
+  var TOTAL = slides.length;
+
+  /* ---- DOM ---- */
+  var ov = document.createElement('div');
+  ov.id = 'aq-overlay';
+  ov.setAttribute('role','dialog');
+  ov.setAttribute('aria-modal','true');
+  var segs = '';
+  for (var i=0;i<TOTAL;i++){ segs += '<i class="aq-seg' + (i===0?' on':'') + '"></i>'; }
+  ov.innerHTML =
+    '<div class="aq-card">'+
+      '<div class="aq-head">'+
+        '<div class="aq-segs">'+segs+'</div>'+
+        '<div class="aq-count"><b id="aq-num">01</b> / 0'+TOTAL+'</div>'+
+        '<button class="aq-x" id="aq-x" aria-label="Fermer">✕</button>'+
+      '</div>'+
+      '<div class="aq-body" id="aq-body"></div>'+
+      '<div class="aq-foot">'+
+        '<button class="aq-prev" id="aq-prev" hidden>← Précédent</button>'+
+        '<button class="aq-next" id="aq-next">C\'est parti →</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(ov);
+
+  var body = ov.querySelector('#aq-body');
+  var segEls, numEl = ov.querySelector('#aq-num');
+  var prevBtn = ov.querySelector('#aq-prev');
+  var nextBtn = ov.querySelector('#aq-next');
+  var cur = 0;
+
+  /* injecte les slides */
+  for (var s=0;s<TOTAL;s++){
+    var d = document.createElement('div');
+    d.className = 'aq-slide' + (s===0?' on':'');
+    d.innerHTML = slides[s];
+    body.appendChild(d);
+  }
+  var slideEls = body.querySelectorAll('.aq-slide');
+  segEls = ov.querySelectorAll('.aq-seg');
+
+  var LABELS = ['C\'est parti →','La suite →','Et après ? →','Je commande →'];
+
+  function render(){
+    slideEls.forEach(function(el,idx){ el.classList.toggle('on', idx===cur); });
+    segEls.forEach(function(el,idx){ el.classList.toggle('on', idx<=cur); });
+    numEl.textContent = ('0'+(cur+1)).slice(-2);
+    prevBtn.hidden = (cur===0);
+    nextBtn.textContent = LABELS[cur];
+    nextBtn.classList.toggle('buy', cur===TOTAL-1);
+    body.scrollTop = 0;
+  }
+  function open(){ ov.classList.add('aq-open'); document.body.style.overflow='hidden'; cur=0; render(); }
+  function close(){ ov.classList.remove('aq-open'); document.body.style.overflow=''; }
+
+  function goCheckout(){
+    close();                                    /* ferme le popup des 4 slides */
+    var el = CHECKOUT_TRIGGER_ID && document.getElementById(CHECKOUT_TRIGGER_ID);
+    if (el){ el.click(); return; }              /* → clique ton bouton "Commander" existant → ouvre le popup */
+    if (CHECKOUT_URL){ window.location.href = CHECKOUT_URL; }
+  }
+  nextBtn.addEventListener('click', function(){
+    if (cur < TOTAL-1){ cur++; render(); }
+    else { goCheckout(); }
+  });
+  prevBtn.addEventListener('click', function(){ if (cur>0){ cur--; render(); } });
+  ov.querySelector('#aq-x').addEventListener('click', close);
+  ov.addEventListener('click', function(e){ if (e.target===ov && CLOSE_ON_BACKDROP) close(); });
+  document.addEventListener('keydown', function(e){ if (e.key==='Escape' && ov.classList.contains('aq-open')) close(); });
+
+  /* ---- déclencheurs (délégation : marche même si le bouton est ajouté après) ---- */
+  var trigSel = TRIGGER_IDS.map(function(id){ return '#'+id; }).join(',');
+  trigSel += (trigSel?',':'') + '[data-open="quizing"],.js-open-quizing';
+  document.addEventListener('click', function(e){
+    var t = e.target.closest(trigSel);
+    if (t){ e.preventDefault(); open(); }
+  });
+
+  /* API publique + auto-open éventuel */
+  window.AQ = { open: open, close: close };
+  if (AUTO_OPEN_DELAY > 0){ setTimeout(open, AUTO_OPEN_DELAY); }
+})();
+</script>

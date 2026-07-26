@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FormaQuiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --primary:#5D6CDB;
+    --primary-dark:#4856c0;
+    --ink:#2E386E;
+    --muted:#6b73a0;
+    --surface:#F4F5FA;
+    --bg1:#ffffff;
+    --bg2:#eef0fb;
+    --radius:18px;
+    --shadow:0 10px 30px rgba(46,56,110,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    color:var(--ink);
+    background:radial-gradient(120% 120% at 50% 0%, var(--bg2) 0%, var(--bg1) 55%);
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+
+  /* App shell */
+  .app{position:fixed;inset:0;display:flex;flex-direction:column}
+
+  /* Top bar */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 22px;flex:0 0 auto;
+  }
+  .brand{font-weight:800;letter-spacing:-.02em;font-size:20px;color:var(--ink)}
+  .brand span{color:var(--primary)}
+  .skip{
+    background:none;border:none;color:var(--muted);font:inherit;font-size:14px;
+    cursor:pointer;padding:8px 10px;border-radius:10px;
+  }
+  .skip:hover{background:var(--surface)}
+  .skip[hidden]{display:none}
+
+  /* Progress */
+  .progress-wrap{flex:0 0 auto;padding:0 22px}
+  .progress{height:4px;background:#e3e6f4;border-radius:99px;overflow:hidden}
+  .progress > i{display:block;height:100%;width:0;background:var(--primary);border-radius:99px;transition:width .45s cubic-bezier(.22,1,.36,1)}
+
+  /* Slides area */
+  .stage{flex:1 1 auto;position:relative;overflow:hidden}
+  .slide{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:24px 26px 30px;
+    opacity:0;visibility:hidden;transform:translateY(16px);
+    transition:opacity .4s ease, transform .45s cubic-bezier(.22,1,.36,1);
+    overflow-y:auto;
+  }
+  .slide.active{opacity:1;visibility:visible;transform:translateY(0)}
+  .inner{max-width:560px;width:100%;margin:auto}
+
+  .eyebrow{
+    display:inline-block;font-size:13px;font-weight:600;color:var(--primary);
+    text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;
+  }
+  .emoji{font-size:42px;line-height:1;margin-bottom:18px;display:block}
+  h1{font-size:clamp(28px,6vw,44px);font-weight:800;letter-spacing:-.02em;line-height:1.1;margin-bottom:16px}
+  h2{font-size:clamp(24px,5vw,34px);font-weight:800;letter-spacing:-.02em;line-height:1.15;margin-bottom:16px}
+  p.lead{font-size:clamp(16px,2.6vw,19px);color:var(--muted);line-height:1.55;margin-bottom:8px}
+  p.lead strong{color:var(--ink)}
+
+  ul.points{list-style:none;text-align:left;margin:22px auto 0;max-width:440px;display:grid;gap:12px}
+  ul.points li{
+    background:#fff;border:1px solid #e6e8f5;border-radius:14px;
+    padding:14px 16px;font-size:15px;line-height:1.45;display:flex;gap:12px;align-items:flex-start;
+    box-shadow:0 2px 8px rgba(46,56,110,.05);
+  }
+  ul.points li b{color:var(--ink)}
+  .tick{color:var(--primary);font-weight:800;flex:0 0 auto}
+
+  .days{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+  .day{
+    background:#fff;border:1px solid #e6e8f5;border-radius:12px;padding:10px 12px;
+    font-size:13px;color:var(--muted);min-width:70px;box-shadow:0 2px 8px rgba(46,56,110,.05)
+  }
+  .day b{display:block;color:var(--primary);font-size:15px}
+
+  /* Buttons */
+  .cta{
+    display:inline-flex;align-items:center;gap:10px;
+    background:var(--primary);color:#fff;border:none;cursor:pointer;
+    font:inherit;font-weight:700;font-size:17px;
+    padding:16px 30px;border-radius:99px;margin-top:26px;
+    box-shadow:0 8px 22px rgba(93,108,219,.35);
+    transition:transform .15s ease, background .2s ease;
+    text-decoration:none;
+  }
+  .cta:hover{background:var(--primary-dark);transform:translateY(-1px)}
+  .cta:active{transform:translateY(0)}
+  .cta.big{font-size:19px;padding:18px 38px}
+  .hint{display:block;margin-top:14px;font-size:13px;color:var(--muted)}
+
+  /* Bottom nav */
+  .nav{
+    flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+    padding:16px 22px 24px;gap:14px;
+  }
+  .nav button{
+    font:inherit;font-size:15px;font-weight:600;cursor:pointer;border-radius:99px;
+    border:1px solid #d8dcef;background:#fff;color:var(--ink);
+    padding:12px 22px;transition:background .15s ease,opacity .2s ease;
+  }
+  .nav button:hover{background:var(--surface)}
+  .nav .next{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .nav .next:hover{background:var(--primary-dark)}
+  .nav button[disabled]{opacity:0;pointer-events:none}
+  .dots{display:flex;gap:7px;align-items:center}
+  .dots i{width:7px;height:7px;border-radius:99px;background:#cfd4ec;transition:all .3s ease}
+  .dots i.on{background:var(--primary);width:22px}
+
+  .nav[hidden]{display:none}
+
+  @media (max-width:520px){
+    .nav button{padding:11px 16px;font-size:14px}
+    .slide{padding:18px 20px 26px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">Forma<span>Quiz</span></div>
+    <button class="skip" id="skip">Passer l'intro</button>
+  </div>
+
+  <div class="progress-wrap"><div class="progress"><i id="bar"></i></div></div>
+
+  <div class="stage" id="stage">
+
+    <!-- 0 : HERO -->
+    <section class="slide active">
+      <div class="inner">
+        <span class="eyebrow">Le parcours qui te fait lancer ton quiz</span>
+        <h1>Et si tu lançais un quiz qui capte des leads pendant que tu dors ?</h1>
+        <p class="lead">Pas une formation de plus. Un parcours que tu vis comme un quiz, et qui te fait publier le tien en 7 jours.</p>
+        <button class="cta big" data-next>Découvrir <span aria-hidden="true">&rarr;</span></button>
+        <span class="hint">2 minutes pour comprendre</span>
+      </div>
+    </section>
+
+    <!-- 1 : PROBLEME -->
+    <section class="slide">
+      <div class="inner">
+        <span class="emoji">😴</span>
+        <h2>Ton PDF gratuit ? Presque personne ne le lit.</h2>
+        <p class="lead">Ta liste se remplit de contacts froids qui n'ouvrent rien et n'achètent jamais. Le problème, ce n'est pas toi. <strong>C'est le format.</strong></p>
+      </div>
+    </section>
+
+    <!-- 2 : LE RETOURNEMENT -->
+    <section class="slide">
+      <div class="inner">
+        <span class="emoji">⚡</span>
+        <h2>Un quiz, lui, on le finit. Et on le partage.</h2>
+        <p class="lead">Il capte <strong>5 à 10 fois mieux</strong> qu'une page classique, parce que répondre est plus fort que donner son email à froid. Tes premiers leads deviennent une question de maths, pas de chance.</p>
+      </div>
+    </section>
+
+    <!-- 3 : CONCEPT META -->
+    <section class="slide">
+      <div class="inner">
+        <span class="emoji">🪞</span>
+        <h2>La façon la plus rapide d'apprendre les quiz : en faisant un quiz.</h2>
+        <p class="lead">FormaQuiz se vit de l'intérieur. Tu comprends pourquoi un quiz convertit <strong>parce que ça marche sur toi</strong>, en direct, pendant que tu apprends.</p>
+      </div>
+    </section>
+
+    <!-- 4 : COMMENT CA MARCHE -->
+    <section class="slide">
+      <div class="inner">
+        <span class="eyebrow">Comment ça marche</span>
+        <h2>7 jours. Une mission par jour.</h2>
+        <ul class="points">
+          <li><span class="tick">1</span><span>Une <b>vidéo courte</b> qui t'enseigne l'essentiel, sans blabla.</span></li>
+          <li><span class="tick">2</span><span>Un <b>quiz du jour</b> qui te fait passer à l'action sur ton propre projet.</span></li>
+          <li><span class="tick">3</span><span>Le finir <b>débloque le jour suivant</b>. Tu avances vraiment.</span></li>
+        </ul>
+        <p class="lead" style="margin-top:18px"><strong>Ton quiz est en ligne dès le 4e jour.</strong></p>
+      </div>
+    </section>
+
+    <!-- 5 : COACH IA -->
+    <section class="slide">
+      <div class="inner">
+        <span class="emoji">🤖</span>
+        <h2>Bloqué à 2h du matin ? Ton coach IA répond.</h2>
+        <p class="lead">Un coach disponible jour et nuit, qui connaît ta niche et te débloque à chaque étape. <strong>Tu n'abandonnes jamais en chemin.</strong></p>
+      </div>
+    </section>
+
+    <!-- 6 : BENEFICES -->
+    <section class="slide">
+      <div class="inner">
+        <span class="eyebrow">Ce que tu repars avec</span>
+        <h2>Un système, pas un cours de plus.</h2>
+        <ul class="points">
+          <li><span class="tick">&#10003;</span><span>Un quiz <b>publié et branché à Systeme.io</b>.</span></li>
+          <li><span class="tick">&#10003;</span><span>Tes leads <b>taggés et segmentés</b> en automatique.</span></li>
+          <li><span class="tick">&#10003;</span><span>Un <b>moteur de viralité</b> qui te ramène des leads sans pub.</span></li>
+          <li><span class="tick">&#10003;</span><span>Des <b>séquences email prêtes à coller</b> pour convertir.</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 7 : POUR QUI -->
+    <section class="slide">
+      <div class="inner">
+        <span class="emoji">🎯</span>
+        <h2>Débutant ou avancé. Quelle que soit ta niche.</h2>
+        <p class="lead">Coach, consultant, créateur, affilié, freelance. Tu pars de zéro ou tu as déjà une audience. <strong>Tu repars avec un quiz qui tourne.</strong></p>
+        <div class="days">
+          <div class="day"><b>J1</b>Penser</div>
+          <div class="day"><b>J4</b>Publier</div>
+          <div class="day"><b>J5</b>Promouvoir</div>
+          <div class="day"><b>J7</b>Piloter</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 : OFFRE -->
+    <section class="slide">
+      <div class="inner">
+        <span class="brand" style="font-size:26px;display:block;margin-bottom:14px">Forma<span style="color:var(--primary)">Quiz</span></span>
+        <p class="lead">Le parcours qui te fait lancer ton quiz lead-magnet en 7 jours, en te faisant <strong>vivre un quiz</strong>. Tu apprends en faisant, un coach IA te guide, et tu repars avec un quiz qui capte et tague tes leads.</p>
+      </div>
+    </section>
+
+    <!-- 9 : CTA FINAL -->
+    <section class="slide">
+      <div class="inner">
+        <span class="emoji">🚀</span>
+        <h2>Prêt à lancer ton quiz ?</h2>
+        <p class="lead">Accès Tiquiz gratuit inclus pour démarrer tout de suite.</p>
+        <!-- ZONE A REMPLACER : mets ici le lien de ta page de commande Systeme.io -->
+        <a class="cta big" href="#" id="buy">Je lance mon quiz</a>
+        <span class="hint">Tu avances à ton rythme, un jour après l'autre.</span>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="nav" id="nav" hidden>
+    <button class="prev" id="prev">Retour</button>
+    <div class="dots" id="dots"></div>
+    <button class="next" id="next">Suivant</button>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var stage = document.getElementById('stage');
+  var bar = document.getElementById('bar');
+  var nav = document.getElementById('nav');
+  var prevBtn = document.getElementById('prev');
+  var nextBtn = document.getElementById('next');
+  var dotsWrap = document.getElementById('dots');
+  var skip = document.getElementById('skip');
+  var i = 0;
+  var last = slides.length - 1;
+
+  // build dots (skip hero at index 0)
+  for (var d = 1; d < slides.length; d++){
+    var dot = document.createElement('i');
+    dotsWrap.appendChild(dot);
+  }
+  var dots = Array.prototype.slice.call(dotsWrap.children);
+
+  function render(){
+    slides.forEach(function(s, idx){ s.classList.toggle('active', idx === i); });
+    // progress fills across non-hero slides
+    var pct = i === 0 ? 0 : (i / last) * 100;
+    bar.style.width = pct + '%';
+    // nav visible only after hero
+    nav.hidden = (i === 0);
+    skip.hidden = (i === last || i === 0);
+    prevBtn.disabled = (i <= 1);
+    nextBtn.textContent = (i === last - 0 && i !== last) ? 'Suivant' : 'Suivant';
+    if (i === last){ nextBtn.disabled = true; } else { nextBtn.disabled = false; }
+    dots.forEach(function(dt, idx){ dt.classList.toggle('on', idx === (i - 1)); });
+    // scroll active slide to top
+    if (slides[i]) slides[i].scrollTop = 0;
+  }
+
+  function go(n){
+    i = Math.max(0, Math.min(last, n));
+    render();
+  }
+  function next(){ if (i < last) go(i + 1); }
+  function prev(){ if (i > 0) go(i - 1); }
+
+  // hero "Découvrir" and any [data-next]
+  document.querySelectorAll('[data-next]').forEach(function(b){
+    b.addEventListener('click', next);
+  });
+  nextBtn.addEventListener('click', next);
+  prevBtn.addEventListener('click', prev);
+  skip.addEventListener('click', function(){ go(last); });
+
+  // keyboard
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight') next();
+    else if (e.key === 'ArrowLeft') prev();
+  });
+
+  // touch swipe
+  var x0 = null;
+  stage.addEventListener('touchstart', function(e){ x0 = e.touches[0].clientX; }, {passive:true});
+  stage.addEventListener('touchend', function(e){
+    if (x0 === null) return;
+    var dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 50){ if (dx < 0) next(); else prev(); }
+    x0 = null;
+  }, {passive:true});
+
+  render();
+})();
+</script>
+</body>
+</html>

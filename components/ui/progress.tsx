@@ -1,31 +1,30 @@
-"use client"
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
-import * as React from "react"
-import { Progress as ProgressPrimitive } from "radix-ui"
-
-import { cn } from "@/lib/utils"
-
+/**
+ * Barre de progression du parcours. Valeur en pourcentage (0-100).
+ */
 function Progress({
+  value = 0,
   className,
-  value,
   ...props
-}: React.ComponentProps<typeof ProgressPrimitive.Root>) {
+}: React.ComponentProps<"div"> & { value?: number }) {
+  const clamped = Math.max(0, Math.min(100, value));
   return (
-    <ProgressPrimitive.Root
-      data-slot="progress"
-      className={cn(
-        "relative flex h-1 w-full items-center overflow-x-hidden rounded-full bg-muted",
-        className
-      )}
+    <div
+      role="progressbar"
+      aria-valuenow={clamped}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      className={cn("h-2 w-full overflow-hidden rounded-full bg-muted", className)}
       {...props}
     >
-      <ProgressPrimitive.Indicator
-        data-slot="progress-indicator"
-        className="size-full flex-1 bg-primary transition-all"
-        style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+      <div
+        className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out"
+        style={{ width: `${clamped}%` }}
       />
-    </ProgressPrimitive.Root>
-  )
+    </div>
+  );
 }
 
-export { Progress }
+export { Progress };

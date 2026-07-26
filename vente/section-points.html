@@ -1,0 +1,10 @@
+<style>
+  /* Remplace #section-ce7f4a4c par l'id de TA section */
+  #section-ce7f4a4c { position: relative; }
+  #section-ce7f4a4c::before {
+    content: ""; position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(22,24,46,.12) 1.3px, transparent 1.4px);
+    background-size: 22px 22px; pointer-events: none; z-index: 0;
+  }
+  #section-ce7f4a4c > * { position: relative; z-index: 1; }
+</style>
