@@ -1279,6 +1279,8 @@
     "shareTabPaidBadge": "A pagamento",
     "shareTabCustomFooterPaidHint": "Sostituisci il link « Questo quiz ti è offerto da Tiquiz » con il tuo testo e il tuo link (ad esempio il tuo link di affiliazione o il tuo sito). Lascia vuoto per mantenere il link Tiquiz.",
     "shareTabCustomFooterFreeHint": "Disponibile con piano a pagamento. Altrimenti il footer Tiquiz resta.",
+    "shareTabHideBrandingLabel": "Nascondere completamente il link",
+    "shareTabHideBrandingHint": "Non mostrare nulla in fondo al quiz (né Tiquiz, né link personalizzato).",
     "shareTabCustomFooterTextPh": "Es.: Questo quiz è offerto da Il Mio Brand",
     "reorder": "Riordina",
     "personalizeHint": "Schermata opzionale prima della 1ª domanda. Il pulsante ✨ accanto a ogni campo genera automaticamente le varianti di genere.",

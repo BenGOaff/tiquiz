@@ -1266,6 +1266,8 @@
     "shareTabPaidBadge": "Paid",
     "shareTabCustomFooterPaidHint": "Replace the « This quiz is offered to you by Tiquiz » link with your own text and link (for example your affiliate link or your website). Leave empty to keep the Tiquiz link.",
     "shareTabCustomFooterFreeHint": "Available on a paid plan. Otherwise the Tiquiz footer remains.",
+    "shareTabHideBrandingLabel": "Hide the link entirely",
+    "shareTabHideBrandingHint": "Show nothing at the bottom of the quiz (no Tiquiz, no custom link).",
     "shareTabCustomFooterTextPh": "E.g.: This quiz is powered by My Brand",
     "reorder": "Reorder",
     "personalizeHint": "Optional screen before the first question. The ✨ button next to each field auto-generates the gender variants.",

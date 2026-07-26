@@ -1282,6 +1282,8 @@
     "shareTabPaidBadge": "Pago",
     "shareTabCustomFooterPaidHint": "Substitua a ligação « Este quiz é oferecido pela Tiquiz » pelo seu próprio texto e ligação (por exemplo a sua ligação de afiliado ou o seu site). Deixe vazio para manter a ligação Tiquiz.",
     "shareTabCustomFooterFreeHint": "Disponível com um plano pago. Caso contrário, o rodapé Tiquiz mantém-se.",
+    "shareTabHideBrandingLabel": "Ocultar a ligação completamente",
+    "shareTabHideBrandingHint": "Não mostrar nada no fim do quiz (nem Tiquiz, nem ligação personalizada).",
     "shareTabCustomFooterTextPh": "Ex.: Este quiz é-te oferecido por O Meu Site",
     "reorder": "Reordenar",
     "personalizeHint": "Ecrã opcional antes da 1.ª pergunta. O botão ✨ ao lado de cada campo gera automaticamente as variantes generizadas.",

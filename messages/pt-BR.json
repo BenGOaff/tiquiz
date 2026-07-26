@@ -1268,6 +1268,8 @@
     "shareTabPaidBadge": "Pago",
     "shareTabCustomFooterPaidHint": "Substitua o link « Este quiz é oferecido a você pela Tiquiz » pelo seu próprio texto e link (por exemplo seu link de afiliado ou seu site). Deixe vazio para manter o link da Tiquiz.",
     "shareTabCustomFooterFreeHint": "Disponível com um plano pago. Caso contrário, o rodapé Tiquiz permanece.",
+    "shareTabHideBrandingLabel": "Ocultar o link completamente",
+    "shareTabHideBrandingHint": "Não mostrar nada no final do quiz (nem Tiquiz, nem link personalizado).",
     "shareTabCustomFooterTextPh": "Ex.: Este quiz é oferecido por Meu Site",
     "reorder": "Reordenar",
     "personalizeHint": "Tela opcional antes da 1ª pergunta. O botão ✨ ao lado de cada campo gera automaticamente as variantes de gênero.",

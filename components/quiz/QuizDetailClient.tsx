@@ -190,6 +190,7 @@ type QuizData = {
   share_networks: string[] | null; og_description: string | null; og_image_url: string | null;
   seo_noindex: boolean | null;
   custom_footer_text: string | null; custom_footer_url: string | null;
+  hide_branding: boolean | null;
   status: string; views_count: number; starts_count: number;
   completions_count: number; shares_count: number;
   hide_response_counts?: boolean | null;
@@ -679,6 +680,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const [seoNoindex, setSeoNoindex] = useState(false);
   const [customFooterText, setCustomFooterText] = useState("");
   const [customFooterUrl, setCustomFooterUrl] = useState("");
+  // Masquer completement le pied de page Tiquiz (payants). Miroir exact du
+  // pattern hide_brand_logo (etat + snapshot + canonical + payload).
+  const [hideBranding, setHideBranding] = useState(false);
   const [shareNetworks, setShareNetworks] = useState<ShareNetwork[]>([]);
   const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
   // brandLogoUrl = logo du PROFIL (source de vérité globale, partagée
@@ -883,6 +887,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     og_image_url: ogImageUrl,
     custom_footer_text: customFooterText,
     custom_footer_url: customFooterUrl,
+    hide_branding: hideBranding,
     share_networks: shareNetworks,
     questions: editQuestions,
     results: editResults,
@@ -902,7 +907,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     closeEnabled, closeAction, closeRedirectUrl, closeMessage, closeCtaText, closeCtaUrl,
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor, textColor, quizBrandLogoUrl, hideBrandLogo,
-    slug, ogDescription, ogImageUrl, customFooterText, customFooterUrl, shareNetworks,
+    slug, ogDescription, ogImageUrl, customFooterText, customFooterUrl, hideBranding, shareNetworks,
     editQuestions, editResults,
   ]);
 
@@ -1002,6 +1007,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     if (typeof s.seo_noindex === "boolean") setSeoNoindex(s.seo_noindex);
     if (typeof s.custom_footer_text === "string") setCustomFooterText(s.custom_footer_text);
     if (typeof s.custom_footer_url === "string") setCustomFooterUrl(s.custom_footer_url);
+    if (typeof s.hide_branding === "boolean") setHideBranding(s.hide_branding);
     if (Array.isArray(s.share_networks)) setShareNetworks(s.share_networks as ShareNetwork[]);
     if (Array.isArray(s.questions)) setEditQuestions(s.questions as QuizQuestion[]);
     if (Array.isArray(s.results)) setEditResults(s.results as QuizResult[]);
@@ -1150,6 +1156,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setSeoNoindex(!!(q as { seo_noindex?: boolean }).seo_noindex);
       setCustomFooterText(q.custom_footer_text ?? "");
       setCustomFooterUrl(q.custom_footer_url ?? "");
+      setHideBranding((q as { hide_branding?: boolean | null }).hide_branding === true);
       setShareNetworks(Array.isArray(q.share_networks) ? (q.share_networks as ShareNetwork[]) : []);
       // Branding: quiz overrides profile, profile overrides default constants
       const resolvedFont = (BRAND_FONT_CHOICES as readonly string[]).includes(q.brand_font ?? "")
@@ -1257,6 +1264,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           og_description: q.og_description ?? "",
           custom_footer_text: q.custom_footer_text ?? "",
           custom_footer_url: q.custom_footer_url ?? "",
+          hide_branding: (q as { hide_branding?: boolean | null }).hide_branding === true,
           share_networks: Array.isArray(q.share_networks) ? q.share_networks : [],
           questions: q.questions,
           results: q.results,
@@ -2029,6 +2037,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           // Custom footer — ignored server-side for free plan but we still send it
           custom_footer_text: customFooterText.trim() || null,
           custom_footer_url: customFooterUrl.trim() || null,
+          hide_branding: hideBranding,
           questions: editQuestions.map((q, i) => ({
             question_text: q.question_text,
             // Type de question (défaut multiple_choice pour les anciennes
@@ -4929,8 +4938,21 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 onChange={(e) => setCustomFooterUrl(e.target.value)}
                 placeholder="https://example.com"
                 className="text-sm"
-                disabled={!isPaidPlan}
+                disabled={!isPaidPlan || hideBranding}
               />
+              <label className={`flex items-start gap-2 pt-1 ${isPaidPlan ? "cursor-pointer" : "opacity-60 cursor-not-allowed"}`}>
+                <input
+                  type="checkbox"
+                  checked={hideBranding}
+                  onChange={(e) => setHideBranding(e.target.checked)}
+                  disabled={!isPaidPlan}
+                  className="mt-0.5"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-medium">{t("shareTabHideBrandingLabel")}</div>
+                  <p className="text-xs text-muted-foreground">{t("shareTabHideBrandingHint")}</p>
+                </div>
+              </label>
             </CardContent>
           </Card>
 

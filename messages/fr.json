@@ -1266,6 +1266,8 @@
     "shareTabPaidBadge": "Payant",
     "shareTabCustomFooterPaidHint": "Remplacez le lien « Ce quiz vous est offert par Tiquiz » par votre propre texte et votre lien (par exemple votre lien d’affiliation ou votre site). Laissez vide pour garder le lien Tiquiz.",
     "shareTabCustomFooterFreeHint": "Disponible avec un plan payant. Sinon, le footer Tiquiz reste affiché.",
+    "shareTabHideBrandingLabel": "Masquer complètement le lien",
+    "shareTabHideBrandingHint": "Ne rien afficher en bas du quiz (ni Tiquiz, ni lien personnalisé).",
     "shareTabCustomFooterTextPh": "Ex : Ce quiz vous est offert par Mon Site",
     "reorder": "Réordonner",
     "personalizeHint": "Écran optionnel avant la 1ʳᵉ question. Le bouton ✨ à côté de chaque champ génère automatiquement les variantes genrées.",

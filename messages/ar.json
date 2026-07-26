@@ -1267,6 +1267,8 @@
     "shareTabPaidBadge": "مدفوع",
     "shareTabCustomFooterPaidHint": "استبدل رابط « هذا الاختبار مقدَّم لك من Tiquiz » بنصك ورابطك الخاص (مثل رابط الإحالة أو موقعك). اتركه فارغًا للإبقاء على رابط Tiquiz.",
     "shareTabCustomFooterFreeHint": "متاح مع خطة مدفوعة. وإلا يبقى تذييل Tiquiz.",
+    "shareTabHideBrandingLabel": "إخفاء الرابط تمامًا",
+    "shareTabHideBrandingHint": "عدم إظهار أي شيء أسفل الاختبار (لا Tiquiz ولا رابط مخصص).",
     "shareTabCustomFooterTextPh": "مثال: هذا الاختبار مقدم من علامتي التجارية",
     "reorder": "إعادة الترتيب",
     "personalizeHint": "شاشة اختيارية قبل السؤال الأول. زر ✨ بجانب كل حقل يُولّد تلقائيًا صيغ الجنس.",

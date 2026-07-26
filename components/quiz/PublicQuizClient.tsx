@@ -191,6 +191,7 @@ type PublicQuizData = {
   ask_first_name?: boolean | null;
   ask_gender?: boolean | null;
   custom_footer_text?: string | null;
+  hide_branding?: boolean | null;
   custom_footer_url?: string | null;
   // Fermeture du quiz (createur) : redirige ou affiche un message.
   close_enabled?: boolean | null;
@@ -2497,7 +2498,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
             )}
           </div>
         </div>
-        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
+        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} hidden={quiz.hide_branding} />
       </div>
     );
   }
@@ -2619,7 +2620,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
               </Button>
             </div>
           </div>
-          <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
+          <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} hidden={quiz.hide_branding} />
         </div>
       );
     }
@@ -2720,7 +2721,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
             )}
         </div>
         </div>
-        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
+        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} hidden={quiz.hide_branding} />
       </div>
     );
   }
@@ -3425,7 +3426,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
                 no separate legal mention block on quiz/survey pages. */}
           </div>
         </div>
-        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
+        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} hidden={quiz.hide_branding} />
       </div>
     );
   }
@@ -3656,6 +3657,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
           customUrl={quiz.custom_footer_url}
           logoUrl={branding.logoUrl}
           tipoteAffiliateId={quiz.tipote_affiliate_id}
+          hidden={quiz.hide_branding}
         />
       </div>
     );
@@ -4198,7 +4200,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
               email capture (product decision 2026-05-17). */}
           </div>
         </div>
-        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} />
+        <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} hidden={quiz.hide_branding} />
       </div>
     );
   }
@@ -4328,7 +4330,10 @@ function tiquizDiscoveryUrl(affiliateId: string | null | undefined): string {
   return `${base}?sa=${encodeURIComponent(affiliateId)}`;
 }
 
-function TiquizFooter({ locale, customText, customUrl, logoUrl, tipoteAffiliateId }: { locale?: string | null; customText?: string | null; customUrl?: string | null; logoUrl?: string | null; tipoteAffiliateId?: string | null }) {
+function TiquizFooter({ locale, customText, customUrl, logoUrl, tipoteAffiliateId, hidden }: { locale?: string | null; customText?: string | null; customUrl?: string | null; logoUrl?: string | null; tipoteAffiliateId?: string | null; hidden?: boolean | null }) {
+  // Plan payant qui a choisi de masquer completement le pied de page : on
+  // n'affiche rien (ni Tiquiz, ni footer perso).
+  if (hidden) return null;
   // Paid plans avec footer custom : on respecte le choix du créateur
   // — pas de mention Tiquiz, pas de tracking. Il a payé pour brander.
   if (customText && customUrl) {
