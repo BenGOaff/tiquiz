@@ -2646,6 +2646,12 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     return (
       <div className={`min-h-screen flex flex-col${layoutOuterClass}`} style={rootStyle}>
         {renderMediaPanel("intro")}
+        {/* Colonne contenu + footer. INDISPENSABLE en disposition split :
+            l'exterieur passe en md:flex-row, et sans cette colonne le footer
+            devenait une 3e colonne collee en haut a droite au lieu de rester
+            un pied de page (retour Bene). Facon Tally : le footer vit en bas
+            de la colonne de contenu. */}
+        <div className="flex-1 flex flex-col min-w-0">
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
         {/* Un seul conteneur pour titre + intro + bouton : mêmes bornes et
             même alignement, donc l'intro est TOUJOURS calée sur le titre. */}
@@ -2727,6 +2733,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         </div>
         </div>
         <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} hidden={quiz.hide_branding} />
+        </div>
       </div>
     );
   }
@@ -3225,6 +3232,9 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
     return (
       <div className={`min-h-screen flex flex-col${layoutOuterClass}`} style={rootStyle}>
         {renderMediaPanel("capture")}
+        {/* Colonne contenu + footer (cf. commentaire intro : footer en bas
+            de la colonne, jamais 3e colonne en split). */}
+        <div className="flex-1 flex flex-col min-w-0">
         {/* Slide-in for the email capture step too — full visitor
             flow now uses the same gentle entrance keyframe so each
             step transition reads as a guided experience. */}
@@ -3432,6 +3442,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
           </div>
         </div>
         <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} hidden={quiz.hide_branding} />
+        </div>
       </div>
     );
   }
@@ -3859,6 +3870,8 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
         style={rootStyle}
       >
         {renderMediaPanel("r:" + (resultProfile?.id ?? ""))}
+        {/* Colonne contenu + footer (cf. commentaire intro). */}
+        <div className="flex-1 flex flex-col min-w-0">
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 py-10 sm:py-16">
         {/* Slide-in for the result reveal — final payoff of the
             quiz, deserves more than a content swap. */}
@@ -4206,6 +4219,7 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
           </div>
         </div>
         <TiquizFooter locale={quiz.locale} customText={quiz.custom_footer_text} customUrl={quiz.custom_footer_url} logoUrl={branding.logoUrl} tipoteAffiliateId={quiz.tipote_affiliate_id} hidden={quiz.hide_branding} />
+        </div>
       </div>
     );
   }
