@@ -214,6 +214,9 @@ interface PublicQuizClientProps {
   quizId: string;
   /** If provided, skip the API fetch and use this data directly (preview mode). */
   previewData?: PublicQuizData | null;
+  /** Branding injecte avec previewData (tests visuels / harness). Sans lui,
+      le branding vient de la reponse API comme d'habitude. */
+  previewBranding?: QuizBranding | null;
   /** Mode compact : quiz affiché dans l'overlay popquiz (iframe). Réduit
    *  marges/typo + CTA collé en bas pour tenir dans la fenêtre vidéo. */
   compact?: boolean;
@@ -954,11 +957,11 @@ function getT(locale: string | null | undefined, addressForm?: string | null): Q
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function PublicQuizClient({ quizId, previewData, compact = false }: PublicQuizClientProps) {
+export default function PublicQuizClient({ quizId, previewData, previewBranding, compact = false }: PublicQuizClientProps) {
   const [quiz, setQuiz] = useState<PublicQuizData | null>(previewData ?? null);
   const [loading, setLoading] = useState(!previewData);
   const [error, setError] = useState<string | null>(null);
-  const [branding, setBranding] = useState<QuizBranding>(() => resolveQuizBranding(null, null));
+  const [branding, setBranding] = useState<QuizBranding>(() => previewBranding ?? resolveQuizBranding(null, null));
 
   // Owner-side preview: ?preview_name=<x> tells us the visitor is the quiz
   // creator pretending to be a real visitor (Marie's feedback #7, 2026-04).

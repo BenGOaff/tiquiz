@@ -45,3 +45,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# Playwright (sorties de run, pas les references commitees)
+/test-results/
+/playwright-report/
