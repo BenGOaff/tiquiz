@@ -4373,6 +4373,21 @@ function TiquizFooter({ locale, customText, customUrl, logoUrl, tipoteAffiliateI
       </div>
     );
   }
+  // Texte perso SANS URL : on respecte quand meme le choix du createur
+  // (mention remplacee, simplement non cliquable). Avant, texte seul =
+  // footer Tiquiz par defaut -> "j'ai change le texte et rien ne change"
+  // (retour Veronique, qui avait volontairement laisse l'URL vide).
+  if (customText) {
+    return (
+      <div className="text-center mt-6 pb-6 px-4 space-y-2">
+        {logoUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoUrl} alt="" className="max-h-10 w-auto object-contain mx-auto" />
+        )}
+        <p className="text-xs text-muted-foreground/60">{customText}</p>
+      </div>
+    );
+  }
   // Free plan or no custom: show Tiquiz branding (with creator logo, or Tiquiz fallback)
   // Legal links (privacy / terms / cookies / mentions légales) used to
   // sit here but were explicitly removed — creators don't want Tiquiz's

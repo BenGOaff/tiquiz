@@ -1269,7 +1269,7 @@
     "shareTabSeoPlaceholder": "Frase curta de chamada exibida sob o título do link compartilhado…",
     "shareTabCustomFooter": "Personalizar o link « oferecido pela Tiquiz »",
     "shareTabPaidBadge": "Pago",
-    "shareTabCustomFooterPaidHint": "Substitua o link « Este quiz é oferecido a você pela Tiquiz » pelo seu próprio texto e link (por exemplo seu link de afiliado ou seu site). Deixe vazio para manter o link da Tiquiz.",
+    "shareTabCustomFooterPaidHint": "Substitua o link « Este quiz é oferecido a você pela Tiquiz » pelo seu próprio texto e link (por exemplo seu link de afiliado ou seu site). Deixe vazio para manter o link da Tiquiz. O link é opcional: só o texto substitui a menção, sem link.",
     "shareTabCustomFooterFreeHint": "Disponível com um plano pago. Caso contrário, o rodapé Tiquiz permanece.",
     "shareTabHideBrandingLabel": "Ocultar o link completamente",
     "shareTabHideBrandingHint": "Não mostrar nada no final do quiz (nem Tiquiz, nem link personalizado).",

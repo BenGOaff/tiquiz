@@ -1267,7 +1267,7 @@
     "seoNoindexHint": "Check this box if you don't want Google, Bing or AI tools (ChatGPT, Perplexity…) to index this quiz. Your direct link still works as a private share.",
     "shareTabCustomFooter": "Customize the « offered by Tiquiz » link",
     "shareTabPaidBadge": "Paid",
-    "shareTabCustomFooterPaidHint": "Replace the « This quiz is offered to you by Tiquiz » link with your own text and link (for example your affiliate link or your website). Leave empty to keep the Tiquiz link.",
+    "shareTabCustomFooterPaidHint": "Replace the « This quiz is offered to you by Tiquiz » link with your own text and link (for example your affiliate link or your website). Leave empty to keep the Tiquiz link. The link is optional: text alone replaces the mention, without a link.",
     "shareTabCustomFooterFreeHint": "Available on a paid plan. Otherwise the Tiquiz footer remains.",
     "shareTabHideBrandingLabel": "Hide the link entirely",
     "shareTabHideBrandingHint": "Show nothing at the bottom of the quiz (no Tiquiz, no custom link).",
