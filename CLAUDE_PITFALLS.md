@@ -1273,3 +1273,19 @@ retirer ces garde-fous.
   SurveyResultsPanel via formatSurveyAnswer. pdfReport.ts est IDENTIQUE
   Tiquiz/Tipote → modifier les deux à l'identique.
 - Pas de glyphe étoile dans le PDF (encodage helvetica) : préfixe "* ".
+
+## Colonne dans un .select() sans migration = select ENTIER mort (drame footer 27 juillet 2026)
+
+`default_content_locale` ajoutee au select profiles de la route publique le
+21 juillet SANS fichier de migration -> en prod, TOUT le select echouait en
+silence (42703) -> profil proprietaire null -> plan lu "free" pour tous ->
+footer perso, masquage de marque, affilie tipote, branding de repli et pixels
+par defaut morts pendant 6 jours, meme pour les lifetime. Et
+check:migrations-pending ne peut RIEN detecter : il n'y a pas de fichier.
+
+Regles :
+- Toute nouvelle colonne referencee dans un .select()/.update() DOIT avoir sa
+  migration DANS LE MEME commit.
+- Sur les routes critiques, ne JAMAIS avaler l'erreur d'un select : logger et
+  prevoir un retry avec le socle de colonnes historiques (fait sur
+  quiz/[quizId]/public).

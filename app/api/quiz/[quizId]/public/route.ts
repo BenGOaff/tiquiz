@@ -304,12 +304,28 @@ export async function GET(req: NextRequest, context: RouteContext) {
     let profileRow: Record<string, unknown> | null = null;
 
     if (quizUserId) {
-      const { data: bp } = await admin
+      const { data: bp, error: bpErr } = await admin
         .from("profiles")
         .select("address_form, privacy_url, brand_logo_url, brand_font, brand_color_primary, plan, reseller_id, tipote_affiliate_id, default_meta_pixel_id, default_ga4_measurement_id, default_google_ads_conversion_id, default_google_ads_conversion_label, ui_locale, default_content_locale")
         .eq("user_id", quizUserId)
         .maybeSingle();
       profileRow = (bp as Record<string, unknown>) ?? null;
+      if (bpErr) {
+        // Drame footer 27 juillet 2026 : une colonne referencee ici sans
+        // migration appliquee (default_content_locale) faisait echouer TOUT
+        // le select en silence -> profil null -> plan lu "free" pour tout le
+        // monde -> footer perso / masquage / affilie / branding de repli /
+        // pixels par defaut morts, meme pour les lifetime. On logge FORT et
+        // on retente avec le socle de colonnes historiques pour que le plan
+        // et le branding survivent a une colonne recente manquante.
+        console.error("[quiz/public] profiles select failed (migration manquante ?):", bpErr.message);
+        const { data: bpRetry } = await admin
+          .from("profiles")
+          .select("address_form, privacy_url, brand_logo_url, brand_font, brand_color_primary, plan, reseller_id, tipote_affiliate_id")
+          .eq("user_id", quizUserId)
+          .maybeSingle();
+        profileRow = (bpRetry as Record<string, unknown>) ?? null;
+      }
 
       // Multiprofils Tiquiz phase 5 : si le quiz est attaché à un
       // projet précis (quiz.project_id), on merge le business_profile
