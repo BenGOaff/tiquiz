@@ -340,6 +340,34 @@ export function RichTextEdit({
     if (clean !== value) onChange(clean);
   }, [onChange, value]);
 
+  // Insertion d'image ROBUSTE. `document.execCommand("insertImage")` est
+  // deprecie et ne fait RIEN quand le focus revient d'une boite de dialogue OS
+  // (le champ editable a pu etre demonte le temps du picker). On insere donc le
+  // noeud <img> directement dans le DOM du champ, a la selection sauvegardee
+  // (ou a la fin), puis on commit tout de suite pour persister l'image.
+  const insertImageNode = useCallback((url: string) => {
+    const el = ref.current;
+    if (!el) return;
+    restoreSelection();
+    const img = document.createElement("img");
+    img.src = url;
+    img.style.maxWidth = "100%";
+    img.style.height = "auto";
+    const sel = typeof window !== "undefined" ? window.getSelection() : null;
+    if (sel && sel.rangeCount > 0 && el.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+      const range = sel.getRangeAt(0);
+      range.collapse(false);
+      range.insertNode(img);
+      range.setStartAfter(img);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } else {
+      el.appendChild(img);
+    }
+    commitNow();
+  }, [restoreSelection, commitNow]);
+
   // ─── Taille de police FIELD-LEVEL, INDEPENDANTE MOBILE/DESKTOP ────
   // Drame Bene 8 juin 2026 : "je veux pouvoir editer la taille mobile
   // et la taille PC separement". On enveloppe l'integralite du contenu
@@ -528,24 +556,16 @@ export function RichTextEdit({
         range.collapse(true);
         const sel = window.getSelection();
         if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+        // Sauvegarde le point de drop : insertImageNode restaure cette
+        // selection pour inserer l'image pile a l'emplacement du drop.
+        saveSelection();
       }
     }
     setUploadingDrop(true);
     try {
       const url = await onImageUpload(image);
       if (!url) return;
-      exec("insertImage", url);
-      const el = ref.current;
-      if (el) {
-        el.querySelectorAll("img").forEach((img) => {
-          img.style.maxWidth = "100%";
-          img.style.height = "auto";
-        });
-      }
-      // Persiste tout de suite le HTML avec l'<img> : sans ce commit, l'effet
-      // de resync [value, editing] reecrit innerHTML depuis `value` (qui n'a
-      // pas encore l'image) et l'image disparait ("ca ne prend pas").
-      commitNow();
+      insertImageNode(url);
     } finally {
       setUploadingDrop(false);
     }
@@ -599,8 +619,19 @@ export function RichTextEdit({
   const onInsertImage = () => {
     saveSelection();
     if (onImageUpload) {
-      // File picker (OS dialog) volera aussi le focus mais ne déclenche
-      // pas le mount d'un Radix dialog, donc on n'a pas besoin de pause.
+      // Le picker OS fait blur du contentEditable -> commit -> setEditing(false)
+      // -> le champ editable est DEMONTE (if (editing) ...), et l'insertion
+      // tombait alors dans un noeud detache : l'image n'apparaissait jamais.
+      // On met donc la MEME pause que le dialog URL pour garder editing=true.
+      // Le picker ne renvoie aucun event sur "Annuler" -> on leve la pause au
+      // retour du focus fenetre (couvre pick ET annulation) ; onPickedImageFile
+      // insere tant que editing est encore vrai.
+      dialogPausedRef.current = true;
+      const release = () => {
+        window.removeEventListener("focus", release);
+        window.setTimeout(() => { dialogPausedRef.current = false; }, 0);
+      };
+      window.addEventListener("focus", release);
       fileInputRef.current?.click();
       return;
     }
@@ -619,18 +650,10 @@ export function RichTextEdit({
     try {
       const url = await onImageUpload(file);
       if (!url) return;
-      restoreSelection();
-      exec("insertImage", url);
-      const el = ref.current;
-      if (el) {
-        el.querySelectorAll("img").forEach((img) => {
-          img.style.maxWidth = "100%";
-          img.style.height = "auto";
-        });
-      }
-      commitNow();
+      insertImageNode(url);
     } finally {
       setUploadingDrop(false);
+      dialogPausedRef.current = false;
     }
   };
 
@@ -640,16 +663,7 @@ export function RichTextEdit({
     if (!isSafeUrl(url)) { setImageError(t("rteUrlInvalid")); return; }
     setImageDialogOpen(false);
     dialogPausedRef.current = false;
-    restoreSelection();
-    exec("insertImage", url);
-    const el = ref.current;
-    if (el) {
-      el.querySelectorAll("img").forEach((img) => {
-        img.style.maxWidth = "100%";
-        img.style.height = "auto";
-      });
-    }
-    commitNow();
+    insertImageNode(url);
   };
 
   const baseCls = `${className || ""} cursor-text rounded-lg px-2 py-1 transition-all min-h-[1.2em]`;
