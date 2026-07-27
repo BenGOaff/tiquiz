@@ -1345,6 +1345,7 @@
     "resultImageHint": "Click or drag-and-drop a file (PNG/JPG/GIF, max 10 MB)",
     "introImageDropzone": "Add an image to the intro page",
     "introImageHint": "Click here or drag-and-drop a file (PNG/JPG/GIF, max 10 MB)",
+    "introCoverHint": "Cover layout: this image is the full-screen background (set in Design)",
     "introImagePos_top": "Above the title",
     "introImagePos_after_title": "After the title",
     "introImagePos_after_intro": "After the intro text",

@@ -1361,6 +1361,7 @@
     "resultImageHint": "Haz clic o arrastra un archivo (PNG/JPG/GIF, 10 MB máx.)",
     "introImageDropzone": "Añadir una imagen a la página de intro",
     "introImageHint": "Haz clic aquí o arrastra un archivo (PNG/JPG/GIF, máx. 10 MB)",
+    "introCoverHint": "Diseño portada: esta imagen es el fondo a pantalla completa (se ajusta en Diseño)",
     "introImagePos_top": "Encima del título",
     "introImagePos_after_title": "Después del título",
     "introImagePos_after_intro": "Después del texto de intro",

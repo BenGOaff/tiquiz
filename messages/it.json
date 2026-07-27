@@ -1358,6 +1358,7 @@
     "resultImageHint": "Clicca o trascina un file (PNG/JPG/GIF, max 10 MB)",
     "introImageDropzone": "Aggiungi un'immagine alla pagina di intro",
     "introImageHint": "Clicca qui o trascina un file (PNG/JPG/GIF, max 10 MB)",
+    "introCoverHint": "Layout copertina: questa immagine è lo sfondo a schermo intero (si regola in Design)",
     "introImagePos_top": "Sopra il titolo",
     "introImagePos_after_title": "Dopo il titolo",
     "introImagePos_after_intro": "Dopo il testo di intro",

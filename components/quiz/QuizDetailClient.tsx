@@ -3460,7 +3460,22 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
             <div data-device-preview={device} className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-sm" : "w-full"}`}>
 
               {/* ── INTRO SECTION ── */}
-              <div ref={introRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 text-center">
+              {/* WYSIWYG couverture : quand la disposition d'accueil est
+                  "cover" (onglet Design) ET qu'une image d'intro est posee,
+                  le public rend l'image en FOND plein ecran avec scrim
+                  sombre + texte blanc. L'apercu doit montrer EXACTEMENT ca,
+                  sinon le createur decouvre la surprise en ligne (drame
+                  Bene : "mon gif est passe en image de fond"). */}
+              <div
+                ref={introRef}
+                className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 text-center"
+                style={introLayout === "cover" && introImageUrl ? {
+                  backgroundImage: `linear-gradient(rgba(15,23,42,0.55), rgba(15,23,42,0.55)), url("${introImageUrl}")`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  color: "#ffffff",
+                } : undefined}
+              >
                 <div className="max-w-2xl w-full space-y-6">
                   {/* Hidden file input partagé pour le picker intro image.
                       Une seule instance, déclenchée par openIntroImagePicker. */}
@@ -3510,10 +3525,37 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       />
                     </div>
                   )}
+                  {/* Mode couverture : l'image est le fond, pas un bloc. On
+                      remplace les slots par une barre de gestion compacte. */}
+                  {introLayout === "cover" && introImageUrl && (
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-[11px] text-white/80 bg-black/30 rounded-full px-3 py-1">
+                        {t("introCoverHint")}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCropTarget({ url: introImageUrl, apply: (u) => setIntroImageUrl(u) })}
+                        className="bg-background/90 hover:bg-primary hover:text-white rounded-full p-1.5 shadow"
+                        aria-label={t("ariaCropImage")}
+                        title={t("ariaCropImage")}
+                      >
+                        <Crop className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={clearIntroImage}
+                        className="bg-background/90 hover:bg-destructive hover:text-white rounded-full p-1.5 shadow"
+                        aria-label={t("ariaRemoveImage")}
+                        title={t("ariaRemoveImage")}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                   {/* Largeur de l'image d'intro (agrandir / retrecir). 100% =
                       pleine largeur (defaut). Drame Christelle : impossible de
-                      redimensionner le GIF d'intro. */}
-                  {introImageUrl && (
+                      redimensionner le GIF d'intro. Sans objet en couverture. */}
+                  {introLayout !== "cover" && introImageUrl && (
                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                       <span>Taille de l&apos;image</span>
                       <input
@@ -3537,7 +3579,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                   )}
 
                   {/* slot TOP — entre logo et titre */}
-                  {introImageUrl && (introImagePosition ?? "top") === "top" && (
+                  {introLayout !== "cover" && introImageUrl && (introImagePosition ?? "top") === "top" && (
                     <ResultDraggableImage url={introImageUrl} ri={-1}
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
@@ -3552,7 +3594,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                   <RichTextEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} onImageUpload={handleRichTextImageUpload} className="tiquiz-quiz-title font-bold leading-tight" placeholder={t("previewTitlePh")} />
 
                   {/* slot AFTER_TITLE — entre titre et intro text */}
-                  {introImageUrl && introImagePosition === "after_title" && (
+                  {introLayout !== "cover" && introImageUrl && introImagePosition === "after_title" && (
                     <ResultDraggableImage url={introImageUrl} ri={-1}
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
@@ -3567,7 +3609,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                   <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} onImageUpload={handleRichTextImageUpload} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder={t("previewIntroPh")} />
 
                   {/* slot AFTER_INTRO — entre intro text et bouton */}
-                  {introImageUrl && introImagePosition === "after_intro" && (
+                  {introLayout !== "cover" && introImageUrl && introImagePosition === "after_intro" && (
                     <ResultDraggableImage url={introImageUrl} ri={-1}
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}
@@ -3592,7 +3634,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                   </div>
 
                   {/* slot BOTTOM — sous le bouton */}
-                  {introImageUrl && introImagePosition === "bottom" && (
+                  {introLayout !== "cover" && introImageUrl && introImagePosition === "bottom" && (
                     <ResultDraggableImage url={introImageUrl} ri={-1}
                       onDragStart={() => setDraggingIntroImage(true)}
                       onDragEnd={() => setDraggingIntroImage(false)}

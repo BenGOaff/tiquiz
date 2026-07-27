@@ -1346,6 +1346,7 @@
     "resultImageHint": "انقر أو اسحب ملفًا (PNG/JPG/GIF، الحد الأقصى 10 ميجابايت)",
     "introImageDropzone": "أضف صورة لصفحة المقدمة",
     "introImageHint": "انقر هنا أو اسحب وأفلت ملفًا (PNG/JPG/GIF، 10 ميغابايت كحد أقصى)",
+    "introCoverHint": "تخطيط الغلاف: هذه الصورة هي خلفية الشاشة الكاملة (يُضبط في التصميم)",
     "introImagePos_top": "فوق العنوان",
     "introImagePos_after_title": "بعد العنوان",
     "introImagePos_after_intro": "بعد نص المقدمة",

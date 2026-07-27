@@ -46,6 +46,13 @@ function isPublicTenantPath(pathname: string): boolean {
   ) {
     return true;
   }
+  // Assets statiques de /public (ex. /tiquiz-logo.png, image du footer).
+  // Sans ca, le footer public sur domaine perso 404 sur son logo : le path
+  // partait dans le catch-all de slugs. Un fichier avec extension n'est
+  // jamais un slug (sanitizeSlug interdit le point).
+  if (/\.[a-z0-9]{2,5}$/i.test(pathname)) {
+    return true;
+  }
   // Bare-slug shape served by app/[publicSlug]/page.tsx so creators
   // can share `test.ethilife.fr/<slug>` without the /q/ or /p/ prefix.
   // Reserved words are pre-rejected here so the catch-all never has
