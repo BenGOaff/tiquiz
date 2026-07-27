@@ -368,6 +368,57 @@ export function RichTextEdit({
     commitNow();
   }, [restoreSelection, commitNow]);
 
+  // ── Redimensionnement de l'image par glisser (poignee coin bas-droit) ──
+  // En plus des presets (%), une poignee apparait au coin bas-droit de l'image
+  // selectionnee. Le glisser ajuste img.style.width en % de la largeur du champ
+  // (responsive). Persistance au blur, comme les presets (applyImageWidth).
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [handlePos, setHandlePos] = useState<{ left: number; top: number } | null>(null);
+
+  const updateHandlePos = useCallback(() => {
+    if (!selectedImg || !wrapRef.current) { setHandlePos(null); return; }
+    const ir = selectedImg.getBoundingClientRect();
+    const wr = wrapRef.current.getBoundingClientRect();
+    setHandlePos({ left: ir.right - wr.left, top: ir.bottom - wr.top });
+  }, [selectedImg]);
+
+  useEffect(() => {
+    updateHandlePos();
+    if (!selectedImg) return;
+    const on = () => updateHandlePos();
+    window.addEventListener("scroll", on, true);
+    window.addEventListener("resize", on);
+    return () => {
+      window.removeEventListener("scroll", on, true);
+      window.removeEventListener("resize", on);
+    };
+  }, [selectedImg, updateHandlePos]);
+
+  const onImageResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const img = selectedImg;
+    const editor = ref.current;
+    if (!img || !editor) return;
+    const startX = e.clientX;
+    const startW = img.getBoundingClientRect().width;
+    const editorW = editor.clientWidth || startW;
+    const onMove = (me: MouseEvent) => {
+      const dx = me.clientX - startX;
+      const newW = Math.max(40, Math.min(startW + dx, editorW));
+      const pct = Math.max(10, Math.min(100, Math.round((newW / editorW) * 100)));
+      img.style.width = `${pct}%`;
+      updateHandlePos();
+    };
+    const onUp = () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      commitNow();
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [selectedImg, updateHandlePos, commitNow]);
+
   // ─── Taille de police FIELD-LEVEL, INDEPENDANTE MOBILE/DESKTOP ────
   // Drame Bene 8 juin 2026 : "je veux pouvoir editer la taille mobile
   // et la taille PC separement". On enveloppe l'integralite du contenu
@@ -990,6 +1041,7 @@ export function RichTextEdit({
             </>
           )}
         </div>
+        <div ref={wrapRef} className="relative">
         <div
           ref={ref}
           contentEditable
@@ -1031,6 +1083,16 @@ export function RichTextEdit({
           style={{ ...(style ?? {}), color: (style?.color as string | undefined) ?? "hsl(var(--foreground))" }}
           data-placeholder={placeholder}
         />
+        {selectedImg && handlePos && !singleLine && (
+          <div
+            aria-label={t("rteImageResizeDrag")}
+            title={t("rteImageResizeDrag")}
+            onMouseDown={onImageResizeStart}
+            style={{ left: handlePos.left - 7, top: handlePos.top - 7 }}
+            className="absolute w-3.5 h-3.5 rounded-sm bg-primary border-2 border-background shadow-sm cursor-nwse-resize z-30"
+          />
+        )}
+        </div>
       </div>
       {dialogs}
       </>
