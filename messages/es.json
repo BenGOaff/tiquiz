@@ -103,7 +103,8 @@
     "rteFontSizeForDesktop": "💻 Para PC",
     "rteImageSize": "Tamaño imagen:",
     "rteImageSizeReset": "100%",
-    "rteImageResizeDrag": "Arrastra para redimensionar",
+    "rteImageCrop": "Recortar la imagen",
+    "rteImageRemove": "Eliminar la imagen",
     "openSidebar": "Abrir el menú"
   },
   "nav": {
