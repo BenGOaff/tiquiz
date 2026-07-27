@@ -511,6 +511,15 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const [restoring, setRestoring] = useState(false);
   const isPaidPlan = (profile?.plan ?? "free") !== "free";
   const [saving, setSaving] = useState(false);
+
+  // Verrou scroll fenetre : editeur plein ecran, seuls les panneaux internes
+  // scrollent (cf. meme verrou dans QuizDetailClient).
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
   const [copied, setCopied] = useState(false);
   const [copiedIframe, setCopiedIframe] = useState(false);
   const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, isCustomDomain, buildPublicUrl } = useShareDomain();
@@ -1339,7 +1348,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       onDiscard={onDiscardDraft}
       locale={locale || "fr"}
     />
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* TOP BAR */}
       <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-background z-10">
         <div className="flex items-center gap-3">

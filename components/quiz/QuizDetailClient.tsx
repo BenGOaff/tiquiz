@@ -704,6 +704,17 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const isPaidPlan = (profile?.plan ?? "free") !== "free";
   const [saving, setSaving] = useState(false);
 
+  // L'editeur est une app plein ecran : la fenetre ne doit JAMAIS scroller
+  // (seuls les panneaux internes scrollent). Sans ce verrou, un element qui
+  // gonfle le body fait apparaitre un grand vide sous l'editeur (retour Bene :
+  // "ca descend bien en dessous, c'est moche et ca fait amateur").
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   // ─── Palettes utilisateur ──────────────────────────────────────
   // Charge depuis profile.saved_palettes au mount du quiz ; chaque
   // édition push immédiatement via PATCH /api/profile (pas de bouton
@@ -2402,7 +2413,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       onDiscard={onDiscardDraft}
       locale={locale || "fr"}
     />
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* TOP BAR */}
       <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-background z-10">
         <div className="flex items-center gap-3">
