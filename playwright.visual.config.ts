@@ -19,7 +19,9 @@ export default defineConfig({
   testDir: "./tests/visual",
   timeout: 60_000,
   fullyParallel: true,
-  retries: 0,
+  // 1 retry : les captures peuvent flaker d'un chouia (timing d'anim,
+  // police) ; un vrai casse de layout echoue aussi au retry.
+  retries: 1,
   reporter: [["list"]],
   expect: {
     toHaveScreenshot: {

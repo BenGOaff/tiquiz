@@ -200,3 +200,24 @@ Checklist minimum :
 - Compteurs `quizzes.*_count` auto-bumpés par trigger → ne JAMAIS UPDATE direct.
 - Endpoints `/track` retournent 200 toujours (`{ok: false, reason}` pour soft fail).
 - Typecheck `npx tsc --noEmit` avant chaque commit, exit 0 obligatoire.
+
+## Tests visuels AVANT push — RÈGLE (demande Béné 27 juillet 2026)
+
+Pour TOUT changement qui touche au design ou à l'UX (viewer public,
+layouts, branding, CSS, composants d'écran), lancer AUTOMATIQUEMENT le
+filet visuel avant de committer, sans que Béné ait à le demander :
+
+```bash
+npm run test:visual            # doit passer 60/60
+```
+
+- Échec = un layout a bougé sans intention -> corriger AVANT de pousser.
+- Changement de design VOULU -> `npm run test:visual:update` puis
+  committer les nouvelles références AVEC le changement.
+- Le harness : `playwright.visual.config.ts` + `tests/visual/` + page
+  fixture `/visual-test` (gated `VISUAL_TEST=1`, aucune base requise).
+- Couverture : 5 dispositions x 4 écrans x 3 viewports (desktop, écran
+  haut, mobile). Si une nouvelle disposition/écran apparaît, AJOUTER le
+  cas à la matrice du spec.
+- Origine : footer devenu 3e colonne en split + carte collée en haut sur
+  écrans hauts, jamais vus avant la prod. Plus jamais ça.
