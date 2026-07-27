@@ -1202,6 +1202,11 @@ export default function PublicQuizClient({ quizId, previewData, compact = false 
   const rootStyle: React.CSSProperties = {
     fontFamily: cssFontFamily(branding.font),
     backgroundColor: branding.backgroundColor,
+    // Le conteneur (et donc son fond image/degrade) couvre TOUJOURS au moins
+    // toute la hauteur de l'ecran, quel que soit le device. 100dvh gere la
+    // barre d'URL mobile ; repli sur la classe min-h-screen (100vh) si un vieux
+    // navigateur ignore dvh.
+    minHeight: "100dvh",
     ...(richBackground ? { background: richBackground } : {}),
     color: contentIsDark ? "#ffffff" : (branding.textColor ?? "hsl(231 41% 31%)"),
     colorScheme: contentIsDark ? "dark" : "light",

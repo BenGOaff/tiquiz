@@ -1229,6 +1229,7 @@
     "previewClickHint": "Cliccando su un'opzione si passa alla domanda successiva.",
     "previewPointFor": "+1 punto per",
     "previewResult": "Risultato {n}",
+    "previewCaptureDisableHint": "Passaggio di cattura email. Per nasconderlo, disattiva la cattura nella scheda Impostazioni.",
     "previewCaptureHeadingDefault": "I tuoi risultati sono pronti",
     "previewCaptureSubtitleDefault": "Inserisci la tua email per scoprire il tuo profilo.",
     "previewCaptureHeadingDefaultSurvey": "Un ultimo passaggio!",

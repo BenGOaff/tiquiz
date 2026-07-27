@@ -77,7 +77,9 @@ Variations selon le canal :
 
 ### vs Tally, Google Forms
 - **Pas un formulaire, un quiz** : résultats personnalisés, quiz noté, sondage, mécaniques de gamification, mémo persistant.
-- **Branding par quiz** (police, couleurs, logo, thème, fond) sans toucher au CSS.
+- **Branding par quiz** sans toucher au CSS : 9 polices, palette générée depuis ta couleur, 9 thèmes, 8 dégradés, image de fond, dispositions variées (carte/couverture, questions centrées/gauche/deux colonnes), design par défaut réutilisable.
+- **Contenu généré par l'IA dans plus de 100 langues**, avec variantes de genre et personnalisation au prénom.
+- **Détecteur d'ex-aequo** et rééquilibrage IA des résultats : un vrai moteur de quiz, pas juste des champs.
 
 ### vs Tipote (la plateforme parente)
 - Tiquiz **n'a pas** : coach IA, crédits IA, réseaux sociaux, automations, constructeur de pages, contenus génériques.
@@ -120,17 +122,22 @@ Variations selon le canal :
 - **Brainstorm IA conversationnel** pour cadrer un brief flou.
 - **Génération complète** en streaming (titre, questions, options, résultats, storytelling).
 - **Trois formats** : quiz par profil, quiz noté (score et tranches), sondage.
-- **Types de questions variés** : choix multiple, échelle, étoiles, oui/non, choix par image, réponse libre.
+- **Types de questions variés** : choix multiple (mono ou multi-réponses), échelle, étoiles, oui/non, choix par image, réponse libre.
 - **Éditeur WYSIWYG** : édition inline, sidebar à onglets, preview live, autosave.
+- **Détecteur d'ex-aequo** : l'éditeur prévient si des combinaisons de réponses tombent à égalité entre profils, pour un résultat toujours net.
 - **Rich text** : gras, italique, alignement, listes, liens, images, color picker.
-- **Outils IA dans l'éditeur** : réécriture d'un texte, rééquilibrage des résultats, variantes grammaticales, duplication.
+- **Outils IA dans l'éditeur** : réécriture d'un texte (3 propositions), rééquilibrage des résultats, variantes grammaticales, duplication.
 - **Personnalisation dynamique** : prénom et forme grammaticale injectés dans les textes.
+- **Notifications** : email à chaque nouveau lead (activable).
 
 ### 7.2. Branding et présentation
-- Police Google (whitelist), couleur primaire, couleur de fond, couleur de texte, logo, favicon.
-- **Thèmes prêts à l'emploi** et fonds riches (dégradé ou image).
-- Écran d'accueil en carte ou en couverture plein écran, formes de boutons.
-- Image et description OG par quiz, footer personnalisable.
+- **9 polices Google**, couleur primaire, couleur de fond, couleur de texte, logo, favicon.
+- **Générateur de palette** : à partir d'une seule couleur de marque, l'outil dérive une palette cohérente.
+- **9 thèmes prêts à l'emploi** et fonds riches : uni, 8 dégradés, ou image plein cadre (avec surface de lecture lisible par-dessus).
+- **Dispositions** : accueil en carte ou en couverture plein écran ; questions centrées, à gauche ou en deux colonnes (type Typeform) ; réponses en auto, grille ou liste ; formes de boutons ; panneau latéral à motifs.
+- **Design par défaut du projet** : enregistre tes réglages comme modèle, chaque nouveau quiz démarre déjà à ta marque.
+- **Responsive** : mise en page centrée et lisible sur tous les écrans (mobile, 16:9, écrans hauts) ; texte qui s'adapte en clair ou sombre selon le fond.
+- Image et description OG par quiz ; footer personnalisable (mets ton propre lien, ou retire complètement la mention Tiquiz sur les plans payants).
 - **Formes d'adresse** par quiz : tu ou vous.
 
 ### 7.3. Capture et viralité
@@ -158,7 +165,8 @@ Variations selon le canal :
 
 ### 7.6. Multilingue
 - **UI admin en 7 langues** (FR, EN, ES, IT, AR, PT Portugal, PT Brésil), avec RTL arabe.
-- **Quiz public multilingue**, dont formes tu et vous du français.
+- **Contenu de quiz générable dans plus de 100 langues** (19 mises en avant), l'IA produit questions et résultats directement dans la langue choisie.
+- **Quiz public multilingue**, dont formes tu et vous du français, et variantes de genre adaptées par langue.
 - Typographie française correcte (espaces insécables) appliquée au save et au render.
 
 ### 7.7. Analytics
@@ -340,7 +348,8 @@ Variations selon le canal :
 - **5 minutes** pour créer un quiz custom de A à Z.
 - **30 secondes** de génération IA.
 - **15 templates métier** prêts à publier.
-- **7 langues UI**, quiz public multilingue, RTL arabe.
+- **7 langues UI**, contenu de quiz dans **plus de 100 langues**, RTL arabe.
+- **9 thèmes**, **8 dégradés**, **9 polices**, palette générée depuis une couleur.
 - **20 Go max** par upload vidéo (popquiz).
 - **6 réseaux** de partage (Facebook, X, LinkedIn, WhatsApp, Telegram, email).
 - **3 couches de sécurité** sur les leads.

@@ -1232,6 +1232,7 @@
     "previewPointsFor": "ponto(s) ao",
     "previewPointsHint": "Número de pontos dados a este perfil quando esta resposta é escolhida. Coloca mais pontos para favorecer um perfil.",
     "previewResult": "Resultado {n}",
+    "previewCaptureDisableHint": "Etapa de captura de email. Para ocultá-la, desative a captura no separador Definições.",
     "previewCaptureHeadingDefault": "Os teus resultados estão prontos",
     "previewCaptureSubtitleDefault": "Introduz o teu email para descobrires o teu perfil.",
     "previewCaptureHeadingDefaultSurvey": "Mais uma etapa!",

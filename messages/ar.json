@@ -1217,6 +1217,7 @@
     "previewClickHint": "النقر على خيار ينتقل إلى السؤال التالي.",
     "previewPointFor": "+1 نقطة لـ",
     "previewResult": "النتيجة {n}",
+    "previewCaptureDisableHint": "خطوة جمع البريد الإلكتروني. لإخفائها، عطّل الجمع من علامة تبويب الإعدادات.",
     "previewCaptureHeadingDefault": "نتائجك جاهزة",
     "previewCaptureSubtitleDefault": "أدخل بريدك الإلكتروني لاكتشاف ملفك الشخصي.",
     "previewCaptureHeadingDefaultSurvey": "خطوة أخيرة!",

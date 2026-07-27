@@ -3997,6 +3997,12 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               {captureEnabled && (
               <div ref={captureRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16">
                 <div className="max-w-lg w-full space-y-6">
+                  {/* Indice editeur uniquement (n'apparait pas cote visiteur) :
+                      beaucoup d'users ne trouvent pas comment retirer l'email. */}
+                  <p className="text-[11px] text-muted-foreground flex items-center justify-center gap-1.5 border border-dashed rounded-lg px-3 py-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {t("previewCaptureDisableHint")}
+                  </p>
                   <RichTextEdit value={captureHeading || t("previewCaptureHeadingDefault")} onChange={setCaptureHeading} onImageUpload={handleRichTextImageUpload} singleLine className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("previewCaptureHeadingPh")} />
                   <RichTextEdit value={captureSubtitle || t("previewCaptureSubtitleDefault")} onChange={setCaptureSubtitle} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-base text-center" placeholder={t("previewCaptureSubtitlePh")} />
                   <div className="space-y-3 max-w-md mx-auto">

@@ -542,6 +542,10 @@ export function RichTextEdit({
           img.style.height = "auto";
         });
       }
+      // Persiste tout de suite le HTML avec l'<img> : sans ce commit, l'effet
+      // de resync [value, editing] reecrit innerHTML depuis `value` (qui n'a
+      // pas encore l'image) et l'image disparait ("ca ne prend pas").
+      commitNow();
     } finally {
       setUploadingDrop(false);
     }
@@ -624,6 +628,7 @@ export function RichTextEdit({
           img.style.height = "auto";
         });
       }
+      commitNow();
     } finally {
       setUploadingDrop(false);
     }
@@ -644,6 +649,7 @@ export function RichTextEdit({
         img.style.height = "auto";
       });
     }
+    commitNow();
   };
 
   const baseCls = `${className || ""} cursor-text rounded-lg px-2 py-1 transition-all min-h-[1.2em]`;

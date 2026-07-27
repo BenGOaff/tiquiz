@@ -1216,6 +1216,7 @@
     "previewPointsFor": "point(s) to",
     "previewPointsHint": "Number of points given to this profile when this answer is picked. Set more points to favour a profile.",
     "previewResult": "Result {n}",
+    "previewCaptureDisableHint": "Email capture step. To hide it, turn off capture in the Settings tab.",
     "previewCaptureHeadingDefault": "Your results are ready",
     "previewCaptureSubtitleDefault": "Enter your email to see your profile.",
     "previewCaptureHeadingDefaultSurvey": "One last step!",

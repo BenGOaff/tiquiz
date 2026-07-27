@@ -19,9 +19,12 @@ Tiquiz permet à un créateur de fabriquer un lead magnet interactif (le classiq
 - Trois modes de contenu partageant le même moteur : **quiz par profil**, **quiz noté (scoring)**, **sondage**.
 - **Module Popquiz** : vidéo avec quiz interactifs incrustés à des timestamps précis, embed iframe.
 - Création **manuelle**, par **génération IA** (streaming SSE), par **brainstorm IA conversationnel**, par **import** de document (.txt, .docx, .pdf) ou depuis un **catalogue de 15 templates métier**.
-- **Éditeur WYSIWYG live** avec preview temps réel, édition inline, champs rich-text, autosave.
-- **Présentation type Typeform** : fonds riches (dégradé, image), thèmes prêts à l'emploi, écran d'accueil en couverture, formes de boutons, navigation clavier et gestuelle mobile.
-- **Capture de leads configurable** (email, prénom, nom, téléphone, pays), placement avant ou après les questions.
+- **Éditeur WYSIWYG live** avec preview temps réel, édition inline, champs rich-text, autosave, et détecteur d'ex-aequo qui prévient le créateur avant publication.
+- **Système de design complet** : 9 polices Google, couleurs de marque (principale, fond, texte) avec générateur de palette à partir d'une seule couleur, 9 thèmes prêts à l'emploi, 8 dégradés, fond image plein cadre, contraste de texte auto (clair/sombre). Dispositions : accueil en carte ou couverture, questions centrées / à gauche / en deux colonnes (type Typeform), formes de boutons, disposition des réponses (auto / grille / liste), panneau latéral avec motifs. Mise en page responsive centrée sur tous les écrans.
+- **Design par défaut du projet** : le créateur enregistre ses réglages de présentation comme modèle ; chaque nouveau quiz démarre déjà à sa marque.
+- **Types de questions variés** : choix multiple (mono ou multi-réponses), oui/non, choix par image, échelle de notation, notation en étoiles, réponse libre.
+- **Présentation type Typeform** : questions une par une, transitions fluides, navigation clavier et gestuelle mobile.
+- **Capture de leads configurable** (email, prénom, nom, téléphone, pays), placement avant ou après les questions, consentement RGPD.
 - **Intégration Systeme.io** : tags de capture, de partage, par résultat (plusieurs tags possibles), par réponse, plus inscription formation, ajout communauté, enrichissement contact.
 - **Viralité** : étape bonus de partage entre capture et résultats, anti-triche réelle, carte de résultat partageable.
 - **Multiprofils** : un compte gère plusieurs projets isolés (contenu, leads, stats, branding, clés Systeme.io).
@@ -31,7 +34,9 @@ Tiquiz permet à un créateur de fabriquer un lead magnet interactif (le classiq
 - **Studio visuel** : génération IA d'images de fond et de textes courts pour la promotion.
 - **Gamification** : jalons (milestones), mur des réussites, objectif hebdomadaire, confettis.
 - **Programme revendeur** : un partenaire revend Tiquiz en gros à ses propres clients (comptes isolés, facturation automatisée).
-- **UI multilingue** (7 locales) avec support RTL, et parcours public en plusieurs variantes dont formes tu/vous.
+- **Multilingue à deux niveaux** : interface admin en 7 langues (dont arabe RTL), et contenu de quiz générable dans plus de 100 langues (19 mises en avant), avec formes tu/vous du français et typographie française automatique.
+- **Notifications de réponses** : email au créateur à chaque nouveau lead (activable), et masquage optionnel des compteurs de réponses.
+- **Masquage de la marque** : les plans payants peuvent remplacer le lien "offert par Tiquiz" par leur propre lien, ou le retirer complètement.
 - **Monétisation freemium** pilotée par webhooks Systeme.io, avec changement de plan en un clic.
 
 ### 1.3. Périmètre exclu (par rapport à Tipote)
@@ -106,7 +111,9 @@ Portés par `quiz_questions.question_type`, avec configuration par type dans `qu
 - `image_choice` (choix par images)
 - `yes_no` (oui / non)
 
-En mode scoring, une note choisie (rating / star) compte comme points ; en mode profil elle est collectée sans influencer le résultat.
+Le choix multiple peut être passé en **multi-réponses** par question (`config.multi_select`), le scoring et la détection d'ex-aequo en tiennent compte.
+
+En mode scoring, une note choisie (rating / star) compte comme points ; en mode profil elle est collectée sans influencer le résultat. Les réponses libres, échelles et étoiles ne déterminent jamais le profil.
 
 ### 3.2. Modes de création
 
@@ -115,7 +122,7 @@ Page `/quiz/new` (et `/survey/new` pour les sondages) :
 - **Manuel** : formulaire complet, quiz vierge.
 - **Génération IA** : `/api/quiz/generate` en streaming SSE remplit le formulaire en temps réel à partir d'un brief (objectif, audience, ton, CTA, bonus, nombre de questions et de résultats, forme d'adresse, langue).
 - **Brainstorm IA** : `/api/quiz/idea-chat` (Claude Haiku), chat conversationnel borné (quelques tours) qui cadre une idée floue avant de lancer la génération complète.
-- **Import** : `/api/quiz/import-extract` extrait le texte d'un fichier `.txt`, `.docx` ou `.pdf` côté serveur, puis alimente la génération IA en mode import.
+- **Import** : `/api/quiz/import-extract` extrait le texte d'un fichier `.txt`, `.docx` ou `.pdf` côté serveur (max 10 Mo, 50 000 caractères ; les PDF scannés sont détectés avec un message d'aide), puis alimente la génération IA en mode import.
 - **Templates** : catalogue de 15 modèles métier prêts à publier (cf. §14).
 - **Génération embarquée anonyme** : `/api/embed/quiz/generate` permet de générer un quiz sans compte via un token de session ; l'utilisateur peut ensuite le revendiquer (`claim`) en s'inscrivant.
 
@@ -124,9 +131,9 @@ Page `/quiz/new` (et `/survey/new` pour les sondages) :
 Sidebar à onglets (Structure, Design, Paramètres, Partage) avec preview live à droite, bascule mobile / desktop en temps réel. Édition inline directement dans la preview via `InlineEdit` et `RichTextEdit`. Autosave via `/api/quiz/[quizId]/autosave`.
 
 - **Structure** : arborescence Intro, Questions (drag-and-drop), Prise d'informations, Demande de partage, Résultats (drag-and-drop) ; scroll-to-section.
-- **Design** : police Google (whitelist), couleur principale, couleur de fond, couleur de texte de marque, logo, favicon, présentation (fond dégradé ou image, thème, disposition d'accueil, forme des boutons).
+- **Design** : 9 polices Google, couleurs de marque (principale, fond, texte) avec générateur de palette à partir d'une seule couleur, logo et favicon. Présentation : fond uni / dégradé (8) / image, 9 thèmes prêts à l'emploi, disposition d'accueil (carte ou couverture), disposition des questions (centrée / gauche / deux colonnes), disposition des réponses (auto / grille / liste), forme des boutons, panneau latéral à motifs. Le créateur peut enregistrer ses réglages comme design par défaut du projet, appliqué automatiquement aux nouveaux quiz.
 - **Paramètres** : formulaire de capture (activation par champ prénom, nom, téléphone, pays), placement de la capture (avant ou après les questions), bloc bonus (description, visuel image / mockup / GIF, message de partage, tag Systeme.io post-partage), CTA par défaut, fermeture du quiz, affichage ou masquage des compteurs de réponses.
-- **Partage** : slug personnalisé, sélecteur de domaine de partage, sélecteur de réseaux, image et description OG, footer personnalisé, options SEO (noindex).
+- **Partage** : slug personnalisé, sélecteur de domaine de partage, sélecteur de réseaux, image et description OG, footer personnalisable (remplacer le lien "offert par Tiquiz" par son propre lien, ou le masquer complètement, sur les plans payants), QR code téléchargeable, snippet iframe.
 
 Les champs rich-text (introduction, description / insight / projection de chaque résultat) sont assainis côté client et côté serveur via `sanitizeRichText`. L'éditeur inclut un color picker, un inséreur de variables de personnalisation, un sélecteur de GIF (via KLIPY), le recadrage d'image et la génération de variantes grammaticales (`/api/quiz/gender-variants`).
 
@@ -136,9 +143,11 @@ Outils IA dans l'éditeur : réécriture d'un texte (`/api/quiz/[quizId]/rewrite
 
 Interpolation dans les textes du parcours, à partir des données capturées :
 
-- `{name}` : prénom du visiteur.
-- `{m|f|x}` : variante grammaticale masculin / féminin / inclusif.
+- `{name}` : prénom du visiteur (repli propre si absent).
+- `{m|f|x}` : variante grammaticale masculin / féminin / inclusif, choisie selon le genre du visiteur. Libellés adaptés par langue (Il/Elle/Iel, He/She/They, etc.).
 - `{a|b}`, `{a|b|c}`, `{L}` : autres formes de variantes gérées par `lib/quizPersonalization.ts`.
+
+Les variantes de genre peuvent être générées par l'IA sur un champ (bouton ✨) ou sur tout le quiz d'un coup. Le contenu peut être produit dans plus de 100 langues (cf. §17.3).
 
 ---
 
@@ -153,16 +162,18 @@ Résolution de l'URL par UUID direct ou par slug personnalisé (validation case-
 3. **Capture** : heading et sous-titre personnalisés, email plus champs optionnels activés, consentement (`privacy_url` + `consent_text`, case optionnelle). Placement avant ou après les questions (`capture_before_questions`).
 4. **Bonus de partage** (si `virality_enabled` et bonus renseigné) : étape intermédiaire avant les résultats, avec anti-triche (cf. §6.3), visuel du bonus, boutons des réseaux sélectionnés, option « Continuer sans bonus ».
 5. **Résultat** : titre, description, insight, projection (headings personnalisables), CTA spécifique du résultat ou CTA par défaut du quiz. Carte de résultat partageable générée côté client (`lib/resultCard.ts`) et confettis (`lib/celebrate.ts`). Bouton « Recommencer ».
-6. **Footer** : logo de marque (ou Tiquiz par défaut) et footer personnalisé.
+6. **Footer** : logo de marque (ou Tiquiz par défaut), footer personnalisé sur les plans payants (lien propre en remplacement du "offert par Tiquiz", ou masquage complet via `hide_branding`).
 
 Un quiz peut être **fermé** par le créateur (`close_enabled`) : à la fermeture, les visiteurs sont soit redirigés vers une URL, soit accueillis par un message avec CTA personnalisé (`close_action` = `redirect` ou `message`).
 
 ### 4.2. Présentation
 
-- **Fond** : uni, dégradé (`background_gradient`, palette fermée) ou image (`background_image_url`).
-- **Thème** : thème prêt à l'emploi mémorisé (`theme_id`), ou réglages manuels.
+- **Fond** : uni, dégradé (`background_gradient`, 8 dégradés fermés) ou image plein cadre (`background_image_url`), avec surface de lecture translucide au-dessus de l'image.
+- **Thème** : 9 thèmes prêts à l'emploi mémorisés (`theme_id`), ou réglages manuels (dont palette générée depuis une couleur de marque).
+- **Dispositions** : accueil en carte ou couverture (`intro_layout`), questions centrées / à gauche / en deux colonnes (`question_layout`), réponses auto / grille / liste (`answer_layout`), panneau latéral à motifs (`panel_media`, `split_side`).
 - **Boutons** : forme pill, arrondie ou carrée (`button_shape`).
-- **Branding runtime** : injection dynamique de la Google Font choisie et application des couleurs de marque sur tout le parcours.
+- **Responsive** : parcours centré verticalement et lisible sur tous les écrans (mobile, 16:9, écrans hauts), champs de capture à fort contraste sur n'importe quel fond.
+- **Branding runtime** : injection dynamique de la Google Font choisie, application des couleurs de marque et bascule automatique du texte clair/sombre selon la luminance du fond.
 
 Toutes les colonnes de présentation sont nullable sans défaut : un quiz qui n'a rien changé est rendu exactement comme le comportement historique.
 
@@ -261,7 +272,7 @@ Routes principales : `/api/popquiz` (liste, création), `/api/popquiz/[id]` (dé
 
 ## 8. Sondage et analyse
 
-Le mode sondage réutilise le moteur quiz mais agrège les réponses brutes au lieu de calculer un résultat. Il supporte tous les types de questions (§3.1). La capture peut être placée avant les questions.
+Le mode sondage réutilise le moteur quiz mais agrège les réponses brutes au lieu de calculer un résultat. Il supporte tous les types de questions (§3.1) et se termine sur un écran de remerciement (`survey_thanks_*`). La capture peut être placée avant les questions ou désactivée (réponses anonymes). La génération IA de sondage propose 8 objectifs adossés à des méthodologies réelles : NPS, CSAT, étude d'audience, feedback, CES, post-événement, découverte, qualification de lead. Un rapport PDF des réponses est exportable.
 
 - **Résultats du sondage** : `/api/quiz/[quizId]/survey-results` et `SurveyResultsPanel`, `SurveyResponsesTable`, `SurveyTrends`.
 - **Agrégation des réponses** : `/api/quiz/[quizId]/aggregate-responses`.
