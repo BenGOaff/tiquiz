@@ -86,10 +86,12 @@ export default function VisualTestClient({
   layout,
   intro,
   bg,
+  bonus,
 }: {
   layout: string;
   intro: string;
   bg: string;
+  bonus: string;
 }) {
   const base = resolveQuizBranding(null, null);
   const branding: QuizBranding = {
@@ -103,6 +105,11 @@ export default function VisualTestClient({
   const quiz: PublicQuizData = {
     ...DEMO_QUIZ,
     ...(intro === "cover" ? { intro_image_url: BG_IMAGE_DATA_URI, intro_layout: "cover" } : {}),
+    // bonus=1 : active l'ecran de partage bonus (etape entre capture et
+    // resultat) pour couvrir ce rendu dans la matrice visuelle.
+    ...(bonus === "1"
+      ? { virality_enabled: true, bonus_description: "<p>le guide PDF des 10 quiz qui convertissent</p>" }
+      : {}),
   } as PublicQuizData;
   return <PublicQuizClient quizId={String(quiz.id)} previewData={quiz} previewBranding={branding} />;
 }

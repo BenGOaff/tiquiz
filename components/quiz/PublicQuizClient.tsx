@@ -126,6 +126,9 @@ type PublicQuizData = {
   // Largeur d'affichage en % (NULL = pleine largeur). Permet d'agrandir /
   // retrecir l'image/GIF d'intro sans la recadrer.
   intro_image_width?: number | null;
+  // Titre custom de l'ecran bonus (retour Jocelyne 28 juillet 2026).
+  // NULL = defaut localise bonusStepHeading, qui respecte address_form.
+  bonus_heading?: string | null;
   bonus_intro_text?: string | null;
   // Override for "Bonus unlocked!" message shown after share. Lets a
   // creator deliver the bonus inline (e.g. discount code) without
@@ -329,6 +332,7 @@ type QuizTranslations = {
 // dans chaque bloc de traduction.
 const RESUME_COPY: Record<string, { resumeNotice: string; resumeRestart: string }> = {
   fr: { resumeNotice: "Tu reprends là où tu t'étais arrêté.", resumeRestart: "Tout recommencer" },
+  fr_vous: { resumeNotice: "Vous reprenez là où vous vous étiez arrêté.", resumeRestart: "Tout recommencer" },
   en: { resumeNotice: "Picking up where you left off.", resumeRestart: "Start over" },
   es: { resumeNotice: "Retomas donde lo dejaste.", resumeRestart: "Empezar de nuevo" },
   de: { resumeNotice: "Du machst da weiter, wo du aufgehört hast.", resumeRestart: "Neu starten" },
@@ -944,7 +948,7 @@ function getT(locale: string | null | undefined, addressForm?: string | null): Q
   // For French locale: use "fr_vous" variant when creator prefers vouvoiement
   const resume = RESUME_COPY[locale ?? "fr"] ?? RESUME_COPY.fr;
   if ((locale ?? "fr") === "fr" && addressForm === "vous") {
-    return { ...translations.fr_vous, ...resume };
+    return { ...translations.fr_vous, ...RESUME_COPY.fr_vous };
   }
   const code = locale ?? "fr";
   // BCP-47 fallback chain: pt-BR / pt-PT → pt; zh-Hant → zh; etc.
@@ -3461,6 +3465,8 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
     // plain. Le custom intro est rendu via dangerouslySetInnerHTML
     // plus bas pour préserver la mise en forme du créateur.
     const bonusText = stripHtml(quiz.bonus_description);
+    const customBonusHeadingHtml = sanitizeRichText(quiz.bonus_heading);
+    const hasCustomHeading = stripHtml(quiz.bonus_heading).length > 0;
     const customBonusIntroHtml = sanitizeRichText(quiz.bonus_intro_text);
     const hasCustomIntro = stripHtml(quiz.bonus_intro_text).length > 0;
     const allowedNetworks = (quiz.share_networks && quiz.share_networks.length > 0)
@@ -3515,9 +3521,16 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
                     </div>
                   ) : null}
 
-                  <h2 className="text-2xl sm:text-3xl font-bold leading-tight">
-                    {t.bonusStepHeading}
-                  </h2>
+                  {hasCustomHeading ? (
+                    <h2
+                      className="tiquiz-rich tiquiz-rich-inline text-2xl sm:text-3xl font-bold leading-tight"
+                      dangerouslySetInnerHTML={{ __html: customBonusHeadingHtml }}
+                    />
+                  ) : (
+                    <h2 className="text-2xl sm:text-3xl font-bold leading-tight">
+                      {t.bonusStepHeading}
+                    </h2>
+                  )}
 
                   {/* slot AFTER_HEADING — entre titre et intro */}
                   {bonusImg && bonusPos === "after_heading" ? bonusImg : null}

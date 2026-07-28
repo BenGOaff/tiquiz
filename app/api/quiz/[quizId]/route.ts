@@ -28,6 +28,7 @@ const FR_TYPO_PLAIN_FIELDS = [
   "consent_text",
   "share_message",
   "bonus_description",
+  "bonus_heading",
   "bonus_intro_text",
   "start_button_text",
   "result_insight_heading",
@@ -196,7 +197,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const allowedFields = [
       "title", "introduction", "cta_text", "cta_url", "privacy_url",
       "consent_text", "virality_enabled", "bonus_description",
-      "bonus_intro_text",
+      "bonus_heading", "bonus_intro_text",
       "share_message", "bonus_image_url", "bonus_image_position", "bonus_image_width", "bonus_unlocked_message", "status", "sio_share_tag_name", "locale",
       "ask_first_name", "ask_gender",
       "address_form", "og_image_url", "og_description", "capture_heading", "capture_subtitle", "capture_submit_text",
