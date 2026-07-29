@@ -10,13 +10,27 @@ import QuizJsonLd from "@/components/quiz/QuizJsonLd";
 import { TrackingPixels } from "@/components/tracking/TrackingPixels";
 import { resolveEffectivePixels } from "@/lib/effectivePixels";
 import { stripHtml } from "@/lib/richText";
+import { interpolateText } from "@/lib/quizPersonalization";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
 export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ quizId: string }>;
-  searchParams: Promise<{ compact?: string }>;
+  searchParams: Promise<{ compact?: string; rp?: string }>;
+};
+
+// "J'ai obtenu : <profil>" dans la langue du quiz, pour l'og:title des
+// URL de partage de resultat (?rp=<resultId>). La formule marche au
+// tutoiement comme au vouvoiement (c'est le partageur qui parle).
+const OG_GOT: Record<string, (t: string) => string> = {
+  fr: (t) => `J'ai obtenu : ${t}`,
+  en: (t) => `I got: ${t}`,
+  es: (t) => `He obtenido: ${t}`,
+  de: (t) => `Mein Ergebnis: ${t}`,
+  pt: (t) => `Meu resultado: ${t}`,
+  it: (t) => `Ho ottenuto: ${t}`,
+  ar: (t) => `حصلت على: ${t}`,
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -42,7 +56,7 @@ async function resolveCustomDomainOwner(): Promise<string | null> {
 
 // Champs sélectionnés sur quizzes — étendre ici si on ajoute des
 // colonnes (ex : pixel ids) dont on a besoin server-side.
-const QUIZ_META_FIELDS = "id, user_id, slug, title, introduction, og_image_url, og_description, share_message, seo_noindex, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id";
+const QUIZ_META_FIELDS = "id, user_id, slug, title, introduction, og_image_url, og_description, share_message, locale, seo_noindex, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id";
 
 async function fetchQuizMeta(slugOrId: string) {
   if (UUID_RE.test(slugOrId)) {
@@ -67,8 +81,10 @@ async function fetchQuizMeta(slugOrId: string) {
 // vit dans `fetchOwnerBranding` (lib/publicUrl.ts) — partagé entre les
 // 3 routes publiques pour rester cohérent.
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { quizId } = await params;
+  const sp = await searchParams;
+  const rp = typeof sp?.rp === "string" && UUID_RE.test(sp.rp) ? sp.rp : null;
   try {
     const data = await fetchQuizMeta(quizId);
     if (!data) return { title: "Quiz" };
@@ -100,6 +116,34 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const description = rawDesc.trim() || undefined;
     const plainTitle = stripHtml(data.title);
 
+    // Partage du PROFIL obtenu (?rp=<resultId>) : l'og:title devient
+    // "J'ai obtenu : <profil>" et l'og:image le visuel du profil (image
+    // du createur, sinon carte generee /result-og). Retour Jocelyne
+    // 28 juillet 2026 : le partage FB ne montrait jamais le profil.
+    let resultShare: { ogTitle: string; imageUrl: string } | null = null;
+    if (rp) {
+      const { data: rrow } = await supabaseAdmin
+        .from("quiz_results")
+        .select("quiz_id, title, image_url")
+        .eq("id", rp)
+        .maybeSingle();
+      if (rrow && rrow.quiz_id === data.id) {
+        const cleanTitle = stripHtml(interpolateText(rrow.title as string, { name: "", gender: "x" }))
+          .replace(/\s+/g, " ")
+          .replace(/^[\s,;:.!?-]+/, "")
+          .trim();
+        if (cleanTitle) {
+          const loc = String((data as { locale?: string | null }).locale ?? "fr").split("-")[0];
+          const got = (OG_GOT[loc] ?? OG_GOT.fr)(cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1));
+          const generated =
+            (await buildCanonicalUrl(`/api/quiz/${data.id}/result-og?rp=${rp}`)) ??
+            `https://quiz.tipote.com/api/quiz/${data.id}/result-og?rp=${rp}`;
+          const resultImage = String((rrow as { image_url?: string | null }).image_url ?? "").trim();
+          resultShare = { ogTitle: got, imageUrl: resultImage || generated };
+        }
+      }
+    }
+
     // Branding owner : custom domain vérifié + share_site_name (optionnel).
     // Permet de virer toute trace de "Tiquiz" des meta sociales quand
     // l'user a payé pour un domain brandé.
@@ -130,9 +174,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // Respecte le toggle "masquer aux moteurs de recherche" côté éditeur.
     // Quand activé, on émet `<meta name="robots" content="noindex,nofollow">`
     // et la row est exclue du sitemap.xml + llms.txt.
-    const robotsMeta = (data as { seo_noindex?: boolean }).seo_noindex
+    // Les variantes ?rp= (partage de profil) sont TOUJOURS noindex : ce
+    // sont des doublons de la page quiz, seul l'aperçu social change.
+    const robotsMeta = (data as { seo_noindex?: boolean }).seo_noindex || resultShare
       ? { robots: { index: false, follow: false, googleBot: { index: false, follow: false } } }
       : {};
+
+    // og:url : Facebook re-scrape l'URL déclarée ici et l'utilise comme
+    // identité du partage. Pour une variante ?rp=, elle DOIT garder le
+    // ?rp= (sinon FB retombe sur l'aperçu générique du quiz). Le
+    // canonical SEO, lui, reste la page quiz nue.
+    const ogUrl = canonical ? (resultShare && rp ? `${canonical}?rp=${rp}` : canonical) : null;
+    const ogTitle = resultShare?.ogTitle ?? plainTitle;
+    const ogImage = resultShare?.imageUrl ?? data.og_image_url ?? null;
 
     return {
       title: titleOverride,
@@ -154,11 +208,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           }
         : {}),
       openGraph: {
-        title: plainTitle,
+        title: ogTitle,
         description,
         ...(siteName ? { siteName } : {}),
-        ...(canonical ? { url: canonical } : {}),
-        ...(data.og_image_url ? { images: [{ url: data.og_image_url }] } : {}),
+        ...(ogUrl ? { url: ogUrl } : {}),
+        ...(ogImage ? { images: [{ url: ogImage }] } : {}),
       },
       // Override des twitter:* aussi sinon le layout global laisse
       // « Tiquiz » dans twitter:title et la description marketing dans
@@ -166,9 +220,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       // twitter:* en priorité).
       twitter: {
         card: "summary_large_image",
-        title: plainTitle,
+        title: ogTitle,
         ...(description ? { description } : {}),
-        ...(data.og_image_url ? { images: [data.og_image_url] } : {}),
+        ...(ogImage ? { images: [ogImage] } : {}),
       },
     };
   } catch {

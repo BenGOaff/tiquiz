@@ -1370,6 +1370,8 @@
     "optionShowResultProjectionHint": "The projection card on the result page. Uncheck to hide it.",
     "optionShowResultShare": "Show the share button",
     "optionShowResultShareHint": "The \"Share my result\" button on the result page. Uncheck to remove it.",
+    "optionShareResultPage": "Result sharing: highlight the obtained profile",
+    "optionShareResultPageHint": "The link shared from the result screen shows the visitor's profile in the preview (title + visual in your quiz colors). Unchecked: the share shows the quiz only.",
     "trackingPixelsTitle": "Tracking & Ads",
     "trackingPixelsHint": "Add your Meta Pixel and Google tags to track your ad campaigns. Pixels only load after visitor consent.",
     "trackingApplyDefaults": "↺ Apply my defaults (from Settings)",
