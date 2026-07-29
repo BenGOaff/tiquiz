@@ -183,7 +183,12 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     }
     const ogUrl = canonical ? (resultShare && rp ? `${canonical}?rp=${rp}` : canonical) : null;
     const ogTitle = resultShare?.ogTitle ?? (plainTitle || "Quiz");
-    const ogImage = resultShare?.imageUrl ?? r.meta.og_image_url ?? null;
+    // og:image TOUJOURS explicite (parite /q/[quizId]).
+    const defaultOgImage = quizRowId
+      ? (await buildCanonicalUrl(`/api/quiz/${quizRowId}/result-og`)) ??
+        `https://quiz.tipote.com/api/quiz/${quizRowId}/result-og`
+      : null;
+    const ogImage = resultShare?.imageUrl ?? (String(r.meta.og_image_url ?? "").trim() || defaultOgImage);
     const titleOverride = siteName
       ? { absolute: `${plainTitle || "Quiz"} · ${siteName}` }
       : (plainTitle || "Quiz");
