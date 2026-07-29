@@ -29,13 +29,26 @@ import { TrackingPixels } from "@/components/tracking/TrackingPixels";
 import { resolveEffectivePixels } from "@/lib/effectivePixels";
 import { isReservedPublicSlug } from "@/lib/publicSlug";
 import { stripHtml } from "@/lib/richText";
+import { interpolateText } from "@/lib/quizPersonalization";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
 export const dynamic = "force-dynamic";
 
 const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
 
-type Props = { params: Promise<{ publicSlug: string }> };
+type Props = { params: Promise<{ publicSlug: string }>; searchParams?: Promise<{ rp?: string }> };
+
+// "J'ai obtenu : <profil>" dans la langue du quiz (partage de resultat
+// ?rp=<resultId>), parite avec /q/[quizId].
+const OG_GOT: Record<string, (t: string) => string> = {
+  fr: (t) => `J'ai obtenu : ${t}`,
+  en: (t) => `I got: ${t}`,
+  es: (t) => `He obtenido: ${t}`,
+  de: (t) => `Mein Ergebnis: ${t}`,
+  pt: (t) => `Meu resultado: ${t}`,
+  it: (t) => `Ho ottenuto: ${t}`,
+  ar: (t) => `حصلت على: ${t}`,
+};
 
 async function resolveCustomDomainOwner(): Promise<string | null> {
   const h = await headers();
@@ -52,7 +65,7 @@ async function resolveCustomDomainOwner(): Promise<string | null> {
 
 type ResolvedPopquiz = NonNullable<Awaited<ReturnType<typeof fetchPublishedPopquiz>>>;
 type Resolved =
-  | { kind: "quiz"; meta: { title?: string | null; introduction?: string | null; og_image_url?: string | null; og_description?: string | null; meta_pixel_id?: string | null; ga4_measurement_id?: string | null; google_ads_conversion_id?: string | null } }
+  | { kind: "quiz"; meta: { id?: string | null; title?: string | null; introduction?: string | null; og_image_url?: string | null; og_description?: string | null; share_message?: string | null; locale?: string | null; meta_pixel_id?: string | null; ga4_measurement_id?: string | null; google_ads_conversion_id?: string | null } }
   | { kind: "popquiz"; popquiz: ResolvedPopquiz }
   | null;
 
@@ -70,7 +83,7 @@ async function resolve(slug: string, ownerId: string): Promise<Resolved> {
   // On matche d'abord par id si c'est un UUID, sinon par slug.
   const quizBase = supabaseAdmin
     .from("quizzes")
-    .select("title, introduction, og_image_url, og_description, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id")
+    .select("id, title, introduction, og_image_url, og_description, share_message, locale, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id")
     .eq("user_id", ownerId)
     .eq("status", "active");
   const { data: quiz } = await (
@@ -97,8 +110,10 @@ async function resolve(slug: string, ownerId: string): Promise<Resolved> {
   return { kind: "popquiz", popquiz };
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { publicSlug } = await params;
+  const sp = searchParams ? await searchParams : {};
+  const rp = typeof sp?.rp === "string" && UUID_RE.test(sp.rp) ? sp.rp : null;
   if (isReservedPublicSlug(publicSlug)) return {};
   const owner = await resolveCustomDomainOwner();
   if (!owner) return {};
@@ -128,8 +143,43 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // ici aussi (title + og_description) pour parité.
     const plainTitle = stripHtml(r.meta.title);
     const ogDescRaw = stripHtml(r.meta.og_description);
+    // FB/LinkedIn n'affichent que l'apercu du lien : le message de partage
+    // sert de description par defaut (retour Jocelyne 28 juillet 2026),
+    // parite avec /q/[quizId].
+    const shareMsgPlain = stripHtml((r.meta as { share_message?: string | null }).share_message);
     const introPlain = stripHtml(r.meta.introduction);
-    const description = (ogDescRaw || introPlain.slice(0, 160)).trim() || undefined;
+    const description = (ogDescRaw || shareMsgPlain || introPlain.slice(0, 160)).trim() || undefined;
+
+    // Partage du PROFIL obtenu (?rp=) : og:title "J'ai obtenu : <profil>"
+    // + visuel du profil (image du createur sinon carte generee), parite
+    // avec /q/[quizId]. Retour Jocelyne 28 juillet 2026.
+    let resultShare: { ogTitle: string; imageUrl: string } | null = null;
+    const quizRowId = String((r.meta as { id?: string | null }).id ?? "");
+    if (rp && quizRowId) {
+      const { data: rrow } = await supabaseAdmin
+        .from("quiz_results")
+        .select("quiz_id, title, image_url")
+        .eq("id", rp)
+        .maybeSingle();
+      if (rrow && rrow.quiz_id === quizRowId) {
+        const cleanTitle = stripHtml(interpolateText(rrow.title as string, { name: "", gender: "x" }))
+          .replace(/\s+/g, " ")
+          .replace(/^[\s,;:.!?-]+/, "")
+          .trim();
+        if (cleanTitle) {
+          const loc = String((r.meta as { locale?: string | null }).locale ?? "fr").split("-")[0];
+          const got = (OG_GOT[loc] ?? OG_GOT.fr)(cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1));
+          const generated =
+            (await buildCanonicalUrl(`/api/quiz/${quizRowId}/result-og?rp=${rp}`)) ??
+            `https://quiz.tipote.com/api/quiz/${quizRowId}/result-og?rp=${rp}`;
+          const resultImage = String((rrow as { image_url?: string | null }).image_url ?? "").trim();
+          resultShare = { ogTitle: got, imageUrl: resultImage || generated };
+        }
+      }
+    }
+    const ogUrl = canonical ? (resultShare && rp ? `${canonical}?rp=${rp}` : canonical) : null;
+    const ogTitle = resultShare?.ogTitle ?? (plainTitle || "Quiz");
+    const ogImage = resultShare?.imageUrl ?? r.meta.og_image_url ?? null;
     const titleOverride = siteName
       ? { absolute: `${plainTitle || "Quiz"} · ${siteName}` }
       : (plainTitle || "Quiz");
@@ -149,20 +199,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           }
         : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
+      ...(resultShare
+        ? { robots: { index: false, follow: false, googleBot: { index: false, follow: false } } }
+        : {}),
       openGraph: {
-        title: plainTitle || "Quiz",
+        title: ogTitle,
         description,
         ...(siteName ? { siteName } : {}),
-        ...(canonical ? { url: canonical } : {}),
-        ...(r.meta.og_image_url
-          ? { images: [{ url: r.meta.og_image_url }] }
-          : {}),
+        ...(ogUrl ? { url: ogUrl } : {}),
+        ...(ogImage ? { images: [{ url: ogImage }] } : {}),
       },
       twitter: {
         card: "summary_large_image",
-        title: plainTitle || "Quiz",
+        title: ogTitle,
         ...(description ? { description } : {}),
-        ...(r.meta.og_image_url ? { images: [r.meta.og_image_url] } : {}),
+        ...(ogImage ? { images: [ogImage] } : {}),
       },
     };
   }
