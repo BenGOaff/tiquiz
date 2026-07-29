@@ -4985,6 +4985,20 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 </label>
               )}
               <p className="text-[10px] text-muted-foreground">{t("shareTabOgImageDimsHint")}</p>
+              {/* Facebook cache l'apercu d'un lien deja partage : apres un
+                  changement ici (message, image, titre), il faut forcer le
+                  rafraichissement via son debogueur (demande Bene 28/07). */}
+              <p className="text-[10px] text-muted-foreground">
+                {t("shareTabFbCacheHint")}{" "}
+                <a
+                  href="https://developers.facebook.com/tools/debug/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-2 hover:text-foreground"
+                >
+                  {t("shareTabFbCacheLink")}
+                </a>
+              </p>
             </div>
 
             {/* Toggle "masquer aux moteurs de recherche" — pendant CWS
