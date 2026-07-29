@@ -47,6 +47,11 @@ interface PlusTrialEmailArgs {
   actionLink?: string | null;
   /** Durée de l'offre, formatée (ex: "2 mois", "60 jours"). */
   durationLabel?: string | null;
+  /** Durée en jours. Choisit l'intro : offre longue (>= 30 j) = cohorte
+   *  des "premiers inscrits" (20 places) ; offre courte = les 15 jours
+   *  offerts d'office a tous les membres, une fois les places ecoulees
+   *  (Bene 28 juil 2026). */
+  days?: number | null;
 }
 
 function buildContent(args: PlusTrialEmailArgs): { subject: string; html: string; text: string } {
@@ -73,6 +78,17 @@ function buildContent(args: PlusTrialEmailArgs): { subject: string; html: string
 
   const subject = "Ton accès Tiquiz Plus offert est activé";
 
+  // "Premiers inscrits" seulement pour l'offre longue (les 20 places de
+  // 2 mois). L'offre 15 jours est servie a TOUS les membres suivants :
+  // le dire ainsi, sinon le message est faux.
+  const firstCohort = (args.days ?? 60) >= 30;
+  const introHtml = firstCohort
+    ? `Bonne nouvelle : tu fais partie des premiers inscrits à l'Atelier du Quiz, et tu reçois <strong>${duration} au meilleur plan de Tiquiz (Plus), gratuitement</strong>.`
+    : `Bonne nouvelle : en tant que membre de l'Atelier du Quiz, tu reçois <strong>${duration} au meilleur plan de Tiquiz (Plus), gratuitement</strong>.`;
+  const introText = firstCohort
+    ? `Tu fais partie des premiers inscrits a l'Atelier du Quiz, et tu recois ${duration} au meilleur plan de Tiquiz (Plus), gratuitement.`
+    : `En tant que membre de l'Atelier du Quiz, tu recois ${duration} au meilleur plan de Tiquiz (Plus), gratuitement.`;
+
   const html = `<!doctype html>
 <html lang="fr">
 <body style="margin:0;padding:0;background:#f6f7fb;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2430;">
@@ -84,7 +100,7 @@ function buildContent(args: PlusTrialEmailArgs): { subject: string; html: string
           <div style="color:#ffffff;font-size:22px;font-weight:700;margin-top:6px;">${duration} de Tiquiz Plus, offert</div>
         </td></tr>
         <tr><td style="padding:28px 32px;">
-          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Bonne nouvelle : tu fais partie des premiers inscrits à l'Atelier du Quiz, et tu reçois <strong>${duration} au meilleur plan de Tiquiz (Plus), gratuitement</strong>.</p>
+          <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">${introHtml}</p>
           <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Tu as accès à tout ce que Plus débloque : multiprofils, analyse IA des résultats, et le reste, sans aucune limite pendant ${duration}.</p>
           ${startLine ? `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3730a3;"><strong>${startLine}</strong></p>` : ""}
           <div style="background:#f1f5ff;border:1px solid #e0e7ff;border-radius:12px;padding:16px 18px;margin:0 0 20px;">
@@ -107,7 +123,7 @@ function buildContent(args: PlusTrialEmailArgs): { subject: string; html: string
   const text = [
     `${duration} de Tiquiz Plus, offert`,
     "",
-    `Tu fais partie des premiers inscrits a l'Atelier du Quiz, et tu recois ${duration} au meilleur plan de Tiquiz (Plus), gratuitement.`,
+    introText,
     `Tu as acces a tout ce que Plus debloque (multiprofils, analyse IA des resultats, et le reste) sans limite pendant ${duration}.`,
     ...(startLine ? ["", startLine] : []),
     "",
