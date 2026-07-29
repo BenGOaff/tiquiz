@@ -201,7 +201,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     return {
       title: titleOverride,
       description,
-      ...(FB_APP_ID ? { other: { "fb:app_id": FB_APP_ID } } : {}),
+      ...(FB_APP_ID ? { facebook: { appId: FB_APP_ID } } : {}),
       ...robotsMeta,
       ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
