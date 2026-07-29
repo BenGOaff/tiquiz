@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Video,
   HandCoins,
+  GraduationCap,
 } from "lucide-react";
 import {
   Sidebar,
@@ -166,6 +167,36 @@ function SidebarCollapseButton() {
 
 export function AppSidebar() {
   const t = useTranslations("nav");
+  // L'Atelier du Quiz (formation de Bene) n'existe qu'en francais : la
+  // carte de conversion ci-dessous n'est montree qu'aux interfaces FR.
+  const locale = useLocale();
+
+  // Eleve de l'Atelier ou pas ? null = pas encore su (aucune carte
+  // affichee, pour ne jamais montrer le mauvais message). Verifie
+  // aupres de l'Atelier via /api/me/atelier-status, memorise pour la
+  // session navigateur (une seule requete cross-app par session).
+  const [hasAtelier, setHasAtelier] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (locale !== "fr") return;
+    try {
+      const cached = window.sessionStorage.getItem("tiquiz_atelier_status");
+      if (cached !== null) {
+        setHasAtelier(cached === "1");
+        return;
+      }
+    } catch { /* sessionStorage indispo (navigation privee stricte) */ }
+    let cancelled = false;
+    fetch("/api/me/atelier-status")
+      .then((r) => r.json())
+      .then((j) => {
+        if (cancelled) return;
+        const v = j?.hasAtelier === true;
+        setHasAtelier(v);
+        try { window.sessionStorage.setItem("tiquiz_atelier_status", v ? "1" : "0"); } catch { /* noop */ }
+      })
+      .catch(() => { if (!cancelled) setHasAtelier(false); });
+    return () => { cancelled = true; };
+  }, [locale]);
 
   return (
     <Sidebar collapsible="offcanvas">
@@ -213,6 +244,47 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 space-y-1">
         <TutorialNudge />
+
+        {/* Carte de conversion vers L'Atelier du Quiz (demande Bene
+            28 juillet 2026). Emplacement : pied de sidebar, toujours
+            visible sans encombrer le menu. FR uniquement (la formation
+            n'existe qu'en francais). Tiquiz seulement, pas Tipote.
+            Deux variantes : non-eleve -> decouvrir l'Atelier ; eleve
+            -> recommander l'Atelier (70% de commission, espace
+            affiliation de l'Atelier). Rien tant que le statut n'est
+            pas connu, pour ne jamais montrer le mauvais message. */}
+        {locale === "fr" && hasAtelier === false && (
+          <a
+            href="https://www.tipote.fr/atelier-du-quiz"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-2 block rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5 transition-colors hover:bg-primary/10"
+          >
+            <span className="block text-[11px] leading-snug text-muted-foreground">
+              {t("atelierNudgeQuestion")}
+            </span>
+            <span className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-primary">
+              <GraduationCap className="h-4 w-4 shrink-0" />
+              {t("atelierNudgeCta")}
+            </span>
+          </a>
+        )}
+        {locale === "fr" && hasAtelier === true && (
+          <a
+            href="https://quizing.tipote.com/affiliation"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-2 block rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5 transition-colors hover:bg-primary/10"
+          >
+            <span className="block text-[11px] leading-snug text-muted-foreground">
+              {t("atelierAffNudgeText")}
+            </span>
+            <span className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-primary">
+              <HandCoins className="h-4 w-4 shrink-0" />
+              {t("atelierAffNudgeCta")}
+            </span>
+          </a>
+        )}
 
         <SidebarMenu>
           <SidebarMenuItem>

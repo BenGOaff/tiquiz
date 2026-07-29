@@ -199,6 +199,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       prePlanLabel: PRE_PLAN_LABELS[currentPlan] ?? null,
       actionLink,
       durationLabel,
+      days,
     });
 
     return NextResponse.json({
@@ -283,6 +284,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     prePlanLabel: "gratuit",
     actionLink,
     durationLabel,
+    days,
   });
 
   return NextResponse.json({
