@@ -605,6 +605,9 @@ export const ALLOWED_SHARE_NETWORKS = [
   "facebook",
   "linkedin",
   "x",
+  // whatsapp manquait ici alors que le viewer le gere depuis toujours
+  // (il n'apparaissait que via la liste par defaut, jamais cochable).
+  "whatsapp",
   "instagram",
   "pinterest",
   "threads",

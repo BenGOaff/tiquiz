@@ -42,7 +42,7 @@ async function resolveCustomDomainOwner(): Promise<string | null> {
 
 // Champs sélectionnés sur quizzes — étendre ici si on ajoute des
 // colonnes (ex : pixel ids) dont on a besoin server-side.
-const QUIZ_META_FIELDS = "id, user_id, slug, title, introduction, og_image_url, og_description, seo_noindex, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id";
+const QUIZ_META_FIELDS = "id, user_id, slug, title, introduction, og_image_url, og_description, share_message, seo_noindex, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id";
 
 async function fetchQuizMeta(slugOrId: string) {
   if (UUID_RE.test(slugOrId)) {
@@ -88,8 +88,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // d'entités `&nbsp;` qui apparaissent en clair dans l'aperçu de
     // partage iMessage / WhatsApp). Cf. rapport Adeline (16 mai 2026).
     const ogDescRaw = stripHtml(data.og_description);
+    // Facebook et LinkedIn ne preremplissent JAMAIS le texte d'un partage
+    // (limitation de leurs sharers) : la seule chose visible est l'apercu
+    // du lien. Pour que "la phrase definie par le createur" apparaisse
+    // quand meme (retour Jocelyne 28 juillet 2026), le message de partage
+    // sert de description d'apercu par defaut ; une description OG
+    // explicite garde la priorite.
+    const shareMsgPlain = stripHtml((data as { share_message?: string | null }).share_message);
     const introPlain = stripHtml(data.introduction);
-    const rawDesc = ogDescRaw || introPlain.slice(0, 160);
+    const rawDesc = ogDescRaw || shareMsgPlain || introPlain.slice(0, 160);
     const description = rawDesc.trim() || undefined;
     const plainTitle = stripHtml(data.title);
 

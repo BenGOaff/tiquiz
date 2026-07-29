@@ -70,7 +70,7 @@ async function resolve(slug: string, ownerId: string): Promise<Resolved> {
   // On matche d'abord par id si c'est un UUID, sinon par slug.
   const quizBase = supabaseAdmin
     .from("quizzes")
-    .select("title, introduction, og_image_url, og_description, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id")
+    .select("title, introduction, og_image_url, og_description, share_message, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id")
     .eq("user_id", ownerId)
     .eq("status", "active");
   const { data: quiz } = await (
@@ -128,8 +128,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // ici aussi (title + og_description) pour parité.
     const plainTitle = stripHtml(r.meta.title);
     const ogDescRaw = stripHtml(r.meta.og_description);
+    // FB/LinkedIn n'affichent que l'apercu du lien : le message de partage
+    // sert de description par defaut (retour Jocelyne 28 juillet 2026),
+    // parite avec /q/[quizId].
+    const shareMsgPlain = stripHtml((r.meta as { share_message?: string | null }).share_message);
     const introPlain = stripHtml(r.meta.introduction);
-    const description = (ogDescRaw || introPlain.slice(0, 160)).trim() || undefined;
+    const description = (ogDescRaw || shareMsgPlain || introPlain.slice(0, 160)).trim() || undefined;
     const titleOverride = siteName
       ? { absolute: `${plainTitle || "Quiz"} · ${siteName}` }
       : (plainTitle || "Quiz");

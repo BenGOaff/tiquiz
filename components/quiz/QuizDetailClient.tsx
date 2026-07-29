@@ -4308,6 +4308,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         className="text-sm bg-background border rounded-lg"
                         placeholder={t("shareMessageDefault")}
                       />
+                      <p className="text-[11px] text-muted-foreground">
+                        {t("shareMessageHint")}
+                      </p>
                     </div>
 
                     {/* Share buttons mockup — reflect actual configured networks */}

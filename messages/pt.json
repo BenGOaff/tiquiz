@@ -1132,7 +1132,7 @@
     "remove": "Remover",
     "addBonusVisual": "Adicionar um visual",
     "shareMessageLabel": "Mensagem de partilha",
-    "shareMessageHint": "Texto pré-preenchido quando o visitante partilha.",
+    "shareMessageHint": "Preenchido quando o visitante partilha no X, WhatsApp, Threads ou pelo telemóvel. O Facebook e o LinkedIn nunca preenchem o texto: mostram a pré-visualização do link, cuja descrição usa esta mensagem (salvo se definires uma descrição OG personalizada).",
     "shareMessageDefault": "Acabei de fazer o quiz \"{title}\"!",
     "shareTagLabel": "Tag Systeme.io após partilha",
     "shareTagHint": "Adicionada ao contacto quando este partilha realmente. Despoleta a tua automatização.",

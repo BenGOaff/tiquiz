@@ -1116,7 +1116,7 @@
     "remove": "Remove",
     "addBonusVisual": "Add a visual",
     "shareMessageLabel": "Share message",
-    "shareMessageHint": "Pre-filled text when the visitor shares.",
+    "shareMessageHint": "Pre-filled when the visitor shares on X, WhatsApp, Threads or from their phone. Facebook and LinkedIn never pre-fill text: they show the link preview, whose description uses this message (unless you set a custom OG description).",
     "shareMessageDefault": "I just took the quiz \"{title}\"!",
     "shareTagLabel": "Systeme.io tag after share",
     "shareTagHint": "Added to the contact when they actually share. Triggers your automation.",
