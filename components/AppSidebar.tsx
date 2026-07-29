@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Video,
   HandCoins,
+  GraduationCap,
 } from "lucide-react";
 import {
   Sidebar,
@@ -166,6 +167,9 @@ function SidebarCollapseButton() {
 
 export function AppSidebar() {
   const t = useTranslations("nav");
+  // L'Atelier du Quiz (formation de Bene) n'existe qu'en francais : la
+  // carte de conversion ci-dessous n'est montree qu'aux interfaces FR.
+  const locale = useLocale();
 
   return (
     <Sidebar collapsible="offcanvas">
@@ -213,6 +217,27 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 space-y-1">
         <TutorialNudge />
+
+        {/* Carte de conversion vers L'Atelier du Quiz (demande Bene
+            28 juillet 2026). Emplacement : pied de sidebar, toujours
+            visible sans encombrer le menu. FR uniquement (la formation
+            n'existe qu'en francais). Tiquiz seulement, pas Tipote. */}
+        {locale === "fr" && (
+          <a
+            href="https://www.tipote.fr/atelier-du-quiz"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-2 block rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5 transition-colors hover:bg-primary/10"
+          >
+            <span className="block text-[11px] leading-snug text-muted-foreground">
+              {t("atelierNudgeQuestion")}
+            </span>
+            <span className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-primary">
+              <GraduationCap className="h-4 w-4 shrink-0" />
+              {t("atelierNudgeCta")}
+            </span>
+          </a>
+        )}
 
         <SidebarMenu>
           <SidebarMenuItem>
