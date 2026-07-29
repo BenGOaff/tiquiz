@@ -205,6 +205,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       openGraph: {
         title: ogTitle,
         description,
+        type: "website",
         ...(siteName ? { siteName } : {}),
         ...(ogUrl ? { url: ogUrl } : {}),
         ...(ogImage ? { images: [{ url: ogImage }] } : {}),
