@@ -1325,6 +1325,8 @@
     "shareTabOgImageHint": "Imagem mostrada pelo WhatsApp, iMessage, X, etc. ao compartilhar o link. Sem upload, exibe-se nosso logo.",
     "shareTabOgImageUpload": "Carregar uma imagem",
     "shareTabOgImageDimsHint": "Recomendado: 1200 × 630 px. Máx 10 MB.",
+    "shareTabFbCacheHint": "A prévia do Facebook não atualiza? O Facebook guarda a antiga em cache: cole a URL do quiz no depurador dele e clique em Scrape Again.",
+    "shareTabFbCacheLink": "Abrir o depurador do Facebook",
     "ogImageUploaded": "Miniatura salva",
     "showConsentCheckboxLabel": "Mostrar checkbox de consentimento",
     "showConsentCheckboxHint": "",

@@ -1324,6 +1324,8 @@
     "shareTabOgImageHint": "الصورة التي تظهر على واتساب وآي مسج وإكس عند مشاركة الرابط. بدون رفع، يظهر شعارنا.",
     "shareTabOgImageUpload": "رفع صورة",
     "shareTabOgImageDimsHint": "موصى به: 1200 × 630 بكسل. الحد الأقصى 10 ميغابايت.",
+    "shareTabFbCacheHint": "معاينة فيسبوك غير محدّثة؟ يحتفظ فيسبوك بالقديمة في الذاكرة المؤقتة: الصق رابط الاختبار في أداة التصحيح ثم اضغط Scrape Again.",
+    "shareTabFbCacheLink": "فتح أداة تصحيح فيسبوك",
     "ogImageUploaded": "تم حفظ الصورة المصغرة",
     "showConsentCheckboxLabel": "إظهار خانة الموافقة",
     "showConsentCheckboxHint": "",
