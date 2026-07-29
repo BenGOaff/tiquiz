@@ -33,6 +33,10 @@ const OG_GOT: Record<string, (t: string) => string> = {
   ar: (t) => `حصلت على: ${t}`,
 };
 
+// App Facebook de Bene (facultatif) : quand FACEBOOK_APP_ID est pose,
+// on emet fb:app_id et le debogueur FB n'affiche plus d'avertissement.
+const FB_APP_ID = (process.env.FACEBOOK_APP_ID ?? "").trim();
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Header set by middleware when the request arrived through a creator
@@ -191,6 +195,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     return {
       title: titleOverride,
       description,
+      ...(FB_APP_ID ? { other: { "fb:app_id": FB_APP_ID } } : {}),
       ...robotsMeta,
       ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
