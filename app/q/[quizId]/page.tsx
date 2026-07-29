@@ -190,12 +190,18 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     // canonical SEO, lui, reste la page quiz nue.
     const ogUrl = canonical ? (resultShare && rp ? `${canonical}?rp=${rp}` : canonical) : null;
     const ogTitle = resultShare?.ogTitle ?? plainTitle;
-    const ogImage = resultShare?.imageUrl ?? data.og_image_url ?? null;
+    // og:image TOUJOURS explicite : vignette du createur, sinon carte
+    // generee aux couleurs du quiz (sans balise, le debogueur FB alerte
+    // "propriete deduite", retour Bene 28 juillet 2026).
+    const defaultOgImage =
+      (await buildCanonicalUrl(`/api/quiz/${data.id}/result-og`)) ??
+      `https://quiz.tipote.com/api/quiz/${data.id}/result-og`;
+    const ogImage = resultShare?.imageUrl ?? (String(data.og_image_url ?? "").trim() || defaultOgImage);
 
     return {
       title: titleOverride,
       description,
-      ...(FB_APP_ID ? { other: { "fb:app_id": FB_APP_ID } } : {}),
+      ...(FB_APP_ID ? { facebook: { appId: FB_APP_ID } } : {}),
       ...robotsMeta,
       ...(siteName ? { applicationName: siteName } : {}),
       ...(canonical ? { alternates: { canonical } } : {}),
