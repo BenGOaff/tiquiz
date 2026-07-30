@@ -2599,7 +2599,15 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-background z-10">
         <div className="flex items-center gap-3">
           {!isEmbed && (
-            <Button variant="ghost" size="icon" asChild><Link href="/dashboard"><ArrowLeft className="w-5 h-5" /></Link></Button>
+            <Button variant="ghost" size="icon" onClick={() => {
+              // Retour = revenir là d'où on vient (Mes projets, dashboard,
+              // stats...), pas toujours /dashboard (retour Béné 30 juil
+              // 2026 : depuis Mes projets, la flèche renvoyait au
+              // dashboard). Fallback dur si l'éditeur a été ouvert
+              // directement (nouvel onglet, lien collé).
+              if (window.history.length > 1) router.back();
+              else router.push("/dashboard");
+            }}><ArrowLeft className="w-5 h-5" /></Button>
           )}
           {/* The title is stored as rich HTML (RichTextEdit on the
               preview canvas drives it). Plain-text rendering here
@@ -4173,7 +4181,17 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           const maxLength = typeof cfg.maxLength === "number" ? cfg.maxLength : 500;
                           return (
                             <div className="space-y-3">
-                              <textarea readOnly placeholder={t("previewFreeTextPh")} rows={5} maxLength={maxLength} className="w-full rounded-xl border-2 border-border px-4 py-3 text-base resize-none bg-muted/10" style={{ borderColor: `${pc}30` }} />
+                              <div className="relative">
+                                <textarea readOnly rows={5} maxLength={maxLength} className="w-full rounded-xl border-2 border-border px-4 py-3 text-base resize-none bg-muted/10" style={{ borderColor: `${pc}30` }} />
+                                {/* Placeholder ÉDITABLE (demande Béné 30 juil
+                                    2026) : le créateur clique sur le texte
+                                    d'invite et le personnalise. Stocké dans
+                                    config.placeholder, affiché tel quel côté
+                                    visiteur ("Ta réponse…" par défaut). */}
+                                <div className="absolute top-3 left-4 right-4">
+                                  <InlineEdit value={typeof cfg.placeholder === "string" ? cfg.placeholder : ""} onChange={(v) => updateQuestionConfig(qi, { placeholder: v.trim() ? v : null })} className="text-base text-muted-foreground/70 italic" placeholder={t("previewFreeTextPh")} />
+                                </div>
+                              </div>
                               <div className="flex items-center justify-between gap-2">
                                 <p className="text-xs italic" style={{ color: `${pc}99` }}>{t("freeTextNotCounted")}</p>
                                 <label className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-muted/60 rounded-full px-2.5 py-1 cursor-pointer" title={t("textMaxLengthHint")}>

@@ -3141,7 +3141,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
           <textarea
             value={draft}
             onChange={(e) => setFreeTextDraft(e.target.value.slice(0, maxLength))}
-            placeholder={t.freeTextPlaceholder}
+            placeholder={String(cfg.placeholder ?? "").trim() || t.freeTextPlaceholder}
             rows={5}
             className="w-full rounded-xl border-2 border-border focus:border-primary focus:ring-0 px-4 py-3 text-base resize-none outline-none transition-colors"
           />
