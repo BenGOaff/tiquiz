@@ -7,6 +7,7 @@ import {
   getActiveProjectScope,
   resolveProjectIdForInsert,
 } from "@/lib/projects/scopeFilter";
+import { normalizeScoringAxes } from "@/lib/quizScoring";
 import { resolveBrandingForRequest } from "@/lib/projects/businessProfile";
 import { designDefaultsToQuizColumns } from "@/lib/quizBranding";
 import { startPendingAtelierTrial } from "@/lib/plusTrial/startPending";
@@ -156,6 +157,11 @@ export async function POST(req: NextRequest) {
         // scoré" (rendu propre sans réglage). Les quiz existants ne
         // sont pas concernés (colonne default false).
         ...(mode === "scoring" && body.show_score_gauge === true ? { show_score_gauge: true } : {}),
+        // Axes du quiz scoré généré par l'IA (normalisés : labels non
+        // vides, 6 max, ids dédupliqués).
+        ...(mode === "scoring" && Array.isArray(body.scoring_axes) && normalizeScoringAxes(body.scoring_axes).length > 0
+          ? { scoring_axes: normalizeScoringAxes(body.scoring_axes) }
+          : {}),
         title,
         introduction: body.introduction ?? null,
         cta_text: body.cta_text ?? null,
