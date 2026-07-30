@@ -26,6 +26,7 @@ export default async function VisualTestPage({
       intro={pick("intro")}
       bg={pick("bg")}
       bonus={pick("bonus")}
+      score={pick("score")}
     />
   );
 }

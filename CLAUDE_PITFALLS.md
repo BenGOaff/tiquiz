@@ -1289,3 +1289,32 @@ Regles :
 - Sur les routes critiques, ne JAMAIS avaler l'erreur d'un select : logger et
   prevoir un retry avec le socle de colonnes historiques (fait sur
   quiz/[quizId]/public).
+
+## Scoring multi-axes — conventions (Véronique, 30 juillet 2026)
+
+Feature : axes de score (1 à 6) sur les quiz mode `scoring`, jauge globale
+opt-in, barres par axe, variables {score}/{label}/{score_<axe>}/{label_<axe>},
+tags SIO par tranche, snapshot des scores dans quiz_leads.scores.
+Toute la logique vit dans `lib/quizScoring.ts` (zéro dépendance, partagé
+viewer/éditeur/serveur). NE PAS ré-implémenter un calcul de score ailleurs.
+
+- **Un score = TOUJOURS un triplet {points, min, max}**, jamais un nombre nu
+  (points négatifs possibles, % = position dans [min, max]). Le snapshot
+  quiz_leads.scores est écrit à la capture, jamais recalculé depuis answers
+  (les points d'options peuvent changer après coup).
+- **L'id d'un axe est FIGÉ à la création** (slug du 1er label). Renommer le
+  label ne change PAS l'id : les placeholders et tags SIO déjà écrits
+  restent valides. `axisSlug()` se base sur l'id, jamais sur le label.
+- Les poids par question vivent dans `quiz_questions.config.axes`
+  (`{"<axisId>": poids}`) : PAS de colonne, pas de migration en cas d'évolution.
+- Le calcul GLOBAL (points/max) doit rester en parité stricte avec
+  `computeResult` mode scoring de PublicQuizClient (affichage X / Y et
+  tranches min_score/max_score matchent sur les points bruts).
+- La jauge est OPT-IN (`show_score_gauge`, default false) : les quiz scoring
+  existants gardent le "X / Y" texte. Les barres n'existent que si des axes
+  sont définis. Contrainte non négociable du brief : zéro changement sur
+  les quiz en ligne.
+- Placeholders : appliqués APRÈS interpolateText (ils traversent intact,
+  ni virgule ni pipe). Dans une URL (cta_url) : URL-encodés, et JAMAIS
+  l'email ni le prénom dans une URL.
+- Matrice visuelle : écran `result-score` ajouté (90 captures au total).

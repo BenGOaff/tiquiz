@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { Mascot } from "@/components/ui/mascot";
 import { stripHtml } from "@/lib/richText";
+import { formatScoresSummary } from "@/lib/quizScoring";
 import {
   Users, Download, RefreshCw, Search, Mail, Calendar,
   CheckCircle2, XCircle, Lock, Sparkles,
@@ -32,6 +33,8 @@ type Lead = {
   has_shared: boolean;
   created_at: string;
   quiz_results: { title: string; sio_tag_name: string | null } | null;
+  /** Snapshot {points,min,max} global + par axe (quiz mode scoring). */
+  scores?: unknown;
   /** Server-redacted PII — UI just adds a CSS blur on top. */
   locked?: boolean;
 };
@@ -114,6 +117,7 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
       t("csv.result"),
       t("csv.sioTag"),
       t("csv.syncSio"),
+      t("csv.scores"),
       t("csv.date"),
     ];
     // Locked rows are skipped — exporting `••••••` masks would only pollute
@@ -133,6 +137,7 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
       stripHtml(l.result_title ?? l.quiz_results?.title ?? ""),
       l.sio_tag_applied ?? l.quiz_results?.sio_tag_name ?? "",
       l.sio_synced ? t("csv.yes") : t("csv.no"),
+      formatScoresSummary(l.scores),
       new Date(l.created_at).toLocaleDateString(localeTag),
     ]);
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");

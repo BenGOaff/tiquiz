@@ -58,6 +58,13 @@ import { QrCodeCard } from "@/components/share/QrCodeCard";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { interpolateText, extractResultLabel } from "@/lib/quizPersonalization";
 import { analyzeTies, type TieConflict } from "@/lib/quizTieAnalysis";
+import {
+  normalizeScoringAxes, resolveScoreLabels, formatScoresSummary, scorePlaceholderList,
+  applyScorePlaceholders,
+  computeReachableRange, analyzeTrancheCoverage, slugifyAxisLabel,
+  MAX_SCORING_AXES,
+  type ScoringAxis, type ScoreLabels,
+} from "@/lib/quizScoring";
 import { stripHtml } from "@/lib/richText";
 import { isPixelFieldValid } from "@/lib/clientPixels";
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
@@ -166,7 +173,7 @@ type IntroImagePosition = "top" | "after_title" | "after_intro" | "bottom";
 // titre du bonus) | "after_heading" | "after_intro" | "bottom".
 type BonusImagePosition = "top" | "after_heading" | "after_intro" | "bottom";
 type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; insight_heading?: string | null; projection_heading?: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_tag_names?: string[] | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null; image_width?: number | null; min_score?: number | null; max_score?: number | null };
-type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; option_index?: number; option_indices?: number[] }[] | null; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
+type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; option_index?: number; option_indices?: number[] }[] | null; scores?: unknown; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
 type QuizData = {
   id: string; title: string; slug: string | null;
   introduction: string | null; cta_text: string | null; cta_url: string | null;
@@ -566,6 +573,13 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // GDPR-style checkbox. Only flips when the creator explicitly opts out.
   const [showConsentCheckbox, setShowConsentCheckbox] = useState(true);
   const [showResultsBreakdown, setShowResultsBreakdown] = useState(false);
+  // Scoring multi-axes + score visuel (Véronique, juillet 2026). Tout
+  // optionnel : pas d'axes + jauge off = comportement historique.
+  const [scoringAxesEdit, setScoringAxesEdit] = useState<ScoringAxis[]>([]);
+  const [showScoreGauge, setShowScoreGauge] = useState(false);
+  const [scoreDisplayMode, setScoreDisplayMode] = useState<"percent" | "label">("percent");
+  const [scoreLabelsEdit, setScoreLabelsEdit] = useState<ScoreLabels>(() => resolveScoreLabels(null, "fr"));
+  const [sioScoreTags, setSioScoreTags] = useState(false);
   // Masquer le nombre brut de réponses dans la synthèse (Résultats) et
   // n'afficher que les %. Default false = compteurs visibles (compat).
   const [hideResponseCounts, setHideResponseCounts] = useState(false);
@@ -847,6 +861,11 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     country_required: countryRequired,
     show_consent_checkbox: showConsentCheckbox,
     show_results_breakdown: showResultsBreakdown,
+    scoring_axes: scoringAxesEdit,
+    show_score_gauge: showScoreGauge,
+    score_display_mode: scoreDisplayMode,
+    score_labels: scoreLabelsEdit,
+    sio_score_tags: sioScoreTags,
     hide_response_counts: hideResponseCounts,
     notify_responses: notifyResponses,
     show_other_results: showOtherResults,
@@ -913,6 +932,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     captureEnabled, captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
     showConsentCheckbox, showResultsBreakdown, hideResponseCounts, notifyResponses, showOtherResults,
+    scoringAxesEdit, showScoreGauge, scoreDisplayMode, scoreLabelsEdit, sioScoreTags,
     metaPixelId, ga4MeasurementId, googleAdsConversionId, googleAdsConversionLabel,
     askFirstName, askGender,
     viralityEnabled, bonusDescription, bonusHeading, bonusIntroText, bonusUnlockedMessage, bonusImageUrl, bonusImagePosition, bonusImageWidth,
@@ -962,6 +982,11 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     if (typeof s.country_required === "boolean") setCountryRequired(s.country_required);
     if (typeof s.show_consent_checkbox === "boolean") setShowConsentCheckbox(s.show_consent_checkbox);
     if (typeof s.show_results_breakdown === "boolean") setShowResultsBreakdown(s.show_results_breakdown);
+    if (Array.isArray(s.scoring_axes)) setScoringAxesEdit(normalizeScoringAxes(s.scoring_axes));
+    if (typeof s.show_score_gauge === "boolean") setShowScoreGauge(s.show_score_gauge);
+    if (s.score_display_mode === "percent" || s.score_display_mode === "label") setScoreDisplayMode(s.score_display_mode);
+    if (s.score_labels && typeof s.score_labels === "object") setScoreLabelsEdit(resolveScoreLabels(s.score_labels, typeof s.locale === "string" ? s.locale : null));
+    if (typeof s.sio_score_tags === "boolean") setSioScoreTags(s.sio_score_tags);
     if (typeof s.hide_response_counts === "boolean") setHideResponseCounts(s.hide_response_counts);
     if (typeof s.notify_responses === "boolean") setNotifyResponses(s.notify_responses);
     if (typeof s.show_other_results === "boolean") setShowOtherResults(s.show_other_results);
@@ -1108,6 +1133,15 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setHideResponseCounts((q as { hide_response_counts?: boolean | null }).hide_response_counts === true);
       setNotifyResponses((q as { notify_responses?: boolean | null }).notify_responses !== false);
       setShowOtherResults((q as { show_other_results?: boolean | null }).show_other_results === true);
+      // Scoring multi-axes : normalisé au chargement (JSONB non typé).
+      setScoringAxesEdit(normalizeScoringAxes((q as { scoring_axes?: unknown }).scoring_axes));
+      setShowScoreGauge((q as { show_score_gauge?: boolean | null }).show_score_gauge === true);
+      {
+        const sdm = (q as { score_display_mode?: string | null }).score_display_mode;
+        setScoreDisplayMode(sdm === "label" ? "label" : "percent");
+      }
+      setScoreLabelsEdit(resolveScoreLabels((q as { score_labels?: unknown }).score_labels, (q as { locale?: string | null }).locale ?? null));
+      setSioScoreTags((q as { sio_score_tags?: boolean | null }).sio_score_tags === true);
       // Phase B pixels — chargés depuis la DB (chaîne vide si null
       // pour que le placeholder s'affiche dans l'input).
       setMetaPixelId((q as { meta_pixel_id?: string | null }).meta_pixel_id ?? "");
@@ -1231,6 +1265,11 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           capture_country: q.capture_country ?? false,
           show_consent_checkbox: (q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false,
           show_results_breakdown: (q as { show_results_breakdown?: boolean | null }).show_results_breakdown === true,
+          scoring_axes: normalizeScoringAxes((q as { scoring_axes?: unknown }).scoring_axes),
+          show_score_gauge: (q as { show_score_gauge?: boolean | null }).show_score_gauge === true,
+          score_display_mode: (q as { score_display_mode?: string | null }).score_display_mode === "label" ? "label" : "percent",
+          score_labels: resolveScoreLabels((q as { score_labels?: unknown }).score_labels, (q as { locale?: string | null }).locale ?? null),
+          sio_score_tags: (q as { sio_score_tags?: boolean | null }).sio_score_tags === true,
           hide_response_counts: (q as { hide_response_counts?: boolean | null }).hide_response_counts === true,
           notify_responses: (q as { notify_responses?: boolean | null }).notify_responses !== false,
           show_other_results: (q as { show_other_results?: boolean | null }).show_other_results === true,
@@ -1367,9 +1406,38 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // template (with placeholders) is preserved in the edit buffer — clicking a
   // field still shows the {name} text for editing. Marie's feedback (2026-04):
   // "Je trouve dommage de voir ce type de titre en aperçu du quiz".
+  // Chips de variables pour les CHAMPS DE RÉSULTAT uniquement : en mode
+  // scoring on ajoute {score}, {label} et les variantes par axe. Les
+  // questions/options gardent les chips de base (le score n'existe pas
+  // encore pendant les questions).
+  const resultVars = useMemo<QuizVarFlags>(
+    () => ({
+      name: askFirstName,
+      gender: askGender,
+      extra: isScoring ? scorePlaceholderList(scoringAxesEdit.filter((a) => a.label.trim())) : undefined,
+    }),
+    [askFirstName, askGender, isScoring, scoringAxesEdit],
+  );
+
+  // Valeurs de démo pour l'aperçu : {score} → 62, chaque axe une valeur
+  // variée, pour que le créateur voie un rendu réaliste (le template
+  // avec placeholders reste intact dans le buffer d'édition).
+  const previewScoreCtx = useMemo(() => {
+    if (!isScoring) return null;
+    const axes = scoringAxesEdit.filter((a) => a.label.trim());
+    const demo = [62, 35, 80, 50, 71, 24];
+    return {
+      snapshot: {
+        global: { points: 62, min: 0, max: 100 },
+        axes: Object.fromEntries(axes.map((a, i) => [a.id, { points: demo[i % demo.length], min: 0, max: 100 }])),
+      },
+      axes,
+      labels: scoreLabelsEdit,
+    };
+  }, [isScoring, scoringAxesEdit, scoreLabelsEdit]);
   const previewInterpolate = useCallback(
-    (text: string) => interpolateText(text, { name: PREVIEW_DEMO_NAME, gender: "x" }),
-    [],
+    (text: string) => applyScorePlaceholders(interpolateText(text, { name: PREVIEW_DEMO_NAME, gender: "x" }), previewScoreCtx),
+    [previewScoreCtx],
   );
 
   /**
@@ -1537,6 +1605,24 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       editResults.length,
     );
   }, [editQuestions, editResults]);
+
+  // Couverture des tranches (mode scoring, Véronique juillet 2026) :
+  // trous et chevauchements entre les [min_score, max_score] des
+  // résultats, comparés à la plage réellement atteignable. C'est le
+  // pendant scoring du détecteur d'ex-æquo ci-dessus (2 jours perdus
+  // par Véronique sur ce sujet : on le rend visible dans l'éditeur).
+  const trancheCoverage = useMemo(() => {
+    if (!isScoring || editResults.length === 0) return null;
+    const range = computeReachableRange(
+      editQuestions.map((q) => ({
+        question_type: q.question_type,
+        options: q.options,
+        config: (q.config ?? null) as Record<string, unknown> | null,
+      })),
+    );
+    if (range.max <= range.min) return null;
+    return { range, issues: analyzeTrancheCoverage(editResults, range.min, range.max) };
+  }, [isScoring, editQuestions, editResults]);
 
   // Bulk-genderize every text field of the quiz in one go. Used when the
   // author toggles "Ask gender" after the quiz was already generated without
@@ -2051,6 +2137,15 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           show_result_projection: showResultProjection,
           show_result_share: showResultShare,
           share_result_page: shareResultPage,
+          // Scoring multi-axes : envoyé uniquement en mode scoring pour
+          // ne rien toucher sur les quiz profil/sondage.
+          ...(isScoring ? {
+            scoring_axes: scoringAxesEdit.filter((a) => a.label.trim()),
+            show_score_gauge: showScoreGauge,
+            score_display_mode: scoreDisplayMode,
+            score_labels: scoreLabelsEdit,
+            sio_score_tags: sioScoreTags,
+          } : {}),
           close_enabled: closeEnabled,
           close_action: closeAction,
           close_redirect_url: closeRedirectUrl.trim() || null,
@@ -2357,12 +2452,85 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   };
   const addResult = () => setEditResults(p => [...p, { title: "", description: null, insight: null, projection: null, cta_text: null, cta_url: null, sio_tag_name: null, sio_tag_names: [], sio_course_id: null, sio_community_id: null, sort_order: p.length }]);
   const removeResult = (i: number) => { setEditResults(p => p.filter((_, ri) => ri !== i)); setEditQuestions(p => p.map(q => ({ ...q, options: q.options.map(o => ({ ...o, result_index: o.result_index > i ? o.result_index - 1 : o.result_index === i ? 0 : o.result_index })) }))); };
+
+  // ── Axes de score (mode scoring, Véronique juillet 2026) ─────────
+  // L'id d'un axe est FIGÉ une fois sauvegardé (slug du premier label) :
+  // renommer l'axe ensuite ne casse ni les placeholders {score_<axe>}
+  // déjà écrits dans les textes, ni les tags SIO. Un axe créé dans
+  // cette session (jamais sauvegardé) voit son id suivre le label le
+  // temps de la frappe, avec remap des poids déjà posés.
+  const freshAxisIdsRef = useRef<Set<string>>(new Set());
+  const remapQuestionAxisId = (oldId: string, newId: string | null) => {
+    setEditQuestions((qs) => qs.map((q) => {
+      const axes = (q.config?.axes ?? null) as Record<string, number> | null;
+      if (!axes || !(oldId in axes)) return q;
+      const { [oldId]: w, ...rest } = axes;
+      const nextAxes = newId ? { ...rest, [newId]: w } : rest;
+      const cfg = { ...(q.config ?? {}) } as Record<string, unknown>;
+      if (Object.keys(nextAxes).length > 0) cfg.axes = nextAxes; else delete cfg.axes;
+      return { ...q, config: cfg };
+    }));
+  };
+  const addScoringAxis = () => {
+    setScoringAxesEdit((p) => {
+      if (p.length >= MAX_SCORING_AXES) return p;
+      const id = `axe_${p.length + 1}_${Math.random().toString(36).slice(2, 6)}`;
+      freshAxisIdsRef.current.add(id);
+      return [...p, { id, label: "" }];
+    });
+  };
+  const renameScoringAxis = (ai: number, label: string) => {
+    const axis = scoringAxesEdit[ai];
+    if (!axis) return;
+    let finalId = axis.id;
+    if (freshAxisIdsRef.current.has(axis.id)) {
+      const nid = slugifyAxisLabel(label) || axis.id;
+      const collision = scoringAxesEdit.some((x, xi) => xi !== ai && x.id === nid);
+      if (!collision && nid !== axis.id) {
+        finalId = nid;
+        freshAxisIdsRef.current.delete(axis.id);
+        freshAxisIdsRef.current.add(nid);
+        remapQuestionAxisId(axis.id, nid);
+      }
+    }
+    setScoringAxesEdit((p) => p.map((a, i) => (i === ai ? { id: finalId, label } : a)));
+  };
+  const removeScoringAxis = (ai: number) => {
+    const axis = scoringAxesEdit[ai];
+    if (axis) {
+      freshAxisIdsRef.current.delete(axis.id);
+      remapQuestionAxisId(axis.id, null);
+    }
+    setScoringAxesEdit((p) => p.filter((_, i) => i !== ai));
+  };
+  const toggleQuestionAxis = (qi: number, axisId: string) => {
+    setEditQuestions((p) => p.map((q, i) => {
+      if (i !== qi) return q;
+      const axes = { ...((q.config?.axes as Record<string, number> | undefined) ?? {}) };
+      if (axisId in axes) delete axes[axisId]; else axes[axisId] = 1;
+      const cfg = { ...(q.config ?? {}) } as Record<string, unknown>;
+      if (Object.keys(axes).length > 0) cfg.axes = axes; else delete cfg.axes;
+      return { ...q, config: cfg };
+    }));
+  };
+  const setQuestionAxisWeight = (qi: number, axisId: string, w: number) => {
+    setEditQuestions((p) => p.map((q, i) => {
+      if (i !== qi) return q;
+      const axes = { ...((q.config?.axes as Record<string, number> | undefined) ?? {}) };
+      if (!(axisId in axes)) return q;
+      axes[axisId] = Math.max(1, Math.min(9, Math.trunc(w) || 1));
+      return { ...q, config: { ...(q.config ?? {}), axes } };
+    }));
+  };
   const handleExportCSV = () => {
     if (!leads.length) return;
     // Strip rich-text formatting from result_title before it lands in
     // a CSV cell — raw `<span style=…>` markup would otherwise leak
     // into the spreadsheet (cf. rapport Adeline, 17 mai 2026).
-    const csv = [t("csvHeader"), ...leads.map(l => [l.email, l.first_name ?? "", l.last_name ?? "", stripHtml(l.result_title ?? ""), l.created_at ? new Date(l.created_at).toLocaleDateString() : ""].map(c => `"${String(c).replace(/"/g,'""')}"`).join(","))].join("\n");
+    // Mode scoring : colonne Scores en plus (résumé "score=62% ; sommeil=50%"
+    // depuis le snapshot du lead). Les autres modes gardent le format actuel.
+    const header = isScoring ? `${t("csvHeader")},"${t("csvScoresHeader")}"` : t("csvHeader");
+    const csv = [header, ...leads.map(l => [l.email, l.first_name ?? "", l.last_name ?? "", stripHtml(l.result_title ?? ""), ...(isScoring ? [formatScoresSummary(l.scores)] : []), l.created_at ? new Date(l.created_at).toLocaleDateString() : ""].map(c => `"${String(c).replace(/"/g,'""')}"`).join(","))].join("\n");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = `leads-${quizId}.csv`; a.click();
   };
 
@@ -3352,6 +3520,92 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     checked={shareResultPage}
                     onChange={v => setShareResultPage(v)}
                   />
+                  {/* ── Score visuel + axes (mode scoring, Véronique juillet
+                      2026). Tout optionnel : jauge off + zéro axe =
+                      comportement historique inchangé. ── */}
+                  {isScoring && (
+                    <div className="mt-2 space-y-3 rounded-xl border p-3">
+                      <p className="text-sm font-semibold">{t("scoringVisualTitle")}</p>
+                      <SettingsToggle
+                        label={t("optionScoreGauge")}
+                        hint={t("optionScoreGaugeHint")}
+                        checked={showScoreGauge}
+                        onChange={v => setShowScoreGauge(v)}
+                      />
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-semibold">{t("scoringAxesLabel")}</p>
+                        <p className="text-[11px] text-muted-foreground leading-snug">{t("scoringAxesHint")}</p>
+                        {scoringAxesEdit.map((axis, ai) => (
+                          <div key={axis.id} className="flex items-center gap-1.5">
+                            <Input
+                              value={axis.label}
+                              onChange={(e) => renameScoringAxis(ai, e.target.value)}
+                              placeholder={t("scoringAxisPh")}
+                              className="h-8 text-sm"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeScoringAxis(ai)}
+                              className="p-1.5 rounded text-muted-foreground hover:text-destructive transition-colors"
+                              aria-label={t("scoringRemoveAxis")}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                        {scoringAxesEdit.length < MAX_SCORING_AXES && (
+                          <Button type="button" variant="outline" size="sm" onClick={addScoringAxis}>
+                            <Plus className="w-3.5 h-3.5 mr-1" />
+                            {t("scoringAddAxis")}
+                          </Button>
+                        )}
+                      </div>
+                      {(showScoreGauge || scoringAxesEdit.length > 0) && (
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-semibold">{t("scoreDisplayLabel")}</p>
+                          <div className="flex items-center gap-3 text-sm">
+                            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                              <input type="radio" name="score-display-mode" checked={scoreDisplayMode === "percent"} onChange={() => setScoreDisplayMode("percent")} className="accent-primary" />
+                              {t("scoreDisplayPercent")}
+                            </label>
+                            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                              <input type="radio" name="score-display-mode" checked={scoreDisplayMode === "label"} onChange={() => setScoreDisplayMode("label")} className="accent-primary" />
+                              {t("scoreDisplayWord")}
+                            </label>
+                          </div>
+                          {scoreDisplayMode === "label" && (
+                            <div className="grid grid-cols-3 gap-1.5">
+                              <div className="space-y-0.5">
+                                <p className="text-[10px] text-muted-foreground">{t("scoreLabelLow")}</p>
+                                <Input value={scoreLabelsEdit.low} onChange={(e) => setScoreLabelsEdit((prev) => ({ ...prev, low: e.target.value }))} className="h-8 text-sm" />
+                              </div>
+                              <div className="space-y-0.5">
+                                <p className="text-[10px] text-muted-foreground">{t("scoreLabelMid")}</p>
+                                <Input value={scoreLabelsEdit.mid} onChange={(e) => setScoreLabelsEdit((prev) => ({ ...prev, mid: e.target.value }))} className="h-8 text-sm" />
+                              </div>
+                              <div className="space-y-0.5">
+                                <p className="text-[10px] text-muted-foreground">{t("scoreLabelHigh")}</p>
+                                <Input value={scoreLabelsEdit.high} onChange={(e) => setScoreLabelsEdit((prev) => ({ ...prev, high: e.target.value }))} className="h-8 text-sm" />
+                              </div>
+                            </div>
+                          )}
+                          <p className="text-[11px] text-muted-foreground leading-snug">{t("scoreLabelsHint")}</p>
+                        </div>
+                      )}
+                      {scoringAxesEdit.some((a) => a.label.trim()) && (
+                        <p className="text-[11px] text-muted-foreground leading-snug">
+                          {t("scoringVarsHint")}{" "}
+                          <span className="font-mono break-all">{scorePlaceholderList(scoringAxesEdit.filter((a) => a.label.trim())).join(" ")}</span>
+                        </p>
+                      )}
+                      <SettingsToggle
+                        label={t("optionSioScoreTags")}
+                        hint={t("optionSioScoreTagsHint")}
+                        checked={sioScoreTags}
+                        onChange={v => setSioScoreTags(v)}
+                      />
+                    </div>
+                  )}
                   {/* Masque le nombre brut de reponses dans l'onglet
                       Resultats (donut + barres) et n'affiche que les %.
                       Off par defaut = compteurs visibles. */}
@@ -3933,6 +4187,46 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           );
                         })()}
 
+                        {/* Axes de score : sur quelles dimensions cette
+                            question pèse (multi-axes pondéré, Véronique
+                            juillet 2026). Une question peut compter sur
+                            PLUSIEURS axes, chacun avec son poids. */}
+                        {isScoring && scoringAxesEdit.some((a) => a.label.trim()) && qType !== "free_text" && (
+                          <div className="p-3 rounded-lg bg-muted/30 border border-border/60 max-w-md mx-auto space-y-1.5">
+                            <p className="text-xs font-semibold">{t("questionAxesLabel")}</p>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {scoringAxesEdit.filter((a) => a.label.trim()).map((axis) => {
+                                const w = ((q.config?.axes as Record<string, number> | undefined) ?? {})[axis.id];
+                                const active = typeof w === "number" && w > 0;
+                                return (
+                                  <span key={axis.id} className="inline-flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleQuestionAxis(qi, axis.id)}
+                                      className={`px-2 py-1 rounded-full border text-xs font-medium transition-colors ${active ? "bg-primary/10 border-primary/40 text-primary" : "border-border text-muted-foreground hover:border-primary/30"}`}
+                                    >
+                                      {axis.label}
+                                    </button>
+                                    {active && (
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        max={9}
+                                        value={w}
+                                        onChange={(e) => setQuestionAxisWeight(qi, axis.id, Number(e.target.value))}
+                                        className="w-12 h-7 text-xs border rounded px-1.5 bg-background"
+                                        aria-label={t("questionAxisWeight", { axis: stripHtml(axis.label) })}
+                                        title={t("questionAxisWeightHint")}
+                                      />
+                                    )}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                            <p className="text-[11px] text-muted-foreground leading-snug">{t("questionAxesHint")}</p>
+                          </div>
+                        )}
+
                         {/* ── Choix (simple / multiple / image) ──────────── */}
                         {(qType === "multiple_choice" || qType === "image_choice") && (<>
                         {/* Multi-select toggle (Typeform/Tally pattern):
@@ -4422,6 +4716,49 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 </div>
               )}
 
+              {/* Phrase d'arbitrage TOUJOURS visible (expert 30 juil
+                  2026) : le tiebreak existe et est déterministe, mais
+                  personne ne le sait. Une ligne discrète, pas un banner. */}
+              {!isScoring && editResults.length > 1 && (
+                <div className="px-6 sm:px-12">
+                  <p className="max-w-2xl mx-auto text-[11px] text-muted-foreground mt-2 mb-1 leading-snug">
+                    {t("tieOrderHint")}
+                  </p>
+                </div>
+              )}
+
+              {/* Couverture des tranches (mode scoring) : trous /
+                  chevauchements / bornes manquantes, avec la plage
+                  atteignable calculée depuis les points des questions. */}
+              {trancheCoverage && trancheCoverage.issues.length > 0 && (
+                <div className="px-6 sm:px-12">
+                  <div className="max-w-2xl mx-auto rounded-xl border border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100 px-4 py-3 my-4">
+                    <p className="font-semibold text-sm">{t("trancheCoverageTitle")}</p>
+                    <p className="text-xs opacity-90 mt-1">
+                      {t("trancheReachable", { min: trancheCoverage.range.min, max: trancheCoverage.range.max })}
+                    </p>
+                    <ul className="mt-2.5 space-y-1.5 text-xs">
+                      {trancheCoverage.issues.map((issue, i) => {
+                        if (issue.kind === "unbounded") {
+                          return <li key={i}>{t("trancheUnbounded")}</li>;
+                        }
+                        if (issue.kind === "gap") {
+                          return <li key={i}>{t("trancheGapItem", { from: issue.from, to: issue.to })}</li>;
+                        }
+                        const nameOf = (ri2: number) =>
+                          stripHtml(extractResultLabel(cleanPlaceholdersForLabel(editResults[ri2]?.title))) || t("previewResult", { n: ri2 + 1 });
+                        return (
+                          <li key={i}>
+                            {t("trancheOverlapItem", { a: nameOf(issue.a), b: nameOf(issue.b), from: issue.from, to: issue.to })}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <p className="text-[11px] opacity-75 mt-2">{t("trancheCoverageHelp")}</p>
+                  </div>
+                </div>
+              )}
+
               {/* ── RESULTS ── */}
               {editResults.map((r, ri) => {
                 const cov = resultCoverage[ri] ?? { questionsLeading: 0, totalQuestions: editQuestions.length, expected: 1, severity: "danger" as const };
@@ -4560,7 +4897,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         <span className="text-muted-foreground">points</span>
                       </div>
                     )}
-                    <RichTextEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} onAIRewrite={aiRewriteResultTitle} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="tiquiz-quiz-result-title font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
+                    <RichTextEdit value={r.title} onChange={(v) => updateR(ri, "title", v)} onGenderize={genderize} onAIRewrite={aiRewriteResultTitle} availableVars={resultVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="tiquiz-quiz-result-title font-bold" style={{ color: pc }} placeholder={t("previewResultTitlePh")} />
                     {r.image_url && r.image_position === "after_title" && (
                       <ResultDraggableImage url={r.image_url} ri={ri}
                         onDragStart={() => setDraggingResultImageRi(ri)}
@@ -4572,7 +4909,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <ResultPositionDropZone label={t("resultImagePos_after_title")}
                         onDrop={() => { updateResultImagePosition(ri, "after_title"); setDraggingResultImageRi(null); }} />
                     )}
-                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultDesc} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-lg leading-relaxed" placeholder={t("previewResultDescPh")} />
+                    <RichTextEdit value={r.description ?? ""} onChange={(v) => updateR(ri, "description", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultDesc} availableVars={resultVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-lg leading-relaxed" placeholder={t("previewResultDescPh")} />
                     {r.image_url && r.image_position === "after_description" && (
                       <ResultDraggableImage url={r.image_url} ri={ri}
                         onDragStart={() => setDraggingResultImageRi(ri)}
@@ -4603,7 +4940,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           {insightPersonalized ? t("headingUseCommon") : t("headingPersonalize")}
                         </button>
                       </div>
-                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultInsight} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder={t("previewResultInsightPh")} />
+                      <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultInsight} availableVars={resultVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder={t("previewResultInsightPh")} />
                     </div>
                     {r.image_url && r.image_position === "after_insight" && (
                       <ResultDraggableImage url={r.image_url} ri={ri}
@@ -4637,7 +4974,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           {projectionPersonalized ? t("headingUseCommon") : t("headingPersonalize")}
                         </button>
                       </div>
-                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultProjection} availableVars={personalizationVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder={t("previewResultProjectionPh")} />
+                      <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultProjection} availableVars={resultVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder={t("previewResultProjectionPh")} />
                     </div>
                     {r.image_url && r.image_position === "bottom" && (
                       <ResultDraggableImage url={r.image_url} ri={ri}
@@ -4655,7 +4992,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           so a longer CTA wraps gracefully instead of
                           overflowing the rounded button. */}
                       <button className={`w-full min-h-[48px] h-auto px-8 py-3 rounded-full text-white font-semibold text-lg whitespace-normal leading-snug ${previewBtnShapeClass}`} style={{ backgroundColor: pc }}>
-                        <RichTextEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} onGenderize={genderize} availableVars={personalizationVars} previewTransform={previewInterpolate} singleLine className="text-white font-semibold text-center w-full" placeholder={t("previewResultCtaPh")} />
+                        <RichTextEdit value={r.cta_text ?? ctaText ?? ""} onChange={(v) => updateR(ri, "cta_text", v || null)} onGenderize={genderize} availableVars={resultVars} previewTransform={previewInterpolate} singleLine className="text-white font-semibold text-center w-full" placeholder={t("previewResultCtaPh")} />
                       </button>
                       {/* Lien du bouton : champ EXPLICITE sous le CTA. Avant, ce
                           n'etait qu'un petit texte gris centre, et les users ne
@@ -4666,6 +5003,15 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         <span className="text-[11px] font-medium text-muted-foreground shrink-0">{t("previewResultCtaUrlLabel")}</span>
                         <InlineEdit value={r.cta_url ?? ctaUrl ?? ""} onChange={(v) => updateR(ri, "cta_url", v || null)} className="text-xs text-foreground text-left flex-1 min-w-0" placeholder={t("previewResultCtaUrlPh")} />
                       </div>
+                      {/* Sortie du score dans l'URL de redirection : chips
+                          d'insertion (append en fin d'URL). Jamais l'email. */}
+                      {isScoring && scoringAxesEdit.some((a) => a.label.trim()) && (
+                        <QuizVarInserter
+                          vars={{ extra: scorePlaceholderList(scoringAxesEdit.filter((a) => a.label.trim())) }}
+                          compact
+                          onInsert={(ph) => updateR(ri, "cta_url", `${(r.cta_url ?? ctaUrl ?? "").trim()}${ph}`)}
+                        />
+                      )}
                     </div>
                     {/* Per-result SIO tag — same rationale as the
                         share tag above, hidden in the anonymous embed. */}

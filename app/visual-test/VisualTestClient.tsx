@@ -87,11 +87,13 @@ export default function VisualTestClient({
   intro,
   bg,
   bonus,
+  score,
 }: {
   layout: string;
   intro: string;
   bg: string;
   bonus: string;
+  score: string;
 }) {
   const base = resolveQuizBranding(null, null);
   const branding: QuizBranding = {
@@ -109,6 +111,50 @@ export default function VisualTestClient({
     // resultat) pour couvrir ce rendu dans la matrice visuelle.
     ...(bonus === "1"
       ? { virality_enabled: true, bonus_description: "<p>le guide PDF des 10 quiz qui convertissent</p>" }
+      : {}),
+    // score=1 : mode scoring multi-axes (jauge globale + barres par axe).
+    // Points calibres pour que le parcours du test (plan detaille + je
+    // garde ce qui marche) donne 3/6 -> jauge a 50%, barres variees
+    // (Organisation 67%, Audace 44%) et tranche basse (L'architecte).
+    ...(score === "1"
+      ? {
+          mode: "scoring",
+          show_score_gauge: true,
+          score_display_mode: "percent",
+          scoring_axes: [
+            { id: "organisation", label: "Organisation" },
+            { id: "audace", label: "Audace" },
+          ],
+          questions: [
+            {
+              id: "q1",
+              question_text: "Quand tu lances un projet, tu commences par quoi ?",
+              question_type: "multiple_choice",
+              sort_order: 0,
+              config: { axes: { organisation: 2, audace: 1 } },
+              options: [
+                { text: "Un plan detaille", result_index: 0, points: 2 },
+                { text: "Un premier test rapide", result_index: 1, points: 3 },
+                { text: "Demander des avis autour de toi", result_index: 0, points: 1 },
+              ],
+            },
+            {
+              id: "q2",
+              question_text: "Ta relation aux outils en ligne ?",
+              question_type: "multiple_choice",
+              sort_order: 1,
+              config: { axes: { audace: 2 } },
+              options: [
+                { text: "J'adore essayer les nouveautes", result_index: 1, points: 3 },
+                { text: "Je garde ce qui marche", result_index: 0, points: 1 },
+              ],
+            },
+          ],
+          results: [
+            { ...(DEMO_QUIZ.results[0] as object), min_score: 0, max_score: 3 },
+            { ...(DEMO_QUIZ.results[1] as object), min_score: 4, max_score: 6 },
+          ],
+        }
       : {}),
   } as PublicQuizData;
   return <PublicQuizClient quizId={String(quiz.id)} previewData={quiz} previewBranding={branding} />;
