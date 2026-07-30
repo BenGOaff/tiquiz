@@ -208,7 +208,7 @@ layouts, branding, CSS, composants d'écran), lancer AUTOMATIQUEMENT le
 filet visuel avant de committer, sans que Béné ait à le demander :
 
 ```bash
-npm run test:visual            # doit passer 75/75
+npm run test:visual            # doit passer 90/90
 ```
 
 - Échec = un layout a bougé sans intention -> corriger AVANT de pousser.
@@ -216,7 +216,7 @@ npm run test:visual            # doit passer 75/75
   committer les nouvelles références AVEC le changement.
 - Le harness : `playwright.visual.config.ts` + `tests/visual/` + page
   fixture `/visual-test` (gated `VISUAL_TEST=1`, aucune base requise).
-- Couverture : 5 dispositions x 5 écrans (intro, question, capture, bonus, résultat) x 3 viewports (desktop, écran
+- Couverture : 5 dispositions x 6 écrans (intro, question, capture, bonus, résultat, résultat scoring multi-axes) x 3 viewports (desktop, écran
   haut, mobile). Si une nouvelle disposition/écran apparaît, AJOUTER le
   cas à la matrice du spec.
 - Origine : footer devenu 3e colonne en split + carte collée en haut sur

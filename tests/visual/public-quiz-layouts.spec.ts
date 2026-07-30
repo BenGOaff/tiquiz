@@ -74,6 +74,24 @@ for (const layout of LAYOUTS) {
       await expect(page).toHaveScreenshot(`${layout.name}-bonus.png`, { fullPage: true });
     });
 
+    test("result-score", async ({ page }) => {
+      // Mode scoring multi-axes (Veronique juillet 2026) : jauge du score
+      // global + barres par axe sur la page de resultat.
+      await gotoFixture(page, `${layout.qs}&score=1&preview_name=Camille`);
+      await startQuiz(page);
+      await answerAllQuestions(page);
+      await page.getByPlaceholder("ton@email.com").fill("test@example.com");
+      const consent = page.getByRole("checkbox");
+      if (await consent.count()) await consent.first().check();
+      await page.getByRole("button", { name: "Voir mon profil" }).click();
+      // 50% = jauge globale calculee (3 points sur 6) -> le mode scoring
+      // multi-axes est bien actif, pas le fallback X / Y.
+      await expect(page.getByText("50%").first()).toBeVisible();
+      await expect(page.getByText("Organisation")).toBeVisible();
+      await page.waitForTimeout(600);
+      await expect(page).toHaveScreenshot(`${layout.name}-result-score.png`, { fullPage: true });
+    });
+
     test("result", async ({ page }) => {
       // preview_name = mode apercu createur : l'ecran capture s'affiche mais
       // la soumission ne POste rien (aucune base requise) et mene au resultat.
