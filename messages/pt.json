@@ -525,6 +525,8 @@
     "createTitle": "Criar um quiz",
     "editTitle": "Editar o quiz",
     "tabManual": "Criar manualmente",
+    "tabScoring": "Quiz com pontuação",
+    "tabScoringHint": "Quiz com pontuação sobre 100: indicador, eixos (ex. sono, stress) e resultados por faixas de pontos. Ideal para um diagnóstico.",
     "tabAI": "Gerar com IA",
     "tabImport": "Importar um ficheiro",
     "titleLabel": "Título do quiz",

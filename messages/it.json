@@ -525,6 +525,8 @@
     "createTitle": "Crea un quiz",
     "editTitle": "Modifica quiz",
     "tabManual": "Crea manualmente",
+    "tabScoring": "Quiz con punteggio",
+    "tabScoringHint": "Quiz con punteggio su 100: indicatore, assi (es. sonno, stress) e risultati per fasce di punti. Ideale per una diagnosi.",
     "tabAI": "Genera con l'IA",
     "tabImport": "Importa un file",
     "titleLabel": "Titolo del quiz",

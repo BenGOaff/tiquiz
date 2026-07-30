@@ -1021,9 +1021,12 @@ export default function QuizFormClient() {
               <FileText className="h-4 w-4" />
               {creatingManual ? <Loader2 className="h-4 w-4 animate-spin" /> : t("tabManual")}
             </TabsTrigger>
-            <TabsTrigger value="scoring" className="gap-1.5 px-4 py-2" onClick={(e) => { e.preventDefault(); handleCreateManual("scoring"); }}>
+            {/* Libellé traduit + tooltip : quelqu'un qui cherche "un quiz
+                scoré / un diagnostic" doit comprendre que c'est ICI, sans
+                se poser la question (demande Béné 30 juil 2026). */}
+            <TabsTrigger value="scoring" className="gap-1.5 px-4 py-2" title={t("tabScoringHint")} onClick={(e) => { e.preventDefault(); handleCreateManual("scoring"); }}>
               <Award className="h-4 w-4" />
-              Quiz noté
+              {t("tabScoring")}
             </TabsTrigger>
             <TabsTrigger value="ai" className="gap-1.5 px-4 py-2">
               <Sparkles className="h-4 w-4" />

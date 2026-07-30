@@ -508,6 +508,8 @@
     "createTitle": "Create a quiz",
     "editTitle": "Edit quiz",
     "tabManual": "Create manually",
+    "tabScoring": "Scored quiz",
+    "tabScoringHint": "Quiz with a score out of 100: gauge, axes (e.g. sleep, stress) and results by point ranges. Ideal for a diagnosis.",
     "tabAI": "Generate with AI",
     "tabImport": "Import a file",
     "titleLabel": "Quiz title",
