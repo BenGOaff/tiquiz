@@ -358,6 +358,9 @@ export default function QuizFormClient() {
           { question_text: "", options: [{ text: "", result_index: 0, points: 1 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }] },
           { question_text: "", options: [{ text: "", result_index: 0, points: 1 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }] },
         ],
+        // Jauge activée d'office sur les nouveaux quiz scorés : rendu
+        // propre sans réglage. Désactivable dans l'éditeur.
+        show_score_gauge: true,
         results: [
           { title: t("result1Default"), description: null, min_score: 0, max_score: 1 },
           { title: t("result2Default"), description: null, min_score: 2, max_score: 2 },
@@ -1017,7 +1020,10 @@ export default function QuizFormClient() {
             primitives do the work. */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
           <TabsList className="h-auto p-1 gap-1">
-            <TabsTrigger value="manual" className="gap-1.5 px-4 py-2" onClick={(e) => { e.preventDefault(); handleCreateManual(); }}>
+            {/* Deux types de quiz en création manuelle (par profil /
+                scoré), tooltips pour choisir sans se poser la question.
+                Le cas "par niveau" se fera via le flux IA (choix scoré). */}
+            <TabsTrigger value="manual" className="gap-1.5 px-4 py-2" title={t("tabManualHint")} onClick={(e) => { e.preventDefault(); handleCreateManual(); }}>
               <FileText className="h-4 w-4" />
               {creatingManual ? <Loader2 className="h-4 w-4 animate-spin" /> : t("tabManual")}
             </TabsTrigger>

@@ -151,6 +151,11 @@ export async function POST(req: NextRequest) {
         project_id: projectId,
         ...designCols,
         mode,
+        // Jauge du score : activée par défaut sur les NOUVEAUX quiz
+        // scorés créés depuis les onglets "Quiz par niveau" / "Quiz
+        // scoré" (rendu propre sans réglage). Les quiz existants ne
+        // sont pas concernés (colonne default false).
+        ...(mode === "scoring" && body.show_score_gauge === true ? { show_score_gauge: true } : {}),
         title,
         introduction: body.introduction ?? null,
         cta_text: body.cta_text ?? null,
