@@ -300,6 +300,13 @@ export default function QuizFormClient() {
   const [aiLocale, setAiLocale] = useState("fr");
   const [aiFormat, setAiFormat] = useState<"short" | "long">("short");
   const [aiSegmentation, setAiSegmentation] = useState<"level" | "profile">("profile");
+  // Type de quiz IA (voie B, Béné 30 juillet 2026) : "profile" = quiz par
+  // profils (flux historique inchangé) ; "scoring" = quiz scoré
+  // (diagnostic) avec points, tranches calculées côté serveur et axes
+  // optionnels. L'ancien choix "Par niveau" est couvert par "scoring".
+  const [aiQuizType, setAiQuizType] = useState<"profile" | "scoring">("profile");
+  const [aiAxes, setAiAxes] = useState("");
+  const [aiTrancheCount, setAiTrancheCount] = useState(3);
   const [aiAskFirstName, setAiAskFirstName] = useState(false);
   const [aiAskGender, setAiAskGender] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -327,6 +334,10 @@ export default function QuizFormClient() {
     if (brief.bonus) setAiBonus(brief.bonus);
     setAiFormat(brief.format);
     setAiSegmentation(brief.segmentation);
+    // "Par niveau" n'existe plus comme choix : un brief niveau devient un
+    // quiz scoré (tranches Débutant → Expert calculées automatiquement).
+    const briefQuizType = brief.segmentation === "level" ? "scoring" : "profile";
+    setAiQuizType(briefQuizType);
 
     setIdeaChatOpen(false);
     void handleGenerate({
@@ -336,7 +347,10 @@ export default function QuizFormClient() {
       bonus,
       locale: aiLocale,
       format: brief.format,
-      segmentation: brief.segmentation,
+      segmentation: "profile",
+      quizType: briefQuizType,
+      axes: [],
+      trancheCount: 3,
     });
   }
 
@@ -358,6 +372,9 @@ export default function QuizFormClient() {
           { question_text: "", options: [{ text: "", result_index: 0, points: 1 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }] },
           { question_text: "", options: [{ text: "", result_index: 0, points: 1 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }, { text: "", result_index: 0, points: 0 }] },
         ],
+        // Jauge activée d'office sur les nouveaux quiz scorés : rendu
+        // propre sans réglage. Désactivable dans l'éditeur.
+        show_score_gauge: true,
         results: [
           { title: t("result1Default"), description: null, min_score: 0, max_score: 1 },
           { title: t("result2Default"), description: null, min_score: 2, max_score: 2 },
@@ -419,7 +436,17 @@ export default function QuizFormClient() {
       .then((r) => r.json())
       .then((data) => {
         if (data.ok && data.profile) {
-          const ta = data.profile.target_audience ?? "";
+          // Le persona d'onboarding peut arriver en Markdown brut
+          // (**gras**, titres, puces) : on le nettoie pour l'input,
+          // sinon le champ prérempli fait amateur.
+          const stripMd = (v: string) => v
+            .replace(/\*\*([^*]+)\*\*/g, "$1")
+            .replace(/__([^_]+)__/g, "$1")
+            .replace(/`([^`]+)`/g, "$1")
+            .replace(/^#+\s*/gm, "")
+            .replace(/^\s*[*•]\s*/gm, "- ")
+            .trim();
+          const ta = stripMd(String(data.profile.target_audience ?? ""));
           setAiTargetFromProfile(ta);
           if (ta && !aiTarget) setAiTarget(ta);
           const cl = data.profile.content_locale;
@@ -652,6 +679,9 @@ export default function QuizFormClient() {
     locale: string;
     format: "short" | "long";
     segmentation: "level" | "profile";
+    quizType?: "profile" | "scoring";
+    axes?: string[];
+    trancheCount?: number;
     askFirstName?: boolean;
     askGender?: boolean;
   };
@@ -665,6 +695,11 @@ export default function QuizFormClient() {
       locale: aiLocale,
       format: aiFormat,
       segmentation: aiSegmentation,
+      quizType: aiQuizType,
+      axes: aiQuizType === "scoring"
+        ? aiAxes.split(",").map((a) => a.trim()).filter(Boolean).slice(0, 6)
+        : [],
+      trancheCount: aiTrancheCount,
       askFirstName: aiAskFirstName,
       askGender: aiAskGender,
     };
@@ -695,6 +730,9 @@ export default function QuizFormClient() {
           locale: params.locale,
           format: params.format,
           segmentation: params.segmentation,
+          quizType: params.quizType ?? "profile",
+          axes: params.axes ?? [],
+          ...(params.quizType === "scoring" ? { resultCount: params.trancheCount ?? 3 } : {}),
           questionCount: params.format === "short" ? 4 : 8,
           askFirstName: params.askFirstName,
           askGender: params.askGender,
@@ -778,6 +816,13 @@ export default function QuizFormClient() {
             share_message: receivedQuiz.share_message ? String(receivedQuiz.share_message) : null,
             questions: Array.isArray(receivedQuiz.questions) ? receivedQuiz.questions : [],
             results: Array.isArray(receivedQuiz.results) ? receivedQuiz.results : [],
+            // Quiz scoré généré : mode + axes + jauge posés par la route
+            // de génération (bornes des tranches déjà calculées).
+            ...(receivedQuiz.mode === "scoring" ? {
+              mode: "scoring",
+              scoring_axes: receivedQuiz.scoring_axes,
+              show_score_gauge: true,
+            } : {}),
           };
           const saveRes = await fetch("/api/quiz", {
             method: "POST",
@@ -1017,16 +1062,15 @@ export default function QuizFormClient() {
             primitives do the work. */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1">
           <TabsList className="h-auto p-1 gap-1">
-            <TabsTrigger value="manual" className="gap-1.5 px-4 py-2" onClick={(e) => { e.preventDefault(); handleCreateManual(); }}>
+            {/* Deux types de quiz en création manuelle (par profil /
+                scoré), tooltips pour choisir sans se poser la question.
+                Le cas "par niveau" se fera via le flux IA (choix scoré). */}
+            {/* L'onglet Manuel ouvre un CHOIX (par profil / scoré),
+                comme l'onglet IA : plus d'onglet "Quiz scoré" séparé
+                (retour Béné 31 juil 2026). */}
+            <TabsTrigger value="manual" className="gap-1.5 px-4 py-2">
               <FileText className="h-4 w-4" />
-              {creatingManual ? <Loader2 className="h-4 w-4 animate-spin" /> : t("tabManual")}
-            </TabsTrigger>
-            {/* Libellé traduit + tooltip : quelqu'un qui cherche "un quiz
-                scoré / un diagnostic" doit comprendre que c'est ICI, sans
-                se poser la question (demande Béné 30 juil 2026). */}
-            <TabsTrigger value="scoring" className="gap-1.5 px-4 py-2" title={t("tabScoringHint")} onClick={(e) => { e.preventDefault(); handleCreateManual("scoring"); }}>
-              <Award className="h-4 w-4" />
-              {t("tabScoring")}
+              {t("tabManual")}
             </TabsTrigger>
             <TabsTrigger value="ai" className="gap-1.5 px-4 py-2">
               <Sparkles className="h-4 w-4" />
@@ -1041,13 +1085,42 @@ export default function QuizFormClient() {
       </div>
 
       {/* MANUAL TAB — creates quiz and redirects to WYSIWYG editor */}
-      {(activeTab === "manual" || activeTab === "scoring") && (
-        <div className="flex items-center justify-center min-h-[40vh]">
-          <div className="text-center space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-            <p className="text-sm text-muted-foreground">{t("creatingQuiz")}</p>
+      {activeTab === "manual" && (
+        creatingManual ? (
+          <div className="flex items-center justify-center min-h-[40vh]">
+            <div className="text-center space-y-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+              <p className="text-sm text-muted-foreground">{t("creatingQuiz")}</p>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="max-w-2xl mx-auto py-10 space-y-4">
+            <div className="text-center space-y-1">
+              <h2 className="text-lg font-semibold">{t("manualChooseTitle")}</h2>
+              <p className="text-sm text-muted-foreground">{t("manualChooseHint")}</p>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => handleCreateManual()}
+                className="p-5 rounded-2xl border-2 border-border text-left hover:border-primary/50 hover:bg-primary/5 transition-all"
+              >
+                <Users className="h-5 w-5 text-violet-500 mb-2" />
+                <p className="font-semibold">{t("manualTypeProfile")}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t("manualTypeProfileDesc")}</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCreateManual("scoring")}
+                className="p-5 rounded-2xl border-2 border-border text-left hover:border-primary/50 hover:bg-primary/5 transition-all"
+              >
+                <Award className="h-5 w-5 text-emerald-500 mb-2" />
+                <p className="font-semibold">{t("manualTypeScoring")}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t("manualTypeScoringDesc")}</p>
+              </button>
+            </div>
+          </div>
+        )
       )}
 
       {/* ================================================================
@@ -1126,14 +1199,17 @@ export default function QuizFormClient() {
                 )}
               </div>
 
-              {/* 4. Segmentation */}
+              {/* 4. Type de quiz (voie B) : par profil (flux historique
+                  inchangé) ou scoré (diagnostic : points, tranches
+                  calculées automatiquement, axes optionnels). L'ancien
+                  "Par niveau" est un cas du scoré. */}
               <div className="space-y-2">
-                <Label>{t("aiSegmentationLabel")}</Label>
+                <Label>{t("aiTypeLabel")}</Label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setAiSegmentation("profile")}
-                    className={`p-3 rounded-xl border text-left transition-all ${aiSegmentation === "profile" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
+                    onClick={() => { setAiQuizType("profile"); setAiSegmentation("profile"); }}
+                    className={`p-3 rounded-xl border text-left transition-all ${aiQuizType === "profile" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
                   >
                     <Users className="h-4 w-4 text-violet-500 mb-1" />
                     <p className="font-medium text-sm">{t("aiSegProfile")}</p>
@@ -1141,14 +1217,42 @@ export default function QuizFormClient() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setAiSegmentation("level")}
-                    className={`p-3 rounded-xl border text-left transition-all ${aiSegmentation === "level" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
+                    onClick={() => { setAiQuizType("scoring"); setAiSegmentation("profile"); }}
+                    className={`p-3 rounded-xl border text-left transition-all ${aiQuizType === "scoring" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/40"}`}
                   >
                     <TrendingUp className="h-4 w-4 text-emerald-500 mb-1" />
-                    <p className="font-medium text-sm">{t("aiSegLevel")}</p>
-                    <p className="text-xs text-muted-foreground">{t("aiSegLevelDesc")}</p>
+                    <p className="font-medium text-sm">{t("aiTypeScoring")}</p>
+                    <p className="text-xs text-muted-foreground">{t("aiTypeScoringDesc")}</p>
                   </button>
                 </div>
+                {aiQuizType === "scoring" && (
+                  <div className="space-y-2 rounded-xl border border-dashed p-3">
+                    <div className="space-y-1">
+                      <Label htmlFor="ai-axes">{t("aiAxesLabel")}</Label>
+                      <Input
+                        id="ai-axes"
+                        value={aiAxes}
+                        onChange={(e) => setAiAxes(e.target.value)}
+                        placeholder={t("aiAxesPh")}
+                      />
+                      <p className="text-xs text-muted-foreground">{t("aiAxesHint")}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="ai-tranches">{t("aiTrancheCountLabel")}</Label>
+                      <select
+                        id="ai-tranches"
+                        value={aiTrancheCount}
+                        onChange={(e) => setAiTrancheCount(Math.min(5, Math.max(2, Number(e.target.value) || 3)))}
+                        className="w-full border border-input rounded-lg px-3 py-2 text-sm bg-background"
+                      >
+                        {[2, 3, 4, 5].map((n) => (
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-muted-foreground">{t("aiTrancheCountHint")}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Personalization toggles — name + gender */}

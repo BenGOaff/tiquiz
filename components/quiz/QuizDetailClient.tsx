@@ -646,6 +646,39 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const [mainTab, setMainTab] = useState<"create" | "share" | "results">("create");
   const [leftTab, setLeftTab] = useState<"edition" | "design" | "settings">("edition");
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+  // Taquet de largeur du panneau split (Béné 30 juil 2026, façon
+  // Systeme.io) : drag horizontal -> panel_media.width (20-60%),
+  // badge % pendant le drag, double-clic = retour au défaut.
+  const [splitDragPct, setSplitDragPct] = useState<number | null>(null);
+  const startSplitDrag = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const row = (e.currentTarget as HTMLElement).parentElement;
+    if (!row) return;
+    const rect = row.getBoundingClientRect();
+    const rightSide = splitSide === "right";
+    const move = (ev: MouseEvent) => {
+      let pct = ((ev.clientX - rect.left) / rect.width) * 100;
+      if (rightSide) pct = 100 - pct;
+      const w = Math.round(Math.min(60, Math.max(20, pct)));
+      setSplitDragPct(w);
+      setPanelMedia((prev) => ({ ...(prev ?? {}), width: w }));
+    };
+    const up = () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      setSplitDragPct(null);
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
+  const resetSplitWidth = () => {
+    setPanelMedia((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev };
+      delete next.width;
+      return next.perPage === undefined && !next.global && !next.pages ? null : next;
+    });
+  };
   const [primaryColor, setPrimaryColor] = useState<string>(DEFAULT_BRAND_COLOR_PRIMARY);
   const [bgColor, setBgColor] = useState<string>(DEFAULT_BRAND_COLOR_BACKGROUND);
   // Couleur des "autres textes" (réponses, corps). NULL = non défini par
@@ -2599,7 +2632,15 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-background z-10">
         <div className="flex items-center gap-3">
           {!isEmbed && (
-            <Button variant="ghost" size="icon" asChild><Link href="/dashboard"><ArrowLeft className="w-5 h-5" /></Link></Button>
+            <Button variant="ghost" size="icon" onClick={() => {
+              // Retour = revenir là d'où on vient (Mes projets, dashboard,
+              // stats...), pas toujours /dashboard (retour Béné 30 juil
+              // 2026 : depuis Mes projets, la flèche renvoyait au
+              // dashboard). Fallback dur si l'éditeur a été ouvert
+              // directement (nouvel onglet, lien collé).
+              if (window.history.length > 1) router.back();
+              else router.push("/dashboard");
+            }}><ArrowLeft className="w-5 h-5" /></Button>
           )}
           {/* The title is stored as rich HTML (RichTextEdit on the
               preview canvas drives it). Plain-text rendering here
@@ -3966,14 +4007,39 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     <div className="w-full max-w-2xl mx-auto mb-8">
                       <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${progress}%`, backgroundColor: pc }} /></div>
                     </div>
-                    <div className={`flex-1 flex ${previewSplit ? (splitSide === "right" ? "flex-col md:flex-row-reverse gap-6" : "flex-col md:flex-row gap-6") : "flex-col items-center justify-center"}`}>
+                    {/* Aperçu split piloté par le toggle écran/mobile de
+                        l'ÉDITEUR, pas par la largeur du viewport : avant, en
+                        aperçu mobile (canvas max-w-sm), les classes md: du
+                        viewport restaient actives -> deux colonnes écrasées
+                        au lieu de la bannière réelle (retour Béné 30 juil
+                        2026 "la version responsive des colonnes est
+                        éclatée"). Les proportions desktop suivent maintenant
+                        EXACTEMENT le rendu public (largeur réglable, 40% par
+                        défaut). */}
+                    <div className={`flex-1 flex ${previewSplit ? (device === "mobile" ? "flex-col gap-6" : (splitSide === "right" ? "flex-row-reverse gap-3" : "flex-row gap-3")) : "flex-col items-center justify-center"}`}>
                       {previewSplit && (
                         <QuizPanelMedia
                           item={resolvePanelMedia(panelMedia, "q:" + (q.id ?? ""), pc, splitImageUrl)}
                           brandColor={pc}
                           logoUrl={effectiveLogoUrl}
-                          className="w-full h-40 md:h-auto md:w-2/5 shrink-0 md:self-stretch rounded-2xl"
+                          className={device === "mobile" ? "w-full h-40 shrink-0 rounded-2xl" : "h-auto shrink-0 self-stretch rounded-2xl"}
+                          style={device === "mobile" ? undefined : { width: `${panelMedia?.width ?? 40}%` }}
                         />
+                      )}
+                      {previewSplit && device === "desktop" && (
+                        <div
+                          onMouseDown={startSplitDrag}
+                          onDoubleClick={resetSplitWidth}
+                          className="relative w-2 -mx-1 shrink-0 cursor-col-resize self-stretch flex items-center justify-center group/split"
+                          title={t("splitWidthHandleTitle")}
+                        >
+                          <div className={`w-1 h-12 rounded-full transition-colors ${splitDragPct != null ? "bg-primary" : "bg-border group-hover/split:bg-primary/60"}`} />
+                          {splitDragPct != null && (
+                            <span className="absolute top-1/2 -translate-y-1/2 left-3 z-10 text-[11px] font-semibold tabular-nums bg-primary text-white rounded px-1.5 py-0.5 shadow">
+                              {splitDragPct}%
+                            </span>
+                          )}
+                        </div>
                       )}
                       <div className={`${previewSplit ? "flex-1 min-w-0 flex flex-col justify-center " : ""}max-w-2xl w-full space-y-8 ${previewAlignText}`}>
                         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -4173,7 +4239,17 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           const maxLength = typeof cfg.maxLength === "number" ? cfg.maxLength : 500;
                           return (
                             <div className="space-y-3">
-                              <textarea readOnly placeholder={t("previewFreeTextPh")} rows={5} maxLength={maxLength} className="w-full rounded-xl border-2 border-border px-4 py-3 text-base resize-none bg-muted/10" style={{ borderColor: `${pc}30` }} />
+                              <div className="relative">
+                                <textarea readOnly rows={5} maxLength={maxLength} className="w-full rounded-xl border-2 border-border px-4 py-3 text-base resize-none bg-muted/10" style={{ borderColor: `${pc}30` }} />
+                                {/* Placeholder ÉDITABLE (demande Béné 30 juil
+                                    2026) : le créateur clique sur le texte
+                                    d'invite et le personnalise. Stocké dans
+                                    config.placeholder, affiché tel quel côté
+                                    visiteur ("Ta réponse…" par défaut). */}
+                                <div className="absolute top-3 left-4 right-4">
+                                  <InlineEdit value={typeof cfg.placeholder === "string" ? cfg.placeholder : ""} onChange={(v) => updateQuestionConfig(qi, { placeholder: v.trim() ? v : null })} className="text-base text-muted-foreground/70 italic" placeholder={t("previewFreeTextPh")} />
+                                </div>
+                              </div>
                               <div className="flex items-center justify-between gap-2">
                                 <p className="text-xs italic" style={{ color: `${pc}99` }}>{t("freeTextNotCounted")}</p>
                                 <label className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-muted/60 rounded-full px-2.5 py-1 cursor-pointer" title={t("textMaxLengthHint")}>

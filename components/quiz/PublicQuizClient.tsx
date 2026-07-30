@@ -2722,12 +2722,20 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
       branding.primaryColor,
       branding.splitImageUrl,
     );
+    // Largeur réglée au taquet dans l'éditeur (panel_media.width, 20-60%).
+    // Absente -> défauts historiques EXACTS (40% md / 44% lg) : aucun quiz
+    // en ligne ne bouge d'un pixel.
+    const panelW = branding.panelMedia?.width;
     return (
       <QuizPanelMedia
         item={item}
         brandColor={branding.primaryColor}
         logoUrl={branding.logoUrl}
-        className="w-full h-44 sm:h-56 md:h-auto md:w-2/5 lg:w-[44%] shrink-0 md:min-h-screen"
+        className="w-full h-44 sm:h-56 md:h-auto md:w-[var(--tq-split-md)] lg:w-[var(--tq-split-lg)] shrink-0 md:min-h-screen"
+        style={{
+          ["--tq-split-md" as string]: panelW ? `${panelW}%` : "40%",
+          ["--tq-split-lg" as string]: panelW ? `${panelW}%` : "44%",
+        }}
       />
     );
   };
@@ -3141,7 +3149,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
           <textarea
             value={draft}
             onChange={(e) => setFreeTextDraft(e.target.value.slice(0, maxLength))}
-            placeholder={t.freeTextPlaceholder}
+            placeholder={String(cfg.placeholder ?? "").trim() || t.freeTextPlaceholder}
             rows={5}
             className="w-full rounded-xl border-2 border-border focus:border-primary focus:ring-0 px-4 py-3 text-base resize-none outline-none transition-colors"
           />
