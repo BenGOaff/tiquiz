@@ -255,7 +255,7 @@
     "labelEmail": "Email",
     "labelPassword": "Contraseña",
     "placeholderEmail": "tu@email.com",
-    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "forgotPassword": "¿Contraseña olvidada?",
     "signIn": "Iniciar sesión",
     "signingIn": "Conectando…",
     "magicLink": "Conectar con enlace mágico",
@@ -267,7 +267,7 @@
     "createAccount": "Crear una cuenta",
     "errFillCredentials": "Ingresa tu email y contraseña.",
     "errFillEmail": "Ingresa tu dirección de email.",
-    "errInvalidCredentials": "Email o contraseña incorrectos.",
+    "errInvalidCredentials": "Email o contraseña incorrectos. Puede que tu navegador haya rellenado una contraseña de otra app de Tipote. Haz clic en '¿Contraseña olvidada?' para elegir una nueva, o usa el enlace mágico.",
     "errUnexpected": "Error inesperado. Inténtalo de nuevo.",
     "errRateLimit": "Demasiados intentos. Inténtalo en unos minutos.",
     "errSendFailed": "No se pudo enviar el enlace. Verifica tu email.",
@@ -279,6 +279,19 @@
     "copyright": "© {year} Tiquiz. Todos los derechos reservados.",
     "ariaHide": "Ocultar contraseña",
     "ariaShow": "Mostrar contraseña"
+  },
+  "forgotPasswordPage": {
+    "title": "Contraseña olvidada",
+    "description": "Introduce tu email: recibirás un enlace para elegir una nueva contraseña.",
+    "labelEmail": "Email",
+    "placeholderEmail": "tu@email.com",
+    "sending": "Enviando…",
+    "sendLink": "Enviar el enlace",
+    "errFillEmail": "Introduce tu dirección de email.",
+    "errSendFailed": "No se pudo enviar el email. Inténtalo de nuevo en unos minutos.",
+    "errUnexpected": "Error inesperado. Inténtalo de nuevo.",
+    "successSent": "Si existe una cuenta para este email, se acaba de enviar un enlace. Revisa también tu carpeta de spam.",
+    "backToLogin": "Volver a la conexión"
   },
   "signupPage": {
     "title": "Crear una cuenta",
@@ -1054,13 +1067,15 @@
     "skipTour": "Salir del tour",
     "next": "Siguiente",
     "tooltipDashboard": "Panel - tu página de inicio. Encuentra tus quiz, estadísticas clave y crea un nuevo quiz en un clic.",
-    "tooltipCreate": "Crear un quiz - constrúyelo manualmente o deja que la IA lo genere. Configura preguntas, resultados e integraciones SIO.",
+    "tooltipCreate": "Crear un quiz - por perfil o con puntuación (diagnóstico), a mano o generado por la IA. Configura tus preguntas, resultados e integraciones con Systeme.io.",
     "tooltipCreateSurvey": "Crear una encuesta - haz preguntas a tu audiencia y recoge sus respuestas. Perfecto para conocer las necesidades de tus suscriptores.",
     "tooltipQuizzes": "Mis proyectos - encuentra todos tus quiz y encuestas aquí. Activa, edita o elimina tus proyectos, y copia el enlace público en un clic.",
     "tooltipPopquiz": "Popquiz de vídeo - integra un quiz interactivo en un vídeo para captar leads durante el visionado.",
     "tooltipLeads": "Mis leads - todos los contactos capturados por tus quiz. Expórtalos o sincronízalos con Systeme.io.",
     "tooltipStats": "Estadísticas - sigue el rendimiento de tus quiz: vistas, tasa de completación, conversiones y compartidos.",
-    "tooltipComplete": "¡Tour completado! Crea tu primer quiz, configura Systeme.io y comparte tu enlace."
+    "tooltipComplete": "¡Tour completado! Crea tu primer quiz, configura Systeme.io y comparte tu enlace.",
+    "nudgeClose": "Ocultar este bloque",
+    "completeTipSettings": "Tu contraseña, tu idioma y tu clave Systeme.io: haz clic en tu avatar arriba a la derecha, luego Parámetros"
   },
   "quizEditor": {
     "backToTop": "Volver arriba",
@@ -1529,7 +1544,11 @@
     "showPassword": "Mostrar contraseña",
     "hidePassword": "Ocultar contraseña",
     "sectionTitle": "Contraseña",
-    "sectionDesc": "Define o cambia tu contraseña para iniciar sesión sin enlace mágico."
+    "sectionDesc": "Define o cambia tu contraseña para iniciar sesión sin enlace mágico.",
+    "pageTitle": "Nueva contraseña",
+    "pageDesc": "Elige tu nueva contraseña para conectarte a Tiquiz.",
+    "pageLoading": "Comprobando…",
+    "goDashboard": "Ir a mi panel"
   },
   "qrCode": {
     "title": "Código QR",

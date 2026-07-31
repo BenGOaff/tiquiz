@@ -267,7 +267,7 @@
     "createAccount": "Crea un account",
     "errFillCredentials": "Inserisci email e password.",
     "errFillEmail": "Inserisci il tuo indirizzo email.",
-    "errInvalidCredentials": "Email o password errati.",
+    "errInvalidCredentials": "Email o password errati. Il tuo browser potrebbe aver inserito una password di un'altra app Tipote. Clicca su 'Password dimenticata?' per sceglierne una nuova, oppure usa il link magico.",
     "errUnexpected": "Errore imprevisto. Riprova.",
     "errRateLimit": "Troppi tentativi. Riprova tra qualche minuto.",
     "errSendFailed": "Impossibile inviare il link. Controlla la tua email.",
@@ -279,6 +279,19 @@
     "copyright": "© {year} Tiquiz. Tutti i diritti riservati.",
     "ariaHide": "Nascondi password",
     "ariaShow": "Mostra password"
+  },
+  "forgotPasswordPage": {
+    "title": "Password dimenticata",
+    "description": "Inserisci la tua email: riceverai un link per scegliere una nuova password.",
+    "labelEmail": "Email",
+    "placeholderEmail": "tua@email.com",
+    "sending": "Invio…",
+    "sendLink": "Invia il link",
+    "errFillEmail": "Inserisci il tuo indirizzo email.",
+    "errSendFailed": "Impossibile inviare l'email. Riprova tra qualche minuto.",
+    "errUnexpected": "Errore imprevisto. Riprova.",
+    "successSent": "Se esiste un account per questa email, un link è appena stato inviato. Controlla anche lo spam.",
+    "backToLogin": "Torna al login"
   },
   "signupPage": {
     "title": "Crea un account",
@@ -1054,13 +1067,15 @@
     "skipTour": "Esci dal tour",
     "next": "Avanti",
     "tooltipDashboard": "Dashboard - la tua home. Trova i tuoi quiz, le statistiche chiave e crea un nuovo quiz in un clic.",
-    "tooltipCreate": "Crea un quiz - costruiscilo manualmente o lascia che l'IA lo generi. Configura domande, risultati e integrazioni SIO.",
+    "tooltipCreate": "Creare un quiz - per profilo o con punteggio (diagnosi), a mano o generato dall'IA. Configura domande, risultati e integrazioni Systeme.io.",
     "tooltipCreateSurvey": "Crea un sondaggio - fai domande al tuo pubblico e raccogli le risposte. Perfetto per conoscere i bisogni dei tuoi iscritti.",
     "tooltipQuizzes": "I miei progetti - trova tutti i tuoi quiz e sondaggi qui. Attiva, modifica o elimina i tuoi progetti, e copia il link pubblico in un clic.",
     "tooltipPopquiz": "Popquiz video - inserisci un quiz interattivo in un video per catturare lead durante la visione.",
     "tooltipLeads": "I miei lead - tutti i contatti catturati dai tuoi quiz. Esportali o sincronizzali con Systeme.io.",
     "tooltipStats": "Statistiche - monitora le prestazioni dei tuoi quiz: visualizzazioni, tasso di completamento, conversioni e condivisioni.",
-    "tooltipComplete": "Tour completato! Crea il tuo primo quiz, configura Systeme.io e condividi il tuo link."
+    "tooltipComplete": "Tour completato! Crea il tuo primo quiz, configura Systeme.io e condividi il tuo link.",
+    "nudgeClose": "Nascondi questo blocco",
+    "completeTipSettings": "La tua password, la tua lingua e la chiave Systeme.io: clicca sul tuo avatar in alto a destra, poi Impostazioni"
   },
   "quizEditor": {
     "backToTop": "Torna in alto",
@@ -1529,7 +1544,11 @@
     "showPassword": "Mostra password",
     "hidePassword": "Nascondi password",
     "sectionTitle": "Password",
-    "sectionDesc": "Imposta o cambia la tua password per accedere senza link magico."
+    "sectionDesc": "Imposta o cambia la tua password per accedere senza link magico.",
+    "pageTitle": "Nuova password",
+    "pageDesc": "Scegli la tua nuova password per accedere a Tiquiz.",
+    "pageLoading": "Verifica…",
+    "goDashboard": "Vai alla mia dashboard"
   },
   "qrCode": {
     "title": "Codice QR",

@@ -267,7 +267,7 @@
     "createAccount": "Criar uma conta",
     "errFillCredentials": "Preencha seu email e senha.",
     "errFillEmail": "Digite seu endereço de email.",
-    "errInvalidCredentials": "Email ou senha incorretos.",
+    "errInvalidCredentials": "Email ou senha incorretos. Seu navegador pode ter preenchido uma senha de outro app Tipote. Clique em 'Esqueceu a senha?' para escolher uma nova, ou use o link mágico.",
     "errUnexpected": "Erro inesperado. Tente novamente.",
     "errRateLimit": "Muitas tentativas. Tente novamente em alguns minutos.",
     "errSendFailed": "Não foi possível enviar o link. Verifique seu email.",
@@ -279,6 +279,19 @@
     "copyright": "© {year} Tiquiz. Todos os direitos reservados.",
     "ariaHide": "Ocultar senha",
     "ariaShow": "Mostrar senha"
+  },
+  "forgotPasswordPage": {
+    "title": "Senha esquecida",
+    "description": "Digite seu email: você vai receber um link para escolher uma nova senha.",
+    "labelEmail": "Email",
+    "placeholderEmail": "seu@email.com",
+    "sending": "Enviando…",
+    "sendLink": "Enviar o link",
+    "errFillEmail": "Digite seu endereço de email.",
+    "errSendFailed": "Não foi possível enviar o email. Tente novamente em alguns minutos.",
+    "errUnexpected": "Erro inesperado. Tente novamente.",
+    "successSent": "Se existir uma conta para este email, um link acabou de ser enviado. Verifique também o spam.",
+    "backToLogin": "Voltar ao login"
   },
   "signupPage": {
     "title": "Criar uma conta",
@@ -1042,13 +1055,15 @@
     "skipTour": "Sair do tour",
     "next": "Próximo",
     "tooltipDashboard": "Painel - sua página inicial. Encontre seus quizzes, as estatísticas-chave e crie um novo quiz com um clique.",
-    "tooltipCreate": "Criar um quiz - gere um quiz manualmente ou deixe a IA criá-lo para você. Configure suas perguntas, resultados e integrações SIO.",
+    "tooltipCreate": "Criar um quiz - por perfil ou com pontuação (diagnóstico), manualmente ou gerado pela IA. Configure suas perguntas, resultados e integrações Systeme.io.",
     "tooltipCreateSurvey": "Criar uma pesquisa - faça perguntas à sua audiência e colete as respostas. Perfeito para conhecer as necessidades dos seus assinantes.",
     "tooltipQuizzes": "Meus projetos - encontre todos os seus quizzes e pesquisas aqui. Ative, edite ou exclua seus projetos, e copie o link público com um clique.",
     "tooltipPopquiz": "Popquiz de vídeo - incorpore um quiz interativo em um vídeo para capturar leads durante a exibição.",
     "tooltipLeads": "Meus leads - todos os contatos capturados pelos seus quizzes. Exporte-os ou sincronize com o Systeme.io.",
     "tooltipStats": "Estatísticas - acompanhe a performance dos seus quizzes: visualizações, taxa de conclusão, conversões e compartilhamentos.",
-    "tooltipComplete": "Tour finalizado! Crie seu primeiro quiz, configure o Systeme.io e compartilhe seu link."
+    "tooltipComplete": "Tour finalizado! Crie seu primeiro quiz, configure o Systeme.io e compartilhe seu link.",
+    "nudgeClose": "Ocultar este bloco",
+    "completeTipSettings": "Sua senha, seu idioma e sua chave Systeme.io: clique no seu avatar no canto superior direito, depois Configurações"
   },
   "quizEditor": {
     "backToTop": "Voltar ao topo",
@@ -1515,7 +1530,11 @@
     "showPassword": "Mostrar senha",
     "hidePassword": "Ocultar senha",
     "sectionTitle": "Senha",
-    "sectionDesc": "Defina ou altere sua senha para entrar sem link mágico."
+    "sectionDesc": "Defina ou altere sua senha para entrar sem link mágico.",
+    "pageTitle": "Nova senha",
+    "pageDesc": "Escolha sua nova senha para entrar no Tiquiz.",
+    "pageLoading": "Verificando…",
+    "goDashboard": "Ir para meu painel"
   },
   "qrCode": {
     "title": "Código QR",

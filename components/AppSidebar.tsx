@@ -17,6 +17,7 @@ import {
   Video,
   HandCoins,
   GraduationCap,
+  Play,
 } from "lucide-react";
 import {
   Sidebar,
@@ -34,6 +35,7 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Button } from "@/components/ui/button";
 import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
 import { TutorialNudge } from "@/components/tutorial/TutorialNudge";
+import { useTutorial } from "@/hooks/useTutorial";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -149,6 +151,40 @@ function ResellerAdminItem() {
   );
 }
 
+// Entree discrete "Refaire le tour guide", montree seulement quand la
+// carte TutorialNudge n'est pas visible (fermee via sa croix ou opt-out) :
+// le tour doit toujours rester relancable quelque part (drame testeuse
+// 31 juillet 2026).
+function RestartTourItem() {
+  const t = useTranslations("tutorial");
+  const { tutorialOptOut, nudgeDismissed, isLoading, resetTutorial, setShowWelcome, setPhase } =
+    useTutorial();
+
+  if (isLoading || (!tutorialOptOut && !nudgeDismissed)) return null;
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild>
+        <button
+          type="button"
+          className={cx(MENU_ITEM_CLASS, "w-full text-left")}
+          onClick={() => {
+            if (tutorialOptOut) {
+              resetTutorial();
+              return;
+            }
+            setShowWelcome(true);
+            setPhase("welcome");
+          }}
+        >
+          <Play className="w-5 h-5" />
+          <span>{tutorialOptOut ? t("helpReactivate") : t("helpRestart")}</span>
+        </button>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
 function SidebarCollapseButton() {
   const { toggleSidebar } = useSidebar();
   const t = useTranslations("common");
@@ -240,19 +276,23 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-      </SidebarContent>
 
-      <SidebarFooter className="p-4 space-y-1">
+        {/* Cartes tour guide + Atelier : DANS la zone scrollable, APRES le
+            menu. Avant elles vivaient dans le footer (hauteur fixe) et
+            comprimaient le menu sur petit ecran : une testeuse ne voyait
+            plus "Mes projets" ni rien apres "Creer un sondage" (31 juillet
+            2026). Ici le menu garde toujours la priorite, les cartes
+            passent sous le pli et se scrollent. */}
+        <div className="mt-4">
         <TutorialNudge />
 
         {/* Carte de conversion vers L'Atelier du Quiz (demande Bene
-            28 juillet 2026). Emplacement : pied de sidebar, toujours
-            visible sans encombrer le menu. FR uniquement (la formation
-            n'existe qu'en francais). Tiquiz seulement, pas Tipote.
-            Deux variantes : non-eleve -> decouvrir l'Atelier ; eleve
-            -> recommander l'Atelier (70% de commission, espace
-            affiliation de l'Atelier). Rien tant que le statut n'est
-            pas connu, pour ne jamais montrer le mauvais message. */}
+            28 juillet 2026). FR uniquement (la formation n'existe qu'en
+            francais). Tiquiz seulement, pas Tipote. Deux variantes :
+            non-eleve -> decouvrir l'Atelier ; eleve -> recommander
+            l'Atelier (70% de commission, espace affiliation de
+            l'Atelier). Rien tant que le statut n'est pas connu, pour ne
+            jamais montrer le mauvais message. */}
         {locale === "fr" && hasAtelier === false && (
           <a
             href="https://www.tipote.fr/atelier-du-quiz"
@@ -285,7 +325,10 @@ export function AppSidebar() {
             </span>
           </a>
         )}
+        </div>
+      </SidebarContent>
 
+      <SidebarFooter className="p-4 space-y-1">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
@@ -300,6 +343,7 @@ export function AppSidebar() {
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          <RestartTourItem />
           {/* Programme affilié — accessible à tout moment depuis chaque app. */}
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
