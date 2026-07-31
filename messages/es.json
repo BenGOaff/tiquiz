@@ -162,23 +162,6 @@
       "badge": "Todo el tiempo"
     },
     "eventsNoticeDesc": "Las nuevas vistas, inicios y completados se registran ahora con fecha - las curvas se llenarán con la actividad. Mientras tanto los totales acumulados siguen siendo fiables.",
-    "totals": {
-      "views": "Vistas",
-      "starts": "Inicios",
-      "completions": "Completados",
-      "leads": "Leads",
-      "shares": "Comparticiones"
-    },
-    "funnel": {
-      "title": "Embudo de conversión",
-      "startRate": "Tasa de inicio",
-      "startRateDetail": "{starts} inicios / {views} vistas",
-      "completionRate": "Tasa de finalización",
-      "completionRateDetail": "{completions} completados / {starts} inicios",
-      "leadRate": "Tasa de conversión (leads)",
-      "leadRateDetail": "{leads} leads / {starts} inicios",
-      "leadRateDetailViews": "{leads} leads / {views} vistas (inicios no rastreados)"
-    },
     "perQuiz": {
       "title": "Rendimiento por quiz",
       "conversion": "conversión",
@@ -1017,7 +1000,8 @@
     "notifyResponsesLabel": "Enviarme un email por cada nueva respuesta",
     "affCommTitle": "Gana comisiones con tus quizzes",
     "affCommDesc": "En cada quiz publicado, el pie «Este quiz es ofrecido por Tiquiz» enlaza con la página de presentación de Tiquiz. Si pegas tu identificador de afiliado de Systeme.io abajo, cada registro que se genere te da una comisión, automáticamente.",
-    "affIdLabel": "Mi identificador de afiliado Tipote"
+    "affIdLabel": "Mi identificador de afiliado Tipote",
+    "faviconRemoveBtn": "Quitar"
   },
   "languageSwitcher": {
     "label": "Idioma"
