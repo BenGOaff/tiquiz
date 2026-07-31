@@ -1067,13 +1067,15 @@
     "skipTour": "Sair da visita",
     "next": "Seguinte",
     "tooltipDashboard": "Painel - a tua página inicial. Encontra os teus quizzes, as estatísticas-chave e cria um novo quiz num clique.",
-    "tooltipCreate": "Criar um quiz - gera um quiz manualmente ou deixa a IA criá-lo por ti. Configura as tuas perguntas, resultados e integrações SIO.",
+    "tooltipCreate": "Criar um quiz - por perfil ou com pontuação (diagnóstico), à mão ou gerado pela IA. Configura as tuas perguntas, resultados e integrações Systeme.io.",
     "tooltipCreateSurvey": "Criar uma sondagem - faz perguntas à tua audiência e recolhe as respostas. Perfeito para conhecer as necessidades dos teus subscritores.",
     "tooltipQuizzes": "Os meus projetos - encontra todos os teus quizzes e sondagens aqui. Ativa, edita ou elimina os teus projetos, e copia o link público num clique.",
     "tooltipPopquiz": "Popquiz de vídeo - incorpora um quiz interativo num vídeo para captar leads durante a visualização.",
     "tooltipLeads": "Os meus leads - todos os contactos captados pelos teus quizzes. Exporta-os ou sincroniza-os com o Systeme.io.",
     "tooltipStats": "Estatísticas - acompanha o desempenho dos teus quizzes: visualizações, taxa de conclusão, conversões e partilhas.",
-    "tooltipComplete": "Visita terminada! Cria o teu primeiro quiz, configura o Systeme.io e partilha o teu link."
+    "tooltipComplete": "Visita terminada! Cria o teu primeiro quiz, configura o Systeme.io e partilha o teu link.",
+    "nudgeClose": "Ocultar este bloco",
+    "completeTipSettings": "A tua palavra-passe, o teu idioma e a chave Systeme.io: clica no teu avatar no canto superior direito, depois Definições"
   },
   "quizEditor": {
     "backToTop": "Voltar ao topo",

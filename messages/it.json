@@ -1067,13 +1067,15 @@
     "skipTour": "Esci dal tour",
     "next": "Avanti",
     "tooltipDashboard": "Dashboard - la tua home. Trova i tuoi quiz, le statistiche chiave e crea un nuovo quiz in un clic.",
-    "tooltipCreate": "Crea un quiz - costruiscilo manualmente o lascia che l'IA lo generi. Configura domande, risultati e integrazioni SIO.",
+    "tooltipCreate": "Creare un quiz - per profilo o con punteggio (diagnosi), a mano o generato dall'IA. Configura domande, risultati e integrazioni Systeme.io.",
     "tooltipCreateSurvey": "Crea un sondaggio - fai domande al tuo pubblico e raccogli le risposte. Perfetto per conoscere i bisogni dei tuoi iscritti.",
     "tooltipQuizzes": "I miei progetti - trova tutti i tuoi quiz e sondaggi qui. Attiva, modifica o elimina i tuoi progetti, e copia il link pubblico in un clic.",
     "tooltipPopquiz": "Popquiz video - inserisci un quiz interattivo in un video per catturare lead durante la visione.",
     "tooltipLeads": "I miei lead - tutti i contatti catturati dai tuoi quiz. Esportali o sincronizzali con Systeme.io.",
     "tooltipStats": "Statistiche - monitora le prestazioni dei tuoi quiz: visualizzazioni, tasso di completamento, conversioni e condivisioni.",
-    "tooltipComplete": "Tour completato! Crea il tuo primo quiz, configura Systeme.io e condividi il tuo link."
+    "tooltipComplete": "Tour completato! Crea il tuo primo quiz, configura Systeme.io e condividi il tuo link.",
+    "nudgeClose": "Nascondi questo blocco",
+    "completeTipSettings": "La tua password, la tua lingua e la chiave Systeme.io: clicca sul tuo avatar in alto a destra, poi Impostazioni"
   },
   "quizEditor": {
     "backToTop": "Torna in alto",

@@ -78,6 +78,7 @@ export function TourCompleteModal() {
                 { icon: ClipboardList, label: t("completeTipQuiz") },
                 { icon: Link, label: t("completeTipSio") },
                 { icon: Share2, label: t("completeTipShare") },
+                { icon: Settings, label: t("completeTipSettings") },
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
