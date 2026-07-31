@@ -16,10 +16,11 @@ Tiquiz permet à un créateur de fabriquer un lead magnet interactif (le classiq
 
 ### 1.2. Fonctionnalités clés
 
-- Trois modes de contenu partageant le même moteur : **quiz par profil**, **quiz noté (scoring)**, **sondage**.
+- Trois modes de contenu partageant le même moteur : **quiz par profil**, **quiz scoré (diagnostic, mono ou multi-axes)**, **sondage**.
+- **Quiz scoré multi-axes** : score global sur 100 (jauge, affichage en pourcentage ou en libellé bas / moyen / élevé personnalisable), jusqu'à 6 axes thématiques avec barre de score par axe, questions pondérées par axe, résultats par tranches de score à bornes calculées, variables `{score}`, `{label}`, `{score_<axe>}`, `{label_<axe>}` dans les textes et les URL de CTA, tags Systeme.io par tranche (globale et par axe).
 - **Module Popquiz** : vidéo avec quiz interactifs incrustés à des timestamps précis, embed iframe.
-- Création **manuelle**, par **génération IA** (streaming SSE), par **brainstorm IA conversationnel**, par **import** de document (.txt, .docx, .pdf) ou depuis un **catalogue de 15 templates métier**.
-- **Éditeur WYSIWYG live** avec preview temps réel, édition inline, champs rich-text, autosave, et détecteur d'ex-aequo qui prévient le créateur avant publication.
+- Création **manuelle** (choix quiz par profil ou quiz scoré), par **génération IA** (streaming SSE, type par profil ou scoré avec axes et nombre de tranches au choix), par **brainstorm IA conversationnel**, par **import** de document (.txt, .docx, .pdf) ou depuis un **catalogue de 15 templates métier**.
+- **Éditeur WYSIWYG live** avec preview temps réel, édition inline, champs rich-text, autosave, détecteur d'ex-aequo (mode profil) et détecteur de couverture des tranches de score (mode scoré : trous, chevauchements, bornes hors de portée signalés avant publication).
 - **Système de design complet** : 9 polices Google, couleurs de marque (principale, fond, texte) avec générateur de palette à partir d'une seule couleur, 9 thèmes prêts à l'emploi, 8 dégradés, fond image plein cadre, contraste de texte auto (clair/sombre). Dispositions : accueil en carte ou couverture, questions centrées / à gauche / en deux colonnes (type Typeform), formes de boutons, disposition des réponses (auto / grille / liste), panneau latéral avec motifs. Mise en page responsive centrée sur tous les écrans.
 - **Design par défaut du projet** : le créateur enregistre ses réglages de présentation comme modèle ; chaque nouveau quiz démarre déjà à sa marque.
 - **Types de questions variés** : choix multiple (mono ou multi-réponses), oui/non, choix par image, échelle de notation, notation en étoiles, réponse libre.
@@ -51,7 +52,7 @@ Tiquiz ne comprend pas : coach IA, crédits IA consommables, réseaux sociaux (O
 
 ```
 INSCRIPTION (webhook Systeme.io ou signup direct)
-  -> LOGIN (mot de passe ou magic link)
+  -> LOGIN (mot de passe, magic link, mot de passe oublié)
     -> DASHBOARD (contenus + stats + jalons)
       -> CRÉER (manuel, IA, brainstorm, import, template)
         -> ÉDITER (éditeur WYSIWYG live) -> PUBLIER
@@ -64,7 +65,9 @@ INSCRIPTION (webhook Systeme.io ou signup direct)
 | Page | URL | Description |
 |:-----|:----|:-----------|
 | Accueil | `/` | Landing publique |
-| Login | `/login` | Connexion (mot de passe + magic link) |
+| Login | `/login` | Connexion (mot de passe + magic link + lien mot de passe oublié) |
+| Mot de passe oublié | `/auth/forgot-password` | Demande de reset (email Resend brandé, fallback template Supabase) |
+| Nouveau mot de passe | `/auth/reset-password` | Choix du nouveau mot de passe après lien recovery |
 | Signup | `/signup` | Inscription |
 | Dashboard | `/dashboard` | Vue d'ensemble, onboarding, jalons |
 | Mes quiz | `/quizzes` | Liste des quiz (gérer, activer, dupliquer, partager) |
@@ -97,8 +100,10 @@ Le même moteur (tables `quizzes`, `quiz_questions`, `quiz_results`, `quiz_leads
 | Mode | Valeur | Principe |
 |:-----|:-------|:---------|
 | Quiz par profil | `quiz` | Chaque option pointe vers un résultat ; le profil dominant gagne |
-| Quiz noté | `scoring` | Chaque option porte des `points` ; le score total tombe dans une tranche `min_score`/`max_score` d'un résultat |
+| Quiz scoré | `scoring` | Chaque option porte des `points` ; le score total tombe dans une tranche `min_score`/`max_score` d'un résultat. Optionnel : axes thématiques (`quizzes.scoring_axes`, jusqu'à 6) sur lesquels chaque question pèse avec un poids (`config.axes`, poids 1 à 9) ; chaque lead reçoit un snapshot de scores `{ points, min, max }` global et par axe (`quiz_leads.scores`), figé à la capture et jamais recalculé |
 | Sondage | `survey` | Les réponses brutes sont agrégées ; pas de résultat calculé |
+
+Le cœur du scoring vit dans `lib/quizScoring.ts` (fichier identique dans Tipote) : calcul du snapshot, pourcentage `(points - min) / (max - min)`, tranches bas / moyen / élevé, variables de score, analyse de couverture des tranches, normalisation d'un quiz scoré généré par l'IA (`finalizeAiScoringQuiz` : points bornés 0-3, tranches contiguës calculées à partir de la plage atteignable), validation serveur du snapshot.
 
 ### 3.1. Types de questions
 
@@ -117,10 +122,10 @@ En mode scoring, une note choisie (rating / star) compte comme points ; en mode 
 
 ### 3.2. Modes de création
 
-Page `/quiz/new` (et `/survey/new` pour les sondages) :
+Page `/quiz/new` (et `/survey/new` pour les sondages), onglets : Créer manuellement, Générer avec l'IA, Importer.
 
-- **Manuel** : formulaire complet, quiz vierge.
-- **Génération IA** : `/api/quiz/generate` en streaming SSE remplit le formulaire en temps réel à partir d'un brief (objectif, audience, ton, CTA, bonus, nombre de questions et de résultats, forme d'adresse, langue).
+- **Manuel** : le clic ouvre un choix en deux cartes, Quiz par profil ou Quiz scoré, puis crée un quiz vierge du mode choisi (le scoré démarre avec la jauge activée).
+- **Génération IA** : `/api/quiz/generate` en streaming SSE remplit le formulaire en temps réel à partir d'un brief (objectif, audience, ton, CTA, bonus, nombre de questions et de résultats, forme d'adresse, langue). Le créateur choisit le type : **par profil** ou **scoré (diagnostic)**, avec pour le scoré ses axes optionnels et le nombre de résultats (1 par tranche de score, 2 à 5). Principe : l'IA fait la sémantique (questions, intensités de réponses 0 à 3, textes de tranches ordonnés sans bornes chiffrées), le code fait l'arithmétique (`finalizeAiScoringQuiz` calcule des tranches contiguës qui couvrent exactement la plage atteignable ; le bandeau de couverture ne doit jamais apparaître sur un quiz généré).
 - **Brainstorm IA** : `/api/quiz/idea-chat` (Claude Haiku), chat conversationnel borné (quelques tours) qui cadre une idée floue avant de lancer la génération complète.
 - **Import** : `/api/quiz/import-extract` extrait le texte d'un fichier `.txt`, `.docx` ou `.pdf` côté serveur (max 10 Mo, 50 000 caractères ; les PDF scannés sont détectés avec un message d'aide), puis alimente la génération IA en mode import.
 - **Templates** : catalogue de 15 modèles métier prêts à publier (cf. §14).
@@ -132,7 +137,10 @@ Sidebar à onglets (Structure, Design, Paramètres, Partage) avec preview live �
 
 - **Structure** : arborescence Intro, Questions (drag-and-drop), Prise d'informations, Demande de partage, Résultats (drag-and-drop) ; scroll-to-section.
 - **Design** : 9 polices Google, couleurs de marque (principale, fond, texte) avec générateur de palette à partir d'une seule couleur, logo et favicon. Présentation : fond uni / dégradé (8) / image, 9 thèmes prêts à l'emploi, disposition d'accueil (carte ou couverture), disposition des questions (centrée / gauche / deux colonnes), disposition des réponses (auto / grille / liste), forme des boutons, panneau latéral à motifs. Le créateur peut enregistrer ses réglages comme design par défaut du projet, appliqué automatiquement aux nouveaux quiz.
-- **Paramètres** : formulaire de capture (activation par champ prénom, nom, téléphone, pays), placement de la capture (avant ou après les questions), bloc bonus (description, visuel image / mockup / GIF, message de partage, tag Systeme.io post-partage), CTA par défaut, fermeture du quiz, affichage ou masquage des compteurs de réponses.
+- **Paramètres** : formulaire de capture (activation par champ prénom, nom, téléphone, pays), placement de la capture (avant ou après les questions), bloc bonus (description, visuel image / mockup / GIF, message de partage, tag Systeme.io post-partage), CTA par défaut, fermeture du quiz, affichage ou masquage des compteurs de réponses. En mode scoré, panneau **Score visuel et axes** : jauge activable, affichage en pourcentage ou en libellé (bas / moyen / élevé personnalisables), gestion des axes (ajout, renommage, suppression ; l'identifiant d'un axe est figé à la création, un renommage ne casse ni variables ni tags), option tags Systeme.io par tranche.
+- **Spécifique au mode scoré, sur chaque question** : pastilles de rattachement aux axes avec poids 1 à 9, points par option, rappel de la règle d'arbitrage en cas d'égalité, et bandeau de couverture des tranches (trous, chevauchements, bornes hors de la plage atteignable, calculée en tenant compte du multi-réponses).
+- **Réponse libre** : le texte d'invite (placeholder) s'édite dans la preview avec le même éditeur riche que les autres textes (taille, police, couleur, alignement, variables), rendu fidèle côté visiteur ; longueur maximale réglable.
+- **Disposition deux colonnes** : un taquet entre l'image et le contenu règle la largeur du panneau (20 à 60 %, double-clic pour revenir au défaut), preview fidèle au rendu public y compris en bascule mobile.
 - **Partage** : slug personnalisé, sélecteur de domaine de partage, sélecteur de réseaux, image et description OG, footer personnalisable (remplacer le lien "offert par Tiquiz" par son propre lien, ou le masquer complètement, sur les plans payants), QR code téléchargeable, snippet iframe.
 
 Les champs rich-text (introduction, description / insight / projection de chaque résultat) sont assainis côté client et côté serveur via `sanitizeRichText`. L'éditeur inclut un color picker, un inséreur de variables de personnalisation, un sélecteur de GIF (via KLIPY), le recadrage d'image et la génération de variantes grammaticales (`/api/quiz/gender-variants`).
@@ -146,6 +154,7 @@ Interpolation dans les textes du parcours, à partir des données capturées :
 - `{name}` : prénom du visiteur (repli propre si absent).
 - `{m|f|x}` : variante grammaticale masculin / féminin / inclusif, choisie selon le genre du visiteur. Libellés adaptés par langue (Il/Elle/Iel, He/She/They, etc.).
 - `{a|b}`, `{a|b|c}`, `{L}` : autres formes de variantes gérées par `lib/quizPersonalization.ts`.
+- **Variables de score** (quiz scoré) : `{score}` et `{label}` (global), `{score_<axe>}` et `{label_<axe>}` par axe, insérables en un clic depuis le menu de variables dans les textes de résultat ET dans l'URL du CTA (valeurs encodées ; jamais l'email dans une URL).
 
 Les variantes de genre peuvent être générées par l'IA sur un champ (bouton ✨) ou sur tout le quiz d'un coup. Le contenu peut être produit dans plus de 100 langues (cf. §17.3).
 
@@ -161,7 +170,7 @@ Résolution de l'URL par UUID direct ou par slug personnalisé (validation case-
 2. **Questions** : navigation multi-étapes avec barre de progression, transitions directionnelles, navigation au clavier (flèches) et par swipe sur mobile.
 3. **Capture** : heading et sous-titre personnalisés, email plus champs optionnels activés, consentement (`privacy_url` + `consent_text`, case optionnelle). Placement avant ou après les questions (`capture_before_questions`).
 4. **Bonus de partage** (si `virality_enabled` et bonus renseigné) : étape intermédiaire avant les résultats, avec anti-triche (cf. §6.3), visuel du bonus, boutons des réseaux sélectionnés, option « Continuer sans bonus ».
-5. **Résultat** : titre, description, insight, projection (headings personnalisables), CTA spécifique du résultat ou CTA par défaut du quiz. Carte de résultat partageable générée côté client (`lib/resultCard.ts`) et confettis (`lib/celebrate.ts`). Bouton « Recommencer ».
+5. **Résultat** : titre, description, insight, projection (headings personnalisables), CTA spécifique du résultat ou CTA par défaut du quiz. En mode scoré avec jauge activée : grande jauge du score global (pourcentage ou libellé) aux couleurs de marque, et carte des barres par axe quand des axes existent. Carte de résultat partageable générée côté client (`lib/resultCard.ts`) et confettis (`lib/celebrate.ts`). Bouton « Recommencer ».
 6. **Footer** : logo de marque (ou Tiquiz par défaut), footer personnalisé sur les plans payants (lien propre en remplacement du "offert par Tiquiz", ou masquage complet via `hide_branding`).
 
 Un quiz peut être **fermé** par le créateur (`close_enabled`) : à la fermeture, les visiteurs sont soit redirigés vers une URL, soit accueillis par un message avec CTA personnalisé (`close_action` = `redirect` ou `message`).
@@ -170,7 +179,7 @@ Un quiz peut être **fermé** par le créateur (`close_enabled`) : à la fermetu
 
 - **Fond** : uni, dégradé (`background_gradient`, 8 dégradés fermés) ou image plein cadre (`background_image_url`), avec surface de lecture translucide au-dessus de l'image.
 - **Thème** : 9 thèmes prêts à l'emploi mémorisés (`theme_id`), ou réglages manuels (dont palette générée depuis une couleur de marque).
-- **Dispositions** : accueil en carte ou couverture (`intro_layout`), questions centrées / à gauche / en deux colonnes (`question_layout`), réponses auto / grille / liste (`answer_layout`), panneau latéral à motifs (`panel_media`, `split_side`).
+- **Dispositions** : accueil en carte ou couverture (`intro_layout`), questions centrées / à gauche / en deux colonnes (`question_layout`), réponses auto / grille / liste (`answer_layout`), panneau latéral à motifs (`panel_media`, `split_side`, largeur réglable `panel_media.width` 20-60 %, défauts historiques 40 % / 44 % selon le breakpoint).
 - **Boutons** : forme pill, arrondie ou carrée (`button_shape`).
 - **Responsive** : parcours centré verticalement et lisible sur tous les écrans (mobile, 16:9, écrans hauts), champs de capture à fort contraste sur n'importe quel fond.
 - **Branding runtime** : injection dynamique de la Google Font choisie, application des couleurs de marque et bascule automatique du texte clair/sombre selon la luminance du fond.
@@ -199,6 +208,7 @@ Chaque utilisateur configure une ou plusieurs clés API Systeme.io (`sio_api_key
 4. Applique les **answer tags** : chaque option répondue peut porter son propre `sio_tag_name`.
 5. Met à jour le champ personnalisé `tiquiz_result` avec le titre du résultat.
 6. Optionnellement inscrit dans une formation (`sio_course_id`) et ajoute à une communauté (`sio_community_id`).
+7. Quiz scoré avec l'option activée (`quizzes.sio_score_tags`) : applique les **tags de tranche** `score-<tranche>` (bas / moyen / élevé global) et `<axe>-<tranche>` par axe, dérivés du snapshot de scores du lead. Pas de champs personnalisés Systeme.io pour le score : les tags par tranche suffisent à segmenter les emails.
 
 La distribution des leads par résultat suit une règle unique et stricte : la source de vérité est l'état courant de `quiz_results` (les profils actuels, y compris ceux à zéro lead), chaque lead est rattaché au titre live via `result_id` ou via le snapshot `result_title` s'il existe encore, sinon exclu silencieusement ; le dénominateur des pourcentages est le total des leads rattachés. Endroits concernés : `app/api/quiz/[quizId]/analytics/route.ts` et `components/quiz/QuizResultsAnalytics.tsx`.
 
@@ -522,11 +532,13 @@ Répartition indicative des modèles : génération de quiz sur le tier Opus, r�
 
 **quizzes** : identité (`user_id`, `title`, `slug`, `introduction`, `locale`, `address_form`, `status`, `mode`), capture (`capture_enabled`, `capture_heading`, `capture_subtitle`, champs, `capture_submit_text`, `capture_before_questions`), parcours (`start_button_text`), CTA par défaut, privacy et footer, viralité (`virality_enabled`, `bonus_description`, `bonus_heading` (titre de l'écran bonus, éditable, défaut localisé qui suit le tutoiement/vouvoiement), `bonus_image_url`, position d'image bonus, `bonus_intro_text`, `bonus_unlocked_message`, `share_message`, `share_networks`, `sio_share_tag_name`), Systeme.io (`sio_capture_tag`), SEO / OG (`og_image_url`, `og_description`, noindex), branding (`brand_font`, `brand_color_primary`, `brand_color_background`, `brand_color_text`, override logo), présentation (`background_style`, `background_gradient`, `background_image_url`, `intro_layout`, `button_shape`, `theme_id`, image d'intro et largeur), fermeture (`close_enabled`, `close_action`, `close_redirect_url`, `close_message`, `close_cta_text`, `close_cta_url`), affichage (`show_other_results`, breakdown, masquage des compteurs), pixels, thanks de sondage, compteurs (`views_count`, `starts_count`, `completions_count`, `shares_count`).
 
-**quiz_questions** : `quiz_id`, `question_text`, `question_type`, `config` (JSONB), `options` (JSONB, `[{ text, result_index, points?, sio_tag_name?, image_url? }]`), `sort_order`.
+**Colonnes scoring de `quizzes`** : `scoring_axes` (JSONB `[{ id, label }]`, id figé à la création), `show_score_gauge`, `score_display_mode` (`percent` / `label`), `score_labels` (3 libellés personnalisables), `sio_score_tags` (option tags par tranche).
+
+**quiz_questions** : `quiz_id`, `question_text`, `question_type`, `config` (JSONB : `multi_select`, `maxLength`, `placeholder` (HTML riche de l'invite du texte libre), `axes` `{ axisId: poids }` en mode scoré), `options` (JSONB, `[{ text, result_index, points?, sio_tag_name?, image_url? }]`), `sort_order`.
 
 **quiz_results** : `quiz_id`, `title`, `description`, `insight`, `projection`, headings personnalisés, `cta_text`, `cta_url`, `sio_tag_names` (tableau) et `sio_tag_name` (legacy), `sio_course_id`, `sio_community_id`, `min_score`, `max_score`, image et position, `sort_order`.
 
-**quiz_leads** : `quiz_id`, `email`, identité, `result_id` (`ON DELETE SET NULL`), `result_title` (snapshot), `consent_given`, `has_shared`, `bonus_unlocked`, `answers` (JSONB), `created_at`, unicité `(quiz_id, email)`.
+**quiz_leads** : `quiz_id`, `email`, identité, `result_id` (`ON DELETE SET NULL`), `result_title` (snapshot), `consent_given`, `has_shared`, `bonus_unlocked`, `answers` (JSONB), `scores` (JSONB, snapshot `{ global: { points, min, max }, axes: { <id>: { points, min, max } } }` figé à la capture, validé serveur, exporté dans le CSV des leads), `created_at`, unicité `(quiz_id, email)`.
 
 **Autres** : `popquizzes` et cues, `quiz_events` et `quiz_question_events` (tracking), `custom_domains`, `webhook_logs`, tables revendeur (resellers, factures, événements de paiement, connexions partenaire), tables milestones et business events.
 
@@ -581,7 +593,9 @@ Répartition indicative des modèles : génération de quiz sur le tier Opus, r�
 
 ### 19.1. Didacticiel interactif
 
-Tour guidé en 7 étapes (plus welcome et completion), inspiré du système Tipote et adapté à Tiquiz. Architecture : `hooks/useTutorial.ts` (état Context + localStorage par user), `components/tutorial/` (WelcomeModal, TourCompleteModal, TutorialSpotlight, TutorialOverlay, HelpButton, TutorialNudge). Fenêtre de première visite de 7 jours, opt-out permanent possible, relance via le bouton flottant, positionnement intelligent des tooltips, traduction complète via `next-intl` (namespace `tutorial`). Étapes : dashboard, création, mes quiz, mes leads, statistiques, paramètres.
+Tour guidé en 7 étapes (plus welcome et completion), inspiré du système Tipote et adapté à Tiquiz. Architecture : `hooks/useTutorial.ts` (état Context + localStorage par user), `components/tutorial/` (WelcomeModal, TourCompleteModal, TutorialSpotlight, TutorialOverlay, HelpButton, TutorialNudge). Fenêtre de première visite de 7 jours, opt-out permanent possible, positionnement intelligent des tooltips, traduction complète via `next-intl` (namespace `tutorial`). Étapes (alignées sur la sidebar) : tableau de bord, créer un quiz, créer un sondage, mes projets, popquiz, prospects, statistiques. L'écran de fin pointe les prochaines étapes, dont la localisation des Paramètres (mot de passe, langue, clé Systeme.io : avatar en haut à droite).
+
+La carte "Besoin d'un coup de main ?" de la sidebar est **fermable d'un clic** (croix, mémorisé par utilisateur) et vit dans la zone scrollable du menu, jamais dans le pied fixe : le menu garde toujours la priorité verticale. Quand la carte est fermée ou le guide désactivé, une entrée "Refaire le tour guidé" apparaît dans le pied de sidebar : le tour reste relançable en permanence.
 
 ### 19.2. Centre d'aide
 
@@ -644,7 +658,7 @@ Sur le serveur de production, l'application source son environnement depuis `.en
 
 - **Serveur** : VPS Ubuntu, application servie par PM2, reverse proxy Caddy / Nginx avec on-demand TLS pour les domaines personnalisés, DNS et CDN Cloudflare.
 - **Build** : `npm run build` (sortie standalone). Typecheck `npx tsc --noEmit` avant chaque commit.
-- **Outillage défensif (scripts npm)** : `check:migrations-pending` (liste les migrations non appliquées en prod), `check:schema`, `diag:multiprofils` (invariants DB), `smoke:multiprofils`, `test:webhook` (cas de routing webhook sans paiement), `test:e2e` (Playwright sur `/q/`, `/p/`, `/pq/`), `smoke` (routes publiques).
+- **Outillage défensif (scripts npm)** : `check:migrations-pending` (liste les migrations non appliquées en prod), `check:schema`, `diag:multiprofils` (invariants DB), `smoke:multiprofils`, `test:webhook` (cas de routing webhook sans paiement), `test:e2e` (Playwright sur `/q/`, `/p/`, `/pq/`), `smoke` (routes publiques), `test:visual` (filet visuel Playwright du viewer public : 5 dispositions x 6 écrans, dont le résultat scoré multi-axes, x 3 viewports = 90 captures de référence, à faire passer avant tout changement design).
 - **CI** : workflow de typecheck plus build plus smoke à chaque push, workflow Playwright planifié.
 - **Invariants anti-régression** documentés dans `docs/INVARIANTS.md` : sécurité des leads, typographie française appliquée au save et au render, auto-activation des quiz d'un popquiz publié, cohérence lockfile / package.json, ownership des cues de popquiz.
 

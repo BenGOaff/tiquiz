@@ -162,23 +162,6 @@
       "badge": "Sempre"
     },
     "eventsNoticeDesc": "Novas visualizações, inícios e conclusões agora têm data - os gráficos vão se preencher com a atividade. Enquanto isso, os totais acumulados continuam confiáveis.",
-    "totals": {
-      "views": "Visualizações",
-      "starts": "Iniciados",
-      "completions": "Concluídos",
-      "leads": "Leads",
-      "shares": "Compartilhamentos"
-    },
-    "funnel": {
-      "title": "Funil de conversão",
-      "startRate": "Taxa de início",
-      "startRateDetail": "{starts} iniciados / {views} visualizações",
-      "completionRate": "Taxa de conclusão",
-      "completionRateDetail": "{completions} concluídos / {starts} iniciados",
-      "leadRate": "Taxa de conversão (leads)",
-      "leadRateDetail": "{leads} leads / {starts} iniciados",
-      "leadRateDetailViews": "{leads} leads / {views} visualizações (inícios não rastreados)"
-    },
     "perQuiz": {
       "title": "Performance por quiz",
       "conversion": "conversão",
@@ -1005,7 +988,20 @@
     "notifyResponsesLabel": "Enviar-me um email a cada nova resposta",
     "affCommTitle": "Ganhe comissões nos seus quizzes",
     "affCommDesc": "Em cada quiz publicado, o rodapé «Este quiz é oferecido por Tiquiz» leva à página de apresentação do Tiquiz. Se você colar seu ID de afiliado Systeme.io abaixo, cada inscrição resultante rende uma comissão, automaticamente.",
-    "affIdLabel": "Meu ID de afiliado Tipote"
+    "affIdLabel": "Meu ID de afiliado Tipote",
+    "faviconRemoveBtn": "Remover",
+    "planMonthlyPlusPrice": "29€",
+    "planMonthlyPlusPeriod": "/mês",
+    "planMonthlyPlusF1": "Tudo do Pro incluído",
+    "planMonthlyPlusF2": "Multiperfis (várias contas)",
+    "planMonthlyPlusF3": "Análise de resultados por IA (quizzes e pesquisas)",
+    "planMonthlyPlusF4": "Várias chaves Systeme.io",
+    "planYearlyPlusPrice": "290€",
+    "planYearlyPlusPeriod": "/ano",
+    "planYearlyPlusF1": "Tudo do Mensal + incluído",
+    "planYearlyPlusF2": "2 meses grátis",
+    "planYearlyPlusF3": "Suporte prioritário",
+    "planYearlyPlusF4": "Acesso antecipado às novidades"
   },
   "languageSwitcher": {
     "label": "Idioma"
@@ -1510,7 +1506,9 @@
     "answerLayoutPerQuestionHint": "Disposição das respostas para esta pergunta. Auto segue a configuração global do quiz.",
     "designThemeLabel": "Tema",
     "designThemeCustom": "Personalizado",
-    "designAdvancedTitle": "Personalizar o design"
+    "designAdvancedTitle": "Personalizar o design",
+    "seoNoindexLabel": "Ocultar este quiz dos mecanismos de busca",
+    "seoNoindexHint": "Marque esta caixa se você não quiser que o Google, o Bing ou as IAs (ChatGPT, Perplexity…) indexem este quiz. Seu link direto continua compartilhável."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova senha",
@@ -2726,7 +2724,8 @@
     "seriesViews": "Visitas",
     "seriesLeads": "Inscritos",
     "tooltipViews": "{count} visitas",
-    "tooltipConversion": "Conversão: {pct}%"
+    "tooltipConversion": "Conversão: {pct}%",
+    "kpiCaptureRateUnreliable": "Visualizações parcialmente rastreadas (quiz incorporado ou anterior ao rastreamento) - taxa confiável nas novas visualizações"
   },
   "illustrations": {
     "emptyInbox": "Caixa de entrada vazia",
@@ -2790,5 +2789,57 @@
     "surveyErrNotEnough": "Respostas insuficientes para uma análise relevante.",
     "surveyExportPdfGlobal": "PDF síntese",
     "surveyExportPdfFull": "PDF detalhado"
+  },
+  "helpSeo": {
+    "metaTitle": "Indexar meus quizzes no Google - Ajuda Tiquiz",
+    "metaDescription": "Como tornar seus quizzes visíveis no Google Search, ChatGPT, Perplexity e outros mecanismos de busca / IAs. Guia passo a passo.",
+    "title": "Indexar meus quizzes no Google e nas IAs",
+    "subtitle": "Faça seus quizzes aparecerem no Google Search, ChatGPT, Perplexity e Claude search - 5 a 10 minutos de configuração, depois é automático.",
+    "s1": {
+      "heading": "Por que indexar?",
+      "body1": "Quando o Google ou uma IA indexa seu quiz, qualquer pessoa pode encontrá-lo pesquisando seu tema. Três benefícios concretos:",
+      "li1": "Tráfego gratuito recorrente vindo do Google Search - cada pesquisa relevante é uma chance de capturar um lead.",
+      "li2": "Quando alguém pede ao ChatGPT, Perplexity ou Claude \"recomende um quiz sobre X\", seu quiz pode aparecer.",
+      "li3": "Mais compartilhamentos sociais: quem encontra você pela busca costuma compartilhar com a própria rede."
+    },
+    "s2": {
+      "heading": "Etapa 1 - Enviar seu sitemap ao Google",
+      "body1": "O Google precisa de um \"sitemap\" (lista dos seus quizzes) para indexá-los. O Tiquiz o gera automaticamente.",
+      "li1": "Acesse o Google Search Console: https://search.google.com/search-console",
+      "li2": "Clique em \"Adicionar propriedade\" e insira seu domínio (ex.: tiquiz.com OU seu domínio personalizado, se tiver um).",
+      "li3": "Verifique a propriedade (via registro DNS TXT - o Google orienta você).",
+      "li4": "No menu à esquerda, vá em \"Sitemaps\" e insira: sitemap.xml",
+      "li5": "Clique em \"Enviar\". O Google vai rastrear seus quizzes em 1 a 7 dias.",
+      "note": "Você não precisa reenviar a cada novo quiz - o sitemap é regenerado automaticamente a cada hora."
+    },
+    "s3": {
+      "heading": "Etapa 2 - Com um domínio personalizado",
+      "body1": "Se você tem um domínio próprio (ex.: quiz.seusite.com), pode indexar seus quizzes no SEU domínio em vez de tiquiz.com. Mais poderoso para o seu SEO.",
+      "li1": "Adicione seu domínio personalizado ao Google Search Console como \"propriedade de domínio\".",
+      "li2": "Verifique a propriedade via um registro DNS TXT (o Google fornece o valor para colar).",
+      "li3": "Envie o sitemap: https://seu-dominio.com/sitemap.xml - ele listará SOMENTE seus quizzes, na SUA URL."
+    },
+    "s4": {
+      "heading": "Etapa 3 - Otimizar cada quiz para SEO",
+      "body1": "Quanto melhores o título e a descrição do seu quiz, mais o Google e as IAs o destacam. Boas práticas:",
+      "li1Title": "Título claro (≤60 caracteres)",
+      "li1Body": "É o texto que o Google mostra nos resultados. Inclua sua palavra-chave principal.",
+      "li2Title": "Descrição (campo \"Prévia nas redes\" no editor)",
+      "li2Body": "150-160 caracteres que resumem o valor do quiz e incentivam o clique.",
+      "li3Title": "Slug curto e descritivo",
+      "li3Body": "Não \"quiz1\", mas \"perfil-sistema-nervoso\" ou \"estilo-foto-fine-art\". O slug é sua URL.",
+      "li4Title": "Imagem de compartilhamento (1200×630 px)",
+      "li4Body": "Aparece no Google Imagens e nas prévias do iMessage / WhatsApp. Uma boa imagem = +20-30% de cliques."
+    },
+    "s5": {
+      "heading": "Etapa 4 - Visibilidade nas IAs (ChatGPT, Perplexity, Claude)",
+      "body1": "Você não precisa configurar nada a mais. As IAs rastreiam os sites automaticamente pelo nosso arquivo `llms.txt` (um manifesto que geramos para você), que lista seus quizzes, a descrição e a URL num formato otimizado para LLMs.",
+      "note": "Quanto mais você preencher o título, a descrição e a imagem OG no editor, mais precisamente uma IA pode recomendar seu quiz às pessoas certas."
+    },
+    "s6": {
+      "heading": "Etapa 5 - Ocultar um quiz dos mecanismos",
+      "body1": "Se você quiser manter um quiz privado (somente via link, sem risco de aparecer no Google), marque a caixa \"Ocultar este quiz dos mecanismos de busca\" na aba SEO do editor do quiz.",
+      "body2": "O quiz continua ativo e compartilhável pelo link direto, mas fica fora do seu sitemap e do arquivo de IA. Ideal para conteúdos internos ou rascunhos públicos compartilhados com um círculo fechado."
+    }
   }
 }

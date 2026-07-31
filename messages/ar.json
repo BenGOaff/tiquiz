@@ -162,23 +162,6 @@
       "badge": "كل الأوقات"
     },
     "eventsNoticeDesc": "المشاهدات والبدء والإكمال الجديدة موثقة الآن بالتاريخ - ستمتلئ الرسوم البيانية مع تدفق النشاط. وفي الوقت نفسه، تظل الإجماليات التراكمية موثوقة.",
-    "totals": {
-      "views": "المشاهدات",
-      "starts": "بدأوا",
-      "completions": "أكملوا",
-      "leads": "العملاء",
-      "shares": "المشاركات"
-    },
-    "funnel": {
-      "title": "قمع التحويل",
-      "startRate": "معدل البدء",
-      "startRateDetail": "{starts} بدأوا / {views} مشاهدة",
-      "completionRate": "معدل الإكمال",
-      "completionRateDetail": "{completions} مكتمل / {starts} بدأوا",
-      "leadRate": "معدل تحويل العملاء",
-      "leadRateDetail": "{leads} عميل / {starts} بدأوا",
-      "leadRateDetailViews": "{leads} عميل / {views} مشاهدة (لم يتم تتبع البدء)"
-    },
     "perQuiz": {
       "title": "الأداء لكل اختبار",
       "conversion": "تحويل",
@@ -1005,7 +988,20 @@
     "notifyResponsesLabel": "أرسل لي بريدًا عند كل رد جديد",
     "affCommTitle": "اكسب عمولات على اختباراتك",
     "affCommDesc": "في كل اختبار منشور، يوجّه التذييل «هذا الاختبار مقدم لكم من Tiquiz» إلى صفحة تعريف Tiquiz. إذا لصقت معرّف الإحالة الخاص بك في Systeme.io أدناه، فكل تسجيل ينتج عن ذلك يمنحك عمولة تلقائيًا.",
-    "affIdLabel": "معرّف الإحالة الخاص بي في Tipote"
+    "affIdLabel": "معرّف الإحالة الخاص بي في Tipote",
+    "faviconRemoveBtn": "إزالة",
+    "planMonthlyPlusPrice": "29€",
+    "planMonthlyPlusPeriod": "/شهر",
+    "planMonthlyPlusF1": "كل مزايا Pro",
+    "planMonthlyPlusF2": "حسابات متعددة (مساحات عمل)",
+    "planMonthlyPlusF3": "تحليل النتائج بالذكاء الاصطناعي (اختبارات واستطلاعات)",
+    "planMonthlyPlusF4": "مفاتيح Systeme.io متعددة",
+    "planYearlyPlusPrice": "290€",
+    "planYearlyPlusPeriod": "/سنة",
+    "planYearlyPlusF1": "كل مزايا الشهري +",
+    "planYearlyPlusF2": "شهران مجانًا",
+    "planYearlyPlusF3": "دعم ذو أولوية",
+    "planYearlyPlusF4": "وصول مبكر إلى الميزات الجديدة"
   },
   "languageSwitcher": {
     "label": "اللغة"
