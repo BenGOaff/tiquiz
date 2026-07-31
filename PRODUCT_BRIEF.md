@@ -72,11 +72,12 @@ Variations selon le canal :
 
 ### vs ScoreApp, Interact
 - **Français, intégration Systeme.io native.**
+- **Le scoring multi-axes est inclus** : score sur 100, jauge, barres par axe, tranches, tags par niveau. Pas besoin d'un outil dédié au diagnostic en plus du quiz par profil.
 - **UI en 7 langues, quiz public multilingue** (dont arabe RTL).
 - **Module Popquiz vidéo** (vidéo avec quiz incrustés à des timestamps) que les concurrents ne proposent pas.
 
 ### vs Tally, Google Forms
-- **Pas un formulaire, un quiz** : résultats personnalisés, quiz noté, sondage, mécaniques de gamification, mémo persistant.
+- **Pas un formulaire, un quiz** : résultats personnalisés, quiz scoré multi-axes, sondage, mécaniques de gamification, mémo persistant.
 - **Branding par quiz** sans toucher au CSS : 9 polices, palette générée depuis ta couleur, 9 thèmes, 8 dégradés, image de fond, dispositions variées (carte/couverture, questions centrées/gauche/deux colonnes), design par défaut réutilisable.
 - **Contenu généré par l'IA dans plus de 100 langues**, avec variantes de genre et personnalisation au prénom.
 - **Détecteur d'ex-aequo** et rééquilibrage IA des résultats : un vrai moteur de quiz, pas juste des champs.
@@ -120,11 +121,14 @@ Variations selon le canal :
 ### 7.1. Création
 - **Cinq façons de démarrer** : génération IA, import de document (.txt, .docx, .pdf), manuel, template, ou quiz phare en un clic à l'inscription.
 - **Brainstorm IA conversationnel** pour cadrer un brief flou.
-- **Génération complète** en streaming (titre, questions, options, résultats, storytelling).
-- **Trois formats** : quiz par profil, quiz noté (score et tranches), sondage.
-- **Types de questions variés** : choix multiple (mono ou multi-réponses), échelle, étoiles, oui/non, choix par image, réponse libre.
-- **Éditeur WYSIWYG** : édition inline, sidebar à onglets, preview live, autosave.
-- **Détecteur d'ex-aequo** : l'éditeur prévient si des combinaisons de réponses tombent à égalité entre profils, pour un résultat toujours net.
+- **Génération complète** en streaming (titre, questions, options, résultats, storytelling). L'IA génère aussi bien un quiz par profil qu'un quiz scoré complet (axes au choix, tranches de score calculées automatiquement, jamais de trou entre les tranches).
+- **Trois formats** : quiz par profil, quiz scoré (diagnostic avec score sur 100, tranches de résultat, et jusqu'à 6 axes thématiques), sondage. À la création manuelle, un choix clair en deux cartes : par profil ou scoré.
+- **Quiz scoré, côté visiteur** : grande jauge du score (en pourcentage ou en mots : bas, moyen, élevé), barres de score par axe (ex : sommeil 50/100, alimentation 20/100, émotions 80/100), message de résultat par tranche.
+- **Variables de score** : {score}, {label} et leurs variantes par axe s'insèrent en un clic dans les textes de résultat et le lien du bouton.
+- **Tags Systeme.io par tranche de score** (option) : segmente tes emails selon le niveau global ou par axe.
+- **Types de questions variés** : choix multiple (mono ou multi-réponses), échelle, étoiles, oui/non, choix par image, réponse libre (texte d'invite personnalisable avec l'éditeur riche).
+- **Éditeur WYSIWYG** : édition inline, sidebar à onglets, preview live, autosave, taquet de largeur pour la disposition en colonnes.
+- **Détecteur d'ex-aequo** (profil) et **détecteur de couverture des tranches** (scoré) : l'éditeur prévient avant publication si un résultat est inatteignable ou si des scores tombent dans un trou.
 - **Rich text** : gras, italique, alignement, listes, liens, images, color picker.
 - **Outils IA dans l'éditeur** : réécriture d'un texte (3 propositions), rééquilibrage des résultats, variantes grammaticales, duplication.
 - **Personnalisation dynamique** : prénom et forme grammaticale injectés dans les textes.
