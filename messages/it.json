@@ -267,7 +267,7 @@
     "createAccount": "Crea un account",
     "errFillCredentials": "Inserisci email e password.",
     "errFillEmail": "Inserisci il tuo indirizzo email.",
-    "errInvalidCredentials": "Email o password errati.",
+    "errInvalidCredentials": "Email o password errati. Il tuo browser potrebbe aver inserito una password di un'altra app Tipote. Clicca su 'Password dimenticata?' per sceglierne una nuova, oppure usa il link magico.",
     "errUnexpected": "Errore imprevisto. Riprova.",
     "errRateLimit": "Troppi tentativi. Riprova tra qualche minuto.",
     "errSendFailed": "Impossibile inviare il link. Controlla la tua email.",
@@ -279,6 +279,19 @@
     "copyright": "© {year} Tiquiz. Tutti i diritti riservati.",
     "ariaHide": "Nascondi password",
     "ariaShow": "Mostra password"
+  },
+  "forgotPasswordPage": {
+    "title": "Password dimenticata",
+    "description": "Inserisci la tua email: riceverai un link per scegliere una nuova password.",
+    "labelEmail": "Email",
+    "placeholderEmail": "tua@email.com",
+    "sending": "Invio…",
+    "sendLink": "Invia il link",
+    "errFillEmail": "Inserisci il tuo indirizzo email.",
+    "errSendFailed": "Impossibile inviare l'email. Riprova tra qualche minuto.",
+    "errUnexpected": "Errore imprevisto. Riprova.",
+    "successSent": "Se esiste un account per questa email, un link è appena stato inviato. Controlla anche lo spam.",
+    "backToLogin": "Torna al login"
   },
   "signupPage": {
     "title": "Crea un account",
@@ -1529,7 +1542,11 @@
     "showPassword": "Mostra password",
     "hidePassword": "Nascondi password",
     "sectionTitle": "Password",
-    "sectionDesc": "Imposta o cambia la tua password per accedere senza link magico."
+    "sectionDesc": "Imposta o cambia la tua password per accedere senza link magico.",
+    "pageTitle": "Nuova password",
+    "pageDesc": "Scegli la tua nuova password per accedere a Tiquiz.",
+    "pageLoading": "Verifica…",
+    "goDashboard": "Vai alla mia dashboard"
   },
   "qrCode": {
     "title": "Codice QR",

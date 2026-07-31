@@ -62,7 +62,9 @@ export default function CallbackClient() {
           const otpType = (type || "magiclink") as "magiclink" | "recovery" | "invite";
           const { error } = await supabase.auth.verifyOtp({ type: otpType, token_hash: tokenHash });
           if (error) throw error;
-          router.replace("/dashboard");
+          // Lien recovery ("mot de passe oublié") : on enchaîne sur le choix
+          // du nouveau mot de passe, pas sur le dashboard.
+          router.replace(otpType === "recovery" ? "/auth/reset-password" : "/dashboard");
           return;
         }
 
@@ -78,6 +80,7 @@ export default function CallbackClient() {
         const hashParams = parseHashParams(window.location.hash || "");
         const access_token = (hashParams["access_token"] || "").trim();
         const refresh_token = (hashParams["refresh_token"] || "").trim();
+        const hashType = (hashParams["type"] || "").trim().toLowerCase();
 
         if (access_token && refresh_token) {
           const { error } = await supabase.auth.setSession({ access_token, refresh_token });
@@ -85,7 +88,10 @@ export default function CallbackClient() {
           try {
             window.history.replaceState({}, document.title, window.location.pathname);
           } catch { /* ignore */ }
-          router.replace("/dashboard");
+          // Les liens recovery (generateLink "mot de passe oublié") arrivent
+          // ici avec type=recovery dans le hash : direction le formulaire de
+          // nouveau mot de passe.
+          router.replace(hashType === "recovery" ? "/auth/reset-password" : "/dashboard");
           return;
         }
 

@@ -250,7 +250,7 @@
     "createAccount": "Créer un compte",
     "errFillCredentials": "Remplis ton email et mot de passe.",
     "errFillEmail": "Entre ton adresse email.",
-    "errInvalidCredentials": "Email ou mot de passe incorrect.",
+    "errInvalidCredentials": "Email ou mot de passe incorrect. Ton navigateur a peut-être prérempli le mot de passe d'une autre app Tipote. Clique sur 'Mot de passe oublié ?' pour en choisir un nouveau, ou utilise le lien magique.",
     "errUnexpected": "Erreur inattendue. Réessaie.",
     "errRateLimit": "Trop de tentatives. Réessaie dans quelques minutes.",
     "errSendFailed": "Impossible d'envoyer le lien. Vérifie ton email.",
@@ -262,6 +262,19 @@
     "copyright": "© {year} Tiquiz. Tous droits réservés.",
     "ariaHide": "Masquer le mot de passe",
     "ariaShow": "Afficher le mot de passe"
+  },
+  "forgotPasswordPage": {
+    "title": "Mot de passe oublié",
+    "description": "Entre ton email : tu recevras un lien pour choisir un nouveau mot de passe.",
+    "labelEmail": "Email",
+    "placeholderEmail": "ton@email.com",
+    "sending": "Envoi…",
+    "sendLink": "Envoyer le lien",
+    "errFillEmail": "Entre ton adresse email.",
+    "errSendFailed": "Impossible d'envoyer l'email. Réessaie dans quelques minutes.",
+    "errUnexpected": "Erreur inattendue. Réessaie.",
+    "successSent": "Si un compte existe pour cet email, un lien vient d'être envoyé. Pense à vérifier tes spams.",
+    "backToLogin": "Retour à la connexion"
   },
   "signupPage": {
     "title": "Créer un compte",
@@ -1513,7 +1526,11 @@
     "showPassword": "Afficher le mot de passe",
     "hidePassword": "Masquer le mot de passe",
     "sectionTitle": "Mot de passe",
-    "sectionDesc": "Définis ou change ton mot de passe pour te connecter sans lien magique."
+    "sectionDesc": "Définis ou change ton mot de passe pour te connecter sans lien magique.",
+    "pageTitle": "Nouveau mot de passe",
+    "pageDesc": "Choisis ton nouveau mot de passe pour te connecter à Tiquiz.",
+    "pageLoading": "Vérification…",
+    "goDashboard": "Aller à mon tableau de bord"
   },
   "qrCode": {
     "title": "Code QR",

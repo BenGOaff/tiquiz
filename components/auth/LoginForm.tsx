@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTranslations } from "next-intl";
@@ -183,6 +184,9 @@ export default function LoginForm() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password">{t("labelPassword")}</Label>
+                    <Link href="/auth/forgot-password" className="text-sm text-primary hover:underline">
+                      {t("forgotPassword")}
+                    </Link>
                   </div>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

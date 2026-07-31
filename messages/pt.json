@@ -267,7 +267,7 @@
     "createAccount": "Criar uma conta",
     "errFillCredentials": "Preenche o teu email e palavra-passe.",
     "errFillEmail": "Introduz o teu endereço de email.",
-    "errInvalidCredentials": "Email ou palavra-passe incorretos.",
+    "errInvalidCredentials": "Email ou palavra-passe incorretos. O teu navegador pode ter preenchido uma palavra-passe de outra app Tipote. Clica em 'Esqueceste a palavra-passe?' para escolher uma nova, ou usa o link mágico.",
     "errUnexpected": "Erro inesperado. Tenta novamente.",
     "errRateLimit": "Demasiadas tentativas. Tenta novamente em alguns minutos.",
     "errSendFailed": "Não foi possível enviar o link. Verifica o teu email.",
@@ -279,6 +279,19 @@
     "copyright": "© {year} Tiquiz. Todos os direitos reservados.",
     "ariaHide": "Ocultar palavra-passe",
     "ariaShow": "Mostrar palavra-passe"
+  },
+  "forgotPasswordPage": {
+    "title": "Palavra-passe esquecida",
+    "description": "Introduz o teu email: vais receber um link para escolher uma nova palavra-passe.",
+    "labelEmail": "Email",
+    "placeholderEmail": "teu@email.com",
+    "sending": "A enviar…",
+    "sendLink": "Enviar o link",
+    "errFillEmail": "Introduz o teu endereço de email.",
+    "errSendFailed": "Não foi possível enviar o email. Tenta novamente dentro de alguns minutos.",
+    "errUnexpected": "Erro inesperado. Tenta novamente.",
+    "successSent": "Se existir uma conta para este email, um link acabou de ser enviado. Verifica também o spam.",
+    "backToLogin": "Voltar ao login"
   },
   "signupPage": {
     "title": "Criar uma conta",
@@ -1529,7 +1542,11 @@
     "showPassword": "Mostrar palavra-passe",
     "hidePassword": "Ocultar palavra-passe",
     "sectionTitle": "Palavra-passe",
-    "sectionDesc": "Define ou altera a tua palavra-passe para iniciar sessão sem link mágico."
+    "sectionDesc": "Define ou altera a tua palavra-passe para iniciar sessão sem link mágico.",
+    "pageTitle": "Nova palavra-passe",
+    "pageDesc": "Escolhe a tua nova palavra-passe para entrar no Tiquiz.",
+    "pageLoading": "A verificar…",
+    "goDashboard": "Ir para o meu painel"
   },
   "qrCode": {
     "title": "Código QR",

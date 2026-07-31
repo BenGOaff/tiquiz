@@ -267,7 +267,7 @@
     "createAccount": "Criar uma conta",
     "errFillCredentials": "Preencha seu email e senha.",
     "errFillEmail": "Digite seu endereço de email.",
-    "errInvalidCredentials": "Email ou senha incorretos.",
+    "errInvalidCredentials": "Email ou senha incorretos. Seu navegador pode ter preenchido uma senha de outro app Tipote. Clique em 'Esqueceu a senha?' para escolher uma nova, ou use o link mágico.",
     "errUnexpected": "Erro inesperado. Tente novamente.",
     "errRateLimit": "Muitas tentativas. Tente novamente em alguns minutos.",
     "errSendFailed": "Não foi possível enviar o link. Verifique seu email.",
@@ -279,6 +279,19 @@
     "copyright": "© {year} Tiquiz. Todos os direitos reservados.",
     "ariaHide": "Ocultar senha",
     "ariaShow": "Mostrar senha"
+  },
+  "forgotPasswordPage": {
+    "title": "Senha esquecida",
+    "description": "Digite seu email: você vai receber um link para escolher uma nova senha.",
+    "labelEmail": "Email",
+    "placeholderEmail": "seu@email.com",
+    "sending": "Enviando…",
+    "sendLink": "Enviar o link",
+    "errFillEmail": "Digite seu endereço de email.",
+    "errSendFailed": "Não foi possível enviar o email. Tente novamente em alguns minutos.",
+    "errUnexpected": "Erro inesperado. Tente novamente.",
+    "successSent": "Se existir uma conta para este email, um link acabou de ser enviado. Verifique também o spam.",
+    "backToLogin": "Voltar ao login"
   },
   "signupPage": {
     "title": "Criar uma conta",
@@ -1515,7 +1528,11 @@
     "showPassword": "Mostrar senha",
     "hidePassword": "Ocultar senha",
     "sectionTitle": "Senha",
-    "sectionDesc": "Defina ou altere sua senha para entrar sem link mágico."
+    "sectionDesc": "Defina ou altere sua senha para entrar sem link mágico.",
+    "pageTitle": "Nova senha",
+    "pageDesc": "Escolha sua nova senha para entrar no Tiquiz.",
+    "pageLoading": "Verificando…",
+    "goDashboard": "Ir para meu painel"
   },
   "qrCode": {
     "title": "Código QR",
