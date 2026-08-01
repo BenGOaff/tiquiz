@@ -309,6 +309,28 @@ export function AppSidebar() {
             </span>
           </a>
         )}
+        {/* Affiliation ouverte a tout le monde (demande Bene 1er aout
+            2026) : on n'a PAS besoin d'avoir l'Atelier pour le
+            recommander. La page explique Tiquiz + l'Atelier et renvoie
+            ensuite vers affiliate.tipote.com pour l'inscription. Les
+            eleves, eux, gardent le lien vers LEUR espace affiliation
+            dans l'Atelier (carte ci-dessous). */}
+        {locale === "fr" && hasAtelier === false && (
+          <a
+            href="https://www.tipote.fr/tiquiz/affiliation"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-2 block rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5 transition-colors hover:bg-primary/10"
+          >
+            <span className="block text-[11px] leading-snug text-muted-foreground">
+              {t("atelierAffJoinText")}
+            </span>
+            <span className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-primary">
+              <HandCoins className="h-4 w-4 shrink-0" />
+              {t("atelierAffJoinCta")}
+            </span>
+          </a>
+        )}
         {locale === "fr" && hasAtelier === true && (
           <a
             href="https://quizing.tipote.com/affiliation"
@@ -348,7 +370,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <a
-                href="https://affiliate.tipote.com"
+                href="https://www.tipote.fr/tiquiz/affiliation"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={MENU_ITEM_CLASS}

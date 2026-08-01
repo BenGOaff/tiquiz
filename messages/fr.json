@@ -126,6 +126,8 @@
     "atelierNudgeCta": "Découvre l'Atelier du Quiz",
     "atelierAffNudgeText": "Recommande l'Atelier du Quiz et touche 70% de commission",
     "atelierAffNudgeCta": "Mon lien d'affiliation",
+    "atelierAffJoinText": "Tu peux recommander Tiquiz et l'Atelier, même sans les avoir.",
+    "atelierAffJoinCta": "Devenir affilié·e",
     "adminPanel": "Admin"
   },
   "stats": {
@@ -1300,7 +1302,7 @@
     "shareTabDomainLabel": "Domaine",
     "iframeCopied": "Code iframe copié !",
     "shareTabNetworks": "Réseaux de partage proposés",
-    "shareTabNetworksHint": "Choisis les réseaux affichés sur la page de résultat.",
+    "shareTabNetworksHint": "Choisis les réseaux affichés sur la page de résultat. Si tu n'en coches aucun, tous sont proposés.",
     "shareTabSeoTitle": "Aperçu sur les réseaux (SEO)",
     "shareTabSeoHint": "Description utilisée quand un visiteur partage le lien.",
     "shareTabSeoPlaceholder": "Courte phrase d'accroche affichée sous le titre du lien partagé…",
@@ -1410,7 +1412,7 @@
     "optionShowResultProjection": "Afficher la carte projection",
     "optionShowResultProjectionHint": "La carte projection sur la page de résultat. Décoche pour la masquer.",
     "optionShowResultShare": "Afficher le bouton de partage",
-    "optionShowResultShareHint": "Le bouton « Partager mon résultat » sur la page de résultat. Décoche pour le retirer.",
+    "optionShowResultShareHint": "Le bouton « Partager mon résultat » sur la page de résultat : il ouvre les réseaux choisis dans l'onglet Partage. Décoche pour le retirer.",
     "optionShareResultPage": "Partage du résultat : mettre en avant le profil obtenu",
     "scoringVisualTitle": "Score visuel et axes",
     "optionScoreGauge": "Jauge du score global",

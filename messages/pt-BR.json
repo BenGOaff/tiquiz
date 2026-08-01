@@ -126,6 +126,8 @@
     "atelierNudgeCta": "Découvre l'Atelier du Quiz",
     "atelierAffNudgeText": "Recommande l'Atelier du Quiz et touche 70% de commission",
     "atelierAffNudgeCta": "Mon lien d'affiliation",
+    "atelierAffJoinText": "Você pode recomendar o Tiquiz e o Atelier, mesmo sem tê-los.",
+    "atelierAffJoinCta": "Quero ser afiliado",
     "adminPanel": "Admin"
   },
   "stats": {
@@ -1300,7 +1302,7 @@
     "shareTabDomainLabel": "Domínio",
     "iframeCopied": "Código iframe copiado!",
     "shareTabNetworks": "Redes de compartilhamento propostas",
-    "shareTabNetworksHint": "Escolha as redes exibidas na página de resultado.",
+    "shareTabNetworksHint": "Escolha as redes mostradas na página de resultado. Se você não escolher nenhuma, todas são oferecidas.",
     "shareTabSeoTitle": "Visualização nas redes (SEO)",
     "shareTabSeoHint": "Descrição usada quando um visitante compartilha o link.",
     "shareTabSeoPlaceholder": "Frase curta de chamada exibida sob o título do link compartilhado…",
@@ -1408,7 +1410,7 @@
     "optionShowResultProjection": "Mostrar o cartão projeção",
     "optionShowResultProjectionHint": "O cartão projeção na página de resultado. Desmarque para ocultá-lo.",
     "optionShowResultShare": "Mostrar o botão de compartilhamento",
-    "optionShowResultShareHint": "O botão «Compartilhar meu resultado» na página de resultado. Desmarque para removê-lo.",
+    "optionShowResultShareHint": "O botão «Compartilhar meu resultado» na página de resultado: ele abre as redes escolhidas na aba Compartilhar. Desmarque para removê-lo.",
     "optionShareResultPage": "Compartilhar resultado: destacar o perfil obtido",
     "scoringVisualTitle": "Pontuação visual e eixos",
     "optionScoreGauge": "Indicador da pontuação global",

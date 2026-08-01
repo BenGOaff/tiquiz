@@ -126,6 +126,8 @@
     "atelierNudgeCta": "Découvre l'Atelier du Quiz",
     "atelierAffNudgeText": "Recommande l'Atelier du Quiz et touche 70% de commission",
     "atelierAffNudgeCta": "Mon lien d'affiliation",
+    "atelierAffJoinText": "You can promote Tiquiz and the Atelier, even without owning them.",
+    "atelierAffJoinCta": "Become an affiliate",
     "adminPanel": "Admin"
   },
   "stats": {
@@ -1300,7 +1302,7 @@
     "shareTabDomainLabel": "Domain",
     "iframeCopied": "Iframe code copied!",
     "shareTabNetworks": "Share networks offered",
-    "shareTabNetworksHint": "Pick which networks appear on the result page.",
+    "shareTabNetworksHint": "Pick the networks shown on the result page. If you pick none, all of them are offered.",
     "shareTabSeoTitle": "Social preview (SEO)",
     "shareTabSeoHint": "Description used when a visitor shares the link.",
     "shareTabSeoPlaceholder": "Short hook shown below the shared link title…",
@@ -1410,7 +1412,7 @@
     "optionShowResultProjection": "Show the projection card",
     "optionShowResultProjectionHint": "The projection card on the result page. Uncheck to hide it.",
     "optionShowResultShare": "Show the share button",
-    "optionShowResultShareHint": "The \"Share my result\" button on the result page. Uncheck to remove it.",
+    "optionShowResultShareHint": "The \"Share my result\" button on the result page: it opens the networks picked in the Share tab. Uncheck to remove it.",
     "optionShareResultPage": "Result sharing: highlight the obtained profile",
     "scoringVisualTitle": "Visual score and axes",
     "optionScoreGauge": "Global score gauge",
