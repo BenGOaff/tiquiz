@@ -174,7 +174,9 @@
       "questionLabel": "Question",
       "visitors": "seen",
       "dropped": "Biggest drop:",
-      "kept": "Stayed to the end:"
+      "kept": "Stayed to the end:",
+      "noData": "no data yet",
+      "removedNotice": "{count, plural, =1 {1 question has been deleted since: its views are no longer counted.} other {# questions have been deleted since: their views are no longer counted.}}"
     },
     "untitled": "Untitled"
   },
@@ -714,7 +716,12 @@
     "optionFallback": "Option {n}",
     "questionFallback": "Question {n}",
     "showConsentCheckboxLabel": "Show the consent checkbox",
-    "showConsentCheckboxHint": "Turn off if you already handle GDPR consent elsewhere (your CRM, another page)."
+    "showConsentCheckboxHint": "Turn off if you already handle GDPR consent elsewhere (your CRM, another page).",
+    "averageRating": "Average: {value}",
+    "freeTextAll": "Every written answer, newest first.",
+    "freeTextShown": "The {shown} most recent answers out of {total}. The Copy button takes them all.",
+    "freeTextCopy": "Copy the answers",
+    "freeTextCopied": "Copied"
   },
   "settings": {
     "title": "Settings",

@@ -55,6 +55,9 @@ interface FunnelStep {
   answers: number;
   /** % of visitors lost compared to the previous question */
   dropFromPrevious: number;
+  /** false = question vivante mais sans aucun event (ajoutée après coup,
+   *  ou jamais atteinte). On ne l'affiche pas comme "0 visiteur". */
+  hasData?: boolean;
 }
 
 interface AnalyticsResponse {
@@ -77,6 +80,8 @@ interface AnalyticsResponse {
   // count = inscrits du jour, views = visites du jour (source quiz_events).
   leadsByDay: { date: string; count: number; views?: number }[];
   funnel?: FunnelStep[];
+  /** Questions supprimées depuis : leurs events sont exclus du funnel. */
+  funnelRemovedQuestions?: number;
   totalFunnelSessions?: number;
   error?: string;
 }
@@ -429,14 +434,26 @@ function FunnelSection({
     );
   }
 
-  const baseline = funnel[0]!.views;
+  const tracked = funnel.filter((f) => f.hasData !== false);
+  if (tracked.length === 0) {
+    return (
+      <Card className="p-4 space-y-2">
+        <h2 className="text-sm font-semibold flex items-center gap-2">
+          <TrendingDown className="size-4 text-primary" />
+          {t("funnelTitle")}
+        </h2>
+        <p className="text-xs text-muted-foreground">{t("funnelEmpty")}</p>
+      </Card>
+    );
+  }
+  const baseline = tracked[0]!.views;
   // Worst drop-off (excluding Q1 where it's always 0). Highlighted in
   // the UI so the user knows immediately which question to fix.
   let worstIdx = -1;
   let worstDrop = -1;
-  for (let i = 1; i < funnel.length; i++) {
-    if (funnel[i]!.dropFromPrevious > worstDrop) {
-      worstDrop = funnel[i]!.dropFromPrevious;
+  for (let i = 1; i < tracked.length; i++) {
+    if (tracked[i]!.dropFromPrevious > worstDrop) {
+      worstDrop = tracked[i]!.dropFromPrevious;
       worstIdx = i;
     }
   }
@@ -463,7 +480,7 @@ function FunnelSection({
           <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-900 dark:text-amber-100">
             {t.rich("worstDropWarning", {
-              q: funnel[worstIdx]!.questionIndex + 1,
+              q: tracked[worstIdx]!.questionIndex + 1,
               pct: worstDrop,
               bold: (chunks) => <span className="font-bold">{chunks}</span>,
             })}
@@ -472,7 +489,7 @@ function FunnelSection({
       ) : null}
 
       <div className="space-y-1.5">
-        {funnel.map((step, i) => {
+        {tracked.map((step, i) => {
           const ratio = baseline > 0 ? step.views / baseline : 0;
           const isWorst = i === worstIdx && worstDrop >= 15;
           const widthPct = Math.max(6, ratio * 100);
