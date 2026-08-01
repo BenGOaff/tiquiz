@@ -748,7 +748,7 @@ export default function SettingsClient() {
                   <p>
                     {t("affiliateNotRegistered")}{" "}
                     <a
-                      href="https://www.tipote.fr/part-tiquiz"
+                      href="https://www.tipote.fr/tiquiz/affiliation"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="underline text-primary hover:text-primary/80"

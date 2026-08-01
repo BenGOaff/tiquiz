@@ -370,7 +370,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <a
-                href="https://affiliate.tipote.com"
+                href="https://www.tipote.fr/tiquiz/affiliation"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={MENU_ITEM_CLASS}

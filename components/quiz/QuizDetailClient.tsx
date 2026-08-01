@@ -67,6 +67,7 @@ import {
   scoreDisplayMode as safeScoreDisplayMode,
   type ScoringAxis, type ScoreLabels, type ScoreDisplayMode,
 } from "@/lib/quizScoring";
+import { resolveShareNetworks } from "@/lib/quiz/shareNetworks";
 import { stripHtml } from "@/lib/richText";
 import { isPixelFieldValid } from "@/lib/clientPixels";
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
@@ -4722,11 +4723,15 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
 
                     {/* Share buttons mockup — reflect actual configured networks */}
                     <div className="space-y-2">
+                      {/* L'apercu passe par la MEME fonction que le viewer :
+                          aucun reseau coche = tous proposes, donc l'apercu
+                          doit les montrer tous lui aussi. Avant il affichait
+                          "Active au moins un reseau", ce qui est faux. */}
                       <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                        {shareNetworks.length > 0 ? t("previewBonusShareVia") : t("previewBonusNoNetworks")}
+                        {t("previewBonusShareVia")}
                       </p>
                       <div className="flex flex-wrap justify-center gap-2">
-                        {shareNetworks.map((n) => (
+                        {resolveShareNetworks(shareNetworks).map((n) => (
                           <span key={n} className="px-4 py-2 rounded-full border text-xs font-medium capitalize" style={{ borderColor: `${pc}40`, color: pc }}>
                             {n}
                           </span>
