@@ -126,6 +126,8 @@
     "atelierNudgeCta": "Découvre l'Atelier du Quiz",
     "atelierAffNudgeText": "Recommande l'Atelier du Quiz et touche 70% de commission",
     "atelierAffNudgeCta": "Mon lien d'affiliation",
+    "atelierAffJoinText": "Você pode recomendar o Tiquiz e o Atelier, mesmo sem tê-los.",
+    "atelierAffJoinCta": "Quero ser afiliado",
     "adminPanel": "Admin"
   },
   "stats": {
