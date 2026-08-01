@@ -1421,6 +1421,8 @@
     "scoreDisplayLabel": "Exibição das pontuações",
     "scoreDisplayPercent": "Porcentagem (ex. 62%)",
     "scoreDisplayWord": "Rótulo (ex. médio)",
+    "scoreDisplayHidden": "Não mostrar a pontuação",
+    "scoreDisplayHiddenHint": "O visitante vê o resultado dele, mas nenhum número ou rótulo de pontuação, nem medidor nem barras.",
     "scoreLabelLow": "Pontuação 0 a 39",
     "scoreLabelMid": "Pontuação 40 a 69",
     "scoreLabelHigh": "Pontuação 70 a 100",
@@ -1515,7 +1517,8 @@
     "designThemeCustom": "Personalizado",
     "designAdvancedTitle": "Personalizar o design",
     "seoNoindexLabel": "Ocultar este quiz dos mecanismos de busca",
-    "seoNoindexHint": "Marque esta caixa se você não quiser que o Google, o Bing ou as IAs (ChatGPT, Perplexity…) indexem este quiz. Seu link direto continua compartilhável."
+    "seoNoindexHint": "Marque esta caixa se você não quiser que o Google, o Bing ou as IAs (ChatGPT, Perplexity…) indexem este quiz. Seu link direto continua compartilhável.",
+    "backToProjects": "Meus projetos"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova senha",
@@ -2702,6 +2705,8 @@
   "quizAnalytics": {
     "loadError": "Não foi possível carregar as estatísticas.",
     "backToEditor": "Voltar ao editor",
+    "backToProjects": "Meus projetos",
+    "openEditor": "Editar",
     "statsHeader": "Estatísticas",
     "period7": "Últimos 7 dias",
     "period30": "Últimos 30 dias",
