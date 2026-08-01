@@ -128,6 +128,9 @@ type QuizLead = {
   answers:
     | Array<{
         question_index: number;
+        /** Identité stable de la question (cf. lib/quiz/questionIdentity.ts).
+         *  Absent sur les réponses antérieures au 1er août 2026. */
+        question_id?: string | null;
         option_index?: number;
         rating?: number;
         stars?: number;
@@ -1163,6 +1166,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           custom_footer_text: customFooterText.trim() || null,
           custom_footer_url: customFooterUrl.trim() || null,
           questions: editQuestions.map((q, i) => ({
+            // Identité stable (drame Adeline, 1er août 2026) : renvoyer l'id
+            // permet au PATCH de METTRE À JOUR la ligne existante au lieu de
+            // la recréer. Sans ça, chaque sauvegarde casserait le lien entre
+            // une question et son historique de réponses.
+            ...(q.id ? { id: q.id } : {}),
             question_text: q.question_text,
             options: q.options.map((o) => ({
               text: o.text,

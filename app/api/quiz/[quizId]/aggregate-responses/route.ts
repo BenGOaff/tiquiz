@@ -83,7 +83,8 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
     .from("quiz_questions")
     .select("options, sort_order")
     .eq("quiz_id", quizId)
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true });
   const optionCounts = ((liveQuestions ?? []) as { options?: unknown[] | null }[]).map(
     (q) => (Array.isArray(q.options) ? q.options.length : 0),
   );

@@ -24,6 +24,7 @@ import { sendCapiLead } from "@/lib/metaCapi";
 import { logBusinessEvent, dedupeKeys } from "@/lib/businessEvents";
 import { mergeOwnerBranding } from "@/lib/projects/businessProfile";
 import { notifyCreatorOfResponse } from "@/lib/email/responseNotification";
+import { buildQuestionPositions, resolveQuestionPosition } from "@/lib/quiz/questionIdentity";
 import {
   sanitizeScoresSnapshot,
   resolveScoreLabels,
@@ -852,15 +853,25 @@ export async function POST(req: NextRequest, context: RouteContext) {
             try {
               const { data: qRows } = await admin
                 .from("quiz_questions")
-                .select("options, sort_order")
+                .select("id, options, sort_order")
                 .eq("quiz_id", quizId)
-                .order("sort_order", { ascending: true });
-              const questionOptions = (qRows ?? []).map(
-                (r) => ((r as { options?: unknown }).options as Array<{ sio_tag_name?: string | null }> | null) ?? [],
+                .order("sort_order", { ascending: true })
+                .order("id", { ascending: true });
+              const questionRows = (qRows ?? []) as Array<{ id?: string; options?: unknown }>;
+              const questionOptions = questionRows.map(
+                (r) => (r.options as Array<{ sio_tag_name?: string | null }> | null) ?? [],
               );
-              for (const a of answers as Array<{ question_index?: number; option_indices?: number[] }>) {
-                const qIdx = Number(a?.question_index);
-                const opts = Number.isInteger(qIdx) ? questionOptions[qIdx] : null;
+              // Identité stable : on relie la réponse à SA question par id,
+              // pas par position. Sinon, une question supprimée au milieu
+              // fait appliquer les tags de la mauvaise question.
+              const positions = buildQuestionPositions(questionRows);
+              for (const a of answers as Array<{
+                question_index?: number;
+                question_id?: string | null;
+                option_indices?: number[];
+              }>) {
+                const qIdx = resolveQuestionPosition(a, positions, questionRows.length);
+                const opts = qIdx === null ? null : questionOptions[qIdx];
                 if (!opts) continue;
                 const chosen = Array.isArray(a?.option_indices) ? a.option_indices : [];
                 for (const oIdx of chosen) {
