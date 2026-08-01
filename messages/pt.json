@@ -1423,6 +1423,8 @@
     "scoreDisplayLabel": "Apresentação das pontuações",
     "scoreDisplayPercent": "Percentagem (ex. 62%)",
     "scoreDisplayWord": "Rótulo (ex. médio)",
+    "scoreDisplayHidden": "Não mostrar a pontuação",
+    "scoreDisplayHiddenHint": "O visitante vê o seu resultado, mas nenhum número ou rótulo de pontuação, nem medidor nem barras.",
     "scoreLabelLow": "Pontuação 0 a 39",
     "scoreLabelMid": "Pontuação 40 a 69",
     "scoreLabelHigh": "Pontuação 70 a 100",
@@ -1515,7 +1517,8 @@
     "answerLayoutPerQuestionHint": "Disposição das respostas para esta pergunta. Auto segue a configuração global do quiz.",
     "designThemeLabel": "Tema",
     "designThemeCustom": "Personalizado",
-    "designAdvancedTitle": "Personalizar o design"
+    "designAdvancedTitle": "Personalizar o design",
+    "backToProjects": "Os meus projetos"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova palavra-passe",
@@ -2754,6 +2757,8 @@
   "quizAnalytics": {
     "loadError": "Não foi possível carregar as estatísticas.",
     "backToEditor": "Voltar ao editor",
+    "backToProjects": "Os meus projetos",
+    "openEditor": "Editar",
     "statsHeader": "Estatísticas",
     "period7": "Últimos 7 dias",
     "period30": "Últimos 30 dias",

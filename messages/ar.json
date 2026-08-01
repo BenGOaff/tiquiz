@@ -1420,6 +1420,8 @@
     "scoreDisplayLabel": "عرض النتائج",
     "scoreDisplayPercent": "نسبة مئوية (مثل 62%)",
     "scoreDisplayWord": "تسمية (مثل متوسط)",
+    "scoreDisplayHidden": "عدم إظهار النتيجة",
+    "scoreDisplayHiddenHint": "يرى الزائر نتيجته، لكن بدون أي رقم أو تسمية للدرجة، وبدون مؤشر أو أشرطة.",
     "scoreLabelLow": "النتيجة 0 إلى 39",
     "scoreLabelMid": "النتيجة 40 إلى 69",
     "scoreLabelHigh": "النتيجة 70 إلى 100",
@@ -1515,7 +1517,8 @@
     "answerLayoutPerQuestionHint": "تخطيط الإجابات لهذا السؤال. تلقائي يتبع الإعداد العام للاختبار.",
     "designThemeLabel": "السمة",
     "designThemeCustom": "مخصص",
-    "designAdvancedTitle": "تخصيص التصميم"
+    "designAdvancedTitle": "تخصيص التصميم",
+    "backToProjects": "مشاريعي"
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",
@@ -2754,6 +2757,8 @@
   "quizAnalytics": {
     "loadError": "تعذر تحميل الإحصائيات.",
     "backToEditor": "العودة إلى المحرر",
+    "backToProjects": "مشاريعي",
+    "openEditor": "تعديل",
     "statsHeader": "إحصائيات",
     "period7": "آخر 7 أيام",
     "period30": "آخر 30 يوماً",

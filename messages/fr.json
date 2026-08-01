@@ -1423,6 +1423,8 @@
     "scoreDisplayLabel": "Affichage des scores",
     "scoreDisplayPercent": "Pourcentage (ex. 62%)",
     "scoreDisplayWord": "Libellé (ex. moyen)",
+    "scoreDisplayHidden": "Ne pas afficher le score",
+    "scoreDisplayHiddenHint": "Le visiteur voit son résultat, mais aucun chiffre ni libellé de score, ni jauge, ni barres.",
     "scoreLabelLow": "Score 0 à 39",
     "scoreLabelMid": "Score 40 à 69",
     "scoreLabelHigh": "Score 70 à 100",
@@ -1515,7 +1517,8 @@
     "answerLayoutPerQuestionHint": "Disposition des réponses pour cette question. Auto suit le réglage global du quiz.",
     "designThemeLabel": "Thème",
     "designThemeCustom": "Personnalisé",
-    "designAdvancedTitle": "Personnaliser le design"
+    "designAdvancedTitle": "Personnaliser le design",
+    "backToProjects": "Mes projets"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",
@@ -2754,6 +2757,8 @@
   "quizAnalytics": {
     "loadError": "Impossible de charger les statistiques.",
     "backToEditor": "Retour à l'éditeur",
+    "backToProjects": "Mes projets",
+    "openEditor": "Modifier",
     "statsHeader": "Statistiques",
     "period7": "7 derniers jours",
     "period30": "30 derniers jours",

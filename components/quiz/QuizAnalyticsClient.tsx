@@ -37,6 +37,7 @@ import {
   BarChart3,
   Eye,
   Loader2,
+  Pencil,
   Send,
   TrendingDown,
   Users,
@@ -45,6 +46,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { stripHtml } from "@/lib/richText";
+import { projectBackHref } from "@/lib/nav/projectBack";
 import QuizInsightsPanel from "@/components/quiz/QuizInsightsPanel";
 
 type Period = "7" | "30" | "90" | "all";
@@ -203,10 +205,15 @@ export function QuizAnalyticsClient({ quizId, initial, hideCounts = false }: Pro
       )}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
+          {/* La flèche remonte à Mes projets (cf. lib/nav/projectBack.ts).
+              Elle pointait vers l'éditeur, dont la flèche revenait ici :
+              on tournait en boucle entre les deux écrans sans pouvoir en
+              sortir (retour Gwenn, 1er août 2026). L'éditeur reste à un
+              clic, par le lien nommé "Modifier" ci-dessous. */}
           <Button variant="ghost" size="icon" asChild>
             <Link
-              href={`/quiz/${quizId}`}
-              aria-label={t("backToEditor")}
+              href={projectBackHref("analytics")}
+              aria-label={t("backToProjects")}
             >
               <ArrowLeft className="size-5" />
             </Link>
@@ -221,6 +228,15 @@ export function QuizAnalyticsClient({ quizId, initial, hideCounts = false }: Pro
             </p>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+        {/* Navigation LATÉRALE vers l'éditeur : nommée et explicite,
+            jamais portée par la flèche retour. */}
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/quiz/${quizId}`}>
+            <Pencil className="size-3.5 mr-1.5" />
+            {t("openEditor")}
+          </Link>
+        </Button>
         <div className="flex items-center gap-1 rounded-md border bg-muted/30 p-0.5">
           {(["7", "30", "90", "all"] as const).map((p) => (
             <button
@@ -237,6 +253,7 @@ export function QuizAnalyticsClient({ quizId, initial, hideCounts = false }: Pro
               {p === "all" ? t("periodShortAll") : t("periodShortDays", { n: p })}
             </button>
           ))}
+        </div>
         </div>
       </div>
 

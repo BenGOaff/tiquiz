@@ -88,6 +88,7 @@ import {
   type BrandFontChoice,
   type ShareNetwork,
 } from "@/lib/quizBranding";
+import { projectBackHref } from "@/lib/nav/projectBack";
 
 // Types
 // Surveys reuse the QuizDetailClient shell but specialise: questions carry a
@@ -1360,15 +1361,14 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       {/* TOP BAR */}
       <header className="flex items-center justify-between px-4 py-2 border-b shrink-0 bg-background z-10">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => {
-              // Retour = revenir là d'où on vient (Mes projets, dashboard,
-              // stats...), pas toujours /dashboard (retour Béné 30 juil
-              // 2026 : depuis Mes projets, la flèche renvoyait au
-              // dashboard). Fallback dur si l'éditeur a été ouvert
-              // directement (nouvel onglet, lien collé).
-              if (window.history.length > 1) router.back();
-              else router.push("/dashboard");
-            }}><ArrowLeft className="w-5 h-5" /></Button>
+          {/* Retour = Mes projets, TOUJOURS (cf. lib/nav/projectBack.ts,
+              boucle stats <-> éditeur, retour Gwenn 1er août 2026). */}
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={t("backToProjects")}
+            onClick={() => router.push(projectBackHref("surveyEditor"))}
+          ><ArrowLeft className="w-5 h-5" /></Button>
           <span className="font-semibold text-sm truncate max-w-[120px] sm:max-w-[200px]">{title || t("titleFallback")}</span>
         </div>
         <nav className="hidden sm:flex items-center bg-muted rounded-lg p-0.5">
