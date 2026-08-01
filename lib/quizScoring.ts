@@ -212,8 +212,6 @@ export function computeScoresSnapshot(
   return axes.length > 0 ? { global, axes: perAxis } : { global };
 }
 
-// Pourcentage 0-100 d'un triplet, robuste aux points négatifs (la
-// position dans [min, max], pas points/max).
 // ── Affichage du score au visiteur ──────────────────────────────────
 //
 // DEUX réglages se combinent, et leur combinaison décidait du rendu à
@@ -265,6 +263,8 @@ export function resolveAxisScoreDisplay(
   return { kind: "value", asLabel: mode === "label" };
 }
 
+// Pourcentage 0-100 d'un triplet, robuste aux points négatifs (la
+// position dans [min, max], pas points/max).
 export function scorePercent(s: AxisScore): number {
   const range = s.max - s.min;
   if (range <= 0) return 0;
