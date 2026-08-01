@@ -174,7 +174,9 @@
       "questionLabel": "Question",
       "visitors": "vus",
       "dropped": "Pire chute :",
-      "kept": "Restés jusqu'au bout :"
+      "kept": "Restés jusqu'au bout :",
+      "noData": "pas encore de donnée",
+      "removedNotice": "{count, plural, =1 {1 question a été supprimée depuis : ses vues ne sont plus comptées.} other {# questions ont été supprimées depuis : leurs vues ne sont plus comptées.}}"
     },
     "untitled": "Sans titre"
   },
@@ -714,7 +716,12 @@
     "optionFallback": "Option {n}",
     "questionFallback": "Question {n}",
     "showConsentCheckboxLabel": "Afficher la case à cocher de consentement",
-    "showConsentCheckboxHint": "Désactive si tu gères déjà le consentement RGPD ailleurs (ton CRM, une autre page)."
+    "showConsentCheckboxHint": "Désactive si tu gères déjà le consentement RGPD ailleurs (ton CRM, une autre page).",
+    "averageRating": "Moyenne : {value}",
+    "freeTextAll": "Toutes les réponses écrites, de la plus récente à la plus ancienne.",
+    "freeTextShown": "Les {shown} réponses les plus récentes sur {total}. Le bouton Copier les prend toutes.",
+    "freeTextCopy": "Copier les réponses",
+    "freeTextCopied": "Copié"
   },
   "settings": {
     "title": "Paramètres",

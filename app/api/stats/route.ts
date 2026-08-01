@@ -37,6 +37,8 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { dateKeyForOffset, parseTzOffset } from "@/lib/dateKeys";
 import { getActiveProjectScope } from "@/lib/projects/scopeFilter";
+import { buildLiveFunnel } from "@/lib/quiz/funnel";
+import { stripHtml } from "@/lib/richText";
 
 export const dynamic = "force-dynamic";
 
@@ -168,6 +170,7 @@ export async function GET(req: NextRequest) {
       curLeadsRes,
       lifeLeadsRes,
       funnelRes,
+      liveQuestionsRes,
     ] = await Promise.all([
       supabaseAdmin.rpc("stats_events_daily", { p_quiz_ids: quizIds, p_tz_offset: tzOffset, p_since: sinceISO }),
       supabaseAdmin.rpc("stats_leads_daily", { p_quiz_ids: quizIds, p_tz_offset: tzOffset, p_since: sinceISO }),
@@ -176,6 +179,14 @@ export async function GET(req: NextRequest) {
       // Leads lifetime par quiz (aucune borne) — somme = leads à vie.
       supabaseAdmin.rpc("stats_leads_counts", { p_quiz_ids: quizIds, p_since: null, p_until: null }),
       supabaseAdmin.rpc("stats_question_funnel", { p_quiz_ids: quizIds, p_since: sinceISO }),
+      // Structure ACTUELLE des quiz : c'est elle qui décide quelles
+      // questions existent, pas les events (drame Adeline 1er août 2026,
+      // cf. lib/quiz/funnel.ts). Volume : quelques dizaines de lignes.
+      supabaseAdmin
+        .from("quiz_questions")
+        .select("quiz_id, question_text, sort_order")
+        .in("quiz_id", quizIds)
+        .order("sort_order", { ascending: true }),
     ]);
 
     // Période précédente (deltas) — seulement si la fenêtre existe.
@@ -386,17 +397,35 @@ export async function GET(req: NextRequest) {
     // Source = quiz_question_events, agrégé en SQL (RPC, monotone : pour
     // chaque session l'index max atteint, puis views(N) = sessions dont
     // max_q >= N). Plus de plafond 100000 ni de logique JS.
-    const funnelByQuiz = new Map<string, { index: number; views: number }[]>();
+    const funnelByQuiz = new Map<string, { question_index: number; views: number }[]>();
     for (const r of funnelRows) {
       let arr = funnelByQuiz.get(r.quiz_id);
       if (!arr) { arr = []; funnelByQuiz.set(r.quiz_id, arr); }
-      arr.push({ index: r.question_index, views: Number(r.views) });
+      arr.push({ question_index: r.question_index, views: Number(r.views) });
+    }
+    // Textes des questions vivantes, par quiz et dans l'ordre d'affichage.
+    const liveQuestionsByQuiz = new Map<string, string[]>();
+    for (const row of (liveQuestionsRes.data ?? []) as { quiz_id: string; question_text: string | null }[]) {
+      const arr = liveQuestionsByQuiz.get(row.quiz_id) ?? [];
+      arr.push(stripHtml(String(row.question_text ?? "")).trim());
+      liveQuestionsByQuiz.set(row.quiz_id, arr);
     }
     const questionFunnels = quizzes.map((q) => {
       const qid = q.id as string;
-      const questions = funnelByQuiz.get(qid) ?? [];
-      return { quizId: qid, title: (q.title as string) ?? "", questions };
-    }).filter((f) => f.questions.length > 0);
+      const texts = liveQuestionsByQuiz.get(qid) ?? [];
+      const { steps, removedQuestions } = buildLiveFunnel(funnelByQuiz.get(qid) ?? [], texts.length);
+      return {
+        quizId: qid,
+        title: (q.title as string) ?? "",
+        removedQuestions,
+        questions: steps.map((s) => ({
+          index: s.questionIndex,
+          views: s.views,
+          hasData: s.hasData,
+          text: texts[s.questionIndex] ?? "",
+        })),
+      };
+    }).filter((f) => f.questions.some((q) => q.hasData));
 
     return NextResponse.json({
       ok: true,

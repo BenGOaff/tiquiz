@@ -74,10 +74,31 @@ export async function GET(_req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ ok: false, error: "LOAD_FAILED" }, { status: 500 });
   }
 
+  // Structure VIVANTE du sondage : c'est elle qui borne l'agrégat. Sans
+  // ce filtre, une question ou une option supprimée continue d'être
+  // comptée dans les totaux (elle n'a plus de libellé côté visiteur,
+  // donc elle gonfle silencieusement le dénominateur et les % ne font
+  // plus 100). Même règle que le funnel, cf. lib/quiz/funnel.ts.
+  const { data: liveQuestions } = await supabaseAdmin
+    .from("quiz_questions")
+    .select("options, sort_order")
+    .eq("quiz_id", quizId)
+    .order("sort_order", { ascending: true });
+  const optionCounts = ((liveQuestions ?? []) as { options?: unknown[] | null }[]).map(
+    (q) => (Array.isArray(q.options) ? q.options.length : 0),
+  );
+
   // totals[questionIdx][optionIdx] = count
   const totals: Record<number, Record<number, number>> = {};
   for (const r of (totalsRes.data ?? []) as { question_index: number; option_index: number; n: number }[]) {
     const qi = r.question_index;
+    // Liste vide (lecture impossible) : on ne filtre rien plutôt que de
+    // renvoyer un agrégat vide au visiteur.
+    if (optionCounts.length > 0) {
+      const liveOptions = optionCounts[qi];
+      if (liveOptions === undefined) continue; // question supprimée depuis
+      if (r.option_index >= liveOptions) continue; // option supprimée depuis
+    }
     if (!totals[qi]) totals[qi] = {};
     totals[qi][r.option_index] = Number(r.n) || 0;
   }

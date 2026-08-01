@@ -72,7 +72,9 @@ type StatsResponse = {
   questionFunnels: Array<{
     quizId: string;
     title: string;
-    questions: Array<{ index: number; views: number }>;
+    /** Questions supprimées depuis : leurs vues historiques sont exclues. */
+    removedQuestions?: number;
+    questions: Array<{ index: number; views: number; hasData?: boolean; text?: string }>;
   }>;
   hasEventData: boolean;
 };
@@ -362,10 +364,15 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
                     key={qf.quizId}
                     title={stripHtml(qf.title) || t("untitled")}
                     questions={qf.questions}
+                    removedQuestions={qf.removedQuestions ?? 0}
                     questionLabel={t("questionFunnel.questionLabel")}
                     visitorsLabel={t("questionFunnel.visitors")}
                     droppedLabel={t("questionFunnel.dropped")}
                     keptLabel={t("questionFunnel.kept")}
+                    noDataLabel={t("questionFunnel.noData")}
+                    removedNotice={t("questionFunnel.removedNotice", {
+                      count: qf.removedQuestions ?? 0,
+                    })}
                   />
                 ))}
               </div>
@@ -637,33 +644,44 @@ function MetricTile({
 function QuestionFunnelCard({
   title,
   questions,
+  removedQuestions = 0,
   questionLabel,
   visitorsLabel,
   droppedLabel,
   keptLabel,
+  noDataLabel,
+  removedNotice,
 }: {
   title: string;
-  questions: Array<{ index: number; views: number }>;
+  questions: Array<{ index: number; views: number; hasData?: boolean; text?: string }>;
+  removedQuestions?: number;
   questionLabel: string;
   visitorsLabel: string;
   droppedLabel: string;
   keptLabel: string;
+  noDataLabel: string;
+  removedNotice: string;
 }) {
   if (questions.length === 0) return null;
-  const base = questions[0]?.views ?? 0;
+  // Une question sans donnée (ajoutée après coup, jamais atteinte) ne
+  // participe ni à l'échelle des barres, ni au calcul des chutes : sinon
+  // elle simule une chute à 100% suivie d'une remontée.
+  const tracked = questions.filter((q) => q.hasData !== false);
+  if (tracked.length === 0) return null;
+  const base = tracked[0]?.views ?? 0;
 
   // Biggest single-step drop — between question N and question N+1.
   // Surfaces the question where the funnel leaks the most so the
   // creator can target their copy fix.
   let biggestDrop: { from: number; to: number; pct: number } | null = null;
-  for (let i = 0; i < questions.length - 1; i++) {
-    const a = questions[i].views;
-    const b = questions[i + 1].views;
+  for (let i = 0; i < tracked.length - 1; i++) {
+    const a = tracked[i].views;
+    const b = tracked[i + 1].views;
     if (a <= 0) continue;
     const lostPct = Math.round(((a - b) / a) * 100);
     if (lostPct <= 0) continue;
     if (!biggestDrop || lostPct > biggestDrop.pct) {
-      biggestDrop = { from: questions[i].index, to: questions[i + 1].index, pct: lostPct };
+      biggestDrop = { from: tracked[i].index, to: tracked[i + 1].index, pct: lostPct };
     }
   }
 
@@ -680,11 +698,13 @@ function QuestionFunnelCard({
         </div>
 
         <div className="space-y-2">
-          {questions.map((q, i) => {
-            const widthPct = base > 0 ? Math.max(4, Math.round((q.views / base) * 100)) : 0;
-            const retentionPct = base > 0 ? Math.round((q.views / base) * 100) : 0;
-            const prev = i > 0 ? questions[i - 1].views : null;
-            const stepDrop = prev !== null && prev > 0
+          {questions.map((q) => {
+            const hasData = q.hasData !== false;
+            const trackedPos = tracked.indexOf(q);
+            const widthPct = hasData && base > 0 ? Math.max(4, Math.round((q.views / base) * 100)) : 0;
+            const retentionPct = hasData && base > 0 ? Math.round((q.views / base) * 100) : 0;
+            const prev = trackedPos > 0 ? tracked[trackedPos - 1].views : null;
+            const stepDrop = hasData && prev !== null && prev > 0
               ? Math.round(((prev - q.views) / prev) * 100)
               : 0;
             // Color the bar progressively warmer as retention degrades —
@@ -696,12 +716,13 @@ function QuestionFunnelCard({
             return (
               <div key={q.index} className="space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground tabular-nums">
-                    {questionLabel} {q.index + 1}
+                  <span className="text-muted-foreground truncate max-w-[60%]" title={q.text || undefined}>
+                    <span className="tabular-nums">{questionLabel} {q.index + 1}</span>
+                    {q.text ? ` · ${q.text}` : ""}
                   </span>
                   <span className="font-medium tabular-nums">
-                    {q.views} {visitorsLabel}
-                    {i > 0 && stepDrop > 0 && (
+                    {hasData ? `${q.views} ${visitorsLabel}` : noDataLabel}
+                    {hasData && trackedPos > 0 && stepDrop > 0 && (
                       <span className="ml-1.5 text-[11px] text-rose-600 dark:text-rose-400">
                         −{stepDrop}%
                       </span>
@@ -720,8 +741,11 @@ function QuestionFunnelCard({
         </div>
 
         <p className="text-[11px] text-muted-foreground">
-          {keptLabel} {questions[questions.length - 1].views} / {base}
+          {keptLabel} {tracked[tracked.length - 1].views} / {base}
         </p>
+        {removedQuestions > 0 && (
+          <p className="text-[11px] text-muted-foreground">{removedNotice}</p>
+        )}
       </CardContent>
     </Card>
   );

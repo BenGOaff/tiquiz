@@ -174,7 +174,9 @@
       "questionLabel": "السؤال",
       "visitors": "مشاهدات",
       "dropped": "أكبر انخفاض:",
-      "kept": "وصلوا حتى النهاية:"
+      "kept": "وصلوا حتى النهاية:",
+      "noData": "لا بيانات بعد",
+      "removedNotice": "{count, plural, =1 {حُذف سؤال واحد منذ ذلك الحين: لم تعد مشاهداته محتسبة.} other {حُذفت # أسئلة منذ ذلك الحين: لم تعد مشاهداتها محتسبة.}}"
     },
     "untitled": "بدون عنوان"
   },
@@ -714,7 +716,12 @@
     "optionFallback": "الخيار {n}",
     "questionFallback": "السؤال {n}",
     "showConsentCheckboxLabel": "إظهار خانة الموافقة",
-    "showConsentCheckboxHint": "أوقف الخيار إذا كنت تتعامل مع موافقة GDPR في مكان آخر (CRM أو صفحة أخرى)."
+    "showConsentCheckboxHint": "أوقف الخيار إذا كنت تتعامل مع موافقة GDPR في مكان آخر (CRM أو صفحة أخرى).",
+    "averageRating": "المتوسط: {value}",
+    "freeTextAll": "كل الإجابات المكتوبة، من الأحدث إلى الأقدم.",
+    "freeTextShown": "أحدث {shown} إجابة من أصل {total}. زر النسخ يأخذها كلها.",
+    "freeTextCopy": "نسخ الإجابات",
+    "freeTextCopied": "تم النسخ"
   },
   "settings": {
     "title": "الإعدادات",

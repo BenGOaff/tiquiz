@@ -174,7 +174,9 @@
       "questionLabel": "Pergunta",
       "visitors": "vistas",
       "dropped": "Maior queda:",
-      "kept": "Chegaram até o fim:"
+      "kept": "Chegaram até o fim:",
+      "noData": "ainda sem dados",
+      "removedNotice": "{count, plural, =1 {1 pergunta foi excluída desde então: as visualizações dela não são mais contadas.} other {# perguntas foram excluídas desde então: as visualizações delas não são mais contadas.}}"
     },
     "untitled": "Sem título"
   },
@@ -714,7 +716,12 @@
     "optionFallback": "Opção {n}",
     "questionFallback": "Pergunta {n}",
     "showConsentCheckboxLabel": "Mostrar a caixa de consentimento",
-    "showConsentCheckboxHint": "Desative se você já trata o consentimento LGPD/GDPR em outro lugar (CRM, outra página)."
+    "showConsentCheckboxHint": "Desative se você já trata o consentimento LGPD/GDPR em outro lugar (CRM, outra página).",
+    "averageRating": "Média: {value}",
+    "freeTextAll": "Todas as respostas escritas, da mais recente à mais antiga.",
+    "freeTextShown": "As {shown} respostas mais recentes de {total}. O botão Copiar leva todas.",
+    "freeTextCopy": "Copiar as respostas",
+    "freeTextCopied": "Copiado"
   },
   "settings": {
     "title": "Configurações",
