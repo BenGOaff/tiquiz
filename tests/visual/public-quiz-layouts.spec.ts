@@ -13,12 +13,66 @@ const LAYOUTS = [
   { name: "cover-intro", qs: "layout=centered&intro=cover&bg=solid" },
 ] as const;
 
+/**
+ * Attend que la HAUTEUR DU DOCUMENT soit stable avant de capturer.
+ *
+ * Les captures sont en `fullPage` : leur hauteur est celle du document.
+ * Si quoi que ce soit arrive en retard (police, image, transition), la
+ * capture sort en 878px au lieu de 844px et le diff echoue pour une
+ * raison qui n'a rien a voir avec le layout. Un `waitForTimeout` fixe ne
+ * protege de rien : il suffit que la machine soit chargee ce jour-la.
+ *
+ * Vu le 1er aout 2026 : `cover-intro > capture` en mobile, rouge au
+ * premier essai, vert au retry. Un filet qui clignote ne sert a rien :
+ * a la longue on cesse de le croire, et le jour ou il attrape un vrai
+ * casse de layout, personne ne regarde.
+ */
+async function settle(page: Page) {
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await new Promise<void>((resolve) => {
+      let last = -1;
+      let stable = 0;
+      let frames = 0;
+      const tick = () => {
+        const h = document.documentElement.scrollHeight;
+        stable = h === last ? stable + 1 : 0;
+        last = h;
+        // 5 frames identiques = pose. 180 frames (~3s) = garde-fou, on
+        // rend la main plutot que de bloquer la suite indefiniment.
+        if (stable >= 5 || ++frames > 180) resolve();
+        else requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+  });
+}
+
 async function gotoFixture(page: Page, qs: string) {
   await page.goto(`/visual-test?${qs}`);
-  // Le bandeau "Mode apercu" (DOM imperatif, position:fixed) bouge de
-  // quelques pixels selon le timing : volatil, pas du layout. On le masque
-  // pour des captures deterministes.
-  await page.addStyleTag({ content: "[data-tiquiz-preview-banner]{display:none !important}" });
+  // Le bandeau "Mode apercu" (DOM imperatif) doit disparaitre des
+  // captures : volatil, pas du layout.
+  //
+  // DEUX PIEGES, les deux ont fait clignoter le filet (1er aout 2026) :
+  //
+  // 1. L'attribut reel est `data-tipote-preview-banner` (heritage du port
+  //    Tipote), pas `data-tiquiz-`. Le selecteur ne matchait donc RIEN et
+  //    le bandeau etait la depuis le debut.
+  // 2. Le bandeau est en `position:fixed`, il n'ajoute pas de hauteur lui
+  //    meme. Mais son effet pose `document.body.style.paddingTop` : +34px
+  //    sur la hauteur du document, donc sur une capture `fullPage`. Le
+  //    masquer ne suffit pas, il faut annuler le padding. Un `!important`
+  //    de feuille de style bat un style inline sans `!important`.
+  //
+  // Selon que l'effet arrivait avant ou apres la capture, on obtenait
+  // 900px ou 934px : rouge, puis vert au retry.
+  await page.addStyleTag({
+    content: `
+      [data-tipote-preview-banner],
+      [data-tiquiz-preview-banner] { display: none !important; }
+      body { padding-top: 0 !important; }
+    `,
+  });
   // Bouton de demarrage visible = quiz monte et police chargee.
   await expect(page.getByText("Commencer le quiz")).toBeVisible();
   await page.waitForTimeout(400);
@@ -41,12 +95,14 @@ for (const layout of LAYOUTS) {
   test.describe(layout.name, () => {
     test("intro", async ({ page }) => {
       await gotoFixture(page, layout.qs);
+      await settle(page);
       await expect(page).toHaveScreenshot(`${layout.name}-intro.png`, { fullPage: true });
     });
 
     test("question", async ({ page }) => {
       await gotoFixture(page, layout.qs);
       await startQuiz(page);
+      await settle(page);
       await expect(page).toHaveScreenshot(`${layout.name}-question.png`, { fullPage: true });
     });
 
@@ -56,6 +112,7 @@ for (const layout of LAYOUTS) {
       await answerAllQuestions(page);
       await expect(page.getByText("Ton profil est pret !")).toBeVisible();
       await page.waitForTimeout(400);
+      await settle(page);
       await expect(page).toHaveScreenshot(`${layout.name}-capture.png`, { fullPage: true });
     });
 
@@ -71,6 +128,7 @@ for (const layout of LAYOUTS) {
       await page.getByRole("button", { name: "Voir mon profil" }).click();
       await expect(page.getByText("Avant de découvrir tes résultats")).toBeVisible();
       await page.waitForTimeout(600);
+      await settle(page);
       await expect(page).toHaveScreenshot(`${layout.name}-bonus.png`, { fullPage: true });
     });
 
@@ -89,6 +147,7 @@ for (const layout of LAYOUTS) {
       await expect(page.getByText("50%").first()).toBeVisible();
       await expect(page.getByText("Organisation")).toBeVisible();
       await page.waitForTimeout(600);
+      await settle(page);
       await expect(page).toHaveScreenshot(`${layout.name}-result-score.png`, { fullPage: true });
     });
 
@@ -104,6 +163,7 @@ for (const layout of LAYOUTS) {
       await page.getByRole("button", { name: "Voir mon profil" }).click();
       await expect(page.getByText("L'architecte").first()).toBeVisible();
       await page.waitForTimeout(600);
+      await settle(page);
       await expect(page).toHaveScreenshot(`${layout.name}-result.png`, { fullPage: true });
     });
   });
