@@ -50,10 +50,29 @@ async function settle(page: Page) {
 
 async function gotoFixture(page: Page, qs: string) {
   await page.goto(`/visual-test?${qs}`);
-  // Le bandeau "Mode apercu" (DOM imperatif, position:fixed) bouge de
-  // quelques pixels selon le timing : volatil, pas du layout. On le masque
-  // pour des captures deterministes.
-  await page.addStyleTag({ content: "[data-tiquiz-preview-banner]{display:none !important}" });
+  // Le bandeau "Mode apercu" (DOM imperatif) doit disparaitre des
+  // captures : volatil, pas du layout.
+  //
+  // DEUX PIEGES, les deux ont fait clignoter le filet (1er aout 2026) :
+  //
+  // 1. L'attribut reel est `data-tipote-preview-banner` (heritage du port
+  //    Tipote), pas `data-tiquiz-`. Le selecteur ne matchait donc RIEN et
+  //    le bandeau etait la depuis le debut.
+  // 2. Le bandeau est en `position:fixed`, il n'ajoute pas de hauteur lui
+  //    meme. Mais son effet pose `document.body.style.paddingTop` : +34px
+  //    sur la hauteur du document, donc sur une capture `fullPage`. Le
+  //    masquer ne suffit pas, il faut annuler le padding. Un `!important`
+  //    de feuille de style bat un style inline sans `!important`.
+  //
+  // Selon que l'effet arrivait avant ou apres la capture, on obtenait
+  // 900px ou 934px : rouge, puis vert au retry.
+  await page.addStyleTag({
+    content: `
+      [data-tipote-preview-banner],
+      [data-tiquiz-preview-banner] { display: none !important; }
+      body { padding-top: 0 !important; }
+    `,
+  });
   // Bouton de demarrage visible = quiz monte et police chargee.
   await expect(page.getByText("Commencer le quiz")).toBeVisible();
   await page.waitForTimeout(400);
