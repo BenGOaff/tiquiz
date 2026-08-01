@@ -333,3 +333,31 @@ npm run test:visual            # doit passer 90/90
   cas à la matrice du spec.
 - Origine : footer devenu 3e colonne en split + carte collée en haut sur
   écrans hauts, jamais vus avant la prod. Plus jamais ça.
+
+## Taille de police d'un champ : UNE seule enveloppe (drame Jocelyne 1er août 2026)
+
+La taille de police au niveau du champ vit dans un `<div
+class="rt-field-fs" style="--rt-fs-m: Xpx; --rt-fs-d: Ypx">` qui
+enveloppe tout le contenu (cf. `RichTextEdit`, section dual-device).
+
+**Le piège :** le navigateur restructure le contenu d'un `contentEditable`
+à la moindre commande. Aligner, coller, appuyer sur Entrée enveloppe le
+bloc dans un `<div>`, et l'enveloppe de taille n'est alors PLUS enfant
+direct du champ. Le code cherchait `:scope > .rt-field-fs` : il ne la
+trouvait plus, en créait une SECONDE par-dessus, et comme la plus
+profonde porte sa propre variable CSS, c'est ELLE qui gagne. Résultat :
+le menu affiche la nouvelle taille, l'écran garde l'ancienne, et
+l'utilisatrice conclut que le bouton ne marche pas. Reproduit sur la 6e
+réponse d'une question de Jocelyne, celle qu'elle avait centrée.
+
+**Règle :** `applyFieldFontSize()` cherche les enveloppes PARTOUT dans le
+champ (`querySelectorAll`), reprend les tailles de la **plus profonde**
+(celle qui gagne en CSS, donc celle que l'utilisatrice voit), les retire
+TOUTES, puis en recrée UNE SEULE en enfant direct. Un `<div>` qui
+n'existait que pour porter la taille est déballé ; un `<div>` qui porte
+autre chose (un alignement) est conservé tel quel. Effet de bord voulu :
+un champ déjà cassé se répare tout seul au premier clic sur une taille.
+
+**Ne jamais** revenir à un `:scope >` ni supposer que le DOM d'un
+contentEditable ressemble à ce qu'on y a écrit. Le module Tipote est
+jumeau : toute correction ici se porte là-bas.
