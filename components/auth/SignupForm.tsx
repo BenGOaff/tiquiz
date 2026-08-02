@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { resolveAppUrl } from "@/lib/authLinks";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,7 +49,14 @@ export default function SignupForm() {
         password,
         options: {
           data: { full_name: cleanName },
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/auth/callback`,
+          // Le domaine ou l'utilisateur est reellement : jamais une
+          // constante de build qui peut valoir localhost (drame Veronique,
+          // 2 aout 2026).
+          emailRedirectTo: `${
+            typeof window !== "undefined" && window.location?.origin
+              ? window.location.origin
+              : resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, null)
+          }/auth/callback`,
         },
       });
 
