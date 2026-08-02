@@ -2862,5 +2862,19 @@
     "surveyErrNotEnough": "Not enough responses for a meaningful analysis.",
     "surveyExportPdfGlobal": "Summary PDF",
     "surveyExportPdfFull": "Detailed PDF"
+  },
+  "coach": {
+    "title": "Your coach",
+    "subtitle": "Knows Tiquiz and the Atelier method",
+    "open": "Open the coach",
+    "close": "Close",
+    "send": "Send",
+    "placeholder": "Ask your question...",
+    "welcome": "Tell me what is blocking you and I will help you move forward.",
+    "thinking": "Thinking...",
+    "failed": "The coach could not answer. Try again in a moment.",
+    "quotaReached": "You have used your 2 questions for today. Come back tomorrow, or unlock unlimited help.",
+    "upsellPlan": "See Tiquiz plans",
+    "upsellAtelier": "Discover L'Atelier du Quiz"
   }
 }

@@ -2862,5 +2862,19 @@
     "surveyErrNotEnough": "إجابات غير كافية لتحليل ذي معنى.",
     "surveyExportPdfGlobal": "ملخص PDF",
     "surveyExportPdfFull": "PDF مفصّل"
+  },
+  "coach": {
+    "title": "مدرّبك",
+    "subtitle": "يعرف Tiquiz ومنهج الورشة",
+    "open": "فتح المدرّب",
+    "close": "إغلاق",
+    "send": "إرسال",
+    "placeholder": "اطرح سؤالك...",
+    "welcome": "قل لي ما الذي يعيقك، وسأساعدك على التقدّم.",
+    "thinking": "يفكّر...",
+    "failed": "لم يتمكّن المدرّب من الإجابة. أعد المحاولة بعد قليل.",
+    "quotaReached": "لقد استخدمت سؤاليك لهذا اليوم. عد غداً، أو افتح المساعدة غير المحدودة.",
+    "upsellPlan": "عرض خطط Tiquiz",
+    "upsellAtelier": "اكتشف ورشة الكويز"
   }
 }

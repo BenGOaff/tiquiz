@@ -2862,5 +2862,19 @@
     "surveyErrNotEnough": "Risposte insufficienti per un'analisi pertinente.",
     "surveyExportPdfGlobal": "PDF sintesi",
     "surveyExportPdfFull": "PDF dettagliato"
+  },
+  "coach": {
+    "title": "Il tuo coach",
+    "subtitle": "Conosce Tiquiz e il metodo dell'Atelier",
+    "open": "Apri il coach",
+    "close": "Chiudi",
+    "send": "Invia",
+    "placeholder": "Fai la tua domanda...",
+    "welcome": "Dimmi cosa ti blocca e ti aiuto ad andare avanti.",
+    "thinking": "Sta pensando...",
+    "failed": "Il coach non ha potuto rispondere. Riprova tra un istante.",
+    "quotaReached": "Hai usato le tue 2 domande di oggi. Torna domani, o sblocca l'aiuto illimitato.",
+    "upsellPlan": "Vedere i piani Tiquiz",
+    "upsellAtelier": "Scoprire L'Atelier du Quiz"
   }
 }

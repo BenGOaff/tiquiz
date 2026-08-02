@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 import { SessionResetGate } from "@/components/projects/SessionResetGate";
+import { CoachWidget } from "@/components/coach/CoachWidget";
 
 interface AppShellProps {
   children: ReactNode;
@@ -48,6 +49,11 @@ export default function AppShell({
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
+
+        {/* Coach en bas a droite, sur toutes les pages authentifiees
+            (demande Bene, 2 aout 2026). Monte ICI et pas dans le layout
+            racine : le viewer public d'un quiz ne doit jamais le voir. */}
+        <CoachWidget />
 
         <main className="flex-1 overflow-auto bg-background flex flex-col">
           {/* Header */}
