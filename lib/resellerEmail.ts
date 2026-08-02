@@ -20,8 +20,9 @@
 // de Béné. Jamais de tiret long (règle anti-IA).
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { resolveAppUrl } from "@/lib/authLinks";
 
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim();
+const APP_URL = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 const RESEND_URL = "https://api.resend.com/emails";
 
 interface ResellerEmailIdentity {

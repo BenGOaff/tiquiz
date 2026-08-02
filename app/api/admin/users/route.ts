@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAdminEmail } from "@/lib/adminEmails";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 export const dynamic = "force-dynamic";
 
@@ -182,7 +183,7 @@ export async function PUT(req: NextRequest) {
     if (send_magic_link) {
       const { createClient } = await import("@supabase/supabase-js");
       const anonClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-      await anonClient.auth.signInWithOtp({ email: email.toLowerCase(), options: { emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com"}/auth/callback`, shouldCreateUser: false } });
+      await anonClient.auth.signInWithOtp({ email: email.toLowerCase(), options: { emailRedirectTo: `${resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, req.nextUrl.origin)}/auth/callback`, shouldCreateUser: false } });
     }
 
     return NextResponse.json({ ok: true, user_id: userId, plan: resolvedPlan });
@@ -210,7 +211,7 @@ export async function PATCH(req: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       { auth: { persistSession: false } },
     );
-    const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim();
+    const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, req.nextUrl.origin);
     const { error } = await anonClient.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${appUrl}/auth/callback`, shouldCreateUser: false },

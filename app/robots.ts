@@ -10,6 +10,7 @@
 
 import type { MetadataRoute } from "next";
 import { headers } from "next/headers";
+import { resolvePublicUrl } from "@/lib/authLinks";
 
 const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
 
@@ -26,7 +27,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
     };
   }
 
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://tiquiz.com").replace(/\/$/, "");
+  const base = resolvePublicUrl(process.env.NEXT_PUBLIC_SITE_URL, "https://tiquiz.com");
   return {
     rules: [
       {

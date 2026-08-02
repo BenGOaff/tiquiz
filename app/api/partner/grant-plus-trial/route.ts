@@ -35,12 +35,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { safeEqual } from "@/lib/partner/tokens";
 import { sendPlusTrialEmail } from "@/lib/email/plusTrialEmail";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const SHARED = (process.env.PARTNER_SHARED_SECRET ?? "").trim();
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim().replace(/\/$/, "");
+const APP_URL = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 const DEFAULT_TRIAL_DAYS = 30;
 
 // Plans qui refusent le trial (déjà Plus payant / à vie / beta).

@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
   if (!secret) {
     return NextResponse.json({ ok: false, error: "cron_secret_missing" }, { status: 500 });
   }
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim();
+  const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
   try {
     const res = await fetch(`${appUrl}/api/cron/reseller-invoices`, {
       headers: { Authorization: `Bearer ${secret}` },

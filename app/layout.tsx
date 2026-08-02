@@ -5,12 +5,13 @@ import Providers from "@/components/Providers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { RTL_LOCALES, SUPPORTED_LOCALES } from "@/i18n/config";
+import { resolvePublicUrl } from "@/lib/authLinks";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
   const t = await getTranslations({ locale, namespace: "metadata" });
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tiquiz.com";
+  const siteUrl = resolvePublicUrl(process.env.NEXT_PUBLIC_SITE_URL, "https://tiquiz.com");
   const languages: Record<string, string> = {};
   for (const l of SUPPORTED_LOCALES) {
     languages[l] = siteUrl;

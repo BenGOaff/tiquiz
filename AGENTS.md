@@ -535,12 +535,18 @@ rond. PS : je n'ai pas de proxy et pas de pare-feu."
 Elle avait raison sur toute la ligne : le lien lui demandait vraiment
 d'ouvrir un serveur sur SA machine.
 
-**Pourquoi.** Le lien de `generateLink` passe d'abord par Supabase
-(`/auth/v1/verify?...&redirect_to=...`). Supabase ne redirige vers
-`redirect_to` que si l'URL est dans sa liste blanche ; sinon il retombe
-sur le **Site URL** du projet. Un Site URL resté sur
-`http://localhost:3000` (la valeur par défaut d'un projet Supabase)
-envoie donc TOUS les utilisateurs sur leur propre ordinateur.
+**Pourquoi.** Le lien reçu portait
+`redirect_to=http://localhost:3000/auth/callback`. Ce n'était pas un
+repli de Supabase : c'est NOUS qui l'avions écrit. En prod,
+`NEXT_PUBLIC_APP_URL` vaut `http://localhost:3000`, et le code faisait
+`process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com"`. Un `??`
+ne protège que du MANQUANT, jamais du FAUX : une variable présente et
+absurde traverse tout.
+
+**Et ça ne concernait pas que le mot de passe.** La même variable est lue
+partout : retours de paiement, emails de notification de réponse, liens
+d'invitation revendeur, emails d'essai Plus, webhook Systeme.io. Tout ce
+qui en sortait pointait sur la machine de celui qui recevait le message.
 
 **Règle : on n'envoie jamais le lien Supabase.** On envoie le nôtre,
 construit avec `properties.hashed_token` :
@@ -548,11 +554,16 @@ construit avec `properties.hashed_token` :
 consomme le jeton lui-même (`verifyOtp`). Plus de liste blanche, plus de
 Site URL entre l'utilisatrice et son compte.
 
-**Et le domaine ne vient jamais d'une constante de build seule.**
-`resolveAppUrl()` (`lib/authLinks.ts`) refuse toute adresse locale
-(localhost, 127.x, ::1, .local) et retombe sur l'origine de la requête,
-puis sur le domaine canonique. Un `.env` de prod mal renseigné ne peut
-plus produire un email cassé. Côté client, `window.location.origin`
+**Règle : plus AUCUNE lecture directe de `NEXT_PUBLIC_APP_URL` ni de
+`NEXT_PUBLIC_SITE_URL`.** Tout passe par `resolveAppUrl()` /
+`resolvePublicUrl()` (`lib/authLinks.ts`), qui refusent toute adresse
+locale (localhost, 127.x, ::1, .local) et retombent sur l'origine de la
+requête, puis sur le domaine canonique du contexte. Un `.env` de prod
+mal renseigné ne peut plus rien casser.
+
+**Le `??` avec une valeur par défaut est un faux garde-fou** : il ne
+couvre que la variable absente. Quand une variable a une valeur
+INTERDITE, il faut la valider, pas lui donner un défaut. Côté client, `window.location.origin`
 remplace `process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"` :
 le domaine où l'utilisatrice navigue vraiment.
 

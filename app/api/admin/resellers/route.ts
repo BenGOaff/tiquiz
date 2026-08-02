@@ -14,6 +14,7 @@ import { isAdminEmail } from "@/lib/adminEmails";
 import { commissionRateFor, isPaidPlan, type ResellerRow } from "@/lib/reseller";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -168,7 +169,7 @@ export async function POST(req: NextRequest) {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         { auth: { persistSession: false } },
       );
-      const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim();
+      const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
       await anonClient.auth
         .signInWithOtp({
           email,
