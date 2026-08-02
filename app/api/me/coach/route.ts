@@ -55,21 +55,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, reason: "bad_body" }, { status: 400 });
   }
 
-  // L'identifiant affilié du parrain, pour que le lien proposé par le
-  // coach lui soit attribué. On l'envoie seulement si on l'a : un `sa`
-  // inventé volerait la commission de quelqu'un d'autre.
-  let affiliateSa: string | undefined;
-  try {
-    const { data } = await supabase
-      .from("profiles")
-      .select("referrer_sa")
-      .eq("id", user.id)
-      .maybeSingle();
-    const v = (data as { referrer_sa?: string | null } | null)?.referrer_sa;
-    if (typeof v === "string" && v.trim()) affiliateSa = v.trim();
-  } catch {
-    // Colonne absente ou erreur : le coach répond, le lien sera nu.
-  }
+  // PAS de `sa` dans le lien que le coach proposera, et c'est un choix.
+  //
+  // Nos inscrits arrivent de Systeme.io, qui a deja pose son cookie
+  // d'affiliation : un lien NU laisse ce cookie decider, donc l'affilie
+  // qui a reellement amene la personne touche sa commission.
+  //
+  // Le seul identifiant que Tiquiz connaisse est
+  // `profiles.tipote_affiliate_id`, celui de l'utilisateur EN TANT
+  // QU'AFFILIE (son lien de pied de page). Le coller ici ecraserait
+  // l'attribution du vrai parrain : ce serait exactement l'inverse de la
+  // consigne "je ne veux jamais les leser".
+  //
+  // Le jour ou on stocke le parrain (capture du ?sa= a l'inscription),
+  // il suffit de le passer en `affiliateSa` ci-dessous : le reste de la
+  // chaine sait deja quoi en faire.
 
   try {
     const res = await callCoach({
@@ -77,7 +77,6 @@ export async function POST(req: NextRequest) {
       message: historyOnly ? "." : message,
       app: "tiquiz",
       context: typeof raw?.context === "string" ? raw.context.slice(0, 400) : undefined,
-      affiliateSa,
       historyOnly,
     });
     const json = await res.json().catch(() => null);
