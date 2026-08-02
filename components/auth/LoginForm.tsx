@@ -11,8 +11,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 import LegalFooterLinks from "@/components/legal/LegalFooterLinks";
+import { resolveAppUrl } from "@/lib/authLinks";
 
-const SITE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+// Domaine de retour des liens magiques : celui sur lequel l'utilisateur
+// est REELLEMENT en train de naviguer. Une constante de build pouvait
+// valoir "http://localhost:3000" si la variable manquait, et le lien
+// recu par email demandait alors d'ouvrir un serveur sur la machine de
+// celui qui le recevait (drame Veronique, 2 aout 2026).
+function siteUrl(): string {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
+  return resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, null);
+}
 
 type Mode = "password" | "magic";
 
@@ -112,7 +123,7 @@ export default function LoginForm() {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email: cleanEmail,
-        options: { emailRedirectTo: `${SITE_URL}/auth/callback` },
+        options: { emailRedirectTo: `${siteUrl()}/auth/callback` },
       });
       if (error) {
         const msg = (error.message || "").toLowerCase();
