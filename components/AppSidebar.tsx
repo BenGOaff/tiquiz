@@ -36,6 +36,7 @@ import { Button } from "@/components/ui/button";
 import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
 import { TutorialNudge } from "@/components/tutorial/TutorialNudge";
 import { useTutorial } from "@/hooks/useTutorial";
+import { useAtelierStatus } from "@/hooks/useAtelierStatus";
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -207,32 +208,10 @@ export function AppSidebar() {
   // carte de conversion ci-dessous n'est montree qu'aux interfaces FR.
   const locale = useLocale();
 
-  // Eleve de l'Atelier ou pas ? null = pas encore su (aucune carte
-  // affichee, pour ne jamais montrer le mauvais message). Verifie
-  // aupres de l'Atelier via /api/me/atelier-status, memorise pour la
-  // session navigateur (une seule requete cross-app par session).
-  const [hasAtelier, setHasAtelier] = useState<boolean | null>(null);
-  useEffect(() => {
-    if (locale !== "fr") return;
-    try {
-      const cached = window.sessionStorage.getItem("tiquiz_atelier_status");
-      if (cached !== null) {
-        setHasAtelier(cached === "1");
-        return;
-      }
-    } catch { /* sessionStorage indispo (navigation privee stricte) */ }
-    let cancelled = false;
-    fetch("/api/me/atelier-status")
-      .then((r) => r.json())
-      .then((j) => {
-        if (cancelled) return;
-        const v = j?.hasAtelier === true;
-        setHasAtelier(v);
-        try { window.sessionStorage.setItem("tiquiz_atelier_status", v ? "1" : "0"); } catch { /* noop */ }
-      })
-      .catch(() => { if (!cancelled) setHasAtelier(false); });
-    return () => { cancelled = true; };
-  }, [locale]);
+  // Eleve de l'Atelier ou pas ? Sert a choisir la carte affichee.
+  // Mecanique (cache, repli) dans hooks/useAtelierStatus, partagee avec
+  // la page de creation de quiz.
+  const hasAtelier = useAtelierStatus(locale === "fr");
 
   return (
     <Sidebar collapsible="offcanvas">
