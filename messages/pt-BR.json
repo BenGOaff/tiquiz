@@ -2862,5 +2862,19 @@
       "body1": "Se você quiser manter um quiz privado (somente via link, sem risco de aparecer no Google), marque a caixa \"Ocultar este quiz dos mecanismos de busca\" na aba SEO do editor do quiz.",
       "body2": "O quiz continua ativo e compartilhável pelo link direto, mas fica fora do seu sitemap e do arquivo de IA. Ideal para conteúdos internos ou rascunhos públicos compartilhados com um círculo fechado."
     }
+  },
+  "coach": {
+    "title": "Seu coach",
+    "subtitle": "Conhece o Tiquiz e o método do Atelier",
+    "open": "Abrir o coach",
+    "close": "Fechar",
+    "send": "Enviar",
+    "placeholder": "Faça sua pergunta...",
+    "welcome": "Me diga o que está travando você e eu ajudo a avançar.",
+    "thinking": "Pensando...",
+    "failed": "O coach não conseguiu responder. Tente de novo daqui a pouco.",
+    "quotaReached": "Você usou suas 2 perguntas de hoje. Volte amanhã, ou libere a ajuda ilimitada.",
+    "upsellPlan": "Ver os planos Tiquiz",
+    "upsellAtelier": "Conhecer L'Atelier du Quiz"
   }
 }
