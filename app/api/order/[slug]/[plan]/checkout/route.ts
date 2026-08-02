@@ -17,11 +17,12 @@ import { logPaymentEvent } from "@/lib/resellerPaymentLog";
 import { createPaypalSubscriptionCheckout } from "@/lib/paypalRest";
 import { createStripeSubscriptionCheckout } from "@/lib/stripeRest";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim();
+const APP_URL = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 const PLAN_KEYS = ["monthly", "yearly", "monthly_plus", "yearly_plus"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 

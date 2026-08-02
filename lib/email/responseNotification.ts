@@ -9,9 +9,10 @@
 // Contenu FR, aucun tiret long (règle anti-IA).
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 const RESEND_URL = "https://api.resend.com/emails";
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim().replace(/\/$/, "");
+const APP_URL = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 
 function esc(s: string): string {
   return s

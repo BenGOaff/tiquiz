@@ -9,6 +9,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createClient } from "@supabase/supabase-js";
 import { timingSafeEqual } from "crypto";
 import { getSignatureMode, verifySioSignature } from "@/lib/sioWebhookSig";
+import { resolveAppUrl } from "@/lib/authLinks";
 import {
   cancelSubscription,
   findContactByEmail,
@@ -31,7 +32,7 @@ function secretMatches(received: string | null | undefined, expected: string | u
   if (a.length !== b.length) return false;
   return timingSafeEqual(a, b);
 }
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim();
+const APP_URL = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 
 const supabaseAnon = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

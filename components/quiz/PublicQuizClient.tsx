@@ -33,6 +33,7 @@ import {
   resolveAxisScoreDisplay,
   scorePercent,
   scoreTranche,
+  pickScoringResultIndex,
   type ScoresSnapshot,
   type ScorePlaceholderContext,
   type ScoringAxis,
@@ -1900,14 +1901,13 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
           ans.kind === "option" ? [ans.optionIndex] : ans.kind === "options" ? ans.optionIndices : [];
         for (const oi of picked) scoreValue += pts[oi] ?? 0;
       });
-      const ranges = [...quiz.results]
-        .filter((r) => r.min_score != null || r.max_score != null)
-        .sort((a, b) => (a.min_score ?? -Infinity) - (b.min_score ?? -Infinity));
-      const profile =
-        ranges.find(
-          (r) =>
-            scoreValue >= (r.min_score ?? -Infinity) && scoreValue <= (r.max_score ?? Infinity),
-        ) ?? null;
+      // Jamais de page de resultat vide : un score qui tombe dans un trou
+      // entre deux tranches, ou un quiz sans aucune tranche, donnait
+      // profile = null et le visiteur arrivait sur un ecran sans titre ni
+      // texte ni bouton. pickScoringResultIndex (lib/quizScoring.ts) rend
+      // toujours un resultat des qu'il en existe un.
+      const pickedIndex = pickScoringResultIndex(quiz.results, scoreValue);
+      const profile = pickedIndex >= 0 ? quiz.results[pickedIndex] ?? null : null;
       return { profile, scores: [], scoreValue, scoreMax };
     }
 

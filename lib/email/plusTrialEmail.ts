@@ -16,9 +16,10 @@
 // jamais l'octroi (le plan est déjà posé en DB). Jamais de tiret long.
 
 import "server-only";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 const RESEND_URL = "https://api.resend.com/emails";
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim().replace(/\/$/, "");
+const APP_URL = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 
 function formatFrDate(iso: string): string {
   try {

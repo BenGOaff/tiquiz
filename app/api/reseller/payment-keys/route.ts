@@ -30,11 +30,12 @@ import {
 import { deleteStripeWebhook, ensureStripeWebhook } from "@/lib/stripeRest";
 import { encryptSecret, isSecretsCryptoConfigured } from "@/lib/secretsCrypto";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { resolveAppUrl } from "@/lib/authLinks";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com").trim();
+const APP_URL = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 
 interface StatusRow {
   stripe_secret_key_enc: string | null;

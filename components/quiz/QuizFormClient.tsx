@@ -4,13 +4,14 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
+import { useAtelierStatus } from "@/hooks/useAtelierStatus";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, ArrowLeft, Loader2, Sparkles, FileText, Upload, Settings2, MessageSquare, Award, Users, Share2, Zap, ChevronRight, ChevronDown, GripVertical, Save, Globe, Monitor, BarChart3, TrendingUp } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Loader2, Sparkles, FileText, Upload, Settings2, MessageSquare, Award, Users, Share2, Zap, ChevronRight, ChevronDown, GripVertical, Save, Globe, Monitor, BarChart3, TrendingUp, MessageCircleQuestion } from "lucide-react";
 import SortableQuestionList from "@/components/quiz/SortableQuestionList";
 import QuizShareSettings from "@/components/quiz/QuizShareSettings";
 import QuizPreview from "@/components/quiz/QuizPreview";
@@ -175,6 +176,36 @@ function ObjectivesDropdown({
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
+
+/**
+ * Le critere de choix entre "profil" et "score", en une phrase, plus une
+ * sortie vers quelqu'un qui repond. Le coach de l'Atelier pour celles qui
+ * l'ont, le support pour les autres : proposer un coach auquel on n'a pas
+ * acces est pire que ne rien proposer.
+ */
+function ModeHelp() {
+  const t = useTranslations("quizForm");
+  const locale = useLocale();
+  const hasAtelier = useAtelierStatus(locale === "fr");
+
+  return (
+    <div className="rounded-xl border border-dashed bg-muted/30 px-4 py-3 space-y-1.5">
+      <p className="text-sm">{t("modeHelpRule")}</p>
+      <p className="text-xs text-muted-foreground">{t("modeHelpChange")}</p>
+      {hasAtelier !== null && (
+        <a
+          href={hasAtelier ? "https://quizing.tipote.com/coach" : "https://app.tipote.com/support/tiquiz"}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+        >
+          <MessageCircleQuestion className="h-3.5 w-3.5" />
+          {hasAtelier ? t("modeHelpCoach") : t("modeHelpSupport")}
+        </a>
+      )}
+    </div>
+  );
+}
 
 export default function QuizFormClient() {
   const t = useTranslations("quizForm");
@@ -1119,6 +1150,12 @@ export default function QuizFormClient() {
                 <p className="text-sm text-muted-foreground mt-1">{t("manualTypeScoringDesc")}</p>
               </button>
             </div>
+            {/* Le choix entre les deux modes est LA decision qui bloque :
+                Veronique a construit un quiz score alors qu'elle voulait
+                des profils, et a passe deux jours a se demander pourquoi
+                ca ne collait pas (2 aout 2026). On donne le critere en une
+                phrase, et une sortie vers quelqu'un qui repond. */}
+            <ModeHelp />
           </div>
         )
       )}

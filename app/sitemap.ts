@@ -23,6 +23,7 @@ import type { MetadataRoute } from "next";
 import { headers } from "next/headers";
 import { SUPPORTED_LOCALES } from "@/i18n/config";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { resolvePublicUrl } from "@/lib/authLinks";
 
 const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
 const PUBLIC_ROUTES = [
@@ -117,7 +118,7 @@ async function buildCustomDomainSitemap(host: string): Promise<MetadataRoute.Sit
 }
 
 async function buildMainHostSitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = (process.env.NEXT_PUBLIC_SITE_URL || "https://tiquiz.com").replace(/\/$/, "");
+  const base = resolvePublicUrl(process.env.NEXT_PUBLIC_SITE_URL, "https://tiquiz.com");
 
   const staticEntries: MetadataRoute.Sitemap = PUBLIC_ROUTES.map((route) => {
     const url = `${base}${route || "/"}`;

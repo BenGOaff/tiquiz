@@ -535,12 +535,18 @@ rond. PS : je n'ai pas de proxy et pas de pare-feu."
 Elle avait raison sur toute la ligne : le lien lui demandait vraiment
 d'ouvrir un serveur sur SA machine.
 
-**Pourquoi.** Le lien de `generateLink` passe d'abord par Supabase
-(`/auth/v1/verify?...&redirect_to=...`). Supabase ne redirige vers
-`redirect_to` que si l'URL est dans sa liste blanche ; sinon il retombe
-sur le **Site URL** du projet. Un Site URL resté sur
-`http://localhost:3000` (la valeur par défaut d'un projet Supabase)
-envoie donc TOUS les utilisateurs sur leur propre ordinateur.
+**Pourquoi.** Le lien reçu portait
+`redirect_to=http://localhost:3000/auth/callback`. Ce n'était pas un
+repli de Supabase : c'est NOUS qui l'avions écrit. En prod,
+`NEXT_PUBLIC_APP_URL` vaut `http://localhost:3000`, et le code faisait
+`process.env.NEXT_PUBLIC_APP_URL ?? "https://quiz.tipote.com"`. Un `??`
+ne protège que du MANQUANT, jamais du FAUX : une variable présente et
+absurde traverse tout.
+
+**Et ça ne concernait pas que le mot de passe.** La même variable est lue
+partout : retours de paiement, emails de notification de réponse, liens
+d'invitation revendeur, emails d'essai Plus, webhook Systeme.io. Tout ce
+qui en sortait pointait sur la machine de celui qui recevait le message.
 
 **Règle : on n'envoie jamais le lien Supabase.** On envoie le nôtre,
 construit avec `properties.hashed_token` :
@@ -548,11 +554,16 @@ construit avec `properties.hashed_token` :
 consomme le jeton lui-même (`verifyOtp`). Plus de liste blanche, plus de
 Site URL entre l'utilisatrice et son compte.
 
-**Et le domaine ne vient jamais d'une constante de build seule.**
-`resolveAppUrl()` (`lib/authLinks.ts`) refuse toute adresse locale
-(localhost, 127.x, ::1, .local) et retombe sur l'origine de la requête,
-puis sur le domaine canonique. Un `.env` de prod mal renseigné ne peut
-plus produire un email cassé. Côté client, `window.location.origin`
+**Règle : plus AUCUNE lecture directe de `NEXT_PUBLIC_APP_URL` ni de
+`NEXT_PUBLIC_SITE_URL`.** Tout passe par `resolveAppUrl()` /
+`resolvePublicUrl()` (`lib/authLinks.ts`), qui refusent toute adresse
+locale (localhost, 127.x, ::1, .local) et retombent sur l'origine de la
+requête, puis sur le domaine canonique du contexte. Un `.env` de prod
+mal renseigné ne peut plus rien casser.
+
+**Le `??` avec une valeur par défaut est un faux garde-fou** : il ne
+couvre que la variable absente. Quand une variable a une valeur
+INTERDITE, il faut la valider, pas lui donner un défaut. Côté client, `window.location.origin`
 remplace `process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"` :
 le domaine où l'utilisatrice navigue vraiment.
 
@@ -561,3 +572,46 @@ les emails que Supabase envoie lui-même, c'est à dire le lien magique et
 la confirmation d'inscription. Vérifier dans le dashboard que le Site
 URL est `https://quiz.tipote.com` et que les Redirect URLs contiennent
 `https://quiz.tipote.com/auth/callback`.
+
+## Profil ou score : c'est LA décision qui bloque (Véronique 2 août 2026)
+
+Véronique a construit un quiz scoré alors qu'elle voulait des profils.
+Elle a cherché pendant deux jours pourquoi "ça ne collait pas", et c'est
+le coach qui a fini par lui dire. Il n'y avait aucun bug : le mauvais
+mode avait été choisi à la première seconde, et rien ne l'avait alertée.
+
+Les deux libellés parlaient produit, pas usage : "score sur 100, jauge,
+axes, résultats par tranches" ne veut rien dire pour une débutante.
+Ils parlent maintenant du QUESTIONNEMENT :
+
+- profil -> **qui es-tu ?** (le plus courant)
+- score  -> **où en es-tu ?**
+
+Sous les deux cartes, une phrase donne le critère, une autre rassure
+(tout reste modifiable), et un lien mène à quelqu'un qui répond : le
+coach de l'Atelier pour celles qui l'ont (`useAtelierStatus`), le support
+pour les autres. **Proposer un coach auquel on n'a pas accès est pire que
+ne rien proposer** : c'est pour ça que rien ne s'affiche tant que le
+statut n'est pas connu.
+
+## Mode scoring : le visiteur ne doit JAMAIS voir une page vide
+
+Trouvé en auditant le scoring. Le viewer faisait
+`ranges.find(...) ?? null` : un score qui tombe dans un TROU entre deux
+tranches, ou un quiz dont aucun résultat n'a de tranche (le cas d'une
+débutante qui n'a pas encore touché aux bornes), donnait
+`resultProfile = null`. Tout l'écran de résultat étant en
+`resultProfile?.`, le visiteur répondait à tout, laissait son email, et
+arrivait sur une page sans titre, sans texte, sans bouton. En silence.
+
+**Règle : `pickScoringResultIndex()` (`lib/quizScoring.ts`) rend toujours
+un résultat dès qu'il en existe un.** Tranche qui contient le score,
+sinon la tranche la plus proche, sinon le premier résultat.
+`analyzeTrancheCoverage` reste là pour prévenir la créatrice : il
+l'avertit, il ne sauve pas le visiteur.
+
+**Et poser des tranches est un calcul, pas une décision de créatrice.**
+La plage de points atteignable est affichée en permanence (plus seulement
+quand quelque chose cloche), et un bouton "Répartir les tranches" découpe
+la plage en tranches contiguës via `splitRangeIntoTranches()`, la MÊME
+fonction que la finalisation d'un quiz généré par l'IA.
