@@ -30,16 +30,33 @@ test("les 4 temps du résultat partagent le même bord gauche", async ({ page })
   await expect(page.getByText("L'architecte").first()).toBeVisible();
   await page.waitForTimeout(600);
 
-  const lefts = await page.evaluate(() => {
-    // Les temps sont les blocs à filet vertical de la colonne de contenu.
-    const blocks = Array.from(document.querySelectorAll<HTMLElement>("[class*='border-l-']"))
-      .filter((el) => el.offsetParent !== null && el.getBoundingClientRect().width > 200);
-    return blocks.map((el) => Math.round(el.getBoundingClientRect().left));
+  // On mesure les bords de TOUT ce que le visiteur lit dans la colonne :
+  // le nom du profil, le chapô, et chacun des temps. Comparer les temps
+  // entre eux ne suffisait pas : ils étaient parfaitement alignés... 20 px
+  // à droite du titre, ce qui est exactement ce que Béné a vu.
+  const box = await page.evaluate(() => {
+    const col = document.querySelector("h2")?.closest("div")?.parentElement;
+    if (!col) return null;
+    const read = (el: Element | null) =>
+      el ? Math.round(el.getBoundingClientRect().left) : null;
+    const title = read(document.querySelector("h2"));
+    // Les temps : les blocs de la colonne qui portent un titre coloré.
+    const beats = Array.from(col.querySelectorAll<HTMLElement>(":scope > div"))
+      .filter((el) => el.getBoundingClientRect().width > 200)
+      .map((el) => Math.round(el.getBoundingClientRect().left));
+    return { title, beats };
   });
 
-  expect(lefts.length, "aucun temps rendu : la fixture n'est pas en mode 4 temps").toBeGreaterThan(1);
-  const min = Math.min(...lefts);
-  const max = Math.max(...lefts);
+  expect(box, "colonne de résultat introuvable").not.toBeNull();
+  expect(box!.title, "titre du profil introuvable").not.toBeNull();
+  expect(box!.beats.length, "aucun bloc mesuré").toBeGreaterThan(1);
+
+  const all = [box!.title as number, ...box!.beats];
+  const min = Math.min(...all);
+  const max = Math.max(...all);
   // 1px de tolérance pour les arrondis sous-pixel.
-  expect(max - min, `bords gauches désalignés : ${JSON.stringify(lefts)}`).toBeLessThanOrEqual(1);
+  expect(
+    max - min,
+    `tout doit partir du même bord que le titre. Mesuré : titre ${box!.title}, blocs ${JSON.stringify(box!.beats)}`,
+  ).toBeLessThanOrEqual(1);
 });
