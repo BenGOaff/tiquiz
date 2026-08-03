@@ -42,6 +42,7 @@ import {
 } from "@/lib/quizScoring";
 import { resolveShareNetworks } from "@/lib/quiz/shareNetworks";
 import { buildShareText, cleanShareUrl } from "@/lib/quiz/shareText";
+import { pickProfileWinner, tallyVotes, tieBreakMode, type ProfileVote } from "@/lib/quiz/profileWinner";
 import { ensureExternalUrl } from "@/lib/url";
 import { celebrate } from "@/lib/celebrate";
 import { generateResultCard } from "@/lib/resultCard";
@@ -163,6 +164,10 @@ type PublicQuizData = {
   scoring_axes?: unknown;
   show_score_gauge?: boolean | null;
   score_display_mode?: string | null;
+  // Comment ce quiz tranche une egalite entre profils. NULL / absent =
+  // "first", le comportement historique : aucun quiz existant ne change
+  // de resultat. Cf. lib/quiz/profileWinner.ts.
+  tie_break?: string | null;
   score_labels?: unknown;
   introduction: string | null;
   cta_text: string | null;
@@ -1975,20 +1980,17 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
       return { profile, scores: [], scoreValue, scoreMax };
     }
 
-    const scores: number[] = new Array(quiz.results.length).fill(0);
-    // Plus forte contribution UNIQUE vers chaque profil (le poids max d'une
-    // seule reponse choisie). Sert a departager les egalites : le profil que
-    // le repondant a choisi le plus franchement l'emporte. Sur un quiz sans
-    // ponderation (tous points = 1), ce tableau est uniforme -> aucune
-    // difference avec l'ancien comportement (retro-compatible strict).
-    const strongest: number[] = new Array(quiz.results.length).fill(0);
+    // Les voix du visiteur, puis LA fonction de depouillement
+    // (lib/quiz/profileWinner.ts), la MEME que l'analyseur d'ex-aequo de
+    // l'editeur. Deux endroits qui recalculent la meme decision finissent
+    // toujours par diverger, et ici ca donnerait un bandeau qui alerte
+    // sur des egalites que le viewer sait trancher.
+    const votes: ProfileVote[] = [];
     src.forEach((ans, qIdx) => {
       if (!ans) return;
       const q = quiz.questions[qIdx];
       if (!q) return;
-      // Each picked option contributes 1 point to its result_index bucket.
-      // Multi-select questions can contribute to several buckets at once;
-      // the highest-total result still wins (no weighting).
+      // Une question multi-select peut voter pour plusieurs profils.
       const picked: number[] =
         ans.kind === "option"
           ? [ans.optionIndex]
@@ -1998,31 +2000,19 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
       for (const oi of picked) {
         const opt = q.options[oi];
         if (!opt) continue;
-        const ri = opt.result_index;
-        // Poids de la reponse : `points` si defini (permet de privilegier
-        // un profil, retour Adeline 14 juillet 2026), sinon 1 (comportement
-        // historique, 100% retro-compatible pour les quiz existants).
-        const weight = typeof opt.points === "number" ? opt.points : 1;
-        if (ri >= 0 && ri < scores.length) {
-          scores[ri] += weight;
-          if (weight > strongest[ri]) strongest[ri] = weight;
-        }
+        votes.push({
+          resultIndex: opt.result_index,
+          // Poids de la reponse : `points` si defini (permet de privilegier
+          // un profil, retour Adeline 14 juillet 2026), sinon 1 (comportement
+          // historique, 100% retro-compatible pour les quiz existants).
+          weight: typeof opt.points === "number" ? opt.points : 1,
+          questionIndex: qIdx,
+        });
       }
     });
-    // Gagnant : score le plus haut. En cas d'egalite, on tranche par la
-    // contribution unique la plus forte (le profil choisi le plus nettement),
-    // puis par l'index le plus bas. Evite le biais "toujours le 1er profil"
-    // sur les egalites, sans rien changer pour les quiz non ponderes.
-    let maxIdx = 0;
-    for (let i = 1; i < scores.length; i++) {
-      if (
-        scores[i] > scores[maxIdx] ||
-        (scores[i] === scores[maxIdx] && strongest[i] > strongest[maxIdx])
-      ) {
-        maxIdx = i;
-      }
-    }
-    return { profile: quiz.results[maxIdx] ?? null, scores };
+    const tally = tallyVotes(votes, quiz.results.length);
+    const { index } = pickProfileWinner(tally, tieBreakMode(quiz.tie_break));
+    return { profile: quiz.results[index] ?? null, scores: tally.scores };
   }, [quiz, answers]);
 
   // Capture email désactivée en mode quiz (juillet 2026) : le créateur a
