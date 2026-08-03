@@ -1561,7 +1561,12 @@
     "designLogoAlign_right": "Destra",
     "designLogoSizeLabel": "Dimensione",
     "designLogoSizeAuto": "Auto",
-    "introWidthHandleTitle": "Trascina per regolare la larghezza del titolo e del sottotitolo. Doppio clic per larghezza piena."
+    "introWidthHandleTitle": "Trascina per regolare la larghezza del titolo e del sottotitolo. Doppio clic per larghezza piena.",
+    "beatsHintTitle": "Novità: la pagina di risultato in 4 tempi",
+    "beatsHintBody": "Lo specchio, la causa, il percorso, il ponte. È la struttura insegnata nell'Atelier e si attiva su questo quiz senza riscrivere nulla: i tuoi testi attuali vengono riutilizzati così come sono.",
+    "beatsHintEnable": "Attiva su questo quiz",
+    "beatsHintDismiss": "No grazie",
+    "beatsHintReversible": "Reversibile in qualsiasi momento, e senza effetto sugli altri quiz."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nuova password",

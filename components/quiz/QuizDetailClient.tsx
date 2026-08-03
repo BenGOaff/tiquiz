@@ -587,6 +587,26 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // null tant qu'on ne sait pas : on n'affiche RIEN plutôt que de
   // proposer un coach auquel elle n'a pas accès (règle du 2 août 2026).
   const hasAtelier = useAtelierStatus();
+
+  // Repère "nouveauté" de la page de résultat : masqué définitivement
+  // (par quiz) dès qu'elle l'écarte. localStorage et pas la base : c'est
+  // une préférence d'affichage, elle ne mérite ni colonne ni migration.
+  const beatsHintKey = `tiquiz:beats-hint-dismissed:${quizId}`;
+  const [beatsHintDismissed, setBeatsHintDismissed] = useState(true);
+  useEffect(() => {
+    // Lu APRÈS le montage : lire localStorage pendant le rendu ferait
+    // diverger le serveur et le client (hydratation). On part donc de
+    // "masqué" et on révèle si rien n'a été écarté.
+    try {
+      setBeatsHintDismissed(window.localStorage.getItem(beatsHintKey) === "1");
+    } catch {
+      setBeatsHintDismissed(false);
+    }
+  }, [beatsHintKey]);
+  const dismissBeatsHint = useCallback(() => {
+    setBeatsHintDismissed(true);
+    try { window.localStorage.setItem(beatsHintKey, "1"); } catch { /* navigation privée */ }
+  }, [beatsHintKey]);
   const [resultProjectionHeading, setResultProjectionHeading] = useState("");
   // Capture email optionnelle en mode quiz (juillet 2026). Default true
   // = comportement historique (l'email est demandé avant le résultat).
@@ -5273,6 +5293,44 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       })}
                     </ul>
                     <p className="text-[11px] opacity-75 mt-2">{t("trancheCoverageHelp")}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* NOUVEAUTÉ SUR UN QUIZ EXISTANT (retour Jocelyne, 3 août 2026).
+                  "Elle veut profiter des dernières améliorations mais c'est
+                  pas possible sur un quiz existant. Elle l'a dupliqué pour
+                  en profiter, mais ça n'a pas marché."
+                  Elle avait raison de chercher : la page en 4 temps EST
+                  activable sur un quiz existant, mais l'interrupteur vivait
+                  dans la colonne de réglages, parmi quinze autres. Personne
+                  ne trouve une nouveauté qu'on ne lui montre pas. Dupliquer
+                  ne pouvait rien donner : la copie est FIDÈLE, donc elle
+                  reproduit exactement la page de l'original.
+                  Le repère s'affiche uniquement quand la page est encore
+                  en mise en page historique, et disparaît dès qu'elle
+                  bascule. */}
+              {resultLayout === "classic" && !beatsHintDismissed && (
+                <div className="rounded-xl border p-4 mb-4" style={{ borderColor: `${pc}40`, backgroundColor: `${pc}0a` }}>
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="w-4 h-4 mt-0.5 shrink-0" style={{ color: pc }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold">{t("beatsHintTitle")}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{t("beatsHintBody")}</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-2.5">
+                        <Button type="button" size="sm" onClick={() => setResultLayout("beats")}>
+                          {t("beatsHintEnable")}
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={dismissBeatsHint}
+                          className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+                        >
+                          {t("beatsHintDismiss")}
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-2">{t("beatsHintReversible")}</p>
+                    </div>
                   </div>
                 </div>
               )}
