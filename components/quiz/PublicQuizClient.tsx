@@ -43,26 +43,18 @@ import { resolveShareNetworks } from "@/lib/quiz/shareNetworks";
 import { ensureExternalUrl } from "@/lib/url";
 import { celebrate } from "@/lib/celebrate";
 import { generateResultCard } from "@/lib/resultCard";
+import {
+  alignBlockMarginClass,
+  alignJustifyClass,
+  alignTextClass,
+  resolveBlockAlign,
+} from "@/lib/quiz/textAlign";
 
 // Rich text fields contain raw HTML tags (<p>, <b>, <a>, …). Strings without any
 // tag are treated as legacy plain text so the old ✓/•/- bullet rendering still
 // works for quizzes created before the rich-text editor landed.
 const HTML_TAG_RE = /<\/?[a-zA-Z][^>]*>/;
 const isHtml = (s: string | null | undefined) => !!s && HTML_TAG_RE.test(s);
-
-// Alignement horizontal choisi par le créateur DANS le titre (via le bouton
-// aligner de l'éditeur rich → style inline text-align). On le lit pour que
-// l'intro / la description / le CTA suivent EXACTEMENT le même bord que le
-// titre. Sans ça, un titre aligné à gauche dans une disposition "centrée"
-// laissait l'intro centrée (donc décalée à droite sous le titre). Retourne
-// null si aucun alignement explicite → on retombe sur la disposition.
-const richTextAlign = (
-  html: string | null | undefined,
-): "left" | "right" | "center" | null => {
-  if (!html) return null;
-  const m = /text-align:\s*(left|right|center)/i.exec(html);
-  return m ? (m[1].toLowerCase() as "left" | "right" | "center") : null;
-};
 
 
 
@@ -2844,18 +2836,19 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
       );
     }
 
-    // Le titre, l'intro et le CTA partagent le MÊME bord. On prend l'alignement
-    // que le créateur a posé sur son titre (gauche/droite/centre) ; à défaut on
-    // suit la disposition (centrée -> centre, gauche/split -> gauche). Corrige
-    // le cas "titre à gauche mais intro centrée décalée" des quiz en centré.
-    const introAlign: "left" | "right" | "center" =
-      richTextAlign(quiz.title) ?? (qLayout === "centered" ? "center" : "left");
-    const introTextClass =
-      introAlign === "center" ? "text-center" : introAlign === "right" ? "text-right" : "text-left";
-    const introBlockMargin =
-      introAlign === "center" ? "mx-auto" : introAlign === "right" ? "ml-auto" : "mr-auto";
-    const introJustify =
-      introAlign === "center" ? "justify-center" : introAlign === "right" ? "justify-end" : "justify-start";
+    // Le titre, l'intro et le CTA partagent le MÊME bord. La règle vit dans
+    // lib/quiz/textAlign.ts, et c'est tout l'enjeu : elle était réécrite en
+    // ternaires ici ET dans l'éditeur, donc corriger un côté laissait l'autre
+    // décalé. "On a déjà parlé de ça mille fois" (Béné, 3 août 2026).
+    const introAlign = resolveBlockAlign(quiz.title, quiz.title, qLayout);
+    const introTextClass = alignTextClass(introAlign);
+    const introBlockMargin = alignBlockMarginClass(introAlign);
+    const introJustify = alignJustifyClass(introAlign);
+    // Le sous-titre peut avoir SON propre alignement : dans ce cas il gagne,
+    // pour lui seul (elle l'a posé exprès).
+    const introBodyAlign = resolveBlockAlign(quiz.introduction, quiz.title, qLayout);
+    const introBodyTextClass = alignTextClass(introBodyAlign);
+    const introBodyMargin = alignBlockMarginClass(introBodyAlign);
 
     return (
       <div className={`min-h-screen flex flex-col${layoutOuterClass}`} style={rootStyle}>
@@ -2902,13 +2895,13 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
 
             {introRich ? (
               <div
-                className={`tiquiz-rich text-muted-foreground text-lg leading-relaxed max-w-xl ${introBlockMargin} ${introTextClass}`}
+                className={`tiquiz-rich text-muted-foreground text-lg leading-relaxed max-w-xl ${introBodyMargin} ${introBodyTextClass}`}
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.introduction) }}
               />
             ) : (
               <>
                 {descLines.length > 0 && (
-                  <p className={`text-muted-foreground text-lg leading-relaxed whitespace-pre-line max-w-xl ${introBlockMargin} ${introTextClass}`}>
+                  <p className={`text-muted-foreground text-lg leading-relaxed whitespace-pre-line max-w-xl ${introBodyMargin} ${introBodyTextClass}`}>
                     {descLines.join("\n")}
                   </p>
                 )}

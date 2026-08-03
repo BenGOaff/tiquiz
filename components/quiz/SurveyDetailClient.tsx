@@ -54,6 +54,7 @@ import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
 import { stripHtml } from "@/lib/richText";
+import { alignBlockMarginClass, alignJustifyClass, alignTextClass, resolveBlockAlign } from "@/lib/quiz/textAlign";
 import { isPixelFieldValid } from "@/lib/clientPixels";
 
 /** Same demo name we use across the quiz editor — keeps the experience
@@ -459,6 +460,17 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // Image de COUVERTURE du sondage (réutilise intro_image_url de la table
   // quizzes ; rendue publiquement par PublicQuizClient en position "top").
   const [introImageUrl, setIntroImageUrl] = useState<string | null>(null);
+
+  // ── Bord commun de l'ecran d'accueil (drame Bene, 3 aout 2026) ──
+  // Meme regle que l'editeur de quiz : titre, sous-titre et bouton se
+  // calent sur le MEME bord (lib/quiz/textAlign.ts). Le sous-titre
+  // portait `mx-auto` en dur, donc il restait centre sous un titre cale
+  // a gauche, et commencait plus a droite que lui.
+  //
+  // "centered" en dur comme disposition de repli : c'est exactement ce
+  // qu'encodait le `text-center` qui etait ecrit ici, et les sondages
+  // n'ont pas de reglage de disposition. Rien ne bouge donc tant que la
+  // creatrice n'a pas aligne son titre elle-meme.
   // Largeur d'affichage de l'image de couverture en % (null = pleine largeur).
   const [introImageWidth, setIntroImageWidth] = useState<number | null>(null);
   const [uploadingOgImage, setUploadingOgImage] = useState(false);
@@ -1900,10 +1912,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             <div className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-sm" : "w-full"}`}>
 
               {/* ── INTRO SECTION ── */}
-              <div ref={introRef} className="min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 text-center">
+              <div ref={introRef} className={`min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 ${alignTextClass(resolveBlockAlign(title, title, "centered"))}`}>
                 <div className="max-w-2xl w-full space-y-6">
                   {effectiveLogoUrl && (
-                    <div className="flex justify-center">
+                    <div className={`flex ${alignJustifyClass(resolveBlockAlign(title, title, "centered"))}`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={effectiveLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
                     </div>
@@ -1963,8 +1975,12 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                   )}
 
                   <RichTextEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} onImageUpload={handleRichTextImageUpload} singleLine className="text-3xl sm:text-5xl font-bold leading-tight" placeholder={t("previewTitlePh")} />
-                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} onImageUpload={handleRichTextImageUpload} className="text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto" placeholder={t("previewIntroPh")} />
-                  <div className="flex justify-center">
+                  {/* `max-w-xl` borne la longueur de ligne et reste ; c'est
+                      le `mx-auto` d'a cote qui centrait le bloc quoi qu'il
+                      arrive, d'ou le sous-titre decale sous un titre a
+                      gauche. */}
+                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} onImageUpload={handleRichTextImageUpload} className={`text-lg text-muted-foreground leading-relaxed max-w-xl ${alignBlockMarginClass(resolveBlockAlign(introduction, title, "centered"))} ${alignTextClass(resolveBlockAlign(introduction, title, "centered"))}`} placeholder={t("previewIntroPh")} />
+                  <div className={`flex ${alignJustifyClass(resolveBlockAlign(title, title, "centered"))}`}>
                     <div className="px-10 py-4 rounded-full text-white font-semibold text-lg shadow-lg transition-opacity hover:opacity-90" style={{ backgroundColor: pc }}>
                       <RichTextEdit
                         value={startButtonText}
