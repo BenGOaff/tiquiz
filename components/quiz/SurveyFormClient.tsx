@@ -244,7 +244,7 @@ export default function SurveyFormClient() {
       });
       if (!res.ok) {
         const errText = await res.text().catch(() => "");
-        toast.error(`${t("errAi")}${errText ? ` — ${errText.slice(0, 150)}` : ""}`);
+        toast.error(`${t("errAi")}${errText ? ` : ${errText.slice(0, 150)}` : ""}`);
         return;
       }
       const survey = await consumeSseStream(res);
@@ -293,7 +293,7 @@ export default function SurveyFormClient() {
       });
       if (!res.ok) {
         const errText = await res.text().catch(() => "");
-        toast.error(`${t("errImport")}${errText ? ` — ${errText.slice(0, 150)}` : ""}`);
+        toast.error(`${t("errImport")}${errText ? ` : ${errText.slice(0, 150)}` : ""}`);
         return;
       }
       const survey = await consumeSseStream(res);
@@ -377,7 +377,7 @@ export default function SurveyFormClient() {
                 >
                   {SURVEY_OBJECTIVES.map((o) => (
                     <option key={o.value} value={o.value}>
-                      {o.labelFr} — {o.desc}
+                      {o.labelFr} : {o.desc}
                     </option>
                   ))}
                 </select>

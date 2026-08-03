@@ -172,7 +172,7 @@ export function QuizAnalyticsClient({ quizId, initial, hideCounts = false }: Pro
           // (instead of trusting the placeholder zeros)
           setFetchError(
             json.error
-              ? `${res.status} — ${json.error}`
+              ? `${res.status} : ${json.error}`
               : `HTTP ${res.status}`,
           );
         }

@@ -5220,7 +5220,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         return (
                           <li key={i} className="leading-snug">
                             <span className="font-medium">{titles}</span>
-                            {path && <span className="opacity-75"> — {path}</span>}
+                            {path && <span className="opacity-75"> · {path}</span>}
                           </li>
                         );
                       })}

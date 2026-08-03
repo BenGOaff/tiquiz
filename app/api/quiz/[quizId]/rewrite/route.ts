@@ -80,7 +80,7 @@ export async function POST(
   });
   if (!rl.ok) {
     return NextResponse.json(
-      { ok: false, error: "RATE_LIMITED", message: `Trop de demandes — réessaie dans ${rl.retryAfterSec}s.`, retry_after_sec: rl.retryAfterSec },
+      { ok: false, error: "RATE_LIMITED", message: `Trop de demandes, réessaie dans ${rl.retryAfterSec}s.`, retry_after_sec: rl.retryAfterSec },
       { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
     );
   }

@@ -565,7 +565,7 @@ export default function QuizFormClient() {
 
   async function handleSave() {
     if (!title.trim()) {
-      toast.error(t("titleLabel") + " — " + "required");
+      toast.error(t("titleLabel") + " : " + "required");
       return;
     }
 
@@ -736,11 +736,11 @@ export default function QuizFormClient() {
     };
 
     if (params.objectives.length === 0) {
-      toast.error(t("aiObjectiveLabel") + " — required");
+      toast.error(t("aiObjectiveLabel") + " : required");
       return;
     }
     if (!params.target.trim()) {
-      toast.error(t("aiTargetLabel") + " — required");
+      toast.error(t("aiTargetLabel") + " : required");
       return;
     }
 
