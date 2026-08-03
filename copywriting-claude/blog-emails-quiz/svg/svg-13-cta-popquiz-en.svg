@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid meet" style="font-family:'Inter','Plus Jakarta Sans',-apple-system,system-ui,sans-serif;" role="img" aria-labelledby="t13 d13">
+  <title id="t13">Build your first Popquiz for free</title>
+  <desc id="d13">End-of-article CTA inviting readers to build their first Popquiz with Tiquiz, 30 minutes to go from a sleeping video to a tagged-lead machine</desc>
+
+  <defs>
+    <linearGradient id="lightBg13" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EEF0FE"/>
+      <stop offset="100%" stop-color="#E3F5FC"/>
+    </linearGradient>
+    <linearGradient id="brandGrad13" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5A6EF6"/>
+      <stop offset="100%" stop-color="#20BBE6"/>
+    </linearGradient>
+    <radialGradient id="glow13" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#5A6EF6" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#5A6EF6" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow13" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#2E386E" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <style>
+    .h13 { font-weight: 900; letter-spacing: -0.04em; text-anchor: middle; }
+    .grey-13 { fill: #6B7280; font-weight: 600; }
+  </style>
+
+  <rect x="0" y="0" width="1200" height="700" fill="url(#lightBg13)" rx="24"/>
+
+  <ellipse cx="600" cy="350" rx="500" ry="200" fill="url(#glow13)" opacity="0.6"/>
+
+  <text x="600" y="220" class="h13" font-size="120" fill="url(#brandGrad13)">Tiquiz</text>
+  <text x="600" y="270" class="grey-13" font-size="22" text-anchor="middle">The quiz that sells for you.</text>
+
+  <text x="600" y="370" class="h13" font-size="48" fill="#2E386E">Your first Popquiz in 30 minutes.</text>
+  <text x="600" y="415" class="grey-13" font-size="20" text-anchor="middle">Free plan available. No credit card. 1 Popquiz included to test.</text>
+
+  <g filter="url(#shadow13)" transform="translate(310, 460)">
+    <rect width="580" height="100" rx="50" fill="#2E386E"/>
+    <text x="290" y="65" text-anchor="middle" font-weight="900" font-size="36" fill="#fff">Build my first Popquiz →</text>
+  </g>
+
+  <text x="600" y="615" class="grey-13" font-size="22" text-anchor="middle">tipote.blog/tiquiz</text>
+
+  <line x1="80" y1="130" x2="280" y2="120" stroke="#5A6EF6" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
+  <line x1="920" y1="120" x2="1120" y2="140" stroke="#5A6EF6" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
+  <line x1="80" y1="630" x2="280" y2="640" stroke="#20BBE6" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
+  <line x1="920" y1="640" x2="1120" y2="630" stroke="#20BBE6" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
+
+  <text x="1160" y="685" fill="#9AA0B5" font-size="12" font-weight="600" text-anchor="end">— tipote.blog/tiquiz</text>
+</svg>

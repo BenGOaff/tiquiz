@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 780" preserveAspectRatio="xMidYMid meet" style="font-family: 'Open Sans', 'Inter', -apple-system, sans-serif;" role="img" aria-labelledby="ttj-m-t ttj-m-d">
+  <title id="ttj-m-t">Le tunnel : Audience, Pub Meta, Quiz Tiquiz, Email auto, Livre Amazon (version mobile)</title>
+  <desc id="ttj-m-d">Schéma vertical en 5 étapes du dispositif de Jocelyne.</desc>
+
+  <!-- Box 1 : Audience -->
+  <g transform="translate(20, 20)">
+    <rect width="360" height="110" rx="14" fill="#F8F9FC"/>
+    <g transform="translate(50, 55)" stroke="#5A6EF6" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="-10" cy="-8" r="9"/>
+      <path d="M-25 18 Q-25 6 -10 6 Q5 6 5 18"/>
+      <circle cx="13" cy="-5" r="7"/>
+      <path d="M-2 16 Q-2 6 13 6 Q26 6 26 16"/>
+    </g>
+    <text x="100" y="45" font-size="17" font-weight="800" fill="#2E386E">Audience ciblée</text>
+    <text x="100" y="68" font-size="13" fill="#6B7280">Femmes 30-55 ans</text>
+    <text x="100" y="88" font-size="13" fill="#6B7280">Intérêts dév. perso</text>
+  </g>
+
+  <!-- Arrow 1→2 -->
+  <g transform="translate(200, 142)">
+    <line x1="0" y1="0" x2="0" y2="18" stroke="#5A6EF6" stroke-width="2.5" stroke-linecap="round"/>
+    <polygon points="-5,18 0,28 5,18" fill="#5A6EF6"/>
+  </g>
+
+  <!-- Box 2 : Pub Meta -->
+  <g transform="translate(20, 180)">
+    <rect width="360" height="110" rx="14" fill="#F8F9FC"/>
+    <g transform="translate(30, 38)" stroke="#5A6EF6" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="0" y="0" width="40" height="32" rx="4"/>
+      <line x1="0" y1="10" x2="40" y2="10"/>
+      <circle cx="6" cy="5" r="1.5" fill="#5A6EF6"/>
+      <circle cx="11" cy="5" r="1.5" fill="#5A6EF6"/>
+    </g>
+    <text x="100" y="45" font-size="17" font-weight="800" fill="#2E386E">Pub Meta</text>
+    <text x="100" y="68" font-size="13" fill="#6B7280">Facebook · Instagram</text>
+    <text x="100" y="88" font-size="13" fill="#6B7280">7 €/jour</text>
+  </g>
+
+  <!-- Arrow 2→3 -->
+  <g transform="translate(200, 302)">
+    <line x1="0" y1="0" x2="0" y2="18" stroke="#5A6EF6" stroke-width="2.5" stroke-linecap="round"/>
+    <polygon points="-5,18 0,28 5,18" fill="#5A6EF6"/>
+  </g>
+
+  <!-- Box 3 : Quiz Tiquiz (highlighted) -->
+  <g transform="translate(20, 340)">
+    <rect width="360" height="110" rx="14" fill="#EEF0FE" stroke="#20BBE6" stroke-width="2"/>
+    <g transform="translate(50, 55)">
+      <circle cx="0" cy="0" r="20" stroke="#20BBE6" stroke-width="2.5" fill="none"/>
+      <text x="0" y="8" text-anchor="middle" font-size="24" font-weight="900" fill="#20BBE6">?</text>
+    </g>
+    <text x="100" y="45" font-size="17" font-weight="800" fill="#2E386E">Quiz Tiquiz</text>
+    <text x="100" y="68" font-size="13" fill="#6B7280">5 questions</text>
+    <text x="100" y="88" font-size="13" fill="#6B7280">5 profils sur mesure</text>
+  </g>
+
+  <!-- Arrow 3→4 -->
+  <g transform="translate(200, 462)">
+    <line x1="0" y1="0" x2="0" y2="18" stroke="#5A6EF6" stroke-width="2.5" stroke-linecap="round"/>
+    <polygon points="-5,18 0,28 5,18" fill="#5A6EF6"/>
+  </g>
+
+  <!-- Box 4 : Email auto -->
+  <g transform="translate(20, 500)">
+    <rect width="360" height="110" rx="14" fill="#F8F9FC"/>
+    <g transform="translate(28, 40)" stroke="#5A6EF6" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="0" y="0" width="44" height="32" rx="4"/>
+      <path d="M0 4 L22 20 L44 4"/>
+    </g>
+    <text x="100" y="45" font-size="17" font-weight="800" fill="#2E386E">Email automatique</text>
+    <text x="100" y="68" font-size="13" fill="#6B7280">Adapté au profil</text>
+    <text x="100" y="88" font-size="13" fill="#6B7280">via Systeme.io</text>
+  </g>
+
+  <!-- Arrow 4→5 -->
+  <g transform="translate(200, 622)">
+    <line x1="0" y1="0" x2="0" y2="18" stroke="#5A6EF6" stroke-width="2.5" stroke-linecap="round"/>
+    <polygon points="-5,18 0,28 5,18" fill="#5A6EF6"/>
+  </g>
+
+  <!-- Box 5 : Livre Amazon -->
+  <g transform="translate(20, 660)">
+    <rect width="360" height="110" rx="14" fill="#F8F9FC"/>
+    <g transform="translate(32, 33)" stroke="#5A6EF6" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="0" y="0" width="36" height="44" rx="2"/>
+      <line x1="5" y1="10" x2="31" y2="10"/>
+      <line x1="5" y1="18" x2="31" y2="18"/>
+      <line x1="5" y1="26" x2="24" y2="26"/>
+    </g>
+    <text x="100" y="45" font-size="17" font-weight="800" fill="#2E386E">Livre Amazon</text>
+    <text x="100" y="68" font-size="13" fill="#6B7280">CTA dans l'email</text>
+    <text x="100" y="88" font-size="13" fill="#6B7280">de résultat</text>
+  </g>
+</svg>

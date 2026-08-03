@@ -5,6 +5,7 @@
 
 import { buildLanguageDirective } from "@/lib/quizLanguages";
 import { slugifyAxisLabel } from "@/lib/quizScoring";
+import { HOOK_CRAFT_BLOCK, RESULT_BEATS_BLOCK } from "@/lib/prompts/quiz/copywriting";
 
 // Bloc d'écriture NATURELLE 2026 — l'arme anti « ça fait IA ». Réutilisé par la
 // génération de quiz ET de sondage. Cible les tics qui trahissent un texte
@@ -165,11 +166,14 @@ PRINCIPES CRÉATIFS :
 - Les résultats ne sont JAMAIS des jugements scolaires ou génériques.
   ❌ Bannir : "Bravo, tu es un expert !", "Tu as 8/10, bien joué !"
   ✅ Préférer : "Tu navigues comme un pro… mais tu passes encore trop de temps à chercher la bonne méthode."
-- Chaque résultat contient : un insight fort et spécifique, une projection motivante ("Et si…"), et un pont naturel vers le CTA.
 - Tonalité empathique mais directive : même dans un quiz fun, on doit suggérer une suite logique.
 - Le ton doit être ${tone}, jamais condescendant, jamais scolaire.
 
 ${NATURAL_WRITING_BLOCK}
+
+${HOOK_CRAFT_BLOCK}
+
+${RESULT_BEATS_BLOCK}
 
 FORME D'ADRESSE : ${formality === "vous" ? "VOUVOYER le lecteur dans TOUT le contenu. Utiliser systématiquement « vous » et ses formes associées." : "TUTOYER le lecteur dans TOUT le contenu. Utiliser systématiquement « tu » et ses formes associées."}
 
@@ -258,11 +262,15 @@ FORMAT DE SORTIE : JSON strict uniquement. Pas de markdown, pas de commentaires,
   ],
   "results": [
     {
-      "title": "${isScoring ? "Nom de la tranche (du plus bas au plus haut)" : "Nom du profil ou niveau"}",
-      "description": "Description valorisante (2-3 phrases)",
-      "insight": "Prise de conscience forte et spécifique — ce que la personne ne voyait pas",
-      "projection": "${formality === "vous" ? "Et si vous..." : "Et si tu..."}  — projection motivante vers l'action",
-      "cta_text": "Texte du CTA personnalisé pour ce profil"
+      "title": "${isScoring ? "Nom de la tranche (du plus bas au plus haut)" : "Nom du profil"} — LE MIROIR",
+      "description": "LE MIROIR : 2-3 phrases où la personne se reconnaît. Aucun conseil ici.",
+      "insight_heading": "Titre de LA CAUSE (3-7 mots)",
+      "insight": "LA CAUSE : 2-3 phrases, une seule cause nommée précisément.",
+      "projection_heading": "Titre du CHEMIN (3-7 mots)",
+      "projection": "LE CHEMIN : 2-3 phrases, des étapes réelles et faisables.",
+      "bridge_heading": "Titre du PONT (3-7 mots)",
+      "bridge": "LE PONT : 2-3 phrases orientées bénéfices, cohérentes avec cta_text.",
+      "cta_text": "Texte du bouton pour ce profil (3-6 mots)"
     }
   ],
   "cta_text": "Texte du CTA principal",

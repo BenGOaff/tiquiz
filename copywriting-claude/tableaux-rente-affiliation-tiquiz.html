@@ -1,0 +1,268 @@
+<!-- ============================================ -->
+<!-- TABLEAUX RENTE AFFILIATION TIQUIZ            -->
+<!-- À coller dans un bloc HTML Systeme io        -->
+<!-- Mobile-first, responsive, palette Tiquiz     -->
+<!-- ============================================ -->
+
+<style>
+.tq-rente-wrap {
+  font-family: 'Open Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #2E386E;
+  max-width: 920px;
+  margin: 24px auto;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+
+.tq-rente-wrap * { box-sizing: border-box; }
+
+.tq-rente-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #2E386E;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.01em;
+}
+
+.tq-rente-sub {
+  font-size: 15px;
+  color: #6B7280;
+  margin: 0 0 18px 0;
+  line-height: 1.5;
+}
+
+.tq-rente-card {
+  background: #FFFFFF;
+  border: 1px solid #E6E8F0;
+  border-radius: 16px;
+  padding: 22px;
+  margin-bottom: 24px;
+  box-shadow: 0 6px 20px rgba(46, 56, 110, 0.06);
+}
+
+.tq-rente-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  overflow: hidden;
+  border-radius: 12px;
+}
+
+.tq-rente-table thead th {
+  background: linear-gradient(90deg, #5A6EF6 0%, #20BBE6 100%);
+  color: #FFFFFF;
+  font-weight: 700;
+  text-align: left;
+  padding: 14px 14px;
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+
+.tq-rente-table tbody td {
+  padding: 14px 14px;
+  border-bottom: 1px solid #EEF0F5;
+  color: #2E386E;
+}
+
+.tq-rente-table tbody tr:nth-child(even) td {
+  background: #F8F9FC;
+}
+
+.tq-rente-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tq-rente-table tbody td:first-child {
+  font-weight: 700;
+  color: #2E386E;
+}
+
+.tq-rente-table tbody td.tq-val {
+  font-weight: 700;
+  color: #0EA2CB;
+  white-space: nowrap;
+}
+
+.tq-rente-foot {
+  font-size: 13px;
+  color: #6B7280;
+  margin-top: 14px;
+  line-height: 1.5;
+}
+
+.tq-rente-foot strong { color: #2E386E; }
+
+/* ============== MOBILE (< 640px) ============== */
+@media (max-width: 640px) {
+  .tq-rente-title { font-size: 18px; }
+  .tq-rente-sub { font-size: 14px; }
+  .tq-rente-card { padding: 16px; border-radius: 14px; }
+
+  .tq-rente-table { font-size: 14px; }
+
+  .tq-rente-table thead { display: none; }
+
+  .tq-rente-table tbody tr {
+    display: block;
+    background: #FFFFFF;
+    border: 1px solid #E6E8F0;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    padding: 4px 0;
+    box-shadow: 0 2px 8px rgba(46, 56, 110, 0.04);
+  }
+
+  .tq-rente-table tbody tr:nth-child(even) td { background: transparent; }
+
+  .tq-rente-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid #EEF0F5;
+    text-align: right;
+  }
+
+  .tq-rente-table tbody td:last-child { border-bottom: none; }
+
+  .tq-rente-table tbody td:before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #6B7280;
+    text-align: left;
+    margin-right: 12px;
+    font-size: 13px;
+    flex: 1;
+  }
+
+  .tq-rente-table tbody td:first-child {
+    background: linear-gradient(90deg, #5A6EF6 0%, #20BBE6 100%);
+    color: #FFFFFF;
+    border-radius: 10px 10px 0 0;
+    padding: 12px 14px;
+    font-weight: 800;
+    justify-content: flex-start;
+    border-bottom: none;
+  }
+
+  .tq-rente-table tbody td:first-child:before { display: none; }
+}
+</style>
+
+<div class="tq-rente-wrap">
+
+  <!-- ====== TABLEAU 1 : RENTE MENSUEL ====== -->
+  <div class="tq-rente-card">
+    <h3 class="tq-rente-title">Ta rente sur le plan Mensuel</h3>
+    <p class="tq-rente-sub">Filleuls abonnés à 9 €/mois. Tu touches 40 % à vie, soit 3,60 € de rente par filleul et par mois.</p>
+
+    <table class="tq-rente-table" role="table" aria-label="Rente mensuelle sur le plan Mensuel">
+      <thead>
+        <tr>
+          <th scope="col">Filleuls actifs</th>
+          <th scope="col">Rente mensuelle</th>
+          <th scope="col">Rente annuelle</th>
+          <th scope="col">Cumul sur 3 ans</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td data-label="Filleuls actifs">1 filleul</td>
+          <td class="tq-val" data-label="Rente mensuelle">3,60 €</td>
+          <td class="tq-val" data-label="Rente annuelle">43,20 €</td>
+          <td class="tq-val" data-label="Cumul sur 3 ans">129,60 €</td>
+        </tr>
+        <tr>
+          <td data-label="Filleuls actifs">5 filleuls</td>
+          <td class="tq-val" data-label="Rente mensuelle">18 €</td>
+          <td class="tq-val" data-label="Rente annuelle">216 €</td>
+          <td class="tq-val" data-label="Cumul sur 3 ans">648 €</td>
+        </tr>
+        <tr>
+          <td data-label="Filleuls actifs">10 filleuls</td>
+          <td class="tq-val" data-label="Rente mensuelle">36 €</td>
+          <td class="tq-val" data-label="Rente annuelle">432 €</td>
+          <td class="tq-val" data-label="Cumul sur 3 ans">1 296 €</td>
+        </tr>
+        <tr>
+          <td data-label="Filleuls actifs">25 filleuls</td>
+          <td class="tq-val" data-label="Rente mensuelle">90 €</td>
+          <td class="tq-val" data-label="Rente annuelle">1 080 €</td>
+          <td class="tq-val" data-label="Cumul sur 3 ans">3 240 €</td>
+        </tr>
+        <tr>
+          <td data-label="Filleuls actifs">50 filleuls</td>
+          <td class="tq-val" data-label="Rente mensuelle">180 €</td>
+          <td class="tq-val" data-label="Rente annuelle">2 160 €</td>
+          <td class="tq-val" data-label="Cumul sur 3 ans">6 480 €</td>
+        </tr>
+        <tr>
+          <td data-label="Filleuls actifs">100 filleuls</td>
+          <td class="tq-val" data-label="Rente mensuelle">360 €</td>
+          <td class="tq-val" data-label="Rente annuelle">4 320 €</td>
+          <td class="tq-val" data-label="Cumul sur 3 ans">12 960 €</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="tq-rente-foot"><strong>Calcul :</strong> 9 € × 40 % = 3,60 € de rente par filleul et par mois. Tant que ton filleul reste abonné, ta rente tombe.</p>
+  </div>
+
+  <!-- ====== TABLEAU 2 : RENTE ANNUEL ====== -->
+  <div class="tq-rente-card">
+    <h3 class="tq-rente-title">Ta rente sur le plan Annuel</h3>
+    <p class="tq-rente-sub">Filleuls abonnés à 90 €/an. Tu touches 40 % à vie, soit 36 € de rente par filleul et par an.</p>
+
+    <table class="tq-rente-table" role="table" aria-label="Rente annuelle sur le plan Annuel">
+      <thead>
+        <tr>
+          <th scope="col">Filleuls actifs</th>
+          <th scope="col">Rente annuelle</th>
+          <th scope="col">Cumul sur 3 ans</th>
+          <th scope="col">Cumul sur 5 ans</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td data-label="Filleuls actifs">1 filleul</td>
+          <td class="tq-val" data-label="Rente annuelle">36 €</td>
+          <td class="tq-val" data-label="Cumul sur 3 ans">108 €</td>
+          <td class="tq-val" data-label="Cumul sur 5 ans">180 €</td>
+        </tr>
+        <tr>
+          <td data-label="Filleuls actifs">5 filleuls</td>
+          <td class="tq-val" data-label="Rente annuelle">180 €</td>
+          <td class="tq-val" data-label="Cumul sur 3 ans">540 €</td>
+          <td class="tq-val" data-label="Cumul sur 5 ans">900 €</td>
+        </tr>
+        <tr>
+          <td data-label="Filleuls actifs">10 filleuls</td>
+          <td class="tq-val" data-label="Rente annuelle">360 €</td>
+          <td class="tq-val" data-label="Cumul sur 3 ans">1 080 €</td>
+          <td class="tq-val" data-label="Cumul sur 5 ans">1 800 €</td>
+        </tr>
+        <tr>
+          <td data-label="Filleuls actifs">25 filleuls</td>
+          <td class="tq-val" data-label="Rente annuelle">900 €</td>
+          <td class="tq-val" data-label="Cumul sur 3 ans">2 700 €</td>
+          <td class="tq-val" data-label="Cumul sur 5 ans">4 500 €</td>
+        </tr>
+        <tr>
+          <td data-label="Filleuls actifs">50 filleuls</td>
+          <td class="tq-val" data-label="Rente annuelle">1 800 €</td>
+          <td class="tq-val" data-label="Cumul sur 3 ans">5 400 €</td>
+          <td class="tq-val" data-label="Cumul sur 5 ans">9 000 €</td>
+        </tr>
+        <tr>
+          <td data-label="Filleuls actifs">100 filleuls</td>
+          <td class="tq-val" data-label="Rente annuelle">3 600 €</td>
+          <td class="tq-val" data-label="Cumul sur 3 ans">10 800 €</td>
+          <td class="tq-val" data-label="Cumul sur 5 ans">18 000 €</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="tq-rente-foot"><strong>Calcul :</strong> 90 € × 40 % = 36 € de rente par filleul et par an. Versement automatique le 10 du mois qui suit chaque renouvellement.</p>
+  </div>
+
+</div>
