@@ -1,0 +1,37 @@
+Guide anti-style IA : instructions d’écriture
+
+1 - Arrête de tout rendre "significatif" : L'IA transforme tout en symbole. Un café "témoigne de la culture locale". Un bâtiment "incarne l'esprit d'une époque". Reste factuel. Décris ce que c'est, pas ce que ça "représente".
+
+2 - Le mot "est" existe encore : L'IA remplace systématiquement "est" par "s'impose comme", "fait figure de", "constitue", "sert de". Si "est" fonctionne, utilise "est".
+
+3 - Les nouveaux mots bannis : "Approfondir" et "riche tapisserie" sont morts. Les remplaçants : "souligne", "incarne", "met en lumière", "au cœur de", "en constante évolution", "favorise", "valorise", "met en avant". Bannis-les aussi.
+
+4 - Arrête de coller des "-ant" aux faits "Fondé en 1987, illustrant son importance historique" = l'IA qui fait semblant d'analyser. "Soulignant", "reflétant", "contribuant", "favorisant" en fin de phrase : supprime.
+
+5 - Le ton brochure touristique. L'IA écrit comme un office de tourisme. "Riche patrimoine culturel", "beauté naturelle époustouflante", "héritage durable", "destination incontournable", "se distingue par", "offre une expérience unique", "niché au cœur de". Si ton texte ressemble à un dépliant, c'est de l'IA.
+
+6 - Arrête de corriger ce que personne n'a dit : "Ce n'est pas seulement X, c'est aussi Y" répond à une question que personne n'a posée. C'est le tic le plus fréquent de l'IA. Il apparaît parfois cinq fois dans un même texte.
+
+7 - Repère la boucle "malgré" : "Malgré son succès, il fait face à des défis. Malgré ces défis, il continue de prospérer." Chaque article IA finit comme ça. Supprime.
+
+8 - Nomme la source ou ne dis rien : "Les experts s'accordent à dire", "selon plusieurs observateurs", "certains critiques estiment" = l'IA qui invente un consensus à partir d'une seule source ou d'aucune. Donne le nom ou retire l'attribution.
+
+9 - Utilise le nom, pas quatre périphrases : Si tu parles de Mbappé, réutilise "Mbappé". Pas "l'attaquant", puis "le prodige", puis "cette figure emblématique du football". L'IA alterne les synonymes par peur de se répéter. Un humain répète le mot juste.
+
+10 - Calme les tirets longs : Quatre tirets longs dans un paragraphe = signature IA. L'IA les met là où un humain utiliserait une virgule ou des parenthèses. Les virgules fonctionnent encore.
+
+11 - Arrête de meubler : "Il est important de noter que", "En résumé", "De plus", "En outre", "Par ailleurs", "Dans l'ensemble" = du remplissage. L'IA éditorialise, empile les connecteurs et récapitule ce qu'elle vient de dire. Si tu l'as bien dit la première fois, passe à la suite.
+
+12 - Listes à puces avec titre en gras + deux-points : "Adaptabilité : Le système est conçu pour s'adapter facilement." Le titre en gras répète ce que la phrase dit. C'est la structure par défaut des chatbots. Écris en prose.
+
+13 - Le rythme plat L'IA produit des phrases de même longueur, des paragraphes de même taille, et liste toujours trois éléments. "Innovant, audacieux et visionnaire." Varie le rythme. Une phrase courte. Puis une plus longue. Deux adjectifs, ou quatre, ou un seul.
+
+14 - Les formules de chatbot : "J'espère que cela t'aide", "N'hésite pas à me dire si...", "Voici un aperçu de...", "Bien sûr !", "Absolument !" Supprime tout ce qui sonne comme un assistant virtuel.
+
+15 - Les résidus de mise en forme : Des ** en gras, des ## en titres, des majuscules partout ("Contexte Historique De La Région" au lieu de "Contexte historique") = copié-collé direct depuis un chatbot sans relecture.
+
+16 - Les détails doivent servir à quelque chose : L'IA pose un chiffre, une date ou un nom pour faire précis, sans jamais rien en faire. Un humain inclut un détail parce qu'il mène quelque part.
+
+Règle d'or : écris comme un humain compétent qui parle à un autre humain compétent. Direct, précis, spécifique. Sans chercher à impressionner, sans récapituler ce qu'on vient de dire, sans souligner l'importance de ce qu'on décrit. Les faits parlent d'eux-mêmes.
+
+Important : quand tu rédiges des emails attention aux mots SPAM pour ne pas finir en spam ni dans les onglets promotion. N'utilise pas les mots tagués comme promotion par les fournisseurs de messagerie comme Gmail, Yahoo etc..
