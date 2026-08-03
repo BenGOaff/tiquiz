@@ -75,7 +75,6 @@ import {
 } from "@/lib/quiz/introLayout";
 import {
   beatShell,
-  bridgeTextColor,
   buildResultBeats,
   resultLayoutMode,
   type BeatMedia,
@@ -5318,8 +5317,23 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <p className="text-sm font-semibold">{t("beatsHintTitle")}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">{t("beatsHintBody")}</p>
                       <div className="flex flex-wrap items-center gap-2 mt-2.5">
-                        <Button type="button" size="sm" onClick={() => setResultLayout("beats")}>
-                          {t("beatsHintEnable")}
+                        {/* Basculer ET faire ecrire les ponts, d'un seul
+                            geste : "le bloc et maintenant n'est pas
+                            automatiquement genere, ce serait mieux quand
+                            meme". Une page en 4 temps dont le 4e temps est
+                            vide n'est pas une page en 4 temps. */}
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={bridgeGenerating}
+                          onClick={() => {
+                            setResultLayout("beats");
+                            void generateMissingBridges();
+                          }}
+                        >
+                          {bridgeGenerating
+                            ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />{t("beatsWritingBridges")}</>
+                            : t("beatsHintEnable")}
                         </Button>
                         <button
                           type="button"
@@ -5342,10 +5356,18 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 // L'habillage des temps vient de beatShell : la MÊME
                 // fonction que le viewer public. Un aperçu qui recalcule
                 // l'allure du viewer finit toujours par mentir.
-                const bridgeInk = bridgeTextColor(isColorDark(pc));
-                const shellCause = beatShell(resultLayout, "cause", pc, bridgeInk);
-                const shellPath = beatShell(resultLayout, "path", pc, bridgeInk);
-                const shellBridge = beatShell(resultLayout, "bridge", pc, bridgeInk);
+                // Les titres de repli suivent la MISE EN PAGE (retour Bene
+                // 3 aout 2026 : "meme si j'ai clique pour avoir le nouveau
+                // format j'ai toujours le 'et si' 'prise de conscience'").
+                const causeDefault = resultLayout === "beats"
+                  ? t("previewResultCauseBeatsDefault")
+                  : t("previewResultInsightDefault");
+                const pathDefault = resultLayout === "beats"
+                  ? t("previewResultPathBeatsDefault")
+                  : t("previewResultProjectionDefault");
+                const shellCause = beatShell(resultLayout, "cause", pc);
+                const shellPath = beatShell(resultLayout, "path", pc);
+                const shellBridge = beatShell(resultLayout, "bridge", pc);
                 const insightPersonalized = editResults.some(rr => rr.insight_heading != null);
                 const projectionPersonalized = editResults.some(rr => rr.projection_heading != null);
                 // Subtle banner above each result that tells the creator how
@@ -5524,14 +5546,14 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         <RichTextEdit
                           value={insightPersonalized
                             ? (r.insight_heading ?? "")
-                            : (resultInsightHeading || t("previewResultInsightDefault"))}
+                            : (resultInsightHeading || causeDefault)}
                           onChange={insightPersonalized
                             ? (v) => updateR(ri, "insight_heading", v ?? "")
                             : setResultInsightHeading}
                           singleLine
                           className={shellCause.headingClass}
                           style={shellCause.headingStyle}
-                          placeholder={insightPersonalized ? (resultInsightHeading.trim() || t("previewResultInsightDefault")) : t("previewResultInsightHeadingPh")}
+                          placeholder={insightPersonalized ? (resultInsightHeading.trim() || causeDefault) : t("previewResultInsightHeadingPh")}
                         />
                         <button type="button"
                           onClick={() => setInsightHeadingPersonalized(!insightPersonalized)}
@@ -5557,14 +5579,14 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         <RichTextEdit
                           value={projectionPersonalized
                             ? (r.projection_heading ?? "")
-                            : (resultProjectionHeading || t("previewResultProjectionDefault"))}
+                            : (resultProjectionHeading || pathDefault)}
                           onChange={projectionPersonalized
                             ? (v) => updateR(ri, "projection_heading", v ?? "")
                             : setResultProjectionHeading}
                           singleLine
                           className={shellPath.headingClass}
                           style={shellPath.headingStyle}
-                          placeholder={projectionPersonalized ? (resultProjectionHeading.trim() || t("previewResultProjectionDefault")) : t("previewResultProjectionHeadingPh")}
+                          placeholder={projectionPersonalized ? (resultProjectionHeading.trim() || pathDefault) : t("previewResultProjectionHeadingPh")}
                         />
                         <button type="button"
                           onClick={() => setProjectionHeadingPersonalized(!projectionPersonalized)}

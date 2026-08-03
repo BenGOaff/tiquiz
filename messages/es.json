@@ -1566,7 +1566,9 @@
     "beatsHintBody": "El espejo, la causa, el camino, el puente. Es la estructura que se enseña en el Atelier, y se activa en este quiz sin reescribir nada: tus textos actuales se reutilizan tal cual.",
     "beatsHintEnable": "Activar en este quiz",
     "beatsHintDismiss": "No, gracias",
-    "beatsHintReversible": "Reversible en cualquier momento, y sin efecto en tus otros quizzes."
+    "beatsHintReversible": "Reversible en cualquier momento, y sin efecto en tus otros quizzes.",
+    "previewResultCauseBeatsDefault": "Lo que de verdad te bloquea",
+    "previewResultPathBeatsDefault": "Por dónde empezar"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nueva contraseña",

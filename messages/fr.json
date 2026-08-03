@@ -1566,7 +1566,9 @@
     "beatsHintBody": "Le miroir, la cause, le chemin, le pont. C'est la structure enseignée dans l'Atelier, et elle s'active sur ce quiz sans rien réécrire : tes textes actuels sont réutilisés tels quels.",
     "beatsHintEnable": "Activer sur ce quiz",
     "beatsHintDismiss": "Non merci",
-    "beatsHintReversible": "Réversible à tout moment, et sans effet sur tes autres quiz."
+    "beatsHintReversible": "Réversible à tout moment, et sans effet sur tes autres quiz.",
+    "previewResultCauseBeatsDefault": "Ce qui bloque vraiment",
+    "previewResultPathBeatsDefault": "Par où commencer"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",

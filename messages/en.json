@@ -1566,7 +1566,9 @@
     "beatsHintBody": "The mirror, the cause, the path, the bridge. It is the structure taught in the Atelier, and it switches on for this quiz without rewriting anything: your current texts are reused as they are.",
     "beatsHintEnable": "Turn on for this quiz",
     "beatsHintDismiss": "No thanks",
-    "beatsHintReversible": "Reversible at any time, and it does not affect your other quizzes."
+    "beatsHintReversible": "Reversible at any time, and it does not affect your other quizzes.",
+    "previewResultCauseBeatsDefault": "What is really blocking you",
+    "previewResultPathBeatsDefault": "Where to start"
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",

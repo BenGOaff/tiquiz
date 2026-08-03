@@ -60,7 +60,6 @@ import {
 import { answerGridClass, answerImageGridClass, resolveAnswerLayout } from "@/lib/quiz/answerLayout";
 import {
   beatShell,
-  bridgeTextColor,
   buildResultBeats,
   mirrorMedia,
   resultLayoutMode,
@@ -335,6 +334,8 @@ type QuizTranslations = {
   insight: string;
   projection: string;
   bridge: string;
+  causeBeats: string;
+  pathBeats: string;
   exclusiveBonus: string;
   shareToUnlock: string;
   copyLink: string;
@@ -514,6 +515,8 @@ const translations: Record<string, QuizTranslations> = {
     insight: "Prise de conscience",
     projection: "Et si...",
     bridge: "Et maintenant",
+    causeBeats: "Ce qui bloque vraiment",
+    pathBeats: "Par où commencer",
     exclusiveBonus: "Bonus exclusif",
     shareToUnlock: "Partage sur un r\u00e9seau pour d\u00e9bloquer ton bonus :",
     copyLink: "Copier le lien",
@@ -590,6 +593,8 @@ const translations: Record<string, QuizTranslations> = {
     insight: "Prise de conscience",
     projection: "Et si...",
     bridge: "Et maintenant",
+    causeBeats: "Ce qui bloque vraiment",
+    pathBeats: "Par où commencer",
     exclusiveBonus: "Bonus exclusif",
     shareToUnlock: "Partagez sur un r\u00e9seau pour d\u00e9bloquer votre bonus :",
     copyLink: "Copier le lien",
@@ -666,6 +671,8 @@ const translations: Record<string, QuizTranslations> = {
     insight: "Key insight",
     projection: "What if...",
     bridge: "What now",
+    causeBeats: "What is really blocking you",
+    pathBeats: "Where to start",
     exclusiveBonus: "Exclusive bonus",
     shareToUnlock: "Share on a network to unlock your bonus:",
     copyLink: "Copy link",
@@ -742,6 +749,8 @@ const translations: Record<string, QuizTranslations> = {
     insight: "Toma de conciencia",
     projection: "\u00bfY si...?",
     bridge: "Y ahora",
+    causeBeats: "Lo que de verdad te bloquea",
+    pathBeats: "Por dónde empezar",
     exclusiveBonus: "Bonus exclusivo",
     shareToUnlock: "Comparte en una red para desbloquear tu bonus:",
     copyLink: "Copiar enlace",
@@ -818,6 +827,8 @@ const translations: Record<string, QuizTranslations> = {
     insight: "Erkenntnis",
     projection: "Was w\u00e4re wenn...",
     bridge: "Und jetzt",
+    causeBeats: "Was dich wirklich blockiert",
+    pathBeats: "Wo du anfängst",
     exclusiveBonus: "Exklusiver Bonus",
     shareToUnlock: "Teile in einem Netzwerk, um deinen Bonus freizuschalten:",
     copyLink: "Link kopieren",
@@ -894,6 +905,8 @@ const translations: Record<string, QuizTranslations> = {
     insight: "Tomada de consci\u00eancia",
     projection: "E se...",
     bridge: "E agora",
+    causeBeats: "O que te bloqueia mesmo",
+    pathBeats: "Por onde começar",
     exclusiveBonus: "B\u00f4nus exclusivo",
     shareToUnlock: "Compartilhe em uma rede para desbloquear seu b\u00f4nus:",
     copyLink: "Copiar link",
@@ -970,6 +983,8 @@ const translations: Record<string, QuizTranslations> = {
     insight: "Presa di coscienza",
     projection: "E se...",
     bridge: "E adesso",
+    causeBeats: "Ciò che ti blocca davvero",
+    pathBeats: "Da dove cominciare",
     exclusiveBonus: "Bonus esclusivo",
     shareToUnlock: "Condividi su un social per sbloccare il tuo bonus:",
     copyLink: "Copia link",
@@ -1046,6 +1061,8 @@ const translations: Record<string, QuizTranslations> = {
     insight: "\u0625\u062f\u0631\u0627\u0643",
     projection: "\u0645\u0627\u0630\u0627 \u0644\u0648...",
     bridge: "\u0648\u0627\u0644\u0622\u0646",
+    causeBeats: "\u0645\u0627 \u064a\u0639\u064a\u0642\u0643 \u0641\u0639\u0644\u0627\u064b",
+    pathBeats: "\u0645\u0646 \u0623\u064a\u0646 \u062a\u0628\u062f\u0623",
     exclusiveBonus: "\u0645\u0643\u0627\u0641\u0623\u0629 \u062d\u0635\u0631\u064a\u0629",
     shareToUnlock: "\u0634\u0627\u0631\u0643 \u0639\u0644\u0649 \u0634\u0628\u0643\u0629 \u0627\u062c\u062a\u0645\u0627\u0639\u064a\u0629 \u0644\u0641\u062a\u062d \u0645\u0643\u0627\u0641\u0623\u062a\u0643:",
     copyLink: "\u0646\u0633\u062e \u0627\u0644\u0631\u0627\u0628\u0637",
@@ -4089,15 +4106,15 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
           {
             result: resultProfile,
             quiz,
-            fallbackHeadings: { cause: t.insight, path: t.projection, bridge: t.bridge },
+            // Les titres de repli suivent la MISE EN PAGE. "Prise de
+            // conscience" et "Et si..." sont les libelles de la page
+            // historique : les garder en 4 temps donnait a Bene une page
+            // qui changeait d'allure sans changer de discours.
+            fallbackHeadings: { cause: t.causeBeats, path: t.pathBeats, bridge: t.bridge },
           },
           stripHtml,
         )
       : [];
-    // Le PONT est un bloc plein à la couleur de marque : son texte doit
-    // rester lisible que la créatrice ait choisi un bleu nuit ou un
-    // jaune pâle. Même helper que le reste du branding.
-    const bridgeInk = bridgeTextColor(isColorDark(branding.primaryColor));
     const mirrorImage = mirrorMedia(resultProfile?.beat_media);
 
     return (
@@ -4319,7 +4336,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
                   const body = interp(beat.body);
                   // L'habillage vient de beatShell : c'est la MÊME fonction
                   // que l'aperçu de l'éditeur appelle.
-                  const shell = beatShell("beats", beat.key, branding.primaryColor, bridgeInk);
+                  const shell = beatShell("beats", beat.key, branding.primaryColor);
                   return (
                     <div key={beat.key} className={shell.containerClass} style={shell.containerStyle}>
                       {beat.heading && (
