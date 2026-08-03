@@ -800,12 +800,26 @@ inconnue, migration pas encore passée : page historique. Un quiz naît en
 `'beats'` uniquement quand le contenu reçu porte VRAIMENT un pont
 (`hasBridgeContent`), donc jamais sur un import ni une création manuelle.
 
-**Le visuel :** trois temps sobres (filet vertical à la couleur de
-marque, aucun fond), le pont seul en bloc plein. C'est la réponse à
-"sans forcément créer 4 cartes de couleurs trop IA" : le rythme se voit,
-un seul bloc appelle l'oeil, et tout est dérivé de `primary` donc
-n'importe quel branding marche sans réglage. La couleur du texte du pont
-vient de `bridgeTextColor(isColorDark(primary))`, jamais du blanc en dur.
+**Le visuel : AUCUNE décoration qui prenne de la place horizontale.**
+Il a fallu trois passages pour y arriver, et les trois échecs disent la
+même chose. Bloc plein à la couleur de marque -> "l'encart est tout pété,
+il monte presque sur le menu de gauche" ET "il est de la même couleur que
+les boutons, ça entraîne de la confusion". Filet vertical + `pl-4` ->
+"tous les morceaux du milieu sont décalés vers la droite : c'est si
+compliqué de tout aligner partout sur les mêmes marges ??"
+
+Non, ça ne l'est pas, et c'est nous qui l'avions compliqué : **une
+décoration à gauche DÉPLACE forcément ce qu'elle décore.** Les temps se
+distinguent donc par leur TITRE (couleur de marque, gras) et par le
+rythme vertical. Le pont, dernier temps, prend un filet HORIZONTAL au
+dessus de lui : il se voit et il ne décale rien.
+
+**INTERDIT sur ces blocs : `pl-*`, `px-*`, `border-l-*`, `mx-*`.** Le
+test `tests/visual/result-beats-bounds.spec.ts` mesure le bord gauche du
+titre du profil ET de chaque temps, et exige qu'ils soient identiques à
+1px près. Comparer les temps ENTRE EUX ne suffisait pas : ils étaient
+parfaitement alignés... 20px à droite du titre, ce que Béné a vu tout de
+suite.
 
 **Images :** `quiz_results.beat_media` (JSONB) porte une image PAR temps,
 avec `mode: "with" | "only"` ("only" = l'image remplace le texte).

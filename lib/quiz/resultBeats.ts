@@ -269,36 +269,36 @@ export function beatShell(
     };
   }
 
-  // LES QUATRE TEMPS PARTAGENT LE MÊME GABARIT (retour Béné, 3 août 2026).
+  // TOUT EST ALIGNÉ SUR LE MÊME BORD, SANS EXCEPTION (Béné, 3 août 2026 :
+  // "tous les morceaux du milieu sont décalés vers la droite : c'est si
+  // compliqué de tout aligner partout sur les mêmes marges ??").
   //
-  // Le pont était un bloc PLEIN à la couleur de marque. Deux problèmes,
-  // les deux signalés le jour même :
+  // Non, et c'est moi qui l'avais compliqué. Le filet vertical + son
+  // `pl-4` poussaient le texte de chaque temps ~20 px à droite du titre et
+  // du chapô. Une décoration à gauche DÉPLACE forcément ce qu'elle
+  // décore : c'est la troisième fois qu'un ornement crée un décalage sur
+  // cet écran, après le `mx-auto` du sous-titre et le bloc plein du pont.
   //
-  //   "l'encart est tout pété, il monte presque sur le menu de gauche"
-  //     -> il était le SEUL à porter un fond, donc le seul dont le bord
-  //        se voyait. Le moindre écart de gouttière entre lui et les
-  //        autres sautait aux yeux, sous forme d'un débordement à gauche.
-  //   "l'encart est de la même couleur que les boutons, ça entraîne de la
-  //   confusion"
-  //     -> un aplat de la couleur de marque, c'est la signature d'un
-  //        bouton. On en faisait un faux bouton juste au dessus du vrai.
+  // Donc plus AUCUNE décoration qui prenne de la place horizontale : ni
+  // filet à gauche, ni fond avec padding, ni marge propre. Les temps se
+  // distinguent par leur TITRE (couleur de marque, gras) et par le rythme
+  // vertical. Le pont, dernier temps, gagne un filet HORIZONTAL au dessus
+  // de lui : il se voit, et il ne décale rien.
   //
-  // Correction : le pont garde le MÊME filet vertical et le MÊME décalage
-  // que les trois autres temps, donc il ne peut plus déborder de rien. Il
-  // se distingue par une teinte LÉGÈRE et un titre plus affirmé : assez
-  // pour arrêter l'oeil, jamais assez pour passer pour un bouton.
+  // INTERDIT sur ces blocs : `pl-*`, `px-*`, `border-l-*`, `mx-*`. Le test
+  // tests/visual/result-beats-bounds.spec.ts mesure les bords et rougit.
   if (key === "bridge") {
     return {
-      containerClass: "border-l-[3px] pl-4 sm:pl-5 pr-4 py-4 rounded-r-xl space-y-2",
-      containerStyle: { borderColor: primary, backgroundColor: `${primary}14` },
+      containerClass: "pt-5 border-t-2 space-y-2",
+      containerStyle: { borderColor: primary },
       headingClass: "text-base sm:text-lg font-bold leading-snug",
       headingStyle: { color: primary },
       bodyToneClass: "",
     };
   }
   return {
-    containerClass: "border-l-[3px] pl-4 sm:pl-5 space-y-1.5",
-    containerStyle: { borderColor: primary },
+    containerClass: "space-y-1.5",
+    containerStyle: {},
     headingClass: "text-base sm:text-lg font-bold leading-snug",
     headingStyle: { color: primary },
     bodyToneClass: "text-muted-foreground",
