@@ -184,11 +184,32 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
           ? `/api/popquiz/${projectId}`
           : `/api/quiz/${projectId}`;
       const res = await fetch(path, { method: "DELETE" });
-      const data = await res.json();
-      if (data.ok) {
+      const data = await res.json().catch(() => null);
+      if (data?.ok) {
         setProjects((prev) => prev.filter((q) => q.id !== projectId));
         toast.success(t("quizDeleted"));
+        return;
       }
+
+      // ÉCHEC VISIBLE, TOUJOURS (drame Béné, 3 août 2026). Avant, un refus
+      // du serveur ne produisait rien du tout à l'écran : elle cliquait,
+      // le projet restait, et la seule trace était un 400 dans la console.
+      // Un `ok: false` sans message est pire que le bug qu'il masque.
+      if (data?.reason === "used_by_popquiz") {
+        const names = Array.isArray(data.usedBy) ? (data.usedBy as string[]).filter(Boolean) : [];
+        toast.error(
+          names.length > 0
+            ? t("deleteBlockedPopquizNamed", { names: names.join(", ") })
+            : t("deleteBlockedPopquiz"),
+          { duration: 8000 },
+        );
+        return;
+      }
+      if (data?.reason === "still_referenced") {
+        toast.error(t("deleteBlockedReferenced"), { duration: 8000 });
+        return;
+      }
+      toast.error(t("deleteError"));
     } catch {
       toast.error(t("deleteError"));
     }
