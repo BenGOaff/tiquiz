@@ -1103,6 +1103,8 @@
     "errTitleRequired": "العنوان مطلوب",
     "errSlugInvalid": "الـ slug غير صالح (a-z, 0-9, -)",
     "errSlugTaken": "هذا الـ slug مستخدم بالفعل",
+    "errSlugReserved": "هذا العنوان محجوز (سيحجب صفحة حقيقية). اختر كلمة أخرى، مثلاً بإضافة موضوعك.",
+    "errSlugGeneric": "تعذر حفظ العنوان. حاول مرة أخرى.",
     "errUnknown": "خطأ غير معروف",
     "errGeneric": "خطأ",
     "errImageOnly": "ملف صورة فقط",

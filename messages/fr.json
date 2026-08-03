@@ -1103,6 +1103,8 @@
     "errTitleRequired": "Titre requis",
     "errSlugInvalid": "Slug invalide (a-z, 0-9, -)",
     "errSlugTaken": "Ce slug est déjà utilisé",
+    "errSlugReserved": "Cette adresse est réservée (elle masquerait une page du site). Choisis un autre mot, par exemple en ajoutant ton thème.",
+    "errSlugGeneric": "L'adresse n'a pas pu être enregistrée. Réessaie.",
     "errUnknown": "Erreur inconnue",
     "errGeneric": "Erreur",
     "errImageOnly": "Fichier image uniquement",
