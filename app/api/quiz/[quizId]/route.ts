@@ -9,8 +9,8 @@ import { isSlugTakenByPopquiz } from "@/lib/publicSlugServer";
 import { sanitizeRichText } from "@/lib/richText";
 import {
   applyFrenchTypography,
+  applyFrenchTypographyDeep,
   applyFrenchTypographyToHtml,
-  isFrenchLocale,
 } from "@/lib/frenchTypography";
 import { resolveQuizAuth } from "@/lib/embed/quizAuth";
 import { computeLockedLeadIds, redactLockedLead, type LeadLike } from "@/lib/leadLock";
@@ -18,32 +18,18 @@ import { isPaidPlan } from "@/lib/planLimits";
 import { fetchAllRows } from "@/lib/db/fetchAllRows";
 import { normalizeScoringAxes, scoreDisplayMode } from "@/lib/quizScoring";
 import { classifyDeleteError, deleteRefusalReason, deleteRefusalStatus } from "@/lib/quizDelete";
-import { sanitizeBeatMedia, resultLayoutMode, type BeatMedia } from "@/lib/quiz/resultBeats";
+import { sanitizeBeatMedia, type BeatMedia } from "@/lib/quiz/resultBeats";
 
 const RICH_TEXT_FIELDS = ["introduction"] as const;
 
 // Plain-text quiz fields that benefit from French typography (title, CTAs,
 // headings, descriptions stored as flat text). Keep this list explicit so a
 // new column doesn't silently get the transform.
-const FR_TYPO_PLAIN_FIELDS = [
-  "title",
-  "cta_text",
-  "consent_text",
-  "share_message",
-  "bonus_description",
-  "bonus_heading",
-  "bonus_intro_text",
-  "start_button_text",
-  "result_insight_heading",
-  "result_projection_heading",
-  "result_bridge_heading",
-  "capture_heading",
-  "capture_subtitle",
-  "capture_submit_text",
-  "survey_thanks_heading",
-  "survey_thanks_body",
-  "og_description",
-] as const;
+// La liste blanche des colonnes a typographier a ete SUPPRIMEE le 3 aout
+// 2026. Elle etait la cause du retour en arriere signale par Bene : toute
+// colonne ajoutee depuis sa derniere mise a jour etait oubliee en
+// silence. lib/frenchTypography.ts travaille desormais en liste noire.
+// NE PAS la reintroduire.
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -437,24 +423,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       typeof patch.locale === "string"
         ? patch.locale
         : ((existing as { locale?: string | null }).locale ?? null);
-    if (isFrenchLocale(effectiveLocale)) {
-      for (const field of FR_TYPO_PLAIN_FIELDS) {
-        if (typeof patch[field] === "string") {
-          patch[field] = applyFrenchTypography(
-            patch[field] as string,
-            effectiveLocale,
-          );
-        }
-      }
-      for (const field of RICH_TEXT_FIELDS) {
-        if (typeof patch[field] === "string") {
-          patch[field] = applyFrenchTypographyToHtml(
-            patch[field] as string,
-            effectiveLocale,
-          );
-        }
-      }
-    }
+    // LISTE NOIRE, PLUS DE LISTE BLANCHE (retour Bene, 3 aout 2026 : "un
+    // probleme qu'on avait corrige et qui revient"). Les deux boucles
+    // d'avant parcouraient des listes de colonnes ecrites a la main :
+    // toute colonne ajoutee depuis etait oubliee en silence, et le bug
+    // revenait a chaque nouveau champ. Le parcours generique traite tout
+    // le contenu textuel et epargne les champs techniques par leur nom et
+    // par la forme de leur valeur (cf. lib/frenchTypography.ts).
+    Object.assign(patch, applyFrenchTypographyDeep(patch, effectiveLocale));
 
     const { error } = await supabase.from("quizzes").update(patch).eq("id", quizId);
     if (error) {

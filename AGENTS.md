@@ -993,3 +993,67 @@ avec un bouton qui bascule et une phrase qui dit que c'est réversible et
 sans effet sur les autres quiz. Écarté = mémorisé en `localStorage` par
 quiz (une préférence d'affichage ne mérite ni colonne ni migration), lu
 APRÈS le montage pour ne pas casser l'hydratation.
+
+## Typographie française : liste NOIRE, et l'espace s'INSÈRE (3 août 2026)
+
+Béné : "en français on laisse un espace entre un mot et des guillemets, ou
+un mot et un point d'interrogation. Là ça n'est plus le cas. Ce genre de
+petits détails est chiant et long à corriger, on peut se l'éviter ?"
+
+Oui, mais pas en recorrigeant : en retirant les DEUX causes.
+
+**Cause 1 : la règle ne faisait que CONVERTIR une espace déjà présente.**
+`Prêt ?` devenait `Prêt<nbsp>?` ; `Prêt?` restait `Prêt?`. Or un modèle de
+langue écrit très souvent le français sans l'espace, donc tout le contenu
+généré arrivait fautif et le restait après n'importe quel nombre de
+sauvegardes. `fixFragment` INSÈRE désormais l'espace manquante.
+
+**Cause 2 : elle n'était appliquée qu'à la MISE À JOUR, sur une liste
+blanche de colonnes.** La CRÉATION (génération IA, import) n'appliquait
+RIEN. Et une liste blanche oublie toute colonne ajoutée après elle : c'est
+la mécanique même du "problème qui revient".
+
+**Règle : `applyFrenchTypographyDeep(payload, locale)` au SEUL point
+d'entrée**, sur `POST /api/quiz` (avant toute lecture du corps) et sur le
+PATCH. Liste NOIRE de noms de champs + garde sur la FORME de la valeur.
+Un champ nouveau est couvert d'office. **Les deux listes blanches ont été
+supprimées, pas vidées : ne pas les réintroduire.**
+
+**Insérer est plus dangereux que convertir**, d'où les gardes, tous
+testés : on n'insère que devant une ponctuation qui TERMINE (suivie d'une
+espace, d'une fermeture ou de la fin). Ça protège le `?` d'une query
+(`a?b=1`), le `:` d'un schéma (`https://`), les heures (`12:30`), le CSS
+(`color:red`). Le `:` exige en plus une LETTRE devant, jamais un chiffre.
+`applyFrenchTypographyToHtml` découpe sur les balises ET les entités :
+sans ça, `&nbsp;` deviendrait `&nbsp ;`.
+
+**Aucune autre langue n'est touchée** (`isFrenchLocale`), c'est testé pour
+les 7 locales.
+
+## L'URL de l'Atelier vit à UN endroit (drame Béné 3 août 2026)
+
+"J'ai voulu rebasculer de Tipote à Tiquiz sur l'Atelier et ça a foiré.
+J'ai bien la demande d'autorisation de connexion mais derrière je tombe
+sur la page d'erreur."
+
+Le consentement marchait. C'est le RETOUR qui tombait dans le vide :
+`app/api/partner/authorize/route.ts` renvoyait vers
+`formaquiz.tipote.com`, hostname mort depuis le rebrand "quizing" du 18
+juin. Vérifié le jour même : ce domaine répond **404**, quand
+`quizing.tipote.com` répond bien.
+
+**C'était la deuxième moitié d'un drame à moitié corrigé.** Le rebrand
+avait déjà cassé l'ALLER (`lib/integrations/tiquiz.ts` côté Atelier
+pointait vers `/connect/quizing`, inexistant). On avait réparé l'aller
+sans voir que le RETOUR portait la même adresse périmée, à l'autre bout de
+la chaîne et dans l'autre repo. **Une URL écrite en dur à deux endroits
+ne se corrige jamais qu'à moitié.**
+
+**Règle : `lib/partner/atelierUrl.ts`.** `ATELIER_BASE_URL` et
+`atelierConnectCallback()` y vivent seuls. Le retour reste FIXE (jamais lu
+depuis la requête : ce serait une redirection ouverte, donc un vol de code
+d'autorisation possible), mais la surcharge `FORMAQUIZ_CONNECT_CALLBACK`
+est VALIDÉE : une valeur vide ou non-https retombe sur le domaine
+canonique. Un `??` seul ne protège que de la variable absente, jamais de
+la variable fausse. `tests/logic/atelier-callback.test.mts` interdit le
+retour de l'ancien hostname.

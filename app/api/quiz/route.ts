@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
+import { applyFrenchTypographyDeep } from "@/lib/frenchTypography";
 import {
   getActiveProjectScope,
   resolveProjectIdForInsert,
@@ -99,6 +100,21 @@ export async function POST(req: NextRequest) {
     } catch {
       return NextResponse.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
     }
+
+    // TYPOGRAPHIE FRANCAISE, AU SEUL POINT D'ENTREE (retour Bene, 3 aout
+    // 2026 : "un probleme qu'on avait corrige et qui revient").
+    //
+    // La creation n'en appliquait AUCUNE : tout ce qui venait de la
+    // generation IA ou d'un import arrivait sans l'espace insecable et le
+    // restait, tant que la creatrice n'avait pas re-sauvegarde le champ a
+    // la main.
+    //
+    // On traite le corps ENTIER, ici, une fois, AVANT toute lecture : le
+    // titre et les enfants sont lus plus bas, donc transformer plus tard
+    // laisserait passer tout ce qui a deja ete extrait. La lib travaille
+    // en liste noire, donc une colonne ajoutee demain est couverte
+    // d'office, sans que personne ait a y penser.
+    body = applyFrenchTypographyDeep(body, body.locale as string | null | undefined);
 
     const title = String(body.title ?? "").trim();
     if (!title) {

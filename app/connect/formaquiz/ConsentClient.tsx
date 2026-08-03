@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ATELIER_BASE_URL } from "@/lib/partner/atelierUrl";
 import { BarChart3, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,7 +66,7 @@ export default function ConsentClient({ state, email }: { state: string; email: 
                 {busy ? "Un instant..." : "Autoriser et connecter"}
               </Button>
               <Button asChild variant="ghost" size="sm">
-                <a href="https://formaquiz.tipote.com/dashboard">Annuler</a>
+                <a href={`${ATELIER_BASE_URL}/dashboard`}>Annuler</a>
               </Button>
             </div>
           </CardContent>
