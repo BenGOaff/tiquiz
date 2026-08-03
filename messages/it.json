@@ -1103,6 +1103,8 @@
     "errTitleRequired": "Titolo obbligatorio",
     "errSlugInvalid": "Slug non valido (a-z, 0-9, -)",
     "errSlugTaken": "Questo slug è già in uso",
+    "errSlugReserved": "Questo indirizzo è riservato (nasconderebbe una pagina reale). Scegli un'altra parola, per esempio aggiungendo il tuo tema.",
+    "errSlugGeneric": "Non è stato possibile salvare l'indirizzo. Riprova.",
     "errUnknown": "Errore sconosciuto",
     "errGeneric": "Errore",
     "errImageOnly": "Solo file immagine",

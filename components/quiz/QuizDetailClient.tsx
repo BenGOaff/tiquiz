@@ -2486,12 +2486,30 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           body: JSON.stringify({ slug: cleanedSlug }),
         });
         const json = await res.json().catch(() => null);
+        // UN REFUS PRODUIT TOUJOURS QUELQUE CHOSE A L'ECRAN.
+        //
+        // SLUG_TAKEN avait son message, SLUG_RESERVED tombait dans le
+        // `console.error` muet : la creatrice tapait une adresse, rien
+        // ne se passait, et la seule trace etait un 409 dans la console
+        // du navigateur. C'est le defaut exact documente le 3 aout
+        // (suppression d'un projet), reproduit ici.
+        //
+        // "quiz", "stats", "admin", "api"... sont refuses parce que sur
+        // un domaine perso l'adresse est a la RACINE du site : elle
+        // masquerait de vraies pages. Il faut le DIRE, pas le taire.
         if (res.status === 409 && json?.error === "SLUG_TAKEN") {
           toast.error(t("errSlugTaken"));
           return;
         }
+        if (res.status === 409 && json?.error === "SLUG_RESERVED") {
+          toast.error(t("errSlugReserved"));
+          return;
+        }
         if (!json?.ok) {
+          // Repli generique : plus aucune raison de refus ne peut
+          // repartir sans que la creatrice voie quelque chose.
           console.error("[slug autosave] save failed", json?.error);
+          toast.error(t("errSlugGeneric"));
           return;
         }
         // Update local quiz so future renders use the new slug.

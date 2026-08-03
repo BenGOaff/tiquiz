@@ -1103,6 +1103,8 @@
     "errTitleRequired": "Title required",
     "errSlugInvalid": "Invalid slug (a-z, 0-9, -)",
     "errSlugTaken": "This slug is already taken",
+    "errSlugReserved": "This address is reserved (it would shadow a real page). Pick another word, for instance by adding your topic.",
+    "errSlugGeneric": "The address could not be saved. Please try again.",
     "errUnknown": "Unknown error",
     "errGeneric": "Error",
     "errImageOnly": "Image file only",

@@ -75,12 +75,40 @@ export function isValidHostname(raw: string): boolean {
 }
 
 // Verification target. Configurable so the VPS can change IP without
-// a code redeploy. The CNAME is informational (shown in the UI); the
-// real DNS check is against the IP that the chain resolves to.
+// a code redeploy.
+//
+// LE CNAME N'EST PLUS "INFORMATIONNEL" (drame Bene, 3 aout 2026). Il
+// etait affiche a l'ecran comme la marche a suivre, mais le controle ne
+// regardait que l'IP au bout de la chaine : on refusait donc des
+// domaines configures exactement comme demande. C'est desormais la
+// preuve PRINCIPALE, et l'IP le repli pour les domaines a l'apex.
 export const DNS_TARGET_IP =
   process.env.CUSTOM_DOMAIN_TARGET_IP ?? "82.25.115.166";
 export const DNS_TARGET_CNAME =
   process.env.CUSTOM_DOMAIN_TARGET_CNAME ?? "connect.tipote.com";
+
+/**
+ * Un hote CNAME est "le notre" s'il EST la cible, ou un sous-domaine
+ * d'elle.
+ *
+ * Fonction PURE, et elle vit ici et pas dans customDomainsServer.ts
+ * pour une raison qui a deja mordu : ce fichier-la porte `server-only`,
+ * donc le runner de tests natif ne peut pas l'importer. Une regle qu'on
+ * ne peut pas tester est une regle qui derive (cf. la section "filet de
+ * tests logique" d'AGENTS.md).
+ *
+ * Le point dans `.${t}` n'est pas cosmetique : sans lui, un simple
+ * `endsWith` accepterait `meconnect.tipote.com`, qui n'est pas a nous.
+ */
+export function isOurCnameTarget(
+  candidate: string | null | undefined,
+  target: string = DNS_TARGET_CNAME,
+): boolean {
+  const c = String(candidate ?? "").trim().toLowerCase().replace(/\.$/, "");
+  const t = String(target ?? "").trim().toLowerCase().replace(/\.$/, "");
+  if (!c || !t) return false;
+  return c === t || c.endsWith(`.${t}`);
+}
 
 /**
  * Feature gate. Until the VPS has Caddy + on-demand TLS configured,
