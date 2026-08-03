@@ -59,6 +59,15 @@ import { interpolateText, extractResultLabel } from "@/lib/quizPersonalization";
 import { type TieConflict } from "@/lib/quizTieAnalysis";
 import { analyzeOptionSupply, analyzeResultCoverage, analyzeResultTies, attributionMode } from "@/lib/quizCoherence";
 import { alignBlockMarginClass, alignJustifyClass, alignTextClass, resolveBlockAlign } from "@/lib/quiz/textAlign";
+import { useAtelierStatus } from "@/hooks/useAtelierStatus";
+import {
+  beatShell,
+  bridgeTextColor,
+  buildResultBeats,
+  resultLayoutMode,
+  type BeatMedia,
+  type BeatKey,
+} from "@/lib/quiz/resultBeats";
 import {
   normalizeScoringAxes, resolveScoreLabels, formatScoresSummary, scorePlaceholderList,
   applyScorePlaceholders,
@@ -129,6 +138,7 @@ import {
   type PanelMediaConfig,
   type QuizBranding,
   quizContentIsDark,
+  isColorDark,
 } from "@/lib/quizBranding";
 import { QuizPanelMedia } from "@/components/quiz/QuizPanelMedia";
 import { PanelMediaEditor } from "@/components/quiz/PanelMediaEditor";
@@ -177,7 +187,7 @@ type IntroImagePosition = "top" | "after_title" | "after_intro" | "bottom";
 // Mêmes 4 slots que l'intro, sur l'écran de partage : "top" (avant le
 // titre du bonus) | "after_heading" | "after_intro" | "bottom".
 type BonusImagePosition = "top" | "after_heading" | "after_intro" | "bottom";
-type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; insight_heading?: string | null; projection_heading?: string | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_tag_names?: string[] | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null; image_width?: number | null; min_score?: number | null; max_score?: number | null };
+type QuizResult = { id?: string; title: string; description: string | null; insight: string | null; projection: string | null; insight_heading?: string | null; projection_heading?: string | null; bridge?: string | null; bridge_heading?: string | null; beat_media?: BeatMedia | null; cta_text: string | null; cta_url: string | null; sio_tag_name: string | null; sio_tag_names?: string[] | null; sio_course_id: string | null; sio_community_id: string | null; sort_order: number; image_url?: string | null; image_position?: ResultImagePosition | null; image_width?: number | null; min_score?: number | null; max_score?: number | null };
 type QuizLead = { id: string; email: string; first_name: string | null; last_name: string | null; phone: string | null; country: string | null; result_id: string | null; result_title: string | null; answers: { question_index: number; question_id?: string | null; option_index?: number; option_indices?: number[] }[] | null; scores?: unknown; has_shared: boolean; bonus_unlocked: boolean; created_at: string };
 type QuizData = {
   id: string; title: string; slug: string | null;
@@ -185,7 +195,8 @@ type QuizData = {
   start_button_text: string | null;
   privacy_url: string | null; consent_text: string | null;
   capture_heading: string | null; capture_subtitle: string | null; capture_submit_text: string | null;
-  result_insight_heading: string | null; result_projection_heading: string | null;
+  result_insight_heading: string | null; result_projection_heading: string | null; result_bridge_heading?: string | null;
+  show_result_bridge?: boolean | null; result_layout?: string | null;
   address_form: string | null;
   capture_first_name: boolean | null; capture_last_name: boolean | null;
   capture_phone: boolean | null; capture_country: boolean | null;
@@ -554,6 +565,15 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // visiteur voit la string i18n par défaut (`previewCaptureSubmit`).
   const [captureSubmitText, setCaptureSubmitText] = useState("");
   const [resultInsightHeading, setResultInsightHeading] = useState("");
+  // LES 4 TEMPS (demande Béné, 3 août 2026). `resultLayout` reste
+  // "classic" pour tous les quiz existants : c'est la colonne qui porte
+  // la garantie, pas une heuristique.
+  const [resultBridgeHeading, setResultBridgeHeading] = useState("");
+  const [showResultBridge, setShowResultBridge] = useState(true);
+  const [resultLayout, setResultLayout] = useState<"classic" | "beats">("classic");
+  // null tant qu'on ne sait pas : on n'affiche RIEN plutôt que de
+  // proposer un coach auquel elle n'a pas accès (règle du 2 août 2026).
+  const hasAtelier = useAtelierStatus();
   const [resultProjectionHeading, setResultProjectionHeading] = useState("");
   // Capture email optionnelle en mode quiz (juillet 2026). Default true
   // = comportement historique (l'email est demandé avant le résultat).
@@ -887,6 +907,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     capture_subtitle: captureSubtitle,
     capture_submit_text: captureSubmitText,
     result_insight_heading: resultInsightHeading,
+    result_bridge_heading: resultBridgeHeading,
+    show_result_bridge: showResultBridge,
+    result_layout: resultLayout,
     result_projection_heading: resultProjectionHeading,
     capture_enabled: captureEnabled,
     capture_first_name: captureFirstName,
@@ -967,6 +990,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   }), [
     title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
     captureHeading, captureSubtitle, captureSubmitText, resultInsightHeading, resultProjectionHeading,
+    resultBridgeHeading, showResultBridge, resultLayout,
     captureEnabled, captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
     showConsentCheckbox, showResultsBreakdown, hideResponseCounts, notifyResponses, showOtherResults,
@@ -1008,6 +1032,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     if (typeof s.capture_subtitle === "string") setCaptureSubtitle(s.capture_subtitle);
     if (typeof s.capture_submit_text === "string") setCaptureSubmitText(s.capture_submit_text);
     if (typeof s.result_insight_heading === "string") setResultInsightHeading(s.result_insight_heading);
+    if (typeof s.result_bridge_heading === "string") setResultBridgeHeading(s.result_bridge_heading);
+    if (typeof s.show_result_bridge === "boolean") setShowResultBridge(s.show_result_bridge);
+    if (typeof s.result_layout === "string") setResultLayout(resultLayoutMode(s.result_layout));
     if (typeof s.result_projection_heading === "string") setResultProjectionHeading(s.result_projection_heading);
     if (typeof s.capture_enabled === "boolean") setCaptureEnabled(s.capture_enabled);
     if (typeof s.capture_first_name === "boolean") setCaptureFirstName(s.capture_first_name);
@@ -1164,6 +1191,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setCaptureHeading(q.capture_heading ?? ""); setCaptureSubtitle(q.capture_subtitle ?? "");
       setCaptureSubmitText(q.capture_submit_text ?? "");
       setResultInsightHeading(q.result_insight_heading ?? ""); setResultProjectionHeading(q.result_projection_heading ?? "");
+      setResultBridgeHeading(q.result_bridge_heading ?? "");
+      setShowResultBridge((q as { show_result_bridge?: boolean | null }).show_result_bridge !== false);
+      setResultLayout(resultLayoutMode((q as { result_layout?: string | null }).result_layout));
       setCaptureEnabled((q as { capture_enabled?: boolean | null }).capture_enabled !== false);
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
       setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
@@ -1293,6 +1323,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           capture_subtitle: q.capture_subtitle ?? "",
           capture_submit_text: q.capture_submit_text ?? "",
           result_insight_heading: q.result_insight_heading ?? "",
+          result_bridge_heading: q.result_bridge_heading ?? "",
+          show_result_bridge: (q as { show_result_bridge?: boolean | null }).show_result_bridge !== false,
+          result_layout: resultLayoutMode((q as { result_layout?: string | null }).result_layout),
           result_projection_heading: q.result_projection_heading ?? "",
           capture_first_name: q.capture_first_name ?? false,
           capture_last_name: q.capture_last_name ?? false,
@@ -1523,6 +1556,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const aiRewriteResultDesc = useCallback((p: string) => aiRewrite(p, "result_description"), [aiRewrite]);
   const aiRewriteResultInsight = useCallback((p: string) => aiRewrite(p, "result_insight"), [aiRewrite]);
   const aiRewriteResultProjection = useCallback((p: string) => aiRewrite(p, "result_projection"), [aiRewrite]);
+  const aiRewriteResultBridge = useCallback((p: string) => aiRewrite(p, "result_bridge"), [aiRewrite]);
 
   // AI rebalance modal state (Marie's feedback #3 partie A, 2026-04). The
   // creator clicks "Rééquilibrer avec l'IA" on a low-coverage result, the
@@ -2184,6 +2218,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           capture_heading: captureHeading || null, capture_subtitle: captureSubtitle || null,
           capture_submit_text: captureSubmitText || null,
           result_insight_heading: resultInsightHeading.trim() || null,
+          result_bridge_heading: resultBridgeHeading.trim() || null,
+          show_result_bridge: showResultBridge,
+          result_layout: resultLayout,
           result_projection_heading: resultProjectionHeading.trim() || null,
           capture_enabled: captureEnabled,
           capture_first_name: captureFirstName, capture_last_name: captureLastName,
@@ -2281,7 +2318,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
             // so unknown fields are passed through without validation.
             config: q.config ?? {},
           })),
-          results: editResults.map((r, i) => ({ id: r.id, title: r.title, description: r.description, insight: r.insight, projection: r.projection, insight_heading: r.insight_heading ?? null, projection_heading: r.projection_heading ?? null, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: (r.sio_tag_names && r.sio_tag_names.length > 0 ? r.sio_tag_names[0] : r.sio_tag_name) || null, sio_tag_names: r.sio_tag_names ?? (r.sio_tag_name ? [r.sio_tag_name] : []), sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i, image_url: r.image_url ?? null, image_position: r.image_position ?? "top", image_width: r.image_width ?? null, min_score: r.min_score ?? null, max_score: r.max_score ?? null })),
+          results: editResults.map((r, i) => ({ id: r.id, title: r.title, description: r.description, insight: r.insight, projection: r.projection, insight_heading: r.insight_heading ?? null, projection_heading: r.projection_heading ?? null, bridge: r.bridge ?? null, bridge_heading: r.bridge_heading ?? null, beat_media: r.beat_media ?? null, cta_text: r.cta_text, cta_url: r.cta_url, sio_tag_name: (r.sio_tag_names && r.sio_tag_names.length > 0 ? r.sio_tag_names[0] : r.sio_tag_name) || null, sio_tag_names: r.sio_tag_names ?? (r.sio_tag_name ? [r.sio_tag_name] : []), sio_course_id: r.sio_course_id || null, sio_community_id: r.sio_community_id || null, sort_order: i, image_url: r.image_url ?? null, image_position: r.image_position ?? "top", image_width: r.image_width ?? null, min_score: r.min_score ?? null, max_score: r.max_score ?? null })),
         }),
       });
       const json = await res.json();
@@ -2515,6 +2552,52 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const updateQuestionConfig = (i: number, patch: Record<string, unknown>) =>
     setEditQuestions((p) => p.map((q, qi) => (qi === i ? { ...q, config: { ...(q.config ?? {}), ...patch } } : q)));
   const updateR = (i: number, field: string, v: unknown) => setEditResults(p => p.map((r, ri) => ri === i ? { ...r, [field]: v } : r));
+
+  // Combien de profils n'ont pas encore de PONT. Sert au bouton qui les
+  // fait écrire : sur un quiz d'avant le 3 août 2026, ils sont tous
+  // vides, et laisser la créatrice devant quatre champs blancs serait
+  // lui refiler le travail au lieu de l'aider.
+  const missingBridges = editResults.filter(
+    (r) => !stripHtml(r.bridge ?? "").trim(),
+  ).length;
+  const [bridgeGenerating, setBridgeGenerating] = useState(false);
+
+  /**
+   * Écrit le pont manquant de chaque profil, un par un.
+   *
+   * On réutilise /rewrite (déjà limité en débit et déjà branché sur la
+   * langue du quiz) plutôt que d'ajouter une route : le pont se déduit
+   * de ce que le profil dit déjà. On envoie le chemin comme matière,
+   * parce que le pont doit PROLONGER le chemin, pas repartir de zéro.
+   */
+  const generateMissingBridges = useCallback(async () => {
+    if (bridgeGenerating) return;
+    setBridgeGenerating(true);
+    let written = 0;
+    try {
+      for (let i = 0; i < editResults.length; i += 1) {
+        const r = editResults[i];
+        if (stripHtml(r.bridge ?? "").trim()) continue;
+        const matter = [
+          stripHtml(r.title ?? ""),
+          stripHtml(r.projection ?? "") || stripHtml(r.description ?? ""),
+          stripHtml(r.cta_text ?? ctaText ?? ""),
+        ].filter(Boolean).join(" . ");
+        if (!matter.trim()) continue;
+        const proposals = await aiRewrite(matter, "result_bridge");
+        const first = proposals?.[0]?.trim();
+        if (first) {
+          updateR(i, "bridge", first);
+          written += 1;
+        }
+      }
+      // Un `ok: false` produit TOUJOURS quelque chose à l'écran.
+      if (written > 0) toast.success(t("beatsBridgesWritten", { count: written }));
+      else toast.error(t("errGeneric"));
+    } finally {
+      setBridgeGenerating(false);
+    }
+  }, [bridgeGenerating, editResults, ctaText, aiRewrite, updateR, t]);
 
   // Titres de blocs personnalisables par profil (retour Gwenn 13 juin
   // 2026). Mode dérivé : au moins un override non-null = mode
@@ -3606,6 +3689,74 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     checked={showOtherResults}
                     onChange={v => setShowOtherResults(v)}
                   />
+                  {/* ── LES 4 TEMPS (demande Béné, 3 août 2026) ──
+                      La page de résultat suit ce que l'Atelier enseigne :
+                      le miroir, la cause, le chemin, le pont. Les noms de
+                      la méthode vivent ICI, dans l'aide de l'éditeur, et
+                      JAMAIS dans le texte que le visiteur lit. */}
+                  <div className="mt-2 space-y-3 rounded-xl border p-3">
+                    <p className="text-sm font-semibold">{t("beatsTitle")}</p>
+                    <p className="text-xs text-muted-foreground">{t("beatsIntro")}</p>
+                    <ol className="space-y-2 text-xs">
+                      {([
+                        ["beatsMirrorName", "beatsMirrorHelp"],
+                        ["beatsCauseName", "beatsCauseHelp"],
+                        ["beatsPathName", "beatsPathHelp"],
+                        ["beatsBridgeName", "beatsBridgeHelp"],
+                      ] as const).map(([name, help], i) => (
+                        <li key={name} className="flex gap-2.5">
+                          <span
+                            className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[11px] font-bold"
+                            style={{ backgroundColor: `${pc}1a`, color: pc }}
+                            aria-hidden
+                          >
+                            {i + 1}
+                          </span>
+                          <span>
+                            <span className="font-semibold">{t(name)}</span>
+                            <span className="text-muted-foreground"> {t(help)}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                    <SettingsToggle
+                      label={t("beatsLayoutLabel")}
+                      hint={t("beatsLayoutHint")}
+                      checked={resultLayout === "beats"}
+                      onChange={(v) => setResultLayout(v ? "beats" : "classic")}
+                    />
+                    {resultLayout === "beats" && (
+                      <SettingsToggle
+                        label={t("optionShowResultBridge")}
+                        hint={t("optionShowResultBridgeHint")}
+                        checked={showResultBridge}
+                        onChange={(v) => setShowResultBridge(v)}
+                      />
+                    )}
+                    {/* Le pont manque sur les quiz d'avant : on propose de
+                        le faire écrire, profil par profil, plutôt que de
+                        laisser la créatrice devant un champ vide. */}
+                    {resultLayout === "beats" && missingBridges > 0 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => void generateMissingBridges()}
+                        disabled={bridgeGenerating}
+                      >
+                        {bridgeGenerating
+                          ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />{t("beatsWritingBridges")}</>
+                          : <><Sparkles className="w-3.5 h-3.5 mr-1.5" />{t("beatsWriteBridges", { count: missingBridges })}</>}
+                      </Button>
+                    )}
+                    {/* Le coach de l'Atelier pour celles qui l'ont, rien
+                        sinon : proposer un coach auquel on n'a pas accès
+                        est pire que ne rien proposer (règle du 2 août). */}
+                    {hasAtelier === true && (
+                      <p className="text-xs text-muted-foreground">{t("beatsAskCoach")}</p>
+                    )}
+                  </div>
                   {/* Atelier juillet 2026 : personnaliser la page de resultat
                       facon Tally. Cartes insight / projection masquables +
                       bouton de partage optionnel. Default TRUE -> quiz
@@ -4970,6 +5121,13 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               {editResults.map((r, ri) => {
                 const cov = resultCoverage[ri] ?? { questionsLeading: 0, totalQuestions: editQuestions.length, expected: 1, severity: "danger" as const };
                 // Mode "titre par profil" dérivé (au moins 1 override).
+                // L'habillage des temps vient de beatShell : la MÊME
+                // fonction que le viewer public. Un aperçu qui recalcule
+                // l'allure du viewer finit toujours par mentir.
+                const bridgeInk = bridgeTextColor(isColorDark(pc));
+                const shellCause = beatShell(resultLayout, "cause", pc, bridgeInk);
+                const shellPath = beatShell(resultLayout, "path", pc, bridgeInk);
+                const shellBridge = beatShell(resultLayout, "bridge", pc, bridgeInk);
                 const insightPersonalized = editResults.some(rr => rr.insight_heading != null);
                 const projectionPersonalized = editResults.some(rr => rr.projection_heading != null);
                 // Subtle banner above each result that tells the creator how
@@ -5143,7 +5301,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <ResultPositionDropZone label={t("resultImagePos_after_description")}
                         onDrop={() => { updateResultImagePosition(ri, "after_description"); setDraggingResultImageRi(null); }} />
                     )}
-                    <div className="p-5 rounded-xl bg-muted/50 border">
+                    <div className={shellCause.containerClass} style={shellCause.containerStyle}>
                       <div className="mb-2">
                         <RichTextEdit
                           value={insightPersonalized
@@ -5153,7 +5311,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                             ? (v) => updateR(ri, "insight_heading", v ?? "")
                             : setResultInsightHeading}
                           singleLine
-                          className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+                          className={shellCause.headingClass}
+                          style={shellCause.headingStyle}
                           placeholder={insightPersonalized ? (resultInsightHeading.trim() || t("previewResultInsightDefault")) : t("previewResultInsightHeadingPh")}
                         />
                         <button type="button"
@@ -5175,7 +5334,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <ResultPositionDropZone label={t("resultImagePos_after_insight")}
                         onDrop={() => { updateResultImagePosition(ri, "after_insight"); setDraggingResultImageRi(null); }} />
                     )}
-                    <div className="p-5 rounded-xl border" style={{ backgroundColor: `${pc}08`, borderColor: `${pc}30` }}>
+                    <div className={shellPath.containerClass} style={shellPath.containerStyle}>
                       <div className="mb-2">
                         <RichTextEdit
                           value={projectionPersonalized
@@ -5185,8 +5344,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                             ? (v) => updateR(ri, "projection_heading", v ?? "")
                             : setResultProjectionHeading}
                           singleLine
-                          className="text-xs font-bold uppercase tracking-widest"
-                          style={{ color: `${pc}99` }}
+                          className={shellPath.headingClass}
+                          style={shellPath.headingStyle}
                           placeholder={projectionPersonalized ? (resultProjectionHeading.trim() || t("previewResultProjectionDefault")) : t("previewResultProjectionHeadingPh")}
                         />
                         <button type="button"
@@ -5198,6 +5357,37 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       </div>
                       <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultProjection} availableVars={resultVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder={t("previewResultProjectionPh")} />
                     </div>
+
+                    {/* LE PONT, 4e temps (demande Béné, 3 août 2026).
+                        Visible seulement en page "4 temps" : un quiz
+                        classique n'a pas ce bloc, et lui en montrer un
+                        vide dans l'aperçu serait mentir sur ce que voit
+                        son visiteur. */}
+                    {resultLayout === "beats" && showResultBridge && (
+                      <div className={shellBridge.containerClass} style={shellBridge.containerStyle}>
+                        <div className="mb-2">
+                          <RichTextEdit
+                            value={r.bridge_heading ?? (resultBridgeHeading || t("previewResultBridgeDefault"))}
+                            onChange={(v) => updateR(ri, "bridge_heading", v ?? "")}
+                            singleLine
+                            className={shellBridge.headingClass}
+                            style={shellBridge.headingStyle}
+                            placeholder={t("previewResultBridgeHeadingPh")}
+                          />
+                        </div>
+                        <RichTextEdit
+                          value={r.bridge ?? ""}
+                          onChange={(v) => updateR(ri, "bridge", v || null)}
+                          onGenderize={genderize}
+                          onAIRewrite={aiRewriteResultBridge}
+                          availableVars={resultVars}
+                          previewTransform={previewInterpolate}
+                          onImageUpload={handleRichTextImageUpload}
+                          className="text-sm leading-relaxed"
+                          placeholder={t("previewResultBridgePh")}
+                        />
+                      </div>
+                    )}
                     {r.image_url && r.image_position === "bottom" && (
                       <ResultDraggableImage url={r.image_url} ri={ri}
                         onDragStart={() => setDraggingResultImageRi(ri)}

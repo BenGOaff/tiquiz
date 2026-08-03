@@ -18,6 +18,7 @@ import { isPaidPlan } from "@/lib/planLimits";
 import { fetchAllRows } from "@/lib/db/fetchAllRows";
 import { normalizeScoringAxes, scoreDisplayMode } from "@/lib/quizScoring";
 import { classifyDeleteError, deleteRefusalReason, deleteRefusalStatus } from "@/lib/quizDelete";
+import { sanitizeBeatMedia, resultLayoutMode, type BeatMedia } from "@/lib/quiz/resultBeats";
 
 const RICH_TEXT_FIELDS = ["introduction"] as const;
 
@@ -35,6 +36,7 @@ const FR_TYPO_PLAIN_FIELDS = [
   "start_button_text",
   "result_insight_heading",
   "result_projection_heading",
+  "result_bridge_heading",
   "capture_heading",
   "capture_subtitle",
   "capture_submit_text",
@@ -221,13 +223,14 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "sio_capture_tag",
       "show_aggregate_responses",
       "start_button_text",
-      "result_insight_heading", "result_projection_heading",
+      "result_insight_heading", "result_projection_heading", "result_bridge_heading",
       "sio_api_key_id",
       "intro_image_url", "intro_image_position", "intro_image_width",
       "background_style", "background_gradient", "background_image_url",
       "intro_layout", "button_shape", "theme_id",
       "question_layout", "split_image_url", "split_side", "panel_media",
-      "answer_layout", "show_result_insight", "show_result_projection", "show_result_share",
+      "answer_layout", "show_result_insight", "show_result_projection", "show_result_bridge", "show_result_share",
+      "result_layout",
       "close_enabled", "close_action", "close_redirect_url", "close_message",
       "close_cta_text", "close_cta_url",
       // Scoring multi-axes (Véronique juillet 2026). scoring_axes est
@@ -328,7 +331,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
     // Cartes resultat masquables + bouton de partage optionnel. Booleens
     // stricts ; default true cote DB -> absence = comportement historique.
-    for (const key of ["show_result_insight", "show_result_projection", "show_result_share"] as const) {
+    for (const key of ["show_result_insight", "show_result_projection", "show_result_bridge", "show_result_share"] as const) {
       if (key in patch) patch[key] = patch[key] !== false;
     }
 
@@ -672,6 +675,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         projection: string | null;
         insight_heading: string | null;
         projection_heading: string | null;
+        bridge: string | null;
+        bridge_heading: string | null;
+        beat_media: BeatMedia | null;
         cta_text: string | null;
         cta_url: string | null;
         sio_tag_name: string | null;
@@ -733,6 +739,22 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             typeof r.projection_heading === "string" && r.projection_heading.trim()
               ? applyFrenchTypographyToHtml(sanitizeRichText(r.projection_heading), effectiveLocale)
               : null,
+          // LE PONT (4e temps, 3 aout 2026) : le texte qui relie le
+          // resultat a l'offre, juste avant le bouton. NULL sur tous les
+          // profils d'avant, donc bloc absent : c'est ce qui fait qu'un
+          // quiz existant ne bouge pas.
+          bridge:
+            typeof r.bridge === "string"
+              ? applyFrenchTypographyToHtml(sanitizeRichText(r.bridge), effectiveLocale)
+              : null,
+          bridge_heading:
+            typeof r.bridge_heading === "string" && r.bridge_heading.trim()
+              ? applyFrenchTypographyToHtml(sanitizeRichText(r.bridge_heading), effectiveLocale)
+              : null,
+          // Image par temps. Sanitize par lib/quiz/resultBeats.ts : ce
+          // champ finit dans un <img src> public, donc on n'ecrit jamais
+          // ce que le client envoie.
+          beat_media: sanitizeBeatMedia(r.beat_media),
           cta_text:
             r.cta_text == null
               ? null

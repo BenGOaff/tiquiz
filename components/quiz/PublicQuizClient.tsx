@@ -18,6 +18,7 @@ import {
   buttonShapeRadiusClass,
   resolvePanelMedia,
   type QuizBranding,
+  isColorDark,
 } from "@/lib/quizBranding";
 import { QuizPanelMedia } from "@/components/quiz/QuizPanelMedia";
 import { sanitizeRichText, stripHtml, decodeHtmlEntities } from "@/lib/richText";
@@ -49,6 +50,14 @@ import {
   alignTextClass,
   resolveBlockAlign,
 } from "@/lib/quiz/textAlign";
+import {
+  beatShell,
+  bridgeTextColor,
+  buildResultBeats,
+  mirrorMedia,
+  resultLayoutMode,
+  type BeatMediaItem,
+} from "@/lib/quiz/resultBeats";
 
 // Rich text fields contain raw HTML tags (<p>, <b>, <a>, …). Strings without any
 // tag are treated as legacy plain text so the old ✓/•/- bullet rendering still
@@ -57,6 +66,25 @@ const HTML_TAG_RE = /<\/?[a-zA-Z][^>]*>/;
 const isHtml = (s: string | null | undefined) => !!s && HTML_TAG_RE.test(s);
 
 
+
+/**
+ * Image d'un temps de la page de résultat.
+ *
+ * `w-full h-auto` par défaut : jamais de `max-h-* object-cover`, qui
+ * recadre l'image de la créatrice sans le lui dire (CLAUDE_PITFALLS B).
+ * Une largeur explicite (25 à 99%) centre l'image dans son bloc.
+ */
+function BeatImage({ item }: { item: BeatMediaItem }) {
+  return (
+    /* eslint-disable-next-line @next/next/no-img-element */
+    <img
+      src={item.url}
+      alt=""
+      className={`h-auto rounded-xl ${item.width ? "mx-auto block" : "w-full"}`}
+      style={item.width ? { width: `${item.width}%` } : undefined}
+    />
+  );
+}
 
 type QuizOption = { text: string; result_index: number; image_url?: string | null; points?: number | null; image_width?: number | null };
 type QuestionType =
@@ -96,6 +124,9 @@ type QuizResult = {
   projection: string | null;
   insight_heading?: string | null;
   projection_heading?: string | null;
+  bridge?: string | null;
+  bridge_heading?: string | null;
+  beat_media?: unknown;
   cta_text: string | null;
   cta_url: string | null;
   sort_order: number;
@@ -164,6 +195,9 @@ type PublicQuizData = {
   // Default TRUE partout (lu en !== false) -> quiz existants inchanges.
   show_result_insight?: boolean | null;
   show_result_projection?: boolean | null;
+  show_result_bridge?: boolean | null;
+  result_bridge_heading?: string | null;
+  result_layout?: string | null;
   show_result_share?: boolean | null;
   // Partage du profil obtenu : quand actif (null = defaut ON), "Partager
   // mon resultat" partage l'URL ?rp=<resultId> dont l'apercu social met
@@ -289,6 +323,7 @@ type QuizTranslations = {
   resultFallback: string;
   insight: string;
   projection: string;
+  bridge: string;
   exclusiveBonus: string;
   shareToUnlock: string;
   copyLink: string;
@@ -467,6 +502,7 @@ const translations: Record<string, QuizTranslations> = {
     resultFallback: "R\u00e9sultat",
     insight: "Prise de conscience",
     projection: "Et si...",
+    bridge: "Et maintenant",
     exclusiveBonus: "Bonus exclusif",
     shareToUnlock: "Partage sur un r\u00e9seau pour d\u00e9bloquer ton bonus :",
     copyLink: "Copier le lien",
@@ -542,6 +578,7 @@ const translations: Record<string, QuizTranslations> = {
     resultFallback: "R\u00e9sultat",
     insight: "Prise de conscience",
     projection: "Et si...",
+    bridge: "Et maintenant",
     exclusiveBonus: "Bonus exclusif",
     shareToUnlock: "Partagez sur un r\u00e9seau pour d\u00e9bloquer votre bonus :",
     copyLink: "Copier le lien",
@@ -617,6 +654,7 @@ const translations: Record<string, QuizTranslations> = {
     resultFallback: "Result",
     insight: "Key insight",
     projection: "What if...",
+    bridge: "What now",
     exclusiveBonus: "Exclusive bonus",
     shareToUnlock: "Share on a network to unlock your bonus:",
     copyLink: "Copy link",
@@ -692,6 +730,7 @@ const translations: Record<string, QuizTranslations> = {
     resultFallback: "Resultado",
     insight: "Toma de conciencia",
     projection: "\u00bfY si...?",
+    bridge: "Y ahora",
     exclusiveBonus: "Bonus exclusivo",
     shareToUnlock: "Comparte en una red para desbloquear tu bonus:",
     copyLink: "Copiar enlace",
@@ -767,6 +806,7 @@ const translations: Record<string, QuizTranslations> = {
     resultFallback: "Ergebnis",
     insight: "Erkenntnis",
     projection: "Was w\u00e4re wenn...",
+    bridge: "Und jetzt",
     exclusiveBonus: "Exklusiver Bonus",
     shareToUnlock: "Teile in einem Netzwerk, um deinen Bonus freizuschalten:",
     copyLink: "Link kopieren",
@@ -842,6 +882,7 @@ const translations: Record<string, QuizTranslations> = {
     resultFallback: "Resultado",
     insight: "Tomada de consci\u00eancia",
     projection: "E se...",
+    bridge: "E agora",
     exclusiveBonus: "B\u00f4nus exclusivo",
     shareToUnlock: "Compartilhe em uma rede para desbloquear seu b\u00f4nus:",
     copyLink: "Copiar link",
@@ -917,6 +958,7 @@ const translations: Record<string, QuizTranslations> = {
     resultFallback: "Risultato",
     insight: "Presa di coscienza",
     projection: "E se...",
+    bridge: "E adesso",
     exclusiveBonus: "Bonus esclusivo",
     shareToUnlock: "Condividi su un social per sbloccare il tuo bonus:",
     copyLink: "Copia link",
@@ -992,6 +1034,7 @@ const translations: Record<string, QuizTranslations> = {
     resultFallback: "\u0627\u0644\u0646\u062a\u064a\u062c\u0629",
     insight: "\u0625\u062f\u0631\u0627\u0643",
     projection: "\u0645\u0627\u0630\u0627 \u0644\u0648...",
+    bridge: "\u0648\u0627\u0644\u0622\u0646",
     exclusiveBonus: "\u0645\u0643\u0627\u0641\u0623\u0629 \u062d\u0635\u0631\u064a\u0629",
     shareToUnlock: "\u0634\u0627\u0631\u0643 \u0639\u0644\u0649 \u0634\u0628\u0643\u0629 \u0627\u062c\u062a\u0645\u0627\u0639\u064a\u0629 \u0644\u0641\u062a\u062d \u0645\u0643\u0627\u0641\u0623\u062a\u0643:",
     copyLink: "\u0646\u0633\u062e \u0627\u0644\u0631\u0627\u0628\u0637",
@@ -4020,6 +4063,27 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
 
   // STEP: Result
   if (step === "result") {
+    // LES 4 TEMPS (demande Béné, 3 août 2026). `resultLayout` vaut
+    // 'classic' pour TOUS les quiz d'avant : la page rend alors
+    // exactement ce qu'elle rendait, au pixel près. Cf.
+    // lib/quiz/resultBeats.ts pour la garantie.
+    const resultLayout = resultLayoutMode(quiz.result_layout);
+    const resultBeats = resultLayout === "beats"
+      ? buildResultBeats(
+          {
+            result: resultProfile,
+            quiz,
+            fallbackHeadings: { cause: t.insight, path: t.projection, bridge: t.bridge },
+          },
+          stripHtml,
+        )
+      : [];
+    // Le PONT est un bloc plein à la couleur de marque : son texte doit
+    // rester lisible que la créatrice ait choisi un bleu nuit ou un
+    // jaune pâle. Même helper que le reste du branding.
+    const bridgeInk = bridgeTextColor(isColorDark(branding.primaryColor));
+    const mirrorImage = mirrorMedia(resultProfile?.beat_media);
+
     return (
       <div
         className={`min-h-screen flex flex-col${layoutOuterClass}`}
@@ -4150,7 +4214,10 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
               ) : null;
             })()}
 
-            {resultProfile?.description && (() => {
+            {/* Le MIROIR : le nom du profil (au dessus) et sa description.
+                Son image peut REMPLACER la description quand la créatrice
+                a choisi le mode "image à la place du texte". */}
+            {resultProfile?.description && mirrorImage?.mode !== "only" && (() => {
               const desc = interp(resultProfile.description);
               return isHtml(desc) ? (
                 <div
@@ -4170,6 +4237,10 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
               ) : null;
             })()}
 
+            {mirrorImage && <BeatImage item={mirrorImage} />}
+
+            {resultLayout === "classic" ? (
+              <>
             {quiz.show_result_insight !== false && resultProfile?.insight && stripHtml(resultProfile.insight).trim() && (() => {
               const ins = interp(resultProfile.insight);
               return (
@@ -4217,6 +4288,47 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
                 </div>
               );
             })()}
+              </>
+            ) : (
+              /* LES 4 TEMPS (demande Béné, 3 août 2026). Trois temps
+                 sobres, un filet vertical à la couleur de marque, aucun
+                 fond : "sans forcément créer 4 cartes de couleurs trop
+                 IA". Le PONT, lui, est plein, parce que c'est le bloc
+                 sur lequel l'oeil doit s'arrêter avant le bouton.
+                 Quels blocs, dans quel ordre, avec quel titre : la
+                 décision vient de buildResultBeats (lib/quiz/resultBeats.ts),
+                 la MÊME fonction que l'aperçu de l'éditeur. */
+              <div className="space-y-6">
+                {resultBeats.map((beat) => {
+                  const body = interp(beat.body);
+                  // L'habillage vient de beatShell : c'est la MÊME fonction
+                  // que l'aperçu de l'éditeur appelle.
+                  const shell = beatShell("beats", beat.key, branding.primaryColor, bridgeInk);
+                  return (
+                    <div key={beat.key} className={shell.containerClass} style={shell.containerStyle}>
+                      {beat.heading && (
+                        <p
+                          className={`tiquiz-rich tiquiz-rich-inline ${shell.headingClass}`}
+                          style={shell.headingStyle}
+                          dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(beat.heading)) }}
+                        />
+                      )}
+                      {beat.media && <BeatImage item={beat.media} />}
+                      {beat.showText && (isHtml(body) ? (
+                        <div
+                          className={`tiquiz-rich text-base leading-relaxed ${shell.bodyToneClass}`}
+                          dangerouslySetInnerHTML={{ __html: sanitizeRichText(body) }}
+                        />
+                      ) : (
+                        <p className={`text-base leading-relaxed whitespace-pre-line ${shell.bodyToneClass}`}>
+                          {decodeHtmlEntities(body)}
+                        </p>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {(() => {
               const slot = (resultProfile?.image_position ?? "top") as ResultImagePosition;
