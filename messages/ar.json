@@ -1566,7 +1566,9 @@
     "beatsHintBody": "المرآة، السبب، الطريق، الجسر. إنها البنية التي تُدرَّس في الورشة، وتُفعَّل على هذا الاختبار دون إعادة كتابة أي شيء: نصوصك الحالية تُستخدم كما هي.",
     "beatsHintEnable": "تفعيل على هذا الاختبار",
     "beatsHintDismiss": "لا، شكراً",
-    "beatsHintReversible": "يمكن التراجع في أي وقت، ودون أي أثر على اختباراتك الأخرى."
+    "beatsHintReversible": "يمكن التراجع في أي وقت، ودون أي أثر على اختباراتك الأخرى.",
+    "previewResultCauseBeatsDefault": "ما يعيقك فعلاً",
+    "previewResultPathBeatsDefault": "من أين تبدأ"
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",

@@ -247,7 +247,6 @@ export function beatShell(
   layout: ResultLayout,
   key: BeatKey,
   primary: string,
-  filledTextColor: string,
 ): BeatShell {
   // Page historique : on reproduit EXACTEMENT les deux cartes d'avant.
   // Ce n'est pas de la dette, c'est la garantie donnée aux quiz existants.
@@ -270,12 +269,30 @@ export function beatShell(
     };
   }
 
+  // LES QUATRE TEMPS PARTAGENT LE MÊME GABARIT (retour Béné, 3 août 2026).
+  //
+  // Le pont était un bloc PLEIN à la couleur de marque. Deux problèmes,
+  // les deux signalés le jour même :
+  //
+  //   "l'encart est tout pété, il monte presque sur le menu de gauche"
+  //     -> il était le SEUL à porter un fond, donc le seul dont le bord
+  //        se voyait. Le moindre écart de gouttière entre lui et les
+  //        autres sautait aux yeux, sous forme d'un débordement à gauche.
+  //   "l'encart est de la même couleur que les boutons, ça entraîne de la
+  //   confusion"
+  //     -> un aplat de la couleur de marque, c'est la signature d'un
+  //        bouton. On en faisait un faux bouton juste au dessus du vrai.
+  //
+  // Correction : le pont garde le MÊME filet vertical et le MÊME décalage
+  // que les trois autres temps, donc il ne peut plus déborder de rien. Il
+  // se distingue par une teinte LÉGÈRE et un titre plus affirmé : assez
+  // pour arrêter l'oeil, jamais assez pour passer pour un bouton.
   if (key === "bridge") {
     return {
-      containerClass: "rounded-2xl px-5 py-5 sm:px-6 sm:py-6 space-y-2",
-      containerStyle: { backgroundColor: primary, color: filledTextColor },
+      containerClass: "border-l-[3px] pl-4 sm:pl-5 pr-4 py-4 rounded-r-xl space-y-2",
+      containerStyle: { borderColor: primary, backgroundColor: `${primary}14` },
       headingClass: "text-base sm:text-lg font-bold leading-snug",
-      headingStyle: {},
+      headingStyle: { color: primary },
       bodyToneClass: "",
     };
   }
@@ -286,15 +303,4 @@ export function beatShell(
     headingStyle: { color: primary },
     bodyToneClass: "text-muted-foreground",
   };
-}
-
-/**
- * Couleur de texte lisible sur le bloc plein.
- *
- * Le pont prend la couleur de marque en fond : une créatrice qui choisit
- * un jaune pâle doit obtenir du texte sombre, pas du blanc sur blanc.
- * `dark` vient du même helper de luminance que le reste du branding.
- */
-export function bridgeTextColor(primaryIsDark: boolean): string {
-  return primaryIsDark ? "#ffffff" : "#111827";
 }

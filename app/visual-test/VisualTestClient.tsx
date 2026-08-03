@@ -57,6 +57,7 @@ const DEMO_QUIZ = {
       title: "L'architecte",
       description: "<p>Tu construis des bases solides avant d'ouvrir les portes.</p>",
       insight: "Ta force : rien n'est laisse au hasard.",
+      bridge: "Tu repars avec un plan clair et une premiere action a faire ce soir.",
       projection: "Et si tu passais a l'action des cette semaine ?",
       cta_text: "Decouvrir la methode",
       cta_url: "https://example.com",
@@ -67,6 +68,7 @@ const DEMO_QUIZ = {
       title: "L'exploratrice",
       description: "<p>Tu testes vite, tu apprends vite, tu ajustes vite.</p>",
       insight: "Ta force : l'elan.",
+      bridge: "Tu gardes ton elan, avec un cadre qui t'evite de repartir de zero.",
       projection: "Et si tu structurais ce qui marche deja ?",
       cta_text: "Passer au niveau suivant",
       cta_url: "https://example.com",
@@ -88,12 +90,15 @@ export default function VisualTestClient({
   bg,
   bonus,
   score,
+  beats,
 }: {
   layout: string;
   intro: string;
   bg: string;
   bonus: string;
   score: string;
+  /** ?beats=1 : page de resultat en 4 temps (Bene, 3 aout 2026). */
+  beats?: string;
 }) {
   const base = resolveQuizBranding(null, null);
   const branding: QuizBranding = {
@@ -107,6 +112,9 @@ export default function VisualTestClient({
   const quiz: PublicQuizData = {
     ...DEMO_QUIZ,
     ...(intro === "cover" ? { intro_image_url: BG_IMAGE_DATA_URI, intro_layout: "cover" } : {}),
+    // Page de resultat en 4 temps + un PONT redige, sinon le 4e temps
+    // n'existe pas et la capture ne prouve rien.
+    ...(beats === "1" ? { result_layout: "beats" } : {}),
     // bonus=1 : active l'ecran de partage bonus (etape entre capture et
     // resultat) pour couvrir ce rendu dans la matrice visuelle.
     ...(bonus === "1"
