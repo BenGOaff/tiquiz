@@ -231,6 +231,8 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "question_layout", "split_image_url", "split_side", "panel_media",
       "answer_layout", "show_result_insight", "show_result_projection", "show_result_bridge", "show_result_share",
       "result_layout",
+      // Logo independant du titre + largeur du bloc d'accueil (3 aout 2026).
+      "brand_logo_align", "brand_logo_width", "intro_text_width",
       "close_enabled", "close_action", "close_redirect_url", "close_message",
       "close_cta_text", "close_cta_url",
       // Scoring multi-axes (Véronique juillet 2026). scoring_axes est

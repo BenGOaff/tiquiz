@@ -1553,7 +1553,15 @@
     "optionShowResultBridgeHint": "El bloque que une el resultado con tu oferta, justo antes del botón.",
     "previewResultBridgeDefault": "Y ahora",
     "previewResultBridgeHeadingPh": "Título del puente",
-    "previewResultBridgePh": "Lo que cambia concretamente para él si da el siguiente paso."
+    "previewResultBridgePh": "Lo que cambia concretamente para él si da el siguiente paso.",
+    "designLogoAlignLabel": "Posición del logo",
+    "designLogoAlign_auto": "Como el título",
+    "designLogoAlign_left": "Izquierda",
+    "designLogoAlign_center": "Centro",
+    "designLogoAlign_right": "Derecha",
+    "designLogoSizeLabel": "Tamaño",
+    "designLogoSizeAuto": "Auto",
+    "introWidthHandleTitle": "Arrastra para ajustar el ancho del título y del subtítulo. Doble clic para ancho completo."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nueva contraseña",

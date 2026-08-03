@@ -51,6 +51,14 @@ import {
   resolveBlockAlign,
 } from "@/lib/quiz/textAlign";
 import {
+  introTextWidthPct,
+  introTextWidthStyle,
+  logoRender,
+  logoWidthPct,
+  resolveLogoAlign,
+} from "@/lib/quiz/introLayout";
+import { answerGridClass, answerImageGridClass, resolveAnswerLayout } from "@/lib/quiz/answerLayout";
+import {
   beatShell,
   bridgeTextColor,
   buildResultBeats,
@@ -195,6 +203,9 @@ type PublicQuizData = {
   // Default TRUE partout (lu en !== false) -> quiz existants inchanges.
   show_result_insight?: boolean | null;
   show_result_projection?: boolean | null;
+  brand_logo_align?: string | null;
+  brand_logo_width?: number | null;
+  intro_text_width?: number | null;
   show_result_bridge?: boolean | null;
   result_bridge_heading?: string | null;
   result_layout?: string | null;
@@ -2891,7 +2902,24 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
     // pour lui seul (elle l'a posé exprès).
     const introBodyAlign = resolveBlockAlign(quiz.introduction, quiz.title, qLayout);
     const introBodyTextClass = alignTextClass(introBodyAlign);
-    const introBodyMargin = alignBlockMarginClass(introBodyAlign);
+    // LE LOGO A SA PROPRE VIE (retour Béné, 3 août 2026 : "si je centre
+    // mon titre à gauche, il centre aussi le logo"). Sans réglage il
+    // suit le titre, donc aucun quiz existant ne bouge.
+    const logo = logoRender(
+      resolveLogoAlign(quiz.brand_logo_align, introAlign),
+      logoWidthPct(quiz.brand_logo_width),
+    );
+    // LARGEUR DU BLOC TITRE + SOUS-TITRE. Elle vit sur le CONTENEUR
+    // COMMUN : c'est ce qui rend impossible le retour du décalage
+    // ("la case du sous titre est plus courte que celle du titre").
+    const introTextStyle = introTextWidthStyle(introTextWidthPct(quiz.intro_text_width));
+    // Le BLOC est positionné par le titre, pour le titre ET le sous-titre :
+    // c'est ce qui leur donne le même bord. L'alignement propre du
+    // sous-titre continue de piloter SON TEXTE (introBodyTextClass), pas
+    // la position de sa boîte. Sans ça, un sous-titre aligné à droite
+    // partirait à droite dès qu'on rétrécit, et on retomberait sur le
+    // décalage dont Béné dit qu'on en a "parlé mille fois".
+    const introFieldClass = introTextStyle ? introBlockMargin : "";
 
     return (
       <div className={`min-h-screen flex flex-col${layoutOuterClass}`} style={rootStyle}>
@@ -2907,13 +2935,9 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
             même alignement, donc l'intro est TOUJOURS calée sur le titre. */}
         <div className={`max-w-2xl w-full space-y-8 ${introTextClass}`} style={readerSurfaceStyle}>
             {branding.logoUrl && (
-              <div className={`flex ${introJustify}`}>
+              <div className={logo.wrapperClass}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={branding.logoUrl}
-                  alt=""
-                  className="max-h-16 w-auto object-contain"
-                />
+                <img src={branding.logoUrl} alt="" className={logo.imgClass} style={logo.imgStyle} />
               </div>
             )}
             {/* Image d'intro — slot TOP (entre logo et titre). On garde
@@ -2926,7 +2950,8 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
                 empêche tout <p>/<div> imbriqué de modifier la taille de
                 police. */}
             <h1
-              className="tiquiz-rich tiquiz-rich-inline tiquiz-quiz-title font-bold leading-tight"
+              className={`tiquiz-rich tiquiz-rich-inline tiquiz-quiz-title font-bold leading-tight ${introFieldClass}`}
+              style={introTextStyle}
               dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(quiz.title)) }}
             />
 
@@ -2938,13 +2963,14 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
 
             {introRich ? (
               <div
-                className={`tiquiz-rich text-muted-foreground text-lg leading-relaxed max-w-xl ${introBodyMargin} ${introBodyTextClass}`}
+                className={`tiquiz-rich text-muted-foreground text-lg leading-relaxed ${introFieldClass} ${introBodyTextClass}`}
+                style={introTextStyle}
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(quiz.introduction) }}
               />
             ) : (
               <>
                 {descLines.length > 0 && (
-                  <p className={`text-muted-foreground text-lg leading-relaxed whitespace-pre-line max-w-xl ${introBodyMargin} ${introBodyTextClass}`}>
+                  <p className={`text-muted-foreground text-lg leading-relaxed whitespace-pre-line ${introFieldClass} ${introBodyTextClass}`} style={introTextStyle}>
                     {descLines.join("\n")}
                   </p>
                 )}
@@ -3065,19 +3091,9 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
     // le réglage quiz-level. Absent ou 'auto' -> on hérite du quiz. Sanitize
     // sur lecture (set fermé : seuls 'grid'/'list' surchargent).
     const qAnswerLayoutOverride = ((q.config ?? {}) as Record<string, unknown>).answer_layout;
-    const answerLayout =
-      qAnswerLayoutOverride === "grid" || qAnswerLayoutOverride === "list"
-        ? qAnswerLayoutOverride
-        : branding.answerLayout;
-    const mcGridClass =
-      answerLayout === "list"
-        ? "grid-cols-1"
-        : answerLayout === "grid"
-          ? "grid-cols-1 sm:grid-cols-2"
-          : hasMultipleOptions
-            ? "grid-cols-1 sm:grid-cols-2"
-            : "grid-cols-1";
-    const imgGridClass = answerLayout === "list" ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2";
+    const answerLayout = resolveAnswerLayout(branding.answerLayout, qAnswerLayoutOverride);
+    const mcGridClass = answerGridClass(answerLayout, q.options.length);
+    const imgGridClass = answerImageGridClass(answerLayout);
     const qType: QuestionType = (q.question_type as QuestionType) ?? "multiple_choice";
     const currentAnswer = answers[currentQ];
     const isOptional = ((q.config ?? {}) as Record<string, unknown>).optional === true;
