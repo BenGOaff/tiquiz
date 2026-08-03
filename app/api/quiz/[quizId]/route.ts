@@ -17,6 +17,7 @@ import { computeLockedLeadIds, redactLockedLead, type LeadLike } from "@/lib/lea
 import { isPaidPlan } from "@/lib/planLimits";
 import { fetchAllRows } from "@/lib/db/fetchAllRows";
 import { normalizeScoringAxes, scoreDisplayMode } from "@/lib/quizScoring";
+import { classifyDeleteError, deleteRefusalReason, deleteRefusalStatus } from "@/lib/quizDelete";
 
 const RICH_TEXT_FIELDS = ["introduction"] as const;
 
@@ -890,8 +891,41 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
       .eq("id", quizId)
       .eq("user_id", auth.userId);
 
-    if (error) {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+    // Un refus n'est pas une panne. Cf. lib/quizDelete.ts : un quiz
+    // reutilise comme question dans une video interactive est retenu par
+    // la cle etrangere `popquiz_cues.quiz_id` (ON DELETE RESTRICT), et le
+    // client doit pouvoir DIRE laquelle plutot que d'afficher un echec nu.
+    const refusal = classifyDeleteError(error);
+    if (refusal.kind !== "ok") {
+      let usedBy: string[] = [];
+      if (refusal.kind === "used_by_popquiz") {
+        // Le nom des videos qui retiennent le quiz : sans lui, on renvoie
+        // l'utilisatrice chercher elle-meme parmi tous ses projets.
+        const { data: cues } = await supabase
+          .from("popquiz_cues")
+          .select("popquizzes(title)")
+          .eq("quiz_id", quizId);
+        usedBy = Array.from(
+          new Set(
+            (cues ?? [])
+              .map((row) => {
+                const pq = (row as { popquizzes?: { title?: string | null } | { title?: string | null }[] }).popquizzes;
+                const one = Array.isArray(pq) ? pq[0] : pq;
+                return (one?.title ?? "").trim();
+              })
+              .filter(Boolean),
+          ),
+        );
+      }
+      return NextResponse.json(
+        {
+          ok: false,
+          reason: deleteRefusalReason(refusal),
+          usedBy,
+          error: refusal.kind === "failed" ? refusal.detail : undefined,
+        },
+        { status: deleteRefusalStatus(refusal) },
+      );
     }
 
     return NextResponse.json({ ok: true });
