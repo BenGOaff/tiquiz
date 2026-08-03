@@ -10,6 +10,7 @@ import QuizJsonLd from "@/components/quiz/QuizJsonLd";
 import { TrackingPixels } from "@/components/tracking/TrackingPixels";
 import { resolveEffectivePixels } from "@/lib/effectivePixels";
 import { stripHtml } from "@/lib/richText";
+import { toShareLine } from "@/lib/quiz/shareText";
 import { interpolateText } from "@/lib/quizPersonalization";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 
@@ -114,7 +115,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     // quand meme (retour Jocelyne 28 juillet 2026), le message de partage
     // sert de description d'apercu par defaut ; une description OG
     // explicite garde la priorite.
-    const shareMsgPlain = stripHtml((data as { share_message?: string | null }).share_message);
+    const shareMsgPlain = toShareLine((data as { share_message?: string | null }).share_message);
     const introPlain = stripHtml(data.introduction);
     const rawDesc = ogDescRaw || shareMsgPlain || introPlain.slice(0, 160);
     const description = rawDesc.trim() || undefined;

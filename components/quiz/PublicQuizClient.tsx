@@ -41,6 +41,7 @@ import {
   type AxisScore,
 } from "@/lib/quizScoring";
 import { resolveShareNetworks } from "@/lib/quiz/shareNetworks";
+import { buildShareText, cleanShareUrl } from "@/lib/quiz/shareText";
 import { ensureExternalUrl } from "@/lib/url";
 import { celebrate } from "@/lib/celebrate";
 import { generateResultCard } from "@/lib/resultCard";
@@ -2575,11 +2576,30 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
 
   // urlOverride : l'ecran de resultat partage l'URL ?rp= (qui met en
   // avant le profil obtenu), pas l'URL du quiz.
+  //
+  // TEXTE BRUT, TOUJOURS (drame Bene, 3 aout 2026). `share_message` et
+  // `title` sont des champs RICHES : passes tels quels, le visiteur
+  // collait `<div class="rt-field-fs" ...>` et des `&nbsp;` dans son
+  // post. La conversion vit dans lib/quiz/shareText.ts, la MEME fonction
+  // que les metadonnees `og:`, sinon les deux moities repartent chacune
+  // de leur cote (c'est precisement ce qui s'est passe : le serveur
+  // strippait depuis mai, le viewer non).
+  //
+  // `interp` d'abord : sans lui, un `{prenom}` partirait tel quel dans
+  // le tweet.
   const getShareData = (urlOverride?: string) => {
-    const shareText =
-      quiz?.share_message || t.defaultShareMessage(quiz?.title ?? "");
-    const shareUrl =
-      urlOverride || (typeof window !== "undefined" ? window.location.href : "");
+    const shareText = buildShareText(
+      interp(quiz?.share_message),
+      interp(quiz?.title),
+      t.defaultShareMessage,
+    );
+    // L'URL AUSSI est nettoyee. Une visiteuse arrivee par une pub
+    // Instagram a un `window.location.href` charge de `utm_*` et de
+    // `fbclid` : recopie tel quel, le lien partage faisait cinq lignes
+    // et attribuait les nouveaux visiteurs a la campagne du precedent.
+    const shareUrl = cleanShareUrl(
+      urlOverride || (typeof window !== "undefined" ? window.location.href : ""),
+    );
     return { shareText, shareUrl };
   };
 
