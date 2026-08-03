@@ -7,13 +7,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { randomSecret, hashSecret } from "@/lib/partner/tokens";
+import { atelierConnectCallback } from "@/lib/partner/atelierUrl";
 
 export const dynamic = "force-dynamic";
 
-const CALLBACK = (
-  process.env.FORMAQUIZ_CONNECT_CALLBACK ??
-  "https://formaquiz.tipote.com/api/integrations/tiquiz/callback"
-).trim();
+// Le domaine vit dans lib/partner/atelierUrl.ts, jamais ici : cette URL
+// pointait encore sur formaquiz.tipote.com, mort depuis le rebrand du 18
+// juin, donc le retour du consentement tombait sur un 404 (Bene, 3 aout).
 
 export async function POST(req: NextRequest) {
   const supabase = await getSupabaseServerClient();
@@ -35,6 +35,6 @@ export async function POST(req: NextRequest) {
   });
   if (error) return NextResponse.json({ ok: false, reason: "db" }, { status: 500 });
 
-  const redirect = `${CALLBACK}?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
+  const redirect = `${atelierConnectCallback()}?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
   return NextResponse.json({ ok: true, redirect });
 }
