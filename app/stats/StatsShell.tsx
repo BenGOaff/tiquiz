@@ -428,7 +428,7 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
               <h2 className="text-base font-semibold text-foreground">
-                {t("perQuiz.title")} <span className="text-muted-foreground font-normal text-sm">— {t(`ranges.${range}`)}</span>
+                {t("perQuiz.title")} <span className="text-muted-foreground font-normal text-sm">{t(`ranges.${range}`)}</span>
               </h2>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

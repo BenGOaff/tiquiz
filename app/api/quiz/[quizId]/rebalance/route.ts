@@ -107,7 +107,7 @@ export async function POST(
   });
   if (!rl.ok) {
     return NextResponse.json(
-      { ok: false, error: "RATE_LIMITED", message: `Trop de demandes de rééquilibrage — réessaie dans ${rl.retryAfterSec}s.`, retry_after_sec: rl.retryAfterSec },
+      { ok: false, error: "RATE_LIMITED", message: `Trop de demandes de rééquilibrage, réessaie dans ${rl.retryAfterSec}s.`, retry_after_sec: rl.retryAfterSec },
       { status: 429, headers: { "Retry-After": String(rl.retryAfterSec) } },
     );
   }
@@ -239,8 +239,8 @@ export async function POST(
   const targetTitle = resultsJson[targetResultIndex]?.title || `Résultat ${targetResultIndex + 1}`;
 
   const systemPrompt = isFr
-    ? `Tu es un expert en design de quiz de personnalité. Ton rôle : rendre atteignable un résultat sous-représenté d'un quiz EXISTANT, SANS modifier le texte des questions, des options ou des résultats existants. Deux leviers, dans cet ordre : (1) réassigner le "result_index" des options qui correspondent SÉMANTIQUEMENT le mieux au résultat cible ; (2) quand une question offre moins de réponses qu'il n'y a de profils, AJOUTER la réponse qui manque au profil cible, rédigée dans la langue, le ton et la forme d'adresse du quiz. Garde un équilibre raisonnable pour les autres résultats — chaque résultat doit avoir au moins ${expected} questions qui mènent à lui.`
-    : `You are a personality-quiz design expert. Your job: make an under-represented result reachable on an EXISTING quiz, WITHOUT rewriting any existing question, option, or result text. Two levers, in this order: (1) reassign the "result_index" of the options that semantically fit the target result best; (2) when a question offers fewer answers than there are profiles, ADD the answer the target profile is missing, written in the quiz's language, tone and address form. Keep a reasonable balance across all results — every result should have at least ${expected} questions leading to it.`;
+    ? `Tu es un expert en design de quiz de personnalité. Ton rôle : rendre atteignable un résultat sous-représenté d'un quiz EXISTANT, SANS modifier le texte des questions, des options ou des résultats existants. Deux leviers, dans cet ordre : (1) réassigner le "result_index" des options qui correspondent SÉMANTIQUEMENT le mieux au résultat cible ; (2) quand une question offre moins de réponses qu'il n'y a de profils, AJOUTER la réponse qui manque au profil cible, rédigée dans la langue, le ton et la forme d'adresse du quiz. Garde un équilibre raisonnable pour les autres résultats : chaque résultat doit avoir au moins ${expected} questions qui mènent à lui.`
+    : `You are a personality-quiz design expert. Your job: make an under-represented result reachable on an EXISTING quiz, WITHOUT rewriting any existing question, option, or result text. Two levers, in this order: (1) reassign the "result_index" of the options that semantically fit the target result best; (2) when a question offers fewer answers than there are profiles, ADD the answer the target profile is missing, written in the quiz's language, tone and address form. Keep a reasonable balance across all results: every result should have at least ${expected} questions leading to it.`;
 
   const userPrompt = isFr
     ? `Quiz actuel (${N} questions, ${R} résultats) :
