@@ -1553,7 +1553,15 @@
     "optionShowResultBridgeHint": "الكتلة التي تربط النتيجة بعرضك، قبل الزر مباشرة.",
     "previewResultBridgeDefault": "والآن",
     "previewResultBridgeHeadingPh": "عنوان الجسر",
-    "previewResultBridgePh": "ما الذي يتغيّر لديه فعلياً إن تابع."
+    "previewResultBridgePh": "ما الذي يتغيّر لديه فعلياً إن تابع.",
+    "designLogoAlignLabel": "موضع الشعار",
+    "designLogoAlign_auto": "مثل العنوان",
+    "designLogoAlign_left": "يسار",
+    "designLogoAlign_center": "وسط",
+    "designLogoAlign_right": "يمين",
+    "designLogoSizeLabel": "الحجم",
+    "designLogoSizeAuto": "تلقائي",
+    "introWidthHandleTitle": "اسحب لضبط عرض العنوان والعنوان الفرعي. انقر مرتين للعرض الكامل."
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",

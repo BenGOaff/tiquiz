@@ -60,6 +60,19 @@ import { type TieConflict } from "@/lib/quizTieAnalysis";
 import { analyzeOptionSupply, analyzeResultCoverage, analyzeResultTies, attributionMode } from "@/lib/quizCoherence";
 import { alignBlockMarginClass, alignJustifyClass, alignTextClass, resolveBlockAlign } from "@/lib/quiz/textAlign";
 import { useAtelierStatus } from "@/hooks/useAtelierStatus";
+import { answerGridClass, resolveAnswerLayout } from "@/lib/quiz/answerLayout";
+import {
+  INTRO_WIDTH_MIN,
+  LOGO_WIDTH_MAX,
+  LOGO_WIDTH_MIN,
+  introTextWidthPct,
+  introTextWidthStyle,
+  logoAlignSetting,
+  logoRender,
+  logoWidthPct,
+  resolveLogoAlign,
+  type LogoAlign,
+} from "@/lib/quiz/introLayout";
 import {
   beatShell,
   bridgeTextColor,
@@ -696,6 +709,44 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     window.addEventListener("mousemove", move);
     window.addEventListener("mouseup", up);
   };
+  /**
+   * Curseur de largeur du bloc titre + sous-titre.
+   *
+   * Béné : "le même curseur pour réduire les marges que celui qu'on
+   * utilise pour bouger la largeur des colonnes ce serait super." C'est
+   * donc EXACTEMENT le mécanisme de startSplitDrag, appliqué au bloc
+   * d'accueil : on tire le bord, la largeur suit, le double-clic remet
+   * pleine largeur.
+   *
+   * La poignée est du côté du bord LIBRE : sous un texte aligné à
+   * gauche, on tire le bord droit. Sinon on tirerait le bord qui ne
+   * bouge pas.
+   */
+  const [introDragPct, setIntroDragPct] = useState<number | null>(null);
+  // L'alignement du titre est calcule plus bas (il depend de l'etat) : on
+  // le lit par une ref pour ne pas avoir a remonter tout le bloc.
+  const introAlignRef = useRef<"left" | "center" | "right">("center");
+  const startIntroWidthDrag = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const block = (e.currentTarget as HTMLElement).parentElement;
+    if (!block) return;
+    const rect = block.getBoundingClientRect();
+    const fromRight = introAlignRef.current !== "right";
+    const move = (ev: MouseEvent) => {
+      let pct = ((ev.clientX - rect.left) / rect.width) * 100;
+      if (!fromRight) pct = 100 - pct;
+      const w = Math.round(Math.min(100, Math.max(INTRO_WIDTH_MIN, pct)));
+      setIntroDragPct(w);
+      setIntroTextWidth(w >= 100 ? null : w);
+    };
+    const up = () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+      setIntroDragPct(null);
+    };
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+  };
   const resetSplitWidth = () => {
     setPanelMedia((prev) => {
       if (!prev) return prev;
@@ -772,6 +823,13 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // Si TRUE, masque tout logo sur ce quiz (ni override, ni profil).
   // Sauvegardé dans quizzes.hide_brand_logo. Default FALSE (compat).
   const [hideBrandLogo, setHideBrandLogo] = useState<boolean>(false);
+  // Le logo a sa PROPRE vie (retour Béné 3 août 2026 : "si je centre mon
+  // titre à gauche, il centre aussi le logo"). "auto" = suit le titre,
+  // donc c'est le défaut, donc aucun quiz existant ne bouge.
+  const [brandLogoAlign, setBrandLogoAlign] = useState<LogoAlign>("auto");
+  const [brandLogoWidth, setBrandLogoWidth] = useState<number | null>(null);
+  // Largeur du bloc titre + sous-titre. null = pleine largeur.
+  const [introTextWidth, setIntroTextWidth] = useState<number | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bonusImageInputRef = useRef<HTMLInputElement>(null);
@@ -910,6 +968,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     result_bridge_heading: resultBridgeHeading,
     show_result_bridge: showResultBridge,
     result_layout: resultLayout,
+    brand_logo_align: brandLogoAlign,
+    brand_logo_width: brandLogoWidth,
+    intro_text_width: introTextWidth,
     result_projection_heading: resultProjectionHeading,
     capture_enabled: captureEnabled,
     capture_first_name: captureFirstName,
@@ -991,6 +1052,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
     captureHeading, captureSubtitle, captureSubmitText, resultInsightHeading, resultProjectionHeading,
     resultBridgeHeading, showResultBridge, resultLayout,
+    brandLogoAlign, brandLogoWidth, introTextWidth,
     captureEnabled, captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
     showConsentCheckbox, showResultsBreakdown, hideResponseCounts, notifyResponses, showOtherResults,
@@ -1035,6 +1097,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     if (typeof s.result_bridge_heading === "string") setResultBridgeHeading(s.result_bridge_heading);
     if (typeof s.show_result_bridge === "boolean") setShowResultBridge(s.show_result_bridge);
     if (typeof s.result_layout === "string") setResultLayout(resultLayoutMode(s.result_layout));
+    if (typeof s.brand_logo_align === "string") setBrandLogoAlign(logoAlignSetting(s.brand_logo_align));
+    setBrandLogoWidth(logoWidthPct(s.brand_logo_width));
+    setIntroTextWidth(introTextWidthPct(s.intro_text_width));
     if (typeof s.result_projection_heading === "string") setResultProjectionHeading(s.result_projection_heading);
     if (typeof s.capture_enabled === "boolean") setCaptureEnabled(s.capture_enabled);
     if (typeof s.capture_first_name === "boolean") setCaptureFirstName(s.capture_first_name);
@@ -1194,6 +1259,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setResultBridgeHeading(q.result_bridge_heading ?? "");
       setShowResultBridge((q as { show_result_bridge?: boolean | null }).show_result_bridge !== false);
       setResultLayout(resultLayoutMode((q as { result_layout?: string | null }).result_layout));
+      setBrandLogoAlign(logoAlignSetting((q as { brand_logo_align?: string | null }).brand_logo_align));
+      setBrandLogoWidth(logoWidthPct((q as { brand_logo_width?: number | null }).brand_logo_width));
+      setIntroTextWidth(introTextWidthPct((q as { intro_text_width?: number | null }).intro_text_width));
       setCaptureEnabled((q as { capture_enabled?: boolean | null }).capture_enabled !== false);
       setCaptureFirstName(q.capture_first_name ?? false); setCaptureLastName(q.capture_last_name ?? false);
       setShowConsentCheckbox((q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false);
@@ -1326,6 +1394,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           result_bridge_heading: q.result_bridge_heading ?? "",
           show_result_bridge: (q as { show_result_bridge?: boolean | null }).show_result_bridge !== false,
           result_layout: resultLayoutMode((q as { result_layout?: string | null }).result_layout),
+          brand_logo_align: logoAlignSetting((q as { brand_logo_align?: string | null }).brand_logo_align),
+          brand_logo_width: logoWidthPct((q as { brand_logo_width?: number | null }).brand_logo_width),
+          intro_text_width: introTextWidthPct((q as { intro_text_width?: number | null }).intro_text_width),
           result_projection_heading: q.result_projection_heading ?? "",
           capture_first_name: q.capture_first_name ?? false,
           capture_last_name: q.capture_last_name ?? false,
@@ -2221,6 +2292,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           result_bridge_heading: resultBridgeHeading.trim() || null,
           show_result_bridge: showResultBridge,
           result_layout: resultLayout,
+          brand_logo_align: brandLogoAlign,
+          brand_logo_width: brandLogoWidth,
+          intro_text_width: introTextWidth,
           result_projection_heading: resultProjectionHeading.trim() || null,
           capture_enabled: captureEnabled,
           capture_first_name: captureFirstName, capture_last_name: captureLastName,
@@ -2770,7 +2844,17 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // choix, pas un accident.
   const introBodyAlign = introIsCover ? "center" as const : resolveBlockAlign(introduction, title, questionLayout);
   const introBodyAlignTextClass = alignTextClass(introBodyAlign);
-  const introBodyMarginClass = alignBlockMarginClass(introBodyAlign);
+  // Logo et largeur du bloc : MEMES fonctions que le viewer public.
+  const previewLogo = logoRender(
+    resolveLogoAlign(brandLogoAlign, introAlign),
+    logoWidthPct(brandLogoWidth),
+  );
+  const introTextStyle = introTextWidthStyle(introTextWidthPct(introTextWidth));
+  // Le bloc est positionne par le TITRE, pour le titre ET le sous-titre :
+  // c'est ce qui leur donne le meme bord ("la case du sous titre est plus
+  // courte que celle du titre", Bene 3 aout 2026).
+  const introFieldClass = introTextStyle ? alignBlockMarginClass(introAlign) : "";
+  introAlignRef.current = introAlign;
 
   return (
    <SioTagsProvider quizId={quizId}>
@@ -3438,6 +3522,49 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f, "quiz"); e.target.value = ""; }}
                   />
                   <p className="text-[10px] text-muted-foreground">{t("designLogoShared")}</p>
+
+                  {/* ── LE LOGO A SA PROPRE VIE (retour Béné 3 août 2026) ──
+                      "Si je centre mon titre à gauche, il centre aussi le
+                      logo." Position ET taille, la taille avec le même
+                      curseur que les images et les gifs. "Comme le titre"
+                      reste le défaut : aucun quiz existant ne bouge. */}
+                  {!hideBrandLogo && effectiveLogoUrl && (
+                    <div className="space-y-2 border-t pt-3">
+                      <p className="text-[11px] font-medium">{t("designLogoAlignLabel")}</p>
+                      <div className="grid grid-cols-4 gap-1 rounded-lg bg-muted p-1">
+                        {(["auto", "left", "center", "right"] as const).map((val) => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => setBrandLogoAlign(val)}
+                            className={`rounded-md px-1 py-1 text-[11px] font-medium transition-colors ${brandLogoAlign === val ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                          >
+                            {t(`designLogoAlign_${val}`)}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                        <span className="shrink-0">{t("designLogoSizeLabel")}</span>
+                        <input
+                          type="range"
+                          min={LOGO_WIDTH_MIN}
+                          max={LOGO_WIDTH_MAX}
+                          step={5}
+                          value={brandLogoWidth ?? LOGO_WIDTH_MAX}
+                          onChange={(e) => {
+                            const v = Number(e.target.value);
+                            // Au maximum, on repasse a NULL : la taille
+                            // historique, pas un 100% ecrit en base.
+                            setBrandLogoWidth(v >= LOGO_WIDTH_MAX ? null : v);
+                          }}
+                          className="flex-1 cursor-pointer accent-primary"
+                        />
+                        <span className="w-9 text-right tabular-nums">
+                          {brandLogoWidth == null ? t("designLogoSizeAuto") : `${brandLogoWidth}%`}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 {/* ── Enregistrer ce design comme modele par defaut du projet ── */}
                 {!isEmbed && (
@@ -4159,9 +4286,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                   )}
 
                   {effectiveLogoUrl && (
-                    <div className={`flex ${introJustifyClass}`}>
+                    <div className={previewLogo.wrapperClass}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={effectiveLogoUrl} alt="" className="max-h-16 w-auto object-contain" />
+                      <img src={effectiveLogoUrl} alt="" className={previewLogo.imgClass} style={previewLogo.imgStyle} />
                     </div>
                   )}
 
@@ -4178,7 +4305,27 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       onDrop={() => { setIntroImagePosition("top"); setDraggingIntroImage(false); }} />
                   )}
 
-                  <RichTextEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} onImageUpload={handleRichTextImageUpload} className="tiquiz-quiz-title font-bold leading-tight" placeholder={t("previewTitlePh")} />
+                  {/* Poignée de largeur du bloc d'accueil (demande Béné,
+                      3 août 2026 : "le même curseur que celui qu'on
+                      utilise pour bouger la largeur des colonnes"). Elle
+                      borne le bloc COMMUN titre + sous-titre, jamais un
+                      des deux : c'est ce qui leur garde le même bord.
+                      Double-clic = pleine largeur. */}
+                  <div className={`relative group/introw space-y-8 ${introFieldClass}`} style={introTextStyle}>
+                    <div
+                      onMouseDown={startIntroWidthDrag}
+                      onDoubleClick={() => setIntroTextWidth(null)}
+                      className={`absolute top-0 bottom-0 ${introAlign === "right" ? "-left-2" : "-right-2"} w-2 cursor-col-resize flex items-center justify-center z-10`}
+                      title={t("introWidthHandleTitle")}
+                    >
+                      <div className={`w-1 h-10 rounded-full transition-colors ${introDragPct != null ? "bg-primary" : "bg-transparent group-hover/introw:bg-primary/40"}`} />
+                      {introDragPct != null && (
+                        <span className={`absolute top-1/2 -translate-y-1/2 ${introAlign === "right" ? "right-3" : "left-3"} text-[11px] font-semibold tabular-nums bg-primary text-white rounded px-1.5 py-0.5 shadow`}>
+                          {introDragPct}%
+                        </span>
+                      )}
+                    </div>
+                    <RichTextEdit value={title} onChange={setTitle} onAIRewrite={aiRewriteTitle} onImageUpload={handleRichTextImageUpload} className="tiquiz-quiz-title font-bold leading-tight" placeholder={t("previewTitlePh")} />
 
                   {/* slot AFTER_TITLE — entre titre et intro text */}
                   {introLayout !== "cover" && introImageUrl && introImagePosition === "after_title" && (
@@ -4193,14 +4340,17 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       onDrop={() => { setIntroImagePosition("after_title"); setDraggingIntroImage(false); }} />
                   )}
 
-                  {/* `max-w-xl` borne la LONGUEUR DE LIGNE (lisibilite) et
-                      n'a jamais pose de probleme. C'est le `mx-auto` qui
-                      etait ecrit a cote qui centrait le bloc quoi qu'il
-                      arrive, y compris sous un titre cale a gauche : d'ou
-                      le sous-titre decale vers la droite. La marge vient
-                      maintenant de lib/quiz/textAlign.ts, la MEME fonction
-                      que le viewer, sinon l'apercu ment. */}
-                  <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} onImageUpload={handleRichTextImageUpload} className={`text-lg text-muted-foreground leading-relaxed max-w-xl ${introBodyMarginClass} ${introBodyAlignTextClass}`} placeholder={t("previewIntroPh")} />
+                  {/* Le sous-titre n'a PLUS de borne propre (retour Bene
+                      3 aout 2026 : "pourquoi la case du sous titre est
+                      plus courte que celle du titre ?"). Il portait un
+                      `max-w-xl` en dur sous un conteneur `max-w-2xl` :
+                      36rem contre 42rem, invisible tant que tout etait
+                      centre, flagrant des l'alignement a gauche. La
+                      largeur vit maintenant sur le bloc COMMUN, reglable
+                      a la poignee, donc les deux champs partagent leurs
+                      bords par construction. */}
+                    <RichTextEdit value={introduction} onChange={setIntroduction} onAIRewrite={aiRewriteIntro} onImageUpload={handleRichTextImageUpload} className={`text-lg text-muted-foreground leading-relaxed ${introBodyAlignTextClass}`} placeholder={t("previewIntroPh")} />
+                  </div>
 
                   {/* slot AFTER_INTRO — entre intro text et bouton */}
                   {introLayout !== "cover" && introImageUrl && introImagePosition === "after_intro" && (
@@ -4581,7 +4731,17 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                             <p className="text-xs text-muted-foreground mt-0.5">{t("multiSelectHint")}</p>
                           </label>
                         </div>
-                        <div className={`grid gap-3 ${q.options.length >= 3 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}>
+                        {/* LISTE / COLONNES : la MÊME fonction que le
+                            viewer (retour Béné 3 août 2026 : "j'ai choisi
+                            liste et je vois toujours mes colonnes").
+                            Avant, cette ligne comptait les options
+                            elle-même et ignorait complètement le réglage,
+                            donc le cocher ne pouvait rien changer. */}
+                        <div className={`grid gap-3 ${answerGridClass(
+                          resolveAnswerLayout(answerLayout, (q.config ?? {}).answer_layout),
+                          q.options.length,
+                          { stacked: device === "mobile" },
+                        )}`}>
                           {q.options.map((opt, oi) => (
                             <div key={oi} className="relative p-5 rounded-xl border-2 border-border hover:border-primary/30 transition-all group">
                               {/* Image facultative pour gamifier la réponse (Hugo,

@@ -1553,7 +1553,15 @@
     "optionShowResultBridgeHint": "The block linking the result to your offer, right before the button.",
     "previewResultBridgeDefault": "What now",
     "previewResultBridgeHeadingPh": "Bridge heading",
-    "previewResultBridgePh": "What it concretely changes for them if they take the next step."
+    "previewResultBridgePh": "What it concretely changes for them if they take the next step.",
+    "designLogoAlignLabel": "Logo position",
+    "designLogoAlign_auto": "Same as title",
+    "designLogoAlign_left": "Left",
+    "designLogoAlign_center": "Centre",
+    "designLogoAlign_right": "Right",
+    "designLogoSizeLabel": "Size",
+    "designLogoSizeAuto": "Auto",
+    "introWidthHandleTitle": "Drag to set the width of the title and subtitle. Double-click for full width."
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",
