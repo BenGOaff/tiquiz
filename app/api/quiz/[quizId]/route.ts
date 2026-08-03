@@ -216,7 +216,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "intro_layout", "button_shape", "theme_id",
       "question_layout", "split_image_url", "split_side", "panel_media",
       "answer_layout", "show_result_insight", "show_result_projection", "show_result_bridge", "show_result_share",
-      "result_layout",
+      "result_layout", "tie_break",
       // Logo independant du titre + largeur du bloc d'accueil (3 aout 2026).
       "brand_logo_align", "brand_logo_width", "intro_text_width",
       "close_enabled", "close_action", "close_redirect_url", "close_message",
@@ -432,7 +432,20 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     // par la forme de leur valeur (cf. lib/frenchTypography.ts).
     Object.assign(patch, applyFrenchTypographyDeep(patch, effectiveLocale));
 
-    const { error } = await supabase.from("quizzes").update(patch).eq("id", quizId);
+    let { error } = await supabase.from("quizzes").update(patch).eq("id", quizId);
+    // UNE COLONNE PAS ENCORE MIGREE NE DOIT PAS EMPECHER D'ENREGISTRER.
+    //
+    // PostgREST refuse tout l'UPDATE quand une seule colonne lui est
+    // inconnue. Sans ce repli, deployer le code avant de passer le SQL
+    // rendrait la sauvegarde impossible sur TOUS les quiz, et la
+    // creatrice perdrait son travail en cours sans comprendre pourquoi.
+    // On retire la colonne du jour et on rejoue : tout le reste est
+    // enregistre, seul le nouveau reglage attend sa migration.
+    if (error && "tie_break" in patch) {
+      console.error("[quiz PATCH] update refuse, repli sans tie_break :", error.message);
+      const { tie_break: _pending, ...rest } = patch as Record<string, unknown>;
+      ({ error } = await supabase.from("quizzes").update(rest).eq("id", quizId));
+    }
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }

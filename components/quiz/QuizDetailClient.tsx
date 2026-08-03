@@ -57,6 +57,7 @@ import { QrCodeCard } from "@/components/share/QrCodeCard";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { interpolateText, extractResultLabel } from "@/lib/quizPersonalization";
 import { type TieConflict } from "@/lib/quizTieAnalysis";
+import { tieBreakMode } from "@/lib/quiz/profileWinner";
 import { analyzeOptionSupply, analyzeResultCoverage, analyzeResultTies, attributionMode } from "@/lib/quizCoherence";
 import { alignBlockMarginClass, alignJustifyClass, alignTextClass, resolveBlockAlign } from "@/lib/quiz/textAlign";
 import { useAtelierStatus } from "@/hooks/useAtelierStatus";
@@ -583,6 +584,12 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const [resultBridgeHeading, setResultBridgeHeading] = useState("");
   const [showResultBridge, setShowResultBridge] = useState(true);
   const [resultLayout, setResultLayout] = useState<"classic" | "beats">("classic");
+  // DEPARTAGE DES EGALITES (retour Bene, 3 aout 2026 : "le scoring par
+  // profil me parait assez aleatoire"). "first" = l'ordre des profils,
+  // le comportement historique ; "answers" = a partir des reponses du
+  // visiteur. La colonne porte la garantie que rien ne bouge sur les
+  // quiz existants, exactement comme result_layout ci-dessus.
+  const [tieBreak, setTieBreak] = useState<"first" | "answers">("first");
   // null tant qu'on ne sait pas : on n'affiche RIEN plutôt que de
   // proposer un coach auquel elle n'a pas accès (règle du 2 août 2026).
   const hasAtelier = useAtelierStatus();
@@ -987,6 +994,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     result_bridge_heading: resultBridgeHeading,
     show_result_bridge: showResultBridge,
     result_layout: resultLayout,
+    tie_break: tieBreak,
     brand_logo_align: brandLogoAlign,
     brand_logo_width: brandLogoWidth,
     intro_text_width: introTextWidth,
@@ -1070,7 +1078,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   }), [
     title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
     captureHeading, captureSubtitle, captureSubmitText, resultInsightHeading, resultProjectionHeading,
-    resultBridgeHeading, showResultBridge, resultLayout,
+    resultBridgeHeading, showResultBridge, resultLayout, tieBreak,
     brandLogoAlign, brandLogoWidth, introTextWidth,
     captureEnabled, captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
@@ -1116,6 +1124,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     if (typeof s.result_bridge_heading === "string") setResultBridgeHeading(s.result_bridge_heading);
     if (typeof s.show_result_bridge === "boolean") setShowResultBridge(s.show_result_bridge);
     if (typeof s.result_layout === "string") setResultLayout(resultLayoutMode(s.result_layout));
+    if (typeof s.tie_break === "string") setTieBreak(tieBreakMode(s.tie_break));
     if (typeof s.brand_logo_align === "string") setBrandLogoAlign(logoAlignSetting(s.brand_logo_align));
     setBrandLogoWidth(logoWidthPct(s.brand_logo_width));
     setIntroTextWidth(introTextWidthPct(s.intro_text_width));
@@ -1278,6 +1287,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setResultBridgeHeading(q.result_bridge_heading ?? "");
       setShowResultBridge((q as { show_result_bridge?: boolean | null }).show_result_bridge !== false);
       setResultLayout(resultLayoutMode((q as { result_layout?: string | null }).result_layout));
+      setTieBreak(tieBreakMode((q as { tie_break?: string | null }).tie_break));
       setBrandLogoAlign(logoAlignSetting((q as { brand_logo_align?: string | null }).brand_logo_align));
       setBrandLogoWidth(logoWidthPct((q as { brand_logo_width?: number | null }).brand_logo_width));
       setIntroTextWidth(introTextWidthPct((q as { intro_text_width?: number | null }).intro_text_width));
@@ -1794,8 +1804,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   );
 
   const tieAnalysis = useMemo(
-    () => analyzeResultTies(coherenceMode, coherenceQuestions, editResults.length),
-    [coherenceMode, coherenceQuestions, editResults.length],
+    () => analyzeResultTies(coherenceMode, coherenceQuestions, editResults.length, tieBreak),
+    [coherenceMode, coherenceQuestions, editResults.length, tieBreak],
   );
 
   // Couverture des tranches (mode scoring, Véronique juillet 2026) :
@@ -2311,6 +2321,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           result_bridge_heading: resultBridgeHeading.trim() || null,
           show_result_bridge: showResultBridge,
           result_layout: resultLayout,
+    tie_break: tieBreak,
           brand_logo_align: brandLogoAlign,
           brand_logo_width: brandLogoWidth,
           intro_text_width: introTextWidth,
@@ -5233,14 +5244,36 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 </div>
               )}
 
-              {/* Phrase d'arbitrage TOUJOURS visible (expert 30 juil
-                  2026) : le tiebreak existe et est déterministe, mais
-                  personne ne le sait. Une ligne discrète, pas un banner. */}
+              {/* COMMENT ON DEPARTAGE UNE EGALITE. La regle existe et est
+                  deterministe, mais personne ne la connait : on la dit, et
+                  on rend la BONNE reglable.
+
+                  Le mode "first" (l'ordre des profils) est le comportement
+                  historique : il reste par defaut sur tous les quiz deja
+                  crees, et la bascule est un bouton, jamais un effet de
+                  bord d'une sauvegarde. Retour Bene, 3 aout 2026 : "sans
+                  toucher aux scoring des quiz existants OU alors en
+                  proposant de realigner ca". */}
               {!isScoring && editResults.length > 1 && (
                 <div className="px-6 sm:px-12">
-                  <p className="max-w-2xl mx-auto text-[11px] text-muted-foreground mt-2 mb-1 leading-snug">
-                    {t("tieOrderHint")}
-                  </p>
+                  <div className="max-w-2xl mx-auto rounded-xl border bg-muted/30 px-4 py-3 my-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium">
+                        {t(tieBreak === "answers" ? "tieBreakAnswersTitle" : "tieBreakFirstTitle")}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                        {t(tieBreak === "answers" ? "tieBreakAnswersHelp" : "tieBreakFirstHelp")}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={tieBreak === "answers" ? "outline" : "default"}
+                      onClick={() => setTieBreak(tieBreak === "answers" ? "first" : "answers")}
+                    >
+                      {t(tieBreak === "answers" ? "tieBreakRevert" : "tieBreakSwitch")}
+                    </Button>
+                  </div>
                 </div>
               )}
 
