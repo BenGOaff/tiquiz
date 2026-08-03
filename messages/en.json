@@ -1561,7 +1561,12 @@
     "designLogoAlign_right": "Right",
     "designLogoSizeLabel": "Size",
     "designLogoSizeAuto": "Auto",
-    "introWidthHandleTitle": "Drag to set the width of the title and subtitle. Double-click for full width."
+    "introWidthHandleTitle": "Drag to set the width of the title and subtitle. Double-click for full width.",
+    "beatsHintTitle": "New: your result page in 4 beats",
+    "beatsHintBody": "The mirror, the cause, the path, the bridge. It is the structure taught in the Atelier, and it switches on for this quiz without rewriting anything: your current texts are reused as they are.",
+    "beatsHintEnable": "Turn on for this quiz",
+    "beatsHintDismiss": "No thanks",
+    "beatsHintReversible": "Reversible at any time, and it does not affect your other quizzes."
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",

@@ -1561,7 +1561,12 @@
     "designLogoAlign_right": "Direita",
     "designLogoSizeLabel": "Tamanho",
     "designLogoSizeAuto": "Auto",
-    "introWidthHandleTitle": "Arrasta para ajustar a largura do título e do subtítulo. Duplo clique para largura total."
+    "introWidthHandleTitle": "Arrasta para ajustar a largura do título e do subtítulo. Duplo clique para largura total.",
+    "beatsHintTitle": "Novo: a tua página de resultado em 4 tempos",
+    "beatsHintBody": "O espelho, a causa, o caminho, a ponte. É a estrutura ensinada no Atelier e ativa-se neste quiz sem reescrever nada: os teus textos atuais são reaproveitados tal como estão.",
+    "beatsHintEnable": "Ativar neste quiz",
+    "beatsHintDismiss": "Não, obrigada",
+    "beatsHintReversible": "Reversível a qualquer momento, e sem efeito nos teus outros quizzes."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova palavra-passe",

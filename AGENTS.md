@@ -959,3 +959,37 @@ Pour que ce soit possible, `npm run test:logic` résout maintenant l'alias
 `@/` (`tests/logic/register-alias.mjs`). Sans ça, tout module qui importe
 `@/lib/...` restait hors de portée du runner natif, donc non testé, donc
 exactement là où les bugs s'installent.
+
+## Une nouveauté qu'on ne montre pas n'existe pas (retour Jocelyne 3 août 2026)
+
+"Elle veut profiter des dernières améliorations mais c'est pas possible sur
+un quiz existant. Elle l'a dupliqué pour en profiter, mais ça n'a pas
+marché."
+
+Trois choses vraies dans cette phrase, et une fausse.
+
+**Faux : "c'est pas possible sur un quiz existant".** La page en 4 temps
+s'active sur n'importe quel quiz, l'interrupteur existait déjà. Il vivait
+dans la colonne de réglages, parmi quinze autres, donc personne ne le
+trouvait. Une nouveauté qu'on ne montre pas n'existe pas pour la
+créatrice, et elle finit par bricoler autour.
+
+**Vrai : dupliquer ne pouvait rien donner.** La duplication est FIDÈLE par
+construction (`select("*")` + liste noire de colonnes non copiables dans
+`app/api/quiz/[quizId]/duplicate/route.ts`). Elle copie donc aussi
+`result_layout = 'classic'` et l'absence de pont : la copie reproduit
+exactement la page de l'original. C'est le comportement voulu, pas un bug,
+mais c'est un cul-de-sac pour qui espère "repartir à neuf".
+
+**Corollaire sur la duplication :** elle est à l'épreuve du futur. Toute
+nouvelle colonne de `quizzes`, `quiz_questions` ou `quiz_results` est
+copiée automatiquement. Ne JAMAIS la réécrire en liste blanche : chaque
+colonne oubliée deviendrait une perte silencieuse à la copie.
+
+**Règle : toute fonctionnalité gatée par une colonne à défaut historique
+doit avoir un repère dans l'éditeur.** Ici, un bandeau au dessus des
+profils de résultat, visible uniquement quand `result_layout === 'classic'`,
+avec un bouton qui bascule et une phrase qui dit que c'est réversible et
+sans effet sur les autres quiz. Écarté = mémorisé en `localStorage` par
+quiz (une préférence d'affichage ne mérite ni colonne ni migration), lu
+APRÈS le montage pour ne pas casser l'hydratation.

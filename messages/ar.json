@@ -1561,7 +1561,12 @@
     "designLogoAlign_right": "يمين",
     "designLogoSizeLabel": "الحجم",
     "designLogoSizeAuto": "تلقائي",
-    "introWidthHandleTitle": "اسحب لضبط عرض العنوان والعنوان الفرعي. انقر مرتين للعرض الكامل."
+    "introWidthHandleTitle": "اسحب لضبط عرض العنوان والعنوان الفرعي. انقر مرتين للعرض الكامل.",
+    "beatsHintTitle": "جديد: صفحة النتيجة بأربع مراحل",
+    "beatsHintBody": "المرآة، السبب، الطريق، الجسر. إنها البنية التي تُدرَّس في الورشة، وتُفعَّل على هذا الاختبار دون إعادة كتابة أي شيء: نصوصك الحالية تُستخدم كما هي.",
+    "beatsHintEnable": "تفعيل على هذا الاختبار",
+    "beatsHintDismiss": "لا، شكراً",
+    "beatsHintReversible": "يمكن التراجع في أي وقت، ودون أي أثر على اختباراتك الأخرى."
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",

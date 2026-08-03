@@ -1561,7 +1561,12 @@
     "designLogoAlign_right": "Droite",
     "designLogoSizeLabel": "Taille",
     "designLogoSizeAuto": "Auto",
-    "introWidthHandleTitle": "Tire pour régler la largeur du titre et du sous-titre. Double-clic pour revenir à la pleine largeur."
+    "introWidthHandleTitle": "Tire pour régler la largeur du titre et du sous-titre. Double-clic pour revenir à la pleine largeur.",
+    "beatsHintTitle": "Nouveau : ta page de résultat en 4 temps",
+    "beatsHintBody": "Le miroir, la cause, le chemin, le pont. C'est la structure enseignée dans l'Atelier, et elle s'active sur ce quiz sans rien réécrire : tes textes actuels sont réutilisés tels quels.",
+    "beatsHintEnable": "Activer sur ce quiz",
+    "beatsHintDismiss": "Non merci",
+    "beatsHintReversible": "Réversible à tout moment, et sans effet sur tes autres quiz."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",
