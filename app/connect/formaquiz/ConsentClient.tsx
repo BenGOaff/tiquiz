@@ -31,6 +31,36 @@ export default function ConsentClient({ state, email }: { state: string; email: 
     }
   }
 
+  /**
+   * Changer de compte SANS quitter le parcours.
+   *
+   * On ferme la session Tiquiz et on repart sur l'écran de connexion, avec
+   * le retour vers ce consentement déjà armé et le `state` conservé. Sans
+   * ça, il fallait comprendre tout seul que cet écran lit la session du
+   * navigateur, aller se déconnecter ailleurs, puis revenir. Personne ne
+   * devine ça.
+   */
+  async function switchAccount() {
+    setBusy(true);
+    setError(false);
+    try {
+      const res = await fetch("/api/partner/switch-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state }),
+      });
+      const json = await res.json();
+      if (json?.next) {
+        window.location.href = json.next as string;
+        return;
+      }
+      throw new Error("no next");
+    } catch {
+      setError(true);
+      setBusy(false);
+    }
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 px-4 py-10">
       <div className="w-full max-w-md">
@@ -58,10 +88,14 @@ export default function ConsentClient({ state, email }: { state: string; email: 
                 Tu connectes ce compte Tiquiz
               </span>
               <strong className="break-all text-base">{email}</strong>
-              <span className="text-xs text-muted-foreground">
-                Tes quiz ne sont pas sur ce compte ? Déconnecte-toi de Tiquiz, reconnecte-toi
-                avec la bonne adresse, puis reviens ici.
-              </span>
+              <button
+                type="button"
+                onClick={switchAccount}
+                disabled={busy}
+                className="w-fit text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground disabled:opacity-50"
+              >
+                Tes quiz ne sont pas sur ce compte ? Utiliser une autre adresse
+              </button>
             </div>
 
             <div className="flex items-start gap-2 rounded-lg bg-muted/50 px-4 py-3 text-sm text-muted-foreground">

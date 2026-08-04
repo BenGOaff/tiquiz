@@ -109,3 +109,37 @@ test("le compte autorise est montre, et il est sortable", () => {
   assert.match(src, /Tu connectes ce compte Tiquiz/);
   assert.match(src, /Tes quiz ne sont pas sur ce compte/);
 });
+
+test("changer de compte se fait SANS quitter le parcours", () => {
+  // Avant, il fallait comprendre tout seul que cet écran lit la session du
+  // navigateur, aller se déconnecter de Tiquiz dans un autre onglet, puis
+  // revenir. Jocelyne ne l'a pas deviné, et sa tentative de reconnexion
+  // n'a donc rien changé du tout.
+  const src = readFileSync(
+    new URL("../../app/connect/formaquiz/ConsentClient.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(src, /switch-account/, "un bouton doit mener au changement de compte");
+  assert.match(src, /method: "POST"/, "jamais un GET : une adresse qui déconnecte est déclenchable");
+
+  const route = readFileSync(
+    new URL("../../app/api/partner/switch-account/route.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(route, /signOut/, "la session Tiquiz doit vraiment être fermée");
+  assert.match(route, /connect\/formaquiz\?state=/, "le retour doit ramener au consentement");
+  assert.ok(!/export async function GET/.test(route), "pas de GET sur une route qui déconnecte");
+});
+
+test("le retour du changement de compte n'est jamais fourni par l'appelant", () => {
+  // Une destination reprise depuis la requête serait une redirection
+  // ouverte, donc un moyen de détourner le parcours d'autorisation.
+  const route = readFileSync(
+    new URL("../../app/api/partner/switch-account/route.ts", import.meta.url),
+    "utf8",
+  );
+  assert.ok(
+    !/body\.(redirect|next|url|return)/.test(route),
+    "la destination se construit ici, elle ne se lit pas dans le corps",
+  );
+});
