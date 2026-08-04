@@ -30,6 +30,24 @@
 export const ATELIER_BASE_URL = "https://quizing.tipote.com";
 
 /**
+ * LE NOM DU PRODUIT, TEL QUE L'ÉLÈVE LE CONNAÎT.
+ *
+ * Retour Béné, 4 août 2026 : "la page de connexion demande de valider la
+ * connexion à Formaquiz ??? C'est l'Atelier du Quiz depuis des lustres !"
+ *
+ * "FormaQuiz" est un nom de code interne, encore partout dans le code
+ * (routes, variables d'environnement, colonne `partner`). Ça, ce n'est pas
+ * grave : personne ne le voit. Ce qui l'était, c'est qu'il avait fui dans
+ * l'écran de consentement, c'est à dire sur le SEUL écran où l'élève doit
+ * reconnaître à qui elle donne accès à ses statistiques. Un nom inconnu à
+ * ce moment là, ça ressemble à du hameçonnage.
+ *
+ * Même raison d'être que la constante du dessus : le nom vit ICI, et le
+ * jour où il change, il change à un seul endroit.
+ */
+export const ATELIER_NAME = "L'Atelier du Quiz";
+
+/**
  * URL de retour du consentement, surchargeable par l'environnement.
  *
  * Elle reste FIXE et n'est jamais lue depuis la requête : un `redirect_uri`

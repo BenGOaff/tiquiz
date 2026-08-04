@@ -14,8 +14,9 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
-import { ATELIER_BASE_URL, atelierConnectCallback } from "../../lib/partner/atelierUrl.ts";
+import { ATELIER_BASE_URL, ATELIER_NAME, atelierConnectCallback } from "../../lib/partner/atelierUrl.ts";
 
 const DEAD_HOST = "formaquiz.tipote.com";
 
@@ -57,4 +58,54 @@ test("le retour reste FIXE : il n'est jamais lu depuis la requête", () => {
   // Un redirect_uri fourni par l'appelant serait une redirection ouverte,
   // donc un moyen de détourner un code d'autorisation.
   assert.equal(atelierConnectCallback.length, 0, "la fonction ne doit prendre AUCUN paramètre");
+});
+
+// ── Le NOM du produit, celui que l'élève reconnaît ───────────────────
+//
+// Béné, 4 août 2026 : "la page de connexion demande de valider la
+// connexion à Formaquiz ??? C'est l'Atelier du Quiz depuis des lustres !"
+//
+// Elle a raison, et le pire est l'endroit : l'écran de consentement est
+// le SEUL où l'élève doit reconnaître à qui elle ouvre ses statistiques.
+// Un nom qu'elle n'a jamais vu, à ce moment précis, ressemble à du
+// hameçonnage. Le nom de code interne peut rester partout ailleurs
+// (routes, variables d'environnement, colonne `partner`) : personne ne
+// le voit.
+
+test("le nom du produit est celui de la cliente", () => {
+  assert.equal(ATELIER_NAME, "L'Atelier du Quiz");
+  assert.ok(!/[—–]/.test(ATELIER_NAME));
+});
+
+test("l'ecran de consentement ne dit plus FormaQuiz", () => {
+  const src = readFileSync(
+    new URL("../../app/connect/formaquiz/ConsentClient.tsx", import.meta.url),
+    "utf8",
+  );
+  // On retire les imports et les commentaires : seul compte ce que
+  // l'élève lit à l'écran.
+  const visible = src
+    .replace(/^import .*$/gm, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+
+  assert.ok(
+    !/formaquiz/i.test(visible),
+    "l'ancien nom de code ne doit plus apparaître dans ce qui est rendu",
+  );
+  assert.ok(/ATELIER_NAME/.test(visible), "le nom doit venir de la constante, jamais réécrit");
+});
+
+test("le compte autorise est montre, et il est sortable", () => {
+  // Jocelyne a passé six semaines reliée à un compte vide. L'email était
+  // déjà là, en petit, dans le paragraphe qui rassure sur la
+  // confidentialité : on ne lit pas une adresse quand on cherche à être
+  // rassuré. Il lui faut aussi une porte de sortie, sinon la voir ne sert
+  // à rien.
+  const src = readFileSync(
+    new URL("../../app/connect/formaquiz/ConsentClient.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(src, /Tu connectes ce compte Tiquiz/);
+  assert.match(src, /Tes quiz ne sont pas sur ce compte/);
 });
