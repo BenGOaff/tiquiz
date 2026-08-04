@@ -1578,7 +1578,14 @@
     "beatsHintDismiss": "No thanks",
     "beatsHintReversible": "Reversible at any time, and it does not affect your other quizzes.",
     "previewResultCauseBeatsDefault": "What is really blocking you",
-    "previewResultPathBeatsDefault": "Where to start"
+    "previewResultPathBeatsDefault": "Where to start",
+    "questionAlignHint": "Alignment for this question. \"Same as quiz\" follows the general setting, the other two make an exception here only.",
+    "questionAlignInherit": "Same as quiz",
+    "questionAlignCenter": "Centred",
+    "questionAlignLeft": "Left",
+    "applyLayoutToAll": "Realign everything on this setting",
+    "applyLayoutToAllHint": "Removes per-question exceptions and the alignment applied by hand inside fields. Your setting above takes over everywhere. Bold, colours and sizes stay untouched.",
+    "applyLayoutToAllDone": "Every question now follows your setting. Remember to save."
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",

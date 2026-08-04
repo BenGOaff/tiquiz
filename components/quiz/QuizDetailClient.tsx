@@ -14,7 +14,7 @@ import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
   Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, ImagePlus, Crop, Star, Settings2,
-  Link2, AlertCircle, Wand2 } from "lucide-react";
+  Link2, AlertCircle, Wand2, AlignLeft } from "lucide-react";
 import { GifPickerButton } from "@/components/quiz/GifPicker";
 import { ImageCropDialog } from "@/components/quiz/ImageCropDialog";
 import { TiquizStudioButton } from "@/components/visual-studio/TiquizStudioButton";
@@ -103,6 +103,12 @@ import {
   buildQuizEditorSnapshot,
   draftDiffersFromSaved,
 } from "@/lib/quiz/editorSnapshot";
+import { answerImageRender } from "@/lib/quiz/answerImage";
+import {
+  clearRichTextAlign,
+  questionAlignSetting,
+  resolveQuestionAlign,
+} from "@/lib/quiz/questionLayout";
 
 /** Demo first name used when rendering placeholders in the editor preview, so
  *  the creator sees what a real visitor would see ("Bonjour Alex" rather than
@@ -2695,6 +2701,35 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     setEditQuestions((p) => p.map((q, qi) => (qi === i ? { ...q, config: { ...(q.config ?? {}), ...patch } } : q)));
   const updateR = (i: number, field: string, v: unknown) => setEditResults(p => p.map((r, ri) => ri === i ? { ...r, [field]: v } : r));
 
+  /**
+   * Remet TOUTES les questions sous le réglage global.
+   *
+   * Retour Béné, 4 août 2026 : "tu empiles les trucs, ça devient n'importe
+   * quoi l'éditeur." Le réglage global ne pouvait rien reprendre en main,
+   * parce qu'un alignement écrit dans un champ (un clic sur le bouton
+   * "centrer" de la barre d'outils) gagne pour toujours contre lui. Une
+   * créatrice qui a aligné ses champs un par un, comme Jocelyne, n'avait
+   * aucun moyen de revenir en arrière autrement qu'en les reprenant tous.
+   *
+   * Deux étages sont donc remis à zéro : les exceptions par question, et
+   * les alignements écrits dans les champs (énoncé + réponses). Le reste
+   * de la mise en forme (gras, couleur, taille) est conservé.
+   */
+  const applyLayoutToAllQuestions = useCallback(() => {
+    setEditQuestions((prev) =>
+      prev.map((q) => {
+        const { align: _a, answer_layout: _l, ...restCfg } = (q.config ?? {}) as Record<string, unknown>;
+        return {
+          ...q,
+          question_text: clearRichTextAlign(q.question_text),
+          options: q.options.map((o) => ({ ...o, text: clearRichTextAlign(o.text) })),
+          config: restCfg,
+        };
+      }),
+    );
+    toast.success(t("applyLayoutToAllDone"));
+  }, [t]);
+
   // Combien de profils n'ont pas encore de PONT. Sert au bouton qui les
   // fait écrire : sur un quiz d'avant le 3 août 2026, ils sont tous
   // vides, et laisser la créatrice devant quatre champs blancs serait
@@ -3414,6 +3449,28 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     ))}
                   </div>
                   <p className="text-[10px] text-muted-foreground">{t("designAnswerLayoutHint")}</p>
+                </div>
+
+                {/* ── Tout réaligner ──
+                    Poser une exception est facile, la retirer doit l'être
+                    autant. Sans ce bouton, un quiz dont on a aligné les
+                    champs un par un (le cas de Jocelyne) ne peut plus JAMAIS
+                    obéir au réglage global : l'alignement écrit dans un champ
+                    gagne pour toujours. Le bouton retire les exceptions des
+                    questions ET les alignements posés à la main dans les
+                    champs, donc le réglage ci-dessus reprend la main partout. */}
+                <div className="space-y-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={applyLayoutToAllQuestions}
+                  >
+                    <AlignLeft className="size-3.5" />
+                    {t("applyLayoutToAll")}
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground">{t("applyLayoutToAllHint")}</p>
                 </div>
 
                 {/* ── Forme des boutons ── */}
@@ -4473,7 +4530,11 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 // garde le bloc centré (items-center) avec texte à gauche, donc
                 // jamais de demi-écran vide.
                 const previewSplit = questionLayout === "split";
-                const previewAlignText = questionLayout === "centered" ? "text-center" : "text-left";
+                // MÊME fonction que le viewer : l'aperçu qui recalcule une
+                // décision finit toujours par mentir (AGENTS.md, cinq fois).
+                const previewAlignText = alignTextClass(
+                  resolveQuestionAlign((q.config ?? {}).align, questionLayout),
+                );
                 return (
                   <div key={qi} ref={el => { questionRefs.current[qi] = el; }} className="min-h-screen flex flex-col px-6 sm:px-12 py-8">
                     {/* Progress bar */}
@@ -4552,6 +4613,21 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                                 cette question. Stocké dans config.answer_layout.
                                 Pertinent uniquement pour les types à réponses
                                 multiples (choix simple, choix image). */}
+                            {/* Alignement PAR QUESTION (retour Béné, 4 août
+                                2026 : "une question centrée, la suivante
+                                alignée à gauche"). "Comme le quiz" = on ne se
+                                prononce pas, donc rien ne bouge sur les quiz
+                                existants. Cf. lib/quiz/questionLayout.ts. */}
+                            <select
+                              value={questionAlignSetting(cfg.align)}
+                              onChange={(e) => updateQuestionConfig(qi, { align: e.target.value })}
+                              className="text-xs border rounded-lg px-2 py-1 bg-background font-medium cursor-pointer"
+                              title={t("questionAlignHint")}
+                            >
+                              <option value="inherit">{t("questionAlignInherit")}</option>
+                              <option value="center">{t("questionAlignCenter")}</option>
+                              <option value="left">{t("questionAlignLeft")}</option>
+                            </select>
                             {(qType === "multiple_choice" || qType === "image_choice") && (
                               <select
                                 value={cfg.answer_layout === "grid" || cfg.answer_layout === "list" ? cfg.answer_layout : "auto"}
@@ -4818,7 +4894,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                               {opt.image_url ? (
                                 <div className="relative mb-3 rounded-lg overflow-hidden border border-border bg-muted/30">
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src={opt.image_url} alt={stripHtml(opt.text)} className="w-full aspect-video object-cover" />
+                                  <img src={opt.image_url} alt={stripHtml(opt.text)} {...answerImageRender(opt.image_width)} />
                                   <button
                                     type="button"
                                     onClick={() => clearOptionImage(qi, oi)}

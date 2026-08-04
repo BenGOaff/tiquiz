@@ -1578,7 +1578,14 @@
     "beatsHintDismiss": "No, gracias",
     "beatsHintReversible": "Reversible en cualquier momento, y sin efecto en tus otros quizzes.",
     "previewResultCauseBeatsDefault": "Lo que de verdad te bloquea",
-    "previewResultPathBeatsDefault": "Por dónde empezar"
+    "previewResultPathBeatsDefault": "Por dónde empezar",
+    "questionAlignHint": "Alineación de esta pregunta. \"Como el quiz\" sigue el ajuste general, las otras dos hacen una excepción solo aquí.",
+    "questionAlignInherit": "Como el quiz",
+    "questionAlignCenter": "Centrado",
+    "questionAlignLeft": "A la izquierda",
+    "applyLayoutToAll": "Realinear todo con este ajuste",
+    "applyLayoutToAllHint": "Quita las excepciones de las preguntas y las alineaciones aplicadas a mano en los campos. Tu ajuste de arriba manda en todas partes. La negrita, los colores y los tamaños no cambian.",
+    "applyLayoutToAllDone": "Todas las preguntas siguen tu ajuste. Acuérdate de guardar."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nueva contraseña",

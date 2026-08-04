@@ -57,6 +57,7 @@ import {
   buildSurveyEditorSnapshot,
   draftDiffersFromSaved,
 } from "@/lib/quiz/editorSnapshot";
+import { answerImageRender } from "@/lib/quiz/answerImage";
 import { stripHtml } from "@/lib/richText";
 import { alignBlockMarginClass, alignJustifyClass, alignTextClass, resolveBlockAlign } from "@/lib/quiz/textAlign";
 import { isPixelFieldValid } from "@/lib/clientPixels";
@@ -2285,9 +2286,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                                       Supabase Storage bucket public-assets, max 10 Mo,
                                       formats image/* incluant GIF. */}
                                   {opt.image_url ? (
-                                    <div className="relative aspect-video bg-muted/30">
+                                    <div className="relative bg-muted/30">
                                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                                      <img src={opt.image_url} alt={stripHtml(opt.text)} className="w-full h-full object-cover" />
+                                      <img src={opt.image_url} alt={stripHtml(opt.text)} {...answerImageRender(opt.image_width)} />
                                       <div className="absolute top-1.5 right-1.5 flex gap-1">
                                         <button
                                           type="button"
