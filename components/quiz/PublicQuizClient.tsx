@@ -61,6 +61,7 @@ import {
 } from "@/lib/quiz/introLayout";
 import { answerGridClass, answerImageGridClass, resolveAnswerLayout } from "@/lib/quiz/answerLayout";
 import { answerImageRender } from "@/lib/quiz/answerImage";
+import { classifyTraffic } from "@/lib/quiz/trafficSource";
 import {
   resolveQuestionAlign,
   resolveQuestionAnswerLayout,
@@ -1594,10 +1595,23 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
       // le navigateur garantit l'envoi même si l'user navigue/ferme
       // juste après le mount (sinon le fetch view était droppé sur les
       // visites courtes → vues sous-comptées, cf. bug stats Gwenn).
+      // PROVENANCE : uniquement sur la vue, et c'est volontaire. Le
+      // referrer ne dit d'où vient la personne qu'au PREMIER écran ;
+      // aux events suivants il pointe sur notre propre page. On envoie
+      // une classification, jamais l'adresse complète (cf.
+      // lib/quiz/trafficSource.ts). Le serveur refiltre de toute façon.
+      const meta =
+        event === "view"
+          ? classifyTraffic({
+              referrer: document.referrer,
+              url: window.location.href,
+              selfHost: window.location.hostname,
+            })
+          : undefined;
       fetch(`/api/quiz/${quizId}/track`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event }),
+        body: JSON.stringify(meta ? { event, meta } : { event }),
         credentials: "same-origin",
         keepalive: true,
       }).catch(() => {});

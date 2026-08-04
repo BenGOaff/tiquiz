@@ -2819,7 +2819,16 @@
     "stageStart": "Início",
     "stageCapture": "Email deixado",
     "leakArrival": "<bold>{lost} de {sample} visitantes</bold> saem da sua tela inicial sem nunca ver a primeira pergunta ({pct}%). Costuma ser a maior perda de um quiz, e se corrige em uma só tela.",
-    "leakCapture": "<bold>{lost} de {sample} pessoas</bold> terminam as perguntas e não deixam o email ({pct}%). Sua promessa de resultado ou o formulário as para bem antes da linha de chegada."
+    "leakCapture": "<bold>{lost} de {sample} pessoas</bold> terminam as perguntas e não deixam o email ({pct}%). Sua promessa de resultado ou o formulário as para bem antes da linha de chegada.",
+    "trafficTitle": "De onde vêm seus visitantes",
+    "trafficSubtitle": "Responder à pergunta que vem antes de todas as outras: sua página decepciona, ou não são as pessoas certas que chegam nela?",
+    "trafficTooFew": "Ainda não há visitas registradas suficientes para ler uma distribuição ({classified} de cerca de {needed} necessárias). Abaixo disso, uma única visita move uma porcentagem em vários pontos.",
+    "trafficDirect": "Direto",
+    "trafficDirectNote": "\"Direto\" não quer dizer que digitaram seu endereço: a maioria dos aplicativos de celular (Instagram, TikTok, mensagens, e-mail) não informa de onde veio o clique. Um QR code ou um link em um PDF também não.",
+    "trafficDirectBlind": "{pct}% do seu tráfego chega sem origem, o que é normal quando você publica no celular: os aplicativos não a transmitem. Para enxergar melhor, marque seus links (por exemplo seu-link?utm_source=instagram) e você verá cada publicação separadamente.",
+    "trafficSingle": "Todo o seu tráfego vem de {source} ({pct}%). O que acontece na sua tela inicial fala portanto DESSE público: se muitos saem, veja primeiro se sua promessa corresponde ao que você anunciou lá.",
+    "trafficMixed": "Seu tráfego vem de vários lugares. Compare: se uma fonte começa muito melhor que as outras, não é sua página que falha, é o público da fonte mais fraca.",
+    "trafficWindow": "Leitura sobre suas últimas {count} visitas."
   },
   "illustrations": {
     "emptyInbox": "Caixa de entrada vazia",

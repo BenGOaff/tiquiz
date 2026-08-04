@@ -2871,7 +2871,16 @@
     "stageStart": "Avvio",
     "stageCapture": "Email lasciata",
     "leakArrival": "<bold>{lost} visitatori su {sample}</bold> lasciano la schermata iniziale senza mai vedere la prima domanda ({pct}%). È spesso la perdita maggiore di un quiz, e si corregge su una sola schermata.",
-    "leakCapture": "<bold>{lost} persone su {sample}</bold> finiscono le domande e non lasciano la loro email ({pct}%). La promessa del risultato o il modulo le ferma proprio sul traguardo."
+    "leakCapture": "<bold>{lost} persone su {sample}</bold> finiscono le domande e non lasciano la loro email ({pct}%). La promessa del risultato o il modulo le ferma proprio sul traguardo.",
+    "trafficTitle": "Da dove arrivano i tuoi visitatori",
+    "trafficSubtitle": "Rispondere alla domanda che viene prima di tutte le altre: la tua pagina delude, oppure non sono le persone giuste ad arrivarci?",
+    "trafficTooFew": "Non ci sono ancora abbastanza visite tracciate per leggere una ripartizione ({classified} su circa {needed} necessarie). Sotto quella soglia, una sola visita sposta una percentuale di diversi punti.",
+    "trafficDirect": "Diretto",
+    "trafficDirectNote": "\"Diretto\" non significa che abbiano digitato il tuo indirizzo: la maggior parte delle app mobili (Instagram, TikTok, messaggistica, email) non indica da dove arriva il clic. Nemmeno un codice QR o un link dentro un PDF.",
+    "trafficDirectBlind": "Il {pct}% del tuo traffico arriva senza provenienza, il che è normale quando pubblichi da mobile: le app non la trasmettono. Per vederci chiaro, etichetta i tuoi link (per esempio il-tuo-link?utm_source=instagram) e vedrai ogni pubblicazione separatamente.",
+    "trafficSingle": "Tutto il tuo traffico viene da {source} ({pct}%). Quello che succede sulla tua schermata iniziale parla quindi di QUEL pubblico: se in tanti se ne vanno, guarda prima se la tua promessa corrisponde a quello che hai annunciato lì.",
+    "trafficMixed": "Il tuo traffico viene da più posti. Confrontali: se una fonte parte molto meglio delle altre, non è la tua pagina a non funzionare, è il pubblico della fonte più debole.",
+    "trafficWindow": "Lettura sulle tue ultime {count} visite."
   },
   "illustrations": {
     "emptyInbox": "Casella vuota",

@@ -35,6 +35,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   BarChart3,
+  Compass,
   Eye,
   Info,
   Loader2,
@@ -51,6 +52,7 @@ import { projectBackHref } from "@/lib/nav/projectBack";
 import QuizInsightsPanel from "@/components/quiz/QuizInsightsPanel";
 import { readFunnelSignal, stepLoss } from "@/lib/quiz/funnelSignal";
 import { biggestLeak, buildFullFunnel } from "@/lib/quiz/fullFunnel";
+import { DIRECT_BLIND_PCT, type TrafficReading } from "@/lib/quiz/trafficSource";
 
 type Period = "7" | "30" | "90" | "all";
 
@@ -83,6 +85,8 @@ interface AnalyticsResponse {
     viewsReliable?: boolean;
     exportRate: number;
   };
+  /** D'ou viennent les visiteurs, sur une fenetre des dernieres vues. */
+  traffic?: { reading: TrafficReading; capped: boolean; window: number };
   resultDistribution: { title: string; count: number; pct: number }[];
   // count = inscrits du jour, views = visites du jour (source quiz_events).
   leadsByDay: { date: string; count: number; views?: number }[];
@@ -422,6 +426,8 @@ export function QuizAnalyticsClient({ quizId, initial, hideCounts = false }: Pro
         </Card>
       </div>
 
+      <TrafficSection traffic={data.traffic} />
+
       <FunnelSection
         funnel={data.funnel ?? []}
         totalSessions={data.totalFunnelSessions ?? 0}
@@ -435,6 +441,96 @@ export function QuizAnalyticsClient({ quizId, initial, hideCounts = false }: Pro
           axes d'amelioration + actions). Gatee par plan cote endpoint. */}
       <QuizInsightsPanel quizId={quizId} />
     </div>
+  );
+}
+
+/**
+ * D'où viennent les visiteurs.
+ *
+ * -- POURQUOI CETTE CARTE EXISTE (4 août 2026) ------------------------
+ *
+ * On a établi que la fuite de Jocelyne était son écran d'accueil, et on
+ * s'est arrêtés là, parce que la question suivante n'avait pas de
+ * réponse dans l'app : est-ce que sa page déçoit, ou est-ce que le
+ * monde qui arrive dessus n'est pas le bon ? Les deux donnent le même
+ * chiffre et appellent des corrections opposées.
+ *
+ * La carte ne conclut pas à la place de la créatrice : elle montre la
+ * répartition et dit ce qu'on peut en tirer. Le verdict (a-t-on assez
+ * de monde ? le direct aveugle-t-il la lecture ?) est calculé dans
+ * lib/quiz/trafficSource.ts, comme le funnel.
+ */
+function TrafficSection({
+  traffic,
+}: {
+  traffic?: { reading: TrafficReading; capped: boolean; window: number };
+}) {
+  const t = useTranslations("quizAnalytics");
+  const reading = traffic?.reading;
+  // Rien de tracé : quiz antérieur au suivi de provenance. On n'affiche
+  // pas une carte vide, qui ferait croire à une panne.
+  if (!reading || reading.kind === "no-data") return null;
+
+  return (
+    <Card className="p-4 space-y-3">
+      <div>
+        <h2 className="text-sm font-semibold flex items-center gap-2">
+          <Compass className="size-4 text-primary" />
+          {t("trafficTitle")}
+        </h2>
+        <p className="text-[11px] text-muted-foreground mt-0.5">{t("trafficSubtitle")}</p>
+      </div>
+
+      {reading.kind === "too-few" ? (
+        <div className="rounded-md bg-muted/50 border px-3 py-2">
+          <p className="text-xs text-muted-foreground">
+            {t("trafficTooFew", { classified: reading.classified, needed: reading.needed })}
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-1.5">
+            {reading.slices.map((s) => (
+              <div key={s.source} className="flex items-center gap-3 text-xs">
+                <div className="w-28 shrink-0 truncate" title={s.source}>
+                  {s.source === "direct" ? t("trafficDirect") : s.source}
+                </div>
+                <div className="flex-1 h-5 rounded-md bg-muted/40 overflow-hidden">
+                  <div className="h-full bg-primary/30" style={{ width: `${Math.max(2, s.pct)}%` }} />
+                </div>
+                <div className="w-24 shrink-0 text-right tabular-nums text-muted-foreground">
+                  {s.pct}% ({s.count})
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* "direct" n'est PAS "ils ont tapé ton adresse" : les
+              applications mobiles n'envoient pas de provenance. Sans
+              cette phrase, on fabrique une fausse piste, ce qu'on
+              essaie précisément d'arrêter. */}
+          {reading.directShare > 0 ? (
+            <p className="text-[11px] text-muted-foreground">
+              {reading.directShare >= DIRECT_BLIND_PCT
+                ? t("trafficDirectBlind", { pct: reading.directShare })
+                : t("trafficDirectNote")}
+            </p>
+          ) : null}
+
+          <p className="text-[11px] text-muted-foreground">
+            {reading.kind === "single"
+              ? t("trafficSingle", { source: reading.top.source, pct: reading.top.pct })
+              : t("trafficMixed")}
+          </p>
+        </>
+      )}
+
+      {traffic?.capped ? (
+        <p className="text-[11px] text-muted-foreground">
+          {t("trafficWindow", { count: traffic.window })}
+        </p>
+      ) : null}
+    </Card>
   );
 }
 

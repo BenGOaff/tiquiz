@@ -15,8 +15,15 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { dateKeyForOffset, parseTzOffset } from "@/lib/dateKeys";
 import { stripHtml } from "@/lib/richText";
 import { buildLiveFunnel } from "@/lib/quiz/funnel";
+import { readTrafficSource, sanitizeVisitMeta } from "@/lib/quiz/trafficSource";
 
 export const dynamic = "force-dynamic";
+
+/** Nombre de vues remontées pour lire la provenance. Une fenêtre, pas un
+ *  cumul : la provenance change à chaque publication, et un plafond
+ *  silencieux sur un cumul serait un sous-comptage déguisé. L'UI dit
+ *  quand la fenêtre est pleine. */
+const TRAFFIC_WINDOW = 3000;
 export const runtime = "nodejs";
 
 type PeriodKey = "7" | "30" | "90" | "all";
@@ -165,6 +172,35 @@ export async function GET(
 
   const trackedViews = Math.max(quiz.views_count ?? 0, viewsFromEvents);
   const completionsCount = Math.max(quiz.completions_count ?? 0, completesFromEvents);
+
+  // ── B bis) PROVENANCE DES VISITEURS ──
+  //
+  // Un écran d'accueil qui perd la moitié des visiteurs a deux causes
+  // possibles, opposées : la page déçoit, ou le monde qui arrive dessus
+  // n'est pas le bon. Sans savoir d'où ils viennent, on ne peut pas
+  // trancher, et on envoie la créatrice réécrire une promesse qui va
+  // très bien (c'est exactement ce qui a coûté trois semaines à
+  // Jocelyne, cf. lib/quiz/trafficSource.ts).
+  //
+  // On lit les N DERNIÈRES vues, pas les N premières : une fenêtre
+  // récente est à la fois honnête (on dit qu'elle est bornée) et plus
+  // utile qu'un cumul depuis toujours, puisque la provenance change à
+  // chaque publication. Pas d'agrégation SQL ici, donc pas de migration
+  // à faire appliquer : les lignes sont minuscules (une classification,
+  // jamais une adresse).
+  const trafficRes = await supabaseAdmin
+    .from("quiz_events")
+    .select("meta")
+    .eq("quiz_id", quizId)
+    .eq("event_type", "view")
+    .not("meta", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(TRAFFIC_WINDOW);
+  const trafficMetas = (trafficRes.error ? [] : trafficRes.data ?? []).map((r) =>
+    sanitizeVisitMeta((r as { meta?: unknown }).meta),
+  );
+  const trafficReading = readTrafficSource(trafficMetas);
+  const trafficCapped = trafficMetas.length >= TRAFFIC_WINDOW;
 
   // ── C) Taux de capture HONNÊTE ──
   // viewsReliable = false si on a plus de leads que de vues trackées
@@ -401,6 +437,7 @@ export async function GET(
       viewsReliable,
       exportRate,
     },
+    traffic: { reading: trafficReading, capped: trafficCapped, window: TRAFFIC_WINDOW },
     resultDistribution,
     leadsByDay,
     funnel,
