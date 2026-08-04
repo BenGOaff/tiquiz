@@ -1590,7 +1590,11 @@
     "applyLayoutToAllDone": "Every question now follows your setting. Remember to save.",
     "sessionLostTitle": "You have been signed out",
     "sessionLostBody": "Your work in progress is kept in this browser, nothing is lost. Sign back in and you will land straight back on this quiz.",
-    "sessionLostAction": "Sign back in"
+    "sessionLostAction": "Sign back in",
+    "otherResultsPositionLabel": "Where to place this block",
+    "otherResultsAfterCta": "After the button (recommended)",
+    "otherResultsBeforeCta": "Before the button",
+    "otherResultsPositionHint": "Placed before the button, it gives the visitor something else to do at the exact moment of your offer."
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",

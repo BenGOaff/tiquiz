@@ -1590,7 +1590,11 @@
     "applyLayoutToAllDone": "Todas as perguntas seguem sua configuração. Lembre de salvar.",
     "sessionLostTitle": "Sua sessão foi encerrada",
     "sessionLostBody": "Seu trabalho em andamento fica guardado neste navegador, nada se perde. Entre novamente e você volta direto para este quiz.",
-    "sessionLostAction": "Entrar novamente"
+    "sessionLostAction": "Entrar novamente",
+    "otherResultsPositionLabel": "Onde colocar este bloco",
+    "otherResultsAfterCta": "Depois do botão (recomendado)",
+    "otherResultsBeforeCta": "Antes do botão",
+    "otherResultsPositionHint": "Colocado antes do botão, dá ao visitante outra coisa para fazer bem no momento da sua proposta."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova senha",

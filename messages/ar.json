@@ -1590,7 +1590,11 @@
     "applyLayoutToAllDone": "كل الأسئلة تتبع إعدادك الآن. لا تنس الحفظ.",
     "sessionLostTitle": "تم إنهاء جلستك",
     "sessionLostBody": "عملك الجاري محفوظ في هذا المتصفح، لم يضع شيء. سجلي الدخول من جديد وستعودين مباشرة إلى هذا الاختبار.",
-    "sessionLostAction": "تسجيل الدخول من جديد"
+    "sessionLostAction": "تسجيل الدخول من جديد",
+    "otherResultsPositionLabel": "أين يوضع هذا القسم",
+    "otherResultsAfterCta": "بعد الزر (مستحسن)",
+    "otherResultsBeforeCta": "قبل الزر",
+    "otherResultsPositionHint": "إذا وضع قبل الزر، فإنه يمنح الزائر شيئا آخر يفعله في لحظة عرضك بالذات."
   },
   "resetPasswordPage": {
     "labelNewPassword": "كلمة مرور جديدة",

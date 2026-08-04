@@ -663,6 +663,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // Active la section "Découvre les autres profils" côté visiteur
   // (Adeline, 19 mai 2026). Default false = comportement historique.
   const [showOtherResults, setShowOtherResults] = useState(false);
+  // Ou se place le bloc par rapport au bouton (retour Gwenn, 4 aout 2026).
+  // Defaut "after_cta" pour TOUT LE MONDE, quiz existants compris.
+  const [otherResultsPosition, setOtherResultsPosition] = useState<"after_cta" | "before_cta">("after_cta");
   // Phase B (Adeline, 19 mai 2026) : Meta Pixel + Google tags per-quiz.
   // Default vide ; pré-rempli à la création depuis les défauts du
   // profil utilisateur (cf. handleApplyPixelDefaults plus bas).
@@ -1029,6 +1032,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     hide_response_counts: hideResponseCounts,
     notify_responses: notifyResponses,
     show_other_results: showOtherResults,
+    other_results_position: otherResultsPosition,
     meta_pixel_id: metaPixelId,
     ga4_measurement_id: ga4MeasurementId,
     google_ads_conversion_id: googleAdsConversionId,
@@ -1094,7 +1098,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     brandLogoAlign, brandLogoWidth, introTextWidth,
     captureEnabled, captureFirstName, captureLastName, capturePhone, captureCountry,
     firstNameRequired, lastNameRequired, phoneRequired, countryRequired,
-    showConsentCheckbox, showResultsBreakdown, hideResponseCounts, notifyResponses, showOtherResults,
+    showConsentCheckbox, showResultsBreakdown, hideResponseCounts, notifyResponses, showOtherResults, otherResultsPosition,
     scoringAxesEdit, showScoreGauge, scoreDisplayMode, scoreLabelsEdit, sioScoreTags,
     metaPixelId, ga4MeasurementId, googleAdsConversionId, googleAdsConversionLabel,
     askFirstName, askGender,
@@ -1164,6 +1168,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     if (typeof s.hide_response_counts === "boolean") setHideResponseCounts(s.hide_response_counts);
     if (typeof s.notify_responses === "boolean") setNotifyResponses(s.notify_responses);
     if (typeof s.show_other_results === "boolean") setShowOtherResults(s.show_other_results);
+    if (s.other_results_position === "after_cta" || s.other_results_position === "before_cta") {
+      setOtherResultsPosition(s.other_results_position);
+    }
     if (typeof s.meta_pixel_id === "string") setMetaPixelId(s.meta_pixel_id);
     if (typeof s.ga4_measurement_id === "string") setGa4MeasurementId(s.ga4_measurement_id);
     if (typeof s.google_ads_conversion_id === "string") setGoogleAdsConversionId(s.google_ads_conversion_id);
@@ -1314,6 +1321,12 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       setHideResponseCounts((q as { hide_response_counts?: boolean | null }).hide_response_counts === true);
       setNotifyResponses((q as { notify_responses?: boolean | null }).notify_responses !== false);
       setShowOtherResults((q as { show_other_results?: boolean | null }).show_other_results === true);
+      {
+        // Colonne absente (migration pas encore passee) ou valeur
+        // inconnue : on retombe sur le nouveau defaut, jamais sur vide.
+        const pos = (q as { other_results_position?: string | null }).other_results_position;
+        setOtherResultsPosition(pos === "before_cta" ? "before_cta" : "after_cta");
+      }
       // Scoring multi-axes : normalisé au chargement (JSONB non typé).
       setScoringAxesEdit(normalizeScoringAxes((q as { scoring_axes?: unknown }).scoring_axes));
       setShowScoreGauge((q as { show_score_gauge?: boolean | null }).show_score_gauge === true);
@@ -1468,6 +1481,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           hide_response_counts: (q as { hide_response_counts?: boolean | null }).hide_response_counts === true,
           notify_responses: (q as { notify_responses?: boolean | null }).notify_responses !== false,
           show_other_results: (q as { show_other_results?: boolean | null }).show_other_results === true,
+          other_results_position:
+            (q as { other_results_position?: string | null }).other_results_position === "before_cta"
+              ? "before_cta"
+              : "after_cta",
           meta_pixel_id: (q as { meta_pixel_id?: string | null }).meta_pixel_id ?? "",
           ga4_measurement_id: (q as { ga4_measurement_id?: string | null }).ga4_measurement_id ?? "",
           google_ads_conversion_id: (q as { google_ads_conversion_id?: string | null }).google_ads_conversion_id ?? "",
@@ -2351,6 +2368,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           hide_response_counts: hideResponseCounts,
           notify_responses: notifyResponses,
           show_other_results: showOtherResults,
+          other_results_position: otherResultsPosition,
           meta_pixel_id: metaPixelId.trim() || null,
           ga4_measurement_id: ga4MeasurementId.trim() || null,
           google_ads_conversion_id: googleAdsConversionId.trim() || null,
@@ -3979,6 +3997,26 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     checked={showOtherResults}
                     onChange={v => setShowOtherResults(v)}
                   />
+                  {/* OU il se place. Retour Gwenn, 4 aout 2026 : "au dessus
+                      du bouton d'achat, ca offre une porte de sortie juste
+                      avant la proposition". Il passe donc apres par defaut,
+                      et celle qui preferait l'ancien ordre le remet ici. */}
+                  {showOtherResults && (
+                    <div className="ml-1 mt-2 space-y-1">
+                      <p className="text-xs font-medium">{t("otherResultsPositionLabel")}</p>
+                      <select
+                        className="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
+                        value={otherResultsPosition}
+                        onChange={e =>
+                          setOtherResultsPosition(e.target.value === "before_cta" ? "before_cta" : "after_cta")
+                        }
+                      >
+                        <option value="after_cta">{t("otherResultsAfterCta")}</option>
+                        <option value="before_cta">{t("otherResultsBeforeCta")}</option>
+                      </select>
+                      <p className="text-xs text-muted-foreground">{t("otherResultsPositionHint")}</p>
+                    </div>
+                  )}
                   {/* ── LES 4 TEMPS (demande Béné, 3 août 2026) ──
                       La page de résultat suit ce que l'Atelier enseigne :
                       le miroir, la cause, le chemin, le pont. Les noms de
