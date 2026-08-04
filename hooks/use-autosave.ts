@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { isSessionLost, writeDraftBackup } from "@/lib/auth/sessionLost";
+
 // Debounced autosave for editors. Pushes a JSON snapshot to a PUT
 // endpoint after the state has been stable for `delayMs`. Skips writes
 // when the serialized snapshot hasn't changed since the last successful
@@ -15,14 +17,26 @@ export function useAutosave<T>({
   state,
   enabled,
   delayMs = 2000,
+  backupId,
 }: {
   endpoint: string;
   state: T;
   enabled: boolean;
   delayMs?: number;
+  /** Identifiant du projet, pour mettre le brouillon a l'abri EN LOCAL
+   *  si le serveur refuse tout. Sans lui, un brouillon ne vit que sur le
+   *  serveur : au moment precis ou le serveur dit non, le travail
+   *  n'existe plus nulle part (drame Bene, 4 aout 2026). */
+  backupId?: string;
 }) {
   const [savingDraft, setSavingDraft] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  // Session tombee : on arrete de reessayer et l'ecran doit le dire.
+  const [sessionLost, setSessionLost] = useState(false);
+  const sessionLostRef = useRef(false);
+  const backupIdRef = useRef(backupId);
+  backupIdRef.current = backupId;
+
   const lastSerializedRef = useRef<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlightRef = useRef<AbortController | null>(null);
@@ -46,12 +60,31 @@ export function useAutosave<T>({
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
 
+  /**
+   * Met le brouillon a l'abri DANS LE NAVIGATEUR.
+   *
+   * C'est le filet le plus important du fichier. Jusqu'ici le brouillon
+   * ne vivait que sur le serveur : au moment precis ou le serveur refuse
+   * tout (session tombee), le travail n'existait plus nulle part.
+   */
+  const backupLocally = useCallback(() => {
+    const id = backupIdRef.current;
+    if (!id || typeof window === "undefined") return;
+    writeDraftBackup(window.localStorage, id, stateRef.current, Date.now());
+  }, []);
+
   // Flush best-effort d'un brouillon en attente (sendBeacon, sinon fetch
   // keepalive qui survit à la navigation / fermeture). Ne pousse QUE s'il y a
   // une modif non sauvée (diff avec le dernier snapshot confirmé). Stable
   // (useCallback []) : lit tout via refs, donc utilisable au démontage.
   const flushNow = useCallback(() => {
     if (!enabledRef.current) return;
+    // Session tombee : le serveur repondra 401. On garde le travail en
+    // local plutot que d'envoyer dans le vide.
+    if (sessionLostRef.current) {
+      backupLocally();
+      return;
+    }
     let serialized: string;
     try {
       serialized = JSON.stringify(stateRef.current);
@@ -74,7 +107,7 @@ export function useAutosave<T>({
     } catch {
       // best-effort
     }
-  }, []);
+  }, [backupLocally]);
 
   useEffect(() => {
     if (!enabled) {
@@ -98,6 +131,14 @@ export function useAutosave<T>({
       return;
     }
     if (lastSerializedRef.current === serialized) return;
+    // Une session morte ne guerit pas toute seule : marteler le serveur
+    // ne sert qu'a noyer la console (une quinzaine de 401 d'affilee dans
+    // le rapport de Bene). On garde le travail en local, et l'ecran
+    // affiche le bandeau.
+    if (sessionLostRef.current) {
+      backupLocally();
+      return;
+    }
 
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
@@ -115,6 +156,13 @@ export function useAutosave<T>({
         if (res.ok) {
           lastSerializedRef.current = serialized;
           setLastSavedAt(Date.now());
+        } else if (isSessionLost(res.status)) {
+          // La session est tombee (connexion ailleurs, jeton expire).
+          // On met le brouillon a l'abri, on arrete de reessayer, et
+          // c'est l'ECRAN qui prend le relais.
+          sessionLostRef.current = true;
+          setSessionLost(true);
+          backupLocally();
         } else {
           let bodyText = "";
           try { bodyText = await res.text(); } catch { /* ignore */ }
@@ -135,7 +183,7 @@ export function useAutosave<T>({
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [endpoint, state, enabled, delayMs]);
+  }, [endpoint, state, enabled, delayMs, backupLocally]);
 
   // Called after an explicit Save succeeds (changes are now in the
   // canonical columns) or when the user dismisses a restore offer.
@@ -187,6 +235,7 @@ export function useAutosave<T>({
   useEffect(() => {
     if (!enabled) return;
     async function onOnline() {
+      if (sessionLostRef.current) return;
       let serialized: string;
       try {
         serialized = JSON.stringify(state);
@@ -231,5 +280,11 @@ export function useAutosave<T>({
     return () => flushNow();
   }, [flushNow]);
 
-  return { savingDraft, lastSavedAt, clearDraft };
+  /** Apres une reconnexion reussie : on repart, sans recharger la page. */
+  const sessionRecovered = useCallback(() => {
+    sessionLostRef.current = false;
+    setSessionLost(false);
+  }, []);
+
+  return { savingDraft, lastSavedAt, clearDraft, sessionLost, sessionRecovered, backupLocally };
 }

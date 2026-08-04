@@ -95,6 +95,7 @@ import {
   type ShareNetwork,
 } from "@/lib/quizBranding";
 import { projectBackHref } from "@/lib/nav/projectBack";
+import { SessionLostBanner } from "@/components/editor/SessionLostBanner";
 
 // Types
 // Surveys reuse the QuizDetailClient shell but specialise: questions carry a
@@ -638,10 +639,14 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     editQuestions, introImageUrl, introImageWidth,
   ]);
 
-  const { savingDraft, clearDraft } = useAutosave({
+  const { savingDraft, clearDraft, sessionLost } = useAutosave({
     endpoint: `/api/quiz/${quizId}/autosave`,
     state: autosaveSnapshot,
     enabled: !loading && !pendingDraft,
+    // Filet local : si la session tombe, le brouillon est mis a
+    // l'abri dans le navigateur au lieu de n'exister que sur le
+    // serveur, qui refuse tout a ce moment la.
+    backupId: quizId,
   });
 
   const applySnapshot = useCallback((s: Record<string, unknown>) => {
@@ -1448,6 +1453,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
   return (
    <SioTagsProvider quizId={quizId}>
+    {/* Session tombee : l'ecran le dit, au lieu de laisser des 401
+        en silence dans la console (drame Bene, 4 aout 2026). */}
+    <SessionLostBanner visible={sessionLost} />
     <UserPalettesProvider palettes={savedPalettes}>
     <RestoreDraftDialog
       open={!!pendingDraft}

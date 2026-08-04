@@ -166,6 +166,7 @@ import {
 import { QuizPanelMedia } from "@/components/quiz/QuizPanelMedia";
 import { PanelMediaEditor } from "@/components/quiz/PanelMediaEditor";
 import { projectBackHref } from "@/lib/nav/projectBack";
+import { SessionLostBanner } from "@/components/editor/SessionLostBanner";
 
 // Types
 // Un quiz (profil ou scoring) peut mélanger des types de questions, comme le
@@ -1109,13 +1110,17 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     editQuestions, editResults, seoNoindex,
   ]);
 
-  const { savingDraft, clearDraft } = useAutosave({
+  const { savingDraft, clearDraft, sessionLost } = useAutosave({
     endpoint: withEmbedToken(`/api/quiz/${quizId}/autosave`, embedSessionToken),
     state: autosaveSnapshot,
     // Pause tant que la fetch initiale n'a pas hydraté l'éditeur OU
     // tant que le dialog de restauration est ouvert (sinon on
     // écraserait le draft serveur avec un état initial vide).
     enabled: !loading && !pendingDraft && !isEmbed,
+    // Filet local : si la session tombe, le brouillon est mis a
+    // l'abri dans le navigateur au lieu de n'exister que sur le
+    // serveur, qui refuse tout a ce moment la.
+    backupId: quizId,
   });
 
   // Applique un snapshot serveur (restauration de draft) — un setX
@@ -2991,6 +2996,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
 
   return (
    <SioTagsProvider quizId={quizId}>
+    {/* Session tombee : l'ecran le dit, au lieu de laisser des 401
+        en silence dans la console (drame Bene, 4 aout 2026). */}
+    <SessionLostBanner visible={sessionLost} />
     <UserPalettesProvider palettes={palettesWithBrand}>
     <EditorPreviewDeviceProvider device={device}>
     <RestoreDraftDialog
