@@ -19,6 +19,7 @@ import { readFileSync } from "node:fs";
 
 import {
   buildQuizEditorSnapshot,
+  diffEditorSnapshot,
   draftDiffersFromSaved,
   QUIZ_SNAPSHOT_KEYS,
   stableStringify,
@@ -90,6 +91,40 @@ test("stableStringify ne casse pas les tableaux", () => {
   assert.notEqual(stableStringify([1, 2]), stableStringify([2, 1]));
 });
 
+// ── Savoir au lieu de supposer ───────────────────────────────────────
+
+test("on peut nommer les champs qui diffèrent", () => {
+  // Le 4 août, on a passé une journée sur des hypothèses parce que le
+  // brouillon est effacé dès que la créatrice répond au dialogue : plus
+  // rien à observer après coup. Maintenant l'éditeur écrit les noms.
+  const canonical = buildQuizEditorSnapshot(sampleInput());
+  const draft = buildQuizEditorSnapshot(
+    sampleInput({ title: "autre", question_layout: "left" }),
+  );
+  assert.deepEqual(diffEditorSnapshot(draft, canonical), ["question_layout", "title"]);
+});
+
+test("rien à signaler quand tout colle", () => {
+  const canonical = buildQuizEditorSnapshot(sampleInput());
+  assert.deepEqual(diffEditorSnapshot(buildQuizEditorSnapshot(sampleInput()), canonical), []);
+});
+
+test("un champ absent d'un côté est nommé, pas ignoré", () => {
+  const canonical = buildQuizEditorSnapshot(sampleInput());
+  const { tie_break: _drop, ...tronque } = canonical as Record<string, unknown>;
+  assert.deepEqual(diffEditorSnapshot(tronque, canonical), ["tie_break"]);
+});
+
+test("on ne journalise que des NOMS de champs", () => {
+  // Ces instantanés portent le texte du quiz d'une créatrice : il n'a
+  // rien à faire dans une console ni dans un journal.
+  const canonical = buildQuizEditorSnapshot(sampleInput());
+  const draft = buildQuizEditorSnapshot(sampleInput({ title: "Mon secret commercial" }));
+  const diff = diffEditorSnapshot(draft, canonical);
+  assert.deepEqual(diff, ["title"]);
+  assert.ok(!diff.join(" ").includes("secret"));
+});
+
 // ── Le garde-fou structurel ──────────────────────────────────────────
 //
 // Le typecheck oblige déjà les deux appelants à fournir toutes les clés.
@@ -103,8 +138,8 @@ test("l'éditeur de sondage compare lui aussi avant de proposer", () => {
   const calls = src.match(/buildSurveyEditorSnapshot\(/g) ?? [];
   assert.equal(calls.length, 2, "état de l'éditeur + reconstruction canonique");
   assert.ok(
-    /draftDiffersFromSaved\(/.test(src),
-    "le sondage doit comparer le contenu, pas seulement les dates",
+    /diffEditorSnapshot\(/.test(src),
+    "le sondage doit comparer le CONTENU, pas seulement les dates, et nommer les champs qui diffèrent",
   );
 });
 
@@ -115,6 +150,10 @@ test("l'éditeur construit ses DEUX instantanés avec la même fonction", () => 
     calls.length,
     2,
     "l'état de l'éditeur ET la reconstruction depuis les colonnes doivent passer par buildQuizEditorSnapshot",
+  );
+  assert.ok(
+    /diffEditorSnapshot\(/.test(src),
+    "l'éditeur doit nommer les champs qui diffèrent, sinon on en est réduit aux hypothèses",
   );
   assert.ok(
     !/JSON\.stringify\(draftState\)/.test(src),

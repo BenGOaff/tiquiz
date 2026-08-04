@@ -2927,7 +2927,9 @@
     "surveyErrPdf": "Error al generar el PDF.",
     "surveyErrNotEnough": "No hay suficientes respuestas para un análisis pertinente.",
     "surveyExportPdfGlobal": "PDF resumen",
-    "surveyExportPdfFull": "PDF detallado"
+    "surveyExportPdfFull": "PDF detallado",
+    "quizSectionPriority": "Haz esto ahora, una sola cosa",
+    "quizLaterToggle": "Y después, cuando lo hayas medido"
   },
   "coach": {
     "title": "Tu coach",
