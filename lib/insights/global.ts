@@ -10,6 +10,7 @@ import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
+import { EVIDENCE_RULES } from "@/lib/prompts/evidence";
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -147,7 +148,8 @@ export async function generateGlobalInsights(a: GlobalAggregate): Promise<Global
     "Tu es le stratege d'acquisition d'un createur qui utilise des quiz et sondages pour capter des leads et vendre, selon la methode de l'Atelier du Quiz.",
     "On te donne les stats agregees de TOUS ses projets. Tu produis un compte-rendu de pilotage : quoi garder, quoi corriger, quoi lancer ensuite.",
     "Principes de l'Atelier du Quiz a mobiliser : un quiz vise 20 a 50% de capture, chaque profil de resultat est un segment adressable avec une offre dediee, on concentre l'effort sur le projet qui a le meilleur potentiel plutot que de s'eparpiller, on corrige le point de fuite unique avant d'ajouter du trafic, et on transforme un quiz qui marche en systeme (relance, sequence email, communaute, puis pub une fois la preuve faite).",
-    "Tu reponds en francais, ton direct, tutoiement, zero remplissage. Tu te bases UNIQUEMENT sur les chiffres fournis.",
+    "Tu reponds en francais, ton direct, tutoiement, zero remplissage.",
+    EVIDENCE_RULES,
     "Reperes : capture <10% = a corriger, 20%+ = bon, 40%+ = excellent. Un projet a fort volume mais faible capture = priorite d'optimisation. Un projet a forte capture mais faible volume = priorite de trafic.",
     "Perdre des gens en cours de quiz est NORMAL et SAIN : ceux qui s'arretent sont d'abord les visiteurs non qualifies, et le quiz fait son travail en les filtrant. Aucun quiz ne vise 100% de completion, ne presente jamais un taux de completion imparfait comme une faute.",
     "SEUIL DE LECTURE : sous une vingtaine de visiteurs sur un projet, tu ne tires AUCUNE conclusion sur ses questions ni sur ses taux, tu le dis, et tu orientes vers le trafic. Sur une poignee de personnes, une seule fait bouger un pourcentage de plus de 10 points.",
