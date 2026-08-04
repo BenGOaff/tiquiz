@@ -180,7 +180,9 @@
       "kept": "Stayed to the end:",
       "noData": "no data yet",
       "removedNotice": "{count, plural, =1 {1 question has been deleted since: its views are no longer counted.} other {# questions have been deleted since: their views are no longer counted.}}",
-      "normalLoss": "Losing people along the way is normal and healthy: the ones who stop are mostly the unqualified visitors. No quiz aims for 100% completion."
+      "normalLoss": "Losing people along the way is normal and healthy: the ones who stop are mostly the unqualified visitors. No quiz aims for 100% completion.",
+      "leakBefore": "The real gap is BEFORE these questions: {lost} visitors out of {sample} leave your welcome screen without seeing a single one. That is where to work first.",
+      "leakAfter": "The real gap is AFTER these questions: {lost} people finish your quiz without leaving their email. That is where to work first."
     },
     "untitled": "Untitled"
   },
@@ -2864,7 +2866,12 @@
     "seriesLeads": "Sign-ups",
     "tooltipViews": "{count} views",
     "tooltipConversion": "Conversion: {pct}%",
-    "funnelNormalLoss": "Losing people along the way is normal and healthy: the ones who stop are mostly the unqualified visitors. No quiz aims for 100% completion."
+    "funnelNormalLoss": "Losing people along the way is normal and healthy: the ones who stop are mostly the unqualified visitors. No quiz aims for 100% completion.",
+    "stageArrival": "Arrived",
+    "stageStart": "Started",
+    "stageCapture": "Left email",
+    "leakArrival": "<bold>{lost} of {sample} visitors</bold> leave your intro screen without ever seeing your first question ({pct}%). It's often a quiz's biggest leak, and it's fixed on a single screen.",
+    "leakCapture": "<bold>{lost} of {sample} people</bold> finish your questions and don't leave their email ({pct}%). Your result promise or your form stops them just before the finish line."
   },
   "illustrations": {
     "emptyInbox": "Empty inbox",

@@ -180,7 +180,9 @@
       "kept": "Chegaram ao fim:",
       "noData": "ainda sem dados",
       "removedNotice": "{count, plural, =1 {1 pergunta foi eliminada desde então: as suas visualizações já não são contadas.} other {# perguntas foram eliminadas desde então: as suas visualizações já não são contadas.}}",
-      "normalLoss": "Perder gente pelo caminho é normal e saudável: quem para são sobretudo os visitantes não qualificados. Nenhum quiz procura 100% de conclusão."
+      "normalLoss": "Perder gente pelo caminho é normal e saudável: quem para são sobretudo os visitantes não qualificados. Nenhum quiz procura 100% de conclusão.",
+      "leakBefore": "O verdadeiro buraco está ANTES destas perguntas: {lost} visitantes em {sample} saem do teu ecrã inicial sem ver nenhuma. É aí que deves trabalhar primeiro.",
+      "leakAfter": "O verdadeiro buraco está DEPOIS destas perguntas: {lost} pessoas terminam o teu quiz sem deixar o email. É aí que deves trabalhar primeiro."
     },
     "untitled": "Sem título"
   },
@@ -2864,7 +2866,12 @@
     "seriesLeads": "Inscritos",
     "tooltipViews": "{count} visitas",
     "tooltipConversion": "Conversão: {pct}%",
-    "funnelNormalLoss": "Perder gente pelo caminho é normal e saudável: quem para são sobretudo os visitantes não qualificados. Nenhum quiz procura 100% de conclusão."
+    "funnelNormalLoss": "Perder gente pelo caminho é normal e saudável: quem para são sobretudo os visitantes não qualificados. Nenhum quiz procura 100% de conclusão.",
+    "stageArrival": "Chegada",
+    "stageStart": "Início",
+    "stageCapture": "Email deixado",
+    "leakArrival": "<bold>{lost} de {sample} visitantes</bold> saem do teu ecrã inicial sem nunca ver a primeira pergunta ({pct}%). É muitas vezes a maior fuga de um quiz, e corrige-se num só ecrã.",
+    "leakCapture": "<bold>{lost} de {sample} pessoas</bold> terminam as perguntas e não deixam o email ({pct}%). A tua promessa de resultado ou o formulário para-as mesmo antes da meta."
   },
   "illustrations": {
     "emptyInbox": "Caixa de entrada vazia",

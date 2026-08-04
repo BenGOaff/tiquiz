@@ -180,7 +180,9 @@
       "kept": "Sono arrivati fino in fondo:",
       "noData": "ancora nessun dato",
       "removedNotice": "{count, plural, =1 {1 domanda è stata eliminata da allora: le sue visualizzazioni non sono più conteggiate.} other {# domande sono state eliminate da allora: le loro visualizzazioni non sono più conteggiate.}}",
-      "normalLoss": "Perdere gente lungo il percorso è normale e sano: chi si ferma è soprattutto il visitatore non qualificato. Nessun quiz punta al 100% di completamento."
+      "normalLoss": "Perdere gente lungo il percorso è normale e sano: chi si ferma è soprattutto il visitatore non qualificato. Nessun quiz punta al 100% di completamento.",
+      "leakBefore": "Il vero buco è PRIMA di queste domande: {lost} visitatori su {sample} lasciano la schermata iniziale senza vederne nemmeno una. È lì che devi lavorare per primo.",
+      "leakAfter": "Il vero buco è DOPO queste domande: {lost} persone finiscono il quiz senza lasciare la loro email. È lì che devi lavorare per primo."
     },
     "untitled": "Senza titolo"
   },
@@ -2864,7 +2866,12 @@
     "seriesLeads": "Iscritti",
     "tooltipViews": "{count} visite",
     "tooltipConversion": "Conversione: {pct}%",
-    "funnelNormalLoss": "Perdere gente lungo il percorso è normale e sano: chi si ferma è soprattutto il visitatore non qualificato. Nessun quiz punta al 100% di completamento."
+    "funnelNormalLoss": "Perdere gente lungo il percorso è normale e sano: chi si ferma è soprattutto il visitatore non qualificato. Nessun quiz punta al 100% di completamento.",
+    "stageArrival": "Arrivo",
+    "stageStart": "Avvio",
+    "stageCapture": "Email lasciata",
+    "leakArrival": "<bold>{lost} visitatori su {sample}</bold> lasciano la schermata iniziale senza mai vedere la prima domanda ({pct}%). È spesso la perdita maggiore di un quiz, e si corregge su una sola schermata.",
+    "leakCapture": "<bold>{lost} persone su {sample}</bold> finiscono le domande e non lasciano la loro email ({pct}%). La promessa del risultato o il modulo le ferma proprio sul traguardo."
   },
   "illustrations": {
     "emptyInbox": "Casella vuota",

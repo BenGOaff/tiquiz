@@ -180,7 +180,9 @@
       "kept": "Llegaron al final:",
       "noData": "aún sin datos",
       "removedNotice": "{count, plural, =1 {Se ha eliminado 1 pregunta desde entonces: sus visualizaciones ya no se cuentan.} other {Se han eliminado # preguntas desde entonces: sus visualizaciones ya no se cuentan.}}",
-      "normalLoss": "Perder gente por el camino es normal y sano: quienes se detienen son sobre todo los visitantes no cualificados. Ningún quiz busca el 100% de finalización."
+      "normalLoss": "Perder gente por el camino es normal y sano: quienes se detienen son sobre todo los visitantes no cualificados. Ningún quiz busca el 100% de finalización.",
+      "leakBefore": "El verdadero agujero está ANTES de estas preguntas: {lost} visitantes de {sample} se van de tu pantalla de inicio sin ver ninguna. Ahí es donde hay que trabajar primero.",
+      "leakAfter": "El verdadero agujero está DESPUÉS de estas preguntas: {lost} personas terminan tu quiz sin dejar su email. Ahí es donde hay que trabajar primero."
     },
     "untitled": "Sin título"
   },
@@ -2864,7 +2866,12 @@
     "seriesLeads": "Registros",
     "tooltipViews": "{count} visitas",
     "tooltipConversion": "Conversión: {pct}%",
-    "funnelNormalLoss": "Perder gente por el camino es normal y sano: quienes se detienen son sobre todo los visitantes no cualificados. Ningún quiz busca el 100% de finalización."
+    "funnelNormalLoss": "Perder gente por el camino es normal y sano: quienes se detienen son sobre todo los visitantes no cualificados. Ningún quiz busca el 100% de finalización.",
+    "stageArrival": "Llegada",
+    "stageStart": "Inicio",
+    "stageCapture": "Email dejado",
+    "leakArrival": "<bold>{lost} de {sample} visitantes</bold> se van de tu pantalla de inicio sin ver nunca tu primera pregunta ({pct}%). Suele ser la mayor fuga de un quiz, y se corrige en una sola pantalla.",
+    "leakCapture": "<bold>{lost} de {sample} personas</bold> terminan tus preguntas y no dejan su email ({pct}%). Tu promesa de resultado o tu formulario las detiene justo antes de la meta."
   },
   "illustrations": {
     "emptyInbox": "Bandeja de entrada vacía",
