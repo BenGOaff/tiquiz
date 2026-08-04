@@ -175,10 +175,12 @@
       "title": "Où décrochent tes répondants ?",
       "questionLabel": "Question",
       "visitors": "vus",
-      "dropped": "Pire chute :",
+      "hotspot": "{lost} personnes s'arrêtent à la question {q}",
+      "tooFew": "Pas encore assez de monde",
       "kept": "Restés jusqu'au bout :",
       "noData": "pas encore de donnée",
-      "removedNotice": "{count, plural, =1 {1 question a été supprimée depuis : ses vues ne sont plus comptées.} other {# questions ont été supprimées depuis : leurs vues ne sont plus comptées.}}"
+      "removedNotice": "{count, plural, =1 {1 question a été supprimée depuis : ses vues ne sont plus comptées.} other {# questions ont été supprimées depuis : leurs vues ne sont plus comptées.}}",
+      "normalLoss": "Perdre du monde en route est normal et sain : ce sont surtout les visiteurs non qualifiés qui s'arrêtent. Aucun quiz ne vise 100% de complétion."
     },
     "untitled": "Sans titre"
   },
@@ -1576,7 +1578,14 @@
     "beatsHintDismiss": "Non merci",
     "beatsHintReversible": "Réversible à tout moment, et sans effet sur tes autres quiz.",
     "previewResultCauseBeatsDefault": "Ce qui bloque vraiment",
-    "previewResultPathBeatsDefault": "Par où commencer"
+    "previewResultPathBeatsDefault": "Par où commencer",
+    "questionAlignHint": "Alignement de cette question. \"Comme le quiz\" suit le réglage général, les deux autres font exception juste ici.",
+    "questionAlignInherit": "Comme le quiz",
+    "questionAlignCenter": "Centré",
+    "questionAlignLeft": "À gauche",
+    "applyLayoutToAll": "Tout réaligner sur ce réglage",
+    "applyLayoutToAllHint": "Retire les exceptions posées sur les questions et les alignements appliqués à la main dans les champs. Ton réglage ci-dessus reprend la main partout. Le gras, les couleurs et les tailles ne bougent pas.",
+    "applyLayoutToAllDone": "Toutes les questions suivent ton réglage. Pense à enregistrer."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",
@@ -2841,13 +2850,21 @@
     "funnelEmpty": "Aucune donnée pour cette période. Le tracking par question commence à enregistrer dès la prochaine visite.",
     "funnelSubtitle": "Nombre de sessions distinctes qui ont vu chaque question. La barre rétrécit à chaque abandon.",
     "sessionsStarted": "{count, plural, =0 {0 session commencée} one {# session commencée} other {# sessions commencées}}",
-    "worstDropWarning": "Question {q} fait perdre <bold>{pct}%</bold> des visiteurs par rapport à la précédente. C'est le point chaud à reformuler en priorité.",
+    "hotspotOnQuestion": "Question {q} est la dernière que voient <bold>{lost} visiteurs sur {sample}</bold> : ils la lisent et n'y répondent pas. C'est elle qu'il faut regarder, pas la suivante (ils ne l'ont jamais vue).",
+    "hotspotAfterAnswer": "<bold>{lost} visiteurs sur {sample}</bold> répondent à la question {q} puis s'arrêtent là. La question passe bien : c'est la longueur ou ce qui vient après qui les perd.",
+    "hotspotUnknown": "Question {q} est la dernière que voient <bold>{lost} visiteurs sur {sample}</bold>. C'est là qu'il faut regarder, pas sur la suivante (ils ne l'ont jamais vue).",
+    "funnelTooFew": "Pas encore assez de monde pour dire où ça décroche. Il faut environ {needed} visiteurs sur une même question pour qu'un écart veuille dire autre chose que le hasard : sur 8 personnes, une seule qui s'arrête pèse déjà 12%. Tu en es à {best}.",
+    "funnelSteady": "Aucun décrochage anormal. Le parcours tient.",
+    "funnelReadableUntil": "Lecture fiable jusqu'à la question {q} : au delà, il y a trop peu de monde pour conclure.",
+    "funnelProtocol": "Pour mesurer un changement : une seule modification à la fois, puis {needed} nouvelles réponses avant de juger. Deux changements en même temps rendent l'effet illisible.",
+    "funnelStepLoss": "-{pct}% ({lost} pers.)",
     "leadsCount": "{count, plural, =0 {0 lead} one {# lead} other {# leads}}",
     "leadsCountWithPct": "{count} leads · {pct}%",
     "seriesViews": "Vues",
     "seriesLeads": "Inscrits",
     "tooltipViews": "{count} vues",
-    "tooltipConversion": "Conversion : {pct}%"
+    "tooltipConversion": "Conversion : {pct}%",
+    "funnelNormalLoss": "Perdre du monde en route est normal et sain : ce sont surtout les visiteurs non qualifiés qui s'arrêtent. Aucun quiz ne vise 100% de complétion."
   },
   "illustrations": {
     "emptyInbox": "Boîte de réception vide",

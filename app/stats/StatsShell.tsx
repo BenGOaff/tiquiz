@@ -33,6 +33,7 @@ import { Mascot } from "@/components/ui/mascot";
 import { stripHtml } from "@/lib/richText";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import GlobalInsightsPanel from "@/components/insights/GlobalInsightsPanel";
+import { readFunnelSignal, stepLoss } from "@/lib/quiz/funnelSignal";
 import {
   BarChart3, Eye, Play, CheckCircle, Users, Share2, TrendingUp, TrendingDown,
   Sparkles, ArrowRight, Info,
@@ -74,7 +75,15 @@ type StatsResponse = {
     title: string;
     /** Questions supprimées depuis : leurs vues historiques sont exclues. */
     removedQuestions?: number;
-    questions: Array<{ index: number; views: number; hasData?: boolean; text?: string }>;
+    questions: Array<{
+      index: number;
+      views: number;
+      /** Sessions ayant VALIDÉ la question. Distingue "ils butent SUR
+       *  elle" de "ils partent APRÈS y avoir répondu". */
+      answers?: number;
+      hasData?: boolean;
+      text?: string;
+    }>;
   }>;
   hasEventData: boolean;
 };
@@ -358,23 +367,53 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
                   {t("questionFunnel.title")}
                 </h2>
               </div>
+              {/* Perdre du monde n'est PAS un échec : ce sont surtout les
+                  visiteurs non qualifiés qui s'arrêtent. Sans cette
+                  phrase, chaque départ se lit comme une faute. */}
+              <p className="text-xs text-muted-foreground">
+                {t("questionFunnel.normalLoss")}
+              </p>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {data.questionFunnels.map((qf) => (
-                  <QuestionFunnelCard
-                    key={qf.quizId}
-                    title={stripHtml(qf.title) || t("untitled")}
-                    questions={qf.questions}
-                    removedQuestions={qf.removedQuestions ?? 0}
-                    questionLabel={t("questionFunnel.questionLabel")}
-                    visitorsLabel={t("questionFunnel.visitors")}
-                    droppedLabel={t("questionFunnel.dropped")}
-                    keptLabel={t("questionFunnel.kept")}
-                    noDataLabel={t("questionFunnel.noData")}
-                    removedNotice={t("questionFunnel.removedNotice", {
-                      count: qf.removedQuestions ?? 0,
-                    })}
-                  />
-                ))}
+                {data.questionFunnels.map((qf) => {
+                  // Le verdict est calculé ICI, avec la MÊME fonction que
+                  // l'analytics du quiz et que le prompt de l'IA. La carte
+                  // ne fait que l'afficher (drame Jocelyne, 4 août 2026).
+                  const signal = readFunnelSignal(
+                    qf.questions.map((q) => ({
+                      questionIndex: q.index,
+                      views: q.views,
+                      answers: q.answers,
+                      hasData: q.hasData,
+                    })),
+                  );
+                  return (
+                    <QuestionFunnelCard
+                      key={qf.quizId}
+                      title={stripHtml(qf.title) || t("untitled")}
+                      questions={qf.questions}
+                      removedQuestions={qf.removedQuestions ?? 0}
+                      questionLabel={t("questionFunnel.questionLabel")}
+                      visitorsLabel={t("questionFunnel.visitors")}
+                      keptLabel={t("questionFunnel.kept")}
+                      noDataLabel={t("questionFunnel.noData")}
+                      hotspotIndex={signal.hotspot?.questionIndex ?? -1}
+                      badgeLabel={
+                        signal.hotspot
+                          ? t("questionFunnel.hotspot", {
+                              lost: signal.hotspot.lost,
+                              q: signal.hotspot.questionIndex + 1,
+                            })
+                          : signal.kind === "too-few"
+                            ? t("questionFunnel.tooFew")
+                            : null
+                      }
+                      badgeTone={signal.hotspot ? "alert" : "quiet"}
+                      removedNotice={t("questionFunnel.removedNotice", {
+                        count: qf.removedQuestions ?? 0,
+                      })}
+                    />
+                  );
+                })}
               </div>
             </div>
           )}
@@ -634,11 +673,21 @@ function MetricTile({
 // QuestionFunnelCard — per-question retention bars.
 //
 // Shows each question as a horizontal bar whose width = (this question's
-// views / first question's views). The drop-off between questions is
-// implicit but glaring: when a bar is noticeably shorter than the one
-// above it, that question is where visitors leave. We also surface the
-// biggest single-step drop as a callout so the creator's eye lands on
-// the worst offender immediately.
+// views / first question's views).
+//
+// -- CE QUI A CHANGÉ (drame Jocelyne, 4 août 2026) --------------------
+//
+// Le badge rouge "chute X% Q6->Q7" sortait dès 1% de perte, SANS AUCUN
+// seuil d'échantillon. Sur un quiz vu par une dizaine de personnes, il
+// désignait donc systématiquement une question à cause d'un ou deux
+// visiteurs. Et comme le pourcentage se calcule sur l'effectif restant,
+// qui fond à mesure qu'on avance, il dérivait mécaniquement vers la fin
+// du quiz : Jocelyne a réécrit puis supprimé "la question 7" trois fois
+// de suite, et l'alerte revenait toujours au même endroit.
+//
+// La décision (seuils + QUELLE question désigner) vit désormais dans
+// lib/quiz/funnelSignal.ts, partagée avec l'analytics du quiz et avec
+// le prompt de l'IA.
 // ---------------------------------------------------------------------------
 
 function QuestionFunnelCard({
@@ -647,20 +696,26 @@ function QuestionFunnelCard({
   removedQuestions = 0,
   questionLabel,
   visitorsLabel,
-  droppedLabel,
   keptLabel,
   noDataLabel,
   removedNotice,
+  hotspotIndex,
+  badgeLabel,
+  badgeTone,
 }: {
   title: string;
-  questions: Array<{ index: number; views: number; hasData?: boolean; text?: string }>;
+  questions: Array<{ index: number; views: number; answers?: number; hasData?: boolean; text?: string }>;
   removedQuestions?: number;
   questionLabel: string;
   visitorsLabel: string;
-  droppedLabel: string;
   keptLabel: string;
   noDataLabel: string;
   removedNotice: string;
+  /** Question sur laquelle les visiteurs s'arrêtent, -1 si aucune ne se
+   *  détache assez pour être nommée. */
+  hotspotIndex: number;
+  badgeLabel: string | null;
+  badgeTone: "alert" | "quiet";
 }) {
   if (questions.length === 0) return null;
   // Une question sans donnée (ajoutée après coup, jamais atteinte) ne
@@ -670,31 +725,24 @@ function QuestionFunnelCard({
   if (tracked.length === 0) return null;
   const base = tracked[0]?.views ?? 0;
 
-  // Biggest single-step drop — between question N and question N+1.
-  // Surfaces the question where the funnel leaks the most so the
-  // creator can target their copy fix.
-  let biggestDrop: { from: number; to: number; pct: number } | null = null;
-  for (let i = 0; i < tracked.length - 1; i++) {
-    const a = tracked[i].views;
-    const b = tracked[i + 1].views;
-    if (a <= 0) continue;
-    const lostPct = Math.round(((a - b) / a) * 100);
-    if (lostPct <= 0) continue;
-    if (!biggestDrop || lostPct > biggestDrop.pct) {
-      biggestDrop = { from: tracked[i].index, to: tracked[i + 1].index, pct: lostPct };
-    }
-  }
-
   return (
     <Card className="hover:shadow-card-hover transition-shadow">
       <CardContent className="p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-3">
           <h3 className="font-semibold truncate text-foreground" title={title}>{title}</h3>
-          {biggestDrop && (
-            <Badge variant="secondary" className="shrink-0 self-start text-[11px] bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 border-0">
-              {droppedLabel} {biggestDrop.pct}% Q{biggestDrop.from + 1}→Q{biggestDrop.to + 1}
+          {badgeLabel ? (
+            <Badge
+              variant="secondary"
+              className={cn(
+                "shrink-0 self-start text-[11px] border-0",
+                badgeTone === "alert"
+                  ? "bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300"
+                  : "text-muted-foreground",
+              )}
+            >
+              {badgeLabel}
             </Badge>
-          )}
+          ) : null}
         </div>
 
         <div className="space-y-2">
@@ -703,10 +751,19 @@ function QuestionFunnelCard({
             const trackedPos = tracked.indexOf(q);
             const widthPct = hasData && base > 0 ? Math.max(4, Math.round((q.views / base) * 100)) : 0;
             const retentionPct = hasData && base > 0 ? Math.round((q.views / base) * 100) : 0;
-            const prev = trackedPos > 0 ? tracked[trackedPos - 1].views : null;
-            const stepDrop = hasData && prev !== null && prev > 0
-              ? Math.round(((prev - q.views) / prev) * 100)
-              : 0;
+            // La perte est portée par la question qui la SUBIT (ceux qui
+            // l'ont vue et ne sont pas arrivés à la suivante), jamais par
+            // la suivante : les partants ne l'ont jamais vue.
+            const loss = hasData
+              ? stepLoss(
+                  questions.map((s) => ({
+                    questionIndex: s.index,
+                    views: s.views,
+                    hasData: s.hasData,
+                  })),
+                  trackedPos,
+                )
+              : null;
             // Color the bar progressively warmer as retention degrades —
             // visual signal even before reading numbers.
             const barTone = retentionPct >= 80 ? "bg-emerald-400 dark:bg-emerald-500"
@@ -722,9 +779,16 @@ function QuestionFunnelCard({
                   </span>
                   <span className="font-medium tabular-nums">
                     {hasData ? `${q.views} ${visitorsLabel}` : noDataLabel}
-                    {hasData && trackedPos > 0 && stepDrop > 0 && (
-                      <span className="ml-1.5 text-[11px] text-rose-600 dark:text-rose-400">
-                        −{stepDrop}%
+                    {loss && (
+                      <span
+                        className={cn(
+                          "ml-1.5 text-[11px]",
+                          q.index === hotspotIndex
+                            ? "text-rose-600 dark:text-rose-400 font-semibold"
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        −{loss.pct}% ({loss.lost})
                       </span>
                     )}
                   </span>

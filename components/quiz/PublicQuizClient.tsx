@@ -60,6 +60,11 @@ import {
   resolveLogoAlign,
 } from "@/lib/quiz/introLayout";
 import { answerGridClass, answerImageGridClass, resolveAnswerLayout } from "@/lib/quiz/answerLayout";
+import { answerImageRender } from "@/lib/quiz/answerImage";
+import {
+  resolveQuestionAlign,
+  resolveQuestionAnswerLayout,
+} from "@/lib/quiz/questionLayout";
 import {
   beatShell,
   buildResultBeats,
@@ -3117,8 +3122,18 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
     // Override PAR QUESTION : q.config.answer_layout ('grid'|'list') prime sur
     // le réglage quiz-level. Absent ou 'auto' -> on hérite du quiz. Sanitize
     // sur lecture (set fermé : seuls 'grid'/'list' surchargent).
-    const qAnswerLayoutOverride = ((q.config ?? {}) as Record<string, unknown>).answer_layout;
-    const answerLayout = resolveAnswerLayout(branding.answerLayout, qAnswerLayoutOverride);
+    const qCfgLayout = (q.config ?? {}) as Record<string, unknown>;
+    const answerLayout = resolveAnswerLayout(
+      branding.answerLayout,
+      resolveQuestionAnswerLayout(qCfgLayout.answer_layout),
+    );
+    // Alignement EFFECTIF de la question : son reglage propre, sinon celui
+    // du quiz (cf. lib/quiz/questionLayout.ts). C'est l'etage du milieu qui
+    // manquait : "une question centree, la suivante a gauche" (Bene,
+    // 4 aout 2026).
+    const qAlign = resolveQuestionAlign(qCfgLayout.align, qLayout);
+    const qAlignText = alignTextClass(qAlign);
+    const qAlignJustify = alignJustifyClass(qAlign);
     const mcGridClass = answerGridClass(answerLayout, q.options.length);
     const imgGridClass = answerImageGridClass(answerLayout);
     const qType: QuestionType = (q.question_type as QuestionType) ?? "multiple_choice";
@@ -3329,8 +3344,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
                     <img
                       src={opt.image_url}
                       alt={stripHtml(opt.text)}
-                      className={`aspect-video object-cover ${typeof opt.image_width === "number" ? "mx-auto block" : "w-full"}`}
-                      style={typeof opt.image_width === "number" ? { width: `${opt.image_width}%` } : undefined}
+                      {...answerImageRender(opt.image_width)}
                     />
                   ) : (
                     <div className="w-full aspect-video bg-muted/40" aria-hidden />
@@ -3409,8 +3423,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
                     <img
                       src={opt.image_url}
                       alt={stripHtml(opt.text)}
-                      className={`aspect-video object-cover ${typeof opt.image_width === "number" ? "mx-auto block" : "w-full"}`}
-                      style={typeof opt.image_width === "number" ? { width: `${opt.image_width}%` } : undefined}
+                      {...answerImageRender(opt.image_width)}
                     />
                   )}
                   <div className="flex items-center gap-3.5 p-4">
@@ -3461,11 +3474,11 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
                 quiz-step-in keyframe → the new question rises in
                 rather than popping. Subtle but transforms the feel
                 from "form" to "guided experience". */}
-            <div key={currentQ} className={`max-w-2xl w-full space-y-8 ${layoutAlignText} ${navDir === "back" ? "animate-quiz-slide-in-left" : "animate-quiz-slide-in-right"}`} style={readerSurfaceStyle}>
+            <div key={currentQ} className={`max-w-2xl w-full space-y-8 ${qAlignText} ${navDir === "back" ? "animate-quiz-slide-in-left" : "animate-quiz-slide-in-right"}`} style={readerSurfaceStyle}>
               {/* Pill-style step indicator — sits more confidently than
                   the previous tracking-widest paragraph and keeps the
                   primary brand color in view at every step. */}
-              <div className={`flex items-center ${layoutIndicatorJustify}`}>
+              <div className={`flex items-center ${qAlignJustify}`}>
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold tabular-nums">
                   {t.questions.charAt(0).toUpperCase() + t.questions.slice(1)}
                   <span className="opacity-70">{currentQ + 1} / {totalQ}</span>
@@ -3504,7 +3517,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
               })()}
               {/* Question = champ court — même fix typo qu'au-dessus. */}
               <h2
-                className={`tiquiz-rich tiquiz-rich-inline tiquiz-quiz-question font-bold leading-tight ${qLayout === "centered" ? "text-center" : "text-left"} text-primary`}
+                className={`tiquiz-rich tiquiz-rich-inline tiquiz-quiz-question font-bold leading-tight ${qAlignText} text-primary`}
                 dangerouslySetInnerHTML={{ __html: sanitizeRichText(interp(q.question_text)) }}
               />
 

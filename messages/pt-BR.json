@@ -175,10 +175,12 @@
       "title": "Onde seus respondentes desistem?",
       "questionLabel": "Pergunta",
       "visitors": "vistas",
-      "dropped": "Maior queda:",
+      "hotspot": "{lost} pessoas param na pergunta {q}",
+      "tooFew": "Ainda não há gente suficiente",
       "kept": "Chegaram até o fim:",
       "noData": "ainda sem dados",
-      "removedNotice": "{count, plural, =1 {1 pergunta foi excluída desde então: as visualizações dela não são mais contadas.} other {# perguntas foram excluídas desde então: as visualizações delas não são mais contadas.}}"
+      "removedNotice": "{count, plural, =1 {1 pergunta foi excluída desde então: as visualizações dela não são mais contadas.} other {# perguntas foram excluídas desde então: as visualizações delas não são mais contadas.}}",
+      "normalLoss": "Perder gente pelo caminho é normal e saudável: quem para são principalmente os visitantes não qualificados. Nenhum quiz busca 100% de conclusão."
     },
     "untitled": "Sem título"
   },
@@ -1576,7 +1578,14 @@
     "beatsHintDismiss": "Não, obrigada",
     "beatsHintReversible": "Reversível a qualquer momento, e sem efeito nos seus outros quizzes.",
     "previewResultCauseBeatsDefault": "O que te bloqueia de verdade",
-    "previewResultPathBeatsDefault": "Por onde começar"
+    "previewResultPathBeatsDefault": "Por onde começar",
+    "questionAlignHint": "Alinhamento desta pergunta. \"Como o quiz\" segue a configuração geral, os outros dois abrem uma exceção só aqui.",
+    "questionAlignInherit": "Como o quiz",
+    "questionAlignCenter": "Centralizado",
+    "questionAlignLeft": "À esquerda",
+    "applyLayoutToAll": "Realinhar tudo por esta configuração",
+    "applyLayoutToAllHint": "Remove as exceções das perguntas e os alinhamentos aplicados na mão nos campos. Sua configuração acima volta a valer em todo lugar. Negrito, cores e tamanhos não mudam.",
+    "applyLayoutToAllDone": "Todas as perguntas seguem sua configuração. Lembre de salvar."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova senha",
@@ -2788,14 +2797,22 @@
     "funnelEmpty": "Sem dados para este período. O rastreamento por pergunta começa a registrar na próxima visita.",
     "funnelSubtitle": "Número de sessões distintas que viram cada pergunta. A barra diminui a cada abandono.",
     "sessionsStarted": "{count, plural, =0 {0 sessões iniciadas} one {# sessão iniciada} other {# sessões iniciadas}}",
-    "worstDropWarning": "A pergunta {q} faz você perder <bold>{pct}%</bold> dos visitantes em relação à anterior. É o ponto a reescrever primeiro.",
+    "hotspotOnQuestion": "A pergunta {q} é a última que <bold>{lost} de {sample} visitantes</bold> veem: eles leem e não respondem. É ela que você deve olhar, não a seguinte (eles nunca a viram).",
+    "hotspotAfterAnswer": "<bold>{lost} de {sample} visitantes</bold> respondem a pergunta {q} e param ali. A pergunta funciona: o que os perde é o tamanho, ou o que vem depois.",
+    "hotspotUnknown": "A pergunta {q} é a última que <bold>{lost} de {sample} visitantes</bold> veem. É ela que você deve olhar, não a seguinte (eles nunca a viram).",
+    "funnelTooFew": "Ainda não há gente suficiente para dizer onde desistem. São necessários cerca de {needed} visitantes em uma mesma pergunta para que uma diferença signifique algo além do acaso: em 8 pessoas, uma só que para já pesa 12%. Você está em {best}.",
+    "funnelSteady": "Nenhuma queda anormal. O percurso se sustenta.",
+    "funnelReadableUntil": "Leitura confiável até a pergunta {q}: além disso, há pouca gente para concluir.",
+    "funnelProtocol": "Para medir uma mudança: uma alteração por vez, depois {needed} novas respostas antes de julgar. Duas mudanças ao mesmo tempo tornam o efeito ilegível.",
+    "funnelStepLoss": "-{pct}% ({lost} pes.)",
     "leadsCount": "{count, plural, =0 {0 leads} one {# lead} other {# leads}}",
     "leadsCountWithPct": "{count} leads · {pct}%",
     "seriesViews": "Visitas",
     "seriesLeads": "Inscritos",
     "tooltipViews": "{count} visitas",
     "tooltipConversion": "Conversão: {pct}%",
-    "kpiCaptureRateUnreliable": "Visualizações parcialmente rastreadas (quiz incorporado ou anterior ao rastreamento) - taxa confiável nas novas visualizações"
+    "kpiCaptureRateUnreliable": "Visualizações parcialmente rastreadas (quiz incorporado ou anterior ao rastreamento) - taxa confiável nas novas visualizações",
+    "funnelNormalLoss": "Perder gente pelo caminho é normal e saudável: quem para são principalmente os visitantes não qualificados. Nenhum quiz busca 100% de conclusão."
   },
   "illustrations": {
     "emptyInbox": "Caixa de entrada vazia",

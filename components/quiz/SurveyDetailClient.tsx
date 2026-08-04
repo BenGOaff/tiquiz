@@ -53,6 +53,11 @@ import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPal
 import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
+import {
+  buildSurveyEditorSnapshot,
+  draftDiffersFromSaved,
+} from "@/lib/quiz/editorSnapshot";
+import { answerImageRender } from "@/lib/quiz/answerImage";
 import { stripHtml } from "@/lib/richText";
 import { alignBlockMarginClass, alignJustifyClass, alignTextClass, resolveBlockAlign } from "@/lib/quiz/textAlign";
 import { isPixelFieldValid } from "@/lib/clientPixels";
@@ -563,7 +568,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   }, []);
 
   // ─── Autosave snapshot ────────────────────────────────────────
-  const autosaveSnapshot = useMemo(() => ({
+  const autosaveSnapshot = useMemo(() => buildSurveyEditorSnapshot({
     title,
     introduction,
     cta_text: ctaText,
@@ -811,12 +816,85 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       const draftState = (q as { draft_state?: unknown }).draft_state ?? null;
       const draftAt = (q as { draft_updated_at?: string | null }).draft_updated_at ?? null;
       const savedAt = (q as { updated_at?: string | null }).updated_at ?? null;
-      if (draftState && draftAt && (!savedAt || new Date(draftAt).getTime() > new Date(savedAt).getTime())) {
-        setPendingDraft({
-          state: draftState as Record<string, unknown>,
-          draftUpdatedAt: draftAt,
-          updatedAt: savedAt,
+      const isNewerDraft =
+        draftState && draftAt && (!savedAt || new Date(draftAt).getTime() > new Date(savedAt).getTime());
+      if (isNewerDraft) {
+        // Reconstruction canonique par le MÊME constructeur que
+        // `autosaveSnapshot` : sans elle, cet éditeur proposait la
+        // restauration dès que le brouillon était plus récent, identique
+        // ou pas (drame Jocelyne, 4 août 2026, côté quiz). Le typecheck
+        // interdit d'oublier un champ ici. Cf. lib/quiz/editorSnapshot.ts.
+        const canonical = buildSurveyEditorSnapshot({
+          title: q.title,
+          introduction: q.introduction ?? "",
+          cta_text: q.cta_text ?? "",
+          cta_url: q.cta_url ?? "",
+          start_button_text: q.start_button_text ?? "",
+          privacy_url: q.privacy_url ?? "",
+          consent_text: q.consent_text ?? "",
+          capture_heading: q.capture_heading ?? "",
+          capture_subtitle: q.capture_subtitle ?? "",
+          capture_submit_text: q.capture_submit_text ?? "",
+          result_insight_heading: q.result_insight_heading ?? "",
+          result_projection_heading: q.result_projection_heading ?? "",
+          capture_first_name: q.capture_first_name ?? false,
+          capture_last_name: q.capture_last_name ?? false,
+          capture_phone: q.capture_phone ?? false,
+          capture_country: q.capture_country ?? false,
+          first_name_required: q.first_name_required ?? false,
+          last_name_required: q.last_name_required ?? false,
+          phone_required: q.phone_required ?? false,
+          country_required: q.country_required ?? false,
+          show_consent_checkbox: (q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false,
+          meta_pixel_id: (q as { meta_pixel_id?: string | null }).meta_pixel_id ?? "",
+          ga4_measurement_id: (q as { ga4_measurement_id?: string | null }).ga4_measurement_id ?? "",
+          google_ads_conversion_id: (q as { google_ads_conversion_id?: string | null }).google_ads_conversion_id ?? "",
+          google_ads_conversion_label: (q as { google_ads_conversion_label?: string | null }).google_ads_conversion_label ?? "",
+          ask_first_name: Boolean((q as unknown as Record<string, unknown>).ask_first_name),
+          ask_gender: Boolean((q as unknown as Record<string, unknown>).ask_gender),
+          share_message: q.share_message ?? "",
+          locale: q.locale ?? "",
+          sio_share_tag_name: q.sio_share_tag_name ?? "",
+          sio_capture_tag: q.sio_capture_tag ?? "",
+          status: q.status,
+          brand_font: resolvedFont,
+          brand_color_primary: q.brand_color_primary || prof?.brand_color_primary || DEFAULT_BRAND_COLOR_PRIMARY,
+          brand_color_background: q.brand_color_background || DEFAULT_BRAND_COLOR_BACKGROUND,
+          brand_color_text: q.brand_color_text ?? null,
+          brand_logo_url: (q as { brand_logo_url?: string | null }).brand_logo_url ?? null,
+          hide_brand_logo: (q as { hide_brand_logo?: boolean | null }).hide_brand_logo === true,
+          capture_enabled: (q as { capture_enabled?: boolean | null }).capture_enabled !== false,
+          capture_before_questions: Boolean((q as { capture_before_questions?: boolean | null }).capture_before_questions),
+          show_aggregate_responses: (q as { show_aggregate_responses?: boolean | null }).show_aggregate_responses === true,
+          hide_response_counts: (q as { hide_response_counts?: boolean | null }).hide_response_counts === true,
+          notify_responses: (q as { notify_responses?: boolean | null }).notify_responses !== false,
+          survey_thanks_heading: (q as { survey_thanks_heading?: string | null }).survey_thanks_heading ?? "",
+          survey_thanks_body: (q as { survey_thanks_body?: string | null }).survey_thanks_body ?? "",
+          slug: q.slug ?? "",
+          og_description: q.og_description ?? "",
+          og_image_url: q.og_image_url ?? null,
+          intro_image_url: (q as { intro_image_url?: string | null }).intro_image_url ?? null,
+          intro_image_width: (q as { intro_image_width?: number | null }).intro_image_width ?? null,
+          custom_footer_text: q.custom_footer_text ?? "",
+          custom_footer_url: q.custom_footer_url ?? "",
+          share_networks: Array.isArray(q.share_networks) ? q.share_networks : [],
+          questions: q.questions.map((qq) => ({
+            ...qq,
+            question_type: (qq.question_type as QuestionType) ?? "multiple_choice",
+            config: (qq.config as Record<string, unknown>) ?? {},
+          })),
         });
+        if (draftDiffersFromSaved(draftState, canonical)) {
+          setPendingDraft({
+            state: draftState as Record<string, unknown>,
+            draftUpdatedAt: draftAt,
+            updatedAt: savedAt,
+          });
+        } else {
+          // Identique au quiz sauvegardé : on le nettoie en silence,
+          // sinon il reviendrait à chaque ouverture.
+          fetch(`/api/quiz/${quizId}/autosave`, { method: "DELETE" }).catch(() => { /* non-fatal */ });
+        }
       }
     } catch { toast.error(t("errLoading")); } finally { setLoading(false); }
   }, [quizId, router, t]);
@@ -2208,9 +2286,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                                       Supabase Storage bucket public-assets, max 10 Mo,
                                       formats image/* incluant GIF. */}
                                   {opt.image_url ? (
-                                    <div className="relative aspect-video bg-muted/30">
+                                    <div className="relative bg-muted/30">
                                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                                      <img src={opt.image_url} alt={stripHtml(opt.text)} className="w-full h-full object-cover" />
+                                      <img src={opt.image_url} alt={stripHtml(opt.text)} {...answerImageRender(opt.image_width)} />
                                       <div className="absolute top-1.5 right-1.5 flex gap-1">
                                         <button
                                           type="button"
