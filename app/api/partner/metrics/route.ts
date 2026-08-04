@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { hashSecret, safeEqual } from "@/lib/partner/tokens";
 import { getPartnerMetrics } from "@/lib/partner/metrics";
+import { buildPartnerReadout } from "@/lib/partner/readout";
 
 export const dynamic = "force-dynamic";
 
@@ -41,5 +42,15 @@ export async function GET(req: NextRequest) {
   const quizId = req.nextUrl.searchParams.get("quizId")?.trim() || null;
   const projectId = req.nextUrl.searchParams.get("projectId")?.trim() || null;
   const metrics = await getPartnerMetrics(conn.user_id as string, { quizId, projectId });
-  return NextResponse.json({ ok: true, metrics });
+  // LA LECTURE DU PARCOURS, pas seulement les compteurs (Jocelyne,
+  // 4 aout 2026). Le coach de l'Atelier n'avait AUCUN chiffre de funnel :
+  // ni demarrages, ni detail par question, ni verdict. Il ne pouvait donc
+  // que generaliser la methode, ce qui sonne juste et ne veut rien dire
+  // sur le quiz de la personne en face.
+  //
+  // Le verdict est REDIGE ici, par les memes fonctions que l'ecran de
+  // stats : l'ecran que l'eleve regarde et le coach a qui elle parle
+  // disent forcement la meme chose. Cf. lib/partner/readout.ts.
+  const readout = await buildPartnerReadout(conn.user_id as string, quizId);
+  return NextResponse.json({ ok: true, metrics, readout });
 }
