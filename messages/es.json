@@ -2871,7 +2871,16 @@
     "stageStart": "Inicio",
     "stageCapture": "Email dejado",
     "leakArrival": "<bold>{lost} de {sample} visitantes</bold> se van de tu pantalla de inicio sin ver nunca tu primera pregunta ({pct}%). Suele ser la mayor fuga de un quiz, y se corrige en una sola pantalla.",
-    "leakCapture": "<bold>{lost} de {sample} personas</bold> terminan tus preguntas y no dejan su email ({pct}%). Tu promesa de resultado o tu formulario las detiene justo antes de la meta."
+    "leakCapture": "<bold>{lost} de {sample} personas</bold> terminan tus preguntas y no dejan su email ({pct}%). Tu promesa de resultado o tu formulario las detiene justo antes de la meta.",
+    "trafficTitle": "De dónde vienen tus visitantes",
+    "trafficSubtitle": "Responder a la pregunta que va antes que todas las demás: ¿tu página decepciona, o no son las personas adecuadas las que llegan a ella?",
+    "trafficTooFew": "Todavía no hay suficientes visitas registradas para leer un reparto ({classified} de unas {needed} necesarias). Por debajo, una sola visita mueve un porcentaje varios puntos.",
+    "trafficDirect": "Directo",
+    "trafficDirectNote": "\"Directo\" no significa que hayan escrito tu dirección: la mayoría de las aplicaciones móviles (Instagram, TikTok, mensajería, correo) no indican de dónde viene el clic. Un código QR o un enlace en un PDF tampoco.",
+    "trafficDirectBlind": "El {pct}% de tu tráfico llega sin procedencia, lo cual es normal cuando publicas en móvil: las aplicaciones no la transmiten. Para verlo claro, etiqueta tus enlaces (por ejemplo tu-enlace?utm_source=instagram) y verás cada publicación por separado.",
+    "trafficSingle": "Todo tu tráfico viene de {source} ({pct}%). Lo que pasa en tu pantalla de inicio habla, por tanto, de ESE público: si muchos se van, mira primero si tu promesa coincide con lo que anunciaste allí.",
+    "trafficMixed": "Tu tráfico viene de varios sitios. Compara: si una fuente empieza mucho mejor que las demás, no es tu página lo que falla, es el público de la fuente más débil.",
+    "trafficWindow": "Lectura sobre tus últimas {count} visitas."
   },
   "illustrations": {
     "emptyInbox": "Bandeja de entrada vacía",

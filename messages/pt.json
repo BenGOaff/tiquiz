@@ -2871,7 +2871,16 @@
     "stageStart": "Início",
     "stageCapture": "Email deixado",
     "leakArrival": "<bold>{lost} de {sample} visitantes</bold> saem do teu ecrã inicial sem nunca ver a primeira pergunta ({pct}%). É muitas vezes a maior fuga de um quiz, e corrige-se num só ecrã.",
-    "leakCapture": "<bold>{lost} de {sample} pessoas</bold> terminam as perguntas e não deixam o email ({pct}%). A tua promessa de resultado ou o formulário para-as mesmo antes da meta."
+    "leakCapture": "<bold>{lost} de {sample} pessoas</bold> terminam as perguntas e não deixam o email ({pct}%). A tua promessa de resultado ou o formulário para-as mesmo antes da meta.",
+    "trafficTitle": "De onde vêm os teus visitantes",
+    "trafficSubtitle": "Responder à pergunta que vem antes de todas as outras: a tua página desilude, ou não são as pessoas certas que lá chegam?",
+    "trafficTooFew": "Ainda não há visitas registadas suficientes para ler uma repartição ({classified} em cerca de {needed} necessárias). Abaixo disso, uma única visita move uma percentagem em vários pontos.",
+    "trafficDirect": "Direto",
+    "trafficDirectNote": "\"Direto\" não quer dizer que escreveram o teu endereço: a maioria das aplicações móveis (Instagram, TikTok, mensagens, email) não indica de onde vem o clique. Um código QR ou um link num PDF também não.",
+    "trafficDirectBlind": "{pct}% do teu tráfego chega sem proveniência, o que é normal quando publicas no telemóvel: as aplicações não a transmitem. Para veres com clareza, marca os teus links (por exemplo o-teu-link?utm_source=instagram) e verás cada publicação em separado.",
+    "trafficSingle": "Todo o teu tráfego vem de {source} ({pct}%). O que acontece no teu ecrã inicial fala portanto DESSE público: se muitos saem, vê primeiro se a tua promessa corresponde ao que anunciaste lá.",
+    "trafficMixed": "O teu tráfego vem de vários sítios. Compara: se uma fonte arranca muito melhor do que as outras, não é a tua página que falha, é o público da fonte mais fraca.",
+    "trafficWindow": "Leitura sobre as tuas últimas {count} visitas."
   },
   "illustrations": {
     "emptyInbox": "Caixa de entrada vazia",

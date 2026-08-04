@@ -2871,7 +2871,16 @@
     "stageStart": "Démarrage",
     "stageCapture": "Email laissé",
     "leakArrival": "<bold>{lost} visiteurs sur {sample}</bold> repartent de ton écran d'accueil sans jamais voir ta première question ({pct}%). C'est souvent la plus grosse fuite d'un quiz, et elle se corrige sur un seul écran.",
-    "leakCapture": "<bold>{lost} personnes sur {sample}</bold> terminent tes questions et ne laissent pas leur email ({pct}%). Ta promesse de résultat ou ton formulaire les arrête juste avant la ligne d'arrivée."
+    "leakCapture": "<bold>{lost} personnes sur {sample}</bold> terminent tes questions et ne laissent pas leur email ({pct}%). Ta promesse de résultat ou ton formulaire les arrête juste avant la ligne d'arrivée.",
+    "trafficTitle": "D'où viennent tes visiteurs",
+    "trafficSubtitle": "Répondre à la question qui vient avant toutes les autres : est-ce que ta page déçoit, ou est-ce que ce ne sont pas les bonnes personnes qui arrivent dessus ?",
+    "trafficTooFew": "Pas encore assez de visites tracées pour lire une répartition ({classified} sur environ {needed} nécessaires). En dessous, une seule visite fait bouger un pourcentage de plusieurs points.",
+    "trafficDirect": "Direct",
+    "trafficDirectNote": "\"Direct\" ne veut pas dire qu'ils ont tapé ton adresse : la plupart des applications mobiles (Instagram, TikTok, messageries, mail) n'indiquent pas d'où vient le clic. Un QR code ou un lien dans un PDF non plus.",
+    "trafficDirectBlind": "{pct}% de ton trafic arrive sans provenance, ce qui est normal quand tu publies sur mobile : les applications ne la transmettent pas. Pour y voir clair, ajoute une étiquette à tes liens (par exemple ton-lien?utm_source=instagram) et tu verras chaque publication séparément.",
+    "trafficSingle": "Tout ton trafic vient de {source} ({pct}%). Ce qui se passe sur ton écran d'accueil parle donc de CE public là : si beaucoup repartent, regarde d'abord si ta promesse correspond à ce que tu as annoncé là-bas.",
+    "trafficMixed": "Ton trafic vient de plusieurs endroits. Compare : si une source démarre beaucoup mieux que les autres, ce n'est pas ta page qui coince, c'est le public de la source la plus faible.",
+    "trafficWindow": "Lecture sur tes {count} dernières visites."
   },
   "illustrations": {
     "emptyInbox": "Boîte de réception vide",

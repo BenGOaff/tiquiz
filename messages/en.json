@@ -2871,7 +2871,16 @@
     "stageStart": "Started",
     "stageCapture": "Left email",
     "leakArrival": "<bold>{lost} of {sample} visitors</bold> leave your intro screen without ever seeing your first question ({pct}%). It's often a quiz's biggest leak, and it's fixed on a single screen.",
-    "leakCapture": "<bold>{lost} of {sample} people</bold> finish your questions and don't leave their email ({pct}%). Your result promise or your form stops them just before the finish line."
+    "leakCapture": "<bold>{lost} of {sample} people</bold> finish your questions and don't leave their email ({pct}%). Your result promise or your form stops them just before the finish line.",
+    "trafficTitle": "Where your visitors come from",
+    "trafficSubtitle": "Answering the question that comes before all the others: is your page disappointing, or are the wrong people landing on it?",
+    "trafficTooFew": "Not enough tracked visits yet to read a breakdown ({classified} out of roughly {needed} needed). Below that, a single visit moves a percentage by several points.",
+    "trafficDirect": "Direct",
+    "trafficDirectNote": "\"Direct\" does not mean they typed your address: most mobile apps (Instagram, TikTok, messaging, email) do not report where the click came from. Neither does a QR code or a link inside a PDF.",
+    "trafficDirectBlind": "{pct}% of your traffic arrives with no source, which is normal when you publish on mobile: apps do not pass it on. To see clearly, tag your links (for example your-link?utm_source=instagram) and each post will show up separately.",
+    "trafficSingle": "All your traffic comes from {source} ({pct}%). What happens on your welcome screen is therefore about THAT audience: if many leave, first check whether your promise matches what you announced there.",
+    "trafficMixed": "Your traffic comes from several places. Compare them: if one source starts much better than the others, your page is not the problem, the weakest source's audience is.",
+    "trafficWindow": "Read over your last {count} visits."
   },
   "illustrations": {
     "emptyInbox": "Empty inbox",
