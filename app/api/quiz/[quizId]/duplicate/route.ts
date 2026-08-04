@@ -36,6 +36,12 @@ const NON_COPYABLE_QUIZ_COLUMNS = new Set([
   "slug",
   "user_id",
   "project_id",
+  // L'analyse IA parle des chiffres de l'ORIGINAL (drame Jocelyne, 4 aout
+  // 2026). Copiee telle quelle, elle s'affiche sur une copie a zero vue en
+  // commentant "113 vues, 55 demarrages", avec la date de l'original. La
+  // copie n'a aucune donnee : elle ne doit donc afficher aucune analyse.
+  "ai_insights",
+  "ai_insights_at",
 ]);
 
 // Per-child columns regenerated on insert (id + FK + timestamps).
