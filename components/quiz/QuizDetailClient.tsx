@@ -99,6 +99,10 @@ import { UserPalettesProvider } from "@/components/editor/PalettesContext";
 import { EditorPreviewDeviceProvider } from "@/components/editor/EditorPreviewDeviceContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
+import {
+  buildQuizEditorSnapshot,
+  draftDiffersFromSaved,
+} from "@/lib/quiz/editorSnapshot";
 
 /** Demo first name used when rendering placeholders in the editor preview, so
  *  the creator sees what a real visitor would see ("Bonjour Alex" rather than
@@ -979,7 +983,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // Collecte l'ensemble de l'état éditable. Stable au sens content : si
   // rien n'a changé, le JSON sérialisé est identique → l'autosave hook
   // skip la requête.
-  const autosaveSnapshot = useMemo(() => ({
+  const autosaveSnapshot = useMemo(() => buildQuizEditorSnapshot({
     title,
     introduction,
     cta_text: ctaText,
@@ -1075,6 +1079,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     share_networks: shareNetworks,
     questions: editQuestions,
     results: editResults,
+    seo_noindex: seoNoindex,
   }), [
     title, introduction, ctaText, ctaUrl, startButtonText, privacyUrl, consentText,
     captureHeading, captureSubtitle, captureSubmitText, resultInsightHeading, resultProjectionHeading,
@@ -1095,7 +1100,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     shareMessage, locale, sioShareTagName, status,
     fontFamily, primaryColor, bgColor, textColor, quizBrandLogoUrl, hideBrandLogo,
     slug, ogDescription, ogImageUrl, customFooterText, customFooterUrl, hideBranding, shareNetworks,
-    editQuestions, editResults,
+    editQuestions, editResults, seoNoindex,
   ]);
 
   const { savingDraft, clearDraft } = useAutosave({
@@ -1408,7 +1413,12 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
         // Snapshot canonique reconstruit à partir des colonnes
         // fraîchement fetchées — DOIT matcher la shape de
         // `autosaveSnapshot` ci-dessous (sinon faux positif de diff).
-        const canonical: Record<string, unknown> = {
+        // MÊME constructeur que `autosaveSnapshot` : c'est ce qui rend
+        // l'oubli d'un champ impossible. Onze champs manquaient ici, donc
+        // la comparaison ne pouvait plus JAMAIS dire "identique", donc le
+        // dialogue revenait à chaque ouverture (drame Jocelyne, 4 août
+        // 2026). Cf. lib/quiz/editorSnapshot.ts.
+        const canonical = buildQuizEditorSnapshot({
           title: q.title,
           introduction: q.introduction ?? "",
           cta_text: q.cta_text ?? "",
@@ -1423,14 +1433,20 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           result_bridge_heading: q.result_bridge_heading ?? "",
           show_result_bridge: (q as { show_result_bridge?: boolean | null }).show_result_bridge !== false,
           result_layout: resultLayoutMode((q as { result_layout?: string | null }).result_layout),
+          tie_break: tieBreakMode((q as { tie_break?: string | null }).tie_break),
           brand_logo_align: logoAlignSetting((q as { brand_logo_align?: string | null }).brand_logo_align),
           brand_logo_width: logoWidthPct((q as { brand_logo_width?: number | null }).brand_logo_width),
           intro_text_width: introTextWidthPct((q as { intro_text_width?: number | null }).intro_text_width),
           result_projection_heading: q.result_projection_heading ?? "",
+          capture_enabled: (q as { capture_enabled?: boolean | null }).capture_enabled !== false,
           capture_first_name: q.capture_first_name ?? false,
           capture_last_name: q.capture_last_name ?? false,
           capture_phone: q.capture_phone ?? false,
           capture_country: q.capture_country ?? false,
+          first_name_required: q.first_name_required ?? false,
+          last_name_required: q.last_name_required ?? false,
+          phone_required: q.phone_required ?? false,
+          country_required: q.country_required ?? false,
           show_consent_checkbox: (q as { show_consent_checkbox?: boolean | null }).show_consent_checkbox !== false,
           show_results_breakdown: (q as { show_results_breakdown?: boolean | null }).show_results_breakdown === true,
           scoring_axes: normalizeScoringAxes((q as { scoring_axes?: unknown }).scoring_axes),
@@ -1441,6 +1457,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           hide_response_counts: (q as { hide_response_counts?: boolean | null }).hide_response_counts === true,
           notify_responses: (q as { notify_responses?: boolean | null }).notify_responses !== false,
           show_other_results: (q as { show_other_results?: boolean | null }).show_other_results === true,
+          meta_pixel_id: (q as { meta_pixel_id?: string | null }).meta_pixel_id ?? "",
+          ga4_measurement_id: (q as { ga4_measurement_id?: string | null }).ga4_measurement_id ?? "",
+          google_ads_conversion_id: (q as { google_ads_conversion_id?: string | null }).google_ads_conversion_id ?? "",
+          google_ads_conversion_label: (q as { google_ads_conversion_label?: string | null }).google_ads_conversion_label ?? "",
           ask_first_name: Boolean((q as unknown as Record<string, unknown>).ask_first_name),
           ask_gender: Boolean((q as unknown as Record<string, unknown>).ask_gender),
           virality_enabled: q.virality_enabled,
@@ -1491,16 +1511,16 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           hide_brand_logo: (q as { hide_brand_logo?: boolean | null }).hide_brand_logo === true,
           slug: q.slug ?? "",
           og_description: q.og_description ?? "",
+          og_image_url: q.og_image_url ?? null,
+          seo_noindex: !!(q as { seo_noindex?: boolean }).seo_noindex,
           custom_footer_text: q.custom_footer_text ?? "",
           custom_footer_url: q.custom_footer_url ?? "",
           hide_branding: (q as { hide_branding?: boolean | null }).hide_branding === true,
           share_networks: Array.isArray(q.share_networks) ? q.share_networks : [],
           questions: q.questions,
           results: q.results,
-        };
-        const sameAsCanonical =
-          JSON.stringify(draftState) === JSON.stringify(canonical);
-        if (sameAsCanonical) {
+        });
+        if (!draftDiffersFromSaved(draftState, canonical)) {
           // Draft strictement identique au canonique → on le nettoie en
           // silence côté serveur pour ne pas re-proposer la restauration
           // au prochain ouverture. Best-effort, l'éventuel échec réseau
