@@ -2858,6 +2858,7 @@
     "funnelTitle": "Embudo por pregunta",
     "funnelEmpty": "Sin datos para este período. El seguimiento por pregunta empieza a registrar desde la próxima visita.",
     "funnelSubtitle": "Número de sesiones distintas que vieron cada pregunta. La barra se encoge con cada abandono.",
+    "funnelCohortNotice": "Este gráfico solo cuenta a las {total, plural, one {# persona} other {# personas}} que pasaron desde tu último cambio de preguntas. {stale, plural, one {# persona más respondió} other {# personas más respondieron}} a una versión diferente del quiz: sumarlas mostraría una caída donde solo añadiste, eliminaste o moviste una pregunta.",
     "sessionsStarted": "{count, plural, =0 {0 sesiones iniciadas} one {# sesión iniciada} other {# sesiones iniciadas}}",
     "hotspotOnQuestion": "La pregunta {q} es la última que ven <bold>{lost} de {sample} visitantes</bold>: la leen y no la responden. Es la que hay que mirar, no la siguiente (nunca la vieron).",
     "hotspotAfterAnswer": "<bold>{lost} de {sample} visitantes</bold> responden la pregunta {q} y se detienen ahí. La pregunta funciona: lo que los pierde es la longitud o lo que viene después.",
