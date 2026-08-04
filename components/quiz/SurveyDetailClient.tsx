@@ -1283,6 +1283,13 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       }
       toast.success(t("saved"));
       try { await clearDraft(); } catch { /* non-fatal */ }
+      // Puis on RELIT ce que le serveur a réellement enregistré : la
+      // typographie française, les `id` des questions nouvelles et les
+      // sanitizers réécrivent le contenu côté serveur, et l'éditeur ne le
+      // relisait jamais. Son état divergeait donc de la base dès la
+      // sauvegarde, et le brouillon suivant portait cette divergence
+      // (drame Jocelyne, 4 août 2026, deuxième round).
+      try { await fetchQuiz(); } catch { /* non-fatal */ }
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : t("errGeneric")); } finally { setSaving(false); }
   };
 

@@ -2460,6 +2460,27 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       // Save explicite OK → on jette le brouillon auto-sauvegardé pour
       // ne pas re-proposer la restauration au prochain ouverture.
       try { await clearDraft(); } catch { /* non-fatal */ }
+      // Puis on RELIT ce que le serveur a réellement enregistré.
+      //
+      // Drame Jocelyne, 4 août 2026, deuxième round : "c'est bon pour la
+      // sauvegarde !" à 13h15, "la sauvegarde recommence" à 13h42.
+      //
+      // Ce que le serveur écrit n'est PAS ce que l'éditeur lui a envoyé,
+      // et l'éditeur ne le relisait jamais :
+      //   - la typographie française insère des espaces insécables avant
+      //     ?, !, :, ; (applyFrenchTypographyDeep, appliqué sur le PATCH) ;
+      //   - une question AJOUTÉE reçoit son `id` à l'INSERT, et l'état
+      //     local n'en a aucun ;
+      //   - les `|| null`, les trim et les sanitizers réécrivent le reste.
+      // L'état de l'éditeur divergeait donc de la base DÈS la sauvegarde,
+      // définitivement. Le brouillon suivant portait cette divergence, la
+      // comparaison la voyait (à raison), et le dialogue revenait.
+      //
+      // Relire coûte une requête et supprime la classe entière : après une
+      // sauvegarde, l'éditeur montre EXACTEMENT ce qui est en base. C'est
+      // aussi ce qui donne enfin leur `id` aux questions nouvelles, donc
+      // ce qui protège leur historique de statistiques.
+      try { await fetchQuiz(); } catch { /* non-fatal : l'état local reste utilisable */ }
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : t("errGeneric")); } finally { setSaving(false); }
   };
 
