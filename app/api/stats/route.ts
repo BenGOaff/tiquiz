@@ -403,6 +403,42 @@ export async function GET(req: NextRequest) {
       if (!arr) { arr = []; funnelByQuiz.set(r.quiz_id, arr); }
       arr.push({ question_index: r.question_index, views: Number(r.views) });
     }
+    // ON N'ADDITIONNE PAS DES GENS QUI N'ONT PAS RÉPONDU AU MÊME QUIZ
+    // (drame Jocelyne, 4 août 2026, cf. lib/quiz/funnelCohort.ts).
+    //
+    // La RPC groupée ne prend qu'une seule borne pour tous les quiz, or
+    // chacun a été modifié à sa propre date. On relit donc UNIQUEMENT
+    // ceux dont la structure a bougé dans la fenêtre : ce sont les seuls
+    // à mélanger deux versions, et ce sont exactement ceux sur lesquels
+    // la créatrice est en train de travailler.
+    //
+    // Colonne lue à part et sans bloquer : absente (migration pas encore
+    // appliquée) -> aucune relecture -> comportement d'avant.
+    const { data: structRows } = await supabaseAdmin
+      .from("quizzes")
+      .select("id, structure_changed_at")
+      .in("id", quizIds);
+    const toRefetch: { id: string; since: string }[] = [];
+    for (const row of (structRows ?? []) as {
+      id: string;
+      structure_changed_at?: string | null;
+    }[]) {
+      const t = row.structure_changed_at;
+      if (t && (!sinceISO || t > sinceISO)) toRefetch.push({ id: row.id, since: t });
+    }
+    if (toRefetch.length > 0) {
+      const redone = await Promise.all(
+        toRefetch.map(async ({ id, since }) => {
+          const { data } = await supabaseAdmin.rpc("quiz_question_funnel_detail", {
+            p_quiz_id: id,
+            p_since: since,
+          });
+          return [id, (data ?? []) as { question_index: number; views: number }[]] as const;
+        }),
+      );
+      for (const [id, rows] of redone) funnelByQuiz.set(id, rows);
+    }
+
     // Textes des questions vivantes, par quiz et dans l'ordre d'affichage.
     const liveQuestionsByQuiz = new Map<string, string[]>();
     for (const row of (liveQuestionsRes.data ?? []) as { quiz_id: string; question_text: string | null }[]) {

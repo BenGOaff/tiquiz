@@ -51,6 +51,7 @@ import { stripHtml } from "@/lib/richText";
 import { projectBackHref } from "@/lib/nav/projectBack";
 import QuizInsightsPanel from "@/components/quiz/QuizInsightsPanel";
 import { readFunnelSignal, stepLoss } from "@/lib/quiz/funnelSignal";
+import type { FunnelCohort } from "@/lib/quiz/funnelCohort";
 import { biggestLeak, buildFullFunnel } from "@/lib/quiz/fullFunnel";
 import { DIRECT_BLIND_PCT, type TrafficReading } from "@/lib/quiz/trafficSource";
 
@@ -93,6 +94,10 @@ interface AnalyticsResponse {
   funnel?: FunnelStep[];
   /** Questions supprimées depuis : leurs events sont exclus du funnel. */
   funnelRemovedQuestions?: number;
+  /** Comparaison des deux cohortes de lecture du funnel (drame Jocelyne,
+   *  4 août 2026) : on n'additionne pas des gens qui n'ont pas répondu au
+   *  même quiz. */
+  funnelCohort?: FunnelCohort;
   totalFunnelSessions?: number;
   error?: string;
 }
@@ -430,6 +435,7 @@ export function QuizAnalyticsClient({ quizId, initial, hideCounts = false }: Pro
 
       <FunnelSection
         funnel={data.funnel ?? []}
+        cohort={data.funnelCohort}
         totalSessions={data.totalFunnelSessions ?? 0}
         views={data.metrics.viewsCount}
         starts={data.metrics.startsCount ?? 0}
@@ -536,6 +542,7 @@ function TrafficSection({
 
 function FunnelSection({
   funnel,
+  cohort,
   totalSessions,
   views,
   starts,
@@ -543,6 +550,10 @@ function FunnelSection({
   viewsReliable,
 }: {
   funnel: FunnelStep[];
+  /** Deux lectures : celle qu'on peut comparer (depuis la dernière
+   *  modification de structure) et le total. Absent = base pas encore
+   *  migrée, on affiche comme avant. */
+  cohort?: FunnelCohort;
   totalSessions: number;
   views: number;
   starts: number;
@@ -607,6 +618,18 @@ function FunnelSection({
           {t("sessionsStarted", { count: totalSessions })}
         </div>
       </div>
+
+      {/* DEUX LECTURES, JAMAIS UNE SEULE (drame Jocelyne, 4 août 2026).
+          Ce graphique ne compte que les gens passés depuis sa dernière
+          modification, sinon la suppression d'une question ressemble à un
+          abandon massif. On dit combien de personnes sont écartées et
+          pourquoi : deux chiffres différents sans explication se lisent
+          comme un bug, et cacher les autres se lit comme une perte. */}
+      {cohort && !cohort.singleVersion && (
+        <p className="text-[11px] text-muted-foreground rounded-md bg-muted/40 px-3 py-2">
+          {t("funnelCohortNotice", { stale: cohort.stale, total: cohort.total })}
+        </p>
+      )}
 
       {/* La plus grosse fuite du parcours ENTIER, en nombre de personnes.
           Elle passe avant le point chaud par question : corriger une

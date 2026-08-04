@@ -14,8 +14,9 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
-import { ATELIER_BASE_URL, atelierConnectCallback } from "../../lib/partner/atelierUrl.ts";
+import { ATELIER_BASE_URL, ATELIER_NAME, atelierConnectCallback } from "../../lib/partner/atelierUrl.ts";
 
 const DEAD_HOST = "formaquiz.tipote.com";
 
@@ -57,4 +58,88 @@ test("le retour reste FIXE : il n'est jamais lu depuis la requête", () => {
   // Un redirect_uri fourni par l'appelant serait une redirection ouverte,
   // donc un moyen de détourner un code d'autorisation.
   assert.equal(atelierConnectCallback.length, 0, "la fonction ne doit prendre AUCUN paramètre");
+});
+
+// ── Le NOM du produit, celui que l'élève reconnaît ───────────────────
+//
+// Béné, 4 août 2026 : "la page de connexion demande de valider la
+// connexion à Formaquiz ??? C'est l'Atelier du Quiz depuis des lustres !"
+//
+// Elle a raison, et le pire est l'endroit : l'écran de consentement est
+// le SEUL où l'élève doit reconnaître à qui elle ouvre ses statistiques.
+// Un nom qu'elle n'a jamais vu, à ce moment précis, ressemble à du
+// hameçonnage. Le nom de code interne peut rester partout ailleurs
+// (routes, variables d'environnement, colonne `partner`) : personne ne
+// le voit.
+
+test("le nom du produit est celui de la cliente", () => {
+  assert.equal(ATELIER_NAME, "L'Atelier du Quiz");
+  assert.ok(!/[—–]/.test(ATELIER_NAME));
+});
+
+test("l'ecran de consentement ne dit plus FormaQuiz", () => {
+  const src = readFileSync(
+    new URL("../../app/connect/formaquiz/ConsentClient.tsx", import.meta.url),
+    "utf8",
+  );
+  // On retire les imports et les commentaires : seul compte ce que
+  // l'élève lit à l'écran.
+  const visible = src
+    .replace(/^import .*$/gm, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+
+  assert.ok(
+    !/formaquiz/i.test(visible),
+    "l'ancien nom de code ne doit plus apparaître dans ce qui est rendu",
+  );
+  assert.ok(/ATELIER_NAME/.test(visible), "le nom doit venir de la constante, jamais réécrit");
+});
+
+test("le compte autorise est montre, et il est sortable", () => {
+  // Jocelyne a passé six semaines reliée à un compte vide. L'email était
+  // déjà là, en petit, dans le paragraphe qui rassure sur la
+  // confidentialité : on ne lit pas une adresse quand on cherche à être
+  // rassuré. Il lui faut aussi une porte de sortie, sinon la voir ne sert
+  // à rien.
+  const src = readFileSync(
+    new URL("../../app/connect/formaquiz/ConsentClient.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(src, /Tu connectes ce compte Tiquiz/);
+  assert.match(src, /Tes quiz ne sont pas sur ce compte/);
+});
+
+test("changer de compte se fait SANS quitter le parcours", () => {
+  // Avant, il fallait comprendre tout seul que cet écran lit la session du
+  // navigateur, aller se déconnecter de Tiquiz dans un autre onglet, puis
+  // revenir. Jocelyne ne l'a pas deviné, et sa tentative de reconnexion
+  // n'a donc rien changé du tout.
+  const src = readFileSync(
+    new URL("../../app/connect/formaquiz/ConsentClient.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(src, /switch-account/, "un bouton doit mener au changement de compte");
+  assert.match(src, /method: "POST"/, "jamais un GET : une adresse qui déconnecte est déclenchable");
+
+  const route = readFileSync(
+    new URL("../../app/api/partner/switch-account/route.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(route, /signOut/, "la session Tiquiz doit vraiment être fermée");
+  assert.match(route, /connect\/formaquiz\?state=/, "le retour doit ramener au consentement");
+  assert.ok(!/export async function GET/.test(route), "pas de GET sur une route qui déconnecte");
+});
+
+test("le retour du changement de compte n'est jamais fourni par l'appelant", () => {
+  // Une destination reprise depuis la requête serait une redirection
+  // ouverte, donc un moyen de détourner le parcours d'autorisation.
+  const route = readFileSync(
+    new URL("../../app/api/partner/switch-account/route.ts", import.meta.url),
+    "utf8",
+  );
+  assert.ok(
+    !/body\.(redirect|next|url|return)/.test(route),
+    "la destination se construit ici, elle ne se lit pas dans le corps",
+  );
 });

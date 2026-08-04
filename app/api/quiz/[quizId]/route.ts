@@ -19,6 +19,7 @@ import { fetchAllRows } from "@/lib/db/fetchAllRows";
 import { normalizeScoringAxes, scoreDisplayMode } from "@/lib/quizScoring";
 import { classifyDeleteError, deleteRefusalReason, deleteRefusalStatus } from "@/lib/quizDelete";
 import { sanitizeBeatMedia, type BeatMedia } from "@/lib/quiz/resultBeats";
+import { structureChanged } from "@/lib/quiz/funnelCohort";
 
 const RICH_TEXT_FIELDS = ["introduction"] as const;
 
@@ -618,6 +619,36 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             { ok: false, error: "QUESTION_DELETE_FAILED", message: delErr.message },
             { status: 500 },
           );
+        }
+      }
+
+      // ON DATE LE CHANGEMENT DE STRUCTURE (drame Jocelyne, 4 août 2026).
+      //
+      // Ajout, suppression ou déplacement : les positions de l'historique
+      // ne se comparent plus à celles d'après. Sans ce repère, le funnel
+      // additionne des sessions qui n'ont pas répondu au même quiz et
+      // affiche une marche que personne n'a produite, pile à l'endroit
+      // qu'on vient de modifier. Cf. lib/quiz/funnelCohort.ts.
+      //
+      // Réécrire un TEXTE ne compte pas : la question reste la même, à la
+      // même place, et son historique reste comparable. C'est même
+      // exactement ce qu'on veut pouvoir mesurer.
+      const beforeIds = (snapshotRows as Array<{ id?: string }>)
+        .map((r) => String(r.id ?? ""))
+        .filter(Boolean);
+      const afterIds = sanitized.map((s) =>
+        s.incomingId && snapshotIds.has(s.incomingId) ? s.incomingId : null,
+      );
+      if (structureChanged(beforeIds, afterIds)) {
+        // Best-effort : la colonne peut manquer sur une base dont la
+        // migration n'est pas encore appliquée. Une sauvegarde de quiz ne
+        // doit JAMAIS échouer pour un repère de statistiques.
+        const { error: stampErr } = await supabase
+          .from("quizzes")
+          .update({ structure_changed_at: new Date().toISOString() })
+          .eq("id", quizId);
+        if (stampErr) {
+          console.warn("[quiz PATCH] structure_changed_at non enregistré:", stampErr.message);
         }
       }
     }
