@@ -5,6 +5,8 @@
 // collee en haut, fond qui ne couvre pas) fait echouer le diff.
 import { test, expect, type Page } from "@playwright/test";
 
+import { advance } from "./flow";
+
 const LAYOUTS = [
   { name: "centered", qs: "layout=centered&bg=solid" },
   { name: "split", qs: "layout=split&bg=solid" },
@@ -79,14 +81,15 @@ async function gotoFixture(page: Page, qs: string) {
 }
 
 async function startQuiz(page: Page) {
-  await page.getByText("Commencer le quiz").click();
-  await expect(page.getByText("Quand tu lances un projet")).toBeVisible();
+  // `advance` reclique tant que l'ecran suivant n'est pas la : le premier
+  // clic peut tomber avant l'hydratation React et rester sans effet, ce
+  // qui faisait clignoter le filet (cf. tests/visual/flow.ts).
+  await advance(page, "Commencer le quiz", "Quand tu lances un projet");
   await page.waitForTimeout(400);
 }
 
 async function answerAllQuestions(page: Page) {
-  await page.getByText("Un plan detaille").click();
-  await expect(page.getByText("Ta relation aux outils")).toBeVisible();
+  await advance(page, "Un plan detaille", "Ta relation aux outils");
   await page.getByText("Je garde ce qui marche").click();
   await page.waitForTimeout(400);
 }

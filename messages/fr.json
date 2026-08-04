@@ -180,7 +180,9 @@
       "kept": "Restés jusqu'au bout :",
       "noData": "pas encore de donnée",
       "removedNotice": "{count, plural, =1 {1 question a été supprimée depuis : ses vues ne sont plus comptées.} other {# questions ont été supprimées depuis : leurs vues ne sont plus comptées.}}",
-      "normalLoss": "Perdre du monde en route est normal et sain : ce sont surtout les visiteurs non qualifiés qui s'arrêtent. Aucun quiz ne vise 100% de complétion."
+      "normalLoss": "Perdre du monde en route est normal et sain : ce sont surtout les visiteurs non qualifiés qui s'arrêtent. Aucun quiz ne vise 100% de complétion.",
+      "leakBefore": "Le vrai trou est AVANT ces questions : {lost} visiteurs sur {sample} repartent de ton écran d'accueil sans en voir une seule. C'est là qu'il faut travailler en premier.",
+      "leakAfter": "Le vrai trou est APRÈS ces questions : {lost} personnes terminent ton quiz sans laisser leur email. C'est là qu'il faut travailler en premier."
     },
     "untitled": "Sans titre"
   },
@@ -2864,7 +2866,12 @@
     "seriesLeads": "Inscrits",
     "tooltipViews": "{count} vues",
     "tooltipConversion": "Conversion : {pct}%",
-    "funnelNormalLoss": "Perdre du monde en route est normal et sain : ce sont surtout les visiteurs non qualifiés qui s'arrêtent. Aucun quiz ne vise 100% de complétion."
+    "funnelNormalLoss": "Perdre du monde en route est normal et sain : ce sont surtout les visiteurs non qualifiés qui s'arrêtent. Aucun quiz ne vise 100% de complétion.",
+    "stageArrival": "Arrivée",
+    "stageStart": "Démarrage",
+    "stageCapture": "Email laissé",
+    "leakArrival": "<bold>{lost} visiteurs sur {sample}</bold> repartent de ton écran d'accueil sans jamais voir ta première question ({pct}%). C'est souvent la plus grosse fuite d'un quiz, et elle se corrige sur un seul écran.",
+    "leakCapture": "<bold>{lost} personnes sur {sample}</bold> terminent tes questions et ne laissent pas leur email ({pct}%). Ta promesse de résultat ou ton formulaire les arrête juste avant la ligne d'arrivée."
   },
   "illustrations": {
     "emptyInbox": "Boîte de réception vide",

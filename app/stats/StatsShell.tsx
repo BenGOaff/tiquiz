@@ -34,6 +34,7 @@ import { stripHtml } from "@/lib/richText";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import GlobalInsightsPanel from "@/components/insights/GlobalInsightsPanel";
 import { readFunnelSignal, stepLoss } from "@/lib/quiz/funnelSignal";
+import { biggestLeak, buildFullFunnel } from "@/lib/quiz/fullFunnel";
 import {
   BarChart3, Eye, Play, CheckCircle, Users, Share2, TrendingUp, TrendingDown,
   Sparkles, ArrowRight, Info,
@@ -378,14 +379,39 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
                   // Le verdict est calculé ICI, avec la MÊME fonction que
                   // l'analytics du quiz et que le prompt de l'IA. La carte
                   // ne fait que l'afficher (drame Jocelyne, 4 août 2026).
-                  const signal = readFunnelSignal(
-                    qf.questions.map((q) => ({
-                      questionIndex: q.index,
-                      views: q.views,
-                      answers: q.answers,
-                      hasData: q.hasData,
-                    })),
-                  );
+                  const steps = qf.questions.map((q) => ({
+                    questionIndex: q.index,
+                    views: q.views,
+                    answers: q.answers,
+                    hasData: q.hasData,
+                  }));
+                  const signal = readFunnelSignal(steps);
+                  // Cette carte ne montre que les questions. Chez
+                  // Jocelyne, la moitié des visiteurs repartaient AVANT
+                  // la première : elle cherchait dans une image qui ne
+                  // contenait pas son problème. On lui dit donc, sur la
+                  // carte elle-même, quand le trou est ailleurs.
+                  const row = data.perQuiz.find((p) => p.id === qf.quizId);
+                  const leak = row
+                    ? biggestLeak(
+                        buildFullFunnel({
+                          views: row.lifetimeViews,
+                          starts: row.lifetimeStarts,
+                          questions: steps,
+                          leads: row.lifetimeLeads,
+                          viewsReliable: row.lifetimeViews >= row.lifetimeLeads,
+                        }),
+                      )
+                    : null;
+                  const leakNote =
+                    leak && leak.stage !== "question"
+                      ? leak.stage === "capture"
+                        ? t("questionFunnel.leakAfter", { lost: leak.lost ?? 0 })
+                        : t("questionFunnel.leakBefore", {
+                            lost: leak.lost ?? 0,
+                            sample: leak.people,
+                          })
+                      : null;
                   return (
                     <QuestionFunnelCard
                       key={qf.quizId}
@@ -408,6 +434,7 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
                             : null
                       }
                       badgeTone={signal.hotspot ? "alert" : "quiet"}
+                      leakNote={leakNote}
                       removedNotice={t("questionFunnel.removedNotice", {
                         count: qf.removedQuestions ?? 0,
                       })}
@@ -702,6 +729,7 @@ function QuestionFunnelCard({
   hotspotIndex,
   badgeLabel,
   badgeTone,
+  leakNote,
 }: {
   title: string;
   questions: Array<{ index: number; views: number; answers?: number; hasData?: boolean; text?: string }>;
@@ -716,6 +744,10 @@ function QuestionFunnelCard({
   hotspotIndex: number;
   badgeLabel: string | null;
   badgeTone: "alert" | "quiet";
+  /** Quand la plus grosse fuite du quiz n'est PAS dans les questions.
+   *  Cette carte ne montre que le milieu du parcours : sans cette
+   *  phrase, elle laisse croire que tout se joue là. */
+  leakNote?: string | null;
 }) {
   if (questions.length === 0) return null;
   // Une question sans donnée (ajoutée après coup, jamais atteinte) ne
@@ -744,6 +776,12 @@ function QuestionFunnelCard({
             </Badge>
           ) : null}
         </div>
+
+        {leakNote ? (
+          <p className="text-xs rounded-md bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 px-3 py-2">
+            {leakNote}
+          </p>
+        ) : null}
 
         <div className="space-y-2">
           {questions.map((q) => {

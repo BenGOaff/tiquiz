@@ -15,13 +15,16 @@
 // l'impression d'un encart "pété".
 import { test, expect } from "@playwright/test";
 
+import { advance } from "./flow";
+
 test("les 4 temps du résultat partagent le même bord gauche", async ({ page }) => {
   // preview_name = mode aperçu créateur : la soumission ne POste rien, donc
   // aucune base n'est nécessaire. Même parcours que le filet de captures.
   await page.goto("/visual-test?layout=centered&bg=solid&beats=1&preview_name=Camille");
-  await expect(page.getByText("Commencer le quiz")).toBeVisible();
-  await page.getByText("Commencer le quiz").click();
-  await page.getByText("Un plan detaille").click();
+  // `advance` reclique tant que l'écran suivant n'est pas là : le premier
+  // clic peut tomber avant l'hydratation React et rester sans effet.
+  await advance(page, "Commencer le quiz", "Quand tu lances un projet");
+  await advance(page, "Un plan detaille", "Je garde ce qui marche");
   await page.getByText("Je garde ce qui marche").click();
   await page.getByPlaceholder("ton@email.com").fill("test@example.com");
   const consent = page.getByRole("checkbox");

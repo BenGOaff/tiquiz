@@ -180,7 +180,9 @@
       "kept": "Chegaram até o fim:",
       "noData": "ainda sem dados",
       "removedNotice": "{count, plural, =1 {1 pergunta foi excluída desde então: as visualizações dela não são mais contadas.} other {# perguntas foram excluídas desde então: as visualizações delas não são mais contadas.}}",
-      "normalLoss": "Perder gente pelo caminho é normal e saudável: quem para são principalmente os visitantes não qualificados. Nenhum quiz busca 100% de conclusão."
+      "normalLoss": "Perder gente pelo caminho é normal e saudável: quem para são principalmente os visitantes não qualificados. Nenhum quiz busca 100% de conclusão.",
+      "leakBefore": "O verdadeiro buraco está ANTES destas perguntas: {lost} visitantes de {sample} saem da sua tela inicial sem ver nenhuma. É aí que você deve trabalhar primeiro.",
+      "leakAfter": "O verdadeiro buraco está DEPOIS destas perguntas: {lost} pessoas terminam seu quiz sem deixar o e-mail. É aí que você deve trabalhar primeiro."
     },
     "untitled": "Sem título"
   },
@@ -2812,7 +2814,12 @@
     "tooltipViews": "{count} visitas",
     "tooltipConversion": "Conversão: {pct}%",
     "kpiCaptureRateUnreliable": "Visualizações parcialmente rastreadas (quiz incorporado ou anterior ao rastreamento) - taxa confiável nas novas visualizações",
-    "funnelNormalLoss": "Perder gente pelo caminho é normal e saudável: quem para são principalmente os visitantes não qualificados. Nenhum quiz busca 100% de conclusão."
+    "funnelNormalLoss": "Perder gente pelo caminho é normal e saudável: quem para são principalmente os visitantes não qualificados. Nenhum quiz busca 100% de conclusão.",
+    "stageArrival": "Chegada",
+    "stageStart": "Início",
+    "stageCapture": "Email deixado",
+    "leakArrival": "<bold>{lost} de {sample} visitantes</bold> saem da sua tela inicial sem nunca ver a primeira pergunta ({pct}%). Costuma ser a maior perda de um quiz, e se corrige em uma só tela.",
+    "leakCapture": "<bold>{lost} de {sample} pessoas</bold> terminam as perguntas e não deixam o email ({pct}%). Sua promessa de resultado ou o formulário as para bem antes da linha de chegada."
   },
   "illustrations": {
     "emptyInbox": "Caixa de entrada vazia",

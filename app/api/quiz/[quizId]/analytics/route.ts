@@ -58,7 +58,7 @@ export async function GET(
   // Ownership + base counters in one shot
   const { data: quiz, error: quizErr } = await supabase
     .from("quizzes")
-    .select("id, title, views_count, completions_count, created_at")
+    .select("id, title, views_count, starts_count, completions_count, created_at")
     .eq("id", quizId)
     .eq("user_id", user.id)
     .maybeSingle();
@@ -135,7 +135,7 @@ export async function GET(
   // (qui inclut l'historique pré-refonte, server-side) et le compte réel
   // quiz_events (fiable mais seulement depuis le 21 mai 2026). Le max
   // donne la meilleure estimation lifetime disponible.
-  const [viewsEventsRes, completesEventsRes] = await Promise.all([
+  const [viewsEventsRes, completesEventsRes, startsEventsRes] = await Promise.all([
     supabaseAdmin
       .from("quiz_events")
       .select("id", { count: "exact", head: true })
@@ -146,9 +146,22 @@ export async function GET(
       .select("id", { count: "exact", head: true })
       .eq("quiz_id", quizId)
       .eq("event_type", "complete"),
+    // Les DÉMARRAGES : la marche entre "il a ouvert le quiz" et "il a vu
+    // la première question". Elle existait en base depuis toujours et
+    // n'apparaissait nulle part, alors que c'est là que se joue la plus
+    // grosse fuite de la plupart des quiz (audit Jocelyne, 4 août 2026 :
+    // 142 arrivées, 69 démarrages, et huit fois moins de perte sur
+    // l'ensemble de ses huit questions).
+    supabaseAdmin
+      .from("quiz_events")
+      .select("id", { count: "exact", head: true })
+      .eq("quiz_id", quizId)
+      .eq("event_type", "start"),
   ]);
   const viewsFromEvents = viewsEventsRes.error ? 0 : viewsEventsRes.count ?? 0;
   const completesFromEvents = completesEventsRes.error ? 0 : completesEventsRes.count ?? 0;
+  const startsFromEvents = startsEventsRes.error ? 0 : startsEventsRes.count ?? 0;
+  const startsCount = Math.max(quiz.starts_count ?? 0, startsFromEvents);
 
   const trackedViews = Math.max(quiz.views_count ?? 0, viewsFromEvents);
   const completionsCount = Math.max(quiz.completions_count ?? 0, completesFromEvents);
@@ -376,6 +389,7 @@ export async function GET(
     metrics: {
       // LIFETIME, source réconciliée max(compteur dénormalisé, quiz_events).
       viewsCount,
+      startsCount,
       completionsCount,
       leadsCount,
       exportedSioCount: exportedSio,

@@ -14,8 +14,13 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
-import { biggestLeak, buildFullFunnel } from "../../lib/quiz/fullFunnel.ts";
+import {
+  biggestLeak,
+  buildFullFunnel,
+  renderFullFunnelVerdict,
+} from "../../lib/quiz/fullFunnel.ts";
 import type { FunnelStepLike } from "../../lib/quiz/funnelSignal.ts";
 
 const q = (...views: number[]): FunnelStepLike[] =>
@@ -147,4 +152,78 @@ test("un quiz sans rien ne raconte rien", () => {
   });
   assert.deepEqual(steps, []);
   assert.equal(biggestLeak(steps), null);
+});
+
+// ── Ce que nos IA reçoivent ──────────────────────────────────────────
+//
+// Le rapport du 3 août a envoyé Jocelyne travailler sa question 7. Le
+// modèle ne pouvait pas faire mieux : on lui donnait un tableau qui
+// commençait à la question 1. Ces tests figent ce qu'il reçoit
+// désormais, parce qu'un prompt régresse en silence.
+
+test("le verdict envoyé à l'IA nomme l'écran d'accueil, pas une question", () => {
+  const verdict = renderFullFunnelVerdict(jocelyne());
+  assert.match(verdict, /ECRAN D'ACCUEIL/);
+  assert.match(verdict, /73 personnes perdues sur 142/);
+  assert.ok(
+    !/LA QUESTION \d/.test(verdict),
+    "aucune de ses questions ne doit être désignée comme la fuite",
+  );
+});
+
+test("et il lui interdit de proposer de retoucher une question", () => {
+  const verdict = renderFullFunnelVerdict(jocelyne());
+  assert.match(verdict, /ne se corrige PAS dans les questions/);
+  assert.match(verdict, /non negociable/);
+});
+
+test("le parcours entier est écrit, marche par marche", () => {
+  const verdict = renderFullFunnelVerdict(jocelyne());
+  assert.match(verdict, /Arrivent sur le quiz : 142/);
+  assert.match(verdict, /Cliquent sur commencer : 69/);
+  assert.match(verdict, /Q1 : 64/);
+  assert.match(verdict, /Laissent leur email : 55/);
+});
+
+test("un gros pourcentage de fin ne vole pas la priorité", () => {
+  // Le même cas que plus haut : la capture perd un plus gros
+  // pourcentage, l'accueil perd plus de monde. C'est l'accueil qui doit
+  // sortir, sinon on renvoie la créatrice peaufiner un écran vu par
+  // deux fois moins de gens.
+  const verdict = renderFullFunnelVerdict(
+    buildFullFunnel({
+      views: 200,
+      starts: 120,
+      questions: q(120, 118, 116, 114),
+      leads: 60,
+      viewsReliable: true,
+    }),
+  );
+  assert.match(verdict, /ECRAN D'ACCUEIL/);
+  assert.ok(!/ECRAN DE CAPTURE/.test(verdict));
+});
+
+test("sans fuite nette, on interdit explicitement d'en inventer une", () => {
+  const verdict = renderFullFunnelVerdict(
+    buildFullFunnel({
+      views: 12,
+      starts: 6,
+      questions: q(6, 5),
+      leads: 4,
+      viewsReliable: true,
+    }),
+  );
+  assert.match(verdict, /Ne fabrique pas un point de fuite/);
+});
+
+test("un quiz sans donnée ne produit aucun bloc", () => {
+  assert.equal(renderFullFunnelVerdict([]), "");
+});
+
+test("l'analyse IA passe bien le parcours entier au modèle", () => {
+  // Le garde-fou structurel : si quelqu'un retire cet appel, le rapport
+  // repart sur le seul funnel par question, donc sur 14% du problème.
+  const src = readFileSync(new URL("../../lib/quiz/insights.ts", import.meta.url), "utf8");
+  assert.ok(/renderFullFunnelVerdict\(/.test(src), "le prompt doit recevoir le parcours complet");
+  assert.ok(/buildFullFunnel\(/.test(src), "l'agrégat doit construire le parcours complet");
 });

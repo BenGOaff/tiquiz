@@ -140,3 +140,73 @@ export function biggestLeak(steps: readonly FullFunnelStep[]): FullFunnelStep | 
   }
   return best;
 }
+
+/**
+ * Le même parcours, écrit pour nos IA.
+ *
+ * Ce texte vit ICI et pas dans le prompt, parce qu'un prompt est du code
+ * (cf. `tests/logic/quiz-prompt.test.mts`) et que celui-ci porte une
+ * contrainte qu'on ne peut pas se permettre de perdre en le retouchant :
+ * la marche prioritaire est CALCULÉE, le modèle n'a pas le droit d'en
+ * choisir une autre.
+ *
+ * À un modèle qui reçoit un tableau de pourcentages et pour consigne
+ * "nomme la fuite prioritaire", il reste toujours un maximum à nommer, et
+ * ce maximum est presque toujours une étape de fin de parcours : il n'y
+ * reste que quelques personnes, donc le moindre départ y pèse lourd en
+ * pourcentage et rien du tout en enjeu. C'est exactement ce qui a envoyé
+ * Jocelyne réécrire des questions pendant trois semaines pendant que la
+ * moitié de ses visiteurs repartaient de l'écran d'accueil.
+ */
+export function renderFullFunnelVerdict(steps: readonly FullFunnelStep[]): string {
+  if (steps.length === 0) return "";
+  const lines = ["PARCOURS COMPLET (de l'arrivee a l'email) :"];
+  for (const s of steps) {
+    const perte =
+      s.lost === null
+        ? ""
+        : s.lost === 0
+          ? "  (aucune perte)"
+          : `  -> ${s.lost} partent ensuite (${s.lostPct}%)`;
+    lines.push(`- ${stageLabel(s)} : ${s.people}${perte}`);
+  }
+  lines.push("");
+
+  const leak = biggestLeak(steps);
+  if (!leak) {
+    lines.push(
+      "VERDICT DU PARCOURS (calcule, non negociable) :",
+      "- Aucune marche ne perd assez de monde pour etre designee comme LA fuite. Ne fabrique pas un point de fuite : cherche les gains ailleurs (amener plus de monde, offre par profil, sequence email).",
+    );
+    return lines.join("\n");
+  }
+
+  const ou =
+    leak.stage === "arrival"
+      ? "L'ECRAN D'ACCUEIL. Ils ouvrent le quiz et repartent sans jamais cliquer sur commencer."
+      : leak.stage === "start"
+        ? "L'ENTREE DANS LE QUIZ. Ils cliquent sur commencer mais n'arrivent pas a la premiere question."
+        : leak.stage === "capture"
+          ? "L'ECRAN DE CAPTURE. Ils finissent le quiz et ne laissent pas leur email."
+          : `LA QUESTION ${(leak.questionIndex ?? 0) + 1}.`;
+
+  lines.push(
+    "VERDICT DU PARCOURS (calcule, non negociable) :",
+    `- LA plus grosse fuite du quiz : ${ou} ${leak.lost} personnes perdues sur ${leak.people} (${leak.lostPct}%).`,
+    "- C'est CETTE marche qui devient la priorite du rapport. Tu n'as pas le droit d'en designer une autre, meme si une etape plus loin affiche un pourcentage superieur : une etape de fin de parcours porte sur beaucoup moins de monde, donc son pourcentage est spectaculaire et son enjeu minuscule.",
+    "- Raisonne en NOMBRE DE PERSONNES quand tu chiffres le gain attendu, pas seulement en pourcentage.",
+  );
+  if (leak.stage === "arrival" || leak.stage === "start") {
+    lines.push(
+      "- Une fuite a l'entree ne se corrige PAS dans les questions. Elle se joue sur la promesse (titre, sous-titre), sur ce qu'on gagne a repondre, sur la duree annoncee, sur la visibilite du bouton, sur le temps de chargement, et sur l'accord entre ce qu'on a promis la ou le lien est publie et ce que le visiteur trouve en arrivant. Ne propose aucune modification de question a ce titre.",
+    );
+  }
+  return lines.join("\n");
+}
+
+function stageLabel(s: FullFunnelStep): string {
+  if (s.stage === "arrival") return "Arrivent sur le quiz";
+  if (s.stage === "start") return "Cliquent sur commencer";
+  if (s.stage === "capture") return "Laissent leur email";
+  return `Q${(s.questionIndex ?? 0) + 1}`;
+}
