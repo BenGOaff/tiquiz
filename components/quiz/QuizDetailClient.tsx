@@ -101,7 +101,7 @@ import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
 import {
   buildQuizEditorSnapshot,
-  draftDiffersFromSaved,
+  diffEditorSnapshot,
 } from "@/lib/quiz/editorSnapshot";
 import { answerImageRender } from "@/lib/quiz/answerImage";
 import {
@@ -1526,7 +1526,16 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           questions: q.questions,
           results: q.results,
         });
-        if (!draftDiffersFromSaved(draftState, canonical)) {
+        // Le nom des champs qui diffèrent, dans la console. C'est la
+        // seule chose qui manquait pour diagnostiquer le retour du
+        // dialogue chez Jocelyne : le brouillon est effacé dès qu'elle
+        // répond, donc on ne peut plus rien observer après coup.
+        // Uniquement des NOMS de champs, jamais leur contenu.
+        const draftDiff = diffEditorSnapshot(draftState, canonical);
+        if (draftDiff.length > 0) {
+          console.warn("[brouillon] restauration proposée, champs différents :", draftDiff.join(", "));
+        }
+        if (draftDiff.length === 0) {
           // Draft strictement identique au canonique → on le nettoie en
           // silence côté serveur pour ne pas re-proposer la restauration
           // au prochain ouverture. Best-effort, l'éventuel échec réseau

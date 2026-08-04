@@ -55,7 +55,7 @@ import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
 import {
   buildSurveyEditorSnapshot,
-  draftDiffersFromSaved,
+  diffEditorSnapshot,
 } from "@/lib/quiz/editorSnapshot";
 import { answerImageRender } from "@/lib/quiz/answerImage";
 import { stripHtml } from "@/lib/richText";
@@ -884,7 +884,11 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
             config: (qq.config as Record<string, unknown>) ?? {},
           })),
         });
-        if (draftDiffersFromSaved(draftState, canonical)) {
+        const draftDiff = diffEditorSnapshot(draftState, canonical);
+        if (draftDiff.length > 0) {
+          console.warn("[brouillon] restauration proposée, champs différents :", draftDiff.join(", "));
+        }
+        if (draftDiff.length > 0) {
           setPendingDraft({
             state: draftState as Record<string, unknown>,
             draftUpdatedAt: draftAt,

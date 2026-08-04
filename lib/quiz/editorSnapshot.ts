@@ -271,3 +271,35 @@ export function draftDiffersFromSaved(
 ): boolean {
   return stableStringify(draft) !== stableStringify(canonical);
 }
+
+/**
+ * QUELS champs diffèrent. Pour le savoir au lieu de le supposer.
+ *
+ * Le 4 août 2026, Jocelyne signale que le dialogue de restauration
+ * revient. On corrige une cause, elle confirme ("c'est bon !"), et ça
+ * recommence vingt-sept minutes plus tard. On formule alors une deuxième
+ * hypothèse... qu'on ne peut pas vérifier, parce qu'au moment où on
+ * regarde en base, le brouillon a déjà été effacé. Une journée de
+ * théories sur un écran qu'on n'a jamais vu.
+ *
+ * Cette fonction rend la prochaine fois triviale : l'éditeur écrit dans
+ * la console le nom des champs qui ont fait pencher la décision. Il n'y a
+ * plus à deviner, il suffit de demander.
+ *
+ * On ne renvoie QUE des noms de champs, jamais leur contenu : ces
+ * snapshots portent le texte du quiz d'une créatrice, ça n'a rien à faire
+ * dans un journal.
+ */
+export function diffEditorSnapshot(
+  draft: unknown,
+  canonical: QuizEditorSnapshot | SurveyEditorSnapshot,
+): string[] {
+  const d = (draft && typeof draft === "object" ? draft : {}) as Record<string, unknown>;
+  const c = canonical as Record<string, unknown>;
+  const keys = new Set([...Object.keys(d), ...Object.keys(c)]);
+  const out: string[] = [];
+  for (const key of keys) {
+    if (stableStringify(d[key]) !== stableStringify(c[key])) out.push(key);
+  }
+  return out.sort();
+}
