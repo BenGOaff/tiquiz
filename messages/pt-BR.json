@@ -2875,7 +2875,9 @@
     "surveyErrPdf": "Erro ao gerar o PDF.",
     "surveyErrNotEnough": "Respostas insuficientes para uma análise relevante.",
     "surveyExportPdfGlobal": "PDF síntese",
-    "surveyExportPdfFull": "PDF detalhado"
+    "surveyExportPdfFull": "PDF detalhado",
+    "quizSectionPriority": "Faça isto agora, uma só coisa",
+    "quizLaterToggle": "E depois, quando você tiver medido"
   },
   "helpSeo": {
     "metaTitle": "Indexar meus quizzes no Google - Ajuda Tiquiz",

@@ -2927,7 +2927,9 @@
     "surveyErrPdf": "Erreur lors de la génération du PDF.",
     "surveyErrNotEnough": "Pas assez de réponses pour une analyse pertinente.",
     "surveyExportPdfGlobal": "PDF synthèse",
-    "surveyExportPdfFull": "PDF détaillé"
+    "surveyExportPdfFull": "PDF détaillé",
+    "quizSectionPriority": "À faire maintenant, une seule chose",
+    "quizLaterToggle": "Et après, quand tu auras mesuré"
   },
   "coach": {
     "title": "Ton coach",
