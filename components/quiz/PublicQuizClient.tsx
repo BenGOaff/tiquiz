@@ -62,6 +62,7 @@ import {
 import { answerGridClass, answerImageGridClass, resolveAnswerLayout } from "@/lib/quiz/answerLayout";
 import { answerImageRender } from "@/lib/quiz/answerImage";
 import { classifyTraffic } from "@/lib/quiz/trafficSource";
+import { resolveOtherResultsPlacement, showsOtherResultsAt } from "@/lib/quiz/otherResults";
 import {
   resolveQuestionAlign,
   resolveQuestionAnswerLayout,
@@ -246,6 +247,8 @@ type PublicQuizData = {
   // profils" sous le résultat du visiteur. Rendu non personnalisé
   // (name vide, gender inclusif). Off par défaut.
   show_other_results?: boolean | null;
+  /** 'after_cta' (defaut) | 'before_cta'. Cf. lib/quiz/otherResults.ts */
+  other_results_position?: string | null;
   // Sondage uniquement (30 mai 2026) : si FALSE, on skippe l'étape
   // email/capture et on envoie le visiteur directement au remerciement
   // après la dernière question. Default TRUE → comportement historique.
@@ -1318,6 +1321,134 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
     (text: string | null | undefined) => makeInterpolator({ name: "", gender: "x" })(text),
     [],
   );
+
+  // Ou se place "Decouvre les autres profils" (retour Gwenn, 4 aout
+  // 2026 : au dessus du bouton, il offre une porte de sortie juste
+  // avant la proposition). La decision vit dans lib/quiz/otherResults.ts.
+  const otherResultsPlacement = resolveOtherResultsPlacement(
+    quiz?.show_other_results,
+    quiz?.other_results_position,
+  );
+
+  // Le bloc est ecrit UNE fois et rendu a l'un OU l'autre emplacement.
+  // Le dupliquer, c'est la garantie qu'une correction future n'en
+  // touchera qu'un seul.
+  function renderOtherResults() {
+    // Appelee uniquement apres la garde de rendu, mais la fonction vit
+    // plus haut dans le composant : on redit la garde ici.
+    if (!quiz) return null;
+            const others = quiz.results
+              .map((r, i) => ({ r, i }))
+              .filter(({ r }) => r.id !== resultProfile?.id);
+            if (others.length === 0) return null;
+            return (
+              <div className="space-y-3">
+                <h3 className="text-base font-semibold">{t.otherProfilesTitle}</h3>
+                <p className="text-xs text-muted-foreground -mt-1 leading-snug">{t.otherProfilesSubtitle}</p>
+                <div className="space-y-2">
+                  {others.map(({ r, i }) => {
+                    const expanded = expandedOtherIdx === i;
+                    const shortLabel = labelForOtherResult(r.title) || t.resultFallback;
+                    const slot = (r.image_position ?? "top") as ResultImagePosition;
+                    return (
+                      <div key={r.id ?? i} className="rounded-xl border bg-card overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedOtherIdx(expanded ? null : i)}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
+                          aria-expanded={expanded}
+                        >
+                          {r.image_url && (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img src={r.image_url} alt="" className="w-12 h-12 object-cover rounded-lg shrink-0" />
+                          )}
+                          <span className="flex-1 font-medium text-sm">{shortLabel}</span>
+                          <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />
+                        </button>
+                        {expanded && (
+                          <div className="border-t bg-background p-4 space-y-4">
+                            {r.image_url && slot === "top" && (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={r.image_url} alt="" className="w-full h-auto rounded-lg" />
+                            )}
+                            {r.title && (
+                              <h4
+                                className="tiquiz-rich tiquiz-rich-inline text-xl font-bold leading-tight"
+                                style={{ color: "hsl(var(--primary))" }}
+                                dangerouslySetInnerHTML={{ __html: sanitizeRichText(interpNeutral(r.title)) }}
+                              />
+                            )}
+                            {r.image_url && slot === "after_title" && (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={r.image_url} alt="" className="w-full h-auto rounded-lg" />
+                            )}
+                            {r.description && (() => {
+                              const desc = interpNeutral(r.description);
+                              return isHtml(desc) ? (
+                                <div className="tiquiz-rich text-muted-foreground text-sm leading-relaxed"
+                                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(desc) }}
+                                />
+                              ) : (
+                                <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(desc)}</p>
+                              );
+                            })()}
+                            {r.image_url && slot === "after_description" && (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={r.image_url} alt="" className="w-full h-auto rounded-lg" />
+                            )}
+                            {r.insight && stripHtml(r.insight).trim() && (() => {
+                              const ins = interpNeutral(r.insight);
+                              return (
+                                <div className="p-3 rounded-lg bg-muted/40 border">
+                                  <p
+                                    className="tiquiz-rich tiquiz-rich-inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1"
+                                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(r.insight_heading?.trim() || quiz.result_insight_heading?.trim() || "") || t.insight }}
+                                  />
+                                  {isHtml(ins) ? (
+                                    <div className="tiquiz-rich text-sm leading-relaxed"
+                                      dangerouslySetInnerHTML={{ __html: sanitizeRichText(ins) }}
+                                    />
+                                  ) : (
+                                    <p className="text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(ins)}</p>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                            {r.image_url && slot === "after_insight" && (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={r.image_url} alt="" className="w-full h-auto rounded-lg" />
+                            )}
+                            {r.projection && stripHtml(r.projection).trim() && (() => {
+                              const proj = interpNeutral(r.projection);
+                              return (
+                                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                                  <p
+                                    className="tiquiz-rich tiquiz-rich-inline text-[10px] font-bold uppercase tracking-widest text-primary/70 mb-1"
+                                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(r.projection_heading?.trim() || quiz.result_projection_heading?.trim() || "") || t.projection }}
+                                  />
+                                  {isHtml(proj) ? (
+                                    <div className="tiquiz-rich text-sm leading-relaxed"
+                                      dangerouslySetInnerHTML={{ __html: sanitizeRichText(proj) }}
+                                    />
+                                  ) : (
+                                    <p className="text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(proj)}</p>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                            {r.image_url && slot === "bottom" && (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img src={r.image_url} alt="" className="w-full h-auto rounded-lg" />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+  }
 
   // Quel autre profil est expandé dans l'accordéon. Single index ;
   // null = tous fermés. On laisse l'utilisateur en ouvrir un seul à
@@ -4472,119 +4603,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
               tout en gardant son propre résultat visible plus haut. Les
               champs rich-text passent par `interpNeutral` (pas `interp`) pour
               que rien ne soit faussement personnalisé. */}
-          {quiz.show_other_results && (() => {
-            const others = quiz.results
-              .map((r, i) => ({ r, i }))
-              .filter(({ r }) => r.id !== resultProfile?.id);
-            if (others.length === 0) return null;
-            return (
-              <div className="space-y-3">
-                <h3 className="text-base font-semibold">{t.otherProfilesTitle}</h3>
-                <p className="text-xs text-muted-foreground -mt-1 leading-snug">{t.otherProfilesSubtitle}</p>
-                <div className="space-y-2">
-                  {others.map(({ r, i }) => {
-                    const expanded = expandedOtherIdx === i;
-                    const shortLabel = labelForOtherResult(r.title) || t.resultFallback;
-                    const slot = (r.image_position ?? "top") as ResultImagePosition;
-                    return (
-                      <div key={r.id ?? i} className="rounded-xl border bg-card overflow-hidden">
-                        <button
-                          type="button"
-                          onClick={() => setExpandedOtherIdx(expanded ? null : i)}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/30 transition-colors"
-                          aria-expanded={expanded}
-                        >
-                          {r.image_url && (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img src={r.image_url} alt="" className="w-12 h-12 object-cover rounded-lg shrink-0" />
-                          )}
-                          <span className="flex-1 font-medium text-sm">{shortLabel}</span>
-                          <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`} />
-                        </button>
-                        {expanded && (
-                          <div className="border-t bg-background p-4 space-y-4">
-                            {r.image_url && slot === "top" && (
-                              /* eslint-disable-next-line @next/next/no-img-element */
-                              <img src={r.image_url} alt="" className="w-full h-auto rounded-lg" />
-                            )}
-                            {r.title && (
-                              <h4
-                                className="tiquiz-rich tiquiz-rich-inline text-xl font-bold leading-tight"
-                                style={{ color: "hsl(var(--primary))" }}
-                                dangerouslySetInnerHTML={{ __html: sanitizeRichText(interpNeutral(r.title)) }}
-                              />
-                            )}
-                            {r.image_url && slot === "after_title" && (
-                              /* eslint-disable-next-line @next/next/no-img-element */
-                              <img src={r.image_url} alt="" className="w-full h-auto rounded-lg" />
-                            )}
-                            {r.description && (() => {
-                              const desc = interpNeutral(r.description);
-                              return isHtml(desc) ? (
-                                <div className="tiquiz-rich text-muted-foreground text-sm leading-relaxed"
-                                  dangerouslySetInnerHTML={{ __html: sanitizeRichText(desc) }}
-                                />
-                              ) : (
-                                <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(desc)}</p>
-                              );
-                            })()}
-                            {r.image_url && slot === "after_description" && (
-                              /* eslint-disable-next-line @next/next/no-img-element */
-                              <img src={r.image_url} alt="" className="w-full h-auto rounded-lg" />
-                            )}
-                            {r.insight && stripHtml(r.insight).trim() && (() => {
-                              const ins = interpNeutral(r.insight);
-                              return (
-                                <div className="p-3 rounded-lg bg-muted/40 border">
-                                  <p
-                                    className="tiquiz-rich tiquiz-rich-inline text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1"
-                                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(r.insight_heading?.trim() || quiz.result_insight_heading?.trim() || "") || t.insight }}
-                                  />
-                                  {isHtml(ins) ? (
-                                    <div className="tiquiz-rich text-sm leading-relaxed"
-                                      dangerouslySetInnerHTML={{ __html: sanitizeRichText(ins) }}
-                                    />
-                                  ) : (
-                                    <p className="text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(ins)}</p>
-                                  )}
-                                </div>
-                              );
-                            })()}
-                            {r.image_url && slot === "after_insight" && (
-                              /* eslint-disable-next-line @next/next/no-img-element */
-                              <img src={r.image_url} alt="" className="w-full h-auto rounded-lg" />
-                            )}
-                            {r.projection && stripHtml(r.projection).trim() && (() => {
-                              const proj = interpNeutral(r.projection);
-                              return (
-                                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                                  <p
-                                    className="tiquiz-rich tiquiz-rich-inline text-[10px] font-bold uppercase tracking-widest text-primary/70 mb-1"
-                                    dangerouslySetInnerHTML={{ __html: sanitizeRichText(r.projection_heading?.trim() || quiz.result_projection_heading?.trim() || "") || t.projection }}
-                                  />
-                                  {isHtml(proj) ? (
-                                    <div className="tiquiz-rich text-sm leading-relaxed"
-                                      dangerouslySetInnerHTML={{ __html: sanitizeRichText(proj) }}
-                                    />
-                                  ) : (
-                                    <p className="text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(proj)}</p>
-                                  )}
-                                </div>
-                              );
-                            })()}
-                            {r.image_url && slot === "bottom" && (
-                              /* eslint-disable-next-line @next/next/no-img-element */
-                              <img src={r.image_url} alt="" className="w-full h-auto rounded-lg" />
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })()}
+          {showsOtherResultsAt(otherResultsPlacement, "before_cta") && renderOtherResults()}
 
           {/* CTA — per-result URL takes priority over global.
               Falls back to the locale's default label when only the URL is set. */}
@@ -4609,6 +4628,11 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
               </Button>
             ) : null;
           })()}
+
+          {/* APRES le bouton, et c'est le nouveau defaut (Gwenn, 4 aout
+              2026) : au dessus, ce bloc offrait une porte de sortie juste
+              avant la proposition. Il reste utile, il passe apres. */}
+          {showsOtherResultsAt(otherResultsPlacement, "after_cta") && renderOtherResults()}
 
           {/* Carte de resultat partageable (image) — sert la viralite : le
               visiteur partage "Je suis [profil]" sur ses reseaux. Uniquement

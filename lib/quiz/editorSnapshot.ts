@@ -81,6 +81,7 @@ export const QUIZ_SNAPSHOT_KEYS = [
   "hide_response_counts",
   "notify_responses",
   "show_other_results",
+  "other_results_position",
   "meta_pixel_id",
   "ga4_measurement_id",
   "google_ads_conversion_id",
