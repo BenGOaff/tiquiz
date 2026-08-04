@@ -175,10 +175,12 @@
       "title": "¿Dónde abandonan tus respondedores?",
       "questionLabel": "Pregunta",
       "visitors": "vistas",
-      "dropped": "Mayor caída:",
+      "hotspot": "{lost} personas se detienen en la pregunta {q}",
+      "tooFew": "Todavía no hay bastante gente",
       "kept": "Llegaron al final:",
       "noData": "aún sin datos",
-      "removedNotice": "{count, plural, =1 {Se ha eliminado 1 pregunta desde entonces: sus visualizaciones ya no se cuentan.} other {Se han eliminado # preguntas desde entonces: sus visualizaciones ya no se cuentan.}}"
+      "removedNotice": "{count, plural, =1 {Se ha eliminado 1 pregunta desde entonces: sus visualizaciones ya no se cuentan.} other {Se han eliminado # preguntas desde entonces: sus visualizaciones ya no se cuentan.}}",
+      "normalLoss": "Perder gente por el camino es normal y sano: quienes se detienen son sobre todo los visitantes no cualificados. Ningún quiz busca el 100% de finalización."
     },
     "untitled": "Sin título"
   },
@@ -2841,13 +2843,21 @@
     "funnelEmpty": "Sin datos para este período. El seguimiento por pregunta empieza a registrar desde la próxima visita.",
     "funnelSubtitle": "Número de sesiones distintas que vieron cada pregunta. La barra se encoge con cada abandono.",
     "sessionsStarted": "{count, plural, =0 {0 sesiones iniciadas} one {# sesión iniciada} other {# sesiones iniciadas}}",
-    "worstDropWarning": "La pregunta {q} pierde el <bold>{pct}%</bold> de los visitantes respecto a la anterior. Es el punto caliente que hay que reescribir primero.",
+    "hotspotOnQuestion": "La pregunta {q} es la última que ven <bold>{lost} de {sample} visitantes</bold>: la leen y no la responden. Es la que hay que mirar, no la siguiente (nunca la vieron).",
+    "hotspotAfterAnswer": "<bold>{lost} de {sample} visitantes</bold> responden la pregunta {q} y se detienen ahí. La pregunta funciona: lo que los pierde es la longitud o lo que viene después.",
+    "hotspotUnknown": "La pregunta {q} es la última que ven <bold>{lost} de {sample} visitantes</bold>. Es la que hay que mirar, no la siguiente (nunca la vieron).",
+    "funnelTooFew": "Todavía no hay bastante gente para saber dónde abandonan. Hacen falta unos {needed} visitantes en una misma pregunta para que una diferencia signifique algo más que azar: con 8 personas, una sola que se detiene ya pesa un 12%. Vas por {best}.",
+    "funnelSteady": "Ningún abandono anormal. El recorrido aguanta.",
+    "funnelReadableUntil": "Lectura fiable hasta la pregunta {q}: más allá hay muy poca gente para concluir.",
+    "funnelProtocol": "Para medir un cambio: una sola modificación cada vez, y luego {needed} respuestas nuevas antes de juzgar. Dos cambios a la vez hacen el efecto ilegible.",
+    "funnelStepLoss": "-{pct}% ({lost} pers.)",
     "leadsCount": "{count, plural, =0 {0 leads} one {# lead} other {# leads}}",
     "leadsCountWithPct": "{count} leads · {pct}%",
     "seriesViews": "Visitas",
     "seriesLeads": "Registros",
     "tooltipViews": "{count} visitas",
-    "tooltipConversion": "Conversión: {pct}%"
+    "tooltipConversion": "Conversión: {pct}%",
+    "funnelNormalLoss": "Perder gente por el camino es normal y sano: quienes se detienen son sobre todo los visitantes no cualificados. Ningún quiz busca el 100% de finalización."
   },
   "illustrations": {
     "emptyInbox": "Bandeja de entrada vacía",

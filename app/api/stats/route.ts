@@ -421,6 +421,11 @@ export async function GET(req: NextRequest) {
         questions: steps.map((s) => ({
           index: s.questionIndex,
           views: s.views,
+          // `answers` distingue "ils butent SUR la question" (vue sans
+          // réponse) de "ils partent APRÈS y avoir répondu". Les deux
+          // appellent des corrections opposées, et on avait la donnée
+          // sans jamais la transmettre (drame Jocelyne, 4 août 2026).
+          answers: s.answers,
           hasData: s.hasData,
           text: texts[s.questionIndex] ?? "",
         })),

@@ -1,12 +1,25 @@
-// app/[publicSlug]/page.tsx
+// app/s/[publicSlug]/page.tsx
 //
-// Catch-all that serves quizzes / popquizzes at the root of a creator
-// custom domain — `test.ethilife.fr/<slug>` instead of the longer
-// `/q/<slug>` or `/p/<slug>`. The existing prefixed routes still work
-// (backwards-compat with anything already shared in the wild) and are
-// the only thing that resolves on the main host quiz.tipote.com,
-// where this catch-all 404s because we never want `/dashboard`,
-// `/settings`, etc. to be shadowed.
+// Sert les quiz / popquiz à la RACINE du domaine perso d'une créatrice :
+// `test.ethilife.fr/<slug>` au lieu du plus long `/q/<slug>` ou
+// `/p/<slug>`. Les routes préfixées continuent de marcher (tout ce qui a
+// déjà été partagé dans la nature) et restent les seules à répondre sur
+// le host principal quiz.tipote.com, où cette page 404 volontairement.
+//
+// -- POURQUOI CE FICHIER VIT SOUS /s (retour Béné, 4 août 2026) --------
+//
+// Il était en `app/[publicSlug]/page.tsx`, donc en concurrence directe
+// avec toutes nos routes statiques. Une route statique gagne toujours,
+// donc un quiz nommé "quiz", "stats" ou "dashboard" n'aurait jamais pu
+// s'afficher : d'où une longue liste de mots interdits à la créatrice,
+// alors que "quiz" est le mot le plus naturel du monde pour nommer un
+// quiz. Le middleware réécrit désormais le slug nu vers `/s/<slug>`, un
+// chemin qui n'est pas une page de l'app : plus d'arbitrage, plus de
+// mots interdits. L'adresse vue par le visiteur ne change pas.
+//
+// `/s/<slug>` n'est pas une URL publique : la porte du middleware
+// (routeTenantPath) refuse ce chemin s'il est tapé directement, et sur
+// le host principal la page 404 comme avant.
 //
 // Routing decision:
 //   1. No custom-domain context → notFound() (we're on the main host).

@@ -38,9 +38,9 @@ export interface UseShareDomain {
   setShareDomain: (next: string) => void;
   /**
    * True when the selected domain is a creator's custom domain (not
-   * the multi-tenant main host). The catch-all route at
-   * app/[publicSlug] serves bare slugs on these, so share URLs can
-   * drop the /q/ or /p/ prefix.
+   * the multi-tenant main host). Le middleware réécrit le slug nu de
+   * ces domaines vers app/s/[publicSlug], donc les liens de partage
+   * peuvent se passer du préfixe /q/ ou /p/.
    */
   isCustomDomain: boolean;
   /**

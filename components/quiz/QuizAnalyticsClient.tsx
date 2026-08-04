@@ -36,6 +36,7 @@ import {
   ArrowLeft,
   BarChart3,
   Eye,
+  Info,
   Loader2,
   Pencil,
   Send,
@@ -48,6 +49,7 @@ import { Card } from "@/components/ui/card";
 import { stripHtml } from "@/lib/richText";
 import { projectBackHref } from "@/lib/nav/projectBack";
 import QuizInsightsPanel from "@/components/quiz/QuizInsightsPanel";
+import { readFunnelSignal, stepLoss } from "@/lib/quiz/funnelSignal";
 
 type Period = "7" | "30" | "90" | "all";
 
@@ -464,16 +466,13 @@ function FunnelSection({
     );
   }
   const baseline = tracked[0]!.views;
-  // Worst drop-off (excluding Q1 where it's always 0). Highlighted in
-  // the UI so the user knows immediately which question to fix.
-  let worstIdx = -1;
-  let worstDrop = -1;
-  for (let i = 1; i < tracked.length; i++) {
-    if (tracked[i]!.dropFromPrevious > worstDrop) {
-      worstDrop = tracked[i]!.dropFromPrevious;
-      worstIdx = i;
-    }
-  }
+  // Le point chaud, ses seuils et surtout la question qu'il DÉSIGNE
+  // vivent dans lib/quiz/funnelSignal.ts. Avant, ce composant calculait
+  // lui-même un "pire drop" sans seuil d'échantillon, et nommait la
+  // question SUIVANTE : celle que les partants n'avaient jamais vue
+  // (drame Jocelyne, 4 août 2026).
+  const signal = readFunnelSignal(funnel);
+  const hotspotIndex = signal.hotspot?.questionIndex ?? -1;
 
   return (
     <Card className="p-4 space-y-3">
@@ -492,15 +491,56 @@ function FunnelSection({
         </div>
       </div>
 
-      {worstIdx > 0 && worstDrop >= 15 ? (
+      {signal.kind === "hotspot" && signal.hotspot ? (
         <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 px-3 py-2 flex items-start gap-2">
           <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-900 dark:text-amber-100">
-            {t.rich("worstDropWarning", {
-              q: tracked[worstIdx]!.questionIndex + 1,
-              pct: worstDrop,
-              bold: (chunks) => <span className="font-bold">{chunks}</span>,
-            })}
+            {t.rich(
+              signal.hotspot.shape === "on-question"
+                ? "hotspotOnQuestion"
+                : signal.hotspot.shape === "after-answer"
+                  ? "hotspotAfterAnswer"
+                  : "hotspotUnknown",
+              {
+                q: signal.hotspot.questionIndex + 1,
+                lost: signal.hotspot.lost,
+                sample: signal.hotspot.sample,
+                bold: (chunks) => <span className="font-bold">{chunks}</span>,
+              },
+            )}
+          </p>
+        </div>
+      ) : signal.kind === "too-few" ? (
+        <div className="rounded-md bg-muted/50 border px-3 py-2 flex items-start gap-2">
+          <Info className="size-4 text-muted-foreground shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground">
+            {t("funnelTooFew", { needed: signal.needed, best: signal.bestSample })}
+          </p>
+        </div>
+      ) : signal.kind === "steady" ? (
+        <div className="rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 px-3 py-2 flex items-start gap-2">
+          <Info className="size-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-emerald-900 dark:text-emerald-100">
+            {t("funnelSteady")}
+            {signal.readableUntil >= 0 && signal.readableUntil < tracked.length - 1
+              ? " " + t("funnelReadableUntil", { q: signal.readableUntil + 1 })
+              : ""}
+          </p>
+        </div>
+      ) : null}
+
+      {/* Le protocole de mesure. Jocelyne a enchaîné les modifications
+          (question, réponses, ordre) en attendant trois personnes entre
+          chaque : aucun effet n'était mesurable, et rien ne le lui
+          disait. */}
+      {signal.kind !== "no-data" ? (
+        <div className="space-y-1">
+          {/* Perdre du monde n'est PAS un échec. Sans cette phrase, une
+              créatrice lit chaque départ comme une faute à corriger et
+              se met à réécrire un quiz qui va bien. */}
+          <p className="text-[11px] text-muted-foreground">{t("funnelNormalLoss")}</p>
+          <p className="text-[11px] text-muted-foreground">
+            {t("funnelProtocol", { needed: signal.needed })}
           </p>
         </div>
       ) : null}
@@ -508,7 +548,10 @@ function FunnelSection({
       <div className="space-y-1.5">
         {tracked.map((step, i) => {
           const ratio = baseline > 0 ? step.views / baseline : 0;
-          const isWorst = i === worstIdx && worstDrop >= 15;
+          const isWorst = step.questionIndex === hotspotIndex;
+          // La perte est portée par la question qui la SUBIT (ceux qui
+          // l'ont vue sans atteindre la suivante), pas par la suivante.
+          const loss = stepLoss(funnel, i);
           const widthPct = Math.max(6, ratio * 100);
           const completionPct =
             baseline > 0 ? Math.round(ratio * 1000) / 10 : 0;
@@ -535,8 +578,8 @@ function FunnelSection({
                   {step.views} ({completionPct}%)
                 </span>
               </div>
-              <div className="w-16 shrink-0 text-right tabular-nums">
-                {step.dropFromPrevious > 0 ? (
+              <div className="w-28 shrink-0 text-right tabular-nums">
+                {loss ? (
                   <span
                     className={
                       isWorst
@@ -544,10 +587,10 @@ function FunnelSection({
                         : "text-muted-foreground"
                     }
                   >
-                    -{step.dropFromPrevious}%
+                    {t("funnelStepLoss", { pct: loss.pct, lost: loss.lost })}
                   </span>
                 ) : (
-                  <span className="text-muted-foreground">—</span>
+                  <span className="text-muted-foreground">-</span>
                 )}
               </div>
             </div>
