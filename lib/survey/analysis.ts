@@ -15,6 +15,7 @@ import { localizedYesNo, isAnswered } from "@/lib/survey/format";
 import { buildQuestionPositions, resolveQuestionPosition } from "@/lib/quiz/questionIdentity";
 import { fetchAllRows } from "@/lib/db/fetchAllRows";
 import { EVIDENCE_RULES } from "@/lib/prompts/evidence";
+import { PRIORITY_RULES, capSecondary } from "@/lib/prompts/priority";
 
 export const SURVEY_AI_MIN_RESPONSES = 5;
 
@@ -69,6 +70,11 @@ export interface SurveyAggregate {
 
 export interface SurveyAnalysisResult {
   summary: string;
+  /** LA chose a faire maintenant, une seule (cf. lib/prompts/priority.ts).
+   *  Cet ecran alignait 3 a 5 enseignements PLUS 3 a 5 actions, sans dire
+   *  par quoi commencer : c'est le tri qu'on demandait a la creatrice de
+   *  faire a notre place. */
+  priority: { title: string; why: string; how: string } | null;
   takeaways: string[];
   actions: string[];
   responses_at_generation: number;
@@ -251,11 +257,15 @@ export async function generateSurveyAnalysis(
     "- Chaque question affiche '[N/T ont répondu]' : N = personnes ayant répondu à CETTE question, T = total des participants. Si N > 0, la question A des réponses : ne dis JAMAIS qu'elle est vide ou sans données.",
     "- Pour une question à réponses libres, le nombre total est donné explicitement ('N réponses libres'). Les exemples cités ne sont qu'un ÉCHANTILLON : n'en déduis pas que seules ces réponses existent, ni que les autres participants n'ont pas répondu.",
     "- Les pourcentages d'une question sont calculés sur les répondants à cette question (pas sur le total), ils somment donc à 100% pour un choix unique.",
+    PRIORITY_RULES,
     "Tu réponds STRICTEMENT en JSON valide, sans texte autour, au format :",
-    '{ "summary": string, "takeaways": string[], "actions": string[] }',
-    "- summary : 2-4 phrases sur ce que disent VRAIMENT les résultats.",
-    "- takeaways : 3 à 5 enseignements concrets (puces courtes).",
-    "- actions : 3 à 5 actions concrètes à mettre en place, à l'impératif.",
+    '{ "summary": string, "priority": { "title": string, "why": string, "how": string }, "takeaways": string[], "actions": string[] }',
+    "- summary : 2-4 phrases sur ce que disent VRAIMENT les résultats. Commence par ce qui MARCHE quand quelque chose marche.",
+    "- priority.title : LA seule chose à faire maintenant, en une phrase à l'impératif.",
+    "- priority.why : 1 à 2 phrases, avec SES chiffres à elle, pour qu'elle voie l'enjeu.",
+    "- priority.how : 2 à 4 phrases très concrètes sur la manière de s'y prendre.",
+    "- takeaways : 3 MAXIMUM, les enseignements qui comptent APRÈS la priorité (puces courtes).",
+    "- actions : 3 MAXIMUM, à l'impératif, jamais un doublon de la priorité. Tableau vide si rien de solide à proposer.",
   ].join("\n");
 
   const lines: string[] = [`Sondage : "${surveyTitle}"`, `Nombre de participants : ${aggregate.totalResponses}`, ""];
@@ -310,6 +320,7 @@ export async function generateSurveyAnalysis(
   const parsed = parseAnalysisJson(raw);
   return {
     summary: parsed.summary,
+    priority: parsed.priority,
     takeaways: parsed.takeaways,
     actions: parsed.actions,
     responses_at_generation: aggregate.totalResponses,
@@ -320,6 +331,7 @@ export async function generateSurveyAnalysis(
 
 function parseAnalysisJson(raw: string): {
   summary: string;
+  priority: { title: string; why: string; how: string } | null;
   takeaways: string[];
   actions: string[];
 } {
@@ -333,14 +345,22 @@ function parseAnalysisJson(raw: string): {
   }
   try {
     const obj = JSON.parse(jsonStr) as Record<string, unknown>;
+    // Le plafond vit dans le CODE et pas seulement dans la consigne :
+    // un modele qui deborde ne doit pas pouvoir re-assommer la creatrice.
     const toStringArray = (v: unknown): string[] =>
-      Array.isArray(v) ? v.map((x) => sanitizeAiText(String(x).trim())).filter(Boolean) : [];
+      capSecondary(Array.isArray(v) ? v.map((x) => sanitizeAiText(String(x).trim())).filter(Boolean) : []);
+    const toStr = (v: unknown): string => (typeof v === "string" ? sanitizeAiText(v.trim()) : "");
+    const p = (obj.priority ?? null) as Record<string, unknown> | null;
     return {
-      summary: typeof obj.summary === "string" ? sanitizeAiText(obj.summary.trim()) : "",
+      summary: toStr(obj.summary),
+      priority:
+        p && typeof p === "object" && toStr(p.title)
+          ? { title: toStr(p.title), why: toStr(p.why), how: toStr(p.how) }
+          : null,
       takeaways: toStringArray(obj.takeaways),
       actions: toStringArray(obj.actions),
     };
   } catch {
-    return { summary: sanitizeAiText(raw.trim().slice(0, 1000)), takeaways: [], actions: [] };
+    return { summary: sanitizeAiText(raw.trim().slice(0, 1000)), priority: null, takeaways: [], actions: [] };
   }
 }
