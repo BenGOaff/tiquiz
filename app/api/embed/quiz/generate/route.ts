@@ -19,6 +19,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { corsHeaders, preflight } from "@/lib/embed/cors";
 import { checkRateLimit, clientIp, hashIp } from "@/lib/embed/rateLimit";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
+import { fetchAnthropic } from "@/lib/aiRetry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -204,7 +205,7 @@ export async function POST(req: NextRequest) {
 
         let res: Response;
         try {
-          res = await fetch(CLAUDE_API_URL, {
+          res = await fetchAnthropic(CLAUDE_API_URL, {
             method: "POST",
             headers: {
               "content-type": "application/json",

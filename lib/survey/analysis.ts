@@ -16,6 +16,7 @@ import { buildQuestionPositions, resolveQuestionPosition } from "@/lib/quiz/ques
 import { fetchAllRows } from "@/lib/db/fetchAllRows";
 import { EVIDENCE_RULES } from "@/lib/prompts/evidence";
 import { PRIORITY_RULES, capSecondary } from "@/lib/prompts/priority";
+import { fetchAnthropic } from "@/lib/aiRetry";
 
 export const SURVEY_AI_MIN_RESPONSES = 5;
 
@@ -284,7 +285,7 @@ export async function generateSurveyAnalysis(
   const timeout = setTimeout(() => controller.abort(), 60_000);
   let res: Response;
   try {
-    res = await fetch(CLAUDE_API_URL, {
+    res = await fetchAnthropic(CLAUDE_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
