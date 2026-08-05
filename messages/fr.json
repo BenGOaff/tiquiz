@@ -2858,7 +2858,7 @@
     "funnelTitle": "Funnel par question",
     "funnelEmpty": "Aucune donnée pour cette période. Le tracking par question commence à enregistrer dès la prochaine visite.",
     "funnelSubtitle": "Nombre de sessions distinctes qui ont vu chaque question. La barre rétrécit à chaque abandon.",
-    "funnelCohortNotice": "Ce graphique ne compte que les {total, plural, one {# personne} other {# personnes}} passées depuis ta dernière modification des questions. {stale, plural, one {# autre personne a répondu} other {# autres personnes ont répondu}} à une version différente du quiz : les additionner ferait apparaître une chute là où tu as simplement ajouté, supprimé ou déplacé une question.",
+    "funnelCohortNotice": "Ce graphique ne compte que les {shown, plural, one {# personne} other {# personnes}} passées depuis ta dernière modification des questions. {stale, plural, one {# autre personne a répondu} other {# autres personnes ont répondu}} à une version différente du quiz : les additionner ferait apparaître une chute là où tu as simplement ajouté, supprimé ou déplacé une question.",
     "sessionsStarted": "{count, plural, =0 {0 session commencée} one {# session commencée} other {# sessions commencées}}",
     "hotspotOnQuestion": "Question {q} est la dernière que voient <bold>{lost} visiteurs sur {sample}</bold> : ils la lisent et n'y répondent pas. C'est elle qu'il faut regarder, pas la suivante (ils ne l'ont jamais vue).",
     "hotspotAfterAnswer": "<bold>{lost} visiteurs sur {sample}</bold> répondent à la question {q} puis s'arrêtent là. La question passe bien : c'est la longueur ou ce qui vient après qui les perd.",

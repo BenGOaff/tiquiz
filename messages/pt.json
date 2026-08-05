@@ -2858,7 +2858,7 @@
     "funnelTitle": "Funil por pergunta",
     "funnelEmpty": "Sem dados para este período. O rastreio por pergunta começa a registar na próxima visita.",
     "funnelSubtitle": "Número de sessões distintas que viram cada pergunta. A barra encolhe a cada abandono.",
-    "funnelCohortNotice": "Este gráfico conta apenas as {total, plural, one {# pessoa} other {# pessoas}} que passaram desde a tua última alteração às perguntas. {stale, plural, one {# outra pessoa respondeu} other {# outras pessoas responderam}} a uma versão diferente do quiz: somá-las mostraria uma queda onde apenas acrescentaste, removeste ou moveste uma pergunta.",
+    "funnelCohortNotice": "Este gráfico conta apenas as {shown, plural, one {# pessoa} other {# pessoas}} que passaram desde a tua última alteração às perguntas. {stale, plural, one {# outra pessoa respondeu} other {# outras pessoas responderam}} a uma versão diferente do quiz: somá-las mostraria uma queda onde apenas acrescentaste, removeste ou moveste uma pergunta.",
     "sessionsStarted": "{count, plural, =0 {0 sessões começadas} one {# sessão começada} other {# sessões começadas}}",
     "hotspotOnQuestion": "A pergunta {q} é a última que <bold>{lost} de {sample} visitantes</bold> veem: leem-na e nunca respondem. É essa que deves olhar, não a seguinte (nunca a viram).",
     "hotspotAfterAnswer": "<bold>{lost} de {sample} visitantes</bold> respondem à pergunta {q} e param aí. A pergunta funciona: o que os perde é a extensão ou o que vem a seguir.",

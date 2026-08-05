@@ -172,3 +172,37 @@ test("dater la structure ne fait jamais echouer une sauvegarde", () => {
   assert.ok(!/return NextResponse/.test(body), "un echec ici ne doit pas interrompre le PATCH");
   assert.match(body, /console\.warn/, "il doit laisser une trace");
 });
+
+// ── Ce que le bandeau annonce à la créatrice (5 août 2026) ───────────
+//
+// La phrase dit "ce graphique ne compte que les N personnes passées
+// depuis ta dernière modification". Elle recevait `total`, qui compte
+// TOUT LE MONDE, exclues comprises. On lui annonçait donc un
+// échantillon plus grand que celui qu'elle regardait, et les deux
+// nombres de la phrase ne s'additionnaient plus : 66 vues "depuis ta
+// modification" plus 46 "autres", sur 66 personnes en tout.
+
+test("le bandeau reçoit la cohorte AFFICHÉE, pas le total", () => {
+  const client = readFileSync(
+    new URL("../../components/quiz/QuizAnalyticsClient.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(client, /funnelCohortNotice", \{ stale: cohort\.stale, shown: cohort\.comparable \}/);
+  assert.doesNotMatch(client, /funnelCohortNotice.*total: cohort\.total/);
+});
+
+test("les 7 langues attendent bien la variable affichée", () => {
+  // Une locale oubliée afficherait la phrase avec un trou à la place du
+  // nombre, dans la langue de quelqu'un qu'on ne verra jamais se
+  // plaindre.
+  for (const locale of ["fr", "en", "es", "it", "pt", "pt-BR", "ar"]) {
+    const raw = readFileSync(
+      new URL(`../../messages/${locale}.json`, import.meta.url),
+      "utf8",
+    );
+    const notice = JSON.parse(raw).quizAnalytics.funnelCohortNotice as string;
+    assert.match(notice, /\{shown, plural,/, `${locale} doit utiliser shown`);
+    assert.match(notice, /\{stale, plural,/, `${locale} doit garder stale`);
+    assert.doesNotMatch(notice, /\{total/, `${locale} ne doit plus utiliser total`);
+  }
+});
