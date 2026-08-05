@@ -2858,7 +2858,7 @@
     "funnelTitle": "Funnel per question",
     "funnelEmpty": "No data for this period. Per-question tracking starts recording on the next visit.",
     "funnelSubtitle": "Number of distinct sessions that reached each question. The bar shrinks with each drop-off.",
-    "funnelCohortNotice": "This chart only counts the {total, plural, one {# person} other {# people}} who came through since you last changed your questions. {stale, plural, one {# other person answered} other {# other people answered}} a different version of the quiz: adding them together would show a drop where you simply added, removed or moved a question.",
+    "funnelCohortNotice": "This chart only counts the {shown, plural, one {# person} other {# people}} who came through since you last changed your questions. {stale, plural, one {# other person answered} other {# other people answered}} a different version of the quiz: adding them together would show a drop where you simply added, removed or moved a question.",
     "sessionsStarted": "{count, plural, =0 {0 sessions started} one {# session started} other {# sessions started}}",
     "hotspotOnQuestion": "Question {q} is the last one <bold>{lost} of {sample} visitors</bold> see: they read it and never answer. That's the one to look at, not the next (they never saw it).",
     "hotspotAfterAnswer": "<bold>{lost} of {sample} visitors</bold> answer question {q}, then stop there. The question itself lands fine: it's the length, or what comes next, that loses them.",

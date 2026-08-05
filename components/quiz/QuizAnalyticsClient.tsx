@@ -627,7 +627,13 @@ function FunnelSection({
           comme un bug, et cacher les autres se lit comme une perte. */}
       {cohort && !cohort.singleVersion && (
         <p className="text-[11px] text-muted-foreground rounded-md bg-muted/40 px-3 py-2">
-          {t("funnelCohortNotice", { stale: cohort.stale, total: cohort.total })}
+          {/* `comparable` et PAS `total` : la phrase dit "ce graphique ne
+              compte que les N personnes passées depuis ta dernière
+              modification", et `total` compte tout le monde, y compris
+              les exclues. On lui annonçait donc un échantillon plus
+              grand que celui qu'elle regarde, et les deux nombres de la
+              phrase ne s'additionnaient plus. */}
+          {t("funnelCohortNotice", { stale: cohort.stale, shown: cohort.comparable })}
         </p>
       )}
 
