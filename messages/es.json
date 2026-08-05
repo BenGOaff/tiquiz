@@ -1318,6 +1318,9 @@
     "iframeCopied": "¡Código iframe copiado!",
     "shareTabNetworks": "Redes de compartir propuestas",
     "shareTabNetworksHint": "Elige las redes mostradas en la página de resultado. Si no eliges ninguna, se ofrecen todas.",
+    "optionSurveyShare": "Permitir compartir la encuesta",
+    "optionSurveyShareHint": "Los botones de compartir en la pantalla de agradecimiento. Desmarca para que nadie pueda difundir tu encuesta desde esa página.",
+    "optionSurveyShareOffHint": "Compartir está desactivado: no aparece ningún botón en la pantalla de agradecimiento.",
     "shareTabSeoTitle": "Vista previa en redes (SEO)",
     "shareTabSeoHint": "Descripción usada cuando un visitante comparte el enlace.",
     "shareTabSeoPlaceholder": "Gancho breve mostrado debajo del título del enlace compartido…",
@@ -1594,7 +1597,9 @@
     "otherResultsPositionLabel": "Dónde colocar este bloque",
     "otherResultsAfterCta": "Después del botón (recomendado)",
     "otherResultsBeforeCta": "Antes del botón",
-    "otherResultsPositionHint": "Colocado antes del botón, le da al visitante otra cosa que hacer justo en el momento de tu propuesta."
+    "otherResultsPositionHint": "Colocado antes del botón, le da al visitante otra cosa que hacer justo en el momento de tu propuesta.",
+    "errResponsesDelete": "La eliminación no se completó. Inténtalo de nuevo en un momento.",
+    "responsesDeleted": "{count, plural, one {# respuesta eliminada} other {# respuestas eliminadas}}"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nueva contraseña",
@@ -1820,7 +1825,17 @@
     "unflagAction": "Quitar marca",
     "radarTitle": "Resumen de las valoraciones",
     "radarTooltip": "Media {avg}/{max} ({pct}%)",
-    "errFlagSave": "No se pudo guardar la marca."
+    "errFlagSave": "No se pudo guardar la marca.",
+    "responsesSelectAll": "Seleccionar todo",
+    "responsesSelectOne": "Seleccionar esta respuesta",
+    "responsesSelected": "{count, plural, one {# respuesta seleccionada} other {# respuestas seleccionadas}}",
+    "responsesClearSelection": "Desmarcar todo",
+    "responsesDelete": "Eliminar",
+    "responsesDeleteTitle": "{count, plural, one {¿Eliminar esta respuesta?} other {¿Eliminar estas # respuestas?}}",
+    "responsesDeleteBody": "Desaparecen de la tabla, de las exportaciones y del resumen. Es definitivo: no hay papelera.",
+    "responsesDeleteStatsNote": "Los contadores de la página Estadísticas (visitas, inicios, finalizaciones) no cambian: vienen del seguimiento de navegación, no de las respuestas.",
+    "responsesDeleteCancel": "Cancelar",
+    "responsesDeleteConfirm": "{count, plural, one {Eliminar la respuesta} other {Eliminar las # respuestas}}"
   },
   "projects": {
     "title": "Mis proyectos",
