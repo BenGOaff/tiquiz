@@ -39,6 +39,16 @@ export interface PartnerQuizStruct {
   hasBonus: boolean;
   hasOgImage: boolean;
   views: number;
+  /** "tu" ou "vous". L'Atelier en a besoin pour ecrire dans le ton du
+   *  quiz au lieu de le redemander : l'information est deja la
+   *  (retour Bene, 5 aout 2026, sur le generateur de bonus). */
+  addressForm: string;
+  /** Le sous-titre d'accueil. Dit de quoi parle le quiz mieux que son
+   *  titre, qui est souvent une question. */
+  introduction: string;
+  /** Le tag Systeme.io pose apres un partage. C'est LUI qui declenche
+   *  l'email de livraison du bonus de viralite. Vide = pas de tag. */
+  shareTagName: string;
   // Profils de resultat LIVE (source de verite pour les emails par profil).
   resultProfiles: PartnerQuizResultProfile[];
 }
@@ -59,7 +69,7 @@ export async function getPartnerQuizAudit(
   let query = supabaseAdmin
     .from("quizzes")
     .select(
-      "id, title, status, mode, capture_enabled, ask_first_name, virality_enabled, og_image_url, bonus_description, bonus_image_url, views_count",
+      "id, title, status, mode, capture_enabled, ask_first_name, virality_enabled, og_image_url, bonus_description, bonus_image_url, views_count, address_form, introduction, sio_share_tag_name",
     )
     .eq("user_id", userId)
     .in("mode", ["quiz", "scoring"]);
@@ -133,6 +143,9 @@ export async function getPartnerQuizAudit(
       hasBonus: nonEmpty(q.bonus_description) || nonEmpty(q.bonus_image_url),
       hasOgImage: nonEmpty(q.og_image_url),
       views: Number(q.views_count) || 0,
+      addressForm: String(q.address_form ?? "tu") === "vous" ? "vous" : "tu",
+      introduction: String(q.introduction ?? ""),
+      shareTagName: String(q.sio_share_tag_name ?? ""),
       resultProfiles: rs.map((r) => ({
         title: r.title,
         description: r.description,
