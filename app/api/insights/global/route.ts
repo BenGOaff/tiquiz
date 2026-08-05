@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { canUseAIAnalysis, shouldShowPlusUpsell, PRICING_PLUS } from "@/lib/planLimits";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { recordAiReport } from "@/lib/insights/history";
 import {
   aggregateGlobalInsights,
   generateGlobalInsights,
@@ -125,6 +126,17 @@ export async function POST(_req: NextRequest) {
     { onConflict: "user_id" },
   );
   if (upErr) console.error("[insights/global] persist failed", upErr.message);
+
+  // La table ci-dessus a `user_id` en cle primaire : elle ne garde que le
+  // DERNIER rapport. On en archive une copie (cf. lib/insights/history.ts).
+  await recordAiReport({
+    userId: user.id,
+    scope: "account",
+    quizId: null,
+    report,
+    model: report.model,
+    generatedAt: nowIso,
+  });
 
   return NextResponse.json({ ok: true, analysis: report, analysisAt: nowIso });
 }

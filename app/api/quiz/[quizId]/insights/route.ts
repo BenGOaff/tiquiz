@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { canUseAIAnalysis, shouldShowPlusUpsell, PRICING_PLUS } from "@/lib/planLimits";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { recordAiReport } from "@/lib/insights/history";
 import {
   aggregateQuizInsights,
   generateQuizInsights,
@@ -135,6 +136,20 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ quizId: s
     .update({ ai_insights: analysis, ai_insights_at: nowIso })
     .eq("id", quizId);
   if (upErr) console.error("[quiz/insights] persist failed", upErr.message);
+
+  // ET ON EN GARDE UNE TRACE. La colonne ci-dessus est ECRASEE a chaque
+  // generation : sans cette ligne, on ne peut pas savoir ce qui a ete
+  // conseille a quelqu'un il y a trois semaines (cf. lib/insights/
+  // history.ts). Best-effort : une trace manquante ne doit jamais
+  // couter son analyse a la creatrice.
+  await recordAiReport({
+    userId: user.id,
+    scope: "quiz",
+    quizId,
+    report: analysis,
+    model: analysis.model,
+    generatedAt: nowIso,
+  });
 
   return NextResponse.json({ ok: true, analysis, analysisAt: nowIso });
 }
