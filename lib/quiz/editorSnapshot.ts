@@ -189,6 +189,9 @@ export const SURVEY_SNAPSHOT_KEYS = [
   "capture_enabled",
   "capture_before_questions",
   "show_aggregate_responses",
+  // Partage du sondage (Adeline, 5 aout 2026) : meme colonne que le
+  // quiz, meme decision (un bouton de partage a la fin, ou pas).
+  "show_result_share",
   "hide_response_counts",
   "notify_responses",
   "survey_thanks_heading",

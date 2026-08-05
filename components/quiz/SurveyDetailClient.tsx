@@ -451,6 +451,46 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       toast.error(t("errFlagSave"));
     }
   };
+
+  /**
+   * Suppression de réponses (Béné, 5 août 2026).
+   *
+   * Contrairement au marquage, on NE retire RIEN de l'écran avant la
+   * réponse du serveur : une suppression optimiste qui échoue ferait
+   * croire que des réponses sont parties, et elles reviendraient au
+   * prochain rechargement, ce qui est pire que l'attente d'une seconde.
+   *
+   * On ne retire que les ids VRAIMENT supprimés, ceux que la route
+   * renvoie : une ligne déjà partie ailleurs ne doit pas faire mentir
+   * l'écran sur ce qu'il vient de faire.
+   */
+  const handleDeleteResponses = async (leadIds: string[]): Promise<string[]> => {
+    try {
+      const res = await fetch(`/api/quiz/${quizId}/survey-delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leadIds }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) {
+        // UN `ok: false` PRODUIT TOUJOURS QUELQUE CHOSE A L'ECRAN
+        // (regle du 3 aout) : un refus silencieux envoie chercher au
+        // mauvais endroit.
+        toast.error(t("errResponsesDelete"));
+        return [];
+      }
+      const removed: string[] = Array.isArray(data.deleted) ? data.deleted : [];
+      if (removed.length > 0) {
+        const gone = new Set(removed);
+        setLeads((prev) => prev.filter((l) => !gone.has(l.id)));
+        toast.success(t("responsesDeleted", { count: removed.length }));
+      }
+      return removed;
+    } catch {
+      toast.error(t("errResponsesDelete"));
+      return [];
+    }
+  };
   const [leftTab, setLeftTab] = useState<"edition" | "design" | "settings">("edition");
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [primaryColor, setPrimaryColor] = useState<string>(DEFAULT_BRAND_COLOR_PRIMARY);
@@ -508,6 +548,15 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // Si TRUE, on affiche les pourcentages de réponses des autres
   // participants sur la page de remerciement. Default FALSE.
   const [showAggregateResponses, setShowAggregateResponses] = useState<boolean>(false);
+  // PARTAGE DU SONDAGE (Adeline, 5 août 2026) : "elle veut empêcher les
+  // gens de partager son sondage". L'écran de remerciement affichait les
+  // boutons de réseaux ET un bouton "Partager", sans aucun réglage pour
+  // les retirer. On réutilise la colonne `show_result_share` du quiz au
+  // lieu d'en créer une deuxième : c'est la même décision (montre-t-on
+  // un bouton de partage à la fin), donc elle n'a qu'un domicile, et il
+  // n'y a pas de migration à appliquer. Défaut ON : aucun sondage en
+  // ligne ne change d'allure.
+  const [showResultShare, setShowResultShare] = useState<boolean>(true);
   // Masquer le nombre brut de reponses dans la synthese (onglet Tendances)
   // et n'afficher que les %. Default false = compteurs visibles (compat).
   const [hideResponseCounts, setHideResponseCounts] = useState<boolean>(false);
@@ -611,6 +660,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     capture_enabled: captureEnabled,
     capture_before_questions: captureBeforeQuestions,
     show_aggregate_responses: showAggregateResponses,
+    show_result_share: showResultShare,
     hide_response_counts: hideResponseCounts,
     notify_responses: notifyResponses,
     survey_thanks_heading: surveyThanksHeading,
@@ -633,7 +683,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     googleAdsConversionLabel, askFirstName, askGender,
     shareMessage, locale, sioShareTagName, sioCaptureTag, status,
     fontFamily, primaryColor, bgColor, textColor, quizBrandLogoUrl, hideBrandLogo,
-    captureEnabled, captureBeforeQuestions, showAggregateResponses, hideResponseCounts, notifyResponses,
+    captureEnabled, captureBeforeQuestions, showAggregateResponses, showResultShare, hideResponseCounts, notifyResponses,
     surveyThanksHeading, surveyThanksBody,
     slug, ogDescription, customFooterText, customFooterUrl, shareNetworks,
     editQuestions, introImageUrl, introImageWidth,
@@ -704,6 +754,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     if (s.intro_image_width === null || typeof s.intro_image_width === "number") setIntroImageWidth(s.intro_image_width as number | null);
     if (typeof s.custom_footer_text === "string") setCustomFooterText(s.custom_footer_text);
     if (typeof s.custom_footer_url === "string") setCustomFooterUrl(s.custom_footer_url);
+    if (typeof s.show_result_share === "boolean") setShowResultShare(s.show_result_share);
     if (Array.isArray(s.share_networks)) setShareNetworks(s.share_networks as ShareNetwork[]);
     if (Array.isArray(s.questions)) setEditQuestions(s.questions as QuizQuestion[]);
   }, []);
@@ -791,6 +842,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       setCustomFooterText(q.custom_footer_text ?? "");
       setCustomFooterUrl(q.custom_footer_url ?? "");
       setShareNetworks(Array.isArray(q.share_networks) ? (q.share_networks as ShareNetwork[]) : []);
+      // `!== false` et pas `=== true` : NULL en base veut dire "jamais
+      // touché", donc partage visible, comme avant ce réglage.
+      setShowResultShare((q as { show_result_share?: boolean | null }).show_result_share !== false);
       // Branding: quiz overrides profile, profile overrides default constants
       const resolvedFont = (BRAND_FONT_CHOICES as readonly string[]).includes(q.brand_font ?? "")
         ? (q.brand_font as BrandFontChoice)
@@ -871,6 +925,12 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           capture_enabled: (q as { capture_enabled?: boolean | null }).capture_enabled !== false,
           capture_before_questions: Boolean((q as { capture_before_questions?: boolean | null }).capture_before_questions),
           show_aggregate_responses: (q as { show_aggregate_responses?: boolean | null }).show_aggregate_responses === true,
+          // `!== false`, EXACTEMENT comme l'hydratation plus haut. Un
+          // `?? true` ou un `=== true` ici et la comparaison serait
+          // fausse a tous les coups pour les sondages a NULL : c'est le
+          // drame Jocelyne du 4 aout, qui reproposait la restauration a
+          // chaque ouverture.
+          show_result_share: (q as { show_result_share?: boolean | null }).show_result_share !== false,
           hide_response_counts: (q as { hide_response_counts?: boolean | null }).hide_response_counts === true,
           notify_responses: (q as { notify_responses?: boolean | null }).notify_responses !== false,
           survey_thanks_heading: (q as { survey_thanks_heading?: string | null }).survey_thanks_heading ?? "",
@@ -1249,6 +1309,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           capture_enabled: captureEnabled,
           capture_before_questions: captureBeforeQuestions,
           show_aggregate_responses: showAggregateResponses,
+          show_result_share: showResultShare,
           hide_response_counts: hideResponseCounts,
           notify_responses: notifyResponses,
           survey_thanks_heading: surveyThanksHeading.trim() || null,
@@ -2609,8 +2670,20 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           {/* Share networks */}
           <Card><CardContent className="pt-6 space-y-3">
             <h3 className="font-semibold flex items-center gap-2"><Share2 className="w-4 h-4 text-primary" /> {t("shareTabNetworks")}</h3>
-            <p className="text-xs text-muted-foreground">{t("shareTabNetworksHint")}</p>
-            <div className="flex flex-wrap gap-2">
+            {/* PARTAGE DU SONDAGE (Adeline, 5 août 2026). L'interrupteur
+                vit AVANT les réseaux : quand il est fermé, la liste en
+                dessous ne décide plus de rien, et le dire vaut mieux que
+                de la laisser croire qu'elle règle quelque chose. */}
+            <SettingsToggle
+              label={t("optionSurveyShare")}
+              hint={t("optionSurveyShareHint")}
+              checked={showResultShare}
+              onChange={setShowResultShare}
+            />
+            <p className="text-xs text-muted-foreground">
+              {showResultShare ? t("shareTabNetworksHint") : t("optionSurveyShareOffHint")}
+            </p>
+            <div className={`flex flex-wrap gap-2 ${showResultShare ? "" : "opacity-40 pointer-events-none"}`}>
               {ALLOWED_SHARE_NETWORKS.map((n) => {
                 const active = shareNetworks.includes(n);
                 return (
@@ -2764,6 +2837,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                 leads={leads}
                 locale={locale}
                 onToggleFlag={handleToggleFlag}
+                onDelete={handleDeleteResponses}
               />
             )}
 

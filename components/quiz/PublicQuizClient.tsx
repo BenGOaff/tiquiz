@@ -4218,8 +4218,15 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
             </div>
           )}
 
-          {/* Surveys still get a share button — just no gating, no bonus.
-              The user explicitly asked for "no viral but share at end". */}
+          {/* PARTAGE DU SONDAGE, DESACTIVABLE (Adeline, 5 aout 2026) :
+              "elle veut empecher les gens de partager son sondage". Le
+              reglage est `show_result_share`, la MEME colonne que le
+              bouton de partage du quiz : c'est la meme decision, elle
+              n'a donc qu'un domicile. `!== false` : NULL = jamais
+              touche = visible, donc aucun sondage en ligne ne bouge.
+              Les deux blocs sont gates ENSEMBLE, sinon decocher ne
+              retirerait que la moitie des boutons. */}
+          {quiz.show_result_share !== false && (<>
           {/* Boutons par reseau choisis par le createur (share_networks).
               Avant, le sondage n'affichait que le bouton generique en
               dessous ; les reseaux actives n'apparaissaient jamais. */}
@@ -4256,6 +4263,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
               <><Copy className="w-4 h-4 mr-2" /> {t.surveyShareCta}</>
             )}
           </Button>
+          </>)}
         </div>
         </div>
       </div>
