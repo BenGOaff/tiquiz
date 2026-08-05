@@ -83,6 +83,47 @@ test("le verdict vide vaut null, jamais une chaîne vide", () => {
   assert.ok(/renderFullFunnelVerdict\(fullFunnel\) \|\| null/.test(READOUT));
 });
 
+// ── Le quart non porté, trouvé le 5 août ─────────────────────────────
+
+test("le funnel du coach est borné à la cohorte comparable", () => {
+  // La page stats, la page analytics et le rapport IA bornaient déjà le
+  // funnel sur `structure_changed_at` depuis le 4 août. Le coach, non :
+  // il appelait la RPC avec `p_since: null`.
+  //
+  // Donc l'élève modifiait son quiz, demandait au coach, et le coach
+  // pouvait encore voir la fausse chute à l'endroit exact qu'elle
+  // venait de retoucher. C'est à dire relancer la boucle sur le seul
+  // écran où elle pose ses questions. Une correction écrite à plusieurs
+  // endroits ne se porte jamais qu'à moitié.
+  assert.ok(/resolveCohortSince\(/.test(READOUT), "la cohorte est résolue");
+  assert.ok(/p_since: cohortSince/.test(READOUT), "et elle est passée à la RPC");
+  assert.ok(
+    !/p_since: null/.test(READOUT),
+    "plus aucun appel non borné ne subsiste dans ce fichier",
+  );
+});
+
+test("la colonne de cohorte est lue à part, pour ne rien casser en prod", () => {
+  // La nommer dans le select principal ferait échouer la requête
+  // entière si la migration n'est pas encore appliquée : le coach
+  // perdrait TOUS les chiffres au lieu d'en perdre le bornage.
+  assert.ok(/select\("structure_changed_at"\)/.test(READOUT));
+});
+
+test("le coach reçoit aussi la comparaison entre ses quiz", () => {
+  // "Sur ton quiz TDAH, 8 sur 10 commencent, contre 5 sur 10 ici."
+  // Déjà rédigé par Tiquiz, comme les deux autres verdicts : c'est ce
+  // qui garantit que le coach et l'écran de stats disent la même phrase.
+  assert.ok(/renderStartRateVerdict\(/.test(READOUT));
+  assert.ok(/startRateVerdict/.test(READOUT));
+});
+
+test("vues douteuses : aucune comparaison n'est envoyée", () => {
+  // Le rapport dirait au même endroit "taux à interpréter avec
+  // prudence" et "tu démarres à 52%".
+  assert.ok(/if \(viewsReliable\) \{/.test(READOUT));
+});
+
 // ── Le garde-fou structurel ──────────────────────────────────────────
 
 test("l'endpoint partenaire renvoie bien la lecture", () => {

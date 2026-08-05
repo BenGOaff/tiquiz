@@ -47,6 +47,7 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
 import { buildLiveFunnel } from "@/lib/quiz/funnel";
+import { resolveCohortSince } from "@/lib/quiz/funnelCohort";
 import { readFunnelSignal, type FunnelSignal, type FunnelStepLike } from "@/lib/quiz/funnelSignal";
 import { biggestLeak, buildFullFunnel, renderFullFunnelVerdict } from "@/lib/quiz/fullFunnel";
 import {
@@ -54,6 +55,11 @@ import {
   renderTrafficForPrompt,
   sanitizeVisitMeta,
 } from "@/lib/quiz/trafficSource";
+import {
+  compareStartRates,
+  renderStartRateVerdict,
+  type StartRateProject,
+} from "@/lib/insights/startRate";
 
 export interface PartnerReadout {
   /** "quiz" : un seul quiz, le verdict a un sens. "account" : plusieurs,
@@ -74,6 +80,10 @@ export interface PartnerReadout {
   funnelVerdict: string | null;
   /** Le verdict de provenance, idem. */
   trafficVerdict: string | null;
+  /** Comment ce quiz demarre par rapport a SES autres quiz. Idem : deja
+   *  redige, pour que le coach et le rapport de Tiquiz disent la meme
+   *  phrase (cf. lib/insights/startRate.ts). */
+  startRateVerdict: string | null;
   /** Ce qu'on a le droit de conclure sur les questions. */
   questionSignal: FunnelSignal | null;
 }
@@ -84,6 +94,7 @@ const EMPTY_ACCOUNT: PartnerReadout = {
   counts: null,
   funnelVerdict: null,
   trafficVerdict: null,
+  startRateVerdict: null,
   questionSignal: null,
 };
 
@@ -126,12 +137,36 @@ export async function buildPartnerReadout(
   const views = Math.max(trackedViews, leads);
   const questionCount = (questionsRes.data ?? []).length;
 
-  // Funnel par question, recalé sur les questions VIVANTES.
+  // Funnel par question, recalé sur les questions VIVANTES **et** sur les
+  // gens qui ont vu la MÊME version du quiz.
+  //
+  // Ce `p_since` valait null jusqu'au 5 août 2026, et c'était le dernier
+  // quart non porté du correctif Jocelyne : la page stats, la page
+  // analytics et le rapport IA bornaient déjà la cohorte, le coach non.
+  // Il pouvait donc encore montrer la fausse chute à l'endroit exact que
+  // l'élève venait de retoucher, c'est à dire relancer la boucle sur le
+  // seul écran où elle pose ses questions. Une correction écrite à
+  // plusieurs endroits ne se porte jamais qu'à moitié : ici c'est le
+  // même appel que `lib/quiz/insights.ts`, volontairement mot pour mot.
+  //
+  // Colonne lue à part : la nommer dans le select plus haut ferait
+  // échouer la requête entière si la migration n'est pas appliquée.
+  // Absente -> null -> comportement d'avant, jamais d'écran vide.
+  const { data: scRow } = await supabaseAdmin
+    .from("quizzes")
+    .select("structure_changed_at")
+    .eq("id", quizId)
+    .maybeSingle();
+  const cohortSince = resolveCohortSince(
+    null,
+    (scRow as { structure_changed_at?: string | null } | null)?.structure_changed_at ?? null,
+  );
+
   let steps: FunnelStepLike[] = [];
   try {
     const { data: rows } = await supabaseAdmin.rpc("quiz_question_funnel_detail", {
       p_quiz_id: quizId,
-      p_since: null,
+      p_since: cohortSince,
     });
     steps = buildLiveFunnel(
       (rows ?? []) as { question_index: number; views: number; answers: number }[],
@@ -158,12 +193,44 @@ export async function buildPartnerReadout(
     ),
   );
 
+  // Ses AUTRES quiz : le coach doit pouvoir dire "celui-la demarre a
+  // 80%, donc c'est atteignable". Meme requete et memes garde-fous que
+  // le rapport de Tiquiz, pour que les deux ecrans ne se contredisent
+  // jamais. Vues douteuses ici -> on ne compare rien.
+  const title = stripHtml(String(quiz.title ?? "")).trim() || null;
+  let startRateVerdict: string | null = null;
+  if (viewsReliable) {
+    const { data: siblings } = await supabaseAdmin
+      .from("quizzes")
+      .select("title, mode, views_count, starts_count")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(60);
+    const projects: StartRateProject[] = ((siblings ?? []) as Array<{
+      title: string | null;
+      mode: string | null;
+      views_count: number | null;
+      starts_count: number | null;
+    }>).map((q) => ({
+      title: stripHtml(String(q.title ?? "")).trim() || "Sans titre",
+      mode: (String(q.mode ?? "quiz") === "survey" ? "survey" : "quiz") as "quiz" | "survey",
+      views: q.views_count ?? 0,
+      starts: q.starts_count ?? 0,
+      viewsReliable: true,
+    }));
+    const comparison = compareStartRates(projects);
+    if (comparison.kind !== "no-data") {
+      startRateVerdict = renderStartRateVerdict(comparison, title);
+    }
+  }
+
   return {
     scope: "quiz",
-    quizTitle: stripHtml(String(quiz.title ?? "")).trim() || null,
+    quizTitle: title,
     counts: { views, starts, completes, leads, viewsReliable, questionCount },
     funnelVerdict: renderFullFunnelVerdict(fullFunnel) || null,
     trafficVerdict: renderTrafficForPrompt(traffic),
+    startRateVerdict,
     questionSignal: readFunnelSignal(steps),
   };
 }
