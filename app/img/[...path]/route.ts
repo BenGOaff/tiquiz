@@ -6,29 +6,41 @@
 // Supabase du 6 août 2026 : chaque visiteur téléchargeait les images
 // directement chez Supabase).
 //
-// -- CE QUI FAIT TOUT LE TRAVAIL --------------------------------------
+// -- LA FRAÎCHEUR EST EXACTEMENT CELLE D'AUJOURD'HUI ------------------
 //
-// L'en-tête `Cache-Control: public, max-age=31536000, immutable`. Il
-// autorise Cloudflare, et le navigateur du visiteur, à garder le fichier
-// sans jamais revenir nous le demander. Supabase envoie donc chaque
-// image une fois par point de présence, au lieu d'une fois par visiteur.
+// Béné, 6 août 2026 : "est-ce qu'on est sûrs et certains que les users ne
+// verront pas la différence ? J'ai des pubs qui tournent dessus, il ne
+// faut absolument rien casser."
 //
-// `immutable` est vrai ici parce que le chemin d'un upload contient un
-// nom de fichier unique : remplacer une image écrit un nouveau chemin, et
-// la base pointe alors ailleurs. Une image REMPLACÉE sous le même nom
-// (`upsert: true`) resterait en cache : c'est le compromis assumé, et
-// c'est pour ça que le nom porte un horodatage côté upload.
+// Ma première version posait `max-age=31536000, immutable`. C'était FAUX,
+// et ça aurait produit un bug visible : le logo se téléverse sur un
+// chemin STABLE (`logos/<user>/logo.png`, en `upsert`), donc une
+// créatrice qui change son logo écrit au même endroit. Avec `immutable`,
+// les visiteurs et Cloudflare auraient gardé l'ancien pendant un an.
+// "J'ai changé mon logo et il ne change pas" serait remonté dans la
+// semaine.
+//
+// Supabase sert ces objets avec `max-age=3600` (son défaut, aucun
+// `cacheControl` n'est posé à l'upload). On reprend donc la MÊME durée :
+// la fraîcheur vue par le visiteur est identique à aujourd'hui, à la
+// seconde près.
+//
+// Le `stale-while-revalidate` fait le travail d'économie sans toucher à
+// la fraîcheur : le cache peut servir sa copie pendant qu'il en récupère
+// une neuve en arrière-plan. Supabase reçoit donc environ une requête par
+// heure et par fichier, au lieu d'une par visiteur. Sur un quiz à 1000
+// visites par jour, c'est 24 téléchargements au lieu de 1000.
 
 import { NextRequest, NextResponse } from "next/server";
 
 import { PROXIED_BUCKETS, assetProxyEnabled } from "@/lib/assetProxy";
 
 export const runtime = "nodejs";
-// Un an. Le cache de Next.js s'ajoute a celui de Cloudflare : sur un
-// serveur unique, c'est lui qui absorbe le gros du trafic.
-export const revalidate = 31536000;
 
-const YEAR = 31536000;
+/** La durée que Supabase applique déjà. On ne change pas la fraîcheur. */
+const MAX_AGE = 3600;
+/** Combien de temps un cache peut servir sa copie en la rafraîchissant. */
+const SWR = 86400;
 
 export async function GET(
   _req: NextRequest,
@@ -53,11 +65,7 @@ export async function GET(
 
   let upstream: Response;
   try {
-    upstream = await fetch(target, {
-      // Le cache de Next.js : c'est lui qui evite d'aller rechercher le
-      // fichier chez Supabase a chaque visiteur.
-      next: { revalidate: YEAR },
-    });
+    upstream = await fetch(target, { next: { revalidate: MAX_AGE } });
   } catch (err) {
     console.error("[img] amont injoignable", err);
     return new NextResponse(null, { status: 502 });
@@ -65,19 +73,22 @@ export async function GET(
 
   if (!upstream.ok || !upstream.body) {
     // 404 chez Supabase = 404 ici : on ne fabrique pas une image vide,
-    // qui masquerait un fichier supprime.
+    // qui masquerait un fichier supprimé.
     return new NextResponse(null, { status: upstream.status === 404 ? 404 : 502 });
   }
 
+  // AUCUN `Content-Length` RECOPIÉ, et c'est délibéré. `fetch` décompresse
+  // tout seul une réponse `content-encoding: gzip` (Supabase le fait sur
+  // les SVG) : la longueur annoncée par l'amont ne correspondrait alors
+  // plus au corps qu'on renvoie, et le navigateur couperait l'image au
+  // milieu. Sans cet en-tête, la réponse part en morceaux, ce qui marche
+  // dans tous les cas.
   const headers = new Headers({
     "Content-Type": upstream.headers.get("content-type") ?? "application/octet-stream",
-    "Cache-Control": `public, max-age=${YEAR}, immutable`,
-    // Cloudflare lit celui-ci en priorite quand il est present.
-    "CDN-Cache-Control": `public, max-age=${YEAR}`,
+    "Cache-Control": `public, max-age=${MAX_AGE}, stale-while-revalidate=${SWR}`,
+    "CDN-Cache-Control": `public, max-age=${MAX_AGE}, stale-while-revalidate=${SWR}`,
     "X-Content-Type-Options": "nosniff",
   });
-  const length = upstream.headers.get("content-length");
-  if (length) headers.set("Content-Length", length);
 
   return new NextResponse(upstream.body, { status: 200, headers });
 }

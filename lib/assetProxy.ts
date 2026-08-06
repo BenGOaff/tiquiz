@@ -23,10 +23,14 @@
 // -- CE QU'ON FAIT --------------------------------------------------
 //
 // On sert les mêmes fichiers depuis NOTRE domaine (`/img/<chemin>`).
-// Supabase envoie alors chaque fichier UNE fois vers notre serveur, qui
-// le renvoie ensuite autant de fois qu'il y a de visiteurs, avec un cache
-// d'un an. Devant, Cloudflare fait le même travail à l'échelle de ses
-// points de présence.
+// Supabase envoie alors chaque fichier une fois PAR HEURE vers notre
+// serveur, au lieu d'une fois par visiteur, et Cloudflare fait le même
+// travail à l'échelle de ses points de présence.
+//
+// La fraîcheur vue par le visiteur ne change PAS : Supabase sert déjà ces
+// objets avec `max-age=3600`, et la route reprend exactement cette durée
+// (cf. l'en-tête de app/img/[...path]/route.ts, où la première version
+// posait un an et aurait figé les logos remplacés).
 //
 // -- CE QU'ON NE FAIT PAS -------------------------------------------
 //
@@ -35,12 +39,21 @@
 // publiés en profitent immédiatement, sans migration, et couper le
 // dispositif ne casse rien puisque les adresses d'origine sont intactes.
 //
-// -- LE COUPE-CIRCUIT -----------------------------------------------
+// -- IL NE S'ALLUME QUE QUAND ELLE LE DÉCIDE -------------------------
 //
-// `ASSET_PROXY=off` dans le `.env` désactive tout, sans redéploiement :
-// un `pm2 restart` suffit. Ce n'est pas de la prudence excessive, c'est
-// la seule façon de rétablir en deux minutes si un cas non prévu casse
-// l'affichage d'un quiz en ligne un samedi.
+// Béné, 6 août 2026 : "est-ce qu'on est sûrs et certains que les users ne
+// verront pas la différence ? J'ai des pubs qui tournent dessus, il ne
+// faut absolument rien casser, jamais, pour les quiz existants."
+//
+// La seule façon honnête de répondre "certains" est de rendre le
+// DÉPLOIEMENT sans effet : `ASSET_PROXY` absent = rien ne change, les
+// adresses partent chez Supabase comme avant, le code dort. Elle allume
+// avec `ASSET_PROXY=on` dans le `.env` plus un `pm2 restart`, vérifie un
+// quiz, et éteint de la même façon en dix secondes si quoi que ce soit
+// cloche. Aucun redéploiement, aucun retour en arrière de code.
+//
+// Un défaut allumé aurait été plus efficace et moins sûr. Avec des
+// publicités en cours, ce n'est pas le bon arbitrage.
 
 /** Le chemin public d'un objet Supabase Storage. */
 const PUBLIC_OBJECT = "/storage/v1/object/public/";
@@ -55,9 +68,16 @@ const PUBLIC_OBJECT = "/storage/v1/object/public/";
  */
 export const PROXIED_BUCKETS = ["public-assets"];
 
-/** Le dispositif est-il actif ? Coupé par `ASSET_PROXY=off`. */
+/**
+ * Le dispositif est-il actif ?
+ *
+ * ÉTEINT PAR DÉFAUT. Il faut `ASSET_PROXY=on` (ou `1`, ou `true`) pour
+ * l'allumer : tout le reste, y compris la variable absente, laisse les
+ * images partir chez Supabase exactement comme avant.
+ */
 export function assetProxyEnabled(env: string | undefined | null): boolean {
-  return String(env ?? "").trim().toLowerCase() !== "off";
+  const v = String(env ?? "").trim().toLowerCase();
+  return v === "on" || v === "1" || v === "true";
 }
 
 /**

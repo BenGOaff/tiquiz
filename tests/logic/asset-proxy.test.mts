@@ -130,34 +130,53 @@ test("aucune boucle infinie sur une structure profonde", () => {
 
 // ── Le coupe-circuit ─────────────────────────────────────────────────
 
-test("ASSET_PROXY=off rend la main aux adresses d'origine", () => {
-  // Elles sont intactes en base : couper ne casse rien, et se fait par un
-  // `pm2 restart`, pas par un redeploiement un samedi.
-  assert.equal(assetProxyEnabled("off"), false);
-  assert.equal(assetProxyEnabled("OFF"), false);
-  assert.equal(assetProxyEnabled(" off "), false);
+test("ETEINT par defaut : le deploiement ne change rien", () => {
+  // "J'ai des pubs qui tournent dessus, il ne faut absolument rien
+  // casser, jamais, pour les quiz existants." La seule facon honnete de
+  // repondre "certains" est que le deploiement soit sans effet tant
+  // qu'elle n'a pas allume.
+  for (const v of [undefined, null, "", "off", "OFF", "0", "false", "peut-etre"]) {
+    assert.equal(assetProxyEnabled(v), false, String(v));
+  }
   assert.equal(toProxiedAssetUrl(IMG, BASE, false), IMG);
   assert.equal(proxyAssetsDeep({ u: IMG }, BASE, false).u, IMG);
 });
 
-test("par defaut, c'est actif", () => {
-  // Une variable absente ne doit pas desactiver la mesure : c'est
-  // l'inverse d'un garde-fou.
-  for (const v of [undefined, null, "", "on", "1", "true"]) {
+test("il s'allume explicitement, et se coupe en dix secondes", () => {
+  // `ASSET_PROXY=on` dans le .env plus un `pm2 restart`. Pas de
+  // redeploiement, donc pas de retour en arriere de code un samedi.
+  for (const v of ["on", "ON", " on ", "1", "true"]) {
     assert.equal(assetProxyEnabled(v), true, String(v));
   }
 });
 
 // ── La route, et la réponse publique ─────────────────────────────────
 
-test("la route sert un cache long, sinon elle ne sert a rien", () => {
-  // C'est l'en-tete qui fait tout le travail : sans lui, on remplace une
-  // requete chez Supabase par une requete chez nous PLUS une requete chez
-  // Supabase.
+test("la fraicheur reste celle d'aujourd'hui, JAMAIS plus longue", () => {
+  // Ma premiere version posait `immutable` pour un an. C'etait faux : le
+  // logo se televerse sur un chemin STABLE en `upsert`, donc une
+  // creatrice qui change son logo aurait vu l'ancien pendant un an.
+  // Supabase sert ces objets avec max-age=3600 : on reprend la meme
+  // duree, a la seconde pres.
+  // On lit les EN-TETES CONSTRUITS, pas le fichier entier : les
+  // commentaires expliquent justement pourquoi `immutable` a ete retire,
+  // et un test qui rougit sur sa propre explication finit desactive.
   const src = readFileSync(new URL("../../app/img/[...path]/route.ts", import.meta.url), "utf8");
-  assert.match(src, /max-age=\$\{YEAR\}, immutable/);
-  assert.match(src, /CDN-Cache-Control/);
-  assert.match(src, /next: \{ revalidate: YEAR \}/, "le cache de Next evite d'aller rechercher");
+  const headers = src.slice(src.indexOf("new Headers({"), src.indexOf("return new NextResponse(upstream.body"));
+  assert.doesNotMatch(headers, /immutable/, "un logo remplace doit pouvoir apparaitre");
+  assert.match(src, /const MAX_AGE = 3600;/);
+  assert.match(headers, /stale-while-revalidate/, "c'est lui qui economise, sans toucher a la fraicheur");
+  assert.match(src, /next: \{ revalidate: MAX_AGE \}/);
+});
+
+test("aucun Content-Length recopie de l'amont", () => {
+  // `fetch` decompresse tout seul une reponse gzip (Supabase le fait sur
+  // les SVG) : la longueur annoncee par l'amont ne correspondrait plus au
+  // corps renvoye, et le navigateur couperait l'image au milieu.
+  const src = readFileSync(new URL("../../app/img/[...path]/route.ts", import.meta.url), "utf8");
+  const headers = src.slice(src.indexOf("new Headers({"), src.indexOf("return new NextResponse(upstream.body"));
+  assert.doesNotMatch(headers, /Content-Length/i);
+  assert.doesNotMatch(src, /headers\.set\("Content-Length"/i);
 });
 
 test("la route refuse ce qui n'est pas un bucket servi", () => {
