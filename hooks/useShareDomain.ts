@@ -34,6 +34,24 @@ export interface UseShareDomain {
    * render as bare paths in the meantime.
    */
   shareOrigin: string;
+  /**
+   * L'origine à utiliser pour le code d'INTÉGRATION (l'iframe), et
+   * elle n'est PAS `shareOrigin`.
+   *
+   * Drame Béné, 6 août 2026 : la démo vidéo de la page de vente de
+   * Tiquiz affichait "Unknown hostname" à la place du lecteur. Le code
+   * collé sur Systeme.io pointait vers `test.ethilife.fr`, le domaine
+   * personnalisé sélectionné le jour où le code avait été copié. Ce
+   * domaine n'est plus vérifié, le répartiteur le refuse, et la page
+   * de vente du produit montrait une erreur de serveur en clair.
+   *
+   * L'hôte de l'iframe n'est JAMAIS vu par le visiteur : le choisir sur
+   * un domaine personnalisé n'apporte rien et ajoute un point de
+   * panne, sur des pages qu'on ne contrôle pas et qu'on ne peut pas
+   * corriger à distance. On prend donc toujours le domaine principal,
+   * le seul qui ne peut pas expirer.
+   */
+  embedOrigin: string;
   /** Updates local state immediately + persists the choice in the background. */
   setShareDomain: (next: string) => void;
   /**
@@ -86,6 +104,15 @@ export function useShareDomain(): UseShareDomain {
     ? `https://${shareDomain}`
     : (typeof window !== "undefined" ? window.location.origin : "");
 
+  // Le domaine principal tant qu'on le connaît, sinon l'origine où la
+  // créatrice navigue vraiment (c'est déjà le domaine principal, elle
+  // est dans son tableau de bord). On ne retombe JAMAIS sur
+  // `shareOrigin` : ce serait reprendre le domaine personnalisé, donc
+  // remettre exactement le bug.
+  const embedOrigin = mainHost
+    ? `https://${mainHost}`
+    : (typeof window !== "undefined" ? window.location.origin : "");
+
   // "Is this a custom domain?" — true when the picked hostname is
   // neither the main host (per API) nor a development origin. We
   // err on the side of "no" during the brief pre-fetch window so
@@ -108,6 +135,7 @@ export function useShareDomain(): UseShareDomain {
     shareDomain,
     shareDomainOptions,
     shareOrigin,
+    embedOrigin,
     setShareDomain,
     isCustomDomain,
     buildPublicUrl,

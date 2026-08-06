@@ -100,7 +100,7 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
   // Hook qui résout le custom-domain du créateur — buildPublicUrl
   // renvoie soit `domain.com/<slug>` (custom) soit `mainHost/q/<slug>`
   // (catch-all racine inactif sur main pour éviter shadow /dashboard).
-  const { buildPublicUrl } = useShareDomain();
+  const { embedOrigin, buildPublicUrl } = useShareDomain();
 
   useEffect(() => {
     (async () => {
@@ -298,9 +298,8 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
     );
   }, [projects]);
 
-  const origin =
-    typeof window !== "undefined" ? window.location.origin : "";
-  const embedUrl = embedHandle ? `${origin}/embed/p/${embedHandle}` : "";
+  // embedOrigin, jamais un domaine personnalise : cf. hooks/useShareDomain.ts.
+  const embedUrl = embedHandle ? `${embedOrigin}/embed/p/${embedHandle}` : "";
 
   // Helper : récupère le label localisé d'une catégorie. Fallback
   // sur des libellés FR si la clé i18n n'existe pas (le déploiement
