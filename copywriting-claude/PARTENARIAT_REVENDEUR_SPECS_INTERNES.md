@@ -33,9 +33,9 @@ me reverse une part dégressive selon son volume de comptes actifs.
 
 | Plan | 40 % | 35 % | 30 % |
 |------|------|------|------|
-| Light 9 €    | 3,60 € | 3,15 € | 2,70 € |
+| Light 17 €    | 6,80 € | 3,15 € | 2,70 € |
 | Complet 19 € | 7,60 € | 6,65 € | 5,70 € |
-| Light 90 €/an    | 36 € | 31,50 € | 27 € |
+| Light 170 €/an    | 36 € | 31,50 € | 27 € |
 | Complet 190 €/an | 76 € | 66,50 € | 57 € |
 
 ---
@@ -64,11 +64,11 @@ minorité, absorbée par la masse.
 |---------------|-----|-----------|-------------|
 | Complet 40 % | 7,60 € | ~0,75 € | ~6,85 € |
 | Complet 30 % | 5,70 € | ~0,75 € | ~4,95 € |
-| Light 40 % | 3,60 € | ~0,75 € | ~2,85 € |
+| Light 40 % | 6,80 € | ~0,75 € | ~2,85 € |
 | Light 30 % | 2,70 € | ~0,75 € | ~1,95 € |
 
 → **Rentable sur tous les paliers et tous les plans.** Le seul point de
-vigilance est le **gros générateur isolé sur le plan 9 €** : sans plafond il
+vigilance est le **gros générateur isolé sur le plan 17 €** : sans plafond il
 peut coûter > 2,70 €. La mutualisation couvre la variance normale ; le plafond
 fair-use (§3) couvre la queue (l'abuseur).
 
@@ -109,7 +109,7 @@ Issu de ton `NOTES_TOKEN_OPTIMIZATION.md` :
    Tipote tourne en Sonnet sans perte). Var d'env `TIQUIZ_QUIZ_MODEL=claude-sonnet-4-6`,
    A/B 1 mois, proxy qualité = taux de regen IA. -40 % sur l'endpoint.
 
-→ Ces 3 actions sécurisent le plan 9 € et divisent ~par 2 ton plus gros coût.
+→ Ces 3 actions sécurisent le plan 17 € et divisent ~par 2 ton plus gros coût.
 
 ---
 

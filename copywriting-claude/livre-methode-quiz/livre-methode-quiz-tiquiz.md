@@ -1557,7 +1557,7 @@ Spécialisé dans les quiz de type *scorecard* (donne un score sur 100, recomman
 L'un des outils les plus utilisés outre-Atlantique, avec une grosse base de templates. À partir de 27 €/mois. Pas d'intégration native Systeme.io. Demande à passer par Zapier.
 
 **Tiquiz — l'outil que j'édite, pensé pour le marché francophone Systeme.io**
-Pour la transparence complète : Tiquiz est l'outil que j'ai construit. Il s'adresse spécifiquement aux solopreneurs francophones qui utilisent Systeme.io. Son angle : intégration native (sans Zapier), tarif accessible (9 €/mois pour le plan de base, 29 €/mois pour le plan avancé avec multi-profils et analyse IA des résultats), génération IA pour produire un quiz à partir d'une phrase. Si vous n'êtes pas sur Systeme.io, Tiquiz n'est pas votre outil prioritaire. Si vous êtes sur Systeme.io, c'est probablement le plus pertinent à tester. Plan gratuit disponible pour valider votre premier quiz avant de payer quoi que ce soit.
+Pour la transparence complète : Tiquiz est l'outil que j'ai construit. Il s'adresse spécifiquement aux solopreneurs francophones qui utilisent Systeme.io. Son angle : intégration native (sans Zapier), tarif accessible (17 €/mois pour le plan de base, 29 €/mois pour le plan avancé avec multi-profils et analyse IA des résultats), génération IA pour produire un quiz à partir d'une phrase. Si vous n'êtes pas sur Systeme.io, Tiquiz n'est pas votre outil prioritaire. Si vous êtes sur Systeme.io, c'est probablement le plus pertinent à tester. Plan gratuit disponible pour valider votre premier quiz avant de payer quoi que ce soit.
 
 ### Le tableau récapitulatif
 
@@ -1569,7 +1569,7 @@ Pour la transparence complète : Tiquiz est l'outil que j'ai construit. Il s'adr
 | Outgrow | 50 €/mois | Non (Zapier) | Non | Oui |
 | ScoreApp | 60 €/mois | Non (Zapier) | Moyennement | Non |
 | Interact | 27 €/mois | Non (Zapier) | Moyennement | Partielle |
-| Tiquiz | Gratuit / 9 € | Oui | Oui | Oui |
+| Tiquiz | Gratuit / 17 € | Oui | Oui | Oui |
 
 ### Comment choisir en 5 minutes
 
@@ -1735,7 +1735,7 @@ A : ___ B : ___ C : ___ D : ___
 
 **Profil 1 — Vous êtes sur Systeme.io et vous voulez démarrer simplement (majorité de A)**
 
-**Outil recommandé :** Tiquiz, plan gratuit pour commencer, puis Mensuel à 9 € quand vous voulez plus de quiz et plus de leads visibles.
+**Outil recommandé :** Tiquiz, plan gratuit pour commencer, puis Mensuel à 17 € quand vous voulez plus de quiz et plus de leads visibles.
 
 **Pourquoi :** intégration native Systeme.io (vos leads sont taggés automatiquement, sans Zapier), interface en français, génération IA incluse, prix accessible. Vous publiez votre premier quiz dans la journée.
 

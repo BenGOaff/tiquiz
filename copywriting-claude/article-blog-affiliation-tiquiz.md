@@ -1,6 +1,6 @@
 # Comment te générer une rente mensuelle avec l'affiliation Tiquiz
 
-**TL;DR :** L'affiliation Tiquiz te permet de te construire une **rente mensuelle récurrente** qui tombe automatiquement le **10 de chaque mois**, tant que tes filleuls restent abonnés. Concrètement, tu touches **40 % de commission à vie** sur chaque abonnement payant Tiquiz souscrit via ton lien. Un filleul mensuel à 9 € = **3,60 € de rente tous les mois, à vie**. Un filleul annuel à 90 € = **36 € de rente tous les ans, à vie**. Avec 30 filleuls actifs sur le mensuel, tu encaisses une rente de **108 € par mois**. Avec 50 filleuls actifs sur l'annuel, **1 800 € par an**. Les versements sont **automatiques** (PayPal ou virement), **sans seuil**, **sans facture à émettre**, **sans condition d'inscription**. Tu reçois un kit affilié complet pour démarrer (bannières, emails, posts, liens trackés) et tu suis ta rente sur ton dashboard Systeme io. Chaque filleul te reste rattaché à vie. **Bonus :** tes filleuls Tiquiz entrent dans l'écosystème Tipote. Quand Tipote sort (plans de 19 à 99 €/mois), ils sont sollicités en priorité pour basculer, et ta rente sur eux peut grimper jusqu'à **39,60 € par filleul et par mois**, sans rien faire de plus. Inscription gratuite : [tipote.fr/tiquiz/affiliation](https://www.tipote.fr/tiquiz/affiliation).
+**TL;DR :** L'affiliation Tiquiz te permet de te construire une **rente mensuelle récurrente** qui tombe automatiquement le **10 de chaque mois**, tant que tes filleuls restent abonnés. Concrètement, tu touches **40 % de commission à vie** sur chaque abonnement payant Tiquiz souscrit via ton lien. Un filleul mensuel à 17 € = **6,80 € de rente tous les mois, à vie**. Un filleul annuel à 170 € = **68 € de rente tous les ans, à vie**. Avec 30 filleuls actifs sur le mensuel, tu encaisses une rente de **204 € par mois**. Avec 50 filleuls actifs sur l'annuel, **3 400 € par an**. Les versements sont **automatiques** (PayPal ou virement), **sans seuil**, **sans facture à émettre**, **sans condition d'inscription**. Tu reçois un kit affilié complet pour démarrer (bannières, emails, posts, liens trackés) et tu suis ta rente sur ton dashboard Systeme io. Chaque filleul te reste rattaché à vie. **Bonus :** tes filleuls Tiquiz entrent dans l'écosystème Tipote. Quand Tipote sort (plans de 19 à 99 €/mois), ils sont sollicités en priorité pour basculer, et ta rente sur eux peut grimper jusqu'à **39,60 € par filleul et par mois**, sans rien faire de plus. Inscription gratuite : [tipote.fr/tiquiz/affiliation](https://www.tipote.fr/tiquiz/affiliation).
 
 ---
 
@@ -55,33 +55,33 @@ La mécanique est volontairement simple. Cinq étapes, et ta rente démarre.
 
 C'est la première question qui revient. Voici les chiffres exacts pour que tu sois fixé·e.
 
-### 2.1. Ta rente sur le plan Mensuel (filleuls à 9 € par mois)
+### 2.1. Ta rente sur le plan Mensuel (filleuls à 17 € par mois)
 
 | Filleuls actifs | Rente mensuelle | Rente annuelle | Cumul sur 3 ans |
 |----------------|-----------------|----------------|-----------------|
-| 1 filleul      | 3,60 €          | 43,20 €        | 129,60 €        |
-| 5 filleuls     | 18 €            | 216 €          | 648 €           |
-| 10 filleuls    | 36 €            | 432 €          | 1 296 €         |
-| 25 filleuls    | 90 €            | 1 080 €        | 3 240 €         |
-| 50 filleuls    | 180 €           | 2 160 €        | 6 480 €         |
-| 100 filleuls   | 360 €           | 4 320 €        | 12 960 €        |
+| 1 filleul      | 6,80 €          | 81,60 €        | 244,80 €        |
+| 5 filleuls     | 34 €            | 408 €          | 1 224 €         |
+| 10 filleuls    | 68 €            | 816 €          | 2 448 €         |
+| 25 filleuls    | 170 €           | 2 040 €        | 6 120 €         |
+| 50 filleuls    | 340 €           | 4 080 €        | 12 240 €        |
+| 100 filleuls   | 680 €           | 8 160 €        | 24 480 €        |
 
-### 2.2. Ta rente sur le plan Annuel (filleuls à 90 € par an)
+### 2.2. Ta rente sur le plan Annuel (filleuls à 170 € par an)
 
 | Filleuls actifs | Rente annuelle | Cumul sur 3 ans | Cumul sur 5 ans |
 |----------------|----------------|-----------------|-----------------|
-| 1 filleul      | 36 €           | 108 €           | 180 €           |
-| 5 filleuls     | 180 €          | 540 €           | 900 €           |
-| 10 filleuls    | 360 €          | 1 080 €         | 1 800 €         |
-| 25 filleuls    | 900 €          | 2 700 €         | 4 500 €         |
-| 50 filleuls    | 1 800 €        | 5 400 €         | 9 000 €         |
-| 100 filleuls   | 3 600 €        | 10 800 €        | 18 000 €        |
+| 1 filleul      | 68 €           | 204 €           | 340 €           |
+| 5 filleuls     | 340 €          | 1 020 €         | 1 700 €         |
+| 10 filleuls    | 680 €          | 2 040 €         | 3 400 €         |
+| 25 filleuls    | 1 700 €        | 5 100 €         | 8 500 €         |
+| 50 filleuls    | 3 400 €        | 10 200 €        | 17 000 €        |
+| 100 filleuls   | 6 800 €        | 20 400 €        | 34 000 €        |
 
 ### 2.3. Pourquoi le mensuel rapporte plus de rente sur la durée
 
-Sur 3 ans cumulés, **un filleul mensuel à 9 €** te rapporte 130 € de rente totale. **Un filleul annuel à 90 €** te rapporte 108 € de rente totale. Le mensuel gagne sur la durée parce que la base (9 € × 12 = 108 €/an) est légèrement supérieure à 90 €/an.
+Sur 3 ans cumulés, **un filleul mensuel à 17 €** te rapporte 245 € de rente totale. **Un filleul annuel à 170 €** te rapporte 204 € de rente totale. Le mensuel gagne sur la durée parce que la base (17 € × 12 = 204 €/an) est supérieure à 170 €/an.
 
-En pratique, les filleuls mensuels ont aussi une **meilleure rétention** parce que 9 € par mois sans engagement est psychologiquement plus facile à conserver que 90 € versés d'un coup. La majorité des filleuls mensuels restent abonnés au moins 6 mois.
+En pratique, les filleuls mensuels ont aussi une **meilleure rétention** parce que 17 € par mois sans engagement est psychologiquement plus facile à conserver que 170 € versés d'un coup. La majorité des filleuls mensuels restent abonnés au moins 6 mois.
 
 ### 2.4. Simulateur officiel pour projeter ta rente
 
@@ -95,7 +95,7 @@ La [page d'affiliation Tiquiz](https://www.tipote.fr/tiquiz/affiliation) intègr
 
 ### 3.1. Le problème des programmes à 20 %
 
-À 20 % sur un abonnement à 9 €/mois, tu touches 1,80 € par filleul et par mois. Pour un solopreneur, ça ne génère pas de rente exploitable. Avec 50 filleuls, tu plafonnes à 90 € par mois. Pas de quoi compenser un mois creux.
+À 20 % sur un abonnement à 17 €/mois, tu touches 3,40 € par filleul et par mois. Pour un solopreneur, ça ne génère pas de rente exploitable. Avec 50 filleuls, tu plafonnes à 170 € par mois. Pas de quoi compenser un mois creux.
 
 C'est pour ça que la plupart des programmes d'affiliation SaaS à 20 % ne génèrent **pas de rente** pour leurs affiliés. Juste un complément anecdotique.
 
@@ -141,16 +141,16 @@ Voici la projection par filleul, à taux d'affiliation identique :
 
 | Produit             | Prix abonnement   | Ta rente / mois / filleul | Ta rente / an / filleul |
 |--------------------|-------------------|---------------------------|--------------------------|
-| Tiquiz Mensuel     | 9 €/mois          | 3,60 €                    | 43,20 €                  |
+| Tiquiz Mensuel     | 17 €/mois          | 6,80 €                    | 81,60 €                  |
 | Tipote plan d'entrée   | 19 €/mois         | 7,60 €                    | 91,20 €                  |
 | Tipote plan intermédiaire | 49 €/mois     | 19,60 €                   | 235,20 €                 |
 | Tipote plan haut   | 99 €/mois         | 39,60 €                   | 475,20 €                 |
 
-Un filleul Tiquiz qui bascule sur Tipote au plan haut **fait ×11 sur ta rente mensuelle** (3,60 € → 39,60 €). Sans nouvel effort de ta part.
+Un filleul Tiquiz qui bascule sur Tipote au plan haut **fait presque ×6 sur ta rente mensuelle** (6,80 € → 39,60 €). Sans nouvel effort de ta part.
 
 ### 4.3. Pourquoi cette mécanique est honnête
 
-Je préfère qu'on soit clair : ce n'est pas un piège à clients. Tiquiz est un produit qui se suffit à lui-même. Un solopreneur peut très bien rester sur Tiquiz à 9 €/mois pendant 3 ans et être parfaitement servi.
+Je préfère qu'on soit clair : ce n'est pas un piège à clients. Tiquiz est un produit qui se suffit à lui-même. Un solopreneur peut très bien rester sur Tiquiz à 17 €/mois pendant 3 ans et être parfaitement servi.
 
 Mais ceux qui veulent aller plus loin (ajouter du coaching IA, de la création de contenu automatisée, plus d'automatisations) auront naturellement envie de Tipote. Et comme tu les as amenés sur ma planète en premier, **la rente continue de t'arriver, même quand ils paient plus cher pour plus de valeur.**
 
@@ -158,7 +158,7 @@ C'est l'opposé d'un programme d'affiliation classique où tu dois sans cesse re
 
 ### 4.4. Ce que ça implique concrètement pour toi aujourd'hui
 
-Chaque filleul Tiquiz que tu amènes maintenant vaut, en projection, bien plus que ses 3,60 € de rente mensuelle visible. Tu construis aussi le terrain de ta rente future sur Tipote, sans aucun effort supplémentaire à fournir le jour J.
+Chaque filleul Tiquiz que tu amènes maintenant vaut, en projection, bien plus que ses 6,80 € de rente mensuelle visible. Tu construis aussi le terrain de ta rente future sur Tipote, sans aucun effort supplémentaire à fournir le jour J.
 
 C'est pour ça qu'il vaut le coup de t'y mettre maintenant, avant la sortie de Tipote. Tes filleuls d'aujourd'hui sont tes points de rente démultipliés de demain.
 
@@ -172,19 +172,19 @@ L'affiliation Tiquiz convient à 4 profils principaux. Vois si tu t'y reconnais.
 
 Tu utilises Tiquiz pour ton propre business. Tu en parles à ton audience, à tes clients, à tes collègues solopreneurs. Tu n'as pas besoin de "vendre" : tu partages juste ce qui marche pour toi.
 
-Avec une newsletter de 1 000 abonnés et un taux de conversion de 1 % sur ton lien affilié (10 filleuls mensuels), tu génères **36 € de rente par mois**. Sur l'année, c'est 432 €. Pour avoir simplement glissé ton lien dans 2 ou 3 emails à ta liste.
+Avec une newsletter de 1 000 abonnés et un taux de conversion de 1 % sur ton lien affilié (10 filleuls mensuels), tu génères **68 € de rente par mois**. Sur l'année, c'est 816 €. Pour avoir simplement glissé ton lien dans 2 ou 3 emails à ta liste.
 
 ### 5.2. Les créateurs de contenu Systeme io (YouTube, blog, podcast, Instagram)
 
 Tu fais déjà du contenu sur Systeme io et l'écosystème solopreneur francophone. Tu cherches des outils complémentaires à recommander à ton audience. Tiquiz s'intègre naturellement à ce que tu fais déjà.
 
-Avec une chaîne YouTube de 5 000 abonnés ciblés Systeme io, viser 30 à 50 filleuls actifs sur l'année est réaliste. Soit une rente entre **108 € et 180 € par mois**. Sans contenu sponsorisé, sans effort marketing additionnel.
+Avec une chaîne YouTube de 5 000 abonnés ciblés Systeme io, viser 30 à 50 filleuls actifs sur l'année est réaliste. Soit une rente entre **204 € et 340 € par mois**. Sans contenu sponsorisé, sans effort marketing additionnel.
 
 ### 5.3. Les freelances et agences qui revendent Tiquiz
 
 Tu gères des projets clients (marketing, copywriting, tunnels de vente Systeme io). Tu peux intégrer Tiquiz dans tes prestations et toucher la rente à vie sur chaque client qui paye un abonnement.
 
-L'exemple type : tu mets en place un quiz Tiquiz pour ton client dans le cadre d'une mission. Ton client signe un abonnement annuel à 90 €. Tu touches 36 € de commission immédiate. Et tant qu'il reste abonné dans les années qui suivent, **ta rente de 36 € par an tombe chaque année automatiquement**, sans relancer.
+L'exemple type : tu mets en place un quiz Tiquiz pour ton client dans le cadre d'une mission. Ton client signe un abonnement annuel à 170 €. Tu touches 68 € de commission immédiate. Et tant qu'il reste abonné dans les années qui suivent, **ta rente de 68 € par an tombe chaque année automatiquement**, sans relancer.
 
 ### 5.4. Les affiliés Systeme io qui veulent une rente complémentaire
 
@@ -251,7 +251,7 @@ Tu reçois un lien tracké unique à ton inscription. Chaque personne qui souscr
 
 ### Combien de rente je peux me générer avec l'affiliation Tiquiz ?
 
-Sur le plan mensuel à 9 €, tu touches **3,60 € de rente par filleul et par mois**, soit 43,20 € par an et par filleul. Sur le plan annuel à 90 €, tu touches **36 € de rente par filleul et par an**. Avec 30 filleuls actifs sur le mensuel, ta rente s'élève à 108 € par mois. Avec 50 filleuls actifs sur l'annuel, ta rente atteint 1 800 € par an. Un simulateur officiel est disponible sur la page d'affiliation Tiquiz pour projeter ta rente selon ton nombre de filleuls visé.
+Sur le plan mensuel à 17 €, tu touches **6,80 € de rente par filleul et par mois**, soit 81,60 € par an et par filleul. Sur le plan annuel à 170 €, tu touches **68 € de rente par filleul et par an**. Avec 30 filleuls actifs sur le mensuel, ta rente s'élève à 204 € par mois. Avec 50 filleuls actifs sur l'annuel, ta rente atteint 3 400 € par an. Un simulateur officiel est disponible sur la page d'affiliation Tiquiz pour projeter ta rente selon ton nombre de filleuls visé.
 
 ### Faut-il être client Tiquiz pour générer une rente avec l'affiliation ?
 
@@ -267,7 +267,7 @@ Oui. Si quelqu'un clique sur ton lien aujourd'hui, crée un compte gratuit Tiqui
 
 ### Mes filleuls Tiquiz me génèrent-ils aussi une rente sur Tipote quand Tipote sort ?
 
-Oui. L'attribution d'affiliation reste à toi pour tout l'écosystème Tipote. Quand Tipote ouvre ses portes (plans de 19 € à 99 €/mois), tes filleuls Tiquiz seront sollicités en priorité pour basculer ou s'ajouter Tipote. À taux d'affiliation identique (40 % à vie), un filleul qui prend Tipote au plan haut te génère **39,60 € de rente par mois au lieu de 3,60 €**. Tu n'as rien de plus à faire : tu as amené le filleul sur Tiquiz, l'écosystème prend la suite, et ta rente grossit toute seule.
+Oui. L'attribution d'affiliation reste à toi pour tout l'écosystème Tipote. Quand Tipote ouvre ses portes (plans de 19 € à 99 €/mois), tes filleuls Tiquiz seront sollicités en priorité pour basculer ou s'ajouter Tipote. À taux d'affiliation identique (40 % à vie), un filleul qui prend Tipote au plan haut te génère **39,60 € de rente par mois au lieu de 6,80 €**. Tu n'as rien de plus à faire : tu as amené le filleul sur Tiquiz, l'écosystème prend la suite, et ta rente grossit toute seule.
 
 ### Quels supports sont fournis pour démarrer ma rente ?
 
@@ -381,7 +381,7 @@ URL complète : `https://www.tipote.fr/rente-mensuelle-affiliation-tiquiz`
       "name": "Combien de rente je peux me générer avec l'affiliation Tiquiz ?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Sur le plan mensuel à 9 €, tu touches 3,60 € de rente par filleul et par mois, soit 43,20 € par an et par filleul. Sur le plan annuel à 90 €, tu touches 36 € de rente par filleul et par an. Avec 30 filleuls actifs sur le mensuel, ta rente s'élève à 108 € par mois. Avec 50 filleuls actifs sur l'annuel, ta rente atteint 1 800 € par an. Un simulateur officiel est disponible sur la page d'affiliation Tiquiz."
+        "text": "Sur le plan mensuel à 17 €, tu touches 6,80 € de rente par filleul et par mois, soit 81,60 € par an et par filleul. Sur le plan annuel à 170 €, tu touches 68 € de rente par filleul et par an. Avec 30 filleuls actifs sur le mensuel, ta rente s'élève à 204 € par mois. Avec 50 filleuls actifs sur l'annuel, ta rente atteint 3 400 € par an. Un simulateur officiel est disponible sur la page d'affiliation Tiquiz."
       }
     },
     {
@@ -413,7 +413,7 @@ URL complète : `https://www.tipote.fr/rente-mensuelle-affiliation-tiquiz`
       "name": "Mes filleuls Tiquiz me génèrent-ils aussi une rente sur Tipote quand Tipote sort ?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Oui. L'attribution d'affiliation reste à toi pour tout l'écosystème Tipote. Quand Tipote ouvre ses portes (plans de 19 à 99 €/mois), tes filleuls Tiquiz seront sollicités en priorité pour basculer sur Tipote. À taux d'affiliation identique (40 % à vie), un filleul qui prend Tipote au plan haut te génère 39,60 € de rente par mois au lieu de 3,60 €. Tu n'as rien à faire de plus : tu as amené le filleul sur Tiquiz, l'écosystème prend la suite, et ta rente grossit toute seule."
+        "text": "Oui. L'attribution d'affiliation reste à toi pour tout l'écosystème Tipote. Quand Tipote ouvre ses portes (plans de 19 à 99 €/mois), tes filleuls Tiquiz seront sollicités en priorité pour basculer sur Tipote. À taux d'affiliation identique (40 % à vie), un filleul qui prend Tipote au plan haut te génère 39,60 € de rente par mois au lieu de 6,80 €. Tu n'as rien à faire de plus : tu as amené le filleul sur Tiquiz, l'écosystème prend la suite, et ta rente grossit toute seule."
       }
     },
     {

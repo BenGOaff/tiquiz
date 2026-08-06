@@ -356,9 +356,9 @@ Sur le gratuit, tes quiz sont sur `quiz.tipote.com/q/ton-quiz`. Sur le payant, t
 
 **À côté de ça, le payant te donne :**
 
-→ **9 € par mois sans engagement** : quiz illimités, sondages illimités, popquiz illimités, leads illimités, sans watermark, domaine perso.
+→ **17 € par mois sans engagement** : quiz illimités, sondages illimités, popquiz illimités, leads illimités, sans watermark, domaine perso.
 
-→ **90 € par an** (économise 18 € par rapport au mensuel, soit 2 mois offerts) : pareil, mais en annuel.
+→ **170 € par an** (économise 34 € par rapport au mensuel, soit 2 mois offerts) : pareil, mais en annuel.
 
 Si ce que tu veux faire tient dans 1 quiz + 10 leads par mois et que le watermark ne te dérange pas, reste sur le gratuit. C'est sincèrement utile.
 
@@ -400,7 +400,7 @@ Maintenant la question simple : **Tiquiz t'aide-t-il vraiment ?**
 
 **Chemin 1 — Oui, ça m'aide. Je passe en illimité.**
 
-Tu actives le plan mensuel à 9 € par mois ou annuel à 90 € par an. Pas d'engagement, désinscription en un clic. Tu débloques quiz illimités, sondages, popquiz illimités, retrait du watermark, domaine perso.
+Tu actives le plan mensuel à 17 € par mois ou annuel à 170 € par an. Pas d'engagement, désinscription en un clic. Tu débloques quiz illimités, sondages, popquiz illimités, retrait du watermark, domaine perso.
 
 → [Je passe en illimité](https://www.tipote.fr/tiquiz)
 

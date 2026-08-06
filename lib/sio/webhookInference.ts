@@ -25,10 +25,14 @@ export type TiquizPlan =
  * sur le matching par URL.
  */
 export const OFFER_TO_PLAN: Record<string, TiquizPlan> = {
-  // Mensuel 9€/mois
+  // Mensuel, vendu 9€/mois À L'ÉPOQUE de ces bons. Le prix public est
+  // passé à 17€/mois le 6 août 2026 : le montant ne sert PAS au routage
+  // (on route sur l'id, puis sur l'URL du tunnel), donc ces commentaires
+  // restent volontairement au prix historique. Les changer les rendrait
+  // faux sans rien corriger.
   "offer-price-3198235": "monthly",
   "3198235": "monthly",
-  // Annuel 90€/an
+  // Annuel, vendu 90€/an à l'époque (170€/an depuis le 6 août 2026).
   "offer-price-3198261": "yearly",
   "3198261": "yearly",
   // Lifetime 57€ (terminé)

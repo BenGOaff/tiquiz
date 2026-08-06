@@ -425,8 +425,8 @@ Valeur `profiles.plan` dans `{ free, monthly, yearly, monthly_plus, yearly_plus,
 | Plan | Prix | Quiz / sondage / popquiz | Réponses visibles | Clés Systeme.io | Multiprofils | Analyse IA |
 |:-----|:-----|:--------------------------|:------------------|:---------|:-------------|:-----------|
 | `free` | 0 € | 1 chaque | 10 / mois (reset glissant 30 j) | 1 | non | non |
-| `monthly` | 9 €/mois | illimité | illimité | 1 | non | non |
-| `yearly` | 90 €/an | illimité | illimité | 1 | non | non |
+| `monthly` | 17 €/mois | illimité | illimité | 1 | non | non |
+| `yearly` | 170 €/an | illimité | illimité | 1 | non | non |
 | `monthly_plus` | 29 €/mois | illimité | illimité | plusieurs | oui | oui |
 | `yearly_plus` | 290 €/an | illimité | illimité | plusieurs | oui | oui |
 | `lifetime` | 57 € | illimité | illimité | plusieurs | oui | oui |

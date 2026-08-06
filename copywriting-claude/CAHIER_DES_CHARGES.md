@@ -207,8 +207,8 @@ Quand un lead partage le quiz, applique le `sio_share_tag_name` au contact.
 |:-----|:-----|:--------|
 | Free | 0€ | 1 quiz max, 10 réponses/mois (auto-reset 30j) |
 | Lifetime | 57€ | Illimité |
-| Monthly | 9€/mois | Illimité |
-| Yearly | 90€/an | Illimité |
+| Monthly | 17€/mois | Illimité |
+| Yearly | 170€/an | Illimité |
 
 ### 5.2. Quota free
 

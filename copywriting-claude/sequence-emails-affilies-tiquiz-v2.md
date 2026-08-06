@@ -27,8 +27,8 @@ Tiquiz est un SaaS de création de quiz marketing avec IA et synchronisation nat
 ### Famille STANDARD — pour les solopreneurs, coachs, formateurs, créateurs
 
 - **Gratuit à vie** : 1 quiz actif, 10 réponses par mois, génération IA des questions et résultats, connexion native Systeme.io. Pour tester sans engagement.
-- **Mensuel — 9 €/mois** sans engagement : quiz et réponses illimités.
-- **Annuel — 90 €/an** : tout l'illimité du mensuel, soit 2 mois offerts.
+- **Mensuel — 17 €/mois** sans engagement : quiz et réponses illimités.
+- **Annuel — 170 €/an** : tout l'illimité du mensuel, soit 2 mois offerts.
 
 ### Famille PLUS — pour les agences, consultants multi-clients, freelances qui gèrent plusieurs marques
 
@@ -59,7 +59,7 @@ Pas de garantie, pas de remboursement. C'est la posture assumée de Béné. Le c
 | 3 | Histoire / persona miroir | Le solopreneur qui en a besoin (Linda) |
 | 4 | Démonstration | Combien de temps pour un quiz, étape par étape |
 | 5 | FAQ / objections | Les questions qui reviennent (incluant "je gère plusieurs clients") |
-| 6 | Comparaison marché | Pourquoi Tiquiz coûte 9 €/mois ou 29 €/mois PLUS, et pas 50-300 €/mois |
+| 6 | Comparaison marché | Pourquoi Tiquiz coûte 17 €/mois ou 29 €/mois PLUS, et pas 50-300 €/mois |
 | 7 | Cas d'usage | Le quiz qui pré-vend (Marie solo) + la rampe de lancement (Karim agence) |
 | 8 | Soft close | Le récap des 5 chemins, et la décision te revient |
 
@@ -90,8 +90,8 @@ Côté tarif, c'est simple, transparent, et il y a deux familles selon ton usage
 **Si tu travailles pour ton business uniquement (la famille STANDARD)** :
 
 - **0 €** pour le compte gratuit (1 quiz, 10 réponses par mois). Pas de carte bancaire, pas d'obligation, juste pour tester en conditions réelles.
-- **9 € par mois** sans engagement, pour les quiz et réponses illimités.
-- **90 € par an** si tu veux économiser deux mois et signer pour l'année.
+- **17 € par mois** sans engagement, pour les quiz et réponses illimités.
+- **170 € par an** si tu veux économiser deux mois et signer pour l'année.
 
 **Si tu gères plusieurs clients, marques ou comptes (la famille PLUS)** — typiquement agences, consultants, freelances qui montent des funnels pour leurs clients :
 
@@ -128,7 +128,7 @@ Hier je t'ai présenté Tiquiz. Aujourd'hui, ce que le produit fait concrètemen
 
 Je te mets la liste telle que Béné me l'a décrite, sans enjoliver.
 
-**Ce que tu débloques dès le plan STANDARD (gratuit, 9 €/mois ou 90 €/an) :**
+**Ce que tu débloques dès le plan STANDARD (gratuit, 17 €/mois ou 170 €/an) :**
 
 - **Tu génères un quiz complet avec l'IA en 3 à 4 minutes** → tu arrêtes de passer des weekends à écrire un PDF que 4 personnes téléchargeront sans jamais lire.
 
@@ -208,7 +208,7 @@ Comme elle sait qui veut quoi, elle arrête d'envoyer son offre "générale" à 
 
 Le quiz ne remplace pas le travail qu'elle fait. Il met un filtre intelligent à l'entrée, pour que tout ce qu'elle fait ensuite (contenu, mails, offres) parle à la bonne personne au bon moment.
 
-Pour le cas de Linda, le plan **Mensuel à 9 €** ou **Annuel à 90 €** suffit largement — un seul business, un seul compte Systeme.io, un seul branding. Pas besoin du PLUS.
+Pour le cas de Linda, le plan **Mensuel à 17 €** ou **Annuel à 170 €** suffit largement — un seul business, un seul compte Systeme.io, un seul branding. Pas besoin du PLUS.
 
 Si tu te reconnais un peu dans Linda, le compte gratuit Tiquiz te permet de monter ton premier quiz sans sortir un euro. Tu vois les résultats sur 10 réponses (largement assez pour valider que les gens jouent le jeu), et tu décides ensuite.
 
@@ -300,7 +300,7 @@ Si tu sais utiliser Systeme.io (ouvrir ton compte, créer une page, créer un ta
 
 Typeform et Tally sont de très bons formulaires. Mais ce sont des formulaires. Ils collectent, ils t'envoient un CSV. Tiquiz est pensé pour un usage précis : capter des leads qualifiés, les segmenter selon leurs réponses, et les synchroniser automatiquement dans Systeme.io avec le bon tag, la bonne inscription en formation, la bonne communauté. Chaque résultat a sa propre mini-page de vente avec CTA personnalisé, donc ton prospect sort déjà chauffé pour l'offre qui lui correspond.
 
-Côté prix : Typeform Basic 25 €/mois, Plus 50 €/mois (600 €/an). Tally Pro 29 $/mois. Tiquiz, c'est 9 €/mois ou 90 €/an pour la version STANDARD. Et 29 €/mois ou 290 €/an pour la version PLUS multi-clients.
+Côté prix : Typeform Basic 25 €/mois, Plus 50 €/mois (600 €/an). Tally Pro 29 $/mois. Tiquiz, c'est 17 €/mois ou 170 €/an pour la version STANDARD. Et 29 €/mois ou 290 €/an pour la version PLUS multi-clients.
 
 **3. Je gère plusieurs clients (agence, freelance, consultant). C'est quel plan ?**
 
@@ -325,7 +325,7 @@ Tu peux utiliser Tiquiz comme générateur de quiz indépendant, les leads arriv
 
 **6. Y a-t-il un essai gratuit ?**
 
-Oui. Compte gratuit à vie : 1 quiz actif, 10 réponses par mois. Tu testes en conditions réelles, sur ton audience, sans CB demandée. Si tu es convaincu·e, tu passes en STANDARD (9 €/mois) ou en PLUS (29 €/mois) selon ton usage. Si tu ne l'es pas, tu restes sur le gratuit ou tu pars, sans engagement, sans drame.
+Oui. Compte gratuit à vie : 1 quiz actif, 10 réponses par mois. Tu testes en conditions réelles, sur ton audience, sans CB demandée. Si tu es convaincu·e, tu passes en STANDARD (17 €/mois) ou en PLUS (29 €/mois) selon ton usage. Si tu ne l'es pas, tu restes sur le gratuit ou tu pars, sans engagement, sans drame.
 
 **7. Garantie ou remboursement ?**
 
@@ -341,7 +341,7 @@ Si ta question n'est pas dans cette liste, réponds à ce mail. Je te répondrai
 
 ## Email 6 — Comparaison marché
 
-**Objet :** Pourquoi Tiquiz coûte 9 € (ou 29 € en PLUS) et pas 50 €/mois
+**Objet :** Pourquoi Tiquiz coûte 17 € (ou 29 € en PLUS) et pas 50 €/mois
 
 **Pré-header :** La table de comparaison qui m'a décidé·e.
 
@@ -361,8 +361,8 @@ J'ai pris le temps de comparer plan par plan. Voici ce que ça donne.
 |---|---|---|---|---|
 | Typeform Plus | 50 € | 600 € | Non (Zapier ~20 €/mois requis) | Non |
 | Tally Pro | ~27 € | ~330 € | Non (Zapier requis) | Non |
-| **Tiquiz Mensuel** | **9 €** | **108 €** | **Oui** | **Oui** |
-| **Tiquiz Annuel** | — | **90 €** | **Oui** | **Oui** |
+| **Tiquiz Mensuel** | **17 €** | **108 €** | **Oui** | **Oui** |
+| **Tiquiz Annuel** | — | **170 €** | **Oui** | **Oui** |
 
 Réel sur 5 ans :
 - Typeform Plus + Zapier : ~4 200 €
@@ -415,7 +415,7 @@ Le truc que je trouve le plus malin dans Tiquiz, c'est la page de résultat qui 
 
 Je te raconte deux exemples concrets. J'invente les personas, la mécanique est exacte.
 
-### Cas 1 — Marie (solopreneur), plan Annuel à 90 €
+### Cas 1 — Marie (solopreneur), plan Annuel à 170 €
 
 Marie est coach business pour solopreneurs débutants. Elle propose 3 offres : un programme à 47 € (mini-formation), un accompagnement à 297 € (4 semaines), et un coaching premium à 1 200 € (3 mois).
 
@@ -439,7 +439,7 @@ Chaque profil débouche sur une page de résultat dédiée avec :
 
 Conversion sur l'offre adaptée : entre 5 et 12 % selon le segment. Soit 10 à 24 fois mieux qu'avant.
 
-Pour Marie, le plan **Annuel à 90 €** suffit largement. Un seul business, un seul compte Systeme.io. Investissement amorti dès la deuxième vente du mois.
+Pour Marie, le plan **Annuel à 170 €** suffit largement. Un seul business, un seul compte Systeme.io. Investissement amorti dès la deuxième vente du mois.
 
 ### Cas 2 — Karim (agence growth), plan Annuel PLUS à 290 €
 
@@ -463,7 +463,7 @@ Son plan **Annuel PLUS à 290 €** s'amortit sur le premier setup client du moi
 
 ### Ce que tu peux faire avec ton activité à toi
 
-Si tu es solo avec une seule offre, le plan STANDARD (9 € ou 90 €) suffit largement. Si tu gères plusieurs clients ou plusieurs marques, le plan PLUS (29 € ou 290 €) te fait gagner du temps en plus de te faire vendre mieux.
+Si tu es solo avec une seule offre, le plan STANDARD (17 € ou 170 €) suffit largement. Si tu gères plusieurs clients ou plusieurs marques, le plan PLUS (29 € ou 290 €) te fait gagner du temps en plus de te faire vendre mieux.
 
 Dans les deux cas, tu peux tester avec le compte gratuit avant de choisir.
 
@@ -503,15 +503,15 @@ Coût : 0 €. Sans CB.
 
 **Chemin 2 — Tu passes en illimité mensuel**
 
-Tu prends le plan à 9 € par mois sans engagement. Quiz et réponses illimités. Tu peux arrêter à tout moment.
+Tu prends le plan à 17 € par mois sans engagement. Quiz et réponses illimités. Tu peux arrêter à tout moment.
 
-Coût : 9 €/mois. Soit le prix d'un café par semaine.
+Coût : 17 €/mois. Soit le prix de deux cafés par semaine.
 
 **Chemin 3 — Tu prends l'annuel**
 
-Tu prends le plan à 90 € par an. Tu économises 2 mois par rapport au mensuel. Tu te paies la tranquillité d'esprit pour l'année.
+Tu prends le plan à 170 € par an. Tu économises 2 mois par rapport au mensuel. Tu te paies la tranquillité d'esprit pour l'année.
 
-Coût : 90 €/an. Le prix d'un demi-mois de Typeform Plus.
+Coût : 170 €/an. Moins de quatre mois de Typeform Plus, pour l'année entière.
 
 ### Famille PLUS — pour ton activité multi-clients
 
@@ -533,7 +533,7 @@ Si tu hésites entre les familles, prends le compte gratuit. Tu testes la mécan
 
 Si tu sais déjà :
 
-- Un seul business, une seule audience à toi → STANDARD (9 €/mois ou 90 €/an).
+- Un seul business, une seule audience à toi → STANDARD (17 €/mois ou 170 €/an).
 - Plusieurs clients, plusieurs marques, plusieurs comptes Systeme.io à gérer → PLUS (29 €/mois ou 290 €/an).
 
 **👉 Je choisis mon chemin →** *[lien : https://www.tipote.fr/part-tiquiz?sa=TON_ID_AFFILIE]*

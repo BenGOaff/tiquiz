@@ -51,7 +51,7 @@ Variations selon le canal :
 | Pain | Ressenti | Réponse Tiquiz |
 |---|---|---|
 | « Typeform, c'est joli mais ça segmente pas mes leads » | Tu collectes des emails sans contexte | Tag Systeme.io différent par résultat de quiz → tu sais qui pense quoi |
-| « ScoreApp marche bien mais c'est 60€/mois et c'est anglais » | Cher + barrière de langue | Tiquiz : 9€/mois, FR, intégration Systeme.io native |
+| « ScoreApp marche bien mais c'est 60€/mois et c'est anglais » | Cher + barrière de langue | Tiquiz : 17€/mois, FR, intégration Systeme.io native |
 | « J'arrive pas à passer le quiz à mes prospects sans copier-coller le lien partout » | Friction de partage | Slug court personnalisé (`/q/mon-quiz`), bouton de partage natif sur le quiz public, viralité via étape « Partage = bonus » |
 | « Mes leads sont dans Systeme.io mais je sais pas qui a fait quel quiz » | Aveugle | Tag SIO différent par capture + par share + par option de réponse |
 | « Je veux un quiz dans MA langue avec MA marque » | Outils anglais, pas brandable | Tiquiz UI en 5 langues admin + quiz public en 8 variantes (FR/FR-vous/EN/ES/IT/DE/PT/AR) + branding par quiz (police Google + couleur primaire + couleur de fond + logo) |
@@ -62,7 +62,7 @@ Variations selon le canal :
 
 ### vs Typeform
 - **Tag Systeme.io natif** par résultat — pas besoin de Zapier
-- **5 fois moins cher** (9€/mois vs 25-83€)
+- **Nettement moins cher** (17€/mois, quand Typeform démarre à 25€)
 - **Génération IA** : tu décris ton quiz en une phrase, l'IA crée tout
 - **Mode lead magnet pensé pour ça** : viralité, partage, anti-triche
 
@@ -78,7 +78,7 @@ Variations selon le canal :
 ### vs Tipote (la plateforme parente)
 - Tiquiz **N'A PAS** : coach IA, crédits IA, réseaux sociaux, automations, pages builder, stratégie, contenus génériques (post, email, article)
 - Tiquiz **A** : tout le module quiz + popquiz, plus simple à appréhender pour qui ne veut QUE du quiz
-- Pricing Tiquiz beaucoup plus bas (9€/mois vs 19-99€/mois Tipote)
+- Pricing Tiquiz beaucoup plus bas (17€/mois vs 19-99€/mois Tipote)
 
 ## 6. Workflow utilisateur (storytelling produit)
 
@@ -196,17 +196,17 @@ Variations selon le canal :
 - **Idéal pour** : un créateur qui veut un outil propriétaire à vie sans frais récurrents
 - **C'est le best-seller**
 
-### Monthly — 9€/mois
+### Monthly — 17€/mois
 - Idem Lifetime mais en mensuel
 - Annulable à tout moment
 - **Idéal pour** : tester sur 1-3 mois avant de switcher en lifetime, ou pour un usage saisonnier
 
-### Yearly — 90€/an
-- Idem, économie de 18€/an vs mensuel
+### Yearly — 170€/an
+- Idem, économie de 34€/an vs mensuel (2 mois offerts)
 - **Idéal pour** : un usage régulier, sans s'engager à vie
 
 ### Pricing rationale (à utiliser dans la com)
-- Tiquiz est **5 fois moins cher** que les concurrents anglais (Typeform 25-83€/mois, ScoreApp 60-200€/mois)
+- Tiquiz est à 17€/mois quand Typeform démarre à 25€/mois et ScoreApp à 60€/mois (et monte jusqu'à 83€ et 200€)
 - L'option **Lifetime à 57€** est unique sur le marché — chez les concurrents c'est ~600€ de lifetime ou pas du tout
 - Aucun crédit IA en lifetime — la génération IA reste illimitée
 
@@ -277,7 +277,7 @@ Variations selon le canal :
 
 - **5 minutes** pour créer un quiz fonctionnel
 - **30 secondes** de génération IA
-- **5 fois moins cher** que les concurrents anglais
+- **17€/mois** quand les concurrents anglais démarrent à 25€ et 60€
 - **57€ une seule fois** (option lifetime)
 - **5 langues UI** + **8 variantes quiz public** + RTL arabe
 - **2 GB max** par upload vidéo (popquiz)
