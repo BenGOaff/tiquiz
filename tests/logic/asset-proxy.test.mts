@@ -197,3 +197,67 @@ test("la reponse publique passe par la reecriture", () => {
   assert.match(src, /questions: asset\(renderedQuestions\)/);
   assert.match(src, /results: asset\(renderedResults\)/);
 });
+
+// ── L'audit exhaustif demandé par Béné (6 août 2026) ─────────────────
+//
+// "Ne m'annonce jamais un truc sans avoir vérifié toutes les
+// conséquences, tout ce que ça va toucher partout, pour anticiper
+// absolument toutes les situations de tous les users et tous leurs
+// quiz. Il faut qu'on soit sûr à 100%."
+//
+// Chaque test ci-dessous fige UNE situation vérifiée dans le code, pour
+// qu'un futur changement la fasse rougir au lieu de la casser en prod.
+
+test("une adresse avec une query n'est pas reecrite", () => {
+  // Elle ne devrait pas exister (getPublicUrl n'en produit pas, et les
+  // transformations d'image sont indisponibles sur le plan gratuit),
+  // mais la reecrire perdrait le parametre en silence.
+  const avecQuery = `${IMG}?width=800`;
+  assert.equal(storageAssetPath(avecQuery, BASE), null);
+  assert.equal(toProxiedAssetUrl(avecQuery, BASE), avecQuery);
+  assert.equal(toProxiedAssetUrl(`${IMG}#ancre`, BASE), `${IMG}#ancre`);
+});
+
+test("un nom de fichier avec un espace ou un accent fait l'aller-retour", () => {
+  // `ext` vient de `file.name.split(".").pop()` : un fichier SANS
+  // extension nommé "mon fichier" met un espace dans le chemin. L'adresse
+  // stockée le porte alors en `%20`, et la route le re-encode apres que
+  // Next l'a decode : le tour doit boucler sans double encodage.
+  const encode = (segments: string[]) => segments.map(encodeURIComponent).join("/");
+  for (const brut of ["mon fichier.png", "été.jpg", "a+b.png", "c(1).webp"]) {
+    const stocke = `${BASE}/storage/v1/object/public/public-assets/quiz/u1/${encodeURIComponent(brut)}`;
+    const proxifie = toProxiedAssetUrl(stocke, BASE);
+    assert.match(proxifie, /^\/img\//, brut);
+    // Ce que Next donnera a la route : les segments DECODES.
+    const segments = proxifie.replace("/img/", "").split("/").map(decodeURIComponent);
+    // Ce que la route renverra vers Supabase.
+    assert.equal(
+      `${BASE}/storage/v1/object/public/${encode(segments)}`,
+      `${BASE}/storage/v1/object/public/public-assets/quiz/u1/${encodeURIComponent(brut)}`,
+      brut,
+    );
+  }
+});
+
+test("le widget d'embed ne consomme PAS la route reecrite", () => {
+  // Il s'execute sur la page de la CLIENTE, pas dans une iframe : une
+  // adresse relative `/img/...` s'y resoudrait sur SON domaine a elle, et
+  // toutes les images seraient cassees. Il utilise sa propre famille de
+  // routes (`/api/embed/quiz/*`), et ce test interdit qu'on l'y branche.
+  const widget = readFileSync(new URL("../../public/embed/tiquiz.js", import.meta.url), "utf8");
+  assert.doesNotMatch(widget, /api\/quiz\/[^"']*\/public/);
+});
+
+test("le visiteur ne renvoie jamais une adresse d'image au serveur", () => {
+  // Sinon la base se remplirait d'adresses relatives `/img/...`, qui ne
+  // voudraient plus rien dire une fois le dispositif eteint. Les trois
+  // POST du viewer n'envoient que des reponses, des identifiants et des
+  // coordonnees.
+  const viewer = readFileSync(
+    new URL("../../components/quiz/PublicQuizClient.tsx", import.meta.url),
+    "utf8",
+  );
+  for (const m of viewer.matchAll(/body: JSON\.stringify\(\{([\s\S]{0,600}?)\}\)/g)) {
+    assert.doesNotMatch(m[1], /image_url|logo_url|_image\b|brand_logo/, m[1].slice(0, 80));
+  }
+});

@@ -96,9 +96,15 @@ export function storageAssetPath(url: string, supabaseUrl: string): string | nul
   if (!raw.startsWith(prefix)) return null;
 
   const path = raw.slice(prefix.length);
-  // Pas de remontée de dossier, pas de chemin vide, pas de query : ce
-  // qui suit part dans une URL vers Supabase, donc rien d'inattendu.
   if (!path || path.includes("..") || path.startsWith("/")) return null;
+
+  // UNE ADRESSE AVEC UNE QUERY N'EST PAS REÉCRITE. Elle ne devrait pas
+  // exister aujourd'hui (`getPublicUrl` n'en produit pas, et les
+  // transformations d'image sont indisponibles sur le plan gratuit),
+  // mais si une créatrice colle un jour une adresse `...jpg?width=800`,
+  // la reécrire perdrait le paramètre en silence. On la laisse partir
+  // chez Supabase telle quelle : moins d'économie, zéro risque.
+  if (path.includes("?") || path.includes("#")) return null;
 
   const bucket = path.split("/")[0];
   if (!PROXIED_BUCKETS.includes(bucket)) return null;
