@@ -261,3 +261,36 @@ test("le visiteur ne renvoie jamais une adresse d'image au serveur", () => {
     assert.doesNotMatch(m[1], /image_url|logo_url|_image\b|brand_logo/, m[1].slice(0, 80));
   }
 });
+
+test("aucun upload ne reecrit un chemin de stockage STABLE", () => {
+  // Mesure sur la prod le 6 aout : sur `quiz.tipote.com`, qui est derriere
+  // Cloudflare, l'image proxifiee ressort en `max-age=14400` alors que la
+  // route en pose 3600. Cloudflare garde la plus LONGUE des deux durees
+  // (reglage Browser Cache TTL de la zone), et aucune ligne de code ne peut
+  // la raccourcir.
+  //
+  // Ca n'a d'importance que pour un fichier qu'on REMPLACE au meme endroit.
+  // Le logo etait le seul du repo dans ce cas (`logos/<uid>/logo.png` en
+  // upsert) : changer son logo n'aurait rien change a l'ecran pendant
+  // quelques heures. Tous les autres uploads portent deja un horodatage,
+  // donc une adresse neuve, donc aucun cache a purger.
+  //
+  // La correction n'est pas dans l'entete, elle est dans le nom : le logo
+  // est horodate comme le reste. Ce test interdit qu'un futur upload
+  // reintroduise un chemin fixe, y compris sur un bucket non proxifie.
+  const fichiers = [
+    "components/quiz/QuizDetailClient.tsx",
+    "components/quiz/SurveyDetailClient.tsx",
+    "components/settings/SettingsClient.tsx",
+    "components/visual-studio/TiquizStudioButton.tsx",
+  ];
+  let vus = 0;
+  for (const f of fichiers) {
+    const src = readFileSync(new URL(`../../${f}`, import.meta.url), "utf8");
+    for (const m of src.matchAll(/`(logos|og|bonus|quiz-[a-z]+|rich-content|studio)\/\$\{[^`]*`/g)) {
+      vus++;
+      assert.match(m[0], /Date\.now\(\)/, `${f} : ${m[0]}`);
+    }
+  }
+  assert.ok(vus >= 10, `on doit avoir vu tous les chemins d'upload, vu ${vus}`);
+});

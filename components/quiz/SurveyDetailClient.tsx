@@ -1120,9 +1120,10 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       const ext = file.name.split(".").pop() ?? "png";
       // Path différent par scope pour ne pas écraser le logo de profil
       // quand on upload un logo override pour un sondage spécifique.
+      // Horodaté comme tous les autres uploads : cf. QuizDetailClient.
       const path = scope === "profile"
-        ? `logos/${user.id}/logo.${ext}`
-        : `logos/${user.id}/quiz-${quizId}.${ext}`;
+        ? `logos/${user.id}/logo-${Date.now()}.${ext}`
+        : `logos/${user.id}/quiz-${quizId}-${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
