@@ -23,6 +23,7 @@ import { CustomDomainsTab } from "@/components/settings/CustomDomainsTab";
 import { isPaidPlan } from "@/lib/planLimits";
 import { toast } from "sonner";
 import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
+import { prepareUpload } from "@/lib/images/compress";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import SetPasswordForm from "@/components/auth/SetPasswordForm";
 import SioApiKeysManager from "@/components/sio/SioApiKeysManager";
@@ -350,10 +351,11 @@ export default function SettingsClient() {
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const ext = file.name.split(".").pop() ?? "png";
+      const prepared = await prepareUpload(file, "logos");
+      const ext = prepared.ext;
       // Horodaté comme tous les autres uploads : cf. QuizDetailClient.
       const path = `logos/${user.id}/logo-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       setBrandLogoUrl(urlData.publicUrl);
