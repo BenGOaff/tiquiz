@@ -78,6 +78,13 @@ const TENANT_PASSTHROUGH_PREFIXES = [
   "/q/",
   "/p/",
   "/embed/",
+  // Les images des quiz, servies par notre domaine au lieu de celui de
+  // Supabase (alerte de depassement du 6 aout 2026, cf. lib/assetProxy).
+  // Sans cette ligne, elles seraient bloquees sur les domaines persos :
+  // toutes les images des clientes qui ont paye pour leur domaine.
+  // La regle de l'extension plus bas les laisserait passer par accident,
+  // mais un fichier sans extension casserait en silence.
+  "/img/",
   "/api/quiz/",
   "/api/popquiz/",
   "/api/leads",

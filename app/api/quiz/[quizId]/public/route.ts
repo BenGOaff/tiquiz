@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { assetProxyEnabled, proxyAssetsDeep } from "@/lib/assetProxy";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { resolveQuizBranding } from "@/lib/quizBranding";
 import { resolveApiKey } from "@/lib/sio/resolveApiKey";
@@ -551,6 +552,18 @@ export async function GET(req: NextRequest, context: RouteContext) {
       cta_text: isFr ? fr(r.cta_text) : r.cta_text,
     }));
 
+    // LES IMAGES PASSENT PAR NOTRE DOMAINE (alerte Supabase du 6 aout
+    // 2026 : 6,68 Go de sortie sur les 5 Go inclus). Chaque visiteur les
+    // telechargeait directement chez Supabase ; elles sont maintenant
+    // servies par `/img/<chemin>`, donc mises en cache par Cloudflare et
+    // par notre serveur. UNE seule passe sur TOUTE la reponse : une liste
+    // blanche de champs oublierait la prochaine colonne d'image, et
+    // l'oubli ne se verrait que sur la facture. Coupe-circuit :
+    // `ASSET_PROXY=off`. Cf. lib/assetProxy.ts.
+    const supabaseBase = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+    const proxied = assetProxyEnabled(process.env.ASSET_PROXY);
+    const asset = <T,>(v: T): T => proxyAssetsDeep(v, supabaseBase, proxied);
+
     return NextResponse.json({
       ok: true,
       // Flag remonté quand le quiz est servi en mode aperçu (créateur
@@ -558,7 +571,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
       // qu'il faut publier pour partager. Bug Fabienne 2026-05-09.
       isDraftPreview: isOwnerPreview,
       quiz: {
-        ...renderedQuiz,
+        ...asset(renderedQuiz),
         address_form: addressForm,
         privacy_url: effectivePrivacyUrl || null,
         custom_footer_text: isFr && typeof customFooterText === "string" ? (fr(customFooterText) as string) : customFooterText,
@@ -576,9 +589,9 @@ export async function GET(req: NextRequest, context: RouteContext) {
         close_cta_text: (quizRow.close_cta_text as string | null) ?? null,
         close_cta_url: (quizRow.close_cta_url as string | null) ?? null,
       },
-      questions: renderedQuestions,
-      results: renderedResults,
-      branding,
+      questions: asset(renderedQuestions),
+      results: asset(renderedResults),
+      branding: asset(branding),
     }, { headers: cacheHeaders });
   } catch (e) {
     return NextResponse.json(
