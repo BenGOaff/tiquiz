@@ -121,3 +121,18 @@ test("le préfixe d'API reste réservé", () => {
   assert.equal(isReservedPublicSlug("api"), true);
   assert.deepEqual(routeTenantPath("/api"), { kind: "block" });
 });
+
+// ── Les images passent sur les domaines persos (6 août 2026) ─────────
+
+test("les images des quiz ne sont pas bloquees sur un domaine perso", () => {
+  // Elles sont servies par NOTRE domaine depuis l'alerte de depassement
+  // Supabase. Bloquees ici, ce seraient toutes les images des clientes
+  // qui ont paye pour leur domaine qui disparaitraient.
+  for (const p of [
+    "/img/public-assets/quiz/user-1/photo.jpg",
+    "/img/public-assets/logo/user-2/sans-extension",
+    "/img/public-assets/a/b/c/d.webp",
+  ]) {
+    assert.equal(routeTenantPath(p).kind, "pass", p);
+  }
+});
