@@ -22,6 +22,7 @@ import {
 import { CustomDomainsTab } from "@/components/settings/CustomDomainsTab";
 import { isPaidPlan } from "@/lib/planLimits";
 import { helpUrl } from "@/lib/help";
+import { AFFILIATE_SIGNUP_URL } from "@/lib/affiliateUrls";
 import { toast } from "sonner";
 import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
 import { prepareUpload } from "@/lib/images/compress";
@@ -755,7 +756,7 @@ export default function SettingsClient() {
                   <p>
                     {t("affiliateNotRegistered")}{" "}
                     <a
-                      href="https://www.tipote.fr/tiquiz/affiliation"
+                      href={AFFILIATE_SIGNUP_URL}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="underline text-primary hover:text-primary/80"

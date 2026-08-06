@@ -33,6 +33,11 @@ import {
 } from "@/components/ui/sidebar";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { helpUrl } from "@/lib/help";
+import {
+  AFFILIATE_DASHBOARD_URL,
+  AFFILIATE_SIGNUP_URL,
+  ATELIER_SALES_URL,
+} from "@/lib/affiliateUrls";
 import { Button } from "@/components/ui/button";
 import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
 import { TutorialNudge } from "@/components/tutorial/TutorialNudge";
@@ -266,16 +271,23 @@ export function AppSidebar() {
         <div className="mt-4">
         <TutorialNudge />
 
-        {/* Carte de conversion vers L'Atelier du Quiz (demande Bene
-            28 juillet 2026). FR uniquement (la formation n'existe qu'en
-            francais). Tiquiz seulement, pas Tipote. Deux variantes :
-            non-eleve -> decouvrir l'Atelier ; eleve -> recommander
-            l'Atelier (70% de commission, espace affiliation de
-            l'Atelier). Rien tant que le statut n'est pas connu, pour ne
-            jamais montrer le mauvais message. */}
+        {/* DEUX CARTES, ET ELLES NE PARLENT PAS DE LA MEME CHOSE.
+            Les confondre est ce qui a fait ecrire Bene le 6 aout 2026 :
+            "mon lien d'affiliation dans tiquiz mene sur l'atelier, c'est
+            quoi la logique ??? Tous les membres de tiquiz ne sont pas
+            membres de l'atelier."
+
+            1. L'ATELIER est une FORMATION. On la propose a qui ne l'a
+               pas (FR uniquement, elle n'existe qu'en francais). Rien
+               tant que le statut n'est pas connu, pour ne jamais montrer
+               le mauvais message.
+            2. L'AFFILIATION est un PROGRAMME, ouvert a tout le monde. Sa
+               carte ne depend donc PAS de l'Atelier, et elle mene a
+               l'espace affilie (affiliate.tipote.com), jamais a une page
+               interne de la formation. */}
         {locale === "fr" && hasAtelier === false && (
           <a
-            href="https://www.tipote.fr/atelier-du-quiz"
+            href={ATELIER_SALES_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="mb-2 block rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5 transition-colors hover:bg-primary/10"
@@ -289,31 +301,13 @@ export function AppSidebar() {
             </span>
           </a>
         )}
-        {/* Affiliation ouverte a tout le monde (demande Bene 1er aout
-            2026) : on n'a PAS besoin d'avoir l'Atelier pour le
-            recommander. La page explique Tiquiz + l'Atelier et renvoie
-            ensuite vers affiliate.tipote.com pour l'inscription. Les
-            eleves, eux, gardent le lien vers LEUR espace affiliation
-            dans l'Atelier (carte ci-dessous). */}
-        {locale === "fr" && hasAtelier === false && (
+        {/* Plus de carte "rejoindre l'affiliation" ici : elle menait a
+            la MEME adresse que "Devenir affilie" du pied de sidebar. Un
+            non-affilie voyait donc deux fois la meme destination, et
+            l'affilie, lui, ne trouvait pas son tableau de bord. */}
+        {locale === "fr" && (
           <a
-            href="https://www.tipote.fr/tiquiz/affiliation"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mb-2 block rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5 transition-colors hover:bg-primary/10"
-          >
-            <span className="block text-[11px] leading-snug text-muted-foreground">
-              {t("atelierAffJoinText")}
-            </span>
-            <span className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-primary">
-              <HandCoins className="h-4 w-4 shrink-0" />
-              {t("atelierAffJoinCta")}
-            </span>
-          </a>
-        )}
-        {locale === "fr" && hasAtelier === true && (
-          <a
-            href="https://quizing.tipote.com/affiliation"
+            href={AFFILIATE_DASHBOARD_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="mb-2 block rounded-lg border border-primary/25 bg-primary/5 px-3 py-2.5 transition-colors hover:bg-primary/10"
@@ -357,7 +351,10 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <a
-                href="https://www.tipote.fr/tiquiz/affiliation"
+                // L'INSCRIPTION, pas le tableau de bord : cette page
+                // explique le programme et permet de s'y inscrire. Le
+                // tableau de bord (carte ci-dessus) demande un compte.
+                href={AFFILIATE_SIGNUP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={MENU_ITEM_CLASS}
