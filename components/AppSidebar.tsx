@@ -32,6 +32,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { helpUrl } from "@/lib/help";
 import { Button } from "@/components/ui/button";
 import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
 import { TutorialNudge } from "@/components/tutorial/TutorialNudge";
@@ -334,7 +335,14 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <a
-                href="https://app.tipote.com/support/tiquiz"
+                // Le centre d'aide vit sur le domaine de Tipote, qui ne
+                // connaît pas la langue choisie ici : sans `?lang=`, une
+                // cliente espagnole cliquait sur "Ayuda" et arrivait sur
+                // une aide en français (audit du 6 août 2026). Elle n'a
+                // pas de compte Tipote, donc aucun cookie de langue
+                // là-bas, et l'entête du navigateur ne dit pas forcément
+                // la même chose que le sélecteur de cette sidebar.
+                href={helpUrl(locale)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={MENU_ITEM_CLASS}

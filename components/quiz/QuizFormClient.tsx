@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
+import { helpUrl } from "@/lib/help";
 import { useAtelierStatus } from "@/hooks/useAtelierStatus";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -194,7 +195,7 @@ function ModeHelp() {
       <p className="text-xs text-muted-foreground">{t("modeHelpChange")}</p>
       {hasAtelier !== null && (
         <a
-          href={hasAtelier ? "https://quizing.tipote.com/coach" : "https://app.tipote.com/support/tiquiz"}
+          href={hasAtelier ? "https://quizing.tipote.com/coach" : helpUrl(locale)}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
