@@ -276,7 +276,7 @@ export default function PopquizEditClient({
   const [error, setError] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
-  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, buildPublicUrl } = useShareDomain();
+  const { shareDomain, shareDomainOptions, shareOrigin, embedOrigin, setShareDomain, buildPublicUrl } = useShareDomain();
 
   // ─── Palettes utilisateur (charte centralisée — chargées au mount,
   //     persistées via PATCH /api/profile dès la première édition) ──
@@ -624,7 +624,8 @@ export default function PopquizEditClient({
   // — it's iframe-internal so no visitor sees it, and the embed
   // route is keyed by /embed/p/ on both hosts.
   const publicUrl = buildPublicUrl("p", handle);
-  const embedUrl = `${shareOrigin}/embed/p/${handle}`;
+  // embedOrigin, jamais shareOrigin : cf. hooks/useShareDomain.ts.
+  const embedUrl = `${embedOrigin}/embed/p/${handle}`;
   const embedSnippet = buildEmbedSnippet(embedUrl);
 
   async function copyPublicUrl() {

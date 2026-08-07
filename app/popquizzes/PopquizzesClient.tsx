@@ -60,7 +60,7 @@ export function PopquizzesClient({
   const [filter, setFilter] = useState<Filter>("all");
   const [embedHandle, setEmbedHandle] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const { shareOrigin, buildPublicUrl } = useShareDomain();
+  const { shareOrigin, embedOrigin, buildPublicUrl } = useShareDomain();
 
   const counts = useMemo(() => {
     const active = popquizzes.filter((p) => p.is_published).length;
@@ -302,7 +302,7 @@ export function PopquizzesClient({
         onOpenChange={(o) => !o && setEmbedHandle(null)}
         embedUrl={
           embedHandle
-            ? `${shareOrigin}/embed/p/${embedHandle}`
+            ? `${embedOrigin}/embed/p/${embedHandle}`
             : ""
         }
       />

@@ -124,8 +124,8 @@
     "becomeAffiliate": "Diventa affiliato",
     "atelierNudgeQuestion": "Besoin d'aide pour rendre ton quiz viral et rentable ?",
     "atelierNudgeCta": "Découvre l'Atelier du Quiz",
-    "atelierAffNudgeText": "Recommande l'Atelier du Quiz et touche 70% de commission",
-    "atelierAffNudgeCta": "Mon lien d'affiliation",
+    "atelierAffNudgeText": "Recommande Tiquiz et l'Atelier du Quiz, jusqu'à 70% de commission",
+    "atelierAffNudgeCta": "Mon espace affilié",
     "atelierAffJoinText": "Puoi consigliare Tiquiz e l'Atelier, anche senza averli.",
     "atelierAffJoinCta": "Diventa affiliato",
     "adminPanel": "Admin"
@@ -864,7 +864,7 @@
     "planFreeF3": "Cattura email",
     "planFreeF4": "Link di condivisione",
     "planProName": "Mensile",
-    "planProPrice": "9 €",
+    "planProPrice": "17 €",
     "planProPeriod": "/mese",
     "planProF1": "Quiz illimitati",
     "planProF2": "Risposte illimitate",
@@ -874,7 +874,7 @@
     "planProF6": "Esportazione CSV",
     "planProCta": "Accesso Mensile",
     "planYearlyName": "Annuale",
-    "planYearlyPrice": "90 €",
+    "planYearlyPrice": "170 €",
     "planYearlyPeriod": "/anno",
     "planYearlyF1": "Tutto di Pro",
     "planYearlyF2": "2 mesi gratis",
@@ -2983,5 +2983,15 @@
     "quotaReached": "Hai usato le tue 2 domande di oggi. Torna domani, o sblocca l'aiuto illimitato.",
     "upsellPlan": "Vedere i piani Tiquiz",
     "upsellAtelier": "Scoprire L'Atelier du Quiz"
+  },
+  "importErrors": {
+    "file_too_large": "Il file supera i 10 MB. Alleggeriscilo o dividilo in due.",
+    "empty_file": "Il file è vuoto.",
+    "unsupported_format": "Formato non supportato. Accettati: .txt, .docx, .pdf.",
+    "docx_no_text": "Nessun testo trovato in questo .docx. Contiene solo immagini?",
+    "pdf_no_text": "Nessun testo da estrarre da questo PDF. Probabilmente è una scansione o un'immagine. Riesportalo in .docx o .txt, oppure incolla il tuo testo direttamente.",
+    "pdf_password": "Questo PDF è protetto da password. Rimuovi la protezione e riprova.",
+    "pdf_damaged": "Impossibile aprire questo PDF: il file sembra danneggiato o incompleto. Riesportalo oppure usa un .docx.",
+    "extract_failed": "Lettura del file non riuscita. Riprova oppure esporta il documento in .docx o .txt."
   }
 }

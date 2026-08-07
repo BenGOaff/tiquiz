@@ -28,7 +28,7 @@ Le guide complet pour créer un quiz marketing connecté à Systeme.io en 2026 :
 
 ### TL;DR
 
-En 2026, créer un quiz marketing qui capte des leads qualifiés et les envoie dans ton Systeme.io avec le bon tag prend **4 à 8 minutes** au lieu d'une journée. Le secret : utiliser un outil avec **connexion native Systeme.io** (sans middleware type Zapier qui ajoute 20 €/mois de coût et 30 % de bugs supplémentaires). Cet article te montre, étape par étape, comment monter ton premier quiz qualifiant avec **Tiquiz**, à partir du plan gratuit (1 quiz, 10 réponses/mois, sans CB). Tu apprends aussi à choisir entre les 5 plans disponibles selon que tu es solopreneur (plan STANDARD à 9 €/mois) ou agence multi-clients (plan PLUS à 29 €/mois).
+En 2026, créer un quiz marketing qui capte des leads qualifiés et les envoie dans ton Systeme.io avec le bon tag prend **4 à 8 minutes** au lieu d'une journée. Le secret : utiliser un outil avec **connexion native Systeme.io** (sans middleware type Zapier qui ajoute 20 €/mois de coût et 30 % de bugs supplémentaires). Cet article te montre, étape par étape, comment monter ton premier quiz qualifiant avec **Tiquiz**, à partir du plan gratuit (1 quiz, 10 réponses/mois, sans CB). Tu apprends aussi à choisir entre les 5 plans disponibles selon que tu es solopreneur (plan STANDARD à 17 €/mois) ou agence multi-clients (plan PLUS à 29 €/mois).
 
 ---
 
@@ -144,10 +144,10 @@ Tiquiz propose **5 plans** regroupés en 2 familles. Le bon plan pour toi dépen
 #### Famille STANDARD (solopreneurs, coachs, créateurs avec un seul business)
 
 - **Gratuit à vie** : 1 quiz actif, 10 réponses/mois. Idéal pour tester en conditions réelles avant de payer.
-- **Mensuel — 9 €/mois** sans engagement : quiz et réponses illimités.
-- **Annuel — 90 €/an** : tout l'illimité du mensuel, soit 2 mois offerts.
+- **Mensuel — 17 €/mois** sans engagement : quiz et réponses illimités.
+- **Annuel — 170 €/an** : tout l'illimité du mensuel, soit 2 mois offerts.
 
-Pour 90 % des solopreneurs lisant cet article, le **plan Mensuel à 9 €** ou **Annuel à 90 €** est le bon choix. Tu peux tester sur le gratuit pendant 2-3 semaines, puis basculer dès que tu valides la mécanique.
+Pour 90 % des solopreneurs lisant cet article, le **plan Mensuel à 17 €** ou **Annuel à 170 €** est le bon choix. Tu peux tester sur le gratuit pendant 2-3 semaines, puis basculer dès que tu valides la mécanique.
 
 #### Famille PLUS (agences, consultants, freelances multi-clients)
 
@@ -189,7 +189,7 @@ Oui. Le compte gratuit à vie (1 quiz, 10 réponses/mois) ne demande aucun moyen
 Oui. Tu peux utiliser Tiquiz comme générateur de quiz indépendant et exporter tes leads en CSV. Mais tu perds la valeur principale (tagging et routage automatiques).
 
 **Combien coûte Tiquiz pour un solopreneur en 2026 ?**
-9 €/mois (sans engagement) ou 90 €/an (2 mois offerts) pour le plan STANDARD. Le compte gratuit reste utilisable indéfiniment pour 1 quiz à 10 réponses/mois.
+17 €/mois (sans engagement) ou 170 €/an (2 mois offerts) pour le plan STANDARD. Le compte gratuit reste utilisable indéfiniment pour 1 quiz à 10 réponses/mois.
 
 **Combien coûte Tiquiz pour une agence multi-clients en 2026 ?**
 29 €/mois ou 290 €/an pour le plan PLUS, qui débloque le multi-profils, le multi-clés API Systeme.io, l'analyse IA des résultats et les templates pré-conçus.
@@ -263,7 +263,7 @@ Je te conseille l'option 1, ne serait-ce que pour mesurer sur ton audience réel
       "name": "Combien coûte Tiquiz pour un solopreneur en 2026 ?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "9 €/mois sans engagement ou 90 €/an (2 mois offerts) pour le plan STANDARD. Le compte gratuit reste utilisable indéfiniment pour 1 quiz à 10 réponses/mois."
+        "text": "17 €/mois sans engagement ou 170 €/an (2 mois offerts) pour le plan STANDARD. Le compte gratuit reste utilisable indéfiniment pour 1 quiz à 10 réponses/mois."
       }
     },
     {
@@ -309,7 +309,7 @@ Comparatif honnête 2026 des outils de quiz marketing : Tiquiz, Typeform, Tally,
 
 ### TL;DR
 
-Quatre outils de quiz marketing dominent le marché francophone en 2026 : **Typeform** (le mastodonte historique, 50 €/mois et plus), **Tally** (le challenger gratuit, ~27 €/mois pour les fonctionnalités avancées), **Outgrow** (l'option premium agence, ~250 €/mois) et **Tiquiz** (le nouveau venu français avec sync native Systeme.io, à partir de 9 €/mois). Si tu utilises Systeme.io, **Tiquiz est imbattable** sur le ratio prix/fonctionnalités grâce à sa connexion native (pas de Zapier, pas de Make). Si tu n'utilises pas Systeme.io, Tally Pro à ~27 €/mois reste le meilleur rapport qualité-prix. Typeform est dépassé en 2026 (trop cher, sans avantage différenciant). Outgrow s'adresse aux grosses agences avec budget illimité. Verdict détaillé par profil dans l'article.
+Quatre outils de quiz marketing dominent le marché francophone en 2026 : **Typeform** (le mastodonte historique, 50 €/mois et plus), **Tally** (le challenger gratuit, ~27 €/mois pour les fonctionnalités avancées), **Outgrow** (l'option premium agence, ~250 €/mois) et **Tiquiz** (le nouveau venu français avec sync native Systeme.io, à partir de 17 €/mois). Si tu utilises Systeme.io, **Tiquiz est imbattable** sur le ratio prix/fonctionnalités grâce à sa connexion native (pas de Zapier, pas de Make). Si tu n'utilises pas Systeme.io, Tally Pro à ~27 €/mois reste le meilleur rapport qualité-prix. Typeform est dépassé en 2026 (trop cher, sans avantage différenciant). Outgrow s'adresse aux grosses agences avec budget illimité. Verdict détaillé par profil dans l'article.
 
 ---
 
@@ -317,7 +317,7 @@ Quatre outils de quiz marketing dominent le marché francophone en 2026 : **Type
 
 1. Pourquoi un comparatif des outils de quiz en 2026
 2. Critères de comparaison utilisés
-3. Tiquiz — le nouveau venu français à 9 €/mois
+3. Tiquiz — le nouveau venu français à 17 €/mois
 4. Typeform — le mastodonte historique à 50 €/mois
 5. Tally — le challenger gratuit à ~27 €/mois
 6. Outgrow — l'option agence premium à ~250 €/mois
@@ -358,9 +358,9 @@ J'évalue chaque outil sur **8 critères** qui couvrent ce qui compte vraiment p
 
 ---
 
-### 3. Tiquiz — le nouveau venu français à 9 €/mois
+### 3. Tiquiz — le nouveau venu français à 17 €/mois
 
-**Prix** : Gratuit (1 quiz, 10 réponses/mois) — Mensuel 9 € — Annuel 90 € — Mensuel PLUS 29 € (multi-clients) — Annuel PLUS 290 €.
+**Prix** : Gratuit (1 quiz, 10 réponses/mois) — Mensuel 17 € — Annuel 170 € — Mensuel PLUS 29 € (multi-clients) — Annuel PLUS 290 €.
 
 **Génération IA** : oui, intégrée. Tu briefes l'IA en 2 lignes, elle génère 10 questions, 4 profils et 4 pages de résultat en moins d'une minute.
 
@@ -460,9 +460,9 @@ J'évalue chaque outil sur **8 critères** qui couvrent ce qui compte vraiment p
 
 | Critère | Tiquiz | Typeform Plus | Tally Pro | Outgrow Agency |
 |---|---|---|---|---|
-| Prix mensuel solo | 9 € | 50 € | 27 € | — |
+| Prix mensuel solo | 17 € | 50 € | 27 € | — |
 | Prix mensuel agence | 29 € | — | — | 250 € |
-| Prix annuel solo | 90 € | 600 € | ~324 € | — |
+| Prix annuel solo | 170 € | 600 € | ~324 € | — |
 | Prix annuel agence | 290 € | — | — | ~3 000 € |
 | Génération IA | Oui (fluide) | Oui | Oui (basique) | Oui |
 | Pages résultat personnalisées | Oui | Logique conditionnelle | Logique conditionnelle | Oui (avancées) |
@@ -481,7 +481,7 @@ Le prix affiché ne dit pas tout. Le vrai coût inclut le middleware (Zapier ou 
 
 - Typeform Plus + Zapier : 50 € + 20 € = 70 €/mois → **4 200 € sur 5 ans**
 - Tally Pro + Zapier : 27 € + 20 € = 47 €/mois → **2 820 € sur 5 ans**
-- **Tiquiz Annuel : 90 €/an → 450 € sur 5 ans**
+- **Tiquiz Annuel : 170 €/an → 450 € sur 5 ans**
 
 **Pour un usage agence multi-clients :**
 
@@ -494,7 +494,7 @@ L'écart est tellement large qu'il rend la décision presque évidente sur le cr
 
 ### 9. Verdict par profil utilisateur
 
-**Si tu es solopreneur Systeme.io** → **Tiquiz**. Sync native, prix imbattable (9 €/mois), génération IA fluide. Commence par le compte gratuit pour tester.
+**Si tu es solopreneur Systeme.io** → **Tiquiz**. Sync native, prix imbattable (17 €/mois), génération IA fluide. Commence par le compte gratuit pour tester.
 
 **Si tu es solopreneur sans Systeme.io (ConvertKit, MailerLite, ActiveCampaign)** → **Tally Pro** à ~27 €/mois reste le meilleur rapport qualité-prix. Tu perds l'avantage natif Systeme.io de Tiquiz, donc autant prendre l'outil le plus flexible.
 
@@ -509,7 +509,7 @@ L'écart est tellement large qu'il rend la décision presque évidente sur le cr
 ### 10. FAQ — choisir son outil de quiz en 2026
 
 **Tiquiz est-il vraiment moins cher que Typeform à fonctionnalités équivalentes ?**
-Oui. À 9 €/mois (Mensuel) ou 90 €/an (Annuel), Tiquiz coûte 5 à 10 fois moins que Typeform Plus (50 €/mois) + Zapier (20 €/mois) pour les fonctionnalités équivalentes en usage marketing.
+Oui. À 17 €/mois (Mensuel) ou 170 €/an (Annuel), Tiquiz coûte 4 à 5 fois moins que Typeform Plus (50 €/mois) + Zapier (20 €/mois) pour les fonctionnalités équivalentes en usage marketing.
 
 **Pourquoi Tiquiz n'a pas de garantie de remboursement ?**
 Parce que le compte gratuit à vie (1 quiz, 10 réponses/mois) permet déjà de tester en conditions réelles avant de payer. La fondatrice (Béné) assume cette posture en remplaçant la garantie par un vrai essai produit.
@@ -521,7 +521,7 @@ Oui, en mode standalone (export CSV des leads). Mais l'avantage principal (sync 
 Sur le ratio prix/qualité de génération IA, Tiquiz prend la tête en 2026 pour les utilisateurs Systeme.io. Pour les autres CRM, Tally Pro reste un excellent compromis.
 
 **Combien de quiz peut-on créer avec Tiquiz ?**
-Illimité sur tous les plans payants (à partir de 9 €/mois). Limité à 1 quiz actif sur le plan gratuit.
+Illimité sur tous les plans payants (à partir de 17 €/mois). Limité à 1 quiz actif sur le plan gratuit.
 
 **Outgrow ou Tiquiz pour une agence en 2026 ?**
 Tiquiz PLUS à 290 €/an si tes clients sont sur Systeme.io. Outgrow Agency à ~3 000 €/an si tes clients sont sur d'autres CRM. La différence de prix (×10) ne se justifie que si tu as vraiment besoin des cas d'usage marketing avancés d'Outgrow (calculateurs financiers complexes, recommandateurs e-commerce, etc.).
@@ -532,7 +532,7 @@ Tiquiz PLUS à 290 €/an si tes clients sont sur Systeme.io. Outgrow Agency à 
 
 Le marché des outils de quiz marketing s'est restructuré entre 2023 et 2026. Les outils historiques (Typeform) sont restés sur leurs prix de 2020, pendant qu'une nouvelle génération (Tiquiz, Tally) a divisé les prix par 3 à 5 sans sacrifier les fonctionnalités essentielles.
 
-Pour un utilisateur Systeme.io en 2026, le choix est devenu évident : **Tiquiz** sur l'usage solo (9 €/mois) ou multi-clients (29 €/mois), avec sa sync native qui économise le coût et la fragilité de Zapier.
+Pour un utilisateur Systeme.io en 2026, le choix est devenu évident : **Tiquiz** sur l'usage solo (17 €/mois) ou multi-clients (29 €/mois), avec sa sync native qui économise le coût et la fragilité de Zapier.
 
 Si tu veux tester avant de t'engager : le compte gratuit à vie te permet de monter un premier quiz sur ton audience réelle sans donner ta CB.
 
@@ -582,7 +582,7 @@ Si tu veux tester avant de t'engager : le compte gratuit à vie te permet de mon
       "name": "Tiquiz est-il vraiment moins cher que Typeform à fonctionnalités équivalentes ?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Oui. À 9 €/mois (Mensuel) ou 90 €/an (Annuel), Tiquiz coûte 5 à 10 fois moins que Typeform Plus (50 €/mois) + Zapier (20 €/mois) pour les fonctionnalités équivalentes en usage marketing."
+        "text": "Oui. À 17 €/mois (Mensuel) ou 170 €/an (Annuel), Tiquiz coûte 4 à 5 fois moins que Typeform Plus (50 €/mois) + Zapier (20 €/mois) pour les fonctionnalités équivalentes en usage marketing."
       }
     },
     {
@@ -636,7 +636,7 @@ La méthode complète pour multiplier ses conversions email par 5 grâce à un q
 
 ### TL;DR
 
-Si tu as une liste email entre 500 et 5 000 inscrits et un taux de conversion en dessous de 1 %, le problème n'est presque jamais ton trafic ou ton offre. C'est ta **segmentation**. La solution la plus rapide à mettre en place : un **quiz qualifiant à l'entrée** qui interroge chaque inscrit, le classe dans un profil, et déclenche la séquence email adaptée à son profil. Cas concret documenté dans cet article : Linda, coach éducation canine, 2 300 abonnés, est passée de **0,6 % de conversion à 4,2 %** en 6 semaines, sans dépenser un euro de pub supplémentaire. La méthode complète + l'outil pour la mettre en œuvre (Tiquiz, à partir de 9 €/mois ou compte gratuit pour tester) sont détaillés dans cet article.
+Si tu as une liste email entre 500 et 5 000 inscrits et un taux de conversion en dessous de 1 %, le problème n'est presque jamais ton trafic ou ton offre. C'est ta **segmentation**. La solution la plus rapide à mettre en place : un **quiz qualifiant à l'entrée** qui interroge chaque inscrit, le classe dans un profil, et déclenche la séquence email adaptée à son profil. Cas concret documenté dans cet article : Linda, coach éducation canine, 2 300 abonnés, est passée de **0,6 % de conversion à 4,2 %** en 6 semaines, sans dépenser un euro de pub supplémentaire. La méthode complète + l'outil pour la mettre en œuvre (Tiquiz, à partir de 17 €/mois ou compte gratuit pour tester) sont détaillés dans cet article.
 
 ---
 
@@ -785,7 +785,7 @@ Pourquoi je le recommande spécifiquement pour cette méthode :
 - **Génération IA du quiz en 4 minutes** : tu briefes l'IA sur ton activité, elle te rédige les 7-10 questions et les 4 pages de résultat. Tu gagnes une demi-journée de travail.
 - **Sync native Systeme.io** : tagging automatique par profil, inscription automatique en formation ou en communauté. Pas de Zapier, pas de Make.
 - **Pages de résultat personnalisées** : chaque profil a sa propre page avec diagnostic et CTA adapté.
-- **Prix accessible** : 9 €/mois pour la version Mensuel ou 90 €/an pour l'Annuel (et un compte gratuit à vie pour tester en conditions réelles avant de payer).
+- **Prix accessible** : 17 €/mois pour la version Mensuel ou 170 €/an pour l'Annuel (et un compte gratuit à vie pour tester en conditions réelles avant de payer).
 
 Si tu gères plusieurs clients (agence, consultant, freelance), le plan PLUS à 29 €/mois te donne le multi-profils (un espace par client), le multi-clés API Systeme.io et l'analyse IA des résultats — utile pour livrer un rapport stratégique exploitable à chaque client.
 
@@ -807,7 +807,7 @@ Si tu n'utilises pas Systeme.io, Tally Pro à ~27 €/mois fait le job pour la p
 La méthode commence à payer à partir de 300-500 inscrits. En dessous, l'effort de mise en place dépasse le gain. Au-dessus, le ROI grimpe linéairement avec la taille de la liste.
 
 **Combien coûte la mise en place complète de la méthode ?**
-Si tu utilises Tiquiz à 9 €/mois et Systeme.io en plan gratuit, le coût total est de 9 €/mois. Si tu pars sur Typeform + Zapier + ConvertKit, le coût grimpe à 70-100 €/mois minimum.
+Si tu utilises Tiquiz à 17 €/mois et Systeme.io en plan gratuit, le coût total est de 17 €/mois. Si tu pars sur Typeform + Zapier + ConvertKit, le coût grimpe à 70-100 €/mois minimum.
 
 **Le quiz qualifie-t-il aussi les leads froids ?**
 Oui, c'est même son rôle principal. Le quiz transforme un visiteur froid (juste arrivé sur ton site) en un lead qualifié et segmenté en moins de 3 minutes.
@@ -823,7 +823,7 @@ Si tu as une liste email et un taux de conversion en dessous de 1 %, tu as quasi
 
 La solution n'est pas de produire plus de contenu, ni d'acheter plus de trafic, ni de baisser tes prix. C'est de **qualifier à l'entrée** avec un quiz, de **router** chaque profil vers la bonne séquence, et de proposer **l'offre adaptée à chaque moment d'achat**.
 
-C'est une méthode qui se met en place en 4 à 6 semaines, qui coûte 9 €/mois si tu utilises les bons outils, et qui multiplie typiquement les conversions par 3 à 7 sur la même audience.
+C'est une méthode qui se met en place en 4 à 6 semaines, qui coûte 17 €/mois si tu utilises les bons outils, et qui multiplie typiquement les conversions par 3 à 7 sur la même audience.
 
 Le seul vrai obstacle, c'est de s'y mettre maintenant plutôt que dans 3 mois.
 
@@ -897,7 +897,7 @@ Le seul vrai obstacle, c'est de s'y mettre maintenant plutôt que dans 3 mois.
       "name": "Combien coûte la mise en place complète de la méthode ?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Si tu utilises Tiquiz à 9 €/mois et Systeme.io en plan gratuit, le coût total est de 9 €/mois. Si tu pars sur Typeform + Zapier + ConvertKit, le coût grimpe à 70-100 €/mois minimum."
+        "text": "Si tu utilises Tiquiz à 17 €/mois et Systeme.io en plan gratuit, le coût total est de 17 €/mois. Si tu pars sur Typeform + Zapier + ConvertKit, le coût grimpe à 70-100 €/mois minimum."
       }
     }
   ]

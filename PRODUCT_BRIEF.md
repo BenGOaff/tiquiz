@@ -51,7 +51,7 @@ Variations selon le canal :
 | Pain | Ressenti | Réponse Tiquiz |
 |---|---|---|
 | « Typeform c'est joli mais ça segmente pas mes leads » | Tu collectes des emails sans contexte | Tag Systeme.io différent par résultat, par réponse, à la capture et au partage : tu sais qui pense quoi |
-| « ScoreApp marche bien mais c'est cher et c'est en anglais » | Prix élevé, barrière de langue | Tiquiz : à partir de 9 €/mois, en français, intégration Systeme.io native |
+| « ScoreApp marche bien mais c'est cher et c'est en anglais » | Prix élevé, barrière de langue | Tiquiz : à partir de 17 €/mois, en français, intégration Systeme.io native |
 | « J'arrive pas à faire circuler mon quiz » | Friction de partage | Slug court personnalisé, boutons de partage natifs, étape « partage = bonus », carte de résultat partageable |
 | « Mes leads sont dans Systeme.io mais je sais pas qui a fait quoi » | Aveugle | Tag par capture, par partage, par résultat, par option de réponse |
 | « Je veux un quiz dans MA langue avec MA marque » | Outils anglais, pas brandables | UI en 7 langues, quiz public multilingue (dont tu/vous et arabe RTL), branding par quiz (police, couleurs, logo, favicon), thèmes et fonds riches |
@@ -66,7 +66,7 @@ Variations selon le canal :
 
 ### vs Typeform
 - **Tag Systeme.io natif** par résultat, sans Zapier.
-- **Nettement moins cher** (à partir de 9 €/mois).
+- **Nettement moins cher** (à partir de 17 €/mois).
 - **Génération IA** : tu décris ton quiz en une phrase, l'IA crée tout.
 - **Pensé lead magnet** : viralité, partage, anti-triche, résultats personnalisés.
 
@@ -231,7 +231,7 @@ Variations selon le canal :
 
 ### Matrice features par plan
 
-| Feature | Free | Mensuel (9 €) | Annuel (90 €) | Mensuel+ (29 €) | Annuel+ (290 €) | Lifetime / Beta |
+| Feature | Free | Mensuel (17 €) | Annuel (170 €) | Mensuel+ (29 €) | Annuel+ (290 €) | Lifetime / Beta |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | Quiz actifs | 1 | illimité | illimité | illimité | illimité | illimité |
 | Sondages actifs | 1 | illimité | illimité | illimité | illimité | illimité |
@@ -249,12 +249,12 @@ Variations selon le canal :
 - Tous les modules de création accessibles (génération IA, embed, partage, Systeme.io).
 - **Idéal pour** : tester un premier lead-magnet.
 
-### Mensuel, 9 €/mois
+### Mensuel, 17 €/mois
 - Quiz, sondages, popquiz illimités, leads illimités.
 - 1 clé Systeme.io. Annulable à tout moment.
 - **Idéal pour** : un créateur en démarrage qui veut un outil de quiz lead-magnet branché à Systeme.io.
 
-### Annuel, 90 €/an
+### Annuel, 170 €/an
 - Identique au Mensuel, avec l'économie de l'engagement annuel.
 - **Idéal pour** : un usage régulier sans engagement à vie.
 
@@ -320,8 +320,8 @@ Variations selon le canal :
 | « Je suis pas tech, je vais pas y arriver » | Onboarding en 5 minutes, pas de prompts à écrire, pas d'API à configurer. À l'inscription tu choisis un template et ton quiz est prêt en un clic. |
 | « Mes leads vont être perdus si vous fermez ? » | Export à tout moment. Et chaque lead est aussi poussé dans Systeme.io en temps réel : tu en as une copie de toute façon. |
 | « Le quiz IA va sortir n'importe quoi » | Brainstorm conversationnel avant génération pour cadrer, et tu modifies chaque texte inline. La génération est un point de départ, pas un point final. |
-| « Pourquoi payer 29 €/mois plutôt que 9 € ? » | Si tu n'as qu'une marque, reste à 9 €. Le + se justifie dès que tu gères plusieurs marques (multiprofils, une clé Systeme.io par projet) ou que tu veux faire parler tes réponses (analyse IA). |
-| « Si je passe de 9 € à 29 € je vais être facturé deux fois ? » | Non. Le switch est automatique : le nouveau plan démarre, l'ancien est annulé chez Systeme.io en même temps. Aucun chevauchement. |
+| « Pourquoi payer 29 €/mois plutôt que 17 € ? » | Si tu n'as qu'une marque, reste à 17 €. Le + se justifie dès que tu gères plusieurs marques (multiprofils, une clé Systeme.io par projet) ou que tu veux faire parler tes réponses (analyse IA). |
+| « Si je passe de 17 € à 29 € je vais être facturé deux fois ? » | Non. Le switch est automatique : le nouveau plan démarre, l'ancien est annulé chez Systeme.io en même temps. Aucun chevauchement. |
 
 ## 12. CTAs
 
@@ -337,7 +337,7 @@ Variations selon le canal :
 
 ### CTAs upsell (free vers payant)
 - « Débloquer les leads cachés »
-- « Passer à l'illimité, 9 €/mois »
+- « Passer à l'illimité, 17 €/mois »
 - « Annuler à tout moment »
 
 ### CTAs upsell (Mensuel ou Annuel vers +)

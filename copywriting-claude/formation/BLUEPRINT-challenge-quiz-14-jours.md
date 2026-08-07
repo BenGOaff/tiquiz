@@ -41,12 +41,12 @@ Le génie : le client part avec un résultat concret (un tunnel publié), pas av
 | Brunson / OFA | Toi / Challenge Quiz |
 |---|---|
 | Tunnel clé en main à la fin | Quiz lead-magnet publié, branché Systeme.io, qui tague des leads |
-| Logiciel récurrent : ClickFunnels | Logiciel récurrent : Tiquiz (Mensuel 9€ / Mensuel+ 29€) |
+| Logiciel récurrent : ClickFunnels | Logiciel récurrent : Tiquiz (Mensuel 17€ / Mensuel+ 29€) |
 | 100% commission affiliés sur le ticket | 100% commission affiliés sur le ticket challenge (tu gères déjà l'affiliation via Systeme.io) |
 | Coaching live + replays | Lives quotidiens courts + replays + missions |
 | "One Funnel Away" | "À un quiz de tout changer" (un seul quiz peut renverser ton acquisition) |
 
-Le point fort de ta version par rapport à Brunson : ton outil est 5 à 7 fois moins cher que ses équivalents anglais, donc l'abonnement récurrent derrière est une évidence économique pour l'élève. Le frein au "je continue" est minuscule (9€).
+Le point fort de ta version par rapport à Brunson : ton outil est nettement moins cher que ses équivalents anglais, donc l'abonnement récurrent derrière est une évidence économique pour l'élève. Le frein au "je continue" est minuscule (17€).
 
 ### 1.3. Pourquoi le quiz est un meilleur produit d'appel que le tunnel
 
@@ -67,7 +67,7 @@ Tu n'empiles pas un produit. Tu construis une machine où chaque étage finance 
 Prix conseillé : **47€** (ou 1€ le jour 1 puis 47€, voir §8). Petit prix volontaire. Ce n'est pas là que tu gagnes ta vie, c'est ton aimant à leads ultra-qualifiés (des gens qui PAIENT pour apprendre à capter des leads = exactement ta cible Tiquiz).
 
 ### Revenu 2 : l'abonnement Tiquiz récurrent (le vrai business)
-Pendant le challenge, l'élève crée son quiz sur Tiquiz. Le plan Free suffit pour démarrer (1 quiz, 10 leads visibles/mois). Dès que son quiz marche, il sature la limite et passe naturellement en Mensuel 9€, puis Mensuel+ 29€ quand il veut plusieurs quiz/marques ou l'analyse IA. C'est le moteur de revenu long terme. La MRR (revenu mensuel récurrent) est l'objectif réel.
+Pendant le challenge, l'élève crée son quiz sur Tiquiz. Le plan Free suffit pour démarrer (1 quiz, 10 leads visibles/mois). Dès que son quiz marche, il sature la limite et passe naturellement en Mensuel 17€, puis Mensuel+ 29€ quand il veut plusieurs quiz/marques ou l'analyse IA. C'est le moteur de revenu long terme. La MRR (revenu mensuel récurrent) est l'objectif réel.
 
 ### Revenu 3 : la commission inverse via les affiliés (effet de levier)
 Tu offres jusqu'à **100% du ticket challenge à tes affiliés**. Tu ne gagnes "rien" sur l'entrée, mais ton armée d'affiliés (tu en as déjà via Systeme.io) ramène des centaines d'inscrits que tu n'aurais jamais touchés. Toi, tu récupères la MRR Tiquiz derrière. Eux gardent le cash immédiat. Tout le monde gagne.
@@ -379,7 +379,7 @@ Après l'entrée à 47€, tu proposes une montée en gamme. Ordre logique :
 1. **Order bump (à la commande, +27€)** : le pack "Templates avancés + swipe file copy étendu". Coche une case, +27€, marge quasi pure.
 2. **Upsell 1 (post-achat, 197€)** : "Le Quiz clé en main par niche" : la version premium où tu donnes des quiz pré-construits et optimisés par secteur, plus les séquences email complètes. C'est ici que se loge ta valeur 3000€ pour ceux qui veulent tout, tout de suite.
 3. **Upsell 2 (297-497€)** : accompagnement / hot seats prioritaires / audit de quiz en direct.
-4. **Le récurrent qui compte** : l'abonnement Tiquiz (9€ puis 29€). Présenté non comme un upsell mais comme l'évidence pour continuer à utiliser ce qu'on vient de construire.
+4. **Le récurrent qui compte** : l'abonnement Tiquiz (17€ puis 29€). Présenté non comme un upsell mais comme l'évidence pour continuer à utiliser ce qu'on vient de construire.
 5. **Downsell** : pour ceux qui refusent l'upsell premium, version allégée à 97€ (paiement en 3 fois possible).
 
 ### 8.4. Le vrai indicateur de succès

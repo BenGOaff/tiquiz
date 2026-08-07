@@ -856,7 +856,7 @@ Audit global du 1er juin 2026 → roadmap rétention dans
 Hors-scope explicite à NE PAS confondre :
 
 - **Lifetime 57€ TERMINÉ depuis longtemps**. Plans actifs Tiquiz :
-  Free / Monthly 9€ / Yearly 90€. Lifetime existants grandfathérés à
+  Free / Monthly 17€ / Yearly 170€. Lifetime existants grandfathérés à
   vie côté DB. Ne JAMAIS proposer une nouvelle vente lifetime ni
   retirer les lifetime existants.
 - **Nouveau pricing à venir** : 19€/mois et 190€/an pour les futurs

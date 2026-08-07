@@ -133,6 +133,7 @@ function titleForVisual(text: string | null | undefined): string {
   t = t.replace(/^[\s,;:.!?–—-]+/, "").trim();
   return t ? t.charAt(0).toUpperCase() + t.slice(1) : "";
 }
+import { prepareUpload } from "@/lib/images/compress";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { SUPPORTED_LOCALES, LOCALE_LABELS } from "@/i18n/config";
 import { useTranslations, useLocale } from "next-intl";
@@ -1958,7 +1959,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error(t("errNotSignedIn")); return; }
-      const ext = file.name.split(".").pop() ?? "png";
+      const prepared = await prepareUpload(file, "logos");
+      const ext = prepared.ext;
       // Path différent par scope pour ne pas écraser le logo de profil
       // quand on upload un logo override pour un quiz spécifique.
       //
@@ -1971,7 +1973,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       const path = scope === "profile"
         ? `logos/${user.id}/logo-${Date.now()}.${ext}`
         : `logos/${user.id}/quiz-${quizId}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       const publicUrl = urlData.publicUrl;
@@ -2010,9 +2012,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error(t("errNotSignedIn")); return; }
-      const ext = file.name.split(".").pop() ?? "png";
+      const prepared = await prepareUpload(file, "bonus");
+      const ext = prepared.ext;
       const path = `bonus/${user.id}/${quizId}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       setBonusImageUrl(urlData.publicUrl);
@@ -2037,9 +2040,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error(t("errNotSignedIn")); return; }
-      const ext = file.name.split(".").pop() ?? "png";
+      const prepared = await prepareUpload(file, "og");
+      const ext = prepared.ext;
       const path = `og/${user.id}/${quizId}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       setOgImageUrl(urlData.publicUrl);
@@ -2081,9 +2085,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error(t("errNotSignedIn")); return; }
-      const ext = file.name.split(".").pop() ?? "jpg";
+      const prepared = await prepareUpload(file, "quiz-backgrounds");
+      const ext = prepared.ext;
       const path = `quiz-backgrounds/${user.id}/${quizId}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       setBackgroundImageUrl(urlData.publicUrl);
@@ -2110,9 +2115,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error(t("errNotSignedIn")); return null; }
-      const ext = file.name.split(".").pop() ?? "jpg";
+      const prepared = await prepareUpload(file, "quiz-panel");
+      const ext = prepared.ext;
       const path = `quiz-panel/${user.id}/${quizId}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       return urlData.publicUrl;
@@ -2151,9 +2157,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error(t("errNotSignedIn")); return; }
-      const ext = file.name.split(".").pop() ?? "png";
+      const prepared = await prepareUpload(file, "quiz-options");
+      const ext = prepared.ext;
       const path = `quiz-options/${user.id}/${quizId}-q${qi}-o${oi}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       setEditQuestions((p) => p.map((q, i) => i !== qi ? q : {
@@ -2190,9 +2197,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error(t("errNotSignedIn")); return; }
-      const ext = file.name.split(".").pop() ?? "png";
+      const prepared = await prepareUpload(file, "quiz-questions");
+      const ext = prepared.ext;
       const path = `quiz-questions/${user.id}/${quizId}-q${qi}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       setQuestionImage(qi, urlData.publicUrl);
@@ -2219,9 +2227,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error(t("errNotSignedIn")); return null; }
-      const ext = file.name.split(".").pop() ?? "png";
+      const prepared = await prepareUpload(file, "rich-content");
+      const ext = prepared.ext;
       const path = `rich-content/${user.id}/${quizId}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       return urlData.publicUrl;

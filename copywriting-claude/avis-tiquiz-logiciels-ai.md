@@ -61,13 +61,13 @@ Quatre plans :
 
 **Plan Gratuit.** 1 quiz actif, 1 sondage, 1 popquiz vidéo, 10 leads visibles par mois, toutes les fonctionnalités IA incluses. Sans limite de durée.
 
-**Plan Mensuel à 9€/mois.** 3 quiz actifs, leads illimités, sondages illimités, popquiz illimités, support standard. Sans engagement.
+**Plan Mensuel à 17€/mois.** 3 quiz actifs, leads illimités, sondages illimités, popquiz illimités, support standard. Sans engagement.
 
 **Plan Mensuel Plus.** Plus de quiz actifs, fonctionnalités avancées (a/b testing, exports détaillés, branding personnalisé, suppression du badge Tiquiz).
 
 **Plans Annuel et Annuel Plus.** Équivalents avec économie significative sur l'année.
 
-Le bon réflexe : démarrer en gratuit, valider que ton quiz convertit dans ta niche avec les 10 premiers leads visibles, puis upgrade au Mensuel quand le quiz t'a déjà rapporté plus que 9€.
+Le bon réflexe : démarrer en gratuit, valider que ton quiz convertit dans ta niche avec les 10 premiers leads visibles, puis upgrade au Mensuel quand le quiz t'a déjà rapporté plus que 17€.
 
 ## Tiquiz vs Typeform vs Interact pour un utilisateur Systeme.io
 
@@ -77,7 +77,7 @@ Le vrai comparatif pour quelqu'un déjà sur Systeme.io :
 
 **Interact** est l'excellent leader anglo-saxon du quiz, mais en anglais uniquement, support en anglais, pas d'intégration native Systeme.io, et plans à partir de 39$/mois.
 
-**Tiquiz** : intégration native Systeme.io, interface française, IA française, support en français, à partir de 0€ pour démarrer ou 9€/mois.
+**Tiquiz** : intégration native Systeme.io, interface française, IA française, support en français, à partir de 0€ pour démarrer ou 17€/mois.
 
 Pour quelqu'un qui n'utilise pas Systeme.io, Typeform et Interact restent d'excellents choix. Pour un utilisateur Systeme.io, Tiquiz est l'option la plus rapide à déployer et la moins chère.
 

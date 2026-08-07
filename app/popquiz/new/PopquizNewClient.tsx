@@ -322,7 +322,7 @@ export default function PopquizNewClient({
   }
   const [copied, setCopied] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
-  const { shareDomain, shareDomainOptions, shareOrigin, setShareDomain, buildPublicUrl } = useShareDomain();
+  const { shareDomain, shareDomainOptions, shareOrigin, embedOrigin, setShareDomain, buildPublicUrl } = useShareDomain();
 
   // ─── Autosave silencieux ────────────────────────────────────────
   // 1) Au mount : on hydrate depuis localStorage si une session
@@ -673,7 +673,8 @@ export default function PopquizNewClient({
   // Same prefix rules as the edit screen: public URL is clean on a
   // custom domain, embed URL keeps /embed/p/ regardless.
   const publishedUrl = handle ? buildPublicUrl("p", handle) : "";
-  const embedUrl = handle ? `${shareOrigin}/embed/p/${handle}` : "";
+  // embedOrigin, jamais shareOrigin : cf. hooks/useShareDomain.ts.
+  const embedUrl = handle ? `${embedOrigin}/embed/p/${handle}` : "";
   const embedSnippet = embedUrl ? buildEmbedSnippet(embedUrl) : "";
 
   async function copyPublishedUrl() {

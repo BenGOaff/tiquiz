@@ -14,7 +14,7 @@ Suite aux changements pricing + features du 2 juin (corrigés après-midi),
 
 ### Matrice features par plan (source vérité CODE = lib/planLimits.ts) :
 
-| Feature | free | monthly (9€) | yearly (90€) | **monthly+ (29€)** | **yearly+ (290€)** | lifetime / beta |
+| Feature | free | monthly (17€) | yearly (170€) | **monthly+ (29€)** | **yearly+ (290€)** | lifetime / beta |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | Quiz actifs | 1 | illim | illim | illim | illim | illim |
 | Sondages actifs | 1 | illim | illim | illim | illim | illim |
@@ -78,9 +78,9 @@ Suite aux changements pricing + features du 2 juin (corrigés après-midi),
 ## Contraintes business validées Béné (1er juin 2026)
 
 - **Lifetime 57€ TERMINÉ** depuis longtemps. Plans actifs : Free /
-  Monthly 9€ / Yearly 90€. Lifetime existants grandfathérés à vie.
+  Monthly 17€ / Yearly 170€. Lifetime existants grandfathérés à vie.
 - **Nouveau pricing à venir** : 19€/mois et 190€/an pour les futurs
-  users uniquement. Abonnés actuels grandfathérés (9€/90€).
+  users uniquement. Abonnés actuels grandfathérés (17€/170€).
 - **Pas de CTA "upgrade Tipote" dans Tiquiz** : Systeme.io a bloqué le
   whitelabel Tipote, donc impossible de vendre Tipote depuis Tiquiz pour
   l'instant. Garder archi compatible mais ne rien exposer côté UI.

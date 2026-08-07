@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { SettingsAchievements } from "@/components/settings/SettingsAchievements";
@@ -21,8 +21,11 @@ import {
 } from "lucide-react";
 import { CustomDomainsTab } from "@/components/settings/CustomDomainsTab";
 import { isPaidPlan } from "@/lib/planLimits";
+import { helpUrl } from "@/lib/help";
+import { AFFILIATE_SIGNUP_URL } from "@/lib/affiliateUrls";
 import { toast } from "sonner";
 import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
+import { prepareUpload } from "@/lib/images/compress";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import SetPasswordForm from "@/components/auth/SetPasswordForm";
 import SioApiKeysManager from "@/components/sio/SioApiKeysManager";
@@ -137,6 +140,9 @@ const PLANS = [
 
 export default function SettingsClient() {
   const t = useTranslations("settings");
+  // Sert au lien vers le centre d'aide : il vit sur le domaine de
+  // Tipote, qui ne connait pas la langue choisie ici (cf. lib/help.ts).
+  const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") || "general";
@@ -350,10 +356,11 @@ export default function SettingsClient() {
       const supabase = getSupabaseBrowserClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const ext = file.name.split(".").pop() ?? "png";
+      const prepared = await prepareUpload(file, "logos");
+      const ext = prepared.ext;
       // Horodaté comme tous les autres uploads : cf. QuizDetailClient.
       const path = `logos/${user.id}/logo-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
       setBrandLogoUrl(urlData.publicUrl);
@@ -749,7 +756,7 @@ export default function SettingsClient() {
                   <p>
                     {t("affiliateNotRegistered")}{" "}
                     <a
-                      href="https://www.tipote.fr/tiquiz/affiliation"
+                      href={AFFILIATE_SIGNUP_URL}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="underline text-primary hover:text-primary/80"
@@ -866,7 +873,7 @@ export default function SettingsClient() {
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
                 <a
-                  href="https://app.tipote.com/support/article/tiquiz-systeme-io"
+                  href={helpUrl(locale, "article/tiquiz-systeme-io")}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-primary hover:underline"

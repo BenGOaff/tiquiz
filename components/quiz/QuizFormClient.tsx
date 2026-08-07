@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
+import { helpUrl } from "@/lib/help";
 import { useAtelierStatus } from "@/hooks/useAtelierStatus";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,7 @@ import { QuizIdeaChat, type QuizBrief } from "@/components/quiz/QuizIdeaChat";
 import { QUIZ_OBJECTIVES } from "@/lib/prompts/quiz/system";
 import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
 import { toast } from "sonner";
+import { asImportFailureReason } from "@/lib/quiz/importFailure";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -194,7 +196,7 @@ function ModeHelp() {
       <p className="text-xs text-muted-foreground">{t("modeHelpChange")}</p>
       {hasAtelier !== null && (
         <a
-          href={hasAtelier ? "https://quizing.tipote.com/coach" : "https://app.tipote.com/support/tiquiz"}
+          href={hasAtelier ? "https://quizing.tipote.com/coach" : helpUrl(locale)}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
@@ -209,6 +211,11 @@ function ModeHelp() {
 
 export default function QuizFormClient() {
   const t = useTranslations("quizForm");
+  // Les raisons d'un import raté vivent dans leur propre namespace : les
+  // deux écrans qui importent un fichier (quiz et sondage) partagent
+  // exactement les mêmes, et les recopier dans deux namespaces les ferait
+  // diverger au premier ajout.
+  const tImport = useTranslations("importErrors");
   const router = useRouter();
 
   // ---- Manual form state ----
@@ -937,9 +944,10 @@ export default function QuizFormClient() {
         });
         const exBody = await exRes.json().catch(() => ({}));
         if (!exRes.ok || !exBody?.ok) {
-          // Surface le hint utile du serveur (ex: "PDF est un scan,
-          // exporte en .docx") ou un fallback générique.
-          toast.error(exBody?.hint || t("importError"));
+          // Le serveur renvoie une RAISON, on la met en mots ici, dans la
+          // langue de la créatrice. Jamais son `error.message` brut : c'est
+          // comme ça que "r is not a function" a fini dans un toast.
+          toast.error(tImport(asImportFailureReason(exBody?.reason)));
           setImporting(false);
           return;
         }

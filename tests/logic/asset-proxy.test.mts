@@ -162,11 +162,18 @@ test("la fraicheur reste celle d'aujourd'hui, JAMAIS plus longue", () => {
   // commentaires expliquent justement pourquoi `immutable` a ete retire,
   // et un test qui rougit sur sa propre explication finit desactive.
   const src = readFileSync(new URL("../../app/img/[...path]/route.ts", import.meta.url), "utf8");
-  const headers = src.slice(src.indexOf("new Headers({"), src.indexOf("return new NextResponse(upstream.body"));
+  const headers = src.slice(src.indexOf("new Headers({"), src.indexOf("export async function GET"));
   assert.doesNotMatch(headers, /immutable/, "un logo remplace doit pouvoir apparaitre");
   assert.match(src, /const MAX_AGE = 3600;/);
   assert.match(headers, /stale-while-revalidate/, "c'est lui qui economise, sans toucher a la fraicheur");
-  assert.match(src, /next: \{ revalidate: MAX_AGE \}/);
+  // Le cache d'amont ne passe PLUS par `next: { revalidate }` : depuis
+  // le 6 aout, la route tient son propre cache disque
+  // (`lib/images/transform.ts`), qui est plus fort. Une fois le fichier
+  // dedans, Supabase n'est plus sollicite DU TOUT, la ou le cache de
+  // `fetch` le rappelait toutes les heures, quand il acceptait de garder
+  // un corps binaire de cette taille.
+  assert.match(src, /await readCached\(/);
+  assert.match(src, /void writeCached\(/);
 });
 
 test("aucun Content-Length recopie de l'amont", () => {
@@ -174,7 +181,7 @@ test("aucun Content-Length recopie de l'amont", () => {
   // les SVG) : la longueur annoncee par l'amont ne correspondrait plus au
   // corps renvoye, et le navigateur couperait l'image au milieu.
   const src = readFileSync(new URL("../../app/img/[...path]/route.ts", import.meta.url), "utf8");
-  const headers = src.slice(src.indexOf("new Headers({"), src.indexOf("return new NextResponse(upstream.body"));
+  const headers = src.slice(src.indexOf("new Headers({"), src.indexOf("export async function GET"));
   assert.doesNotMatch(headers, /Content-Length/i);
   assert.doesNotMatch(src, /headers\.set\("Content-Length"/i);
 });
