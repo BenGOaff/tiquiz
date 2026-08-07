@@ -1432,6 +1432,19 @@ bougé.
    dix secondes ce que deux diagnostics à l'aveugle n'avaient pas su
    trancher. Une vente absente de la liste n'est jamais arrivée.
 
+**ET ON A CONFONDU DEUX IDENTIFIANTS PENDANT DEUX MOIS.** Le 2 juin, on
+a noté que "tous les bons de commande partagent le même offer-price-id
+(`offerprice-dc9c3e75`)" et on a basculé le routage sur l'URL pour
+contourner l'ambiguïté. C'était faux : `offerprice-dc9c3e75` est l'**id
+du bloc HTML** de la page de commande (`<div id="offerprice-dc9c3e75">`),
+le même partout parce que c'est le même gabarit de page. Le webhook,
+lui, envoie `pricePlan.id`, un entier UNIQUE par plan tarifaire.
+
+On a donc contourné pendant deux mois une ambiguïté qui n'existait pas,
+en se rabattant sur une URL qui, elle, est absente des ventes. **Un
+identifiant vu dans le navigateur n'est pas celui reçu par le serveur :
+c'est le payload qui fait foi, pas la page.**
+
 **Règle : tout plan vendu doit être joignable par un offer-price-id.**
 L'URL est un complément utile (elle distingue les tunnels affiliés sur
 les optins), pas une voie de secours : elle est absente là où ça compte.
