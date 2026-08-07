@@ -45,8 +45,12 @@ const supabaseAnon = createClient(
 // test + l'endpoint admin dry-run). Source unique de vérité pour le
 // mapping URL/offer-id → plan Tiquiz.
 import {
+  AMOUNT_PATHS,
+  FALLBACK_PAID_PLAN,
+  inferPlanFromAmount,
   inferPlanFromOfferId as inferPlan,
   inferPlanFromUrl,
+  isConfirmedSaleEvent,
   type TiquizPlan,
 } from "@/lib/sio/webhookInference";
 // Une vente encaissée sans accès ouvert PRÉVIENT Béné (drame Ivan, 7 août).
@@ -81,7 +85,7 @@ function deepGet(obj: any, path: string): any {
   return path.split(".").reduce((o, k) => o?.[k], obj);
 }
 
-function extractStr(body: any, paths: string[]): string | null {
+function extractStr(body: any, paths: readonly string[]): string | null {
   for (const p of paths) {
     const v = deepGet(body, p);
     if (v != null && String(v).trim()) return String(v).trim();
@@ -417,9 +421,42 @@ export async function POST(req: NextRequest) {
         // downgrade them. Keep their current plan.
         finalPlan = oldPlan as TiquizPlan;
         console.warn(`[Tiquiz webhook] Unknown offer ${offerId} — keeping existing paid plan ${oldPlan}`);
+      } else if (isConfirmedSaleEvent(eventType)) {
+        // ── UNE VENTE ENCAISSÉE OUVRE TOUJOURS UN ACCÈS ──
+        //
+        // Béné, 7 août 2026 : "pourquoi une vente refusée ? Il a payé le
+        // client, il doit recevoir ses accès, point barre."
+        //
+        // Elle a raison, et l'ancien comportement était indéfendable.
+        // Ce qui est ambigu sur une offre inconnue, ce n'est pas QU'IL a
+        // payé (l'événement est une vente confirmée) mais QUEL palier il
+        // a pris. On répond donc à la vraie question : le montant s'il
+        // est reconnaissable, sinon le palier de base.
+        //
+        // `monthly` en dernier recours n'est pas un pari : il ouvre
+        // exactement les mêmes fonctionnalités que `yearly` (seule la
+        // facturation diffère, et Systeme.io s'en occupe), et c'est le
+        // moins cher, donc on ne donne jamais un PLUS par accident.
+        const parMontant = inferPlanFromAmount(extractStr(rawBody, AMOUNT_PATHS));
+        finalPlan = parMontant ?? FALLBACK_PAID_PLAN;
+        const msg = `unknown_offer:${offerId || "missing"}→granted:${finalPlan}`;
+        console.warn(`[Tiquiz webhook] OFFRE INCONNUE, accès ouvert quand même — ${msg} email=${email}`);
+        await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "granted_fallback", error: msg });
+        // On prévient Béné : l'accès est ouvert, mais le palier reste à
+        // confirmer, et les deux identifiants reçus sont dans l'email.
+        await sendSaleRefusedAlert({
+          email,
+          offerId: offerId ?? null,
+          sourceUrl: sourceUrl ?? null,
+          eventType,
+          grantedPlan: finalPlan,
+        }).catch(() => false);
       } else {
+        // Pas une vente : une offre inconnue sur un événement qu'on ne
+        // sait pas nommer n'ouvre RIEN. Sans ce garde-fou, n'importe quel
+        // appel mal configuré donnerait un accès payant.
         const msg = `unknown_offer:${offerId || "missing"}`;
-        console.error(`[Tiquiz webhook] REFUSE grant — ${msg} email=${email}`);
+        console.error(`[Tiquiz webhook] REFUSE grant — ${msg} email=${email} type=${eventType}`);
         await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "refused", error: msg });
         // ON PRÉVIENT BÉNÉ (drame Ivan, 7 août 2026). Le refus est le bon
         // comportement ; c'est le silence qui coûte cher. Avant, la seule
@@ -434,6 +471,7 @@ export async function POST(req: NextRequest) {
           offerId: offerId ?? null,
           sourceUrl: sourceUrl ?? null,
           eventType,
+          grantedPlan: null,
         }).catch(() => false);
         return NextResponse.json({ ok: false, refused: true, reason: "unknown_offer", offer_id: offerId }, { status: 200 });
       }

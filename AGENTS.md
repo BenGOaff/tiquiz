@@ -1445,6 +1445,37 @@ en se rabattant sur une URL qui, elle, est absente des ventes. **Un
 identifiant vu dans le navigateur n'est pas celui reçu par le serveur :
 c'est le payload qui fait foi, pas la page.**
 
+**ET SURTOUT, LA RÈGLE QUE BÉNÉ A IMPOSÉE :** "pourquoi une vente
+refusée ? Il a payé le client, il doit recevoir ses accès, point barre."
+
+Elle a raison, et l'ancien comportement était indéfendable. Sur une offre
+inconnue on refusait, donc un client qui venait de payer se retrouvait
+sans rien. **Ce qui est ambigu dans ce cas, ce n'est pas QU'IL a payé
+(l'événement est une vente confirmée), c'est seulement QUEL palier.** On
+répond donc à la vraie question, dans cet ordre :
+
+1. l'offer-price-id ;
+2. l'URL (optins uniquement) ;
+3. **le MONTANT** (`inferPlanFromAmount`), qui tranche entre la base et
+   le PLUS, en correspondance EXACTE : un montant remisé ne doit pas
+   ouvrir un palier au hasard ;
+4. **le palier de base** (`FALLBACK_PAID_PLAN = "monthly"`).
+
+Le repli n'est pas un pari : `monthly` et `yearly` ouvrent EXACTEMENT les
+mêmes fonctionnalités (cf. `lib/planLimits.ts`), seule la facturation
+diffère et Systeme.io s'en occupe. Se tromper entre les deux ne coûte
+rien au client, et c'est le palier le moins cher, donc on ne donne jamais
+un PLUS par accident.
+
+**Le garde-fou qui reste : `isConfirmedSaleEvent(eventType)`.** Le repli
+payant ne s'applique QU'À une vente confirmée. Un événement qu'on ne sait
+pas nommer n'ouvre toujours RIEN : sans ça, n'importe quel appel mal
+configuré donnerait un accès payant. Les annulations et les échecs de
+paiement sont filtrés en amont.
+
+L'alerte email dit maintenant QUEL palier a été ouvert, et que la
+correction n'est pas urgente puisque le client a déjà son accès.
+
 **Règle : tout plan vendu doit être joignable par un offer-price-id.**
 L'URL est un complément utile (elle distingue les tunnels affiliés sur
 les optins), pas une voie de secours : elle est absente là où ça compte.

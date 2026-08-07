@@ -148,6 +148,94 @@ export function inferPlanFromOfferId(offerId: string | null | undefined): Tiquiz
   return null;
 }
 
+/**
+ * LE MONTANT, TROISIÈME VOIE (Béné, 7 août 2026).
+ *
+ * "Pourquoi une vente refusée ? Il a payé le client, il doit recevoir ses
+ * accès, point barre."
+ *
+ * Elle a raison, et l'ancien comportement était indéfendable : sur une
+ * offre inconnue, on refusait, donc un client qui venait de payer se
+ * retrouvait sans rien. Ce qui est ambigu dans ce cas, ce n'est pas
+ * QU'IL a payé (l'événement est une vente confirmée), c'est seulement
+ * QUEL palier il a pris. On répond donc à la vraie question.
+ *
+ * Le montant tranche entre le palier de base et le palier PLUS, qui sont
+ * les seuls à ne pas ouvrir la même chose. Correspondance EXACTE
+ * uniquement : un montant remisé ne doit pas ouvrir un palier au hasard,
+ * il retombera sur le repli.
+ */
+const AMOUNT_TO_PLAN: Record<number, TiquizPlan> = {
+  // En centimes, comme les renvoie l'API Systeme.io.
+  900: "monthly",      // ancien prix
+  1700: "monthly",     // depuis le 6 août 2026
+  9000: "yearly",      // ancien prix
+  17000: "yearly",     // depuis le 6 août 2026
+  2900: "monthly_plus",
+  29000: "yearly_plus",
+  5700: "lifetime",    // opération terminée, gardé pour l'historique
+};
+
+/** Paths à essayer pour le montant payé. */
+export const AMOUNT_PATHS = [
+  "pricePlan.amount",
+  "data.pricePlan.amount",
+  "order.total_amount",
+  "data.order.total_amount",
+  "order.amount",
+  "data.order.amount",
+  "amount",
+  "data.amount",
+] as const;
+
+/**
+ * Devine le palier depuis le montant payé.
+ *
+ * On essaie la valeur telle quelle (centimes) PUIS multipliée par 100 :
+ * selon l'événement, Systeme.io envoie tantôt `1700`, tantôt `17.00`.
+ * Sans ce doublon, un payload en euros ne correspondrait à rien.
+ */
+export function inferPlanFromAmount(raw: unknown): TiquizPlan | null {
+  const n = typeof raw === "number" ? raw : Number(String(raw ?? "").replace(",", "."));
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const centimes = Math.round(n);
+  if (centimes in AMOUNT_TO_PLAN) return AMOUNT_TO_PLAN[centimes]!;
+  const converti = Math.round(n * 100);
+  if (converti in AMOUNT_TO_PLAN) return AMOUNT_TO_PLAN[converti]!;
+  return null;
+}
+
+/**
+ * LE REPLI QUAND ON NE SAIT VRAIMENT PAS : le palier de base.
+ *
+ * **On n'abandonne JAMAIS un client qui a payé.** Le choix de `monthly`
+ * n'est pas arbitraire :
+ *
+ *   - `monthly` et `yearly` ouvrent EXACTEMENT les mêmes fonctionnalités
+ *     (cf. lib/planLimits.ts) : seule la facturation diffère, et c'est
+ *     Systeme.io qui la gère. Se tromper entre les deux ne coûte donc
+ *     rien au client ;
+ *   - c'est le palier le moins cher, donc on ne donne jamais un PLUS par
+ *     accident.
+ *
+ * Béné reçoit une alerte à chaque fois, avec l'identifiant reçu : elle
+ * corrige en deux clics si c'était un annuel ou un PLUS.
+ */
+export const FALLBACK_PAID_PLAN: TiquizPlan = "monthly";
+
+/**
+ * Cet événement confirme-t-il un encaissement ?
+ *
+ * Le repli payant ne s'applique QU'ICI. Les annulations, remboursements
+ * et échecs de paiement sont filtrés en amont ; ce garde-fou empêche
+ * qu'un événement d'un autre genre (une notification, un test) ouvre un
+ * accès payant à lui tout seul.
+ */
+export function isConfirmedSaleEvent(eventType: string | null | undefined): boolean {
+  if (!eventType) return false;
+  return /SALE|ORDER|PURCHASE|VENTE|COMMANDE/i.test(eventType);
+}
+
 /** Paths à essayer pour extraire l'URL du bon de commande depuis un payload SIO.
  *  Large par design — SIO change parfois la shape selon le type d'event. */
 export const URL_PATHS = [

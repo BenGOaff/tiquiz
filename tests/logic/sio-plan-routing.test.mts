@@ -26,8 +26,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  FALLBACK_PAID_PLAN,
   OFFER_TO_PLAN,
+  inferPlanFromAmount,
   inferPlanFromPayload,
+  isConfirmedSaleEvent,
   URL_TO_PLAN,
   inferPlanFromOfferId,
   inferPlanFromUrl,
@@ -187,4 +190,65 @@ test("l'optin gratuit, lui, porte bien son URL", () => {
   });
   assert.equal(r.plan, "free");
   assert.equal(r.source, "url");
+});
+
+// ── UNE VENTE ENCAISSÉE OUVRE TOUJOURS UN ACCÈS ──────────────────────
+//
+// Béné, 7 août 2026 : "pourquoi une vente refusée ? Il a payé le client,
+// il doit recevoir ses accès, point barre."
+//
+// Elle a raison. Ce qui est ambigu sur une offre inconnue, ce n'est pas
+// QU'IL a payé (l'événement est une vente confirmée), c'est QUEL palier.
+// On répond donc à la vraie question : le montant s'il est reconnaissable,
+// sinon le palier de base.
+
+test("le montant tranche entre la base et le palier PLUS", () => {
+  // En centimes, comme l'API Systeme.io les renvoie.
+  assert.equal(inferPlanFromAmount(1700), "monthly");
+  assert.equal(inferPlanFromAmount(17000), "yearly");
+  assert.equal(inferPlanFromAmount(2900), "monthly_plus");
+  assert.equal(inferPlanFromAmount(29000), "yearly_plus");
+});
+
+test("le montant est aussi compris en euros", () => {
+  // Selon l'evenement, SIO envoie tantot 1700, tantot "17.00".
+  assert.equal(inferPlanFromAmount("17.00"), "monthly");
+  assert.equal(inferPlanFromAmount(170), "yearly");
+  assert.equal(inferPlanFromAmount("29"), "monthly_plus");
+  assert.equal(inferPlanFromAmount("290"), "yearly_plus");
+});
+
+test("un montant remise ne devine PAS un palier au hasard", () => {
+  // Correspondance exacte uniquement : sinon un code promo ouvrirait un
+  // PLUS a quelqu'un qui a paye la base. Il retombera sur le repli.
+  assert.equal(inferPlanFromAmount(1200), null);
+  assert.equal(inferPlanFromAmount(0), null);
+  assert.equal(inferPlanFromAmount("gratuit"), null);
+  assert.equal(inferPlanFromAmount(null), null);
+});
+
+test("le repli est le palier de BASE, jamais un PLUS", () => {
+  // `monthly` ouvre exactement les memes fonctionnalites que `yearly`
+  // (seule la facturation differe), et c'est le moins cher : se tromper
+  // ne coute rien au client et ne donne jamais un PLUS par accident.
+  assert.equal(FALLBACK_PAID_PLAN, "monthly");
+  assert.notEqual(FALLBACK_PAID_PLAN, "monthly_plus");
+  assert.notEqual(FALLBACK_PAID_PLAN, "yearly_plus");
+});
+
+test("une vente confirmee est reconnue comme telle", () => {
+  // Le type exact releve dans le journal d'Ivan.
+  assert.equal(isConfirmedSaleEvent("customer.sale.completed"), true);
+  assert.equal(isConfirmedSaleEvent("SALE_NEW"), true);
+  assert.equal(isConfirmedSaleEvent("order.completed"), true);
+  assert.equal(isConfirmedSaleEvent("Vente confirmee"), true);
+});
+
+test("ce qui n'est PAS une vente n'ouvre rien", () => {
+  // Le garde-fou : sans lui, n'importe quel appel mal configure
+  // ouvrirait un acces payant a lui tout seul.
+  assert.equal(isConfirmedSaleEvent("free_optin"), false);
+  assert.equal(isConfirmedSaleEvent("contact.updated"), false);
+  assert.equal(isConfirmedSaleEvent(""), false);
+  assert.equal(isConfirmedSaleEvent(null), false);
 });
