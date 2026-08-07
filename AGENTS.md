@@ -1382,29 +1382,50 @@ Ivan Pellegry passe du gratuit au mensuel. Côté Systeme.io tout est bon :
 il porte le tag `tiquiz-mensuel`, la vente est encaissée. Côté Tiquiz, son
 compte reste en `free`.
 
-**La cause est dans le changement de prix de la veille.** En passant à
-17 / 170 le 6 août, de NOUVEAUX plans tarifaires ont été créés côté
-Systeme.io ("NV tiquiz mensuel" à 17,00 €, id 3375217 ; "NV Tiquiz annuel"
-à 170,00 €, id 3375221). Leurs ids sont neufs, donc absents de
-`OFFER_TO_PLAN`. Le webhook route sur l'URL PUIS sur l'id : quand aucun
-des deux ne correspond, il REFUSE d'ouvrir un accès.
+**MA PREMIÈRE EXPLICATION ÉTAIT FAUSSE, et la garder ici sert de leçon.**
+J'avais vu que le passage à 17 / 170 avait créé de nouveaux plans
+tarifaires côté Systeme.io (ids 3375217 et 3375221, absents de notre table)
+et j'en ai conclu que le webhook ne pouvait plus rattacher la vente. Béné a
+corrigé : **les URLs des bons de commande n'ont pas changé**, seul le tarif
+a bougé, sur les 4 bons existants. Or le routage passe par l'URL EN
+PREMIER. Sa vente aurait donc dû être reconnue.
 
-**Ce refus est le bon comportement, et il faut le garder.** On ne devine
-jamais un plan payant sur une offre inconnue : l'inverse ouvrirait des
-accès sur des ventes qui n'ont pas eu lieu. Un client bloqué se débloque
-en deux clics dans l'admin ; un accès ouvert à tort ne se voit jamais.
+J'avais une corrélation (le prix a changé la veille) et je l'ai présentée
+comme une cause. **Une explication cohérente qui n'a pas été vérifiée reste
+une hypothèse**, et l'écrire comme un fait fait perdre du temps à tout le
+monde : on corrige le mauvais endroit.
 
-**La vraie leçon : créer un bon de commande côté Systeme.io est une
-modification de code déguisée.** C'est la deuxième fois, après les
-tunnels affiliés du 27 juin. Une table de routage ne se met pas à jour
-toute seule quand le tunnel change.
+**Ce qu'on sait vraiment :** la vente est passée, le tag est posé, l'accès
+n'a pas été ouvert. Restent deux causes possibles, qui se corrigent à des
+endroits OPPOSÉS :
 
-**Règle : tout plan vendu doit être joignable par une URL ET par un
-offer-price-id.** Deux voies, pas une : celle qui reste debout sauve la
-vente quand l'autre bouge. `tests/logic/sio-plan-routing.test.mts` le
-vérifie pour les quatre plans vendus (mensuel, annuel, mensuel+, annuel+),
-et interdit qu'un même id route vers deux plans différents.
+- l'appel est arrivé et a été refusé -> le bon de commande n'est pas
+  reconnu, c'est la table de routage qu'il faut compléter ;
+- l'appel n'est jamais arrivé -> le webhook n'est pas posé sur ce bon de
+  commande, et aucune ligne de code ne peut le rattraper.
 
-**Quand un tarif change, il y a donc trois choses à faire, pas une :** le
-prix affiché dans l'app, l'entrée URL du nouveau bon de commande, et son
-offer-price-id.
+**Rien dans l'app ne permettait de les distinguer.** La réponse dormait
+dans `webhook_logs`, c'est à dire dans Supabase, c'est à dire nulle part
+pour Béné. D'où les deux ajouts, et c'est eux qui comptent :
+
+1. **Une vente encaissée sans accès envoie une alerte email** aux admins,
+   avec l'offer-price-id et l'URL reçus, c'est à dire exactement les deux
+   lignes à ajouter pour que le suivant passe. Le refus était le bon
+   comportement ; c'est le silence qui coûtait.
+2. **`/admin` liste les appels Systeme.io reçus** (`WebhookLogsCard` +
+   `app/api/admin/webhook-logs/route.ts`), avec pour chaque ligne ce que
+   le routage répondrait AUJOURD'HUI. Une vente absente de cette liste
+   n'est jamais arrivée : la question se tranche en un coup d'oeil, et
+   sans refaire un achat.
+
+**Sur les identifiants d'offre, à ne pas réapprendre :** les bons de
+commande récents envoient un id PARTAGÉ (`offerprice-dc9c3e75`, le même
+pour le mensuel et pour l'annuel). Il ne peut distinguer aucun plan, et
+c'est pour ça que l'URL passe en premier depuis le 2 juin. Les ids
+numériques ajoutés le 7 août sont un repli, pas la voie principale.
+
+**La règle qui reste vraie :** tout plan vendu doit être joignable par une
+URL ET par un offer-price-id. Deux voies, pas une.
+`tests/logic/sio-plan-routing.test.mts` le vérifie pour les quatre plans
+vendus, et interdit qu'un même id route vers deux plans différents.
+
