@@ -1375,3 +1375,36 @@ dans les 7 langues, et les cas qui appellent une action ont leur propre
 phrase : PDF scanné, PDF protégé par mot de passe, PDF abîmé. Même règle
 que la suppression d'un quiz (3 août) : le serveur dit ce qui s'est
 passé, l'interface dit comment le dire.
+
+## Un client qui a payé reste en gratuit (drame Ivan, 7 août 2026)
+
+Ivan Pellegry passe du gratuit au mensuel. Côté Systeme.io tout est bon :
+il porte le tag `tiquiz-mensuel`, la vente est encaissée. Côté Tiquiz, son
+compte reste en `free`.
+
+**La cause est dans le changement de prix de la veille.** En passant à
+17 / 170 le 6 août, de NOUVEAUX plans tarifaires ont été créés côté
+Systeme.io ("NV tiquiz mensuel" à 17,00 €, id 3375217 ; "NV Tiquiz annuel"
+à 170,00 €, id 3375221). Leurs ids sont neufs, donc absents de
+`OFFER_TO_PLAN`. Le webhook route sur l'URL PUIS sur l'id : quand aucun
+des deux ne correspond, il REFUSE d'ouvrir un accès.
+
+**Ce refus est le bon comportement, et il faut le garder.** On ne devine
+jamais un plan payant sur une offre inconnue : l'inverse ouvrirait des
+accès sur des ventes qui n'ont pas eu lieu. Un client bloqué se débloque
+en deux clics dans l'admin ; un accès ouvert à tort ne se voit jamais.
+
+**La vraie leçon : créer un bon de commande côté Systeme.io est une
+modification de code déguisée.** C'est la deuxième fois, après les
+tunnels affiliés du 27 juin. Une table de routage ne se met pas à jour
+toute seule quand le tunnel change.
+
+**Règle : tout plan vendu doit être joignable par une URL ET par un
+offer-price-id.** Deux voies, pas une : celle qui reste debout sauve la
+vente quand l'autre bouge. `tests/logic/sio-plan-routing.test.mts` le
+vérifie pour les quatre plans vendus (mensuel, annuel, mensuel+, annuel+),
+et interdit qu'un même id route vers deux plans différents.
+
+**Quand un tarif change, il y a donc trois choses à faire, pas une :** le
+prix affiché dans l'app, l'entrée URL du nouveau bon de commande, et son
+offer-price-id.

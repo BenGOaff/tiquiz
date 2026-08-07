@@ -38,6 +38,39 @@ export const OFFER_TO_PLAN: Record<string, TiquizPlan> = {
   // Lifetime 57€ (terminé)
   "offer-price-3198280": "lifetime",
   "3198280": "lifetime",
+
+  // ── LES PLANS DU NOUVEAU PRIX (drame Ivan, 7 août 2026) ────────────
+  //
+  // Ivan Pellegry passe du gratuit au mensuel le 7 août. Côté
+  // Systeme.io, tout est bon : il porte le tag `tiquiz-mensuel`, la
+  // vente est encaissée. Côté Tiquiz, son compte reste en `free`.
+  //
+  // En passant les prix à 17 / 170 le 6 août, Béné a créé de NOUVEAUX
+  // plans tarifaires Systeme.io ("NV tiquiz mensuel" 17,00 €, "NV
+  // Tiquiz annuel" 170,00 €). Leurs ids sont neufs, donc inconnus de
+  // cette table. Le webhook route sur l'URL PUIS sur l'id : si le
+  // nouveau bon de commande vit sur une autre URL, plus rien ne
+  // correspond, et la route REFUSE d'ouvrir un accès (c'est voulu : on
+  // ne devine jamais un plan payant). Résultat, un client qui a payé
+  // reste en gratuit.
+  //
+  // La leçon est la même que pour les URLs le 27 juin : **une table de
+  // routage ne se met pas à jour toute seule quand le tunnel change.**
+  // Créer un bon de commande côté Systeme.io est une modification de
+  // code déguisée. Les ids sont ici pour que le repli fonctionne même
+  // si l'URL du tunnel bouge encore.
+  "offer-price-3375217": "monthly",
+  "3375217": "monthly",
+  "offer-price-3375221": "yearly",
+  "3375221": "yearly",
+
+  // Les paliers PLUS ne tenaient QUE par leur URL. Même fragilité :
+  // ajouter leur id ne change rien tant que l'URL marche, et sauve la
+  // vente le jour où elle change.
+  "offer-price-3278876": "monthly_plus",
+  "3278876": "monthly_plus",
+  "offer-price-3278878": "yearly_plus",
+  "3278878": "yearly_plus",
 };
 
 /**
