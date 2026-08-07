@@ -49,6 +49,8 @@ import {
   inferPlanFromUrl,
   type TiquizPlan,
 } from "@/lib/sio/webhookInference";
+// Une vente encaissée sans accès ouvert PRÉVIENT Béné (drame Ivan, 7 août).
+import { sendSaleRefusedAlert } from "@/lib/email/saleRefusedAlert";
 
 // Plans Tiquiz refuses to downgrade automatically. `beta` is granted manually
 // by Ben for lifetime access; `lifetime` is the paid one-time tier. Both must
@@ -419,6 +421,20 @@ export async function POST(req: NextRequest) {
         const msg = `unknown_offer:${offerId || "missing"}`;
         console.error(`[Tiquiz webhook] REFUSE grant — ${msg} email=${email}`);
         await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "refused", error: msg });
+        // ON PRÉVIENT BÉNÉ (drame Ivan, 7 août 2026). Le refus est le bon
+        // comportement ; c'est le silence qui coûte cher. Avant, la seule
+        // trace était cette ligne de log, donc elle l'a appris par le
+        // client, le lendemain, alors que toutes les ventes au nouveau
+        // prix tombaient pareil depuis la veille.
+        //
+        // Best-effort : un échec d'envoi ne doit pas changer la réponse,
+        // sinon Systeme.io rejoue l'événement en boucle.
+        await sendSaleRefusedAlert({
+          email,
+          offerId: offerId ?? null,
+          sourceUrl: sourceUrl ?? null,
+          eventType,
+        }).catch(() => false);
         return NextResponse.json({ ok: false, refused: true, reason: "unknown_offer", offer_id: offerId }, { status: 200 });
       }
     }

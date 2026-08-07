@@ -38,6 +38,37 @@ export const OFFER_TO_PLAN: Record<string, TiquizPlan> = {
   // Lifetime 57€ (terminé)
   "offer-price-3198280": "lifetime",
   "3198280": "lifetime",
+
+  // ── LES PLANS TARIFAIRES DU NOUVEAU PRIX (7 août 2026) ─────────────
+  //
+  // Ids relevés dans Systeme.io après le passage à 17 / 170 : "NV tiquiz
+  // mensuel" (17,00 €) et "NV Tiquiz annuel" (170,00 €), plus les deux
+  // paliers PLUS qui ne tenaient jusque là QUE par leur URL.
+  //
+  // CE N'EST PAS CE QUI A BLOQUÉ IVAN, et c'est écrit ici pour que
+  // personne ne relise ce bloc comme la cause. Béné a confirmé après
+  // coup que les URLs des bons de commande n'ont PAS changé : seul le
+  // tarif a bougé, sur les 4 bons existants. Le routage par URL, qui
+  // passe EN PREMIER, aurait donc dû reconnaître sa vente. Sa panne est
+  // ailleurs, et probablement en amont : l'appel n'est peut-être jamais
+  // arrivé. L'écran des appels reçus, dans /admin, est là pour trancher.
+  //
+  // Ces entrées restent quand même, parce qu'un plan vendu doit être
+  // joignable par DEUX voies : celle qui tient encore sauve la vente
+  // quand l'autre bouge. Mais elles ne servent QUE si Systeme.io envoie
+  // l'id NUMÉRIQUE du plan. Les bons de commande récents envoient un
+  // identifiant PARTAGÉ (`offerprice-dc9c3e75`, le même pour le mensuel
+  // et pour l'annuel), qui ne peut par construction distinguer aucun
+  // plan. D'où la priorité donnée à l'URL, et d'où le fait que ce repli
+  // ne la remplacera jamais.
+  "offer-price-3375217": "monthly",
+  "3375217": "monthly",
+  "offer-price-3375221": "yearly",
+  "3375221": "yearly",
+  "offer-price-3278876": "monthly_plus",
+  "3278876": "monthly_plus",
+  "offer-price-3278878": "yearly_plus",
+  "3278878": "yearly_plus",
 };
 
 /**

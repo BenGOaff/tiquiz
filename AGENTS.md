@@ -1375,3 +1375,57 @@ dans les 7 langues, et les cas qui appellent une action ont leur propre
 phrase : PDF scanné, PDF protégé par mot de passe, PDF abîmé. Même règle
 que la suppression d'un quiz (3 août) : le serveur dit ce qui s'est
 passé, l'interface dit comment le dire.
+
+## Un client qui a payé reste en gratuit (drame Ivan, 7 août 2026)
+
+Ivan Pellegry passe du gratuit au mensuel. Côté Systeme.io tout est bon :
+il porte le tag `tiquiz-mensuel`, la vente est encaissée. Côté Tiquiz, son
+compte reste en `free`.
+
+**MA PREMIÈRE EXPLICATION ÉTAIT FAUSSE, et la garder ici sert de leçon.**
+J'avais vu que le passage à 17 / 170 avait créé de nouveaux plans
+tarifaires côté Systeme.io (ids 3375217 et 3375221, absents de notre table)
+et j'en ai conclu que le webhook ne pouvait plus rattacher la vente. Béné a
+corrigé : **les URLs des bons de commande n'ont pas changé**, seul le tarif
+a bougé, sur les 4 bons existants. Or le routage passe par l'URL EN
+PREMIER. Sa vente aurait donc dû être reconnue.
+
+J'avais une corrélation (le prix a changé la veille) et je l'ai présentée
+comme une cause. **Une explication cohérente qui n'a pas été vérifiée reste
+une hypothèse**, et l'écrire comme un fait fait perdre du temps à tout le
+monde : on corrige le mauvais endroit.
+
+**Ce qu'on sait vraiment :** la vente est passée, le tag est posé, l'accès
+n'a pas été ouvert. Restent deux causes possibles, qui se corrigent à des
+endroits OPPOSÉS :
+
+- l'appel est arrivé et a été refusé -> le bon de commande n'est pas
+  reconnu, c'est la table de routage qu'il faut compléter ;
+- l'appel n'est jamais arrivé -> le webhook n'est pas posé sur ce bon de
+  commande, et aucune ligne de code ne peut le rattraper.
+
+**Rien dans l'app ne permettait de les distinguer.** La réponse dormait
+dans `webhook_logs`, c'est à dire dans Supabase, c'est à dire nulle part
+pour Béné. D'où les deux ajouts, et c'est eux qui comptent :
+
+1. **Une vente encaissée sans accès envoie une alerte email** aux admins,
+   avec l'offer-price-id et l'URL reçus, c'est à dire exactement les deux
+   lignes à ajouter pour que le suivant passe. Le refus était le bon
+   comportement ; c'est le silence qui coûtait.
+2. **`/admin` liste les appels Systeme.io reçus** (`WebhookLogsCard` +
+   `app/api/admin/webhook-logs/route.ts`), avec pour chaque ligne ce que
+   le routage répondrait AUJOURD'HUI. Une vente absente de cette liste
+   n'est jamais arrivée : la question se tranche en un coup d'oeil, et
+   sans refaire un achat.
+
+**Sur les identifiants d'offre, à ne pas réapprendre :** les bons de
+commande récents envoient un id PARTAGÉ (`offerprice-dc9c3e75`, le même
+pour le mensuel et pour l'annuel). Il ne peut distinguer aucun plan, et
+c'est pour ça que l'URL passe en premier depuis le 2 juin. Les ids
+numériques ajoutés le 7 août sont un repli, pas la voie principale.
+
+**La règle qui reste vraie :** tout plan vendu doit être joignable par une
+URL ET par un offer-price-id. Deux voies, pas une.
+`tests/logic/sio-plan-routing.test.mts` le vérifie pour les quatre plans
+vendus, et interdit qu'un même id route vers deux plans différents.
+

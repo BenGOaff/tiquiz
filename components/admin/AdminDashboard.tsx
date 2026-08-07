@@ -10,6 +10,7 @@ import { toast } from "sonner";
 
 import ResellersCard from "@/components/admin/ResellersCard";
 import ResellerPaymentEventsCard from "@/components/admin/ResellerPaymentEventsCard";
+import WebhookLogsCard from "@/components/admin/WebhookLogsCard";
 
 type User = {
   user_id?: string; id?: string; email: string; first_name?: string; last_name?: string;
@@ -270,6 +271,10 @@ export default function AdminDashboard() {
 
       {/* Suivi des paiements revendeurs (diagnostic) */}
       <ResellerPaymentEventsCard />
+
+      {/* Appels Systeme.io recus : repond a "est-ce que la vente est
+          arrivee jusqu'a nous ?" (drame Ivan, 7 aout 2026). */}
+      <WebhookLogsCard />
     </div>
   );
 }
