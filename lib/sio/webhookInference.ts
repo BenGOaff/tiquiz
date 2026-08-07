@@ -19,10 +19,24 @@ export type TiquizPlan =
   | "yearly_plus";
 
 /**
- * Anciens bons de commande Tiquiz — IDs numériques uniques.
- * Conservés pour rétrocompat ; les nouveaux bons (depuis 2 juin 2026
- * après-midi) partagent tous le même offer-price-id, donc on bascule
- * sur le matching par URL.
+ * LES PLANS TARIFAIRES SYSTEME.IO, PAR LEUR ID NUMÉRIQUE.
+ *
+ * -- DEUX IDENTIFIANTS QU'ON A CONFONDUS PENDANT DEUX MOIS -------------
+ *
+ * Le 2 juin, on a noté que "tous les nouveaux bons de commande partagent
+ * le même offer-price-id (`offerprice-dc9c3e75`)", et on a basculé le
+ * routage sur l'URL pour contourner cette ambiguïté.
+ *
+ * C'était une confusion. `offerprice-dc9c3e75` est l'**id du bloc HTML**
+ * de la page de commande (`<div id="offerprice-dc9c3e75">`), le même sur
+ * tous les bons parce que c'est le même gabarit de page. Le webhook, lui,
+ * n'envoie jamais ça : il envoie `pricePlan.id`, un entier UNIQUE par
+ * plan tarifaire. Vérifié le 7 août 2026 sur le journal de production,
+ * où la vente d'Ivan porte `3375217`.
+ *
+ * Conséquence : cette table n'est PAS un vestige, c'est la voie
+ * principale. L'URL, elle, est absente des événements de vente (cf. le
+ * bloc de la fin de fichier) : elle ne sert que sur les optins.
  */
 export const OFFER_TO_PLAN: Record<string, TiquizPlan> = {
   // Mensuel, vendu 9€/mois À L'ÉPOQUE de ces bons. Le prix public est
@@ -39,28 +53,24 @@ export const OFFER_TO_PLAN: Record<string, TiquizPlan> = {
   "offer-price-3198280": "lifetime",
   "3198280": "lifetime",
 
-  // ── LES PLANS TARIFAIRES DU NOUVEAU PRIX (7 août 2026) ─────────────
+  // ── LES PLANS DU NOUVEAU PRIX (drame Ivan, 7 août 2026) ────────────
   //
-  // Ids relevés dans Systeme.io après le passage à 17 / 170 : "NV tiquiz
-  // mensuel" (17,00 €) et "NV Tiquiz annuel" (170,00 €), plus les deux
-  // paliers PLUS qui ne tenaient jusque là QUE par leur URL.
+  // Ivan paie son mensuel, son compte reste en gratuit. Le journal de
+  // production montre l'appel arrivé : `pricePlan.id = 3375217`, AUCUNE
+  // URL de tunnel, réponse `unknown_offer:3375217`, accès refusé.
   //
-  // CE N'EST PAS CE QUI A BLOQUÉ IVAN, et c'est écrit ici pour que
-  // personne ne relise ce bloc comme la cause. Béné a confirmé après
-  // coup que les URLs des bons de commande n'ont PAS changé : seul le
-  // tarif a bougé, sur les 4 bons existants. Le routage par URL, qui
-  // passe EN PREMIER, aurait donc dû reconnaître sa vente. Sa panne est
-  // ailleurs, et probablement en amont : l'appel n'est peut-être jamais
-  // arrivé. L'écran des appels reçus, dans /admin, est là pour trancher.
+  // Le bon de commande a gardé son URL, mais il vend depuis le 6 août un
+  // NOUVEAU plan tarifaire ("NV tiquiz mensuel" à 17,00 €), dont l'id
+  // était absent d'ici. Le refus est le bon comportement (on ne devine
+  // jamais un plan payant), mais il laisse dehors un client qui a payé.
   //
-  // Ces entrées restent quand même, parce qu'un plan vendu doit être
-  // joignable par DEUX voies : celle qui tient encore sauve la vente
-  // quand l'autre bouge. Mais elles ne servent QUE si Systeme.io envoie
-  // l'id NUMÉRIQUE du plan. Les bons de commande récents envoient un
-  // identifiant PARTAGÉ (`offerprice-dc9c3e75`, le même pour le mensuel
-  // et pour l'annuel), qui ne peut par construction distinguer aucun
-  // plan. D'où la priorité donnée à l'URL, et d'où le fait que ce repli
-  // ne la remplacera jamais.
+  // Les deux paliers PLUS sont ajoutés dans la foulée : ils ne tenaient
+  // QUE par leur URL depuis le 2 juin, donc ils étaient irroutables sur
+  // une vente, exactement comme Ivan, sans que personne l'ait vu.
+  //
+  // **Changer un tarif dans Systeme.io crée un nouveau plan, donc un
+  // nouvel id, donc une ligne à ajouter ici.** C'est une modification de
+  // code déguisée en réglage.
   "offer-price-3375217": "monthly",
   "3375217": "monthly",
   "offer-price-3375221": "yearly",
@@ -72,9 +82,13 @@ export const OFFER_TO_PLAN: Record<string, TiquizPlan> = {
 };
 
 /**
- * URL canoniques des bons de commande Tipote.fr (Béné 2 juin 2026).
- * Source de vérité pour le routage des nouveaux paliers (mensuel+ /
- * annuel+) dont les offer-price-id sont ambigus.
+ * URL canoniques des tunnels Tipote.fr (Béné 2 juin 2026).
+ *
+ * ATTENTION À CE QUE CETTE TABLE PEUT ET NE PEUT PAS FAIRE. Un événement
+ * de VENTE ne porte aucune URL (relevé le 7 août 2026) : elle ne sert
+ * donc que sur les optins gratuits, où elle distingue le tunnel perso du
+ * tunnel affilié. Au moment où l'argent rentre, seul l'id du plan
+ * tranche.
  *
  * Format normalisé (via normalizeFunnelUrl) : `<host>/<path>` sans
  * protocole, sans www., sans trailing slash, sans query string, lowercase.
@@ -132,6 +146,94 @@ export function inferPlanFromOfferId(offerId: string | null | undefined): Tiquiz
     if (`offer-price-${num[1]}` in OFFER_TO_PLAN) return OFFER_TO_PLAN[`offer-price-${num[1]}`]!;
   }
   return null;
+}
+
+/**
+ * LE MONTANT, TROISIÈME VOIE (Béné, 7 août 2026).
+ *
+ * "Pourquoi une vente refusée ? Il a payé le client, il doit recevoir ses
+ * accès, point barre."
+ *
+ * Elle a raison, et l'ancien comportement était indéfendable : sur une
+ * offre inconnue, on refusait, donc un client qui venait de payer se
+ * retrouvait sans rien. Ce qui est ambigu dans ce cas, ce n'est pas
+ * QU'IL a payé (l'événement est une vente confirmée), c'est seulement
+ * QUEL palier il a pris. On répond donc à la vraie question.
+ *
+ * Le montant tranche entre le palier de base et le palier PLUS, qui sont
+ * les seuls à ne pas ouvrir la même chose. Correspondance EXACTE
+ * uniquement : un montant remisé ne doit pas ouvrir un palier au hasard,
+ * il retombera sur le repli.
+ */
+const AMOUNT_TO_PLAN: Record<number, TiquizPlan> = {
+  // En centimes, comme les renvoie l'API Systeme.io.
+  900: "monthly",      // ancien prix
+  1700: "monthly",     // depuis le 6 août 2026
+  9000: "yearly",      // ancien prix
+  17000: "yearly",     // depuis le 6 août 2026
+  2900: "monthly_plus",
+  29000: "yearly_plus",
+  5700: "lifetime",    // opération terminée, gardé pour l'historique
+};
+
+/** Paths à essayer pour le montant payé. */
+export const AMOUNT_PATHS = [
+  "pricePlan.amount",
+  "data.pricePlan.amount",
+  "order.total_amount",
+  "data.order.total_amount",
+  "order.amount",
+  "data.order.amount",
+  "amount",
+  "data.amount",
+] as const;
+
+/**
+ * Devine le palier depuis le montant payé.
+ *
+ * On essaie la valeur telle quelle (centimes) PUIS multipliée par 100 :
+ * selon l'événement, Systeme.io envoie tantôt `1700`, tantôt `17.00`.
+ * Sans ce doublon, un payload en euros ne correspondrait à rien.
+ */
+export function inferPlanFromAmount(raw: unknown): TiquizPlan | null {
+  const n = typeof raw === "number" ? raw : Number(String(raw ?? "").replace(",", "."));
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const centimes = Math.round(n);
+  if (centimes in AMOUNT_TO_PLAN) return AMOUNT_TO_PLAN[centimes]!;
+  const converti = Math.round(n * 100);
+  if (converti in AMOUNT_TO_PLAN) return AMOUNT_TO_PLAN[converti]!;
+  return null;
+}
+
+/**
+ * LE REPLI QUAND ON NE SAIT VRAIMENT PAS : le palier de base.
+ *
+ * **On n'abandonne JAMAIS un client qui a payé.** Le choix de `monthly`
+ * n'est pas arbitraire :
+ *
+ *   - `monthly` et `yearly` ouvrent EXACTEMENT les mêmes fonctionnalités
+ *     (cf. lib/planLimits.ts) : seule la facturation diffère, et c'est
+ *     Systeme.io qui la gère. Se tromper entre les deux ne coûte donc
+ *     rien au client ;
+ *   - c'est le palier le moins cher, donc on ne donne jamais un PLUS par
+ *     accident.
+ *
+ * Béné reçoit une alerte à chaque fois, avec l'identifiant reçu : elle
+ * corrige en deux clics si c'était un annuel ou un PLUS.
+ */
+export const FALLBACK_PAID_PLAN: TiquizPlan = "monthly";
+
+/**
+ * Cet événement confirme-t-il un encaissement ?
+ *
+ * Le repli payant ne s'applique QU'ICI. Les annulations, remboursements
+ * et échecs de paiement sont filtrés en amont ; ce garde-fou empêche
+ * qu'un événement d'un autre genre (une notification, un test) ouvre un
+ * accès payant à lui tout seul.
+ */
+export function isConfirmedSaleEvent(eventType: string | null | undefined): boolean {
+  if (!eventType) return false;
+  return /SALE|ORDER|PURCHASE|VENTE|COMMANDE/i.test(eventType);
 }
 
 /** Paths à essayer pour extraire l'URL du bon de commande depuis un payload SIO.
