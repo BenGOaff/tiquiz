@@ -1382,50 +1382,62 @@ Ivan Pellegry passe du gratuit au mensuel. Côté Systeme.io tout est bon :
 il porte le tag `tiquiz-mensuel`, la vente est encaissée. Côté Tiquiz, son
 compte reste en `free`.
 
-**MA PREMIÈRE EXPLICATION ÉTAIT FAUSSE, et la garder ici sert de leçon.**
-J'avais vu que le passage à 17 / 170 avait créé de nouveaux plans
-tarifaires côté Systeme.io (ids 3375217 et 3375221, absents de notre table)
-et j'en ai conclu que le webhook ne pouvait plus rattacher la vente. Béné a
-corrigé : **les URLs des bons de commande n'ont pas changé**, seul le tarif
-a bougé, sur les 4 bons existants. Or le routage passe par l'URL EN
-PREMIER. Sa vente aurait donc dû être reconnue.
+**Le journal de production, une fois consultable, a tout dit :**
 
-J'avais une corrélation (le prix a changé la veille) et je l'ai présentée
-comme une cause. **Une explication cohérente qui n'a pas été vérifiée reste
-une hypothèse**, et l'écrire comme un fait fait perdre du temps à tout le
-monde : on corrige le mauvais endroit.
+```
+07/08 11:56-11:57  subscription.payment.failed  tunnel: -  offre: 3375217
+07/08 11:58        customer.sale.completed      tunnel: -  offre: 3375217
+                   -> refused, unknown_offer:3375217
+06/08 21:05        free_optin   tunnel: tipote.fr/tiquiz-gratuit  offre: -
+```
 
-**Ce qu'on sait vraiment :** la vente est passée, le tag est posé, l'accès
-n'a pas été ouvert. Restent deux causes possibles, qui se corrigent à des
-endroits OPPOSÉS :
+Le webhook est bien posé et il arrive. En passant à 17 / 170, le bon de
+commande a gardé son URL mais vend un NOUVEAU plan tarifaire (`3375217`),
+absent de `OFFER_TO_PLAN`. La route a répondu `unknown_offer` et refusé,
+ce qui est le bon comportement, mais laisse dehors un client qui a payé.
 
-- l'appel est arrivé et a été refusé -> le bon de commande n'est pas
-  reconnu, c'est la table de routage qu'il faut compléter ;
-- l'appel n'est jamais arrivé -> le webhook n'est pas posé sur ce bon de
-  commande, et aucune ligne de code ne peut le rattraper.
+**LA DÉCOUVERTE QUI COMPTE : un événement de VENTE ne porte AUCUNE URL de
+tunnel.** Seul l'optin gratuit en a une. Le routage par URL, qui passe en
+premier, ne peut donc rien faire sur une vente : **l'offer-price-id est
+la seule voie qui existe** au moment où l'argent rentre.
 
-**Rien dans l'app ne permettait de les distinguer.** La réponse dormait
-dans `webhook_logs`, c'est à dire dans Supabase, c'est à dire nulle part
-pour Béné. D'où les deux ajouts, et c'est eux qui comptent :
+Corollaire immédiat, et il vaut un audit : les paliers PLUS n'avaient
+QUE leur URL depuis le 2 juin. Ils étaient donc irroutables sur une
+vente, exactement comme Ivan, sans que personne l'ait jamais vu.
+
+**JE ME SUIS TROMPÉ DEUX FOIS, ET LES DEUX FOIS DE LA MÊME FAÇON.**
+D'abord j'ai présenté "les nouveaux ids ne sont pas dans la table" comme
+un fait alors que c'était une hypothèse. Puis, quand Béné a précisé que
+les URLs n'avaient pas changé, j'ai retiré un diagnostic JUSTE en
+raisonnant "le routage par URL aurait donc dû marcher" : sans vérifier
+qu'il y avait une URL dans le payload. Il n'y en a pas.
+
+> **Les deux erreurs sont la même : raisonner sur la forme SUPPOSÉE d'un
+> payload au lieu de la regarder.** Un journal se lit, il ne se déduit pas.
+
+`tests/logic/sio-plan-routing.test.mts` fige désormais la forme OBSERVÉE
+(vente sans URL avec `pricePlan.id`, optin avec URL sans offre) : si un
+jour une vente cesse d'être reconnue, il dira si c'est le payload qui a
+bougé.
+
+**Les deux ajouts qui suppriment le silence :**
 
 1. **Une vente encaissée sans accès envoie une alerte email** aux admins,
    avec l'offer-price-id et l'URL reçus, c'est à dire exactement les deux
-   lignes à ajouter pour que le suivant passe. Le refus était le bon
-   comportement ; c'est le silence qui coûtait.
+   lignes à ajouter pour que le suivant passe. Le refus était juste ;
+   c'est le silence qui coûtait une journée et un client.
 2. **`/admin` liste les appels Systeme.io reçus** (`WebhookLogsCard` +
    `app/api/admin/webhook-logs/route.ts`), avec pour chaque ligne ce que
-   le routage répondrait AUJOURD'HUI. Une vente absente de cette liste
-   n'est jamais arrivée : la question se tranche en un coup d'oeil, et
-   sans refaire un achat.
+   le routage répondrait AUJOURD'HUI. C'est cet écran qui a tranché en
+   dix secondes ce que deux diagnostics à l'aveugle n'avaient pas su
+   trancher. Une vente absente de la liste n'est jamais arrivée.
 
-**Sur les identifiants d'offre, à ne pas réapprendre :** les bons de
-commande récents envoient un id PARTAGÉ (`offerprice-dc9c3e75`, le même
-pour le mensuel et pour l'annuel). Il ne peut distinguer aucun plan, et
-c'est pour ça que l'URL passe en premier depuis le 2 juin. Les ids
-numériques ajoutés le 7 août sont un repli, pas la voie principale.
+**Règle : tout plan vendu doit être joignable par un offer-price-id.**
+L'URL est un complément utile (elle distingue les tunnels affiliés sur
+les optins), pas une voie de secours : elle est absente là où ça compte.
+Le test l'exige pour les quatre plans vendus, et interdit qu'un même id
+route vers deux plans différents.
 
-**La règle qui reste vraie :** tout plan vendu doit être joignable par une
-URL ET par un offer-price-id. Deux voies, pas une.
-`tests/logic/sio-plan-routing.test.mts` le vérifie pour les quatre plans
-vendus, et interdit qu'un même id route vers deux plans différents.
-
+**Quand un tarif change, il y a donc trois choses à faire, pas une :** le
+prix affiché dans l'app, l'entrée URL du bon de commande, et surtout son
+nouvel offer-price-id.
