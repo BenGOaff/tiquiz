@@ -17,6 +17,7 @@ import { InsightsList } from "@/components/ui/insights-card";
 import { SocialProofCounter } from "@/components/SocialProofCounter";
 import { computeInsights } from "@/lib/insights";
 import { stripHtml } from "@/lib/richText";
+import { maxSeriesValue, yAxisWidth } from "@/lib/charts/yAxis";
 import {
   Plus, Eye, Users, TrendingUp, ClipboardList, Target, BarChart3,
   Sparkles, Mail, Link2, ArrowUpRight, Download,
@@ -523,7 +524,7 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
                   <ResponsiveContainer width="100%" height={230}>
                     <BarChart
                       data={chartTrafficData}
-                      margin={{ top: 5, right: 5, left: -20, bottom: 5 }}
+                      margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
                       barGap={2}
                       barCategoryGap="20%"
                     >
@@ -542,6 +543,10 @@ export default function DashboardClient({ userEmail }: { userEmail?: string }) {
                         tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                         axisLine={false}
                         tickLine={false}
+                        width={yAxisWidth(
+                          maxSeriesValue(chartTrafficData, [t("views"), t("leads")]),
+                          { fontSize: 11 },
+                        )}
                       />
                       {hasRealTraffic && <Tooltip content={<CustomTooltip />} />}
                       <Legend
