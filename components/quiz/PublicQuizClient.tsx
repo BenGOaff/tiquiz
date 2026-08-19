@@ -41,7 +41,7 @@ import {
   type AxisScore,
 } from "@/lib/quizScoring";
 import { resolveShareNetworks } from "@/lib/quiz/shareNetworks";
-import { buildShareText, cleanShareUrl } from "@/lib/quiz/shareText";
+import { buildResultShareText, buildShareText, cleanShareUrl } from "@/lib/quiz/shareText";
 import { pickProfileWinner, tallyVotes, tieBreakMode, type ProfileVote } from "@/lib/quiz/profileWinner";
 import { ensureExternalUrl } from "@/lib/url";
 import { celebrate } from "@/lib/celebrate";
@@ -359,6 +359,10 @@ type QuizTranslations = {
   thanksForSharing: string;
   emailPlaceholder: string;
   defaultShareMessage: (title: string) => string;
+  // Partage DEPUIS l'ecran de resultat : la phrase NOMME le profil
+  // obtenu (retour client 7 aout 2026). Le lien, lui, reste celui du
+  // quiz : celui qui le recoit vient passer le test.
+  defaultResultShareMessage: (result: string) => string;
   // Share step (between capture and result)
   bonusStepHeading: string;
   bonusStepIntro: (bonus: string) => string;
@@ -540,6 +544,7 @@ const translations: Record<string, QuizTranslations> = {
     emailPlaceholder: "ton@email.com",
     thanksForSharing: "Merci pour le partage !",
     defaultShareMessage: (title) => `Je viens de faire le quiz "${title}" ! Fais-le aussi :`,
+    defaultResultShareMessage: (result) => `J'ai obtenu : ${result}. Et toi ? Fais le quiz pour le savoir :`,
     bonusStepHeading: "Avant de découvrir tes résultats…",
     bonusStepIntro: (bonus) => `Partage le quiz pour recevoir ${bonus || "ton bonus"} avec tes résultats.`,
     skipShare: "Non merci, voir mes résultats",
@@ -618,6 +623,7 @@ const translations: Record<string, QuizTranslations> = {
     emailPlaceholder: "votre@email.com",
     thanksForSharing: "Merci pour le partage !",
     defaultShareMessage: (title) => `Je viens de faire le quiz "${title}" ! Faites-le aussi :`,
+    defaultResultShareMessage: (result) => `J'ai obtenu : ${result}. Et vous ? Faites le quiz pour le savoir :`,
     bonusStepHeading: "Avant de découvrir vos résultats…",
     bonusStepIntro: (bonus) => `Partagez le quiz pour recevoir ${bonus || "votre bonus"} avec vos résultats.`,
     skipShare: "Non merci, voir mes résultats",
@@ -696,6 +702,7 @@ const translations: Record<string, QuizTranslations> = {
     emailPlaceholder: "your@email.com",
     thanksForSharing: "Thanks for sharing!",
     defaultShareMessage: (title) => `I just took the quiz "${title}"! Try it too:`,
+    defaultResultShareMessage: (result) => `I got: ${result}. What about you? Take the quiz to find out:`,
     bonusStepHeading: "Before you see your results…",
     bonusStepIntro: (bonus) => `Share the quiz to get ${bonus || "your bonus"} with your results.`,
     skipShare: "No thanks, see my results",
@@ -774,6 +781,7 @@ const translations: Record<string, QuizTranslations> = {
     emailPlaceholder: "tu@email.com",
     thanksForSharing: "\u00a1Gracias por compartir!",
     defaultShareMessage: (title) => `\u00a1Acabo de hacer el quiz "${title}"! Hazlo t\u00fa tambi\u00e9n:`,
+    defaultResultShareMessage: (result) => `Mi resultado: ${result}. \u00bfY t\u00fa? Haz el quiz para descubrirlo:`,
     bonusStepHeading: "Antes de ver tus resultados…",
     bonusStepIntro: (bonus) => `Comparte el quiz para recibir ${bonus || "tu bonus"} con tus resultados.`,
     skipShare: "No gracias, ver mis resultados",
@@ -852,6 +860,7 @@ const translations: Record<string, QuizTranslations> = {
     emailPlaceholder: "deine@email.com",
     thanksForSharing: "Danke f\u00fcrs Teilen!",
     defaultShareMessage: (title) => `Ich habe gerade das Quiz "${title}" gemacht! Probier es auch:`,
+    defaultResultShareMessage: (result) => `Mein Ergebnis: ${result}. Und du? Mach das Quiz und finde es heraus:`,
     bonusStepHeading: "Bevor du dein Ergebnis siehst…",
     bonusStepIntro: (bonus) => `Teile das Quiz, um ${bonus || "deinen Bonus"} mit deinen Ergebnissen zu erhalten.`,
     skipShare: "Nein danke, Ergebnis zeigen",
@@ -930,6 +939,7 @@ const translations: Record<string, QuizTranslations> = {
     emailPlaceholder: "seu@email.com",
     thanksForSharing: "Obrigado por compartilhar!",
     defaultShareMessage: (title) => `Acabei de fazer o quiz "${title}"! Fa\u00e7a voc\u00ea tamb\u00e9m:`,
+    defaultResultShareMessage: (result) => `O meu resultado: ${result}. E o teu? Faz o quiz para descobrir:`,
     bonusStepHeading: "Antes de ver seu resultado…",
     bonusStepIntro: (bonus) => `Compartilhe o quiz para receber ${bonus || "seu bônus"} com seus resultados.`,
     skipShare: "Não, obrigado, ver meus resultados",
@@ -1008,6 +1018,7 @@ const translations: Record<string, QuizTranslations> = {
     emailPlaceholder: "tua@email.com",
     thanksForSharing: "Grazie per la condivisione!",
     defaultShareMessage: (title) => `Ho appena fatto il quiz "${title}"! Fallo anche tu:`,
+    defaultResultShareMessage: (result) => `Il mio risultato: ${result}. E il tuo? Fai il quiz per scoprirlo:`,
     bonusStepHeading: "Prima di vedere i tuoi risultati…",
     bonusStepIntro: (bonus) => `Condividi il quiz per ricevere ${bonus || "il tuo bonus"} con i tuoi risultati.`,
     skipShare: "No grazie, mostra i risultati",
@@ -1086,6 +1097,7 @@ const translations: Record<string, QuizTranslations> = {
     emailPlaceholder: "بريدك@email.com",
     thanksForSharing: "\u0634\u0643\u0631\u0627\u064b \u0644\u0644\u0645\u0634\u0627\u0631\u0643\u0629!",
     defaultShareMessage: (title) => `\u0644\u0642\u062f \u0623\u062c\u0631\u064a\u062a \u0627\u062e\u062a\u0628\u0627\u0631 "${title}"! \u062c\u0631\u0628\u0647 \u0623\u0646\u062a \u0623\u064a\u0636\u0627\u064b:`,
+    defaultResultShareMessage: (result) => `\u0646\u062a\u064a\u062c\u062a\u064a : ${result}. \u0648\u0623\u0646\u062a\u061f \u062c\u0631\u0628 \u0627\u0644\u0627\u062e\u062a\u0628\u0627\u0631 \u0644\u062a\u0639\u0631\u0641:`,
     bonusStepHeading: "قبل أن ترى نتائجك…",
     bonusStepIntro: (bonus) => `شارك الاختبار لتستلم ${bonus || "مكافأتك"} مع نتائجك.`,
     skipShare: "لا شكراً، أرني النتائج",
@@ -2485,13 +2497,24 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
    * partage montre le quiz, pas le profil que j'ai eu"). Decoche : l'URL
    * du quiz seul.
    */
-  const resultShareUrl = (): string => {
-    if (typeof window === "undefined") return "";
+  /**
+   * CE QU'ON PARTAGE DEPUIS L'ECRAN DE RESULTAT : le texte ET le lien,
+   * decides ENSEMBLE.
+   *
+   * Le reglage `share_result_page` gouverne les deux. Decoche, le lien
+   * perd son `?rp=`, donc l'apercu social redevient celui du quiz : un
+   * texte qui annoncerait quand meme "j'ai obtenu X" contredirait
+   * l'image juste en dessous. Deux moities d'une meme decision calculees
+   * separement finissent toujours par se contredire, c'est la lecon des
+   * reseaux de partage, du score et de l'alignement du sous-titre.
+   */
+  const resultShare = (): { scope: ShareScope; url: string } => {
+    if (typeof window === "undefined") return { scope: "quiz", url: "" };
     const base = `${window.location.origin}${window.location.pathname}`;
     if (quiz?.share_result_page !== false && resultProfile) {
-      return `${base}?rp=${resultProfile.id}`;
+      return { scope: "result", url: `${base}?rp=${resultProfile.id}` };
     }
-    return base;
+    return { scope: "quiz", url: base };
   };
 
   // Carte de resultat en PNG : le comportement historique de
@@ -2714,6 +2737,9 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
   // Copy time used to gate the confirmation button (prevents 1-click cheat).
   const [copyTimestamp, setCopyTimestamp] = useState(0);
 
+  // Les deux partages du viewer. Voir getShareData juste dessous.
+  type ShareScope = "quiz" | "result";
+
   // urlOverride : l'ecran de resultat partage l'URL ?rp= (qui met en
   // avant le profil obtenu), pas l'URL du quiz.
   //
@@ -2727,12 +2753,32 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
   //
   // `interp` d'abord : sans lui, un `{prenom}` partirait tel quel dans
   // le tweet.
-  const getShareData = (urlOverride?: string) => {
-    const shareText = buildShareText(
-      interp(quiz?.share_message),
-      interp(quiz?.title),
-      t.defaultShareMessage,
-    );
+  const getShareData = (scope: ShareScope, urlOverride?: string) => {
+    // LA MECANIQUE EST UN PARAMETRE, jamais devinee ici. Deux partages
+    // coexistent et ils ne disent pas la meme chose :
+    //
+    //   "quiz"    -> avant d'avoir son resultat. On partage le quiz.
+    //   "result"  -> l'ecran final. On partage CE QU'ON A OBTENU.
+    //
+    // Deduire le cas depuis la presence d'un `urlOverride` marcherait
+    // aujourd'hui et casserait au premier ecran qui partage une autre
+    // URL : c'est la lecon des controles "profil" appliques a un quiz
+    // score (drame Veronique, 1er aout 2026).
+    const shareText =
+      scope === "result"
+        ? buildResultShareText(
+            interp(quiz?.share_message),
+            // Le NOM court du profil, sans "tu es le/la" ni marqueurs
+            // inclusifs : c'est ce qu'on colle dans un post.
+            labelForOtherResult(resultProfile?.title),
+            interp(quiz?.title),
+            { withResult: t.defaultResultShareMessage, quizOnly: t.defaultShareMessage },
+          )
+        : buildShareText(
+            interp(quiz?.share_message),
+            interp(quiz?.title),
+            t.defaultShareMessage,
+          );
     // L'URL AUSSI est nettoyee. Une visiteuse arrivee par une pub
     // Instagram a un `window.location.href` charge de `utm_*` et de
     // `fbclid` : recopie tel quel, le lien partage faisait cinq lignes
@@ -2781,8 +2827,8 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
   const MIN_SHARE_DWELL_MS = 3500;
   const MIN_COPY_DWELL_MS = 5000;
 
-  const shareOn = (platform: string, urlOverride?: string) => {
-    const { shareText, shareUrl } = getShareData(urlOverride);
+  const shareOn = (platform: string, scope: ShareScope = "quiz", urlOverride?: string) => {
+    const { shareText, shareUrl } = getShareData(scope, urlOverride);
     const encoded = encodeURIComponent(shareUrl);
     const text = encodeURIComponent(shareText);
 
@@ -2824,7 +2870,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
 
     // Instagram n'a pas d'URL de partage : on copie le lien REELLEMENT
     // partage (celui du resultat depuis l'ecran de resultat).
-    if (platform === "instagram") void copyShareLink(urlOverride);
+    if (platform === "instagram") void copyShareLink(scope, urlOverride);
 
     setShareWarning(false);
     const openedAt = Date.now();
@@ -2860,8 +2906,8 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
     document.addEventListener("visibilitychange", onReturn);
   };
 
-  const copyShareLink = async (urlOverride?: string) => {
-    const { shareText, shareUrl } = getShareData(urlOverride);
+  const copyShareLink = async (scope: ShareScope = "quiz", urlOverride?: string) => {
+    const { shareText, shareUrl } = getShareData(scope, urlOverride);
     await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
     setLinkCopied(true);
     setCopyConfirmVisible(true);
@@ -4019,7 +4065,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
                 <Button
                   size="lg"
                   className={`w-full h-12 rounded-full ${btnShapeClass}`}
-                  onClick={() => shareOn("native")}
+                  onClick={() => shareOn("native", "quiz")}
                 >
                   {t.shareToUnlock}
                 </Button>
@@ -4028,7 +4074,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
               <div className="flex flex-wrap gap-2 justify-center">
                 <ShareNetworkButtons allowed={allowedNetworks} onShare={shareOn} />
                 <button
-                  onClick={() => void copyShareLink()}
+                  onClick={() => void copyShareLink("quiz")}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-muted text-foreground text-sm font-medium hover:opacity-80 transition-opacity border"
                 >
                   {linkCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
@@ -4243,7 +4289,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
             size="lg"
             className="w-full rounded-full"
             onClick={async () => {
-              const shareData = getShareData();
+              const shareData = getShareData("quiz");
               try {
                 if (typeof navigator !== "undefined" && navigator.share) {
                   await navigator.share({ title: stripHtml(quiz.title), text: shareData.shareText, url: shareData.shareUrl });
@@ -4681,13 +4727,19 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
                   <div className="flex flex-wrap gap-2 justify-center">
                     <ShareNetworkButtons
                       allowed={resolveShareNetworks(quiz.share_networks)}
-                      onShare={(platform) => shareOn(platform, resultShareUrl())}
+                      onShare={(platform) => {
+                        const { scope, url } = resultShare();
+                        shareOn(platform, scope, url);
+                      }}
                     />
                     {/* Repli universel : marche meme si le visiteur n'utilise
                         aucun des reseaux proposes. */}
                     <button
                       type="button"
-                      onClick={() => void copyShareLink(resultShareUrl())}
+                      onClick={() => {
+                        const { scope, url } = resultShare();
+                        void copyShareLink(scope, url);
+                      }}
                       className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border bg-background text-sm font-medium hover:bg-muted transition-colors"
                     >
                       {linkCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}

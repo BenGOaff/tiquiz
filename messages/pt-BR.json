@@ -1172,7 +1172,7 @@
     "remove": "Remover",
     "addBonusVisual": "Adicionar um visual",
     "shareMessageLabel": "Mensagem de compartilhamento",
-    "shareMessageHint": "Preenchido quando o visitante compartilha no X, WhatsApp, Threads ou pelo celular. O Facebook e o LinkedIn nunca preenchem o texto: eles mostram a prévia do link, cuja descrição usa esta mensagem (a menos que você defina uma descrição OG personalizada).",
+    "shareMessageHint": "Preenchido quando o visitante compartilha no X, WhatsApp, Threads ou pelo celular. O Facebook e o LinkedIn nunca preenchem o texto: eles mostram a prévia do link, cuja descrição usa esta mensagem (a menos que você defina uma descrição OG personalizada). Na tela de resultado, o compartilhamento nomeia automaticamente o perfil obtido. Escreva {resultat} na sua mensagem para colocar esse nome você mesma.",
     "shareMessageDefault": "Acabei de fazer o quiz \"{title}\"!",
     "shareTagLabel": "Tag Systeme.io após compartilhamento",
     "shareTagHint": "Adicionada ao contato quando ele realmente compartilha. Dispara sua automação.",
