@@ -116,6 +116,14 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/auth/") ||
     pathname.startsWith("/legal/") ||
+    // Pages de vente servies par nous. PUBLIQUES par nature : un
+    // visiteur qui decouvre Tiquiz n'a evidemment pas de session. Sans
+    // cette ligne le middleware le renverrait vers /login, ce qui
+    // transformerait une page de vente en cul-de-sac.
+    // La porte de l'apercu n'est pas ici : c'est la cle
+    // SALES_PREVIEW_TOKEN dans l'URL, verifiee par la route elle-meme.
+    pathname.startsWith("/apercu/") ||
+    pathname.startsWith("/v/") ||
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname === "/favicon.ico"
