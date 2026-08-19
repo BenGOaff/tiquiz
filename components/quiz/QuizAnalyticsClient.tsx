@@ -54,6 +54,7 @@ import { readFunnelSignal, stepLoss } from "@/lib/quiz/funnelSignal";
 import type { FunnelCohort } from "@/lib/quiz/funnelCohort";
 import { biggestLeak, buildFullFunnel } from "@/lib/quiz/fullFunnel";
 import { DIRECT_BLIND_PCT, type TrafficReading } from "@/lib/quiz/trafficSource";
+import { maxSeriesValue, yAxisWidth } from "@/lib/charts/yAxis";
 
 type Period = "7" | "30" | "90" | "all";
 
@@ -331,7 +332,7 @@ export function QuizAnalyticsClient({ quizId, initial, hideCounts = false }: Pro
             <EmptyState message={t("emptyLeadsPeriod")} />
           ) : (
             <ResponsiveContainer width="100%" height={240}>
-              <AreaChart data={data.leadsByDay} margin={{ top: 4, left: -12, right: 8 }}>
+              <AreaChart data={data.leadsByDay} margin={{ top: 4, left: 0, right: 8 }}>
                 <defs>
                   <linearGradient id="qaLeadFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#5D6CDB" stopOpacity={0.35} />
@@ -353,6 +354,10 @@ export function QuizAnalyticsClient({ quizId, initial, hideCounts = false }: Pro
                   allowDecimals={false}
                   fontSize={10}
                   tick={{ fill: "hsl(var(--muted-foreground))" }}
+                  width={yAxisWidth(
+                    maxSeriesValue(data.leadsByDay, ["views", "count"]),
+                    { fontSize: 10 },
+                  )}
                 />
                 <Tooltip content={<DayTooltip showViews={showViews} />} />
                 {/* Vues en fond (gris) — visible seulement si les vues sont

@@ -35,6 +35,7 @@ import { SkeletonCard } from "@/components/ui/skeleton";
 import GlobalInsightsPanel from "@/components/insights/GlobalInsightsPanel";
 import { readFunnelSignal, stepLoss } from "@/lib/quiz/funnelSignal";
 import { biggestLeak, buildFullFunnel } from "@/lib/quiz/fullFunnel";
+import { maxSeriesValue, yAxisWidth } from "@/lib/charts/yAxis";
 import {
   BarChart3, Eye, Play, CheckCircle, Users, Share2, TrendingUp, TrendingDown,
   Sparkles, ArrowRight, Info,
@@ -293,7 +294,7 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
                   )}
                   <div className="h-[260px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -16, bottom: 0 }}>
+                      <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                         <defs>
                           <linearGradient id="leadFill" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.45} />
@@ -316,7 +317,10 @@ export default function StatsShell({ userEmail }: { userEmail: string }) {
                           stroke="hsl(var(--muted-foreground))"
                           tick={{ fontSize: 11 }}
                           allowDecimals={false}
-                          width={32}
+                          width={yAxisWidth(
+                            maxSeriesValue(chartData, ["views", "count"]),
+                            { fontSize: 11 },
+                          )}
                         />
                         <Tooltip content={<AcqTooltip showViews={hasDailyViews} />} />
                         {hasDailyViews && (
