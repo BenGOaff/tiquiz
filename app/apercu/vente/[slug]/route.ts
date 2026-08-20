@@ -25,8 +25,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "node:fs";
 import path from "node:path";
-import { timingSafeEqual } from "node:crypto";
 import { renderSalesPage, type SalesPageMeta } from "@/lib/sales/servePage";
+import { isSalesOpen } from "@/lib/sales/previewGate";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,27 +47,13 @@ const PAGES: Record<string, Omit<SalesPageMeta, "slug">> = {
   },
 };
 
-/** Comparaison à durée constante : une clé ne se devine pas à la montre. */
-function memeCle(recue: string, attendue: string): boolean {
-  const a = Buffer.from(recue);
-  const b = Buffer.from(attendue);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
-
-function porteOuverte(req: NextRequest): boolean {
-  const attendue = (process.env.SALES_PREVIEW_TOKEN ?? "").trim();
-  // Absence de configuration = fermé. Jamais l'inverse.
-  if (attendue.length < 16) {
-    console.warn(
-      "[apercu/vente] SALES_PREVIEW_TOKEN absent ou trop court : la porte reste fermee.",
-    );
-    return false;
-  }
-  const recue = (req.nextUrl.searchParams.get("k") ?? "").trim();
-  if (!recue) return false;
-  return memeCle(recue, attendue);
-}
+// LA PORTE VIT DANS `lib/sales/previewGate.ts`, PLUS ICI.
+//
+// Cette route en avait sa propre copie (`porteOuverte` + `memeCle`),
+// pendant que le bon de commande appelait `isSalesPreviewOpen`. Deux
+// copies d'une meme decision, et le 20 aout il a fallu en ouvrir une des
+// deux sur un domaine public : c'est exactement le moment ou une copie
+// oubliee produit une page de vente en 404 le jour du lancement.
 
 export async function GET(
   req: NextRequest,
@@ -77,7 +63,7 @@ export async function GET(
 
   // Sans la bonne cle, on ne dit RIEN : ni que la page existe, ni
   // pourquoi elle est refusee.
-  if (!porteOuverte(req)) {
+  if (!isSalesOpen(req.nextUrl.searchParams.get("k"), req.headers.get("host"), process.env)) {
     return new NextResponse("Not found", { status: 404 });
   }
 

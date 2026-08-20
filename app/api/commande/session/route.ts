@@ -21,7 +21,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { findOwnerProduct } from "@/lib/checkout/catalog";
 import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ownerAccount";
 import { createOwnerCheckoutSession } from "@/lib/checkout/stripeCheckout";
-import { isSalesPreviewOpen } from "@/lib/sales/previewGate";
+import { isSalesOpen } from "@/lib/sales/previewGate";
 import { resolveAppUrl } from "@/lib/authLinks";
 
 export const runtime = "nodejs";
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // La porte du chantier. Tant qu'elle est fermée, ce bon de commande
   // n'existe pour personne, et on ne dit pas qu'il existe.
-  if (!isSalesPreviewOpen(body.k, process.env)) {
+  if (!isSalesOpen(body.k, req.headers.get("host"), process.env)) {
     return NextResponse.json({ ok: false, reason: "not_found" }, { status: 404 });
   }
 
