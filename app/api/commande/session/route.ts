@@ -22,6 +22,7 @@ import { findOwnerProduct } from "@/lib/checkout/catalog";
 import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ownerAccount";
 import { createOwnerCheckoutSession } from "@/lib/checkout/stripeCheckout";
 import { isSalesOpen } from "@/lib/sales/previewGate";
+import { checkoutReturnBase } from "@/lib/sales/salesHosts";
 import { resolveAppUrl } from "@/lib/authLinks";
 
 export const runtime = "nodejs";
@@ -72,7 +73,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "live_without_webhook" }, { status: 503 });
   }
 
-  const base = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, req.nextUrl.origin);
+  // ON RAMENE L'ACHETEUR LA OU IL A ACHETE.
+  //
+  // Sur tiquiz.fr il n'a aucune cle dans son URL : le renvoyer sur le
+  // domaine canonique lui donnerait une page 404 juste apres avoir paye.
+  // `checkoutReturnBase` n'accepte que NOS domaines de vente, donc un
+  // Host falsifie ne peut pas detourner le retour.
+  const base = checkoutReturnBase(
+    req.nextUrl.origin,
+    resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, req.nextUrl.origin),
+  );
   const retour = `${base}/commande/${product.id}/retour?session_id={CHECKOUT_SESSION_ID}&k=${encodeURIComponent(String(body.k ?? ""))}`;
 
   const result = await createOwnerCheckoutSession({

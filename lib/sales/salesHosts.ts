@@ -43,3 +43,36 @@ export function salesSlugForHost(host: string | null | undefined): string | null
 export function isPublicSalesHost(host: string | null | undefined): boolean {
   return salesSlugForHost(host) !== null;
 }
+
+/**
+ * SUR QUEL DOMAINE RAMENER L'ACHETEUR APRÈS SON PAIEMENT.
+ *
+ * Trouvé le 20 août, avant que ça ne coûte une vente. L'URL de retour
+ * était construite depuis `APP_URL`, donc `quiz.tipote.com`. Un
+ * acheteur venu de `tiquiz.fr` n'a AUCUNE clé dans son URL
+ * (c'est tout l'intérêt du domaine public) : il serait renvoyé sur un
+ * domaine où la porte est fermée, et il aurait vu une page 404 juste
+ * après avoir payé.
+ *
+ * La règle est donc : **on ramène l'acheteur là où il a acheté.** C'est
+ * aussi ce qu'il attend, et c'est ce que son navigateur affichera dans
+ * la barre d'adresse pendant tout le parcours.
+ *
+ * `origin` n'est utilisé QUE s'il fait partie de nos domaines de vente :
+ * un `Host` falsifié ne peut donc pas détourner le retour de paiement
+ * vers un site tiers. Partout ailleurs, on garde le domaine canonique.
+ */
+export function checkoutReturnBase(
+  origin: string | null | undefined,
+  canonique: string,
+): string {
+  const propre = String(origin ?? "").trim().replace(/\/$/, "");
+  if (!propre) return canonique;
+  let host: string | null = null;
+  try {
+    host = new URL(propre).host;
+  } catch {
+    return canonique;
+  }
+  return isPublicSalesHost(host) ? propre : canonique;
+}
