@@ -124,6 +124,11 @@ export async function middleware(req: NextRequest) {
     // SALES_PREVIEW_TOKEN dans l'URL, verifiee par la route elle-meme.
     pathname.startsWith("/apercu/") ||
     pathname.startsWith("/v/") ||
+    // Le bon de commande et son retour de paiement. Publics par la meme
+    // evidence : quelqu'un qui achete Tiquiz n'a pas encore de compte,
+    // c'est justement l'achat qui le lui cree. Ils restent fermes par la
+    // cle SALES_PREVIEW_TOKEN tant que le chantier n'est pas ouvert.
+    pathname.startsWith("/commande/") ||
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname === "/favicon.ico"

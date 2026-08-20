@@ -62,6 +62,15 @@ export interface OwnerProduct {
   interval: "month" | "year" | null;
   /** Le plan que ce produit ouvre dans l'app. La raison d'être de la vente. */
   plan: TiquizPlan;
+  /**
+   * Ce qu'on écrit dans le journal des ventes et dans l'audit des plans.
+   *
+   * DISTINCT de `systeme_io`, et ce n'est pas cosmétique : les deux
+   * chemins partagent la table `webhook_logs`, dont l'idempotence repose
+   * sur `(source, event_id)`. Une source commune mélangerait les deux, et
+   * un identifiant réutilisé par l'un ferait sauter une vente de l'autre.
+   */
+  source: string;
 }
 
 /**
@@ -80,6 +89,7 @@ export const OWNER_CATALOG: Readonly<Record<OwnerProductId, OwnerProduct>> = {
     currency: "eur",
     interval: "month",
     plan: "monthly",
+    source: "stripe",
   },
   "mensuel-plus": {
     id: "mensuel-plus",
@@ -88,6 +98,7 @@ export const OWNER_CATALOG: Readonly<Record<OwnerProductId, OwnerProduct>> = {
     currency: "eur",
     interval: "month",
     plan: "monthly_plus",
+    source: "stripe",
   },
   annuel: {
     id: "annuel",
@@ -96,6 +107,7 @@ export const OWNER_CATALOG: Readonly<Record<OwnerProductId, OwnerProduct>> = {
     currency: "eur",
     interval: "year",
     plan: "yearly",
+    source: "stripe",
   },
   "annuel-plus": {
     id: "annuel-plus",
@@ -104,6 +116,7 @@ export const OWNER_CATALOG: Readonly<Record<OwnerProductId, OwnerProduct>> = {
     currency: "eur",
     interval: "year",
     plan: "yearly_plus",
+    source: "stripe",
   },
 } as const;
 
