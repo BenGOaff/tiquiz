@@ -274,6 +274,21 @@ export default function AdminDashboard() {
 
       {/* Appels Systeme.io recus : repond a "est-ce que la vente est
           arrivee jusqu'a nous ?" (drame Ivan, 7 aout 2026). */}
+      {/* Un ecran qu'on ne montre pas n'existe pas (retour Jocelyne, 3 aout).
+          Le lien vit ici, au dessus du journal des appels, parce que c'est
+          exactement l'endroit ou on se demande "et cette vente, elle est
+          passee ?". */}
+      <div className="rounded-lg border p-4">
+        <p className="font-semibold">Ventes directes</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Les abonnements encaisses par Tiquiz lui-meme, avec le bouton pour rembourser
+          sans passer par Stripe.
+        </p>
+        <a href="/admin/ventes" className="mt-3 inline-block text-sm font-semibold text-primary underline">
+          Ouvrir mes ventes directes
+        </a>
+      </div>
+
       <WebhookLogsCard />
     </div>
   );

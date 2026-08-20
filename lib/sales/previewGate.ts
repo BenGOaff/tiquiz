@@ -23,6 +23,8 @@
 
 import { timingSafeEqual } from "node:crypto";
 
+import { isPublicSalesHost } from "@/lib/sales/salesHosts";
+
 /** D'où on lit les variables. Voir `lib/checkout/ownerAccount.ts`. */
 export type EnvSource = Readonly<Record<string, string | null | undefined>>;
 
@@ -68,4 +70,28 @@ export function isSalesPreviewOpen(recue: string | null | undefined, env: EnvSou
   const propre = String(recue ?? "").trim();
   if (!propre) return false;
   return memeCle(propre, attendue);
+}
+
+/**
+ * LA MÊME PORTE, MAIS QUI CONNAÎT AUSSI LE DOMAINE PUBLIC.
+ *
+ * Sur `tiquiz.fr`, la page de vente et le bon de commande sont OUVERTS :
+ * c'est tout l'intérêt d'avoir un domaine. Sur `quiz.tipote.com`, ils
+ * restent fermés par la clé, parce que c'est l'app et pas la vitrine.
+ *
+ * **L'hôte est un PARAMÈTRE, jamais deviné à l'intérieur.** On ne peut
+ * pas appeler cette fonction sans avoir dit d'où vient la requête :
+ * c'est la seule protection qui survit au prochain qui touchera au
+ * fichier (leçon des contrôles "profil" appliqués à un quiz scoré,
+ * 1er août).
+ *
+ * `isSalesPreviewOpen` reste : elle sert là où l'hôte n'a pas de sens.
+ */
+export function isSalesOpen(
+  recue: string | null | undefined,
+  host: string | null | undefined,
+  env: EnvSource,
+): boolean {
+  if (isPublicSalesHost(host)) return true;
+  return isSalesPreviewOpen(recue, env);
 }

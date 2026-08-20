@@ -46,6 +46,13 @@ export const OWN_HOSTS: ReadonlySet<string> = new Set([
   "videos.tipote.com",
   "videos.quiz.tipote.com",
   "connect.tipote.com",
+  // Nos domaines de vente (chantier du 20 aout). Sans eux, le portier
+  // des domaines personnalises les prendrait pour le domaine d'une
+  // creatrice et repondrait 404 a tout sauf a un slug de quiz.
+  // A garder en phase avec SALES_HOSTS (lib/sales/salesHosts.ts) ET
+  // avec les vhosts du Caddyfile.
+  "tiquiz.fr",
+  "www.tiquiz.fr",
   // dev / preview
   "localhost",
   "127.0.0.1",

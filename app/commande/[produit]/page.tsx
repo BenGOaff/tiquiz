@@ -39,6 +39,7 @@
 // coûteuse qu'une page de commande puisse commettre.
 
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import {
@@ -49,7 +50,7 @@ import {
   ownerBillingKey,
 } from "@/lib/checkout/catalog";
 import { readOwnerStripe, readOwnerStripePublishable } from "@/lib/checkout/ownerAccount";
-import { isSalesPreviewOpen } from "@/lib/sales/previewGate";
+import { isSalesOpen } from "@/lib/sales/previewGate";
 import CommandeClient from "./CommandeClient";
 
 export const dynamic = "force-dynamic";
@@ -86,7 +87,11 @@ export default async function Page({
   const { produit } = await params;
   const { k } = await searchParams;
 
-  if (!isSalesPreviewOpen(k, process.env)) notFound();
+  // La porte s'ouvre par la cle OU par le domaine public : sur
+  // tiquiz.fr le bon de commande doit etre accessible sans rien dans
+  // l'URL, c'est tout l'interet d'avoir un domaine.
+  const host = (await headers()).get("host");
+  if (!isSalesOpen(k, host, process.env)) notFound();
 
   const product = findOwnerProduct(produit);
   if (!product) notFound();

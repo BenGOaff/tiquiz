@@ -10,6 +10,7 @@ import { createServerClient } from "@supabase/ssr";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { customDomainsEnabled, isOwnHost, normaliseHost } from "@/lib/customDomains";
 import { routeTenantPath, TENANT_SLUG_PREFIX } from "@/lib/publicSlug";
+import { salesSlugForHost } from "@/lib/sales/salesHosts";
 
 const UI_LOCALE_COOKIE = "ui_locale";
 const SUPPORTED_LOCALES = ["en", "fr", "es", "it", "ar", "pt", "pt-BR"];
@@ -63,6 +64,28 @@ function startsWithAny(pathname: string, prefixes: string[]) {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // -------------------------------------------------------------------
+  // NOS DOMAINES DE VENTE (tiquiz.fr).
+  //
+  // Ils passent AVANT le portier des domaines personnalises : sans ca,
+  // `tiquiz.fr` serait pris pour le domaine d'une creatrice et
+  // repondrait 404 a tout sauf a un slug de quiz.
+  //
+  // La racine sert la page de vente. On REECRIT au lieu de rediriger :
+  // l'adresse vue par le visiteur reste `tiquiz.fr`, et le partage d'un
+  // lien ne fait pas apparaitre un chemin technique.
+  //
+  // Le reste des chemins passe normalement : c'est ce qui laisse
+  // `/commande/...`, `/api/...` et les fichiers de la page fonctionner
+  // sur ce domaine.
+  // -------------------------------------------------------------------
+  const slugDeVente = salesSlugForHost(req.headers.get("host"));
+  if (slugDeVente && pathname === "/") {
+    const url = req.nextUrl.clone();
+    url.pathname = `/apercu/vente/${slugDeVente}`;
+    return NextResponse.rewrite(url);
+  }
 
   // -------------------------------------------------------------------
   // Custom-domain gate. Runs first so a creator-owned hostname can

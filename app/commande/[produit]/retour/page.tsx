@@ -26,13 +26,14 @@
 // il réessaie tout seul, et il n'a pas besoin que l'acheteur soit là.
 
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { LIENS_LEGAUX, LIEN_SUPPORT } from "@/lib/checkout/brand";
 import { findOwnerProduct, formatOwnerPrice, ownerBillingKey } from "@/lib/checkout/catalog";
 import { readOwnerStripe } from "@/lib/checkout/ownerAccount";
 import { retrieveOwnerSession } from "@/lib/checkout/stripeCheckout";
-import { isSalesPreviewOpen } from "@/lib/sales/previewGate";
+import { isSalesOpen } from "@/lib/sales/previewGate";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,11 @@ export default async function Page({
   const { produit } = await params;
   const { session_id: sessionId, k } = await searchParams;
 
-  if (!isSalesPreviewOpen(k, process.env)) notFound();
+  // La porte s'ouvre par la cle OU par le domaine public : sur
+  // tiquiz.fr le bon de commande doit etre accessible sans rien dans
+  // l'URL, c'est tout l'interet d'avoir un domaine.
+  const host = (await headers()).get("host");
+  if (!isSalesOpen(k, host, process.env)) notFound();
   const product = findOwnerProduct(produit);
   if (!product) notFound();
 
