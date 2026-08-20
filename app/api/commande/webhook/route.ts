@@ -26,9 +26,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { findOwnerProduct } from "@/lib/checkout/catalog";
-import { grantPlanByEmail } from "@/lib/checkout/grantPlan";
+import { downgradeToFreeByEmail, grantPlanByEmail } from "@/lib/checkout/grantPlan";
+import { readRefundOutcome } from "@/lib/checkout/refund";
+import { sendRefundGoodbyeEmail } from "@/lib/email/refundGoodbyeEmail";
 import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ownerAccount";
-import { retrieveOwnerSession, verifyStripeSignature } from "@/lib/checkout/stripeCheckout";
+import {
+  retrieveOwnerSession,
+  retrieveOwnerSessionByPaymentIntent,
+  verifyStripeSignature,
+} from "@/lib/checkout/stripeCheckout";
 import { logWebhookEvent } from "@/lib/webhooks/log";
 
 export const runtime = "nodejs";
@@ -61,7 +67,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "bad_signature" }, { status: 401 });
   }
 
-  let event: { id?: string; type?: string; data?: { object?: { id?: string } } };
+  let event: RawEvent;
   try {
     event = JSON.parse(raw);
   } catch {
@@ -80,6 +86,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   });
   if (duplicate) {
     return NextResponse.json({ ok: true, duplicate: true });
+  }
+
+  // ── L'ARGENT REPART : ON FERME, ET ON LE DIT BIEN ──
+  //
+  // Béné, 20 août : "si je rembourse, l'accès est coupé ou pas ? L'user
+  // reçoit quelle info ?" Avant ce bloc : non, et rien de nous. Sur un
+  // abonnement, ça voulait dire garder le plan payant sans le payer.
+  if (eventType === "charge.refunded") {
+    return await surRemboursement(event);
   }
 
   // Les deux événements qui veulent dire "l'argent est là". Le second
@@ -151,4 +166,92 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       `compte ${octroi.created ? "cree" : "existant"}, lien de connexion ${octroi.loginLinkSent ? "envoye" : "NON ENVOYE"}`,
   );
   return NextResponse.json({ ok: true, granted: true });
+}
+
+/** La forme d'un evenement Stripe, reduite a ce qu'on lit. */
+interface RawEvent {
+  id?: string;
+  type?: string;
+  data?: {
+    object?: {
+      id?: string;
+      amount?: number | null;
+      amount_refunded?: number | null;
+      refunded?: boolean | null;
+      payment_intent?: string | null;
+      billing_details?: { email?: string | null; name?: string | null } | null;
+    };
+  };
+}
+
+/**
+ * UN REMBOURSEMENT TOTAL RETIRE LE PLAN. UN REMBOURSEMENT PARTIEL, NON.
+ *
+ * La distinction n'est pas theorique : un geste commercial de 5 EUR sur
+ * un abonnement a 17 EUR mettrait dehors quelqu'un qui a paye 12 EUR pour
+ * rester dedans. La decision vit dans `readRefundOutcome`, testee, et
+ * personne ne la reecrit ici.
+ *
+ * On repond 200 dans tous les cas compris, y compris quand on ne fait
+ * rien : un 500 sur un cas ecarte declencherait des reessais en boucle.
+ */
+async function surRemboursement(event: RawEvent): Promise<NextResponse> {
+  const charge = event.data?.object ?? null;
+  const issue = readRefundOutcome(charge);
+  if (issue !== "full") {
+    console.log(`[commande/webhook] remboursement ${issue} : plan conserve`);
+    return NextResponse.json({ ok: true, refund: issue });
+  }
+
+  const compte = readOwnerStripe(process.env);
+  const paymentIntent = String(charge?.payment_intent ?? "").trim();
+
+  // L'adresse de la VENTE d'abord : c'est elle qui a recu les acces.
+  // `billing_details.email` est l'adresse de facturation de la carte, qui
+  // peut etre celle du conjoint, de l'entreprise, ou vide. On ne retire
+  // pas un plan sur cette base la, on s'en sert seulement en dernier
+  // recours pour ne pas rester muet.
+  const vente =
+    compte && paymentIntent
+      ? await retrieveOwnerSessionByPaymentIntent(compte.key, paymentIntent)
+      : null;
+  const email = vente?.email ?? charge?.billing_details?.email ?? null;
+  const prenom = vente?.name ?? charge?.billing_details?.name ?? null;
+
+  if (!email) {
+    console.error(
+      "[commande/webhook] remboursement TOTAL sans adresse retrouvee : plan NON retire, " +
+        `paiement ${paymentIntent || "inconnu"}. Intervention necessaire.`,
+    );
+    return NextResponse.json({ ok: true, reason: "no_email" });
+  }
+
+  const sortie = await downgradeToFreeByEmail({
+    email,
+    source: "stripe_refund",
+    reference: paymentIntent || null,
+  });
+  if (!sortie.ok) {
+    console.error(`[commande/webhook] retrogradation impossible pour ${email} : ${sortie.reason}`);
+    // 502 : on VEUT le reessai, un plan paye reste ouvert sans paiement.
+    return NextResponse.json({ ok: false, reason: sortie.reason }, { status: 502 });
+  }
+
+  // ON SE QUITTE BIEN, ET C'EST NOUS QUI LE DISONS.
+  //
+  // Pas d'email quand il n'y avait rien a retirer (compte deja gratuit,
+  // adresse inconnue de nous) : annoncer la fin d'un abonnement a
+  // quelqu'un qui n'en avait pas serait absurde. Un plan a vie protege
+  // ne recoit rien non plus, il n'a rien perdu.
+  let envoye = false;
+  if (!sortie.skipped) {
+    envoye = await sendRefundGoodbyeEmail({ email, prenom });
+  }
+
+  console.log(
+    `[commande/webhook] remboursement total pour ${email} : ` +
+      `${sortie.skipped ? `rien a retirer (${sortie.skipped})` : `plan ${sortie.previousPlan} retire`}, ` +
+      `email d'au revoir ${envoye ? "envoye" : "non envoye"}`,
+  );
+  return NextResponse.json({ ok: true, downgraded: !sortie.skipped, skipped: sortie.skipped });
 }

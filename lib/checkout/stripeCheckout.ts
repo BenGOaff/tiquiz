@@ -53,6 +53,8 @@ export const OWNER_STRIPE_EVENTS = [
   // session. Sans cet événement, ces ventes n'ouvriraient jamais l'accès.
   "checkout.session.async_payment_succeeded",
   "checkout.session.async_payment_failed",
+  // Le remboursement. Sans lui, un abonne rembourse garde son plan payant.
+  "charge.refunded",
 ] as const;
 
 function toForm(obj: Record<string, string | number>): string {
@@ -290,6 +292,8 @@ export function verifyStripeSignature(
 export interface OwnerSessionInfo {
   paid: boolean;
   email: string | null;
+  /** Le nom saisi au paiement, pour dire "Hey Gwenn" au lieu de "Hey". */
+  name?: string | null;
   productId: string | null;
   affiliateRef: string | null;
 }
@@ -314,7 +318,7 @@ export async function retrieveOwnerSession(
     if (!res.ok) return null;
     const json = (await res.json()) as {
       payment_status?: string;
-      customer_details?: { email?: string | null } | null;
+      customer_details?: { email?: string | null; name?: string | null } | null;
       metadata?: Record<string, string> | null;
     };
     const meta = json.metadata ?? {};
@@ -323,6 +327,54 @@ export async function retrieveOwnerSession(
       // un code promo : le client n'a rien payé et a pourtant droit à tout.
       paid: json.payment_status === "paid" || json.payment_status === "no_payment_required",
       email: json.customer_details?.email ?? null,
+      name: json.customer_details?.name ?? null,
+      productId: meta.product ?? null,
+      affiliateRef: meta.affiliate_ref ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Retrouve la vente à partir du paiement qu'on vient de rembourser.
+ *
+ * L'événement `charge.refunded` ne porte ni notre `metadata[product]` ni
+ * l'adresse saisie au moment de payer : il parle d'une charge, pas d'une
+ * commande. Le seul fil qui relie les deux est le PaymentIntent, et
+ * l'API sait lister les sessions qui en dépendent (paramètre
+ * `payment_intent`).
+ *
+ * On pourrait se contenter de `billing_details.email` sur la charge,
+ * mais c'est l'adresse de FACTURATION de la carte, pas forcément celle
+ * du compte : on couperait alors l'accès de la mauvaise personne, ou de
+ * personne. On remonte donc à la session, qui porte l'adresse qui a
+ * réellement reçu les accès.
+ */
+export async function retrieveOwnerSessionByPaymentIntent(
+  key: string,
+  paymentIntentId: string,
+): Promise<OwnerSessionInfo | null> {
+  try {
+    const res = await fetch(
+      `${STRIPE_API}/v1/checkout/sessions?limit=1&payment_intent=${encodeURIComponent(paymentIntentId)}`,
+      { headers: { Authorization: `Bearer ${key}` } },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      data?: Array<{
+        payment_status?: string;
+        customer_details?: { email?: string | null; name?: string | null } | null;
+        metadata?: Record<string, string> | null;
+      }>;
+    };
+    const s = json.data?.[0];
+    if (!s) return null;
+    const meta = s.metadata ?? {};
+    return {
+      paid: s.payment_status === "paid" || s.payment_status === "no_payment_required",
+      email: s.customer_details?.email ?? null,
+      name: s.customer_details?.name ?? null,
       productId: meta.product ?? null,
       affiliateRef: meta.affiliate_ref ?? null,
     };
