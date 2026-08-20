@@ -15,7 +15,7 @@
 // dit "ça ne marche pas" et il part. Chaque raison renvoyée par le
 // serveur a donc sa phrase, en français, avec ce qu'il y a à faire.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 
@@ -38,23 +38,33 @@ export default function CommandeClient({
   produit,
   cle,
   clePublique,
+  modesDiscordants = false,
 }: {
   produit: string;
   cle: string;
   clePublique: string | null;
+  /** Clé secrète et clé publiable pas dans le même monde (live vs test). */
+  modesDiscordants?: boolean;
 }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [mode, setMode] = useState<string | null>(null);
 
   // La clé publiable est indispensable au navigateur. Sans elle, le cadre
-  // resterait vide sans dire pourquoi : on le dit.
+  // resterait vide sans dire pourquoi : on le dit, et on distingue les
+  // deux causes, parce qu'elles n'appellent pas le même geste.
   useEffect(() => {
+    if (modesDiscordants) {
+      setErreur(
+        "Les deux clés Stripe de ce serveur ne sont pas du même type : l'une est en conditions réelles, l'autre en test. Le formulaire reste fermé tant que les deux ne concordent pas.",
+      );
+      return;
+    }
     if (!clePublique) {
       setErreur(
         "La clé publique Stripe n'est pas posée sur ce serveur. Le formulaire ne peut pas s'afficher.",
       );
     }
-  }, [clePublique]);
+  }, [clePublique, modesDiscordants]);
 
   const fetchClientSecret = useCallback(async () => {
     const r = await fetch("/api/commande/session", {
@@ -79,6 +89,15 @@ export default function CommandeClient({
     return data.clientSecret;
   }, [produit, cle]);
 
+  // `loadStripe` rend une NOUVELLE promesse a chaque appel. Appelee dans
+  // le JSX, elle en fabriquerait une par rendu, et le fournisseur Stripe
+  // se remonterait a chaque fois : formulaire qui clignote, champs vides
+  // au milieu d'une saisie. On la garde stable.
+  const stripePromise = useMemo(
+    () => (clePublique ? loadStripe(clePublique) : null),
+    [clePublique],
+  );
+
   if (erreur) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-900">
@@ -98,7 +117,7 @@ export default function CommandeClient({
         </p>
       )}
       <EmbeddedCheckoutProvider
-        stripe={loadStripe(clePublique)}
+        stripe={stripePromise}
         options={{ fetchClientSecret }}
       >
         <EmbeddedCheckout />

@@ -34,6 +34,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveAppUrl } from "@/lib/authLinks";
+import { isLifetimePlan } from "@/lib/plans/lifetime";
 import type { TiquizPlan } from "@/lib/sio/webhookInference";
 
 /** Client anonyme, uniquement pour envoyer le lien de connexion. */
@@ -185,4 +186,79 @@ export async function grantPlanByEmail(args: {
   }
 
   return { ok: true, created, previousPlan, loginLinkSent: true };
+}
+
+/**
+ * RETIRE LE PLAN PAYANT APRÈS UN REMBOURSEMENT TOTAL.
+ *
+ * Béné, 20 août 2026 : "si je rembourse les 47 €, l'accès est coupé ou
+ * pas ?" Avant ce chantier, non : le webhook n'écoutait que les
+ * paiements réussis, donc quelqu'un pouvait acheter, se faire rembourser
+ * et garder son plan.
+ *
+ * Deux refus, et ils comptent tous les deux :
+ *
+ * 1. **Un plan promis à vie ne redescend jamais ici** (`beta`,
+ *    `lifetime`). Le seul chemin légitime pour les retirer est la route
+ *    d'administration. La liste vit dans `lib/plans/lifetime.ts`, la
+ *    MÊME que celle du webhook Systeme.io : deux copies finiraient par
+ *    diverger, et la divergence coûterait un compte à vie.
+ * 2. **Déjà en gratuit : on ne fait rien**, et on le dit. Réécrire
+ *    `free` par-dessus `free` polluerait le journal des changements de
+ *    plan avec des lignes qui ne racontent rien.
+ *
+ * On ne supprime PAS le compte : les quiz et les leads restent à leur
+ * propriétaire. C'est ce que dit la page de commande, et une promesse
+ * faite sur un bon de commande se tient.
+ */
+export async function downgradeToFreeByEmail(args: {
+  email: string;
+  source: string;
+  reference?: string | null;
+}): Promise<{ ok: boolean; skipped?: string; previousPlan?: string | null; reason?: string }> {
+  const email = args.email.trim().toLowerCase();
+  const user = await findUserByEmail(email);
+  if (!user) return { ok: true, skipped: "no_account" };
+
+  const { data: avant } = await supabaseAdmin
+    .from("profiles")
+    .select("*")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const previousPlan =
+    String((avant as { plan?: string | null } | null)?.plan ?? "").trim().toLowerCase() || null;
+
+  if (!previousPlan || previousPlan === "free") {
+    return { ok: true, skipped: "already_free", previousPlan };
+  }
+  if (isLifetimePlan(previousPlan)) {
+    console.warn(
+      `[downgradeToFree] REFUS de retrograder un plan a vie (${previousPlan}) pour ${email}. ` +
+        `Passer par la route d'administration si c'est vraiment voulu.`,
+    );
+    return { ok: true, skipped: "lifetime_plan", previousPlan };
+  }
+
+  const { error } = await supabaseAdmin
+    .from("profiles")
+    .update({ plan: "free", updated_at: new Date().toISOString() })
+    .eq("user_id", user.id);
+  if (error) {
+    return { ok: false, previousPlan, reason: `update:${error.message}` };
+  }
+
+  // Best-effort : la traçabilité ne doit pas annuler la rétrogradation.
+  try {
+    await supabaseAdmin.from("plan_change_log").insert({
+      target_user_id: user.id,
+      target_email: email,
+      old_plan: previousPlan,
+      new_plan: "free",
+      reason: `${args.source}:${args.reference ?? "sans_reference"}`,
+    });
+  } catch {
+    // Le plan est déjà retiré, c'est ce qui compte.
+  }
+
+  return { ok: true, previousPlan };
 }

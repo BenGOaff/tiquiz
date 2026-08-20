@@ -22,6 +22,7 @@ import {
   readOwnerPaypal,
   readOwnerProviders,
   readOwnerStripe,
+  readOwnerStripePublishable,
   readOwnerStripeWebhookSecret,
   stripeKeyMode,
 } from "../../lib/checkout/ownerAccount.ts";
@@ -145,6 +146,51 @@ test("deux modes qui ne s'accordent pas : on annonce le plus dangereux", () => {
   assert.equal(p.mode, "live");
 });
 
+test("la cle publiable : le nom sans prefixe gagne, l'ancien reste accepte", () => {
+  // Pourquoi ce test existe : `NEXT_PUBLIC_*` n'est pas lue au demarrage,
+  // Next la remplace par sa valeur pendant `npm run build`. Une cle posee
+  // dans `.env` APRES le build reste invisible, et l'ecran de commande
+  // annonce "cle absente" alors qu'elle est dans le fichier. Le nom sans
+  // prefixe est lu a l'execution : un `pm2 restart` suffit.
+  const nouveau = readOwnerStripePublishable({
+    STRIPE_PUBLISHABLE_KEY_OWNER: "pk_live_" + "A".repeat(20),
+  });
+  assert.equal(nouveau?.mode, "live");
+
+  const ancien = readOwnerStripePublishable({
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_OWNER: "pk_test_" + "B".repeat(20),
+  });
+  assert.equal(ancien?.mode, "test", "l'ancien nom doit marcher la ou il est deja pose");
+
+  // Les deux poses : c'est le nouveau qui decide, sinon poser le nouveau
+  // ne changerait rien tant que l'ancien traine dans le fichier.
+  const lesDeux = readOwnerStripePublishable({
+    STRIPE_PUBLISHABLE_KEY_OWNER: "pk_live_" + "C".repeat(20),
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_OWNER: "pk_test_" + "D".repeat(20),
+  });
+  assert.equal(lesDeux?.mode, "live");
+});
+
+test("la cle publiable : tout ce qui n'en est pas une ferme", () => {
+  // Une cle SECRETE collee dans la case publiable est le geste le plus
+  // facile a faire, et le plus cher : elle partirait dans le navigateur.
+  for (const valeur of [
+    undefined,
+    "",
+    "   ",
+    "pk_live_",
+    "sk_live_" + "E".repeat(20),
+    "rk_live_" + "F".repeat(20),
+    "whsec_" + "G".repeat(20),
+  ]) {
+    assert.equal(
+      readOwnerStripePublishable({ STRIPE_PUBLISHABLE_KEY_OWNER: valeur }),
+      null,
+      `cette valeur ne doit pas ouvrir : ${JSON.stringify(valeur)}`,
+    );
+  }
+});
+
 test("le nom des variables ne vit qu'a UN endroit", async () => {
   // Même règle que l'URL de l'Atelier (3 août) et que la porte du
   // chantier affilié : une valeur lue à deux endroits ne se corrige
@@ -154,6 +200,8 @@ test("le nom des variables ne vit qu'a UN endroit", async () => {
   const racine = process.cwd();
   const noms = [
     "STRIPE_SECRET_KEY_OWNER",
+    "STRIPE_PUBLISHABLE_KEY_OWNER",
+    "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_OWNER",
     "STRIPE_WEBHOOK_SECRET_OWNER",
     "PAYPAL_CLIENT_ID_OWNER",
     "PAYPAL_SECRET_OWNER",

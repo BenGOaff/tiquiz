@@ -2,19 +2,37 @@
 //
 // LE BON DE COMMANDE TIQUIZ, PLEINE PAGE.
 //
-// Jumeau de celui de l'Atelier. Deux différences, et elles se voient à
-// l'écran :
+// Jumeau de celui de l'Atelier, refait le 20 août après le retour de
+// Béné sur celui là : "il est ultra moche, je veux un design plus
+// accordé au design de la page tout en restant sobre, des tailles
+// adaptées à tous les écrans, tout est sur fond clair, pas de fond
+// foncé." Le sien n'était pas encore ouvert, mais deux bons de commande
+// jumeaux qui ne se ressemblent pas, c'est le même défaut qu'on répare
+// deux fois.
 //
-// 1. **Ce sont des abonnements**, donc la page dit clairement la
-//    récurrence et le fait qu'on peut arrêter quand on veut. Un prix
-//    mensuel affiché comme un prix unique est la meilleure façon de
-//    récolter des demandes de remboursement le mois suivant.
-// 2. **Il y a quatre paliers**, donc la page montre les trois autres en
-//    bas. Quelqu'un qui arrive sur le mensuel et voulait l'annuel ne
-//    doit pas avoir à revenir en arrière pour le trouver.
+// -- CE QUE LE PREMIER JET AVAIT RATÉ ----------------------------------
 //
-// Fermé tant que ce n'est pas annoncé : même porte que la page de vente
-// (`?k=`). Sans la clé, 404, on ne dit même pas que la page existe.
+// Il empruntait les jetons de couleur de l'APP (`text-muted-foreground`,
+// `border-primary`), qui sont ceux du tableau de bord de la créatrice.
+// Or cette page est vue par quelqu'un qui n'a pas encore de compte et
+// qui vient de lire la page de vente. Une rupture visuelle au moment de
+// sortir sa carte se paie en abandons. Les couleurs viennent donc de
+// `lib/checkout/brand.ts`, relevées dans `content/sales/tiquiz.html`.
+//
+// -- LE FOND FONCÉ N'ÉTAIT PAS LE NÔTRE --------------------------------
+//
+// Le panneau bleu nuit vu sur l'Atelier était le formulaire de Stripe,
+// rendu dans une iframe de `js.stripe.com`. Notre CSS ne le traverse
+// pas. Il se règle par `branding_settings` sur la session, cf. `brand.ts`.
+//
+// -- DEUX DIFFÉRENCES AVEC L'ATELIER, ET ELLES SE VOIENT ---------------
+//
+// 1. **Ce sont des abonnements**, donc la page dit la récurrence et le
+//    fait qu'on arrête quand on veut. Un prix mensuel affiché comme un
+//    prix unique, ce sont des demandes de remboursement le mois suivant.
+// 2. **Il y a quatre paliers**, donc les trois autres sont accessibles
+//    en bas. Quelqu'un qui voulait l'annuel ne doit pas avoir à revenir
+//    en arrière pour le trouver.
 //
 // Le prix vient du catalogue et n'est JAMAIS réécrit ici : un prix
 // affiché à un endroit et facturé à un autre est la faute la plus
@@ -30,6 +48,7 @@ import {
   formatOwnerPrice,
   ownerBillingKey,
 } from "@/lib/checkout/catalog";
+import { readOwnerStripe, readOwnerStripePublishable } from "@/lib/checkout/ownerAccount";
 import { isSalesPreviewOpen } from "@/lib/sales/previewGate";
 import CommandeClient from "./CommandeClient";
 
@@ -46,6 +65,16 @@ const RECURRENCE: Record<string, string> = {
   yearly: "par an, sans engagement",
   once: "paiement unique",
 };
+
+/** Ce que Tiquiz fait, dans les mots de la page de vente. */
+const INCLUS: readonly { titre: string; detail: string }[] = [
+  { titre: "Le quiz parfait à partir d'un prompt", detail: "Généré par l'IA, importé, ou créé à la main. Comme tu veux." },
+  { titre: "Des leads qualifiés, pas des touristes", detail: "Chaque réponse te dit qui est la personne en face." },
+  { titre: "Des mini-tunnels de vente", detail: "Une page de résultat par profil, avec ton offre au bout." },
+  { titre: "Des quiz qui te ressemblent", detail: "Ton logo, tes images, tes couleurs, et ton propre domaine." },
+  { titre: "Aussi des sondages et des popquiz", detail: "Le même moteur, trois formats, sans rien réapprendre." },
+  { titre: "Des chiffres qui disent quoi réparer", detail: "Où tes visiteurs décrochent, question par question." },
+];
 
 export default async function Page({
   params,
@@ -67,74 +96,95 @@ export default async function Page({
     (id) => OWNER_CATALOG[id],
   );
 
+  // Les deux clés doivent parler du MÊME monde. Une clé secrète live avec
+  // une clé publiable test (ou l'inverse) donne un formulaire qui refuse
+  // la session sans dire pourquoi : moitié de configuration, écran muet.
+  const publiable = readOwnerStripePublishable(process.env);
+  const secrete = readOwnerStripe(process.env);
+  const modesDiscordants = !!publiable && !!secrete && publiable.mode !== secrete.mode;
+
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10">
-      <div className="grid gap-10 md:grid-cols-2">
-        <section className="space-y-6">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Ta commande
+    // Le fond clair est posé ici, pas hérité : cette page est publique et
+    // ne doit rien devoir au thème de celui qui l'ouvre.
+    <main className="min-h-screen bg-white text-[#2b3264]">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="grid items-start gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
+          {/* ---------------- Ce qu'on achète ---------------- */}
+          <section>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#5e6dde]">
+              Résumé de ta commande
             </p>
-            <h1 className="mt-2 text-3xl font-bold">{product.label}</h1>
-            <p className="mt-3 text-4xl font-bold">
-              {formatOwnerPrice(product)}{" "}
-              <span className="text-base font-medium text-muted-foreground">
+            <h1 className="mt-2 text-2xl font-extrabold leading-tight sm:text-3xl">
+              {product.label}
+            </h1>
+
+            <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="text-4xl font-extrabold tracking-tight sm:text-5xl">
+                {formatOwnerPrice(product)}
+              </span>
+              <span className="text-sm font-semibold text-[#8890b5]">
                 {RECURRENCE[ownerBillingKey(product)]}
               </span>
-            </p>
-          </div>
-
-          <ul className="space-y-3 text-sm">
-            {[
-              "Tes quiz en ligne, sur ton domaine, avec ton branding.",
-              "Tes leads capturés et envoyés vers ton outil d'emailing.",
-              "Les statistiques qui disent où tes visiteurs décrochent.",
-            ].map((ligne) => (
-              <li key={ligne} className="flex gap-3">
-                <span aria-hidden className="mt-0.5 font-bold text-primary">
-                  ✓
-                </span>
-                <span>{ligne}</span>
-              </li>
-            ))}
-          </ul>
-
-          <div className="rounded-lg border border-dashed px-4 py-3 text-sm">
-            <p className="font-semibold">Tu arrêtes quand tu veux</p>
-            <p className="mt-1 text-muted-foreground">
-              Aucun engagement de durée. Tes quiz et tes leads restent à toi.
-            </p>
-          </div>
-
-          {autres.length > 0 && (
-            <div className="border-t pt-4 text-sm">
-              <p className="font-semibold">Les autres formules</p>
-              <ul className="mt-2 space-y-1">
-                {autres.map((a) => (
-                  <li key={a.id}>
-                    <Link
-                      href={`/commande/${a.id}?k=${encodeURIComponent(cle)}`}
-                      className="text-primary underline"
-                    >
-                      {a.label}
-                    </Link>{" "}
-                    <span className="text-muted-foreground">
-                      {formatOwnerPrice(a)} {RECURRENCE[ownerBillingKey(a)]}
-                    </span>
-                  </li>
-                ))}
-              </ul>
             </div>
-          )}
-        </section>
+            <p className="mt-2 text-sm text-[#8890b5]">
+              Aucun frais caché. Tu arrêtes quand tu veux, tes quiz et tes leads
+              restent à toi.
+            </p>
 
-        <section>
-          <CommandeClient
-            produit={product.id}
-            cle={cle}
-            clePublique={process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_OWNER ?? null}
-          />
-        </section>
+            <ul className="mt-6 space-y-2.5">
+              {INCLUS.map((item) => (
+                <li key={item.titre} className="flex gap-3">
+                  <span
+                    aria-hidden
+                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#f3f6fc] text-[11px] font-bold text-[#5e6dde]"
+                  >
+                    ✓
+                  </span>
+                  <span className="text-[13px] leading-snug sm:text-sm">
+                    <strong className="font-semibold">{item.titre}</strong>{" "}
+                    <span className="text-[#8890b5]">{item.detail}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            {autres.length > 0 && (
+              <div className="mt-6 rounded-xl border border-[#e4e7f5] bg-[#f3f6fc] px-4 py-3">
+                <p className="text-sm font-bold">Les autres formules</p>
+                <ul className="mt-2 space-y-1 text-[13px]">
+                  {autres.map((a) => (
+                    <li key={a.id}>
+                      <Link
+                        href={`/commande/${a.id}?k=${encodeURIComponent(cle)}`}
+                        className="font-semibold text-[#5e6dde] underline"
+                      >
+                        {a.label}
+                      </Link>{" "}
+                      <span className="text-[#8890b5]">
+                        {formatOwnerPrice(a)} {RECURRENCE[ownerBillingKey(a)]}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+
+          {/* ---------------- Le paiement ---------------- */}
+          <section className="lg:sticky lg:top-8">
+            <div className="rounded-2xl border border-[#e4e7f5] bg-white p-3 shadow-[0_8px_30px_rgba(43,50,100,0.06)] sm:p-4">
+              <CommandeClient
+                produit={product.id}
+                cle={cle}
+                clePublique={modesDiscordants ? null : (publiable?.key ?? null)}
+                modesDiscordants={modesDiscordants}
+              />
+            </div>
+            <p className="mt-3 text-center text-xs text-[#8890b5]">
+              Paiement sécurisé par Stripe. Accès immédiat. Facture envoyée par email.
+            </p>
+          </section>
+        </div>
       </div>
     </main>
   );

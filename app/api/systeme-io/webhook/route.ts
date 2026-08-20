@@ -55,6 +55,7 @@ import {
 } from "@/lib/sio/webhookInference";
 // Une vente encaissée sans accès ouvert PRÉVIENT Béné (drame Ivan, 7 août).
 import { sendSaleRefusedAlert } from "@/lib/email/saleRefusedAlert";
+import { LIFETIME_PLANS } from "@/lib/plans/lifetime";
 
 // Plans Tiquiz refuses to downgrade automatically. `beta` is granted manually
 // by Ben for lifetime access; `lifetime` is the paid one-time tier. Both must
@@ -65,7 +66,10 @@ import { sendSaleRefusedAlert } from "@/lib/email/saleRefusedAlert";
 // NB : monthly_plus / yearly_plus NE SONT PAS dans LIFETIME_PLANS — ce
 // sont des abonnements récurrents qui DOIVENT pouvoir être downgrade
 // vers free quand SIO envoie CANCEL / REFUND / EXPIR (comme monthly/yearly).
-const LIFETIME_PLANS: ReadonlySet<string> = new Set(["beta", "lifetime"]);
+// La liste elle-meme vit desormais dans lib/plans/lifetime.ts : un
+// DEUXIEME chemin de retrogradation existe depuis le 20 aout (le
+// remboursement d'une vente Stripe encaissee par nous), et une liste de
+// protections recopiee a deux endroits finit toujours par diverger.
 
 // Events that confirm the end of a paid subscription — we downgrade the
 // affected user's plan back to `free` (UNLESS they're on lifetime/beta).
