@@ -30,6 +30,7 @@ import {
   formatOwnerPrice,
   ownerBillingKey,
 } from "@/lib/checkout/catalog";
+import { readOwnerStripe, readOwnerStripePublishable } from "@/lib/checkout/ownerAccount";
 import { isSalesPreviewOpen } from "@/lib/sales/previewGate";
 import CommandeClient from "./CommandeClient";
 
@@ -63,6 +64,13 @@ export default async function Page({
   if (!product) notFound();
 
   const cle = String(k ?? "");
+
+  // Les deux clés doivent parler du MÊME monde. Une clé secrète live avec
+  // une clé publiable test (ou l'inverse) donne un formulaire qui refuse
+  // la session sans dire pourquoi : moitié de configuration, écran muet.
+  const publiable = readOwnerStripePublishable(process.env);
+  const secrete = readOwnerStripe(process.env);
+  const modesDiscordants = !!publiable && !!secrete && publiable.mode !== secrete.mode;
   const autres = OWNER_PRODUCT_ORDER.filter((id) => id !== product.id).map(
     (id) => OWNER_CATALOG[id],
   );
@@ -132,7 +140,8 @@ export default async function Page({
           <CommandeClient
             produit={product.id}
             cle={cle}
-            clePublique={process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_OWNER ?? null}
+            clePublique={modesDiscordants ? null : (publiable?.key ?? null)}
+            modesDiscordants={modesDiscordants}
           />
         </section>
       </div>

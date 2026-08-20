@@ -78,6 +78,35 @@ export function readOwnerStripe(env: EnvSource): OwnerStripeAccount | null {
 }
 
 /**
+ * La clé PUBLIABLE, celle que le navigateur a le droit de connaître.
+ *
+ * -- POURQUOI DEUX NOMS DE VARIABLE ACCEPTÉS ---------------------------
+ *
+ * `NEXT_PUBLIC_*` n'est PAS lue au démarrage : Next la remplace par sa
+ * valeur au moment du `npm run build`. Une clé posée dans `.env` APRÈS
+ * le build reste donc invisible, et l'écran de commande affiche "la clé
+ * publique n'est pas posée" alors qu'elle est bien là, dans le fichier,
+ * sous les yeux de celle qui la cherche.
+ *
+ * C'est la même famille que le `??` du 2 août : ce n'est pas la variable
+ * MANQUANTE qui coûte cher, c'est la variable présente que le code ne
+ * regarde pas. Ici la sortie est simple : cette clé n'a aucun besoin
+ * d'être publique au sens de Next. Elle est lue côté serveur et passée
+ * en prop au formulaire, donc `STRIPE_PUBLISHABLE_KEY_OWNER` (sans
+ * préfixe) est lue à l'EXÉCUTION, et un simple `pm2 restart` suffit.
+ *
+ * L'ancien nom reste accepté en repli pour ne rien casser là où il est
+ * déjà posé, mais c'est le nouveau qui gagne.
+ */
+export function readOwnerStripePublishable(env: EnvSource): OwnerStripeAccount | null {
+  const key = String(
+    env.STRIPE_PUBLISHABLE_KEY_OWNER ?? env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_OWNER ?? "",
+  ).trim();
+  if (!/^pk_(live|test)_[A-Za-z0-9]{8,}$/.test(key)) return null;
+  return { key, mode: key.includes("_live_") ? "live" : "test" };
+}
+
+/**
  * Le secret de signature du webhook Stripe.
  *
  * Séparé de la clé parce qu'il ne sert pas à la même chose et qu'il peut

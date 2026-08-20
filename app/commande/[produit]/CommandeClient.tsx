@@ -38,23 +38,33 @@ export default function CommandeClient({
   produit,
   cle,
   clePublique,
+  modesDiscordants = false,
 }: {
   produit: string;
   cle: string;
   clePublique: string | null;
+  /** Clé secrète et clé publiable pas dans le même monde (live vs test). */
+  modesDiscordants?: boolean;
 }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [mode, setMode] = useState<string | null>(null);
 
   // La clé publiable est indispensable au navigateur. Sans elle, le cadre
-  // resterait vide sans dire pourquoi : on le dit.
+  // resterait vide sans dire pourquoi : on le dit, et on distingue les
+  // deux causes, parce qu'elles n'appellent pas le même geste.
   useEffect(() => {
+    if (modesDiscordants) {
+      setErreur(
+        "Les deux clés Stripe de ce serveur ne sont pas du même type : l'une est en conditions réelles, l'autre en test. Le formulaire reste fermé tant que les deux ne concordent pas.",
+      );
+      return;
+    }
     if (!clePublique) {
       setErreur(
         "La clé publique Stripe n'est pas posée sur ce serveur. Le formulaire ne peut pas s'afficher.",
       );
     }
-  }, [clePublique]);
+  }, [clePublique, modesDiscordants]);
 
   const fetchClientSecret = useCallback(async () => {
     const r = await fetch("/api/commande/session", {
