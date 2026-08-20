@@ -1544,3 +1544,55 @@ séparément finissent toujours par se contredire.
 
 Test : `tests/logic/result-share.test.mts`. Le module quiz de Tipote est
 jumeau : la correction y vit aussi.
+
+
+## Un export SingleFile n'a PAS les scripts (19 août 2026)
+
+Béné, sur la page de vente de l'Atelier répliquée chez nous : "je vois
+bien la page mais pas les popups comment ça marche et résumé en 5 points
+ni le curseur étoile."
+
+Ses trois blocs perso (étincelles au curseur, carrousel 5 écrans, mini
+test) étaient bien écrits dans sa page Systeme.io. Dans notre copie, le
+CSS était là et le JS avait disparu : **un seul `<script>` survivait dans
+tout le document**, contre 11 sur la vraie page.
+
+La cause n'est pas notre extracteur (il ne retire que Google Tag Manager
+et Facebook) : **SingleFile retire les scripts par défaut**. L'export
+qu'on nous avait donné n'en contenait aucun. Le CSS qui reste donne
+l'illusion d'une page complète, et c'est ce qui rend le piège coûteux :
+rien ne manque à l'oeil, seuls les comportements manquent.
+
+**Règle : une page de vente se capture depuis son URL EN LIGNE**
+(`scripts/fetch-sales-page.mjs`), jamais depuis un export fait à la
+main. C'est d'ailleurs pour ça que Tiquiz marchait du premier coup et
+pas l'Atelier : deux pages jumelles, deux méthodes de capture, une seule
+panne. Même famille que les deux versions divergentes de `pdf-parse` du
+7 août.
+
+**Et une capture se VÉRIFIE dans un navigateur, pas à l'oeil.** On ouvre
+la page servie par nous, on clique les boutons qui déclenchent quelque
+chose, et on lit la console. C'est ce qui a montré, en plus, que deux des
+quatre ids de son `TRIGGER_IDS` n'existent plus sur sa page (elle avait
+recréé les boutons dans l'éditeur Systeme.io, ce qui leur a donné de
+nouveaux ids) : son propre garde-fou le signalait déjà, sur la page en
+ligne comme sur la copie, et personne ne lisait la console.
+
+## Trois causes, un seul message : le 404 muet (19 août 2026)
+
+La page de vente de l'Atelier répondait `Not found`. Trois branches de la
+route rendaient exactement ce texte : clé absente, slug inconnu, fichier
+non déployé. Impossible de savoir laquelle, donc impossible d'avancer
+autrement qu'en devinant.
+
+**Règle : une fois la porte franchie, le serveur DIT ce qui cloche.**
+Sans la bonne clé, on ne dit rien (un refus explicite annoncerait qu'il y
+a quelque chose derrière). Avec la bonne clé, on nomme la cause et on
+donne la donnée qui manque toujours : le dossier depuis lequel on a
+cherché. C'est la même règle que la suppression d'un quiz (3 août) et que
+l'import PDF (7 août), appliquée à un endroit qui l'avait oubliée.
+
+La cause réelle ce jour là : `SALES_PREVIEW_TOKEN` posée sur le serveur
+de Tiquiz et pas sur celui de l'Atelier. **Deux apps, deux `.env`,** et
+une variable posée une seule fois. `grep -l NOM_DE_LA_VAR /home/tipote/*/.env`
+répond en une seconde à "je l'ai pourtant mise quelque part".

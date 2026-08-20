@@ -58,7 +58,12 @@ function memeCle(recue: string, attendue: string): boolean {
 function porteOuverte(req: NextRequest): boolean {
   const attendue = (process.env.SALES_PREVIEW_TOKEN ?? "").trim();
   // Absence de configuration = fermé. Jamais l'inverse.
-  if (attendue.length < 16) return false;
+  if (attendue.length < 16) {
+    console.warn(
+      "[apercu/vente] SALES_PREVIEW_TOKEN absent ou trop court : la porte reste fermee.",
+    );
+    return false;
+  }
   const recue = (req.nextUrl.searchParams.get("k") ?? "").trim();
   if (!recue) return false;
   return memeCle(recue, attendue);
@@ -70,18 +75,42 @@ export async function GET(
 ): Promise<NextResponse> {
   const { slug } = await ctx.params;
 
+  // Sans la bonne cle, on ne dit RIEN : ni que la page existe, ni
+  // pourquoi elle est refusee.
   if (!porteOuverte(req)) {
     return new NextResponse("Not found", { status: 404 });
   }
 
+  // À PARTIR D'ICI, LA CLÉ EST BONNE : on peut donc dire ce qui cloche,
+  // et on le DOIT.
+  //
+  // Les trois causes de 404 renvoyaient le même "Not found" : impossible
+  // de savoir si c'était la variable d'environnement, un slug inconnu ou
+  // un fichier non déployé. Un cul-de-sac de diagnostic, alors que la
+  // règle de ce dépôt est que le serveur DIT ce qui s'est passé (drame
+  // de la suppression d'un quiz, 3 août ; import PDF, 7 août).
+  //
+  // Ce n'est pas une fuite : seul quelqu'un qui détient déjà la clé lit
+  // ces messages.
   const meta = PAGES[slug];
   if (!meta || !/^[a-z0-9-]+$/.test(slug)) {
-    return new NextResponse("Not found", { status: 404 });
+    return new NextResponse(
+      `Page inconnue : "${slug}".\nPages servies par cette app : ${Object.keys(PAGES).join(", ")}`,
+      { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } },
+    );
   }
 
   const fichier = path.join(process.cwd(), "content", "sales", `${slug}.html`);
   if (!fs.existsSync(fichier)) {
-    return new NextResponse("Not found", { status: 404 });
+    // Le dossier de travail est la donnée qui manque toujours quand on
+    // cherche un fichier "pourtant deploye".
+    console.error(`[apercu/vente] fichier absent : ${fichier}`);
+    return new NextResponse(
+      `Fichier absent : content/sales/${slug}.html\n` +
+        `Cherché depuis : ${process.cwd()}\n` +
+        `Le dossier content/sales/ n'est probablement pas arrivé sur le serveur.`,
+      { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } },
+    );
   }
 
   const html = renderSalesPage(fs.readFileSync(fichier, "utf8"), { slug, ...meta }, {
