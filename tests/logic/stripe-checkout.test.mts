@@ -180,3 +180,86 @@ test("chaque raison du serveur a une phrase a l'ecran", () => {
     assert.ok(ecran.includes(`${r}:`), `la raison "${r}" n'a pas de phrase a l'ecran`);
   }
 });
+
+test("une vraie facture, pas seulement un recu (20 aout 2026)", () => {
+  // Le 20 aout, la premiere vraie vente a produit "Recu de ETHILIFE
+  // n. 1879-1677". Un recu prouve un paiement ; il ne porte ni numero de
+  // facture, ni adresse de l'acheteur, donc un client professionnel ne
+  // peut rien en faire. Trois lignes reparent ca, et les trois comptent.
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "lib/checkout/stripeCheckout.ts"),
+    "utf8",
+  );
+
+  assert.ok(
+    src.includes('params["invoice_creation[enabled]"] = "true"'),
+    "invoice_creation a disparu : les acheteurs ne recevraient qu'un recu",
+  );
+  assert.ok(
+    src.includes('billing_address_collection: "required"'),
+    "sans adresse collectee, la facture n'a pas ses mentions obligatoires",
+  );
+  assert.ok(
+    src.includes('"tax_id_collection[enabled]": "true"'),
+    "sans numero de TVA collecte, aucune entreprise ne peut etre autoliquidee",
+  );
+  assert.ok(
+    src.includes("include_inclusive_tax"),
+    "le prix est TTC : la facture doit montrer la TVA CONTENUE, pas une taxe ajoutee",
+  );
+});
+
+test("invoice_creation ne part JAMAIS sur un abonnement", () => {
+  // `invoice_creation` n'existe qu'en mode paiement. Envoye sur un
+  // abonnement, Stripe REFUSE la session : la caisse tombe. Et il serait
+  // inutile de toute facon, un abonnement facturant tout seul a chaque
+  // echeance. Le test verifie que la ligne vit bien dans la branche du
+  // paiement unique, apres le `} else {`.
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "lib/checkout/stripeCheckout.ts"),
+    "utf8",
+  );
+  const sinon = src.indexOf("  } else {");
+  const facture = src.indexOf('params["invoice_creation[enabled]"]');
+  assert.ok(sinon > 0 && facture > sinon, "invoice_creation est sorti de la branche paiement unique");
+});
+
+test("une couleur ne peut pas faire tomber la caisse", () => {
+  // `branding_settings` donne au formulaire de Stripe le fond clair de la
+  // page (Bene, 20 aout : "tout est sur fond clair, pas de fond fonce").
+  // Ses valeurs sont des enumerations chez Stripe : si l'une changeait de
+  // nom, la session serait refusee et plus personne ne pourrait payer.
+  // On reessaie donc SANS l'habillage avant d'abandonner.
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "lib/checkout/stripeCheckout.ts"),
+    "utf8",
+  );
+  assert.ok(src.includes("STRIPE_BRANDING"), "l'habillage du formulaire Stripe a disparu");
+  assert.ok(
+    src.includes("mentionneLHabillage(out.detail)"),
+    "le repli sans habillage a disparu : une couleur refusee bloquerait tous les paiements",
+  );
+  assert.ok(
+    src.indexOf("postSession(args.key, params)") > src.indexOf("mentionneLHabillage(out.detail)"),
+    "le second essai ne retire pas l'habillage",
+  );
+});
+
+test("notre CSS ne traverse pas l'iframe de Stripe : les couleurs vivent a UN endroit", () => {
+  // Le fond fonce vu par Bene n'etait pas le notre : le formulaire est
+  // rendu dans une iframe de js.stripe.com, que nos feuilles de style
+  // n'atteignent pas. La seule facon de le colorer est `branding_settings`.
+  // Ces couleurs sont donc lues des DEUX cotes de la frontiere, et une
+  // couleur ecrite deux fois finit par se contredire.
+  const brand = fs.readFileSync(path.join(process.cwd(), "lib/checkout/brand.ts"), "utf8");
+  for (const cle of ["background_color", "button_color", "font_family", "border_style"]) {
+    assert.ok(brand.includes(cle), `branding_settings[${cle}] a disparu de brand.ts`);
+  }
+  // Cherche le PARAMETRE, pas le mot : `display_name` est cite dans un
+  // commentaire juste au dessus, et un test qui attrape un commentaire
+  // rougit sans qu'il y ait de bug.
+  assert.ok(
+    !brand.includes("branding_settings[display_name]"),
+    "display_name est repose : le nom affiche doit rester celui du releve bancaire",
+  );
+});

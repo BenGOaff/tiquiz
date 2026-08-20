@@ -15,7 +15,7 @@
 // dit "ça ne marche pas" et il part. Chaque raison renvoyée par le
 // serveur a donc sa phrase, en français, avec ce qu'il y a à faire.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 
@@ -89,6 +89,15 @@ export default function CommandeClient({
     return data.clientSecret;
   }, [produit, cle]);
 
+  // `loadStripe` rend une NOUVELLE promesse a chaque appel. Appelee dans
+  // le JSX, elle en fabriquerait une par rendu, et le fournisseur Stripe
+  // se remonterait a chaque fois : formulaire qui clignote, champs vides
+  // au milieu d'une saisie. On la garde stable.
+  const stripePromise = useMemo(
+    () => (clePublique ? loadStripe(clePublique) : null),
+    [clePublique],
+  );
+
   if (erreur) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-900">
@@ -108,7 +117,7 @@ export default function CommandeClient({
         </p>
       )}
       <EmbeddedCheckoutProvider
-        stripe={loadStripe(clePublique)}
+        stripe={stripePromise}
         options={{ fetchClientSecret }}
       >
         <EmbeddedCheckout />
