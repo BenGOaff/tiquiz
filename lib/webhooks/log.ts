@@ -4,8 +4,25 @@
 //
 // Une seule écriture fait les deux choses à la fois : elle garde la trace
 // de l'appel, et elle dit s'il avait déjà été traité. C'est la base de
-// données qui tranche, via l'index unique `(source, event_id)`, pas un
-// `select` suivi d'un `insert` qui laisserait une fenêtre entre les deux.
+// données qui tranche, via un index unique, pas un `select` suivi d'un
+// `insert` qui laisserait une fenêtre entre les deux.
+//
+// SUR TIQUIZ, CET INDEX EST PARTIEL, et c'est important de le savoir :
+//
+//   (source, event_id) where event_id is not null
+//                        and source in ('stripe', 'paypal')
+//
+// (migration 20260820_owner_webhook_idempotency.sql)
+//
+// Il ne couvre QUE nos ventes à nous. La route Systeme.io journalise
+// plusieurs fois le même événement (`received`, puis `processed` ou
+// `error`), donc un index global sur `(source, event_id)` refuserait de
+// se créer sur la base existante. Systeme.io garde son propre index,
+// celui de la migration 012, et son propre fonctionnement.
+//
+// Tant que cette migration n'est pas appliquée, `duplicate` vaut
+// TOUJOURS `false` sur Tiquiz : un réessai de Stripe ouvrirait le plan
+// une deuxième fois.
 //
 // -- POURQUOI CE FICHIER EXISTE (20 août 2026) -------------------------
 //
