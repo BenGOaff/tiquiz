@@ -1021,7 +1021,12 @@
     "planYearlyPlusF1": "Tudo do Mensal + incluído",
     "planYearlyPlusF2": "2 meses grátis",
     "planYearlyPlusF3": "Suporte prioritário",
-    "planYearlyPlusF4": "Acesso antecipado às novidades"
+    "planYearlyPlusF4": "Acesso antecipado às novidades",
+    "billingPortalCta": "Gerenciar minha assinatura e meu cartão",
+    "billingPortalOpening": "Abrindo...",
+    "billingPortalHint": "Troque de cartão, baixe suas notas, veja a próxima cobrança ou cancele.",
+    "billingPortalFailed": "Não conseguimos abrir a página de cobrança agora. Tente de novo em instantes.",
+    "billingPortalElsewhere": "Sua assinatura não foi feita aqui. Fale com o suporte que a gente resolve."
   },
   "languageSwitcher": {
     "label": "Idioma"

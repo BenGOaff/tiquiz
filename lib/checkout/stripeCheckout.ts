@@ -47,6 +47,24 @@ import { OWNER_SUBSCRIPTION_EVENTS } from "@/lib/checkout/subscriptionLifecycle"
 
 const STRIPE_API = "https://api.stripe.com";
 
+/**
+ * L'identifiant du client, quelle que soit la forme recue.
+ *
+ * Stripe renvoie soit la chaine `cus_...`, soit l'objet complet quand la
+ * ressource est "etendue". Lire un seul des deux cas marcherait
+ * aujourd'hui et casserait le jour ou on ajoute un `expand` : c'est
+ * exactement la lecon du drame Ivan, ou on raisonnait sur la forme
+ * SUPPOSEE d'un payload.
+ */
+export function readCustomerId(v: unknown): string | null {
+  if (typeof v === "string") return v.trim() || null;
+  if (v && typeof v === "object") {
+    const id = (v as { id?: unknown }).id;
+    if (typeof id === "string") return id.trim() || null;
+  }
+  return null;
+}
+
 /** Les événements qui nous intéressent sur une vente à nous. */
 export const OWNER_STRIPE_EVENTS = [
   "checkout.session.completed",
@@ -305,6 +323,19 @@ export interface OwnerSessionInfo {
   name?: string | null;
   productId: string | null;
   affiliateRef: string | null;
+  /**
+   * LE CLIENT STRIPE, ET IL FAUT LE GARDER.
+   *
+   * On l'a jete pendant tout le chantier, et c'est ce qui rendait
+   * impossible le portail de facturation demande le 21 aout ("ils
+   * veulent payer avec une autre carte ?"). Sans cet identifiant, on ne
+   * peut pas dire a Stripe de qui on parle.
+   *
+   * L'adresse email ne peut pas le remplacer : elle change, et elle
+   * n'est pas toujours celle du compte (une carte au nom du conjoint,
+   * une adresse d'entreprise).
+   */
+  customerId: string | null;
 }
 
 /**
@@ -328,6 +359,7 @@ export async function retrieveOwnerSession(
     const json = (await res.json()) as {
       payment_status?: string;
       customer_details?: { email?: string | null; name?: string | null } | null;
+      customer?: string | { id?: string } | null;
       metadata?: Record<string, string> | null;
     };
     const meta = json.metadata ?? {};
@@ -339,6 +371,7 @@ export async function retrieveOwnerSession(
       name: json.customer_details?.name ?? null,
       productId: meta.product ?? null,
       affiliateRef: meta.affiliate_ref ?? null,
+      customerId: readCustomerId(json.customer),
     };
   } catch {
     return null;
@@ -373,6 +406,7 @@ export async function retrieveOwnerSessionByPaymentIntent(
     const json = (await res.json()) as {
       data?: Array<{
         payment_status?: string;
+        customer?: string | { id?: string } | null;
         customer_details?: { email?: string | null; name?: string | null } | null;
         metadata?: Record<string, string> | null;
       }>;
@@ -384,6 +418,7 @@ export async function retrieveOwnerSessionByPaymentIntent(
       paid: s.payment_status === "paid" || s.payment_status === "no_payment_required",
       email: s.customer_details?.email ?? null,
       name: s.customer_details?.name ?? null,
+      customerId: readCustomerId(s.customer),
       productId: meta.product ?? null,
       affiliateRef: meta.affiliate_ref ?? null,
     };
