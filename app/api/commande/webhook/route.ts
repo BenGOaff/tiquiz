@@ -38,6 +38,7 @@ import {
   verifyStripeSignature,
 } from "@/lib/checkout/stripeCheckout";
 import { recordChurn } from "@/lib/checkout/churn";
+import { rememberStripeCustomer } from "@/lib/checkout/customerLink";
 import {
   isSubscriptionEvent,
   readCancellationFeedback,
@@ -181,6 +182,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
     // 502 : on VEUT que Stripe réessaie, parce qu'un client a payé.
     return NextResponse.json({ ok: false, reason: octroi.reason ?? "grant_failed" }, { status: 502 });
+  }
+
+  // ON GARDE LE FIL VERS STRIPE.
+  //
+  // Sans cet identifiant, l'abonne ne pourra jamais changer sa carte :
+  // le portail de facturation a besoin de savoir DE QUI on parle, et
+  // l'adresse email ne peut pas le remplacer (elle change, et elle n'est
+  // pas toujours celle du compte).
+  //
+  // APRES l'octroi, jamais avant : c'est l'octroi qui cree le profil sur
+  // un premier achat. Et un echec ici ne fait pas echouer le webhook, un
+  // acces ouvert vaut plus qu'un lien de facturation.
+  const lien = await rememberStripeCustomer({
+    email: vente.email,
+    customerId: vente.customerId,
+  });
+  if (!lien.ok) {
+    console.warn(
+      `[commande/webhook] lien Stripe non enregistre pour ${vente.email} (${lien.reason}) : ` +
+        `le portail de facturation ne lui sera pas propose.`,
+    );
   }
 
   console.log(
@@ -346,6 +368,13 @@ async function surAbonnement(
         `rien consigne, plan NON touche. Intervention necessaire.`,
     );
     return NextResponse.json({ ok: true, reason: "no_email" });
+  }
+
+  // Un evenement d'abonnement porte le client : c'est l'occasion de
+  // rattraper le lien pour les comptes qui n'en avaient pas encore (une
+  // vente encaissee avant cette colonne, par exemple).
+  if (customerId) {
+    await rememberStripeCustomer({ email, customerId });
   }
 
   const { amountCents, currency } = readSubscriptionAmount(abonnement);

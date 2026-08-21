@@ -1021,7 +1021,12 @@
     "notifyResponsesLabel": "Email me on every new response",
     "affCommTitle": "Earn commissions on your quizzes",
     "affCommDesc": "On every published quiz, the footer \"This quiz is powered by Tiquiz\" links to the Tiquiz presentation page. If you paste your Systeme.io affiliate ID below, every sign-up that results earns you a commission, automatically.",
-    "affIdLabel": "My Tipote affiliate ID"
+    "affIdLabel": "My Tipote affiliate ID",
+    "billingPortalCta": "Manage my subscription and card",
+    "billingPortalOpening": "Opening...",
+    "billingPortalHint": "Change your card, download your invoices, see your next payment or cancel.",
+    "billingPortalFailed": "We can't open the billing page right now. Please try again in a moment.",
+    "billingPortalElsewhere": "Your subscription wasn't taken out here. Contact support and we'll handle it."
   },
   "languageSwitcher": {
     "label": "Language"

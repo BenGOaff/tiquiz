@@ -48,6 +48,14 @@ type Profile = {
   brand_website_url: string | null;
   target_audience: string | null;
   tipote_affiliate_id: string | null;
+  /**
+   * Le client Stripe, quand l'abonnement a ete pris sur NOTRE bon de
+   * commande. Absent pour les abonnes arrives par Systeme.io : leur
+   * carte se change la-bas, et le bouton ne doit pas leur etre propose
+   * (proposer une porte qui ne s'ouvre pas est pire que ne rien
+   * proposer, cf. le coach de l'Atelier).
+   */
+  stripe_customer_id?: string | null;
   // Phase B (Adeline, 19 mai 2026) : défauts user pour les pixels Meta + Google.
   default_meta_pixel_id?: string | null;
   default_meta_capi_token?: string | null;
@@ -151,6 +159,41 @@ export default function SettingsClient() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [portailEnCours, setPortailEnCours] = useState(false);
+  const [portailErreur, setPortailErreur] = useState<string | null>(null);
+
+  /**
+   * Ouvre le portail de facturation Stripe.
+   *
+   * UN `ok: false` PRODUIT TOUJOURS QUELQUE CHOSE A L'ECRAN (regle du
+   * 3 aout). Un clic sans effet enverrait l'abonne chercher au mauvais
+   * endroit, ce qui coute plus cher que la panne elle-meme. Le serveur
+   * renvoie une RAISON, l'ecran sait comment la dire : l'interface
+   * existe en 7 langues.
+   */
+  const ouvrirPortail = async () => {
+    setPortailErreur(null);
+    setPortailEnCours(true);
+    try {
+      const res = await fetch("/api/compte/facturation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale }),
+      });
+      const data = (await res.json()) as { ok?: boolean; url?: string; reason?: string };
+      if (data.ok && data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      setPortailErreur(
+        data.reason === "no_customer" ? t("billingPortalElsewhere") : t("billingPortalFailed"),
+      );
+    } catch {
+      setPortailErreur(t("billingPortalFailed"));
+    } finally {
+      setPortailEnCours(false);
+    }
+  };
 
   // Identite du titulaire (editable — retour Bene 14 juillet 2026).
   const [firstName, setFirstName] = useState("");
@@ -984,6 +1027,28 @@ export default function SettingsClient() {
                   </span>
                 )}
               </div>
+              {/* GERER SA CARTE, SES FACTURES, SON ABONNEMENT.
+                  Uniquement si l'abonnement vient de notre bon de
+                  commande : les abonnes Systeme.io n'ont rien a gerer
+                  ici, et un bouton qui echoue les enverrait chercher au
+                  mauvais endroit. */}
+              {profile?.stripe_customer_id && (
+                <div className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={ouvrirPortail}
+                    disabled={portailEnCours}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:underline disabled:opacity-60"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    {portailEnCours ? t("billingPortalOpening") : t("billingPortalCta")}
+                  </button>
+                  <p className="text-xs text-muted-foreground">{t("billingPortalHint")}</p>
+                  {portailErreur && (
+                    <p className="text-xs font-semibold text-destructive">{portailErreur}</p>
+                  )}
+                </div>
+              )}
               {hasActiveSubscription && (
                 <button
                   type="button"

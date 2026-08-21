@@ -1021,7 +1021,12 @@
     "notifyResponsesLabel": "M'envoyer un email à chaque nouvelle réponse",
     "affCommTitle": "Touche des commissions sur tes quizzes",
     "affCommDesc": "Sur chaque quiz publié, le footer « Ce quiz vous est offert par Tiquiz » redirige vers la page de présentation de Tiquiz. Si tu colles ton identifiant affilié Systeme.io ci-dessous, chaque inscription qui en découle te rapporte une commission, automatiquement.",
-    "affIdLabel": "Mon identifiant affilié Tipote"
+    "affIdLabel": "Mon identifiant affilié Tipote",
+    "billingPortalCta": "Gérer mon abonnement et ma carte",
+    "billingPortalOpening": "Ouverture...",
+    "billingPortalHint": "Changer de carte, télécharger tes factures, voir ta prochaine échéance ou résilier.",
+    "billingPortalFailed": "Impossible d'ouvrir la page de facturation pour le moment. Réessaie dans un instant.",
+    "billingPortalElsewhere": "Ton abonnement n'a pas été pris ici. Contacte le support et on s'en occupe."
   },
   "languageSwitcher": {
     "label": "Langue"

@@ -1021,7 +1021,12 @@
     "affCommTitle": "Guadagna commissioni sui tuoi quiz",
     "affCommDesc": "Su ogni quiz pubblicato, il footer «Questo quiz ti è offerto da Tiquiz» rimanda alla pagina di presentazione di Tiquiz. Se incolli qui sotto il tuo ID affiliato Systeme.io, ogni iscrizione che ne deriva ti fa guadagnare una commissione, automaticamente.",
     "affIdLabel": "Il mio ID affiliato Tipote",
-    "faviconRemoveBtn": "Rimuovi"
+    "faviconRemoveBtn": "Rimuovi",
+    "billingPortalCta": "Gestisci abbonamento e carta",
+    "billingPortalOpening": "Apertura...",
+    "billingPortalHint": "Cambia la carta, scarica le fatture, controlla la prossima scadenza o disdici.",
+    "billingPortalFailed": "Non riusciamo ad aprire la pagina di fatturazione. Riprova tra un istante.",
+    "billingPortalElsewhere": "Il tuo abbonamento non è stato sottoscritto qui. Scrivi al supporto e ce ne occupiamo."
   },
   "languageSwitcher": {
     "label": "Lingua"

@@ -1021,7 +1021,12 @@
     "planYearlyPlusF1": "كل مزايا الشهري +",
     "planYearlyPlusF2": "شهران مجانًا",
     "planYearlyPlusF3": "دعم ذو أولوية",
-    "planYearlyPlusF4": "وصول مبكر إلى الميزات الجديدة"
+    "planYearlyPlusF4": "وصول مبكر إلى الميزات الجديدة",
+    "billingPortalCta": "إدارة اشتراكي وبطاقتي",
+    "billingPortalOpening": "جاري الفتح...",
+    "billingPortalHint": "غيّر بطاقتك، حمّل فواتيرك، اطّلع على موعد الدفع القادم أو ألغِ الاشتراك.",
+    "billingPortalFailed": "تعذّر فتح صفحة الفوترة الآن. حاول مرة أخرى بعد قليل.",
+    "billingPortalElsewhere": "لم يتم الاشتراك من هنا. تواصل مع الدعم وسنتكفّل بالأمر."
   },
   "languageSwitcher": {
     "label": "اللغة"
