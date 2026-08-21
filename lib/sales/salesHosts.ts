@@ -33,6 +33,32 @@ export const SALES_HOSTS: Readonly<Record<string, string>> = {
   "www.tiquiz.fr": "tiquiz",
 };
 
+/**
+ * L'ADRESSE CANONIQUE D'UNE PAGE DE VENTE, UNE FOIS SON DOMAINE EN LIGNE.
+ *
+ * Tant que la page n'était qu'un aperçu derrière `?k=`, sa canonique
+ * devait désigner l'originale sur Systeme.io : deux copies de la même
+ * page se seraient fait concurrence sur les mêmes mots.
+ *
+ * Le jour où le domaine devient public, la réponse s'inverse. Laisser la
+ * canonique sur `tipote.fr` reviendrait à dire à Google "la vraie page
+ * est ailleurs", donc à acheter un domaine qui ne pourra jamais remonter.
+ * Béné, 19 août : "il faudra aussi optimiser le référencement à chaque
+ * étape pour que ces pages rankent correctement."
+ *
+ * Sans `www` : c'est l'adresse qu'on communique, et une seule des deux
+ * formes doit être canonique.
+ */
+export const PUBLIC_SALES_CANONICAL: Readonly<Record<string, string>> = {
+  tiquiz: "https://tiquiz.fr/",
+};
+
+/** L'adresse canonique publique de cette page, ou `null` si elle n'en a pas encore. */
+export function publicSalesCanonical(slug: string | null | undefined): string | null {
+  const propre = String(slug ?? "").trim().toLowerCase();
+  return PUBLIC_SALES_CANONICAL[propre] ?? null;
+}
+
 /** Le slug de page de vente servi par cet hôte, ou `null`. */
 export function salesSlugForHost(host: string | null | undefined): string | null {
   const h = String(host ?? "").trim().toLowerCase().split(":")[0];
