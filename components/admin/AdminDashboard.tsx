@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import ResellersCard from "@/components/admin/ResellersCard";
 import ResellerPaymentEventsCard from "@/components/admin/ResellerPaymentEventsCard";
 import WebhookLogsCard from "@/components/admin/WebhookLogsCard";
+import PilotageCard from "@/components/admin/PilotageCard";
 
 type User = {
   user_id?: string; id?: string; email: string; first_name?: string; last_name?: string;
@@ -155,6 +156,13 @@ export default function AdminDashboard() {
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <Button variant="outline" size="sm" onClick={fetchUsers}><RefreshCw className="w-4 h-4 mr-1" />{t("refresh")}</Button>
       </div>
+
+      {/* L'ECRAN UNIQUE, EN PREMIER.
+          Bene, 21 aout : "je vois les eleves, leurs infos + le bouton
+          rembourser ? Au lieu d'avoir deux ecrans". Il passe donc AVANT
+          la liste technique des comptes, qui reste en dessous pour les
+          actions d'administration (changer un plan, creer un compte). */}
+      <PilotageCard />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">

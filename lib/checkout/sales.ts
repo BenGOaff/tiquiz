@@ -36,9 +36,28 @@ export interface EventRow {
   event_type: string | null;
   payload: unknown;
   created_at: string;
+  /** L'identifiant de l'evenement chez le fournisseur, quand il existe. */
+  event_id?: string | null;
 }
 
-export type SaleProvider = "stripe" | "paypal";
+/**
+ * D'OÙ VIENT L'ARGENT.
+ *
+ * `systeme_io` a été ajouté le 21 août, et c'est une correction de fond,
+ * pas un ajout de confort. Béné : "sur mon dashboard je dois retrouver
+ * mes clients actuels et ceux qui sont passés et passeront encore par
+ * systeme io sinon c'est tout sauf fiable et exhaustif."
+ *
+ * Elle a raison : la totalité de ses clients payants d'aujourd'hui sont
+ * arrives par Systeme.io. Un tableau de bord qui ne montre que nos
+ * propres ventes affiche un chiffre d'affaires proche de zero et laisse
+ * croire qu'il n'y a rien a piloter.
+ *
+ * **Ces ventes ne se remboursent PAS depuis chez nous** : l'argent est
+ * chez Systeme.io, qui a son propre bouton. L'ecran doit le dire au lieu
+ * d'afficher une action qui echouerait.
+ */
+export type SaleProvider = "stripe" | "paypal" | "systeme_io";
 
 export interface Sale {
   /** Ce qu'on rembourse. PaymentIntent chez Stripe, capture chez PayPal. */
