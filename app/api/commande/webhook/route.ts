@@ -31,10 +31,21 @@ import { readRefundOutcome } from "@/lib/checkout/refund";
 import { sendRefundGoodbyeEmail } from "@/lib/email/refundGoodbyeEmail";
 import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ownerAccount";
 import {
+  retrieveOwnerCustomer,
   retrieveOwnerSession,
   retrieveOwnerSessionByPaymentIntent,
+  retrieveOwnerSubscription,
   verifyStripeSignature,
 } from "@/lib/checkout/stripeCheckout";
+import { recordChurn } from "@/lib/checkout/churn";
+import {
+  isSubscriptionEvent,
+  readCancellationFeedback,
+  readSubscriptionAmount,
+  readSubscriptionOutcome,
+  stripeDateToIso,
+  type RawSubscription,
+} from "@/lib/checkout/subscriptionLifecycle";
 import { logWebhookEvent } from "@/lib/webhooks/log";
 
 export const runtime = "nodejs";
@@ -95,6 +106,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // abonnement, ça voulait dire garder le plan payant sans le payer.
   if (eventType === "charge.refunded") {
     return await surRemboursement(event);
+  }
+
+  // ── L'ABONNEMENT S'ARRÊTE, OU IL VA S'ARRÊTER ──
+  //
+  // Ajouté le 21 août. Avant : aucun événement d'abonnement n'était
+  // écouté, donc un client qui résiliait gardait son plan payant
+  // indéfiniment, et la question "qui est parti" n'avait aucune donnée
+  // derrière. Ce qui coupe, ce qui ne coupe PAS, et pourquoi : voir
+  // `lib/checkout/subscriptionLifecycle.ts`.
+  if (isSubscriptionEvent(eventType)) {
+    return await surAbonnement(eventType, event);
   }
 
   // Les deux événements qui veulent dire "l'argent est là". Le second
@@ -254,4 +276,137 @@ async function surRemboursement(event: RawEvent): Promise<NextResponse> {
       `email d'au revoir ${envoye ? "envoye" : "non envoye"}`,
   );
   return NextResponse.json({ ok: true, downgraded: !sortie.skipped, skipped: sortie.skipped });
+}
+
+/**
+ * LE CYCLE DE VIE D'UN ABONNEMENT.
+ *
+ * Trois choses se passent ici, et la deuxième est celle qu'on oublie.
+ *
+ * 1. On RELIT l'abonnement chez Stripe. La signature prouve
+ *    l'expéditeur, pas la fraîcheur de l'objet : entre l'envoi et le
+ *    traitement, le client a pu annuler sa résiliation.
+ * 2. On DEMANDE l'adresse au client Stripe. Un événement d'abonnement
+ *    n'en porte aucune : sans cet appel, on saurait qu'un abonnement
+ *    s'arrête sans savoir de qui il s'agit.
+ * 3. On consigne le départ, et on ne coupe que sur une fin réelle.
+ *
+ * On répond 200 sur tous les cas compris, y compris quand on ne fait
+ * rien : un 500 sur un cas écarté déclencherait des réessais en boucle.
+ */
+async function surAbonnement(
+  eventType: string | null,
+  event: RawEvent,
+): Promise<NextResponse> {
+  const objet = (event.data?.object ?? {}) as Record<string, unknown>;
+
+  // Sur `customer.subscription.*` l'objet EST l'abonnement ; sur
+  // `invoice.*` il porte l'abonnement dans un champ. Deux formes, une
+  // seule lecture, écrite ici plutôt que devinée plus bas.
+  const surLAbonnement = String(eventType ?? "").startsWith("customer.subscription.");
+  const subId = String(
+    (surLAbonnement ? objet.id : objet.subscription) ?? "",
+  ).trim();
+  const customerId = String(objet.customer ?? "").trim();
+
+  const compte = readOwnerStripe(process.env);
+  if (!compte) {
+    console.error("[commande/webhook] STRIPE_SECRET_KEY_OWNER absente : abonnement non traite.");
+    // 503 : Stripe reessaiera, et une fois la cle posee les evenements
+    // de l'intervalle rentreront tout seuls.
+    return NextResponse.json({ ok: false, reason: "not_configured" }, { status: 503 });
+  }
+
+  // On relit, sauf si on n'a rien a relire (une facture sans abonnement
+  // est un paiement unique : ce n'est pas notre affaire ici).
+  const frais = subId ? await retrieveOwnerSubscription(compte.key, subId) : null;
+  const abonnement = (frais ?? (surLAbonnement ? objet : null)) as RawSubscription | null;
+
+  if (!subId && surLAbonnement) {
+    console.error("[commande/webhook] evenement d'abonnement sans identifiant");
+    return NextResponse.json({ ok: true, reason: "no_subscription" });
+  }
+  if (!subId) {
+    // `invoice.paid` d'un achat unique : rien a faire cote abonnement.
+    return NextResponse.json({ ok: true, reason: "not_a_subscription" });
+  }
+
+  const lecture = readSubscriptionOutcome(eventType, abonnement);
+
+  // L'ADRESSE. Sur une facture Stripe la donne parfois directement ;
+  // sinon on va la chercher chez le client. Sans elle, on ne peut ni
+  // retirer un plan ni consigner un depart.
+  const surFacture = String(objet.customer_email ?? "").trim() || null;
+  const client = surFacture ? null : await retrieveOwnerCustomer(compte.key, customerId);
+  const email = surFacture ?? client?.email ?? null;
+
+  if (!email) {
+    console.error(
+      `[commande/webhook] abonnement ${subId} (${eventType}) sans adresse retrouvee : ` +
+        `rien consigne, plan NON touche. Intervention necessaire.`,
+    );
+    return NextResponse.json({ ok: true, reason: "no_email" });
+  }
+
+  const { amountCents, currency } = readSubscriptionAmount(abonnement);
+  const { feedback, comment } = readCancellationFeedback(abonnement);
+  const finDePeriode = stripeDateToIso(abonnement?.current_period_end);
+
+  // ── ON CONSIGNE ──
+  //
+  // Uniquement sur une intention de partir ou une fin reelle. Stripe
+  // envoie un `customer.subscription.updated` pour a peu pres tout (une
+  // carte mise a jour, une TVA renseignee) : creer une ligne a chaque
+  // fois remplirait la table de departs qui n'en sont pas.
+  if (lecture.reason === "cancel_scheduled" || lecture.reason === "ended") {
+    await recordChurn({
+      email,
+      reference: subId,
+      amountCents,
+      currency,
+      endsAt: finDePeriode,
+      endedAt: lecture.outcome === "revoke" ? new Date().toISOString() : null,
+      stripeFeedback: feedback,
+      stripeComment: comment,
+    });
+  } else if (lecture.reason === "reactivated") {
+    // On ne cree rien : on complete SI un depart etait deja consigne.
+    // Sans ce garde-fou, chaque mise a jour anodine deviendrait un
+    // depart dans le tableau de bord.
+    await recordChurn({
+      email,
+      reference: subId,
+      reactivatedAt: new Date().toISOString(),
+      updateOnly: true,
+    });
+  }
+
+  if (lecture.outcome !== "revoke") {
+    console.log(
+      `[commande/webhook] abonnement ${subId} (${eventType}) : ${lecture.reason}, acces conserve`,
+    );
+    return NextResponse.json({ ok: true, subscription: lecture.reason, revoked: false });
+  }
+
+  const sortie = await downgradeToFreeByEmail({
+    email,
+    source: "stripe",
+    reference: subId,
+  });
+
+  if (!sortie.ok && sortie.reason !== "already_free") {
+    console.error(
+      `[commande/webhook] abonnement ${subId} termine mais plan NON retire pour ${email} ` +
+        `(${sortie.reason ?? "raison inconnue"})`,
+    );
+    // 502 : on VEUT que Stripe reessaie. Garder un plan payant qui n'est
+    // plus paye est une perte seche, tous les mois.
+    return NextResponse.json({ ok: false, reason: sortie.reason ?? "downgrade_failed" }, { status: 502 });
+  }
+
+  console.log(
+    `[commande/webhook] abonnement ${subId} termine : ${email} repasse en gratuit ` +
+      `(${sortie.reason ?? "ok"})`,
+  );
+  return NextResponse.json({ ok: true, subscription: lecture.reason, revoked: true });
 }

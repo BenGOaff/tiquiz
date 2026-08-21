@@ -11,6 +11,17 @@
 //
 // Ce qu'on INJECTE, en revanche, doit passer par ici et nulle part
 // ailleurs : le référencement, le lien de commande, le suivi affilié.
+//
+// 21 août : cette phrase était vraie pour le référencement et FAUSSE
+// pour le lien de commande, qui n'avait jamais été écrit. Béné s'en est
+// aperçue dix minutes après la mise en ligne du domaine de l'Atelier.
+// Une intention écrite en commentaire n'est pas du code : les cibles de
+// commande sont maintenant un paramètre OBLIGATOIRE de
+// `renderSalesPage`, donc on ne peut plus servir une page de vente sans
+// avoir dit où elle vend.
+
+import { rewriteOrderLinks, type OrderLinkRewrite } from "@/lib/sales/salesPageLinks";
+import type { OwnerProductId } from "@/lib/checkout/catalog";
 
 /** Ce qu'on sait d'une page de vente, indépendamment de son HTML. */
 export type SalesPageMeta = {
@@ -38,7 +49,21 @@ export function stripHeadTags(html: string): string {
     .replace(/<meta[^>]*name=["']?description["']?[^>]*>/gi, "")
     .replace(/<meta[^>]*property=["']og:[^"']*["'][^>]*>/gi, "")
     .replace(/<meta[^>]*name=["']twitter:[^"']*["'][^>]*>/gi, "")
-    .replace(/<link[^>]*rel=["']?canonical["']?[^>]*>/gi, "");
+    .replace(/<link[^>]*rel=["']?canonical["']?[^>]*>/gi, "")
+    // LE `noindex` DE SYSTEME.IO, TROUVÉ LE 21 AOÛT.
+    //
+    // La page capturée porte sa propre balise, posée par l'éditeur de
+    // Systeme.io :
+    //
+    //   <meta data-react-helmet="true" name="robots" content="noindex"/>
+    //
+    // Sans ce retrait, décider `indexable: true` de notre côté ne
+    // servait à rien : la balise de la capture restait dans le
+    // document et c'est elle que Google aurait lue. On aurait cru la
+    // page ouverte au référencement alors qu'elle restait fermée, et
+    // c'est exactement le genre d'écart qu'on ne découvre que des mois
+    // plus tard en se demandant pourquoi rien ne remonte.
+    .replace(/<meta[^>]*name=["']?robots["']?[^>]*>/gi, "");
 }
 
 /** Échappe ce qui part dans un attribut HTML. */
@@ -96,9 +121,33 @@ export function buildHeadTags(meta: SalesPageMeta): string {
 export function renderSalesPage(
   html: string,
   meta: SalesPageMeta,
-  opts: { indexable: boolean },
+  opts: {
+    indexable: boolean;
+    /**
+     * Où mènent les boutons payants de la page.
+     *
+     * **Obligatoire, jamais deviné.** Sans lui, les boutons continuent
+     * de pointer vers les pages de plan Systeme.io capturées avec la
+     * page : le visiteur quitte notre domaine et notre bon de commande
+     * ne sert jamais. C'est ce qui s'est passé sur l'Atelier le 21 août,
+     * entre la mise en ligne du domaine et le message de Béné dix
+     * minutes plus tard.
+     *
+     * `null` est un choix explicite : "je sers cette page sans y
+     * brancher de commande". On ne peut plus l'oublier par distraction.
+     */
+    checkoutTargets: Readonly<Record<string, OwnerProductId>> | null;
+    /** Appelé avec le résultat de la réécriture, pour journaliser. */
+    onRewrite?: (info: OrderLinkRewrite) => void;
+  },
 ): string {
   let sortie = stripHeadTags(html);
+
+  if (opts.checkoutTargets) {
+    const info = rewriteOrderLinks(sortie, opts.checkoutTargets);
+    sortie = info.html;
+    opts.onRewrite?.(info);
+  }
 
   const tetes = [
     buildHeadTags(meta),

@@ -33,6 +33,32 @@ export const SALES_HOSTS: Readonly<Record<string, string>> = {
   "www.tiquiz.fr": "tiquiz",
 };
 
+/**
+ * L'ADRESSE CANONIQUE D'UNE PAGE DE VENTE, UNE FOIS SON DOMAINE EN LIGNE.
+ *
+ * Tant que la page n'était qu'un aperçu derrière `?k=`, sa canonique
+ * devait désigner l'originale sur Systeme.io : deux copies de la même
+ * page se seraient fait concurrence sur les mêmes mots.
+ *
+ * Le jour où le domaine devient public, la réponse s'inverse. Laisser la
+ * canonique sur `tipote.fr` reviendrait à dire à Google "la vraie page
+ * est ailleurs", donc à acheter un domaine qui ne pourra jamais remonter.
+ * Béné, 19 août : "il faudra aussi optimiser le référencement à chaque
+ * étape pour que ces pages rankent correctement."
+ *
+ * Sans `www` : c'est l'adresse qu'on communique, et une seule des deux
+ * formes doit être canonique.
+ */
+export const PUBLIC_SALES_CANONICAL: Readonly<Record<string, string>> = {
+  tiquiz: "https://tiquiz.fr/",
+};
+
+/** L'adresse canonique publique de cette page, ou `null` si elle n'en a pas encore. */
+export function publicSalesCanonical(slug: string | null | undefined): string | null {
+  const propre = String(slug ?? "").trim().toLowerCase();
+  return PUBLIC_SALES_CANONICAL[propre] ?? null;
+}
+
 /** Le slug de page de vente servi par cet hôte, ou `null`. */
 export function salesSlugForHost(host: string | null | undefined): string | null {
   const h = String(host ?? "").trim().toLowerCase().split(":")[0];
@@ -42,4 +68,37 @@ export function salesSlugForHost(host: string | null | undefined): string | null
 /** Cet hôte est-il un domaine de vente public ? */
 export function isPublicSalesHost(host: string | null | undefined): boolean {
   return salesSlugForHost(host) !== null;
+}
+
+/**
+ * SUR QUEL DOMAINE RAMENER L'ACHETEUR APRÈS SON PAIEMENT.
+ *
+ * Trouvé le 20 août, avant que ça ne coûte une vente. L'URL de retour
+ * était construite depuis `APP_URL`, donc `quiz.tipote.com`. Un
+ * acheteur venu de `tiquiz.fr` n'a AUCUNE clé dans son URL
+ * (c'est tout l'intérêt du domaine public) : il serait renvoyé sur un
+ * domaine où la porte est fermée, et il aurait vu une page 404 juste
+ * après avoir payé.
+ *
+ * La règle est donc : **on ramène l'acheteur là où il a acheté.** C'est
+ * aussi ce qu'il attend, et c'est ce que son navigateur affichera dans
+ * la barre d'adresse pendant tout le parcours.
+ *
+ * `origin` n'est utilisé QUE s'il fait partie de nos domaines de vente :
+ * un `Host` falsifié ne peut donc pas détourner le retour de paiement
+ * vers un site tiers. Partout ailleurs, on garde le domaine canonique.
+ */
+export function checkoutReturnBase(
+  origin: string | null | undefined,
+  canonique: string,
+): string {
+  const propre = String(origin ?? "").trim().replace(/\/$/, "");
+  if (!propre) return canonique;
+  let host: string | null = null;
+  try {
+    host = new URL(propre).host;
+  } catch {
+    return canonique;
+  }
+  return isPublicSalesHost(host) ? propre : canonique;
 }

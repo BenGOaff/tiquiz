@@ -43,6 +43,7 @@ import crypto from "node:crypto";
 
 import { STRIPE_BRANDING } from "@/lib/checkout/brand";
 import type { OwnerProduct } from "@/lib/checkout/catalog";
+import { OWNER_SUBSCRIPTION_EVENTS } from "@/lib/checkout/subscriptionLifecycle";
 
 const STRIPE_API = "https://api.stripe.com";
 
@@ -55,6 +56,14 @@ export const OWNER_STRIPE_EVENTS = [
   "checkout.session.async_payment_failed",
   // Le remboursement. Sans lui, un abonne rembourse garde son plan payant.
   "charge.refunded",
+  // LE CYCLE DE VIE DE L'ABONNEMENT, AJOUTE LE 21 AOUT.
+  //
+  // Sans ces quatre la, un client qui resilie garde son plan payant
+  // indefiniment, un renouvellement qui echoue ne coupe rien, et la
+  // question "qui est parti" n'a aucune donnee derriere. Voir
+  // `lib/checkout/subscriptionLifecycle.ts` pour qui coupe quoi, et
+  // surtout pour ce qui NE coupe PAS.
+  ...OWNER_SUBSCRIPTION_EVENTS,
 ] as const;
 
 function toForm(obj: Record<string, string | number>): string {
@@ -378,6 +387,67 @@ export async function retrieveOwnerSessionByPaymentIntent(
       productId: meta.product ?? null,
       affiliateRef: meta.affiliate_ref ?? null,
     };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * L'ADRESSE DERRIÈRE UN ABONNEMENT.
+ *
+ * Un événement `customer.subscription.*` ne porte PAS d'adresse email :
+ * il parle d'un abonnement, qui désigne un client par son identifiant.
+ * Sans cet appel, on saurait qu'un abonnement s'arrête sans savoir de
+ * qui il s'agit, donc sans pouvoir retirer le plan.
+ *
+ * C'est la même leçon que le remboursement du 20 août : la signature
+ * prouve l'expéditeur, elle ne fournit pas la donnée qui manque. On va
+ * la chercher.
+ */
+export async function retrieveOwnerCustomer(
+  key: string,
+  customerId: string,
+): Promise<{ email: string | null; name: string | null } | null> {
+  const id = String(customerId ?? "").trim();
+  if (!id) return null;
+  try {
+    const res = await fetch(`${STRIPE_API}/v1/customers/${encodeURIComponent(id)}`, {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      email?: string | null;
+      name?: string | null;
+      deleted?: boolean;
+    };
+    // Un client supprimé chez Stripe ne renvoie plus que son id. On ne
+    // fabrique pas une adresse : on répond qu'on ne sait pas.
+    if (json.deleted) return null;
+    return { email: json.email ?? null, name: json.name ?? null };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Relit un abonnement chez Stripe.
+ *
+ * On relit au lieu de croire le corps reçu, pour la raison habituelle :
+ * la signature prouve l'expéditeur, pas la FRAÎCHEUR de l'objet. Entre
+ * l'envoi et le traitement, le client a pu annuler sa résiliation.
+ */
+export async function retrieveOwnerSubscription(
+  key: string,
+  subscriptionId: string,
+): Promise<Record<string, unknown> | null> {
+  const id = String(subscriptionId ?? "").trim();
+  if (!id) return null;
+  try {
+    const res = await fetch(`${STRIPE_API}/v1/subscriptions/${encodeURIComponent(id)}`, {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as Record<string, unknown>;
   } catch {
     return null;
   }

@@ -27,6 +27,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { renderSalesPage, type SalesPageMeta } from "@/lib/sales/servePage";
 import { isSalesOpen } from "@/lib/sales/previewGate";
+import { isPublicSalesHost, publicSalesCanonical } from "@/lib/sales/salesHosts";
+import { SALES_CHECKOUT_TARGETS } from "@/lib/sales/salesPageLinks";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -99,18 +101,56 @@ export async function GET(
     );
   }
 
-  const html = renderSalesPage(fs.readFileSync(fichier, "utf8"), { slug, ...meta }, {
-    // En aperçu, JAMAIS indexable : une page de test qui remonte dans
-    // Google ferait doublon avec l'originale et abîmerait les deux.
-    indexable: false,
-  });
+  // LE DOMAINE PUBLIC N'EST PAS UN APERÇU.
+  //
+  // Sur `tiquiz.fr`, la page est la vraie page : elle doit être
+  // indexable, et sa canonique doit désigner ce domaine. Derrière la
+  // clé, elle reste un chantier : `noindex`, canonique vers l'originale.
+  //
+  // L'hôte est un PARAMÈTRE de la décision, jamais deviné ailleurs.
+  const publique = isPublicSalesHost(req.headers.get("host"));
+  const canonique = (publique && publicSalesCanonical(slug)) || meta.canonical;
+
+  const html = renderSalesPage(
+    fs.readFileSync(fichier, "utf8"),
+    { slug, ...meta, canonical: canonique },
+    {
+      indexable: publique,
+      // LES BOUTONS PAYANTS MÈNENT CHEZ NOUS.
+      //
+      // Sans ça, ils pointent vers les pages de plan Systeme.io capturées
+      // avec la page : le visiteur quitte le domaine et notre bon de
+      // commande ne sert jamais. Corrigé AVANT de brancher `tiquiz.fr`,
+      // parce que sur l'Atelier on l'a découvert en direct.
+      checkoutTargets: SALES_CHECKOUT_TARGETS[slug] ?? null,
+      onRewrite: (info) => {
+        if (info.rewritten.length === 0) {
+          console.error(
+            `[apercu/vente] ${slug} : AUCUN bouton payant reecrit. ` +
+              `Les visiteurs paient chez Systeme.io.`,
+          );
+        }
+        if (info.unmapped.length > 0) {
+          // Une page recapturée peut avoir gagné un bouton payant qu'on
+          // continuerait d'envoyer chez Systeme.io. Ça se dit.
+          console.warn(
+            `[apercu/vente] ${slug} : lien(s) de tunnel Tiquiz laisse(s) tels quels ` +
+              `et absents des deux listes : ${info.unmapped.join(", ")}`,
+          );
+        }
+      },
+    },
+  );
 
   return new NextResponse(html, {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "no-store, max-age=0",
-      "X-Robots-Tag": "noindex, nofollow",
+      // L'en-tête suit la même décision que la balise. Les deux se
+      // contredisant, c'est l'en-tête qui gagne : le laisser en dur
+      // aurait rendu `indexable` décoratif.
+      ...(publique ? {} : { "X-Robots-Tag": "noindex, nofollow" }),
     },
   });
 }

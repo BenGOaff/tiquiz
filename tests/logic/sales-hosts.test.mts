@@ -18,7 +18,11 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { isPublicSalesHost, salesSlugForHost } from "../../lib/sales/salesHosts.ts";
+import {
+  checkoutReturnBase,
+  isPublicSalesHost,
+  salesSlugForHost,
+} from "../../lib/sales/salesHosts.ts";
 import { isSalesOpen, isSalesPreviewOpen } from "../../lib/sales/previewGate.ts";
 
 const CLE = "une-cle-de-chantier-assez-longue";
@@ -75,5 +79,51 @@ test("le middleware sert la page de vente a la racine du domaine", () => {
   assert.ok(
     src.includes("NextResponse.rewrite"),
     "la racine n'est plus reecrite : le visiteur verrait un chemin technique",
+  );
+});
+
+test("on ramene l'acheteur LA OU IL A ACHETE (20 aout 2026)", () => {
+  // Trouve avant que ca ne coute une vente. L'URL de retour venait de
+  // APP_URL, donc du domaine canonique. Un acheteur venu du domaine
+  // public n'a AUCUNE cle dans son URL : il aurait ete renvoye sur un
+  // domaine ou la porte est fermee, et aurait vu une 404 juste apres
+  // avoir paye.
+  assert.equal(
+    checkoutReturnBase("https://tiquiz.fr", "https://quiz.tipote.com"),
+    "https://tiquiz.fr",
+  );
+  assert.equal(
+    checkoutReturnBase("https://www.tiquiz.fr", "https://quiz.tipote.com"),
+    "https://www.tiquiz.fr",
+  );
+});
+
+test("un Host falsifie ne detourne PAS le retour de paiement", () => {
+  // Sans ce garde-fou, n'importe qui pourrait faire revenir un acheteur
+  // sur SON site apres un paiement chez nous. Seuls NOS domaines de
+  // vente sont acceptes ; tout le reste retombe sur le canonique.
+  for (const origine of [
+    "https://mechant.example",
+    "https://tiquiz.fr.mechant.example",
+    "http://localhost:3000",
+    "pas-une-url",
+    "",
+    null,
+    undefined,
+  ]) {
+    assert.equal(
+      checkoutReturnBase(origine, "https://quiz.tipote.com"),
+      "https://quiz.tipote.com",
+      String(origine),
+    );
+  }
+});
+
+test("depuis l'app, on garde le domaine canonique", () => {
+  // Sur l'app, l'acheteur est passe par la cle : le canonique est le bon
+  // choix et rien ne change par rapport a avant.
+  assert.equal(
+    checkoutReturnBase("https://quiz.tipote.com", "https://quiz.tipote.com"),
+    "https://quiz.tipote.com",
   );
 });
