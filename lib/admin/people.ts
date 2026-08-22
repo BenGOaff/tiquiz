@@ -147,6 +147,36 @@ export interface Person {
   } | null;
 }
 
+/**
+ * CHEZ QUOI CETTE PERSONNE EST-ELLE CLIENTE ?
+ *
+ * Béné, 22 août : "je peux pas avoir une seule liste avec toutes les
+ * infos ? Genre s'il est client Tiquiz ou Atelier ou les deux".
+ *
+ * La question est celle de tous les jours, et elle n'avait de réponse
+ * nulle part : il fallait croiser la colonne Plan et la colonne Atelier
+ * de tête. Elle vit ici, en fonction pure, pour que l'écran l'affiche
+ * sans la recalculer.
+ *
+ * `aucun` existe et n'est pas un cas d'erreur : une personne peut avoir
+ * un compte Tiquiz gratuit sans être élève, elle est alors cliente de
+ * rien. Le confondre avec `tiquiz` gonflerait la clientèle payante.
+ */
+export type ClientKind = "tiquiz" | "atelier" | "les-deux" | "aucun";
+
+export function readClientKind(p: {
+  hasTiquizAccount: boolean;
+  plan: string;
+  atelier: { status: string | null } | null;
+}): ClientKind {
+  const tiquiz = p.hasTiquizAccount && String(p.plan ?? "").trim() !== "" && p.plan !== "free";
+  const atelier = p.atelier?.status === "active";
+  if (tiquiz && atelier) return "les-deux";
+  if (tiquiz) return "tiquiz";
+  if (atelier) return "atelier";
+  return "aucun";
+}
+
 export interface PeopleTotals {
   comptes: number;
   essai: number;
