@@ -31,6 +31,7 @@ import {
   ArrowUpRight,
   CreditCard,
   Loader2,
+  MessageSquareQuote,
   Minus,
   RefreshCw,
   Search,
@@ -42,6 +43,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { isAtelierSale } from "@/lib/admin/atelier";
+import { buildChurnDigest } from "@/lib/admin/churnDigest";
 import type { PeopleTotals, Person, PersonStatus } from "@/lib/admin/people";
 import type { Sale } from "@/lib/checkout/sales";
 
@@ -197,6 +199,8 @@ export default function PilotageCard() {
   const totals = data?.totals ?? null;
   const orphelines = data?.ventesOrphelines ?? [];
   const tendance = data?.tendance ?? null;
+  // Le tri et les comptes vivent dans lib/, testes. Ici on affiche.
+  const departs = buildChurnDigest(people);
 
   const q = recherche.trim().toLowerCase();
   const visibles = people.filter((p) => {
@@ -325,6 +329,61 @@ export default function PilotageCard() {
                 </li>
               ))}
             </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── POURQUOI ELLES PARTENT ──
+          "consigner ces reponses pour level up l'outil". Une reponse
+          rangee dans une colonne que personne n'ouvre n'existe pas : ce
+          bloc est la seule raison d'etre de l'email de depart.
+          AUCUN POURCENTAGE : sur trois departs, "67% pour le prix"
+          designe deux personnes et se lit comme une tendance (meme
+          defaut que le funnel de Jocelyne, 4 aout). */}
+      {departs.total > 0 && (
+        <Card>
+          <CardContent className="py-4">
+            <p className="flex items-center gap-2 text-sm font-bold">
+              <MessageSquareQuote className="size-4" aria-hidden />
+              Pourquoi elles partent
+            </p>
+            {departs.parMotif.length > 0 && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {departs.parMotif
+                  .map((m) => `${MOTIFS[m.motif] ?? m.motif} : ${m.count}`)
+                  .join("  ·  ")}
+              </p>
+            )}
+            {departs.voix.length > 0 ? (
+              <ul className="mt-3 space-y-3">
+                {departs.voix.map((v) => (
+                  <li key={`${v.email}-${v.quand ?? ""}`} className="text-sm">
+                    <p className="italic">&laquo;&nbsp;{v.texte}&nbsp;&raquo;</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {v.name || v.email}
+                      {v.quand && ` · ${jour(v.quand)}`}
+                      {v.motif && ` · ${MOTIFS[v.motif] ?? v.motif}`}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Personne n&apos;a encore écrit. L&apos;email part le lendemain de la
+                résiliation.
+              </p>
+            )}
+            {departs.sansReponse > 0 && (
+              // On BORNE ce que les phrases ci dessus valent. Sans cette
+              // ligne, 2 reponses sur 30 departs se lisent comme "voila
+              // pourquoi les gens partent".
+              <p className="mt-3 text-xs text-muted-foreground">
+                {departs.sansReponse === 1
+                  ? "1 personne est partie sans rien dire"
+                  : `${departs.sansReponse} personnes sont parties sans rien dire`}{" "}
+                sur {departs.total} {departs.total === 1 ? "départ" : "départs"}.
+              </p>
+            )}
           </CardContent>
         </Card>
       )}

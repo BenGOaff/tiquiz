@@ -152,6 +152,15 @@ export async function middleware(req: NextRequest) {
     // c'est justement l'achat qui le lui cree. Ils restent fermes par la
     // cle SALES_PREVIEW_TOKEN tant que le chantier n'est pas ouvert.
     pathname.startsWith("/commande/") ||
+    // La page ou quelqu'un qui vient de resilier dit POURQUOI. Publique
+    // par la meme evidence que le bon de commande, en sens inverse :
+    // elle n'a plus d'abonnement et peut ne plus avoir de compte du
+    // tout. Sans cette ligne, le middleware la renverrait vers /login,
+    // ce qui reviendrait a lui demander de se connecter pour repondre a
+    // une question qu'on lui pose. On n'aurait aucune reponse.
+    // L'autorisation est ailleurs : le jeton SIGNE dans l'URL, verifie
+    // par la page et par la route (lib/churn/replyToken.ts).
+    pathname.startsWith("/depart/") ||
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname === "/favicon.ico"
