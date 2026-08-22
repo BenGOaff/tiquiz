@@ -155,6 +155,29 @@ function remboursables(p: Person): Sale[] {
   );
 }
 
+/**
+ * OU SE REMBOURSE L'ARGENT DE CETTE PERSONNE.
+ *
+ * Bene, 22 aout : "il est ou le fucking bouton rembourser ??"
+ *
+ * Il n'y en avait pas, et il ne POUVAIT pas y en avoir : toutes ses
+ * ventes d'aujourd'hui passent par Systeme.io, qui encaisse et qui garde
+ * l'argent. Le bouton n'existe que sur nos propres encaissements, et il
+ * n'y en a encore aucun.
+ *
+ * Mais un bouton absent sans un mot se lit comme un bug, et elle a passe
+ * du temps a le chercher. La ligne dit donc OU aller, meme quand il n'y
+ * a rien a cliquer ici. Regle du 3 aout : un refus n'est pas une panne,
+ * mais il doit produire quelque chose a l'ecran.
+ */
+function ouRembourser(p: Person): string {
+  if (remboursables(p).length > 0) return "remboursable ici";
+  const restantes = p.sales.filter((v) => !v.refundedAt);
+  if (restantes.length === 0) return "tout est rembourse";
+  if (restantes.some((v) => isAtelierSale(v.ref))) return "a rembourser depuis l'Atelier";
+  return "a rembourser dans Systeme.io";
+}
+
 function jour(iso: string | null): string {
   if (!iso) return "-";
   try {
@@ -745,8 +768,22 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
                             </Badge>
                           </td>
                           <td className="px-4 py-3 capitalize">{p.plan}</td>
-                          <td className="px-4 py-3 font-semibold">
-                            {p.paidCents > 0 ? euros(p.paidCents) : "-"}
+                          <td className="px-4 py-3">
+                            {/* OU EST L'ARGENT, DIT SUR LA LIGNE.
+                                Bene, 22 aout : "il est ou le fucking
+                                bouton rembourser ??" Il n'y en avait pas,
+                                et il ne pouvait pas y en avoir : toutes
+                                ses ventes passent par Systeme.io, qui
+                                garde l'argent. Un bouton absent sans
+                                explication se lit comme un bug. */}
+                            <span className="font-semibold">
+                              {p.paidCents > 0 ? euros(p.paidCents) : "-"}
+                            </span>
+                            {p.sales.length > 0 && (
+                              <span className="block text-xs text-muted-foreground">
+                                {ouRembourser(p)}
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-xs text-muted-foreground">
                             {p.quizCount} quiz · {p.leadCount} leads
