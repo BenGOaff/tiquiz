@@ -34,6 +34,7 @@ import PilotageCard from "@/components/admin/PilotageCard";
 import ResellerPaymentEventsCard from "@/components/admin/ResellerPaymentEventsCard";
 import ResellersCard from "@/components/admin/ResellersCard";
 import StatistiquesCard from "@/components/admin/StatistiquesCard";
+import TagsCard from "@/components/admin/TagsCard";
 import WebhookLogsCard from "@/components/admin/WebhookLogsCard";
 
 /**
@@ -153,6 +154,12 @@ export default function AdminDashboard() {
           </Card>
 
           <PilotageCard vue="clients" />
+
+          {/* LE CONTROLE DES TAGS vit ici, sous la liste : c'est la meme
+              question ("est-ce que cette personne a bien ce qu'elle a
+              paye ?"), et la correction se fait dans la liste juste au
+              dessus. */}
+          <TagsCard />
         </>
       )}
 

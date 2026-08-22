@@ -141,6 +141,47 @@ test("un refus d'admin est nomme, pas laisse en 'erreur'", () => {
   assert.ok(src.includes("administrateur"), "le refus d'admin ne nomme plus ce qu'il faut regarder");
 });
 
+test("le bouton Rembourser reste visible sans deplier", () => {
+  // Bene, 22 aout : "sauf erreur de ma part je n'ai plus de bouton pour
+  // rembourser un client ?" Il etait dans le tiroir, et c'est exactement
+  // le probleme : une action qu'on doit chercher n'existe pas.
+  const src = lire("components/admin/PilotageCard.tsx");
+  const iFerme = src.indexOf("LE BOUTON REMBOURSER RESTE VISIBLE SANS DEPLIER");
+  const iTiroir = src.indexOf("LE TIROIR : tout le reste");
+  assert.ok(iFerme > 0, "le bouton Rembourser a quitte la ligne fermee");
+  assert.ok(iFerme < iTiroir, "le bouton Rembourser est retourne dans le tiroir");
+  // Et la regle du "remboursable" vit a UN endroit : le bouton s'affiche
+  // a deux endroits, deux copies finiraient par diverger.
+  assert.ok(src.includes("function remboursables("), "la regle du remboursable a ete recopiee");
+});
+
+test("Tiquiz et l'Atelier se distinguent dans les ventes ET dans les stats", () => {
+  // "je vois mal les differences entre tiquiz et l'atelier, partout".
+  for (const fichier of [
+    "components/admin/PilotageCard.tsx",
+    "components/admin/StatistiquesCard.tsx",
+  ]) {
+    assert.ok(
+      lire(fichier).includes("NOM_PRODUIT"),
+      `${fichier} ne distingue pas les deux produits`,
+    );
+  }
+});
+
+test("plus de jargon de diagnostic a l'ecran", () => {
+  // "Nombres recus : ca veut dire quoi ? C'est pas clair... nombre de
+  // leads ? nombre de ventes ? nombre d'euros ??" C'etait ma sonde de
+  // debug, laissee dans SON ecran. Elle ne sert plus a rien depuis que
+  // le tarif du plan donne le montant.
+  for (const fichier of [
+    "components/admin/WebhookLogsCard.tsx",
+    "app/api/admin/webhook-logs/route.ts",
+  ]) {
+    assert.ok(!lire(fichier).includes("Nombres reçus"), `${fichier} affiche encore la sonde`);
+    assert.ok(!lire(fichier).includes("champsNumeriques"), `${fichier} garde la sonde`);
+  }
+});
+
 test("aucun graphique ne dessine un montant qu'on n'a pas", () => {
   // La parenthese de sa demande : "(uniquement de maniere fiable
   // aussi...)". Le composant DOIT traiter le cas "je ne sais pas", et

@@ -47,6 +47,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { isAtelierSale } from "@/lib/admin/atelier";
+import { NOM_PRODUIT, readSaleProduct } from "@/lib/admin/saleProduct";
 import { buildChurnDigest } from "@/lib/admin/churnDigest";
 import { readClientKind, type ClientKind, type PeopleTotals, type Person, type PersonStatus } from "@/lib/admin/people";
 import type { Sale } from "@/lib/checkout/sales";
@@ -133,8 +134,25 @@ function euros(cents: number): string {
  */
 function montant(v: Sale): string {
   if (v.amountSource === "payload") return euros(v.amountCents);
-  if (v.amountSource === "plan") return `~ ${euros(v.amountCents)} (tarif du plan)`;
-  return "montant non transmis";
+  if (v.amountSource === "plan") return `~ ${euros(v.amountCents)}`;
+  return "montant inconnu";
+}
+
+/**
+ * LES VENTES QU'ON PEUT VRAIMENT REMBOURSER D'ICI.
+ *
+ * Ni Systeme.io (l'argent est chez eux), ni l'Atelier (même compte
+ * Stripe, donc l'appel réussirait, mais seul l'Atelier sait couper
+ * l'accès et envoyer l'email de départ), ni ce qui est déjà remboursé.
+ *
+ * La liste vit ici et pas dans le JSX : le bouton s'affiche à DEUX
+ * endroits maintenant (la ligne fermée et le tiroir), et deux endroits
+ * qui recalculent la même règle finissent toujours par diverger.
+ */
+function remboursables(p: Person): Sale[] {
+  return p.sales.filter(
+    (v) => !v.refundedAt && v.provider !== "systeme_io" && !isAtelierSale(v.ref),
+  );
 }
 
 function jour(iso: string | null): string {
@@ -457,6 +475,28 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
                 Rafraîchir
               </Button>
             </div>
+            {/* TIQUIZ ET L'ATELIER, SEPARES.
+                Bene, 22 aout : "je vois mal les differences entre Tiquiz
+                et l'Atelier, partout". Un abonnement a 17 EUR et une
+                formation a 47 EUR dans la meme ligne ne veulent rien
+                dire, ni en nombre ni en total. */}
+            {totals && totals.parProduitVendu.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-3">
+                {totals.parProduitVendu.map((p) => (
+                  <div key={p.produit} className="rounded-lg border px-3 py-2">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      {NOM_PRODUIT[p.produit]}
+                    </p>
+                    <p className="text-lg font-bold">{euros(p.totalCents)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {p.ventes} vente{p.ventes > 1 ? "s" : ""}
+                      {p.estimees > 0 ? `, dont ${p.estimees} au tarif du plan` : ""}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {totals && totals.parProduit.length > 0 && (
               <p className="mt-3 text-sm text-muted-foreground">
                 {totals.parProduit
@@ -477,15 +517,25 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
                 "Encaisse ce mois". Sans cette phrase, l'ecran annonce
                 zero euro sur un mois ou l'argent est bien rentre, et il
                 a l'air de marcher. */}
+            {/* CE QUE LE TOTAL CONTIENT, EN UNE PHRASE.
+                Ces montants COMPTENT (decision Bene du 22 aout) : on dit
+                juste combien viennent du tarif du plan, pour qu'un ecart
+                avec sa banque ne reste pas mysterieux. */}
+            {totals && totals.ventesEstimees > 0 && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Dont {totals.ventesEstimees} vente{totals.ventesEstimees > 1 ? "s" : ""} chiffrée
+                {totals.ventesEstimees > 1 ? "s" : ""} au tarif du plan : Systeme.io ne nous
+                transmet pas la somme exacte, une remise éventuelle n&apos;est donc pas déduite.
+              </p>
+            )}
             {totals && totals.ventesSansMontant > 0 && (
               <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-700">
-                <AlertTriangle className="size-3.5 shrink-0 mt-0.5" />
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
                 <span>
-                  {totals.ventesSansMontant} vente{totals.ventesSansMontant > 1 ? "s" : ""} dont
-                  Systeme.io ne nous transmet pas le montant encaissé. Le tarif du plan
-                  s&apos;affiche à côté de chacune, mais ce n&apos;est qu&apos;un ordre de
-                  grandeur (tu as des codes de réduction actifs), donc il ne compte pas dans le
-                  total ci dessus. Le nombre de ventes, lui, est juste.
+                  {totals.ventesSansMontant} vente{totals.ventesSansMontant > 1 ? "s" : ""} sur un
+                  produit qu&apos;on ne reconnaît pas : ni son montant ni son palier ne sont
+                  connus, elle{totals.ventesSansMontant > 1 ? "s ne comptent" : " ne compte"} pas
+                  dans le total.
                 </span>
               </p>
             )}
@@ -703,6 +753,25 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
                             <span className="block">vu le {jour(p.lastSignIn)}</span>
                           </td>
                           <td className="px-4 py-3 text-right">
+                            {/* LE BOUTON REMBOURSER RESTE VISIBLE SANS DEPLIER.
+                                Bene, 22 aout : "sauf erreur de ma part je
+                                n'ai plus de bouton pour rembourser un
+                                client ?" Il etait bien la, dans le tiroir,
+                                et c'est exactement le probleme : une action
+                                qu'on doit chercher n'existe pas. */}
+                            {remboursables(p).map((v) => (
+                              <Button
+                                key={v.ref}
+                                variant="outline"
+                                size="sm"
+                                onClick={() => void rembourser(p, v)}
+                                disabled={enCours === v.ref}
+                                className="mb-1 mr-2 h-7 text-xs"
+                              >
+                                {enCours === v.ref && <Loader2 className="size-3 animate-spin" />}
+                                Rembourser {montant(v)}
+                              </Button>
+                            ))}
                             <button
                               type="button"
                               onClick={() => setDeplie(ouvert ? null : p.email)}
@@ -890,7 +959,8 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
                                           key={v.ref}
                                           className="rounded border px-2 py-1 text-xs text-muted-foreground"
                                         >
-                                          {montant(v)} du {jour(v.paidAt)} ·{" "}
+                                          {NOM_PRODUIT[readSaleProduct(v)]} · {montant(v)} du{" "}
+                                          {jour(v.paidAt)} ·{" "}
                                           {v.refundedAt
                                             ? `remboursée le ${jour(v.refundedAt)}`
                                             : "à rembourser depuis l'Atelier"}
@@ -900,15 +970,16 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
                                           key={v.ref}
                                           className="rounded border px-2 py-1 text-xs text-muted-foreground"
                                         >
-                                          {montant(v)} du {jour(v.paidAt)} · à rembourser dans
-                                          Systeme.io
+                                          {NOM_PRODUIT[readSaleProduct(v)]} · {montant(v)} du{" "}
+                                          {jour(v.paidAt)} · à rembourser dans Systeme.io
                                         </span>
                                       ) : v.refundedAt ? (
                                         <span
                                           key={v.ref}
                                           className="rounded border px-2 py-1 text-xs text-muted-foreground"
                                         >
-                                          {montant(v)} remboursés le {jour(v.refundedAt)}
+                                          {NOM_PRODUIT[readSaleProduct(v)]} · {montant(v)}{" "}
+                                          remboursés le {jour(v.refundedAt)}
                                         </span>
                                       ) : (
                                         <Button
@@ -922,7 +993,8 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
                                           {enCours === v.ref && (
                                             <Loader2 className="size-3 animate-spin" />
                                           )}
-                                          Rembourser {montant(v)} du {jour(v.paidAt)}
+                                          Rembourser {montant(v)} · {NOM_PRODUIT[readSaleProduct(v)]} du{" "}
+                                          {jour(v.paidAt)}
                                         </Button>
                                       ),
                                     )}

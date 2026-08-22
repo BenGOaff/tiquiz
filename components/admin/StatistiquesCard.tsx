@@ -34,6 +34,7 @@ import {
   type StatsAdmin,
 } from "@/lib/admin/adminStats";
 import type { Person, PeopleTotals } from "@/lib/admin/people";
+import { NOM_PRODUIT } from "@/lib/admin/saleProduct";
 
 interface Reponse {
   ok?: boolean;
@@ -80,10 +81,9 @@ function Barres({
                 <>
                   Pas de courbe ici, et c&apos;est volontaire : {serie.concernees} vente
                   {serie.concernees > 1 ? "s" : ""} de la période{" "}
-                  {serie.concernees > 1 ? "n'ont" : "n'a"} pas de montant, parce que
-                  Systeme.io ne nous le transmet pas. Une courbe à zéro se lirait
-                  &quot;je ne vends rien&quot; alors qu&apos;elle voudrait dire &quot;je ne
-                  connais pas les montants&quot;. Le nombre de ventes, juste au dessus, est
+                  {serie.concernees > 1 ? "portent" : "porte"} sur un produit qu&apos;on ne
+                  reconnaît pas, donc son montant est inconnu. Une courbe qui les oublie
+                  serait fausse sans le dire. Le nombre de ventes, juste au dessus, est
                   fiable.
                 </>
               ) : (
@@ -109,6 +109,16 @@ function Barres({
           </p>
         </div>
         {sousTitre && <p className="mt-0.5 text-xs text-muted-foreground">{sousTitre}</p>}
+        {/* CE QUE LE TOTAL CONTIENT. Ces montants comptent (decision
+            Bene du 22 aout) : on dit juste combien viennent du tarif du
+            plan, pour qu'un ecart avec sa banque ne reste pas
+            mysterieux. */}
+        {serie.estimees ? (
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Dont {serie.estimees} vente{serie.estimees > 1 ? "s" : ""} chiffrée
+            {serie.estimees > 1 ? "s" : ""} au tarif du plan, remise éventuelle non déduite.
+          </p>
+        ) : null}
 
         <div className="mt-4 flex h-32 items-end gap-1.5">
           {serie.points.map((p) => (
@@ -146,6 +156,39 @@ function Barres({
             {serie.sansDate > 1 ? "s" : ""} des barres.
           </p>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * TIQUIZ ET L'ATELIER, SEPARES.
+ *
+ * Bene, 22 aout : "je vois mal les differences entre Tiquiz et
+ * l'Atelier, partout, dans les ventes, les stats". Un abonnement a 17 €
+ * et une formation a 47 € dans la meme barre ne veulent rien dire : ni
+ * le nombre, ni le total.
+ */
+function Produits({ parProduit }: { parProduit: StatsAdmin["parProduit"] }) {
+  if (!parProduit.length) return null;
+  return (
+    <Card>
+      <CardContent className="py-4">
+        <p className="text-sm font-semibold">Par produit, sur toute la période lue</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          {parProduit.map((p) => (
+            <div key={p.produit} className="rounded-lg border px-3 py-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {NOM_PRODUIT[p.produit]}
+              </p>
+              <p className="text-xl font-bold">{euros(p.totalCents)}</p>
+              <p className="text-xs text-muted-foreground">
+                {p.ventes} vente{p.ventes > 1 ? "s" : ""}
+                {p.estimees > 0 ? `, dont ${p.estimees} au tarif du plan` : ""}
+              </p>
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );
@@ -282,10 +325,18 @@ export default function StatistiquesCard() {
         ))}
       </div>
 
+      <Produits parProduit={stats.parProduit} />
+
       <Barres
         titre="Ventes par mois"
         serie={stats.ventes}
-        sousTitre="Le nombre de ventes encaissées, toutes sources confondues."
+        sousTitre={
+          stats.ventesParProduit.length
+            ? `Ce mois ci : ${stats.ventesParProduit
+                .map((p) => `${p.valeur} ${NOM_PRODUIT[p.produit]}`)
+                .join(", ")}.`
+            : "Le nombre de ventes encaissées, toutes sources confondues."
+        }
       />
       <Barres titre="Encaissé par mois" serie={stats.encaisse} format={euros} />
       <Barres

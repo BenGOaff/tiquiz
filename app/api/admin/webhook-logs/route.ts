@@ -24,7 +24,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAdminEmail } from "@/lib/adminEmails";
-import { champsNumeriques, readCallKind, readCallVerdict } from "@/lib/admin/webhookRows";
+import { readCallKind, readCallVerdict } from "@/lib/admin/webhookRows";
 import { readSioAmountCents } from "@/lib/admin/sioSales";
 import { readPricePlan } from "@/lib/sio/pricePlans";
 import {
@@ -117,14 +117,6 @@ export async function GET(req: NextRequest) {
       montantCents,
       montantSource,
       planNom: tarif?.nom ?? null,
-      // LE PAYLOAD PARLE QUAND ON NE TROUVE PAS LE MONTANT.
-      //
-      // Des dizaines de ventes réelles s'affichent à 0,00 € : aucun de
-      // nos chemins ne trouve le montant dans ce que Systeme.io envoie
-      // vraiment. On ne rallonge pas la liste au flair (drame Ivan), on
-      // REGARDE. Uniquement des nombres : ni adresse, ni nom.
-      champsNumeriques:
-        kind === "sale" && duPayload == null ? champsNumeriques(p) : [],
     };
   });
 

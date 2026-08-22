@@ -30,6 +30,7 @@
 
 import type { Person } from "./people";
 import type { Sale } from "@/lib/checkout/sales";
+import { readSaleProduct, totauxParProduit, type Produit, type TotalProduit } from "./saleProduct";
 
 /** Un point de la courbe : un mois, et sa valeur. */
 export interface PointMois {
@@ -42,6 +43,14 @@ export interface PointMois {
 export interface SerieFiable {
   fiable: true;
   points: PointMois[];
+  /**
+   * Combien de ventes de la période sont chiffrées au TARIF DU PLAN.
+   *
+   * Béné a tranché le 22 août : ces montants comptent. On dit juste
+   * combien ils sont, pour qu'un écart avec sa banque ne reste pas
+   * mystérieux. Zéro sur les séries qui comptent des lignes.
+   */
+  estimees?: number;
   /** Le total DE LA FENÊTRE, jamais le total global : sinon la somme des barres ne fait pas le total affiché. */
   total: number;
   /** Des lignes qu'on n'a pas pu dater, donc absentes des barres. */
@@ -141,14 +150,18 @@ export function serieEncaissee(
     return { fiable: false, raison: "aucune-donnee", concernees: 0 };
   }
 
-  // C'EST LA PROVENANCE DU MONTANT QUI DÉCIDE, PAS SA VALEUR.
+  // ON NE REFUSE DE DESSINER QUE CE QU'ON NE SAIT PAS DU TOUT.
   //
-  // Un prix de plan tarifaire est un ordre de grandeur (54 codes de
-  // réduction actifs dans son compte, certains à 100 %) : l'additionner
-  // gonflerait la courbe. Et une vente à 0 € est légitime, donc tester
-  // `<= 0` ferait mentir l'avertissement dans l'autre sens.
+  // Un montant venu du tarif du plan compte (décision Béné, 22 août) :
+  // il est simplement DÉNOMBRÉ, et l'écran écrit "dont N estimées".
+  // Seule une vente dont on n'a aucun montant retire la courbe, parce
+  // que là, la somme serait vraiment fausse.
+  //
+  // Et on ne teste pas `<= 0` : une vente à 0 € est légitime (un code de
+  // réduction à 100 %), et la compter comme manquante ferait mentir
+  // l'avertissement dans l'autre sens.
   const sansMontant = dansLaFenetre.filter(
-    (v) => !v.refundedAt && v.amountSource !== "payload",
+    (v) => !v.refundedAt && v.amountSource === "inconnu",
   ).length;
   if (sansMontant > 0) {
     return { fiable: false, raison: "montants-absents", concernees: sansMontant };
@@ -168,6 +181,7 @@ export function serieEncaissee(
     points,
     total: points.reduce((s, p) => s + p.valeur, 0),
     sansDate: 0,
+    estimees: dansLaFenetre.filter((v) => !v.refundedAt && v.amountSource === "plan").length,
   };
 }
 
@@ -209,6 +223,17 @@ export interface StatsAdmin {
   /** Ce que ses clientes ont produit. Des lignes comptées, donc fiable. */
   quiz: number;
   leads: number;
+  /**
+   * TIQUIZ ET L'ATELIER, SÉPARÉS.
+   *
+   * Béné, 22 août : "je vois mal les différences entre Tiquiz et
+   * l'Atelier, partout, dans les ventes, les stats". Un abonnement à
+   * 17 € et une formation à 47 € dans la même barre ne veulent rien
+   * dire : ni le nombre, ni le total.
+   */
+  parProduit: TotalProduit[];
+  /** Les ventes du mois en cours, par produit. */
+  ventesParProduit: { produit: Produit; valeur: number }[];
 }
 
 export function buildAdminStats(
@@ -237,6 +262,17 @@ export function buildAdminStats(
     plans: repartitionParPlan(people),
     quiz: people.reduce((s, p) => s + (Number(p.quizCount) || 0), 0),
     leads: people.reduce((s, p) => s + (Number(p.leadCount) || 0), 0),
+    parProduit: totauxParProduit(ventes),
+    ventesParProduit: (["tiquiz", "atelier", "inconnu"] as Produit[])
+      .map((produit) => ({
+        produit,
+        valeur: serieParMois(
+          ventes.filter((v) => readSaleProduct(v) === produit).map((v) => v.paidAt),
+          maintenant,
+          nbMois,
+        ).points.at(-1)?.valeur ?? 0,
+      }))
+      .filter((p) => p.valeur > 0),
   };
 }
 
