@@ -329,8 +329,32 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
             {totals && totals.parProduit.length > 0 && (
               <p className="mt-3 text-sm text-muted-foreground">
                 {totals.parProduit
-                  .map((p) => `${p.productId} : ${p.count} (${euros(p.totalCents)})`)
+                  .map((p) =>
+                    // Un montant a zero sur une vente REELLE est un
+                    // mensonge : on dit qu'on ne l'a pas, on ne
+                    // l'invente pas et on ne l'additionne pas.
+                    p.sansMontant >= p.count
+                      ? `${p.productId} : ${p.count} (montant non transmis)`
+                      : `${p.productId} : ${p.count} (${euros(p.totalCents)})`,
+                  )
                   .join("  ·  ")}
+              </p>
+            )}
+            {/* LE TOTAL DIT CE QU'IL NE SAIT PAS.
+                Systeme.io ne nous transmet pas le prix paye a un endroit
+                qu'on sache lire : ces ventes comptent pour 0 dans
+                "Encaisse ce mois". Sans cette phrase, l'ecran annonce
+                zero euro sur un mois ou l'argent est bien rentre, et il
+                a l'air de marcher. */}
+            {totals && totals.ventesSansMontant > 0 && (
+              <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-700">
+                <AlertTriangle className="size-3.5 shrink-0 mt-0.5" />
+                <span>
+                  {totals.ventesSansMontant} vente{totals.ventesSansMontant > 1 ? "s" : ""} sans
+                  montant : Systeme.io ne nous l&apos;a pas transmis, donc elle
+                  {totals.ventesSansMontant > 1 ? "s ne comptent" : " ne compte"} pas dans le
+                  total ci dessus. Le nombre de ventes, lui, est juste.
+                </span>
               </p>
             )}
           </CardContent>

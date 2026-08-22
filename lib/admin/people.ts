@@ -161,8 +161,21 @@ export interface PeopleTotals {
   /** Encaissé sur la période lue, remboursements déduits, en centimes. */
   encaisseCents: number;
   rembourseCents: number;
+  /**
+   * DES VENTES BIEN RÉELLES DONT ON N'A PAS LE MONTANT.
+   *
+   * Systeme.io ne nous transmet pas (encore) le prix payé à un endroit
+   * qu'on sache lire. Les compter est le seul moyen honnête d'afficher
+   * un chiffre d'affaires : sans ça, l'écran additionne des zéros et
+   * annonce "0,00 € encaissé" sur un mois où l'argent est bien rentré.
+   *
+   * Règle du 8 juin, déjà écrite pour l'Atelier : on n'affiche pas un
+   * total dont le dénominateur ment. Un chiffre qui a l'air juste vaut
+   * moins que pas de chiffre du tout.
+   */
+  ventesSansMontant: number;
   /** Par produit vendu, pour "quels plans sont vendus". */
-  parProduit: { productId: string; count: number; totalCents: number }[];
+  parProduit: { productId: string; count: number; totalCents: number; sansMontant: number }[];
 }
 
 export interface PeopleView {
@@ -357,16 +370,19 @@ export function buildPeople(input: {
   const orphelines: Sale[] = [];
   let encaisse = 0;
   let rembourse = 0;
-  const parProduit = new Map<string, { count: number; totalCents: number }>();
+  const parProduit = new Map<string, { count: number; totalCents: number; sansMontant: number }>();
+  let ventesSansMontant = 0;
 
   for (const v of input.sales) {
     const montant = Number(v.amountCents) || 0;
+    if (montant <= 0) ventesSansMontant += 1;
     if (v.refundedAt) rembourse += montant;
     else encaisse += montant;
 
     const id = String(v.productId ?? "").trim() || "inconnu";
-    const agg = parProduit.get(id) ?? { count: 0, totalCents: 0 };
+    const agg = parProduit.get(id) ?? { count: 0, totalCents: 0, sansMontant: 0 };
     agg.count += 1;
+    if (montant <= 0) agg.sansMontant += 1;
     if (!v.refundedAt) agg.totalCents += montant;
     parProduit.set(id, agg);
 
@@ -428,6 +444,7 @@ export function buildPeople(input: {
       atelier: people.filter((p) => p.atelier?.status === "active").length,
       encaisseCents: encaisse,
       rembourseCents: rembourse,
+      ventesSansMontant,
       parProduit: [...parProduit.entries()]
         .map(([productId, v]) => ({ productId, ...v }))
         .sort((a, b) => b.totalCents - a.totalCents),

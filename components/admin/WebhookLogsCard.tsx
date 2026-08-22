@@ -20,6 +20,13 @@ import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, Webhook } from "lucide
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  demandeUneAction,
+  routageConcerne,
+  type CallKind,
+  type CallVerdict,
+  type ChampNumerique,
+} from "@/lib/admin/webhookRows";
 
 type Row = {
   id: string;
@@ -31,12 +38,56 @@ type Row = {
   email: string | null;
   sourceUrl: string | null;
   offerId: string | null;
+  kind: CallKind;
   planNow: string | null;
+  verdict: CallVerdict;
+  montantCents: number | null;
+  champsNumeriques: ChampNumerique[];
 };
 
-/** Un appel qui n'a PAS ouvert d'accès mérite l'oeil. */
-function estProblematique(r: Row): boolean {
-  return r.status === "refused" || r.status === "error" || !!r.error;
+/**
+ * CE QUE CHAQUE VERDICT VEUT DIRE, EN CLAIR.
+ *
+ * Le serveur rend un code, l'écran écrit la phrase. Et la COULEUR compte
+ * autant que le mot : avant le 22 août, tout ce qui portait une trace
+ * d'erreur virait au rouge, y compris un paiement refusé chez Systeme.io
+ * (la carte du client, pas nous) et un refus corrigé depuis. Un écran où
+ * tout est rouge est un écran qu'on arrête de lire.
+ */
+const VERDICTS: Record<CallVerdict, { mot: string; aide: string; ton: "ok" | "info" | "alerte" }> = {
+  ouvert: { mot: "accès ouvert", aide: "", ton: "ok" },
+  "palier-a-confirmer": {
+    mot: "accès ouvert, palier à confirmer",
+    aide: "Le client a ses accès. Le palier vient d'un repli : vérifie s'il a pris l'annuel ou un PLUS.",
+    ton: "info",
+  },
+  "sans-acces": {
+    mot: "sans accès",
+    aide: "Cette personne attend quelque chose qu'elle n'a pas. Le bon de commande n'est toujours pas reconnu.",
+    ton: "alerte",
+  },
+  "corrige-depuis": {
+    mot: "corrigé depuis",
+    aide: "Refusé sur le moment, mais le routage d'aujourd'hui sait répondre. Vérifie juste que la personne a bien ses accès.",
+    ton: "info",
+  },
+  "paiement-echoue": {
+    mot: "paiement refusé",
+    aide: "La carte du client a été refusée chez Systeme.io. Rien à corriger chez nous.",
+    ton: "info",
+  },
+  panne: { mot: "panne", aide: "On a planté sur cet appel.", ton: "alerte" },
+  "sans-objet": { mot: "traité", aide: "", ton: "ok" },
+};
+
+const TONS: Record<"ok" | "info" | "alerte", string> = {
+  ok: "text-emerald-700",
+  info: "text-muted-foreground",
+  alerte: "text-destructive",
+};
+
+function euros(cents: number): string {
+  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(cents / 100);
 }
 
 function quandFr(iso: string): string {
@@ -71,8 +122,9 @@ export default function WebhookLogsCard() {
     charger();
   }, [charger]);
 
-  const affiches = problemesSeuls ? rows.filter(estProblematique) : rows;
-  const nbProblemes = rows.filter(estProblematique).length;
+  const aRegarder = (r: Row) => demandeUneAction(r.verdict);
+  const affiches = problemesSeuls ? rows.filter(aRegarder) : rows;
+  const nbProblemes = rows.filter(aRegarder).length;
 
   return (
     <Card>
@@ -105,7 +157,7 @@ export default function WebhookLogsCard() {
           Une vente absente de cette liste n&apos;est jamais arrivée jusqu&apos;à Tiquiz : le
           webhook n&apos;est pas posé sur ce bon de commande. Une vente présente mais refusée
           veut dire l&apos;inverse : l&apos;appel arrive, c&apos;est le bon de commande qui
-          n&apos;est pas reconnu.
+          n&apos;est pas reconnu. Seules les lignes en rouge demandent une action de ta part.
         </p>
 
         {loading ? (
@@ -126,13 +178,15 @@ export default function WebhookLogsCard() {
                   <th className="py-1 pr-3 font-medium">Événement</th>
                   <th className="py-1 pr-3 font-medium">Tunnel</th>
                   <th className="py-1 pr-3 font-medium">Offre</th>
+                  <th className="py-1 pr-3 font-medium">Montant</th>
                   <th className="py-1 pr-3 font-medium">Plan reconnu</th>
                   <th className="py-1 font-medium">État</th>
                 </tr>
               </thead>
               <tbody>
                 {affiches.map((r) => {
-                  const ko = estProblematique(r);
+                  const v = VERDICTS[r.verdict];
+                  const ko = demandeUneAction(r.verdict);
                   return (
                     <tr key={r.id} className="border-t align-top">
                       <td className="py-1.5 pr-3 whitespace-nowrap">{quandFr(r.receivedAt)}</td>
@@ -144,11 +198,30 @@ export default function WebhookLogsCard() {
                       <td className="py-1.5 pr-3 max-w-[160px] truncate" title={r.offerId ?? ""}>
                         {r.offerId ?? "-"}
                       </td>
+                      <td className="py-1.5 pr-3 whitespace-nowrap">
+                        {/* LE MONTANT, ET CE QU'ON FAIT QUAND IL MANQUE.
+                            Un 0,00 € affiché sur une vraie vente est un
+                            mensonge : on dit qu'on ne l'a pas reçu, et on
+                            montre plus bas les nombres que le payload
+                            porte vraiment. */}
+                        {r.montantCents != null ? (
+                          euros(r.montantCents)
+                        ) : r.kind === "sale" ? (
+                          <span className="text-amber-700">non transmis</span>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
                       <td className="py-1.5 pr-3">
                         {/* Ce que le routage répondrait AUJOURD'HUI. Sur une
                             ligne refusée hier, ça dit si le correctif déployé
-                            depuis suffit, sans refaire un achat. */}
-                        {r.planNow ? (
+                            depuis suffit, sans refaire un achat.
+                            Un optin gratuit ne passe PAS par cette table :
+                            lui reprocher un tunnel absent de la liste serait
+                            une alerte rouge sur un compte créé normalement. */}
+                        {!routageConcerne(r.kind) ? (
+                          <span className="text-muted-foreground">sans objet</span>
+                        ) : r.planNow ? (
                           <span className="text-emerald-700">{r.planNow}</span>
                         ) : (
                           <span className="text-destructive">non reconnu</span>
@@ -156,19 +229,27 @@ export default function WebhookLogsCard() {
                       </td>
                       <td className="py-1.5">
                         <span
-                          className={`inline-flex items-center gap-1 ${ko ? "text-destructive" : "text-emerald-700"}`}
-                          title={r.error ?? ""}
+                          className={`inline-flex items-center gap-1 ${TONS[v.ton]}`}
+                          title={v.aide || r.error || ""}
                         >
-                          {ko ? (
+                          {v.ton === "alerte" ? (
                             <AlertTriangle className="w-3 h-3" />
                           ) : (
                             <CheckCircle2 className="w-3 h-3" />
                           )}
-                          {r.status ?? "-"}
+                          {v.mot}
                         </span>
-                        {r.error && (
-                          <div className="text-[11px] text-muted-foreground mt-0.5 max-w-[220px] truncate">
-                            {r.error}
+                        {ko && v.aide && (
+                          <div className="text-[11px] text-muted-foreground mt-0.5 max-w-[240px]">
+                            {v.aide}
+                          </div>
+                        )}
+                        {r.champsNumeriques.length > 0 && (
+                          <div className="text-[11px] text-muted-foreground mt-1 max-w-[260px]">
+                            Nombres reçus :{" "}
+                            {r.champsNumeriques
+                              .map((c) => `${c.chemin}=${c.valeur}`)
+                              .join(", ")}
                           </div>
                         )}
                       </td>
