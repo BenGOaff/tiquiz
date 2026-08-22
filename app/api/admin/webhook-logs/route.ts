@@ -24,44 +24,42 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAdminEmail } from "@/lib/adminEmails";
-import { inferPlanFromOfferId, inferPlanFromUrl } from "@/lib/sio/webhookInference";
+import { champsNumeriques, readCallKind, readCallVerdict } from "@/lib/admin/webhookRows";
+import { readSioAmountCents } from "@/lib/admin/sioSales";
+import {
+  AMOUNT_PATHS,
+  OFFER_ID_PATHS,
+  URL_PATHS,
+  extractStr,
+  inferPlanFromOfferId,
+  inferPlanFromUrl,
+} from "@/lib/sio/webhookInference";
 
 export const dynamic = "force-dynamic";
 
-/** Premier chemin non vide, comme le webhook lui-même. */
-function deepGet(obj: unknown, path: string): unknown {
-  return path.split(".").reduce<unknown>(
-    (o, k) => (o == null ? undefined : (o as Record<string, unknown>)[k]),
-    obj,
-  );
-}
-function pick(body: unknown, paths: readonly string[]): string | null {
-  for (const p of paths) {
-    const v = deepGet(body, p);
-    if (v != null && String(v).trim()) return String(v).trim();
-  }
-  return null;
-}
-
+/**
+ * Les chemins viennent de `webhookInference`, PAS d'une copie locale.
+ *
+ * Cette route en gardait ses propres exemplaires. Deux listes qui disent
+ * la même chose finissent toujours par diverger, et cet écran sert
+ * précisément à diagnostiquer le routage : le jour où elles se
+ * séparent, il annonce un plan que le webhook n'aurait pas choisi. C'est
+ * le drame de l'URL de l'Atelier (3 août), transposé.
+ */
 const EMAIL_PATHS = [
   "customer.email", "data.customer.email",
   "contact.email", "data.contact.email",
   "email",
 ] as const;
-const URL_PATHS = [
-  "funnel.url", "data.funnel.url",
-  "funnel_step.url", "data.funnel_step.url",
-  "order.source_url", "data.order.source_url",
-  "source_url", "data.source_url",
-  "checkout_url", "data.checkout_url", "data.order.checkout_url",
-  "order.funnel.url", "data.order.funnel.url",
-  "order.funnel_step.url", "data.order.funnel_step.url",
+
+/** Les chemins où le webhook cherche le montant pour la commission. */
+const AMOUNT_PATHS_VENTE = [
+  "order.total_price", "data.order.total_price",
+  "amount", "data.amount",
+  ...AMOUNT_PATHS,
 ] as const;
-const OFFER_PATHS = [
-  "pricePlan.id", "data.pricePlan.id",
-  "data.offer_price_plan.id", "data.offer_price.id",
-  "product_id",
-] as const;
+
+const pick = extractStr;
 
 export async function GET(req: NextRequest) {
   const supabase = await getSupabaseServerClient();
@@ -87,22 +85,43 @@ export async function GET(req: NextRequest) {
   // cet écran sert à diagnostiquer, pas à tout étaler.
   const rows = (data ?? []).map((r) => {
     const p = (r as { payload?: unknown }).payload;
+    const source = (r as { source: string | null }).source;
+    const eventType = (r as { event_type: string | null }).event_type;
+    const status = (r as { status: string | null }).status;
     const sourceUrl = pick(p, URL_PATHS);
-    const offerId = pick(p, OFFER_PATHS);
+    const offerId = pick(p, OFFER_ID_PATHS);
+    const kind = readCallKind(source);
+    // Ce que la table de routage répondrait AUJOURD'HUI sur cette ligne.
+    // Sur un appel refusé hier, ça dit tout de suite si le correctif
+    // déployé depuis suffit, sans refaire un achat pour le savoir.
+    const planNow = inferPlanFromUrl(sourceUrl) ?? inferPlanFromOfferId(offerId);
+    const montantCents = readSioAmountCents(pick(p, AMOUNT_PATHS_VENTE));
+
     return {
       id: (r as { id: string }).id,
-      source: (r as { source: string | null }).source,
-      eventType: (r as { event_type: string | null }).event_type,
-      status: (r as { status: string | null }).status,
+      source,
+      eventType,
+      status,
       error: (r as { error: string | null }).error,
       receivedAt: (r as { received_at: string }).received_at,
       email: pick(p, EMAIL_PATHS),
       sourceUrl,
       offerId,
-      // Ce que la table de routage répondrait AUJOURD'HUI sur cette ligne.
-      // Sur un appel refusé hier, ça dit tout de suite si le correctif
-      // déployé depuis suffit, sans refaire un achat pour le savoir.
-      planNow: inferPlanFromUrl(sourceUrl) ?? inferPlanFromOfferId(offerId),
+      kind,
+      planNow,
+      // Le verdict est calculé ICI, avec la même fonction que le test.
+      // L'écran ne fait que le traduire : il ne recalcule rien, sinon il
+      // finit toujours par mentir (six fois dans ce dépôt).
+      verdict: readCallVerdict({ source, eventType, status, error: (r as { error: string | null }).error, planNow }),
+      montantCents,
+      // LE PAYLOAD PARLE QUAND ON NE TROUVE PAS LE MONTANT.
+      //
+      // Des dizaines de ventes réelles s'affichent à 0,00 € : aucun de
+      // nos chemins ne trouve le montant dans ce que Systeme.io envoie
+      // vraiment. On ne rallonge pas la liste au flair (drame Ivan), on
+      // REGARDE. Uniquement des nombres : ni adresse, ni nom.
+      champsNumeriques:
+        kind === "sale" && montantCents == null ? champsNumeriques(p) : [],
     };
   });
 
