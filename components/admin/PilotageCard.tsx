@@ -126,6 +126,21 @@ interface Reponse {
  * chacune nomme la correction : sans ca, "l'Atelier est absent" enverrait
  * chercher partout.
  */
+/**
+ * Pourquoi l'ecran n'a rien pu charger, en une phrase actionnable.
+ *
+ * Chacune nomme OU regarder. "Erreur" tout court laisse devant un mur,
+ * et un ecran a zero se lit comme "tu n'as aucun client".
+ */
+const RAISONS_PANNE: Record<string, string> = {
+  forbidden:
+    "Ton compte n'est pas reconnu comme administrateur. Reconnecte toi, et si ça persiste ton adresse doit être ajoutée à la liste des admins du serveur.",
+  read_failed:
+    "La base de données n'a pas répondu. Le plus souvent : la clé de service du serveur n'est plus valable.",
+  network: "La connexion a coupé avant la réponse. Réessaie.",
+  unknown: "Le serveur a refusé sans dire pourquoi. Regarde le journal du serveur.",
+};
+
 const RAISONS_ATELIER: Record<string, string> = {
   not_configured:
     "PARTNER_SHARED_SECRET n'est pas posé sur le serveur Tiquiz.",
@@ -135,12 +150,24 @@ const RAISONS_ATELIER: Record<string, string> = {
   read_failed: "L'Atelier a répondu une erreur.",
 };
 
-export default function PilotageCard() {
+/**
+ * Ce que cette carte montre.
+ *
+ * Bene, 22 aout : "Fais moi un systeme d'onglets : clients actuels /
+ * mes ventes / mes affilies." Les DEUX vues lisent la meme reponse du
+ * serveur : separer les donnees en deux appels donnerait deux totaux qui
+ * finiraient par se contredire.
+ */
+export type VuePilotage = "clients" | "ventes";
+
+export default function PilotageCard({ vue }: { vue: VuePilotage }) {
   const [data, setData] = useState<Reponse | null>(null);
   const [chargement, setChargement] = useState(true);
   const [recherche, setRecherche] = useState("");
   const [filtre, setFiltre] = useState<PersonStatus | "tous">("tous");
   const [enCours, setEnCours] = useState<string | null>(null);
+  /** Renseigne quand le serveur n'a pas pu repondre. Reste a l'ecran. */
+  const [panne, setPanne] = useState<string | null>(null);
 
   const charger = useCallback(async () => {
     setChargement(true);
@@ -148,10 +175,19 @@ export default function PilotageCard() {
       const res = await fetch("/api/admin/pilotage");
       const j = (await res.json()) as Reponse;
       setData(j);
-      // UN `ok: false` PRODUIT TOUJOURS QUELQUE CHOSE A L'ECRAN.
-      if (!j.ok) toast.error("Le tableau de bord n'a pas pu être chargé.");
+      // UN `ok: false` PRODUIT TOUJOURS QUELQUE CHOSE A L'ECRAN, et un
+      // toast ne suffit PAS : il disparait, et il reste un ecran a zero
+      // qui ressemble a "tu n'as aucun client". Bene, 22 aout : "je n'ai
+      // plus AUCUNE info sur mes users". L'ecran doit rester marque.
+      if (!j.ok) {
+        setPanne(j.reason ?? (res.status === 403 ? "forbidden" : "unknown"));
+        toast.error("Le tableau de bord n'a pas pu être chargé.");
+      } else {
+        setPanne(null);
+      }
     } catch {
       setData({ ok: false });
+      setPanne("network");
       toast.error("Le tableau de bord n'a pas pu être chargé.");
     } finally {
       setChargement(false);
@@ -211,8 +247,26 @@ export default function PilotageCard() {
 
   return (
     <div className="space-y-4">
+      {/* ── LE SERVEUR N'A PAS REPONDU : ON LE DIT, ET CA RESTE ──
+          Un ecran a zero ressemble a "tu n'as aucun client". Bene,
+          22 aout : "je n'ai plus AUCUNE info sur mes users". Un toast
+          disparait ; ce bandeau reste. */}
+      {panne && (
+        <Card className="border-rose-300 bg-rose-50">
+          <CardContent className="py-3">
+            <p className="flex items-center gap-2 text-sm font-bold text-rose-900">
+              <AlertTriangle className="size-4" aria-hidden />
+              Rien n&apos;a pu être chargé. Les zéros ci dessous ne veulent RIEN dire.
+            </p>
+            <p className="mt-1 text-xs text-rose-900">
+              {RAISONS_PANNE[panne] ?? `Le serveur a répondu : ${panne}.`}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* ── L'ARGENT, ET S'IL MONTE OU S'IL DESCEND ── */}
-      {tendance && (
+      {vue === "ventes" && tendance && (
         <Card>
           <CardContent className="py-4">
             <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
@@ -305,7 +359,7 @@ export default function PilotageCard() {
       )}
 
       {/* ── L'ARGENT EST ENTRE, PERSONNE EN FACE ── */}
-      {orphelines.length > 0 && (
+      {vue === "ventes" && orphelines.length > 0 && (
         <Card className="border-amber-300 bg-amber-50">
           <CardContent className="py-4">
             <p className="flex items-center gap-2 text-sm font-bold text-amber-900">
@@ -340,7 +394,7 @@ export default function PilotageCard() {
           AUCUN POURCENTAGE : sur trois departs, "67% pour le prix"
           designe deux personnes et se lit comme une tendance (meme
           defaut que le funnel de Jocelyne, 4 aout). */}
-      {departs.total > 0 && (
+      {vue === "clients" && departs.total > 0 && (
         <Card>
           <CardContent className="py-4">
             <p className="flex items-center gap-2 text-sm font-bold">
@@ -388,7 +442,9 @@ export default function PilotageCard() {
         </Card>
       )}
 
-      {/* ── LE FILTRE, ET IL DIT DEJA LES CHIFFRES ── */}
+      {/* ── LE FILTRE ET LE TABLEAU : c'est l'onglet Clients ── */}
+      {vue === "clients" && (
+      <>
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[220px] flex-1">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -617,6 +673,8 @@ export default function PilotageCard() {
         Les ventes Systeme.io se remboursent chez eux, celles de l&apos;Atelier depuis son
         écran Élèves : lui seul sait couper l&apos;accès et envoyer l&apos;email de départ.
       </p>
+      </>
+      )}
     </div>
   );
 }
