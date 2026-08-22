@@ -140,6 +140,43 @@ export default function CommandeClient({
       >
         <EmbeddedCheckout />
       </EmbeddedCheckoutProvider>
+
+      {/* ── CE QUE LES CGV PROMETTENT, ET QUE L'ÉCRAN NE FAISAIT PAS ──
+          Nos CGV disent, à l'article 5 : "Cette renonciation est
+          recueillie avant paiement." Le bon de commande n'affichait
+          RIEN : ni les CGV, ni la renonciation. Les conditions
+          annonçaient donc quelque chose que l'interface ne faisait pas,
+          ce qui les rend inopposables sur ce point précis.
+
+          C'est la moitié de décision qui revient : un texte d'un côté,
+          un écran de l'autre, et personne pour vérifier qu'ils disent la
+          même chose.
+
+          Les liens s'ouvrent dans un nouvel onglet : partir lire les CGV
+          ne doit pas faire perdre un paiement en cours. */}
+      <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+        En payant, tu acceptes les{" "}
+        <a
+          href="/terms"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold underline"
+        >
+          Conditions générales de vente
+        </a>{" "}
+        et la{" "}
+        <a
+          href="/privacy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold underline"
+        >
+          Politique de confidentialité
+        </a>
+        . Ton accès étant ouvert immédiatement, tu demandes l&apos;exécution du service avant
+        la fin du délai de rétractation de 14 jours et tu renonces expressément à ce droit
+        (articles L221-25 et L221-28 3° du Code de la consommation).
+      </p>
     </div>
   );
 }
