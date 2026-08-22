@@ -58,18 +58,38 @@ test("IL N'Y A QU'UNE SEULE LISTE DE PERSONNES", () => {
   assert.ok(dash.includes('<PilotageCard vue="clients" />'), "l'onglet Clients n'a plus la liste");
 });
 
-test("les actions ont rejoint la liste, dans le tiroir de chaque ligne", () => {
-  // Sans elles, la fusion aurait retire des capacites au lieu de ranger.
-  const src = lire("components/admin/PilotageCard.tsx");
-  assert.ok(src.includes("changerPlan"), "on ne peut plus changer le palier depuis la liste");
-  assert.ok(src.includes("renvoyerAcces"), "on ne peut plus renvoyer ses acces depuis la liste");
-  assert.ok(src.includes("supprimer"), "on ne peut plus supprimer un compte depuis la liste");
-  assert.ok(src.includes("rembourser"), "on ne peut plus rembourser depuis la liste");
-  // Un seul tiroir ouvert a la fois : dix tiroirs recreent l'ecran
-  // empile qu'on vient de defaire.
+test("chaque personne a UNE fiche, et c'est la qu'on agit", () => {
+  // Bene, 22 aout : "Tu trouves ca pratique ? lisible ? facile a
+  // utiliser ? Quand j'aurai 200000 clients, je fais comment ?"
+  //
+  // Le tiroir servait a regarder, pas a travailler. Une fiche a son
+  // adresse : elle se garde en favori, elle se partage, elle survit a un
+  // rafraichissement, et un ticket de support pourra la citer.
+  const liste = lire("components/admin/PilotageCard.tsx");
   assert.ok(
-    /setDeplie\(ouvert \? null : p\.email\)/.test(src),
-    "le depliant n'ouvre plus une seule ligne a la fois",
+    liste.includes("/admin/clients/${encodeURIComponent(p.email)}"),
+    "la liste ne mene plus a la fiche",
+  );
+  assert.ok(!liste.includes("setDeplie"), "le tiroir est revenu dans la liste");
+
+  const fiche = lire("components/admin/ClientFiche.tsx");
+  for (const action of ["changerPlan", "renvoyerAcces", "supprimer", "rembourser", "enregistrerNom"]) {
+    assert.ok(fiche.includes(action), `la fiche ne sait plus ${action}`);
+  }
+  // La fleche remonte a Mes clients, jamais a l'historique : deux ecrans
+  // qui se citent l'un l'autre font une boucle (drame Gwenn, 1er aout).
+  assert.ok(!fiche.includes("router.back()"), "la fiche est revenue a router.back()");
+  assert.ok(fiche.includes('href="/admin"'), "la fiche ne remonte plus a Mes clients");
+});
+
+test("la fiche dit d'ou vient la personne, et avoue quand elle ne sait pas", () => {
+  // "savoir d'ou il vient". Le journal ne remonte qu'au 7 aout : un
+  // tiret se lirait "venue de nulle part".
+  const src = lire("components/admin/ClientFiche.tsx");
+  assert.ok(src.includes("D'où elle vient"), "la provenance a disparu de la fiche");
+  assert.ok(
+    src.includes("ne remonte qu&apos;au 7 août"),
+    "la fiche ne dit plus pourquoi la provenance peut manquer",
   );
 });
 
@@ -141,18 +161,17 @@ test("un refus d'admin est nomme, pas laisse en 'erreur'", () => {
   assert.ok(src.includes("administrateur"), "le refus d'admin ne nomme plus ce qu'il faut regarder");
 });
 
-test("le bouton Rembourser reste visible sans deplier", () => {
-  // Bene, 22 aout : "sauf erreur de ma part je n'ai plus de bouton pour
-  // rembourser un client ?" Il etait dans le tiroir, et c'est exactement
-  // le probleme : une action qu'on doit chercher n'existe pas.
+test("on voit sur la ligne OU se rembourse l'argent", () => {
+  // Bene, 22 aout : "il est ou le fucking bouton rembourser ??"
+  //
+  // Il n'y en avait pas, et il ne pouvait pas y en avoir : toutes ses
+  // ventes passent par Systeme.io, qui garde l'argent. Un bouton absent
+  // sans un mot se lit comme un bug.
   const src = lire("components/admin/PilotageCard.tsx");
-  const iFerme = src.indexOf("LE BOUTON REMBOURSER RESTE VISIBLE SANS DEPLIER");
-  const iTiroir = src.indexOf("LE TIROIR : tout le reste");
-  assert.ok(iFerme > 0, "le bouton Rembourser a quitte la ligne fermee");
-  assert.ok(iFerme < iTiroir, "le bouton Rembourser est retourne dans le tiroir");
-  // Et la regle du "remboursable" vit a UN endroit : le bouton s'affiche
-  // a deux endroits, deux copies finiraient par diverger.
-  assert.ok(src.includes("function remboursables("), "la regle du remboursable a ete recopiee");
+  assert.ok(src.includes("function ouRembourser("), "la ligne ne dit plus ou rembourser");
+  assert.ok(src.includes("a rembourser dans Systeme.io"), "la destination n'est plus nommee");
+  // Et quand c'est remboursable ici, le bouton est sur la ligne.
+  assert.ok(src.includes("function remboursables("), "la regle du remboursable a disparu");
 });
 
 test("Tiquiz et l'Atelier se distinguent dans les ventes ET dans les stats", () => {
