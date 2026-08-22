@@ -165,6 +165,18 @@ export function inferPlanFromOfferId(offerId: string | null | undefined): Tiquiz
  * uniquement : un montant remisé ne doit pas ouvrir un palier au hasard,
  * il retombera sur le repli.
  */
+/**
+ * Les montants qu'on CONNAIT, en centimes.
+ *
+ * Exporte depuis le 21 aout : le tableau de bord doit trancher entre
+ * "1700 centimes" et "17 euros" sur un entier nu, et la seule facon
+ * honnete de le faire est de regarder les montants qu'on a vraiment
+ * vendus, jamais de deviner au flair.
+ */
+export function isKnownAmountCents(cents: number): boolean {
+  return Number.isFinite(cents) && cents in AMOUNT_TO_PLAN;
+}
+
 const AMOUNT_TO_PLAN: Record<number, TiquizPlan> = {
   // En centimes, comme les renvoie l'API Systeme.io.
   900: "monthly",      // ancien prix

@@ -5,6 +5,8 @@
 // and refunds. We only grant access on confirmed-payment events and we must
 // be idempotent because SIO retries aggressively on any non-2xx response.
 import { NextRequest, NextResponse } from "next/server";
+
+import { readSioAmountCents } from "@/lib/admin/sioSales";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createClient } from "@supabase/supabase-js";
 import { timingSafeEqual } from "crypto";
@@ -582,7 +584,21 @@ export async function POST(req: NextRequest) {
       const totalPriceRaw =
         extractStr(rawBody, ["order.total_price", "data.order.total_price"]) ??
         extractStr(rawBody, ["amount", "data.amount"]);
-      const saleAmountCents = totalPriceRaw ? parseInt(String(totalPriceRaw), 10) : 0;
+      // ON NE PARIE PLUS SUR LA FORME DU MONTANT.
+      //
+      // `parseInt` traite "17.00" comme 17, donc 17 CENTIMES : la
+      // commission vaudrait alors 7 centimes au lieu de 5,67 EUR, en
+      // silence. Si le montant arrive deja en centimes, `parseInt` est
+      // juste. Les deux formes sont plausibles et **je n'ai pas verifie
+      // laquelle arrive** : c'est exactement l'erreur du drame Ivan
+      // (raisonner sur la forme SUPPOSEE d'un payload au lieu de la
+      // regarder).
+      //
+      // `readSioAmountCents` est testee et traite les deux : euros avec
+      // decimales, et entier deja en centimes. Plus de pari a faire.
+      // Pour trancher pour de bon, l'ecran /admin liste les appels recus
+      // avec leur payload.
+      const saleAmountCents = readSioAmountCents(totalPriceRaw) ?? 0;
       const tipoteAffEndpoint =
         process.env.TIPOTE_AFFILIATE_ENDPOINT ??
         "https://app.tipote.com/api/affiliate/attribute-sale";

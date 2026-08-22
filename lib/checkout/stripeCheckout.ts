@@ -336,6 +336,58 @@ export interface OwnerSessionInfo {
    * une adresse d'entreprise).
    */
   customerId: string | null;
+  /** Ce qui a été encaissé, TVA comprise. */
+  amountTotalCents: number;
+  /** La TVA comprise dans le total. Sert à calculer la base HT. */
+  amountTaxCents: number;
+  /**
+   * La référence qui identifie CE paiement, pour l'idempotence de la
+   * commission affiliée.
+   *
+   * Le PaymentIntent d'abord (unique par encaissement, y compris sur les
+   * échéances d'un abonnement), l'identifiant de session ensuite. Sans
+   * elle, un réessai de Stripe créerait une deuxième commission pour la
+   * même vente.
+   */
+  paymentRef: string | null;
+}
+
+/** Ce qu'on lit dans une session Stripe. Une seule forme, deux lecteurs. */
+interface RawSession {
+  id?: string;
+  payment_status?: string;
+  amount_total?: number | null;
+  total_details?: { amount_tax?: number | null } | null;
+  payment_intent?: string | null;
+  customer?: string | { id?: string } | null;
+  customer_details?: { email?: string | null; name?: string | null } | null;
+  metadata?: Record<string, string> | null;
+}
+
+/**
+ * La même traduction pour les deux lecteurs de session.
+ *
+ * Avant, chacun refaisait la sienne. C'est exactement comme ça qu'un
+ * champ finit par exister d'un côté et pas de l'autre : le webhook de
+ * remboursement et le webhook de paiement doivent voir la MÊME vente.
+ */
+function litSession(s: RawSession): OwnerSessionInfo {
+  const meta = s.metadata ?? {};
+  return {
+    // `no_payment_required` couvre le cas d'un montant ramené à zéro par
+    // un code promo : le client n'a rien payé et a pourtant droit à tout.
+    paid: s.payment_status === "paid" || s.payment_status === "no_payment_required",
+    email: s.customer_details?.email ?? null,
+    name: s.customer_details?.name ?? null,
+    productId: meta.product ?? null,
+    affiliateRef: meta.affiliate_ref ?? null,
+    customerId: readCustomerId(s.customer),
+    amountTotalCents: Number(s.amount_total ?? 0) || 0,
+    amountTaxCents: Number(s.total_details?.amount_tax ?? 0) || 0,
+    paymentRef: (typeof s.payment_intent === "string" ? s.payment_intent : "").trim() ||
+      (s.id ?? "").trim() ||
+      null,
+  };
 }
 
 /**
@@ -356,23 +408,7 @@ export async function retrieveOwnerSession(
       { headers: { Authorization: `Bearer ${key}` } },
     );
     if (!res.ok) return null;
-    const json = (await res.json()) as {
-      payment_status?: string;
-      customer_details?: { email?: string | null; name?: string | null } | null;
-      customer?: string | { id?: string } | null;
-      metadata?: Record<string, string> | null;
-    };
-    const meta = json.metadata ?? {};
-    return {
-      // `no_payment_required` couvre le cas d'un montant ramené à zéro par
-      // un code promo : le client n'a rien payé et a pourtant droit à tout.
-      paid: json.payment_status === "paid" || json.payment_status === "no_payment_required",
-      email: json.customer_details?.email ?? null,
-      name: json.customer_details?.name ?? null,
-      productId: meta.product ?? null,
-      affiliateRef: meta.affiliate_ref ?? null,
-      customerId: readCustomerId(json.customer),
-    };
+    return litSession((await res.json()) as RawSession);
   } catch {
     return null;
   }
@@ -403,25 +439,9 @@ export async function retrieveOwnerSessionByPaymentIntent(
       { headers: { Authorization: `Bearer ${key}` } },
     );
     if (!res.ok) return null;
-    const json = (await res.json()) as {
-      data?: Array<{
-        payment_status?: string;
-        customer?: string | { id?: string } | null;
-        customer_details?: { email?: string | null; name?: string | null } | null;
-        metadata?: Record<string, string> | null;
-      }>;
-    };
+    const json = (await res.json()) as { data?: RawSession[] };
     const s = json.data?.[0];
-    if (!s) return null;
-    const meta = s.metadata ?? {};
-    return {
-      paid: s.payment_status === "paid" || s.payment_status === "no_payment_required",
-      email: s.customer_details?.email ?? null,
-      name: s.customer_details?.name ?? null,
-      customerId: readCustomerId(s.customer),
-      productId: meta.product ?? null,
-      affiliateRef: meta.affiliate_ref ?? null,
-    };
+    return s ? litSession(s) : null;
   } catch {
     return null;
   }

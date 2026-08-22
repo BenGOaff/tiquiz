@@ -11,6 +11,7 @@ import { isAdminEmail } from "@/lib/adminEmails";
 import { customDomainsEnabled, isOwnHost, normaliseHost } from "@/lib/customDomains";
 import { routeTenantPath, TENANT_SLUG_PREFIX } from "@/lib/publicSlug";
 import { salesSlugForHost } from "@/lib/sales/salesHosts";
+import { readSa, SA_COOKIE, SA_MAX_AGE_SECONDS, SA_PARAM } from "@/lib/affiliate/sa";
 
 const UI_LOCALE_COOKIE = "ui_locale";
 const SUPPORTED_LOCALES = ["en", "fr", "es", "it", "ar", "pt", "pt-BR"];
@@ -66,6 +67,35 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // -------------------------------------------------------------------
+  // LE `?sa=` D'UNE AFFILIEE, RANGE DES LA PREMIERE PAGE.
+  //
+  // Sur un tunnel Systeme.io, c'etait leur page qui le captait. Sur
+  // notre domaine, personne ne le fait : sans cette ligne, une affiliee
+  // qui envoie du monde sur tiquiz.fr n'est payee sur RIEN, et le
+  // symptome est le pire qui soit puisqu'il n'y en a aucun. Tout marche,
+  // l'argent rentre, et la commission n'existe pas.
+  //
+  // On le pose sur TOUTES les reponses, y compris la reecriture de la
+  // page de vente : c'est justement la page ou le lien atterrit.
+  // -------------------------------------------------------------------
+  const sa = readSa(req.nextUrl.searchParams.get(SA_PARAM));
+  const poseSa = (res: NextResponse): NextResponse => {
+    if (sa) {
+      res.cookies.set(SA_COOKIE, sa, {
+        maxAge: SA_MAX_AGE_SECONDS,
+        path: "/",
+        sameSite: "lax",
+        // Lisible par le bon de commande : c'est LUI qui doit le
+        // transmettre a Stripe. `httpOnly` le rendrait invisible au
+        // navigateur, donc inutile.
+        httpOnly: false,
+        secure: req.nextUrl.protocol === "https:",
+      });
+    }
+    return res;
+  };
+
+  // -------------------------------------------------------------------
   // NOS DOMAINES DE VENTE (tiquiz.fr).
   //
   // Ils passent AVANT le portier des domaines personnalises : sans ca,
@@ -84,7 +114,7 @@ export async function middleware(req: NextRequest) {
   if (slugDeVente && pathname === "/") {
     const url = req.nextUrl.clone();
     url.pathname = `/apercu/vente/${slugDeVente}`;
-    return NextResponse.rewrite(url);
+    return poseSa(NextResponse.rewrite(url));
   }
 
   // -------------------------------------------------------------------
@@ -120,14 +150,14 @@ export async function middleware(req: NextRequest) {
       if (route.kind === "slug") {
         const url = req.nextUrl.clone();
         url.pathname = `${TENANT_SLUG_PREFIX}/${route.slug}`;
-        return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+        return poseSa(NextResponse.rewrite(url, { request: { headers: requestHeaders } }));
       }
-      return NextResponse.next({ request: { headers: requestHeaders } });
+      return poseSa(NextResponse.next({ request: { headers: requestHeaders } }));
     }
   }
 
   // Public routes — never block
-  if (pathname === "/") return NextResponse.next();
+  if (pathname === "/") return poseSa(NextResponse.next());
 
   // Public quiz pages /q/..., public popquiz pages /p/..., API,
   // embed, _next, auth, legal, login, signup, favicon.
@@ -152,6 +182,15 @@ export async function middleware(req: NextRequest) {
     // c'est justement l'achat qui le lui cree. Ils restent fermes par la
     // cle SALES_PREVIEW_TOKEN tant que le chantier n'est pas ouvert.
     pathname.startsWith("/commande/") ||
+    // La page ou quelqu'un qui vient de resilier dit POURQUOI. Publique
+    // par la meme evidence que le bon de commande, en sens inverse :
+    // elle n'a plus d'abonnement et peut ne plus avoir de compte du
+    // tout. Sans cette ligne, le middleware la renverrait vers /login,
+    // ce qui reviendrait a lui demander de se connecter pour repondre a
+    // une question qu'on lui pose. On n'aurait aucune reponse.
+    // L'autorisation est ailleurs : le jeton SIGNE dans l'URL, verifie
+    // par la page et par la route (lib/churn/replyToken.ts).
+    pathname.startsWith("/depart/") ||
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname === "/favicon.ico"
@@ -175,7 +214,7 @@ export async function middleware(req: NextRequest) {
         sameSite: "lax",
       });
     }
-    return res;
+    return poseSa(res);
   }
 
   // Protected routes — require auth
@@ -218,21 +257,21 @@ export async function middleware(req: NextRequest) {
       if (!user) {
         const loginUrl = new URL("/login", req.url);
         loginUrl.searchParams.set("redirect", pathname);
-        return NextResponse.redirect(loginUrl);
+        return poseSa(NextResponse.redirect(loginUrl));
       }
 
       // Admin route protection
       if (pathname.startsWith("/admin") && !isAdminEmail(user.email)) {
-        return NextResponse.redirect(new URL("/dashboard", req.url));
+        return poseSa(NextResponse.redirect(new URL("/dashboard", req.url)));
       }
     } catch {
       // Fail-open: never block on Supabase errors
     }
 
-    return res;
+    return poseSa(res);
   }
 
-  return NextResponse.next();
+  return poseSa(NextResponse.next());
 }
 
 export const config = {
