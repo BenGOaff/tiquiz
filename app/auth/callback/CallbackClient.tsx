@@ -122,12 +122,16 @@ export default function CallbackClient() {
     }
     setResending(true);
     try {
-      const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      // NOTRE route, comme le formulaire de connexion. Avec
+      // `signInWithOtp`, c'est Supabase qui ecrit l'email, et son
+      // gabarit disait "Connexion Tipote" sur un bouton Tiquiz
+      // (22 aout). Deux boutons qui envoient deux emails differents,
+      // c'est exactement la moitie de correction qu'on repete.
+      await fetch("/api/auth/magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, locale: document.documentElement.lang || null }),
       });
-      if (error) throw error;
       setResent(true);
     } catch {
       setResendError(t("errResendFailed"));
