@@ -3000,5 +3000,23 @@
     "pdf_password": "Ce PDF est protégé par un mot de passe. Retire la protection, puis réessaie.",
     "pdf_damaged": "Ce PDF n'a pas pu être ouvert : le fichier semble abîmé ou incomplet. Réexporte-le, ou passe par un .docx.",
     "extract_failed": "La lecture du fichier a échoué. Réessaie, ou exporte ton document en .docx ou en .txt."
+  },
+  "supportForm": {
+    "title": "Nous écrire",
+    "intro": "Le centre d'aide répond à la plupart des questions. S'il ne répond pas à la tienne, écris moi ici : je te réponds par email.",
+    "email": "Ton adresse email",
+    "name": "Ton prénom",
+    "subject": "En deux mots, c'est à propos de quoi ?",
+    "message": "Explique moi ce qui se passe",
+    "messageHint": "Dis moi ce que tu essayais de faire, et ce que tu as vu à la place. Plus c'est précis, plus ma réponse est utile.",
+    "send": "Envoyer ma demande",
+    "sending": "Envoi...",
+    "sent": "C'est parti. Je te réponds par email, à l'adresse que tu as indiquée.",
+    "again": "Écrire une autre demande",
+    "helpCenter": "Voir le centre d'aide",
+    "errShort": "Ajoute quelques mots : je ne pourrai pas t'aider avec ça.",
+    "errEmail": "Cette adresse email n'a pas l'air valide.",
+    "errTooMany": "Tu as déjà envoyé plusieurs demandes. Attends un peu, je les ai toutes.",
+    "errFailed": "Ta demande n'est pas partie. Réessaie dans un instant."
   }
 }

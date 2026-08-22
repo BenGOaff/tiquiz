@@ -41,6 +41,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import SupportCard from "@/components/admin/SupportCard";
 import { Input } from "@/components/ui/input";
 import { isAtelierSale } from "@/lib/admin/atelier";
 import { readClientKind, type ClientKind, type Person } from "@/lib/admin/people";
@@ -533,6 +534,18 @@ export default function ClientFiche({ email }: { email: string }) {
               compte. Vérifie l&apos;adresse, puis ouvre lui son accès à la main.
             </p>
           )}
+        </CardContent>
+      </Card>
+
+      {/* ── CE QU'ELLE NOUS A ECRIT ──
+          Bene, 22 aout : "pourquoi ne pas lier le compte client a l'aide
+          au ticketing ?" Repondre a quelqu'un sans voir ses acces ni ses
+          paiements, c'est repondre a l'aveugle. Le MEME composant que la
+          file, filtre sur elle : deux implementations d'une file de
+          tickets finiraient par se contredire. */}
+      <Card>
+        <CardContent className="py-4">
+          <SupportCard email={email} />
         </CardContent>
       </Card>
 

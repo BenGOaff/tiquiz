@@ -3000,5 +3000,23 @@
     "pdf_password": "Este PDF está protegido por senha. Remova a proteção e tente de novo.",
     "pdf_damaged": "Não foi possível abrir este PDF: o arquivo parece danificado ou incompleto. Exporte de novo ou use um .docx.",
     "extract_failed": "A leitura do arquivo falhou. Tente de novo ou exporte seu documento como .docx ou .txt."
+  },
+  "supportForm": {
+    "title": "Fale conosco",
+    "intro": "A central de ajuda responde à maioria das perguntas. Se não responder à sua, escreva para mim aqui: eu respondo por email.",
+    "email": "O teu endereço de email",
+    "name": "O teu nome",
+    "subject": "Em poucas palavras, é sobre o quê?",
+    "message": "Conta-me o que se passa",
+    "messageHint": "Diz-me o que estavas a tentar fazer e o que viste em vez disso. Quanto mais preciso, mais útil é a minha resposta.",
+    "send": "Enviar o meu pedido",
+    "sending": "A enviar...",
+    "sent": "Enviado. Respondo por email, para o endereço que indicaste.",
+    "again": "Escrever outro pedido",
+    "helpCenter": "Ver o centro de ajuda",
+    "errShort": "Acrescenta algumas palavras: assim não consigo ajudar.",
+    "errEmail": "Esse endereço de email não parece válido.",
+    "errTooMany": "Já enviaste vários pedidos. Espera um pouco, tenho todos.",
+    "errFailed": "O teu pedido não seguiu. Tenta de novo daqui a pouco."
   }
 }

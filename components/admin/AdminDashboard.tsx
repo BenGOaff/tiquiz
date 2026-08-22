@@ -34,6 +34,7 @@ import PilotageCard from "@/components/admin/PilotageCard";
 import ResellerPaymentEventsCard from "@/components/admin/ResellerPaymentEventsCard";
 import ResellersCard from "@/components/admin/ResellersCard";
 import StatistiquesCard from "@/components/admin/StatistiquesCard";
+import SupportCard from "@/components/admin/SupportCard";
 import TagsCard from "@/components/admin/TagsCard";
 import WebhookLogsCard from "@/components/admin/WebhookLogsCard";
 
@@ -47,6 +48,7 @@ const ONGLETS = [
   { id: "clients", label: "Mes clients" },
   { id: "ventes", label: "Mes ventes" },
   { id: "stats", label: "Statistiques" },
+  { id: "support", label: "Support" },
   { id: "revendeurs", label: "Mes revendeurs" },
   { id: "affilies", label: "Mes affiliés" },
 ] as const;
@@ -194,6 +196,9 @@ export default function AdminDashboard() {
 
       {/* ── STATISTIQUES : seulement ce qu'on sait juste ── */}
       {onglet === "stats" && <StatistiquesCard />}
+
+      {/* ── SUPPORT : qui attend une reponse, et depuis quand ── */}
+      {onglet === "support" && <SupportCard />}
 
       {/* ── MES REVENDEURS ──
           Ces deux cartes vivaient tout en bas de "Mes ventes", apres le

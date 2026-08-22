@@ -12,6 +12,7 @@ import {
   BarChart3,
   PanelLeftClose,
   HelpCircle,
+  MessageSquare,
   MessageCircleQuestion,
   ShieldCheck,
   Video,
@@ -210,6 +211,7 @@ function SidebarCollapseButton() {
 
 export function AppSidebar() {
   const t = useTranslations("nav");
+  const tSupport = useTranslations("supportForm");
   // L'Atelier du Quiz (formation de Bene) n'existe qu'en francais : la
   // carte de conversion ci-dessous n'est montree qu'aux interfaces FR.
   const locale = useLocale();
@@ -344,6 +346,19 @@ export function AppSidebar() {
                 <HelpCircle className="w-5 h-5" />
                 <span>{t("support")}</span>
               </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          {/* ECRIRE A UN HUMAIN.
+              Le centre d'aide juste au dessus repond a la plupart des
+              questions ; celui-ci mene a quelqu'un quand il n'y repond
+              pas. Les deux, dans cet ordre : une reponse tout de suite
+              vaut mieux qu'une reponse demain. */}
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <Link href="/support" className={MENU_ITEM_CLASS}>
+                <MessageSquare className="w-5 h-5" />
+                <span>{tSupport("title")}</span>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <RestartTourItem />
