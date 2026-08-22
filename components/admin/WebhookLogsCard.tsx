@@ -42,6 +42,8 @@ type Row = {
   planNow: string | null;
   verdict: CallVerdict;
   montantCents: number | null;
+  montantSource: "payload" | "plan" | "inconnu";
+  planNom: string | null;
   champsNumeriques: ChampNumerique[];
 };
 
@@ -204,12 +206,19 @@ export default function WebhookLogsCard() {
                             mensonge : on dit qu'on ne l'a pas reçu, et on
                             montre plus bas les nombres que le payload
                             porte vraiment. */}
-                        {r.montantCents != null ? (
+                        {r.montantCents == null ? (
+                          r.kind === "sale" ? (
+                            <span className="text-amber-700">non transmis</span>
+                          ) : (
+                            "-"
+                          )
+                        ) : r.montantSource === "payload" ? (
                           euros(r.montantCents)
-                        ) : r.kind === "sale" ? (
-                          <span className="text-amber-700">non transmis</span>
                         ) : (
-                          "-"
+                          <span className="text-muted-foreground" title={r.planNom ?? ""}>
+                            ~ {euros(r.montantCents)}
+                            <span className="block text-[10px]">tarif du plan</span>
+                          </span>
                         )}
                       </td>
                       <td className="py-1.5 pr-3">

@@ -68,6 +68,23 @@ export interface Sale {
   productId: string | null;
   /** En centimes, pour ne jamais manipuler de flottant. */
   amountCents: number;
+  /**
+   * D'OÙ VIENT CE MONTANT, ET DONC CE QU'IL VAUT.
+   *
+   * `"payload"` : la somme réellement encaissée, telle que le
+   *   fournisseur nous l'a envoyée. C'est la seule qui peut entrer dans
+   *   un chiffre d'affaires.
+   * `"plan"` : le prix AFFICHÉ du plan tarifaire, quand le payload ne
+   *   porte pas de montant. Un ordre de grandeur, jamais un total : le
+   *   compte de Béné a 54 codes de réduction actifs, dont certains à
+   *   100 %, donc une vente remisée vaudrait moins.
+   * `"inconnu"` : on ne sait pas, et `amountCents` vaut 0.
+   *
+   * **La mécanique est un CHAMP, pas une devinette de l'appelant.**
+   * Deduire "0 = pas de montant" marcherait aujourd'hui et casserait le
+   * jour d'une vente à 0 € légitime (un code GRATUIT, justement).
+   */
+  amountSource: "payload" | "plan" | "inconnu";
   currency: string;
   paidAt: string;
   refundedAt: string | null;
@@ -115,6 +132,8 @@ export function buildSales(rows: readonly EventRow[]): Sale[] {
           name: texte(details.name),
           productId: texte(meta.product),
           amountCents: Number(objet.amount_total ?? 0) || 0,
+          // Stripe envoie la somme reellement encaissee : c'est la verite.
+          amountSource: "payload",
           currency: (texte(objet.currency) ?? "eur").toLowerCase(),
           paidAt: row.created_at,
           refundedAt: null,
@@ -144,6 +163,8 @@ export function buildSales(rows: readonly EventRow[]): Sale[] {
           name: null,
           productId: custom.split("|")[0] || null,
           amountCents: Math.round(Number(montant.value ?? 0) * 100) || 0,
+          // PayPal aussi : la capture porte la somme reellement prise.
+          amountSource: "payload",
           currency: (texte(montant.currency_code) ?? "eur").toLowerCase(),
           paidAt: row.created_at,
           refundedAt: null,

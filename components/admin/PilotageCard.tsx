@@ -121,14 +121,20 @@ function euros(cents: number): string {
 }
 
 /**
- * Le montant d'une vente, ou l'aveu qu'on ne l'a pas.
+ * Le montant d'une vente, ET D'OÙ IL VIENT.
  *
  * Systeme.io ne nous transmet pas le prix payé là où on le lit :
  * afficher `0,00 €` sur une vente bien réelle est un mensonge, et c'est
  * pire qu'un trou parce que ça a l'air juste (règle du 8 juin).
+ *
+ * On affiche donc le tarif du plan quand on ne l'a que par là, avec le
+ * `~` et la mention : c'est un ordre de grandeur, pas la somme encaissée
+ * (il y a 54 codes de réduction actifs dans son compte).
  */
 function montant(v: Sale): string {
-  return (Number(v.amountCents) || 0) > 0 ? euros(v.amountCents) : "montant non transmis";
+  if (v.amountSource === "payload") return euros(v.amountCents);
+  if (v.amountSource === "plan") return `~ ${euros(v.amountCents)} (tarif du plan)`;
+  return "montant non transmis";
 }
 
 function jour(iso: string | null): string {
@@ -459,7 +465,7 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
                     // mensonge : on dit qu'on ne l'a pas, on ne
                     // l'invente pas et on ne l'additionne pas.
                     p.sansMontant >= p.count
-                      ? `${p.productId} : ${p.count} (montant non transmis)`
+                      ? `${p.productId} : ${p.count} (montant encaissé non transmis)`
                       : `${p.productId} : ${p.count} (${euros(p.totalCents)})`,
                   )
                   .join("  ·  ")}
@@ -475,9 +481,10 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
               <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-700">
                 <AlertTriangle className="size-3.5 shrink-0 mt-0.5" />
                 <span>
-                  {totals.ventesSansMontant} vente{totals.ventesSansMontant > 1 ? "s" : ""} sans
-                  montant : Systeme.io ne nous l&apos;a pas transmis, donc elle
-                  {totals.ventesSansMontant > 1 ? "s ne comptent" : " ne compte"} pas dans le
+                  {totals.ventesSansMontant} vente{totals.ventesSansMontant > 1 ? "s" : ""} dont
+                  Systeme.io ne nous transmet pas le montant encaissé. Le tarif du plan
+                  s&apos;affiche à côté de chacune, mais ce n&apos;est qu&apos;un ordre de
+                  grandeur (tu as des codes de réduction actifs), donc il ne compte pas dans le
                   total ci dessus. Le nombre de ventes, lui, est juste.
                 </span>
               </p>

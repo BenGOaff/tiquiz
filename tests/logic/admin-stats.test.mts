@@ -36,6 +36,9 @@ function vente(over: Record<string, unknown> = {}) {
     name: null,
     productId: "monthly",
     amountCents: 1700,
+    // Par defaut : une somme reellement encaissee. Les cas "on ne
+    // connait pas le montant" le disent explicitement.
+    amountSource: "payload",
     currency: "eur",
     paidAt: "2026-08-03T09:00:00Z",
     refundedAt: null,
@@ -122,7 +125,7 @@ test("UNE SEULE vente sans montant suffit a retirer la courbe des euros", () => 
   const serie = serieEncaissee(
     [
       vente({ amountCents: 1700, paidAt: "2026-08-03T09:00:00Z" }),
-      vente({ amountCents: 0, paidAt: "2026-08-04T09:00:00Z" }),
+      vente({ amountCents: 1700, amountSource: "plan", paidAt: "2026-08-04T09:00:00Z" }),
     ],
     AOUT,
     3,
@@ -218,7 +221,7 @@ test("buildAdminStats assemble tout sans jamais lire l'horloge lui meme", () => 
         createdAt: "2026-08-01T09:00:00Z",
         quizCount: 3,
         leadCount: 40,
-        sales: [vente({ amountCents: 0, paidAt: "2026-08-03T09:00:00Z" })],
+        sales: [vente({ amountCents: 1700, amountSource: "plan", paidAt: "2026-08-03T09:00:00Z" })],
       }),
       personne({
         email: "b@b.fr",

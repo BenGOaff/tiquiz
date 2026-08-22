@@ -1660,3 +1660,57 @@ diagnostic évident.
 être sûre même mal replacée. `( ... )` au lieu de `...` coûte deux
 caractères et enferme les dégâts dans un sous-shell. Une variable
 exportée dans un terminal, elle, survit à tout ce qu'on y tapera ensuite.
+
+## Ce que l'API de Systeme.io donne, et ce qu'elle ne donne pas (22 août 2026)
+
+Béné : "vu que tu es connecté à Systeme.io en MCP maintenant, tu ne peux
+pas récupérer toutes les infos qu'il nous manque ? Genre les ventes
+depuis le début, l'affiliation ?"
+
+Relevé en interrogeant son compte, pas en supposant :
+
+| Disponible | Absent |
+|---|---|
+| plans tarifaires (id, nom, montant, devise) | **les commandes / les ventes** |
+| contacts, tags, champs de contact | **l'affiliation, les commissions** |
+| tunnels, étapes, pages | les remboursements |
+| campagnes, newsletters, règles d'automatisation | |
+| codes de réduction, produits numériques | |
+
+**L'historique des ventes ne peut donc PAS être rapatrié.** Il vit dans
+leur tableau de bord, et chez nous seulement depuis le 7 août, dans
+`webhook_logs`. Le dire est plus utile que de laisser espérer un import
+qui n'existera pas.
+
+**Ce que les plans tarifaires ont réglé, eux :** `lib/sio/pricePlans.ts`
+porte la table LUE dans son compte. Elle a servi deux fois le jour même.
+Trois plans Tiquiz en dollars existaient depuis avril et manquaient à
+`OFFER_TO_PLAN` (une vente dessus tombait sur le repli, donc au bon
+endroit mais au mauvais palier). Et le prix du plan donne enfin un ordre
+de grandeur au montant d'une vente Systeme.io, qui s'affichait `0,00 €`.
+
+**Ce prix reste une ESTIMATION, marquée `amountSource: "plan"`.** Son
+compte porte 54 codes de réduction actifs, dont certains à 100 % : une
+vente remisée vaut moins que le tarif affiché. Un montant `"plan"`
+n'entre donc JAMAIS dans un chiffre d'affaires (ni `encaisseCents`, ni
+`paidCents`, ni la courbe de `serieEncaissee`). **Un chiffre gonflé dans
+un tableau de bord est pire qu'une absence de chiffre : il fait prendre
+des décisions.**
+
+`Sale.amountSource` vaut `"payload" | "plan" | "inconnu"`, et c'est un
+CHAMP, pas une déduction de l'appelant. Tester `amountCents <= 0` pour
+dire "montant inconnu" casserait le jour d'une vente à 0 € légitime,
+c'est à dire le jour où quelqu'un utilise le code `GRATUIT`.
+
+**Et deux listes de chemins qui cherchent la même chose finissent
+toujours par diverger.** Le webhook lisait `order.total_price`, le
+tableau de bord non : une vente pouvait être commissionnée au bon
+montant et affichée à zéro. Les deux passent maintenant par
+`PAID_AMOUNT_PATHS`. `pricePlan.amount` en est volontairement EXCLU :
+c'est le prix du plan, pas la somme encaissée. Il ne sert qu'à deviner
+le palier (`AMOUNT_PATHS`).
+
+**Quand un tarif change, Systeme.io crée un nouveau plan, donc un nouvel
+id, donc DEUX lignes à ajouter** : `OFFER_TO_PLAN` et `PRICE_PLANS`. Le
+test `tests/logic/sio-price-plans.test.mts` exige que les deux tables
+soient d'accord.
