@@ -1714,3 +1714,122 @@ le palier (`AMOUNT_PATHS`).
 id, donc DEUX lignes à ajouter** : `OFFER_TO_PLAN` et `PRICE_PLANS`. Le
 test `tests/logic/sio-price-plans.test.mts` exige que les deux tables
 soient d'accord.
+
+## Une fiche par client, et le tiroir qui a disparu (22 août 2026)
+
+Béné : "Tu trouves ça pratique ? lisible ? facile à utiliser ? Quand
+j'aurai 200000 clients, je fais comment ? Retrouver toutes ses infos,
+pouvoir mettre à jour ses infos, le rembourser, savoir d'où il vient, ce
+qu'il a comme accès, ce qu'il a payé ?"
+
+J'avais empilé : une liste pour REGARDER (état, Atelier, argent) et une
+autre pour AGIR (palier, lien de connexion, suppression), puis un tiroir
+dépliant dans la première. Un tiroir sert à jeter un oeil, pas à
+travailler, et deux listes des mêmes personnes finissent toujours par se
+contredire.
+
+**Règle : la liste reste une liste, et mène à `/admin/clients/<email>`.**
+Tout ce qu'on FAIT sur une personne se passe sur sa fiche. Une adresse
+plutôt qu'une fenêtre : elle se garde en favori, elle se partage avec
+quelqu'un, elle survit à un rafraîchissement, et un ticket de support
+peut la citer (l'email d'alerte le fait).
+
+L'état et le rattachement des ventes passent par `buildPeople`, la MÊME
+fonction que la liste. Une fiche qui recalcule afficherait "Abonné" là où
+le tableau dit "Part bientôt".
+
+**D'où vient la personne :** `readProvenance` (`lib/admin/provenance.ts`)
+lit le PREMIER appel reçu pour son adresse et en sort le tunnel
+d'entrée. `part-tiquiz-gratuit` vient d'une affiliée, `tiquiz-gratuit`
+vient d'elle. Le plus ancien, jamais le plus récent : le plus récent
+dirait par où elle est repassée. Le journal ne remonte qu'au 7 août, et
+l'écran le DIT au lieu d'afficher un tiret.
+
+## Le bouton Rembourser qui ne pouvait pas exister (22 août 2026)
+
+"Il est où le fucking bouton rembourser ??"
+
+Il n'y en avait pas, et il ne POUVAIT pas y en avoir : toutes ses ventes
+d'aujourd'hui passent par Systeme.io, qui encaisse et garde l'argent. Le
+bouton n'existe que sur nos propres encaissements, et il n'y en a encore
+aucun.
+
+**Règle : un bouton absent se justifie sur la ligne.** La colonne Payé
+dit "à rembourser dans Systeme.io" ou "à rembourser depuis l'Atelier".
+Un bouton absent sans un mot se lit comme un bug, et elle a passé du
+temps à le chercher. Même famille que le `ok: false` muet du 3 août.
+
+## Le support : le centre d'aide est chez Tipote, le ticketing chez nous
+
+Le centre d'aide EXISTE (57 articles, servis par `app.tipote.com/support`,
+partagés par les deux apps, cf. `lib/help.ts`). Ce qui manquait, c'était
+le chemin vers un humain.
+
+- `/support` : formulaire dans les 7 langues, **PUBLIQUE**. Celle qui a
+  le plus besoin d'aide est celle qui n'arrive pas à se connecter : la
+  renvoyer vers `/login` serait un cul-de-sac parfait. La ligne est dans
+  le middleware, avec la même justification que `/depart/`.
+- Les tickets vivent dans la base de TIQUIZ (`support_tickets`), pas chez
+  Tipote : ils doivent apparaître sur la fiche du client, à côté de ses
+  accès et de ses paiements. Une donnée dans une autre base est une
+  donnée qu'on ne croisera jamais.
+- La file est triée de façon que **ce qui attend le plus longtemps passe
+  devant** (`trierFile`). Trier du plus récent enterrerait ceux qu'on a
+  déjà fait attendre. Au delà de 24 h sans réponse, la ligne rougit.
+- **L'ordre compte : on ENVOIE l'email d'abord, on enregistre ensuite.**
+  L'inverse laisserait Béné convaincue d'avoir répondu et la cliente
+  devant une boîte vide, en silence.
+- Ce que la cliente a écrit est repris dans l'email de réponse, donc
+  ÉCHAPPÉ (`renderTiquizMessage`) : sinon un `<` casse le message et un
+  `<script>` volontaire devient une injection chez quelqu'un d'autre.
+
+## Après un paiement pris chez nous (22 août 2026)
+
+Trois choses doivent suivre un paiement. Une était là, deux manquaient.
+
+1. **La facture** : déjà émise par Stripe (`invoice_creation`).
+2. **L'email d'accès venait de SUPABASE.** `grantPlan` appelait
+   `signInWithOtp`, donc Supabase envoyait SON gabarit, configuré pour
+   l'autre app. C'est exactement le reproche du 22 août ("je reçois les
+   trucs tipote"). On génère le jeton et on envoie NOTRE email.
+   **INTERDIT : `signInWithOtp` dans un chemin qui envoie un email.**
+3. **L'étiquette Systeme.io n'était pas posée.** Ses automatisations sont
+   bâties dessus : un client payé chez nous et non étiqueté sort de
+   toutes ses séquences sans que rien ne le signale. `poserTagAchat`
+   utilise SA clé, celle de ses Paramètres (`resolveApiKey`), et ne crée
+   JAMAIS une étiquette manquante : une étiquette créée par nous avec une
+   faute se retrouverait en double dans sa liste.
+
+Les deux sont best-effort et POSTÉRIEURES au plan : "il a payé le client,
+il doit recevoir ses accès, point barre".
+
+**PayPal sur Tiquiz n'est pas le PayPal de l'Atelier.** L'Atelier vend un
+achat unique (API Orders, déjà branché dans formaquiz). Tiquiz vend des
+ABONNEMENTS : il faut l'API Subscriptions, donc des produits et des plans
+créés chez PayPal, et un cycle de vie d'abonnement à écouter. Ce n'est
+pas un copier-coller, et ça ne se vérifie pas sans les identifiants.
+
+## Vérifier DANS QUEL DOSSIER on regarde (ma faute, 22 août 2026)
+
+J'ai annoncé à Béné qu'il n'y avait "rien dans Tiquiz, ni CGV ni mentions
+légales, zéro page". C'était faux. Je lisais les fichiers de
+`tipote-app` : le répertoire de travail du shell PERSISTE entre deux
+commandes, et un `cd` fait dix minutes plus tôt s'appliquait encore.
+
+Tiquiz a son corpus légal, écrit pour lui, en 5 langues :
+`lib/legal/{legal-notice,privacy,terms,terms-of-use,cookies,affiliate}.ts`
+et les pages `/legal`, `/terms`, `/privacy`, `/cookies`. Ma recherche
+`find app -ipath "*cgv*"` n'a rien trouvé parce que les routes sont
+nommées en anglais.
+
+**Deux leçons, et la deuxième est la vraie :**
+- `pwd` avant de conclure quoi que ce soit sur un dépôt, et un chemin
+  ABSOLU dans les commandes qui traversent plusieurs dépôts ;
+- **ne pas conclure "ça n'existe pas" d'une recherche qui n'a rien
+  trouvé.** Une recherche vide veut dire "je n'ai pas trouvé", pas "il
+  n'y a rien", et la différence a produit un rapport faux.
+
+**Ce qui manquait vraiment était plus précis** : nos CGV disent à
+l'article 5 "cette renonciation est recueillie avant paiement", et le bon
+de commande n'affichait ni les CGV ni la renonciation. Le texte annonçait
+quelque chose que l'écran ne faisait pas. Encore une moitié de décision.
