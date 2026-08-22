@@ -130,6 +130,9 @@ export async function fetchAtelier(env: NodeJS.ProcessEnv = process.env): Promis
         name: texte(v.name),
         productId: texte(v.productId) ? `atelier-${texte(v.productId)}` : "atelier",
         amountCents: Number(v.amountCents) || 0,
+        // L'Atelier encaisse par Stripe ou PayPal : ses ventes portent
+        // la somme reellement prise, comme les notres.
+        amountSource: "payload",
         currency: texte(v.currency) ?? "eur",
         paidAt: texte(v.paidAt) ?? new Date(0).toISOString(),
         refundedAt: texte(v.refundedAt),

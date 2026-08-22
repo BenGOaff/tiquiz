@@ -26,9 +26,10 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { champsNumeriques, readCallKind, readCallVerdict } from "@/lib/admin/webhookRows";
 import { readSioAmountCents } from "@/lib/admin/sioSales";
+import { readPricePlan } from "@/lib/sio/pricePlans";
 import {
-  AMOUNT_PATHS,
   OFFER_ID_PATHS,
+  PAID_AMOUNT_PATHS,
   URL_PATHS,
   extractStr,
   inferPlanFromOfferId,
@@ -50,13 +51,6 @@ const EMAIL_PATHS = [
   "customer.email", "data.customer.email",
   "contact.email", "data.contact.email",
   "email",
-] as const;
-
-/** Les chemins où le webhook cherche le montant pour la commission. */
-const AMOUNT_PATHS_VENTE = [
-  "order.total_price", "data.order.total_price",
-  "amount", "data.amount",
-  ...AMOUNT_PATHS,
 ] as const;
 
 const pick = extractStr;
@@ -95,7 +89,14 @@ export async function GET(req: NextRequest) {
     // Sur un appel refusé hier, ça dit tout de suite si le correctif
     // déployé depuis suffit, sans refaire un achat pour le savoir.
     const planNow = inferPlanFromUrl(sourceUrl) ?? inferPlanFromOfferId(offerId);
-    const montantCents = readSioAmountCents(pick(p, AMOUNT_PATHS_VENTE));
+    // Le montant encaisse d'abord ; a defaut le tarif du plan, lu dans
+    // son compte Systeme.io. La PROVENANCE part avec, sinon l'ecran ne
+    // peut pas distinguer une somme reelle d'un ordre de grandeur.
+    const duPayload = readSioAmountCents(pick(p, PAID_AMOUNT_PATHS));
+    const tarif = duPayload == null ? readPricePlan(offerId) : null;
+    const montantCents = duPayload ?? tarif?.montantCents ?? null;
+    const montantSource: "payload" | "plan" | "inconnu" =
+      duPayload != null ? "payload" : tarif ? "plan" : "inconnu";
 
     return {
       id: (r as { id: string }).id,
@@ -114,6 +115,8 @@ export async function GET(req: NextRequest) {
       // finit toujours par mentir (six fois dans ce dépôt).
       verdict: readCallVerdict({ source, eventType, status, error: (r as { error: string | null }).error, planNow }),
       montantCents,
+      montantSource,
+      planNom: tarif?.nom ?? null,
       // LE PAYLOAD PARLE QUAND ON NE TROUVE PAS LE MONTANT.
       //
       // Des dizaines de ventes réelles s'affichent à 0,00 € : aucun de
@@ -121,7 +124,7 @@ export async function GET(req: NextRequest) {
       // vraiment. On ne rallonge pas la liste au flair (drame Ivan), on
       // REGARDE. Uniquement des nombres : ni adresse, ni nom.
       champsNumeriques:
-        kind === "sale" && montantCents == null ? champsNumeriques(p) : [],
+        kind === "sale" && duPayload == null ? champsNumeriques(p) : [],
     };
   });
 

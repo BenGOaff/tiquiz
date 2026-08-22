@@ -50,6 +50,7 @@ import {
   AMOUNT_PATHS,
   FALLBACK_PAID_PLAN,
   inferPlanFromAmount,
+  PAID_AMOUNT_PATHS,
   inferPlanFromOfferId as inferPlan,
   inferPlanFromUrl,
   isConfirmedSaleEvent,
@@ -581,9 +582,11 @@ export async function POST(req: NextRequest) {
     // qui centralise les commissions. Best-effort, ne bloque pas le flow
     // d'ouverture d'accès si ça plante.
     try {
-      const totalPriceRaw =
-        extractStr(rawBody, ["order.total_price", "data.order.total_price"]) ??
-        extractStr(rawBody, ["amount", "data.amount"]);
+      // LA MEME LISTE QUE LE TABLEAU DE BORD (`PAID_AMOUNT_PATHS`).
+      // Elles etaient differentes jusqu'au 22 aout, et elles avaient
+      // deja diverge : une vente pouvait etre commissionnee au bon
+      // montant ici, et affichee a zero la-bas.
+      const totalPriceRaw = extractStr(rawBody, PAID_AMOUNT_PATHS);
       // ON NE PARIE PLUS SUR LA FORME DU MONTANT.
       //
       // `parseInt` traite "17.00" comme 17, donc 17 CENTIMES : la

@@ -141,8 +141,14 @@ export function serieEncaissee(
     return { fiable: false, raison: "aucune-donnee", concernees: 0 };
   }
 
+  // C'EST LA PROVENANCE DU MONTANT QUI DÉCIDE, PAS SA VALEUR.
+  //
+  // Un prix de plan tarifaire est un ordre de grandeur (54 codes de
+  // réduction actifs dans son compte, certains à 100 %) : l'additionner
+  // gonflerait la courbe. Et une vente à 0 € est légitime, donc tester
+  // `<= 0` ferait mentir l'avertissement dans l'autre sens.
   const sansMontant = dansLaFenetre.filter(
-    (v) => !v.refundedAt && (Number(v.amountCents) || 0) <= 0,
+    (v) => !v.refundedAt && v.amountSource !== "payload",
   ).length;
   if (sansMontant > 0) {
     return { fiable: false, raison: "montants-absents", concernees: sansMontant };

@@ -36,8 +36,10 @@
 // l'écran dit clairement que son remboursement se fait chez eux.
 
 import type { EventRow, Sale } from "@/lib/checkout/sales";
+import { readPricePlan } from "@/lib/sio/pricePlans";
 import {
   AMOUNT_PATHS,
+  PAID_AMOUNT_PATHS,
   OFFER_ID_PATHS,
   extractStr,
   inferPlanFromAmount,
@@ -138,8 +140,32 @@ export function buildSioSales(rows: EventRow[]): Sale[] {
     vues.add(cle);
 
     const offre = extractStr(payload, OFFER_ID_PATHS);
-    const montantBrut = extractStr(payload, AMOUNT_PATHS);
-    const plan = inferPlanFromOfferId(offre) ?? inferPlanFromAmount(montantBrut);
+    // DEUX QUESTIONS, DEUX LISTES DE CHEMINS.
+    //
+    // Pour ROUTER le palier, le prix affiche du plan est un bon indice.
+    // Pour CHIFFRER une vente, il ne vaut rien : c'est la somme
+    // encaissee qu'il faut, et elle seule.
+    const montantBrut = extractStr(payload, PAID_AMOUNT_PATHS);
+    const plan =
+      inferPlanFromOfferId(offre) ?? inferPlanFromAmount(extractStr(payload, AMOUNT_PATHS));
+
+    // LE MONTANT, ET D'OÙ IL VIENT.
+    //
+    // Le payload d'abord : c'est la somme réellement encaissée, la seule
+    // qui puisse entrer dans un chiffre d'affaires.
+    //
+    // À défaut, le prix affiché du plan tarifaire, lu dans son compte
+    // Systeme.io le 22 août. C'est ce qui a manqué pendant des semaines :
+    // 47 ventes bien réelles affichées à `0,00 €`, et un onglet Ventes
+    // qui ne servait à rien. Mais ça reste une ESTIMATION, et elle est
+    // marquée comme telle : son compte porte 54 codes de réduction
+    // actifs, dont certains à 100 %, donc une vente remisée vaudrait
+    // moins que le prix du plan.
+    const duPayload = readSioAmountCents(montantBrut);
+    const tarif = duPayload == null ? readPricePlan(offre) : null;
+    const amountCents = duPayload ?? tarif?.montantCents ?? 0;
+    const amountSource: Sale["amountSource"] =
+      duPayload != null ? "payload" : tarif ? "plan" : "inconnu";
 
     ventes.push({
       // Rien a rembourser de notre cote : la reference est l'evenement,
@@ -150,8 +176,9 @@ export function buildSioSales(rows: EventRow[]): Sale[] {
       name: extractStr(payload, NAME_PATHS),
       // Le PLAN plutot que l'offre brute : c'est ce que Bene lit.
       productId: plan ?? "inconnu",
-      amountCents: readSioAmountCents(montantBrut) ?? 0,
-      currency: "eur",
+      amountCents,
+      amountSource,
+      currency: tarif?.devise ?? "eur",
       paidAt: row.created_at,
       // On n'invente pas un remboursement qu'on n'a jamais observe.
       refundedAt: null,

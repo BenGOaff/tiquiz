@@ -79,6 +79,23 @@ export const OFFER_TO_PLAN: Record<string, TiquizPlan> = {
   "3278876": "monthly_plus",
   "offer-price-3278878": "yearly_plus",
   "3278878": "yearly_plus",
+
+  // ── LES PLANS EN DOLLARS (relevés dans son compte le 22 août 2026) ──
+  //
+  // Ils existaient depuis avril et n'étaient nulle part ici. Une vente
+  // dessus tombait sur le repli : le client entrait bien (c'est le
+  // correctif du 7 août qui l'a sauvé), mais il était rangé en mensuel
+  // même s'il avait pris l'annuel.
+  //
+  // Trouvés en lisant l'API de Systeme.io, pas en devinant : c'est le
+  // seul moyen de savoir ce qu'un compte contient VRAIMENT, et c'est ce
+  // qui manquait le jour du drame Ivan.
+  "offer-price-3211596": "monthly",
+  "3211596": "monthly",
+  "offer-price-3211612": "yearly",
+  "3211612": "yearly",
+  "offer-price-3211578": "lifetime",
+  "3211578": "lifetime",
 };
 
 /**
@@ -188,16 +205,45 @@ const AMOUNT_TO_PLAN: Record<number, TiquizPlan> = {
   5700: "lifetime",    // opération terminée, gardé pour l'historique
 };
 
-/** Paths à essayer pour le montant payé. */
-export const AMOUNT_PATHS = [
-  "pricePlan.amount",
-  "data.pricePlan.amount",
+/**
+ * LA SOMME RÉELLEMENT ENCAISSÉE, ET RIEN D'AUTRE.
+ *
+ * `pricePlan.amount` n'est PAS là, et c'est le point de cette liste : ce
+ * champ porte le prix AFFICHÉ du plan, pas ce que le client a payé. Le
+ * compte de Béné a 54 codes de réduction actifs, dont certains à 100 % :
+ * confondre les deux gonflerait le chiffre d'affaires d'un tableau de
+ * bord, en silence, et ça ferait prendre des décisions.
+ *
+ * Le prix du plan a sa propre voie (`lib/sio/pricePlans.ts`), et tout ce
+ * qui en vient est marqué `amountSource: "plan"`.
+ *
+ * Le webhook ET le tableau de bord lisent CETTE liste. Ils en avaient
+ * deux différentes jusqu'au 22 août, et elles avaient déjà divergé : le
+ * webhook lisait `order.total_price`, le tableau de bord non, donc une
+ * vente pouvait être commissionnée au bon montant et affichée à zéro.
+ */
+export const PAID_AMOUNT_PATHS = [
+  "order.total_price",
+  "data.order.total_price",
   "order.total_amount",
   "data.order.total_amount",
   "order.amount",
   "data.order.amount",
   "amount",
   "data.amount",
+] as const;
+
+/**
+ * Les chemins où CHERCHER UN MONTANT POUR DEVINER LE PALIER.
+ *
+ * Ici le prix du plan est le bienvenu : on ne calcule pas un chiffre
+ * d'affaires, on répond à "quel palier a-t-il pris ?", et pour ça le
+ * tarif affiché est même l'indice le plus fiable.
+ */
+export const AMOUNT_PATHS = [
+  "pricePlan.amount",
+  "data.pricePlan.amount",
+  ...PAID_AMOUNT_PATHS,
 ] as const;
 
 /**

@@ -405,15 +405,28 @@ export function buildPeople(input: {
 
   for (const v of input.sales) {
     const montant = Number(v.amountCents) || 0;
-    if (montant <= 0) ventesSansMontant += 1;
-    if (v.refundedAt) rembourse += montant;
-    else encaisse += montant;
+    // C'EST LA PROVENANCE QUI DÉCIDE, PAS LA VALEUR.
+    //
+    // Un prix de plan tarifaire (`"plan"`) est un ordre de grandeur, pas
+    // une somme encaissée : le compte de Béné porte 54 codes de
+    // réduction actifs. L'additionner GONFLERAIT le chiffre d'affaires,
+    // et un chiffre gonflé fait prendre des décisions.
+    //
+    // Et on ne teste pas `montant <= 0` : une vente à 0 € est légitime
+    // (un code de réduction à 100 %), et la compter comme "montant
+    // manquant" ferait mentir l'avertissement dans l'autre sens.
+    const sur = v.amountSource === "payload";
+    if (!sur) ventesSansMontant += 1;
+    if (sur) {
+      if (v.refundedAt) rembourse += montant;
+      else encaisse += montant;
+    }
 
     const id = String(v.productId ?? "").trim() || "inconnu";
     const agg = parProduit.get(id) ?? { count: 0, totalCents: 0, sansMontant: 0 };
     agg.count += 1;
-    if (montant <= 0) agg.sansMontant += 1;
-    if (!v.refundedAt) agg.totalCents += montant;
+    if (!sur) agg.sansMontant += 1;
+    if (sur && !v.refundedAt) agg.totalCents += montant;
     parProduit.set(id, agg);
 
     const personne = parEmail.get(cle(v.email));
@@ -423,7 +436,9 @@ export function buildPeople(input: {
     }
     personne.sales.push(v);
     // Un remboursement ne compte pas comme de l'argent gardé.
-    if (!v.refundedAt) personne.paidCents += montant;
+    // Meme regle que le total general : seul un montant venu du
+    // fournisseur compte comme de l'argent encaisse.
+    if (sur && !v.refundedAt) personne.paidCents += montant;
   }
 
   // 4. On finalise chaque personne : tri de ses ventes, dernier moyen de

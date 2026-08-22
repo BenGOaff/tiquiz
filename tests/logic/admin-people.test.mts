@@ -41,6 +41,7 @@ function vente(email: string | null, extra: Partial<Sale> = {}): Sale {
     name: null,
     productId: "mensuel",
     amountCents: 1700,
+    amountSource: "payload",
     currency: "eur",
     paidAt: "2026-08-01T10:00:00Z",
     refundedAt: null,
