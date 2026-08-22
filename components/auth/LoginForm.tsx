@@ -11,19 +11,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
 import LegalFooterLinks from "@/components/legal/LegalFooterLinks";
-import { resolveAppUrl } from "@/lib/authLinks";
 
-// Domaine de retour des liens magiques : celui sur lequel l'utilisateur
-// est REELLEMENT en train de naviguer. Une constante de build pouvait
-// valoir "http://localhost:3000" si la variable manquait, et le lien
-// recu par email demandait alors d'ouvrir un serveur sur la machine de
-// celui qui le recevait (drame Veronique, 2 aout 2026).
-function siteUrl(): string {
-  if (typeof window !== "undefined" && window.location?.origin) {
-    return window.location.origin;
-  }
-  return resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, null);
-}
+// Le domaine du lien magique n'est plus decide ici : c'est la route
+// /api/auth/magic-link qui construit le lien, avec `resolveAppUrl` et
+// l'origine de la requete. Le garde-fou du 2 aout (jamais un lien vers
+// la machine de celui qui recoit l'email) vit donc a UN seul endroit,
+// partage avec le mot de passe oublie.
 
 type Mode = "password" | "magic";
 
@@ -121,22 +114,25 @@ export default function LoginForm() {
     }
     setLoadingMagic(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: cleanEmail,
-        options: { emailRedirectTo: `${siteUrl()}/auth/callback` },
+      // NOTRE route, pas `signInWithOtp`.
+      //
+      // Avec `signInWithOtp`, c'est SUPABASE qui ecrit l'email, avec le
+      // gabarit de son tableau de bord. Le 22 aout, ce gabarit disait
+      // encore "Connexion Tipote", signe "Bene - Tipote", sur un bouton
+      // Tiquiz. Aucun code ne pouvait le corriger : la seule parade est
+      // de ne plus lui confier l'envoi.
+      //
+      // La route repond TOUJOURS ok : elle ne dit jamais si une adresse
+      // a un compte ou non.
+      await fetch("/api/auth/magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail, locale: document.documentElement.lang || null }),
       });
-      if (error) {
-        const msg = (error.message || "").toLowerCase();
-        if (msg.includes("rate") || msg.includes("limit") || error.status === 429) {
-          setErrorMagic(t("errRateLimit"));
-        } else {
-          setErrorMagic(t("errSendFailed"));
-        }
-        setLoadingMagic(false);
-        return;
-      }
       setSuccessMagic(t("successMagic"));
     } catch {
+      // Seule une panne reseau arrive ici : la route, elle, ne renvoie
+      // jamais d'erreur.
       setErrorMagic(t("errUnexpected"));
     } finally {
       setLoadingMagic(false);
