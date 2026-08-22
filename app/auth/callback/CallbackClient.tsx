@@ -59,7 +59,15 @@ export default function CallbackClient() {
 
         // OTP flow (token_hash)
         if (tokenHash) {
-          const otpType = (type || "magiclink") as "magiclink" | "recovery" | "invite";
+          // `signup` en fait partie : c'est le lien de confirmation
+          // d'inscription, que NOUS envoyons maintenant (22 aout). Sans
+          // lui dans cette liste, la nouvelle inscrite cliquait sur son
+          // email et tombait sur "lien invalide".
+          const otpType = (type || "magiclink") as
+            | "magiclink"
+            | "recovery"
+            | "invite"
+            | "signup";
           const { error } = await supabase.auth.verifyOtp({ type: otpType, token_hash: tokenHash });
           if (error) throw error;
           // Lien recovery ("mot de passe oublié") : on enchaîne sur le choix

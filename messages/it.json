@@ -299,7 +299,9 @@
     "errFillAll": "Compila tutti i campi.",
     "errPasswordMin": "La password deve avere almeno 6 caratteri.",
     "errSignup": "Errore nella creazione dell'account.",
-    "successCheckEmail": "Account creato! Controlla la tua email per confermare."
+    "successCheckEmail": "Account creato! Controlla la tua email per confermare.",
+    "errAlreadyRegistered": "Questo indirizzo ha già un account Tiquiz. Accedi, oppure chiedi una nuova password.",
+    "errEmailFailed": "Il tuo account è creato ma l'email di conferma non è partita. Scrivici e lo apriamo a mano."
   },
   "callbackPage": {
     "loadingTitle": "Autenticazione in corso…",

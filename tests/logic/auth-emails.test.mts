@@ -20,6 +20,7 @@ import test from "node:test";
 
 import { buildMagicLinkContent } from "../../lib/email/magicLinkContent.ts";
 import { buildPasswordResetContent } from "../../lib/email/passwordResetContent.ts";
+import { buildSignupContent } from "../../lib/email/signupContent.ts";
 import { renderTiquizEmail, tiquizFrom } from "../../lib/email/tiquizShell.ts";
 
 const LIEN = "https://quiz.tipote.com/auth/callback?token_hash=abc123&type=magiclink";
@@ -52,6 +53,20 @@ test("l'email de connexion se presente comme Tiquiz, dans les 7 langues", () => 
     assert.ok(!/Connexion Tipote/i.test(subject), `${loc} : le sujet dit encore Connexion Tipote`);
     assert.ok(html.includes("Tiquiz"), `${loc} : le corps ne dit pas Tiquiz`);
   }
+});
+
+test("les TROIS emails d'authentification disent Tiquiz, et c'est le meme cadre", () => {
+  for (const loc of LOCALES) {
+    for (const build of [buildPasswordResetContent, buildSignupContent]) {
+      const { subject, html } = build(LIEN, loc);
+      assert.ok(subject.includes("Tiquiz"), `${loc} : le sujet ne dit pas Tiquiz`);
+      assert.ok(html.includes("Tiquiz"), `${loc} : le corps ne dit pas Tiquiz`);
+    }
+  }
+  const cadre = (h: string) => h.slice(0, h.indexOf("font-size:22px"));
+  const ref = cadre(buildMagicLinkContent(LIEN, "fr").html);
+  assert.equal(cadre(buildPasswordResetContent(LIEN, "fr").html), ref);
+  assert.equal(cadre(buildSignupContent(LIEN, "fr").html), ref);
 });
 
 test("le mot de passe oublie aussi, et c'est le meme cadre", () => {
@@ -96,7 +111,7 @@ test("une langue inconnue retombe sur le francais, jamais sur du vide", () => {
 
 test("aucun tiret cadratin dans ce que la cliente lit", () => {
   for (const loc of LOCALES) {
-    for (const build of [buildMagicLinkContent, buildPasswordResetContent]) {
+    for (const build of [buildMagicLinkContent, buildPasswordResetContent, buildSignupContent]) {
       const { subject, text } = build(LIEN, loc);
       assert.ok(!/[—–]/.test(subject), `${loc} : tiret cadratin dans le sujet`);
       assert.ok(!/[—–]/.test(text), `${loc} : tiret cadratin dans le corps`);
@@ -175,4 +190,53 @@ test("un envoi rate se voit dans le journal", () => {
     src.slice(i, i + 500).includes("console.error"),
     "un email non parti passe en silence",
   );
+});
+
+// ── LE DOMAINE DU LIEN ──
+
+test("les trois routes construisent le lien avec resolveAppUrl", () => {
+  // C'est LA correction du 22 aout, et elle ne vaut que si les trois
+  // routes la partagent. Une seule qui lirait la variable en direct
+  // renverrait ses utilisatrices sur app.tipote.com, comme avant.
+  for (const route of [
+    "app/api/auth/magic-link/route.ts",
+    "app/api/auth/forgot-password/route.ts",
+    "app/api/auth/signup/route.ts",
+  ]) {
+    const src = codeSeul(route);
+    assert.ok(src.includes("resolveAppUrl("), `${route} ne passe plus par resolveAppUrl`);
+    // Et elle passe l'origine de la requete : sans ce deuxieme argument,
+    // resolveAppUrl ne peut PAS savoir ou la personne navigue.
+    assert.ok(
+      /resolveAppUrl\([^)]*req\.nextUrl\.origin/.test(src),
+      `${route} n'envoie pas l'origine de la requete a resolveAppUrl`,
+    );
+  }
+});
+
+test("l'inscription passe par NOTRE route, plus par Supabase", () => {
+  // C'etait le DERNIER email confie a Supabase, donc le dernier qui
+  // arrivait au nom de Tipote. Et c'est le seul qu'une nouvelle inscrite
+  // est OBLIGEE d'ouvrir pour entrer.
+  const src = codeSeul("components/auth/SignupForm.tsx");
+  assert.ok(src.includes("/api/auth/signup"), "le formulaire n'appelle plus notre route");
+  assert.ok(!src.includes("auth.signUp"), "auth.signUp est revenu : l'email repartira de Supabase");
+});
+
+test("le lien d'inscription est accepte par la page de retour", () => {
+  // Sans `signup` dans la liste des types, la nouvelle inscrite clique
+  // sur son email et tombe sur "lien invalide". Le compte existe, elle
+  // ne peut pas entrer, et un deuxieme essai dit "adresse deja inscrite".
+  const src = codeSeul("app/auth/callback/CallbackClient.tsx");
+  assert.ok(src.includes('"signup"'), "la page de retour refuse le lien d'inscription");
+});
+
+test("un email d'inscription qui ne part pas est DIT a l'ecran", () => {
+  // Le compte existe deja a ce moment la : se taire laisserait quelqu'un
+  // avec un compte qu'il ne peut pas ouvrir, et sans moyen de le savoir.
+  const src = codeSeul("app/api/auth/signup/route.ts");
+  assert.ok(src.includes("email_failed"), "l'echec d'envoi ne remonte plus a l'ecran");
+  assert.ok(src.includes("console.error"), "l'echec d'envoi ne se voit pas dans le journal");
+  const form = codeSeul("components/auth/SignupForm.tsx");
+  assert.ok(form.includes("email_failed"), "l'ecran ne sait pas traduire cet echec");
 });
