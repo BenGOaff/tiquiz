@@ -12,6 +12,7 @@ import ResellersCard from "@/components/admin/ResellersCard";
 import ResellerPaymentEventsCard from "@/components/admin/ResellerPaymentEventsCard";
 import WebhookLogsCard from "@/components/admin/WebhookLogsCard";
 import PilotageCard from "@/components/admin/PilotageCard";
+import AffiliesCard from "@/components/admin/AffiliesCard";
 
 type User = {
   user_id?: string; id?: string; email: string; first_name?: string; last_name?: string;
@@ -163,6 +164,14 @@ export default function AdminDashboard() {
           la liste technique des comptes, qui reste en dessous pour les
           actions d'administration (changer un plan, creer un compte). */}
       <PilotageCard />
+
+      {/* LES AFFILIEES, JUSTE DERRIERE.
+          Bene, 21 aout : "les affilies : qui vend, combien, mes
+          factures... les sommes a sortir aux affilies chaque mois pour
+          calculer mon benefice restant." Il vient apres le pilotage
+          parce qu'il repond a une question qui suppose la premiere :
+          combien est rentre, puis combien en ressort. */}
+      <AffiliesCard />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
