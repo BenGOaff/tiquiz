@@ -98,6 +98,71 @@ export function renderTiquizEmail(
 }
 
 /**
+ * LE MÊME CADRE, POUR UN MESSAGE SANS BOUTON.
+ *
+ * Une réponse du support n'est pas une action à faire : c'est du texte à
+ * lire. Le gabarit à bouton l'aurait obligée à inventer un CTA, et un
+ * bouton qui ne mène nulle part est pire qu'une absence de bouton.
+ *
+ * `paragraphes` est du TEXTE BRUT, échappé ici. Ce qu'une cliente a
+ * écrit finit dans cet email : le laisser passer en HTML serait une
+ * injection dans la boîte de sa correspondante.
+ */
+export function renderTiquizMessage(copy: {
+  subject: string;
+  heading: string;
+  paragraphes: readonly string[];
+  footer: string;
+}): { html: string; text: string } {
+  const corps = copy.paragraphes
+    .map(
+      (p) =>
+        `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;white-space:pre-wrap;">${echapper(
+          p,
+        )}</p>`,
+    )
+    .join("");
+
+  const html = `<!doctype html>
+<html>
+<body style="margin:0;padding:0;background:#f6f7fb;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2430;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7fb;padding:24px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(31,36,48,0.08);">
+        <tr><td style="background:linear-gradient(135deg,#0ea5c9,#20BBE6);padding:28px 32px;">
+          <div style="color:#ffffff;font-size:13px;letter-spacing:.08em;text-transform:uppercase;opacity:.85;">Tiquiz</div>
+          <div style="color:#ffffff;font-size:22px;font-weight:700;margin-top:6px;">${echapper(copy.heading)}</div>
+        </td></tr>
+        <tr><td style="padding:28px 32px;">${corps}</td></tr>
+        <tr><td style="padding:18px 32px;border-top:1px solid #eef0f4;">
+          <p style="margin:0;font-size:12px;color:#8a8f9c;">${echapper(copy.footer)}</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  const text = [copy.heading, "", ...copy.paragraphes, "", copy.footer].join("\n");
+  return { html, text };
+}
+
+/**
+ * Échappe ce qui vient d'un humain avant de l'écrire dans du HTML.
+ *
+ * Ce que la cliente a écrit est repris dans l'email de réponse : sans
+ * ça, un `<` mal placé casse le message, et un `<script>` volontaire
+ * devient une injection dans la boîte de quelqu'un d'autre.
+ */
+function echapper(v: string): string {
+  return String(v ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
  * L'expéditeur : **Tiquiz**, jamais Tipote.
  *
  * C'est la ligne que l'utilisatrice lit en premier dans sa boîte, avant

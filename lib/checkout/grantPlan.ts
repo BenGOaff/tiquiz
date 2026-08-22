@@ -30,18 +30,12 @@
 // toucher au chemin de production : d'où ce fichier, écrit pour être ce
 // que les deux chemins partageront.
 
-import { createClient } from "@supabase/supabase-js";
-
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { resolveAppUrl } from "@/lib/authLinks";
+import { buildAuthCallbackUrl, resolveAppUrl } from "@/lib/authLinks";
+import { sendMagicLinkEmail } from "@/lib/email/magicLinkEmail";
 import { isLifetimePlan } from "@/lib/plans/lifetime";
+import { poserTagAchat } from "@/lib/sio/appliquerTag";
 import type { TiquizPlan } from "@/lib/sio/webhookInference";
-
-/** Client anonyme, uniquement pour envoyer le lien de connexion. */
-const supabaseAnon = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
-);
 
 export interface GrantPlanResult {
   ok: boolean;
@@ -53,6 +47,8 @@ export interface GrantPlanResult {
   reason?: string;
   /** Le lien de connexion est-il parti ? */
   loginLinkSent?: boolean;
+  /** L'étiquette Systeme.io a-t-elle été posée ? */
+  tagPose?: boolean;
 }
 
 async function findUserByEmail(email: string): Promise<{ id: string } | null> {
@@ -82,6 +78,8 @@ export async function grantPlanByEmail(args: {
   reference?: string | null;
   /** L'origine de la requête, pour que le lien de connexion pointe chez nous. */
   requestOrigin?: string | null;
+  /** La langue du bon de commande, pour que l'email arrive dans la sienne. */
+  locale?: string | null;
 }): Promise<GrantPlanResult> {
   const email = String(args.email ?? "").trim().toLowerCase();
   if (!email.includes("@")) {
@@ -166,26 +164,64 @@ export async function grantPlanByEmail(args: {
     }
   }
 
-  // 5. Le lien de connexion.
+  // 5. L'ÉTIQUETTE SYSTEME.IO.
+  //
+  // Béné, 22 août : "on utilise les mêmes [tags] pour ceux qui vont payer
+  // via notre système comme ça je ne suis pas perdue."
+  //
+  // Ses automatisations et ses séquences d'emails sont bâties sur ces
+  // étiquettes. Un client payé par NOTRE bon de commande et non étiqueté
+  // sort de tous ses scénarios sans que rien ne le signale.
+  //
+  // Best-effort, et APRÈS le plan : une étiquette qui échoue ne doit
+  // jamais priver quelqu'un de l'accès qu'il vient de payer.
+  const tagPose = await poserTagAchat(email, args.plan).catch(() => false);
+
+  // 6. Le lien de connexion, ÉCRIT PAR NOUS.
   //
   // Il part APRÈS que le plan est posé : si l'envoi échoue, la personne a
   // quand même son accès et peut demander un lien elle-même. L'inverse
   // (envoyer puis échouer à poser le plan) lui ferait découvrir un compte
   // en gratuit après avoir payé.
+  //
+  // **Et il ne passe plus par l'email de Supabase.** Béné, 22 août :
+  // "je demande un lien magique sur tiquiz et je reçois les trucs tipote
+  // c'est pas pro du tout !!" Les gabarits de Supabase sont configurés
+  // dans SON tableau de bord, pour l'autre app, et aucun code ne peut
+  // les changer. On génère donc le jeton et on envoie NOTRE email : le
+  // tout premier message qu'une cliente reçoit après avoir payé porte
+  // enfin le nom de ce qu'elle vient d'acheter.
   const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, args.requestOrigin);
-  const { error: otpErr } = await supabaseAnon.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: `${appUrl}/auth/callback`, shouldCreateUser: false },
-  });
-  if (otpErr) {
-    console.error(`[grantPlan] lien de connexion NON envoye a ${email} : ${otpErr.message}`);
-    // `ok: true` quand même : l'accès EST ouvert. Renvoyer un échec ici
-    // ferait rejouer la vente par le fournisseur alors que le seul
-    // problème est un email.
-    return { ok: true, created, previousPlan, loginLinkSent: false };
+  let lienParti = false;
+  try {
+    const { data: lien, error: lienErr } = await supabaseAdmin.auth.admin.generateLink({
+      type: "magiclink",
+      email,
+      options: { redirectTo: `${appUrl}/auth/callback` },
+    });
+    const hashedToken = lien?.properties?.hashed_token;
+    if (lienErr || !hashedToken) {
+      console.error(
+        `[grantPlan] jeton de connexion NON emis pour ${email} : ${lienErr?.message ?? "absent"}`,
+      );
+    } else {
+      lienParti = await sendMagicLinkEmail({
+        email,
+        actionLink: buildAuthCallbackUrl(appUrl, { tokenHash: hashedToken, type: "magiclink" }),
+        locale: args.locale ?? null,
+      });
+      if (!lienParti) {
+        console.error(`[grantPlan] lien de connexion NON parti a ${email}.`);
+      }
+    }
+  } catch (e) {
+    console.error(`[grantPlan] lien de connexion : ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  return { ok: true, created, previousPlan, loginLinkSent: true };
+  // `ok: true` même si l'email ou l'étiquette ont échoué : l'accès EST
+  // ouvert. Renvoyer un échec ici ferait rejouer la vente par le
+  // fournisseur alors que le paiement, lui, a bien abouti.
+  return { ok: true, created, previousPlan, loginLinkSent: lienParti, tagPose };
 }
 
 /**

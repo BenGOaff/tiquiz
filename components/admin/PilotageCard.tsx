@@ -24,21 +24,18 @@
 // par mentir : c'est vrai six fois dans ce dépôt (les réseaux de
 // partage, le score, l'alignement, la disposition des réponses...).
 
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import {
   AlertTriangle,
   ArrowDownRight,
   ArrowUpRight,
-  ChevronDown,
-  ChevronUp,
-  CreditCard,
+  ChevronRight,
   Loader2,
-  Mail,
   MessageSquareQuote,
   Minus,
   RefreshCw,
   Search,
-  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -47,7 +44,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { isAtelierSale } from "@/lib/admin/atelier";
-import { NOM_PRODUIT, readSaleProduct } from "@/lib/admin/saleProduct";
+import { NOM_PRODUIT } from "@/lib/admin/saleProduct";
 import { buildChurnDigest } from "@/lib/admin/churnDigest";
 import { readClientKind, type ClientKind, type PeopleTotals, type Person, type PersonStatus } from "@/lib/admin/people";
 import type { Sale } from "@/lib/checkout/sales";
@@ -112,9 +109,6 @@ const CLIENTS: Record<ClientKind, { label: string; classe: string }> = {
   aucun: { label: "Gratuit", classe: "bg-muted text-muted-foreground" },
 };
 
-/** Les paliers, dans l'ordre où on les vend. */
-const PLANS = ["free", "monthly", "monthly_plus", "yearly", "yearly_plus", "lifetime"] as const;
-
 function euros(cents: number): string {
   return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(
     (Number(cents) || 0) / 100,
@@ -153,6 +147,29 @@ function remboursables(p: Person): Sale[] {
   return p.sales.filter(
     (v) => !v.refundedAt && v.provider !== "systeme_io" && !isAtelierSale(v.ref),
   );
+}
+
+/**
+ * OU SE REMBOURSE L'ARGENT DE CETTE PERSONNE.
+ *
+ * Bene, 22 aout : "il est ou le fucking bouton rembourser ??"
+ *
+ * Il n'y en avait pas, et il ne POUVAIT pas y en avoir : toutes ses
+ * ventes d'aujourd'hui passent par Systeme.io, qui encaisse et qui garde
+ * l'argent. Le bouton n'existe que sur nos propres encaissements, et il
+ * n'y en a encore aucun.
+ *
+ * Mais un bouton absent sans un mot se lit comme un bug, et elle a passe
+ * du temps a le chercher. La ligne dit donc OU aller, meme quand il n'y
+ * a rien a cliquer ici. Regle du 3 aout : un refus n'est pas une panne,
+ * mais il doit produire quelque chose a l'ecran.
+ */
+function ouRembourser(p: Person): string {
+  if (remboursables(p).length > 0) return "remboursable ici";
+  const restantes = p.sales.filter((v) => !v.refundedAt);
+  if (restantes.length === 0) return "tout est rembourse";
+  if (restantes.some((v) => isAtelierSale(v.ref))) return "a rembourser depuis l'Atelier";
+  return "a rembourser dans Systeme.io";
 }
 
 function jour(iso: string | null): string {
@@ -222,14 +239,6 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
   const [recherche, setRecherche] = useState("");
   const [filtre, setFiltre] = useState<PersonStatus | "tous">("tous");
   const [enCours, setEnCours] = useState<string | null>(null);
-  /**
-   * L'adresse de la ligne ouverte, ou `null`.
-   *
-   * UNE SEULE a la fois : Bene, 22 aout, "peut etre en mode depliant
-   * avec les infos de base". Autoriser dix tiroirs ouverts recree
-   * exactement l'ecran qu'on vient de retirer.
-   */
-  const [deplie, setDeplie] = useState<string | null>(null);
   /** Renseigne quand le serveur n'a pas pu repondre. Reste a l'ecran. */
   const [panne, setPanne] = useState<string | null>(null);
 
@@ -261,91 +270,6 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
   useEffect(() => {
     void charger();
   }, [charger]);
-
-  // ── LES TROIS ACTIONS DU TIROIR ──
-  //
-  // Elles vivaient sur une DEUXIEME liste des memes personnes, plus bas
-  // dans la page. Bene, 22 aout : "pourquoi j'ai deux fois la liste des
-  // users ?" Elle avait raison, et c'etait mon empilement : une liste
-  // pour regarder, une autre pour agir, les deux a tenir a jour.
-  //
-  // Chaque action DIT ce qui s'est passe, y compris quand le serveur
-  // refuse : un `ok: false` muet envoie chercher au mauvais endroit
-  // (regle du 3 aout).
-
-  async function changerPlan(personne: Person, plan: string) {
-    if (!personne.userId || plan === personne.plan) return;
-    setEnCours(`plan:${personne.email}`);
-    try {
-      const res = await fetch("/api/admin/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: personne.userId, plan }),
-      });
-      const j = (await res.json()) as { ok?: boolean; error?: string };
-      if (j.ok) {
-        toast.success(`${personne.email} passe en ${plan}.`);
-        await charger();
-      } else {
-        toast.error(j.error ?? "Le palier n'a pas pu être changé.");
-      }
-    } catch {
-      toast.error("La connexion a échoué. Le palier n'a pas changé.");
-    } finally {
-      setEnCours(null);
-    }
-  }
-
-  async function renvoyerAcces(personne: Person) {
-    setEnCours(`lien:${personne.email}`);
-    try {
-      const res = await fetch("/api/admin/users", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: personne.email }),
-      });
-      const j = (await res.json()) as { ok?: boolean; error?: string };
-      if (j.ok) toast.success(`Lien de connexion renvoyé à ${personne.email}.`);
-      else toast.error(j.error ?? "L'email n'est pas parti.");
-    } catch {
-      toast.error("La connexion a échoué. L'email n'est pas parti.");
-    } finally {
-      setEnCours(null);
-    }
-  }
-
-  async function supprimer(personne: Person) {
-    if (!personne.userId) return;
-    // Irreversible : tout part en cascade (compte, quiz, leads).
-    if (
-      !window.confirm(
-        `Supprimer définitivement le compte de ${personne.email} ?\n\n` +
-          `Ses quiz et ses leads partent avec. Rien ne peut être récupéré.`,
-      )
-    ) {
-      return;
-    }
-    setEnCours(`suppr:${personne.email}`);
-    try {
-      const res = await fetch("/api/admin/users", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: personne.userId }),
-      });
-      const j = (await res.json()) as { ok?: boolean; error?: string };
-      if (j.ok) {
-        toast.success(`Compte de ${personne.email} supprimé.`);
-        setDeplie(null);
-        await charger();
-      } else {
-        toast.error(j.error ?? "Le compte n'a pas pu être supprimé.");
-      }
-    } catch {
-      toast.error("La connexion a échoué. Le compte n'a pas été supprimé.");
-    } finally {
-      setEnCours(null);
-    }
-  }
 
   async function rembourser(personne: Person, vente: Sale) {
     const somme = euros(vente.amountCents);
@@ -710,24 +634,22 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
                     <th className="px-4 py-2 font-semibold">Payé</th>
                     <th className="px-4 py-2 font-semibold">Activité</th>
                     <th className="px-4 py-2 font-semibold">
-                      <span className="sr-only">Détail</span>
+                      <span className="sr-only">Sa fiche</span>
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {visibles.map((p) => {
-                    const ouvert = deplie === p.email;
                     const chez = readClientKind(p);
                     return (
-                      <Fragment key={p.email}>
-                        {/* ── LA LIGNE FERMEE : ce qu'on lit en balayant ──
-                            Béné, 22 août : "les infos de base + si je
-                            déplie je peux lui renvoyer ses accès, le
-                            rembourser etc." Sept colonnes se lisent d'un
-                            coup d'oeil ; quinze, non. */}
-                        <tr
-                          className={`border-b align-top last:border-0 ${ouvert ? "bg-muted/30" : "hover:bg-muted/20"}`}
-                        >
+                        /* ── UNE LIGNE PAR PERSONNE, ET RIEN DE PLUS ──
+                           Bene, 22 aout : "Tu trouves ca pratique ?
+                           lisible ? facile a utiliser ? Quand j'aurai
+                           200000 clients, je fais comment ?"
+                           Le tiroir servait a regarder, pas a
+                           travailler. Tout ce qu'on FAIT sur une
+                           personne vit desormais sur sa fiche. */
+                        <tr key={p.email} className="border-b align-top last:border-0 hover:bg-muted/20">
                           <td className="px-4 py-3">
                             <span className="font-medium">{p.email}</span>
                             {p.name && (
@@ -745,8 +667,22 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
                             </Badge>
                           </td>
                           <td className="px-4 py-3 capitalize">{p.plan}</td>
-                          <td className="px-4 py-3 font-semibold">
-                            {p.paidCents > 0 ? euros(p.paidCents) : "-"}
+                          <td className="px-4 py-3">
+                            {/* OU EST L'ARGENT, DIT SUR LA LIGNE.
+                                Bene, 22 aout : "il est ou le fucking
+                                bouton rembourser ??" Il n'y en avait pas,
+                                et il ne pouvait pas y en avoir : toutes
+                                ses ventes passent par Systeme.io, qui
+                                garde l'argent. Un bouton absent sans
+                                explication se lit comme un bug. */}
+                            <span className="font-semibold">
+                              {p.paidCents > 0 ? euros(p.paidCents) : "-"}
+                            </span>
+                            {p.sales.length > 0 && (
+                              <span className="block text-xs text-muted-foreground">
+                                {ouRembourser(p)}
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-xs text-muted-foreground">
                             {p.quizCount} quiz · {p.leadCount} leads
@@ -772,239 +708,14 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
                                 Rembourser {montant(v)}
                               </Button>
                             ))}
-                            <button
-                              type="button"
-                              onClick={() => setDeplie(ouvert ? null : p.email)}
-                              aria-expanded={ouvert}
+                            <Link
+                              href={`/admin/clients/${encodeURIComponent(p.email)}`}
                               className="inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-semibold hover:bg-muted"
                             >
-                              {ouvert ? (
-                                <>
-                                  <ChevronUp className="size-3.5" /> Fermer
-                                </>
-                              ) : (
-                                <>
-                                  <ChevronDown className="size-3.5" /> Détail
-                                </>
-                              )}
-                            </button>
+                              Sa fiche <ChevronRight className="size-3.5" />
+                            </Link>
                           </td>
                         </tr>
-
-                        {/* ── LE TIROIR : tout le reste, et les actions ── */}
-                        {ouvert && (
-                          <tr className="border-b bg-muted/20 last:border-0">
-                            <td colSpan={7} className="px-4 py-4">
-                              <div className="grid gap-4 md:grid-cols-3">
-                                {/* Ce qu'on sait d'elle */}
-                                <div className="space-y-1 text-xs">
-                                  <p className="text-sm font-semibold">Son compte</p>
-                                  <p className="text-muted-foreground">
-                                    Compte Tiquiz :{" "}
-                                    {p.hasTiquizAccount
-                                      ? `créé le ${jour(p.createdAt)}`
-                                      : "aucun"}
-                                  </p>
-                                  {p.resellerName && (
-                                    <p className="text-muted-foreground">
-                                      revendeur : {p.resellerName}
-                                    </p>
-                                  )}
-                                  {p.selfServe && (
-                                    <p className="inline-flex items-center gap-1 text-muted-foreground">
-                                      <CreditCard className="size-3" /> gère sa carte elle même
-                                    </p>
-                                  )}
-                                  {p.lastPaidAt && (
-                                    <p className="text-muted-foreground">
-                                      dernier paiement le {jour(p.lastPaidAt)}{" "}
-                                      {p.lastProvider === "stripe"
-                                        ? "par carte"
-                                        : p.lastProvider === "paypal"
-                                          ? "en PayPal"
-                                          : "via Systeme.io"}
-                                    </p>
-                                  )}
-                                  {p.churn && (
-                                    <p className="text-muted-foreground">
-                                      {p.churn.endsAt && !p.churn.endedAt
-                                        ? `part, accès jusqu'au ${jour(p.churn.endsAt)}`
-                                        : `parti le ${jour(p.churn.endedAt)}`}
-                                      {p.churn.feedback && (
-                                        <span className="block">
-                                          {MOTIFS[p.churn.feedback] ?? p.churn.feedback}
-                                        </span>
-                                      )}
-                                      {p.churn.comment && (
-                                        <span className="block italic">
-                                          &laquo;&nbsp;{p.churn.comment}&nbsp;&raquo;
-                                        </span>
-                                      )}
-                                    </p>
-                                  )}
-                                </div>
-
-                                {/* L'Atelier */}
-                                <div className="space-y-1 text-xs">
-                                  <p className="text-sm font-semibold">L&apos;Atelier</p>
-                                  {p.atelier ? (
-                                    <>
-                                      <p className="capitalize text-muted-foreground">
-                                        {p.atelier.status === "active"
-                                          ? "élève"
-                                          : (p.atelier.status ?? "-")}
-                                        {p.atelier.tier ? ` · ${p.atelier.tier}` : ""}
-                                      </p>
-                                      <p className="text-muted-foreground">
-                                        {p.atelier.daysDone} jour
-                                        {p.atelier.daysDone > 1 ? "s" : ""} fait
-                                        {p.atelier.daysDone > 1 ? "s" : ""}
-                                      </p>
-                                      {p.atelier.grantedAt && (
-                                        <p className="text-muted-foreground">
-                                          inscrite le {jour(p.atelier.grantedAt)}
-                                        </p>
-                                      )}
-                                    </>
-                                  ) : (
-                                    <p className="text-muted-foreground">
-                                      Pas élève de l&apos;Atelier.
-                                    </p>
-                                  )}
-                                </div>
-
-                                {/* Ce que Béné peut FAIRE, ici, sans changer d'écran */}
-                                <div className="space-y-2">
-                                  <p className="text-sm font-semibold">Agir</p>
-                                  {p.userId ? (
-                                    <>
-                                      <label className="block text-xs text-muted-foreground">
-                                        Son palier
-                                        <select
-                                          value={p.plan}
-                                          onChange={(e) => void changerPlan(p, e.target.value)}
-                                          disabled={enCours === `plan:${p.email}`}
-                                          className="mt-1 w-full rounded border bg-background px-2 py-1 text-xs"
-                                        >
-                                          {PLANS.map((v) => (
-                                            <option key={v} value={v}>
-                                              {v}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      </label>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-7 w-full text-xs"
-                                        onClick={() => void renvoyerAcces(p)}
-                                        disabled={enCours === `lien:${p.email}`}
-                                      >
-                                        {enCours === `lien:${p.email}` ? (
-                                          <Loader2 className="size-3 animate-spin" />
-                                        ) : (
-                                          <Mail className="size-3" />
-                                        )}
-                                        Lui renvoyer ses accès
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-7 w-full border-destructive/40 text-xs text-destructive hover:bg-destructive/10"
-                                        onClick={() => void supprimer(p)}
-                                        disabled={enCours === `suppr:${p.email}`}
-                                      >
-                                        {enCours === `suppr:${p.email}` ? (
-                                          <Loader2 className="size-3 animate-spin" />
-                                        ) : (
-                                          <Trash2 className="size-3" />
-                                        )}
-                                        Supprimer le compte
-                                      </Button>
-                                    </>
-                                  ) : (
-                                    <p className="text-xs text-muted-foreground">
-                                      Pas de compte Tiquiz : rien à changer ici. Invite la
-                                      depuis le bloc au dessus de la liste.
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* ── SES VENTES, ET LE BOUTON REMBOURSER ── */}
-                              <div className="mt-4 border-t pt-3">
-                                <p className="text-sm font-semibold">Ses paiements</p>
-                                {p.sales.length === 0 ? (
-                                  <p className="mt-1 text-xs text-muted-foreground">
-                                    Aucune vente enregistrée.
-                                  </p>
-                                ) : (
-                                  <div className="mt-2 flex flex-wrap gap-2">
-                                    {p.sales.map((v) =>
-                                      /* UNE VENTE SYSTEME.IO NE SE REMBOURSE PAS
-                                         D'ICI : l'argent est chez eux. Afficher
-                                         un bouton qui echouerait enverrait Bene
-                                         chercher au mauvais endroit. */
-                                      /* UNE VENTE DE L'ATELIER NE SE REMBOURSE PAS
-                                         D'ICI, ET LE PIEGE EST SUBTIL : elle est
-                                         sur le MEME compte Stripe, donc l'appel
-                                         REUSSIRAIT. Mais seul l'Atelier sait
-                                         couper l'acces et envoyer l'email de
-                                         depart : on reprendrait l'argent en
-                                         laissant l'eleve dedans, sans un mot.
-                                         La moitie d'une decision, et on sait ou
-                                         ca mene dans ce depot. */
-                                      isAtelierSale(v.ref) ? (
-                                        <span
-                                          key={v.ref}
-                                          className="rounded border px-2 py-1 text-xs text-muted-foreground"
-                                        >
-                                          {NOM_PRODUIT[readSaleProduct(v)]} · {montant(v)} du{" "}
-                                          {jour(v.paidAt)} ·{" "}
-                                          {v.refundedAt
-                                            ? `remboursée le ${jour(v.refundedAt)}`
-                                            : "à rembourser depuis l'Atelier"}
-                                        </span>
-                                      ) : v.provider === "systeme_io" ? (
-                                        <span
-                                          key={v.ref}
-                                          className="rounded border px-2 py-1 text-xs text-muted-foreground"
-                                        >
-                                          {NOM_PRODUIT[readSaleProduct(v)]} · {montant(v)} du{" "}
-                                          {jour(v.paidAt)} · à rembourser dans Systeme.io
-                                        </span>
-                                      ) : v.refundedAt ? (
-                                        <span
-                                          key={v.ref}
-                                          className="rounded border px-2 py-1 text-xs text-muted-foreground"
-                                        >
-                                          {NOM_PRODUIT[readSaleProduct(v)]} · {montant(v)}{" "}
-                                          remboursés le {jour(v.refundedAt)}
-                                        </span>
-                                      ) : (
-                                        <Button
-                                          key={v.ref}
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => void rembourser(p, v)}
-                                          disabled={enCours === v.ref}
-                                          className="h-7 text-xs"
-                                        >
-                                          {enCours === v.ref && (
-                                            <Loader2 className="size-3 animate-spin" />
-                                          )}
-                                          Rembourser {montant(v)} · {NOM_PRODUIT[readSaleProduct(v)]} du{" "}
-                                          {jour(v.paidAt)}
-                                        </Button>
-                                      ),
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
                     );
                   })}
                 </tbody>

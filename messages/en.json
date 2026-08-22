@@ -3000,5 +3000,23 @@
     "pdf_password": "This PDF is password protected. Remove the protection, then try again.",
     "pdf_damaged": "This PDF could not be opened: the file looks damaged or incomplete. Export it again, or use a .docx.",
     "extract_failed": "Reading the file failed. Try again, or export your document as .docx or .txt."
+  },
+  "supportForm": {
+    "title": "Write to us",
+    "intro": "The help centre answers most questions. If it doesn't answer yours, write to me here: I reply by email.",
+    "email": "Your email address",
+    "name": "Your first name",
+    "subject": "In a few words, what is it about?",
+    "message": "Tell me what is happening",
+    "messageHint": "Tell me what you were trying to do, and what you saw instead. The more precise, the more useful my answer.",
+    "send": "Send my request",
+    "sending": "Sending...",
+    "sent": "Sent. I will reply by email, to the address you gave.",
+    "again": "Write another request",
+    "helpCenter": "Open the help centre",
+    "errShort": "Add a few words: I will not be able to help with that.",
+    "errEmail": "That email address does not look valid.",
+    "errTooMany": "You already sent several requests. Give it a moment, I have them all.",
+    "errFailed": "Your request did not go through. Try again in a moment."
   }
 }

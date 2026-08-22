@@ -191,6 +191,14 @@ export async function middleware(req: NextRequest) {
     // L'autorisation est ailleurs : le jeton SIGNE dans l'URL, verifie
     // par la page et par la route (lib/churn/replyToken.ts).
     pathname.startsWith("/depart/") ||
+    // ECRIRE AU SUPPORT NE DEMANDE PAS D'ETRE CONNECTEE.
+    //
+    // Celle qui a le plus besoin d'aide est justement celle qui n'arrive
+    // PAS a se connecter. La renvoyer vers /login pour signaler qu'elle
+    // n'arrive pas a s'y connecter serait un cul-de-sac parfait.
+    // La protection est ailleurs : la route limite le nombre de demandes
+    // par adresse IP, et ne lit jamais rien.
+    pathname === "/support" ||
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname === "/favicon.ico"
