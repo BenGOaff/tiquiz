@@ -54,20 +54,22 @@ CREATE INDEX IF NOT EXISTS idx_support_tickets_email
 
 ALTER TABLE support_tickets ENABLE ROW LEVEL SECURITY;
 
--- AUCUNE POLICY DE LECTURE, ET C'EST VOULU.
+-- AUCUNE POLICY DU TOUT, ET C'EST VOULU.
 --
 -- Un ticket contient ce qu'une cliente a écrit, souvent son problème de
--- paiement ou de connexion. Sans policy SELECT, seule la clé de service
--- y accède, c'est à dire uniquement nos routes admin. Une policy
--- "chacun lit les siens" serait tentante ; elle ouvrirait la table à
--- tout le monde au premier oubli de filtre.
+-- paiement ou de connexion. Sans policy, seule la clé de service y
+-- accède, c'est à dire uniquement nos routes serveur.
 --
--- L'écriture, elle, doit rester possible pour une personne NON
--- connectée : celle qui n'arrive pas à se connecter est justement celle
--- qui a besoin d'écrire.
-DROP POLICY IF EXISTS "support_tickets_insert" ON support_tickets;
-CREATE POLICY "support_tickets_insert"
-  ON support_tickets FOR INSERT
-  WITH CHECK (true);
+-- **Et il ne faut PAS de policy d'insertion publique**, même si le
+-- formulaire est ouvert à quelqu'un qui n'est pas connecté. Le
+-- formulaire n'écrit pas dans la table : il appelle
+-- `/api/support/ticket`, qui écrit avec la clé de service et qui limite
+-- le nombre de demandes par adresse IP. Une policy `WITH CHECK (true)`
+-- laisserait n'importe qui écrire en direct avec la clé anonyme, qui est
+-- publique par nature, et contourner cette limite. Ce serait une porte
+-- ouverte pour rien.
+--
+-- Une policy "chacun lit les siens" serait tentante elle aussi ; elle
+-- ouvrirait la table à tout le monde au premier oubli de filtre.
 
 NOTIFY pgrst, 'reload schema';
