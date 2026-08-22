@@ -39,6 +39,7 @@ import {
 } from "@/lib/checkout/stripeCheckout";
 import { recordChurn } from "@/lib/checkout/churn";
 import { rememberStripeCustomer } from "@/lib/checkout/customerLink";
+import { commissionnerVente } from "@/lib/affiliate/ownerSale";
 import {
   isSubscriptionEvent,
   readCancellationFeedback,
@@ -209,6 +210,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     `[commande/webhook] plan ouvert pour ${vente.email} : ${product.id} (${product.plan}), ` +
       `compte ${octroi.created ? "cree" : "existant"}, lien de connexion ${octroi.loginLinkSent ? "envoye" : "NON ENVOYE"}`,
   );
+
+  // ── LA COMMISSION DE L'AFFILIÉE ──
+  //
+  // APRES le plan, et jamais avant : une commission qui echoue ne doit
+  // pas priver un acheteur de ce qu'il a paye. Sans ce bloc, une vente
+  // faite sur NOTRE bon de commande ne payait personne, alors que la
+  // meme vente passee par le tunnel Systeme.io payait bien.
+  await commissionnerVente({
+    email: vente.email,
+    reference: vente.paymentRef,
+    affiliateRef: vente.affiliateRef,
+    amountTotalCents: vente.amountTotalCents,
+    amountTaxCents: vente.amountTaxCents,
+    product,
+  });
+
   return NextResponse.json({ ok: true, granted: true });
 }
 

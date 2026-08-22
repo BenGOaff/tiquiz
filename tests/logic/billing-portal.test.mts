@@ -89,7 +89,14 @@ test("LE FIL EST CAPTURE AU MOMENT DE LA VENTE", () => {
   // n'apparaitrait jamais a personne.
   const stripe = lire("lib/checkout/stripeCheckout.ts");
   assert.ok(/customerId: string \| null;/.test(stripe), "la session ne rend plus le client");
-  assert.ok(stripe.includes("readCustomerId(json.customer)"), "le client n'est plus lu sur la session");
+  // On assert sur la PROPRIETE, pas sur le nom de la variable : les deux
+  // lecteurs de session partagent maintenant une seule traduction
+  // (`litSession`), et une assertion pincee sur `json.customer` rougit au
+  // premier rangement, donc pour la mauvaise raison.
+  assert.ok(
+    /readCustomerId\(\s*\w+\.customer\s*\)/.test(stripe),
+    "le client n'est plus lu sur la session",
+  );
 
   const webhook = lire("app/api/commande/webhook/route.ts");
   assert.ok(webhook.includes("rememberStripeCustomer("), "le webhook ne retient plus le client");
