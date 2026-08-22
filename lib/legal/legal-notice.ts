@@ -26,7 +26,7 @@ const fr: LegalPage = {
       h: "Hébergement",
       body: [
         [
-          "Application : Hostinger",
+          "Application : Hostinger, serveur situé à Paris, France",
           "Base de données et authentification : Supabase",
           "Pages marketing : ITACWT Limited (Systeme.io), Dublin, Irlande",
         ],
@@ -90,7 +90,7 @@ const en: LegalPage = {
       h: "Hosting",
       body: [
         [
-          "Application: Hostinger",
+          "Application: Hostinger, server located in Paris, France",
           "Database and authentication: Supabase",
           "Marketing pages: ITACWT Limited (Systeme.io), Dublin, Ireland",
         ],
@@ -137,7 +137,7 @@ const es: LegalPage = {
     { h: "Editor", body: [`${C.name}, ${C.form} con capital social de ${C.capital}, inscrita en el RCS con el número ${C.rcs}. Sede social: ${C.address}.`, `CIF: ${C.vat} — Contacto: ${C.email}.`] },
     { h: "Ámbito", body: ["Este aviso cubre el sitio de presentación tiquiz.com y la aplicación Tiquiz."] },
     { h: "Director de la publicación", body: [`${C.director}, directora de ${C.name}.`] },
-    { h: "Alojamiento", body: [[ "Aplicación: Hostinger", "Base de datos y autenticación: Supabase", "Páginas de marketing: ITACWT Limited (Systeme.io), Dublín, Irlanda" ]] },
+    { h: "Alojamiento", body: [[ "Aplicación: Hostinger, servidor situado en París, Francia", "Base de datos y autenticación: Supabase", "Páginas de marketing: ITACWT Limited (Systeme.io), Dublín, Irlanda" ]] },
     { h: "Naturaleza de la actividad", body: ["Edición de software en modo SaaS que permite crear quizzes interactivos, captar leads cualificados y sincronizar con las herramientas de marketing del creador."] },
     { h: "Propiedad intelectual", body: ["El nombre, la marca Tiquiz®, el logo, las interfaces, el código y todos los contenidos están protegidos. Queda prohibida toda reproducción, representación, modificación o explotación, total o parcial, sin autorización escrita."] },
     { h: "Contenidos generados por IA", body: ["Los quizzes, títulos, preguntas y resultados generados por IA pueden contener errores, aproximaciones o imprecisiones. El usuario es responsable de su revisión y uso."] },
@@ -152,7 +152,7 @@ const it: LegalPage = {
     { h: "Editore", body: [`${C.name}, ${C.form} con capitale sociale di ${C.capital}, iscritta al RCS con il numero ${C.rcs}. Sede legale: ${C.address}.`, `Partita IVA: ${C.vat} — Contatto: ${C.email}.`] },
     { h: "Ambito", body: ["Le presenti note coprono il sito di presentazione tiquiz.com e l'applicazione Tiquiz."] },
     { h: "Direttore della pubblicazione", body: [`${C.director}, dirigente di ${C.name}.`] },
-    { h: "Hosting", body: [[ "Applicazione: Hostinger", "Database e autenticazione: Supabase", "Pagine marketing: ITACWT Limited (Systeme.io), Dublino, Irlanda" ]] },
+    { h: "Hosting", body: [[ "Applicazione: Hostinger, server situato a Parigi, Francia", "Database e autenticazione: Supabase", "Pagine marketing: ITACWT Limited (Systeme.io), Dublino, Irlanda" ]] },
     { h: "Natura dell'attività", body: ["Editore di software in modalità SaaS che consente di creare quiz interattivi, catturare lead qualificati e sincronizzarsi con gli strumenti di marketing del creatore."] },
     { h: "Proprietà intellettuale", body: ["Il nome, il marchio Tiquiz®, il logo, le interfacce, il codice e tutti i contenuti sono protetti. È vietata qualsiasi riproduzione, rappresentazione, modifica o sfruttamento, totale o parziale, senza autorizzazione scritta."] },
     { h: "Contenuti generati dall'IA", body: ["I quiz, titoli, domande e risultati generati dall'IA possono contenere errori, approssimazioni o inesattezze. L'utente è responsabile della rilettura e dell'uso."] },
@@ -167,7 +167,7 @@ const ar: LegalPage = {
     { h: "الناشر", body: [`${C.name}، ${C.form} برأس مال ${C.capital}، مسجلة في السجل التجاري تحت الرقم ${C.rcs}. المقر الاجتماعي: ${C.address}.`, `رقم ضريبة القيمة المضافة: ${C.vat} — الاتصال: ${C.email}.`] },
     { h: "النطاق", body: ["يغطي هذا الإشعار الموقع التعريفي tiquiz.com وتطبيق Tiquiz."] },
     { h: "مدير النشر", body: [`${C.director}، مديرة ${C.name}.`] },
-    { h: "الاستضافة", body: [[ "التطبيق: Hostinger", "قاعدة البيانات والمصادقة: Supabase", "صفحات التسويق: ITACWT Limited (Systeme.io)، دبلن، إيرلندا" ]] },
+    { h: "الاستضافة", body: [[ "التطبيق: Hostinger، خادم موجود في باريس، فرنسا", "قاعدة البيانات والمصادقة: Supabase", "صفحات التسويق: ITACWT Limited (Systeme.io)، دبلن، إيرلندا" ]] },
     { h: "طبيعة النشاط", body: ["نشر برنامج بصيغة SaaS يسمح بإنشاء اختبارات تفاعلية، جذب عملاء محتملين مؤهلين، والمزامنة مع أدوات التسويق الخاصة بالمبدع."] },
     { h: "الملكية الفكرية", body: ["الاسم والعلامة التجارية Tiquiz® والشعار والواجهات والكود وجميع المحتويات محمية. يُمنع أي نسخ أو تمثيل أو تعديل أو استغلال، كلي أو جزئي، بدون إذن كتابي."] },
     { h: "المحتوى المُولَّد بالذكاء الاصطناعي", body: ["قد تحتوي الاختبارات والعناوين والأسئلة والنتائج المُولَّدة بالذكاء الاصطناعي على أخطاء أو تقريبات. يظل المستخدم مسؤولاً عن مراجعتها واستخدامها."] },

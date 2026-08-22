@@ -32,7 +32,14 @@ const RAISONS: Record<string, string> = {
   stripe_refused: "Stripe a refusé d'ouvrir le paiement. Rien n'a été débité.",
   network: "La connexion a coupé avant d'ouvrir le paiement. Rien n'a été débité.",
   live_without_webhook:
-    "Le paiement en conditions réelles est bloqué tant que l'ouverture automatique des accès n'est pas branchée. Rien n'a été débité.",
+    // CE QUI MANQUE VRAIMENT, ET PLUS CE QUI MANQUAIT EN AOUT.
+    // L'ouverture des acces EST branchee depuis le 22 aout. Ce qui
+    // bloque desormais, c'est le secret du webhook : sans lui, rien ne
+    // peut valider la confirmation de Stripe, donc un abonnement serait
+    // preleve chaque mois en face de rien. Un message perime envoie
+    // chercher au mauvais endroit, c'est la faute qu'on repare depuis
+    // trois jours.
+    "Le paiement en conditions réelles est fermé : la clé STRIPE_WEBHOOK_SECRET_OWNER n'est pas posée sur le serveur. Sans elle, un abonnement serait prélevé sans ouvrir aucun accès. Rien n'a été débité.",
   invalid_body: "Requête illisible.",
 };
 
