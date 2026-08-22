@@ -28,23 +28,36 @@
 //    payload ne le porte pas, ce qui est le cas aujourd'hui sur toutes
 //    les ventes Systeme.io.
 //
-// -- ET POURQUOI CE MONTANT RESTE UNE ESTIMATION -----------------------
+// -- CE MONTANT COMPTE, ET IL EST MARQUÉ (décision Béné, 22 août) ------
 //
-// C'est le prix AFFICHÉ du plan, pas la somme encaissée. Son compte
-// porte 54 codes de réduction actifs, dont plusieurs à 50, 80 et même
-// 100 %. Une vente remisée vaudrait donc moins que ce qui est écrit
-// ici, et un chiffre d'affaires calculé là dessus serait GONFLÉ.
+// J'avais d'abord exclu ces montants du chiffre d'affaires : le prix du
+// plan n'est pas la somme encaissée, et son compte porte 54 codes de
+// réduction actifs. Elle a tranché : "pour les prix, tu les as dans les
+// tunnels, avec les codes promo donc pas besoin de chercher un truc de
+// fou".
 //
-// Un chiffre gonflé dans un tableau de bord est pire qu'une absence de
-// chiffre : il fait prendre des décisions. Ce montant est donc marqué
-// `"plan"`, il s'affiche comme un ordre de grandeur, et il n'entre
-// JAMAIS dans la courbe du chiffre d'affaires (cf. `serieEncaissee`).
+// Elle a raison sur le fond : un tableau de bord qui refuse d'afficher
+// le moindre euro parce qu'une remise est théoriquement possible ne sert
+// à rien. Ces montants entrent donc dans les totaux.
+//
+// Ce qui reste, et qui suffit : ils portent `amountSource: "plan"`,
+// l'écran écrit `~` devant, et il dit combien de ventes du total sont
+// estimées. On donne le chiffre, on dit ce qu'il vaut, et elle décide.
 
 import type { TiquizPlan } from "./webhookInference";
 
 export interface PricePlan {
   /** Le nom tel qu'il est écrit dans son compte. */
   nom: string;
+  /**
+   * DE QUEL PRODUIT ON PARLE.
+   *
+   * Béné, 22 août : "je vois mal les différences entre Tiquiz et
+   * l'Atelier, partout, dans les ventes, les stats". Deux produits qui
+   * se vendent par le même Systeme.io, encaissés sur le même Stripe : à
+   * l'écran, plus rien ne les séparait.
+   */
+  produit: "tiquiz" | "atelier";
   /** Le prix AFFICHÉ, en centimes. Jamais forcément la somme encaissée. */
   montantCents: number;
   devise: "eur" | "usd";
@@ -62,35 +75,35 @@ export interface PricePlan {
  */
 export const PRICE_PLANS: Record<string, PricePlan> = {
   // ── TIQUIZ, PRIX ACTUELS (depuis le 6 août 2026) ──
-  "3375217": { nom: "NV tiquiz mensuel", montantCents: 1700, devise: "eur", plan: "monthly" },
-  "3375221": { nom: "NV Tiquiz annuel", montantCents: 17000, devise: "eur", plan: "yearly" },
-  "3278876": { nom: "Tiquiz mensuel PLUS", montantCents: 2900, devise: "eur", plan: "monthly_plus" },
-  "3278878": { nom: "Tiquiz annuel PLUS", montantCents: 29000, devise: "eur", plan: "yearly_plus" },
+  "3375217": { produit: "tiquiz", nom: "NV tiquiz mensuel", montantCents: 1700, devise: "eur", plan: "monthly" },
+  "3375221": { produit: "tiquiz", nom: "NV Tiquiz annuel", montantCents: 17000, devise: "eur", plan: "yearly" },
+  "3278876": { produit: "tiquiz", nom: "Tiquiz mensuel PLUS", montantCents: 2900, devise: "eur", plan: "monthly_plus" },
+  "3278878": { produit: "tiquiz", nom: "Tiquiz annuel PLUS", montantCents: 29000, devise: "eur", plan: "yearly_plus" },
 
   // ── TIQUIZ, PRIX HISTORIQUES ──
   // Gardés : les ventes passées portent ces ids, et le tableau de bord
   // relit l'historique.
-  "3198235": { nom: "Tiquiz mensuel", montantCents: 900, devise: "eur", plan: "monthly" },
-  "3198261": { nom: "Tiquiz annuel", montantCents: 9000, devise: "eur", plan: "yearly" },
-  "3198280": { nom: "Tiquiz Beta", montantCents: 5700, devise: "eur", plan: "lifetime" },
+  "3198235": { produit: "tiquiz", nom: "Tiquiz mensuel", montantCents: 900, devise: "eur", plan: "monthly" },
+  "3198261": { produit: "tiquiz", nom: "Tiquiz annuel", montantCents: 9000, devise: "eur", plan: "yearly" },
+  "3198280": { produit: "tiquiz", nom: "Tiquiz Beta", montantCents: 5700, devise: "eur", plan: "lifetime" },
 
   // ── TIQUIZ EN DOLLARS ──
   // Ils existent dans son compte et manquaient au routage. Une vente
   // dessus ouvrait un accès par repli (donc le client entrait bien),
   // mais était rangée au mauvais palier.
-  "3211596": { nom: "tiquiz monthly", montantCents: 900, devise: "usd", plan: "monthly" },
-  "3211612": { nom: "tiquiz annual", montantCents: 9000, devise: "usd", plan: "yearly" },
-  "3211578": { nom: "Tiquiz Beta (USD)", montantCents: 5700, devise: "usd", plan: "lifetime" },
+  "3211596": { produit: "tiquiz", nom: "tiquiz monthly", montantCents: 900, devise: "usd", plan: "monthly" },
+  "3211612": { produit: "tiquiz", nom: "tiquiz annual", montantCents: 9000, devise: "usd", plan: "yearly" },
+  "3211578": { produit: "tiquiz", nom: "Tiquiz Beta (USD)", montantCents: 5700, devise: "usd", plan: "lifetime" },
 
   // ── L'ATELIER DU QUIZ ──
   // Ce ne sont PAS des paliers Tiquiz : ils n'ouvrent aucun accès ici,
   // d'où `plan: null`. Ils sont là pour que le tableau de bord sache
   // nommer et chiffrer une vente de l'Atelier au lieu de l'afficher en
   // "inconnu".
-  "3316702": { nom: "Atelier du Quiz", montantCents: 4700, devise: "eur", plan: null },
-  "3371197": { nom: "Atelier du Quiz simple", montantCents: 700, devise: "eur", plan: null },
-  "3371202": { nom: "Atelier du Quiz augmenté", montantCents: 4700, devise: "eur", plan: null },
-  "3372762": { nom: "Atelier du Quiz augmenté", montantCents: 3700, devise: "eur", plan: null },
+  "3316702": { produit: "atelier", nom: "Atelier du Quiz", montantCents: 4700, devise: "eur", plan: null },
+  "3371197": { produit: "atelier", nom: "Atelier du Quiz simple", montantCents: 700, devise: "eur", plan: null },
+  "3371202": { produit: "atelier", nom: "Atelier du Quiz augmenté", montantCents: 4700, devise: "eur", plan: null },
+  "3372762": { produit: "atelier", nom: "Atelier du Quiz augmenté", montantCents: 3700, devise: "eur", plan: null },
 };
 
 /**

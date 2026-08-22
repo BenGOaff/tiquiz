@@ -25,7 +25,6 @@ import {
   routageConcerne,
   type CallKind,
   type CallVerdict,
-  type ChampNumerique,
 } from "@/lib/admin/webhookRows";
 
 type Row = {
@@ -44,7 +43,6 @@ type Row = {
   montantCents: number | null;
   montantSource: "payload" | "plan" | "inconnu";
   planNom: string | null;
-  champsNumeriques: ChampNumerique[];
 };
 
 /**
@@ -251,14 +249,6 @@ export default function WebhookLogsCard() {
                         {ko && v.aide && (
                           <div className="text-[11px] text-muted-foreground mt-0.5 max-w-[240px]">
                             {v.aide}
-                          </div>
-                        )}
-                        {r.champsNumeriques.length > 0 && (
-                          <div className="text-[11px] text-muted-foreground mt-1 max-w-[260px]">
-                            Nombres reçus :{" "}
-                            {r.champsNumeriques
-                              .map((c) => `${c.chemin}=${c.valeur}`)
-                              .join(", ")}
                           </div>
                         )}
                       </td>

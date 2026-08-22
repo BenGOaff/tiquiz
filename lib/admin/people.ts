@@ -41,6 +41,7 @@
 // affichées au lieu d'être perdues.
 
 import type { Sale } from "@/lib/checkout/sales";
+import { totauxParProduit, type TotalProduit } from "./saleProduct";
 import type { AtelierPerson } from "@/lib/admin/atelier";
 
 /** Ce qu'on lit d'un compte. Volontairement réduit à ce qui s'affiche. */
@@ -204,6 +205,17 @@ export interface PeopleTotals {
    * moins que pas de chiffre du tout.
    */
   ventesSansMontant: number;
+  /**
+   * Des ventes chiffrées au TARIF DU PLAN, faute de mieux.
+   *
+   * Béné, 22 août : "pour les prix, tu les as dans les tunnels, avec les
+   * codes promo donc pas besoin de chercher un truc de fou". Elles
+   * comptent donc dans le total. On dit juste combien elles sont, pour
+   * qu'un écart avec sa banque ne reste pas mystérieux.
+   */
+  ventesEstimees: number;
+  /** Tiquiz, l'Atelier, et ce qu'on n'a pas su rattacher. */
+  parProduitVendu: TotalProduit[];
   /** Par produit vendu, pour "quels plans sont vendus". */
   parProduit: { productId: string; count: number; totalCents: number; sansMontant: number }[];
 }
@@ -402,6 +414,7 @@ export function buildPeople(input: {
   let rembourse = 0;
   const parProduit = new Map<string, { count: number; totalCents: number; sansMontant: number }>();
   let ventesSansMontant = 0;
+  let ventesEstimees = 0;
 
   for (const v of input.sales) {
     const montant = Number(v.amountCents) || 0;
@@ -415,9 +428,13 @@ export function buildPeople(input: {
     // Et on ne teste pas `montant <= 0` : une vente à 0 € est légitime
     // (un code de réduction à 100 %), et la compter comme "montant
     // manquant" ferait mentir l'avertissement dans l'autre sens.
-    const sur = v.amountSource === "payload";
-    if (!sur) ventesSansMontant += 1;
-    if (sur) {
+    // Un montant venu du tarif du plan COMPTE (décision Béné du 22
+    // août), il est seulement dénombré à part. Seul un montant qu'on
+    // n'a pas du tout ne peut rien alimenter.
+    const chiffre = v.amountSource !== "inconnu";
+    if (v.amountSource === "inconnu") ventesSansMontant += 1;
+    if (v.amountSource === "plan") ventesEstimees += 1;
+    if (chiffre) {
       if (v.refundedAt) rembourse += montant;
       else encaisse += montant;
     }
@@ -425,8 +442,8 @@ export function buildPeople(input: {
     const id = String(v.productId ?? "").trim() || "inconnu";
     const agg = parProduit.get(id) ?? { count: 0, totalCents: 0, sansMontant: 0 };
     agg.count += 1;
-    if (!sur) agg.sansMontant += 1;
-    if (sur && !v.refundedAt) agg.totalCents += montant;
+    if (!chiffre) agg.sansMontant += 1;
+    if (chiffre && !v.refundedAt) agg.totalCents += montant;
     parProduit.set(id, agg);
 
     const personne = parEmail.get(cle(v.email));
@@ -438,7 +455,7 @@ export function buildPeople(input: {
     // Un remboursement ne compte pas comme de l'argent gardé.
     // Meme regle que le total general : seul un montant venu du
     // fournisseur compte comme de l'argent encaisse.
-    if (sur && !v.refundedAt) personne.paidCents += montant;
+    if (chiffre && !v.refundedAt) personne.paidCents += montant;
   }
 
   // 4. On finalise chaque personne : tri de ses ventes, dernier moyen de
@@ -490,6 +507,8 @@ export function buildPeople(input: {
       encaisseCents: encaisse,
       rembourseCents: rembourse,
       ventesSansMontant,
+      ventesEstimees,
+      parProduitVendu: totauxParProduit(input.sales),
       parProduit: [...parProduit.entries()]
         .map(([productId, v]) => ({ productId, ...v }))
         .sort((a, b) => b.totalCents - a.totalCents),

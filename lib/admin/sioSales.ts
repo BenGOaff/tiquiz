@@ -175,7 +175,10 @@ export function buildSioSales(rows: EventRow[]): Sale[] {
       email,
       name: extractStr(payload, NAME_PATHS),
       // Le PLAN plutot que l'offre brute : c'est ce que Bene lit.
-      productId: plan ?? "inconnu",
+      // Une vente de l'Atelier n'a pas de palier Tiquiz : elle porte le
+      // nom du produit, sinon elle finissait en "inconnu" et se
+      // melangeait aux abonnements dans les totaux.
+      productId: plan ?? (tarif?.produit === "atelier" ? "atelier" : "inconnu"),
       amountCents,
       amountSource,
       currency: tarif?.devise ?? "eur",

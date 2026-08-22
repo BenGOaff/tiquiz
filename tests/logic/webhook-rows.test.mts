@@ -19,7 +19,6 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 
 import {
-  champsNumeriques,
   compterActions,
   demandeUneAction,
   readCallKind,
@@ -147,39 +146,4 @@ test("le badge compte ce qui demande une action, et rien d'autre", () => {
     ]),
     1,
   );
-});
-
-// ── LE MONTANT QU'ON NE TROUVE PAS ───────────────────────────────────
-//
-// 47 ventes affichees a 0,00 €. On ne rallonge pas la liste des chemins
-// au flair (drame Ivan) : on fait parler le payload.
-
-test("champsNumeriques rend les nombres avec leur chemin", () => {
-  const found = champsNumeriques({
-    order: { id: 12345, total_price: "17.00", customer: { email: "a@b.fr", first_name: "Ada" } },
-    pricePlan: { id: 3375217, name: "NV tiquiz mensuel" },
-  });
-  const chemins = Object.fromEntries(found.map((c) => [c.chemin, c.valeur]));
-  assert.equal(chemins["order.total_price"], 17);
-  assert.equal(chemins["pricePlan.id"], 3375217);
-  assert.equal(chemins["order.id"], 12345);
-  // Aucune donnee personnelle ne sort de la.
-  const texte = JSON.stringify(found);
-  assert.ok(!texte.includes("a@b.fr"));
-  assert.ok(!texte.includes("Ada"));
-});
-
-test("champsNumeriques ne rend ni booleen, ni zero, ni chaine libre", () => {
-  const found = champsNumeriques({ paye: true, remise: 0, ref: "cmd-2026", montant: 1700 });
-  assert.deepEqual(found, [{ chemin: "montant", valeur: 1700 }]);
-});
-
-test("champsNumeriques est borne et ne boucle pas sur un payload profond", () => {
-  const gros: Record<string, unknown> = {};
-  for (let i = 0; i < 100; i += 1) gros[`n${i}`] = i + 1;
-  assert.equal(champsNumeriques(gros, 5).length, 5);
-
-  let profond: unknown = 42;
-  for (let i = 0; i < 40; i += 1) profond = { encore: profond };
-  assert.deepEqual(champsNumeriques(profond), []);
 });

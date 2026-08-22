@@ -121,11 +121,35 @@ test("une ligne SANS date est comptee a part, jamais avalee", () => {
   assert.equal(serie.sansDate, 2);
 });
 
-test("UNE SEULE vente sans montant suffit a retirer la courbe des euros", () => {
+test("un montant venu du tarif du plan COMPTE, et il est denombre", () => {
+  // Decision Bene, 22 aout : "pour les prix, tu les as dans les tunnels,
+  // avec les codes promo donc pas besoin de chercher un truc de fou".
+  // J'avais d'abord exclu ces montants ; un tableau de bord qui refuse
+  // d'afficher le moindre euro parce qu'une remise est theoriquement
+  // possible ne sert a rien.
   const serie = serieEncaissee(
     [
       vente({ amountCents: 1700, paidAt: "2026-08-03T09:00:00Z" }),
-      vente({ amountCents: 1700, amountSource: "plan", paidAt: "2026-08-04T09:00:00Z" }),
+      vente({ amountCents: 4700, amountSource: "plan", paidAt: "2026-08-04T09:00:00Z" }),
+    ],
+    AOUT,
+    3,
+  );
+  assert.equal(serie.fiable, true);
+  if (!serie.fiable) return;
+  assert.equal(serie.total, 6400);
+  // Elle doit savoir ce que le total contient, sinon un ecart avec sa
+  // banque reste mysterieux.
+  assert.equal(serie.estimees, 1);
+});
+
+test("une vente dont on ne sait RIEN retire la courbe, elle", () => {
+  // La, la somme serait vraiment fausse : on ne connait ni le produit ni
+  // le montant.
+  const serie = serieEncaissee(
+    [
+      vente({ amountCents: 1700, paidAt: "2026-08-03T09:00:00Z" }),
+      vente({ amountCents: 0, amountSource: "inconnu", paidAt: "2026-08-04T09:00:00Z" }),
     ],
     AOUT,
     3,
@@ -240,8 +264,9 @@ test("buildAdminStats assemble tout sans jamais lire l'horloge lui meme", () => 
   assert.equal(stats.departs.total, 1);
   assert.equal(stats.quiz, 4);
   assert.equal(stats.leads, 42);
-  // La vente existe et compte ; son MONTANT, lui, n'est pas dessine.
-  assert.equal(stats.encaisse.fiable, false);
+  // La vente existe, elle compte, et son montant vient du tarif du plan.
+  assert.equal(stats.encaisse.fiable, true);
+  if (stats.encaisse.fiable) assert.equal(stats.encaisse.estimees, 1);
 });
 
 test("moisDe et moisLabel ne s'affolent pas sur une valeur illisible", () => {
