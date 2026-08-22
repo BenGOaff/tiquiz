@@ -28,13 +28,18 @@
 // ça a l'air de marcher. La donnée était déjà là, dans `webhook_logs`
 // depuis le drame Ivan : il ne manquait qu'un lecteur.
 //
-// -- CE QUI EST DÉLIBÉRÉMENT ABSENT -------------------------------------
+// -- L'ATELIER AUSSI, PAR UNE LIAISON EN LECTURE SEULE -----------------
 //
-// L'Atelier. Ses données vivent dans une autre app, avec sa propre base.
-// Les rapatrier demande une liaison en lecture seule entre les deux
-// serveurs, qui est la prochaine étape. L'écran le DIT au lieu de le
-// taire : c'est la règle du 8 juin, on n'affiche pas un total dont le
-// dénominateur ment.
+// Ses données vivent dans une autre app, avec sa propre base. Tiquiz va
+// donc les CHERCHER (`lib/admin/atelier.ts`), avec le secret partagé qui
+// existe déjà entre les deux serveurs.
+//
+// **Et si l'Atelier ne répond pas, on le DIT.** L'écran s'affiche quand
+// même (une panne de l'Atelier ne doit pas priver Béné de son tableau de
+// bord Tiquiz), mais il annonce qu'il est incomplet. C'est la règle du
+// 8 juin : on n'affiche pas un total dont le dénominateur ment. Un
+// chiffre d'affaires amputé de moitié sans prévenir vaut moins que pas
+// de chiffre, parce qu'il a l'air juste.
 
 import { NextResponse } from "next/server";
 
@@ -42,6 +47,7 @@ import { isAdminEmail } from "@/lib/adminEmails";
 import { buildSales, type EventRow } from "@/lib/checkout/sales";
 import { buildSioSales } from "@/lib/admin/sioSales";
 import { buildPeople, monthlyTrend, type ChurnRow, type ProfileRow } from "@/lib/admin/people";
+import { fetchAtelier } from "@/lib/admin/atelier";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -163,6 +169,10 @@ export async function GET(): Promise<NextResponse> {
       }
     }
 
+    // L'ATELIER, en parallele du reste. Ne jette jamais : rend
+    // `reachable: false` si quoi que ce soit cloche.
+    const atelier = await fetchAtelier(process.env);
+
     const lignes: ProfileRow[] = profiles.map((p) => {
       const uid = String(p.user_id ?? p.id ?? "");
       return {
@@ -180,7 +190,12 @@ export async function GET(): Promise<NextResponse> {
       };
     });
 
-    const vue = buildPeople({ profiles: lignes, sales, churn });
+    const vue = buildPeople({
+      profiles: lignes,
+      sales: [...sales, ...atelier.sales],
+      churn,
+      atelier: atelier.people,
+    });
 
     return NextResponse.json({
       ok: true,
@@ -193,6 +208,9 @@ export async function GET(): Promise<NextResponse> {
       // honnetement "sur les N derniers" au lieu de laisser croire que
       // c'est tout l'historique.
       evenementsLus: events?.length ?? 0,
+      // L'ecran DOIT pouvoir dire "il manque l'Atelier". Sans ca, une
+      // panne de liaison passerait pour un mois sans ventes.
+      atelier: { reachable: atelier.reachable, reason: atelier.reason ?? null },
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

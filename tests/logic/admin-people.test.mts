@@ -149,7 +149,11 @@ test("le lifetime n'est PAS un abonnement a suivre", () => {
     const v = buildPeople({ profiles: [compte(`${plan}@x.fr`, plan)], sales: [], churn: [] });
     assert.equal(v.people[0].status, "avie", plan);
   }
-  assert.equal(readPersonStatus("LIFETIME", null), "avie", "la casse ne doit pas changer le verdict");
+  assert.equal(
+    readPersonStatus({ hasTiquizAccount: true, plan: "LIFETIME", churn: null }),
+    "avie",
+    "la casse ne doit pas changer le verdict",
+  );
 });
 
 test("UN REMBOURSEMENT ne compte ni dans son total ni dans le CA", () => {
@@ -296,4 +300,109 @@ test("un remboursement et une date illisible ne faussent pas le CA", () => {
     new Date("2026-08-21T12:00:00Z"),
   );
   assert.equal(t.moisCents, 2000);
+});
+
+// ── L'ATELIER, LU EN DIRECT DEPUIS L'AUTRE APP ──
+
+test("UN ELEVE DE L'ATELIER SANS COMPTE TIQUIZ apparait quand meme", () => {
+  // C'est une cliente payante. La laisser dehors ferait exactement ce
+  // que Bene reprochait a la premiere version : "tout sauf fiable et
+  // exhaustif".
+  const v = buildPeople({
+    profiles: [],
+    sales: [],
+    churn: [],
+    atelier: [
+      {
+        email: "Eleve@X.fr",
+        name: "Jocelyne",
+        status: "active",
+        tier: "plus",
+        grantedAt: "2026-07-01T00:00:00Z",
+        createdAt: "2026-07-01T00:00:00Z",
+        lastSignIn: null,
+        daysDone: 3,
+      },
+    ],
+  });
+  assert.equal(v.people.length, 1);
+  assert.equal(v.people[0].email, "eleve@x.fr", "l'adresse doit etre en minuscules");
+  assert.equal(v.people[0].hasTiquizAccount, false);
+  assert.equal(v.people[0].atelier?.daysDone, 3);
+  assert.equal(v.totals.atelierSeul, 1);
+  assert.equal(v.totals.atelier, 1);
+});
+
+test("ELEVE DE L'ATELIER N'EST PAS 'ESSAI', et c'est important", () => {
+  // Confondre les deux mentirait DEUX fois : elle n'essaie pas Tiquiz
+  // (elle n'y a pas de compte) et elle a paye l'Atelier (ce n'est pas un
+  // prospect). C'est au contraire la liste a inviter.
+  const v = buildPeople({
+    profiles: [],
+    sales: [],
+    churn: [],
+    atelier: [
+      {
+        email: "a@x.fr",
+        name: null,
+        status: "active",
+        tier: null,
+        grantedAt: null,
+        createdAt: null,
+        lastSignIn: null,
+        daysDone: 0,
+      },
+    ],
+  });
+  assert.equal(v.people[0].status, "atelier");
+  assert.notEqual(v.people[0].status, "essai");
+  assert.equal(v.totals.essai, 0, "elle ne doit pas gonfler le compteur d'essais");
+});
+
+test("quelqu'un qui est dans LES DEUX n'apparait qu'UNE fois", () => {
+  // Deux lignes pour la meme personne, c'est le drame des entrees
+  // dupliquees du 8 juin, sur un tableau ou Bene compte ses clients.
+  const v = buildPeople({
+    profiles: [compte("deux@x.fr", "monthly")],
+    sales: [],
+    churn: [],
+    atelier: [
+      {
+        email: "deux@x.fr",
+        name: "Deux",
+        status: "active",
+        tier: "plus",
+        grantedAt: null,
+        createdAt: null,
+        lastSignIn: null,
+        daysDone: 7,
+      },
+    ],
+  });
+  assert.equal(v.people.length, 1);
+  assert.equal(v.people[0].hasTiquizAccount, true);
+  assert.equal(v.people[0].status, "abonne", "son statut Tiquiz reste celui de son abonnement");
+  assert.equal(v.people[0].atelier?.daysDone, 7, "et on lui ajoute ce que l'Atelier sait");
+  assert.equal(v.totals.atelierSeul, 0);
+  assert.equal(v.totals.atelier, 1);
+});
+
+test("une vente de l'Atelier compte dans le chiffre d'affaires", () => {
+  const v = buildPeople({
+    profiles: [compte("client@x.fr", "free")],
+    sales: [vente("client@x.fr", { ref: "atelier:pi_9", productId: "atelier", amountCents: 4700 })],
+    churn: [],
+  });
+  assert.equal(v.people[0].paidCents, 4700);
+  assert.equal(v.totals.encaisseCents, 4700);
+  assert.equal(v.totals.parProduit[0].productId, "atelier");
+});
+
+test("l'Atelier injoignable ne fait pas tomber l'ecran", () => {
+  // Une panne de l'Atelier ne doit pas priver Bene de son tableau de
+  // bord Tiquiz. L'ecran s'affiche, et il DIT qu'il est incomplet.
+  const v = buildPeople({ profiles: [compte("a@x.fr", "monthly")], sales: [], churn: [] });
+  assert.equal(v.people.length, 1);
+  assert.equal(v.totals.atelier, 0);
+  assert.equal(v.people[0].atelier, null);
 });

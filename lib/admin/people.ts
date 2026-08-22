@@ -41,6 +41,7 @@
 // affichées au lieu d'être perdues.
 
 import type { Sale } from "@/lib/checkout/sales";
+import type { AtelierPerson } from "@/lib/admin/atelier";
 
 /** Ce qu'on lit d'un compte. Volontairement réduit à ce qui s'affiche. */
 export interface ProfileRow {
@@ -91,12 +92,23 @@ export type PersonStatus =
   /** Il est parti, l'accès est retombé en gratuit. */
   | "parti"
   /** Payant à vie (lifetime, beta) : pas d'abonnement à suivre. */
-  | "avie";
+  | "avie"
+  /**
+   * ÉLÈVE DE L'ATELIER SANS COMPTE TIQUIZ.
+   *
+   * Ce n'est PAS un essai, et les confondre serait mentir deux fois :
+   * la personne n'essaie pas Tiquiz (elle n'y a pas de compte), et elle
+   * a payé l'Atelier (donc ce n'est pas un prospect). C'est au contraire
+   * exactement la liste que Béné a envie d'inviter.
+   */
+  | "atelier";
 
 export interface Person {
   email: string;
   name: string | null;
   userId: string | null;
+  /** A-t-elle un compte Tiquiz ? Faux = élève de l'Atelier seulement. */
+  hasTiquizAccount: boolean;
   plan: string;
   status: PersonStatus;
   createdAt: string | null;
@@ -114,6 +126,15 @@ export interface Person {
   /** Comment il a payé la dernière fois. */
   lastProvider: Sale["provider"] | null;
   lastPaidAt: string | null;
+
+  /** Ce que l'Atelier sait d'elle, ou `null` si elle n'y est pas. */
+  atelier: {
+    /** `active` = élève inscrit. */
+    status: string | null;
+    tier: string | null;
+    grantedAt: string | null;
+    daysDone: number;
+  } | null;
 
   /** Renseigné quand il part ou qu'il est parti. */
   churn: {
@@ -133,6 +154,10 @@ export interface PeopleTotals {
   partants: number;
   partis: number;
   avie: number;
+  /** Élèves de l'Atelier sans compte Tiquiz. */
+  atelierSeul: number;
+  /** Élèves de l'Atelier, avec ou sans compte Tiquiz. */
+  atelier: number;
   /** Encaissé sur la période lue, remboursements déduits, en centimes. */
   encaisseCents: number;
   rembourseCents: number;
@@ -185,8 +210,24 @@ function plusRecent(a: string | null, b: string | null): string | null {
  * rangerait dans "abonné" et Béné ne verrait jamais qu'il s'en va, donc
  * n'aurait jamais l'occasion de le retenir.
  */
-export function readPersonStatus(plan: string, churn: ChurnRow | null): PersonStatus {
-  const p = String(plan ?? "").trim().toLowerCase() || "free";
+export function readPersonStatus(input: {
+  /**
+   * A-t-elle un compte Tiquiz ?
+   *
+   * **Paramètre OBLIGATOIRE, jamais deviné du plan.** Une élève de
+   * l'Atelier sans compte Tiquiz aurait un plan vide, donc `free`, donc
+   * "Essai" : l'écran annoncerait qu'elle essaie un produit auquel elle
+   * n'a pas accès. C'est la règle du 1er août, appliquée avant que le
+   * bug n'existe.
+   */
+  hasTiquizAccount: boolean;
+  plan: string;
+  churn: ChurnRow | null;
+}): PersonStatus {
+  if (!input.hasTiquizAccount) return "atelier";
+
+  const churn = input.churn;
+  const p = String(input.plan ?? "").trim().toLowerCase() || "free";
 
   if (PLANS_A_VIE.has(p)) return "avie";
 
@@ -214,6 +255,14 @@ export function buildPeople(input: {
   profiles: ProfileRow[];
   sales: Sale[];
   churn: ChurnRow[];
+  /**
+   * Les élèves de l'Atelier.
+   *
+   * Vide quand l'Atelier est injoignable : l'écran s'affiche quand même
+   * et DIT qu'il est incomplet, plutôt que de tomber. Voir
+   * `lib/admin/atelier.ts`.
+   */
+  atelier?: AtelierPerson[];
 }): PeopleView {
   // 1. SEED sur la source de vérité : les comptes. Un compte sans vente
   //    doit apparaître (c'est "qui teste en gratos"), donc on part de là
@@ -226,6 +275,7 @@ export function buildPeople(input: {
       email,
       name: nomDe(p),
       userId: String(p.user_id ?? "").trim() || null,
+      hasTiquizAccount: true,
       plan: String(p.plan ?? "").trim().toLowerCase() || "free",
       status: "essai",
       createdAt: p.created_at ?? null,
@@ -238,6 +288,51 @@ export function buildPeople(input: {
       sales: [],
       lastProvider: null,
       lastPaidAt: null,
+      atelier: null,
+      churn: null,
+    });
+  }
+
+  // 1 bis. LES ÉLÈVES DE L'ATELIER.
+  //
+  // Ceux qui ont aussi un compte Tiquiz enrichissent leur ligne. Ceux
+  // qui n'en ont pas en CRÉENT une : ce sont des clientes payantes, et
+  // les laisser dehors ferait exactement ce que Béné reprochait à la
+  // première version, "tout sauf fiable et exhaustif".
+  for (const a of input.atelier ?? []) {
+    const email = cle(a.email);
+    if (!email) continue;
+    const infos = {
+      status: a.status,
+      tier: a.tier,
+      grantedAt: a.grantedAt,
+      daysDone: a.daysDone,
+    };
+    const existante = parEmail.get(email);
+    if (existante) {
+      existante.atelier = infos;
+      // Son nom peut n'être renseigné que d'un seul côté.
+      existante.name = existante.name ?? a.name;
+      continue;
+    }
+    parEmail.set(email, {
+      email,
+      name: a.name,
+      userId: null,
+      hasTiquizAccount: false,
+      plan: "-",
+      status: "atelier",
+      createdAt: a.createdAt,
+      lastSignIn: a.lastSignIn,
+      quizCount: 0,
+      leadCount: 0,
+      resellerName: null,
+      selfServe: false,
+      paidCents: 0,
+      sales: [],
+      lastProvider: null,
+      lastPaidAt: null,
+      atelier: infos,
       churn: null,
     });
   }
@@ -304,7 +399,11 @@ export function buildPeople(input: {
         comment: c.stripe_comment ?? c.reason ?? null,
       };
     }
-    personne.status = readPersonStatus(personne.plan, c);
+    personne.status = readPersonStatus({
+      hasTiquizAccount: personne.hasTiquizAccount,
+      plan: personne.plan,
+      churn: c,
+    });
   }
 
   const people = [...parEmail.values()].sort((a, b) => {
@@ -325,6 +424,8 @@ export function buildPeople(input: {
       partants: compte("partant"),
       partis: compte("parti"),
       avie: compte("avie"),
+      atelierSeul: compte("atelier"),
+      atelier: people.filter((p) => p.atelier?.status === "active").length,
       encaisseCents: encaisse,
       rembourseCents: rembourse,
       parProduit: [...parProduit.entries()]

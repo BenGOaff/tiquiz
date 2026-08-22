@@ -41,6 +41,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { isAtelierSale } from "@/lib/admin/atelier";
 import type { PeopleTotals, Person, PersonStatus } from "@/lib/admin/people";
 import type { Sale } from "@/lib/checkout/sales";
 
@@ -67,6 +68,9 @@ const ETATS: Record<PersonStatus, { label: string; classe: string }> = {
   partant: { label: "Part bientôt", classe: "bg-amber-100 text-amber-900" },
   parti: { label: "Parti", classe: "bg-rose-100 text-rose-900" },
   avie: { label: "À vie", classe: "bg-indigo-100 text-indigo-800" },
+  // Elle a paye l'Atelier mais n'a pas de compte Tiquiz. Ce n'est ni un
+  // essai ni un prospect : c'est exactement la liste a inviter.
+  atelier: { label: "Atelier seul", classe: "bg-sky-100 text-sky-900" },
 };
 
 /**
@@ -109,8 +113,25 @@ interface Reponse {
   ventesOrphelines?: Sale[];
   tendance?: { moisCents: number; moisPrecedentCents: number; ecartPct: number | null };
   evenementsLus?: number;
+  atelier?: { reachable?: boolean; reason?: string | null };
   reason?: string;
 }
+
+/**
+ * Pourquoi l'Atelier manque, en une phrase actionnable.
+ *
+ * Le serveur renvoie une RAISON, l'ecran sait comment la dire. Et
+ * chacune nomme la correction : sans ca, "l'Atelier est absent" enverrait
+ * chercher partout.
+ */
+const RAISONS_ATELIER: Record<string, string> = {
+  not_configured:
+    "PARTNER_SHARED_SECRET n'est pas posé sur le serveur Tiquiz.",
+  forbidden:
+    "Les deux serveurs n'ont pas le même PARTNER_SHARED_SECRET.",
+  unreachable: "L'Atelier n'a pas répondu.",
+  read_failed: "L'Atelier a répondu une erreur.",
+};
 
 export default function PilotageCard() {
   const [data, setData] = useState<Reponse | null>(null);
@@ -258,6 +279,27 @@ export default function PilotageCard() {
         </Card>
       )}
 
+      {/* ── L'ATELIER MANQUE : ON LE DIT ──
+          Regle du 8 juin : on n'affiche pas un total dont le
+          denominateur ment. Un chiffre d'affaires ampute de moitie sans
+          prevenir vaut moins que pas de chiffre, parce qu'il a l'air
+          juste. */}
+      {data?.ok && data.atelier && !data.atelier.reachable && (
+        <Card className="border-rose-300 bg-rose-50">
+          <CardContent className="py-3">
+            <p className="flex items-center gap-2 text-sm font-bold text-rose-900">
+              <AlertTriangle className="size-4" aria-hidden />
+              Les chiffres ci dessous ne comptent PAS l&apos;Atelier
+            </p>
+            <p className="mt-1 text-xs text-rose-900">
+              {RAISONS_ATELIER[data.atelier.reason ?? ""] ??
+                "La liaison avec l'Atelier n'a pas abouti."}{" "}
+              Les ventes et les élèves de l&apos;Atelier sont donc absents des totaux.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* ── L'ARGENT EST ENTRE, PERSONNE EN FACE ── */}
       {orphelines.length > 0 && (
         <Card className="border-amber-300 bg-amber-50">
@@ -307,6 +349,7 @@ export default function PilotageCard() {
               ["parti", `Partis ${totals.partis}`],
               ["avie", `À vie ${totals.avie}`],
               ["essai", `Essai ${totals.essai}`],
+              ["atelier", `Atelier seul ${totals.atelierSeul}`],
             ] as [PersonStatus | "tous", string][]).map(([id, label]) => (
               <button
                 key={id}
@@ -342,6 +385,7 @@ export default function PilotageCard() {
                     <th className="px-4 py-2 font-semibold">Personne</th>
                     <th className="px-4 py-2 font-semibold">État</th>
                     <th className="px-4 py-2 font-semibold">Plan</th>
+                    <th className="px-4 py-2 font-semibold">Atelier</th>
                     <th className="px-4 py-2 font-semibold">Payé</th>
                     <th className="px-4 py-2 font-semibold">Dernier paiement</th>
                     <th className="px-4 py-2 font-semibold">Activité</th>
@@ -395,6 +439,24 @@ export default function PilotageCard() {
                         )}
                       </td>
                       <td className="px-4 py-3 capitalize">{p.plan}</td>
+                      <td className="px-4 py-3 text-xs">
+                        {p.atelier ? (
+                          <>
+                            <span className="font-semibold capitalize">
+                              {p.atelier.status === "active" ? "élève" : (p.atelier.status ?? "-")}
+                            </span>
+                            {p.atelier.tier && (
+                              <span className="block text-muted-foreground">{p.atelier.tier}</span>
+                            )}
+                            <span className="block text-muted-foreground">
+                              {p.atelier.daysDone} jour{p.atelier.daysDone > 1 ? "s" : ""} fait
+                              {p.atelier.daysDone > 1 ? "s" : ""}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 font-semibold">
                         {p.paidCents > 0 ? euros(p.paidCents) : "-"}
                       </td>
@@ -428,7 +490,25 @@ export default function PilotageCard() {
                                  D'ICI : l'argent est chez eux. Afficher
                                  un bouton qui echouerait enverrait Bene
                                  chercher au mauvais endroit. */
-                              v.provider === "systeme_io" ? (
+                              /* UNE VENTE DE L'ATELIER NE SE REMBOURSE PAS
+                                 D'ICI, ET LE PIEGE EST SUBTIL : elle est
+                                 sur le MEME compte Stripe, donc l'appel
+                                 REUSSIRAIT. Mais seul l'Atelier sait
+                                 couper l'acces et envoyer l'email de
+                                 depart : on reprendrait l'argent en
+                                 laissant l'eleve dedans, sans un mot.
+                                 La moitie d'une decision, et on sait ou
+                                 ca mene dans ce depot. */
+                              isAtelierSale(v.ref) ? (
+                                <span key={v.ref} className="block text-xs text-muted-foreground">
+                                  {euros(v.amountCents)} du {jour(v.paidAt)}
+                                  <span className="block">
+                                    {v.refundedAt
+                                      ? `remboursée le ${jour(v.refundedAt)}`
+                                      : "à rembourser depuis l'Atelier"}
+                                  </span>
+                                </span>
+                              ) : v.provider === "systeme_io" ? (
                                 <span key={v.ref} className="block text-xs text-muted-foreground">
                                   {euros(v.amountCents)} du {jour(v.paidAt)}
                                   <span className="block">à rembourser dans Systeme.io</span>
@@ -473,9 +553,10 @@ export default function PilotageCard() {
           qu'il lit les 3000 derniers evenements ferait tirer de fausses
           conclusions sur un mois ancien. */}
       <p className="text-xs text-muted-foreground">
-        Ventes Tiquiz : notre bon de commande (carte et PayPal) ET Systeme.io, sur les{" "}
-        {data?.evenementsLus ?? 0} derniers évènements reçus. Les ventes Systeme.io se
-        remboursent chez eux. L&apos;Atelier a encore son propre écran, il arrive ici ensuite.
+        Tiquiz (notre bon de commande, carte et PayPal, ET Systeme.io) sur les{" "}
+        {data?.evenementsLus ?? 0} derniers évènements reçus, PLUS l&apos;Atelier lu en direct.
+        Les ventes Systeme.io se remboursent chez eux, celles de l&apos;Atelier depuis son
+        écran Élèves : lui seul sait couper l&apos;accès et envoyer l&apos;email de départ.
       </p>
     </div>
   );
