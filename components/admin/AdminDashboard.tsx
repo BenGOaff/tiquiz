@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,7 +23,22 @@ type User = {
   reseller_name?: string | null;
 };
 
+/** Les trois questions que Bene se pose, dans son ordre a elle. */
+const ONGLETS = [
+  { id: "clients", label: "Mes clients" },
+  { id: "ventes", label: "Mes ventes" },
+  { id: "affilies", label: "Mes affiliés" },
+] as const;
+
+type OngletId = (typeof ONGLETS)[number]["id"];
+
 export default function AdminDashboard() {
+  // Bene, 22 aout : "Fais moi un systeme d'onglets." Un seul ecran qui
+  // empile tout oblige a scroller pour trouver, et noie la liste des
+  // clients sous les chiffres de vente.
+  const [onglet, setOnglet] = useState<OngletId>("clients");
+  /** Renseigne quand la liste n'a pas pu etre chargee. Reste a l'ecran. */
+  const [panne, setPanne] = useState<string | null>(null);
   const t = useTranslations("admin");
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,9 +54,26 @@ export default function AdminDashboard() {
     try {
       const res = await fetch("/api/admin/users");
       const json = await res.json();
-      if (json.ok) setUsers(json.users ?? []);
-      else toast.error(json.error);
-    } catch { toast.error(t("toasts.loadError")); }
+      if (json.ok) {
+        setUsers(json.users ?? []);
+        setPanne(null);
+      } else {
+        // UN ECHEC PRODUIT TOUJOURS QUELQUE CHOSE A L'ECRAN, ET CA RESTE.
+        // Bene, 22 aout : "je n'ai plus AUCUNE info sur mes users". Un
+        // toast disparait en trois secondes ; il restait un tableau vide
+        // et des compteurs a zero, qui se lisent comme "tu n'as aucun
+        // client". Ce bandeau, lui, ne bouge pas.
+        setPanne(
+          res.status === 401
+            ? "Ton compte n'est pas reconnu comme administrateur. Reconnecte toi, et si ça persiste ton adresse doit être ajoutée à la liste des admins du serveur."
+            : String(json.error ?? "Le serveur a refusé sans dire pourquoi."),
+        );
+        toast.error(json.error ?? t("toasts.loadError"));
+      }
+    } catch {
+      setPanne("La connexion a coupé avant la réponse. Réessaie.");
+      toast.error(t("toasts.loadError"));
+    }
     finally { setLoading(false); }
   };
 
@@ -158,20 +191,71 @@ export default function AdminDashboard() {
         <Button variant="outline" size="sm" onClick={fetchUsers}><RefreshCw className="w-4 h-4 mr-1" />{t("refresh")}</Button>
       </div>
 
-      {/* L'ECRAN UNIQUE, EN PREMIER.
-          Bene, 21 aout : "je vois les eleves, leurs infos + le bouton
-          rembourser ? Au lieu d'avoir deux ecrans". Il passe donc AVANT
-          la liste technique des comptes, qui reste en dessous pour les
-          actions d'administration (changer un plan, creer un compte). */}
-      <PilotageCard />
+      {/* ── LES ONGLETS ── */}
+      <div className="flex flex-wrap gap-1.5 border-b pb-2">
+        {ONGLETS.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            onClick={() => setOnglet(o.id)}
+            className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+              onglet === o.id
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/70"
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
 
-      {/* LES AFFILIEES, JUSTE DERRIERE.
-          Bene, 21 aout : "les affilies : qui vend, combien, mes
-          factures... les sommes a sortir aux affilies chaque mois pour
-          calculer mon benefice restant." Il vient apres le pilotage
-          parce qu'il repond a une question qui suppose la premiere :
-          combien est rentre, puis combien en ressort. */}
-      <AffiliesCard />
+      {onglet === "affilies" && <AffiliesCard />}
+
+      {onglet === "ventes" && (
+        <>
+          <PilotageCard vue="ventes" />
+
+          {/* Un ecran qu'on ne montre pas n'existe pas (retour Jocelyne,
+              3 aout). Le lien vit ici, au dessus du journal des appels,
+              parce que c'est exactement l'endroit ou on se demande "et
+              cette vente, elle est passee ?". */}
+          <div className="rounded-lg border p-4">
+            <p className="font-semibold">Ventes directes</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Les abonnements encaissés par Tiquiz lui même, avec le bouton pour rembourser
+              sans passer par Stripe.
+            </p>
+            <Link href="/admin/ventes" className="mt-3 inline-block text-sm font-semibold text-primary underline">
+              Ouvrir mes ventes directes
+            </Link>
+          </div>
+
+          {/* Appels Systeme.io recus : repond a "est-ce que la vente est
+              arrivee jusqu'a nous ?" (drame Ivan, 7 aout 2026). */}
+          <WebhookLogsCard />
+          <ResellersCard />
+          <ResellerPaymentEventsCard />
+        </>
+      )}
+
+      {onglet === "clients" && (
+      <>
+      {/* TOUS SES USERS, gratuits ET payants, toutes sources confondues.
+          Bene, 22 aout : "je veux VOIR tous mes users gratuits et
+          payants, comme avant". */}
+      <PilotageCard vue="clients" />
+
+      {panne && (
+        <Card className="border-rose-300 bg-rose-50">
+          <CardContent className="py-3">
+            <p className="text-sm font-bold text-rose-900">
+              La liste des comptes n&apos;a pas pu être chargée. Les compteurs ci dessous
+              sont à zéro pour cette raison, pas parce que tu n&apos;as personne.
+            </p>
+            <p className="mt-1 text-xs text-rose-900">{panne}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
@@ -283,30 +367,8 @@ export default function AdminDashboard() {
         </div></Card>
       )}
 
-      {/* Revendeurs */}
-      <ResellersCard />
-
-      {/* Suivi des paiements revendeurs (diagnostic) */}
-      <ResellerPaymentEventsCard />
-
-      {/* Appels Systeme.io recus : repond a "est-ce que la vente est
-          arrivee jusqu'a nous ?" (drame Ivan, 7 aout 2026). */}
-      {/* Un ecran qu'on ne montre pas n'existe pas (retour Jocelyne, 3 aout).
-          Le lien vit ici, au dessus du journal des appels, parce que c'est
-          exactement l'endroit ou on se demande "et cette vente, elle est
-          passee ?". */}
-      <div className="rounded-lg border p-4">
-        <p className="font-semibold">Ventes directes</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Les abonnements encaisses par Tiquiz lui-meme, avec le bouton pour rembourser
-          sans passer par Stripe.
-        </p>
-        <a href="/admin/ventes" className="mt-3 inline-block text-sm font-semibold text-primary underline">
-          Ouvrir mes ventes directes
-        </a>
-      </div>
-
-      <WebhookLogsCard />
+      </>
+      )}
     </div>
   );
 }
