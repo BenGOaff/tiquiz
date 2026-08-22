@@ -299,7 +299,9 @@
     "errFillAll": "Please fill in all fields.",
     "errPasswordMin": "Password must be at least 6 characters.",
     "errSignup": "Error creating the account.",
-    "successCheckEmail": "Account created! Check your email to confirm."
+    "successCheckEmail": "Account created! Check your email to confirm.",
+    "errAlreadyRegistered": "This address already has a Tiquiz account. Sign in, or ask for a new password.",
+    "errEmailFailed": "Your account was created but the confirmation email did not go out. Write to us and we will open it by hand."
   },
   "callbackPage": {
     "loadingTitle": "Authenticating…",

@@ -2,11 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { resolveAppUrl } from "@/lib/authLinks";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,8 +12,15 @@ import LegalFooterLinks from "@/components/legal/LegalFooterLinks";
 
 export default function SignupForm() {
   const t = useTranslations("signupPage");
-  const router = useRouter();
-  const supabase = getSupabaseBrowserClient();
+  // Le serveur renvoie une RAISON, l'ecran sait comment la dire. Chacune
+  // nomme l'action a faire : "erreur lors de la creation" laisse devant
+  // un mur, "tu as deja un compte" envoie se connecter.
+  const RAISONS_SIGNUP: Record<string, string> = {
+    already_registered: t("errAlreadyRegistered"),
+    email_failed: t("errEmailFailed"),
+    weak_password: t("errPasswordMin"),
+    invalid_email: t("errFillAll"),
+  };
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -44,24 +48,33 @@ export default function SignupForm() {
 
     setLoading(true);
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password,
-        options: {
-          data: { full_name: cleanName },
-          // Le domaine ou l'utilisateur est reellement : jamais une
-          // constante de build qui peut valoir localhost (drame Veronique,
-          // 2 aout 2026).
-          emailRedirectTo: `${
-            typeof window !== "undefined" && window.location?.origin
-              ? window.location.origin
-              : resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, null)
-          }/auth/callback`,
-        },
+      // NOTRE route, pas `supabase.auth.signUp`.
+      //
+      // `signUp` depuis le navigateur declenche l'email de SUPABASE, avec
+      // son gabarit : la toute premiere chose qu'une nouvelle inscrite
+      // recevait de Tiquiz etait un email au nom de Tipote (22 aout). Et
+      // c'est le seul email qu'elle est OBLIGEE d'ouvrir pour entrer.
+      //
+      // Le domaine du lien est decide par le serveur, a partir de
+      // l'origine de la requete : c'est la seule source qui ne peut pas
+      // se tromper.
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: cleanEmail,
+          password,
+          fullName: cleanName,
+          locale: document.documentElement.lang || null,
+        }),
       });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; reason?: string };
 
-      if (signUpError) {
-        setError(t("errSignup"));
+      if (!data.ok) {
+        // UN `ok: false` PRODUIT TOUJOURS QUELQUE CHOSE A L'ECRAN, et
+        // chaque raison a SA phrase : "erreur lors de la creation" ne dit
+        // pas quoi faire, alors que "tu as deja un compte" si.
+        setError(RAISONS_SIGNUP[data.reason ?? ""] ?? t("errSignup"));
         setLoading(false);
         return;
       }

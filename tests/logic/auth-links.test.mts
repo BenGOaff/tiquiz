@@ -38,6 +38,62 @@ describe("Véronique : jamais de localhost dans un email", () => {
     assert.equal(resolveAppUrl("   ", "https://quiz.tipote.com"), "https://quiz.tipote.com");
   });
 
+  // ── DRAME BÉNÉ, 22 AOÛT ──
+  //
+  // "Je suis là : https://quiz.tipote.com/auth/forgot-password. Je reçois
+  // le bon email mais il me renvoie sur Tipote putain !!"
+  //
+  // `NEXT_PUBLIC_APP_URL` vaut `https://app.tipote.com` sur le serveur
+  // Tiquiz. Ces tests manquaient : ils ne couvraient QUE les adresses
+  // locales. Une adresse valide qui designe UNE AUTRE APP traversait
+  // tout, et plus personne ne pouvait se connecter.
+
+  test("une variable qui nomme une AUTRE app est ignoree", () => {
+    // Elle est parfaitement valide, joignable, en https. Elle est juste
+    // fausse : on valide l'IDENTITE, pas seulement la FORME.
+    assert.equal(
+      resolveAppUrl("https://app.tipote.com", "https://quiz.tipote.com"),
+      "https://quiz.tipote.com",
+    );
+    // Meme sans origine de requete (un cron, par exemple) : on retombe
+    // sur le domaine canonique, jamais sur l'autre app.
+    assert.equal(resolveAppUrl("https://app.tipote.com", null), CANONICAL_APP_URL);
+    for (const etranger of [
+      "https://quizing.tipote.com",
+      "https://n8n.tipote.com",
+      "https://www.tipote.fr",
+      "https://example.com",
+    ]) {
+      assert.equal(resolveAppUrl(etranger, null), CANONICAL_APP_URL, etranger);
+    }
+  });
+
+  test("la VRAIE valeur du serveur, le 22 aout : http:https://quiz.tipote.com", () => {
+    // Copiee telle quelle du .env de production. `new URL()` la lit comme
+    // protocole "http:" + hostname "https" : une adresse qui ne mene
+    // nulle part. L'ancien code ne refusait que les adresses LOCALES,
+    // donc cette bouillie passait et partait dans les emails.
+    const cassee = "http:https://quiz.tipote.com";
+    assert.equal(resolveAppUrl(cassee, "https://quiz.tipote.com"), "https://quiz.tipote.com");
+    assert.equal(resolveAppUrl(cassee, null), CANONICAL_APP_URL);
+  });
+
+  test("le domaine ou elle navigue gagne sur la variable", () => {
+    // La seule source qui ne peut pas se tromper.
+    assert.equal(
+      resolveAppUrl("https://quiz.tipote.com", "https://tiquiz.fr"),
+      "https://tiquiz.fr",
+    );
+  });
+
+  test("nos domaines de vente sont acceptes, pas ceux d'une creatrice", () => {
+    assert.equal(resolveAppUrl(null, "https://tiquiz.fr"), "https://tiquiz.fr");
+    assert.equal(resolveAppUrl(null, "https://www.tiquiz.fr"), "https://www.tiquiz.fr");
+    // Le domaine personnalise d'une creatrice ne sert PAS nos pages de
+    // compte : un lien de connexion qui y pointerait serait un cul-de-sac.
+    assert.equal(resolveAppUrl(null, "https://lequizdemartine.fr"), CANONICAL_APP_URL);
+  });
+
   test("rien d'exploitable : le domaine canonique, jamais une impasse", () => {
     assert.equal(resolveAppUrl(null, null), CANONICAL_APP_URL);
     assert.equal(resolveAppUrl("pas une url", "non plus"), CANONICAL_APP_URL);

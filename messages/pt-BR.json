@@ -299,7 +299,9 @@
     "errFillAll": "Preencha todos os campos.",
     "errPasswordMin": "A senha deve ter pelo menos 6 caracteres.",
     "errSignup": "Erro ao criar a conta.",
-    "successCheckEmail": "Conta criada! Verifique seu email para confirmar."
+    "successCheckEmail": "Conta criada! Verifique seu email para confirmar.",
+    "errAlreadyRegistered": "Este endereço já tem uma conta Tiquiz. Entre, ou peça uma nova senha.",
+    "errEmailFailed": "Sua conta foi criada mas o email de confirmação não saiu. Escreva para nós e abrimos na mão."
   },
   "callbackPage": {
     "loadingTitle": "Autenticação em andamento…",

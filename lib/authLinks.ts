@@ -20,8 +20,55 @@
 // le jeton elle-même (verifyOtp). Plus aucune liste blanche, plus aucun
 // "Site URL" entre l'utilisateur et son compte.
 
+// DRAME BÉNÉ (22 août 2026), et il est PIRE que celui de Véronique.
+//
+// "Je suis là : https://quiz.tipote.com/auth/forgot-password. Je reçois
+// le bon email mais il me renvoie sur Tipote putain !!"
+//
+// Le lien portait `https://app.tipote.com/auth/callback?token_hash=...`.
+// Elle ne pouvait donc PAS se connecter, et ses utilisatrices non plus.
+//
+// La cause : `NEXT_PUBLIC_APP_URL` vaut `https://app.tipote.com` sur le
+// serveur Tiquiz. La correction du 2 août ne refusait que les adresses
+// LOCALES : une adresse parfaitement valide, mais qui désigne UNE AUTRE
+// APP, traversait tout. **On avait validé la FORME, jamais l'IDENTITÉ.**
+// C'est exactement la leçon du `??` : il ne protège que du manquant,
+// jamais du faux.
+//
+// RÈGLE : le domaine où l'utilisatrice est EN TRAIN de naviguer gagne
+// sur toute variable d'environnement. Une variable ne peut plus que
+// confirmer, jamais contredire. Et une variable qui nomme une autre app
+// est IGNORÉE, pas honorée.
+
 /** Domaine de secours si rien d'exploitable n'est disponible. */
 export const CANONICAL_APP_URL = "https://quiz.tipote.com";
+
+/**
+ * Les domaines où CETTE app sert ses pages de compte.
+ *
+ * Volontairement PLUS COURT que `OWN_HOSTS` (lib/customDomains.ts), qui
+ * contient `app.tipote.com`, `n8n.tipote.com` et les sous-domaines de
+ * service : ils partagent le même serveur mais ne servent pas Tiquiz.
+ * Un lien de connexion qui pointerait sur l'un d'eux est un cul-de-sac.
+ *
+ * À garder en phase avec les vhosts du Caddyfile.
+ */
+export const APP_AUTH_HOSTS: ReadonlySet<string> = new Set([
+  "quiz.tipote.com",
+  "tiquiz.fr",
+  "www.tiquiz.fr",
+]);
+
+/** Cette adresse désigne-t-elle bien NOTRE app ? */
+export function isAppOrigin(raw: string | null | undefined): boolean {
+  const propre = (raw ?? "").trim();
+  if (!isUsableOrigin(propre)) return false;
+  try {
+    return APP_AUTH_HOSTS.has(new URL(propre).hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
 
 function isUsableOrigin(raw: string | null | undefined): boolean {
   if (!raw) return false;
@@ -63,20 +110,32 @@ export function resolvePublicUrl(
 }
 
 /**
- * URL publique de l'app pour un lien envoyé par email.
+ * URL de NOTRE app pour un lien envoyé par email.
  *
- * Ordre : la variable d'environnement si elle est exploitable, sinon
- * l'origine de la requête en cours (le domaine par lequel l'utilisateur
- * est réellement arrivé), sinon le domaine canonique.
+ * Ordre, et il n'est pas négociable :
  *
- * Le repli sur la requête n'est pas cosmétique : c'est ce qui empêche un
- * `.env` de prod mal renseigné de partir en emails cassés.
+ * 1. **l'origine de la requête**, si elle désigne notre app. C'est le
+ *    domaine où l'utilisatrice est en train de naviguer : c'est la seule
+ *    source qui ne peut pas se tromper ;
+ * 2. la variable d'environnement, **uniquement si elle désigne notre
+ *    app**. Elle ne peut donc que confirmer ;
+ * 3. le domaine canonique.
+ *
+ * Une variable qui nomme une autre app (`app.tipote.com` sur le serveur
+ * Tiquiz, le 22 août) est ignorée au lieu d'être suivie. Un `.env` mal
+ * renseigné ne peut plus empêcher personne de se connecter.
  */
 export function resolveAppUrl(
   envUrl: string | null | undefined,
   requestOrigin?: string | null,
 ): string {
-  return resolvePublicUrl(envUrl, CANONICAL_APP_URL, requestOrigin);
+  const origine = (requestOrigin ?? "").trim().replace(/\/$/, "");
+  if (isAppOrigin(origine)) return origine;
+
+  const env = (envUrl ?? "").trim().replace(/\/$/, "");
+  if (isAppOrigin(env)) return env;
+
+  return CANONICAL_APP_URL;
 }
 
 export type AuthLinkType = "recovery" | "magiclink" | "invite" | "signup";
