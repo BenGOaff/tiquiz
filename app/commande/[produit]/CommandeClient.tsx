@@ -260,6 +260,17 @@ export default function CommandeClient({
         <EmbeddedCheckout />
       </EmbeddedCheckoutProvider>
 
+      {/* ET DANS CETTE BRANCHE AUSSI, qui est la seule que voit un
+          acheteur quand tout va bien.
+
+          Bene, 23 aout : "je ne vois pas paypal sur mon bon de commande
+          test. Uniquement Stripe." Le bloc etait rendu dans la branche
+          d'erreur et dans celle sans cle Stripe, et OUBLIE dans celle
+          la. C'est le meme defaut que le `poseSa` du middleware : un
+          bloc conditionnel recopie dans chaque `return`, et celui qui
+          compte est celui qu'on oublie. Le test compte les branches. */}
+      {blocPaypal}
+
       {/* ── CE QUE LES CGV PROMETTENT, ET QUE L'ÉCRAN NE FAISAIT PAS ──
           Nos CGV disent, à l'article 5 : "Cette renonciation est
           recueillie avant paiement." Le bon de commande n'affichait
