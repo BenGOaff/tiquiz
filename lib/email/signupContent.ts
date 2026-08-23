@@ -41,7 +41,7 @@ const COPY: Record<string, TiquizEmailCopy> = {
   },
   es: {
     subject: "Tiquiz: confirma tu correo",
-    heading: "Bienvenida a Tiquiz",
+    heading: "Te damos la bienvenida a Tiquiz",
     intro:
       "Queda un clic. Confirma tu correo y tu cuenta se abre, para crear tu primer quiz enseguida.",
     cta: "Confirmar mi correo",
@@ -52,7 +52,7 @@ const COPY: Record<string, TiquizEmailCopy> = {
   },
   it: {
     subject: "Tiquiz: conferma la tua email",
-    heading: "Benvenuta in Tiquiz",
+    heading: "Ti diamo il benvenuto in Tiquiz",
     intro:
       "Manca un clic. Conferma la tua email e il tuo account si apre, per creare subito il tuo primo quiz.",
     cta: "Confermare la mia email",
@@ -63,7 +63,7 @@ const COPY: Record<string, TiquizEmailCopy> = {
   },
   pt: {
     subject: "Tiquiz: confirma o teu email",
-    heading: "Bem-vinda ao Tiquiz",
+    heading: "Boas-vindas ao Tiquiz",
     intro:
       "Falta um clique. Confirma o teu email e a tua conta abre, para criares o teu primeiro quiz de seguida.",
     cta: "Confirmar o meu email",
@@ -74,7 +74,7 @@ const COPY: Record<string, TiquizEmailCopy> = {
   },
   "pt-BR": {
     subject: "Tiquiz: confirme seu email",
-    heading: "Bem-vinda ao Tiquiz",
+    heading: "Boas-vindas ao Tiquiz",
     intro:
       "Falta um clique. Confirme seu email e sua conta abre, para você criar seu primeiro quiz em seguida.",
     cta: "Confirmar meu email",

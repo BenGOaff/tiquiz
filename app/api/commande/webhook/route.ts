@@ -28,6 +28,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { findOwnerProduct } from "@/lib/checkout/catalog";
 import { downgradeToFreeByEmail, grantPlanByEmail } from "@/lib/checkout/grantPlan";
 import { readRefundOutcome } from "@/lib/checkout/refund";
+import { arreterAbonnementsStripe } from "@/lib/checkout/subscriptionCancel";
 import { sendRefundGoodbyeEmail } from "@/lib/email/refundGoodbyeEmail";
 import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ownerAccount";
 import {
@@ -299,6 +300,36 @@ async function surRemboursement(event: RawEvent): Promise<NextResponse> {
     console.error(`[commande/webhook] retrogradation impossible pour ${email} : ${sortie.reason}`);
     // 502 : on VEUT le reessai, un plan paye reste ouvert sans paiement.
     return NextResponse.json({ ok: false, reason: sortie.reason }, { status: 502 });
+  }
+
+  // ── ON ARRÊTE AUSSI L'ABONNEMENT, ET C'EST INDISPENSABLE ──
+  //
+  // Un remboursement ne touche PAS à l'abonnement chez Stripe : il rend
+  // l'argent d'un paiement, et le calendrier continue. Sans ce bloc, la
+  // personne remboursée est re-prélevée le mois suivant alors que son
+  // accès vient d'être fermé. C'est le pire des deux mondes, et ça
+  // n'apparaît qu'un mois plus tard, sur son relevé.
+  //
+  // `immediat` et pas `fin-de-periode` : la période en cours vient
+  // d'être remboursée, il n'y a plus rien à honorer.
+  // L'identifiant client vient de la VENTE relue chez Stripe. On ne le
+  // lit pas sur la charge : sa forme varie (chaine ou objet etendu), et
+  // raisonner sur la forme supposee d'un payload est exactement ce qui a
+  // coute la journee du 7 aout (drame Ivan).
+  const clientStripe = vente?.customerId ?? null;
+  if (compte && clientStripe) {
+    const stop = await arreterAbonnementsStripe(compte.key, clientStripe, "immediat");
+    if (!stop.ok) {
+      // On ne fait PAS échouer le webhook : l'accès est déjà retiré, et
+      // un réessai rejouerait l'email d'au revoir. On crie, parce qu'un
+      // abonnement encore vivant se règle à la main, tout de suite.
+      console.error(
+        `[commande/webhook] REMBOURSEMENT de ${email} : abonnement NON arrete (${stop.reason}). ` +
+          `A arreter A LA MAIN dans Stripe, sinon elle sera prelevee le mois prochain.`,
+      );
+    } else if (stop.arretes.length) {
+      console.log(`[commande/webhook] abonnement(s) arrete(s) apres remboursement : ${stop.arretes.join(", ")}`);
+    }
   }
 
   // ON SE QUITTE BIEN, ET C'EST NOUS QUI LE DISONS.

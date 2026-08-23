@@ -102,9 +102,9 @@ const COPY: Record<string, PlanOpenedCopy> = {
     footer: "Tiquiz, the quiz tool of the Tipote ecosystem.",
   },
   es: {
-    subjectNouveau: "Tiquiz: bienvenida, tu acceso está abierto",
+    subjectNouveau: "Tiquiz: te damos la bienvenida, tu acceso está abierto",
     subjectMontee: "Tiquiz: tu plan {plan} está abierto",
-    headingNouveau: "Bienvenida a Tiquiz",
+    headingNouveau: "Te damos la bienvenida a Tiquiz",
     headingMontee: "Tu plan está abierto",
     introNouveau:
       "Tu pago se ha realizado y tu cuenta {plan} está abierta. Haz clic en el botón para entrar, no tienes que crear ninguna contraseña.",
@@ -121,9 +121,9 @@ const COPY: Record<string, PlanOpenedCopy> = {
     footer: "Tiquiz, la herramienta de quiz del ecosistema Tipote.",
   },
   it: {
-    subjectNouveau: "Tiquiz: benvenuta, il tuo accesso è aperto",
+    subjectNouveau: "Tiquiz: benvenuto, il tuo accesso è aperto",
     subjectMontee: "Tiquiz: il tuo piano {plan} è aperto",
-    headingNouveau: "Benvenuta in Tiquiz",
+    headingNouveau: "Ti diamo il benvenuto in Tiquiz",
     headingMontee: "Il tuo piano è aperto",
     introNouveau:
       "Il pagamento è andato a buon fine e il tuo account {plan} è aperto. Clicca sul pulsante per entrare, non devi creare nessuna password.",
@@ -140,9 +140,9 @@ const COPY: Record<string, PlanOpenedCopy> = {
     footer: "Tiquiz, lo strumento quiz dell'ecosistema Tipote.",
   },
   pt: {
-    subjectNouveau: "Tiquiz: bem-vinda, o teu acesso está aberto",
+    subjectNouveau: "Tiquiz: boas-vindas, o teu acesso está aberto",
     subjectMontee: "Tiquiz: o teu plano {plan} está aberto",
-    headingNouveau: "Bem-vinda ao Tiquiz",
+    headingNouveau: "Boas-vindas ao Tiquiz",
     headingMontee: "O teu plano está aberto",
     introNouveau:
       "O teu pagamento passou e a tua conta {plan} está aberta. Clica no botão para entrar, não tens de criar palavra-passe.",
@@ -159,9 +159,9 @@ const COPY: Record<string, PlanOpenedCopy> = {
     footer: "Tiquiz, a ferramenta de quiz do ecossistema Tipote.",
   },
   "pt-BR": {
-    subjectNouveau: "Tiquiz: bem-vinda, seu acesso está aberto",
+    subjectNouveau: "Tiquiz: boas-vindas, seu acesso está aberto",
     subjectMontee: "Tiquiz: seu plano {plan} está aberto",
-    headingNouveau: "Bem-vinda ao Tiquiz",
+    headingNouveau: "Boas-vindas ao Tiquiz",
     headingMontee: "Seu plano está aberto",
     introNouveau:
       "Seu pagamento passou e sua conta {plan} está aberta. Clique no botão para entrar, você não precisa criar senha.",

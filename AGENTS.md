@@ -1971,3 +1971,96 @@ qui a été affiché sur le bon de commande), jamais d'un payload.
 `tests/logic/apres-paiement.test.mts` fige les 7 langues, les deux
 situations, l'absence de la phrase "tu as demandé à te connecter", et
 qu'aucune variable `{plan}` ne reste à trou.
+
+## Annuler n'est pas rembourser (Béné, 23 août 2026)
+
+"Je veux annuler et rembourser mon achat test depuis mon dashboard
+admin. Il me faut un bouton pour annuler l'abo directement (l'user doit
+aussi pouvoir le faire en toute autonomie) et un différent pour
+rembourser (ce qui sera plus rare)."
+
+En allant les écrire, DEUX bugs d'argent sont sortis. Les deux étaient
+invisibles tant que personne n'avait payé pour de vrai chez nous.
+
+**1. Annuler coupait l'accès et laissait le prélèvement tourner.**
+`/api/billing/cancel` ne connaissait QUE Systeme.io. Une abonnée Stripe
+qui cliquait "Annuler mon abonnement" tombait dans la branche "aucun
+abonnement actif", **qui retirait son plan en local et répondait ok**.
+Accès fermé, carte prélevée tous les mois. La pire combinaison possible,
+et elle attendait depuis le jour où nous avons encaissé nous mêmes.
+
+**2. Rembourser ne touchait pas à l'abonnement.** On rendait l'argent, on
+fermait l'accès, et Stripe re-prélevait le mois suivant quelqu'un qui
+n'avait plus rien. Ça ne se voit qu'un mois plus tard, sur son relevé.
+
+Les deux sont le défaut de Véronique dans une autre famille : une logique
+écrite pour un cas (Systeme.io) appliquée telle quelle à un autre (nos
+propres encaissements).
+
+**Les deux gestes, et ils ne se confondent jamais :**
+
+| Geste | L'argent | L'accès | Le défaut |
+|---|---|---|---|
+| annuler | reste encaissé | tenu jusqu'à la fin de la période PAYÉE | `fin-de-periode` |
+| rembourser | repart | fermé tout de suite | l'abonnement s'arrête en `immediat` |
+
+**Règle : `lib/checkout/cancelSubscriptions.ts` décide, pour les DEUX
+boutons.** La fiche client (`/api/admin/clients/abonnement`) et l'écran
+de réglages (`/api/billing/cancel`) appellent la même fonction. Deux
+écrans qui décideraient chacun de leur côté finiraient par se
+contredire, et ici la contradiction se compte en euros prélevés.
+
+**`quand` est un paramètre obligatoire**, jamais deviné. Le défaut est la
+fin de période : elle a payé son mois, on ne le lui reprend pas.
+
+**Et on regarde les DEUX fournisseurs.** Une même personne peut avoir un
+abonnement Systeme.io (ses ventes historiques) et un abonnement Stripe
+(notre bon de commande). N'en arrêter qu'un laisse l'autre tourner.
+
+**INTERDIT : retirer un plan parce qu'on n'a "rien trouvé".** "Je n'ai
+rien trouvé" et "je n'ai pas pu regarder" sont deux réponses différentes.
+On n'aligne le plan sur gratuit que si les deux contrôles ont pu
+s'exécuter. Un contrôle en erreur ne touche à rien et le dit.
+
+Au passage : `hasActiveSubscription` ne listait que `monthly` et
+`yearly`, donc une abonnée `monthly_plus` ou `yearly_plus` ne voyait
+AUCUN bouton pour arrêter son abonnement. Les quatre paliers vendus
+vivent dans `OWNER_CATALOG`, et ce sont eux.
+
+**La clé Stripe restreinte doit avoir Abonnements en ÉCRITURE**, sinon
+l'annulation répond `missing_permission`. L'écran le dit en toutes
+lettres au lieu d'un "erreur serveur" qui enverrait chercher un bug dans
+le code. Test : `tests/logic/subscription-cancel.test.mts`.
+
+## On ne vend pas qu'à des femmes (Béné, 23 août 2026)
+
+Sur la page de remerciement du bon de commande : "'Et te voilà dans
+Tiquiz, prête à créer ton premier quiz' : c'est genré automatiquement ou
+tu pars du principe que je ne vends qu'à des femmes ?? Ce qui n'est PAS
+le cas évidemment."
+
+Les prénoms de ce dépôt le disent tout seuls : François Xavier, Éric,
+Maurice, Ivan. Un accord au féminin sur la première page qu'un client
+voit après avoir payé, c'est un message qui dit "ce produit n'est pas
+pour toi", trente secondes après qu'il ait sorti sa carte.
+
+Ce n'était pas un oubli isolé : l'accueil des emails était genré dans
+QUATRE langues (`Bienvenida`, `Benvenuta`, `Bem-vinda` x2) et l'écran de
+session expirée en français et en italien.
+
+**Règle : on tourne la phrase autrement, on ne met pas de point médian.**
+"Prête à créer" devient "avec tout ce qu'il faut pour créer",
+"Bienvenida" devient "Te damos la bienvenida", "Tu as été déconnectée"
+devient "Ta session a expiré". Ça marche dans les 7 langues, alors que
+le point médian n'existe qu'en français.
+
+Nuance assumée, et c'est une décision de Béné à trancher si elle veut :
+l'interface utilise DÉJÀ l'inclusif à trois endroits (`affilié·e`,
+`Prêt·e à booster`, `inscrit·e`), et l'éditeur sait insérer une variante
+selon le genre dans le texte d'un quiz. Ces trois chaînes n'ont pas été
+touchées.
+
+Le filet est `tests/logic/genre-neutre.test.mts`. Il ne crie PAS sur un
+accord avec un nom féminin ("analyse prête", "vidéo prête") : un test qui
+rougit pour rien finit désactivé. Il ne regarde que l'adresse directe au
+lecteur.

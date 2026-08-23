@@ -51,8 +51,26 @@ export const LIENS_LEGAUX: readonly { texte: string; href: string }[] = [
   { texte: "Affiliation", href: "https://www.tipote.fr/affiliation" },
 ];
 
-/** Là où on répond quand quelque chose cloche. */
-export const LIEN_SUPPORT = "https://www.tipote.com/contact";
+/**
+ * Là où on répond quand quelque chose cloche.
+ *
+ * C'était `https://www.tipote.com/contact`, qui n'est ni un domaine à
+ * nous (le nôtre est `tipote.fr`) ni une page de support. Béné, 23 août :
+ * "le support me donne cette url alors que le support n'est pas là du
+ * tout."
+ *
+ * La bonne adresse est NOTRE formulaire, celui du 22 août : il est
+ * public (elle n'a pas besoin d'être connectée pour écrire, et c'est
+ * justement celle qui n'arrive pas à se connecter qui en a le plus
+ * besoin) et il alimente la file de tickets de l'admin. Le centre
+ * d'aide de Tipote (`app.tipote.com/support`) sert les ARTICLES, il n'a
+ * pas de formulaire : y envoyer quelqu'un qui a un problème de paiement
+ * le laisse sans interlocuteur.
+ *
+ * En absolu et pas en relatif : cette page est aussi servie sur
+ * `tiquiz.fr`, où tout chemin non autorisé répond 404.
+ */
+export const LIEN_SUPPORT = "https://quiz.tipote.com/support";
 
 /**
  * Ce qu'on envoie à Stripe pour que son formulaire ressemble à la page
