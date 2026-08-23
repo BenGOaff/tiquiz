@@ -121,13 +121,13 @@
     "projects": "Meus projetos",
     "createSurvey": "Criar uma pesquisa",
     "popquiz": "Popquiz de vídeo",
-    "becomeAffiliate": "Seja um afiliado",
+    "becomeAffiliate": "Entrar no programa de afiliação",
     "atelierNudgeQuestion": "Besoin d'aide pour rendre ton quiz viral et rentable ?",
     "atelierNudgeCta": "Découvre l'Atelier du Quiz",
     "atelierAffNudgeText": "Recommande Tiquiz et l'Atelier du Quiz, jusqu'à 70% de commission",
     "atelierAffNudgeCta": "Mon espace affilié",
     "atelierAffJoinText": "Você pode recomendar o Tiquiz e o Atelier, mesmo sem tê-los.",
-    "atelierAffJoinCta": "Quero ser afiliado",
+    "atelierAffJoinCta": "Entrar no programa de afiliação",
     "adminPanel": "Admin"
   },
   "stats": {
@@ -382,7 +382,7 @@
       "lateNightWithName": "Ainda por aqui {name}? ☕"
     },
     "subtitleRotation": {
-      "0": "Pronto·a para alavancar seu negócio hoje?",
+      "0": "Vamos alavancar seu negócio hoje?",
       "1": "Vamos criar conteúdo que converte?",
       "2": "Um novo dia, uma nova oportunidade ✨",
       "3": "O que vamos lançar hoje?",

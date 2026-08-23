@@ -2054,16 +2054,78 @@ session expirée en français et en italien.
 devient "Ta session a expiré". Ça marche dans les 7 langues, alors que
 le point médian n'existe qu'en français.
 
-Nuance assumée, et c'est une décision de Béné à trancher si elle veut :
-l'interface utilise DÉJÀ l'inclusif à trois endroits (`affilié·e`,
-`Prêt·e à booster`, `inscrit·e`), et l'éditeur sait insérer une variante
-selon le genre dans le texte d'un quiz. Ces trois chaînes n'ont pas été
-touchées.
+**Le 24, elle a tranché la nuance qui restait ouverte.** L'interface
+gardait l'inclusif à trois endroits (`Devenir affilié·e`, `Prêt·e à
+booster`, `Pas encore inscrit·e`), en attendant son avis. Son avis :
+"arrête de penser que je n'ai que des users féminines putain !!! d'où ça
+vient cette merde ??" Ces trois chaînes sont donc TOURNÉES comme les
+autres ("Rejoindre le programme d'affiliation", "On booste ton business
+aujourd'hui ?", "Pas encore dans le programme ?"), et leurs versions
+espagnole et italienne aussi, qui étaient parties en "Lista/o" et
+"Pronta/o" : lister les deux genres n'est pas mieux que d'en imposer un.
 
-Le filet est `tests/logic/genre-neutre.test.mts`. Il ne crie PAS sur un
-accord avec un nom féminin ("analyse prête", "vidéo prête") : un test qui
-rougit pour rien finit désactivé. Il ne regarde que l'adresse directe au
-lecteur.
+**Ne subsiste que l'aide de l'éditeur** qui explique la variante selon le
+genre : elle DOIT montrer un exemple ("cher·e"), sinon la fonctionnalité
+ne s'explique pas. C'est la seule exception du test.
+
+Le filet est `tests/logic/genre-neutre.test.mts`, ici ET dans Tipote
+depuis le 24 (il n'existait que d'un côté, et l'autre portait exactement
+les mêmes fautes : un garde-fou qui ne protège qu'un des deux jumeaux ne
+protège personne). Il ne crie PAS sur un accord avec un nom féminin
+("analyse prête", "vidéo prête") : un test qui rougit pour rien finit
+désactivé. Il ne regarde que l'adresse directe au lecteur.
+
+## Un lien légal ne fait JAMAIS quitter la page (Béné, 24 août 2026)
+
+"Pour toutes les pages créées dans Tiquiz et Tipote : un lien vers la
+politique de confi etc. doit s'ouvrir dans un nouvel onglet et JAMAIS
+faire quitter la page à un visiteur !! D'autant que sur le quiz, la
+personne doit tout recommencer suivant les situations... c'est infernal
+et le genre de choses pratiques auxquelles tu dois penser. Je ne sais pas
+quand ça a sauté mais en tous cas je l'ai demandé et ça a été codé, puis
+retiré."
+
+**Ça n'avait pas sauté : ça n'avait jamais été posé** pour les liens
+écrits par les créatrices. Le code DISAIT le faire. `sanitizeRichText`
+portait `ADD_ATTR: ["target"]` sous le commentaire "Force links to open
+safely", et **`ADD_ATTR` ne fait qu'AUTORISER l'attribut à survivre au
+nettoyage : il n'en ajoute aucun.** Un lien posé dans n'importe quel
+champ riche (consentement, page de résultat, bouton, pied de page)
+sortait donc sans `target`, donc dans le même onglet. Le visiteur à la
+question 7 qui va lire la politique de confidentialité perdait toutes
+ses réponses, et il ne revenait pas : c'est juste avant de laisser son
+email.
+
+Encore une règle écrite en commentaire, donc pas une règle (comme le
+`w-full h-auto` des images de réponse, 4 août).
+
+**Règle, et elle tient en deux moitiés :**
+
+1. **Le sanitizer pose le `target`** (HOOK 3 de `lib/richText.ts`,
+   `afterSanitizeAttributes`), sur tout `<a>` qui a un `href`, avec
+   `rel="noopener noreferrer"` (sans `noopener`, la page ouverte garde
+   une poignée sur la nôtre via `window.opener`). C'est là et pas dans
+   les composants : un lien peut venir de n'importe quel champ de
+   n'importe quel écran, et une règle recopiée dans chaque composant
+   finit toujours par en oublier un.
+2. **Nos liens légaux écrits en dur** utilisent `<a target="_blank">` et
+   jamais `<Link>` de Next, qui fait une navigation INTERNE, c'est à dire
+   exactement ce qu'on ne veut pas.
+
+**Endroits à respecter :** `components/quiz/PublicQuizClient.tsx` (les 3
+branches de `ConsentText`), `components/legal/LegalFooterLinks.tsx` (sous
+les formulaires de connexion et d'inscription),
+`app/commande/[produit]/CommandeClient.tsx` (un paiement en cours),
+`app/support/page.tsx`.
+
+**Ce qui n'est PAS visé :** la navigation ENTRE pages légales. On n'y
+perd rien, et forcer un onglet à chaque clic y serait juste pénible.
+
+Garde-fou : `tests/logic/liens-legaux.test.mts`, qui tient les deux
+moitiés (il SANITISE vraiment, il ne relit pas la source) et qui exige
+que les écrans surveillés portent encore des liens légaux : un test qui
+ne peut plus échouer ment. Le module quiz de Tipote est jumeau : le même
+test y vit.
 
 ## Une seule file de tickets, une porte commune (Béné, 23 août 2026)
 

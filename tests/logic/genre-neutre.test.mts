@@ -83,10 +83,47 @@ test("les tournures neutres sont bien la, pas juste l'ancien texte efface", () =
   }
 });
 
-// NOTE, et c'est une decision de Bene, pas de moi : l'app utilise DEJA
-// l'ecriture inclusive a trois endroits ("affilié·e", "Prêt·e à booster",
-// "inscrit·e"), et le quiz sait meme inserer une variante selon le genre.
-// Ici on a tourne les phrases autrement plutot que d'ajouter des points
-// medians, parce que ca marche dans les 7 langues alors que le point
-// median n'existe qu'en francais. Si Bene tranche pour l'inclusif, c'est
-// ce fichier qu'il faudra reecrire, et les trois chaines ci-dessus avec.
+// ── L'INCLUSIF N'ÉTAIT PAS LA SORTIE NON PLUS (Béné, 24 août 2026) ──
+//
+// "'Toute affiliée' arrête de penser que je n'ai que des users
+// féminines putain !!! d'où ça vient cette merde ??"
+//
+// Le 23 août, trois chaînes avaient été LAISSÉES en écriture inclusive
+// ("Devenir affilié·e", "Prêt·e à booster", "Pas encore inscrit·e"), en
+// attendant qu'elle tranche. Elle a tranché : la sortie est la même que
+// partout ailleurs, on TOURNE LA PHRASE. Le point médian n'existe qu'en
+// français, et les mêmes chaînes en espagnol et en italien étaient
+// parties en "Lista/o" et "Pronta/o", qui ne sont pas mieux : elles
+// listent les deux genres au lieu de n'en imposer aucun.
+//
+// -> "Rejoindre le programme d'affiliation", "On booste ton business
+// aujourd'hui ?", "Pas encore dans le programme ?". Rien à accorder,
+// donc rien à oublier dans les 7 langues.
+
+/** Ce que le quiz sait faire pour SA créatrice n'est pas notre copy. */
+const EXCEPTIONS_INCLUSIF: readonly RegExp[] = [
+  // L'éditeur propose d'insérer une variante selon le genre dans le
+  // texte d'un quiz : cette aide DOIT montrer un exemple ("cher·e"),
+  // sinon la fonctionnalité ne s'explique pas.
+  /Insérer une variante selon le genre/,
+];
+
+test("aucun point median ni double forme dans ce que lit un utilisateur", () => {
+  const motif = /"[^"]*(?:[A-Za-zÀ-ÿ]·[a-zà-ÿ]{1,3}|[A-Za-zÀ-ÿ]{3,}\/[ao](?![A-Za-zÀ-ÿ]))[^"]*"/g;
+  const fautes: string[] = [];
+  for (const locale of ["fr", "en", "es", "it", "pt", "pt-BR", "ar"]) {
+    const fichier = `messages/${locale}.json`;
+    for (const ligne of lire(fichier).match(motif) ?? []) {
+      if (EXCEPTIONS_INCLUSIF.some((e) => e.test(ligne))) continue;
+      fautes.push(`${fichier} : ${ligne}`);
+    }
+  }
+  assert.deepEqual(fautes, [], `tourner la phrase au lieu d'accorder :\n${fautes.join("\n")}`);
+});
+
+test("les tournures neutres du 24 aout sont bien la", () => {
+  const fr = lire("messages/fr.json");
+  assert.match(fr, /Rejoindre le programme d'affiliation/, "le CTA affiliation a disparu");
+  assert.match(fr, /On booste ton business aujourd'hui/, "la rotation du dashboard a disparu");
+  assert.match(fr, /Pas encore dans le programme/, "l'invite affiliation a disparu");
+});
