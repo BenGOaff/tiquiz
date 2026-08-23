@@ -27,7 +27,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const COLONNES =
-  "id, email, name, subject, message, page, status, admin_reply, replied_at, locale, created_at";
+  "id, email, name, subject, message, page, status, admin_reply, replied_at, locale, created_at, product";
 
 /** Combien de tickets on lit d'un coup. Au delà, la file se filtre. */
 const LIMITE = 200;
@@ -54,6 +54,9 @@ function versTicket(r: Record<string, unknown>): Ticket {
     repliedAt: (r.replied_at as string) ?? null,
     locale: String(r.locale ?? "fr"),
     createdAt: String(r.created_at ?? ""),
+    // Repli sur "tiquiz" quand la colonne n'existe pas encore : la file
+    // s'affiche, elle ne tombe pas parce qu'une migration est en retard.
+    product: String(r.product ?? "tiquiz"),
   };
 }
 

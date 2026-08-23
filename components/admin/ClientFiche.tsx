@@ -29,6 +29,7 @@ import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   ArrowLeft,
+  CalendarX,
   CreditCard,
   Loader2,
   Mail,
@@ -84,6 +85,22 @@ const RAISONS_REMBOURSEMENT: Record<string, string> = {
     "Ta clé Stripe n'a pas le droit de rembourser. Dans Stripe, ouvre ta clé restreinte et passe Remboursements en Écriture. Rien n'a été remboursé.",
   provider_refused: "Le fournisseur a refusé le remboursement. Rien n'a été remboursé.",
   network: "La connexion au fournisseur a échoué. Rien n'a été remboursé.",
+};
+
+/** Ce que le serveur refuse, dit en une phrase exploitable. */
+const RAISONS_ABONNEMENT: Record<string, string> = {
+  forbidden: "Tu n'as pas les droits pour arrêter un abonnement.",
+  invalid_body: "Cette adresse n'est pas exploitable.",
+  already_free: "Ce compte est déjà en gratuit : il n'y a aucun abonnement à arrêter.",
+  lifetime_plan: "Ce palier est à vie, il n'y a pas d'abonnement derrière.",
+  not_configured: "La clé de paiement n'est pas posée sur le serveur.",
+  missing_permission:
+    "Ta clé Stripe n'a pas le droit d'arrêter un abonnement. Dans Stripe, ouvre ta clé restreinte et passe Abonnements en Écriture. Rien n'a été arrêté.",
+  provider_refused: "Stripe a refusé l'annulation. Rien n'a été arrêté.",
+  sio_unreachable: "Systeme.io n'est pas joignable. Rien n'a été arrêté, réessaie.",
+  network: "La connexion a échoué. Rien n'a été arrêté.",
+  unreadable:
+    "Impossible de vérifier ses abonnements, donc rien n'a été touché : mieux vaut ça qu'un accès coupé pendant que le prélèvement continue.",
 };
 
 const RAISONS_PAGE: Record<string, string> = {
@@ -279,6 +296,59 @@ export default function ClientFiche({ email }: { email: string }) {
       }
     } catch {
       toast.error("La connexion a échoué. Le compte n'a pas été supprimé.");
+    } finally {
+      setEnCours(null);
+    }
+  }
+
+  /**
+   * ARRÊTER L'ABONNEMENT. Ce n'est PAS rembourser.
+   *
+   * Béné, 23 août : "il me faut un bouton pour annuler l'abo directement
+   * et un différent pour rembourser (ce qui sera plus rare)."
+   *
+   * Le défaut est la fin de période : la personne a payé son mois, on ne
+   * lui reprend pas ce qu'elle a acheté. L'immédiat existe pour les cas
+   * où l'argent repart aussi.
+   */
+  async function annulerAbonnement(immediat: boolean) {
+    const phrase = immediat
+      ? `Arrêter TOUT DE SUITE l'abonnement de ${email} ?\n\nLe prélèvement s'arrête et l'accès repasse en gratuit immédiatement. À réserver aux cas où l'argent repart aussi.`
+      : `Arrêter l'abonnement de ${email} ?\n\nPlus aucun prélèvement. L'accès reste ouvert jusqu'à la fin de la période déjà payée, puis repasse en gratuit tout seul.`;
+    if (!window.confirm(phrase)) return;
+    setEnCours("abo");
+    try {
+      const res = await fetch("/api/admin/clients/abonnement", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, quand: immediat ? "immediat" : "fin-de-periode" }),
+      });
+      const j = (await res.json()) as {
+        ok?: boolean;
+        reason?: string;
+        arretes?: Array<{ fournisseur: string; id: string }>;
+        aucunAbonnement?: boolean;
+        finLe?: string | null;
+      };
+      if (!j.ok) {
+        toast.error(RAISONS_ABONNEMENT[j.reason ?? ""] ?? "L'abonnement n'a pas pu être arrêté.");
+        return;
+      }
+      if (j.aucunAbonnement) {
+        toast.success("Aucun abonnement en cours : le palier a été aligné sur gratuit.");
+      } else if (immediat) {
+        toast.success(`${j.arretes?.length ?? 0} abonnement(s) arrêté(s), accès fermé.`);
+      } else {
+        const fin = j.finLe ? new Date(j.finLe).toLocaleDateString("fr-FR") : null;
+        toast.success(
+          fin
+            ? `Abonnement arrêté. Accès conservé jusqu'au ${fin}.`
+            : "Abonnement arrêté. Accès conservé jusqu'à la fin de la période payée.",
+        );
+      }
+      await charger();
+    } catch {
+      toast.error("La connexion a échoué. L'abonnement n'a pas été arrêté.");
     } finally {
       setEnCours(null);
     }
@@ -614,6 +684,36 @@ export default function ClientFiche({ email }: { email: string }) {
                       )}
                       Lui renvoyer ses accès
                     </Button>
+                    {/* ARRÊTER L'ABONNEMENT, distinct de REMBOURSER.
+                        Rembourser vit sur la ligne de la vente, parce
+                        qu'on rembourse UN paiement ; annuler vit ici,
+                        parce qu'on annule UN abonnement. */}
+                    {p.plan !== "free" && p.plan !== "beta" && p.plan !== "lifetime" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void annulerAbonnement(false)}
+                          disabled={enCours === "abo"}
+                        >
+                          {enCours === "abo" ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <CalendarX className="size-4" />
+                          )}
+                          Arrêter l&apos;abonnement
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={() => void annulerAbonnement(true)}
+                          disabled={enCours === "abo"}
+                        >
+                          Arrêter tout de suite
+                        </Button>
+                      </>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"

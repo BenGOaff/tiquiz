@@ -122,7 +122,7 @@ export default async function Page({
                 },
                 {
                   titre: "Tes accès",
-                  detail: "Et te voilà dans Tiquiz, prête à créer ton premier quiz.",
+                  detail: "Et te voilà dans Tiquiz, avec tout ce qu'il faut pour créer ton premier quiz.",
                 },
               ].map((etape, i) => (
                 <li key={etape.titre} className="flex gap-3">

@@ -1971,3 +1971,157 @@ qui a été affiché sur le bon de commande), jamais d'un payload.
 `tests/logic/apres-paiement.test.mts` fige les 7 langues, les deux
 situations, l'absence de la phrase "tu as demandé à te connecter", et
 qu'aucune variable `{plan}` ne reste à trou.
+
+## Annuler n'est pas rembourser (Béné, 23 août 2026)
+
+"Je veux annuler et rembourser mon achat test depuis mon dashboard
+admin. Il me faut un bouton pour annuler l'abo directement (l'user doit
+aussi pouvoir le faire en toute autonomie) et un différent pour
+rembourser (ce qui sera plus rare)."
+
+En allant les écrire, DEUX bugs d'argent sont sortis. Les deux étaient
+invisibles tant que personne n'avait payé pour de vrai chez nous.
+
+**1. Annuler coupait l'accès et laissait le prélèvement tourner.**
+`/api/billing/cancel` ne connaissait QUE Systeme.io. Une abonnée Stripe
+qui cliquait "Annuler mon abonnement" tombait dans la branche "aucun
+abonnement actif", **qui retirait son plan en local et répondait ok**.
+Accès fermé, carte prélevée tous les mois. La pire combinaison possible,
+et elle attendait depuis le jour où nous avons encaissé nous mêmes.
+
+**2. Rembourser ne touchait pas à l'abonnement.** On rendait l'argent, on
+fermait l'accès, et Stripe re-prélevait le mois suivant quelqu'un qui
+n'avait plus rien. Ça ne se voit qu'un mois plus tard, sur son relevé.
+
+Les deux sont le défaut de Véronique dans une autre famille : une logique
+écrite pour un cas (Systeme.io) appliquée telle quelle à un autre (nos
+propres encaissements).
+
+**Les deux gestes, et ils ne se confondent jamais :**
+
+| Geste | L'argent | L'accès | Le défaut |
+|---|---|---|---|
+| annuler | reste encaissé | tenu jusqu'à la fin de la période PAYÉE | `fin-de-periode` |
+| rembourser | repart | fermé tout de suite | l'abonnement s'arrête en `immediat` |
+
+**Règle : `lib/checkout/cancelSubscriptions.ts` décide, pour les DEUX
+boutons.** La fiche client (`/api/admin/clients/abonnement`) et l'écran
+de réglages (`/api/billing/cancel`) appellent la même fonction. Deux
+écrans qui décideraient chacun de leur côté finiraient par se
+contredire, et ici la contradiction se compte en euros prélevés.
+
+**`quand` est un paramètre obligatoire**, jamais deviné. Le défaut est la
+fin de période : elle a payé son mois, on ne le lui reprend pas.
+
+**Et on regarde les DEUX fournisseurs.** Une même personne peut avoir un
+abonnement Systeme.io (ses ventes historiques) et un abonnement Stripe
+(notre bon de commande). N'en arrêter qu'un laisse l'autre tourner.
+
+**INTERDIT : retirer un plan parce qu'on n'a "rien trouvé".** "Je n'ai
+rien trouvé" et "je n'ai pas pu regarder" sont deux réponses différentes.
+On n'aligne le plan sur gratuit que si les deux contrôles ont pu
+s'exécuter. Un contrôle en erreur ne touche à rien et le dit.
+
+Au passage : `hasActiveSubscription` ne listait que `monthly` et
+`yearly`, donc une abonnée `monthly_plus` ou `yearly_plus` ne voyait
+AUCUN bouton pour arrêter son abonnement. Les quatre paliers vendus
+vivent dans `OWNER_CATALOG`, et ce sont eux.
+
+**La clé Stripe restreinte doit avoir Abonnements en ÉCRITURE**, sinon
+l'annulation répond `missing_permission`. L'écran le dit en toutes
+lettres au lieu d'un "erreur serveur" qui enverrait chercher un bug dans
+le code. Test : `tests/logic/subscription-cancel.test.mts`.
+
+## On ne vend pas qu'à des femmes (Béné, 23 août 2026)
+
+Sur la page de remerciement du bon de commande : "'Et te voilà dans
+Tiquiz, prête à créer ton premier quiz' : c'est genré automatiquement ou
+tu pars du principe que je ne vends qu'à des femmes ?? Ce qui n'est PAS
+le cas évidemment."
+
+Les prénoms de ce dépôt le disent tout seuls : François Xavier, Éric,
+Maurice, Ivan. Un accord au féminin sur la première page qu'un client
+voit après avoir payé, c'est un message qui dit "ce produit n'est pas
+pour toi", trente secondes après qu'il ait sorti sa carte.
+
+Ce n'était pas un oubli isolé : l'accueil des emails était genré dans
+QUATRE langues (`Bienvenida`, `Benvenuta`, `Bem-vinda` x2) et l'écran de
+session expirée en français et en italien.
+
+**Règle : on tourne la phrase autrement, on ne met pas de point médian.**
+"Prête à créer" devient "avec tout ce qu'il faut pour créer",
+"Bienvenida" devient "Te damos la bienvenida", "Tu as été déconnectée"
+devient "Ta session a expiré". Ça marche dans les 7 langues, alors que
+le point médian n'existe qu'en français.
+
+Nuance assumée, et c'est une décision de Béné à trancher si elle veut :
+l'interface utilise DÉJÀ l'inclusif à trois endroits (`affilié·e`,
+`Prêt·e à booster`, `inscrit·e`), et l'éditeur sait insérer une variante
+selon le genre dans le texte d'un quiz. Ces trois chaînes n'ont pas été
+touchées.
+
+Le filet est `tests/logic/genre-neutre.test.mts`. Il ne crie PAS sur un
+accord avec un nom féminin ("analyse prête", "vidéo prête") : un test qui
+rougit pour rien finit désactivé. Il ne regarde que l'adresse directe au
+lecteur.
+
+## Une seule file de tickets, une porte commune (Béné, 23 août 2026)
+
+"S'il n'a pas reçu ses accès, comment il accède à
+`quiz.tipote.com/support` ? Pas con hein ??? Je veux un service de
+ticketing dans le centre d'aide commun à toutes les app, essentiellement
+pour Tiquiz et L'Atelier qui sont vendus en ce moment, avec ticket relié
+à la fiche client si elle existe."
+
+**Sur le détail, notre formulaire était déjà public** (aucun compte
+demandé, c'est écrit dans `app/support/page.tsx`). Sur le fond elle a
+raison : quelqu'un dont rien ne marche ne sait pas sur QUELLE app écrire,
+et il ne devrait pas avoir à le savoir.
+
+**Et surtout, il y avait DEUX files.** `support_tickets` chez Tipote
+depuis le 12 mars (les escalades du robot d'aide, avec la conversation)
+et `support_tickets` ici depuis le 22 août (le formulaire). Deux bases,
+deux écrans d'admin, aucun des deux ne connaissant L'Atelier. Une demande
+pouvait attendre des jours dans celle qu'on ne regardait pas.
+
+**Règle : la PORTE est commune, la FILE est unique et vit ici.**
+
+| Où | Quoi |
+|---|---|
+| `app.tipote.com/support` | les 57 articles, le robot, ET le formulaire de contact (7 langues, sélecteur de produit) |
+| `quiz.tipote.com/support` | le formulaire dans l'app, qui pré-remplit l'adresse quand une session existe |
+| l'Atelier, menu "Besoin d'aide ?" | mène au centre d'aide avec `?produit=atelier` |
+| **la file** | `support_tickets` de TIQUIZ, affichée dans `/admin` et sur la fiche client |
+
+La file vit ici et pas chez Tipote pour la raison déjà écrite le 22 août :
+le ticket doit s'afficher sur la FICHE CLIENT, à côté des accès, des
+paiements et du statut Atelier, et c'est l'admin de Tiquiz qui porte
+cette fiche. **Une donnée dans une autre base est une donnée qu'on ne
+croisera jamais.**
+
+**Le chemin :** le centre d'aide POSTe sur son `/api/support/ticket`
+(Tipote), qui relaie vers `/api/partner/support-ticket` (ici) avec
+`x-partner-secret`. Le secret ne protège rien de confidentiel (l'autre
+porte est publique) : il sert à SAUTER LA LIMITE PAR IP, parce qu'un
+relais serveur à serveur arrive toujours de la même adresse et couperait
+tout le centre d'aide dès la sixième personne. Tipote applique SA limite,
+sur l'IP réelle, avant de relayer.
+
+**Si le relais échoue, on écrit dans la table locale de Tipote et on crie
+dans le journal.** Elle a vu "envoyé" : la demande doit exister quelque
+part. L'écran d'admin de Tipote garde donc l'historique, et porte un
+bandeau qui dit où est la file vivante. Sans ce bandeau, Béné
+surveillerait un écran qui ne bouge plus.
+
+**`product` est validé, jamais écrit tel quel** (`lib/support/produit.ts`,
+alias `formaquiz` et `quizing` acceptés). Valeur inconnue -> `tiquiz`, le
+défaut de la colonne : un ticket mal étiqueté reste lisible, un ticket
+refusé est une cliente sans réponse.
+
+**Et l'écriture se replie sur l'ancienne forme** si la migration n'est
+pas encore passée : PostgREST rejette l'écriture ENTIÈRE sur une colonne
+inconnue, donc sans repli un déploiement en avance perdrait TOUS les
+tickets en silence (drame `quiz_events.meta`, 15 jours de stats perdues).
+
+Test : `tests/logic/support-ticketing.test.mts` ici,
+`tests/logic/support-relay.test.mts` côté Tipote.

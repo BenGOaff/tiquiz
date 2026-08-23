@@ -467,7 +467,17 @@ export default function SettingsClient() {
 
   const currentPlan = profile?.plan ?? "free";
   const isLifetimePlan = currentPlan === "beta" || currentPlan === "lifetime";
-  const hasActiveSubscription = currentPlan === "monthly" || currentPlan === "yearly";
+  // LES PALIERS PLUS COMPTENT AUSSI.
+  //
+  // Cette ligne ne listait que `monthly` et `yearly` : une abonnee
+  // `monthly_plus` ou `yearly_plus` ne voyait AUCUN bouton pour arreter
+  // son abonnement, donc son seul recours etait de nous ecrire. Les
+  // quatre paliers vendus vivent dans `OWNER_CATALOG`, et ce sont eux.
+  const hasActiveSubscription =
+    currentPlan === "monthly" ||
+    currentPlan === "yearly" ||
+    currentPlan === "monthly_plus" ||
+    currentPlan === "yearly_plus";
 
   return (
     <div className="space-y-5">

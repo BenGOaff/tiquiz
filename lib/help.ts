@@ -38,3 +38,23 @@ export function helpUrl(locale: string, path = "tiquiz"): string {
   // validation ici, mais un encodage, parce que c'est une query string.
   return `${base}?lang=${encodeURIComponent(locale)}`;
 }
+
+/**
+ * LE CHEMIN VERS UN HUMAIN, depuis n'importe quelle app.
+ *
+ * Béné, 23 août 2026 : "s'il n'a pas reçu ses accès, comment il accède à
+ * quiz.tipote.com/support ? Pas con hein ??? Je veux un service de
+ * ticketing dans le centre d'aide commun à toutes les app."
+ *
+ * Le formulaire de Tiquiz est bien public (aucun compte demandé), mais
+ * ce n'est pas la question : personne ne devrait avoir à deviner sur
+ * QUELLE app écrire quand justement rien ne marche. Le centre d'aide est
+ * l'adresse commune aux trois produits, et son formulaire relaie dans la
+ * file unique.
+ *
+ * `produit` pré-sélectionne l'outil : l'app qui envoie le sait, la
+ * personne n'a pas à le redire.
+ */
+export function contactUrl(locale: string, produit = "tiquiz"): string {
+  return `${HELP_BASE}?lang=${encodeURIComponent(locale)}&produit=${encodeURIComponent(produit)}`;
+}

@@ -43,6 +43,7 @@ function ticket(over: Partial<Ticket> = {}): Ticket {
     repliedAt: null,
     locale: "fr",
     createdAt: "2026-08-22T17:00:00Z",
+    product: "tiquiz",
     ...over,
   };
 }

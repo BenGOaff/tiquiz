@@ -31,6 +31,7 @@ import {
   type Ticket,
   type TicketStatus,
 } from "@/lib/support/tickets";
+import { nomProduit } from "@/lib/support/produit";
 
 const ETATS: Record<TicketStatus, { label: string; classe: string }> = {
   open: { label: "En attente", classe: "bg-amber-100 text-amber-900" },
@@ -227,6 +228,14 @@ export default function SupportCard({ email }: { email?: string }) {
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge className={`${ETATS[t.status].classe} border-0`}>
                     {ETATS[t.status].label}
+                  </Badge>
+                  {/* DE QUEL PRODUIT ON PARLE. La file est commune aux
+                      trois apps depuis le 23 aout : sans ce libelle,
+                      "je n'ai pas recu mes acces" ne dit pas s'il s'agit
+                      de Tiquiz ou de L'Atelier, et la reponse tombe a
+                      cote. */}
+                  <Badge variant="outline" className="border-primary/40 text-primary">
+                    {nomProduit(t.product)}
                   </Badge>
                   {retard && <AlertTriangle className="size-4 text-destructive" />}
                   {/* D'UN TICKET A LA FICHE : tout ce qu'on sait d'elle,
