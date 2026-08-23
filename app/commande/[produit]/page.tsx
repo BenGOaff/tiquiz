@@ -49,7 +49,11 @@ import {
   formatOwnerPrice,
   ownerBillingKey,
 } from "@/lib/checkout/catalog";
-import { readOwnerStripe, readOwnerStripePublishable } from "@/lib/checkout/ownerAccount";
+import {
+  readOwnerPaypal,
+  readOwnerStripe,
+  readOwnerStripePublishable,
+} from "@/lib/checkout/ownerAccount";
 import { isSalesOpen } from "@/lib/sales/previewGate";
 import CommandeClient from "./CommandeClient";
 
@@ -107,6 +111,11 @@ export default async function Page({
   const publiable = readOwnerStripePublishable(process.env);
   const secrete = readOwnerStripe(process.env);
   const modesDiscordants = !!publiable && !!secrete && publiable.mode !== secrete.mode;
+
+  // PayPal a son propre sort : une clé Stripe manquante ne doit pas
+  // faire disparaître le bouton PayPal, sinon l'acheteur arrive sur une
+  // page sans aucun moyen de payer alors qu'il en reste un qui marche.
+  const paypalDisponible = !!readOwnerPaypal(process.env);
 
   return (
     // Le fond clair est posé ici, pas hérité : cette page est publique et
@@ -179,6 +188,7 @@ export default async function Page({
           <section className="lg:sticky lg:top-8">
             <div className="rounded-2xl border border-[#e4e7f5] bg-white p-3 shadow-[0_8px_30px_rgba(43,50,100,0.06)] sm:p-4">
               <CommandeClient
+                paypalDisponible={paypalDisponible}
                 produit={product.id}
                 cle={cle}
                 clePublique={modesDiscordants ? null : (publiable?.key ?? null)}
@@ -186,7 +196,7 @@ export default async function Page({
               />
             </div>
             <p className="mt-3 text-center text-xs text-[#8890b5]">
-              Paiement sécurisé par Stripe. Accès immédiat. Facture envoyée par email.
+              {paypalDisponible ? "Paiement sécurisé par Stripe ou PayPal. Accès immédiat." : "Paiement sécurisé par Stripe. Accès immédiat. Facture envoyée par email."}
             </p>
           </section>
         </div>

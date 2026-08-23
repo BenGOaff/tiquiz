@@ -177,3 +177,24 @@ export function readOwnerProviders(env: EnvSource): OwnerProviders {
     mixedModes: modes.length === 2 && modes[0] !== modes[1],
   };
 }
+
+/**
+ * L'identifiant du webhook PayPal, celui qui permet de VÉRIFIER un
+ * événement.
+ *
+ * Contrairement à Stripe, PayPal ne signe pas avec un secret partagé :
+ * on lui redemande, à chaque événement, s'il l'a bien émis, et cette
+ * question exige l'identifiant du webhook. Sans lui, on ne peut rien
+ * vérifier, donc l'adresse accepterait n'importe quel corps : ce serait
+ * distribuer des abonnements gratuits à qui connaît l'URL.
+ *
+ * `scripts/paypal-setup.mjs` le crée et l'affiche : il n'y a pas à aller
+ * le chercher à la main dans le tableau de bord PayPal.
+ */
+export function readOwnerPaypalWebhookId(env: EnvSource): string | null {
+  const id = String(env.PAYPAL_WEBHOOK_ID_OWNER ?? "").trim();
+  // Les identifiants PayPal ressemblent à "1JE12345LM678901N". On ne
+  // valide que la forme générale : une valeur vide ou un reste de
+  // copier-coller ne doit pas passer pour un identifiant.
+  return /^[A-Za-z0-9-]{8,}$/.test(id) ? id : null;
+}

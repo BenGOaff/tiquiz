@@ -156,6 +156,54 @@ if (stripeLive && !secretWebhook) {
   bloquants += 1;
 }
 
+console.log("\n  PayPal, sur le meme bon de commande");
+// Les deux verifications sont evaluees AVANT d'etre combinees : un `&&`
+// direct court-circuite le second appel, donc la ligne "PAYPAL_SECRET_OWNER"
+// disparaissait du rapport des que le Client ID manquait. Un controle qui
+// cache une ligne envoie chercher au mauvais endroit.
+const paypalId = verifier("PAYPAL_CLIENT_ID_OWNER", {
+  requis: false,
+  minimum: 20,
+  quoi: "Sans elle, pas de bouton PayPal du tout.",
+});
+const paypalSecret = verifier("PAYPAL_SECRET_OWNER", {
+  requis: false,
+  minimum: 20,
+  quoi: "Le secret de la meme app PayPal que le Client ID.",
+});
+const paypalPose = paypalId && paypalSecret;
+const paypalLive = lire("PAYPAL_ENV_OWNER").toLowerCase() === "live";
+verifier("PAYPAL_ENV_OWNER", {
+  requis: false,
+  quoi:
+    "ABSENTE = bac a sable. Des identifiants REELS envoyes a l'API du bac a sable\n" +
+    "       sont refuses, et le message ne dit pas pourquoi. Poser PAYPAL_ENV_OWNER=live.",
+});
+const webhookPaypal = verifier("PAYPAL_WEBHOOK_ID_OWNER", {
+  requis: false,
+  minimum: 8,
+  quoi: "npm run paypal:setup la cree et affiche la ligne a coller.",
+});
+console.log(lignes.splice(0).join("\n"));
+
+if (paypalPose && paypalLive && !webhookPaypal) {
+  console.log(
+    "\n  ATTENTION : PayPal est en REEL et l'identifiant de webhook manque.\n" +
+      "  Le paiement PayPal se refuse tout seul, et c'est voulu : sinon un\n" +
+      "  abonnement serait preleve en face d'aucun acces.\n" +
+      "  -> npm run paypal:setup",
+  );
+  bloquants += 1;
+}
+
+if (paypalPose && !paypalLive && stripeLive) {
+  console.log(
+    "\n  ATTENTION : Stripe est en REEL et PayPal en bac a sable.\n" +
+      "  L'ecran annonce un seul mode : un des deux boutons ment.",
+  );
+  bloquants += 1;
+}
+
 console.log("\n  Ventes Systeme.io");
 verifier("SYSTEME_IO_WEBHOOK_SECRET", {
   requis: false,

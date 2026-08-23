@@ -43,7 +43,20 @@ const RAISONS: Record<string, string> = {
   invalid_body: "Requête illisible.",
 };
 
+/** Les raisons propres à PayPal, avec la même règle : jamais un cadre muet. */
+const RAISONS_PAYPAL: Record<string, string> = {
+  not_configured: "Le compte PayPal n'est pas branché sur ce serveur. Rien n'a été débité.",
+  invalid_email: "Cette adresse email ne semble pas valide.",
+  invalid_product: "Ce palier ne peut pas être vendu en abonnement PayPal.",
+  paypal_refused: "PayPal a refusé d'ouvrir le paiement. Rien n'a été débité.",
+  no_approval_link: "PayPal n'a pas renvoyé de page de paiement. Rien n'a été débité.",
+  live_without_webhook:
+    "Le paiement PayPal est bloqué tant que l'ouverture automatique des accès n'est pas branchée. Rien n'a été débité.",
+  network: "La connexion à PayPal a échoué. Rien n'a été débité.",
+};
+
 export default function CommandeClient({
+  paypalDisponible = false,
   produit,
   cle,
   clePublique,
@@ -54,9 +67,14 @@ export default function CommandeClient({
   clePublique: string | null;
   /** Clé secrète et clé publiable pas dans le même monde (live vs test). */
   modesDiscordants?: boolean;
+  /** Le compte PayPal de Béné est branché sur ce serveur. */
+  paypalDisponible?: boolean;
 }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [mode, setMode] = useState<string | null>(null);
+  const [emailPaypal, setEmailPaypal] = useState("");
+  const [paypalEnCours, setPaypalEnCours] = useState(false);
+  const [erreurPaypal, setErreurPaypal] = useState<string | null>(null);
 
   // La clé publiable est indispensable au navigateur. Sans elle, le cadre
   // resterait vide sans dire pourquoi : on le dit, et on distingue les
@@ -123,16 +141,110 @@ export default function CommandeClient({
     [clePublique],
   );
 
+  // ── PAYPAL ──
+  //
+  // Beaucoup de gens n'ont pas envie de sortir leur carte et paient en
+  // PayPal ou pas du tout. Un bon de commande sans PayPal, ce ne sont
+  // pas des ventes qui passent ailleurs, ce sont des ventes qui ne se
+  // font pas.
+  //
+  // L'ADRESSE EST DEMANDÉE ICI, et c'est la différence avec Stripe.
+  // Stripe la collecte dans son formulaire ; PayPal emmène l'acheteur
+  // chez lui et nous rendra l'adresse de SON COMPTE PayPal, qui n'est
+  // pas toujours celle qu'il utilise chez nous. Ouvrir l'accès sur
+  // celle-là fabriquerait un compte orphelin, ce que l'Atelier a
+  // rencontré le 7 août sur les commandes de bonus.
+  async function partirSurPaypal() {
+    if (paypalEnCours) return;
+    const adresse = emailPaypal.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adresse)) {
+      setErreurPaypal("Indique l'adresse email sur laquelle tu veux recevoir tes accès.");
+      return;
+    }
+    setErreurPaypal(null);
+    setPaypalEnCours(true);
+    try {
+      const r = await fetch("/api/commande/paypal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ produit, email: adresse, k: cle, ref: refAffiliee() }),
+      });
+      const data = (await r.json().catch(() => ({}))) as {
+        ok?: boolean;
+        approveUrl?: string;
+        reason?: string;
+      };
+      if (data.ok && data.approveUrl) {
+        window.location.assign(data.approveUrl);
+        return;
+      }
+      setErreurPaypal(
+        RAISONS_PAYPAL[data.reason ?? ""] ?? "PayPal n'a pas pu ouvrir le paiement.",
+      );
+    } catch {
+      setErreurPaypal("La connexion a coupé avant d'ouvrir PayPal. Rien n'a été débité.");
+    } finally {
+      setPaypalEnCours(false);
+    }
+  }
+
+  // UNE PANNE DE CARTE NE DOIT PAS EMPORTER PAYPAL.
+  //
+  // Une clé Stripe absente faisait disparaître tout le composant, donc
+  // l'acheteur se retrouvait devant une page sans AUCUN moyen de payer
+  // alors qu'il en restait un qui marchait. Deux moyens de paiement,
+  // deux sorts indépendants : ce bloc est rendu dans toutes les
+  // branches, y compris celle de l'erreur.
+  const blocPaypal = paypalDisponible ? (
+    <div className="mt-5">
+      <div className="mb-4 flex items-center gap-3">
+        <span className="h-px flex-1 bg-border" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          ou
+        </span>
+        <span className="h-px flex-1 bg-border" />
+      </div>
+      <label className="mb-2 block text-sm font-medium">
+        Ton adresse email
+        <input
+          type="email"
+          value={emailPaypal}
+          onChange={(e) => setEmailPaypal(e.target.value)}
+          placeholder="celle qui recevra tes accès"
+          className="mt-1 w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+      </label>
+      <button
+        type="button"
+        onClick={() => void partirSurPaypal()}
+        disabled={paypalEnCours}
+        className="w-full rounded-lg border bg-card px-4 py-3 text-sm font-bold transition hover:bg-muted disabled:cursor-wait disabled:opacity-60"
+      >
+        {paypalEnCours ? "Ouverture de PayPal..." : "Payer avec PayPal"}
+      </button>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Sur PayPal, la TVA n&apos;est pas ventilée par pays : tu paies exactement le prix
+        affiché, comme par carte.
+      </p>
+      {erreurPaypal && (
+        <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-900">{erreurPaypal}</p>
+      )}
+    </div>
+  ) : null;
+
   if (erreur) {
     return (
+      <div>
       <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-900">
         <p className="font-semibold">Le paiement n&apos;a pas pu s&apos;ouvrir.</p>
         <p className="mt-1">{erreur}</p>
       </div>
+      {blocPaypal}
+      </div>
     );
   }
 
-  if (!clePublique) return null;
+  if (!clePublique) return <div>{blocPaypal}</div>;
 
   return (
     <div>

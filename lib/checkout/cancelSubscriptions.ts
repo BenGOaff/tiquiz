@@ -27,7 +27,8 @@
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { downgradeToFreeByEmail } from "@/lib/checkout/grantPlan";
-import { readOwnerStripe } from "@/lib/checkout/ownerAccount";
+import { readOwnerPaypal, readOwnerStripe } from "@/lib/checkout/ownerAccount";
+import { cancelOwnerPaypalSubscription } from "@/lib/checkout/paypalOwner";
 import {
   annulerAbonnementOwner,
   listerAbonnementsOwner,
@@ -43,7 +44,7 @@ import {
 const PLANS_A_VIE: ReadonlySet<string> = new Set(["beta", "lifetime"]);
 
 export interface AbonnementArrete {
-  fournisseur: "stripe" | "systeme-io";
+  fournisseur: "stripe" | "paypal" | "systeme-io";
   id: string;
   /** La date jusqu'à laquelle l'accès est payé, en ISO. */
   finLe: string | null;
@@ -122,6 +123,41 @@ export async function annulerAbonnementsDe(args: {
     }
   } else if (clientStripe && !compte) {
     // On SAIT qu'elle a payé chez nous et on ne peut pas vérifier : ne
+    // surtout pas conclure qu'il n'y a rien.
+    toutLu = false;
+    echec = echec ?? "not_configured";
+  }
+
+  // ── PAYPAL, notre bon de commande aussi ──
+  //
+  // **PayPal ne connaît pas la fin de période.** Chez Stripe,
+  // `cancel_at_period_end` laisse l'accès courir jusqu'à la date payée ;
+  // ici, `cancel` arrête le prélèvement tout de suite, et c'est tout ce
+  // que PayPal sait faire. On ne fait donc PAS semblant : le
+  // prélèvement s'arrête maintenant dans les deux cas, et c'est NOUS qui
+  // tenons l'accès jusqu'à la date déjà payée quand elle a choisi la fin
+  // de période (le plan n'est pas retiré plus bas).
+  //
+  // Conséquence honnête, à dire à l'écran : sur PayPal, "fin de période"
+  // veut dire "tu gardes l'accès jusqu'à la date payée", pas "PayPal te
+  // prélèvera encore une fois".
+  const comptePaypal = readOwnerPaypal(process.env);
+  const aboPaypal =
+    String((profil as { paypal_subscription_id?: string | null } | null)?.paypal_subscription_id ?? "").trim();
+  if (comptePaypal && aboPaypal) {
+    const r = await cancelOwnerPaypalSubscription({
+      compte: comptePaypal,
+      subscriptionId: aboPaypal,
+      raison: args.quand === "immediat" ? "Remboursement" : "Annulation demandee",
+    });
+    if (r.ok) {
+      arretes.push({ fournisseur: "paypal", id: aboPaypal, finLe: null });
+    } else {
+      toutLu = false;
+      echec = echec ?? r.reason ?? "provider_refused";
+    }
+  } else if (aboPaypal && !comptePaypal) {
+    // On SAIT qu'il a payé en PayPal et on ne peut pas vérifier : ne
     // surtout pas conclure qu'il n'y a rien.
     toutLu = false;
     echec = echec ?? "not_configured";
