@@ -27,11 +27,18 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { createHash } from "node:crypto";
 
-import { verdictMoisOffert, type MotifRefus, type MotifSuspect } from "@/lib/trial/moisOffert";
+import {
+  JOURS_MOIS_OFFERT_ANNONCE,
+  verdictMoisOffert,
+  type MotifRefus,
+  type MotifSuspect,
+} from "@/lib/trial/moisOffert";
 import { proprietaireDuLien } from "@/lib/trial/proprietaireDuLien";
 
-/** La durée du cadeau. Un mois, pas 30 jours flottants. */
-export const JOURS_MOIS_OFFERT = 30;
+/** La durée du cadeau. Le nombre vit dans le module pur : c'est LUI
+ *  que le bon de commande annonce, et deux nombres écrits séparément
+ *  finissent toujours par diverger. */
+export const JOURS_MOIS_OFFERT = JOURS_MOIS_OFFERT_ANNONCE;
 
 /**
  * L'empreinte d'une adresse IP, jamais l'adresse.
@@ -53,7 +60,7 @@ export interface EssaiDeCeCheckout {
   /** 0 = pas d'essai. 30 = le mois offert. */
   jours: number;
   /** Pourquoi il n'y en a pas, pour le journal. */
-  motif?: MotifRefus | "pas_de_lien" | "registre_injoignable";
+  motif?: MotifRefus | "pas_de_lien" | "lien_ancien" | "registre_injoignable";
   /** Accordé, mais quelque chose sent l'auto-affiliation. */
   signale?: MotifSuspect;
 }
@@ -69,12 +76,25 @@ const SANS_ESSAI = (motif: EssaiDeCeCheckout["motif"]): EssaiDeCeCheckout => ({ 
 export async function essaiPourCeCheckout(args: {
   /** Le lien d'affiliation transporté depuis la page de vente. */
   sa: string | null;
+  /**
+   * Ce lien vient-il du système d'affiliation COURANT ?
+   *
+   * PARAMÈTRE OBLIGATOIRE, jamais déduit de la présence d'un `sa` : les
+   * deux générations de liens portent le même identifiant, donc le
+   * deviner reviendrait à offrir le mois sur les anciens liens
+   * Systeme.io, ce que Béné a explicitement exclu. Il se lit avec
+   * `lienOuvreLeMoisOffert()` (`lib/affiliate/moisOffertLien.ts`).
+   */
+  lienCourant: boolean;
   /** L'adresse, quand on la connaît déjà (session ouverte, ou PayPal). */
   email?: string | null;
   ip?: string | null;
 }): Promise<EssaiDeCeCheckout> {
   const sa = String(args.sa ?? "").trim();
   if (!sa) return SANS_ESSAI("pas_de_lien");
+  // Un ancien lien commissionne exactement comme avant : c'est le
+  // CADEAU qui est réservé au système courant, pas la vente.
+  if (!args.lienCourant) return SANS_ESSAI("lien_ancien");
 
   try {
     const proprietaire = await proprietaireDuLien(sa);

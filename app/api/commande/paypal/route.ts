@@ -29,6 +29,7 @@ import { isSalesOpen } from "@/lib/sales/previewGate";
 import { resolveAppUrl } from "@/lib/authLinks";
 import { readSa } from "@/lib/affiliate/sa";
 import { essaiPourCeCheckout } from "@/lib/trial/moisOffertCheckout";
+import { lienOuvreLeMoisOffert, MO_COOKIE } from "@/lib/affiliate/moisOffertLien";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -90,6 +91,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // non-cumul est complet AVANT le paiement.
   const essai = await essaiPourCeCheckout({
     sa: readSa(body.ref),
+    // Meme lecture que sur le formulaire carte : le marqueur vient du
+    // COOKIE pose par le middleware, jamais du corps de la requete.
+    lienCourant: lienOuvreLeMoisOffert(readSa(body.ref), req.cookies.get(MO_COOKIE)?.value),
     email,
     ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
   });

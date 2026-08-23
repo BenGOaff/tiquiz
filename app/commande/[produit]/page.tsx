@@ -39,7 +39,7 @@
 // coûteuse qu'une page de commande puisse commettre.
 
 import Link from "next/link";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import {
@@ -55,6 +55,9 @@ import {
   readOwnerStripePublishable,
 } from "@/lib/checkout/ownerAccount";
 import { isSalesOpen } from "@/lib/sales/previewGate";
+import { readSa, SA_COOKIE } from "@/lib/affiliate/sa";
+import { MO_COOKIE, MO_PARAM, pageOuvreLeMoisOffert } from "@/lib/affiliate/moisOffertLien";
+import { JOURS_MOIS_OFFERT_ANNONCE } from "@/lib/trial/moisOffert";
 import CommandeClient from "./CommandeClient";
 
 export const dynamic = "force-dynamic";
@@ -86,10 +89,10 @@ export default async function Page({
   searchParams,
 }: {
   params: Promise<{ produit: string }>;
-  searchParams: Promise<{ k?: string }>;
+  searchParams: Promise<{ k?: string; sa?: string; mo?: string }>;
 }) {
   const { produit } = await params;
-  const { k } = await searchParams;
+  const { k, sa: saUrl, mo: moUrl } = await searchParams;
 
   // La porte s'ouvre par la cle OU par le domaine public : sur
   // tiquiz.fr le bon de commande doit etre accessible sans rien dans
@@ -116,6 +119,20 @@ export default async function Page({
   // faire disparaître le bouton PayPal, sinon l'acheteur arrive sur une
   // page sans aucun moyen de payer alors qu'il en reste un qui marche.
   const paypalDisponible = !!readOwnerPaypal(process.env);
+
+  // ── LES 30 JOURS OFFERTS, ANNONCÉS UNIQUEMENT SUR UN LIEN AFFILIÉ ──
+  //
+  // Béné : "uniquement sur les liens affiliés n'oublie pas, c'est pas
+  // pour celui qui tombe sur la page de vente tout seul". Annoncer un
+  // cadeau que le serveur refusera ensuite serait pire que de ne rien
+  // annoncer : l'acheteuse verrait le prix plein au moment de payer.
+  const boite = await cookies();
+  const moisOffertAnnonce = pageOuvreLeMoisOffert({
+    saUrl: readSa(saUrl),
+    moUrl: moUrl,
+    saCookie: readSa(boite.get(SA_COOKIE)?.value),
+    moCookie: boite.get(MO_COOKIE)?.value,
+  }) && ownerBillingKey(product) !== "once";
 
   return (
     // Le fond clair est posé ici, pas hérité : cette page est publique et
@@ -144,6 +161,21 @@ export default async function Page({
               Aucun frais caché. Tu arrêtes quand tu veux, tes quiz et tes leads
               restent à toi.
             </p>
+
+            {moisOffertAnnonce && (
+              <div className="mt-4 rounded-xl border border-[#c9d3ff] bg-[#eef2ff] px-4 py-3">
+                <p className="text-sm font-bold text-[#2b3264]">
+                  {JOURS_MOIS_OFFERT_ANNONCE} jours offerts sur cette formule
+                </p>
+                <p className="mt-1 text-[13px] leading-snug text-[#5a6390]">
+                  Tu es venu par un lien de parrainage : rien n'est prélevé
+                  pendant {JOURS_MOIS_OFFERT_ANNONCE} jours. Ensuite,{" "}
+                  {formatOwnerPrice(product)} {RECURRENCE[ownerBillingKey(product)]}.
+                  Tu peux arrêter avant la fin des {JOURS_MOIS_OFFERT_ANNONCE} jours
+                  sans rien payer.
+                </p>
+              </div>
+            )}
 
             <ul className="mt-6 space-y-2.5">
               {INCLUS.map((item) => (

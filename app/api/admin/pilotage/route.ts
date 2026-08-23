@@ -186,6 +186,14 @@ export async function GET(): Promise<NextResponse> {
         quiz_count: quizParUser[uid] ?? 0,
         lead_count: leadsParUser[uid] ?? 0,
         stripe_customer_id: (p.stripe_customer_id as string) ?? null,
+        // Le mois offert. Absent tant que la migration
+        // 20260823_mois_offert.sql n'est pas passee : `?? null` et pas
+        // une valeur par defaut, sinon l'ecran dirait "jamais eu de mois
+        // offert" sur tout le monde, ce qui serait faux sans se voir.
+        free_month_granted_at: (p.free_month_granted_at as string) ?? null,
+        free_month_source: (p.free_month_source as string) ?? null,
+        free_month_sa: (p.free_month_sa as string) ?? null,
+        free_month_flag: (p.free_month_flag as string) ?? null,
         reseller_name: p.reseller_id ? revendeurs[String(p.reseller_id)] ?? null : null,
       };
     });

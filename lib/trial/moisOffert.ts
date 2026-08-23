@@ -44,6 +44,17 @@ export type VerdictMoisOffert =
   | { ok: true; aVerifier: true; motif: MotifSuspect }
   | { ok: false; motif: MotifRefus };
 
+/**
+ * LA DURÉE DU CADEAU, ÉCRITE UNE SEULE FOIS.
+ *
+ * Elle vit dans le module PUR parce qu'elle est lue des deux côtés : la
+ * décision serveur (`moisOffertCheckout.ts`, qui tire `supabaseAdmin`)
+ * et l'écran qui l'ANNONCE (le bon de commande). Deux nombres écrits
+ * séparément finissent toujours par diverger, et là la divergence se
+ * lit "30 jours offerts" sur la page et 15 sur le relevé.
+ */
+export const JOURS_MOIS_OFFERT_ANNONCE = 30;
+
 export type MotifRefus = "deja_recu" | "auto_affiliation" | "affiliee_inconnue";
 
 export type MotifSuspect = "meme_ip";

@@ -23,6 +23,7 @@ import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ow
 import { createOwnerCheckoutSession } from "@/lib/checkout/stripeCheckout";
 import { readSa } from "@/lib/affiliate/sa";
 import { essaiPourCeCheckout } from "@/lib/trial/moisOffertCheckout";
+import { lienOuvreLeMoisOffert, MO_COOKIE } from "@/lib/affiliate/moisOffertLien";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { isSalesOpen } from "@/lib/sales/previewGate";
 import { checkoutReturnBase } from "@/lib/sales/salesHosts";
@@ -115,6 +116,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const essai = await essaiPourCeCheckout({
     sa,
+    // Le marqueur du systeme courant, pose par le middleware. Il se lit
+    // dans le COOKIE et jamais dans le corps de la requete : le corps
+    // vient du navigateur, donc n'importe qui pourrait l'ecrire.
+    lienCourant: lienOuvreLeMoisOffert(sa, req.cookies.get(MO_COOKIE)?.value),
     email: emailConnu,
     ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
   });

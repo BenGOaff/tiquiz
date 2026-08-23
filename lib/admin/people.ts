@@ -58,6 +58,11 @@ export interface ProfileRow {
   stripe_customer_id?: string | null;
   /** Renseigné si le compte appartient au portefeuille d'un revendeur. */
   reseller_name?: string | null;
+  /** Le mois offert (migration 20260823_mois_offert.sql). */
+  free_month_granted_at?: string | null;
+  free_month_source?: string | null;
+  free_month_sa?: string | null;
+  free_month_flag?: string | null;
 }
 
 /** Une ligne de `subscription_churn`. */
@@ -127,6 +132,22 @@ export interface Person {
   /** Comment il a payé la dernière fois. */
   lastProvider: Sale["provider"] | null;
   lastPaidAt: string | null;
+
+  /**
+   * Son mois offert, ou `null` si elle n'en a jamais eu.
+   *
+   * `flag` porte ce qui mérite un oeil : `deja_recu` (un DEUXIÈME mois,
+   * ouvert avant qu'on connaisse son adresse) ou `meme_ip` (le lien et
+   * l'achat viennent de la même connexion). On n'a rien repris : on
+   * MONTRE, Béné tranche. Reprendre un essai commencé, c'est prélever
+   * quelqu'un qui ne s'y attend pas.
+   */
+  moisOffert: {
+    grantedAt: string | null;
+    source: string | null;
+    sa: string | null;
+    flag: string | null;
+  } | null;
 
   /** Ce que l'Atelier sait d'elle, ou `null` si elle n'y est pas. */
   atelier: {
@@ -248,6 +269,25 @@ function nomDe(p: ProfileRow): string | null {
   return n || null;
 }
 
+/**
+ * Le mois offert d'une ligne `profiles`.
+ *
+ * Rend `null` tant que la colonne est absente (migration pas encore
+ * passée) : un écran qui afficherait "jamais eu de mois offert" sur
+ * tout le monde serait faux, et c'est exactement le genre de faux
+ * qu'on ne remarque pas.
+ */
+function lireMoisOffert(p: ProfileRow): Person["moisOffert"] {
+  const date = String(p.free_month_granted_at ?? "").trim();
+  if (!date) return null;
+  return {
+    grantedAt: date,
+    source: String(p.free_month_source ?? "").trim() || null,
+    sa: String(p.free_month_sa ?? "").trim() || null,
+    flag: String(p.free_month_flag ?? "").trim() || null,
+  };
+}
+
 /** Le plus récent des deux, en tolérant les dates illisibles. */
 function plusRecent(a: string | null, b: string | null): string | null {
   const ta = a ? Date.parse(a) : Number.NaN;
@@ -339,6 +379,7 @@ export function buildPeople(input: {
       leadCount: Number(p.lead_count) || 0,
       resellerName: String(p.reseller_name ?? "").trim() || null,
       selfServe: Boolean(String(p.stripe_customer_id ?? "").trim()),
+      moisOffert: lireMoisOffert(p),
       paidCents: 0,
       sales: [],
       lastProvider: null,
@@ -383,6 +424,9 @@ export function buildPeople(input: {
       leadCount: 0,
       resellerName: null,
       selfServe: false,
+      // Pas de compte Tiquiz, donc pas de ligne `profiles`, donc rien à
+      // lire : `null` dit "on ne sait pas", jamais "elle n'en a pas eu".
+      moisOffert: null,
       paidCents: 0,
       sales: [],
       lastProvider: null,

@@ -530,6 +530,36 @@ export default function ClientFiche({ email }: { email: string }) {
             <p className="text-muted-foreground">Pas élève de l&apos;Atelier.</p>
           )}
         </Bloc>
+
+        {/* LE MOIS OFFERT.
+            Bene, 23 aout : "il faut aussi tracker les tricheurs qui
+            veulent s'autoaffilier". On MONTRE, on ne reprend rien :
+            reprendre un essai commence, c'est prelever quelqu'un qui ne
+            s'y attend pas. Le bloc ne s'affiche que si elle en a eu un :
+            "jamais eu de mois offert" est vrai de presque tout le monde,
+            donc ce serait du bruit sur toutes les fiches. */}
+        {p.moisOffert && (
+          <Bloc titre="Mois offert">
+            <p>30 jours offerts le {jour(p.moisOffert.grantedAt)}</p>
+            {p.moisOffert.sa && (
+              <p className="text-muted-foreground break-all">
+                Lien : {p.moisOffert.sa}
+              </p>
+            )}
+            {p.moisOffert.flag === "deja_recu" && (
+              <p className="font-semibold text-rose-700">
+                Elle en avait DÉJÀ eu un. Ouvert quand même : son adresse
+                n&apos;était pas connue avant le paiement.
+              </p>
+            )}
+            {p.moisOffert.flag === "meme_ip" && (
+              <p className="font-semibold text-amber-700">
+                Même connexion que le lien utilisé. Ça arrive pour un couple
+                ou deux collègues, ça arrive aussi à qui s&apos;auto-affilie.
+              </p>
+            )}
+          </Bloc>
+        )}
       </div>
 
       {/* ── CE QU'ELLE A PAYÉ ── */}

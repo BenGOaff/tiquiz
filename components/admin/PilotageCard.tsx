@@ -46,8 +46,20 @@ import { Input } from "@/components/ui/input";
 import { isAtelierSale } from "@/lib/admin/atelier";
 import { NOM_PRODUIT } from "@/lib/admin/saleProduct";
 import { buildChurnDigest } from "@/lib/admin/churnDigest";
+import { buildMoisOffertDigest } from "@/lib/admin/moisOffertDigest";
 import { readClientKind, type ClientKind, type PeopleTotals, type Person, type PersonStatus } from "@/lib/admin/people";
 import type { Sale } from "@/lib/checkout/sales";
+
+/**
+ * Le motif, dit en clair.
+ *
+ * Le serveur renvoie la RAISON, l'écran dit comment la dire : même règle
+ * que la suppression d'un quiz (3 août) et que l'import PDF (7 août).
+ */
+const MOTIF_MOIS_OFFERT: Record<string, string> = {
+  deja_recu: "en avait déjà eu un",
+  meme_ip: "même connexion que le lien",
+};
 
 /**
  * Les raisons d'un refus de remboursement, traduites.
@@ -310,6 +322,7 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
   const tendance = data?.tendance ?? null;
   // Le tri et les comptes vivent dans lib/, testes. Ici on affiche.
   const departs = buildChurnDigest(people);
+  const moisOfferts = buildMoisOffertDigest(people);
 
   const q = recherche.trim().toLowerCase();
   const visibles = people.filter((p) => {
@@ -567,6 +580,48 @@ export default function PilotageCard({ vue }: { vue: VuePilotage }) {
                   : `${departs.sansReponse} personnes sont parties sans rien dire`}{" "}
                 sur {departs.total} {departs.total === 1 ? "départ" : "départs"}.
               </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── LES MOIS OFFERTS ──
+          Bene, 23 aout : "il faut aussi tracker les tricheurs qui veulent
+          s'autoaffilier". Deux cas echappent au moteur par construction
+          (adresse inconnue avant le paiement sur le formulaire carte, IP
+          partagee volontairement acceptee) : ils remontent ICI, sinon la
+          promesse ne tient pas. On ne reprend rien, on montre.
+          La carte n'apparait qu'a partir du premier mois offert : un
+          "0 mois offert" permanent serait du bruit. */}
+      {vue === "clients" && moisOfferts.total > 0 && (
+        <Card className={moisOfferts.aRegarder.length > 0 ? "border-amber-300 bg-amber-50" : ""}>
+          <CardContent className="py-3">
+            <p className="text-sm font-semibold">
+              {moisOfferts.total === 1 ? "1 mois offert" : `${moisOfferts.total} mois offerts`}
+              {moisOfferts.aRegarder.length > 0
+                ? ` , dont ${moisOfferts.aRegarder.length} à regarder`
+                : ""}
+            </p>
+            {moisOfferts.aRegarder.length === 0 ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Rien de suspect pour l&apos;instant.
+              </p>
+            ) : (
+              <ul className="mt-2 space-y-1 text-xs">
+                {moisOfferts.aRegarder.map((l) => (
+                  <li key={l.email} className="flex flex-wrap items-baseline gap-x-2">
+                    <a
+                      href={`/admin/clients/${encodeURIComponent(l.email)}`}
+                      className="font-semibold underline"
+                    >
+                      {l.name ?? l.email}
+                    </a>
+                    <span className="text-muted-foreground">
+                      {MOTIF_MOIS_OFFERT[l.flag ?? ""] ?? l.flag}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             )}
           </CardContent>
         </Card>
