@@ -35,14 +35,23 @@ export function tipoteBaseUrl(env: Record<string, string | undefined> = process.
   return TIPOTE_PAR_DEFAUT;
 }
 
-export async function proprietaireDuLien(sa: string): Promise<ProprietaireDuLien> {
+/**
+ * L'affiliée derrière un CODE PUBLIC (`?ref=jocelyne`).
+ *
+ * Le paramètre s'appelle `ref` et pas `sa` depuis le 24 août 2026 : nos
+ * liens ne portent plus l'identifiant Systeme.io (Béné : "je ne veux
+ * surtout pas de sa dans les nouveaux liens"). Tipote traduit le code
+ * en affiliée contre sa table, y compris les ANCIENS codes d'une
+ * affiliée qui a changé le sien.
+ */
+export async function proprietaireDuLien(ref: string): Promise<ProprietaireDuLien> {
   const secret = (process.env.AFFILIATE_INTERNAL_SECRET ?? "").trim();
-  if (!secret || !sa) return INCONNU;
+  if (!secret || !ref) return INCONNU;
   try {
     const res = await fetch(`${tipoteBaseUrl()}/api/affiliate/proprietaire`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Affiliate-Secret": secret },
-      body: JSON.stringify({ sa }),
+      body: JSON.stringify({ ref }),
       // Une inscription attend derrière : on ne la fait pas patienter
       // pendant que l'autre app redémarre.
       signal: AbortSignal.timeout(6000),

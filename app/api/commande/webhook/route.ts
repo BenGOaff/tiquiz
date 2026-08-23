@@ -233,7 +233,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (vente.freeMonthDays > 0) {
     await marquerMoisOffertConsomme({
       email: vente.email,
-      sa: vente.affiliateRef,
+      ref: vente.affiliateCode,
       ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
     });
   }
@@ -248,6 +248,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     email: vente.email,
     reference: vente.paymentRef,
     affiliateRef: vente.affiliateRef,
+    affiliateCode: vente.affiliateCode,
     amountTotalCents: vente.amountTotalCents,
     amountTaxCents: vente.amountTaxCents,
     product,

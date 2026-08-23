@@ -55,8 +55,7 @@ import {
   readOwnerStripePublishable,
 } from "@/lib/checkout/ownerAccount";
 import { isSalesOpen } from "@/lib/sales/previewGate";
-import { readSa, SA_COOKIE } from "@/lib/affiliate/sa";
-import { MO_COOKIE, MO_PARAM, pageOuvreLeMoisOffert } from "@/lib/affiliate/moisOffertLien";
+import { pickRef, REF_COOKIE } from "@/lib/affiliate/refLien";
 import { JOURS_MOIS_OFFERT_ANNONCE } from "@/lib/trial/moisOffert";
 import CommandeClient from "./CommandeClient";
 
@@ -89,10 +88,10 @@ export default async function Page({
   searchParams,
 }: {
   params: Promise<{ produit: string }>;
-  searchParams: Promise<{ k?: string; sa?: string; mo?: string }>;
+  searchParams: Promise<{ k?: string; ref?: string }>;
 }) {
   const { produit } = await params;
-  const { k, sa: saUrl, mo: moUrl } = await searchParams;
+  const { k, ref: refUrl } = await searchParams;
 
   // La porte s'ouvre par la cle OU par le domaine public : sur
   // tiquiz.fr le bon de commande doit etre accessible sans rien dans
@@ -126,13 +125,17 @@ export default async function Page({
   // pour celui qui tombe sur la page de vente tout seul". Annoncer un
   // cadeau que le serveur refusera ensuite serait pire que de ne rien
   // annoncer : l'acheteuse verrait le prix plein au moment de payer.
+  //
+  // La règle ne demande plus aucun marqueur depuis le 24 août : nos
+  // liens portent `?ref=`, les anciens tunnels Systeme.io portent
+  // `?sa=`. Venir par un `?ref=` SUFFIT donc à dire que le lien est
+  // d'ici. L'URL gagne sur le cookie (même règle que l'attribution) :
+  // au premier chargement, le cookie que le middleware vient de poser
+  // n'est pas encore relisible, et s'en remettre à lui ferait une page
+  // muette exactement sur le lien qui offre.
   const boite = await cookies();
-  const moisOffertAnnonce = pageOuvreLeMoisOffert({
-    saUrl: readSa(saUrl),
-    moUrl: moUrl,
-    saCookie: readSa(boite.get(SA_COOKIE)?.value),
-    moCookie: boite.get(MO_COOKIE)?.value,
-  }) && ownerBillingKey(product) !== "once";
+  const moisOffertAnnonce =
+    !!pickRef(refUrl, boite.get(REF_COOKIE)?.value) && ownerBillingKey(product) !== "once";
 
   return (
     // Le fond clair est posé ici, pas hérité : cette page est publique et

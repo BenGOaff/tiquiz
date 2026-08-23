@@ -145,8 +145,17 @@ export async function createOwnerCheckoutSession(args: {
   product: OwnerProduct;
   /** Où Stripe renvoie l'acheteur. Doit contenir `{CHECKOUT_SESSION_ID}`. */
   returnUrl: string;
-  /** Le code de l'affiliée, s'il y en a un. Voyage jusqu'à la commission. */
+  /**
+   * L'identifiant Systeme.io d'un ANCIEN lien, s'il y en a un.
+   *
+   * Voyage jusqu'à la commission. Distinct de `affiliateCode` : les
+   * deux générations de liens ne se devinent pas l'une l'autre, elles
+   * arrivent dans des champs différents et repartent dans des metadata
+   * différentes.
+   */
   affiliateRef?: string | null;
+  /** Le CODE PUBLIC de l'affiliée (`?ref=`), sur nos liens actuels. */
+  affiliateCode?: string | null;
   /**
    * Les jours d'essai GRATUIT sur l'abonnement choisi.
    *
@@ -208,6 +217,7 @@ export async function createOwnerCheckoutSession(args: {
     params["subscription_data[metadata][product]"] = p.id;
     params["subscription_data[metadata][source]"] = p.source;
     if (args.affiliateRef) params["subscription_data[metadata][affiliate_ref]"] = args.affiliateRef;
+    if (args.affiliateCode) params["subscription_data[metadata][affiliate_code]"] = args.affiliateCode;
     // L'ESSAI GRATUIT. Stripe n'accepte cette clé que sur un abonnement,
     // et c'est bien là qu'elle a un sens.
     const essai = Number(args.trialDays ?? 0);
@@ -253,6 +263,7 @@ export async function createOwnerCheckoutSession(args: {
   }
 
   if (args.affiliateRef) params["metadata[affiliate_ref]"] = args.affiliateRef;
+  if (args.affiliateCode) params["metadata[affiliate_code]"] = args.affiliateCode;
   if (args.email) params.customer_email = args.email;
 
   try {
@@ -350,7 +361,10 @@ export interface OwnerSessionInfo {
   /** Le nom saisi au paiement, pour dire "Hey Gwenn" au lieu de "Hey". */
   name?: string | null;
   productId: string | null;
+  /** L'identifiant Systeme.io d'un ANCIEN lien, ou `null`. */
   affiliateRef: string | null;
+  /** Le CODE PUBLIC de l'affiliée (`?ref=`), ou `null`. */
+  affiliateCode: string | null;
   /** Les jours offerts sur cet abonnement, 0 s'il n'y en a pas. */
   freeMonthDays: number;
   /**
@@ -411,6 +425,7 @@ function litSession(s: RawSession): OwnerSessionInfo {
     name: s.customer_details?.name ?? null,
     productId: meta.product ?? null,
     affiliateRef: meta.affiliate_ref ?? null,
+    affiliateCode: meta.affiliate_code ?? null,
     freeMonthDays: Number(meta.free_month_days ?? 0) || 0,
     customerId: readCustomerId(s.customer),
     amountTotalCents: Number(s.amount_total ?? 0) || 0,

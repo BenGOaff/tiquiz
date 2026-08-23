@@ -101,7 +101,14 @@ test("quand ca ne tient pas, on lache le sa, JAMAIS l'adresse", () => {
 });
 
 test("un custom_id vide ne fabrique pas de fausses valeurs", () => {
-  const vide = { productId: null, email: null, affiliateRef: null, trialDays: 0, remplace: null };
+  const vide = {
+    productId: null,
+    email: null,
+    affiliateRef: null,
+    trialDays: 0,
+    remplace: null,
+    affiliateCode: null,
+  };
   assert.deepEqual(readCustomId(""), vide);
   assert.deepEqual(readCustomId(null), vide);
 });
@@ -353,4 +360,64 @@ test("quand ca deborde, c'est le `sa` qui part, jamais l'abonnement remplace", (
   const lu = readCustomId(id);
   assert.equal(lu.affiliateRef, null, "le sa aurait du partir en premier");
   assert.equal(lu.remplace, "I-BW452GLLEP1G", "l'abonnement remplace a ete sacrifie");
+});
+
+// ── LE CODE PUBLIC, ET LE `sa` QU'IL REMPLACE (24 août 2026) ──────────
+//
+// Béné : "je ne veux surtout pas de sa dans les nouveaux liens sinon
+// y'a forcément un moment où on va merder, trouver autre chose nom de
+// zeus ! Y'a pas que ce système, c'est celui de systeme io c'est tout !!"
+//
+// Deux champs SÉPARÉS, jamais un seul : les mettre ensemble obligerait
+// à deviner lequel on a reçu, en pratique à la forme, ce qui casserait
+// le jour où quelqu'un choisit un code qui ressemble à un `sa`.
+
+test("un custom_id ecrit AVANT le code public se relit comme avant", () => {
+  // Un abonnement en cours le jour du deploiement ne doit pas se relire
+  // de travers : les nouveaux champs sont AJOUTES EN FIN.
+  const lu = readCustomId("mensuel|a@b.fr|sa00168442b1c2d3e4f5a6b7c8d9|30");
+  assert.equal(lu.productId, "mensuel");
+  assert.equal(lu.email, "a@b.fr");
+  assert.equal(lu.affiliateRef, "sa00168442b1c2d3e4f5a6b7c8d9");
+  assert.equal(lu.trialDays, 30);
+  assert.equal(lu.affiliateCode, null);
+});
+
+test("le code public voyage, et il ne se confond pas avec le `sa`", () => {
+  const id = buildCustomId({
+    productId: "mensuel",
+    email: "a@b.fr",
+    affiliateCode: "jocelyne",
+    trialDays: 30,
+  });
+  const lu = readCustomId(id);
+  assert.equal(lu.affiliateCode, "jocelyne");
+  // Le champ `sa` reste VIDE : un lien est d'une generation ou de
+  // l'autre, jamais des deux.
+  assert.equal(lu.affiliateRef, null);
+  assert.ok(id.length <= CUSTOM_ID_MAX);
+});
+
+test("un ancien lien Systeme.io remplit `sa` et laisse le code vide", () => {
+  const id = buildCustomId({
+    productId: "mensuel",
+    email: "a@b.fr",
+    affiliateRef: "sa00168442b1c2d3e4f5a6b7c8d9",
+  });
+  const lu = readCustomId(id);
+  assert.equal(lu.affiliateRef, "sa00168442b1c2d3e4f5a6b7c8d9");
+  assert.equal(lu.affiliateCode, null);
+});
+
+test("le code et l'abonnement remplace coexistent", () => {
+  const lu = readCustomId(
+    buildCustomId({
+      productId: "mensuel-plus",
+      email: "a@b.fr",
+      affiliateCode: "jocelyne",
+      remplace: "I-BW452GLLEP1G",
+    }),
+  );
+  assert.equal(lu.remplace, "I-BW452GLLEP1G");
+  assert.equal(lu.affiliateCode, "jocelyne");
 });

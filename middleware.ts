@@ -12,7 +12,7 @@ import { customDomainsEnabled, isOwnHost, normaliseHost } from "@/lib/customDoma
 import { routeTenantPath, TENANT_SLUG_PREFIX } from "@/lib/publicSlug";
 import { salesSlugForHost } from "@/lib/sales/salesHosts";
 import { readSa, SA_COOKIE, SA_MAX_AGE_SECONDS, SA_PARAM } from "@/lib/affiliate/sa";
-import { marqueurPresent, MO_COOKIE, MO_PARAM } from "@/lib/affiliate/moisOffertLien";
+import { readRef, REF_COOKIE, REF_MAX_AGE_SECONDS, REF_PARAM } from "@/lib/affiliate/refLien";
 
 const UI_LOCALE_COOKIE = "ui_locale";
 const SUPPORTED_LOCALES = ["en", "fr", "es", "it", "ar", "pt", "pt-BR"];
@@ -79,41 +79,35 @@ export async function middleware(req: NextRequest) {
   // On le pose sur TOUTES les reponses, y compris la reecriture de la
   // page de vente : c'est justement la page ou le lien atterrit.
   // -------------------------------------------------------------------
+  // DEUX GENERATIONS DE LIENS, DEUX PARAMETRES.
+  //
+  // `?ref=jocelyne` : nos liens, fabriques par l'espace affilie depuis
+  // le 24 aout (Bene : "je ne veux surtout pas de sa dans les nouveaux
+  // liens... c'est celui de systeme io c'est tout !!").
+  //
+  // `?sa=sa0016...` : les anciens tunnels Systeme.io. Ils restent
+  // valides et commissionnent exactement comme avant.
+  //
+  // Le NOM DU PARAMETRE dit donc la generation du lien, et c'est ce qui
+  // a permis de supprimer le marqueur `mo=1` : le mois offert s'ouvre
+  // sur un `?ref=`, jamais sur un `?sa=`. Un marqueur en moins, c'est
+  // un endroit en moins ou on pouvait l'oublier.
+  const ref = readRef(req.nextUrl.searchParams.get(REF_PARAM));
   const sa = readSa(req.nextUrl.searchParams.get(SA_PARAM));
 
-  // Le marqueur du systeme d'affiliation COURANT (cf.
-  // `lib/affiliate/moisOffertLien.ts`). Il ne vaut que POSE AVEC un
-  // `sa` : un `?mo=1` seul ne designe personne, et un ancien lien
-  // Systeme.io n'en porte pas. Il commissionne comme avant, il n'ouvre
-  // simplement pas le mois offert.
-  const marqueMoisOffert = !!sa && marqueurPresent(req.nextUrl.searchParams.get(MO_PARAM));
-
   const poseSa = (res: NextResponse): NextResponse => {
-    if (sa) {
-      res.cookies.set(SA_COOKIE, sa, {
-        maxAge: SA_MAX_AGE_SECONDS,
-        path: "/",
-        sameSite: "lax",
-        // Lisible par le bon de commande : c'est LUI qui doit le
-        // transmettre a Stripe. `httpOnly` le rendrait invisible au
-        // navigateur, donc inutile.
-        httpOnly: false,
-        secure: req.nextUrl.protocol === "https:",
-      });
-    }
-    if (marqueMoisOffert) {
-      // La VALEUR est l'identifiant, pas un "oui" : l'attribution suit
-      // le dernier lien, le cadeau doit suivre le meme.
-      res.cookies.set(MO_COOKIE, sa!, {
-        maxAge: SA_MAX_AGE_SECONDS,
-        path: "/",
-        sameSite: "lax",
-        // Lu UNIQUEMENT cote serveur : hors de portee d'une page qui
-        // voudrait se l'ecrire pour recycler un ancien lien.
-        httpOnly: true,
-        secure: req.nextUrl.protocol === "https:",
-      });
-    }
+    // Les deux cookies sont LISIBLES par le bon de commande : c'est LUI
+    // qui doit les transmettre a Stripe. `httpOnly` les rendrait
+    // invisibles au navigateur, donc inutiles.
+    const options = {
+      maxAge: REF_MAX_AGE_SECONDS,
+      path: "/",
+      sameSite: "lax" as const,
+      httpOnly: false,
+      secure: req.nextUrl.protocol === "https:",
+    };
+    if (ref) res.cookies.set(REF_COOKIE, ref, options);
+    if (sa) res.cookies.set(SA_COOKIE, sa, { ...options, maxAge: SA_MAX_AGE_SECONDS });
     return res;
   };
 

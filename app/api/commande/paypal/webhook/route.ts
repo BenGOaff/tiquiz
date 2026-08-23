@@ -271,7 +271,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (abo.trialDays > 0) {
     await marquerMoisOffertConsomme({
       email: abo.email,
-      sa: abo.affiliateRef,
+      ref: abo.affiliateCode,
       ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
     });
   }
@@ -288,6 +288,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     email: abo.email,
     reference: abonnementId,
     affiliateRef: abo.affiliateRef,
+    affiliateCode: abo.affiliateCode,
     // Ce qui a vraiment été prélevé quand PayPal le dit, sinon le prix
     // du catalogue : ne rien envoyer ferait sauter la commission.
     amountTotalCents: abo.amountCents || product.amountCents,

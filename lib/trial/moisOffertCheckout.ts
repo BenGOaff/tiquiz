@@ -60,7 +60,7 @@ export interface EssaiDeCeCheckout {
   /** 0 = pas d'essai. 30 = le mois offert. */
   jours: number;
   /** Pourquoi il n'y en a pas, pour le journal. */
-  motif?: MotifRefus | "pas_de_lien" | "lien_ancien" | "registre_injoignable";
+  motif?: MotifRefus | "pas_de_lien" | "registre_injoignable";
   /** Accordé, mais quelque chose sent l'auto-affiliation. */
   signale?: MotifSuspect;
 }
@@ -74,30 +74,28 @@ const SANS_ESSAI = (motif: EssaiDeCeCheckout["motif"]): EssaiDeCeCheckout => ({ 
  * paiement. En cas de doute, pas d'essai, et le journal le dit.
  */
 export async function essaiPourCeCheckout(args: {
-  /** Le lien d'affiliation transporté depuis la page de vente. */
-  sa: string | null;
   /**
-   * Ce lien vient-il du système d'affiliation COURANT ?
+   * LE CODE PUBLIC de l'affiliée (`?ref=jocelyne`), et lui seul.
    *
-   * PARAMÈTRE OBLIGATOIRE, jamais déduit de la présence d'un `sa` : les
-   * deux générations de liens portent le même identifiant, donc le
-   * deviner reviendrait à offrir le mois sur les anciens liens
-   * Systeme.io, ce que Béné a explicitement exclu. Il se lit avec
-   * `lienOuvreLeMoisOffert()` (`lib/affiliate/moisOffertLien.ts`).
+   * Béné, 23 août : le mois offert vaut "uniquement avec le système
+   * d'affiliation en cours et pas sur les anciens liens systeme io".
+   *
+   * Depuis le 24 août, cette règle ne demande plus aucun marqueur :
+   * nos liens portent `?ref=`, les anciens portent `?sa=`, donc le NOM
+   * DU PARAMÈTRE dit la génération. Un checkout arrivé par un `?sa=`
+   * n'a pas de `ref`, donc pas de cadeau, et il commissionne
+   * exactement comme avant.
    */
-  lienCourant: boolean;
+  ref: string | null;
   /** L'adresse, quand on la connaît déjà (session ouverte, ou PayPal). */
   email?: string | null;
   ip?: string | null;
 }): Promise<EssaiDeCeCheckout> {
-  const sa = String(args.sa ?? "").trim();
-  if (!sa) return SANS_ESSAI("pas_de_lien");
-  // Un ancien lien commissionne exactement comme avant : c'est le
-  // CADEAU qui est réservé au système courant, pas la vente.
-  if (!args.lienCourant) return SANS_ESSAI("lien_ancien");
+  const ref = String(args.ref ?? "").trim().toLowerCase();
+  if (!ref) return SANS_ESSAI("pas_de_lien");
 
   try {
-    const proprietaire = await proprietaireDuLien(sa);
+    const proprietaire = await proprietaireDuLien(ref);
     if (!proprietaire.connu) {
       // On n'a pas pu vérifier : on n'offre rien. Offrir au nom d'une
       // affiliée non vérifiée ouvrirait la porte au premier identifiant
@@ -115,7 +113,7 @@ export async function essaiPourCeCheckout(args: {
       emailAffiliee: proprietaire.email,
       affilieeActive: proprietaire.existe && proprietaire.actif,
       ipHash: empreinte,
-      ipsDejaVues: await ipsDuLien(sa),
+      ipsDejaVues: await ipsDuLien(ref),
     });
 
     if (!verdict.ok) return SANS_ESSAI(verdict.motif);
@@ -141,7 +139,8 @@ export async function essaiPourCeCheckout(args: {
  */
 export async function marquerMoisOffertConsomme(args: {
   email: string;
-  sa: string | null;
+  /** Le code public du lien par lequel elle est venue. */
+  ref: string | null;
   ip?: string | null;
   signale?: MotifSuspect | null;
 }): Promise<{ ok: boolean; dejaEu: boolean }> {
@@ -153,7 +152,7 @@ export async function marquerMoisOffertConsomme(args: {
     const patch = {
       free_month_granted_at: new Date().toISOString(),
       free_month_source: "filleul",
-      free_month_sa: args.sa ?? null,
+      free_month_sa: args.ref ?? null,
       free_month_ip_hash: empreinteIp(args.ip),
       // Un deuxième mois offert est plus grave qu'une IP partagée : le
       // drapeau dit lequel des deux, jamais les deux mélangés.
@@ -174,7 +173,7 @@ export async function marquerMoisOffertConsomme(args: {
     }
     if (dejaRecu) {
       console.error(
-        `[mois-offert] ${email} a eu un DEUXIEME mois offert (lien ${args.sa ?? "?"}) : ` +
+        `[mois-offert] ${email} a eu un DEUXIEME mois offert (lien ${args.ref ?? "?"}) : ` +
           `a regarder dans l'admin.`,
       );
     }
@@ -207,12 +206,12 @@ async function dejaEuSonMois(email: string): Promise<string | null> {
  * personne qui se crée des comptes, pas une affiliée qui travaille.
  * Fail-open : si on ne peut pas lire, on n'invente pas de soupçon.
  */
-async function ipsDuLien(sa: string): Promise<string[]> {
+async function ipsDuLien(ref: string): Promise<string[]> {
   try {
     const { data, error } = await supabaseAdmin
       .from("profiles")
       .select("free_month_ip_hash")
-      .eq("free_month_sa", sa)
+      .eq("free_month_sa", ref)
       .not("free_month_ip_hash", "is", null)
       .limit(200);
     if (error) return [];
