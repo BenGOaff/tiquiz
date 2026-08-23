@@ -101,7 +101,7 @@ test("quand ca ne tient pas, on lache le sa, JAMAIS l'adresse", () => {
 });
 
 test("un custom_id vide ne fabrique pas de fausses valeurs", () => {
-  const vide = { productId: null, email: null, affiliateRef: null, trialDays: 0 };
+  const vide = { productId: null, email: null, affiliateRef: null, trialDays: 0, remplace: null };
   assert.deepEqual(readCustomId(""), vide);
   assert.deepEqual(readCustomId(null), vide);
 });
@@ -298,4 +298,59 @@ test("le bouton PayPal est rendu dans TOUTES les branches du bon de commande", (
     brancheNormale.includes("{blocPaypal}"),
     "la branche ou tout va bien ne rend pas PayPal : c'est exactement le bug du 23 aout",
   );
+});
+
+// ── LA MONTÉE DE PALIER ────────────────────────────────────────────────
+//
+// Béné, 23 août 2026 : "Pour paypal : on dit rien, on facture et on
+// upgrade point barre." PayPal ne sait pas changer le prix d'un
+// abonnement en cours : on en ouvre un neuf, et l'ancien s'arrête une
+// fois le nouveau ACTIVÉ. Le lien entre les deux voyage dans le
+// `custom_id`, et le perdre laisserait la personne prélevée DEUX fois.
+
+test("un custom_id ecrit AVANT la montee de palier se relit comme avant", () => {
+  // Le 5e champ est en dernier : les abonnements deja en cours ne
+  // doivent pas se relire de travers le jour du deploiement.
+  const ancien = "mensuel|a@b.fr|sa00168442b1c2d3e4f5a6b7c8d9|30";
+  const lu = readCustomId(ancien);
+  assert.equal(lu.productId, "mensuel");
+  assert.equal(lu.email, "a@b.fr");
+  assert.equal(lu.trialDays, 30);
+  assert.equal(lu.remplace, null);
+});
+
+test("sans montee, le custom_id ne change pas d'un caractere", () => {
+  const sans = buildCustomId({ productId: "mensuel", email: "a@b.fr", affiliateRef: null, trialDays: 0 });
+  assert.equal(sans, "mensuel|a@b.fr||");
+  assert.equal(readCustomId(sans).remplace, null);
+});
+
+test("l'abonnement remplace voyage, et se relit", () => {
+  const id = buildCustomId({
+    productId: "mensuel-plus",
+    email: "a@b.fr",
+    affiliateRef: null,
+    trialDays: 0,
+    remplace: "I-BW452GLLEP1G",
+  });
+  const lu = readCustomId(id);
+  assert.equal(lu.productId, "mensuel-plus");
+  assert.equal(lu.remplace, "I-BW452GLLEP1G");
+  assert.ok(id.length <= CUSTOM_ID_MAX);
+});
+
+test("quand ca deborde, c'est le `sa` qui part, jamais l'abonnement remplace", () => {
+  // Perdre le `sa` coute une attribution, qui retombe sur la conversion
+  // par email. Perdre l'abonnement remplace coute un DOUBLE prelevement.
+  const longue = `${"a".repeat(80)}@exemple.fr`;
+  const id = buildCustomId({
+    productId: "mensuel-plus",
+    email: longue,
+    affiliateRef: "sa00168442b1c2d3e4f5a6b7c8d9",
+    trialDays: 0,
+    remplace: "I-BW452GLLEP1G",
+  });
+  const lu = readCustomId(id);
+  assert.equal(lu.affiliateRef, null, "le sa aurait du partir en premier");
+  assert.equal(lu.remplace, "I-BW452GLLEP1G", "l'abonnement remplace a ete sacrifie");
 });

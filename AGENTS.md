@@ -2267,3 +2267,114 @@ vit là-bas, et la copier ici donnerait deux registres, donc deux réponses
 différentes le jour où l'un prend du retard.
 
 Test : `tests/logic/mois-offert.test.mts`.
+
+## Le mois offert ne s'ouvre QUE sur un lien du système courant (23 août 2026)
+
+Béné : "on le met sur l'espace affilié en expliquant que c'est
+uniquement avec le système d'affiliation en cours et pas sur les anciens
+liens systeme io (qui restent valides mais ne seront plus ceux à
+utiliser dans le futur)". Et : "uniquement sur les liens affiliés
+n'oublie pas, c'est pas pour celui qui tombe sur la page de vente tout
+seul".
+
+**Le piège : les deux générations de liens portent le MÊME `?sa=`.**
+Même forme, même propriétaire. Une fois arrivés chez nous, un ancien
+lien Systeme.io et un lien de l'espace affilié sont indiscernables. Le
+`sa` dit QUI est payé, il ne peut pas dire par quelle génération de lien
+la personne est venue : le déduire reviendrait à offrir le mois sur les
+anciens liens, exactement ce qui est exclu.
+
+**Règle : un marqueur `?mo=1`, écrit à UN seul endroit**
+(`buildAffiliateLink()`, côté Tipote). Tout ce que l'espace affilié
+fabrique aujourd'hui le porte, rien de ce qui a été copié dans
+Systeme.io ne le portera jamais. Le test `affiliate-link.test.mts`
+interdit qu'il soit recopié ailleurs.
+
+**Le cookie porte l'IDENTIFIANT, pas un "oui"** (`tq_mo`, `httpOnly`).
+L'attribution suit le DERNIER lien (`pickSa`) : les deux moitiés de la
+décision doivent parler du même lien, sinon on paie l'un et on offre au
+titre de l'autre. Un "oui" flottant offrirait le mois sur n'importe quel
+lien suivant, ancien compris.
+
+**`essaiPourCeCheckout` prend `lienCourant` en PARAMÈTRE OBLIGATOIRE**,
+lu dans le COOKIE et jamais dans le corps de la requête (le corps vient
+du navigateur). Le bon de commande annonce les 30 jours par
+`pageOuvreLeMoisOffert()`, où **l'URL gagne sur le cookie** : au premier
+chargement, le cookie que le middleware vient de poser n'est pas encore
+relisible, et s'en remettre à lui ferait une page muette exactement sur
+le lien qui offre.
+
+**Sans destination sur NOTRE domaine, le cadeau est mort.** Les tunnels
+Systeme.io ne nous transmettent rien de ce qu'on ajoute à l'URL. D'où le
+slug `tiquiz_direct` (`https://tiquiz.fr/`), le seul par lequel le
+marqueur peut arriver.
+
+Le nombre de jours vit dans le module PUR
+(`JOURS_MOIS_OFFERT_ANNONCE`) : il est lu par la décision serveur ET par
+l'écran qui l'annonce, et deux nombres écrits séparément finissent
+toujours par diverger.
+
+**Admin :** les mois offerts et ceux qui méritent un oeil remontent dans
+`/admin` et sur la fiche client (`buildMoisOffertDigest`). Deux cas
+échappent au moteur PAR CONSTRUCTION, et c'est pour ça qu'ils doivent
+s'afficher : `deja_recu` (sur le formulaire carte, l'adresse est saisie
+DANS Stripe, donc inconnue avant le paiement) et `meme_ip` (accordé
+volontairement, une IP partagée c'est aussi un couple ou deux
+collègues). **On montre, on ne reprend rien.**
+
+## Monter de palier : le prorata chez Stripe, un abonnement neuf chez PayPal (23 août 2026)
+
+Béné : "l'user paye 17€ pour le mois et veut upgrader à tiquiz plus : on
+retire les 17€ qu'il a payés déjà pour lui faire payer le complément
+pour le mois en cours et la bonne somme le mois d'après ?" Puis : "Pour
+stripe oui on met le prorata en route. Pour paypal : on dit rien, on
+facture et on upgrade point barre."
+
+**LE BUG D'ARGENT QUE ÇA FERME.** L'écran des formules envoyait vers le
+bon de commande du palier voulu. Un abonné qui cliquait ouvrait donc un
+**DEUXIÈME abonnement** pendant que le premier continuait de le
+prélever, et il ne s'en apercevait qu'au relevé suivant. Même famille
+que les deux bugs d'argent du 23 août (annuler qui coupait l'accès en
+laissant le prélèvement, rembourser qui laissait l'abonnement tourner).
+
+**Le SENS du changement ne se lit pas sur le prix.** Un palier porte
+DEUX axes : le niveau (base / Plus) et la facturation (mois / année).
+L'annuel coûte 170 € d'un coup mais revient moins cher au mois : un
+classement par prix rangerait "mensuel -> annuel" dans les descentes, et
+refuserait le passage à l'année. La règle est donc sur les deux axes
+(`sensDuChangement`, `lib/checkout/planChange.ts`) : monter de niveau =
+montée ; à niveau égal, mois -> année = montée ; tout le reste =
+descente.
+
+**Une descente est REFUSÉE, avec sa raison.** L'appliquer tout de suite
+retirerait des fonctionnalités déjà payées jusqu'à la fin de la période.
+La sortie honnête existe déjà : elle arrête son abonnement (l'accès tient
+jusqu'à la date payée) et reprend le palier qu'elle veut. L'écran le DIT
+au lieu de n'afficher aucun bouton (leçon du bouton Rembourser absent,
+22 août).
+
+**Le montant vient de Stripe, jamais d'une soustraction faite par nous.**
+`GET /api/billing/change-plan?produit=` demande la facture que Stripe
+émettrait (`/v1/invoices/create_preview`). Un montant affiché différent
+du montant prélevé est pire que pas de montant du tout. **GET n'a pas le
+droit de facturer** : un préchargement de navigateur fait des GET.
+
+**PayPal ne sait pas faire de prorata**, et ce n'est pas un raccourci :
+il n'a pas d'équivalent de `proration_behavior`. On ouvre un abonnement
+neuf au palier demandé, et on arrête l'ancien **UNE FOIS le nouveau
+ACTIVÉ**, dans le webhook. L'ordre n'est pas un détail : arrêter d'abord
+laisserait sans rien quelqu'un qui n'irait pas au bout de l'accord
+PayPal. Le lien entre les deux voyage dans le `custom_id` (5e champ,
+`remplace`) : le perdre laisserait la personne prélevée DEUX fois, donc
+il ne se sacrifie JAMAIS, contrairement au `sa`.
+
+**Le plan s'ouvre par le WEBHOOK, pas par la route.**
+`ouvertureDemandee()` rend `null` dès que rien n'a bougé : Stripe envoie
+`customer.subscription.updated` pour à peu près tout (une carte changée,
+une TVA renseignée), et ouvrir à chaque fois enverrait un email de
+confirmation à quelqu'un qui vient de mettre sa carte à jour. Un accès à
+VIE n'est jamais remplacé par un abonnement.
+
+`PLANS_A_VIE` vivait en deux exemplaires (`cancelSubscriptions.ts` et
+`admin/people.ts`) : la liste est maintenant dans
+`lib/checkout/plansAVie.ts`. Test : `tests/logic/plan-change.test.mts`.

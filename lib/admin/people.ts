@@ -43,6 +43,7 @@
 import type { Sale } from "@/lib/checkout/sales";
 import { totauxParProduit, type TotalProduit } from "./saleProduct";
 import type { AtelierPerson } from "@/lib/admin/atelier";
+import { PLANS_A_VIE } from "@/lib/checkout/plansAVie";
 
 /** Ce qu'on lit d'un compte. Volontairement réduit à ce qui s'affiche. */
 export interface ProfileRow {
@@ -254,7 +255,6 @@ export interface PeopleView {
 }
 
 /** LIFETIME et BETA : payants, mais sans abonnement à suivre. */
-const PLANS_A_VIE = new Set(["lifetime", "beta"]);
 
 function cle(email: string | null | undefined): string {
   return String(email ?? "").trim().toLowerCase();

@@ -295,5 +295,39 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     product: { id: product.id, label: product.label },
   });
 
+  // ── LA MONTÉE DE PALIER : ON ARRÊTE L'ANCIEN, MAINTENANT SEULEMENT ──
+  //
+  // Béné, 23 août : "Pour paypal : on dit rien, on facture et on upgrade
+  // point barre." PayPal ne sait pas changer le prix d'un abonnement en
+  // cours sans repasser par l'accord du client : on en ouvre donc un
+  // nouveau, et on arrête l'ancien ICI, une fois le nouveau ACTIVÉ.
+  //
+  // L'ordre n'est pas un détail. Arrêter d'abord laisserait sans rien
+  // quelqu'un qui n'irait pas au bout de l'accord PayPal ; arrêter ici
+  // veut dire qu'entre les deux il a payé les deux, pendant quelques
+  // secondes. C'est le seul des deux risques qui se rattrape.
+  if (abo.remplace) {
+    const arret = await cancelOwnerPaypalSubscription({
+      compte,
+      subscriptionId: abo.remplace,
+      raison: "Montee de palier",
+    });
+    if (!arret.ok) {
+      // On CRIE : deux abonnements qui prélèvent la même personne, c'est
+      // un remboursement et un client perdu. Le 200 reste, sinon PayPal
+      // rejouerait l'ouverture du plan en boucle.
+      console.error(
+        `[commande/paypal/webhook] ancien abonnement ${abo.remplace} NON arrete pour ` +
+          `${abo.email} (${arret.reason ?? "?"}) : A ARRETER A LA MAIN chez PayPal, ` +
+          `sinon il est preleve DEUX fois.`,
+      );
+    } else {
+      console.log(
+        `[commande/paypal/webhook] ${abo.email} : ancien abonnement ${abo.remplace} arrete ` +
+          `apres la montee vers ${product.id}`,
+      );
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }

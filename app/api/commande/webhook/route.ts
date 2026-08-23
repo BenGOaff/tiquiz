@@ -42,6 +42,10 @@ import { recordChurn } from "@/lib/checkout/churn";
 import { rememberStripeCustomer } from "@/lib/checkout/customerLink";
 import { commissionnerVente } from "@/lib/affiliate/ownerSale";
 import { marquerMoisOffertConsomme } from "@/lib/trial/moisOffertCheckout";
+import { ouvertureDemandee, type OuvertureDemandee } from "@/lib/checkout/planChange";
+import { estPlanAVie } from "@/lib/checkout/plansAVie";
+import { estAbonnementVivant } from "@/lib/checkout/subscriptionCancel";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
   isSubscriptionEvent,
   readCancellationFeedback,
@@ -481,6 +485,42 @@ async function surAbonnement(
   }
 
   if (lecture.outcome !== "revoke") {
+    // ── LA MONTEE DE PALIER ──
+    //
+    // Bene, 23 aout : "l'user paye 17 EUR pour le mois et veut upgrader
+    // a tiquiz plus". La route `/api/billing/change-plan` change la
+    // ligne chez Stripe ; c'est ICI que l'acces suit, a partir de ce
+    // que Stripe facture VRAIMENT. Deux endroits qui ouvriraient le
+    // plan finiraient par se contredire (quatrieme fois dans ce depot).
+    //
+    // `ouvertureDemandee` rend null des que rien n'a bouge : Stripe
+    // envoie `customer.subscription.updated` pour a peu pres tout, et
+    // ouvrir a chaque fois enverrait un email de confirmation a
+    // quelqu'un qui vient de mettre sa carte a jour.
+    const ouverture = await lireOuverture(email, abonnement);
+    if (ouverture) {
+      const grant = await grantPlanByEmail({
+        email,
+        plan: ouverture.plan,
+        source: "stripe",
+        reference: subId,
+        planLabel: ouverture.label,
+      });
+      if (!grant.ok) {
+        console.error(
+          `[commande/webhook] palier ${ouverture.produit} NON ouvert pour ${email} ` +
+            `(${grant.reason ?? "raison inconnue"}) : il a paye la difference.`,
+        );
+        // 502 : on VEUT que Stripe reessaie. Il a paye une montee qu'il
+        // n'a pas recue, et le silence coute plus cher que le bug.
+        return NextResponse.json({ ok: false, reason: grant.reason ?? "grant_failed" }, { status: 502 });
+      }
+      console.log(
+        `[commande/webhook] abonnement ${subId} : ${email} passe en ${ouverture.plan}`,
+      );
+      return NextResponse.json({ ok: true, subscription: "plan_changed", plan: ouverture.plan });
+    }
+
     console.log(
       `[commande/webhook] abonnement ${subId} (${eventType}) : ${lecture.reason}, acces conserve`,
     );
@@ -508,4 +548,36 @@ async function surAbonnement(
       `(${sortie.reason ?? "ok"})`,
   );
   return NextResponse.json({ ok: true, subscription: lecture.reason, revoked: true });
+}
+
+/**
+ * Le palier a ouvrir pour cet abonnement, ou `null`.
+ *
+ * La DECISION est pure et testee (`ouvertureDemandee`). Ici on ne fait
+ * que lui donner ce qu'elle demande : ce que Stripe facture, si
+ * l'abonnement est vivant, et le plan REEL du compte. Lire le plan
+ * dedans la rendrait intestable, et comparer a une hypothese au lieu du
+ * plan reel ferait repartir un email a chaque mise a jour anodine.
+ */
+async function lireOuverture(
+  email: string,
+  abonnement: RawSubscription | null,
+): Promise<OuvertureDemandee | null> {
+  const meta = (abonnement as { metadata?: Record<string, unknown> } | null)?.metadata ?? {};
+  const produitFacture = String(meta.product ?? "").trim();
+  if (!produitFacture) return null;
+
+  const { data } = await supabaseAdmin
+    .from("profiles")
+    .select("plan")
+    .ilike("email", email)
+    .maybeSingle();
+  const planActuel = String((data as { plan?: string } | null)?.plan ?? "").trim().toLowerCase();
+
+  return ouvertureDemandee({
+    produitFacture,
+    vivant: estAbonnementVivant((abonnement as { status?: unknown } | null)?.status),
+    planActuel,
+    aVie: estPlanAVie(planActuel),
+  });
 }
