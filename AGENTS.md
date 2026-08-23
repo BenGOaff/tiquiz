@@ -2268,46 +2268,46 @@ différentes le jour où l'un prend du retard.
 
 Test : `tests/logic/mois-offert.test.mts`.
 
-## Le mois offert ne s'ouvre QUE sur un lien du système courant (23 août 2026)
+## Le mois offert ne s'ouvre QUE sur un lien du système courant (24 août 2026)
 
-Béné : "on le met sur l'espace affilié en expliquant que c'est
+Béné, le 23 : "on le met sur l'espace affilié en expliquant que c'est
 uniquement avec le système d'affiliation en cours et pas sur les anciens
 liens systeme io (qui restent valides mais ne seront plus ceux à
 utiliser dans le futur)". Et : "uniquement sur les liens affiliés
 n'oublie pas, c'est pas pour celui qui tombe sur la page de vente tout
 seul".
 
-**Le piège : les deux générations de liens portent le MÊME `?sa=`.**
-Même forme, même propriétaire. Une fois arrivés chez nous, un ancien
-lien Systeme.io et un lien de l'espace affilié sont indiscernables. Le
-`sa` dit QUI est payé, il ne peut pas dire par quelle génération de lien
-la personne est venue : le déduire reviendrait à offrir le mois sur les
-anciens liens, exactement ce qui est exclu.
+**La première version passait par un marqueur `?mo=1`, et Béné l'a
+refusée le lendemain** : "je ne veux surtout pas de sa dans les nouveaux
+liens sinon y'a forcément un moment où on va merder, trouver autre chose
+nom de zeus ! Y'a pas que ce système, c'est celui de systeme io c'est
+tout !!"
 
-**Règle : un marqueur `?mo=1`, écrit à UN seul endroit**
-(`buildAffiliateLink()`, côté Tipote). Tout ce que l'espace affilié
-fabrique aujourd'hui le porte, rien de ce qui a été copié dans
-Systeme.io ne le portera jamais. Le test `affiliate-link.test.mts`
-interdit qu'il soit recopié ailleurs.
+Elle avait raison, et sa correction a SUPPRIMÉ le problème au lieu de le
+contourner. Le marqueur n'existait que parce que les deux générations de
+liens portaient le même `?sa=` et étaient donc indiscernables. Depuis que
+nos liens portent `?ref=jocelyne` (cf. la section suivante), **le nom du
+paramètre dit à lui seul la génération du lien** :
 
-**Le cookie porte l'IDENTIFIANT, pas un "oui"** (`tq_mo`, `httpOnly`).
-L'attribution suit le DERNIER lien (`pickSa`) : les deux moitiés de la
-décision doivent parler du même lien, sinon on paie l'un et on offre au
-titre de l'autre. Un "oui" flottant offrirait le mois sur n'importe quel
-lien suivant, ancien compris.
+| Le lien porte | D'où il vient | Commission | Mois offert |
+|---|---|---|---|
+| `?ref=` | l'espace affilié, aujourd'hui | oui | **oui** |
+| `?sa=` | un ancien tunnel Systeme.io | oui | non |
 
-**`essaiPourCeCheckout` prend `lienCourant` en PARAMÈTRE OBLIGATOIRE**,
-lu dans le COOKIE et jamais dans le corps de la requête (le corps vient
-du navigateur). Le bon de commande annonce les 30 jours par
-`pageOuvreLeMoisOffert()`, où **l'URL gagne sur le cookie** : au premier
-chargement, le cookie que le middleware vient de poser n'est pas encore
-relisible, et s'en remettre à lui ferait une page muette exactement sur
-le lien qui offre.
+`essaiPourCeCheckout({ ref })` ne prend donc QUE le code public. Un
+checkout arrivé par un ancien lien n'a rien à lui passer : pas de
+cadeau, et il commissionne exactement comme avant. `lib/affiliate/
+moisOffertLien.ts` a été SUPPRIMÉ, et avec lui le cookie `tq_mo`.
 
-**Sans destination sur NOTRE domaine, le cadeau est mort.** Les tunnels
-Systeme.io ne nous transmettent rien de ce qu'on ajoute à l'URL. D'où le
-slug `tiquiz_direct` (`https://tiquiz.fr/`), le seul par lequel le
-marqueur peut arriver.
+**Un marqueur en moins, c'est un endroit en moins où on pouvait
+l'oublier.** C'est la leçon générale : quand une décision demande un
+drapeau à maintenir, se demander d'abord si la donnée qu'on a déjà ne
+répond pas toute seule.
+
+**Sans destination sur NOTRE domaine, le cadeau reste mort.** Les
+tunnels Systeme.io ne nous transmettent rien de ce qu'on ajoute à
+l'URL. D'où le slug `tiquiz_direct` (`https://tiquiz.fr/`), le seul par
+lequel un `?ref=` peut arriver jusqu'à notre middleware.
 
 Le nombre de jours vit dans le module PUR
 (`JOURS_MOIS_OFFERT_ANNONCE`) : il est lu par la décision serveur ET par
@@ -2321,6 +2321,116 @@ s'afficher : `deja_recu` (sur le formulaire carte, l'adresse est saisie
 DANS Stripe, donc inconnue avant le paiement) et `meme_ip` (accordé
 volontairement, une IP partagée c'est aussi un couple ou deux
 collègues). **On montre, on ne reprend rien.**
+
+## Le lien d'affiliation porte `?ref=`, l'ancien `?sa=` reste lu (24 août 2026)
+
+`sa` reste la CLÉ INTERNE des commissions (tout l'historique est
+dessus) ; il ne sort plus dans une URL publique. Côté Tiquiz, on LIT les
+deux, **dans des champs séparés** :
+
+| Où | Nos liens | Anciens liens |
+|---|---|---|
+| URL | `?ref=jocelyne` | `?sa=sa0016...` |
+| cookie | `tq_ref` | `tq_sa` |
+| corps du checkout | `ref` | `sa` |
+| metadata Stripe | `affiliate_code` | `affiliate_ref` |
+| `custom_id` PayPal | 6e champ | 3e champ |
+
+**Ils ne se devinent JAMAIS l'un l'autre.** Deviner à la forme
+marcherait aujourd'hui et casserait le jour où une affiliée choisit un
+code qui ressemble à un `sa`. Le client nomme le champ, le serveur lit
+celui qu'on lui donne.
+
+**Les nouveaux champs du `custom_id` PayPal sont AJOUTÉS EN FIN** : un
+abonnement en cours le jour du déploiement se relit exactement comme
+avant, aux mêmes positions. C'est testé.
+
+`lib/affiliate/refLien.ts` porte le format (jumeau de `sanitizeRef` côté
+Tipote : un code accepté là-bas et refusé ici serait une affiliée jamais
+payée, sans le moindre symptôme) et la règle habituelle, **l'URL gagne
+sur le cookie** : c'est le DERNIER lien qui a fermé la vente.
+
+## L'audit du 24 août : quatre trous dans les chaînes paiement
+
+Béné : "je n'envoie rien en prod ni sur supabase pour le moment et tu me
+fais un audit complet de tout ce qui pourrait merder... Je veux un
+système fiable et stable."
+
+Garde-fou commun : `tests/logic/audit-24-aout.test.mts`.
+
+### 1. UN RÉESSAI DE WEBHOOK NE POUVAIT PAS REPASSER (le plus grave)
+
+La ligne de journal était écrite AVANT le travail, et **tout conflit sur
+l'index valait "déjà traité"**. Or l'index du 20 août couvrait tous les
+statuts.
+
+Conséquence : dès que le traitement ÉCHOUAIT (Supabase indisponible une
+seconde, Stripe injoignable, une colonne manquante), la route répondait
+502 pour demander un réessai, et **ce réessai était refusé par notre
+propre journal** : ligne existante -> doublon -> 200 -> le fournisseur
+arrête de réessayer.
+
+**Une vente encaissée dont le premier traitement ratait n'ouvrait donc
+JAMAIS l'accès**, et le symptôme était l'absence de symptôme. Huit
+chemins de nos deux webhooks répondaient 502 en comptant sur un réessai
+qui ne pouvait pas arriver.
+
+**La correction : le statut fait partie du verrou.**
+
+```
+(source, event_id) where status in ('processing','processed')
+```
+
+C'est exactement la forme de l'index de la migration 012, qui protège le
+webhook Systeme.io depuis mars et qui n'avait pas été reprise. Une ligne
+`error` en SORT, donc le réessai suivant peut reprendre.
+
+Trois cas, tous nécessaires : rien en base -> on travaille ; `processed`
+-> vrai doublon ; `processing` -> quelqu'un travaille (409, réessaie
+plus tard) ou son travail est mort en route (> 2 min -> on reprend).
+
+**Et la décision est sortie dans un module PUR** (`verrouRegles.ts`) :
+`log.ts` importe `supabaseAdmin`, donc aucun test ne pouvait l'importer,
+donc rien ne la testait. C'est LITTÉRALEMENT là que le bug s'était
+installé. `maintenant` est un paramètre : un test qui dépend de
+l'horloge clignote.
+
+**Le marquage est obligatoire à TOUTES les sorties**, exception
+comprise. D'où la séparation `POST` / `traiterEvenement` : un `return`
+oublié au milieu de deux cents lignes laisserait l'événement bloqué.
+
+### 2. REMBOURSER UNE ÉCHÉANCE N'ARRÊTAIT PAS L'ABONNEMENT
+
+L'identifiant client venait UNIQUEMENT de la session de paiement. Une
+ÉCHÉANCE d'abonnement n'en a pas (c'est une facture, pas une session) :
+`vente` valait `null` sur tout remboursement mensuel, donc l'abonnement
+n'était pas arrêté. Accès fermé, et Stripe prélevait le mois suivant.
+
+Le bug d'argent du 23 août, par une autre porte. Repli sur
+`readCustomerId(charge.customer)`, qui gère les deux formes de Stripe et
+existait déjà : ne pas s'en servir n'était pas une précaution, c'était
+un trou.
+
+### 3. RIEN NE LIAIT `SALES_HOSTS` ET `OWN_HOSTS`
+
+Un domaine de vente absent d'`OWN_HOSTS` est pris par le portier pour le
+domaine d'une créatrice : **404 sur le bon de commande ET sur son
+`/api/commande/session`**. Le commentaire disait "à garder en phase", et
+rien ne le vérifiait : la mécanique des deux listes qui divergent,
+quatre fois payée dans ce dépôt.
+
+### 4. UNE PORTE PARTENAIRE COMPARAIT SON SECRET AVEC `!==`
+
+`support-ticket` était la seule ; les autres utilisent `safeEqual`. Une
+comparaison naïve s'arrête au premier caractère différent : son TEMPS
+raconte combien de caractères sont justes.
+
+### 5. UN APPEL VERS L'AUTRE APP POUVAIT BLOQUER UN WEBHOOK
+
+`commissionnerVente` tourne DANS le webhook de paiement et n'avait aucun
+délai maximum. Une panne de Tipote gardait la requête ouverte jusqu'à ce
+que la plateforme la tue. `proprietaireDuLien` avait le sien : deux
+appels vers la même app, un seul protégé.
 
 ## Monter de palier : le prorata chez Stripe, un abonnement neuf chez PayPal (23 août 2026)
 
