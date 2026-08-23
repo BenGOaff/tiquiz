@@ -121,13 +121,13 @@
     "projects": "Mes projets",
     "createSurvey": "Créer un sondage",
     "popquiz": "Popquiz vidéo",
-    "becomeAffiliate": "Devenir affilié",
+    "becomeAffiliate": "Rejoindre le programme d'affiliation",
     "atelierNudgeQuestion": "Besoin d'aide pour rendre ton quiz viral et rentable ?",
     "atelierNudgeCta": "Découvre l'Atelier du Quiz",
     "atelierAffNudgeText": "Recommande Tiquiz et l'Atelier du Quiz, jusqu'à 70% de commission",
     "atelierAffNudgeCta": "Mon espace affilié",
     "atelierAffJoinText": "Tu peux recommander Tiquiz et l'Atelier, même sans les avoir.",
-    "atelierAffJoinCta": "Devenir affilié·e",
+    "atelierAffJoinCta": "Rejoindre le programme d'affiliation",
     "adminPanel": "Admin"
   },
   "stats": {
@@ -382,7 +382,7 @@
       "lateNightWithName": "Toujours là {name} ? ☕"
     },
     "subtitleRotation": {
-      "0": "Prêt·e à booster ton business aujourd'hui ?",
+      "0": "On booste ton business aujourd'hui ?",
       "1": "On crée du contenu qui convertit ?",
       "2": "Une nouvelle journée, une nouvelle opportunité ✨",
       "3": "Qu'est-ce qu'on lance aujourd'hui ?",
@@ -1016,7 +1016,7 @@
     "trackingDefaultsMetaCapiPlaceholder": "EAAG… (token d'accès Conversions API)",
     "trackingDefaultsMetaCapiHelp": "Active l'envoi serveur des conversions (résiste aux bloqueurs de pub, améliore le matching, dédupliqué avec le pixel). Events Manager → ton dataset → Paramètres → Conversions API → « Générer un token d'accès ». À utiliser avec le pixel ci-dessus.",
     "affiliateWhereId": "<strong>Où trouver mon ID ?</strong> Connecte-toi à Systeme.io → <em>Tableau de bord affilié</em> → en haut à droite tu vois ton <em>identifiant affilié</em> (qui commence par <code>sa</code>). Copie-le, colle-le ici, c'est tout.",
-    "affiliateNotRegistered": "Pas encore inscrit·e ?",
+    "affiliateNotRegistered": "Pas encore dans le programme ?",
     "affiliateDiscoverProgram": "Découvrir le programme d'affiliation",
     "affiliateTerms": "Conditions générales",
     "affiliateEmptyFieldNote": "Si tu laisses ce champ vide, le footer reste visible mais sans tracking - les inscriptions ne te rapporteront rien.",

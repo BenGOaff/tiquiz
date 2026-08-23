@@ -121,13 +121,13 @@
     "projects": "I miei progetti",
     "createSurvey": "Crea un sondaggio",
     "popquiz": "Popquiz video",
-    "becomeAffiliate": "Diventa affiliato",
+    "becomeAffiliate": "Entrare nel programma di affiliazione",
     "atelierNudgeQuestion": "Besoin d'aide pour rendre ton quiz viral et rentable ?",
     "atelierNudgeCta": "Découvre l'Atelier du Quiz",
     "atelierAffNudgeText": "Recommande Tiquiz et l'Atelier du Quiz, jusqu'à 70% de commission",
     "atelierAffNudgeCta": "Mon espace affilié",
     "atelierAffJoinText": "Puoi consigliare Tiquiz e l'Atelier, anche senza averli.",
-    "atelierAffJoinCta": "Diventa affiliato",
+    "atelierAffJoinCta": "Entrare nel programma di affiliazione",
     "adminPanel": "Admin"
   },
   "stats": {
@@ -382,7 +382,7 @@
       "lateNightWithName": "Sempre qui {name}? ☕"
     },
     "subtitleRotation": {
-      "0": "Pronta/o a far crescere il tuo business oggi?",
+      "0": "Facciamo crescere il tuo business oggi?",
       "1": "Creiamo contenuti che convertono?",
       "2": "Un nuovo giorno, una nuova opportunità ✨",
       "3": "Cosa lanciamo oggi?",
@@ -1015,7 +1015,7 @@
     "trackingDefaultsMetaCapiPlaceholder": "EAAG… (token di accesso API Conversions)",
     "trackingDefaultsMetaCapiHelp": "Attiva l'invio server-side delle conversioni (resiste agli ad blocker, migliora il matching, deduplicato con il pixel). Events Manager → il tuo dataset → Impostazioni → API Conversions → «Genera un token di accesso». Da usare con il pixel sopra.",
     "affiliateWhereId": "<strong>Dove trovo il mio ID?</strong> Accedi a Systeme.io → <em>Dashboard affiliato</em> → in alto a destra vedi il tuo <em>identificativo affiliato</em> (inizia con <code>sa</code>). Copialo, incollalo qui, fatto.",
-    "affiliateNotRegistered": "Non sei ancora iscritto?",
+    "affiliateNotRegistered": "Non sei ancora nel programma?",
     "affiliateDiscoverProgram": "Scopri il programma di affiliazione",
     "affiliateTerms": "Termini e condizioni",
     "affiliateEmptyFieldNote": "Se lasci questo campo vuoto, il footer resta visibile ma senza tracking - le iscrizioni non ti faranno guadagnare nulla.",

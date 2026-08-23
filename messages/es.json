@@ -121,13 +121,13 @@
     "projects": "Mis proyectos",
     "createSurvey": "Crear una encuesta",
     "popquiz": "Popquiz de vídeo",
-    "becomeAffiliate": "Hazte afiliado",
+    "becomeAffiliate": "Unirme al programa de afiliación",
     "atelierNudgeQuestion": "Besoin d'aide pour rendre ton quiz viral et rentable ?",
     "atelierNudgeCta": "Découvre l'Atelier du Quiz",
     "atelierAffNudgeText": "Recommande Tiquiz et l'Atelier du Quiz, jusqu'à 70% de commission",
     "atelierAffNudgeCta": "Mon espace affilié",
     "atelierAffJoinText": "Puedes recomendar Tiquiz y el Atelier, incluso sin tenerlos.",
-    "atelierAffJoinCta": "Hazte afiliado",
+    "atelierAffJoinCta": "Unirme al programa de afiliación",
     "adminPanel": "Admin"
   },
   "stats": {
@@ -382,7 +382,7 @@
       "lateNightWithName": "¿Sigues por aquí {name}? ☕"
     },
     "subtitleRotation": {
-      "0": "¿Lista/o para impulsar tu negocio hoy?",
+      "0": "¿Impulsamos tu negocio hoy?",
       "1": "¿Creamos contenido que convierte?",
       "2": "Un nuevo día, una nueva oportunidad ✨",
       "3": "¿Qué lanzamos hoy?",
@@ -1015,7 +1015,7 @@
     "trackingDefaultsMetaCapiPlaceholder": "EAAG… (token de acceso de la API de Conversiones)",
     "trackingDefaultsMetaCapiHelp": "Activa el envío de conversiones desde el servidor (resiste los bloqueadores de anuncios, mejora la coincidencia, deduplicado con el píxel). Events Manager → tu conjunto de datos → Ajustes → API de Conversiones → «Generar un token de acceso». Para usar con el píxel anterior.",
     "affiliateWhereId": "<strong>¿Dónde encuentro mi ID?</strong> Inicia sesión en Systeme.io → <em>Panel de afiliados</em> → arriba a la derecha verás tu <em>identificador de afiliado</em> (empieza por <code>sa</code>). Cópialo, pégalo aquí, listo.",
-    "affiliateNotRegistered": "¿Aún no te has registrado?",
+    "affiliateNotRegistered": "¿Aún no estás en el programa?",
     "affiliateDiscoverProgram": "Descubre el programa de afiliados",
     "affiliateTerms": "Términos y condiciones",
     "affiliateEmptyFieldNote": "Si dejas este campo vacío, el pie de página sigue siendo visible pero sin tracking - las altas no te generarán nada.",
