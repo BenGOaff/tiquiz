@@ -27,6 +27,14 @@ export interface Ticket {
   repliedAt: string | null;
   locale: string;
   createdAt: string;
+  /**
+   * De quel produit parle la demande.
+   *
+   * Depuis le 23 aout, la file est commune aux trois apps : sans cette
+   * colonne, Bene lirait "je n'ai pas recu mes acces" sans savoir s'il
+   * s'agit de Tiquiz ou de L'Atelier, et repondrait a cote.
+   */
+  product: string;
 }
 
 /** Une valeur venue de la base, ramenée à un statut qu'on connaît. */

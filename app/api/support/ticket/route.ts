@@ -29,7 +29,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { sendSupportAlert } from "@/lib/email/supportAlertEmail";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { ecrireTicket, preparerTicket } from "@/lib/support/creerTicket";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,32 +56,31 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: false, reason: "trop_de_demandes" }, { status: 429 });
   }
 
-  let email = "";
-  let name = "";
-  let subject = "";
-  let message = "";
-  let page = "";
-  let locale = "fr";
+  let brut: Record<string, unknown>;
   try {
-    const body = await req.json();
-    email = String(body?.email ?? "").trim().toLowerCase().slice(0, 320);
-    name = String(body?.name ?? "").trim().slice(0, 100);
-    subject = String(body?.subject ?? "").trim().slice(0, 200);
-    message = String(body?.message ?? "").trim().slice(0, 5000);
-    page = String(body?.page ?? "").trim().slice(0, 300);
-    locale = String(body?.locale ?? "fr").trim().slice(0, 8) || "fr";
+    brut = (await req.json()) as Record<string, unknown>;
   } catch {
     return NextResponse.json({ ok: false, reason: "invalid_body" }, { status: 400 });
   }
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return NextResponse.json({ ok: false, reason: "invalid_email" }, { status: 400 });
+  // Le nettoyage et la validation vivent dans `lib/support/creerTicket.ts`,
+  // partages avec la porte du centre d'aide commun. Trois portes qui
+  // valideraient chacune de leur cote finiraient par ne plus enregistrer
+  // les memes champs.
+  const prepare = preparerTicket({
+    email: String(brut.email ?? ""),
+    name: String(brut.name ?? ""),
+    subject: String(brut.subject ?? ""),
+    message: String(brut.message ?? ""),
+    page: String(brut.page ?? ""),
+    locale: String(brut.locale ?? "fr"),
+    product: brut.product ?? "tiquiz",
+    conversation: brut.conversation,
+  });
+  if (!prepare.ok) {
+    return NextResponse.json({ ok: false, reason: prepare.reason }, { status: 400 });
   }
-  if (message.length < 10) {
-    // Dix caractères : de quoi refuser un formulaire envoyé par erreur,
-    // sans jamais refuser une vraie question courte.
-    return NextResponse.json({ ok: false, reason: "message_trop_court" }, { status: 400 });
-  }
+  const ticket = prepare.ticket;
 
   // L'identité si on l'a. Une absence de session n'est PAS une erreur.
   let userId: string | null = null;
@@ -95,29 +94,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     userId = null;
   }
 
-  const { error } = await supabaseAdmin.from("support_tickets").insert({
-    user_id: userId,
-    email,
-    name: name || null,
-    subject: subject || null,
-    message,
-    page: page || null,
-    locale,
-    status: "open",
-  });
-
-  if (error) {
-    // Un refus se NOMME, et surtout il se JOURNALISE : une demande
-    // perdue en silence, c'est une cliente qui attend une réponse qui ne
-    // viendra jamais.
-    console.error(`[support/ticket] demande PERDUE pour ${email} : ${error.message}`);
-    return NextResponse.json({ ok: false, reason: "write_failed" }, { status: 500 });
+  const ecrit = await ecrireTicket(ticket, userId);
+  if (!ecrit.ok) {
+    return NextResponse.json({ ok: false, reason: ecrit.reason }, { status: 500 });
   }
 
   // On prévient Béné. Best-effort : un email d'alerte qui ne part pas ne
   // doit pas faire croire à la cliente que sa demande a échoué, puisque
   // elle est bien enregistrée.
-  await sendSupportAlert({ email, name, subject, message, page }).catch(() => false);
+  await sendSupportAlert({
+    email: ticket.email,
+    name: ticket.name,
+    subject: ticket.subject,
+    message: ticket.message,
+    page: ticket.page,
+  }).catch(() => false);
 
   return NextResponse.json({ ok: true });
 }

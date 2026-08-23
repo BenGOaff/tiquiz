@@ -59,18 +59,22 @@ export const LIENS_LEGAUX: readonly { texte: string; href: string }[] = [
  * "le support me donne cette url alors que le support n'est pas là du
  * tout."
  *
- * La bonne adresse est NOTRE formulaire, celui du 22 août : il est
- * public (elle n'a pas besoin d'être connectée pour écrire, et c'est
- * justement celle qui n'arrive pas à se connecter qui en a le plus
- * besoin) et il alimente la file de tickets de l'admin. Le centre
- * d'aide de Tipote (`app.tipote.com/support`) sert les ARTICLES, il n'a
- * pas de formulaire : y envoyer quelqu'un qui a un problème de paiement
- * le laisse sans interlocuteur.
+ * Puis, dans la foulée : "s'il n'a pas reçu ses accès, comment il accède
+ * à quiz.tipote.com/support ? Pas con hein ???" Le formulaire de Tiquiz
+ * est bien public, mais elle a raison sur le fond : quelqu'un qui vient
+ * d'acheter et dont rien ne marche ne sait pas sur quelle app écrire, et
+ * il ne devrait pas avoir à le savoir.
  *
- * En absolu et pas en relatif : cette page est aussi servie sur
- * `tiquiz.fr`, où tout chemin non autorisé répond 404.
+ * On envoie donc vers le CENTRE D'AIDE COMMUN, qui porte les 57 articles
+ * ET le formulaire, et dont les tickets arrivent dans la file unique.
+ * `produit=tiquiz` pré-sélectionne l'outil : le bon de commande sait de
+ * quoi il parle.
+ *
+ * `lang=fr` en dur, et c'est exact aujourd'hui : le bon de commande est
+ * servi en français (`locale: "fr"` côté Stripe). Le jour où il parlera
+ * une autre langue, cette valeur devra suivre.
  */
-export const LIEN_SUPPORT = "https://quiz.tipote.com/support";
+export const LIEN_SUPPORT = "https://app.tipote.com/support?lang=fr&produit=tiquiz";
 
 /**
  * Ce qu'on envoie à Stripe pour que son formulaire ressemble à la page

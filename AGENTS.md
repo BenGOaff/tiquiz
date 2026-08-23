@@ -2064,3 +2064,64 @@ Le filet est `tests/logic/genre-neutre.test.mts`. Il ne crie PAS sur un
 accord avec un nom féminin ("analyse prête", "vidéo prête") : un test qui
 rougit pour rien finit désactivé. Il ne regarde que l'adresse directe au
 lecteur.
+
+## Une seule file de tickets, une porte commune (Béné, 23 août 2026)
+
+"S'il n'a pas reçu ses accès, comment il accède à
+`quiz.tipote.com/support` ? Pas con hein ??? Je veux un service de
+ticketing dans le centre d'aide commun à toutes les app, essentiellement
+pour Tiquiz et L'Atelier qui sont vendus en ce moment, avec ticket relié
+à la fiche client si elle existe."
+
+**Sur le détail, notre formulaire était déjà public** (aucun compte
+demandé, c'est écrit dans `app/support/page.tsx`). Sur le fond elle a
+raison : quelqu'un dont rien ne marche ne sait pas sur QUELLE app écrire,
+et il ne devrait pas avoir à le savoir.
+
+**Et surtout, il y avait DEUX files.** `support_tickets` chez Tipote
+depuis le 12 mars (les escalades du robot d'aide, avec la conversation)
+et `support_tickets` ici depuis le 22 août (le formulaire). Deux bases,
+deux écrans d'admin, aucun des deux ne connaissant L'Atelier. Une demande
+pouvait attendre des jours dans celle qu'on ne regardait pas.
+
+**Règle : la PORTE est commune, la FILE est unique et vit ici.**
+
+| Où | Quoi |
+|---|---|
+| `app.tipote.com/support` | les 57 articles, le robot, ET le formulaire de contact (7 langues, sélecteur de produit) |
+| `quiz.tipote.com/support` | le formulaire dans l'app, qui pré-remplit l'adresse quand une session existe |
+| l'Atelier, menu "Besoin d'aide ?" | mène au centre d'aide avec `?produit=atelier` |
+| **la file** | `support_tickets` de TIQUIZ, affichée dans `/admin` et sur la fiche client |
+
+La file vit ici et pas chez Tipote pour la raison déjà écrite le 22 août :
+le ticket doit s'afficher sur la FICHE CLIENT, à côté des accès, des
+paiements et du statut Atelier, et c'est l'admin de Tiquiz qui porte
+cette fiche. **Une donnée dans une autre base est une donnée qu'on ne
+croisera jamais.**
+
+**Le chemin :** le centre d'aide POSTe sur son `/api/support/ticket`
+(Tipote), qui relaie vers `/api/partner/support-ticket` (ici) avec
+`x-partner-secret`. Le secret ne protège rien de confidentiel (l'autre
+porte est publique) : il sert à SAUTER LA LIMITE PAR IP, parce qu'un
+relais serveur à serveur arrive toujours de la même adresse et couperait
+tout le centre d'aide dès la sixième personne. Tipote applique SA limite,
+sur l'IP réelle, avant de relayer.
+
+**Si le relais échoue, on écrit dans la table locale de Tipote et on crie
+dans le journal.** Elle a vu "envoyé" : la demande doit exister quelque
+part. L'écran d'admin de Tipote garde donc l'historique, et porte un
+bandeau qui dit où est la file vivante. Sans ce bandeau, Béné
+surveillerait un écran qui ne bouge plus.
+
+**`product` est validé, jamais écrit tel quel** (`lib/support/produit.ts`,
+alias `formaquiz` et `quizing` acceptés). Valeur inconnue -> `tiquiz`, le
+défaut de la colonne : un ticket mal étiqueté reste lisible, un ticket
+refusé est une cliente sans réponse.
+
+**Et l'écriture se replie sur l'ancienne forme** si la migration n'est
+pas encore passée : PostgREST rejette l'écriture ENTIÈRE sur une colonne
+inconnue, donc sans repli un déploiement en avance perdrait TOUS les
+tickets en silence (drame `quiz_events.meta`, 15 jours de stats perdues).
+
+Test : `tests/logic/support-ticketing.test.mts` ici,
+`tests/logic/support-relay.test.mts` côté Tipote.
