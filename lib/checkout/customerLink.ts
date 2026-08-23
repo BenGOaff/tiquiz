@@ -86,3 +86,55 @@ export async function readStripeCustomerId(userId: string): Promise<string | nul
     return null;
   }
 }
+
+/**
+ * LE FIL VERS PAYPAL, l'équivalent du client Stripe.
+ *
+ * Sans lui, le bouton "Arrêter l'abonnement" ne saurait pas QUOI
+ * arrêter : on fermerait l'accès en laissant le prélèvement tourner,
+ * c'est à dire exactement le bug d'argent trouvé le 23 août sur
+ * l'annulation.
+ *
+ * Repli si la colonne n'existe pas encore : PostgREST rejette la mise à
+ * jour ENTIÈRE sur une colonne inconnue, donc sans ce filet un
+ * déploiement en avance sur la migration ferait échouer l'appel après
+ * l'octroi. L'accès serait ouvert, le fil perdu, et le message dirait
+ * quoi appliquer.
+ */
+export async function rememberPaypalSubscription(args: {
+  email: string;
+  subscriptionId: string | null | undefined;
+}): Promise<{ ok: boolean; reason?: string }> {
+  const email = String(args.email ?? "").trim().toLowerCase();
+  const abonnement = String(args.subscriptionId ?? "").trim();
+  if (!email) return { ok: false, reason: "no_email" };
+  if (!abonnement) return { ok: false, reason: "no_subscription" };
+
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .update({ paypal_subscription_id: abonnement })
+      .eq("email", email)
+      .select("user_id");
+
+    if (error) {
+      if (/column .* does not exist|schema cache/i.test(error.message)) {
+        console.warn(
+          "[customerLink] colonne paypal_subscription_id absente : migration " +
+            "20260823_paypal_subscription.sql a passer sur Supabase.",
+        );
+        return { ok: false, reason: "colonne_absente" };
+      }
+      throw error;
+    }
+    if (!data || data.length === 0) return { ok: false, reason: "no_profile" };
+    return { ok: true };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(
+      `[customerLink] abonnement PayPal NON rattache a ${email} : ${message}. ` +
+        `Il faudra l'arreter a la main chez PayPal.`,
+    );
+    return { ok: false, reason: "write_failed" };
+  }
+}

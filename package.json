@@ -16,6 +16,7 @@
     "check:schema": "node scripts/check-schema.mjs",
     "check:migrations-pending": "node scripts/check-pending-migrations.mjs",
     "check:prod": "node scripts/check-prod.mjs",
+    "paypal:setup": "node scripts/paypal-setup.mjs",
     "test:webhook": "node scripts/test-webhook-routing.mjs",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install --with-deps chromium",

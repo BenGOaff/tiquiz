@@ -31,7 +31,8 @@ import { notFound } from "next/navigation";
 
 import { LIENS_LEGAUX, LIEN_SUPPORT } from "@/lib/checkout/brand";
 import { findOwnerProduct, formatOwnerPrice, ownerBillingKey } from "@/lib/checkout/catalog";
-import { readOwnerStripe } from "@/lib/checkout/ownerAccount";
+import { readOwnerPaypal, readOwnerStripe } from "@/lib/checkout/ownerAccount";
+import { getOwnerPaypalSubscription } from "@/lib/checkout/paypalOwner";
 import { retrieveOwnerSession } from "@/lib/checkout/stripeCheckout";
 import { isSalesOpen } from "@/lib/sales/previewGate";
 
@@ -52,10 +53,12 @@ export default async function Page({
   searchParams,
 }: {
   params: Promise<{ produit: string }>;
-  searchParams: Promise<{ session_id?: string; k?: string }>;
+  // `session_id` vient de Stripe, `subscription_id` de PayPal : les deux
+  // fournisseurs ramènent l'acheteur ici, chacun avec son vocabulaire.
+  searchParams: Promise<{ session_id?: string; subscription_id?: string; k?: string }>;
 }) {
   const { produit } = await params;
-  const { session_id: sessionId, k } = await searchParams;
+  const { session_id: sessionId, subscription_id: abonnementPaypal, k } = await searchParams;
 
   // La porte s'ouvre par la cle OU par le domaine public : sur
   // tiquiz.fr le bon de commande doit etre accessible sans rien dans
@@ -69,9 +72,35 @@ export default async function Page({
   const session =
     compte && sessionId ? await retrieveOwnerSession(compte.key, sessionId) : null;
 
+  // LE RETOUR DE PAYPAL.
+  //
+  // On relit l'abonnement au lieu de croire l'URL : `?subscription_id=`
+  // est un paramètre comme un autre, et quelqu'un qui le change à la
+  // main verrait sinon un écran de félicitations sans avoir payé.
+  //
+  // Ce que cet écran fait, et ce qu'il ne fait PAS : il CONFIRME. Ce qui
+  // ouvre l'accès, c'est le webhook, parce que beaucoup d'acheteurs ne
+  // voient jamais cette page (paiement sur mobile, onglet fermé).
+  const comptePaypal = readOwnerPaypal(process.env);
+  const aboPaypal =
+    comptePaypal && abonnementPaypal
+      ? await getOwnerPaypalSubscription({
+          compte: comptePaypal,
+          subscriptionId: abonnementPaypal,
+        })
+      : null;
+
   // Trois états, trois écrans. Le troisième est celui qu'on oublie
   // toujours, et c'est le seul où l'acheteur a besoin qu'on le rassure.
-  const etat = !session ? "inconnu" : session.paid ? "paye" : "en_attente";
+  const etat = aboPaypal
+    ? aboPaypal.actif
+      ? "paye"
+      : "en_attente"
+    : !session
+      ? "inconnu"
+      : session.paid
+        ? "paye"
+        : "en_attente";
 
   return (
     <main className="min-h-screen bg-white text-[#2b3264]">

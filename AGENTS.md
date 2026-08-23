@@ -2125,3 +2125,78 @@ tickets en silence (drame `quiz_events.meta`, 15 jours de stats perdues).
 
 Test : `tests/logic/support-ticketing.test.mts` ici,
 `tests/logic/support-relay.test.mts` côté Tipote.
+
+## PayPal sur Tiquiz : des ABONNEMENTS, pas un achat unique (23 août 2026)
+
+Béné avait prévenu : "ce n'est pas un copier-coller de l'Atelier."
+L'Atelier vend un achat unique et utilise l'API Orders (une commande,
+une capture, terminé). Tiquiz vend des abonnements : il faut un produit,
+un plan de facturation, un abonnement, et un cycle de vie à écouter.
+Les deux se ressemblent en surface et ne font pas le même métier ;
+recopier l'un sur l'autre aurait vendu un paiement unique de 17 € au
+lieu d'un abonnement mensuel, et personne ne l'aurait vu avant le
+deuxième mois.
+
+**Ce n'était pas une nouveauté pour autant.** `lib/paypalRest.ts` fait
+tourner des abonnements PayPal en production depuis des mois pour les
+REVENDEURS, depuis leurs propres comptes. `lib/checkout/paypalOwner.ts`
+est la même mécanique appliquée au compte de Béné avec NOTRE catalogue.
+On ne l'importe pas : il tire `resellerPayments` donc `supabaseAdmin`,
+qui exige les variables d'environnement au chargement et rend le tout
+intestable. **La plomberie REST est dupliquée, les décisions ne le sont
+pas.**
+
+**Les quatre garanties du webhook sont celles de Stripe** : signature
+vérifiée avant tout (PayPal ne signe pas avec un secret partagé, on lui
+REDEMANDE s'il a émis l'événement, et ça exige
+`PAYPAL_WEBHOOK_ID_OWNER`), idempotence par `webhook_logs`, relecture de
+l'abonnement chez PayPal, et le plan qui vient du catalogue.
+
+**Ce qui coupe et ce qui ne coupe pas :**
+
+| Événement | Effet |
+|---|---|
+| `BILLING.SUBSCRIPTION.ACTIVATED` | ouvre le plan, rattache l'abonnement, paie l'affiliée |
+| `CANCELLED` / `EXPIRED` | ferme l'accès |
+| `SUSPENDED` | **ne ferme RIEN**, journalisé fort |
+| `PAYMENT.SALE.COMPLETED` | l'échéance, enregistrée, aucun effet sur l'accès |
+| `PAYMENT.SALE.REFUNDED` | ferme l'accès ET arrête l'abonnement |
+
+`SUSPENDED` arrive après trois échecs de prélèvement. Couper là mettrait
+dehors quelqu'un dont la carte vient d'expirer et qui va la changer :
+même règle que Stripe sur `invoice.payment_failed`.
+
+**L'adresse SAISIE voyage dans le `custom_id`, et elle gagne.** PayPal
+renvoie l'adresse du COMPTE PayPal, qui n'est pas toujours celle utilisée
+chez nous (compte du conjoint, adresse pro). Ouvrir l'accès sur celle-là
+fabrique un compte orphelin, ce que l'Atelier a rencontré le 7 août sur
+les commandes de bonus. `custom_id` est borné à 127 caractères par
+PayPal : quand ça déborde on lâche le `sa`, JAMAIS l'adresse (une
+attribution retombe sur la conversion par email, un accès perdu ne
+retombe sur rien).
+
+**PayPal ne connaît pas la fin de période.** `cancel` arrête le
+prélèvement tout de suite, et c'est tout ce qu'il sait faire. On ne fait
+donc pas semblant : le `quand` de `cancelSubscriptions.ts` décide ce que
+NOUS faisons de l'accès, pas ce que PayPal fait du prélèvement.
+
+**La commission est sur le TTC**, décision de Béné du 22 août ("pour
+paypal : oui on garde le TTC"). PayPal ne ventile pas la TVA comme
+Stripe Tax : passer une taxe à zéro dit la vérité de cette vente là au
+lieu d'inventer un taux. Une vente PayPal paie donc l'affiliée un peu
+plus qu'une vente carte, et c'est assumé.
+
+**Le branchement se fait par `npm run paypal:setup`**, jamais à la main :
+l'identifiant de webhook se relève dans l'interface PayPal, se recopie
+dans un `.env`, et une faute de frappe ne se voit nulle part (le
+paiement s'ouvre, l'argent rentre, aucun accès ne s'ouvre parce que la
+vérification échoue en silence). Le script crée le webhook, affiche la
+ligne à coller, et n'imprime jamais un secret.
+
+**`PAYPAL_ENV_OWNER` absente vaut BAC À SABLE.** Des identifiants réels
+envoyés à l'API du bac à sable sont refusés avec un message qui ne dit
+pas pourquoi. `check:prod` le signale, et crie aussi quand Stripe est en
+réel pendant que PayPal est en bac à sable : l'écran annonce un seul
+mode, donc un des deux boutons ment.
+
+Test : `tests/logic/paypal-owner.test.mts`.
