@@ -78,7 +78,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         Authorization: `Bearer ${compte.key}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      body: `payment_intent=${encodeURIComponent(ref)}`,
+      // UN `ch_` SE REMBOURSE AUSSI BIEN QU'UN `pi_`.
+      //
+      // Sur un abonnement, la facture ne porte pas toujours de
+      // PaymentIntent : certaines ne donnent qu'une charge. Envoyer une
+      // charge sous le nom `payment_intent` fait répondre Stripe "no
+      // such payment_intent", et l'écran dirait "le fournisseur a
+      // refusé" pour une vente parfaitement remboursable.
+      body: `${ref.startsWith("ch_") ? "charge" : "payment_intent"}=${encodeURIComponent(ref)}`,
     });
     const json = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
     if (!res.ok) {

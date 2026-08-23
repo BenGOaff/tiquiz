@@ -13,6 +13,8 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 
 import { buildSales, formatSaleAmount, type EventRow } from "../../lib/checkout/sales.ts";
 
@@ -173,4 +175,111 @@ test("le montant s'affiche en euros avec deux decimales", () => {
   const [vente] = buildSales([achatStripe("pi_1", "2026-08-20T10:00:00Z")]);
   // Espace insecable dans le format francais : on compare sur le chiffre.
   assert.ok(formatSaleAmount(vente).startsWith("47,00"), formatSaleAmount(vente));
+});
+
+// ── L'ABONNEMENT : LA VENTE N'EST PAS LA SESSION (23 août 2026) ──
+//
+// Béné, après son premier abonnement Tiquiz payé pour de vrai : "mon
+// achat test de tiquiz par abonnement, j'ai bien pu l'arrêter mais pas
+// le rembourser depuis mon dashboard admin : c'est RELOU !"
+//
+// La cause était nette : en mode ABONNEMENT, Stripe ne pose PAS de
+// `payment_intent` sur `checkout.session.completed` (c'est réservé au
+// paiement unique). La ligne était donc écartée en silence, et l'écran
+// affichait "rien pour l'instant" sur un compte qui venait de payer.
+//
+// La vente d'un abonnement, ce sont ses FACTURES payées.
+
+function factureStripe(
+  quand: string,
+  facture: Record<string, unknown>,
+): EventRow {
+  return {
+    source: "stripe",
+    event_type: "invoice.paid",
+    created_at: quand,
+    payload: { data: { object: facture } },
+  } as unknown as EventRow;
+}
+
+test("une echeance d'abonnement apparait, et elle est remboursable", () => {
+  const ventes = buildSales([
+    factureStripe("2026-08-23T12:00:00Z", {
+      payment_intent: "pi_abo1",
+      amount_paid: 1700,
+      currency: "eur",
+      customer_email: "bene@exemple.fr",
+      metadata: { product: "mensuel" },
+    }),
+  ]);
+  assert.equal(ventes.length, 1);
+  assert.equal(ventes[0].ref, "pi_abo1", "sans reference, aucun bouton Rembourser");
+  assert.equal(ventes[0].amountCents, 1700);
+  assert.equal(ventes[0].email, "bene@exemple.fr");
+  assert.equal(ventes[0].productId, "mensuel");
+});
+
+test("on lit les TROIS formes de reference d'une facture", () => {
+  // Stripe a deplace `invoice.payment_intent` vers
+  // `payments[].payment.payment_intent` dans ses versions recentes, et
+  // certaines factures ne portent qu'une `charge`. Ne lire qu'une forme
+  // ferait disparaitre les ventes du jour ou le compte change de
+  // version d'API, sans que rien ne le signale.
+  const parPayments = buildSales([
+    factureStripe("2026-08-23T12:00:00Z", {
+      amount_paid: 1700,
+      payments: { data: [{ payment: { payment_intent: "pi_recent" } }] },
+    }),
+  ]);
+  assert.equal(parPayments[0]?.ref, "pi_recent");
+
+  const parCharge = buildSales([
+    factureStripe("2026-08-23T12:00:00Z", { amount_paid: 1700, charge: "ch_seule" }),
+  ]);
+  assert.equal(parCharge[0]?.ref, "ch_seule");
+
+  // Et l'objet etendu, quand `expand` est utilise.
+  const etendu = buildSales([
+    factureStripe("2026-08-23T12:00:00Z", {
+      amount_paid: 1700,
+      payment_intent: { id: "pi_etendu" },
+    }),
+  ]);
+  assert.equal(etendu[0]?.ref, "pi_etendu");
+});
+
+test("le remboursement d'une echeance retrouve SA facture", () => {
+  const ventes = buildSales([
+    factureStripe("2026-08-23T12:00:00Z", { payment_intent: "pi_abo1", amount_paid: 1700 }),
+    remboursementStripe("pi_abo1", "2026-08-23T13:00:00Z"),
+  ]);
+  assert.equal(ventes.length, 1, "le remboursement ne doit pas fabriquer une deuxieme ligne");
+  assert.equal(ventes[0].refundedAt, "2026-08-23T13:00:00Z");
+});
+
+test("douze mois d'abonnement font douze lignes, pas une", () => {
+  // Chaque echeance est un encaissement distinct, donc remboursable
+  // separement : Bene veut pouvoir rendre LE DERNIER MOIS.
+  const ventes = buildSales([
+    factureStripe("2026-08-23T12:00:00Z", { payment_intent: "pi_aout", amount_paid: 1700 }),
+    factureStripe("2026-07-23T12:00:00Z", { payment_intent: "pi_juillet", amount_paid: 1700 }),
+  ]);
+  assert.equal(ventes.length, 2);
+  assert.equal(ventes[0].ref, "pi_aout", "la plus recente en haut");
+});
+
+test("une facture sans reference exploitable est ecartee, pas inventee", () => {
+  const ventes = buildSales([factureStripe("2026-08-23T12:00:00Z", { amount_paid: 1700 })]);
+  assert.deepEqual(ventes, [], "une ligne sans reference offrirait un bouton qui echouerait");
+});
+
+test("le remboursement envoie charge= ou payment_intent= selon la reference", () => {
+  // Envoyer une charge sous le nom `payment_intent` fait repondre Stripe
+  // "no such payment_intent", et l'ecran dirait "le fournisseur a
+  // refuse" pour une vente parfaitement remboursable.
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "app/api/admin/ventes/rembourser/route.ts"),
+    "utf8",
+  );
+  assert.match(src, /ref\.startsWith\("ch_"\) \? "charge" : "payment_intent"/);
 });
