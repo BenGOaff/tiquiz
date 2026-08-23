@@ -35,7 +35,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { commissionnerVente } from "@/lib/affiliate/ownerSale";
 import { findOwnerProduct } from "@/lib/checkout/catalog";
 import { downgradeToFreeByEmail, grantPlanByEmail } from "@/lib/checkout/grantPlan";
-import { readOwnerPaypal, readOwnerPaypalWebhookId } from "@/lib/checkout/ownerAccount";
+import {
+  readOwnerPaypal,
+  readOwnerPaypalWebhookId,
+  type OwnerPaypalAccount,
+} from "@/lib/checkout/ownerAccount";
 import {
   cancelOwnerPaypalSubscription,
   getOwnerPaypalSubscription,
@@ -43,7 +47,7 @@ import {
 } from "@/lib/checkout/paypalOwner";
 import { rememberPaypalSubscription } from "@/lib/checkout/customerLink";
 import { marquerMoisOffertConsomme } from "@/lib/trial/moisOffertCheckout";
-import { logWebhookEvent } from "@/lib/webhooks/log";
+import { marquerTraite, prendreLeVerrou } from "@/lib/webhooks/log";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -104,18 +108,57 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const eventId = String(event.id ?? "").trim() || null;
   const eventType = String(event.event_type ?? "").trim() || null;
 
-  if (eventId) {
-    const { duplicate } = await logWebhookEvent({
-      source: SOURCE,
-      event_id: eventId,
-      event_type: eventType,
-      payload: event as unknown as Record<string, unknown>,
-      status: "received",
-    });
-    if (duplicate) {
-      return NextResponse.json({ ok: true, reason: "deja_traite" });
-    }
+  // ── LE VERROU ──
+  //
+  // Il journalise ET dit si on a le droit de travailler. Avant l'audit
+  // du 24 aout, toute ligne existante etait prise pour un doublon : un
+  // traitement rate repondait 502 pour demander un reessai, et ce
+  // reessai recevait 200 sans rien faire.
+  const verrou = await prendreLeVerrou({
+    source: SOURCE,
+    event_id: eventId,
+    event_type: eventType,
+    payload: event as unknown as Record<string, unknown>,
+    status: "processing",
+  });
+  if (verrou.action === "doublon") {
+    return NextResponse.json({ ok: true, reason: "deja_traite" });
   }
+  if (verrou.action === "en_cours") {
+    // 409 : PayPal reessaiera. Repondre 200 ici perdrait l'ouverture de
+    // l'acces si le traitement en cours echoue.
+    return NextResponse.json({ ok: false, reason: "en_cours" }, { status: 409 });
+  }
+
+  // LE MARQUAGE EST OBLIGATOIRE, quelle que soit la sortie.
+  let reponse: NextResponse;
+  try {
+    reponse = await traiterEvenement(req, compte, event, eventId, eventType);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[commande/paypal/webhook] traitement interrompu : ${message}`);
+    await marquerTraite(SOURCE, eventId, "error", message.slice(0, 500));
+    return NextResponse.json({ ok: false, reason: "exception" }, { status: 500 });
+  }
+  const reussi = reponse.status >= 200 && reponse.status < 300;
+  await marquerTraite(SOURCE, eventId, reussi ? "processed" : "error", reussi ? null : `HTTP ${reponse.status}`);
+  return reponse;
+}
+
+/**
+ * Le traitement proprement dit, une fois le verrou pris.
+ *
+ * Separe de `POST` pour une seule raison : TOUTES ses sorties doivent
+ * passer par le marquage, et un `return` oublie au milieu laisserait
+ * l'evenement bloque en `processing`.
+ */
+async function traiterEvenement(
+  req: NextRequest,
+  compte: OwnerPaypalAccount,
+  event: EvenementPaypal,
+  eventId: string | null,
+  eventType: string | null,
+): Promise<NextResponse> {
 
   // L'ABONNEMENT CONCERNÉ.
   //

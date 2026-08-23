@@ -206,7 +206,9 @@ test("le webhook verifie la signature AVANT de rien faire", () => {
   const iVerif = src.indexOf("await verifyOwnerPaypalWebhook(");
   const iOctroi = src.indexOf("await grantPlanByEmail(");
   assert.ok(iVerif > 0 && iOctroi > iVerif, "un corps non signe peut ouvrir un acces");
-  assert.ok(src.includes("logWebhookEvent"), "plus d'idempotence : PayPal reessaie");
+  assert.ok(src.includes("prendreLeVerrou"), "plus d'idempotence : PayPal reessaie");
+  // Et un traitement rate doit pouvoir etre REPRIS (audit 24 aout).
+  assert.match(src, /marquerTraite\(SOURCE, eventId, reussi \? "processed" : "error"/);
   // On relit chez PayPal : la signature prouve l'expediteur, pas la
   // fraicheur de l'objet.
   assert.ok(src.includes("getOwnerPaypalSubscription"), "on croit le corps recu sur parole");

@@ -32,6 +32,7 @@ import { arreterAbonnementsStripe } from "@/lib/checkout/subscriptionCancel";
 import { sendRefundGoodbyeEmail } from "@/lib/email/refundGoodbyeEmail";
 import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ownerAccount";
 import {
+  readCustomerId,
   retrieveOwnerCustomer,
   retrieveOwnerSession,
   retrieveOwnerSessionByPaymentIntent,
@@ -54,7 +55,7 @@ import {
   stripeDateToIso,
   type RawSubscription,
 } from "@/lib/checkout/subscriptionLifecycle";
-import { logWebhookEvent } from "@/lib/webhooks/log";
+import { marquerTraite, prendreLeVerrou } from "@/lib/webhooks/log";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -96,16 +97,60 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const eventId = String(event.id ?? "").trim() || null;
   const eventType = String(event.type ?? "").trim() || null;
 
-  const { duplicate } = await logWebhookEvent({
+  // ── LE VERROU ──
+  //
+  // Il journalise ET dit si on a le droit de travailler. Avant l'audit
+  // du 24 aout, toute ligne existante etait prise pour un doublon :
+  // un traitement rate repondait 502 pour demander un reessai, et ce
+  // reessai recevait 200 sans rien faire. Une vente encaissee dont le
+  // premier traitement ratait n'ouvrait donc JAMAIS l'acces.
+  const verrou = await prendreLeVerrou({
     source: SOURCE,
     event_id: eventId,
     event_type: eventType,
     payload: event,
-    status: "received",
+    status: "processing",
   });
-  if (duplicate) {
+  if (verrou.action === "doublon") {
     return NextResponse.json({ ok: true, duplicate: true });
   }
+  if (verrou.action === "en_cours") {
+    // 409 : Stripe reessaiera. Repondre 200 ici perdrait la vente si le
+    // traitement en cours echoue.
+    return NextResponse.json({ ok: false, reason: "en_cours" }, { status: 409 });
+  }
+
+  // LE MARQUAGE EST OBLIGATOIRE, quelle que soit la sortie. Sans lui,
+  // l'evenement reste `processing` et sera repris deux minutes plus
+  // tard : c'est le filet, pas le fonctionnement normal.
+  let reponse: NextResponse;
+  try {
+    reponse = await traiterEvenement(req, event, eventType);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[commande/webhook] traitement interrompu : ${message}`);
+    await marquerTraite(SOURCE, eventId, "error", message.slice(0, 500));
+    // 500 : Stripe reessaiera, et le statut `error` laisse la porte
+    // ouverte au reessai.
+    return NextResponse.json({ ok: false, reason: "exception" }, { status: 500 });
+  }
+  const reussi = reponse.status >= 200 && reponse.status < 300;
+  await marquerTraite(SOURCE, eventId, reussi ? "processed" : "error", reussi ? null : `HTTP ${reponse.status}`);
+  return reponse;
+}
+
+/**
+ * Le traitement proprement dit, une fois le verrou pris.
+ *
+ * Separe de `POST` pour une seule raison : TOUTES ses sorties doivent
+ * passer par le marquage, et un `return` oublie au milieu de deux cents
+ * lignes laisserait l'evenement bloque en `processing`.
+ */
+async function traiterEvenement(
+  req: NextRequest,
+  event: RawEvent,
+  eventType: string | null,
+): Promise<NextResponse> {
 
   // ── L'ARGENT REPART : ON FERME, ET ON LE DIT BIEN ──
   //
@@ -268,6 +313,8 @@ interface RawEvent {
       amount_refunded?: number | null;
       refunded?: boolean | null;
       payment_intent?: string | null;
+      /** Chaine ou objet etendu : `readCustomerId` gere les deux. */
+      customer?: string | { id?: string } | null;
       billing_details?: { email?: string | null; name?: string | null } | null;
     };
   };
@@ -336,11 +383,20 @@ async function surRemboursement(event: RawEvent): Promise<NextResponse> {
   //
   // `immediat` et pas `fin-de-periode` : la période en cours vient
   // d'être remboursée, il n'y a plus rien à honorer.
-  // L'identifiant client vient de la VENTE relue chez Stripe. On ne le
-  // lit pas sur la charge : sa forme varie (chaine ou objet etendu), et
-  // raisonner sur la forme supposee d'un payload est exactement ce qui a
-  // coute la journee du 7 aout (drame Ivan).
-  const clientStripe = vente?.customerId ?? null;
+  // L'identifiant client vient de la VENTE relue chez Stripe, PUIS de la
+  // charge elle meme.
+  //
+  // LE BUG QUE LE REPLI FERME (audit du 24 aout) : `vente` est cherchee
+  // parmi les sessions de paiement. Une ECHEANCE d'abonnement n'en a
+  // pas (c'est une facture, pas une session), donc `vente` valait `null`
+  // sur tout remboursement mensuel, donc l'abonnement n'etait PAS
+  // arrete. On fermait l'acces et Stripe prelevait le mois suivant :
+  // exactement le bug d'argent du 23 aout, par une autre porte.
+  //
+  // `readCustomerId` gere les DEUX formes que Stripe envoie (chaine ou
+  // objet etendu) : c'est justement pour ca qu'elle existe. Ne pas s'en
+  // servir n'etait pas une precaution, c'etait un trou.
+  const clientStripe = vente?.customerId ?? readCustomerId(charge?.customer) ?? null;
   if (compte && clientStripe) {
     const stop = await arreterAbonnementsStripe(compte.key, clientStripe, "immediat");
     if (!stop.ok) {

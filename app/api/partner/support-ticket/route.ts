@@ -32,6 +32,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
+import { safeEqual } from "@/lib/partner/tokens";
+
 import { sendSupportAlert } from "@/lib/email/supportAlertEmail";
 import { ecrireTicket, preparerTicket } from "@/lib/support/creerTicket";
 
@@ -45,7 +47,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     console.error("[partner/support-ticket] PARTNER_SHARED_SECRET absent : on refuse.");
     return NextResponse.json({ ok: false, reason: "not_configured" }, { status: 503 });
   }
-  if ((req.headers.get("x-partner-secret") ?? "").trim() !== SHARED) {
+  // `safeEqual` et pas `!==` : la comparaison naive de deux chaines
+  // s'arrete au premier caractere different, donc son TEMPS d'execution
+  // raconte combien de caracteres sont justes. C'est la comparaison
+  // qu'utilisent deja les autres portes partenaires ; celle ci l'avait
+  // oubliee (audit du 24 aout).
+  if (!safeEqual((req.headers.get("x-partner-secret") ?? "").trim(), SHARED)) {
     return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
   }
 
