@@ -236,3 +236,26 @@ test("la migration du fil PayPal existe et se replie", () => {
     "sans repli, un deploiement en avance sur la migration perd le fil en silence",
   );
 });
+
+test("le bouton PayPal est rendu dans TOUTES les branches du bon de commande", () => {
+  // Bene, 23 aout : "je ne vois pas paypal sur mon bon de commande test.
+  // Uniquement Stripe." Le bloc etait rendu dans la branche d'erreur et
+  // dans celle sans cle Stripe, et OUBLIE dans la seule que voit un
+  // acheteur quand tout va bien.
+  //
+  // Meme defaut que le `poseSa` du middleware : un bloc conditionnel
+  // recopie dans chaque `return`, et celui qu'on oublie est celui qui
+  // compte.
+  const src = lire("app/commande/[produit]/CommandeClient.tsx");
+  const corps = src.slice(src.indexOf("const blocPaypal ="));
+
+  const rendus = (corps.match(/\{blocPaypal\}/g) ?? []).length;
+  assert.ok(rendus >= 3, `le bloc PayPal n'est rendu que ${rendus} fois : une branche l'oublie`);
+
+  // Et NOMMEMENT la branche normale, celle du formulaire Stripe monte.
+  const brancheNormale = corps.slice(corps.indexOf("EmbeddedCheckoutProvider"));
+  assert.ok(
+    brancheNormale.includes("{blocPaypal}"),
+    "la branche ou tout va bien ne rend pas PayPal : c'est exactement le bug du 23 aout",
+  );
+});
