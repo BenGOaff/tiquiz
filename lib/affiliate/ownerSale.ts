@@ -35,6 +35,7 @@ import "server-only";
 
 import { commissionBaseCents } from "@/lib/checkout/commissionBase";
 import { readSa } from "./sa";
+import { readRef as readRefCode } from "./refLien";
 
 /** L'endroit où Tipote centralise les commissions. */
 const ENDPOINT_PAR_DEFAUT = "https://app.tipote.com/api/affiliate/attribute-sale";
@@ -43,8 +44,21 @@ export interface VenteACommissionner {
   email: string | null;
   /** L'identifiant du paiement chez Stripe. Clé d'idempotence. */
   reference: string | null;
-  /** Le `sa` transporté depuis le lien d'affiliation, s'il y en avait un. */
+  /** Le `sa` d'un ANCIEN lien Systeme.io, s'il y en avait un. */
   affiliateRef: string | null;
+  /**
+   * Le CODE PUBLIC de l'affiliée (`?ref=`), sur nos liens actuels.
+   *
+   * Depuis le 24 août 2026, nos liens ne portent plus le `sa` : Béné,
+   * "je ne veux surtout pas de sa dans les nouveaux liens... c'est
+   * celui de systeme io c'est tout !!". Tipote traduit le code en
+   * affiliée contre sa table, anciens codes compris.
+   *
+   * Les deux champs ne sont jamais remplis en même temps : un lien est
+   * d'une génération ou de l'autre. Ils restent SÉPARÉS pour que
+   * personne n'ait à deviner lequel il a reçu.
+   */
+  affiliateCode: string | null;
   /** Ce qui a été encaissé, TVA comprise. */
   amountTotalCents: number;
   /** La TVA comprise dedans, telle que Stripe la calcule. */
@@ -96,15 +110,26 @@ export async function commissionnerVente(vente: VenteACommissionner): Promise<vo
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Affiliate-Secret": secret },
+      // UN APPEL SANS DÉLAI MAXIMUM BLOQUE LE WEBHOOK QUI L'APPELLE.
+      //
+      // Cette fonction tourne DANS le webhook de paiement. Si Tipote ne
+      // répond pas, la requête reste ouverte jusqu'à ce que la
+      // plateforme la tue, et le fournisseur ne reçoit jamais sa
+      // réponse. La commission peut attendre ; l'accès du client, non.
+      // (Audit du 24 août : `proprietaireDuLien` avait son délai, pas
+      // celui ci.)
+      signal: AbortSignal.timeout(8000),
       body: JSON.stringify({
         customer_email: email,
         sale_amount_cents: base,
         currency: "EUR",
         source_app: "tiquiz",
         sio_order_id: ref,
-        // `null` est le cas COURANT : sans lien d'affiliation,
-        // l'attribution retombe sur la conversion par email.
+        // `null` est le cas COURANT pour les deux : sans lien
+        // d'affiliation, l'attribution retombe sur la conversion par
+        // email.
         affiliate_ref: readSa(vente.affiliateRef),
+        affiliate_code: readRefCode(vente.affiliateCode),
         product_name: vente.product.label,
         sale_at: new Date().toISOString(),
         raw_payload: { source: "stripe_checkout", product: vente.product.id, reference },

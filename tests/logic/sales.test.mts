@@ -283,3 +283,46 @@ test("le remboursement envoie charge= ou payment_intent= selon la reference", ()
   );
   assert.match(src, /ref\.startsWith\("ch_"\) \? "charge" : "payment_intent"/);
 });
+
+test("une echeance d'abonnement porte le NOM du palier, pas 'non identifie'", () => {
+  // Bene, 23 aout : "j'ai 'produit non identifie' au lieu du nom de
+  // l'abonnement souscrit". Une ligne de remboursement sans nom oblige a
+  // aller verifier ailleurs CE qu'on rembourse, et c'est exactement le
+  // moment ou on ne veut pas hesiter.
+  //
+  // Trois endroits possibles selon la version d'API, plus le montant en
+  // dernier recours.
+  const parAbonnement = buildSales([
+    factureStripe("2026-08-23T12:00:00Z", {
+      payment_intent: "pi_1",
+      amount_paid: 1700,
+      subscription_details: { metadata: { product: "mensuel" } },
+    }),
+  ]);
+  assert.equal(parAbonnement[0]?.productId, "mensuel");
+
+  const parPrix = buildSales([
+    factureStripe("2026-08-23T12:00:00Z", {
+      payment_intent: "pi_2",
+      amount_paid: 2900,
+      lines: { data: [{ price: { metadata: { product: "mensuel-plus" } } }] },
+    }),
+  ]);
+  assert.equal(parPrix[0]?.productId, "mensuel-plus");
+
+  // Et le cas de Bene : aucune metadonnee nulle part, mais 17,00 EUR
+  // n'est le prix que d'un seul palier du catalogue.
+  const parMontant = buildSales([
+    factureStripe("2026-08-23T12:00:00Z", { payment_intent: "pi_3", amount_paid: 1700 }),
+  ]);
+  assert.equal(parMontant[0]?.productId, "mensuel");
+});
+
+test("une somme qui ne correspond a rien ne fabrique pas un faux nom", () => {
+  // Une vente remisee vaut moins que le tarif affiche. Mieux vaut "non
+  // identifie" qu'un nom de palier faux sur une ligne de remboursement.
+  const ventes = buildSales([
+    factureStripe("2026-08-23T12:00:00Z", { payment_intent: "pi_4", amount_paid: 1234 }),
+  ]);
+  assert.equal(ventes[0]?.productId, null);
+});

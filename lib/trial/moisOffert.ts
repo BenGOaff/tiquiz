@@ -11,17 +11,31 @@
 // barre. Il faut aussi tracker les tricheurs qui veulent s'autoaffilier :
 // même adresse email, même adresse IP etc."
 //
-// -- LES TROIS RÈGLES, ET POURQUOI ELLES VIVENT ICI --------------------
+// -- CE QUE C'EST, EXACTEMENT (précision Béné du 23 août) -------------
 //
-// Deux chemins mènent à un mois offert : l'inscription par un lien
-// d'affiliée, et l'octroi app-à-app (`/api/partner/grant-plus-trial`,
-// l'opération "les 20 premiers"). Si chacun décidait de son côté, le
-// "point barre" ne tiendrait pas : quelqu'un prendrait un mois par
-// chaque porte. La règle vit donc ICI, et les deux l'appellent.
+// "Si l'user a un test tiquiz plus activé 15j il le garde mais on lui
+// ajoute 30 jours de l'abonnement qu'il choisit : s'il prend mensuel il
+// a 30j gratos à mensuel. S'il prend mensuel plus : il a 30j gratos à
+// mensuel plus."
 //
-// Aucune entrée / sortie dans ce fichier : il décide, il ne lit rien et
-// n'écrit rien. C'est ce qui le rend testable, et c'est la règle du
-// dépôt depuis le 1er août.
+// Ce n'est donc PAS un palier prêté, c'est un ESSAI GRATUIT sur
+// l'abonnement qu'il prend. Stripe (`trial_period_days`) et PayPal (un
+// cycle de facturation `TRIAL`) le font nativement : le client choisit
+// son palier, il n'est pas prélevé pendant 30 jours, puis il paie le
+// prix de CE palier.
+//
+// Et ça règle le cumul tout seul : les 15 jours de Tiquiz Plus offerts
+// par l'Atelier vivent dans `affiliate_trial_*` et continuent de
+// tourner sans qu'on y touche. Deux mécaniques séparées, aucune ne
+// mange l'autre. Le premier jet posait un `monthly_plus` prêté et
+// devait additionner des jours dans les mêmes colonnes : c'était une
+// complication née d'une mauvaise lecture.
+//
+// -- LES DEUX RÈGLES QUI RESTENT, ET POURQUOI ELLES VIVENT ICI --------
+//
+// Deux endroits ouvrent un essai : le bon de commande Stripe et le bon
+// de commande PayPal. Si chacun décidait de son côté, le "point barre"
+// ne tiendrait pas.
 
 /** Ce qu'on répond à une demande de mois offert. */
 export type VerdictMoisOffert =
@@ -30,21 +44,20 @@ export type VerdictMoisOffert =
   | { ok: true; aVerifier: true; motif: MotifSuspect }
   | { ok: false; motif: MotifRefus };
 
-export type MotifRefus =
-  | "deja_recu"
-  | "deja_premium"
-  | "auto_affiliation"
-  | "affiliee_inconnue";
+/**
+ * LA DURÉE DU CADEAU, ÉCRITE UNE SEULE FOIS.
+ *
+ * Elle vit dans le module PUR parce qu'elle est lue des deux côtés : la
+ * décision serveur (`moisOffertCheckout.ts`, qui tire `supabaseAdmin`)
+ * et l'écran qui l'ANNONCE (le bon de commande). Deux nombres écrits
+ * séparément finissent toujours par diverger, et là la divergence se
+ * lit "30 jours offerts" sur la page et 15 sur le relevé.
+ */
+export const JOURS_MOIS_OFFERT_ANNONCE = 30;
+
+export type MotifRefus = "deja_recu" | "auto_affiliation" | "affiliee_inconnue";
 
 export type MotifSuspect = "meme_ip";
-
-/** Les paliers qui n'ont rien à gagner à un mois offert. */
-const PLANS_SANS_OBJET: ReadonlySet<string> = new Set([
-  "monthly_plus",
-  "yearly_plus",
-  "lifetime",
-  "beta",
-]);
 
 /**
  * DEUX ADRESSES QUI VONT DANS LA MÊME BOÎTE.
@@ -83,8 +96,6 @@ export function memeBoite(a: unknown, b: unknown): boolean {
 export interface DemandeMoisOffert {
   /** L'adresse de la personne qui s'inscrit. */
   email: string;
-  /** Son palier actuel. `free` par défaut. */
-  planActuel?: string | null;
   /** A-t-elle DÉJÀ reçu son mois offert, un jour, par n'importe quelle porte ? */
   dejaRecuLe?: string | null;
   /** L'adresse de l'affiliée dont le lien l'a amenée, si on la connaît. */
@@ -115,11 +126,9 @@ export function verdictMoisOffert(d: DemandeMoisOffert): VerdictMoisOffert {
   //    empêche le cumul entre les deux portes.
   if (d.dejaRecuLe) return { ok: false, motif: "deja_recu" };
 
-  // 2. Rien à offrir à qui a déjà mieux. Ce n'est pas un refus, c'est
-  //    un cadeau sans objet : lui poser un essai retirerait son palier
-  //    à l'expiration.
-  const plan = String(d.planActuel ?? "free").trim().toLowerCase();
-  if (PLANS_SANS_OBJET.has(plan)) return { ok: false, motif: "deja_premium" };
+  // Le palier actuel n'entre PAS dans la décision, et c'est voulu :
+  // l'essai porte sur l'abonnement qu'il choisit, pas sur ce qu'il a
+  // déjà. Ses 15 jours d'Atelier continuent de tourner à côté.
 
   // 3. Le lien d'une affiliée qu'on ne connaît pas n'offre rien : un
   //    identifiant inventé ne doit pas pouvoir distribuer des mois.
@@ -144,7 +153,6 @@ export function verdictMoisOffert(d: DemandeMoisOffert): VerdictMoisOffert {
 /** Ce que le journal et l'écran d'admin affichent. */
 export const MOTIFS: Readonly<Record<MotifRefus | MotifSuspect, string>> = {
   deja_recu: "a déjà eu son mois offert",
-  deja_premium: "a déjà un palier supérieur",
   auto_affiliation: "s'inscrit avec l'adresse de l'affiliée",
   affiliee_inconnue: "lien d'affiliation inconnu ou suspendu",
   meme_ip: "même adresse IP qu'un autre mois offert sur ce lien",

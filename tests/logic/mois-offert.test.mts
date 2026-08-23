@@ -13,6 +13,8 @@
 // porte. C'est pour ça que la règle vit dans UNE fonction.
 
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import test from "node:test";
 
 import {
@@ -20,6 +22,10 @@ import {
   normaliserEmail,
   verdictMoisOffert,
 } from "../../lib/trial/moisOffert.ts";
+
+function lire(rel: string): string {
+  return fs.readFileSync(path.join(process.cwd(), rel), "utf8");
+}
 
 // ── LES ADRESSES QUI VONT DANS LA MÊME BOÎTE ──
 
@@ -60,19 +66,7 @@ test("un seul mois offert par personne, point barre", () => {
   assert.equal(r.ok === false && r.motif, "deja_recu");
 });
 
-test("le mois offert ne se pose pas sur un palier superieur", () => {
-  // Ce n'est pas un refus, c'est un cadeau sans objet : poser un essai
-  // sur un compte Plus lui RETIRERAIT son palier a l'expiration.
-  for (const plan of ["monthly_plus", "yearly_plus", "lifetime", "beta"]) {
-    const r = verdictMoisOffert({ email: "a@b.fr", planActuel: plan });
-    assert.equal(r.ok, false, `${plan} devrait etre sans objet`);
-    assert.equal(r.ok === false && r.motif, "deja_premium");
-  }
-  // Un compte gratuit ou mensuel, lui, y a droit.
-  assert.equal(verdictMoisOffert({ email: "a@b.fr", planActuel: "free" }).ok, true);
-  assert.equal(verdictMoisOffert({ email: "a@b.fr", planActuel: "monthly" }).ok, true);
-  assert.equal(verdictMoisOffert({ email: "a@b.fr", planActuel: null }).ok, true);
-});
+
 
 // ── LES TRICHEURS ──
 
@@ -149,9 +143,92 @@ test("le refus CERTAIN passe avant le simple soupcon", () => {
   assert.equal(r.ok === false && r.motif, "auto_affiliation");
 });
 
-test("sans lien d'affiliation, une inscription normale reste eligible", () => {
-  // Le mois offert EN TANT QU'AFFILIEE passe par la meme fonction, sans
-  // `emailAffiliee`. Elle ne doit pas etre refusee pour autant.
-  const r = verdictMoisOffert({ email: "fabienne@tipote.fr", planActuel: "free" });
-  assert.equal(r.ok, true);
+
+
+// ── LE CUMUL AVEC L'ATELIER (Bene, 23 aout) ──
+//
+// "qui peut se cumuler par contre avec les 15 jours offerts de
+// l'atelier, ne te melanger pas les pinceaux."
+
+
+
+
+
+
+
+
+
+// ── L'ESSAI EST POSÉ SUR L'ABONNEMENT CHOISI (précision Béné, 23 août) ──
+//
+// "Si l'user a un test tiquiz plus activé 15j il le garde mais on lui
+// ajoute 30 jours de l'abonnement qu'il choisit : s'il prend mensuel il
+// a 30j gratos à mensuel. S'il prend mensuel plus : il a 30j gratos à
+// mensuel plus."
+
+test("le mois offert passe par l'essai gratuit du fournisseur", () => {
+  // Stripe : `trial_period_days`. C'est ce qui fait que le client paie
+  // le prix de SON palier apres 30 jours, et pas un palier prete qu'on
+  // lui retirerait.
+  const stripe = lire("lib/checkout/stripeCheckout.ts");
+  assert.ok(
+    stripe.includes("subscription_data[trial_period_days]"),
+    "l'essai Stripe a disparu : le mois offert ne serait plus offert",
+  );
+  // PayPal : un cycle de facturation TRIAL a 0, joue une seule fois.
+  const paypal = lire("lib/checkout/paypalOwner.ts");
+  assert.ok(paypal.includes('tenure_type: "TRIAL"'), "l'essai PayPal a disparu");
+  assert.ok(
+    /sequence: essaiJours > 0 \? 2 : 1/.test(paypal),
+    "les sequences PayPal ne se suivent plus : le plan serait refuse",
+  );
+});
+
+test("on ne touche PAS au palier de la personne", () => {
+  // Ses 15 jours d'Atelier vivent dans `affiliate_trial_*` et doivent
+  // continuer de tourner. Le premier jet posait un `monthly_plus`
+  // prete et devait additionner des jours dans les memes colonnes :
+  // c'etait une complication nee d'une mauvaise lecture.
+  const src = lire("lib/trial/moisOffertCheckout.ts");
+  assert.ok(
+    !/affiliate_trial_(pre_plan|pending_days|expires_at)/.test(src),
+    "le mois offert touche de nouveau aux colonnes d'essai de l'Atelier",
+  );
+  assert.ok(!/\bplan:\s/.test(src), "le mois offert reecrit de nouveau le palier");
+});
+
+test("le cadeau se consomme a l'ACHAT, pas au bon de commande", () => {
+  // Un checkout abandonne ne doit pas bruler le mois de quelqu'un qui
+  // n'a rien achete.
+  for (const route of [
+    "app/api/commande/webhook/route.ts",
+    "app/api/commande/paypal/webhook/route.ts",
+  ]) {
+    assert.ok(
+      lire(route).includes("marquerMoisOffertConsomme"),
+      `${route} ne marque plus le mois offert comme consomme`,
+    );
+  }
+  for (const route of ["app/api/commande/session/route.ts", "app/api/commande/paypal/route.ts"]) {
+    assert.ok(
+      !lire(route).includes("marquerMoisOffertConsomme"),
+      `${route} consomme le cadeau avant l'achat`,
+    );
+  }
+});
+
+test("le fait est ECRIT, jamais deduit d'un sa present", () => {
+  // Un `sa` peut etre la sans qu'aucun essai n'ait ete ouvert (deja eu
+  // son mois, auto-affiliation refusee). Deduire marquerait des cadeaux
+  // jamais faits, et priverait ces gens du leur.
+  assert.ok(
+    lire("lib/checkout/stripeCheckout.ts").includes(
+      "subscription_data[metadata][free_month_days]",
+    ),
+    "Stripe ne transporte plus le fait",
+  );
+  const webhook = lire("app/api/commande/webhook/route.ts");
+  assert.ok(
+    /vente\.freeMonthDays > 0/.test(webhook),
+    "le webhook devine de nouveau au lieu de lire",
+  );
 });

@@ -15,6 +15,10 @@ import path from "node:path";
 const ROUTE = path.join(process.cwd(), "app/api/commande/webhook/route.ts");
 const src = fs.readFileSync(ROUTE, "utf8");
 
+function lire(rel: string): string {
+  return fs.readFileSync(path.join(process.cwd(), rel), "utf8");
+}
+
 test("la signature est verifiee AVANT tout le reste", () => {
   // Sans ça, cette adresse est un distributeur d'accès gratuits pour qui
   // la connaît. Et le corps doit être lu BRUT : la signature porte sur les
@@ -41,18 +45,46 @@ test("la signature est verifiee AVANT tout le reste", () => {
 });
 
 test("un evenement deja traite n'ouvre pas l'acces une deuxieme fois", () => {
-  // Stripe réessaie tant qu'il n'a pas un 2xx. Sans idempotence, un
-  // réessai rejouerait la vente.
-  assert.ok(src.includes("logWebhookEvent"), "plus de journal, donc plus d'idempotence");
-  assert.ok(src.includes("duplicate"), "le doublon n'est plus detecte");
+  // Stripe réessaie tant qu'il n'a pas un 2xx. Sans verrou, un réessai
+  // rejouerait la vente.
+  assert.ok(src.includes("prendreLeVerrou"), "plus de verrou, donc plus d'idempotence");
+  assert.match(src, /verrou\.action === "doublon"/);
 
-  const posLog = src.indexOf("await logWebhookEvent(");
+  const posVerrou = src.indexOf("await prendreLeVerrou(");
   const posGrant = src.indexOf("await grantPlanByEmail(");
-  assert.ok(posLog > 0 && posGrant > 0, "appels introuvables : le test ne mesure plus rien");
+  assert.ok(posVerrou > 0 && posGrant > 0, "appels introuvables : le test ne mesure plus rien");
   assert.ok(
-    posLog < posGrant,
-    "l'acces est ouvert AVANT le controle de doublon : un reessai rejouerait la vente",
+    posVerrou < posGrant,
+    "l'acces est ouvert AVANT le verrou : un reessai rejouerait la vente",
   );
+});
+
+test("UN TRAITEMENT RATE PEUT ETRE REPRIS (audit 24 aout)", () => {
+  // LE BUG : la route repondait 502 pour demander un reessai, et ce
+  // reessai retombait sur la ligne de journal, etait pris pour un
+  // doublon, et recevait 200. Une vente encaissee dont le premier
+  // traitement ratait n'ouvrait donc JAMAIS l'acces, en silence.
+  //
+  // Deux pieces, et les deux comptent : le statut fait partie du verrou
+  // (migration), et l'echec MARQUE la ligne pour la liberer.
+  assert.match(src, /marquerTraite\(SOURCE, eventId, reussi \? "processed" : "error"/);
+  assert.match(src, /verrou\.action === "en_cours"/, "un traitement en cours devrait demander un reessai");
+
+  const migration = lire("supabase/migrations/20260824_webhook_lock.sql");
+  assert.match(migration, /status in \('processing', 'processed'\)/);
+  assert.match(migration, /drop index if exists public\.webhook_logs_owner_event_uidx/);
+});
+
+test("TOUTES les sorties passent par le marquage", () => {
+  // Un `return` oublie au milieu de deux cents lignes laisserait
+  // l'evenement bloque en `processing`, donc repris toutes les deux
+  // minutes. La separation en deux fonctions est ce qui l'empeche.
+  assert.match(src, /async function traiterEvenement\(/);
+  // Le POST ne fait plus le travail lui meme : il verrouille, delegue,
+  // et marque.
+  assert.match(src, /reponse = await traiterEvenement\(/);
+  // Et une exception ne laisse pas la ligne bloquee non plus.
+  assert.match(src, /await marquerTraite\(SOURCE, eventId, "error"/);
 });
 
 test("seuls DEUX evenements valent un encaissement", () => {

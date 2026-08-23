@@ -29,6 +29,8 @@ import { prepareUpload } from "@/lib/images/compress";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import SetPasswordForm from "@/components/auth/SetPasswordForm";
 import SioApiKeysManager from "@/components/sio/SioApiKeysManager";
+import { formatCents } from "@/lib/checkout/catalog";
+import { monteeVersProduit } from "@/lib/checkout/planChange";
 
 type Profile = {
   full_name: string | null;
@@ -283,6 +285,116 @@ export default function SettingsClient() {
       toast.error(t("errNetwork"));
     } finally {
       setChangingPlan(null);
+    }
+  };
+
+  // ── LA MONTÉE DE PALIER, SUR NOTRE PROPRE ABONNEMENT ──
+  //
+  // Béné, 23 août 2026 : "l'user paye 17 EUR pour le mois et veut
+  // upgrader à tiquiz plus : on retire les 17 EUR qu'il a payés déjà".
+  //
+  // LE BUG QUE ÇA FERME : jusqu'ici le bouton d'une autre formule
+  // ouvrait le bon de commande, donc un DEUXIÈME abonnement, pendant
+  // que le premier continuait de prélever. Personne ne le voyait avant
+  // le relevé suivant.
+  //
+  // `montee` dit ce que le serveur sait de cette personne : chez quel
+  // fournisseur elle paie, sur quel palier, et vers lesquels elle peut
+  // monter. `null` = pas d'abonnement chez nous, on garde le lien vers
+  // le bon de commande, qui est alors le bon chemin.
+  const [montee, setMontee] = useState<{
+    fournisseur: "stripe" | "paypal";
+    actuel: string | null;
+    cibles: string[];
+  } | null>(null);
+  const [apercu, setApercu] = useState<{
+    cible: string;
+    label: string;
+    aPayerCents: number;
+    ensuiteCents: number;
+    currency: string;
+    prorata: boolean;
+  } | null>(null);
+  const [apercuEnCours, setApercuEnCours] = useState<string | null>(null);
+  const [monteeEnCours, setMonteeEnCours] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/billing/change-plan", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.ok && d.actuel) {
+          setMontee({ fournisseur: d.fournisseur, actuel: d.actuel, cibles: d.cibles ?? [] });
+        }
+      })
+      // Silence volontaire : pas d'abonnement chez nous est le cas le
+      // plus fréquent, ce n'est pas une panne.
+      .catch(() => {});
+  }, []);
+
+  // Le MONTANT avant la confirmation. Il vient de Stripe, jamais d'une
+  // soustraction faite ici : un montant affiché différent du montant
+  // prélevé est pire que pas de montant du tout.
+  // Le prix formaté dans la langue de l'écran, par la MÊME fonction que
+  // le bon de commande : deux formateurs afficheraient deux styles pour
+  // la même chose.
+  const montant = (cents: number, currency: string) => formatCents(cents, currency, locale);
+
+  const demanderApercu = async (produit: string, label: string) => {
+    setApercuEnCours(produit);
+    try {
+      const r = await fetch(`/api/billing/change-plan?produit=${encodeURIComponent(produit)}`, {
+        cache: "no-store",
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!d?.ok) {
+        // Un `ok: false` produit TOUJOURS quelque chose à l'écran.
+        toast.error(d?.message ?? t("errGeneric"));
+        return;
+      }
+      setApercu({
+        cible: produit,
+        label,
+        aPayerCents: d.aPayerCents ?? 0,
+        ensuiteCents: d.ensuiteCents ?? 0,
+        currency: d.currency ?? "eur",
+        prorata: !!d.prorata,
+      });
+    } catch {
+      toast.error(t("errNetwork"));
+    } finally {
+      setApercuEnCours(null);
+    }
+  };
+
+  const confirmerMontee = async () => {
+    if (!apercu) return;
+    setMonteeEnCours(true);
+    try {
+      const r = await fetch("/api/billing/change-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ produit: apercu.cible }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (d?.ok && d.approveUrl) {
+        // PayPal demande son accord avant de prélever.
+        window.location.assign(d.approveUrl);
+        return;
+      }
+      if (d?.ok) {
+        setApercu(null);
+        toast.success(t("upgradeDone"));
+        // Le plan est ouvert par le WEBHOOK : on laisse quelques
+        // secondes avant de recharger, sinon l'écran réafficherait
+        // l'ancien palier et elle croirait que ça n'a pas marché.
+        setTimeout(() => window.location.reload(), 4000);
+        return;
+      }
+      toast.error(d?.message ?? t("errGeneric"));
+    } catch {
+      toast.error(t("errNetwork"));
+    } finally {
+      setMonteeEnCours(false);
     }
   };
 
@@ -1200,6 +1312,32 @@ export default function SettingsClient() {
                           </>
                         )}
                       </Button>
+                    ) : plan.ctaKey && planKey && montee && monteeVersProduit(planKey, montee.cibles) ? (
+                      // ELLE PAIE DÉJÀ CHEZ NOUS : on MONTE son
+                      // abonnement, on n'en ouvre pas un deuxième. Le
+                      // lien vers le bon de commande, plus bas, en
+                      // ouvrirait un second pendant que le premier
+                      // continue de prélever.
+                      <Button
+                        className="w-full rounded-full"
+                        variant={('popular' in plan && plan.popular) ? "default" : "outline"}
+                        onClick={() => demanderApercu(monteeVersProduit(planKey, montee.cibles)!, t(plan.nameKey))}
+                        disabled={apercuEnCours !== null}
+                      >
+                        {apercuEnCours === monteeVersProduit(planKey, montee.cibles) ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            {t("upgradeNow")} <ArrowRight className="h-4 w-4 ml-1.5" />
+                          </>
+                        )}
+                      </Button>
+                    ) : plan.ctaKey && planKey && montee ? (
+                      // Elle paie chez nous, mais ce palier n'est pas une
+                      // MONTÉE : on ne propose rien et on dit comment
+                      // faire. Un bouton absent sans un mot se lit comme
+                      // un bug (leçon du bouton Rembourser, 22 août).
+                      <p className="text-center text-xs text-muted-foreground">{t("downgradeHint")}</p>
                     ) : plan.ctaKey && effectiveCheckoutUrl ? (
                       // Client direct Tiquiz : CTA universel (checkout SIO du
                       // nouveau plan). Le webhook auto-cancel l'ancien sub cote
@@ -1251,6 +1389,34 @@ export default function SettingsClient() {
       {/* Cancel-subscription confirmation. Calls /api/billing/cancel which
           tells SIO to cancel at the end of the current billing period. The
           eventual SALE_CANCELED webhook then flips plan→free locally. */}
+      {/* LE MONTANT AVANT LA CONFIRMATION.
+          Un bouton "Passer au Plus" sans montant demande d'accepter une
+          somme inconnue sur une carte deja donnee : c'est exactement ce
+          qui produit une demande de remboursement le lendemain. */}
+      <Dialog open={!!apercu} onOpenChange={(open) => { if (!open && !monteeEnCours) setApercu(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("upgradeTitle", { plan: apercu?.label ?? "" })}</DialogTitle>
+            <DialogDescription>
+              {apercu
+                ? t(apercu.prorata ? "upgradeStripeBody" : "upgradePaypalBody", {
+                    aujourdhui: montant(apercu.aPayerCents, apercu.currency),
+                    ensuite: montant(apercu.ensuiteCents, apercu.currency),
+                  })
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setApercu(null)} disabled={monteeEnCours}>
+              {t("upgradeCancel")}
+            </Button>
+            <Button onClick={confirmerMontee} disabled={monteeEnCours}>
+              {monteeEnCours ? <Loader2 className="h-4 w-4 animate-spin" /> : t("upgradeConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={cancelOpen} onOpenChange={(open) => { if (!cancelling) setCancelOpen(open); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

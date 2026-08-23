@@ -21,6 +21,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { findOwnerProduct } from "@/lib/checkout/catalog";
 import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ownerAccount";
 import { createOwnerCheckoutSession } from "@/lib/checkout/stripeCheckout";
+import { readSa } from "@/lib/affiliate/sa";
+import { readRef } from "@/lib/affiliate/refLien";
+import { essaiPourCeCheckout } from "@/lib/trial/moisOffertCheckout";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { isSalesOpen } from "@/lib/sales/previewGate";
 import { checkoutReturnBase } from "@/lib/sales/salesHosts";
 import { resolveAppUrl } from "@/lib/authLinks";
@@ -29,7 +33,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  let body: { produit?: string; k?: string; ref?: string };
+  let body: { produit?: string; k?: string; ref?: string; sa?: string };
   try {
     body = await req.json();
   } catch {
@@ -85,11 +89,67 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   );
   const retour = `${base}/commande/${product.id}/retour?session_id={CHECKOUT_SESSION_ID}&k=${encodeURIComponent(String(body.k ?? ""))}`;
 
+  // ── LE MOIS OFFERT PAR UNE AFFILIÉE ──
+  //
+  // Béné, 23 août : "passe par mon lien et reçois un mois offert", et
+  // "s'il prend mensuel il a 30j gratos à mensuel. S'il prend mensuel
+  // plus : il a 30j gratos à mensuel plus."
+  //
+  // DEUX GÉNÉRATIONS DE LIENS, DEUX CHAMPS DISTINCTS.
+  //
+  // `ref` = notre code public (tous nos liens depuis le 24 août).
+  // `sa`  = l'identifiant Systeme.io d'un ANCIEN tunnel, qui reste
+  //         valide et commissionne comme avant.
+  //
+  // Ils ne se mélangent JAMAIS et ne se devinent pas l'un l'autre : le
+  // client nomme le champ. Deviner à la forme marcherait aujourd'hui et
+  // casserait le jour où une affiliée choisit un code qui ressemble à
+  // un `sa`.
+  //
+  // `readRef` / `readSa` et pas un `slice()` : une valeur tronquée garde
+  // la FORME d'un identifiant valide, passe tous les contrôles, et ne
+  // désigne personne. La commission ET le cadeau seraient perdus en
+  // silence.
+  const ref = readRef(body.ref);
+  const sa = readSa(body.sa);
+
+  // L'adresse si une session est ouverte : elle permet le contrôle
+  // complet du non-cumul AVANT le paiement. Anonyme, on accorde et on
+  // vérifie après (cf. `moisOffertCheckout.ts`).
+  let emailConnu: string | null = null;
+  try {
+    const supabase = await getSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    emailConnu = user?.email ?? null;
+  } catch {
+    emailConnu = null;
+  }
+
+  // LE CADEAU EST RÉSERVÉ AUX LIENS D'ICI, et ça ne demande plus aucun
+  // marqueur : nos liens portent `?ref=`, les anciens portent `?sa=`.
+  // Un checkout arrivé par un ancien lien n'a pas de `ref`, donc pas de
+  // cadeau, et il commissionne exactement comme avant.
+  const essai = await essaiPourCeCheckout({
+    ref,
+    email: emailConnu,
+    ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+  });
+  if (essai.jours > 0) {
+    console.log(
+      `[commande] ${essai.jours} jours offerts sur ${product.id} (lien ${ref})` +
+        (essai.signale ? ` A VERIFIER : ${essai.signale}` : ""),
+    );
+  }
+
   const result = await createOwnerCheckoutSession({
     key: compte.key,
     product,
     returnUrl: retour,
-    affiliateRef: typeof body.ref === "string" ? body.ref.trim().slice(0, 40) : null,
+    affiliateRef: sa,
+    affiliateCode: ref,
+    trialDays: essai.jours,
   });
 
   if (!result.ok || !result.clientSecret) {

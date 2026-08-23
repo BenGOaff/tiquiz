@@ -2200,3 +2200,291 @@ réel pendant que PayPal est en bac à sable : l'écran annonce un seul
 mode, donc un des deux boutons ment.
 
 Test : `tests/logic/paypal-owner.test.mts`.
+
+## Le mois offert : l'essai du fournisseur, pas un palier prêté (23 août 2026)
+
+Béné : "garder le mois offert aux affiliés pour qu'ils puissent créer du
+contenu et tester ET qu'ils puissent [offrir] un mois gratuit pour tester
+à tous leurs affiliés comme argument de vente 'passe par mon lien et
+reçois un mois offert'. Bien sûr, ils ne peuvent pas cumuler mois offert
+par l'affilié PLUS mois offert EN TANT qu'affilié : au total c'est un
+mois offert, point barre. Il faut aussi tracker les tricheurs qui veulent
+s'autoaffilier : même adresse email, même adresse IP etc."
+
+Puis, la précision qui change la mécanique : "s'il a un test tiquiz plus
+activé 15j il le garde mais on lui ajoute 30 jours de l'abonnement qu'il
+choisit : s'il prend mensuel il a 30j gratos à mensuel. S'il prend
+mensuel plus : il a 30j gratos à mensuel plus."
+
+**Le premier jet était faux et compliqué.** Il posait un `monthly_plus`
+prêté et devait ADDITIONNER des jours dans `affiliate_trial_*`, les
+mêmes colonnes que les 15 jours de l'Atelier, avec toute la gymnastique
+qui va avec (ne pas écraser `pre_plan`, repousser `expires_at`...).
+
+**La bonne lecture est plus simple : c'est l'essai gratuit du
+fournisseur, sur l'abonnement choisi.** `trial_period_days` chez Stripe,
+un cycle de facturation `TRIAL` à 0 chez PayPal. Le client choisit son
+palier, il n'est pas prélevé pendant 30 jours, puis il paie le prix de
+CE palier. Et le cumul se règle tout seul : les 15 jours de l'Atelier
+vivent dans `affiliate_trial_*` et continuent de tourner sans qu'on y
+touche. **Le mois offert ne réécrit JAMAIS `plan` ni
+`affiliate_trial_*`**, c'est ce que fige le test.
+
+**Les deux règles, dans `lib/trial/moisOffert.ts` :**
+
+1. **Un seul mois par personne, point barre.** `free_month_granted_at`
+   n'est jamais effacé : sans ça il suffirait d'attendre l'expiration
+   pour en reprendre un.
+2. **Les tricheurs.** Auto-affiliation REFUSÉE, alias Gmail compris
+   (`bene+x@gmail.com` et `b.e.n.e@gmail.com` sont la même boîte : c'est
+   le moyen le plus simple de tricher, et comparer les adresses brutes
+   ne le voit pas). Même IP : on ACCORDE et on SIGNALE. Béné a demandé
+   de *tracker* les tricheurs, pas de fermer la porte à un client
+   honnête : une IP partagée, c'est aussi un couple, deux collègues, une
+   salle de formation.
+
+**Le fait est ÉCRIT, jamais déduit.** Le nombre de jours offerts voyage
+dans `subscription_data[metadata][free_month_days]` (Stripe) et dans le
+`custom_id` (PayPal). Déduire d'un `sa` présent serait faux : un `sa`
+peut être là sans qu'aucun essai n'ait été ouvert (déjà eu son mois,
+auto-affiliation refusée), et marquer un cadeau jamais fait priverait
+ces gens du leur.
+
+**Et il se consomme à l'ACHAT, pas au bon de commande.** Un checkout
+abandonné ne doit pas brûler le mois de quelqu'un qui n'a rien acheté.
+
+**Le trou assumé, et il est nommé :** sur le formulaire carte, l'adresse
+est saisie DANS Stripe, donc on ne peut pas toujours vérifier le
+non-cumul avant. Connectée ou via PayPal (qui demande l'adresse avant),
+le contrôle est complet ; anonyme, on accorde et on vérifie après. Un
+deuxième mois est alors marqué `free_month_flag = 'deja_recu'` et remonte
+dans l'admin. **On ne reprend rien** : reprendre un essai commencé, c'est
+prélever quelqu'un qui ne s'y attend pas.
+
+`AFFILIATE_INTERNAL_SECRET` sert au passage à demander à Tipote QUI
+possède un lien (`/api/affiliate/proprietaire`) : la table `affiliates`
+vit là-bas, et la copier ici donnerait deux registres, donc deux réponses
+différentes le jour où l'un prend du retard.
+
+Test : `tests/logic/mois-offert.test.mts`.
+
+## Le mois offert ne s'ouvre QUE sur un lien du système courant (24 août 2026)
+
+Béné, le 23 : "on le met sur l'espace affilié en expliquant que c'est
+uniquement avec le système d'affiliation en cours et pas sur les anciens
+liens systeme io (qui restent valides mais ne seront plus ceux à
+utiliser dans le futur)". Et : "uniquement sur les liens affiliés
+n'oublie pas, c'est pas pour celui qui tombe sur la page de vente tout
+seul".
+
+**La première version passait par un marqueur `?mo=1`, et Béné l'a
+refusée le lendemain** : "je ne veux surtout pas de sa dans les nouveaux
+liens sinon y'a forcément un moment où on va merder, trouver autre chose
+nom de zeus ! Y'a pas que ce système, c'est celui de systeme io c'est
+tout !!"
+
+Elle avait raison, et sa correction a SUPPRIMÉ le problème au lieu de le
+contourner. Le marqueur n'existait que parce que les deux générations de
+liens portaient le même `?sa=` et étaient donc indiscernables. Depuis que
+nos liens portent `?ref=jocelyne` (cf. la section suivante), **le nom du
+paramètre dit à lui seul la génération du lien** :
+
+| Le lien porte | D'où il vient | Commission | Mois offert |
+|---|---|---|---|
+| `?ref=` | l'espace affilié, aujourd'hui | oui | **oui** |
+| `?sa=` | un ancien tunnel Systeme.io | oui | non |
+
+`essaiPourCeCheckout({ ref })` ne prend donc QUE le code public. Un
+checkout arrivé par un ancien lien n'a rien à lui passer : pas de
+cadeau, et il commissionne exactement comme avant. `lib/affiliate/
+moisOffertLien.ts` a été SUPPRIMÉ, et avec lui le cookie `tq_mo`.
+
+**Un marqueur en moins, c'est un endroit en moins où on pouvait
+l'oublier.** C'est la leçon générale : quand une décision demande un
+drapeau à maintenir, se demander d'abord si la donnée qu'on a déjà ne
+répond pas toute seule.
+
+**Sans destination sur NOTRE domaine, le cadeau reste mort.** Les
+tunnels Systeme.io ne nous transmettent rien de ce qu'on ajoute à
+l'URL. D'où le slug `tiquiz_direct` (`https://tiquiz.fr/`), le seul par
+lequel un `?ref=` peut arriver jusqu'à notre middleware.
+
+Le nombre de jours vit dans le module PUR
+(`JOURS_MOIS_OFFERT_ANNONCE`) : il est lu par la décision serveur ET par
+l'écran qui l'annonce, et deux nombres écrits séparément finissent
+toujours par diverger.
+
+**Admin :** les mois offerts et ceux qui méritent un oeil remontent dans
+`/admin` et sur la fiche client (`buildMoisOffertDigest`). Deux cas
+échappent au moteur PAR CONSTRUCTION, et c'est pour ça qu'ils doivent
+s'afficher : `deja_recu` (sur le formulaire carte, l'adresse est saisie
+DANS Stripe, donc inconnue avant le paiement) et `meme_ip` (accordé
+volontairement, une IP partagée c'est aussi un couple ou deux
+collègues). **On montre, on ne reprend rien.**
+
+## Le lien d'affiliation porte `?ref=`, l'ancien `?sa=` reste lu (24 août 2026)
+
+`sa` reste la CLÉ INTERNE des commissions (tout l'historique est
+dessus) ; il ne sort plus dans une URL publique. Côté Tiquiz, on LIT les
+deux, **dans des champs séparés** :
+
+| Où | Nos liens | Anciens liens |
+|---|---|---|
+| URL | `?ref=jocelyne` | `?sa=sa0016...` |
+| cookie | `tq_ref` | `tq_sa` |
+| corps du checkout | `ref` | `sa` |
+| metadata Stripe | `affiliate_code` | `affiliate_ref` |
+| `custom_id` PayPal | 6e champ | 3e champ |
+
+**Ils ne se devinent JAMAIS l'un l'autre.** Deviner à la forme
+marcherait aujourd'hui et casserait le jour où une affiliée choisit un
+code qui ressemble à un `sa`. Le client nomme le champ, le serveur lit
+celui qu'on lui donne.
+
+**Les nouveaux champs du `custom_id` PayPal sont AJOUTÉS EN FIN** : un
+abonnement en cours le jour du déploiement se relit exactement comme
+avant, aux mêmes positions. C'est testé.
+
+`lib/affiliate/refLien.ts` porte le format (jumeau de `sanitizeRef` côté
+Tipote : un code accepté là-bas et refusé ici serait une affiliée jamais
+payée, sans le moindre symptôme) et la règle habituelle, **l'URL gagne
+sur le cookie** : c'est le DERNIER lien qui a fermé la vente.
+
+## L'audit du 24 août : quatre trous dans les chaînes paiement
+
+Béné : "je n'envoie rien en prod ni sur supabase pour le moment et tu me
+fais un audit complet de tout ce qui pourrait merder... Je veux un
+système fiable et stable."
+
+Garde-fou commun : `tests/logic/audit-24-aout.test.mts`.
+
+### 1. UN RÉESSAI DE WEBHOOK NE POUVAIT PAS REPASSER (le plus grave)
+
+La ligne de journal était écrite AVANT le travail, et **tout conflit sur
+l'index valait "déjà traité"**. Or l'index du 20 août couvrait tous les
+statuts.
+
+Conséquence : dès que le traitement ÉCHOUAIT (Supabase indisponible une
+seconde, Stripe injoignable, une colonne manquante), la route répondait
+502 pour demander un réessai, et **ce réessai était refusé par notre
+propre journal** : ligne existante -> doublon -> 200 -> le fournisseur
+arrête de réessayer.
+
+**Une vente encaissée dont le premier traitement ratait n'ouvrait donc
+JAMAIS l'accès**, et le symptôme était l'absence de symptôme. Huit
+chemins de nos deux webhooks répondaient 502 en comptant sur un réessai
+qui ne pouvait pas arriver.
+
+**La correction : le statut fait partie du verrou.**
+
+```
+(source, event_id) where status in ('processing','processed')
+```
+
+C'est exactement la forme de l'index de la migration 012, qui protège le
+webhook Systeme.io depuis mars et qui n'avait pas été reprise. Une ligne
+`error` en SORT, donc le réessai suivant peut reprendre.
+
+Trois cas, tous nécessaires : rien en base -> on travaille ; `processed`
+-> vrai doublon ; `processing` -> quelqu'un travaille (409, réessaie
+plus tard) ou son travail est mort en route (> 2 min -> on reprend).
+
+**Et la décision est sortie dans un module PUR** (`verrouRegles.ts`) :
+`log.ts` importe `supabaseAdmin`, donc aucun test ne pouvait l'importer,
+donc rien ne la testait. C'est LITTÉRALEMENT là que le bug s'était
+installé. `maintenant` est un paramètre : un test qui dépend de
+l'horloge clignote.
+
+**Le marquage est obligatoire à TOUTES les sorties**, exception
+comprise. D'où la séparation `POST` / `traiterEvenement` : un `return`
+oublié au milieu de deux cents lignes laisserait l'événement bloqué.
+
+### 2. REMBOURSER UNE ÉCHÉANCE N'ARRÊTAIT PAS L'ABONNEMENT
+
+L'identifiant client venait UNIQUEMENT de la session de paiement. Une
+ÉCHÉANCE d'abonnement n'en a pas (c'est une facture, pas une session) :
+`vente` valait `null` sur tout remboursement mensuel, donc l'abonnement
+n'était pas arrêté. Accès fermé, et Stripe prélevait le mois suivant.
+
+Le bug d'argent du 23 août, par une autre porte. Repli sur
+`readCustomerId(charge.customer)`, qui gère les deux formes de Stripe et
+existait déjà : ne pas s'en servir n'était pas une précaution, c'était
+un trou.
+
+### 3. RIEN NE LIAIT `SALES_HOSTS` ET `OWN_HOSTS`
+
+Un domaine de vente absent d'`OWN_HOSTS` est pris par le portier pour le
+domaine d'une créatrice : **404 sur le bon de commande ET sur son
+`/api/commande/session`**. Le commentaire disait "à garder en phase", et
+rien ne le vérifiait : la mécanique des deux listes qui divergent,
+quatre fois payée dans ce dépôt.
+
+### 4. UNE PORTE PARTENAIRE COMPARAIT SON SECRET AVEC `!==`
+
+`support-ticket` était la seule ; les autres utilisent `safeEqual`. Une
+comparaison naïve s'arrête au premier caractère différent : son TEMPS
+raconte combien de caractères sont justes.
+
+### 5. UN APPEL VERS L'AUTRE APP POUVAIT BLOQUER UN WEBHOOK
+
+`commissionnerVente` tourne DANS le webhook de paiement et n'avait aucun
+délai maximum. Une panne de Tipote gardait la requête ouverte jusqu'à ce
+que la plateforme la tue. `proprietaireDuLien` avait le sien : deux
+appels vers la même app, un seul protégé.
+
+## Monter de palier : le prorata chez Stripe, un abonnement neuf chez PayPal (23 août 2026)
+
+Béné : "l'user paye 17€ pour le mois et veut upgrader à tiquiz plus : on
+retire les 17€ qu'il a payés déjà pour lui faire payer le complément
+pour le mois en cours et la bonne somme le mois d'après ?" Puis : "Pour
+stripe oui on met le prorata en route. Pour paypal : on dit rien, on
+facture et on upgrade point barre."
+
+**LE BUG D'ARGENT QUE ÇA FERME.** L'écran des formules envoyait vers le
+bon de commande du palier voulu. Un abonné qui cliquait ouvrait donc un
+**DEUXIÈME abonnement** pendant que le premier continuait de le
+prélever, et il ne s'en apercevait qu'au relevé suivant. Même famille
+que les deux bugs d'argent du 23 août (annuler qui coupait l'accès en
+laissant le prélèvement, rembourser qui laissait l'abonnement tourner).
+
+**Le SENS du changement ne se lit pas sur le prix.** Un palier porte
+DEUX axes : le niveau (base / Plus) et la facturation (mois / année).
+L'annuel coûte 170 € d'un coup mais revient moins cher au mois : un
+classement par prix rangerait "mensuel -> annuel" dans les descentes, et
+refuserait le passage à l'année. La règle est donc sur les deux axes
+(`sensDuChangement`, `lib/checkout/planChange.ts`) : monter de niveau =
+montée ; à niveau égal, mois -> année = montée ; tout le reste =
+descente.
+
+**Une descente est REFUSÉE, avec sa raison.** L'appliquer tout de suite
+retirerait des fonctionnalités déjà payées jusqu'à la fin de la période.
+La sortie honnête existe déjà : elle arrête son abonnement (l'accès tient
+jusqu'à la date payée) et reprend le palier qu'elle veut. L'écran le DIT
+au lieu de n'afficher aucun bouton (leçon du bouton Rembourser absent,
+22 août).
+
+**Le montant vient de Stripe, jamais d'une soustraction faite par nous.**
+`GET /api/billing/change-plan?produit=` demande la facture que Stripe
+émettrait (`/v1/invoices/create_preview`). Un montant affiché différent
+du montant prélevé est pire que pas de montant du tout. **GET n'a pas le
+droit de facturer** : un préchargement de navigateur fait des GET.
+
+**PayPal ne sait pas faire de prorata**, et ce n'est pas un raccourci :
+il n'a pas d'équivalent de `proration_behavior`. On ouvre un abonnement
+neuf au palier demandé, et on arrête l'ancien **UNE FOIS le nouveau
+ACTIVÉ**, dans le webhook. L'ordre n'est pas un détail : arrêter d'abord
+laisserait sans rien quelqu'un qui n'irait pas au bout de l'accord
+PayPal. Le lien entre les deux voyage dans le `custom_id` (5e champ,
+`remplace`) : le perdre laisserait la personne prélevée DEUX fois, donc
+il ne se sacrifie JAMAIS, contrairement au `sa`.
+
+**Le plan s'ouvre par le WEBHOOK, pas par la route.**
+`ouvertureDemandee()` rend `null` dès que rien n'a bougé : Stripe envoie
+`customer.subscription.updated` pour à peu près tout (une carte changée,
+une TVA renseignée), et ouvrir à chaque fois enverrait un email de
+confirmation à quelqu'un qui vient de mettre sa carte à jour. Un accès à
+VIE n'est jamais remplacé par un abonnement.
+
+`PLANS_A_VIE` vivait en deux exemplaires (`cancelSubscriptions.ts` et
+`admin/people.ts`) : la liste est maintenant dans
+`lib/checkout/plansAVie.ts`. Test : `tests/logic/plan-change.test.mts`.

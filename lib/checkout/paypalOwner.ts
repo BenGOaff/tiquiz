@@ -123,10 +123,32 @@ export function paypalInterval(product: OwnerProduct): "MONTH" | "YEAR" | null {
 // PayPal borne `custom_id` à 127 caractères. Format compact, séparé par
 // des barres, dans l'ordre de ce qu'on refuse de perdre en premier :
 //
-//     <produit>|<email>|<sa>
+//     <produit>|<email>|<sa>|<jours>|<abonnement remplacé>|<code public>
 //
 // Si ça dépasse, on lâche le `sa` (l'attribution retombe alors sur la
-// conversion par email, qui existe). On ne lâche JAMAIS l'adresse.
+// conversion par email, qui existe). On ne lâche JAMAIS l'adresse, et
+// JAMAIS l'abonnement remplacé : le perdre laisserait DEUX abonnements
+// prélever la même personne en même temps.
+//
+// -- POURQUOI DEUX CHAMPS D'AFFILIATION, ET PAS UN (24 août 2026) ------
+//
+// Depuis que nos liens portent `?ref=jocelyne` au lieu du `?sa=` de
+// Systeme.io, deux valeurs peuvent arriver, et elles ne veulent pas
+// dire la même chose. Les mettre dans le MÊME champ obligerait à
+// deviner laquelle on a reçue, en pratique à la forme, ce qui casserait
+// le jour où quelqu'un choisit un code qui ressemble à un `sa`.
+//
+// Elles ne sont d'ailleurs jamais remplies toutes les deux : un lien
+// est d'une génération ou de l'autre.
+//
+// Les nouveaux champs sont AJOUTÉS EN FIN : un `custom_id` écrit avant
+// qu'ils existent (un abonnement en cours le jour du déploiement) se
+// relit exactement comme avant, aux mêmes positions.
+//
+// Le nombre de jours est ÉCRIT, pas déduit : le webhook doit savoir
+// qu'un mois a été offert pour le marquer comme consommé, et le déduire
+// d'un `sa` présent serait faux (un `sa` peut être là sans qu'aucun
+// essai n'ait été ouvert).
 
 export const CUSTOM_ID_MAX = 127;
 
@@ -134,15 +156,33 @@ export function buildCustomId(args: {
   productId: string;
   email: string;
   affiliateRef?: string | null;
+  trialDays?: number | null;
+  /**
+   * L'abonnement PayPal que celui ci REMPLACE (montée de palier).
+   *
+   * PayPal ne sait pas changer le prix d'un abonnement en cours sans
+   * repasser par l'accord du client. On en ouvre donc un nouveau, et on
+   * n'arrête l'ancien QU'UNE FOIS le nouveau activé : arrêter d'abord
+   * laisserait quelqu'un sans rien si l'accord n'aboutit pas.
+   */
+  remplace?: string | null;
+  /** Le CODE PUBLIC de l'affiliée (`?ref=`), sur nos liens actuels. */
+  affiliateCode?: string | null;
 }): string {
   const produit = String(args.productId ?? "").trim();
   const email = String(args.email ?? "").trim();
   const sa = String(args.affiliateRef ?? "").trim();
+  const essai = Number(args.trialDays ?? 0) > 0 ? String(Math.floor(Number(args.trialDays))) : "";
+  const remplace = String(args.remplace ?? "").trim();
+  const code = String(args.affiliateCode ?? "").trim().toLowerCase();
+  // Un `custom_id` sans montée ni code ne porte pas de barre en trop :
+  // il reste MOT POUR MOT celui d'avant.
+  const queue = code ? `|${remplace}|${code}` : remplace ? `|${remplace}` : "";
 
-  const complet = `${produit}|${email}|${sa}`;
+  const complet = `${produit}|${email}|${sa}|${essai}${queue}`;
   if (complet.length <= CUSTOM_ID_MAX) return complet;
 
-  const sansSa = `${produit}|${email}|`;
+  const sansSa = `${produit}|${email}||${essai}${queue}`;
   if (sansSa.length <= CUSTOM_ID_MAX) return sansSa;
 
   // Une adresse à elle seule plus longue que la limite : on garde le
@@ -158,14 +198,31 @@ export function readCustomId(raw: string | null | undefined): {
   productId: string | null;
   email: string | null;
   affiliateRef: string | null;
+  trialDays: number;
+  /** L'abonnement que celui ci remplace, ou `null`. */
+  remplace: string | null;
+  /** Le CODE PUBLIC de l'affiliée, ou `null` (ancien lien Systeme.io). */
+  affiliateCode: string | null;
 } {
   const s = String(raw ?? "").trim();
-  if (!s) return { productId: null, email: null, affiliateRef: null };
-  const [produit, email, sa] = s.split("|");
+  const vide = {
+    productId: null,
+    email: null,
+    affiliateRef: null,
+    trialDays: 0,
+    remplace: null,
+    affiliateCode: null,
+  };
+  if (!s) return vide;
+  const [produit, email, sa, essai, remplace, code] = s.split("|");
+  const jours = Number(essai);
   return {
     productId: produit || null,
     email: (email || "").trim().toLowerCase() || null,
     affiliateRef: sa || null,
+    trialDays: Number.isFinite(jours) && jours > 0 ? jours : 0,
+    remplace: (remplace || "").trim() || null,
+    affiliateCode: (code || "").trim().toLowerCase() || null,
   };
 }
 
@@ -236,9 +293,23 @@ export async function createOwnerPaypalSubscription(args: {
   returnUrl: string;
   cancelUrl: string;
   affiliateRef?: string | null;
+  /** Les jours d'essai gratuit sur l'abonnement choisi. */
+  trialDays?: number | null;
+  /** L'abonnement PayPal que celui ci remplace (montée de palier). */
+  remplace?: string | null;
+  /** Le CODE PUBLIC de l'affiliée (`?ref=`), sur nos liens actuels. */
+  affiliateCode?: string | null;
 }): Promise<PaypalSubscriptionResult> {
   const unit = paypalInterval(args.product);
   if (!unit) return { ok: false, reason: "invalid_product" };
+
+  // PayPal borne un cycle d'essai à 365 jours et refuse un plan dont les
+  // séquences ne se suivent pas : on borne ici plutôt que de laisser
+  // l'API refuser avec un message que personne ne lira.
+  const essaiJours =
+    Number.isInteger(args.trialDays) && Number(args.trialDays) > 0
+      ? Math.min(Number(args.trialDays), 365)
+      : 0;
 
   const token = await jeton(args.compte);
   if (!token) return { ok: false, reason: "not_configured" };
@@ -258,10 +329,31 @@ export async function createOwnerPaypalSubscription(args: {
       product_id: productId,
       name: args.product.label,
       billing_cycles: [
+        // L'ESSAI GRATUIT, quand il y en a un.
+        //
+        // Chez PayPal ce n'est pas un réglage à part : c'est un CYCLE de
+        // facturation à 0, de type `TRIAL`, joué une seule fois avant le
+        // cycle payant. Le client choisit son palier, il n'est pas
+        // prélevé pendant la période, puis il paie le prix de CE palier.
+        // Les `sequence` doivent se suivre : l'essai est 1, le régulier
+        // devient 2.
+        ...(essaiJours > 0
+          ? [
+              {
+                frequency: { interval_unit: "DAY", interval_count: essaiJours },
+                tenure_type: "TRIAL",
+                sequence: 1,
+                total_cycles: 1,
+                pricing_scheme: {
+                  fixed_price: { value: "0", currency_code: args.product.currency.toUpperCase() },
+                },
+              },
+            ]
+          : []),
         {
           frequency: { interval_unit: unit, interval_count: 1 },
           tenure_type: "REGULAR",
-          sequence: 1,
+          sequence: essaiJours > 0 ? 2 : 1,
           // 0 = sans fin. "Sans engagement" veut dire qu'on arrête quand
           // on veut, pas que ça s'arrête tout seul au bout d'un an.
           total_cycles: 0,
@@ -293,6 +385,9 @@ export async function createOwnerPaypalSubscription(args: {
         productId: args.product.id,
         email: args.email,
         affiliateRef: args.affiliateRef,
+        trialDays: essaiJours,
+        remplace: args.remplace,
+        affiliateCode: args.affiliateCode,
       }),
       subscriber: { email_address: args.email },
       application_context: {
@@ -335,6 +430,18 @@ export interface PaypalSubscriptionInfo {
   email: string | null;
   affiliateRef: string | null;
   amountCents: number;
+  /** Les jours offerts sur cet abonnement, 0 s'il n'y en a pas. */
+  trialDays: number;
+  /**
+   * L'abonnement que celui ci REMPLACE (montée de palier), ou `null`.
+   *
+   * Le webhook l'arrête une fois celui ci activé. Sans ce champ, la
+   * personne serait prélevée sur les DEUX, et elle ne s'en apercevrait
+   * qu'au relevé suivant.
+   */
+  remplace: string | null;
+  /** Le CODE PUBLIC de l'affiliée, ou `null` (ancien lien Systeme.io). */
+  affiliateCode: string | null;
 }
 
 /** La forme d'un abonnement PayPal, réduite à ce qu'on en lit. */
@@ -351,7 +458,8 @@ interface AboShape {
  */
 export function readSubscription(json: AboShape): PaypalSubscriptionInfo {
   const status = String(json.status ?? "").trim().toUpperCase();
-  const { productId, email, affiliateRef } = readCustomId(json.custom_id);
+  const { productId, email, affiliateRef, trialDays, remplace, affiliateCode } =
+    readCustomId(json.custom_id);
   return {
     // ACTIVE : payé et en cours. APPROVED : approuvé, activation
     // imminente, ce qu'on voit au retour immédiat de l'acheteur.
@@ -362,6 +470,9 @@ export function readSubscription(json: AboShape): PaypalSubscriptionInfo {
     // repli : voir le bloc sur le `custom_id` plus haut.
     email: email ?? (json.subscriber?.email_address ?? null),
     affiliateRef,
+    trialDays,
+    remplace,
+    affiliateCode,
     amountCents: paypalAmountToCents(json.billing_info?.last_payment?.amount?.value),
   };
 }

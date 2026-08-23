@@ -32,6 +32,7 @@ import { arreterAbonnementsStripe } from "@/lib/checkout/subscriptionCancel";
 import { sendRefundGoodbyeEmail } from "@/lib/email/refundGoodbyeEmail";
 import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ownerAccount";
 import {
+  readCustomerId,
   retrieveOwnerCustomer,
   retrieveOwnerSession,
   retrieveOwnerSessionByPaymentIntent,
@@ -41,6 +42,11 @@ import {
 import { recordChurn } from "@/lib/checkout/churn";
 import { rememberStripeCustomer } from "@/lib/checkout/customerLink";
 import { commissionnerVente } from "@/lib/affiliate/ownerSale";
+import { marquerMoisOffertConsomme } from "@/lib/trial/moisOffertCheckout";
+import { ouvertureDemandee, type OuvertureDemandee } from "@/lib/checkout/planChange";
+import { estPlanAVie } from "@/lib/checkout/plansAVie";
+import { estAbonnementVivant } from "@/lib/checkout/subscriptionCancel";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import {
   isSubscriptionEvent,
   readCancellationFeedback,
@@ -49,7 +55,7 @@ import {
   stripeDateToIso,
   type RawSubscription,
 } from "@/lib/checkout/subscriptionLifecycle";
-import { logWebhookEvent } from "@/lib/webhooks/log";
+import { marquerTraite, prendreLeVerrou } from "@/lib/webhooks/log";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -91,16 +97,60 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const eventId = String(event.id ?? "").trim() || null;
   const eventType = String(event.type ?? "").trim() || null;
 
-  const { duplicate } = await logWebhookEvent({
+  // ── LE VERROU ──
+  //
+  // Il journalise ET dit si on a le droit de travailler. Avant l'audit
+  // du 24 aout, toute ligne existante etait prise pour un doublon :
+  // un traitement rate repondait 502 pour demander un reessai, et ce
+  // reessai recevait 200 sans rien faire. Une vente encaissee dont le
+  // premier traitement ratait n'ouvrait donc JAMAIS l'acces.
+  const verrou = await prendreLeVerrou({
     source: SOURCE,
     event_id: eventId,
     event_type: eventType,
     payload: event,
-    status: "received",
+    status: "processing",
   });
-  if (duplicate) {
+  if (verrou.action === "doublon") {
     return NextResponse.json({ ok: true, duplicate: true });
   }
+  if (verrou.action === "en_cours") {
+    // 409 : Stripe reessaiera. Repondre 200 ici perdrait la vente si le
+    // traitement en cours echoue.
+    return NextResponse.json({ ok: false, reason: "en_cours" }, { status: 409 });
+  }
+
+  // LE MARQUAGE EST OBLIGATOIRE, quelle que soit la sortie. Sans lui,
+  // l'evenement reste `processing` et sera repris deux minutes plus
+  // tard : c'est le filet, pas le fonctionnement normal.
+  let reponse: NextResponse;
+  try {
+    reponse = await traiterEvenement(req, event, eventType);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[commande/webhook] traitement interrompu : ${message}`);
+    await marquerTraite(SOURCE, eventId, "error", message.slice(0, 500));
+    // 500 : Stripe reessaiera, et le statut `error` laisse la porte
+    // ouverte au reessai.
+    return NextResponse.json({ ok: false, reason: "exception" }, { status: 500 });
+  }
+  const reussi = reponse.status >= 200 && reponse.status < 300;
+  await marquerTraite(SOURCE, eventId, reussi ? "processed" : "error", reussi ? null : `HTTP ${reponse.status}`);
+  return reponse;
+}
+
+/**
+ * Le traitement proprement dit, une fois le verrou pris.
+ *
+ * Separe de `POST` pour une seule raison : TOUTES ses sorties doivent
+ * passer par le marquage, et un `return` oublie au milieu de deux cents
+ * lignes laisserait l'evenement bloque en `processing`.
+ */
+async function traiterEvenement(
+  req: NextRequest,
+  event: RawEvent,
+  eventType: string | null,
+): Promise<NextResponse> {
 
   // ── L'ARGENT REPART : ON FERME, ET ON LE DIT BIEN ──
   //
@@ -215,6 +265,24 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       `compte ${octroi.created ? "cree" : "existant"}, lien de connexion ${octroi.loginLinkSent ? "envoye" : "NON ENVOYE"}`,
   );
 
+  // ── LE MOIS OFFERT EST CONSOMMÉ ──
+  //
+  // ICI et pas au moment du bon de commande : un checkout abandonné ne
+  // doit pas brûler le cadeau de quelqu'un qui n'a rien acheté.
+  //
+  // On lit la métadonnée ÉCRITE à l'ouverture du checkout, on ne déduit
+  // rien d'un `sa` présent : un `sa` peut être là sans qu'aucun essai
+  // n'ait été ouvert (personne qui a déjà eu son mois, auto-affiliation
+  // refusée), et marquer un cadeau jamais fait priverait quelqu'un du
+  // sien.
+  if (vente.freeMonthDays > 0) {
+    await marquerMoisOffertConsomme({
+      email: vente.email,
+      ref: vente.affiliateCode,
+      ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+    });
+  }
+
   // ── LA COMMISSION DE L'AFFILIÉE ──
   //
   // APRES le plan, et jamais avant : une commission qui echoue ne doit
@@ -225,6 +293,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     email: vente.email,
     reference: vente.paymentRef,
     affiliateRef: vente.affiliateRef,
+    affiliateCode: vente.affiliateCode,
     amountTotalCents: vente.amountTotalCents,
     amountTaxCents: vente.amountTaxCents,
     product,
@@ -244,6 +313,8 @@ interface RawEvent {
       amount_refunded?: number | null;
       refunded?: boolean | null;
       payment_intent?: string | null;
+      /** Chaine ou objet etendu : `readCustomerId` gere les deux. */
+      customer?: string | { id?: string } | null;
       billing_details?: { email?: string | null; name?: string | null } | null;
     };
   };
@@ -312,11 +383,20 @@ async function surRemboursement(event: RawEvent): Promise<NextResponse> {
   //
   // `immediat` et pas `fin-de-periode` : la période en cours vient
   // d'être remboursée, il n'y a plus rien à honorer.
-  // L'identifiant client vient de la VENTE relue chez Stripe. On ne le
-  // lit pas sur la charge : sa forme varie (chaine ou objet etendu), et
-  // raisonner sur la forme supposee d'un payload est exactement ce qui a
-  // coute la journee du 7 aout (drame Ivan).
-  const clientStripe = vente?.customerId ?? null;
+  // L'identifiant client vient de la VENTE relue chez Stripe, PUIS de la
+  // charge elle meme.
+  //
+  // LE BUG QUE LE REPLI FERME (audit du 24 aout) : `vente` est cherchee
+  // parmi les sessions de paiement. Une ECHEANCE d'abonnement n'en a
+  // pas (c'est une facture, pas une session), donc `vente` valait `null`
+  // sur tout remboursement mensuel, donc l'abonnement n'etait PAS
+  // arrete. On fermait l'acces et Stripe prelevait le mois suivant :
+  // exactement le bug d'argent du 23 aout, par une autre porte.
+  //
+  // `readCustomerId` gere les DEUX formes que Stripe envoie (chaine ou
+  // objet etendu) : c'est justement pour ca qu'elle existe. Ne pas s'en
+  // servir n'etait pas une precaution, c'etait un trou.
+  const clientStripe = vente?.customerId ?? readCustomerId(charge?.customer) ?? null;
   if (compte && clientStripe) {
     const stop = await arreterAbonnementsStripe(compte.key, clientStripe, "immediat");
     if (!stop.ok) {
@@ -462,6 +542,42 @@ async function surAbonnement(
   }
 
   if (lecture.outcome !== "revoke") {
+    // ── LA MONTEE DE PALIER ──
+    //
+    // Bene, 23 aout : "l'user paye 17 EUR pour le mois et veut upgrader
+    // a tiquiz plus". La route `/api/billing/change-plan` change la
+    // ligne chez Stripe ; c'est ICI que l'acces suit, a partir de ce
+    // que Stripe facture VRAIMENT. Deux endroits qui ouvriraient le
+    // plan finiraient par se contredire (quatrieme fois dans ce depot).
+    //
+    // `ouvertureDemandee` rend null des que rien n'a bouge : Stripe
+    // envoie `customer.subscription.updated` pour a peu pres tout, et
+    // ouvrir a chaque fois enverrait un email de confirmation a
+    // quelqu'un qui vient de mettre sa carte a jour.
+    const ouverture = await lireOuverture(email, abonnement);
+    if (ouverture) {
+      const grant = await grantPlanByEmail({
+        email,
+        plan: ouverture.plan,
+        source: "stripe",
+        reference: subId,
+        planLabel: ouverture.label,
+      });
+      if (!grant.ok) {
+        console.error(
+          `[commande/webhook] palier ${ouverture.produit} NON ouvert pour ${email} ` +
+            `(${grant.reason ?? "raison inconnue"}) : il a paye la difference.`,
+        );
+        // 502 : on VEUT que Stripe reessaie. Il a paye une montee qu'il
+        // n'a pas recue, et le silence coute plus cher que le bug.
+        return NextResponse.json({ ok: false, reason: grant.reason ?? "grant_failed" }, { status: 502 });
+      }
+      console.log(
+        `[commande/webhook] abonnement ${subId} : ${email} passe en ${ouverture.plan}`,
+      );
+      return NextResponse.json({ ok: true, subscription: "plan_changed", plan: ouverture.plan });
+    }
+
     console.log(
       `[commande/webhook] abonnement ${subId} (${eventType}) : ${lecture.reason}, acces conserve`,
     );
@@ -489,4 +605,36 @@ async function surAbonnement(
       `(${sortie.reason ?? "ok"})`,
   );
   return NextResponse.json({ ok: true, subscription: lecture.reason, revoked: true });
+}
+
+/**
+ * Le palier a ouvrir pour cet abonnement, ou `null`.
+ *
+ * La DECISION est pure et testee (`ouvertureDemandee`). Ici on ne fait
+ * que lui donner ce qu'elle demande : ce que Stripe facture, si
+ * l'abonnement est vivant, et le plan REEL du compte. Lire le plan
+ * dedans la rendrait intestable, et comparer a une hypothese au lieu du
+ * plan reel ferait repartir un email a chaque mise a jour anodine.
+ */
+async function lireOuverture(
+  email: string,
+  abonnement: RawSubscription | null,
+): Promise<OuvertureDemandee | null> {
+  const meta = (abonnement as { metadata?: Record<string, unknown> } | null)?.metadata ?? {};
+  const produitFacture = String(meta.product ?? "").trim();
+  if (!produitFacture) return null;
+
+  const { data } = await supabaseAdmin
+    .from("profiles")
+    .select("plan")
+    .ilike("email", email)
+    .maybeSingle();
+  const planActuel = String((data as { plan?: string } | null)?.plan ?? "").trim().toLowerCase();
+
+  return ouvertureDemandee({
+    produitFacture,
+    vivant: estAbonnementVivant((abonnement as { status?: unknown } | null)?.status),
+    planActuel,
+    aVie: estPlanAVie(planActuel),
+  });
 }

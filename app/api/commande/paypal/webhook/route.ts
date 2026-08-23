@@ -35,14 +35,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { commissionnerVente } from "@/lib/affiliate/ownerSale";
 import { findOwnerProduct } from "@/lib/checkout/catalog";
 import { downgradeToFreeByEmail, grantPlanByEmail } from "@/lib/checkout/grantPlan";
-import { readOwnerPaypal, readOwnerPaypalWebhookId } from "@/lib/checkout/ownerAccount";
+import {
+  readOwnerPaypal,
+  readOwnerPaypalWebhookId,
+  type OwnerPaypalAccount,
+} from "@/lib/checkout/ownerAccount";
 import {
   cancelOwnerPaypalSubscription,
   getOwnerPaypalSubscription,
   verifyOwnerPaypalWebhook,
 } from "@/lib/checkout/paypalOwner";
 import { rememberPaypalSubscription } from "@/lib/checkout/customerLink";
-import { logWebhookEvent } from "@/lib/webhooks/log";
+import { marquerMoisOffertConsomme } from "@/lib/trial/moisOffertCheckout";
+import { marquerTraite, prendreLeVerrou } from "@/lib/webhooks/log";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -103,18 +108,57 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const eventId = String(event.id ?? "").trim() || null;
   const eventType = String(event.event_type ?? "").trim() || null;
 
-  if (eventId) {
-    const { duplicate } = await logWebhookEvent({
-      source: SOURCE,
-      event_id: eventId,
-      event_type: eventType,
-      payload: event as unknown as Record<string, unknown>,
-      status: "received",
-    });
-    if (duplicate) {
-      return NextResponse.json({ ok: true, reason: "deja_traite" });
-    }
+  // ── LE VERROU ──
+  //
+  // Il journalise ET dit si on a le droit de travailler. Avant l'audit
+  // du 24 aout, toute ligne existante etait prise pour un doublon : un
+  // traitement rate repondait 502 pour demander un reessai, et ce
+  // reessai recevait 200 sans rien faire.
+  const verrou = await prendreLeVerrou({
+    source: SOURCE,
+    event_id: eventId,
+    event_type: eventType,
+    payload: event as unknown as Record<string, unknown>,
+    status: "processing",
+  });
+  if (verrou.action === "doublon") {
+    return NextResponse.json({ ok: true, reason: "deja_traite" });
   }
+  if (verrou.action === "en_cours") {
+    // 409 : PayPal reessaiera. Repondre 200 ici perdrait l'ouverture de
+    // l'acces si le traitement en cours echoue.
+    return NextResponse.json({ ok: false, reason: "en_cours" }, { status: 409 });
+  }
+
+  // LE MARQUAGE EST OBLIGATOIRE, quelle que soit la sortie.
+  let reponse: NextResponse;
+  try {
+    reponse = await traiterEvenement(req, compte, event, eventId, eventType);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[commande/paypal/webhook] traitement interrompu : ${message}`);
+    await marquerTraite(SOURCE, eventId, "error", message.slice(0, 500));
+    return NextResponse.json({ ok: false, reason: "exception" }, { status: 500 });
+  }
+  const reussi = reponse.status >= 200 && reponse.status < 300;
+  await marquerTraite(SOURCE, eventId, reussi ? "processed" : "error", reussi ? null : `HTTP ${reponse.status}`);
+  return reponse;
+}
+
+/**
+ * Le traitement proprement dit, une fois le verrou pris.
+ *
+ * Separe de `POST` pour une seule raison : TOUTES ses sorties doivent
+ * passer par le marquage, et un `return` oublie au milieu laisserait
+ * l'evenement bloque en `processing`.
+ */
+async function traiterEvenement(
+  req: NextRequest,
+  compte: OwnerPaypalAccount,
+  event: EvenementPaypal,
+  eventId: string | null,
+  eventType: string | null,
+): Promise<NextResponse> {
 
   // L'ABONNEMENT CONCERNÉ.
   //
@@ -262,6 +306,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       `compte ${octroi.created ? "cree" : "existant"}, confirmation ${octroi.loginLinkSent ? "envoyee" : "NON ENVOYEE"}`,
   );
 
+  // ── LE MOIS OFFERT EST CONSOMMÉ ──
+  //
+  // ICI et pas au bon de commande : un paiement abandonné ne doit pas
+  // brûler le cadeau. Le nombre de jours est LU dans le `custom_id`, il
+  // n'est pas déduit d'un `sa` présent.
+  if (abo.trialDays > 0) {
+    await marquerMoisOffertConsomme({
+      email: abo.email,
+      ref: abo.affiliateCode,
+      ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+    });
+  }
+
   // ── LA COMMISSION DE L'AFFILIÉE ──
   //
   // **Sur le TTC, et c'est une décision de Béné** (22 août : "pour paypal :
@@ -274,12 +331,47 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     email: abo.email,
     reference: abonnementId,
     affiliateRef: abo.affiliateRef,
+    affiliateCode: abo.affiliateCode,
     // Ce qui a vraiment été prélevé quand PayPal le dit, sinon le prix
     // du catalogue : ne rien envoyer ferait sauter la commission.
     amountTotalCents: abo.amountCents || product.amountCents,
     amountTaxCents: 0,
     product: { id: product.id, label: product.label },
   });
+
+  // ── LA MONTÉE DE PALIER : ON ARRÊTE L'ANCIEN, MAINTENANT SEULEMENT ──
+  //
+  // Béné, 23 août : "Pour paypal : on dit rien, on facture et on upgrade
+  // point barre." PayPal ne sait pas changer le prix d'un abonnement en
+  // cours sans repasser par l'accord du client : on en ouvre donc un
+  // nouveau, et on arrête l'ancien ICI, une fois le nouveau ACTIVÉ.
+  //
+  // L'ordre n'est pas un détail. Arrêter d'abord laisserait sans rien
+  // quelqu'un qui n'irait pas au bout de l'accord PayPal ; arrêter ici
+  // veut dire qu'entre les deux il a payé les deux, pendant quelques
+  // secondes. C'est le seul des deux risques qui se rattrape.
+  if (abo.remplace) {
+    const arret = await cancelOwnerPaypalSubscription({
+      compte,
+      subscriptionId: abo.remplace,
+      raison: "Montee de palier",
+    });
+    if (!arret.ok) {
+      // On CRIE : deux abonnements qui prélèvent la même personne, c'est
+      // un remboursement et un client perdu. Le 200 reste, sinon PayPal
+      // rejouerait l'ouverture du plan en boucle.
+      console.error(
+        `[commande/paypal/webhook] ancien abonnement ${abo.remplace} NON arrete pour ` +
+          `${abo.email} (${arret.reason ?? "?"}) : A ARRETER A LA MAIN chez PayPal, ` +
+          `sinon il est preleve DEUX fois.`,
+      );
+    } else {
+      console.log(
+        `[commande/paypal/webhook] ${abo.email} : ancien abonnement ${abo.remplace} arrete ` +
+          `apres la montee vers ${product.id}`,
+      );
+    }
+  }
 
   return NextResponse.json({ ok: true });
 }

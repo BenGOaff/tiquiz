@@ -34,14 +34,16 @@ import {
   listerAbonnementsOwner,
   type CancelQuand,
 } from "@/lib/checkout/subscriptionCancel";
+import { PLANS_A_VIE } from "@/lib/checkout/plansAVie";
 import {
   cancelSubscription,
   findContactByEmail,
   listSubscriptionsForContact,
 } from "@/lib/systemeIoClient";
 
-/** Les plans qui n'ont AUCUN abonnement derrière : rien à arrêter. */
-const PLANS_A_VIE: ReadonlySet<string> = new Set(["beta", "lifetime"]);
+/* Les plans qui n'ont AUCUN abonnement derrière (rien à arrêter) vivent
+   dans `lib/checkout/plansAVie.ts` : deux exemplaires de la même liste
+   finissent toujours par diverger. */
 
 export interface AbonnementArrete {
   fournisseur: "stripe" | "paypal" | "systeme-io";

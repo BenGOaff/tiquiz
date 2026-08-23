@@ -156,12 +156,40 @@ export function planForOwnerProduct(id: string | null | undefined): TiquizPlan |
  * la même chose.
  */
 export function formatOwnerPrice(product: OwnerProduct, locale = "fr-FR"): string {
+  return formatCents(product.amountCents, product.currency, locale);
+}
+
+/**
+ * Un montant en centimes, formaté comme un prix.
+ *
+ * Séparé de `formatOwnerPrice` parce que tout n'est pas le prix d'un
+ * produit : la facture de prorata d'une montée de palier est un montant
+ * calculé par Stripe. Deux formateurs afficheraient deux styles pour la
+ * même chose sur le même écran.
+ */
+export function formatCents(cents: number, currency = "eur", locale = "fr-FR"): string {
+  const n = Number(cents);
   return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: product.currency.toUpperCase(),
+    currency: String(currency || "eur").toUpperCase(),
     // 17,00 € plutôt que 17 € : c'est un prix, pas un compte.
     minimumFractionDigits: 2,
-  }).format(product.amountCents / 100);
+  }).format((Number.isFinite(n) ? n : 0) / 100);
+}
+
+/**
+ * Le produit du catalogue qui ouvre CE plan, ou `null`.
+ *
+ * L'app parle en plans (`monthly_plus`), le catalogue en produits
+ * (`mensuel-plus`). La table de correspondance vit ici, avec le
+ * catalogue, et pas recopiée dans un écran : c'est exactement la faute
+ * qui a coûté un client le 7 août (le prix vivait à un endroit, le plan
+ * à un autre, le lien à un troisième).
+ */
+export function produitPourPlan(plan: string | null | undefined): OwnerProduct | null {
+  const p = String(plan ?? "").trim().toLowerCase();
+  if (!p) return null;
+  return Object.values(OWNER_CATALOG).find((prod) => prod.plan === p) ?? null;
 }
 
 /**

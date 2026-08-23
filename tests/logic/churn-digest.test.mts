@@ -30,6 +30,7 @@ function personne(over: Partial<Person> & { email: string }): Person {
     leadCount: 0,
     resellerName: null,
     selfServe: true,
+    moisOffert: null,
     paidCents: 0,
     sales: [],
     lastProvider: null,

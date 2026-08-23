@@ -28,12 +28,14 @@ import { checkoutReturnBase } from "@/lib/sales/salesHosts";
 import { isSalesOpen } from "@/lib/sales/previewGate";
 import { resolveAppUrl } from "@/lib/authLinks";
 import { readSa } from "@/lib/affiliate/sa";
+import { readRef } from "@/lib/affiliate/refLien";
+import { essaiPourCeCheckout } from "@/lib/trial/moisOffertCheckout";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  let body: { produit?: string; email?: string; k?: string; ref?: string };
+  let body: { produit?: string; email?: string; k?: string; ref?: string; sa?: string };
   try {
     body = await req.json();
   } catch {
@@ -84,17 +86,37 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const cle = encodeURIComponent(String(body.k ?? ""));
   const retour = `${base}/commande/${product.id}/retour?k=${cle}`;
 
+  // Le mois offert, exactement comme sur le formulaire carte. Ici on
+  // connait l'adresse (elle est demandee avant), donc le controle du
+  // non-cumul est complet AVANT le paiement.
+  // Meme regle que sur le formulaire carte : le cadeau s'ouvre sur un
+  // `?ref=` (nos liens), jamais sur un `?sa=` (anciens tunnels
+  // Systeme.io, qui commissionnent comme avant).
+  const essai = await essaiPourCeCheckout({
+    ref: readRef(body.ref),
+    email,
+    ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+  });
+  if (essai.jours > 0) {
+    console.log(
+      `[commande/paypal] ${essai.jours} jours offerts sur ${product.id}` +
+        (essai.signale ? ` A VERIFIER : ${essai.signale}` : ""),
+    );
+  }
+
   const result = await createOwnerPaypalSubscription({
     compte,
     product,
     email,
+    trialDays: essai.jours,
     returnUrl: retour,
     // Annuler ramène au bon de commande, pas sur un cul-de-sac.
     cancelUrl: `${base}/commande/${product.id}?k=${cle}`,
-    // `readSa` et pas un `slice()` : une valeur tronquée garde la FORME
-    // d'un identifiant valide, passe tous les contrôles, et ne désigne
-    // personne. La commission serait perdue en silence.
-    affiliateRef: readSa(body.ref),
+    // `readRef` / `readSa` et pas un `slice()` : une valeur tronquée
+    // garde la FORME d'un identifiant valide, passe tous les contrôles,
+    // et ne désigne personne. La commission serait perdue en silence.
+    affiliateCode: readRef(body.ref),
+    affiliateRef: readSa(body.sa),
   });
 
   if (!result.ok || !result.approveUrl) {
