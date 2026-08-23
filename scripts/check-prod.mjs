@@ -64,8 +64,13 @@ const lignes = [];
 let bloquants = 0;
 let avertissements = 0;
 
-function verifier(cle, { requis, quoi, minimum = 1 }) {
-  const v = lire(cle);
+function verifier(cle, { requis, quoi, minimum = 1, aussi = [] }) {
+  // `aussi` : les autres noms sous lesquels la MÊME valeur est acceptée par
+  // le code. Sans ça, ce contrôle réclamait une variable que l'app ne lit
+  // plus en premier, et disait "absente" alors qu'elle était bien posée
+  // sous son nom courant. Un contrôle qui ne regarde pas au même endroit
+  // que le code envoie chercher au mauvais endroit.
+  const v = [cle, ...aussi].map(lire).find((x) => x.length >= minimum) ?? lire(cle);
   const ok = v.length >= minimum;
   if (!ok) {
     if (requis) bloquants += 1;
@@ -107,9 +112,13 @@ verifier("STRIPE_SECRET_KEY_OWNER", {
   requis: false,
   quoi: "Sans elle, le bon de commande ne s'ouvre pas du tout.",
 });
-verifier("NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_OWNER", {
+const publiable = verifier("STRIPE_PUBLISHABLE_KEY_OWNER", {
   requis: false,
-  quoi: "La clé publique. Sans elle, le formulaire Stripe reste vide.",
+  aussi: ["NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_OWNER"],
+  quoi:
+    "La clé publique (pk_test_... ou pk_live_...), sans préfixe NEXT_PUBLIC_ :\n" +
+    "       elle est lue à l'EXÉCUTION, donc un pm2 restart suffit, sans rebuild.\n" +
+    "       Sans elle, le formulaire de paiement ne s'affiche pas du tout.",
 });
 const secretWebhook = verifier("STRIPE_WEBHOOK_SECRET_OWNER", {
   requis: false,
@@ -121,6 +130,16 @@ verifier("SALES_PREVIEW_TOKEN", {
   quoi: "16 caractères minimum. Sans elle, /commande répond 404 sur quiz.tipote.com.",
 });
 console.log(lignes.splice(0).join("\n"));
+
+if (lire("STRIPE_SECRET_KEY_OWNER") && !publiable) {
+  console.log(
+    "\n  ATTENTION : la clé Stripe SECRÈTE est posée et la clé PUBLIABLE manque.\n" +
+      "  Le bon de commande s'ouvre, mais le formulaire de paiement reste vide :\n" +
+      "  personne ne peut payer. Poser STRIPE_PUBLISHABLE_KEY_OWNER, du même type\n" +
+      "  (test ou réel) que la clé secrète, puis pm2 restart.",
+  );
+  bloquants += 1;
+}
 
 if (stripeLive && !secretWebhook) {
   console.log(
