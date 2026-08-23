@@ -41,6 +41,7 @@ import {
 import { recordChurn } from "@/lib/checkout/churn";
 import { rememberStripeCustomer } from "@/lib/checkout/customerLink";
 import { commissionnerVente } from "@/lib/affiliate/ownerSale";
+import { marquerMoisOffertConsomme } from "@/lib/trial/moisOffertCheckout";
 import {
   isSubscriptionEvent,
   readCancellationFeedback,
@@ -214,6 +215,24 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     `[commande/webhook] plan ouvert pour ${vente.email} : ${product.id} (${product.plan}), ` +
       `compte ${octroi.created ? "cree" : "existant"}, lien de connexion ${octroi.loginLinkSent ? "envoye" : "NON ENVOYE"}`,
   );
+
+  // ── LE MOIS OFFERT EST CONSOMMÉ ──
+  //
+  // ICI et pas au moment du bon de commande : un checkout abandonné ne
+  // doit pas brûler le cadeau de quelqu'un qui n'a rien acheté.
+  //
+  // On lit la métadonnée ÉCRITE à l'ouverture du checkout, on ne déduit
+  // rien d'un `sa` présent : un `sa` peut être là sans qu'aucun essai
+  // n'ait été ouvert (personne qui a déjà eu son mois, auto-affiliation
+  // refusée), et marquer un cadeau jamais fait priverait quelqu'un du
+  // sien.
+  if (vente.freeMonthDays > 0) {
+    await marquerMoisOffertConsomme({
+      email: vente.email,
+      sa: vente.affiliateRef,
+      ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+    });
+  }
 
   // ── LA COMMISSION DE L'AFFILIÉE ──
   //

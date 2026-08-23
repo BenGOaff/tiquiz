@@ -28,6 +28,7 @@ import { checkoutReturnBase } from "@/lib/sales/salesHosts";
 import { isSalesOpen } from "@/lib/sales/previewGate";
 import { resolveAppUrl } from "@/lib/authLinks";
 import { readSa } from "@/lib/affiliate/sa";
+import { essaiPourCeCheckout } from "@/lib/trial/moisOffertCheckout";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -84,10 +85,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const cle = encodeURIComponent(String(body.k ?? ""));
   const retour = `${base}/commande/${product.id}/retour?k=${cle}`;
 
+  // Le mois offert, exactement comme sur le formulaire carte. Ici on
+  // connait l'adresse (elle est demandee avant), donc le controle du
+  // non-cumul est complet AVANT le paiement.
+  const essai = await essaiPourCeCheckout({
+    sa: readSa(body.ref),
+    email,
+    ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+  });
+  if (essai.jours > 0) {
+    console.log(
+      `[commande/paypal] ${essai.jours} jours offerts sur ${product.id}` +
+        (essai.signale ? ` A VERIFIER : ${essai.signale}` : ""),
+    );
+  }
+
   const result = await createOwnerPaypalSubscription({
     compte,
     product,
     email,
+    trialDays: essai.jours,
     returnUrl: retour,
     // Annuler ramène au bon de commande, pas sur un cul-de-sac.
     cancelUrl: `${base}/commande/${product.id}?k=${cle}`,

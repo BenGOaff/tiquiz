@@ -123,10 +123,15 @@ export function paypalInterval(product: OwnerProduct): "MONTH" | "YEAR" | null {
 // PayPal borne `custom_id` à 127 caractères. Format compact, séparé par
 // des barres, dans l'ordre de ce qu'on refuse de perdre en premier :
 //
-//     <produit>|<email>|<sa>
+//     <produit>|<email>|<sa>|<jours d'essai offerts>
 //
 // Si ça dépasse, on lâche le `sa` (l'attribution retombe alors sur la
 // conversion par email, qui existe). On ne lâche JAMAIS l'adresse.
+//
+// Le nombre de jours est ÉCRIT, pas déduit : le webhook doit savoir
+// qu'un mois a été offert pour le marquer comme consommé, et le déduire
+// d'un `sa` présent serait faux (un `sa` peut être là sans qu'aucun
+// essai n'ait été ouvert).
 
 export const CUSTOM_ID_MAX = 127;
 
@@ -134,15 +139,17 @@ export function buildCustomId(args: {
   productId: string;
   email: string;
   affiliateRef?: string | null;
+  trialDays?: number | null;
 }): string {
   const produit = String(args.productId ?? "").trim();
   const email = String(args.email ?? "").trim();
   const sa = String(args.affiliateRef ?? "").trim();
+  const essai = Number(args.trialDays ?? 0) > 0 ? String(Math.floor(Number(args.trialDays))) : "";
 
-  const complet = `${produit}|${email}|${sa}`;
+  const complet = `${produit}|${email}|${sa}|${essai}`;
   if (complet.length <= CUSTOM_ID_MAX) return complet;
 
-  const sansSa = `${produit}|${email}|`;
+  const sansSa = `${produit}|${email}||${essai}`;
   if (sansSa.length <= CUSTOM_ID_MAX) return sansSa;
 
   // Une adresse à elle seule plus longue que la limite : on garde le
@@ -158,14 +165,17 @@ export function readCustomId(raw: string | null | undefined): {
   productId: string | null;
   email: string | null;
   affiliateRef: string | null;
+  trialDays: number;
 } {
   const s = String(raw ?? "").trim();
-  if (!s) return { productId: null, email: null, affiliateRef: null };
-  const [produit, email, sa] = s.split("|");
+  if (!s) return { productId: null, email: null, affiliateRef: null, trialDays: 0 };
+  const [produit, email, sa, essai] = s.split("|");
+  const jours = Number(essai);
   return {
     productId: produit || null,
     email: (email || "").trim().toLowerCase() || null,
     affiliateRef: sa || null,
+    trialDays: Number.isFinite(jours) && jours > 0 ? jours : 0,
   };
 }
 
@@ -236,9 +246,19 @@ export async function createOwnerPaypalSubscription(args: {
   returnUrl: string;
   cancelUrl: string;
   affiliateRef?: string | null;
+  /** Les jours d'essai gratuit sur l'abonnement choisi. */
+  trialDays?: number | null;
 }): Promise<PaypalSubscriptionResult> {
   const unit = paypalInterval(args.product);
   if (!unit) return { ok: false, reason: "invalid_product" };
+
+  // PayPal borne un cycle d'essai à 365 jours et refuse un plan dont les
+  // séquences ne se suivent pas : on borne ici plutôt que de laisser
+  // l'API refuser avec un message que personne ne lira.
+  const essaiJours =
+    Number.isInteger(args.trialDays) && Number(args.trialDays) > 0
+      ? Math.min(Number(args.trialDays), 365)
+      : 0;
 
   const token = await jeton(args.compte);
   if (!token) return { ok: false, reason: "not_configured" };
@@ -258,10 +278,31 @@ export async function createOwnerPaypalSubscription(args: {
       product_id: productId,
       name: args.product.label,
       billing_cycles: [
+        // L'ESSAI GRATUIT, quand il y en a un.
+        //
+        // Chez PayPal ce n'est pas un réglage à part : c'est un CYCLE de
+        // facturation à 0, de type `TRIAL`, joué une seule fois avant le
+        // cycle payant. Le client choisit son palier, il n'est pas
+        // prélevé pendant la période, puis il paie le prix de CE palier.
+        // Les `sequence` doivent se suivre : l'essai est 1, le régulier
+        // devient 2.
+        ...(essaiJours > 0
+          ? [
+              {
+                frequency: { interval_unit: "DAY", interval_count: essaiJours },
+                tenure_type: "TRIAL",
+                sequence: 1,
+                total_cycles: 1,
+                pricing_scheme: {
+                  fixed_price: { value: "0", currency_code: args.product.currency.toUpperCase() },
+                },
+              },
+            ]
+          : []),
         {
           frequency: { interval_unit: unit, interval_count: 1 },
           tenure_type: "REGULAR",
-          sequence: 1,
+          sequence: essaiJours > 0 ? 2 : 1,
           // 0 = sans fin. "Sans engagement" veut dire qu'on arrête quand
           // on veut, pas que ça s'arrête tout seul au bout d'un an.
           total_cycles: 0,
@@ -293,6 +334,7 @@ export async function createOwnerPaypalSubscription(args: {
         productId: args.product.id,
         email: args.email,
         affiliateRef: args.affiliateRef,
+        trialDays: essaiJours,
       }),
       subscriber: { email_address: args.email },
       application_context: {
@@ -335,6 +377,8 @@ export interface PaypalSubscriptionInfo {
   email: string | null;
   affiliateRef: string | null;
   amountCents: number;
+  /** Les jours offerts sur cet abonnement, 0 s'il n'y en a pas. */
+  trialDays: number;
 }
 
 /** La forme d'un abonnement PayPal, réduite à ce qu'on en lit. */
@@ -351,7 +395,7 @@ interface AboShape {
  */
 export function readSubscription(json: AboShape): PaypalSubscriptionInfo {
   const status = String(json.status ?? "").trim().toUpperCase();
-  const { productId, email, affiliateRef } = readCustomId(json.custom_id);
+  const { productId, email, affiliateRef, trialDays } = readCustomId(json.custom_id);
   return {
     // ACTIVE : payé et en cours. APPROVED : approuvé, activation
     // imminente, ce qu'on voit au retour immédiat de l'acheteur.
@@ -362,6 +406,7 @@ export function readSubscription(json: AboShape): PaypalSubscriptionInfo {
     // repli : voir le bloc sur le `custom_id` plus haut.
     email: email ?? (json.subscriber?.email_address ?? null),
     affiliateRef,
+    trialDays,
     amountCents: paypalAmountToCents(json.billing_info?.last_payment?.amount?.value),
   };
 }

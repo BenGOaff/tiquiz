@@ -57,6 +57,8 @@ export interface EventRow {
  * chez Systeme.io, qui a son propre bouton. L'ecran doit le dire au lieu
  * d'afficher une action qui echouerait.
  */
+import { OWNER_CATALOG } from "@/lib/checkout/catalog";
+
 export type SaleProvider = "stripe" | "paypal" | "systeme_io";
 
 export interface Sale {
@@ -141,12 +143,47 @@ export function refFacture(facture: Record<string, unknown>): string | null {
  * s'afficherait sans nom de produit.
  */
 export function productIdDeLaFacture(facture: Record<string, unknown>): string | null {
+  // 1. Notre `metadata[product]`, posé sur l'abonnement. Stripe le
+  //    recopie sur la facture dans `subscription_details`.
+  const surAbo = texte(lire(lire(facture.subscription_details).metadata).product);
+  if (surAbo) return surAbo;
+
+  // 2. Sur les lignes, où il peut vivre à trois endroits selon la
+  //    version d'API : la ligne, son prix, son plan.
   const lignes = lire(facture.lines).data;
-  if (!Array.isArray(lignes)) return null;
-  for (const ligne of lignes) {
-    const meta = lire(lire(ligne).metadata);
-    const p = texte(meta.product);
-    if (p) return p;
+  if (Array.isArray(lignes)) {
+    for (const brute of lignes) {
+      const ligne = lire(brute);
+      const surLigne =
+        texte(lire(ligne.metadata).product) ??
+        texte(lire(lire(ligne.price).metadata).product) ??
+        texte(lire(lire(ligne.plan).metadata).product);
+      if (surLigne) return surLigne;
+    }
+  }
+
+  // 3. LE MONTANT, en dernier recours.
+  //
+  //    Béné, 23 août : "j'ai 'produit non identifié' au lieu du nom de
+  //    l'abonnement souscrit". Elle a raison de le relever : une ligne
+  //    de remboursement sans nom de produit oblige à aller vérifier
+  //    ailleurs CE qu'on rembourse, et c'est exactement le moment où on
+  //    ne veut pas hésiter.
+  //
+  //    Les quatre paliers vendus ont quatre montants distincts (1700,
+  //    2900, 17000, 29000) : le montant les identifie sans ambiguïté.
+  //    Ce n'est pas une devinette, c'est une lecture du catalogue.
+  //
+  //    Une somme remisée ne correspondra à rien et rendra `null` : on
+  //    préfère "non identifié" à un faux nom.
+  return produitParMontant(Number(facture.amount_paid ?? 0));
+}
+
+/** Le produit du catalogue qui coûte EXACTEMENT cette somme. */
+export function produitParMontant(cents: number): string | null {
+  if (!Number.isFinite(cents) || cents <= 0) return null;
+  for (const produit of Object.values(OWNER_CATALOG)) {
+    if (produit.amountCents === cents) return produit.id;
   }
   return null;
 }

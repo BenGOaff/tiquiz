@@ -147,6 +147,16 @@ export async function createOwnerCheckoutSession(args: {
   returnUrl: string;
   /** Le code de l'affiliée, s'il y en a un. Voyage jusqu'à la commission. */
   affiliateRef?: string | null;
+  /**
+   * Les jours d'essai GRATUIT sur l'abonnement choisi.
+   *
+   * Béné, 23 août : "s'il prend mensuel il a 30j gratos à mensuel. S'il
+   * prend mensuel plus : il a 30j gratos à mensuel plus." C'est
+   * exactement ce que fait `trial_period_days` : le client choisit son
+   * palier, il n'est pas prélevé pendant la période, puis il paie le
+   * prix de CE palier.
+   */
+  trialDays?: number | null;
   /** Pré-remplit l'adresse quand on la connaît déjà. */
   email?: string | null;
 }): Promise<CheckoutSessionResult> {
@@ -198,6 +208,24 @@ export async function createOwnerCheckoutSession(args: {
     params["subscription_data[metadata][product]"] = p.id;
     params["subscription_data[metadata][source]"] = p.source;
     if (args.affiliateRef) params["subscription_data[metadata][affiliate_ref]"] = args.affiliateRef;
+    // L'ESSAI GRATUIT. Stripe n'accepte cette clé que sur un abonnement,
+    // et c'est bien là qu'elle a un sens.
+    const essai = Number(args.trialDays ?? 0);
+    if (Number.isInteger(essai) && essai > 0 && essai <= 365) {
+      params["subscription_data[trial_period_days]"] = String(essai);
+      // Ce qui se passe si la carte tombe en défaut à la fin de l'essai.
+      // `cancel` plutôt que `create_invoice` : on ne veut pas lancer un
+      // impayé à quelqu'un qui a juste testé et changé d'avis.
+      params["subscription_data[trial_settings][end_behavior][missing_payment_method]"] = "cancel";
+      // ON ÉCRIT LE FAIT, ON NE LE DÉDUIRA PAS.
+      //
+      // Le webhook doit savoir qu'un mois a été offert pour le marquer
+      // comme consommé. Le déduire d'un `sa` présent serait faux : un
+      // `sa` peut être là sans qu'aucun essai n'ait été ouvert (personne
+      // qui a déjà eu son mois, auto-affiliation refusée). Deviner
+      // marquerait des cadeaux jamais faits.
+      params["subscription_data[metadata][free_month_days]"] = String(essai);
+    }
     // Un abonnement produit ses factures TOUT SEUL, à chaque échéance.
     // `invoice_creation` n'existe QUE pour le paiement unique, et
     // l'envoyer ici ferait refuser la session par Stripe.
@@ -323,6 +351,8 @@ export interface OwnerSessionInfo {
   name?: string | null;
   productId: string | null;
   affiliateRef: string | null;
+  /** Les jours offerts sur cet abonnement, 0 s'il n'y en a pas. */
+  freeMonthDays: number;
   /**
    * LE CLIENT STRIPE, ET IL FAUT LE GARDER.
    *
@@ -381,6 +411,7 @@ function litSession(s: RawSession): OwnerSessionInfo {
     name: s.customer_details?.name ?? null,
     productId: meta.product ?? null,
     affiliateRef: meta.affiliate_ref ?? null,
+    freeMonthDays: Number(meta.free_month_days ?? 0) || 0,
     customerId: readCustomerId(s.customer),
     amountTotalCents: Number(s.amount_total ?? 0) || 0,
     amountTaxCents: Number(s.total_details?.amount_tax ?? 0) || 0,

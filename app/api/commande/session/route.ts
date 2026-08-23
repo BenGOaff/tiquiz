@@ -21,6 +21,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { findOwnerProduct } from "@/lib/checkout/catalog";
 import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ownerAccount";
 import { createOwnerCheckoutSession } from "@/lib/checkout/stripeCheckout";
+import { readSa } from "@/lib/affiliate/sa";
+import { essaiPourCeCheckout } from "@/lib/trial/moisOffertCheckout";
+import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { isSalesOpen } from "@/lib/sales/previewGate";
 import { checkoutReturnBase } from "@/lib/sales/salesHosts";
 import { resolveAppUrl } from "@/lib/authLinks";
@@ -85,11 +88,49 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   );
   const retour = `${base}/commande/${product.id}/retour?session_id={CHECKOUT_SESSION_ID}&k=${encodeURIComponent(String(body.k ?? ""))}`;
 
+  // ── LE MOIS OFFERT PAR UNE AFFILIÉE ──
+  //
+  // Béné, 23 août : "passe par mon lien et reçois un mois offert", et
+  // "s'il prend mensuel il a 30j gratos à mensuel. S'il prend mensuel
+  // plus : il a 30j gratos à mensuel plus."
+  //
+  // `readSa` et pas un `slice()` : une valeur tronquée garde la FORME
+  // d'un identifiant valide, passe tous les contrôles, et ne désigne
+  // personne. La commission ET le cadeau seraient perdus en silence.
+  const sa = readSa(body.ref);
+
+  // L'adresse si une session est ouverte : elle permet le contrôle
+  // complet du non-cumul AVANT le paiement. Anonyme, on accorde et on
+  // vérifie après (cf. `moisOffertCheckout.ts`).
+  let emailConnu: string | null = null;
+  try {
+    const supabase = await getSupabaseServerClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    emailConnu = user?.email ?? null;
+  } catch {
+    emailConnu = null;
+  }
+
+  const essai = await essaiPourCeCheckout({
+    sa,
+    email: emailConnu,
+    ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+  });
+  if (essai.jours > 0) {
+    console.log(
+      `[commande] ${essai.jours} jours offerts sur ${product.id} (lien ${sa})` +
+        (essai.signale ? ` A VERIFIER : ${essai.signale}` : ""),
+    );
+  }
+
   const result = await createOwnerCheckoutSession({
     key: compte.key,
     product,
     returnUrl: retour,
-    affiliateRef: typeof body.ref === "string" ? body.ref.trim().slice(0, 40) : null,
+    affiliateRef: sa,
+    trialDays: essai.jours,
   });
 
   if (!result.ok || !result.clientSecret) {

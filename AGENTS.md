@@ -2200,3 +2200,70 @@ réel pendant que PayPal est en bac à sable : l'écran annonce un seul
 mode, donc un des deux boutons ment.
 
 Test : `tests/logic/paypal-owner.test.mts`.
+
+## Le mois offert : l'essai du fournisseur, pas un palier prêté (23 août 2026)
+
+Béné : "garder le mois offert aux affiliés pour qu'ils puissent créer du
+contenu et tester ET qu'ils puissent [offrir] un mois gratuit pour tester
+à tous leurs affiliés comme argument de vente 'passe par mon lien et
+reçois un mois offert'. Bien sûr, ils ne peuvent pas cumuler mois offert
+par l'affilié PLUS mois offert EN TANT qu'affilié : au total c'est un
+mois offert, point barre. Il faut aussi tracker les tricheurs qui veulent
+s'autoaffilier : même adresse email, même adresse IP etc."
+
+Puis, la précision qui change la mécanique : "s'il a un test tiquiz plus
+activé 15j il le garde mais on lui ajoute 30 jours de l'abonnement qu'il
+choisit : s'il prend mensuel il a 30j gratos à mensuel. S'il prend
+mensuel plus : il a 30j gratos à mensuel plus."
+
+**Le premier jet était faux et compliqué.** Il posait un `monthly_plus`
+prêté et devait ADDITIONNER des jours dans `affiliate_trial_*`, les
+mêmes colonnes que les 15 jours de l'Atelier, avec toute la gymnastique
+qui va avec (ne pas écraser `pre_plan`, repousser `expires_at`...).
+
+**La bonne lecture est plus simple : c'est l'essai gratuit du
+fournisseur, sur l'abonnement choisi.** `trial_period_days` chez Stripe,
+un cycle de facturation `TRIAL` à 0 chez PayPal. Le client choisit son
+palier, il n'est pas prélevé pendant 30 jours, puis il paie le prix de
+CE palier. Et le cumul se règle tout seul : les 15 jours de l'Atelier
+vivent dans `affiliate_trial_*` et continuent de tourner sans qu'on y
+touche. **Le mois offert ne réécrit JAMAIS `plan` ni
+`affiliate_trial_*`**, c'est ce que fige le test.
+
+**Les deux règles, dans `lib/trial/moisOffert.ts` :**
+
+1. **Un seul mois par personne, point barre.** `free_month_granted_at`
+   n'est jamais effacé : sans ça il suffirait d'attendre l'expiration
+   pour en reprendre un.
+2. **Les tricheurs.** Auto-affiliation REFUSÉE, alias Gmail compris
+   (`bene+x@gmail.com` et `b.e.n.e@gmail.com` sont la même boîte : c'est
+   le moyen le plus simple de tricher, et comparer les adresses brutes
+   ne le voit pas). Même IP : on ACCORDE et on SIGNALE. Béné a demandé
+   de *tracker* les tricheurs, pas de fermer la porte à un client
+   honnête : une IP partagée, c'est aussi un couple, deux collègues, une
+   salle de formation.
+
+**Le fait est ÉCRIT, jamais déduit.** Le nombre de jours offerts voyage
+dans `subscription_data[metadata][free_month_days]` (Stripe) et dans le
+`custom_id` (PayPal). Déduire d'un `sa` présent serait faux : un `sa`
+peut être là sans qu'aucun essai n'ait été ouvert (déjà eu son mois,
+auto-affiliation refusée), et marquer un cadeau jamais fait priverait
+ces gens du leur.
+
+**Et il se consomme à l'ACHAT, pas au bon de commande.** Un checkout
+abandonné ne doit pas brûler le mois de quelqu'un qui n'a rien acheté.
+
+**Le trou assumé, et il est nommé :** sur le formulaire carte, l'adresse
+est saisie DANS Stripe, donc on ne peut pas toujours vérifier le
+non-cumul avant. Connectée ou via PayPal (qui demande l'adresse avant),
+le contrôle est complet ; anonyme, on accorde et on vérifie après. Un
+deuxième mois est alors marqué `free_month_flag = 'deja_recu'` et remonte
+dans l'admin. **On ne reprend rien** : reprendre un essai commencé, c'est
+prélever quelqu'un qui ne s'y attend pas.
+
+`AFFILIATE_INTERNAL_SECRET` sert au passage à demander à Tipote QUI
+possède un lien (`/api/affiliate/proprietaire`) : la table `affiliates`
+vit là-bas, et la copier ici donnerait deux registres, donc deux réponses
+différentes le jour où l'un prend du retard.
+
+Test : `tests/logic/mois-offert.test.mts`.

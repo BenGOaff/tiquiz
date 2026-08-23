@@ -42,6 +42,7 @@ import {
   verifyOwnerPaypalWebhook,
 } from "@/lib/checkout/paypalOwner";
 import { rememberPaypalSubscription } from "@/lib/checkout/customerLink";
+import { marquerMoisOffertConsomme } from "@/lib/trial/moisOffertCheckout";
 import { logWebhookEvent } from "@/lib/webhooks/log";
 
 export const runtime = "nodejs";
@@ -261,6 +262,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     `[commande/paypal/webhook] plan ouvert pour ${abo.email} : ${product.id} (${product.plan}), ` +
       `compte ${octroi.created ? "cree" : "existant"}, confirmation ${octroi.loginLinkSent ? "envoyee" : "NON ENVOYEE"}`,
   );
+
+  // ── LE MOIS OFFERT EST CONSOMMÉ ──
+  //
+  // ICI et pas au bon de commande : un paiement abandonné ne doit pas
+  // brûler le cadeau. Le nombre de jours est LU dans le `custom_id`, il
+  // n'est pas déduit d'un `sa` présent.
+  if (abo.trialDays > 0) {
+    await marquerMoisOffertConsomme({
+      email: abo.email,
+      sa: abo.affiliateRef,
+      ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+    });
+  }
 
   // ── LA COMMISSION DE L'AFFILIÉE ──
   //

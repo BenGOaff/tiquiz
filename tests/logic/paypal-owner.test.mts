@@ -101,8 +101,48 @@ test("quand ca ne tient pas, on lache le sa, JAMAIS l'adresse", () => {
 });
 
 test("un custom_id vide ne fabrique pas de fausses valeurs", () => {
-  assert.deepEqual(readCustomId(""), { productId: null, email: null, affiliateRef: null });
-  assert.deepEqual(readCustomId(null), { productId: null, email: null, affiliateRef: null });
+  const vide = { productId: null, email: null, affiliateRef: null, trialDays: 0 };
+  assert.deepEqual(readCustomId(""), vide);
+  assert.deepEqual(readCustomId(null), vide);
+});
+
+test("les jours offerts voyagent avec la commande, ils ne se devinent pas", () => {
+  // Le webhook doit savoir qu'un mois a ete offert pour le marquer
+  // comme consomme. Le deduire d'un `sa` present serait faux : un `sa`
+  // peut etre la sans qu'aucun essai n'ait ete ouvert (personne qui a
+  // deja eu son mois, auto-affiliation refusee), et marquer un cadeau
+  // jamais fait priverait quelqu'un du sien.
+  const avec = readCustomId(
+    buildCustomId({
+      productId: "mensuel",
+      email: "a@b.fr",
+      affiliateRef: "sa00168442b1c2d3e4f5a6b7c8d9",
+      trialDays: 30,
+    }),
+  );
+  assert.equal(avec.trialDays, 30);
+  assert.equal(avec.email, "a@b.fr");
+
+  const sans = readCustomId(buildCustomId({ productId: "mensuel", email: "a@b.fr" }));
+  assert.equal(sans.trialDays, 0);
+});
+
+test("meme quand le sa est sacrifie, les jours offerts survivent", () => {
+  // L'ordre de sacrifice compte : l'adresse d'abord (un acces perdu ne
+  // se rattrape pas), les jours ensuite (un cadeau non trace se voit
+  // dans l'admin), le sa en premier a partir.
+  const longue = `${"a".repeat(80)}@tipote.fr`;
+  const lu = readCustomId(
+    buildCustomId({
+      productId: "annuel-plus",
+      email: longue,
+      affiliateRef: "sa00168442b1c2d3e4f5a6b7c8d9",
+      trialDays: 30,
+    }),
+  );
+  assert.equal(lu.email, longue);
+  assert.equal(lu.affiliateRef, null);
+  assert.equal(lu.trialDays, 30);
 });
 
 // ── LA LECTURE D'UN ABONNEMENT ──
