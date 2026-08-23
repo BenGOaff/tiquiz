@@ -44,6 +44,8 @@ import crypto from "node:crypto";
 import { STRIPE_BRANDING } from "@/lib/checkout/brand";
 import type { OwnerProduct } from "@/lib/checkout/catalog";
 import { OWNER_SUBSCRIPTION_EVENTS } from "@/lib/checkout/subscriptionLifecycle";
+import { acheteurDepuisStripe } from "@/lib/facture/stripeAcheteur";
+import type { Acheteur } from "@/lib/facture/identite";
 
 const STRIPE_API = "https://api.stripe.com";
 
@@ -360,6 +362,16 @@ export interface OwnerSessionInfo {
   email: string | null;
   /** Le nom saisi au paiement, pour dire "Hey Gwenn" au lieu de "Hey". */
   name?: string | null;
+  /**
+   * L'IDENTITÉ DE FACTURATION SAISIE DANS LE FORMULAIRE STRIPE.
+   *
+   * Le bon de commande carte exige déjà l'adresse et propose la case
+   * entreprise : on la reprend au lieu de la redemander. Sans ça, la
+   * fiche client serait vide alors que l'adresse figure sur la facture
+   * Stripe, et le client verrait un formulaire vide juste après l'avoir
+   * rempli.
+   */
+  facturation?: Acheteur;
   productId: string | null;
   /** L'identifiant Systeme.io d'un ANCIEN lien, ou `null`. */
   affiliateRef: string | null;
@@ -404,7 +416,17 @@ interface RawSession {
   total_details?: { amount_tax?: number | null } | null;
   payment_intent?: string | null;
   customer?: string | { id?: string } | null;
-  customer_details?: { email?: string | null; name?: string | null } | null;
+  customer_details?: {
+    email?: string | null;
+    name?: string | null;
+    /** L'adresse exigée par `billing_address_collection: "required"`. */
+    address?: {
+      line1?: string | null; line2?: string | null;
+      postal_code?: string | null; city?: string | null; country?: string | null;
+    } | null;
+    /** La case entreprise (`tax_id_collection`). */
+    tax_ids?: { type?: string | null; value?: string | null }[] | null;
+  } | null;
   metadata?: Record<string, string> | null;
 }
 
@@ -423,6 +445,9 @@ function litSession(s: RawSession): OwnerSessionInfo {
     paid: s.payment_status === "paid" || s.payment_status === "no_payment_required",
     email: s.customer_details?.email ?? null,
     name: s.customer_details?.name ?? null,
+    // CE QUE STRIPE A DÉJÀ COLLECTÉ : on le reprend au lieu de le
+    // redemander. Voir `lib/facture/stripeAcheteur.ts`.
+    facturation: acheteurDepuisStripe(s.customer_details),
     productId: meta.product ?? null,
     affiliateRef: meta.affiliate_ref ?? null,
     affiliateCode: meta.affiliate_code ?? null,

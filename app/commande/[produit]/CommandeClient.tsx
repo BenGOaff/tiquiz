@@ -16,6 +16,12 @@
 // serveur a donc sa phrase, en français, avec ce qu'il y a à faire.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+import ChampsFacturation, {
+  ACHETEUR_FORM_VIDE,
+  type ChampsAcheteur,
+} from "@/components/facturation/ChampsFacturation";
+import { manques } from "@/lib/facture/identite";
 import { loadStripe } from "@stripe/stripe-js";
 import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
 
@@ -43,6 +49,27 @@ const RAISONS: Record<string, string> = {
     "Le paiement en conditions réelles est fermé : la clé STRIPE_WEBHOOK_SECRET_OWNER n'est pas posée sur le serveur. Sans elle, un abonnement serait prélevé sans ouvrir aucun accès. Rien n'a été débité.",
   invalid_body: "Requête illisible.",
 };
+
+/**
+ * Ce qui manque, dit en français et pas en noms de champs.
+ *
+ * "Il manque nom, ville" enverrait chercher une case appelée "ville".
+ * Le serveur renvoie des RAISONS, l'écran dit comment les dire : c'est
+ * la règle de la suppression d'un quiz (3 août) et de l'import PDF
+ * (7 août), appliquée ici.
+ */
+const MOTS_MANQUES: Record<string, string> = {
+  nom: "ton nom",
+  adresse: "ton adresse",
+  ville: "ton code postal et ta ville",
+  pays: "ton pays",
+};
+
+function LIBELLE_MANQUES(codes: string[]): string {
+  const mots = codes.map((c) => MOTS_MANQUES[c] ?? c);
+  if (mots.length === 1) return mots[0];
+  return `${mots.slice(0, -1).join(", ")} et ${mots[mots.length - 1]}`;
+}
 
 /** Les raisons propres à PayPal, avec la même règle : jamais un cadre muet. */
 const RAISONS_PAYPAL: Record<string, string> = {
@@ -76,6 +103,14 @@ export default function CommandeClient({
   const [emailPaypal, setEmailPaypal] = useState("");
   const [paypalEnCours, setPaypalEnCours] = useState(false);
   const [erreurPaypal, setErreurPaypal] = useState<string | null>(null);
+  // LES INFOS DE FACTURATION, DEMANDÉES AVANT PAYPAL.
+  //
+  // Stripe les collecte lui même (`billing_address_collection: required`
+  // + la case entreprise). PayPal ne demande rien et ne nous rend rien
+  // d'exploitable : sans ce bloc, une vente PayPal n'a AUCUNE adresse,
+  // donc aucune facture opposable. Les deux moyens de paiement doivent
+  // produire la même pièce comptable.
+  const [facturation, setFacturation] = useState<ChampsAcheteur>(ACHETEUR_FORM_VIDE);
 
   // La clé publiable est indispensable au navigateur. Sans elle, le cadre
   // resterait vide sans dire pourquoi : on le dit, et on distingue les
@@ -171,13 +206,24 @@ export default function CommandeClient({
       setErreurPaypal("Indique l'adresse email sur laquelle tu veux recevoir tes accès.");
       return;
     }
+    // On vérifie AVANT d'ouvrir PayPal : réclamer une adresse à
+    // quelqu'un qui vient de payer est le meilleur moyen de ne jamais
+    // l'obtenir. `manques()` est la MÊME fonction que celle qui décide,
+    // à l'émission, si la facture est complète.
+    const incomplet = manques({ ...facturation, email: adresse });
+    if (incomplet.length > 0) {
+      setErreurPaypal(
+        "Il manque " + LIBELLE_MANQUES(incomplet) + " : la facture ne serait pas valable sans.",
+      );
+      return;
+    }
     setErreurPaypal(null);
     setPaypalEnCours(true);
     try {
       const r = await fetch("/api/commande/paypal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ produit, email: adresse, k: cle, ref: refAffiliee(), sa: saAffiliee() }),
+        body: JSON.stringify({ produit, email: adresse, k: cle, ref: refAffiliee(), sa: saAffiliee(), facturation }),
       });
       const data = (await r.json().catch(() => ({}))) as {
         ok?: boolean;
@@ -224,6 +270,10 @@ export default function CommandeClient({
           className="mt-1 w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
         />
       </label>
+      <div className="mb-4 mt-4">
+        <p className="mb-2 text-sm font-semibold">Informations de facturation</p>
+        <ChampsFacturation valeur={facturation} onChange={setFacturation} />
+      </div>
       <button
         type="button"
         onClick={() => void partirSurPaypal()}

@@ -46,6 +46,15 @@ import {
   verifyOwnerPaypalWebhook,
 } from "@/lib/checkout/paypalOwner";
 import { rememberPaypalSubscription } from "@/lib/checkout/customerLink";
+import { construireFacture } from "@/lib/facture/construire";
+import { lireAcheteur } from "@/lib/facture/identite";
+import {
+  encaissementDepuisSale,
+  remboursementDepuisRefund,
+  type EncaissementPaypal,
+  type RemboursementPaypal,
+} from "@/lib/facture/paypalVente";
+import { emettreFacture, factureDeLaVente, lireFacturation } from "@/lib/facture/store";
 import { marquerMoisOffertConsomme } from "@/lib/trial/moisOffertCheckout";
 import { marquerTraite, prendreLeVerrou } from "@/lib/webhooks/log";
 
@@ -57,12 +66,17 @@ const SOURCE = "paypal";
 interface EvenementPaypal {
   id?: string;
   event_type?: string;
+  /** L'heure de l'événement chez PayPal. Repli pour dater une facture. */
+  create_time?: string;
   resource?: {
     id?: string;
     status?: string;
     /** Sur un PAYMENT.SALE.*, l'abonnement qui a produit ce prélèvement. */
     billing_agreement_id?: string;
-    amount?: { total?: string | null } | null;
+    amount?: { total?: string | null; currency?: string | null } | null;
+    /** Sur un PAYMENT.SALE.REFUNDED, la vente d'origine. */
+    sale_id?: string;
+    create_time?: string;
   };
 }
 
@@ -152,6 +166,103 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
  * passer par le marquage, et un `return` oublie au milieu laisserait
  * l'evenement bloque en `processing`.
  */
+/**
+ * LA FACTURE DE L'ÉCHÉANCE.
+ *
+ * Béné, 24 août : "PayPal envoie des factures auto ? Si non il faut
+ * qu'on les créée..." Vérifié dans notre code, et c'est la seule
+ * vérification qui tranche : `lib/checkout/paypalOwner.ts` n'appelle
+ * AUCUN point d'entrée de facturation, et l'abonnement qu'on crée ne
+ * porte ni adresse ni numéro de TVA. Aucune facture n'existait donc pour
+ * une vente PayPal, quoi que PayPal envoie de son côté (un avis de
+ * paiement n'est pas une facture : ni numérotation, ni identité complète
+ * du vendeur, ni adresse de l'acheteur, ni ventilation de TVA).
+ *
+ * ON N'ÉCHOUE JAMAIS ICI. Le client a payé, son accès est ouvert : un
+ * problème de facturation ne doit pas transformer la réponse en 502,
+ * qui ferait rejouer l'ouverture d'accès. On journalise fort, et la
+ * facture manquante se rattrape depuis la fiche client.
+ */
+async function facturerEcheance(args: {
+  email: string;
+  encaissement: EncaissementPaypal;
+  productId: string | null;
+  libelle: string;
+}): Promise<void> {
+  try {
+    const acheteur = await lireFacturation({ email: args.email });
+    const facture = construireFacture(
+      "facture",
+      {
+        provider: "paypal",
+        saleRef: args.encaissement.saleRef,
+        productId: args.productId,
+        libelle: args.libelle,
+        currency: args.encaissement.currency,
+        totalCents: args.encaissement.totalCents,
+        paidAt: args.encaissement.paidAt,
+        emailCle: args.email,
+      },
+      acheteur,
+    );
+    const ligne = await emettreFacture(facture);
+    if (!ligne) return;
+    console.log(
+      `[commande/paypal/webhook] facture ${ligne.numero} emise pour ${args.email}` +
+        (facture.aCompleter.length ? ` (a completer : ${facture.aCompleter.join(", ")})` : ""),
+    );
+  } catch (e) {
+    console.error(`[commande/paypal/webhook] facture NON emise : ${(e as Error).message}`);
+  }
+}
+
+/**
+ * L'AVOIR. Un remboursement n'efface pas une facture, il en émet une
+ * autre en négatif qui la référence : c'est la loi, et c'est aussi la
+ * seule façon de garder une numérotation continue.
+ */
+async function avoirDuRemboursement(args: {
+  email: string;
+  remboursement: RemboursementPaypal;
+  productId: string | null;
+  libelle: string;
+}): Promise<void> {
+  try {
+    const origine = args.remboursement.saleRef
+      ? await factureDeLaVente("paypal", args.remboursement.saleRef)
+      : null;
+    // L'identité vient de la FACTURE D'ORIGINE quand elle existe : un
+    // avoir doit porter la même adresse que ce qu'il annule, même si le
+    // client a déménagé depuis.
+    const acheteur = origine
+      ? lireAcheteur(origine.acheteur)
+      : await lireFacturation({ email: args.email });
+    const avoir = construireFacture(
+      "avoir",
+      {
+        provider: "paypal",
+        saleRef: args.remboursement.refundRef,
+        productId: args.productId,
+        libelle: origine ? `Remboursement - ${origine.libelle}` : `Remboursement - ${args.libelle}`,
+        currency: args.remboursement.currency,
+        totalCents: args.remboursement.totalCents,
+        paidAt: args.remboursement.paidAt,
+        emailCle: args.email,
+      },
+      acheteur,
+    );
+    const ligne = await emettreFacture(avoir, origine?.id ?? null);
+    if (ligne) {
+      console.log(
+        `[commande/paypal/webhook] avoir ${ligne.numero} emis pour ${args.email}` +
+          (origine ? ` (annule ${origine.numero})` : " (facture d'origine introuvable)"),
+      );
+    }
+  } catch (e) {
+    console.error(`[commande/paypal/webhook] avoir NON emis : ${(e as Error).message}`);
+  }
+}
+
 async function traiterEvenement(
   req: NextRequest,
   compte: OwnerPaypalAccount,
@@ -237,6 +348,16 @@ async function traiterEvenement(
           `(${stop.reason}). A arreter A LA MAIN dans PayPal, sinon il sera preleve le mois prochain.`,
       );
     }
+    const remboursement = remboursementDepuisRefund(event.resource, event.create_time);
+    if (remboursement) {
+      await avoirDuRemboursement({
+        email: abo.email,
+        remboursement,
+        productId: abo.productId,
+        libelle: findOwnerProduct(abo.productId)?.label ?? "Abonnement Tiquiz",
+      });
+    }
+
     console.log(
       `[commande/paypal/webhook] remboursement pour ${abo.email} : ` +
         `${sortie.skipped ? `rien a retirer (${sortie.skipped})` : "plan retire"}`,
@@ -250,6 +371,25 @@ async function traiterEvenement(
       `[commande/paypal/webhook] echeance encaissee pour ${abo.email} ` +
         `(${event.resource?.amount?.total ?? "?"} EUR, abonnement ${abonnementId})`,
     );
+    // C'EST ICI QU'ON FACTURE, et pas à l'activation : un abonnement qui
+    // démarre par un mois offert est ACTIVÉ sans qu'un euro ait bougé.
+    // Cet événement arrive à chaque échéance, donc la première comme les
+    // suivantes, et il porte le montant RÉELLEMENT encaissé (une remise
+    // comprise).
+    const encaissement = encaissementDepuisSale(event.resource, event.create_time);
+    if (encaissement) {
+      await facturerEcheance({
+        email: abo.email,
+        encaissement,
+        productId: abo.productId,
+        libelle: findOwnerProduct(abo.productId)?.label ?? "Abonnement Tiquiz",
+      });
+    } else {
+      console.error(
+        `[commande/paypal/webhook] echeance sans montant lisible pour ${abo.email} : ` +
+          `facture NON emise, a faire a la main.`,
+      );
+    }
     return NextResponse.json({ ok: true, reason: "echeance" });
   }
 

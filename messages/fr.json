@@ -3026,5 +3026,20 @@
     "errEmail": "Cette adresse email n'a pas l'air valide.",
     "errTooMany": "Tu as déjà envoyé plusieurs demandes. Attends un peu, je les ai toutes.",
     "errFailed": "Ta demande n'est pas partie. Réessaie dans un instant."
+  },
+  "facturation": {
+    "title": "Informations de facturation",
+    "subtitle": "Ce qui apparaît sur tes factures. Complète-les si tu as besoin d'une facture au nom de ton entreprise.",
+    "loading": "Chargement...",
+    "save": "Enregistrer",
+    "saving": "Enregistrement...",
+    "saved": "Informations enregistrées.",
+    "saveFailed": "Impossible d'enregistrer. Réessaie dans un instant.",
+    "futureOnly": "Vaut pour les prochaines factures. Une facture déjà émise ne se modifie pas : écris-nous si l'une d'elles doit être corrigée.",
+    "incomplete": "Il manque des informations pour émettre une facture valable : nom, adresse, code postal, ville et pays.",
+    "invoicesTitle": "Mes factures",
+    "invoicesEmpty": "Aucune facture pour le moment.",
+    "invoiceOpen": "Voir",
+    "invoicesStripeNote": "Les paiements par carte sont facturés par Stripe : ces factures se téléchargent depuis le bouton de gestion de l'abonnement ci-dessus."
   }
 }

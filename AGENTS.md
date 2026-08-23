@@ -2550,3 +2550,139 @@ VIE n'est jamais remplacé par un abonnement.
 `PLANS_A_VIE` vivait en deux exemplaires (`cancelSubscriptions.ts` et
 `admin/people.ts`) : la liste est maintenant dans
 `lib/checkout/plansAVie.ts`. Test : `tests/logic/plan-change.test.mts`.
+
+## Une facture légale, et PayPal n'en émet aucune (Béné, 24 août 2026)
+
+"Dans la fiche contact de mes clients j'ai aussi besoin de savoir :
+l'entreprise (si concerné), l'adresse, le pays, la tva (si concerné),
+prénom, nom, adresse email, bref tout ce qu'il faut pour une facture
+légale et que je puisse mettre à jour si demande du client : lui aussi
+doit avoir ces infos et pouvoir les mettre à jour. PayPal envoie des
+factures auto ? Si non il faut qu'on les créée... stripe le fait c'est
+bien mais paypal j'ai un doute."
+
+**Son doute était fondé, et ça se vérifie chez nous sans interroger
+PayPal :** `lib/checkout/paypalOwner.ts` n'appelle AUCUN point d'entrée
+de facturation, et l'abonnement qu'on crée ne porte ni adresse ni numéro
+de TVA. Aucune facture n'existait donc pour une vente PayPal, quoi que
+PayPal envoie de son côté. Un avis de paiement n'est pas une facture :
+ni numérotation, ni identité complète du vendeur, ni adresse de
+l'acheteur, ni ventilation de TVA. Stripe, lui, en émet vraiment
+(`invoice_creation` en paiement unique, et un abonnement facture tout
+seul à chaque échéance).
+
+**Règle : on n'émet QUE pour PayPal.** Émettre aussi pour Stripe ferait
+deux factures pour une seule vente, avec deux numérotations. Notre série
+`TQ-<année>-NNNN` ne couvre donc que les ventes PayPal (et les pièces
+créées à la main). L'écran client le DIT au lieu d'afficher une liste
+incomplète : les factures carte se téléchargent dans le portail Stripe,
+déjà branché juste au dessus.
+
+### Deux tables, et la différence est la clé de tout
+
+| | Ce que c'est | Qui l'écrit |
+|---|---|---|
+| `facturation_clients` | les infos ACTUELLES, pour les factures À VENIR | le client, Béné, le bon de commande, Stripe |
+| `factures` | ce qui a été émis, FIGÉ, identité de l'acheteur RECOPIÉE dedans | la fonction SQL `emettre_facture`, personne d'autre |
+
+Ce n'est pas une précaution d'ingénieur, **c'est la loi** : une facture
+émise ne se modifie pas. Un client qui déménage garde son ancienne
+adresse sur ses anciennes factures ; une erreur se corrige par un AVOIR
+suivi d'une nouvelle facture. Un écran qui lirait l'adresse COURANTE
+réécrirait tout l'historique au premier déménagement, sans que personne
+ne le voie. **Les deux écrans le disent en toutes lettres**, sinon
+quelqu'un qui corrige son adresse attend de voir ses anciennes factures
+changer, ne voit rien, et conclut que le bouton ne marche pas (scénario
+Jocelyne du 1er août).
+
+### La numérotation : pas une séquence Postgres
+
+Une séquence saute des numéros dès qu'une transaction est annulée, c'est
+même sa raison d'être. Une numérotation de factures doit être
+**chronologique et continue** : un trou est exactement ce qu'un contrôle
+cherche. D'où `facture_compteurs` + la fonction `emettre_facture`, qui
+alloue le numéro ET insère dans la MÊME transaction.
+
+**Elle ne lève jamais sur un doublon : elle rend la facture déjà émise.**
+PayPal rejoue ses webhooks à la moindre erreur, et deux factures pour un
+encaissement coûtent infiniment plus cher qu'une facture manquante.
+L'index `(provider, sale_ref, genre)` le garantit côté base.
+
+**La série est l'année du PAIEMENT, pas l'année courante** : un webhook
+rejoué le 2 janvier pour un encaissement du 31 décembre doit tomber dans
+la série de décembre.
+
+### La TVA : quatre cas, et le piège est le premier
+
+`resoudreTva()` (`lib/facture/tva.ts`) décide, personne d'autre.
+
+| Acheteur | Régime | Taux |
+|---|---|---|
+| France | TVA française | 20 % |
+| UE, numéro de TVA valide | autoliquidation | 0 % |
+| UE, sans numéro | guichet unique OSS | le taux de SON pays |
+| hors UE | hors champ (art. 259 B) | 0 % |
+
+**LE PIÈGE : une entreprise FRANÇAISE avec un numéro de TVA paie quand
+même.** L'autoliquidation n'existe pas entre deux entreprises du même
+pays. Se tromper là, c'est facturer 0 % à tous les clients pros français
+et payer la TVA de sa poche au redressement. C'est testé nommément.
+
+**Le prix est TTC** (décision du 12 août), donc le HT est
+`total / (1 + taux)` et la TVA est la DIFFÉRENCE. Arrondir les deux
+séparément donne une facture dont les lignes ne font pas le total.
+
+**`TAUX_UE` se périme.** Un État change son taux quand il veut, et ça
+arrive plusieurs fois par an dans l'Union. La table porte `TAUX_MAJ`, une
+date : à revérifier une fois par an sur la liste de la Commission. Un
+taux faux ne se voit sur aucun écran, il se voit à la déclaration.
+
+**Ce qu'on ne fait PAS : valider un numéro de TVA auprès de VIES.** On
+vérifie sa FORME (et que son préfixe correspond au pays de l'adresse, la
+Grèce mise à part qui écrit `EL`). Un numéro bien formé mais inexistant
+produirait une autoliquidation injustifiée, donc de la TVA à notre
+charge : ces factures sortent marquées `tva-a-valider-vies` et remontent
+sur la fiche client. Brancher VIES est le prochain pas.
+
+### On émet toujours, on ne retient jamais
+
+"Il a payé le client, il doit recevoir ses accès, point barre" (7 août)
+vaut aussi pour sa facture. Adresse absente, pays inconnu, numéro
+illisible : on émet, au taux français, et la colonne `a_completer` porte
+ce qui manque. L'admin voit la liste ; personne n'attend une adresse
+pour avoir sa facture.
+
+### Où l'adresse est collectée, et pourquoi pas ailleurs
+
+- **Stripe** la collecte déjà (`billing_address_collection: "required"`
+  + `tax_id_collection`). Le webhook la RÉCUPÈRE dans
+  `facturation_clients` : la redemander serait présenter un formulaire
+  vide à quelqu'un qui vient de le remplir.
+- **PayPal** ne demande rien et ne rend rien d'exploitable. Le bon de
+  commande la demande donc AVANT d'ouvrir PayPal. Après le retour serait
+  trop tard : celui qui ferme son onglet a payé quand même.
+- **`completerFacturation` ne remplace jamais le bloc entier**
+  (`fusionnerAcheteur`, champ par champ) : Stripe ne collecte pas la
+  société, et effacerait celle saisie la semaine d'avant.
+
+### Endroits à respecter
+
+`lib/facture/{tva,identite,construire,paypalVente,stripeAcheteur,pays}.ts`
+(purs et testés), `lib/facture/store.ts` (aucune décision, il importe
+`supabaseAdmin` donc aucun test ne peut l'importer),
+`components/facturation/ChampsFacturation.tsx` (LE formulaire, partagé
+par les trois écrans : bon de commande, réglages, fiche admin),
+`app/facture/[numero]/page.tsx`,
+`app/api/commande/paypal/webhook/route.ts`,
+`app/api/commande/webhook/route.ts`, `app/api/compte/mes-infos/route.ts`,
+`app/api/admin/clients/[email]/route.ts`,
+`supabase/migrations/20260824_facturation.sql`.
+Test : `tests/logic/facturation.test.mts`.
+
+**Pas de moteur PDF, et c'est volontaire.** Une facture électronique n'a
+pas à être un PDF : ce qui compte, c'est son contenu, sa numérotation et
+le fait qu'elle ne change plus. La page `/facture/<numero>` rend ce qui a
+été figé, et le navigateur sait l'enregistrer en PDF. Ajouter un moteur,
+c'est une dépendance de plus dans `npm ci`, un binaire à embarquer dans
+la sortie standalone, et un chemin de plus qui casse en production sans
+casser en local (leçon `pdf-parse`, 7 août).

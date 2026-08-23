@@ -3026,5 +3026,20 @@
     "errEmail": "Questo indirizzo email non sembra valido.",
     "errTooMany": "Hai già inviato diverse richieste. Aspetta un momento, le ho tutte.",
     "errFailed": "La tua richiesta non è partita. Riprova tra poco."
+  },
+  "facturation": {
+    "title": "Dati di fatturazione",
+    "subtitle": "Ciò che compare sulle tue fatture. Completali se ti serve una fattura intestata alla tua azienda.",
+    "loading": "Caricamento...",
+    "save": "Salva",
+    "saving": "Salvataggio...",
+    "saved": "Dati salvati.",
+    "saveFailed": "Impossibile salvare. Riprova tra un istante.",
+    "futureOnly": "Vale per le prossime fatture. Una fattura già emessa non si modifica: scrivici se una di esse va corretta.",
+    "incomplete": "Mancano dei dati per emettere una fattura valida: nome, indirizzo, CAP, città e paese.",
+    "invoicesTitle": "Le mie fatture",
+    "invoicesEmpty": "Nessuna fattura per ora.",
+    "invoiceOpen": "Apri",
+    "invoicesStripeNote": "I pagamenti con carta sono fatturati da Stripe: quelle fatture si scaricano dal pulsante di gestione dell'abbonamento qui sopra."
   }
 }

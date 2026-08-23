@@ -2,8 +2,8 @@
 //
 // UNE PERSONNE, ET TOUT CE QU'ON SAIT D'ELLE.
 //
-//   GET    -> { ok: true, personne, provenance }
-//   PATCH  -> met à jour son nom
+//   GET    -> { ok: true, personne, provenance, facturation, factures }
+//   PATCH  -> met à jour son nom, ou ses infos de facturation
 //
 // Béné, 22 août : "Tu trouves ça pratique ? lisible ? facile à utiliser ?
 // Quand j'aurai 200000 clients, je fais comment ? (...) Retrouver toutes
@@ -38,6 +38,8 @@ import { buildPeople, type ChurnRow, type ProfileRow } from "@/lib/admin/people"
 import { readProvenance, type LigneProvenance } from "@/lib/admin/provenance";
 import { buildSioSales } from "@/lib/admin/sioSales";
 import { buildSales, type EventRow } from "@/lib/checkout/sales";
+import { lireAcheteur, manques } from "@/lib/facture/identite";
+import { ecrireFacturation, facturesDe, lireFacturation } from "@/lib/facture/store";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -185,10 +187,35 @@ export async function GET(
       return NextResponse.json({ ok: false, reason: "introuvable" }, { status: 404 });
     }
 
+    // SES INFOS DE FACTURATION ET SES FACTURES.
+    //
+    // Béné, 24 août : "tout ce qu'il faut pour une facture légale et que
+    // je puisse mettre à jour si demande du client". Elles vivent dans
+    // leur propre table, à part de `profiles` : `profiles.first_name`
+    // est le nom d'affichage de l'app, la facturation est l'identité de
+    // l'ACHETEUR, qui peut être une société. Confondre les deux ferait
+    // qu'un changement de prénom réécrirait l'identité fiscale.
+    const facturation = await lireFacturation({ email });
+    const factures = await facturesDe(email);
+
     return NextResponse.json({
       ok: true,
       personne,
       provenance,
+      facturation,
+      manquesFacturation: manques(facturation ?? lireAcheteur({})),
+      factures: factures.map((f) => ({
+        numero: f.numero,
+        genre: f.genre,
+        libelle: f.libelle,
+        currency: f.currency,
+        totalCents: f.total_cents,
+        htCents: f.ht_cents,
+        tvaCents: f.tva_cents,
+        tvaTauxBp: f.tva_taux_bp,
+        issuedAt: f.issued_at,
+        aCompleter: f.a_completer ?? [],
+      })),
       // Une vente encaissée sans compte en face est exactement le drame
       // Ivan : on la remonte au lieu de l'écarter en silence.
       ventesOrphelines: vue.ventesOrphelines.filter(
@@ -203,7 +230,7 @@ export async function GET(
 }
 
 /**
- * MET À JOUR SON NOM.
+ * MET À JOUR SON NOM, OU SES INFOS DE FACTURATION.
  *
  * Le PALIER, le lien de connexion et la suppression passent par
  * `/api/admin/users`, qui les fait déjà et qui est déjà éprouvé. Les
@@ -224,15 +251,35 @@ export async function PATCH(
     return NextResponse.json({ ok: false, reason: "invalid_email" }, { status: 400 });
   }
 
-  let firstName = "";
-  let lastName = "";
+  let body: { firstName?: unknown; lastName?: unknown; facturation?: unknown };
   try {
-    const body = await req.json();
-    firstName = String(body?.firstName ?? "").trim().slice(0, 80);
-    lastName = String(body?.lastName ?? "").trim().slice(0, 80);
+    body = (await req.json()) as typeof body;
   } catch {
     return NextResponse.json({ ok: false, reason: "invalid_body" }, { status: 400 });
   }
+
+  // LA FACTURATION EST UNE MISE À JOUR À PART.
+  //
+  // "que je puisse mettre à jour si demande du client" : c'est ce
+  // chemin. Il ne touche PAS aux factures déjà émises, et ce n'est pas
+  // un oubli : une facture émise ne se modifie pas. Une erreur sur une
+  // pièce passée se corrige par un avoir suivi d'une nouvelle facture.
+  if (body.facturation) {
+    const acheteur = lireAcheteur(body.facturation);
+    const ecrit = await ecrireFacturation({
+      email,
+      acheteur: { ...acheteur, email: acheteur.email ?? email },
+      source: "admin",
+    });
+    if (!ecrit.ok) {
+      console.error(`[admin/clients] maj facturation ${email} : ${ecrit.reason}`);
+      return NextResponse.json({ ok: false, reason: ecrit.reason ?? "write_failed" }, { status: 500 });
+    }
+    return NextResponse.json({ ok: true, manquesFacturation: manques(acheteur) });
+  }
+
+  const firstName = String(body?.firstName ?? "").trim().slice(0, 80);
+  const lastName = String(body?.lastName ?? "").trim().slice(0, 80);
 
   const { error } = await supabaseAdmin
     .from("profiles")

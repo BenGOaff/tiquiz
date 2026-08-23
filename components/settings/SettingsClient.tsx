@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import MesInfosFacturation from "@/components/facturation/MesInfosFacturation";
 import { SettingsAchievements } from "@/components/settings/SettingsAchievements";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1182,6 +1183,12 @@ export default function SettingsClient() {
               )}
             </CardContent>
           </Card>
+
+          {/* SES INFOS DE FACTURATION, ET SES FACTURES.
+              Béné, 24 août : "lui aussi doit avoir ces infos et pouvoir
+              les mettre à jour." Juste sous l'abonnement, parce que
+              c'est là qu'on vient quand on cherche une facture. */}
+          <MesInfosFacturation />
 
           {/* Toggle Mensuel / Annuel (parité page de vente). Affiché
               pour TOUS (y compris lifetime/beta : les cartes montrent
