@@ -222,10 +222,6 @@ export default function CommandeClient({
       >
         {paypalEnCours ? "Ouverture de PayPal..." : "Payer avec PayPal"}
       </button>
-      <p className="mt-2 text-xs text-muted-foreground">
-        Sur PayPal, la TVA n&apos;est pas ventilée par pays : tu paies exactement le prix
-        affiché, comme par carte.
-      </p>
       {erreurPaypal && (
         <p className="mt-2 rounded-md bg-red-50 px-3 py-2 text-sm text-red-900">{erreurPaypal}</p>
       )}

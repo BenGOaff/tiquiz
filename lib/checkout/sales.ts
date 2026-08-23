@@ -106,6 +106,51 @@ function texte(v: unknown): string | null {
  * doit pas créer une vente fantôme, donc il ne fait que MARQUER une
  * vente existante. Une vente sans achat connu n'existe pas.
  */
+/**
+ * CE QU'ON REMBOURSE SUR UNE FACTURE D'ABONNEMENT.
+ *
+ * Trois formes possibles selon la version d'API du compte, et il faut
+ * les trois : `payment_intent` (historique, chaîne ou objet étendu),
+ * `payments[].payment.payment_intent` (versions récentes), et à défaut
+ * la `charge`. Un `ch_` se rembourse aussi bien qu'un `pi_`, la route
+ * de remboursement reconnaît les deux au préfixe.
+ */
+export function refFacture(facture: Record<string, unknown>): string | null {
+  const direct = facture.payment_intent;
+  const pi = typeof direct === "string" ? direct.trim() : texte(lire(direct).id);
+  if (pi) return pi;
+
+  const paiements = lire(facture.payments).data;
+  if (Array.isArray(paiements)) {
+    for (const entree of paiements) {
+      const p = lire(lire(entree).payment).payment_intent;
+      const id = typeof p === "string" ? p.trim() : texte(lire(p).id);
+      if (id) return id;
+    }
+  }
+
+  const charge = facture.charge;
+  return (typeof charge === "string" ? charge.trim() : texte(lire(charge).id)) || null;
+}
+
+/**
+ * Le produit acheté, lu sur la ligne de facture.
+ *
+ * Notre `metadata[product]` voyage sur l'abonnement, donc il est là la
+ * plupart du temps. Cette lecture est le repli : sans elle, une échéance
+ * s'afficherait sans nom de produit.
+ */
+export function productIdDeLaFacture(facture: Record<string, unknown>): string | null {
+  const lignes = lire(facture.lines).data;
+  if (!Array.isArray(lignes)) return null;
+  for (const ligne of lignes) {
+    const meta = lire(lire(ligne).metadata);
+    const p = texte(meta.product);
+    if (p) return p;
+  }
+  return null;
+}
+
 export function buildSales(rows: readonly EventRow[]): Sale[] {
   const ventes = new Map<string, Sale>();
   const rembourses = new Map<string, string>();
@@ -133,6 +178,47 @@ export function buildSales(rows: readonly EventRow[]): Sale[] {
           productId: texte(meta.product),
           amountCents: Number(objet.amount_total ?? 0) || 0,
           // Stripe envoie la somme reellement encaissee : c'est la verite.
+          amountSource: "payload",
+          currency: (texte(objet.currency) ?? "eur").toLowerCase(),
+          paidAt: row.created_at,
+          refundedAt: null,
+        });
+      } else if (type === "invoice.paid") {
+        // ── L'ÉCHÉANCE D'UN ABONNEMENT ──
+        //
+        // Béné, 23 août : "mon achat test de tiquiz par abonnement, j'ai
+        // bien pu l'arrêter mais pas le rembourser depuis mon dashboard
+        // admin : c'est RELOU !"
+        //
+        // Elle avait raison, et la cause est nette : en mode ABONNEMENT,
+        // Stripe ne pose PAS de `payment_intent` sur la session (c'est
+        // réservé au paiement unique). Le `if (!ref) continue` juste au
+        // dessus écartait donc silencieusement toutes ses ventes Tiquiz,
+        // et l'écran affichait "rien pour l'instant" sur un compte qui
+        // venait de payer.
+        //
+        // La vente d'un abonnement, ce n'est pas la session : c'est
+        // CHAQUE facture payée. Les lire ici fait d'une pierre deux
+        // coups : le premier mois devient remboursable, et les mois
+        // suivants apparaissent au lieu de disparaître.
+        //
+        // ON NE SUPPOSE PAS LA FORME DU PAYLOAD. Stripe a déplacé
+        // `invoice.payment_intent` vers `payments[].payment.payment_intent`
+        // dans ses versions récentes, et certaines factures ne portent
+        // qu'un `charge`. On lit les trois, dans cet ordre. C'est la
+        // leçon du drame Ivan : on regarde ce qu'il y a, on ne raisonne
+        // pas sur ce qu'il devrait y avoir.
+        const ref = refFacture(objet);
+        if (!ref) continue;
+        ventes.set(ref, {
+          ref,
+          provider: "stripe",
+          email: texte(objet.customer_email) ?? texte(lire(objet.customer_details).email),
+          name: texte(objet.customer_name) ?? texte(lire(objet.customer_details).name),
+          productId: texte(lire(objet.metadata).product) ?? productIdDeLaFacture(objet),
+          // `amount_paid` : ce qui a VRAIMENT été encaissé sur cette
+          // échéance, remise comprise.
+          amountCents: Number(objet.amount_paid ?? 0) || 0,
           amountSource: "payload",
           currency: (texte(objet.currency) ?? "eur").toLowerCase(),
           paidAt: row.created_at,
