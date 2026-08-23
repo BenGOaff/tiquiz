@@ -107,7 +107,13 @@ verifier("RESEND_API_KEY", {
 console.log(lignes.splice(0).join("\n"));
 
 console.log("\n  Paiement pris chez nous");
-const stripeLive = lire("STRIPE_SECRET_KEY_OWNER").startsWith("sk_live");
+// `rk_live_...` est une cle RESTREINTE, et `lib/checkout/ownerAccount.ts`
+// l'accepte explicitement (`/^(sk|rk)_(live|test)_/`). Ne tester que
+// `sk_live` laissait passer un compte en conditions REELLES sans que ce
+// controle s'en apercoive : l'avertissement sur le secret du webhook ne
+// partait jamais. C'est exactement le defaut du 22 aout, un controle qui
+// ne regarde pas au meme endroit que le code.
+const stripeLive = /^rk_live_|^sk_live_/.test(lire("STRIPE_SECRET_KEY_OWNER"));
 verifier("STRIPE_SECRET_KEY_OWNER", {
   requis: false,
   quoi: "Sans elle, le bon de commande ne s'ouvre pas du tout.",
@@ -177,7 +183,7 @@ console.log(lignes.splice(0).join("\n"));
 // On ne se connecte pas à la base : on liste les fichiers, et on nomme
 // celles que le chantier en cours attend. `check:migrations-pending`,
 // lui, interroge la prod et dit ce qui manque vraiment.
-console.log("\n  Migrations récentes à ne pas oublier");
+console.log("\n  Les 5 dernières migrations écrites (simple rappel, PAS une alerte)");
 const dossier = join(RACINE, "supabase", "migrations");
 const recentes = existsSync(dossier)
   ? readdirSync(dossier)
@@ -186,7 +192,12 @@ const recentes = existsSync(dossier)
       .slice(-5)
   : [];
 for (const f of recentes) console.log(`      ${f}`);
-console.log("      -> npm run check:migrations-pending  dit lesquelles manquent VRAIMENT.");
+console.log(
+  "\n      Ce controle NE SE CONNECTE PAS a la base : il liste des fichiers, il\n" +
+    "      ne sait pas ce qui est applique. Seul `npm run check:migrations-pending`\n" +
+    "      interroge la prod et repond. Tant qu'il dit 0 manquant, ces lignes ne\n" +
+    "      demandent rien.",
+);
 
 console.log(
   `\n  ${bloquants} chose${bloquants > 1 ? "s" : ""} bloquante${bloquants > 1 ? "s" : ""}, ` +
