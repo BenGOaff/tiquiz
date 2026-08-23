@@ -154,3 +154,15 @@ test("aucune porte partenaire ne compare son secret avec ===", () => {
   parcourir(dossier);
   assert.deepEqual(fautifs, [], `comparaison naive du secret : ${fautifs.join(", ")}`);
 });
+
+// ── 5. UN APPEL VERS L'AUTRE APP A TOUJOURS UN DÉLAI MAXIMUM ─────────
+
+test("aucun appel cross-app ne peut bloquer un webhook", () => {
+  // `commissionnerVente` tourne DANS le webhook de paiement. Sans delai
+  // maximum, une panne de Tipote garde la requete ouverte jusqu'a ce que
+  // la plateforme la tue, et le fournisseur ne recoit jamais sa reponse.
+  // La commission peut attendre ; l'acces du client, non.
+  for (const f of ["lib/affiliate/ownerSale.ts", "lib/trial/proprietaireDuLien.ts"]) {
+    assert.match(lire(f), /AbortSignal\.timeout\(/, `${f} : appel sans delai maximum`);
+  }
+});

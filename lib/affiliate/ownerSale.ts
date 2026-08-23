@@ -110,6 +110,15 @@ export async function commissionnerVente(vente: VenteACommissionner): Promise<vo
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Affiliate-Secret": secret },
+      // UN APPEL SANS DÉLAI MAXIMUM BLOQUE LE WEBHOOK QUI L'APPELLE.
+      //
+      // Cette fonction tourne DANS le webhook de paiement. Si Tipote ne
+      // répond pas, la requête reste ouverte jusqu'à ce que la
+      // plateforme la tue, et le fournisseur ne reçoit jamais sa
+      // réponse. La commission peut attendre ; l'accès du client, non.
+      // (Audit du 24 août : `proprietaireDuLien` avait son délai, pas
+      // celui ci.)
+      signal: AbortSignal.timeout(8000),
       body: JSON.stringify({
         customer_email: email,
         sale_amount_cents: base,
