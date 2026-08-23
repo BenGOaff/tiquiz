@@ -3026,5 +3026,20 @@
     "errEmail": "Esse endereço de email não parece válido.",
     "errTooMany": "Já enviaste vários pedidos. Espera um pouco, tenho todos.",
     "errFailed": "O teu pedido não seguiu. Tenta de novo daqui a pouco."
+  },
+  "facturation": {
+    "title": "Dados de faturação",
+    "subtitle": "O que aparece nas tuas faturas. Preenche-os se precisares de uma fatura em nome da tua empresa.",
+    "loading": "A carregar...",
+    "save": "Guardar",
+    "saving": "A guardar...",
+    "saved": "Dados guardados.",
+    "saveFailed": "Não foi possível guardar. Tenta de novo daqui a pouco.",
+    "futureOnly": "Vale para as próximas faturas. Uma fatura já emitida não se altera: escreve-nos se alguma tiver de ser corrigida.",
+    "incomplete": "Faltam dados para emitir uma fatura válida: nome, morada, código postal, cidade e país.",
+    "invoicesTitle": "As minhas faturas",
+    "invoicesEmpty": "Ainda não há faturas.",
+    "invoiceOpen": "Ver",
+    "invoicesStripeNote": "Os pagamentos com cartão são faturados pela Stripe: essas faturas descarregam-se no botão de gestão da subscrição acima."
   }
 }

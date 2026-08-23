@@ -3026,5 +3026,20 @@
     "errEmail": "Esse endereço de email não parece válido.",
     "errTooMany": "Já enviaste vários pedidos. Espera um pouco, tenho todos.",
     "errFailed": "O teu pedido não seguiu. Tenta de novo daqui a pouco."
+  },
+  "facturation": {
+    "title": "Dados de faturamento",
+    "subtitle": "O que aparece nas suas notas. Preencha se precisar de uma nota em nome da sua empresa.",
+    "loading": "Carregando...",
+    "save": "Salvar",
+    "saving": "Salvando...",
+    "saved": "Dados salvos.",
+    "saveFailed": "Não foi possível salvar. Tente de novo daqui a pouco.",
+    "futureOnly": "Vale para as próximas notas. Uma nota já emitida não é alterada: escreva para a gente se alguma precisar de correção.",
+    "incomplete": "Faltam dados para emitir uma nota válida: nome, endereço, CEP, cidade e país.",
+    "invoicesTitle": "Minhas notas",
+    "invoicesEmpty": "Nenhuma nota por enquanto.",
+    "invoiceOpen": "Ver",
+    "invoicesStripeNote": "Os pagamentos com cartão são faturados pela Stripe: essas notas são baixadas no botão de gestão da assinatura acima."
   }
 }

@@ -43,6 +43,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import SupportCard from "@/components/admin/SupportCard";
+import FacturationClient, { type FactureVue } from "@/components/admin/FacturationClient";
+import type { ChampsAcheteur } from "@/components/facturation/ChampsFacturation";
 import { Input } from "@/components/ui/input";
 import { isAtelierSale } from "@/lib/admin/atelier";
 import { readClientKind, type ClientKind, type Person } from "@/lib/admin/people";
@@ -157,6 +159,10 @@ interface Reponse {
   provenance?: Provenance;
   ventesOrphelines?: Sale[];
   atelierJoignable?: boolean;
+  /** Ce qu'il faut pour une facture légale, et ce qui manque encore. */
+  facturation?: ChampsAcheteur | null;
+  manquesFacturation?: string[];
+  factures?: FactureVue[];
   reason?: string;
 }
 
@@ -643,6 +649,17 @@ export default function ClientFiche({ email }: { email: string }) {
           paiements, c'est repondre a l'aveugle. Le MEME composant que la
           file, filtre sur elle : deux implementations d'une file de
           tickets finiraient par se contredire. */}
+      {/* SA FACTURATION, ET SES FACTURES.
+          Juste avant le support : quand quelqu'un écrit pour une
+          facture, les deux sont sous les yeux en même temps. */}
+      <FacturationClient
+        email={email}
+        facturation={data?.facturation ?? null}
+        manques={data?.manquesFacturation ?? []}
+        factures={data?.factures ?? []}
+        onEnregistre={() => void charger()}
+      />
+
       <Card>
         <CardContent className="py-4">
           <SupportCard email={email} />

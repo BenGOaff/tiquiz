@@ -56,6 +56,7 @@ import {
   type RawSubscription,
 } from "@/lib/checkout/subscriptionLifecycle";
 import { marquerTraite, prendreLeVerrou } from "@/lib/webhooks/log";
+import { completerFacturation } from "@/lib/facture/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -218,6 +219,31 @@ async function traiterEvenement(
         `plan NON ouvert, intervention necessaire.`,
     );
     return NextResponse.json({ ok: true, reason: "unknown_product" });
+  }
+
+  // CE QUE STRIPE A COLLECTÉ, GARDÉ CHEZ NOUS.
+  //
+  // Béné, 24 août : "dans la fiche contact de mes clients j'ai aussi
+  // besoin de savoir : l'entreprise, l'adresse, le pays, la tva..."
+  // Le formulaire carte les exige déjà : les redemander serait présenter
+  // un formulaire vide à quelqu'un qui vient de le remplir, et laisser
+  // la fiche client sans adresse alors qu'elle figure sur la facture
+  // Stripe.
+  //
+  // `completerFacturation` et pas `ecrireFacturation` : cette source ne
+  // connaît ni la société ni un email de facturation distinct, et elle
+  // ne doit rien effacer de ce que la personne a saisi elle même.
+  if (vente.facturation) {
+    const ecrit = await completerFacturation({
+      email: vente.email,
+      acheteur: vente.facturation,
+      source: "stripe",
+    });
+    if (!ecrit.ok) {
+      console.warn(
+        `[commande/webhook] facturation non enregistree pour ${vente.email} (${ecrit.reason})`,
+      );
+    }
   }
 
   const octroi = await grantPlanByEmail({

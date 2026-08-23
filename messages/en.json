@@ -3026,5 +3026,20 @@
     "errEmail": "That email address does not look valid.",
     "errTooMany": "You already sent several requests. Give it a moment, I have them all.",
     "errFailed": "Your request did not go through. Try again in a moment."
+  },
+  "facturation": {
+    "title": "Billing information",
+    "subtitle": "What appears on your invoices. Fill this in if you need an invoice in your company name.",
+    "loading": "Loading...",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Information saved.",
+    "saveFailed": "Could not save. Please try again in a moment.",
+    "futureOnly": "Applies to future invoices. An invoice already issued cannot be edited: write to us if one needs correcting.",
+    "incomplete": "Some information is missing for a valid invoice: name, address, postal code, city and country.",
+    "invoicesTitle": "My invoices",
+    "invoicesEmpty": "No invoice yet.",
+    "invoiceOpen": "View",
+    "invoicesStripeNote": "Card payments are invoiced by Stripe: those invoices download from the subscription management button above."
   }
 }

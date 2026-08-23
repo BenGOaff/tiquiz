@@ -30,12 +30,21 @@ import { resolveAppUrl } from "@/lib/authLinks";
 import { readSa } from "@/lib/affiliate/sa";
 import { readRef } from "@/lib/affiliate/refLien";
 import { essaiPourCeCheckout } from "@/lib/trial/moisOffertCheckout";
+import { lireAcheteur } from "@/lib/facture/identite";
+import { ecrireFacturation } from "@/lib/facture/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  let body: { produit?: string; email?: string; k?: string; ref?: string; sa?: string };
+  let body: {
+    produit?: string;
+    email?: string;
+    k?: string;
+    ref?: string;
+    sa?: string;
+    facturation?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
@@ -102,6 +111,31 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       `[commande/paypal] ${essai.jours} jours offerts sur ${product.id}` +
         (essai.signale ? ` A VERIFIER : ${essai.signale}` : ""),
     );
+  }
+
+  // ON ENREGISTRE LA FACTURATION AVANT D'OUVRIR PAYPAL.
+  //
+  // Le webhook émettra la facture au premier encaissement, et il ne
+  // saura la relire que par l'adresse email. L'écrire après le retour de
+  // PayPal serait trop tard : l'acheteur qui ferme son onglet a payé
+  // quand même, et sa facture n'aurait aucune adresse.
+  //
+  // **On n'échoue jamais ici.** Une écriture refusée ne doit pas empêcher
+  // d'encaisser : la facture sortira marquée "à compléter", ce qui se
+  // rattrape depuis la fiche client, alors qu'une vente perdue ne se
+  // rattrape pas.
+  if (body.facturation) {
+    const ecrit = await ecrireFacturation({
+      email,
+      acheteur: { ...lireAcheteur(body.facturation), email },
+      source: "checkout",
+    });
+    if (!ecrit.ok) {
+      console.error(
+        `[commande/paypal] facturation NON enregistree pour ${email} (${ecrit.reason}) : ` +
+          `la facture sortira incomplete.`,
+      );
+    }
   }
 
   const result = await createOwnerPaypalSubscription({
