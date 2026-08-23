@@ -2686,3 +2686,25 @@ le fait qu'elle ne change plus. La page `/facture/<numero>` rend ce qui a
 c'est une dépendance de plus dans `npm ci`, un binaire à embarquer dans
 la sortie standalone, et un chemin de plus qui casse en production sans
 casser en local (leçon `pdf-parse`, 7 août).
+
+## Sortir de Systeme.io : l'état des lieux vit dans UN fichier
+
+Béné, 24 août 2026 : "note où on s'arrête et ce qu'il reste à faire pour
+qu'à terme mon système remplace complètement Systeme io pour les ventes
+et l'affiliation sauf pour les emails."
+
+**`ROADMAP_SORTIE_SIO.md`**, à la racine de ce dépôt. Il couvre les TROIS
+dépôts (les ventes ici, l'affiliation chez Tipote, l'Atelier chez
+formaquiz) et il vit à un seul endroit : trois copies d'un état des lieux
+divergeraient en une semaine, et c'est le motif de ce dépôt depuis trois
+mois.
+
+**Le point à retenir sans ouvrir le fichier :** les emails restent chez
+Systeme.io, donc notre système doit continuer de leur PARLER. Or
+`poserTagAchat` échoue quand le contact n'existe PAS chez eux, ce qui est
+le cas normal de quelqu'un qui achète sur notre bon de commande. Il sort
+donc de toutes les séquences, en silence, et le problème grossit à chaque
+vente prise chez nous. C'est le chantier 1.
+
+Y est aussi noté, à discuter le 25 août : alléger le Supabase de Tiquiz
+(section 9), avec la requête de tailles à passer AVANT toute décision.
