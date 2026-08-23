@@ -32,7 +32,7 @@
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildAuthCallbackUrl, resolveAppUrl } from "@/lib/authLinks";
-import { sendMagicLinkEmail } from "@/lib/email/magicLinkEmail";
+import { sendPlanOpenedEmail } from "@/lib/email/planOpenedEmail";
 import { isLifetimePlan } from "@/lib/plans/lifetime";
 import { poserTagAchat } from "@/lib/sio/appliquerTag";
 import type { TiquizPlan } from "@/lib/sio/webhookInference";
@@ -80,6 +80,15 @@ export async function grantPlanByEmail(args: {
   requestOrigin?: string | null;
   /** La langue du bon de commande, pour que l'email arrive dans la sienne. */
   locale?: string | null;
+  /**
+   * Le nom du plan tel qu'il a ete AFFICHE sur le bon de commande
+   * ("Tiquiz mensuel"). Il vient du catalogue, jamais d'un payload.
+   *
+   * Sans lui, l'email de confirmation dirait "ton plan est ouvert" sans
+   * nommer lequel, ce qui est exactement le reproche du 23 aout : un
+   * message qui ne confirme pas ce qui vient d'etre paye.
+   */
+  planLabel?: string | null;
 }): Promise<GrantPlanResult> {
   const email = String(args.email ?? "").trim().toLowerCase();
   if (!email.includes("@")) {
@@ -177,20 +186,31 @@ export async function grantPlanByEmail(args: {
   // jamais priver quelqu'un de l'accès qu'il vient de payer.
   const tagPose = await poserTagAchat(email, args.plan).catch(() => false);
 
-  // 6. Le lien de connexion, ÉCRIT PAR NOUS.
+  // 6. LA CONFIRMATION D'ACHAT, ÉCRITE PAR NOUS, AVEC LE LIEN D'ENTRÉE.
   //
-  // Il part APRÈS que le plan est posé : si l'envoi échoue, la personne a
-  // quand même son accès et peut demander un lien elle-même. L'inverse
+  // Elle part APRÈS que le plan est posé : si l'envoi échoue, la personne
+  // a quand même son accès et peut demander un lien elle-même. L'inverse
   // (envoyer puis échouer à poser le plan) lui ferait découvrir un compte
   // en gratuit après avoir payé.
   //
-  // **Et il ne passe plus par l'email de Supabase.** Béné, 22 août :
+  // **Et ça ne passe plus par l'email de Supabase.** Béné, 22 août :
   // "je demande un lien magique sur tiquiz et je reçois les trucs tipote
   // c'est pas pro du tout !!" Les gabarits de Supabase sont configurés
   // dans SON tableau de bord, pour l'autre app, et aucun code ne peut
-  // les changer. On génère donc le jeton et on envoie NOTRE email : le
-  // tout premier message qu'une cliente reçoit après avoir payé porte
-  // enfin le nom de ce qu'elle vient d'acheter.
+  // les changer. On génère donc le jeton et on envoie NOTRE email.
+  //
+  // **Et ce n'est plus l'email "ton lien de connexion".** Béné, 23 août,
+  // après le premier vrai paiement : "j'ai bien reçu un lien de connexion
+  // mais pas le mail de bienvenue : il faut vérifier qu'une personne qui
+  // était en gratuit et passe en payant reçoit bien ce qu'il faut."
+  // Le message commençait par "Tu as demandé à te connecter à Tiquiz
+  // sans mot de passe" : elle n'avait pas demandé à se connecter, elle
+  // avait payé. Rien ne confirmait l'achat ni ne nommait le plan.
+  //
+  // La SITUATION est un paramètre du texte, jamais une devinette : un
+  // compte créé par l'achat reçoit une bienvenue, un compte qui existait
+  // déjà reçoit une confirmation de montée de palier. C'est la
+  // correction faite dans l'Atelier le 7 août et jamais portée ici.
   const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL, args.requestOrigin);
   let lienParti = false;
   try {
@@ -205,13 +225,15 @@ export async function grantPlanByEmail(args: {
         `[grantPlan] jeton de connexion NON emis pour ${email} : ${lienErr?.message ?? "absent"}`,
       );
     } else {
-      lienParti = await sendMagicLinkEmail({
+      lienParti = await sendPlanOpenedEmail({
         email,
+        situation: created ? "nouveau-compte" : "montee-de-palier",
+        planLabel: args.planLabel ?? args.plan,
         actionLink: buildAuthCallbackUrl(appUrl, { tokenHash: hashedToken, type: "magiclink" }),
         locale: args.locale ?? null,
       });
       if (!lienParti) {
-        console.error(`[grantPlan] lien de connexion NON parti a ${email}.`);
+        console.error(`[grantPlan] confirmation d'achat NON partie a ${email}.`);
       }
     }
   } catch (e) {

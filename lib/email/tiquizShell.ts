@@ -37,6 +37,14 @@ export interface TiquizEmailCopy {
   subject: string;
   heading: string;
   intro: string;
+  /**
+   * Les points a retenir, sous l'intro et avant le bouton.
+   *
+   * Optionnel : les emails d'authentification n'ont rien a lister. Un
+   * email qui CONFIRME UN ACHAT, si : la cliente vient de payer et doit
+   * lire, en trois secondes, ce qui est ouvert et ou ca se gere.
+   */
+  points?: readonly string[];
   cta: string;
   /** La phrase "si ce n'est pas toi, ignore". */
   ignore: string;
@@ -55,6 +63,14 @@ export function renderTiquizEmail(
   actionLink: string,
   copy: TiquizEmailCopy,
 ): { html: string; text: string } {
+  const points = (copy.points ?? []).length
+    ? `<ul style="margin:0 0 20px;padding-left:20px;font-size:15px;line-height:1.6;">${(
+        copy.points ?? []
+      )
+        .map((p) => `<li style="margin:0 0 8px;">${p}</li>`)
+        .join("")}</ul>`
+    : "";
+
   const html = `<!doctype html>
 <html>
 <body style="margin:0;padding:0;background:#f6f7fb;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2430;">
@@ -67,6 +83,7 @@ export function renderTiquizEmail(
         </td></tr>
         <tr><td style="padding:28px 32px;">
           <p style="margin:0 0 20px;font-size:15px;line-height:1.6;">${copy.intro}</p>
+          ${points}
           <div style="text-align:center;margin:24px 0 8px;">
             <a href="${actionLink}" style="display:inline-block;background:#20BBE6;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:13px 26px;border-radius:9999px;">${copy.cta}</a>
           </div>
@@ -86,6 +103,7 @@ export function renderTiquizEmail(
     copy.heading,
     "",
     copy.intro,
+    ...((copy.points ?? []).length ? ["", ...(copy.points ?? []).map((p) => `- ${p}`)] : []),
     "",
     `${copy.cta} : ${actionLink}`,
     "",

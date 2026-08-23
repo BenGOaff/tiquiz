@@ -1921,3 +1921,53 @@ nommées en anglais.
 l'article 5 "cette renonciation est recueillie avant paiement", et le bon
 de commande n'affichait ni les CGV ni la renonciation. Le texte annonçait
 quelque chose que l'écran ne faisait pas. Encore une moitié de décision.
+
+## Elle a payé, elle n'a pas demandé à se connecter (Béné, 23 août 2026)
+
+Premier vrai paiement sur notre bon de commande, en conditions réelles.
+Le plan s'ouvre, le compte est créé, l'email part. Et Béné : "j'ai bien
+reçu un lien de connexion mais pas le mail de bienvenue : il faut
+vérifier qu'une personne qui était en gratuit et passe en payant reçoit
+bien ce qu'il faut."
+
+Il n'y avait pas de mail de bienvenue, et il n'y en avait jamais eu.
+`grantPlanByEmail` appelait `sendMagicLinkEmail`, donc le seul message
+qu'une cliente recevait après avoir payé s'intitulait "Tiquiz : ton lien
+de connexion" et commençait par **"Tu as demandé à te connecter à Tiquiz
+sans mot de passe"**. Elle n'avait rien demandé : elle avait payé. Aucune
+phrase ne confirmait l'achat, ne nommait le plan ouvert, ni ne disait où
+se gèrent la carte et les factures.
+
+**Et le cas le plus fréquent était le pire.** Une cliente déjà inscrite
+en gratuit qui passe en payant recevait un lien de connexion vers un
+compte qu'elle savait déjà avoir : donc rien du tout, du point de vue de
+sa commande. Béné n'a vu que la moitié du problème parce qu'elle avait
+supprimé son compte gratuit avant de tester, ce qui l'a mise dans le cas
+"compte créé".
+
+**C'est le drame de l'Atelier du 7 août, jamais porté ici** : "l'email de
+montée de palier n'est plus l'email de bienvenue". On souhaitait la
+bienvenue à quelqu'un qui avait déjà le produit, sans jamais lui
+confirmer que sa commande avait ouvert ce qu'il venait de payer.
+
+**Règle : `lib/email/planOpenedContent.ts`, et la SITUATION est un
+paramètre obligatoire.**
+
+| Situation | Ce que la cliente lit |
+|---|---|
+| `nouveau-compte` | bienvenue, le plan nommé, le lien d'entrée (elle n'a pas de mot de passe) |
+| `montee-de-palier` | sa commande confirmée, le plan nommé, et que ses quiz et ses leads sont intacts |
+
+On ne peut pas appeler la fonction sans avoir dit de quel cas on parle :
+c'est la seule protection qui survit au prochain qui touchera au fichier.
+`created` (le compte a-t-il été créé par cet achat) est la source, et il
+sortait déjà de `grantPlanByEmail`, personne ne le lisait.
+
+Les deux messages portent le lien de connexion : le plus court chemin
+vers son tableau de bord reste le même, c'est le TEXTE autour qui
+change. Et le nom du plan vient du CATALOGUE (`OWNER_CATALOG`, donc de ce
+qui a été affiché sur le bon de commande), jamais d'un payload.
+
+`tests/logic/apres-paiement.test.mts` fige les 7 langues, les deux
+situations, l'absence de la phrase "tu as demandé à te connecter", et
+qu'aucune variable `{plan}` ne reste à trou.

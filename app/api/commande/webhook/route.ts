@@ -175,6 +175,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     source: product.source,
     reference: sessionId,
     requestOrigin: req.nextUrl.origin,
+    // Le nom AFFICHE sur le bon de commande, pour que l'email de
+    // confirmation nomme ce qui vient d'etre paye.
+    planLabel: product.label,
   });
 
   if (!octroi.ok) {

@@ -30,6 +30,8 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
+import { buildPlanOpenedContent } from "../../lib/email/planOpenedContent.ts";
+
 function lire(rel: string): string {
   return fs.readFileSync(path.join(process.cwd(), rel), "utf8");
 }
@@ -43,7 +45,14 @@ test("l'email d'acces est ECRIT PAR NOUS, jamais envoye par Supabase", () => {
     !src.includes("signInWithOtp"),
     "grantPlan est revenu a l'email de Supabase : la cliente recevra le gabarit de l'autre app",
   );
-  assert.ok(src.includes("sendMagicLinkEmail"), "grantPlan n'envoie plus notre email");
+  assert.ok(src.includes("sendPlanOpenedEmail"), "grantPlan n'envoie plus notre email");
+  // L'email "ton lien de connexion" commence par "Tu as demandé à te
+  // connecter" : c'est faux apres un paiement, elle n'a rien demande,
+  // elle a paye. Voir le bloc de tests plus bas.
+  assert.ok(
+    !src.includes("sendMagicLinkEmail"),
+    "grantPlan est revenu a l'email de connexion : il ne confirme aucun achat",
+  );
   // Notre lien passe par le jeton, pas par le lien de Supabase.
   assert.ok(src.includes("hashed_token"), "le lien n'est plus construit a partir du jeton");
   assert.ok(src.includes("buildAuthCallbackUrl"), "le lien ne passe plus par /auth/callback");
@@ -67,7 +76,7 @@ test("le plan est pose AVANT l'email et AVANT l'etiquette", () => {
   const iPlan = src.indexOf('from("profiles").upsert');
   // Les APPELS, pas les imports : ceux-ci sont en haut du fichier.
   const iTag = src.indexOf("await poserTagAchat(");
-  const iMail = src.indexOf("await sendMagicLinkEmail(");
+  const iMail = src.indexOf("await sendPlanOpenedEmail(");
   assert.ok(iPlan > 0 && iTag > iPlan, "l'etiquette est posee avant le plan");
   assert.ok(iMail > iPlan, "l'email part avant que le plan soit pose");
 });
@@ -114,4 +123,114 @@ test("le bon de commande affiche les CGV et la renonciation", () => {
   assert.ok(src.includes('href="/terms"'), "le bon de commande ne mene plus aux CGV");
   assert.ok(src.includes('href="/privacy"'), "le bon de commande ne mene plus a la confidentialite");
   assert.ok(src.includes("L221-28"), "la renonciation au droit de retractation a disparu");
+});
+
+
+// ── CE QUE LA CLIENTE LIT APRÈS AVOIR PAYÉ (23 août 2026) ──
+//
+// Béné, apres le premier vrai paiement sur notre bon de commande : "j'ai
+// bien reçu un lien de connexion mais pas le mail de bienvenue : il faut
+// vérifier qu'une personne qui était en gratuit et passe en payant
+// reçoit bien ce qu'il faut."
+//
+// Elle recevait "Tiquiz : ton lien de connexion", qui commence par "Tu
+// as demandé à te connecter à Tiquiz sans mot de passe". Elle n'avait
+// pas demandé à se connecter : elle avait payé. Et pour une cliente déjà
+// inscrite en gratuit, ce message ne disait strictement rien de son
+// achat. Même drame que la montée de palier de l'Atelier, 7 août.
+
+/** Les 7 langues de l'interface. */
+const LOCALES = ["fr", "en", "es", "it", "pt", "pt-BR", "ar"];
+
+const SITUATIONS = ["nouveau-compte", "montee-de-palier"] as const;
+
+test("la confirmation d'achat NOMME le plan paye, dans les 7 langues", () => {
+  for (const loc of LOCALES) {
+    for (const situation of SITUATIONS) {
+      const { subject, html, text } = buildPlanOpenedContent({
+        situation,
+        planLabel: "Tiquiz mensuel",
+        actionLink: "https://quiz.tipote.com/auth/callback?token_hash=abc&type=magiclink",
+        locale: loc,
+      });
+      assert.ok(subject.includes("Tiquiz"), `${loc}/${situation} : le sujet ne dit pas Tiquiz`);
+      assert.ok(html.includes("Tiquiz mensuel"), `${loc}/${situation} : le plan n'est pas nomme`);
+      assert.ok(text.includes("Tiquiz mensuel"), `${loc}/${situation} : version texte sans le plan`);
+      assert.ok(html.includes("token_hash=abc"), `${loc}/${situation} : plus de lien d'entree`);
+    }
+  }
+});
+
+test("on ne souhaite pas la bienvenue a quelqu'un qui a deja un compte", () => {
+  // C'est la correction de l'Atelier du 7 aout, portee ici : un eleve
+  // qui achetait l'upsell recevait le message du jour de son
+  // inscription, sans jamais voir sa commande confirmee.
+  for (const loc of LOCALES) {
+    const nouveau = buildPlanOpenedContent({
+      situation: "nouveau-compte",
+      planLabel: "Tiquiz mensuel",
+      actionLink: "https://x/y",
+      locale: loc,
+    });
+    const montee = buildPlanOpenedContent({
+      situation: "montee-de-palier",
+      planLabel: "Tiquiz mensuel",
+      actionLink: "https://x/y",
+      locale: loc,
+    });
+    assert.notEqual(nouveau.subject, montee.subject, `${loc} : les deux sujets sont identiques`);
+    assert.notEqual(nouveau.html, montee.html, `${loc} : les deux messages sont identiques`);
+  }
+});
+
+test("la confirmation ne dit JAMAIS que la cliente a demande a se connecter", () => {
+  // La phrase exacte de l'email qu'elle a recu le 23 aout.
+  const interdits = [
+    /demand[ée] à te connecter/i,
+    /asked to sign in/i,
+    /has pedido entrar/i,
+    /Hai chiesto di accedere/i,
+    /Pediste para entrar/i,
+    /pediu para entrar/i,
+  ];
+  for (const loc of LOCALES) {
+    for (const situation of SITUATIONS) {
+      const { html } = buildPlanOpenedContent({
+        situation,
+        planLabel: "Tiquiz mensuel",
+        actionLink: "https://x/y",
+        locale: loc,
+      });
+      for (const motif of interdits) {
+        assert.ok(!motif.test(html), `${loc}/${situation} : le message parle encore de connexion demandee`);
+      }
+    }
+  }
+});
+
+test("aucun tiret cadratin dans ce que la cliente lit", () => {
+  for (const loc of LOCALES) {
+    for (const situation of SITUATIONS) {
+      const { subject, html } = buildPlanOpenedContent({
+        situation,
+        planLabel: "Tiquiz mensuel",
+        actionLink: "https://x/y",
+        locale: loc,
+      });
+      assert.ok(!/[\u2013\u2014]/.test(subject + html), `${loc}/${situation} : tiret cadratin`);
+    }
+  }
+});
+
+test("un plan sans nom ne produit pas un email troue", () => {
+  // `planLabel` est optionnel en amont : si personne ne le passe, on
+  // retombe sur le nom du plan technique, jamais sur une phrase a trou.
+  const { html, subject } = buildPlanOpenedContent({
+    situation: "montee-de-palier",
+    planLabel: "",
+    actionLink: "https://x/y",
+    locale: "fr",
+  });
+  assert.ok(!html.includes("{plan}"), "la variable {plan} est restee dans le message");
+  assert.ok(!subject.includes("{plan}"), "la variable {plan} est restee dans le sujet");
 });
