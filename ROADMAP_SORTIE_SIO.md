@@ -117,16 +117,42 @@ dépose, sa banque exécute.
 la banque l'exige). Sans elle, le fichier SEPA n'est pas produit et
 l'écran le DIT. La liste PayPal se télécharge sans ça.
 
+### 3.1 bis L'autofacturation (FAIT le 25 août)
+
+Béné : "je veux le même truc que systeme io : l'affilié complète ses
+infos, son numéro de TVA et siren s'il a, ses coordonnées, son mode
+paiement et tous les mois on génère sa facture pour sa compta, il peut
+la télécharger et nous on peut le payer via cette facture qu'on a
+générée pour lui."
+
+C'est fait, dans le dépôt TIPOTE (l'affiliation y vit) :
+`lib/affiliate/fiscal.ts`, `lib/affiliate/autofacture.ts`,
+`supabase/migrations/20260825_autofacturation.sql`, la pièce imprimable
+`/facture-affilie/<numero>`. Chaque lot mensuel émet une facture par
+affilié, série `AFF-`, numérotation continue.
+
+**La distinction qu'elle a écrite elle même, et qui structure tout :**
+les factures qu'on crée pour nos ACHETEURS (série `TQ-` ici, `AQ-` pour
+l'Atelier) vont dans le sens inverse de celles qu'on crée à la place de
+nos AFFILIÉS. Sur une vente nous sommes le vendeur et le prix est TTC,
+la TVA se calcule dedans ; sur une autofacture l'affilié est le vendeur,
+la commission est nette, et la TVA s'AJOUTE. Recopier l'une sur l'autre
+ferait des factures fausses des deux côtés.
+
+Sans mandat accepté, on n'émet pas, donc on ne paie pas : le lot écarte
+avec la raison `profil-fiscal`, distincte de `coordonnees`. Le détail
+vit dans l'`AGENTS.md` de Tipote.
+
 **Ce qui reste sur ce chantier :**
 
-1. **La facture de commission.** L'affiliée est un prestataire : c'est
-   elle qui facture, ou on émet une autofacturation avec son accord
-   écrit. Le module de facturation existe côté Tiquiz depuis le 24 août
-   et se porterait, mais c'est une pièce à l'envers (nous sommes
-   l'acheteur) : à traiter comme un chantier propre.
-2. **Les commissions historiques restent chez Systeme.io.** Deux
+1. **Les commissions historiques restent chez Systeme.io.** Deux
    systèmes paient en parallèle pendant la transition ; la page Paiement
    le dit, pour qu'une affiliée sache lequel regarde son argent.
+2. **Un passage par son comptable**, une fois, sur trois choix qui sont
+   les siens : une seule série `AFF-` pour tous les affiliés, le cas du
+   particulier non assujetti, et le fait que la commission soit nette de
+   taxe (un affilié assujetti coûte 20 % de trésorerie en plus, qu'on
+   récupère, mais qui sortent le mois même).
 
 ### 3.2 Un affilié doit pouvoir s'inscrire sans compte Systeme.io
 
@@ -144,20 +170,13 @@ devenu une colonne facultative parmi d'autres, et toutes les clés
 étrangères repointées. `ref` reste l'identité publique. À faire d'un
 bloc : une moitié de migration laisserait deux registres d'affiliés.
 
-### 3.3 Les liens pointent encore vers les tunnels Systeme.io
+### 3.3 Les liens (FAIT le 25 août, sauf deux)
 
-Sur les 8 destinations de `lib/affiliate/linkDestinations.ts` (Tipote),
-**7 mènent à des tunnels Systeme.io** (`/part-tiquiz-mensuel`,
-`/part-tiquiz-annuel`...). Une seule, `tiquiz_direct`
-(`https://tiquiz.fr/`), arrive sur notre domaine.
-
-Or les pages Systeme.io ne nous transmettent pas la query : un `?ref=`
-posé dessus n'atteint jamais notre bon de commande. Ces liens
-commissionnent toujours, mais **via Systeme.io**, et ils n'ouvrent pas le
-mois offert.
-
-Repointer est mécanique. Ce qui ne l'est pas, c'est de décider quel
-tunnel bascule chez nous et quand : voir chantier 3.
+Les 8 destinations de `lib/affiliate/linkDestinations.ts` (Tipote)
+atterrissent sur nos domaines, à deux exceptions nommées dans le code et
+tenues par un test. **Le détail est en 4.1**, avec les deux raisons : ne
+pas le redire ici, deux endroits qui décrivent le même état finissent
+toujours par se contredire.
 
 ---
 
