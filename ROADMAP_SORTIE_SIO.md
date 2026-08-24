@@ -421,10 +421,20 @@ POIDS de chaque fichier, c'est leur NOMBRE.
 
 ### Mesurer avant de supprimer
 
+**CES COMMANDES SE LANCENT SUR LE SERVEUR, PAS SUR TON PC.** Elles
+lisent le `.env` de production, qui n'existe que là bas. Sur Windows
+elles répondent `Missing script` (le code n'y est pas encore) ou
+`Il manque NEXT_PUBLIC_SUPABASE_URL` (pas de `.env`).
+
 ```bash
-cd ~/tiquiz-app && npm run check:storage            # le resume
-cd ~/tiquiz-app && npm run check:storage -- --detail  # + les 40 plus gros orphelins
+# 1. se connecter au serveur, puis :
+cd /home/tipote/tiquiz-app && npm run check:storage
+cd /home/tipote/tiquiz-app && npm run check:storage -- --detail   # + les 40 plus gros orphelins
+cd /home/tipote/tipote-app && npm run check:storage
 ```
+
+Et il faut que le code SOIT DÉJÀ DÉPLOYÉ : le script arrive avec le
+`git pull`, comme le reste.
 
 `scripts/storage-audit.mjs` liste le bucket, le pèse par dossier, croise
 chaque fichier avec les colonnes qui pourraient le citer, et dit combien
@@ -457,10 +467,19 @@ est irréversible, et ça se décide avec Béné, script de mesure en main.
 Béné, 26 août : "on ne supprime rien des clients à ce stade. On peut
 archiver l'existant quelque part pour le retrouver en cas de besoin ?"
 
+**Sur le serveur, toujours.** L'archive est écrite sur le disque du
+serveur (400 Go, dont 47 utilisés), pas sur le PC.
+
 ```bash
-cd ~/tiquiz-app && npm run storage:archive       # vers /srv/storage-archive/<projet>
-cd ~/tiquiz-app && npm run storage:archive -- --reprendre   # apres une coupure
+cd /home/tipote/tiquiz-app && npm run storage:archive
+cd /home/tipote/tipote-app && npm run storage:archive
+# apres une coupure reseau, ne retelecharge que ce qui manque :
+cd /home/tipote/tiquiz-app && npm run storage:archive -- --reprendre
 ```
+
+L'archive atterrit dans `/srv/storage-archive/<projet>/`, et elle est
+donc emportée par la sauvegarde hebdomadaire Hostinger avec le reste du
+serveur.
 
 `scripts/storage-archive.mjs` copie le bucket entier sur CE serveur, en
 gardant l'arborescence, et écrit un `_manifeste.json` à côté : chemin,
@@ -513,26 +532,66 @@ dire pour ne pas recopier la complexité inutilement :
   cliente : tout ce qui n'est pas une image se télécharge au lieu de
   s'afficher, et les extensions exécutables sont refusées.
 
-`infra/nginx/assets.quiz.tipote.com.conf` et `assets.tiquiz.com.conf`
-sont écrits. **Il reste à décider, et ce n'est pas à moi de trancher :**
+**La sauvegarde est confirmée** (Béné, 26 août) : Hostinger fait des
+snapshots hebdomadaires du serveur entier, stockés séparément. Un
+disque mort ne perd donc au pire qu'une semaine d'images téléversées,
+et l'archive du bucket vit sur le même disque, donc dans le même
+snapshot. C'était le seul argument sérieux en face : il tombe.
 
-1. **La sauvegarde.** C'est le VRAI coût de ce déménagement, et le seul
-   argument sérieux en face. Chez Supabase, la sauvegarde est le
-   problème de quelqu'un d'autre. Sur ce serveur, elle est le nôtre : si
-   le disque meurt sans sauvegarde, toutes les images de toutes les
-   clientes disparaissent, et aucun quiz n'a plus d'illustration. **À ne
-   pas brancher tant qu'une sauvegarde n'existe pas** (le VPS en propose
-   une, ou un `rsync` nocturne vers un autre disque).
-2. **Où écrit-on ?** Le plus simple est une route qui reçoit le fichier
-   et l'écrit dans `/srv/public-assets`. Le TUS existant sert à des
-   vidéos de plusieurs centaines de Mo reprises en cas de coupure ; une
-   image de 300 Ko n'en a pas besoin.
-3. **Les deux apps ou une seule ?** Le même serveur peut servir les
-   deux, sur deux sous-domaines et deux dossiers séparés.
+### Ce qui est écrit, et comment on l'allume
 
-**Rien de tout ça n'est branché.** La config nginx est posée dans le
-dépôt, comme celles des vidéos, et elle n'a d'effet que le jour où on
-l'installe.
+Le code est là et **il est INERTE tant qu'une variable n'est pas
+posée**. Sans `NEXT_PUBLIC_ASSETS_BASE_URL`, tout continue d'aller chez
+Supabase, exactement comme avant.
+
+| Pièce | Rôle |
+|---|---|
+| `lib/storage/cheminAsset.ts` | PUR et testé : quel chemin a le droit d'être écrit, et quelle adresse publique il obtient |
+| `app/api/upload/asset/route.ts` | écrit le fichier dans `ASSETS_DIR` |
+| `lib/storage/televerser.ts` | **le seul endroit qui décide** entre notre serveur et Supabase |
+| `infra/nginx/assets.*.conf` | nginx sert le dossier |
+
+**Les quinze appels recopiés dans les composants ont disparu.** Ils
+appelaient tous `supabase.storage.from("public-assets").upload(...)` :
+changer de destination demandait quinze modifications, et il suffisait
+d'en oublier une pour que la moitié des images parte encore chez
+Supabase sans que rien ne le signale. C'est le motif du dépôt depuis
+trois mois (les réseaux de partage, le score, l'alignement du
+sous-titre, la disposition des réponses).
+
+**Sur le serveur, pour allumer :**
+
+```bash
+sudo mkdir -p /srv/public-assets && sudo chown tipote:tipote /srv/public-assets
+sudo certbot certonly --nginx -d assets.quiz.tipote.com
+sudo cp /home/tipote/tiquiz-app/infra/nginx/assets.quiz.tipote.com.conf /etc/nginx/sites-available/
+sudo ln -s /etc/nginx/sites-available/assets.quiz.tipote.com.conf /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Puis dans le `.env` de l'app, et SEULEMENT une fois que l'adresse
+répond :
+
+```
+NEXT_PUBLIC_ASSETS_BASE_URL=https://assets.quiz.tipote.com
+ASSETS_DIR=/srv/public-assets
+```
+
+`NEXT_PUBLIC_*` est gravée au moment du `next build` : il faut donc
+reconstruire, pas seulement redémarrer (leçon du 22 août).
+
+**La variable est VALIDÉE, pas seulement lue.** Une valeur vide, en
+`http`, ou pointant sur `localhost` est ignorée et tout retombe sur
+Supabase. Un `??` ne protège que de la variable absente, jamais de la
+variable fausse : ici une base fausse écrirait des adresses MORTES dans
+la base de données, sur des quiz publiés, et elles y resteraient après
+correction de la variable.
+
+**Et on ne perd jamais l'envoi d'une créatrice.** Si notre serveur
+refuse (disque plein, droits, route pas déployée), le navigateur
+retombe sur Supabase et le dit dans la console. Une image au mauvais
+endroit se déplace ; une image perdue se re-téléverse, et la créatrice
+ne sait pas pourquoi ça a raté.
 
 ### Le reste, sur la base elle même
 

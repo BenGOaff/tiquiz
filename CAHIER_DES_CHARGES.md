@@ -800,6 +800,10 @@ TIPOTE_AFFILIATE_ENDPOINT=...            # optionnel, defaut https://app.tipote.
 # Support et partenaires
 PARTNER_SHARED_SECRET=...                # MEME valeur que sur le serveur Tipote (relais du centre d'aide)
 
+# Images servies par NOTRE serveur (optionnel : absente = tout va chez Supabase)
+NEXT_PUBLIC_ASSETS_BASE_URL=https://assets.quiz.tipote.com   # VALIDEE : https, jamais localhost
+ASSETS_DIR=/srv/public-assets            # le dossier servi par infra/nginx/assets.*.conf
+
 # Revendeur
 RESELLER_SECRETS_KEY=...                 # 32 octets, chiffrement des clés de paiement
 
