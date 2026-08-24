@@ -72,26 +72,15 @@ export type MotifSuspect = "meme_ip";
  * les points ne le sont QUE chez Gmail, parce qu'ailleurs
  * `jean.dupont@` et `jeandupont@` peuvent être deux personnes.
  */
-const DOMAINES_GMAIL = new Set(["gmail.com", "googlemail.com"]);
+import { memePersonne, normaliserAdresse } from "@/lib/affiliate/memeAdresse";
 
-export function normaliserEmail(brut: unknown): string {
-  const v = String(brut ?? "").trim().toLowerCase();
-  const at = v.lastIndexOf("@");
-  if (at <= 0) return v;
-  let local = v.slice(0, at);
-  const domaine = v.slice(at + 1);
-  const plus = local.indexOf("+");
-  if (plus > 0) local = local.slice(0, plus);
-  if (DOMAINES_GMAIL.has(domaine)) local = local.replace(/\./g, "");
-  return `${local}@${domaine}`;
-}
-
-/** Deux adresses qui désignent la même boîte. */
-export function memeBoite(a: unknown, b: unknown): boolean {
-  const na = normaliserEmail(a);
-  const nb = normaliserEmail(b);
-  return na.length > 0 && na === nb;
-}
+// La règle vit maintenant dans `lib/affiliate/memeAdresse.ts`, partagée
+// avec l'attribution des commissions : elle ne gardait que le CADEAU
+// tant qu'elle était enfermée ici, et l'ARGENT comparait les adresses
+// brutes (audit du 26 août). Les deux noms restent exportés, le reste du
+// dépôt les appelle déjà.
+export const normaliserEmail = normaliserAdresse;
+export const memeBoite = memePersonne;
 
 export interface DemandeMoisOffert {
   /** L'adresse de la personne qui s'inscrit. */

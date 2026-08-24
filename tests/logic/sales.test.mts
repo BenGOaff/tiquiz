@@ -326,3 +326,127 @@ test("une somme qui ne correspond a rien ne fabrique pas un faux nom", () => {
   ]);
   assert.equal(ventes[0]?.productId, null);
 });
+
+// ── LES ÉCHÉANCES D'ABONNEMENT PAYPAL (25 août 2026) ────────────────
+//
+// Cette fonction ne connaissait que `PAYMENT.CAPTURE.*`, c'est à dire
+// l'API Orders : un achat unique, la forme de l'Atelier. Tiquiz vend des
+// ABONNEMENTS, qui émettent `PAYMENT.SALE.*` (API v1).
+//
+// Conséquence, trouvée en branchant le bouton Rembourser : **aucune
+// échéance PayPal n'apparaissait dans le tableau des ventes**, ni dans
+// le chiffre d'affaires, ni sur la fiche du client. Et comme on émet une
+// facture sur cet événement depuis le 24 août, il y avait des factures
+// pour des ventes invisibles.
+
+function echeancePaypal(
+  id: string,
+  quand: string,
+  extra: Record<string, unknown> = {},
+): EventRow {
+  return {
+    source: "paypal",
+    event_type: "PAYMENT.SALE.COMPLETED",
+    created_at: quand,
+    payload: {
+      resource: {
+        id,
+        billing_agreement_id: "I-ABON1",
+        // PayPal envoie ses montants en CHAÎNE, jamais en nombre.
+        amount: { total: "17.00", currency: "EUR" },
+        ...extra,
+      },
+    },
+  } as unknown as EventRow;
+}
+
+test("une echeance d'abonnement PayPal apparait dans les ventes", () => {
+  const ventes = buildSales([echeancePaypal("9XY", "2026-08-25T08:00:00Z")]);
+  assert.equal(ventes.length, 1);
+  assert.equal(ventes[0].provider, "paypal");
+  assert.equal(ventes[0].ref, "9XY");
+  assert.equal(ventes[0].amountCents, 1700);
+  assert.equal(ventes[0].amountSource, "payload");
+  assert.equal(ventes[0].currency, "eur");
+});
+
+test("le custom_id rattache l'echeance a son acheteur", () => {
+  // Notre `custom_id` porte `<produit>|<email>|...`. Quand PayPal le
+  // recopie de l'abonnement sur l'échéance, la vente se rattache toute
+  // seule à la fiche client.
+  const [v] = buildSales([
+    echeancePaypal("9XY", "2026-08-25T08:00:00Z", { custom_id: "mensuel|marie@exemple.fr|sa001" }),
+  ]);
+  assert.equal(v.productId, "mensuel");
+  assert.equal(v.email, "marie@exemple.fr");
+});
+
+test("SANS custom_id, on ne DEVINE PAS l'acheteur", () => {
+  // Rattacher au flair collerait la vente à la mauvaise personne. Une
+  // vente orpheline remonte dans l'admin, et c'est ce qui a fait exister
+  // cet écran (drame Ivan, 7 août).
+  const [v] = buildSales([echeancePaypal("9XY", "2026-08-25T08:00:00Z")]);
+  assert.equal(v.email, null);
+  assert.equal(v.productId, null);
+});
+
+test("une echeance sans montant lisible n'est pas une vente a zero euro", () => {
+  // `Number("")` vaut 0 : sans le test de chaîne vide, un montant absent
+  // entrerait dans le chiffre d'affaires pour 0,00 €, ce qui est un
+  // chiffre faux et pas une absence de chiffre.
+  const [v] = buildSales([
+    echeancePaypal("9XY", "2026-08-25T08:00:00Z", { amount: { currency: "EUR" } }),
+  ]);
+  assert.equal(v.amountCents, 0);
+  assert.equal(v.amountSource, "inconnu");
+});
+
+test("le remboursement d'une echeance marque SA vente", () => {
+  const ventes = buildSales([
+    echeancePaypal("9XY", "2026-08-25T08:00:00Z"),
+    {
+      source: "paypal",
+      event_type: "PAYMENT.SALE.REFUNDED",
+      created_at: "2026-08-26T09:00:00Z",
+      payload: { resource: { id: "REF-1", sale_id: "9XY", amount: { total: "17.00" } } },
+    } as unknown as EventRow,
+  ]);
+  assert.equal(ventes.length, 1);
+  assert.equal(ventes[0].refundedAt, "2026-08-26T09:00:00Z");
+});
+
+test("un remboursement dont l'achat est hors fenetre ne cree pas de vente fantome", () => {
+  const ventes = buildSales([
+    {
+      source: "paypal",
+      event_type: "PAYMENT.SALE.REFUNDED",
+      created_at: "2026-08-26T09:00:00Z",
+      payload: { resource: { id: "REF-1", sale_id: "inconnu" } },
+    } as unknown as EventRow,
+  ]);
+  assert.deepEqual(ventes, []);
+});
+
+test("le bouton Rembourser accepte les DEUX fournisseurs", () => {
+  // Il refusait PayPal en dur, au motif que "PayPal n'encaisse pas
+  // encore pour Tiquiz". Faux depuis le 23 août : l'écran proposait donc
+  // un bouton que la route refusait.
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "app/api/admin/ventes/rembourser/route.ts"),
+    "utf8",
+  );
+  assert.match(src, /provider !== "stripe" && provider !== "paypal"/);
+  assert.match(src, /refundOwnerPaypalSale/);
+});
+
+test("on rembourse une VENTE v1, pas une capture v2", () => {
+  // Un abonnement PayPal produit des ventes v1 ; les captures v2 sont
+  // l'autre monde, celui de l'achat unique de l'Atelier. Se tromper
+  // d'endpoint ferait dire "PayPal a refusé" sur un remboursement
+  // parfaitement possible.
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "lib/checkout/paypalOwner.ts"),
+    "utf8",
+  );
+  assert.match(src, /\/v1\/payments\/sale\/\$\{encodeURIComponent\(id\)\}\/refund/);
+});

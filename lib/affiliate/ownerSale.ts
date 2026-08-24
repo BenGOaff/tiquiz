@@ -128,6 +128,10 @@ export async function commissionnerVente(vente: VenteACommissionner): Promise<vo
         // `null` est le cas COURANT pour les deux : sans lien
         // d'affiliation, l'attribution retombe sur la conversion par
         // email.
+        // ON DIT SUR QUOI ON PAIE. `commissionBaseCents` a deja retire
+        // la TVA : sans ce champ, Tipote lisait le montant comme du TTC
+        // et le rabotait une deuxieme fois (audit du 26 aout).
+        base: "ht",
         affiliate_ref: readSa(vente.affiliateRef),
         affiliate_code: readRefCode(vente.affiliateCode),
         product_name: vente.product.label,
@@ -162,6 +166,101 @@ export async function commissionnerVente(vente: VenteACommissionner): Promise<vo
   } catch (e) {
     console.error(
       `[commission] attribution impossible : ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
+}
+
+/**
+ * LA VENTE EST TOMBÉE : LA COMMISSION AUSSI.
+ *
+ * Contrepartie de `commissionnerVente`, appelée quand l'argent repart :
+ * remboursement total, ou impayé repris par la banque.
+ *
+ * -- CE QUE ÇA FERME (audit du 26 août 2026) ---------------------------
+ *
+ * Rien n'annulait une commission. Un remboursement fermait l'accès,
+ * arrêtait l'abonnement, émettait l'avoir, et laissait la commission
+ * mûrir : vingt et un jours plus tard elle entrait dans un lot, et
+ * l'argent partait. Tant que Systeme.io payait ça ne coûtait rien ;
+ * depuis le 25 août c'est nous qui virons, et un virement ne se reprend
+ * pas.
+ *
+ * Nos conditions d'affiliation le promettaient déjà ("elles peuvent être
+ * annulées en cas de remboursement, d'impayé, de fraude") : le texte
+ * annonçait ce que le code ne faisait pas.
+ *
+ * **La clé doit être EXACTEMENT celle de la création.** `stripe:<ref>`
+ * pour une vente carte, l'identifiant d'abonnement pour PayPal : c'est
+ * ce que `commissionnerVente` a écrit dans `sio_order_id`. Une clé qui
+ * ne correspond pas n'annule rien, en silence, ce qui est précisément le
+ * bug qu'on ferme.
+ *
+ * Ne jette jamais et ne bloque rien : le remboursement doit aboutir même
+ * si Tipote ne répond pas. On CRIE, parce que c'est de l'argent qui va
+ * partir si personne ne regarde.
+ */
+export async function annulerCommissionVente(args: {
+  /** La MÊME référence que celle passée à `commissionnerVente`. */
+  reference: string | null;
+  motif: "remboursement" | "impaye" | "fraude";
+}): Promise<void> {
+  try {
+    const secret = process.env.AFFILIATE_INTERNAL_SECRET?.trim();
+    const reference = (args.reference ?? "").trim();
+    if (!secret || !reference) {
+      console.error(
+        `[commission] annulation impossible (${!secret ? "secret absent" : "reference absente"}) : ` +
+          `une commission peut partir sur une vente ${args.motif}.`,
+      );
+      return;
+    }
+
+    const url = (process.env.TIPOTE_AFFILIATE_ENDPOINT?.trim() || ENDPOINT_PAR_DEFAUT).replace(
+      /\/attribute-sale$/,
+      "/cancel-sale",
+    );
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Affiliate-Secret": secret },
+      // Même délai que l'attribution : cette fonction tourne DANS le
+      // webhook de paiement, et l'accès du client ne doit pas attendre
+      // que Tipote réponde.
+      signal: AbortSignal.timeout(8000),
+      body: JSON.stringify({
+        source_app: "tiquiz",
+        sio_order_id: `stripe:${reference}`,
+        motif: args.motif,
+      }),
+    });
+
+    if (!res.ok) {
+      const corps = await res.text().catch(() => "");
+      console.error(
+        `[commission] annulation REFUSEE (${res.status}) sur stripe:${reference} : ` +
+          `${corps.slice(0, 200)}. La commission va murir et partir au prochain lot.`,
+      );
+      return;
+    }
+
+    const json = (await res.json().catch(() => ({}))) as {
+      resultat?: { annulees?: number; tropTard?: number; tropTardCents?: number };
+    };
+    const r = json.resultat ?? {};
+    if ((r.tropTard ?? 0) > 0) {
+      // DÉJÀ VERSÉE : ce n'est pas rattrapable par du code. L'argent est
+      // parti et la facture d'autofacturation qui le justifie a été
+      // remise à un comptable.
+      console.error(
+        `[commission] stripe:${reference} (${args.motif}) : ${r.tropTard} commission(s) DEJA VERSEE(S) ` +
+          `(${r.tropTardCents ?? 0} c). A recuperer a la main.`,
+      );
+    }
+    console.log(
+      `[commission] stripe:${reference} (${args.motif}) : ${r.annulees ?? 0} annulee(s)`,
+    );
+  } catch (e) {
+    console.error(
+      `[commission] annulation impossible : ${e instanceof Error ? e.message : String(e)}`,
     );
   }
 }

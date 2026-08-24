@@ -32,9 +32,27 @@ import "server-only";
 
 import { ADMIN_EMAILS } from "@/lib/adminEmails";
 import { resolveApiKey } from "@/lib/sio/resolveApiKey";
+import { corpsCreationContact } from "@/lib/sio/contactFields";
 import { readSioTag } from "@/lib/sio/tags";
 import { sioUserRequest } from "@/lib/sio/userApiClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import type { Acheteur } from "@/lib/facture/identite";
+
+/** Ce qu'on sait de l'acheteur au moment de le créer chez Systeme.io. */
+export interface IdentiteContact {
+  /** La langue de ses emails. */
+  locale?: string | null;
+  /**
+   * Son identité de facturation, quand on l'a.
+   *
+   * Elle porte le prénom, le nom, et aussi la société, le numéro de TVA
+   * et l'adresse : les champs existent dans sa fiche contact
+   * (`company_name`, `tax_number`, `street_address`...) et n'étaient
+   * jamais renseignés. C'est de la donnée qu'on collecte déjà pour les
+   * factures depuis le 24 août.
+   */
+  acheteur?: Acheteur | null;
+}
 
 /** Le compte dont la clé Systeme.io porte les contacts de Tiquiz. */
 async function idProprietaire(): Promise<string | null> {
@@ -65,6 +83,62 @@ async function trouverContact(apiKey: string, email: string): Promise<number | n
   return Number.isFinite(id) && id > 0 ? id : null;
 }
 
+/**
+ * LE CONTACT, TROUVÉ OU CRÉÉ.
+ *
+ * Béné, 24 août : les emails restent chez Systeme.io. Un client qui n'y
+ * existe pas est donc un client injoignable : pas de bienvenue, pas de
+ * relance, pas de segment. Et c'est le cas NORMAL de quelqu'un qui
+ * achète sur notre bon de commande sans jamais toucher un tunnel.
+ *
+ * **À N'APPELER QUE DEPUIS UN CHEMIN D'ACHAT.** Créer un contact, c'est
+ * faire entrer quelqu'un dans sa liste : ça se justifie parce qu'il
+ * vient d'acheter. L'appeler depuis une lecture ferait grossir sa liste
+ * de gens qui n'ont rien demandé, et abîmerait sa délivrabilité.
+ *
+ * On RE-CHERCHE après un refus de création : deux webhooks qui arrivent
+ * en même temps peuvent créer la course, et Systeme.io refuse le second
+ * doublon. Ce refus veut dire "il existe", pas "ça a raté".
+ */
+async function assurerContact(
+  apiKey: string,
+  email: string,
+  identite: IdentiteContact,
+): Promise<number | null> {
+  const existant = await trouverContact(apiKey, email);
+  if (existant) return existant;
+
+  const corps = corpsCreationContact({
+    email,
+    locale: identite.locale,
+    acheteur: identite.acheteur,
+  });
+  if (!corps) {
+    console.warn(`[sio/tag] adresse inexploitable, contact non cree : ${email}`);
+    return null;
+  }
+
+  const res = await sioUserRequest<{ id?: number }>(apiKey, "/contacts", {
+    method: "POST",
+    body: corps as unknown as Record<string, unknown>,
+  });
+  const id = Number(res.data?.id);
+  if (res.ok && Number.isFinite(id) && id > 0) {
+    console.log(`[sio/tag] contact cree chez Systeme.io pour ${email}`);
+    return id;
+  }
+
+  // Refus : soit il existait déjà (course entre deux webhooks), soit
+  // l'API a dit non. On redemande avant de conclure.
+  const apres = await trouverContact(apiKey, email);
+  if (apres) return apres;
+  console.error(
+    `[sio/tag] contact NON cree pour ${email} (${res.status}) : ${res.error ?? "sans detail"}. ` +
+      `Cette personne sortira des sequences email.`,
+  );
+  return null;
+}
+
 /** L'identifiant d'une étiquette par son nom, ou `null`. */
 async function trouverTag(apiKey: string, nom: string): Promise<number | null> {
   const res = await sioUserRequest<{ items?: { id?: number; name?: string }[] }>(
@@ -82,16 +156,24 @@ async function trouverTag(apiKey: string, nom: string): Promise<number | null> {
 /**
  * Pose l'étiquette du palier acheté sur le contact.
  *
+ * Le contact est CRÉÉ s'il n'existe pas : voir `assurerContact`. Sans
+ * ça, un acheteur venu de notre bon de commande n'entrait dans aucune
+ * séquence email, alors que les emails restent chez Systeme.io.
+ *
  * Rend `false` sans rien casser quand : aucune clé n'est connectée, le
- * palier n'a pas d'étiquette connue, le contact n'existe pas chez
- * Systeme.io, ou l'étiquette n'existe pas.
+ * palier n'a pas d'étiquette connue, le contact n'a pas pu être créé,
+ * ou l'étiquette n'existe pas.
  *
  * **On ne CRÉE jamais l'étiquette manquante**, et c'est délibéré : une
  * étiquette créée par nous avec une faute de frappe se retrouverait en
  * double dans sa liste, et ses automatisations continueraient de pointer
  * l'ancienne. Mieux vaut ne rien poser et le dire.
  */
-export async function poserTagAchat(email: string, plan: string): Promise<boolean> {
+export async function poserTagAchat(
+  email: string,
+  plan: string,
+  identite: IdentiteContact = {},
+): Promise<boolean> {
   const adresse = String(email ?? "").trim().toLowerCase();
   const tag = readSioTag(plan);
   if (!adresse || !tag) return false;
@@ -110,14 +192,12 @@ export async function poserTagAchat(email: string, plan: string): Promise<boolea
       return false;
     }
 
-    const contactId = await trouverContact(cle.apiKey, adresse);
-    if (!contactId) {
-      // Le cas normal d'un client venu de NOTRE bon de commande sans
-      // jamais passer par un tunnel Systeme.io. On le dit : c'est une
-      // personne qui sortira de ses séquences.
-      console.warn(`[sio/tag] ${adresse} n'existe pas chez Systeme.io : etiquette non posee.`);
-      return false;
-    }
+    // TROUVÉ OU CRÉÉ. Avant le 25 août on se contentait de chercher, et
+    // on abandonnait quand le contact n'existait pas : c'est à dire le
+    // cas normal d'un client venu de NOTRE bon de commande. Il sortait
+    // de toutes ses séquences, en silence.
+    const contactId = await assurerContact(cle.apiKey, adresse, identite);
+    if (!contactId) return false;
 
     const tagId = await trouverTag(cle.apiKey, tag);
     if (!tagId) {

@@ -35,6 +35,7 @@ import { buildAuthCallbackUrl, resolveAppUrl } from "@/lib/authLinks";
 import { sendPlanOpenedEmail } from "@/lib/email/planOpenedEmail";
 import { isLifetimePlan } from "@/lib/plans/lifetime";
 import { poserTagAchat } from "@/lib/sio/appliquerTag";
+import { lireFacturation } from "@/lib/facture/store";
 import type { TiquizPlan } from "@/lib/sio/webhookInference";
 
 export interface GrantPlanResult {
@@ -184,7 +185,22 @@ export async function grantPlanByEmail(args: {
   //
   // Best-effort, et APRÈS le plan : une étiquette qui échoue ne doit
   // jamais priver quelqu'un de l'accès qu'il vient de payer.
-  const tagPose = await poserTagAchat(email, args.plan).catch(() => false);
+  //
+  // 25 août : le contact est désormais CRÉÉ chez Systeme.io s'il n'y est
+  // pas. Avant, on cherchait et on abandonnait, ce qui est le cas normal
+  // d'un acheteur venu de notre bon de commande : il n'entrait dans
+  // AUCUNE séquence email, en silence. Comme les emails restent chez
+  // eux, il était injoignable.
+  //
+  // On lui passe l'identité de facturation qu'on vient de collecter :
+  // prénom, nom, mais aussi société, numéro de TVA et adresse. Ces
+  // champs existent dans sa fiche contact et n'étaient jamais
+  // renseignés. C'est de la donnée qu'on a déjà.
+  const identiteSio = await lireFacturation({ email }).catch(() => null);
+  const tagPose = await poserTagAchat(email, args.plan, {
+    locale: args.locale ?? null,
+    acheteur: identiteSio,
+  }).catch(() => false);
 
   // 6. LA CONFIRMATION D'ACHAT, ÉCRITE PAR NOUS, AVEC LE LIEN D'ENTRÉE.
   //

@@ -24,7 +24,14 @@
 // Conséquence assumée : entre le clic et la fermeture de l'accès, il
 // s'écoule le temps d'un aller-retour de webhook. Quelques secondes.
 //
-// Sur Tiquiz, seul Stripe encaisse pour l'instant.
+// LES DEUX FOURNISSEURS, DEPUIS LE 25 AOÛT.
+//
+// Cette page disait "sur Tiquiz, seul Stripe encaisse pour l'instant",
+// et la route refusait PayPal en dur. Ce n'est plus vrai depuis le
+// 23 août : PayPal encaisse des abonnements. Une vente PayPal se
+// remboursait donc uniquement dans l'interface PayPal, alors que le
+// webhook, lui, faisait déjà correctement le reste (accès fermé,
+// abonnement arrêté, avoir émis). C'est le BOUTON qui manquait.
 //
 // -- REMBOURSEMENT TOTAL UNIQUEMENT ------------------------------------
 //
@@ -36,7 +43,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { isAdminEmail } from "@/lib/adminEmails";
-import { readOwnerStripe } from "@/lib/checkout/ownerAccount";
+import { readOwnerPaypal, readOwnerStripe } from "@/lib/checkout/ownerAccount";
+import { refundOwnerPaypalSale } from "@/lib/checkout/paypalOwner";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
@@ -62,10 +70,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const ref = String(body.ref ?? "").trim();
   const provider = String(body.provider ?? "").trim();
-  // PayPal n'encaisse pas encore pour Tiquiz : refuser explicitement vaut
-  // mieux que d'appeler une API qui n'est pas branchee.
-  if (!ref || provider !== "stripe") {
+  if (!ref || (provider !== "stripe" && provider !== "paypal")) {
+    // `systeme_io` tombe ici, et c'est voulu : cet argent est chez eux,
+    // il se rembourse chez eux. La colonne Payé le DIT sur la ligne
+    // plutôt que d'afficher un bouton qui échouerait (22 août).
     return NextResponse.json({ ok: false, reason: "invalid_body" }, { status: 400 });
+  }
+
+  if (provider === "paypal") {
+    const comptePaypal = readOwnerPaypal(process.env);
+    if (!comptePaypal) {
+      return NextResponse.json({ ok: false, reason: "not_configured" }, { status: 503 });
+    }
+    const sortie = await refundOwnerPaypalSale({ compte: comptePaypal, saleId: ref });
+    if (!sortie.ok) {
+      console.error(
+        `[admin/rembourser] PayPal a refuse ${ref} : ${sortie.detail ?? sortie.reason}`,
+      );
+      return NextResponse.json(
+        { ok: false, reason: sortie.reason === "network" ? "network" : "provider_refused" },
+        { status: 502 },
+      );
+    }
+    console.log(`[admin/rembourser] ${user.email} a rembourse la vente PayPal ${ref}`);
+    return NextResponse.json({ ok: true });
   }
 
   const compte = readOwnerStripe(process.env);

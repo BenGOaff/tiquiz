@@ -34,7 +34,12 @@ test("le + et les points de Gmail vont dans la meme boite", () => {
   // adresses brutes ne le voit pas.
   assert.equal(normaliserEmail("bene+tiquiz@gmail.com"), "bene@gmail.com");
   assert.equal(normaliserEmail("b.e.n.e@gmail.com"), "bene@gmail.com");
-  assert.equal(normaliserEmail("Bene@GoogleMail.com"), "bene@googlemail.com");
+  // `googlemail.com` EST `gmail.com` : Google livre les deux dans la
+  // meme boite. On les gardait distincts jusqu'au 26 aout, ce qui
+  // laissait passer l'alias le plus simple qui soit, celui qui ne
+  // demande meme pas de `+`.
+  assert.equal(normaliserEmail("Bene@GoogleMail.com"), "bene@gmail.com");
+  assert.ok(memeBoite("bene@gmail.com", "b.e.n.e@googlemail.com"));
   assert.ok(memeBoite("bene+1@gmail.com", "b.e.ne@gmail.com"));
 });
 

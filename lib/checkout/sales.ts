@@ -292,6 +292,49 @@ export function buildSales(rows: readonly EventRow[]): Sale[] {
           paidAt: row.created_at,
           refundedAt: null,
         });
+      } else if (type === "PAYMENT.SALE.COMPLETED") {
+        // L'ÉCHÉANCE D'UN ABONNEMENT PAYPAL, ET ELLE MANQUAIT.
+        //
+        // Trouvé le 25 août : cette fonction ne connaissait que
+        // `PAYMENT.CAPTURE.*`, c'est à dire l'API Orders (un achat
+        // unique, la forme de l'Atelier). Tiquiz vend des ABONNEMENTS,
+        // qui émettent `PAYMENT.SALE.*` (API v1). Résultat : aucune
+        // échéance PayPal n'apparaissait dans le tableau des ventes, ni
+        // dans le chiffre d'affaires, ni sur la fiche du client.
+        //
+        // Et depuis le 24 août on émet une FACTURE sur cet événement :
+        // il y avait donc des factures pour des ventes invisibles.
+        const ref = texte(res.id);
+        if (!ref) continue;
+        const montant = lire(res.amount);
+        // PayPal envoie ses montants en CHAÎNE ("17.00"). `Number("")`
+        // vaut 0 : sans le test de chaîne vide, une échéance sans
+        // montant deviendrait une vente à zéro euro.
+        const brut = texte(montant.total);
+        const custom = texte(res.custom_id) ?? "";
+        const champs = custom.split("|");
+        ventes.set(ref, {
+          ref,
+          provider: "paypal",
+          // `custom_id` porte `<produit>|<email>|...` quand PayPal le
+          // recopie de l'abonnement sur l'échéance. Quand il ne le fait
+          // pas, on laisse `null` : DEVINER l'adresse rattacherait la
+          // vente à la mauvaise personne, ce qui est pire que de la
+          // laisser en vente orpheline (elle remonte alors dans l'admin,
+          // c'est exactement le drame Ivan qui l'a fait exister).
+          email: champs[1] ?? null,
+          name: null,
+          productId: champs[0] || null,
+          amountCents: brut ? Math.round(Number(brut) * 100) || 0 : 0,
+          amountSource: brut ? "payload" : "inconnu",
+          currency: (texte(montant.currency) ?? "eur").toLowerCase(),
+          paidAt: row.created_at,
+          refundedAt: null,
+        });
+      } else if (type === "PAYMENT.SALE.REFUNDED") {
+        // Ici le fil est direct : `sale_id` désigne la vente d'origine.
+        const origine = texte(res.sale_id);
+        if (origine) rembourses.set(origine, row.created_at);
       } else if (type === "PAYMENT.CAPTURE.REFUNDED") {
         // Le remboursement porte l'identifiant de la capture d'origine
         // dans ses liens : c'est le seul fil vers la vente.
