@@ -629,6 +629,14 @@ export async function POST(req: NextRequest) {
             sale_amount_cents: saleAmountCents,
             currency: currency.toUpperCase(),
             source_app: "tiquiz",
+            // `order.total_price` est ce que l'acheteur a PAYE, donc du
+            // TTC. Le repli de Tipote vaut deja "ttc", mais le dire
+            // retire le pari : c'est la lecon de l'audit du 26 aout.
+            base: "ttc",
+            // Vente passee par LEUR tunnel : ils la versent. On
+            // l'enregistre pour que le tableau de bord de l'affilie soit
+            // complet, jamais pour la virer nous memes.
+            regle_par: "systeme_io",
             sio_order_id: String(orderId),
             product_name: productName,
             sale_at: new Date().toISOString(),

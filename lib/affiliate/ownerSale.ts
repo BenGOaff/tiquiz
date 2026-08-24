@@ -132,6 +132,12 @@ export async function commissionnerVente(vente: VenteACommissionner): Promise<vo
         // la TVA : sans ce champ, Tipote lisait le montant comme du TTC
         // et le rabotait une deuxieme fois (audit du 26 aout).
         base: "ht",
+        // ET QUI PAIE. Cette vente est prise sur NOTRE bon de commande,
+        // donc c'est nous qui versons la commission. Une vente passee
+        // par un tunnel Systeme.io est versee par EUX, et n'entre donc
+        // pas dans nos lots : sans ce champ, le premier lot aurait vire
+        // une deuxieme fois ce qu'ils ont deja paye.
+        regle_par: "nous",
         affiliate_ref: readSa(vente.affiliateRef),
         affiliate_code: readRefCode(vente.affiliateCode),
         product_name: vente.product.label,
