@@ -17,6 +17,7 @@
     "check:migrations-pending": "node scripts/check-pending-migrations.mjs",
     "check:prod": "node scripts/check-prod.mjs",
     "check:storage": "node scripts/storage-audit.mjs",
+    "storage:migrate": "node scripts/storage-migrate.mjs",
     "storage:archive": "node scripts/storage-archive.mjs",
     "paypal:setup": "node scripts/paypal-setup.mjs",
     "test:webhook": "node scripts/test-webhook-routing.mjs",
