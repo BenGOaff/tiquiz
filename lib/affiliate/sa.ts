@@ -60,8 +60,19 @@ export const SA_PARAM = "sa";
  */
 export const SA_COOKIE = "tq_sa";
 
-/** 90 jours, en secondes. Même fenêtre que l'attribution par email. */
-export const SA_MAX_AGE_SECONDS = 90 * 24 * 60 * 60;
+/**
+ * UN AN, COMME CHEZ SYSTEME.IO.
+ *
+ * Béné, 26 août 2026 : "son cookie est posé pour 1 an sur le device de
+ * son prospect."
+ *
+ * C'était 90 jours. Un prospect qui cliquait en janvier et achetait en
+ * juin ne payait donc plus personne, alors que le programme promet un
+ * an : l'affilié avait fait le travail et perdait la vente sur un délai
+ * qu'il ne maîtrise pas. Un quiz se partage longtemps, et une décision
+ * d'abonnement se prend rarement le jour du clic.
+ */
+export const SA_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
 
 /**
  * L'identifiant s'il est valide, `null` sinon.

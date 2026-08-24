@@ -68,11 +68,13 @@ test("le navigateur retrouve le sa dans l'URL ou dans le cookie", () => {
   assert.equal(readSaFromBrowser("", ""), null);
 });
 
-test("la fenetre du cookie est celle de l'attribution par email", () => {
-  // 90 jours cote Tipote (ATTRIBUTION_WINDOW_DAYS). Deux durees
-  // differentes pour la meme promesse donneraient deux reponses selon le
-  // chemin emprunte par l'acheteur.
-  assert.equal(SA_MAX_AGE_SECONDS, 90 * 24 * 60 * 60);
+test("le cookie dure UN AN, comme chez Systeme.io", () => {
+  // Bene, 26 aout : "son cookie est pose pour 1 an sur le device de son
+  // prospect." C'etait 90 jours : un prospect qui cliquait en janvier et
+  // achetait en juin ne payait plus personne, alors que le programme
+  // promet un an. Un quiz se partage longtemps, et une decision
+  // d'abonnement se prend rarement le jour du clic.
+  assert.equal(SA_MAX_AGE_SECONDS, 365 * 24 * 60 * 60);
 });
 
 // ── LA BASE DE COMMISSION ──

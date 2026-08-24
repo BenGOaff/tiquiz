@@ -274,6 +274,8 @@ Variations selon le canal :
 - Le plan Beta est accordé manuellement. Ne pas mettre Lifetime ou Beta en avant comme CTA.
 
 ### La commission affiliée (à dire juste)
+- **Le cookie dure 1 an**, et une inscription gratuite via son lien rattache la personne à l'affilié **à vie**. Celui qui a amené le contact le garde, même si le prospect croise un autre lien plus tard.
+- **Versable 30 jours après le paiement du client.** Ne jamais annoncer un autre délai : c'est celui que les affiliés connaissent.
 - **40 % sur Tiquiz, versés CHAQUE MOIS** tant que la personne recommandée reste abonnée. Ce n'est pas une prime one-shot : c'est un revenu récurrent, et c'est l'argument principal.
 - Le versement s'arrête si la personne arrête son abonnement ou se fait rembourser. Les mois déjà versés restent acquis.
 - Le simulateur de l'espace affilié projette sur 12 mois : c'est une fenêtre de calcul, pas une limite de durée. Ne jamais écrire "pendant 12 mois".

@@ -25,6 +25,7 @@ import path from "node:path";
 import test, { describe } from "node:test";
 
 import { memeBoite, normaliserEmail } from "@/lib/trial/moisOffert";
+import { REF_MAX_AGE_SECONDS } from "@/lib/affiliate/refLien";
 import { memePersonne } from "@/lib/affiliate/memeAdresse";
 import { commissionBaseCents } from "@/lib/checkout/commissionBase";
 
@@ -218,5 +219,50 @@ describe("S'affilier à soi même", () => {
     const src = lire("lib/trial/moisOffert.ts");
     assert.match(src, /from "@\/lib\/affiliate\/memeAdresse"/);
     assert.ok(!src.includes("const DOMAINES_GMAIL"), "la regle est de nouveau dupliquee");
+  });
+});
+
+// ── 6. LE RATTACHEMENT À VIE, CÔTÉ INSCRIPTION ──────────────────────
+
+describe("Une inscription gratuite rattache a son affilie", () => {
+  const signup = lire("app/api/auth/signup/route.ts");
+  const rattacher = lire("lib/affiliate/rattacherInscrit.ts");
+
+  test("L'INSCRIPTION LIT LES DEUX COOKIES", () => {
+    // Elle n'en lisait AUCUN : la règle "inscrit en free sur son lien =
+    // son affilié à vie" ne marchait que via Systeme.io, dont l'optin
+    // appelle `sio-conversion`. Sur nos pages, l'affilié perdait son
+    // prospect à l'expiration du cookie.
+    assert.match(signup, /rattacherInscrit\(\{/);
+    assert.match(signup, /req\.cookies\.get\(REF_COOKIE\)/);
+    assert.match(signup, /req\.cookies\.get\(SA_COOKIE\)/);
+  });
+
+  test("APRÈS la création du compte, et jamais avant", () => {
+    // Un rattachement qui échoue ne doit pas priver quelqu'un de son
+    // inscription : un compte non créé est un client perdu tout de
+    // suite, un rattachement manquant se rattrape.
+    const iCompte = signup.indexOf("generateLink");
+    const iRattache = signup.indexOf("rattacherInscrit({");
+    assert.ok(iCompte > 0 && iRattache > iCompte, "le rattachement passe avant la creation");
+  });
+
+  test("ET IL NE FAIT JAMAIS ÉCHOUER L'INSCRIPTION", () => {
+    assert.match(rattacher, /Promise<void>/);
+    assert.match(rattacher, /catch \(e\)/);
+    assert.match(rattacher, /AbortSignal\.timeout\(8000\)/);
+  });
+
+  test("SANS LIEN AFFILIÉ, aucun aller-retour reseau", () => {
+    // C'est le cas NORMAL et le plus fréquent : la majorité des
+    // inscriptions n'ont pas d'affilié. Appeler Tipote pour rien
+    // ralentirait toutes les inscriptions.
+    assert.match(rattacher, /if \(!ref && !sa\) return;/);
+  });
+
+  test("LE COOKIE DURE UN AN, donc le rattachement est encore possible", () => {
+    // Les deux moitiés de la même promesse : le cookie porte le lien
+    // jusqu'à l'inscription, l'inscription le grave à vie.
+    assert.equal(REF_MAX_AGE_SECONDS, 365 * 24 * 60 * 60);
   });
 });

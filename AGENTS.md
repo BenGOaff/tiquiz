@@ -2792,3 +2792,46 @@ vit dans `lib/affiliate/memeAdresse.ts`, partagée avec l'attribution des
 commissions. Enfermée ici, elle ne gardait que le CADEAU.
 
 Test : `tests/logic/audit-26-aout.test.mts`.
+
+## Le cookie d'affiliation dure UN AN (Béné, 26 août 2026)
+
+"Son cookie est posé pour 1 an sur le device de son prospect."
+
+`REF_MAX_AGE_SECONDS` et `SA_MAX_AGE_SECONDS` valaient 90 jours. Un
+prospect qui cliquait en janvier et achetait en juin ne payait plus
+personne, alors que le programme promet un an. Un quiz se partage
+longtemps, et une décision d'abonnement se prend rarement le jour du
+clic.
+
+Les deux cookies portent la MÊME durée : deux durées différentes
+donneraient deux réponses pour la même promesse selon le lien emprunté.
+
+## Une inscription gratuite rattache son affilié, à VIE
+
+"S'il s'inscrit en free sur son lien : il reste son affilié à vie."
+
+**Cette règle ne marchait QUE via Systeme.io.** Leur optin appelle
+`sio-conversion` chez Tipote, qui écrit le rattachement. Notre propre
+inscription (`/api/auth/signup`) ne lisait ni le cookie, ni le `?ref=`,
+et n'écrivait rien du tout.
+
+Un affilié qui envoyait quelqu'un sur NOS pages perdait donc son
+prospect à l'expiration du cookie : il avait fait le travail (amener
+l'inscrit) et ne touchait rien sur la vente qui arrivait trois mois plus
+tard. **Et le problème grossissait à chaque inscription prise chez
+nous**, c'est à dire à mesure qu'on sort de Systeme.io.
+
+`rattacherInscrit()` (`lib/affiliate/rattacherInscrit.ts`) est appelée
+APRÈS la création du compte, et ne jette jamais : le rattachement
+compte, l'inscription compte plus. Sans lien affilié dans les cookies,
+elle ne fait AUCUN aller-retour réseau, parce que c'est le cas normal et
+le plus fréquent.
+
+Le registre vit chez Tipote (`POST /api/affiliate/rattacher`, secret
+partagé), pas ici : le copier donnerait deux registres, donc deux
+réponses différentes le jour où l'un prend du retard.
+
+**Le PREMIER rattachement gagne**, et un affilié exclu n'en crée aucun :
+c'est à vie, donc ce n'est pas l'endroit où être permissif.
+
+Test : `tests/logic/audit-26-aout.test.mts`.
