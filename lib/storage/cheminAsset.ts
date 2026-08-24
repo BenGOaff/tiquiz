@@ -43,8 +43,19 @@ export const DOSSIERS_ASSETS = [
   "studio",
 ] as const;
 
-/** Les extensions qu'une image peut porter. Rien d'autre n'est écrit. */
-export const EXTENSIONS_ASSETS = ["webp", "png", "jpg", "jpeg", "gif", "avif"] as const;
+/**
+ * Les extensions qu'une image peut porter. Rien d'autre n'est écrit.
+ *
+ * **`svg` en est ABSENT, et c'est une décision.** Un SVG est un document
+ * qui peut porter du script, et il serait servi depuis un domaine à
+ * nous. `ico` y est, lui : c'est une image, elle n'exécute rien, et
+ * c'est un format de favicon que les créatrices envoient vraiment
+ * (`prepareFaviconForUpload` le laisse passer tel quel).
+ *
+ * Une extension refusée ne perd JAMAIS l'envoi : `televerserAsset`
+ * retombe sur Supabase, exactement comme avant.
+ */
+export const EXTENSIONS_ASSETS = ["webp", "png", "jpg", "jpeg", "gif", "avif", "ico"] as const;
 
 export type RefusChemin =
   | "dossier_inconnu"
