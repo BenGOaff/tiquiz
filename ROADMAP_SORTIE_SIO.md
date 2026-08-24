@@ -14,7 +14,12 @@ Ce fichier dit **ce qui est vérifié dans le code**, pas ce qu'on espère.
 Chaque point porte le fichier où il se trouve, pour qu'une prochaine
 session n'ait pas à re-chercher.
 
-Dernière vérification : 24 août 2026.
+Dernière vérification : 25 août 2026.
+
+**Fait le 25 août :** le contact Systeme.io est créé (chantier 1), le
+bouton Rembourser accepte PayPal, les échéances PayPal apparaissent enfin
+dans les ventes, l'Atelier émet ses factures, et les destinations
+affiliées atterrissent sur nos domaines sauf deux (voir plus bas).
 
 ---
 
@@ -40,10 +45,10 @@ Dernière vérification : 24 août 2026.
 | | Pourquoi | Chantier |
 |---|---|---|
 | Les emails | décision Béné : ils restent | jamais |
-| Le contact et ses étiquettes | on ne CRÉE pas de contact chez eux | **1** |
+| Le contact d'un INSCRIT GRATUIT | l'achat crée le contact depuis le 25 août, pas l'inscription | **1** |
 | Le paiement des affiliés | aucune table, aucun écran, aucun virement chez nous | **2** |
 | L'inscription d'un affilié | `affiliates.sa` est la clé primaire | **2** |
-| Les pages de vente | 1 page répliquée sur 8+ | **3** |
+| Les pages de vente | 1 page répliquée ; les pages "plan" sont LEURS bons de commande | **3** |
 | Les codes de réduction | 54 codes actifs chez eux, 0 chez nous | **4** |
 | Les clients payants actuels | tous abonnés chez Systeme.io | **5** |
 
@@ -51,45 +56,43 @@ Dernière vérification : 24 août 2026.
 
 ## 2. Chantier 1 : le contact doit EXISTER chez Systeme.io
 
-**C'est le plus urgent, et il grossit à chaque vente prise chez nous.**
+**FAIT LE 25 AOÛT POUR L'ACHAT. Reste l'inscription gratuite.**
 
-`poserTagAchat` (`lib/sio/appliquerTag.ts`) pose l'étiquette qui
-déclenche les séquences. Elle échoue, en silence pour la cliente, quand
-le contact n'existe pas là-bas. Le code le dit lui même :
+`poserTagAchat` posait l'étiquette qui déclenche les séquences, mais
+abandonnait quand le contact n'existait pas là-bas, c'est à dire le cas
+NORMAL de quelqu'un qui achète sur notre bon de commande. Il n'entrait
+dans AUCUNE séquence email, en silence.
 
-> "Le cas normal d'un client venu de NOTRE bon de commande sans jamais
-> passer par un tunnel Systeme.io. On le dit : c'est une personne qui
-> sortira de ses séquences."
+`assurerContact` cherche puis CRÉE (`lib/sio/appliquerTag.ts`), et
+re-cherche après un refus : deux webhooks simultanés créent la course, et
+Systeme.io refuse le second doublon, ce qui veut dire "il existe" et pas
+"ça a raté". L'identité de facturation part avec (société, TVA, adresse) :
+ces champs existaient dans sa fiche contact et n'étaient jamais remplis.
 
-Autrement dit : **quelqu'un qui achète sur notre bon de commande n'entre
-dans aucune séquence email.** Pas de message de bienvenue, pas de
-relance, pas de segment. Aujourd'hui ça touche peu de monde parce que
-presque tout passe encore par Systeme.io. Le jour où nos ventes
-deviennent la norme, ça touche tout le monde, et personne ne le voit
-puisque l'accès s'ouvre normalement.
+**Les slugs sont RELEVÉS, pas devinés** (`GET /contact_fields`, 25 août).
+Le nom de famille s'appelle `surname`, pas `last_name` : un slug inventé
+est accepté par l'API et IGNORÉ, donc le champ resterait vide pour
+toujours, sans erreur.
 
-**Ce qu'il faut faire :**
+**CE QUI RESTE :**
 
-1. `creerContact(email, prenom, nom)` dans `lib/sio/contacts.ts`, qui est
-   aujourd'hui en LECTURE SEULE (aucun POST). L'API le permet
-   (`POST /contacts`), et notre client `sioUserRequest` sait déjà écrire.
-2. `poserTagAchat` crée le contact s'il n'existe pas, puis étiquette.
-   Ordre imposé : le contact d'abord, l'étiquette ensuite.
-3. Rester **best-effort** : une panne chez eux ne doit jamais bloquer un
-   accès payé (règle du 7 août). On journalise fort.
-4. Étendre aux autres moments de vie, pas seulement l'achat : passage en
-   gratuit, résiliation, remboursement, montée de palier. Une séquence
-   "ton abonnement se termine" ne peut pas exister si l'étiquette n'est
-   jamais posée.
-5. **Ne JAMAIS créer une étiquette manquante** (règle déjà en place) :
-   une étiquette créée par nous avec une faute se retrouverait en double
-   et ses automatisations continueraient de pointer l'ancienne.
+1. **L'inscription GRATUITE ne crée pas le contact.** Seul le chemin
+   d'achat le fait. Tant que c'est vrai, le tunnel gratuit doit rester
+   chez Systeme.io (c'est l'une des deux exceptions du chantier 3.3), et
+   quelqu'un qui s'inscrit en direct sur `quiz.tipote.com/signup`
+   n'existe pas dans ses séquences.
+2. **Les autres moments de vie.** Résiliation, remboursement, montée de
+   palier : rien n'est étiqueté. Une séquence "ton abonnement se termine"
+   ne peut pas exister si l'étiquette n'est jamais posée.
+   *Décision Béné du 25 août : sur une montée de palier on AJOUTE la
+   nouvelle étiquette sans retirer l'ancienne.* C'est déjà le
+   comportement, et le contrôle d'écart le tolère explicitement.
 
-**Décision qui est la sienne :** quelles étiquettes pour quels
-événements. La liste vit dans `lib/sio/tags.ts` et doit correspondre à ce
-qui existe VRAIMENT dans son compte.
-
----
+**Ne jamais défaire :** on ne CRÉE pas d'étiquette manquante (une
+étiquette créée par nous avec une faute se retrouverait en double, et ses
+automatisations continueraient de pointer l'ancienne), et
+`assurerContact` ne s'appelle QUE depuis un chemin d'achat (créer un
+contact fait entrer quelqu'un dans sa liste).
 
 ## 3. Chantier 2 : payer les affiliés
 
@@ -170,26 +173,47 @@ tunnel bascule chez nous et quand : voir chantier 3.
 ## 4. Chantier 3 : les pages de vente
 
 Une seule page est répliquée chez nous : `content/sales/tiquiz.html`,
-servie sur `tiquiz.fr` (`lib/sales/servePage.ts`). Les pages par palier
-(`tiquiz-mensuel`, `-annuel`, `-gratuit`, les `-plus`) et toutes les
-pages Tipote sont encore chez Systeme.io.
+servie sur `tiquiz.fr` (`lib/sales/servePage.ts`).
 
-**La méthode est déjà écrite et éprouvée** (19 août) : capture depuis
-l'URL EN LIGNE avec `scripts/fetch-sales-page.mjs`, jamais depuis un
-export fait à la main, puis vérification dans un navigateur en cliquant
-les boutons. Un export SingleFile perd les scripts sans que rien ne le
-signale.
+**CE QU'ON A APPRIS LE 25 AOÛT, EN ESSAYANT DE RÉPLIQUER LES AUTRES.**
+Les pages `tiquiz-mensuel`, `tiquiz-annuel` et compagnie ne sont PAS des
+pages de vente : ce sont les BONS DE COMMANDE de Systeme.io. Elles
+portent un `<form id="form-checkout">` sans action, piloté par leur
+JavaScript. Les répliquer donnerait un formulaire de paiement mort, et on
+ne le verrait qu'à la première vente perdue. Les captures ont été jetées.
 
-Ce qu'il faut, page par page : capturer, servir, réécrire les liens de
-commande vers `/commande/<produit>` (`renderSalesPage` l'exige déjà comme
-paramètre obligatoire), vérifier le référencement (canonique, titre,
-description), et seulement ensuite repointer la destination affiliée.
+Le tunnel GRATUIT a le même problème : son formulaire d'optin crée le
+contact et pose le tag chez eux.
 
-**Décision qui est la sienne :** l'ordre. Le plus rentable d'abord est
-probablement le tunnel gratuit, parce que c'est lui qui alimente tout le
-reste.
+**Il reste donc à répliquer des pages qui VENDENT vraiment**, c'est à
+dire des pages de contenu dont les boutons mènent à notre bon de
+commande. `renderSalesPage` sait déjà réécrire ces boutons
+(`SALES_CHECKOUT_TARGETS`), et l'exige comme paramètre obligatoire.
 
----
+**La méthode est écrite et éprouvée** (19 août) : capture depuis l'URL EN
+LIGNE avec `scripts/fetch-sales-page.mjs`, jamais depuis un export fait à
+la main, puis vérification dans un navigateur en cliquant les boutons. Un
+export SingleFile perd les scripts sans que rien ne le signale.
+
+### 4.1 Les destinations affiliées (fait le 25 août, sauf deux)
+
+Les 4 paliers mènent maintenant à **notre bon de commande**
+(`tiquiz.fr/commande/<produit>`), le hub à `tiquiz.fr`. La chaîne du
+`?ref=` a été vérifiée bout en bout, et sur `tiquiz.fr` le bon de
+commande est ouvert sans clé.
+
+**Deux exceptions, nommées dans le code et dans le test :**
+
+- `tiquiz_free` : voir ci-dessus, c'est un optin chez eux.
+- `atelier` : **l'Atelier a son PROPRE registre d'affiliés.**
+  `attributeQuizingSale` résout le `sa` contre `profiles.
+  sio_affiliate_id` dans SA base, pas contre la table `affiliates` de
+  Tipote. Une affiliée Tipote qui n'est pas élève de l'Atelier serait
+  `affiliate_not_registered`, alors que le tunnel Systeme.io la paie. Et
+  l'Atelier ne lit que `?sa=`, jamais `?ref=`. **Repointer ce lien change
+  QUI est payé.** Le chantier est : unifier les deux registres, ou porter
+  `?ref=` côté Atelier ET accepter que seuls les élèves affiliés soient
+  payés.
 
 ## 5. Chantier 4 : ce que le bon de commande ne sait pas encore faire
 
@@ -260,27 +284,35 @@ l'Atelier vend un ACHAT UNIQUE, donc une facture par vente et pas une par
 
 ## 8. L'ordre que je recommande
 
-1. **Le contact Systeme.io** (chantier 1). Petit, et il empire chaque
-   jour où on vend chez nous.
-2. **Le bouton Rembourser PayPal** (chantier 4). Une heure, et ça retire
-   un aller-retour manuel à chaque geste commercial.
-3. **Les factures de l'Atelier** (chantier 7). Portage, la mécanique est
-   écrite et testée.
-4. **Les pages de vente**, une par une (chantier 3), en repointant la
-   destination affiliée juste après chacune.
-5. **Les codes de réduction** (chantier 4), avant d'avoir trop de
-   clients chez nous : c'est plus simple à poser avant qu'après.
-6. **Le paiement des affiliés** (chantier 2), qui est un vrai produit à
-   lui seul, et qu'il vaut mieux attaquer quand le reste est stable.
-7. **La clé technique des affiliés** (3.2), le jour où elle veut
-   recruter quelqu'un qui n'a pas de compte Systeme.io.
+**Fait le 25 août :** le contact Systeme.io à l'achat, le bouton
+Rembourser PayPal, les échéances PayPal dans les ventes, les factures de
+l'Atelier, les destinations affiliées sur nos domaines.
+
+Ce qui reste, du plus rentable au plus lourd :
+
+1. **Le paiement des affiliés** (chantier 2). *Décision Béné du 25 août :
+   export SEPA + virement à la main.* Il faut le cycle (approbation après
+   rétractation, lot mensuel figé, statuts qui bougent vraiment), les
+   coordonnées bancaires chez nous (donc chiffrées : c'est de la donnée
+   bancaire) et le fichier SEPA. C'est un produit à lui seul.
+2. **Le contact Systeme.io à l'INSCRIPTION GRATUITE** (chantier 1, moitié
+   restante). Tant qu'il manque, le tunnel gratuit ne peut pas quitter
+   Systeme.io.
+3. **Les codes de réduction** (chantier 4), avant d'avoir trop de clients
+   chez nous : plus simple à poser avant qu'après. Et une remise doit
+   descendre dans la facture ET dans la commission.
+4. **Les pages qui vendent vraiment** (chantier 3), une par une.
+5. **VIES** et **l'export OSS** (chantier 4), quand les ventes
+   européennes arrivent.
+6. **La clé technique des affiliés** (3.2), le jour où elle veut recruter
+   quelqu'un sans compte Systeme.io.
+7. **Les clients déjà là** (chantier 5), qui est une décision de fond
+   avant d'être du code.
 
 **Ce qui ne partira jamais :** les emails, donc le pont vers Systeme.io.
 Le but n'est pas de couper le lien, c'est de n'en garder qu'un seul, et
 qu'il aille dans un seul sens : nous écrivons chez eux, ils ne décident
 plus rien chez nous.
-
----
 
 ## 9. Hors sujet, mais noté : alléger le Supabase de Tiquiz
 
