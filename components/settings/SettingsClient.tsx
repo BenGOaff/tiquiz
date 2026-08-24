@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { CustomDomainsTab } from "@/components/settings/CustomDomainsTab";
 import { isPaidPlan } from "@/lib/planLimits";
+import { televerserAsset } from "@/lib/storage/televerser";
 import { helpUrl } from "@/lib/help";
 import { AFFILIATE_SIGNUP_URL } from "@/lib/affiliateUrls";
 import { toast } from "sonner";
@@ -516,9 +517,8 @@ export default function SettingsClient() {
       const ext = prepared.ext;
       // Horodaté comme tous les autres uploads : cf. QuizDetailClient.
       const path = `logos/${user.id}/logo-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from("public-assets").getPublicUrl(path);
+      const publicUrlTeleversee = await televerserAsset(supabase, path, prepared.blob);
+      const urlData = { publicUrl: publicUrlTeleversee };
       setBrandLogoUrl(urlData.publicUrl);
       toast.success(t("logoUploaded"));
     } catch (err) {

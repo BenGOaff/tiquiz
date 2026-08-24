@@ -14,6 +14,7 @@ import { useTranslations } from "next-intl";
 import { Wand2, Loader2 } from "lucide-react";
 import { ImageStudio } from "@/components/visual-studio/ImageStudio";
 import { prepareUpload } from "@/lib/images/compress";
+import { televerserAsset } from "@/lib/storage/televerser";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import { BRAND_PRESETS } from "@/lib/visualStudio/presets";
 import { Button } from "@/components/ui/button";
@@ -101,10 +102,7 @@ export function TiquizStudioButton({
     const prepared = await prepareUpload(blob, "studio");
     const ext = prepared.ext;
     const path = `studio/${user.id}/${contentId ? contentId + "-" : ""}${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("public-assets").upload(path, prepared.blob, { upsert: true, contentType: prepared.blob.type || "image/png" });
-    if (error) throw error;
-    const { data } = supabase.storage.from("public-assets").getPublicUrl(path);
-    return { url: data.publicUrl };
+    return { url: await televerserAsset(supabase, path, prepared.blob) };
   }
 
   return (

@@ -381,11 +381,222 @@ plus rien chez nous.
 > supabase de Tiquiz, on frôle les limites et on doit éviter sachant
 > qu'on a un super serveur. Note le on en parle demain."
 
-**À discuter le 25 août. Rien n'est décidé, rien n'a été touché.** Ce qui
-suit est un repérage fait dans les migrations, pour ne pas partir de
-zéro demain. **Je n'ai pas mesuré la base réelle** : la première chose à
-faire est de regarder les tailles réelles, pas de théoriser (leçon du
-22 août : un journal se LIT, il ne se déduit pas).
+### CE N'EST PAS LA BASE, CE SONT LES FICHIERS (mesuré le 26 août)
+
+La capture de l'écran d'usage tranche, et elle tranche contre
+l'hypothèse de départ :
+
+| | Utilisé | Plan gratuit |
+|---|---|---|
+| **Stockage (fichiers)** | **0,73 Go (73 %)** | 1 Go |
+| Base de données | 0,079 Go (16 %) | 0,5 Go |
+| Egress | 0,647 Go (13 %) | 5 Go |
+| Utilisateurs actifs | 43 | 50 000 |
+
+La base est à 16 % avec 43 utilisateurs : elle n'est pas le sujet. Le
+stockage est à 73 %, et **il ne peut que grossir**, pour deux raisons
+qui sont toutes les deux dans le code.
+
+**1. Chaque envoi écrit un fichier NEUF.**
+
+```
+const path = `quiz-backgrounds/${user.id}/${quizId}-${Date.now()}.${ext}`;
+```
+
+L'horodatage est VOULU et il ne faut pas le retirer : un chemin stable
+laissait les navigateurs afficher l'ancien logo pendant la durée de leur
+cache, et c'est un bug déjà corrigé. Mais il a une conséquence que
+personne n'avait tirée : changer l'image de fond d'un quiz dix fois écrit
+DIX fichiers, et les neuf premiers restent. Le `upsert: true` posé à côté
+ne remplace jamais rien, puisque le chemin est neuf à chaque fois.
+
+**2. Aucun fichier n'est JAMAIS supprimé.** Ni au remplacement d'une
+image, ni à la suppression du quiz qui la portait. `storage.remove()`
+n'apparaît nulle part dans le dépôt Tiquiz.
+
+Ce qui est DÉJÀ bon, et qu'il ne faut pas refaire : les images sont
+compressées à l'envoi (WebP qualité 92, bord max 2400 px en couverture,
+1600 en contenu, 1200 en OG, 900 en logo). Le problème n'est donc pas le
+POIDS de chaque fichier, c'est leur NOMBRE.
+
+### Mesurer avant de supprimer
+
+**CES COMMANDES SE LANCENT SUR LE SERVEUR, PAS SUR TON PC.** Elles
+lisent le `.env` de production, qui n'existe que là bas. Sur Windows
+elles répondent `Missing script` (le code n'y est pas encore) ou
+`Il manque NEXT_PUBLIC_SUPABASE_URL` (pas de `.env`).
+
+```bash
+# 1. se connecter au serveur, puis :
+cd /home/tipote/tiquiz-app && npm run check:storage
+cd /home/tipote/tiquiz-app && npm run check:storage -- --detail   # + les 40 plus gros orphelins
+cd /home/tipote/tipote-app && npm run check:storage
+```
+
+Et il faut que le code SOIT DÉJÀ DÉPLOYÉ : le script arrive avec le
+`git pull`, comme le reste.
+
+`scripts/storage-audit.mjs` liste le bucket, le pèse par dossier, croise
+chaque fichier avec les colonnes qui pourraient le citer, et dit combien
+pèse ce que plus personne ne référence. **Il ne supprime rien et n'en a
+pas le pouvoir** : un fichier effacé par erreur, c'est l'image de
+couverture d'une cliente qui disparaît de son quiz en ligne, sans retour
+arrière.
+
+Et il REFUSE de rendre un verdict si une seule de ses sources n'a pas pu
+être lue : les fichiers qu'elle cite paraîtraient orphelins, et proposer
+de les supprimer reviendrait à proposer d'effacer les images de résultat
+de tout le monde. Une connaissance partielle ne doit jamais ressembler à
+une connaissance complète.
+
+### Les trois corrections, dans l'ordre de rentabilité
+
+1. **Le ménage de l'existant.** Ce que le script mesure. Une seule
+   passe, sur ce qui s'est accumulé depuis le lancement.
+2. **Supprimer l'ancien fichier au remplacement.** On connaît son
+   adresse : c'est la valeur de la colonne qu'on s'apprête à écraser.
+   C'est ce qui empêche le problème de revenir.
+3. **Supprimer les fichiers d'un quiz supprimé.** Aujourd'hui ils
+   survivent à leur quiz pour toujours.
+
+**Aucune des trois n'est écrite** : supprimer des fichiers d'une cliente
+est irréversible, et ça se décide avec Béné, script de mesure en main.
+
+### On archive AVANT, on supprime après (et peut-être jamais)
+
+Béné, 26 août : "on ne supprime rien des clients à ce stade. On peut
+archiver l'existant quelque part pour le retrouver en cas de besoin ?"
+
+**Sur le serveur, toujours.** L'archive est écrite sur le disque du
+serveur (400 Go, dont 47 utilisés), pas sur le PC.
+
+```bash
+cd /home/tipote/tiquiz-app && npm run storage:archive
+cd /home/tipote/tipote-app && npm run storage:archive
+# apres une coupure reseau, ne retelecharge que ce qui manque :
+cd /home/tipote/tiquiz-app && npm run storage:archive -- --reprendre
+```
+
+L'archive atterrit dans `/srv/storage-archive/<projet>/`, et elle est
+donc emportée par la sauvegarde hebdomadaire Hostinger avec le reste du
+serveur.
+
+`scripts/storage-archive.mjs` copie le bucket entier sur CE serveur, en
+gardant l'arborescence, et écrit un `_manifeste.json` à côté : chemin,
+taille, type, date de création, empreinte SHA-256. Sans le manifeste on
+aurait un tas de fichiers dont personne ne saurait à quel quiz ils
+appartenaient.
+
+**Il ne supprime rien et ne connaît que la lecture.** Il VÉRIFIE la
+taille de chaque téléchargement (une réponse tronquée s'écrirait sans
+bruit, et l'archive mentirait au moment exact où on lui fait confiance)
+et il SORT EN ERREUR si un seul fichier manque : une archive incomplète
+qui se croit complète est pire que pas d'archive, parce qu'on
+supprimerait ensuite en confiance.
+
+L'empreinte SHA-256 sert deux fois : vérifier plus tard qu'un fichier
+n'a pas bougé, et repérer les doublons exacts (le même visuel envoyé dix
+fois sous dix noms différents, ce que l'horodatage garantit).
+
+### Servir les images depuis NOTRE serveur
+
+Béné, 26 août : "on a un super serveur quasiment inutilisé : on ne peut
+pas l'exploiter davantage ? Histoire de ne pas avoir un abonnement en
+plus à payer et d'éviter les futures alertes, sur toutes les app ?"
+
+| | Supabase (gratuit) | Le serveur |
+|---|---|---|
+| stockage | 1 Go, **à 73 %** | 400 Go, à 47 |
+| bande passante | 5 Go | 32 To, à 0,106 |
+| CPU | - | à 1 % |
+
+**Et ce chemin est déjà PROUVÉ dans ce dépôt.** Les vidéos de Popquiz
+ne sont pas chez Supabase : elles sont sur ce serveur, envoyées par un
+serveur TUS et servies par nginx (`infra/nginx/videos.*.conf`,
+`lib/popquiz/playback.ts`). La migration a même son garde-fou :
+`isSelfHostedPath()` distingue un chemin auto-hébergé d'un ancien chemin
+Supabase, et le code sert les deux. **On ne migre rien : les anciennes
+adresses continuent de marcher pour toujours, et seuls les NOUVEAUX
+envois vont sur le serveur.**
+
+Pour les images c'est plus simple que pour les vidéos, et il faut le
+dire pour ne pas recopier la complexité inutilement :
+
+- **Pas de `secure_link`.** Une vidéo est réservée aux élèves, donc son
+  URL expire. Une image de quiz est PUBLIQUE : elle s'affiche sur une
+  page ouverte et part dans les aperçus de partage. Une URL qui expire
+  casserait l'aperçu Facebook d'un quiz partagé trois jours plus tôt.
+- **Cache d'un an.** Le nom du fichier porte déjà l'horodatage de
+  l'envoi, donc une adresse ne désigne jamais deux contenus différents.
+- **Aucune exécution.** Ces fichiers viennent du téléversement d'une
+  cliente : tout ce qui n'est pas une image se télécharge au lieu de
+  s'afficher, et les extensions exécutables sont refusées.
+
+**La sauvegarde est confirmée** (Béné, 26 août) : Hostinger fait des
+snapshots hebdomadaires du serveur entier, stockés séparément. Un
+disque mort ne perd donc au pire qu'une semaine d'images téléversées,
+et l'archive du bucket vit sur le même disque, donc dans le même
+snapshot. C'était le seul argument sérieux en face : il tombe.
+
+### Ce qui est écrit, et comment on l'allume
+
+Le code est là et **il est INERTE tant qu'une variable n'est pas
+posée**. Sans `NEXT_PUBLIC_ASSETS_BASE_URL`, tout continue d'aller chez
+Supabase, exactement comme avant.
+
+| Pièce | Rôle |
+|---|---|
+| `lib/storage/cheminAsset.ts` | PUR et testé : quel chemin a le droit d'être écrit, et quelle adresse publique il obtient |
+| `app/api/upload/asset/route.ts` | écrit le fichier dans `ASSETS_DIR` |
+| `lib/storage/televerser.ts` | **le seul endroit qui décide** entre notre serveur et Supabase |
+| `infra/nginx/assets.*.conf` | nginx sert le dossier |
+
+**Les quinze appels recopiés dans les composants ont disparu.** Ils
+appelaient tous `supabase.storage.from("public-assets").upload(...)` :
+changer de destination demandait quinze modifications, et il suffisait
+d'en oublier une pour que la moitié des images parte encore chez
+Supabase sans que rien ne le signale. C'est le motif du dépôt depuis
+trois mois (les réseaux de partage, le score, l'alignement du
+sous-titre, la disposition des réponses).
+
+**Sur le serveur, pour allumer :**
+
+```bash
+sudo mkdir -p /srv/public-assets && sudo chown tipote:tipote /srv/public-assets
+sudo certbot certonly --nginx -d assets.quiz.tipote.com
+sudo cp /home/tipote/tiquiz-app/infra/nginx/assets.quiz.tipote.com.conf /etc/nginx/sites-available/
+sudo ln -s /etc/nginx/sites-available/assets.quiz.tipote.com.conf /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Puis dans le `.env` de l'app, et SEULEMENT une fois que l'adresse
+répond :
+
+```
+NEXT_PUBLIC_ASSETS_BASE_URL=https://assets.quiz.tipote.com
+ASSETS_DIR=/srv/public-assets
+```
+
+`NEXT_PUBLIC_*` est gravée au moment du `next build` : il faut donc
+reconstruire, pas seulement redémarrer (leçon du 22 août).
+
+**La variable est VALIDÉE, pas seulement lue.** Une valeur vide, en
+`http`, ou pointant sur `localhost` est ignorée et tout retombe sur
+Supabase. Un `??` ne protège que de la variable absente, jamais de la
+variable fausse : ici une base fausse écrirait des adresses MORTES dans
+la base de données, sur des quiz publiés, et elles y resteraient après
+correction de la variable.
+
+**Et on ne perd jamais l'envoi d'une créatrice.** Si notre serveur
+refuse (disque plein, droits, route pas déployée), le navigateur
+retombe sur Supabase et le dit dans la console. Une image au mauvais
+endroit se déplace ; une image perdue se re-téléverse, et la créatrice
+ne sait pas pourquoi ça a raté.
+
+### Le reste, sur la base elle même
+
+**Rien n'est décidé, rien n'a été touché.** Ce qui suit est un repérage
+fait dans les migrations. Ce n'est PAS urgent : la base est à 16 %.
 
 ```sql
 -- À passer dans le SQL Editor de Supabase Tiquiz avant toute décision.
