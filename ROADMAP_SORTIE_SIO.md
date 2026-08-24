@@ -18,8 +18,9 @@ Dernière vérification : 25 août 2026.
 
 **Fait le 25 août :** le contact Systeme.io est créé (chantier 1), le
 bouton Rembourser accepte PayPal, les échéances PayPal apparaissent enfin
-dans les ventes, l'Atelier émet ses factures, et les destinations
-affiliées atterrissent sur nos domaines sauf deux (voir plus bas).
+dans les ventes, l'Atelier émet ses factures, les destinations affiliées
+atterrissent sur nos domaines sauf deux, et **le cycle de versement des
+affiliés existe** (chantier 2.1).
 
 ---
 
@@ -46,7 +47,7 @@ affiliées atterrissent sur nos domaines sauf deux (voir plus bas).
 |---|---|---|
 | Les emails | décision Béné : ils restent | jamais |
 | Le contact d'un INSCRIT GRATUIT | l'achat crée le contact depuis le 25 août, pas l'inscription | **1** |
-| Le paiement des affiliés | aucune table, aucun écran, aucun virement chez nous | **2** |
+| ~~Le paiement des affiliés~~ | **fait le 25 août** : coordonnées, lot, fichiers SEPA et PayPal | ~~2~~ |
 | L'inscription d'un affilié | `affiliates.sa` est la clé primaire | **2** |
 | Les pages de vente | 1 page répliquée ; les pages "plan" sont LEURS bons de commande | **3** |
 | Les codes de réduction | 54 codes actifs chez eux, 0 chez nous | **4** |
@@ -98,44 +99,34 @@ contact fait entrer quelqu'un dans sa liste).
 
 C'est le plus gros, et il se découpe en trois.
 
-### 3.1 Rien ne paie personne aujourd'hui
+### 3.1 Le cycle de versement (FAIT le 25 août)
 
-Vérifié : `affiliate_commissions` porte bien les statuts
-(`pending / approved / paid / cancelled / rejected`) et une colonne
-`payout_id`, mais **aucune table `affiliate_payouts` n'existe, et aucun
-code ne fait passer une commission d'un statut à l'autre.** Les statuts
-sont décoratifs.
+Béné : "on doit proposer le choix aux affiliés : Paypal ou virement
+bancaire." Et : export SEPA, virement à la main.
 
-Et la page Paiement de l'espace affilié
-(`app/affiliate/paiement/page.tsx`, côté Tipote) dit explicitement que
-tout se passe chez Systeme.io : c'est là que l'affilié règle son PayPal
-ou son IBAN, et c'est là que Béné vire entre le 10 et le 13 du mois.
+Ce qui existe maintenant : l'affiliée choisit sa méthode et saisit ses
+coordonnées (`/paiement`), les commissions mûrissent en `approved` après
+21 jours, un lot mensuel les fige, et l'admin télécharge le fichier
+`pain.001.001.03` pour la banque ou la liste à tabulations pour PayPal
+(`/admin/versements`).
 
-**Ce qu'il faut :**
+**AUCUN ARGENT NE PART D'UN ÉCRAN** : on produit un fichier, elle le
+dépose, sa banque exécute.
 
-1. **Les coordonnées de paiement chez nous.** Les colonnes existent
-   (`paypal_email`, `iban_holder`, `iban_number`) mais ont été
-   volontairement débranchées en juin, parce qu'elles faisaient croire
-   à une configuration qui n'existait pas. Les rebrancher veut dire les
-   traiter comme des données bancaires : chiffrement au repos (le
-   modèle est déjà là, `lib/sio/keyCrypto.ts`), et aucune lecture par
-   une route qui n'en a pas besoin.
-2. **Un cycle de versement.** Table `affiliate_payouts`, un lot par
-   mois et par affilié, qui fige les commissions `approved` et bascule
-   tout en `paid`. Le lot doit être une PIÈCE, pas un calcul refait à
-   l'affichage : sinon la somme affichée bouge quand une commission est
-   annulée après coup.
-3. **Une règle d'approbation, écrite une fois.** Une commission passe
-   `pending -> approved` quand le délai de rétractation est écoulé ET
-   que la vente n'a pas été remboursée. Aujourd'hui c'est Béné qui le
-   fait de tête dans Systeme.io.
-4. **Le versement lui même.** Deux voies possibles, et c'est une
-   décision :
-   - PayPal Payouts (API) : automatique, commission PayPal par envoi ;
-   - virement à la main depuis un export SEPA : gratuit, manuel.
-   Dans les deux cas il faut **la facture de commission** (l'affilié est
-   un prestataire : c'est LUI qui facture, ou on émet un
-   autofacturation avec son accord écrit).
+**À poser sur le serveur** : `SEPA_DEBTOR_IBAN` (et `SEPA_DEBTOR_BIC` si
+la banque l'exige). Sans elle, le fichier SEPA n'est pas produit et
+l'écran le DIT. La liste PayPal se télécharge sans ça.
+
+**Ce qui reste sur ce chantier :**
+
+1. **La facture de commission.** L'affiliée est un prestataire : c'est
+   elle qui facture, ou on émet une autofacturation avec son accord
+   écrit. Le module de facturation existe côté Tiquiz depuis le 24 août
+   et se porterait, mais c'est une pièce à l'envers (nous sommes
+   l'acheteur) : à traiter comme un chantier propre.
+2. **Les commissions historiques restent chez Systeme.io.** Deux
+   systèmes paient en parallèle pendant la transition ; la page Paiement
+   le dit, pour qu'une affiliée sache lequel regarde son argent.
 
 ### 3.2 Un affilié doit pouvoir s'inscrire sans compte Systeme.io
 
@@ -290,17 +281,13 @@ l'Atelier, les destinations affiliées sur nos domaines.
 
 Ce qui reste, du plus rentable au plus lourd :
 
-1. **Le paiement des affiliés** (chantier 2). *Décision Béné du 25 août :
-   export SEPA + virement à la main.* Il faut le cycle (approbation après
-   rétractation, lot mensuel figé, statuts qui bougent vraiment), les
-   coordonnées bancaires chez nous (donc chiffrées : c'est de la donnée
-   bancaire) et le fichier SEPA. C'est un produit à lui seul.
-2. **Le contact Systeme.io à l'INSCRIPTION GRATUITE** (chantier 1, moitié
+1. **Le contact Systeme.io à l'INSCRIPTION GRATUITE** (chantier 1, moitié
    restante). Tant qu'il manque, le tunnel gratuit ne peut pas quitter
    Systeme.io.
-3. **Les codes de réduction** (chantier 4), avant d'avoir trop de clients
+2. **Les codes de réduction** (chantier 4), avant d'avoir trop de clients
    chez nous : plus simple à poser avant qu'après. Et une remise doit
    descendre dans la facture ET dans la commission.
+3. **La facture de commission des affiliés** (3.1, ce qui reste).
 4. **Les pages qui vendent vraiment** (chantier 3), une par une.
 5. **VIES** et **l'export OSS** (chantier 4), quand les ventes
    européennes arrivent.
