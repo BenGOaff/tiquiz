@@ -44,7 +44,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** Le dossier servi par nginx. Voir `infra/nginx/assets.*.conf`. */
-const DOSSIER = (process.env.ASSETS_DIR ?? "/srv/public-assets").replace(/\/+$/, "");
+const DOSSIER = (process.env.ASSETS_DIR ?? "/srv/assets-tiquiz").replace(/\/+$/, "");
 
 /**
  * 12 Mo. Les images sont déjà compressées côté navigateur (WebP q92,

@@ -24,6 +24,20 @@ import {
 
 const lire = (rel: string) => fs.readFileSync(path.join(process.cwd(), rel), "utf8");
 
+/** Tous les fichiers de code sous ces dossiers, recursivement. */
+function sourcesDe(dossiers: string[]): string[] {
+  const trouves: string[] = [];
+  const descendre = (rel: string) => {
+    for (const e of fs.readdirSync(path.join(process.cwd(), rel), { withFileTypes: true })) {
+      const sous = `${rel}/${e.name}`;
+      if (e.isDirectory()) descendre(sous);
+      else if (/\.tsx?$/.test(e.name)) trouves.push(sous);
+    }
+  };
+  for (const d of dossiers) descendre(d);
+  return trouves.sort();
+}
+
 const MOI = "11111111-2222-3333-4444-555555555555";
 const AUTRE = "99999999-8888-7777-6666-555555555555";
 
@@ -134,21 +148,27 @@ describe("L'adresse publique de nos fichiers", () => {
 
 describe("La chaine, qui n'est dans aucune fonction pure", () => {
   test("PLUS AUCUN COMPOSANT NE TELEVERSE DIRECTEMENT", () => {
-    // Il y avait QUINZE appels recopies : changer de destination
-    // demandait quinze modifications, et il suffisait d'en oublier une
-    // pour que la moitie des images parte encore chez Supabase sans que
-    // rien ne le signale. C'est le motif du depot depuis trois mois.
-    for (const f of [
-      "components/quiz/QuizDetailClient.tsx",
-      "components/quiz/SurveyDetailClient.tsx",
-      "components/visual-studio/TiquizStudioButton.tsx",
-      "components/settings/SettingsClient.tsx",
-    ]) {
-      assert.ok(
-        !lire(f).includes('storage.from("public-assets").upload'),
-        `${f} televerse de nouveau en direct`,
-      );
-    }
+    // Il y avait une quinzaine d'appels recopies : changer de
+    // destination demandait autant de modifications, et il suffisait
+    // d'en oublier une pour que la moitie des images parte encore chez
+    // Supabase sans que rien ne le signale. C'est le motif du depot
+    // depuis trois mois.
+    //
+    // ON BALAIE LE DOSSIER, on ne tient pas une liste de fichiers. Une
+    // liste ecrite a la main ne voit pas le composant ajoute demain, et
+    // c'est exactement lui qui rouvrirait la porte.
+    const fautifs = sourcesDe(["components", "app"]).filter((f) =>
+      lire(f).includes('storage.from("public-assets").upload'),
+    );
+    assert.deepEqual(fautifs, [], `televersement direct : ${fautifs.join(", ")}`);
+
+    // Et le test doit pouvoir echouer : si plus personne n'appelle
+    // `televerserAsset`, c'est que la chaine a ete debranchee, pas
+    // qu'elle est propre.
+    const passentPar = sourcesDe(["components"]).filter((f) =>
+      lire(f).includes("televerserAsset("),
+    );
+    assert.ok(passentPar.length > 0, "plus aucun composant n'appelle televerserAsset");
   });
 
   test("LA ROUTE PREND L'IDENTITE DANS LA SESSION, jamais dans le corps", () => {
