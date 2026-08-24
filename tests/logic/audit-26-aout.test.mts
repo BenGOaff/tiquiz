@@ -25,6 +25,7 @@ import path from "node:path";
 import test, { describe } from "node:test";
 
 import { memeBoite, normaliserEmail } from "@/lib/trial/moisOffert";
+import { REF_MAX_AGE_SECONDS } from "@/lib/affiliate/refLien";
 import { memePersonne } from "@/lib/affiliate/memeAdresse";
 import { commissionBaseCents } from "@/lib/checkout/commissionBase";
 
@@ -43,15 +44,16 @@ describe("Une vente qui tombe ne paie personne", () => {
   });
 
   test("LE REMBOURSEMENT PAYPAL AUSSI", () => {
-    assert.match(paypal, /annulerCommissionVente\(\{ reference: abonnementId, motif: "remboursement" \}\)/);
+    assert.match(paypal, /annulerCommissionVente\(\{[\s\S]{0,300}?motif: "remboursement"/);
   });
 
   test("LA CLÉ D'ANNULATION EST CELLE DE LA CRÉATION", () => {
-    // `commissionnerVente` écrit `stripe:<reference>` dans
+    // `commissionnerVente` écrit `<moyen>:<reference>` dans
     // `sio_order_id`. Une clé qui ne correspond pas n'annule rien, en
-    // silence, ce qui est exactement le bug qu'on ferme.
-    assert.match(ownerSale, /const ref = `stripe:\$\{reference\}`/);
-    assert.match(ownerSale, /sio_order_id: `stripe:\$\{reference\}`/);
+    // silence, ce qui est exactement le bug qu'on ferme. C'est pour ça
+    // que l'appelant passe la clé ENTIÈRE, préfixe compris.
+    assert.match(ownerSale, /const ref = `\$\{vente\.moyen\}:\$\{reference\}`/);
+    assert.match(ownerSale, /sio_order_id: cle,/);
   });
 
   test("L'ANNULATION NE FAIT JAMAIS ÉCHOUER LE REMBOURSEMENT", () => {
@@ -102,44 +104,81 @@ describe("Quand la banque reprend l'argent", () => {
 
 // ── 3. LE MOIS OFFERT, ET LES DEUX BUGS OPPOSÉS ─────────────────────
 
-describe("Le mois offert et la commission", () => {
-  test("PAYPAL NE COMMISSIONNE PLUS À L'ACTIVATION QUAND IL Y A UN ESSAI", () => {
-    // PayPal ACTIVE sans qu'un euro ait bougé : la commission naissait
-    // sur une vente à zéro, mûrissait en 21 jours, et partait AVANT le
-    // premier prélèvement, qui tombe au 30e.
-    assert.match(paypal, /if \(abo\.trialDays > 0\) \{[\s\S]{0,400}?commission REPORTEE/);
+describe("On paie chaque mois ou le client reste abonne", () => {
+  test("L'ACTIVATION PAYPAL NE COMMISSIONNE RIEN", () => {
+    // Elle ouvre l'accès, elle ne fait pas rentrer d'argent : un
+    // abonnement qui démarre par un mois offert est ACTIVÉ sans qu'un
+    // euro ait bougé. La commission naissait alors sur une vente à
+    // zéro, mûrissait en 21 jours, et partait AVANT le premier
+    // prélèvement, qui tombe au 30e.
+    const activation = paypal.slice(paypal.indexOf('eventType !== "BILLING.SUBSCRIPTION.ACTIVATED"'));
+    assert.ok(
+      !activation.includes("commissionnerVente"),
+      "l'activation commissionne de nouveau",
+    );
+    assert.match(activation, /L'ACTIVATION NE COMMISSIONNE RIEN/);
   });
 
-  test("ELLE PART À L'ÉCHÉANCE, avec la MÊME clé", () => {
-    // Donc la deuxième échéance tombe sur la contrainte d'unicité et ne
-    // paie pas deux fois. Un abonnement sans essai est commissionné à
-    // l'activation : l'échéance est alors un doublon, et c'est voulu.
+  test("CHAQUE ÉCHÉANCE PAYPAL COMMISSIONNE, sur la clé de LA VENTE", () => {
+    // Avec l'abonnement pour clé, la deuxième échéance tombait sur la
+    // contrainte d'unicité et l'affilié ne touchait plus rien à partir
+    // du deuxième mois.
     const echeance = paypal.slice(paypal.indexOf('eventType === "PAYMENT.SALE.COMPLETED"'));
-    assert.match(echeance.slice(0, 3000), /commissionnerVente\(\{[\s\S]{0,300}?reference: abonnementId/);
+    assert.match(echeance.slice(0, 3000), /reference: encaissement\.saleRef/);
+    assert.match(echeance.slice(0, 3000), /moyen: "paypal"/);
   });
 
-  test("STRIPE : UNE VENTE AVEC ESSAI EST À ZÉRO AU CHECKOUT", () => {
-    // C'est la cause du bug miroir : `amount_total` vaut 0, donc la base
-    // vaut 0, donc AUCUNE commission n'était créée, et rien ne la créait
-    // plus jamais ensuite. L'affilié promouvait le mois offert et
-    // n'était payé sur aucune de ces ventes.
-    assert.equal(commissionBaseCents(0, 0), 0);
+  test("LE CHECKOUT STRIPE NE COMMISSIONNE QUE LES ACHATS UNIQUES", () => {
+    // Un abonnement est commissionné facture par facture. Commissionner
+    // au checkout EN PLUS ferait deux commissions sur le premier mois,
+    // sous deux clés différentes, donc sans que l'unicité les voie.
+    assert.match(stripe, /if \(product\.interval === null\) \{[\s\S]{0,400}?commissionnerVente/);
   });
 
-  test("STRIPE LA CRÉE À LA PREMIÈRE FACTURE PAYÉE", () => {
-    assert.match(stripe, /commissionnerEcheanceOfferte/);
+  test("CHAQUE FACTURE STRIPE PAYÉE COMMISSIONNE, sur la clé de LA FACTURE", () => {
+    assert.match(stripe, /commissionnerEcheance\(abonnement, objet\)/);
     assert.match(stripe, /eventType === "invoice\.paid"/);
-    // Gaté sur la mécanique : sur une vente sans essai la commission est
-    // déjà partie au checkout, et repasser ici en créerait une SECONDE
-    // sous une autre clé.
-    assert.match(stripe, /free_month_days[\s\S]{0,200}?if \(jours <= 0\) return;/);
-    // Sur ce qui a VRAIMENT été encaissé, jamais le prix du catalogue.
-    assert.match(stripe, /facture\.amount_paid/);
+    const bloc = stripe.slice(stripe.indexOf("async function commissionnerEcheance("));
+    assert.match(bloc, /reference: factureId/);
+    // Sur ce qui a VRAIMENT été encaissé, jamais le prix du catalogue :
+    // une remise, un prorata ou une TVA différente changent la somme.
+    assert.match(bloc, /facture\.amount_paid/);
   });
 
-  test("LA CLÉ EST L'ABONNEMENT, donc une seule commission", () => {
-    const bloc = stripe.slice(stripe.indexOf("async function commissionnerEcheanceOfferte"));
-    assert.match(bloc, /reference: subId/);
+  test("LE MOIS OFFERT SE RÈGLE TOUT SEUL, sans un drapeau de plus", () => {
+    // La facture d'essai vaut 0, donc pas de commission ; la première
+    // vraie échéance en crée une. Plus aucun code ne lit
+    // `free_month_days` pour decider d'une commission.
+    assert.equal(commissionBaseCents(0, 0), 0);
+    const bloc = stripe.slice(stripe.indexOf("async function commissionnerEcheance("));
+    assert.ok(!bloc.includes("free_month_days"), "la commission depend de nouveau d'un drapeau");
+    assert.match(bloc, /if \(paye <= 0\) return;/);
+  });
+
+  test("UNE FACTURE SANS IDENTIFIANT NE COMMISSIONNE PAS", () => {
+    // Elle serait impossible à dédupliquer, donc rejouée à chaque
+    // reessai du webhook : mieux vaut une commission manquante, qui se
+    // rattrape, qu'une commission versée douze fois.
+    const bloc = stripe.slice(stripe.indexOf("async function commissionnerEcheance("));
+    assert.match(bloc, /if \(!factureId\)/);
+    assert.match(bloc, /impossible a dedupliquer/);
+  });
+
+  test("UN REMBOURSEMENT N'ANNULE QUE L'ÉCHÉANCE REMBOURSÉE", () => {
+    // Les mois déjà encaissés ont été gagnés et restent acquis : Béné
+    // dit "on arrête de payer s'il se barre", pas "on reprend ce qui a
+    // été versé".
+    assert.match(stripe, /charge as \{ invoice\?: unknown \}/);
+    assert.match(stripe, /references: \[/);
+    assert.match(paypal, /remboursement\?\.saleRef \? `paypal:\$\{remboursement\.saleRef\}`/);
+  });
+
+  test("LE MOYEN DE PAIEMENT PRÉFIXE LA CLÉ", () => {
+    // Le préfixe était `stripe:` pour tout le monde, PayPal compris :
+    // ça marchait par accident, et une clé qui ment sur sa provenance
+    // est introuvable le jour où il faut la retrouver à la main.
+    assert.match(ownerSale, /const ref = `\$\{vente\.moyen\}:\$\{reference\}`/);
+    assert.match(ownerSale, /moyen: "stripe" \| "paypal";/);
   });
 });
 
@@ -180,5 +219,50 @@ describe("S'affilier à soi même", () => {
     const src = lire("lib/trial/moisOffert.ts");
     assert.match(src, /from "@\/lib\/affiliate\/memeAdresse"/);
     assert.ok(!src.includes("const DOMAINES_GMAIL"), "la regle est de nouveau dupliquee");
+  });
+});
+
+// ── 6. LE RATTACHEMENT À VIE, CÔTÉ INSCRIPTION ──────────────────────
+
+describe("Une inscription gratuite rattache a son affilie", () => {
+  const signup = lire("app/api/auth/signup/route.ts");
+  const rattacher = lire("lib/affiliate/rattacherInscrit.ts");
+
+  test("L'INSCRIPTION LIT LES DEUX COOKIES", () => {
+    // Elle n'en lisait AUCUN : la règle "inscrit en free sur son lien =
+    // son affilié à vie" ne marchait que via Systeme.io, dont l'optin
+    // appelle `sio-conversion`. Sur nos pages, l'affilié perdait son
+    // prospect à l'expiration du cookie.
+    assert.match(signup, /rattacherInscrit\(\{/);
+    assert.match(signup, /req\.cookies\.get\(REF_COOKIE\)/);
+    assert.match(signup, /req\.cookies\.get\(SA_COOKIE\)/);
+  });
+
+  test("APRÈS la création du compte, et jamais avant", () => {
+    // Un rattachement qui échoue ne doit pas priver quelqu'un de son
+    // inscription : un compte non créé est un client perdu tout de
+    // suite, un rattachement manquant se rattrape.
+    const iCompte = signup.indexOf("generateLink");
+    const iRattache = signup.indexOf("rattacherInscrit({");
+    assert.ok(iCompte > 0 && iRattache > iCompte, "le rattachement passe avant la creation");
+  });
+
+  test("ET IL NE FAIT JAMAIS ÉCHOUER L'INSCRIPTION", () => {
+    assert.match(rattacher, /Promise<void>/);
+    assert.match(rattacher, /catch \(e\)/);
+    assert.match(rattacher, /AbortSignal\.timeout\(8000\)/);
+  });
+
+  test("SANS LIEN AFFILIÉ, aucun aller-retour reseau", () => {
+    // C'est le cas NORMAL et le plus fréquent : la majorité des
+    // inscriptions n'ont pas d'affilié. Appeler Tipote pour rien
+    // ralentirait toutes les inscriptions.
+    assert.match(rattacher, /if \(!ref && !sa\) return;/);
+  });
+
+  test("LE COOKIE DURE UN AN, donc le rattachement est encore possible", () => {
+    // Les deux moitiés de la même promesse : le cookie porte le lien
+    // jusqu'à l'inscription, l'inscription le grave à vie.
+    assert.equal(REF_MAX_AGE_SECONDS, 365 * 24 * 60 * 60);
   });
 });

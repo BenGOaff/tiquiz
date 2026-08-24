@@ -68,11 +68,13 @@ test("le navigateur retrouve le sa dans l'URL ou dans le cookie", () => {
   assert.equal(readSaFromBrowser("", ""), null);
 });
 
-test("la fenetre du cookie est celle de l'attribution par email", () => {
-  // 90 jours cote Tipote (ATTRIBUTION_WINDOW_DAYS). Deux durees
-  // differentes pour la meme promesse donneraient deux reponses selon le
-  // chemin emprunte par l'acheteur.
-  assert.equal(SA_MAX_AGE_SECONDS, 90 * 24 * 60 * 60);
+test("le cookie dure UN AN, comme chez Systeme.io", () => {
+  // Bene, 26 aout : "son cookie est pose pour 1 an sur le device de son
+  // prospect." C'etait 90 jours : un prospect qui cliquait en janvier et
+  // achetait en juin ne payait plus personne, alors que le programme
+  // promet un an. Un quiz se partage longtemps, et une decision
+  // d'abonnement se prend rarement le jour du clic.
+  assert.equal(SA_MAX_AGE_SECONDS, 365 * 24 * 60 * 60);
 });
 
 // ── LA BASE DE COMMISSION ──
@@ -174,8 +176,14 @@ test("la reference de commission porte son moyen de paiement", () => {
   // sio_order_id). Sans prefixe, deux numerotations independantes
   // finissent par se percuter, et la deuxieme vente serait
   // silencieusement traitee comme un doublon.
+  //
+  // Le prefixe etait `stripe:` pour TOUT LE MONDE, PayPal compris : ca
+  // marchait par accident (les identifiants ne se ressemblent pas), mais
+  // une cle qui ment sur sa provenance est introuvable le jour ou il
+  // faut la retrouver a la main. Depuis le 26 aout le moyen est un
+  // parametre, comme dans le depot de l'Atelier.
   const src = fs.readFileSync(path.join(process.cwd(), "lib/affiliate/ownerSale.ts"), "utf8");
-  assert.ok(src.includes("`stripe:${reference}`"), "la reference n'est plus prefixee");
+  assert.ok(src.includes("`${vente.moyen}:${reference}`"), "la reference n'est plus prefixee");
 });
 
 test("sans secret partage, on le DIT au lieu de se taire", () => {

@@ -2717,27 +2717,51 @@ paypal et stripe plus tout le système d'affiliation ?"
 Le détail complet vit dans l'`AGENTS.md` de Tipote (l'affiliation y vit).
 Ce qui concerne CE dépôt tient en trois points.
 
-### Le mois offert : deux bugs opposés, un par fournisseur
+### LA COMMISSION EST RÉCURRENTE : chaque mois, pas une fois
 
-| | Ce qui se passait | Coût |
-|---|---|---|
-| PayPal | commission à l'ACTIVATION, sur le prix du catalogue | payée 21 j après, donc AVANT le 1er prélèvement (30e jour) |
-| Stripe | `amount_total` vaut ZÉRO sur un essai, donc aucune commission, et rien ne la créait ensuite | l'affilié n'était payé sur AUCUNE de ces ventes |
+Béné, en relisant l'audit : "chez nous on paye bien 40% chaque mois où
+[le client] reste abonné, pas une seule fois... ! On arrête de payer
+s'il se barre c'est tout. S'il arrête son abonnement ou s'il demande un
+remboursement : pas de com pour son affilié. Mais sinon on paye tous les
+mois..."
 
-Le raisonnement était pourtant déjà écrit, quinze lignes plus haut dans
-le webhook PayPal, pour la FACTURE : "C'EST ICI QU'ON FACTURE, et pas à
-l'activation : un abonnement qui démarre par un mois offert est ACTIVÉ
-sans qu'un euro ait bougé." **La facture avait appris la leçon, la
-commission non.**
+**Le code faisait exactement l'inverse, des deux côtés :**
 
-**Règle : on commissionne quand l'argent ARRIVE, et la clé est
-l'ABONNEMENT.** PayPal commissionne sur `PAYMENT.SALE.COMPLETED`, Stripe
-sur `invoice.paid` (gaté sur `free_month_days`, sinon on créerait une
-SECONDE commission sur une vente déjà commissionnée au checkout). La
-deuxième échéance tombe alors sur la contrainte d'unicité et ne paie pas
-deux fois : **la base tranche, on n'ajoute pas de drapeau.** Un
-abonnement sans essai reste commissionné à l'activation, et son échéance
-est un doublon, ce qui est exactement ce qu'on veut.
+| | Ce qui se passait |
+|---|---|
+| PayPal | commission à l'ACTIVATION, donc UNE fois, et sur un mois offert avant le premier euro |
+| Stripe | commission au CHECKOUT, donc UNE fois, et JAMAIS sur un mois offert (montant zéro) |
+
+**Règle : une commission par ENCAISSEMENT, aucune sur une ouverture.**
+Stripe commissionne chaque `invoice.paid`, PayPal chaque
+`PAYMENT.SALE.COMPLETED`. Le checkout ne commissionne plus que les
+produits SANS échéance (`product.interval === null`), sinon le premier
+mois compterait deux fois, sous deux clés différentes que l'unicité ne
+verrait pas.
+
+**LA CLÉ EST LE PAIEMENT, JAMAIS L'ABONNEMENT.** C'est le coeur : avec
+l'abonnement pour clé, la deuxième échéance tombe sur la contrainte
+d'unicité et l'affilié ne touche plus rien à partir du deuxième mois.
+La facture Stripe et la vente PayPal sont donc les références, et le
+moyen de paiement préfixe la clé (`stripe:` / `paypal:`) au lieu du
+`stripe:` universel d'avant, qui marchait par accident.
+
+**Trois cas se règlent alors tout seuls, sans un drapeau de plus :**
+- le MOIS OFFERT : la facture d'essai vaut 0, donc pas de commission ;
+  la première vraie échéance en crée une ;
+- l'ARRÊT de l'abonnement : plus d'échéance, donc plus de commission ;
+- la MONTÉE DE PALIER : la facture suivante porte le nouveau montant,
+  donc la commission suit.
+
+C'est la leçon générale du 24 août, appliquée ici : quand une décision
+demande un drapeau à maintenir, se demander d'abord si la donnée qu'on a
+déjà ne répond pas toute seule.
+
+**Un remboursement n'annule que l'échéance remboursée.** Les mois déjà
+encaissés ont été gagnés et restent acquis : elle dit "on arrête de
+payer s'il se barre", pas "on reprend ce qui a été versé". La charge
+Stripe porte `invoice`, le remboursement PayPal porte `sale_id` : on
+essaie les deux clés, une seule existe en base.
 
 ### Un remboursement annule la commission, un impayé aussi
 
@@ -2766,5 +2790,48 @@ retiré la TVA, et sans ce champ Tipote la rabotait une deuxième fois.
 Et `moisOffert.ts` ne redéfinit plus la règle des alias d'adresse : elle
 vit dans `lib/affiliate/memeAdresse.ts`, partagée avec l'attribution des
 commissions. Enfermée ici, elle ne gardait que le CADEAU.
+
+Test : `tests/logic/audit-26-aout.test.mts`.
+
+## Le cookie d'affiliation dure UN AN (Béné, 26 août 2026)
+
+"Son cookie est posé pour 1 an sur le device de son prospect."
+
+`REF_MAX_AGE_SECONDS` et `SA_MAX_AGE_SECONDS` valaient 90 jours. Un
+prospect qui cliquait en janvier et achetait en juin ne payait plus
+personne, alors que le programme promet un an. Un quiz se partage
+longtemps, et une décision d'abonnement se prend rarement le jour du
+clic.
+
+Les deux cookies portent la MÊME durée : deux durées différentes
+donneraient deux réponses pour la même promesse selon le lien emprunté.
+
+## Une inscription gratuite rattache son affilié, à VIE
+
+"S'il s'inscrit en free sur son lien : il reste son affilié à vie."
+
+**Cette règle ne marchait QUE via Systeme.io.** Leur optin appelle
+`sio-conversion` chez Tipote, qui écrit le rattachement. Notre propre
+inscription (`/api/auth/signup`) ne lisait ni le cookie, ni le `?ref=`,
+et n'écrivait rien du tout.
+
+Un affilié qui envoyait quelqu'un sur NOS pages perdait donc son
+prospect à l'expiration du cookie : il avait fait le travail (amener
+l'inscrit) et ne touchait rien sur la vente qui arrivait trois mois plus
+tard. **Et le problème grossissait à chaque inscription prise chez
+nous**, c'est à dire à mesure qu'on sort de Systeme.io.
+
+`rattacherInscrit()` (`lib/affiliate/rattacherInscrit.ts`) est appelée
+APRÈS la création du compte, et ne jette jamais : le rattachement
+compte, l'inscription compte plus. Sans lien affilié dans les cookies,
+elle ne fait AUCUN aller-retour réseau, parce que c'est le cas normal et
+le plus fréquent.
+
+Le registre vit chez Tipote (`POST /api/affiliate/rattacher`, secret
+partagé), pas ici : le copier donnerait deux registres, donc deux
+réponses différentes le jour où l'un prend du retard.
+
+**Le PREMIER rattachement gagne**, et un affilié exclu n'en crée aucun :
+c'est à vie, donc ce n'est pas l'endroit où être permissif.
 
 Test : `tests/logic/audit-26-aout.test.mts`.

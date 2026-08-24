@@ -125,10 +125,11 @@ test("le middleware range les DEUX generations, chacune dans son cookie", () => 
   assert.match(src, /res\.cookies\.set\(SA_COOKIE, sa/);
 });
 
-test("les deux cookies durent la meme fenetre d'attribution", () => {
-  // Deux durees differentes donneraient deux reponses pour la meme
-  // promesse selon le chemin emprunte par l'acheteuse.
-  assert.equal(REF_MAX_AGE_SECONDS, 90 * 24 * 60 * 60);
+test("les deux cookies durent UN AN", () => {
+  // Bene, 26 aout : "son cookie est pose pour 1 an". Deux durees
+  // differentes donneraient deux reponses pour la meme promesse selon
+  // le chemin emprunte par l'acheteur.
+  assert.equal(REF_MAX_AGE_SECONDS, 365 * 24 * 60 * 60);
   assert.equal(REF_MAX_AGE_SECONDS, SA_MAX_AGE_SECONDS);
 });
 

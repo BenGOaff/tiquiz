@@ -35,6 +35,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { buildAuthCallbackUrl, resolveAppUrl } from "@/lib/authLinks";
+import { rattacherInscrit } from "@/lib/affiliate/rattacherInscrit";
+import { REF_COOKIE } from "@/lib/affiliate/refLien";
+import { SA_COOKIE } from "@/lib/affiliate/sa";
 import { sendSignupEmail } from "@/lib/email/signupEmail";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -127,6 +130,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     console.error(`[signup] ${e instanceof Error ? e.message : String(e)}`);
     return NextResponse.json({ ok: false, reason: "signup_failed" }, { status: 502 });
   }
+
+  // ── LE RATTACHEMENT À VIE ──
+  //
+  // APRÈS la création du compte, et jamais avant : un rattachement qui
+  // échoue ne doit pas priver quelqu'un de son inscription. Et il ne
+  // jette jamais : le rattachement compte, l'inscription compte plus.
+  await rattacherInscrit({
+    email,
+    ref: req.cookies.get(REF_COOKIE)?.value,
+    sa: req.cookies.get(SA_COOKIE)?.value,
+    pageUrl: req.headers.get("referer"),
+  });
 
   const parti = await sendSignupEmail({ email, actionLink, locale });
   if (!parti) {
