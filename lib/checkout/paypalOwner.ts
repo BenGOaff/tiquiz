@@ -544,6 +544,53 @@ export async function cancelOwnerPaypalSubscription(args: {
  * refuse plutôt que de faire semblant. Une adresse de webhook qui accepte
  * un corps non signé distribue des abonnements gratuits à qui la connaît.
  */
+/**
+ * REMBOURSE UNE ÉCHÉANCE D'ABONNEMENT.
+ *
+ * Béné, 22 août : "il est où le fucking bouton rembourser ??" Il
+ * n'existait que pour Stripe, et la route refusait explicitement PayPal
+ * au motif que "PayPal n'encaisse pas encore pour Tiquiz". Ce n'est plus
+ * vrai depuis le 23 août.
+ *
+ * **L'ENDPOINT EST CELUI DES VENTES v1, PAS DES CAPTURES v2.** Un
+ * abonnement PayPal produit des `PAYMENT.SALE.*`, donc des ventes v1 ;
+ * l'API Orders v2 et ses captures sont l'autre monde, celui de l'achat
+ * unique de l'Atelier. Utiliser `/v2/payments/captures/<id>/refund` sur
+ * un identifiant de vente ferait répondre "resource not found", et
+ * l'écran dirait "PayPal a refusé" pour un remboursement parfaitement
+ * possible.
+ *
+ * Corps VIDE = remboursement TOTAL, ce qui est le seul geste proposé
+ * dans l'admin : un remboursement partiel ne coupe pas l'accès, et
+ * proposer un bouton dont la conséquence change selon le montant serait
+ * un piège pour celle qui clique.
+ *
+ * On ne ferme rien ici : c'est le webhook `PAYMENT.SALE.REFUNDED` qui
+ * ferme l'accès, arrête l'abonnement et émet l'avoir. Il part de toute
+ * façon, que le remboursement vienne d'ici ou de l'interface PayPal.
+ */
+export async function refundOwnerPaypalSale(args: {
+  compte: OwnerPaypalAccount;
+  saleId: string;
+}): Promise<{ ok: boolean; reason?: PaypalFailure; detail?: string }> {
+  const id = String(args.saleId ?? "").trim();
+  if (!id) return { ok: false, reason: "paypal_refused", detail: "identifiant vide" };
+  try {
+    const token = await jeton(args.compte);
+    if (!token) return { ok: false, reason: "not_configured", detail: "jeton refuse" };
+    const res = await poster(args.compte, token, `/v1/payments/sale/${encodeURIComponent(id)}/refund`, {});
+    if (!res.ok) {
+      const detail =
+        String((res.json as { message?: string }).message ?? "") ||
+        JSON.stringify(res.json).slice(0, 300);
+      return { ok: false, reason: "paypal_refused", detail };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, reason: "network", detail: (e as Error).message };
+  }
+}
+
 export async function verifyOwnerPaypalWebhook(args: {
   compte: OwnerPaypalAccount;
   webhookId: string;
