@@ -348,11 +348,24 @@ async function traiterEvenement(
           `(${stop.reason}). A arreter A LA MAIN dans PayPal, sinon il sera preleve le mois prochain.`,
       );
     }
-    // LA COMMISSION TOMBE AVEC LA VENTE. Même clé que la création :
-    // l'identifiant d'abonnement.
-    await annulerCommissionVente({ reference: abonnementId, motif: "remboursement" });
-
     const remboursement = remboursementDepuisRefund(event.resource, event.create_time);
+
+    // LA COMMISSION DE CETTE ÉCHÉANCE LÀ TOMBE, pas les précédentes.
+    //
+    // Les mois déjà encaissés ont été gagnés et restent acquis : c'est
+    // la règle de Béné ("on arrête de payer s'il se barre", pas "on
+    // reprend ce qui a été versé"). On vise donc la VENTE remboursée.
+    //
+    // L'abonnement est passé en plus, pour les lignes d'avant le 26 août
+    // qui étaient encore commissionnées à l'activation : sans lui, ces
+    // commissions là survivraient à un remboursement.
+    await annulerCommissionVente({
+      references: [
+        remboursement?.saleRef ? `paypal:${remboursement.saleRef}` : null,
+        `stripe:${abonnementId}`,
+      ],
+      motif: "remboursement",
+    });
     if (remboursement) {
       await avoirDuRemboursement({
         email: abo.email,
@@ -395,32 +408,29 @@ async function traiterEvenement(
       );
     }
 
-    // ── LA COMMISSION PART QUAND L'ARGENT ARRIVE ──
+    // ── LA COMMISSION, CHAQUE MOIS OÙ LE CLIENT RESTE ABONNÉ ──
     //
-    // Elle partait à l'ACTIVATION. Sur un abonnement qui démarre par un
-    // MOIS OFFERT, PayPal active sans qu'un euro ait bougé : la
-    // commission naissait donc sur une vente à zéro, mûrissait en 21
-    // jours, et partait dans le lot AVANT le premier prélèvement, qui
-    // tombe au 30e. Quelqu'un pouvait annuler au 29e jour sans avoir
-    // jamais payé, et l'affilié était payé quand même.
+    // Béné, 26 août : "on paye bien 40% chaque mois où [le client] reste
+    // abonné, pas une seule fois... on arrête de payer s'il se barre
+    // c'est tout."
     //
-    // Le raisonnement était déjà écrit quinze lignes plus haut, pour la
-    // FACTURE : "C'EST ICI QU'ON FACTURE, et pas à l'activation : un
-    // abonnement qui démarre par un mois offert est ACTIVÉ sans qu'un
-    // euro ait bougé." La facture avait appris la leçon, la commission
-    // non.
+    // C'EST DONC ICI, et nulle part ailleurs : cet événement arrive à
+    // CHAQUE prélèvement, et il porte la somme réellement encaissée
+    // (une remise comprise). L'activation, elle, ne commissionne plus
+    // du tout : sur un abonnement qui démarre par un mois offert,
+    // PayPal active sans qu'un euro ait bougé.
     //
-    // **La clé est celle de l'activation**, donc l'échéance suivante
-    // tombe sur la contrainte d'unicité et ne paie pas une deuxième
-    // fois. Un abonnement sans essai est commissionné à l'activation :
-    // ce premier appel est alors un doublon, et c'est exactement ce
-    // qu'on veut. Une seule mécanique, la base tranche.
+    // **La clé est la VENTE, jamais l'abonnement.** Avec l'abonnement
+    // pour clé, la deuxième échéance tombait sur la contrainte
+    // d'unicité et l'affilié ne touchait plus rien à partir du
+    // deuxième mois.
     if (encaissement && encaissement.totalCents > 0) {
       const produit = findOwnerProduct(abo.productId);
       if (produit) {
         await commissionnerVente({
+          moyen: "paypal",
           email: abo.email,
-          reference: abonnementId,
+          reference: encaissement.saleRef,
           affiliateRef: abo.affiliateRef,
           affiliateCode: abo.affiliateCode,
           amountTotalCents: encaissement.totalCents,
@@ -506,30 +516,16 @@ async function traiterEvenement(
   // vérité de cette vente là, au lieu d'inventer un taux. L'affiliée
   // touche donc un peu plus sur une vente PayPal que sur une vente carte,
   // et c'est assumé.
+  // ── L'ACTIVATION NE COMMISSIONNE RIEN ──
   //
-  // **PAS SUR UN ABONNEMENT QUI DÉMARRE PAR UN MOIS OFFERT.** PayPal
-  // l'ACTIVE sans qu'un euro ait bougé : commissionner ici paierait
-  // l'affilié 21 jours avant le premier prélèvement, qui tombe au 30e.
-  // La commission part alors du `PAYMENT.SALE.COMPLETED`, sur le montant
-  // vraiment encaissé et avec la MÊME clé, donc jamais deux fois.
-  if (abo.trialDays > 0) {
-    console.log(
-      `[commande/paypal/webhook] ${abonnementId} : mois offert (${abo.trialDays} j), ` +
-        `commission REPORTEE au premier prelevement.`,
-    );
-  } else {
-    await commissionnerVente({
-      email: abo.email,
-      reference: abonnementId,
-      affiliateRef: abo.affiliateRef,
-      affiliateCode: abo.affiliateCode,
-      // Ce qui a vraiment été prélevé quand PayPal le dit, sinon le prix
-      // du catalogue : ne rien envoyer ferait sauter la commission.
-      amountTotalCents: abo.amountCents || product.amountCents,
-      amountTaxCents: 0,
-      product: { id: product.id, label: product.label },
-    });
-  }
+  // Elle ouvre l'accès, elle ne fait pas rentrer d'argent : un
+  // abonnement qui démarre par un mois offert est ACTIVÉ sans qu'un euro
+  // ait bougé. Et comme la commission est RÉCURRENTE (Béné, 26 août :
+  // "on paye tous les mois"), il n'y a plus de "première fois" à
+  // traiter à part : chaque `PAYMENT.SALE.COMPLETED` la crée, y compris
+  // celui du premier prélèvement, qui suit l'activation de près.
+  //
+  // Une mécanique en moins, donc un endroit en moins où l'oublier.
 
   // ── LA MONTÉE DE PALIER : ON ARRÊTE L'ANCIEN, MAINTENANT SEULEMENT ──
   //

@@ -174,8 +174,14 @@ test("la reference de commission porte son moyen de paiement", () => {
   // sio_order_id). Sans prefixe, deux numerotations independantes
   // finissent par se percuter, et la deuxieme vente serait
   // silencieusement traitee comme un doublon.
+  //
+  // Le prefixe etait `stripe:` pour TOUT LE MONDE, PayPal compris : ca
+  // marchait par accident (les identifiants ne se ressemblent pas), mais
+  // une cle qui ment sur sa provenance est introuvable le jour ou il
+  // faut la retrouver a la main. Depuis le 26 aout le moyen est un
+  // parametre, comme dans le depot de l'Atelier.
   const src = fs.readFileSync(path.join(process.cwd(), "lib/affiliate/ownerSale.ts"), "utf8");
-  assert.ok(src.includes("`stripe:${reference}`"), "la reference n'est plus prefixee");
+  assert.ok(src.includes("`${vente.moyen}:${reference}`"), "la reference n'est plus prefixee");
 });
 
 test("sans secret partage, on le DIT au lieu de se taire", () => {

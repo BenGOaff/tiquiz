@@ -21,6 +21,30 @@
 // des affiliées (`affiliate.tipote.com`). Écrire une deuxième table ici
 // donnerait deux comptes différents pour le même argent.
 //
+// -- ON COMMISSIONNE CHAQUE ENCAISSEMENT, JAMAIS L'OUVERTURE -----------
+//
+// Béné, 26 août 2026 : "chez nous on paye bien 40% chaque mois où
+// l'affilié reste abonné, pas une seule fois... ! On arrête de payer si
+// [le client] se barre c'est tout. S'il arrête son abonnement ou s'il
+// demande un remboursement : pas de com pour son affilié. Mais sinon on
+// paye tous les mois..."
+//
+// La commission est donc RÉCURRENTE, et la règle tient en une ligne :
+// **une commission par euro encaissé, aucune sur une ouverture.**
+//
+// La clé d'idempotence est le PAIEMENT (la facture Stripe, la vente
+// PayPal), jamais l'abonnement. Avec l'abonnement pour clé, la deuxième
+// échéance tombait sur la contrainte d'unicité et ne payait pas : c'est
+// exactement ce qu'il ne faut pas.
+//
+// Et ça règle trois cas tout seuls, sans un drapeau de plus :
+//   * le MOIS OFFERT : la facture d'essai vaut 0, donc pas de
+//     commission ; la première vraie échéance en crée une ;
+//   * l'ARRÊT de l'abonnement : plus d'échéance, donc plus de
+//     commission, sans rien à débrancher ;
+//   * le REMBOURSEMENT : on annule la commission DE CETTE ÉCHÉANCE là,
+//     les mois déjà versés restent acquis.
+//
 // -- APRÈS LE PLAN, ET JAMAIS AVANT ------------------------------------
 //
 // Cette fonction ne jette jamais et ne bloque rien. Une commission qui
@@ -42,7 +66,24 @@ const ENDPOINT_PAR_DEFAUT = "https://app.tipote.com/api/affiliate/attribute-sale
 
 export interface VenteACommissionner {
   email: string | null;
-  /** L'identifiant du paiement chez Stripe. Clé d'idempotence. */
+  /**
+   * PAR QUEL MOYEN L'ARGENT EST RENTRÉ.
+   *
+   * Sert à préfixer la clé d'idempotence. Le préfixe était `stripe:`
+   * pour tout le monde, y compris pour PayPal : ça marchait par accident
+   * (les identifiants ne se ressemblent pas), mais une clé qui ment sur
+   * sa provenance est introuvable le jour où il faut la retrouver à la
+   * main. Le dépôt de l'Atelier portait déjà ce champ.
+   */
+  moyen: "stripe" | "paypal";
+  /**
+   * L'IDENTIFIANT DE L'ENCAISSEMENT. Clé d'idempotence.
+   *
+   * **Le PAIEMENT, jamais l'abonnement** : une facture Stripe, une
+   * vente PayPal. Avec l'abonnement pour clé, la deuxième échéance
+   * serait un doublon et l'affilié ne toucherait rien à partir du
+   * deuxième mois.
+   */
   reference: string | null;
   /** Le `sa` d'un ANCIEN lien Systeme.io, s'il y en avait un. */
   affiliateRef: string | null;
@@ -104,7 +145,7 @@ export async function commissionnerVente(vente: VenteACommissionner): Promise<vo
     // numerotations independantes finissent par se percuter sur la
     // contrainte d'unicite (source_app, sio_order_id). La deuxieme vente
     // serait alors silencieusement traitee comme un doublon.
-    const ref = `stripe:${reference}`;
+    const ref = `${vente.moyen}:${reference}`;
 
     const url = process.env.TIPOTE_AFFILIATE_ENDPOINT?.trim() || ENDPOINT_PAR_DEFAUT;
     const res = await fetch(url, {
@@ -142,7 +183,7 @@ export async function commissionnerVente(vente: VenteACommissionner): Promise<vo
         affiliate_code: readRefCode(vente.affiliateCode),
         product_name: vente.product.label,
         sale_at: new Date().toISOString(),
-        raw_payload: { source: "stripe_checkout", product: vente.product.id, reference },
+        raw_payload: { source: `${vente.moyen}_encaissement`, product: vente.product.id, reference },
       }),
     });
 
@@ -206,67 +247,88 @@ export async function commissionnerVente(vente: VenteACommissionner): Promise<vo
  * partir si personne ne regarde.
  */
 export async function annulerCommissionVente(args: {
-  /** La MÊME référence que celle passée à `commissionnerVente`. */
-  reference: string | null;
+  /**
+   * LES RÉFÉRENCES DE L'ENCAISSEMENT QUI TOMBE.
+   *
+   * Plusieurs, parce qu'un même remboursement peut désigner sa cible de
+   * deux façons selon ce que le fournisseur nous donne (la facture ou
+   * le paiement chez Stripe ; la vente ou l'abonnement chez PayPal). On
+   * essaie chacune : une seule existera en base, les autres ne trouvent
+   * rien et ne coûtent qu'un aller-retour.
+   *
+   * Elles doivent porter LE MÊME préfixe qu'à la création : une clé qui
+   * ne correspond pas n'annule rien, en silence, ce qui est exactement
+   * le bug qu'on ferme.
+   */
+  references: readonly (string | null | undefined)[];
   motif: "remboursement" | "impaye" | "fraude";
 }): Promise<void> {
-  try {
-    const secret = process.env.AFFILIATE_INTERNAL_SECRET?.trim();
-    const reference = (args.reference ?? "").trim();
-    if (!secret || !reference) {
-      console.error(
-        `[commission] annulation impossible (${!secret ? "secret absent" : "reference absente"}) : ` +
-          `une commission peut partir sur une vente ${args.motif}.`,
-      );
-      return;
-    }
+  const secret = process.env.AFFILIATE_INTERNAL_SECRET?.trim();
+  const cles = args.references
+    .map((r) => (r ?? "").trim())
+    .filter((r) => r.length > 0);
 
-    const url = (process.env.TIPOTE_AFFILIATE_ENDPOINT?.trim() || ENDPOINT_PAR_DEFAUT).replace(
-      /\/attribute-sale$/,
-      "/cancel-sale",
-    );
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Affiliate-Secret": secret },
-      // Même délai que l'attribution : cette fonction tourne DANS le
-      // webhook de paiement, et l'accès du client ne doit pas attendre
-      // que Tipote réponde.
-      signal: AbortSignal.timeout(8000),
-      body: JSON.stringify({
-        source_app: "tiquiz",
-        sio_order_id: `stripe:${reference}`,
-        motif: args.motif,
-      }),
-    });
-
-    if (!res.ok) {
-      const corps = await res.text().catch(() => "");
-      console.error(
-        `[commission] annulation REFUSEE (${res.status}) sur stripe:${reference} : ` +
-          `${corps.slice(0, 200)}. La commission va murir et partir au prochain lot.`,
-      );
-      return;
-    }
-
-    const json = (await res.json().catch(() => ({}))) as {
-      resultat?: { annulees?: number; tropTard?: number; tropTardCents?: number };
-    };
-    const r = json.resultat ?? {};
-    if ((r.tropTard ?? 0) > 0) {
-      // DÉJÀ VERSÉE : ce n'est pas rattrapable par du code. L'argent est
-      // parti et la facture d'autofacturation qui le justifie a été
-      // remise à un comptable.
-      console.error(
-        `[commission] stripe:${reference} (${args.motif}) : ${r.tropTard} commission(s) DEJA VERSEE(S) ` +
-          `(${r.tropTardCents ?? 0} c). A recuperer a la main.`,
-      );
-    }
-    console.log(
-      `[commission] stripe:${reference} (${args.motif}) : ${r.annulees ?? 0} annulee(s)`,
-    );
-  } catch (e) {
+  if (!secret || cles.length === 0) {
     console.error(
-      `[commission] annulation impossible : ${e instanceof Error ? e.message : String(e)}`,
+      `[commission] annulation impossible (${!secret ? "secret absent" : "aucune reference"}) : ` +
+        `une commission peut partir sur une vente ${args.motif}.`,
     );
+    return;
   }
+
+  const url = (process.env.TIPOTE_AFFILIATE_ENDPOINT?.trim() || ENDPOINT_PAR_DEFAUT).replace(
+    /\/attribute-sale$/,
+    "/cancel-sale",
+  );
+
+  let annulees = 0;
+  for (const cle of cles) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Affiliate-Secret": secret },
+        // Même délai que l'attribution : cette fonction tourne DANS le
+        // webhook de paiement, et l'accès du client ne doit pas attendre
+        // que Tipote réponde.
+        signal: AbortSignal.timeout(8000),
+        body: JSON.stringify({
+          source_app: "tiquiz",
+          sio_order_id: cle,
+          motif: args.motif,
+        }),
+      });
+
+      if (!res.ok) {
+        const corps = await res.text().catch(() => "");
+        console.error(
+          `[commission] annulation REFUSEE (${res.status}) sur ${cle} : ${corps.slice(0, 200)}. ` +
+            `La commission va murir et partir au prochain lot.`,
+        );
+        continue;
+      }
+
+      const json = (await res.json().catch(() => ({}))) as {
+        resultat?: { annulees?: number; tropTard?: number; tropTardCents?: number };
+      };
+      const r = json.resultat ?? {};
+      annulees += r.annulees ?? 0;
+      if ((r.tropTard ?? 0) > 0) {
+        // DÉJÀ VERSÉE : ce n'est pas rattrapable par du code. L'argent
+        // est parti et la facture d'autofacturation qui le justifie a
+        // été remise à un comptable.
+        console.error(
+          `[commission] ${cle} (${args.motif}) : ${r.tropTard} commission(s) DEJA VERSEE(S) ` +
+            `(${r.tropTardCents ?? 0} c). A recuperer a la main.`,
+        );
+      }
+    } catch (e) {
+      console.error(
+        `[commission] annulation impossible sur ${cle} : ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
+
+  console.log(
+    `[commission] ${args.motif} sur ${cles.join(", ")} : ${annulees} commission(s) annulee(s)`,
+  );
 }

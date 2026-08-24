@@ -334,21 +334,29 @@ async function traiterEvenement(
     });
   }
 
-  // ── LA COMMISSION DE L'AFFILIÉE ──
+  // ── LA COMMISSION D'UN ACHAT UNIQUE ──
   //
   // APRES le plan, et jamais avant : une commission qui echoue ne doit
-  // pas priver un acheteur de ce qu'il a paye. Sans ce bloc, une vente
-  // faite sur NOTRE bon de commande ne payait personne, alors que la
-  // meme vente passee par le tunnel Systeme.io payait bien.
-  await commissionnerVente({
-    email: vente.email,
-    reference: vente.paymentRef,
-    affiliateRef: vente.affiliateRef,
-    affiliateCode: vente.affiliateCode,
-    amountTotalCents: vente.amountTotalCents,
-    amountTaxCents: vente.amountTaxCents,
-    product,
-  });
+  // pas priver un acheteur de ce qu'il a paye.
+  //
+  // **UNIQUEMENT sur un produit sans echeance.** Un ABONNEMENT est
+  // commissionne facture par facture, sur `invoice.paid` : Bene, 26
+  // aout, "on paye 40% chaque mois ou [le client] reste abonne, pas une
+  // seule fois". Commissionner ici EN PLUS ferait deux commissions sur
+  // le premier mois, sous deux cles differentes (le paiement ici, la
+  // facture la-bas), donc sans que la contrainte d'unicite les voie.
+  if (product.interval === null) {
+    await commissionnerVente({
+      moyen: "stripe",
+      email: vente.email,
+      reference: vente.paymentRef,
+      affiliateRef: vente.affiliateRef,
+      affiliateCode: vente.affiliateCode,
+      amountTotalCents: vente.amountTotalCents,
+      amountTaxCents: vente.amountTaxCents,
+      product,
+    });
+  }
 
   return NextResponse.json({ ok: true, granted: true });
 }
@@ -442,13 +450,25 @@ async function surRemboursement(
   // vingt et un jours plus tard elle partait dans un lot. Nos propres
   // conditions d'affiliation le promettaient pourtant déjà.
   //
-  // La clé est celle de la CRÉATION : `commissionnerVente` a écrit
-  // `stripe:<paymentRef>`, où `paymentRef` vient de la session relue.
-  // Sans la session (une échéance d'abonnement n'en a pas), on retombe
-  // sur l'identifiant de paiement, qui est ce que `paymentRef` vaut dans
-  // ce cas là.
+  // LES CLÉS POSSIBLES DE CET ENCAISSEMENT LÀ, et seulement lui : les
+  // mois déjà encaissés ont été gagnés et restent acquis. C'est la règle
+  // de Béné ("on arrête de payer s'il se barre", pas "on reprend ce qui
+  // a été versé").
+  //
+  //   * une ÉCHÉANCE d'abonnement est commissionnée sur la FACTURE, que
+  //     la charge porte dans `invoice` ;
+  //   * un ACHAT UNIQUE est commissionné sur le paiement.
+  //
+  // On essaie les deux : une seule existe en base, l'autre ne trouve
+  // rien. Deviner laquelle marcherait aujourd'hui et casserait au
+  // premier produit qui change de forme.
+  const factureDeLaCharge = String((charge as { invoice?: unknown } | null)?.invoice ?? "").trim();
   await annulerCommissionVente({
-    reference: vente?.paymentRef ?? paymentIntent ?? null,
+    references: [
+      factureDeLaCharge ? `stripe:${factureDeLaCharge}` : null,
+      vente?.paymentRef ? `stripe:${vente.paymentRef}` : null,
+      paymentIntent ? `stripe:${paymentIntent}` : null,
+    ],
     motif,
   });
 
@@ -620,24 +640,21 @@ async function surAbonnement(
     });
   }
 
-  // ── LA COMMISSION D'UNE VENTE AVEC MOIS OFFERT ──
+  // ── LA COMMISSION, CHAQUE MOIS OÙ LE CLIENT RESTE ABONNÉ ──
   //
-  // Le miroir exact du bug PayPal, dans l'autre sens. Au moment du
-  // checkout, un abonnement avec `trial_period_days` a un `amount_total`
-  // de ZÉRO : `commissionBaseCents` rendait 0, la commission n'était pas
-  // créée, et **rien ne la créait plus jamais** ensuite. L'affilié
-  // promouvait le mois offert et n'était payé sur AUCUNE de ces ventes.
+  // Béné, 26 août : "on paye bien 40% chaque mois où [le client] reste
+  // abonné, pas une seule fois... on arrête de payer s'il se barre
+  // c'est tout."
   //
-  // On la crée donc quand la première facture est VRAIMENT payée. La clé
-  // est l'ABONNEMENT (et non le paiement, qui sert aux ventes sans
-  // essai) : la deuxième échéance tombe sur la contrainte d'unicité et
-  // ne paie pas deux fois.
+  // C'EST DONC ICI, pour TOUTES les échéances, y compris la première :
+  // le checkout ne commissionne plus les abonnements, justement pour ne
+  // pas la compter deux fois. Une seule mécanique, un seul endroit.
   //
-  // Gaté sur `free_month_days` : sur une vente sans essai, la commission
-  // est déjà partie au checkout avec le bon montant, et repasser ici
-  // créerait une SECONDE commission sous une autre clé.
+  // Et ça règle le mois offert sans un drapeau de plus : la facture
+  // d'essai vaut 0, donc pas de commission ; la première vraie échéance
+  // en crée une.
   if (eventType === "invoice.paid" && abonnement) {
-    await commissionnerEcheanceOfferte(subId, abonnement, objet);
+    await commissionnerEcheance(abonnement, objet);
   }
 
   if (lecture.outcome !== "revoke") {
@@ -739,32 +756,46 @@ async function lireOuverture(
 }
 
 /**
- * La commission d'un abonnement qui a démarré par un MOIS OFFERT.
+ * LA COMMISSION D'UNE ÉCHÉANCE D'ABONNEMENT.
  *
- * Séparée pour rester lisible, et parce qu'elle ne concerne qu'un cas :
- * les metadata portent `free_month_days`. Tout le reste est déjà
- * commissionné au checkout.
+ * Une par facture payée, donc une par mois où le client reste abonné.
+ * **La clé est la FACTURE**, jamais l'abonnement : avec l'abonnement
+ * pour clé, la deuxième échéance serait un doublon et l'affilié ne
+ * toucherait plus rien à partir du deuxième mois.
+ *
+ * Trois cas se règlent tout seuls, sans rien à débrancher :
+ *   * le MOIS OFFERT : la facture d'essai vaut 0, donc pas de
+ *     commission ;
+ *   * l'ARRÊT de l'abonnement : plus de facture, donc plus de
+ *     commission ;
+ *   * la MONTÉE DE PALIER : la facture suivante porte le nouveau
+ *     montant, donc la commission suit toute seule.
  */
-async function commissionnerEcheanceOfferte(
-  subId: string,
+async function commissionnerEcheance(
   abonnement: RawSubscription | null,
   facture: Record<string, unknown>,
 ): Promise<void> {
-  const meta = (abonnement as { metadata?: Record<string, unknown> } | null)?.metadata ?? {};
-  const jours = Number(meta.free_month_days ?? 0) || 0;
-  if (jours <= 0) return;
-
   // Ce qui a VRAIMENT été encaissé sur cette facture, jamais le prix du
-  // catalogue : une remise, une TVA différente, un prorata changent la
+  // catalogue : une remise, un prorata ou une TVA différente changent la
   // somme, et la commission se calcule sur ce qui est rentré.
   const paye = Math.round(Number(facture.amount_paid ?? 0)) || 0;
   if (paye <= 0) return;
   const taxe = Math.round(Number(facture.tax ?? 0)) || 0;
 
+  const factureId = String(facture.id ?? "").trim();
+  if (!factureId) {
+    console.error(
+      "[commande/webhook] facture payee sans identifiant : commission NON creee, " +
+        "elle serait impossible a dedupliquer.",
+    );
+    return;
+  }
+
+  const meta = (abonnement as { metadata?: Record<string, unknown> } | null)?.metadata ?? {};
   const produit = findOwnerProduct(String(meta.product ?? ""));
   if (!produit) {
     console.error(
-      `[commande/webhook] abonnement ${subId} : premier prelevement encaisse mais produit inconnu ` +
+      `[commande/webhook] echeance ${factureId} encaissee mais produit inconnu ` +
         `(${String(meta.product ?? "?")}) : commission NON creee.`,
     );
     return;
@@ -774,10 +805,9 @@ async function commissionnerEcheanceOfferte(
   if (!email) return;
 
   await commissionnerVente({
+    moyen: "stripe",
     email,
-    // La clé est l'ABONNEMENT : une seule commission, quelle que soit
-    // l'échéance qui arrive.
-    reference: subId,
+    reference: factureId,
     affiliateRef: String(meta.affiliate_ref ?? "") || null,
     affiliateCode: String(meta.affiliate_code ?? "") || null,
     amountTotalCents: paye,

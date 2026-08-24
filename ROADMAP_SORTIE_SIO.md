@@ -158,11 +158,18 @@ arbitraient. Depuis le 25 août c'est NOUS qui virons.
 2. **L'impayé n'était écouté nulle part.** `charge.dispute.*` est
    maintenant traité : on ferme sur `funds_withdrawn` (l'argent est
    vraiment parti), jamais sur `created` (une contestation se conteste).
-3. **Le mois offert commissionnait à l'envers, dans les deux sens.**
-   PayPal payait à l'ACTIVATION, donc avant le premier euro et avant la
-   fin de l'essai ; Stripe ne payait JAMAIS (montant zéro au checkout,
-   et rien ensuite). Les deux commissionnent désormais au premier
-   encaissement réel, avec la clé de l'abonnement, donc une seule fois.
+3. **La commission est RÉCURRENTE, et elle ne l'était pas.** Béné, le
+   26 : "on paye bien 40% chaque mois où [le client] reste abonné, pas
+   une seule fois... on arrête de payer s'il se barre c'est tout."
+   PayPal commissionnait à l'ACTIVATION (donc une fois, et avant le
+   premier euro sur un mois offert) ; Stripe au CHECKOUT (donc une
+   fois, et jamais du tout sur un mois offert, où le montant vaut zéro).
+   **On commissionne désormais chaque ENCAISSEMENT**, avec la clé du
+   PAIEMENT (la facture Stripe, la vente PayPal) et non de l'abonnement.
+   Trois cas se règlent alors tout seuls : le mois offert (facture à 0,
+   donc pas de commission), l'arrêt de l'abonnement (plus d'échéance,
+   donc plus de commission) et la montée de palier (la facture suivante
+   porte le nouveau montant).
 
 Trois écarts de calcul fermés au passage : le taux venait d'une
 constante à côté du module qui l'annonce (et `affiliate_rate_overrides`

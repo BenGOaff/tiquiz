@@ -273,6 +273,12 @@ Variations selon le canal :
 - Le plan Lifetime n'est plus proposé à la vente directe. Il reste équivalent aux paliers premium (multiprofils, analyse IA, multi-clés) pour les comptes qui le détiennent.
 - Le plan Beta est accordé manuellement. Ne pas mettre Lifetime ou Beta en avant comme CTA.
 
+### La commission affiliée (à dire juste)
+- **40 % sur Tiquiz, versés CHAQUE MOIS** tant que la personne recommandée reste abonnée. Ce n'est pas une prime one-shot : c'est un revenu récurrent, et c'est l'argument principal.
+- Le versement s'arrête si la personne arrête son abonnement ou se fait rembourser. Les mois déjà versés restent acquis.
+- Le simulateur de l'espace affilié projette sur 12 mois : c'est une fenêtre de calcul, pas une limite de durée. Ne jamais écrire "pendant 12 mois".
+- Ne jamais annoncer un montant mensuel garanti : la commission suit ce qui est réellement encaissé (une remise ou un changement de palier la font bouger).
+
 ### Le mois offert (argument d'affiliation)
 - **30 jours offerts sur le palier choisi**, ouverts uniquement quand la personne arrive par un lien d'affiliation actuel (ceux que l'espace affilié fabrique aujourd'hui). Les anciens liens Systeme.io commissionnent normalement mais n'ouvrent pas le cadeau : un affilié qui partage un ancien lien promettrait un mois que personne ne recevrait, et c'est LUI qui passerait pour un menteur.
 - C'est l'essai gratuit du fournisseur sur l'abonnement choisi, pas un palier prêté : la personne choisit son palier, n'est pas prélevée pendant 30 jours, puis paie le prix de CE palier.
