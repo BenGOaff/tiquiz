@@ -381,11 +381,81 @@ plus rien chez nous.
 > supabase de Tiquiz, on frôle les limites et on doit éviter sachant
 > qu'on a un super serveur. Note le on en parle demain."
 
-**À discuter le 25 août. Rien n'est décidé, rien n'a été touché.** Ce qui
-suit est un repérage fait dans les migrations, pour ne pas partir de
-zéro demain. **Je n'ai pas mesuré la base réelle** : la première chose à
-faire est de regarder les tailles réelles, pas de théoriser (leçon du
-22 août : un journal se LIT, il ne se déduit pas).
+### CE N'EST PAS LA BASE, CE SONT LES FICHIERS (mesuré le 26 août)
+
+La capture de l'écran d'usage tranche, et elle tranche contre
+l'hypothèse de départ :
+
+| | Utilisé | Plan gratuit |
+|---|---|---|
+| **Stockage (fichiers)** | **0,73 Go (73 %)** | 1 Go |
+| Base de données | 0,079 Go (16 %) | 0,5 Go |
+| Egress | 0,647 Go (13 %) | 5 Go |
+| Utilisateurs actifs | 43 | 50 000 |
+
+La base est à 16 % avec 43 utilisateurs : elle n'est pas le sujet. Le
+stockage est à 73 %, et **il ne peut que grossir**, pour deux raisons
+qui sont toutes les deux dans le code.
+
+**1. Chaque envoi écrit un fichier NEUF.**
+
+```
+const path = `quiz-backgrounds/${user.id}/${quizId}-${Date.now()}.${ext}`;
+```
+
+L'horodatage est VOULU et il ne faut pas le retirer : un chemin stable
+laissait les navigateurs afficher l'ancien logo pendant la durée de leur
+cache, et c'est un bug déjà corrigé. Mais il a une conséquence que
+personne n'avait tirée : changer l'image de fond d'un quiz dix fois écrit
+DIX fichiers, et les neuf premiers restent. Le `upsert: true` posé à côté
+ne remplace jamais rien, puisque le chemin est neuf à chaque fois.
+
+**2. Aucun fichier n'est JAMAIS supprimé.** Ni au remplacement d'une
+image, ni à la suppression du quiz qui la portait. `storage.remove()`
+n'apparaît nulle part dans le dépôt Tiquiz.
+
+Ce qui est DÉJÀ bon, et qu'il ne faut pas refaire : les images sont
+compressées à l'envoi (WebP qualité 92, bord max 2400 px en couverture,
+1600 en contenu, 1200 en OG, 900 en logo). Le problème n'est donc pas le
+POIDS de chaque fichier, c'est leur NOMBRE.
+
+### Mesurer avant de supprimer
+
+```bash
+cd ~/tiquiz-app && npm run check:storage            # le resume
+cd ~/tiquiz-app && npm run check:storage -- --detail  # + les 40 plus gros orphelins
+```
+
+`scripts/storage-audit.mjs` liste le bucket, le pèse par dossier, croise
+chaque fichier avec les colonnes qui pourraient le citer, et dit combien
+pèse ce que plus personne ne référence. **Il ne supprime rien et n'en a
+pas le pouvoir** : un fichier effacé par erreur, c'est l'image de
+couverture d'une cliente qui disparaît de son quiz en ligne, sans retour
+arrière.
+
+Et il REFUSE de rendre un verdict si une seule de ses sources n'a pas pu
+être lue : les fichiers qu'elle cite paraîtraient orphelins, et proposer
+de les supprimer reviendrait à proposer d'effacer les images de résultat
+de tout le monde. Une connaissance partielle ne doit jamais ressembler à
+une connaissance complète.
+
+### Les trois corrections, dans l'ordre de rentabilité
+
+1. **Le ménage de l'existant.** Ce que le script mesure. Une seule
+   passe, sur ce qui s'est accumulé depuis le lancement.
+2. **Supprimer l'ancien fichier au remplacement.** On connaît son
+   adresse : c'est la valeur de la colonne qu'on s'apprête à écraser.
+   C'est ce qui empêche le problème de revenir.
+3. **Supprimer les fichiers d'un quiz supprimé.** Aujourd'hui ils
+   survivent à leur quiz pour toujours.
+
+**Aucune des trois n'est écrite** : supprimer des fichiers d'une cliente
+est irréversible, et ça se décide avec Béné, script de mesure en main.
+
+### Le reste, sur la base elle même
+
+**Rien n'est décidé, rien n'a été touché.** Ce qui suit est un repérage
+fait dans les migrations. Ce n'est PAS urgent : la base est à 16 %.
 
 ```sql
 -- À passer dans le SQL Editor de Supabase Tiquiz avant toute décision.
