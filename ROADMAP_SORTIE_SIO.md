@@ -452,6 +452,88 @@ une connaissance complète.
 **Aucune des trois n'est écrite** : supprimer des fichiers d'une cliente
 est irréversible, et ça se décide avec Béné, script de mesure en main.
 
+### On archive AVANT, on supprime après (et peut-être jamais)
+
+Béné, 26 août : "on ne supprime rien des clients à ce stade. On peut
+archiver l'existant quelque part pour le retrouver en cas de besoin ?"
+
+```bash
+cd ~/tiquiz-app && npm run storage:archive       # vers /srv/storage-archive/<projet>
+cd ~/tiquiz-app && npm run storage:archive -- --reprendre   # apres une coupure
+```
+
+`scripts/storage-archive.mjs` copie le bucket entier sur CE serveur, en
+gardant l'arborescence, et écrit un `_manifeste.json` à côté : chemin,
+taille, type, date de création, empreinte SHA-256. Sans le manifeste on
+aurait un tas de fichiers dont personne ne saurait à quel quiz ils
+appartenaient.
+
+**Il ne supprime rien et ne connaît que la lecture.** Il VÉRIFIE la
+taille de chaque téléchargement (une réponse tronquée s'écrirait sans
+bruit, et l'archive mentirait au moment exact où on lui fait confiance)
+et il SORT EN ERREUR si un seul fichier manque : une archive incomplète
+qui se croit complète est pire que pas d'archive, parce qu'on
+supprimerait ensuite en confiance.
+
+L'empreinte SHA-256 sert deux fois : vérifier plus tard qu'un fichier
+n'a pas bougé, et repérer les doublons exacts (le même visuel envoyé dix
+fois sous dix noms différents, ce que l'horodatage garantit).
+
+### Servir les images depuis NOTRE serveur
+
+Béné, 26 août : "on a un super serveur quasiment inutilisé : on ne peut
+pas l'exploiter davantage ? Histoire de ne pas avoir un abonnement en
+plus à payer et d'éviter les futures alertes, sur toutes les app ?"
+
+| | Supabase (gratuit) | Le serveur |
+|---|---|---|
+| stockage | 1 Go, **à 73 %** | 400 Go, à 47 |
+| bande passante | 5 Go | 32 To, à 0,106 |
+| CPU | - | à 1 % |
+
+**Et ce chemin est déjà PROUVÉ dans ce dépôt.** Les vidéos de Popquiz
+ne sont pas chez Supabase : elles sont sur ce serveur, envoyées par un
+serveur TUS et servies par nginx (`infra/nginx/videos.*.conf`,
+`lib/popquiz/playback.ts`). La migration a même son garde-fou :
+`isSelfHostedPath()` distingue un chemin auto-hébergé d'un ancien chemin
+Supabase, et le code sert les deux. **On ne migre rien : les anciennes
+adresses continuent de marcher pour toujours, et seuls les NOUVEAUX
+envois vont sur le serveur.**
+
+Pour les images c'est plus simple que pour les vidéos, et il faut le
+dire pour ne pas recopier la complexité inutilement :
+
+- **Pas de `secure_link`.** Une vidéo est réservée aux élèves, donc son
+  URL expire. Une image de quiz est PUBLIQUE : elle s'affiche sur une
+  page ouverte et part dans les aperçus de partage. Une URL qui expire
+  casserait l'aperçu Facebook d'un quiz partagé trois jours plus tôt.
+- **Cache d'un an.** Le nom du fichier porte déjà l'horodatage de
+  l'envoi, donc une adresse ne désigne jamais deux contenus différents.
+- **Aucune exécution.** Ces fichiers viennent du téléversement d'une
+  cliente : tout ce qui n'est pas une image se télécharge au lieu de
+  s'afficher, et les extensions exécutables sont refusées.
+
+`infra/nginx/assets.quiz.tipote.com.conf` et `assets.tiquiz.com.conf`
+sont écrits. **Il reste à décider, et ce n'est pas à moi de trancher :**
+
+1. **La sauvegarde.** C'est le VRAI coût de ce déménagement, et le seul
+   argument sérieux en face. Chez Supabase, la sauvegarde est le
+   problème de quelqu'un d'autre. Sur ce serveur, elle est le nôtre : si
+   le disque meurt sans sauvegarde, toutes les images de toutes les
+   clientes disparaissent, et aucun quiz n'a plus d'illustration. **À ne
+   pas brancher tant qu'une sauvegarde n'existe pas** (le VPS en propose
+   une, ou un `rsync` nocturne vers un autre disque).
+2. **Où écrit-on ?** Le plus simple est une route qui reçoit le fichier
+   et l'écrit dans `/srv/public-assets`. Le TUS existant sert à des
+   vidéos de plusieurs centaines de Mo reprises en cas de coupure ; une
+   image de 300 Ko n'en a pas besoin.
+3. **Les deux apps ou une seule ?** Le même serveur peut servir les
+   deux, sur deux sous-domaines et deux dossiers séparés.
+
+**Rien de tout ça n'est branché.** La config nginx est posée dans le
+dépôt, comme celles des vidéos, et elle n'a d'effet que le jour où on
+l'installe.
+
 ### Le reste, sur la base elle même
 
 **Rien n'est décidé, rien n'a été touché.** Ce qui suit est un repérage
