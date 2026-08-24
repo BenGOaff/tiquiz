@@ -26,18 +26,24 @@
 // panne réseau et faire croire à une clé manquante.
 
 import { readFileSync, existsSync, readdirSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { join, dirname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RACINE = dirname(dirname(fileURLToPath(import.meta.url)));
 
 /** Lit le `.env` du repo, sans jamais l'exporter dans le shell. */
-function lireEnv() {
+function lireEnv(dossier = RACINE) {
   const valeurs = new Map();
   for (const nom of [".env.production.local", ".env.local", ".env.production", ".env"]) {
-    const chemin = join(RACINE, nom);
+    const chemin = join(dossier, nom);
     if (!existsSync(chemin)) continue;
-    for (const ligne of readFileSync(chemin, "utf8").split(/\r?\n/)) {
+    let brut = "";
+    try {
+      brut = readFileSync(chemin, "utf8");
+    } catch {
+      continue; // un .env illisible (droits) ne doit pas faire tomber le controle
+    }
+    for (const ligne of brut.split(/\r?\n/)) {
       const t = ligne.trim();
       if (!t || t.startsWith("#")) continue;
       const sans = t.startsWith("export ") ? t.slice(7).trim() : t;
@@ -57,7 +63,13 @@ const lire = (cle) => (env.get(cle) ?? process.env[cle] ?? "").trim();
 
 /** Une clé qu'on ne montre jamais. */
 function estSecret(cle) {
-  return /(_KEY|_SECRET|_TOKEN|PASSWORD|SERVICE_ROLE)/i.test(cle);
+  // CLIENT_ID en fait partie : dans NOTRE integration PayPal, il ne
+  // quitte jamais le serveur (le bon de commande poste sur
+  // /api/commande/paypal, il n'y a pas de SDK dans la page). Le
+  // rapport n'a donc aucune raison de l'imprimer. WEBHOOK_ID reste
+  // visible : c'est un identifiant qu'on recopie depuis PayPal, et
+  // le voir est exactement ce qui rend un diagnostic evident.
+  return /(_KEY|_SECRET|_TOKEN|PASSWORD|CLIENT_ID|SERVICE_ROLE)/i.test(cle);
 }
 
 const lignes = [];
@@ -225,6 +237,66 @@ verifier("AFFILIATE_INTERNAL_SECRET", {
   quoi: "Sans elle, aucune commission d'affiliation n'est enregistrée.",
 });
 console.log(lignes.splice(0).join("\n"));
+
+// ── LES SECRETS QUI DOIVENT ÊTRE LES MÊMES AILLEURS ──
+//
+// C'est le seul contrôle qu'aucune des deux apps ne pouvait faire toute
+// seule, et c'est celui qui compte : deux valeurs POSÉES des deux côtés
+// mais DIFFÉRENTES se lisent "ok" partout, et la liaison échoue en
+// silence. Un 401 sur une porte partenaire ne dit jamais "vos deux
+// secrets ne sont pas les mêmes".
+const PARTAGES = [
+  { cle: "PARTNER_SHARED_SECRET", avec: ["tipote-app", "formaquiz"] },
+  { cle: "AFFILIATE_INTERNAL_SECRET", avec: ["tipote-app"] },
+];
+
+function trouverVoisin(nom) {
+  const parent = dirname(RACINE);
+  // Les noms de dossiers changent d'une machine a l'autre (le serveur a
+  // `tiquiz-app`, une machine de dev peut avoir `tiquiz`). On essaie les
+  // deux, et on le DIT quand on ne trouve rien : "pas compare" n'est pas
+  // "identique".
+  const candidats = [nom, nom.replace(/-app$/, ""), `${nom}-app`];
+  for (const c of candidats) {
+    const chemin = join(parent, c);
+    if (c !== basename(RACINE) && existsSync(join(chemin, "package.json"))) return chemin;
+  }
+  return null;
+}
+
+console.log("\n  Les secrets partagés avec les autres apps");
+let comparaisons = 0;
+for (const { cle, avec } of PARTAGES) {
+  const ici = lire(cle);
+  for (const nom of avec) {
+    const dossier = trouverVoisin(nom);
+    if (!dossier) {
+      console.log(`  -    ${cle.padEnd(30)} ${nom.padEnd(12)} dossier introuvable, RIEN COMPARÉ`);
+      continue;
+    }
+    comparaisons += 1;
+    const laBas = (lireEnv(dossier).get(cle) ?? "").trim();
+    let verdict;
+    if (!ici && !laBas) verdict = "absente des deux côtés";
+    else if (!ici) verdict = "ABSENTE ICI, posée là-bas";
+    else if (!laBas) verdict = "posée ici, ABSENTE là-bas";
+    else if (ici === laBas) verdict = "identique";
+    else verdict = "DIFFÉRENTE des deux côtés";
+    const grave = verdict.includes("ABSENTE") || verdict.startsWith("DIFFÉRENTE");
+    if (grave) bloquants += 1;
+    // "absente des deux cotes" n'est pas un desaccord, mais ce n'est pas
+    // un "ok" non plus : la ligne du dessus l'a deja signalee, celle ci
+    // ne doit pas venir rassurer par dessus.
+    const marque = grave ? "ALERTE" : verdict.startsWith("absente") ? "-   " : "ok  ";
+    console.log(`  ${marque} ${cle.padEnd(30)} ${nom.padEnd(12)} ${verdict}`);
+  }
+}
+if (comparaisons === 0) {
+  console.log(
+    "\n  Aucune autre app trouvée à côté de ce dossier : cette section n'a rien\n" +
+      "  vérifié. Sur le serveur, les trois dépôts sont voisins dans /home/tipote.",
+  );
+}
 
 // ── LES MIGRATIONS QUE L'ON SAIT NÉCESSAIRES ──
 //
