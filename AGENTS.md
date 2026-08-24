@@ -2708,3 +2708,63 @@ vente prise chez nous. C'est le chantier 1.
 
 Y est aussi noté, à discuter le 25 août : alléger le Supabase de Tiquiz
 (section 9), avec la requête de tailles à passer AVANT toute décision.
+
+## L'audit du 26 août : le mois offert commissionnait à l'envers
+
+Béné : "tu peux auditer tout le parcours de vente tiquiz et l'atelier,
+paypal et stripe plus tout le système d'affiliation ?"
+
+Le détail complet vit dans l'`AGENTS.md` de Tipote (l'affiliation y vit).
+Ce qui concerne CE dépôt tient en trois points.
+
+### Le mois offert : deux bugs opposés, un par fournisseur
+
+| | Ce qui se passait | Coût |
+|---|---|---|
+| PayPal | commission à l'ACTIVATION, sur le prix du catalogue | payée 21 j après, donc AVANT le 1er prélèvement (30e jour) |
+| Stripe | `amount_total` vaut ZÉRO sur un essai, donc aucune commission, et rien ne la créait ensuite | l'affilié n'était payé sur AUCUNE de ces ventes |
+
+Le raisonnement était pourtant déjà écrit, quinze lignes plus haut dans
+le webhook PayPal, pour la FACTURE : "C'EST ICI QU'ON FACTURE, et pas à
+l'activation : un abonnement qui démarre par un mois offert est ACTIVÉ
+sans qu'un euro ait bougé." **La facture avait appris la leçon, la
+commission non.**
+
+**Règle : on commissionne quand l'argent ARRIVE, et la clé est
+l'ABONNEMENT.** PayPal commissionne sur `PAYMENT.SALE.COMPLETED`, Stripe
+sur `invoice.paid` (gaté sur `free_month_days`, sinon on créerait une
+SECONDE commission sur une vente déjà commissionnée au checkout). La
+deuxième échéance tombe alors sur la contrainte d'unicité et ne paie pas
+deux fois : **la base tranche, on n'ajoute pas de drapeau.** Un
+abonnement sans essai reste commissionné à l'activation, et son échéance
+est un doublon, ce qui est exactement ce qu'on veut.
+
+### Un remboursement annule la commission, un impayé aussi
+
+`annulerCommissionVente()` (`lib/affiliate/ownerSale.ts`) est la
+contrepartie de `commissionnerVente`, avec la MÊME clé
+(`stripe:<reference>`). Elle ne jette jamais : un remboursement doit
+aboutir même si Tipote ne répond pas.
+
+**`charge.dispute.*` n'était écouté nulle part.** Un impayé laissait
+l'accès ouvert, l'abonnement actif ET la commission en route : on perdait
+la vente, le service rendu et la commission, les trois d'un coup. On agit
+sur `funds_withdrawn` (l'argent est VRAIMENT parti), jamais sur `created`
+(une contestation se conteste, et couper l'accès de quelqu'un qui va
+gagner son litige nous ferait perdre un client pour rien).
+
+**La mécanique est un PARAMÈTRE** (`surRemboursement(event, motif)`) :
+sur un litige, `data.object` est un LITIGE, il n'a ni `amount_refunded`
+ni `refunded`, donc `readRefundOutcome` y répondrait "aucun
+remboursement" et on ne ferait rien.
+
+### La base de commission est DITE
+
+`commissionnerVente` envoie `base: "ht"` : `commissionBaseCents` a déjà
+retiré la TVA, et sans ce champ Tipote la rabotait une deuxième fois.
+
+Et `moisOffert.ts` ne redéfinit plus la règle des alias d'adresse : elle
+vit dans `lib/affiliate/memeAdresse.ts`, partagée avec l'attribution des
+commissions. Enfermée ici, elle ne gardait que le CADEAU.
+
+Test : `tests/logic/audit-26-aout.test.mts`.

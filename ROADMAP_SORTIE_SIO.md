@@ -143,6 +143,35 @@ Sans mandat accepté, on n'émet pas, donc on ne paie pas : le lot écarte
 avec la raison `profil-fiscal`, distincte de `coordonnees`. Le détail
 vit dans l'`AGENTS.md` de Tipote.
 
+### 3.1 ter L'audit du 26 août : ce qui pouvait partir en trop
+
+Trois trous d'argent, trouvés en auditant les trois chaînes de vente.
+Tant que Systeme.io payait, ils ne coûtaient rien : c'est eux qui
+arbitraient. Depuis le 25 août c'est NOUS qui virons.
+
+1. **Une vente remboursée payait quand même.** `cancelled_at` existait
+   depuis le 25 mai et aucune ligne de code ne l'écrivait. Fermé : les
+   trois webhooks (Stripe, PayPal, et les deux de l'Atelier) annulent
+   la commission, et une commission DÉJÀ VERSÉE est signalée au lieu
+   d'être réécrite (l'argent est parti, et la facture qui le justifie
+   est chez un comptable).
+2. **L'impayé n'était écouté nulle part.** `charge.dispute.*` est
+   maintenant traité : on ferme sur `funds_withdrawn` (l'argent est
+   vraiment parti), jamais sur `created` (une contestation se conteste).
+3. **Le mois offert commissionnait à l'envers, dans les deux sens.**
+   PayPal payait à l'ACTIVATION, donc avant le premier euro et avant la
+   fin de l'essai ; Stripe ne payait JAMAIS (montant zéro au checkout,
+   et rien ensuite). Les deux commissionnent désormais au premier
+   encaissement réel, avec la clé de l'abonnement, donc une seule fois.
+
+Trois écarts de calcul fermés au passage : le taux venait d'une
+constante à côté du module qui l'annonce (et `affiliate_rate_overrides`
+n'était lue nulle part), la base de commission était du HT pour nos
+checkouts et du TTC pour les webhooks Systeme.io (~20 % de trop), et
+l'anti-auto-affiliation comparait les adresses brutes alors que la règle
+qui voit les alias Gmail existait déjà, mais ne gardait que le mois
+offert.
+
 **Ce qui reste sur ce chantier :**
 
 1. **Les commissions historiques restent chez Systeme.io.** Deux
@@ -153,6 +182,25 @@ vit dans l'`AGENTS.md` de Tipote.
    particulier non assujetti, et le fait que la commission soit nette de
    taxe (un affilié assujetti coûte 20 % de trésorerie en plus, qu'on
    récupère, mais qui sortent le mois même).
+3. **LES COMMISSIONS DE L'ATELIER NE SONT DANS AUCUN LOT.** Elles
+   vivent dans la base de l'Atelier (`profiles.sio_affiliate_id` y tient
+   lieu de registre), et `preparerLot` ne lit que celle de Tipote. Une
+   vente de l'Atelier prise sur NOTRE bon de commande crée donc une
+   commission que Systeme.io ne connaît pas et que notre cycle ne paie
+   pas. L'admin les AFFICHE (il interroge les deux bases), ce qui rend
+   la dette visible mais ne la solde pas. C'est le verrou 3.2 sous un
+   autre angle : tant que les deux registres sont séparés, il faut soit
+   les unifier, soit faire remonter les commissions de l'Atelier vers
+   Tipote comme Tiquiz le fait déjà.
+4. **À VÉRIFIER DANS SES AUTOMATISATIONS SYSTEME.IO**, et ça ne se
+   vérifie pas depuis le code : une vente TIQUIZ passée par Systeme.io
+   peut être enregistrée DEUX fois, une fois par `/api/affiliate/
+   sio-sale` (base de l'Atelier) et une fois par le webhook Systeme.io
+   de Tiquiz (base de Tipote). Les deux tables ont chacune leur
+   contrainte d'unicité, aucune ne voit l'autre, et l'admin ADDITIONNE
+   les deux sources. Le cas est journalisé en clair depuis le 26 août :
+   si la ligne "vente TIQUIZ enregistree dans la base de l'Atelier"
+   apparaît dans `pm2 logs`, il faut débrancher l'une des deux.
 
 ### 3.2 Un affilié doit pouvoir s'inscrire sans compte Systeme.io
 

@@ -448,9 +448,27 @@ Le plan lifetime n'est plus proposé à la vente directe ; il reste équivalent 
 
 Le quota free : les leads continuent d'être captés au-delà de la limite mais seule la portion visible est débloquée ; le reste reste flouté jusqu'à la montée en gamme.
 
-### 16.3. Bons de commande Systeme.io
+### 16.3. Où l'argent rentre
 
-Inférence du plan par URL en priorité (les nouveaux bons partagent le même `offer-price-id`), fallback sur l'`offer-price-id` (anciens bons numériques uniques).
+Deux chemins coexistent, et ils ne se confondent jamais.
+
+| | Notre bon de commande | Systeme.io |
+|:---|:---|:---|
+| adresse | `tiquiz.fr/commande/<produit>` | `tipote.fr/tiquiz-*` |
+| encaissement | Stripe (carte) ou PayPal (abonnement) | eux |
+| ce qui ouvre le plan | notre webhook, sur le catalogue | leur webhook, par inférence |
+| facture | Stripe l'émet ; pour PayPal c'est NOUS (série `TQ-`) | eux |
+| commission affiliée | `?ref=` -> Tipote | `?sa=` -> Tipote |
+
+**Le plan vient du CATALOGUE** (`lib/checkout/catalog.ts`), jamais d'une
+devinette : c'est toute la différence avec le routage Systeme.io, qui
+reçoit un paiement qu'il n'a pas déclenché et doit deviner le palier.
+
+**Inférence Systeme.io**, dans cet ordre : l'`offer-price-id`, puis
+l'URL (optins uniquement, une vente n'en porte AUCUNE), puis le MONTANT
+en correspondance exacte, puis le palier de base. Une vente confirmée
+ouvre TOUJOURS quelque chose : "il a payé le client, il doit recevoir
+ses accès, point barre" (Béné, 7 août).
 
 | URL Systeme.io | Plan cible |
 |:---|:---|
@@ -460,13 +478,129 @@ Inférence du plan par URL en priorité (les nouveaux bons partagent le même `o
 | `tipote.fr/tiquiz-mensuel-plus` | `monthly_plus` |
 | `tipote.fr/tiquiz-annuel-plus` | `yearly_plus` |
 
-Des variantes partenaires (`part-tiquiz-*`) pointent vers les mêmes plans.
+### 16.4. Les webhooks de paiement, et leurs quatre garanties
 
-### 16.4. Changement de plan en un clic
+`/api/commande/webhook` (Stripe) et `/api/commande/paypal/webhook`
+(PayPal) partagent les mêmes garanties, chacune avec un incident
+derrière elle :
 
-Depuis Paramètres, onglet Abonnement : l'utilisateur choisit un plan cible, passe au checkout Systeme.io. À réception du `NEW_SALE`, le plan est mis à jour, les anciens abonnements Systeme.io sont auto-annulés (`cancelSubscription("Now")`) et `expected_sio_cancel_until` est posé à 24 h. Le `SALE_CANCELED` de l'ancien abonnement est ignoré tant que ce flag est dans le futur (anti double-downgrade et anti double-facturation). Tous les sens sont couverts (montée et descente de gamme). Routes : `/api/billing/checkout-urls`, `/api/billing/cancel`.
+1. **la signature**, vérifiée sur le corps BRUT avant tout parsing.
+   PayPal ne signe pas avec un secret partagé : on lui REDEMANDE s'il a
+   émis l'événement (`PAYPAL_WEBHOOK_ID_OWNER` obligatoire) ;
+2. **le verrou d'idempotence**, `(source, event_id)` limité aux statuts
+   `processing` / `processed`. Une ligne `error` en SORT, donc un
+   réessai peut reprendre : sans ça, une vente dont le premier
+   traitement ratait n'ouvrait JAMAIS l'accès ;
+3. **on relit la vente chez le fournisseur** : la signature prouve
+   l'expéditeur, pas la fraîcheur de l'objet ;
+4. **le marquage à toutes les sorties**, exception comprise.
 
-### 16.5. Quota et RPC
+**Ce qui coupe l'accès et ce qui ne le coupe pas :**
+
+| Événement | Effet |
+|:---|:---|
+| `checkout.session.completed`, `BILLING.SUBSCRIPTION.ACTIVATED` | ouvre le plan |
+| `customer.subscription.deleted`, `CANCELLED`, `EXPIRED` | ferme |
+| `charge.refunded` TOTAL, `PAYMENT.SALE.REFUNDED` | ferme, arrête l'abonnement, annule la commission |
+| `charge.dispute.funds_withdrawn` | ferme, comme un remboursement |
+| `charge.dispute.created` | **ne ferme RIEN**, journalisé fort |
+| `invoice.payment_failed`, `SUSPENDED` | **ne ferme RIEN** |
+| remboursement PARTIEL | **ne ferme RIEN** |
+
+Un geste commercial de 5 € sur un abonnement à 17 € mettrait dehors
+quelqu'un qui a payé 12 € pour rester dedans. Une contestation se
+conteste : couper l'accès de quelqu'un qui va gagner son litige nous
+ferait perdre un client pour rien.
+
+**Rembourser n'est pas annuler** :
+
+| Geste | L'argent | L'accès | L'abonnement |
+|:---|:---|:---|:---|
+| annuler | reste encaissé | jusqu'à la fin de la période PAYÉE | s'arrête en fin de période |
+| rembourser | repart | fermé tout de suite | s'arrête `immediat` |
+
+`lib/checkout/cancelSubscriptions.ts` décide pour les DEUX boutons (le
+sien dans les réglages, celui de l'admin sur la fiche client), et
+regarde les DEUX fournisseurs : une même personne peut avoir un
+abonnement Systeme.io et un abonnement Stripe.
+
+### 16.5. Monter de palier, et pourquoi on ne descend pas
+
+Le SENS du changement se lit sur DEUX axes, jamais sur le prix : le
+niveau (base / Plus) et la facturation (mois / année). L'annuel coûte
+170 € d'un coup mais revient moins cher au mois, donc un classement par
+prix rangerait "mensuel -> annuel" dans les descentes.
+
+- monter de niveau -> MONTÉE ;
+- à niveau égal, mois -> année -> MONTÉE ;
+- tout le reste -> DESCENTE, **refusée avec sa raison**. L'appliquer
+  tout de suite retirerait des fonctionnalités déjà payées. La sortie
+  honnête existe : arrêter l'abonnement (l'accès tient jusqu'à la date
+  payée) et reprendre le palier voulu.
+
+**Stripe : prorata.** `GET /api/billing/change-plan?produit=` demande à
+Stripe la facture qu'il émettrait (`/v1/invoices/create_preview`). Le
+montant vient de LUI, jamais d'une soustraction faite par nous, et le
+GET ne facture rien (un préchargement de navigateur fait des GET).
+
+**PayPal : abonnement neuf.** Il n'a pas d'équivalent du prorata. On
+ouvre le nouveau, et on arrête l'ancien **une fois le nouveau ACTIVÉ** :
+arrêter d'abord laisserait sans rien quelqu'un qui n'irait pas au bout
+de l'accord PayPal.
+
+Le plan s'ouvre par le WEBHOOK, jamais par la route
+(`ouvertureDemandee()`), et rend `null` dès que rien n'a bougé : Stripe
+envoie `customer.subscription.updated` pour à peu près tout.
+
+### 16.6. Le mois offert
+
+30 jours, ouverts **uniquement** sur un lien portant `?ref=` (nos liens
+actuels). Un `?sa=` vient d'un ancien tunnel Systeme.io : il
+commissionne comme avant, il n'ouvre pas le cadeau. Le nom du paramètre
+dit à lui seul la génération du lien, donc aucun marqueur à maintenir.
+
+C'est l'ESSAI GRATUIT DU FOURNISSEUR sur le palier choisi
+(`trial_period_days` chez Stripe, un cycle `TRIAL` chez PayPal), pas un
+palier prêté : il ne réécrit jamais `plan` ni `affiliate_trial_*`.
+
+**Un seul par personne** (`free_month_granted_at`, jamais effacé).
+Auto-affiliation REFUSÉE, alias Gmail compris. Même IP : on ACCORDE et
+on SIGNALE (une IP partagée, c'est aussi un couple ou deux collègues).
+Il se consomme à l'ACHAT, jamais au bon de commande.
+
+### 16.7. Les factures clients
+
+**On n'émet QUE pour PayPal** (série `TQ-<année>-NNNN`) : Stripe émet
+les siennes, et émettre des deux côtés donnerait deux factures et deux
+numérotations pour une seule vente. L'écran client le DIT au lieu
+d'afficher une liste incomplète.
+
+Deux tables, et la différence est la clé de tout :
+
+| | Ce que c'est | Qui l'écrit |
+|:---|:---|:---|
+| `facturation_clients` | les infos ACTUELLES, pour les factures À VENIR | le client, Béné, le bon de commande, Stripe |
+| `factures` | ce qui a été émis, FIGÉ, identité RECOPIÉE dedans | `emettre_facture()`, personne d'autre |
+
+Une facture émise ne se modifie pas : c'est la loi. Une erreur se
+corrige par un AVOIR suivi d'une nouvelle facture.
+
+**Numérotation continue** : un compteur, jamais une séquence Postgres
+(une séquence saute des numéros dès qu'une transaction est annulée, et
+un trou est exactement ce qu'un contrôle cherche). La fonction alloue le
+numéro ET insère dans la MÊME transaction, et ne lève jamais sur un
+doublon : elle rend la pièce déjà émise.
+
+**Quatre régimes de TVA** (`resoudreTva()`) : France 20 %,
+autoliquidation UE avec numéro valide, guichet unique OSS sans numéro,
+hors champ hors UE. **Le piège : une entreprise FRANÇAISE avec un numéro
+de TVA paie quand même** ; l'autoliquidation n'existe pas entre deux
+entreprises du même pays.
+
+On émet TOUJOURS : adresse absente ou pays inconnu donnent une facture
+au taux français, avec `a_completer` qui porte ce qui manque.
+
+### 16.8. Quota et RPC
 
 `increment_response_count(user_id)` incrémente le compteur et vérifie la limite ; `reset_monthly_responses(user_id)` réinitialise ; auto-reset après 30 jours via `responses_reset_at`. La création de quiz au-delà du quota free est refusée côté API.
 
@@ -511,7 +645,8 @@ Les textes du parcours public sont gérés hors `next-intl` dans `PublicQuizClie
 | Notifications | sonner (toast) |
 | GIF | KLIPY |
 | Vidéo | Serveur TUS auto-hébergé, lecture par URL signée |
-| CRM / Paiement | Systeme.io (API + webhooks) ; Stripe et PayPal côté revendeur |
+| Encaissement | Stripe et PayPal sur NOTRE bon de commande (`tiquiz.fr/commande/...`) ; Systeme.io sur ses tunnels historiques ; Stripe et PayPal côté revendeur |
+| CRM et emails | Systeme.io (API + webhooks). Les emails y restent, donc notre système doit continuer de leur parler |
 | Hosting | VPS (Ubuntu) |
 | Process manager | PM2 |
 | Reverse proxy | Caddy / Nginx (on-demand TLS pour les domaines perso) |
@@ -541,6 +676,8 @@ Répartition indicative des modèles : génération de quiz sur le tier Opus, r�
 **quiz_leads** : `quiz_id`, `email`, identité, `result_id` (`ON DELETE SET NULL`), `result_title` (snapshot), `consent_given`, `has_shared`, `bonus_unlocked`, `answers` (JSONB), `scores` (JSONB, snapshot `{ global: { points, min, max }, axes: { <id>: { points, min, max } } }` figé à la capture, validé serveur, exporté dans le CSV des leads), `created_at`, unicité `(quiz_id, email)`.
 
 **Autres** : `popquizzes` et cues, `quiz_events` et `quiz_question_events` (tracking), `custom_domains`, `webhook_logs`, tables revendeur (resellers, factures, événements de paiement, connexions partenaire), tables milestones et business events.
+
+**Vente chez nous** : `facturation_clients` (les infos ACTUELLES du client, mises à jour par lui, par Béné, par le bon de commande et par Stripe), `factures` + `facture_compteurs` (ce qui a été ÉMIS, figé, série `TQ-`), `support_tickets` (la file unique des trois apps, cf. §19.3), `churn` (les départs consignés, avec le motif que Stripe donne gratuitement). `profiles` porte en plus `stripe_customer_id`, `paypal_subscription_id`, `free_month_granted_at` et `free_month_flag`.
 
 **Storage** : bucket `public-assets` (lecture publique, écriture authentifiée sous le préfixe du user) pour logos, favicons, images OG, visuels de bonus, images d'intro et de résultat, fonds. Bucket vidéo dédié pour les popquiz (upload TUS).
 
@@ -614,6 +751,10 @@ Support mutualisé avec Tipote : le bouton Aide redirige vers le centre d'aide T
 - Ownership cross-tenant sur les domaines personnalisés et les cues de popquiz.
 - Sécurité des leads en trois couches (cf. §6.4).
 - `emailRedirectTo` dynamique via l'URL applicative.
+- Webhooks de paiement : signature vérifiée sur le corps BRUT avant tout parsing, et verrou d'idempotence `(source, event_id)` limité aux statuts `processing` / `processed` (une ligne `error` en sort, donc un réessai peut reprendre).
+- Toutes les portes partenaires comparent leur secret en temps constant (`safeEqual` / `timingSafeEqual`) : une comparaison naïve s'arrête au premier caractère différent, et son TEMPS raconte combien de caractères sont justes.
+- Aucun lien envoyé par email ne vient d'une constante de build seule : `resolveAppUrl()` refuse toute adresse locale et retombe sur l'origine de la requête. Un `??` ne protège que de la variable ABSENTE, jamais de la variable FAUSSE.
+- Tout appel sortant depuis un webhook porte un délai maximum : une panne de l'autre app garderait sinon la requête ouverte jusqu'à ce que la plateforme la tue, et le fournisseur ne recevrait jamais sa réponse.
 
 ---
 
@@ -641,6 +782,23 @@ SYSTEME_IO_WEBHOOK_SIGNING_SECRET=...   # active la vérif HMAC
 
 # GIF
 KLIPY_API_KEY=...
+
+# Encaissement chez nous (Stripe)
+STRIPE_SECRET_KEY_OWNER=...              # cle restreinte : Abonnements en ECRITURE, sinon l'annulation repond missing_permission
+STRIPE_WEBHOOK_SECRET_OWNER=...          # sans elle le webhook REFUSE tout : 503, et Stripe reessaie
+
+# Encaissement chez nous (PayPal)
+PAYPAL_CLIENT_ID_OWNER=...
+PAYPAL_CLIENT_SECRET_OWNER=...
+PAYPAL_WEBHOOK_ID_OWNER=...              # se pose par `npm run paypal:setup`, jamais a la main
+PAYPAL_ENV_OWNER=live                    # ABSENTE vaut BAC A SABLE : des identifiants reels y sont refuses sans dire pourquoi
+
+# Affiliation (les commissions vivent chez Tipote)
+AFFILIATE_INTERNAL_SECRET=...            # MEME valeur que sur le serveur Tipote. Absente : AUCUNE vente ne paie personne
+TIPOTE_AFFILIATE_ENDPOINT=...            # optionnel, defaut https://app.tipote.com/api/affiliate/attribute-sale
+
+# Support et partenaires
+PARTNER_SHARED_SECRET=...                # MEME valeur que sur le serveur Tipote (relais du centre d'aide)
 
 # Revendeur
 RESELLER_SECRETS_KEY=...                 # 32 octets, chiffrement des clés de paiement

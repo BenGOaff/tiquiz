@@ -202,10 +202,12 @@ Variations selon le canal :
 
 **Business et créatif** : profil entrepreneur, moteur intérieur, style yoga, terrain naturopathie, prêt à lancer ta formation, levier de croissance marketing, style photo, prêt pour ton premier achat immobilier.
 
-### 7.12. Changement de plan en un clic
-- Depuis Paramètres, l'utilisateur choisit un plan cible, passe au checkout Systeme.io.
-- L'ancien abonnement Systeme.io est auto-annulé, sans double facturation ni chevauchement.
-- Couvre tous les sens (montée et descente de gamme).
+### 7.12. Changement de plan, annulation, remboursement
+- **Monter de palier se fait en un clic**, depuis Paramètres. Sur carte, le prorata est calculé par Stripe : ce qui a déjà été payé pour le mois en cours est déduit, et le montant affiché est celui qui sera prélevé. Sur PayPal, un abonnement neuf remplace l'ancien, qui n'est arrêté qu'une fois le nouveau actif.
+- **Descendre de palier est refusé, avec sa raison**, et c'est un choix : appliquer la descente tout de suite retirerait des fonctionnalités déjà payées jusqu'à la fin de la période. La sortie est dite à l'écran : arrêter l'abonnement (l'accès tient jusqu'à la date payée) et reprendre le palier voulu.
+- **Annuler n'est pas rembourser.** Annuler garde l'accès jusqu'à la fin de la période payée. Rembourser rend l'argent, ferme l'accès et arrête le prélèvement.
+- **L'utilisateur peut tout faire seul**, sans écrire au support.
+- Ne jamais promettre "changement dans les deux sens en un clic" : la descente passe par une annulation, et le dire est plus honnête que de le laisser découvrir.
 
 ### 7.13. Domaines personnalisés
 - **Connecte ton propre domaine** : n'importe quel sous-domaine que tu contrôles.
@@ -270,6 +272,17 @@ Variations selon le canal :
 ### Lifetime et Beta
 - Le plan Lifetime n'est plus proposé à la vente directe. Il reste équivalent aux paliers premium (multiprofils, analyse IA, multi-clés) pour les comptes qui le détiennent.
 - Le plan Beta est accordé manuellement. Ne pas mettre Lifetime ou Beta en avant comme CTA.
+
+### Le mois offert (argument d'affiliation)
+- **30 jours offerts sur le palier choisi**, ouverts uniquement quand la personne arrive par un lien d'affiliation actuel (ceux que l'espace affilié fabrique aujourd'hui). Les anciens liens Systeme.io commissionnent normalement mais n'ouvrent pas le cadeau : un affilié qui partage un ancien lien promettrait un mois que personne ne recevrait, et c'est LUI qui passerait pour un menteur.
+- C'est l'essai gratuit du fournisseur sur l'abonnement choisi, pas un palier prêté : la personne choisit son palier, n'est pas prélevée pendant 30 jours, puis paie le prix de CE palier.
+- **Un seul par personne**, quelle que soit la porte. On ne peut pas cumuler le mois reçu par un affilié et celui reçu en tant qu'affilié.
+- Ne jamais annoncer "sans carte" : la carte est demandée à l'ouverture, c'est le prélèvement qui attend.
+
+### Comment on encaisse (à savoir, pas à mettre en avant)
+- **Carte (Stripe) ou PayPal, sur notre propre bon de commande** `tiquiz.fr/commande/<produit>`. Les tunnels Systeme.io historiques continuent de fonctionner en parallèle.
+- **La facture** : Stripe émet les siennes, et pour PayPal c'est nous (série `TQ-`), avec les quatre régimes de TVA. Une facture émise ne se modifie plus ; une erreur se corrige par un avoir.
+- Ne pas écrire "paiement sécurisé par Systeme.io" sur un tunnel qui passe par nous : c'est faux, et une phrase fausse sur une page de paiement coûte la vente.
 
 ### Pricing rationale (à utiliser dans la com)
 - Tiquiz est nettement moins cher que les concurrents anglais sur le plan Mensuel, et reste compétitif en Mensuel+.

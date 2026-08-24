@@ -41,7 +41,7 @@ import {
 } from "@/lib/checkout/stripeCheckout";
 import { recordChurn } from "@/lib/checkout/churn";
 import { rememberStripeCustomer } from "@/lib/checkout/customerLink";
-import { commissionnerVente } from "@/lib/affiliate/ownerSale";
+import { annulerCommissionVente, commissionnerVente } from "@/lib/affiliate/ownerSale";
 import { marquerMoisOffertConsomme } from "@/lib/trial/moisOffertCheckout";
 import { ouvertureDemandee, type OuvertureDemandee } from "@/lib/checkout/planChange";
 import { estPlanAVie } from "@/lib/checkout/plansAVie";
@@ -159,7 +159,32 @@ async function traiterEvenement(
   // reçoit quelle info ?" Avant ce bloc : non, et rien de nous. Sur un
   // abonnement, ça voulait dire garder le plan payant sans le payer.
   if (eventType === "charge.refunded") {
-    return await surRemboursement(event);
+    return await surRemboursement(event, "remboursement");
+  }
+
+  // ── LA BANQUE REPREND L'ARGENT ──
+  //
+  // `charge.dispute.*` n'etait ecoute NULLE PART (audit du 26 aout). Un
+  // impaye laissait donc l'acces ouvert, l'abonnement actif ET la
+  // commission en route vers le lot du mois : on perdait la vente, le
+  // service rendu et la commission, les trois d'un coup.
+  //
+  // On agit sur `funds_withdrawn` (l'argent est VRAIMENT parti), pas sur
+  // `created` : une contestation se conteste, et fermer l'acces d'un
+  // client qui va gagner son litige nous en ferait perdre un pour rien.
+  if (eventType === "charge.dispute.funds_withdrawn") {
+    return await surRemboursement(event, "impaye");
+  }
+  if (eventType === "charge.dispute.created") {
+    // On ne touche a rien, on rend la chose VISIBLE : c'est le moment ou
+    // Bene peut encore repondre avec une preuve de livraison.
+    const objet = event.data?.object as { charge?: unknown; amount?: unknown } | undefined;
+    console.error(
+      `[commande/webhook] CONTESTATION ouverte sur ${String(objet?.charge ?? "?")} ` +
+        `(${String(objet?.amount ?? "?")} c) : acces conserve, rien retire. ` +
+        `A repondre dans Stripe avant la date limite.`,
+    );
+    return NextResponse.json({ ok: true, dispute: "opened" });
   }
 
   // ── L'ABONNEMENT S'ARRÊTE, OU IL VA S'ARRÊTER ──
@@ -357,12 +382,24 @@ interface RawEvent {
  * On repond 200 dans tous les cas compris, y compris quand on ne fait
  * rien : un 500 sur un cas ecarte declencherait des reessais en boucle.
  */
-async function surRemboursement(event: RawEvent): Promise<NextResponse> {
+async function surRemboursement(
+  event: RawEvent,
+  motif: "remboursement" | "impaye",
+): Promise<NextResponse> {
   const charge = event.data?.object ?? null;
-  const issue = readRefundOutcome(charge);
-  if (issue !== "full") {
-    console.log(`[commande/webhook] remboursement ${issue} : plan conserve`);
-    return NextResponse.json({ ok: true, refund: issue });
+
+  // UN IMPAYÉ N'EST JAMAIS PARTIEL, et l'objet reçu n'est pas le même.
+  //
+  // Sur `charge.dispute.funds_withdrawn`, `data.object` est un LITIGE :
+  // il n'a ni `amount_refunded` ni `refunded`, donc `readRefundOutcome`
+  // y répondrait "aucun remboursement" et on ne ferait rien. La
+  // mécanique est donc un PARAMÈTRE, pas une lecture de la forme reçue.
+  if (motif === "remboursement") {
+    const issue = readRefundOutcome(charge);
+    if (issue !== "full") {
+      console.log(`[commande/webhook] remboursement ${issue} : plan conserve`);
+      return NextResponse.json({ ok: true, refund: issue });
+    }
   }
 
   const compte = readOwnerStripe(process.env);
@@ -398,6 +435,22 @@ async function surRemboursement(event: RawEvent): Promise<NextResponse> {
     // 502 : on VEUT le reessai, un plan paye reste ouvert sans paiement.
     return NextResponse.json({ ok: false, reason: sortie.reason }, { status: 502 });
   }
+
+  // ── LA COMMISSION TOMBE AVEC LA VENTE ──
+  //
+  // Rien ne le faisait avant le 26 août : la commission mûrissait, et
+  // vingt et un jours plus tard elle partait dans un lot. Nos propres
+  // conditions d'affiliation le promettaient pourtant déjà.
+  //
+  // La clé est celle de la CRÉATION : `commissionnerVente` a écrit
+  // `stripe:<paymentRef>`, où `paymentRef` vient de la session relue.
+  // Sans la session (une échéance d'abonnement n'en a pas), on retombe
+  // sur l'identifiant de paiement, qui est ce que `paymentRef` vaut dans
+  // ce cas là.
+  await annulerCommissionVente({
+    reference: vente?.paymentRef ?? paymentIntent ?? null,
+    motif,
+  });
 
   // ── ON ARRÊTE AUSSI L'ABONNEMENT, ET C'EST INDISPENSABLE ──
   //
@@ -567,6 +620,26 @@ async function surAbonnement(
     });
   }
 
+  // ── LA COMMISSION D'UNE VENTE AVEC MOIS OFFERT ──
+  //
+  // Le miroir exact du bug PayPal, dans l'autre sens. Au moment du
+  // checkout, un abonnement avec `trial_period_days` a un `amount_total`
+  // de ZÉRO : `commissionBaseCents` rendait 0, la commission n'était pas
+  // créée, et **rien ne la créait plus jamais** ensuite. L'affilié
+  // promouvait le mois offert et n'était payé sur AUCUNE de ces ventes.
+  //
+  // On la crée donc quand la première facture est VRAIMENT payée. La clé
+  // est l'ABONNEMENT (et non le paiement, qui sert aux ventes sans
+  // essai) : la deuxième échéance tombe sur la contrainte d'unicité et
+  // ne paie pas deux fois.
+  //
+  // Gaté sur `free_month_days` : sur une vente sans essai, la commission
+  // est déjà partie au checkout avec le bon montant, et repasser ici
+  // créerait une SECONDE commission sous une autre clé.
+  if (eventType === "invoice.paid" && abonnement) {
+    await commissionnerEcheanceOfferte(subId, abonnement, objet);
+  }
+
   if (lecture.outcome !== "revoke") {
     // ── LA MONTEE DE PALIER ──
     //
@@ -662,5 +735,53 @@ async function lireOuverture(
     vivant: estAbonnementVivant((abonnement as { status?: unknown } | null)?.status),
     planActuel,
     aVie: estPlanAVie(planActuel),
+  });
+}
+
+/**
+ * La commission d'un abonnement qui a démarré par un MOIS OFFERT.
+ *
+ * Séparée pour rester lisible, et parce qu'elle ne concerne qu'un cas :
+ * les metadata portent `free_month_days`. Tout le reste est déjà
+ * commissionné au checkout.
+ */
+async function commissionnerEcheanceOfferte(
+  subId: string,
+  abonnement: RawSubscription | null,
+  facture: Record<string, unknown>,
+): Promise<void> {
+  const meta = (abonnement as { metadata?: Record<string, unknown> } | null)?.metadata ?? {};
+  const jours = Number(meta.free_month_days ?? 0) || 0;
+  if (jours <= 0) return;
+
+  // Ce qui a VRAIMENT été encaissé sur cette facture, jamais le prix du
+  // catalogue : une remise, une TVA différente, un prorata changent la
+  // somme, et la commission se calcule sur ce qui est rentré.
+  const paye = Math.round(Number(facture.amount_paid ?? 0)) || 0;
+  if (paye <= 0) return;
+  const taxe = Math.round(Number(facture.tax ?? 0)) || 0;
+
+  const produit = findOwnerProduct(String(meta.product ?? ""));
+  if (!produit) {
+    console.error(
+      `[commande/webhook] abonnement ${subId} : premier prelevement encaisse mais produit inconnu ` +
+        `(${String(meta.product ?? "?")}) : commission NON creee.`,
+    );
+    return;
+  }
+
+  const email = String(facture.customer_email ?? "").trim();
+  if (!email) return;
+
+  await commissionnerVente({
+    email,
+    // La clé est l'ABONNEMENT : une seule commission, quelle que soit
+    // l'échéance qui arrive.
+    reference: subId,
+    affiliateRef: String(meta.affiliate_ref ?? "") || null,
+    affiliateCode: String(meta.affiliate_code ?? "") || null,
+    amountTotalCents: paye,
+    amountTaxCents: taxe,
+    product: { id: produit.id, label: produit.label },
   });
 }
