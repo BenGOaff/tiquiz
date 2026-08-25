@@ -16,6 +16,7 @@ On doit lire un humain expert, pas un assistant. Écris comme on parle, avec du 
 À BANNIR absolument (marqueurs typiques d'un texte IA) :
 - Le patron "Ce n'est pas X, c'est Y" / "Il ne s'agit pas de X, mais de Y".
 - Les tirets cadratins (:) en incise et la sur-ponctuation décorative.
+- Les guillemets à chevrons. En français, écris "comme ceci", jamais « comme cela ».
 - Les verbes/mots brochure : "optimiser", "booster", "libérer ton potentiel", "passer au niveau supérieur", "révolutionner", "plonger dans", "à l'ère de", "dans un monde où", "découvrez".
 - Les triades lisses et parallélismes mécaniques ("plus simple, plus rapide, plus efficace").
 - Le faux-profond qui sonne bien mais ne dit rien ("la vraie différence se joue ailleurs").

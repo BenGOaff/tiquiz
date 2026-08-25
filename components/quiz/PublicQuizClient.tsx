@@ -13,6 +13,7 @@ import {
   resolveIntroStart,
   startSurPremiereReponse,
 } from "@/lib/quiz/introStart";
+import { resolveResultCta } from "@/lib/quiz/resultCta";
 import {
   resolveQuizBranding,
   googleFontHref,
@@ -4315,8 +4316,14 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
   // STEP: Result — survey branch first, since survey leads land here too
   // (no resultProfile, no bonus flow, no profile reveal).
   if (step === "result" && quiz.mode === "survey") {
-    const ctaUrl = quiz.cta_url || "";
-    const ctaText = interp(quiz.cta_text || "") || t.resultCtaDefault;
+    // Un sondage n'a pas de profil : le CTA du quiz est le SEUL qui
+    // existe ici. La mecanique est un PARAMETRE, jamais devinee.
+    const ctaSondage = resolveResultCta("sondage", {
+      quizTexte: quiz.cta_text,
+      quizUrl: quiz.cta_url,
+    });
+    const ctaUrl = ctaSondage.url ?? "";
+    const ctaText = interp(ctaSondage.texte ?? "") || t.resultCtaDefault;
     return (
       <div
         className="min-h-screen flex flex-col"
@@ -4823,10 +4830,18 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
             // dans l'URL du CTA (valeurs URL-encodées). UNIQUEMENT le
             // score : jamais l'email ni le prénom dans une URL, et rien
             // de payant ne doit dépendre d'un paramètre modifiable.
-            const rawCtaUrl = resultProfile?.cta_url || quiz.cta_url;
-            const ctaUrl = rawCtaUrl ? applyScorePlaceholders(rawCtaUrl, scoreCtx, { urlEncode: true }) : rawCtaUrl;
-            const rawCtaText = interp(resultProfile?.cta_text || quiz.cta_text || "");
-            const ctaText = rawCtaText || t.resultCtaDefault;
+            // LE BOUTON VIENT DU PROFIL, ET DE LUI SEUL (Bene, 25 aout
+            // 2026). Le repli sur le CTA du quiz portait l'ADRESSE autant
+            // que le libelle, et c'est l'adresse qui decide si le bouton
+            // existe : la migration 20260825_cta_par_profil l'a recopiee
+            // dans chaque profil AVANT que ce repli parte, donc aucun
+            // visiteur ne voit de difference.
+            const cta = resolveResultCta("profil", {
+              profilTexte: resultProfile?.cta_text,
+              profilUrl: resultProfile?.cta_url,
+            });
+            const ctaUrl = cta.url ? applyScorePlaceholders(cta.url, scoreCtx, { urlEncode: true }) : cta.url;
+            const ctaText = interp(cta.texte ?? "") || t.resultCtaDefault;
             return ctaUrl ? (
               <Button size="lg" className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug ${btnShapeClass}`} asChild>
                 <a href={ensureExternalUrl(ctaUrl)} target="_blank" rel="noopener noreferrer">

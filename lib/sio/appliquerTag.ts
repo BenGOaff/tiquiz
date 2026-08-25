@@ -169,7 +169,17 @@ async function trouverTag(apiKey: string, nom: string): Promise<number | null> {
  * double dans sa liste, et ses automatisations continueraient de pointer
  * l'ancienne. Mieux vaut ne rien poser et le dire.
  */
-export async function poserTagAchat(
+/**
+ * -- ELLE SERT AUSSI A L'INSCRIPTION GRATUITE (Bene, 25 aout 2026) -----
+ *
+ * "Inscrit gratos chez nous = contact cree chez systeme io et abonne a
+ * la campagne tiquiz free !"
+ *
+ * Elle s'appelait `poserTagAchat`, ce qui laissait croire qu'elle ne
+ * concernait qu'une vente. Elle pose le tag d'un PLAN, et `free` en est
+ * un : c'est le meme geste, avec le tag `tiquiz-free`.
+ */
+export async function poserTagPlan(
   email: string,
   plan: string,
   identite: IdentiteContact = {},

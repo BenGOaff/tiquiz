@@ -60,11 +60,11 @@ test("l'email d'acces est ECRIT PAR NOUS, jamais envoye par Supabase", () => {
 
 test("l'etiquette Systeme.io est posee, et elle ne bloque JAMAIS l'acces", () => {
   const src = lire(GRANT);
-  assert.ok(src.includes("poserTagAchat"), "l'etiquette Systeme.io n'est plus posee");
+  assert.ok(src.includes("poserTagPlan"), "l'etiquette Systeme.io n'est plus posee");
   // "Il a paye le client, il doit recevoir ses acces, point barre."
   // Une etiquette qui echoue ne doit pas faire echouer l'ouverture.
   assert.ok(
-    /poserTagAchat\([^)]*\)\.catch\(/.test(src),
+    /poserTagPlan\([^)]*\)\.catch\(/.test(src),
     "une etiquette qui echoue peut desormais priver quelqu'un de son acces",
   );
 });
@@ -75,7 +75,7 @@ test("le plan est pose AVANT l'email et AVANT l'etiquette", () => {
   const src = lire(GRANT);
   const iPlan = src.indexOf('from("profiles").upsert');
   // Les APPELS, pas les imports : ceux-ci sont en haut du fichier.
-  const iTag = src.indexOf("await poserTagAchat(");
+  const iTag = src.indexOf("await poserTagPlan(");
   const iMail = src.indexOf("await sendPlanOpenedEmail(");
   assert.ok(iPlan > 0 && iTag > iPlan, "l'etiquette est posee avant le plan");
   assert.ok(iMail > iPlan, "l'email part avant que le plan soit pose");
