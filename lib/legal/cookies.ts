@@ -71,7 +71,7 @@ const fr: LegalPage = {
     },
     {
       h: "10. Contact",
-      body: [`${C.name} — ${C.address} — ${C.email}.`],
+      body: [`${C.name}, ${C.address}, ${C.email}.`],
     },
   ],
 };
@@ -146,7 +146,7 @@ const en: LegalPage = {
     },
     {
       h: "10. Contact",
-      body: [`${C.name} — ${C.address} — ${C.email}.`],
+      body: [`${C.name}, ${C.address}, ${C.email}.`],
     },
   ],
 };
@@ -170,7 +170,7 @@ const es: LegalPage = {
     { h: "7. Plazo de conservación", body: ["Las cookies se conservan un máximo de 13 meses desde su depósito. Las preferencias de consentimiento también se conservan 13 meses máximo."] },
     { h: "8. Tus derechos", body: ["Puedes en cualquier momento oponerte al depósito de cookies no esenciales, retirar tu consentimiento, pedir acceso o supresión de los datos recogidos. Contacto: " + C.email + ". Reclamación posible ante la autoridad de control competente."] },
     { h: "9. Modificación", body: ["La política puede evolucionar para tener en cuenta evoluciones legales o técnicas."] },
-    { h: "10. Contacto", body: [`${C.name} — ${C.address} — ${C.email}.`] },
+    { h: "10. Contacto", body: [`${C.name}, ${C.address}, ${C.email}.`] },
   ],
 };
 const it: LegalPage = {
@@ -191,7 +191,7 @@ const it: LegalPage = {
     { h: "7. Durata di conservazione", body: ["I cookie sono conservati al massimo 13 mesi dal loro deposito. Le preferenze di consenso sono conservate anch'esse al massimo 13 mesi."] },
     { h: "8. I tuoi diritti", body: ["Puoi in qualsiasi momento opporti al deposito di cookie non essenziali, revocare il tuo consenso, chiedere l'accesso o la cancellazione dei dati raccolti. Contatto: " + C.email + ". Reclamo possibile presso l'autorità di controllo competente."] },
     { h: "9. Modifiche", body: ["L'informativa può evolvere per tenere conto di evoluzioni legali o tecniche."] },
-    { h: "10. Contatto", body: [`${C.name} — ${C.address} — ${C.email}.`] },
+    { h: "10. Contatto", body: [`${C.name}, ${C.address}, ${C.email}.`] },
   ],
 };
 const ar: LegalPage = {
@@ -212,7 +212,7 @@ const ar: LegalPage = {
     { h: "7. مدة الاحتفاظ", body: ["يتم الاحتفاظ بملفات تعريف الارتباط لمدة أقصاها 13 شهرًا من تاريخ إيداعها. يتم الاحتفاظ بتفضيلات الموافقة أيضًا لمدة أقصاها 13 شهرًا."] },
     { h: "8. حقوقك", body: ["يمكنك في أي وقت الاعتراض على إيداع ملفات تعريف الارتباط غير الأساسية، وسحب موافقتك، وطلب الوصول إلى البيانات المجمعة أو حذفها. الاتصال: " + C.email + ". يمكن تقديم شكوى إلى السلطة المختصة."] },
     { h: "9. التعديلات", body: ["قد تتطور هذه السياسة لمراعاة التطورات القانونية أو التقنية."] },
-    { h: "10. الاتصال", body: [`${C.name} — ${C.address} — ${C.email}.`] },
+    { h: "10. الاتصال", body: [`${C.name}, ${C.address}, ${C.email}.`] },
   ],
 };
 

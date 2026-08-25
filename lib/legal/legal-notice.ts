@@ -9,7 +9,7 @@ const fr: LegalPage = {
       h: "Éditeur",
       body: [
         `${C.name}, ${C.form} au capital de ${C.capital}, immatriculée au RCS sous le numéro ${C.rcs}. Siège social : ${C.address}.`,
-        `TVA : ${C.vat} — Contact : ${C.email}.`,
+        `TVA : ${C.vat} - Contact : ${C.email}.`,
       ],
     },
     {
@@ -73,7 +73,7 @@ const en: LegalPage = {
       h: "Publisher",
       body: [
         `${C.name}, a ${C.form} with a share capital of ${C.capital}, registered with the Montpellier Trade Registry under no. 909 349 045. Registered office: ${C.address}.`,
-        `VAT: ${C.vat} — Contact: ${C.email}.`,
+        `VAT: ${C.vat} - Contact: ${C.email}.`,
       ],
     },
     {
@@ -105,7 +105,7 @@ const en: LegalPage = {
     {
       h: "Intellectual property",
       body: [
-        "The Tiquiz® name and logo, the interfaces, the code and every piece of content are protected. Any reproduction, modification or exploitation — full or partial — is forbidden without prior written consent.",
+        "The Tiquiz® name and logo, the interfaces, the code and every piece of content are protected. Any reproduction, modification or exploitation, full or partial, is forbidden without prior written consent.",
       ],
     },
     {
@@ -134,7 +134,7 @@ const es: LegalPage = {
   title: "Aviso legal",
   lastUpdated: "Última actualización: 22/04/2026",
   sections: [
-    { h: "Editor", body: [`${C.name}, ${C.form} con capital social de ${C.capital}, inscrita en el RCS con el número ${C.rcs}. Sede social: ${C.address}.`, `CIF: ${C.vat} — Contacto: ${C.email}.`] },
+    { h: "Editor", body: [`${C.name}, ${C.form} con capital social de ${C.capital}, inscrita en el RCS con el número ${C.rcs}. Sede social: ${C.address}.`, `CIF: ${C.vat} - Contacto: ${C.email}.`] },
     { h: "Ámbito", body: ["Este aviso cubre el sitio de presentación tiquiz.com y la aplicación Tiquiz."] },
     { h: "Director de la publicación", body: [`${C.director}, directora de ${C.name}.`] },
     { h: "Alojamiento", body: [[ "Aplicación: Hostinger, servidor situado en París, Francia", "Base de datos y autenticación: Supabase", "Páginas de marketing: ITACWT Limited (Systeme.io), Dublín, Irlanda" ]] },
@@ -149,7 +149,7 @@ const it: LegalPage = {
   title: "Note legali",
   lastUpdated: "Ultimo aggiornamento: 22/04/2026",
   sections: [
-    { h: "Editore", body: [`${C.name}, ${C.form} con capitale sociale di ${C.capital}, iscritta al RCS con il numero ${C.rcs}. Sede legale: ${C.address}.`, `Partita IVA: ${C.vat} — Contatto: ${C.email}.`] },
+    { h: "Editore", body: [`${C.name}, ${C.form} con capitale sociale di ${C.capital}, iscritta al RCS con il numero ${C.rcs}. Sede legale: ${C.address}.`, `Partita IVA: ${C.vat} - Contatto: ${C.email}.`] },
     { h: "Ambito", body: ["Le presenti note coprono il sito di presentazione tiquiz.com e l'applicazione Tiquiz."] },
     { h: "Direttore della pubblicazione", body: [`${C.director}, dirigente di ${C.name}.`] },
     { h: "Hosting", body: [[ "Applicazione: Hostinger, server situato a Parigi, Francia", "Database e autenticazione: Supabase", "Pagine marketing: ITACWT Limited (Systeme.io), Dublino, Irlanda" ]] },
@@ -164,7 +164,7 @@ const ar: LegalPage = {
   title: "إشعار قانوني",
   lastUpdated: "آخر تحديث: 22/04/2026",
   sections: [
-    { h: "الناشر", body: [`${C.name}، ${C.form} برأس مال ${C.capital}، مسجلة في السجل التجاري تحت الرقم ${C.rcs}. المقر الاجتماعي: ${C.address}.`, `رقم ضريبة القيمة المضافة: ${C.vat} — الاتصال: ${C.email}.`] },
+    { h: "الناشر", body: [`${C.name}، ${C.form} برأس مال ${C.capital}، مسجلة في السجل التجاري تحت الرقم ${C.rcs}. المقر الاجتماعي: ${C.address}.`, `رقم ضريبة القيمة المضافة: ${C.vat} - الاتصال: ${C.email}.`] },
     { h: "النطاق", body: ["يغطي هذا الإشعار الموقع التعريفي tiquiz.com وتطبيق Tiquiz."] },
     { h: "مدير النشر", body: [`${C.director}، مديرة ${C.name}.`] },
     { h: "الاستضافة", body: [[ "التطبيق: Hostinger، خادم موجود في باريس، فرنسا", "قاعدة البيانات والمصادقة: Supabase", "صفحات التسويق: ITACWT Limited (Systeme.io)، دبلن، إيرلندا" ]] },
