@@ -4009,30 +4009,18 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         la méthode vivent ICI, dans l'aide de l'éditeur, et
                         JAMAIS dans le texte que le visiteur lit. */}
                     <div className="mt-2 space-y-3 rounded-xl border p-3">
-                      <p className="text-sm font-semibold">{t("beatsTitle")}</p>
-                      <p className="text-xs text-muted-foreground">{t("beatsIntro")}</p>
-                      <ol className="space-y-2 text-xs">
-                        {([
-                          ["beatsMirrorName", "beatsMirrorHelp"],
-                          ["beatsCauseName", "beatsCauseHelp"],
-                          ["beatsPathName", "beatsPathHelp"],
-                          ["beatsBridgeName", "beatsBridgeHelp"],
-                        ] as const).map(([name, help], i) => (
-                          <li key={name} className="flex gap-2.5">
-                            <span
-                              className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[11px] font-bold"
-                              style={{ backgroundColor: `${pc}1a`, color: pc }}
-                              aria-hidden
-                            >
-                              {i + 1}
-                            </span>
-                            <span>
-                              <span className="font-semibold">{t(name)}</span>
-                              <span className="text-muted-foreground"> {t(help)}</span>
-                            </span>
-                          </li>
-                        ))}
-                      </ol>
+                      {/* LE VOCABULAIRE DE LA METHODE A DISPARU D'ICI
+                          (Bene, 25 aout 2026 : "a quoi ca sert a ceux qui
+                          sont pas dans l'atelier ?").
+
+                          Le miroir, la cause, le chemin, le pont : ces
+                          noms n'aident que quelqu'un qui a suivi
+                          l'Atelier. Pour les autres, c'etaient quinze
+                          lignes de theorie dans une colonne de reglages.
+
+                          Ce qui reste utile vit sur les blocs eux-memes,
+                          dans l'apercu de la page de resultat : c'est la
+                          qu'on ecrit, donc c'est la qu'on comprend. */}
                       <SettingsToggle
                         label={t("beatsLayoutLabel")}
                         hint={t("beatsLayoutHint")}
