@@ -4,7 +4,7 @@ import { COMPANY as C } from "./company";
 const fr: LegalPage = {
   title: "Conditions générales de vente",
   lastUpdated: "Dernière mise à jour : 22/04/2026",
-  intro: `Les présentes CGV régissent les relations entre ${C.name} (${C.form}, capital ${C.capital}, RCS ${C.rcs}, siège ${C.address}) — ci-après « le Vendeur » — et tout Client souscrivant aux services Tiquiz® sur tiquiz.com.`,
+  intro: `Les présentes CGV régissent les relations entre ${C.name} (${C.form}, capital ${C.capital}, RCS ${C.rcs}, siège ${C.address}), ci-après "le Vendeur", et tout Client souscrivant aux services Tiquiz® sur tiquiz.com.`,
   sections: [
     {
       h: "Article 1 – Objet",

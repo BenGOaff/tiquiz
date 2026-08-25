@@ -4,7 +4,7 @@ import { COMPANY as C } from "./company";
 const fr: LegalPage = {
   title: "Conditions générales du programme d'affiliation",
   lastUpdated: "Dernière mise à jour : 22/04/2026",
-  intro: `${C.name} (${C.form}, capital ${C.capital}, RCS ${C.rcs}, siège ${C.address}) — ci-après « l'Éditeur » — propose un programme d'affiliation permettant aux participants de promouvoir Tiquiz® en échange de commissions.`,
+  intro: `${C.name} (${C.form}, capital ${C.capital}, RCS ${C.rcs}, siège ${C.address}), ci-après "l'Éditeur", propose un programme d'affiliation permettant aux participants de promouvoir Tiquiz® en échange de commissions.`,
   sections: [
     {
       h: "Article 1 – Objet",
