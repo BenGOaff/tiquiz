@@ -170,6 +170,7 @@ import { PanelMediaEditor } from "@/components/quiz/PanelMediaEditor";
 import { projectBackHref } from "@/lib/nav/projectBack";
 import { SessionLostBanner } from "@/components/editor/SessionLostBanner";
 import { resolveIntroStart } from "@/lib/quiz/introStart";
+import { SettingsSection } from "@/components/quiz/SettingsSection";
 
 // Types
 // Un quiz (profil ou scoring) peut mélanger des types de questions, comme le
@@ -3811,602 +3812,505 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 </div>
               </div>)}
               {leftTab === "settings" && (<div className="space-y-6">
-                {/* ── Fermeture du quiz ── */}
-                <section className="space-y-2.5">
-                  <div>
-                    <h3 className="text-sm font-semibold">{t("closeTitle")}</h3>
-                    <p className="text-[11px] text-muted-foreground leading-snug">{t("closeHint")}</p>
-                  </div>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={closeEnabled} onChange={(e) => setCloseEnabled(e.target.checked)} className="size-4 accent-primary" />
-                    {t("closeEnableLabel")}
-                  </label>
-                  {closeEnabled && (
-                    <div className="space-y-3 rounded-lg border border-border p-3">
-                      <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
-                        {([["message", t("closeActionMessage")], ["redirect", t("closeActionRedirect")]] as const).map(([val, label]) => (
-                          <button key={val} type="button" onClick={() => setCloseAction(val)} className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${closeAction === val ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>
-                        ))}
-                      </div>
-                      {closeAction === "redirect" ? (
-                        <div className="space-y-1">
-                          <Label className="text-xs">{t("closeRedirectUrlLabel")}</Label>
-                          <Input value={closeRedirectUrl} onChange={(e) => setCloseRedirectUrl(e.target.value)} placeholder="https://..." />
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <div className="space-y-1">
-                            <Label className="text-xs">{t("closeMessageLabel")}</Label>
-                            <Textarea value={closeMessage} onChange={(e) => setCloseMessage(e.target.value)} rows={2} placeholder={t("closeMessagePlaceholder")} />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">{t("closeCtaTextLabel")}</Label>
-                            <Input value={closeCtaText} onChange={(e) => setCloseCtaText(e.target.value)} />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">{t("closeCtaUrlLabel")}</Label>
-                            <Input value={closeCtaUrl} onChange={(e) => setCloseCtaUrl(e.target.value)} placeholder="https://..." />
-                          </div>
-                        </div>
-                      )}
+                {/* TROIS GROUPES, TROIS TITRES CLAIRS (Béné, 25 août 2026).
+                    Avant : sept blocs empilés dans une seule colonne, chacun
+                    avec ses propres marges et sa propre taille de titre. Le
+                    tracking et la pub ont DÉMÉNAGÉ dans l'onglet Partager du
+                    haut, qui porte déjà l'adresse publique, le code
+                    d'intégration et les réseaux : c'est le même sujet. */}
+                <SettingsSection titre={t("settingsGroupCapture")} aide={t("settingsGroupCaptureHint")} ouvertParDefaut>
+                  <section className="space-y-2.5">
+                    <div>
+                      <h3 className="text-sm font-semibold">{t("captureFormTitle")}</h3>
+                      <p className="text-[11px] text-muted-foreground leading-snug">{t("captureFormHint")}</p>
                     </div>
-                  )}
-                </section>
-                {/* ── Langue du quiz (langue du joueur public) ──
-                    Pilote quizzes.locale, qui détermine TOUTE la langue de
-                    l'interface vue par le visiteur (écran de personnalisation,
-                    boutons Suivant/Précédent, capture email, etc.) via
-                    getT(quiz.locale) dans PublicQuizClient. Sans ce sélecteur,
-                    un quiz au contenu anglais restait affiché avec le chrome
-                    en français (retour utilisatrice anglophone, 21 juil 2026). */}
-                <section className="space-y-2">
-                  <div>
-                    <h3 className="text-sm font-semibold">{t("quizLanguageLabel")}</h3>
-                    <p className="text-[11px] text-muted-foreground leading-snug">{t("quizLanguageHint")}</p>
-                  </div>
-                  <select
-                    value={locale}
-                    onChange={(e) => setLocale(e.target.value)}
-                    className="w-full text-sm bg-background border border-input rounded-md px-2 py-1.5 cursor-pointer"
-                    aria-label={t("quizLanguageLabel")}
-                  >
-                    {!locale && <option value="">{t("quizLanguagePick")}</option>}
-                    {SUPPORTED_LOCALES.map((loc) => (
-                      <option key={loc} value={loc}>{LOCALE_LABELS[loc] ?? loc}</option>
-                    ))}
-                  </select>
-                </section>
-                {/* ── Formulaire de prise de contact ── */}
-                <section className="space-y-2.5">
-                  <div>
-                    <h3 className="text-sm font-semibold">{t("captureFormTitle")}</h3>
-                    <p className="text-[11px] text-muted-foreground leading-snug">{t("captureFormHint")}</p>
-                  </div>
-                  {/* Capture email optionnelle en mode quiz (juillet 2026).
-                      Activée = le créateur récupère l'email du visiteur en
-                      échange d'une ressource affichée à la fin. Désactivée =
-                      le visiteur voit son résultat sans donner d'email (aucun
-                      lead, aucune synchro Systeme.io). Default ON → les quiz
-                      existants ne changent pas. */}
-                  <SettingsToggle
-                    label={t("quizCaptureEnabledLabel")}
-                    hint={t("quizCaptureEnabledHint")}
-                    checked={captureEnabled}
-                    onChange={setCaptureEnabled}
-                  />
-                  {captureEnabled && (<>
-                  <div className="flex flex-wrap gap-1.5">
-                    <CapturePill label={t("fieldEmailRequired")} active locked />
-                    <CapturePill label={t("fieldFirstNameRequired")} active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />
-                    <CapturePill label={t("fieldLastNameRequired")} active={captureLastName} onToggle={() => setCaptureLastName(!captureLastName)} />
-                    <CapturePill label={t("fieldPhone")} active={capturePhone} onToggle={() => setCapturePhone(!capturePhone)} />
-                    <CapturePill label={t("fieldCountry")} active={captureCountry} onToggle={() => setCaptureCountry(!captureCountry)} />
-                  </div>
-                  {/* Sub-toggles "obligatoire" pour chaque champ capturé.
-                      Convention SaaS : asterisk côté visiteur sur les
-                      cases cochées ici, rien sur les autres. L'email
-                      reste obligatoire d'office (pas de toggle). */}
-                  {(captureFirstName || captureLastName || capturePhone || captureCountry) && (
-                    <div className="flex flex-col gap-1.5 pt-1">
-                      {captureFirstName && (
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
-                          <input type="checkbox" checked={firstNameRequired} onChange={(e) => setFirstNameRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
-                          <span>{t("fieldFirstNameRequiredToggle")}</span>
-                        </label>
-                      )}
-                      {captureLastName && (
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
-                          <input type="checkbox" checked={lastNameRequired} onChange={(e) => setLastNameRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
-                          <span>{t("fieldLastNameRequiredToggle")}</span>
-                        </label>
-                      )}
-                      {capturePhone && (
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
-                          <input type="checkbox" checked={phoneRequired} onChange={(e) => setPhoneRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
-                          <span>{t("fieldPhoneRequired")}</span>
-                        </label>
-                      )}
-                      {captureCountry && (
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
-                          <input type="checkbox" checked={countryRequired} onChange={(e) => setCountryRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
-                          <span>{t("fieldCountryRequiredToggle")}</span>
-                        </label>
-                      )}
-                    </div>
-                  )}
-                  {(!captureFirstName || !captureLastName || !capturePhone || !captureCountry) && (
-                    <button
-                      onClick={() => {
-                        if (!captureFirstName) setCaptureFirstName(true);
-                        else if (!captureLastName) setCaptureLastName(true);
-                        else if (!capturePhone) setCapturePhone(true);
-                        else if (!captureCountry) setCaptureCountry(true);
-                      }}
-                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-muted/60 hover:bg-muted text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> {t("addField")}
-                    </button>
-                  )}
-                  {/* Consent checkbox is opt-out — most creators want it for
-                      RGPD safety, but some manage consent upstream (their CRM,
-                      a separate landing page) and don't want a redundant
-                      checkbox under the email field. */}
-                  <SettingsToggle
-                    label={t("showConsentCheckboxLabel")}
-                    hint={t("showConsentCheckboxHint")}
-                    checked={showConsentCheckbox}
-                    onChange={setShowConsentCheckbox}
-                  />
-                  </>)}
-                </section>
-
-                <Separator />
-
-                {/* ── Personnalisation (prénom + genre) ── */}
-                <section className="space-y-2.5">
-                  <div>
-                    <h3 className="text-sm font-semibold">{t("personalizeTitle")}</h3>
-                    <p className="text-[11px] text-muted-foreground leading-snug">
-                      {t("personalizeHint")}
-                    </p>
-                  </div>
-                  <SettingsToggle
-                    label={t("personalizeAskFirstName")}
-                    hint={t("personalizeAskFirstNameHint")}
-                    checked={askFirstName}
-                    onChange={setAskFirstName}
-                  />
-                  <SettingsToggle
-                    label={t("personalizeAskGender")}
-                    hint={t("personalizeAskGenderHint")}
-                    checked={askGender}
-                    onChange={setAskGender}
-                  />
-                  {askGender && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      onClick={runBulkGenderize}
-                      disabled={!!bulkGenderizing}
-                    >
-                      {bulkGenderizing ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
-                          {t("genderizingAll", { done: bulkGenderizing.done, total: bulkGenderizing.total })}
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-3.5 h-3.5 mr-2" />
-                          {t("genderizeAll")}
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </section>
-
-                <Separator />
-
-                {/* ── Options ── */}
-                <section className="space-y-2">
-                  <h3 className="text-sm font-semibold">{t("optionsTitle")}</h3>
-                  <SettingsToggle
-                    label={t("optionShareRequest")}
-                    hint={t("optionShareRequestHint")}
-                    checked={viralityEnabled}
-                    onChange={v => setViralityEnabled(v)}
-                  />
-                  {/* Gwenn (2026-05-14) : voir tous les scores par profil
-                      à la fin du quiz, pas juste le gagnant. Off par défaut
-                      pour ne pas changer le rendu des quizs existants. */}
-                  <SettingsToggle
-                    label={t("optionShowResultsBreakdown")}
-                    hint={t("optionShowResultsBreakdownHint")}
-                    checked={showResultsBreakdown}
-                    onChange={v => setShowResultsBreakdown(v)}
-                  />
-                  {/* Adeline (19 mai 2026) : accordéon "Découvre les
-                      autres profils" sous le résultat du visiteur,
-                      lui permet de voir ce qu'il a "manqué". Rendu
-                      non personnalisé (sans prénom ni variante de
-                      genre). Off par défaut — comme breakdown, c'est
-                      au créateur de décider s'il veut garder le
-                      mystère ou montrer la valeur des autres profils. */}
-                  <SettingsToggle
-                    label={t("optionShowOtherResults")}
-                    hint={t("optionShowOtherResultsHint")}
-                    checked={showOtherResults}
-                    onChange={v => setShowOtherResults(v)}
-                  />
-                  {/* OU il se place. Retour Gwenn, 4 aout 2026 : "au dessus
-                      du bouton d'achat, ca offre une porte de sortie juste
-                      avant la proposition". Il passe donc apres par defaut,
-                      et celle qui preferait l'ancien ordre le remet ici. */}
-                  {showOtherResults && (
-                    <div className="ml-1 mt-2 space-y-1">
-                      <p className="text-xs font-medium">{t("otherResultsPositionLabel")}</p>
-                      <select
-                        className="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
-                        value={otherResultsPosition}
-                        onChange={e =>
-                          setOtherResultsPosition(e.target.value === "before_cta" ? "before_cta" : "after_cta")
-                        }
-                      >
-                        <option value="after_cta">{t("otherResultsAfterCta")}</option>
-                        <option value="before_cta">{t("otherResultsBeforeCta")}</option>
-                      </select>
-                      <p className="text-xs text-muted-foreground">{t("otherResultsPositionHint")}</p>
-                    </div>
-                  )}
-                  {/* ── LES 4 TEMPS (demande Béné, 3 août 2026) ──
-                      La page de résultat suit ce que l'Atelier enseigne :
-                      le miroir, la cause, le chemin, le pont. Les noms de
-                      la méthode vivent ICI, dans l'aide de l'éditeur, et
-                      JAMAIS dans le texte que le visiteur lit. */}
-                  <div className="mt-2 space-y-3 rounded-xl border p-3">
-                    <p className="text-sm font-semibold">{t("beatsTitle")}</p>
-                    <p className="text-xs text-muted-foreground">{t("beatsIntro")}</p>
-                    <ol className="space-y-2 text-xs">
-                      {([
-                        ["beatsMirrorName", "beatsMirrorHelp"],
-                        ["beatsCauseName", "beatsCauseHelp"],
-                        ["beatsPathName", "beatsPathHelp"],
-                        ["beatsBridgeName", "beatsBridgeHelp"],
-                      ] as const).map(([name, help], i) => (
-                        <li key={name} className="flex gap-2.5">
-                          <span
-                            className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[11px] font-bold"
-                            style={{ backgroundColor: `${pc}1a`, color: pc }}
-                            aria-hidden
-                          >
-                            {i + 1}
-                          </span>
-                          <span>
-                            <span className="font-semibold">{t(name)}</span>
-                            <span className="text-muted-foreground"> {t(help)}</span>
-                          </span>
-                        </li>
-                      ))}
-                    </ol>
+                    {/* Capture email optionnelle en mode quiz (juillet 2026).
+                        Activée = le créateur récupère l'email du visiteur en
+                        échange d'une ressource affichée à la fin. Désactivée =
+                        le visiteur voit son résultat sans donner d'email (aucun
+                        lead, aucune synchro Systeme.io). Default ON → les quiz
+                        existants ne changent pas. */}
                     <SettingsToggle
-                      label={t("beatsLayoutLabel")}
-                      hint={t("beatsLayoutHint")}
-                      checked={resultLayout === "beats"}
-                      onChange={(v) => setResultLayout(v ? "beats" : "classic")}
+                      label={t("quizCaptureEnabledLabel")}
+                      hint={t("quizCaptureEnabledHint")}
+                      checked={captureEnabled}
+                      onChange={setCaptureEnabled}
                     />
-                    {resultLayout === "beats" && (
-                      <SettingsToggle
-                        label={t("optionShowResultBridge")}
-                        hint={t("optionShowResultBridgeHint")}
-                        checked={showResultBridge}
-                        onChange={(v) => setShowResultBridge(v)}
-                      />
+                    {captureEnabled && (<>
+                    <div className="flex flex-wrap gap-1.5">
+                      <CapturePill label={t("fieldEmailRequired")} active locked />
+                      <CapturePill label={t("fieldFirstNameRequired")} active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />
+                      <CapturePill label={t("fieldLastNameRequired")} active={captureLastName} onToggle={() => setCaptureLastName(!captureLastName)} />
+                      <CapturePill label={t("fieldPhone")} active={capturePhone} onToggle={() => setCapturePhone(!capturePhone)} />
+                      <CapturePill label={t("fieldCountry")} active={captureCountry} onToggle={() => setCaptureCountry(!captureCountry)} />
+                    </div>
+                    {/* Sub-toggles "obligatoire" pour chaque champ capturé.
+                        Convention SaaS : asterisk côté visiteur sur les
+                        cases cochées ici, rien sur les autres. L'email
+                        reste obligatoire d'office (pas de toggle). */}
+                    {(captureFirstName || captureLastName || capturePhone || captureCountry) && (
+                      <div className="flex flex-col gap-1.5 pt-1">
+                        {captureFirstName && (
+                          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                            <input type="checkbox" checked={firstNameRequired} onChange={(e) => setFirstNameRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
+                            <span>{t("fieldFirstNameRequiredToggle")}</span>
+                          </label>
+                        )}
+                        {captureLastName && (
+                          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                            <input type="checkbox" checked={lastNameRequired} onChange={(e) => setLastNameRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
+                            <span>{t("fieldLastNameRequiredToggle")}</span>
+                          </label>
+                        )}
+                        {capturePhone && (
+                          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                            <input type="checkbox" checked={phoneRequired} onChange={(e) => setPhoneRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
+                            <span>{t("fieldPhoneRequired")}</span>
+                          </label>
+                        )}
+                        {captureCountry && (
+                          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                            <input type="checkbox" checked={countryRequired} onChange={(e) => setCountryRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
+                            <span>{t("fieldCountryRequiredToggle")}</span>
+                          </label>
+                        )}
+                      </div>
                     )}
-                    {/* Le pont manque sur les quiz d'avant : on propose de
-                        le faire écrire, profil par profil, plutôt que de
-                        laisser la créatrice devant un champ vide. */}
-                    {resultLayout === "beats" && missingBridges > 0 && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => void generateMissingBridges()}
-                        disabled={bridgeGenerating}
+                    {(!captureFirstName || !captureLastName || !capturePhone || !captureCountry) && (
+                      <button
+                        onClick={() => {
+                          if (!captureFirstName) setCaptureFirstName(true);
+                          else if (!captureLastName) setCaptureLastName(true);
+                          else if (!capturePhone) setCapturePhone(true);
+                          else if (!captureCountry) setCaptureCountry(true);
+                        }}
+                        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-muted/60 hover:bg-muted text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        {bridgeGenerating
-                          ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />{t("beatsWritingBridges")}</>
-                          : <><Sparkles className="w-3.5 h-3.5 mr-1.5" />{t("beatsWriteBridges", { count: missingBridges })}</>}
-                      </Button>
+                        <Plus className="w-3.5 h-3.5" /> {t("addField")}
+                      </button>
                     )}
-                    {/* Le coach de l'Atelier pour celles qui l'ont, rien
-                        sinon : proposer un coach auquel on n'a pas accès
-                        est pire que ne rien proposer (règle du 2 août). */}
-                    {hasAtelier === true && (
-                      <p className="text-xs text-muted-foreground">{t("beatsAskCoach")}</p>
-                    )}
-                  </div>
-                  {/* Atelier juillet 2026 : personnaliser la page de resultat
-                      facon Tally. Cartes insight / projection masquables +
-                      bouton de partage optionnel. Default TRUE -> quiz
-                      existants inchanges. */}
-                  <SettingsToggle
-                    label={t("optionShowResultInsight")}
-                    hint={t("optionShowResultInsightHint")}
-                    checked={showResultInsight}
-                    onChange={v => setShowResultInsight(v)}
-                  />
-                  <SettingsToggle
-                    label={t("optionShowResultProjection")}
-                    hint={t("optionShowResultProjectionHint")}
-                    checked={showResultProjection}
-                    onChange={v => setShowResultProjection(v)}
-                  />
-                  <SettingsToggle
-                    label={t("optionShowResultShare")}
-                    hint={t("optionShowResultShareHint")}
-                    checked={showResultShare}
-                    onChange={v => setShowResultShare(v)}
-                  />
-                  {/* Partage du profil obtenu (Jocelyne 28 juillet 2026) :
-                      l'URL partagee ?rp= met en avant le profil du visiteur
-                      dans l'apercu social. Default ON (null = actif). */}
-                  <SettingsToggle
-                    label={t("optionShareResultPage")}
-                    hint={t("optionShareResultPageHint")}
-                    checked={shareResultPage}
-                    onChange={v => setShareResultPage(v)}
-                  />
-                  {/* ── Score visuel + axes (mode scoring, Véronique juillet
-                      2026). Tout optionnel : jauge off + zéro axe =
-                      comportement historique inchangé. ── */}
-                  {isScoring && (
-                    <div className="mt-2 space-y-3 rounded-xl border p-3">
-                      <p className="text-sm font-semibold">{t("scoringVisualTitle")}</p>
-                      {/* Le choix d'affichage vient EN PREMIER et reste
-                          toujours visible : il était conditionné à la jauge
-                          ou aux axes, donc une créatrice sans ni l'un ni
-                          l'autre n'avait aucun moyen de retirer le score de
-                          la page (retour Véronique, 1er août 2026). */}
-                      <div className="space-y-1.5">
-                        <p className="text-xs font-semibold">{t("scoreDisplayLabel")}</p>
-                        <div className="flex flex-wrap items-center gap-3 text-sm">
-                          <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                            <input type="radio" name="score-display-mode" checked={scoreDisplayMode === "percent"} onChange={() => setScoreDisplayMode("percent")} className="accent-primary" />
-                            {t("scoreDisplayPercent")}
-                          </label>
-                          <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                            <input type="radio" name="score-display-mode" checked={scoreDisplayMode === "label"} onChange={() => setScoreDisplayMode("label")} className="accent-primary" />
-                            {t("scoreDisplayWord")}
-                          </label>
-                          <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                            <input type="radio" name="score-display-mode" checked={scoreDisplayMode === "hidden"} onChange={() => setScoreDisplayMode("hidden")} className="accent-primary" />
-                            {t("scoreDisplayHidden")}
-                          </label>
-                        </div>
-                        {scoreDisplayMode === "hidden" ? (
-                          <p className="text-[11px] text-muted-foreground leading-snug">{t("scoreDisplayHiddenHint")}</p>
+                    {/* Consent checkbox is opt-out — most creators want it for
+                        RGPD safety, but some manage consent upstream (their CRM,
+                        a separate landing page) and don't want a redundant
+                        checkbox under the email field. */}
+                    <SettingsToggle
+                      label={t("showConsentCheckboxLabel")}
+                      hint={t("showConsentCheckboxHint")}
+                      checked={showConsentCheckbox}
+                      onChange={setShowConsentCheckbox}
+                    />
+                    </>)}
+                  </section>
+
+                  <Separator />
+
+                  {/* ── Personnalisation (prénom + genre) ── */}
+                  <section className="space-y-2.5">
+                    <div>
+                      <h3 className="text-sm font-semibold">{t("personalizeTitle")}</h3>
+                      <p className="text-[11px] text-muted-foreground leading-snug">
+                        {t("personalizeHint")}
+                      </p>
+                    </div>
+                    <SettingsToggle
+                      label={t("personalizeAskFirstName")}
+                      hint={t("personalizeAskFirstNameHint")}
+                      checked={askFirstName}
+                      onChange={setAskFirstName}
+                    />
+                    <SettingsToggle
+                      label={t("personalizeAskGender")}
+                      hint={t("personalizeAskGenderHint")}
+                      checked={askGender}
+                      onChange={setAskGender}
+                    />
+                    {askGender && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={runBulkGenderize}
+                        disabled={!!bulkGenderizing}
+                      >
+                        {bulkGenderizing ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                            {t("genderizingAll", { done: bulkGenderizing.done, total: bulkGenderizing.total })}
+                          </>
                         ) : (
                           <>
-                            {scoreDisplayMode === "label" && (
-                              <div className="grid grid-cols-3 gap-1.5">
-                                <div className="space-y-0.5">
-                                  <p className="text-[10px] text-muted-foreground">{t("scoreLabelLow")}</p>
-                                  <Input value={scoreLabelsEdit.low} onChange={(e) => setScoreLabelsEdit((prev) => ({ ...prev, low: e.target.value }))} className="h-8 text-sm" />
-                                </div>
-                                <div className="space-y-0.5">
-                                  <p className="text-[10px] text-muted-foreground">{t("scoreLabelMid")}</p>
-                                  <Input value={scoreLabelsEdit.mid} onChange={(e) => setScoreLabelsEdit((prev) => ({ ...prev, mid: e.target.value }))} className="h-8 text-sm" />
-                                </div>
-                                <div className="space-y-0.5">
-                                  <p className="text-[10px] text-muted-foreground">{t("scoreLabelHigh")}</p>
-                                  <Input value={scoreLabelsEdit.high} onChange={(e) => setScoreLabelsEdit((prev) => ({ ...prev, high: e.target.value }))} className="h-8 text-sm" />
-                                </div>
-                              </div>
-                            )}
-                            <p className="text-[11px] text-muted-foreground leading-snug">{t("scoreLabelsHint")}</p>
+                            <Sparkles className="w-3.5 h-3.5 mr-2" />
+                            {t("genderizeAll")}
                           </>
                         )}
+                      </Button>
+                    )}
+                  </section>
+
+                  <Separator />
+
+                  {/* ── Options ── */}
+                </SettingsSection>
+                <SettingsSection titre={t("settingsGroupResultats")} aide={t("settingsGroupResultatsHint")}>
+                  <section className="space-y-2">
+                    <h3 className="text-sm font-semibold">{t("optionsTitle")}</h3>
+                    <SettingsToggle
+                      label={t("optionShareRequest")}
+                      hint={t("optionShareRequestHint")}
+                      checked={viralityEnabled}
+                      onChange={v => setViralityEnabled(v)}
+                    />
+                    {/* Gwenn (2026-05-14) : voir tous les scores par profil
+                        à la fin du quiz, pas juste le gagnant. Off par défaut
+                        pour ne pas changer le rendu des quizs existants. */}
+                    <SettingsToggle
+                      label={t("optionShowResultsBreakdown")}
+                      hint={t("optionShowResultsBreakdownHint")}
+                      checked={showResultsBreakdown}
+                      onChange={v => setShowResultsBreakdown(v)}
+                    />
+                    {/* Adeline (19 mai 2026) : accordéon "Découvre les
+                        autres profils" sous le résultat du visiteur,
+                        lui permet de voir ce qu'il a "manqué". Rendu
+                        non personnalisé (sans prénom ni variante de
+                        genre). Off par défaut — comme breakdown, c'est
+                        au créateur de décider s'il veut garder le
+                        mystère ou montrer la valeur des autres profils. */}
+                    <SettingsToggle
+                      label={t("optionShowOtherResults")}
+                      hint={t("optionShowOtherResultsHint")}
+                      checked={showOtherResults}
+                      onChange={v => setShowOtherResults(v)}
+                    />
+                    {/* OU il se place. Retour Gwenn, 4 aout 2026 : "au dessus
+                        du bouton d'achat, ca offre une porte de sortie juste
+                        avant la proposition". Il passe donc apres par defaut,
+                        et celle qui preferait l'ancien ordre le remet ici. */}
+                    {showOtherResults && (
+                      <div className="ml-1 mt-2 space-y-1">
+                        <p className="text-xs font-medium">{t("otherResultsPositionLabel")}</p>
+                        <select
+                          className="w-full rounded-md border bg-background px-2 py-1.5 text-sm"
+                          value={otherResultsPosition}
+                          onChange={e =>
+                            setOtherResultsPosition(e.target.value === "before_cta" ? "before_cta" : "after_cta")
+                          }
+                        >
+                          <option value="after_cta">{t("otherResultsAfterCta")}</option>
+                          <option value="before_cta">{t("otherResultsBeforeCta")}</option>
+                        </select>
+                        <p className="text-xs text-muted-foreground">{t("otherResultsPositionHint")}</p>
                       </div>
-                      {/* La jauge n'a plus de sens si le score n'est pas
-                          affiché : on retire le réglage au lieu de laisser
-                          une case cochée qui ne fait rien. */}
-                      {scoreDisplayMode !== "hidden" && (
+                    )}
+                    {/* ── LES 4 TEMPS (demande Béné, 3 août 2026) ──
+                        La page de résultat suit ce que l'Atelier enseigne :
+                        le miroir, la cause, le chemin, le pont. Les noms de
+                        la méthode vivent ICI, dans l'aide de l'éditeur, et
+                        JAMAIS dans le texte que le visiteur lit. */}
+                    <div className="mt-2 space-y-3 rounded-xl border p-3">
+                      <p className="text-sm font-semibold">{t("beatsTitle")}</p>
+                      <p className="text-xs text-muted-foreground">{t("beatsIntro")}</p>
+                      <ol className="space-y-2 text-xs">
+                        {([
+                          ["beatsMirrorName", "beatsMirrorHelp"],
+                          ["beatsCauseName", "beatsCauseHelp"],
+                          ["beatsPathName", "beatsPathHelp"],
+                          ["beatsBridgeName", "beatsBridgeHelp"],
+                        ] as const).map(([name, help], i) => (
+                          <li key={name} className="flex gap-2.5">
+                            <span
+                              className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[11px] font-bold"
+                              style={{ backgroundColor: `${pc}1a`, color: pc }}
+                              aria-hidden
+                            >
+                              {i + 1}
+                            </span>
+                            <span>
+                              <span className="font-semibold">{t(name)}</span>
+                              <span className="text-muted-foreground"> {t(help)}</span>
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                      <SettingsToggle
+                        label={t("beatsLayoutLabel")}
+                        hint={t("beatsLayoutHint")}
+                        checked={resultLayout === "beats"}
+                        onChange={(v) => setResultLayout(v ? "beats" : "classic")}
+                      />
+                      {resultLayout === "beats" && (
                         <SettingsToggle
-                          label={t("optionScoreGauge")}
-                          hint={t("optionScoreGaugeHint")}
-                          checked={showScoreGauge}
-                          onChange={v => setShowScoreGauge(v)}
+                          label={t("optionShowResultBridge")}
+                          hint={t("optionShowResultBridgeHint")}
+                          checked={showResultBridge}
+                          onChange={(v) => setShowResultBridge(v)}
                         />
                       )}
-                      {/* Les axes restent éditables même score masqué : ils
-                          alimentent aussi les variables {score_axe} des
-                          textes et les tags Systeme.io. */}
-                      <div className="space-y-1.5">
-                        <p className="text-xs font-semibold">{t("scoringAxesLabel")}</p>
-                        <p className="text-[11px] text-muted-foreground leading-snug">{t("scoringAxesHint")}</p>
-                        {scoringAxesEdit.map((axis, ai) => (
-                          <div key={axis.id} className="flex items-center gap-1.5">
-                            <Input
-                              value={axis.label}
-                              onChange={(e) => renameScoringAxis(ai, e.target.value)}
-                              placeholder={t("scoringAxisPh")}
-                              className="h-8 text-sm"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeScoringAxis(ai)}
-                              className="p-1.5 rounded text-muted-foreground hover:text-destructive transition-colors"
-                              aria-label={t("scoringRemoveAxis")}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                      {/* Le pont manque sur les quiz d'avant : on propose de
+                          le faire écrire, profil par profil, plutôt que de
+                          laisser la créatrice devant un champ vide. */}
+                      {resultLayout === "beats" && missingBridges > 0 && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => void generateMissingBridges()}
+                          disabled={bridgeGenerating}
+                        >
+                          {bridgeGenerating
+                            ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />{t("beatsWritingBridges")}</>
+                            : <><Sparkles className="w-3.5 h-3.5 mr-1.5" />{t("beatsWriteBridges", { count: missingBridges })}</>}
+                        </Button>
+                      )}
+                      {/* Le coach de l'Atelier pour celles qui l'ont, rien
+                          sinon : proposer un coach auquel on n'a pas accès
+                          est pire que ne rien proposer (règle du 2 août). */}
+                      {hasAtelier === true && (
+                        <p className="text-xs text-muted-foreground">{t("beatsAskCoach")}</p>
+                      )}
+                    </div>
+                    {/* Atelier juillet 2026 : personnaliser la page de resultat
+                        facon Tally. Cartes insight / projection masquables +
+                        bouton de partage optionnel. Default TRUE -> quiz
+                        existants inchanges. */}
+                    <SettingsToggle
+                      label={t("optionShowResultInsight")}
+                      hint={t("optionShowResultInsightHint")}
+                      checked={showResultInsight}
+                      onChange={v => setShowResultInsight(v)}
+                    />
+                    <SettingsToggle
+                      label={t("optionShowResultProjection")}
+                      hint={t("optionShowResultProjectionHint")}
+                      checked={showResultProjection}
+                      onChange={v => setShowResultProjection(v)}
+                    />
+                    <SettingsToggle
+                      label={t("optionShowResultShare")}
+                      hint={t("optionShowResultShareHint")}
+                      checked={showResultShare}
+                      onChange={v => setShowResultShare(v)}
+                    />
+                    {/* Partage du profil obtenu (Jocelyne 28 juillet 2026) :
+                        l'URL partagee ?rp= met en avant le profil du visiteur
+                        dans l'apercu social. Default ON (null = actif). */}
+                    <SettingsToggle
+                      label={t("optionShareResultPage")}
+                      hint={t("optionShareResultPageHint")}
+                      checked={shareResultPage}
+                      onChange={v => setShareResultPage(v)}
+                    />
+                    {/* ── Score visuel + axes (mode scoring, Véronique juillet
+                        2026). Tout optionnel : jauge off + zéro axe =
+                        comportement historique inchangé. ── */}
+                    {isScoring && (
+                      <div className="mt-2 space-y-3 rounded-xl border p-3">
+                        <p className="text-sm font-semibold">{t("scoringVisualTitle")}</p>
+                        {/* Le choix d'affichage vient EN PREMIER et reste
+                            toujours visible : il était conditionné à la jauge
+                            ou aux axes, donc une créatrice sans ni l'un ni
+                            l'autre n'avait aucun moyen de retirer le score de
+                            la page (retour Véronique, 1er août 2026). */}
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-semibold">{t("scoreDisplayLabel")}</p>
+                          <div className="flex flex-wrap items-center gap-3 text-sm">
+                            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                              <input type="radio" name="score-display-mode" checked={scoreDisplayMode === "percent"} onChange={() => setScoreDisplayMode("percent")} className="accent-primary" />
+                              {t("scoreDisplayPercent")}
+                            </label>
+                            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                              <input type="radio" name="score-display-mode" checked={scoreDisplayMode === "label"} onChange={() => setScoreDisplayMode("label")} className="accent-primary" />
+                              {t("scoreDisplayWord")}
+                            </label>
+                            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                              <input type="radio" name="score-display-mode" checked={scoreDisplayMode === "hidden"} onChange={() => setScoreDisplayMode("hidden")} className="accent-primary" />
+                              {t("scoreDisplayHidden")}
+                            </label>
                           </div>
-                        ))}
-                        {scoringAxesEdit.length < MAX_SCORING_AXES && (
-                          <Button type="button" variant="outline" size="sm" onClick={addScoringAxis}>
-                            <Plus className="w-3.5 h-3.5 mr-1" />
-                            {t("scoringAddAxis")}
-                          </Button>
+                          {scoreDisplayMode === "hidden" ? (
+                            <p className="text-[11px] text-muted-foreground leading-snug">{t("scoreDisplayHiddenHint")}</p>
+                          ) : (
+                            <>
+                              {scoreDisplayMode === "label" && (
+                                <div className="grid grid-cols-3 gap-1.5">
+                                  <div className="space-y-0.5">
+                                    <p className="text-[10px] text-muted-foreground">{t("scoreLabelLow")}</p>
+                                    <Input value={scoreLabelsEdit.low} onChange={(e) => setScoreLabelsEdit((prev) => ({ ...prev, low: e.target.value }))} className="h-8 text-sm" />
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <p className="text-[10px] text-muted-foreground">{t("scoreLabelMid")}</p>
+                                    <Input value={scoreLabelsEdit.mid} onChange={(e) => setScoreLabelsEdit((prev) => ({ ...prev, mid: e.target.value }))} className="h-8 text-sm" />
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <p className="text-[10px] text-muted-foreground">{t("scoreLabelHigh")}</p>
+                                    <Input value={scoreLabelsEdit.high} onChange={(e) => setScoreLabelsEdit((prev) => ({ ...prev, high: e.target.value }))} className="h-8 text-sm" />
+                                  </div>
+                                </div>
+                              )}
+                              <p className="text-[11px] text-muted-foreground leading-snug">{t("scoreLabelsHint")}</p>
+                            </>
+                          )}
+                        </div>
+                        {/* La jauge n'a plus de sens si le score n'est pas
+                            affiché : on retire le réglage au lieu de laisser
+                            une case cochée qui ne fait rien. */}
+                        {scoreDisplayMode !== "hidden" && (
+                          <SettingsToggle
+                            label={t("optionScoreGauge")}
+                            hint={t("optionScoreGaugeHint")}
+                            checked={showScoreGauge}
+                            onChange={v => setShowScoreGauge(v)}
+                          />
+                        )}
+                        {/* Les axes restent éditables même score masqué : ils
+                            alimentent aussi les variables {score_axe} des
+                            textes et les tags Systeme.io. */}
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-semibold">{t("scoringAxesLabel")}</p>
+                          <p className="text-[11px] text-muted-foreground leading-snug">{t("scoringAxesHint")}</p>
+                          {scoringAxesEdit.map((axis, ai) => (
+                            <div key={axis.id} className="flex items-center gap-1.5">
+                              <Input
+                                value={axis.label}
+                                onChange={(e) => renameScoringAxis(ai, e.target.value)}
+                                placeholder={t("scoringAxisPh")}
+                                className="h-8 text-sm"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeScoringAxis(ai)}
+                                className="p-1.5 rounded text-muted-foreground hover:text-destructive transition-colors"
+                                aria-label={t("scoringRemoveAxis")}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                          {scoringAxesEdit.length < MAX_SCORING_AXES && (
+                            <Button type="button" variant="outline" size="sm" onClick={addScoringAxis}>
+                              <Plus className="w-3.5 h-3.5 mr-1" />
+                              {t("scoringAddAxis")}
+                            </Button>
+                          )}
+                        </div>
+                        {scoringAxesEdit.some((a) => a.label.trim()) && (
+                          <p className="text-[11px] text-muted-foreground leading-snug">
+                            {t("scoringVarsHint")}{" "}
+                            <span className="font-mono break-all">{scorePlaceholderList(scoringAxesEdit.filter((a) => a.label.trim())).join(" ")}</span>
+                          </p>
+                        )}
+                        <SettingsToggle
+                          label={t("optionSioScoreTags")}
+                          hint={t("optionSioScoreTagsHint")}
+                          checked={sioScoreTags}
+                          onChange={v => setSioScoreTags(v)}
+                        />
+                      </div>
+                    )}
+                    {/* Masque le nombre brut de reponses dans l'onglet
+                        Resultats (donut + barres) et n'affiche que les %.
+                        Off par defaut = compteurs visibles. */}
+                    <SettingsToggle
+                      label={t("optionHideResponseCounts")}
+                      hint={t("optionHideResponseCountsHint")}
+                      checked={hideResponseCounts}
+                      onChange={v => setHideResponseCounts(v)}
+                    />
+                    {/* Notifications email par quiz (Gwenn 19 juil 2026) : chaque
+                        quiz peut couper ses emails de notification. On/off. */}
+                    <SettingsToggle
+                      label={t("optionNotifyResponses")}
+                      hint={t("optionNotifyResponsesHint")}
+                      checked={notifyResponses}
+                      onChange={v => setNotifyResponses(v)}
+                    />
+                  </section>
+
+                  {/* Tracking & Pubs — Phase B (Adeline, 19 mai 2026).
+                      Meta Pixel + GA4 + Google Ads per-quiz. Les pixels
+                      ne se chargent qu'APRÈS le visiteur a coché la
+                      case de consentement (gating strict côté visiteur).
+                      Aide : liens directs Meta Events Manager / GA4
+                      Admin / Google Ads pour aller chercher les IDs. */}
+                  <section className="space-y-1.5">
+                    <div>
+                      <h3 className="text-sm font-semibold">{t("defaultCtaTitle")}</h3>
+                      <p className="text-[11px] text-muted-foreground leading-snug">
+                        {t("defaultCtaHint")}
+                      </p>
+                    </div>
+                    <Input value={ctaText} onChange={e => setCtaText(e.target.value)} placeholder={t("ctaTextPlaceholder")} className="text-xs" />
+                    <Input value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} placeholder={t("ctaUrlPlaceholder")} className="text-xs" />
+                  </section>
+                </SettingsSection>
+                <SettingsSection titre={t("settingsGroupGestion")} aide={t("settingsGroupGestionHint")}>
+                  <section className="space-y-2">
+                    <div>
+                      <h3 className="text-sm font-semibold">{t("quizLanguageLabel")}</h3>
+                      <p className="text-[11px] text-muted-foreground leading-snug">{t("quizLanguageHint")}</p>
+                    </div>
+                    <select
+                      value={locale}
+                      onChange={(e) => setLocale(e.target.value)}
+                      className="w-full text-sm bg-background border border-input rounded-md px-2 py-1.5 cursor-pointer"
+                      aria-label={t("quizLanguageLabel")}
+                    >
+                      {!locale && <option value="">{t("quizLanguagePick")}</option>}
+                      {SUPPORTED_LOCALES.map((loc) => (
+                        <option key={loc} value={loc}>{LOCALE_LABELS[loc] ?? loc}</option>
+                      ))}
+                    </select>
+                  </section>
+                  {/* ── Formulaire de prise de contact ── */}
+                  <section className="space-y-2.5">
+                    <div>
+                      <h3 className="text-sm font-semibold">{t("closeTitle")}</h3>
+                      <p className="text-[11px] text-muted-foreground leading-snug">{t("closeHint")}</p>
+                    </div>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={closeEnabled} onChange={(e) => setCloseEnabled(e.target.checked)} className="size-4 accent-primary" />
+                      {t("closeEnableLabel")}
+                    </label>
+                    {closeEnabled && (
+                      <div className="space-y-3 rounded-lg border border-border p-3">
+                        <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
+                          {([["message", t("closeActionMessage")], ["redirect", t("closeActionRedirect")]] as const).map(([val, label]) => (
+                            <button key={val} type="button" onClick={() => setCloseAction(val)} className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${closeAction === val ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>{label}</button>
+                          ))}
+                        </div>
+                        {closeAction === "redirect" ? (
+                          <div className="space-y-1">
+                            <Label className="text-xs">{t("closeRedirectUrlLabel")}</Label>
+                            <Input value={closeRedirectUrl} onChange={(e) => setCloseRedirectUrl(e.target.value)} placeholder="https://..." />
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="space-y-1">
+                              <Label className="text-xs">{t("closeMessageLabel")}</Label>
+                              <Textarea value={closeMessage} onChange={(e) => setCloseMessage(e.target.value)} rows={2} placeholder={t("closeMessagePlaceholder")} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">{t("closeCtaTextLabel")}</Label>
+                              <Input value={closeCtaText} onChange={(e) => setCloseCtaText(e.target.value)} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">{t("closeCtaUrlLabel")}</Label>
+                              <Input value={closeCtaUrl} onChange={(e) => setCloseCtaUrl(e.target.value)} placeholder="https://..." />
+                            </div>
+                          </div>
                         )}
                       </div>
-                      {scoringAxesEdit.some((a) => a.label.trim()) && (
-                        <p className="text-[11px] text-muted-foreground leading-snug">
-                          {t("scoringVarsHint")}{" "}
-                          <span className="font-mono break-all">{scorePlaceholderList(scoringAxesEdit.filter((a) => a.label.trim())).join(" ")}</span>
-                        </p>
-                      )}
-                      <SettingsToggle
-                        label={t("optionSioScoreTags")}
-                        hint={t("optionSioScoreTagsHint")}
-                        checked={sioScoreTags}
-                        onChange={v => setSioScoreTags(v)}
-                      />
-                    </div>
-                  )}
-                  {/* Masque le nombre brut de reponses dans l'onglet
-                      Resultats (donut + barres) et n'affiche que les %.
-                      Off par defaut = compteurs visibles. */}
-                  <SettingsToggle
-                    label={t("optionHideResponseCounts")}
-                    hint={t("optionHideResponseCountsHint")}
-                    checked={hideResponseCounts}
-                    onChange={v => setHideResponseCounts(v)}
-                  />
-                  {/* Notifications email par quiz (Gwenn 19 juil 2026) : chaque
-                      quiz peut couper ses emails de notification. On/off. */}
-                  <SettingsToggle
-                    label={t("optionNotifyResponses")}
-                    hint={t("optionNotifyResponsesHint")}
-                    checked={notifyResponses}
-                    onChange={v => setNotifyResponses(v)}
-                  />
-                </section>
-
-                {/* Tracking & Pubs — Phase B (Adeline, 19 mai 2026).
-                    Meta Pixel + GA4 + Google Ads per-quiz. Les pixels
-                    ne se chargent qu'APRÈS le visiteur a coché la
-                    case de consentement (gating strict côté visiteur).
-                    Aide : liens directs Meta Events Manager / GA4
-                    Admin / Google Ads pour aller chercher les IDs. */}
-                <section className="space-y-2.5">
-                  <div>
-                    <h3 className="text-sm font-semibold">{t("trackingPixelsTitle")}</h3>
-                    <p className="text-[11px] text-muted-foreground leading-snug">{t("trackingPixelsHint")}</p>
-                  </div>
-                  {/* Bouton "Appliquer mes valeurs par défaut" — visible
-                      seulement si l'auteur a configuré au moins une
-                      valeur dans /settings ET que les champs locaux
-                      sont tous vides (sinon on risquerait d'écraser
-                      des valeurs déjà saisies sur ce quiz). */}
-                  {pixelDefaults &&
-                    !metaPixelId && !ga4MeasurementId && !googleAdsConversionId && !googleAdsConversionLabel &&
-                    (pixelDefaults.meta_pixel_id || pixelDefaults.ga4_measurement_id ||
-                     pixelDefaults.google_ads_conversion_id || pixelDefaults.google_ads_conversion_label) && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMetaPixelId(pixelDefaults.meta_pixel_id ?? "");
-                        setGa4MeasurementId(pixelDefaults.ga4_measurement_id ?? "");
-                        setGoogleAdsConversionId(pixelDefaults.google_ads_conversion_id ?? "");
-                        setGoogleAdsConversionLabel(pixelDefaults.google_ads_conversion_label ?? "");
-                      }}
-                      className="text-[11px] text-primary hover:underline self-start"
-                    >
-                      {t("trackingApplyDefaults")}
-                    </button>
-                  )}
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-medium block">{t("trackingMetaLabel")}</label>
-                    <Input value={metaPixelId} onChange={(e) => setMetaPixelId(e.target.value)} placeholder="1234567890123456" className="text-xs h-8" />
-                    {metaPixelId && !isPixelFieldValid("meta_pixel_id", metaPixelId) && (
-                      <p className="text-[10px] text-destructive">{t("trackingInvalidFormat")}</p>
                     )}
-                    <p className="text-[10px] text-muted-foreground">
-                      <a href="https://business.facebook.com/events_manager" target="_blank" rel="noopener noreferrer" className="hover:underline">{t("trackingMetaHelp")}</a>
-                    </p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-medium block">{t("trackingGa4Label")}</label>
-                    <Input value={ga4MeasurementId} onChange={(e) => setGa4MeasurementId(e.target.value)} placeholder="G-XXXXXXXXXX" className="text-xs h-8" />
-                    {ga4MeasurementId && !isPixelFieldValid("ga4_measurement_id", ga4MeasurementId) && (
-                      <p className="text-[10px] text-destructive">{t("trackingInvalidFormat")}</p>
-                    )}
-                    <p className="text-[10px] text-muted-foreground">
-                      <a href="https://analytics.google.com/" target="_blank" rel="noopener noreferrer" className="hover:underline">{t("trackingGa4Help")}</a>
-                    </p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-medium block">{t("trackingAdsIdLabel")}</label>
-                    <Input value={googleAdsConversionId} onChange={(e) => setGoogleAdsConversionId(e.target.value)} placeholder="AW-1234567890" className="text-xs h-8" />
-                    {googleAdsConversionId && !isPixelFieldValid("google_ads_conversion_id", googleAdsConversionId) && (
-                      <p className="text-[10px] text-destructive">{t("trackingInvalidFormat")}</p>
-                    )}
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-medium block">{t("trackingAdsLabelLabel")}</label>
-                    <Input value={googleAdsConversionLabel} onChange={(e) => setGoogleAdsConversionLabel(e.target.value)} placeholder="abcDEF123" className="text-xs h-8" />
-                    {googleAdsConversionLabel && !isPixelFieldValid("google_ads_conversion_label", googleAdsConversionLabel) && (
-                      <p className="text-[10px] text-destructive">{t("trackingInvalidFormat")}</p>
-                    )}
-                    <p className="text-[10px] text-muted-foreground">
-                      <a href="https://ads.google.com/" target="_blank" rel="noopener noreferrer" className="hover:underline">{t("trackingAdsHelp")}</a>
-                    </p>
-                  </div>
-                </section>
-
-                {viralityEnabled && (
-                  <section className="space-y-3 bg-muted/30 border rounded-xl p-3">
-                    <div>
-                      <h4 className="text-xs font-semibold">{t("bonusTitle")}</h4>
-                      <p className="text-[11px] text-muted-foreground leading-snug">{t("bonusHint")}</p>
-                    </div>
-                    <Input value={bonusDescription} onChange={e => setBonusDescription(e.target.value)} placeholder={t("bonusPlaceholder")} className="text-xs" />
-
-                    {/* Visuel bonus : édité directement dans le preview
-                        (WYSIWYG, miroir de la couverture intro) → dropzone
-                        d'upload + génération IA + GIF + drag-and-drop sur
-                        4 slots + crop. Plus rien à gérer dans la sidebar. */}
-
-                    <div>
-                      <Label className="text-[11px] font-semibold">{t("shareMessageLabel")}</Label>
-                      <p className="text-[10px] text-muted-foreground mb-1.5">{t("shareMessageHint")}</p>
-                      <Textarea value={shareMessage} onChange={e => setShareMessage(e.target.value)} placeholder={t("shareMessageDefault", { title: title || "…" })} className="text-xs" rows={2} />
-                    </div>
-
-                    {/* SIO tag is a logged-in-only feature — the
-                        embed visitor configures tags later in their
-                        account, after the import. */}
-                    {!isEmbed && (
-                      <div>
-                        <Label className="text-[11px] font-semibold">{t("shareTagLabel")}</Label>
-                        <p className="text-[10px] text-muted-foreground mb-1.5">{t("shareTagHint")}</p>
-                        <SioTagPicker value={sioShareTagName} onChange={setSioShareTagName} />
-                      </div>
-                    )}
-
-                    {/* Clé API Systeme.io par quiz : permet (ex: freelance)
-                        d'envoyer les leads de CE quiz vers le compte SIO du
-                        client. Le picker fetch les clés + PATCH /api/quiz/[id]
-                        de façon autonome (l'éditeur ne gère pas sio_api_key_id,
-                        donc pas de conflit avec l'autosave). */}
-                    {!isEmbed && <QuizSioKeyPicker quizId={quizId} />}
                   </section>
-                )}
-
-                <Separator />
-
-                {/* ── CTA par défaut ── */}
-                <section className="space-y-1.5">
-                  <div>
-                    <h3 className="text-sm font-semibold">{t("defaultCtaTitle")}</h3>
-                    <p className="text-[11px] text-muted-foreground leading-snug">
-                      {t("defaultCtaHint")}
-                    </p>
-                  </div>
-                  <Input value={ctaText} onChange={e => setCtaText(e.target.value)} placeholder={t("ctaTextPlaceholder")} className="text-xs" />
-                  <Input value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} placeholder={t("ctaUrlPlaceholder")} className="text-xs" />
-                </section>
+                  {/* ── Langue du quiz (langue du joueur public) ──
+                      Pilote quizzes.locale, qui détermine TOUTE la langue de
+                      l'interface vue par le visiteur (écran de personnalisation,
+                      boutons Suivant/Précédent, capture email, etc.) via
+                      getT(quiz.locale) dans PublicQuizClient. Sans ce sélecteur,
+                      un quiz au contenu anglais restait affiché avec le chrome
+                      en français (retour utilisatrice anglophone, 21 juil 2026). */}
+                </SettingsSection>
               </div>)}
             </div>
           </aside>
@@ -6411,6 +6315,125 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
               Enregistrer
             </Button>
           </div>
+          {/* LE TRACKING ET LA PUB VIVENT ICI (Béné, 25 août 2026).
+
+              Ils étaient dans la barre de paramètres, à gauche, entre la
+              langue et le formulaire de capture. Or un pixel Meta, un
+              identifiant GA4 et une conversion Google Ads répondent à la
+              même question que cet onglet : comment ce quiz est diffusé et
+              mesuré. Ils sont donc à côté de l'adresse publique, du code
+              d'intégration et des réseaux. */}
+          <Card><CardContent className="pt-6">
+            <section className="space-y-2.5">
+            <div>
+            <h3 className="text-sm font-semibold">{t("trackingPixelsTitle")}</h3>
+            <p className="text-[11px] text-muted-foreground leading-snug">{t("trackingPixelsHint")}</p>
+            </div>
+            {/* Bouton "Appliquer mes valeurs par défaut" — visible
+            seulement si l'auteur a configuré au moins une
+            valeur dans /settings ET que les champs locaux
+            sont tous vides (sinon on risquerait d'écraser
+            des valeurs déjà saisies sur ce quiz). */}
+            {pixelDefaults &&
+            !metaPixelId && !ga4MeasurementId && !googleAdsConversionId && !googleAdsConversionLabel &&
+            (pixelDefaults.meta_pixel_id || pixelDefaults.ga4_measurement_id ||
+            pixelDefaults.google_ads_conversion_id || pixelDefaults.google_ads_conversion_label) && (
+            <button
+            type="button"
+            onClick={() => {
+            setMetaPixelId(pixelDefaults.meta_pixel_id ?? "");
+            setGa4MeasurementId(pixelDefaults.ga4_measurement_id ?? "");
+            setGoogleAdsConversionId(pixelDefaults.google_ads_conversion_id ?? "");
+            setGoogleAdsConversionLabel(pixelDefaults.google_ads_conversion_label ?? "");
+            }}
+            className="text-[11px] text-primary hover:underline self-start"
+            >
+            {t("trackingApplyDefaults")}
+            </button>
+            )}
+            <div className="space-y-1.5">
+            <label className="text-[11px] font-medium block">{t("trackingMetaLabel")}</label>
+            <Input value={metaPixelId} onChange={(e) => setMetaPixelId(e.target.value)} placeholder="1234567890123456" className="text-xs h-8" />
+            {metaPixelId && !isPixelFieldValid("meta_pixel_id", metaPixelId) && (
+            <p className="text-[10px] text-destructive">{t("trackingInvalidFormat")}</p>
+            )}
+            <p className="text-[10px] text-muted-foreground">
+            <a href="https://business.facebook.com/events_manager" target="_blank" rel="noopener noreferrer" className="hover:underline">{t("trackingMetaHelp")}</a>
+            </p>
+            </div>
+            <div className="space-y-1.5">
+            <label className="text-[11px] font-medium block">{t("trackingGa4Label")}</label>
+            <Input value={ga4MeasurementId} onChange={(e) => setGa4MeasurementId(e.target.value)} placeholder="G-XXXXXXXXXX" className="text-xs h-8" />
+            {ga4MeasurementId && !isPixelFieldValid("ga4_measurement_id", ga4MeasurementId) && (
+            <p className="text-[10px] text-destructive">{t("trackingInvalidFormat")}</p>
+            )}
+            <p className="text-[10px] text-muted-foreground">
+            <a href="https://analytics.google.com/" target="_blank" rel="noopener noreferrer" className="hover:underline">{t("trackingGa4Help")}</a>
+            </p>
+            </div>
+            <div className="space-y-1.5">
+            <label className="text-[11px] font-medium block">{t("trackingAdsIdLabel")}</label>
+            <Input value={googleAdsConversionId} onChange={(e) => setGoogleAdsConversionId(e.target.value)} placeholder="AW-1234567890" className="text-xs h-8" />
+            {googleAdsConversionId && !isPixelFieldValid("google_ads_conversion_id", googleAdsConversionId) && (
+            <p className="text-[10px] text-destructive">{t("trackingInvalidFormat")}</p>
+            )}
+            </div>
+            <div className="space-y-1.5">
+            <label className="text-[11px] font-medium block">{t("trackingAdsLabelLabel")}</label>
+            <Input value={googleAdsConversionLabel} onChange={(e) => setGoogleAdsConversionLabel(e.target.value)} placeholder="abcDEF123" className="text-xs h-8" />
+            {googleAdsConversionLabel && !isPixelFieldValid("google_ads_conversion_label", googleAdsConversionLabel) && (
+            <p className="text-[10px] text-destructive">{t("trackingInvalidFormat")}</p>
+            )}
+            <p className="text-[10px] text-muted-foreground">
+            <a href="https://ads.google.com/" target="_blank" rel="noopener noreferrer" className="hover:underline">{t("trackingAdsHelp")}</a>
+            </p>
+            </div>
+            </section>
+
+            {viralityEnabled && (
+            <section className="space-y-3 bg-muted/30 border rounded-xl p-3">
+            <div>
+            <h4 className="text-xs font-semibold">{t("bonusTitle")}</h4>
+            <p className="text-[11px] text-muted-foreground leading-snug">{t("bonusHint")}</p>
+            </div>
+            <Input value={bonusDescription} onChange={e => setBonusDescription(e.target.value)} placeholder={t("bonusPlaceholder")} className="text-xs" />
+
+            {/* Visuel bonus : édité directement dans le preview
+            (WYSIWYG, miroir de la couverture intro) → dropzone
+            d'upload + génération IA + GIF + drag-and-drop sur
+            4 slots + crop. Plus rien à gérer dans la sidebar. */}
+
+            <div>
+            <Label className="text-[11px] font-semibold">{t("shareMessageLabel")}</Label>
+            <p className="text-[10px] text-muted-foreground mb-1.5">{t("shareMessageHint")}</p>
+            <Textarea value={shareMessage} onChange={e => setShareMessage(e.target.value)} placeholder={t("shareMessageDefault", { title: title || "…" })} className="text-xs" rows={2} />
+            </div>
+
+            {/* SIO tag is a logged-in-only feature — the
+            embed visitor configures tags later in their
+            account, after the import. */}
+            {!isEmbed && (
+            <div>
+            <Label className="text-[11px] font-semibold">{t("shareTagLabel")}</Label>
+            <p className="text-[10px] text-muted-foreground mb-1.5">{t("shareTagHint")}</p>
+            <SioTagPicker value={sioShareTagName} onChange={setSioShareTagName} />
+            </div>
+            )}
+
+            {/* Clé API Systeme.io par quiz : permet (ex: freelance)
+            d'envoyer les leads de CE quiz vers le compte SIO du
+            client. Le picker fetch les clés + PATCH /api/quiz/[id]
+            de façon autonome (l'éditeur ne gère pas sio_api_key_id,
+            donc pas de conflit avec l'autosave). */}
+            {!isEmbed && <QuizSioKeyPicker quizId={quizId} />}
+            </section>
+            )}
+
+            <Separator />
+
+            {/* ── CTA par défaut ── */}
+          </CardContent></Card>
+
         </div></div>
       )}
 

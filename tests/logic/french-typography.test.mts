@@ -291,3 +291,22 @@ test("aucun appelant ne peut plus détruire une taille de police", () => {
     assert.match(out, /--rt-fs-d:\s*32px/);
   }
 });
+
+// ── L'INTERFACE FRANÇAISE N'EN PORTE AUCUN NON PLUS ─────────────────
+//
+// Béné : "le générateur de quiz de tiquiz et tipote et PARTOUT EN FAIT
+// ne doit jamais utiliser ce type de guillemet en français."
+//
+// La règle serveur couvre ce que le modèle écrit. Elle ne couvre pas ce
+// que NOUS avons écrit à la main : 70 chevrons vivaient dans les libellés
+// français de l'interface, dont ceux des cartes d'insights.
+//
+// Ce test ne regarde QUE le français : l'arabe utilise légitimement les
+// chevrons, et un test qui rougit pour rien finit désactivé.
+
+test("aucun chevron dans les libelles francais de l'interface", async () => {
+  const { readFileSync } = await import("node:fs");
+  const src = readFileSync(new URL("../../messages/fr.json", import.meta.url), "utf8");
+  const trouves = src.split("\n").filter((l) => /[«»]/.test(l));
+  assert.deepEqual(trouves, [], "des chevrons sont revenus dans messages/fr.json");
+});
