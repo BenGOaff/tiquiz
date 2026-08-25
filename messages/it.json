@@ -1614,7 +1614,17 @@
     "otherResultsBeforeCta": "Prima del pulsante",
     "otherResultsPositionHint": "Messo prima del pulsante, dà al visitatore qualcos'altro da fare proprio nel momento della tua proposta.",
     "errResponsesDelete": "L'eliminazione non è andata a buon fine. Riprova tra un istante.",
-    "responsesDeleted": "{count, plural, one {# risposta eliminata} other {# risposte eliminate}}"
+    "responsesDeleted": "{count, plural, one {# risposta eliminata} other {# risposte eliminate}}",
+    "introStartLabel": "Da cosa parte il visitatore",
+    "introStartButton": "Un pulsante",
+    "introStartPersonalize": "Il suo nome",
+    "introStartQuestion": "La prima domanda",
+    "introStartHelp": "Un campo o una domanda sotto il titolo coinvolge più di un pulsante. Il pulsante resta l'impostazione predefinita.",
+    "introStartQuestionPreview": "La prima domanda compare qui, sotto il titolo e la descrizione. Si modifica nella scheda Domande.",
+    "introStartRefus_capture-avant": "Qui non si può: il tuo sondaggio chiede l'email prima delle domande, quindi la prima domanda non può passare davanti. Il pulsante resta.",
+    "introStartRefus_aucune-question": "Per ora non si può: questo quiz non ha nessuna domanda. Il pulsante resta.",
+    "introStartRefus_rien-a-demander": "Qui non si può: non chiedi né il nome né il genere. Attivane uno, oppure tieni il pulsante.",
+    "introStartStatsNotice": "Questo quiz parte da una domanda: la schermata iniziale E la domanda 1 sono la stessa. Gli avvii contano quindi chi ha RISPOSTO alla prima domanda. Prima contavano i clic sul pulsante: i due periodi non si confrontano."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nuova password",
@@ -2918,7 +2928,8 @@
     "trafficDirectBlind": "Il {pct}% del tuo traffico arriva senza provenienza, il che è normale quando pubblichi da mobile: le app non la trasmettono. Per vederci chiaro, etichetta i tuoi link (per esempio il-tuo-link?utm_source=instagram) e vedrai ogni pubblicazione separatamente.",
     "trafficSingle": "Tutto il tuo traffico viene da {source} ({pct}%). Quello che succede sulla tua schermata iniziale parla quindi di QUEL pubblico: se in tanti se ne vanno, guarda prima se la tua promessa corrisponde a quello che hai annunciato lì.",
     "trafficMixed": "Il tuo traffico viene da più posti. Confrontali: se una fonte parte molto meglio delle altre, non è la tua pagina a non funzionare, è il pubblico della fonte più debole.",
-    "trafficWindow": "Lettura sulle tue ultime {count} visite."
+    "trafficWindow": "Lettura sulle tue ultime {count} visite.",
+    "introStartStatsNotice": "Questo quiz parte da una domanda: la schermata iniziale E la domanda 1 sono la stessa. Gli avvii contano quindi chi ha RISPOSTO alla prima domanda. Prima contavano i clic sul pulsante: i due periodi non si confrontano."
   },
   "illustrations": {
     "emptyInbox": "Casella vuota",

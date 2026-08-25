@@ -1614,7 +1614,17 @@
     "otherResultsBeforeCta": "Avant le bouton",
     "otherResultsPositionHint": "Placé avant le bouton, il donne au visiteur autre chose à faire juste au moment de ta proposition.",
     "errResponsesDelete": "La suppression n'a pas abouti. Réessaie dans un instant.",
-    "responsesDeleted": "{count, plural, one {# réponse supprimée} other {# réponses supprimées}}"
+    "responsesDeleted": "{count, plural, one {# réponse supprimée} other {# réponses supprimées}}",
+    "introStartLabel": "Par quoi le visiteur commence",
+    "introStartButton": "Un bouton",
+    "introStartPersonalize": "Son prénom",
+    "introStartQuestion": "La première question",
+    "introStartHelp": "Un champ ou une question sous le titre engage plus qu'un bouton. Le bouton reste le réglage par défaut.",
+    "introStartQuestionPreview": "La première question s'affiche ici, sous le titre et la description. Elle se modifie dans l'onglet Questions.",
+    "introStartRefus_capture-avant": "Impossible ici : ton sondage demande l'email avant les questions, donc la première question ne peut pas passer devant. Le bouton reste affiché.",
+    "introStartRefus_aucune-question": "Impossible pour l'instant : ce quiz n'a aucune question. Le bouton reste affiché.",
+    "introStartRefus_rien-a-demander": "Impossible ici : tu ne demandes ni le prénom ni le genre. Active l'un des deux, ou garde le bouton.",
+    "introStartStatsNotice": "Ce quiz démarre sur une question : l'écran d'accueil ET la question 1 ne font qu'un. Le nombre de démarrages compte donc les visiteurs qui ont RÉPONDU à la première question. Avant ce réglage, il comptait les clics sur le bouton : les deux périodes ne se comparent pas."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",
@@ -2918,7 +2928,8 @@
     "trafficDirectBlind": "{pct}% de ton trafic arrive sans provenance, ce qui est normal quand tu publies sur mobile : les applications ne la transmettent pas. Pour y voir clair, ajoute une étiquette à tes liens (par exemple ton-lien?utm_source=instagram) et tu verras chaque publication séparément.",
     "trafficSingle": "Tout ton trafic vient de {source} ({pct}%). Ce qui se passe sur ton écran d'accueil parle donc de CE public là : si beaucoup repartent, regarde d'abord si ta promesse correspond à ce que tu as annoncé là-bas.",
     "trafficMixed": "Ton trafic vient de plusieurs endroits. Compare : si une source démarre beaucoup mieux que les autres, ce n'est pas ta page qui coince, c'est le public de la source la plus faible.",
-    "trafficWindow": "Lecture sur tes {count} dernières visites."
+    "trafficWindow": "Lecture sur tes {count} dernières visites.",
+    "introStartStatsNotice": "Ce quiz démarre sur une question : l'écran d'accueil ET la question 1 ne font qu'un. Le nombre de démarrages compte donc les visiteurs qui ont RÉPONDU à la première question. Avant ce réglage, il comptait les clics sur le bouton : les deux périodes ne se comparent pas."
   },
   "illustrations": {
     "emptyInbox": "Boîte de réception vide",
