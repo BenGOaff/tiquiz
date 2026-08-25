@@ -1630,7 +1630,10 @@
     "settingsGroupResultats": "Página de resultado",
     "settingsGroupResultatsHint": "O que o visitante vê depois de obter o perfil dele.",
     "settingsGroupGestion": "Gerenciamento do quiz",
-    "settingsGroupGestionHint": "O idioma da interface, e o fechamento do quiz."
+    "settingsGroupGestionHint": "O idioma da interface, e o fechamento do quiz.",
+    "ctaReprendreTitre": "Seu botão padrão",
+    "ctaReprendreAide": "{count} perfil(is) ainda mostram seu botão padrão. Agora existe um botão próprio para cada perfil: recupere-o aqui para não perder nada. Os perfis que já têm o deles não são tocados.",
+    "ctaReprendreAction": "Recuperar este botão nesses perfis"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova senha",

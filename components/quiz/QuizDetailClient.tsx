@@ -170,6 +170,7 @@ import { PanelMediaEditor } from "@/components/quiz/PanelMediaEditor";
 import { projectBackHref } from "@/lib/nav/projectBack";
 import { SessionLostBanner } from "@/components/editor/SessionLostBanner";
 import { resolveIntroStart } from "@/lib/quiz/introStart";
+import { profilsSansCta } from "@/lib/quiz/resultCta";
 import { SettingsSection } from "@/components/quiz/SettingsSection";
 
 // Types
@@ -4233,16 +4234,50 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       case de consentement (gating strict côté visiteur).
                       Aide : liens directs Meta Events Manager / GA4
                       Admin / Google Ads pour aller chercher les IDs. */}
-                  <section className="space-y-1.5">
-                    <div>
-                      <h3 className="text-sm font-semibold">{t("defaultCtaTitle")}</h3>
-                      <p className="text-[11px] text-muted-foreground leading-snug">
-                        {t("defaultCtaHint")}
-                      </p>
-                    </div>
-                    <Input value={ctaText} onChange={e => setCtaText(e.target.value)} placeholder={t("ctaTextPlaceholder")} className="text-xs" />
-                    <Input value={ctaUrl} onChange={e => setCtaUrl(e.target.value)} placeholder={t("ctaUrlPlaceholder")} className="text-xs" />
-                  </section>
+                  {/* LE CTA PAR DÉFAUT A DISPARU (Béné, 25 août 2026 :
+                      "il faut remplir pour chaque profil point barre. Si
+                      rien = pas de CTA").
+
+                      Ce qui reste ici, c'est une PROPOSITION, et seulement
+                      pour les quiz qui avaient un bouton par défaut avec
+                      des profils qui n'en ont pas. On ne recopie jamais en
+                      douce : "on ne modifie pas les quiz existants MAIS on
+                      leur propose toujours de bénéficier des
+                      améliorations."
+
+                      Un profil qui a DÉJÀ son bouton n'est jamais touché,
+                      champ par champ. */}
+                  {(() => {
+                    const aReprendre = profilsSansCta(ctaUrl, editResults);
+                    if (aReprendre === 0) return null;
+                    return (
+                      <section className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5">
+                        <div>
+                          <h3 className="text-sm font-semibold">{t("ctaReprendreTitre")}</h3>
+                          <p className="text-[11px] text-muted-foreground leading-snug">
+                            {t("ctaReprendreAide", { count: aReprendre })}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="w-full text-xs"
+                          onClick={() => {
+                            setEditResults((prev) =>
+                              prev.map((r) => ({
+                                ...r,
+                                cta_url: String(r.cta_url ?? "").trim() ? r.cta_url : ctaUrl,
+                                cta_text: String(r.cta_text ?? "").trim() ? r.cta_text : ctaText,
+                              })),
+                            );
+                          }}
+                        >
+                          {t("ctaReprendreAction")}
+                        </Button>
+                      </section>
+                    );
+                  })()}
                 </SettingsSection>
                 <SettingsSection titre={t("settingsGroupGestion")} aide={t("settingsGroupGestionHint")}>
                   <section className="space-y-2">

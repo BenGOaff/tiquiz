@@ -1630,7 +1630,10 @@
     "settingsGroupResultats": "Pagina del risultato",
     "settingsGroupResultatsHint": "Cosa vede il visitatore una volta ottenuto il suo profilo.",
     "settingsGroupGestion": "Gestione del quiz",
-    "settingsGroupGestionHint": "La lingua dell'interfaccia, e la chiusura del quiz."
+    "settingsGroupGestionHint": "La lingua dell'interfaccia, e la chiusura del quiz.",
+    "ctaReprendreTitre": "Il tuo pulsante predefinito",
+    "ctaReprendreAide": "{count} profilo/i mostrano ancora il tuo pulsante predefinito. Ora c'è un pulsante per ogni profilo: riprendilo qui per non perdere nulla. I profili che hanno già il loro non vengono toccati.",
+    "ctaReprendreAction": "Riprendere questo pulsante su questi profili"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nuova password",

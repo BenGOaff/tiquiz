@@ -1630,7 +1630,10 @@
     "settingsGroupResultats": "Result page",
     "settingsGroupResultatsHint": "What the visitor sees once they have their profile.",
     "settingsGroupGestion": "Quiz management",
-    "settingsGroupGestionHint": "Interface language, and closing the quiz."
+    "settingsGroupGestionHint": "Interface language, and closing the quiz.",
+    "ctaReprendreTitre": "Your default button",
+    "ctaReprendreAide": "{count} profile(s) still show your default button. It has been replaced by one button per profile: bring it over so you lose nothing. Profiles that already have their own will not move.",
+    "ctaReprendreAction": "Bring this button to those profiles"
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",

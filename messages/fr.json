@@ -1630,7 +1630,10 @@
     "settingsGroupResultats": "Page de résultat",
     "settingsGroupResultatsHint": "Ce que le visiteur voit une fois son profil obtenu.",
     "settingsGroupGestion": "Gestion du quiz",
-    "settingsGroupGestionHint": "La langue de l'interface, et la fermeture du quiz."
+    "settingsGroupGestionHint": "La langue de l'interface, et la fermeture du quiz.",
+    "ctaReprendreTitre": "Ton bouton par défaut",
+    "ctaReprendreAide": "{count} profil(s) affichent encore ton bouton par défaut. Il vient d'être remplacé par un bouton propre à chaque profil : reprends-le ici pour ne rien perdre. Les profils qui ont déjà le leur ne bougeront pas.",
+    "ctaReprendreAction": "Reprendre ce bouton sur ces profils"
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",
