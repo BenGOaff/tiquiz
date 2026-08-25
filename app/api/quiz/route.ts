@@ -69,21 +69,6 @@ export async function GET() {
   }
 }
 
-/**
- * Le contenu recu porte-t-il un PONT redige ?
- *
- * C'est ce qui decide si le quiz nait en page "4 temps" ou en page
- * classique. On ne se fie pas a "ca vient de l'IA" : un import ou une
- * creation manuelle passent par la meme route, et une mise en page batie
- * sur un bloc absent donnerait une page bancale au visiteur.
- */
-function hasBridgeContent(results: unknown): boolean {
-  if (!Array.isArray(results)) return false;
-  return results.some((r) => {
-    const bridge = (r as Record<string, unknown> | null)?.bridge;
-    return typeof bridge === "string" && bridge.replace(/<[^>]*>/g, "").trim().length > 0;
-  });
-}
 
 // POST — create quiz with questions and results
 export async function POST(req: NextRequest) {
@@ -194,13 +179,28 @@ export async function POST(req: NextRequest) {
         ...(mode === "scoring" && Array.isArray(body.scoring_axes) && normalizeScoringAxes(body.scoring_axes).length > 0
           ? { scoring_axes: normalizeScoringAxes(body.scoring_axes) }
           : {}),
-        // Page de resultat en 4 temps : uniquement quand le contenu recu
-        // porte VRAIMENT un pont. Un quiz cree a la main, importe, ou
-        // genere avant cette version n'a pas de pont : le mettre en
-        // "beats" lui donnerait une mise en page batie sur un bloc
-        // absent. Le defaut de la colonne ('classic') couvre tout le
-        // reste, y compris les quiz existants.
-        ...(!isSurvey && hasBridgeContent(body.results) ? { result_layout: "beats" } : {}),
+        // LES 4 TEMPS SONT LA NORME POUR UN QUIZ NEUF (Bene, 25 aout 2026).
+        //
+        // "Pourquoi mon resultat sur un nouveau quiz est arrive en prise
+        // de conscience et si, au lieu du profil en 4 temps ?? On devait
+        // l'appliquer par defaut, comme nouvelle norme."
+        //
+        // La condition d'avant (`hasBridgeContent`) existait pour ne pas
+        // batir une mise en page sur un bloc absent. Cette prudence etait
+        // inutile : `buildResultBeats()` SAUTE deja tout bloc vide
+        // (`if (!bodyHasWords && !m) continue`). Un quiz sans pont rend
+        // donc simplement les temps qu'il a, sans trou.
+        //
+        // Et elle etait surtout INATTEIGNABLE : `QuizFormClient` ne
+        // transmettait pas `bridge`, donc elle repondait toujours non.
+        // Aucun quiz cree par le formulaire n'a jamais pu naitre en 4
+        // temps depuis le 3 aout.
+        //
+        // AUCUN QUIZ EXISTANT NE BOUGE : cette route ne CREE que des
+        // nouveaux quiz, et la colonne garde son defaut 'classic' pour
+        // tout le reste. Un quiz deja en ligne bascule quand sa creatrice
+        // le decide, par le bandeau de l'editeur.
+        ...(isSurvey ? {} : { result_layout: "beats" }),
         title,
         introduction: body.introduction ?? null,
         cta_text: body.cta_text ?? null,
