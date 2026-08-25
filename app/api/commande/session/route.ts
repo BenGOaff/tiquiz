@@ -24,6 +24,11 @@ import { createOwnerCheckoutSession } from "@/lib/checkout/stripeCheckout";
 import { readSa } from "@/lib/affiliate/sa";
 import { readRef } from "@/lib/affiliate/refLien";
 import { essaiPourCeCheckout } from "@/lib/trial/moisOffertCheckout";
+import {
+  arbitrerRemiseEtEssai,
+  verifierCodeReduction,
+  type RaisonCode,
+} from "@/lib/checkout/codeReduction";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { isSalesOpen } from "@/lib/sales/previewGate";
 import { checkoutReturnBase } from "@/lib/sales/salesHosts";
@@ -33,7 +38,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  let body: { produit?: string; k?: string; ref?: string; sa?: string };
+  let body: { produit?: string; k?: string; ref?: string; sa?: string; code?: string };
   try {
     body = await req.json();
   } catch {
@@ -143,6 +148,34 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  // ── LE CODE DE RÉDUCTION D'UN AFFILIÉ (Béné, 25 août 2026) ────────
+  //
+  // "Ne sera valable que sur le lien de l'affilié." La vérification vit
+  // chez Tipote, avec le registre : on ENVOIE le lien reçu, on ne
+  // décide rien ici. Le pourcentage ne vient JAMAIS du navigateur, ce
+  // serait un prix que l'acheteur choisit lui-même.
+  let remise: { code: string; percentOff: number } | null = null;
+  let remiseRefusee: RaisonCode | "essai-plus-avantageux" | null = null;
+  const codeSaisi = String(body.code ?? "").trim();
+  if (codeSaisi) {
+    const arbitrage = arbitrerRemiseEtEssai(essai.jours);
+    if (!arbitrage.appliquer) {
+      // On le DIT au lieu d'avaler le code : un coupon posé pendant un
+      // essai gratuit se brûlerait sur une facture à 0 €, et l'acheteur
+      // paierait plein tarif au deuxième mois en croyant l'avoir eu.
+      remiseRefusee = arbitrage.raison;
+    } else {
+      const verdict = await verifierCodeReduction({
+        code: codeSaisi,
+        produit: product.id,
+        ref,
+        sa,
+      });
+      if (verdict.valide) remise = { code: verdict.code, percentOff: verdict.percentOff };
+      else remiseRefusee = verdict.raison;
+    }
+  }
+
   const result = await createOwnerCheckoutSession({
     key: compte.key,
     product,
@@ -150,6 +183,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     affiliateRef: sa,
     affiliateCode: ref,
     trialDays: essai.jours,
+    remise,
   });
 
   if (!result.ok || !result.clientSecret) {
@@ -162,6 +196,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   return NextResponse.json({
     ok: true,
     clientSecret: result.clientSecret,
+    // Ce que l'écran doit dire du code saisi. Le serveur renvoie la
+    // RAISON, jamais la phrase : le bon de commande existe en plusieurs
+    // langues (règle du 3 août sur la suppression d'un quiz).
+    remise: remise ? { code: remise.code, percentOff: remise.percentOff } : null,
+    remiseRefusee,
     // L'écran DOIT pouvoir dire "mode test" : un formulaire qui accepte la
     // carte 4242 sans rien prélever ressemble trait pour trait à une vraie
     // vente, et on ne s'en aperçoit qu'en cherchant un virement.

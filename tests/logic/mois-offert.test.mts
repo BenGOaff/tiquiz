@@ -182,8 +182,14 @@ test("le mois offert passe par l'essai gratuit du fournisseur", () => {
   // PayPal : un cycle de facturation TRIAL a 0, joue une seule fois.
   const paypal = lire("lib/checkout/paypalOwner.ts");
   assert.ok(paypal.includes('tenure_type: "TRIAL"'), "l'essai PayPal a disparu");
+  // PayPal REFUSE un plan dont les sequences ne se suivent pas. Le cycle
+  // payant est donc en 2 des que quelque chose le precede, et en 1
+  // sinon. Depuis le 25 aout, deux choses peuvent le preceder : l'essai
+  // gratuit, et la premiere echeance remisee d'un code d'affilie. Les
+  // deux ne se cumulent jamais (arbitre dans codeReduction.ts), donc il
+  // n'y a jamais plus d'un cycle avant celui la.
   assert.ok(
-    /sequence: essaiJours > 0 \? 2 : 1/.test(paypal),
+    /sequence: essaiJours > 0 \|\| remiseActive \? 2 : 1/.test(paypal),
     "les sequences PayPal ne se suivent plus : le plan serait refuse",
   );
 });

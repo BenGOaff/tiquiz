@@ -30,6 +30,10 @@ import { resolveAppUrl } from "@/lib/authLinks";
 import { readSa } from "@/lib/affiliate/sa";
 import { readRef } from "@/lib/affiliate/refLien";
 import { essaiPourCeCheckout } from "@/lib/trial/moisOffertCheckout";
+import {
+  arbitrerRemiseEtEssai,
+  verifierCodeReduction,
+} from "@/lib/checkout/codeReduction";
 import { lireAcheteur } from "@/lib/facture/identite";
 import { ecrireFacturation } from "@/lib/facture/store";
 
@@ -43,6 +47,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     k?: string;
     ref?: string;
     sa?: string;
+    code?: string;
     facturation?: unknown;
   };
   try {
@@ -138,11 +143,29 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
   }
 
+  // LE CODE DE RÉDUCTION, EXACTEMENT COMME SUR LA CARTE.
+  //
+  // Les deux moyens de paiement doivent facturer la même chose : un code
+  // qui marche par carte et pas par PayPal, c'est un bon de commande qui
+  // ment sur l'un des deux, et une réclamation le lendemain.
+  let remise: { code: string; percentOff: number } | null = null;
+  const codeSaisi = String(body.code ?? "").trim();
+  if (codeSaisi && arbitrerRemiseEtEssai(essai.jours).appliquer) {
+    const verdict = await verifierCodeReduction({
+      code: codeSaisi,
+      produit: product.id,
+      ref: readRef(body.ref) ?? null,
+      sa: readSa(body.sa) ?? null,
+    });
+    if (verdict.valide) remise = { code: verdict.code, percentOff: verdict.percentOff };
+  }
+
   const result = await createOwnerPaypalSubscription({
     compte,
     product,
     email,
     trialDays: essai.jours,
+    remise,
     returnUrl: retour,
     // Annuler ramène au bon de commande, pas sur un cul-de-sac.
     cancelUrl: `${base}/commande/${product.id}?k=${cle}`,

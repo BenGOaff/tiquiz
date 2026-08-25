@@ -170,6 +170,14 @@ export async function createOwnerCheckoutSession(args: {
   trialDays?: number | null;
   /** Pré-remplit l'adresse quand on la connaît déjà. */
   email?: string | null;
+  /**
+   * La remise d'un code d'affilié, déjà VÉRIFIÉE côté serveur.
+   *
+   * Un pourcentage qui viendrait du navigateur serait un prix que
+   * l'acheteur choisit lui-même : celui-ci a été validé par Tipote
+   * (lib/checkout/codeReduction.ts) avant d'arriver ici.
+   */
+  remise?: { code: string; percentOff: number } | null;
 }): Promise<CheckoutSessionResult> {
   if (!args.returnUrl.includes("{CHECKOUT_SESSION_ID}")) {
     // Sans ce gabarit, la page de retour ne saurait pas QUELLE vente elle
@@ -179,6 +187,34 @@ export async function createOwnerCheckoutSession(args: {
 
   const p = args.product;
   const abonnement = p.interval !== null;
+
+  // LA REMISE PASSE PAR UN COUPON, JAMAIS PAR UN PRIX RABAISSÉ.
+  //
+  // Baisser `unit_amount` marcherait sur un achat unique et serait FAUX
+  // sur un abonnement : le prix créé ici est celui de TOUTES les
+  // échéances, donc une remise de lancement deviendrait une remise à
+  // vie, sur une décision prise une fois, et personne ne s'en
+  // apercevrait avant de lire un tableau de bord des mois plus tard.
+  // Un coupon `duration: once` porte sur la première échéance, et sur
+  // elle seule.
+  //
+  // Effet de bord voulu : la remise apparaît en toutes lettres dans le
+  // formulaire de paiement et sur la facture, au lieu d'un prix plus bas
+  // que l'acheteur ne peut relier à son code.
+  //
+  // Et la commission suit toute seule : elle se calcule sur ce qui a été
+  // ENCAISSÉ à chaque échéance (26 août), donc l'affilié touche 40 % du
+  // montant remisé qu'il a lui-même consenti, sans un drapeau de plus.
+  let couponId: string | null = null;
+  if (args.remise && args.remise.percentOff >= 1 && args.remise.percentOff <= 90) {
+    couponId = await creerCouponUnique(args.key, args.remise);
+    if (!couponId) {
+      // On ne vend PAS au prix plein en silence à quelqu'un qui a saisi
+      // un code valide : il s'en apercevrait sur son relevé, pas sur
+      // l'écran. Mieux vaut un refus qu'il peut réessayer.
+      return { ok: false, reason: "stripe_refused", detail: "coupon_creation_failed" };
+    }
+  }
 
   const params: Record<string, string | number> = {
     ui_mode: "embedded",
@@ -213,6 +249,17 @@ export async function createOwnerCheckoutSession(args: {
     "metadata[product]": p.id,
     "metadata[source]": p.source,
   };
+
+  if (couponId) {
+    params["discounts[0][coupon]"] = couponId;
+    // Le code SAISI, pas le coupon Stripe : c'est celui là qu'on
+    // retrouvera dans l'admin quand une affiliée demandera combien son
+    // code a rapporté.
+    params["metadata[discount_code]"] = args.remise!.code;
+    if (abonnement) {
+      params["subscription_data[metadata][discount_code]"] = args.remise!.code;
+    }
+  }
 
   if (abonnement) {
     params["line_items[0][price_data][recurring][interval]"] = p.interval as string;
@@ -288,6 +335,49 @@ export async function createOwnerCheckoutSession(args: {
   } catch (e) {
     return { ok: false, reason: "network", detail: (e as Error).message };
   }
+}
+
+/**
+ * Un coupon Stripe à usage unique, pour CE bon de commande.
+ *
+ * `duration: once` = la première échéance, et elle seule.
+ * `max_redemptions: 1` + `redeem_by` à 24 h : ce coupon est fabriqué
+ * pour un acheteur et un instant. Sans ces deux bornes, un identifiant
+ * de coupon récupéré dans le trafic réseau resservirait indéfiniment,
+ * et le code de l'affiliée deviendrait un code public.
+ *
+ * Rend `null` sur le moindre refus : l'appelant préfère un échec visible
+ * à une vente au prix plein derrière un code annoncé.
+ */
+async function creerCouponUnique(
+  key: string,
+  remise: { code: string; percentOff: number },
+): Promise<string | null> {
+  const dans24h = Math.floor(Date.now() / 1000) + 24 * 3600;
+  const res = await fetch(`${STRIPE_API}/v1/coupons`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: toForm({
+      percent_off: remise.percentOff,
+      duration: "once",
+      // Ce que l'acheteur lit sur son reçu.
+      name: `Code ${remise.code}`,
+      max_redemptions: 1,
+      redeem_by: dans24h,
+      "metadata[discount_code]": remise.code,
+    }),
+  });
+  const json = (await res.json().catch(() => ({}))) as { id?: string; error?: { message?: string } };
+  if (!res.ok || !json.id) {
+    console.error(
+      `[commande] coupon refuse par Stripe : ${json.error?.message ?? `HTTP ${res.status}`}`,
+    );
+    return null;
+  }
+  return json.id;
 }
 
 /** Le refus porte-t-il sur l'habillage, et sur lui seul ? */
