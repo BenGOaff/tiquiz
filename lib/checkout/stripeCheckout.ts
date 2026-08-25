@@ -42,6 +42,12 @@
 import crypto from "node:crypto";
 
 import { STRIPE_BRANDING } from "@/lib/checkout/brand";
+import {
+  META_REMISE_CODE,
+  META_REMISE_DUREE,
+  META_REMISE_MOIS,
+  META_REMISE_PCT,
+} from "@/lib/checkout/remiseDifferee";
 import type { OwnerProduct } from "@/lib/checkout/catalog";
 import { OWNER_SUBSCRIPTION_EVENTS } from "@/lib/checkout/subscriptionLifecycle";
 import { acheteurDepuisStripe } from "@/lib/facture/stripeAcheteur";
@@ -170,6 +176,34 @@ export async function createOwnerCheckoutSession(args: {
   trialDays?: number | null;
   /** Pré-remplit l'adresse quand on la connaît déjà. */
   email?: string | null;
+  /**
+   * La remise d'un code d'affilié, déjà VÉRIFIÉE côté serveur.
+   *
+   * Un pourcentage qui viendrait du navigateur serait un prix que
+   * l'acheteur choisit lui-même : celui-ci a été validé par Tipote
+   * (lib/checkout/codeReduction.ts) avant d'arriver ici.
+   */
+  remise?: {
+    code: string;
+    percentOff: number;
+    duree: "once" | "forever" | "months";
+    mois: number | null;
+  } | null;
+  /**
+   * La remise à poser à la FIN de l'essai gratuit.
+   *
+   * Elle n'est PAS mise sur la session : elle voyage dans les metadata
+   * de l'abonnement, et le webhook la pose sur
+   * `customer.subscription.trial_will_end`. Une facture d'essai à 0 €
+   * pourrait sinon consommer la remise, et l'acheteur paierait plein
+   * tarif au premier vrai mois (cf. lib/checkout/remiseDifferee.ts).
+   */
+  remiseDifferee?: {
+    code: string;
+    percentOff: number;
+    duree: "once" | "forever" | "months";
+    mois: number | null;
+  } | null;
 }): Promise<CheckoutSessionResult> {
   if (!args.returnUrl.includes("{CHECKOUT_SESSION_ID}")) {
     // Sans ce gabarit, la page de retour ne saurait pas QUELLE vente elle
@@ -179,6 +213,34 @@ export async function createOwnerCheckoutSession(args: {
 
   const p = args.product;
   const abonnement = p.interval !== null;
+
+  // LA REMISE PASSE PAR UN COUPON, JAMAIS PAR UN PRIX RABAISSÉ.
+  //
+  // Baisser `unit_amount` marcherait sur un achat unique et serait FAUX
+  // sur un abonnement : le prix créé ici est celui de TOUTES les
+  // échéances, donc une remise de lancement deviendrait une remise à
+  // vie, sur une décision prise une fois, et personne ne s'en
+  // apercevrait avant de lire un tableau de bord des mois plus tard.
+  // Un coupon `duration: once` porte sur la première échéance, et sur
+  // elle seule.
+  //
+  // Effet de bord voulu : la remise apparaît en toutes lettres dans le
+  // formulaire de paiement et sur la facture, au lieu d'un prix plus bas
+  // que l'acheteur ne peut relier à son code.
+  //
+  // Et la commission suit toute seule : elle se calcule sur ce qui a été
+  // ENCAISSÉ à chaque échéance (26 août), donc l'affilié touche 40 % du
+  // montant remisé qu'il a lui-même consenti, sans un drapeau de plus.
+  let couponId: string | null = null;
+  if (args.remise && args.remise.percentOff >= 1 && args.remise.percentOff <= 90) {
+    couponId = await creerCouponUnique(args.key, args.remise);
+    if (!couponId) {
+      // On ne vend PAS au prix plein en silence à quelqu'un qui a saisi
+      // un code valide : il s'en apercevrait sur son relevé, pas sur
+      // l'écran. Mieux vaut un refus qu'il peut réessayer.
+      return { ok: false, reason: "stripe_refused", detail: "coupon_creation_failed" };
+    }
+  }
 
   const params: Record<string, string | number> = {
     ui_mode: "embedded",
@@ -213,6 +275,33 @@ export async function createOwnerCheckoutSession(args: {
     "metadata[product]": p.id,
     "metadata[source]": p.source,
   };
+
+  // LA REMISE QUI ATTEND. On écrit le FAIT dans les metadata au lieu de
+  // le déduire plus tard : un code peut donner des jours offerts et
+  // aucune remise, donc "il y a un code donc il y a une remise" serait
+  // faux (leçon du mois offert, 23 août).
+  const differee = args.remiseDifferee;
+  if (differee && abonnement) {
+    params[`subscription_data[metadata][${META_REMISE_PCT}]`] = String(differee.percentOff);
+    params[`subscription_data[metadata][${META_REMISE_DUREE}]`] = differee.duree;
+    if (differee.duree === "months" && differee.mois) {
+      params[`subscription_data[metadata][${META_REMISE_MOIS}]`] = String(differee.mois);
+    }
+    if (differee.code) {
+      params[`subscription_data[metadata][${META_REMISE_CODE}]`] = differee.code;
+    }
+  }
+
+  if (couponId) {
+    params["discounts[0][coupon]"] = couponId;
+    // Le code SAISI, pas le coupon Stripe : c'est celui là qu'on
+    // retrouvera dans l'admin quand une affiliée demandera combien son
+    // code a rapporté.
+    params["metadata[discount_code]"] = args.remise!.code;
+    if (abonnement) {
+      params["subscription_data[metadata][discount_code]"] = args.remise!.code;
+    }
+  }
 
   if (abonnement) {
     params["line_items[0][price_data][recurring][interval]"] = p.interval as string;
@@ -288,6 +377,54 @@ export async function createOwnerCheckoutSession(args: {
   } catch (e) {
     return { ok: false, reason: "network", detail: (e as Error).message };
   }
+}
+
+/**
+ * Un coupon Stripe à usage unique, pour CE bon de commande.
+ *
+ * `duration: once` = la première échéance, et elle seule.
+ * `max_redemptions: 1` + `redeem_by` à 24 h : ce coupon est fabriqué
+ * pour un acheteur et un instant. Sans ces deux bornes, un identifiant
+ * de coupon récupéré dans le trafic réseau resservirait indéfiniment,
+ * et le code de l'affiliée deviendrait un code public.
+ *
+ * Rend `null` sur le moindre refus : l'appelant préfère un échec visible
+ * à une vente au prix plein derrière un code annoncé.
+ */
+async function creerCouponUnique(
+  key: string,
+  remise: { code: string; percentOff: number; duree: "once" | "forever" | "months"; mois: number | null },
+): Promise<string | null> {
+  const dans24h = Math.floor(Date.now() / 1000) + 24 * 3600;
+  const champs: Record<string, string | number> = {
+    percent_off: remise.percentOff,
+    // LA DURÉE VIENT DU CODE, elle n'est plus écrite en dur. Béné a
+    // demandé les trois : la première échéance, N mois ("décembre à
+    // -40%"), ou toujours.
+    duration: remise.duree,
+    // Ce que l'acheteur lit sur son reçu.
+    name: `Code ${remise.code}`,
+    max_redemptions: 1,
+    redeem_by: dans24h,
+    "metadata[discount_code]": remise.code,
+  };
+  if (remise.duree === "months" && remise.mois) champs.duration_in_months = remise.mois;
+  const res = await fetch(`${STRIPE_API}/v1/coupons`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: toForm(champs),
+  });
+  const json = (await res.json().catch(() => ({}))) as { id?: string; error?: { message?: string } };
+  if (!res.ok || !json.id) {
+    console.error(
+      `[commande] coupon refuse par Stripe : ${json.error?.message ?? `HTTP ${res.status}`}`,
+    );
+    return null;
+  }
+  return json.id;
 }
 
 /** Le refus porte-t-il sur l'habillage, et sur lui seul ? */
@@ -576,5 +713,69 @@ export async function retrieveOwnerSubscription(
     return (await res.json()) as Record<string, unknown>;
   } catch {
     return null;
+  }
+}
+
+
+/**
+ * Pose une remise sur un abonnement DÉJÀ ouvert.
+ *
+ * Sert au code "pourcentage sur le premier mois après le mois gratuit" :
+ * on attend la fin de l'essai plutôt que de parier sur le comportement
+ * d'un coupon face à une facture à 0 € (cf. lib/checkout/remiseDifferee.ts).
+ *
+ * Rend `false` sur le moindre refus, sans jamais lever : l'appelant est
+ * un webhook, et une remise ratée ne doit pas faire échouer le
+ * traitement de l'abonnement. Elle CRIE en revanche, parce qu'une remise
+ * promise et non posée est une réclamation à venir.
+ */
+export async function poserRemiseSurAbonnement(args: {
+  key: string;
+  subscriptionId: string;
+  coupon: Record<string, string | number>;
+}): Promise<boolean> {
+  const id = String(args.subscriptionId ?? "").trim();
+  if (!id) return false;
+  try {
+    const c = await fetch(`${STRIPE_API}/v1/coupons`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${args.key}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: toForm(args.coupon),
+    });
+    const cj = (await c.json().catch(() => ({}))) as { id?: string; error?: { message?: string } };
+    if (!c.ok || !cj.id) {
+      console.error(
+        `[commande] coupon differe refuse : ${cj.error?.message ?? `HTTP ${c.status}`}`,
+      );
+      return false;
+    }
+    const r = await fetch(`${STRIPE_API}/v1/subscriptions/${encodeURIComponent(id)}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${args.key}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      // ON EFFACE AUSSI LA MARQUE. Sans ça, un webhook rejoué reposerait
+      // le coupon, et deux remises cumulees sur un abonnement, ça se voit
+      // sur un relevé, pas sur un écran.
+      body: toForm({
+        "discounts[0][coupon]": cj.id,
+        [`metadata[${META_REMISE_PCT}]`]: "",
+        [`metadata[${META_REMISE_DUREE}]`]: "",
+        [`metadata[${META_REMISE_MOIS}]`]: "",
+      }),
+    });
+    if (!r.ok) {
+      const detail = (await r.text().catch(() => "")).slice(0, 200);
+      console.error(`[commande] remise non posee sur ${id} : HTTP ${r.status} ${detail}`);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error(`[commande] remise non posee sur ${id} : ${(e as Error).message}`);
+    return false;
   }
 }

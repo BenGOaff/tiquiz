@@ -3066,5 +3066,29 @@
     "invoicesEmpty": "Aucune facture pour le moment.",
     "invoiceOpen": "Voir",
     "invoicesStripeNote": "Les paiements par carte sont facturés par Stripe : ces factures se téléchargent depuis le bouton de gestion de l'abonnement ci-dessus."
+  },
+  "partageQuiz": {
+    "title": "Partager ce quiz",
+    "intro": "Un lien, un clic, et le quiz est installé chez la personne, avec ses textes, ses images et ses points.",
+    "whatTravels": "Le contenu voyage : titres, questions, réponses, points, profils, images, couleurs et mise en page. Ce qui vous désigne reste chez vous : vos tags Systeme.io, vos pixels de suivi et les adresses de vos boutons. La personne le voit écrit à l'installation, et le quiz arrive en brouillon.",
+    "labelField": "Pour qui ? (facultatif)",
+    "labelPlaceholder": "Sophie, cliente potentielle",
+    "onceOnly": "Ce lien ne sert qu'une fois",
+    "create": "Créer le lien et le copier",
+    "creating": "Création...",
+    "loading": "Lecture des liens...",
+    "empty": "Aucun lien de partage pour ce quiz.",
+    "unnamed": "Lien sans nom",
+    "installs": "{n} installation(s)",
+    "revoked": "désactivé",
+    "copy": "Copier le lien",
+    "copied": "Lien copié.",
+    "copyError": "Copie impossible. Le lien est : {url}",
+    "revoke": "Désactiver",
+    "reactivate": "Réactiver",
+    "loadError": "Impossible de lire les liens de partage.",
+    "createError": "Le lien n'a pas pu être créé.",
+    "updateError": "Le changement n'a pas pu être enregistré.",
+    "button": "Partager ce quiz"
   }
 }

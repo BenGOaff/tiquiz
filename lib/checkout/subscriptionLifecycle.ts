@@ -62,6 +62,11 @@ export const OWNER_SUBSCRIPTION_EVENTS = [
   // réessaie, et couper au premier échec mettrait dehors des gens qui
   // vont payer.
   "invoice.payment_failed",
+  // L'essai gratuit se termine dans trois jours. Stripe l'envoie exprès
+  // pour ça, et c'est le moment où on pose la remise d'un code
+  // "pourcentage sur le premier mois APRÈS le mois gratuit" (Béné, 25
+  // août 2026). Ne touche jamais à l'accès.
+  "customer.subscription.trial_will_end",
 ] as const;
 
 export type SubscriptionOutcome =
@@ -158,6 +163,13 @@ export function readSubscriptionOutcome(
     // **On ne coupe pas sur ce qu'on ne comprend pas** : le risque d'un
     // client mis dehors à tort est plus cher que celui d'un accès gardé
     // quelques jours de trop, et le `deleted` finira par arriver.
+    return { outcome: "keep", reason: "still_active", churnPending: false };
+  }
+
+  if (type === "customer.subscription.trial_will_end") {
+    // L'essai se termine dans trois jours. Rien à faire côté accès :
+    // il est ouvert et il le reste. C'est la route qui y pose la remise
+    // en attente, s'il y en a une.
     return { outcome: "keep", reason: "still_active", churnPending: false };
   }
 

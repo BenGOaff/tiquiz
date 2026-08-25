@@ -100,6 +100,37 @@ export default function CommandeClient({
 }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [mode, setMode] = useState<string | null>(null);
+
+  // ── LE CODE DE RÉDUCTION D'UN AFFILIÉ (Béné, 25 août 2026) ─────────
+  //
+  // "Ne sera valable que sur le lien de l'affilié." Il arrive donc par
+  // l'URL dans le cas normal (l'affiliée partage UN lien qui porte son
+  // `?ref=` et son `?code=`), et le champ juste en dessous rattrape
+  // celui qui a lu le code dans une vidéo et cliqué un lien plus ancien.
+  //
+  // On le lit APRÈS le montage, pas pendant : `window` n'existe pas au
+  // rendu serveur, et une valeur lue trop tôt casserait l'hydratation.
+  const [codeSaisi, setCodeSaisi] = useState("");
+  const [codeApplique, setCodeApplique] = useState("");
+  const [remise, setRemise] = useState<{
+    code: string;
+    jours: number;
+    joursDeBase: number;
+    percentOff: number | null;
+    duree: string | null;
+    mois: number | null;
+    apresEssai: boolean;
+  } | null>(null);
+  const [remiseRefusee, setRemiseRefusee] = useState<string | null>(null);
+
+  useEffect(() => {
+    const depuisUrl = new URLSearchParams(window.location.search).get("code") ?? "";
+    const propre = depuisUrl.trim().toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 40);
+    if (propre) {
+      setCodeSaisi(propre);
+      setCodeApplique(propre);
+    }
+  }, []);
   const [emailPaypal, setEmailPaypal] = useState("");
   const [paypalEnCours, setPaypalEnCours] = useState(false);
   const [erreurPaypal, setErreurPaypal] = useState<string | null>(null);
@@ -154,17 +185,117 @@ export default function CommandeClient({
     [],
   );
 
+
+  // ── LE BLOC "CODE DE RÉDUCTION" ────────────────────────────────────
+  //
+  // Il est rendu AU DESSUS du paiement, jamais dedans : appliquer un
+  // code remonte le formulaire Stripe (la session porte le prix, donc
+  // elle est recréée), et on ne remonte pas un formulaire de carte sous
+  // les doigts de quelqu'un qui est en train de le remplir.
+  //
+  // Le serveur renvoie une RAISON, l'écran la met en mots : c'est la
+  // règle du 3 août (un `ok: false` produit toujours quelque chose à
+  // l'écran) et celle du 7 août (le serveur dit ce qui s'est passé,
+  // l'interface dit comment le dire).
+  const PHRASES_REFUS: Record<string, string> = {
+    "mauvais-lien":
+      "Ce code ne marche qu'avec le lien de la personne qui te l'a donné. Reprends son lien, puis reviens ici.",
+    inconnu: "Ce code n'existe pas. Vérifie qu'il est bien recopié.",
+    desactive: "Ce code n'est plus actif.",
+    expire: "Ce code a expiré.",
+    "produit-exclu": "Ce code ne s'applique pas à cette formule.",
+    "remise-illisible": "Ce code n'est pas exploitable. Écris-nous, on le règle.",
+    indisponible:
+      "On n'a pas pu vérifier ce code à l'instant. Réessaie dans une minute, ton code n'est pas perdu.",
+    "pas-encore": "Ce code n'est pas encore ouvert. Reviens à la date annoncée.",
+    "essai-refuse":
+      "Ce code offre des jours d'essai, et l'essai gratuit ne peut être ouvert qu'une fois par personne. Ta commande passe au tarif normal.",
+  };
+
+  // La durée d'une remise, en mots. Une remise "à vie" et une remise sur
+  // une échéance ne se disent pas pareil, et l'acheteur doit savoir
+  // laquelle il a avant de payer.
+  const dureeEnMots = (r: { duree: string | null; mois: number | null }) =>
+    r.duree === "forever"
+      ? "sur toutes tes échéances"
+      : r.duree === "months" && r.mois
+        ? `pendant ${r.mois} mois`
+        : "sur ta première échéance payée";
+
+  const blocCode = (
+    <div className="mb-4 rounded-lg border p-3">
+      <label htmlFor="code-reduction" className="text-sm font-medium">
+        Tu as un code de réduction ?
+      </label>
+      <div className="mt-2 flex gap-2">
+        <input
+          id="code-reduction"
+          type="text"
+          value={codeSaisi}
+          onChange={(e) =>
+            setCodeSaisi(e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 40))
+          }
+          placeholder="TONCODE"
+          className="w-full rounded-md border px-3 py-2 font-mono text-sm uppercase"
+        />
+        <button
+          type="button"
+          onClick={() => setCodeApplique(codeSaisi.trim())}
+          disabled={!codeSaisi.trim() || codeSaisi.trim() === codeApplique}
+          className="shrink-0 rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50"
+        >
+          Appliquer
+        </button>
+      </div>
+      {remise && (
+        <p className="mt-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+          {/* TROIS PHRASES, parce qu'il y a trois avantages possibles et
+              qu'une seule phrase mentirait sur deux d'entre eux. Ce qui
+              est annoncé est ce qui sera FACTURÉ : le serveur rend
+              l'avantage tel qu'il sera appliqué, pas ce qui a été saisi. */}
+          Code {remise.code} appliqué :{" "}
+          {remise.percentOff === null
+            ? `${remise.jours} jours offerts au lieu de ${remise.joursDeBase}.`
+            : remise.apresEssai
+              ? `${remise.jours} jours offerts, puis -${remise.percentOff} % ${dureeEnMots(remise)}.`
+              : `-${remise.percentOff} % ${dureeEnMots(remise)}.`}
+        </p>
+      )}
+      {!remise && remiseRefusee && (
+        <p className="mt-2 text-sm text-amber-700 dark:text-amber-400">
+          {PHRASES_REFUS[remiseRefusee] ?? PHRASES_REFUS.inconnu}
+        </p>
+      )}
+    </div>
+  );
+
   const fetchClientSecret = useCallback(async () => {
     const r = await fetch("/api/commande/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ produit, k: cle, ref: refAffiliee(), sa: saAffiliee() }),
+      body: JSON.stringify({
+        produit,
+        k: cle,
+        ref: refAffiliee(),
+        sa: saAffiliee(),
+        code: codeApplique || undefined,
+      }),
     });
     const data = (await r.json().catch(() => ({}))) as {
       ok?: boolean;
       clientSecret?: string;
       reason?: string;
       mode?: string;
+      remise?: {
+        code: string;
+        jours: number;
+        joursDeBase: number;
+        percentOff: number | null;
+        duree: string | null;
+        mois: number | null;
+        apresEssai: boolean;
+      } | null;
+      remiseRefusee?: string | null;
     };
     if (!data.ok || !data.clientSecret) {
       const phrase = RAISONS[data.reason ?? ""] ?? "Le paiement n'a pas pu s'ouvrir.";
@@ -174,8 +305,13 @@ export default function CommandeClient({
       throw new Error(data.reason ?? "checkout_failed");
     }
     if (data.mode) setMode(data.mode);
+    // Le serveur a tranché : c'est LUI qui dit si le code s'applique, et
+    // avec quelle remise. Le navigateur n'a fait que transmettre ce qui
+    // a été tapé.
+    setRemise(data.remise ?? null);
+    setRemiseRefusee(data.remiseRefusee ?? null);
     return data.clientSecret;
-  }, [produit, cle, refAffiliee, saAffiliee]);
+  }, [produit, cle, refAffiliee, saAffiliee, codeApplique]);
 
   // `loadStripe` rend une NOUVELLE promesse a chaque appel. Appelee dans
   // le JSX, elle en fabriquerait une par rendu, et le fournisseur Stripe
@@ -223,7 +359,9 @@ export default function CommandeClient({
       const r = await fetch("/api/commande/paypal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ produit, email: adresse, k: cle, ref: refAffiliee(), sa: saAffiliee(), facturation }),
+        // Le code part AUSSI par ici : un code qui marche par carte et pas
+        // par PayPal, c'est un bon de commande qui ment sur l'un des deux.
+        body: JSON.stringify({ produit, email: adresse, k: cle, ref: refAffiliee(), sa: saAffiliee(), code: codeApplique || undefined, facturation }),
       });
       const data = (await r.json().catch(() => ({}))) as {
         ok?: boolean;
@@ -295,12 +433,13 @@ export default function CommandeClient({
         <p className="font-semibold">Le paiement n&apos;a pas pu s&apos;ouvrir.</p>
         <p className="mt-1">{erreur}</p>
       </div>
+      {blocCode}
       {blocPaypal}
       </div>
     );
   }
 
-  if (!clePublique) return <div>{blocPaypal}</div>;
+  if (!clePublique) return <div>{blocCode}{blocPaypal}</div>;
 
   return (
     <div>
@@ -309,7 +448,13 @@ export default function CommandeClient({
           Mode test : aucun argent ne circule, aucune carte n&apos;est débitée.
         </p>
       )}
+      {blocCode}
+      {/* `key` : appliquer un code crée une NOUVELLE session de paiement
+          (c'est elle qui porte le prix). Sans ce remontage, le formulaire
+          garderait l'ancienne et facturerait le prix plein derrière un
+          code affiché comme appliqué. */}
       <EmbeddedCheckoutProvider
+        key={codeApplique || "sans-code"}
         stripe={stripePromise}
         options={{ fetchClientSecret }}
       >

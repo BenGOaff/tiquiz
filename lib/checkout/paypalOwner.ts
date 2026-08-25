@@ -299,6 +299,17 @@ export async function createOwnerPaypalSubscription(args: {
   remplace?: string | null;
   /** Le CODE PUBLIC de l'affiliée (`?ref=`), sur nos liens actuels. */
   affiliateCode?: string | null;
+  /**
+   * La remise d'un code d'affilié, déjà VÉRIFIÉE côté serveur.
+   * Jamais reçue du navigateur : ce serait un prix que l'acheteur
+   * choisit lui-même.
+   */
+  remise?: {
+    code: string;
+    percentOff: number;
+    duree: "once" | "forever" | "months";
+    mois: number | null;
+  } | null;
 }): Promise<PaypalSubscriptionResult> {
   const unit = paypalInterval(args.product);
   if (!unit) return { ok: false, reason: "invalid_product" };
@@ -310,6 +321,43 @@ export async function createOwnerPaypalSubscription(args: {
     Number.isInteger(args.trialDays) && Number(args.trialDays) > 0
       ? Math.min(Number(args.trialDays), 365)
       : 0;
+
+  // CHEZ PAYPAL, TOUT S'EXPRIME EN CYCLES DE FACTURATION.
+  //
+  // Il n'y a pas de coupon : un plan porte une SUITE de cycles, et
+  // chacun a son prix et son nombre de répétitions. C'est ce qui permet
+  // de rendre les cinq cas demandés par Béné le 25 août 2026 sans
+  // aucune mécanique différée, là où Stripe demande un coupon posé plus
+  // tard :
+  //
+  //   - deux mois gratis        -> un cycle TRIAL de 60 jours ;
+  //   - % sur la 1re échéance   -> un cycle REGULAR remisé, joué 1 fois ;
+  //   - % sur N mois            -> le même, joué N fois ;
+  //   - % à vie                 -> le cycle sans fin porte le prix remisé ;
+  //   - % APRÈS le mois offert  -> le cycle TRIAL, PUIS le cycle remisé,
+  //     PUIS le prix plein. Les trois se suivent naturellement.
+  //
+  // Les `sequence` doivent se suivre sans trou, sinon PayPal refuse le
+  // plan avec un message que personne ne lira.
+  const pct = Number(args.remise?.percentOff ?? 0);
+  const remiseLisible = Number.isInteger(pct) && pct >= 1 && pct <= 90;
+  const dureeRemise = args.remise?.duree ?? "once";
+  const prixRemiseCents = remiseLisible
+    ? Math.max(1, Math.round((args.product.amountCents * (100 - pct)) / 100))
+    : args.product.amountCents;
+
+  // "À vie" n'est pas un cycle de plus : c'est le prix du cycle sans fin.
+  const remiseAVie = remiseLisible && dureeRemise === "forever";
+  // Un cycle remisé joué un nombre FINI de fois, avant le prix plein.
+  const cyclesRemises = remiseLisible && !remiseAVie
+    ? dureeRemise === "months"
+      ? Math.max(1, Math.min(36, Number(args.remise?.mois ?? 1)))
+      : 1
+    : 0;
+
+  const prixRegulier = remiseAVie ? prixRemiseCents : args.product.amountCents;
+  const seqRemise = essaiJours > 0 ? 2 : 1;
+  const seqRegulier = seqRemise + (cyclesRemises > 0 ? 1 : 0);
 
   const token = await jeton(args.compte);
   if (!token) return { ok: false, reason: "not_configured" };
@@ -350,16 +398,36 @@ export async function createOwnerPaypalSubscription(args: {
               },
             ]
           : []),
+        // LES ÉCHÉANCES REMISÉES, quand un code en ouvre. Jouées un
+        // nombre FINI de fois, puis le cycle suivant reprend le prix
+        // plein. Une remise "à vie" ne passe pas par ici : c'est le
+        // cycle sans fin lui-même qui porte le prix remisé.
+        ...(cyclesRemises > 0
+          ? [
+              {
+                frequency: { interval_unit: unit, interval_count: 1 },
+                tenure_type: "REGULAR",
+                sequence: seqRemise,
+                total_cycles: cyclesRemises,
+                pricing_scheme: {
+                  fixed_price: {
+                    value: paypalAmount(prixRemiseCents),
+                    currency_code: args.product.currency.toUpperCase(),
+                  },
+                },
+              },
+            ]
+          : []),
         {
           frequency: { interval_unit: unit, interval_count: 1 },
           tenure_type: "REGULAR",
-          sequence: essaiJours > 0 ? 2 : 1,
+          sequence: seqRegulier,
           // 0 = sans fin. "Sans engagement" veut dire qu'on arrête quand
           // on veut, pas que ça s'arrête tout seul au bout d'un an.
           total_cycles: 0,
           pricing_scheme: {
             fixed_price: {
-              value: paypalAmount(args.product.amountCents),
+              value: paypalAmount(prixRegulier),
               currency_code: args.product.currency.toUpperCase(),
             },
           },

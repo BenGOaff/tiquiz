@@ -32,10 +32,16 @@ import { arreterAbonnementsStripe } from "@/lib/checkout/subscriptionCancel";
 import { sendRefundGoodbyeEmail } from "@/lib/email/refundGoodbyeEmail";
 import { readOwnerStripe, readOwnerStripeWebhookSecret } from "@/lib/checkout/ownerAccount";
 import {
+  couponPourRemise,
+  lireRemiseEnAttente,
+  poserLaRemise,
+} from "@/lib/checkout/remiseDifferee";
+import {
   readCustomerId,
   retrieveOwnerCustomer,
   retrieveOwnerSession,
   retrieveOwnerSessionByPaymentIntent,
+  poserRemiseSurAbonnement,
   retrieveOwnerSubscription,
   verifyStripeSignature,
 } from "@/lib/checkout/stripeCheckout";

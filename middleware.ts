@@ -215,6 +215,15 @@ export async function middleware(req: NextRequest) {
     // La protection est ailleurs : la route limite le nombre de demandes
     // par adresse IP, et ne lit jamais rien.
     pathname === "/support" ||
+    // LA PAGE D'UN QUIZ PARTAGE, VUE AVANT D'AVOIR UN COMPTE.
+    //
+    // Celui qui recoit le lien n'a pas forcement de compte Tiquiz : c'est
+    // meme le cas le plus interessant, celui du prospect a qui on montre
+    // son quiz deja construit. Le renvoyer vers /login lui demanderait de
+    // s'inscrire pour decouvrir ce qu'on lui propose, donc de decider
+    // avant de voir. La page montre l'apercu et n'installe RIEN : le POST
+    // qui installe, lui, exige une session.
+    pathname.startsWith("/partage/") ||
     pathname === "/login" ||
     pathname === "/signup" ||
     pathname === "/favicon.ico"

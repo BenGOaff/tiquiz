@@ -3066,5 +3066,29 @@
     "invoicesEmpty": "Nenhuma nota por enquanto.",
     "invoiceOpen": "Ver",
     "invoicesStripeNote": "Os pagamentos com cartão são faturados pela Stripe: essas notas são baixadas no botão de gestão da assinatura acima."
+  },
+  "partageQuiz": {
+    "title": "Compartilhar este quiz",
+    "intro": "Um link, um clique, e o quiz fica instalado na conta da pessoa, com os textos, as imagens e os pontos.",
+    "whatTravels": "O conteúdo viaja: títulos, perguntas, respostas, pontos, perfis, imagens, cores e layout. O que identifica você fica com você: suas tags Systeme.io, seus pixels de rastreamento e os endereços dos seus botões. A pessoa vê isso escrito na instalação, e o quiz chega como rascunho.",
+    "labelField": "Para quem? (opcional)",
+    "labelPlaceholder": "Sofia, cliente em potencial",
+    "onceOnly": "Este link serve apenas uma vez",
+    "create": "Criar o link e copiar",
+    "creating": "Criando...",
+    "loading": "Carregando os links...",
+    "empty": "Ainda não há nenhum link para este quiz.",
+    "unnamed": "Link sem nome",
+    "installs": "{n} instalação(ões)",
+    "revoked": "desativado",
+    "copy": "Copiar o link",
+    "copied": "Link copiado.",
+    "copyError": "Não foi possível copiar. O link é: {url}",
+    "revoke": "Desativar",
+    "reactivate": "Reativar",
+    "loadError": "Não foi possível ler os links de compartilhamento.",
+    "createError": "Não foi possível criar o link.",
+    "updateError": "Não foi possível salvar a alteração.",
+    "button": "Compartilhar este quiz"
   }
 }
