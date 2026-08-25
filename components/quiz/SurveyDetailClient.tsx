@@ -52,6 +52,7 @@ import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components
 import { interpolateText } from "@/lib/quizPersonalization";
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
 import { UserPalettesProvider } from "@/components/editor/PalettesContext";
+import { EditorPreviewDeviceProvider } from "@/components/editor/EditorPreviewDeviceContext";
 import { RestoreDraftDialog } from "@/components/editor/RestoreDraftDialog";
 import { useAutosave } from "@/hooks/use-autosave";
 import {
@@ -1516,6 +1517,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const pc = primaryColor;
 
   return (
+   <EditorPreviewDeviceProvider device={device}>
    <SioTagsProvider quizId={quizId}>
     {/* Session tombee : l'ecran le dit, au lieu de laisser des 401
         en silence dans la console (drame Bene, 4 aout 2026). */}
@@ -2070,7 +2072,14 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
           {/* RIGHT: LIVE PREVIEW — all sections stacked, exactly as visitor sees it */}
           <main ref={previewRef} className="flex-1 overflow-y-auto" style={{ backgroundColor: bgColor, fontFamily, ...(textColor ? { color: textColor, ["--foreground" as string]: hexToHslTriplet(textColor) ?? undefined } : {}) }}>
-            <div className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-sm" : "w-full"}`}>
+            {/* data-device-preview : sans lui, l'apercu affiche la taille
+                que la MEDIA QUERY choisit d'apres la largeur reelle de
+                l'ecran, pas celle du device selectionne. Sur un PC, passer
+                en mobile retrecissait donc le canvas et gardait les
+                tailles desktop : l'apercu mentait (globals.css, bloc
+                rt-field-fs). L'editeur de quiz le posait depuis le 8 juin,
+                celui de sondage ne l'avait jamais eu. */}
+            <div data-device-preview={device} className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-sm" : "w-full"}`}>
 
               {/* ── INTRO SECTION ── */}
               <div ref={introRef} className={`min-h-screen flex flex-col items-center justify-center px-6 sm:px-12 py-16 ${alignTextClass(resolveBlockAlign(title, title, "centered"))}`}>
@@ -2866,5 +2875,6 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
     </div>
     </UserPalettesProvider>
    </SioTagsProvider>
+   </EditorPreviewDeviceProvider>
   );
 }
