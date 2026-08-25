@@ -32,6 +32,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
+import { PartagerQuizDialog } from "@/components/quiz/PartagerQuizDialog";
 import { EmbedCodeDialog } from "@/components/popquiz/EmbedCodeDialog";
 
 type ProjectMode = "quiz" | "survey" | "popquiz";
@@ -91,10 +92,15 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
   const t = useTranslations("dashboard");
   const tProjects = useTranslations("projects");
   const tEmbed = useTranslations("popquizEmbed");
+  const tPartage = useTranslations("partageQuiz");
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>("folders");
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  // Le quiz dont on gere les liens de partage. Une adresse par
+  // destinataire, geree ici parce que c'est ici qu'on manipule un
+  // PROJET entier (comme la duplication juste a cote).
+  const [partageId, setPartageId] = useState<string | null>(null);
 
   const [embedHandle, setEmbedHandle] = useState<string | null>(null);
   // Hook qui résout le custom-domain du créateur — buildPublicUrl
@@ -647,6 +653,19 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                               <CopyPlus className="h-4 w-4" />
                             </Button>
                           ) : null}
+                          {/* Partager : comme la duplication, quiz et
+                              sondage uniquement. Le popquiz n'a pas de
+                              route de copie profonde. */}
+                          {!isPopquiz ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setPartageId(p.id)}
+                              title={tPartage("button")}
+                            >
+                              <Share2 className="h-4 w-4" />
+                            </Button>
+                          ) : null}
                           {/* Bouton stats : réservé aux vrais quiz. La
                               page /quiz/[id]/analytics n'existe pas pour
                               les surveys ni les popquiz (Gwenn 19 mai
@@ -681,6 +700,14 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
           )}
         </div>
       )}
+
+      <PartagerQuizDialog
+        quizId={partageId ?? ""}
+        open={partageId !== null}
+        onOpenChange={(o) => {
+          if (!o) setPartageId(null);
+        }}
+      />
 
       <EmbedCodeDialog
         open={embedHandle !== null}
