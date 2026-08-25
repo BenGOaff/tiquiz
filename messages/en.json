@@ -1614,7 +1614,17 @@
     "otherResultsBeforeCta": "Before the button",
     "otherResultsPositionHint": "Placed before the button, it gives the visitor something else to do at the exact moment of your offer.",
     "errResponsesDelete": "The deletion did not go through. Try again in a moment.",
-    "responsesDeleted": "{count, plural, one {# response deleted} other {# responses deleted}}"
+    "responsesDeleted": "{count, plural, one {# response deleted} other {# responses deleted}}",
+    "introStartLabel": "How visitors begin",
+    "introStartButton": "A button",
+    "introStartPersonalize": "Their first name",
+    "introStartQuestion": "The first question",
+    "introStartHelp": "A field or a question under the title engages more than a button. The button stays the default.",
+    "introStartQuestionPreview": "The first question appears here, under the title and the description. Edit it in the Questions tab.",
+    "introStartRefus_capture-avant": "Not possible here: your survey asks for the email before the questions, so the first question cannot come first. The button stays.",
+    "introStartRefus_aucune-question": "Not possible yet: this quiz has no question. The button stays.",
+    "introStartRefus_rien-a-demander": "Not possible here: you ask for neither first name nor gender. Turn one on, or keep the button.",
+    "introStartStatsNotice": "This quiz starts on a question: the welcome screen AND question 1 are one screen. Starts therefore count visitors who ANSWERED the first question. Before this setting, they counted button clicks: the two periods are not comparable."
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",
@@ -2918,7 +2928,8 @@
     "trafficDirectBlind": "{pct}% of your traffic arrives with no source, which is normal when you publish on mobile: apps do not pass it on. To see clearly, tag your links (for example your-link?utm_source=instagram) and each post will show up separately.",
     "trafficSingle": "All your traffic comes from {source} ({pct}%). What happens on your welcome screen is therefore about THAT audience: if many leave, first check whether your promise matches what you announced there.",
     "trafficMixed": "Your traffic comes from several places. Compare them: if one source starts much better than the others, your page is not the problem, the weakest source's audience is.",
-    "trafficWindow": "Read over your last {count} visits."
+    "trafficWindow": "Read over your last {count} visits.",
+    "introStartStatsNotice": "This quiz starts on a question: the welcome screen AND question 1 are one screen. Starts therefore count visitors who ANSWERED the first question. Before this setting, they counted button clicks: the two periods are not comparable."
   },
   "illustrations": {
     "emptyInbox": "Empty inbox",

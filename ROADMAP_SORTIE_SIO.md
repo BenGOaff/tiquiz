@@ -293,11 +293,11 @@ Vérifié dans `lib/checkout/stripeCheckout.ts` et `paypalOwner.ts` :
   commission affiliée**, sinon on paie une commission sur un prix que
   personne n'a payé.
 - **Aucun order bump, aucun upsell.**
-- **Le remboursement PayPal n'est pas possible depuis l'admin.**
-  `app/api/admin/ventes/rembourser/route.ts` refuse tout ce qui n'est pas
-  `provider === "stripe"`. Une vente PayPal se rembourse aujourd'hui dans
-  l'interface PayPal, et le webhook fait le reste correctement (accès
-  fermé, abonnement arrêté, avoir émis). C'est le BOUTON qui manque.
+- ~~Le remboursement PayPal n'est pas possible depuis l'admin.~~
+  **FAIT le 25 août**, et cette ligne disait le contraire jusqu'au 26 :
+  `app/api/admin/ventes/rembourser/route.ts` accepte `provider` valant
+  `stripe` OU `paypal` et appelle `refundOwnerPaypalSale`. Une ligne de
+  roadmap périmée envoie chercher un bouton qui existe.
 - **VIES n'est pas branché** : on vérifie la forme d'un numéro de TVA,
   pas son existence. Une autoliquidation injustifiée est de la TVA à
   notre charge. Les factures concernées sortent marquées.
@@ -380,6 +380,50 @@ plus rien chez nous.
 > Béné, 24 août : "il faudra aussi qu'on réfléchisse à alléger le
 > supabase de Tiquiz, on frôle les limites et on doit éviter sachant
 > qu'on a un super serveur. Note le on en parle demain."
+
+### CE QUI A ÉTÉ FAIT LE 26 AOÛT AU SOIR, ET CE QUE ÇA A CORRIGÉ
+
+**La cause n'était pas le stockage, c'était la BANDE PASSANTE.** Le
+bandeau Supabase dit `Cached Egress Exceeded` : **7,27 Go** sur le cycle
+précédent, pour 719 Mo d'images. Chaque visiteur de quiz téléchargeait
+ces images DEPUIS Supabase, une dizaine de fois par fichier en moyenne.
+Le stockage à 73 % était vrai et n'était pas la cause. Le reste de cette
+section, écrit avant la mesure, part de la mauvaise hypothèse : la
+mécanique décrite (chaque envoi écrit un fichier neuf, rien n'est jamais
+supprimé) reste exacte, la CONCLUSION était fausse.
+
+**Fait, dans l'ordre, sur Tiquiz :**
+
+1. audit corrigé (schéma demandé à la base, plus aucune liste de
+   colonnes écrite à la main, tous les buckets) ;
+2. archive complète sur le serveur, 805 fichiers, 0 échec, avec
+   manifeste et empreinte par fichier ;
+3. **c'est CADDY qui sert le 443, pas nginx.** Tout `infra/nginx/` décrit
+   une réalité morte. Le bloc `location ^~ /assets/` a été écrit puis
+   jeté ; ce qui tourne est un `handle @assets_tq` dans le Caddyfile ;
+4. les fichiers copiés depuis l'archive (jamais re-téléchargés : ça
+   aurait reconsommé la bande passante qu'on essaie d'économiser) ;
+5. `NEXT_PUBLIC_ASSETS_BASE_URL=https://videos.quiz.tipote.com/assets`
+   posée, l'app reconstruite : les NOUVELLES images vont sur le serveur ;
+6. `storage-migrate.mjs` appliqué : **323 lignes réécrites, 0 échec**,
+   sur `quizzes`, `quiz_results`, `quiz_questions`, `profiles`,
+   `business_profiles`, `custom_domains`. Aucune image manquante, aucune
+   table sans clé primaire.
+
+**RIEN N'A ÉTÉ SUPPRIMÉ CHEZ SUPABASE, ET RIEN NE DOIT L'ÊTRE.** Les
+719 Mo y restent : si une adresse nous a échappé, l'image s'affiche
+encore. Les 420 fichiers que l'audit dit orphelins ne sont pas une
+liste de suppression.
+
+**Au passage :** une page de maintenance est servie par Caddy quand une
+app ne répond plus (déploiement en cours), sur les quatre sites. Elle
+sort en **200** et pas en 5xx, parce que Cloudflare remplace le corps
+d'une réponse 5xx par sa propre page d'erreur. Elle vit dans
+`/srv/maintenance/index.html`, donc **hors du dépôt**, comme le
+Caddyfile : c'est une dette, tout ce qui n'est pas versionné disparaît au
+prochain serveur.
+
+---
 
 ### CE N'EST PAS LA BASE, CE SONT LES FICHIERS (mesuré le 26 août)
 

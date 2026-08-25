@@ -210,6 +210,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       "sio_capture_tag",
       "show_aggregate_responses",
       "start_button_text",
+      // Par quoi le visiteur commence : button (defaut) | personalize |
+      // question. Toute autre valeur degrade vers button dans
+      // lib/quiz/introStart.ts, donc aucune sauvegarde ne peut echouer ici.
+      "intro_start_mode",
       "result_insight_heading", "result_projection_heading", "result_bridge_heading",
       "sio_api_key_id",
       "intro_image_url", "intro_image_position", "intro_image_width",

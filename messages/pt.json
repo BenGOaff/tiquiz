@@ -1614,7 +1614,17 @@
     "otherResultsBeforeCta": "Antes do botão",
     "otherResultsPositionHint": "Colocado antes do botão, dá ao visitante outra coisa para fazer mesmo no momento da tua proposta.",
     "errResponsesDelete": "A eliminação não foi concluída. Tenta novamente daqui a pouco.",
-    "responsesDeleted": "{count, plural, one {# resposta eliminada} other {# respostas eliminadas}}"
+    "responsesDeleted": "{count, plural, one {# resposta eliminada} other {# respostas eliminadas}}",
+    "introStartLabel": "Por onde o visitante começa",
+    "introStartButton": "Um botão",
+    "introStartPersonalize": "O primeiro nome",
+    "introStartQuestion": "A primeira pergunta",
+    "introStartHelp": "Um campo ou uma pergunta sob o título envolve mais do que um botão. O botão continua a ser a opção por omissão.",
+    "introStartQuestionPreview": "A primeira pergunta aparece aqui, sob o título e a descrição. Edita-se no separador Perguntas.",
+    "introStartRefus_capture-avant": "Aqui não é possível: o teu inquérito pede o email antes das perguntas, por isso a primeira pergunta não pode vir à frente. O botão fica.",
+    "introStartRefus_aucune-question": "Ainda não é possível: este quiz não tem nenhuma pergunta. O botão fica.",
+    "introStartRefus_rien-a-demander": "Aqui não é possível: não pedes nem o primeiro nome nem o género. Ativa um dos dois, ou mantém o botão.",
+    "introStartStatsNotice": "Este quiz começa numa pergunta: o ecrã inicial E a pergunta 1 são um só. Os inícios contam então quem RESPONDEU à primeira pergunta. Antes contavam os cliques no botão: os dois períodos não se comparam."
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova palavra-passe",
@@ -2918,7 +2928,8 @@
     "trafficDirectBlind": "{pct}% do teu tráfego chega sem proveniência, o que é normal quando publicas no telemóvel: as aplicações não a transmitem. Para veres com clareza, marca os teus links (por exemplo o-teu-link?utm_source=instagram) e verás cada publicação em separado.",
     "trafficSingle": "Todo o teu tráfego vem de {source} ({pct}%). O que acontece no teu ecrã inicial fala portanto DESSE público: se muitos saem, vê primeiro se a tua promessa corresponde ao que anunciaste lá.",
     "trafficMixed": "O teu tráfego vem de vários sítios. Compara: se uma fonte arranca muito melhor do que as outras, não é a tua página que falha, é o público da fonte mais fraca.",
-    "trafficWindow": "Leitura sobre as tuas últimas {count} visitas."
+    "trafficWindow": "Leitura sobre as tuas últimas {count} visitas.",
+    "introStartStatsNotice": "Este quiz começa numa pergunta: o ecrã inicial E a pergunta 1 são um só. Os inícios contam então quem RESPONDEU à primeira pergunta. Antes contavam os cliques no botão: os dois períodos não se comparam."
   },
   "illustrations": {
     "emptyInbox": "Caixa de entrada vazia",
