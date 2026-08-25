@@ -77,6 +77,7 @@ import { nativeShareResolveIsProof, readShareCredit } from "@/lib/quiz/shareCred
 import { firstNameRequiredOnCapture, showFirstNameOnCapture } from "@/lib/quiz/firstNameAsk";
 import {
   beatShell,
+  RESULT_BODY_CLASS,
   beatShown,
   buildResultBeats,
   mirrorMedia,
@@ -4649,11 +4650,11 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
               const desc = interp(resultProfile.description);
               return isHtml(desc) ? (
                 <div
-                  className="tiquiz-rich text-muted-foreground text-base leading-relaxed"
+                  className={`tiquiz-rich text-muted-foreground ${RESULT_BODY_CLASS}`}
                   dangerouslySetInnerHTML={{ __html: sanitizeRichText(desc) }}
                 />
               ) : (
-                <p className="text-muted-foreground text-base leading-relaxed whitespace-pre-line">{decodeHtmlEntities(desc)}</p>
+                <p className={`text-muted-foreground ${RESULT_BODY_CLASS} whitespace-pre-line`}>{decodeHtmlEntities(desc)}</p>
               );
             })()}
 
@@ -4679,11 +4680,11 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
                   />
                   {isHtml(ins) ? (
                     <div
-                      className="tiquiz-rich text-sm leading-relaxed"
+                      className={`tiquiz-rich ${RESULT_BODY_CLASS}`}
                       dangerouslySetInnerHTML={{ __html: sanitizeRichText(ins) }}
                     />
                   ) : (
-                    <p className="text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(ins)}</p>
+                    <p className={`${RESULT_BODY_CLASS} whitespace-pre-line`}>{decodeHtmlEntities(ins)}</p>
                   )}
                 </div>
               );
@@ -4707,11 +4708,11 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
                   />
                   {isHtml(proj) ? (
                     <div
-                      className="tiquiz-rich text-sm leading-relaxed"
+                      className={`tiquiz-rich ${RESULT_BODY_CLASS}`}
                       dangerouslySetInnerHTML={{ __html: sanitizeRichText(proj) }}
                     />
                   ) : (
-                    <p className="text-sm leading-relaxed whitespace-pre-line">{decodeHtmlEntities(proj)}</p>
+                    <p className={`${RESULT_BODY_CLASS} whitespace-pre-line`}>{decodeHtmlEntities(proj)}</p>
                   )}
                 </div>
               );
@@ -4744,11 +4745,11 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
                       {beat.media && <BeatImage item={beat.media} />}
                       {beat.showText && (isHtml(body) ? (
                         <div
-                          className={`tiquiz-rich text-base leading-relaxed ${shell.bodyToneClass}`}
+                          className={`tiquiz-rich ${RESULT_BODY_CLASS} ${shell.bodyToneClass}`}
                           dangerouslySetInnerHTML={{ __html: sanitizeRichText(body) }}
                         />
                       ) : (
-                        <p className={`text-base leading-relaxed whitespace-pre-line ${shell.bodyToneClass}`}>
+                        <p className={`${RESULT_BODY_CLASS} whitespace-pre-line ${shell.bodyToneClass}`}>
                           {decodeHtmlEntities(body)}
                         </p>
                       ))}
