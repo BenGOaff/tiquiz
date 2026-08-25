@@ -160,6 +160,47 @@ Les variantes de genre peuvent être générées par l'IA sur un champ (bouton �
 
 ---
 
+### 3.5. Partager un quiz à un autre compte
+
+Bouton **Partager ce quiz** sur la carte d'un projet (`/quizzes`). Il fabrique un lien (`/partage/<jeton>`) qui INSTALLE une copie du quiz dans le compte de celui qui l'ouvre : textes, images, questions, points, profils de résultat, couleurs et mise en page. Le quiz d'origine n'est ni déplacé, ni publié, ni modifié.
+
+**La règle, en une ligne : les textes voyagent, les destinations et les identifiants restent.** `lib/quiz/partage.ts` porte la liste de ce qui ne traverse jamais : clé et tags Systeme.io, pixels Meta / GA4 / Google Ads, `cta_url`, `privacy_url`, pied de page, redirections de fermeture, `hide_branding`, plus l'identité et les compteurs. Chacun de ces champs, copié tel quel, produit un bug invisible à l'installation et découvert des semaines plus tard sur les données de vrais visiteurs : les leads du destinataire déclencheraient les automatisations de l'expéditeur, et ses visiteurs atterriraient sur le site de l'expéditeur.
+
+`aPersonnaliser()` rend la liste de ce qui a été retiré, mais **uniquement ce que l'expéditeur avait vraiment rempli** : l'écran d'installation l'affiche, et une liste qui contient du bruit ne se lit plus.
+
+**Les images sont RECOPIÉES** dans le dossier de stockage du destinataire (`lib/quiz/partageImages.ts`). Garder les URL de l'expéditeur afficherait tout correctement, jusqu'au jour où il fait le ménage dans son stockage : le quiz de son client se viderait de ses images des mois plus tard. On reconnaît une image à sa FORME (une URL de notre bucket public), n'importe où dans la ligne y compris au fond d'un JSONB, jamais par une liste de colonnes qui oublierait la prochaine. Une copie qui échoue garde l'URL d'origine, qui s'affiche encore, et l'écran dit combien de fichiers n'ont pas suivi.
+
+**Le lien.** Table `quiz_shares` : un lien par destinataire, avec son libellé privé (jamais montré au destinataire), son compteur d'installations, sa date d'expiration facultative et son interrupteur. Par défaut il ne sert qu'UNE fois. `etatPartage()` rend la raison exacte d'un refus (`inconnu` / `revoque` / `expire` / `epuise`), jamais un écran muet.
+
+**Les deux portes.** `/api/quiz/[quizId]/partage` (le propriétaire crée et révoque, sous RLS). `/api/partage/[jeton]` : la lecture du quiz source se fait avec la clé de service, parce que le destinataire n'a aucun droit dessus et ne doit pas en gagner ; mais **l'écriture de la copie se fait avec SA session**, donc sous sa propre RLS, avec son `user_id` et son projet. Le plafond du plan gratuit s'y applique comme partout.
+
+**La page `/partage/<jeton>` est PUBLIQUE** : montrer son travail à un prospect ne doit pas commencer par lui demander de s'inscrire. Seule l'installation exige un compte. Sa langue vient de `quizzes.locale`, c'est à dire de la langue DU QUIZ PARTAGÉ (`lib/quiz/partageTextes.ts`, 7 langues, `?lang=` accepté et prioritaire) : celui qui reçoit un quiz anglais lit l'anglais, sinon on ne le lui aurait pas envoyé. **Le contenu du quiz, lui, ne change jamais de langue.**
+
+---
+
+### 3.6. La page de résultat : classique ou en 4 temps
+
+`quizzes.result_layout` vaut `'classic'` par défaut en base, et `resultLayoutMode()` ne rend `'beats'` que sur la valeur explicite : un quiz d'hier est rendu exactement comme hier, colonne absente ou valeur inconnue comprises.
+
+En mode `beats`, la page suit les quatre temps enseignés dans l'Atelier, et `lib/quiz/resultBeats.ts` décide seul quels blocs, dans quel ordre, avec quel titre :
+
+| Temps | Champ | Ce qu'il fait |
+|---|---|---|
+| le miroir | `title` + `description` | il se reconnaît, donc il continue à lire |
+| la cause | `insight` (+ `insight_heading`) | ce qui bloque vraiment, souvent autre chose que ce qu'il croyait |
+| le chemin | `projection` (+ `projection_heading`) | les étapes, il voit que c'est faisable |
+| le pont | `bridge` (+ `bridge_heading`) | l'offre comme suite logique, pas comme une pub |
+
+Le vocabulaire de la méthode ne sort JAMAIS côté visiteur : il vit dans l'aide de l'éditeur et dans le prompt, sinon le visiteur lit le squelette au lieu du message. Les trois premiers temps sont masquables (`show_result_insight`, `show_result_projection`, `show_result_bridge`), et `beatShown()` est la seule fonction qui en décide, pour le viewer comme pour l'aperçu.
+
+**Aucune décoration qui prenne de la place horizontale** sur ces blocs : ni `pl-*`, ni `px-*`, ni `border-l-*`, ni `mx-*`. Une décoration à gauche déplace forcément ce qu'elle décore, et `tests/visual/result-beats-bounds.spec.ts` mesure les bords gauches et exige qu'ils soient identiques à 1 px près.
+
+`quiz_results.beat_media` (JSONB, sanitizé par `sanitizeBeatMedia`) porte une image par temps, avec `mode: "with" | "only"` ("only" = l'image remplace le texte).
+
+**La taille du corps de texte de la page de résultat vit dans UNE constante**, `RESULT_BODY_CLASS` (`text-base`, soit 16 px), lue par le viewer ET par les quatre champs de l'éditeur. Avant, le pitch valait 16 px chez le visiteur et 18 px dans l'éditeur, les deux cartes du milieu 14 px des deux côtés, et le pont 16 contre 14 : la créatrice réglait sa page sur un aperçu qui mentait, puis reprenait tout à la main. Une taille choisie à la main dans un champ passe devant (l'enveloppe `.rt-field-fs` porte `!important`), donc changer ce défaut ne touche que les champs jamais réglés.
+
+---
+
 ## 4. Quiz public (`/q/[quizId|slug]`)
 
 Résolution de l'URL par UUID direct ou par slug personnalisé (validation case-insensitive ; un slug ressemblant à un UUID est refusé pour ne pas masquer le fallback direct). Sur domaine personnalisé, l'URL perd le préfixe `/q/`.
@@ -691,6 +732,8 @@ Répartition indicative des modèles : génération de quiz sur le tier Opus, r�
 | `/api/quiz/[quizId]` | GET / PATCH / DELETE | oui | Détail / mise à jour (sanitisation serveur, typo FR) / suppression |
 | `/api/quiz/[quizId]/autosave` | POST | oui | Autosave éditeur |
 | `/api/quiz/[quizId]/duplicate` | POST | oui | Duplication |
+| `/api/quiz/[quizId]/partage` | GET / POST / PATCH | oui | Liens de partage d'un quiz (lister, créer, révoquer) |
+| `/api/partage/[jeton]` | GET / POST | non / oui | Aperçu public d'un quiz partagé, puis installation dans le compte connecté |
 | `/api/quiz/[quizId]/rewrite` | POST | oui | Réécriture IA d'un texte |
 | `/api/quiz/[quizId]/rebalance` | POST | oui | Rééquilibrage IA des résultats |
 | `/api/quiz/generate` | POST | oui | Génération IA (SSE) |

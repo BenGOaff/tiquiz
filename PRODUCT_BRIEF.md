@@ -195,21 +195,39 @@ Variations selon le canal :
 - Synthèse automatique des réponses agrégées par Claude, sur quiz et sondages.
 - Cas d'usage : « 200 personnes ont fait mon quiz, qu'est-ce qui ressort vraiment ? » L'IA dégage patterns, segments et insights actionnables.
 
-### 7.11. Templates métier (15 modèles)
+### 7.11. Partager un quiz entier à quelqu'un
+
+- **Un lien, un clic, et le quiz est installé chez l'autre**, dans son compte : textes, images, questions, points, profils de résultat, couleurs et mise en page. Le quiz d'origine ne bouge pas, la personne reçoit une copie.
+- **Trois usages à raconter** : montrer un quiz DÉJÀ construit à un client potentiel (il voit la page sans avoir à créer de compte), livrer un quiz réalisé pour un client, distribuer un modèle à tout un groupe.
+- **Ce qui reste chez l'expéditeur, et c'est un argument, pas une limite** : ses tags Systeme.io, ses pixels publicitaires, l'adresse de ses boutons, son lien de politique de confidentialité, son pied de page. Sans ça, les leads du destinataire tomberaient dans les automatisations de l'expéditeur et ses visiteurs sur le site de l'expéditeur. L'écran d'installation liste ce qu'il reste à remplir.
+- **Le quiz arrive en brouillon**, toujours. Il ne se publie que quand le destinataire le décide.
+- Le lien ne sert qu'une fois par défaut (décochable), affiche son nombre d'installations et se désactive d'un clic.
+- La page vue par le destinataire parle la langue DU QUIZ partagé (7 langues). Le contenu, lui, n'est jamais traduit : un quiz écrit en anglais arrive en anglais.
+- Un compte Tiquiz est nécessaire pour installer, pas pour regarder. Le plan gratuit reste limité à 1 quiz : installer compte comme une création.
+
+### 7.12. La page de résultat en 4 temps
+
+- Option activable sur n'importe quel quiz, réversible, sans effet sur les autres : **le miroir** (il se reconnaît), **la cause** (ce qui bloque vraiment, souvent autre chose que ce qu'il croyait), **le chemin** (les étapes, il voit que c'est faisable), **le pont** (l'offre comme suite logique, pas comme une pub).
+- C'est la méthode enseignée dans l'Atelier, appliquée à l'écran qui vend.
+- Le vocabulaire de la méthode ne sort jamais côté visiteur : il lit un message, pas un squelette.
+- Chaque temps peut porter sa propre image, avec ou à la place du texte, et se masquer.
+- Les quiz existants ne bougent pas : la page historique reste la page par défaut.
+
+### 7.13. Templates métier (15 modèles)
 15 templates prêts à publier, chacun structuré en 6 questions de 4 options et 4 résultats, ton chaleureux, tutoiement, pas de jargon :
 
 **Coaching et développement personnel** : croyance limitante (mindset), rapport à la nourriture (nutrition), fuites d'énergie (sommeil et énergie), style parental (parentalité), schéma amoureux (couple), blocage en reconversion, rapport à l'argent (finance).
 
 **Business et créatif** : profil entrepreneur, moteur intérieur, style yoga, terrain naturopathie, prêt à lancer ta formation, levier de croissance marketing, style photo, prêt pour ton premier achat immobilier.
 
-### 7.12. Changement de plan, annulation, remboursement
+### 7.14. Changement de plan, annulation, remboursement
 - **Monter de palier se fait en un clic**, depuis Paramètres. Sur carte, le prorata est calculé par Stripe : ce qui a déjà été payé pour le mois en cours est déduit, et le montant affiché est celui qui sera prélevé. Sur PayPal, un abonnement neuf remplace l'ancien, qui n'est arrêté qu'une fois le nouveau actif.
 - **Descendre de palier est refusé, avec sa raison**, et c'est un choix : appliquer la descente tout de suite retirerait des fonctionnalités déjà payées jusqu'à la fin de la période. La sortie est dite à l'écran : arrêter l'abonnement (l'accès tient jusqu'à la date payée) et reprendre le palier voulu.
 - **Annuler n'est pas rembourser.** Annuler garde l'accès jusqu'à la fin de la période payée. Rembourser rend l'argent, ferme l'accès et arrête le prélèvement.
 - **L'utilisateur peut tout faire seul**, sans écrire au support.
 - Ne jamais promettre "changement dans les deux sens en un clic" : la descente passe par une annulation, et le dire est plus honnête que de le laisser découvrir.
 
-### 7.13. Domaines personnalisés
+### 7.15. Domaines personnalisés
 - **Connecte ton propre domaine** : n'importe quel sous-domaine que tu contrôles.
 - **Setup rapide** : un seul CNAME chez ton registrar (détecté automatiquement avec instructions sur-mesure), Tiquiz vérifie le DNS et émet le certificat SSL sans action supplémentaire.
 - **URLs propres** sur ton domaine, sans préfixe et sans paraître hébergé chez Tiquiz.
@@ -217,14 +235,14 @@ Variations selon le canal :
 - **Sécurité** : un autre créateur ne peut pas réclamer ton domaine ni servir son contenu via ton hostname.
 - **Rétrocompatibilité** : les liens déjà partagés continuent de fonctionner.
 
-### 7.14. Studio visuel
+### 7.16. Studio visuel
 - Génération IA d'images de fond et de textes courts pour promouvoir un quiz.
 - Formats prêts pour chaque réseau (carré, portrait, story, paysage), canvas d'édition, export PDF, brand kit.
 
-### 7.15. Gamification
+### 7.17. Gamification
 - Jalons (premier quiz publié, premier lead, paliers de leads), mur des réussites, objectif hebdomadaire, confettis.
 
-### 7.16. Programme revendeur
+### 7.18. Programme revendeur
 - Un partenaire revend Tiquiz en gros à ses propres clients : chaque client a un compte isolé qui connecte son propre Systeme.io.
 - Interface revendeur : créer et gérer des accès clients, compteur de comptes actifs, taux de reversement dégressif au volume, estimation de facture.
 - Facturation automatisée, paiements via les propres clés Stripe ou PayPal du revendeur.

@@ -26,7 +26,7 @@ const fr: LegalPage = {
         [
           "Identification : nom, prénom, email, numéro de téléphone (facultatif), adresse de facturation.",
           "Activité quiz : quiz créés, questions, résultats, statistiques d'usage.",
-          "Leads captés par vos quiz : emails et informations des visiteurs que vos quiz collectent — vous en êtes le responsable de traitement, Tiquiz agit en sous-traitant.",
+          "Leads captés par vos quiz : emails et informations des visiteurs que vos quiz collectent - vous en êtes le responsable de traitement, Tiquiz agit en sous-traitant.",
           "Techniques : adresse IP, navigateur, appareil, journaux de connexion.",
           "Paiement : les données bancaires sont traitées par Stripe et PayPal. Aucune donnée bancaire n'est stockée par Tiquiz.",
         ],
@@ -121,7 +121,7 @@ const fr: LegalPage = {
     {
       h: "15. Contact",
       body: [
-        `${C.name} — ${C.address} — ${C.email}.`,
+        `${C.name}, ${C.address}, ${C.email}.`,
         "Autorité de contrôle : CNIL (www.cnil.fr).",
       ],
     },
@@ -153,7 +153,7 @@ const en: LegalPage = {
         [
           "Identification: first and last name, email, phone number (optional), billing address.",
           "Quiz activity: quizzes you create, questions, results, usage statistics.",
-          "Leads captured by your quizzes: emails and answers collected by your quizzes — you are the data controller, Tiquiz acts as your processor.",
+          "Leads captured by your quizzes: emails and answers collected by your quizzes - you are the data controller, Tiquiz acts as your processor.",
           "Technical: IP address, browser, device, connection logs.",
           "Payment: card data is processed by Stripe and PayPal. No card data is stored by Tiquiz.",
         ],
@@ -248,7 +248,7 @@ const en: LegalPage = {
     {
       h: "15. Contact",
       body: [
-        `${C.name} — ${C.address} — ${C.email}.`,
+        `${C.name}, ${C.address}, ${C.email}.`,
         "Supervisory authority: CNIL (www.cnil.fr).",
       ],
     },
@@ -272,7 +272,7 @@ const es: LegalPage = {
       body: ["Recopilamos las siguientes categorías:",
         [ "Identificación: nombre, apellidos, email, teléfono (opcional), dirección de facturación.",
           "Actividad del quiz: quizzes creados, preguntas, resultados, estadísticas de uso.",
-          "Leads captados por tus quizzes: emails e información de los visitantes recogidos por tus quizzes — tú eres el responsable del tratamiento, Tiquiz actúa como encargado.",
+          "Leads captados por tus quizzes: emails e información de los visitantes recogidos por tus quizzes - tú eres el responsable del tratamiento, Tiquiz actúa como encargado.",
           "Técnicos: dirección IP, navegador, dispositivo, registros de conexión.",
           "Pago: los datos bancarios los procesan Stripe y PayPal. Tiquiz no almacena datos bancarios." ]]},
     { h: "4. Finalidades y bases legales",
@@ -309,7 +309,7 @@ const es: LegalPage = {
     { h: "12. Cookies", body: ["Consulta la política de cookies dedicada para el detalle por categoría y la gestión del consentimiento."]},
     { h: "13. Menores", body: ["Tiquiz está reservado a personas mayores de edad. Si un menor nos ha transmitido datos, contacta con " + C.email + " para su supresión."]},
     { h: "14. Modificaciones", body: ["Esta política puede evolucionar. En caso de modificación sustancial, se informará a los usuarios. Consulta esta página regularmente."]},
-    { h: "15. Contacto", body: [`${C.name} — ${C.address} — ${C.email}.`, "Autoridad de control: CNIL (www.cnil.fr)."]},
+    { h: "15. Contacto", body: [`${C.name}, ${C.address}, ${C.email}.`, "Autoridad de control: CNIL (www.cnil.fr)."]},
   ],
 };
 
@@ -327,7 +327,7 @@ const it: LegalPage = {
       body: ["Raccogliamo le seguenti categorie:",
         [ "Identificazione: nome, cognome, email, numero di telefono (facoltativo), indirizzo di fatturazione.",
           "Attività quiz: quiz creati, domande, risultati, statistiche d'uso.",
-          "Lead catturati dai tuoi quiz: email e informazioni dei visitatori raccolti dai tuoi quiz — tu sei il titolare del trattamento, Tiquiz agisce come responsabile.",
+          "Lead catturati dai tuoi quiz: email e informazioni dei visitatori raccolti dai tuoi quiz - tu sei il titolare del trattamento, Tiquiz agisce come responsabile.",
           "Tecnici: indirizzo IP, browser, dispositivo, log di connessione.",
           "Pagamento: i dati bancari sono trattati da Stripe e PayPal. Tiquiz non memorizza alcun dato bancario." ]]},
     { h: "4. Finalità e basi giuridiche",
@@ -363,7 +363,7 @@ const it: LegalPage = {
     { h: "12. Cookie", body: ["Consulta l'informativa dedicata ai cookie per il dettaglio per categoria e la gestione del consenso."]},
     { h: "13. Minori", body: ["Tiquiz è riservato alle persone maggiorenni. Se un minore ci ha trasmesso dati, contatta " + C.email + " per la cancellazione."]},
     { h: "14. Modifiche", body: ["La presente informativa può evolvere. In caso di modifica sostanziale, gli utenti ne saranno informati. Consulta regolarmente questa pagina."]},
-    { h: "15. Contatto", body: [`${C.name} — ${C.address} — ${C.email}.`, "Autorità di controllo: CNIL (www.cnil.fr)."]},
+    { h: "15. Contatto", body: [`${C.name}, ${C.address}, ${C.email}.`, "Autorità di controllo: CNIL (www.cnil.fr)."]},
   ],
 };
 
@@ -381,7 +381,7 @@ const ar: LegalPage = {
       body: ["نجمع الفئات التالية:",
         [ "معلومات الهوية: الاسم، اللقب، البريد الإلكتروني، رقم الهاتف (اختياري)، عنوان الفوترة.",
           "نشاط الاختبار: الاختبارات المنشأة، الأسئلة، النتائج، إحصائيات الاستخدام.",
-          "العملاء المحتملون: رسائل البريد الإلكتروني ومعلومات الزوار التي تجمعها اختباراتك — أنت المسؤول عن المعالجة، وTiquiz يعمل كمعالج من الباطن.",
+          "العملاء المحتملون: رسائل البريد الإلكتروني ومعلومات الزوار التي تجمعها اختباراتك - أنت المسؤول عن المعالجة، وTiquiz يعمل كمعالج من الباطن.",
           "بيانات تقنية: عنوان IP، المتصفح، الجهاز، سجلات الاتصال.",
           "الدفع: تُعالَج البيانات المصرفية بواسطة Stripe وPayPal. لا يخزن Tiquiz أي بيانات مصرفية." ]]},
     { h: "4. الأغراض والأسس القانونية",
@@ -417,7 +417,7 @@ const ar: LegalPage = {
     { h: "12. ملفات تعريف الارتباط", body: ["راجع سياسة ملفات تعريف الارتباط المخصصة للتفاصيل حسب الفئة وإدارة الموافقة."]},
     { h: "13. القاصرون", body: ["Tiquiz محجوز للبالغين. إذا أرسل لنا قاصر بيانات، تواصل مع " + C.email + " للحذف."]},
     { h: "14. التعديلات", body: ["قد تتطور هذه السياسة. في حالة تعديل جوهري، يُبلَّغ المستخدمون. راجع هذه الصفحة بانتظام."]},
-    { h: "15. الاتصال", body: [`${C.name} — ${C.address} — ${C.email}.`, "السلطة الرقابية: CNIL (www.cnil.fr)."]},
+    { h: "15. الاتصال", body: [`${C.name}, ${C.address}, ${C.email}.`, "السلطة الرقابية: CNIL (www.cnil.fr)."]},
   ],
 };
 
