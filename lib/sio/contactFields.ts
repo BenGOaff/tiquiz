@@ -4,7 +4,7 @@
 //
 // -- POURQUOI CE FICHIER EXISTE (25 août 2026) -------------------------
 //
-// Parce que `poserTagAchat` échouait quand le contact N'EXISTAIT PAS
+// Parce que `poserTagPlan` échouait quand le contact N'EXISTAIT PAS
 // chez Systeme.io, et que c'est le cas NORMAL de quelqu'un qui achète
 // sur notre bon de commande sans jamais toucher un tunnel. Le code le
 // disait déjà en commentaire : "c'est une personne qui sortira de ses

@@ -34,7 +34,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildAuthCallbackUrl, resolveAppUrl } from "@/lib/authLinks";
 import { sendPlanOpenedEmail } from "@/lib/email/planOpenedEmail";
 import { isLifetimePlan } from "@/lib/plans/lifetime";
-import { poserTagAchat } from "@/lib/sio/appliquerTag";
+import { poserTagPlan } from "@/lib/sio/appliquerTag";
 import { lireFacturation } from "@/lib/facture/store";
 import type { TiquizPlan } from "@/lib/sio/webhookInference";
 
@@ -197,7 +197,7 @@ export async function grantPlanByEmail(args: {
   // champs existent dans sa fiche contact et n'étaient jamais
   // renseignés. C'est de la donnée qu'on a déjà.
   const identiteSio = await lireFacturation({ email }).catch(() => null);
-  const tagPose = await poserTagAchat(email, args.plan, {
+  const tagPose = await poserTagPlan(email, args.plan, {
     locale: args.locale ?? null,
     acheteur: identiteSio,
   }).catch(() => false);

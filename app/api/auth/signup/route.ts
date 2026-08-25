@@ -39,6 +39,7 @@ import { rattacherInscrit } from "@/lib/affiliate/rattacherInscrit";
 import { REF_COOKIE } from "@/lib/affiliate/refLien";
 import { SA_COOKIE } from "@/lib/affiliate/sa";
 import { sendSignupEmail } from "@/lib/email/signupEmail";
+import { poserTagPlan } from "@/lib/sio/appliquerTag";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
@@ -142,6 +143,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     sa: req.cookies.get(SA_COOKIE)?.value,
     pageUrl: req.headers.get("referer"),
   });
+
+  // ── LE CONTACT CHEZ SYSTEME.IO ──
+  //
+  // Bene, 25 aout 2026 : "inscrit gratos chez nous = contact cree chez
+  // systeme io et abonne a la campagne tiquiz free !"
+  //
+  // Les emails restent chez Systeme.io, donc notre systeme doit continuer
+  // de leur PARLER. Une inscription prise sur nos pages ne creait aucun
+  // contact : la personne sortait de toutes les sequences, en silence, et
+  // le probleme grossissait a chaque inscription, c'est a dire a mesure
+  // qu'on sort de Systeme.io.
+  //
+  // `poserTagPlan` cree le contact s'il n'existe pas, puis pose
+  // `tiquiz-free`. Best-effort et JAMAIS bloquant : une etiquette qui
+  // echoue ne doit pas priver quelqu'un de son inscription. Le journal
+  // le dit, l'ecran non.
+  //
+  // ET LE TAG NE SUFFIT PAS A ABONNER A LA CAMPAGNE. L'API de Systeme.io
+  // n'a aucun point d'entree pour inscrire un contact a une campagne :
+  // c'est une AUTOMATISATION (declencheur "tag ajoute") qui le fait, et
+  // elle se cree dans leur tableau de bord. Verifie le 25 aout 2026 :
+  // aucune regle n'ecoute encore `tiquiz-free`. Sans cette regle, le
+  // contact est bien cree et etiquete, et il ne recoit rien.
+  await poserTagPlan(email, "free", { locale });
 
   const parti = await sendSignupEmail({ email, actionLink, locale });
   if (!parti) {

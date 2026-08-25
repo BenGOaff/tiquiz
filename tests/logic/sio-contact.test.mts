@@ -5,7 +5,7 @@
 // Béné, 24 août 2026 : son système doit remplacer Systeme.io pour les
 // ventes et l'affiliation, "sauf pour les emails".
 //
-// C'est cette exception qui crée le trou. `poserTagAchat` posait
+// C'est cette exception qui crée le trou. `poserTagPlan` posait
 // l'étiquette qui déclenche ses séquences, mais elle abandonnait quand
 // le contact n'existait pas là-bas. Or c'est le cas NORMAL de quelqu'un
 // qui achète sur notre bon de commande sans jamais toucher un tunnel :
@@ -136,14 +136,14 @@ describe("Le corps de la création", () => {
 });
 
 describe("Les règles qui ne se voient pas dans un écran", () => {
-  test("poserTagAchat CRÉE le contact au lieu d'abandonner", () => {
+  test("poserTagPlan CRÉE le contact au lieu d'abandonner", () => {
     const src = lire("lib/sio/appliquerTag.ts");
     assert.match(src, /assurerContact\(/);
     // L'ancien comportement : chercher, puis abandonner. S'il revient,
     // le trou revient avec lui.
     assert.ok(
       !/const contactId = await trouverContact\(/.test(src),
-      "poserTagAchat ne doit plus se contenter de CHERCHER le contact",
+      "poserTagPlan ne doit plus se contenter de CHERCHER le contact",
     );
   });
 
@@ -174,6 +174,6 @@ describe("Les règles qui ne se voient pas dans un écran", () => {
     // pro). La facturation, elle, est saisie par la personne.
     const src = lire("lib/checkout/grantPlan.ts");
     assert.match(src, /lireFacturation\(\{ email \}\)/);
-    assert.match(src, /poserTagAchat\(email, args\.plan, \{/);
+    assert.match(src, /poserTagPlan\(email, args\.plan, \{/);
   });
 });
