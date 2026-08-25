@@ -112,7 +112,15 @@ export default function CommandeClient({
   // rendu serveur, et une valeur lue trop tôt casserait l'hydratation.
   const [codeSaisi, setCodeSaisi] = useState("");
   const [codeApplique, setCodeApplique] = useState("");
-  const [remise, setRemise] = useState<{ code: string; percentOff: number } | null>(null);
+  const [remise, setRemise] = useState<{
+    code: string;
+    jours: number;
+    joursDeBase: number;
+    percentOff: number | null;
+    duree: string | null;
+    mois: number | null;
+    apresEssai: boolean;
+  } | null>(null);
   const [remiseRefusee, setRemiseRefusee] = useState<string | null>(null);
 
   useEffect(() => {
@@ -199,9 +207,20 @@ export default function CommandeClient({
     "remise-illisible": "Ce code n'est pas exploitable. Écris-nous, on le règle.",
     indisponible:
       "On n'a pas pu vérifier ce code à l'instant. Réessaie dans une minute, ton code n'est pas perdu.",
-    "essai-plus-avantageux":
-      "Tu as déjà un mois offert sur cette commande, et il vaut mieux que ce code. On garde le mois offert.",
+    "pas-encore": "Ce code n'est pas encore ouvert. Reviens à la date annoncée.",
+    "essai-refuse":
+      "Ce code offre des jours d'essai, et l'essai gratuit ne peut être ouvert qu'une fois par personne. Ta commande passe au tarif normal.",
   };
+
+  // La durée d'une remise, en mots. Une remise "à vie" et une remise sur
+  // une échéance ne se disent pas pareil, et l'acheteur doit savoir
+  // laquelle il a avant de payer.
+  const dureeEnMots = (r: { duree: string | null; mois: number | null }) =>
+    r.duree === "forever"
+      ? "sur toutes tes échéances"
+      : r.duree === "months" && r.mois
+        ? `pendant ${r.mois} mois`
+        : "sur ta première échéance payée";
 
   const blocCode = (
     <div className="mb-4 rounded-lg border p-3">
@@ -230,7 +249,16 @@ export default function CommandeClient({
       </div>
       {remise && (
         <p className="mt-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
-          Code {remise.code} appliqué : -{remise.percentOff} % sur ta première échéance.
+          {/* TROIS PHRASES, parce qu'il y a trois avantages possibles et
+              qu'une seule phrase mentirait sur deux d'entre eux. Ce qui
+              est annoncé est ce qui sera FACTURÉ : le serveur rend
+              l'avantage tel qu'il sera appliqué, pas ce qui a été saisi. */}
+          Code {remise.code} appliqué :{" "}
+          {remise.percentOff === null
+            ? `${remise.jours} jours offerts au lieu de ${remise.joursDeBase}.`
+            : remise.apresEssai
+              ? `${remise.jours} jours offerts, puis -${remise.percentOff} % ${dureeEnMots(remise)}.`
+              : `-${remise.percentOff} % ${dureeEnMots(remise)}.`}
         </p>
       )}
       {!remise && remiseRefusee && (
@@ -258,7 +286,15 @@ export default function CommandeClient({
       clientSecret?: string;
       reason?: string;
       mode?: string;
-      remise?: { code: string; percentOff: number } | null;
+      remise?: {
+        code: string;
+        jours: number;
+        joursDeBase: number;
+        percentOff: number | null;
+        duree: string | null;
+        mois: number | null;
+        apresEssai: boolean;
+      } | null;
       remiseRefusee?: string | null;
     };
     if (!data.ok || !data.clientSecret) {

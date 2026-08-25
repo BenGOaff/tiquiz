@@ -31,8 +31,9 @@ import { readSa } from "@/lib/affiliate/sa";
 import { readRef } from "@/lib/affiliate/refLien";
 import { essaiPourCeCheckout } from "@/lib/trial/moisOffertCheckout";
 import {
-  arbitrerRemiseEtEssai,
+  planDuCheckout,
   verifierCodeReduction,
+  type Avantage,
 } from "@/lib/checkout/codeReduction";
 import { lireAcheteur } from "@/lib/facture/identite";
 import { ecrireFacturation } from "@/lib/facture/store";
@@ -143,29 +144,40 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // LE CODE DE RÉDUCTION, EXACTEMENT COMME SUR LA CARTE.
+  // L'AVANTAGE DU CODE, EXACTEMENT COMME SUR LA CARTE.
   //
   // Les deux moyens de paiement doivent facturer la même chose : un code
   // qui marche par carte et pas par PayPal, c'est un bon de commande qui
   // ment sur l'un des deux, et une réclamation le lendemain.
-  let remise: { code: string; percentOff: number } | null = null;
+  //
+  // Une différence assumée : PayPal exprime TOUT en cycles de
+  // facturation, donc il n'a pas besoin de la remise différée de Stripe.
+  // Le cycle d'essai puis le cycle remisé se suivent naturellement, et
+  // `plan.differee` s'applique ici comme une remise ordinaire.
+  let avantage: Avantage | null = null;
+  let codeApplique = "";
   const codeSaisi = String(body.code ?? "").trim();
-  if (codeSaisi && arbitrerRemiseEtEssai(essai.jours).appliquer) {
+  if (codeSaisi) {
     const verdict = await verifierCodeReduction({
       code: codeSaisi,
       produit: product.id,
       ref: readRef(body.ref) ?? null,
       sa: readSa(body.sa) ?? null,
     });
-    if (verdict.valide) remise = { code: verdict.code, percentOff: verdict.percentOff };
+    if (verdict.valide) {
+      avantage = verdict.avantage;
+      codeApplique = verdict.code;
+    }
   }
+  const plan = planDuCheckout({ joursOfferts: essai.jours, avantage });
+  const remisePaypal = plan.coupon ?? plan.differee;
 
   const result = await createOwnerPaypalSubscription({
     compte,
     product,
     email,
-    trialDays: essai.jours,
-    remise,
+    trialDays: plan.jours,
+    remise: remisePaypal ? { ...remisePaypal, code: codeApplique } : null,
     returnUrl: retour,
     // Annuler ramène au bon de commande, pas sur un cul-de-sac.
     cancelUrl: `${base}/commande/${product.id}?k=${cle}`,

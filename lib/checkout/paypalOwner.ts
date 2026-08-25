@@ -304,7 +304,12 @@ export async function createOwnerPaypalSubscription(args: {
    * Jamais reçue du navigateur : ce serait un prix que l'acheteur
    * choisit lui-même.
    */
-  remise?: { code: string; percentOff: number } | null;
+  remise?: {
+    code: string;
+    percentOff: number;
+    duree: "once" | "forever" | "months";
+    mois: number | null;
+  } | null;
 }): Promise<PaypalSubscriptionResult> {
   const unit = paypalInterval(args.product);
   if (!unit) return { ok: false, reason: "invalid_product" };
@@ -317,28 +322,42 @@ export async function createOwnerPaypalSubscription(args: {
       ? Math.min(Number(args.trialDays), 365)
       : 0;
 
-  // LA REMISE EST UN PREMIER CYCLE MOINS CHER, PAS UN PRIX PLUS BAS.
+  // CHEZ PAYPAL, TOUT S'EXPRIME EN CYCLES DE FACTURATION.
   //
-  // Chez PayPal, un plan porte le prix de TOUTES ses échéances : baisser
-  // `fixed_price` ferait une remise à vie sur une décision prise une
-  // fois. On pose donc un cycle REGULAR joué UNE fois au prix remisé,
-  // suivi du cycle sans fin au prix plein. C'est exactement la mécanique
-  // de l'essai gratuit juste en dessous, et le miroir du coupon
-  // `duration: once` côté Stripe : les deux moyens de paiement doivent
-  // facturer la même chose, sinon le bon de commande ment sur l'un des
-  // deux.
+  // Il n'y a pas de coupon : un plan porte une SUITE de cycles, et
+  // chacun a son prix et son nombre de répétitions. C'est ce qui permet
+  // de rendre les cinq cas demandés par Béné le 25 août 2026 sans
+  // aucune mécanique différée, là où Stripe demande un coupon posé plus
+  // tard :
   //
-  // L'essai et la remise ne se cumulent JAMAIS (arbitré en amont dans
-  // lib/checkout/codeReduction.ts, parce qu'une remise posée pendant un
-  // essai se brûlerait sur une échéance à zéro). Le `essaiJours === 0`
-  // ci-dessous n'est pas une deuxième décision : c'est la ceinture qui
-  // va avec les bretelles, sur un chemin qui touche à de l'argent.
-  const pctRemise = Number(args.remise?.percentOff ?? 0);
-  const remiseActive =
-    essaiJours === 0 && Number.isInteger(pctRemise) && pctRemise >= 1 && pctRemise <= 90;
-  const prixRemiseCents = remiseActive
-    ? Math.max(1, Math.round((args.product.amountCents * (100 - pctRemise)) / 100))
+  //   - deux mois gratis        -> un cycle TRIAL de 60 jours ;
+  //   - % sur la 1re échéance   -> un cycle REGULAR remisé, joué 1 fois ;
+  //   - % sur N mois            -> le même, joué N fois ;
+  //   - % à vie                 -> le cycle sans fin porte le prix remisé ;
+  //   - % APRÈS le mois offert  -> le cycle TRIAL, PUIS le cycle remisé,
+  //     PUIS le prix plein. Les trois se suivent naturellement.
+  //
+  // Les `sequence` doivent se suivre sans trou, sinon PayPal refuse le
+  // plan avec un message que personne ne lira.
+  const pct = Number(args.remise?.percentOff ?? 0);
+  const remiseLisible = Number.isInteger(pct) && pct >= 1 && pct <= 90;
+  const dureeRemise = args.remise?.duree ?? "once";
+  const prixRemiseCents = remiseLisible
+    ? Math.max(1, Math.round((args.product.amountCents * (100 - pct)) / 100))
+    : args.product.amountCents;
+
+  // "À vie" n'est pas un cycle de plus : c'est le prix du cycle sans fin.
+  const remiseAVie = remiseLisible && dureeRemise === "forever";
+  // Un cycle remisé joué un nombre FINI de fois, avant le prix plein.
+  const cyclesRemises = remiseLisible && !remiseAVie
+    ? dureeRemise === "months"
+      ? Math.max(1, Math.min(36, Number(args.remise?.mois ?? 1)))
+      : 1
     : 0;
+
+  const prixRegulier = remiseAVie ? prixRemiseCents : args.product.amountCents;
+  const seqRemise = essaiJours > 0 ? 2 : 1;
+  const seqRegulier = seqRemise + (cyclesRemises > 0 ? 1 : 0);
 
   const token = await jeton(args.compte);
   if (!token) return { ok: false, reason: "not_configured" };
@@ -379,16 +398,17 @@ export async function createOwnerPaypalSubscription(args: {
               },
             ]
           : []),
-        // LA PREMIÈRE ÉCHÉANCE REMISÉE, quand un code s'applique.
-        // `total_cycles: 1` : jouée une fois, puis le cycle suivant
-        // reprend le prix plein.
-        ...(remiseActive
+        // LES ÉCHÉANCES REMISÉES, quand un code en ouvre. Jouées un
+        // nombre FINI de fois, puis le cycle suivant reprend le prix
+        // plein. Une remise "à vie" ne passe pas par ici : c'est le
+        // cycle sans fin lui-même qui porte le prix remisé.
+        ...(cyclesRemises > 0
           ? [
               {
                 frequency: { interval_unit: unit, interval_count: 1 },
                 tenure_type: "REGULAR",
-                sequence: 1,
-                total_cycles: 1,
+                sequence: seqRemise,
+                total_cycles: cyclesRemises,
                 pricing_scheme: {
                   fixed_price: {
                     value: paypalAmount(prixRemiseCents),
@@ -401,13 +421,13 @@ export async function createOwnerPaypalSubscription(args: {
         {
           frequency: { interval_unit: unit, interval_count: 1 },
           tenure_type: "REGULAR",
-          sequence: essaiJours > 0 || remiseActive ? 2 : 1,
+          sequence: seqRegulier,
           // 0 = sans fin. "Sans engagement" veut dire qu'on arrête quand
           // on veut, pas que ça s'arrête tout seul au bout d'un an.
           total_cycles: 0,
           pricing_scheme: {
             fixed_price: {
-              value: paypalAmount(args.product.amountCents),
+              value: paypalAmount(prixRegulier),
               currency_code: args.product.currency.toUpperCase(),
             },
           },

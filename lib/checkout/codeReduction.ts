@@ -33,11 +33,58 @@ export type RaisonCode =
   | "mauvais-lien"
   | "produit-exclu"
   | "remise-illisible"
+  | "pas-encore"
   | "indisponible";
 
+/**
+ * Ce qu'un code donne. Une UNION, pas un objet à champs optionnels.
+ *
+ * Béné, 25 août 2026 : "un pourcentage sur le premier mois après le mois
+ * gratuit ; un pourcentage à vie ; un pourcentage ponctuel sur une durée
+ * précise ; un pourcentage selon l'abonnement ; deux mois gratis au lieu
+ * d'un."
+ *
+ * Cinq demandes, deux natures. Une remise se calcule sur un prix et
+ * s'exprime en coupon ; des jours offerts rallongent l'essai et ne
+ * touchent aucun prix. Les mélanger dans un objet à champs optionnels
+ * laisserait un appelant lire le mauvais champ, et ce serait un client
+ * qui paie ce qu'il ne devait pas payer.
+ */
+export type Avantage =
+  | { type: "percent"; percentOff: number; duree: "once" | "forever" | "months"; mois: number | null }
+  | { type: "free_days"; jours: number };
+
 export type VerdictRemise =
-  | { valide: true; code: string; percentOff: number }
+  | { valide: true; code: string; avantage: Avantage }
   | { valide: false; raison: RaisonCode };
+
+/**
+ * Relit l'avantage reçu, sans jamais faire confiance à sa forme.
+ *
+ * Il arrive d'une autre application par le réseau : une réponse tronquée
+ * ou une version plus ancienne de l'autre app doit donner "pas
+ * d'avantage", jamais un objet à moitié rempli dont on lirait un champ
+ * indéfini comme un prix.
+ */
+function lireAvantage(brut: unknown): Avantage | null {
+  if (!brut || typeof brut !== "object") return null;
+  const a = brut as Record<string, unknown>;
+  if (a.type === "free_days") {
+    const jours = Number(a.jours);
+    if (!Number.isInteger(jours) || jours < 1 || jours > 365) return null;
+    return { type: "free_days", jours };
+  }
+  if (a.type !== "percent") return null;
+  const pct = Number(a.percentOff);
+  if (!Number.isInteger(pct) || pct < 1 || pct > 90) return null;
+  const duree = a.duree === "forever" ? "forever" : a.duree === "months" ? "months" : "once";
+  if (duree === "months") {
+    const mois = Number(a.mois);
+    if (!Number.isInteger(mois) || mois < 1 || mois > 36) return null;
+    return { type: "percent", percentOff: pct, duree, mois };
+  }
+  return { type: "percent", percentOff: pct, duree, mois: null };
+}
 
 /** L'app qui porte le registre. Validée, jamais locale (drame Véronique). */
 export function tipoteBaseUrl(env: Record<string, string | undefined> = process.env): string {
@@ -86,15 +133,16 @@ export async function verifierCodeReduction(args: {
       ok?: boolean;
       valide?: boolean;
       code?: string;
-      percentOff?: number;
+      avantage?: unknown;
       raison?: string;
     };
     if (!j.ok) return { valide: false, raison: "indisponible" };
-    if (j.valide && typeof j.percentOff === "number") {
-      return { valide: true, code: String(j.code ?? code), percentOff: j.percentOff };
+    const avantage = lireAvantage(j.avantage);
+    if (j.valide && avantage) {
+      return { valide: true, code: String(j.code ?? code), avantage };
     }
     const raisons: RaisonCode[] = [
-      "inconnu", "desactive", "expire", "mauvais-lien", "produit-exclu", "remise-illisible",
+      "inconnu", "desactive", "expire", "pas-encore", "mauvais-lien", "produit-exclu", "remise-illisible",
     ];
     const raison = raisons.find((r) => r === j.raison) ?? "inconnu";
     return { valide: false, raison };
@@ -121,27 +169,59 @@ export function prixRemiseCents(montantCents: number, percentOff: number): numbe
   return Math.max(1, Math.round((montantCents * (100 - pct)) / 100));
 }
 
-// ── LE MOIS OFFERT ET LE CODE NE SE CUMULENT PAS ────────────────────
+// ── CE QUE L'AVANTAGE DEVIENT SUR LE BON DE COMMANDE ────────────────
 //
-// Le piège est technique et il coûte cher : un coupon Stripe
-// `duration: once` s'applique à la PREMIÈRE facture, et pendant un essai
-// gratuit la première facture vaut zéro. Cumuler les deux BRÛLERAIT donc
-// la remise sur une facture à 0 €, sans rien réduire, et l'acheteur
-// paierait le prix plein au deuxième mois en croyant avoir son code.
+// Trois sorties possibles, et elles ne se mélangent jamais :
+//   - `jours`   : l'essai gratuit à ouvrir (le mois offert, allongé par
+//                 un code `free_days`) ;
+//   - `coupon`  : la remise à poser TOUT DE SUITE sur la session ;
+//   - `differee`: la remise à poser à la FIN de l'essai.
 //
-// L'essai gagne, et ce n'est pas arbitraire : 30 jours offerts valent
-// plus qu'un pourcentage sur une échéance, dans tous les cas de notre
-// catalogue. Et l'écran le DIT, il ne l'avale pas : un code saisi qui
-// disparaît sans un mot, c'est la règle du `ok: false` muet du 3 août.
+// Béné, 25 août 2026 : "un pourcentage sur le premier mois APRÈS le mois
+// gratuit", et "deux mois gratis au lieu d'un".
+//
+// LES JOURS D'UN CODE REMPLACENT, ILS NE S'AJOUTENT PAS. "Deux mois
+// gratis AU LIEU d'un" : 60 jours, pas 30 + 60.
+//
+// ET ILS N'OUVRENT PAS UN ESSAI REFUSÉ. Le moteur du mois offert dit
+// déjà "un seul par personne, point barre" (23 août) et refuse
+// l'auto-affiliation. Un code qui passerait outre rouvrirait exactement
+// le trou qu'on a fermé. Le code allonge un cadeau accordé, il n'en
+// accorde pas un nouveau.
+//
+// LA REMISE ATTEND LA FIN DE L'ESSAI dès qu'il y en a un, quelle que
+// soit sa durée : cf. lib/checkout/remiseDifferee.ts pour la raison
+// (une facture d'essai à 0 € pourrait consommer la remise).
 
-export type ArbitrageRemise =
-  | { appliquer: true }
-  | { appliquer: false; raison: "essai-plus-avantageux" };
+export type PlanDuCheckout = {
+  /** Les jours d'essai à ouvrir. 0 = aucun. */
+  jours: number;
+  /** La remise à poser sur la session tout de suite. */
+  coupon: { code: string; percentOff: number; duree: "once" | "forever" | "months"; mois: number | null } | null;
+  /** La remise à poser à la fin de l'essai, écrite dans les metadata. */
+  differee: { code: string; percentOff: number; duree: "once" | "forever" | "months"; mois: number | null } | null;
+  /** Ce que l'écran doit dire du code, quand il ne s'applique pas. */
+  refus: "essai-refuse" | null;
+};
 
-export function arbitrerRemiseEtEssai(joursEssai: number): ArbitrageRemise {
-  const jours = Number(joursEssai);
-  if (Number.isFinite(jours) && jours > 0) {
-    return { appliquer: false, raison: "essai-plus-avantageux" };
+export function planDuCheckout(args: {
+  joursOfferts: number;
+  avantage: Avantage | null;
+}): PlanDuCheckout {
+  const base = Number.isFinite(args.joursOfferts) ? Math.max(0, Math.trunc(args.joursOfferts)) : 0;
+  const a = args.avantage;
+
+  if (!a) return { jours: base, coupon: null, differee: null, refus: null };
+
+  if (a.type === "free_days") {
+    // Aucun essai accordé (déjà reçu, auto-affiliation, lien inconnu) :
+    // le code n'en ouvre pas un, et l'écran le DIT.
+    if (base <= 0) return { jours: 0, coupon: null, differee: null, refus: "essai-refuse" };
+    return { jours: Math.max(base, a.jours), coupon: null, differee: null, refus: null };
   }
-  return { appliquer: true };
+
+  const remise = { code: "", percentOff: a.percentOff, duree: a.duree, mois: a.mois };
+  return base > 0
+    ? { jours: base, coupon: null, differee: remise, refus: null }
+    : { jours: 0, coupon: remise, differee: null, refus: null };
 }
