@@ -77,6 +77,7 @@ import {
 } from "@/lib/quiz/introLayout";
 import {
   beatShell,
+  beatShown,
   buildResultBeats,
   resultLayoutMode,
   type BeatMedia,
@@ -168,6 +169,7 @@ import {
 import { QuizPanelMedia } from "@/components/quiz/QuizPanelMedia";
 import { PanelMediaEditor } from "@/components/quiz/PanelMediaEditor";
 import { projectBackHref } from "@/lib/nav/projectBack";
+import { firstNameMoment } from "@/lib/quiz/firstNameAsk";
 import { SessionLostBanner } from "@/components/editor/SessionLostBanner";
 import { resolveIntroStart } from "@/lib/quiz/introStart";
 import { profilsSansCta } from "@/lib/quiz/resultCta";
@@ -467,6 +469,54 @@ function ResultPositionDropZone({ label, onDrop }: {
     >
       ↓ {label} ↓
     </div>
+  );
+}
+
+/**
+ * Le bouton qui retire un temps de la page de résultat.
+ *
+ * Béné, 25 août 2026 : "une option pour supprimer un bloc directement
+ * dans l'éditeur, on n'a pas besoin de ça dans la barre de paramètres."
+ *
+ * Il ne supprime AUCUN texte : il pose le même réglage que
+ * l'interrupteur d'avant (`show_result_*`), à l'endroit où on le
+ * comprend. Le contenu écrit reste en base, et le bloc se réaffiche par
+ * la ligne pointillée qui prend sa place.
+ *
+ * Toujours visible, jamais au survol seul : l'aperçu se travaille aussi
+ * au doigt sur la vue mobile, où un `hover` n'existe pas.
+ */
+function BeatRemoveButton({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onRemove}
+      title={label}
+      aria-label={label}
+      className="absolute -top-2.5 -right-2.5 z-10 rounded-full border bg-background p-1 text-muted-foreground opacity-50 shadow-sm transition hover:opacity-100 hover:text-red-600"
+    >
+      <X className="h-3.5 w-3.5" />
+    </button>
+  );
+}
+
+/**
+ * La place laissée par un temps retiré.
+ *
+ * Sans elle, retirer un bloc serait sans retour : il disparaîtrait de
+ * l'aperçu, et l'interrupteur qui le ramenait n'existe plus. Une action
+ * qu'on ne peut pas défaire dans le même écran n'est pas une option,
+ * c'est un piège.
+ */
+function BeatHiddenRow({ label, onRestore }: { label: string; onRestore: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onRestore}
+      className="w-full rounded-xl border border-dashed px-4 py-2.5 text-xs text-muted-foreground transition hover:border-primary/50 hover:text-primary"
+    >
+      {label}
+    </button>
   );
 }
 
@@ -2797,6 +2847,61 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     setEditQuestions((p) => p.map((q, qi) => (qi === i ? { ...q, config: { ...(q.config ?? {}), ...patch } } : q)));
   const updateR = (i: number, field: string, v: unknown) => setEditResults(p => p.map((r, ri) => ri === i ? { ...r, [field]: v } : r));
 
+  // ── Retirer un temps depuis le bloc lui-meme (Bene, 25 aout 2026) ──
+  //
+  // "Pourquoi ces parties activables ou pas ? On met tout [...] et une
+  // option pour supprimer un bloc directement dans l'editeur, on n'a pas
+  // besoin de ca dans la barre de parametres."
+  //
+  // C'est le MEME reglage qu'avant (`show_result_*`, une colonne par
+  // temps, valable pour tous les profils), pose la ou on le comprend.
+  // AUCUN texte n'est efface : le contenu reste en base, et la ligne
+  // pointillee qui prend la place du bloc le ramene.
+  //
+  // La visibilite est lue par `beatShown` (lib/quiz/resultBeats.ts), la
+  // MEME fonction que le viewer. Avant, l'apercu ne lisait rien du tout :
+  // decocher "Afficher la carte insight" retirait le bloc chez le
+  // visiteur et le laissait ici.
+  // ── LE PRÉNOM SE DEMANDE À UN SEUL MOMENT (Béné, 25 août 2026) ────
+  //
+  // "Demander le prénom : on l'a au début + ensuite ? C'est flou, pas
+  // précis, pourquoi ? Si activé au début bah ça reste activé c'est
+  // tout."
+  //
+  // Deux réglages portaient le même mot dans deux sections : l'écran de
+  // personnalisation (`ask_first_name`) et le champ du formulaire de
+  // capture (`capture_first_name`). Les deux écrivent la MÊME valeur
+  // chez le visiteur. Les deux cochés, il donnait son prénom au début
+  // puis retrouvait une case pré-remplie juste avant son email.
+  //
+  // Aucune colonne ne change : c'est la lecture qui est unifiée, par
+  // lib/quiz/firstNameAsk.ts, la MÊME fonction que le viewer.
+  const prenomMoment = firstNameMoment({
+    ask_first_name: askFirstName,
+    capture_first_name: captureFirstName,
+  });
+
+  const beatFlags = useMemo(() => ({
+    show_result_insight: showResultInsight,
+    show_result_projection: showResultProjection,
+    show_result_bridge: showResultBridge,
+  }), [showResultInsight, showResultProjection, showResultBridge]);
+
+  const setBeatShown = useCallback((key: "cause" | "path" | "bridge", on: boolean) => {
+    if (key === "cause") setShowResultInsight(on);
+    else if (key === "path") setShowResultProjection(on);
+    else setShowResultBridge(on);
+  }, []);
+
+  const removeBeat = useCallback((key: "cause" | "path" | "bridge") => {
+    setBeatShown(key, false);
+    // Un retrait qui ne dit pas sa portee se lit comme un bug : il vaut
+    // pour TOUS les profils, et il se defait tout de suite.
+    toast.success(t("beatRemoved"), {
+      action: { label: t("beatRemovedUndo"), onClick: () => setBeatShown(key, true) },
+    });
+  }, [setBeatShown, t]);
+
   /**
    * Remet TOUTES les questions sous le réglage global.
    *
@@ -3840,7 +3945,14 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     {captureEnabled && (<>
                     <div className="flex flex-wrap gap-1.5">
                       <CapturePill label={t("fieldEmailRequired")} active locked />
-                      <CapturePill label={t("fieldFirstNameRequired")} active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />
+                      {/* Demandé au début = déjà collecté. La pastille
+                          reste allumée (le prénom EST bien récupéré sur
+                          le lead) mais elle n'est plus décochable ici :
+                          elle décrirait un champ que le visiteur ne voit
+                          pas. Elle se règle dans Personnalisation. */}
+                      {prenomMoment === "intro"
+                        ? <CapturePill label={t("fieldFirstNameFromIntro")} active locked />
+                        : <CapturePill label={t("fieldFirstNameRequired")} active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />}
                       <CapturePill label={t("fieldLastNameRequired")} active={captureLastName} onToggle={() => setCaptureLastName(!captureLastName)} />
                       <CapturePill label={t("fieldPhone")} active={capturePhone} onToggle={() => setCapturePhone(!capturePhone)} />
                       <CapturePill label={t("fieldCountry")} active={captureCountry} onToggle={() => setCaptureCountry(!captureCountry)} />
@@ -3851,7 +3963,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         reste obligatoire d'office (pas de toggle). */}
                     {(captureFirstName || captureLastName || capturePhone || captureCountry) && (
                       <div className="flex flex-col gap-1.5 pt-1">
-                        {captureFirstName && (
+                        {captureFirstName && prenomMoment === "capture" && (
                           <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
                             <input type="checkbox" checked={firstNameRequired} onChange={(e) => setFirstNameRequired(e.target.checked)} className="h-3.5 w-3.5 accent-primary" />
                             <span>{t("fieldFirstNameRequiredToggle")}</span>
@@ -3877,10 +3989,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         )}
                       </div>
                     )}
-                    {(!captureFirstName || !captureLastName || !capturePhone || !captureCountry) && (
+                    {((!captureFirstName && prenomMoment !== "intro") || !captureLastName || !capturePhone || !captureCountry) && (
                       <button
                         onClick={() => {
-                          if (!captureFirstName) setCaptureFirstName(true);
+                          if (!captureFirstName && prenomMoment !== "intro") setCaptureFirstName(true);
                           else if (!captureLastName) setCaptureLastName(true);
                           else if (!capturePhone) setCapturePhone(true);
                           else if (!captureCountry) setCaptureCountry(true);
@@ -4027,14 +4139,6 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         checked={resultLayout === "beats"}
                         onChange={(v) => setResultLayout(v ? "beats" : "classic")}
                       />
-                      {resultLayout === "beats" && (
-                        <SettingsToggle
-                          label={t("optionShowResultBridge")}
-                          hint={t("optionShowResultBridgeHint")}
-                          checked={showResultBridge}
-                          onChange={(v) => setShowResultBridge(v)}
-                        />
-                      )}
                       {/* Le pont manque sur les quiz d'avant : on propose de
                           le faire écrire, profil par profil, plutôt que de
                           laisser la créatrice devant un champ vide. */}
@@ -4059,22 +4163,12 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                         <p className="text-xs text-muted-foreground">{t("beatsAskCoach")}</p>
                       )}
                     </div>
-                    {/* Atelier juillet 2026 : personnaliser la page de resultat
-                        facon Tally. Cartes insight / projection masquables +
-                        bouton de partage optionnel. Default TRUE -> quiz
-                        existants inchanges. */}
-                    <SettingsToggle
-                      label={t("optionShowResultInsight")}
-                      hint={t("optionShowResultInsightHint")}
-                      checked={showResultInsight}
-                      onChange={v => setShowResultInsight(v)}
-                    />
-                    <SettingsToggle
-                      label={t("optionShowResultProjection")}
-                      hint={t("optionShowResultProjectionHint")}
-                      checked={showResultProjection}
-                      onChange={v => setShowResultProjection(v)}
-                    />
+                    {/* Les trois interrupteurs "Afficher la carte X" ont
+                        quitte cette colonne le 25 aout 2026. Ils vivent
+                        maintenant SUR le bloc, dans l'apercu de la page de
+                        resultat : c'est la qu'on ecrit, donc c'est la qu'on
+                        decide. Rien n'est perdu au passage, les colonnes
+                        `show_result_*` sont les memes. */}
                     <SettingsToggle
                       label={t("optionShowResultShare")}
                       hint={t("optionShowResultShareHint")}
@@ -5125,8 +5219,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                   <RichTextEdit value={captureHeading || t("previewCaptureHeadingDefault")} onChange={setCaptureHeading} onImageUpload={handleRichTextImageUpload} singleLine className="text-2xl sm:text-4xl font-bold text-center" placeholder={t("previewCaptureHeadingPh")} />
                   <RichTextEdit value={captureSubtitle || t("previewCaptureSubtitleDefault")} onChange={setCaptureSubtitle} onImageUpload={handleRichTextImageUpload} className="text-muted-foreground text-base text-center" placeholder={t("previewCaptureSubtitlePh")} />
                   <div className="space-y-3 max-w-md mx-auto">
-                    {(captureFirstName || captureLastName) && <div className="grid grid-cols-2 gap-3">
-                      {captureFirstName && <div><label className="text-sm text-muted-foreground">{t("previewCaptureFirstName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
+                    {/* L'aperçu suit la MÊME règle que le viewer : prénom
+                        demandé au début, pas de case ici. */}
+                    {((captureFirstName && prenomMoment === "capture") || captureLastName) && <div className="grid grid-cols-2 gap-3">
+                      {captureFirstName && prenomMoment === "capture" && <div><label className="text-sm text-muted-foreground">{t("previewCaptureFirstName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
                       {captureLastName && <div><label className="text-sm text-muted-foreground">{t("previewCaptureLastName")}</label><Input readOnly className="mt-1 bg-muted/20" /></div>}
                     </div>}
                     <div><label className="text-sm text-muted-foreground">Email</label><Input readOnly className="mt-1 bg-muted/20" /></div>
@@ -5616,6 +5712,15 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 const shellCause = beatShell(resultLayout, "cause", pc);
                 const shellPath = beatShell(resultLayout, "path", pc);
                 const shellBridge = beatShell(resultLayout, "bridge", pc);
+                // Le nom affiche sur la ligne "bloc masque" est le titre
+                // QU'ELLE a ecrit, jamais un nom de champ : c'est le seul
+                // moyen de reconnaitre le bloc qu'on ramene.
+                const nameCause = stripHtml(resultInsightHeading).trim() || causeDefault;
+                const namePath = stripHtml(resultProjectionHeading).trim() || pathDefault;
+                const nameBridge = stripHtml(resultBridgeHeading).trim() || t("previewResultBridgeDefault");
+                const shownCause = beatShown("cause", resultLayout, beatFlags);
+                const shownPath = beatShown("path", resultLayout, beatFlags);
+                const shownBridge = beatShown("bridge", resultLayout, beatFlags);
                 const insightPersonalized = editResults.some(rr => rr.insight_heading != null);
                 const projectionPersonalized = editResults.some(rr => rr.projection_heading != null);
                 // Subtle banner above each result that tells the creator how
@@ -5789,7 +5894,15 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <ResultPositionDropZone label={t("resultImagePos_after_description")}
                         onDrop={() => { updateResultImagePosition(ri, "after_description"); setDraggingResultImageRi(null); }} />
                     )}
-                    <div className={shellCause.containerClass} style={shellCause.containerStyle}>
+                    {!shownCause && (
+                      <BeatHiddenRow
+                        label={t("beatHidden", { name: nameCause })}
+                        onRestore={() => setBeatShown("cause", true)}
+                      />
+                    )}
+                    {shownCause && (
+                    <div className={`relative ${shellCause.containerClass}`} style={shellCause.containerStyle}>
+                      <BeatRemoveButton label={t("beatRemove")} onRemove={() => removeBeat("cause")} />
                       <div className="mb-2">
                         <RichTextEdit
                           value={insightPersonalized
@@ -5811,6 +5924,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       </div>
                       <RichTextEdit value={r.insight ?? ""} onChange={(v) => updateR(ri, "insight", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultInsight} availableVars={resultVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder={t("previewResultInsightPh")} />
                     </div>
+                    )}
                     {r.image_url && r.image_position === "after_insight" && (
                       <ResultDraggableImage url={r.image_url} ri={ri}
                         onDragStart={() => setDraggingResultImageRi(ri)}
@@ -5822,7 +5936,15 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       <ResultPositionDropZone label={t("resultImagePos_after_insight")}
                         onDrop={() => { updateResultImagePosition(ri, "after_insight"); setDraggingResultImageRi(null); }} />
                     )}
-                    <div className={shellPath.containerClass} style={shellPath.containerStyle}>
+                    {!shownPath && (
+                      <BeatHiddenRow
+                        label={t("beatHidden", { name: namePath })}
+                        onRestore={() => setBeatShown("path", true)}
+                      />
+                    )}
+                    {shownPath && (
+                    <div className={`relative ${shellPath.containerClass}`} style={shellPath.containerStyle}>
+                      <BeatRemoveButton label={t("beatRemove")} onRemove={() => removeBeat("path")} />
                       <div className="mb-2">
                         <RichTextEdit
                           value={projectionPersonalized
@@ -5845,14 +5967,22 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                       </div>
                       <RichTextEdit value={r.projection ?? ""} onChange={(v) => updateR(ri, "projection", v || null)} onGenderize={genderize} onAIRewrite={aiRewriteResultProjection} availableVars={resultVars} previewTransform={previewInterpolate} onImageUpload={handleRichTextImageUpload} className="text-sm leading-relaxed" placeholder={t("previewResultProjectionPh")} />
                     </div>
+                    )}
 
                     {/* LE PONT, 4e temps (demande Béné, 3 août 2026).
                         Visible seulement en page "4 temps" : un quiz
                         classique n'a pas ce bloc, et lui en montrer un
                         vide dans l'aperçu serait mentir sur ce que voit
                         son visiteur. */}
-                    {resultLayout === "beats" && showResultBridge && (
-                      <div className={shellBridge.containerClass} style={shellBridge.containerStyle}>
+                    {resultLayout === "beats" && !shownBridge && (
+                      <BeatHiddenRow
+                        label={t("beatHidden", { name: nameBridge })}
+                        onRestore={() => setBeatShown("bridge", true)}
+                      />
+                    )}
+                    {shownBridge && (
+                      <div className={`relative ${shellBridge.containerClass}`} style={shellBridge.containerStyle}>
+                        <BeatRemoveButton label={t("beatRemove")} onRemove={() => removeBeat("bridge")} />
                         <div className="mb-2">
                           <RichTextEdit
                             value={r.bridge_heading ?? (resultBridgeHeading || t("previewResultBridgeDefault"))}
