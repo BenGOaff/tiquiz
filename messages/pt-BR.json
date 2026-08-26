@@ -851,6 +851,7 @@
     "upgradeCancel": "Agora não",
     "upgradeDone": "Pronto. Seu novo acesso chega em alguns segundos.",
     "downgradeHint": "Para ir para um plano mais barato, cancele sua assinatura: você mantém o acesso até a data já paga e depois escolhe o plano que quiser.",
+    "planStateUnknown": "Estamos verificando sua assinatura. Recarregue a página em instantes.",
     "paymentsManaged": "Os pagamentos são gerenciados pelo Systeme.io. Você pode mudar de plano a qualquer momento.",
     "paymentsManagedReseller": "Seus pagamentos são gerenciados pelo seu fornecedor. Entre em contato com ele para qualquer dúvida de cobrança.",
     "dangerZone": "Zona de perigo",

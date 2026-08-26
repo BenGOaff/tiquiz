@@ -851,6 +851,7 @@
     "upgradeCancel": "Non ora",
     "upgradeDone": "Fatto. Il nuovo accesso arriva tra qualche secondo.",
     "downgradeHint": "Per passare a un piano più economico, annulla l'abbonamento: mantieni l'accesso fino alla data già pagata, poi scegli il piano che vuoi.",
+    "planStateUnknown": "Stiamo verificando il tuo abbonamento. Ricarica la pagina tra poco.",
     "paymentsManaged": "I pagamenti sono gestiti da Systeme.io. Puoi cambiare piano in qualsiasi momento.",
     "paymentsManagedReseller": "I tuoi pagamenti sono gestiti dal tuo fornitore. Contattalo per qualsiasi domanda di fatturazione.",
     "dangerZone": "Zona di pericolo",

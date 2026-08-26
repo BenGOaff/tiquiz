@@ -32,7 +32,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
 import SetPasswordForm from "@/components/auth/SetPasswordForm";
 import SioApiKeysManager from "@/components/sio/SioApiKeysManager";
 import { formatCents } from "@/lib/checkout/catalog";
-import { monteeVersProduit } from "@/lib/checkout/planChange";
+import { monteeVersProduit, type EtatAbonnement } from "@/lib/checkout/planChange";
 
 type Profile = {
   full_name: string | null;
@@ -309,6 +309,14 @@ export default function SettingsClient() {
     actuel: string | null;
     cibles: string[];
   } | null>(null);
+  // "JE N'AI RIEN TROUVÉ" ET "JE N'AI PAS PU REGARDER" SONT DEUX
+  // RÉPONSES DIFFÉRENTES (règle du 23 août). Le `.catch` ci dessous
+  // rendait une abonnée Stripe indiscernable d'une utilisatrice en
+  // gratuit dès qu'une requête échouait, et lui affichait un bon de
+  // commande. On ne propose plus rien tant qu'on ne sait pas.
+  // `null` = on n'a pas encore de réponse. `true` = le serveur a
+  // répondu, quelle que soit sa réponse.
+  const [abonnementLu, setAbonnementLu] = useState(false);
   const [apercu, setApercu] = useState<{
     cible: string;
     label: string;
@@ -322,15 +330,24 @@ export default function SettingsClient() {
 
   useEffect(() => {
     fetch("/api/billing/change-plan", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d?.ok && d.actuel) {
-          setMontee({ fournisseur: d.fournisseur, actuel: d.actuel, cibles: d.cibles ?? [] });
-        }
+      .then(async (r) => {
+        // Une réponse LUE, même négative, est une information : elle dit
+        // qu'il n'y a pas d'abonnement chez nous. Une requête qui échoue
+        // ne dit rien du tout, et les deux ne se confondent plus.
+        if (!r.ok) return { lu: true, corps: null as unknown };
+        return { lu: true, corps: await r.json() };
       })
-      // Silence volontaire : pas d'abonnement chez nous est le cas le
-      // plus fréquent, ce n'est pas une panne.
-      .catch(() => {});
+      .then(({ corps }) => {
+        const d = corps as { ok?: boolean; actuel?: string; fournisseur?: "stripe" | "paypal"; cibles?: string[] } | null;
+        if (d?.ok && d.actuel) {
+          setMontee({ fournisseur: d.fournisseur ?? "stripe", actuel: d.actuel, cibles: d.cibles ?? [] });
+        }
+        setAbonnementLu(true);
+      })
+      .catch(() => {
+        // On NE marque PAS "lu" : sans réponse, l'écran ne proposera
+        // aucun bouton plutôt qu'un bon de commande à une abonnée.
+      });
   }, []);
 
   // Le MONTANT avant la confirmation. Il vient de Stripe, jamais d'une
@@ -586,11 +603,23 @@ export default function SettingsClient() {
   // `monthly_plus` ou `yearly_plus` ne voyait AUCUN bouton pour arreter
   // son abonnement, donc son seul recours etait de nous ecrire. Les
   // quatre paliers vendus vivent dans `OWNER_CATALOG`, et ce sont eux.
+  // L'ÉTAT DE L'ABONNEMENT, EN UN SEUL ENDROIT.
+  //
+  // Il ne se devine pas d'un `montee` nul : ce nul voulait dire à la
+  // fois "pas d'abonnement chez nous" et "je n'ai pas pu regarder".
   const hasActiveSubscription =
     currentPlan === "monthly" ||
     currentPlan === "yearly" ||
     currentPlan === "monthly_plus" ||
     currentPlan === "yearly_plus";
+
+  const etatAbonnement: EtatAbonnement = !abonnementLu
+    ? "inconnu"
+    : montee
+      ? "chez-nous"
+      : hasActiveSubscription
+        ? "systeme-io"
+        : "aucun";
 
   return (
     <div className="space-y-5">
@@ -1261,6 +1290,15 @@ export default function SettingsClient() {
                   pro_yearly_plus: "yearly_plus",
                 } as Record<string, string>
               )[plan.id];
+              // L'identifiant de NOTRE catalogue pour cette carte.
+              const produitCommande = (
+                {
+                  pro_monthly: "mensuel",
+                  pro_yearly: "annuel",
+                  pro_monthly_plus: "mensuel-plus",
+                  pro_yearly_plus: "annuel-plus",
+                } as Record<string, string>
+              )[plan.id];
               const effectiveCheckoutUrl = managedBilling?.managed
                 ? (planKey ? managedBilling.urls[planKey] ?? null : null)
                 : plan.checkoutUrl;
@@ -1345,10 +1383,31 @@ export default function SettingsClient() {
                       // faire. Un bouton absent sans un mot se lit comme
                       // un bug (leçon du bouton Rembourser, 22 août).
                       <p className="text-center text-xs text-muted-foreground">{t("downgradeHint")}</p>
+                    ) : plan.ctaKey && etatAbonnement === "inconnu" ? (
+                      // ON NE PROPOSE RIEN QUAND ON NE SAIT PAS.
+                      // Un bouton de commande affiché à une abonnée dont
+                      // la lecture a échoué lui ferait ouvrir un second
+                      // abonnement. Et un bouton absent sans un mot se
+                      // lit comme un bug (leçon du 22 août).
+                      <p className="text-center text-xs text-muted-foreground">
+                        {t("planStateUnknown")}
+                      </p>
+                    ) : plan.ctaKey && etatAbonnement === "aucun" && produitCommande ? (
+                      // EN GRATUIT : NOTRE bon de commande, pas un
+                      // tunnel Systeme.io. Sans ça, le ?ref= de
+                      // l'affiliée qui l'a amenée n'atteint jamais
+                      // notre commissionnement.
+                      <Button className="w-full rounded-full" variant={('popular' in plan && plan.popular) ? "default" : "outline"} asChild>
+                        <a href={`/commande/${produitCommande}`}>{t(plan.ctaKey)} <ArrowRight className="h-4 w-4 ml-1.5" /></a>
+                      </Button>
                     ) : plan.ctaKey && effectiveCheckoutUrl ? (
-                      // Client direct Tiquiz : CTA universel (checkout SIO du
-                      // nouveau plan). Le webhook auto-cancel l'ancien sub cote
-                      // SIO et upsert profiles.plan. Cf. webhook route.ts.
+                      // ABONNÉE SYSTEME.IO : on garde LEUR bon de
+                      // commande, et ce n'est pas un oubli. C'est leur
+                      // webhook qui annule l'ancien abonnement quand le
+                      // nouveau est pris chez eux. Lui donner le nôtre
+                      // ouvrirait un abonnement Stripe pendant que leur
+                      // prélèvement continue : ce serait créer le bug,
+                      // pas le fermer.
                       <Button className="w-full rounded-full" variant={('popular' in plan && plan.popular) ? "default" : "outline"} asChild>
                         <a href={effectiveCheckoutUrl} target="_blank" rel="noopener noreferrer">{t(plan.ctaKey)} <ArrowRight className="h-4 w-4 ml-1.5" /></a>
                       </Button>

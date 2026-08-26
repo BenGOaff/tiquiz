@@ -283,12 +283,18 @@ export default function LoginForm() {
             {mode === "password" && (
               <div className="mt-6 pt-6 border-t border-border">
                 <p className="text-center text-sm text-muted-foreground mb-3">{t("noAccount")}</p>
-                {/* Inscription directe desactivee : on envoie vers la page
-                    de capture Systeme.io (Bene 14 juillet 2026). */}
+                {/* L'INSCRIPTION SE FAIT CHEZ NOUS depuis le 26 août 2026.
+                    Béné : "sur notre page on doit pouvoir s'inscrire sur
+                    la page de login."
+
+                    Un LIEN INTERNE, et c'est ce qui fait tenir la chaîne
+                    affiliée : le cookie `tq_ref` est posé par le
+                    middleware sur l'hôte où la personne est arrivée
+                    (`tiquiz.fr`), et il ne voyage pas vers un autre
+                    domaine. La renvoyer chez Systeme.io lui faisait
+                    perdre son affiliée en route. */}
                 <Button variant="outline" className="w-full" asChild>
-                  <a href={process.env.NEXT_PUBLIC_TIQUIZ_SIGNUP_URL ?? "https://www.tipote.fr/part-tiquiz-gratuit"}>
-                    {t("createAccount")}
-                  </a>
+                  <Link href="/signup">{t("createAccount")}</Link>
                 </Button>
               </div>
             )}
