@@ -35,8 +35,6 @@ import {
   chargerAnalytics,
   GA_ATTEND_CONSENTEMENT,
   GA_MEASUREMENT_ID,
-  ID_MESURE_HISTORIQUE,
-  remplacerIdMesure,
   GOOGLE_SITE_VERIFICATION,
   hoteNormalise,
   scriptAnalyticsGoogle,
@@ -132,7 +130,7 @@ test("le jeton de propriété, lui, ne dépend PAS du chemin", () => {
 test("la page de vente pose le jeton, alors qu'elle ignore le layout", () => {
   const src = lire("lib/sales/servePage.ts");
   assert.match(src, /baliseVerificationGoogle\(\)/, "tiquiz.fr n'aurait aucune balise de propriété");
-  assert.match(src, /remplacerIdMesure\(/, "l'identifiant ne serait plus pose sur la page de vente");
+  assert.match(src, /scriptAnalyticsGoogle\(\)/, "la balise ne serait plus posee sur la page de vente");
 });
 
 test("mesurer et indexer sont deux décisions SÉPARÉES", () => {
@@ -191,34 +189,30 @@ test("l'interrupteur de consentement existe et il est nommé", () => {
   assert.match(src, /consentementDonne/);
 });
 
-// ── LE CONSENTEMENT : ON RÉÉCRIT DANS LE BANDEAU, ON N'AJOUTE PAS ──
+// ── LA BALISE EST CELLE DE GOOGLE, AU CARACTERE PRES ──
 
-test("l'identifiant est remplacé DANS le bandeau cookies de la page", () => {
-  // La page capturée porte déjà le bandeau de Béné, qui ne charge GA4
-  // qu'après consentement. Ajouter notre balise par dessus le
-  // contournerait, sur la page même où elle demande ce consentement.
-  const page = `<script>var CFG = {\n    ga     : '${ID_MESURE_HISTORIQUE}',\n    pixel  : '',\n};</script>`;
-  const r = remplacerIdMesure(page, GA_MEASUREMENT_ID);
-  assert.equal(r.remplace, true);
-  assert.ok(r.html.includes(`'${GA_MEASUREMENT_ID}'`));
-  assert.ok(!r.html.includes(ID_MESURE_HISTORIQUE), "l'ancien identifiant est reste");
-  // Et le reste du bandeau n'est pas touché.
-  assert.ok(r.html.includes("pixel  : ''"));
+test("le bloc rendu est EXACTEMENT celui que Google donne", () => {
+  // Bene a colle ce bloc trois fois. Le recopier tel quel n'est pas de
+  // la paresse : c'est ce qui permet de comparer d'un coup d'oeil ce que
+  // Google affiche et ce que la page sert.
+  const attendu = [
+    "<!-- Google tag (gtag.js) -->",
+    `<script async src="https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"></script>`,
+    "<script>",
+    "  window.dataLayer = window.dataLayer || [];",
+    "  function gtag(){dataLayer.push(arguments);}",
+    "  gtag('js', new Date());",
+    "",
+    `  gtag('config', '${GA_MEASUREMENT_ID}');`,
+    "</script>",
+  ].join("\n");
+  assert.equal(scriptAnalyticsGoogle(), attendu);
 });
 
-test("une page SANS bandeau le dit, au lieu de le deviner", () => {
-  // `remplace: false` ne se déduit PAS d'une chaîne inchangée : une page
-  // dont l'identifiant est déjà le bon rendrait exactement le même HTML.
-  const r = remplacerIdMesure("<html><head></head><body>x</body></html>", GA_MEASUREMENT_ID);
-  assert.equal(r.remplace, false);
-  const deja = remplacerIdMesure(`<script>ga : '${GA_MEASUREMENT_ID}',</script>`, GA_MEASUREMENT_ID);
-  assert.equal(deja.remplace, true, "un identifiant deja bon reste un remplacement reussi");
-});
-
-test("le rendu ne pose PAS deux balises Google sur une page", () => {
+test("la page de vente pose la balise ENTIERE, pas seulement le src", () => {
+  // La version d'avant reecrivait l'identifiant dans le bandeau cookies
+  // au lieu de poser la balise. Defendable, et pas ce qui etait demande.
   const src = lire("lib/sales/servePage.ts");
-  assert.match(src, /remplacerIdMesure\(sortie, GA_MEASUREMENT_ID\)/);
-  // La balise brute n'est posée QUE si le bandeau est absent, et ça crie.
-  assert.match(src, /if \(!rec\.remplace\)/);
-  assert.match(src, /aucun bandeau cookies dans la page/);
+  assert.match(src, /opts\.analytics \? scriptAnalyticsGoogle\(\) : ""/);
+  assert.doesNotMatch(src, /remplacerIdMesure/, "on ne reecrit plus le bandeau de Bene");
 });
