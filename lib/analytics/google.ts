@@ -1,35 +1,40 @@
 // lib/analytics/google.ts (Tiquiz)
 //
-// LES OUTILS GOOGLE : OÙ ILS SE CHARGENT, ET SURTOUT OÙ ILS NE SE
-// CHARGENT PAS.
+// LES OUTILS GOOGLE : SUR LES PAGES DE VENTE, ET NULLE PART AILLEURS.
 //
-// Béné, 26 août 2026 : "tu peux ajouter ça pour que je puisse suivre les
-// performances sur les outils Google ?"
+// Béné, 26 août 2026 : "juste tiquiz.fr et atelierduquiz.fr : je m'en
+// fous de faire ranker les app, je veux faire ranker les pages de vente.
+// Pas les quiz ni le reste. Pour les quiz etc chaque user pose ses
+// propres info de tracking."
 //
 // -- POURQUOI CE N'EST PAS "UNE BALISE DANS LE LAYOUT" -----------------
 //
-// Notre `<head>` est servi sur TROIS familles de domaines :
+// Notre `<head>` est servi sur QUATRE familles de domaines :
 //
-//   1. les nôtres (tiquiz.fr, quiz.tipote.com) ;
-//   2. le DOMAINE PERSONNALISÉ d'une créatrice (example.com), que le
+//   1. la PAGE DE VENTE, `tiquiz.fr` : la seule qu'on veut faire
+//      remonter dans Google, et la seule qu'on veut mesurer ;
+//   2. l'APP, `quiz.tipote.com` : un espace de travail derrière une
+//      connexion, qui n'a aucune raison de ranker ;
+//   3. le DOMAINE PERSONNALISÉ d'une créatrice (example.com), que le
 //      portier des domaines personnalisés laisse passer ;
-//   3. la même app, en local et en préversion.
+//   4. la même app, en local et en préversion.
 //
-// Poser la balise partout aurait deux conséquences que personne n'aurait
-// vues avant longtemps :
+// **Règle : les outils Google vivent sur le DOMAINE DE VENTE, point.**
+//
+// Ce n'est pas de la prudence, chacune des trois autres familles a sa
+// raison propre :
 //
 // - **le jeton de vérification sur le domaine d'une cliente** permettrait
 //   à Béné de revendiquer CE domaine dans sa Search Console, et donc de
 //   voir les données de recherche de sa cliente. Ce n'est pas une faille
 //   technique, c'est une capacité qu'on ne veut pas ouvrir par accident ;
-// - **la mesure d'audience sur les quiz publics** mélangerait le trafic
-//   des VISITEURS DE SES CLIENTES avec le sien. Ses chiffres à elle
-//   (combien arrivent sur la page de vente, combien s'inscrivent)
-//   deviendraient illisibles, noyés dans un trafic qui ne lui appartient
-//   pas. Et le trafic des quiz est déjà mesuré, mieux et sans cookie, par
-//   `quiz_events`.
-//
-// **Règle : Google mesure NOS pages, jamais les quiz de nos clientes.**
+// - **les quiz ont DÉJÀ leur mesure, et elle appartient à la créatrice**
+//   (`lib/effectivePixels.ts` : son pixel Meta, son GA4, sa conversion
+//   Google Ads). Poser le nôtre à côté mélangerait le trafic de ses
+//   visiteurs au nôtre, et rendrait illisibles les chiffres des deux ;
+// - **l'app derrière connexion** n'apporte que du bruit : des sessions
+//   de travail comptées comme des visites, sur des pages qu'on ne veut
+//   surtout pas voir remonter dans une recherche.
 //
 // -- CE QUI N'EST PAS TRANCHÉ ICI, ET QUI EST À ELLE -------------------
 //
@@ -69,11 +74,11 @@ export const GA_ATTEND_CONSENTEMENT = false;
 /**
  * Les chemins PUBLICS servis pour le compte d'une créatrice.
  *
- * `/q` et `/s` sont les quiz publics (le second est la réécriture d'un
- * slug nu sur un domaine personnalisé), `/embed` est le quiz affiché
- * dans un iframe SUR LE SITE DE LA CLIENTE. Cet iframe est servi par
- * notre domaine, donc le seul contrôle de l'hôte ne suffirait pas à
- * l'exclure : c'est bien le CHEMIN qui dit à qui appartient l'audience.
+ * `/q` et `/s` sont les quiz publics, `/embed` est le quiz affiché dans
+ * un iframe sur le site de la cliente. Le domaine de vente ne devrait
+ * jamais en servir, mais **une défense qui ne coûte rien se garde** :
+ * le jour où un quiz est servi sous `tiquiz.fr`, le seul contrôle de
+ * l'hôte laisserait passer une mesure qui ne nous appartient pas.
  */
 const CHEMINS_DE_NOS_CLIENTES = ["/q", "/s", "/embed"];
 
@@ -91,24 +96,20 @@ export function hoteNormalise(raw: string | null | undefined): string {
  * Sert-on le JETON DE PROPRIÉTÉ sur cette page ?
  *
  * L'hôte suffit, et le chemin n'a rien à y faire : Google vient lire ce
- * jeton à la racine du domaine qu'il vérifie. Ce qu'on protège ici,
- * c'est uniquement de le servir sur le domaine d'une créatrice.
+ * jeton à la racine du domaine qu'il vérifie.
  *
- * `estNotreHote` est un PARAMÈTRE et non une lecture faite ici : la
- * liste de nos domaines vit dans `lib/customDomains.ts`, et deux listes
- * qui disent la même chose finissent toujours par diverger.
+ * `estHoteDeVente` est un PARAMÈTRE et non une lecture faite ici : la
+ * liste des domaines de vente vit dans `lib/sales/salesHosts.ts`, et
+ * deux listes qui disent la même chose finissent toujours par diverger.
  */
-export function servirVerification(estNotreHote: boolean): boolean {
-  return estNotreHote;
+export function servirVerification(estHoteDeVente: boolean): boolean {
+  return estHoteDeVente;
 }
 
 /**
  * Charge-t-on la MESURE d'audience ?
  *
- * Ici le CHEMIN compte, et c'est toute la différence avec la balise de
- * propriété : `/embed` est servi par NOTRE domaine mais s'affiche dans
- * un iframe sur le site de la cliente, donc l'audience est la sienne.
- * Le seul contrôle de l'hôte ne l'exclurait pas.
+ * Le domaine de vente, et le chemin en défense (voir ci dessus).
  *
  * **Le pathname doit être celui que le NAVIGATEUR voit.** Il est lu côté
  * client (`usePathname`) et pas dans un en-tête inventé : le middleware
@@ -121,11 +122,11 @@ export function servirVerification(estNotreHote: boolean): boolean {
  * consentement. Les deux ne se confondent pas.
  */
 export function chargerAnalytics(params: {
-  estNotreHote: boolean;
+  estHoteDeVente: boolean;
   pathname: string;
   consentementDonne?: boolean;
 }): boolean {
-  if (!params.estNotreHote) return false;
+  if (!params.estHoteDeVente) return false;
   if (estUnChemin(params.pathname, CHEMINS_DE_NOS_CLIENTES)) return false;
   if (GA_ATTEND_CONSENTEMENT && params.consentementDonne !== true) return false;
   return true;

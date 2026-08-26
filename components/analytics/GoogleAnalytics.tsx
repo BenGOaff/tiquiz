@@ -11,15 +11,19 @@
 //
 // L'hôte, lui, reste décidé côté SERVEUR et arrive en prop : c'est la
 // seule source qui ne peut pas être contournée depuis le navigateur.
+//
+// Il ne reste vrai que sur `tiquiz.fr` : Béné ne veut mesurer que la
+// vente, et les quiz ont déjà le tracking de leur créatrice
+// (`lib/effectivePixels.ts`).
 
 import Script from "next/script";
 import { usePathname } from "next/navigation";
 
 import { chargerAnalytics, GA_MEASUREMENT_ID } from "@/lib/analytics/google";
 
-export default function GoogleAnalytics({ estNotreHote }: { estNotreHote: boolean }) {
+export default function GoogleAnalytics({ estHoteDeVente }: { estHoteDeVente: boolean }) {
   const pathname = usePathname() ?? "/";
-  if (!chargerAnalytics({ estNotreHote, pathname })) return null;
+  if (!chargerAnalytics({ estHoteDeVente, pathname })) return null;
 
   return (
     <>

@@ -8,23 +8,28 @@ import { RTL_LOCALES, SUPPORTED_LOCALES } from "@/i18n/config";
 import { resolvePublicUrl } from "@/lib/authLinks";
 import { headers } from "next/headers";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
-import { isOwnHost } from "@/lib/customDomains";
-import {
-  GOOGLE_SITE_VERIFICATION,
-  hoteNormalise,
-  servirVerification,
-} from "@/lib/analytics/google";
+import { isPublicSalesHost } from "@/lib/sales/salesHosts";
 
 /**
- * Cette page est-elle servie sur un de NOS domaines ?
+ * Cette page est-elle servie sur le DOMAINE DE VENTE ?
+ *
+ * Béné, 26 août : "je m'en fous de faire ranker les app, je veux faire
+ * ranker les pages de vente." L'app derrière connexion ne reçoit donc
+ * plus rien du tout : ni jeton, ni mesure.
+ *
+ * Ce qui reste à couvrir ICI, c'est le BON DE COMMANDE : il vit sur
+ * `tiquiz.fr/commande/...`, donc sur le domaine de vente, mais il est
+ * rendu par React et non par le route handler de la page de vente. Sans
+ * cette ligne, on mesurerait l'arrivée sur la page et plus rien ensuite,
+ * c'est à dire précisément l'endroit où la vente se joue.
  *
  * Décidé côté serveur, à partir du `Host` : c'est la seule source qui ne
  * peut pas être contournée depuis le navigateur. Le CHEMIN, lui, est lu
  * côté client par `GoogleAnalytics` (cf. lib/analytics/google.ts).
  */
-async function estNotreHote(): Promise<boolean> {
+async function estHoteDeVente(): Promise<boolean> {
   const h = await headers();
-  return isOwnHost(hoteNormalise(h.get("host")));
+  return isPublicSalesHost(h.get("host"));
 }
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -32,7 +37,6 @@ export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "metadata" });
 
   const siteUrl = resolvePublicUrl(process.env.NEXT_PUBLIC_SITE_URL, "https://tiquiz.com");
-  const notreHote = await estNotreHote();
   const languages: Record<string, string> = {};
   for (const l of SUPPORTED_LOCALES) {
     languages[l] = siteUrl;
@@ -70,12 +74,6 @@ export async function generateMetadata(): Promise<Metadata> {
     icons: {
       icon: "/favicon.ico",
     },
-    // LE JETON DE PROPRIÉTÉ SEARCH CONSOLE, sur NOS domaines seulement.
-    // Servi sur le domaine personnalisé d'une créatrice, il permettrait
-    // de revendiquer SON domaine dans notre Search Console.
-    ...(servirVerification(notreHote)
-      ? { verification: { google: GOOGLE_SITE_VERIFICATION } }
-      : {}),
   };
 }
 
@@ -87,7 +85,7 @@ export default async function RootLayout({
   const locale = await getLocale();
   const messages = await getMessages();
   const dir = (RTL_LOCALES as string[]).includes(locale) ? "rtl" : "ltr";
-  const notreHote = await estNotreHote();
+  const hoteDeVente = await estHoteDeVente();
 
   return (
     <html lang={locale} dir={dir}>
@@ -99,10 +97,13 @@ export default async function RootLayout({
           litteral cassait le rendu metadata sur prod (E2E Playwright failed
           le 4 juin 2026 sur les tests og:url + body content). */}
       <meta name="color-scheme" content="light" />
-      {/* MESURE D'AUDIENCE : nos pages, jamais les quiz de nos clientes.
-          Le composant est CLIENT parce que la décision a besoin du chemin
-          que le navigateur voit (cf. lib/analytics/google.ts). */}
-      <GoogleAnalytics estNotreHote={notreHote} />
+      {/* MESURE D'AUDIENCE : le domaine de vente, et lui seul. Le
+          composant est CLIENT parce que la décision a besoin du chemin
+          que le navigateur voit (cf. lib/analytics/google.ts).
+          Le JETON de propriété, lui, n'est pas ici : Google le lit à la
+          racine de tiquiz.fr, qui est servie par le route handler de la
+          page de vente. */}
+      <GoogleAnalytics estHoteDeVente={hoteDeVente} />
       <body className="font-sans antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>{children}</Providers>

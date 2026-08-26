@@ -17,10 +17,13 @@
 //    propriété servi sur `example.com` permettrait de revendiquer CE
 //    domaine dans notre Search Console, donc d'y voir les données de
 //    recherche de quelqu'un d'autre.
-// 3. L'AUDIENCE DES QUIZ N'EST PAS LA NÔTRE. `/q`, `/s` et surtout
-//    `/embed` (un iframe servi par notre domaine mais affiché sur le
-//    site de la cliente) mélangeraient son trafic à elle avec le nôtre,
-//    et rendraient illisibles les chiffres de Béné.
+// 3. L'AUDIENCE DES QUIZ N'EST PAS LA NÔTRE, et elle est DÉJÀ mesurée
+//    par la créatrice (`lib/effectivePixels.ts` : son pixel Meta, son
+//    GA4, sa conversion Google Ads). Béné, 26 août : "pour les quiz etc
+//    chaque user pose ses propres info de tracking."
+// 4. L'APP NE RANKE PAS ET NE SE MESURE PAS. "Je m'en fous de faire
+//    ranker les app, je veux faire ranker les pages de vente." Un
+//    espace de travail derrière connexion n'apporte que du bruit.
 
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -38,6 +41,7 @@ import {
   servirVerification,
 } from "@/lib/analytics/google";
 import { isOwnHost } from "@/lib/customDomains";
+import { isPublicSalesHost } from "@/lib/sales/salesHosts";
 
 const lire = (f: string) => fs.readFileSync(path.join(process.cwd(), f), "utf8");
 
@@ -65,18 +69,26 @@ test("les deux balises sont bien formées", () => {
 
 // ── 2. Le domaine d'une créatrice ne reçoit RIEN ──
 
-test("rien n'est servi sur le domaine d'une créatrice", () => {
-  assert.equal(isOwnHost("example.com"), false, "la fixture n'est plus un domaine tiers");
-  assert.equal(servirVerification(false), false, "le jeton fuiterait sur son domaine");
-  for (const p of ["/", "/commande/mensuel", "/q/mon-quiz"]) {
-    assert.equal(chargerAnalytics({ estNotreHote: false, pathname: p }), false, p);
+test("rien n'est servi hors du domaine de vente", () => {
+  // Le domaine d'une créatrice, et l'app elle même.
+  assert.equal(isPublicSalesHost("example.com"), false);
+  assert.equal(
+    isPublicSalesHost("quiz.tipote.com"),
+    false,
+    "l'app recevrait la mesure alors qu'elle n'a rien a faire dans les chiffres de vente",
+  );
+  assert.equal(servirVerification(false), false, "le jeton fuiterait hors du domaine de vente");
+  for (const p of ["/", "/commande/mensuel", "/q/mon-quiz", "/quizzes"]) {
+    assert.equal(chargerAnalytics({ estHoteDeVente: false, pathname: p }), false, p);
   }
 });
 
-test("nos domaines, eux, sont bien reconnus", () => {
-  for (const h of ["tiquiz.fr", "www.tiquiz.fr", "quiz.tipote.com"]) {
-    assert.equal(isOwnHost(h), true, h);
+test("le domaine de vente est reconnu, avec et sans www", () => {
+  for (const h of ["tiquiz.fr", "www.tiquiz.fr", "TIQUIZ.FR"]) {
+    assert.equal(isPublicSalesHost(h), true, h);
   }
+  // Il reste un de nos domaines, mais ce n'est pas le critère ici.
+  assert.equal(isOwnHost("quiz.tipote.com"), true);
   assert.equal(hoteNormalise("Tiquiz.FR:443"), "tiquiz.fr");
   assert.equal(hoteNormalise(null), "");
 });
@@ -86,20 +98,23 @@ test("nos domaines, eux, sont bien reconnus", () => {
 test("la mesure ne se charge PAS sur les quiz publics ni dans un iframe", () => {
   for (const p of ["/q/mon-quiz", "/s/mon-quiz", "/embed/abc", "/q", "/embed"]) {
     assert.equal(
-      chargerAnalytics({ estNotreHote: true, pathname: p }),
+      chargerAnalytics({ estHoteDeVente: true, pathname: p }),
       false,
       `${p} : le trafic d'une cliente entrerait dans les chiffres de Béné`,
     );
   }
 });
 
-test("elle se charge sur NOS pages", () => {
-  for (const p of ["/", "/commande/mensuel", "/signup", "/quizzes", "/questions"]) {
-    assert.equal(chargerAnalytics({ estNotreHote: true, pathname: p }), true, p);
+test("elle se charge sur la page de vente ET sur le bon de commande", () => {
+  // Le bon de commande vit sur tiquiz.fr mais il est rendu par React,
+  // pas par le route handler de la page de vente. Sans lui, on
+  // mesurerait l'arrivée et plus rien ensuite, c'est à dire précisément
+  // l'endroit où la vente se joue.
+  for (const p of ["/", "/commande/mensuel", "/commande/annuel-plus"]) {
+    assert.equal(chargerAnalytics({ estHoteDeVente: true, pathname: p }), true, p);
   }
   // Un chemin qui COMMENCE par les mêmes lettres n'est pas un quiz.
-  assert.equal(chargerAnalytics({ estNotreHote: true, pathname: "/questions" }), true);
-  assert.equal(chargerAnalytics({ estNotreHote: true, pathname: "/support" }), true);
+  assert.equal(chargerAnalytics({ estHoteDeVente: true, pathname: "/questions" }), true);
 });
 
 test("le jeton de propriété, lui, ne dépend PAS du chemin", () => {
@@ -131,10 +146,13 @@ test("mesurer et indexer sont deux décisions SÉPARÉES", () => {
 
 // ── 5. Le layout ne décide pas seul, et il ne triche pas ──
 
-test("le layout gate le jeton sur l'hôte, et délègue la mesure au client", () => {
+test("le layout ne mesure QUE le domaine de vente, et délègue au client", () => {
   const src = lire("app/layout.tsx");
-  assert.match(src, /servirVerification\(notreHote\)/);
-  assert.match(src, /<GoogleAnalytics estNotreHote=\{notreHote\}/);
+  assert.match(src, /isPublicSalesHost\(/);
+  assert.match(src, /<GoogleAnalytics estHoteDeVente=\{hoteDeVente\}/);
+  // Le jeton n'a rien à faire ici : Google le lit à la racine de
+  // tiquiz.fr, servie par le route handler de la page de vente.
+  assert.doesNotMatch(src, /verification:/);
   // Le middleware ne pose AUCUN en-tête de chemin : un repli côté
   // serveur chargerait la mesure sur tous les quiz publics.
   assert.doesNotMatch(src, /x-pathname|x-invoke-path/);
@@ -146,6 +164,16 @@ test("le composant de mesure lit le chemin du NAVIGATEUR", () => {
   assert.match(src, /"use client"/);
   assert.match(src, /usePathname\(\)/);
   assert.match(src, /chargerAnalytics\(/);
+});
+
+test("les quiz gardent le tracking de LEUR créatrice, et lui seul", () => {
+  // Béné : "pour les quiz etc chaque user pose ses propres info de
+  // tracking." C'est vrai, et c'est une raison de plus de ne pas poser
+  // le nôtre à côté : deux mesures sur la même page, dont une qui ne
+  // sert à personne.
+  const src = lire("lib/effectivePixels.ts");
+  assert.match(src, /default_ga4_measurement_id/);
+  assert.match(src, /meta_pixel_id/);
 });
 
 // ── 6. Le consentement : ce qui est fait, et ce qui ne l'est pas ──
