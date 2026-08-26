@@ -23,7 +23,7 @@ export type BlockBehavior = "type-qb" | "type-sh" | "count-fb" | "loop-sc";
 
 const QB_TEXT =
   "Je veux un quiz pour qualifier mes visiteurs prêts à commander ma formation sur l'éducation canine";
-const SH_URL = "https://app.tiquiz.com/sandra-costa/formation-canine";
+const SH_URL = "https://quiz.tipote.com/sandra-costa/formation-canine";
 
 function typeInto(el: HTMLElement, text: string, speed: number, timers: number[]) {
   let i = 0;

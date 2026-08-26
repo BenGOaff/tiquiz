@@ -6,7 +6,7 @@
 // match the actual hostname the visitor / scraper landed on.
 //
 // Why this matters: Next.js `metadataBase` in app/layout.tsx is a single
-// static URL (https://tiquiz.com / https://quiz.tipote.com). When a quiz
+// static URL (https://quiz.tipote.com, ou le domaine de vente). When a quiz
 // is served through a creator's custom domain, Next would still emit
 // og:url pointing to the main host — iMessage / WhatsApp / Slack read
 // og:url to display the hostname under the share preview, so creators

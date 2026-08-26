@@ -6,7 +6,7 @@
 // middleware pose quand la requête vient d'un domaine personnalisé
 // d'un user :
 //
-//   1. tiquiz.com (host principal) → sitemap global : pages statiques
+//   1. l'app (host principal) → sitemap global : pages statiques
 //      + tous les quiz publiés sur la plateforme (cap 10000).
 //
 //   2. quiz.adelinecirade.com (custom domain user) → sitemap ne listant
@@ -24,6 +24,8 @@ import { headers } from "next/headers";
 import { SUPPORTED_LOCALES } from "@/i18n/config";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolvePublicUrl } from "@/lib/authLinks";
+import { hoteCanonique, HOTE_VENTE } from "@/lib/publicHost";
+import { SALES_HOSTS } from "@/lib/sales/salesHosts";
 
 const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
 const PUBLIC_ROUTES = [
@@ -49,8 +51,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return buildCustomDomainSitemap(customHost.toLowerCase().trim());
   }
 
-  // ─── Cas host principal (tiquiz.com) : sitemap global ────────────
-  return buildMainHostSitemap();
+  // ─── Cas domaine de VENTE : la page de vente, et elle seule ──────
+  //
+  // Sans cette branche, `tiquiz.fr/sitemap.xml` tombait dans le sitemap
+  // de l'app et servait des URLs sur un domaine qui n'est pas à nous.
+  // Une seule page à annoncer, mais elle doit l'être : sans sitemap,
+  // c'est le robots.txt qui reste la seule piste.
+  const host = (h.get("host") ?? "").toLowerCase().trim().replace(/:\d+$/, "");
+  if (Object.prototype.hasOwnProperty.call(SALES_HOSTS, host)) {
+    return [
+      {
+        url: `${HOTE_VENTE}/`,
+        lastModified: new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 1,
+      },
+    ];
+  }
+
+  // ─── Cas host principal (l'app) : sitemap global ─────────────────
+  return buildMainHostSitemap(host);
 }
 
 async function buildCustomDomainSitemap(host: string): Promise<MetadataRoute.Sitemap> {
@@ -117,8 +137,11 @@ async function buildCustomDomainSitemap(host: string): Promise<MetadataRoute.Sit
   return entries;
 }
 
-async function buildMainHostSitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = resolvePublicUrl(process.env.NEXT_PUBLIC_SITE_URL, "https://tiquiz.com");
+async function buildMainHostSitemap(host: string): Promise<MetadataRoute.Sitemap> {
+  const base = resolvePublicUrl(
+    process.env.NEXT_PUBLIC_SITE_URL,
+    hoteCanonique({ host }),
+  );
 
   const staticEntries: MetadataRoute.Sitemap = PUBLIC_ROUTES.map((route) => {
     const url = `${base}${route || "/"}`;

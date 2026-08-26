@@ -9,6 +9,7 @@ import { resolvePublicUrl } from "@/lib/authLinks";
 import { headers } from "next/headers";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
 import { isPublicSalesHost } from "@/lib/sales/salesHosts";
+import { hoteCanonique } from "@/lib/publicHost";
 
 /**
  * Cette page est-elle servie sur le DOMAINE DE VENTE ?
@@ -36,7 +37,14 @@ export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
   const t = await getTranslations({ locale, namespace: "metadata" });
 
-  const siteUrl = resolvePublicUrl(process.env.NEXT_PUBLIC_SITE_URL, "https://tiquiz.com");
+  // `metadataBase` gouverne la canonique et les images OG de TOUTE
+  // l'app : un repli sur un domaine qui n'est pas à nous les envoyait
+  // toutes chez quelqu'un d'autre. Le repli se calcule maintenant
+  // (cf. lib/publicHost.ts).
+  const siteUrl = resolvePublicUrl(
+    process.env.NEXT_PUBLIC_SITE_URL,
+    hoteCanonique({ host: (await headers()).get("host") }),
+  );
   const languages: Record<string, string> = {};
   for (const l of SUPPORTED_LOCALES) {
     languages[l] = siteUrl;

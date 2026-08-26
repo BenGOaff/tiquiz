@@ -4,7 +4,7 @@ import { COMPANY as C } from "./company";
 const fr: LegalPage = {
   title: "Politique de cookies",
   lastUpdated: "Dernière mise à jour : 22/04/2026",
-  intro: `Cette politique informe les utilisateurs sur les cookies et traceurs utilisés lors de la navigation sur tiquiz.com et l'application Tiquiz. Les services sont édités par ${C.name} (${C.form}, RCS ${C.rcs}, siège ${C.address}).`,
+  intro: `Cette politique informe les utilisateurs sur les cookies et traceurs utilisés lors de la navigation sur tiquiz.fr et l'application Tiquiz. Les services sont édités par ${C.name} (${C.form}, RCS ${C.rcs}, siège ${C.address}).`,
   sections: [
     {
       h: "1. Définition",
@@ -79,7 +79,7 @@ const fr: LegalPage = {
 const en: LegalPage = {
   title: "Cookie Policy",
   lastUpdated: "Last updated: 04/22/2026",
-  intro: `This policy explains the cookies and trackers used when you browse tiquiz.com and the Tiquiz application. The services are published by ${C.name} (a ${C.form}, registered with the Montpellier Trade Registry under no. 909 349 045, registered office ${C.address}).`,
+  intro: `This policy explains the cookies and trackers used when you browse tiquiz.fr and the Tiquiz application. The services are published by ${C.name} (a ${C.form}, registered with the Montpellier Trade Registry under no. 909 349 045, registered office ${C.address}).`,
   sections: [
     {
       h: "1. Definition",
@@ -155,7 +155,7 @@ const en: LegalPage = {
 const es: LegalPage = {
   title: "Política de cookies",
   lastUpdated: "Última actualización: 22/04/2026",
-  intro: `Esta política informa a los usuarios sobre las cookies y trazadores utilizados durante la navegación en tiquiz.com y la aplicación Tiquiz. Los servicios son editados por ${C.name} (${C.form}, RCS ${C.rcs}, sede ${C.address}).`,
+  intro: `Esta política informa a los usuarios sobre las cookies y trazadores utilizados durante la navegación en tiquiz.fr y la aplicación Tiquiz. Los servicios son editados por ${C.name} (${C.form}, RCS ${C.rcs}, sede ${C.address}).`,
   sections: [
     { h: "1. Definición", body: ["Una cookie es un archivo depositado en el dispositivo del usuario al consultar un sitio. Almacena información de navegación o comportamiento. Algunas cookies son depositadas por Tiquiz, otras por socios terceros."] },
     { h: "2. Finalidades", body: ["Las cookies sirven para:", [ "Asegurar el funcionamiento técnico del servicio.", "Proteger el acceso y las transacciones.", "Medir la audiencia y el rendimiento.", "Ofrecer funciones de compartir." ]] },
@@ -176,7 +176,7 @@ const es: LegalPage = {
 const it: LegalPage = {
   title: "Informativa sui cookie",
   lastUpdated: "Ultimo aggiornamento: 22/04/2026",
-  intro: `La presente informativa informa gli utenti sui cookie e tracciatori utilizzati durante la navigazione su tiquiz.com e l'applicazione Tiquiz. I servizi sono editi da ${C.name} (${C.form}, RCS ${C.rcs}, sede ${C.address}).`,
+  intro: `La presente informativa informa gli utenti sui cookie e tracciatori utilizzati durante la navigazione su tiquiz.fr e l'applicazione Tiquiz. I servizi sono editi da ${C.name} (${C.form}, RCS ${C.rcs}, sede ${C.address}).`,
   sections: [
     { h: "1. Definizione", body: ["Un cookie è un file depositato sul dispositivo dell'utente durante la consultazione di un sito. Memorizza informazioni di navigazione o comportamento. Alcuni cookie sono depositati da Tiquiz, altri da partner terzi."] },
     { h: "2. Finalità", body: ["I cookie servono a:", [ "Assicurare il funzionamento tecnico del servizio.", "Proteggere l'accesso e le transazioni.", "Misurare l'audience e le prestazioni.", "Proporre funzionalità di condivisione." ]] },
@@ -197,7 +197,7 @@ const it: LegalPage = {
 const ar: LegalPage = {
   title: "سياسة ملفات تعريف الارتباط",
   lastUpdated: "آخر تحديث: 22/04/2026",
-  intro: `تُعلِم هذه السياسة المستخدمين بملفات تعريف الارتباط والمتتبعات المستخدمة أثناء التصفح على موقع tiquiz.com وتطبيق Tiquiz. الخدمات نشرتها ${C.name} (${C.form}، RCS ${C.rcs}، المقر ${C.address}).`,
+  intro: `تُعلِم هذه السياسة المستخدمين بملفات تعريف الارتباط والمتتبعات المستخدمة أثناء التصفح على موقع tiquiz.fr وتطبيق Tiquiz. الخدمات نشرتها ${C.name} (${C.form}، RCS ${C.rcs}، المقر ${C.address}).`,
   sections: [
     { h: "1. التعريف", body: ["ملف تعريف الارتباط هو ملف يُودَع على جهاز المستخدم عند زيارة موقع. يخزّن معلومات التصفح أو السلوك. بعضها يُودَع من قبل Tiquiz والبعض الآخر من قبل شركاء خارجيين."] },
     { h: "2. الأغراض", body: ["تُستخدم ملفات تعريف الارتباط لـ:", [ "ضمان التشغيل التقني للخدمة.", "تأمين الوصول والمعاملات.", "قياس الجمهور والأداء.", "اقتراح ميزات المشاركة." ]] },

@@ -11,7 +11,7 @@
 // Spec : https://llmstxt.org
 //
 // Host-aware comme sitemap.xml :
-//   - host principal (tiquiz.com) : liste les quiz les plus populaires
+//   - host principal (l'app) : liste les quiz les plus populaires
 //     + une description de la plateforme
 //   - custom domain user : liste UNIQUEMENT les quiz de ce user, avec
 //     leur description, langue, et URL. Permet à un LLM qui crawle le
@@ -22,6 +22,7 @@ import { headers } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
 import { resolvePublicUrl } from "@/lib/authLinks";
+import { hoteCanonique } from "@/lib/publicHost";
 
 const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
 
@@ -33,7 +34,7 @@ export async function GET() {
 
   const body = customHost
     ? await buildCustomDomainLlmsTxt(customHost.toLowerCase().trim())
-    : await buildMainHostLlmsTxt();
+    : await buildMainHostLlmsTxt((h.get("host") ?? "").toLowerCase().trim());
 
   return new Response(body, {
     status: 200,
@@ -119,8 +120,11 @@ async function buildCustomDomainLlmsTxt(host: string): Promise<string> {
   return lines.join("\n");
 }
 
-async function buildMainHostLlmsTxt(): Promise<string> {
-  const base = resolvePublicUrl(process.env.NEXT_PUBLIC_SITE_URL, "https://tiquiz.com");
+async function buildMainHostLlmsTxt(host: string): Promise<string> {
+  const base = resolvePublicUrl(
+    process.env.NEXT_PUBLIC_SITE_URL,
+    hoteCanonique({ host }),
+  );
   const lines: string[] = [];
   lines.push("# Tiquiz");
   lines.push("");

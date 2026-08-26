@@ -15,7 +15,7 @@ const fr: LegalPage = {
     {
       h: "Périmètre",
       body: [
-        "Les présentes mentions couvrent le site de présentation tiquiz.com et l'application Tiquiz (quiz.tiquiz.com ou équivalent).",
+        "Les présentes mentions couvrent le site de présentation tiquiz.fr et l'application Tiquiz (quiz.tipote.com ou équivalent).",
       ],
     },
     {
@@ -79,7 +79,7 @@ const en: LegalPage = {
     {
       h: "Scope",
       body: [
-        "This notice covers the marketing site tiquiz.com and the Tiquiz application.",
+        "This notice covers the marketing site tiquiz.fr and the Tiquiz application.",
       ],
     },
     {
@@ -135,7 +135,7 @@ const es: LegalPage = {
   lastUpdated: "Última actualización: 22/04/2026",
   sections: [
     { h: "Editor", body: [`${C.name}, ${C.form} con capital social de ${C.capital}, inscrita en el RCS con el número ${C.rcs}. Sede social: ${C.address}.`, `CIF: ${C.vat} - Contacto: ${C.email}.`] },
-    { h: "Ámbito", body: ["Este aviso cubre el sitio de presentación tiquiz.com y la aplicación Tiquiz."] },
+    { h: "Ámbito", body: ["Este aviso cubre el sitio de presentación tiquiz.fr y la aplicación Tiquiz."] },
     { h: "Director de la publicación", body: [`${C.director}, directora de ${C.name}.`] },
     { h: "Alojamiento", body: [[ "Aplicación: Hostinger, servidor situado en París, Francia", "Base de datos y autenticación: Supabase", "Páginas de marketing: ITACWT Limited (Systeme.io), Dublín, Irlanda" ]] },
     { h: "Naturaleza de la actividad", body: ["Edición de software en modo SaaS que permite crear quizzes interactivos, captar leads cualificados y sincronizar con las herramientas de marketing del creador."] },
@@ -150,7 +150,7 @@ const it: LegalPage = {
   lastUpdated: "Ultimo aggiornamento: 22/04/2026",
   sections: [
     { h: "Editore", body: [`${C.name}, ${C.form} con capitale sociale di ${C.capital}, iscritta al RCS con il numero ${C.rcs}. Sede legale: ${C.address}.`, `Partita IVA: ${C.vat} - Contatto: ${C.email}.`] },
-    { h: "Ambito", body: ["Le presenti note coprono il sito di presentazione tiquiz.com e l'applicazione Tiquiz."] },
+    { h: "Ambito", body: ["Le presenti note coprono il sito di presentazione tiquiz.fr e l'applicazione Tiquiz."] },
     { h: "Direttore della pubblicazione", body: [`${C.director}, dirigente di ${C.name}.`] },
     { h: "Hosting", body: [[ "Applicazione: Hostinger, server situato a Parigi, Francia", "Database e autenticazione: Supabase", "Pagine marketing: ITACWT Limited (Systeme.io), Dublino, Irlanda" ]] },
     { h: "Natura dell'attività", body: ["Editore di software in modalità SaaS che consente di creare quiz interattivi, catturare lead qualificati e sincronizzarsi con gli strumenti di marketing del creatore."] },
@@ -165,7 +165,7 @@ const ar: LegalPage = {
   lastUpdated: "آخر تحديث: 22/04/2026",
   sections: [
     { h: "الناشر", body: [`${C.name}، ${C.form} برأس مال ${C.capital}، مسجلة في السجل التجاري تحت الرقم ${C.rcs}. المقر الاجتماعي: ${C.address}.`, `رقم ضريبة القيمة المضافة: ${C.vat} - الاتصال: ${C.email}.`] },
-    { h: "النطاق", body: ["يغطي هذا الإشعار الموقع التعريفي tiquiz.com وتطبيق Tiquiz."] },
+    { h: "النطاق", body: ["يغطي هذا الإشعار الموقع التعريفي tiquiz.fr وتطبيق Tiquiz."] },
     { h: "مدير النشر", body: [`${C.director}، مديرة ${C.name}.`] },
     { h: "الاستضافة", body: [[ "التطبيق: Hostinger، خادم موجود في باريس، فرنسا", "قاعدة البيانات والمصادقة: Supabase", "صفحات التسويق: ITACWT Limited (Systeme.io)، دبلن، إيرلندا" ]] },
     { h: "طبيعة النشاط", body: ["نشر برنامج بصيغة SaaS يسمح بإنشاء اختبارات تفاعلية، جذب عملاء محتملين مؤهلين، والمزامنة مع أدوات التسويق الخاصة بالمبدع."] },

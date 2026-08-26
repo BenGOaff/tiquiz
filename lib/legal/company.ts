@@ -11,9 +11,12 @@ export const COMPANY = {
   address: "377 Tertre Avenue Grassion Cibrand, 34130 Mauguio, France",
   product: "Tiquiz",
   productMark: "Tiquiz®",
-  // Consumer-facing email. Using @tiquiz.com for the US launch; the creator
-  // can still reply from hello@tipote.com internally.
-  email: "hello@tiquiz.com",
+  // Adresse de contact des documents légaux. Elle portait `@tiquiz.com`,
+  // un domaine qui n'appartient pas à l'éditrice (constaté le 26 août
+  // 2026) : les CGV, les CGU et la politique de confidentialité
+  // donnaient donc une adresse que personne ne relève. C'est celle qui
+  // est déjà utilisée partout ailleurs dans le code.
+  email: "hello@tipote.com",
   director: "Bénédicte Lagardette",
   // ISO 8601 date that feeds every "Last updated" line.
   lastUpdated: "2026-04-22",

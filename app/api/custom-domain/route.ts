@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
   // Block claiming a hostname we already own — would break our own
   // routing if someone managed to insert it (and there's no legit
-  // reason for a creator to register app.tiquiz.com on their account).
+  // reason for a creator to register quiz.tipote.com on their account).
   if (OWN_HOSTS.has(hostname)) {
     return NextResponse.json(
       { ok: false, error: "This hostname is reserved." },

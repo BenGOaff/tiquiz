@@ -2711,7 +2711,7 @@
       "heading": "Paso 1 - Enviar tu sitemap a Google",
       "body1": "Google necesita un «sitemap» (lista de tus quizzes) para indexarlos. Tiquiz lo genera automáticamente.",
       "li1": "Ve a Google Search Console: https://search.google.com/search-console",
-      "li2": "Haz clic en «Añadir propiedad» y entra tu dominio (ej. tiquiz.com O tu dominio personalizado si tienes uno).",
+      "li2": "Haz clic en «Añadir propiedad» y entra tu dominio (ej. quiz.tipote.com O tu dominio personalizado si tienes uno).",
       "li3": "Verifica la propiedad (vía registro DNS TXT - Google te guía).",
       "li4": "En el menú izquierdo, ve a «Sitemaps» y entra: sitemap.xml",
       "li5": "Haz clic en «Enviar». Google rastreará tus quizzes en 1 a 7 días.",
@@ -2719,7 +2719,7 @@
     },
     "s3": {
       "heading": "Paso 2 - Con un dominio personalizado",
-      "body1": "Si tienes un dominio propio (ej. quiz.tusitio.com), puedes indexar tus quizzes en TU dominio en lugar de tiquiz.com. Más potente para tu SEO.",
+      "body1": "Si tienes un dominio propio (ej. quiz.tusitio.com), puedes indexar tus quizzes en TU dominio en lugar de quiz.tipote.com. Más potente para tu SEO.",
       "li1": "Añade tu dominio personalizado a Google Search Console como «propiedad de dominio».",
       "li2": "Verifica la propiedad vía un registro DNS TXT (Google te da el valor a pegar).",
       "li3": "Envía el sitemap: https://tu-dominio.com/sitemap.xml - listará ÚNICAMENTE tus quizzes, en TU URL."

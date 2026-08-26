@@ -65,11 +65,56 @@ export const GA_MEASUREMENT_ID = "G-N6LQDRDMDB";
 export const GOOGLE_SITE_VERIFICATION = "4k7FK9pvBtwkoqaNmGd0vcXE3xYq3lsoJgzt9J4sav8";
 
 /**
- * Le jour où un bandeau cookies existera, passer ceci à `true` et
- * brancher le mode Consentement de Google. Tant que c'est `false`, la
- * balise se charge dès qu'elle est servie sur un de nos domaines.
+ * LA BALISE ATTEND LE CONSENTEMENT (26 août 2026).
+ *
+ * Le commentaire ci-dessus disait "il n'y a aucun bandeau cookies dans
+ * cette app". C'était vrai de l'APP, et faux là où la balise se charge :
+ * les pages de vente portent le bandeau de Béné depuis le début, avec
+ * son propre GA4 posé seulement après accord.
+ *
+ * On avait donc, sur `tiquiz.fr`, un bandeau qui demande la permission
+ * et une balise qui ne l'attendait pas. Un bandeau qu'on contourne
+ * n'est pas un détail juridique : c'est un bandeau qui ment à la
+ * personne qui vient de cliquer "refuser".
  */
-export const GA_ATTEND_CONSENTEMENT = false;
+export const GA_ATTEND_CONSENTEMENT = true;
+
+/** Là où le bandeau de Béné range le choix de la personne. */
+export const CLE_CONSENTEMENT = "aq_consent_v1";
+
+/** Combien de jours le bandeau mémorise ce choix (`CFG.memoire`). */
+export const MEMOIRE_CONSENTEMENT_JOURS = 182;
+
+/**
+ * La personne a-t-elle accepté la MESURE ?
+ *
+ * Fonction pure : elle prend ce qui est stocké, pas le navigateur, donc
+ * elle se teste. Le bandeau écrit `{mesure, pub, video, t}` et oublie
+ * le choix passé `CFG.memoire` jours ; on relit la même règle, sinon on
+ * mesurerait encore quelqu'un dont l'accord a expiré côté bandeau.
+ *
+ * Tout ce qui n'est pas un OUI franc est un NON : rien de stocké, JSON
+ * illisible, horodatage absent ou périmé. Sur un consentement, le doute
+ * ne profite jamais à la mesure.
+ */
+export function consentementMesure(
+  brut: string | null | undefined,
+  maintenant: number = Date.now(),
+  memoireJours: number = MEMOIRE_CONSENTEMENT_JOURS,
+): boolean {
+  if (!brut) return false;
+  let objet: unknown;
+  try {
+    objet = JSON.parse(brut);
+  } catch {
+    return false;
+  }
+  if (!objet || typeof objet !== "object") return false;
+  const o = objet as { mesure?: unknown; t?: unknown };
+  if (typeof o.t !== "number" || !Number.isFinite(o.t)) return false;
+  if (maintenant - o.t > memoireJours * 864e5) return false;
+  return o.mesure === true;
+}
 
 /**
  * Les chemins PUBLICS servis pour le compte d'une créatrice.
@@ -169,6 +214,82 @@ export function baliseVerificationGoogle(): string {
  * pas ce qu'elle a écrit sans qu'elle le demande. La page porte donc
  * deux mesures, et c'est un choix assumé, pas un oubli.
  */
+/**
+ * LE MODE CONSENTEMENT DE GOOGLE, POSÉ AVANT LA BALISE.
+ *
+ * Béné, 26 août 2026 : "faut mettre ce qu'il faut là où il faut
+ * qu'est-ce que j'en sais moi ?"
+ *
+ * -- LE VRAI DÉFAUT N'ÉTAIT PAS CELUI QU'ON CROYAIT ------------------
+ *
+ * La page de vente portait DEUX propriétés GA4 : la nôtre, chargée
+ * toujours, et celle du bandeau cookies, chargée après accord. Deux
+ * chiffres pour la même page, donc aucun des deux n'est croyable.
+ *
+ * Mais le plus grave était l'autre moitié : **un bandeau qui demande la
+ * permission et une balise qui ne l'attend pas**. La personne clique
+ * "refuser" et on la mesure quand même. Ce n'est pas un détail
+ * juridique, c'est un bandeau qui ment à qui vient de cliquer.
+ *
+ * -- POURQUOI LE MODE CONSENTEMENT, ET PAS UN GATE MAISON ------------
+ *
+ * C'est exactement ce que l'écran de Google indique ("si vous avez des
+ * utilisateurs finaux dans l'EEE, configurez le mode Consentement"), et
+ * c'est la seule solution qui **laisse la balise INTACTE**. Elle reste
+ * au caractère près celle que Google donne ; ce qui change, c'est
+ * qu'elle ne dépose rien tant que l'accord n'est pas là.
+ *
+ * Le bandeau de Béné écrit `{mesure, pub, video, t}` dans
+ * `aq_consent_v1` et oublie le choix au bout de `CFG.memoire` jours. On
+ * relit SA règle, sinon on mesurerait encore quelqu'un dont l'accord a
+ * expiré de son côté.
+ *
+ * Il n'émet aucun événement, et `storage` ne se déclenche pas dans
+ * l'onglet qui écrit : on se raccroche au clic, puisqu'un consentement
+ * est toujours donné par un clic. L'écouteur se retire dès qu'il a sa
+ * réponse.
+ */
+export function scriptConsentementGoogle(): string {
+  return [
+    "<script>",
+    "  window.dataLayer = window.dataLayer || [];",
+    "  function gtag(){dataLayer.push(arguments);}",
+    "  gtag('consent', 'default', {",
+    "    ad_storage: 'denied',",
+    "    ad_user_data: 'denied',",
+    "    ad_personalization: 'denied',",
+    "    analytics_storage: 'denied',",
+    "    wait_for_update: 500",
+    "  });",
+    "  (function(){",
+    `    var CLE = '${CLE_CONSENTEMENT}';`,
+    `    var MEMOIRE = ${MEMOIRE_CONSENTEMENT_JOURS};`,
+    "    function accepte(){",
+    "      try {",
+    "        var o = JSON.parse(localStorage.getItem(CLE));",
+    "        if (!o || typeof o.t !== 'number') return false;",
+    "        if (Date.now() - o.t > MEMOIRE * 864e5) return false;",
+    "        return o.mesure === true;",
+    "      } catch (e) { return false; }",
+    "    }",
+    "    function accorder(){",
+    "      gtag('consent', 'update', { analytics_storage: 'granted' });",
+    "    }",
+    "    if (accepte()) { accorder(); return; }",
+    "    function surClic(){",
+    "      setTimeout(function(){",
+    "        if (accepte()) {",
+    "          accorder();",
+    "          document.removeEventListener('click', surClic, true);",
+    "        }",
+    "      }, 0);",
+    "    }",
+    "    document.addEventListener('click', surClic, true);",
+    "  })();",
+    "</script>",
+  ].join("\n");
+}
+
 export function scriptAnalyticsGoogle(): string {
   return [
     `<!-- Google tag (gtag.js) -->`,

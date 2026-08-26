@@ -4,13 +4,13 @@ import { COMPANY as C } from "./company";
 const fr: LegalPage = {
   title: "Conditions générales d'utilisation",
   lastUpdated: "Dernière mise à jour : 22/04/2026",
-  intro: `Les présentes CGU définissent les conditions d'accès et d'utilisation de Tiquiz® et du site tiquiz.com, édités par ${C.name} (${C.form}, capital ${C.capital}, RCS ${C.rcs}, siège ${C.address}). L'accès au service implique l'acceptation sans réserve des CGU. Elles complètent les Conditions générales de vente.`,
+  intro: `Les présentes CGU définissent les conditions d'accès et d'utilisation de Tiquiz® et du site tiquiz.fr, édités par ${C.name} (${C.form}, capital ${C.capital}, RCS ${C.rcs}, siège ${C.address}). L'accès au service implique l'acceptation sans réserve des CGU. Elles complètent les Conditions générales de vente.`,
   sections: [
     {
       h: "Article 1 - Définitions",
       body: [
         [
-          "Plateforme : l'application Tiquiz® et le site tiquiz.com.",
+          "Plateforme : l'application Tiquiz® et le site tiquiz.fr.",
           "Utilisateur : toute personne accédant à la Plateforme.",
           "Compte : espace personnel permettant d'accéder aux services.",
           "Contenus Utilisateur : les données, textes et médias saisis par l'Utilisateur.",
@@ -104,13 +104,13 @@ const fr: LegalPage = {
 const en: LegalPage = {
   title: "Terms of Use",
   lastUpdated: "Last updated: 04/22/2026",
-  intro: `These Terms of Use govern access to and use of Tiquiz® and tiquiz.com, published by ${C.name} (a ${C.form}, share capital ${C.capital}, registered with the Montpellier Trade Registry under no. 909 349 045, registered office ${C.address}). Accessing the service implies full acceptance of these Terms. They complement the Terms of Sale.`,
+  intro: `These Terms of Use govern access to and use of Tiquiz® and tiquiz.fr, published by ${C.name} (a ${C.form}, share capital ${C.capital}, registered with the Montpellier Trade Registry under no. 909 349 045, registered office ${C.address}). Accessing the service implies full acceptance of these Terms. They complement the Terms of Sale.`,
   sections: [
     {
       h: "Article 1 - Definitions",
       body: [
         [
-          "Platform: the Tiquiz® application and tiquiz.com.",
+          "Platform: the Tiquiz® application and tiquiz.fr.",
           "User: any person accessing the Platform.",
           "Account: the personal area used to access the services.",
           "User Content: data, text and media entered by the User.",
@@ -205,9 +205,9 @@ const en: LegalPage = {
 const es: LegalPage = {
   title: "Condiciones generales de uso",
   lastUpdated: "Última actualización: 22/04/2026",
-  intro: `Las presentes CGU definen las condiciones de acceso y uso de Tiquiz® y del sitio tiquiz.com, editados por ${C.name} (${C.form}, capital ${C.capital}, RCS ${C.rcs}, sede ${C.address}). El acceso al servicio implica la aceptación sin reservas de las CGU. Completan las Condiciones generales de venta.`,
+  intro: `Las presentes CGU definen las condiciones de acceso y uso de Tiquiz® y del sitio tiquiz.fr, editados por ${C.name} (${C.form}, capital ${C.capital}, RCS ${C.rcs}, sede ${C.address}). El acceso al servicio implica la aceptación sin reservas de las CGU. Completan las Condiciones generales de venta.`,
   sections: [
-    { h: "Artículo 1 - Definiciones", body: [[ "Plataforma: la aplicación Tiquiz® y el sitio tiquiz.com.","Usuario: toda persona que accede a la Plataforma.","Cuenta: espacio personal que permite acceder a los servicios.","Contenidos de Usuario: datos, textos y medios introducidos por el Usuario.","Contenidos Generados: contenidos producidos mediante las funciones de IA.","Servicios: conjunto de funcionalidades ofrecidas." ]] },
+    { h: "Artículo 1 - Definiciones", body: [[ "Plataforma: la aplicación Tiquiz® y el sitio tiquiz.fr.","Usuario: toda persona que accede a la Plataforma.","Cuenta: espacio personal que permite acceder a los servicios.","Contenidos de Usuario: datos, textos y medios introducidos por el Usuario.","Contenidos Generados: contenidos producidos mediante las funciones de IA.","Servicios: conjunto de funcionalidades ofrecidas." ]] },
     { h: "Artículo 2 - Acceso a los servicios", body: ["El acceso está reservado a personas mayores de edad con capacidad jurídica. El Usuario debe proporcionar información exacta y actualizada, mantener la confidencialidad de sus identificadores y señalar cualquier acceso no autorizado."] },
     { h: "Artículo 3 - Descripción de los servicios", body: ["Tiquiz® es una aplicación SaaS que permite crear quizzes interactivos, captar leads, segmentar prospectos y sincronizar con herramientas de marketing de terceros. Las funcionalidades pueden evolucionar sin previo aviso."] },
     { h: "Artículo 4 - Datos y seguridad", body: ["El Editor aplica medidas técnicas y organizativas apropiadas (cifrado, control de acceso, aislamiento lógico). El acceso a los datos del usuario está estrictamente limitado a la prestación del servicio, el mantenimiento, la seguridad o las obligaciones legales.","Para los leads captados, el Usuario actúa como responsable del tratamiento en el sentido del RGPD; el Editor actúa como encargado y se compromete a respetar la normativa."] },
@@ -225,9 +225,9 @@ const es: LegalPage = {
 const it: LegalPage = {
   title: "Condizioni generali di utilizzo",
   lastUpdated: "Ultimo aggiornamento: 22/04/2026",
-  intro: `Le presenti CGU definiscono le condizioni di accesso e utilizzo di Tiquiz® e del sito tiquiz.com, editi da ${C.name} (${C.form}, capitale ${C.capital}, RCS ${C.rcs}, sede ${C.address}). L'accesso al servizio implica l'accettazione senza riserve delle CGU. Completano le Condizioni generali di vendita.`,
+  intro: `Le presenti CGU definiscono le condizioni di accesso e utilizzo di Tiquiz® e del sito tiquiz.fr, editi da ${C.name} (${C.form}, capitale ${C.capital}, RCS ${C.rcs}, sede ${C.address}). L'accesso al servizio implica l'accettazione senza riserve delle CGU. Completano le Condizioni generali di vendita.`,
   sections: [
-    { h: "Articolo 1 - Definizioni", body: [[ "Piattaforma: l'applicazione Tiquiz® e il sito tiquiz.com.","Utente: qualsiasi persona che acceda alla Piattaforma.","Account: spazio personale che consente di accedere ai servizi.","Contenuti Utente: dati, testi e media inseriti dall'Utente.","Contenuti Generati: contenuti prodotti tramite le funzioni di IA.","Servizi: l'insieme delle funzionalità proposte." ]] },
+    { h: "Articolo 1 - Definizioni", body: [[ "Piattaforma: l'applicazione Tiquiz® e il sito tiquiz.fr.","Utente: qualsiasi persona che acceda alla Piattaforma.","Account: spazio personale che consente di accedere ai servizi.","Contenuti Utente: dati, testi e media inseriti dall'Utente.","Contenuti Generati: contenuti prodotti tramite le funzioni di IA.","Servizi: l'insieme delle funzionalità proposte." ]] },
     { h: "Articolo 2 - Accesso ai servizi", body: ["L'accesso è riservato a persone maggiorenni con capacità giuridica. L'Utente deve fornire informazioni esatte e aggiornate, mantenere la riservatezza delle proprie credenziali e segnalare qualsiasi accesso non autorizzato."] },
     { h: "Articolo 3 - Descrizione dei servizi", body: ["Tiquiz® è un'applicazione SaaS che consente di creare quiz interattivi, catturare lead, segmentare prospect e sincronizzarsi con strumenti di marketing di terzi. Le funzionalità possono evolvere senza preavviso."] },
     { h: "Articolo 4 - Dati e sicurezza", body: ["L'Editore attua misure tecniche e organizzative appropriate (cifratura, controllo degli accessi, isolamento logico). L'accesso ai dati dell'utente è strettamente limitato alla fornitura del servizio, alla manutenzione, alla sicurezza o agli obblighi di legge.","Per i lead catturati, l'Utente agisce come titolare del trattamento ai sensi del GDPR; l'Editore agisce come responsabile e si impegna a rispettare la normativa."] },
@@ -245,9 +245,9 @@ const it: LegalPage = {
 const ar: LegalPage = {
   title: "الشروط العامة للاستخدام",
   lastUpdated: "آخر تحديث: 22/04/2026",
-  intro: `تحدد هذه الشروط العامة للاستخدام شروط الوصول إلى Tiquiz® وموقع tiquiz.com واستخدامهما، الناشرة ${C.name} (${C.form}، رأس مال ${C.capital}، RCS ${C.rcs}، المقر ${C.address}). يستلزم الوصول إلى الخدمة قبول الشروط دون تحفظ. تكمّل هذه الشروط الشروط العامة للبيع.`,
+  intro: `تحدد هذه الشروط العامة للاستخدام شروط الوصول إلى Tiquiz® وموقع tiquiz.fr واستخدامهما، الناشرة ${C.name} (${C.form}، رأس مال ${C.capital}، RCS ${C.rcs}، المقر ${C.address}). يستلزم الوصول إلى الخدمة قبول الشروط دون تحفظ. تكمّل هذه الشروط الشروط العامة للبيع.`,
   sections: [
-    { h: "المادة 1 - التعاريف", body: [[ "المنصة: تطبيق Tiquiz® وموقع tiquiz.com.","المستخدم: كل شخص يصل إلى المنصة.","الحساب: الفضاء الشخصي الذي يسمح بالوصول إلى الخدمات.","محتويات المستخدم: البيانات والنصوص والوسائط التي يدخلها المستخدم.","المحتويات المُولَّدة: المحتويات المنتجة عبر ميزات الذكاء الاصطناعي.","الخدمات: مجموع الميزات المقترحة." ]] },
+    { h: "المادة 1 - التعاريف", body: [[ "المنصة: تطبيق Tiquiz® وموقع tiquiz.fr.","المستخدم: كل شخص يصل إلى المنصة.","الحساب: الفضاء الشخصي الذي يسمح بالوصول إلى الخدمات.","محتويات المستخدم: البيانات والنصوص والوسائط التي يدخلها المستخدم.","المحتويات المُولَّدة: المحتويات المنتجة عبر ميزات الذكاء الاصطناعي.","الخدمات: مجموع الميزات المقترحة." ]] },
     { h: "المادة 2 - الوصول إلى الخدمات", body: ["الوصول محجوز للبالغين الذين يتمتعون بالأهلية القانونية. يجب على المستخدم تقديم معلومات دقيقة ومحدّثة، والحفاظ على سرية بيانات اعتماده والإبلاغ عن أي وصول غير مصرح به."] },
     { h: "المادة 3 - وصف الخدمات", body: ["Tiquiz® هو تطبيق SaaS يتيح إنشاء اختبارات تفاعلية، جذب عملاء محتملين، تقسيم العملاء والمزامنة مع أدوات تسويق طرف ثالث. قد تتطور الميزات دون إشعار مسبق."] },
     { h: "المادة 4 - البيانات والأمن", body: ["يطبق الناشر تدابير تقنية وتنظيمية مناسبة (التشفير، التحكم في الوصول، العزل المنطقي). الوصول إلى بيانات المستخدم محصور بتقديم الخدمة والصيانة والأمن أو الالتزامات القانونية.","بالنسبة للعملاء المحتملين، يتصرف المستخدم كمسؤول عن المعالجة بمفهوم RGPD؛ ويتصرف الناشر كمعالج من الباطن ويلتزم باحترام التشريعات."] },
