@@ -285,7 +285,19 @@ Champs : email (obligatoire), prénom, nom, téléphone, pays (activables). Le p
 
 Étape intermédiaire entre capture et résultats, activée par `virality_enabled` et un bonus renseigné. Elle propose un visuel (image, mockup ou GIF), un message de partage, les réseaux sélectionnés (Facebook, X, LinkedIn, WhatsApp, Telegram, email, copie de lien) et une option pour continuer sans bonus.
 
-### 6.3. Anti-triche
+### 6.3. Export des leads (CSV)
+
+`lib/leads/exportCsv.ts`, pur et testé. Une colonne est un COUPLE `{ entête, valeur }` : les deux ne peuvent plus être écrits à deux endroits, donc plus diverger. Avant le 26 août ils l'étaient, et la Date et les Scores étaient PERMUTÉS sur tout quiz scoré, ce qui donnait une colonne Date vide à l'écran.
+
+Colonnes, dans cet ordre : Email, Prénom, Nom, Résultat, Date, Téléphone, Pays, [Scores si quiz scoré], Tag Systeme.io, puis **une colonne par question**.
+
+- Le fichier commence par le **BOM UTF-8** (`\uFEFF`) et le blob part en `text/csv;charset=utf-8`. Sans lui, Excel lit de l'UTF-8 comme du Latin-1 et affiche `RÃ©sultat`.
+- La date est en `AAAA-MM-JJ HH:MM`, triable dans un tableur, et non au format local.
+- Les réponses passent par `buildQuestionPositions` + `indexAnswersByPosition` puis `formatSurveyAnswer` : jamais par `question_index` (§ identité stable des questions), donc une question supprimée ou déplacée ne décale rien. Les échelles, les étoiles et le texte libre sortent comme à l'écran.
+- La colonne **Tag Systeme.io** (`sio_tag_applied`) est vide pour qui n'utilise pas Systeme.io. C'est une colonne d'information, jamais un prérequis.
+- Séparateur virgule, inchangé.
+
+### 6.4. Anti-triche
 
 - Mobile : `navigator.share()` natif (ne résout qu'en cas de partage réel).
 - Desktop : `window.open()` plus polling de `popup.closed` avec durée minimale d'ouverture.
@@ -294,7 +306,7 @@ Champs : email (obligatoire), prénom, nom, téléphone, pays (activables). Le p
 
 Le déverrouillage applique le share tag et incrémente le compteur de partages.
 
-### 6.4. Sécurité des leads (trois couches)
+### 6.5. Sécurité des leads (trois couches)
 
 Aucun lead ne peut disparaître lors d'un re-shuffle des résultats :
 
@@ -328,6 +340,13 @@ Le mode sondage réutilise le moteur quiz mais agrège les réponses brutes au l
 - **Résultats du sondage** : `/api/quiz/[quizId]/survey-results` et `SurveyResultsPanel`, `SurveyResponsesTable`, `SurveyTrends`.
 - **Agrégation des réponses** : `/api/quiz/[quizId]/aggregate-responses`.
 - **Analyse IA** (feature premium) : `/api/quiz/[quizId]/survey-analysis` synthétise les réponses agrégées avec Claude (`lib/survey/analysis.ts`), fait ressortir patterns et segments. Le helper de gate est `canUseAIAnalysis` (couvre quiz et sondage).
+
+  **Ce qu'on lui donne à lire vit dans `lib/survey/renderQuestions.ts`** (pur, partagé avec `lib/quiz/insights.ts` et le rapport PDF). Trois familles de réponses, pas une :
+  - les questions à options : le compteur par option ;
+  - le **texte libre** : un échantillon RÉPARTI du premier au dernier (`echantillonReparti`, déterministe), jamais les 25 premières lignes, qui ne diraient que le début de la collecte ;
+  - les **échelles** (`rating_scale`, `star_rating`) : la moyenne AVEC son échelle, et la répartition complète, **zéros compris**. Une moyenne de 5 ne veut rien dire sans savoir si c'est sur 10 ou sur 5, et c'est le CREUX au milieu qui fait voir une audience coupée en deux. `resoudreEchelle()` reprend exactement les défauts du viewer (0..10, et 1..max ?? 5), sinon l'analyse commenterait une échelle que personne n'a vue.
+
+  `ANSWER_READING_RULES` est joint au prompt : sans lui, un modèle à qui on donne des pourcentages nomme toujours un maximum, même sur trois réponses.
 - **Modération** : marquage d'un lead ou d'une réponse (`survey-flag`).
 
 ---
@@ -393,6 +412,20 @@ Routes : `/api/custom-domain` (liste, création), `/api/custom-domain/[id]` (dé
 ## 12. Pixels de tracking
 
 Chaque contenu peut porter des identifiants pixel, avec fallback sur les défauts du profil créateur (`lib/effectivePixels.ts`) : Meta Pixel, GA4, Google Ads. Le côté serveur peut aussi envoyer des conversions Meta via CAPI (`lib/metaCapi.ts`, token `default_meta_capi_token`). Le composant `components/tracking/TrackingPixels.tsx` injecte les pixels sur la page publique. Le fallback render-time garantit qu'un pixel posé dans les réglages s'applique partout sauf override explicite par contenu.
+
+### 12.1. Nos propres outils Google (26 août 2026)
+
+Béné : "juste `tiquiz.fr` et `atelierduquiz.fr` : je m'en fous de faire ranker les app, je veux faire ranker les pages de vente. Pas les quiz ni le reste. Pour les quiz etc chaque user pose ses propres info de tracking."
+
+`lib/analytics/google.ts` décide, personne d'autre. `GA_MEASUREMENT_ID` (`G-N6LQDRDMDB` ici, `G-6EN74PGTTH` pour l'Atelier), `GOOGLE_SITE_VERIFICATION`, et deux fonctions qui répondent aux deux seules questions : `servirVerification(estHoteDeVente)` et `chargerAnalytics({ estHoteDeVente, pathname })`.
+
+**La balise est celle que Google donne, au caractère près** (`scriptAnalyticsGoogle()`), et un test la compare à la chaîne attendue. Elle avait été "améliorée" en une seule ligne d'appel, ce qui n'était pas ce qui était demandé.
+
+**Ce qui est EXCLU, et c'est le coeur de la règle** : les quiz publics (`/q`, `/s`, `/embed`) ne portent JAMAIS notre GA. Chaque créateur pose ses propres identifiants dessus (§12) ; y ajouter les nôtres mesurerait son audience à nous, sur ses pages à elle.
+
+**Où c'est posé, et pourquoi pas ailleurs** : les pages de vente ne sont pas rendues par le layout React mais par une route (`app/apercu/vente/[slug]/route.ts` via `lib/sales/servePage.ts`). Une balise mise dans `app/layout.tsx` seul n'aurait donc jamais atteint `tiquiz.fr`. `analytics` est un paramètre OBLIGATOIRE de `servePage` : un appelant qui se tait ne compile pas.
+
+Côté app, la décision est prise dans un composant client qui lit `usePathname()`. Le middleware ne pose aucun en-tête de chemin : en inventer un aurait chargé GA sur tous les quiz publics par le repli.
 
 ---
 
@@ -792,7 +825,7 @@ Support mutualisé avec Tipote : le bouton Aide redirige vers le centre d'aide T
 - Secrets revendeur (clés de paiement) chiffrés at rest en AES-256-GCM.
 - Validation Zod sur les formulaires.
 - Ownership cross-tenant sur les domaines personnalisés et les cues de popquiz.
-- Sécurité des leads en trois couches (cf. §6.4).
+- Sécurité des leads en trois couches (cf. §6.5).
 - `emailRedirectTo` dynamique via l'URL applicative.
 - Webhooks de paiement : signature vérifiée sur le corps BRUT avant tout parsing, et verrou d'idempotence `(source, event_id)` limité aux statuts `processing` / `processed` (une ligne `error` en sort, donc un réessai peut reprendre).
 - Toutes les portes partenaires comparent leur secret en temps constant (`safeEqual` / `timingSafeEqual`) : une comparaison naïve s'arrête au premier caractère différent, et son TEMPS raconte combien de caractères sont justes.

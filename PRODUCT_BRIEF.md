@@ -177,7 +177,10 @@ Variations selon le canal :
 - **Funnel par quiz** : vues, démarrages, complétions, partages, conversions.
 - **Drop-off par question** et distribution des leads par résultat.
 - **Insights et analyse IA** (paliers premium) sur les réponses agrégées.
-- **Export** des leads, filtres KPI sur la page leads, source de chaque lead.
+- **Export** des leads en CSV, filtres KPI sur la page leads, source de chaque lead.
+  - Le fichier contient **le détail des réponses, une colonne par question** : les choix, le texte libre, les notes d'échelle et les étoiles, exactement comme à l'écran. Plus la date, le téléphone, le pays, les scores sur un quiz scoré, et le tag Systeme.io posé.
+  - **Il s'ouvre avec les accents dans Excel** (BOM UTF-8), et la date est au format triable.
+  - **C'est un argument pour qui n'utilise PAS Systeme.io** : le tag n'est qu'une colonne parmi d'autres, et tout le reste s'exploite dans n'importe quel tableur ou n'importe quel CRM. Ne jamais présenter l'export comme un plan B : c'est la porte de sortie qui rend la confiance possible.
 
 ### 7.8. Sécurité des leads
 - Trois couches indépendantes garantissent qu'aucun lead ne disparaît, même si le créateur efface des résultats.
@@ -298,6 +301,8 @@ Variations selon le canal :
 - Le versement s'arrête si la personne arrête son abonnement ou se fait rembourser. Les mois déjà versés restent acquis.
 - Le simulateur de l'espace affilié projette sur 12 mois : c'est une fenêtre de calcul, pas une limite de durée. Ne jamais écrire "pendant 12 mois".
 - Ne jamais annoncer un montant mensuel garanti : la commission suit ce qui est réellement encaissé (une remise ou un changement de palier la font bouger).
+- **Les liens de l'espace affilié mènent à NOS pages** (`tiquiz.fr`, `tiquiz.fr/commande/<produit>`) depuis le 26 août. Leur page ne transmet pas ce qu'on ajoute à l'URL : un lien passé par un tunnel Systeme.io ne peut atteindre ni notre commissionnement ni le mois offert. Seule l'inscription gratuite reste chez eux, parce que son formulaire crée le contact et pose le tag qui déclenche les séquences email.
+- **L'Atelier du Quiz est dans le même programme** (70 %), avec le même lien, le même cookie d'un an et le même versement.
 
 ### Le mois offert (argument d'affiliation)
 - **30 jours offerts sur le palier choisi**, ouverts uniquement quand la personne arrive par un lien d'affiliation actuel (ceux que l'espace affilié fabrique aujourd'hui). Les anciens liens Systeme.io commissionnent normalement mais n'ouvrent pas le cadeau : un affilié qui partage un ancien lien promettrait un mois que personne ne recevrait, et c'est LUI qui passerait pour un menteur.
