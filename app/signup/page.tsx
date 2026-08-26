@@ -1,26 +1,46 @@
 // app/signup/page.tsx
 //
-// L'inscription directe sur Tiquiz est DESACTIVEE (Bene 14 juillet 2026 :
-// "il ne devrait pas pouvoir s'inscrire directement sur Tiquiz, mais
-// obligatoirement passer par ma page de capture systeme io"). On redirige
-// donc toute tentative d'inscription vers la page de capture Systeme.io,
-// qui provisionne ensuite le compte via le webhook / free-optin.
+// L'INSCRIPTION GRATUITE SE FAIT CHEZ NOUS (Béné, 26 août 2026).
 //
-// URL surchargeable par env (NEXT_PUBLIC_TIQUIZ_SIGNUP_URL) pour que Bene
-// puisse la changer sans redeploiement ; defaut = la page fournie.
+// "Sur notre page on doit pouvoir s'inscrire sur la page de login : pas
+// de compte, crées-en un gratuitement maintenant. Avec le lien affi,
+// l'envoi sur systeme io pour être abonné à la campagne etc."
 //
-// NB : le blocage cote UI (cette redirection + retrait des liens) empeche
-// l'inscription normale. Le verrou DEFINITIF est cote Supabase : desactiver
-// "Allow new users to sign up" dans Auth. Le provisioning Systeme.io passe
-// par admin.createUser (service-role) et n'est PAS affecte par ce reglage.
-import { redirect } from "next/navigation";
+// -- CE QUE CETTE PAGE FAISAIT, ET POURQUOI ÇA A CHANGÉ ---------------
+//
+// Elle REDIRIGEAIT vers `tipote.fr/part-tiquiz-gratuit`, décision du
+// 14 juillet 2026 : "il ne devrait pas pouvoir s'inscrire directement
+// sur Tiquiz, mais obligatoirement passer par ma page de capture
+// systeme io". Le motif était bon : une inscription prise chez nous ne
+// créait aucun contact chez eux, donc la personne sortait de toutes les
+// séquences email, en silence.
+//
+// Ce motif a disparu le 25 août. `POST /api/auth/signup` crée le compte,
+// rattache l'affilié à vie (`rattacherInscrit`, cookie `tq_ref` posé par
+// le middleware), ET crée le contact chez Systeme.io avec son étiquette
+// (`poserTagPlan`). Le formulaire existait depuis, et il n'était branché
+// nulle part : cette page redirigeait encore.
+//
+// -- CE QUI RESTE À FAIRE CHEZ SYSTEME.IO, ET CE N'EST PAS DU CODE ----
+//
+// Poser l'étiquette ne suffit PAS à abonner quelqu'un à une campagne :
+// leur API n'a aucun point d'entrée pour ça, c'est une AUTOMATISATION
+// (déclencheur "tag ajouté") qui le fait, et elle se crée dans leur
+// tableau de bord. Sans une règle qui écoute `tiquiz-free`, le contact
+// est bien créé et étiqueté, et il ne reçoit rien.
+
+import type { Metadata } from "next";
+
+import SignupForm from "@/components/auth/SignupForm";
 
 export const dynamic = "force-dynamic";
 
-const SIGNUP_CAPTURE_URL =
-  process.env.NEXT_PUBLIC_TIQUIZ_SIGNUP_URL ??
-  "https://www.tipote.fr/part-tiquiz-gratuit";
+export const metadata: Metadata = {
+  // L'inscription n'a rien à faire dans un résultat de recherche : ce
+  // sont les pages de vente qui doivent ranker.
+  robots: { index: false, follow: false },
+};
 
 export default function SignupPage() {
-  redirect(SIGNUP_CAPTURE_URL);
+  return <SignupForm />;
 }
