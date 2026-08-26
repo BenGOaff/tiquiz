@@ -1638,7 +1638,19 @@
     "settingsGroupGestionHint": "O idioma da interface, e o fecho do quiz.",
     "ctaReprendreTitre": "O teu botão por omissão",
     "ctaReprendreAide": "{count} perfil(is) mostram ainda o teu botão por omissão. Agora há um botão próprio para cada perfil: recupera-o aqui para não perderes nada. Os perfis que já têm o seu não são tocados.",
-    "ctaReprendreAction": "Recuperar este botão nesses perfis"
+    "ctaReprendreAction": "Recuperar este botão nesses perfis",
+    "csvColumns": {
+      "email": "Email",
+      "prenom": "Nome",
+      "nom": "Apelido",
+      "resultat": "Resultado",
+      "date": "Data",
+      "telephone": "Telefone",
+      "pays": "País",
+      "scores": "Pontuações",
+      "tag": "Etiqueta Systeme.io",
+      "question": "P"
+    }
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova palavra-passe",

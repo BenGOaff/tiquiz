@@ -1638,7 +1638,19 @@
     "settingsGroupGestionHint": "Interface language, and closing the quiz.",
     "ctaReprendreTitre": "Your default button",
     "ctaReprendreAide": "{count} profile(s) still show your default button. It has been replaced by one button per profile: bring it over so you lose nothing. Profiles that already have their own will not move.",
-    "ctaReprendreAction": "Bring this button to those profiles"
+    "ctaReprendreAction": "Bring this button to those profiles",
+    "csvColumns": {
+      "email": "Email",
+      "prenom": "First name",
+      "nom": "Last name",
+      "resultat": "Result",
+      "date": "Date",
+      "telephone": "Phone",
+      "pays": "Country",
+      "scores": "Scores",
+      "tag": "Systeme.io tag",
+      "question": "Q"
+    }
   },
   "resetPasswordPage": {
     "labelNewPassword": "New password",
