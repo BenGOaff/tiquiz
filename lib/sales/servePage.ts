@@ -24,6 +24,8 @@ import { rewriteOrderLinks, type OrderLinkRewrite } from "@/lib/sales/salesPageL
 import type { OwnerProductId } from "@/lib/checkout/catalog";
 import {
   baliseVerificationGoogle,
+  GA_MEASUREMENT_ID,
+  remplacerIdMesure,
   scriptAnalyticsGoogle,
 } from "@/lib/analytics/google";
 
@@ -173,12 +175,30 @@ export function renderSalesPage(
     opts.onRewrite?.(info);
   }
 
+  // LA MESURE : on réécrit l'identifiant DANS le bandeau cookies de la
+  // page quand elle en porte un, et on n'ajoute une balise brute que
+  // s'il n'y en a pas. Ajouter par dessus contournerait le consentement
+  // que la page demande, et mettrait deux balises Google sur une page
+  // (cf. lib/analytics/google.ts).
+  let baliseBrute = "";
+  if (opts.analytics) {
+    const rec = remplacerIdMesure(sortie, GA_MEASUREMENT_ID);
+    sortie = rec.html;
+    if (!rec.remplace) {
+      baliseBrute = scriptAnalyticsGoogle();
+      console.warn(
+        `[apercu/vente] ${meta.slug} : aucun bandeau cookies dans la page, ` +
+          `la mesure est posee SANS consentement. A verifier.`,
+      );
+    }
+  }
+
   const tetes = [
     buildHeadTags(meta),
     opts.indexable
       ? ""
       : `<meta name="robots" content="noindex, nofollow">`,
-    opts.analytics ? scriptAnalyticsGoogle() : "",
+    baliseBrute,
   ]
     .filter(Boolean)
     .join("\n");
