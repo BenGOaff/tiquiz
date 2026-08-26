@@ -1638,7 +1638,19 @@
     "settingsGroupGestionHint": "O idioma da interface, e o fechamento do quiz.",
     "ctaReprendreTitre": "Seu botão padrão",
     "ctaReprendreAide": "{count} perfil(is) ainda mostram seu botão padrão. Agora existe um botão próprio para cada perfil: recupere-o aqui para não perder nada. Os perfis que já têm o deles não são tocados.",
-    "ctaReprendreAction": "Recuperar este botão nesses perfis"
+    "ctaReprendreAction": "Recuperar este botão nesses perfis",
+    "csvColumns": {
+      "email": "Email",
+      "prenom": "Nome",
+      "nom": "Sobrenome",
+      "resultat": "Resultado",
+      "date": "Data",
+      "telephone": "Telefone",
+      "pays": "País",
+      "scores": "Pontuações",
+      "tag": "Etiqueta Systeme.io",
+      "question": "P"
+    }
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nova senha",

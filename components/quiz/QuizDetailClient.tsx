@@ -94,6 +94,9 @@ import {
 } from "@/lib/quizScoring";
 import { resolveShareNetworks } from "@/lib/quiz/shareNetworks";
 import { stripHtml } from "@/lib/richText";
+import { buildQuestionPositions, indexAnswersByPosition } from "@/lib/quiz/questionIdentity";
+import { formatSurveyAnswer } from "@/lib/survey/format";
+import { colonnesExport, construireCsv, type LeadExportable } from "@/lib/leads/exportCsv";
 import { isPixelFieldValid } from "@/lib/clientPixels";
 import { UserPalettePicker, type PaletteList } from "@/components/editor/UserPalettePicker";
 import { ColorSwatchPicker } from "@/components/ui/ColorSwatchPicker";
@@ -3078,9 +3081,54 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
     // into the spreadsheet (cf. rapport Adeline, 17 mai 2026).
     // Mode scoring : colonne Scores en plus (résumé "score=62% ; sommeil=50%"
     // depuis le snapshot du lead). Les autres modes gardent le format actuel.
-    const header = isScoring ? `${t("csvHeader")},"${t("csvScoresHeader")}"` : t("csvHeader");
-    const csv = [header, ...leads.map(l => [l.email, l.first_name ?? "", l.last_name ?? "", stripHtml(l.result_title ?? ""), ...(isScoring ? [formatScoresSummary(l.scores)] : []), l.created_at ? new Date(l.created_at).toLocaleDateString() : ""].map(c => `"${String(c).replace(/"/g,'""')}"`).join(","))].join("\n");
-    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = `leads-${quizId}.csv`; a.click();
+    // L'EXPORT VIT DANS `lib/leads/exportCsv.ts`, et c'est la correction
+    // la plus importante ici. Il tenait sur UNE ligne dans ce composant,
+    // donc aucun test ne pouvait le voir, et l'en-tête avait fini par
+    // se désaligner de la ligne sur les quiz scorés : le score tombait
+    // sous "Date" et la date sous "Scores" (26 août 2026).
+    //
+    // Une colonne y est désormais un couple `{ entête, valeur }` : les
+    // deux ne peuvent plus diverger.
+    const questionsExport = (quiz?.questions ?? []) as {
+      id?: string | null;
+      question_text?: string | null;
+      question_type?: string | null;
+      options?: { text?: string }[] | null;
+    }[];
+    const positions = buildQuestionPositions(questionsExport);
+    const colonnes = colonnesExport({
+      libelles: {
+        email: t("csvColumns.email"),
+        prenom: t("csvColumns.prenom"),
+        nom: t("csvColumns.nom"),
+        resultat: t("csvColumns.resultat"),
+        date: t("csvColumns.date"),
+        telephone: t("csvColumns.telephone"),
+        pays: t("csvColumns.pays"),
+        scores: t("csvColumns.scores"),
+        tag: t("csvColumns.tag"),
+        question: t("csvColumns.question"),
+      },
+      scoring: isScoring,
+      resumerScores: (sc) => formatScoresSummary(sc as never),
+      questions: questionsExport,
+      // L'identité STABLE des questions, jamais l'index brut : une
+      // question supprimée au milieu décalerait sinon toutes les
+      // réponses postérieures (drame Adeline, 1er août 2026).
+      reponse: (lead, position) => {
+        const parPosition = indexAnswersByPosition(
+          (lead.answers as never) ?? [],
+          positions,
+          questionsExport.length,
+        );
+        const rep = parPosition.get(position);
+        if (!rep) return "";
+        return formatSurveyAnswer(questionsExport[position] as never, rep as never, locale);
+      },
+      nettoyer: stripHtml,
+    });
+    const csv = construireCsv(colonnes, leads as unknown as LeadExportable[]);
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); a.download = `leads-${quizId}.csv`; a.click();
   };
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;

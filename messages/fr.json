@@ -1638,7 +1638,19 @@
     "settingsGroupGestionHint": "La langue de l'interface, et la fermeture du quiz.",
     "ctaReprendreTitre": "Ton bouton par défaut",
     "ctaReprendreAide": "{count} profil(s) affichent encore ton bouton par défaut. Il vient d'être remplacé par un bouton propre à chaque profil : reprends-le ici pour ne rien perdre. Les profils qui ont déjà le leur ne bougeront pas.",
-    "ctaReprendreAction": "Reprendre ce bouton sur ces profils"
+    "ctaReprendreAction": "Reprendre ce bouton sur ces profils",
+    "csvColumns": {
+      "email": "Email",
+      "prenom": "Prénom",
+      "nom": "Nom",
+      "resultat": "Résultat",
+      "date": "Date",
+      "telephone": "Téléphone",
+      "pays": "Pays",
+      "scores": "Scores",
+      "tag": "Tag Systeme.io",
+      "question": "Q"
+    }
   },
   "resetPasswordPage": {
     "labelNewPassword": "Nouveau mot de passe",
