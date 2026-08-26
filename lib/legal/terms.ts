@@ -4,7 +4,7 @@ import { COMPANY as C } from "./company";
 const fr: LegalPage = {
   title: "Conditions générales de vente",
   lastUpdated: "Dernière mise à jour : 22/04/2026",
-  intro: `Les présentes CGV régissent les relations entre ${C.name} (${C.form}, capital ${C.capital}, RCS ${C.rcs}, siège ${C.address}), ci-après "le Vendeur", et tout Client souscrivant aux services Tiquiz® sur tiquiz.com.`,
+  intro: `Les présentes CGV régissent les relations entre ${C.name} (${C.form}, capital ${C.capital}, RCS ${C.rcs}, siège ${C.address}), ci-après "le Vendeur", et tout Client souscrivant aux services Tiquiz® sur tiquiz.fr.`,
   sections: [
     {
       h: "Article 1 - Objet",
@@ -108,7 +108,7 @@ const fr: LegalPage = {
 const en: LegalPage = {
   title: "Terms of Sale",
   lastUpdated: "Last updated: 04/22/2026",
-  intro: `These Terms of Sale ("Terms") govern the relationship between ${C.name} (a ${C.form}, share capital ${C.capital}, registered with the Montpellier Trade Registry under no. 909 349 045, registered office ${C.address}), the "Vendor", and any Customer subscribing to Tiquiz® on tiquiz.com.`,
+  intro: `These Terms of Sale ("Terms") govern the relationship between ${C.name} (a ${C.form}, share capital ${C.capital}, registered with the Montpellier Trade Registry under no. 909 349 045, registered office ${C.address}), the "Vendor", and any Customer subscribing to Tiquiz® on tiquiz.fr.`,
   sections: [
     {
       h: "Article 1 - Purpose",
@@ -213,7 +213,7 @@ const en: LegalPage = {
 const es: LegalPage = {
   title: "Condiciones generales de venta",
   lastUpdated: "Última actualización: 22/04/2026",
-  intro: `Las presentes CGV rigen las relaciones entre ${C.name} (${C.form}, capital ${C.capital}, RCS ${C.rcs}, sede ${C.address}), en adelante «el Vendedor», y cualquier Cliente que se suscriba a los servicios Tiquiz® en tiquiz.com.`,
+  intro: `Las presentes CGV rigen las relaciones entre ${C.name} (${C.form}, capital ${C.capital}, RCS ${C.rcs}, sede ${C.address}), en adelante «el Vendedor», y cualquier Cliente que se suscriba a los servicios Tiquiz® en tiquiz.fr.`,
   sections: [
     { h: "Artículo 1 - Objeto", body: ["Las CGV definen las condiciones de acceso y uso de Tiquiz®, aplicación SaaS de creación de quizzes interactivos y captura de leads."] },
     { h: "Artículo 2 - Descripción de los servicios", body: ["Tiquiz se proporciona a distancia a través de una plataforma online. Permite la creación de quizzes, la cualificación de prospectos, la sincronización con herramientas de terceros (Systeme.io, etc.) y la medición de rendimiento. El Vendedor se reserva el derecho de modificar, hacer evolucionar o suprimir todas o parte de las funcionalidades en cualquier momento."] },
@@ -236,7 +236,7 @@ const es: LegalPage = {
 const it: LegalPage = {
   title: "Condizioni generali di vendita",
   lastUpdated: "Ultimo aggiornamento: 22/04/2026",
-  intro: `Le presenti CGV disciplinano i rapporti tra ${C.name} (${C.form}, capitale ${C.capital}, RCS ${C.rcs}, sede ${C.address}), di seguito "il Venditore", e ogni Cliente che sottoscriva i servizi Tiquiz® su tiquiz.com.`,
+  intro: `Le presenti CGV disciplinano i rapporti tra ${C.name} (${C.form}, capitale ${C.capital}, RCS ${C.rcs}, sede ${C.address}), di seguito "il Venditore", e ogni Cliente che sottoscriva i servizi Tiquiz® su tiquiz.fr.`,
   sections: [
     { h: "Articolo 1 - Oggetto", body: ["Le CGV definiscono le condizioni di accesso e di utilizzo di Tiquiz®, applicazione SaaS di creazione di quiz interattivi e di cattura di lead."] },
     { h: "Articolo 2 - Descrizione dei servizi", body: ["Tiquiz è fornito a distanza tramite una piattaforma online. Consente la creazione di quiz, la qualificazione dei prospect, la sincronizzazione con strumenti di terzi (Systeme.io, ecc.) e la misurazione delle prestazioni. Il Venditore si riserva il diritto di far evolvere, modificare o rimuovere tutte o parte delle funzionalità in qualsiasi momento."] },
@@ -259,7 +259,7 @@ const it: LegalPage = {
 const ar: LegalPage = {
   title: "الشروط العامة للبيع",
   lastUpdated: "آخر تحديث: 22/04/2026",
-  intro: `تحكم هذه الشروط العامة للبيع العلاقات بين ${C.name} (${C.form}، رأس مال ${C.capital}، RCS ${C.rcs}، المقر ${C.address}), "البائع", وكل عميل يشترك في خدمات Tiquiz® على tiquiz.com.`,
+  intro: `تحكم هذه الشروط العامة للبيع العلاقات بين ${C.name} (${C.form}، رأس مال ${C.capital}، RCS ${C.rcs}، المقر ${C.address}), "البائع", وكل عميل يشترك في خدمات Tiquiz® على tiquiz.fr.`,
   sections: [
     { h: "المادة 1 - الموضوع", body: ["تحدد الشروط العامة للبيع شروط الوصول إلى Tiquiz® واستخدامه، وهو تطبيق SaaS لإنشاء اختبارات تفاعلية وجذب عملاء محتملين."] },
     { h: "المادة 2 - وصف الخدمات", body: ["يُقدَّم Tiquiz عن بُعد عبر منصة إلكترونية. يتيح إنشاء الاختبارات، تأهيل العملاء المحتملين، المزامنة مع أدوات طرف ثالث (Systeme.io، إلخ)، وقياس الأداء. يحتفظ البائع بالحق في تطوير أو تعديل أو إزالة كل أو بعض الوظائف في أي وقت."] },

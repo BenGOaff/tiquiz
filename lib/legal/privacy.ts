@@ -4,7 +4,7 @@ import { COMPANY as C } from "./company";
 const fr: LegalPage = {
   title: "Politique de confidentialité",
   lastUpdated: "Dernière mise à jour : 22/04/2026",
-  intro: `La présente politique décrit comment ${C.name} (édite Tiquiz®) collecte, utilise et protège les données personnelles des visiteurs et utilisateurs des sites tiquiz.com et de l'application Tiquiz. Les traitements respectent le RGPD et la loi Informatique et Libertés.`,
+  intro: `La présente politique décrit comment ${C.name} (édite Tiquiz®) collecte, utilise et protège les données personnelles des visiteurs et utilisateurs des sites tiquiz.fr et de l'application Tiquiz. Les traitements respectent le RGPD et la loi Informatique et Libertés.`,
   sections: [
     {
       h: "1. Responsable du traitement",
@@ -16,7 +16,7 @@ const fr: LegalPage = {
     {
       h: "2. Périmètre des services",
       body: [
-        `La politique couvre le site de présentation tiquiz.com et l'application Tiquiz (quiz interactifs, capture de leads, intégrations marketing). Tiquiz® est une marque déposée de ${C.name}.`,
+        `La politique couvre le site de présentation tiquiz.fr et l'application Tiquiz (quiz interactifs, capture de leads, intégrations marketing). Tiquiz® est une marque déposée de ${C.name}.`,
       ],
     },
     {
@@ -131,7 +131,7 @@ const fr: LegalPage = {
 const en: LegalPage = {
   title: "Privacy Policy",
   lastUpdated: "Last updated: 04/22/2026",
-  intro: `This policy explains how ${C.name} (the publisher of Tiquiz®) collects, uses and protects personal data of visitors and users of tiquiz.com and the Tiquiz application. Processing complies with the EU GDPR and the French Data Protection Act.`,
+  intro: `This policy explains how ${C.name} (the publisher of Tiquiz®) collects, uses and protects personal data of visitors and users of tiquiz.fr and the Tiquiz application. Processing complies with the EU GDPR and the French Data Protection Act.`,
   sections: [
     {
       h: "1. Data controller",
@@ -143,7 +143,7 @@ const en: LegalPage = {
     {
       h: "2. Scope",
       body: [
-        `This policy covers the marketing site tiquiz.com and the Tiquiz application (interactive quizzes, lead capture, marketing integrations). Tiquiz® is a registered trademark of ${C.name}.`,
+        `This policy covers the marketing site tiquiz.fr and the Tiquiz application (interactive quizzes, lead capture, marketing integrations). Tiquiz® is a registered trademark of ${C.name}.`,
       ],
     },
     {
@@ -259,7 +259,7 @@ const en: LegalPage = {
 const es: LegalPage = {
   title: "Política de privacidad",
   lastUpdated: "Última actualización: 22/04/2026",
-  intro: `Esta política describe cómo ${C.name} (editora de Tiquiz®) recopila, utiliza y protege los datos personales de visitantes y usuarios de tiquiz.com y la aplicación Tiquiz. Los tratamientos cumplen con el RGPD.`,
+  intro: `Esta política describe cómo ${C.name} (editora de Tiquiz®) recopila, utiliza y protege los datos personales de visitantes y usuarios de tiquiz.fr y la aplicación Tiquiz. Los tratamientos cumplen con el RGPD.`,
   sections: [
     { h: "1. Responsable del tratamiento",
       body: [
@@ -267,7 +267,7 @@ const es: LegalPage = {
         `Para cualquier consulta: ${C.email}.`,
       ]},
     { h: "2. Ámbito de los servicios",
-      body: [`Esta política cubre el sitio de presentación tiquiz.com y la aplicación Tiquiz (quizzes interactivos, captura de leads, integraciones de marketing). Tiquiz® es una marca registrada de ${C.name}.`]},
+      body: [`Esta política cubre el sitio de presentación tiquiz.fr y la aplicación Tiquiz (quizzes interactivos, captura de leads, integraciones de marketing). Tiquiz® es una marca registrada de ${C.name}.`]},
     { h: "3. Datos recopilados",
       body: ["Recopilamos las siguientes categorías:",
         [ "Identificación: nombre, apellidos, email, teléfono (opcional), dirección de facturación.",
@@ -316,13 +316,13 @@ const es: LegalPage = {
 const it: LegalPage = {
   title: "Informativa sulla privacy",
   lastUpdated: "Ultimo aggiornamento: 22/04/2026",
-  intro: `La presente informativa descrive come ${C.name} (editore di Tiquiz®) raccoglie, utilizza e protegge i dati personali dei visitatori e utenti di tiquiz.com e dell'applicazione Tiquiz. I trattamenti rispettano il GDPR.`,
+  intro: `La presente informativa descrive come ${C.name} (editore di Tiquiz®) raccoglie, utilizza e protegge i dati personali dei visitatori e utenti di tiquiz.fr e dell'applicazione Tiquiz. I trattamenti rispettano il GDPR.`,
   sections: [
     { h: "1. Titolare del trattamento",
       body: [ `Il titolare del trattamento è ${C.name}, ${C.form} con capitale sociale di ${C.capital}, iscritta al RCS di Montpellier con il n. 909 349 045, sede legale ${C.address}.`,
               `Per qualsiasi domanda: ${C.email}.` ]},
     { h: "2. Ambito dei servizi",
-      body: [`L'informativa copre il sito di presentazione tiquiz.com e l'applicazione Tiquiz (quiz interattivi, cattura di lead, integrazioni marketing). Tiquiz® è un marchio registrato di ${C.name}.`]},
+      body: [`L'informativa copre il sito di presentazione tiquiz.fr e l'applicazione Tiquiz (quiz interattivi, cattura di lead, integrazioni marketing). Tiquiz® è un marchio registrato di ${C.name}.`]},
     { h: "3. Dati raccolti",
       body: ["Raccogliamo le seguenti categorie:",
         [ "Identificazione: nome, cognome, email, numero di telefono (facoltativo), indirizzo di fatturazione.",
@@ -370,13 +370,13 @@ const it: LegalPage = {
 const ar: LegalPage = {
   title: "سياسة الخصوصية",
   lastUpdated: "آخر تحديث: 22/04/2026",
-  intro: `تصف هذه السياسة كيف تقوم ${C.name} (الناشرة لـ Tiquiz®) بجمع واستخدام وحماية البيانات الشخصية لزوار ومستخدمي موقع tiquiz.com وتطبيق Tiquiz. تلتزم عمليات المعالجة باللائحة العامة لحماية البيانات (RGPD).`,
+  intro: `تصف هذه السياسة كيف تقوم ${C.name} (الناشرة لـ Tiquiz®) بجمع واستخدام وحماية البيانات الشخصية لزوار ومستخدمي موقع tiquiz.fr وتطبيق Tiquiz. تلتزم عمليات المعالجة باللائحة العامة لحماية البيانات (RGPD).`,
   sections: [
     { h: "1. المسؤول عن المعالجة",
       body: [ `المسؤول عن المعالجة هو ${C.name}، ${C.form} برأس مال ${C.capital}، مسجلة في السجل التجاري لمونبلييه تحت الرقم 909 349 045، المقر الاجتماعي ${C.address}.`,
               `لأي سؤال: ${C.email}.` ]},
     { h: "2. نطاق الخدمات",
-      body: [`تغطي هذه السياسة الموقع التعريفي tiquiz.com وتطبيق Tiquiz (اختبارات تفاعلية، جمع العملاء المحتملين، التكاملات التسويقية). Tiquiz® علامة تجارية مسجلة لـ ${C.name}.`]},
+      body: [`تغطي هذه السياسة الموقع التعريفي tiquiz.fr وتطبيق Tiquiz (اختبارات تفاعلية، جمع العملاء المحتملين، التكاملات التسويقية). Tiquiz® علامة تجارية مسجلة لـ ${C.name}.`]},
     { h: "3. البيانات المجمعة",
       body: ["نجمع الفئات التالية:",
         [ "معلومات الهوية: الاسم، اللقب، البريد الإلكتروني، رقم الهاتف (اختياري)، عنوان الفوترة.",

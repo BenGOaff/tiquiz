@@ -25,6 +25,7 @@ import type { OwnerProductId } from "@/lib/checkout/catalog";
 import {
   baliseVerificationGoogle,
   scriptAnalyticsGoogle,
+  scriptConsentementGoogle,
 } from "@/lib/analytics/google";
 
 /** Ce qu'on sait d'une page de vente, indépendamment de son HTML. */
@@ -180,6 +181,13 @@ export function renderSalesPage(
       : `<meta name="robots" content="noindex, nofollow">`,
     // LA BALISE GOOGLE, telle que Google la donne. On ne touche pas au
     // bandeau cookies de la page : c'est ce que Béné y a écrit.
+    // LE CONSENTEMENT D'ABORD, LA BALISE ENSUITE, ET L'ORDRE COMPTE.
+    // `gtag('consent','default')` doit être posé AVANT le chargement de
+    // la balise, sinon elle a déjà écrit ses cookies quand l'état par
+    // défaut arrive. La balise elle même reste intacte : c'est le mode
+    // Consentement qui l'empêche de déposer quoi que ce soit tant que
+    // la personne n'a pas accepté dans le bandeau.
+    opts.analytics ? scriptConsentementGoogle() : "",
     opts.analytics ? scriptAnalyticsGoogle() : "",
   ]
     .filter(Boolean)

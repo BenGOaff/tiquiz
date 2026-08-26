@@ -214,13 +214,13 @@ export const SHARE_EMBED = `
     <div class="tqz-sh-section">
       <div class="tqz-sh-head"><div class="tqz-sh-head-left"><div class="tqz-sh-icon"><svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div><div class="tqz-sh-stitle">Partager avec un lien</div></div><button class="tqz-sh-copy">Copier le lien</button></div>
       <div class="tqz-sh-label">Lien</div>
-      <div class="tqz-sh-input"><span id="tqz-sh-url">https://app.tiquiz.com/sandra-costa/formation-canine</span></div>
+      <div class="tqz-sh-input"><span id="tqz-sh-url">https://quiz.tipote.com/sandra-costa/formation-canine</span></div>
     </div>
     <div class="tqz-sh-section">
       <div class="tqz-sh-head"><div class="tqz-sh-head-left"><div class="tqz-sh-icon"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div><div class="tqz-sh-stitle">Ajouter à mon site</div></div><button class="tqz-sh-copy">Copier le code</button></div>
       <div class="tqz-sh-code">
         <div class="tqz-sh-code-line"><span class="tqz-hl-cmt">&lt;!-- Tiquiz begin --&gt;</span></div>
-        <div class="tqz-sh-code-line"><span class="tqz-hl-tag">&lt;iframe</span> <span class="tqz-hl-attr">src</span>=<span class="tqz-hl-val">"https://app.tiquiz.com/sandra-costa/formation-canine"</span></div>
+        <div class="tqz-sh-code-line"><span class="tqz-hl-tag">&lt;iframe</span> <span class="tqz-hl-attr">src</span>=<span class="tqz-hl-val">"https://quiz.tipote.com/sandra-costa/formation-canine"</span></div>
         <div class="tqz-sh-code-line">&nbsp;&nbsp;<span class="tqz-hl-attr">style</span>=<span class="tqz-hl-val">"border:0"</span> <span class="tqz-hl-attr">width</span>=<span class="tqz-hl-val">"100%"</span> <span class="tqz-hl-attr">height</span>=<span class="tqz-hl-val">"600"</span></div>
         <div class="tqz-sh-code-line">&nbsp;&nbsp;<span class="tqz-hl-attr">frameborder</span>=<span class="tqz-hl-val">"0"</span><span class="tqz-hl-tag">&gt;&lt;/iframe&gt;</span></div>
         <div class="tqz-sh-code-line"><span class="tqz-hl-cmt">&lt;!-- end Tiquiz --&gt;</span></div>

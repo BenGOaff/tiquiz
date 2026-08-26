@@ -3,7 +3,7 @@
 // components/legal/LegalLocaleSwitcher.tsx
 // Renders the 5 supported locales as plain anchor tags on legal pages so
 // creators can share locale-specific links from their landing pages
-// (e.g. tiquiz.com/privacy?lang=en from an English sales page).
+// (e.g. tiquiz.fr/privacy?lang=en from an English sales page).
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";

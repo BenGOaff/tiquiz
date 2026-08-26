@@ -38,6 +38,9 @@ import {
   GOOGLE_SITE_VERIFICATION,
   hoteNormalise,
   scriptAnalyticsGoogle,
+  MEMOIRE_CONSENTEMENT_JOURS,
+  CLE_CONSENTEMENT,
+  scriptConsentementGoogle,
   servirVerification,
 } from "@/lib/analytics/google";
 import { isOwnHost } from "@/lib/customDomains";
@@ -111,10 +114,32 @@ test("elle se charge sur la page de vente ET sur le bon de commande", () => {
   // mesurerait l'arrivée et plus rien ensuite, c'est à dire précisément
   // l'endroit où la vente se joue.
   for (const p of ["/", "/commande/mensuel", "/commande/annuel-plus"]) {
-    assert.equal(chargerAnalytics({ estHoteDeVente: true, pathname: p }), true, p);
+    assert.equal(
+      chargerAnalytics({ estHoteDeVente: true, pathname: p, consentementDonne: true }),
+      true,
+      p,
+    );
   }
   // Un chemin qui COMMENCE par les mêmes lettres n'est pas un quiz.
-  assert.equal(chargerAnalytics({ estHoteDeVente: true, pathname: "/questions" }), true);
+  assert.equal(
+    chargerAnalytics({ estHoteDeVente: true, pathname: "/questions", consentementDonne: true }),
+    true,
+  );
+});
+
+test("sans accord, elle ne se charge NULLE PART", () => {
+  // Le bon de commande est rendu par React, pas par le route handler de
+  // la page de vente : le mode Consentement posé dans le HTML capturé
+  // ne l'atteint pas. C'est le composant qui relit le MÊME choix, rangé
+  // par le bandeau sous la même clé, sur le même domaine.
+  for (const p of ["/", "/commande/mensuel"]) {
+    assert.equal(chargerAnalytics({ estHoteDeVente: true, pathname: p }), false, p);
+    assert.equal(
+      chargerAnalytics({ estHoteDeVente: true, pathname: p, consentementDonne: false }),
+      false,
+      p,
+    );
+  }
 });
 
 test("le jeton de propriété, lui, ne dépend PAS du chemin", () => {
@@ -215,4 +240,44 @@ test("la page de vente pose la balise ENTIERE, pas seulement le src", () => {
   const src = lire("lib/sales/servePage.ts");
   assert.match(src, /opts\.analytics \? scriptAnalyticsGoogle\(\) : ""/);
   assert.doesNotMatch(src, /remplacerIdMesure/, "on ne reecrit plus le bandeau de Bene");
+});
+
+// -- LE CONSENTEMENT (26 août 2026) -----------------------------------
+
+test("la balise ne dépose RIEN avant accord", () => {
+  const c = scriptConsentementGoogle();
+  assert.match(c, /gtag\('consent', 'default'/, "l'état par défaut doit être posé");
+  assert.match(c, /analytics_storage: 'denied'/, "refusé par défaut");
+  assert.match(c, /gtag\('consent', 'update', \{ analytics_storage: 'granted' \}\)/);
+});
+
+test("le consentement est posé AVANT la balise, jamais après", () => {
+  // `consent default` arrivé après le chargement de la balise ne sert à
+  // rien : elle a déjà écrit ses cookies.
+  const page = [scriptConsentementGoogle(), scriptAnalyticsGoogle()].join("\n");
+  assert.ok(
+    page.indexOf("consent', 'default'") < page.indexOf("googletagmanager.com/gtag/js"),
+    "l'ordre est inversé",
+  );
+});
+
+test("on relit la clé et la mémoire du bandeau, pas les nôtres", () => {
+  const c = scriptConsentementGoogle();
+  assert.match(c, new RegExp(`var CLE = '${CLE_CONSENTEMENT}'`));
+  assert.match(c, new RegExp(`var MEMOIRE = ${MEMOIRE_CONSENTEMENT_JOURS}`));
+  // Un accord expiré côté bandeau doit expirer chez nous aussi.
+  assert.match(c, /Date\.now\(\) - o\.t > MEMOIRE \* 864e5/);
+});
+
+test("tout ce qui n'est pas un OUI franc est un NON", () => {
+  const c = scriptConsentementGoogle();
+  assert.match(c, /o\.mesure === true/, "une valeur approchante ne suffit pas");
+  assert.match(c, /catch \(e\) \{ return false; \}/, "stockage bloqué = pas de mesure");
+});
+
+test("la balise elle même reste INTACTE", () => {
+  // Le mode Consentement existe précisément pour ne pas y toucher.
+  const b = scriptAnalyticsGoogle();
+  assert.match(b, /<!-- Google tag \(gtag\.js\) -->/);
+  assert.match(b, new RegExp(`gtag\\('config', '${GA_MEASUREMENT_ID}'\\);`));
 });
