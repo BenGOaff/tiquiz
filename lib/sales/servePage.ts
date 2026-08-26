@@ -178,6 +178,8 @@ export function renderSalesPage(
     opts.indexable
       ? ""
       : `<meta name="robots" content="noindex, nofollow">`,
+    // LA BALISE GOOGLE, telle que Google la donne. On ne touche pas au
+    // bandeau cookies de la page : c'est ce que Béné y a écrit.
     opts.analytics ? scriptAnalyticsGoogle() : "",
   ]
     .filter(Boolean)

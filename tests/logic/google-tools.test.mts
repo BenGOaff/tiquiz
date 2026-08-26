@@ -130,7 +130,7 @@ test("le jeton de propriété, lui, ne dépend PAS du chemin", () => {
 test("la page de vente pose le jeton, alors qu'elle ignore le layout", () => {
   const src = lire("lib/sales/servePage.ts");
   assert.match(src, /baliseVerificationGoogle\(\)/, "tiquiz.fr n'aurait aucune balise de propriété");
-  assert.match(src, /opts\.analytics \? scriptAnalyticsGoogle\(\) : ""/);
+  assert.match(src, /scriptAnalyticsGoogle\(\)/, "la balise ne serait plus posee sur la page de vente");
 });
 
 test("mesurer et indexer sont deux décisions SÉPARÉES", () => {
@@ -187,4 +187,32 @@ test("l'interrupteur de consentement existe et il est nommé", () => {
   const src = lire("lib/analytics/google.ts");
   assert.match(src, /GA_ATTEND_CONSENTEMENT/);
   assert.match(src, /consentementDonne/);
+});
+
+// ── LA BALISE EST CELLE DE GOOGLE, AU CARACTERE PRES ──
+
+test("le bloc rendu est EXACTEMENT celui que Google donne", () => {
+  // Bene a colle ce bloc trois fois. Le recopier tel quel n'est pas de
+  // la paresse : c'est ce qui permet de comparer d'un coup d'oeil ce que
+  // Google affiche et ce que la page sert.
+  const attendu = [
+    "<!-- Google tag (gtag.js) -->",
+    `<script async src="https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"></script>`,
+    "<script>",
+    "  window.dataLayer = window.dataLayer || [];",
+    "  function gtag(){dataLayer.push(arguments);}",
+    "  gtag('js', new Date());",
+    "",
+    `  gtag('config', '${GA_MEASUREMENT_ID}');`,
+    "</script>",
+  ].join("\n");
+  assert.equal(scriptAnalyticsGoogle(), attendu);
+});
+
+test("la page de vente pose la balise ENTIERE, pas seulement le src", () => {
+  // La version d'avant reecrivait l'identifiant dans le bandeau cookies
+  // au lieu de poser la balise. Defendable, et pas ce qui etait demande.
+  const src = lire("lib/sales/servePage.ts");
+  assert.match(src, /opts\.analytics \? scriptAnalyticsGoogle\(\) : ""/);
+  assert.doesNotMatch(src, /remplacerIdMesure/, "on ne reecrit plus le bandeau de Bene");
 });

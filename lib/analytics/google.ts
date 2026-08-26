@@ -145,22 +145,40 @@ export function baliseVerificationGoogle(): string {
 }
 
 /**
- * La mesure d'audience, pour un `<head>` écrit à la main.
+ * LA BALISE GOOGLE, EXACTEMENT CELLE QUE GOOGLE DONNE.
  *
- * **Elle n'existe que pour la page de vente**, qui ne passe pas par le
- * layout React. Partout ailleurs c'est `components/analytics/
- * GoogleAnalytics.tsx` qui décide, parce qu'il a besoin du chemin que
- * voit le navigateur. Les deux chargent le même identifiant, écrit une
- * seule fois juste au dessus.
+ * Béné, 26 août 2026, en collant le bloc pour la troisième fois : "tu
+ * vois bien que ce qui est demandé n'est pas ce que tu as mis ???"
+ *
+ * Elle a raison. La version précédente réécrivait l'identifiant DANS le
+ * bandeau cookies de la page au lieu de poser la balise, parce que le
+ * bandeau charge déjà GA4 après consentement et que Google demande une
+ * seule balise par page. C'était un raisonnement défendable, et ce
+ * n'était pas ce qui était demandé.
+ *
+ * **Le bloc ci-dessous est celui de Google, au caractère près**, y
+ * compris son commentaire d'ouverture et sa ligne vide. Le recopier tel
+ * quel n'est pas de la paresse : c'est ce qui permet de comparer d'un
+ * coup d'oeil ce que Google affiche et ce que la page sert.
+ *
+ * -- CE QUI RESTE VRAI, ET QUI EST SA DÉCISION -------------------------
+ *
+ * La page de vente porte AUSSI le bandeau cookies de Béné
+ * (`__AQ_COOKIES__` / `aqc-banniere`), qui charge `G-HRCMDXGTQD` après
+ * consentement. Il n'est pas touché : c'est sa page, et on n'y modifie
+ * pas ce qu'elle a écrit sans qu'elle le demande. La page porte donc
+ * deux mesures, et c'est un choix assumé, pas un oubli.
  */
 export function scriptAnalyticsGoogle(): string {
   return [
+    `<!-- Google tag (gtag.js) -->`,
     `<script async src="https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"></script>`,
     `<script>`,
-    `window.dataLayer = window.dataLayer || [];`,
-    `function gtag(){dataLayer.push(arguments);}`,
-    `gtag('js', new Date());`,
-    `gtag('config', '${GA_MEASUREMENT_ID}');`,
+    `  window.dataLayer = window.dataLayer || [];`,
+    `  function gtag(){dataLayer.push(arguments);}`,
+    `  gtag('js', new Date());`,
+    ``,
+    `  gtag('config', '${GA_MEASUREMENT_ID}');`,
     `</script>`,
   ].join("\n");
 }
