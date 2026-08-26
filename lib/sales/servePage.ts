@@ -22,6 +22,10 @@
 
 import { rewriteOrderLinks, type OrderLinkRewrite } from "@/lib/sales/salesPageLinks";
 import type { OwnerProductId } from "@/lib/checkout/catalog";
+import {
+  baliseVerificationGoogle,
+  scriptAnalyticsGoogle,
+} from "@/lib/analytics/google";
 
 /** Ce qu'on sait d'une page de vente, indépendamment de son HTML. */
 export type SalesPageMeta = {
@@ -92,6 +96,12 @@ function attr(value: string): string {
  */
 export function buildHeadTags(meta: SalesPageMeta): string {
   const balises = [
+    // LE JETON DE PROPRIÉTÉ GOOGLE. Il vit ici et pas seulement dans
+    // `app/layout.tsx` : cette page ne passe JAMAIS par le layout, elle
+    // est servie telle quelle par un route handler. Le poser dans le
+    // seul layout ne l'aurait donc jamais mis sur tiquiz.fr, c'est à
+    // dire sur la page qui compte le plus pour le référencement.
+    baliseVerificationGoogle(),
     `<title>${attr(meta.title)}</title>`,
     `<meta name="description" content="${attr(meta.description)}">`,
     `<link rel="canonical" href="${attr(meta.canonical)}">`,
@@ -124,6 +134,20 @@ export function renderSalesPage(
   opts: {
     indexable: boolean;
     /**
+     * Charge-t-on la mesure d'audience sur cette page ?
+     *
+     * **Obligatoire, jamais déduit de `indexable`.** Les deux disent des
+     * choses différentes : `indexable` parle de Google Search, celui-ci
+     * parle de Google Analytics. Les confondre marcherait aujourd'hui,
+     * parce que les deux valent `true` sur le domaine public, et
+     * casserait le jour où l'on veut mesurer une page qu'on ne veut pas
+     * indexer, ou l'inverse.
+     *
+     * Derrière la clé d'aperçu il vaut `false` : compter ses propres
+     * visites de relecture fausserait ses chiffres.
+     */
+    analytics: boolean;
+    /**
      * Où mènent les boutons payants de la page.
      *
      * **Obligatoire, jamais deviné.** Sans lui, les boutons continuent
@@ -154,6 +178,7 @@ export function renderSalesPage(
     opts.indexable
       ? ""
       : `<meta name="robots" content="noindex, nofollow">`,
+    opts.analytics ? scriptAnalyticsGoogle() : "",
   ]
     .filter(Boolean)
     .join("\n");
