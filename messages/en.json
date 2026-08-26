@@ -852,6 +852,7 @@
     "upgradeCancel": "Not now",
     "upgradeDone": "Done. Your new access lands in a few seconds.",
     "downgradeHint": "To move to a cheaper plan, cancel your subscription: you keep your access until the date you already paid for, then you pick the plan you want.",
+    "planStateUnknown": "We are checking your subscription. Reload the page in a moment.",
     "paymentsManaged": "Payments are handled by Systeme.io. You can change plan at any time.",
     "paymentsManagedReseller": "Your payments are handled by your provider. Contact them for any billing question.",
     "dangerZone": "Danger zone",

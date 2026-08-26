@@ -239,3 +239,114 @@ export function monteeVersProduit(
   if (!produit) return null;
   return cibles.includes(produit.id) ? produit.id : null;
 }
+
+// ---------------------------------------------------------------------
+// CE QUE FAIT LE BOUTON DE L'ÉCRAN DES FORMULES
+// ---------------------------------------------------------------------
+//
+// Béné, 26 août 2026 : "là où on met des liens pour upgrader ou
+// downgrader un abo... il faut penser à TOUT et ne RIEN laisser au
+// hasard."
+//
+// -- CE QUI MARCHAIT DÉJÀ, ET QU'IL NE FAUT PAS CASSER ----------------
+//
+// L'écran appelle bien `/api/billing/change-plan` quand la personne
+// paie chez nous : le travail du 23 août a bien atterri. Un abonné
+// Stripe ou PayPal MONTE son abonnement, il n'en ouvre pas un second.
+//
+// Et le lien vers un bon de commande Systeme.io, plus bas, n'est PAS un
+// oubli pour un abonné Systeme.io : c'est leur webhook qui annule
+// l'ancien abonnement quand le nouveau est pris chez eux. Le remplacer
+// par NOTRE bon de commande ouvrirait un abonnement Stripe pendant que
+// leur prélèvement continue. Ce serait CRÉER le bug, pas le fermer.
+//
+// -- CE QUI MANQUAIT VRAIMENT -----------------------------------------
+//
+// L'écran ne distinguait pas "elle n'a pas d'abonnement chez nous" de
+// "je n'ai pas pu regarder". `/api/billing/change-plan` est appelé avec
+// un `.catch(() => {})`, donc une panne réseau d'une seconde rendait
+// une abonnée Stripe indiscernable d'une utilisatrice en gratuit, et
+// lui affichait un bon de commande. C'est la règle du 23 août, mot pour
+// mot : "je n'ai rien trouvé" et "je n'ai pas pu regarder" sont deux
+// réponses différentes.
+//
+// Et une utilisatrice en GRATUIT partait chez Systeme.io alors que nous
+// avons notre propre bon de commande depuis le 22 août, donc sans le
+// `?ref=` de l'affiliée qui l'a amenée.
+//
+// -- L'ÉTAT EST UN PARAMÈTRE, JAMAIS UNE DÉDUCTION --------------------
+//
+// `abonnement` est OBLIGATOIRE et porte les quatre cas. Le compilateur
+// refuse un appelant qui se tait, et personne ne peut plus retomber sur
+// "pas de nouvelle, bonne nouvelle" quand il s'agit d'argent.
+
+/** Ce que le serveur a pu établir sur l'abonnement de cette personne. */
+export type EtatAbonnement =
+  /** On n'a pas encore la réponse, ou l'appel a échoué. */
+  | "inconnu"
+  /** Aucun abonnement : elle est en gratuit. */
+  | "aucun"
+  /** Elle paie chez NOUS (Stripe ou PayPal). */
+  | "chez-nous"
+  /** Elle paie encore par un tunnel Systeme.io historique. */
+  | "systeme-io";
+
+export type ActionDuBouton =
+  | { action: "actuel" }
+  | { action: "inclus" }
+  /** Notre bon de commande : elle n'a rien en cours. */
+  | { action: "commander"; produit: OwnerProductId }
+  /** Le changement de palier avec prorata. */
+  | { action: "changer"; produit: OwnerProductId }
+  /** Le bon de commande Systeme.io, qui annule l'ancien de leur côté. */
+  | { action: "commander-systeme-io"; produit: OwnerProductId }
+  /** Rien à afficher, et l'écran DIT pourquoi. */
+  | { action: "refuse"; raison: RefusDeChangement | "etat-inconnu" };
+
+/**
+ * Ce que le bouton d'une carte de palier doit faire.
+ *
+ * L'ordre des cas n'est pas décoratif : l'état INCONNU passe en premier,
+ * avant même de regarder les paliers. Proposer quoi que ce soit à
+ * quelqu'un dont on ignore l'abonnement, c'est risquer de le faire
+ * payer deux fois.
+ */
+export function actionDuBouton(args: {
+  /** Le palier facturé aujourd'hui, ou null en gratuit. */
+  actuelId: string | null | undefined;
+  /** Le palier de la carte. */
+  cibleId: string | null | undefined;
+  /** Ce que le serveur a pu établir. Jamais deviné. */
+  abonnement: EtatAbonnement;
+  /** Un accès à vie n'est jamais remplacé par un abonnement. */
+  aVie?: boolean;
+}): ActionDuBouton {
+  const cible = findOwnerProduct(args.cibleId);
+  if (!cible) return { action: "refuse", raison: "produit_inconnu" };
+
+  if (args.aVie) return { action: "inclus" };
+
+  // ON NE PROPOSE RIEN QUAND ON NE SAIT PAS.
+  if (args.abonnement === "inconnu") {
+    return { action: "refuse", raison: "etat-inconnu" };
+  }
+
+  if (args.abonnement === "aucun") {
+    return { action: "commander", produit: cible.id };
+  }
+
+  if (args.abonnement === "systeme-io") {
+    const actuel = findOwnerProduct(args.actuelId);
+    if (actuel && sensDuChangement(actuel, cible) === "identique") {
+      return { action: "actuel" };
+    }
+    // On ne juge PAS le sens ici : c'est Systeme.io qui gère la bascule
+    // d'un de leurs plans à l'autre, dans les deux sens.
+    return { action: "commander-systeme-io", produit: cible.id };
+  }
+
+  const decide = deciderChangement({ actuelId: args.actuelId, cibleId: args.cibleId });
+  if (decide.ok) return { action: "changer", produit: cible.id };
+  if (decide.raison === "deja_sur_ce_palier") return { action: "actuel" };
+  return { action: "refuse", raison: decide.raison ?? "produit_inconnu" };
+}

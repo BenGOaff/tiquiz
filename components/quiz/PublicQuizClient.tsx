@@ -49,6 +49,7 @@ import {
 import { resolveShareNetworks } from "@/lib/quiz/shareNetworks";
 import { buildResultShareText, buildShareText, cleanShareUrl } from "@/lib/quiz/shareText";
 import { pickProfileWinner, tallyVotes, tieBreakMode, type ProfileVote } from "@/lib/quiz/profileWinner";
+import { tiquizDiscoveryUrl } from "@/lib/affiliate/lienDecouverte";
 import { ensureExternalUrl } from "@/lib/url";
 import { celebrate } from "@/lib/celebrate";
 import { generateResultCard } from "@/lib/resultCard";
@@ -5072,13 +5073,6 @@ const tiquizFooterTexts: Record<string, string> = {
 
 
 // URL de découverte Tiquiz côté tipote.fr. Si le créateur a posé son
-// ID affilié dans Settings, on attache ?sa=<id> pour qu'il touche une
-// commission sur les inscriptions qui en découlent.
-function tiquizDiscoveryUrl(affiliateId: string | null | undefined): string {
-  const base = "https://www.tipote.fr/part-tiquiz";
-  if (!affiliateId) return base;
-  return `${base}?sa=${encodeURIComponent(affiliateId)}`;
-}
 
 function TiquizFooter({ locale, customText, customUrl, logoUrl, tipoteAffiliateId, hidden }: { locale?: string | null; customText?: string | null; customUrl?: string | null; logoUrl?: string | null; tipoteAffiliateId?: string | null; hidden?: boolean | null }) {
   // Plan payant qui a choisi de masquer completement le pied de page : on

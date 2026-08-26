@@ -1,3 +1,5 @@
+export { tiquizDiscoveryUrl } from "@/lib/affiliate/lienDecouverte";
+
 // lib/popquiz/appearance.ts
 //
 // Helpers de rendu de l'apparence d'un popquiz public — partagés
@@ -68,12 +70,3 @@ export function buildPlayerWrapperStyle(
   return {};
 }
 
-/** URL d'affiliation Tiquiz côté tipote.fr. Si le créateur a posé
- *  son ID affilié SIO dans Settings, on attache ?sa=<id> pour qu'il
- *  touche une commission sur les inscriptions qui découlent de ce
- *  popquiz. Sinon, lien direct (non tracké mais fonctionnel). */
-export function tiquizDiscoveryUrl(affiliateId: string | null | undefined): string {
-  const base = "https://www.tipote.fr/part-tiquiz";
-  if (!affiliateId) return base;
-  return `${base}?sa=${encodeURIComponent(affiliateId)}`;
-}
