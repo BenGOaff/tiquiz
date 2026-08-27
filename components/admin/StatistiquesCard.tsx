@@ -26,6 +26,7 @@ import { AlertTriangle, Loader2, RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { BASE_MIN_CHURN, type Mrr, type PointChurn } from "@/lib/admin/mrr";
 import {
   buildAdminStats,
   moisLabel,
@@ -289,6 +290,135 @@ export default function StatistiquesCard() {
     );
   }
 
+/**
+ * LE REVENU RÉCURRENT, EN HAUT DE L'ÉCRAN (Béné, 27 août 2026).
+ *
+ * "Oui je veux mon MRR et mon churn facilement trouvables."
+ *
+ * Deux chiffres et pas un, parce qu'ils ne disent pas la même chose :
+ * ce qui se renouvellera, et ce qui paie encore mais a déjà donné son
+ * préavis. Les fondre en un seul aurait gonflé le premier.
+ *
+ * La phrase sur le catalogue n'est pas de la modestie : un abonné venu
+ * de Systeme.io sur un ancien tarif est compté au prix d'aujourd'hui, et
+ * quelqu'un qui compare ce chiffre à son relevé bancaire doit savoir
+ * pourquoi il ne tombe pas au centime.
+ */
+function RevenuRecurrent({ mrr }: { mrr: Mrr }) {
+  return (
+    <Card>
+      <CardContent className="py-4">
+        <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
+          <div>
+            <p className="text-xs text-muted-foreground">Revenu récurrent mensuel</p>
+            <p className="mt-1 text-3xl font-bold">{euros(mrr.cents)}</p>
+            <p className="text-xs text-muted-foreground">
+              {mrr.abonnes} abonnement{mrr.abonnes > 1 ? "s" : ""} qui se renouvelle
+              {mrr.abonnes > 1 ? "nt" : ""}
+            </p>
+          </div>
+          {mrr.partants > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground">Dont le préavis est posé</p>
+              <p className="mt-1 text-3xl font-bold text-amber-600">-{euros(mrr.enSursisCents)}</p>
+              <p className="text-xs text-muted-foreground">
+                {mrr.partants} personne{mrr.partants > 1 ? "s" : ""} qui paie
+                {mrr.partants > 1 ? "nt" : ""} encore mais ne se renouvellera
+                {mrr.partants > 1 ? "ont" : ""} pas
+              </p>
+            </div>
+          )}
+        </div>
+
+        {mrr.parPlan.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+            {mrr.parPlan.map((p) => (
+              <span key={p.plan} className="text-muted-foreground">
+                <span className="font-medium text-foreground">{p.plan}</span> : {p.abonnes} ({euros(p.cents)})
+              </span>
+            ))}
+          </div>
+        )}
+
+        <p className="mt-3 text-xs text-muted-foreground">
+          Calculé aux tarifs du catalogue d&apos;aujourd&apos;hui, l&apos;annuel ramené au mois.
+          Un abonnement arrivé par Systeme.io sur un ancien tarif est donc compté au prix actuel.
+          Les accès à vie n&apos;y sont pas : ils ne se renouvellent pas.
+        </p>
+
+        {mrr.nonChiffrables.length > 0 && (
+          <p className="mt-2 text-xs text-amber-700">
+            Non compté, faute de tarif connu :{" "}
+            {mrr.nonChiffrables.map((n) => `${n.personnes} en ${n.plan}`).join(", ")}.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * LE CHURN, ET SON REFUS DE CALCULER.
+ *
+ * Sur une base de 3 personnes, un départ vaut 33 %. Le taux n'est donc
+ * calculé qu'à partir de `BASE_MIN_CHURN` ; en dessous on montre les
+ * effectifs bruts et on le DIT. C'est la règle du funnel de Jocelyne
+ * (4 août) transposée à l'argent : la retenue ne s'obtient pas en la
+ * demandant, elle s'obtient en refusant de calculer.
+ */
+function Churn({ serie }: { serie: PointChurn[] }) {
+  // Les six derniers mois : au delà, la ligne du haut est vide et fait
+  // croire que la donnée manque, alors que le business n'existait pas.
+  const lignes = serie.slice(-6).reverse();
+  return (
+    <Card>
+      <CardContent className="py-4">
+        <p className="text-sm font-semibold">Churn mensuel</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          La part des abonnements qui se sont arrêtés dans le mois, sur ceux qui étaient
+          en cours au premier jour.
+        </p>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full min-w-[26rem] text-sm">
+            <thead>
+              <tr className="text-left text-xs text-muted-foreground">
+                <th className="pb-1 font-medium">Mois</th>
+                <th className="pb-1 text-right font-medium">Payants au début</th>
+                <th className="pb-1 text-right font-medium">Nouveaux</th>
+                <th className="pb-1 text-right font-medium">Partis</th>
+                <th className="pb-1 text-right font-medium">Taux</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lignes.map((l) => (
+                <tr key={l.mois} className="border-t">
+                  <td className="py-1.5">{moisLabel(l.mois)}</td>
+                  <td className="py-1.5 text-right tabular-nums">{l.base}</td>
+                  <td className="py-1.5 text-right tabular-nums text-emerald-700">
+                    {l.nouveaux > 0 ? `+${l.nouveaux}` : "0"}
+                  </td>
+                  <td className="py-1.5 text-right tabular-nums">{l.partis}</td>
+                  <td className="py-1.5 text-right tabular-nums">
+                    {l.tauxPct === null ? (
+                      <span className="text-muted-foreground">trop peu</span>
+                    ) : (
+                      `${l.tauxPct} %`
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          En dessous de {BASE_MIN_CHURN} payants au premier jour du mois, le taux n&apos;est pas
+          calculé : un départ sur trois personnes ferait 33 %, ce qui ne dit rien de ton business.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
   if (!stats) return null;
 
   const moisCourant = stats.mois[stats.mois.length - 1];
@@ -306,6 +436,8 @@ export default function StatistiquesCard() {
           Rafraîchir
         </Button>
       </div>
+
+      <RevenuRecurrent mrr={stats.mrr} />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         {[
@@ -349,6 +481,7 @@ export default function StatistiquesCard() {
         serie={stats.departs}
         sousTitre="Abonnements résiliés. En perdre est normal : ce qui compte est le rapport avec la colonne des ventes."
       />
+      <Churn serie={stats.churn} />
       <Plans plans={stats.plans} />
     </div>
   );

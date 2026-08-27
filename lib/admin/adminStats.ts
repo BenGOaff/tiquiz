@@ -29,6 +29,7 @@
 // la règle regarde la donnée, elle n'est pas câblée sur une date.
 
 import type { Person } from "./people";
+import { buildMrr, serieChurn, type Mrr, type PointChurn } from "@/lib/admin/mrr";
 import type { Sale } from "@/lib/checkout/sales";
 import { readSaleProduct, totauxParProduit, type Produit, type TotalProduit } from "./saleProduct";
 
@@ -234,6 +235,18 @@ export interface StatsAdmin {
   parProduit: TotalProduit[];
   /** Les ventes du mois en cours, par produit. */
   ventesParProduit: { produit: Produit; valeur: number }[];
+  /**
+   * LE REVENU RÉCURRENT ET LE CHURN (Béné, 27 août 2026).
+   *
+   * "Oui je veux mon MRR et mon churn facilement trouvables."
+   *
+   * Ils vivent ICI et pas dans le composant, comme le reste de cet
+   * écran : un tableau de bord qui recalcule ce que le serveur a déjà
+   * calculé finit toujours par mentir. La règle est dans
+   * `lib/admin/mrr.ts`, testée.
+   */
+  mrr: Mrr;
+  churn: PointChurn[];
 }
 
 export function buildAdminStats(
@@ -263,6 +276,10 @@ export function buildAdminStats(
     quiz: people.reduce((s, p) => s + (Number(p.quizCount) || 0), 0),
     leads: people.reduce((s, p) => s + (Number(p.leadCount) || 0), 0),
     parProduit: totauxParProduit(ventes),
+    mrr: buildMrr(people),
+    // La MÊME fenêtre que les autres séries : deux fenêtres calculées
+    // séparément donneraient deux axes différents sur le même écran.
+    churn: serieChurn(people, derniersMois(maintenant, nbMois)),
     ventesParProduit: (["tiquiz", "atelier", "inconnu"] as Produit[])
       .map((produit) => ({
         produit,

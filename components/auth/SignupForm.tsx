@@ -10,7 +10,10 @@ import { Label } from "@/components/ui/label";
 import { ArrowRight } from "lucide-react";
 import LegalFooterLinks from "@/components/legal/LegalFooterLinks";
 
-export default function SignupForm() {
+import type { Parrainage } from "@/lib/affiliate/accueilParrain";
+import { Gift } from "lucide-react";
+
+export default function SignupForm({ parrainage }: { parrainage?: Parrainage }) {
   const t = useTranslations("signupPage");
   // Le serveur renvoie une RAISON, l'ecran sait comment la dire. Chacune
   // nomme l'action a faire : "erreur lors de la creation" laisse devant
@@ -100,6 +103,35 @@ export default function SignupForm() {
             <CardTitle className="text-2xl font-bold text-center">{t("title")}</CardTitle>
             <CardDescription className="text-center">{t("desc")}</CardDescription>
           </CardHeader>
+
+          {/* QUELQU'UN L'ENVOIE, ON LE DIT (Bene, 27 aout 2026).
+              "Jocelyne te propose de tester Tiquiz gratuitement alors
+              n'hesite pas ! En plus grace a son lien tu profiteras d'un
+              mois gratuit a l'abonnement de ton choix."
+
+              La decision vient de `readParrainage`, jamais d'un test
+              recopie ici : ce bandeau annonce un CADEAU, et le cadeau est
+              refuse par `essaiPourCeCheckout` sur une affiliee inconnue,
+              en pause ou exclue. Deux endroits qui decideraient chacun de
+              leur cote finiraient par promettre ce que le checkout ne
+              donnera pas, au pire moment : la carte a la main. */}
+          {parrainage?.affiche && (
+            <div className="px-6 pb-4">
+              <div className="flex items-start gap-3 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm">
+                <Gift className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+                <div className="space-y-1">
+                  <p className="font-semibold">
+                    {parrainage.prenom
+                      ? t("parrainTitre", { prenom: parrainage.prenom })
+                      : t("parrainTitreSansNom")}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {t("parrainCadeau", { jours: parrainage.joursOfferts })}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <CardContent>
             <form onSubmit={handleSignup} className="space-y-4">

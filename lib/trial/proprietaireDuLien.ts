@@ -16,6 +16,8 @@
 // porte au premier identifiant inventé. Un cadeau manqué se rattrape,
 // une fraude non.
 
+import { prenomPublic } from "@/lib/affiliate/nomPublic";
+
 const TIPOTE_PAR_DEFAUT = "https://app.tipote.com";
 
 export interface ProprietaireDuLien {
@@ -24,9 +26,25 @@ export interface ProprietaireDuLien {
   existe: boolean;
   actif: boolean;
   email: string | null;
+  /**
+   * Son PRÉNOM, pour la nommer sur la page d'inscription (Béné, 27 août
+   * 2026 : "Jocelyne te propose de tester Tiquiz gratuitement").
+   *
+   * Tipote ne le renvoie que si elle est ACTIVE, et jamais le nom
+   * complet. `null` est un cas normal, pas une panne : l'écran dit
+   * alors "un partenaire Tiquiz", ce qui est vrai et ne trahit
+   * personne.
+   */
+  nomPublic: string | null;
 }
 
-const INCONNU: ProprietaireDuLien = { connu: false, existe: false, actif: false, email: null };
+const INCONNU: ProprietaireDuLien = {
+  connu: false,
+  existe: false,
+  actif: false,
+  email: null,
+  nomPublic: null,
+};
 
 /** L'app qui porte le registre. Validée, jamais locale (drame Véronique). */
 export function tipoteBaseUrl(env: Record<string, string | undefined> = process.env): string {
@@ -57,13 +75,22 @@ export async function proprietaireDuLien(ref: string): Promise<ProprietaireDuLie
       signal: AbortSignal.timeout(6000),
     });
     if (!res.ok) return INCONNU;
-    const j = (await res.json()) as { ok?: boolean; existe?: boolean; actif?: boolean; email?: string | null };
+    const j = (await res.json()) as {
+      ok?: boolean;
+      existe?: boolean;
+      actif?: boolean;
+      email?: string | null;
+      nomPublic?: string | null;
+    };
     if (!j.ok) return INCONNU;
     return {
       connu: true,
       existe: !!j.existe,
       actif: !!j.actif,
       email: j.email ?? null,
+      // Repassé par la MÊME règle qu'à l'émission : ce mot va dans une
+      // page publique, et la moitié d'une règle n'est pas une règle.
+      nomPublic: prenomPublic(j.nomPublic),
     };
   } catch {
     return INCONNU;

@@ -6,32 +6,42 @@
 // de compte, crées-en un gratuitement maintenant. Avec le lien affi,
 // l'envoi sur systeme io pour être abonné à la campagne etc."
 //
-// -- CE QUE CETTE PAGE FAISAIT, ET POURQUOI ÇA A CHANGÉ ---------------
+// Cette page REDIRIGEAIT vers `tipote.fr/part-tiquiz-gratuit` (décision
+// du 14 juillet). Le motif était bon à l'époque : une inscription prise
+// chez nous ne créait aucun contact chez eux, donc la personne sortait
+// de toutes les séquences email, en silence. Ce motif a disparu le
+// 25 août : `POST /api/auth/signup` crée le compte, rattache l'affiliée
+// à vie, ET crée le contact chez Systeme.io avec son étiquette.
 //
-// Elle REDIRIGEAIT vers `tipote.fr/part-tiquiz-gratuit`, décision du
-// 14 juillet 2026 : "il ne devrait pas pouvoir s'inscrire directement
-// sur Tiquiz, mais obligatoirement passer par ma page de capture
-// systeme io". Le motif était bon : une inscription prise chez nous ne
-// créait aucun contact chez eux, donc la personne sortait de toutes les
-// séquences email, en silence.
+// -- ET ON NOMME LA PERSONNE QUI ENVOIE (Béné, 27 août 2026) ----------
 //
-// Ce motif a disparu le 25 août. `POST /api/auth/signup` crée le compte,
-// rattache l'affilié à vie (`rattacherInscrit`, cookie `tq_ref` posé par
-// le middleware), ET crée le contact chez Systeme.io avec son étiquette
-// (`poserTagPlan`). Le formulaire existait depuis, et il n'était branché
-// nulle part : cette page redirigeait encore.
+// "Jocelyne te propose de tester Tiquiz gratuitement alors n'hésite pas.
+// En plus grâce à son lien tu profiteras d'un mois gratuit à
+// l'abonnement de ton choix."
+//
+// Quelqu'un qui arrive par un lien affilié a déjà entendu parler de
+// Tiquiz par quelqu'un en qui il a confiance. Le recevoir sur un
+// formulaire nu, c'est jeter cette confiance à la porte.
+//
+// Le code vient de l'URL, sinon du cookie `tq_ref` posé par le
+// middleware (`pickRef` : l'URL gagne, c'est le DERNIER lien qui a
+// amené la personne).
 //
 // -- CE QUI RESTE À FAIRE CHEZ SYSTEME.IO, ET CE N'EST PAS DU CODE ----
 //
-// Poser l'étiquette ne suffit PAS à abonner quelqu'un à une campagne :
-// leur API n'a aucun point d'entrée pour ça, c'est une AUTOMATISATION
-// (déclencheur "tag ajouté") qui le fait, et elle se crée dans leur
-// tableau de bord. Sans une règle qui écoute `tiquiz-free`, le contact
-// est bien créé et étiqueté, et il ne reçoit rien.
+// Vérifié dans son compte le 27 août : ses 51 règles d'automatisation
+// sont TOUTES déclenchées par un formulaire, AUCUNE par une étiquette.
+// Poser `tiquiz-free` ne déclenche donc rien. Il faut une règle
+// "étiquette tiquiz-free ajoutée -> inscrire à la campagne Tiquiz free",
+// sinon le contact est créé, étiqueté, et il ne reçoit rien.
 
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 
 import SignupForm from "@/components/auth/SignupForm";
+import { readParrainage, type Parrainage } from "@/lib/affiliate/accueilParrain";
+import { pickRef, REF_COOKIE, REF_PARAM } from "@/lib/affiliate/refLien";
+import { proprietaireDuLien } from "@/lib/trial/proprietaireDuLien";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +51,31 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function SignupPage() {
-  return <SignupForm />;
+export default async function SignupPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const boite = await cookies();
+  const ref = pickRef(sp[REF_PARAM], boite.get(REF_COOKIE)?.value);
+
+  let parrainage: Parrainage = { affiche: false };
+  if (ref) {
+    // Un aller-retour vers Tipote, et UNIQUEMENT quand il y a un code à
+    // résoudre : sans code c'est le cas normal, et le cas normal ne doit
+    // rien payer. `proprietaireDuLien` porte déjà son propre délai
+    // maximum et rend `connu: false` sur la moindre panne, ce qui fait
+    // taire le bandeau au lieu de retarder l'inscription.
+    const p = await proprietaireDuLien(ref);
+    parrainage = readParrainage({
+      ref,
+      connu: p.connu,
+      existe: p.existe,
+      actif: p.actif,
+      nomPublic: p.nomPublic,
+    });
+  }
+
+  return <SignupForm parrainage={parrainage} />;
 }
