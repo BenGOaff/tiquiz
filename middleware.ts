@@ -5,7 +5,7 @@
 // host down to route handlers via a request header for ownership
 // checks).
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { customDomainsEnabled, isOwnHost, normaliseHost } from "@/lib/customDomains";
@@ -13,6 +13,7 @@ import { routeTenantPath, TENANT_SLUG_PREFIX } from "@/lib/publicSlug";
 import { salesSlugForHost } from "@/lib/sales/salesHosts";
 import { readSa, SA_COOKIE, SA_MAX_AGE_SECONDS, SA_PARAM } from "@/lib/affiliate/sa";
 import { readRef, REF_COOKIE, REF_MAX_AGE_SECONDS, REF_PARAM } from "@/lib/affiliate/refLien";
+import { clicASignaler, signalerClic } from "@/lib/affiliate/signalerClic";
 
 const UI_LOCALE_COOKIE = "ui_locale";
 const SUPPORTED_LOCALES = ["en", "fr", "es", "it", "ar", "pt", "pt-BR"];
@@ -64,7 +65,7 @@ function startsWithAny(pathname: string, prefixes: string[]) {
   return prefixes.some((p) => pathname === p || pathname.startsWith(p + "/"));
 }
 
-export async function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest, event: NextFetchEvent) {
   const { pathname } = req.nextUrl;
 
   // -------------------------------------------------------------------
@@ -94,6 +95,32 @@ export async function middleware(req: NextRequest) {
   // un endroit en moins ou on pouvait l'oublier.
   const ref = readRef(req.nextUrl.searchParams.get(REF_PARAM));
   const sa = readSa(req.nextUrl.searchParams.get(SA_PARAM));
+
+  // LE CLIC EST COMPTE ICI, ET NULLE PART AILLEURS (Bene, 27 aout 2026).
+  //
+  // "Je veux UN lien affilie pour chaque page, avec l'ID de l'affilie et
+  // ca doit tout compter." Le lien reste `tiquiz.fr/?ref=jocelyne` : on
+  // ne change pas le lien de tout le monde pour nourrir un compteur, on
+  // branche le compteur sur le lien.
+  //
+  // `waitUntil` et pas `await` : la reponse part sans attendre. Le
+  // commentaire plus bas dit "on ne touche PAS a la base ici, Edge et
+  // latence" et il reste vrai, c'est justement pour ca que l'appel sort
+  // du chemin de la reponse. Une page de vente ralentie coute une vente,
+  // un clic non compte coute une ligne dans un tableau.
+  if (clicASignaler({ ref, pathname, accept: req.headers.get("accept") })) {
+    event.waitUntil(
+      signalerClic({
+        ref: ref as string,
+        pageUrl: req.nextUrl.toString(),
+        referrer: req.headers.get("referer"),
+        userAgent: req.headers.get("user-agent"),
+        // L'adresse n'est jamais stockee en clair : Tipote en garde une
+        // empreinte, qui sert au dedoublonnage sur 30 minutes.
+        ip: req.headers.get("x-forwarded-for"),
+      }),
+    );
+  }
 
   const poseSa = (res: NextResponse): NextResponse => {
     // Les deux cookies sont LISIBLES par le bon de commande : c'est LUI
