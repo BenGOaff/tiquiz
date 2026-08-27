@@ -53,6 +53,20 @@ export function tipoteBaseUrl(env: Record<string, string | undefined> = process.
  * Fonction PURE : c'est la seule décision de ce fichier, donc la seule
  * chose qui pouvait dériver, donc la seule chose à tester.
  */
+/**
+ * Le paramètre par lequel un affilié nomme son canal.
+ *
+ * Court exprès : il se dicte dans une vidéo et se recopie à la main.
+ * `?c=youtube`, `?c=newsletter`, `?c=story-mardi`.
+ */
+export const CANAL_PARAM = "c";
+
+/** Ce qu'on accepte de transporter. Le nettoyage se fait chez Tipote. */
+export function lireCanalBrut(valeur: string | null | undefined): string | null {
+  const brut = String(valeur ?? "").trim().slice(0, 40);
+  return brut || null;
+}
+
 export function clicASignaler(args: {
   ref: string | null | undefined;
   pathname: string;
@@ -74,6 +88,16 @@ export function clicASignaler(args: {
  */
 export async function signalerClic(args: {
   ref: string;
+  /**
+   * L'étiquette que l'affilié a posée lui même (`?c=youtube`), BRUTE.
+   *
+   * On ne la nettoie PAS ici, et c'est voulu : la mise en forme d'un
+   * canal vit dans `sanitizeChannel`, chez Tipote, avec le reste des
+   * règles de comptage. La recopier ici en donnerait deux versions, et
+   * le jour où elles divergent, `youtube` et `Youtube` deviennent deux
+   * canaux différents dans le tableau de l'affilié.
+   */
+  canal: string | null;
   pageUrl: string;
   referrer: string | null;
   userAgent: string | null;
