@@ -38,6 +38,8 @@
 // voit. Mieux vaut une liste courte à vérifier qu'une confiance aveugle.
 
 /** Le pays du vendeur. Tout est écrit de son point de vue. */
+import type { ControleVies } from "@/lib/facture/vies";
+
 export const PAYS_VENDEUR = "FR";
 
 /**
@@ -151,6 +153,25 @@ export interface DecisionTva {
 export function resoudreTva(args: {
   pays: string | null | undefined;
   numeroTva?: string | null;
+  /**
+   * CE QUE VIES A RÉPONDU, ET C'EST UN PARAMÈTRE OBLIGATOIRE.
+   *
+   * Béné, 27 août 2026 : "un numéro bien formé mais inexistant produit
+   * une autoliquidation injustifiée, donc de la TVA à ta charge. On peut
+   * corriger ça ?"
+   *
+   * Obligatoire, comme le `mode` des contrôles de cohérence et la `base`
+   * des commissions : on ne peut plus appeler cette fonction sans avoir
+   * dit si le numéro a été vérifié. Un défaut optionnel ferait taire la
+   * question au premier appelant qui l'oublie, et c'est exactement le
+   * chemin par lequel la TVA reviendrait à sa charge.
+   *
+   * `non-verifie` et `injoignable` donnent la même facture, et ne
+   * veulent pas dire la même chose : "on n'a pas demandé" contre "on a
+   * demandé et personne n'a répondu". Les confondre empêcherait de
+   * repérer un chemin qui a oublié d'appeler VIES.
+   */
+  vies: ControleVies;
 }): DecisionTva {
   const aCompleter: string[] = [];
   const numero = normaliserNumeroTva(args.numeroTva);
@@ -189,20 +210,32 @@ export function resoudreTva(args: {
   }
 
   if (numero) {
-    if (numeroTvaBienForme(numero, pays)) {
+    if (!numeroTvaBienForme(numero, pays)) {
+      // Numéro donné mais illisible ou d'un autre pays : on NE FAIT PAS
+      // d'autoliquidation. Facturer la TVA est réparable, l'oublier non.
+      aCompleter.push("tva-numero-invalide");
+    } else if (args.vies === "invalide") {
+      // VIES DIT QUE CE NUMÉRO N'EXISTE PAS : pas d'autoliquidation.
+      //
+      // On tombe alors dans le régime OSS, exactement comme s'il n'avait
+      // donné aucun numéro, et la raison est écrite sur la facture.
+      // Facturer la TVA est réparable (une facture rectificative) ;
+      // l'oublier ne l'est pas, et c'est elle qui la paierait.
+      aCompleter.push("tva-numero-refuse-vies");
+    } else {
       return {
         regime: "autoliquidation",
         tauxBp: 0,
         pays,
         mention: "Autoliquidation : TVA due par le preneur (article 283-2 du CGI, article 196 de la directive 2006/112/CE).",
-        // Bien formé n'est pas valide : voir l'en-tête. Tant que VIES
-        // n'est pas branché, chaque autoliquidation se vérifie une fois.
-        aCompleter: [...aCompleter, "tva-a-valider-vies"],
+        // Vérifié auprès de VIES : plus rien à contrôler à la main. Pas
+        // vérifié, ou VIES injoignable : la facture sort MARQUÉE, comme
+        // avant. Une facture qui attendrait la Commission européenne
+        // serait pire (règle du 7 août : on émet toujours).
+        aCompleter:
+          args.vies === "valide" ? aCompleter : [...aCompleter, "tva-a-valider-vies"],
       };
     }
-    // Numéro donné mais illisible ou d'un autre pays : on NE FAIT PAS
-    // d'autoliquidation. Facturer la TVA est réparable, l'oublier non.
-    aCompleter.push("tva-numero-invalide");
   }
 
   return {
