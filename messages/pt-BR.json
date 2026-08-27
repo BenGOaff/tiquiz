@@ -301,7 +301,10 @@
     "errSignup": "Erro ao criar a conta.",
     "successCheckEmail": "Conta criada! Verifique seu email para confirmar.",
     "errAlreadyRegistered": "Este endereço já tem uma conta Tiquiz. Entre, ou peça uma nova senha.",
-    "errEmailFailed": "Sua conta foi criada mas o email de confirmação não saiu. Escreva para nós e abrimos na mão."
+    "errEmailFailed": "Sua conta foi criada mas o email de confirmação não saiu. Escreva para nós e abrimos na mão.",
+    "parrainTitre": "{prenom} convida você a testar o Tiquiz gratuitamente",
+    "parrainTitreSansNom": "Você chegou pelo link de um parceiro Tiquiz",
+    "parrainCadeau": "Sua conta gratuita abre sem cartão. E se você assinar mais tarde, este link dá {jours} dias grátis no plano que escolher."
   },
   "callbackPage": {
     "loadingTitle": "Autenticação em andamento…",
