@@ -47,7 +47,7 @@ const lire = (rel: string) => fs.readFileSync(path.join(process.cwd(), rel), "ut
 
 describe("Quel taux, et pourquoi ce taux là", () => {
   test("acheteur français : 20 %, aucune mention", () => {
-    const d = resoudreTva({ pays: "FR" });
+    const d = resoudreTva({ pays: "FR", vies: "non-verifie" });
     assert.equal(d.regime, "france");
     assert.equal(d.tauxBp, 2000);
     assert.equal(d.mention, null);
@@ -57,13 +57,13 @@ describe("Quel taux, et pourquoi ce taux là", () => {
     // L'autoliquidation n'existe pas entre deux entreprises du même
     // pays. Se tromper ici, c'est facturer 0 % à tous les clients pros
     // français, et payer la TVA de sa poche au redressement.
-    const d = resoudreTva({ pays: "FR", numeroTva: "FR38909349045" });
+    const d = resoudreTva({ pays: "FR", numeroTva: "FR38909349045", vies: "non-verifie" });
     assert.equal(d.regime, "france");
     assert.equal(d.tauxBp, 2000);
   });
 
   test("entreprise belge avec numéro valide : autoliquidation à 0 %", () => {
-    const d = resoudreTva({ pays: "BE", numeroTva: "BE0123456789" });
+    const d = resoudreTva({ pays: "BE", numeroTva: "BE0123456789", vies: "non-verifie" });
     assert.equal(d.regime, "autoliquidation");
     assert.equal(d.tauxBp, 0);
     assert.match(d.mention ?? "", /[Aa]utoliquidation/);
@@ -74,14 +74,14 @@ describe("Quel taux, et pourquoi ce taux là", () => {
 
   test("particulier belge : le taux BELGE, pas le français", () => {
     // Un service électronique est taxé là où le client consomme.
-    const d = resoudreTva({ pays: "BE" });
+    const d = resoudreTva({ pays: "BE", vies: "non-verifie" });
     assert.equal(d.regime, "oss");
     assert.equal(d.tauxBp, 2100);
     assert.match(d.mention ?? "", /OSS/);
   });
 
   test("hors Union : 0 %, hors champ, et la mention le dit", () => {
-    const d = resoudreTva({ pays: "US" });
+    const d = resoudreTva({ pays: "US", vies: "non-verifie" });
     assert.equal(d.regime, "hors-ue");
     assert.equal(d.tauxBp, 0);
     assert.match(d.mention ?? "", /259 B/);
@@ -89,7 +89,7 @@ describe("Quel taux, et pourquoi ce taux là", () => {
 
   test("un numéro illisible NE DÉCLENCHE PAS l'autoliquidation", () => {
     // Facturer la TVA à tort est réparable ; l'oublier ne l'est pas.
-    const d = resoudreTva({ pays: "BE", numeroTva: "PAS-UN-NUMERO" });
+    const d = resoudreTva({ pays: "BE", numeroTva: "PAS-UN-NUMERO", vies: "non-verifie" });
     assert.equal(d.regime, "oss");
     assert.equal(d.tauxBp, 2100);
     assert.ok(d.aCompleter.includes("tva-numero-invalide"));
@@ -98,7 +98,7 @@ describe("Quel taux, et pourquoi ce taux là", () => {
   test("un numéro d'un AUTRE pays que l'adresse est refusé", () => {
     // Adresse allemande, numéro belge : soit l'adresse est fausse, soit
     // c'est une tentative. Dans les deux cas on ne l'accepte pas.
-    const d = resoudreTva({ pays: "DE", numeroTva: "BE0123456789" });
+    const d = resoudreTva({ pays: "DE", numeroTva: "BE0123456789", vies: "non-verifie" });
     assert.equal(d.regime, "oss");
     assert.ok(d.aCompleter.includes("tva-numero-invalide"));
   });
@@ -106,7 +106,7 @@ describe("Quel taux, et pourquoi ce taux là", () => {
   test("pays inconnu : on facture au taux français, et on le SIGNALE", () => {
     // On n'attend pas une adresse pour donner sa facture à quelqu'un qui
     // a payé (règle du 7 août). On émet, et on dit ce qui manque.
-    const d = resoudreTva({ pays: null });
+    const d = resoudreTva({ pays: null, vies: "non-verifie" });
     assert.equal(d.tauxBp, 2000);
     assert.ok(d.aCompleter.includes("pays"));
   });
@@ -115,7 +115,7 @@ describe("Quel taux, et pourquoi ce taux là", () => {
     // Le seul pays où le préfixe du numéro n'est pas le code du pays.
     // L'oublier ferait refuser toutes les autoliquidations grecques.
     assert.ok(numeroTvaBienForme("EL123456789", "GR"));
-    assert.equal(resoudreTva({ pays: "GR", numeroTva: "EL123456789" }).regime, "autoliquidation");
+    assert.equal(resoudreTva({ pays: "GR", numeroTva: "EL123456789", vies: "non-verifie" }).regime, "autoliquidation");
   });
 
   test("les 27 pays de l'Union ont un taux", () => {
@@ -176,8 +176,8 @@ describe("Le prix est TTC, la TVA se calcule dedans", () => {
   test("un client belge paie le MÊME montant qu'un français", () => {
     // C'est tout le sens du TTC : le montant payé ne bouge pas, c'est la
     // part de TVA qui change dedans.
-    const fr = decomposerTTC(1700, resoudreTva({ pays: "FR" }).tauxBp);
-    const be = decomposerTTC(1700, resoudreTva({ pays: "BE" }).tauxBp);
+    const fr = decomposerTTC(1700, resoudreTva({ pays: "FR", vies: "non-verifie" }).tauxBp);
+    const be = decomposerTTC(1700, resoudreTva({ pays: "BE", vies: "non-verifie" }).tauxBp);
     assert.equal(fr.totalCents, be.totalCents);
     assert.notEqual(fr.tvaCents, be.tvaCents);
   });
@@ -269,7 +269,7 @@ describe("D'une vente à une facture", () => {
   });
 
   test("une facture ordinaire", () => {
-    const f = construireFacture("facture", vente, acheteur);
+    const f = construireFacture("facture", vente, acheteur, "non-verifie");
     assert.equal(f.serie, "TQ-2026");
     assert.equal(f.totalCents, 1700);
     assert.equal(f.htCents + f.tvaCents, 1700);
@@ -285,7 +285,7 @@ describe("D'une vente à une facture", () => {
   test("UN AVOIR EST NÉGATIF, ET C'EST UN PARAMÈTRE", () => {
     // Le genre ne se déduit pas d'un montant négatif : ça marcherait
     // jusqu'au premier remboursement partiel.
-    const a = construireFacture("avoir", vente, acheteur);
+    const a = construireFacture("avoir", vente, acheteur, "non-verifie");
     assert.equal(a.totalCents, -1700);
     assert.equal(a.htCents, -1417);
     assert.equal(a.tvaCents, -283);
@@ -295,7 +295,7 @@ describe("D'une vente à une facture", () => {
   test("sans identité, on émet QUAND MÊME, en marquant", () => {
     // "il a payé le client, il doit recevoir ses accès, point barre"
     // vaut aussi pour sa facture : on ne la retient pas.
-    const f = construireFacture("facture", vente, null);
+    const f = construireFacture("facture", vente, null, "non-verifie");
     assert.equal(f.totalCents, 1700);
     assert.equal(f.tvaTauxBp, 2000);
     assert.deepEqual(f.aCompleter.sort(), ["adresse", "nom", "pays", "ville"]);

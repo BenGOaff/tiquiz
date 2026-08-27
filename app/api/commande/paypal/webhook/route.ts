@@ -55,6 +55,7 @@ import {
   type RemboursementPaypal,
 } from "@/lib/facture/paypalVente";
 import { emettreFacture, factureDeLaVente, lireFacturation } from "@/lib/facture/store";
+import { verifierVies } from "@/lib/facture/vies";
 import { marquerMoisOffertConsomme } from "@/lib/trial/moisOffertCheckout";
 import { marquerTraite, prendreLeVerrou } from "@/lib/webhooks/log";
 
@@ -191,6 +192,16 @@ async function facturerEcheance(args: {
 }): Promise<void> {
   try {
     const acheteur = await lireFacturation({ email: args.email });
+    // ON DEMANDE A VIES, ET ON N'ATTEND JAMAIS APRES LUI (Bene, 27 aout
+    // 2026 : "un numero bien forme mais inexistant produit une
+    // autoliquidation injustifiee, donc de la TVA a ta charge").
+    //
+    // `verifierVies` ne leve pas et rend `injoignable` au bout de six
+    // secondes : la facture sort alors marquee, comme avant. Une piece
+    // comptable qui attendrait la Commission europeenne serait pire.
+    const vies = acheteur?.tvaNumero
+      ? await verifierVies(acheteur.tvaNumero)
+      : ("non-verifie" as const);
     const facture = construireFacture(
       "facture",
       {
@@ -204,6 +215,7 @@ async function facturerEcheance(args: {
         emailCle: args.email,
       },
       acheteur,
+      vies,
     );
     const ligne = await emettreFacture(facture);
     if (!ligne) return;
@@ -237,6 +249,13 @@ async function avoirDuRemboursement(args: {
     const acheteur = origine
       ? lireAcheteur(origine.acheteur)
       : await lireFacturation({ email: args.email });
+    // UN AVOIR NE REJUGE PAS LA TVA DE LA FACTURE QU'IL ANNULE.
+    //
+    // Il porte la meme identite (voir juste au dessus) et doit porter le
+    // meme regime : un numero devenu invalide entre temps, ou un VIES
+    // injoignable ce jour la, produirait un avoir a 21 % pour annuler
+    // une facture a 0 %, et les deux pieces ne se compenseraient plus.
+    // `non-verifie` reproduit exactement le calcul d'origine.
     const avoir = construireFacture(
       "avoir",
       {
@@ -250,6 +269,7 @@ async function avoirDuRemboursement(args: {
         emailCle: args.email,
       },
       acheteur,
+      "non-verifie",
     );
     const ligne = await emettreFacture(avoir, origine?.id ?? null);
     if (ligne) {

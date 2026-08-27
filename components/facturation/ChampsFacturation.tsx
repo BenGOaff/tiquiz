@@ -82,6 +82,61 @@ export default function ChampsFacturation({
   // perdu.
   const [pro, setPro] = useState(!!(valeur.societe || valeur.tvaNumero));
 
+  // LE NUMÉRO DE TVA REMPLIT LE FORMULAIRE (Béné, 27 août 2026).
+  //
+  // "On peut faire que l'user rentre son numéro de tva et hop les
+  // données sont récupérées et tout ce qui doit être rempli l'est pour
+  // la facturation ?"
+  //
+  // VIES renvoie la raison sociale et l'adresse déclarées auprès de
+  // l'administration du pays : c'est plus juste qu'une saisie à la main,
+  // parce que c'est exactement ce que le fisc a dans ses fichiers. Et le
+  // numéro est vérifié TOUT DE SUITE, donc la personne apprend ici qu'il
+  // est faux, au lieu de le découvrir sur une facture avec de la TVA
+  // qu'elle n'attendait pas.
+  const [verif, setVerif] = useState<
+    { etat: "encours" } | { etat: "fait"; verdict: string; rempli: string[] } | null
+  >(null);
+
+  async function verifierTva() {
+    const numero = String(valeur.tvaNumero ?? "").trim();
+    if (!numero) return;
+    setVerif({ etat: "encours" });
+    try {
+      const r = await fetch("/api/facturation/verifier-tva", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ numero }),
+      });
+      const j = (await r.json()) as {
+        ok?: boolean;
+        verdict?: string;
+        identite?: { nom?: string | null; adresse?: string | null };
+      };
+      if (!j.ok || !j.verdict) {
+        setVerif({ etat: "fait", verdict: "injoignable", rempli: [] });
+        return;
+      }
+      // ON NE REMPLACE JAMAIS CE QU'ELLE A ÉCRIT. On ne remplit que le
+      // vide : quelqu'un qui a corrigé son adresse la semaine dernière
+      // ne doit pas la voir écrasée par le fichier d'un État.
+      const suivant = { ...valeur };
+      const rempli: string[] = [];
+      if (j.verdict === "valide" && j.identite?.nom && !suivant.societe) {
+        suivant.societe = j.identite.nom;
+        rempli.push("Entreprise");
+      }
+      if (j.verdict === "valide" && j.identite?.adresse && !suivant.adresse1) {
+        suivant.adresse1 = j.identite.adresse;
+        rempli.push("Adresse");
+      }
+      if (rempli.length) onChange(suivant);
+      setVerif({ etat: "fait", verdict: j.verdict, rempli });
+    } catch {
+      setVerif({ etat: "fait", verdict: "injoignable", rempli: [] });
+    }
+  }
+
   const set = (champ: keyof ChampsAcheteur) => (v: string) =>
     onChange({ ...valeur, [champ]: v.trim() ? v : null });
 
@@ -154,12 +209,52 @@ export default function ChampsFacturation({
       ) : (
         <div className="space-y-3 rounded-lg border border-dashed p-3">
           <Champ label="Entreprise" valeur={valeur.societe} onChange={set("societe")} autoComplete="organization" />
-          <Champ
-            label="Numéro de TVA intracommunautaire"
-            valeur={valeur.tvaNumero}
-            onChange={set("tvaNumero")}
-            placeholder="BE0123456789"
-          />
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <Champ
+                label="Numéro de TVA intracommunautaire"
+                valeur={valeur.tvaNumero}
+                onChange={(v) => {
+                  setVerif(null);
+                  set("tvaNumero")(v);
+                }}
+                placeholder="BE0123456789"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => void verifierTva()}
+              disabled={!valeur.tvaNumero || verif?.etat === "encours"}
+              className="h-10 shrink-0 rounded-lg border px-3 text-sm font-medium hover:bg-muted disabled:opacity-50"
+            >
+              {verif?.etat === "encours" ? "Vérification..." : "Vérifier"}
+            </button>
+          </div>
+
+          {/* TROIS RÉPONSES, TROIS PHRASES. "Injoignable" est le cas le
+              plus fréquent : VIES interroge les administrations en
+              direct, il est lent et il tombe souvent. Le présenter comme
+              un refus ferait croire à un numéro faux, et la personne
+              corrigerait quelque chose de juste. */}
+          {verif?.etat === "fait" && (
+            <p
+              className={`text-xs ${
+                verif.verdict === "valide"
+                  ? "text-emerald-700"
+                  : verif.verdict === "invalide"
+                    ? "text-destructive"
+                    : "text-muted-foreground"
+              }`}
+            >
+              {verif.verdict === "valide"
+                ? verif.rempli.length
+                  ? `Numéro valide. Rempli pour toi : ${verif.rempli.join(", ").toLowerCase()}.`
+                  : "Numéro valide. Ce pays ne publie pas le nom ni l'adresse de l'entreprise, à toi de les compléter."
+                : verif.verdict === "invalide"
+                  ? "Ce numéro n'existe pas dans le registre européen. Vérifie la saisie : sans numéro valide, la TVA de ton pays s'applique."
+                  : "Le registre européen ne répond pas en ce moment. Ce n'est pas ton numéro qui est en cause, tu peux continuer."}
+            </p>
+          )}
           {/* On dit ce que ça fait, sinon personne ne le remplit, et on
               dit aussi ce que ça ne fait PAS : en France la TVA reste
               due, quel que soit le numéro. C'est la question qui revient. */}

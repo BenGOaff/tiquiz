@@ -22,6 +22,7 @@ import {
   type Vendeur,
 } from "@/lib/facture/identite";
 import { decomposerTTC, resoudreTva } from "@/lib/facture/tva";
+import type { ControleVies } from "@/lib/facture/vies";
 
 export type FactureGenre = "facture" | "avoir";
 export type FactureProvider = "paypal" | "stripe" | "manuel";
@@ -84,9 +85,18 @@ export function construireFacture(
   genre: FactureGenre,
   vente: VenteAFacturer,
   acheteurBrut: Acheteur | null | undefined,
+  /**
+   * CE QUE VIES A RÉPONDU SUR SON NUMÉRO DE TVA.
+   *
+   * Obligatoire, comme le genre : un défaut optionnel ferait taire la
+   * question au premier appelant qui l'oublie, et un numéro inexistant
+   * repartirait en autoliquidation, donc en TVA à la charge de Béné.
+   * Le compilateur refuse l'oubli.
+   */
+  vies: ControleVies,
 ): FactureAEmettre {
   const acheteur = acheteurBrut ?? ACHETEUR_VIDE;
-  const tva = resoudreTva({ pays: acheteur.pays, numeroTva: acheteur.tvaNumero });
+  const tva = resoudreTva({ pays: acheteur.pays, numeroTva: acheteur.tvaNumero, vies });
   const signe = genre === "avoir" ? -1 : 1;
   const m = decomposerTTC(Math.abs(vente.totalCents), tva.tauxBp);
 
