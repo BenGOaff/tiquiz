@@ -739,6 +739,8 @@
     "freeTextAll": "Todas las respuestas escritas, de la más reciente a la más antigua.",
     "freeTextShown": "Las {shown} respuestas más recientes de {total}. El botón Copiar las coge todas.",
     "freeTextCopy": "Copiar las respuestas",
+    "otherAnswersTitle": "Lo que escribieron en Otro",
+    "otherAnswersHint": "Las respuestas que tu lista no ofrecía.",
     "freeTextCopied": "Copiado"
   },
   "settings": {
@@ -1062,7 +1064,7 @@
     "welcomeA11y": "Tour guiado de la aplicación",
     "welcomeHeading": "¡Bienvenido{name, select, other { {name}} }!",
     "welcomeSubtitle": "Crea quiz, captura leads, haz crecer tu lista.",
-    "welcomeBody": "En 1 minuto te muestro las herramientas esenciales. ¿Listo?",
+    "welcomeBody": "En 1 minuto te muestro las herramientas esenciales. ¿Empezamos?",
     "welcomeStep1": "Crea tu primer quiz en unos clics",
     "welcomeStep2": "Captura leads cualificados automáticamente",
     "welcomeStep3": "Conecta Systeme.io para sincronizar tus contactos",
@@ -1286,6 +1288,8 @@
     "previewQuestionsCounter": "Pregunta {n}/{total}",
     "previewQuestionPh": "Texto de la pregunta…",
     "previewOptionPh": "Opción {n}…",
+    "optionIsOther": "Respuesta libre (Otro)",
+    "optionIsOtherHint": "El visitante elige esta respuesta y luego escribe la suya. Una sola por pregunta.",
     "previewAddOption": "+ Añadir una opción",
     "previewShuffleOptions": "Mezclar respuestas",
     "previewMoveUp": "Subir respuesta",

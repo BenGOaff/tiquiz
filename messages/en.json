@@ -739,6 +739,8 @@
     "freeTextAll": "Every written answer, newest first.",
     "freeTextShown": "The {shown} most recent answers out of {total}. The Copy button takes them all.",
     "freeTextCopy": "Copy the answers",
+    "otherAnswersTitle": "What they wrote in Other",
+    "otherAnswersHint": "The answers your list did not offer.",
     "freeTextCopied": "Copied"
   },
   "settings": {
@@ -1286,6 +1288,8 @@
     "previewQuestionsCounter": "Questions {n}/{total}",
     "previewQuestionPh": "Question text…",
     "previewOptionPh": "Option {n}…",
+    "optionIsOther": "Free answer (Other)",
+    "optionIsOtherHint": "The visitor picks this answer then writes their own. One per question.",
     "previewAddOption": "+ Add an option",
     "previewShuffleOptions": "Shuffle answers",
     "previewMoveUp": "Move answer up",
