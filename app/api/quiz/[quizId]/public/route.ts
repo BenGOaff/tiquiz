@@ -211,41 +211,6 @@ async function enrichSioContact(apiKey: string, contactId: number, quizResultTit
   }
 }
 
-/**
- * LE SLUG DU CHAMP QUI PORTE L'AFFILIÉ CHEZ LE VENDEUR.
- *
- * Voisin de `tiquiz_result`, écrit juste au dessus depuis des mois.
- *
- * ATTENTION, ET C'EST LE PIÈGE DE CE FICHIER : Systeme.io ACCEPTE un
- * slug qu'il ne connaît pas et l'IGNORE, sans erreur. Le vendeur doit
- * donc avoir créé ce champ dans SON compte, sinon la valeur part dans
- * le vide et rien ne le signale (drame `surname` du 25 août : un slug
- * inventé laisse le champ vide pour toujours).
- */
-const SIO_CHAMP_AFFILIE = "tiquiz_affiliate";
-
-/**
- * Écrit sur la fiche contact du vendeur QUI a amené ce lead.
- *
- * C'est la moitié "suivi" : elle sert au vendeur pour savoir d'où vient
- * son contact. Elle ne DÉCLENCHE PAS la commission, qui se joue sur le
- * cookie posé quand le visiteur atterrit sur sa page de vente (cf.
- * `attacherAffiliate`). Confondre les deux, c'est promettre à un
- * affilié un suivi qui s'affiche et un paiement qui n'arrive pas.
- */
-async function marquerAffilieSio(apiKey: string, contactId: number, valeur: string) {
-  try {
-    await sioFetch(apiKey, `/contacts/${contactId}`, {
-      method: "PATCH",
-      body: { fields: [{ slug: SIO_CHAMP_AFFILIE, value: valeur }] },
-    });
-  } catch (e) {
-    // Best-effort, comme tout ce bloc : un lead capturé ne doit jamais
-    // échouer parce qu'un champ n'a pas pu être écrit.
-    console.error("[Systeme.io affilie] Error:", e);
-  }
-}
-
 async function enrollInSioCourse(apiKey: string, courseId: string, contactId: number) {
   try {
     await sioFetch(apiKey, `/school/courses/${courseId}/enrollments`, { method: "POST", body: { contactId } });
@@ -1027,13 +992,21 @@ export async function POST(req: NextRequest, context: RouteContext) {
           }
 
           if (resultTitle) await enrichSioContact(apiKey, sioContactId, resultTitle);
-          // QUI a amené ce contact. `sa` d'abord : c'est l'identifiant
-          // que le vendeur reconnaît dans SON Systeme.io. Le code
-          // public ne lui dit rien s'il n'est pas chez nous.
-          {
-            const marque = affiliate.sa || affiliate.ref;
-            if (marque) await marquerAffilieSio(apiKey, sioContactId, marque);
-          }
+          // ON N'ÉCRIT PAS L'AFFILIÉ SUR LA FICHE CONTACT, et c'est une
+          // correction (Béné, 27 août 2026).
+          //
+          // Systeme.io porte DÉJÀ l'affilié nativement sur le contact :
+          // "Identifiant affilié" et "Affilié" apparaissent sur sa fiche,
+          // renseignés tout seuls quand la personne arrive par un lien
+          // qui porte `?sa=`. Un champ personnalisé en plus n'aurait rien
+          // ajouté, aurait demandé au vendeur de le créer dans son compte,
+          // et aurait échoué EN SILENCE s'il ne le faisait pas (Systeme.io
+          // accepte un slug inconnu et l'ignore).
+          //
+          // Ce qui déclenche leur mécanique, c'est que le visiteur
+          // atterrisse sur LEUR page avec l'identifiant : c'est le rôle de
+          // `attacherAffiliate` sur le bouton de fin de quiz. Nos colonnes
+          // `affiliate_*` servent NOS statistiques, rien d'autre.
           if (courseId) await enrollInSioCourse(apiKey, courseId, sioContactId);
           if (communityId) await addToSioCommunity(apiKey, communityId, sioContactId);
 

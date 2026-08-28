@@ -739,6 +739,8 @@
     "freeTextAll": "Tutte le risposte scritte, dalla più recente alla più vecchia.",
     "freeTextShown": "Le {shown} risposte più recenti su {total}. Il pulsante Copia le prende tutte.",
     "freeTextCopy": "Copia le risposte",
+    "sourcesTitle": "Da dove arrivano i tuoi lead",
+    "sourcesNone": "Senza affiliato",
     "otherAnswersTitle": "Cosa hanno scritto in Altro",
     "otherAnswersHint": "Le risposte che il tuo elenco non proponeva.",
     "freeTextCopied": "Copiato"

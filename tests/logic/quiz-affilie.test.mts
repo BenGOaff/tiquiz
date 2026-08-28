@@ -184,3 +184,21 @@ test("le lien légal ne porte JAMAIS l'identifiant d'affilié", () => {
   // Et il EST bien collé sur le bouton qui mène à la vente.
   assert.match(src, /lienSortant\(ctaUrl\)/);
 });
+
+test("on n'ecrit PLUS l'affilie sur la fiche contact Systeme.io", () => {
+  // Béné, 27 août : Systeme.io porte DÉJÀ l'affilié nativement sur le
+  // contact ("Identifiant affilié" et "Affilié" sur sa fiche), rempli
+  // tout seul quand la personne arrive par un lien qui porte ?sa=.
+  // Un champ personnalisé en plus n'ajoutait rien, demandait au vendeur
+  // de le créer, et échouait EN SILENCE s'il ne le faisait pas.
+  const src = readFileSync("app/api/quiz/[quizId]/public/route.ts", "utf8");
+  assert.ok(!/tiquiz_affiliate/.test(src), "le champ personnalisé est revenu");
+  assert.ok(!/marquerAffilieSio/.test(src));
+});
+
+test("la carte des sources ne s'affiche pas sans trafic affilié", () => {
+  // Une carte à une seule ligne à 100% est du bruit pour toutes les
+  // créatrices qui n'ont pas de programme d'affiliation.
+  const src = readFileSync("components/quiz/QuizResultsAnalytics.tsx", "utf8");
+  assert.match(src, /if \(avecAffilie === 0\) return \[\];/);
+});

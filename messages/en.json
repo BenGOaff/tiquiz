@@ -739,6 +739,8 @@
     "freeTextAll": "Every written answer, newest first.",
     "freeTextShown": "The {shown} most recent answers out of {total}. The Copy button takes them all.",
     "freeTextCopy": "Copy the answers",
+    "sourcesTitle": "Where your leads come from",
+    "sourcesNone": "No affiliate",
     "otherAnswersTitle": "What they wrote in Other",
     "otherAnswersHint": "The answers your list did not offer.",
     "freeTextCopied": "Copied"
