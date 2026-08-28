@@ -202,3 +202,16 @@ test("la carte des sources ne s'affiche pas sans trafic affilié", () => {
   const src = readFileSync("components/quiz/QuizResultsAnalytics.tsx", "utf8");
   assert.match(src, /if \(avecAffilie === 0\) return \[\];/);
 });
+
+test("un code d'URL doit déjà être canonique, on ne le reforme pas", () => {
+  // `sanitizeRef` est fait pour une SAISIE À LA MAIN ("Jocelyne Dupré"
+  // -> jocelyne-dupre). Appliqué à une URL publique, il transformerait
+  // `?ref=A B C` en `a-b-c` et créditerait un affilié qui s'appelle
+  // vraiment `a-b-c` et qui n'a rien fait. Le lien est fabriqué par
+  // buildAffiliateLink, donc déjà propre.
+  assert.equal(lireAffiliateDuQuiz("?ref=A%20B%20C").ref, null);
+  assert.equal(lireAffiliateDuQuiz("?ref=jocelyne_dupre").ref, null);
+  // La casse et le blanc autour ne réécrivent aucun code : eux passent.
+  assert.equal(lireAffiliateDuQuiz("?ref=JOCELYNE").ref, "jocelyne");
+  assert.equal(lireAffiliateDuQuiz("?ref=%20jocelyne%20").ref, "jocelyne");
+});
