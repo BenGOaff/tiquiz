@@ -535,6 +535,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
                 if (Number.isFinite(Number(o?.image_width))) {
                   cleaned.image_width = Math.trunc(Number(o.image_width));
                 }
+                // Reponse "Autre : precisez" (cf. lib/quiz/otherOption.ts).
+                // Ecrit UNIQUEMENT quand il vaut true : un `is_other: false`
+                // sur chaque option alourdirait le JSONB de tous les quiz
+                // pour ne rien dire de plus que son absence.
+                if (o?.is_other === true) {
+                  cleaned.is_other = true;
+                }
                 return cleaned;
               })
             : [],

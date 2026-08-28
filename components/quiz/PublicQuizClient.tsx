@@ -85,6 +85,12 @@ import {
   resultLayoutMode,
   type BeatMediaItem,
 } from "@/lib/quiz/resultBeats";
+import {
+  AUTRE_TEXTE_MAX,
+  autreTexteManquant,
+  otherOptionIndex,
+  sanitizeAutreTexte,
+} from "@/lib/quiz/otherOption";
 
 // Rich text fields contain raw HTML tags (<p>, <b>, <a>, …). Strings without any
 // tag are treated as legacy plain text so the old ✓/•/- bullet rendering still
@@ -113,7 +119,7 @@ function BeatImage({ item }: { item: BeatMediaItem }) {
   );
 }
 
-type QuizOption = { text: string; result_index: number; image_url?: string | null; points?: number | null; image_width?: number | null };
+type QuizOption = { text: string; result_index: number; image_url?: string | null; points?: number | null; image_width?: number | null; is_other?: boolean | null };
 type QuestionType =
   | "multiple_choice"
   | "rating_scale"
@@ -137,8 +143,11 @@ type QuizQuestion = {
 // Multi-select is opt-in per question via config.multi_select=true; it adds
 // the "options" variant (plural) without touching the existing single path.
 type SurveyAnswer =
-  | { kind: "option"; optionIndex: number }
-  | { kind: "options"; optionIndices: number[] }
+  // `text` ne sert QUE lorsque l'option choisie est un "Autre : précisez"
+  // (cf. lib/quiz/otherOption.ts). Il voyage a cote de l'index, jamais a
+  // sa place : la barre "Autre" doit se compter comme les autres.
+  | { kind: "option"; optionIndex: number; text?: string }
+  | { kind: "options"; optionIndices: number[]; text?: string }
   | { kind: "rating"; value: number }
   | { kind: "star"; value: number }
   | { kind: "text"; value: string };
@@ -346,6 +355,8 @@ type QuizTranslations = {
   firstNamePlaceholder: string;
   lastNamePlaceholder: string;
   phonePlaceholder: string;
+  /** Champ ouvert par une réponse "Autre : précisez". */
+  otherPlaceholder: string;
   countryPlaceholder: string;
   optional: string;
   phoneRequiredError: string;
@@ -533,6 +544,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Pr\u00e9nom",
     lastNamePlaceholder: "Nom",
     phonePlaceholder: "T\u00e9l\u00e9phone",
+    otherPlaceholder: "Ta r\u00e9ponse",
     countryPlaceholder: "Pays",
     optional: "optionnel",
     phoneRequiredError: "Le numéro de téléphone est obligatoire.",
@@ -612,6 +624,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Pr\u00e9nom",
     lastNamePlaceholder: "Nom",
     phonePlaceholder: "T\u00e9l\u00e9phone",
+    otherPlaceholder: "Votre r\u00e9ponse",
     countryPlaceholder: "Pays",
     optional: "optionnel",
     phoneRequiredError: "Le numéro de téléphone est obligatoire.",
@@ -691,6 +704,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "First name",
     lastNamePlaceholder: "Last name",
     phonePlaceholder: "Phone",
+    otherPlaceholder: "Your answer",
     countryPlaceholder: "Country",
     optional: "optional",
     phoneRequiredError: "Phone number is required.",
@@ -770,6 +784,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Nombre",
     lastNamePlaceholder: "Apellido",
     phonePlaceholder: "Tel\u00e9fono",
+    otherPlaceholder: "Tu respuesta",
     countryPlaceholder: "Pa\u00eds",
     optional: "opcional",
     phoneRequiredError: "El número de teléfono es obligatorio.",
@@ -849,6 +864,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Vorname",
     lastNamePlaceholder: "Nachname",
     phonePlaceholder: "Telefon",
+    otherPlaceholder: "Deine Antwort",
     countryPlaceholder: "Land",
     optional: "optional",
     phoneRequiredError: "Telefonnummer ist erforderlich.",
@@ -928,6 +944,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Nome",
     lastNamePlaceholder: "Sobrenome",
     phonePlaceholder: "Telefone",
+    otherPlaceholder: "A tua resposta",
     countryPlaceholder: "Pa\u00eds",
     optional: "opcional",
     phoneRequiredError: "O número de telefone é obrigatório.",
@@ -1007,6 +1024,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "Nome",
     lastNamePlaceholder: "Cognome",
     phonePlaceholder: "Telefono",
+    otherPlaceholder: "La tua risposta",
     countryPlaceholder: "Paese",
     optional: "opzionale",
     phoneRequiredError: "Il numero di telefono è obbligatorio.",
@@ -1086,6 +1104,7 @@ const translations: Record<string, QuizTranslations> = {
     firstNamePlaceholder: "\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0623\u0648\u0644",
     lastNamePlaceholder: "\u0627\u0633\u0645 \u0627\u0644\u0639\u0627\u0626\u0644\u0629",
     phonePlaceholder: "\u0627\u0644\u0647\u0627\u062a\u0641",
+    otherPlaceholder: "\u0625\u062c\u0627\u0628\u062a\u0643",
     countryPlaceholder: "\u0627\u0644\u0628\u0644\u062f",
     optional: "\u0627\u062e\u062a\u064a\u0627\u0631\u064a",
     phoneRequiredError: "رقم الهاتف مطلوب.",
@@ -1267,6 +1286,12 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
   // taps "Next". Reset whenever currentQ changes (handled in commitAnswer +
   // an effect below) so each question starts blank.
   const [multiOptionsDraft, setMultiOptionsDraft] = useState<number[]>([]);
+  // Le texte tapé dans un "Autre : précisez", et le fait que "Autre" soit
+  // choisi en choix SIMPLE. En choix simple, cliquer "Autre" ne valide
+  // rien : ça ouvre le champ. Sans cet état, l'avance automatique
+  // emporterait le visiteur avant qu'il ait écrit un mot.
+  const [autreTexte, setAutreTexte] = useState("");
+  const [autreChoisi, setAutreChoisi] = useState(false);
 
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState(() => {
@@ -2289,8 +2314,10 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
         // réponses suivantes à la mauvaise question.
         const ref = { question_index: qIdx, question_id: quiz.questions[qIdx]?.id ?? null };
         if (!ans) return ref;
-        if (ans.kind === "option") return { ...ref, option_index: ans.optionIndex };
-        if (ans.kind === "options") return { ...ref, option_indices: ans.optionIndices };
+        if (ans.kind === "option")
+          return { ...ref, option_index: ans.optionIndex, ...(ans.text ? { text: ans.text } : {}) };
+        if (ans.kind === "options")
+          return { ...ref, option_indices: ans.optionIndices, ...(ans.text ? { text: ans.text } : {}) };
         if (ans.kind === "rating") return { ...ref, rating: ans.value };
         if (ans.kind === "star") return { ...ref, stars: ans.value };
         return { ...ref, text: ans.value };
@@ -2337,6 +2364,8 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
     setAnswers(newAnswers);
     setFreeTextDraft("");
     setMultiOptionsDraft([]);
+    setAutreTexte("");
+    setAutreChoisi(false);
     setNavDir("forward");
 
     const advance = () => {
@@ -2386,7 +2415,9 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
     };
 
     const isOneTap =
-      ans.kind === "option" || ans.kind === "rating" || ans.kind === "star";
+      (ans.kind === "option" && ans.text === undefined) ||
+      ans.kind === "rating" ||
+      ans.kind === "star";
     if (isOneTap) {
       if (advanceTimerRef.current) window.clearTimeout(advanceTimerRef.current);
       advanceTimerRef.current = window.setTimeout(() => {
@@ -2411,6 +2442,8 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
     setAnswers(newAnswers);
     setFreeTextDraft("");
     setMultiOptionsDraft([]);
+    setAutreTexte("");
+    setAutreChoisi(false);
     setNavDir("forward");
     if (quiz && currentQ < quiz.questions.length - 1) {
       setCurrentQ(currentQ + 1);
@@ -2686,12 +2719,13 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
           const ref = { question_index: qIdx, question_id: quiz?.questions?.[qIdx]?.id ?? null };
           if (!ans) return ref;
           if (ans.kind === "option") {
-            return { ...ref, option_index: ans.optionIndex };
+            // `text` quand l'option choisie est un "Autre : précisez".
+            return { ...ref, option_index: ans.optionIndex, ...(ans.text ? { text: ans.text } : {}) };
           }
           if (ans.kind === "options") {
             // Multi-select: send the full sorted array. Analytics
             // (SurveyTrends / QuizResultsAnalytics) handle either shape.
-            return { ...ref, option_indices: ans.optionIndices };
+            return { ...ref, option_indices: ans.optionIndices, ...(ans.text ? { text: ans.text } : {}) };
           }
           if (ans.kind === "rating") {
             return { ...ref, rating: ans.value };
@@ -3500,6 +3534,30 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
       </span>
     );
 
+    // ─── "Autre : précisez" ─────────────────────────────────────────
+    // Le champ est rendu par UNE fonction, appelée par les deux branches
+    // à choix (liste et images). Recopier le bloc dans chacune, c'est se
+    // condamner à n'en corriger qu'un : c'est le motif de ce dépôt depuis
+    // trois mois.
+    const autreIdx = otherOptionIndex(q.options);
+    const renderAutreField = (): React.ReactNode => (
+      <div className="space-y-2">
+        <input
+          type="text"
+          value={autreTexte}
+          onChange={(e) => setAutreTexte(e.target.value.slice(0, AUTRE_TEXTE_MAX))}
+          maxLength={AUTRE_TEXTE_MAX}
+          placeholder={t.otherPlaceholder}
+          aria-label={t.otherPlaceholder}
+          autoFocus
+          className="w-full rounded-xl border-2 border-primary/50 bg-background px-4 py-3 text-base outline-none focus:border-primary"
+        />
+        <div className="text-right text-xs text-muted-foreground">
+          {autreTexte.length}/{AUTRE_TEXTE_MAX}
+        </div>
+      </div>
+    );
+
     if (qType === "rating_scale") {
       // NPS-style 0-10 scale. Config lets the creator override the bounds
       // and the endpoint labels per question; defaults give an out-of-the-box
@@ -3661,15 +3719,28 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
             {q.options.map((opt, oi) => {
               const isSelected = multiSelect
                 ? selectedSet!.has(oi)
-                : currentAnswer?.kind === "option" && currentAnswer.optionIndex === oi;
+                : autreChoisi
+                  ? oi === autreIdx
+                  : currentAnswer?.kind === "option" && currentAnswer.optionIndex === oi;
               return (
                 <button
                   key={oi}
-                  onClick={() =>
-                    multiSelect
-                      ? toggleMultiOption(oi)
-                      : commitAnswer({ kind: "option", optionIndex: oi })
-                  }
+                  onClick={() => {
+                    if (multiSelect) {
+                      toggleMultiOption(oi);
+                      return;
+                    }
+                    if (oi === autreIdx) {
+                      setAutreChoisi(true);
+                      return;
+                    }
+                    // Repartir sur une réponse de la liste referme le
+                    // champ : sinon le texte tapé partirait avec un
+                    // choix qui n'est plus "Autre".
+                    setAutreChoisi(false);
+                    setAutreTexte("");
+                    commitAnswer({ kind: "option", optionIndex: oi });
+                  }}
                   className={`select-none active:scale-[0.98] group flex flex-col rounded-xl border-2 overflow-hidden transition-all ${btnShapeClass} ${
                     isSelected
                       ? "border-primary shadow-md scale-[1.02]"
@@ -3698,17 +3769,50 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
               );
             })}
           </div>
-          {multiSelect && (
+          {/* Le champ "Autre", ouvert par le choix de cette réponse.
+              En multi-select il suit la case cochée ; en choix simple il
+              suit le clic, qui ne valide rien tant qu'il n'y a pas de
+              texte. */}
+          {autreIdx >= 0 &&
+            (multiSelect ? selectedSet!.has(autreIdx) : autreChoisi) &&
+            renderAutreField()}
+          {multiSelect ? (
             <Button
               size="lg"
               className={`w-full h-12 rounded-full ${btnShapeClass}`}
-              disabled={selectedSet!.size === 0}
-              onClick={() =>
-                commitAnswer({ kind: "options", optionIndices: Array.from(selectedSet!).sort((a, b) => a - b) })
+              disabled={
+                selectedSet!.size === 0 ||
+                autreTexteManquant(q.options, Array.from(selectedSet!), autreTexte)
               }
+              onClick={() => {
+                const picked = Array.from(selectedSet!).sort((a, b) => a - b);
+                const texte = sanitizeAutreTexte(autreTexte);
+                commitAnswer({
+                  kind: "options",
+                  optionIndices: picked,
+                  ...(picked.includes(autreIdx) && texte ? { text: texte } : {}),
+                });
+              }}
             >
               {t.nextQuestion}
             </Button>
+          ) : (
+            autreChoisi && (
+              <Button
+                size="lg"
+                className={`w-full h-12 rounded-full ${btnShapeClass}`}
+                disabled={sanitizeAutreTexte(autreTexte).length === 0}
+                onClick={() =>
+                  commitAnswer({
+                    kind: "option",
+                    optionIndex: autreIdx,
+                    text: sanitizeAutreTexte(autreTexte),
+                  })
+                }
+              >
+                {t.nextQuestion}
+              </Button>
+            )
           )}
         </div>
       );
@@ -3734,15 +3838,28 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
             {q.options.map((opt, oi) => {
               const isSelected = multiSelect
                 ? selectedSet!.has(oi)
-                : currentAnswer?.kind === "option" && currentAnswer.optionIndex === oi;
+                : autreChoisi
+                  ? oi === autreIdx
+                  : currentAnswer?.kind === "option" && currentAnswer.optionIndex === oi;
               return (
                 <button
                   key={oi}
-                  onClick={() =>
-                    multiSelect
-                      ? toggleMultiOption(oi)
-                      : commitAnswer({ kind: "option", optionIndex: oi })
-                  }
+                  onClick={() => {
+                    if (multiSelect) {
+                      toggleMultiOption(oi);
+                      return;
+                    }
+                    if (oi === autreIdx) {
+                      setAutreChoisi(true);
+                      return;
+                    }
+                    // Repartir sur une réponse de la liste referme le
+                    // champ : sinon le texte tapé partirait avec un
+                    // choix qui n'est plus "Autre".
+                    setAutreChoisi(false);
+                    setAutreTexte("");
+                    commitAnswer({ kind: "option", optionIndex: oi });
+                  }}
                   className={`text-left rounded-xl border-2 overflow-hidden transition-all duration-200 select-none active:scale-[0.98] ${btnShapeClass} ${
                     isSelected
                       ? "border-primary bg-primary/5 shadow-md scale-[1.02]"
@@ -3775,17 +3892,50 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
               );
             })}
           </div>
-          {multiSelect && (
+          {/* Le champ "Autre", ouvert par le choix de cette réponse.
+              En multi-select il suit la case cochée ; en choix simple il
+              suit le clic, qui ne valide rien tant qu'il n'y a pas de
+              texte. */}
+          {autreIdx >= 0 &&
+            (multiSelect ? selectedSet!.has(autreIdx) : autreChoisi) &&
+            renderAutreField()}
+          {multiSelect ? (
             <Button
               size="lg"
               className={`w-full h-12 rounded-full ${btnShapeClass}`}
-              disabled={selectedSet!.size === 0}
-              onClick={() =>
-                commitAnswer({ kind: "options", optionIndices: Array.from(selectedSet!).sort((a, b) => a - b) })
+              disabled={
+                selectedSet!.size === 0 ||
+                autreTexteManquant(q.options, Array.from(selectedSet!), autreTexte)
               }
+              onClick={() => {
+                const picked = Array.from(selectedSet!).sort((a, b) => a - b);
+                const texte = sanitizeAutreTexte(autreTexte);
+                commitAnswer({
+                  kind: "options",
+                  optionIndices: picked,
+                  ...(picked.includes(autreIdx) && texte ? { text: texte } : {}),
+                });
+              }}
             >
               {t.nextQuestion}
             </Button>
+          ) : (
+            autreChoisi && (
+              <Button
+                size="lg"
+                className={`w-full h-12 rounded-full ${btnShapeClass}`}
+                disabled={sanitizeAutreTexte(autreTexte).length === 0}
+                onClick={() =>
+                  commitAnswer({
+                    kind: "option",
+                    optionIndex: autreIdx,
+                    text: sanitizeAutreTexte(autreTexte),
+                  })
+                }
+              >
+                {t.nextQuestion}
+              </Button>
+            )
           )}
         </div>
       );

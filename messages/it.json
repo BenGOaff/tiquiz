@@ -739,6 +739,8 @@
     "freeTextAll": "Tutte le risposte scritte, dalla più recente alla più vecchia.",
     "freeTextShown": "Le {shown} risposte più recenti su {total}. Il pulsante Copia le prende tutte.",
     "freeTextCopy": "Copia le risposte",
+    "otherAnswersTitle": "Cosa hanno scritto in Altro",
+    "otherAnswersHint": "Le risposte che il tuo elenco non proponeva.",
     "freeTextCopied": "Copiato"
   },
   "settings": {
@@ -1286,6 +1288,8 @@
     "previewQuestionsCounter": "Domanda {n}/{total}",
     "previewQuestionPh": "Testo della domanda…",
     "previewOptionPh": "Opzione {n}…",
+    "optionIsOther": "Risposta libera (Altro)",
+    "optionIsOtherHint": "Il visitatore sceglie questa risposta poi scrive la sua. Una sola per domanda.",
     "previewAddOption": "+ Aggiungi un'opzione",
     "previewShuffleOptions": "Mescola le risposte",
     "previewMoveUp": "Sposta la risposta su",

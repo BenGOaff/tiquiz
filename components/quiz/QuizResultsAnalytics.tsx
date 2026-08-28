@@ -39,6 +39,7 @@ import {
   Award,
   BarChart3,
 } from "lucide-react";
+import { collectAutreTextes } from "@/lib/quiz/otherOption";
 
 // Donut palette: primary Tiquiz + tonal variations, repeats if > 7 slices.
 const CHART_COLORS = [
@@ -54,7 +55,7 @@ const CHART_COLORS = [
 type Question = {
   id?: string;
   question_text: string;
-  options: { text: string; result_index: number }[];
+  options: { text: string; result_index: number; is_other?: boolean | null }[];
   sort_order: number;
   /** multiple_choice (défaut), yes_no, image_choice, free_text,
    *  rating_scale, star_rating. Les trois derniers n'ont pas d'options :
@@ -382,11 +383,20 @@ export default function QuizResultsAnalytics({
           value: optionCounts[oIdx],
         };
       });
+      // LES TEXTES DU "AUTRE". Ils vivent dans la MEME réponse que
+      // l'index choisi, donc la barre "Autre" se compte comme les
+      // autres ET on peut lire ce qui a été écrit. Les deux ne disent
+      // pas la même chose : la barre dit combien de gens la liste
+      // laisse de côté, les textes disent ce qu'il aurait fallu y
+      // mettre.
+      const reponses = answersByLead
+        .map((byPos) => byPos.get(qIdx))
+        .filter((a): a is NonNullable<typeof a> => !!a);
       return {
         ...base,
         kind: "choice" as const,
         totalAnswered,
-        texts: [] as string[],
+        texts: collectAutreTextes(q.options, reponses),
         data,
       };
     });
@@ -596,29 +606,13 @@ export default function QuizResultsAnalytics({
           </h3>
           {questionStats.map((q) => {
             if (q.totalAnswered === 0) return null;
-            return (
-              <Card key={q.questionIndex}>
-                <CardContent className="pt-6">
-                  <div className="flex items-start justify-between gap-3 mb-4">
-                    <p className="font-medium text-sm">
-                      <span className="text-muted-foreground me-2">
-                        {t("questionPrefix", { n: q.questionIndex + 1 })}
-                      </span>
-                      {q.questionText}
-                    </p>
-                    <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-muted-foreground">
-                      {q.kind === "scale" && q.average !== null && (
-                        <span className="font-medium text-foreground">
-                          {t("averageRating", { value: q.average })}
-                        </span>
-                      )}
-                      {!hideCounts && t("answersCount", { count: q.totalAnswered })}
-                    </span>
-                  </div>
+            // La liste des textes sert DEUX écrans : une question de
+            // type texte libre, et les "Autre : précisez" d'une question
+            // à choix. Un seul bloc, donc une seule correction le jour
+            // où il bouge.
+            const blocTextes =
+              q.texts.length > 0 ? (
 
-                  {/* Réponses libres : on montre ce que les gens ont écrit.
-                      C'est la matière première des emails de l'autrice. */}
-                  {q.kind === "text" ? (
                     <div className="space-y-2">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-xs text-muted-foreground">
@@ -659,6 +653,31 @@ export default function QuizResultsAnalytics({
                         ))}
                       </ul>
                     </div>
+              ) : null;
+            return (
+              <Card key={q.questionIndex}>
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <p className="font-medium text-sm">
+                      <span className="text-muted-foreground me-2">
+                        {t("questionPrefix", { n: q.questionIndex + 1 })}
+                      </span>
+                      {q.questionText}
+                    </p>
+                    <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-muted-foreground">
+                      {q.kind === "scale" && q.average !== null && (
+                        <span className="font-medium text-foreground">
+                          {t("averageRating", { value: q.average })}
+                        </span>
+                      )}
+                      {!hideCounts && t("answersCount", { count: q.totalAnswered })}
+                    </span>
+                  </div>
+
+                  {/* Réponses libres : on montre ce que les gens ont écrit.
+                      C'est la matière première des emails de l'autrice. */}
+                  {q.kind === "text" ? (
+                    blocTextes
                   ) : (
                   <div className="space-y-3">
                     {q.data.map((opt, i) => {
@@ -700,6 +719,15 @@ export default function QuizResultsAnalytics({
                         </div>
                       );
                     })}
+                    {blocTextes && (
+                      <div className="space-y-2 border-t pt-4">
+                        <div>
+                          <p className="text-sm font-medium">{t("otherAnswersTitle")}</p>
+                          <p className="text-xs text-muted-foreground">{t("otherAnswersHint")}</p>
+                        </div>
+                        {blocTextes}
+                      </div>
+                    )}
                   </div>
                   )}
                 </CardContent>
