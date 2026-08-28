@@ -9,10 +9,17 @@
 // une règle écrite en commentaire n'est pas une règle : rien ne la
 // vérifiait.
 //
-// Audit du 27 août 2026, deuxième défaut : l'écran de fin envoyait
-// CHAQUE nouvelle cliente configurer une clé API Systeme.io. La plupart
-// n'ont pas de compte Systeme.io : elles arrivaient sur un champ qu'elles
-// ne peuvent pas remplir, à la seconde où il faut créer le premier quiz.
+// Audit du 27 août 2026 : l'accueil s'adressait au lecteur AU MASCULIN
+// dans 5 langues. Le filet genre-neutre du 24 août n'attrapait que le
+// féminin, donc "Prêt ?" passait.
+//
+// Ce que ce fichier NE teste PAS, et c'est délibéré : l'écran de fin
+// envoie vers les réglages pour y poser la clé API Systeme.io, et c'est
+// juste. J'avais conclu de la sortie de Systeme.io côté VENTE qu'il
+// fallait le rétrograder partout. Béné, 27 août : "ça reste LE outil de
+// BASE pour Tiquiz, synchro des leads, automatisations". La synchro des
+// leads est le coeur du produit : aller chercher sa clé EST l'étape
+// suivante.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -81,40 +88,6 @@ test("le tour envoie vers l'URL réelle de chaque entrée", () => {
   }
   // Et l'URL de l'étape "projets" reste celle de l'entrée de menu.
   assert.equal(urls.get("projects"), "/quizzes");
-});
-
-test("l'écran de fin mène à la création d'un quiz, pas aux réglages", () => {
-  assert.match(modal, /router\.push\("\/quiz\/new"\)/);
-  assert.ok(
-    !modal.includes('router.push("/settings")'),
-    "le bouton principal renvoie de nouveau vers les réglages",
-  );
-  assert.ok(
-    !modal.includes("completeGoSettings"),
-    "l'ancien libellé Systeme.io est revenu sur le bouton principal",
-  );
-});
-
-test("Systeme.io n'est plus présenté comme l'étape obligatoire", () => {
-  // L'intégration existe toujours et reste citée. Ce qui est interdit,
-  // c'est de la donner comme LA chose à faire à quelqu'un qui n'a pas
-  // de compte Systeme.io.
-  for (const l of ["fr", "en", "es", "it", "pt", "pt-BR", "ar"]) {
-    const t = JSON.parse(readFileSync(`messages/${l}.json`, "utf8")).tutorial;
-    assert.ok(t.completeGoCreate, `${l} : completeGoCreate manquant`);
-    assert.ok(
-      !/Systeme\.io/i.test(String(t.completeBody)),
-      `${l} : l'écran de fin ordonne encore de configurer Systeme.io`,
-    );
-    assert.ok(
-      !/Systeme\.io/i.test(String(t.completeGoCreate)),
-      `${l} : le bouton principal parle encore de Systeme.io`,
-    );
-    assert.ok(
-      !/Systeme\.io/i.test(String(t.tooltipComplete)),
-      `${l} : la dernière bulle ordonne encore de configurer Systeme.io`,
-    );
-  }
 });
 
 test("l'accueil du tour ne s'adresse pas au lecteur au masculin", () => {

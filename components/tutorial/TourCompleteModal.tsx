@@ -25,10 +25,10 @@ export function TourCompleteModal() {
     setPhase("completed");
   };
 
-  const handleGoCreate = () => {
+  const handleGoSettings = () => {
     setOpen(false);
     setPhase("completed");
-    router.push("/quiz/new");
+    router.push("/settings");
   };
 
   const handleOptOut = () => {
@@ -90,9 +90,9 @@ export function TourCompleteModal() {
             </div>
           </div>
 
-          <Button onClick={handleGoCreate} size="lg" className="w-full text-base gap-2">
-            <Sparkles className="w-4 h-4" />
-            {t("completeGoCreate")}
+          <Button onClick={handleGoSettings} size="lg" className="w-full text-base gap-2">
+            <Settings className="w-4 h-4" />
+            {t("completeGoSettings")}
           </Button>
 
           <Button
