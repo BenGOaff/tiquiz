@@ -541,6 +541,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
                 // pour ne rien dire de plus que son absence.
                 if (o?.is_other === true) {
                   cleaned.is_other = true;
+                  // Le mot que le visiteur voit dans son champ. Vide =
+                  // le defaut de sa langue, pas une chaine vide.
+                  const ph = String(o?.other_placeholder ?? "").trim();
+                  if (ph) cleaned.other_placeholder = ph.slice(0, 60);
                 }
                 return cleaned;
               })
