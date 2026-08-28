@@ -91,6 +91,14 @@ import {
   otherOptionIndex,
   sanitizeAutreTexte,
 } from "@/lib/quiz/otherOption";
+import {
+  AFFILIATE_VIDE,
+  affiliateAbsent,
+  attacherAffiliate,
+  lireAffiliateDuQuiz,
+  lireAffiliateEnregistre,
+  type AffiliateDuQuiz,
+} from "@/lib/quiz/affiliateRelay";
 
 // Rich text fields contain raw HTML tags (<p>, <b>, <a>, …). Strings without any
 // tag are treated as legacy plain text so the old ✓/•/- bullet rendering still
@@ -1200,6 +1208,50 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
   // shows over EVERY render path (loading / error / intro / questions /
   // result) — wrapping every early return with a Fragment would have meant
   // touching ~10 returns for no real win.
+  // ─── L'AFFILIÉ QUI A PARTAGÉ CE QUIZ (Maurice, 27 août 2026) ────────
+  //
+  // `?sa=` / `?ref=` collé à la fin du lien du quiz. On le garde d'un
+  // écran à l'autre et on le recolle sur le bouton de fin : c'est ce qui
+  // permet à un vendeur de proposer UN quiz à tous ses affiliés au lieu
+  // d'en dupliquer un par affilié.
+  //
+  // sessionStorage, PAS localStorage : un identifiant gardé des semaines
+  // attribuerait une visite d'aujourd'hui à quelqu'un qui a partagé le
+  // lien il y a un mois. La visite est la bonne portée, et ça survit au
+  // rafraîchissement, qui est le vrai risque sur un quiz de dix écrans.
+  //
+  // La clé porte le quizId : deux quiz ouverts dans le même onglet ne
+  // doivent pas se voler leur affilié.
+  const [affilie, setAffilie] = useState<AffiliateDuQuiz>(AFFILIATE_VIDE);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const cle = `tq_quiz_aff_${quizId}`;
+    const depuisUrl = lireAffiliateDuQuiz(window.location.search);
+    if (!affiliateAbsent(depuisUrl)) {
+      setAffilie(depuisUrl);
+      try {
+        window.sessionStorage.setItem(cle, JSON.stringify(depuisUrl));
+      } catch {
+        // Navigation privée stricte : on garde l'affilié en mémoire pour
+        // cette page. Mieux que rien, et rien ne casse.
+      }
+      return;
+    }
+    try {
+      const garde = window.sessionStorage.getItem(cle);
+      if (garde) setAffilie(lireAffiliateEnregistre(garde));
+    } catch {
+      // Valeur illisible : on continue sans affilié plutôt que de
+      // planter le quiz d'un visiteur.
+    }
+  }, [quizId]);
+
+  /** Un lien qui SORT du quiz, avec l'affilié recollé dessus. */
+  const lienSortant = useCallback(
+    (url: string) => attacherAffiliate(ensureExternalUrl(url), affilie),
+    [affilie],
+  );
+
   const [previewName, setPreviewName] = useState<string | null>(null);
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -2325,14 +2377,18 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
       await fetch(`/api/quiz/${quizId}/public`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ anonymous: true, answers: payload }),
+        body: JSON.stringify({
+          anonymous: true,
+          answers: payload,
+          ...(affiliateAbsent(affilie) ? {} : { affiliate: affilie }),
+        }),
       });
     } catch {
       // Non-fatal : on garde le visiteur sur le remerciement même si
       // l'insert anonyme échoue (rien à montrer comme erreur, le
       // sondage est censé être "fire-and-forget" pour le visiteur).
     }
-  }, [quiz, quizId, isPreviewMode]);
+  }, [quiz, quizId, isPreviewMode, affilie]);
 
   // Single answer-commit pathway for every question type. Auto-advances to
   // the next question (or to email capture on the last one) so the existing
@@ -2566,7 +2622,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
   useEffect(() => {
     if (!quiz || isPreviewMode) return;
     if (quiz.close_enabled !== true || quiz.close_action !== "redirect") return;
-    const url = ensureExternalUrl(quiz.close_redirect_url || "");
+    const url = lienSortant(quiz.close_redirect_url || "");
     if (url && typeof window !== "undefined") window.location.replace(url);
   }, [quiz, isPreviewMode]);
 
@@ -2749,6 +2805,10 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
             result_id: profile?.id ?? null,
             consent_given: consent,
             answers: answersPayload,
+            // L'AFFILIÉ QUI A AMENÉ CE LEAD (Maurice, 27 août 2026).
+            // Envoyé tel qu'il a été lu dans l'URL du quiz : le serveur
+            // revalide, il ne fait jamais confiance au navigateur.
+            ...(affiliateAbsent(affilie) ? {} : { affiliate: affilie }),
             // Snapshot {points, min, max} global + par axe (mode scoring).
             scores: snapshot ?? undefined,
             // event_id partagé avec le pixel navigateur → dédup CAPI.
@@ -3069,7 +3129,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
   // loader s'affiche pendant que l'effet ci-dessus renvoie le visiteur.
   // Sinon, message de fermeture + CTA optionnel.
   if (!isPreviewMode && quiz.close_enabled === true) {
-    const closeRedirect = ensureExternalUrl(quiz.close_redirect_url || "");
+    const closeRedirect = lienSortant(quiz.close_redirect_url || "");
     if (quiz.close_action === "redirect" && closeRedirect) {
       return (
         <div className="min-h-screen flex items-center justify-center" style={rootStyle}>
@@ -3077,7 +3137,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
         </div>
       );
     }
-    const closeCtaUrl = ensureExternalUrl(quiz.close_cta_url || "");
+    const closeCtaUrl = lienSortant(quiz.close_cta_url || "");
     return (
       <div className="min-h-screen flex flex-col" style={rootStyle}>
         <div className="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6 text-center">
@@ -4525,7 +4585,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
               className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug ${btnShapeClass}`}
               asChild
             >
-              <a href={ensureExternalUrl(ctaUrl)} target="_blank" rel="noopener noreferrer">
+              <a href={lienSortant(ctaUrl)} target="_blank" rel="noopener noreferrer">
                 <span
                   className="tiquiz-rich block w-full"
                   dangerouslySetInnerHTML={{ __html: sanitizeRichText(ctaText) }}
@@ -5003,7 +5063,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
             const ctaText = interp(cta.texte ?? "") || t.resultCtaDefault;
             return ctaUrl ? (
               <Button size="lg" className={`w-full min-h-[48px] h-auto py-3 px-6 text-base rounded-full whitespace-normal leading-snug ${btnShapeClass}`} asChild>
-                <a href={ensureExternalUrl(ctaUrl)} target="_blank" rel="noopener noreferrer">
+                <a href={lienSortant(ctaUrl)} target="_blank" rel="noopener noreferrer">
                   <span
                     className="tiquiz-rich"
                     dangerouslySetInnerHTML={{ __html: sanitizeRichText(ctaText) }}
