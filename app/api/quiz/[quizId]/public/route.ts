@@ -35,6 +35,7 @@ import {
   axisSlug,
   slugifyAxisLabel,
 } from "@/lib/quizScoring";
+import { affiliateAbsent, lireAffiliateObjet } from "@/lib/quiz/affiliateRelay";
 
 // No `force-dynamic`: it would make Vercel inject `Cache-Control: private, no-store`,
 // overriding the edge-SWR headers set on the GET response and forcing `cf-cache-status: DYNAMIC`.
@@ -607,6 +608,20 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
 // ── POST — submit lead + auto-tag in Systeme.io ────────────────
 
+/**
+ * L'erreur PostgREST "cette colonne n'existe pas".
+ *
+ * `42703` est le code Postgres pour un nom de colonne inconnu ; le
+ * message est lu en secours parce que PostgREST ne le remonte pas
+ * toujours de la même façon selon la version.
+ */
+function colonneInconnue(err: { code?: string | null; message?: string | null } | null): boolean {
+  if (!err) return false;
+  if (String(err.code ?? "") === "42703" || String(err.code ?? "") === "PGRST204") return true;
+  const m = String(err.message ?? "").toLowerCase();
+  return m.includes("column") && (m.includes("does not exist") || m.includes("schema cache"));
+}
+
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
     const { quizId: slugOrId } = await context.params;
@@ -705,26 +720,64 @@ export async function POST(req: NextRequest, context: RouteContext) {
     const fbp = req.cookies.get("_fbp")?.value ?? null;
     const fbc = req.cookies.get("_fbc")?.value ?? null;
 
-    const { data: lead, error } = await admin
-      .from("quiz_leads")
-      .upsert(
-        {
-          quiz_id: quizId,
-          email,
-          first_name: firstName || null,
-          last_name: lastName || null,
-          phone: phone || null,
-          country: country || null,
-          result_id: resultId,
-          consent_given: Boolean(body.consent_given),
-          ...(gender ? { gender } : {}),
-          ...(answers ? { answers } : {}),
-          ...(scoresSnapshot ? { scores: scoresSnapshot } : {}),
-        },
-        { onConflict: "quiz_id,email" },
-      )
-      .select("id, created_at")
-      .single();
+    // L'AFFILIÉ QUI A AMENÉ CE LEAD (Maurice, 27 août 2026).
+    //
+    // Revalidé ici, jamais cru sur parole : la valeur vient du
+    // navigateur, et elle finit dans une colonne puis sur la fiche
+    // contact du vendeur.
+    //
+    // On n'écrit RIEN quand il n'y a rien : sans ce garde, un deuxième
+    // passage sans affilié (le visiteur revient par un lien nu) écraserait
+    // l'affilié du premier. L'upsert se fait sur `quiz_id,email`, donc
+    // c'est le PREMIER qui l'a amené qui reste, comme partout ailleurs.
+    const affiliate = lireAffiliateObjet((body as { affiliate?: unknown }).affiliate);
+    const colonnesAffiliate = affiliateAbsent(affiliate)
+      ? {}
+      : {
+          affiliate_sa: affiliate.sa,
+          affiliate_ref: affiliate.ref,
+          affiliate_canal: affiliate.canal,
+        };
+
+    const baseLead = {
+      quiz_id: quizId,
+      email,
+      first_name: firstName || null,
+      last_name: lastName || null,
+      phone: phone || null,
+      country: country || null,
+      result_id: resultId,
+      consent_given: Boolean(body.consent_given),
+      ...(gender ? { gender } : {}),
+      ...(answers ? { answers } : {}),
+      ...(scoresSnapshot ? { scores: scoresSnapshot } : {}),
+    };
+
+    const ecrireLead = (extra: Record<string, unknown>) =>
+      admin
+        .from("quiz_leads")
+        .upsert({ ...baseLead, ...extra }, { onConflict: "quiz_id,email" })
+        .select("id, created_at")
+        .single();
+
+    let { data: lead, error } = await ecrireLead(colonnesAffiliate);
+
+    // LA MIGRATION PEUT NE PAS ÊTRE ENCORE PASSÉE, et PostgREST rejette
+    // l'écriture ENTIÈRE sur une colonne inconnue. Sans ce repli, un
+    // déploiement en avance sur la base ferait échouer TOUTES les
+    // captures : plus un seul lead, sur tous les quiz, pendant que
+    // l'écran continue d'afficher un formulaire qui a l'air de marcher.
+    //
+    // C'est exactement le drame `quiz_events.meta` (15 jours de
+    // statistiques perdues en juin), et il coûterait ici des leads, pas
+    // des compteurs.
+    if (error && Object.keys(colonnesAffiliate).length > 0 && colonneInconnue(error)) {
+      console.error(
+        "[quiz/public] colonnes affiliate absentes en base : lead enregistre SANS sa provenance. " +
+          "Appliquer supabase/migrations/20260827_quiz_lead_affilie.sql",
+      );
+      ({ data: lead, error } = await ecrireLead({}));
+    }
 
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
@@ -939,6 +992,21 @@ export async function POST(req: NextRequest, context: RouteContext) {
           }
 
           if (resultTitle) await enrichSioContact(apiKey, sioContactId, resultTitle);
+          // ON N'ÉCRIT PAS L'AFFILIÉ SUR LA FICHE CONTACT, et c'est une
+          // correction (Béné, 27 août 2026).
+          //
+          // Systeme.io porte DÉJÀ l'affilié nativement sur le contact :
+          // "Identifiant affilié" et "Affilié" apparaissent sur sa fiche,
+          // renseignés tout seuls quand la personne arrive par un lien
+          // qui porte `?sa=`. Un champ personnalisé en plus n'aurait rien
+          // ajouté, aurait demandé au vendeur de le créer dans son compte,
+          // et aurait échoué EN SILENCE s'il ne le faisait pas (Systeme.io
+          // accepte un slug inconnu et l'ignore).
+          //
+          // Ce qui déclenche leur mécanique, c'est que le visiteur
+          // atterrisse sur LEUR page avec l'identifiant : c'est le rôle de
+          // `attacherAffiliate` sur le bouton de fin de quiz. Nos colonnes
+          // `affiliate_*` servent NOS statistiques, rien d'autre.
           if (courseId) await enrollInSioCourse(apiKey, courseId, sioContactId);
           if (communityId) await addToSioCommunity(apiKey, communityId, sioContactId);
 
