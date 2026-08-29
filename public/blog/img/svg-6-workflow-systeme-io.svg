@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid meet" style="font-family:'Inter','Plus Jakarta Sans',-apple-system,system-ui,sans-serif;" role="img" aria-labelledby="tqWfTitle tqWfDesc">
+  <title id="tqWfTitle">Workflow Systeme.io déclenché par le tag posé par Tiquiz</title>
+  <desc id="tqWfDesc">Schéma d'un workflow Systeme.io qui se déclenche automatiquement à l'ajout d'un tag posé par Tiquiz, et enchaîne plusieurs actions automatiques</desc>
+
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5A6EF6"/>
+      <stop offset="100%" stop-color="#20BBE6"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#2E386E" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <style>
+    .bg { fill: #F6F7FB; }
+    .orb-i { fill: #5A6EF6; opacity: 0.07; }
+    .orb-c { fill: #20BBE6; opacity: 0.07; }
+    .hd { fill: #2E386E; font-weight: 900; font-size: 28px; letter-spacing: -0.03em; text-anchor: middle; }
+    .sub { fill: #6B7280; font-weight: 500; font-size: 15px; text-anchor: middle; }
+    .col-title { fill: #9AA0B5; font-weight: 700; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+
+    .trigger { fill: url(#grad); }
+    .step-box { fill: #fff; stroke: #E6E8F0; stroke-width: 1.5; }
+    .step-icon-bg { fill: #EEF0FE; }
+    .step-title { fill: #2E386E; font-weight: 800; font-size: 13px; }
+    .step-desc { fill: #6B7280; font-weight: 500; font-size: 11px; }
+
+    @keyframes flow { to { stroke-dashoffset: -22; } }
+    @keyframes pulse { 0%,100% { opacity: 0.85; } 50% { opacity: 1; } }
+    .flow-down { stroke-dasharray: 6 4; animation: flow 1.2s linear infinite; }
+    .pulse { animation: pulse 2s ease-in-out infinite; }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1200" height="600" rx="24"/>
+  <circle class="orb-i" cx="160" cy="120" r="200"/>
+  <circle class="orb-c" cx="1040" cy="500" r="220"/>
+
+  <text class="hd" x="600" y="55">Le tag pose dans Systeme.io déclenche le workflow</text>
+  <text class="sub" x="600" y="84">Tu prépares ce workflow une fois. Il tourne tout seul, à vie, à chaque nouveau lead.</text>
+
+  <!-- Workflow header bar -->
+  <g filter="url(#shadow)" transform="translate(80, 130)">
+    <rect x="0" y="0" width="1040" height="56" rx="14" fill="#2E386E"/>
+    <text x="20" y="36" fill="#fff" font-weight="900" font-size="14">Systeme.io · Automatisation › Workflow "Quiz – Profil Motivée"</text>
+    <g transform="translate(900, 16)">
+      <rect x="0" y="0" width="120" height="24" rx="6" fill="#20BBE6"/>
+      <text x="60" y="16" fill="#fff" font-weight="800" font-size="11" text-anchor="middle">ACTIF</text>
+    </g>
+  </g>
+
+  <!-- Trigger -->
+  <g class="pulse" transform="translate(170, 220)">
+    <rect class="trigger" x="0" y="0" width="280" height="80" rx="14"/>
+    <text x="20" y="28" fill="rgba(255,255,255,0.85)" font-size="10" font-weight="800" letter-spacing="0.1em" text-transform="uppercase">Déclencheur</text>
+    <text x="20" y="52" fill="#fff" font-size="15" font-weight="900">Ajout du tag</text>
+    <rect x="20" y="58" width="140" height="20" rx="5" fill="rgba(255,255,255,0.25)"/>
+    <text x="90" y="73" fill="#fff" font-size="11" font-weight="800" text-anchor="middle" font-family="Courier New">quiz-motivee</text>
+  </g>
+
+  <!-- Down arrow 1 -->
+  <g transform="translate(310, 305)">
+    <line class="flow-down" x1="0" y1="0" x2="0" y2="22" stroke="#20BBE6" stroke-width="3" stroke-linecap="round"/>
+    <polygon points="-6,22 0,32 6,22" fill="#20BBE6"/>
+  </g>
+
+  <!-- Action 1: Send email -->
+  <g transform="translate(170, 340)">
+    <rect class="step-box" x="0" y="0" width="280" height="62" rx="12"/>
+    <rect x="14" y="14" width="34" height="34" rx="8" fill="#EEF0FE"/>
+    <text x="31" y="36" fill="#5A6EF6" font-weight="900" font-size="14" text-anchor="middle">@</text>
+    <text class="step-title" x="58" y="28">Envoyer un email</text>
+    <text class="step-desc" x="58" y="46">"Sandra, voici ta page de résultat"</text>
+  </g>
+
+  <!-- Action 2: Course access -->
+  <g transform="translate(460, 220)">
+    <rect class="step-box" x="0" y="0" width="280" height="62" rx="12"/>
+    <rect x="14" y="14" width="34" height="34" rx="8" fill="#E3F5FC"/>
+    <text x="31" y="36" fill="#0EA2CB" font-weight="900" font-size="14" text-anchor="middle">📚</text>
+    <text class="step-title" x="58" y="28">Inscrire à la formation</text>
+    <text class="step-desc" x="58" y="46">"Programme 12 semaines · Niveau 2"</text>
+  </g>
+
+  <!-- Action 3: Community add -->
+  <g transform="translate(460, 300)">
+    <rect class="step-box" x="0" y="0" width="280" height="62" rx="12"/>
+    <rect x="14" y="14" width="34" height="34" rx="8" fill="#EEF0FE"/>
+    <text x="31" y="36" fill="#5A6EF6" font-weight="900" font-size="14" text-anchor="middle">👥</text>
+    <text class="step-title" x="58" y="28">Ajouter à la communauté</text>
+    <text class="step-desc" x="58" y="46">"Communauté Motivées"</text>
+  </g>
+
+  <!-- Action 4: Email campaign -->
+  <g transform="translate(460, 380)">
+    <rect class="step-box" x="0" y="0" width="280" height="62" rx="12"/>
+    <rect x="14" y="14" width="34" height="34" rx="8" fill="#E3F5FC"/>
+    <text x="31" y="36" fill="#0EA2CB" font-weight="900" font-size="14" text-anchor="middle">✉</text>
+    <text class="step-title" x="58" y="28">Lancer une campagne email</text>
+    <text class="step-desc" x="58" y="46">"Séquence Nurture 7 jours"</text>
+  </g>
+
+  <!-- Action 5: Tag remove -->
+  <g transform="translate(750, 220)">
+    <rect class="step-box" x="0" y="0" width="280" height="62" rx="12"/>
+    <rect x="14" y="14" width="34" height="34" rx="8" fill="#EEF0FE"/>
+    <text x="31" y="36" fill="#5A6EF6" font-weight="900" font-size="14" text-anchor="middle">⚐</text>
+    <text class="step-title" x="58" y="28">Retirer un autre tag</text>
+    <text class="step-desc" x="58" y="46">"prospect-froid" → enlevé</text>
+  </g>
+
+  <!-- Action 6: Custom field -->
+  <g transform="translate(750, 300)">
+    <rect class="step-box" x="0" y="0" width="280" height="62" rx="12"/>
+    <rect x="14" y="14" width="34" height="34" rx="8" fill="#E3F5FC"/>
+    <text x="31" y="36" fill="#0EA2CB" font-weight="900" font-size="14" text-anchor="middle">⊞</text>
+    <text class="step-title" x="58" y="28">Mettre à jour un champ</text>
+    <text class="step-desc" x="58" y="46">"profil = motivée"</text>
+  </g>
+
+  <!-- Action 7: Notification -->
+  <g transform="translate(750, 380)">
+    <rect class="step-box" x="0" y="0" width="280" height="62" rx="12"/>
+    <rect x="14" y="14" width="34" height="34" rx="8" fill="#EEF0FE"/>
+    <text x="31" y="36" fill="#5A6EF6" font-weight="900" font-size="14" text-anchor="middle">🔔</text>
+    <text class="step-title" x="58" y="28">Notifier ton équipe</text>
+    <text class="step-desc" x="58" y="46">"Nouveau lead chaud à appeler"</text>
+  </g>
+
+  <!-- Footer caption -->
+  <g transform="translate(80, 480)">
+    <rect x="0" y="0" width="1040" height="60" rx="14" fill="#fff" stroke="#E6E8F0"/>
+    <text x="40" y="28" fill="#2E386E" font-size="13" font-weight="800">Tu enchaînes autant d'actions que tu veux. Une fois préparé, le workflow tourne tout seul.</text>
+    <text x="40" y="48" fill="#6B7280" font-size="12" font-weight="500">À chaque nouveau lead Tiquiz qui reçoit ce tag, le workflow se déclenche en automatique.</text>
+  </g>
+
+  <text x="1160" y="585" fill="#9AA0B5" font-size="12" font-weight="600" text-anchor="end">— tipote.fr/tiquiz</text>
+</svg>

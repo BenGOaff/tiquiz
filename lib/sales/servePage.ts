@@ -33,6 +33,17 @@ export type SalesPageMeta = {
   slug: string;
   /** L'adresse canonique une fois en ligne. */
   canonical: string;
+  /**
+   * La marque décrite en données structurées, quand la page en est la
+   * page officielle. Absente sur un aperçu : une page fermée n'a pas à
+   * se déclarer comme le site de référence de quoi que ce soit.
+   */
+  marque?: {
+    nom: string;
+    logo?: string;
+    sameAs?: string[];
+    produit?: { offres: { nom: string; prix: string; url: string }[] };
+  };
   title: string;
   description: string;
   /** L'image de partage, chemin absolu sur notre domaine. */
@@ -117,7 +128,75 @@ export function buildHeadTags(meta: SalesPageMeta): string {
     balises.push(`<meta property="og:image" content="${attr(meta.ogImage)}">`);
     balises.push(`<meta name="twitter:image" content="${attr(meta.ogImage)}">`);
   }
+  // QUI EST TIQUIZ, EN DONNÉES STRUCTURÉES.
+  //
+  // Béné, 29 août : "la page de vente tiquiz.fr ne ranke pas du tout sur
+  // google quand je tape simplement tiquiz."
+  //
+  // Sur une requête de MARQUE, un moteur cherche à relier un nom à un
+  // site : c'est le rôle d'`Organization` et de `WebSite`. Sans eux, la
+  // page est un document parmi d'autres qui contient le mot "tiquiz",
+  // et rien ne dit que c'est LE site de ce nom. Ça ne fait pas ranker à
+  // soi seul (il faut aussi que le domaine soit indexé et cité), mais
+  // c'est la pièce qu'on peut poser nous mêmes, et elle manquait.
+  if (meta.marque) balises.push(baliseMarque(meta));
   return balises.join("\n");
+}
+
+/**
+ * Le JSON-LD de la marque.
+ *
+ * `sameAs` compte autant que le reste : ce sont les autres endroits où
+ * la marque existe, et c'est ce qui permet à un moteur de recouper.
+ * Une liste vide n'est pas écrite plutôt qu'écrite vide.
+ */
+function baliseMarque(meta: SalesPageMeta): string {
+  const marque = meta.marque!;
+  const organisation: Record<string, unknown> = {
+    "@type": "Organization",
+    name: marque.nom,
+    url: meta.canonical,
+    description: meta.description,
+  };
+  if (marque.logo) organisation.logo = marque.logo;
+  if (marque.sameAs?.length) organisation.sameAs = marque.sameAs;
+
+  const donnees = {
+    "@context": "https://schema.org",
+    "@graph": [
+      organisation,
+      {
+        "@type": "WebSite",
+        name: marque.nom,
+        url: meta.canonical,
+        inLanguage: meta.locale.replace("_", "-"),
+        publisher: { "@type": "Organization", name: marque.nom },
+      },
+      ...(marque.produit
+        ? [
+            {
+              "@type": "SoftwareApplication",
+              name: marque.nom,
+              applicationCategory: "BusinessApplication",
+              operatingSystem: "Web",
+              url: meta.canonical,
+              description: meta.description,
+              offers: marque.produit.offres.map((o) => ({
+                "@type": "Offer",
+                name: o.nom,
+                price: o.prix,
+                priceCurrency: "EUR",
+                url: o.url,
+              })),
+            },
+          ]
+        : []),
+    ],
+  };
+  // Le JSON est inséré dans un `<script>` : une balise fermante à
+  // l'intérieur d'une chaîne fermerait le script et casserait la page.
+  const json = JSON.stringify(donnees).replace(/</g, "\\u003c");
+  return `<script type="application/ld+json">${json}</script>`;
 }
 
 /**

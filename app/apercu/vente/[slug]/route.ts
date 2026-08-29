@@ -29,6 +29,7 @@ import { renderSalesPage, type SalesPageMeta } from "@/lib/sales/servePage";
 import { isSalesOpen } from "@/lib/sales/previewGate";
 import { isPublicSalesHost, publicSalesCanonical } from "@/lib/sales/salesHosts";
 import { SALES_CHECKOUT_TARGETS } from "@/lib/sales/salesPageLinks";
+import { OWNER_CATALOG } from "@/lib/checkout/catalog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +47,35 @@ const PAGES: Record<string, Omit<SalesPageMeta, "slug">> = {
     description:
       "Crée un quiz personnalisé en quelques minutes, capture des emails qualifiés et envoie à chaque visiteur le résultat qui lui parle. Sans code, en 7 langues.",
     locale: "fr_FR",
+  },
+};
+
+/**
+ * QUI EST DERRIÈRE CETTE PAGE, pour les moteurs et pour les modèles.
+ *
+ * Béné, 29 août : "la page de vente tiquiz.fr ne ranke pas du tout sur
+ * google quand je tape simplement tiquiz."
+ *
+ * Sur une requête de marque, un moteur cherche à relier un NOM à un
+ * SITE. Sans `Organization` ni `WebSite`, la page n'est qu'un document
+ * qui contient le mot, et rien ne dit que c'est le site de ce nom.
+ *
+ * Les prix viennent du CATALOGUE, jamais recopiés : un tarif écrit ici
+ * et un tarif au bon de commande finiraient par diverger, et c'est
+ * Google qui afficherait l'ancien.
+ */
+const MARQUES: Record<string, SalesPageMeta["marque"]> = {
+  tiquiz: {
+    nom: "Tiquiz",
+    logo: "https://tiquiz.fr/blog/img/tipote-logo1.webp",
+    sameAs: ["https://quiz.tipote.com/", "https://www.tipote.fr/tiquiz"],
+    produit: {
+      offres: Object.values(OWNER_CATALOG).map((p) => ({
+        nom: p.label,
+        prix: (p.amountCents / 100).toFixed(2),
+        url: `https://tiquiz.fr/commande/${p.id}`,
+      })),
+    },
   },
 };
 
@@ -111,9 +141,16 @@ export async function GET(
   const publique = isPublicSalesHost(req.headers.get("host"));
   const canonique = (publique && publicSalesCanonical(slug)) || meta.canonical;
 
+  // LA MARQUE NE SE DÉCLARE QUE SUR SA PAGE OFFICIELLE.
+  //
+  // Sur un aperçu derrière clé, annoncer "ce site est LE site de
+  // Tiquiz" ferait concurrence à la vraie page sur exactement la même
+  // requête. On ne la pose donc que quand le domaine est public.
+  const marque = publique ? MARQUES[slug] : undefined;
+
   const html = renderSalesPage(
     fs.readFileSync(fichier, "utf8"),
-    { slug, ...meta, canonical: canonique },
+    { slug, ...meta, canonical: canonique, marque },
     {
       indexable: publique,
       // La mesure d'audience ne tourne que sur le domaine PUBLIC :
