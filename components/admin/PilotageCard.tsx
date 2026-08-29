@@ -86,6 +86,7 @@ const ETATS: Record<PersonStatus, { label: string; classe: string }> = {
   avie: { label: "À vie", classe: "bg-indigo-100 text-indigo-800" },
   // Elle a paye l'Atelier mais n'a pas de compte Tiquiz. Ce n'est ni un
   // essai ni un prospect : c'est exactement la liste a inviter.
+  "essai-plus": { label: "Essai Plus", classe: "bg-sky-100 text-sky-800" },
   atelier: { label: "Atelier seul", classe: "bg-sky-100 text-sky-900" },
 };
 

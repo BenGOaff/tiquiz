@@ -59,6 +59,17 @@ export interface ProfileRow {
   stripe_customer_id?: string | null;
   /** Renseigné si le compte appartient au portefeuille d'un revendeur. */
   reseller_name?: string | null;
+  /**
+   * L'ESSAI PLUS DE L'ATELIER (colonnes `affiliate_trial_*`).
+   *
+   * Pendant cet essai, `plan` vaut `monthly_plus` alors que la personne
+   * ne paie RIEN : à l'expiration, le cron la remet sur
+   * `affiliate_trial_pre_plan`. Lire le plan seul la compte donc comme
+   * abonnée payante, et son prix entre dans le revenu récurrent.
+   */
+  affiliate_trial_expires_at?: string | null;
+  affiliate_trial_pre_plan?: string | null;
+
   /** Le mois offert (migration 20260823_mois_offert.sql). */
   free_month_granted_at?: string | null;
   free_month_source?: string | null;
@@ -108,7 +119,14 @@ export type PersonStatus =
    * a payé l'Atelier (donc ce n'est pas un prospect). C'est au contraire
    * exactement la liste que Béné a envie d'inviter.
    */
-  | "atelier";
+  | "atelier"
+  /**
+   * Essai Plus offert par l'Atelier : elle a les fonctions du PLUS, et
+   * elle ne paie rien. Ni "abonné" (elle ne paie pas) ni "essai" (elle
+   * n'est pas en gratuit) : c'est un troisième cas, et le confondre
+   * avec l'un des deux fausse un chiffre dans un sens ou dans l'autre.
+   */
+  | "essai-plus";
 
 export interface Person {
   email: string;
@@ -149,6 +167,15 @@ export interface Person {
     sa: string | null;
     flag: string | null;
   } | null;
+
+  /**
+   * Son essai Plus offert par l'Atelier, ou `null`.
+   *
+   * `prePlan` est le palier sur lequel elle RETOMBERA : c'est ce qui
+   * dit si l'essai va se transformer en abonnement ou en compte
+   * gratuit, donc ce qu'on peut en espérer.
+   */
+  essaiPlus: { expiresAt: string; prePlan: string | null } | null;
 
   /** Ce que l'Atelier sait d'elle, ou `null` si elle n'y est pas. */
   atelier: {
@@ -318,6 +345,20 @@ export function readPersonStatus(input: {
   hasTiquizAccount: boolean;
   plan: string;
   churn: ChurnRow | null;
+  /**
+   * La fin de l'essai Plus offert par l'Atelier, ou `null`.
+   *
+   * **Paramètre OBLIGATOIRE, jamais deviné du plan.** C'est exactement
+   * le bug que Béné a repéré à l'oeil le 29 août : "je vois 28 clients
+   * en monthly plus ça m'étonne beaucoup, tu as compté ceux qui sont en
+   * essai gratuit de l'atelier non ?" Oui. Pendant son essai, une
+   * élève porte `plan = monthly_plus` et ne paie rien ; le plan seul ne
+   * peut pas les distinguer, et le compilateur oblige maintenant
+   * l'appelant à dire ce qu'il en sait.
+   */
+  essaiPlusJusquA: string | null;
+  /** L'horloge est un PARAMÈTRE : un test qui dépend de l'heure clignote. */
+  maintenant: Date;
 }): PersonStatus {
   if (!input.hasTiquizAccount) return "atelier";
 
@@ -326,6 +367,7 @@ export function readPersonStatus(input: {
 
   if (PLANS_A_VIE.has(p)) return "avie";
 
+
   if (churn) {
     // Il a annulé sa résiliation : il est redevenu un abonné ordinaire.
     const reactive = Boolean(churn.reactivated_at);
@@ -333,6 +375,22 @@ export function readPersonStatus(input: {
       if (churn.ended_at) return "parti";
       if (churn.cancelled_at) return "partant";
     }
+  }
+
+  // L'ESSAI PASSE APRÈS LA RÉSILIATION, et avant le plan.
+  //
+  // Après la résiliation, parce que quelqu'un qui s'en va est ce qu'il
+  // faut voir en premier : c'est l'ordre annoncé en tête de cette
+  // fonction, et le test l'exige.
+  //
+  // Avant le plan, parce que c'est tout le sujet : pendant son essai
+  // elle porte `monthly_plus` et ne paie rien. Et un essai EXPIRÉ ne
+  // compte plus : le cron a remis le plan d'avant, et une date passée
+  // ne doit pas garder quelqu'un en essai pour toujours si ce cron a
+  // raté un tour.
+  const fin = Date.parse(String(input.essaiPlusJusquA ?? ""));
+  if (Number.isFinite(fin) && fin > input.maintenant.getTime() && p !== "free") {
+    return "essai-plus";
   }
 
   return p === "free" ? "essai" : "abonne";
@@ -346,6 +404,23 @@ export function readPersonStatus(input: {
  * départs pour la même personne, un remboursement partiel) sans monter
  * de base ni de navigateur.
  */
+/**
+ * SON ESSAI PLUS, S'IL Y EN A UN.
+ *
+ * On rend la ligne telle qu'elle est en base, EXPIRÉE COMPRISE : c'est
+ * `readPersonStatus` qui décide si l'essai court encore. Filtrer ici
+ * ferait décider la lecture à la place de la règle, et il faudrait
+ * alors une horloge à deux endroits.
+ */
+function lireEssaiPlus(p: ProfileRow): Person["essaiPlus"] {
+  const fin = String(p.affiliate_trial_expires_at ?? "").trim();
+  if (!fin) return null;
+  return {
+    expiresAt: fin,
+    prePlan: String(p.affiliate_trial_pre_plan ?? "").trim() || null,
+  };
+}
+
 export function buildPeople(input: {
   profiles: ProfileRow[];
   sales: Sale[];
@@ -358,7 +433,15 @@ export function buildPeople(input: {
    * `lib/admin/atelier.ts`.
    */
   atelier?: AtelierPerson[];
+  /**
+   * L'horloge, pour savoir si un essai court encore.
+   *
+   * Paramètre et pas `new Date()` interne : un test qui dépend de
+   * l'heure clignote, et un test qui clignote est pire que pas de test.
+   */
+  maintenant?: Date;
 }): PeopleView {
+  const maintenant = input.maintenant ?? new Date();
   // 1. SEED sur la source de vérité : les comptes. Un compte sans vente
   //    doit apparaître (c'est "qui teste en gratos"), donc on part de là
   //    et jamais des paiements.
@@ -384,6 +467,7 @@ export function buildPeople(input: {
       sales: [],
       lastProvider: null,
       lastPaidAt: null,
+      essaiPlus: lireEssaiPlus(p),
       atelier: null,
       churn: null,
     });
@@ -431,6 +515,7 @@ export function buildPeople(input: {
       sales: [],
       lastProvider: null,
       lastPaidAt: null,
+      essaiPlus: null,
       atelier: infos,
       churn: null,
     });
@@ -525,6 +610,8 @@ export function buildPeople(input: {
       hasTiquizAccount: personne.hasTiquizAccount,
       plan: personne.plan,
       churn: c,
+      essaiPlusJusquA: personne.essaiPlus?.expiresAt ?? null,
+      maintenant,
     });
   }
 

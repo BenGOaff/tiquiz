@@ -203,6 +203,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         quiz_count: quizParUser[uid] ?? 0,
         lead_count: leadsParUser[uid] ?? 0,
         stripe_customer_id: (p.stripe_customer_id as string) ?? null,
+        // L'ESSAI PLUS DE L'ATELIER. Sans ces deux colonnes, une eleve
+        // en essai porte `plan = monthly_plus` et se compte comme
+        // abonnee payante : c'est ce que Bene a repere a l'oeil le
+        // 29 aout ("28 clients en monthly plus ca m'etonne beaucoup").
+        affiliate_trial_expires_at: (p.affiliate_trial_expires_at as string) ?? null,
+        affiliate_trial_pre_plan: (p.affiliate_trial_pre_plan as string) ?? null,
         // Le mois offert. Absent tant que la migration
         // 20260823_mois_offert.sql n'est pas passee : `?? null` et pas
         // une valeur par defaut, sinon l'ecran dirait "jamais eu de mois

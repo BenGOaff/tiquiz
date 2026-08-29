@@ -29,7 +29,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Loader2, Search } from "lucide-react";
+import { AlertTriangle, ChevronRight, Loader2, Search } from "lucide-react";
 
 import { CARTE } from "@/components/pilotage/carte";
 import {
@@ -90,6 +90,22 @@ const TON_PRODUIT: Record<Appartenance, { fond: string; texte: string }> = {
   "tiquiz-gratuit": { fond: "transparent", texte: "inherit" },
 };
 
+/**
+ * POURQUOI L'ATELIER NE REPOND PAS, en clair.
+ *
+ * Le serveur rend une RAISON, l'ecran ecrit la phrase : les quatre cas
+ * ne se corrigent pas au meme endroit, et un seul message pour tous
+ * obligerait a deviner lequel (le 404 muet du 19 aout).
+ */
+const RAISON_ATELIER: Record<string, string> = {
+  not_configured: "PARTNER_SHARED_SECRET absente sur ce serveur",
+  forbidden: "les deux serveurs n'ont pas le même secret",
+  "pas-deploye": "la route partenaire n'est pas déployée là-bas",
+  "trop-lent": "pas de réponse dans le délai",
+  unreachable: "serveur injoignable",
+  read_failed: "réponse inattendue",
+};
+
 const TON_STATUT: Record<PersonStatus, string> = {
   abonne: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
   avie: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
@@ -97,6 +113,7 @@ const TON_STATUT: Record<PersonStatus, string> = {
   parti: "bg-muted text-muted-foreground",
   essai: "bg-muted text-muted-foreground",
   atelier: "bg-primary/15 text-primary",
+  "essai-plus": "bg-sky-500/15 text-sky-700 dark:text-sky-300",
 };
 
 const AU_SINGULIER: Record<PersonStatus, string> = {
@@ -106,6 +123,7 @@ const AU_SINGULIER: Record<PersonStatus, string> = {
   parti: "Parti",
   essai: "Gratuit",
   atelier: "Atelier",
+  "essai-plus": "Essai Plus",
 };
 
 export function ClientsPilotage() {
@@ -115,6 +133,13 @@ export function ClientsPilotage() {
   // voudrait dire "personne n'a de compte Tipote", ce qu'on ne peut pas
   // affirmer quand la liaison n'a pas repondu.
   const [tipote, setTipote] = useState<Record<string, string> | null>(null);
+  // L'ATELIER VIT DANS UNE AUTRE APP. S'il ne repond pas, ses eleves
+  // MANQUENT a cette liste, et une liste sans eux se lit "je n'ai aucun
+  // eleve". C'est la question exacte de Bene le 29 aout : "je ne vois
+  // aucun membre de l'atelier c'est normal ?"
+  const [atelier, setAtelier] = useState<{ reachable: boolean; reason: string | null } | null>(
+    null,
+  );
   const [c, setC] = useState<CritereClients>(CRITERES_PAR_DEFAUT);
   const [combien, setCombien] = useState(50);
 
@@ -134,6 +159,7 @@ export function ClientsPilotage() {
         | { lisible: false; raison: string }
         | undefined;
       setTipote(t?.lisible ? t.comptes : null);
+      setAtelier((j.atelier as { reachable: boolean; reason: string | null }) ?? null);
       setPeople((j.people as Person[]) ?? []);
       setErreur(null);
     } catch {
@@ -182,6 +208,27 @@ export function ClientsPilotage() {
       {erreur && (
         <p className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
           {erreur}
+        </p>
+      )}
+
+      {/* UNE LISTE INCOMPLETE LE DIT. Sans cette phrase, l'absence des
+          eleves de l'Atelier se lit comme une absence d'eleves, et on
+          va chercher au mauvais endroit. */}
+      {atelier && !atelier.reachable && (
+        <p className="flex items-start gap-2 rounded-xl border border-amber-300/50 bg-amber-50 p-4 text-sm dark:bg-amber-950/20">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            <span className="font-medium">
+              Les élèves de l&apos;Atelier ne sont pas dans cette liste.
+            </span>{" "}
+            L&apos;Atelier n&apos;a pas répondu
+            {atelier.reason ? ` (${RAISON_ATELIER[atelier.reason] ?? atelier.reason})` : ""}. Ce
+            n&apos;est pas parce qu&apos;il n&apos;y en a aucun.{" "}
+            <Link href="/pilotage/sante" className="underline underline-offset-2">
+              Voir pourquoi
+            </Link>
+            .
+          </span>
         </p>
       )}
 

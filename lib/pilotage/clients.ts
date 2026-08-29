@@ -73,6 +73,7 @@ export const ORDRE_STATUTS: readonly PersonStatus[] = [
   "abonne",
   "avie",
   "partant",
+  "essai-plus",
   "atelier",
   "essai",
   "parti",
@@ -85,6 +86,7 @@ export const NOM_STATUT: Record<PersonStatus, string> = {
   atelier: "Élèves de l'Atelier",
   essai: "En gratuit",
   parti: "Partis",
+  "essai-plus": "En essai Plus offert",
 };
 
 /** Le temps d'une date, ou `null` si elle est illisible. */

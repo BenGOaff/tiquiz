@@ -36,6 +36,7 @@ function personne(over: Partial<Person> & { email: string }): Person {
     lastProvider: null,
     lastPaidAt: null,
     atelier: null,
+    essaiPlus: null,
     churn: null,
   } as Person;
 }
