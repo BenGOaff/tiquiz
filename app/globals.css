@@ -92,9 +92,29 @@
     --sidebar-accent-foreground: 230 41% 28%;
     --sidebar-border: 220 13% 90%;
     --sidebar-ring: 233 64% 61%;
+
+    /* ── LES COULEURS DU CENTRE DE PILOTAGE (29 aout 2026) ──────────
+       Une par PRODUIT, dans un ordre fixe : une couleur suit une
+       entite, jamais son rang. Trier par montant repeindrait les
+       survivants au premier filtre.
+
+       Ces six valeurs ne sont pas choisies a l'oeil : elles passent le
+       validateur de palette (bande de clarte, plancher de chroma,
+       separation pour les daltonismes protan / deutan / tritan,
+       plancher en vision normale, contraste sur le fond). Le mode
+       sombre a SES PROPRES pas, mesures sur le fond sombre : un simple
+       eclaircissement des couleurs claires echoue la bande. */
+    --pil-tiquiz: #5D6CDB;
+    --pil-atelier: #1F9D8F;
+    --pil-autre: #B86A14;
   }
 
   .dark {
+    /* Mesures sur le fond sombre, pas deduites du mode clair. */
+    --pil-tiquiz: #7280E2;
+    --pil-atelier: #22AA9B;
+    --pil-autre: #C87F1E;
+
     --background: 230 50% 12%;
     --foreground: 0 0% 95%;
     --rt-chrome-fg: 0 0% 95%;
