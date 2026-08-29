@@ -33,6 +33,7 @@ import { RegistrarInstructions } from "./RegistrarInstructions";
 type Props = {
   domain: CustomDomainRow;
   cnameTarget: string;
+  ipTarget: string;
   // Per-domain registrar info detected at add-time. Optional because
   // the parent only knows it for freshly-added domains; older rows
   // load with no detection until the user expands the card.
@@ -47,6 +48,7 @@ const POLL_MAX_ATTEMPTS = 20; // 20 × 30s = 10 min
 export function CustomDomainCard({
   domain,
   cnameTarget,
+  ipTarget,
   registrar,
   onUpdated,
   onDeleted,
@@ -289,6 +291,7 @@ export function CustomDomainCard({
               <RegistrarInstructions
                 hostname={domain.hostname}
                 cnameTarget={cnameTarget}
+                ipTarget={ipTarget}
                 registrar={registrar}
               />
             </div>
