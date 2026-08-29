@@ -6,7 +6,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { balance, previsionnel, COUT_INCONNU } from "@/lib/pilotage/business";
+import { balance, engagement, tuiles, COUT_INCONNU } from "@/lib/pilotage/business";
 
 test("le net retire ce qui est ENGAGÉ, pas ce qui est deja parti", () => {
   // Le deja verse concerne des ventes d'AVANT : l'ajouter ferait payer
@@ -39,15 +39,80 @@ test("un cout inconnu ne fabrique pas un net flatteur", () => {
   assert.equal(b.partPct, 0);
 });
 
-test("le previsionnel est une PROJECTION, et refuse d'inventer un taux", () => {
-  assert.equal(previsionnel(105900, 30), 74130);
-  // Sans part observee, on ne devine pas : un previsionnel faux qui a
-  // l'air precis est pire que pas de previsionnel.
-  assert.equal(previsionnel(105900, null), null);
+// ── CE QU'ON DOIT VRAIMENT, ET QUAND ─────────────────────────────────
+
+test("ON N'EXTRAPOLE PLUS : les trois montants sont ceux des commissions", () => {
+  // Bene, 29 aout : "on tracke les commissions, donc on peut estimer en
+  // temps reel les commissions a verser". Le premier jet appliquait au
+  // recurrent le POURCENTAGE observe sur la periode : il suffisait
+  // qu'une grosse vente affiliee tombe dedans pour que le previsionnel
+  // double sans qu'aucun abonne n'ait bouge.
+  const e = engagement({
+    ...COUT_INCONNU,
+    duesCents: 20000,
+    sousGarantieCents: 10000,
+    verseesCents: 500000,
+  })!;
+  assert.equal(e.aVerserCents, 20000);
+  assert.equal(e.sousGarantieCents, 10000);
+  assert.equal(e.engageCents, 30000);
+  assert.equal(e.verseesCents, 500000, "le deja verse est rendu, il n'entre pas dans l'engage");
+});
+
+test("A VERSER et SOUS GARANTIE ne se confondent jamais", () => {
+  // Bene : "a ajuster en fonction du delai de 30 jours et des
+  // remboursements". Un remboursement pendant la garantie annule sa
+  // commission : les fondre en un seul "a payer" annoncerait comme du
+  // du de l'argent qui peut encore disparaitre.
+  const e = engagement({ ...COUT_INCONNU, duesCents: 100, sousGarantieCents: 900 })!;
+  assert.notEqual(e.aVerserCents, e.engageCents);
+});
+
+test("liaison muette : on ne rend pas un cout de zero", () => {
+  assert.equal(engagement(null), null);
+});
+
+test("LES QUATRE CHIFFRES QUI PASSENT DEVANT, et ils sont quatre", () => {
+  // "Tu peux pas me faire ressortir des chiffres importants ? Genre en
+  // haut revenus recurrents, commissions en cours." Au dela de quatre,
+  // plus rien ne ressort et on est revenu au tableau qu'elle trouve
+  // triste.
+  const t = tuiles({
+    mrrCents: 105900,
+    abonnes: 12,
+    encaisseCents: 100000,
+    ventes: 7,
+    engagement: engagement({ ...COUT_INCONNU, duesCents: 20000, sousGarantieCents: 10000 }),
+  });
+  assert.deepEqual(
+    t.map((x) => x.cle),
+    ["recurrent", "encaisse", "commissions", "net"],
+  );
+  assert.equal(t[0].cents, 105900);
+  assert.equal(t[2].cents, 30000);
+  assert.equal(t[3].cents, 70000);
+  // Chaque grand nombre porte une phrase : sans elle il ne se compare a
+  // rien.
+  for (const x of t) assert.ok(x.note.length > 3, x.cle);
+});
+
+test("sans liaison, les tuiles qui en dependent rendent null, jamais zero", () => {
+  const t = tuiles({
+    mrrCents: 105900,
+    abonnes: 12,
+    encaisseCents: 100000,
+    ventes: 7,
+    engagement: null,
+  });
+  assert.equal(t.find((x) => x.cle === "commissions")?.cents, null);
+  assert.equal(t.find((x) => x.cle === "net")?.cents, null);
+  // Le recurrent et l'encaisse, eux, ne dependent pas de l'autre app.
+  assert.equal(t.find((x) => x.cle === "recurrent")?.cents, 105900);
 });
 
 test("des valeurs absurdes ne produisent jamais NaN", () => {
   const b = balance(Number.NaN, { ...COUT_INCONNU, duesCents: Number.NaN });
   assert.equal(Number.isFinite(b.netCents), true);
-  assert.equal(Number.isFinite(previsionnel(Number.NaN, 10) ?? 0), true);
+  const e = engagement({ ...COUT_INCONNU, duesCents: Number.NaN })!;
+  assert.equal(Number.isFinite(e.engageCents), true);
 });
