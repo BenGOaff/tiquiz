@@ -8,6 +8,10 @@
 import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isAdminEmail } from "@/lib/adminEmails";
+import { estHotePilotage, exigeAdmin } from "@/lib/pilotage/acces";
+
+/** Le domaine de l'app, pour renvoyer quelqu'un hors du sous-domaine. */
+const APP_URL_CANONIQUE = "https://quiz.tipote.com";
 import { customDomainsEnabled, isOwnHost, normaliseHost } from "@/lib/customDomains";
 import { routeTenantPath, TENANT_SLUG_PREFIX } from "@/lib/publicSlug";
 import { salesSlugForHost } from "@/lib/sales/salesHosts";
@@ -282,8 +286,19 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
     return poseSa(res);
   }
 
+  // LE CENTRE DE PILOTAGE EXIGE UN COMPTE ADMIN, par le chemin ET par
+  // le HOST.
+  //
+  // Le host n'est pas un raffinement : sur `pilotage.tipote.com`, la
+  // doc de cette version de Next donne l'ordre d'execution, et le
+  // middleware s'execute AVANT les rewrites `beforeFiles` de
+  // `next.config.ts`. Il voit donc `/clients`, jamais
+  // `/pilotage/clients` : un gate sur le seul pathname y est mort.
+  // C'est mot pour mot le drame du sous-domaine affilie de Tipote.
+  const admin = exigeAdmin(req.headers.get("host"), pathname);
+
   // Protected routes — require auth
-  if (startsWithAny(pathname, PROTECTED_PREFIXES)) {
+  if (admin || startsWithAny(pathname, PROTECTED_PREFIXES)) {
     const res = NextResponse.next();
 
     // Set locale cookie if missing
@@ -325,18 +340,35 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
         return poseSa(NextResponse.redirect(loginUrl));
       }
 
-      // Admin route protection. `/pilotage` est le centre de pilotage :
-      // il montre les clients, l'argent et les cles, donc il est gate
-      // exactement comme `/admin`. Un chemin oublie ici serait ouvert a
-      // n'importe quel compte connecte.
-      if (
-        (pathname.startsWith("/admin") || pathname.startsWith("/pilotage")) &&
-        !isAdminEmail(user.email)
-      ) {
-        return poseSa(NextResponse.redirect(new URL("/dashboard", req.url)));
+      // Un compte connecte qui n'est pas admin n'entre pas.
+      //
+      // Et on le renvoie sur L'AUTRE domaine quand il est arrive par le
+      // sous-domaine : sur `pilotage.tipote.com`, `/dashboard` serait
+      // reecrit en `/pilotage/dashboard`, donc en 404. On le mettrait
+      // dehors dans un cul-de-sac au lieu de le ramener chez lui.
+      if (admin && !isAdminEmail(user.email)) {
+        const ailleurs = estHotePilotage(req.headers.get("host"))
+          ? new URL("/dashboard", APP_URL_CANONIQUE)
+          : new URL("/dashboard", req.url);
+        return poseSa(NextResponse.redirect(ailleurs));
       }
     } catch {
-      // Fail-open: never block on Supabase errors
+      // Fail-open: never block on Supabase errors.
+      //
+      // SAUF SUR L'ADMIN ET LE PILOTAGE. Ce repli existe pour qu'une
+      // seconde d'indisponibilite de Supabase ne mette pas les
+      // creatrices dehors de leur tableau de bord : c'est le bon
+      // arbitrage sur une page qui n'expose que leurs propres donnees.
+      //
+      // Il ne l'est pas ici. Ces ecrans montrent les clients, l'argent
+      // et l'etat des cles : si on ne PEUT PAS verifier qui demande, on
+      // refuse. "Je n'ai pas pu regarder" n'est pas "c'est bon", et
+      // c'est la seule reponse qu'on puisse defendre sur cette page.
+      if (admin) {
+        const loginUrl = new URL("/login", req.url);
+        loginUrl.searchParams.set("redirect", pathname);
+        return poseSa(NextResponse.redirect(loginUrl));
+      }
     }
 
     return poseSa(res);

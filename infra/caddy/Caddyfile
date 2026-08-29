@@ -212,6 +212,12 @@ pilotage.tipote.com {
         }
         header @not_next_static Cache-Control "private, no-cache, no-store, max-age=0, must-revalidate"
 
+        # RIEN DE CE DOMAINE NE VA DANS UN MOTEUR DE RECHERCHE. Tout y
+        # exige un compte admin, donc rien n'est crawlable de toute
+        # façon, sauf la page de connexion. Un sous-domaine d'admin
+        # indexé, c'est une adresse offerte à qui cherche une porte.
+        header X-Robots-Tag "noindex, nofollow, noarchive"
+
         reverse_proxy 127.0.0.1:3001 {
                 import proxy_headers
                 # Les sondes de la section Paramètres interrogent
