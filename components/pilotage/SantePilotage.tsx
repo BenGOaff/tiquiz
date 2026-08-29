@@ -296,8 +296,11 @@ export function SantePilotage() {
       <section className={`${CARTE} p-4`}>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-sm font-medium">Les paiements et les appels reçus</h2>
+          {/* Le journal complet, avec le payload lu ligne par ligne, vit
+              encore dans l'admin de Tiquiz. Cette page en tire le
+              verdict ; elle ne le remplace pas encore. */}
           <Link href="/admin" className="text-xs text-primary underline-offset-2 hover:underline">
-            Le détail dans Tiquiz
+            Le journal complet, dans Tiquiz
           </Link>
         </div>
 

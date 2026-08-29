@@ -414,7 +414,9 @@ function Alertes({
         texte:
           `${v.email} a payé ${euros(v.amountCents)} le ${quandLong(v.paidAt)}`
           + " et n'apparaît dans aucun compte.",
-        lien: { libelle: "Ouvrir Mes ventes", href: "/admin/ventes" },
+        // La section Ventes de la console, pas l'ancien admin : le
+        // jour où on éteindra /admin, ce lien deviendrait un cul-de-sac.
+        lien: { libelle: "Ouvrir les ventes", href: "/pilotage/ventes" },
         reference: v.ref,
       });
     }
