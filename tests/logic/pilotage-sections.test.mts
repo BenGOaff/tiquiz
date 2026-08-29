@@ -98,3 +98,20 @@ test("une section prête ne renvoie plus vers l'ancien écran", () => {
     assert.equal((s.remplace ?? []).length, 0, s.id);
   }
 });
+
+test("LE SÉLECTEUR DE PÉRIODE N'EXISTE QUE LÀ OÙ IL FAIT QUELQUE CHOSE", () => {
+  // Béné le veut "partout", et il l'est sur tout ce qui compte des euros
+  // ou des personnes dans le temps. Un annuaire, une file de support et
+  // une liste de réglages ne se filtrent pas par mois : l'y laisser en
+  // ferait un bouton qui ne fait rien, et on le reclique.
+  const avec = SECTIONS.filter((s) => s.periode).map((s) => s.id);
+  assert.deepEqual(avec, ["accueil", "ventes", "business"]);
+});
+
+test("chaque section se prononce sur la période", () => {
+  // Un champ optionnel serait "je ne sais pas", et une section ajoutée
+  // sans y penser hériterait du silence.
+  for (const s of SECTIONS) {
+    assert.equal(typeof s.periode, "boolean", s.id);
+  }
+});

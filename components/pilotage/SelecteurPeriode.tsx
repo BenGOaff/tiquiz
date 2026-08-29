@@ -33,6 +33,7 @@ import {
   normaliserJour,
   type PeriodeId,
 } from "@/lib/pilotage/periode";
+import { sectionActive } from "@/lib/pilotage/sections";
 
 export function SelecteurPeriode() {
   const router = useRouter();
@@ -49,6 +50,18 @@ export function SelecteurPeriode() {
 
   const [debut, setDebut] = useState(active.debut ?? "");
   const [fin, setFin] = useState(active.fin ?? "");
+
+  // IL NE S'AFFICHE PAS LÀ OÙ IL NE FERAIT RIEN.
+  //
+  // Un annuaire de clients, une file de support, l'état des clés : rien
+  // de tout ça ne se filtre par mois. Y laisser le sélecteur en ferait
+  // un bouton qui ne fait rien, et on le reclique. La décision vit dans
+  // `lib/pilotage/sections.ts`, avec le reste du plan : recopier ici la
+  // liste des écrans concernés garantirait qu'elle finisse par ne plus
+  // correspondre.
+  const affiche = sectionActive(pathname ?? "/pilotage").periode;
+
+  if (!affiche) return null;
 
   function aller(query: string) {
     router.push(query ? `${pathname}?${query}` : pathname);
