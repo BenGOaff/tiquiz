@@ -997,7 +997,8 @@
         "s1": "Ouvrez la gestion DNS de {root} chez votre hébergeur.",
         "s2": "Trouvez l'option pour ajouter un nouvel enregistrement DNS.",
         "s3": "Créez un CNAME avec Nom = \"{name}\" et Cible/Valeur = \"{cnameTarget}\".",
-        "s4": "Enregistrez. Nous détecterons le changement automatiquement."
+        "s4": "Enregistrez. Nous détecterons le changement automatiquement.",
+        "s3Apex": "Créez un enregistrement A avec Nom = \"{name}\" et Valeur = \"{cnameTarget}\"."
       }
     },
     "toastCopied": "Copié dans le presse-papiers",
@@ -1044,7 +1045,10 @@
     "billingPortalOpening": "Ouverture...",
     "billingPortalHint": "Changer de carte, télécharger tes factures, voir ta prochaine échéance ou résilier.",
     "billingPortalFailed": "Impossible d'ouvrir la page de facturation pour le moment. Réessaie dans un instant.",
-    "billingPortalElsewhere": "Ton abonnement n'a pas été pris ici. Contacte le support et on s'en occupe."
+    "billingPortalElsewhere": "Ton abonnement n'a pas été pris ici. Contacte le support et on s'en occupe.",
+    "dnsFieldNameSubdomain": "Sous-domaine",
+    "dnsApexWhy": "Ici il s'agit de la racine de ton domaine, et un CNAME y est refusé par tous les hébergeurs : un enregistrement A est la seule voie possible. Ce n'est pas une erreur de notre part, ton hébergeur te dira la même chose.",
+    "dnsApexPrefer": "Un sous-domaine est plus solide : sur {suggestion}, un CNAME désigne notre serveur par son nom, donc ton branchement reste juste même si notre adresse change un jour. Supprime ce domaine et ajoute plutôt {suggestion}."
   },
   "languageSwitcher": {
     "label": "Langue"
