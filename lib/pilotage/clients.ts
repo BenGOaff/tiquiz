@@ -28,6 +28,17 @@ import {
   type Appartenance,
 } from "@/lib/pilotage/appartenance";
 
+/**
+ * UNE PERSONNE, PLUS CE QU'ON A APPRIS AILLEURS.
+ *
+ * `tipote` n'est pas dans `Person` parce qu'il ne vient pas de la même
+ * base : il est recollé après coup depuis l'espace Tipote. Le déclarer
+ * ici plutôt que de compter sur une propriété qui traverse en douce,
+ * c'est ce qui fait que le compilateur voit passer l'information.
+ * `null` = on n'a pas pu regarder, et ce n'est pas `false`.
+ */
+export type PersonneAvecTipote = Person & { tipote?: boolean | null };
+
 export type FiltreStatut = "tous" | PersonStatus;
 /**
  * LE FILTRE PRODUIT SUIT LES PASTILLES.
@@ -113,7 +124,9 @@ export function compterParStatut(people: readonly Person[]): Record<string, numb
  * qu'on veut savoir, c'est "combien de gens ont l'Atelier", pas une
  * partition.
  */
-export function compterParProduit(people: readonly Person[]): Record<string, number> {
+export function compterParProduit(
+  people: readonly PersonneAvecTipote[],
+): Record<string, number> {
   const par: Record<string, number> = { tous: people.length };
   for (const p of people) {
     for (const a of APPARTENANCES_ORDRE) if (estDe(p, a)) par[a] = (par[a] ?? 0) + 1;
@@ -123,9 +136,9 @@ export function compterParProduit(people: readonly Person[]): Record<string, num
 
 /** Filtre et range. */
 export function filtrerClients(
-  people: readonly Person[],
+  people: readonly PersonneAvecTipote[],
   c: CritereClients,
-): Person[] {
+): PersonneAvecTipote[] {
   const q = c.recherche.trim();
 
   const gardees = people.filter((p) => {
