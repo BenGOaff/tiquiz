@@ -21,7 +21,7 @@
 import "server-only";
 
 /** Le délai au delà duquel on renonce. Assez pour une base lente. */
-const DELAI_MS = 8000;
+const DELAI_MS = 12000;
 
 export interface LigneAffilieDistante {
   sa: string;
@@ -45,7 +45,15 @@ export interface LigneAffilieDistante {
 
 export type EtatLiaison =
   | { ok: true; manque: Record<string, boolean> }
-  | { ok: false; raison: "not_configured" | "forbidden" | "unreachable" | "read_failed" };
+  | {
+      ok: false;
+      // TROIS CAUSES, TROIS MESSAGES. Un seul texte pour "pas
+      // configuré", "pas déployé" et "injoignable" oblige à deviner
+      // laquelle, et c'est exactement le 404 muet du 19 août.
+      raison: "not_configured" | "forbidden" | "pas-deploye" | "trop-lent" | "unreachable" | "read_failed";
+      /** Le code HTTP reçu, quand il y en a eu un. */
+      statut?: number;
+    };
 
 export interface AffiliesDistants {
   lignes: LigneAffilieDistante[];
@@ -88,9 +96,16 @@ export async function lireAffiliesDistants(
     if (res.status === 503) {
       return { lignes: [], etat: { ok: false, raison: "not_configured" } };
     }
+    if (res.status === 404) {
+      // La porte n'existe pas encore SUR CE SERVEUR : la mise à jour de
+      // l'espace affilié n'est pas déployée. C'est une attente, pas une
+      // panne, et les deux ne se corrigent pas pareil.
+      console.error("[pilotage/affilies] 404 : la route partenaire n'est pas deployee.");
+      return { lignes: [], etat: { ok: false, raison: "pas-deploye", statut: 404 } };
+    }
     if (!res.ok) {
       console.error(`[pilotage/affilies] reponse ${res.status}`);
-      return { lignes: [], etat: { ok: false, raison: "read_failed" } };
+      return { lignes: [], etat: { ok: false, raison: "read_failed", statut: res.status } };
     }
 
     const json = (await res.json()) as {
@@ -105,9 +120,11 @@ export async function lireAffiliesDistants(
       etat: { ok: true, manque: json.manque ?? {} },
     };
   } catch (e) {
-    console.error(
-      `[pilotage/affilies] injoignable : ${e instanceof Error ? e.message : String(e)}`,
-    );
-    return { lignes: [], etat: { ok: false, raison: "unreachable" } };
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[pilotage/affilies] injoignable : ${message}`);
+    // Un abandon sur délai n'est pas une panne de réseau : l'un se
+    // corrige en allégeant la requête, l'autre en regardant le serveur.
+    const tropLent = /abort|timeout|timed out/i.test(message);
+    return { lignes: [], etat: { ok: false, raison: tropLent ? "trop-lent" : "unreachable" } };
   }
 }

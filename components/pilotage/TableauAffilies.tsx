@@ -79,12 +79,25 @@ export function TableauAffilies({
   if (!etat.ok) {
     // UNE PANNE SE DIT. Un tableau vide se lirait "je n'ai aucun
     // affilié", ce qui est faux et décourageant.
-    const phrase =
-      etat.raison === "not_configured"
-        ? "La liaison avec l'espace affilié n'est pas configurée sur ce serveur (PARTNER_SHARED_SECRET)."
-        : etat.raison === "forbidden"
-          ? "Les deux serveurs n'ont pas le même secret partagé. C'est un réglage, pas une panne."
-          : "L'espace affilié n'a pas répondu. Rien n'est perdu, réessaie dans un instant.";
+    // TROIS CAUSES, TROIS PHRASES, TROIS CORRECTIONS DIFFÉRENTES. Un
+    // seul message pour toutes obligeait à deviner laquelle (le 404 muet
+    // du 19 août, dans une autre famille).
+    const PHRASES: Record<string, string> = {
+      not_configured:
+        "PARTNER_SHARED_SECRET n'est pas posée sur ce serveur. C'est un réglage, rien n'est cassé.",
+      forbidden:
+        "Les deux serveurs n'ont pas le même secret partagé. C'est un réglage, pas une panne.",
+      "pas-deploye":
+        "La mise à jour de l'espace affilié n'est pas encore en ligne : la porte qui sert cette liste"
+        + " n'existe pas encore sur son serveur. Rien à corriger, il faut la déployer.",
+      "trop-lent":
+        "L'espace affilié a mis trop de temps à répondre. Ce n'est pas une panne, mais la requête"
+        + " est trop lourde ou le serveur est chargé.",
+      unreachable:
+        "L'espace affilié n'a pas répondu du tout. Regarde s'il tourne, puis réessaie.",
+      read_failed: `L'espace affilié a répondu ${etat.statut ?? "une erreur"}, ce qui n'est pas prévu.`,
+    };
+    const phrase = PHRASES[etat.raison] ?? PHRASES.unreachable;
     return (
       <section className={`${CARTE} p-6`}>
         <p className="flex items-center gap-2 text-sm font-medium">
