@@ -50,7 +50,7 @@ import { buildPeople, monthlyTrend, type ChurnRow, type ProfileRow } from "@/lib
 import { fetchAtelier } from "@/lib/admin/atelier";
 import { lirePeriode, tronqueeParLeJournal, DEBUT_DU_JOURNAL } from "@/lib/pilotage/periode";
 import { resumePeriode } from "@/lib/pilotage/resumePeriode";
-import { lireCoutAffiliation } from "@/lib/pilotage/affilies";
+import { lireComptesTipote, lireCoutAffiliation } from "@/lib/pilotage/affilies";
 import { buildMrr, serieChurn } from "@/lib/admin/mrr";
 import { derniersMois } from "@/lib/admin/adminStats";
 import { GENRE_VENTE_ORPHELINE } from "@/lib/pilotage/alertes";
@@ -181,9 +181,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // L'ATELIER, en parallele du reste. Ne jette jamais : rend
-    // `reachable: false` si quoi que ce soit cloche.
-    const atelier = await fetchAtelier(process.env);
+    // L'ATELIER ET LES COMPTES TIPOTE, en parallele du reste. Aucun
+    // des deux ne jette : une liaison muette rend son etat, jamais une
+    // exception. Un ecran de pilotage qui tombe parce qu'une autre app
+    // ne repond pas serait une plaisanterie.
+    const [atelier, tipote] = await Promise.all([
+      fetchAtelier(process.env),
+      lireComptesTipote(process.env),
+    ]);
 
     const lignes: ProfileRow[] = profiles.map((p) => {
       const uid = String(p.user_id ?? p.id ?? "");
@@ -267,6 +272,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       // L'ecran DOIT pouvoir dire "il manque l'Atelier". Sans ca, une
       // panne de liaison passerait pour un mois sans ventes.
       atelier: { reachable: atelier.reachable, reason: atelier.reason ?? null },
+      // QUI A UN COMPTE TIPOTE. `null` = on n'a pas pu regarder, ce qui
+      // n'est PAS "personne" : la liste doit pouvoir dire la difference
+      // au lieu de faire disparaitre la pastille de tout le monde.
+      tipote: tipote.ok
+        ? { lisible: true as const, comptes: tipote.comptes, tronque: tipote.tronque }
+        : { lisible: false as const, raison: tipote.raison },
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

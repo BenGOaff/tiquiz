@@ -34,6 +34,7 @@ import { ChevronRight, Loader2, Search } from "lucide-react";
 import { CARTE } from "@/components/pilotage/carte";
 import {
   filtrerClients,
+  compterParProduit,
   compterParStatut,
   CRITERES_PAR_DEFAUT,
   ORDRE_STATUTS,
@@ -41,6 +42,12 @@ import {
   type CritereClients,
   type TriClients,
 } from "@/lib/pilotage/clients";
+import {
+  APPARTENANCES_ORDRE,
+  appartenances,
+  NOM_APPARTENANCE,
+  type Appartenance,
+} from "@/lib/pilotage/appartenance";
 import type { Person, PersonStatus } from "@/lib/admin/people";
 
 function euros(cents: number): string {
@@ -65,6 +72,24 @@ const TRIS: { id: TriClients; libelle: string }[] = [
   { id: "alpha", libelle: "Alphabétique" },
 ];
 
+/**
+ * LA COULEUR D'UN PRODUIT EST CELLE DU GRAPHIQUE.
+ *
+ * `--pil-tiquiz` et `--pil-atelier` sont les teintes validées de
+ * l'encaissé : réutiliser les mêmes fait qu'une pastille bleue dans la
+ * liste et une barre bleue dans le graphique parlent du même produit.
+ * Deux palettes pour les mêmes entités, c'est deux choses à apprendre.
+ */
+const TON_PRODUIT: Record<Appartenance, { fond: string; texte: string }> = {
+  tiquiz: { fond: "color-mix(in oklab, var(--pil-tiquiz) 16%, transparent)", texte: "var(--pil-tiquiz)" },
+  atelier: { fond: "color-mix(in oklab, var(--pil-atelier) 16%, transparent)", texte: "var(--pil-atelier)" },
+  tipote: { fond: "color-mix(in oklab, var(--pil-autre) 16%, transparent)", texte: "var(--pil-autre)" },
+  // Le gratuit n'a PAS de couleur de marque : c'est un prospect, pas un
+  // client. Lui donner la teinte de Tiquiz ferait lire une clientèle
+  // payante deux fois plus grande qu'elle n'est.
+  "tiquiz-gratuit": { fond: "transparent", texte: "inherit" },
+};
+
 const TON_STATUT: Record<PersonStatus, string> = {
   abonne: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
   avie: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
@@ -86,6 +111,10 @@ const AU_SINGULIER: Record<PersonStatus, string> = {
 export function ClientsPilotage() {
   const [people, setPeople] = useState<Person[] | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  // `null` = on n'a PAS PU regarder. Ce n'est pas un objet vide : vide
+  // voudrait dire "personne n'a de compte Tipote", ce qu'on ne peut pas
+  // affirmer quand la liaison n'a pas repondu.
+  const [tipote, setTipote] = useState<Record<string, string> | null>(null);
   const [c, setC] = useState<CritereClients>(CRITERES_PAR_DEFAUT);
   const [combien, setCombien] = useState(50);
 
@@ -97,6 +126,14 @@ export function ClientsPilotage() {
         setErreur("La liste n'a pas pu être lue.");
         return;
       }
+      // LES COMPTES TIPOTE VIVENT DANS L'AUTRE BASE. On les colle ici,
+      // une fois : sans ça, chaque ligne referait la recherche et la
+      // pastille dependrait de l'ordre d'affichage.
+      const t = j.tipote as
+        | { lisible: true; comptes: Record<string, string> }
+        | { lisible: false; raison: string }
+        | undefined;
+      setTipote(t?.lisible ? t.comptes : null);
       setPeople((j.people as Person[]) ?? []);
       setErreur(null);
     } catch {
@@ -108,8 +145,21 @@ export function ClientsPilotage() {
     void charger();
   }, [charger]);
 
-  const compte = useMemo(() => compterParStatut(people ?? []), [people]);
-  const vues = useMemo(() => filtrerClients(people ?? [], c), [people, c]);
+  // CHAQUE PERSONNE PORTE SON APPARTENANCE TIPOTE, une fois pour
+  // toutes. `null` quand la liaison est muette : les fonctions pures
+  // savent alors qu'on n'a pas su, au lieu de conclure "pas cliente".
+  const gens = useMemo(
+    () =>
+      (people ?? []).map((p) => ({
+        ...p,
+        tipote: tipote ? Boolean(tipote[p.email.toLowerCase()]) : null,
+      })),
+    [people, tipote],
+  );
+
+  const compte = useMemo(() => compterParStatut(gens), [gens]);
+  const compteProduit = useMemo(() => compterParProduit(gens), [gens]);
+  const vues = useMemo(() => filtrerClients(gens, c), [gens, c]);
 
   if (!people && !erreur) {
     return (
@@ -152,6 +202,37 @@ export function ClientsPilotage() {
             nombre={compte[s] ?? 0}
           />
         ))}
+      </div>
+
+      {/* DE QUOI IL EST CLIENT, en filtre ET en pastille sur la ligne.
+          Une personne cliente de deux produits est comptée dans les
+          deux : ces nombres ne s'additionnent pas au total, et c'est
+          voulu. La question est "combien ont l'Atelier", pas une
+          partition. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-muted-foreground">Client de</span>
+        <Puce
+          actif={c.produit === "tous"}
+          onClick={() => setC({ ...c, produit: "tous" })}
+          libelle="Peu importe"
+          nombre={compteProduit.tous ?? 0}
+        />
+        {APPARTENANCES_ORDRE.filter((a) => (compteProduit[a] ?? 0) > 0).map((a) => (
+          <Puce
+            key={a}
+            actif={c.produit === a}
+            onClick={() => setC({ ...c, produit: a })}
+            libelle={NOM_APPARTENANCE[a]}
+            nombre={compteProduit[a] ?? 0}
+          />
+        ))}
+        {tipote === null && (
+          // MUET N'EST PAS VIDE. Sans cette phrase, l'absence totale de
+          // pastille Tipote se lirait "aucun client Tipote".
+          <span className="text-xs text-muted-foreground">
+            Tipote n&apos;a pas répondu : ses comptes ne sont pas affichés.
+          </span>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -206,6 +287,27 @@ export function ClientsPilotage() {
                     {p.quizCount > 0 && ` · ${p.quizCount} quiz`}
                     {p.leadCount > 0 && ` · ${p.leadCount} leads`}
                   </span>
+                </span>
+                {/* DE QUOI IL EST CLIENT, EN UN COUP D'OEIL. Les mêmes
+                    couleurs que le graphique de l'encaissé : une
+                    pastille bleue ici et une barre bleue là-bas parlent
+                    du même produit. */}
+                <span className="hidden shrink-0 items-center gap-1 sm:flex">
+                  {appartenances(p).map((a) => (
+                    <span
+                      key={a}
+                      className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium ${
+                        a === "tiquiz-gratuit" ? "border text-muted-foreground" : ""
+                      }`}
+                      style={
+                        a === "tiquiz-gratuit"
+                          ? undefined
+                          : { backgroundColor: TON_PRODUIT[a].fond, color: TON_PRODUIT[a].texte }
+                      }
+                    >
+                      {NOM_APPARTENANCE[a]}
+                    </span>
+                  ))}
                 </span>
                 <span
                   className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${TON_STATUT[p.status]}`}

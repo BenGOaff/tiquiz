@@ -176,6 +176,58 @@ quiz.tipote.com {
 }
 
 # ------------------------------------------------------------------
+# Centre de pilotage (pilotage.tipote.com)
+# ------------------------------------------------------------------
+# Sert le MÊME Next.js que quiz.tipote.com (port 3001) : le centre de
+# pilotage vit dans le dépôt Tiquiz, et next.config.ts rewrite
+# pilotage.tipote.com/* -> /pilotage/*. Une 4e app aurait voulu dire un
+# 4e .env, un 4e build et un 4e pm2 dans un déploiement manuel, c'est à
+# dire exactement la configuration qui a croisé les clés Supabase des
+# deux apps le 22 août. L'adresse dédiée sans le risque.
+#
+# CE BLOC DOIT EXISTER AVANT DE POSER LE DNS. Sans lui, l'hôte tombe
+# dans le catchall :443, donc dans l'émission de certificat à la
+# demande, qui interroge le dispatcher, qui ne trouve pas ce nom dans
+# les domaines vérifiés des créatrices et refuse le certificat. Le
+# navigateur afficherait alors une erreur TLS, sans rien dire de la
+# cause.
+#
+# L'accès reste gardé DEUX fois côté app (middleware + layout) : cet
+# écran montre les clients, l'argent et l'état des clés.
+pilotage.tipote.com {
+        encode zstd gzip
+        import block_bad_paths
+
+        # Aucun envoi de fichier ici : la console pilote, elle n'édite
+        # pas. 5 Mo suffisent largement et bornent la surface.
+        request_body {
+                max_size 5MB
+        }
+
+        @next_static path /_next/static/*
+        header @next_static Cache-Control "public, max-age=31536000, immutable"
+
+        @not_next_static {
+                not path /_next/static/*
+        }
+        header @not_next_static Cache-Control "private, no-cache, no-store, max-age=0, must-revalidate"
+
+        reverse_proxy 127.0.0.1:3001 {
+                import proxy_headers
+                # Les sondes de la section Paramètres interrogent
+                # Stripe, PayPal et Resend, et la section Santé
+                # interroge les deux autres apps. Chacune a son propre
+                # délai maximum côté serveur, mais la réponse complète
+                # peut cumuler : on laisse la même marge que le reste
+                # de Tiquiz plutôt que de couper une page de
+                # diagnostic au moment où on en a besoin.
+                transport http {
+                        read_timeout 5m
+                }
+        }
+}
+
+# ------------------------------------------------------------------
 # tus uploads (tus.tipote.com + tus.quiz.tipote.com)
 # ------------------------------------------------------------------
 # Both names front the same popquiz-tus node server; the JWT's `app`

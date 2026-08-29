@@ -22,10 +22,34 @@
 // composant se contente d'appeler.
 
 import type { Person, PersonStatus } from "@/lib/admin/people";
-import { readClientKind, type ClientKind } from "@/lib/admin/people";
+import {
+  APPARTENANCES_ORDRE,
+  estDe,
+  type Appartenance,
+} from "@/lib/pilotage/appartenance";
+
+/**
+ * UNE PERSONNE, PLUS CE QU'ON A APPRIS AILLEURS.
+ *
+ * `tipote` n'est pas dans `Person` parce qu'il ne vient pas de la même
+ * base : il est recollé après coup depuis l'espace Tipote. Le déclarer
+ * ici plutôt que de compter sur une propriété qui traverse en douce,
+ * c'est ce qui fait que le compilateur voit passer l'information.
+ * `null` = on n'a pas pu regarder, et ce n'est pas `false`.
+ */
+export type PersonneAvecTipote = Person & { tipote?: boolean | null };
 
 export type FiltreStatut = "tous" | PersonStatus;
-export type FiltreProduit = "tous" | ClientKind;
+/**
+ * LE FILTRE PRODUIT SUIT LES PASTILLES.
+ *
+ * Il était bâti sur `ClientKind` ("tiquiz | atelier | les-deux |
+ * aucun"), une réponse à choix unique : impossible d'y faire entrer
+ * Tipote sans inventer "les-trois". Une personne peut être cliente de
+ * plusieurs choses, donc on filtre sur UNE appartenance et on garde
+ * tous ceux qui l'ont, quelles que soient les autres.
+ */
+export type FiltreProduit = "tous" | Appartenance;
 export type TriClients = "recents" | "paye" | "activite" | "alpha";
 
 export interface CritereClients {
@@ -91,16 +115,35 @@ export function compterParStatut(people: readonly Person[]): Record<string, numb
   return par;
 }
 
+/**
+ * Le nombre de personnes par APPARTENANCE, pour que le filtre produit
+ * porte son compte comme celui des statuts.
+ *
+ * Une personne cliente de deux produits est comptée dans les deux : les
+ * colonnes ne s'additionnent donc pas au total, et c'est normal. Ce
+ * qu'on veut savoir, c'est "combien de gens ont l'Atelier", pas une
+ * partition.
+ */
+export function compterParProduit(
+  people: readonly PersonneAvecTipote[],
+): Record<string, number> {
+  const par: Record<string, number> = { tous: people.length };
+  for (const p of people) {
+    for (const a of APPARTENANCES_ORDRE) if (estDe(p, a)) par[a] = (par[a] ?? 0) + 1;
+  }
+  return par;
+}
+
 /** Filtre et range. */
 export function filtrerClients(
-  people: readonly Person[],
+  people: readonly PersonneAvecTipote[],
   c: CritereClients,
-): Person[] {
+): PersonneAvecTipote[] {
   const q = c.recherche.trim();
 
   const gardees = people.filter((p) => {
     if (c.statut !== "tous" && p.status !== c.statut) return false;
-    if (c.produit !== "tous" && readClientKind(p) !== c.produit) return false;
+    if (c.produit !== "tous" && !estDe(p, c.produit)) return false;
     return correspond(p, q);
   });
 

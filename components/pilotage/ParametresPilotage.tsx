@@ -20,9 +20,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, XCircle } from "lucide-react";
 
 import { CARTE } from "@/components/pilotage/carte";
+import { comptePannes, type EtatCle, type ResultatCle } from "@/lib/pilotage/sondesCles";
 import {
   NOM_GROUPE,
   type EtatReglage,
@@ -33,6 +34,7 @@ import {
 
 interface Reponse {
   ok?: boolean;
+  cles?: ResultatCle[];
   reglages?: EtatReglage[];
   contradictions?: Contradiction[];
   stripe?: Mode;
@@ -87,6 +89,8 @@ export function ParametresPilotage() {
 
   const reglages = data?.reglages ?? [];
   const soucis = data?.contradictions ?? [];
+  const cles = data?.cles ?? [];
+  const refusees = comptePannes(cles);
   const manquantsRequis = reglages.filter((r) => r.requis && !r.pose);
 
   return (
@@ -124,12 +128,12 @@ export function ParametresPilotage() {
       )}
 
       {/* LES CONTRADICTIONS D'ABORD : elles coûtent des ventes. */}
-      {data?.ok && (soucis.length > 0 || manquantsRequis.length > 0) && (
+      {data?.ok && (soucis.length > 0 || manquantsRequis.length > 0 || refusees > 0) && (
         <section className="rounded-xl border border-destructive/50 bg-destructive/5 p-4">
           <p className="flex items-center gap-2 text-sm font-medium text-destructive">
             <AlertTriangle className="h-4 w-4" />
-            {soucis.length + manquantsRequis.length} chose
-            {soucis.length + manquantsRequis.length > 1 ? "s" : ""} à corriger
+            {soucis.length + manquantsRequis.length + refusees} chose
+            {soucis.length + manquantsRequis.length + refusees > 1 ? "s" : ""} à corriger
           </p>
           <ul className="mt-2 space-y-1.5 text-sm">
             {manquantsRequis.map((r) => (
@@ -146,15 +150,52 @@ export function ParametresPilotage() {
                 <span>{c.texte}</span>
               </li>
             ))}
+            {cles
+              .filter((c) => c.etat === "refusee")
+              .map((c) => (
+                <li key={c.variable} className="flex gap-2">
+                  <span aria-hidden>-</span>
+                  <span>{c.detail}</span>
+                </li>
+              ))}
           </ul>
         </section>
       )}
 
-      {data?.ok && soucis.length === 0 && manquantsRequis.length === 0 && (
+      {data?.ok && soucis.length === 0 && manquantsRequis.length === 0 && refusees === 0 && (
         <p className="flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-4 text-sm">
           <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          Rien d&apos;incohérent. Tout ce qui est nécessaire est posé.
+          Rien d&apos;incohérent, et toutes les clés testées répondent.
         </p>
+      )}
+
+      {/* EST-CE QUE LES CLÉS MARCHENT. C'est la seule chose qu'un grep
+          dans le .env ne dit pas, et c'est celle qui a coûté une
+          journée le 22 août et un client le 7 août. */}
+      {data?.ok && cles.length > 0 && (
+        <section className={`${CARTE} p-4`}>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-medium">Est-ce que ça répond ?</h2>
+            <span className="text-xs text-muted-foreground">
+              Testé à l&apos;instant, en lecture seule : rien n&apos;est créé, rien n&apos;est
+              envoyé, rien n&apos;est facturé.
+            </span>
+          </div>
+          <ul className="mt-3 divide-y">
+            {cles.map((c) => (
+              <li key={c.variable} className="py-2.5">
+                <div className="flex flex-wrap items-baseline gap-2 text-sm">
+                  <PastilleCle etat={c.etat} />
+                  <span className="font-medium">{c.service}</span>
+                  <code className="rounded bg-muted px-1 text-[11px] text-muted-foreground">
+                    {c.variable}
+                  </code>
+                </div>
+                <p className="mt-0.5 text-xs text-muted-foreground">{c.detail}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {/* LES MODES : ce sont eux qui disent si on encaisse pour de vrai. */}
@@ -231,6 +272,44 @@ export function ParametresPilotage() {
           );
         })}
 
+      {/* COMMENT ON POSE UNE VALEUR. Écrit UNE fois, avec les commandes
+          exactes : une clé Supabase ou une clé publiable ne peut pas se
+          changer depuis un écran (l'app en a besoin pour démarrer, et
+          les NEXT_PUBLIC_ sont gravées au build), donc la seule chose
+          utile est de ne pas la faire chercher. */}
+      {data?.ok && manquantsRequis.length + soucis.length + refusees > 0 && (
+        <section className={`${CARTE} p-4`}>
+          <h2 className="text-sm font-medium">Poser une valeur sur le serveur</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Ces clés ne peuvent pas se changer depuis un écran : l&apos;app en a besoin pour
+            démarrer, et celles en <code className="rounded bg-muted px-1">NEXT_PUBLIC_</code>{" "}
+            sont gravées au moment du build. Sur le serveur, dans{" "}
+            <code className="rounded bg-muted px-1">~/tiquiz-app/.env</code> (et pas{" "}
+            <code className="rounded bg-muted px-1">.env.local</code>, qui est une convention de
+            développement).
+          </p>
+          <pre className="mt-3 overflow-x-auto rounded-lg bg-muted p-3 text-xs">
+            <code>{"nano ~/tiquiz-app/.env"}</code>
+          </pre>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Puis, depuis <code className="rounded bg-muted px-1">~/tiquiz-app</code>, en UNE
+            seule commande : sans le <code className="rounded bg-muted px-1">&amp;&amp;</code>,
+            un build refusé se déploierait quand même, et c&apos;est exactement ce qui a mis
+            Tipote par terre le 22 août.
+          </p>
+          <pre className="mt-2 overflow-x-auto rounded-lg bg-muted p-3 text-xs">
+            <code>{"npm run build && pm2 restart tiquiz-prod --update-env"}</code>
+          </pre>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Ne jamais faire <code className="rounded bg-muted px-1">set -a; . .env; set +a</code>{" "}
+            dans le terminal pour lire une valeur : ça exporte tout le fichier dans le shell, et
+            c&apos;est comme ça que les deux app ont servi la base l&apos;une de l&apos;autre
+            pendant une journée. Entre parenthèses, tout meurt avec le sous-shell :{" "}
+            <code className="rounded bg-muted px-1">( set -a; . .env; set +a; echo ok )</code>.
+          </p>
+        </section>
+      )}
+
       {/* CE QUE CET ÉCRAN NE PEUT PAS VOIR, ET IL LE DIT. */}
       {data?.ok && (
         <section className={`${CARTE} p-4`}>
@@ -264,4 +343,29 @@ export function ParametresPilotage() {
       )}
     </div>
   );
+}
+
+function PastilleCle({ etat }: { etat: EtatCle }) {
+  if (etat === "ok") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400">
+        <CheckCircle2 className="h-3.5 w-3.5" /> répond
+      </span>
+    );
+  }
+  if (etat === "refusee") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
+        <XCircle className="h-3.5 w-3.5" /> refusée
+      </span>
+    );
+  }
+  if (etat === "injoignable") {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400">
+        <AlertTriangle className="h-3.5 w-3.5" /> pas de réponse
+      </span>
+    );
+  }
+  return <span className="text-xs text-muted-foreground">pas configurée</span>;
 }

@@ -297,3 +297,48 @@ export async function lireCoutAffiliation(
     return null;
   }
 }
+
+// ── QUI A UN COMPTE TIPOTE ───────────────────────────────────────────
+//
+// Béné, 29 août : "de QUOI il est client ? Tiquiz ? Atelier ? Tipote ?"
+//
+// La console lit la base de Tiquiz. Sans cet appel, la pastille Tipote
+// serait affichée à partir de rien, donc fausse : une pastille qu'on ne
+// peut pas prouver est pire qu'une pastille absente.
+
+export type ComptesTipote =
+  | { ok: true; comptes: Record<string, string>; tronque: boolean }
+  // MUET N'EST PAS VIDE. Rendre `{}` ferait disparaître la pastille de
+  // tout le monde et se lirait "personne n'est client Tipote", ce qui
+  // est une affirmation qu'on ne peut pas soutenir.
+  | { ok: false; raison: string };
+
+export async function lireComptesTipote(
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<ComptesTipote> {
+  const secret = String(env.PARTNER_SHARED_SECRET ?? "").trim();
+  if (!secret) return { ok: false, raison: "not_configured" };
+
+  try {
+    const res = await fetch(`${origine(env)}/api/partner/comptes`, {
+      headers: { "x-partner-secret": secret },
+      cache: "no-store",
+      signal: AbortSignal.timeout(DELAI_MS),
+    });
+    if (res.status === 403 || res.status === 401) return { ok: false, raison: "forbidden" };
+    if (res.status === 503) return { ok: false, raison: "not_configured" };
+    if (res.status === 404) return { ok: false, raison: "pas-deploye" };
+    if (!res.ok) return { ok: false, raison: "read_failed" };
+
+    const json = (await res.json()) as {
+      ok?: boolean;
+      comptes?: Record<string, string>;
+      tronque?: boolean;
+    };
+    if (!json?.ok) return { ok: false, raison: "read_failed" };
+    return { ok: true, comptes: json.comptes ?? {}, tronque: Boolean(json.tronque) };
+  } catch (e) {
+    const trop = e instanceof Error && e.name === "TimeoutError";
+    return { ok: false, raison: trop ? "trop-lent" : "unreachable" };
+  }
+}

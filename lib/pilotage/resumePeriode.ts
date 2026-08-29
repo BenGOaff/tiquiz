@@ -105,7 +105,7 @@ export function resumePeriode(args: {
     ).length,
     // La série lit les MÊMES ventes filtrées : le graphique ne peut
     // donc pas montrer autre chose que le compteur au dessus de lui.
-    serie: serieEmpilee(ventes, fin, moisCouverts(periode, maintenant)),
+    serie: serieEmpilee(ventes, periode, maintenant),
     contacts: derniersContacts(contacts, 6),
     dernieresVentes: dernieresVentes(
       args.people
