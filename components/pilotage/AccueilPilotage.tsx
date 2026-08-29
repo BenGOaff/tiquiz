@@ -244,6 +244,10 @@ export function AccueilPilotage() {
                 dessine : deux totaux calculés séparément finissent
                 toujours par se contredire, et c'est celui du haut
                 qu'on croit. */}
+            {/* CHAQUE CHIFFRE MENE LA OU ON PEUT AGIR DESSUS. Un
+                chiffre sans suite se regarde ; ceux-ci se travaillent,
+                et chercher la bonne section dans le menu a chaque fois
+                est exactement ce qui fait qu'on ne le fait pas. */}
             <Chiffre
               titre="Encaissé"
               valeur={euros(d.resume.encaisseCents)}
@@ -252,13 +256,20 @@ export function AccueilPilotage() {
                   ? `${euros(d.resume.rembourseCents)} remboursés`
                   : `${d.resume.ventes} vente${d.resume.ventes > 1 ? "s" : ""}`
               }
+              href="/pilotage/ventes"
             />
             <Chiffre
               titre="Nouveaux comptes"
               valeur={String(d.resume.nouveauxComptes)}
               note={d.resume.departs > 0 ? `${d.resume.departs} départ${d.resume.departs > 1 ? "s" : ""}` : undefined}
+              href="/pilotage/clients"
             />
-            <Chiffre titre="Abonnés" valeur={String(d.totals.abonnes)} note="en ce moment" />
+            <Chiffre
+              titre="Abonnés"
+              valeur={String(d.totals.abonnes)}
+              note="en ce moment"
+              href="/pilotage/business"
+            />
             <Chiffre
               titre="Tickets ouverts"
               valeur={tickets === null ? "-" : String(ouverts)}
@@ -289,7 +300,7 @@ export function AccueilPilotage() {
 
           {/* 4. Ce qui vient de se passer. */}
           <div className="grid gap-4 lg:grid-cols-3">
-            <Liste titre="Derniers contacts" vide="Personne de nouveau.">
+            <Liste titre="Derniers contacts" href="/pilotage/clients" vide="Personne de nouveau.">
               {contacts.map((p) => (
                 <Ligne
                   key={p.email}
@@ -300,7 +311,7 @@ export function AccueilPilotage() {
               ))}
             </Liste>
 
-            <Liste titre="Dernières ventes" vide="Aucune vente lue.">
+            <Liste titre="Dernières ventes" href="/pilotage/ventes" vide="Aucune vente lue.">
               {ventes.map(({ vente, email, nom }) => (
                 <Ligne
                   key={`${vente.ref}-${vente.paidAt}`}

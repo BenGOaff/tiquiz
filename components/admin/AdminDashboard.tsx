@@ -22,7 +22,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Loader2, Plus } from "lucide-react";
+import { ArrowRight, Gauge, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -99,6 +99,22 @@ export default function AdminDashboard() {
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
       <h1 className="text-2xl font-bold">{t("title")}</h1>
+
+      {/* LA CONSOLE DE PILOTAGE SE TROUVE, ELLE NE SE DEVINE PAS.
+          Une fonctionnalité injoignable n'existe pas : sans ce lien, il
+          faudrait taper l'adresse de mémoire, et cet écran resterait
+          celui qu'on ouvre par défaut. */}
+      <Link
+        href="/pilotage"
+        className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/40 bg-primary/5 p-4 text-sm transition-colors hover:bg-primary/10"
+      >
+        <Gauge className="h-4 w-4 shrink-0 text-primary" />
+        <span className="font-semibold">Le centre de pilotage</span>
+        <span className="text-muted-foreground">
+          Toutes les app au même endroit : clients, ventes, affiliés, business, support, santé.
+        </span>
+        <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-primary" />
+      </Link>
 
       {/* ── LES ONGLETS ── */}
       <div className="flex flex-wrap gap-1.5 border-b pb-2">
