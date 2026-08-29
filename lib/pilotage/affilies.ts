@@ -57,6 +57,8 @@ export type EtatLiaison =
 
 export interface AffiliesDistants {
   lignes: LigneAffilieDistante[];
+  /** Adresse du client -> prénom de l'affilié qui l'a amené. */
+  attributions: Record<string, string>;
   etat: EtatLiaison;
 }
 
@@ -76,7 +78,7 @@ export async function lireAffiliesDistants(
   const secret = String(env.PARTNER_SHARED_SECRET ?? "").trim();
   if (!secret) {
     console.warn("[pilotage/affilies] PARTNER_SHARED_SECRET absent : aucun affilie affiche.");
-    return { lignes: [], etat: { ok: false, raison: "not_configured" } };
+    return { lignes: [], attributions: {}, etat: { ok: false, raison: "not_configured" } };
   }
 
   try {
@@ -91,32 +93,34 @@ export async function lireAffiliesDistants(
       // configuration, pas une panne : on la nomme, parce que la
       // correction n'est pas la même.
       console.error("[pilotage/affilies] secret refuse : les .env divergent.");
-      return { lignes: [], etat: { ok: false, raison: "forbidden" } };
+      return { lignes: [], attributions: {}, etat: { ok: false, raison: "forbidden" } };
     }
     if (res.status === 503) {
-      return { lignes: [], etat: { ok: false, raison: "not_configured" } };
+      return { lignes: [], attributions: {}, etat: { ok: false, raison: "not_configured" } };
     }
     if (res.status === 404) {
       // La porte n'existe pas encore SUR CE SERVEUR : la mise à jour de
       // l'espace affilié n'est pas déployée. C'est une attente, pas une
       // panne, et les deux ne se corrigent pas pareil.
       console.error("[pilotage/affilies] 404 : la route partenaire n'est pas deployee.");
-      return { lignes: [], etat: { ok: false, raison: "pas-deploye", statut: 404 } };
+      return { lignes: [], attributions: {}, etat: { ok: false, raison: "pas-deploye", statut: 404 } };
     }
     if (!res.ok) {
       console.error(`[pilotage/affilies] reponse ${res.status}`);
-      return { lignes: [], etat: { ok: false, raison: "read_failed", statut: res.status } };
+      return { lignes: [], attributions: {}, etat: { ok: false, raison: "read_failed", statut: res.status } };
     }
 
     const json = (await res.json()) as {
       ok?: boolean;
       lignes?: LigneAffilieDistante[];
+      attributions?: Record<string, string>;
       manque?: Record<string, boolean>;
     };
-    if (!json.ok) return { lignes: [], etat: { ok: false, raison: "read_failed" } };
+    if (!json.ok) return { lignes: [], attributions: {}, etat: { ok: false, raison: "read_failed" } };
 
     return {
       lignes: Array.isArray(json.lignes) ? json.lignes : [],
+      attributions: json.attributions ?? {},
       etat: { ok: true, manque: json.manque ?? {} },
     };
   } catch (e) {
@@ -125,6 +129,10 @@ export async function lireAffiliesDistants(
     // Un abandon sur délai n'est pas une panne de réseau : l'un se
     // corrige en allégeant la requête, l'autre en regardant le serveur.
     const tropLent = /abort|timeout|timed out/i.test(message);
-    return { lignes: [], etat: { ok: false, raison: tropLent ? "trop-lent" : "unreachable" } };
+    return {
+      lignes: [],
+      attributions: {},
+      etat: { ok: false, raison: tropLent ? "trop-lent" : "unreachable" },
+    };
   }
 }
