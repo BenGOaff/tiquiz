@@ -31,7 +31,8 @@ import { AlertTriangle, Loader2, RefreshCw } from "lucide-react";
 
 import { GraphiqueEncaisse } from "@/components/pilotage/GraphiqueEncaisse";
 import { derniersContacts, dernieresVentes, parDateDesc } from "@/lib/pilotage/recents";
-import type { SerieEmpilee } from "@/lib/pilotage/serieEmpilee";
+import { libellePeriode, type SerieEmpilee } from "@/lib/pilotage/serieEmpilee";
+import { CARTE } from "@/components/pilotage/carte";
 import type { Person, PeopleTotals } from "@/lib/admin/people";
 import type { Sale } from "@/lib/checkout/sales";
 import type { Ticket } from "@/lib/support/tickets";
@@ -52,6 +53,16 @@ function euros(cents: number): string {
     currency: "EUR",
     maximumFractionDigits: 0,
   }).format(cents / 100);
+}
+
+function quandLong(iso: string | null | undefined): string {
+  const t = Date.parse(String(iso ?? ""));
+  if (!Number.isFinite(t)) return "à une date inconnue";
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(t));
 }
 
 function quand(iso: string | null | undefined): string {
@@ -144,7 +155,18 @@ export function AccueilPilotage() {
           {/* 1. LES CHIFFRES DU MOMENT. Quatre, pas douze : une rangée
               qu'on lit d'un coup d'oeil vaut mieux qu'un mur de cartes. */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Chiffre titre="Encaissé sur la période" valeur={euros(d.totals.encaisseCents)} />
+            {/* LE MÊME CHIFFRE QUE LE GRAPHIQUE, pas un deuxième calcul.
+                Béné : "encaissé sur la période : quelle période ?" La
+                question est juste. Le titre nomme donc les mois
+                RÉELLEMENT lus, et la valeur sort de la série qui les
+                dessine : deux totaux calculés séparément finissent
+                toujours par se contredire, et c'est celui du haut
+                qu'on croit. */}
+            <Chiffre
+              titre={`Encaissé ${libellePeriode(d.serieEmpilee) || "sur la période lue"}`}
+              valeur={euros(d.serieEmpilee.fiable ? d.serieEmpilee.totalCents : 0)}
+              note={d.totals.rembourseCents > 0 ? `${euros(d.totals.rembourseCents)} remboursés` : undefined}
+            />
             <Chiffre titre="Abonnés" valeur={String(d.totals.abonnes)} note={`${d.totals.avie} à vie`} />
             <Chiffre titre="Comptes" valeur={String(d.totals.comptes)} note={`${d.totals.atelier} élèves`} />
             <Chiffre
@@ -212,7 +234,7 @@ export function AccueilPilotage() {
 
 function Chiffre({ titre, valeur, note }: { titre: string; valeur: string; note?: string }) {
   return (
-    <div className="rounded-xl border bg-background p-4">
+    <div className={`${CARTE} p-4`}>
       <p className="text-xs text-muted-foreground">{titre}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{valeur}</p>
       {note && <p className="mt-0.5 text-xs text-muted-foreground">{note}</p>}
@@ -239,15 +261,25 @@ function Alertes({
   const lignes: { cle: string; texte: string; lien?: { libelle: string; href: string } }[] = [];
 
   if (ventesOrphelines.length > 0) {
-    lignes.push({
-      cle: "orphelines",
-      texte:
-        `${ventesOrphelines.length} vente${ventesOrphelines.length > 1 ? "s" : ""} encaissée`
-        + `${ventesOrphelines.length > 1 ? "s" : ""} sans compte en face : `
-        + ventesOrphelines.slice(0, 3).map((v) => v.email).join(", ")
-        + (ventesOrphelines.length > 3 ? "..." : ""),
-      lien: { libelle: "Ouvrir Mes ventes", href: "/admin/ventes" },
-    });
+    // QUAND ET COMBIEN, pas seulement QUI. Une vente orpheline d'il y a
+    // trois mois et une d'hier n'appellent pas la même réaction, et
+    // sans sa date elle se lit comme une urgence permanente : c'est
+    // comme ça qu'une alerte finit par ne plus être lue.
+    for (const v of ventesOrphelines.slice(0, 3)) {
+      lignes.push({
+        cle: `orpheline-${v.ref}`,
+        texte:
+          `${v.email} a payé ${euros(v.amountCents)} le ${quandLong(v.paidAt)}`
+          + " et n'apparaît dans aucun compte.",
+        lien: { libelle: "Ouvrir Mes ventes", href: "/admin/ventes" },
+      });
+    }
+    if (ventesOrphelines.length > 3) {
+      lignes.push({
+        cle: "orphelines-reste",
+        texte: `${ventesOrphelines.length - 3} autre${ventesOrphelines.length - 3 > 1 ? "s" : ""} vente${ventesOrphelines.length - 3 > 1 ? "s" : ""} dans le même cas.`,
+      });
+    }
   }
   if (!atelier.reachable) {
     lignes.push({
@@ -301,7 +333,7 @@ function Liste({
   children: React.ReactNode[];
 }) {
   return (
-    <section className="rounded-xl border bg-background p-4">
+    <section className={`${CARTE} p-4`}>
       <h2 className="text-sm font-medium">{titre}</h2>
       {/* LE VIDE PARLE. Une liste vide sans un mot se lit "c'est cassé". */}
       {children.length === 0 ? (

@@ -36,7 +36,7 @@ export default async function PilotageLayout({
   if (!user || !isAdminEmail(user.email)) redirect("/dashboard");
 
   return (
-    <div className="min-h-screen bg-muted/20 lg:flex">
+    <div className="min-h-screen bg-background lg:flex">
       <PilotageNav email={user.email ?? ""} />
       {/* La colonne de contenu porte SA largeur et SON rythme, une seule
           fois. Chaque page ne décide que de son espacement vertical :
