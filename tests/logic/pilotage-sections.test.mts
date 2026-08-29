@@ -13,10 +13,20 @@ import { resolve } from "node:path";
 
 import { SECTIONS, cheminSection, sectionActive } from "@/lib/pilotage/sections";
 
-test("les 8 sections de Béné sont là, et elles seules", () => {
+test("les sections du plan sont là, et elles seules", () => {
   assert.deepEqual(
     SECTIONS.map((s) => s.id),
-    ["accueil", "clients", "ventes", "affilies", "business", "support", "sante", "parametres"],
+    [
+      "accueil",
+      "clients",
+      "ventes",
+      "affilies",
+      "revendeurs",
+      "business",
+      "support",
+      "sante",
+      "parametres",
+    ],
   );
 });
 

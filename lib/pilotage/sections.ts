@@ -46,6 +46,7 @@ export type SectionId =
   | "clients"
   | "ventes"
   | "affilies"
+  | "revendeurs"
   | "business"
   | "support"
   | "sante"
@@ -114,6 +115,14 @@ export const SECTIONS: readonly Section[] = [
     chemin: "/affilies",
     nom: "Affiliés",
     question: "Qui recommande quoi, et combien je leur dois ?",
+    etat: "prete",
+    periode: false,
+  },
+  {
+    id: "revendeurs",
+    chemin: "/revendeurs",
+    nom: "Revendeurs",
+    question: "Qui revend Tiquiz, avec quel portefeuille, et que reste-t-il à encaisser ?",
     etat: "prete",
     periode: false,
   },
