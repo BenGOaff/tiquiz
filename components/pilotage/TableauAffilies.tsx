@@ -25,6 +25,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { AlertTriangle, Search } from "lucide-react";
 
 import { CARTE } from "@/components/pilotage/carte";
@@ -299,7 +300,12 @@ export function TableauAffilies({
 function Identite({ l }: { l: LigneAffilieDistante }) {
   return (
     <div className="min-w-0">
-      <p className="truncate font-medium">{l.nom ?? l.email}</p>
+      <Link
+        href={`/pilotage/affilies/${encodeURIComponent(l.sa)}`}
+        className="block truncate font-medium hover:underline"
+      >
+        {l.nom ?? l.email}
+      </Link>
       <p className="truncate text-xs text-muted-foreground">{l.nom ? l.email : ""}</p>
       <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs">
         {l.ref ? (
