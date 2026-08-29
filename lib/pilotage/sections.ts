@@ -40,7 +40,6 @@
 // LES HÔTES NE S'ÉCRIVENT PAS ICI. Le test `affiliate-links` l'exige, et
 // il a raison : une adresse écrite en dur à deux endroits ne se corrige
 // jamais qu'à moitié (drame du rebrand "quizing", 3 août).
-import { ATELIER_BASE_URL } from "@/lib/partner/atelierUrl";
 
 export type SectionId =
   | "accueil"
@@ -83,11 +82,7 @@ export const SECTIONS: readonly Section[] = [
     chemin: "/clients",
     nom: "Clients et élèves",
     question: "Qui sont ces personnes, qu'ont-elles payé, qu'ont-elles comme accès ?",
-    etat: "a-venir",
-    remplace: [
-      { libelle: "Mes clients (Tiquiz)", href: "/admin" },
-      { libelle: "Les élèves (Atelier)", href: `${ATELIER_BASE_URL}/admin/eleves` },
-    ],
+    etat: "prete",
   },
   {
     id: "ventes",
