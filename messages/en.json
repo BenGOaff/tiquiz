@@ -1048,7 +1048,12 @@
     "billingPortalElsewhere": "Your subscription wasn't taken out here. Contact support and we'll handle it.",
     "dnsFieldNameSubdomain": "Sub-domain",
     "dnsApexWhy": "This is the root of your domain, and every DNS provider refuses a CNAME there: an A record is the only option. This is not a mistake on our side, your provider will tell you the same thing.",
-    "dnsApexPrefer": "A subdomain holds up better: on {suggestion}, a CNAME points at our server by name, so your setup stays correct even if our address changes one day. Remove this domain and add {suggestion} instead."
+    "dnsApexPrefer": "A subdomain holds up better: on {suggestion}, a CNAME points at our server by name, so your setup stays correct even if our address changes one day. Remove this domain and add {suggestion} instead.",
+    "downgradeTitle": "Switch to {plan}",
+    "downgradeBody": "Nothing is charged today, and you keep your current plan until {date}. From that date, you move to {plan} and pay {ensuite} per billing period.",
+    "downgradeScheduled": "Your switch to a cheaper plan is scheduled for {date}. Nothing changes until then.",
+    "downgradeKeep": "Cancel this change",
+    "downgradeCancelled": "Change cancelled. You keep your current plan."
   },
   "languageSwitcher": {
     "label": "Language"

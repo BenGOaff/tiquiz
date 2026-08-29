@@ -36,11 +36,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { resolveAppUrl } from "@/lib/authLinks";
-import { ciblesPossibles, deciderChangement } from "@/lib/checkout/planChange";
+import { ciblesPossibles, deciderChangement, sensVers } from "@/lib/checkout/planChange";
 import {
+  annulerDescenteProgrammee,
   apercuChangement,
   appliquerChangement,
+  lireDescenteProgrammee,
   lireLigneAbonnement,
+  programmerDescente,
 } from "@/lib/checkout/planChangeStripe";
 import {
   readOwnerPaypal,
@@ -69,6 +72,14 @@ const PHRASES: Record<string, string> = {
   deja_sur_ce_palier: "Tu es déjà sur ce palier.",
   descente_non_geree:
     "Pour passer à un palier moins cher, arrête ton abonnement : tu gardes ton accès jusqu'à la date déjà payée, puis tu reprends le palier que tu veux.",
+  // PAYPAL N'A PAS D'ÉQUIVALENT DU CALENDRIER DE STRIPE : on ne peut
+  // pas y programmer un changement pour l'échéance suivante sans un
+  // nouvel accord du client, dont la date d'effet exacte dépend de leur
+  // côté. Plutôt que d'inventer une mécanique sur de l'argent, on dit la
+  // sortie qui marche, celle qui ne lui reprend rien de ce qu'elle a
+  // payé.
+  descente_paypal:
+    "Ton abonnement est chez PayPal, qui ne sait pas programmer un changement de palier. Arrête ton abonnement : tu gardes ton accès jusqu'à la date déjà payée, puis tu reprends le palier que tu veux.",
   pas_d_abonnement: "Tu n'as pas d'abonnement en cours chez nous.",
   pas_notre_abonnement:
     "Ton abonnement n'a pas été pris sur notre bon de commande. Écris-nous, on s'en occupe.",
@@ -84,6 +95,7 @@ const COTE_CLIENT = new Set([
   "produit_inconnu",
   "deja_sur_ce_palier",
   "descente_non_geree",
+  "descente_paypal",
   "pas_d_abonnement",
   "pas_notre_abonnement",
 ]);
@@ -177,6 +189,22 @@ async function contexteDe(email: string): Promise<Contexte> {
 
 // ── CE QUE ÇA COÛTERAIT ──────────────────────────────────────────────
 
+/**
+ * La fin de la période DÉJÀ PAYÉE, lue chez Stripe.
+ *
+ * On ne la calcule pas : ajouter un mois à une date d'achat se trompe
+ * dès qu'il y a eu un essai, une pause ou un changement de cycle, et
+ * une date fausse annoncée à une cliente est pire que pas de date.
+ */
+async function finDePeriode(args: {
+  key: string;
+  subscriptionId: string;
+}): Promise<string | null> {
+  const sub = await retrieveOwnerSubscription(args.key, args.subscriptionId);
+  const fin = (sub as { current_period_end?: unknown } | null)?.current_period_end;
+  return typeof fin === "number" ? new Date(fin * 1000).toISOString() : null;
+}
+
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const email = await adresseConnectee();
   if (!email) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
@@ -189,17 +217,54 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   // SANS `produit` : l'écran veut juste savoir où il en est et ce qu'il
   // peut proposer. Aucun appel de facturation, donc rien à attendre.
   if (!demande) {
+    // UN CHANGEMENT DÉJÀ PROGRAMMÉ SE VOIT, ET SE DÉFAIT. Une descente
+    // qu'on ne peut ni voir ni annuler serait pire que pas de descente
+    // du tout : elle découvrirait le nouveau palier un matin, sans se
+    // souvenir de l'avoir demandé.
+    const programme =
+      ctx.fournisseur === "stripe"
+        ? await lireDescenteProgrammee({ key: ctx.key, subscriptionId: ctx.abonnementId })
+        : null;
+
     return NextResponse.json({
       ok: true,
       fournisseur: ctx.fournisseur,
       actuel: ctx.produit,
       cibles: ciblesPossibles(ctx.produit),
+      // Le sens de chaque cible : les deux ne se présentent pas pareil,
+      // l'une se paie maintenant, l'autre s'annonce pour une date.
+      sens: Object.fromEntries(
+        ciblesPossibles(ctx.produit).map((id) => [id, sensVers(ctx.produit, id)]),
+      ),
+      programme,
     });
   }
 
   const decision = deciderChangement({ actuelId: ctx.produit, cibleId: demande });
   if (!decision.ok || !decision.cible || !decision.proration) {
     return refus(decision.raison ?? "unreadable");
+  }
+
+  // UNE DESCENTE NE SE FACTURE PAS : elle s'annonce.
+  //
+  // Rien n'est prélevé aujourd'hui, et rien ne change avant l'échéance.
+  // Ce que l'écran doit montrer, ce n'est donc pas un montant à payer,
+  // c'est une DATE et le prix qui s'appliquera à partir d'elle.
+  if (decision.quand === "fin-de-periode") {
+    if (ctx.fournisseur === "paypal") return refus("descente_paypal");
+    const fin = await finDePeriode({ key: ctx.key, subscriptionId: ctx.abonnementId });
+    return NextResponse.json({
+      ok: true,
+      fournisseur: "stripe",
+      actuel: ctx.produit,
+      cible: decision.cible.id,
+      sens: "descente",
+      aPayerCents: 0,
+      ensuiteCents: decision.cible.amountCents,
+      currency: decision.cible.currency,
+      prorata: false,
+      effetLe: fin,
+    });
   }
 
   // PAYPAL NE SAIT PAS FAIRE DE PRORATA.
@@ -261,13 +326,62 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const email = await adresseConnectee();
   if (!email) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
 
-  const body = (await req.json().catch(() => ({}))) as { produit?: unknown };
+  const body = (await req.json().catch(() => ({}))) as { produit?: unknown; annuler?: unknown };
   const ctx = await contexteDe(email);
   if (!ctx.ok) return refus(ctx.raison);
+
+  // ANNULER UN CHANGEMENT PROGRAMMÉ. Elle a changé d'avis avant
+  // l'échéance : on détache le calendrier et l'abonnement reste
+  // exactement ce qu'il est.
+  if (body.annuler === true) {
+    if (ctx.fournisseur !== "stripe") return refus("descente_paypal");
+    const prog = await lireDescenteProgrammee({
+      key: ctx.key,
+      subscriptionId: ctx.abonnementId,
+    });
+    if (!prog) return NextResponse.json({ ok: true, rienAAnnuler: true });
+    const out = await annulerDescenteProgrammee({ key: ctx.key, scheduleId: prog.scheduleId });
+    if (!out.ok) {
+      console.error(`[change-plan] annulation refusee pour ${email} : ${out.detail ?? "?"}`);
+      return refus("stripe_refused");
+    }
+    console.log(`[change-plan] ${email} annule son changement programme.`);
+    return NextResponse.json({ ok: true, annule: true });
+  }
 
   const decision = deciderChangement({ actuelId: ctx.produit, cibleId: String(body.produit ?? "") });
   if (!decision.ok || !decision.cible || !decision.proration) {
     return refus(decision.raison ?? "unreadable");
+  }
+
+  // LA DESCENTE EST PROGRAMMÉE, PAS APPLIQUÉE.
+  //
+  // Rien n'est prélevé, rien ne change avant l'échéance, et l'accès
+  // qu'elle a payé reste entier jusque là. Le plan sera ouvert par le
+  // WEBHOOK le jour de la bascule, comme pour n'importe quelle vente.
+  if (decision.quand === "fin-de-periode") {
+    if (ctx.fournisseur === "paypal") return refus("descente_paypal");
+    const r = await programmerDescente({
+      key: ctx.key,
+      subscriptionId: ctx.abonnementId,
+      cible: decision.cible,
+    });
+    if (!r.ok) {
+      console.error(`[change-plan] descente refusee pour ${email} : ${r.detail ?? "?"}`);
+      return refus("stripe_refused");
+    }
+    console.log(
+      `[change-plan] ${email} : ${ctx.produit ?? "?"} -> ${decision.cible.id} ` +
+        `programme pour le ${r.effetLe}. Le plan sera ouvert par le webhook ce jour la.`,
+    );
+    return NextResponse.json({
+      ok: true,
+      fournisseur: "stripe",
+      cible: decision.cible.id,
+      label: decision.cible.label,
+      programme: true,
+      effetLe: r.effetLe,
+    });
   }
 
   if (ctx.fournisseur === "paypal") {

@@ -212,3 +212,246 @@ export async function appliquerChangement(args: {
   if (!out.ok) return { ok: false, detail: out.detail };
   return { ok: true, subscriptionId: String(out.json.id ?? args.subscriptionId) };
 }
+
+// ── LA DESCENTE, PROGRAMMÉE À L'ÉCHÉANCE ─────────────────────────────
+//
+// Béné, 29 août : "je veux que le downgrade soit pris en compte sans
+// désabonnement côté user."
+//
+// -- POURQUOI UN CALENDRIER, ET PAS UNE SIMPLE MISE À JOUR ------------
+//
+// `subscription.update` avec `proration_behavior: none` change le prix
+// pour la PROCHAINE facture, mais il change la ligne TOUT DE SUITE.
+// Notre webhook lit `customer.subscription.updated` et ouvrirait donc
+// le palier inférieur immédiatement : elle perdrait le PLUS qu'elle a
+// déjà payé jusqu'à la fin du mois. C'est exactement ce qu'on refuse.
+//
+// Un CALENDRIER (`subscription_schedules`) met la vérité chez Stripe :
+// la phase 1 garde le tarif actuel jusqu'à la fin de la période payée,
+// la phase 2 applique le nouveau. Notre webhook voit le changement le
+// jour où il a vraiment lieu, et ouvre le bon palier à ce moment là.
+// Aucun état "descente en attente" à tenir de notre côté, donc aucune
+// deuxième source de vérité à faire diverger.
+//
+// -- ET UN CALENDRIER EXIGE UN VRAI PRIX ------------------------------
+//
+// Les montées passent par `price_data` (un tarif fabriqué à la volée).
+// Les calendriers n'en veulent pas : il leur faut un objet `Price`. On
+// en crée donc un, UNE fois par palier, retrouvé par son `lookup_key` :
+// sans ça le compte Stripe de Béné se remplirait d'un prix par
+// descente, exactement ce que `idProduitStripe` évite pour les produits.
+
+/** La clé qui retrouve le prix d'un palier. Unique sur le compte. */
+function cleDuPrix(cible: OwnerProduct): string {
+  return `tiquiz_prix_${cible.id.replace(/-/g, "_")}`;
+}
+
+/**
+ * Le prix Stripe de ce palier, créé s'il n'existe pas encore.
+ *
+ * `transfer_lookup_key` déplace la clé depuis l'ancien prix le jour où
+ * le tarif change : Stripe interdit de modifier le montant d'un prix,
+ * donc un changement de tarif crée un nouvel objet, et sans ce
+ * transfert on retrouverait l'ancien pour toujours.
+ */
+export async function assurerPrixStripe(
+  key: string,
+  cible: OwnerProduct,
+): Promise<{ ok: boolean; id?: string; detail?: string }> {
+  const lookup = cleDuPrix(cible);
+  const attendu = {
+    montant: cible.amountCents,
+    devise: cible.currency.toLowerCase(),
+    interval: cible.interval ?? "month",
+  };
+
+  const trouve = await appelStripe(
+    key,
+    `/v1/prices?lookup_keys[]=${encodeURIComponent(lookup)}&active=true&limit=1`,
+  );
+  if (trouve.ok) {
+    const data = (trouve.json.data as Record<string, unknown>[] | undefined) ?? [];
+    const p = data[0];
+    const rec = (p?.recurring ?? {}) as { interval?: string };
+    // ON VÉRIFIE QUE LE PRIX RETROUVÉ EST BIEN LE BON. Un prix dont le
+    // montant ne correspond plus (tarif changé) ne doit pas être
+    // réutilisé : on en créerait un nouveau et on lui prendrait la clé.
+    if (
+      p &&
+      Number(p.unit_amount) === attendu.montant &&
+      String(p.currency).toLowerCase() === attendu.devise &&
+      rec.interval === attendu.interval
+    ) {
+      return { ok: true, id: String(p.id) };
+    }
+  }
+
+  const produit = await assurerProduitStripe(key, cible);
+  if (!produit.ok || !produit.id) return { ok: false, detail: produit.detail };
+
+  const cree = await appelStripe(key, "/v1/prices", {
+    product: produit.id,
+    unit_amount: cible.amountCents,
+    currency: cible.currency,
+    "recurring[interval]": cible.interval ?? "month",
+    // La TVA est DANS le prix, comme partout ailleurs.
+    tax_behavior: "inclusive",
+    lookup_key: lookup,
+    transfer_lookup_key: "true",
+  });
+  if (!cree.ok) return { ok: false, detail: cree.detail };
+  return { ok: true, id: String(cree.json.id) };
+}
+
+export interface DescenteProgrammee {
+  ok: boolean;
+  detail?: string;
+  /** Quand le nouveau palier prend effet, en ISO. */
+  effetLe?: string;
+  /** Le calendrier créé, pour pouvoir l'annuler. */
+  scheduleId?: string;
+}
+
+function lirePhaseCourante(schedule: Record<string, unknown>): {
+  price: string | null;
+  debut: number | null;
+  fin: number | null;
+} {
+  const phases = (schedule.phases as Record<string, unknown>[] | undefined) ?? [];
+  const p = phases[0];
+  if (!p) return { price: null, debut: null, fin: null };
+  const items = (p.items as Record<string, unknown>[] | undefined) ?? [];
+  const prix = items[0]?.price;
+  return {
+    // `price` peut être une chaîne ou un objet développé selon l'appel.
+    price: typeof prix === "string" ? prix : prix ? String((prix as { id?: string }).id ?? "") : null,
+    debut: typeof p.start_date === "number" ? p.start_date : null,
+    fin: typeof p.end_date === "number" ? p.end_date : null,
+  };
+}
+
+/**
+ * Programme la descente à la fin de la période déjà payée.
+ *
+ * **On n'ouvre PAS le plan ici**, et on ne le fera pas non plus le jour
+ * venu : c'est le webhook qui l'ouvre en voyant l'abonnement changer,
+ * comme pour n'importe quelle vente. Deux chemins qui ouvriraient
+ * l'accès chacun de leur côté finiraient par se contredire.
+ */
+export async function programmerDescente(args: {
+  key: string;
+  subscriptionId: string;
+  cible: OwnerProduct;
+}): Promise<DescenteProgrammee> {
+  const prix = await assurerPrixStripe(args.key, args.cible);
+  if (!prix.ok || !prix.id) return { ok: false, detail: prix.detail };
+
+  // 1. Un calendrier CALQUÉ sur l'abonnement en cours. Sa phase 0 décrit
+  //    exactement ce qui est facturé aujourd'hui : on la relira pour la
+  //    réécrire à l'identique, Stripe exigeant qu'on renvoie TOUTES les
+  //    phases à chaque mise à jour.
+  const cree = await appelStripe(args.key, "/v1/subscription_schedules", {
+    from_subscription: args.subscriptionId,
+  });
+  if (!cree.ok) return { ok: false, detail: cree.detail };
+
+  const scheduleId = String(cree.json.id ?? "");
+  const phase = lirePhaseCourante(cree.json);
+  if (!scheduleId || !phase.price || !phase.debut || !phase.fin) {
+    // On ne devine pas la forme d'une réponse : sans ces valeurs on ne
+    // peut pas réécrire la phase courante à l'identique, et l'écrire de
+    // travers changerait ce qui est facturé MAINTENANT.
+    return { ok: false, detail: "calendrier illisible" };
+  }
+
+  // 2. Deux phases : le tarif actuel jusqu'à l'échéance, le nouveau
+  //    ensuite. `release` rend l'abonnement à lui même une fois la
+  //    bascule faite : sans ça il resterait piloté par un calendrier
+  //    dont plus personne n'a besoin, et une montée ultérieure
+  //    échouerait.
+  const maj = await appelStripe(
+    args.key,
+    `/v1/subscription_schedules/${encodeURIComponent(scheduleId)}`,
+    {
+      end_behavior: "release",
+      "phases[0][items][0][price]": phase.price,
+      "phases[0][items][0][quantity]": 1,
+      "phases[0][start_date]": phase.debut,
+      "phases[0][end_date]": phase.fin,
+      "phases[1][items][0][price]": prix.id,
+      "phases[1][items][0][quantity]": 1,
+      // Le webhook lit `metadata.product` pour savoir QUEL palier
+      // ouvrir. Portée par la phase, elle est recopiée sur l'abonnement
+      // au moment de la bascule : sans elle, il rouvrirait l'ancien
+      // palier et la descente se déferait toute seule.
+      "phases[1][metadata][product]": args.cible.id,
+      "phases[1][metadata][source]": args.cible.source,
+      "phases[1][proration_behavior]": "none",
+    },
+  );
+  if (!maj.ok) return { ok: false, detail: maj.detail };
+
+  return {
+    ok: true,
+    scheduleId,
+    effetLe: new Date(phase.fin * 1000).toISOString(),
+  };
+}
+
+/**
+ * Le changement déjà programmé sur cet abonnement, s'il y en a un.
+ *
+ * Une descente programmée qu'on ne peut ni voir ni défaire serait pire
+ * que pas de descente du tout : elle découvrirait le nouveau palier un
+ * matin, sans se souvenir de l'avoir demandé.
+ */
+export async function lireDescenteProgrammee(args: {
+  key: string;
+  subscriptionId: string;
+}): Promise<{ scheduleId: string; effetLe: string; produit: string | null } | null> {
+  const sub = await appelStripe(
+    args.key,
+    `/v1/subscriptions/${encodeURIComponent(args.subscriptionId)}`,
+  );
+  if (!sub.ok) return null;
+  const scheduleId =
+    typeof sub.json.schedule === "string"
+      ? sub.json.schedule
+      : sub.json.schedule
+        ? String((sub.json.schedule as { id?: string }).id ?? "")
+        : "";
+  if (!scheduleId) return null;
+
+  const sch = await appelStripe(
+    args.key,
+    `/v1/subscription_schedules/${encodeURIComponent(scheduleId)}`,
+  );
+  if (!sch.ok) return null;
+  const phases = (sch.json.phases as Record<string, unknown>[] | undefined) ?? [];
+  const suivante = phases[1];
+  if (!suivante) return null;
+  const meta = (suivante.metadata ?? {}) as { product?: string };
+  const debut = typeof suivante.start_date === "number" ? suivante.start_date : null;
+  if (!debut) return null;
+  return {
+    scheduleId,
+    effetLe: new Date(debut * 1000).toISOString(),
+    produit: meta.product ?? null,
+  };
+}
+
+/** Annule un changement programmé, sans toucher à l'abonnement en cours. */
+export async function annulerDescenteProgrammee(args: {
+  key: string;
+  scheduleId: string;
+}): Promise<{ ok: boolean; detail?: string }> {
+  // `release` détache le calendrier et LAISSE l'abonnement tel qu'il
+  // est. `cancel`, lui, annulerait l'abonnement : la confusion coûterait
+  // une cliente, donc on n'utilise jamais l'autre.
+  const out = await appelStripe(
+    args.key,
+    `/v1/subscription_schedules/${encodeURIComponent(args.scheduleId)}/release`,
+    {},
+  );
+  return out.ok ? { ok: true } : { ok: false, detail: out.detail };
+}

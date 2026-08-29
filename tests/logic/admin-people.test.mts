@@ -151,7 +151,13 @@ test("le lifetime n'est PAS un abonnement a suivre", () => {
     assert.equal(v.people[0].status, "avie", plan);
   }
   assert.equal(
-    readPersonStatus({ hasTiquizAccount: true, plan: "LIFETIME", churn: null }),
+    readPersonStatus({
+      hasTiquizAccount: true,
+      plan: "LIFETIME",
+      churn: null,
+      essaiPlusJusquA: null,
+      maintenant: new Date("2026-08-29T12:00:00Z"),
+    }),
     "avie",
     "la casse ne doit pas changer le verdict",
   );

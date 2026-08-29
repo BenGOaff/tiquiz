@@ -2835,3 +2835,46 @@ réponses différentes le jour où l'un prend du retard.
 c'est à vie, donc ce n'est pas l'endroit où être permissif.
 
 Test : `tests/logic/audit-26-aout.test.mts`.
+
+## Équipes dans le PLUS : ce qui est noté, et ce qui bloque (Béné, 29 août 2026)
+
+"Imaginons une entreprise qui a besoin d'avoir plusieurs
+collaborateurs : ils auraient accès aux quiz, sondages etc. et l'admin
+pourrait décider de ne pas ouvrir les accès à la partie facturation ou
+aux leads. Pour un prestataire, on lui ouvre des accès pour qu'il mette
+le quiz en place et suive les statistiques, place les pixels, mais on
+veut pas qu'il voit forcément nos leads ni nos détails de facturation.
+Uniquement pour le Plus. 5 places pour le prix actuel, au delà +50 €/mois,
+au delà de 10 encore +100 €/mois."
+
+Pas urgent, c'est pour démarcher de plus grosses structures. Trois
+choses à ne pas perdre en attendant.
+
+**1. LE MULTIPROFIL N'EST PAS UNE ÉQUIPE, et c'est le piège.** Les
+projets (`project_id`, phase 6) partitionnent le CONTENU d'UNE personne.
+Une équipe partitionne les DROITS de plusieurs personnes sur le même
+contenu. Bâtir l'un sur l'autre donnerait "un projet = un collaborateur",
+donc un prestataire qui voit tout ou rien selon le projet, ce qui est
+exactement ce qu'elle refuse.
+
+**2. LE DROIT LE PLUS DUR EST CELUI DES LEADS.** Ce sont des données
+personnelles chiffrées (`lib/piiCrypto.ts`, une clé par créatrice). Un
+membre sans droit "leads" ne doit pas les voir, mais il doit voir les
+STATISTIQUES, qui se calculent sur les mêmes lignes. Le droit se pose
+donc sur la lecture des CHAMPS (email, nom, réponses nominatives), pas
+sur la table : un gate au niveau de l'écran laisserait l'API ouverte,
+et c'est par l'API qu'on récupère un export.
+
+**3. LA FACTURATION EST DÉJÀ SÉPARABLE.** `facturation_clients`,
+`factures` et le portail Stripe sont des écrans à part : c'est le droit
+le plus simple à poser, et probablement celui par lequel commencer.
+
+**Sur le prix, mon avis, qu'elle a demandé.** La marche de 5 à 6 places
+coûte +50 €/mois, soit +263 % pour UN siège de plus : c'est le genre de
+marche où on n'ajoute jamais la 6e personne, on partage un mot de passe,
+et le revendeur perd la vente ET le contrôle des accès. Un prix PAR
+SIÈGE au delà des 5 inclus (par exemple +10 €/mois par siège) rapporte
+la même chose à 10 places, se dit en une phrase à un acheteur, et ne
+crée aucune raison de tricher. Les paliers restent utiles pour les gros
+volumes, mais posés plus haut (au delà de 20, 50).
+

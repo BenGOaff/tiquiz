@@ -90,14 +90,18 @@ test("passer du mois à l'année est une MONTÉE", () => {
   assert.equal(a.action, "changer");
 });
 
-test("une descente chez nous est refusée AVEC sa raison", () => {
+test("une descente chez nous CHANGE le palier, elle ne renvoie plus au bon de commande", () => {
+  // Elle refusait, avec sa raison, jusqu'au 29 aout. Bene : "je veux que
+  // le downgrade soit pris en compte sans desabonnement cote user."
+  // Le changement est accepte ici, et c'est la route qui le programme
+  // pour la fin de la periode payee (jamais tout de suite : elle a paye
+  // son mois, on ne lui retire rien avant l'echeance).
   const a = actionDuBouton({
     actuelId: "annuel-plus",
     cibleId: "mensuel",
     abonnement: "chez-nous",
   });
-  assert.equal(a.action, "refuse");
-  assert.equal(a.action === "refuse" ? a.raison : null, "descente_non_geree");
+  assert.deepEqual(a, { action: "changer", produit: "mensuel" });
 });
 
 test("une abonnée Systeme.io garde LEUR bon de commande", () => {

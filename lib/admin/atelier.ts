@@ -45,7 +45,13 @@ export interface AtelierView {
   /** A-t-on VRAIMENT pu lire l'Atelier ? */
   reachable: boolean;
   /** Renseigné quand `reachable` est faux, pour le journal. */
-  reason?: "not_configured" | "forbidden" | "unreachable" | "read_failed";
+  reason?:
+    | "not_configured"
+    | "forbidden"
+    | "pas-deploye"
+    | "trop-lent"
+    | "unreachable"
+    | "read_failed";
   people: AtelierPerson[];
   sales: Sale[];
 }
@@ -63,6 +69,15 @@ function texte(v: unknown): string | null {
  * Une panne de l'Atelier ne doit pas faire tomber le tableau de bord de
  * Tiquiz : elle doit le rendre incomplet ET visible.
  */
+/**
+ * Ce qu'on accepte d'attendre de l'Atelier.
+ *
+ * Douze secondes : la meme valeur que l'espace affilie. Au dela, on rend
+ * `reachable: false` avec sa raison, et l'ecran le DIT. Une liaison
+ * lente ne doit pas faire attendre tout le tableau de bord.
+ */
+const DELAI_MS = 12000;
+
 export async function fetchAtelier(env: NodeJS.ProcessEnv = process.env): Promise<AtelierView> {
   const secret = String(env.PARTNER_SHARED_SECRET ?? "").trim();
   if (!secret) {
@@ -76,12 +91,25 @@ export async function fetchAtelier(env: NodeJS.ProcessEnv = process.env): Promis
     const res = await fetch(`${ATELIER_BASE_URL}/api/partner/pilotage`, {
       headers: { "x-partner-secret": secret },
       cache: "no-store",
+      // UN DÉLAI MAXIMUM, comme tout appel vers une autre app. Sans lui,
+      // une panne de l'Atelier garde la requête ouverte jusqu'à ce que
+      // la plateforme la tue, et TOUT le tableau de bord attend avec
+      // elle. C'est le trou n°5 de l'audit du 24 août, jamais rebouché
+      // ici : `lireAffiliesDistants` avait le sien, celui-ci non.
+      signal: AbortSignal.timeout(DELAI_MS),
     });
     if (res.status === 401) {
       // Les deux serveurs n'ont pas le meme secret. C'est une erreur de
       // configuration, pas une panne : on la nomme.
       console.error("[admin/atelier] secret refuse par l'Atelier : les deux .env divergent.");
       return { ...VIDE, reason: "forbidden" };
+    }
+    if (res.status === 404) {
+      // La porte n'existe pas encore SUR CE SERVEUR : la mise a jour de
+      // l'Atelier n'est pas deployee. C'est une attente, pas une panne,
+      // et les deux ne se corrigent pas au meme endroit.
+      console.error("[admin/atelier] 404 : la route partenaire n'est pas deployee.");
+      return { ...VIDE, reason: "pas-deploye" };
     }
     if (!res.ok) {
       console.error(`[admin/atelier] l'Atelier a repondu ${res.status}`);
@@ -141,10 +169,13 @@ export async function fetchAtelier(env: NodeJS.ProcessEnv = process.env): Promis
 
     return { reachable: true, people, sales };
   } catch (e) {
+    // "Trop lent" et "injoignable" ne se corrigent pas au meme endroit :
+    // l'un est une app qui rame, l'autre une app qui ne repond plus.
+    const trop = e instanceof Error && e.name === "TimeoutError";
     console.error(
-      `[admin/atelier] injoignable : ${e instanceof Error ? e.message : String(e)}`,
+      `[admin/atelier] ${trop ? "trop lent" : "injoignable"} : ${e instanceof Error ? e.message : String(e)}`,
     );
-    return { ...VIDE, reason: "unreachable" };
+    return { ...VIDE, reason: trop ? "trop-lent" : "unreachable" };
   }
 }
 

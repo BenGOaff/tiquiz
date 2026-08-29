@@ -29,6 +29,7 @@ import {
   monteeVersProduit,
   ouvertureDemandee,
   sensDuChangement,
+  sensVers,
 } from "../../lib/checkout/planChange.ts";
 import { estPlanAVie, PLANS_A_VIE } from "../../lib/checkout/plansAVie.ts";
 
@@ -89,13 +90,39 @@ test("une montee passe, avec le prorata demande explicitement", () => {
   assert.equal(d.proration, "always_invoice");
 });
 
-test("une descente est REFUSEE, et la raison est nommee", () => {
-  // On ne l'applique pas tout de suite : ce serait retirer des
-  // fonctionnalites deja payees jusqu'a la fin de la periode. Meme
-  // regle que l'annulation du 23 aout.
+test("UNE DESCENTE EST ACCEPTEE, ET ELLE ATTEND L'ECHEANCE", () => {
+  // Bene, 29 aout : "je veux que le downgrade soit pris en compte sans
+  // desabonnement cote user." L'ancien refus obligeait a resilier pour
+  // descendre, et beaucoup ne reviennent pas.
+  //
+  // Ce qu'on n'applique PAS tout de suite, c'est le changement : elle a
+  // paye sa periode au tarif fort, on ne lui reprend pas ce qu'elle a
+  // achete (regle de l'annulation du 23 aout).
   const d = deciderChangement({ actuelId: "mensuel-plus", cibleId: "mensuel" });
-  assert.equal(d.ok, false);
-  assert.equal(d.raison, "descente_non_geree");
+  assert.equal(d.ok, true);
+  assert.equal(d.sens, "descente");
+  assert.equal(d.quand, "fin-de-periode");
+  assert.equal(d.proration, "none", "une descente ne facture RIEN aujourd'hui");
+});
+
+test("une MONTEE, elle, prend effet tout de suite et se facture", () => {
+  const d = deciderChangement({ actuelId: "mensuel", cibleId: "mensuel-plus" });
+  assert.equal(d.ok, true);
+  assert.equal(d.quand, "immediat");
+  assert.equal(d.proration, "always_invoice");
+});
+
+test("LE MOMENT EST UN CHAMP, jamais deduit du sens par l'appelant", () => {
+  // Deduire marcherait aujourd'hui et casserait au premier cas qui ne
+  // suit pas la regle. Le champ est rendu, l'appelant le lit.
+  for (const [actuel, cible] of [
+    ["mensuel", "mensuel-plus"],
+    ["mensuel-plus", "mensuel"],
+    ["mensuel", "annuel"],
+  ]) {
+    const d = deciderChangement({ actuelId: actuel, cibleId: cible });
+    assert.ok(d.quand, `${actuel} -> ${cible} doit dire QUAND`);
+  }
 });
 
 test("un palier inconnu ne facture rien", () => {
@@ -115,11 +142,25 @@ test("demander son propre palier ne facture rien", () => {
   assert.equal(deciderChangement({ actuelId: "mensuel", cibleId: "mensuel" }).raison, "deja_sur_ce_palier");
 });
 
-test("les cibles proposees sont exactement les montees", () => {
+test("les cibles proposees sont TOUS les autres paliers, dans les deux sens", () => {
+  // Depuis le 29 aout, une descente se propose comme une montee : elle
+  // ne se fait plus en resiliant. Ce qui n'est jamais propose, c'est son
+  // propre palier.
   assert.deepEqual(ciblesPossibles("mensuel").sort(), ["annuel", "annuel-plus", "mensuel-plus"]);
-  // Depuis le palier le plus haut, il n'y a plus rien a vendre.
-  assert.deepEqual(ciblesPossibles("annuel-plus"), []);
+  assert.deepEqual(ciblesPossibles("annuel-plus").sort(), ["annuel", "mensuel", "mensuel-plus"]);
+  assert.ok(!ciblesPossibles("mensuel").includes("mensuel" as never));
   assert.deepEqual(ciblesPossibles("inconnu"), []);
+});
+
+test("et chaque cible dit DANS QUEL SENS elle va", () => {
+  // Les deux ne se presentent pas pareil : l'une se paie maintenant,
+  // l'autre s'annonce pour une date. L'ecran doit pouvoir les
+  // distinguer sans refaire le calcul.
+  assert.equal(sensVers("mensuel", "mensuel-plus"), "montee");
+  assert.equal(sensVers("mensuel-plus", "mensuel"), "descente");
+  assert.equal(sensVers("mensuel", "annuel"), "montee", "passer a l'annee est une montee");
+  assert.equal(sensVers("mensuel", "mensuel"), "identique");
+  assert.equal(sensVers("inconnu", "mensuel"), null);
 });
 
 // ── LE PRODUIT STRIPE ──
@@ -256,8 +297,11 @@ test("un bouton de montee ne s'affiche que si c'en est une", () => {
   assert.equal(monteeVersProduit("yearly", cibles), "annuel");
   // Son propre palier : rien a proposer.
   assert.equal(monteeVersProduit("monthly", cibles), null);
-  // Une descente : rien non plus, et l'ecran dit comment faire.
-  assert.equal(monteeVersProduit("monthly", ciblesPossibles("mensuel-plus")), null);
+  // Une descente EST proposee depuis le 29 aout : le bouton existe, et
+  // c'est le dialogue qui annonce une date au lieu d'un montant.
+  assert.equal(monteeVersProduit("monthly", ciblesPossibles("mensuel-plus")), "mensuel");
+  // Le gratuit n'est pas un palier vendu : on n'y descend pas, on
+  // resilie.
   assert.equal(monteeVersProduit("free", cibles), null);
 });
 

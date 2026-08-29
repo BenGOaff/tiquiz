@@ -1048,7 +1048,12 @@
     "billingPortalElsewhere": "Il tuo abbonamento non è stato sottoscritto qui. Scrivi al supporto e ce ne occupiamo.",
     "dnsFieldNameSubdomain": "Sottodominio",
     "dnsApexWhy": "Qui si tratta della radice del tuo dominio, e tutti i provider rifiutano un CNAME: un record A è l'unica via possibile. Non è un nostro errore, il tuo provider ti dirà la stessa cosa.",
-    "dnsApexPrefer": "Un sottodominio è più solido: su {suggestion}, un CNAME indica il nostro server per nome, quindi la configurazione resta corretta anche se un giorno il nostro indirizzo cambia. Elimina questo dominio e aggiungi {suggestion}."
+    "dnsApexPrefer": "Un sottodominio è più solido: su {suggestion}, un CNAME indica il nostro server per nome, quindi la configurazione resta corretta anche se un giorno il nostro indirizzo cambia. Elimina questo dominio e aggiungi {suggestion}.",
+    "downgradeTitle": "Passare a {plan}",
+    "downgradeBody": "Oggi non viene addebitato nulla e mantieni il tuo piano attuale fino al {date}. Da quella data passi a {plan} e paghi {ensuite} per periodo.",
+    "downgradeScheduled": "Il passaggio a un piano meno caro è programmato per il {date}. Fino ad allora non cambia nulla.",
+    "downgradeKeep": "Annullare questa modifica",
+    "downgradeCancelled": "Modifica annullata. Mantieni il tuo piano attuale."
   },
   "languageSwitcher": {
     "label": "Lingua"

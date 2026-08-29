@@ -95,7 +95,11 @@ export function sensDuChangement(actuel: OwnerProduct, cible: OwnerProduct): Sen
  * août : quand un cas a deux mécaniques, la mécanique se passe, sinon
  * la fonction finit par appliquer la règle de l'autre cas.
  */
-export type ProrationStripe = "always_invoice";
+export type ProrationStripe =
+  /** Montée : Stripe crédite ce qui n'a pas été consommé et facture la différence tout de suite. */
+  | "always_invoice"
+  /** Descente : on ne facture rien, le changement est PROGRAMMÉ à l'échéance. */
+  | "none";
 
 /**
  * Ce qu'on peut faire, ou la raison de ne pas le faire.
@@ -114,6 +118,20 @@ export interface ChangementDecide {
   cible?: OwnerProduct;
   actuel?: OwnerProduct;
   proration?: ProrationStripe;
+  /**
+   * QUAND le changement prend effet.
+   *
+   * `immediat` pour une montée : c'est un service qu'on rend tout de
+   * suite, donc on le facture tout de suite. `fin-de-periode` pour une
+   * descente : elle a payé sa période au tarif fort, on ne lui reprend
+   * pas ce qu'elle a acheté.
+   *
+   * C'est un CHAMP, jamais une déduction du sens par l'appelant :
+   * déduire marcherait aujourd'hui et casserait au premier cas qui ne
+   * suit pas la règle (une descente qu'on voudrait immédiate parce
+   * qu'elle vient d'acheter par erreur, par exemple).
+   */
+  quand?: "immediat" | "fin-de-periode";
 }
 
 export function deciderChangement(args: {
@@ -133,18 +151,50 @@ export function deciderChangement(args: {
 
   const sens = sensDuChangement(actuel, cible);
   if (sens === "identique") return { ok: false, raison: "deja_sur_ce_palier", actuel, cible };
-  if (sens === "descente") return { ok: false, raison: "descente_non_geree", sens, actuel, cible };
 
-  return { ok: true, sens, actuel, cible, proration: "always_invoice" };
+  // UNE DESCENTE EST ACCEPTÉE, ET ELLE PREND EFFET À L'ÉCHÉANCE.
+  //
+  // Béné, 29 août : "je veux que le downgrade soit pris en compte sans
+  // désabonnement côté user."
+  //
+  // Elle a raison, et l'ancien refus était mauvais commercialement :
+  // pour descendre, il fallait résilier, et beaucoup ne reviennent pas.
+  // Ce qu'il ne fallait PAS faire, en revanche, c'est l'appliquer tout
+  // de suite : elle a payé sa période au tarif fort, on ne lui reprend
+  // pas ce qu'elle a acheté (règle du 23 août). D'où le moment : la
+  // fin de la période DÉJÀ PAYÉE, et pas une minute avant.
+  if (sens === "descente") {
+    return { ok: true, sens, actuel, cible, proration: "none", quand: "fin-de-periode" };
+  }
+
+  return { ok: true, sens, actuel, cible, proration: "always_invoice", quand: "immediat" };
 }
 
-/** Les paliers vers lesquels on peut monter depuis celui ci. */
+/**
+ * Les paliers vers lesquels on peut aller depuis celui ci.
+ *
+ * Les DEUX sens, depuis le 29 août : une descente ne se fait plus en
+ * résiliant. Le sens de chacune est rendu à côté, parce que les deux ne
+ * se présentent pas pareil à l'écran (l'une se paie maintenant, l'autre
+ * s'annonce pour une date).
+ */
 export function ciblesPossibles(actuelId: string | null | undefined): OwnerProductId[] {
   const actuel = findOwnerProduct(actuelId);
   if (!actuel) return [];
   return (Object.keys(OWNER_CATALOG) as OwnerProductId[]).filter(
-    (id) => sensDuChangement(actuel, OWNER_CATALOG[id]) === "montee",
+    (id) => sensDuChangement(actuel, OWNER_CATALOG[id]) !== "identique",
   );
+}
+
+/** Le sens d'un changement, pour que l'écran sache quoi annoncer. */
+export function sensVers(
+  actuelId: string | null | undefined,
+  cibleId: string,
+): SensDuChangement | null {
+  const actuel = findOwnerProduct(actuelId);
+  const cible = findOwnerProduct(cibleId);
+  if (!actuel || !cible) return null;
+  return sensDuChangement(actuel, cible);
 }
 
 /**

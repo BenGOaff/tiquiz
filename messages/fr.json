@@ -1048,7 +1048,12 @@
     "billingPortalElsewhere": "Ton abonnement n'a pas été pris ici. Contacte le support et on s'en occupe.",
     "dnsFieldNameSubdomain": "Sous-domaine",
     "dnsApexWhy": "Ici il s'agit de la racine de ton domaine, et un CNAME y est refusé par tous les hébergeurs : un enregistrement A est la seule voie possible. Ce n'est pas une erreur de notre part, ton hébergeur te dira la même chose.",
-    "dnsApexPrefer": "Un sous-domaine est plus solide : sur {suggestion}, un CNAME désigne notre serveur par son nom, donc ton branchement reste juste même si notre adresse change un jour. Supprime ce domaine et ajoute plutôt {suggestion}."
+    "dnsApexPrefer": "Un sous-domaine est plus solide : sur {suggestion}, un CNAME désigne notre serveur par son nom, donc ton branchement reste juste même si notre adresse change un jour. Supprime ce domaine et ajoute plutôt {suggestion}.",
+    "downgradeTitle": "Passer à {plan}",
+    "downgradeBody": "Rien n'est prélevé aujourd'hui, et tu gardes ta formule actuelle jusqu'au {date}. À partir de cette date, tu passes à {plan} et tu paies {ensuite} par échéance.",
+    "downgradeScheduled": "Ton passage à une formule moins chère est programmé pour le {date}. D'ici là, rien ne change.",
+    "downgradeKeep": "Annuler ce changement",
+    "downgradeCancelled": "Changement annulé. Tu gardes ta formule actuelle."
   },
   "languageSwitcher": {
     "label": "Langue"
