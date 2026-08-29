@@ -117,8 +117,7 @@ export const SECTIONS: readonly Section[] = [
     chemin: "/sante",
     nom: "Santé des app",
     question: "Qu'est-ce qui casse ou qu'il faut surveiller en ce moment ?",
-    etat: "a-venir",
-    remplace: [{ libelle: "Appels Systeme.io reçus", href: "/admin" }],
+    etat: "prete",
   },
   {
     id: "parametres",

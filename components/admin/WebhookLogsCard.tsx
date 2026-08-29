@@ -21,10 +21,12 @@ import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, Webhook } from "lucide
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  LIBELLE_VERDICT,
   demandeUneAction,
   routageConcerne,
   type CallKind,
   type CallVerdict,
+  type TonVerdict,
 } from "@/lib/admin/webhookRows";
 
 type Row = {
@@ -45,42 +47,12 @@ type Row = {
   planNom: string | null;
 };
 
-/**
- * CE QUE CHAQUE VERDICT VEUT DIRE, EN CLAIR.
- *
- * Le serveur rend un code, l'écran écrit la phrase. Et la COULEUR compte
- * autant que le mot : avant le 22 août, tout ce qui portait une trace
- * d'erreur virait au rouge, y compris un paiement refusé chez Systeme.io
- * (la carte du client, pas nous) et un refus corrigé depuis. Un écran où
- * tout est rouge est un écran qu'on arrête de lire.
- */
-const VERDICTS: Record<CallVerdict, { mot: string; aide: string; ton: "ok" | "info" | "alerte" }> = {
-  ouvert: { mot: "accès ouvert", aide: "", ton: "ok" },
-  "palier-a-confirmer": {
-    mot: "accès ouvert, palier à confirmer",
-    aide: "Le client a ses accès. Le palier vient d'un repli : vérifie s'il a pris l'annuel ou un PLUS.",
-    ton: "info",
-  },
-  "sans-acces": {
-    mot: "sans accès",
-    aide: "Cette personne attend quelque chose qu'elle n'a pas. Le bon de commande n'est toujours pas reconnu.",
-    ton: "alerte",
-  },
-  "corrige-depuis": {
-    mot: "corrigé depuis",
-    aide: "Refusé sur le moment, mais le routage d'aujourd'hui sait répondre. Vérifie juste que la personne a bien ses accès.",
-    ton: "info",
-  },
-  "paiement-echoue": {
-    mot: "paiement refusé",
-    aide: "La carte du client a été refusée chez Systeme.io. Rien à corriger chez nous.",
-    ton: "info",
-  },
-  panne: { mot: "panne", aide: "On a planté sur cet appel.", ton: "alerte" },
-  "sans-objet": { mot: "traité", aide: "", ton: "ok" },
-};
+// Le libellé et le TON viennent de `lib/admin/webhookRows.ts`, comme le
+// verdict lui même : deux écrans qui décriraient le même appel avec
+// leurs propres mots finiraient par se contredire.
+const VERDICTS = LIBELLE_VERDICT;
 
-const TONS: Record<"ok" | "info" | "alerte", string> = {
+const TONS: Record<TonVerdict, string> = {
   ok: "text-emerald-700",
   info: "text-muted-foreground",
   alerte: "text-destructive",
