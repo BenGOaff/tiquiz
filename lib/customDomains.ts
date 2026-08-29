@@ -53,6 +53,11 @@ export const OWN_HOSTS: ReadonlySet<string> = new Set([
   // avec les vhosts du Caddyfile.
   "tiquiz.fr",
   "www.tiquiz.fr",
+  // Le centre de pilotage (29 aout). SANS CETTE LIGNE il repondrait 404
+  // sur tout : le portier prendrait son hote pour le domaine d'une
+  // creatrice, exactement le trou trouve le 24 aout sur les domaines de
+  // vente. A garder en phase avec le rewrite de next.config.ts.
+  "pilotage.tipote.com",
   // dev / preview
   "localhost",
   "127.0.0.1",

@@ -48,6 +48,7 @@ import { buildSales, type EventRow } from "@/lib/checkout/sales";
 import { buildSioSales } from "@/lib/admin/sioSales";
 import { buildPeople, monthlyTrend, type ChurnRow, type ProfileRow } from "@/lib/admin/people";
 import { fetchAtelier } from "@/lib/admin/atelier";
+import { serieEmpilee } from "@/lib/pilotage/serieEmpilee";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -212,6 +213,13 @@ export async function GET(): Promise<NextResponse> {
       // qui lit l'horloge tout seul n'est pas testable, et un test qui
       // depend de l'heure est un test qui clignote (1er aout).
       tendance: monthlyTrend(sales, new Date()),
+      // L'ENCAISSÉ PAR MOIS, RÉPARTI PAR PRODUIT, calculé ICI.
+      //
+      // Le graphique en a besoin, mais on n'envoie pas les ventes au
+      // navigateur pour autant : elles portent les adresses des
+      // clients, et un écran n'a pas à recevoir ce qu'il n'affiche pas.
+      // L'Atelier est inclus, sinon le total ne serait pas le total.
+      serieEmpilee: serieEmpilee([...sales, ...atelier.sales], new Date(), 12),
       // Le nombre d'evenements lus, pour que l'ecran puisse dire
       // honnetement "sur les N derniers" au lieu de laisser croire que
       // c'est tout l'historique.

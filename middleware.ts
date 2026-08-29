@@ -325,8 +325,14 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
         return poseSa(NextResponse.redirect(loginUrl));
       }
 
-      // Admin route protection
-      if (pathname.startsWith("/admin") && !isAdminEmail(user.email)) {
+      // Admin route protection. `/pilotage` est le centre de pilotage :
+      // il montre les clients, l'argent et les cles, donc il est gate
+      // exactement comme `/admin`. Un chemin oublie ici serait ouvert a
+      // n'importe quel compte connecte.
+      if (
+        (pathname.startsWith("/admin") || pathname.startsWith("/pilotage")) &&
+        !isAdminEmail(user.email)
+      ) {
         return poseSa(NextResponse.redirect(new URL("/dashboard", req.url)));
       }
     } catch {

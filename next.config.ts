@@ -23,6 +23,33 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/**/*": ["./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],
   },
+  async rewrites() {
+    return {
+      beforeFiles: [
+        // pilotage.tipote.com -> /pilotage/*
+        //
+        // Le centre de pilotage a son adresse, mais pas son deploiement :
+        // une 4e app voudrait dire un 4e .env, un 4e build et un 4e pm2
+        // dans un process manuel, c'est a dire la configuration qui a
+        // croise les cles Supabase le 22 aout.
+        //
+        // Le lookahead exclut ce qui ne doit PAS etre reecrit. TOUTE
+        // nouvelle URL statique posee a la racine doit y etre ajoutee,
+        // sinon elle part en /pilotage/<fichier> qui n'existe pas.
+        {
+          source:
+            "/:path((?!_next|api|pilotage|favicon|robots\\.txt|sitemap\\.xml|login|auth).*)",
+          has: [{ type: "host", value: "pilotage.tipote.com" }],
+          destination: "/pilotage/:path",
+        },
+        {
+          source: "/",
+          has: [{ type: "host", value: "pilotage.tipote.com" }],
+          destination: "/pilotage",
+        },
+      ],
+    };
+  },
 };
 
 export default withNextIntl(nextConfig);
