@@ -49,6 +49,7 @@ import { buildSioSales } from "@/lib/admin/sioSales";
 import { buildPeople, monthlyTrend, type ChurnRow, type ProfileRow } from "@/lib/admin/people";
 import { fetchAtelier } from "@/lib/admin/atelier";
 import { serieEmpilee } from "@/lib/pilotage/serieEmpilee";
+import { GENRE_VENTE_ORPHELINE } from "@/lib/pilotage/alertes";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -220,6 +221,14 @@ export async function GET(): Promise<NextResponse> {
       // clients, et un écran n'a pas à recevoir ce qu'il n'affiche pas.
       // L'Atelier est inclus, sinon le total ne serait pas le total.
       serieEmpilee: serieEmpilee([...sales, ...atelier.sales], new Date(), 12),
+      // LES ALERTES DÉJÀ TRAITÉES. Une alerte qui ne peut pas s'éteindre
+      // cesse d'être lue, et le jour où une vraie apparaît à côté,
+      // personne ne la voit. On rend les références, l'écran range.
+      //
+      // Une table absente ne prive de RIEN : on rend une liste vide,
+      // donc toutes les alertes restent actives. C'est le bon sens de
+      // l'échec ici, l'inverse cacherait des ventes.
+      alertesTraitees: await lireTraitees(),
       // Le nombre d'evenements lus, pour que l'ecran puisse dire
       // honnetement "sur les N derniers" au lieu de laisser croire que
       // c'est tout l'historique.
@@ -233,4 +242,18 @@ export async function GET(): Promise<NextResponse> {
     console.error(`[admin/pilotage] lecture impossible : ${message}`);
     return NextResponse.json({ ok: false, reason: "read_failed" }, { status: 500 });
   }
+}
+
+/** Les références d'alertes déjà traitées. Jamais bloquant. */
+async function lireTraitees(): Promise<string[]> {
+  const { data, error } = await supabaseAdmin
+    .from("alertes_traitees")
+    .select("reference")
+    .eq("genre", GENRE_VENTE_ORPHELINE)
+    .limit(2000);
+  if (error) {
+    console.error(`[admin/pilotage] alertes traitees illisibles : ${error.message}`);
+    return [];
+  }
+  return ((data as { reference: string }[] | null) ?? []).map((r) => r.reference);
 }

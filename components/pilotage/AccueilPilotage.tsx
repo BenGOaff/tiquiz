@@ -33,6 +33,7 @@ import { GraphiqueEncaisse } from "@/components/pilotage/GraphiqueEncaisse";
 import { derniersContacts, dernieresVentes, parDateDesc } from "@/lib/pilotage/recents";
 import { libellePeriode, type SerieEmpilee } from "@/lib/pilotage/serieEmpilee";
 import { CARTE } from "@/components/pilotage/carte";
+import { trierAlertes, GENRE_VENTE_ORPHELINE } from "@/lib/pilotage/alertes";
 import type { Person, PeopleTotals } from "@/lib/admin/people";
 import type { Sale } from "@/lib/checkout/sales";
 import type { Ticket } from "@/lib/support/tickets";
@@ -44,6 +45,7 @@ type Donnees = {
   totals: PeopleTotals;
   ventesOrphelines: Sale[];
   serieEmpilee: SerieEmpilee;
+  alertesTraitees?: string[];
   atelier: { reachable: boolean; reason: string | null };
 };
 
@@ -106,6 +108,40 @@ export function AccueilPilotage() {
       setTickets(null);
     }
   }, []);
+
+  const traiter = useCallback(
+    async (reference: string, traite: boolean) => {
+      const url = "/api/admin/pilotage/traiter";
+      try {
+        const res = traite
+          ? await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ genre: GENRE_VENTE_ORPHELINE, reference }),
+            })
+          : await fetch(
+              `${url}?genre=${GENRE_VENTE_ORPHELINE}&reference=${encodeURIComponent(reference)}`,
+              { method: "DELETE" },
+            );
+        const j = await res.json();
+        // UN REFUS PRODUIT TOUJOURS QUELQUE CHOSE À L'ÉCRAN : sans ça,
+        // il est indiscernable d'un clic qui n'a pas pris.
+        if (!j?.ok) {
+          setErreur(
+            j?.reason === "table_absente"
+              ? "La migration 20260829_alertes_traitees n'est pas encore appliquée sur Supabase."
+              : "L'alerte n'a pas pu être marquée.",
+          );
+          return;
+        }
+        setErreur(null);
+        await charger();
+      } catch {
+        setErreur("L'alerte n'a pas pu être marquée.");
+      }
+    },
+    [charger],
+  );
 
   useEffect(() => {
     void charger();
@@ -179,6 +215,8 @@ export function AccueilPilotage() {
           {/* 2. CE QUI DEMANDE UNE ACTION, tout de suite après. */}
           <Alertes
             ventesOrphelines={d.ventesOrphelines}
+            traitees={new Set(d.alertesTraitees ?? [])}
+            onTraiter={traiter}
             atelier={d.atelier}
             sansMontant={d.totals.ventesSansMontant}
           />
@@ -251,33 +289,51 @@ function Chiffre({ titre, valeur, note }: { titre: string; valeur: string; note?
  */
 function Alertes({
   ventesOrphelines,
+  traitees,
+  onTraiter,
   atelier,
   sansMontant,
 }: {
   ventesOrphelines: Sale[];
+  traitees: ReadonlySet<string>;
+  onTraiter: (reference: string, traite: boolean) => void;
   atelier: { reachable: boolean; reason: string | null };
   sansMontant: number;
 }) {
-  const lignes: { cle: string; texte: string; lien?: { libelle: string; href: string } }[] = [];
+  const lignes: {
+    cle: string;
+    texte: string;
+    lien?: { libelle: string; href: string };
+    reference?: string;
+  }[] = [];
 
-  if (ventesOrphelines.length > 0) {
+  // Ce qui a été réglé sort de la liste, sans disparaître : marquer
+  // traité éteint l'alerte, ça n'efface pas l'argent.
+  const { actives: orphelines, traitees: reglees } = trierAlertes(
+    ventesOrphelines,
+    (v) => v.ref,
+    traitees,
+  );
+
+  if (orphelines.length > 0) {
     // QUAND ET COMBIEN, pas seulement QUI. Une vente orpheline d'il y a
     // trois mois et une d'hier n'appellent pas la même réaction, et
     // sans sa date elle se lit comme une urgence permanente : c'est
     // comme ça qu'une alerte finit par ne plus être lue.
-    for (const v of ventesOrphelines.slice(0, 3)) {
+    for (const v of orphelines.slice(0, 5)) {
       lignes.push({
         cle: `orpheline-${v.ref}`,
         texte:
           `${v.email} a payé ${euros(v.amountCents)} le ${quandLong(v.paidAt)}`
           + " et n'apparaît dans aucun compte.",
         lien: { libelle: "Ouvrir Mes ventes", href: "/admin/ventes" },
+        reference: v.ref,
       });
     }
-    if (ventesOrphelines.length > 3) {
+    if (orphelines.length > 5) {
       lignes.push({
         cle: "orphelines-reste",
-        texte: `${ventesOrphelines.length - 3} autre${ventesOrphelines.length - 3 > 1 ? "s" : ""} vente${ventesOrphelines.length - 3 > 1 ? "s" : ""} dans le même cas.`,
+        texte: `${orphelines.length - 5} autre${orphelines.length - 5 > 1 ? "s" : ""} vente${orphelines.length - 5 > 1 ? "s" : ""} dans le même cas.`,
       });
     }
   }
@@ -299,7 +355,12 @@ function Alertes({
     });
   }
 
-  if (lignes.length === 0) return null;
+  // RIEN À SIGNALER NE PRODUIT RIEN. Un encart "tout va bien" affiché
+  // en permanence finit par ne plus être lu. Mais ce qui a été traité
+  // reste rattrapable, discrètement.
+  if (lignes.length === 0) {
+    return reglees.length > 0 ? <Reglees ventes={reglees} onTraiter={onTraiter} /> : null;
+  }
 
   return (
     <section className="rounded-xl border border-amber-300/50 bg-amber-50 p-4 dark:bg-amber-950/20">
@@ -316,10 +377,62 @@ function Alertes({
                 {l.lien.libelle}
               </Link>
             )}
+            {l.reference && (
+              <button
+                type="button"
+                onClick={() => onTraiter(l.reference!, true)}
+                className="rounded-md border border-current/30 px-2 py-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/10"
+              >
+                Marquer traité
+              </button>
+            )}
           </li>
         ))}
       </ul>
+      {reglees.length > 0 && <Reglees ventes={reglees} onTraiter={onTraiter} discret />}
     </section>
+  );
+}
+
+/**
+ * Ce qui a été marqué traité.
+ *
+ * Discret, mais JAMAIS absent : une décision qu'on ne peut plus défaire
+ * finit par ne plus être prise, et ici elle porte sur de l'argent
+ * rentré sans contrepartie.
+ */
+function Reglees({
+  ventes,
+  onTraiter,
+  discret,
+}: {
+  ventes: Sale[];
+  onTraiter: (reference: string, traite: boolean) => void;
+  discret?: boolean;
+}) {
+  return (
+    <details className={discret ? "mt-3" : `${CARTE} p-4`}>
+      <summary className="cursor-pointer text-xs text-muted-foreground">
+        {ventes.length} vente{ventes.length > 1 ? "s" : ""} marquée
+        {ventes.length > 1 ? "s" : ""} traitée{ventes.length > 1 ? "s" : ""}
+      </summary>
+      <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+        {ventes.map((v) => (
+          <li key={v.ref} className="flex flex-wrap items-baseline gap-2">
+            <span>
+              {v.email} · {euros(v.amountCents)} · {quandLong(v.paidAt)}
+            </span>
+            <button
+              type="button"
+              onClick={() => onTraiter(v.ref, false)}
+              className="underline underline-offset-2"
+            >
+              remettre en alerte
+            </button>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 
