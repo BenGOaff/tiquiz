@@ -28,7 +28,7 @@
 // PUR : ni horloge ni composant. La date de fin est un PARAMÈTRE, sinon
 // le test dépend de l'heure et finit par clignoter (leçon du 1er août).
 
-import { moisDe, derniersMois } from "@/lib/admin/adminStats";
+import { moisDe, derniersMois, moisLabel } from "@/lib/admin/adminStats";
 import { readSaleProduct, type Produit } from "@/lib/admin/saleProduct";
 import type { Sale } from "@/lib/checkout/sales";
 
@@ -155,4 +155,21 @@ export function segmentsDessin(
     const brut = (cents / max) * hauteurTracePx;
     return { produit, cents, hauteurPx: Math.max(minPx, Math.round(brut)) };
   });
+}
+
+/**
+ * La période VRAIMENT couverte, écrite en toutes lettres.
+ *
+ * Béné, 29 août : "encaissé sur la période : quelle période ?" La
+ * question est juste, et un chiffre dont on ne sait pas ce qu'il couvre
+ * ne sert à rien : il ne se compare à rien, pas même au relevé de
+ * banque. On nomme donc les mois RÉELLEMENT lus, pas la fenêtre
+ * demandée : la fenêtre fait douze mois, la donnée en couvre cinq.
+ */
+export function libellePeriode(serie: SerieEmpilee): string {
+  if (!serie.fiable || serie.mois.length === 0) return "";
+  const premier = serie.mois[0].mois;
+  const dernier = serie.mois[serie.mois.length - 1].mois;
+  if (premier === dernier) return `en ${moisLabel(dernier)}`;
+  return `de ${moisLabel(premier)} à ${moisLabel(dernier)}`;
 }

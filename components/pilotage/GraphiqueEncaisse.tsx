@@ -37,6 +37,7 @@ import {
 } from "@/lib/pilotage/serieEmpilee";
 import { NOM_PRODUIT, type Produit } from "@/lib/admin/saleProduct";
 import { moisLabel } from "@/lib/admin/adminStats";
+import { CARTE } from "@/components/pilotage/carte";
 
 const COULEUR: Record<Produit, string> = {
   tiquiz: "var(--pil-tiquiz)",
@@ -60,7 +61,7 @@ export function GraphiqueEncaisse({ serie }: { serie: SerieEmpilee }) {
   // CE QU'ON NE SAIT PAS SE DIT, on ne dessine pas un cadre vide.
   if (!serie.fiable) {
     return (
-      <section className="rounded-xl border bg-background p-5">
+      <section className={`${CARTE} p-5`}>
         <h2 className="text-sm font-medium">Encaissé par mois</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           {serie.raison === "aucune-donnee"
@@ -77,7 +78,7 @@ export function GraphiqueEncaisse({ serie }: { serie: SerieEmpilee }) {
   const iDernier = serie.mois.length - 1;
 
   return (
-    <section className="rounded-xl border bg-background p-5">
+    <section className={`${CARTE} p-5`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-medium">Encaissé par mois</h2>
         <div className="flex items-center gap-3">

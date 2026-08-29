@@ -17,6 +17,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
 import { SECTIONS } from "@/lib/pilotage/sections";
+import { CARTE } from "@/components/pilotage/carte";
 
 export default async function SectionAVenir({
   params,
@@ -35,7 +36,7 @@ export default async function SectionAVenir({
         <p className="mt-1 text-sm text-muted-foreground">{s.question}</p>
       </div>
 
-      <div className="rounded-xl border bg-background p-6">
+      <div className={`${CARTE} p-6`}>
         <p className="text-sm font-medium">Cette section n&apos;est pas encore construite.</p>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Rien n&apos;a été retiré : le travail se fait toujours sur les écrans ci-dessous, et

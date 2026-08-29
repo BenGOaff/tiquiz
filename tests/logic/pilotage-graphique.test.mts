@@ -16,6 +16,7 @@ import assert from "node:assert/strict";
 import {
   serieEmpilee,
   segmentsDessin,
+  libellePeriode,
   PRODUITS_ORDRE,
 } from "@/lib/pilotage/serieEmpilee";
 import type { Sale } from "@/lib/checkout/sales";
@@ -131,4 +132,32 @@ test("seuls les produits PRÉSENTS entrent dans la légende", () => {
   if (!s.fiable) return;
   assert.ok(s.presents.length >= 1);
   assert.ok(s.presents.every((p) => PRODUITS_ORDRE.includes(p)));
+});
+
+test("LA PÉRIODE EST NOMMÉE, jamais laissée à deviner", () => {
+  // Béné, 29 août : "encaissé sur la période : quelle période ?" Un
+  // chiffre dont on ignore ce qu'il couvre ne se compare à rien, pas
+  // même au relevé de banque. Et on nomme les mois RÉELLEMENT lus, pas
+  // la fenêtre demandée : la fenêtre fait douze mois, la donnée cinq.
+  const s = serieEmpilee(
+    [
+      vente({ ref: "a", paidAt: "2026-04-10T10:00:00Z" }),
+      vente({ ref: "b", paidAt: "2026-08-10T10:00:00Z" }),
+    ],
+    FIN,
+    12,
+  );
+  const l = libellePeriode(s);
+  assert.match(l, /avr/);
+  assert.match(l, /ao/);
+  assert.ok(!l.includes("12"), l);
+});
+
+test("un seul mois de données ne s'annonce pas comme une plage", () => {
+  const s = serieEmpilee([vente({ paidAt: "2026-08-10T10:00:00Z" })], FIN, 12);
+  assert.match(libellePeriode(s), /^en /);
+});
+
+test("sans donnée, aucune période n'est inventée", () => {
+  assert.equal(libellePeriode(serieEmpilee([], FIN, 12)), "");
 });

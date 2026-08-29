@@ -87,7 +87,7 @@ export function PilotageNav({ email }: { email: string }) {
     <>
       {/* Mobile : une barre, et le menu se déplie. Une sidebar fixe sur
           un téléphone mange la moitié de l'écran. */}
-      <div className="flex items-center justify-between border-b bg-background px-4 py-3 lg:hidden">
+      <div className="flex items-center justify-between border-b bg-card px-4 py-3 lg:hidden">
         <span className="text-sm font-semibold">Pilotage</span>
         <button
           type="button"
@@ -100,10 +100,10 @@ export function PilotageNav({ email }: { email: string }) {
         </button>
       </div>
       {ouvert && (
-        <div className="border-b bg-background p-3 lg:hidden">{liens}</div>
+        <div className="border-b bg-card p-3 lg:hidden">{liens}</div>
       )}
 
-      <aside className="hidden w-60 shrink-0 border-r bg-background lg:block">
+      <aside className="hidden w-60 shrink-0 border-r border-border/60 bg-card lg:block">
         <div className="sticky top-0 flex h-screen flex-col p-4">
           <div className="px-3 py-2">
             <p className="text-sm font-semibold">Pilotage</p>
