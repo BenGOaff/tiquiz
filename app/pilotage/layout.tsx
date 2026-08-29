@@ -20,7 +20,10 @@ import { redirect } from "next/navigation";
 
 import { isAdminEmail } from "@/lib/adminEmails";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { Suspense } from "react";
+
 import { PilotageNav } from "@/components/pilotage/PilotageNav";
+import { SelecteurPeriode } from "@/components/pilotage/SelecteurPeriode";
 
 export const metadata: Metadata = { title: "Pilotage" };
 
@@ -45,6 +48,14 @@ export default async function PilotageLayout({
           l'espace affilié). */}
       <main className="min-w-0 flex-1">
         <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          {/* LE SÉLECTEUR EST ICI ET PAS DANS UNE PAGE : Béné le veut
+              "partout", et une barre recopiée dans chaque écran finit
+              toujours par manquer dans l'un d'eux. */}
+          <div className="mb-5 flex justify-end">
+            <Suspense fallback={null}>
+              <SelecteurPeriode />
+            </Suspense>
+          </div>
           {children}
         </div>
       </main>

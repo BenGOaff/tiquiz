@@ -26,24 +26,40 @@
 // reste, et l'inverse serait absurde.
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, Loader2, RefreshCw } from "lucide-react";
 
 import { GraphiqueEncaisse } from "@/components/pilotage/GraphiqueEncaisse";
-import { derniersContacts, dernieresVentes, parDateDesc } from "@/lib/pilotage/recents";
-import { libellePeriode, type SerieEmpilee } from "@/lib/pilotage/serieEmpilee";
+import { parDateDesc } from "@/lib/pilotage/recents";
+import type { SerieEmpilee } from "@/lib/pilotage/serieEmpilee";
 import { CARTE } from "@/components/pilotage/carte";
+import { trierAlertes, GENRE_VENTE_ORPHELINE } from "@/lib/pilotage/alertes";
 import type { Person, PeopleTotals } from "@/lib/admin/people";
 import type { Sale } from "@/lib/checkout/sales";
 import type { Ticket } from "@/lib/support/tickets";
 import { NOM_PRODUIT } from "@/lib/admin/saleProduct";
 import { readSaleProduct } from "@/lib/admin/saleProduct";
 
+type Resume = {
+  encaisseCents: number;
+  rembourseCents: number;
+  ventes: number;
+  nouveauxComptes: number;
+  departs: number;
+  serie: SerieEmpilee;
+  contacts: Person[];
+  dernieresVentes: { vente: Sale; email: string; nom: string | null }[];
+  sansMontant: number;
+};
+
 type Donnees = {
   people: Person[];
   totals: PeopleTotals;
   ventesOrphelines: Sale[];
-  serieEmpilee: SerieEmpilee;
+  resume: Resume;
+  periode: { libelle: string; tronquee: boolean; depuis: string };
+  alertesTraitees?: string[];
   atelier: { reachable: boolean; reason: string | null };
 };
 
@@ -72,6 +88,8 @@ function quand(iso: string | null | undefined): string {
 }
 
 export function AccueilPilotage() {
+  const params = useSearchParams();
+  const query = params?.toString() ?? "";
   const [d, setD] = useState<Donnees | null>(null);
   const [tickets, setTickets] = useState<Ticket[] | null>(null);
   const [chargement, setChargement] = useState(true);
@@ -81,7 +99,9 @@ export function AccueilPilotage() {
     setChargement(true);
     setErreur(null);
     try {
-      const res = await fetch("/api/admin/pilotage", { cache: "no-store" });
+      const res = await fetch(`/api/admin/pilotage${query ? `?${query}` : ""}`, {
+        cache: "no-store",
+      });
       const j = await res.json();
       // UN `ok: false` PRODUIT TOUJOURS QUELQUE CHOSE À L'ÉCRAN.
       if (!j?.ok) {
@@ -105,7 +125,41 @@ export function AccueilPilotage() {
     } catch {
       setTickets(null);
     }
-  }, []);
+  }, [query]);
+
+  const traiter = useCallback(
+    async (reference: string, traite: boolean) => {
+      const url = "/api/admin/pilotage/traiter";
+      try {
+        const res = traite
+          ? await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ genre: GENRE_VENTE_ORPHELINE, reference }),
+            })
+          : await fetch(
+              `${url}?genre=${GENRE_VENTE_ORPHELINE}&reference=${encodeURIComponent(reference)}`,
+              { method: "DELETE" },
+            );
+        const j = await res.json();
+        // UN REFUS PRODUIT TOUJOURS QUELQUE CHOSE À L'ÉCRAN : sans ça,
+        // il est indiscernable d'un clic qui n'a pas pris.
+        if (!j?.ok) {
+          setErreur(
+            j?.reason === "table_absente"
+              ? "La migration 20260829_alertes_traitees n'est pas encore appliquée sur Supabase."
+              : "L'alerte n'a pas pu être marquée.",
+          );
+          return;
+        }
+        setErreur(null);
+        await charger();
+      } catch {
+        setErreur("L'alerte n'a pas pu être marquée.");
+      }
+    },
+    [charger],
+  );
 
   useEffect(() => {
     void charger();
@@ -119,8 +173,11 @@ export function AccueilPilotage() {
     );
   }
 
-  const contacts = d ? derniersContacts(d.people, 6) : [];
-  const ventes = d ? dernieresVentes(d.people, 6) : [];
+  // TOUT VIENT DU RÉSUMÉ, donc de la même période. Refiltrer ici
+  // rouvrirait la porte à un écran dont le haut et le bas ne parlent pas
+  // du même intervalle.
+  const contacts = d?.resume.contacts ?? [];
+  const ventes = d?.resume.dernieresVentes ?? [];
   const ticketsRecents = tickets ? parDateDesc(tickets, (t) => t.createdAt).slice(0, 6) : [];
   const ouverts = (tickets ?? []).filter((t) => t.status === "open").length;
 
@@ -130,7 +187,7 @@ export function AccueilPilotage() {
         <div>
           <h1 className="text-2xl font-semibold">Accueil</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Qu&apos;est-ce qui demande mon attention aujourd&apos;hui ?
+            {d ? d.periode.libelle : "Qu'est-ce qui demande mon attention aujourd'hui ?"}
           </p>
         </div>
         <button
@@ -143,6 +200,20 @@ export function AccueilPilotage() {
           Rafraîchir
         </button>
       </div>
+
+      {/* ON DIT QUAND LA PÉRIODE DÉPASSE CE QU'ON A. Le journal des
+          encaissements n'existe que depuis le 7 août 2026 : un total
+          tronqué qui ne le dit pas fait prendre des décisions sur un
+          chiffre faux. */}
+      {d?.periode.tronquee && (
+        <p className="rounded-lg border border-border/60 bg-card px-4 py-2 text-xs text-muted-foreground">
+          Les encaissements ne sont enregistrés chez nous que depuis le{" "}
+          {new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(
+            new Date(`${d.periode.depuis}T00:00:00Z`),
+          )}
+          . Avant cette date, les ventes vivent uniquement dans Systeme.io.
+        </p>
+      )}
 
       {erreur && (
         <p className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
@@ -163,12 +234,20 @@ export function AccueilPilotage() {
                 toujours par se contredire, et c'est celui du haut
                 qu'on croit. */}
             <Chiffre
-              titre={`Encaissé ${libellePeriode(d.serieEmpilee) || "sur la période lue"}`}
-              valeur={euros(d.serieEmpilee.fiable ? d.serieEmpilee.totalCents : 0)}
-              note={d.totals.rembourseCents > 0 ? `${euros(d.totals.rembourseCents)} remboursés` : undefined}
+              titre="Encaissé"
+              valeur={euros(d.resume.encaisseCents)}
+              note={
+                d.resume.rembourseCents > 0
+                  ? `${euros(d.resume.rembourseCents)} remboursés`
+                  : `${d.resume.ventes} vente${d.resume.ventes > 1 ? "s" : ""}`
+              }
             />
-            <Chiffre titre="Abonnés" valeur={String(d.totals.abonnes)} note={`${d.totals.avie} à vie`} />
-            <Chiffre titre="Comptes" valeur={String(d.totals.comptes)} note={`${d.totals.atelier} élèves`} />
+            <Chiffre
+              titre="Nouveaux comptes"
+              valeur={String(d.resume.nouveauxComptes)}
+              note={d.resume.departs > 0 ? `${d.resume.departs} départ${d.resume.departs > 1 ? "s" : ""}` : undefined}
+            />
+            <Chiffre titre="Abonnés" valeur={String(d.totals.abonnes)} note="en ce moment" />
             <Chiffre
               titre="Tickets ouverts"
               valeur={tickets === null ? "-" : String(ouverts)}
@@ -179,12 +258,14 @@ export function AccueilPilotage() {
           {/* 2. CE QUI DEMANDE UNE ACTION, tout de suite après. */}
           <Alertes
             ventesOrphelines={d.ventesOrphelines}
+            traitees={new Set(d.alertesTraitees ?? [])}
+            onTraiter={traiter}
             atelier={d.atelier}
-            sansMontant={d.totals.ventesSansMontant}
+            sansMontant={d.resume.sansMontant}
           />
 
           {/* 3. LE graphique. */}
-          <GraphiqueEncaisse serie={d.serieEmpilee} />
+          <GraphiqueEncaisse serie={d.resume.serie} />
 
           {/* 4. Ce qui vient de se passer. */}
           <div className="grid gap-4 lg:grid-cols-3">
@@ -251,33 +332,51 @@ function Chiffre({ titre, valeur, note }: { titre: string; valeur: string; note?
  */
 function Alertes({
   ventesOrphelines,
+  traitees,
+  onTraiter,
   atelier,
   sansMontant,
 }: {
   ventesOrphelines: Sale[];
+  traitees: ReadonlySet<string>;
+  onTraiter: (reference: string, traite: boolean) => void;
   atelier: { reachable: boolean; reason: string | null };
   sansMontant: number;
 }) {
-  const lignes: { cle: string; texte: string; lien?: { libelle: string; href: string } }[] = [];
+  const lignes: {
+    cle: string;
+    texte: string;
+    lien?: { libelle: string; href: string };
+    reference?: string;
+  }[] = [];
 
-  if (ventesOrphelines.length > 0) {
+  // Ce qui a été réglé sort de la liste, sans disparaître : marquer
+  // traité éteint l'alerte, ça n'efface pas l'argent.
+  const { actives: orphelines, traitees: reglees } = trierAlertes(
+    ventesOrphelines,
+    (v) => v.ref,
+    traitees,
+  );
+
+  if (orphelines.length > 0) {
     // QUAND ET COMBIEN, pas seulement QUI. Une vente orpheline d'il y a
     // trois mois et une d'hier n'appellent pas la même réaction, et
     // sans sa date elle se lit comme une urgence permanente : c'est
     // comme ça qu'une alerte finit par ne plus être lue.
-    for (const v of ventesOrphelines.slice(0, 3)) {
+    for (const v of orphelines.slice(0, 5)) {
       lignes.push({
         cle: `orpheline-${v.ref}`,
         texte:
           `${v.email} a payé ${euros(v.amountCents)} le ${quandLong(v.paidAt)}`
           + " et n'apparaît dans aucun compte.",
         lien: { libelle: "Ouvrir Mes ventes", href: "/admin/ventes" },
+        reference: v.ref,
       });
     }
-    if (ventesOrphelines.length > 3) {
+    if (orphelines.length > 5) {
       lignes.push({
         cle: "orphelines-reste",
-        texte: `${ventesOrphelines.length - 3} autre${ventesOrphelines.length - 3 > 1 ? "s" : ""} vente${ventesOrphelines.length - 3 > 1 ? "s" : ""} dans le même cas.`,
+        texte: `${orphelines.length - 5} autre${orphelines.length - 5 > 1 ? "s" : ""} vente${orphelines.length - 5 > 1 ? "s" : ""} dans le même cas.`,
       });
     }
   }
@@ -299,7 +398,12 @@ function Alertes({
     });
   }
 
-  if (lignes.length === 0) return null;
+  // RIEN À SIGNALER NE PRODUIT RIEN. Un encart "tout va bien" affiché
+  // en permanence finit par ne plus être lu. Mais ce qui a été traité
+  // reste rattrapable, discrètement.
+  if (lignes.length === 0) {
+    return reglees.length > 0 ? <Reglees ventes={reglees} onTraiter={onTraiter} /> : null;
+  }
 
   return (
     <section className="rounded-xl border border-amber-300/50 bg-amber-50 p-4 dark:bg-amber-950/20">
@@ -316,10 +420,62 @@ function Alertes({
                 {l.lien.libelle}
               </Link>
             )}
+            {l.reference && (
+              <button
+                type="button"
+                onClick={() => onTraiter(l.reference!, true)}
+                className="rounded-md border border-current/30 px-2 py-0.5 text-xs hover:bg-black/5 dark:hover:bg-white/10"
+              >
+                Marquer traité
+              </button>
+            )}
           </li>
         ))}
       </ul>
+      {reglees.length > 0 && <Reglees ventes={reglees} onTraiter={onTraiter} discret />}
     </section>
+  );
+}
+
+/**
+ * Ce qui a été marqué traité.
+ *
+ * Discret, mais JAMAIS absent : une décision qu'on ne peut plus défaire
+ * finit par ne plus être prise, et ici elle porte sur de l'argent
+ * rentré sans contrepartie.
+ */
+function Reglees({
+  ventes,
+  onTraiter,
+  discret,
+}: {
+  ventes: Sale[];
+  onTraiter: (reference: string, traite: boolean) => void;
+  discret?: boolean;
+}) {
+  return (
+    <details className={discret ? "mt-3" : `${CARTE} p-4`}>
+      <summary className="cursor-pointer text-xs text-muted-foreground">
+        {ventes.length} vente{ventes.length > 1 ? "s" : ""} marquée
+        {ventes.length > 1 ? "s" : ""} traitée{ventes.length > 1 ? "s" : ""}
+      </summary>
+      <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+        {ventes.map((v) => (
+          <li key={v.ref} className="flex flex-wrap items-baseline gap-2">
+            <span>
+              {v.email} · {euros(v.amountCents)} · {quandLong(v.paidAt)}
+            </span>
+            <button
+              type="button"
+              onClick={() => onTraiter(v.ref, false)}
+              className="underline underline-offset-2"
+            >
+              remettre en alerte
+            </button>
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 

@@ -40,7 +40,6 @@
 // LES HÔTES NE S'ÉCRIVENT PAS ICI. Le test `affiliate-links` l'exige, et
 // il a raison : une adresse écrite en dur à deux endroits ne se corrige
 // jamais qu'à moitié (drame du rebrand "quizing", 3 août).
-import { AFFILIATE_DASHBOARD_URL } from "@/lib/affiliateUrls";
 import { ATELIER_BASE_URL } from "@/lib/partner/atelierUrl";
 
 export type SectionId =
@@ -103,11 +102,7 @@ export const SECTIONS: readonly Section[] = [
     chemin: "/affilies",
     nom: "Affiliés",
     question: "Qui recommande quoi, et combien je leur dois ?",
-    etat: "a-venir",
-    remplace: [
-      { libelle: "Les affiliés (Tipote)", href: `${AFFILIATE_DASHBOARD_URL}/admin/affilies` },
-      { libelle: "Les versements", href: `${AFFILIATE_DASHBOARD_URL}/admin/versements` },
-    ],
+    etat: "prete",
   },
   {
     id: "business",
