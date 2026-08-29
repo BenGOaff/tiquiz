@@ -50,6 +50,9 @@ import { buildPeople, monthlyTrend, type ChurnRow, type ProfileRow } from "@/lib
 import { fetchAtelier } from "@/lib/admin/atelier";
 import { lirePeriode, tronqueeParLeJournal, DEBUT_DU_JOURNAL } from "@/lib/pilotage/periode";
 import { resumePeriode } from "@/lib/pilotage/resumePeriode";
+import { lireCoutAffiliation } from "@/lib/pilotage/affilies";
+import { buildMrr, serieChurn } from "@/lib/admin/mrr";
+import { derniersMois } from "@/lib/admin/adminStats";
 import { GENRE_VENTE_ORPHELINE } from "@/lib/pilotage/alertes";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -246,6 +249,17 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       // donc toutes les alertes restent actives. C'est le bon sens de
       // l'échec ici, l'inverse cacherait des ventes.
       alertesTraitees: await lireTraitees(),
+      // LE RÉCURRENT ET LE CHURN, calculés sur les mêmes personnes que
+      // le reste : deux lectures séparées finiraient par se contredire.
+      mrr: buildMrr(vue.people),
+      churn: serieChurn(vue.people, derniersMois(maintenant, 12)),
+      // CE QUI SORT, sur la MÊME période que ce qui rentre. `null` =
+      // on n'a pas pu lire, ce qui n'est PAS un coût de zéro : l'écran
+      // doit dire la différence, sinon il affiche une marge fausse.
+      coutAffiliation: await lireCoutAffiliation({
+        debut: periode.debut,
+        fin: periode.fin,
+      }),
       // Le nombre d'evenements lus, pour que l'ecran puisse dire
       // honnetement "sur les N derniers" au lieu de laisser croire que
       // c'est tout l'historique.

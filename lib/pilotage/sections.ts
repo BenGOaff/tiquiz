@@ -62,6 +62,21 @@ export interface Section {
   /** Construite, ou pas encore. */
   etat: "prete" | "a-venir";
   /**
+   * LE SÉLECTEUR DE PÉRIODE A-T-IL UN SENS SUR CET ÉCRAN ?
+   *
+   * Béné le veut "partout", et il l'est : sur tout ce qui compte des
+   * euros ou des personnes dans le temps. Mais un annuaire, une file de
+   * support, l'état des clés et la liste des réglages ne se filtrent
+   * pas par mois : y laisser le sélecteur en ferait un bouton qui ne
+   * fait rien, et un bouton qui ne fait rien est pire qu'un bouton
+   * absent, parce qu'on le reclique.
+   *
+   * L'écran concerné le DIT quand même, en une phrase ("cet annuaire ne
+   * suit pas le filtre de période") : un contrôle qui disparaît sans un
+   * mot se lit comme un bug.
+   */
+  periode: boolean;
+  /**
    * L'écran qui fait encore le travail aujourd'hui. Obligatoire tant que
    * la section n'est pas prête : une section qui annonce "bientôt" sans
    * dire où aller est un cul-de-sac.
@@ -76,6 +91,7 @@ export const SECTIONS: readonly Section[] = [
     nom: "Accueil",
     question: "Qu'est-ce qui demande mon attention aujourd'hui ?",
     etat: "prete",
+    periode: true,
   },
   {
     id: "clients",
@@ -83,14 +99,15 @@ export const SECTIONS: readonly Section[] = [
     nom: "Clients et élèves",
     question: "Qui sont ces personnes, qu'ont-elles payé, qu'ont-elles comme accès ?",
     etat: "prete",
+    periode: false,
   },
   {
     id: "ventes",
     chemin: "/ventes",
     nom: "Ventes",
     question: "Qui a acheté quoi, quand, comment, via qui, et combien il paie ?",
-    etat: "a-venir",
-    remplace: [{ libelle: "Mes ventes (Tiquiz)", href: "/admin/ventes" }],
+    etat: "prete",
+    periode: true,
   },
   {
     id: "affilies",
@@ -98,38 +115,39 @@ export const SECTIONS: readonly Section[] = [
     nom: "Affiliés",
     question: "Qui recommande quoi, et combien je leur dois ?",
     etat: "prete",
+    periode: false,
   },
   {
     id: "business",
     chemin: "/business",
     nom: "Business",
     question: "Ce qui rentre contre ce qui sort, ce mois et le mois prochain.",
-    etat: "a-venir",
-    remplace: [{ libelle: "Statistiques (Tiquiz)", href: "/admin" }],
+    etat: "prete",
+    periode: true,
   },
   {
     id: "support",
     chemin: "/support",
     nom: "Support",
     question: "Qui attend une réponse, et depuis combien de temps ?",
-    etat: "a-venir",
-    remplace: [{ libelle: "Support (Tiquiz)", href: "/admin" }],
+    etat: "prete",
+    periode: false,
   },
   {
     id: "sante",
     chemin: "/sante",
     nom: "Santé des app",
     question: "Qu'est-ce qui casse ou qu'il faut surveiller en ce moment ?",
-    etat: "a-venir",
-    remplace: [{ libelle: "Appels Systeme.io reçus", href: "/admin" }],
+    etat: "prete",
+    periode: false,
   },
   {
     id: "parametres",
     chemin: "/parametres",
     nom: "Paramètres",
     question: "Ce qui fait tourner les app et circuler l'argent.",
-    etat: "a-venir",
-    remplace: [{ libelle: "Réglages (Tiquiz)", href: "/settings" }],
+    etat: "prete",
+    periode: false,
   },
 ];
 

@@ -245,3 +245,55 @@ export async function lireFicheAffiliee(
     return { fiche: null, raison: /abort|timeout/i.test(message) ? "trop-lent" : "unreachable" };
   }
 }
+
+// ── CE QUE L'AFFILIATION COÛTE SUR UNE PÉRIODE ───────────────────────
+
+import type { CoutAffiliation } from "@/lib/pilotage/business";
+import { COUT_INCONNU } from "@/lib/pilotage/business";
+
+/**
+ * Ce qui sort en commissions sur cette période.
+ *
+ * Une liaison muette rend `null`, jamais un coût de zéro : "je n'ai pas
+ * pu lire" et "l'affiliation n'a rien coûté" sont deux réponses
+ * différentes, et la seconde ferait afficher une marge fausse.
+ */
+export async function lireCoutAffiliation(
+  bornes: { debut: string | null; fin: string | null },
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<CoutAffiliation | null> {
+  const secret = String(env.PARTNER_SHARED_SECRET ?? "").trim();
+  if (!secret) return null;
+
+  const q = new URLSearchParams();
+  if (bornes.debut) q.set("debut", bornes.debut);
+  if (bornes.fin) q.set("fin", bornes.fin);
+
+  try {
+    const res = await fetch(
+      `${origine(env)}/api/partner/commissions-periode${q.toString() ? `?${q}` : ""}`,
+      {
+        headers: { "x-partner-secret": secret },
+        cache: "no-store",
+        signal: AbortSignal.timeout(DELAI_MS),
+      },
+    );
+    if (!res.ok) return null;
+    const j = (await res.json()) as { ok?: boolean } & Record<string, number | boolean>;
+    if (!j?.ok) return null;
+    return {
+      ...COUT_INCONNU,
+      duesCents: Number(j.dues) || 0,
+      sousGarantieCents: Number(j.sousGarantie) || 0,
+      verseesCents: Number(j.versees) || 0,
+      annuleesCents: Number(j.annulees) || 0,
+      autresDevises: Number(j.autresDevises) || 0,
+      tronque: Boolean(j.tronque),
+    };
+  } catch (e) {
+    console.error(
+      `[pilotage/affilies] cout injoignable : ${e instanceof Error ? e.message : String(e)}`,
+    );
+    return null;
+  }
+}

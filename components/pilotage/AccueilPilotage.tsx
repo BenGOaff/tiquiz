@@ -37,7 +37,8 @@ import { CARTE } from "@/components/pilotage/carte";
 import { trierAlertes, GENRE_VENTE_ORPHELINE } from "@/lib/pilotage/alertes";
 import type { Person, PeopleTotals } from "@/lib/admin/people";
 import type { Sale } from "@/lib/checkout/sales";
-import type { Ticket } from "@/lib/support/tickets";
+import { DELAI_ALERTE_HEURES, estEnRetard, type Ticket } from "@/lib/support/tickets";
+import { attenteLisible, pireAttenteHeures } from "@/lib/pilotage/support";
 import { NOM_PRODUIT } from "@/lib/admin/saleProduct";
 import { readSaleProduct } from "@/lib/admin/saleProduct";
 
@@ -180,6 +181,16 @@ export function AccueilPilotage() {
   const ventes = d?.resume.dernieresVentes ?? [];
   const ticketsRecents = tickets ? parDateDesc(tickets, (t) => t.createdAt).slice(0, 6) : [];
   const ouverts = (tickets ?? []).filter((t) => t.status === "open").length;
+  // CE QUI DEMANDE UNE ACTION REMONTE SUR L'ACCUEIL. Un nombre de
+  // tickets ouverts ne dit pas s'il y a urgence ; une personne qui
+  // attend depuis quatre jours, si.
+  const horlogeTickets = tickets ? new Date() : null;
+  const enRetard =
+    tickets && horlogeTickets
+      ? tickets.filter((t) => estEnRetard(t, horlogeTickets)).length
+      : 0;
+  const pireAttente =
+    tickets && horlogeTickets ? pireAttenteHeures(tickets, horlogeTickets) : null;
 
   return (
     <div className="space-y-6">
@@ -233,6 +244,10 @@ export function AccueilPilotage() {
                 dessine : deux totaux calculés séparément finissent
                 toujours par se contredire, et c'est celui du haut
                 qu'on croit. */}
+            {/* CHAQUE CHIFFRE MENE LA OU ON PEUT AGIR DESSUS. Un
+                chiffre sans suite se regarde ; ceux-ci se travaillent,
+                et chercher la bonne section dans le menu a chaque fois
+                est exactement ce qui fait qu'on ne le fait pas. */}
             <Chiffre
               titre="Encaissé"
               valeur={euros(d.resume.encaisseCents)}
@@ -241,17 +256,31 @@ export function AccueilPilotage() {
                   ? `${euros(d.resume.rembourseCents)} remboursés`
                   : `${d.resume.ventes} vente${d.resume.ventes > 1 ? "s" : ""}`
               }
+              href="/pilotage/ventes"
             />
             <Chiffre
               titre="Nouveaux comptes"
               valeur={String(d.resume.nouveauxComptes)}
               note={d.resume.departs > 0 ? `${d.resume.departs} départ${d.resume.departs > 1 ? "s" : ""}` : undefined}
+              href="/pilotage/clients"
             />
-            <Chiffre titre="Abonnés" valeur={String(d.totals.abonnes)} note="en ce moment" />
+            <Chiffre
+              titre="Abonnés"
+              valeur={String(d.totals.abonnes)}
+              note="en ce moment"
+              href="/pilotage/business"
+            />
             <Chiffre
               titre="Tickets ouverts"
               valeur={tickets === null ? "-" : String(ouverts)}
-              note={tickets === null ? "file illisible" : undefined}
+              note={
+                tickets === null
+                  ? "file illisible"
+                  : pireAttente !== null
+                    ? `la plus ancienne : ${attenteLisible(pireAttente)}`
+                    : undefined
+              }
+              href="/pilotage/support"
             />
           </div>
 
@@ -262,6 +291,8 @@ export function AccueilPilotage() {
             onTraiter={traiter}
             atelier={d.atelier}
             sansMontant={d.resume.sansMontant}
+            ticketsEnRetard={enRetard}
+            pireAttenteHeures={pireAttente}
           />
 
           {/* 3. LE graphique. */}
@@ -269,7 +300,7 @@ export function AccueilPilotage() {
 
           {/* 4. Ce qui vient de se passer. */}
           <div className="grid gap-4 lg:grid-cols-3">
-            <Liste titre="Derniers contacts" vide="Personne de nouveau.">
+            <Liste titre="Derniers contacts" href="/pilotage/clients" vide="Personne de nouveau.">
               {contacts.map((p) => (
                 <Ligne
                   key={p.email}
@@ -280,7 +311,7 @@ export function AccueilPilotage() {
               ))}
             </Liste>
 
-            <Liste titre="Dernières ventes" vide="Aucune vente lue.">
+            <Liste titre="Dernières ventes" href="/pilotage/ventes" vide="Aucune vente lue.">
               {ventes.map(({ vente, email, nom }) => (
                 <Ligne
                   key={`${vente.ref}-${vente.paidAt}`}
@@ -294,6 +325,7 @@ export function AccueilPilotage() {
 
             <Liste
               titre="Derniers tickets"
+              href="/pilotage/support"
               vide={tickets === null ? "File illisible pour le moment." : "Aucun ticket."}
             >
               {ticketsRecents.map((t) => (
@@ -313,14 +345,34 @@ export function AccueilPilotage() {
   );
 }
 
-function Chiffre({ titre, valeur, note }: { titre: string; valeur: string; note?: string }) {
-  return (
-    <div className={`${CARTE} p-4`}>
+function Chiffre({
+  titre,
+  valeur,
+  note,
+  href,
+}: {
+  titre: string;
+  valeur: string;
+  note?: string;
+  /** Où va-t-on pour AGIR sur ce chiffre. Un chiffre sans suite se
+      regarde ; celui-ci se traite. */
+  href?: string;
+}) {
+  const contenu = (
+    <>
       <p className="text-xs text-muted-foreground">{titre}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{valeur}</p>
       {note && <p className="mt-0.5 text-xs text-muted-foreground">{note}</p>}
-    </div>
+    </>
   );
+  if (href) {
+    return (
+      <Link href={href} className={`${CARTE} block p-4 transition-colors hover:bg-accent/50`}>
+        {contenu}
+      </Link>
+    );
+  }
+  return <div className={`${CARTE} p-4`}>{contenu}</div>;
 }
 
 /**
@@ -336,12 +388,16 @@ function Alertes({
   onTraiter,
   atelier,
   sansMontant,
+  ticketsEnRetard,
+  pireAttenteHeures: pireAttente,
 }: {
   ventesOrphelines: Sale[];
   traitees: ReadonlySet<string>;
   onTraiter: (reference: string, traite: boolean) => void;
   atelier: { reachable: boolean; reason: string | null };
   sansMontant: number;
+  ticketsEnRetard: number;
+  pireAttenteHeures: number | null;
 }) {
   const lignes: {
     cle: string;
@@ -369,7 +425,9 @@ function Alertes({
         texte:
           `${v.email} a payé ${euros(v.amountCents)} le ${quandLong(v.paidAt)}`
           + " et n'apparaît dans aucun compte.",
-        lien: { libelle: "Ouvrir Mes ventes", href: "/admin/ventes" },
+        // La section Ventes de la console, pas l'ancien admin : le
+        // jour où on éteindra /admin, ce lien deviendrait un cul-de-sac.
+        lien: { libelle: "Ouvrir les ventes", href: "/pilotage/ventes" },
         reference: v.ref,
       });
     }
@@ -387,6 +445,19 @@ function Alertes({
       // sans ventes, ce qui est pire qu'une absence de chiffre.
       texte:
         "L'Atelier n'a pas répondu : ses élèves et ses ventes manquent aux totaux ci-dessus.",
+    });
+  }
+  if (ticketsEnRetard > 0) {
+    // Quelqu'un attend depuis plus d'une journée. C'est la seule alerte
+    // de cette liste qui porte sur une personne qui, elle, attend
+    // vraiment une réponse de Béné.
+    lignes.push({
+      cle: "support-retard",
+      texte:
+        `${ticketsEnRetard} demande${ticketsEnRetard > 1 ? "s" : ""} de support `
+        + `sans réponse depuis plus de ${DELAI_ALERTE_HEURES} h`
+        + (pireAttente !== null ? ` (la plus ancienne : ${attenteLisible(pireAttente)}).` : "."),
+      lien: { libelle: "Ouvrir le support", href: "/pilotage/support" },
     });
   }
   if (sansMontant > 0) {
@@ -482,15 +553,25 @@ function Reglees({
 function Liste({
   titre,
   vide,
+  href,
   children,
 }: {
   titre: string;
   vide: string;
+  /** La section qui montre TOUT. Un aperçu sans sortie est un cul-de-sac. */
+  href?: string;
   children: React.ReactNode[];
 }) {
   return (
     <section className={`${CARTE} p-4`}>
-      <h2 className="text-sm font-medium">{titre}</h2>
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="text-sm font-medium">{titre}</h2>
+        {href && (
+          <Link href={href} className="text-xs text-primary underline-offset-2 hover:underline">
+            Tout voir
+          </Link>
+        )}
+      </div>
       {/* LE VIDE PARLE. Une liste vide sans un mot se lit "c'est cassé". */}
       {children.length === 0 ? (
         <p className="mt-2 text-sm text-muted-foreground">{vide}</p>

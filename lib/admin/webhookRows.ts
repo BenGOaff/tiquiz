@@ -150,3 +150,49 @@ export function demandeUneAction(verdict: CallVerdict): boolean {
 export function compterActions(rows: readonly CallRow[]): number {
   return rows.reduce((n, r) => n + (demandeUneAction(readCallVerdict(r)) ? 1 : 0), 0);
 }
+
+/**
+ * CE QUE CHAQUE VERDICT VEUT DIRE, EN CLAIR.
+ *
+ * Le serveur rend un code, l'écran écrit la phrase. Cette table vivait
+ * dans `WebhookLogsCard`, donc dans UN écran ; le jour où un deuxième
+ * écran a eu besoin des mêmes mots (la section Santé du pilotage), la
+ * recopier aurait garanti que les deux finissent par ne plus dire la
+ * même chose du même appel. C'est le motif de ce dépôt depuis trois
+ * mois, et il s'applique aussi aux mots.
+ *
+ * ET LA COULEUR COMPTE AUTANT QUE LE MOT : avant le 22 août, tout ce
+ * qui portait une trace d'erreur virait au rouge, y compris un paiement
+ * refusé chez Systeme.io (la carte du client, pas nous) et un refus
+ * corrigé depuis. Un écran où tout est rouge est un écran qu'on arrête
+ * de lire.
+ */
+export type TonVerdict = "ok" | "info" | "alerte";
+
+export const LIBELLE_VERDICT: Readonly<
+  Record<CallVerdict, { mot: string; aide: string; ton: TonVerdict }>
+> = {
+  ouvert: { mot: "accès ouvert", aide: "", ton: "ok" },
+  "palier-a-confirmer": {
+    mot: "accès ouvert, palier à confirmer",
+    aide: "Le client a ses accès. Le palier vient d'un repli : vérifie s'il a pris l'annuel ou un PLUS.",
+    ton: "info",
+  },
+  "sans-acces": {
+    mot: "sans accès",
+    aide: "Cette personne attend quelque chose qu'elle n'a pas. Le bon de commande n'est toujours pas reconnu.",
+    ton: "alerte",
+  },
+  "corrige-depuis": {
+    mot: "corrigé depuis",
+    aide: "Refusé sur le moment, mais le routage d'aujourd'hui sait répondre. Vérifie juste que la personne a bien ses accès.",
+    ton: "info",
+  },
+  "paiement-echoue": {
+    mot: "paiement refusé",
+    aide: "La carte du client a été refusée chez Systeme.io. Rien à corriger chez nous.",
+    ton: "info",
+  },
+  panne: { mot: "panne", aide: "On a planté sur cet appel.", ton: "alerte" },
+  "sans-objet": { mot: "traité", aide: "", ton: "ok" },
+};
