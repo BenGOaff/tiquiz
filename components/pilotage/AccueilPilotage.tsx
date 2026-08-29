@@ -26,12 +26,13 @@
 // reste, et l'inverse serait absurde.
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, Loader2, RefreshCw } from "lucide-react";
 
 import { GraphiqueEncaisse } from "@/components/pilotage/GraphiqueEncaisse";
-import { derniersContacts, dernieresVentes, parDateDesc } from "@/lib/pilotage/recents";
-import { libellePeriode, type SerieEmpilee } from "@/lib/pilotage/serieEmpilee";
+import { parDateDesc } from "@/lib/pilotage/recents";
+import type { SerieEmpilee } from "@/lib/pilotage/serieEmpilee";
 import { CARTE } from "@/components/pilotage/carte";
 import { trierAlertes, GENRE_VENTE_ORPHELINE } from "@/lib/pilotage/alertes";
 import type { Person, PeopleTotals } from "@/lib/admin/people";
@@ -40,11 +41,24 @@ import type { Ticket } from "@/lib/support/tickets";
 import { NOM_PRODUIT } from "@/lib/admin/saleProduct";
 import { readSaleProduct } from "@/lib/admin/saleProduct";
 
+type Resume = {
+  encaisseCents: number;
+  rembourseCents: number;
+  ventes: number;
+  nouveauxComptes: number;
+  departs: number;
+  serie: SerieEmpilee;
+  contacts: Person[];
+  dernieresVentes: { vente: Sale; email: string; nom: string | null }[];
+  sansMontant: number;
+};
+
 type Donnees = {
   people: Person[];
   totals: PeopleTotals;
   ventesOrphelines: Sale[];
-  serieEmpilee: SerieEmpilee;
+  resume: Resume;
+  periode: { libelle: string; tronquee: boolean; depuis: string };
   alertesTraitees?: string[];
   atelier: { reachable: boolean; reason: string | null };
 };
@@ -74,6 +88,8 @@ function quand(iso: string | null | undefined): string {
 }
 
 export function AccueilPilotage() {
+  const params = useSearchParams();
+  const query = params?.toString() ?? "";
   const [d, setD] = useState<Donnees | null>(null);
   const [tickets, setTickets] = useState<Ticket[] | null>(null);
   const [chargement, setChargement] = useState(true);
@@ -83,7 +99,9 @@ export function AccueilPilotage() {
     setChargement(true);
     setErreur(null);
     try {
-      const res = await fetch("/api/admin/pilotage", { cache: "no-store" });
+      const res = await fetch(`/api/admin/pilotage${query ? `?${query}` : ""}`, {
+        cache: "no-store",
+      });
       const j = await res.json();
       // UN `ok: false` PRODUIT TOUJOURS QUELQUE CHOSE À L'ÉCRAN.
       if (!j?.ok) {
@@ -107,7 +125,7 @@ export function AccueilPilotage() {
     } catch {
       setTickets(null);
     }
-  }, []);
+  }, [query]);
 
   const traiter = useCallback(
     async (reference: string, traite: boolean) => {
@@ -155,8 +173,11 @@ export function AccueilPilotage() {
     );
   }
 
-  const contacts = d ? derniersContacts(d.people, 6) : [];
-  const ventes = d ? dernieresVentes(d.people, 6) : [];
+  // TOUT VIENT DU RÉSUMÉ, donc de la même période. Refiltrer ici
+  // rouvrirait la porte à un écran dont le haut et le bas ne parlent pas
+  // du même intervalle.
+  const contacts = d?.resume.contacts ?? [];
+  const ventes = d?.resume.dernieresVentes ?? [];
   const ticketsRecents = tickets ? parDateDesc(tickets, (t) => t.createdAt).slice(0, 6) : [];
   const ouverts = (tickets ?? []).filter((t) => t.status === "open").length;
 
@@ -166,7 +187,7 @@ export function AccueilPilotage() {
         <div>
           <h1 className="text-2xl font-semibold">Accueil</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Qu&apos;est-ce qui demande mon attention aujourd&apos;hui ?
+            {d ? d.periode.libelle : "Qu'est-ce qui demande mon attention aujourd'hui ?"}
           </p>
         </div>
         <button
@@ -179,6 +200,20 @@ export function AccueilPilotage() {
           Rafraîchir
         </button>
       </div>
+
+      {/* ON DIT QUAND LA PÉRIODE DÉPASSE CE QU'ON A. Le journal des
+          encaissements n'existe que depuis le 7 août 2026 : un total
+          tronqué qui ne le dit pas fait prendre des décisions sur un
+          chiffre faux. */}
+      {d?.periode.tronquee && (
+        <p className="rounded-lg border border-border/60 bg-card px-4 py-2 text-xs text-muted-foreground">
+          Les encaissements ne sont enregistrés chez nous que depuis le{" "}
+          {new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" }).format(
+            new Date(`${d.periode.depuis}T00:00:00Z`),
+          )}
+          . Avant cette date, les ventes vivent uniquement dans Systeme.io.
+        </p>
+      )}
 
       {erreur && (
         <p className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
@@ -199,12 +234,20 @@ export function AccueilPilotage() {
                 toujours par se contredire, et c'est celui du haut
                 qu'on croit. */}
             <Chiffre
-              titre={`Encaissé ${libellePeriode(d.serieEmpilee) || "sur la période lue"}`}
-              valeur={euros(d.serieEmpilee.fiable ? d.serieEmpilee.totalCents : 0)}
-              note={d.totals.rembourseCents > 0 ? `${euros(d.totals.rembourseCents)} remboursés` : undefined}
+              titre="Encaissé"
+              valeur={euros(d.resume.encaisseCents)}
+              note={
+                d.resume.rembourseCents > 0
+                  ? `${euros(d.resume.rembourseCents)} remboursés`
+                  : `${d.resume.ventes} vente${d.resume.ventes > 1 ? "s" : ""}`
+              }
             />
-            <Chiffre titre="Abonnés" valeur={String(d.totals.abonnes)} note={`${d.totals.avie} à vie`} />
-            <Chiffre titre="Comptes" valeur={String(d.totals.comptes)} note={`${d.totals.atelier} élèves`} />
+            <Chiffre
+              titre="Nouveaux comptes"
+              valeur={String(d.resume.nouveauxComptes)}
+              note={d.resume.departs > 0 ? `${d.resume.departs} départ${d.resume.departs > 1 ? "s" : ""}` : undefined}
+            />
+            <Chiffre titre="Abonnés" valeur={String(d.totals.abonnes)} note="en ce moment" />
             <Chiffre
               titre="Tickets ouverts"
               valeur={tickets === null ? "-" : String(ouverts)}
@@ -218,11 +261,11 @@ export function AccueilPilotage() {
             traitees={new Set(d.alertesTraitees ?? [])}
             onTraiter={traiter}
             atelier={d.atelier}
-            sansMontant={d.totals.ventesSansMontant}
+            sansMontant={d.resume.sansMontant}
           />
 
           {/* 3. LE graphique. */}
-          <GraphiqueEncaisse serie={d.serieEmpilee} />
+          <GraphiqueEncaisse serie={d.resume.serie} />
 
           {/* 4. Ce qui vient de se passer. */}
           <div className="grid gap-4 lg:grid-cols-3">

@@ -41,14 +41,15 @@
 // chiffre d'affaires amputé de moitié sans prévenir vaut moins que pas
 // de chiffre, parce qu'il a l'air juste.
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { isAdminEmail } from "@/lib/adminEmails";
 import { buildSales, type EventRow } from "@/lib/checkout/sales";
 import { buildSioSales } from "@/lib/admin/sioSales";
 import { buildPeople, monthlyTrend, type ChurnRow, type ProfileRow } from "@/lib/admin/people";
 import { fetchAtelier } from "@/lib/admin/atelier";
-import { serieEmpilee } from "@/lib/pilotage/serieEmpilee";
+import { lirePeriode, tronqueeParLeJournal, DEBUT_DU_JOURNAL } from "@/lib/pilotage/periode";
+import { resumePeriode } from "@/lib/pilotage/resumePeriode";
 import { GENRE_VENTE_ORPHELINE } from "@/lib/pilotage/alertes";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -85,7 +86,7 @@ async function toutesLesLignes(
   return tout;
 }
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(req: NextRequest): Promise<NextResponse> {
   const supabase = await getSupabaseServerClient();
   const {
     data: { user },
@@ -93,6 +94,12 @@ export async function GET(): Promise<NextResponse> {
   if (!user || !isAdminEmail(user.email)) {
     return NextResponse.json({ ok: false, reason: "forbidden" }, { status: 403 });
   }
+
+  // L'HEURE EST PRISE ICI, jamais dans une fonction pure : un calcul qui
+  // lit l'horloge tout seul n'est pas testable, et un test qui dépend de
+  // l'heure clignote.
+  const maintenant = new Date();
+  const periode = lirePeriode(req.nextUrl.searchParams, maintenant);
 
   try {
     const profiles = await toutesLesLignes("profiles", "*", "user_id");
@@ -214,13 +221,23 @@ export async function GET(): Promise<NextResponse> {
       // qui lit l'horloge tout seul n'est pas testable, et un test qui
       // depend de l'heure est un test qui clignote (1er aout).
       tendance: monthlyTrend(sales, new Date()),
+      // LA PÉRIODE GOUVERNE TOUT L'ÉCRAN, ou elle ment. Un sélecteur qui
+      // ne déplacerait que le graphique pendant que les compteurs
+      // parlent d'autre chose met deux chiffres contradictoires sur la
+      // même page, et c'est celui du haut qu'on croit.
+      periode: { ...periode, tronquee: tronqueeParLeJournal(periode), depuis: DEBUT_DU_JOURNAL },
+      resume: resumePeriode({
+        sales: [...sales, ...atelier.sales],
+        people: vue.people,
+        periode,
+        maintenant,
+      }),
       // L'ENCAISSÉ PAR MOIS, RÉPARTI PAR PRODUIT, calculé ICI.
       //
       // Le graphique en a besoin, mais on n'envoie pas les ventes au
       // navigateur pour autant : elles portent les adresses des
       // clients, et un écran n'a pas à recevoir ce qu'il n'affiche pas.
       // L'Atelier est inclus, sinon le total ne serait pas le total.
-      serieEmpilee: serieEmpilee([...sales, ...atelier.sales], new Date(), 12),
       // LES ALERTES DÉJÀ TRAITÉES. Une alerte qui ne peut pas s'éteindre
       // cesse d'être lue, et le jour où une vraie apparaît à côté,
       // personne ne la voit. On rend les références, l'écran range.
