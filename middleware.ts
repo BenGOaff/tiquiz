@@ -13,7 +13,7 @@ import { routeTenantPath, TENANT_SLUG_PREFIX } from "@/lib/publicSlug";
 import { salesSlugForHost } from "@/lib/sales/salesHosts";
 import { readSa, SA_COOKIE, SA_MAX_AGE_SECONDS, SA_PARAM } from "@/lib/affiliate/sa";
 import { readRef, REF_COOKIE, REF_MAX_AGE_SECONDS, REF_PARAM } from "@/lib/affiliate/refLien";
-import { CANAL_PARAM, clicASignaler, lireCanalBrut, signalerClic } from "@/lib/affiliate/signalerClic";
+import { canalDeLUrl, clicASignaler, signalerClic } from "@/lib/affiliate/signalerClic";
 
 const UI_LOCALE_COOKIE = "ui_locale";
 const SUPPORTED_LOCALES = ["en", "fr", "es", "it", "ar", "pt", "pt-BR"];
@@ -116,7 +116,7 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
         // ce que le referrer ne peut PAS voir (une newsletter, un lien
         // en bio, un QR code). La provenance automatique couvre le
         // reste, donc celui qui n'y pense pas n'a jamais un ecran vide.
-        canal: lireCanalBrut(req.nextUrl.searchParams.get(CANAL_PARAM)),
+        canal: canalDeLUrl(req.nextUrl.searchParams),
         pageUrl: req.nextUrl.toString(),
         referrer: req.headers.get("referer"),
         userAgent: req.headers.get("user-agent"),

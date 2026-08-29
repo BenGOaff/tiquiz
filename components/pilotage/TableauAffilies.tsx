@@ -24,6 +24,7 @@
 // La console dit ce qu'on DOIT à quelqu'un, jamais où l'argent part.
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, Search } from "lucide-react";
 
 import { CARTE } from "@/components/pilotage/carte";
@@ -50,7 +51,44 @@ export function TableauAffilies({
   lignes: LigneAffilieDistante[];
   etat: EtatLiaison;
 }) {
+  const router = useRouter();
   const [recherche, setRecherche] = useState("");
+  const [enCours, setEnCours] = useState(false);
+  const [compteRendu, setCompteRendu] = useState<string | null>(null);
+
+  const sansCode = lignes.filter((l) => !l.ref).length;
+
+  // ATTRIBUER LES CODES MANQUANTS, sur un clic et pas pendant
+  // l'affichage : une page qui dit regarder ne doit pas écrire, sinon un
+  // rafraîchissement devient une écriture et personne ne sait plus d'où
+  // vient quoi.
+  async function attribuer() {
+    setEnCours(true);
+    setCompteRendu(null);
+    try {
+      const res = await fetch("/api/admin/pilotage/affilies-codes", { method: "POST" });
+      const j = await res.json();
+      if (!j?.ok) {
+        setCompteRendu(
+          j?.raison === "pas-deploye"
+            ? "La mise à jour de l'espace affilié n'est pas encore en ligne."
+            : "Les codes n'ont pas pu être attribués.",
+        );
+        return;
+      }
+      setCompteRendu(
+        j.attribues > 0
+          ? `${j.attribues} code${j.attribues > 1 ? "s" : ""} attribué${j.attribues > 1 ? "s" : ""}.`
+            + (j.echecs?.length ? ` ${j.echecs.length} n'ont pas pu en recevoir : ${j.echecs.join(", ")}` : "")
+          : "Tout le monde avait déjà un code.",
+      );
+      router.refresh();
+    } catch {
+      setCompteRendu("Les codes n'ont pas pu être attribués.");
+    } finally {
+      setEnCours(false);
+    }
+  }
 
   const vues = useMemo(() => {
     const q = recherche.trim().toLowerCase();
@@ -79,12 +117,25 @@ export function TableauAffilies({
   if (!etat.ok) {
     // UNE PANNE SE DIT. Un tableau vide se lirait "je n'ai aucun
     // affilié", ce qui est faux et décourageant.
-    const phrase =
-      etat.raison === "not_configured"
-        ? "La liaison avec l'espace affilié n'est pas configurée sur ce serveur (PARTNER_SHARED_SECRET)."
-        : etat.raison === "forbidden"
-          ? "Les deux serveurs n'ont pas le même secret partagé. C'est un réglage, pas une panne."
-          : "L'espace affilié n'a pas répondu. Rien n'est perdu, réessaie dans un instant.";
+    // TROIS CAUSES, TROIS PHRASES, TROIS CORRECTIONS DIFFÉRENTES. Un
+    // seul message pour toutes obligeait à deviner laquelle (le 404 muet
+    // du 19 août, dans une autre famille).
+    const PHRASES: Record<string, string> = {
+      not_configured:
+        "PARTNER_SHARED_SECRET n'est pas posée sur ce serveur. C'est un réglage, rien n'est cassé.",
+      forbidden:
+        "Les deux serveurs n'ont pas le même secret partagé. C'est un réglage, pas une panne.",
+      "pas-deploye":
+        "La mise à jour de l'espace affilié n'est pas encore en ligne : la porte qui sert cette liste"
+        + " n'existe pas encore sur son serveur. Rien à corriger, il faut la déployer.",
+      "trop-lent":
+        "L'espace affilié a mis trop de temps à répondre. Ce n'est pas une panne, mais la requête"
+        + " est trop lourde ou le serveur est chargé.",
+      unreachable:
+        "L'espace affilié n'a pas répondu du tout. Regarde s'il tourne, puis réessaie.",
+      read_failed: `L'espace affilié a répondu ${etat.statut ?? "une erreur"}, ce qui n'est pas prévu.`,
+    };
+    const phrase = PHRASES[etat.raison] ?? PHRASES.unreachable;
     return (
       <section className={`${CARTE} p-6`}>
         <p className="flex items-center gap-2 text-sm font-medium">
@@ -107,6 +158,30 @@ export function TableauAffilies({
         />
         <Bandeau titre="Déjà versé" valeur={euros(totaux.versees)} note="depuis le début" />
       </div>
+
+      {/* UN AFFILIÉ SANS CODE N'A AUCUN LIEN UTILISABLE, et il peut
+          rester des mois comme ça : un code n'était créé qu'au premier
+          écran qui en avait besoin. On le signale, et on le répare. */}
+      {sansCode > 0 && (
+        <div className="rounded-lg border border-amber-300/50 bg-amber-50 p-4 dark:bg-amber-950/20">
+          <p className="text-sm font-medium">
+            {sansCode} affilié{sansCode > 1 ? "s" : ""} sans code public
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Sans code, aucun lien ne peut les désigner : ils ne peuvent pas travailler, et rien
+            ne le leur dit. Un code attribué ne change plus jamais.
+          </p>
+          <button
+            type="button"
+            onClick={() => void attribuer()}
+            disabled={enCours}
+            className="mt-3 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground hover:opacity-90 disabled:opacity-50"
+          >
+            {enCours ? "Attribution..." : "Attribuer les codes manquants"}
+          </button>
+          {compteRendu && <p className="mt-2 text-sm">{compteRendu}</p>}
+        </div>
+      )}
 
       {etat.manque.clics && (
         <p className="rounded-lg border border-amber-300/50 bg-amber-50 px-4 py-2 text-xs dark:bg-amber-950/20">

@@ -21,7 +21,7 @@
 import "server-only";
 
 /** Le délai au delà duquel on renonce. Assez pour une base lente. */
-const DELAI_MS = 8000;
+const DELAI_MS = 12000;
 
 export interface LigneAffilieDistante {
   sa: string;
@@ -45,10 +45,20 @@ export interface LigneAffilieDistante {
 
 export type EtatLiaison =
   | { ok: true; manque: Record<string, boolean> }
-  | { ok: false; raison: "not_configured" | "forbidden" | "unreachable" | "read_failed" };
+  | {
+      ok: false;
+      // TROIS CAUSES, TROIS MESSAGES. Un seul texte pour "pas
+      // configuré", "pas déployé" et "injoignable" oblige à deviner
+      // laquelle, et c'est exactement le 404 muet du 19 août.
+      raison: "not_configured" | "forbidden" | "pas-deploye" | "trop-lent" | "unreachable" | "read_failed";
+      /** Le code HTTP reçu, quand il y en a eu un. */
+      statut?: number;
+    };
 
 export interface AffiliesDistants {
   lignes: LigneAffilieDistante[];
+  /** Adresse du client -> prénom de l'affilié qui l'a amené. */
+  attributions: Record<string, string>;
   etat: EtatLiaison;
 }
 
@@ -68,7 +78,7 @@ export async function lireAffiliesDistants(
   const secret = String(env.PARTNER_SHARED_SECRET ?? "").trim();
   if (!secret) {
     console.warn("[pilotage/affilies] PARTNER_SHARED_SECRET absent : aucun affilie affiche.");
-    return { lignes: [], etat: { ok: false, raison: "not_configured" } };
+    return { lignes: [], attributions: {}, etat: { ok: false, raison: "not_configured" } };
   }
 
   try {
@@ -83,31 +93,89 @@ export async function lireAffiliesDistants(
       // configuration, pas une panne : on la nomme, parce que la
       // correction n'est pas la même.
       console.error("[pilotage/affilies] secret refuse : les .env divergent.");
-      return { lignes: [], etat: { ok: false, raison: "forbidden" } };
+      return { lignes: [], attributions: {}, etat: { ok: false, raison: "forbidden" } };
     }
     if (res.status === 503) {
-      return { lignes: [], etat: { ok: false, raison: "not_configured" } };
+      return { lignes: [], attributions: {}, etat: { ok: false, raison: "not_configured" } };
+    }
+    if (res.status === 404) {
+      // La porte n'existe pas encore SUR CE SERVEUR : la mise à jour de
+      // l'espace affilié n'est pas déployée. C'est une attente, pas une
+      // panne, et les deux ne se corrigent pas pareil.
+      console.error("[pilotage/affilies] 404 : la route partenaire n'est pas deployee.");
+      return { lignes: [], attributions: {}, etat: { ok: false, raison: "pas-deploye", statut: 404 } };
     }
     if (!res.ok) {
       console.error(`[pilotage/affilies] reponse ${res.status}`);
-      return { lignes: [], etat: { ok: false, raison: "read_failed" } };
+      return { lignes: [], attributions: {}, etat: { ok: false, raison: "read_failed", statut: res.status } };
     }
 
     const json = (await res.json()) as {
       ok?: boolean;
       lignes?: LigneAffilieDistante[];
+      attributions?: Record<string, string>;
       manque?: Record<string, boolean>;
     };
-    if (!json.ok) return { lignes: [], etat: { ok: false, raison: "read_failed" } };
+    if (!json.ok) return { lignes: [], attributions: {}, etat: { ok: false, raison: "read_failed" } };
 
     return {
       lignes: Array.isArray(json.lignes) ? json.lignes : [],
+      attributions: json.attributions ?? {},
       etat: { ok: true, manque: json.manque ?? {} },
     };
   } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[pilotage/affilies] injoignable : ${message}`);
+    // Un abandon sur délai n'est pas une panne de réseau : l'un se
+    // corrige en allégeant la requête, l'autre en regardant le serveur.
+    const tropLent = /abort|timeout|timed out/i.test(message);
+    return {
+      lignes: [],
+      attributions: {},
+      etat: { ok: false, raison: tropLent ? "trop-lent" : "unreachable" },
+    };
+  }
+}
+
+/**
+ * Attribue un code public à tous ceux qui n'en ont pas.
+ *
+ * Une action explicite, jamais un effet de bord de l'affichage : une
+ * page qui dit regarder ne doit pas écrire, sinon un rafraîchissement
+ * devient une écriture et personne ne sait plus d'où vient quoi.
+ */
+export async function attribuerCodesManquants(
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<{ ok: boolean; attribues: number; echecs: string[]; raison?: string }> {
+  const secret = String(env.PARTNER_SHARED_SECRET ?? "").trim();
+  if (!secret) return { ok: false, attribues: 0, echecs: [], raison: "not_configured" };
+
+  try {
+    const res = await fetch(`${origine(env)}/api/partner/affilies/codes`, {
+      method: "POST",
+      headers: { "x-partner-secret": secret },
+      cache: "no-store",
+      signal: AbortSignal.timeout(30000),
+    });
+    const json = (await res.json().catch(() => null)) as {
+      ok?: boolean;
+      attribues?: number;
+      echecs?: string[];
+      reason?: string;
+    } | null;
+    if (!res.ok || !json?.ok) {
+      return {
+        ok: false,
+        attribues: 0,
+        echecs: [],
+        raison: json?.reason ?? (res.status === 404 ? "pas-deploye" : `http_${res.status}`),
+      };
+    }
+    return { ok: true, attribues: json.attribues ?? 0, echecs: json.echecs ?? [] };
+  } catch (e) {
     console.error(
-      `[pilotage/affilies] injoignable : ${e instanceof Error ? e.message : String(e)}`,
+      `[pilotage/affilies] codes : ${e instanceof Error ? e.message : String(e)}`,
     );
-    return { lignes: [], etat: { ok: false, raison: "unreachable" } };
+    return { ok: false, attribues: 0, echecs: [], raison: "unreachable" };
   }
 }

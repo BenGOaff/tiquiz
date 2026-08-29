@@ -56,10 +56,37 @@ export function tipoteBaseUrl(env: Record<string, string | undefined> = process.
 /**
  * Le paramètre par lequel un affilié nomme son canal.
  *
- * Court exprès : il se dicte dans une vidéo et se recopie à la main.
- * `?c=youtube`, `?c=newsletter`, `?c=story-mardi`.
+ * `?ref=eric&sc=youtube`, `&sc=newsletter`, `&sc=story-mardi`.
+ *
+ * -- POURQUOI DEUX NOMS LUS, ET UN SEUL ÉCRIT -------------------------
+ *
+ * Il s'appelait `c` depuis le 19 août, et des liens le portent peut être
+ * déjà. Renommer sec ferait perdre le canal de ceux là, en silence, et
+ * un canal perdu ne se retrouve pas : le clic est passé.
+ *
+ * On LIT donc les deux, on n'en ÉCRIT qu'un (`sc`, plus explicite et
+ * moins susceptible d'entrer en collision avec un paramètre de
+ * quelqu'un d'autre). La règle habituelle tient : le nom de ce qu'on
+ * fabrique vit à UN endroit.
  */
-export const CANAL_PARAM = "c";
+export const CANAL_PARAM = "sc";
+
+/** Les noms acceptés en LECTURE, le nôtre d'abord. */
+export const CANAL_PARAMS: readonly string[] = [CANAL_PARAM, "c"];
+
+/**
+ * Le canal porté par cette URL, quel que soit le nom utilisé.
+ *
+ * Le premier nom RENSEIGNÉ gagne : quelqu'un qui écrit les deux a
+ * probablement corrigé son lien sans retirer l'ancien.
+ */
+export function canalDeLUrl(params: { get(cle: string): string | null }): string | null {
+  for (const nom of CANAL_PARAMS) {
+    const v = lireCanalBrut(params.get(nom));
+    if (v) return v;
+  }
+  return null;
+}
 
 /** Ce qu'on accepte de transporter. Le nettoyage se fait chez Tipote. */
 export function lireCanalBrut(valeur: string | null | undefined): string | null {
