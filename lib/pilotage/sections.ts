@@ -89,8 +89,7 @@ export const SECTIONS: readonly Section[] = [
     chemin: "/ventes",
     nom: "Ventes",
     question: "Qui a acheté quoi, quand, comment, via qui, et combien il paie ?",
-    etat: "a-venir",
-    remplace: [{ libelle: "Mes ventes (Tiquiz)", href: "/admin/ventes" }],
+    etat: "prete",
   },
   {
     id: "affilies",
@@ -111,8 +110,7 @@ export const SECTIONS: readonly Section[] = [
     chemin: "/support",
     nom: "Support",
     question: "Qui attend une réponse, et depuis combien de temps ?",
-    etat: "a-venir",
-    remplace: [{ libelle: "Support (Tiquiz)", href: "/admin" }],
+    etat: "prete",
   },
   {
     id: "sante",

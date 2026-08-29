@@ -8,6 +8,8 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 
 import { SECTIONS, cheminSection, sectionActive } from "@/lib/pilotage/sections";
 
@@ -64,4 +66,35 @@ test("LA SECTION ACTIVE EST LA PLUS PRÉCISE, jamais l'accueil par défaut", () 
 test("un chemin hors du plan retombe sur l'accueil au lieu de rien allumer", () => {
   assert.equal(sectionActive("/pilotage/inconnu").id, "accueil");
   assert.equal(sectionActive("").id, "accueil");
+});
+
+test("L'ÉTAT D'UNE SECTION EST CELUI DE SON ÉCRAN, pas une case oubliée", () => {
+  // Le 29 août, Ventes avait sa page construite et servie, et portait
+  // encore l'étiquette "à venir" dans le menu. Béné lit ce menu pour
+  // savoir où travailler : une section prête annoncée "bientôt", c'est
+  // un écran qu'elle n'ouvre pas.
+  //
+  // Deux sources de vérité (le dossier et cette liste), donc elles
+  // finissent par diverger. Ce test les tient ensemble.
+  for (const s of SECTIONS) {
+    if (!s.chemin) continue; // l'accueil est `app/pilotage/page.tsx`.
+    const page = resolve(process.cwd(), `app/pilotage${s.chemin}/page.tsx`);
+    const construite = existsSync(page);
+    assert.equal(
+      construite,
+      s.etat === "prete",
+      construite
+        ? `${s.id} a sa page mais reste annoncee "a venir"`
+        : `${s.id} est annoncee "prete" et n'a pas de page`,
+    );
+  }
+});
+
+test("une section prête ne renvoie plus vers l'ancien écran", () => {
+  // `remplace` dit où se fait le travail EN ATTENDANT. Le garder sur
+  // une section construite ferait repartir vers l'admin qu'on remplace.
+  for (const s of SECTIONS) {
+    if (s.etat !== "prete") continue;
+    assert.equal((s.remplace ?? []).length, 0, s.id);
+  }
 });
