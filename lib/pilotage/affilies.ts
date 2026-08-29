@@ -136,3 +136,46 @@ export async function lireAffiliesDistants(
     };
   }
 }
+
+/**
+ * Attribue un code public à tous ceux qui n'en ont pas.
+ *
+ * Une action explicite, jamais un effet de bord de l'affichage : une
+ * page qui dit regarder ne doit pas écrire, sinon un rafraîchissement
+ * devient une écriture et personne ne sait plus d'où vient quoi.
+ */
+export async function attribuerCodesManquants(
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<{ ok: boolean; attribues: number; echecs: string[]; raison?: string }> {
+  const secret = String(env.PARTNER_SHARED_SECRET ?? "").trim();
+  if (!secret) return { ok: false, attribues: 0, echecs: [], raison: "not_configured" };
+
+  try {
+    const res = await fetch(`${origine(env)}/api/partner/affilies/codes`, {
+      method: "POST",
+      headers: { "x-partner-secret": secret },
+      cache: "no-store",
+      signal: AbortSignal.timeout(30000),
+    });
+    const json = (await res.json().catch(() => null)) as {
+      ok?: boolean;
+      attribues?: number;
+      echecs?: string[];
+      reason?: string;
+    } | null;
+    if (!res.ok || !json?.ok) {
+      return {
+        ok: false,
+        attribues: 0,
+        echecs: [],
+        raison: json?.reason ?? (res.status === 404 ? "pas-deploye" : `http_${res.status}`),
+      };
+    }
+    return { ok: true, attribues: json.attribues ?? 0, echecs: json.echecs ?? [] };
+  } catch (e) {
+    console.error(
+      `[pilotage/affilies] codes : ${e instanceof Error ? e.message : String(e)}`,
+    );
+    return { ok: false, attribues: 0, echecs: [], raison: "unreachable" };
+  }
+}

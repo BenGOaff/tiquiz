@@ -39,7 +39,7 @@
 
 import { readRef, REF_PARAM } from "@/lib/affiliate/refLien";
 import { readSa, SA_PARAM } from "@/lib/affiliate/sa";
-import { CANAL_PARAM, lireCanalBrut } from "@/lib/affiliate/signalerClic";
+import { CANAL_PARAM, canalDeLUrl, lireCanalBrut } from "@/lib/affiliate/signalerClic";
 
 export { CANAL_PARAM, REF_PARAM, SA_PARAM };
 
@@ -76,7 +76,7 @@ export function lireAffiliateDuQuiz(
   return {
     sa: readSa(params.get(SA_PARAM)),
     ref: readRef(params.get(REF_PARAM)),
-    canal: lireCanalBrut(params.get(CANAL_PARAM)),
+    canal: canalDeLUrl(params),
   };
 }
 

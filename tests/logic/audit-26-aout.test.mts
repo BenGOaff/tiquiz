@@ -266,3 +266,41 @@ describe("Une inscription gratuite rattache a son affilie", () => {
     assert.equal(REF_MAX_AGE_SECONDS, 365 * 24 * 60 * 60);
   });
 });
+
+// ── LE CANAL D'UN LIEN AFFILIÉ (Béné, 29 août 2026) ──────────────────
+//
+// "On leur attribue un code par défaut qui sera toujours valable, plus
+// la possibilité de le personnaliser et de tracker avec ?sc=youtube ou
+// un truc du genre."
+//
+// Le canal existait déjà, sous le nom `c`. On accepte donc les DEUX
+// noms : renommer sec ferait perdre le canal des liens déjà partagés,
+// en silence, et un canal perdu ne se retrouve pas.
+
+test("le canal se lit sous ?sc=, le nom qu'on ecrit desormais", async () => {
+  const { canalDeLUrl, CANAL_PARAM } = await import("@/lib/affiliate/signalerClic");
+  assert.equal(CANAL_PARAM, "sc");
+  assert.equal(canalDeLUrl(new URLSearchParams("ref=eric&sc=youtube")), "youtube");
+});
+
+test("UN ANCIEN LIEN EN ?c= CONTINUE DE MARCHER", async () => {
+  // Des liens le portent peut-etre deja. Un canal perdu ne se retrouve
+  // pas : le clic est passe.
+  const { canalDeLUrl } = await import("@/lib/affiliate/signalerClic");
+  assert.equal(canalDeLUrl(new URLSearchParams("ref=eric&c=newsletter")), "newsletter");
+});
+
+test("les deux ensemble : le NOTRE gagne", async () => {
+  // Quelqu'un qui ecrit les deux a probablement corrige son lien sans
+  // retirer l'ancien.
+  const { canalDeLUrl } = await import("@/lib/affiliate/signalerClic");
+  assert.equal(canalDeLUrl(new URLSearchParams("sc=youtube&c=vieux")), "youtube");
+});
+
+test("aucun canal reste null, on n'invente pas d'etiquette", async () => {
+  // Inventer une valeur ferait apparaitre un canal que personne n'a
+  // ecrit, et fausserait la comparaison entre ses canaux.
+  const { canalDeLUrl } = await import("@/lib/affiliate/signalerClic");
+  assert.equal(canalDeLUrl(new URLSearchParams("ref=eric")), null);
+  assert.equal(canalDeLUrl(new URLSearchParams("sc=%20%20")), null);
+});
