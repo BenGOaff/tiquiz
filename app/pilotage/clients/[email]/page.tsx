@@ -15,6 +15,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import ClientFiche from "@/components/admin/ClientFiche";
+import { CARTE } from "@/components/pilotage/carte";
+import { lireAffiliesDistants } from "@/lib/pilotage/affilies";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
@@ -35,6 +37,14 @@ export default async function FichePilotagePage({
   // Next décode déjà le segment : `a%40b.fr` arrive en `a@b.fr`.
   const { email } = await params;
 
+  // QUI L'A AMENÉ. Béné : "pour leurs clients je veux voir qui est leur
+  // affilié." L'information vit sur l'autre base, et son absence ne
+  // prive de rien : la ligne ne s'affiche simplement pas. On ne montre
+  // JAMAIS "aucun affilié" faute d'avoir pu lire, ce serait une réponse
+  // fausse à une vraie question.
+  const { attributions, etat } = await lireAffiliesDistants();
+  const amenePar = etat.ok ? attributions[email.trim().toLowerCase()] : null;
+
   return (
     <div className="space-y-4">
       {/* LA FLÈCHE REMONTE LA HIÉRARCHIE, jamais l'historique : deux
@@ -47,6 +57,12 @@ export default async function FichePilotagePage({
         <ArrowLeft className="h-4 w-4" />
         Clients et élèves
       </Link>
+      {amenePar && (
+        <section className={`${CARTE} px-4 py-3`}>
+          <p className="text-xs text-muted-foreground">Amené par</p>
+          <p className="text-sm font-medium">{amenePar}</p>
+        </section>
+      )}
       <ClientFiche email={email} />
     </div>
   );

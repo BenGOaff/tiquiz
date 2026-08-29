@@ -179,3 +179,69 @@ export async function attribuerCodesManquants(
     return { ok: false, attribues: 0, echecs: [], raison: "unreachable" };
   }
 }
+
+// ── LA FICHE D'UN AFFILIÉ ────────────────────────────────────────────
+
+export interface AchatFilleul {
+  produit: string | null;
+  commissionCents: number;
+  devise: string;
+  etat: "versee" | "a-verser" | "sous-garantie" | "annulee";
+  le: string;
+}
+
+export interface Filleul {
+  email: string;
+  arriveLe: string | null;
+  achats: AchatFilleul[];
+  gagneCents: number;
+}
+
+export interface FicheAffilieDistante {
+  affilie: {
+    sa: string;
+    email: string;
+    display_name: string | null;
+    status: string | null;
+    ref: string | null;
+    created_at: string | null;
+    alias: string[];
+  };
+  filleuls: Filleul[];
+  acheteurs: number;
+}
+
+/**
+ * La fiche d'un affilié, ou `null` avec sa raison.
+ *
+ * `null` et "introuvable" ne sont pas la même chose : l'un veut dire
+ * que la liaison a échoué, l'autre que cet identifiant n'existe pas.
+ * Les confondre enverrait chercher au mauvais endroit.
+ */
+export async function lireFicheAffiliee(
+  sa: string,
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<{ fiche: FicheAffilieDistante | null; raison?: string }> {
+  const secret = String(env.PARTNER_SHARED_SECRET ?? "").trim();
+  if (!secret) return { fiche: null, raison: "not_configured" };
+
+  try {
+    const res = await fetch(`${origine(env)}/api/partner/affilies/${encodeURIComponent(sa)}`, {
+      headers: { "x-partner-secret": secret },
+      cache: "no-store",
+      signal: AbortSignal.timeout(DELAI_MS),
+    });
+    if (res.status === 404) {
+      const j = (await res.json().catch(() => null)) as { reason?: string } | null;
+      return { fiche: null, raison: j?.reason === "introuvable" ? "introuvable" : "pas-deploye" };
+    }
+    if (!res.ok) return { fiche: null, raison: `http_${res.status}` };
+    const j = (await res.json()) as { ok?: boolean } & FicheAffilieDistante;
+    if (!j?.ok) return { fiche: null, raison: "read_failed" };
+    return { fiche: { affilie: j.affilie, filleuls: j.filleuls ?? [], acheteurs: j.acheteurs ?? 0 } };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[pilotage/affilies] fiche injoignable : ${message}`);
+    return { fiche: null, raison: /abort|timeout/i.test(message) ? "trop-lent" : "unreachable" };
+  }
+}
