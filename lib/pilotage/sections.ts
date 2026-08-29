@@ -104,8 +104,7 @@ export const SECTIONS: readonly Section[] = [
     chemin: "/business",
     nom: "Business",
     question: "Ce qui rentre contre ce qui sort, ce mois et le mois prochain.",
-    etat: "a-venir",
-    remplace: [{ libelle: "Statistiques (Tiquiz)", href: "/admin" }],
+    etat: "prete",
   },
   {
     id: "support",
