@@ -20,6 +20,7 @@ import {
   estHotePilotage,
   exigeAdmin,
   normaliserHote,
+  redirectionSurLeSousDomaine,
 } from "@/lib/pilotage/acces";
 
 test("le chemin /pilotage exige un admin, sur n'importe quel domaine", () => {
@@ -93,4 +94,41 @@ test("LE MIDDLEWARE APPELLE VRAIMENT CE GATE, et ne fail-open plus dessus", () =
     src.includes("Fail-open") && src.includes("exigeAdmin"),
     "le fail-open doit etre explicitement borne au cas non-admin",
   );
+});
+
+// ── LE 404 APRÈS CONNEXION (capture Béné, 29 août 2026) ──────────────
+
+test("APRÈS CONNEXION, /dashboard SUR LE SOUS-DOMAINE RAMÈNE À LA CONSOLE", () => {
+  // Elle n'y est pas allee expres : l'app envoie tout le monde sur
+  // /dashboard apres la connexion, et sur ce domaine il est reecrit en
+  // /pilotage/dashboard, qui n'est pas une section. Le premier ecran
+  // apres s'etre connectee etait un 404.
+  assert.equal(redirectionSurLeSousDomaine(HOTE_PILOTAGE, "/dashboard"), "/");
+  assert.equal(redirectionSurLeSousDomaine(HOTE_PILOTAGE, "/quizzes"), "/");
+  assert.equal(redirectionSurLeSousDomaine(HOTE_PILOTAGE, "/settings"), "/");
+  assert.equal(redirectionSurLeSousDomaine(HOTE_PILOTAGE, "/n-importe-quoi"), "/");
+});
+
+test("les sections de la console, elles, passent", () => {
+  for (const p of ["/", "/clients", "/clients/eric@x.fr", "/ventes", "/revendeurs", "/sante"]) {
+    assert.equal(redirectionSurLeSousDomaine(HOTE_PILOTAGE, p), null, p);
+  }
+});
+
+test("un favori en /pilotage/... marche aussi sur le sous-domaine", () => {
+  // C'est ce que porte une adresse enregistree depuis quiz.tipote.com.
+  assert.equal(redirectionSurLeSousDomaine(HOTE_PILOTAGE, "/pilotage"), null);
+  assert.equal(redirectionSurLeSousDomaine(HOTE_PILOTAGE, "/pilotage/business"), null);
+});
+
+test("et on peut toujours S'Y CONNECTER", () => {
+  for (const p of ["/login", "/auth/callback", "/api/auth/signup", "/_next/static/x.js"]) {
+    assert.equal(redirectionSurLeSousDomaine(HOTE_PILOTAGE, p), null, p);
+  }
+});
+
+test("sur les AUTRES domaines, on ne redirige jamais rien", () => {
+  assert.equal(redirectionSurLeSousDomaine("quiz.tipote.com", "/dashboard"), null);
+  assert.equal(redirectionSurLeSousDomaine("exemple-cliente.fr", "/mon-quiz"), null);
+  assert.equal(redirectionSurLeSousDomaine(null, "/dashboard"), null);
 });

@@ -324,7 +324,16 @@ export default function SettingsClient() {
     ensuiteCents: number;
     currency: string;
     prorata: boolean;
+    /** Renseignée sur une DESCENTE : rien à payer, une date à annoncer. */
+    effetLe?: string | null;
   } | null>(null);
+  // UN CHANGEMENT DÉJÀ PROGRAMMÉ. Une descente qu'on ne peut ni voir ni
+  // défaire serait pire que pas de descente du tout : elle découvrirait
+  // le nouveau palier un matin sans se souvenir de l'avoir demandé.
+  const [programme, setProgramme] = useState<{ effetLe: string; produit: string | null } | null>(
+    null,
+  );
+  const [annulationEnCours, setAnnulationEnCours] = useState(false);
   const [apercuEnCours, setApercuEnCours] = useState<string | null>(null);
   const [monteeEnCours, setMonteeEnCours] = useState(false);
 
@@ -338,9 +347,16 @@ export default function SettingsClient() {
         return { lu: true, corps: await r.json() };
       })
       .then(({ corps }) => {
-        const d = corps as { ok?: boolean; actuel?: string; fournisseur?: "stripe" | "paypal"; cibles?: string[] } | null;
+        const d = corps as {
+          ok?: boolean;
+          actuel?: string;
+          fournisseur?: "stripe" | "paypal";
+          cibles?: string[];
+          programme?: { effetLe: string; produit: string | null } | null;
+        } | null;
         if (d?.ok && d.actuel) {
           setMontee({ fournisseur: d.fournisseur ?? "stripe", actuel: d.actuel, cibles: d.cibles ?? [] });
+          setProgramme(d.programme ?? null);
         }
         setAbonnementLu(true);
       })
@@ -357,6 +373,41 @@ export default function SettingsClient() {
   // le bon de commande : deux formateurs afficheraient deux styles pour
   // la même chose.
   const montant = (cents: number, currency: string) => formatCents(cents, currency, locale);
+
+  /** Une date d'échéance, écrite dans la langue de l'écran. */
+  const jourFr = (iso: string) => {
+    const t = Date.parse(iso);
+    if (!Number.isFinite(t)) return "";
+    return new Intl.DateTimeFormat(locale, {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(new Date(t));
+  };
+
+  /** Défaire un changement programmé. */
+  const annulerProgramme = async () => {
+    setAnnulationEnCours(true);
+    try {
+      const r = await fetch("/api/billing/change-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ annuler: true }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (d?.ok) {
+        setProgramme(null);
+        toast.success(t("downgradeCancelled"));
+        return;
+      }
+      // Un `ok: false` produit TOUJOURS quelque chose à l'écran.
+      toast.error(d?.message ?? t("errGeneric"));
+    } catch {
+      toast.error(t("errNetwork"));
+    } finally {
+      setAnnulationEnCours(false);
+    }
+  };
 
   const demanderApercu = async (produit: string, label: string) => {
     setApercuEnCours(produit);
@@ -377,6 +428,7 @@ export default function SettingsClient() {
         ensuiteCents: d.ensuiteCents ?? 0,
         currency: d.currency ?? "eur",
         prorata: !!d.prorata,
+        effetLe: d.effetLe ?? null,
       });
     } catch {
       toast.error(t("errNetwork"));
@@ -1459,17 +1511,57 @@ export default function SettingsClient() {
           Un bouton "Passer au Plus" sans montant demande d'accepter une
           somme inconnue sur une carte deja donnee : c'est exactement ce
           qui produit une demande de remboursement le lendemain. */}
+      {/* CE QUI EST DÉJÀ PROGRAMMÉ, ET COMMENT LE DÉFAIRE. */}
+      {programme && (
+        <div className="mt-4 rounded-xl border border-amber-300/60 bg-amber-50 p-4 text-sm dark:bg-amber-950/20">
+          <p>
+            {t("downgradeScheduled", {
+              date: jourFr(programme.effetLe),
+            })}
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={annulerProgramme}
+            disabled={annulationEnCours}
+          >
+            {annulationEnCours ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              t("downgradeKeep")
+            )}
+          </Button>
+        </div>
+      )}
+
       <Dialog open={!!apercu} onOpenChange={(open) => { if (!open && !monteeEnCours) setApercu(null); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t("upgradeTitle", { plan: apercu?.label ?? "" })}</DialogTitle>
+            <DialogTitle>
+              {apercu?.effetLe
+                ? t("downgradeTitle", { plan: apercu?.label ?? "" })
+                : t("upgradeTitle", { plan: apercu?.label ?? "" })}
+            </DialogTitle>
             <DialogDescription>
-              {apercu
-                ? t(apercu.prorata ? "upgradeStripeBody" : "upgradePaypalBody", {
-                    aujourdhui: montant(apercu.aPayerCents, apercu.currency),
-                    ensuite: montant(apercu.ensuiteCents, apercu.currency),
-                  })
-                : ""}
+              {/* UNE DESCENTE NE SE FACTURE PAS, ELLE S'ANNONCE. Rien
+                  n'est prélevé, rien ne change avant l'échéance : ce
+                  qu'elle doit lire, c'est la DATE et ce qu'elle paiera à
+                  partir d'elle. Lui montrer "0 €" la laisserait croire
+                  qu'elle passe au palier inférieur tout de suite, donc
+                  qu'elle perd ce qu'elle a déjà payé. */}
+              {!apercu
+                ? ""
+                : apercu.effetLe
+                  ? t("downgradeBody", {
+                      plan: apercu.label,
+                      date: jourFr(apercu.effetLe),
+                      ensuite: montant(apercu.ensuiteCents, apercu.currency),
+                    })
+                  : t(apercu.prorata ? "upgradeStripeBody" : "upgradePaypalBody", {
+                      aujourdhui: montant(apercu.aPayerCents, apercu.currency),
+                      ensuite: montant(apercu.ensuiteCents, apercu.currency),
+                    })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-2">

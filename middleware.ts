@@ -8,7 +8,11 @@
 import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { isAdminEmail } from "@/lib/adminEmails";
-import { estHotePilotage, exigeAdmin } from "@/lib/pilotage/acces";
+import {
+  estHotePilotage,
+  exigeAdmin,
+  redirectionSurLeSousDomaine,
+} from "@/lib/pilotage/acces";
 
 /** Le domaine de l'app, pour renvoyer quelqu'un hors du sous-domaine. */
 const APP_URL_CANONIQUE = "https://quiz.tipote.com";
@@ -296,6 +300,18 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
   // `/pilotage/clients` : un gate sur le seul pathname y est mort.
   // C'est mot pour mot le drame du sous-domaine affilie de Tipote.
   const admin = exigeAdmin(req.headers.get("host"), pathname);
+
+  // UN CHEMIN INCONNU SUR LE SOUS-DOMAINE RAMENE A LA CONSOLE.
+  //
+  // Apres la connexion, l'app envoie tout le monde sur `/dashboard` :
+  // sur ce domaine il est reecrit en `/pilotage/dashboard`, qui n'est
+  // pas une section, donc 404. Le premier ecran apres s'etre connectee
+  // etait une erreur. Ici il n'existe QUE la console : tout ce qui n'est
+  // pas une de ses sections revient a son accueil.
+  const versConsole = redirectionSurLeSousDomaine(req.headers.get("host"), pathname);
+  if (versConsole) {
+    return poseSa(NextResponse.redirect(new URL(versConsole, req.url)));
+  }
 
   // Protected routes — require auth
   if (admin || startsWithAny(pathname, PROTECTED_PREFIXES)) {

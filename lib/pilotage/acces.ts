@@ -26,6 +26,8 @@
 // PUR : ni requête ni base, donc testable. Un gate enfermé dans le
 // middleware est un gate que personne ne peut vérifier.
 
+import { SECTIONS } from "@/lib/pilotage/sections";
+
 /** Le sous-domaine du centre de pilotage. Écrit UNE fois. */
 export const HOTE_PILOTAGE = "pilotage.tipote.com";
 
@@ -84,4 +86,49 @@ export function exigeAdmin(host: string | null | undefined, pathname: string): b
   // s'y connecter. C'est le sens inverse d'une liste d'autorisations :
   // un écran ajouté demain est protégé d'office.
   return !OUVERTS_SUR_LE_SOUS_DOMAINE.some((o) => p === o || p.startsWith(`${o}/`));
+}
+
+/**
+ * SUR LE SOUS-DOMAINE, UN CHEMIN INCONNU RAMÈNE À L'ACCUEIL.
+ *
+ * Béné, 29 août, capture à l'appui : `pilotage.tipote.com/dashboard`
+ * répond 404. Elle n'y est pas allée exprès. Après la connexion, l'app
+ * envoie tout le monde sur `/dashboard` ; sur ce domaine, ce chemin est
+ * réécrit en `/pilotage/dashboard`, qui n'est pas une section, donc
+ * `notFound()`. Le premier écran qu'elle voit après s'être connectée
+ * est une erreur.
+ *
+ * Plutôt que d'ajouter `/dashboard` à une liste d'exceptions (il y
+ * aurait `/quizzes`, `/settings`, et le prochain écran ajouté à
+ * l'app), on prend le problème dans l'autre sens : sur ce domaine, il
+ * n'existe QUE la console. Tout ce qui n'est pas une de ses sections
+ * ramène à son accueil.
+ *
+ * Rend `null` quand il n'y a rien à faire, et le chemin de destination
+ * sinon : une fonction qui rendrait un booléen obligerait l'appelant à
+ * recalculer où aller.
+ */
+export function redirectionSurLeSousDomaine(
+  host: string | null | undefined,
+  pathname: string,
+): string | null {
+  if (!estHotePilotage(host)) return null;
+
+  const p = String(pathname ?? "");
+  if (p === "/" || p === "") return null;
+
+  // Ce qui sert à se connecter, et les fichiers, passent tels quels.
+  if (OUVERTS_SUR_LE_SOUS_DOMAINE.some((o) => p === o || p.startsWith(`${o}/`))) return null;
+
+  // `/pilotage/...` écrit en toutes lettres marche aussi : c'est ce que
+  // porte un favori enregistré depuis `quiz.tipote.com`.
+  if (p === "/pilotage" || p.startsWith("/pilotage/")) return null;
+
+  // Une section de la console, avec ou sans sous-chemin
+  // (`/clients/eric@x.fr`). La liste vient de `sections.ts` : la
+  // recopier ici garantirait qu'elle finisse par ne plus correspondre.
+  const premier = `/${p.split("/").filter(Boolean)[0] ?? ""}`;
+  if (SECTIONS.some((s) => s.chemin && s.chemin === premier)) return null;
+
+  return "/";
 }
