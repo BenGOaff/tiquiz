@@ -10,6 +10,7 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveAppUrl } from "@/lib/authLinks";
+import { adresseExpediteur, tiquizFrom } from "./tiquizShell";
 
 const RESEND_URL = "https://api.resend.com/emails";
 const APP_URL = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
@@ -169,16 +170,13 @@ export async function notifyCreatorOfResponse(args: ResponseNotificationArgs): P
       .filter(Boolean)
       .join("\n");
 
-    const fromEmail =
-      process.env.SUPPORT_FROM_EMAIL?.trim() ||
-      process.env.RESELLER_FROM_EMAIL?.trim() ||
-      "hello@tipote.com";
+    const fromEmail = adresseExpediteur();
 
     const res = await fetch(RESEND_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: `Tiquiz <${fromEmail}>`,
+        from: tiquizFrom(process.env, "Tiquiz"),
         to: [p.email],
         subject,
         html,

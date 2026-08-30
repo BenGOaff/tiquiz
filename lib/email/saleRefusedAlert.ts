@@ -26,6 +26,7 @@
 import "server-only";
 import { ADMIN_EMAILS } from "@/lib/adminEmails";
 import { resolveAppUrl } from "@/lib/authLinks";
+import { adresseExpediteur, tiquizFrom } from "./tiquizShell";
 
 const RESEND_URL = "https://api.resend.com/emails";
 
@@ -70,10 +71,7 @@ export async function sendSaleRefusedAlert(args: SaleRefusedArgs): Promise<boole
     console.warn("[saleRefusedAlert] RESEND_API_KEY manquante, alerte non envoyee.");
     return false;
   }
-  const fromEmail =
-    process.env.SUPPORT_FROM_EMAIL?.trim() ||
-    process.env.RESELLER_FROM_EMAIL?.trim() ||
-    "hello@tipote.com";
+  const fromEmail = adresseExpediteur();
   const appUrl = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 
   const offre = args.offerId ? echappe(args.offerId) : "(aucun reçu)";
@@ -108,7 +106,7 @@ export async function sendSaleRefusedAlert(args: SaleRefusedArgs): Promise<boole
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: `Tiquiz <${fromEmail}>`,
+        from: tiquizFrom(process.env, "Tiquiz"),
         to: [...ADMIN_EMAILS],
         subject: args.grantedPlan
           ? `Bon de commande inconnu (accès ouvert en ${args.grantedPlan}) : ${args.email}`

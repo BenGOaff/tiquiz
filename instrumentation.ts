@@ -46,4 +46,20 @@ export async function register() {
 
   const message = formaterDiagnostic(diagnostic, "TIQUIZ");
   if (message) console.error(message);
+
+  // L'EXPÉDITEUR DES EMAILS, POUR LA MÊME RAISON.
+  //
+  // Depuis le 30 août, Tiquiz écrit depuis `tiquiz.fr`. Le repli sur
+  // l'ancien domaine est délibéré (c'est celui qui ne part pas en spam),
+  // mais il est SILENCIEUX : sans ce contrôle, un `.env` non recopié
+  // remet toute l'app à écrire sous le nom de Tipote et rien ne le dit.
+  const { verifierExpediteur, formaterExpediteur } = await import("@/lib/env/expediteur");
+  const expediteur = formaterExpediteur(
+    verifierExpediteur({
+      brut: process.env.SUPPORT_FROM_EMAIL ?? process.env.RESELLER_FROM_EMAIL,
+      domainesAttendus: ["tiquiz.fr", "quiz.tipote.com"],
+    }),
+    "TIQUIZ",
+  );
+  if (expediteur) console.error(expediteur);
 }

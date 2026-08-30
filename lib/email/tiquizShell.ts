@@ -191,16 +191,59 @@ function echapper(v: string): string {
  * vérifié chez Resend, et en changer sans l'avoir vérifié ferait tomber
  * tous les emails en spam. Le nom affiché suffit à lever l'ambiguïté.
  */
-export function tiquizFrom(
+export function adresseExpediteur(
   // Type LARGE, pas `NodeJS.ProcessEnv` : celui-la exige NODE_ENV, donc
   // un test ne peut pas lui passer deux cles sans une assertion. Et une
   // assertion posee pour faire taire le compilateur, c'est exactement ce
   // qui a cache le drame de l'import PDF (7 aout).
   env: Record<string, string | undefined> = process.env,
 ): string {
-  const adresse =
-    env.SUPPORT_FROM_EMAIL?.trim() || env.RESELLER_FROM_EMAIL?.trim() || "hello@tipote.com";
-  return `Tiquiz <${adresse}>`;
+  const brut =
+    env.SUPPORT_FROM_EMAIL?.trim() || env.RESELLER_FROM_EMAIL?.trim() || REPLI_EXPEDITEUR;
+  return adresseNue(brut);
+}
+
+/**
+ * L'adresse SEULE, même si le `.env` porte déjà un nom devant.
+ *
+ * Le 30 août, en basculant l'expéditeur sur `tiquiz.fr`, la valeur à
+ * poser était l'adresse nue : le nom est écrit par le code. Une valeur
+ * de la forme `Tiquiz <hello@tiquiz.fr>` produisait
+ * `Tiquiz <Tiquiz <hello@tiquiz.fr>>`, que Resend refuse, donc **plus
+ * aucun email ne part**, y compris les liens de connexion.
+ *
+ * On ne se contente pas de l'interdire : on le RATTRAPE. Le dépôt de
+ * l'Atelier le faisait déjà (`withBrandName`, lib/email/resend.ts) et
+ * pas celui-ci, ce qui est exactement la divergence entre jumeaux qui a
+ * coûté deux pannes différentes sur `pdf-parse` le 7 août.
+ */
+export function adresseNue(brut: string): string {
+  // `[^>]*` et pas `[^>]+` : sur un `<>` vide, le motif exigeant ne
+  // trouve rien, on garderait `"<>"` tel quel et Resend refuserait tout.
+  // C'est mon propre test qui l'a attrape.
+  const entreChevrons = brut.match(/<([^>]*)>/);
+  const adresse = (entreChevrons ? entreChevrons[1] : brut).trim();
+  return adresse || REPLI_EXPEDITEUR;
+}
+
+/**
+ * Le repli, et il est DÉLIBÉRÉMENT sur l'ancien domaine.
+ *
+ * `hello@tipote.com` est vérifié chez Resend depuis des mois. Mettre
+ * `tiquiz.fr` ici ferait partir en spam tous les emails d'un serveur où
+ * la variable a été oubliée, sans que rien ne le signale. Un repli doit
+ * être ce qui marche à coup sûr, pas ce qu'on préfère.
+ *
+ * L'oubli, lui, CRIE au démarrage : voir `lib/env/expediteur.ts`.
+ */
+export const REPLI_EXPEDITEUR = "hello@tipote.com";
+
+/** L'expéditeur complet, nom compris. */
+export function tiquizFrom(
+  env: Record<string, string | undefined> = process.env,
+  nom = "Tiquiz",
+): string {
+  return `${nom} <${adresseExpediteur(env)}>`;
 }
 
 /** Choisit les phrases : locale exacte, puis sa racine, puis le français. */

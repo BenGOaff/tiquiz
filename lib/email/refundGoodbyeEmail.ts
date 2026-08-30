@@ -22,6 +22,7 @@
 // compte. Jamais de tiret cadratin.
 
 import "server-only";
+import { adresseExpediteur, tiquizFrom } from "./tiquizShell";
 
 const RESEND_URL = "https://api.resend.com/emails";
 
@@ -58,10 +59,7 @@ export async function sendRefundGoodbyeEmail(args: {
     console.warn("[refundGoodbyeEmail] RESEND_API_KEY manquante, email non envoye.");
     return false;
   }
-  const fromEmail =
-    process.env.SUPPORT_FROM_EMAIL?.trim() ||
-    process.env.RESELLER_FROM_EMAIL?.trim() ||
-    "hello@tipote.com";
+  const fromEmail = adresseExpediteur();
 
   try {
     const { subject, html, text } = buildContent(args.prenom ?? null);
@@ -69,7 +67,7 @@ export async function sendRefundGoodbyeEmail(args: {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: `Tiquiz <${fromEmail}>`,
+        from: tiquizFrom(process.env, "Tiquiz"),
         to: [args.email],
         subject,
         html,

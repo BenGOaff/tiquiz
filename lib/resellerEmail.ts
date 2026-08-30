@@ -21,6 +21,7 @@
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveAppUrl } from "@/lib/authLinks";
+import { adresseExpediteur, tiquizFrom } from "./email/tiquizShell";
 
 const APP_URL = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
 const RESEND_URL = "https://api.resend.com/emails";
@@ -130,10 +131,13 @@ export async function sendResellerAccessEmail(args: {
       return sendViaSupabaseTemplate(args.email);
     }
 
-    const fromEmail =
-      process.env.RESELLER_FROM_EMAIL?.trim() ||
-      process.env.SUPPORT_FROM_EMAIL?.trim() ||
-      "hello@tipote.com";
+    // L'ORDRE DES DEUX VARIABLES ÉTAIT INVERSÉ ICI, ET NULLE PART
+    // AILLEURS. Les six autres envois lisent `SUPPORT_FROM_EMAIL` en
+    // premier ; ce fichier lisait `RESELLER_FROM_EMAIL`. Avec les deux
+    // posées, l'email d'accès d'un client de revendeur partait donc
+    // d'une adresse différente de tous les autres, sans que rien ne le
+    // dise. La résolution vit maintenant à UN endroit.
+    const fromEmail = adresseExpediteur();
 
     const { html, text, subject } = buildHtml({
       actionLink,
@@ -149,7 +153,7 @@ export async function sendResellerAccessEmail(args: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: `Tiquiz <${fromEmail}>`,
+        from: tiquizFrom(process.env, "Tiquiz"),
         to: [args.email],
         subject,
         html,
