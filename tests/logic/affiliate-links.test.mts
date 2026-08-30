@@ -47,10 +47,12 @@ test("les adresses sont distinctes et pointent au bon endroit", () => {
   // sont plus celles qu'on applique.
   assert.equal(AFFILIATE_SIGNUP_URL, "https://tiquiz.fr/affiliation");
   assert.equal(AFFILIATE_ATELIER_URL, "https://tiquiz.fr/affiliation-atelier");
-  // La page de VENTE de l'Atelier reste chez Systeme.io, et c'est
-  // delibere : son tunnel porte le bon de commande, et son registre
-  // d'affilies est le sien (cf. l'audit du 25 aout).
-  assert.equal(ATELIER_SALES_URL, "https://www.tipote.fr/atelier-du-quiz");
+  // RAPATRIEE LE 30 AOUT, apres verification dans le depot de l'Atelier.
+  // L'exception qui la gardait chez Systeme.io disait que l'Atelier ne
+  // lisait que `?sa=` et tenait son propre registre : les deux sont
+  // faux depuis que `commissionnerVente` interroge Tipote EN PREMIER
+  // avec `affiliate_code` et `source_app: "atelier"`.
+  assert.equal(ATELIER_SALES_URL, "https://atelierduquiz.fr/");
 
   const toutes = [
     AFFILIATE_DASHBOARD_URL,

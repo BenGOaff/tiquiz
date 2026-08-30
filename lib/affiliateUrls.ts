@@ -66,5 +66,23 @@ export const AFFILIATE_ATELIER_URL = "https://tiquiz.fr/affiliation-atelier";
  * Rien à voir avec l'affiliation : c'est la formation. Elle vit ici
  * parce que les deux cartes de la sidebar sont voisines et qu'on les
  * confondait justement.
+ *
+ * RAPATRIÉE LE 30 AOÛT 2026, après vérification dans le dépôt de
+ * l'Atelier. Elle désignait `www.tipote.fr/atelier-du-quiz`, et la note
+ * qui justifiait de l'y laisser disait que l'Atelier tenait son propre
+ * registre d'affiliés et ne lisait que `?sa=`. **Ce n'est plus vrai.**
+ * Vérifié ligne par ligne :
+ *
+ *   - `atelierduquiz.fr` est un hôte de vente de l'app de l'Atelier
+ *     (`lib/sales/salesHosts.ts`), donc son middleware capte le `?ref=` ;
+ *   - le bon de commande le transporte (`affiliateCode`) ;
+ *   - `commissionnerVente` interroge le registre CENTRAL de Tipote en
+ *     PREMIER, avec `affiliate_code`, `source_app: "atelier"` (c'est lui
+ *     qui fixe les 70 %) et `base: "ht"`. Le registre historique de
+ *     l'Atelier n'est plus qu'un repli.
+ *
+ * Laisser ce lien chez Systeme.io envoyait donc les visiteurs sur un
+ * tunnel qui ne nous transmet rien, alors que notre propre domaine
+ * commissionne correctement.
  */
-export const ATELIER_SALES_URL = "https://www.tipote.fr/atelier-du-quiz";
+export const ATELIER_SALES_URL = "https://atelierduquiz.fr/";

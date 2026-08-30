@@ -55,7 +55,8 @@ export default function PageAffiliation() {
               six mots en 3,6 rem écrase le reste de la page, et c'est ce
               que Béné a relevé : "c'est trop". Deux caractères suffisent
               à porter le message. */}
-          <span className="tq-surb">{pourcentTiquiz} %</span> chaque mois, tant qu&apos;il reste
+          <span className="tq-surb">{pourcentTiquiz} %</span>{" "}
+          chaque mois, tant qu&apos;il reste
           abonné
         </h1>
         <p className="tq-doux mt-6 tq-lire text-[1.1rem] leading-relaxed">
@@ -168,7 +169,8 @@ export default function PageAffiliation() {
           </table>
         </div>
         <p className="tq-doux tq-lire mt-6 text-[0.95rem] leading-relaxed">
-          Trente filleuls au mensuel, ça fait {gains[0].gain} multiplié par 30 chaque mois, et ça
+          Trente filleuls au mensuel, ça fait {gains[0].gain}{" "}
+          multiplié par 30 chaque mois, et ça
           continue le mois suivant sans que tu refasses quoi que ce soit. C&apos;est là que
           l&apos;abonnement change tout par rapport à une vente unique.
         </p>
