@@ -234,6 +234,71 @@ pilotage.tipote.com {
 }
 
 # ------------------------------------------------------------------
+# LES DOMAINES DE VENTE (tiquiz.fr, atelierduquiz.fr)
+# ------------------------------------------------------------------
+#
+# ILS ÉTAIENT CONFIGURÉS DIRECTEMENT SUR LE SERVEUR, ET PAS ICI.
+#
+# Le 29 août 2026, un `cp` de ce fichier vers /etc/caddy/Caddyfile a
+# donc EFFACÉ leurs blocs : les deux pages de vente sont tombées en
+# ERR_SSL_PROTOCOL_ERROR d'un coup. Sans bloc nommé, l'hôte tombe dans
+# le catchall :443, donc dans l'émission de certificat à la demande, qui
+# interroge le dispatcher, qui ne trouve pas ce nom dans les domaines
+# vérifiés des créatrices et refuse le certificat. Caddy interrompt
+# alors la poignée de main TLS, et le navigateur n'a rien à afficher
+# d'autre qu'une erreur de protocole.
+#
+# **Règle : ce fichier est la SEULE vérité de la configuration Caddy.**
+# Tout hôte servi en production a son bloc ICI. Une modification faite à
+# la main sur le serveur est perdue au prochain déploiement, et elle ne
+# se voit qu'au moment où la page de vente ne répond plus, c'est à dire
+# au pire moment possible.
+#
+# Le `www` est servi par le même bloc : `SALES_HOSTS` (côté Tiquiz et
+# côté Atelier) connaît les deux formes, et la balise canonique désigne
+# l'adresse sans `www`. C'est elle qui consolide le référencement, pas
+# une redirection de plus.
+
+# Page de vente + bon de commande Tiquiz. Servis par l'app Tiquiz
+# (port 3001), qui décide elle même d'ouvrir sans clé sur cet hôte
+# (lib/sales/previewGate.ts). Le blog vit ici aussi : tiquiz.fr/blog.
+tiquiz.fr, www.tiquiz.fr {
+        encode zstd gzip
+        import block_bad_paths
+
+        # Les visuels du blog et les fichiers de la page de vente ne
+        # changent qu'au déploiement : ils se mettent en cache long.
+        # Tout le reste reste frais, parce qu'un bon de commande servi
+        # depuis un cache afficherait un ancien prix.
+        @statique path /_next/static/* /blog/img/* /sales/*
+        header @statique Cache-Control "public, max-age=31536000, immutable"
+
+        reverse_proxy 127.0.0.1:3001 {
+                import proxy_headers
+                transport http {
+                        read_timeout 5m
+                }
+        }
+}
+
+# Page de vente + bon de commande de l'Atelier du Quiz, servis par
+# l'app formaquiz (port 3002).
+atelierduquiz.fr, www.atelierduquiz.fr {
+        encode zstd gzip
+        import block_bad_paths
+
+        @statique path /_next/static/* /sales/*
+        header @statique Cache-Control "public, max-age=31536000, immutable"
+
+        reverse_proxy 127.0.0.1:3002 {
+                import proxy_headers
+                transport http {
+                        read_timeout 5m
+                }
+        }
+}
+
+# ------------------------------------------------------------------
 # tus uploads (tus.tipote.com + tus.quiz.tipote.com)
 # ------------------------------------------------------------------
 # Both names front the same popquiz-tus node server; the JWT's `app`
