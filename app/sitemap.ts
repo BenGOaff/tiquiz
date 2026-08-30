@@ -26,6 +26,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolvePublicUrl } from "@/lib/authLinks";
 import { hoteCanonique, HOTE_VENTE } from "@/lib/publicHost";
 import { SALES_HOSTS } from "@/lib/sales/salesHosts";
+import { listerArticles } from "@/lib/blog/articles";
 
 const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
 const PUBLIC_ROUTES = [
@@ -59,6 +60,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // c'est le robots.txt qui reste la seule piste.
   const host = (h.get("host") ?? "").toLowerCase().trim().replace(/:\d+$/, "");
   if (Object.prototype.hasOwnProperty.call(SALES_HOSTS, host)) {
+    // LE BLOG EST SUR CE DOMAINE, DONC DANS CE SITEMAP.
+    //
+    // C'est même la moitié de l'intérêt de l'avoir rapatrié : la page
+    // de vente seule ne donne à Google qu'une page à indexer, et un
+    // domaine d'une page ne remonte sur rien. Dix articles qui pointent
+    // vers elle, c'est ce qui la fait exister.
+    //
+    // `lastModified` vaut la date de PUBLICATION, jamais la date du
+    // jour : annoncer que tout a changé à chaque régénération apprend
+    // au robot à ne plus croire ce champ.
     return [
       {
         url: `${HOTE_VENTE}/`,
@@ -66,6 +77,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: "weekly" as const,
         priority: 1,
       },
+      {
+        url: `${HOTE_VENTE}/blog`,
+        lastModified: new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.8,
+      },
+      ...listerArticles().map((a) => ({
+        url: `${HOTE_VENTE}/blog/${a.slug}`,
+        lastModified: new Date(`${a.publieLe}T12:00:00Z`),
+        changeFrequency: "monthly" as const,
+        priority: 0.7,
+      })),
     ];
   }
 

@@ -2878,3 +2878,67 @@ la même chose à 10 places, se dit en une phrase à un acheteur, et ne
 crée aucune raison de tricher. Les paliers restent utiles pour les gros
 volumes, mais posés plus haut (au delà de 20, 50).
 
+
+## Le blog vit dans le dépôt, pas dans une base (Béné, 29 août 2026)
+
+"Sinon oui mon blog sur tiquiz.fr/blog. Je vais supprimer les anciennes
+versions dans la foulée. Profites-en pour mettre à jour l'affiliation,
+les liens, les prix etc..."
+
+Dix articles importés depuis Systeme.io, servis sur `tiquiz.fr/blog`.
+`content/blog/*.json` porte le contenu, `lib/blog/` les décisions,
+`public/blog/img/` les visuels. Dix articles qui changent trois fois par
+an n'ont rien à faire dans une base : un fichier se relit dans une revue
+de code, se déploie avec le reste, et ne peut pas disparaître parce
+qu'une migration n'a pas été passée.
+
+**L'import lit le MODÈLE de la page, jamais le HTML rendu.** Chaque page
+Systeme.io embarque `window.__PRELOADED_STATE__` : le contenu bloc par
+bloc, avec son type. C'est du JavaScript et pas du JSON (`\x3c`, `\'`) :
+c'est Node qui sait le lire, pas un remplacement de chaînes fait à la
+main. Deux racines existent, `BlogPostBody` ET `BlogPageBody` : oublier
+la seconde a sorti l'étude de cas Jocelyne à zéro bloc, sans un mot.
+
+**Trois pièges de l'import, tous invisibles sans un contrôle explicite :**
+
+1. **L'ORDRE des remplacements décide de la justesse.** Mis en premier,
+   `9 €/mois -> 17 €/mois` transforme "1 filleul à 9 €/mois = 3,60 €" en
+   "1 filleul à 17 €/mois = 3,60 €" : le prix devient juste et le calcul
+   devient faux, ce qui est pire que de n'avoir rien touché. Les phrases
+   qui portent une ARITHMÉTIQUE se corrigent entières, AVANT les
+   remplacements génériques.
+2. **Deux motifs qui se chevauchent : le plus long d'abord.** Un motif
+   court consomme sa cible et le long ne trouve plus rien, en silence.
+3. **Une même lettre s'écrit de deux façons** (`à` précomposé ou `a` +
+   accent combinant). On normalise en NFC avant toute comparaison,
+   sinon un remplacement échoue sans bruit.
+   Et une espace INSÉCABLE (`1 800 €`) ne se tape pas : on l'exprime.
+
+Le pipeline REFUSE de finir en silence : il compte les corrections
+appliquées, liste celles qui n'ont trouvé aucune cible, et cherche ce
+qui ne devrait plus exister (ancien prix, ancien lien, tiret cadratin,
+chevron, point médian). `tests/logic/blog.test.mts` rejoue ces contrôles
+sur le contenu déployé.
+
+**Le lien vers l'Atelier RESTE chez Systeme.io**, et le test l'exige.
+L'Atelier a son propre registre d'affiliés et ne lit que `?sa=` :
+repointer ce lien changerait QUI est payé (cf. la section du 25 août).
+Sans cette exception écrite, le prochain passage "finit le travail".
+
+**Les images sont chez nous, recompressées** (82 fichiers, 24,3 Mo ->
+5,7 Mo). Les GIF passent en WebP **animé** : `sharp(buf, {animated:
+true})`, sinon on ne garde que la première image et le GIF devient une
+capture fixe sans que rien ne le signale. Hotlinker le CDN de
+Systeme.io aurait tué tous les visuels le jour de la résiliation.
+
+**Ce qui manquait pour ranker sur "tiquiz".** La page de vente ne
+portait AUCUNE donnée structurée : elle était un document parmi d'autres
+contenant le mot. Elle déclare maintenant `Organization`, `WebSite` et
+ses offres (`lib/sales/servePage.ts`), **uniquement sur le domaine
+public** : deux pages qui prétendent être le site officiel se feraient
+concurrence sur la même requête. Les prix viennent du CATALOGUE, jamais
+recopiés.
+
+**À faire quand elle en aura le temps :** plusieurs visuels portent
+`www.tipote.fr/tiquiz` incrusté dans l'image. Ça ne casse rien, mais ça
+envoie le lecteur vers une adresse qui va disparaître.

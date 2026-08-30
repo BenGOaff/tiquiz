@@ -557,3 +557,93 @@ html[data-pq-compact] body {
  * principal ; meme traitement (couvert par .py-16 ci-dessus). Le scroll
  * interne residuel (si un quiz tres long) reste possible mais l'iframe
  * grandit d'abord pour tout afficher, donc en pratique pas de scroll. */
+
+/* ── LE BLOG ─────────────────────────────────────────────────────────
+   La mise en forme des articles vit ICI, une fois, et pas dans le
+   contenu importé. Les blocs venus de Systeme.io portaient leurs
+   couleurs et leurs tailles en dur : les garder aurait donné des pages
+   qui ne ressemblent à rien d'autre sur le site, et impossibles à
+   restyler sans rouvrir dix fichiers de contenu.
+
+   Aucune décoration à gauche (pas de `pl-*`, pas de `border-l`) :
+   c'est la règle des blocs de résultat du 3 août. Une décoration à
+   gauche déplace ce qu'elle décore, et les bords ne s'alignent plus. */
+.tiquiz-blog {
+  font-size: 1.0625rem;
+  line-height: 1.75;
+}
+.tiquiz-blog p {
+  margin: 1.1em 0;
+}
+.tiquiz-blog h2 {
+  margin: 2.2em 0 0.6em;
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+.tiquiz-blog h3 {
+  margin: 1.8em 0 0.5em;
+  font-size: 1.25rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+.tiquiz-blog h4 {
+  margin: 1.5em 0 0.4em;
+  font-weight: 650;
+}
+.tiquiz-blog ul,
+.tiquiz-blog ol {
+  margin: 1.1em 0;
+  padding-left: 1.4em;
+}
+.tiquiz-blog ul {
+  list-style: disc;
+}
+.tiquiz-blog ol {
+  list-style: decimal;
+}
+.tiquiz-blog li {
+  margin: 0.4em 0;
+}
+.tiquiz-blog a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.tiquiz-blog blockquote {
+  margin: 1.5em 0;
+  font-style: italic;
+  color: hsl(var(--muted-foreground));
+}
+.tiquiz-blog code {
+  border-radius: 4px;
+  background: hsl(var(--muted));
+  padding: 0.1em 0.35em;
+  font-size: 0.9em;
+}
+/* Un tableau large SCROLLE dans sa boîte : sans ça, c'est la page
+   entière qui part en travers sur un téléphone. */
+.tiquiz-blog table {
+  display: block;
+  overflow-x: auto;
+  width: 100%;
+  margin: 1.5em 0;
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+.tiquiz-blog th,
+.tiquiz-blog td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.5em 0.75em;
+  text-align: left;
+  vertical-align: top;
+}
+.tiquiz-blog th {
+  background: hsl(var(--muted));
+  font-weight: 650;
+}
+/* Un paragraphe qui ne porte qu'un <br> vient de l'éditeur d'origine :
+   il servait d'espacement, et notre rythme vertical s'en charge déjà. */
+.tiquiz-blog p:has(> br:only-child) {
+  display: none;
+}

@@ -225,6 +225,15 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/auth/") ||
     pathname.startsWith("/legal/") ||
+    // LE BLOG EST PUBLIC, ET C'EST TOUT SON INTÉRÊT.
+    //
+    // Il vit sur `tiquiz.fr`, il est lu par des gens qui découvrent
+    // Tiquiz depuis une recherche Google, et aucun d'eux n'a de compte.
+    // Sans cette ligne, le middleware renverrait chaque article vers
+    // /login : un blog derrière une connexion ne ramène personne et ne
+    // ranke sur rien.
+    pathname === "/blog" ||
+    pathname.startsWith("/blog/") ||
     // Pages de vente servies par nous. PUBLIQUES par nature : un
     // visiteur qui decouvre Tiquiz n'a evidemment pas de session. Sans
     // cette ligne le middleware le renverrait vers /login, ce qui

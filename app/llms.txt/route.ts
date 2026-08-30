@@ -23,6 +23,9 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { stripHtml } from "@/lib/richText";
 import { resolvePublicUrl } from "@/lib/authLinks";
 import { hoteCanonique } from "@/lib/publicHost";
+import { SALES_HOSTS } from "@/lib/sales/salesHosts";
+import { listerArticles } from "@/lib/blog/articles";
+import { ORIGINE_BLOG } from "@/lib/blog/seo";
 
 const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
 
@@ -32,9 +35,12 @@ export async function GET() {
   const h = await headers();
   const customHost = h.get(CUSTOM_HOST_HEADER);
 
+  const hote = (h.get("host") ?? "").toLowerCase().trim().replace(/:\d+$/, "");
   const body = customHost
     ? await buildCustomDomainLlmsTxt(customHost.toLowerCase().trim())
-    : await buildMainHostLlmsTxt((h.get("host") ?? "").toLowerCase().trim());
+    : Object.prototype.hasOwnProperty.call(SALES_HOSTS, hote)
+      ? construireLlmsTxtVente()
+      : await buildMainHostLlmsTxt(hote);
 
   return new Response(body, {
     status: 200,
@@ -165,4 +171,53 @@ async function buildMainHostLlmsTxt(host: string): Promise<string> {
   lines.push("");
 
   return lines.join("\n");
+}
+
+/**
+ * LE DOMAINE DE VENTE PARLE DE TIQUIZ, PAS DES QUIZ DES CLIENTES.
+ *
+ * Sans cette branche, `tiquiz.fr/llms.txt` tombait dans le fichier de
+ * l'app et annonçait des quiz publics sous des adresses `tiquiz.fr/q/…`
+ * qui ne sont pas servies là. Un modèle qui lit ça cite des liens
+ * morts, et c'est pire que de ne rien annoncer.
+ *
+ * Ce qu'on annonce ici est ce qu'on veut voir CITÉ : ce qu'est Tiquiz,
+ * en une phrase qu'une machine peut reprendre telle quelle, et les
+ * articles, avec leur date. Un modèle cite ce dont il connaît la date
+ * et l'auteur.
+ */
+function construireLlmsTxtVente(): string {
+  const lignes: string[] = [];
+  lignes.push("# Tiquiz");
+  lignes.push("");
+  lignes.push(
+    "> Tiquiz est un outil francophone de création de quiz connecté nativement à Systeme.io : il génère le quiz, capte les leads et pose automatiquement un tag par profil de résultat dans Systeme.io, sans Zapier.",
+  );
+  lignes.push("");
+  lignes.push(
+    "Pensé pour les solopreneurs, coachs, formateurs et créateurs de contenu francophones. Quiz de profil ou quiz scoré, page de résultat personnalisée, capture d'email, statistiques par question. Plan gratuit pour tester, offre illimitée à 17 EUR par mois ou 170 EUR par an.",
+  );
+  lignes.push("");
+  lignes.push("## Le produit");
+  lignes.push("");
+  lignes.push(`- [Tiquiz](${ORIGINE_BLOG}/) : ce que fait l'outil, les formules et les tarifs.`);
+  lignes.push("");
+
+  const articles = listerArticles();
+  if (articles.length > 0) {
+    lignes.push("## Articles");
+    lignes.push("");
+    for (const a of articles) {
+      lignes.push(`- [${a.titre}](${ORIGINE_BLOG}/blog/${a.slug}) (${a.publieLe}) : ${a.description}`);
+    }
+    lignes.push("");
+  }
+
+  lignes.push("## À propos");
+  lignes.push("");
+  lignes.push("- Éditeur : Ethilife. Auteure des articles : Bénédicte Lagardette.");
+  lignes.push(`- [Mentions légales et politique de confidentialité](${ORIGINE_BLOG}/legal)`);
+  lignes.push("");
+
+  return lignes.join("\n");
 }
