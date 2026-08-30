@@ -148,6 +148,26 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
     };
     if (ref) res.cookies.set(REF_COOKIE, ref, options);
     if (sa) res.cookies.set(SA_COOKIE, sa, { ...options, maxAge: SA_MAX_AGE_SECONDS });
+
+    // UN LIEN AFFILIE NE SE MET JAMAIS EN CACHE (29 aout 2026).
+    //
+    // Le clic est compte ICI, dans ce middleware, et le cookie d'un an
+    // est pose ICI. Une reponse a `?ref=jocelyne` servie depuis un
+    // cache (Cloudflare, un proxy d'entreprise, le navigateur) n'arrive
+    // donc JAMAIS jusqu'a nous : le clic n'est pas compte, le cookie
+    // n'est pas pose, la vente n'est attribuee a personne et le mois
+    // offert ne s'ouvre pas. Rien ne casse a l'ecran, c'est ce qui rend
+    // le cas dangereux : l'affiliee voit sa page s'afficher et ses
+    // chiffres rester a zero.
+    //
+    // Pire : un cache partage pourrait servir le `Set-Cookie` d'UN
+    // affilie a tous les visiteurs suivants.
+    //
+    // On le dit donc dans la reponse elle meme, et pas seulement dans
+    // une regle Cloudflare : une regle vit dans une interface, se
+    // retape a la main et s'oublie au prochain domaine. Cet en-tete
+    // vaut pour tous les caches, y compris ceux qu'on ne connait pas.
+    if (ref || sa) res.headers.set("Cache-Control", "private, no-store, max-age=0");
     return res;
   };
 

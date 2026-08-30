@@ -47,6 +47,9 @@ const PAGES: Record<string, Omit<SalesPageMeta, "slug">> = {
     description:
       "Crée un quiz personnalisé en quelques minutes, capture des emails qualifiés et envoie à chaque visiteur le résultat qui lui parle. Sans code, en 7 langues.",
     locale: "fr_FR",
+    // NOTRE icône, pas celle du compte Systeme.io qui a publié la page
+    // d'origine : la capture portait le "t" de Tipote.
+    favicon: "/favicon.ico",
   },
 };
 
@@ -67,7 +70,10 @@ const PAGES: Record<string, Omit<SalesPageMeta, "slug">> = {
 const MARQUES: Record<string, SalesPageMeta["marque"]> = {
   tiquiz: {
     nom: "Tiquiz",
-    logo: "https://tiquiz.fr/blog/img/tipote-logo1.webp",
+    // LE LOGO DE TIQUIZ, pas celui de Tipote. Ce champ finit dans les
+    // résultats de recherche et dans les réponses des assistants : deux
+    // produits qui présentent le même logo ne se distinguent plus.
+    logo: "https://tiquiz.fr/tiquiz-logo.png",
     sameAs: ["https://quiz.tipote.com/", "https://www.tipote.fr/tiquiz"],
     produit: {
       offres: Object.values(OWNER_CATALOG).map((p) => ({
