@@ -12,6 +12,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import { lireArticle, listerArticles, tousLesSlugs } from "@/lib/blog/articles";
+import { rubriqueDe } from "@/lib/blog/rubriques";
+import CarteArticle from "@/components/site/CarteArticle";
 import { minutesDeLecture, nettoyerBloc, sommaire } from "@/lib/blog/rendu";
 import {
   ORIGINE_BLOG,
@@ -88,8 +90,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     .filter((x) => x.slug !== a.slug)
     .slice(0, 3);
 
+  const rubrique = rubriqueDe(a.slug);
+
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
+    <main>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdArticle(a)) }}
@@ -105,42 +109,63 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         />
       ) : null}
 
-      <nav className="text-sm text-muted-foreground">
-        <Link href="/blog" className="hover:text-foreground">
-          Blog
-        </Link>
-      </nav>
+      {/* LE CHAPEAU, EN PLEINE LARGEUR.
+          Le titre respire, la couverture suit dessous. C'est la seule
+          partie de la page qui sort du gabarit de lecture : le CORPS,
+          lui, reste borné à une longueur de ligne confortable, parce
+          qu'un paragraphe de 120 caractères ne se lit pas. */}
+      <header className="mx-auto max-w-4xl px-5 pt-10 sm:px-8 sm:pt-14">
+        <nav aria-label="Fil d'Ariane" className="tq-doux text-sm">
+          <Link href="/blog" className="hover:text-[var(--tq-encre)]">
+            Blog
+          </Link>
+          {rubrique ? (
+            <>
+              <span className="mx-2">/</span>
+              <Link
+                href={`/blog/rubrique/${rubrique.id}`}
+                className="hover:text-[var(--tq-encre)]"
+              >
+                {rubrique.libelle}
+              </Link>
+            </>
+          ) : null}
+        </nav>
 
-      <article className="mt-4">
-        <h1 className="text-4xl font-bold leading-tight tracking-tight">{a.titre}</h1>
-        <p className="mt-3 text-lg text-muted-foreground">{a.description}</p>
-        <p className="mt-4 text-sm text-muted-foreground">
-          Par Béné, fondatrice de Tiquiz{" · "}
+        <h1 className="mt-5 text-[2.1rem] leading-[1.1] sm:text-[2.9rem]">{a.titre}</h1>
+        <p className="tq-doux mt-4 max-w-[64ch] text-[1.1rem] leading-relaxed">{a.description}</p>
+        <p className="tq-doux mt-6 text-sm">
+          Par Béné, fondatrice de Tiquiz{" | "}
           <time dateTime={a.publieLe}>{jourLisible(a.publieLe)}</time>
-          {" · "}
+          {" | "}
           {minutes} min de lecture
         </p>
 
         {a.couverture ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={a.couverture}
-            alt=""
-            className="mt-8 w-full rounded-xl"
-            // La couverture est la PREMIÈRE image vue : elle se charge
-            // tout de suite. Un `lazy` ici retarderait le plus gros
-            // élément de la page, donc la note de performance.
-            fetchPriority="high"
-          />
+          <div className="tq-carte-media mt-9">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={a.couverture}
+              alt=""
+              width={1200}
+              height={675}
+              // La couverture est la PREMIÈRE image vue : elle se charge
+              // tout de suite. Un `lazy` ici retarderait le plus gros
+              // élément de la page, donc la note de performance.
+              fetchPriority="high"
+            />
+          </div>
         ) : null}
+      </header>
 
+      <div className="mx-auto max-w-[46rem] px-5 sm:px-8">
         {toc.length >= 3 ? (
-          <nav className="mt-10 rounded-xl border bg-muted/30 p-5">
-            <p className="text-sm font-semibold">Dans cet article</p>
-            <ul className="mt-2 space-y-1 text-sm">
+          <nav className="mt-12 rounded-2xl border border-[var(--tq-bord)] bg-white p-6">
+            <p className="tq-etiquette">Dans cet article</p>
+            <ul className="mt-3 space-y-1.5 text-[0.95rem]">
               {toc.map((e) => (
                 <li key={e.id} className={e.niveau === 3 ? "ml-4" : ""}>
-                  <a href={`#${e.id}`} className="text-muted-foreground hover:text-foreground">
+                  <a href={`#${e.id}`} className="tq-doux hover:text-[var(--tq-bleu)]">
                     {e.texte}
                   </a>
                 </li>
@@ -149,7 +174,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           </nav>
         ) : null}
 
-        <div className="tiquiz-blog mt-10">
+        <article className="tiquiz-blog mt-12">
           {a.blocs.map((b, i) => {
             if (b.type === "titre") {
               const Balise = b.niveau === 2 ? "h2" : "h3";
@@ -160,9 +185,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               );
             }
             if (b.type === "html") {
-              return (
-                <div key={i} dangerouslySetInnerHTML={{ __html: nettoyerBloc(b.html) }} />
-              );
+              return <div key={i} dangerouslySetInnerHTML={{ __html: nettoyerBloc(b.html) }} />;
             }
             if (b.type === "image") {
               return (
@@ -170,16 +193,19 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 // jamais d'`object-cover`. C'est la règle du 4 août, et
                 // un schéma recadré ne veut plus rien dire.
                 // eslint-disable-next-line @next/next/no-img-element
-                <img key={i} src={b.src} alt={b.alt} loading="lazy" className="my-8 h-auto w-full rounded-lg" />
+                <img
+                  key={i}
+                  src={b.src}
+                  alt={b.alt}
+                  loading="lazy"
+                  className="my-8 h-auto w-full"
+                />
               );
             }
             if (b.type === "cta") {
               return (
-                <p key={i} className="my-8">
-                  <a
-                    href={b.url}
-                    className="inline-block rounded-full bg-foreground px-6 py-3 font-medium text-background no-underline transition-opacity hover:opacity-90"
-                  >
+                <p key={i} className="my-10">
+                  <a href={b.url} className="tq-bouton no-underline">
                     {b.texte}
                   </a>
                 </p>
@@ -188,7 +214,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             return (
               <section key={i} className="my-10">
                 {b.questions.map((q, k) => (
-                  <details key={k} className="border-b py-3">
+                  <details key={k} className="border-b border-[var(--tq-bord)] py-4">
                     <summary className="cursor-pointer font-semibold">{q.question}</summary>
                     <div
                       className="mt-2"
@@ -199,38 +225,42 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </section>
             );
           })}
-        </div>
-      </article>
+        </article>
 
-      {/* CE QUE LE LECTEUR FAIT ENSUITE. Un article qui se termine sur
-          un point final renvoie le visiteur à son onglet précédent. */}
-      <aside className="mt-14 rounded-2xl border bg-muted/30 p-6">
-        <p className="text-lg font-semibold">Un quiz qui tague tes leads dans Systeme.io</p>
-        <p className="mt-1 text-muted-foreground">
-          Tiquiz génère le quiz, pose les tags par profil et te rend des leads déjà triés. Plan
-          gratuit pour tester, sans carte.
-        </p>
-        <a
-          href="https://tiquiz.fr/"
-          className="mt-4 inline-block rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background"
-        >
-          Voir Tiquiz
-        </a>
-      </aside>
+        {/* CE QUE LE LECTEUR FAIT ENSUITE. Un article qui se termine sur
+            un point final renvoie le visiteur à son onglet précédent. */}
+        <aside className="mt-16 rounded-3xl bg-[var(--tq-marine)] px-7 py-10 sm:px-10">
+          <h2 className="max-w-[22ch] text-[1.5rem] text-white">
+            Un quiz qui tague tes leads dans <span className="tq-surb">Systeme.io</span>
+          </h2>
+          <p className="mt-4 max-w-[52ch] leading-relaxed text-[#b9c3d9]">
+            Tiquiz génère le quiz, pose les tags par profil et te rend des leads déjà triés. Plan
+            gratuit pour tester, sans carte.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/signup" className="tq-bouton">
+              Créer mon quiz gratuitement
+            </Link>
+            <Link
+              href="/"
+              className="tq-bouton bg-transparent !text-white ring-1 ring-white/25 hover:!bg-white/10"
+            >
+              Voir Tiquiz
+            </Link>
+          </div>
+        </aside>
+      </div>
 
       {autres.length > 0 ? (
-        <section className="mt-14">
-          <h2 className="text-xl font-semibold">À lire ensuite</h2>
-          <ul className="mt-4 space-y-3">
-            {autres.map((x) => (
-              <li key={x.slug}>
-                <Link href={`/blog/${x.slug}`} className="font-medium hover:underline">
-                  {x.titre}
-                </Link>
-                <p className="text-sm text-muted-foreground">{x.description}</p>
-              </li>
-            ))}
-          </ul>
+        <section className="mt-24 bg-[var(--tq-panneau)] py-16">
+          <div className="mx-auto max-w-6xl px-5 sm:px-8">
+            <h2 className="text-[2rem]">À lire ensuite</h2>
+            <div className="mt-10 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+              {autres.map((x) => (
+                <CarteArticle key={x.slug} article={x} />
+              ))}
+            </div>
+          </div>
         </section>
       ) : null}
     </main>

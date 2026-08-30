@@ -25,6 +25,7 @@ import { resolvePublicUrl } from "@/lib/authLinks";
 import { hoteCanonique } from "@/lib/publicHost";
 import { SALES_HOSTS } from "@/lib/sales/salesHosts";
 import { listerArticles } from "@/lib/blog/articles";
+import { PAGES_PUBLIQUES } from "@/lib/site/pagesPubliques";
 import { ORIGINE_BLOG } from "@/lib/blog/seo";
 
 const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
@@ -201,6 +202,19 @@ function construireLlmsTxtVente(): string {
   lignes.push("## Le produit");
   lignes.push("");
   lignes.push(`- [Tiquiz](${ORIGINE_BLOG}/) : ce que fait l'outil, les formules et les tarifs.`);
+  lignes.push("");
+
+  // LE RESTE DU SITE, rapatrié de Systeme.io le 30 août 2026.
+  //
+  // La liste vient de `lib/site/pagesPubliques.ts`, la MÊME que celle
+  // du sitemap : deux listes de pages écrites séparément finissent
+  // toujours par diverger, et c'est la page la plus récente qui manque
+  // à l'une des deux.
+  lignes.push("## Le site");
+  lignes.push("");
+  for (const page of PAGES_PUBLIQUES) {
+    lignes.push(`- [${page.titre}](${ORIGINE_BLOG}${page.chemin}) : ${page.resume}`);
+  }
   lignes.push("");
 
   const articles = listerArticles();

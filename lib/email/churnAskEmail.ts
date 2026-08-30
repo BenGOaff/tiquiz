@@ -18,6 +18,7 @@
 import "server-only";
 
 import { buildChurnAskContent } from "./churnAskContent";
+import { adresseExpediteur, tiquizFrom } from "./tiquizShell";
 
 const RESEND_URL = "https://api.resend.com/emails";
 
@@ -44,10 +45,7 @@ export async function sendChurnAskEmail(args: {
     return false;
   }
 
-  const fromEmail =
-    process.env.SUPPORT_FROM_EMAIL?.trim() ||
-    process.env.RESELLER_FROM_EMAIL?.trim() ||
-    "hello@tipote.com";
+  const fromEmail = adresseExpediteur();
 
   try {
     const { subject, html, text } = buildChurnAskContent({
@@ -58,7 +56,7 @@ export async function sendChurnAskEmail(args: {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: `Béné de Tiquiz <${fromEmail}>`,
+        from: tiquizFrom(process.env, "Béné de Tiquiz"),
         to: [args.email],
         subject,
         html,

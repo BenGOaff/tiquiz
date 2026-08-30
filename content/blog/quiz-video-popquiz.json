@@ -1,483 +1,483 @@
 {
- "slug": "quiz-video-popquiz",
- "titre": "Combiner les quiz et les vidéos pour vendre plus avec Popquiz",
- "description": "Le quiz vidéo capture 4 fois plus de contacts que la vidéo classique. Méthode complète pour glisser un quiz dans n'importe quelle vidéo YouTube, Vimeo ou autre.",
- "motsCles": [
-  "quiz vidéo · quiz vidéo interactif · popquiz · quiz YouTube · quiz dans une vidéo · intégrer quiz vidéo · vidéo interactive marketing · quiz vidéo lead magnet · quiz vidéo Systeme io · alternative EdPuzzle français · alternative H5P solopreneur · transformer vidéo YouTube en quiz · quiz formation vidéo · vidéo quiz embed · tiquiz popquiz · quiz vidéo YouTube lead magnet · vidéo qui capture des leads"
- ],
- "publieLe": "2026-05-06",
- "couverture": "/blog/img/combinerlesquizetlesvideospourvendre-1-43-1.webp",
- "blocs": [
-  {
-   "type": "html",
-   "html": "<p><strong><em>TL;DR</em></strong></p><p>Un quiz vidéo (ou Popquiz) est un quiz qui apparaît au milieu d’une vidéo, au moment que tu choisis. Le visiteur regarde, ton quiz s’affiche par-dessus, il répond, la vidéo reprend. </p><p>Cinq chiffres qui prouvent l’intérêt du format : </p><ul><li><p>87 % des marketeurs disent que la vidéo a directement augmenté leurs ventes,</p></li><li><p>un visiteur passe 2,6 fois plus de temps sur une page qui contient une vidéo, </p></li><li><p>le contenu interactif génère 2 fois plus de conversions que le contenu passif,</p></li><li><p>le taux moyen de capture d’un quiz lead-magnet est de 33,6 %, contre 2 à 3 % pour un opt-in classique avec ebook,</p></li><li><p>la vidéo interactive multiplie l’engagement par 5 vs la vidéo linéaire. <br><br></p></li></ul><p>Tu prends ta vidéo (ou une vidéo qui cartonne déjà sur ta thématique sans la voler, comme un marquepage glissé dans un livre prêté), tu y glisses ton quiz, et tu colles le résultat sur ton blog ou ta page Systeme io. </p><p>Avec Tiquiz, tu crées un Popquiz en moins de 10 minutes et tes contacts arrivent direct dans ton compte Systeme io, sans Zapier ni Make.</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p>Regarde cette vidéo popquiz pour tout comprendre du fonctionnement :</p>"
-  },
-  {
-   "type": "cta",
-   "texte": "Je veux faire ça aussi →",
-   "url": "https://affiliate.tipote.com/signup"
-  },
-  {
-   "type": "html",
-   "html": "<p>55 % des visiteurs passent moins de 15 secondes sur une page web (<a href=\"https://chartbeat.com/blog/how-much-do-people-actually-read-online/\">Chartbeat</a>).</p><p>Sur ta dernière vidéo YouTube, le visiteur reste en moyenne 32 secondes.</p><p>Et combien parmi eux te laissent leur email ? Probablement zéro. La vidéo passive ne capte presque plus personne en 2026.</p><p>Pourtant la vidéo est le format qui rapporte le plus en 2026.</p><p><strong>87 % des marketeurs disent que la vidéo a directement augmenté leurs ventes</strong> (rapport <a href=\"https://www.wyzowl.com/video-marketing-statistics/\">Wyzowl State of Video Marketing 2024</a>).</p><p><strong>Les entreprises qui utilisent la vidéo voient leurs revenus croître 49 % plus vite</strong> que celles qui ne l’utilisent pas (étude Aberdeen Group). Le problème, c’est que la vidéo est passive. Le visiteur regarde, scrolle, oublie. Sauf si tu lui demandes de cliquer.</p><p>Le quiz vidéo (ou Popquiz) règle ce paradoxe.</p><p>Tu prends une vidéo qui parle déjà à ton audience, tu y glisses 2 ou 3 quiz aux moments-clés, et tu transformes chaque spectateur en contact rangé selon ses réponses.</p><p>Voici les chiffres qui prouvent que ça marche, pourquoi c’est légal, et 7 cas d’usage qui font que tu vas vouloir t’y mettre cette semaine.</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 3,
-   "texte": "1. Quiz vidéo : la mécanique en 30 seconde",
-   "id": "1-quiz-video-la-mecanique-en-30-seconde"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Concrètement, c’est quoi un Popquiz",
-   "id": "concretement-c-est-quoi-un-popquiz"
-  },
-  {
-   "type": "html",
-   "html": "<p>Un quiz vidéo, c’est un quiz qui apparaît par-dessus une vidéo en lecture, au moment précis que tu as choisi. </p><p>Le visiteur lance la vidéo, à 0:45 ton quiz s’affiche par-dessus l’image, il répond, la vidéo reprend.</p>"
-  },
-  {
-   "type": "image",
-   "src": "/blog/img/popquiz.webp",
-   "alt": "popquiz"
-  },
-  {
-   "type": "html",
-   "html": "<p>Tu peux placer un quiz, deux quiz, dix quiz. </p><p>À toi de voir.</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Le process en 5 étapes",
-   "id": "le-process-en-5-etapes"
-  },
-  {
-   "type": "html",
-   "html": "<p>Ajouter un quiz à une vidéo sur Tiquiz est aussi simple que de casser des oeufs pour faire une omelette 🍳</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p>→ Tu prends une vidéo (YouTube, Vimeo, ou ton fichier vidéo perso)</p><p>→ Tu choisis les moments où ton quiz doit apparaître (par exemple à 0:30, à 2:15, à 4:00)</p><p>→ À chaque moment choisi, le quiz s’affiche par-dessus la vidéo</p><p>→ Le visiteur répond, son email est récupéré, son profil est rangé dans ton Systeme io</p><p>→ La vidéo reprend toute seule</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Pas besoin de tourner de vidéos, utilise celles qui cartonnent déjà",
-   "id": "pas-besoin-de-tourner-de-videos-utilise-celles-qui-cartonnen"
-  },
-  {
-   "type": "html",
-   "html": "<p>La différence en une ligne : tu ne tournes pas une vidéo de plus. Tu transformes celle qui existe déjà en machine à contacts qualifiés.</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p>C’est exactement la même mécanique qu’un quiz classique en lead-magnet, sauf qu’elle est embarquée dans un format que ton audience consomme déjà sans effort. </p><p>Tu ne lui demandes pas de cliquer sur un ebook qu’elle ne lira pas. </p><p>Tu lui glisses un quiz au milieu de quelque chose qu’elle est déjà en train de regarder.</p>"
-  },
-  {
-   "type": "image",
-   "src": "/blog/img/svg-9-popquiz-vs-classique-fr.svg",
-   "alt": ""
-  },
-  {
-   "type": "titre",
-   "niveau": 3,
-   "texte": "2. 5 raisons sous-estimées de te mettre aux quiz vidéos cette semaine",
-   "id": "2-5-raisons-sous-estimees-de-te-mettre-aux-quiz-videos-cette"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "La vidéo, c’est ce qui vend le plus en ce moment (et de très loin)",
-   "id": "la-video-c-est-ce-qui-vend-le-plus-en-ce-moment-et-de-tres-l"
-  },
-  {
-   "type": "html",
-   "html": "<p>87 % des marketeurs disent que la vidéo a directement augmenté leurs ventes. </p><p>90 % disent qu’elle a aidé à générer des leads. </p><p>96 % disent qu’elle a aidé leurs prospects à comprendre leur produit ou service. </p><p>Trois chiffres tirés du rapport annuel <a href=\"https://www.wyzowl.com/video-marketing-statistics/\">Wyzowl State of Video Marketing 2024</a>, basé sur 600 marketeurs interrogés.</p><p>Les entreprises qui utilisent la vidéo voient leurs revenus croître 49 % plus vite que celles qui ne l’utilisent pas (étude Aberdeen Group, citée par <a href=\"https://www.vidyard.com/blog/video-marketing-statistics/\">Vidyard</a>).</p><p>Forrester Research a calculé que <strong>1 minute de vidéo équivaut à 1,8 million de mots écrits</strong> en termes d’impact (Dr James McQuivey, étude Forrester). Tu ne fais pas ça avec un article de blog, peu importe sa qualité.</p><p>Si tu te dis que la vidéo n’est “pas pour toi”, ces chiffres te disent l’inverse.</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p><strong>D’où sort cette affirmation ?</strong></p><p>Pour remonter le fil, allons déjà voir ce que l’étude scientifique de ce Dr James McQuivey nous dit. James s’est basé sur la célèbre phrase “ Une image vaut mille mots”. En prenant donc simplement le nombre d’images le plus couramment contenues dans une seconde de vidéo anglo-saxonne, à savoir 30 (29,97 pour les puristes), il a multiplié ce nombre par 60 (nombre de secondes dans une minute), puis re-multiplié par 1000&nbsp; et… 30 x 60 x 1000 = 1 800 000 Tadaaaaa !! 🥳 Une vidéo d’une minute est aussi impactante que 1,8 million de mots !</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Tes lecteurs te lâchent en 15 secondes sur ta page de blog. Avec une vidéo, ils restent 2 fois plus longtemps.",
-   "id": "tes-lecteurs-te-lachent-en-15-secondes-sur-ta-page-de-blog-a"
-  },
-  {
-   "type": "html",
-   "html": "<p>55 % des visiteurs passent moins de 15 secondes sur une page web (<a href=\"https://chartbeat.com/blog/how-much-do-people-actually-read-online/\">Chartbeat</a>). </p><p>Ton contenu text-only, peu importe sa qualité, perd la moitié de ton audience avant la fin du premier paragraphe. </p><p>Tu écris 2 000 mots, ils en lisent 30.</p><p>Avec une vidéo intégrée, les visiteurs passent <strong>2,6 fois plus de temps sur la page</strong> (<a href=\"https://wistia.com/learn/marketing/state-of-video-report-2024\">Wistia State of Video Report 2024</a>). </p><p>Et le taux de conversion d’une page avec vidéo est en moyenne <strong>80 % plus élevé</strong> qu’une page sans vidéo (étude Eyeview Digital, citée par <a href=\"https://blog.hubspot.com/marketing/video-marketing-statistics\">HubSpot</a>).</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p>Le simple fait d’ajouter une vidéo retient ton lecteur. </p><p>Le quiz vidéo va plus loin : il transforme ce temps passé en contact qualifié.</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Spectateur passif vs visiteur acteur : CA x2 sur le même trafic",
-   "id": "spectateur-passif-vs-visiteur-acteur-ca-x2-sur-le-meme-trafi"
-  },
-  {
-   "type": "html",
-   "html": "<p>Le contenu interactif (quiz, calculatrice, sondage) génère 2 fois plus de conversions que le contenu passif (vidéo seule, ebook, article). </p><p>Source : <a href=\"https://outgrow.co/blog/interactive-content-statistics\">Outgrow Interactive Content Statistics</a> et <a href=\"https://www.demandmetric.com/content/content-marketing-infographic\">Demand Metric</a>.</p><p>70 % des marketeurs disent que le contenu interactif convertit efficacement.</p><p>88 % disent qu’il les différencie de leurs concurrents.</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p><strong>Pourquoi ces chiffres ? </strong></p><p>Parce que ton visiteur n’est plus un spectateur. Il est acteur. Il clique, il choisit, il s’investit. Et un visiteur investi devient un contact qualifié 2 fois plus souvent qu’un spectateur passif.</p><p><em>Sur le même trafic. Sans rien dépenser de plus.</em></p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Un quiz capte 33 % des visiteurs en moyenne. Un opt-in classique en capte 2 à 3 %.",
-   "id": "un-quiz-capte-33-des-visiteurs-en-moyenne-un-opt-in-classiqu"
-  },
-  {
-   "type": "html",
-   "html": "<p>Le taux moyen de capture d’un quiz lead-magnet est de <strong>33,6 %</strong> (<a href=\"https://www.tryinteract.com/blog/quiz-marketing-statistics/\">Interact Quiz Marketing Statistics</a>, basé sur l’analyse de centaines de quiz publiés sur leur plateforme).</p><p>Pour comparer : le taux moyen de conversion d’un opt-in classique avec ebook gratuit est de <strong>2 à 3 %</strong> (<a href=\"https://sumo.com/\">Sumo</a> / <a href=\"https://www.getresponse.com/resources/reports/email-marketing-benchmarks\">GetResponse Email Marketing Benchmarks</a>).</p><p>Sur le même trafic,<strong> le quiz capture 10 à 15 fois plus de contacts</strong> qu’un ebook gratuit. </p><p>Ce n’est pas marginal, c’est un changement de catégorie.</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p><strong>Et avec un quiz vidéo, tu joues sur les deux tableaux : </strong>la rétention de la vidéo + la conversion du quiz. Le résultat dépasse les deux pris séparément.</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "La vidéo interactive multiplie l’engagement par 5",
-   "id": "la-video-interactive-multiplie-l-engagement-par-5"
-  },
-  {
-   "type": "html",
-   "html": "<p>Une vidéo interactive génère <strong>5 fois plus d’engagement</strong> qu’une vidéo linéaire (<a href=\"https://www.demandgenreport.com/\">Demand Gen Report</a>).</p><p>Les vidéos interactives ont un taux de complétion <strong>50 % supérieur</strong> aux vidéos non interactives (<a href=\"https://www.wibbitz.com/\">Wibbitz</a>).</p><p>89 % des consommateurs disent vouloir voir plus de vidéos de la part des marques en 2024 (Wyzowl). </p><p>Et plus c’est interactif, plus c’est partagé.</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p><strong>Le quiz vidéo coche les trois cases : </strong>engagement multiplié, complétion en hausse, partage facilité. Tu ne fais pas un effort marketing supplémentaire - tu transformes ce que tu as déjà en quelque chose de bien plus rentable.</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 3,
-   "texte": "Glisser un quiz sur n’importe quelle vidéo YouTube (sans rien voler à personne)",
-   "id": "glisser-un-quiz-sur-n-importe-quelle-video-youtube-sans-rien"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "La vidéo est à son auteur. Le quiz est à toi.",
-   "id": "la-video-est-a-son-auteur-le-quiz-est-a-toi"
-  },
-  {
-   "type": "html",
-   "html": "<p>Tu prends une vidéo qui existe déjà (la tienne, celle d’un partenaire, une vidéo qui cartonne dans ta niche, un TED Talk, une conférence publique) et tu glisses tes quiz par-dessus.</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p><strong>C’est légal pour une raison simple :</strong></p><p>Tu ne voles rien. La vidéo reste sur YouTube ou Vimeo, son auteur garde tous ses spectateurs et tout ce que ça lui rapporte. Toi, tu glisses juste ton quiz par-dessus, comme un marque-page dans un livre prêté.</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p><strong>Le livre est à son auteur. Le marque-page est à toi.</strong></p><p>Personne ne perd, tout le monde gagne.</p>"
-  },
-  {
-   "type": "image",
-   "src": "/blog/img/svg-10-marque-page-livre-fr.svg",
-   "alt": ""
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Les 6 types de vidéos sur lesquelles tu peux poser ton Popquiz",
-   "id": "les-6-types-de-videos-sur-lesquelles-tu-peux-poser-ton-popqu"
-  },
-  {
-   "type": "html",
-   "html": "<p>→ <strong>Tes propres vidéos YouTube ou Vimeo</strong>. </p><p>Le cas d’usage évident. Ta dernière vidéo qui parle de ta méthode peut maintenant trier ses spectateurs en 4 profils différents, et chacun part dans la suite d’emails qui lui correspond.</p><p>→ <strong>Les vidéos d’experts que tu cites souvent</strong>. </p><p>Un mail à l’auteur pour le prévenir, c’est plus poli mais pas obligatoire. Tu fais un embed standard, comme n’importe quel article de blog qui intègre une vidéo YouTube.</p><p>→ <strong>Les vidéos qui cartonnent et qui collent à ta thématique</strong>. </p><p>Par exemple un TED viral, une interview qui fait le tour de LinkedIn, un Q&amp;A d’un expert reconnu dans ton domaine.</p><p>→ <strong>Les replays de webinaires gratuits</strong>. </p><p>Surtout les tiens. Si tu as fait un webinaire d’1 heure il y a 6 mois et que ton replay traîne sur YouTube avec 800 vues, tu y poses un Popquiz à 25 minutes (au cœur du replay) et tu réveilles ce trafic dormant.</p><p>→ <strong>Les vidéos d’institutions publiques</strong>. </p><p>TED Talks, conférences universitaires, vidéos d’organismes publics, conférences libres de droits.</p><p>→ <strong>Les vidéos sous licence libre (Creative Commons)</strong>. </p><p>YouTube en propose des milliers, filtrées dans la recherche avancée.</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "4 lignes rouges à ne pas franchir",
-   "id": "4-lignes-rouges-a-ne-pas-franchir"
-  },
-  {
-   "type": "html",
-   "html": "<p>→ Re-publier la vidéo d’un autre sur ton propre compte YouTube</p><p>→ Télécharger la vidéo et la mettre toi-même sur ton serveur (sauf si tu as l’accord)</p><p>→ Modifier le contenu de la vidéo (couper des passages, changer le son)</p><p>→ Cacher la source originale au point de tromper le viewer</p><p>Tu utilises la vidéo telle qu’elle est, tu ajoutes ton quiz par-dessus. C’est tout.</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p>Il est important de respecter ces consignes pour ne pas franchir les limites de l'éthique et voler le travail des créateurs de vidéos.</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 3,
-   "texte": "7 façons de transformer une vidéo en machine à contacts",
-   "id": "7-facons-de-transformer-une-video-en-machine-a-contacts"
-  },
-  {
-   "type": "html",
-   "html": "<p>Voici 7 cas concrets de personnes qui ont mis un Popquiz au milieu d’une vidéo, et ce que ça a changé pour leur business. J’invente les prénoms, mais les mécaniques sont exactes.</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Marie a 200 vidéos YouTube et 0 contact. Voilà ce qu’elle a changé.",
-   "id": "marie-a-200-videos-youtube-et-0-contact-voila-ce-qu-elle-a-c"
-  },
-  {
-   "type": "html",
-   "html": "<p>Marie est coach business pour solopreneurs débutants. </p><p>Elle a posté 200 vidéos sur sa chaîne YouTube depuis 4 ans. 8 000 vues par mois cumulées. 0 contact récupéré.</p><p>Sur ses 10 vidéos les plus vues, elle ajoute un Popquiz “Quel type d’entrepreneur es-tu ?” à 30 secondes du début. </p><p>4 profils de résultat : Le démarrage, La galère, Le plateau, Le passage de cap. Chaque profil a sa séquence email.</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p><strong>Résultat : </strong></p><p>200 contacts qualifiés capturés chaque mois sur ses anciennes vidéos. </p><p>Plus une seule vidéo nouvelle à tourner.</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Sophie a multiplié par 3 les ventes derrière son replay de webinaire",
-   "id": "sophie-a-multiplie-par-3-les-ventes-derriere-son-replay-de-w"
-  },
-  {
-   "type": "html",
-   "html": "<p>Sophie organise des webinaires gratuits de 60 minutes. </p><p>Le replay sur YouTube fait 1 500 vues, mais 90 % des spectateurs ne s’inscrivent pas à son offre payante derrière.</p><p>Elle pose un Popquiz à 25 minutes (au cœur du replay) qui demande où en est le spectateur : “Tu démarres / tu galères / tu plafonnes”. </p><p>Chaque réponse déclenche une suite d’emails différente, adaptée au stade du prospect.</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p><strong>Résultat :</strong></p><p>30 % des spectateurs répondent au quiz et tombent dans la séquence email adaptée à leur profil. </p><p>Conversion sur l’offre principale ×3.</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Thomas pose un quiz sur un TED viral à 3 millions de vues. Il capture sur le trafic des autres.",
-   "id": "thomas-pose-un-quiz-sur-un-ted-viral-a-3-millions-de-vues-il"
-  },
-  {
-   "type": "html",
-   "html": "<p>Thomas est consultant en productivité. </p><p>Une vidéo TED virale parle exactement de son sujet (l’épuisement professionnel), avec 3 millions de vues cumulées.</p><p>Il publie un article de blog “Mon analyse du TED Talk de [intervenant]”, colle la vidéo TED dans son article, et ajoute un Popquiz à 5:00 (“Quelle est ta plus grande perte de temps en ce moment ?”).</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p><strong>Résultat :</strong></p><p>du trafic Google qui arrive sur son article (grâce au SEO sur le nom du conférencier) + le quiz qui récupère des contacts sur ce trafic gratuit. Pas une vidéo tournée, pas un sou de pub.</p><p>Il profite de la notoriété d'un intervenant plus connu que lui.</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "L’affiliée qui chauffe ses prospects sur une vidéo qui n’est pas la sienne",
-   "id": "l-affiliee-qui-chauffe-ses-prospects-sur-une-video-qui-n-est"
-  },
-  {
-   "type": "html",
-   "html": "<p>Béné fait de l’affiliation Systeme io. La page de vente Systeme io contient une vidéo démo officielle de 3 minutes, faite par Systeme io.</p><p>Sur sa propre page d’affiliation, elle colle la vidéo démo + un Popquiz “Quel plan Systeme io te correspond ?” à 2:30. </p><p>Le quiz qualifie le visiteur en 3 profils : usage léger / pro / business avancé. </p><p>Chaque profil reçoit l’argumentaire adapté à son besoin avant le clic vers la page de vente.</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p><strong>Résultat :</strong></p><p>le visiteur arrive sur la page d’affiliation Systeme io déjà chauffé et orienté vers le bon plan. </p><p>Conversion ×2 sur ses commissions.</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Léa fait passer son taux de complétion de 40 % à 75 % avec 4 quiz dans une vidéo",
-   "id": "lea-fait-passer-son-taux-de-completion-de-40-a-75-avec-4-qui"
-  },
-  {
-   "type": "html",
-   "html": "<p>Léa vend une formation sur la pâtisserie. </p><p>Module 3 = vidéo de 12 minutes sur la pâte à choux. </p><p>Avant : 40 % des élèves finissent ce module. La majorité décrochent à la moitié.</p><p>Elle place 4 quiz dans la vidéo : à 2 min, 5 min, 8 min, 11 min. </p><p>Chaque quiz vérifie la compréhension de l’élève. Si l’élève rate, replay automatique du passage. </p><p>Si réussit, on continue.</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p><strong>Résultat :</strong></p><p>taux de complétion qui passe de 40 % à 75 %. Les élèves apprennent vraiment, et les avis 5 étoiles montent en conséquence.</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Pierre divise par 2 ses appels découverte qui ne convertissent pas",
-   "id": "pierre-divise-par-2-ses-appels-decouverte-qui-ne-convertisse"
-  },
-  {
-   "type": "html",
-   "html": "<p>Pierre fait des appels découverte gratuits de 30 minutes. </p><p>40 % des appels sont des balles à blanc qui ne deviendront jamais clients. C’est du temps perdu.</p><p>Avant de réserver l’appel, le visiteur regarde une vidéo de 5 minutes (présentation de Pierre) avec un Popquiz à 4:00 : “Es-tu prêt à investir 2 000 € dans ton accompagnement cette année ?”. </p><p>Si oui, accès au calendrier pour réserver. Si non, redirection vers une ressource gratuite.</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p><strong>Résultat :</strong></p><p>appels découverte 2 fois plus qualifiés. Pierre vend 1 client sur 3 au lieu de 1 sur 8. Et il récupère du temps pour bosser sur son contenu.</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Camille teste son offre à 297 € avec un quiz vidéo, avant de la créer",
-   "id": "camille-teste-son-offre-a-297-avec-un-quiz-video-avant-de-la"
-  },
-  {
-   "type": "html",
-   "html": "<p>Camille veut lancer une nouvelle formation à 297 €. Avant de la créer, elle veut vérifier que son audience est intéressée.</p><p>Elle tourne une vidéo de 3 minutes qui présente le concept. </p><p>Au milieu, un Popquiz à 2:00 : “À quel prix tu serais prêt à acheter cette formation ?”. </p><p>4 réponses possibles : moins de 100 €, 100-200 €, 200-400 €, plus de 400 €.</p><p>Si 60 % répondent “297 € et plus”, la formation se fait. Si 60 % répondent “moins de 100 €”, elle change le prix ou l’angle.</p>"
-  },
-  {
-   "type": "html",
-   "html": "<p><strong>Résultat :</strong></p><p>zéro création produit dans le vide. Camille sait à l’avance ce que son audience veut payer.</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 3,
-   "texte": "Ton premier Popquiz en 10 minutes (étape par étape)",
-   "id": "ton-premier-popquiz-en-10-minutes-etape-par-etape"
-  },
-  {
-   "type": "html",
-   "html": "<p>Voici la procédure exacte pour créer ton premier Popquiz dans Tiquiz. Compte 20 minutes pour l’ensemble. Si tu as déjà un quiz prêt dans ton compte, tu descends à 10 minutes.</p>"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Étape 1 - Tu prépares ton ou tes quiz",
-   "id": "etape-1-tu-prepares-ton-ou-tes-quiz"
-  },
-  {
-   "type": "html",
-   "html": "<p>Avant de créer ton Popquiz, tu as besoin d’au moins 1 quiz dans ton compte Tiquiz.</p><p>Si tu n’en as pas encore : tu vas dans /quiz/new, tu choisis le mode IA, tu briefes en 1 phrase (“quiz pour qualifier mes visiteurs entrepreneurs débutants”), tu obtiens ton quiz en 30 secondes. </p><p>Tu ajustes 2-3 questions, tu nommes 4 profils de résultat. </p><p>C’est prêt.</p>"
-  },
-  {
-   "type": "image",
-   "src": "/blog/img/quiz-tiquiz.webp",
-   "alt": ""
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Étape 2 - Tu crées ton popquiz",
-   "id": "etape-2-tu-crees-ton-popquiz"
-  },
-  {
-   "type": "html",
-   "html": "<p>Tu vas dans Popquiz et choisis ta vidéo. </p><p>Trois options pour le faire :</p><p>→ <strong>Lien YouTube</strong> : tu colles le lien (le simple lien de la vidéo, comme tu le copies depuis le bouton “Partager” de YouTube). Tiquiz récupère automatiquement la miniature et la durée.</p><p>→ <strong>Lien Vimeo</strong> : pareil que YouTube.</p><p>→ <strong>Fichier vidéo perso</strong> : tu téléverses ta vidéo (jusqu’à 20 Go, format mp4 / mov / webm).</p>"
-  },
-  {
-   "type": "image",
-   "src": "/blog/img/creerpopquiz.webp",
-   "alt": "popquiz"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Étape 3 - Tu places tes moments quiz dans la vidéo",
-   "id": "etape-3-tu-places-tes-moments-quiz-dans-la-video"
-  },
-  {
-   "type": "html",
-   "html": "<p>Sur la barre de la vidéo, tu cliques au moment précis où tu veux que ton quiz apparaisse. </p><p>Tu choisis le quiz dans ta liste. </p><p>Tu choisis le mode :</p><p>→ <strong>Bloquant</strong> : le visiteur DOIT répondre avant de continuer la vidéo</p><p>→ <strong>Optionnel</strong> : le visiteur peut sauter le quiz s’il veut</p><p>Tu places autant de moments-quiz que tu veux. Pour une vidéo de 5 minutes, 2 ou 3 quiz fonctionnent bien. </p><p>Au-delà, c’est trop intrusif.</p>"
-  },
-  {
-   "type": "image",
-   "src": "/blog/img/popquiztiquiz.webp",
-   "alt": "popquiz"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Étape 4 - Tu publies ton popquiz",
-   "id": "etape-4-tu-publies-ton-popquiz"
-  },
-  {
-   "type": "html",
-   "html": "<p>Tu cliques sur Publier. </p><p>Tiquiz te donne deux outils :</p><p>→ <strong>Un lien direct</strong> à partager : tipote.fr/p/mon-popquiz</p><p>→ <strong>Un petit code à coller</strong> dans n’importe quelle page (article de blog, page Systeme io, site WordPress)</p>"
-  },
-  {
-   "type": "image",
-   "src": "/blog/img/partagepopquiz.webp",
-   "alt": "popquiz"
-  },
-  {
-   "type": "titre",
-   "niveau": 2,
-   "texte": "Étape 5 - Tu regardes les contacts tomber",
-   "id": "etape-5-tu-regardes-les-contacts-tomber"
-  },
-  {
-   "type": "html",
-   "html": "<p>Chaque réponse à un quiz vidéo récupère le contact, le range selon son profil de réponse, et le synchronise automatiquement dans ton Systeme io. </p><p>Compte 24 à 48 heures avant tes premiers contacts si ton trafic est constant. </p><p>Plus si tu lances le Popquiz sans le partager. </p><p>Pour accélérer : tu mets le lien dans ta bio Instagram, dans ta signature email, dans une story, dans une newsletter.</p>"
-  },
-  {
-   "type": "image",
-   "src": "/blog/img/leadstiquiz.webp",
-   "alt": "popquiz"
-  },
-  {
-   "type": "titre",
-   "niveau": 3,
-   "texte": "Pourquoi tu paies 10 fois moins avec Tiquiz qu’avec un outil U",
-   "id": "pourquoi-tu-paies-10-fois-moins-avec-tiquiz-qu-avec-un-outil"
-  },
-  {
-   "type": "html",
-   "html": "<p>Quand un outil français est nettement moins cher que ses concurrents américains, on se demande où est le piège. </p><p>J’ai pris le temps de comparer plan par plan. </p><p>Voici ce que ça donne.</p>"
-  },
-  {
-   "type": "image",
-   "src": "/blog/img/tableaucomparatifdoutilshorizontal.webp",
-   "alt": "popquiz"
-  },
-  {
-   "type": "html",
-   "html": "<p>La différence vient du fait que Tiquiz est codé avec l’IA, sans dépendre d’un dev externe coûteux, par une fondatrice française qui voulait l’outil simple qui n’existait pas. </p><p>Les économies de structure passent dans le prix utilisateur. C’est aussi simple que ça.</p><p>Et le seul outil de cette liste qui est branché en direct à Systeme io, c’est Tiquiz. Les autres, tu paies en plus Zapier ou Make pour faire le pont (entre 19 € et 417 €/mois).</p>"
-  },
-  {
-   "type": "image",
-   "src": "/blog/img/svg-12-comparatif-outils-popquiz-fr.svg",
-   "alt": "popquiz"
-  },
-  {
-   "type": "titre",
-   "niveau": 3,
-   "texte": "FAQ - Comment insérer un quiz dans une vidéo et le connecter à Systeme io ?",
-   "id": "faq-comment-inserer-un-quiz-dans-une-video-et-le-connecter-a"
-  },
-  {
-   "type": "faq",
-   "questions": [
+  "slug": "quiz-video-popquiz",
+  "titre": "Combiner les quiz et les vidéos pour vendre plus avec Popquiz",
+  "description": "Le quiz vidéo capture 4 fois plus de contacts que la vidéo classique. Méthode complète pour glisser un quiz dans n'importe quelle vidéo YouTube, Vimeo ou autre.",
+  "motsCles": [
+    "quiz vidéo · quiz vidéo interactif · popquiz · quiz YouTube · quiz dans une vidéo · intégrer quiz vidéo · vidéo interactive marketing · quiz vidéo lead magnet · quiz vidéo Systeme io · alternative EdPuzzle français · alternative H5P solopreneur · transformer vidéo YouTube en quiz · quiz formation vidéo · vidéo quiz embed · tiquiz popquiz · quiz vidéo YouTube lead magnet · vidéo qui capture des leads"
+  ],
+  "publieLe": "2026-05-06",
+  "couverture": "/blog/img/quiz-video-popquiz.webp",
+  "blocs": [
     {
-     "question": "Est-ce vraiment légal de glisser un quiz dans une vidéo YouTube ?",
-     "reponse": "<p>Oui. Tu ne voles rien. La vidéo reste sur YouTube, son auteur garde tous ses spectateurs et tout ce que ça lui rapporte. Toi, tu glisses juste ton quiz par-dessus, comme un marque-page dans un livre prêté. Le livre est à son auteur. Le marque-page est à toi. Personne ne perd, tout le monde gagne.</p>"
+      "type": "html",
+      "html": "<p><strong><em>TL;DR</em></strong></p><p>Un quiz vidéo (ou Popquiz) est un quiz qui apparaît au milieu d’une vidéo, au moment que tu choisis. Le visiteur regarde, ton quiz s’affiche par-dessus, il répond, la vidéo reprend. </p><p>Cinq chiffres qui prouvent l’intérêt du format : </p><ul><li><p>87 % des marketeurs disent que la vidéo a directement augmenté leurs ventes,</p></li><li><p>un visiteur passe 2,6 fois plus de temps sur une page qui contient une vidéo, </p></li><li><p>le contenu interactif génère 2 fois plus de conversions que le contenu passif,</p></li><li><p>le taux moyen de capture d’un quiz lead-magnet est de 33,6 %, contre 2 à 3 % pour un opt-in classique avec ebook,</p></li><li><p>la vidéo interactive multiplie l’engagement par 5 vs la vidéo linéaire. <br><br></p></li></ul><p>Tu prends ta vidéo (ou une vidéo qui cartonne déjà sur ta thématique sans la voler, comme un marquepage glissé dans un livre prêté), tu y glisses ton quiz, et tu colles le résultat sur ton blog ou ta page Systeme io. </p><p>Avec Tiquiz, tu crées un Popquiz en moins de 10 minutes et tes contacts arrivent direct dans ton compte Systeme io, sans Zapier ni Make.</p>"
     },
     {
-     "question": "Le créateur de la vidéo perd-il quelque chose ?",
-     "reponse": "<p>Non. Ses vues sont comptées normalement, ce qu’il gagne avec sa vidéo aussi, son rang dans Google YouTube aussi. Tu ne fais que récupérer tes contacts en plus de son audience.</p>"
+      "type": "html",
+      "html": "<p>Regarde cette vidéo popquiz pour tout comprendre du fonctionnement :</p>"
     },
     {
-     "question": "Combien de quiz je peux placer sur une vidéo ?",
-     "reponse": "<p>Autant que tu veux. Pour une vidéo de 5 minutes, 2 ou 3 quiz fonctionnent bien. Pour une vidéo de 30 minutes (style replay de webinaire), 4 à 6 quiz placés stratégiquement. Au-delà, c’est trop intrusif et tes spectateurs vont fuir.</p>"
+      "type": "cta",
+      "texte": "Je veux faire ça aussi →",
+      "url": "https://affiliate.tipote.com/signup"
     },
     {
-     "question": "Puis-je rendre les quiz obligatoires ou optionnels ?",
-     "reponse": "<p>Les deux. À chaque moment-quiz, tu choisis le mode bloquant (le visiteur DOIT répondre avant de continuer) ou optionnel (il peut sauter). Le mode bloquant convertit plus, mais frustre certains. À tester selon ton audience.</p>"
+      "type": "html",
+      "html": "<p>55 % des visiteurs passent moins de 15 secondes sur une page web (<a href=\"https://chartbeat.com/blog/how-much-do-people-actually-read-online/\">Chartbeat</a>).</p><p>Sur ta dernière vidéo YouTube, le visiteur reste en moyenne 32 secondes.</p><p>Et combien parmi eux te laissent leur email ? Probablement zéro. La vidéo passive ne capte presque plus personne en 2026.</p><p>Pourtant la vidéo est le format qui rapporte le plus en 2026.</p><p><strong>87 % des marketeurs disent que la vidéo a directement augmenté leurs ventes</strong> (rapport <a href=\"https://www.wyzowl.com/video-marketing-statistics/\">Wyzowl State of Video Marketing 2024</a>).</p><p><strong>Les entreprises qui utilisent la vidéo voient leurs revenus croître 49 % plus vite</strong> que celles qui ne l’utilisent pas (étude Aberdeen Group). Le problème, c’est que la vidéo est passive. Le visiteur regarde, scrolle, oublie. Sauf si tu lui demandes de cliquer.</p><p>Le quiz vidéo (ou Popquiz) règle ce paradoxe.</p><p>Tu prends une vidéo qui parle déjà à ton audience, tu y glisses 2 ou 3 quiz aux moments-clés, et tu transformes chaque spectateur en contact rangé selon ses réponses.</p><p>Voici les chiffres qui prouvent que ça marche, pourquoi c’est légal, et 7 cas d’usage qui font que tu vas vouloir t’y mettre cette semaine.</p>"
     },
     {
-     "question": "Popquiz est inclus dans le plan gratuit de Tiquiz ?",
-     "reponse": "<p>Oui. Le plan gratuit Tiquiz inclut 1 Popquiz, avec 10 réponses par mois. Suffisant pour tester le concept sur une vidéo et voir si la mécanique fonctionne sur ton audience. Tu passes en illimité à 17 €/mois quand tu es convaincu.</p>"
+      "type": "titre",
+      "niveau": 3,
+      "texte": "1. Quiz vidéo : la mécanique en 30 seconde",
+      "id": "1-quiz-video-la-mecanique-en-30-seconde"
     },
     {
-     "question": "Le quiz s’adapte au branding de mon site ?",
-     "reponse": "<p>Oui. Le branding de ton compte Tiquiz (logo, couleurs, police Google) s’applique automatiquement au quiz superposé. L’intégration visuelle est cohérente avec ton site, sans que tu aies à toucher au CSS.</p>"
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Concrètement, c’est quoi un Popquiz",
+      "id": "concretement-c-est-quoi-un-popquiz"
+    },
+    {
+      "type": "html",
+      "html": "<p>Un quiz vidéo, c’est un quiz qui apparaît par-dessus une vidéo en lecture, au moment précis que tu as choisi. </p><p>Le visiteur lance la vidéo, à 0:45 ton quiz s’affiche par-dessus l’image, il répond, la vidéo reprend.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/popquiz.webp",
+      "alt": "popquiz"
+    },
+    {
+      "type": "html",
+      "html": "<p>Tu peux placer un quiz, deux quiz, dix quiz. </p><p>À toi de voir.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Le process en 5 étapes",
+      "id": "le-process-en-5-etapes"
+    },
+    {
+      "type": "html",
+      "html": "<p>Ajouter un quiz à une vidéo sur Tiquiz est aussi simple que de casser des oeufs pour faire une omelette 🍳</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>→ Tu prends une vidéo (YouTube, Vimeo, ou ton fichier vidéo perso)</p><p>→ Tu choisis les moments où ton quiz doit apparaître (par exemple à 0:30, à 2:15, à 4:00)</p><p>→ À chaque moment choisi, le quiz s’affiche par-dessus la vidéo</p><p>→ Le visiteur répond, son email est récupéré, son profil est rangé dans ton Systeme io</p><p>→ La vidéo reprend toute seule</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Pas besoin de tourner de vidéos, utilise celles qui cartonnent déjà",
+      "id": "pas-besoin-de-tourner-de-videos-utilise-celles-qui-cartonnen"
+    },
+    {
+      "type": "html",
+      "html": "<p>La différence en une ligne : tu ne tournes pas une vidéo de plus. Tu transformes celle qui existe déjà en machine à contacts qualifiés.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>C’est exactement la même mécanique qu’un quiz classique en lead-magnet, sauf qu’elle est embarquée dans un format que ton audience consomme déjà sans effort. </p><p>Tu ne lui demandes pas de cliquer sur un ebook qu’elle ne lira pas. </p><p>Tu lui glisses un quiz au milieu de quelque chose qu’elle est déjà en train de regarder.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/svg-9-popquiz-vs-classique-fr.svg",
+      "alt": ""
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "2. 5 raisons sous-estimées de te mettre aux quiz vidéos cette semaine",
+      "id": "2-5-raisons-sous-estimees-de-te-mettre-aux-quiz-videos-cette"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "La vidéo, c’est ce qui vend le plus en ce moment (et de très loin)",
+      "id": "la-video-c-est-ce-qui-vend-le-plus-en-ce-moment-et-de-tres-l"
+    },
+    {
+      "type": "html",
+      "html": "<p>87 % des marketeurs disent que la vidéo a directement augmenté leurs ventes. </p><p>90 % disent qu’elle a aidé à générer des leads. </p><p>96 % disent qu’elle a aidé leurs prospects à comprendre leur produit ou service. </p><p>Trois chiffres tirés du rapport annuel <a href=\"https://www.wyzowl.com/video-marketing-statistics/\">Wyzowl State of Video Marketing 2024</a>, basé sur 600 marketeurs interrogés.</p><p>Les entreprises qui utilisent la vidéo voient leurs revenus croître 49 % plus vite que celles qui ne l’utilisent pas (étude Aberdeen Group, citée par <a href=\"https://www.vidyard.com/blog/video-marketing-statistics/\">Vidyard</a>).</p><p>Forrester Research a calculé que <strong>1 minute de vidéo équivaut à 1,8 million de mots écrits</strong> en termes d’impact (Dr James McQuivey, étude Forrester). Tu ne fais pas ça avec un article de blog, peu importe sa qualité.</p><p>Si tu te dis que la vidéo n’est “pas pour toi”, ces chiffres te disent l’inverse.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>D’où sort cette affirmation ?</strong></p><p>Pour remonter le fil, allons déjà voir ce que l’étude scientifique de ce Dr James McQuivey nous dit. James s’est basé sur la célèbre phrase “ Une image vaut mille mots”. En prenant donc simplement le nombre d’images le plus couramment contenues dans une seconde de vidéo anglo-saxonne, à savoir 30 (29,97 pour les puristes), il a multiplié ce nombre par 60 (nombre de secondes dans une minute), puis re-multiplié par 1000&nbsp; et… 30 x 60 x 1000 = 1 800 000 Tadaaaaa !! 🥳 Une vidéo d’une minute est aussi impactante que 1,8 million de mots !</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Tes lecteurs te lâchent en 15 secondes sur ta page de blog. Avec une vidéo, ils restent 2 fois plus longtemps.",
+      "id": "tes-lecteurs-te-lachent-en-15-secondes-sur-ta-page-de-blog-a"
+    },
+    {
+      "type": "html",
+      "html": "<p>55 % des visiteurs passent moins de 15 secondes sur une page web (<a href=\"https://chartbeat.com/blog/how-much-do-people-actually-read-online/\">Chartbeat</a>). </p><p>Ton contenu text-only, peu importe sa qualité, perd la moitié de ton audience avant la fin du premier paragraphe. </p><p>Tu écris 2 000 mots, ils en lisent 30.</p><p>Avec une vidéo intégrée, les visiteurs passent <strong>2,6 fois plus de temps sur la page</strong> (<a href=\"https://wistia.com/learn/marketing/state-of-video-report-2024\">Wistia State of Video Report 2024</a>). </p><p>Et le taux de conversion d’une page avec vidéo est en moyenne <strong>80 % plus élevé</strong> qu’une page sans vidéo (étude Eyeview Digital, citée par <a href=\"https://blog.hubspot.com/marketing/video-marketing-statistics\">HubSpot</a>).</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>Le simple fait d’ajouter une vidéo retient ton lecteur. </p><p>Le quiz vidéo va plus loin : il transforme ce temps passé en contact qualifié.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Spectateur passif vs visiteur acteur : CA x2 sur le même trafic",
+      "id": "spectateur-passif-vs-visiteur-acteur-ca-x2-sur-le-meme-trafi"
+    },
+    {
+      "type": "html",
+      "html": "<p>Le contenu interactif (quiz, calculatrice, sondage) génère 2 fois plus de conversions que le contenu passif (vidéo seule, ebook, article). </p><p>Source : <a href=\"https://outgrow.co/blog/interactive-content-statistics\">Outgrow Interactive Content Statistics</a> et <a href=\"https://www.demandmetric.com/content/content-marketing-infographic\">Demand Metric</a>.</p><p>70 % des marketeurs disent que le contenu interactif convertit efficacement.</p><p>88 % disent qu’il les différencie de leurs concurrents.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Pourquoi ces chiffres ? </strong></p><p>Parce que ton visiteur n’est plus un spectateur. Il est acteur. Il clique, il choisit, il s’investit. Et un visiteur investi devient un contact qualifié 2 fois plus souvent qu’un spectateur passif.</p><p><em>Sur le même trafic. Sans rien dépenser de plus.</em></p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Un quiz capte 33 % des visiteurs en moyenne. Un opt-in classique en capte 2 à 3 %.",
+      "id": "un-quiz-capte-33-des-visiteurs-en-moyenne-un-opt-in-classiqu"
+    },
+    {
+      "type": "html",
+      "html": "<p>Le taux moyen de capture d’un quiz lead-magnet est de <strong>33,6 %</strong> (<a href=\"https://www.tryinteract.com/blog/quiz-marketing-statistics/\">Interact Quiz Marketing Statistics</a>, basé sur l’analyse de centaines de quiz publiés sur leur plateforme).</p><p>Pour comparer : le taux moyen de conversion d’un opt-in classique avec ebook gratuit est de <strong>2 à 3 %</strong> (<a href=\"https://sumo.com/\">Sumo</a> / <a href=\"https://www.getresponse.com/resources/reports/email-marketing-benchmarks\">GetResponse Email Marketing Benchmarks</a>).</p><p>Sur le même trafic,<strong> le quiz capture 10 à 15 fois plus de contacts</strong> qu’un ebook gratuit. </p><p>Ce n’est pas marginal, c’est un changement de catégorie.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Et avec un quiz vidéo, tu joues sur les deux tableaux : </strong>la rétention de la vidéo + la conversion du quiz. Le résultat dépasse les deux pris séparément.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "La vidéo interactive multiplie l’engagement par 5",
+      "id": "la-video-interactive-multiplie-l-engagement-par-5"
+    },
+    {
+      "type": "html",
+      "html": "<p>Une vidéo interactive génère <strong>5 fois plus d’engagement</strong> qu’une vidéo linéaire (<a href=\"https://www.demandgenreport.com/\">Demand Gen Report</a>).</p><p>Les vidéos interactives ont un taux de complétion <strong>50 % supérieur</strong> aux vidéos non interactives (<a href=\"https://www.wibbitz.com/\">Wibbitz</a>).</p><p>89 % des consommateurs disent vouloir voir plus de vidéos de la part des marques en 2024 (Wyzowl). </p><p>Et plus c’est interactif, plus c’est partagé.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Le quiz vidéo coche les trois cases : </strong>engagement multiplié, complétion en hausse, partage facilité. Tu ne fais pas un effort marketing supplémentaire - tu transformes ce que tu as déjà en quelque chose de bien plus rentable.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Glisser un quiz sur n’importe quelle vidéo YouTube (sans rien voler à personne)",
+      "id": "glisser-un-quiz-sur-n-importe-quelle-video-youtube-sans-rien"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "La vidéo est à son auteur. Le quiz est à toi.",
+      "id": "la-video-est-a-son-auteur-le-quiz-est-a-toi"
+    },
+    {
+      "type": "html",
+      "html": "<p>Tu prends une vidéo qui existe déjà (la tienne, celle d’un partenaire, une vidéo qui cartonne dans ta niche, un TED Talk, une conférence publique) et tu glisses tes quiz par-dessus.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>C’est légal pour une raison simple :</strong></p><p>Tu ne voles rien. La vidéo reste sur YouTube ou Vimeo, son auteur garde tous ses spectateurs et tout ce que ça lui rapporte. Toi, tu glisses juste ton quiz par-dessus, comme un marque-page dans un livre prêté.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Le livre est à son auteur. Le marque-page est à toi.</strong></p><p>Personne ne perd, tout le monde gagne.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/svg-10-marque-page-livre-fr.svg",
+      "alt": ""
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Les 6 types de vidéos sur lesquelles tu peux poser ton Popquiz",
+      "id": "les-6-types-de-videos-sur-lesquelles-tu-peux-poser-ton-popqu"
+    },
+    {
+      "type": "html",
+      "html": "<p>→ <strong>Tes propres vidéos YouTube ou Vimeo</strong>. </p><p>Le cas d’usage évident. Ta dernière vidéo qui parle de ta méthode peut maintenant trier ses spectateurs en 4 profils différents, et chacun part dans la suite d’emails qui lui correspond.</p><p>→ <strong>Les vidéos d’experts que tu cites souvent</strong>. </p><p>Un mail à l’auteur pour le prévenir, c’est plus poli mais pas obligatoire. Tu fais un embed standard, comme n’importe quel article de blog qui intègre une vidéo YouTube.</p><p>→ <strong>Les vidéos qui cartonnent et qui collent à ta thématique</strong>. </p><p>Par exemple un TED viral, une interview qui fait le tour de LinkedIn, un Q&amp;A d’un expert reconnu dans ton domaine.</p><p>→ <strong>Les replays de webinaires gratuits</strong>. </p><p>Surtout les tiens. Si tu as fait un webinaire d’1 heure il y a 6 mois et que ton replay traîne sur YouTube avec 800 vues, tu y poses un Popquiz à 25 minutes (au cœur du replay) et tu réveilles ce trafic dormant.</p><p>→ <strong>Les vidéos d’institutions publiques</strong>. </p><p>TED Talks, conférences universitaires, vidéos d’organismes publics, conférences libres de droits.</p><p>→ <strong>Les vidéos sous licence libre (Creative Commons)</strong>. </p><p>YouTube en propose des milliers, filtrées dans la recherche avancée.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "4 lignes rouges à ne pas franchir",
+      "id": "4-lignes-rouges-a-ne-pas-franchir"
+    },
+    {
+      "type": "html",
+      "html": "<p>→ Re-publier la vidéo d’un autre sur ton propre compte YouTube</p><p>→ Télécharger la vidéo et la mettre toi-même sur ton serveur (sauf si tu as l’accord)</p><p>→ Modifier le contenu de la vidéo (couper des passages, changer le son)</p><p>→ Cacher la source originale au point de tromper le viewer</p><p>Tu utilises la vidéo telle qu’elle est, tu ajoutes ton quiz par-dessus. C’est tout.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p>Il est important de respecter ces consignes pour ne pas franchir les limites de l'éthique et voler le travail des créateurs de vidéos.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "7 façons de transformer une vidéo en machine à contacts",
+      "id": "7-facons-de-transformer-une-video-en-machine-a-contacts"
+    },
+    {
+      "type": "html",
+      "html": "<p>Voici 7 cas concrets de personnes qui ont mis un Popquiz au milieu d’une vidéo, et ce que ça a changé pour leur business. J’invente les prénoms, mais les mécaniques sont exactes.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Marie a 200 vidéos YouTube et 0 contact. Voilà ce qu’elle a changé.",
+      "id": "marie-a-200-videos-youtube-et-0-contact-voila-ce-qu-elle-a-c"
+    },
+    {
+      "type": "html",
+      "html": "<p>Marie est coach business pour solopreneurs débutants. </p><p>Elle a posté 200 vidéos sur sa chaîne YouTube depuis 4 ans. 8 000 vues par mois cumulées. 0 contact récupéré.</p><p>Sur ses 10 vidéos les plus vues, elle ajoute un Popquiz “Quel type d’entrepreneur es-tu ?” à 30 secondes du début. </p><p>4 profils de résultat : Le démarrage, La galère, Le plateau, Le passage de cap. Chaque profil a sa séquence email.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Résultat : </strong></p><p>200 contacts qualifiés capturés chaque mois sur ses anciennes vidéos. </p><p>Plus une seule vidéo nouvelle à tourner.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Sophie a multiplié par 3 les ventes derrière son replay de webinaire",
+      "id": "sophie-a-multiplie-par-3-les-ventes-derriere-son-replay-de-w"
+    },
+    {
+      "type": "html",
+      "html": "<p>Sophie organise des webinaires gratuits de 60 minutes. </p><p>Le replay sur YouTube fait 1 500 vues, mais 90 % des spectateurs ne s’inscrivent pas à son offre payante derrière.</p><p>Elle pose un Popquiz à 25 minutes (au cœur du replay) qui demande où en est le spectateur : “Tu démarres / tu galères / tu plafonnes”. </p><p>Chaque réponse déclenche une suite d’emails différente, adaptée au stade du prospect.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Résultat :</strong></p><p>30 % des spectateurs répondent au quiz et tombent dans la séquence email adaptée à leur profil. </p><p>Conversion sur l’offre principale ×3.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Thomas pose un quiz sur un TED viral à 3 millions de vues. Il capture sur le trafic des autres.",
+      "id": "thomas-pose-un-quiz-sur-un-ted-viral-a-3-millions-de-vues-il"
+    },
+    {
+      "type": "html",
+      "html": "<p>Thomas est consultant en productivité. </p><p>Une vidéo TED virale parle exactement de son sujet (l’épuisement professionnel), avec 3 millions de vues cumulées.</p><p>Il publie un article de blog “Mon analyse du TED Talk de [intervenant]”, colle la vidéo TED dans son article, et ajoute un Popquiz à 5:00 (“Quelle est ta plus grande perte de temps en ce moment ?”).</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Résultat :</strong></p><p>du trafic Google qui arrive sur son article (grâce au SEO sur le nom du conférencier) + le quiz qui récupère des contacts sur ce trafic gratuit. Pas une vidéo tournée, pas un sou de pub.</p><p>Il profite de la notoriété d'un intervenant plus connu que lui.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "L’affiliée qui chauffe ses prospects sur une vidéo qui n’est pas la sienne",
+      "id": "l-affiliee-qui-chauffe-ses-prospects-sur-une-video-qui-n-est"
+    },
+    {
+      "type": "html",
+      "html": "<p>Béné fait de l’affiliation Systeme io. La page de vente Systeme io contient une vidéo démo officielle de 3 minutes, faite par Systeme io.</p><p>Sur sa propre page d’affiliation, elle colle la vidéo démo + un Popquiz “Quel plan Systeme io te correspond ?” à 2:30. </p><p>Le quiz qualifie le visiteur en 3 profils : usage léger / pro / business avancé. </p><p>Chaque profil reçoit l’argumentaire adapté à son besoin avant le clic vers la page de vente.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Résultat :</strong></p><p>le visiteur arrive sur la page d’affiliation Systeme io déjà chauffé et orienté vers le bon plan. </p><p>Conversion ×2 sur ses commissions.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Léa fait passer son taux de complétion de 40 % à 75 % avec 4 quiz dans une vidéo",
+      "id": "lea-fait-passer-son-taux-de-completion-de-40-a-75-avec-4-qui"
+    },
+    {
+      "type": "html",
+      "html": "<p>Léa vend une formation sur la pâtisserie. </p><p>Module 3 = vidéo de 12 minutes sur la pâte à choux. </p><p>Avant : 40 % des élèves finissent ce module. La majorité décrochent à la moitié.</p><p>Elle place 4 quiz dans la vidéo : à 2 min, 5 min, 8 min, 11 min. </p><p>Chaque quiz vérifie la compréhension de l’élève. Si l’élève rate, replay automatique du passage. </p><p>Si réussit, on continue.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Résultat :</strong></p><p>taux de complétion qui passe de 40 % à 75 %. Les élèves apprennent vraiment, et les avis 5 étoiles montent en conséquence.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Pierre divise par 2 ses appels découverte qui ne convertissent pas",
+      "id": "pierre-divise-par-2-ses-appels-decouverte-qui-ne-convertisse"
+    },
+    {
+      "type": "html",
+      "html": "<p>Pierre fait des appels découverte gratuits de 30 minutes. </p><p>40 % des appels sont des balles à blanc qui ne deviendront jamais clients. C’est du temps perdu.</p><p>Avant de réserver l’appel, le visiteur regarde une vidéo de 5 minutes (présentation de Pierre) avec un Popquiz à 4:00 : “Es-tu prêt à investir 2 000 € dans ton accompagnement cette année ?”. </p><p>Si oui, accès au calendrier pour réserver. Si non, redirection vers une ressource gratuite.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Résultat :</strong></p><p>appels découverte 2 fois plus qualifiés. Pierre vend 1 client sur 3 au lieu de 1 sur 8. Et il récupère du temps pour bosser sur son contenu.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Camille teste son offre à 297 € avec un quiz vidéo, avant de la créer",
+      "id": "camille-teste-son-offre-a-297-avec-un-quiz-video-avant-de-la"
+    },
+    {
+      "type": "html",
+      "html": "<p>Camille veut lancer une nouvelle formation à 297 €. Avant de la créer, elle veut vérifier que son audience est intéressée.</p><p>Elle tourne une vidéo de 3 minutes qui présente le concept. </p><p>Au milieu, un Popquiz à 2:00 : “À quel prix tu serais prêt à acheter cette formation ?”. </p><p>4 réponses possibles : moins de 100 €, 100-200 €, 200-400 €, plus de 400 €.</p><p>Si 60 % répondent “297 € et plus”, la formation se fait. Si 60 % répondent “moins de 100 €”, elle change le prix ou l’angle.</p>"
+    },
+    {
+      "type": "html",
+      "html": "<p><strong>Résultat :</strong></p><p>zéro création produit dans le vide. Camille sait à l’avance ce que son audience veut payer.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Ton premier Popquiz en 10 minutes (étape par étape)",
+      "id": "ton-premier-popquiz-en-10-minutes-etape-par-etape"
+    },
+    {
+      "type": "html",
+      "html": "<p>Voici la procédure exacte pour créer ton premier Popquiz dans Tiquiz. Compte 20 minutes pour l’ensemble. Si tu as déjà un quiz prêt dans ton compte, tu descends à 10 minutes.</p>"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Étape 1 - Tu prépares ton ou tes quiz",
+      "id": "etape-1-tu-prepares-ton-ou-tes-quiz"
+    },
+    {
+      "type": "html",
+      "html": "<p>Avant de créer ton Popquiz, tu as besoin d’au moins 1 quiz dans ton compte Tiquiz.</p><p>Si tu n’en as pas encore : tu vas dans /quiz/new, tu choisis le mode IA, tu briefes en 1 phrase (“quiz pour qualifier mes visiteurs entrepreneurs débutants”), tu obtiens ton quiz en 30 secondes. </p><p>Tu ajustes 2-3 questions, tu nommes 4 profils de résultat. </p><p>C’est prêt.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/quiz-tiquiz.webp",
+      "alt": ""
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Étape 2 - Tu crées ton popquiz",
+      "id": "etape-2-tu-crees-ton-popquiz"
+    },
+    {
+      "type": "html",
+      "html": "<p>Tu vas dans Popquiz et choisis ta vidéo. </p><p>Trois options pour le faire :</p><p>→ <strong>Lien YouTube</strong> : tu colles le lien (le simple lien de la vidéo, comme tu le copies depuis le bouton “Partager” de YouTube). Tiquiz récupère automatiquement la miniature et la durée.</p><p>→ <strong>Lien Vimeo</strong> : pareil que YouTube.</p><p>→ <strong>Fichier vidéo perso</strong> : tu téléverses ta vidéo (jusqu’à 20 Go, format mp4 / mov / webm).</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/creerpopquiz.webp",
+      "alt": "popquiz"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Étape 3 - Tu places tes moments quiz dans la vidéo",
+      "id": "etape-3-tu-places-tes-moments-quiz-dans-la-video"
+    },
+    {
+      "type": "html",
+      "html": "<p>Sur la barre de la vidéo, tu cliques au moment précis où tu veux que ton quiz apparaisse. </p><p>Tu choisis le quiz dans ta liste. </p><p>Tu choisis le mode :</p><p>→ <strong>Bloquant</strong> : le visiteur DOIT répondre avant de continuer la vidéo</p><p>→ <strong>Optionnel</strong> : le visiteur peut sauter le quiz s’il veut</p><p>Tu places autant de moments-quiz que tu veux. Pour une vidéo de 5 minutes, 2 ou 3 quiz fonctionnent bien. </p><p>Au-delà, c’est trop intrusif.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/popquiztiquiz.webp",
+      "alt": "popquiz"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Étape 4 - Tu publies ton popquiz",
+      "id": "etape-4-tu-publies-ton-popquiz"
+    },
+    {
+      "type": "html",
+      "html": "<p>Tu cliques sur Publier. </p><p>Tiquiz te donne deux outils :</p><p>→ <strong>Un lien direct</strong> à partager : tipote.fr/p/mon-popquiz</p><p>→ <strong>Un petit code à coller</strong> dans n’importe quelle page (article de blog, page Systeme io, site WordPress)</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/partagepopquiz.webp",
+      "alt": "popquiz"
+    },
+    {
+      "type": "titre",
+      "niveau": 2,
+      "texte": "Étape 5 - Tu regardes les contacts tomber",
+      "id": "etape-5-tu-regardes-les-contacts-tomber"
+    },
+    {
+      "type": "html",
+      "html": "<p>Chaque réponse à un quiz vidéo récupère le contact, le range selon son profil de réponse, et le synchronise automatiquement dans ton Systeme io. </p><p>Compte 24 à 48 heures avant tes premiers contacts si ton trafic est constant. </p><p>Plus si tu lances le Popquiz sans le partager. </p><p>Pour accélérer : tu mets le lien dans ta bio Instagram, dans ta signature email, dans une story, dans une newsletter.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/leadstiquiz.webp",
+      "alt": "popquiz"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "Pourquoi tu paies 10 fois moins avec Tiquiz qu’avec un outil U",
+      "id": "pourquoi-tu-paies-10-fois-moins-avec-tiquiz-qu-avec-un-outil"
+    },
+    {
+      "type": "html",
+      "html": "<p>Quand un outil français est nettement moins cher que ses concurrents américains, on se demande où est le piège. </p><p>J’ai pris le temps de comparer plan par plan. </p><p>Voici ce que ça donne.</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/tableaucomparatifdoutilshorizontal.webp",
+      "alt": "popquiz"
+    },
+    {
+      "type": "html",
+      "html": "<p>La différence vient du fait que Tiquiz est codé avec l’IA, sans dépendre d’un dev externe coûteux, par une fondatrice française qui voulait l’outil simple qui n’existait pas. </p><p>Les économies de structure passent dans le prix utilisateur. C’est aussi simple que ça.</p><p>Et le seul outil de cette liste qui est branché en direct à Systeme io, c’est Tiquiz. Les autres, tu paies en plus Zapier ou Make pour faire le pont (entre 19 € et 417 €/mois).</p>"
+    },
+    {
+      "type": "image",
+      "src": "/blog/img/svg-12-comparatif-outils-popquiz-fr.svg",
+      "alt": "popquiz"
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "FAQ - Comment insérer un quiz dans une vidéo et le connecter à Systeme io ?",
+      "id": "faq-comment-inserer-un-quiz-dans-une-video-et-le-connecter-a"
+    },
+    {
+      "type": "faq",
+      "questions": [
+        {
+          "question": "Est-ce vraiment légal de glisser un quiz dans une vidéo YouTube ?",
+          "reponse": "<p>Oui. Tu ne voles rien. La vidéo reste sur YouTube, son auteur garde tous ses spectateurs et tout ce que ça lui rapporte. Toi, tu glisses juste ton quiz par-dessus, comme un marque-page dans un livre prêté. Le livre est à son auteur. Le marque-page est à toi. Personne ne perd, tout le monde gagne.</p>"
+        },
+        {
+          "question": "Le créateur de la vidéo perd-il quelque chose ?",
+          "reponse": "<p>Non. Ses vues sont comptées normalement, ce qu’il gagne avec sa vidéo aussi, son rang dans Google YouTube aussi. Tu ne fais que récupérer tes contacts en plus de son audience.</p>"
+        },
+        {
+          "question": "Combien de quiz je peux placer sur une vidéo ?",
+          "reponse": "<p>Autant que tu veux. Pour une vidéo de 5 minutes, 2 ou 3 quiz fonctionnent bien. Pour une vidéo de 30 minutes (style replay de webinaire), 4 à 6 quiz placés stratégiquement. Au-delà, c’est trop intrusif et tes spectateurs vont fuir.</p>"
+        },
+        {
+          "question": "Puis-je rendre les quiz obligatoires ou optionnels ?",
+          "reponse": "<p>Les deux. À chaque moment-quiz, tu choisis le mode bloquant (le visiteur DOIT répondre avant de continuer) ou optionnel (il peut sauter). Le mode bloquant convertit plus, mais frustre certains. À tester selon ton audience.</p>"
+        },
+        {
+          "question": "Popquiz est inclus dans le plan gratuit de Tiquiz ?",
+          "reponse": "<p>Oui. Le plan gratuit Tiquiz inclut 1 Popquiz, avec 10 réponses par mois. Suffisant pour tester le concept sur une vidéo et voir si la mécanique fonctionne sur ton audience. Tu passes en illimité à 17 €/mois quand tu es convaincu.</p>"
+        },
+        {
+          "question": "Le quiz s’adapte au branding de mon site ?",
+          "reponse": "<p>Oui. Le branding de ton compte Tiquiz (logo, couleurs, police Google) s’applique automatiquement au quiz superposé. L’intégration visuelle est cohérente avec ton site, sans que tu aies à toucher au CSS.</p>"
+        }
+      ]
+    },
+    {
+      "type": "titre",
+      "niveau": 3,
+      "texte": "À toi de jouer",
+      "id": "a-toi-de-jouer"
+    },
+    {
+      "type": "html",
+      "html": "<p>Tu as maintenant les bases pour transformer une vidéo passive (la tienne ou celle d’un autre) en machine à contacts triés.</p><p>Ce qu’il te reste à faire :</p><p>→ Identifie une vidéo qui parle à ton audience (5 minutes max pour démarrer)</p><p>→ Réfléchis à 1-2 questions que tu veux poser à ton spectateur</p><p>→ Crée ton compte Tiquiz (gratuit, 1 Popquiz inclus pour tester)</p><p>→ Génère ton quiz avec l’IA en 30 secondes</p><p>→ Place le moment-quiz sur la vidéo</p><p>→ Publie, colle le code sur ton blog ou ta page Systeme io</p><p>→ Regarde les contacts tomber</p><p>Compte 20 minutes pour ton premier Popquiz. </p><p>20mn pour passer de “j’ai une vidéo qui dort” à “j’ai une machine à contacts qui tourne sans moi”.</p>"
+    },
+    {
+      "type": "cta",
+      "texte": "Je crée mon premier popquiz sur Tiquiz",
+      "url": "https://affiliate.tipote.com/signup"
     }
-   ]
-  },
-  {
-   "type": "titre",
-   "niveau": 3,
-   "texte": "À toi de jouer",
-   "id": "a-toi-de-jouer"
-  },
-  {
-   "type": "html",
-   "html": "<p>Tu as maintenant les bases pour transformer une vidéo passive (la tienne ou celle d’un autre) en machine à contacts triés.</p><p>Ce qu’il te reste à faire :</p><p>→ Identifie une vidéo qui parle à ton audience (5 minutes max pour démarrer)</p><p>→ Réfléchis à 1-2 questions que tu veux poser à ton spectateur</p><p>→ Crée ton compte Tiquiz (gratuit, 1 Popquiz inclus pour tester)</p><p>→ Génère ton quiz avec l’IA en 30 secondes</p><p>→ Place le moment-quiz sur la vidéo</p><p>→ Publie, colle le code sur ton blog ou ta page Systeme io</p><p>→ Regarde les contacts tomber</p><p>Compte 20 minutes pour ton premier Popquiz. </p><p>20mn pour passer de “j’ai une vidéo qui dort” à “j’ai une machine à contacts qui tourne sans moi”.</p>"
-  },
-  {
-   "type": "cta",
-   "texte": "Je crée mon premier popquiz sur Tiquiz",
-   "url": "https://affiliate.tipote.com/signup"
-  }
- ]
+  ]
 }

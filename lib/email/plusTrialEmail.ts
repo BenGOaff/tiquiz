@@ -17,6 +17,7 @@
 
 import "server-only";
 import { resolveAppUrl } from "@/lib/authLinks";
+import { adresseExpediteur, tiquizFrom } from "./tiquizShell";
 
 const RESEND_URL = "https://api.resend.com/emails";
 const APP_URL = resolveAppUrl(process.env.NEXT_PUBLIC_APP_URL);
@@ -148,10 +149,7 @@ export async function sendPlusTrialEmail(args: PlusTrialEmailArgs): Promise<bool
     console.warn("[plusTrialEmail] RESEND_API_KEY manquante, email non envoye.");
     return false;
   }
-  const fromEmail =
-    process.env.SUPPORT_FROM_EMAIL?.trim() ||
-    process.env.RESELLER_FROM_EMAIL?.trim() ||
-    "hello@tipote.com";
+  const fromEmail = adresseExpediteur();
 
   try {
     const { subject, html, text } = buildContent(args);
@@ -162,7 +160,7 @@ export async function sendPlusTrialEmail(args: PlusTrialEmailArgs): Promise<bool
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: `Tiquiz <${fromEmail}>`,
+        from: tiquizFrom(process.env, "Tiquiz"),
         to: [args.email],
         subject,
         html,
