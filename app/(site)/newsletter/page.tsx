@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 
 export default function PageNewsletter() {
   return (
-    <main className="mx-auto max-w-3xl px-5 py-14 sm:px-8 sm:py-20">
+    <main className="tq-large py-16 sm:py-24">
       <p className="tq-etiquette">La newsletter</p>
       <h1 className="mt-3 text-[2.4rem] sm:text-[3.2rem]">
         Ce que je teste, et ce qui <span className="tq-surb">rate aussi</span>

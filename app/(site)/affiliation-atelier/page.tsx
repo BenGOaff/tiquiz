@@ -50,7 +50,7 @@ export default function PageAffiliationAtelier() {
 
   return (
     <main>
-      <section className="mx-auto max-w-6xl px-5 pt-14 sm:px-8 sm:pt-20">
+      <section className="tq-large pt-16 sm:pt-24">
         <p className="tq-etiquette">Affiliation</p>
         <h1 className="mt-3 max-w-[18ch] text-[2.6rem] sm:text-[3.6rem]">
           <span className="tq-surb">{pourcent} %</span> sur l&apos;Atelier du Quiz
@@ -72,7 +72,7 @@ export default function PageAffiliationAtelier() {
 
       {/* CE QU'ON VEND VRAIMENT. Un affilié qui ne sait pas ce qu'il y a
           dedans en parle mal, et il en parle une fois. */}
-      <section className="mx-auto mt-20 max-w-6xl px-5 sm:px-8">
+      <section className="tq-large mt-24">
         <h2 className="text-[2rem]">Ce que ton filleul reçoit</h2>
         <p className="tq-doux mt-3 max-w-[62ch] leading-relaxed">
           Sept jours, une étape par jour, et Béné répond du premier au dernier.
@@ -104,7 +104,7 @@ export default function PageAffiliationAtelier() {
 
       {/* LE POINT TECHNIQUE QU'IL FAUT DIRE. */}
       <section className="mt-24 bg-[var(--tq-panneau)] py-16">
-        <div className="mx-auto max-w-6xl px-5 sm:px-8">
+        <div className="tq-large">
           <h2 className="text-[2rem]">Le lien de l&apos;Atelier n&apos;est pas celui de Tiquiz</h2>
           <p className="tq-doux mt-4 max-w-[64ch] leading-relaxed">
             Autant le dire tout de suite, parce que c&apos;est le genre de détail qui coûte des
@@ -135,7 +135,7 @@ export default function PageAffiliationAtelier() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-5 py-20 sm:px-8">
+      <section className="tq-large py-24">
         <h2 className="text-[2rem]">Comment tu es payé</h2>
         <p className="tq-doux mt-4 max-w-[64ch] leading-relaxed">
           Une commission devient versable 30 jours après le paiement, le temps que le délai de

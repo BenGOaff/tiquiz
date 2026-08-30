@@ -15,13 +15,12 @@ export default function SiteFooter() {
   const annee = new Date().getFullYear();
   return (
     <footer className="tq-pied mt-24">
-      <div className="mx-auto max-w-6xl px-5 py-14 sm:px-8">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="tq-large py-16">
+        <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-1">
             <div className="flex items-center gap-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/favicon-tiquiz.png" alt="" width={26} height={26} className="rounded-md" />
-              <span className="text-base font-extrabold tracking-tight text-white">tiquiz</span>
+              <img src="/logo-tiquiz.webp" alt="Tiquiz" width={360} height={186} className="h-8 w-auto" />
             </div>
             <p className="mt-3 max-w-[24ch] text-sm leading-relaxed text-[#8d9ab8]">
               Des quiz qui captent des leads déjà qualifiés, et les taguent tout seuls dans

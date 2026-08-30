@@ -114,7 +114,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           partie de la page qui sort du gabarit de lecture : le CORPS,
           lui, reste borné à une longueur de ligne confortable, parce
           qu'un paragraphe de 120 caractères ne se lit pas. */}
-      <header className="mx-auto max-w-4xl px-5 pt-10 sm:px-8 sm:pt-14">
+      <header className="tq-large pt-14 sm:pt-20">
         <nav aria-label="Fil d'Ariane" className="tq-doux text-sm">
           <Link href="/blog" className="hover:text-[var(--tq-encre)]">
             Blog
@@ -158,7 +158,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         ) : null}
       </header>
 
-      <div className="mx-auto max-w-[46rem] px-5 sm:px-8">
+      <div className="tq-large">
         {toc.length >= 3 ? (
           <nav className="mt-12 rounded-2xl border border-[var(--tq-bord)] bg-white p-6">
             <p className="tq-etiquette">Dans cet article</p>
@@ -253,7 +253,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
       {autres.length > 0 ? (
         <section className="mt-24 bg-[var(--tq-panneau)] py-16">
-          <div className="mx-auto max-w-6xl px-5 sm:px-8">
+          <div className="tq-large">
             <h2 className="text-[2rem]">À lire ensuite</h2>
             <div className="mt-10 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
               {autres.map((x) => (
