@@ -149,7 +149,10 @@ test("les quatre paliers vendus ont chacun leur ligne", () => {
 test("l'Atelier a son propre taux, et il est plus haut", () => {
   const { prix, gain } = gainAtelier();
   assert.match(prix, /47/);
-  assert.match(gain, /32,90/);
+  // 70 % du HORS TAXES (47 / 1,2 x 0,7), pas du TTC. Le premier jet
+  // annoncait 32,90 €, soit 5,48 € de plus que ce qui sera verse : sa
+  // propre page annonce 27,42 €, et c'est elle qui a raison.
+  assert.match(gain, /27,42/);
 });
 
 test("l'espace avant % et € est INSECABLE", () => {

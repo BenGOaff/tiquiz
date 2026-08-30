@@ -18,6 +18,8 @@ import type { Metadata } from "next";
 import { HOTE_VENTE } from "@/lib/publicHost";
 import { AFFILIATE_DASHBOARD_URL } from "@/lib/affiliateUrls";
 import { REGLES, TAUX, gainAtelier, tableauDesGains } from "@/lib/site/programmeAffiliation";
+import { COMMISSION_MAX_PCT } from "@/lib/site/recompenseAffiliation";
+import SimulateurAffiliation from "@/components/site/SimulateurAffiliation";
 
 const TITRE = "Programme d'affiliation Tiquiz : 40 % récurrent, à vie";
 const DESCRIPTION =
@@ -46,13 +48,18 @@ export default function PageAffiliation() {
 
   return (
     <main>
-      <section className="mx-auto max-w-6xl px-5 pt-14 sm:px-8 sm:pt-20">
+      <section className="tq-large pt-16 sm:pt-24">
         <p className="tq-etiquette">Programme d&apos;affiliation</p>
         <h1 className="mt-3 max-w-[18ch] text-[2.6rem] sm:text-[3.6rem]">
-          {pourcentTiquiz} % <span className="tq-surb">chaque mois</span>, tant qu&apos;il reste
+          {/* C'est le TAUX qu'on surligne, pas la phrase. Un bloc bleu de
+              six mots en 3,6 rem écrase le reste de la page, et c'est ce
+              que Béné a relevé : "c'est trop". Deux caractères suffisent
+              à porter le message. */}
+          <span className="tq-surb">{pourcentTiquiz} %</span>{" "}
+          chaque mois, tant qu&apos;il reste
           abonné
         </h1>
-        <p className="tq-doux mt-6 max-w-[64ch] text-[1.1rem] leading-relaxed">
+        <p className="tq-doux mt-6 tq-lire text-[1.1rem] leading-relaxed">
           Tu parles de Tiquiz à quelqu&apos;un, il s&apos;abonne, tu touches {pourcentTiquiz} % de
           son abonnement. Pas une fois : tous les mois, tant qu&apos;il reste client. Le jour où il
           part, ça s&apos;arrête, et c&apos;est normal.
@@ -71,10 +78,59 @@ export default function PageAffiliation() {
         </p>
       </section>
 
+      {/* LE SIMULATEUR. Il vivait sur sa page Systeme.io et il a disparu
+          quand je l'ai remplacée sans l'avoir lue. Il remonte tout en
+          haut : c'est la seule question que se pose un affilié, et lui
+          seul y répond en chiffres. */}
+      <section className="tq-large mt-16">
+        <h2 className="text-[2.2rem]">Combien tu touches, concrètement</h2>
+        <p className="tq-doux tq-lire mt-4 text-[1.05rem] leading-relaxed">
+          {pourcentTiquiz} % sur chaque paiement, et pas seulement sur le premier. Et ta récompense
+          monte avec toi : soit un <strong className="text-[var(--tq-encre)]">taux plus élevé</strong>,
+          soit une <strong className="text-[var(--tq-encre)]">remise sur ton propre abonnement</strong>.
+          Tu prends l&apos;une ou l&apos;autre, jamais les deux, et tu peux changer d&apos;avis.
+        </p>
+        <div className="mt-8">
+          <SimulateurAffiliation />
+        </div>
+      </section>
+
+      {/* LES DEUX RÉCOMPENSES, EN TOUTES LETTRES. */}
+      <section className="tq-large mt-24">
+        <h2 className="text-[2rem]">Ta récompense, c&apos;est toi qui la choisis</h2>
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <div className="rounded-2xl border-2 border-[var(--tq-bleu)] bg-white p-7">
+            <p className="tq-etiquette">Option 1</p>
+            <h3 className="mt-2 text-[1.3rem]">Un taux d&apos;affiliation plus élevé</h3>
+            <ul className="tq-doux mt-4 space-y-2.5 leading-relaxed">
+              <li>+5 % par marche de 10 filleuls abonnés.</li>
+              <li>La première marche s&apos;ouvre dès ton premier filleul : tu passes à 45 %.</li>
+              <li>Plafond à {COMMISSION_MAX_PCT} %, atteint à 51 filleuls.</li>
+              <li>Le taux s&apos;applique à TOUS tes filleuls, pas seulement aux nouveaux.</li>
+            </ul>
+          </div>
+          <div className="rounded-2xl border border-[var(--tq-bord)] bg-white p-7">
+            <p className="tq-etiquette">Option 2</p>
+            <h3 className="mt-2 text-[1.3rem]">Une remise sur ton abonnement</h3>
+            <ul className="tq-doux mt-4 space-y-2.5 leading-relaxed">
+              <li>10 % de remise par marche de 10 filleuls abonnés.</li>
+              <li>Elle s&apos;ouvre au 10e filleul : en dessous, elle ne donne rien.</li>
+              <li>À 100 filleuls, tu ne paies plus ton abonnement.</li>
+              <li>Tu gardes {pourcentTiquiz} % de commission à côté.</li>
+            </ul>
+          </div>
+        </div>
+        <p className="tq-doux tq-lire mt-6 leading-relaxed">
+          Ton décompte est recalculé une fois par mois. Si des filleuls partent, ton taux ou ta
+          remise redescendent, et tu es prévenu avant que ça s&apos;applique. Personne ne découvre
+          une hausse de prix sur son relevé.
+        </p>
+      </section>
+
       {/* CE QUE ÇA RAPPORTE, EN EUROS. */}
-      <section className="mx-auto mt-20 max-w-6xl px-5 sm:px-8">
-        <h2 className="text-[2rem]">Ce que ça rapporte, précisément</h2>
-        <p className="tq-doux mt-3 max-w-[62ch] leading-relaxed">
+      <section className="tq-large mt-24">
+        <h2 className="text-[2rem]">Chaque offre, et ce qu&apos;elle te rapporte</h2>
+        <p className="tq-doux tq-lire mt-4 leading-relaxed">
           Les montants ci-dessous sont calculés sur le prix hors taxes, qui est la base réelle du
           calcul. Autant que tu voies le bon chiffre tout de suite plutôt qu&apos;au premier
           versement.
@@ -112,8 +168,9 @@ export default function PageAffiliation() {
             </tbody>
           </table>
         </div>
-        <p className="tq-doux mt-6 max-w-[62ch] text-sm leading-relaxed">
-          Trente filleuls au mensuel, ça fait {gains[0].gain} multiplié par 30 chaque mois, et ça
+        <p className="tq-doux tq-lire mt-6 text-[0.95rem] leading-relaxed">
+          Trente filleuls au mensuel, ça fait {gains[0].gain}{" "}
+          multiplié par 30 chaque mois, et ça
           continue le mois suivant sans que tu refasses quoi que ce soit. C&apos;est là que
           l&apos;abonnement change tout par rapport à une vente unique.
         </p>
@@ -121,9 +178,9 @@ export default function PageAffiliation() {
 
       {/* LES RÈGLES. */}
       <section className="mt-24 bg-[var(--tq-panneau)] py-16">
-        <div className="mx-auto max-w-6xl px-5 sm:px-8">
+        <div className="tq-large">
           <h2 className="text-[2rem]">Les règles, en entier</h2>
-          <p className="tq-doux mt-3 max-w-[62ch] leading-relaxed">
+          <p className="tq-doux tq-lire mt-4 leading-relaxed">
             Pas de petites lignes. Si un point te paraît flou, écris-nous, on le précisera sur cette
             page pour tout le monde.
           </p>
@@ -140,27 +197,27 @@ export default function PageAffiliation() {
 
       {/* CE QUI A CHANGÉ. La question que tous les affiliés en place
           vont se poser en arrivant ici. */}
-      <section className="mx-auto mt-24 max-w-6xl px-5 sm:px-8">
+      <section className="tq-large mt-28">
         <h2 className="text-[2rem]">Tu affilies déjà avec un lien Systeme.io ?</h2>
-        <p className="tq-doux mt-4 max-w-[64ch] leading-relaxed">
+        <p className="tq-doux mt-4 tq-lire leading-relaxed">
           Tes anciens liens restent valides et continuent de te payer, exactement comme avant. Rien
           n&apos;est perdu, rien n&apos;est à refaire.
         </p>
-        <p className="tq-doux mt-4 max-w-[64ch] leading-relaxed">
+        <p className="tq-doux mt-4 tq-lire leading-relaxed">
           Ce qui change, c&apos;est que les liens de ton espace affilié portent maintenant ton code
           public (<code className="rounded bg-[var(--tq-panneau)] px-1.5 py-0.5">?ref=</code>) au
           lieu de l&apos;identifiant de Systeme.io. Ils passent par notre bon de commande, donc ils
           comptent tes clics, tes inscrits et tes ventes, canal par canal. Les anciens liens ne
           peuvent pas faire ça (leur page ne nous transmet rien).
         </p>
-        <p className="tq-doux mt-4 max-w-[64ch] leading-relaxed">
+        <p className="tq-doux mt-4 tq-lire leading-relaxed">
           Et le mois offert à ton filleul ne fonctionne qu&apos;avec les liens de cette
           génération. C&apos;est un argument de vente que tu n&apos;as pas sur un ancien lien, donc
           autant reprendre les nouveaux dans tes contenus quand tu en as l&apos;occasion.
         </p>
       </section>
 
-      <section className="mx-auto max-w-6xl px-5 py-20 sm:px-8">
+      <section className="tq-large py-24">
         <div className="rounded-3xl bg-[var(--tq-marine)] px-8 py-14 sm:px-14">
           <h2 className="max-w-[22ch] text-[1.9rem] text-white sm:text-[2.4rem]">
             Ton lien est prêt en <span className="tq-surb">deux minutes</span>

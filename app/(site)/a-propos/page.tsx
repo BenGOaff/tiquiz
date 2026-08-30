@@ -119,7 +119,7 @@ export default function PageAPropos() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }}
       />
 
-      <section className="mx-auto max-w-6xl px-5 pt-14 sm:px-8 sm:pt-20">
+      <section className="tq-large pt-16 sm:pt-24">
         <div className="grid items-center gap-10 lg:grid-cols-[1.4fr_1fr]">
           <div>
             <p className="tq-etiquette">À propos</p>
@@ -149,7 +149,7 @@ export default function PageAPropos() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
+      <section className="tq-large py-20">
         <h2 className="text-[1.8rem]">D&apos;où je viens</h2>
         <div className="tq-doux mt-5 max-w-[46rem] space-y-4 leading-relaxed">
           <p>
@@ -179,7 +179,7 @@ export default function PageAPropos() {
       </section>
 
       <section className="bg-[var(--tq-panneau)] py-16">
-        <div className="mx-auto max-w-6xl px-5 sm:px-8">
+        <div className="tq-large">
           <h2 className="text-[1.8rem]">Et puis, à 34 ans, tout s&apos;est arrêté</h2>
           <div className="tq-doux mt-5 max-w-[46rem] space-y-4 leading-relaxed">
             <p>
@@ -213,7 +213,7 @@ export default function PageAPropos() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
+      <section className="tq-large py-20">
         <h2 className="text-[1.8rem]">L&apos;histoire d&apos;iziquiz, mon plus gros échec</h2>
         <div className="tq-doux mt-5 max-w-[46rem] space-y-4 leading-relaxed">
           <p>
@@ -258,7 +258,7 @@ export default function PageAPropos() {
       </section>
 
       <section className="bg-[var(--tq-panneau)] py-16">
-        <div className="mx-auto max-w-6xl px-5 sm:px-8">
+        <div className="tq-large">
           <h2 className="text-[1.8rem]">Ce que j&apos;en ai fait : Tiquiz</h2>
           <div className="tq-doux mt-5 max-w-[46rem] space-y-4 leading-relaxed">
             <p>
@@ -317,7 +317,7 @@ export default function PageAPropos() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
+      <section className="tq-large py-20">
         <h2 className="text-[1.8rem]">Les valeurs que je défends</h2>
         <div className="tq-doux mt-5 max-w-[46rem] space-y-4 leading-relaxed">
           <p>

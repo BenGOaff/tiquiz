@@ -56,7 +56,7 @@ export default function BlogIndex() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdListe(articles)) }}
       />
 
-      <section className="mx-auto max-w-6xl px-5 pt-12 sm:px-8 sm:pt-16">
+      <section className="tq-large pt-16 sm:pt-24">
         <p className="tq-etiquette">Le blog</p>
         <h1 className="mt-3 max-w-[16ch] text-[2.6rem] sm:text-[3.4rem]">
           Des quiz qui <span className="tq-surb">rapportent</span>
@@ -65,13 +65,13 @@ export default function BlogIndex() {
       </section>
 
       {articles.length === 0 ? (
-        <p className="tq-doux mx-auto max-w-6xl px-5 py-16 sm:px-8">
+        <p className="tq-doux tq-large py-20">
           Aucun article pour le moment.
         </p>
       ) : (
         <>
           {/* LE CHAPEAU À DEUX COLONNES. */}
-          <section className="mx-auto mt-12 grid max-w-6xl gap-12 px-5 sm:px-8 lg:grid-cols-[1.55fr_1fr]">
+          <section className="tq-large mt-14 grid gap-14 lg:grid-cols-[1.55fr_1fr]">
             <article className="tq-carte group">
               <Link href={`/blog/${une.slug}`} className="block">
                 {une.couverture ? (
@@ -122,7 +122,7 @@ export default function BlogIndex() {
 
           {/* LA GRILLE, SOUS SES PASTILLES. */}
           <section className="mt-24 bg-[var(--tq-panneau)] py-16">
-            <div className="mx-auto max-w-6xl px-5 sm:px-8">
+            <div className="tq-large">
               <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="text-[2rem]">Choisis un sujet</h2>
                 <PastillesRubriques />
@@ -136,7 +136,7 @@ export default function BlogIndex() {
           </section>
 
           {/* CE QUE LE LECTEUR FAIT ENSUITE. */}
-          <section className="mx-auto max-w-6xl px-5 py-20 sm:px-8">
+          <section className="tq-large py-24">
             <div className="rounded-3xl bg-[var(--tq-marine)] px-8 py-14 text-center sm:px-14">
               <h2 className="mx-auto max-w-[20ch] text-[1.9rem] text-white sm:text-[2.4rem]">
                 Ton premier quiz tourne <span className="tq-surb">ce soir</span>

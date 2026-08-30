@@ -62,7 +62,7 @@ export default async function PageRubrique({
   const articles = articlesDeLaRubrique(r.id);
 
   return (
-    <main className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
+    <main className="tq-large py-16 sm:py-20">
       <p className="tq-etiquette">Rubrique</p>
       <h1 className="mt-3 text-[2.4rem] sm:text-[3rem]">{r.libelle}</h1>
       <p className="tq-doux mt-4 max-w-[62ch] text-[1.05rem] leading-relaxed">{r.chapeau}</p>

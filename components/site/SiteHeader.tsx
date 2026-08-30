@@ -18,9 +18,11 @@ import { MENU, CTA_MENU, attributsLien } from "@/lib/site/nav";
 function Marque() {
   return (
     <Link href="/" className="flex items-center gap-2" aria-label="Tiquiz, accueil">
+      {/* SON VRAI LOGO, celui qu'on voit sur ses 10 vignettes. Avant le
+          30 août on affichait le favicon carré à côté du mot "tiquiz"
+          écrit en CSS : deux fois la marque, dont une inventée. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/favicon-tiquiz.png" alt="" width={28} height={28} className="rounded-md" />
-      <span className="text-[1.05rem] font-extrabold tracking-tight">tiquiz</span>
+      <img src="/logo-tiquiz.webp" alt="Tiquiz" width={360} height={186} className="h-9 w-auto" />
     </Link>
   );
 }
@@ -28,15 +30,15 @@ function Marque() {
 export default function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--tq-bord)] bg-[var(--tq-creme)]/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
+      <div className="tq-large flex items-center justify-between gap-5 py-4">
         <Marque />
 
-        <nav aria-label="Navigation principale" className="hidden items-center gap-7 md:flex">
+        <nav aria-label="Navigation principale" className="hidden items-center gap-6 lg:flex">
           {MENU.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className="text-sm font-medium text-[var(--tq-encre-douce)] transition-colors hover:text-[var(--tq-encre)]"
+              className="text-[0.95rem] font-medium text-[var(--tq-encre-douce)] transition-colors hover:text-[var(--tq-encre)]"
               {...attributsLien(l.href)}
             >
               {l.libelle}
@@ -44,10 +46,10 @@ export default function SiteHeader() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-3 md:flex">
+        <div className="hidden items-center gap-4 lg:flex">
           <Link
             href="/login"
-            className="text-sm font-medium text-[var(--tq-encre-douce)] transition-colors hover:text-[var(--tq-encre)]"
+            className="text-[0.95rem] font-medium text-[var(--tq-encre-douce)] transition-colors hover:text-[var(--tq-encre)]"
           >
             Se connecter
           </Link>
@@ -57,7 +59,7 @@ export default function SiteHeader() {
         </div>
 
         {/* Le menu mobile. `group` + `open:` suffisent : pas d'état React. */}
-        <details className="group relative md:hidden">
+        <details className="group relative lg:hidden">
           <summary
             className="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-lg border border-[var(--tq-bord)]"
             aria-label="Ouvrir le menu"

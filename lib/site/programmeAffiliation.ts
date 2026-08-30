@@ -102,11 +102,20 @@ export function tableauDesGains(locale = "fr-FR"): LigneGain[] {
   }));
 }
 
-/** Ce que rapporte une vente de l'Atelier du Quiz. */
+/**
+ * Ce que rapporte une vente de l'Atelier du Quiz.
+ *
+ * SUR LE HORS TAXES, comme Tiquiz. Le premier jet calculait 70 % du
+ * TTC, soit 32,90 €, et c'était faux : sa propre page d'affiliation
+ * annonce 27,42 €, qui est bien 70 % du HT (47 / 1,2 x 0,7). Annoncer
+ * un montant plus élevé que celui qui sera versé est la pire erreur
+ * possible sur une page d'affiliation : l'affilié le découvre à son
+ * premier virement.
+ */
 export function gainAtelier(locale = "fr-FR"): { prix: string; gain: string } {
   return {
     prix: formatCents(PRIX_ATELIER_CENTS, "eur", locale),
-    gain: formatCents(Math.round(PRIX_ATELIER_CENTS * TAUX.atelier), "eur", locale),
+    gain: formatCents(Math.round(horsTaxes(PRIX_ATELIER_CENTS) * TAUX.atelier), "eur", locale),
   };
 }
 

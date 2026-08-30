@@ -31,7 +31,7 @@
 // qui REDIRIGENT, et le document reste à une seule adresse canonique,
 // donc une seule page à faire remonter.
 
-import { AFFILIATE_DASHBOARD_URL } from "@/lib/affiliateUrls";
+import { AFFILIATE_DASHBOARD_URL, ATELIER_SALES_URL } from "@/lib/affiliateUrls";
 import { ADRESSES_LEGALES_FR } from "@/lib/site/adressesLegales";
 
 /** Un lien du site public. */
@@ -59,6 +59,12 @@ export interface ColonnePied {
  */
 export const MENU: readonly LienSite[] = [
   { href: "/blog", libelle: "Blog" },
+  // L'ATELIER EST DANS LE MENU (Béné, 30 août 2026) : "le blog tiquiz.fr
+  // = le blog de l'atelier ET de tiquiz, on centralise tout dessus."
+  // Ce domaine porte donc les deux marques, et quelqu'un qui arrive par
+  // un article sur les quiz doit pouvoir trouver la formation sans
+  // savoir qu'elle vit sur un autre domaine.
+  { href: ATELIER_SALES_URL, libelle: "L'Atelier du Quiz" },
   { href: "/affiliation", libelle: "Affiliation" },
   { href: "/a-propos", libelle: "À propos" },
   { href: "/support", libelle: "Aide" },
@@ -89,6 +95,7 @@ export const PIED: readonly ColonnePied[] = [
     liens: [
       { href: "/", libelle: "Ce que fait Tiquiz" },
       { href: "/commande/mensuel", libelle: "Tarifs et abonnement" },
+      { href: ATELIER_SALES_URL, libelle: "L'Atelier du Quiz" },
       { href: "/blog", libelle: "Le blog" },
       { href: "/newsletter", libelle: "La newsletter" },
     ],

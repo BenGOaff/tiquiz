@@ -674,6 +674,10 @@ html[data-pq-compact] body {
    ==================================================================== */
 
 .tq-site {
+  /* 17 px, pas 16. Beneé, 30 août : "Typeform = pleine page, tiquiz =
+     tout ratatiné en tout petit". Typeform ouvre son blog à 17 px sur un
+     conteneur de 1280 : c'est ça qui fait respirer, pas la couleur. */
+  font-size: 17px;
   --tq-encre: #0b1020;
   --tq-encre-douce: #4a5270;
   --tq-marine: #050a1e;
@@ -690,6 +694,24 @@ html[data-pq-compact] body {
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* LE GABARIT DE PAGE, ÉCRIT UNE FOIS.
+   1280 px de contenu, et des marges latérales qui s'ouvrent avec
+   l'écran au lieu d'un `px-8` figé. C'est la seule classe qui décide la
+   largeur du site : une page qui poserait la sienne recréerait le
+   décalage de bord gauche qu'on vient de corriger sur la page auteur. */
+.tq-large {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: clamp(1.25rem, 4vw, 3.5rem);
+}
+
+/* La longueur de ligne d'un bloc de texte suivi. Au delà, l'oeil perd
+   le début de la ligne suivante. */
+.tq-lire {
+  max-width: 46rem;
 }
 
 /* Les titres : lourds et serrés, comme sur ses vignettes. */
@@ -711,10 +733,17 @@ html[data-pq-compact] body {
    bleu de ses vignettes. `box-decoration-break` le fait suivre quand la
    phrase passe à la ligne, sinon la deuxième ligne perd son fond. */
 .tq-surb {
-  background: linear-gradient(100deg, var(--tq-bleu-fonce), var(--tq-bleu) 55%, var(--tq-cyan));
+  /* PLUS DISCRET QU'AU PREMIER JET (Béné, 30 août : "c'est bien de
+     vouloir reprendre le style des vignettes, mais c'est trop"). Sur une
+     vignette de 1200 px le bloc bleu porte trois mots ; sur un titre de
+     page il en portait six, en 3,5 rem, et il écrasait tout le reste.
+     On garde le geste, on retire le poids : moins de hauteur, un rayon
+     plus serré, et un dégradé qui reste dans les bleus au lieu de finir
+     en cyan clair. */
+  background: linear-gradient(100deg, var(--tq-bleu-fonce), var(--tq-bleu) 70%);
   color: #fff;
-  border-radius: 0.55rem;
-  padding: 0.02em 0.3em;
+  border-radius: 0.3em;
+  padding: 0.04em 0.22em;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
@@ -722,7 +751,7 @@ html[data-pq-compact] body {
 /* L'ÉTIQUETTE DE RUBRIQUE. Petite, en capitales, à la couleur de
    marque : c'est elle qui donne le rythme d'une grille de cartes. */
 .tq-etiquette {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -732,7 +761,7 @@ html[data-pq-compact] body {
 /* LES CARTES. L'image garde SON format (règle du 4 août : jamais de
    object-cover qui recadre), le cadre ne fait que l'arrondir. */
 .tq-carte-media {
-  border-radius: 0.9rem;
+  border-radius: 1.1rem;
   overflow: hidden;
   background: var(--tq-panneau);
   border: 1px solid var(--tq-bord);
@@ -760,8 +789,8 @@ html[data-pq-compact] body {
   align-items: center;
   border-radius: 999px;
   border: 1px solid var(--tq-bord);
-  padding: 0.4rem 0.95rem;
-  font-size: 0.875rem;
+  padding: 0.55rem 1.15rem;
+  font-size: 0.9375rem;
   font-weight: 500;
   color: var(--tq-encre-douce);
   background: transparent;
@@ -784,9 +813,9 @@ html[data-pq-compact] body {
   justify-content: center;
   gap: 0.5rem;
   border-radius: 999px;
-  padding: 0.7rem 1.4rem;
+  padding: 0.85rem 1.7rem;
   font-weight: 600;
-  font-size: 0.9375rem;
+  font-size: 1rem;
   background: var(--tq-bleu);
   color: #fff;
   transition: all 0.15s ease;
@@ -829,8 +858,8 @@ html[data-pq-compact] body {
 
 /* Le corps d'un article, sur le fond crème du site. */
 .tq-site .tiquiz-blog {
-  font-size: 1.09rem;
-  line-height: 1.78;
+  font-size: 1.125rem;
+  line-height: 1.8;
   color: #23283c;
 }
 .tq-site .tiquiz-blog h2,
