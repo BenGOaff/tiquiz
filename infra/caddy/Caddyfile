@@ -299,6 +299,54 @@ atelierduquiz.fr, www.atelierduquiz.fr {
 }
 
 # ------------------------------------------------------------------
+# L'Atelier du Quiz, l'APPLICATION (quizing.tipote.com)
+# ------------------------------------------------------------------
+# MÊME APP que `atelierduquiz.fr` juste au dessus (port 3002), et deux
+# noms qui ne font PAS le même métier :
+#
+#   atelierduquiz.fr    -> la page de vente et le bon de commande
+#   quizing.tipote.com  -> la formation elle même, derrière connexion
+#
+# CE BLOC A COÛTÉ UNE PANNE, ET C'EST LA DEUXIÈME FOIS (30 août 2026).
+#
+# Il n'a JAMAIS existé dans ce fichier : il était configuré à la main
+# sur le serveur, comme l'étaient `tiquiz.fr` et `atelierduquiz.fr`
+# avant le 29 août. Le `cp infra/caddy/Caddyfile /etc/caddy/Caddyfile`
+# du déploiement l'a donc effacé, et l'Atelier a répondu **525** à tous
+# ses élèves : sans bloc nommé, Caddy ne peut produire aucun certificat
+# pour ce nom, donc il coupe la poignée de main.
+#
+# Le symptôme est cruel parce qu'il ne ressemble pas à sa cause : PM2
+# est vert, l'app tourne, redémarrer ne change rien, et aucun journal
+# d'application ne dit quoi que ce soit puisque AUCUNE requête n'arrive
+# jusqu'à elle. Ce qui l'a tranché en une commande :
+#
+#   curl -sSv --resolve quizing.tipote.com:443:127.0.0.1 \
+#        https://quizing.tipote.com/ -o /dev/null
+#
+# `TLS alert, internal error` = Caddy répond, mais il n'a pas de
+# certificat pour ce nom.
+#
+# `scripts/check-caddy-hosts.mjs` ne pouvait pas l'attraper : il compare
+# le dépôt au fichier VIVANT, et le fichier vivant l'avait déjà perdu.
+# Il vérifie désormais AUSSI que tout hôte nommé par le code a son bloc
+# ici (`ATELIER_BASE_URL`, lib/partner/atelierUrl.ts).
+quizing.tipote.com {
+        encode zstd gzip
+        import block_bad_paths
+
+        reverse_proxy 127.0.0.1:3002 {
+                import proxy_headers
+                # Même délai que les autres apps Next : une génération
+                # de contenu par l'IA peut tenir plusieurs minutes, et
+                # une coupure à 60 s ressemble à un bug de l'app.
+                transport http {
+                        read_timeout 5m
+                }
+        }
+}
+
+# ------------------------------------------------------------------
 # tus uploads (tus.tipote.com + tus.quiz.tipote.com)
 # ------------------------------------------------------------------
 # Both names front the same popquiz-tus node server; the JWT's `app`

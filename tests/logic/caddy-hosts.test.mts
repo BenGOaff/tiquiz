@@ -20,7 +20,10 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-import { hotesPerdus, hotesServis } from "../../scripts/check-caddy-hosts.mjs";
+import { HOTES_ATTENDUS, hotesAbsents, hotesPerdus, hotesServis } from "../../scripts/check-caddy-hosts.mjs";
+import { ATELIER_BASE_URL } from "../../lib/partner/atelierUrl.ts";
+import { AFFILIATE_DASHBOARD_URL, ATELIER_SALES_URL } from "../../lib/affiliateUrls.ts";
+import { HOTE_VENTE } from "../../lib/publicHost.ts";
 
 const CADDYFILE = fs.readFileSync(
   path.join(process.cwd(), "infra/caddy/Caddyfile"),
@@ -112,4 +115,49 @@ test("une reponse qui porte un lien affilie interdit toute mise en cache", () =>
     /if \(ref \|\| sa\) res\.headers\.set\("Cache-Control", "private, no-store/.test(src),
     "sans cet en-tete, un cache partage peut avaler un clic affilie et rejouer le Set-Cookie d'un affilie a tout le monde",
   );
+});
+
+// ── LA PANNE DU 30 AOÛT : LE TROISIÈME HÔTE ──
+
+test("l'application de l'Atelier a son bloc, et elle ne l'a jamais eu", () => {
+  // Bene, 30 aout : "l'atelier est down et je ne comprends pas
+  // pourquoi. Je viens de relancer mais c'est toujours down."
+  //
+  // `quizing.tipote.com` etait dans EXACTEMENT le cas de `tiquiz.fr` et
+  // `atelierduquiz.fr` la veille : configure a la main sur le serveur,
+  // jamais recopie ici. Le `cp` du deploiement l'a efface, et l'Atelier
+  // a repondu 525 a tous ses eleves. PM2 restait vert : aucune requete
+  // n'arrivait jusqu'a l'app, donc l'app n'avait rien a dire.
+  assert.ok(
+    hotesServis(CADDYFILE).has("quizing.tipote.com"),
+    "sans bloc, Caddy n'a aucun certificat pour ce nom et coupe la poignee de main",
+  );
+});
+
+test("tout hote nomme par le CODE a son bloc dans le depot", () => {
+  // LA MOITIE QUI MANQUAIT. Le controle d'origine compare le depot au
+  // fichier VIVANT : quand les deux ont perdu le meme nom, ils sont
+  // d'accord, et personne ne crie. Un controle qui compare deux copies
+  // ne rattrape jamais une erreur commune aux deux.
+  //
+  // Cette liste, elle, ne depend d'aucun fichier de configuration.
+  const absents = hotesAbsents(CADDYFILE);
+  assert.deepEqual(absents, [], `hotes designes par le code et sans bloc : ${absents.map((a) => a.hote).join(", ")}`);
+});
+
+test("la liste des hotes attendus suit les constantes, elle ne se perime pas", () => {
+  // Une liste de noms recopies a la main se perime en silence : c'est la
+  // mecanique meme du probleme qu'on ferme. Chaque entree est donc
+  // rattachee a la constante qui la nomme, et ce test rougit le jour ou
+  // l'une des deux bouge sans l'autre.
+  const attendus = new Set(HOTES_ATTENDUS.map((h) => h.hote));
+  for (const [url, quoi] of [
+    [ATELIER_BASE_URL, "ATELIER_BASE_URL"],
+    [ATELIER_SALES_URL, "ATELIER_SALES_URL"],
+    [AFFILIATE_DASHBOARD_URL, "AFFILIATE_DASHBOARD_URL"],
+    [HOTE_VENTE, "HOTE_VENTE"],
+  ] as const) {
+    const hote = new URL(url).hostname;
+    assert.ok(attendus.has(hote), `${quoi} designe ${hote}, absent de HOTES_ATTENDUS`);
+  }
 });
