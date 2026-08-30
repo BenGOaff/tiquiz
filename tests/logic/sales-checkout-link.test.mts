@@ -207,3 +207,80 @@ test("la page capturee : l'inscription gratuite est intacte", () => {
     "l'optin gratuit a ete detourne : le suivi des affilies est casse",
   );
 });
+
+// ---------------------------------------------------------------------
+// L'ICÔNE DE L'ONGLET, ET LE LOGO DES DONNÉES STRUCTURÉES
+//
+// Béné, 30 août 2026 : "tu n'as pas mis le favicon de tiquiz mais celui
+// de tipote pour la page de vente tiquiz.fr c'est dommage."
+//
+// La page est une CAPTURE d'un tunnel Systeme.io : elle porte l'icône du
+// compte qui l'a publiée, donc le "t" bleu de Tipote. Deux produits qui
+// portent la même icône ne se distinguent plus dans un onglet ni dans
+// des favoris, et c'est la première chose qu'un visiteur voit.
+//
+// Le même défaut vivait dans le logo des données structurées ajouté la
+// veille : une image de Tipote annoncée comme le logo officiel de
+// Tiquiz. Une adresse écrite en dur à deux endroits ne se corrige jamais
+// qu'à moitié (leçon de l'URL de l'Atelier, 3 août), d'où les deux
+// contrôles côte à côte.
+// ---------------------------------------------------------------------
+
+test("l'icone de la capture est retiree, la notre est posee", async () => {
+  const { buildHeadTags } = await import("../../lib/sales/servePage.ts");
+
+  const capture =
+    '<link rel="icon" type="image/png" href="/v/tiquiz/045f2fea8dfa.webp">' +
+    '<link rel="apple-touch-icon" href="/v/tiquiz/045f2fea8dfa.webp">' +
+    '<link rel="shortcut icon" href="/v/tiquiz/045f2fea8dfa.webp">';
+  const nettoye = stripHeadTags(capture);
+  assert.ok(!nettoye.includes("045f2fea8dfa"), "l'icone de la capture survit : " + nettoye);
+
+  const tags = buildHeadTags({
+    slug: "tiquiz",
+    canonical: "https://tiquiz.fr/",
+    title: "T",
+    description: "D",
+    locale: "fr_FR",
+    favicon: "/favicon.ico",
+  });
+  assert.ok(tags.includes('<link rel="icon" href="/favicon.ico">'), tags);
+  assert.ok(tags.includes('<link rel="apple-touch-icon" href="/favicon.ico">'), tags);
+});
+
+test("sans icone declaree on n'en invente aucune", async () => {
+  const { buildHeadTags } = await import("../../lib/sales/servePage.ts");
+  const tags = buildHeadTags({
+    slug: "x",
+    canonical: "https://tiquiz.fr/",
+    title: "T",
+    description: "D",
+    locale: "fr_FR",
+  });
+  assert.ok(!tags.includes('rel="icon"'), tags);
+});
+
+test("la page de vente Tiquiz porte l'icone ET le logo de Tiquiz", () => {
+  const route = fs.readFileSync(
+    path.join(process.cwd(), "app/apercu/vente/[slug]/route.ts"),
+    "utf8",
+  );
+  assert.ok(/favicon:\s*"\/favicon\.ico"/.test(route), "la page de vente n'a plus d'icone a elle");
+  assert.ok(
+    !/logo:\s*"[^"]*tipote-logo/.test(route),
+    "le logo des donnees structurees est encore celui de Tipote",
+  );
+  assert.ok(/logo:\s*"[^"]*tiquiz-logo/.test(route), "le logo de Tiquiz n'est plus declare");
+});
+
+test("la page capturee ne sert plus l'icone de Tipote", () => {
+  if (!capturee) return;
+  assert.ok(
+    /<link[^>]*rel=["'][^"']*icon/i.test(capturee),
+    "la capture n'a plus d'icone : ce test ne peut plus echouer, il ment",
+  );
+  assert.ok(
+    !/<link[^>]*rel=["'][^"']*icon/i.test(stripHeadTags(capturee)),
+    "l'icone de Tipote survit dans la page servie",
+  );
+});

@@ -50,6 +50,17 @@ export type SalesPageMeta = {
   ogImage?: string;
   /** La langue de la page, pour `<html lang>`. */
   locale: string;
+  /**
+   * L'icône de l'onglet.
+   *
+   * Elle vient de NOUS, jamais de la capture : la page a été prise chez
+   * Systeme.io, donc elle porte l'icône du compte qui l'a publiée. Sur
+   * `tiquiz.fr`, ça affichait le "t" de Tipote au lieu de celui de
+   * Tiquiz. C'est la première chose qu'un visiteur voit dans son onglet
+   * et dans ses favoris, et deux produits qui portent la même icône ne
+   * se distinguent plus.
+   */
+  favicon?: string;
 };
 
 /**
@@ -66,6 +77,14 @@ export function stripHeadTags(html: string): string {
     .replace(/<meta[^>]*property=["']og:[^"']*["'][^>]*>/gi, "")
     .replace(/<meta[^>]*name=["']twitter:[^"']*["'][^>]*>/gi, "")
     .replace(/<link[^>]*rel=["']?canonical["']?[^>]*>/gi, "")
+    // L'ICÔNE DE LA CAPTURE, POUR LA MÊME RAISON QUE LE TITRE.
+    //
+    // Elle pointe sur le fichier du compte Systeme.io qui a publié la
+    // page d'origine. La laisser, c'est afficher l'icône d'une autre
+    // marque dans l'onglet de celle-ci. Elle est retirée ici et
+    // réécrite par `buildHeadTags`.
+    .replace(/<link[^>]*rel=["'][^"']*icon[^"']*["'][^>]*>/gi, "")
+    .replace(/<link[^>]*rel=["']?apple-touch-icon["']?[^>]*>/gi, "")
     // LE `noindex` DE SYSTEME.IO, TROUVÉ LE 21 AOÛT.
     //
     // La page capturée porte sa propre balise, posée par l'éditeur de
@@ -124,6 +143,10 @@ export function buildHeadTags(meta: SalesPageMeta): string {
     `<meta property="og:locale" content="${attr(meta.locale)}">`,
     `<meta name="twitter:card" content="summary_large_image">`,
   ];
+  if (meta.favicon) {
+    balises.push(`<link rel="icon" href="${attr(meta.favicon)}">`);
+    balises.push(`<link rel="apple-touch-icon" href="${attr(meta.favicon)}">`);
+  }
   if (meta.ogImage) {
     balises.push(`<meta property="og:image" content="${attr(meta.ogImage)}">`);
     balises.push(`<meta name="twitter:image" content="${attr(meta.ogImage)}">`);
