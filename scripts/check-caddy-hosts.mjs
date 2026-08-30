@@ -21,6 +21,22 @@
 // Il ne remplace pas `caddy validate`, il répond à une autre question :
 // validate dit "ce fichier est correct", celui-ci dit "ce fichier ne
 // perd personne en route".
+//
+// -- ET IL A LAISSÉ PASSER LE TROISIÈME (30 août 2026) ----------------
+//
+// `quizing.tipote.com`, l'application de l'Atelier, était dans EXACTEMENT
+// le même cas et n'a pas été rapatrié le 29 : la copie l'a effacé à son
+// tour, et l'Atelier a répondu 525 à ses élèves.
+//
+// Ce contrôle ne pouvait pas le voir. Il compare le dépôt au fichier
+// VIVANT, et le fichier vivant l'avait DÉJÀ perdu : les deux étaient
+// d'accord pour l'oublier. **Un contrôle qui compare deux copies ne
+// rattrape jamais une erreur commune aux deux.**
+//
+// D'où la deuxième moitié : `HOTES_ATTENDUS`, la liste des noms que le
+// CODE désigne. Elle ne dépend d'aucun fichier de configuration, donc
+// elle survit à leur effacement, et c'est le seul endroit d'où la
+// vérité pouvait venir.
 
 import fs from "node:fs";
 
@@ -66,6 +82,34 @@ export function hotesServis(source) {
   return hotes;
 }
 
+/**
+ * Les hôtes que le CODE désigne, avec l'endroit qui les nomme.
+ *
+ * Ce ne sont pas des noms recopiés à la main : chacun est une constante
+ * d'un module, et `tests/logic/caddy-hosts.test.mts` vérifie que la
+ * constante vaut toujours ça. Le jour où quelqu'un change
+ * `ATELIER_BASE_URL`, le test rouge renvoie ici au lieu de laisser la
+ * liste se périmer en silence.
+ *
+ * Une adresse écrite dans le code et sans bloc Caddy, c'est une panne
+ * qui attend un déploiement : l'app tourne, PM2 est vert, et le
+ * navigateur affiche une erreur TLS que rien n'explique.
+ */
+export const HOTES_ATTENDUS = [
+  { hote: "quiz.tipote.com", ou: "lib/authLinks.ts (domaine canonique de Tiquiz)" },
+  { hote: "tiquiz.fr", ou: "lib/publicHost.ts, HOTE_VENTE" },
+  { hote: "atelierduquiz.fr", ou: "lib/affiliateUrls.ts, ATELIER_SALES_URL" },
+  { hote: "quizing.tipote.com", ou: "lib/partner/atelierUrl.ts, ATELIER_BASE_URL" },
+  { hote: "affiliate.tipote.com", ou: "lib/affiliateUrls.ts, AFFILIATE_DASHBOARD_URL" },
+  { hote: "app.tipote.com", ou: "l'app Tipote" },
+];
+
+/** Ceux que le dépôt ne sert pas alors que le code les désigne. */
+export function hotesAbsents(repo) {
+  const servis = hotesServis(repo);
+  return HOTES_ATTENDUS.filter((h) => !servis.has(h.hote));
+}
+
 /** Ce que le dépôt oublie par rapport à ce qui tourne. */
 export function hotesPerdus(repo, live) {
   return [...hotesServis(live)].filter((h) => !hotesServis(repo).has(h)).sort();
@@ -78,11 +122,32 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
   const repo = fs.readFileSync(REPO, "utf8");
   const live = fs.readFileSync(LIVE, "utf8");
+
+  // D'ABORD les hôtes que le code désigne : ce contrôle ne dépend
+  // d'aucun fichier de configuration, donc il tient même quand les deux
+  // ont perdu le même nom. C'est la moitié qui manquait.
+  const absents = hotesAbsents(repo);
+  if (absents.length > 0) {
+    console.error("");
+    console.error("  DEPLOIEMENT REFUSE : le code designe des hotes sans bloc Caddy");
+    console.error("");
+    for (const a of absents) console.error(`    - ${a.hote}   (${a.ou})`);
+    console.error("");
+    console.error("  Sans bloc nomme, Caddy ne peut produire aucun certificat pour");
+    console.error("  ce nom : le navigateur affiche une erreur TLS, PM2 reste vert");
+    console.error("  et aucun journal d'application ne dit quoi que ce soit.");
+    console.error("");
+    process.exit(1);
+  }
+
   const perdus = hotesPerdus(repo, live);
 
   if (perdus.length === 0) {
     const n = hotesServis(repo).size;
-    console.log(`OK : les ${n} hotes du depot couvrent tout ce qui tourne.`);
+    console.log(
+      `OK : les ${n} hotes du depot couvrent tout ce qui tourne, ` +
+        `et les ${HOTES_ATTENDUS.length} adresses nommees par le code.`,
+    );
     process.exit(0);
   }
 
