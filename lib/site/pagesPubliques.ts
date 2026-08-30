@@ -46,8 +46,8 @@ export const PAGES_PUBLIQUES: readonly PagePublique[] = [
     chemin: "/a-propos",
     titre: "Bénédicte Lagardette, fondatrice de Tiquiz",
     resume:
-      "Qui construit Tiquiz, l'Atelier du Quiz et Tipote, et les règles qu'elle s'impose : aucun chiffre sans source, aucune fausse urgence.",
-    priorite: 0.6,
+      "Ex-infirmière (urgences en Corse, ambulance en Suisse), handicapée à 34 ans après trois opérations du dos, elle a repris depuis son lit et code aujourd'hui ses propres logiciels avec l'IA. L'histoire derrière Tiquiz et l'Atelier du Quiz, y compris l'échec d'iziquiz.",
+    priorite: 0.7,
   },
   {
     chemin: "/newsletter",
