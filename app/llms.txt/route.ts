@@ -26,6 +26,7 @@ import { hoteCanonique } from "@/lib/publicHost";
 import { SALES_HOSTS } from "@/lib/sales/salesHosts";
 import { listerArticles } from "@/lib/blog/articles";
 import { PAGES_PUBLIQUES } from "@/lib/site/pagesPubliques";
+import { OWNER_CATALOG, OWNER_PRODUCT_ORDER } from "@/lib/checkout/catalog";
 import { ORIGINE_BLOG } from "@/lib/blog/seo";
 
 const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
@@ -195,8 +196,21 @@ function construireLlmsTxtVente(): string {
     "> Tiquiz est un outil francophone de création de quiz connecté nativement à Systeme.io : il génère le quiz, capte les leads et pose automatiquement un tag par profil de résultat dans Systeme.io, sans Zapier.",
   );
   lignes.push("");
+  // LES PRIX VIENNENT DU CATALOGUE, JAMAIS ÉCRITS ICI.
+  //
+  // Cette ligne portait "17 EUR par mois ou 170 EUR par an" en dur, et
+  // elle oubliait les deux paliers PLUS. Un fichier lu par des moteurs
+  // d'IA qui annonce un prix périmé est pire qu'un fichier absent : il
+  // sera cité (trouvé à l'audit du 30 août 2026).
+  const tarifs = OWNER_PRODUCT_ORDER.map((id) => {
+    const p = OWNER_CATALOG[id];
+    const montant = (p.amountCents / 100).toFixed(2).replace(".", ",");
+    return `${p.label.replace(/\bPlus\b/, "PLUS")} ${montant} EUR par ${p.interval === "year" ? "an" : "mois"}`;
+  }).join(", ");
   lignes.push(
-    "Pensé pour les solopreneurs, coachs, formateurs et créateurs de contenu francophones. Quiz de profil ou quiz scoré, page de résultat personnalisée, capture d'email, statistiques par question. Plan gratuit pour tester, offre illimitée à 17 EUR par mois ou 170 EUR par an.",
+    "Pensé pour les solopreneurs, coachs, formateurs et créateurs de contenu francophones. " +
+      "Quiz de profil ou quiz scoré, page de résultat personnalisée, capture d'email, statistiques " +
+      `par question. Plan gratuit pour tester, sans carte bancaire. Formules payantes : ${tarifs}.`,
   );
   lignes.push("");
   lignes.push("## Le produit");
