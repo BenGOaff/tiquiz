@@ -35,16 +35,30 @@ import path from "node:path";
 import {
   AFFILIATE_DASHBOARD_URL,
   AFFILIATE_SIGNUP_URL,
+  AFFILIATE_ATELIER_URL,
   ATELIER_SALES_URL,
 } from "../../lib/affiliateUrls.ts";
 
-test("les trois adresses sont distinctes et pointent au bon endroit", () => {
+test("les adresses sont distinctes et pointent au bon endroit", () => {
   assert.equal(AFFILIATE_DASHBOARD_URL, "https://affiliate.tipote.com");
-  assert.equal(AFFILIATE_SIGNUP_URL, "https://www.tipote.fr/tiquiz/affiliation");
+  // RAPATRIEE LE 30 AOUT 2026. Elle designait un tunnel Systeme.io qui
+  // decrit l'ANCIEN programme (identifiant ?sa=, versement chez eux,
+  // pas de mois offert) : un affilie envoye la lisait des regles qui ne
+  // sont plus celles qu'on applique.
+  assert.equal(AFFILIATE_SIGNUP_URL, "https://tiquiz.fr/affiliation");
+  assert.equal(AFFILIATE_ATELIER_URL, "https://tiquiz.fr/affiliation-atelier");
+  // La page de VENTE de l'Atelier reste chez Systeme.io, et c'est
+  // delibere : son tunnel porte le bon de commande, et son registre
+  // d'affilies est le sien (cf. l'audit du 25 aout).
   assert.equal(ATELIER_SALES_URL, "https://www.tipote.fr/atelier-du-quiz");
 
-  const toutes = [AFFILIATE_DASHBOARD_URL, AFFILIATE_SIGNUP_URL, ATELIER_SALES_URL];
-  assert.equal(new Set(toutes).size, 3, "deux de ces adresses sont identiques");
+  const toutes = [
+    AFFILIATE_DASHBOARD_URL,
+    AFFILIATE_SIGNUP_URL,
+    AFFILIATE_ATELIER_URL,
+    ATELIER_SALES_URL,
+  ];
+  assert.equal(new Set(toutes).size, 4, "deux de ces adresses sont identiques");
 });
 
 /** Les fichiers de l'app, hors dépendances et hors le module d'adresses. */

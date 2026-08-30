@@ -30,29 +30,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendSupportAlert } from "@/lib/email/supportAlertEmail";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { ecrireTicket, preparerTicket } from "@/lib/support/creerTicket";
+import { creerLimiteur, ipDeLaRequete } from "@/lib/rateLimit/parIp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MAX_PAR_HEURE = 5;
-const compteur = new Map<string, { n: number; jusqu: number }>();
-
-function tropDeDemandes(ip: string): boolean {
-  const now = Date.now();
-  const vu = compteur.get(ip);
-  if (!vu || now > vu.jusqu) {
-    compteur.set(ip, { n: 1, jusqu: now + 3_600_000 });
-    return false;
-  }
-  vu.n += 1;
-  // Un ménage pour ne pas garder une entrée par IP indéfiniment.
-  if (compteur.size > 5000) compteur.clear();
-  return vu.n > MAX_PAR_HEURE;
-}
+// LE COMPTEUR SE DÉSARMAIT TOUT SEUL (trouvé le 30 août 2026).
+//
+// Il faisait `compteur.clear()` dès que la table dépassait sa taille,
+// donc il remettait à zéro le compteur de TOUT LE MONDE : un garde-fou
+// qu'on peut désarmer en le remplissant n'en est pas un. L'audit du
+// 24 août avait corrigé exactement ça côté Tipote, et la correction
+// n'avait jamais été portée ici.
+//
+// La décision vit maintenant dans un module PUR et testé, partagé avec
+// les autres routes publiques qui écrivent (cf. lib/rateLimit/parIp.ts).
+const limiteur = creerLimiteur({ max: 5, fenetreMs: 3_600_000 });
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "inconnue";
-  if (tropDeDemandes(ip)) {
+  const ip = ipDeLaRequete(req.headers);
+  if (limiteur.trop(ip)) {
     return NextResponse.json({ ok: false, reason: "trop_de_demandes" }, { status: 429 });
   }
 

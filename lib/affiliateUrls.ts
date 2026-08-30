@@ -41,8 +41,24 @@ export const AFFILIATE_DASHBOARD_URL = "https://affiliate.tipote.com";
  * C'est la porte d'entrée de quelqu'un qui n'est pas encore affilié. Le
  * tableau de bord, lui, demande un compte : y envoyer un curieux le
  * bloque sur un écran de connexion.
+ *
+ * RAPATRIÉE LE 30 AOÛT 2026. Elle désignait
+ * `www.tipote.fr/tiquiz/affiliation`, un tunnel Systeme.io qui décrit
+ * l'ANCIEN programme : identifiant `?sa=`, versement chez eux, pas de
+ * mois offert. Un affilié envoyé là lisait des règles qui ne sont plus
+ * celles qu'on applique.
  */
-export const AFFILIATE_SIGNUP_URL = "https://www.tipote.fr/tiquiz/affiliation";
+export const AFFILIATE_SIGNUP_URL = "https://tiquiz.fr/affiliation";
+
+/**
+ * La page qui explique l'affiliation de l'ATELIER, à 70 %.
+ *
+ * Elle est distincte parce que le programme l'est : l'Atelier tient son
+ * propre registre d'affiliés et lit un identifiant différent de celui de
+ * Tiquiz. Envoyer un affilié Tiquiz recommander l'Atelier avec son lien
+ * Tiquiz, c'est le faire travailler pour zéro commission.
+ */
+export const AFFILIATE_ATELIER_URL = "https://tiquiz.fr/affiliation-atelier";
 
 /**
  * La page de vente de l'Atelier du Quiz.

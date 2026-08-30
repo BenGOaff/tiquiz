@@ -91,10 +91,12 @@ async function trouverContact(apiKey: string, email: string): Promise<number | n
  * relance, pas de segment. Et c'est le cas NORMAL de quelqu'un qui
  * achète sur notre bon de commande sans jamais toucher un tunnel.
  *
- * **À N'APPELER QUE DEPUIS UN CHEMIN D'ACHAT.** Créer un contact, c'est
- * faire entrer quelqu'un dans sa liste : ça se justifie parce qu'il
- * vient d'acheter. L'appeler depuis une lecture ferait grossir sa liste
- * de gens qui n'ont rien demandé, et abîmerait sa délivrabilité.
+ * **À N'APPELER QUE QUAND LA PERSONNE L'A DEMANDÉ.** Créer un contact,
+ * c'est faire entrer quelqu'un dans sa liste. Deux cas le justifient, et
+ * deux seulement : il vient d'ACHETER, ou il vient de S'INSCRIRE (compte
+ * gratuit, newsletter). L'appeler depuis une simple lecture ferait
+ * grossir sa liste de gens qui n'ont rien demandé, abîmerait sa
+ * délivrabilité, et serait illégal pour une liste de diffusion.
  *
  * On RE-CHERCHE après un refus de création : deux webhooks qui arrivent
  * en même temps peuvent créer la course, et Systeme.io refuse le second
@@ -184,8 +186,29 @@ export async function poserTagPlan(
   plan: string,
   identite: IdentiteContact = {},
 ): Promise<boolean> {
-  const adresse = String(email ?? "").trim().toLowerCase();
   const tag = readSioTag(plan);
+  if (!tag) return false;
+  return poserTagParNom(email, tag, identite);
+}
+
+/**
+ * POSE UNE ÉTIQUETTE DÉSIGNÉE PAR SON NOM.
+ *
+ * Sortie de `poserTagPlan` le 30 août 2026, pour l'inscription à la
+ * newsletter : son tag (`newsletter`) n'est le tag d'aucun palier, mais
+ * le GESTE est exactement le même (trouver ou créer le contact, résoudre
+ * l'étiquette, la poser). Recopier ces trois étapes dans une deuxième
+ * route aurait donné deux implémentations qui divergent, ce que ce dépôt
+ * a déjà payé quatre fois.
+ *
+ * L'étiquette n'est JAMAIS créée si elle n'existe pas : voir plus haut.
+ */
+export async function poserTagParNom(
+  email: string,
+  tag: string,
+  identite: IdentiteContact = {},
+): Promise<boolean> {
+  const adresse = String(email ?? "").trim().toLowerCase();
   if (!adresse || !tag) return false;
 
   try {

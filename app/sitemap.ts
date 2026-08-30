@@ -27,6 +27,8 @@ import { resolvePublicUrl } from "@/lib/authLinks";
 import { hoteCanonique, HOTE_VENTE } from "@/lib/publicHost";
 import { SALES_HOSTS } from "@/lib/sales/salesHosts";
 import { listerArticles } from "@/lib/blog/articles";
+import { RUBRIQUES } from "@/lib/blog/rubriques";
+import { PAGES_PUBLIQUES } from "@/lib/site/pagesPubliques";
 
 const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
 const PUBLIC_ROUTES = [
@@ -83,11 +85,32 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: "weekly" as const,
         priority: 0.8,
       },
+      // LES RUBRIQUES. Une rubrique est une PAGE (voir
+      // lib/blog/rubriques.ts) : la déclarer ici est ce qui la rend
+      // découvrable sur des requêtes de sujet.
+      ...RUBRIQUES.map((r) => ({
+        url: `${HOTE_VENTE}/blog/rubrique/${r.id}`,
+        lastModified: new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.6,
+      })),
       ...listerArticles().map((a) => ({
         url: `${HOTE_VENTE}/blog/${a.slug}`,
         lastModified: new Date(`${a.publieLe}T12:00:00Z`),
         changeFrequency: "monthly" as const,
         priority: 0.7,
+      })),
+      // LE RESTE DU SITE PUBLIC, rapatrié de Systeme.io le 30 août.
+      //
+      // Une page absente du sitemap n'est pas invisible, mais elle
+      // dépend entièrement du fait qu'un robot suive un lien jusqu'à
+      // elle. C'est justement pour faire remonter ce domaine qu'on l'a
+      // construit : autant les annoncer.
+      ...PAGES_PUBLIQUES.map((p) => ({
+        url: `${HOTE_VENTE}${p.chemin}`,
+        lastModified: new Date(),
+        changeFrequency: "monthly" as const,
+        priority: p.priorite,
       })),
     ];
   }

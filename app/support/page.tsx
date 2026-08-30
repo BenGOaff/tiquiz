@@ -18,6 +18,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
 import AppShell from "@/components/AppShell";
+import SiteShell from "@/components/site/SiteShell";
 import SupportForm from "@/components/support/SupportForm";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
@@ -57,8 +58,18 @@ export default async function SupportPage() {
   // Connectée : la page vit dans l'app, avec sa barre latérale. Non
   // connectée : elle vit seule, parce qu'une barre latérale pleine de
   // liens qui renverraient vers /login serait une deuxième impasse.
+  // SANS SESSION, C'EST UN VISITEUR DU SITE, PAS UN UTILISATEUR.
+  //
+  // Cette branche ne portait AUCUN cadre : le formulaire seul, sans
+  // en-tête, sans pied de page, donc sans un seul lien pour repartir.
+  // Quelqu'un qui arrive de `tiquiz.fr/support`, pose sa question et
+  // veut ensuite regarder le produit se retrouvait dans un cul-de-sac
+  // (trouvé le 30 août en raccordant les pages publiques entre elles).
+  //
+  // Connecté, il garde `AppShell` : il est dans l'app, et la navigation
+  // de l'app est celle qui lui sert.
   if (!user) {
-    return <div className="min-h-screen bg-background">{formulaire}</div>;
+    return <SiteShell>{formulaire}</SiteShell>;
   }
 
   return (

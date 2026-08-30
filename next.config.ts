@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+// Depuis `adressesLegales.ts` et PAS `nav.ts` : ce fichier est
+// compilé hors du projet TypeScript, donc sans l'alias `@/`.
+import { ADRESSES_LEGALES_FR } from "./lib/site/adressesLegales";
 
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
@@ -22,6 +25,44 @@ const nextConfig: NextConfig = {
   // cherché au mauvais endroit, sans le second il n'existe pas du tout.
   outputFileTracingIncludes: {
     "/api/**/*": ["./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],
+  },
+  /**
+   * LES ADRESSES FRANÇAISES DES DOCUMENTS LÉGAUX, ET /contact.
+   *
+   * Béné, 30 août 2026 : elle liste les pages de `tipote.fr` à
+   * rapatrier, dont `/cgv`, `/cgu`, `/mentions-legales`... Les
+   * documents existent déjà, en 5 langues, à des adresses anglaises
+   * (`/terms`, `/terms-of-use`, `/legal`...). On ne les DÉPLACE pas :
+   * ces adresses sont déjà posées dans l'app, dans des emails et dans
+   * des quiz publiés, et les casser serait pire que le problème.
+   *
+   * On ajoute donc les adresses françaises, qui redirigent. Le document
+   * garde UNE canonique, donc une seule page à faire remonter.
+   *
+   * La table vit dans `lib/site/nav.ts`, lue aussi par le pied de page :
+   * deux listes écrites séparément finiraient par pointer ailleurs
+   * l'une de l'autre.
+   *
+   * `permanent: true` (308) : ces adresses ne bougeront plus, et un 308
+   * transmet le crédit accumulé par les liens déjà partagés.
+   */
+  async redirects() {
+    return [
+      ...Object.entries(ADRESSES_LEGALES_FR).map(([source, destination]) => ({
+        source,
+        destination,
+        permanent: true,
+      })),
+      // UNE SEULE PORTE POUR ÉCRIRE (question de Béné, 30 août : "on
+      // fait quoi pour les curieux qui veulent me poser une question ?").
+      //
+      // `/support` est déjà publique, déjà traduite en 7 langues, et
+      // ses demandes atterrissent dans la file de tickets rattachée à
+      // la fiche client. Une deuxième page de contact aurait créé une
+      // deuxième file, c'est à dire l'exact problème qu'on a fermé le
+      // 23 août en fusionnant celle de Tipote et la nôtre.
+      { source: "/contact", destination: "/support", permanent: true },
+    ];
   },
   async rewrites() {
     return {
