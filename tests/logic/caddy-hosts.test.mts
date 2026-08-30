@@ -94,3 +94,22 @@ test("une directive imbriquee n'est jamais lue comme une adresse", () => {
   const bidon = `exemple.fr {\n\treverse_proxy 127.0.0.1:3001 {\n\t\ttransport http {\n\t\t\tread_timeout 5m\n\t\t}\n\t}\n}\n`;
   assert.deepEqual([...hotesServis(bidon)], ["exemple.fr"]);
 });
+
+// ── UN LIEN AFFILIÉ NE SE MET JAMAIS EN CACHE ──
+//
+// Béné, 29 août : "on peut genre mettre en cache tiquiz.fr et
+// atelierduquiz.fr pour éviter que les pages de vente sautent ?"
+//
+// Oui, et il y a UN piège qui coûterait cher. Le clic affilié est
+// compté dans le middleware, et le cookie d'un an y est posé. Une
+// réponse à `?ref=jocelyne` servie depuis un cache n'arrive jamais
+// jusqu'à nous : pas de clic, pas de cookie, pas d'attribution, pas de
+// mois offert. Et rien ne casse à l'écran.
+
+test("une reponse qui porte un lien affilie interdit toute mise en cache", () => {
+  const src = fs.readFileSync(path.join(process.cwd(), "middleware.ts"), "utf8");
+  assert.ok(
+    /if \(ref \|\| sa\) res\.headers\.set\("Cache-Control", "private, no-store/.test(src),
+    "sans cet en-tete, un cache partage peut avaler un clic affilie et rejouer le Set-Cookie d'un affilie a tout le monde",
+  );
+});
