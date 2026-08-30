@@ -47,6 +47,7 @@ import {
   type AxisScore,
 } from "@/lib/quizScoring";
 import { resolveShareNetworks } from "@/lib/quiz/shareNetworks";
+import { absolutiser, urlPartage } from "@/lib/partage/urlsReseaux";
 import { buildResultShareText, buildShareText, cleanShareUrl } from "@/lib/quiz/shareText";
 import { pickProfileWinner, tallyVotes, tieBreakMode, type ProfileVote } from "@/lib/quiz/profileWinner";
 import { tiquizDiscoveryUrl } from "@/lib/affiliate/lienDecouverte";
@@ -2936,7 +2937,28 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
     const shareUrl = cleanShareUrl(
       urlOverride || (typeof window !== "undefined" ? window.location.href : ""),
     );
-    return { shareText, shareUrl };
+
+    // L'IMAGE A EPINGLER SUIT LA MECANIQUE, comme le texte et le lien.
+    //
+    // Pinterest n'a JAMAIS recu d'image depuis ce bouton : l'URL etait
+    // construite sans `media=`, donc son formulaire s'ouvrait en
+    // demandant au visiteur de choisir une image lui-meme, et neuf fois
+    // sur dix il fermait l'onglet. Le bug vivait dans ce fichier, donc
+    // dans un composant, donc hors de portee de tout test : il y est
+    // reste des mois (cf. lib/partage/urlsReseaux.ts).
+    //
+    // Elle est DERIVEE DU MEME `scope` que le texte : deux moities d'une
+    // meme decision calculees separement finissent toujours par se
+    // contredire (lecon du 7 aout). Un chemin relatif est absolutise, et
+    // une origine locale rend `null` plutot qu'une epingle qui demande a
+    // Pinterest d'aller chercher une image sur la machine du visiteur.
+    const origine = typeof window !== "undefined" ? window.location.origin : "";
+    const shareMedia = absolutiser(
+      scope === "result" ? resultProfile?.image_url ?? null : quiz?.intro_image_url ?? null,
+      origine,
+    );
+
+    return { shareText, shareUrl, shareMedia };
   };
 
   const trackShare = useCallback(async () => {
@@ -2976,9 +2998,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
   // plus valoir la meme chose.
 
   const shareOn = (platform: string, scope: ShareScope = "quiz", urlOverride?: string) => {
-    const { shareText, shareUrl } = getShareData(scope, urlOverride);
-    const encoded = encodeURIComponent(shareUrl);
-    const text = encodeURIComponent(shareText);
+    const { shareText, shareUrl, shareMedia } = getShareData(scope, urlOverride);
 
     // ── WEB SHARE API : LA RESOLUTION N'EST PAS UNE PREUVE ──
     //
@@ -3025,29 +3045,30 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
       return;
     }
 
-    // Chaque reseau propose dans l'editeur (ALLOWED_SHARE_NETWORKS) DOIT
-    // avoir une entree ici, sinon son bouton cocherait dans le vide.
-    const urls: Record<string, string> = {
-      x: `https://twitter.com/intent/tweet?text=${text}&url=${encoded}`,
-      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encoded}`,
-      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encoded}`,
-      reddit: `https://www.reddit.com/submit?url=${encoded}&title=${text}`,
-      threads: `https://www.threads.net/intent/post?text=${text}%20${encoded}`,
-      whatsapp: `https://wa.me/?text=${text}%20${encoded}`,
-      pinterest: `https://pinterest.com/pin/create/button/?url=${encoded}&description=${text}`,
-      email: `mailto:?subject=${encodeURIComponent(stripHtml(quiz?.title || ""))}&body=${text}%0A%0A${encoded}`,
-      // Instagram n'a AUCUNE URL de partage web : on copie message + lien
-      // (le visiteur voit le bouton de confirmation "J'ai partage le lien"
-      // et l'indice "colle le lien...") puis on ouvre Instagram a cote.
-      instagram: "https://www.instagram.com/",
-    };
+    // LES URL DE PARTAGE VIVENT DANS `lib/partage/urlsReseaux.ts`.
+    //
+    // Elles etaient ecrites ici, au milieu de ce composant, et c'est
+    // exactement pour ca qu'un bug y a survecu des mois : le lien
+    // Pinterest n'a jamais porte de `media=`. Une logique enfermee dans
+    // un composant React n'est pas testable, donc elle n'est pas testee
+    // (AGENTS.md, 1er aout). Le blog appelle desormais la MEME fonction.
+    //
+    // Instagram n'a AUCUNE adresse de partage web : `urlPartage` rend
+    // `null`, et ce n'est pas une erreur. On copie le lien REELLEMENT
+    // partage (celui du resultat depuis l'ecran de resultat) et on
+    // ouvre Instagram a cote, exactement comme avant.
+    const url =
+      platform === "instagram"
+        ? "https://www.instagram.com/"
+        : urlPartage(platform, {
+            url: shareUrl,
+            texte: shareText,
+            titre: stripHtml(quiz?.title || ""),
+            media: shareMedia,
+          });
 
-    const url = urls[platform];
-    if (!url) return;
-
-    // Instagram n'a pas d'URL de partage : on copie le lien REELLEMENT
-    // partage (celui du resultat depuis l'ecran de resultat).
     if (platform === "instagram") void copyShareLink(scope, urlOverride);
+    if (!url) return;
 
     setShareWarning(false);
     const openedAt = Date.now();

@@ -3,6 +3,8 @@
 // Aligned with the Tipote `lib/planLimits.ts` API surface so shared logic
 // (e.g. `lib/leadLock.ts`) can be ported across repos with zero friction.
 
+import { OWNER_CATALOG, type OwnerProductId } from "@/lib/checkout/catalog";
+
 export type PlanId =
   | "free"
   | "lifetime"
@@ -185,16 +187,40 @@ export function canConnectMultipleSioKeys(plan: string | null | undefined): bool
 }
 
 /**
- * Prix publics des paliers premium « + » (Béné 2 juin 2026). Utilisés
- * dans les messages d'upsell (PATCH /api/projects 403, POST
- * /api/sio-api-keys 403, dialog ProjectSwitcher, panneau Survey AI).
+ * Prix publics des paliers PLUS, utilisés dans les messages d'upsell
+ * (403 de /api/projects, /api/sio-api-keys, analyses IA, dialogues).
  *
- * Source de vérité unique pour ne pas que les prix divergent entre les
- * différents messages d'erreur côté API et l'UI.
+ * -- CE COMMENTAIRE DISAIT "SOURCE DE VÉRITÉ UNIQUE", ET C'ÉTAIT FAUX --
+ *
+ * Les prix y étaient ÉCRITS EN DUR ("29€/mois", "290€/an") alors que
+ * `OWNER_CATALOG` (lib/checkout/catalog.ts) les porte déjà : c'est lui
+ * qui fait payer, et c'est lui qu'affiche le bon de commande. Deux
+ * tables de prix, donc deux prix le jour où l'un des deux bouge, et
+ * c'est celui des messages d'erreur qui serait resté en arrière sans
+ * que personne ne le voie (trouvé à l'audit du 30 août 2026).
+ *
+ * Ils sont maintenant DÉRIVÉS du catalogue. Il n'y a plus qu'une table.
+ *
+ * Au passage : "mensuel+" devient "mensuel PLUS", la convention de
+ * marque de Béné, et l'espace avant € est insécable.
  */
+function prixPublic(id: OwnerProductId, rythme: string): string {
+  const p = OWNER_CATALOG[id];
+  // Sans décimales quand le prix est rond : "29 €/mois" et pas
+  // "29,00 €/mois", qui alourdit un message d'erreur.
+  const montant = p.amountCents % 100 === 0 ? String(p.amountCents / 100) : (p.amountCents / 100).toFixed(2).replace(".", ",");
+  return `${montant}\u00a0€/${rythme}`;
+}
+
 export const PRICING_PLUS = {
-  monthlyPlus: { label: "Tiquiz mensuel+", price: "29€/mois" },
-  yearlyPlus: { label: "Tiquiz annuel+", price: "290€/an" },
+  monthlyPlus: {
+    label: OWNER_CATALOG["mensuel-plus"].label.replace(/\bPlus\b/, "PLUS"),
+    price: prixPublic("mensuel-plus", "mois"),
+  },
+  yearlyPlus: {
+    label: OWNER_CATALOG["annuel-plus"].label.replace(/\bPlus\b/, "PLUS"),
+    price: prixPublic("annuel-plus", "an"),
+  },
 } as const;
 
 /** Texte standard pour les messages d'upsell vers les plans + */

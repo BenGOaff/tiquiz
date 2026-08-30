@@ -29,7 +29,15 @@ function Marque() {
 
 export default function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 border-b border-[var(--tq-bord)] bg-[var(--tq-creme)]/90 backdrop-blur">
+        // LE FOND EST OPAQUE, et ce n'est pas un detail de gout.
+    //
+    // Il etait a 90 % avec un flou : joli sur une page claire, illisible
+    // au dessus d'une couverture d'article. Or les dix couvertures de
+    // Bene sont en marine sombre, et l'en-tete passe DEVANT elles au
+    // defilement : le menu devenait gris pale sur bleu nuit. Mesure de
+    // l'ancien contraste sur cette bande : bien en dessous du minimum
+    // lisible.
+    <header className="sticky top-0 z-40 border-b border-[var(--tq-bord)] bg-[var(--tq-creme)]">
       <div className="tq-large flex items-center justify-between gap-5 py-4">
         <Marque />
 

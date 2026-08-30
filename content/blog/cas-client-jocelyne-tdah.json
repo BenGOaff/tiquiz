@@ -46,7 +46,7 @@
     },
     {
       "type": "html",
-      "html": "<p><em>Mise à jour</em> à <em>J+10 du lancement du quiz :</em></p><p>🤑 Le <strong>coût par lead est passé à 0.12€</strong> sur la pub Meta.</p><p>📧 Le quiz a capturé <strong>407 leads qualifiés </strong>depuis son lancement.</p><p>🏆Et le livre promu par Jocelyne <strong>se classe parmis les meilleurs de sa catégorie</strong>, malgré la concurrence dans le domaine du développement personnel et du TDAH :</p>"
+      "html": "<p><em>Mise à jour</em> à <em>J+10 du lancement du quiz :</em></p><p>🤑 Le <strong>coût par lead est passé à 0.12€</strong> sur la pub Meta.</p><p>📧 Le quiz a capturé <strong>407 leads qualifiés </strong>depuis son lancement.</p><p>🏆 Et le livre promu par Jocelyne <strong>se classe parmis les meilleurs de sa catégorie</strong>, malgré la concurrence dans le domaine du développement personnel et du TDAH :</p>"
     },
     {
       "type": "image",
@@ -55,7 +55,7 @@
     },
     {
       "type": "html",
-      "html": "<p><em>Mise à jour</em> à <em>J+17 du lancement du quiz :</em></p><p>🤑 Le <strong>coût par lead est passé à 0.08€</strong> sur la pub Meta.</p><p>📧 Le quiz a capturé <strong>680 leads qualifiés </strong>depuis son lancement.</p><p>🏆Et le livre promu par Jocelyne <strong>se classe premier de plusieurs catégories</strong>, malgré la concurrence dans le domaine du développement personnel et du TDAH :</p>"
+      "html": "<p><em>Mise à jour</em> à <em>J+17 du lancement du quiz :</em></p><p>🤑 Le <strong>coût par lead est passé à 0.08€</strong> sur la pub Meta.</p><p>📧 Le quiz a capturé <strong>680 leads qualifiés </strong>depuis son lancement.</p><p>🏆 Et le livre promu par Jocelyne <strong>se classe premier de plusieurs catégories</strong>, malgré la concurrence dans le domaine du développement personnel et du TDAH :</p>"
     },
     {
       "type": "image",
@@ -93,7 +93,7 @@
     {
       "type": "titre",
       "niveau": 2,
-      "texte": "Le quiz Tiquiz :\"Quel type de cerveau TDAH êtes-vous ?\"",
+      "texte": "Le quiz Tiquiz : \"Quel type de cerveau TDAH êtes-vous ?\"",
       "id": "le-quiz-tiquiz-quel-type-de-cerveau-tdah-etes-vous"
     },
     {
@@ -127,7 +127,7 @@
     },
     {
       "type": "html",
-      "html": "<p>À chaque résultat, Tiquiz pose un tag différent sur le contact directement dans Systeme.io. </p><p>Le tag déclenche dans Systeme.io un workflow qui ajoute le tag générique\"TDAH\" et envoie l'email adapté au profil. </p><p><strong>Pas besoin de Zapier, pas de Make, pas une ligne de code.</strong></p><p>La passerelle est native - c'est ce qui rend la mise en place accessible à quelqu'un qui n'a jamais touché à du technique.</p>"
+      "html": "<p>À chaque résultat, Tiquiz pose un tag différent sur le contact directement dans Systeme.io. </p><p>Le tag déclenche dans Systeme.io un workflow qui ajoute le tag générique \"TDAH\" et envoie l'email adapté au profil. </p><p><strong>Pas besoin de Zapier, pas de Make, pas une ligne de code.</strong></p><p>La passerelle est native - c'est ce qui rend la mise en place accessible à quelqu'un qui n'a jamais touché à du technique.</p>"
     },
     {
       "type": "html",
@@ -213,7 +213,7 @@
     },
     {
       "type": "html",
-      "html": "<p><strong>Sources des benchmarks 2026 :</strong><a href=\"http://tryinteract.com\">tryinteract.com</a> · <a href=\"http://kyleads.com\">kyleads.com</a> · <a href=\"http://getaiform.com\">getaiform.com</a></p>"
+      "html": "<p><strong>Sources des benchmarks 2026 :</strong><a href=\"https://tryinteract.com\">tryinteract.com</a> · <a href=\"https://kyleads.com\">kyleads.com</a> · <a href=\"https://getaiform.com\">getaiform.com</a></p>"
     },
     {
       "type": "titre",

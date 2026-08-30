@@ -19,6 +19,7 @@ import test from "node:test";
 import { lireArticle, listerArticles, tousLesSlugs } from "../../lib/blog/articles.ts";
 import { estHrefSur, attributsLien, minutesDeLecture, nettoyerBloc, sommaire, texteBrut } from "../../lib/blog/rendu.ts";
 import { jsonLdArticle, jsonLdFaq, jsonLdFilDAriane, ORIGINE_BLOG, urlArticle } from "../../lib/blog/seo.ts";
+import { reponctuer } from "../../lib/blog/reponctuation.ts";
 
 const ARTICLES = listerArticles();
 const COMPLETS = tousLesSlugs().map((s) => lireArticle(s)!);
@@ -98,14 +99,126 @@ test("plus aucun lien vers les pages qui vont disparaitre", () => {
   }
 });
 
-test("le lien vers l'Atelier RESTE chez Systeme.io, et la raison reste ecrite", () => {
-  // Décision du 25 août, et elle n'a pas changé : l'Atelier a son PROPRE
-  // registre d'affiliés (`profiles.sio_affiliate_id` dans sa base), il
-  // ne lit que `?sa=` et jamais `?ref=`. Repointer ce lien changerait
-  // QUI est payé. Sans cette exception écrite noir sur blanc, le
-  // prochain passage "finit le travail" et casse le tunnel.
+test("le lien vers l'Atelier mene a SON domaine, plus au tunnel Systeme.io", () => {
+  // CETTE EXCEPTION A ETE LEVEE LE 30 AOUT, et il faut dire pourquoi
+  // sinon le prochain passage la remet.
+  //
+  // Jusqu'au 25 aout, le lien restait chez Systeme.io parce que
+  // l'Atelier tenait son PROPRE registre d'affilies et ne lisait que
+  // `?sa=`. Verifie ligne par ligne dans son depot le 30 aout : ce
+  // n'est plus vrai. `atelierduquiz.fr` est un hote de vente, donc son
+  // middleware capte le `?ref=` ; son bon de commande le transporte ; et
+  // `commissionnerVente` interroge le registre CENTRAL de Tipote en
+  // premier, avec `source_app: "atelier"` (c'est ce champ qui fixe les
+  // 70 %). Le registre historique n'est plus qu'un repli.
+  //
+  // Laisser le lien la-bas envoyait donc les lecteurs sur un tunnel qui
+  // ne nous transmet rien, alors que notre domaine commissionne.
   const texte = toutLeTexte();
-  assert.ok(texte.includes("tipote.fr/atelier-du-quiz"), "le lien de l'Atelier a ete repointe");
+  assert.ok(!texte.includes("tipote.fr/atelier-du-quiz"), "ancien tunnel Systeme.io");
+  assert.ok(texte.includes("atelierduquiz.fr"), "le domaine de l'Atelier");
+});
+
+test("aucun lien de LECTURE ne mene a l'espace affilie", () => {
+  // Bene, 30 aout : "certains liens sont debiles comme 'C'est pour ca
+  // que Tiquiz existe' qui mene vers l'affiliate center et pas vers
+  // Tiquiz". Sept liens de ce genre existaient : le lecteur clique pour
+  // essayer le produit et tombe sur un ecran de connexion qui ne le
+  // concerne pas.
+  //
+  // Le tableau de bord reste cite dans l'article d'affiliation, la ou
+  // c'est justement ce dont on parle : la regle porte donc sur le
+  // COUPLE (destination, texte du lien), pas sur l'URL seule.
+  for (const a of COMPLETS) {
+    for (const b of a.blocs) {
+      const fragments =
+        b.type === "html" ? [b.html]
+        : b.type === "faq" ? b.questions.map((q) => q.reponse)
+        : [];
+      for (const html of fragments) {
+        for (const m of html.matchAll(/<a[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g)) {
+          if (!m[1].includes("affiliate.tipote.com")) continue;
+          const texteDuLien = m[2].replace(/<[^>]+>/g, "");
+          assert.ok(
+            /affiliate\.tipote\.com/i.test(texteDuLien),
+            `${a.slug} : "${texteDuLien.slice(0, 50)}" mene a l'espace affilie`,
+          );
+        }
+      }
+      if (b.type === "cta") {
+        assert.ok(
+          !b.url.includes("affiliate.tipote.com"),
+          `${a.slug} : le bouton "${b.texte}" mene a l'espace affilie`,
+        );
+      }
+    }
+  }
+});
+
+test("aucune URL concatenee par l'import ne survit", () => {
+  // `systeme.io/fr?sa=<id>fr/blog/exemples-lead-magnets` : le lien
+  // affilie de Bene a ete recolle DEVANT un chemin. Ces quatre URL
+  // etaient MORTES, personne n'a jamais pu les suivre, et rien ne les
+  // signalait puisque le TEXTE du lien, lui, etait juste.
+  const texte = toutLeTexte();
+  assert.ok(!/\?sa=[a-z0-9]+fr[/?]/i.test(texte), "lien affilie colle devant un chemin");
+});
+
+test("aucun lien externe n'est en http nu", () => {
+  // Un `http://` en 2026 declenche un avertissement du navigateur, et
+  // c'est NOUS qui envoyons le lecteur dessus.
+  for (const a of COMPLETS) {
+    for (const b of a.blocs) {
+      const brut = JSON.stringify(b);
+      assert.ok(!/"http:\/\//.test(brut) && !/href=\\"http:\/\//.test(brut), `${a.slug} : lien en clair`);
+    }
+  }
+});
+
+test("aucun guillemet ne reste colle a son mot", () => {
+  // L'import a remplace les chevrons par des guillemets droits et a
+  // emporte l'espace qui les entourait : `Donc"c'est gratuit"`,
+  // `conversion"a une maman`. 46 occurrences, invisibles a la relecture
+  // rapide parce que la phrase, elle, est juste.
+  //
+  // LE TEST APPELLE LA MEME FONCTION QUE LA REPARATION
+  // (`scripts/reparer-blog.mjs`). Une regle recopiee ici finirait par
+  // accepter ce que le script corrige, ou l'inverse : c'est le motif des
+  // deux listes qui divergent, paye quatre fois dans ce depot.
+  //
+  // Le contenu est propre quand la reparation ne change RIEN : c'est la
+  // definition la plus courte, et elle ne peut pas mentir.
+  for (const a of COMPLETS) {
+    for (const b of a.blocs) {
+      const fragments =
+        b.type === "html" ? [b.html]
+        : b.type === "titre" ? [b.texte]
+        : b.type === "cta" ? [b.texte]
+        : b.type === "faq" ? b.questions.flatMap((q) => [q.question, q.reponse])
+        : [];
+      for (const html of fragments) {
+        assert.equal(reponctuer(html), html, `${a.slug} : ponctuation collee`);
+      }
+    }
+    assert.equal(reponctuer(a.titre), a.titre, `${a.slug} : titre`);
+    assert.equal(reponctuer(a.description), a.description, `${a.slug} : description`);
+  }
+});
+
+test("la reponctuation met l'espace du BON cote", () => {
+  // Le piege : un guillemet ouvrant veut l'espace AVANT, un fermant la
+  // veut APRES. Une regle qui ne compte pas les guillemets mettrait
+  // l'espace du mauvais cote dans un cas sur deux, et personne ne le
+  // verrait en relisant une liste de remplacements.
+  assert.equal(reponctuer('<p>Donc"c\'est gratuit" ok</p>'), '<p>Donc "c\'est gratuit" ok</p>');
+  assert.equal(reponctuer("<p>parles \"funnel\"a une maman</p>"), "<p>parles \"funnel\" a une maman</p>");
+  // Un guillemet DANS un attribut n'est pas une citation : on n'y touche
+  // pas, sinon on casse le HTML.
+  const lien = '<a href="https://x.fr" title="a">t</a>';
+  assert.equal(reponctuer(lien), lien);
+  // Et ce qui est deja propre ne bouge pas : le script est idempotent.
+  const propre = '<p>Il a dit "oui", puis il est parti.</p>';
+  assert.equal(reponctuer(propre), propre);
 });
 
 test("l'affiliation ne parle plus du code Systeme.io", () => {

@@ -30,6 +30,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 import AffiliesCard from "@/components/admin/AffiliesCard";
+import CommentairesBlogCard from "@/components/admin/CommentairesBlogCard";
 import PilotageCard from "@/components/admin/PilotageCard";
 import ResellerPaymentEventsCard from "@/components/admin/ResellerPaymentEventsCard";
 import ResellersCard from "@/components/admin/ResellersCard";
@@ -214,7 +215,16 @@ export default function AdminDashboard() {
       {onglet === "stats" && <StatistiquesCard />}
 
       {/* ── SUPPORT : qui attend une reponse, et depuis quand ── */}
-      {onglet === "support" && <SupportCard />}
+      {onglet === "support" && (
+        <div className="space-y-6">
+          <SupportCard />
+          {/* LA MODERATION DU BLOG VIT AVEC LE SUPPORT, et pas dans un
+              onglet a elle : les deux sont "quelqu'un attend une reponse
+              de nous". Un onglet de plus pour deux commentaires par
+              semaine, c'est un onglet qu'on n'ouvre jamais. */}
+          <CommentairesBlogCard />
+        </div>
+      )}
 
       {/* ── MES REVENDEURS ──
           Ces deux cartes vivaient tout en bas de "Mes ventes", apres le

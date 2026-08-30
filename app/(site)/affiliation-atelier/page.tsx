@@ -43,8 +43,12 @@ import { AFFILIATE_DASHBOARD_URL } from "@/lib/affiliateUrls";
 import { REGLES, TAUX, gainAtelier } from "@/lib/site/programmeAffiliation";
 
 const TITRE = "Affiliation Atelier du Quiz : 70 % par vente";
+// Le prix et le taux viennent du module, jamais tapés ici : une
+// description qui annonce un prix périmé part dans les résultats de
+// recherche et y reste des semaines.
 const DESCRIPTION =
-  "Recommande l'Atelier du Quiz, la formation de 7 jours à 47 €, et touche 70 % sur chaque vente. Comment obtenir ton lien et comment tu es payé.";
+  `Recommande l'Atelier du Quiz, la formation de 7 jours à ${gainAtelier().prix}, et touche ` +
+  `${Math.round(TAUX.atelier * 100)} % sur chaque vente. Comment obtenir ton lien et comment tu es payé.`;
 
 export const metadata: Metadata = {
   title: TITRE,

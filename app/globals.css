@@ -870,12 +870,120 @@ html[data-pq-compact] body {
   color: var(--tq-bleu-fonce);
   text-decoration-thickness: 1px;
 }
+/* UN SEUL ACCENT BLEU PAR PAGE, et c'est le résumé du haut.
+   Le filet des citations était lui aussi à la couleur de marque : deux
+   bleus qui appellent l'oeil sur le même écran, aucun ne l'appelle. Il
+   passe au gris des bordures (Béné, 30 août : "les encarts bleu sont
+   moches j'en veux pas"). */
 .tq-site .tiquiz-blog blockquote {
   color: var(--tq-encre-douce);
-  border-left: 3px solid var(--tq-bleu);
+  border-left: 3px solid var(--tq-bord);
   padding-left: 1.1rem;
   font-style: normal;
 }
 .tq-site .tiquiz-blog img {
   border-radius: 0.75rem;
+}
+
+/* ── LA PAGE D'ARTICLE ────────────────────────────────────────────────
+   Béné, 30 août 2026 : "le contenu est mal réparti, dur à lire", "un
+   bouton texte bleu sur couleur bleu c'est carrément de la merde", "les
+   encarts bleu sont moches j'en veux pas en plus ils rendent le texte
+   illisible".
+
+   Les trois viennent de la même page et les trois se mesurent :
+   le corps faisait 1168 px de large, et le libellé des boutons sortait
+   en #0B3FA8 sur #1D6BF0, soit 1,93:1 de contraste quand le minimum
+   lisible est 4,5:1. */
+
+/* LE BOUTON PLEIN GAGNE SUR LA RÈGLE DES LIENS D'ARTICLE.
+   `.tq-site .tiquiz-blog a` pèse 0,3,0 et `.tq-bouton` 0,1,0 : le lien
+   gagnait, donc le libellé prenait le bleu foncé du texte. On monte la
+   spécificité au lieu d'un `!important` : le prochain bouton posé dans
+   un article n'aura pas à connaître cette histoire, il portera la
+   classe. */
+.tq-site .tq-bouton-plein,
+.tq-site .tiquiz-blog a.tq-bouton-plein {
+  color: #fff;
+  text-decoration: none;
+}
+.tq-site .tq-bouton-plein:hover,
+.tq-site .tiquiz-blog a.tq-bouton-plein:hover {
+  color: #fff;
+}
+
+/* LE RÉSUMÉ (TL;DR), MIS EN ÉVIDENCE.
+   Il était rendu comme un paragraphe parmi les autres, alors que c'est
+   le seul que la moitié des lecteurs lira. Aucun aplat de couleur : un
+   filet HORIZONTAL au dessus et un fond blanc. Une décoration à gauche
+   déplacerait le texte et casserait l'alignement des bords (règle du
+   3 août), et un aplat bleu est exactement ce dont elle ne veut pas. */
+.tq-resume {
+  border-top: 3px solid var(--tq-bleu);
+  border-bottom: 1px solid var(--tq-bord);
+  padding: 1.4rem 0 1.1rem;
+}
+.tq-resume .tiquiz-blog {
+  font-size: 1.02rem;
+}
+.tq-resume .tiquiz-blog p:first-child {
+  margin-top: 0;
+}
+.tq-resume .tiquiz-blog p:last-child {
+  margin-bottom: 0;
+}
+
+/* LE SOMMAIRE. Les entrées se coupent proprement dans un rail de
+   320 px : un titre de section n'est pas court. */
+.tq-sommaire a {
+  text-decoration: none;
+}
+.tq-sommaire-mobile > summary::marker {
+  color: var(--tq-bleu);
+}
+
+/* LES BOUTONS DE PARTAGE. La couleur du réseau n'apparaît qu'au survol :
+   six pastilles bariolées à côté d'un article, ça se lit comme une
+   publicité. */
+.tq-site [data-partage]:hover {
+  background: var(--survol);
+  border-color: transparent;
+  color: #fff;
+}
+
+/* LES CHAMPS DU FORMULAIRE DE COMMENTAIRE. */
+.tq-champ {
+  display: block;
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--tq-bord);
+  background: #fff;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.95rem;
+  color: var(--tq-encre);
+  transition: border-color 0.15s ease;
+}
+.tq-champ:focus {
+  outline: none;
+  border-color: var(--tq-bleu);
+}
+
+/* UNE IMAGE D'ARTICLE NE DÉPASSE JAMAIS SA PROPRE DÉFINITION, NI LA
+   HAUTEUR D'UN ÉCRAN.
+
+   `width: auto` + `height: auto` + les deux `max-*` : le navigateur
+   réduit proportionnellement pour tenir dans la boîte, sans jamais
+   déformer ni recadrer. Poser `width: 100%` avec un `max-height`
+   ÉCRASERAIT l'image, ce qui est pire que le problème d'origine.
+
+   La borne fine est posée en ligne par `VisuelArticle`, qui a lu
+   l'en-tête du fichier ; celle ci est le filet pour une image dont on
+   n'a pas pu lire la taille. 760 px de haut, c'est à peu près un écran
+   de portable : au delà, une capture en portrait pousse tout le texte
+   hors de vue et le lecteur croit que l'article est fini. */
+.tq-site .tiquiz-blog img {
+  max-width: 100%;
+  max-height: 760px;
+  width: auto;
+  height: auto;
 }
