@@ -2942,3 +2942,185 @@ recopiés.
 **À faire quand elle en aura le temps :** plusieurs visuels portent
 `www.tipote.fr/tiquiz` incrusté dans l'image. Ça ne casse rien, mais ça
 envoie le lecteur vers une adresse qui va disparaître.
+
+## La page d'article du blog, refaite sur le modèle Typeform (Béné, 30 août 2026)
+
+Elle a listé dix défauts en regardant une page d'article, et neuf
+viennent d'UN chiffre : **le corps de l'article faisait 1168 px de
+large**. Mesuré, pas déduit. À 18 px, ça fait 150 caractères par ligne
+et l'oeil perd le début de la ligne suivante, ce qu'elle décrit par "le
+contenu est mal réparti, dur à lire". Les images héritaient de cette
+largeur, d'où "certaines images sont d'une taille disproportionnée c'est
+carrément n'importe quoi".
+
+**La page est maintenant une grille : 720 px de lecture, 320 px de rail
+collant.** Le rail porte ce qui doit rester sous les yeux (sommaire,
+partage, invitation) ; le bas de page porte ce qu'on choisit après avoir
+fini de lire.
+
+### Les trois défauts d'images, et pourquoi la largeur n'était que le premier
+
+| Ce qu'on affichait | Mesuré |
+|---|---|
+| `gwenn.webp` (200 px) en `w-full` | agrandie **5,8 fois** |
+| `publicite-quiz.webp` (842 x 1808) | **2508 px de haut**, deux écrans et demi |
+| `schema-...-large.webp` **PUIS** `-mobile.webp` | le même schéma deux fois, la 2e étirée sur 2151 px |
+
+Le troisième est le vrai "n'importe quoi" et aucune largeur ne l'aurait
+corrigé : ses schémas existent en DEUX versions dessinées exprès, et
+l'import les a transformées en deux blocs image ordinaires. Il fallait
+comprendre qu'ils n'en font qu'un.
+
+- `lib/blog/imagesArticle.ts` : `normaliserImages()` retire les doublons
+  voisins puis apparie les variantes en un `<picture>`. **L'extension
+  peut différer** entre les deux versions (`.svg` et `.webp`) : c'est le
+  cas réel du corpus.
+- `lib/blog/dimensionsImage.ts` : la taille naturelle, lue dans les
+  premiers octets (WebP VP8 / VP8L / VP8X, PNG, JPEG, GIF) et dans le
+  `viewBox` des SVG. **Pas de dépendance** : la lecture a lieu au build,
+  sur des fichiers du dépôt, et une librairie de plus est un chemin de
+  plus qui casse en prod sans casser en local (leçon `pdf-parse`).
+- `tailleAffichage()` borne par la colonne ET par la hauteur (760 px).
+  Une capture en portrait se borne par sa HAUTEUR : c'est ce qui
+  manquait. Le ratio est conservé, on RÉDUIT, on ne recadre jamais.
+- CSS : `width: auto; height: auto` + les deux `max-*`. **Poser
+  `width: 100%` avec un `max-height` ÉCRASERAIT l'image**, ce qui est
+  pire que le problème d'origine.
+
+### Le bouton bleu sur bleu : c'était de la spécificité CSS
+
+"Un bouton texte bleu sur couleur bleu c'est carrément de la merde."
+Elle a raison et c'était mesurable : `.tq-site .tiquiz-blog a` pèse
+0,3,0 et `.tq-bouton` 0,1,0, donc le libellé prenait le bleu foncé des
+liens d'article. **#0B3FA8 sur #1D6BF0 = 1,93:1**, quand le minimum
+lisible est 4,5:1.
+
+`tq-bouton-plein` (globals.css) monte la spécificité au lieu d'un
+`!important` : le prochain bouton posé dans un article portera la classe
+sans avoir à connaître cette histoire.
+
+Au passage, l'encart de fin d'article n'est plus un aplat marine ("les
+encarts bleu sont moches j'en veux pas") : fond blanc, filet HORIZONTAL
+à la couleur de marque, texte à l'encre du site. Un seul accent bleu par
+page, et c'est le résumé du haut ; le filet des citations est repassé au
+gris.
+
+### Pinterest ne recevait PAS l'image, et le viewer de quiz non plus
+
+"Aucune image ne peut être repartagée sur Pinterest, les images ne sont
+pas conformes." Deux causes, et la première vivait dans le viewer :
+
+1. **Le lien Pinterest n'a jamais porté de `media=`.** Il était écrit
+   dans `PublicQuizClient.tsx`, au milieu d'un composant de 5000 lignes,
+   donc hors de portée de tout test : il y est resté des mois. Sans
+   `media`, Pinterest ouvre son formulaire SANS image et demande au
+   visiteur d'en choisir une.
+2. **Le format.** Pinterest est un flux VERTICAL : une image 16/9 y
+   occupe trois fois moins de hauteur que ses voisines, donc elle ne
+   circule pas. Les couvertures font 1200 x 675.
+
+**Règle : `lib/partage/urlsReseaux.ts` construit les URL, pour le blog
+ET pour le viewer de quiz.** `media` est un CHAMP du contexte, jamais
+deviné, et un chemin relatif n'est jamais envoyé (Pinterest ne connaît
+pas notre domaine). `absolutiser()` refuse toute origine locale, comme
+`resolveAppUrl` : un `??` protège du manquant, jamais du faux.
+
+`npm run blog:epingles` construit une épingle **1000 x 1500** par
+article (`public/blog/pin/<slug>.jpg`, committées) : sa couverture
+nette, posée sur elle-même floutée et assombrie, avec son logo en pied.
+**On ne dessine AUCUN texte** : ses couvertures portent déjà leur titre
+dans sa typographie, et le réécrire avec la police que trouve le serveur
+donnerait une épingle qui change d'allure selon la machine.
+
+### Le TL;DR est un chapeau, pas un paragraphe
+
+Il vit dans le PREMIER bloc HTML, mélangé au texte
+(`<p><strong><em>TL;DR</em></strong></p>` suivi du résumé).
+`extraireResume()` (`lib/blog/gabarit.ts`) le sort et retire le libellé.
+Neuf articles sur dix en ont un ; l'étude de cas de Jocelyne n'en a pas,
+et on n'en fabrique PAS : un résumé tiré des premières phrases répète
+mot pour mot le paragraphe juste en dessous.
+
+### Les liens qui mentaient (et le script qui les répare)
+
+"Certains liens sont débiles comme 'C'est pour ça que Tiquiz existe' qui
+mène vers l'affiliate center et pas vers Tiquiz."
+
+- **7 liens de lecture** menaient à `affiliate.tipote.com/signup` ;
+- **4 URL étaient MORTES**, concaténées par l'import :
+  `systeme.io/fr?sa=<id>fr/blog/exemples-lead-magnets` ;
+- **7 liens externes en `http://`** ;
+- **46 guillemets collés** : l'import a remplacé les chevrons `«` `»` par
+  des guillemets droits et a emporté l'espace qui les entourait.
+
+`npm run blog:reparer` (idempotent, `--verifie` pour compter seulement)
+corrige les quatre familles. **La décision se prend sur le COUPLE
+(destination, texte du lien)** : `affiliate.tipote.com` est une
+destination JUSTE quand la phrase parle du programme et FAUSSE quand
+elle dit "teste Tiquiz". Un remplacement à l'aveugle sur l'URL aurait
+cassé les liens légitimes de l'article d'affiliation.
+
+La règle de reponctuation vit dans `lib/blog/reponctuation.ts`, et le
+TEST APPELLE LA MÊME FONCTION que le script : le contenu est propre
+quand la réparation ne change rien. Deux copies de la règle finiraient
+par ne plus être d'accord.
+
+**L'exception "le lien de l'Atelier reste chez Systeme.io" est LEVÉE.**
+Elle datait du 25 août et disait que l'Atelier tenait son propre
+registre et ne lisait que `?sa=`. Vérifié dans son dépôt le 30 août :
+`atelierduquiz.fr` est un hôte de vente, son middleware capte le `?ref=`,
+et `commissionnerVente` interroge le registre CENTRAL de Tipote en
+premier avec `source_app: "atelier"`.
+
+### Les commentaires : modérés par défaut, et rendus par le serveur
+
+Sa raison est le référencement. Une liste chargée après coup par le
+navigateur n'est pas dans le HTML servi : pour un moteur, l'article n'a
+alors aucun commentaire. La liste est donc **rendue par le serveur**, et
+le JSON-LD porte `commentCount` (uniquement quand il y en a : annoncer
+`0` sur dix articles dit le contraire de ce qu'on cherche).
+
+- **Rien n'est public par défaut.** Un commentaire arrive en
+  `en_attente` et n'apparaît qu'après relecture dans `/admin` (onglet
+  Support, `CommentairesBlogCard`). Une file qu'on ne montre pas est une
+  file que personne ne relève.
+- **L'adresse email ne sort jamais.** Elle n'est pas dans le `select` de
+  la lecture publique : c'est la règle des IBAN du 25 août.
+- **Le champ piège** plutôt qu'un captcha (qui fait fuir une lectrice sur
+  cinq et envoie ses données à un tiers). Le piège attrapé répond 200 :
+  dire à un robot qu'il est repéré lui apprend à ne plus l'être.
+- **On ne compte PAS les noms de domaine nus** comme des liens. Ce blog
+  parle d'outils, "Systeme.io" apparaît dans toute discussion normale, et
+  les compter refuserait les commentaires les plus intéressants. Un
+  garde-fou qui crie pour rien finit désactivé.
+
+**LE PIÈGE QUI A ÉTÉ ÉVITÉ DE JUSTESSE, et il vaut pour tout ce dépôt :**
+`lib/supabaseAdmin.ts` LÈVE au chargement du module quand une variable
+manque. Un `import` en tête de `commentairesStore.ts` faisait donc
+répondre **500 à toute la page d'article** sans base, alors que le blog
+n'a jamais eu besoin de base pour s'afficher. Constaté en lançant le
+serveur, pas déduit. Le client est chargé par `await import(...)` DANS
+le try : une base absente coûte la section commentaires, jamais
+l'article.
+
+🚨 Migration : `supabase/migrations/20260830_blog_commentaires.sql`.
+
+### Ce que le filet de tests fige
+
+`tests/logic/article-blog.test.mts` (31 tests) et les cinq nouveaux tests
+de `blog.test.mts`. Ils portent ce qu'ELLE a vu : une image agrandie 5,8
+fois, une capture de 2508 px de haut, le même schéma affiché deux fois,
+un lien de lecture vers l'espace affilié, un guillemet collé, une épingle
+qui n'est pas en 1000 x 1500.
+
+### Ce qui reste ouvert, et qui n'est pas du code
+
+- **80 % des images du blog n'ont pas d'`alt`**, et trois portent
+  "tiquiz amazon" sur des visuels sans rapport. Écrire ces textes demande
+  de savoir ce qu'il y a dans l'image : c'est un travail à faire avec
+  Béné, pas à inventer.
+- **Plusieurs couvertures portent une adresse périmée incrustée dans le
+  dessin** (`tipote.fr/<slug>`, `tipote.fr/tiquiz?sa=TON_ID`), et celle
+  de l'article d'affiliation annonce **108 €/mois** alors que le texte
+  corrigé dit 204 €. Le visuel contredit l'article, et il part tel quel
+  sur Pinterest.

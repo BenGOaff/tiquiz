@@ -2,19 +2,65 @@
 //
 // UN ARTICLE.
 //
-// Rendu STATIQUEMENT : le contenu est un fichier du dépôt, il ne change
-// qu'au déploiement. Une page servie sans aucun aller-retour est aussi
-// la meilleure chose qu'on puisse faire pour le référencement, et la
-// seule qui tienne si la base est indisponible.
+// -- LA MISE EN PAGE, REPRISE DE TYPEFORM (Béné, 30 août 2026) --------
+//
+// "certaines images sont d'une taille disproportionnée c'est carrément
+// n'importe quoi. Le contenu est mal réparti, dur à lire : tu as bien
+// étudié le blog et les articles de Typeform ? Pourquoi tu gardes pas un
+// sticky bar avec les principaux CTA et/ou articles relatifs ? Le TL;DR
+// du début doit être mis en évidence, comme sur la plupart des blogs
+// sérieux."
+//
+// Tout ce qu'elle décrit vient d'UN chiffre, mesuré avant correction :
+// **le corps de l'article faisait 1168 px de large**. À 18 px, ça fait
+// 150 caractères par ligne, et l'oeil perd le début de la ligne
+// suivante. Les images héritaient de cette largeur, donc une capture de
+// 500 px était étirée à 1168, et une variante téléphone de 760 x 1400
+// occupait 2151 px de haut.
+//
+// La page est donc une GRILLE : 720 px de lecture, 320 px de rail. Le
+// rail porte ce qui doit rester sous les yeux (sommaire, partage,
+// invitation), le bas de page porte ce qu'on choisit après avoir fini.
+//
+// -- CE QUI EST RENDU, ET PAR QUI -------------------------------------
+//
+// Aucune décision n'est prise dans ce fichier :
+//   - `extraireResume` sort le TL;DR du corps (lib/blog/gabarit.ts) ;
+//   - `normaliserImages` apparie les variantes desktop / téléphone et
+//     retire les doublons (lib/blog/imagesArticle.ts) ;
+//   - `tailleRendue` borne chaque image (lib/blog/imagesDisque.ts) ;
+//   - `articlesVoisins` choisit la suite (lib/blog/gabarit.ts) ;
+//   - `urlPartage` construit les liens de partage (lib/partage/).
+// Toutes sont pures et testées. Une décision écrite dans le JSX est une
+// décision que personne ne peut vérifier.
+//
+// -- ELLE RESTE STATIQUE, MAIS ELLE SE REVALIDE -----------------------
+//
+// `force-static` PLUS `revalidate` : la page est prérendue au build et
+// régénérée toutes les dix minutes. Les deux sont nécessaires.
+//
+//   - sans `force-static`, la lecture des commentaires est une requête
+//     non mise en cache, donc Next bascule TOUTE la page en rendu à la
+//     demande. Vérifié dans la sortie de `next build` : l'article
+//     passait de prérendu à dynamique. Un blog rendu à chaque visite,
+//     c'est le contraire de ce qu'on cherche pour le référencement.
+//   - sans `revalidate`, la page serait figée au build : un commentaire
+//     publié par Béné n'apparaîtrait jamais, et elle conclurait que le
+//     bouton ne marche pas (scénario Jocelyne du 1er août).
+//
+// Dix minutes de retard sur une conversation, personne ne les voit.
 
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import { lireArticle, listerArticles, tousLesSlugs } from "@/lib/blog/articles";
+import { articlesVoisins, extraireResume } from "@/lib/blog/gabarit";
+import { normaliserImages } from "@/lib/blog/imagesArticle";
+import { lireCommentairesPublies } from "@/lib/blog/commentairesStore";
 import { rubriqueDe } from "@/lib/blog/rubriques";
-import CarteArticle from "@/components/site/CarteArticle";
 import { minutesDeLecture, nettoyerBloc, sommaire } from "@/lib/blog/rendu";
+import { epinglePour, textePartage } from "@/lib/blog/partage";
 import {
   ORIGINE_BLOG,
   jsonLdArticle,
@@ -23,9 +69,16 @@ import {
   urlArticle,
 } from "@/lib/blog/seo";
 
+import CarteArticle from "@/components/site/CarteArticle";
+import Commentaires from "@/components/site/Commentaires";
+import EncartCta from "@/components/site/EncartCta";
+import PartageArticle from "@/components/site/PartageArticle";
+import RailArticle from "@/components/site/RailArticle";
+import VisuelArticle from "@/components/site/VisuelArticle";
+
 export const dynamic = "force-static";
 export const dynamicParams = false;
-export const revalidate = 3600;
+export const revalidate = 600;
 
 export function generateStaticParams() {
   return tousLesSlugs().map((slug) => ({ slug }));
@@ -83,20 +136,25 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   const a = lireArticle(slug);
   if (!a) notFound();
 
+  const { resume, corps } = extraireResume(a.blocs);
+  const blocs = normaliserImages(corps);
   const toc = sommaire(a.blocs);
   const minutes = minutesDeLecture(a.blocs);
   const faq = jsonLdFaq(a);
-  const autres = listerArticles()
-    .filter((x) => x.slug !== a.slug)
-    .slice(0, 3);
-
   const rubrique = rubriqueDe(a.slug);
+  const voisins = articlesVoisins(a, listerArticles(), 3);
+
+  const url = urlArticle(a.slug);
+  const epingle = epinglePour(a.slug);
+  const partage = textePartage(a);
+
+  const commentaires = await lireCommentairesPublies(a.slug);
 
   return (
     <main>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdArticle(a)) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdArticle(a, commentaires.length)) }}
       />
       <script
         type="application/ld+json"
@@ -109,40 +167,44 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         />
       ) : null}
 
-      {/* LE CHAPEAU, EN PLEINE LARGEUR.
-          Le titre respire, la couverture suit dessous. C'est la seule
-          partie de la page qui sort du gabarit de lecture : le CORPS,
-          lui, reste borné à une longueur de ligne confortable, parce
-          qu'un paragraphe de 120 caractères ne se lit pas. */}
+      {/* LE CHAPEAU. Il vit dans la colonne de lecture, pas en pleine
+          largeur : le titre, le sous-titre et le premier paragraphe
+          doivent partir du MÊME bord gauche. C'est la règle du 3 août,
+          et c'est ce qui rendait la page bancale. */}
       <header className="tq-large pt-14 sm:pt-20">
-        <nav aria-label="Fil d'Ariane" className="tq-doux text-sm">
-          <Link href="/blog" className="hover:text-[var(--tq-encre)]">
-            Blog
-          </Link>
-          {rubrique ? (
-            <>
-              <span className="mx-2">/</span>
-              <Link
-                href={`/blog/rubrique/${rubrique.id}`}
-                className="hover:text-[var(--tq-encre)]"
-              >
-                {rubrique.libelle}
-              </Link>
-            </>
-          ) : null}
-        </nav>
+        <div className="max-w-[45rem]">
+          <nav aria-label="Fil d'Ariane" className="tq-doux text-sm">
+            <Link href="/blog" className="hover:text-[var(--tq-encre)]">
+              Blog
+            </Link>
+            {rubrique ? (
+              <>
+                <span className="mx-2">/</span>
+                <Link
+                  href={`/blog/rubrique/${rubrique.id}`}
+                  className="hover:text-[var(--tq-encre)]"
+                >
+                  {rubrique.libelle}
+                </Link>
+              </>
+            ) : null}
+          </nav>
 
-        <h1 className="mt-5 text-[2.1rem] leading-[1.1] sm:text-[2.9rem]">{a.titre}</h1>
-        <p className="tq-doux mt-4 max-w-[64ch] text-[1.1rem] leading-relaxed">{a.description}</p>
-        <p className="tq-doux mt-6 text-sm">
-          Par Béné, fondatrice de Tiquiz{" | "}
-          <time dateTime={a.publieLe}>{jourLisible(a.publieLe)}</time>
-          {" | "}
-          {minutes} min de lecture
-        </p>
+          <h1 className="mt-5 text-[2.1rem] leading-[1.1] sm:text-[2.7rem]">{a.titre}</h1>
+          <p className="tq-doux mt-4 text-[1.1rem] leading-relaxed">{a.description}</p>
+          <p className="tq-doux mt-6 text-sm">
+            Par Béné, fondatrice de Tiquiz{" | "}
+            <time dateTime={a.publieLe}>{jourLisible(a.publieLe)}</time>
+            {" | "}
+            {minutes} min de lecture
+          </p>
+        </div>
 
         {a.couverture ? (
-          <div className="tq-carte-media mt-9">
+          // La couverture est une image DESSINÉE, pas une capture : elle
+          // a droit à plus de largeur que le texte, et elle porte le
+          // ratio de ses vignettes.
+          <div className="tq-carte-media mt-9 max-w-[56rem]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={a.couverture}
@@ -153,110 +215,134 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               // tout de suite. Un `lazy` ici retarderait le plus gros
               // élément de la page, donc la note de performance.
               fetchPriority="high"
+              {...(epingle ? { "data-pin-media": epingle } : {})}
             />
           </div>
         ) : null}
       </header>
 
-      <div className="tq-large">
-        {toc.length >= 3 ? (
-          <nav className="mt-12 rounded-2xl border border-[var(--tq-bord)] bg-white p-6">
-            <p className="tq-etiquette">Dans cet article</p>
-            <ul className="mt-3 space-y-1.5 text-[0.95rem]">
-              {toc.map((e) => (
-                <li key={e.id} className={e.niveau === 3 ? "ml-4" : ""}>
-                  <a href={`#${e.id}`} className="tq-doux hover:text-[var(--tq-bleu)]">
-                    {e.texte}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        ) : null}
+      <div className="tq-large mt-12 grid gap-x-16 lg:grid-cols-[minmax(0,45rem)_20rem] lg:justify-between">
+        <div className="min-w-0">
+          {/* LE TL;DR, MIS EN ÉVIDENCE. Il était rendu comme un
+              paragraphe parmi les autres, alors que c'est le seul que la
+              moitié des lecteurs lira. */}
+          {resume ? (
+            <section className="tq-resume" aria-label="En bref">
+              <p className="tq-etiquette">En bref</p>
+              <div
+                className="tiquiz-blog mt-2"
+                dangerouslySetInnerHTML={{ __html: nettoyerBloc(resume) }}
+              />
+            </section>
+          ) : null}
 
-        <article className="tiquiz-blog mt-12">
-          {a.blocs.map((b, i) => {
-            if (b.type === "titre") {
-              const Balise = b.niveau === 2 ? "h2" : "h3";
-              return (
-                <Balise key={i} id={b.id} className="scroll-mt-24">
-                  {b.texte}
-                </Balise>
-              );
-            }
-            if (b.type === "html") {
-              return <div key={i} dangerouslySetInnerHTML={{ __html: nettoyerBloc(b.html) }} />;
-            }
-            if (b.type === "image") {
-              return (
-                // L'image garde SON format : jamais de hauteur imposée,
-                // jamais d'`object-cover`. C'est la règle du 4 août, et
-                // un schéma recadré ne veut plus rien dire.
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={i}
-                  src={b.src}
-                  alt={b.alt}
-                  loading="lazy"
-                  className="my-8 h-auto w-full"
-                />
-              );
-            }
-            if (b.type === "cta") {
-              return (
-                <p key={i} className="my-10">
-                  <a href={b.url} className="tq-bouton no-underline">
-                    {b.texte}
-                  </a>
-                </p>
-              );
-            }
-            return (
-              <section key={i} className="my-10">
-                {b.questions.map((q, k) => (
-                  <details key={k} className="border-b border-[var(--tq-bord)] py-4">
-                    <summary className="cursor-pointer font-semibold">{q.question}</summary>
-                    <div
-                      className="mt-2"
-                      dangerouslySetInnerHTML={{ __html: nettoyerBloc(q.reponse) }}
-                    />
-                  </details>
+          {/* LE SOMMAIRE SUR PETIT ÉCRAN. Le rail n'existe pas sous
+              1024 px : replié, il ne s'interpose pas entre le lecteur et
+              son article. */}
+          {toc.length >= 3 ? (
+            <details className="tq-sommaire-mobile mt-8 lg:hidden">
+              <summary className="tq-etiquette cursor-pointer">Dans cet article</summary>
+              <ul className="tq-sommaire mt-3 space-y-2 text-[0.95rem]">
+                {toc.map((e) => (
+                  <li key={e.id} className={e.niveau === 3 ? "pl-3" : ""}>
+                    <a href={`#${e.id}`} className="tq-doux hover:text-[var(--tq-bleu)]">
+                      {e.texte}
+                    </a>
+                  </li>
                 ))}
-              </section>
-            );
-          })}
-        </article>
+              </ul>
+            </details>
+          ) : null}
 
-        {/* CE QUE LE LECTEUR FAIT ENSUITE. Un article qui se termine sur
-            un point final renvoie le visiteur à son onglet précédent. */}
-        <aside className="mt-16 rounded-3xl bg-[var(--tq-marine)] px-7 py-10 sm:px-10">
-          <h2 className="max-w-[22ch] text-[1.5rem] text-white">
-            Un quiz qui tague tes leads dans <span className="tq-surb">Systeme.io</span>
-          </h2>
-          <p className="mt-4 max-w-[52ch] leading-relaxed text-[#b9c3d9]">
-            Tiquiz génère le quiz, pose les tags par profil et te rend des leads déjà triés. Plan
-            gratuit pour tester, sans carte.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/signup" className="tq-bouton">
-              Créer mon quiz gratuitement
-            </Link>
-            <Link
-              href="/"
-              className="tq-bouton bg-transparent !text-white ring-1 ring-white/25 hover:!bg-white/10"
-            >
-              Voir Tiquiz
-            </Link>
+          <article className="tiquiz-blog mt-10">
+            {blocs.map((b, i) => {
+              if (b.type === "titre") {
+                const Balise = b.niveau === 2 ? "h2" : "h3";
+                return (
+                  <Balise key={i} id={b.id} className="scroll-mt-28">
+                    {b.texte}
+                  </Balise>
+                );
+              }
+              if (b.type === "html") {
+                return <div key={i} dangerouslySetInnerHTML={{ __html: nettoyerBloc(b.html) }} />;
+              }
+              if (b.type === "image") {
+                return (
+                  <VisuelArticle
+                    key={i}
+                    src={b.src}
+                    alt={b.alt}
+                    mobile={b.mobile}
+                    epingle={epingle}
+                  />
+                );
+              }
+              if (b.type === "cta") {
+                return (
+                  <p key={i} className="my-10">
+                    {/* `tq-bouton-plein` force le blanc du libellé. Sans
+                        lui, `.tq-site .tiquiz-blog a` (spécificité 0,3,0)
+                        bat `.tq-bouton` (0,1,0) et le texte sortait en
+                        bleu foncé sur fond bleu : 1,93:1 de contraste,
+                        quand le minimum lisible est 4,5:1. */}
+                    <a href={b.url} className="tq-bouton tq-bouton-plein no-underline">
+                      {b.texte}
+                    </a>
+                  </p>
+                );
+              }
+              return (
+                <section key={i} className="my-10">
+                  {b.questions.map((q, k) => (
+                    <details key={k} className="border-b border-[var(--tq-bord)] py-4">
+                      <summary className="cursor-pointer font-semibold">{q.question}</summary>
+                      <div
+                        className="mt-2"
+                        dangerouslySetInnerHTML={{ __html: nettoyerBloc(q.reponse) }}
+                      />
+                    </details>
+                  ))}
+                </section>
+              );
+            })}
+          </article>
+
+          {/* LE PARTAGE EN BAS : c'est là qu'on a fini de lire, donc
+              là qu'on décide si ça valait la peine d'être transmis. Le
+              rail le propose aussi, en haut, pour qui décide plus tôt. */}
+          <div className="mt-12 border-t border-[var(--tq-bord)] pt-8">
+            <p className="tq-etiquette">Partager cet article</p>
+            <div className="mt-3">
+              <PartageArticle
+                url={url}
+                titre={a.titre}
+                texte={partage}
+                epingle={epingle}
+              />
+            </div>
           </div>
-        </aside>
+
+          <EncartCta />
+
+          <Commentaires slug={a.slug} commentaires={commentaires} />
+        </div>
+
+        <RailArticle
+          sommaire={toc}
+          url={url}
+          titre={a.titre}
+          textePartage={partage}
+          epingle={epingle}
+        />
       </div>
 
-      {autres.length > 0 ? (
+      {voisins.length > 0 ? (
         <section className="mt-24 bg-[var(--tq-panneau)] py-16">
           <div className="tq-large">
             <h2 className="text-[2rem]">À lire ensuite</h2>
             <div className="mt-10 grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-              {autres.map((x) => (
+              {voisins.map((x) => (
                 <CarteArticle key={x.slug} article={x} />
               ))}
             </div>

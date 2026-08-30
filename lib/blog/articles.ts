@@ -47,6 +47,15 @@ export interface BlocImage {
   type: "image";
   src: string;
   alt: string;
+  /**
+   * La variante dessinée pour un téléphone, quand elle existe.
+   *
+   * Elle n'est PAS dans les fichiers de contenu : elle y vit comme un
+   * second bloc image, et `normaliserImages` (lib/blog/imagesArticle.ts)
+   * apparie les deux au rendu. Le champ est ici pour que le jour où un
+   * article la porte directement, rien ne change côté page.
+   */
+  mobile?: string;
 }
 export interface BlocFaq {
   type: "faq";

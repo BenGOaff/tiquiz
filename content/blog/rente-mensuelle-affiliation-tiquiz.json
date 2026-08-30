@@ -98,7 +98,7 @@
     },
     {
       "type": "html",
-      "html": "<p><strong>Simulateur officiel pour projeter ta rente</strong></p><p>La <a href=\"https://affiliate.tipote.com/\">page d'affiliation Tiquiz</a> intègre un simulateur interactif. </p><p>Tu choisis le nombre de filleuls par type de plan (Gratuit, Mensuel, Annuel) et la durée de projection (1 mois, 6 mois, 1 an). </p><p>Le simulateur te calcule ta rente projetée en temps réel.</p>"
+      "html": "<p><strong>Simulateur officiel pour projeter ta rente</strong></p><p>La <a href=\"https://tiquiz.fr/affiliation\">page d'affiliation Tiquiz</a> intègre un simulateur interactif. </p><p>Tu choisis le nombre de filleuls par type de plan (Gratuit, Mensuel, Annuel) et la durée de projection (1 mois, 6 mois, 1 an). </p><p>Le simulateur te calcule ta rente projetée en temps réel.</p>"
     },
     {
       "type": "titre",
@@ -374,7 +374,7 @@
     {
       "type": "cta",
       "texte": "Je crée mon compte affilié Tiquiz",
-      "url": "https://affiliate.tipote.com/"
+      "url": "https://tiquiz.fr/affiliation"
     }
   ]
 }

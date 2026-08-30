@@ -66,7 +66,7 @@ function urlAbsolue(chemin: string | null): string | null {
  * mise à jour pour paraître frais. Une date de modification fausse est
  * repérée, et elle coûte plus qu'elle ne rapporte.
  */
-export function jsonLdArticle(a: Article): object {
+export function jsonLdArticle(a: Article, nbCommentaires = 0): object {
   const image = urlAbsolue(a.couverture);
   return {
     "@context": "https://schema.org",
@@ -82,6 +82,14 @@ export function jsonLdArticle(a: Article): object {
     url: urlArticle(a.slug),
     ...(image ? { image: [image] } : {}),
     ...(a.motsCles.length ? { keywords: a.motsCles.join(", ") } : {}),
+    // LE NOMBRE DE COMMENTAIRES, quand il y en a.
+    //
+    // C'est la moitié de la réponse à "ça aide à ranker" (Béné, 30 août)
+    // : un moteur voit une page qui a fait réagir, pas seulement un
+    // texte. On ne déclare RIEN quand il n'y en a aucun : annoncer
+    // `commentCount: 0` sur dix articles dit exactement le contraire de
+    // ce qu'on cherche, et un balisage qui ment fait retirer les autres.
+    ...(nbCommentaires > 0 ? { commentCount: nbCommentaires } : {}),
   };
 }
 
