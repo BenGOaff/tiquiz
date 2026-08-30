@@ -74,7 +74,14 @@ caddy version  # sanity check
 ### A.4 — Drop in the Caddyfile + env file
 
 ```bash
-sudo cp /home/tipote/tiquiz/infra/caddy/Caddyfile /etc/caddy/Caddyfile
+# LA COPIE PASSE PAR LE CONTROLE, JAMAIS EN DIRECT.
+#
+# Le 29 aout 2026, un `cp` nu a efface les blocs de `tiquiz.fr` et
+# `atelierduquiz.fr`, qui n'existaient que sur le serveur : les deux
+# pages de vente sont tombees en erreur TLS, sans une ligne dans les
+# journaux. `check:caddy` compare les HOTES SERVIS des deux fichiers et
+# REFUSE la copie si le depot en perdrait un.
+cd /home/tipote/tiquiz-app && npm run check:caddy && sudo cp infra/caddy/Caddyfile /etc/caddy/Caddyfile && sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy
 
 # Generate the Caddy ↔ Tiquiz shared secret (used by /api/internal/
 # caddy-ask). Save it somewhere safe; it also needs to be added to
