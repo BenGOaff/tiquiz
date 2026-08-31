@@ -333,11 +333,11 @@
       "questions": [
         {
           "question": "Comment fonctionne le programme d'affiliation Tiquiz ?",
-          "reponse": "<p>Tu reçois un lien tracké unique à ton inscription. Chaque personne qui souscrit à un abonnement payant Tiquiz via ton lien est rattachée à toi à vie. Tu touches <strong>40 % de commission récurrente</strong> sur chaque paiement de ton filleul, ce qui se transforme en <strong>rente mensuelle versée automatiquement le 10 de chaque mois</strong> sur ton PayPal ou ton compte bancaire.</p>"
+          "reponse": "<p>Tu reçois un lien tracké unique à ton inscription. Chaque personne qui souscrit à un abonnement payant Tiquiz via ton lien est rattachée à toi à vie. Tu touches <strong>40 % de commission récurrente</strong> sur chaque paiement de ton filleul, ce qui se transforme en <strong>rente mensuelle versée entre le 10 et le 13 de chaque mois</strong> sur ton PayPal ou ton compte bancaire.</p>"
         },
         {
           "question": "Combien de rente je peux générer avec l'affiliation Tiquiz ?",
-          "reponse": "<p>Sur le plan mensuel à 17 €, tu touches <strong>6,80 € de rente par filleul et par mois</strong>, soit 81,60 € par an et par filleul. Sur le plan annuel à 170 €, tu touches <strong>68 € de rente par filleul et par an</strong>. Avec 30 filleuls actifs sur le mensuel, ta rente s'élève à 108 € par mois. Avec 50 filleuls actifs sur l'annuel, ta rente atteint 1 800 € par an. Un simulateur officiel est disponible sur la page d'affiliation Tiquiz pour projeter ta rente selon ton nombre de filleuls visé.</p>"
+          "reponse": "<p>Sur le plan mensuel à 17 €, tu touches <strong>6,80 € de rente par filleul et par mois</strong>, soit 81,60 € par an et par filleul. Sur le plan annuel à 170 €, tu touches <strong>68 € de rente par filleul et par an</strong>. Avec 30 filleuls actifs sur le mensuel, ta rente s'élève à 204 € par mois. Avec 50 filleuls actifs sur l'annuel, ta rente atteint 3 400 € par an. Un simulateur officiel est disponible sur la page d'affiliation Tiquiz pour projeter ta rente selon ton nombre de filleuls visé.</p>"
         },
         {
           "question": "Faut-il être client Tiquiz pour générer une rente avec l'affiliation ?",
@@ -345,7 +345,7 @@
         },
         {
           "question": "Quand suis-je payé pour ma rente Tiquiz ?",
-          "reponse": "<p>Ta rente est versée <strong>automatiquement le 10 de chaque mois</strong>, via PayPal ou virement bancaire au choix. Pas de seuil de versement à atteindre, pas de facture à émettre, pas de relance à faire. Tu paramètres ta méthode de paiement à l'inscription, et ta rente tombe ensuite chaque mois en automatique.</p>"
+          "reponse": "<p>Ta rente est versée <strong>entre le 10 et le 13 de chaque mois</strong>, via PayPal ou virement bancaire au choix. Une commission devient versable 30 jours après le paiement de ton filleul, et le versement part dès 20 € cumulés. En dessous de ce seuil l'argent reste acquis et part au versement suivant. Pas de facture à émettre, pas de relance à faire : nous l'émettons pour toi. Tu paramètres ta méthode de paiement à l'inscription, et ta rente tombe ensuite chaque mois en automatique.</p>"
         },
         {
           "question": "Mes filleuls Tiquiz me restent-ils à vie ?",
@@ -357,7 +357,7 @@
         },
         {
           "question": "Quels supports sont fournis pour démarrer ma rente ?",
-          "reponse": "<p>Tu reçois un <strong>kit affilié complet</strong> à l'inscription : bannières dans plusieurs formats (web et réseaux sociaux), emails prêts à envoyer, posts pour LinkedIn / Instagram / X / Threads, liens trackés personnalisables vers chaque page du site, et un dashboard de suivi de ta rente sur Systeme io. Tout est prêt à coller. Tu n'as pas à créer le matériel toi-même.</p>"
+          "reponse": "<p>Tu reçois un <strong>kit affilié complet</strong> à l'inscription : bannières dans plusieurs formats (web et réseaux sociaux), emails prêts à envoyer, posts pour LinkedIn / Instagram / X / Threads, liens trackés personnalisables vers chaque page du site, et un dashboard de suivi de ta rente dans ton espace affilié. Tout est prêt à coller. Tu n'as pas à créer le matériel toi-même.</p>"
         }
       ]
     },

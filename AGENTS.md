@@ -3355,8 +3355,74 @@ qui n'est pas en 1000 x 1500.
   "tiquiz amazon" sur des visuels sans rapport. Écrire ces textes demande
   de savoir ce qu'il y a dans l'image : c'est un travail à faire avec
   Béné, pas à inventer.
-- **Plusieurs couvertures portent une adresse périmée incrustée dans le
-  dessin** (`tipote.fr/<slug>`, `tipote.fr/tiquiz?sa=TON_ID`), et celle
-  de l'article d'affiliation annonce **108 €/mois** alors que le texte
-  corrigé dit 204 €. Le visuel contredit l'article, et il part tel quel
-  sur Pinterest.
+
+## Les nouvelles couvertures, et le chiffre qui a survécu au dessin (31 août 2026)
+
+Béné a livré dix couvertures neuves, une par article, aux noms exacts des
+slugs. Converties en WebP 1200 de large dans `public/blog/img/<slug>.webp`
+(668 Ko -> 553 Ko), épingles Pinterest reconstruites
+(`npm run blog:epingles`, 10/10), et le dossier source retiré de
+`public/` : servi tel quel, il aurait exposé 11 Mo de PNG à
+`/blog/nouvelles%20couvertures%20articles/`, crawlables et en double.
+
+**Neuf sur dix règlent le problème de l'adresse périmée** : elles portent
+`tiquiz.fr/blog` au lieu de `tipote.fr/<slug>`. Vérifié en les
+REGARDANT, pas en le supposant.
+
+**La dixième rejoue les deux erreurs de l'ancienne**, et c'est un dessin
+donc aucun test ne peut le voir :
+`rente-mensuelle-affiliation-tiquiz.png` annonce **108 €/mois pour 30
+filleuls** (c'est 30 x 9 € x 40 %, l'ancien tarif : le bon chiffre est
+204 €) et montre le lien **`tipote.fr/tiquiz?sa=TON_ID`**, c'est à dire
+le domaine Systeme.io ET le paramètre que Béné a banni le 24 août. Un
+lien qui atterrit là ne paie plus personne. À redessiner ; l'épingle
+Pinterest en hérite.
+
+### Et le même 108 € vivait ENCORE dans la FAQ de l'article
+
+En vérifiant le chiffre du dessin contre le texte, la FAQ portait cinq
+faits dont **quatre faux**. Deux familles, et la seconde coûte le plus
+cher.
+
+**Des calculs restés au tarif d'avant le 6 août.** "Avec 30 filleuls
+actifs sur le mensuel, ta rente s'élève à 108 € par mois", alors que la
+phrase JUSTE AU DESSUS annonce 6,80 € par filleul (donc 204 €) et que le
+corps de l'article dit 204 €. Le même article se contredisait à deux
+paragraphes d'écart. Idem pour "1 800 € par an" sur 50 filleuls annuels,
+quand le corps dit 3 400 €. C'est le piège de l'import nommé le 29 août :
+la passe corrige les PRIX et laisse les CALCULS faits avec l'ancien prix.
+
+**Des promesses que le système contredit.** "versée automatiquement le 10
+de chaque mois" (c'est ENTRE le 10 et le 13), et surtout **"Pas de seuil
+de versement à atteindre"** alors qu'il y en a un, 20 €, plus un délai de
+30 jours. L'espace affilié le dit correctement depuis le 26 août ; le
+blog promettait l'inverse. Ça ne se découvre qu'au premier virement, et
+c'est le blog qui recrute : un gros affilié lit ici, constate là-bas, et
+ne revient pas. Même famille que les CGV du 22 août, dont l'article 5
+annonçait une renonciation que l'écran ne recueillait pas.
+Le kit annonçait aussi "un dashboard de suivi de ta rente sur Systeme
+io" : il vit sur `affiliate.tipote.com` depuis que le registre est chez
+nous.
+
+**Règle : `lib/blog/faitsProgramme.ts`**, appliqué par
+`npm run blog:reparer` et vérifié par `tests/logic/blog.test.mts`, qui
+appelle LA MÊME fonction : le contenu est propre quand la réparation ne
+change plus rien. Les montants se CALCULENT (`RENTE_PAR_FILLEUL`), ils ne
+se recopient pas, sinon le prochain changement de tarif laissera encore
+des calculs à l'ancien prix. Et **les faits passent AVANT la
+reponctuation** : reponctuer d'abord change les espaces autour des `€`,
+donc plus aucune phrase entière ne serait reconnue.
+
+**LA FAUTE QUE J'AI FAITE EN L'ÉCRIVANT, et qui vaut plus que la règle :**
+le motif de "1 800 € par an" portait une espace ORDINAIRE, l'article une
+INSÉCABLE. Le remplacement ne trouvait rien. **Et le contrôle échouait de
+la même façon, avec le même littéral : il répondait "aucun fait faux" sur
+un article qui portait encore le mauvais chiffre.** Un contrôle qui ne
+distingue pas ce qu'il est censé distinguer est pire qu'un contrôle
+absent (leçon des clés Supabase, 22 août). Les motifs acceptent
+maintenant n'importe quelle espace, et un test le fige.
+
+**Reste à trancher par Béné, pas par le code :** la FAQ promet des
+commissions sur Tipote "quand Tipote sort", avec des prix (19 € à
+917 €/mois) et un exemple à 39,60 €/mois. Tipote n'est pas en vente, et
+la règle du 8 juin dit qu'on n'en parle NULLE PART en affiliation.
