@@ -94,6 +94,17 @@ test("aucun prix Tiquiz n'est ecrit en dur hors du catalogue", () => {
       if (etaitDansBloc || (ouvre && ferme) || (ouvre && !ferme)) return;
       if (nue.startsWith("//") || nue.startsWith("*")) return;
 
+      // LE MOTIF D'UNE CORRECTION N'EST PAS UN PRIX ANNONCE.
+      //
+      // `lib/blog/faitsProgramme.ts` existe precisement pour RETIRER
+      // les montants perimes du blog : ses champs `de:` citent le texte
+      // A REMPLACER, donc forcement l'ancien. Seul `vers:` annonce
+      // quelque chose, et il se calcule a partir du catalogue.
+      //
+      // On n'exempte que ce fichier, et que ces lignes la : un `vers:`
+      // avec un prix en dur reste fautif, comme partout ailleurs.
+      if (chemin.endsWith("lib/blog/faitsProgramme.ts") && nue.startsWith("de: ")) return;
+
       // UN PRIX ANNONCE, pas un nombre qui passe. On exige la MONNAIE
       // ET un rythme ou une preposition de prix : ca attrape
       // "29€/mois" et "17 EUR par mois", et ca laisse passer un exemple
@@ -108,4 +119,18 @@ test("aucun prix Tiquiz n'est ecrit en dur hors du catalogue", () => {
     [],
     "prix ecrit en dur hors du catalogue : " + fautifs.join(", "),
   );
+});
+
+test("l'exemption des motifs de `faitsProgramme` couvre bien quelque chose", () => {
+  // Une exemption qui ne s'applique plus a rien est une exemption qu'on
+  // oublie de retirer, et qui couvrira un jour autre chose que ce
+  // qu'elle visait. Un test qui ne peut plus echouer ment.
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "lib/blog/faitsProgramme.ts"),
+    "utf8",
+  );
+  const motifs = src.split("\n").filter((l) => l.trim().startsWith("de: "));
+  assert.ok(motifs.length > 0, "plus aucun motif : l'exemption ne sert plus a rien");
+  // Et le fichier doit toujours CALCULER ce qu'il annonce.
+  assert.match(src, /RENTE_PAR_FILLEUL/);
 });

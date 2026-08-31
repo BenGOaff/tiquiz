@@ -2337,11 +2337,12 @@ prélèvement tout de suite, et c'est tout ce qu'il sait faire. On ne fait
 donc pas semblant : le `quand` de `cancelSubscriptions.ts` décide ce que
 NOUS faisons de l'accès, pas ce que PayPal fait du prélèvement.
 
-**La commission est sur le TTC**, décision de Béné du 22 août ("pour
-paypal : oui on garde le TTC"). PayPal ne ventile pas la TVA comme
-Stripe Tax : passer une taxe à zéro dit la vérité de cette vente là au
-lieu d'inventer un taux. Une vente PayPal paie donc l'affiliée un peu
-plus qu'une vente carte, et c'est assumé.
+**La commission est sur le HT, comme partout ailleurs** (Béné,
+31 août 2026 : "pour l'affiliation on fait uniquement 40 % etc. sur le
+HT. Débrouille toi pour que sur PayPal ça marche aussi, il y a forcément
+un moyen de calculer chez nous la TVA si concerné ou pas"). Voir la
+section "Une vente PayPal paie sur le HT" plus bas : ça remplace sa
+décision du 22 août ("pour paypal : oui on garde le TTC").
 
 **Le branchement se fait par `npm run paypal:setup`**, jamais à la main :
 l'identifiant de webhook se relève dans l'interface PayPal, se recopie
@@ -3208,19 +3209,19 @@ C'est mot pour mot le drame du 19 août, transposé au blog : l'app
 promettait 32,90 € et payait 27,42 €, et la cause était la même, un
 montant écrit à la main à côté d'un montant calculé.
 
-**Deux nuances qui empêchent de trancher tout seul**, et c'est pour ça
-que la décision revient à Béné :
+**TRANCHÉ LE 31 AOÛT : c'est le HT, partout.** "Pour l'affiliation on
+fait uniquement 40 % etc. sur le HT." Le blog a été recalculé
+(`lib/blog/faitsProgramme.ts`, dix corrections, `npm run blog:reparer`)
+et un test exige désormais que le blog et le simulateur annoncent le
+MÊME montant au centime. PayPal aussi paie sur le HT : voir "Une vente
+PayPal paie sur le HT".
 
-- une vente **PayPal** commissionne bien sur le **TTC** (sa décision du
-  22 août, "pour paypal : oui on garde le TTC"). Le chiffre du blog est
-  donc juste pour PayPal et faux pour Stripe ;
-- le blog annonce **40 %**, mais à 30 filleuls le taux réel est **55 %**,
-  donc 233,70 €/mois. Le blog sous-vend d'un côté ce qu'il survend de
-  l'autre.
-
-Tant que ce n'est pas tranché, **le simulateur et le blog ne disent pas
-la même chose**, et c'est le simulateur qui a raison sur ce que Stripe
-verse.
+**Il restait une deuxième nuance, et elle joue dans l'autre sens :** le
+blog annonce **40 %**, alors qu'à 30 filleuls le taux réel est **55 %**,
+donc 233,70 €/mois au lieu des 170,10 € affichés. Le blog sous-vend
+maintenant le programme. C'est un choix de communication, pas une
+erreur : 40 % est bien le taux de DÉPART, et le simulateur montre la
+montée. À reprendre avec Béné si elle veut que le blog en parle.
 
 ## Le blog vit dans le dépôt, pas dans une base (Béné, 29 août 2026)
 
@@ -3659,3 +3660,82 @@ maintenant n'importe quelle espace, et un test le fige.
 commissions sur Tipote "quand Tipote sort", avec des prix (19 € à
 917 €/mois) et un exemple à 39,60 €/mois. Tipote n'est pas en vente, et
 la règle du 8 juin dit qu'on n'en parle NULLE PART en affiliation.
+
+
+## Une vente PayPal paie sur le HT, comme une vente carte (Béné, 31 août 2026)
+
+"Pour l'affiliation on fait uniquement 40 % etc. sur le HT. Débrouille
+toi pour que sur PayPal ça marche aussi, il y a forcément un moyen de
+calculer chez nous la TVA si concerné ou pas et le montant de la
+commission, de manière fiable et stable."
+
+**Elle avait raison : le moyen existait déjà, il n'était pas branché.**
+
+### Ce que le code faisait, et pourquoi ça ne se voyait pas
+
+Le webhook PayPal envoyait `amountTaxCents: 0` et, deux lignes plus
+bas, `base: "ht"` à Tipote. **Le champ disait "hors taxes", le nombre
+était TTC.** Tipote faisait confiance au champ et ne retirait rien.
+
+Un paramètre obligatoire ne protège de rien quand on lui ment. C'est la
+limite de la règle du 1er août ("quand un cas a deux mécaniques, la
+mécanique est un PARAMÈTRE OBLIGATOIRE") : elle force l'appelant à
+DIRE, elle ne l'empêche pas de dire faux.
+
+| | ce qui était versé | ce qui est dû |
+|---|---|---|
+| Tiquiz mensuel, 17 € | 6,80 € | **5,67 €** |
+| Tiquiz annuel, 170 € | 68 € | **56,67 €** |
+| l'Atelier, 47 € à 70 % | 32,90 € | **27,42 €** |
+
+Les deux derniers chiffres de la troisième ligne sont EXACTEMENT ceux du
+drame du 19 août, où l'app annonçait 32,90 € et payait 27,42 €. On avait
+corrigé ce que l'app ANNONCE ; le chemin PayPal, lui, versait encore les
+32,90 €.
+
+### Le moyen : c'est la facture qu'on émet déjà
+
+Depuis le 24 août, **c'est NOUS qui émettons la facture d'une vente
+PayPal** (PayPal n'en émet aucune). `construireFacture` résout donc déjà
+le régime de TVA de l'acheteur (son pays, son numéro, la réponse de
+VIES) et décompose le TTC : France 20 %, autoliquidation 0 %, guichet
+unique au taux de SON pays, hors UE 0 %.
+
+`facturerEcheance` / `facturerVente` RENDENT maintenant la facture
+qu'elles viennent de construire, et la commission lit son `tvaCents`
+(`lib/facture/taxeVentePaypal.ts`). **Montant facturé et montant
+commissionné sortent du MÊME calcul, par construction** : les
+recalculer séparément est le défaut sorti six fois dans ce dépôt, et
+ici la contradiction se compterait en euros versés.
+
+**On ne devine JAMAIS un taux.** Un acheteur belge, un professionnel en
+autoliquidation et un acheteur hors UE n'ont pas la même taxe : un
+`0.2` posé quelque part les paierait tous les trois faux. Le test
+l'interdit dans les deux webhooks.
+
+### Sans facture, on retient et on crie
+
+Le seul cas sans facture est celui où tout a échoué. On ne rend PAS
+zéro : zéro veut dire "vente sans TVA", et ce serait faux neuf fois sur
+dix. On retient le taux du pays du vendeur, ce que `resoudreTva` fait
+déjà d'un pays inconnu, et **le journal le dit**.
+
+**Le sens du repli est ce qui compte** : retenir une TVA sur une vente
+qui n'en portait pas SOUS-paie l'affiliée, ce qui se corrige au lot
+suivant ; l'inverse SUR-paie, et un virement parti ne revient pas
+(règle de Tipote, 26 août).
+
+Corollaire : une taxe LÉGITIMEMENT à zéro (autoliquidation, hors UE)
+n'est pas un repli. Les confondre sous-paierait de 20 % chaque vente
+professionnelle.
+
+### Au passage, côté Atelier
+
+La commission utilisait `commande.amountTotalCents` (ce qu'on avait
+enregistré à la création de la commande) pendant que la facture
+utilisait le montant de la CAPTURE (ce qui a vraiment été payé, une
+remise comprise). Décomposer une TVA calculée sur un total et la retirer
+d'un AUTRE donne une base fausse qui a l'air juste. L'encaissement passe
+maintenant devant.
+
+Test : `tests/logic/commission-ht-paypal.test.mts`, dans les deux dépôts.

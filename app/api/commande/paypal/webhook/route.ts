@@ -47,6 +47,8 @@ import {
 } from "@/lib/checkout/paypalOwner";
 import { rememberPaypalSubscription } from "@/lib/checkout/customerLink";
 import { construireFacture } from "@/lib/facture/construire";
+import type { FactureAEmettre } from "@/lib/facture/construire";
+import { taxeEstUnRepli, taxePaypalCents } from "@/lib/facture/taxeVentePaypal";
 import { lireAcheteur } from "@/lib/facture/identite";
 import {
   encaissementDepuisSale,
@@ -183,15 +185,45 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
  * problème de facturation ne doit pas transformer la réponse en 502,
  * qui ferait rejouer l'ouverture d'accès. On journalise fort, et la
  * facture manquante se rattrape depuis la fiche client.
+ *
+ * -- ELLE REND LA FACTURE, ET C'EST ELLE QUI DONNE LA TVA -------------
+ *
+ * Béné, 31 août 2026 : "pour l'affiliation on fait uniquement 40 % etc.
+ * sur le HT. Débrouille toi pour que sur PayPal ça marche aussi, il y a
+ * forcément un moyen de calculer chez nous la TVA si concerné ou pas et
+ * le montant de la commission, de manière fiable et stable."
+ *
+ * Il y en avait un, et il tournait déjà : c'est CETTE fonction. Elle
+ * résout le régime de TVA de l'acheteur (pays, numéro, réponse de VIES)
+ * et décompose le TTC encaissé. On lui fait donc RENDRE la facture
+ * qu'elle vient de construire, et la commission lit son `tvaCents`.
+ *
+ * **Le montant facturé et le montant commissionné sortent ainsi du MÊME
+ * calcul, par construction.** Les recalculer séparément, c'est le
+ * défaut sorti six fois dans ce dépôt : deux endroits qui décident la
+ * même chose finissent toujours par se contredire, et ici la
+ * contradiction se compte en euros versés.
+ *
+ * Elle rend `null` seulement si tout a échoué. L'appelant traite ce
+ * `null` comme "je ne sais pas", jamais comme "il n'y a pas de TVA".
  */
 async function facturerEcheance(args: {
   email: string;
   encaissement: EncaissementPaypal;
   productId: string | null;
   libelle: string;
-}): Promise<void> {
+}): Promise<FactureAEmettre | null> {
   try {
-    const acheteur = await lireFacturation({ email: args.email });
+    // Un échec de LECTURE ne doit pas priver la commission de sa base :
+    // sans fiche de facturation, `resoudreTva` retient le taux français
+    // et marque "pays" à compléter. C'est le repli le moins coûteux, et
+    // il est CONSERVATEUR pour l'affiliée : il sous-paie de 17 %, ce
+    // qui se rattrape au lot suivant, au lieu de surpayer de 20 %, ce
+    // qu'un virement parti ne rattrape jamais.
+    const acheteur = await lireFacturation({ email: args.email }).catch((e) => {
+      console.error(`[commande/paypal/webhook] fiche de facturation illisible : ${(e as Error).message}`);
+      return null;
+    });
     // ON DEMANDE A VIES, ET ON N'ATTEND JAMAIS APRES LUI (Bene, 27 aout
     // 2026 : "un numero bien forme mais inexistant produit une
     // autoliquidation injustifiee, donc de la TVA a ta charge").
@@ -218,13 +250,20 @@ async function facturerEcheance(args: {
       vies,
     );
     const ligne = await emettreFacture(facture);
-    if (!ligne) return;
-    console.log(
-      `[commande/paypal/webhook] facture ${ligne.numero} emise pour ${args.email}` +
-        (facture.aCompleter.length ? ` (a completer : ${facture.aCompleter.join(", ")})` : ""),
-    );
+    if (ligne) {
+      console.log(
+        `[commande/paypal/webhook] facture ${ligne.numero} emise pour ${args.email}` +
+          (facture.aCompleter.length ? ` (a completer : ${facture.aCompleter.join(", ")})` : ""),
+      );
+    }
+    // On rend la facture MÊME si l'émission a échoué : la TVA a été
+    // calculée, et la commission de l'affiliée n'a aucune raison
+    // d'attendre une pièce comptable. Une pièce manquante se réémet, un
+    // versement faux ne se reprend pas (règle du 25 août).
+    return facture;
   } catch (e) {
     console.error(`[commande/paypal/webhook] facture NON emise : ${(e as Error).message}`);
+    return null;
   }
 }
 
@@ -414,8 +453,9 @@ async function traiterEvenement(
     // suivantes, et il porte le montant RÉELLEMENT encaissé (une remise
     // comprise).
     const encaissement = encaissementDepuisSale(event.resource, event.create_time);
+    let facture: FactureAEmettre | null = null;
     if (encaissement) {
-      await facturerEcheance({
+      facture = await facturerEcheance({
         email: abo.email,
         encaissement,
         productId: abo.productId,
@@ -444,9 +484,32 @@ async function traiterEvenement(
     // pour clé, la deuxième échéance tombait sur la contrainte
     // d'unicité et l'affilié ne touchait plus rien à partir du
     // deuxième mois.
+    //
+    // ── ET ON PAIE SUR LE HT, COMME PARTOUT AILLEURS ──
+    //
+    // Béné, 31 août 2026 : "pour l'affiliation on fait uniquement 40 %
+    // etc. sur le HT." Ça REMPLACE sa décision du 22 août ("pour paypal
+    // : oui on garde le TTC"), prise à un moment où nous ne savions pas
+    // ventiler la TVA d'une vente PayPal.
+    //
+    // On sait, et depuis le 24 août : c'est la facture qu'on vient
+    // d'émettre qui le fait. La taxe passée ici est la SIENNE, jamais un
+    // taux redevine à côté.
+    //
+    // Sans facture (cas rarissime, tout a échoué), on ne devine PAS : on
+    // le dit fort et on retombe sur le taux du pays du vendeur, qui est
+    // le repli conservateur.
     if (encaissement && encaissement.totalCents > 0) {
       const produit = findOwnerProduct(abo.productId);
       if (produit) {
+        const taxe = taxePaypalCents(facture, encaissement.totalCents);
+        if (taxeEstUnRepli(facture, encaissement.totalCents)) {
+          console.error(
+            `[commande/paypal/webhook] TVA de la vente ${encaissement.saleRef} INCONNUE ` +
+              `(${abo.email}) : commission calculee au taux du pays du vendeur. ` +
+              `A verifier sur sa fiche client.`,
+          );
+        }
         await commissionnerVente({
           moyen: "paypal",
           email: abo.email,
@@ -454,7 +517,7 @@ async function traiterEvenement(
           affiliateRef: abo.affiliateRef,
           affiliateCode: abo.affiliateCode,
           amountTotalCents: encaissement.totalCents,
-          amountTaxCents: 0,
+          amountTaxCents: taxe,
           product: { id: produit.id, label: produit.label },
         });
       }

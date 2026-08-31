@@ -55,15 +55,36 @@ const PRIX_ANNUEL_TTC = 170;
 const TAUX_BASE = 0.4;
 
 /**
+ * LA TVA RETIRÉE AVANT DE COMMISSIONNER.
+ *
+ * Béné, 31 août 2026 : "pour l'affiliation on fait uniquement 40 % etc.
+ * sur le HT."
+ *
+ * C'est la décision qui manquait, et elle tranche l'écart nommé dans
+ * l'AGENTS.md : le simulateur calculait sur le HT (ce que le système
+ * verse) et le blog annonçait le TTC, soit **20 % de plus que ce qui
+ * sera versé**. C'est mot pour mot le drame du 19 août, où l'app
+ * promettait 32,90 € et payait 27,42 €.
+ *
+ * Le taux du pays du vendeur, parce que c'est celui de la très grande
+ * majorité des ventes. Un affilié dont le filleul est belge ou
+ * professionnel touchera un peu plus ; annoncer le cas le plus courant
+ * et se tromper VERS LE HAUT à la marge est la seule erreur acceptable
+ * dans ce sens là.
+ */
+const TVA = 0.2;
+
+/**
  * La rente par filleul, telle que l'article l'annonce.
  *
  * Calculée, jamais recopiée : c'est ce qui a manqué à la passe
- * d'import. 6,80 € et 68 € doivent tomber d'ici, sinon un changement de
- * tarif laisserait encore des calculs à l'ancien prix.
+ * d'import. Tous les montants de l'article tombent d'ici, sinon un
+ * changement de tarif ou de base laisserait encore des calculs faits
+ * avec l'ancienne valeur.
  */
 export const RENTE_PAR_FILLEUL = {
-  mensuel: PRIX_MENSUEL_TTC * TAUX_BASE,
-  annuel: PRIX_ANNUEL_TTC * TAUX_BASE,
+  mensuel: (PRIX_MENSUEL_TTC / (1 + TVA)) * TAUX_BASE,
+  annuel: (PRIX_ANNUEL_TTC / (1 + TVA)) * TAUX_BASE,
 } as const;
 
 /** Un montant en euros, écrit comme l'article les écrit. */
@@ -94,21 +115,113 @@ export const FAITS: readonly {
   vers: string;
   pourquoi: string;
 }[] = [
+  // ── LES CALCULS DE RENTE ──
+  //
+  // Deux motifs par phrase, et ce n'est pas un doublon : l'un vise le
+  // texte de l'import (l'ancien tarif à 9 €), l'autre le texte déjà
+  // corrigé une fois (le TTC). Un ré-import ramènerait le premier, et
+  // il doit retomber sur la MÊME cible que le second.
   {
     de: "Avec 30 filleuls actifs sur le mensuel, ta rente s'élève à 108 € par mois.",
     vers: `Avec 30 filleuls actifs sur le mensuel, ta rente s'élève à ${euros(
       30 * RENTE_PAR_FILLEUL.mensuel,
     )} € par mois.`,
-    pourquoi:
-      "108 = 30 x 9 EUR x 40 %, l'ancien tarif. La phrase juste au dessus annonce 6,80 EUR par filleul, donc 204 EUR, et le corps de l'article dit 204 EUR.",
+    pourquoi: "108 = 30 x 9 EUR x 40 %, l'ancien tarif d'avant le 6 aout.",
+  },
+  {
+    de: "Avec 30 filleuls actifs sur le mensuel, ta rente s'élève à 204 € par mois.",
+    vers: `Avec 30 filleuls actifs sur le mensuel, ta rente s'élève à ${euros(
+      30 * RENTE_PAR_FILLEUL.mensuel,
+    )} € par mois.`,
+    pourquoi: "204 = 30 x 40 % du TTC. La commission se calcule sur le HT (Bene, 31 aout).",
   },
   {
     de: "Avec 50 filleuls actifs sur l'annuel, ta rente atteint 1 800 € par an.",
     vers: `Avec 50 filleuls actifs sur l'annuel, ta rente atteint ${euros(
       50 * RENTE_PAR_FILLEUL.annuel,
     )} € par an.`,
+    pourquoi: "1 800 = 50 x 90 EUR x 40 %, l'ancien tarif annuel.",
+  },
+  {
+    de: "Avec 50 filleuls actifs sur l'annuel, ta rente atteint 3 400 € par an.",
+    vers: `Avec 50 filleuls actifs sur l'annuel, ta rente atteint ${euros(
+      50 * RENTE_PAR_FILLEUL.annuel,
+    )} € par an.`,
+    pourquoi: "3 400 = 50 x 40 % du TTC annuel. La commission se calcule sur le HT.",
+  },
+  {
+    de: "<strong>Concrètement :</strong> 1 filleul à 17 €/mois = <strong>6,80 €/mois à vie</strong>. 30 filleuls actifs = <strong>204 €/mois</strong>. 50 filleuls sur le plan annuel = <strong>3 400 €/an</strong>.",
+    vers: `<strong>Concrètement :</strong> 1 filleul à ${PRIX_MENSUEL_TTC} €/mois = <strong>${euros(
+      RENTE_PAR_FILLEUL.mensuel,
+    )} €/mois à vie</strong>. 30 filleuls actifs = <strong>${euros(
+      30 * RENTE_PAR_FILLEUL.mensuel,
+    )} €/mois</strong>. 50 filleuls sur le plan annuel = <strong>${euros(
+      50 * RENTE_PAR_FILLEUL.annuel,
+    )} €/an</strong>.`,
+    pourquoi: "les trois montants de l'accroche etaient 40 % du TTC, donc 20 % de trop.",
+  },
+  {
+    de: "Sur le plan mensuel à 17 €, tu touches <strong>6,80 € de rente par filleul et par mois</strong>, soit 81,60 € par an et par filleul. Sur le plan annuel à 170 €, tu touches <strong>68 € de rente par filleul et par an</strong>.",
+    vers: `Sur le plan mensuel à ${PRIX_MENSUEL_TTC} €, tu touches <strong>${euros(
+      RENTE_PAR_FILLEUL.mensuel,
+    )} € de rente par filleul et par mois</strong>, soit ${euros(
+      12 * RENTE_PAR_FILLEUL.mensuel,
+    )} € par an et par filleul. Sur le plan annuel à ${PRIX_ANNUEL_TTC} €, tu touches <strong>${euros(
+      RENTE_PAR_FILLEUL.annuel,
+    )} € de rente par filleul et par an</strong>.`,
+    pourquoi: "la reponse de la FAQ annoncait 40 % du TTC sur les deux paliers.",
+  },
+  {
+    de: "Sur 3 ans cumulés, <strong>un filleul mensuel à 17 €</strong> te rapporte 244,80 € de rente totale. <strong>Un filleul annuel à 170 €</strong> te rapporte 204 € de rente totale.",
+    vers: `Sur 3 ans cumulés, <strong>un filleul mensuel à ${PRIX_MENSUEL_TTC} €</strong> te rapporte ${euros(
+      36 * RENTE_PAR_FILLEUL.mensuel,
+    )} € de rente totale. <strong>Un filleul annuel à ${PRIX_ANNUEL_TTC} €</strong> te rapporte ${euros(
+      3 * RENTE_PAR_FILLEUL.annuel,
+    )} € de rente totale.`,
     pourquoi:
-      "1 800 = 50 x 90 EUR x 40 %, l'ancien tarif annuel. Le corps de l'article dit 3 400 EUR.",
+      "projection a 3 ans calculee sur le TTC. La phrase suivante (17 x 12 = 204 EUR/an) parle de ce que le CLIENT paie : elle est juste, on n'y touche pas.",
+  },
+  {
+    de: "tu génères <strong>68 € de rente par mois</strong>. Sur l'année, c'est 432 €.",
+    vers: `tu génères <strong>${euros(10 * RENTE_PAR_FILLEUL.mensuel)} € de rente par mois</strong>. Sur l'année, c'est ${euros(
+      120 * RENTE_PAR_FILLEUL.mensuel,
+    )} €.`,
+    pourquoi:
+      "68 = 10 x 40 % du TTC, et surtout 432 ne correspondait a RIEN (68 x 12 = 816). Deux fautes dans la meme phrase.",
+  },
+  {
+    de: "Soit une rente entre <strong>204 € et 340 € par mois</strong>.",
+    vers: `Soit une rente entre <strong>${euros(30 * RENTE_PAR_FILLEUL.mensuel)} € et ${euros(
+      50 * RENTE_PAR_FILLEUL.mensuel,
+    )} € par mois</strong>.`,
+    pourquoi: "fourchette 30 a 50 filleuls, calculee sur le TTC.",
+  },
+  {
+    de: "Tu touches 68 € de commission immédiate.",
+    vers: `Tu touches ${euros(RENTE_PAR_FILLEUL.annuel)} € de commission immédiate.`,
+    pourquoi: "40 % du TTC annuel au lieu du HT.",
+  },
+  // Les deux comparaisons avec Tipote. Le montant TIPOTE (39,60 €,
+  // 49,50 €) n'est PAS touché : Tipote n'est pas en vente, et ce que le
+  // blog en promet est un point ouvert que Béné doit trancher. Mais la
+  // moitié TIQUIZ de la comparaison, elle, doit dire la même chose que
+  // le reste de l'article : le laisser à 6,80 € ferait se contredire
+  // deux paragraphes du même texte, ce qui est exactement ce qu'on
+  // vient de fermer.
+  {
+    de: "(6,80 € vers 49,50 €)",
+    vers: `(${euros(RENTE_PAR_FILLEUL.mensuel)} € vers 49,50 €)`,
+    pourquoi: "la moitie Tiquiz de la comparaison etait restee au TTC.",
+  },
+  {
+    de: "<strong>39,60 € de rente par mois au lieu de 6,80 €</strong>",
+    vers: `<strong>39,60 € de rente par mois au lieu de ${euros(RENTE_PAR_FILLEUL.mensuel)} €</strong>`,
+    pourquoi: "idem : le montant Tiquiz de la comparaison doit etre celui verse.",
+  },
+  {
+    de: "bien plus que ses 6,80 € de rente mensuelle visible",
+    vers: `bien plus que ses ${euros(RENTE_PAR_FILLEUL.mensuel)} € de rente mensuelle visible`,
+    pourquoi: "40 % du TTC mensuel au lieu du HT.",
   },
   {
     de: "rente mensuelle versée automatiquement le 10 de chaque mois",
