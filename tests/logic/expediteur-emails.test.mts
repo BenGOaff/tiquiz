@@ -58,12 +58,24 @@ test("une adresse deja nommee dans le .env ne casse PAS les envois", () => {
   );
 });
 
-test("sans variable on retombe sur le domaine VERIFIE, jamais sur le nouveau", () => {
-  // Un repli doit etre ce qui marche a coup sur. Mettre tiquiz.fr ici
-  // ferait partir en spam tous les emails d'un serveur ou la variable a
-  // ete oubliee.
+test("sans variable on retombe sur un domaine VRAIMENT verifie chez Resend", () => {
+  // CE TEST FIGEAIT UNE HYPOTHESE, ET ELLE ETAIT FAUSSE (31 aout 2026).
+  //
+  // Il exigeait `hello@tipote.com`, avec pour justification "un repli
+  // doit etre ce qui marche a coup sur". Personne n'avait verifie que
+  // ca marchait. Releve dans le compte Resend de Bene le 31 aout, les
+  // domaines verifies sont `tiquiz.fr`, `atelierduquiz.fr` et
+  // **`send.tipote.com`** : `tipote.com` tout court n'y est pas.
+  //
+  // Le repli partait donc d'un domaine non verifie, que Resend REFUSE :
+  // plus aucun email, liens de connexion compris. Un repli qu'on n'a
+  // jamais essaye n'est pas un garde-fou, c'est une hypothese.
   assert.equal(adresseExpediteur({}), REPLI_EXPEDITEUR);
-  assert.equal(REPLI_EXPEDITEUR, "hello@tipote.com");
+  assert.equal(REPLI_EXPEDITEUR, "hello@tiquiz.fr");
+  assert.ok(
+    !REPLI_EXPEDITEUR.endsWith("@tipote.com"),
+    "tipote.com n'est pas un domaine verifie chez Resend : send.tipote.com l'est",
+  );
 });
 
 test("une valeur vide ou illisible ne produit jamais un expediteur vide", () => {
@@ -81,7 +93,7 @@ test("l'oubli de la variable CRIE, il ne se devine pas", () => {
   const msg = formaterExpediteur(d, "TIQUIZ");
   assert.ok(msg !== null, "aucun message : l'oubli passerait inapercu");
   assert.ok(msg.includes("SUPPORT_FROM_EMAIL"), msg);
-  assert.ok(msg.includes("hello@tipote.com"), "le message ne dit pas d'ou partent les emails");
+  assert.ok(msg.includes(REPLI_EXPEDITEUR), "le message ne dit pas d'ou partent les emails");
 });
 
 test("le nom en double est signale a part : il empeche TOUT envoi", () => {

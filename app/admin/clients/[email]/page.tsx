@@ -18,6 +18,7 @@ import AppShell from "@/components/AppShell";
 import ClientFiche from "@/components/admin/ClientFiche";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { lireEmailParam } from "@/lib/admin/emailParam";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function FicheClientPage({
 
   return (
     <AppShell userEmail={user.email ?? ""} headerTitle="Fiche client">
-      <ClientFiche email={decodeURIComponent(email)} />
+      <ClientFiche email={lireEmailParam(email)} />
     </AppShell>
   );
 }
