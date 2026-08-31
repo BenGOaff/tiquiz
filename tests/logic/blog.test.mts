@@ -540,3 +540,71 @@ test("LE BLOG ANNONCE CE QUE LE SYSTÈME VERSE, au centime", async () => {
     commissionCentsAuTaux("annuel", COMMISSION_BASE_PCT),
   );
 });
+
+test("CHAQUE IMAGE DU BLOG PORTE UN TEXTE ALTERNATIF", async () => {
+  // Audit SEO/GEO : 33 images sur 76 n'en avaient AUCUN, soit 43 % du
+  // blog. Un `alt` vide, c'est trois choses perdues d'un coup : une
+  // lectrice aveugle n'entend rien (ou s'entend epeler
+  // "mjaxntazmgewmtkwodgy..."), Google ne sait pas ce qu'il y a dans le
+  // schema, et un modele de langue non plus. C'est exactement ce que
+  // Bene vise en parlant de GEO : ils lisent le `alt`, jamais le pixel.
+  const dossier = path.join(process.cwd(), "content", "blog");
+  const sans: string[] = [];
+  for (const f of fs.readdirSync(dossier).filter((n) => n.endsWith(".json"))) {
+    const article = JSON.parse(fs.readFileSync(path.join(dossier, f), "utf8"));
+    const images: { src?: string; alt?: string }[] = [];
+    const parcourir = (o: unknown): void => {
+      if (Array.isArray(o)) o.forEach(parcourir);
+      else if (o && typeof o === "object") {
+        const bloc = o as Record<string, unknown>;
+        if (typeof bloc.src === "string") images.push(bloc as { src?: string; alt?: string });
+        Object.values(bloc).forEach(parcourir);
+      }
+    };
+    parcourir(article);
+    for (const img of images) {
+      if (!String(img.alt ?? "").trim()) sans.push(`${f} ${img.src}`);
+    }
+  }
+  assert.deepEqual(sans, [], "images sans texte alternatif : relance npm run blog:reparer");
+});
+
+test("un `alt` decrit ce qu'on voit, il ne bourre pas de mots cles", async () => {
+  const { ALT_IMAGES } = await import("@/lib/blog/altImages");
+  const valeurs = Object.values(ALT_IMAGES);
+  assert.ok(valeurs.length >= 30, "la table s'est videe");
+  for (const [src, alt] of Object.entries(ALT_IMAGES)) {
+    // Un lecteur d'ecran annonce DEJA que c'est une image : le repeter
+    // fait perdre du temps a celle qui ecoute.
+    assert.ok(
+      !/^(image|photo|capture|illustration|visuel) (de|du|d'|montrant)/i.test(alt),
+      `${src} : commence par "image de"`,
+    );
+    assert.ok(alt.length >= 20, `${src} : trop court pour dire quelque chose`);
+    // Au dela, un lecteur d'ecran coupe et Google tronque.
+    assert.ok(alt.length <= 200, `${src} : ${alt.length} caracteres, c'est trop long`);
+    assert.ok(!/[—–]/.test(alt), `${src} : tiret cadratin`);
+  }
+  // Deux images differentes qui portent le MEME texte, c'est soit un
+  // copier-coller, soit deux variantes du meme schema (desktop et
+  // mobile). Les secondes sont legitimes et appariees par
+  // `normaliserImages` : on verifie juste qu'il n'y en a pas plus.
+  const doublons = valeurs.length - new Set(valeurs).size;
+  assert.ok(doublons <= 2, `${doublons} textes identiques : un copier-coller a du passer`);
+});
+
+test("la reparation POSE les alt, elle ne les ecrase pas", async () => {
+  const { poserAlt } = await import("@/lib/blog/altImages");
+  const vide = { src: "/blog/img/gwenn.webp", alt: "" };
+  assert.equal(poserAlt(vide), true);
+  assert.match(vide.alt, /Gwenn/);
+  // Un `alt` deja ecrit est garde tel quel : certains viennent de
+  // Systeme.io et sont mauvais, mais les remplacer en masse ferait
+  // perdre ceux qui sont bons.
+  const plein = { src: "/blog/img/gwenn.webp", alt: "deja ecrit" };
+  assert.equal(poserAlt(plein), false);
+  assert.equal(plein.alt, "deja ecrit");
+  // Une image inconnue ne recoit rien plutot qu'un texte invente.
+  const inconnue = { src: "/blog/img/pas-dans-la-table.webp", alt: "" };
+  assert.equal(poserAlt(inconnue), false);
+});

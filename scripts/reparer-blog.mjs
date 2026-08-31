@@ -51,6 +51,7 @@ import path from "node:path";
 
 import { reponctuer } from "../lib/blog/reponctuation.ts";
 import { corrigerFaits } from "../lib/blog/faitsProgramme.ts";
+import { poserAlt } from "../lib/blog/altImages.ts";
 
 const DOSSIER = path.join(process.cwd(), "content", "blog");
 const VERIFIE = process.argv.includes("--verifie");
@@ -146,6 +147,7 @@ function corrigerAncres(html) {
 
 let typo = 0;
 let faits = 0;
+let alts = 0;
 function texte(s) {
   // LES FAITS D'ABORD, LA PONCTUATION ENSUITE.
   //
@@ -164,7 +166,19 @@ function texte(s) {
 function reparerBloc(b) {
   if (b.type === "html") return { ...b, html: texte(corrigerAncres(b.html)) };
   if (b.type === "titre") return { ...b, texte: texte(b.texte) };
-  if (b.type === "image") return { ...b, alt: texte(b.alt) };
+  if (b.type === "image") {
+    // LE TEXTE ALTERNATIF, POSÉ S'IL MANQUE.
+    //
+    // 33 images sur 76 n'en avaient aucun : ni lecteur d'écran, ni
+    // Google, ni modèle de langue ne savaient ce qu'elles montrent, et
+    // les schémas de ce blog portent l'essentiel de l'argumentaire.
+    //
+    // `poserAlt` n'écrase jamais un `alt` existant : le remplacer en
+    // masse ferait perdre ceux qui sont bons.
+    const image = { ...b, alt: texte(b.alt) };
+    if (poserAlt(image)) alts += 1;
+    return image;
+  }
   if (b.type === "cta") return { ...b, texte: texte(b.texte), url: corrigerLien(b.url, b.texte) };
   if (b.type === "faq") {
     return {
@@ -201,6 +215,7 @@ for (const f of fichiers) {
 console.log(`Fichiers ${VERIFIE ? "a corriger" : "reecrits"} : ${ecrits}/${fichiers.length}`);
 console.log(`Fragments reponctues : ${typo}`);
 console.log(`Faits du programme corriges : ${faits}`);
+console.log(`Textes alternatifs poses : ${alts}`);
 for (const r of REGLES) {
   const n = compte.get(r.de) ?? 0;
   if (n > 0) console.log(`  ${n}x  ${r.de}\n        -> ${r.vers}   (${r.pourquoi})`);
