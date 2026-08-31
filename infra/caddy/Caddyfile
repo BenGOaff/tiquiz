@@ -404,6 +404,66 @@ videos.tipote.com, videos.quiz.tipote.com {
         }
         respond @blocked 403
 
+        # ── LES IMAGES DES CRÉATRICES (/assets/), SANS SIGNATURE ──
+        #
+        # PANNE DU 31 AOÛT 2026, et c'est la leçon principale : ce bloc
+        # avait été écrit dans `infra/nginx/videos.*.conf`, alors que
+        # c'est CADDY qui répond sur ce domaine. nginx ne voit jamais
+        # ces requêtes. Le garde-fou existait, il était à l'étage du
+        # dessous.
+        #
+        # Sans lui, `/assets/<image>.webp` tombait dans le `handle`
+        # ci dessous, celui des VIDÉOS, qui exige un lien signé
+        # (`forward_auth` -> `/_validate-secure-link`). Aucune image
+        # n'en porte : le validateur refusait, et Caddy répondait 403
+        # sur TOUTES les images de TOUTES les créatrices à la fois,
+        # favicons comprises. Un fichier absent aurait rendu 404 : le
+        # 403 disait déjà que le refus venait de l'authentification, pas
+        # du disque.
+        #
+        # AUCUN FICHIER N'A ÉTÉ PERDU. Ils sont sur le disque, écrits
+        # par `app/api/upload/asset/route.ts` ; ils étaient seulement
+        # refusés à la porte.
+        #
+        # DEUX FAUTES EMPILÉES, et il faut les deux corrections :
+        # 1. la signature, levée ici (ces images sont PUBLIQUES, elles
+        #    l'étaient déjà chez Supabase) ;
+        # 2. la RACINE. Le site sert `/srv/popquiz-videos` : même
+        #    signature valide, `/assets/x.webp` aurait été cherché dans
+        #    le dossier des vidéos et rendu 404. `handle_path` retire le
+        #    préfixe `/assets`, donc `/assets/logos/x.webp` est lu dans
+        #    `/srv/assets-tiquiz/logos/x.webp`, exactement comme
+        #    `ASSETS_DIR` (app/api/upload/asset/route.ts) et
+        #    `NEXT_PUBLIC_ASSETS_BASE_URL` le promettent.
+        #
+        # On n'importe PAS `videos_cors` : il pose
+        # `Cache-Control: private, max-age=300`, juste pour une vidéo
+        # signée, faux pour une image dont le nom porte déjà
+        # l'horodatage de l'envoi. Une adresse ne désigne jamais deux
+        # contenus différents ici, donc l'immutable est sûr.
+        handle /assets/* {
+                # `handle` ET PAS `handle_path`, DÉLIBÉRÉMENT. Les deux
+                # sont des directives DIFFÉRENTES dans l'ordre de Caddy,
+                # et l'attrape-tout ci dessous est un `handle` : mélanger
+                # les deux ferait dépendre le résultat d'un ordre que ce
+                # fichier ne montre pas. Avec la même directive, l'ordre
+                # d'écriture fait foi, et il se lit.
+                uri strip_prefix /assets
+                root * /srv/assets-tiquiz
+
+                header {
+                        Cache-Control "public, max-age=31536000, immutable"
+                        X-Content-Type-Options "nosniff"
+                        # Le studio visuel relit ces images dans un
+                        # <canvas> : sans cet en-tête le canvas devient
+                        # "tainted" et l'export échoue.
+                        Access-Control-Allow-Origin "*"
+                        -Server
+                }
+
+                file_server
+        }
+
         handle {
                 forward_auth 127.0.0.1:1080 {
                         uri /_validate-secure-link
