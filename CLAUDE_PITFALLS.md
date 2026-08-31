@@ -672,6 +672,12 @@ immédiatement.
 
 ## AT) Systeme.io strippe les `<script>` — iframe obligatoire (31 mai 2026)
 
+**À REPLACER DANS LE TEMPS (note du 30 août 2026) :** la page de vente
+n'est plus sur `tipote.fr/tiquiz` depuis le 20 août, elle est servie par
+notre app sur `tiquiz.fr`, où ce piège n'existe pas (on rend le HTML
+nous mêmes). Ce qui suit reste vrai pour toute page encore hébergée chez
+Systeme.io.
+
 Pour la preuve sociale embarquée sur `tipote.fr/tiquiz` (sales page),
 Systeme.io rend le HTML d'un bloc "Code HTML personnalisé" MAIS
 supprime / désactive les `<script>` à l'intérieur. Conséquence : un
@@ -704,8 +710,12 @@ Notation définitive :
 | Surface | Domaine | Détail |
 |---|---|---|
 | **App Tiquiz** (dashboard, éditeur, API, quizzes des users) | `https://quiz.tipote.com` | C'est le host primaire de l'app Tiquiz. La marque s'appelle Tiquiz mais le domaine appartient à Tipote. PAS `app.tiquiz.com`, PAS `tiquiz.com`, PAS `app.tipote.com`. |
-| **Page de vente Tiquiz** (sales page Systeme.io) | `https://tipote.fr/tiquiz` | Hébergée chez Systeme.io, c'est là qu'on colle les snippets HTML custom (preuve sociale, etc.). |
+| **Page de vente Tiquiz, blog et site public** | `https://tiquiz.fr` | **RAPATRIÉE CHEZ NOUS le 20 août 2026.** Servie par l'app Tiquiz (port 3001), pas par Systeme.io. Porte aussi `/blog`, `/affiliation`, `/a-propos`, `/newsletter` et le bon de commande `/commande/<produit>`. |
+| **Ancienne page de vente Tiquiz** | `https://tipote.fr/tiquiz` | Tunnel Systeme.io. Il répond encore, et il **ne commissionne plus** : leur page ignore notre `?ref=`. Ne plus y envoyer personne. |
+| **Page de vente de l'Atelier** | `https://atelierduquiz.fr` | Servie par le dépôt formaquiz (port 3002). |
+| **App de l'Atelier du Quiz** (la formation) | `https://quizing.tipote.com` | Même app que ci-dessus, autre métier. PAS `formaquiz.tipote.com`, mort depuis le rebrand du 18 juin. |
 | **App Tipote** (autopilot) | `https://app.tipote.com` | Repo tipote-app, autre app. |
+| **Espace affilié** | `https://affiliate.tipote.com` | Sous-domaine de Tipote. C'est LUI qui paie : registre, commissions, versements. |
 | **Custom domains des users** | divers | Cf. pitfall H ter et J : OG metadata via `buildCanonicalUrl`, favicon via route handler. |
 
 **Conséquence pratique** :
