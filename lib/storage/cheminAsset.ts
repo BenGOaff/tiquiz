@@ -28,6 +28,28 @@
 // n'accepte que ce qu'on sait nommer. Une liste noire oublie toujours la
 // prochaine extension.
 
+/**
+ * LE DOSSIER OÙ LES IMAGES ATTERRISSENT, ET IL VIT ICI.
+ *
+ * PANNE DU 31 AOÛT 2026. Ce chemin était écrit à TROIS endroits qui ne
+ * se parlaient pas : la route d'envoi (`ASSETS_DIR`), la config nginx
+ * (`alias /srv/assets-tiquiz/`) et... personne dans Caddy, qui est le
+ * serveur qui répond vraiment. Le bloc `/assets/` avait été écrit pour
+ * nginx, qui ne voit jamais ces requêtes.
+ *
+ * Résultat : toutes les images de toutes les créatrices en 403, d'un
+ * coup, favicons comprises. Rien n'était perdu, tout était refusé.
+ *
+ * La constante vit donc dans le module PUR, celui qu'un test peut
+ * importer, et `tests/logic/assets-servis.test.mts` exige que le
+ * Caddyfile serve CE dossier là. Deux copies d'un chemin finissent
+ * toujours par diverger ; ici la divergence coûte toutes les images.
+ */
+export const DOSSIER_ASSETS_DEFAUT = "/srv/assets-tiquiz";
+
+/** Le préfixe public sous lequel ces fichiers sont servis. */
+export const PREFIXE_ASSETS = "/assets";
+
 /** Les dossiers de tête qu'on accepte. Un dossier inconnu est refusé. */
 export const DOSSIERS_ASSETS = [
   "bonus",

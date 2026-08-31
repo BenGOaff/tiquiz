@@ -3833,3 +3833,79 @@ l'avoir vérifié une seule fois. C'est la leçon d'Ivan (7 août), et celle
 des événements Stripe manquants (31 août) : **écrire le code n'est pas
 la dernière étape, vérifier que le fournisseur envoie ou écoute quelque
 chose l'est.**
+
+## Toutes les images en 403 : le garde-fou était à l'étage du dessous (31 août 2026)
+
+Béné : "toutes les images sont cassées c'est pas normal", puis "j'ai
+même plus les favicon putain", puis "a priori tous les champs pour
+ajouter des images ont disparu de tiquiz !!! Tu as fait quoi ???". Et,
+en même temps, une vraie cliente : "Damien a perdu tous ses visuels de
+quiz".
+
+**Trois symptômes, UNE cause, et AUCUN fichier perdu.**
+
+### Ce qui s'est passé
+
+Les images ont été basculées sur le serveur des vidéos cette semaine,
+pour économiser Supabase. Le bloc qui sert `/assets/` a été écrit dans
+`infra/nginx/videos.*.conf`... alors que c'est **Caddy** qui répond sur
+`videos.quiz.tipote.com`. nginx ne voit jamais ces requêtes.
+
+`/assets/<image>.webp` tombait donc dans le `handle` des VIDÉOS, qui
+exige un lien signé (`forward_auth` -> `/_validate-secure-link`). Aucune
+image n'en porte, donc Caddy répondait `403 forbidden` à TOUTES les
+images de TOUTES les créatrices, d'un coup.
+
+**Deux fautes empilées, et il fallait les deux corrections :** même avec
+une signature valide, la racine du site est `/srv/popquiz-videos`, donc
+l'image aurait été cherchée dans le dossier des vidéos.
+
+### LE 403 ÉTAIT LE DIAGNOSTIC, et c'est ce qu'il faut retenir
+
+Un fichier absent rend **404**. Un **403** dit que le refus vient de
+l'AUTHENTIFICATION, pas du disque. Partir chercher des fichiers perdus
+aurait été chercher au mauvais endroit pendant des heures, alors que
+tout était sur le serveur, refusé à la porte.
+
+Confirmé par deux sondes qui distinguent les deux blocs, avant d'écrire
+la moindre ligne : `OPTIONS /assets/x.webp` répondait **204** (le bloc
+`/assets` n'a aucun gestionnaire d'`OPTIONS`, celui des vidéos oui), et
+le corps du 403 faisait 9 octets, `forbidden`, donc Caddy et pas nginx.
+
+### Le troisième symptôme n'en était pas un
+
+"Tous les champs pour ajouter des images ont disparu" : ils n'ont pas
+bougé. `QuizDetailClient` rend l'aperçu **à la place** du bouton d'ajout
+dès qu'une image existe (`imgUrl ? <img> : <label>Image de la
+question</label>`). Un aperçu en 403 se lit donc "le champ a disparu".
+**Un symptôme rapporté est une observation, jamais un diagnostic.**
+
+### Les garde-fous, et pourquoi il en faut deux
+
+| Quand | Quoi | Ce qu'il attrape |
+|---|---|---|
+| avant le push | `tests/logic/assets-servis.test.mts` | le Caddyfile ne sert plus `/assets/`, ou depuis le mauvais dossier, ou derrière la signature |
+| après le déploiement | `npm run check:assets` | la CONFIG VIVANTE refuse encore |
+
+**`check:assets` distingue ce qu'il est censé distinguer**, et c'est
+tout son intérêt (leçon des clés Supabase, 22 août) : il demande un nom
+qui n'existe PAS exprès. **404 = la route est saine**, 403 = la panne.
+Il n'a donc besoin ni d'un vrai fichier, ni d'un secret. Vérifié le jour
+même contre la production : il sort en rouge sur la panne en cours.
+
+**`handle` et PAS `handle_path`** dans le Caddyfile : ce sont deux
+directives différentes dans l'ordre de Caddy, et l'attrape-tout des
+vidéos est un `handle`. Avec la même directive, l'ordre d'écriture fait
+foi, et il se lit dans le fichier.
+
+**Et le chemin ne vit plus qu'à un endroit** : `DOSSIER_ASSETS_DEFAUT`
+(`lib/storage/cheminAsset.ts`, module pur donc testable). Il était écrit
+dans la route d'envoi et dans nginx, sans que rien ne les compare.
+
+### La leçon, plus grande que cette panne
+
+C'est la version « mauvais serveur » du garde-fou non fusionné du
+23 août. **Écrire un bloc de configuration n'est pas la dernière étape ;
+vérifier que c'est bien LUI qui répond l'est.** Le fichier était juste,
+correctement commenté, testé par l'oeil, et adressé à un serveur qui ne
+voit jamais ces requêtes.
