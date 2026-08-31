@@ -4271,6 +4271,27 @@ C'est la même leçon que les images en 403 : **quand un changement
 déplace l'endroit d'où quelque chose est SERVI, la dernière étape n'est
 pas d'écrire la configuration, c'est d'aller lire la réponse.**
 
+### CE QUI A RÉELLEMENT DÉBLOQUÉ, ET CE QUE MON CONTRÔLE A DIT DE FAUX
+
+Le contrôle a répondu **401** sur la clé du serveur. Béné l'a remplacée
+par celle du compte où `tiquiz.fr` est vérifié, et **les emails
+partent**.
+
+Mais le message que ce contrôle affichait était FAUX, et il faut le
+dire : il annonçait "elle est révoquée, mal recopiée, ou elle n'a pas
+le droit de lire", en mettant les trois sur le même plan. Or **une clé
+Resend en `Sending access` répond 401 sur `/domains` tout en
+fonctionnant parfaitement** : elle sait envoyer, elle n'a pas le droit
+de lister. Sa capture d'écran le montrait d'ailleurs, colonne
+Permission.
+
+Le geste a été le bon par chance, pas par diagnostic. **Un contrôle qui
+ne distingue pas ce qu'il est censé distinguer est pire qu'un contrôle
+absent** (leçon des clés Supabase, 22 août), et je venais de la refaire
+dans l'outil écrit pour l'appliquer. Le script nomme désormais les deux
+causes, dit où trancher (la colonne Permission), et rappelle que le
+journal du serveur, lui, dit toujours la vérité.
+
 **Et ça vaut aussi pour Tipote**, qui retombe sur `hello@tipote.com`
 alors que le compte relevé ce jour là vérifie `send.tipote.com` et pas
 `tipote.com`. On ne l'a PAS changé : quelle adresse Tipote doit employer
