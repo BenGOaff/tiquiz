@@ -7,12 +7,17 @@
 // factures, alertes etc doivent être envoyés via tiquiz.fr aussi."
 //
 // Tous les envois lisent `SUPPORT_FROM_EMAIL`, et retombent sur
-// `hello@tipote.com` quand elle manque. Ce repli est le bon choix (c'est
-// le domaine vérifié de longue date chez Resend, donc celui qui ne part
-// pas en spam), mais il a un défaut : **il est silencieux**. Un `.env`
-// non recopié, un `postbuild` qui n'a pas tourné, une variable perdue au
-// prochain déploiement, et toute l'app se remet à écrire sous le nom de
-// l'autre marque sans qu'une seule ligne ne le signale.
+// `REPLI_EXPEDITEUR` quand elle manque. **Ce repli valait
+// `hello@tipote.com` jusqu'au 31 août, et c'était faux :** relevé dans
+// le compte Resend de Béné, les domaines vérifiés sont `tiquiz.fr`,
+// `atelierduquiz.fr` et `send.tipote.com`. `tipote.com` tout court n'y
+// est PAS, donc Resend refusait l'envoi, donc plus aucun email ne
+// partait. Le repli est maintenant `hello@tiquiz.fr`, vérifié.
+//
+// Le défaut de fond reste le même : **un repli est silencieux**. Un
+// `.env` non recopié, un `postbuild` qui n'a pas tourné, une variable
+// perdue au prochain déploiement, et toute l'app écrit sous une adresse
+// que personne n'a choisie sans qu'une seule ligne ne le signale.
 //
 // C'est exactement la forme de la panne du 22 août : la valeur du
 // FICHIER et la valeur du PROCESSUS peuvent différer, et seul un
@@ -68,7 +73,7 @@ export function verifierExpediteur(args: {
   const attendus = args.domainesAttendus.map((d) => d.toLowerCase());
 
   if (!brut) {
-    return { ok: false, genre: "absente", adresse: "hello@tipote.com" };
+    return { ok: false, genre: "absente", adresse: "hello@tiquiz.fr" };
   }
   if (brut.includes("<")) {
     return { ok: false, genre: "nom-en-double", brut };
@@ -95,8 +100,8 @@ export function formaterExpediteur(d: DiagnosticExpediteur, marque: string): str
     return (
       `${entete}\n` +
       `  SUPPORT_FROM_EMAIL n'est pas posée dans le processus.\n` +
-      `  Tous les emails partent donc de ${d.adresse}, c'est à dire sous\n` +
-      `  l'autre marque. Poser la variable dans le .env AVANT le build\n` +
+      `  Tous les emails partent donc de ${d.adresse}, le repli du code.\n` +
+      `  Poser la variable dans le .env AVANT le build\n` +
       `  (le postbuild recopie les .env dans .next/standalone/).\n`
     );
   }

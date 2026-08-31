@@ -195,8 +195,18 @@ function echapper(v: string): string {
  * c'est à dire l'inverse de ce que le fichier fait vingt lignes plus
  * bas. Un commentaire périmé n'est pas neutre : il m'a fait remplacer
  * une adresse JUSTE dans un message d'erreur, en croyant corriger une
- * faute. `REPLI_EXPEDITEUR` reste `hello@tipote.com` parce qu'un repli
- * doit être ce qui marche à coup sûr, pas ce qu'on préfère.
+ * faute.
+ *
+ * **ET LE REPLI ÉTAIT CASSÉ (31 août, mesuré).** Il valait
+ * `hello@tipote.com`, sous le motif qu'un repli doit être "ce qui
+ * marche à coup sûr". Relevé dans son compte Resend le même jour, les
+ * domaines vérifiés sont `tiquiz.fr`, `atelierduquiz.fr` et
+ * **`send.tipote.com`** : `tipote.com` tout court n'en fait PAS partie.
+ * Le repli partait donc d'un domaine non vérifié, que Resend REFUSE,
+ * donc plus aucun email ne partait, liens de connexion compris.
+ *
+ * C'est le même défaut que le `??` du 2 août : une valeur par défaut
+ * qu'on n'a jamais essayée n'est pas un garde-fou, c'est une hypothèse.
  */
 export function adresseExpediteur(
   // Type LARGE, pas `NodeJS.ProcessEnv` : celui-la exige NODE_ENV, donc
@@ -243,7 +253,7 @@ export function adresseNue(brut: string): string {
  *
  * L'oubli, lui, CRIE au démarrage : voir `lib/env/expediteur.ts`.
  */
-export const REPLI_EXPEDITEUR = "hello@tipote.com";
+export const REPLI_EXPEDITEUR = "hello@tiquiz.fr";
 
 /** L'expéditeur complet, nom compris. */
 export function tiquizFrom(

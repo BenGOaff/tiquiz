@@ -18,6 +18,7 @@ import ClientFiche from "@/components/admin/ClientFiche";
 import { CARTE } from "@/components/pilotage/carte";
 import { lireAffiliesDistants } from "@/lib/pilotage/affilies";
 import { isAdminEmail } from "@/lib/adminEmails";
+import { lireEmailParam } from "@/lib/admin/emailParam";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
 export const dynamic = "force-dynamic";
@@ -34,8 +35,15 @@ export default async function FichePilotagePage({
   } = await supabase.auth.getUser();
   if (!user || !isAdminEmail(user.email)) redirect("/dashboard");
 
-  // Next décode déjà le segment : `a%40b.fr` arrive en `a@b.fr`.
-  const { email } = await params;
+  // NON, NEXT NE DÉCODE PAS LE SEGMENT. Ce commentaire disait
+  // l'inverse, et c'est pour ça que personne ne décodait : la fiche
+  // s'ouvrait sur `blagardette%2Btestaffi2%40gmail.com`, et surtout la
+  // recherche de "Amené par" échouait pour TOUT LE MONDE, puisque `@`
+  // s'encode toujours en `%40`. Le suivi d'affiliation avait donc l'air
+  // de ne connaître personne. Sa jumelle `/admin/clients/[email]`
+  // décodait, elle (31 août 2026).
+  const { email: brut } = await params;
+  const email = lireEmailParam(brut);
 
   // QUI L'A AMENÉ. Béné : "pour leurs clients je veux voir qui est leur
   // affilié." L'information vit sur l'autre base, et son absence ne
@@ -43,7 +51,7 @@ export default async function FichePilotagePage({
   // JAMAIS "aucun affilié" faute d'avoir pu lire, ce serait une réponse
   // fausse à une vraie question.
   const { attributions, etat } = await lireAffiliesDistants();
-  const amenePar = etat.ok ? attributions[email.trim().toLowerCase()] : null;
+  const amenePar = etat.ok ? attributions[email] : null;
 
   return (
     <div className="space-y-4">

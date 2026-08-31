@@ -99,6 +99,32 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ ok: true });
   }
 
+  // ── AUCUN 5xx SUR CE CHEMIN, ET C'EST MESURÉ (31 août 2026) ──
+  //
+  // Béné : "le test d'inscription gratuite avec un ref ne fonctionne
+  // pas : /api/auth/signup 502. On attire du trafic et les gens peuvent
+  // même pas s'inscrire."
+  //
+  // Les quatre refus ci dessous répondaient 502, et **Cloudflare
+  // REMPLACE le corps d'un 502** par sa propre page (`error code: 502`,
+  // text/plain). Le `res.json()` du formulaire échouait donc, `reason`
+  // valait `undefined`, et l'écran affichait sa phrase par défaut :
+  // "Erreur lors de la création du compte."
+  //
+  // Or le compte ÉTAIT créé. Vérifié en sondant la production : le
+  // contact `tiquiz-free` apparaissait bien dans Systeme.io. L'écran
+  // annonçait donc l'inverse de ce qui s'était passé, et un deuxième
+  // essai répondait "adresse déjà inscrite". Le pire enchaînement
+  // possible sur la page qui doit inspirer confiance.
+  //
+  // La phrase juste existait déjà (`errEmailFailed` : "ton compte est
+  // créé mais l'email n'est pas parti"), elle n'arrivait jamais.
+  //
+  // C'est exactement la leçon payée le matin même sur le formulaire de
+  // la newsletter. Un statut choisi pour bien dire "c'est nous qui
+  // sommes en panne" est celui qu'un intermédiaire se permet de
+  // réécrire. Ici rien ne dépend du statut : c'est un navigateur, il
+  // n'y a aucun réessai automatique à déclencher.
   let actionLink: string | null = null;
   try {
     // `generateLink` CRÉE la personne en attente de confirmation ET rend
@@ -118,18 +144,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ ok: false, reason: "already_registered" }, { status: 409 });
       }
       console.error(`[signup] creation impossible pour ${email} : ${error.message}`);
-      return NextResponse.json({ ok: false, reason: "signup_failed" }, { status: 502 });
+      return NextResponse.json({ ok: false, reason: "signup_failed" });
     }
 
     const hashedToken = data?.properties?.hashed_token;
     if (!hashedToken) {
       console.error(`[signup] aucun jeton rendu pour ${email} : email NON envoye.`);
-      return NextResponse.json({ ok: false, reason: "signup_failed" }, { status: 502 });
+      return NextResponse.json({ ok: false, reason: "signup_failed" });
     }
     actionLink = buildAuthCallbackUrl(appUrl, { tokenHash: hashedToken, type: "signup" });
   } catch (e) {
     console.error(`[signup] ${e instanceof Error ? e.message : String(e)}`);
-    return NextResponse.json({ ok: false, reason: "signup_failed" }, { status: 502 });
+    return NextResponse.json({ ok: false, reason: "signup_failed" });
   }
 
   // ── LE RATTACHEMENT À VIE ──
@@ -176,7 +202,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     console.error(
       `[signup] compte cree pour ${email} mais email NON parti : elle ne peut pas entrer.`,
     );
-    return NextResponse.json({ ok: false, reason: "email_failed" }, { status: 502 });
+    return NextResponse.json({ ok: false, reason: "email_failed" });
   }
 
   return NextResponse.json({ ok: true });
