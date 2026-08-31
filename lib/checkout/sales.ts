@@ -30,6 +30,8 @@
 // Le pliage est ici, pur et testé. La route se contente de lire la table
 // et de l'appeler.
 
+import { metaAbonnementDeLaFacture } from "@/lib/checkout/formeStripe";
+
 /** Une ligne de `webhook_logs`, réduite à ce qu'on lit. */
 export interface EventRow {
   source: string;
@@ -144,8 +146,12 @@ export function refFacture(facture: Record<string, unknown>): string | null {
  */
 export function productIdDeLaFacture(facture: Record<string, unknown>): string | null {
   // 1. Notre `metadata[product]`, posé sur l'abonnement. Stripe le
-  //    recopie sur la facture dans `subscription_details`.
-  const surAbo = texte(lire(lire(facture.subscription_details).metadata).product);
+  //    recopie sur la facture dans `subscription_details`, qui a
+  //    déménagé sous `parent` dans les versions récentes de l'API.
+  //    `metaAbonnementDeLaFacture` lit les deux formes : sans elle, le
+  //    tableau des ventes affichait "produit non identifié" sur chaque
+  //    échéance d'abonnement, ce que Béné a déjà relevé le 23 août.
+  const surAbo = texte(metaAbonnementDeLaFacture(facture).product);
   if (surAbo) return surAbo;
 
   // 2. Sur les lignes, où il peut vivre à trois endroits selon la

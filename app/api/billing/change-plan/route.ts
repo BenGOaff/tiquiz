@@ -54,6 +54,7 @@ import { createOwnerPaypalSubscription, getOwnerPaypalSubscription } from "@/lib
 import { retrieveOwnerSubscription } from "@/lib/checkout/stripeCheckout";
 import { estAbonnementVivant, listerAbonnementsOwner } from "@/lib/checkout/subscriptionCancel";
 import { checkoutReturnBase } from "@/lib/sales/salesHosts";
+import { finDePeriodeAbonnement } from "@/lib/checkout/formeStripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 
@@ -123,7 +124,27 @@ async function adresseConnectee(): Promise<string | null> {
 // là qu'on monte, et Stripe n'a rien à voir là dedans.
 
 type Contexte =
-  | { ok: true; fournisseur: "paypal"; produit: string | null; abonnementId: string }
+  | {
+      ok: true;
+      fournisseur: "paypal";
+      produit: string | null;
+      abonnementId: string;
+      /**
+       * QUI A AMENÉ CE CLIENT, RECOPIÉ SUR LE NOUVEL ABONNEMENT.
+       *
+       * PayPal ne sait pas changer le palier d'un abonnement : on en
+       * ouvre un NEUF. Sans ces deux champs, le nouveau `custom_id`
+       * naissait sans affiliée, et chaque `PAYMENT.SALE.COMPLETED`
+       * suivant remontait une vente sans lien. L'affiliée n'était
+       * rattrapée que par la conversion écrite en base lors d'une
+       * PREMIÈRE commission : quelqu'un qui monte de palier PENDANT
+       * son mois offert n'en a aucune, donc son affiliée n'était plus
+       * jamais payée, sans qu'une ligne le dise. Une montée de palier
+       * ne change pas qui a amené le client.
+       */
+      affiliateRef: string | null;
+      affiliateCode: string | null;
+    }
   | {
       ok: true;
       fournisseur: "stripe";
@@ -151,7 +172,14 @@ async function contexteDe(email: string): Promise<Contexte> {
     // Un abonnement PayPal éteint n'est pas un abonnement à monter : on
     // continue vers Stripe au lieu de refuser.
     if (abo?.actif) {
-      return { ok: true, fournisseur: "paypal", produit: abo.productId, abonnementId: paypalId };
+      return {
+        ok: true,
+        fournisseur: "paypal",
+        produit: abo.productId,
+        abonnementId: paypalId,
+        affiliateRef: abo.affiliateRef,
+        affiliateCode: abo.affiliateCode,
+      };
     }
   }
 
@@ -201,8 +229,11 @@ async function finDePeriode(args: {
   subscriptionId: string;
 }): Promise<string | null> {
   const sub = await retrieveOwnerSubscription(args.key, args.subscriptionId);
-  const fin = (sub as { current_period_end?: unknown } | null)?.current_period_end;
-  return typeof fin === "number" ? new Date(fin * 1000).toISOString() : null;
+  // `current_period_end` a quitté la racine de l'abonnement pour ses
+  // LIGNES dans les versions récentes de l'API. Lu au seul premier
+  // niveau, l'écran annonçait une descente de palier SANS date.
+  const fin = finDePeriodeAbonnement(sub);
+  return fin ? new Date(fin * 1000).toISOString() : null;
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -385,7 +416,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   if (ctx.fournisseur === "paypal") {
-    return monterViaPaypal(req, email, ctx.abonnementId, decision.cible);
+    return monterViaPaypal(req, email, ctx.abonnementId, decision.cible, {
+      // Une montée de palier ne change pas qui a amené le client : on
+      // RECOPIE son affiliée sur l'abonnement neuf.
+      affiliateRef: ctx.affiliateRef,
+      affiliateCode: ctx.affiliateCode,
+    });
   }
 
   const r = await appliquerChangement({
@@ -430,6 +466,12 @@ async function monterViaPaypal(
   email: string,
   ancienId: string,
   cible: import("@/lib/checkout/catalog").OwnerProduct,
+  /**
+   * L'AFFILIÉE DE L'ABONNEMENT QU'ON REMPLACE. Paramètre OBLIGATOIRE :
+   * l'oublier ne casse rien de visible, ça arrête juste de payer
+   * quelqu'un. Le compilateur refuse maintenant un appelant qui se tait.
+   */
+  affiliation: { affiliateRef: string | null; affiliateCode: string | null },
 ): Promise<NextResponse> {
   const compte = readOwnerPaypal(process.env);
   if (!compte) return refus("not_configured");
@@ -462,6 +504,10 @@ async function monterViaPaypal(
     // activé. Le perdre laisserait deux abonnements prélever la même
     // personne.
     remplace: ancienId,
+    // ET CELLE QUI A AMENÉ LE CLIENT SUIT. Sans ces deux lignes, chaque
+    // échéance du nouvel abonnement remontait une vente sans affiliée.
+    affiliateRef: affiliation.affiliateRef,
+    affiliateCode: affiliation.affiliateCode,
   });
 
   if (!result.ok || !result.approveUrl) {

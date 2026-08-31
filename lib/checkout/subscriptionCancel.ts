@@ -34,6 +34,8 @@
 // testables. Les appels réseau vivent ici aussi, mais derrière des
 // fonctions qui prennent la clé en paramètre.
 
+import { finDePeriodeAbonnement } from "@/lib/checkout/formeStripe";
+
 /** Quand l'abonnement s'arrête. */
 export type CancelQuand = "fin-de-periode" | "immediat";
 
@@ -91,13 +93,18 @@ export function lireAbonnements(json: unknown): AbonnementOwner[] {
   if (!Array.isArray(data)) return [];
   const sortie: AbonnementOwner[] = [];
   for (const brut of data) {
-    const o = brut as { id?: unknown; status?: unknown; current_period_end?: unknown } | null;
+    const o = brut as { id?: unknown; status?: unknown } | null;
     const id = String(o?.id ?? "").trim();
     if (!id) continue;
     sortie.push({
       id,
       status: String(o?.status ?? "").trim().toLowerCase(),
-      finLe: secondesEnIso(o?.current_period_end),
+      // La date de fin a quitté la racine de l'abonnement pour ses
+      // LIGNES dans les versions récentes de l'API : `finLe` est la
+      // date qu'on ANNONCE à quelqu'un qui résilie ("ton accès tient
+      // jusqu'au ..."). Lue au seul premier niveau, elle disparaissait
+      // de l'écran sans qu'aucune erreur ne le dise.
+      finLe: secondesEnIso(finDePeriodeAbonnement(brut)),
     });
   }
   return sortie;
@@ -172,7 +179,6 @@ export async function annulerAbonnementOwner(
             body: "cancel_at_period_end=true",
           });
     const json = (await res.json().catch(() => ({}))) as {
-      current_period_end?: unknown;
       error?: { message?: string };
     };
     if (!res.ok) {
@@ -184,7 +190,7 @@ export async function annulerAbonnementOwner(
       const manquePermission = res.status === 403 || /permission|not have access/i.test(detail);
       return { ok: false, finLe: null, reason: manquePermission ? "missing_permission" : "provider_refused" };
     }
-    return { ok: true, finLe: secondesEnIso(json.current_period_end) };
+    return { ok: true, finLe: secondesEnIso(finDePeriodeAbonnement(json)) };
   } catch (e) {
     console.error(`[abonnement] reseau : ${(e as Error).message}`);
     return { ok: false, finLe: null, reason: "network" };

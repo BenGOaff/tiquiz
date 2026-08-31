@@ -61,6 +61,12 @@ import {
   stripeDateToIso,
   type RawSubscription,
 } from "@/lib/checkout/subscriptionLifecycle";
+import {
+  abonnementDeLaFacture,
+  finDePeriodeAbonnement,
+  metaAbonnementDeLaFacture,
+  taxeDeLaFacture,
+} from "@/lib/checkout/formeStripe";
 import { marquerTraite, prendreLeVerrou } from "@/lib/webhooks/log";
 import { completerFacturation } from "@/lib/facture/store";
 
@@ -561,10 +567,19 @@ async function surAbonnement(
   // Sur `customer.subscription.*` l'objet EST l'abonnement ; sur
   // `invoice.*` il porte l'abonnement dans un champ. Deux formes, une
   // seule lecture, écrite ici plutôt que devinée plus bas.
+  //
+  // ET SUR LA FACTURE, LE CHAMP A DÉMÉNAGÉ (audit du 31 août 2026).
+  // `invoice.subscription` a disparu au profit de
+  // `invoice.parent.subscription_details.subscription`. Lu au seul
+  // premier niveau, `invoice.paid` sortait en "ce n'est pas un
+  // abonnement" et `commissionnerEcheance` n'était JAMAIS appelée :
+  // l'affilié touchait le premier mois et plus rien ensuite, sans
+  // qu'une seule ligne d'erreur le dise. `abonnementDeLaFacture` lit
+  // les deux formes. Voir `lib/checkout/formeStripe.ts`.
   const surLAbonnement = String(eventType ?? "").startsWith("customer.subscription.");
-  const subId = String(
-    (surLAbonnement ? objet.id : objet.subscription) ?? "",
-  ).trim();
+  const subId = surLAbonnement
+    ? String(objet.id ?? "").trim()
+    : (abonnementDeLaFacture(objet) ?? "");
   const customerId = String(objet.customer ?? "").trim();
 
   const compte = readOwnerStripe(process.env);
@@ -615,7 +630,11 @@ async function surAbonnement(
 
   const { amountCents, currency } = readSubscriptionAmount(abonnement);
   const { feedback, comment } = readCancellationFeedback(abonnement);
-  const finDePeriode = stripeDateToIso(abonnement?.current_period_end);
+  // `current_period_end` a quitté la racine de l'abonnement pour ses
+  // LIGNES. Lu au seul premier niveau, la date annoncée à quelqu'un qui
+  // descend de palier disparaissait, et le départ consigné n'avait plus
+  // d'échéance.
+  const finDePeriode = stripeDateToIso(finDePeriodeAbonnement(abonnement));
 
   // ── ON CONSIGNE ──
   //
@@ -659,7 +678,7 @@ async function surAbonnement(
   // Et ça règle le mois offert sans un drapeau de plus : la facture
   // d'essai vaut 0, donc pas de commission ; la première vraie échéance
   // en crée une.
-  if (eventType === "invoice.paid" && abonnement) {
+  if (eventType === "invoice.paid") {
     await commissionnerEcheance(abonnement, objet);
   }
 
@@ -786,7 +805,15 @@ async function commissionnerEcheance(
   // somme, et la commission se calcule sur ce qui est rentré.
   const paye = Math.round(Number(facture.amount_paid ?? 0)) || 0;
   if (paye <= 0) return;
-  const taxe = Math.round(Number(facture.tax ?? 0)) || 0;
+  // LA TVA, ET ELLE DÉCIDE DE 1,13 EUR PAR VENTE ET PAR MOIS.
+  //
+  // `invoice.tax` est devenu `invoice.total_taxes[].amount`. Lu au seul
+  // premier niveau, la taxe valait zéro, donc la commission se calculait
+  // sur le TTC : 40 % de 17,00 EUR au lieu de 40 % de 14,17 EUR. C'est
+  // le MÊME écart que l'audit du 26 août, par une autre porte, et il
+  // est invisible parce que zéro est une réponse légitime (un client
+  // hors UE, une autoliquidation).
+  const taxe = taxeDeLaFacture(facture);
 
   const factureId = String(facture.id ?? "").trim();
   if (!factureId) {
@@ -797,7 +824,16 @@ async function commissionnerEcheance(
     return;
   }
 
-  const meta = (abonnement as { metadata?: Record<string, unknown> } | null)?.metadata ?? {};
+  // LES METADONNÉES, AVEC LEUR REPLI SUR LA FACTURE.
+  //
+  // On préfère celles de l'abonnement RELU (elles suivent une montée de
+  // palier), mais une relecture ratée ne doit pas coûter une commission :
+  // Stripe recopie ces mêmes clés sur la facture. Sans ce repli, une
+  // seconde d'API indisponible faisait disparaître le mois de l'affilié,
+  // en silence, et le réessai de Stripe n'y changeait rien puisque le
+  // webhook avait répondu 200.
+  const surAbo = (abonnement as { metadata?: Record<string, unknown> } | null)?.metadata ?? {};
+  const meta = Object.keys(surAbo).length > 0 ? surAbo : metaAbonnementDeLaFacture(facture);
   const produit = findOwnerProduct(String(meta.product ?? ""));
   if (!produit) {
     console.error(

@@ -60,7 +60,9 @@ npm run test:visual    # 99/99, UNIQUEMENT si le design ou l'UX bouge
 
 Et selon ce qui a été touché : `npm run check:caddy` (un fichier de
 `infra/caddy/`), `npm run check:migrations-pending` (après un
-déploiement), `npm run check:supabase-keys` (un doute sur un `.env`).
+déploiement), `npm run check:supabase-keys` (un doute sur un `.env`),
+`npm run check:stripe` (un doute sur les commissions récurrentes : il
+dit la version d'API des webhooks et les événements écoutés).
 
 ### Les cinq pièges qui ont coûté le plus cher
 
@@ -2611,12 +2613,29 @@ refuserait le passage à l'année. La règle est donc sur les deux axes
 montée ; à niveau égal, mois -> année = montée ; tout le reste =
 descente.
 
-**Une descente est REFUSÉE, avec sa raison.** L'appliquer tout de suite
-retirerait des fonctionnalités déjà payées jusqu'à la fin de la période.
-La sortie honnête existe déjà : elle arrête son abonnement (l'accès tient
-jusqu'à la date payée) et reprend le palier qu'elle veut. L'écran le DIT
-au lieu de n'afficher aucun bouton (leçon du bouton Rembourser absent,
-22 août).
+**Une descente est ACCEPTÉE, et elle prend effet à l'ÉCHÉANCE** (Béné,
+29 août : "je veux que le downgrade soit pris en compte sans
+désabonnement côté user"). Cette page a dit le contraire jusqu'au
+31 août, et c'était périmé, pas faux à l'origine : la descente était
+refusée jusqu'au 29. L'ancien refus était mauvais commercialement, il
+fallait résilier pour descendre et beaucoup ne revenaient pas.
+
+Ce qu'il ne faut PAS faire, en revanche, c'est l'appliquer tout de
+suite : elle a payé sa période au tarif fort, on ne lui reprend pas ce
+qu'elle a acheté (règle du 23 août). Chez Stripe, la descente passe donc
+par un CALENDRIER à deux phases (`programmerDescente`) ; chez PayPal
+elle est refusée avec sa raison (`descente_paypal`), parce que PayPal
+n'a pas de calendrier. Un changement déjà programmé se VOIT et se défait
+(`lireDescenteProgrammee` / `annulerDescenteProgrammee`) : le découvrir
+un matin sans se souvenir de l'avoir demandé serait pire que pas de
+descente du tout.
+
+**Le piège du calendrier, et il vaut de l'argent :** les metadonnées
+d'une phase sont posées SUR L'ABONNEMENT au moment où la phase commence.
+N'y écrire que `product` risquait d'effacer `affiliate_code`,
+`free_month_days` et la remise en attente le jour de la bascule.
+`metadonneesDeLaPhaseSuivante()` REPORTE tout ce que l'abonnement porte,
+puis réécrit `product` et `source`. Voir la section du 31 août.
 
 **Le montant vient de Stripe, jamais d'une soustraction faite par nous.**
 `GET /api/billing/change-plan?produit=` demande la facture que Stripe
@@ -2928,6 +2947,92 @@ réponses différentes le jour où l'un prend du retard.
 c'est à vie, donc ce n'est pas l'endroit où être permissif.
 
 Test : `tests/logic/audit-26-aout.test.mts`.
+
+## Une commission récurrente tenait à la version d'API de Stripe (31 août 2026)
+
+Béné : "je vais démarcher de très gros affiliés, je ne peux pas me
+permettre de proposer un système instable."
+
+**Aucun appel de ce dépôt n'envoie d'en-tête `Stripe-Version`.** Les
+réponses arrivent donc dans la version PAR DÉFAUT DU COMPTE, et les
+webhooks dans la version choisie SUR L'ENDPOINT. Les deux se règlent
+dans le tableau de bord de Stripe, pas chez nous, et elles peuvent
+changer sans qu'une ligne de code bouge.
+
+Or Stripe a DÉPLACÉ trois champs que ce dépôt lit pour payer les
+affiliés, et les trois échouent EN SILENCE :
+
+| Ce qu'on lisait | Où c'est passé | Ce que ça coûte |
+|---|---|---|
+| `invoice.subscription` | `invoice.parent.subscription_details.subscription` | `invoice.paid` sort en "ce n'est pas un abonnement" : **plus AUCUNE commission récurrente**, l'affilié touche le 1er mois et plus rien |
+| `invoice.tax` | `invoice.total_taxes[].amount` | la taxe vaut zéro, la commission se calcule sur le TTC : **1,13 € de trop par vente et par mois** |
+| `subscription.current_period_end` | `subscription.items.data[].current_period_end` | la date annoncée à qui descend de palier disparaît |
+
+Le deuxième est exactement l'écart du 26 août, par une autre porte. Et
+le premier est le plus grave parce que **zéro erreur ne s'écrit nulle
+part** : le webhook répond 200, la vente est encaissée, l'accès s'ouvre,
+et seule l'affiliée voit qu'il ne se passe plus rien chez elle.
+
+**Règle : `lib/checkout/formeStripe.ts` lit les DEUX formes, personne ne
+lit un champ Stripe à la main.** `abonnementDeLaFacture`,
+`taxeDeLaFacture`, `finDePeriodeAbonnement`, `metaAbonnementDeLaFacture`,
+`montantAbonnement`. Pur, donc testé.
+
+**On n'ÉPINGLE PAS une version, et c'est délibéré.** Épingler nos appels
+sortants ne dit rien de la version des webhooks REÇUS : ça ne fermerait
+que la moitié de la porte, et ça créerait une deuxième valeur à
+maintenir. Une lecture tolérante ne casse jamais ce qui marchait, et
+elle marche déjà le jour où Béné accepte la mise à jour d'API que Stripe
+lui propose.
+
+**Et pour SAVOIR au lieu de supposer :**
+
+```bash
+npm run check:stripe
+```
+
+Il dit la version des événements récents, la version de CHAQUE endpoint
+de webhook, la forme réelle d'une facture payée, et surtout **les
+événements manquants avec ce que chacun coûte**. Un événement absent de
+l'abonnement d'un endpoint ne produit AUCUNE erreur : il n'arrive
+simplement jamais. `invoice.paid` manquant, c'est zéro commission
+récurrente ; `customer.subscription.deleted` manquant, c'est un plan
+payant qui reste ouvert après une résiliation. Le test exige que sa
+liste reste d'accord avec `OWNER_SUBSCRIPTION_EVENTS`.
+
+C'est la leçon d'Ivan (7 août), réappliquée : **on regarde ce qu'il y a,
+on ne raisonne pas sur ce qu'il devrait y avoir.** `refFacture`
+(`lib/checkout/sales.ts`) le faisait DÉJÀ pour `payment_intent` : la
+moitié du problème était connue, et l'autre moitié vivait dans le
+fichier qui paie.
+
+**L'Atelier n'est PAS concerné** : il vend un achat unique, son webhook
+Stripe n'écoute ni `invoice.*` ni `customer.subscription.*`. Vérifié, pas
+supposé. Le jour où il vendra un abonnement, ce fichier se porte là-bas.
+
+### Un changement de palier perdait l'affiliée
+
+Deux chemins, deux fuites, et le repli qui les cachait à moitié.
+
+**PayPal ne sait pas changer le palier : on ouvre un abonnement NEUF.**
+Son `custom_id` naissait sans `affiliate_code` ni `affiliate_ref`, donc
+chaque `PAYMENT.SALE.COMPLETED` suivant remontait une vente sans lien.
+`change-plan` recopie maintenant les deux depuis l'abonnement remplacé,
+et c'est un PARAMÈTRE OBLIGATOIRE de `monterViaPaypal` : l'oublier ne
+casse rien de visible, ça arrête juste de payer quelqu'un.
+
+**Stripe passe par un calendrier sur une descente**, et les metadonnées
+de la phase 1 sont posées sur l'abonnement au moment de la bascule (voir
+la section "Monter de palier").
+
+**Le repli qui rend ces deux trous discrets, et pourquoi il ne suffit
+pas :** `attributeSale` retrouve l'affiliée par la CONVERSION en base
+quand le lien manque. Mais cette conversion n'est écrite qu'à la
+PREMIÈRE commission attribuée. Quelqu'un qui change de palier pendant
+son mois offert n'en a jamais eu une seule : son affiliée n'était plus
+jamais payée, sans qu'une ligne le dise.
+
+Test : `tests/logic/audit-31-aout.test.mts`.
 
 ## Équipes dans le PLUS : ce qui est noté, et ce qui bloque (Béné, 29 août 2026)
 
