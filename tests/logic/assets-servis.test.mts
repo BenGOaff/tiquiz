@@ -126,3 +126,26 @@ test("le test attrape bien la regression qu'il decrit", () => {
     "la configuration d'avant la correction doit etre reconnue comme cassee",
   );
 });
+
+test("chaque domaine sert SON dossier, jamais celui de l'autre app", () => {
+  // Les deux domaines videos.* partagent UN bloc de site. Le premier
+  // correctif servait donc Tipote depuis le dossier de Tiquiz : la
+  // meme panne, rejouee dans l'autre app, par la correction de la
+  // premiere. Tipote porte le MEME code d'envoi, avec son dossier.
+  assert.match(
+    VIDEOS,
+    /@assets_tipote[\s\S]*?host\s+videos\.tipote\.com[\s\S]*?path\s+\/assets\/\*/,
+    "Il manque le matcher qui envoie videos.tipote.com sur SON dossier.",
+  );
+  const iTipote = VIDEOS.indexOf("handle @assets_tipote");
+  const iTiquiz = VIDEOS.indexOf(`handle ${PREFIXE_ASSETS}/*`);
+  assert.ok(
+    iTipote !== -1 && iTipote < iTiquiz,
+    "Le bloc de Tipote doit venir AVANT celui de Tiquiz, sinon le second " +
+      "prend les deux domaines et Tipote est servi depuis le mauvais dossier.",
+  );
+  assert.ok(
+    !VIDEOS.slice(iTipote, iTiquiz).includes(DOSSIER_ASSETS_DEFAUT),
+    `videos.tipote.com ne doit pas etre servi depuis ${DOSSIER_ASSETS_DEFAUT}.`,
+  );
+});

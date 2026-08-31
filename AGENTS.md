@@ -62,7 +62,23 @@ Et selon ce qui a été touché : `npm run check:caddy` (un fichier de
 `infra/caddy/`), `npm run check:migrations-pending` (après un
 déploiement), `npm run check:supabase-keys` (un doute sur un `.env`),
 `npm run check:stripe` (un doute sur les commissions récurrentes : il
-dit la version d'API des webhooks et les événements écoutés).
+dit la version d'API des webhooks et les événements écoutés),
+**`npm run check:assets`** (après TOUT déploiement qui touche à Caddy,
+à nginx ou aux images).
+
+### ET LA RÈGLE QUI MANQUAIT, PAYÉE LE 31 AOÛT
+
+**Quand un changement déplace l'endroit d'où quelque chose est SERVI,
+la dernière étape n'est pas d'écrire la configuration : c'est d'aller
+chercher l'URL et de lire le code de réponse.** Une commande, dix
+secondes.
+
+Ce jour là, toutes les images de toutes les créatrices ont répondu 403
+pendant des heures, sur des quiz qui tournaient en PUBLICITÉ payante.
+Le bloc de service avait été écrit dans la config nginx, correctement,
+commenté, relu... et adressé à un serveur qui ne voit jamais ces
+requêtes, parce que c'est Caddy qui répond. Personne n'a demandé au
+serveur s'il servait vraiment le fichier.
 
 ### Les cinq pièges qui ont coûté le plus cher
 
