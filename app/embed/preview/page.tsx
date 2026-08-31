@@ -31,7 +31,10 @@ export default async function EmbedPreviewPage(props: {
       initialSessionToken={sp.session ?? ""}
       locale={locale}
       source={sp.source ?? "embed"}
-      checkoutUrl={sp.checkout ?? "https://www.tipote.fr/tiquiz"}
+      // Le repli est NOTRE page de vente, plus le tunnel Systeme.io
+      // (Béné, 31 août 2026 : "il faut bien que ce soit ça qui
+      // s'affiche pour les nouveaux partout").
+      checkoutUrl={sp.checkout ?? "https://tiquiz.fr/"}
     />
   );
 }

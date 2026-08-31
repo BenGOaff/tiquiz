@@ -42,7 +42,13 @@ export const dynamic = "force-dynamic";
  */
 const PAGES: Record<string, Omit<SalesPageMeta, "slug">> = {
   tiquiz: {
-    canonical: "https://www.tipote.fr/tiquiz",
+    // La canonique d'APERÇU. Sur le domaine public elle est remplacée
+    // par `publicSalesCanonical()`, qui rend déjà `https://tiquiz.fr/`.
+    //
+    // Elle désignait l'ancien tunnel Systeme.io comme l'original.
+    // L'aperçu est en `noindex`, donc ça ne coûtait rien à Google, mais
+    // plus rien ne doit nommer l'ancienne page comme la vraie.
+    canonical: "https://tiquiz.fr/",
     title: "Tiquiz : le générateur de quiz qui transforme tes visiteurs en leads",
     description:
       "Crée un quiz personnalisé en quelques minutes, capture des emails qualifiés et envoie à chaque visiteur le résultat qui lui parle. Sans code, en 7 langues.",
