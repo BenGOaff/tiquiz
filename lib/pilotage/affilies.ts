@@ -197,6 +197,50 @@ export interface Filleul {
   gagneCents: number;
 }
 
+/** Ce qu'il gagne aujourd'hui, et ce qui l'attend à la marche suivante. */
+export interface RecompenseAffiliee {
+  choix: "commissions" | "abonnement";
+  tauxPct: number;
+  /** Un accord négocié, qui passe devant le barème. */
+  tauxNegocie: boolean;
+  remisePct: number;
+  prochaineMarcheManque: number | null;
+  prochaineMarcheValeur: number | null;
+}
+
+/** Où part son argent. L'IBAN n'est là QUE sous forme de masque. */
+export interface VersementAffiliee {
+  methode: "paypal" | "virement" | null;
+  /** A-t-il CHOISI, ou est-ce déduit d'une ligne historique ? */
+  explicite: boolean;
+  paypalEmail: string | null;
+  ibanMasque: string | null;
+  titulaire: string | null;
+  mandatAccepteLe: string | null;
+  manques: string[];
+}
+
+export interface FactureAffiliee {
+  numero: string;
+  genre: string;
+  periode: string;
+  htCents: number;
+  ttcCents: number;
+  currency: string;
+  emiseLe: string | null;
+  versee: boolean;
+}
+
+/** Les quatre poches, qui ne se recouvrent pas. */
+export interface ArgentAffiliee {
+  aVenirCents: number;
+  sousGarantieCents: number;
+  aVerserCents: number;
+  verseCents: number;
+  annuleCents: number;
+  autresDevises: number;
+}
+
 export interface FicheAffilieDistante {
   affilie: {
     sa: string;
@@ -209,6 +253,16 @@ export interface FicheAffilieDistante {
   };
   filleuls: Filleul[];
   acheteurs: number;
+  // TOUT CE QUI SUIT EST OPTIONNEL, ET CE N'EST PAS DU CONFORT.
+  //
+  // Le centre de pilotage et le registre sont DEUX serveurs, déployés
+  // séparément. Entre les deux déploiements, l'un répond sans ces
+  // champs : les rendre obligatoires ferait planter la fiche entière
+  // pendant ce temps là, sur un écran qui marchait très bien avant.
+  recompense?: RecompenseAffiliee;
+  versement?: VersementAffiliee;
+  factures?: FactureAffiliee[];
+  argent?: ArgentAffiliee;
 }
 
 /**
@@ -238,7 +292,17 @@ export async function lireFicheAffiliee(
     if (!res.ok) return { fiche: null, raison: `http_${res.status}` };
     const j = (await res.json()) as { ok?: boolean } & FicheAffilieDistante;
     if (!j?.ok) return { fiche: null, raison: "read_failed" };
-    return { fiche: { affilie: j.affilie, filleuls: j.filleuls ?? [], acheteurs: j.acheteurs ?? 0 } };
+    return {
+      fiche: {
+        affilie: j.affilie,
+        filleuls: j.filleuls ?? [],
+        acheteurs: j.acheteurs ?? 0,
+        recompense: j.recompense,
+        versement: j.versement,
+        factures: j.factures ?? [],
+        argent: j.argent,
+      },
+    };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     console.error(`[pilotage/affilies] fiche injoignable : ${message}`);
