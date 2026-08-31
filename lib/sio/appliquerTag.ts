@@ -11,11 +11,18 @@
 // ne reçoit pas la séquence d'accueil, il n'apparaît pas dans ses
 // filtres, et personne ne s'en aperçoit avant des semaines.
 //
-// -- AVEC SA CLÉ, CELLE DE SES PARAMÈTRES ------------------------------
+// -- AVEC SA CLÉ : L'ÉCRAN PARAMÈTRES, PUIS LE `.env` ------------------
 //
 // "QUELLE clé il te manque et pour quoi ? On en a déjà créé et
-// connecté." Elle avait raison : la clé vit dans `sio_api_keys`,
-// chiffrée, et `resolveApiKey` la rend. Rien à poser sur le serveur.
+// connecté." La clé vit dans `sio_api_keys`, chiffrée, et
+// `resolveApiKey` la rend.
+//
+// **"Rien à poser sur le serveur" était écrit ici, et c'était faux.**
+// Le 31 août, la sonde de production a répondu `aucune_cle` : rien en
+// base pour les profils admin, et le `.env` n'était même pas consulté.
+// Une clé posée dans `SYSTEME_IO_API_KEY` (la variable que
+// `lib/systemeIoClient.ts` utilise déjà) est donc lue en repli, cf.
+// `cleDuProprietaire`.
 //
 // La clé utilisée est celle de la PROPRIÉTAIRE du service, c'est à dire
 // le compte administrateur : c'est SON compte Systeme.io qui porte les
@@ -102,15 +109,25 @@ async function idProprietaire(): Promise<string | null> {
  * fuite d'une cliente vers une autre, silencieuse. Le repli ne vaut que
  * pour le compte PROPRIÉTAIRE, donc il vit dans cette fonction là.
  */
-async function cleDuProprietaire(): Promise<{ apiKey: string; source: string } | null> {
+async function cleDuProprietaire(): Promise<
+  { ok: true; apiKey: string; source: string } | { ok: false; raison: RaisonPoseTag }
+> {
   const proprietaire = await idProprietaire();
+  const duFichier = process.env.SYSTEME_IO_API_KEY?.trim();
+
   if (proprietaire) {
     const cle = await resolveApiKey(proprietaire);
-    if (cle) return { apiKey: cle.apiKey, source: cle.source };
+    if (cle) return { ok: true, apiKey: cle.apiKey, source: cle.source };
   }
-  const duFichier = process.env.SYSTEME_IO_API_KEY?.trim();
-  if (duFichier) return { apiKey: duFichier, source: "env" };
-  return null;
+  if (duFichier) return { ok: true, apiKey: duFichier, source: "env" };
+
+  // ON DIT LEQUEL DES DEUX MANQUE, et j'avais fusionné les deux le
+  // 31 août au soir : la sonde de production a répondu `aucune_cle`
+  // sans qu'on puisse savoir si c'était le PROFIL qui manquait ou la
+  // CLÉ. Un contrôle qui ne distingue pas ce qu'il est censé
+  // distinguer est pire qu'un contrôle absent (leçon du 22 août), et
+  // je venais de le refaire dans le fichier qui répare ce défaut.
+  return { ok: false, raison: proprietaire ? "aucune_cle" : "aucun_profil_admin" };
 }
 
 /** L'identifiant du contact chez Systeme.io, ou `null` s'il n'y est pas. */
@@ -266,6 +283,7 @@ export type RaisonPoseTag =
   | "ok"
   | "adresse_ou_tag_vide"
   | "aucun_admin"
+  | "aucun_profil_admin"
   | "aucune_cle"
   | "contact_impossible"
   | "tag_inconnu"
@@ -295,13 +313,17 @@ export async function poserTagParNomDetaille(
 
   try {
     const cle = await cleDuProprietaire();
-    if (!cle) {
+    if (!cle.ok) {
       console.warn(
-        `[sio/tag] aucune cle Systeme.io trouvee (ni dans sio_api_keys pour ` +
-          `${ADMIN_EMAILS.join(" / ")}, ni dans SYSTEME_IO_API_KEY) : ` +
-          `${adresse} n'est pas etiquete ${tag}.`,
+        cle.raison === "aucun_profil_admin"
+          ? `[sio/tag] AUCUN PROFIL ne porte l'une des adresses admin ` +
+            `(${ADMIN_EMAILS.join(" / ")}) dans la table profiles, et ` +
+            `SYSTEME_IO_API_KEY est absente du .env. ${adresse} n'est pas etiquete.`
+          : `[sio/tag] le profil admin existe, mais AUCUNE CLE : ni dans ` +
+            `sio_api_keys (ecran Parametres), ni dans SYSTEME_IO_API_KEY. ` +
+            `${adresse} n'est pas etiquete ${tag}.`,
       );
-      return { ok: false, raison: "aucune_cle" };
+      return { ok: false, raison: cle.raison };
     }
     console.log(`[sio/tag] cle Systeme.io resolue (source: ${cle.source}).`);
 
