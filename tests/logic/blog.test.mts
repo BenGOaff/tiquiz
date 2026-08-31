@@ -67,15 +67,23 @@ test("aucun ancien prix ne survit dans le corpus", () => {
 });
 
 test("l'arithmetique de l'article d'affiliation est refaite, pas rafistolee", () => {
-  // 40 % de 17 € font 6,80 €. Remplacer le prix sans refaire le calcul
-  // aurait laisse "17 €/mois = 3,60 €", donc un prix juste et un
-  // resultat faux : pire que de n'avoir rien touche.
+  // Bene, 31 aout 2026 : "pour l'affiliation on fait uniquement 40 %
+  // etc. sur le HT." 40 % de 14,17 EUR font 5,67 EUR, pas 6,80 EUR.
+  //
+  // Remplacer un prix sans refaire le calcul laisse un prix juste et un
+  // resultat faux, ce qui est pire que de n'avoir rien touche : c'est
+  // ce qui avait produit le 108 EUR.
   const a = lireArticle("rente-mensuelle-affiliation-tiquiz")!;
   const texte = JSON.stringify(a);
-  assert.ok(texte.includes("6,80 €"), "la commission mensuelle recalculee");
-  assert.ok(texte.includes("204 €/mois"), "30 filleuls a 6,80 €");
-  assert.ok(texte.includes("81,60 €"), "la rente annuelle par filleul");
-  assert.ok(texte.includes("68 € de rente par filleul et par an"), "40 % de 170 €");
+  assert.ok(texte.includes("5,67 €"), "la commission mensuelle, sur le HT");
+  assert.ok(texte.includes("170 €/mois"), "30 filleuls a 5,67 EUR");
+  assert.ok(texte.includes("56,67 € de rente par filleul et par an"), "40 % du HT annuel");
+  // ET PLUS AUCUN MONTANT CALCULE SUR LE TTC. Un seul survivant ferait
+  // se contredire deux paragraphes du meme article, ce qui est la
+  // faute d'origine.
+  for (const faux of ["6,80 €", "81,60 €", "244,80 €", "3 400 €", "340 € par mois"]) {
+    assert.ok(!texte.includes(faux), `${faux} : montant calcule sur le TTC`);
+  }
 });
 
 test("plus aucun lien vers les pages qui vont disparaitre", () => {
@@ -501,14 +509,34 @@ test("LE CONTRÔLE VOIT UNE ESPACE INSÉCABLE, sinon il ment", async () => {
   const avecInsecable =
     "Avec 50 filleuls actifs sur l'annuel, ta rente atteint 1 800 € par an.";
   assert.equal(faitsFaux(avecInsecable).length, 1, "l'insecable doit etre vue");
-  assert.ok(corrigerFaits(avecInsecable).includes("3 400"), corrigerFaits(avecInsecable));
+  assert.ok(corrigerFaits(avecInsecable).includes("2 833,33"), corrigerFaits(avecInsecable));
 });
 
 test("les montants annoncés se CALCULENT, ils ne se recopient pas", async () => {
-  // 6,80 € et 68 € doivent tomber du prix et du taux, sinon un
-  // changement de tarif laisserait encore des calculs à l'ancien prix :
-  // c'est exactement ce qui a produit le 108 €.
+  // Les montants tombent du prix, du taux ET DE LA TVA, sinon un
+  // changement laisserait encore des calculs a l'ancienne valeur :
+  // c'est exactement ce qui a produit le 108 EUR.
   const { RENTE_PAR_FILLEUL } = await import("@/lib/blog/faitsProgramme");
-  assert.equal(Math.round(RENTE_PAR_FILLEUL.mensuel * 100) / 100, 6.8);
-  assert.equal(RENTE_PAR_FILLEUL.annuel, 68);
+  assert.equal(Math.round(RENTE_PAR_FILLEUL.mensuel * 100) / 100, 5.67);
+  assert.equal(Math.round(RENTE_PAR_FILLEUL.annuel * 100) / 100, 56.67);
+});
+
+test("LE BLOG ANNONCE CE QUE LE SYSTÈME VERSE, au centime", async () => {
+  // L'ecart nomme le 31 aout : le simulateur calculait sur le HT (ce
+  // que Stripe verse) et le blog annoncait le TTC, soit 20 % de plus
+  // que ce qui sera verse. C'est le drame du 19 aout, transpose au
+  // blog : l'app promettait 32,90 EUR et payait 27,42 EUR.
+  const { RENTE_PAR_FILLEUL } = await import("@/lib/blog/faitsProgramme");
+  const { commissionCentsAuTaux, COMMISSION_BASE_PCT } = await import(
+    "@/lib/site/recompenseAffiliation"
+  );
+  assert.equal(
+    Math.round(RENTE_PAR_FILLEUL.mensuel * 100),
+    commissionCentsAuTaux("mensuel", COMMISSION_BASE_PCT),
+    "le blog et le simulateur doivent dire le meme montant",
+  );
+  assert.equal(
+    Math.round(RENTE_PAR_FILLEUL.annuel * 100),
+    commissionCentsAuTaux("annuel", COMMISSION_BASE_PCT),
+  );
 });

@@ -237,13 +237,22 @@ test("un remboursement ARRETE l'abonnement PayPal", () => {
   assert.ok(bloc.includes("cancelOwnerPaypalSubscription"), "le remboursement laisse tourner l'abonnement");
 });
 
-test("la commission PayPal est sur le TTC, et c'est une DECISION", () => {
-  // Bene, 22 aout : "pour paypal : oui on garde le TTC." PayPal ne
-  // ventile pas la TVA comme Stripe Tax : passer une taxe a zero dit la
-  // verite de cette vente la, au lieu d'inventer un taux.
+test("LA COMMISSION PAYPAL EST SUR LE HT, comme partout ailleurs", () => {
+  // Bene, 31 aout 2026 : "pour l'affiliation on fait uniquement 40 %
+  // etc. sur le HT. Debrouille toi pour que sur PayPal ca marche
+  // aussi." Ca REMPLACE sa decision du 22 aout ("pour paypal : oui on
+  // garde le TTC"), qui datait d'un moment ou nous ne savions pas
+  // ventiler la TVA d'une vente PayPal.
+  //
+  // Nous savons depuis le 24 aout : c'est NOUS qui emettons la facture
+  // de ces ventes, donc nous qui resolvons le regime. Le detail vit
+  // dans `commission-ht-paypal.test.mts`.
   const src = lire("app/api/commande/paypal/webhook/route.ts");
-  assert.ok(src.includes("amountTaxCents: 0"), "la base de commission a change sans decision");
-  assert.ok(/TTC/.test(src), "la decision n'est plus expliquee la ou elle s'applique");
+  assert.ok(
+    !/amountTaxCents:\s*0\b/.test(src),
+    "une taxe a zero en dur : la commission repart sur le TTC",
+  );
+  assert.ok(src.includes("taxePaypalCents("), "la taxe doit venir de la facture emise");
 });
 
 test("l'abonnement PayPal est rattache au compte, sinon on ne peut plus l'arreter", () => {

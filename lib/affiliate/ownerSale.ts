@@ -102,7 +102,26 @@ export interface VenteACommissionner {
   affiliateCode: string | null;
   /** Ce qui a été encaissé, TVA comprise. */
   amountTotalCents: number;
-  /** La TVA comprise dedans, telle que Stripe la calcule. */
+  /**
+   * LA TVA COMPRISE DEDANS.
+   *
+   * Stripe la calcule et la renvoie. **PayPal, non : c'est NOUS qui la
+   * calculons**, au moment d'émettre la facture de cette vente
+   * (`lib/facture/taxeVentePaypal.ts`), à partir du pays de l'acheteur,
+   * de son numéro de TVA et de la réponse de VIES.
+   *
+   * Béné, 31 août 2026 : "pour l'affiliation on fait uniquement 40 %
+   * etc. sur le HT. Débrouille toi pour que sur PayPal ça marche
+   * aussi." Ça remplace sa décision du 22 août ("pour paypal : oui on
+   * garde le TTC"), qui datait d'un moment où nous ne savions pas
+   * ventiler. Jusque là, ce champ arrivait à ZÉRO depuis PayPal : le
+   * `base: "ht"` envoyé à Tipote était donc un mensonge, et l'affiliée
+   * touchait 1,13 € de trop par échéance mensuelle.
+   *
+   * **Ne PAS poser un taux ici.** Un acheteur belge, un professionnel
+   * en autoliquidation et un acheteur hors UE n'ont pas la même taxe :
+   * un taux appliqué de mémoire les paierait tous les trois faux.
+   */
   amountTaxCents: number;
   product: { id: string; label: string };
 }

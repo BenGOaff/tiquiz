@@ -123,9 +123,14 @@ describe("On paie chaque mois ou le client reste abonne", () => {
     // Avec l'abonnement pour clé, la deuxième échéance tombait sur la
     // contrainte d'unicité et l'affilié ne touchait plus rien à partir
     // du deuxième mois.
-    const echeance = paypal.slice(paypal.indexOf('eventType === "PAYMENT.SALE.COMPLETED"'));
-    assert.match(echeance.slice(0, 3000), /reference: encaissement\.saleRef/);
-    assert.match(echeance.slice(0, 3000), /moyen: "paypal"/);
+    // On borne au BLOC de l'echeance (jusqu'a son `return`), pas a un
+    // nombre de caracteres : un commentaire ajoute au dessus poussait
+    // l'appel hors de la fenetre et faisait rougir un code juste.
+    const debut = paypal.indexOf('eventType === "PAYMENT.SALE.COMPLETED"');
+    const fin = paypal.indexOf('reason: "echeance"', debut);
+    const echeance = paypal.slice(debut, fin > debut ? fin : undefined);
+    assert.match(echeance, /reference: encaissement\.saleRef/);
+    assert.match(echeance, /moyen: "paypal"/);
   });
 
   test("LE CHECKOUT STRIPE NE COMMISSIONNE QUE LES ACHATS UNIQUES", () => {
