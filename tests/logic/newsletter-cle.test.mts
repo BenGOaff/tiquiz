@@ -8,12 +8,16 @@
 //
 // Elle avait raison sur les deux points.
 //
-// 1. LA CLÉ DU `.env` N'ÉTAIT LUE PAR PERSONNE sur ce chemin.
-//    `resolveApiKey` ne regarde QUE la base (`sio_api_keys`, ou
-//    l'ancienne colonne du profil). `SYSTEME_IO_API_KEY` est pourtant
-//    déjà la variable que `lib/systemeIoClient.ts` utilise. Deux
-//    endroits qui ont besoin de la même clé, un seul qui savait où
-//    elle est.
+// 1. LE CHEMIN QUI MÈNE À LA CLÉ CASSAIT AVANT ELLE. Béné, le même
+//    jour : "ma clé systeme io elle n'est pas dans le .env, elle est
+//    dans mon compte Tiquiz." Donc la clé est bien en base, et le
+//    `.env` n'était pas la réponse : il reste un filet, rien de plus.
+//    Le vrai défaut est que l'identifiant du compte administrateur se
+//    cherchait dans `profiles.email`, une colonne NULLABLE que **aucun
+//    déclencheur ne remplit** (`001_initial_schema.sql`). Un compte
+//    ouvert avant que `grantPlan` ne l'écrive n'y a rien. On interroge
+//    donc aussi `auth.users`, la seule table où une adresse existe
+//    toujours.
 //
 // 2. LE 502 ÉTAIT MUET, ET C'ÉTAIT MA FAUTE DE CONCEPTION. Mesuré sur
 //    la production : Cloudflare REMPLACE le corps d'un 502 par sa page
@@ -104,4 +108,27 @@ test("les refus de VALIDATION gardent leur 4xx", () => {
   // bonne chose a un client qui a mal rempli.
   assert.match(ROUTE, /raison: "email_manquant" \}, \{ status: 400 \}/);
   assert.match(ROUTE, /raison: "trop_de_demandes" \}, \{ status: 429 \}/);
+});
+
+test("l'admin se retrouve AUSSI dans auth.users, pas seulement dans profiles", () => {
+  // `profiles.email` est nullable et rien ne la remplit : la chercher
+  // seule, c'est chercher dans un annuaire a moitie rempli. Un profil
+  // sans adresse rendait "aucun profil admin" pour quelqu'un dont le
+  // compte existe et porte la cle.
+  const bloc = TAG.slice(
+    TAG.indexOf("async function idProprietaire"),
+    TAG.indexOf("async function cleDuProprietaire"),
+  );
+  assert.match(bloc, /auth\.admin\.listUsers/, "auth.users est la seule source sure d'une adresse");
+  assert.match(bloc, /return idProprietaireViaAuth\(\)/, "le repli doit etre BRANCHE, pas seulement ecrit");
+  assert.match(bloc, /page <= 20/, "listUsers ne filtre pas par email : la pagination doit etre bornee");
+});
+
+test("la lecture de auth.users compare les DEUX adresses admin", () => {
+  const bloc = TAG.slice(
+    TAG.indexOf("async function idProprietaireViaAuth"),
+    TAG.indexOf("async function cleDuProprietaire"),
+  );
+  assert.match(bloc, /ADMIN_EMAILS\.map/, "une seule adresse cherchee rejouerait le bug d'origine");
+  assert.match(bloc, /toLowerCase\(\)/, "les adresses de auth.users ne sont pas normalisees");
 });

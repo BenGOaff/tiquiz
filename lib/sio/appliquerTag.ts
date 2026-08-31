@@ -11,18 +11,22 @@
 // ne reçoit pas la séquence d'accueil, il n'apparaît pas dans ses
 // filtres, et personne ne s'en aperçoit avant des semaines.
 //
-// -- AVEC SA CLÉ : L'ÉCRAN PARAMÈTRES, PUIS LE `.env` ------------------
+// -- AVEC SA CLÉ, ET ELLE EST DANS SON COMPTE TIQUIZ -------------------
 //
-// "QUELLE clé il te manque et pour quoi ? On en a déjà créé et
-// connecté." La clé vit dans `sio_api_keys`, chiffrée, et
-// `resolveApiKey` la rend.
+// Béné, 31 août : "ma clé systeme io elle n'est pas dans le .env, elle
+// est dans mon compte Tiquiz." Elle a raison, et ça déplace le
+// diagnostic : la clé EST en base (`sio_api_keys`, chiffrée, rendue par
+// `resolveApiKey`), donc ce qui casse n'est pas la clé, c'est LE CHEMIN
+// QUI MÈNE À ELLE. Ce chemin passe par l'identifiant du compte
+// administrateur, qui était cherché dans `profiles.email` : une colonne
+// NULLABLE que rien ne remplit. Il passe maintenant aussi par
+// `auth.users`, la seule table où une adresse est garantie.
 //
-// **"Rien à poser sur le serveur" était écrit ici, et c'était faux.**
-// Le 31 août, la sonde de production a répondu `aucune_cle` : rien en
-// base pour les profils admin, et le `.env` n'était même pas consulté.
-// Une clé posée dans `SYSTEME_IO_API_KEY` (la variable que
-// `lib/systemeIoClient.ts` utilise déjà) est donc lue en repli, cf.
-// `cleDuProprietaire`.
+// Le `.env` (`SYSTEME_IO_API_KEY`, la variable que
+// `lib/systemeIoClient.ts` utilise déjà) reste lu en DERNIER repli. Ce
+// n'est pas la réponse à cette panne, c'est un filet : deux endroits
+// ont besoin de la même clé, autant qu'ils sachent tous les deux où
+// elle peut être.
 //
 // La clé utilisée est celle de la PROPRIÉTAIRE du service, c'est à dire
 // le compte administrateur : c'est SON compte Systeme.io qui porte les
@@ -69,6 +73,21 @@ export interface IdentiteContact {
  * porte la clé est enregistré sous l'autre adresse, elle rendait `null`
  * et TOUTE la chaîne s'arrêtait là, en silence.
  *
+ * **ET `profiles.email` N'EST PAS UNE SOURCE FIABLE.** Béné, 31 août :
+ * "ma clé systeme io elle n'est pas dans le .env, elle est dans mon
+ * compte Tiquiz." Elle a raison, et c'est exactement pour ça que le
+ * repli `.env` ne pouvait pas être la réponse : la clé EST en base, et
+ * c'est le chemin qui mène à elle qui casse. `profiles.email` est
+ * NULLABLE (`001_initial_schema.sql`) et **aucun déclencheur ne la
+ * remplit** : un compte ouvert avant que `grantPlan` ne l'écrive porte
+ * une ligne de profil dont l'adresse est vide. Chercher un admin par
+ * cette colonne, c'est chercher dans un annuaire à moitié rempli.
+ *
+ * La source de vérité d'une adresse, c'est `auth.users`. On l'interroge
+ * en repli (`listUsers` ne filtre pas par email, d'où la pagination,
+ * exactement comme `grantPlanByEmail`). La lecture de `profiles` reste
+ * en premier parce qu'elle coûte une requête au lieu d'un balayage.
+ *
  * `.maybeSingle()` ÉCHOUE quand deux lignes matchent, et son erreur
  * était ignorée. On prend donc la première ligne d'une liste bornée
  * plutôt qu'un `maybeSingle` qui transforme un doublon en absence.
@@ -86,6 +105,28 @@ async function idProprietaire(): Promise<string | null> {
     }
     const id = (data as { user_id?: string }[] | null)?.[0]?.user_id;
     if (id) return id;
+  }
+  return idProprietaireViaAuth();
+}
+
+/**
+ * L'admin retrouvé dans `auth.users`, la seule table qui garantit une
+ * adresse. Bornée à 20 pages de 200 : au delà, on préfère rendre `null`
+ * plutôt que balayer indéfiniment pendant qu'un webhook attend.
+ */
+async function idProprietaireViaAuth(): Promise<string | null> {
+  const cherchees = new Set(ADMIN_EMAILS.map((e) => e.trim().toLowerCase()));
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) {
+      console.warn(`[sio/tag] lecture de auth.users impossible : ${error.message}`);
+      return null;
+    }
+    const users = data?.users ?? [];
+    if (users.length === 0) return null;
+    const hit = users.find((u) => cherchees.has((u.email ?? "").trim().toLowerCase()));
+    if (hit) return hit.id;
+    if (users.length < 200) return null;
   }
   return null;
 }
@@ -282,7 +323,6 @@ export async function poserTagPlan(
 export type RaisonPoseTag =
   | "ok"
   | "adresse_ou_tag_vide"
-  | "aucun_admin"
   | "aucun_profil_admin"
   | "aucune_cle"
   | "contact_impossible"
