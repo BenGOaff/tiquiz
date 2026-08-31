@@ -69,6 +69,7 @@ import {
 } from "@/lib/checkout/formeStripe";
 import { marquerTraite, prendreLeVerrou } from "@/lib/webhooks/log";
 import { completerFacturation } from "@/lib/facture/store";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -768,7 +769,7 @@ async function lireOuverture(
   const { data } = await supabaseAdmin
     .from("profiles")
     .select("plan")
-    .ilike("email", email)
+    .ilike("email", echapperMotifLike(email))
     .maybeSingle();
   const planActuel = String((data as { plan?: string } | null)?.plan ?? "").trim().toLowerCase();
 

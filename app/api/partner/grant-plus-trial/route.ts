@@ -36,6 +36,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { safeEqual } from "@/lib/partner/tokens";
 import { sendPlusTrialEmail } from "@/lib/email/plusTrialEmail";
 import { resolveAppUrl } from "@/lib/authLinks";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { data: existing, error: readErr } = await supabaseAdmin
     .from("profiles")
     .select("user_id, email, plan, affiliate_trial_pre_plan, affiliate_trial_expires_at, affiliate_trial_pending_days")
-    .ilike("email", email)
+    .ilike("email", echapperMotifLike(email))
     .maybeSingle();
   if (readErr) {
     console.error("[grant-plus-trial] read error:", readErr.message);
