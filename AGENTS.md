@@ -4234,3 +4234,45 @@ qui marche à coup sûr" : personne n'avait vérifié que ça marchait.
 Le repli est maintenant `hello@tiquiz.fr`. Le contrôle de démarrage
 (`lib/env/expediteur.ts`) continue de crier quand la variable manque :
 un repli qui marche reste un repli silencieux.
+
+## Une clé Resend appartient à un COMPTE, pas au domaine qu'on regarde (31 août 2026)
+
+Deux sources se contredisaient, et les deux disaient vrai :
+
+| Source | Ce qu'elle disait |
+|---|---|
+| le tableau de bord de Béné | `tiquiz.fr` -> **Verified** |
+| `pm2 logs tiquiz-prod` | `The tiquiz.fr domain is not verified` |
+
+**Une clé Resend appartient à un compte (et à une équipe).** Le tableau
+de bord montre le compte qu'on REGARDE ; l'API répond pour le compte de
+la clé qu'on ENVOIE. Quand les deux diffèrent, un domaine peut être
+parfaitement vérifié d'un côté et inconnu de l'autre, et **rien à
+l'écran ne le dit**.
+
+Pendant ce temps, AUCUN email ne partait, et le journal le montre sur
+cinq chemins différents : `signupEmail`, `magicLinkEmail`,
+`passwordResetEmail`, `responseNotification`, `resellerEmail`. Une
+inscription créait bien le compte et laissait la personne dehors.
+
+**Règle : on ne déduit pas d'un tableau de bord ce que l'API répondra.**
+
+```bash
+npm run check:resend
+```
+
+Il demande à Resend, AVEC LA CLÉ QUE L'APP UTILISE VRAIMENT, la liste
+des domaines qu'elle voit, et la compare à l'adresse d'expédition
+résolue. Il existe dans les TROIS dépôts, parce qu'un garde-fou qui ne
+protège qu'un des jumeaux ne protège personne. Il n'imprime jamais la
+clé, seulement son préfixe et sa longueur (règle du 22 août).
+
+C'est la même leçon que les images en 403 : **quand un changement
+déplace l'endroit d'où quelque chose est SERVI, la dernière étape n'est
+pas d'écrire la configuration, c'est d'aller lire la réponse.**
+
+**Et ça vaut aussi pour Tipote**, qui retombe sur `hello@tipote.com`
+alors que le compte relevé ce jour là vérifie `send.tipote.com` et pas
+`tipote.com`. On ne l'a PAS changé : quelle adresse Tipote doit employer
+est une décision de Béné, pas une déduction. Le contrôle est là pour
+qu'elle la prenne en connaissance de cause.
