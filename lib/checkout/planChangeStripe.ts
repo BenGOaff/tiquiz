@@ -331,6 +331,59 @@ function lirePhaseCourante(schedule: Record<string, unknown>): {
 }
 
 /**
+ * LES METADONNÉES À REPORTER SUR LA PHASE SUIVANTE D'UN CALENDRIER.
+ *
+ * -- CE QUE ÇA FERME (audit du 31 août 2026) ---------------------------
+ *
+ * Une descente de palier passe par un calendrier Stripe à deux phases.
+ * Les metadonnées d'une phase sont posées SUR L'ABONNEMENT au moment où
+ * la phase commence : la phase 1 ne portait que `product` et `source`,
+ * donc tout le reste risquait de disparaître le jour de la bascule.
+ *
+ * Et "tout le reste", c'est ce qui PAIE :
+ *
+ *   * `affiliate_code` / `affiliate_ref` : `commissionnerEcheance` les
+ *     lit sur l'abonnement à chaque `invoice.paid`. Perdus, l'affiliée
+ *     cesse d'être payée à partir de la bascule, sans un mot. Le repli
+ *     par conversion en base ne la sauve que si une PREMIÈRE commission
+ *     avait déjà été créée : quelqu'un qui descend de palier pendant
+ *     son mois offert n'en a aucune.
+ *   * `free_month_days` : le mois offert n'est plus consommé, donc
+ *     réutilisable.
+ *   * la remise différée et le code de réduction : la remise promise ne
+ *     se poserait jamais.
+ *
+ * **On REPORTE tout ce que porte l'abonnement, puis on écrase `product`
+ * et `source`.** C'est correct que Stripe fusionne ou remplace : si
+ * l'API fusionne, on réécrit les mêmes valeurs et rien ne bouge ; si
+ * elle remplace, rien n'est perdu. On ne parie pas sur la version d'API
+ * du compte, c'est la règle de `lib/checkout/formeStripe.ts`.
+ *
+ * Fonction PURE, donc testée : la décision qui décide qui est payé ne
+ * vit pas dans un module qui fait des appels réseau.
+ */
+export function metadonneesDeLaPhaseSuivante(
+  abonnement: unknown,
+  cible: OwnerProduct,
+): Record<string, string> {
+  const brut = (abonnement as { metadata?: Record<string, unknown> } | null)?.metadata ?? {};
+  const sortie: Record<string, string> = {};
+  for (const [cle, valeur] of Object.entries(brut)) {
+    const v = String(valeur ?? "").trim();
+    // Stripe borne une clé à 40 caractères et une valeur à 500 : une
+    // entrée hors gabarit ferait REFUSER la mise à jour entière, donc la
+    // descente. On la laisse tomber plutôt que de tout perdre.
+    if (!cle || cle.length > 40 || !v || v.length > 500) continue;
+    sortie[cle] = v;
+  }
+  // Le webhook lit `product` pour savoir QUEL palier ouvrir : il doit
+  // décrire la phase qui commence, pas celle qui se termine.
+  sortie.product = cible.id;
+  sortie.source = cible.source;
+  return sortie;
+}
+
+/**
  * Programme la descente à la fin de la période déjà payée.
  *
  * **On n'ouvre PAS le plan ici**, et on ne le fera pas non plus le jour
@@ -345,6 +398,15 @@ export async function programmerDescente(args: {
 }): Promise<DescenteProgrammee> {
   const prix = await assurerPrixStripe(args.key, args.cible);
   if (!prix.ok || !prix.id) return { ok: false, detail: prix.detail };
+
+  // 0. CE QUE L'ABONNEMENT PORTE AUJOURD'HUI, pour ne rien en perdre à
+  //    la bascule. Voir `metadonneesDeLaPhaseSuivante` : c'est là que
+  //    vit l'affiliée qui sera payée le mois d'après.
+  const actuel = await appelStripe(
+    args.key,
+    `/v1/subscriptions/${encodeURIComponent(args.subscriptionId)}`,
+  );
+  const metaSuivante = metadonneesDeLaPhaseSuivante(actuel.ok ? actuel.json : null, args.cible);
 
   // 1. Un calendrier CALQUÉ sur l'abonnement en cours. Sa phase 0 décrit
   //    exactement ce qui est facturé aujourd'hui : on la relira pour la
@@ -380,13 +442,18 @@ export async function programmerDescente(args: {
       "phases[0][end_date]": phase.fin,
       "phases[1][items][0][price]": prix.id,
       "phases[1][items][0][quantity]": 1,
-      // Le webhook lit `metadata.product` pour savoir QUEL palier
-      // ouvrir. Portée par la phase, elle est recopiée sur l'abonnement
-      // au moment de la bascule : sans elle, il rouvrirait l'ancien
-      // palier et la descente se déferait toute seule.
-      "phases[1][metadata][product]": args.cible.id,
-      "phases[1][metadata][source]": args.cible.source,
       "phases[1][proration_behavior]": "none",
+      // TOUTES les metadonnées de l'abonnement, `product` et `source`
+      // réécrits sur le palier CIBLE. Portées par la phase, elles sont
+      // posées sur l'abonnement au moment de la bascule : n'y mettre
+      // que `product` risquait d'effacer l'affiliée, le mois offert et
+      // la remise en attente le jour où la descente prend effet.
+      ...Object.fromEntries(
+        Object.entries(metaSuivante).map(([cle, valeur]) => [
+          `phases[1][metadata][${cle}]`,
+          valeur,
+        ]),
+      ),
     },
   );
   if (!maj.ok) return { ok: false, detail: maj.detail };

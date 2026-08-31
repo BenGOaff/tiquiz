@@ -48,6 +48,8 @@
 // décider sans avoir dit de quel événement on parle. C'est la règle du
 // 1er août, celle qui survit au prochain qui touchera au fichier.
 
+import { montantAbonnement } from "@/lib/checkout/formeStripe";
+
 /** Les événements d'abonnement qu'on écoute. */
 export const OWNER_SUBSCRIPTION_EVENTS = [
   // L'abonnement s'arrête POUR DE BON. C'est le seul qui coupe l'accès.
@@ -210,16 +212,19 @@ export function readCancellationFeedback(
   return { feedback: propre(d?.feedback), comment: propre(d?.comment) };
 }
 
-/** Le montant de l'abonnement, en centimes, ou `null`. */
+/**
+ * Le montant de l'abonnement, en centimes, ou `null`.
+ *
+ * DÉLÈGUE à `montantAbonnement` (`lib/checkout/formeStripe.ts`) : la
+ * ligne d'un abonnement ne porte pas son prix au même endroit selon la
+ * version d'API du compte, et un départ consigné à 0 EUR fausse le
+ * revenu perdu du tableau de bord. Une seule lecture pour tout le
+ * dépôt, sinon les deux finissent par diverger.
+ */
 export function readSubscriptionAmount(
   subscription: RawSubscription | null | undefined,
 ): { amountCents: number | null; currency: string | null } {
-  const prix = subscription?.items?.data?.[0]?.price ?? null;
-  const montant = Number(prix?.unit_amount);
-  return {
-    amountCents: Number.isFinite(montant) ? montant : null,
-    currency: String(prix?.currency ?? "").trim().toLowerCase() || null,
-  };
+  return montantAbonnement(subscription);
 }
 
 /** Une date Stripe (secondes) en ISO, ou `null`. */
