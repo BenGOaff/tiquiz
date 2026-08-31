@@ -82,7 +82,13 @@ export default async function FicheAffiliePage({
 
   const a = fiche.affilie;
   const total = fiche.filleuls.reduce((s, f) => s + f.gagneCents, 0);
+  // GRATUITS = ceux qui n'ont JAMAIS acheté. PAYANTS = ceux qui
+  // comptent pour le palier (annulations exclues). Les deux ne sont pas
+  // complémentaires : un remboursé n'est ni l'un ni l'autre, et c'est
+  // voulu, il ne doit pas gonfler le palier.
   const gratuits = fiche.filleuls.length - fiche.acheteurs;
+  const payants = fiche.payants ?? fiche.acheteurs;
+  const rembourses = fiche.acheteurs - payants;
   const r = fiche.recompense;
   const v = fiche.versement;
   const argent = fiche.argent;
@@ -128,7 +134,7 @@ export default async function FicheAffiliePage({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Chiffre titre="Filleuls" valeur={String(fiche.filleuls.length)} />
         <Chiffre titre="Comptes gratuits" valeur={String(gratuits)} />
-        <Chiffre titre="Clients payants" valeur={String(fiche.acheteurs)} />
+        <Chiffre titre="Clients payants" valeur={String(payants)} />
         <Chiffre titre="Lui a rapporté" valeur={euros(total)} />
       </div>
 
@@ -155,9 +161,19 @@ export default async function FicheAffiliePage({
               ? "Il a choisi les commissions. Les deux ne se cumulent pas."
               : "Il a choisi la remise. Il ne touche donc pas de commission."}
           </p>
+          {/* LA RÈGLE EST ÉCRITE À L'ÉCRAN, sinon on relit le compteur
+              du haut et on croit que les 3 comptes gratuits comptent.
+              Béné, 31 août : "client payant = augmente le %, client
+              gratuit = aucun impact". */}
+          <p className="mt-1 text-xs text-muted-foreground">
+            Seuls ses clients PAYANTS font monter le palier ({payants} aujourd&apos;hui).
+            {rembourses > 0 &&
+              ` ${rembourses} remboursé${rembourses > 1 ? "s" : ""} ne compte${rembourses > 1 ? "nt" : ""} plus.`}
+          </p>
           {r.prochaineMarcheManque !== null && r.prochaineMarcheValeur !== null && (
             <p className="mt-2 text-sm">
-              Encore {r.prochaineMarcheManque} filleul
+              Encore {r.prochaineMarcheManque} client
+              {r.prochaineMarcheManque > 1 ? "s" : ""} payant
               {r.prochaineMarcheManque > 1 ? "s" : ""} et il passe à {r.prochaineMarcheValeur} %.
             </p>
           )}
