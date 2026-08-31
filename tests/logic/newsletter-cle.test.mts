@@ -1,0 +1,107 @@
+// tests/logic/newsletter-cle.test.mts
+//
+// L'INSCRIPTION NEWSLETTER : 502 MUET, ET UNE CLÉ QUE PERSONNE NE LISAIT.
+//
+// Béné, 31 août 2026 : "pourtant tu as tout ce qu'il faut pour faire
+// communiquer tiquiz et systeme io bordel ! J'ai ma clé api dans
+// tiquiz, dans .env, partout."
+//
+// Elle avait raison sur les deux points.
+//
+// 1. LA CLÉ DU `.env` N'ÉTAIT LUE PAR PERSONNE sur ce chemin.
+//    `resolveApiKey` ne regarde QUE la base (`sio_api_keys`, ou
+//    l'ancienne colonne du profil). `SYSTEME_IO_API_KEY` est pourtant
+//    déjà la variable que `lib/systemeIoClient.ts` utilise. Deux
+//    endroits qui ont besoin de la même clé, un seul qui savait où
+//    elle est.
+//
+// 2. LE 502 ÉTAIT MUET, ET C'ÉTAIT MA FAUTE DE CONCEPTION. Mesuré sur
+//    la production : Cloudflare REMPLACE le corps d'un 502 par sa page
+//    (`error code: 502`, text/plain), quand un 400 de validation
+//    revient avec notre JSON intact. La cause qu'on venait d'ajouter
+//    n'atteignait donc jamais le navigateur.
+//
+// 3. Et `idProprietaire` ne testait que le PREMIER des deux admins.
+
+import { readFileSync } from "node:fs";
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { ADMIN_EMAILS } from "@/lib/adminEmails";
+
+const TAG = readFileSync("lib/sio/appliquerTag.ts", "utf8");
+const ROUTE = readFileSync("app/api/newsletter/route.ts", "utf8");
+const RESOLVE = readFileSync("lib/sio/resolveApiKey.ts", "utf8");
+
+test("la cle du compte proprietaire retombe sur le .env", () => {
+  assert.match(
+    TAG,
+    /process\.env\.SYSTEME_IO_API_KEY/,
+    "une cle posee dans le .env doit etre lue par le chemin qui pose les etiquettes",
+  );
+  assert.match(TAG, /async function cleDuProprietaire\(/);
+});
+
+test("le repli .env n'est PAS dans resolveApiKey, et c'est capital", () => {
+  // `resolveApiKey` sert AUSSI les revendeurs, qui ont chacun LEUR
+  // compte Systeme.io. Un repli sur la cle de Bene ferait ecrire les
+  // contacts d'une revendeuse dans le compte de Bene le jour ou sa cle
+  // manque : une fuite d'une cliente vers une autre, en silence.
+  assert.doesNotMatch(
+    RESOLVE,
+    /SYSTEME_IO_API_KEY/,
+    "le repli sur la cle du proprietaire n'a rien a faire dans la cascade des revendeurs",
+  );
+});
+
+test("on essaie TOUS les admins, pas seulement le premier", () => {
+  assert.ok(ADMIN_EMAILS.length >= 2, "le test n'a de sens qu'avec plusieurs admins");
+  assert.match(
+    TAG,
+    /for \(const admin of ADMIN_EMAILS\)/,
+    "si le profil qui porte la cle est sous l'autre adresse, la chaine s'arretait la",
+  );
+  // On regarde le CODE, pas les commentaires : la mention historique
+  // de `ADMIN_EMAILS[0]` explique POURQUOI la correction existe, et la
+  // retirer ferait perdre le seul endroit qui le raconte. Meme
+  // precedent que le test de `poserTagAchat` dans ce depot.
+  const codeSeul = TAG.split("\n")
+    .filter((l) => !l.trim().startsWith("//") && !l.trim().startsWith("*") && !l.trim().startsWith("/*"))
+    .join("\n");
+  assert.doesNotMatch(
+    codeSeul,
+    /ADMIN_EMAILS\[0\]/,
+    "ne regarder que le premier admin est exactement le bug corrige",
+  );
+});
+
+test("un doublon de profil ne se lit pas comme une absence", () => {
+  // `.maybeSingle()` ECHOUE quand deux lignes matchent, et l'erreur
+  // etait ignoree : deux profils avec la meme adresse rendaient
+  // "aucun admin", ce qui est faux et indiagnosticable.
+  const bloc = TAG.slice(TAG.indexOf("async function idProprietaire"), TAG.indexOf("async function cleDuProprietaire"));
+  assert.doesNotMatch(bloc, /maybeSingle/, "on lit une liste bornee, pas un maybeSingle");
+  assert.match(bloc, /\.limit\(1\)/);
+  assert.match(bloc, /if \(error\)/, "l'erreur de lecture doit etre vue, jamais avalee");
+});
+
+test("l'echec d'inscription ne repond JAMAIS 5xx : le corps doit arriver", () => {
+  // MESURE du 31 aout sur la production : Cloudflare remplace le corps
+  // d'un 502 par sa propre page. Un statut choisi pour bien dire "c'est
+  // nous qui sommes en panne" est celui qu'un intermediaire se permet
+  // de reecrire, donc la cause n'arrive nulle part.
+  const bloc = ROUTE.slice(ROUTE.indexOf("if (!pose.ok)"));
+  assert.doesNotMatch(
+    bloc,
+    /status:\s*5\d\d/,
+    "un 5xx sur cet echec fait effacer le corps par le proxy, donc la cause",
+  );
+  assert.match(bloc, /ok: false, raison: "indisponible", cause: pose\.raison/);
+});
+
+test("les refus de VALIDATION gardent leur 4xx", () => {
+  // Ceux-la passent intacts (verifie en production), et un 400 dit la
+  // bonne chose a un client qui a mal rempli.
+  assert.match(ROUTE, /raison: "email_manquant" \}, \{ status: 400 \}/);
+  assert.match(ROUTE, /raison: "trop_de_demandes" \}, \{ status: 429 \}/);
+});

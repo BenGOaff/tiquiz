@@ -86,14 +86,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         `Systeme.io a refuse la creation ; tag_inconnu = l'etiquette "${TAG_NEWSLETTER}" ` +
         `est introuvable dans le compte.)`,
     );
-    // La raison SORT dans la reponse : sans elle, diagnostiquer demande
-    // un acces au serveur, et c'est ce qui a coute la matinee. Aucune de
-    // ces valeurs n'est un secret, elles nomment un etat de
-    // configuration.
-    return NextResponse.json(
-      { ok: false, raison: "indisponible", cause: pose.raison },
-      { status: 502 },
-    );
+    // ── 200, ET SURTOUT PAS 502 (31 août 2026) ──
+    //
+    // Cette route repondait 502 avec la cause dans le corps. MESURÉ sur
+    // la production : Cloudflare REMPLACE le corps d'un 502 par sa
+    // propre page (`error code: 502`, en text/plain). La raison qu'on
+    // venait d'ajouter n'atteignait donc jamais le navigateur, et Béné
+    // a redéployé pour rien.
+    //
+    // Le contrôle qui l'a prouvé : un 400 de validation revient avec
+    // NOTRE JSON intact, le 502 non. Un statut choisi pour bien dire
+    // "c'est nous qui sommes en panne" est exactement celui qu'un
+    // intermédiaire s'autorise à réécrire.
+    //
+    // C'est la règle des `/track` de ce dépôt, et elle vaut ici pour la
+    // même raison : **le corps doit arriver**. `ok: false` porte
+    // l'échec, `cause` porte le diagnostic, et aucun proxy ne peut les
+    // effacer. L'échec CRIE dans le journal, il ne se lit pas dans un
+    // code HTTP.
+    return NextResponse.json({ ok: false, raison: "indisponible", cause: pose.raison });
   }
 
   return NextResponse.json({ ok: true });
