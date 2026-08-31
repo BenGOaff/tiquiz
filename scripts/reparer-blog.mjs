@@ -50,6 +50,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { reponctuer } from "../lib/blog/reponctuation.ts";
+import { corrigerFaits } from "../lib/blog/faitsProgramme.ts";
 
 const DOSSIER = path.join(process.cwd(), "content", "blog");
 const VERIFIE = process.argv.includes("--verifie");
@@ -144,9 +145,19 @@ function corrigerAncres(html) {
 // ── LE PASSAGE ──────────────────────────────────────────────────────
 
 let typo = 0;
+let faits = 0;
 function texte(s) {
-  const out = reponctuer(s);
-  if (out !== s) typo += 1;
+  // LES FAITS D'ABORD, LA PONCTUATION ENSUITE.
+  //
+  // L'ordre n'est pas cosmétique : les corrections de faits portent sur
+  // des PHRASES ENTIÈRES, et la reponctuation change les espaces autour
+  // des `€` et des `:`. Reponctuer d'abord ferait que plus aucune
+  // phrase ne serait reconnue, et la correction échouerait en silence.
+  // C'est le piège de l'ordre des remplacements, déjà payé le 29 août.
+  const avecFaits = corrigerFaits(s);
+  if (avecFaits !== s) faits += 1;
+  const out = reponctuer(avecFaits);
+  if (out !== avecFaits) typo += 1;
   return out;
 }
 
@@ -189,6 +200,7 @@ for (const f of fichiers) {
 
 console.log(`Fichiers ${VERIFIE ? "a corriger" : "reecrits"} : ${ecrits}/${fichiers.length}`);
 console.log(`Fragments reponctues : ${typo}`);
+console.log(`Faits du programme corriges : ${faits}`);
 for (const r of REGLES) {
   const n = compte.get(r.de) ?? 0;
   if (n > 0) console.log(`  ${n}x  ${r.de}\n        -> ${r.vers}   (${r.pourquoi})`);

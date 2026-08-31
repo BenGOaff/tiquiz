@@ -27,7 +27,7 @@
 // `simulateur-affiliation.test.mts` les FIGE : tout changement de barème
 // doit être porté des deux côtés, et le test rougit si un seul bouge.
 
-import { OWNER_CATALOG, type OwnerProductId } from "@/lib/checkout/catalog";
+import { OWNER_CATALOG, OWNER_PRODUCT_ORDER, type OwnerProductId } from "@/lib/checkout/catalog";
 import { TAUX, TVA, horsTaxes } from "@/lib/site/programmeAffiliation";
 
 /** Une marche tous les 10 filleuls. */
@@ -81,70 +81,131 @@ export function echeancesParAn(produit: OwnerProductId): number {
   return OWNER_CATALOG[produit].interval === "year" ? 1 : 12;
 }
 
-export interface Simulation {
-  filleuls: number;
-  tauxPct: number;
-  remisePct: number;
-  /** Option 1 : le taux majoré, sur 12 mois, en centimes. */
-  option1Cents: number;
-  /** Option 2 : commissions au taux de base + remise sur son abo. */
-  option2Cents: number;
-  /** La part "remise" de l'option 2, pour l'expliquer. */
-  economieCents: number;
-  /** Les commissions au taux de base, part commune de l'option 2. */
-  baseCents: number;
-  /** Laquelle rapporte le plus. */
-  gagnante: "taux" | "remise" | "egalite" | "aucune";
-  /** L'écart entre les deux, en centimes. */
-  ecartCents: number;
-}
-
-/**
- * LES DEUX OPTIONS, CALCULÉES SUR 12 MOIS.
- *
- * C'est une FENÊTRE DE CALCUL, pas une prévision : elle suppose que les
- * filleuls restent abonnés toute l'année. Le dire est obligatoire, et
- * l'écran le dit. Promettre un revenu serait exactement ce que Béné
- * interdit.
- */
-export function simuler(args: {
-  /** Le palier que prennent ses filleuls. */
-  filleuls: number;
-  planFilleul: OwnerProductId;
-  /** Son propre abonnement : il sert à chiffrer la remise. */
-  planPerso: OwnerProductId;
-}): Simulation {
-  const n = filleuls(args.filleuls);
-  const tauxPct = tauxCommissionPct(n);
-  const remisePct = remiseAbonnementPct(n);
-  const parAn = echeancesParAn(args.planFilleul);
-
-  const option1Cents = n * commissionCentsAuTaux(args.planFilleul, tauxPct) * parAn;
-  const baseCents = n * commissionCentsAuTaux(args.planFilleul, COMMISSION_BASE_PCT) * parAn;
-
-  const prixPerso = OWNER_CATALOG[args.planPerso].amountCents;
-  const economieCents = Math.round(
-    prixPerso * (remisePct / 100) * echeancesParAn(args.planPerso),
-  );
-  const option2Cents = baseCents + economieCents;
-
-  let gagnante: Simulation["gagnante"] = "egalite";
-  if (n === 0) gagnante = "aucune";
-  else if (option1Cents > option2Cents) gagnante = "taux";
-  else if (option2Cents > option1Cents) gagnante = "remise";
-
-  return {
-    filleuls: n,
-    tauxPct,
-    remisePct,
-    option1Cents,
-    option2Cents,
-    economieCents,
-    baseCents,
-    gagnante,
-    ecartCents: Math.abs(option1Cents - option2Cents),
-  };
-}
+// L'ANCIEN SIMULATEUR A ÉTÉ RETIRÉ, PAS DÉSACTIVÉ (31 août 2026).
+//
+// `simuler()` rendait des totaux sur 12 mois et ARBITRAIT entre les deux
+// récompenses ("ce que tu as intérêt à choisir"), ce qui l'obligeait à
+// demander au visiteur SON abonnement avant de lui montrer le moindre
+// chiffre. Béné : "le visiteur doit voir que ça existe mais là on
+// l'aide à être séduit par le programme c'est tout."
+//
+// Le laisser exporté sans appelant en aurait fait un piège : le prochain
+// passage l'aurait rebranché en croyant réparer, et l'arbitrage serait
+// revenu. Une fonction morte se retire.
 
 /** La TVA retenue, réexportée pour que l'écran puisse l'expliquer. */
 export { TVA };
+
+// ── COMBIEN JE GAGNE CHAQUE MOIS ─────────────────────────────────────
+//
+// Béné, 31 août 2026 : "la calculatrice sur la page affiliation est
+// bordélique : je veux voir combien je gagne chaque mois en fonction de
+// mes affiliés, et de leurs plans. Et en dessous, je veux voir
+// l'option : augmenter mes commissions OU faire baisser mon abonnement.
+// Le visiteur doit voir que ça existe mais là on l'aide à être séduit
+// par le programme c'est tout."
+//
+// Trois choses clochaient, et les trois sont dans sa phrase.
+//
+// **1. Le simulateur ne répondait pas à la question posée.** Il rendait
+// des totaux SUR 12 MOIS, et la question d'un affilié est mensuelle :
+// "ma rente, c'est combien par mois ?" Il fallait diviser de tête, et
+// pas par 12 pour un filleul annuel.
+//
+// **2. Un seul plan pour TOUS les filleuls.** Elle écrit "de LEURS
+// plans", au pluriel : une audience mélange forcément du mensuel et de
+// l'annuel, et c'est le mélange qui donne le vrai chiffre.
+//
+// **3. Il ARBITRAIT entre les deux récompenses** ("ce que tu as intérêt
+// à choisir"), et pour ça il demandait le plan PERSO du visiteur avant
+// même de lui montrer un chiffre. Un formulaire qui interroge quelqu'un
+// sur un abonnement qu'il n'a pas encore, sur une page qui essaie de le
+// convaincre, c'est une porte fermée. Le choix se fait dans l'espace
+// affilié, une fois inscrit, avec ses vrais filleuls.
+//
+// -- LE LISSAGE MENSUEL EST DIT, JAMAIS CACHÉ -------------------------
+//
+// Un filleul ANNUEL paie une fois par an. Le porter dans un total
+// mensuel suppose qu'on étale sa commission sur douze mois : c'est la
+// seule façon d'additionner des paliers de récurrences différentes, et
+// l'écran doit le dire. Annoncer 56,67 € le mois de l'échéance et 0 €
+// les onze autres serait exact et inutilisable.
+
+/** Combien de filleuls sur chaque palier. Absent = zéro. */
+export type FilleulsParPlan = Partial<Record<OwnerProductId, number>>;
+
+export interface LignePlan {
+  produit: OwnerProductId;
+  filleuls: number;
+  /** Ce que cette ligne rapporte par mois, échéance annuelle LISSÉE. */
+  mensuelCents: number;
+}
+
+export interface SimulationMensuelle {
+  /** Le total des filleuls, toutes formules confondues. */
+  filleuls: number;
+  /** Le taux qui s'applique à ce nombre de filleuls. */
+  tauxPct: number;
+  /** LA réponse à la question : combien par mois. */
+  mensuelCents: number;
+  /** Le même calcul sur douze mois, pour qui préfère l'année. */
+  annuelCents: number;
+  /** Ce que le taux de base aurait donné, pour chiffrer la marche. */
+  mensuelAuTauxDeBaseCents: number;
+  /** Le détail, palier par palier, dans l'ordre du catalogue. */
+  lignes: LignePlan[];
+  /** La remise d'abonnement atteinte à ce nombre de filleuls. */
+  remisePct: number;
+}
+
+/**
+ * LA RENTE MENSUELLE D'UN MÉLANGE DE FILLEULS.
+ *
+ * Pure et testée : un barème enfermé dans un composant React n'est pas
+ * testable, donc il n'est pas testé, et c'est exactement là que les
+ * bugs de chiffres s'installent.
+ *
+ * **Le taux s'applique au TOTAL des filleuls, pas palier par palier.**
+ * C'est ce que fait `attributeSale` chez Tipote (`recompense_commission_pct`
+ * est posé sur l'affilié, pas sur la vente) : découper le calcul par
+ * palier donnerait un taux plus bas que celui réellement versé.
+ */
+export function simulerParPlan(parPlan: FilleulsParPlan): SimulationMensuelle {
+  const lignesBrutes = OWNER_PRODUCT_ORDER.map((produit) => ({
+    produit,
+    filleuls: filleuls(parPlan[produit]),
+  }));
+  const total = lignesBrutes.reduce((s, l) => s + l.filleuls, 0);
+  const tauxPct = tauxCommissionPct(total);
+
+  const mensuelDe = (produit: OwnerProductId, taux: number): number =>
+    // Une échéance ANNUELLE est lissée sur douze mois : c'est la seule
+    // façon d'additionner des paliers qui n'ont pas la même récurrence,
+    // et l'écran le dit en toutes lettres.
+    (commissionCentsAuTaux(produit, taux) * echeancesParAn(produit)) / 12;
+
+  const lignes: LignePlan[] = lignesBrutes.map((l) => ({
+    ...l,
+    mensuelCents: Math.round(l.filleuls * mensuelDe(l.produit, tauxPct)),
+  }));
+
+  // Le total est arrondi UNE fois, sur la somme non arrondie : arrondir
+  // chaque ligne puis les additionner ferait que le total affiché ne
+  // serait pas la somme des lignes affichées, à un centime près. C'est
+  // le genre d'écart qu'un affilié relève et qui coûte la confiance.
+  const brut = lignesBrutes.reduce((s, l) => s + l.filleuls * mensuelDe(l.produit, tauxPct), 0);
+  const base = lignesBrutes.reduce(
+    (s, l) => s + l.filleuls * mensuelDe(l.produit, COMMISSION_BASE_PCT),
+    0,
+  );
+
+  return {
+    filleuls: total,
+    tauxPct,
+    mensuelCents: Math.round(brut),
+    annuelCents: Math.round(brut * 12),
+    mensuelAuTauxDeBaseCents: Math.round(base),
+    lignes,
+    remisePct: remiseAbonnementPct(total),
+  };
+}

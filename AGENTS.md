@@ -3110,6 +3110,85 @@ crée aucune raison de tricher. Les paliers restent utiles pour les gros
 volumes, mais posés plus haut (au delà de 20, 50).
 
 
+## Le simulateur d'affiliation répond enfin à la question posée (31 août 2026)
+
+Béné : "la calculatrice sur la page affiliation est bordélique : je veux
+voir combien je gagne chaque mois en fonction de mes affiliés, et de
+leurs plans. Et en dessous, je veux voir l'option : augmenter mes
+commissions OU faire baisser mon abonnement. Le visiteur doit voir que
+ça existe mais là on l'aide à être séduit par le programme c'est tout."
+
+Le "bordélique" est précis, et il tenait en trois choses :
+
+1. **le résultat était SUR 12 MOIS**, alors que la question d'un affilié
+   est mensuelle. Il fallait diviser de tête, et pas par 12 pour un
+   filleul annuel ;
+2. **tous les filleuls avaient le MÊME plan**, alors qu'elle écrit "de
+   LEURS plans" au pluriel : une audience mélange forcément du mensuel
+   et de l'annuel, et c'est le mélange qui donne le vrai chiffre ;
+3. **il ARBITRAIT entre les deux récompenses** ("ce que tu as intérêt à
+   choisir"), et pour ça il demandait SON abonnement au visiteur avant
+   de lui montrer un seul chiffre. Un formulaire qui interroge quelqu'un
+   sur un abonnement qu'il n'a pas encore, sur la page qui doit le
+   convaincre, c'est une porte fermée.
+
+**Règle : `simulerParPlan()` (`lib/site/recompenseAffiliation.ts`), un
+compteur par palier, un total MENSUEL, et les deux options MONTRÉES en
+dessous.** L'arbitrage se fait dans l'espace affilié, une fois inscrit,
+avec ses vrais filleuls.
+
+Trois choses à ne pas défaire :
+
+- **le taux s'applique au TOTAL des filleuls**, jamais palier par
+  palier : c'est ce que fait `attributeSale` chez Tipote, où
+  `recompense_commission_pct` est posé sur l'AFFILIÉ et pas sur la
+  vente. Découper donnerait un taux plus bas que celui versé ;
+- **une échéance ANNUELLE est LISSÉE sur douze mois**, et l'écran le
+  dit. C'est la seule façon d'additionner deux récurrences ; annoncer
+  56,67 € le mois de l'échéance et 0 € les onze autres serait exact et
+  inutilisable ;
+- **le total est arrondi UNE fois**, sur la somme non arrondie. Arrondir
+  chaque ligne puis les additionner ferait que le total affiché n'est
+  pas la somme des lignes affichées, et c'est le genre d'écart qu'un
+  affilié relève.
+
+`simuler()` a été RETIRÉ, pas laissé sans appelant : une fonction morte
+qui arbitre est un piège que le prochain passage rebranche en croyant
+réparer.
+
+Test : `tests/logic/simulateur-affiliation.test.mts`.
+
+### ET L'ÉCART QUE ÇA A RÉVÉLÉ : le blog annonce 20 % de trop
+
+Le simulateur calcule sur le **HT** (`horsTaxes`), comme le système
+paie : `COMMISSION_BASE = "ht"`, décision de Béné du 19 août. Le blog,
+lui, est écrit sur le **TTC**.
+
+| | le blog annonce | Stripe verse (40 % du HT) |
+|---|---|---|
+| 1 filleul mensuel | 6,80 €/mois | **5,67 €/mois** |
+| 30 filleuls mensuels | 204 €/mois | **170,10 €/mois** |
+| 1 filleul annuel | 68 €/an | **56,67 €/an** |
+| 50 filleuls annuels | 3 400 €/an | **2 833,50 €/an** |
+
+C'est mot pour mot le drame du 19 août, transposé au blog : l'app
+promettait 32,90 € et payait 27,42 €, et la cause était la même, un
+montant écrit à la main à côté d'un montant calculé.
+
+**Deux nuances qui empêchent de trancher tout seul**, et c'est pour ça
+que la décision revient à Béné :
+
+- une vente **PayPal** commissionne bien sur le **TTC** (sa décision du
+  22 août, "pour paypal : oui on garde le TTC"). Le chiffre du blog est
+  donc juste pour PayPal et faux pour Stripe ;
+- le blog annonce **40 %**, mais à 30 filleuls le taux réel est **55 %**,
+  donc 233,70 €/mois. Le blog sous-vend d'un côté ce qu'il survend de
+  l'autre.
+
+Tant que ce n'est pas tranché, **le simulateur et le blog ne disent pas
+la même chose**, et c'est le simulateur qui a raison sur ce que Stripe
+verse.
+
 ## Le blog vit dans le dépôt, pas dans une base (Béné, 29 août 2026)
 
 "Sinon oui mon blog sur tiquiz.fr/blog. Je vais supprimer les anciennes
@@ -3355,8 +3434,74 @@ qui n'est pas en 1000 x 1500.
   "tiquiz amazon" sur des visuels sans rapport. Écrire ces textes demande
   de savoir ce qu'il y a dans l'image : c'est un travail à faire avec
   Béné, pas à inventer.
-- **Plusieurs couvertures portent une adresse périmée incrustée dans le
-  dessin** (`tipote.fr/<slug>`, `tipote.fr/tiquiz?sa=TON_ID`), et celle
-  de l'article d'affiliation annonce **108 €/mois** alors que le texte
-  corrigé dit 204 €. Le visuel contredit l'article, et il part tel quel
-  sur Pinterest.
+
+## Les nouvelles couvertures, et le chiffre qui a survécu au dessin (31 août 2026)
+
+Béné a livré dix couvertures neuves, une par article, aux noms exacts des
+slugs. Converties en WebP 1200 de large dans `public/blog/img/<slug>.webp`
+(668 Ko -> 553 Ko), épingles Pinterest reconstruites
+(`npm run blog:epingles`, 10/10), et le dossier source retiré de
+`public/` : servi tel quel, il aurait exposé 11 Mo de PNG à
+`/blog/nouvelles%20couvertures%20articles/`, crawlables et en double.
+
+**Neuf sur dix règlent le problème de l'adresse périmée** : elles portent
+`tiquiz.fr/blog` au lieu de `tipote.fr/<slug>`. Vérifié en les
+REGARDANT, pas en le supposant.
+
+**La dixième rejoue les deux erreurs de l'ancienne**, et c'est un dessin
+donc aucun test ne peut le voir :
+`rente-mensuelle-affiliation-tiquiz.png` annonce **108 €/mois pour 30
+filleuls** (c'est 30 x 9 € x 40 %, l'ancien tarif : le bon chiffre est
+204 €) et montre le lien **`tipote.fr/tiquiz?sa=TON_ID`**, c'est à dire
+le domaine Systeme.io ET le paramètre que Béné a banni le 24 août. Un
+lien qui atterrit là ne paie plus personne. À redessiner ; l'épingle
+Pinterest en hérite.
+
+### Et le même 108 € vivait ENCORE dans la FAQ de l'article
+
+En vérifiant le chiffre du dessin contre le texte, la FAQ portait cinq
+faits dont **quatre faux**. Deux familles, et la seconde coûte le plus
+cher.
+
+**Des calculs restés au tarif d'avant le 6 août.** "Avec 30 filleuls
+actifs sur le mensuel, ta rente s'élève à 108 € par mois", alors que la
+phrase JUSTE AU DESSUS annonce 6,80 € par filleul (donc 204 €) et que le
+corps de l'article dit 204 €. Le même article se contredisait à deux
+paragraphes d'écart. Idem pour "1 800 € par an" sur 50 filleuls annuels,
+quand le corps dit 3 400 €. C'est le piège de l'import nommé le 29 août :
+la passe corrige les PRIX et laisse les CALCULS faits avec l'ancien prix.
+
+**Des promesses que le système contredit.** "versée automatiquement le 10
+de chaque mois" (c'est ENTRE le 10 et le 13), et surtout **"Pas de seuil
+de versement à atteindre"** alors qu'il y en a un, 20 €, plus un délai de
+30 jours. L'espace affilié le dit correctement depuis le 26 août ; le
+blog promettait l'inverse. Ça ne se découvre qu'au premier virement, et
+c'est le blog qui recrute : un gros affilié lit ici, constate là-bas, et
+ne revient pas. Même famille que les CGV du 22 août, dont l'article 5
+annonçait une renonciation que l'écran ne recueillait pas.
+Le kit annonçait aussi "un dashboard de suivi de ta rente sur Systeme
+io" : il vit sur `affiliate.tipote.com` depuis que le registre est chez
+nous.
+
+**Règle : `lib/blog/faitsProgramme.ts`**, appliqué par
+`npm run blog:reparer` et vérifié par `tests/logic/blog.test.mts`, qui
+appelle LA MÊME fonction : le contenu est propre quand la réparation ne
+change plus rien. Les montants se CALCULENT (`RENTE_PAR_FILLEUL`), ils ne
+se recopient pas, sinon le prochain changement de tarif laissera encore
+des calculs à l'ancien prix. Et **les faits passent AVANT la
+reponctuation** : reponctuer d'abord change les espaces autour des `€`,
+donc plus aucune phrase entière ne serait reconnue.
+
+**LA FAUTE QUE J'AI FAITE EN L'ÉCRIVANT, et qui vaut plus que la règle :**
+le motif de "1 800 € par an" portait une espace ORDINAIRE, l'article une
+INSÉCABLE. Le remplacement ne trouvait rien. **Et le contrôle échouait de
+la même façon, avec le même littéral : il répondait "aucun fait faux" sur
+un article qui portait encore le mauvais chiffre.** Un contrôle qui ne
+distingue pas ce qu'il est censé distinguer est pire qu'un contrôle
+absent (leçon des clés Supabase, 22 août). Les motifs acceptent
+maintenant n'importe quelle espace, et un test le fige.
+
+**Reste à trancher par Béné, pas par le code :** la FAQ promet des
+commissions sur Tipote "quand Tipote sort", avec des prix (19 € à
+917 €/mois) et un exemple à 39,60 €/mois. Tipote n'est pas en vente, et
+la règle du 8 juin dit qu'on n'en parle NULLE PART en affiliation.

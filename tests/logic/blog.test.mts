@@ -451,3 +451,64 @@ test("les prix annonces aux moteurs viennent du catalogue", async () => {
   assert.ok(src.includes("OWNER_CATALOG"), "les offres doivent venir du catalogue");
   assert.ok(!/prix: "\d/.test(src), "un prix ecrit en dur");
 });
+
+// ── LES FAITS DU PROGRAMME D'AFFILIATION (31 août 2026) ──────────────
+//
+// Béné : "vérifier que chaque affilié reçoit les bonnes infos."
+//
+// La FAQ de l'article d'affiliation portait cinq faits, dont quatre
+// faux : deux calculs restés à l'ancien tarif (108 € au lieu de 204,
+// 1 800 € au lieu de 3 400), un versement annoncé "le 10" au lieu
+// d'"entre le 10 et le 13", et surtout **"Pas de seuil de versement à
+// atteindre"** alors qu'il y en a un, 20 €.
+//
+// Le dernier est le plus cher : il ne se découvre qu'au premier
+// virement, et c'est le blog qui recrute. Même famille que les CGV du
+// 22 août, dont l'article 5 annonçait une renonciation que l'écran ne
+// recueillait pas.
+
+test("le blog ne contredit plus le programme d'affiliation", async () => {
+  const { faitsFaux } = await import("@/lib/blog/faitsProgramme");
+  const dossier = path.join(process.cwd(), "content", "blog");
+  for (const f of fs.readdirSync(dossier).filter((n) => n.endsWith(".json"))) {
+    const brut = fs.readFileSync(path.join(dossier, f), "utf8");
+    const faux = faitsFaux(brut);
+    assert.equal(faux.length, 0, `${f} porte encore : ${faux.join(" | ")}`);
+  }
+});
+
+test("LA RÉPARATION NE CHANGE PLUS RIEN : le contenu déployé est propre", async () => {
+  // Le TEST APPELLE LA MÊME FONCTION que `npm run blog:reparer`. Deux
+  // copies de la règle finiraient par ne plus être d'accord, et c'est
+  // la copie muette qui gagnerait.
+  const { corrigerFaits } = await import("@/lib/blog/faitsProgramme");
+  const dossier = path.join(process.cwd(), "content", "blog");
+  for (const f of fs.readdirSync(dossier).filter((n) => n.endsWith(".json"))) {
+    const brut = fs.readFileSync(path.join(dossier, f), "utf8");
+    assert.equal(corrigerFaits(brut), brut, `${f} n'est pas a jour : relance npm run blog:reparer`);
+  }
+});
+
+test("LE CONTRÔLE VOIT UNE ESPACE INSÉCABLE, sinon il ment", async () => {
+  // C'est l'erreur faite en écrivant cette règle : le motif portait une
+  // espace ordinaire, l'article une INSÉCABLE. Le remplacement ne
+  // trouvait rien, ET le contrôle répondait "tout va bien" sur un
+  // article qui portait encore le mauvais chiffre.
+  //
+  // Un contrôle qui ne distingue pas ce qu'il est censé distinguer est
+  // pire qu'un contrôle absent (leçon des clés Supabase, 22 août).
+  const { faitsFaux, corrigerFaits } = await import("@/lib/blog/faitsProgramme");
+  const avecInsecable =
+    "Avec 50 filleuls actifs sur l'annuel, ta rente atteint 1 800 € par an.";
+  assert.equal(faitsFaux(avecInsecable).length, 1, "l'insecable doit etre vue");
+  assert.ok(corrigerFaits(avecInsecable).includes("3 400"), corrigerFaits(avecInsecable));
+});
+
+test("les montants annoncés se CALCULENT, ils ne se recopient pas", async () => {
+  // 6,80 € et 68 € doivent tomber du prix et du taux, sinon un
+  // changement de tarif laisserait encore des calculs à l'ancien prix :
+  // c'est exactement ce qui a produit le 108 €.
+  const { RENTE_PAR_FILLEUL } = await import("@/lib/blog/faitsProgramme");
+  assert.equal(Math.round(RENTE_PAR_FILLEUL.mensuel * 100) / 100, 6.8);
+  assert.equal(RENTE_PAR_FILLEUL.annuel, 68);
+});
