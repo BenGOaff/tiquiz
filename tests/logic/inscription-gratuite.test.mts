@@ -51,10 +51,26 @@ test("le contact est cree APRES le compte, jamais avant", () => {
 });
 
 test("l'appel ne peut pas faire echouer l'inscription", () => {
-  // `poserTagPlan` ne jette jamais et rend un booleen : c'est ce qui
-  // permet de l'appeler sans try/catch sans risquer un 500.
-  assert.match(TAG, /Promise<boolean>/);
-  assert.match(TAG, /catch \(e\) \{[\s\S]*?return false;/);
+  // `poserTagPlan` ne jette JAMAIS : c'est ce qui permet de l'appeler
+  // sans try/catch sans risquer un 500, et donc de ne jamais priver
+  // quelqu'un de son inscription parce que Systeme.io a hoquete.
+  //
+  // Le 31 aout, la pose est passee d'un booleen a une RAISON (le
+  // formulaire de la newsletter repondait 502 sans dire pourquoi).
+  // Ce test verifiait la FORME du `return false;` : il a rougi sur une
+  // correction qui ne touchait pas a l'invariant. Il porte maintenant
+  // sur l'invariant lui-meme, qui est "l'exception est attrapee et la
+  // fonction rend quelque chose".
+  assert.match(TAG, /Promise<boolean>/, "poserTagPlan doit rester un booleen pour ses appelants");
+  assert.match(
+    TAG,
+    /catch \(e\) \{[\s\S]*?return \{ ok: false, raison: "exception" \};/,
+    "l'exception doit etre attrapee et rendue comme une raison, jamais propagee",
+  );
+  // Et aucun chemin ne relance : un `throw` ici ferait un 500 sur une
+  // inscription qui a pourtant reussi.
+  const corps = TAG.slice(TAG.indexOf("export async function poserTagParNomDetaille"));
+  assert.ok(!/\bthrow\b/.test(corps), "poserTagParNomDetaille ne doit jamais relancer");
 });
 
 test("la fonction dit ce qu'elle fait : un PLAN, pas un achat", () => {

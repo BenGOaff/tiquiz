@@ -187,9 +187,16 @@ function echapper(v: string): string {
  * même d'ouvrir. Un email de Tiquiz signé Tipote a l'air d'une erreur,
  * au mieux, et d'une tentative d'hameçonnage au pire.
  *
- * L'ADRESSE d'envoi, elle, reste `hello@tipote.com` : c'est le domaine
- * vérifié chez Resend, et en changer sans l'avoir vérifié ferait tomber
- * tous les emails en spam. Le nom affiché suffit à lever l'ambiguïté.
+ * L'ADRESSE d'envoi vient du `.env` (`SUPPORT_FROM_EMAIL`). Depuis le
+ * 30 août c'est `hello@tiquiz.fr`, vérifiée chez Resend et routée par
+ * Cloudflare, et c'est l'adresse de Tiquiz ET de l'Atelier.
+ *
+ * Ce commentaire disait encore "reste hello@tipote.com" le 31 août,
+ * c'est à dire l'inverse de ce que le fichier fait vingt lignes plus
+ * bas. Un commentaire périmé n'est pas neutre : il m'a fait remplacer
+ * une adresse JUSTE dans un message d'erreur, en croyant corriger une
+ * faute. `REPLI_EXPEDITEUR` reste `hello@tipote.com` parce qu'un repli
+ * doit être ce qui marche à coup sûr, pas ce qu'on préfère.
  */
 export function adresseExpediteur(
   // Type LARGE, pas `NodeJS.ProcessEnv` : celui-la exige NODE_ENV, donc

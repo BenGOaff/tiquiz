@@ -27,7 +27,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { jugerInscription, TAG_NEWSLETTER } from "@/lib/newsletter/inscription";
-import { poserTagParNom } from "@/lib/sio/appliquerTag";
+import { poserTagParNomDetaille } from "@/lib/sio/appliquerTag";
 import { creerLimiteur, ipDeLaRequete } from "@/lib/rateLimit/parIp";
 import { ACHETEUR_VIDE } from "@/lib/facture/identite";
 
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // partir d'un acheteur. On réutilise ce chemin plutôt que d'en écrire
   // un deuxième : une newsletter qui dit "Hey" au lieu de "Hey Gwenn"
   // est une newsletter qui ressemble à toutes les autres.
-  const pose = await poserTagParNom(verdict.email, TAG_NEWSLETTER, {
+  const pose = await poserTagParNomDetaille(verdict.email, TAG_NEWSLETTER, {
     locale: "fr",
     // `ACHETEUR_VIDE` et pas un objet partiel : le type porte dix
     // champs, et en oublier un ferait passer `undefined` là où le
@@ -69,18 +69,31 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       : null,
   });
 
-  if (!pose) {
+  if (!pose.ok) {
     // ON NE MENT PAS À LA PERSONNE.
     //
     // Elle a cliqué, on n'a pas su l'inscrire : lui afficher "c'est
     // bon" la ferait attendre des emails qui n'arriveront jamais, et
     // elle conclurait que la newsletter n'existe pas. On le dit, et ça
     // crie dans le journal pour qu'on puisse la rattraper.
+    // LA CAUSE EST NOMMEE, pas devinee (31 aout 2026). Ce bloc disait
+    // "verifier la cle API et l'existence du tag", c'est a dire DEUX
+    // pistes parmi cinq, sans dire laquelle. Un journal se lit, il ne
+    // se deduit pas.
     console.error(
-      `[newsletter] inscription NON enregistree chez Systeme.io pour ${verdict.email}. ` +
-        `Verifier la cle API et l'existence du tag "${TAG_NEWSLETTER}".`,
+      `[newsletter] inscription NON enregistree pour ${verdict.email} : ${pose.raison}. ` +
+        `(aucune_cle = la cle Systeme.io n'est pas connectee ; contact_impossible = ` +
+        `Systeme.io a refuse la creation ; tag_inconnu = l'etiquette "${TAG_NEWSLETTER}" ` +
+        `est introuvable dans le compte.)`,
     );
-    return NextResponse.json({ ok: false, raison: "indisponible" }, { status: 502 });
+    // La raison SORT dans la reponse : sans elle, diagnostiquer demande
+    // un acces au serveur, et c'est ce qui a coute la matinee. Aucune de
+    // ces valeurs n'est un secret, elles nomment un etat de
+    // configuration.
+    return NextResponse.json(
+      { ok: false, raison: "indisponible", cause: pose.raison },
+      { status: 502 },
+    );
   }
 
   return NextResponse.json({ ok: true });

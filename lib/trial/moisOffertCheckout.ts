@@ -34,6 +34,7 @@ import {
   type MotifSuspect,
 } from "@/lib/trial/moisOffert";
 import { proprietaireDuLien } from "@/lib/trial/proprietaireDuLien";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 /** La durée du cadeau. Le nombre vit dans le module pur : c'est LUI
  *  que le bon de commande annonce, et deux nombres écrits séparément
@@ -159,7 +160,7 @@ export async function marquerMoisOffertConsomme(args: {
       free_month_flag: dejaRecu ? "deja_recu" : (args.signale ?? null),
     };
 
-    const { error } = await supabaseAdmin.from("profiles").update(patch).ilike("email", email);
+    const { error } = await supabaseAdmin.from("profiles").update(patch).ilike("email", echapperMotifLike(email));
     if (error) {
       if (/column .* does not exist|schema cache/i.test(error.message)) {
         console.error(
@@ -190,7 +191,7 @@ async function dejaEuSonMois(email: string): Promise<string | null> {
     const { data, error } = await supabaseAdmin
       .from("profiles")
       .select("free_month_granted_at")
-      .ilike("email", email)
+      .ilike("email", echapperMotifLike(email))
       .maybeSingle();
     if (error) return null;
     return (data as { free_month_granted_at?: string | null } | null)?.free_month_granted_at ?? null;

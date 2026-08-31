@@ -57,6 +57,7 @@ import { checkoutReturnBase } from "@/lib/sales/salesHosts";
 import { finDePeriodeAbonnement } from "@/lib/checkout/formeStripe";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -160,7 +161,7 @@ async function contexteDe(email: string): Promise<Contexte> {
   const { data: profil } = await supabaseAdmin
     .from("profiles")
     .select("stripe_customer_id, paypal_subscription_id")
-    .ilike("email", email)
+    .ilike("email", echapperMotifLike(email))
     .maybeSingle();
   const ligne = (profil ?? {}) as { stripe_customer_id?: string; paypal_subscription_id?: string };
 
