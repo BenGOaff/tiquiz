@@ -3133,9 +3133,42 @@ Le "bordélique" est précis, et il tenait en trois choses :
    convaincre, c'est une porte fermée.
 
 **Règle : `simulerParPlan()` (`lib/site/recompenseAffiliation.ts`), un
-compteur par palier, un total MENSUEL, et les deux options MONTRÉES en
+CURSEUR par palier, un total MENSUEL, et les deux options MONTRÉES en
 dessous.** L'arbitrage se fait dans l'espace affilié, une fois inscrit,
 avec ses vrais filleuls.
+
+### Le palier était calculé, il n'était pas MONTRÉ (même jour)
+
+Elle a relu l'écran : "elle prend en compte l'augmentation de palier ?
+Il faut ! [...] la calculatrice elle doit prendre en compte le taux
+suivant le nb d'affiliés. Aussi fais la plus ergonomique, avec des
+curseurs et pas des boutons plus moins."
+
+**Le taux ÉTAIT pris en compte** : `simulerParPlan` appelle
+`tauxCommissionPct` sur le TOTAL des filleuls, et c'est testé depuis le
+premier jet. Ce qui manquait, c'est qu'on ne le VOYAIT nulle part :
+l'écran affichait un montant sans la mécanique qui le fait monter, donc
+il se lisait comme un simple produit, donc rien ne donnait envie de
+pousser plus loin. Un barème invisible ne motive personne.
+
+L'écran dit maintenant trois choses en même temps : le taux courant, ce
+que la marche a déjà ajouté par rapport aux 40 % de départ, et la
+MARCHE SUIVANTE (`prochaineMarcheCommission`, dans le lib, pure et
+testée). Les deux cartes du bas affichent la valeur atteinte à ce
+nombre de filleuls, au lieu d'un "jusqu'à 70 %" abstrait.
+
+**Le seuil ne se réécrit PAS dans le composant.** La marche s'ouvre au
+PREMIER filleul de la dizaine (1 -> 45 %, 11 -> 50 %), c'est le
+découpage de `tauxCommissionPct`, et deux formules pour le même barème
+finissent toujours par diverger. Le test compare la marche annoncée à ce
+que `tauxCommissionPct` rendra vraiment : annoncer un palier que le
+barème ne donnera pas se découvre au premier versement.
+
+**Les boutons plus/moins demandaient dix clics pour atteindre la
+première marche.** Avec un curseur, le chiffre bouge pendant qu'on
+tire : la mécanique se comprend sans la lire. Le champ numérique reste
+à côté, parce que le curseur s'arrête à 100 et que quelqu'un qui vise
+plus doit pouvoir l'écrire.
 
 Trois choses à ne pas défaire :
 
@@ -3316,9 +3349,55 @@ sans avoir à connaître cette histoire.
 
 Au passage, l'encart de fin d'article n'est plus un aplat marine ("les
 encarts bleu sont moches j'en veux pas") : fond blanc, filet HORIZONTAL
-à la couleur de marque, texte à l'encre du site. Un seul accent bleu par
-page, et c'est le résumé du haut ; le filet des citations est repassé au
-gris.
+à la couleur de marque, texte à l'encre du site.
+
+### AUCUN APLAT DE COULEUR SOUS DU TEXTE, NULLE PART (Béné, 31 août 2026)
+
+"Supprime l'arrière plan bleu sous le texte c'est pas adapté, pas beau,
+j'en veux pas, NULLE PART. Au pire mets carrément le texte en couleur,
+mais dans les couleurs Tiquiz pas couleurs des vignettes. **Notre
+branding c'est celui des pages de vente tiquiz.fr et atelierduquiz.fr
+pas les vignettes.**"
+
+**Troisième fois que la remarque sort**, et c'est ça qui fait qu'elle
+devient une règle et un test plutôt qu'une correction de plus :
+
+- 3 août : "l'encart est tout pété" ET "il est de la même couleur que
+  les boutons, ça entraîne de la confusion" (les quatre temps de la page
+  de résultat) ;
+- 30 août : "les encarts bleu sont moches j'en veux pas en plus ils
+  rendent le texte illisible" (la fin d'article) ;
+- 31 août : le simulateur, le bloc de fin de la page affiliation, celui
+  du blog, et le surligneur de titre.
+
+**Le motif est toujours le même : on prend les couleurs d'un VISUEL et
+on les applique à une INTERFACE.** Sa dernière phrase le nomme mieux que
+tous les audits : le branding vient des PAGES DE VENTE, pas des
+vignettes d'articles. Un dessin de 1200 px peut porter trois mots dans
+un bloc bleu et vivre sur un fond marine ; une page qui doit se LIRE,
+non.
+
+**Règle : fond blanc ou crème, texte à l'encre, et le bleu ne sert plus
+qu'à quatre choses** : un bouton, une pastille numérotée, un FILET
+HORIZONTAL, et un CHIFFRE. Le seul fond sombre qui reste est le PIED de
+page (`.tq-pied`), le geste Typeform qu'elle a montré elle même, où
+rien ne se lit longtemps.
+
+**`.tq-surb` est devenu une COULEUR DE TEXTE** ("au pire mets carrément
+le texte en couleur"). C'était un dégradé bleu avec du blanc dessus,
+recopié des vignettes ; c'est maintenant le mot en bleu de marque, plus
+lourd que le reste du titre. Aucun appel n'a bougé, les sept titres
+concernés gardent leur emphase.
+
+**INTERDIT :** `bg-[var(--tq-marine)]` sur un bloc de contenu, un
+`bg-[var(--tq-bleu)]` avec du padding sous du texte, et le `text-white`
+qui en découle. `tests/logic/branding-site.test.mts` les refuse sur les
+sept écrans du site public, et exige que `.tq-surb` n'ait plus de
+`background`.
+
+Un filet reste HORIZONTAL, jamais vertical : une décoration à gauche
+déplace ce qu'elle décore, et les bords ne s'alignent plus (règle du
+3 août, mesurée à 20 px).
 
 ### Pinterest ne recevait PAS l'image, et le viewer de quiz non plus
 
@@ -3395,10 +3474,6 @@ alors aucun commentaire. La liste est donc **rendue par le serveur**, et
 le JSON-LD porte `commentCount` (uniquement quand il y en a : annoncer
 `0` sur dix articles dit le contraire de ce qu'on cherche).
 
-- **Rien n'est public par défaut.** Un commentaire arrive en
-  `en_attente` et n'apparaît qu'après relecture dans `/admin` (onglet
-  Support, `CommentairesBlogCard`). Une file qu'on ne montre pas est une
-  file que personne ne relève.
 - **L'adresse email ne sort jamais.** Elle n'est pas dans le `select` de
   la lecture publique : c'est la règle des IBAN du 25 août.
 - **Le champ piège** plutôt qu'un captcha (qui fait fuir une lectrice sur
@@ -3419,6 +3494,85 @@ le try : une base absente coûte la section commentaires, jamais
 l'article.
 
 🚨 Migration : `supabase/migrations/20260830_blog_commentaires.sql`.
+
+### Tout mettre en attente ne modérait rien : ça éteignait la section (31 août 2026)
+
+Béné : "qui les valide, quand et comment ? J'ai voulu tester et il était
+écrit 'votre commentaire est en cours de validation'. Sauf que, ben
+c'est pas fait la suite ? On peut regarder ce que font les blogs les
+plus modernes et fiables en ce moment et calquer sur leur comportement ?
+Peut être une auto modération (pas de liens, pas de discours négatifs ou
+déplacés, pas de spam). L'idée c'est de permettre aux gens de laisser
+des commentaires (mais JE DOIS ÊTRE ALERTÉE pour savoir qu'il y en a) et
+de montrer aux moteurs de recherche et à l'IA que mon blog intéresse le
+public."
+
+**Elle a raison, et le défaut n'était pas un morceau manquant : c'était
+la posture.** Le 30 août, la règle écrite ici disait "rien n'est public
+par défaut", et la file de modération existait bel et bien. Mais
+personne ne relève une file tous les jours, et RIEN ne disait qu'il y
+avait quelque chose dedans : en pratique, aucun commentaire n'aurait
+jamais été publié. Un blog dont la section commentaires reste vide dit à
+Google et aux modèles exactement le contraire de ce qu'elle cherche, et
+la lectrice qui ne voit jamais son message ne revient pas.
+
+**Règle : trois issues, pas deux** (`lib/blog/commentaires.ts`,
+`jugerCommentaire` rend `statut` + `motifs`). C'est le comportement des
+blogs qui marchent, Akismet et le défaut de WordPress compris.
+
+| Issue | Quand | Béné |
+|---|---|---|
+| `publie` | aucun signal douteux | prévenue, rien à faire |
+| `en_attente` | un signal l'a retenu | prévenue, elle tranche |
+| `refuse` | propos haineux | ça n'atteint jamais la page |
+
+**UN LIEN RETIENT TOUJOURS.** C'est sa règle ("pas de liens"), et c'est
+la seule qui protège vraiment : le spam de commentaire n'existe que pour
+poser un lien. Un lecteur honnête qui cite une source attend quelques
+heures, ce n'est pas cher payé. Les autres signaux : tournure de spam
+(`ressembleAuSpam`), plus de 60 % de majuscules, huit fois le même
+caractère, un "nom" de plus de cinq mots.
+
+**ON RETIENT, ON NE REFUSE PAS, sauf haine.** Un doute mal placé qui
+REFUSE fait perdre un vrai lecteur sans que personne ne le sache ; un
+doute mal placé qui RETIENT coûte un clic. Les deux erreurs n'ont pas le
+même prix.
+
+**Et les filtres ne crient PAS pour rien.** "Putain c'est génial" est un
+compliment : `proposInterdits` ne vise que ce qui s'attaque à une
+personne ou à un groupe. `ressembleAuSpam` cherche des TOURNURES de
+placement ("gagner de l'argent facile", "backlinks pas cher", un numéro
+WhatsApp), jamais un mot isolé : "j'ai fait un quiz sur les casinos"
+doit passer. Un filtre qui rougit pour rien finit désactivé, et on se
+retrouve sans filtre du tout (leçon du filet genre-neutre, 24 août).
+
+**L'ALERTE PART DANS LES DEUX CAS**
+(`lib/email/commentaireBlogAlerte.ts`), et l'OBJET dit lequel : elle
+trie sa boîte sans ouvrir. Un commentaire auto-publié n'appelle aucune
+action, mais il apparaît sur SON site sous SON nom : ne l'alerter que
+sur les cas douteux lui ferait découvrir les autres par hasard, des
+semaines plus tard. Quand la lectrice a laissé son adresse, elle est en
+`reply_to` : répondre à un commentaire est la meilleure façon de faire
+revenir quelqu'un, et aller chercher son adresse dans l'admin est
+exactement ce qui fait qu'on ne le fait jamais.
+
+`objetAlerte` vit dans le module PUR et pas dans le module d'email :
+celui-ci porte `import "server-only"`, donc aucun test ne peut le
+charger. C'est le piège qui avait caché le verrou des webhooks le
+24 août.
+
+**Le MOTIF est affiché dans l'admin, jamais deviné.** Sans lui, Béné
+relit chaque message pour comprendre ce qui l'a arrêté. Un commentaire
+reçu AVANT l'auto-modération n'a pas de motif : l'écran dit "reçu avant
+l'auto-modération", il n'en invente pas un.
+
+**Les deux écritures se replient sur l'ancienne forme** si la colonne
+`motifs` n'est pas encore en prod, en écriture ET en lecture. Sans le
+repli en lecture, la file reviendrait VIDE, et un écran vide se lit "il
+n'y a rien à faire" alors qu'il veut dire "je n'ai pas pu regarder" (ce
+sont deux réponses différentes, règle du 23 août).
+
+🚨 Migration : `supabase/migrations/20260831_blog_commentaires_moderation.sql`.
 
 ### Ce que le filet de tests fige
 

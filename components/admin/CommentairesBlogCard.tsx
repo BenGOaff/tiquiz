@@ -6,16 +6,27 @@
 //
 // -- POURQUOI CET ÉCRAN EXISTE ----------------------------------------
 //
-// Un commentaire arrive en `en_attente` et n'apparaît nulle part tant
-// qu'il n'a pas été vu : c'est la seule posture tenable, ce qui se
-// publie sur le domaine de Béné engage sa réputation et son
-// référencement. Mais une file qu'on ne montre pas est une file que
-// personne ne relève : les commentaires attendraient dans Supabase,
-// c'est à dire nulle part pour elle, et la fonctionnalité entière serait
-// morte à la première semaine.
+// Depuis le 31 août, un commentaire sans aucun signal douteux est
+// PUBLIÉ tout de suite (`lib/blog/commentaires.ts`). N'arrivent ici que
+// ceux qu'un signal a retenus : un lien, une tournure de spam, des
+// majuscules, des caractères répétés.
 //
-// C'est la leçon de `webhook_logs` (7 août) : une donnée qu'on n'affiche
-// pas ne sert à personne.
+// Une file qu'on ne montre pas est une file que personne ne relève :
+// les commentaires attendraient dans Supabase, c'est à dire nulle part
+// pour elle. C'est la leçon de `webhook_logs` (7 août) : une donnée
+// qu'on n'affiche pas ne sert à personne.
+//
+// Et l'écran n'est plus le SEUL signal : Béné reçoit un email à chaque
+// commentaire (`lib/email/commentaireBlogAlerte.ts`), qui dit s'il est
+// déjà en ligne ou s'il l'attend. "Je dois être alertée pour savoir
+// qu'il y en a."
+//
+// -- LE MOTIF EST AFFICHÉ, JAMAIS DEVINÉ ------------------------------
+//
+// La colonne `motifs` porte ce qui a retenu le commentaire. Sans elle,
+// Béné relit chaque message pour deviner ce qui l'a arrêté. Un
+// commentaire reçu AVANT l'auto-modération n'a pas de motif : on le
+// DIT, on n'en invente pas un.
 //
 // -- CE QUI ATTEND LE PLUS LONGTEMPS PASSE DEVANT ---------------------
 //
@@ -36,6 +47,33 @@ interface Ligne {
   auteur: string;
   message: string;
   cree_le: string;
+  motifs?: string | null;
+}
+
+/**
+ * Ce que chaque motif veut dire, en clair.
+ *
+ * La table est recopiee ici plutot qu'importee de
+ * `lib/blog/commentaires.ts` : ce composant est client, et l'import
+ * tirerait tout le module de moderation dans le bundle de l'admin pour
+ * six libelles. Le test verifie que les deux listes restent d'accord.
+ */
+const MOTIFS: Record<string, string> = {
+  lien: "contient un lien",
+  spam: "tournure de spam",
+  propos: "propos deplaces",
+  cris: "ecrit en majuscules",
+  repetition: "caracteres repetes",
+  "premier-mot-copie": "le nom ressemble a un slogan",
+};
+
+function phraseMotifs(brut: string | null | undefined): string {
+  const cles = String(brut ?? "")
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+  if (cles.length === 0) return "recu avant l'auto-moderation";
+  return cles.map((c) => MOTIFS[c] ?? c).join(", ");
 }
 
 function quand(iso: string): string {
@@ -140,8 +178,9 @@ export default function CommentairesBlogCard() {
           // casse" ou "je n'ai rien a faire ici", et les deux coutent
           // du temps (lecon du tableau de liens, 24 aout).
           <p className="mt-4 text-sm text-muted-foreground">
-            Rien a relire. Les nouveaux commentaires arrivent ici avant d&apos;etre publies : tant
-            qu&apos;ils y sont, personne ne les voit sur le blog.
+            Rien a relire. Un commentaire sans lien, sans spam et sans propos deplaces part en
+            ligne tout seul ; seuls ceux qu&apos;un signal retient arrivent ici. Tu recois un email
+            dans les deux cas.
           </p>
         ) : (
           <ul className="mt-4 space-y-4">
@@ -153,6 +192,9 @@ export default function CommentairesBlogCard() {
                     {" "}
                     | {quand(c.cree_le)} | <code className="text-xs">{c.slug}</code>
                   </span>
+                </p>
+                <p className="mt-1 text-xs font-medium text-amber-700">
+                  Retenu : {phraseMotifs(c.motifs)}
                 </p>
                 <p className="mt-2 whitespace-pre-wrap text-sm">{c.message}</p>
                 <div className="mt-3 flex gap-2">

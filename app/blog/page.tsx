@@ -137,26 +137,30 @@ export default function BlogIndex() {
 
           {/* CE QUE LE LECTEUR FAIT ENSUITE. */}
           <section className="tq-large py-24">
-            <div className="rounded-3xl bg-[var(--tq-marine)] px-8 py-14 text-center sm:px-14">
-              <h2 className="mx-auto max-w-[20ch] text-[1.9rem] text-white sm:text-[2.4rem]">
+            {/* PAS D'APLAT SOUS DU TEXTE (Béné, 31 août 2026). Même
+                gabarit que la fin d'article : du blanc, un filet
+                HORIZONTAL, le texte à l'encre du site. */}
+            <div className="rounded-3xl border border-[var(--tq-bord)] bg-white px-8 py-12 text-center sm:px-14 sm:py-14">
+              <span
+                aria-hidden="true"
+                className="mx-auto block h-[3px] w-12 rounded-full bg-[var(--tq-bleu)]"
+              />
+              <h2 className="mx-auto mt-6 max-w-[20ch] text-[1.9rem] sm:text-[2.4rem]">
                 Ton premier quiz tourne <span className="tq-surb">ce soir</span>
               </h2>
-              <p className="mx-auto mt-5 max-w-[52ch] leading-relaxed text-[#b9c3d9]">
+              <p className="tq-doux mx-auto mt-5 max-w-[52ch] leading-relaxed">
                 Tiquiz écrit le quiz, pose les tags par profil et te rend des leads déjà triés dans
                 Systeme.io. Sans Zapier, sans Make.
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-3">
-                <Link href="/signup" className="tq-bouton">
+                <Link href="/signup" className="tq-bouton tq-bouton-plein">
                   Créer mon quiz gratuitement
                 </Link>
-                <Link
-                  href="/"
-                  className="tq-bouton bg-transparent !text-white ring-1 ring-white/25 hover:!bg-white/10"
-                >
+                <Link href="/" className="tq-bouton tq-bouton-fantome">
                   Voir ce que fait Tiquiz
                 </Link>
               </div>
-              <p className="mt-5 text-xs text-[#7f8db0]">
+              <p className="tq-doux mt-5 text-xs">
                 Plan gratuit, sans carte bancaire et sans limite de durée.
               </p>
             </div>

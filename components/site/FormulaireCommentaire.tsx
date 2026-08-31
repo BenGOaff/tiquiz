@@ -6,15 +6,22 @@
 //
 // -- IL DIT TOUJOURS CE QUI S'EST PASSÉ -------------------------------
 //
-// Trois issues, trois phrases, et aucune ne peut être silencieuse :
+// Quatre issues, quatre phrases, et aucune ne peut être silencieuse :
 //
-//   - envoyé -> "il attend d'être relu", parce que le commentaire
-//     n'apparaît PAS tout de suite et que sans cette phrase la lectrice
-//     recharge la page, ne voit rien, et conclut que ça n'a pas marché
-//     (le scénario exact de Jocelyne, 1er août) ;
+//   - PUBLIÉ -> "il est en ligne", et on invite à recharger. C'est le
+//     cas normal depuis le 31 août : l'auto-modération publie tout de
+//     suite ce qui n'a aucun signal douteux ;
+//   - RETENU -> "il attend d'être relu". Sans cette phrase la lectrice
+//     recharge, ne voit rien, et conclut que ça n'a pas marché (le
+//     scénario exact de Jocelyne, 1er août) ;
 //   - refusé -> la raison, traduite ici. Le serveur renvoie une RAISON,
 //     jamais une phrase (règle du 3 août) ;
 //   - panne réseau -> on le dit aussi, au lieu d'un `catch {}` muet.
+//
+// **LE STATUT VIENT DU SERVEUR, il ne se devine pas ici.** Deux
+// endroits qui décideraient chacun de leur côté finiraient par se
+// contredire, et ici la contradiction se lit "mon commentaire a
+// disparu".
 //
 // -- LE CHAMP PIÈGE ---------------------------------------------------
 //
@@ -38,6 +45,7 @@ const AUTRES_RAISONS: Record<string, string> = {
 
 export default function FormulaireCommentaire({ slug }: { slug: string }) {
   const [etat, setEtat] = useState<"prêt" | "envoi" | "envoyé">("prêt");
+  const [statut, setStatut] = useState<"publie" | "en_attente">("en_attente");
   const [erreur, setErreur] = useState<string | null>(null);
 
   async function envoyer(e: React.FormEvent<HTMLFormElement>) {
@@ -58,8 +66,13 @@ export default function FormulaireCommentaire({ slug }: { slug: string }) {
           siteWeb: data.get("siteWeb"),
         }),
       });
-      const json = (await r.json().catch(() => ({}))) as { ok?: boolean; raison?: string };
+      const json = (await r.json().catch(() => ({}))) as {
+        ok?: boolean;
+        raison?: string;
+        statut?: string;
+      };
       if (json.ok) {
+        setStatut(json.statut === "publie" ? "publie" : "en_attente");
         setEtat("envoyé");
         form.reset();
         return;
@@ -78,9 +91,18 @@ export default function FormulaireCommentaire({ slug }: { slug: string }) {
   if (etat === "envoyé") {
     return (
       <p className="mt-10 rounded-2xl border border-[var(--tq-bord)] bg-white p-5 leading-relaxed">
-        <strong>C&apos;est envoyé.</strong> Ton commentaire attend d&apos;être relu avant
-        d&apos;apparaître : c&apos;est ce qui garde cette page lisible. Tu ne le verras donc pas
-        tout de suite.
+        {statut === "publie" ? (
+          <>
+            <strong>C&apos;est en ligne.</strong> Recharge la page pour le voir avec les autres.
+            Merci d&apos;avoir pris le temps.
+          </>
+        ) : (
+          <>
+            <strong>C&apos;est envoyé.</strong> Ton commentaire attend d&apos;être relu avant
+            d&apos;apparaître : c&apos;est ce qui garde cette page lisible. Tu ne le verras donc
+            pas tout de suite.
+          </>
+        )}
       </p>
     );
   }

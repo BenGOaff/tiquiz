@@ -8,7 +8,8 @@
 //      limite est une table qu'on remplit en une nuit ;
 //   2. le VERDICT PUR (`jugerCommentaire`), qui ne connaît ni la requête
 //      ni la base et qui est testé ;
-//   3. l'écriture, en `en_attente`.
+//   3. l'écriture, avec le STATUT que le verdict a décidé ;
+//   4. l'ALERTE à Béné, best-effort, après l'écriture.
 //
 // L'ordre n'est pas décoratif : valider avant de limiter reviendrait à
 // faire travailler le serveur pour chaque envoi d'un robot, et à ne
@@ -28,6 +29,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { tousLesSlugs } from "@/lib/blog/articles";
 import { jugerCommentaire } from "@/lib/blog/commentaires";
 import { enregistrerCommentaire } from "@/lib/blog/commentairesStore";
+import { envoyerAlerteCommentaire } from "@/lib/email/commentaireBlogAlerte";
 import { creerLimiteur } from "@/lib/rateLimit/parIp";
 
 export const dynamic = "force-dynamic";
@@ -74,7 +76,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, raison: verdict.raison }, { status: 400 });
   }
 
-  const ecrit = await enregistrerCommentaire(verdict.valeur, ip);
+  const ecrit = await enregistrerCommentaire(
+    verdict.valeur,
+    ip,
+    verdict.statut,
+    verdict.motifs,
+  );
   if (!ecrit.ok) {
     return NextResponse.json(
       { ok: false, raison: ecrit.raison },
@@ -82,7 +89,23 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // `en_attente` est dit EXPLICITEMENT : sans ça, la lectrice cherche son
-  // commentaire sur la page et conclut que le bouton n'a pas marché.
-  return NextResponse.json({ ok: true, statut: "en_attente" });
+  // L'ALERTE PART APRÈS L'ÉCRITURE, et son échec ne change rien à la
+  // réponse : le commentaire est déjà enregistré. Répondre "erreur"
+  // parce que NOTRE email n'est pas parti ferait renvoyer le message
+  // cinq fois.
+  await envoyerAlerteCommentaire({
+    slug: verdict.valeur.slug,
+    auteur: verdict.valeur.auteur,
+    message: verdict.valeur.message,
+    email: verdict.valeur.email,
+    statut: verdict.statut,
+    motifs: verdict.motifs,
+  }).catch(() => false);
+
+  // LE STATUT EST DIT EXPLICITEMENT, et c'est lui qui décide la phrase
+  // affichée. Annoncer "en cours de validation" à quelqu'un dont le
+  // commentaire est DÉJÀ en ligne l'enverrait le chercher au mauvais
+  // endroit, et l'inverse le ferait conclure que le bouton n'a pas
+  // marché (règle du `ok: false`, 3 août).
+  return NextResponse.json({ ok: true, statut: verdict.statut });
 }

@@ -19,7 +19,7 @@
 
 import { createHash } from "node:crypto";
 
-import type { CommentairePropre } from "./commentaires";
+import type { CommentairePropre, MotifRetenue, StatutCommentaire } from "./commentaires";
 
 /**
  * LE CLIENT EST CHARGÉ À LA DEMANDE, ET C'EST NÉCESSAIRE.
@@ -54,6 +54,8 @@ export interface CommentairePublie {
 export interface CommentaireEnAttente extends CommentairePublie {
   slug: string;
   statut: string;
+  /** Ce qui l'a retenu, tel que l'auto-modération l'a nommé. */
+  motifs?: string | null;
 }
 
 /**
@@ -111,20 +113,44 @@ export function empreinteIp(ip: string): string {
 
 export type ResultatEcriture = { ok: true } | { ok: false; raison: "table_absente" | "ecriture" };
 
-/** Enregistre un commentaire EN ATTENTE. Rien n'est publié par cette route. */
+/**
+ * Enregistre un commentaire, AVEC LE STATUT QU'ON LUI A DONNÉ.
+ *
+ * `statut` est un PARAMÈTRE OBLIGATOIRE, jamais deviné ici : la
+ * décision "ça passe tout seul ou ça attend" est prise par
+ * `jugerCommentaire`, qui est pur et testé. Un store qui trancherait de
+ * son côté finirait par ne plus dire la même chose que la fonction qui
+ * décide (le défaut sorti six fois sur les aperçus d'éditeur).
+ *
+ * L'ÉCRITURE SE REPLIE SUR L'ANCIENNE FORME si la colonne `motifs`
+ * n'existe pas encore en prod : PostgREST rejette l'insertion ENTIÈRE
+ * sur une colonne inconnue, donc sans repli un déploiement en avance
+ * sur la migration perdrait TOUS les commentaires en silence (drame
+ * `quiz_events.meta`, 15 jours de statistiques perdues).
+ */
 export async function enregistrerCommentaire(
   c: CommentairePropre,
   ip: string,
+  statut: StatutCommentaire,
+  motifs: readonly MotifRetenue[] = [],
 ): Promise<ResultatEcriture> {
   try {
-    const { error } = await (await client()).from("blog_commentaires").insert({
+    const base = {
       slug: c.slug,
       auteur: c.auteur,
       message: c.message,
       email: c.email,
       ip_hash: empreinteIp(ip),
-      statut: "en_attente",
-    });
+      statut,
+    };
+    const sb = await client();
+    let { error } = await sb
+      .from("blog_commentaires")
+      .insert({ ...base, motifs: motifs.length > 0 ? motifs.join(",") : null });
+    if (error && /motifs/.test(String(error.message ?? ""))) {
+      console.warn("[blog] colonne motifs absente : migration 20260831 non appliquee");
+      ({ error } = await sb.from("blog_commentaires").insert(base));
+    }
     if (!error) return { ok: true };
     // PostgREST répond `PGRST205` quand la table n'existe pas encore :
     // on le DIT au lieu d'un "erreur serveur" qui enverrait chercher un
@@ -143,17 +169,39 @@ export async function enregistrerCommentaire(
   }
 }
 
-/** La file de modération : ce qui attend depuis le plus longtemps d'abord. */
+/**
+ * La file de modération : ce qui attend depuis le plus longtemps d'abord.
+ *
+ * Trier du plus récent enterrerait ceux qu'on a déjà fait attendre
+ * (même règle que la file du support).
+ *
+ * La lecture SE REPLIE sur la version sans `motifs` : sans ça, un
+ * déploiement en avance sur la migration rendrait la file VIDE, et un
+ * écran vide se lit "il n'y a rien à faire" alors qu'il veut dire "je
+ * n'ai pas pu regarder". Ce sont deux réponses différentes (règle du
+ * 23 août).
+ */
 export async function lireFileModeration(limite = 100): Promise<CommentaireEnAttente[]> {
+  const colonnes = "id, slug, auteur, message, cree_le, statut";
   try {
-    const { data, error } = await (await client())
-      .from("blog_commentaires")
-      .select("id, slug, auteur, message, cree_le, statut")
-      .eq("statut", "en_attente")
-      .order("cree_le", { ascending: true })
-      .limit(limite);
-    if (error) return [];
-    return (data ?? []) as CommentaireEnAttente[];
+    const sb = await client();
+    const requete = (champs: string) =>
+      sb
+        .from("blog_commentaires")
+        .select(champs)
+        .eq("statut", "en_attente")
+        .order("cree_le", { ascending: true })
+        .limit(limite);
+
+    let { data, error } = await requete(`${colonnes}, motifs`);
+    if (error && /motifs/.test(String(error.message ?? ""))) {
+      ({ data, error } = await requete(colonnes));
+    }
+    if (error) {
+      console.error("[blog] file de moderation illisible", error.message);
+      return [];
+    }
+    return (data ?? []) as unknown as CommentaireEnAttente[];
   } catch {
     return [];
   }
