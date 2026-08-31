@@ -2959,8 +2959,16 @@ webhooks dans la version choisie SUR L'ENDPOINT. Les deux se règlent
 dans le tableau de bord de Stripe, pas chez nous, et elles peuvent
 changer sans qu'une ligne de code bouge.
 
-Or Stripe a DÉPLACÉ trois champs que ce dépôt lit pour payer les
-affiliés, et les trois échouent EN SILENCE :
+**MESURÉ sur le serveur le 31 août, pas déduit :** le compte et les deux
+endpoints sont en **`2020-08-27`**, et une facture payée porte encore
+`subscription` et `tax` à la RACINE. Rien n'est donc cassé aujourd'hui,
+et il faut le dire dans ce sens là : ce qui suit est un FILET pour le
+jour où Béné accepte la mise à jour d'API que Stripe lui proposera, pas
+la correction d'une panne en cours.
+
+Ce filet n'est pas théorique pour autant, parce que Stripe a DÉPLACÉ
+trois champs que ce dépôt lit pour payer les affiliés, et que les trois
+échoueraient EN SILENCE :
 
 | Ce qu'on lisait | Où c'est passé | Ce que ça coûte |
 |---|---|---|
@@ -2969,9 +2977,11 @@ affiliés, et les trois échouent EN SILENCE :
 | `subscription.current_period_end` | `subscription.items.data[].current_period_end` | la date annoncée à qui descend de palier disparaît |
 
 Le deuxième est exactement l'écart du 26 août, par une autre porte. Et
-le premier est le plus grave parce que **zéro erreur ne s'écrit nulle
-part** : le webhook répond 200, la vente est encaissée, l'accès s'ouvre,
-et seule l'affiliée voit qu'il ne se passe plus rien chez elle.
+le premier est le plus grave parce que **zéro erreur ne s'écrirait nulle
+part** : le webhook répondrait 200, la vente serait encaissée, l'accès
+s'ouvrirait, et seule l'affiliée verrait qu'il ne se passe plus rien
+chez elle. Une mise à jour d'API acceptée d'un clic un mardi soir se
+paierait en commissions manquantes découvertes des semaines plus tard.
 
 **Règle : `lib/checkout/formeStripe.ts` lit les DEUX formes, personne ne
 lit un champ Stripe à la main.** `abonnementDeLaFacture`,
@@ -2995,10 +3005,33 @@ Il dit la version des événements récents, la version de CHAQUE endpoint
 de webhook, la forme réelle d'une facture payée, et surtout **les
 événements manquants avec ce que chacun coûte**. Un événement absent de
 l'abonnement d'un endpoint ne produit AUCUNE erreur : il n'arrive
-simplement jamais. `invoice.paid` manquant, c'est zéro commission
-récurrente ; `customer.subscription.deleted` manquant, c'est un plan
-payant qui reste ouvert après une résiliation. Le test exige que sa
-liste reste d'accord avec `OWNER_SUBSCRIPTION_EVENTS`.
+simplement jamais. Le test exige que sa liste reste d'accord avec
+`OWNER_SUBSCRIPTION_EVENTS`.
+
+**Et c'est LÀ qu'il a trouvé quelque chose de vraiment cassé**, le jour
+même de son écriture, alors que la version d'API allait bien :
+
+| Endpoint | Manquait | Ce que ça coûtait |
+|---|---|---|
+| `quiz.tipote.com` | `charge.dispute.created` + `charge.dispute.funds_withdrawn` | un impayé gardait son accès ET sa commission : le trou que l'audit du 26 août croyait avoir fermé côté CODE était resté ouvert côté CONFIG |
+| `quiz.tipote.com` | `customer.subscription.trial_will_end` | la remise promise après le mois offert ne se posait jamais |
+| `quizing.tipote.com` (l'Atelier) | les deux `charge.dispute.*` | idem, sur l'achat unique |
+
+**La leçon, et elle est plus grande que Stripe :** on avait écrit le code
+des litiges le 26 août, écrit le test, mis à jour cette page, et
+personne n'avait vérifié que le fournisseur ENVOYAIT l'événement. Un
+`if` qui attend un événement jamais émis est indiscernable d'un `if` qui
+marche. C'est la version « configuration » du garde-fou non fusionné du
+23 août : **écrire un garde-fou n'est pas la dernière étape, vérifier
+qu'il reçoit quelque chose l'est.**
+
+**Deux apps, deux listes, et le contrôle a failli crier pour rien.** Son
+premier jet réclamait `invoice.paid` à l'Atelier, qui vend un ACHAT
+UNIQUE et n'écoute aucun événement d'abonnement : cinq fausses alertes
+sur sept, et une alerte fausse emporte les vraies avec elle. Le tableau
+`SERVEURS` porte donc, par hôte, ce que l'app vend. Un hôte inconnu fait
+dire "je ne sais pas ce que cette app vend", jamais "il manque des
+événements".
 
 C'est la leçon d'Ivan (7 août), réappliquée : **on regarde ce qu'il y a,
 on ne raisonne pas sur ce qu'il devrait y avoir.** `refFacture`
