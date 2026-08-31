@@ -82,7 +82,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       `[depart] ecriture impossible : ${e instanceof Error ? e.message : String(e)}`,
     );
     // 502 : ce n'est pas sa faute, et elle doit pouvoir reessayer.
-    return NextResponse.json({ ok: false, reason: "write_failed" }, { status: 502 });
+  // 200 ET PAS 5xx : LE CORPS DOIT ARRIVER (mesuré le 31 août 2026).
+  // Cloudflare, qui sert nos six domaines, REMPLACE le corps d'un 502
+  // par sa propre page (`error code: 502`, text/plain). L'écran lit la
+  // RAISON, pas le statut : avec un 5xx il n'en recevait aucune et
+  // affichait sa phrase par défaut. Mesuré deux fois, sur la newsletter
+  // et sur l'inscription.
+    return NextResponse.json({ ok: false, reason: "write_failed" });
   }
 
   return NextResponse.json({ ok: true });

@@ -77,7 +77,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       "[commande/paypal] PAYPAL_CLIENT_ID_OWNER / PAYPAL_SECRET_OWNER absents ou invalides : " +
         "aucun paiement PayPal possible.",
     );
-    return NextResponse.json({ ok: false, reason: "not_configured" }, { status: 503 });
+  // 200 ET PAS 5xx : LE CORPS DOIT ARRIVER (mesuré le 31 août 2026).
+  // Cloudflare, qui sert nos six domaines, REMPLACE le corps d'un 502
+  // par sa propre page (`error code: 502`, text/plain). L'écran lit la
+  // RAISON, pas le statut : avec un 5xx il n'en recevait aucune et
+  // affichait sa phrase par défaut. Mesuré deux fois, sur la newsletter
+  // et sur l'inscription.
+    return NextResponse.json({ ok: false, reason: "not_configured" });
   }
 
   // ON N'ENCAISSE PAS DE VRAI ARGENT TANT QUE RIEN N'OUVRE L'ACCÈS.
@@ -92,7 +98,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       "[commande/paypal] compte LIVE sans PAYPAL_WEBHOOK_ID_OWNER : paiement refuse, " +
         "sinon un abonnement serait preleve sans ouvrir d'acces.",
     );
-    return NextResponse.json({ ok: false, reason: "live_without_webhook" }, { status: 503 });
+    // 200 : ce refus DOIT etre lisible a l'ecran (cf. la note plus bas).
+    return NextResponse.json({ ok: false, reason: "live_without_webhook" });
   }
 
   // ON RAMÈNE L'ACHETEUR LÀ OÙ IL A ACHETÉ. `checkoutReturnBase` n'accepte
@@ -192,7 +199,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     console.error(
       `[commande/paypal] PayPal a refuse : ${result.reason} / ${result.detail ?? ""}`,
     );
-    return NextResponse.json({ ok: false, reason: result.reason }, { status: 502 });
+    return NextResponse.json({ ok: false, reason: result.reason });
   }
 
   return NextResponse.json({

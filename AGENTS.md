@@ -4106,3 +4106,68 @@ des étiquettes s'arrêtait en mars 2025. Trois mesures, trois minutes.
 Le contact créé pour ce test a été supprimé après.
 
 Test : `tests/logic/newsletter-cle.test.mts`.
+
+
+## Un 5xx devant un formulaire perd sa raison (mesuré le 31 août 2026)
+
+Béné : "le test d'inscription gratuite avec un ref ne fonctionne pas :
+`/api/auth/signup` 502. Du coup c'est top, on attire du trafic et les
+gens peuvent même pas s'inscrire, ça inspire vachement confiance."
+
+**Le compte ÉTAIT créé.** Vérifié en sondant la production puis en
+regardant son compte Systeme.io : le contact portait déjà `tiquiz-free`
+à la seconde près. Le seul geste qui avait échoué était le DERNIER,
+l'envoi de l'email par Resend. Et l'écran annonçait l'inverse.
+
+### Pourquoi l'écran mentait
+
+La route répondait **502**, et Cloudflare, qui sert nos six domaines
+(relevé le même jour : `server: cloudflare` sur les six), **remplace le
+corps d'un 502** par sa propre page, `error code: 502` en text/plain.
+Le `res.json()` du formulaire échouait donc, `reason` valait
+`undefined`, et l'écran affichait sa phrase par défaut : "Erreur lors
+de la création du compte."
+
+La phrase JUSTE existait déjà (`errEmailFailed` : "ton compte est créé
+mais l'email de confirmation n'est pas parti"). Elle n'arrivait jamais.
+Et un deuxième essai répondait "adresse déjà inscrite", ce qui achevait
+de faire croire à un système cassé.
+
+**Mesuré deux fois le même jour**, sur deux routes indépendantes : le
+formulaire de la newsletter le matin, l'inscription l'après-midi. Un
+400 de validation, lui, revient avec notre JSON intact.
+
+### La règle
+
+**Un refus MÉTIER sur un chemin lu par un NAVIGATEUR répond 200 avec
+`ok: false` et sa raison.** Les 4xx restent (ils passent intacts et ils
+disent la bonne chose). Un 5xx ne se justifie que là où un FOURNISSEUR
+doit réessayer, c'est à dire dans un webhook : un navigateur ne
+réessaie rien tout seul, donc le statut ne lui sert à rien et le corps
+lui sert à tout.
+
+Corrigés le 31 août : `auth/signup` (4 sorties), `newsletter`,
+`commande/session`, `commande/paypal`, `depart`. Garde-fou :
+`tests/logic/corps-avale-par-cloudflare.test.mts`, qui exige aussi que
+les webhooks GARDENT leurs 5xx.
+
+**Restent en 5xx, volontairement :** les écrans d'`/admin` (Béné y a
+accès au serveur) et les routes de génération IA, dont `aiFailure.ts`
+traduit déjà le statut côté client. À reprendre au prochain passage :
+elles perdent la distinction "saturé" / "trop long" / "refusé", donc
+`failureCopy` sort toujours sa phrase générique.
+
+### Et ce qu'il reste à faire, qui n'est PAS du code
+
+Resend refuse l'envoi. La cause exacte est dans le journal, à une
+commande :
+
+```bash
+pm2 logs tiquiz-prod --nostream --lines 200 | grep -i "signup\|Resend"
+```
+
+`sendTiquizEmail` écrit `Resend a refuse <statut> <corps>`. Le suspect
+le plus probable est le domaine `tiquiz.fr`, basculé le 30 août :
+tant qu'il n'est pas VÉRIFIÉ chez Resend (SPF et DKIM posés dans
+Cloudflare et validés), tout envoi depuis `hello@tiquiz.fr` est refusé,
+y compris les liens de connexion.
