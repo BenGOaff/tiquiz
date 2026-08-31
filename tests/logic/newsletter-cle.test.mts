@@ -162,3 +162,18 @@ test("la meme cle n'est jamais essayee deux fois", () => {
   // Sinon le journal dirait "deux cles refusees" pour une seule.
   assert.match(TAG, /!cles\.some\(\(c\) => c\.apiKey === duFichier\)/);
 });
+
+test("la recherche d'etiquette PAGINE : la newsletter etait hors de portee", () => {
+  // MESURE du 31 aout dans son compte : les 100 etiquettes les plus
+  // recentes s'arretent au 24 mars 2025, `hasMore` vaut true, et
+  // l'etiquette `newsletter` date du 30 juillet 2022. Avec une seule
+  // page, elle etait INTROUVABLE, donc l'inscription ne pouvait pas
+  // aboutir meme avec une cle valide.
+  const bloc = TAG.slice(TAG.indexOf("async function trouverTag"), TAG.indexOf("export async function poserTagPlan"));
+  assert.match(bloc, /startingAfter/, "sans curseur, on relit la meme page pour toujours");
+  assert.match(bloc, /hasMore/, "une liste tronquee le DIT : encore faut-il le lire");
+  assert.doesNotMatch(bloc, /limit=200/, "le maximum accepte par Systeme.io est 100");
+  assert.match(bloc, /limit=100/);
+  // Borne : un webhook de paiement ne reste pas ouvert indefiniment.
+  assert.match(bloc, /page < 30/);
+});

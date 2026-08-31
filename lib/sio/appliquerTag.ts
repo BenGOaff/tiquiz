@@ -295,18 +295,59 @@ async function assurerContact(
   return cleRejetee(res.status) ? "cle_refusee" : null;
 }
 
-/** L'identifiant d'une étiquette par son nom, ou `null`. */
+/**
+ * L'identifiant d'une étiquette par son nom, ou `null`.
+ *
+ * -- ON PAGINE, ET C'ÉTAIT UNE BOMBE À RETARDEMENT (31 août 2026) -----
+ *
+ * Cette fonction demandait `?limit=200`. **Le maximum accepté par
+ * Systeme.io est 100** : on ne voyait donc, au mieux, que les 100
+ * étiquettes les plus RÉCENTES.
+ *
+ * MESURÉ dans son compte le 31 août 2026, pas déduit : les 100 plus
+ * récentes s'arrêtent au **24 mars 2025**, et `hasMore` vaut `true`.
+ * Or l'étiquette `newsletter` date du **30 juillet 2022**.
+ *
+ * **Elle était donc HORS DE PORTÉE, et l'inscription à la newsletter
+ * ne pouvait pas aboutir**, même avec une clé parfaitement valide :
+ * `tag_inconnu` sur une étiquette qui existe depuis quatre ans. Les
+ * étiquettes de vente (`tiquiz-free`, `tiquiz-mensuel`... avril 2026)
+ * sont dans la page, elles : c'est pour ça que le tagging des ventes
+ * marchait et que celui-là n'avait jamais eu la moindre chance.
+ *
+ * C'est la leçon des 51 règles d'automatisation, deux fois payée en une
+ * semaine : **une liste tronquée ne dit pas qu'elle est tronquée.** Ici
+ * elle le dit (`hasMore`), et personne ne le lisait.
+ *
+ * Bornée à 30 pages : au delà, mieux vaut répondre "je n'ai pas trouvé"
+ * que tenir un webhook de paiement ouvert indéfiniment.
+ */
 async function trouverTag(apiKey: string, nom: string): Promise<number | null> {
-  const res = await sioUserRequest<{ items?: { id?: number; name?: string }[] }>(
-    apiKey,
-    "/tags?limit=200",
-  );
-  if (!res.ok || !Array.isArray(res.data?.items)) return null;
-  const trouve = res.data!.items!.find(
-    (t) => String(t?.name ?? "").trim().toLowerCase() === nom.toLowerCase(),
-  );
-  const id = Number(trouve?.id);
-  return Number.isFinite(id) && id > 0 ? id : null;
+  interface PageTags {
+    items?: { id?: number; name?: string }[];
+    hasMore?: boolean;
+  }
+  const cherche = nom.trim().toLowerCase();
+  let apres: number | null = null;
+
+  for (let page = 0; page < 30; page++) {
+    const suite: string = apres === null ? "" : `&startingAfter=${apres}`;
+    const res = await sioUserRequest<PageTags>(apiKey, `/tags?limit=100${suite}`);
+    if (!res.ok || !Array.isArray(res.data?.items)) return null;
+
+    const items: { id?: number; name?: string }[] = res.data!.items!;
+    const trouve = items.find((t) => String(t?.name ?? "").trim().toLowerCase() === cherche);
+    const id = Number(trouve?.id);
+    if (Number.isFinite(id) && id > 0) return id;
+
+    const dernier = Number(items[items.length - 1]?.id);
+    // Pas de curseur exploitable = on ne peut pas avancer. S'arrêter
+    // vaut mieux que redemander la même page pour toujours.
+    if (!res.data?.hasMore || items.length === 0 || !Number.isFinite(dernier)) return null;
+    apres = dernier;
+  }
+  console.warn(`[sio/tag] etiquette ${nom} introuvable apres 30 pages.`);
+  return null;
 }
 
 /**
