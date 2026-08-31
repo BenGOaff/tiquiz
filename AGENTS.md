@@ -3110,6 +3110,85 @@ crée aucune raison de tricher. Les paliers restent utiles pour les gros
 volumes, mais posés plus haut (au delà de 20, 50).
 
 
+## Le simulateur d'affiliation répond enfin à la question posée (31 août 2026)
+
+Béné : "la calculatrice sur la page affiliation est bordélique : je veux
+voir combien je gagne chaque mois en fonction de mes affiliés, et de
+leurs plans. Et en dessous, je veux voir l'option : augmenter mes
+commissions OU faire baisser mon abonnement. Le visiteur doit voir que
+ça existe mais là on l'aide à être séduit par le programme c'est tout."
+
+Le "bordélique" est précis, et il tenait en trois choses :
+
+1. **le résultat était SUR 12 MOIS**, alors que la question d'un affilié
+   est mensuelle. Il fallait diviser de tête, et pas par 12 pour un
+   filleul annuel ;
+2. **tous les filleuls avaient le MÊME plan**, alors qu'elle écrit "de
+   LEURS plans" au pluriel : une audience mélange forcément du mensuel
+   et de l'annuel, et c'est le mélange qui donne le vrai chiffre ;
+3. **il ARBITRAIT entre les deux récompenses** ("ce que tu as intérêt à
+   choisir"), et pour ça il demandait SON abonnement au visiteur avant
+   de lui montrer un seul chiffre. Un formulaire qui interroge quelqu'un
+   sur un abonnement qu'il n'a pas encore, sur la page qui doit le
+   convaincre, c'est une porte fermée.
+
+**Règle : `simulerParPlan()` (`lib/site/recompenseAffiliation.ts`), un
+compteur par palier, un total MENSUEL, et les deux options MONTRÉES en
+dessous.** L'arbitrage se fait dans l'espace affilié, une fois inscrit,
+avec ses vrais filleuls.
+
+Trois choses à ne pas défaire :
+
+- **le taux s'applique au TOTAL des filleuls**, jamais palier par
+  palier : c'est ce que fait `attributeSale` chez Tipote, où
+  `recompense_commission_pct` est posé sur l'AFFILIÉ et pas sur la
+  vente. Découper donnerait un taux plus bas que celui versé ;
+- **une échéance ANNUELLE est LISSÉE sur douze mois**, et l'écran le
+  dit. C'est la seule façon d'additionner deux récurrences ; annoncer
+  56,67 € le mois de l'échéance et 0 € les onze autres serait exact et
+  inutilisable ;
+- **le total est arrondi UNE fois**, sur la somme non arrondie. Arrondir
+  chaque ligne puis les additionner ferait que le total affiché n'est
+  pas la somme des lignes affichées, et c'est le genre d'écart qu'un
+  affilié relève.
+
+`simuler()` a été RETIRÉ, pas laissé sans appelant : une fonction morte
+qui arbitre est un piège que le prochain passage rebranche en croyant
+réparer.
+
+Test : `tests/logic/simulateur-affiliation.test.mts`.
+
+### ET L'ÉCART QUE ÇA A RÉVÉLÉ : le blog annonce 20 % de trop
+
+Le simulateur calcule sur le **HT** (`horsTaxes`), comme le système
+paie : `COMMISSION_BASE = "ht"`, décision de Béné du 19 août. Le blog,
+lui, est écrit sur le **TTC**.
+
+| | le blog annonce | Stripe verse (40 % du HT) |
+|---|---|---|
+| 1 filleul mensuel | 6,80 €/mois | **5,67 €/mois** |
+| 30 filleuls mensuels | 204 €/mois | **170,10 €/mois** |
+| 1 filleul annuel | 68 €/an | **56,67 €/an** |
+| 50 filleuls annuels | 3 400 €/an | **2 833,50 €/an** |
+
+C'est mot pour mot le drame du 19 août, transposé au blog : l'app
+promettait 32,90 € et payait 27,42 €, et la cause était la même, un
+montant écrit à la main à côté d'un montant calculé.
+
+**Deux nuances qui empêchent de trancher tout seul**, et c'est pour ça
+que la décision revient à Béné :
+
+- une vente **PayPal** commissionne bien sur le **TTC** (sa décision du
+  22 août, "pour paypal : oui on garde le TTC"). Le chiffre du blog est
+  donc juste pour PayPal et faux pour Stripe ;
+- le blog annonce **40 %**, mais à 30 filleuls le taux réel est **55 %**,
+  donc 233,70 €/mois. Le blog sous-vend d'un côté ce qu'il survend de
+  l'autre.
+
+Tant que ce n'est pas tranché, **le simulateur et le blog ne disent pas
+la même chose**, et c'est le simulateur qui a raison sur ce que Stripe
+verse.
+
 ## Le blog vit dans le dépôt, pas dans une base (Béné, 29 août 2026)
 
 "Sinon oui mon blog sur tiquiz.fr/blog. Je vais supprimer les anciennes
