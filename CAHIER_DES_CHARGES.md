@@ -876,6 +876,10 @@ TIPOTE_AFFILIATE_ENDPOINT=...            # optionnel, defaut https://app.tipote.
 # Support et partenaires
 PARTNER_SHARED_SECRET=...                # MEME valeur que sur le serveur Tipote (relais du centre d'aide)
 
+# Expediteur des emails (30 aout 2026)
+SUPPORT_FROM_EMAIL=hello@tiquiz.fr       # l'ADRESSE NUE, jamais "Tiquiz <hello@tiquiz.fr>" : Resend refuse, et plus aucun email ne part
+RESELLER_FROM_EMAIL=hello@tiquiz.fr      # meme regle. Absente : repli sur hello@tipote.com, et instrumentation.ts CRIE au demarrage
+
 # Images servies par NOTRE serveur (optionnel : absente = tout va chez Supabase)
 NEXT_PUBLIC_ASSETS_BASE_URL=https://assets.quiz.tipote.com   # VALIDEE : https, jamais localhost
 ASSETS_DIR=/srv/public-assets            # le dossier servi par infra/nginx/assets.*.conf
@@ -896,12 +900,124 @@ Sur le serveur de production, l'application source son environnement depuis `.en
 
 - **Serveur** : VPS Ubuntu, application servie par PM2, reverse proxy Caddy / Nginx avec on-demand TLS pour les domaines personnalisés, DNS et CDN Cloudflare.
 - **Build** : `npm run build` (sortie standalone). Typecheck `npx tsc --noEmit` avant chaque commit.
-- **Outillage défensif (scripts npm)** : `check:migrations-pending` (liste les migrations non appliquées en prod), `check:schema`, `diag:multiprofils` (invariants DB), `smoke:multiprofils`, `test:webhook` (cas de routing webhook sans paiement), `test:e2e` (Playwright sur `/q/`, `/p/`, `/pq/`), `smoke` (routes publiques), `test:visual` (filet visuel Playwright du viewer public : 5 dispositions x 6 écrans, dont le résultat scoré multi-axes, x 3 viewports = 90 captures de référence, à faire passer avant tout changement design).
+- **Outillage défensif (scripts npm)** : `check:migrations-pending` (liste les migrations non appliquées en prod), `check:schema`, `diag:multiprofils` (invariants DB), `smoke:multiprofils`, `test:webhook` (cas de routing webhook sans paiement), `test:e2e` (Playwright sur `/q/`, `/p/`, `/pq/`), `smoke` (routes publiques), `test:visual` (filet visuel Playwright du viewer public : 5 dispositions x 6 écrans, dont le résultat scoré multi-axes, x 3 viewports, plus 9 mesures de bords = **99 tests**, à faire passer avant tout changement design).
 - **CI** : workflow de typecheck plus build plus smoke à chaque push, workflow Playwright planifié.
 - **Invariants anti-régression** documentés dans `docs/INVARIANTS.md` : sécurité des leads, typographie française appliquée au save et au render, auto-activation des quiz d'un popquiz publié, cohérence lockfile / package.json, ownership des cues de popquiz.
 
 ### Typographie française
 
 Le NBSP est appliqué automatiquement avant `: ; ! ? »` pour les locales françaises, à la fois au save (PATCH du quiz) et au render (route publique). La transformation est idempotente et pure (`lib/frenchTypography.ts`).
-</content>
-</invoke>
+
+## 23. Le site public `tiquiz.fr` (29 et 30 août 2026)
+
+Ce chapitre manquait entièrement : le site a été construit les 29 et
+30 août, après la dernière relecture de ce document. Un agent qui
+reprenait le dossier ne pouvait pas savoir que ces pages existent.
+
+### Les six domaines, et ce que chacun sert
+
+| Domaine | Sert | Port |
+|---|---|---|
+| `tiquiz.fr`, `www.` | page de vente, bon de commande, **blog et site public** | 3001 |
+| `quiz.tipote.com` | l'application Tiquiz (derrière connexion) | 3001 |
+| `pilotage.tipote.com` | le centre de pilotage (même app, rewrite) | 3001 |
+| `atelierduquiz.fr`, `www.` | page de vente de l'Atelier | 3002 |
+| `quizing.tipote.com` | **l'application** de l'Atelier | 3002 |
+| `app.tipote.com`, `affiliate.tipote.com` | Tipote et l'espace affilié | 3000 |
+
+**`/etc/caddy/Caddyfile` ne s'édite JAMAIS à la main.** La vérité est
+`infra/caddy/Caddyfile`, et le déploiement est un `cp` par dessus. Cette
+règle a coûté deux pannes : un `cp` efface tout bloc qui n'existait que
+sur le serveur, et sans bloc nommé Caddy ne peut produire aucun
+certificat, donc il coupe la poignée de main. Le symptôme ne ressemble
+pas à sa cause (PM2 vert, l'app tourne, aucun journal ne dit rien).
+
+`npm run check:caddy` refuse le déploiement dans les deux sens : si le
+dépôt PERDRAIT un hôte servi aujourd'hui, et si un hôte nommé par le
+CODE n'a pas de bloc (`HOTES_ATTENDUS`). La deuxième moitié a été
+ajoutée le 30 août, après que `quizing.tipote.com` soit tombé : un
+contrôle qui compare deux copies ne rattrape jamais une erreur commune
+aux deux.
+
+### Les pages
+
+`app/(site)/` porte le cadre commun (`SiteShell` = en-tête + pied de
+page, jetons `tq-*` de `globals.css`, scope `.tq-site`).
+
+| Page | Ce qu'elle fait |
+|---|---|
+| `/blog` | l'accueil : une une, les derniers, une grille, des pastilles de rubrique |
+| `/blog/[slug]` | un article |
+| `/blog/rubrique/[id]` | une rubrique (5, définies dans `lib/blog/rubriques.ts`) |
+| `/affiliation` | le programme Tiquiz, avec le simulateur de gains |
+| `/affiliation-atelier` | le programme Atelier, 70 % |
+| `/a-propos` | la page auteur de Béné |
+| `/newsletter` | l'inscription, qui pose l'étiquette `newsletter` chez Systeme.io |
+
+Les adresses légales françaises redirigent vers les pages existantes
+(`/cgv` -> `/terms`, etc.), depuis `lib/site/adressesLegales.ts`.
+
+**Ce fichier n'a AUCUN import, et c'est nécessaire** : il est lu par
+`next.config.ts`, qui est compilé HORS du projet TypeScript, donc où
+l'alias `@/` n'est pas résolu. Un import y fait échouer le `next build`
+alors que `tsc` et les tests restent verts.
+
+### Le blog : des fichiers, pas une base
+
+`content/blog/*.json` (10 articles), `lib/blog/` (les décisions),
+`public/blog/img/` (83 visuels recompressés), `public/blog/pin/` (les
+épingles Pinterest). Dix articles qui changent trois fois par an n'ont
+rien à faire dans une base : un fichier se relit en revue de code, se
+déploie avec le reste, et ne peut pas disparaître parce qu'une migration
+n'a pas été passée.
+
+- **Mise en page** : 720 px de colonne de lecture, 320 px de rail
+  collant (sommaire, partage, invitation). Le corps faisait 1168 px
+  avant le 30 août, ce qui donnait 150 caractères par ligne.
+- **Images** : `lib/blog/dimensionsImage.ts` lit la taille dans les
+  premiers octets (WebP VP8/VP8L/VP8X, PNG, JPEG, GIF, `viewBox` des
+  SVG), sans aucune dépendance, au build. Une image n'est jamais
+  agrandie au delà de sa définition ni plus haute que 760 px.
+- **Variantes** : `lib/blog/imagesArticle.ts` apparie
+  `<nom>-large.webp` et `<nom>-mobile.webp` en un `<picture>`. Sans lui,
+  les deux s'affichaient l'une sous l'autre.
+- **Partage** : `lib/partage/urlsReseaux.ts`, partagé avec le viewer de
+  quiz. Le lien Pinterest porte `media=` (l'épingle 1000x1500), sans
+  quoi Pinterest ouvre son formulaire sans image.
+- **Commentaires** : modérés par défaut (`en_attente`), rendus par le
+  serveur pour le référencement, relus dans `/admin` onglet Support.
+  Table `blog_commentaires` (migration `20260830`). L'email n'est jamais
+  renvoyé à un navigateur.
+- **SEO** : canonical sur `tiquiz.fr`, JSON-LD `BlogPosting` +
+  `BreadcrumbList` + `FAQPage`, sitemap et robots dépendants de l'hôte
+  (sur un domaine de vente : `Allow: /`, sitemap des 22 URL publiques).
+
+**La page d'article est `force-static` PLUS `revalidate = 600`, et il
+faut les deux.** Sans `force-static`, la lecture des commentaires est
+une requête non mise en cache, donc Next bascule toute la page en rendu
+à la demande. Sans `revalidate`, un commentaire publié n'apparaîtrait
+jamais.
+
+`npm run blog:reparer` (idempotent) répare les liens et la ponctuation
+d'un import ; `npm run blog:epingles` construit les épingles.
+
+### Les emails partent de `tiquiz.fr`
+
+Depuis le 30 août, l'expéditeur est `hello@tiquiz.fr` (domaine vérifié
+chez Resend, SPF/DKIM/DMARC posés). `lib/email/tiquizShell.ts` :
+
+- `adresseExpediteur()` lit `SUPPORT_FROM_EMAIL`, puis
+  `RESELLER_FROM_EMAIL`, puis le repli ;
+- **le repli est DÉLIBÉRÉMENT `hello@tipote.com`**, vérifié chez Resend
+  depuis des mois. Un repli doit être ce qui marche à coup sûr, pas ce
+  qu'on préfère : mettre `tiquiz.fr` ici enverrait en spam tous les
+  emails d'un serveur où la variable a été oubliée ;
+- `adresseNue()` retire un nom déjà présent dans la variable. Une valeur
+  `Tiquiz <hello@tiquiz.fr>` produisait `Tiquiz <Tiquiz <...>>`, que
+  Resend refuse : **plus aucun email ne part**, liens de connexion
+  compris ;
+- l'oubli CRIE au démarrage (`lib/env/expediteur.ts`, appelé par
+  `instrumentation.ts`).
+
+Les réponses arrivent sur `hello@tipote.com` par le routage Cloudflare
+Email, et repartent en `tiquiz.fr`.

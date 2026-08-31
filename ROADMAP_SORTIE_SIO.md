@@ -267,18 +267,33 @@ Les 4 paliers mènent maintenant à **notre bon de commande**
 `?ref=` a été vérifiée bout en bout, et sur `tiquiz.fr` le bon de
 commande est ouvert sans clé.
 
-**Deux exceptions, nommées dans le code et dans le test :**
+**PLUS AUCUNE EXCEPTION depuis le 27 août 2026.** Les huit destinations
+atterrissent sur nos domaines. Les deux dernières sont tombées les 26 et
+27 août, et cette section disait le contraire jusqu'au 30.
 
-- `tiquiz_free` : voir ci-dessus, c'est un optin chez eux.
-- `atelier` : **l'Atelier a son PROPRE registre d'affiliés.**
-  `attributeQuizingSale` résout le `sa` contre `profiles.
-  sio_affiliate_id` dans SA base, pas contre la table `affiliates` de
-  Tipote. Une affiliée Tipote qui n'est pas élève de l'Atelier serait
-  `affiliate_not_registered`, alors que le tunnel Systeme.io la paie. Et
-  l'Atelier ne lit que `?sa=`, jamais `?ref=`. **Repointer ce lien change
-  QUI est payé.** Le chantier est : unifier les deux registres, ou porter
-  `?ref=` côté Atelier ET accepter que seuls les élèves affiliés soient
-  payés.
+| Destination | Où elle mène | Depuis |
+|---|---|---|
+| `tiquiz_direct`, `tiquiz_main` | `https://tiquiz.fr/` | 25 août |
+| les 4 paliers | `https://tiquiz.fr/commande/<produit>` | 25 août |
+| `atelier` | `https://atelierduquiz.fr/` | 26 août |
+| `tiquiz_free` | `https://tiquiz.fr/signup` | 27 août |
+
+**La raison de fond est la même pour les deux, et elle vaut d'être
+retenue : depuis que nos liens portent `?ref=` (24 août), un lien qui
+atterrit chez Systeme.io ne paie PLUS PERSONNE.** Leur page ignore ce
+paramètre, notre middleware ne voit jamais la requête donc ne pose aucun
+cookie, et leur webhook ne sait lire qu'un `sa`. Ce n'était plus une
+exception qui protégeait quelque chose, c'était un trou.
+
+- **`atelier`** : l'Atelier lit maintenant `?ref=` (son `middleware.ts`
+  + `lib/affiliate/refLien.ts`) et remonte ses ventes au registre
+  CENTRAL de Tipote, à 70 % (`source_app: "atelier"`). Son registre
+  historique (`profiles.sio_affiliate_id`) reste interrogé en REPLI,
+  donc un élève affilié là-bas et pas chez Tipote est payé comme avant.
+- **`tiquiz_free`** : notre `/signup` crée le compte, écrit le
+  rattachement À VIE, et crée le contact chez Systeme.io avec
+  l'étiquette `tiquiz-free` (`poserTagPlan`). Les séquences email de
+  Béné partent comme avant, son workflow écoute cette étiquette.
 
 ## 5. Chantier 4 : ce que le bon de commande ne sait pas encore faire
 
