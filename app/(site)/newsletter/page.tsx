@@ -30,7 +30,7 @@
 
 import type { Metadata } from "next";
 
-import { COMPANY } from "@/lib/legal/company";
+import { adresseExpediteur } from "@/lib/email/tiquizShell";
 import { HOTE_VENTE } from "@/lib/publicHost";
 import FormulaireNewsletter from "@/components/site/FormulaireNewsletter";
 
@@ -186,7 +186,7 @@ export default function PageNewsletter() {
               <span className="min-w-0 text-sm font-bold leading-tight">
                 Béné
                 <span className="block break-words text-[12.5px] font-normal text-[var(--tq-encre-douce)]">
-                  {COMPANY.email}
+                  {adresseExpediteur()}
                 </span>
               </span>
             </div>
@@ -214,7 +214,7 @@ export default function PageNewsletter() {
 
       {/* ── LE FORMULAIRE ── */}
       <section className="mt-16">
-        <FormulaireNewsletter />
+        <FormulaireNewsletter contact={adresseExpediteur()} />
       </section>
 
       {/* ── CE QU'IL Y A DEDANS ── */}
@@ -325,7 +325,7 @@ export default function PageNewsletter() {
         </div>
 
         <p className="tq-doux mt-6 text-sm leading-relaxed">
-          Pour recevoir mes emails, ajoute <strong>{COMPANY.email}</strong> à tes contacts, sinon
+          Pour recevoir mes emails, ajoute <strong>{adresseExpediteur()}</strong> à tes contacts, sinon
           le premier message risque d&apos;atterrir dans les indésirables. Ton adresse sert à
           t&apos;envoyer cette newsletter et mes offres, elle n&apos;est ni vendue ni transmise,
           et le lien de désinscription est en bas de chaque message. Le détail est dans ma{" "}

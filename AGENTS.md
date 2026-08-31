@@ -3805,15 +3805,37 @@ elle a évité de casser ses emails.
 
 ### Ce qui a été mesuré, dans son compte, par leur API
 
-| Question | Réponse |
+| Question | Réponse de l'API |
 |---|---|
 | combien de règles d'automatisation | **51**, toutes actives |
-| combien se déclenchent sur `tag_added` | **ZÉRO** |
+| combien se déclenchent sur `tag_added` | **aucune** |
 | sur quoi se déclenchent-elles | `form_subscribed`, toutes |
 
-Autrement dit : **`poserTagPlan` crée bien le contact et pose bien
-l'étiquette, et personne n'écoute.** Seule la soumission d'un de ses
-FORMULAIRES Systeme.io déclenche une séquence.
+🚨 **CETTE MESURE EST INVALIDE, ET LA CONCLUSION QUI EN A ÉTÉ TIRÉE
+AUSSI (corrigé le 31 août au soir).** Béné a envoyé la capture d'une
+règle « Tag "newsletter" ajouté -> S'abonner à la campagne Pépites
+365 », active dans son tableau de bord. Elle n'apparaît **nulle part**
+dans la réponse de l'API, même sans aucun filtre.
+
+**L'API de Systeme.io ne sait pas représenter ces règles.** Sur les 51
+qu'elle rend, aucune ne porte l'action « s'abonner à une campagne »,
+alors que ses tunnels en font évidemment. Elle ne montre donc qu'un
+SOUS-ENSEMBLE, et son silence ne veut rien dire.
+
+**C'est exactement la règle du 22 août, que j'ai enfreinte :** ne pas
+conclure "ça n'existe pas" d'une recherche qui n'a rien trouvé. Une
+recherche vide dit "je n'ai pas trouvé", pas "il n'y a rien". Je l'ai
+fait deux fois, le 31 août matin sur `tiquiz-free` et le soir sur
+`newsletter`, en présentant les deux comme des faits mesurés.
+
+**Ce qui est VRAI, et vérifié :** au moins une règle `tag_added` existe
+et abonne à une campagne. Poser le tag `newsletter` SUFFIT donc à
+inscrire quelqu'un à Pépites 365.
+
+**Ce qui reste INCONNU :** si `tiquiz-free` et les étiquettes de vente
+ont la leur. **Le seul endroit où ça se vérifie est son tableau de bord**
+(https://systeme.io/dashboard/automation-rules), pas l'API. Ne plus
+jamais écrire ici qu'une règle n'existe pas sur la foi de cet outil.
 
 ### Ce que ça casse déjà, en production
 
@@ -3955,27 +3977,27 @@ elles nomment un état de configuration.
 |---|---|
 | le tag `newsletter` existe-t-il | **oui**, id 263284, créé en 2022 |
 | le contact de test a-t-il été créé | **NON** : l'échec est à la création |
-| une règle écoute-t-elle `tag_added` sur ce tag | **aucune** |
+| une règle écoute-t-elle `tag_added` sur ce tag | **OUI**, vérifié par Béné dans son tableau de bord (l'API ne la voit pas) |
 | la règle 1273770 fait quoi | déclencheur `form_subscribed`, action `add_tag` |
 | "Pépites 365" est-elle une campagne | **oui**, id 1172338 |
 
-Autrement dit : **son formulaire Systeme.io abonne à la campagne, et la
-règle ne fait qu'AJOUTER le tag à côté.** Poser le tag nous mêmes
-reproduit donc la moitié visible et rien de ce qui envoie les emails.
+**J'ai conclu de ce relevé que poser le tag ne déclencherait rien.
+C'ÉTAIT FAUX.** Béné a envoyé la capture de sa règle « Tag
+"newsletter" ajouté -> S'abonner à la campagne Pépites 365 », active.
+L'API ne la rend pas, même sans filtre : elle ne sait pas représenter
+ces règles (aucune des 51 qu'elle montre ne porte l'action « abonner à
+une campagne »).
 
-**Et l'API de Systeme.io n'a AUCUN point d'entrée pour abonner un
-contact à une campagne** (vérifié : seul `assign_contact_tag` existe).
-Le tag est le seul levier à notre portée.
+**Donc, pour la newsletter : poser le tag SUFFIT.** La chaîne est
+complète dès que le 502 est réparé.
 
-**Le déblocage est chez Béné, en deux minutes** : une règle
-d'automatisation, déclencheur "tag ajouté" sur `newsletter`, action
-"s'abonner à la campagne Pépites 365". Tant qu'elle n'existe pas, un
-inscrit venu de notre page est étiqueté et ne reçoit rien.
-
-C'est la troisième fois que ce dépôt bute dessus (l'inscription
-gratuite, les tags d'achat, la newsletter). **Un tag posé par l'API
-n'est pas une séquence déclenchée**, et la vérification se fait dans son
-compte, pas dans notre tête.
+**Et la vraie leçon est sur la MÉTHODE, pas sur Systeme.io.** L'API
+n'a aucun point d'entrée pour abonner un contact à une campagne (ça,
+c'est vérifié : seul `assign_contact_tag` existe), et j'en ai déduit
+qu'elle ne pouvait pas non plus me MONTRER une règle qui le fait. Un
+outil qui ne sait pas FAIRE quelque chose ne sait pas forcément le
+VOIR non plus : son silence n'est pas une réponse. La vérification se
+fait dans son tableau de bord.
 
 ### 3. UNE ADRESSE DE CONTACT QUE PERSONNE N'AVAIT VÉRIFIÉE
 

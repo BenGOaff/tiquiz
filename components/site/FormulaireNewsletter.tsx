@@ -13,20 +13,36 @@
 // la suppression d'un quiz et de l'import PDF, appliquée ici.
 
 import { useState } from "react";
-import { COMPANY } from "@/lib/legal/company";
 
-const PHRASES: Record<string, string> = {
-  email_manquant: "Il manque ton adresse email.",
-  email_invalide: "Cette adresse ne ressemble pas à une adresse email. Vérifie la frappe ?",
-  consentement_manquant: "Coche la case pour que je puisse t'envoyer la newsletter.",
-  trop_de_demandes: "Trop de tentatives depuis cette connexion. Réessaie dans une heure.",
-  indisponible:
-    `Je n'ai pas réussi à t'inscrire, et ce n'est pas de ta faute. Réessaie dans un moment, ou écris à ${COMPANY.email}.`,
-};
+/**
+ * L'ADRESSE DE CONTACT VIENT DU SERVEUR, ELLE N'EST PAS ÉCRITE ICI.
+ *
+ * Le 31 août, cette phrase portait `hello@tiquiz.fr` en dur. J'ai cru
+ * à une adresse inventée et je l'ai remplacée par celle des pages
+ * légales : **c'était MA correction qui était fausse.** Béné l'avait
+ * mise en place la veille, sur Cloudflare, chez Resend et dans le
+ * `.env`, et c'est l'adresse de Tiquiz et de l'Atelier.
+ *
+ * La leçon n'est pas "il fallait la laisser en dur" : c'est qu'une
+ * adresse écrite à la main dans un message d'erreur est invérifiable,
+ * dans les deux sens. Elle vient donc de `adresseExpediteur()`
+ * (`lib/email/tiquizShell.ts`), la MÊME source que l'expéditeur des
+ * emails. Si l'adresse change, la phrase change avec, et on ne peut
+ * plus se tromper ni dans un sens ni dans l'autre.
+ */
+function phrases(contact: string): Record<string, string> {
+  return {
+    email_manquant: "Il manque ton adresse email.",
+    email_invalide: "Cette adresse ne ressemble pas à une adresse email. Vérifie la frappe ?",
+    consentement_manquant: "Coche la case pour que je puisse t'envoyer la newsletter.",
+    trop_de_demandes: "Trop de tentatives depuis cette connexion. Réessaie dans une heure.",
+    indisponible: `Je n'ai pas réussi à t'inscrire, et ce n'est pas de ta faute. Réessaie dans un moment, ou écris à ${contact}.`,
+  };
+}
 
-const PHRASE_PAR_DEFAUT = PHRASES.indisponible;
-
-export default function FormulaireNewsletter() {
+export default function FormulaireNewsletter({ contact }: { contact: string }) {
+  const PHRASES = phrases(contact);
+  const PHRASE_PAR_DEFAUT = PHRASES.indisponible;
   const [etat, setEtat] = useState<"repos" | "envoi" | "ok">("repos");
   const [erreur, setErreur] = useState<string | null>(null);
 
