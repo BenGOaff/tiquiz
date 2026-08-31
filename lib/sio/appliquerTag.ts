@@ -54,16 +54,63 @@ export interface IdentiteContact {
   acheteur?: Acheteur | null;
 }
 
-/** Le compte dont la clé Systeme.io porte les contacts de Tiquiz. */
+/**
+ * Le compte dont la clé Systeme.io porte les contacts de Tiquiz.
+ *
+ * ON ESSAIE TOUS LES ADMINS, PAS SEULEMENT LE PREMIER (31 août 2026).
+ * Cette fonction ne regardait que `ADMIN_EMAILS[0]` : si le profil qui
+ * porte la clé est enregistré sous l'autre adresse, elle rendait `null`
+ * et TOUTE la chaîne s'arrêtait là, en silence.
+ *
+ * `.maybeSingle()` ÉCHOUE quand deux lignes matchent, et son erreur
+ * était ignorée. On prend donc la première ligne d'une liste bornée
+ * plutôt qu'un `maybeSingle` qui transforme un doublon en absence.
+ */
 async function idProprietaire(): Promise<string | null> {
-  const admin = ADMIN_EMAILS[0];
-  if (!admin) return null;
-  const { data } = await supabaseAdmin
-    .from("profiles")
-    .select("user_id")
-    .eq("email", admin.toLowerCase())
-    .maybeSingle();
-  return (data as { user_id?: string } | null)?.user_id ?? null;
+  for (const admin of ADMIN_EMAILS) {
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .select("user_id")
+      .eq("email", admin.trim().toLowerCase())
+      .limit(1);
+    if (error) {
+      console.warn(`[sio/tag] lecture du profil admin impossible : ${error.message}`);
+      continue;
+    }
+    const id = (data as { user_id?: string }[] | null)?.[0]?.user_id;
+    if (id) return id;
+  }
+  return null;
+}
+
+/**
+ * LA CLÉ DU COMPTE PROPRIÉTAIRE, BASE PUIS `.env`.
+ *
+ * PANNE DU 31 AOÛT 2026. Béné : "j'ai ma clé api dans tiquiz, dans
+ * .env, partout... je ne sais pas ce qui merde." Elle avait raison de
+ * s'énerver : `resolveApiKey` ne lit QUE la base de données
+ * (`sio_api_keys`, ou l'ancienne colonne du profil). **Une clé posée
+ * dans le `.env` n'était lue par personne sur ce chemin**, alors que
+ * `SYSTEME_IO_API_KEY` est déjà la variable que `lib/systemeIoClient.ts`
+ * utilise pour la facturation. Deux endroits qui ont besoin de la même
+ * clé, et un seul qui savait où elle était.
+ *
+ * **LE REPLI EST ICI, PAS DANS `resolveApiKey`, et c'est capital.**
+ * `resolveApiKey` sert AUSSI les revendeurs, qui ont chacun LEUR clé et
+ * LEUR compte Systeme.io. Y mettre le repli ferait écrire les contacts
+ * d'un revendeur dans le compte de Béné le jour où sa clé manque : une
+ * fuite d'une cliente vers une autre, silencieuse. Le repli ne vaut que
+ * pour le compte PROPRIÉTAIRE, donc il vit dans cette fonction là.
+ */
+async function cleDuProprietaire(): Promise<{ apiKey: string; source: string } | null> {
+  const proprietaire = await idProprietaire();
+  if (proprietaire) {
+    const cle = await resolveApiKey(proprietaire);
+    if (cle) return { apiKey: cle.apiKey, source: cle.source };
+  }
+  const duFichier = process.env.SYSTEME_IO_API_KEY?.trim();
+  if (duFichier) return { apiKey: duFichier, source: "env" };
+  return null;
 }
 
 /** L'identifiant du contact chez Systeme.io, ou `null` s'il n'y est pas. */
@@ -247,18 +294,16 @@ export async function poserTagParNomDetaille(
   if (!adresse || !tag) return { ok: false, raison: "adresse_ou_tag_vide" };
 
   try {
-    const proprietaire = await idProprietaire();
-    if (!proprietaire) {
-      console.warn("[sio/tag] aucun compte administrateur : etiquette non posee.");
-      return { ok: false, raison: "aucun_admin" };
-    }
-    const cle = await resolveApiKey(proprietaire);
+    const cle = await cleDuProprietaire();
     if (!cle) {
       console.warn(
-        `[sio/tag] aucune cle Systeme.io connectee : ${adresse} n'est pas etiquete ${tag}.`,
+        `[sio/tag] aucune cle Systeme.io trouvee (ni dans sio_api_keys pour ` +
+          `${ADMIN_EMAILS.join(" / ")}, ni dans SYSTEME_IO_API_KEY) : ` +
+          `${adresse} n'est pas etiquete ${tag}.`,
       );
       return { ok: false, raison: "aucune_cle" };
     }
+    console.log(`[sio/tag] cle Systeme.io resolue (source: ${cle.source}).`);
 
     // TROUVÉ OU CRÉÉ. Avant le 25 août on se contentait de chercher, et
     // on abandonnait quand le contact n'existait pas : c'est à dire le
