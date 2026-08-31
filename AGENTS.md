@@ -3583,12 +3583,48 @@ fois, une capture de 2508 px de haut, le même schéma affiché deux fois,
 un lien de lecture vers l'espace affilié, un guillemet collé, une épingle
 qui n'est pas en 1000 x 1500.
 
+### Les textes alternatifs : 43 % du blog n'en avait aucun (31 août 2026)
+
+Cette page annonçait **80 %**. C'était faux, et je corrige plutôt que
+d'empiler : mesuré, c'est **33 images sur 76**, soit 43 %, concentrées
+sur deux articles (17 raisons, l'étude de cas de Jocelyne).
+
+**Un `alt` vide, c'est trois choses perdues d'un coup :** une lectrice
+aveugle n'entend rien (ou s'entend épeler
+`mjaxntazmgewmtkwodgyywezytzimjvinmzknti3mjg0mge4owu.webp`), Google ne
+sait pas ce qu'il y a dans le schéma, et un modèle de langue non plus.
+C'est exactement ce que Béné vise en parlant de GEO : ChatGPT et Claude
+lisent le `alt`, jamais le pixel. Or les schémas de ce blog portent
+l'essentiel de l'argumentaire (l'email contre les réseaux, le tunnel de
+Jocelyne, les chiffres de sa campagne) : sans texte, ce contenu
+n'existait pour aucun des trois.
+
+Les 33 textes ont été écrits en REGARDANT chaque image, une par une.
+Ils vivent dans `lib/blog/altImages.ts`, la même mécanique que
+`faitsProgramme.ts` : un module, `npm run blog:reparer` qui l'applique,
+et un test qui exige qu'il ne reste aucune image sans texte. Écrit à la
+main dans le JSON, un `alt` disparaîtrait au prochain import.
+
+**La clé est le CHEMIN de l'image, pas sa position** : une image déplacée
+garde son texte, et les deux variantes desktop/mobile d'un même schéma
+sont couvertes d'un coup.
+
+**On n'ÉCRASE jamais un `alt` existant.** Trois portent encore "tiquiz
+amazon" sur des visuels sans rapport, hérités de Systeme.io ; les
+remplacer en masse ferait perdre les bons. Ils se corrigent un par un,
+en les ajoutant à la table.
+
+Le test dit aussi ce qu'un `alt` NE doit pas être : pas de "image de"
+(un lecteur d'écran annonce déjà que c'en est une), pas plus de 200
+caractères, pas de tiret cadratin. Il a attrapé deux de mes propres
+textes en les écrivant.
+
 ### Ce qui reste ouvert, et qui n'est pas du code
 
-- **80 % des images du blog n'ont pas d'`alt`**, et trois portent
-  "tiquiz amazon" sur des visuels sans rapport. Écrire ces textes demande
-  de savoir ce qu'il y a dans l'image : c'est un travail à faire avec
-  Béné, pas à inventer.
+- **Plusieurs visuels portent `tipote.fr/tiquiz` incrusté dans l'image**
+  (les schémas SVG en pied, la bannière de l'étude de cas). Ça ne casse
+  rien, mais ça envoie le lecteur vers une adresse qui va disparaître.
+  Seule Béné peut les redessiner.
 
 ## Les nouvelles couvertures, et le chiffre qui a survécu au dessin (31 août 2026)
 
