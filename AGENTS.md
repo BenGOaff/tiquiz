@@ -3999,13 +3999,110 @@ outil qui ne sait pas FAIRE quelque chose ne sait pas forcément le
 VOIR non plus : son silence n'est pas une réponse. La vérification se
 fait dans son tableau de bord.
 
-### 3. UNE ADRESSE DE CONTACT QUE PERSONNE N'AVAIT VÉRIFIÉE
+### 3. UNE ADRESSE QUE J'AI REMPLACÉE ALORS QU'ELLE ÉTAIT BONNE
 
-Le message d'échec disait "écris à hello@tiquiz.fr". Cette adresse
-n'existe nulle part ailleurs dans le dépôt qu'en exemple dans un
-commentaire. Elle vient maintenant de `COMPANY.email`, celle des pages
-légales, donc une adresse réelle et relevée.
+Le message d'échec disait "écris à hello@tiquiz.fr". J'ai affirmé que
+cette adresse n'existait nulle part ailleurs et je l'ai remplacée.
+Béné : "si on l'a mise en place hier, c'est l'adresse qu'on utilise
+pour tiquiz et l'atelier maintenant, c'est réglé sur cloudflare, resend
+et dans le .env."
+
+Ma source était un COMMENTAIRE périmé de `lib/email/tiquizShell.ts`,
+qui disait que l'expéditeur "reste hello@tipote.com" alors que le code
+juste en dessous lit `SUPPORT_FROM_EMAIL`. Le commentaire a été
+corrigé, et l'écran lit maintenant `adresseExpediteur()`, c'est à dire
+LA MÊME SOURCE que l'expéditeur des emails.
+
+**Un commentaire n'est pas une mesure.** C'est la troisième fois que ce
+dépôt paie une règle écrite en commentaire et démentie par le code
+(le `w-full h-auto` des images de réponse, l'`ADD_ATTR: ["target"]` des
+liens légaux, et celle-ci).
 
 **Une adresse écrite à la main dans un message d'erreur est une adresse
 que personne ne vérifiera jamais**, parce qu'on ne lit ce message que le
 jour où quelque chose est déjà cassé.
+
+
+## L'inscription newsletter : TROIS blocages empilés, et aucun n'était celui qu'on croyait (31 août 2026)
+
+Suite de la section précédente. Béné, après trois déploiements : "j'ai
+mis la clé, elle est valide, une clé systeme.io fonctionnelle (pas
+celle de mon compte tiquiz utilisateur). Pas mieux."
+
+Elle avait raison à chaque fois, et à chaque fois la cause était
+ailleurs. Les trois se cachaient l'une derrière l'autre : chaque
+correction découvrait la suivante.
+
+### 1. LE CHEMIN QUI MÈNE À LA CLÉ, PAS LA CLÉ
+
+La sonde de production répondait `aucune_cle`, et j'en ai conclu qu'il
+fallait poser la clé dans le `.env`. Béné : "ma clé systeme io elle
+n'est pas dans le .env, elle est dans mon compte Tiquiz." Elle y était
+bien. Ce qui cassait, c'est ce qui mène à elle.
+
+Pour aller la chercher, on résout d'abord l'identifiant du compte
+ADMINISTRATEUR, et on le cherchait dans `profiles.email`. Cette colonne
+est **NULLABLE et aucun déclencheur ne la remplit**
+(`001_initial_schema.sql`) : un compte ouvert avant que `grantPlan` ne
+l'écrive n'y a aucune adresse. Chercher un admin là, c'est chercher
+dans un annuaire à moitié rempli.
+
+`auth.users` est la seule table où une adresse est garantie :
+`idProprietaireViaAuth` l'interroge en repli, sur les deux adresses
+admin, avec la même pagination que `grantPlanByEmail`.
+
+### 2. UNE CLÉ REFUSÉE SE LISAIT "CONTACT IMPOSSIBLE"
+
+Une fois la clé trouvée, la sonde répondait `contact_impossible`, ce qui
+envoie chercher du côté du contact. Or un 401 rend `null` sur la
+RECHERCHE comme sur la CRÉATION : les deux se lisaient pareil. C'est le
+défaut que ce fichier existe pour corriger, une couche plus bas.
+
+`cle_refusee` (401/403) est maintenant une raison à part.
+
+**ET ON N'ARBITRE PAS ENTRE LES DEUX CLÉS.** Il en existe deux (son
+compte Tiquiz, et le `.env`), et rien dans le code ne peut savoir
+laquelle marche. Choisir un ordre définitif serait un pari dans les deux
+sens : faire gagner le `.env` fait gagner une valeur périmée le jour où
+elle change sa clé dans l'écran Paramètres ; faire gagner la base est ce
+qui bloquait. **On les essaie**, un refus passe à la suivante, et le
+journal dit laquelle a été acceptée. Jamais deux fois la même valeur :
+sinon le journal dirait "deux clés refusées" pour une seule.
+
+### 3. ET L'ÉTIQUETTE ÉTAIT HORS DE PORTÉE DEPUIS LE DÉBUT
+
+C'est la trouvaille qui compte, et elle est MESURÉE dans son compte, pas
+déduite :
+
+| Question | Réponse |
+|---|---|
+| combien d'étiquettes | plus de 100 (`hasMore: true`) |
+| les 100 plus récentes s'arrêtent quand | **24 mars 2025** |
+| quand a été créée `newsletter` | **30 juillet 2022** |
+| quand ont été créées `tiquiz-free`, `tiquiz-mensuel`... | avril 2026 |
+
+`trouverTag` demandait `?limit=200`. **Le maximum accepté par
+Systeme.io est 100.** L'étiquette `newsletter` était donc INTROUVABLE,
+et l'inscription ne pouvait pas aboutir **même avec une clé
+parfaitement valide**. Les étiquettes de VENTE, elles, sont dans la
+première page : c'est exactement pour ça que le tagging des achats
+marchait et que celui de la newsletter n'avait jamais eu la moindre
+chance.
+
+On pagine (`startingAfter`), borné à 30 pages : un webhook de paiement
+ne reste pas ouvert indéfiniment.
+
+**C'est la leçon des 51 règles d'automatisation, payée deux fois dans
+la même semaine : une liste tronquée ne dit pas qu'elle est tronquée.**
+Ici elle le disait (`hasMore`), et personne ne le lisait.
+
+### La méthode qui a fini par trancher
+
+Les trois causes ont été trouvées en INTERROGEANT son compte Systeme.io,
+pas en relisant le code : le contact de test n'existait pas, le même
+corps de création (`{email, locale}`) était accepté par l'API, la liste
+des étiquettes s'arrêtait en mars 2025. Trois mesures, trois minutes.
+
+Le contact créé pour ce test a été supprimé après.
+
+Test : `tests/logic/newsletter-cle.test.mts`.
