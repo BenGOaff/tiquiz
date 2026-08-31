@@ -441,6 +441,31 @@ videos.tipote.com, videos.quiz.tipote.com {
         # signée, faux pour une image dont le nom porte déjà
         # l'horodatage de l'envoi. Une adresse ne désigne jamais deux
         # contenus différents ici, donc l'immutable est sûr.
+        # CHAQUE APP A SON DOSSIER, et les deux domaines partagent ce
+        # bloc de site. Sans ce matcher sur l'HÔTE, `videos.tipote.com`
+        # serait servi depuis le dossier de Tiquiz : 404 sur toutes les
+        # images de Tipote, c'est à dire la panne du 31 août rejouée
+        # dans l'autre app, par le correctif de la première.
+        # Tipote porte le MÊME code d'envoi, avec `/srv/assets-tipote`
+        # (cf. son app/api/upload/asset/route.ts).
+        @assets_tipote {
+                host videos.tipote.com
+                path /assets/*
+        }
+        handle @assets_tipote {
+                uri strip_prefix /assets
+                root * /srv/assets-tipote
+
+                header {
+                        Cache-Control "public, max-age=31536000, immutable"
+                        X-Content-Type-Options "nosniff"
+                        Access-Control-Allow-Origin "*"
+                        -Server
+                }
+
+                file_server
+        }
+
         handle /assets/* {
                 # `handle` ET PAS `handle_path`, DÉLIBÉRÉMENT. Les deux
                 # sont des directives DIFFÉRENTES dans l'ordre de Caddy,
