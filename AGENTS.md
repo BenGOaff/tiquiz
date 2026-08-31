@@ -3,6 +3,99 @@
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 
+## ÉTAT DU SYSTÈME au 30 août 2026 (à lire en premier)
+
+Ce fichier est CHRONOLOGIQUE : il raconte des pannes, dans l'ordre où
+elles sont arrivées. C'est utile pour comprendre POURQUOI une règle
+existe, et inutile pour savoir où on en est. Ce bloc là répond à la
+deuxième question, et il est le seul à devoir être relu quand quelque
+chose change.
+
+### Les trois applications, et les six domaines
+
+| Domaine | Sert | Dépôt | Port |
+|---|---|---|---|
+| `tiquiz.fr` | vente, bon de commande, **blog et site public** | tiquiz | 3001 |
+| `quiz.tipote.com` | l'app Tiquiz (derrière connexion) | tiquiz | 3001 |
+| `pilotage.tipote.com` | le centre de pilotage (même app) | tiquiz | 3001 |
+| `atelierduquiz.fr` | vente de l'Atelier du Quiz | formaquiz | 3002 |
+| `quizing.tipote.com` | l'app de l'Atelier (la formation) | formaquiz | 3002 |
+| `app.tipote.com`, `affiliate.tipote.com` | Tipote et l'espace affilié | tipote-app | 3000 |
+
+`www.tipote.fr` reste chez Systeme.io : ce sont les anciens tunnels, ils
+fonctionnent encore et **ne commissionnent plus** (voir plus bas).
+
+### Qui décide de quoi (la règle qui évite les contradictions)
+
+- **Tipote PAIE.** Le registre d'affiliés, les taux, les commissions et
+  les versements vivent là, et nulle part ailleurs. Tiquiz et l'Atelier
+  AFFICHENT et remontent leurs ventes.
+- **Tiquiz VEND.** Le catalogue, les prix et le bon de commande sont ici
+  (`lib/checkout/`, `lib/planLimits.ts`). Aucun prix ne se recopie.
+- **L'Atelier ENSEIGNE.** Il n'a plus de registre d'affiliés propre
+  depuis le 26 août : il envoie `source_app: "atelier"` à Tipote, qui
+  applique 70 %. Son ancien registre reste un REPLI.
+
+### L'argent, en cinq lignes
+
+- Encaissement : **Stripe et PayPal, sur notre bon de commande**
+  `tiquiz.fr/commande/<produit>`. Les tunnels Systeme.io historiques
+  tournent en parallèle.
+- Prix : 17 / 170 (Mensuel, Annuel), 29 / 290 (les paliers PLUS).
+- Affiliation : **40 % sur Tiquiz, récurrent à chaque échéance**, 70 %
+  sur l'Atelier. Le taux MONTE avec les filleuls jusqu'à 70 %
+  (`lib/affiliate/recompense.ts` chez Tipote).
+- Cookie d'affiliation : **1 an**. Versement à **J+30**, minimum 20 €.
+- **Nos liens portent `?ref=`, jamais `?sa=`.** Conséquence décisive :
+  un lien qui atterrit chez Systeme.io ne paie plus personne. C'est
+  pour ça que les 8 destinations affiliées sont sur nos domaines.
+
+### Avant CHAQUE push, sans qu'on le demande
+
+```bash
+npm run test:logic     # runner natif, ~15 s, aucune dependance
+npx tsc --noEmit       # exit 0 obligatoire
+npm run test:visual    # 99/99, UNIQUEMENT si le design ou l'UX bouge
+```
+
+Et selon ce qui a été touché : `npm run check:caddy` (un fichier de
+`infra/caddy/`), `npm run check:migrations-pending` (après un
+déploiement), `npm run check:supabase-keys` (un doute sur un `.env`).
+
+### Les cinq pièges qui ont coûté le plus cher
+
+1. **Une logique enfermée dans un composant React n'est pas testable,
+   donc elle n'est pas testée.** Toute règle métier sort dans `lib/` en
+   fonction pure. C'est là que vivaient le funnel d'Adeline, la taille
+   de police de Jocelyne et le lien Pinterest sans image.
+2. **Quand un cas a deux mécaniques, la mécanique est un PARAMÈTRE
+   OBLIGATOIRE**, jamais devinée à l'intérieur (`mode`, `base`, `quand`,
+   `scope`, `choix`, `maintenant`). Le compilateur refuse alors un
+   appelant qui se tait.
+3. **Un `??` protège du MANQUANT, jamais du FAUX.** Une variable
+   présente et absurde traverse tout : c'est ce qui a envoyé des liens
+   `localhost` à des clientes.
+4. **Un aperçu qui recalcule une décision au lieu d'appeler la fonction
+   du viewer finit toujours par mentir.** Sorti six fois.
+5. **Un garde-fou qui ne protège qu'un des deux jumeaux ne protège
+   personne.** Les modules quiz de Tiquiz et Tipote sont jumeaux : toute
+   correction se porte des deux côtés.
+
+### Où chercher le reste
+
+| Question | Fichier |
+|---|---|
+| ce que le produit promet, quoi écrire en com | `PRODUCT_BRIEF.md` |
+| comment ça marche, écran par écran | `CAHIER_DES_CHARGES.md` |
+| ce qui reste à reprendre à Systeme.io | `ROADMAP_SORTIE_SIO.md` |
+| les bugs récurrents et les conventions | `CLAUDE_PITFALLS.md` |
+| sur quelle branche pousser | `CLAUDE_WORKFLOW.md` |
+| le programme d'affiliation en détail | `PLAN_AFFILIATION.md` (dépôt tipote-app) |
+
+**Béné ne lit pas les dossiers.** Tout ce qu'elle doit faire ou copier
+se met dans le message final, jamais dans un fichier qu'on lui demande
+d'ouvrir. Une commande à la fois, aucun paramètre à remplacer.
+
 ## Anti-IA writing — JAMAIS de tiret long (drame 7 juin 2026)
 
 Béné a une règle absolue dans tout le contenu user-visible (i18n
@@ -2920,10 +3013,15 @@ qui ne devrait plus exister (ancien prix, ancien lien, tiret cadratin,
 chevron, point médian). `tests/logic/blog.test.mts` rejoue ces contrôles
 sur le contenu déployé.
 
-**Le lien vers l'Atelier RESTE chez Systeme.io**, et le test l'exige.
-L'Atelier a son propre registre d'affiliés et ne lit que `?sa=` :
-repointer ce lien changerait QUI est payé (cf. la section du 25 août).
-Sans cette exception écrite, le prochain passage "finit le travail".
+**Le lien vers l'Atelier menait chez Systeme.io, et cette exception a
+été LEVÉE le 30 août.** Elle disait que l'Atelier tenait son propre
+registre d'affiliés et ne lisait que `?sa=`, donc que repointer le lien
+changerait QUI est payé. Vérifié ligne par ligne dans son dépôt le
+30 août : ce n'est plus vrai. `atelierduquiz.fr` est un hôte de vente,
+son middleware capte le `?ref=`, et `commissionnerVente` interroge le
+registre CENTRAL de Tipote en premier (`source_app: "atelier"`). Les
+liens du blog pointent donc sur `atelierduquiz.fr`, et le test l'exige
+dans ce sens là.
 
 **Les images sont chez nous, recompressées** (82 fichiers, 24,3 Mo ->
 5,7 Mo). Les GIF passent en WebP **animé** : `sharp(buf, {animated:

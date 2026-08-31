@@ -298,11 +298,15 @@ Variations selon le canal :
 - **Le cookie dure 1 an**, et une inscription gratuite via son lien rattache la personne à l'affilié **à vie**. Celui qui a amené le contact le garde, même si le prospect croise un autre lien plus tard.
 - **Versable 30 jours après le paiement du client.** Ne jamais annoncer un autre délai : c'est celui que les affiliés connaissent.
 - **40 % sur Tiquiz, versés CHAQUE MOIS** tant que la personne recommandée reste abonnée. Ce n'est pas une prime one-shot : c'est un revenu récurrent, et c'est l'argument principal.
+- **Et le taux MONTE avec le nombre de filleuls, jusqu'à 70 %.** C'est le deuxième argument, et il n'était écrit nulle part avant le 30 août : 0 filleul 40 %, 1 à 10 filleuls 45 %, 11 à 20 50 %, puis +5 % par tranche de 10 jusqu'à 70 % (atteint à 51 filleuls). Source de vérité : `lib/affiliate/recompense.ts` chez Tipote, simulateur public sur `tiquiz.fr/affiliation`.
+- **Ou une remise sur SON abonnement, au choix, et les deux ne se cumulent pas.** Par marches de 10 filleuls : -10 %, -20 %, ... et **à 100 filleuls l'abonnement est offert**.
+- **Piège à ne pas inverser dans la com** : le TAUX s'ouvre au premier filleul (1 suffit pour 45 %), la REMISE attend le dixième (9 filleuls = 0 %). Sa page Systeme.io annonçait l'inverse des deux côtés. Promettre une remise à quelqu'un qui touchera zéro est la pire des annonces.
+- **Le compte est MENSUEL et il peut baisser** : un "filleul abonné" est quelqu'un qui a payé son mois, ni un inscrit gratuit, ni un essai, ni un remboursé. Ne jamais annoncer un taux comme acquis à vie.
 - Le versement s'arrête si la personne arrête son abonnement ou se fait rembourser. Les mois déjà versés restent acquis.
 - Le simulateur de l'espace affilié projette sur 12 mois : c'est une fenêtre de calcul, pas une limite de durée. Ne jamais écrire "pendant 12 mois".
 - Ne jamais annoncer un montant mensuel garanti : la commission suit ce qui est réellement encaissé (une remise ou un changement de palier la font bouger).
-- **Les liens de l'espace affilié mènent à NOS pages** (`tiquiz.fr`, `tiquiz.fr/commande/<produit>`) depuis le 26 août. Leur page ne transmet pas ce qu'on ajoute à l'URL : un lien passé par un tunnel Systeme.io ne peut atteindre ni notre commissionnement ni le mois offert. Seule l'inscription gratuite reste chez eux, parce que son formulaire crée le contact et pose le tag qui déclenche les séquences email.
-- **L'Atelier du Quiz est dans le même programme** (70 %), avec le même lien, le même cookie d'un an et le même versement.
+- **Les 8 destinations de l'espace affilié mènent à NOS pages**, sans aucune exception depuis le 27 août : `tiquiz.fr`, `tiquiz.fr/commande/<produit>`, `tiquiz.fr/signup` pour l'inscription gratuite, `atelierduquiz.fr` pour l'Atelier. La raison est décisive : depuis que nos liens portent `?ref=` (24 août), **un lien qui atterrit chez Systeme.io ne paie plus personne** (leur page ignore ce paramètre, notre middleware ne voit jamais la requête). Notre `/signup` crée aussi le contact chez Systeme.io avec l'étiquette `tiquiz-free`, donc les séquences email partent comme avant.
+- **L'Atelier du Quiz est dans le même programme** (70 %), avec le même code, le même cookie d'un an et le même versement. Sa page de vente est `atelierduquiz.fr` depuis le 26 août, elle lit le `?ref=` et remonte au registre central de Tipote. Sa page publique est `tiquiz.fr/affiliation-atelier`.
 
 ### Le mois offert (argument d'affiliation)
 - **30 jours offerts sur le palier choisi**, ouverts uniquement quand la personne arrive par un lien d'affiliation actuel (ceux que l'espace affilié fabrique aujourd'hui). Les anciens liens Systeme.io commissionnent normalement mais n'ouvrent pas le cadeau : un affilié qui partage un ancien lien promettrait un mois que personne ne recevrait, et c'est LUI qui passerait pour un menteur.
@@ -420,4 +424,40 @@ Variations selon le canal :
 - Ne pas comparer frontalement aux modules Tipote (produit cousin, pas concurrent).
 - Ne pas faire de promesse « tu vas exploser tes leads » : promesse outil, pas promesse résultat.
 - Ne pas utiliser de screenshots avec une UI obsolète : vérifier la fraîcheur des assets.
-</content>
+
+## 16. Le site public et le blog (30 août 2026)
+
+Ajouté après la construction du site : ce chapitre n'existait pas, donc
+personne ne savait qu'il y avait du contenu à réutiliser en com.
+
+### Ce qui est en ligne
+
+`tiquiz.fr` porte la page de vente, le bon de commande, **et un site** :
+`/blog` (10 articles, 5 rubriques), `/affiliation` avec son simulateur
+de gains, `/affiliation-atelier`, `/a-propos` (la page auteur de Béné),
+`/newsletter`. `atelierduquiz.fr` porte la page de vente de l'Atelier.
+
+### Ce que ça change pour la com
+
+- **Les articles sont des arguments déjà écrits, et sourcés.** Le
+  comparatif des 8 outils porte les prix relevés le 21 août avec la date
+  et le lien de chaque page tarifaire. Le reprendre dans un email ou un
+  post ne demande aucune vérification.
+- **On envoie sur nos pages, plus sur un tunnel.** Un lien vers un
+  article ou vers `/affiliation` porte le `?ref=` et commissionne ; un
+  lien vers un tunnel Systeme.io ne commissionne plus rien depuis le
+  24 août.
+- **Chaque article a une épingle Pinterest 1000x1500** dans
+  `public/blog/pin/`. C'est le canal que Béné utilise pour son
+  référencement, et le format vertical est la condition pour y circuler.
+- **Les commentaires sont modérés** : rien n'apparaît sans relecture.
+
+### Deux réserves à connaître avant de reprendre un visuel
+
+- **Plusieurs couvertures portent une adresse périmée incrustée dans le
+  dessin** (`tipote.fr/<slug>`, `tipote.fr/tiquiz?sa=TON_ID`). Elles
+  partent telles quelles sur Pinterest.
+- **La couverture de l'article d'affiliation annonce 108 €/mois** alors
+  que le texte corrigé dit 204 €/mois (30 filleuls x 6,80 €). Le visuel
+  contredit l'article : ne pas le reprendre en com tant qu'il n'est pas
+  redessiné.
