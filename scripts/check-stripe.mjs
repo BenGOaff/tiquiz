@@ -42,26 +42,81 @@ import { fileURLToPath } from "node:url";
 const RACINE = dirname(dirname(fileURLToPath(import.meta.url)));
 
 /**
- * LES ÉVÉNEMENTS DONT LE SERVEUR A BESOIN, et ce qu'on perd sans eux.
+ * LES ÉVÉNEMENTS DONT UN SERVEUR A BESOIN, et ce qu'on perd sans eux.
  *
- * La liste est écrite ici en clair plutôt qu'importée : ce script tourne
- * sur le serveur de prod avec `node`, sans build et sans dépendance,
- * exactement comme `login-link.mjs`. Le test
- * `tests/logic/audit-31-aout.test.mts` exige qu'elle reste d'accord avec
- * `OWNER_SUBSCRIPTION_EVENTS`, donc elle ne peut pas dériver en silence.
+ * -- DEUX APPS, DEUX MÉTIERS, DEUX LISTES (31 août 2026) ---------------
+ *
+ * Le même chemin `/api/commande/webhook` est servi par les DEUX apps, et
+ * elles ne vendent pas la même chose :
+ *
+ *   Tiquiz   -> des ABONNEMENTS (`interval: "month" | "year"`)
+ *   l'Atelier -> un ACHAT UNIQUE (`interval: null`)
+ *
+ * Le premier jet appliquait la liste des abonnements aux deux, et
+ * réclamait donc `invoice.paid` à l'Atelier, qui n'écoute AUCUN
+ * événement d'abonnement (vérifié dans son webhook, pas supposé). Cinq
+ * fausses alertes sur sept. **Un contrôle qui crie pour rien finit
+ * désactivé**, et c'est la règle du dépôt depuis le 23 août.
+ *
+ * La mécanique est donc un PARAMÈTRE porté par le TABLEAU ci dessous,
+ * jamais devinée à la lecture de l'URL.
  */
-const ATTENDUS = [
+const COMMUNS = [
   ["checkout.session.completed", "aucun plan ne s'ouvre apres un paiement"],
   ["checkout.session.async_payment_succeeded", "un paiement differe n'ouvre rien"],
   ["charge.refunded", "un rembourse garde son acces, et sa commission part"],
   ["charge.dispute.created", "aucune alerte quand un impaye s'ouvre"],
   ["charge.dispute.funds_withdrawn", "un impaye garde son acces et sa commission"],
+];
+
+/** En plus des communs, pour une app qui vend des abonnements. */
+const ABONNEMENTS = [
   ["customer.subscription.updated", "une montee de palier n'ouvre rien"],
   ["customer.subscription.deleted", "un plan paye reste ouvert apres resiliation"],
   ["customer.subscription.trial_will_end", "la remise promise apres le mois offert ne se pose pas"],
   ["invoice.paid", "AUCUNE commission recurrente : l'affilie n'est paye qu'une fois"],
   ["invoice.payment_failed", "un prelevement en echec n'est consigne nulle part"],
 ];
+
+/**
+ * QUI EST DERRIÈRE CHAQUE ADRESSE.
+ *
+ * Écrit en clair : ce script tourne sur le serveur avec `node`, sans
+ * build et sans dépendance, comme `login-link.mjs`. Le test
+ * `tests/logic/audit-31-aout.test.mts` exige que la liste des
+ * abonnements reste d'accord avec `OWNER_SUBSCRIPTION_EVENTS`, donc
+ * elle ne peut pas dériver en silence.
+ */
+const SERVEURS = [
+  { hote: "quiz.tipote.com", nom: "Tiquiz", abonnements: true },
+  { hote: "tiquiz.fr", nom: "Tiquiz", abonnements: true },
+  { hote: "quizing.tipote.com", nom: "l'Atelier du Quiz", abonnements: false },
+  { hote: "atelierduquiz.fr", nom: "l'Atelier du Quiz", abonnements: false },
+];
+
+/**
+ * Ce qu'on attend de cette adresse, ou `null` si on ne sait pas de quelle
+ * app il s'agit.
+ *
+ * **On ne devine PAS.** Un hôte inconnu qui porte notre chemin fait dire
+ * "je ne sais pas ce que cette app vend", pas "il manque des
+ * événements" : accuser à tort coûte plus cher que de se taire, et une
+ * recherche vide veut dire "je n'ai pas trouvé" (leçon du 22 août).
+ */
+function attendusPour(url) {
+  let hote = "";
+  try {
+    hote = new URL(url).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+  const connu = SERVEURS.find((s) => s.hote === hote);
+  if (!connu) return null;
+  return {
+    nom: connu.nom,
+    evenements: connu.abonnements ? [...COMMUNS, ...ABONNEMENTS] : COMMUNS,
+  };
+}
 
 /** Lit le `.env` du repo, sans jamais l'exporter dans le shell. */
 function lireEnv() {
@@ -115,7 +170,16 @@ async function main() {
     console.log("Sur le serveur, lance la commande depuis le dossier de l'app.");
     process.exit(1);
   }
-  console.log(`Cle lue : ${cle.startsWith("sk_live") ? "REEL (sk_live)" : cle.startsWith("sk_test") ? "TEST (sk_test)" : "forme inattendue"}\n`);
+  // UNE CLÉ RESTREINTE (`rk_`) EST LA BONNE PRATIQUE, pas une anomalie.
+  // Le premier jet ne connaissait que `sk_` et répondait "forme
+  // inattendue" à une clé parfaitement saine : une alerte fausse sur la
+  // première ligne fait douter de tout le rapport qui suit.
+  const famille = /^(sk|rk)_live/.test(cle)
+    ? `REEL (${cle.slice(0, 2)}_live)`
+    : /^(sk|rk)_test/.test(cle)
+      ? `TEST (${cle.slice(0, 2)}_test)`
+      : "forme inattendue";
+  console.log(`Cle lue : ${famille}${cle.startsWith("rk_") ? ", restreinte" : ""}\n`);
 
   // ── LE COMPTE ──
   const compte = await stripe(cle, "/v1/account");
@@ -188,17 +252,27 @@ async function main() {
     console.log(`    version : ${p.api_version ?? "(celle du compte)"}`);
     if (!actif) probleme = true;
 
-    const estLeNotre = String(p.url ?? "").includes("/api/commande/webhook");
-    if (!estLeNotre) {
-      console.log("    (pas le webhook du bon de commande : evenements non verifies)");
+    if (!String(p.url ?? "").includes("/api/commande/webhook")) {
+      console.log("    (pas le webhook d'un bon de commande a nous : evenements non verifies)");
       continue;
     }
 
+    const attendu = attendusPour(p.url);
+    if (!attendu) {
+      // On ne sait pas ce que cette app vend, donc on ne reclame rien.
+      console.log("    hote inconnu : impossible de dire ce qu'il devrait ecouter.");
+      console.log("    Ajoute le a SERVEURS dans scripts/check-stripe.mjs.");
+      continue;
+    }
+    console.log(`    sert   : ${attendu.nom}${attendu.evenements.length === COMMUNS.length ? " (achat unique)" : " (abonnements)"}`);
+
     const ecoutes = new Set(Array.isArray(p.enabled_events) ? p.enabled_events : []);
     const tout = ecoutes.has("*");
-    const manquants = tout ? [] : ATTENDUS.filter(([e]) => !ecoutes.has(e));
+    const manquants = tout ? [] : attendu.evenements.filter(([e]) => !ecoutes.has(e));
     if (manquants.length === 0) {
-      console.log(`    evenements : les ${ATTENDUS.length} necessaires sont ecoutes${tout ? " (via *)" : ""}`);
+      console.log(
+        `    evenements : les ${attendu.evenements.length} necessaires sont ecoutes${tout ? " (via *)" : ""}`,
+      );
     } else {
       probleme = true;
       console.log(`    evenements MANQUANTS (${manquants.length}) :`);

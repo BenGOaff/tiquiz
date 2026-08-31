@@ -277,6 +277,39 @@ describe("`npm run check:stripe` ne peut pas dériver en silence", () => {
     assert.ok(scriptStripe.includes('"checkout.session.async_payment_succeeded"'));
   });
 
+  test("IL NE RÉCLAME PAS D'ABONNEMENT À L'ATELIER", () => {
+    // Relevé sur le serveur le 31 août : le contrôle criait 7
+    // événements manquants sur `quizing.tipote.com`, dont 5 que
+    // l'Atelier n'écoute pas et n'a aucune raison d'écouter (il vend un
+    // ACHAT UNIQUE, `interval: null`). Un contrôle qui crie pour rien
+    // finit désactivé, et il emporte les 2 vraies alertes avec lui.
+    assert.match(scriptStripe, /hote: "quizing\.tipote\.com", nom: "l'Atelier du Quiz", abonnements: false/);
+    assert.match(scriptStripe, /hote: "quiz\.tipote\.com", nom: "Tiquiz", abonnements: true/);
+  });
+
+  test("les DISPUTES sont réclamées aux DEUX : les deux les écoutent", () => {
+    const communs = scriptStripe.slice(
+      scriptStripe.indexOf("const COMMUNS"),
+      scriptStripe.indexOf("const ABONNEMENTS"),
+    );
+    assert.ok(communs.includes('"charge.dispute.created"'));
+    assert.ok(communs.includes('"charge.dispute.funds_withdrawn"'));
+    assert.ok(communs.includes('"charge.refunded"'));
+  });
+
+  test("UN HÔTE INCONNU NE SE FAIT PAS ACCUSER", () => {
+    // "Je ne sais pas ce que cette app vend" et "il manque des
+    // événements" sont deux réponses différentes (règle du 23 août).
+    assert.match(scriptStripe, /if \(!attendu\) \{/);
+    assert.match(scriptStripe, /hote inconnu/);
+  });
+
+  test("une clé RESTREINTE n'est pas une anomalie", () => {
+    // Sa clé de prod est une `rk_`, et le premier jet répondait "forme
+    // inattendue" en première ligne du rapport.
+    assert.match(scriptStripe, /\^\(sk\|rk\)_live/);
+  });
+
   test("IL N'IMPRIME JAMAIS DE SECRET", () => {
     // Ce rapport finit dans un terminal, un historique, parfois un
     // copier-coller. Même règle que `check-prod.mjs`.
@@ -288,6 +321,8 @@ describe("`npm run check:stripe` ne peut pas dériver en silence", () => {
     for (const ligne of impressions) {
       assert.ok(!ligne.includes("${cle}"), `la cle est imprimee telle quelle : ${ligne.trim()}`);
     }
-    assert.match(scriptStripe, /startsWith\("sk_live"\)/);
+    // Il ne dit que la FAMILLE de la clé, ce qui suffit à trancher un
+    // diagnostic sans rien exposer.
+    assert.match(scriptStripe, /\^\(sk\|rk\)_live/);
   });
 });
