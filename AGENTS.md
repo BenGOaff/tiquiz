@@ -4171,3 +4171,66 @@ le plus probable est le domaine `tiquiz.fr`, basculé le 30 août :
 tant qu'il n'est pas VÉRIFIÉ chez Resend (SPF et DKIM posés dans
 Cloudflare et validés), tout envoi depuis `hello@tiquiz.fr` est refusé,
 y compris les liens de connexion.
+
+## Un segment d'URL n'est PAS décodé par Next (31 août 2026)
+
+Béné ouvre une fiche client depuis le pilotage. Le titre affiche
+`blagardette%2Btestaffi2%40gmail.com`, et surtout la ligne "Amené par"
+ne s'affiche jamais.
+
+Ce n'était pas un défaut cosmétique. La ligne se cherche dans une table
+indexée par l'adresse RÉELLE :
+
+```
+attributions["blagardette%2Btestaffi2%40gmail.com"]  ->  undefined
+```
+
+Et comme **`@` s'encode toujours en `%40`** dans un segment d'URL, la
+recherche échouait pour TOUT LE MONDE, pas seulement pour les adresses à
+`+`. Le suivi d'affiliation avait donc l'air de ne connaître personne,
+alors que la donnée était là.
+
+**Et la cause est un commentaire qui affirmait le contraire :** la page
+portait "Next décode déjà le segment : `a%40b.fr` arrive en `a@b.fr`."
+C'est faux. Sa jumelle `app/admin/clients/[email]` décodait, elle. Un
+garde-fou qui ne protège qu'un des deux jumeaux ne protège personne, et
+une règle écrite en commentaire n'est pas une règle : c'est la
+quatrième fois que ce dépôt paie exactement ça.
+
+**Règle : `lireEmailParam()` (`lib/admin/emailParam.ts`), et pas un
+`decodeURIComponent` recopié.** Il ne LÈVE jamais (`decodeURIComponent`
+jette `URIError` sur un `%` isolé, et une fiche qui répond 500 est pire
+qu'une adresse imparfaite), et il normalise en minuscules, puisque
+c'est sous cette forme que l'adresse sert de clé partout ailleurs.
+
+**Le `+` n'est PAS converti en espace.** C'est dans une QUERY qu'il vaut
+une espace, pas dans un CHEMIN. Le convertir casserait toutes les
+adresses en `+alias`, c'est à dire exactement celles avec lesquelles on
+teste l'affiliation.
+
+L'autre moitié de cette panne vit chez Tipote : l'attribution ne se
+construisait que sur les ventes, jamais sur les inscriptions gratuites.
+
+## Le repli d'expéditeur partait d'un domaine non vérifié (31 août 2026)
+
+Béné : "je n'ai reçu que l'email de bienvenue venant de Systeme.io, pas
+celui qu'on est censés envoyer."
+
+`REPLI_EXPEDITEUR` valait `hello@tipote.com`, et le commentaire à côté
+justifiait ce choix : "c'est le domaine vérifié de longue date chez
+Resend". **Relevé dans son compte Resend le 31 août, c'est faux.** Les
+domaines vérifiés sont `tiquiz.fr`, `atelierduquiz.fr` et
+**`send.tipote.com`** : `tipote.com` tout court n'y est pas.
+
+Donc, dès que `SUPPORT_FROM_EMAIL` manque dans le processus, l'app écrit
+depuis un domaine que Resend REFUSE, et **plus aucun email ne part**,
+liens de connexion compris.
+
+C'est le `??` du 2 août dans une autre robe : **une valeur par défaut
+qu'on n'a jamais essayée n'est pas un garde-fou, c'est une hypothèse.**
+Et le test la figeait, avec pour justification "un repli doit être ce
+qui marche à coup sûr" : personne n'avait vérifié que ça marchait.
+
+Le repli est maintenant `hello@tiquiz.fr`. Le contrôle de démarrage
+(`lib/env/expediteur.ts`) continue de crier quand la variable manque :
+un repli qui marche reste un repli silencieux.
