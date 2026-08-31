@@ -3775,3 +3775,61 @@ d'un AUTRE donne une base fausse qui a l'air juste. L'encaissement passe
 maintenant devant.
 
 Test : `tests/logic/commission-ht-paypal.test.mts`, dans les deux dépôts.
+
+
+## Poser une étiquette chez Systeme.io ne déclenche RIEN (mesuré le 31 août 2026)
+
+Béné : "tout bascule sur le nouveau système et les nouvelles pages,
+nouveau blog, nouveaux domaines, il faut bien que ce soit ça qui
+s'affiche pour les nouveaux partout."
+
+En allant basculer le bouton d'essai gratuit de la page de vente, une
+vérification a arrêté le geste, et c'est la bonne nouvelle du jour :
+elle a évité de casser ses emails.
+
+### Ce qui a été mesuré, dans son compte, par leur API
+
+| Question | Réponse |
+|---|---|
+| combien de règles d'automatisation | **51**, toutes actives |
+| combien se déclenchent sur `tag_added` | **ZÉRO** |
+| sur quoi se déclenchent-elles | `form_subscribed`, toutes |
+
+Autrement dit : **`poserTagPlan` crée bien le contact et pose bien
+l'étiquette, et personne n'écoute.** Seule la soumission d'un de ses
+FORMULAIRES Systeme.io déclenche une séquence.
+
+### Ce que ça casse déjà, en production
+
+- **`tiquiz.fr/signup`** (l'inscription gratuite, revenue chez nous le
+  27 août) : le compte est créé, le rattachement affilié est posé, le
+  contact est créé chez Systeme.io avec `tiquiz-free`... et il ne reçoit
+  rien. L'AGENTS.md de Tipote affirmait "ses séquences email partent
+  comme avant" : c'était faux, et c'est corrigé là-bas.
+- **`poserTagAchat` après une vente sur notre bon de commande** : même
+  chose. L'étiquette est posée, aucune séquence ne part.
+
+Le code d'`app/api/auth/signup/route.ts` le disait déjà, depuis le
+25 août : "aucune règle n'écoute encore `tiquiz-free`". C'est la
+documentation qui a écrit le contraire, et c'est elle qu'on relit.
+
+### Ce qu'on NE fait pas, et pourquoi
+
+**Le bouton d'essai gratuit de la page de vente reste sur leur optin**
+(`SALES_LINKS_LEFT_ALONE`). Le basculer sur `tiquiz.fr/signup`
+donnerait l'attribution affiliée et retirerait la séquence email : on
+échangerait un problème contre un autre, sur le chemin le plus
+fréquenté du site.
+
+**Le vrai déblocage est chez Béné, en deux minutes** : créer une règle
+d'automatisation avec le déclencheur "tag ajouté" sur `tiquiz-free`
+(puis sur les étiquettes de vente), qui inscrit à la campagne. Une fois
+qu'elle existe, le bouton bascule et tout marche des deux côtés.
+
+**Règle générale : un tag posé par l'API n'est pas une séquence
+déclenchée.** Les deux se ressemblent et ne sont pas la même chose. Ce
+dépôt a écrit trois fois "son workflow écoute cette étiquette" sans
+l'avoir vérifié une seule fois. C'est la leçon d'Ivan (7 août), et celle
+des événements Stripe manquants (31 août) : **écrire le code n'est pas
+la dernière étape, vérifier que le fournisseur envoie ou écoute quelque
+chose l'est.**
