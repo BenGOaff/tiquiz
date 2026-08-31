@@ -203,26 +203,61 @@ export async function poserTagPlan(
  *
  * L'étiquette n'est JAMAIS créée si elle n'existe pas : voir plus haut.
  */
-export async function poserTagParNom(
+/**
+ * POURQUOI LA POSE A ÉCHOUÉ.
+ *
+ * PANNE DU 31 AOÛT 2026 : le formulaire de la newsletter répondait 502
+ * et Béné n'avait aucun moyen de savoir POURQUOI. Cette fonction
+ * écrasait CINQ causes distinctes en un seul `false` : pas de compte
+ * admin, pas de clé, contact impossible, étiquette inconnue, pose
+ * refusée. Un booléen ne dit pas où chercher.
+ *
+ * C'est le drame du 19 août ("trois causes, un seul message : le 404
+ * muet") dans une autre famille. Le serveur rend une RAISON.
+ */
+export type RaisonPoseTag =
+  | "ok"
+  | "adresse_ou_tag_vide"
+  | "aucun_admin"
+  | "aucune_cle"
+  | "contact_impossible"
+  | "tag_inconnu"
+  | "pose_refusee"
+  | "exception";
+
+export interface ResultatPoseTag {
+  ok: boolean;
+  raison: RaisonPoseTag;
+}
+
+/**
+ * La version qui DIT ce qui s'est passé.
+ *
+ * `poserTagParNom` reste un booléen pour tous les appelants qui n'ont
+ * rien à en faire (les webhooks de vente : ils ne doivent jamais
+ * bloquer un accès). Les écrans qui répondent à un humain appellent
+ * celle-ci.
+ */
+export async function poserTagParNomDetaille(
   email: string,
   tag: string,
   identite: IdentiteContact = {},
-): Promise<boolean> {
+): Promise<ResultatPoseTag> {
   const adresse = String(email ?? "").trim().toLowerCase();
-  if (!adresse || !tag) return false;
+  if (!adresse || !tag) return { ok: false, raison: "adresse_ou_tag_vide" };
 
   try {
     const proprietaire = await idProprietaire();
     if (!proprietaire) {
       console.warn("[sio/tag] aucun compte administrateur : etiquette non posee.");
-      return false;
+      return { ok: false, raison: "aucun_admin" };
     }
     const cle = await resolveApiKey(proprietaire);
     if (!cle) {
       console.warn(
         `[sio/tag] aucune cle Systeme.io connectee : ${adresse} n'est pas etiquete ${tag}.`,
       );
-      return false;
+      return { ok: false, raison: "aucune_cle" };
     }
 
     // TROUVÉ OU CRÉÉ. Avant le 25 août on se contentait de chercher, et
@@ -230,12 +265,12 @@ export async function poserTagParNom(
     // cas normal d'un client venu de NOTRE bon de commande. Il sortait
     // de toutes ses séquences, en silence.
     const contactId = await assurerContact(cle.apiKey, adresse, identite);
-    if (!contactId) return false;
+    if (!contactId) return { ok: false, raison: "contact_impossible" };
 
     const tagId = await trouverTag(cle.apiKey, tag);
     if (!tagId) {
       console.warn(`[sio/tag] l'etiquette ${tag} n'existe pas chez Systeme.io.`);
-      return false;
+      return { ok: false, raison: "tag_inconnu" };
     }
 
     const res = await sioUserRequest(cle.apiKey, `/contacts/${contactId}/tags`, {
@@ -244,11 +279,27 @@ export async function poserTagParNom(
     });
     if (!res.ok) {
       console.warn(`[sio/tag] pose refusee pour ${adresse} (${res.status}).`);
-      return false;
+      return { ok: false, raison: "pose_refusee" };
     }
-    return true;
+    return { ok: true, raison: "ok" };
   } catch (e) {
     console.error(`[sio/tag] ${e instanceof Error ? e.message : String(e)}`);
-    return false;
+    return { ok: false, raison: "exception" };
   }
+}
+
+/**
+ * La même chose, en booléen.
+ *
+ * Gardée pour les webhooks de vente : une étiquette qui échoue ne doit
+ * JAMAIS priver quelqu'un de l'accès qu'il vient de payer (règle du
+ * 7 août), donc ils n'ont rien à faire de la raison.
+ */
+export async function poserTagParNom(
+  email: string,
+  tag: string,
+  identite: IdentiteContact = {},
+): Promise<boolean> {
+  const r = await poserTagParNomDetaille(email, tag, identite);
+  return r.ok;
 }

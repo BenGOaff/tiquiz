@@ -3925,3 +3925,65 @@ C'est la version « mauvais serveur » du garde-fou non fusionné du
 vérifier que c'est bien LUI qui répond l'est.** Le fichier était juste,
 correctement commenté, testé par l'oeil, et adressé à un serveur qui ne
 voit jamais ces requêtes.
+
+## Le formulaire de la newsletter : 502 muet, et la campagne qui n'est pas abonnée (31 août 2026)
+
+Béné teste `tiquiz.fr/newsletter` : "Je n'ai pas réussi à t'inscrire".
+La console dit `api/newsletter: 502`. Le reste de ses messages de
+console (des `preload ... not used`) est du bruit sans rapport.
+
+### 1. CINQ CAUSES ÉCRASÉES EN UN SEUL `false`
+
+`poserTagParNom` rendait un booléen. Un `false` pouvait vouloir dire :
+pas de compte administrateur, aucune clé Systeme.io connectée, contact
+impossible à créer, étiquette introuvable, ou pose refusée. **Un
+booléen ne dit pas où chercher**, et le journal disait "vérifier la clé
+API et l'existence du tag", c'est à dire DEUX pistes sur cinq.
+
+C'est le drame du 19 août ("trois causes, un seul message : le 404
+muet") dans une autre famille. `poserTagParNomDetaille` rend une
+RAISON ; `poserTagParNom` reste un booléen pour les webhooks de vente,
+qui ne doivent jamais bloquer un accès payé.
+
+La raison SORT aussi dans la réponse HTTP : sans elle, diagnostiquer
+demande un accès au serveur. Aucune de ces valeurs n'est un secret,
+elles nomment un état de configuration.
+
+### 2. CE QUI A ÉTÉ MESURÉ DANS SON COMPTE, ET QUI CHANGE LA CONCLUSION
+
+| Question | Réponse |
+|---|---|
+| le tag `newsletter` existe-t-il | **oui**, id 263284, créé en 2022 |
+| le contact de test a-t-il été créé | **NON** : l'échec est à la création |
+| une règle écoute-t-elle `tag_added` sur ce tag | **aucune** |
+| la règle 1273770 fait quoi | déclencheur `form_subscribed`, action `add_tag` |
+| "Pépites 365" est-elle une campagne | **oui**, id 1172338 |
+
+Autrement dit : **son formulaire Systeme.io abonne à la campagne, et la
+règle ne fait qu'AJOUTER le tag à côté.** Poser le tag nous mêmes
+reproduit donc la moitié visible et rien de ce qui envoie les emails.
+
+**Et l'API de Systeme.io n'a AUCUN point d'entrée pour abonner un
+contact à une campagne** (vérifié : seul `assign_contact_tag` existe).
+Le tag est le seul levier à notre portée.
+
+**Le déblocage est chez Béné, en deux minutes** : une règle
+d'automatisation, déclencheur "tag ajouté" sur `newsletter`, action
+"s'abonner à la campagne Pépites 365". Tant qu'elle n'existe pas, un
+inscrit venu de notre page est étiqueté et ne reçoit rien.
+
+C'est la troisième fois que ce dépôt bute dessus (l'inscription
+gratuite, les tags d'achat, la newsletter). **Un tag posé par l'API
+n'est pas une séquence déclenchée**, et la vérification se fait dans son
+compte, pas dans notre tête.
+
+### 3. UNE ADRESSE DE CONTACT QUE PERSONNE N'AVAIT VÉRIFIÉE
+
+Le message d'échec disait "écris à hello@tiquiz.fr". Cette adresse
+n'existe nulle part ailleurs dans le dépôt qu'en exemple dans un
+commentaire. Elle vient maintenant de `COMPANY.email`, celle des pages
+légales, donc une adresse réelle et relevée.
+
+**Une adresse écrite à la main dans un message d'erreur est une adresse
+que personne ne vérifiera jamais**, parce qu'on ne lit ce message que le
+jour où quelque chose est déjà cassé.

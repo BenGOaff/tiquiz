@@ -13,6 +13,7 @@
 // la suppression d'un quiz et de l'import PDF, appliquée ici.
 
 import { useState } from "react";
+import { COMPANY } from "@/lib/legal/company";
 
 const PHRASES: Record<string, string> = {
   email_manquant: "Il manque ton adresse email.",
@@ -20,7 +21,7 @@ const PHRASES: Record<string, string> = {
   consentement_manquant: "Coche la case pour que je puisse t'envoyer la newsletter.",
   trop_de_demandes: "Trop de tentatives depuis cette connexion. Réessaie dans une heure.",
   indisponible:
-    "Je n'ai pas réussi à t'inscrire, et ce n'est pas de ta faute. Réessaie dans un moment, ou écris à hello@tiquiz.fr.",
+    `Je n'ai pas réussi à t'inscrire, et ce n'est pas de ta faute. Réessaie dans un moment, ou écris à ${COMPANY.email}.`,
 };
 
 const PHRASE_PAR_DEFAUT = PHRASES.indisponible;
