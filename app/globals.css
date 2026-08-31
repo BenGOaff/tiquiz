@@ -661,13 +661,17 @@ html[data-pq-compact] body {
    TYPOGRAPHIE et la COULEUR. Copier aussi leur serif de titre aurait
    donné une page qui ne ressemble à aucune de ses vignettes.
 
-   LA PALETTE N'EST PAS INVENTÉE : elle est relevée dans les 10
-   vignettes qu'elle a refaites le 30 août (échantillonnage des pixels
-   saturés). Bleu électrique #1D6BF0, encre marine #050A1E.
+   LA PALETTE : bleu électrique #1D6BF0, encre marine #050A1E.
 
-   Le détail signature de sa marque, présent sur les 10 vignettes : un
-   MOT POSÉ DANS UN RECTANGLE ARRONDI À DÉGRADÉ BLEU. C'est `.tq-surb`,
-   et c'est ce qui fait qu'on reconnaît ses pages sans lire le logo.
+   ELLE A TRANCHÉ D'OÙ VIENT LE BRANDING, le 31 août : "notre branding
+   c'est celui des pages de vente tiquiz.fr et atelierduquiz.fr pas les
+   vignettes." Les couleurs restent les mêmes, mais on ne recopie plus
+   les GESTES d'un visuel : pas d'aplat sombre, pas de rectangle bleu
+   sous un mot. Une vignette se regarde une seconde, une page se lit.
+
+   Ce qu'il reste de coloré, et il n'y a QUE ça : les boutons, le pied
+   de page sombre, un filet horizontal, et un chiffre en bleu. Le fond
+   d'un bloc qui porte du texte est blanc ou crème, sans exception.
 
    Tout est préfixé `tq-` et ne descend que sous `.tq-site` : l'app
    derrière connexion garde ses propres jetons, intacts.
@@ -729,23 +733,31 @@ html[data-pq-compact] body {
   color: var(--tq-encre-douce);
 }
 
-/* LE SURLIGNEUR DE MARQUE. Le mot qui compte, posé dans le rectangle
-   bleu de ses vignettes. `box-decoration-break` le fait suivre quand la
-   phrase passe à la ligne, sinon la deuxième ligne perd son fond. */
+/* LE MOT QUI COMPTE, EN COULEUR. PAS DANS UN RECTANGLE.
+   ------------------------------------------------------------------
+   C'était un aplat bleu dégradé, repris des vignettes d'articles.
+   Béné, 31 août 2026 : "supprime l'arrière plan bleu sous le texte
+   c'est pas adapté, pas beau, j'en veux pas, NULLE PART. Au pire mets
+   carrément le texte en couleur, mais dans les couleurs Tiquiz pas
+   couleurs des vignettes. Notre branding c'est celui des pages de
+   vente tiquiz.fr et atelierduquiz.fr pas les vignettes."
+
+   Troisième fois que la remarque sort ("l'encart est tout pété" le
+   3 août, "les encarts bleu sont moches" le 30), et le motif est
+   toujours le même : on prend les couleurs d'un VISUEL et on les
+   applique à une INTERFACE. Un dessin de 1200 px peut porter trois
+   mots dans un bloc bleu ; une page qui doit se LIRE, non.
+
+   Ce qui reste : le mot est en bleu de marque, et il est plus lourd
+   que le reste du titre. L'emphase se voit, rien ne s'écrase.
+
+   INTERDIT : y remettre un `background`, et à plus forte raison un
+   dégradé. Le fond coloré sous du texte n'existe plus sur ce site
+   qu'aux DEUX endroits où rien ne se lit longtemps : un bouton, et
+   le pied de page sombre. */
 .tq-surb {
-  /* PLUS DISCRET QU'AU PREMIER JET (Béné, 30 août : "c'est bien de
-     vouloir reprendre le style des vignettes, mais c'est trop"). Sur une
-     vignette de 1200 px le bloc bleu porte trois mots ; sur un titre de
-     page il en portait six, en 3,5 rem, et il écrasait tout le reste.
-     On garde le geste, on retire le poids : moins de hauteur, un rayon
-     plus serré, et un dégradé qui reste dans les bleus au lieu de finir
-     en cyan clair. */
-  background: linear-gradient(100deg, var(--tq-bleu-fonce), var(--tq-bleu) 70%);
-  color: #fff;
-  border-radius: 0.3em;
-  padding: 0.04em 0.22em;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
+  color: var(--tq-bleu);
+  font-weight: 900;
 }
 
 /* L'ÉTIQUETTE DE RUBRIQUE. Petite, en capitales, à la couleur de

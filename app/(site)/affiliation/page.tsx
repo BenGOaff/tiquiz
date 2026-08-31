@@ -51,10 +51,11 @@ export default function PageAffiliation() {
       <section className="tq-large pt-16 sm:pt-24">
         <p className="tq-etiquette">Programme d&apos;affiliation</p>
         <h1 className="mt-3 max-w-[18ch] text-[2.6rem] sm:text-[3.6rem]">
-          {/* C'est le TAUX qu'on surligne, pas la phrase. Un bloc bleu de
-              six mots en 3,6 rem écrase le reste de la page, et c'est ce
-              que Béné a relevé : "c'est trop". Deux caractères suffisent
-              à porter le message. */}
+          {/* C'est le TAUX qu'on met en couleur, pas la phrase. Deux
+              caractères suffisent à porter le message ; six mots en
+              3,6 rem écraseraient le reste de la page, ce que Béné a
+              relevé le 30 août ("c'est trop"). Depuis le 31, `tq-surb`
+              est une couleur de texte, plus un rectangle bleu. */}
           <span className="tq-surb">{pourcentTiquiz} %</span>{" "}
           chaque mois, tant qu&apos;il reste
           abonné
@@ -218,11 +219,22 @@ export default function PageAffiliation() {
       </section>
 
       <section className="tq-large py-24">
-        <div className="rounded-3xl bg-[var(--tq-marine)] px-8 py-14 sm:px-14">
-          <h2 className="max-w-[22ch] text-[1.9rem] text-white sm:text-[2.4rem]">
+        {/* PAS D'APLAT SOUS DU TEXTE (Béné, 31 août 2026 : "supprime
+            l'arrière plan bleu sous le texte [...] j'en veux pas, nulle
+            part"). Ce bloc était un panneau marine à texte blanc. Le
+            gabarit retenu est celui d'`EncartCta`, validé le 30 août :
+            du blanc, un filet HORIZONTAL à la couleur de marque, le
+            texte à l'encre du site. Un filet vertical est exclu : une
+            décoration à gauche déplace ce qu'elle décore. */}
+        <div className="rounded-3xl border border-[var(--tq-bord)] bg-white px-8 py-12 sm:px-14 sm:py-14">
+          <span
+            aria-hidden="true"
+            className="block h-[3px] w-12 rounded-full bg-[var(--tq-bleu)]"
+          />
+          <h2 className="mt-6 max-w-[22ch] text-[1.9rem] sm:text-[2.4rem]">
             Ton lien est prêt en <span className="tq-surb">deux minutes</span>
           </h2>
-          <p className="mt-5 max-w-[54ch] leading-relaxed text-[#b9c3d9]">
+          <p className="tq-doux mt-5 max-w-[54ch] leading-relaxed">
             Tu crées ton compte affilié, tu récupères ton lien, tu le mets dans ta bio, sous ta
             vidéo ou dans ton prochain email. Le tableau de bord te dit ensuite lequel de tes canaux
             travaille vraiment.
@@ -230,7 +242,7 @@ export default function PageAffiliation() {
           <div className="mt-8 flex flex-wrap gap-3">
             <a
               href={AFFILIATE_DASHBOARD_URL}
-              className="tq-bouton"
+              className="tq-bouton tq-bouton-plein"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -238,7 +250,7 @@ export default function PageAffiliation() {
             </a>
             <a
               href="/conditions-generales-affiliation"
-              className="tq-bouton bg-transparent !text-white ring-1 ring-white/25 hover:!bg-white/10"
+              className="tq-bouton tq-bouton-fantome"
               target="_blank"
               rel="noopener noreferrer"
             >

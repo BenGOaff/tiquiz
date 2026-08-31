@@ -22,7 +22,9 @@ import test, { describe } from "node:test";
 
 import {
   COMMISSION_BASE_PCT,
+  COMMISSION_MAX_PCT,
   commissionCentsAuTaux,
+  prochaineMarcheCommission,
   simulerParPlan,
   tauxCommissionPct,
 } from "@/lib/site/recompenseAffiliation";
@@ -110,7 +112,7 @@ describe("L'écran montre les deux options, il n'arbitre plus", () => {
     const src = SRC;
     assert.ok(!src.includes("gagnante"), "l'arbitrage est encore la");
     assert.ok(src.includes("Augmenter tes commissions"), "l'option 1 doit etre nommee");
-    assert.ok(src.includes("Faire baisser ton abonnement"), "l'option 2 doit etre nommee");
+    assert.ok(src.includes("faire baisser ton abonnement"), "l'option 2 doit etre nommee");
   });
 
   test("LE CHIFFRE MENSUEL EST L'ÉLÉMENT PRINCIPAL", () => {
@@ -128,5 +130,57 @@ describe("L'écran montre les deux options, il n'arbitre plus", () => {
     const src = SRC;
     assert.match(SRC, /lissée sur douze mois/);
     assert.match(SRC, /hors taxes/);
+  });
+});
+
+describe("Le palier se VOIT, et il se tire au curseur", () => {
+  test("PROCHAINE MARCHE : elle s'ouvre au PREMIER filleul de la dizaine", () => {
+    // 1 filleul suffit pour 45 %, 11 pour 50 %. C'est le decoupage de
+    // `tauxCommissionPct` : deux formules pour le meme bareme
+    // finiraient toujours par diverger.
+    assert.deepEqual(prochaineMarcheCommission(0), { filleuls: 1, tauxPct: 45, manque: 1 });
+    assert.deepEqual(prochaineMarcheCommission(5), { filleuls: 11, tauxPct: 50, manque: 6 });
+    assert.deepEqual(prochaineMarcheCommission(10), { filleuls: 11, tauxPct: 50, manque: 1 });
+  });
+
+  test("le seuil annonce le taux que `tauxCommissionPct` donnera VRAIMENT", () => {
+    // Annoncer une marche que le bareme ne rendra pas est pire que ne
+    // rien annoncer : ca se decouvre au premier versement.
+    for (let n = 0; n <= 80; n += 1) {
+      const m = prochaineMarcheCommission(n);
+      if (!m) continue;
+      assert.equal(m.tauxPct, tauxCommissionPct(m.filleuls), `a ${n} filleuls`);
+      assert.ok(m.tauxPct > tauxCommissionPct(n), `a ${n} filleuls, la marche doit MONTER`);
+    }
+  });
+
+  test("au plafond, on ne promet plus de marche", () => {
+    assert.equal(tauxCommissionPct(51), COMMISSION_MAX_PCT);
+    assert.equal(prochaineMarcheCommission(51), null);
+    assert.equal(prochaineMarcheCommission(500), null);
+  });
+
+  test("L'ÉCRAN AFFICHE LE TAUX, pas seulement un montant", () => {
+    // Bene, 31 aout : "elle prend en compte l'augmentation de palier ?
+    // Il faut !" Il ETAIT pris en compte, il n'etait pas montre.
+    assert.ok(SRC.includes("prochaineMarcheCommission"), "la marche suivante doit etre affichee");
+    assert.match(SRC, /Ton taux à \{s\.filleuls\} filleuls/);
+    assert.match(SRC, /\{s\.tauxPct\} %/);
+  });
+
+  test("des CURSEURS, plus de boutons plus/moins", () => {
+    // "Fais la plus ergonomique, avec des curseurs et pas des boutons
+    // plus moins." Dix clics pour atteindre la premiere marche, c'est
+    // une mecanique que personne ne decouvre.
+    assert.match(SRC, /type="range"/);
+    assert.ok(!SRC.includes("&minus;"), "le bouton moins est encore la");
+    assert.ok(!SRC.includes("Un filleul de plus"), "le bouton plus est encore la");
+  });
+
+  test("le bareme n'est PAS reecrit dans le composant", () => {
+    // Un bareme enferme dans un composant React n'est pas testable,
+    // donc il n'est pas teste. Le composant importe, il ne recalcule pas.
+    assert.ok(!/Math\.ceil\([^)]*PALIER/.test(SRC), "le composant recalcule le taux");
+    assert.ok(!SRC.includes("* 0.4"), "un taux ecrit en dur dans l'ecran");
   });
 });

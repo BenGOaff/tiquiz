@@ -209,3 +209,40 @@ export function simulerParPlan(parPlan: FilleulsParPlan): SimulationMensuelle {
     remisePct: remiseAbonnementPct(total),
   };
 }
+
+// ── LA MARCHE SUIVANTE ───────────────────────────────────────────────
+//
+// Béné, 31 août 2026 : "elle prend en compte l'augmentation de palier ?
+// Il faut ! [...] la calculatrice elle doit prendre en compte le taux
+// suivant le nb d'affiliés."
+//
+// Le taux ÉTAIT bien appliqué (`simulerParPlan` appelle
+// `tauxCommissionPct` sur le TOTAL), mais l'écran n'en disait rien : on
+// voyait un montant sans voir la mécanique qui le fait monter. Un
+// barème invisible ne motive personne à bouger un curseur.
+//
+// La décision vit ICI et pas dans le composant, pour la même raison que
+// le reste du fichier : le seuil de la marche suivante est un calcul,
+// donc il se teste.
+//
+// **Le seuil s'ouvre au PREMIER filleul de la dizaine** (1 -> 45 %,
+// 11 -> 50 %), c'est le découpage de `tauxCommissionPct` et il ne doit
+// pas être réécrit ici : deux formules pour le même barème finissent
+// toujours par diverger.
+
+export interface MarcheSuivante {
+  /** À combien de filleuls la marche s'ouvre. */
+  filleuls: number;
+  /** Le taux qu'on atteint alors. */
+  tauxPct: number;
+  /** Combien il en manque depuis là où on est. */
+  manque: number;
+}
+
+/** La prochaine marche de commission, ou `null` une fois au plafond. */
+export function prochaineMarcheCommission(filleulsActifs: unknown): MarcheSuivante | null {
+  const n = filleuls(filleulsActifs);
+  if (tauxCommissionPct(n) >= COMMISSION_MAX_PCT) return null;
+  const seuil = n === 0 ? 1 : PALIER_FILLEULS * Math.ceil(n / PALIER_FILLEULS) + 1;
+  return { filleuls: seuil, tauxPct: tauxCommissionPct(seuil), manque: seuil - n };
+}

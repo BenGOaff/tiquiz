@@ -33,6 +33,12 @@ import {
   compterLiens,
   emailPlausible,
   jugerCommentaire,
+  motifsDeRetenue,
+  objetAlerte,
+  partDeMajuscules,
+  proposInterdits,
+  ressembleAuSpam,
+  PHRASE_MOTIF,
   messageEnHtml,
   MESSAGE_MAX,
   PHRASE_REFUS,
@@ -307,6 +313,12 @@ test("un commentaire valable est accepte, et rien de plus", () => {
   assert.equal(v.valeur.auteur, "Jocelyne");
   assert.equal(v.valeur.message, "Merci, ca m'a debloquee.");
   assert.equal(v.valeur.email, "j@exemple.fr");
+  // ET IL PART EN LIGNE. Tout mettre en attente etait le vrai defaut :
+  // personne ne releve une file tous les jours, donc rien n'aurait
+  // jamais ete publie, et un blog sans commentaires dit a Google le
+  // contraire de ce que Bene cherche.
+  assert.equal(v.statut, "publie");
+  assert.deepEqual(v.motifs, []);
 });
 
 test("le champ piege attrape un robot sans rien demander au visiteur", () => {
@@ -351,7 +363,7 @@ test("chaque refus a une phrase, sinon la lectrice ne sait pas quoi corriger", (
   // l'ecran. Le serveur rend la RAISON, l'interface ecrit la phrase.
   const raisons = [
     "nom-manquant", "nom-trop-long", "message-court", "message-long",
-    "email-invalide", "trop-de-liens", "piege", "article-inconnu",
+    "email-invalide", "trop-de-liens", "piege", "propos-interdits", "article-inconnu",
   ] as const;
   for (const r of raisons) {
     assert.ok(PHRASE_REFUS[r] && PHRASE_REFUS[r].length > 10, `${r} : phrase manquante`);
@@ -386,4 +398,106 @@ test("un message trop long est refuse AVANT d'atteindre la base", () => {
   const v = jugerCommentaire({ slug: SLUGS[0], auteur: "Eric", message: "a".repeat(MESSAGE_MAX + 1) }, SLUGS);
   assert.ok(!v.ok);
   assert.equal(v.raison, "message-long");
+});
+
+// ── L'AUTO-MODÉRATION (Béné, 31 août 2026) ──
+//
+// "Qui les valide, quand et comment ? [...] Peut être une auto
+// modération (pas de liens, pas de discours négatifs ou déplacés, pas
+// de spam)."
+
+test("UN LIEN RETIENT TOUJOURS, meme un seul, meme honnete", () => {
+  // C'est sa regle ("pas de liens") et c'est la seule qui protege
+  // vraiment : le spam de commentaire n'existe que pour poser un lien.
+  const v = jugerCommentaire(
+    { slug: SLUGS[0], auteur: "Eric", message: "super article, voir aussi https://monsite.fr" },
+    SLUGS,
+  );
+  assert.ok(v.ok, "un lien RETIENT, il ne refuse pas");
+  assert.equal(v.statut, "en_attente");
+  assert.deepEqual(v.motifs, ["lien"]);
+});
+
+test("une tournure de spam est retenue, un mot isole ne l'est pas", () => {
+  assert.ok(ressembleAuSpam("Gagnez de l'argent facile depuis la maison"));
+  assert.ok(ressembleAuSpam("backlinks pas cher, referencement garanti"));
+  assert.ok(ressembleAuSpam("contacte moi sur whatsapp +33 6 12 34 56 78"));
+  // ET CE QUI NE DOIT PAS CRIER. Un filtre qui retient un commentaire
+  // legitime finit desactive, et on se retrouve sans filtre du tout.
+  assert.ok(!ressembleAuSpam("j'ai fait un quiz sur les casinos, ca marche bien"));
+  assert.ok(!ressembleAuSpam("Tiquiz m'a fait gagner du temps"));
+  assert.ok(!ressembleAuSpam("mon audience investit dans l'immobilier"));
+});
+
+test("LES PROPOS HAINEUX N'ENTRENT PAS, ils ne vont pas dans une file", () => {
+  const v = jugerCommentaire(
+    { slug: SLUGS[0], auteur: "Anonyme", message: "ferme la sale pd, ton blog est nul" },
+    SLUGS,
+  );
+  assert.ok(!v.ok);
+  assert.equal(v.raison, "propos-interdits");
+});
+
+test("un gros mot d'enthousiasme n'est PAS un propos haineux", () => {
+  // "Putain c'est genial" est un compliment. Une liste longue de gros
+  // mots retiendrait les meilleurs commentaires : le filtre ne vise que
+  // ce qui s'attaque a une personne ou a un groupe.
+  assert.ok(!proposInterdits("putain c'est genial ce truc"));
+  assert.ok(!proposInterdits("ce quiz est vraiment con a remplir"));
+  assert.ok(proposInterdits("sale negre"));
+});
+
+test("les majuscules et les caracteres repetes retiennent, sans refuser", () => {
+  assert.equal(partDeMajuscules("bonjour a tous, merci pour cet article"), 0);
+  assert.ok(partDeMajuscules("MERCI BEAUCOUP POUR CET ARTICLE FORMIDABLE") > 0.9);
+  // Moins de 20 lettres : on ne juge pas. "OK MERCI" n'est pas un cri.
+  assert.equal(partDeMajuscules("OK MERCI"), 0);
+  assert.deepEqual(motifsDeRetenue("Eric", "MERCI BEAUCOUP POUR CET ARTICLE FORMIDABLE"), ["cris"]);
+  assert.deepEqual(motifsDeRetenue("Eric", "genial aaaaaaaaaa vraiment"), ["repetition"]);
+});
+
+test("chaque motif a une phrase, sinon l'ecran d'admin ne dit rien", () => {
+  for (const m of ["lien", "spam", "propos", "cris", "repetition", "premier-mot-copie"] as const) {
+    assert.ok(PHRASE_MOTIF[m] && PHRASE_MOTIF[m].length > 5, `${m} : phrase manquante`);
+  }
+});
+
+test("BÉNÉ EST ALERTÉE DANS LES DEUX CAS, et l'objet dit lequel", () => {
+  // "Je dois etre alertee pour savoir qu'il y en a." Un commentaire
+  // auto-publie n'appelle aucune action, mais il apparait sur SON site
+  // sous SON nom : ne l'alerter que sur les cas douteux lui ferait
+  // decouvrir les autres par hasard, des semaines plus tard.
+  assert.match(objetAlerte({ statut: "publie", auteur: "Jocelyne" }), /en ligne/);
+  assert.match(objetAlerte({ statut: "en_attente", auteur: "Jocelyne" }), /relire/);
+  assert.ok(
+    objetAlerte({ statut: "publie", auteur: "Jocelyne" }) !==
+      objetAlerte({ statut: "en_attente", auteur: "Jocelyne" }),
+    "les deux objets doivent se distinguer dans une boite mail",
+  );
+});
+
+test("L'ÉCRAN D'ADMIN NOMME LES MÊMES MOTIFS que la moderation", () => {
+  // La table est recopiee dans le composant client (pour ne pas tirer
+  // tout le module de moderation dans le bundle de l'admin). Deux
+  // listes qui disent la meme chose finissent toujours par diverger :
+  // le test les tient ensemble.
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "components/admin/CommentairesBlogCard.tsx"),
+    "utf8",
+  );
+  for (const cle of Object.keys(PHRASE_MOTIF)) {
+    assert.ok(src.includes(`"${cle}"`) || src.includes(`${cle}:`), `motif ${cle} absent de l'ecran`);
+  }
+});
+
+test("le statut d'ecriture est un PARAMÈTRE, jamais devine par la base", () => {
+  // Un store qui trancherait de son cote finirait par ne plus dire la
+  // meme chose que la fonction qui decide (le defaut sorti six fois
+  // sur les apercus d'editeur).
+  const src = fs.readFileSync(path.join(process.cwd(), "lib/blog/commentairesStore.ts"), "utf8");
+  assert.match(src, /statut: StatutCommentaire/);
+  assert.ok(
+    !/statut:\s*"en_attente"/.test(src),
+    "le store ne doit plus ecrire un statut en dur",
+  );
 });
