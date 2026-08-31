@@ -351,14 +351,22 @@ offer-price-id, et un tarif qui change se répercute à trois endroits
 
 ## 7. Et l'Atelier (dépôt `formaquiz`)
 
-Il a son propre bon de commande (Stripe + PayPal Orders, 47 €), mais
-**aucun système de facture** : `lib/facture/` n'y existe pas. La vente
-PayPal de l'Atelier est donc exactement dans l'état où était celle de
-Tiquiz avant le 24 août : encaissée, sans facture.
+🚨 **CETTE SECTION DISAIT "aucun système de facture, `lib/facture/`
+n'y existe pas". C'EST PÉRIMÉ (vérifié le 31 août).**
 
-Le module est portable presque tel quel. La seule différence de fond :
-l'Atelier vend un ACHAT UNIQUE, donc une facture par vente et pas une par
-échéance.
+Le module y vit depuis le 25 août : `lib/facture/{construire,tva,
+identite,store,paypalVente,stripeAcheteur,taxeVentePaypal,vies,pays}.ts`,
+et le webhook PayPal de l'Atelier émet vraiment la facture. VIES y est
+branché aussi, ce que la section 5 dit encore manquant.
+
+Ce qui reste vrai : l'Atelier vend un ACHAT UNIQUE, donc une facture par
+vente et pas une par échéance. Et la vente par CARTE n'émet pas de
+facture de notre part, parce que Stripe émet la sienne : deux pièces
+pour un seul encaissement seraient pires que zéro.
+
+**Une roadmap se relit quand on corrige ce qu'elle décrit.** Le 26 août,
+une ligne périmée de cette même page envoyait chercher un bouton
+Rembourser PayPal qui existait déjà.
 
 ---
 

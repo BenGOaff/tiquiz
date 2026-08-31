@@ -252,7 +252,14 @@ export interface FicheAffilieDistante {
     alias: string[];
   };
   filleuls: Filleul[];
+  /** Ceux qui ont acheté au moins une fois, annulations comprises. */
   acheteurs: number;
+  /**
+   * CEUX QUI COMPTENT POUR LE PALIER, et eux seuls (Béné, 31 août) :
+   * "client payant = augmente le %, client gratuit = aucun impact".
+   * Optionnel comme le reste : voir plus bas.
+   */
+  payants?: number;
   // TOUT CE QUI SUIT EST OPTIONNEL, ET CE N'EST PAS DU CONFORT.
   //
   // Le centre de pilotage et le registre sont DEUX serveurs, déployés
@@ -297,6 +304,7 @@ export async function lireFicheAffiliee(
         affilie: j.affilie,
         filleuls: j.filleuls ?? [],
         acheteurs: j.acheteurs ?? 0,
+        payants: j.payants,
         recompense: j.recompense,
         versement: j.versement,
         factures: j.factures ?? [],
