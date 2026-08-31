@@ -150,17 +150,45 @@ async function idProprietaireViaAuth(): Promise<string | null> {
  * fuite d'une cliente vers une autre, silencieuse. Le repli ne vaut que
  * pour le compte PROPRIÉTAIRE, donc il vit dans cette fonction là.
  */
-async function cleDuProprietaire(): Promise<
-  { ok: true; apiKey: string; source: string } | { ok: false; raison: RaisonPoseTag }
+/** Une clé candidate, avec d'où elle vient. */
+interface CleCandidate {
+  apiKey: string;
+  source: string;
+}
+
+async function clesDuProprietaire(): Promise<
+  { ok: true; cles: CleCandidate[] } | { ok: false; raison: RaisonPoseTag }
 > {
   const proprietaire = await idProprietaire();
   const duFichier = process.env.SYSTEME_IO_API_KEY?.trim();
 
+  // ON LES ESSAIE TOUTES LES DEUX, plutôt que d'arbitrer (31 août 2026).
+  //
+  // Béné a une clé dans son compte Tiquiz ET une dans le `.env`, et
+  // elle a dit de la seconde : "elle est valide, une clé systeme.io
+  // fonctionnelle (pas celle de mon compte tiquiz utilisateur)". Les
+  // deux ne se valent donc pas, et rien dans le code ne peut savoir
+  // laquelle marche.
+  //
+  // Choisir un ordre définitif serait un pari dans les deux sens :
+  // faire gagner le `.env` fait gagner une valeur périmée le jour où
+  // elle change sa clé dans l'écran Paramètres ; faire gagner la base
+  // est ce qui bloque aujourd'hui. On n'arbitre pas : la première est
+  // essayée, et si Systeme.io la REFUSE (401/403), on passe à la
+  // suivante. Le coût d'un appel de plus n'existe que dans le cas où
+  // ça ne marchait pas du tout.
+  const cles: CleCandidate[] = [];
   if (proprietaire) {
     const cle = await resolveApiKey(proprietaire);
-    if (cle) return { ok: true, apiKey: cle.apiKey, source: cle.source };
+    if (cle) cles.push({ apiKey: cle.apiKey, source: cle.source });
   }
-  if (duFichier) return { ok: true, apiKey: duFichier, source: "env" };
+  // Jamais deux fois la même : si les deux portent la même valeur, le
+  // second essai serait refusé pour la même raison, et le journal
+  // laisserait croire qu'on a essayé deux clés différentes.
+  if (duFichier && !cles.some((c) => c.apiKey === duFichier)) {
+    cles.push({ apiKey: duFichier, source: "env" });
+  }
+  if (cles.length > 0) return { ok: true, cles };
 
   // ON DIT LEQUEL DES DEUX MANQUE, et j'avais fusionné les deux le
   // 31 août au soir : la sonde de production a répondu `aucune_cle`
@@ -171,12 +199,31 @@ async function cleDuProprietaire(): Promise<
   return { ok: false, raison: proprietaire ? "aucune_cle" : "aucun_profil_admin" };
 }
 
+/**
+ * UNE CLÉ REFUSÉE N'EST PAS UN CONTACT INTROUVABLE (31 août 2026).
+ *
+ * Béné : "j'ai mis la clé, elle est valide". La sonde répondait
+ * `contact_impossible`, ce qui l'envoyait chercher du côté du contact
+ * alors que le refus peut venir de la CLÉ : un 401 sur la recherche
+ * rendait `null`, le POST échouait aussi, et les deux se lisaient
+ * "création refusée". C'est exactement le défaut que ce fichier existe
+ * pour corriger, une couche plus bas.
+ */
+function cleRejetee(status: number): boolean {
+  return status === 401 || status === 403;
+}
+
 /** L'identifiant du contact chez Systeme.io, ou `null` s'il n'y est pas. */
 async function trouverContact(apiKey: string, email: string): Promise<number | null> {
   const res = await sioUserRequest<{ items?: { id?: number; email?: string }[] }>(
     apiKey,
     `/contacts?email=${encodeURIComponent(email)}&limit=20`,
   );
+  if (!res.ok) {
+    console.warn(
+      `[sio/tag] recherche de contact refusee (${res.status}) : ${res.error ?? "sans detail"}`,
+    );
+  }
   if (!res.ok || !Array.isArray(res.data?.items)) return null;
   // On ne fait PAS confiance au filtre : selon les API, `?email=` peut
   // être ignoré et rendre la première page complète. On revérifie
@@ -211,7 +258,7 @@ async function assurerContact(
   apiKey: string,
   email: string,
   identite: IdentiteContact,
-): Promise<number | null> {
+): Promise<number | "cle_refusee" | null> {
   const existant = await trouverContact(apiKey, email);
   if (existant) return existant;
 
@@ -243,7 +290,9 @@ async function assurerContact(
     `[sio/tag] contact NON cree pour ${email} (${res.status}) : ${res.error ?? "sans detail"}. ` +
       `Cette personne sortira des sequences email.`,
   );
-  return null;
+  // 401 / 403 : ce n'est pas le contact qui pose problème, c'est la clé.
+  // Le dire évite d'envoyer chercher au mauvais endroit.
+  return cleRejetee(res.status) ? "cle_refusee" : null;
 }
 
 /** L'identifiant d'une étiquette par son nom, ou `null`. */
@@ -325,6 +374,7 @@ export type RaisonPoseTag =
   | "adresse_ou_tag_vide"
   | "aucun_profil_admin"
   | "aucune_cle"
+  | "cle_refusee"
   | "contact_impossible"
   | "tag_inconnu"
   | "pose_refusee"
@@ -352,7 +402,7 @@ export async function poserTagParNomDetaille(
   if (!adresse || !tag) return { ok: false, raison: "adresse_ou_tag_vide" };
 
   try {
-    const cle = await cleDuProprietaire();
+    const cle = await clesDuProprietaire();
     if (!cle.ok) {
       console.warn(
         cle.raison === "aucun_profil_admin"
@@ -365,22 +415,52 @@ export async function poserTagParNomDetaille(
       );
       return { ok: false, raison: cle.raison };
     }
-    console.log(`[sio/tag] cle Systeme.io resolue (source: ${cle.source}).`);
+    console.log(
+      `[sio/tag] cle(s) Systeme.io resolue(s) : ${cle.cles.map((c) => c.source).join(", ")}.`,
+    );
 
     // TROUVÉ OU CRÉÉ. Avant le 25 août on se contentait de chercher, et
     // on abandonnait quand le contact n'existait pas : c'est à dire le
     // cas normal d'un client venu de NOTRE bon de commande. Il sortait
     // de toutes ses séquences, en silence.
-    const contactId = await assurerContact(cle.apiKey, adresse, identite);
-    if (!contactId) return { ok: false, raison: "contact_impossible" };
+    let retenue: CleCandidate | null = null;
+    let contactId: number | null = null;
+    // "Toutes refusées" et "aucun contact" sont deux échecs DIFFÉRENTS,
+    // et les confondre renverrait `cle_refusee` sur une clé qui marche
+    // très bien : c'est le défaut que ce fichier corrige, refait dans
+    // sa propre correction.
+    let toutesRefusees = true;
+    for (const candidate of cle.cles) {
+      const r = await assurerContact(candidate.apiKey, adresse, identite);
+      if (r === "cle_refusee") {
+        console.error(
+          `[sio/tag] Systeme.io REFUSE la cle (source: ${candidate.source}). ` +
+            `Ce n'est pas le contact : c'est la cle qui n'a pas ete acceptee.`,
+        );
+        continue;
+      }
+      // La clé a été ACCEPTÉE, quel que soit le sort du contact.
+      toutesRefusees = false;
+      if (typeof r === "number") {
+        retenue = candidate;
+        contactId = r;
+      }
+      // Une création refusée pour une AUTRE raison que la clé ne se
+      // rejoue pas avec une deuxième clé : le refus vient du corps
+      // envoyé, pas de qui l'envoie.
+      break;
+    }
+    if (!retenue || !contactId) {
+      return { ok: false, raison: toutesRefusees ? "cle_refusee" : "contact_impossible" };
+    }
 
-    const tagId = await trouverTag(cle.apiKey, tag);
+    const tagId = await trouverTag(retenue.apiKey, tag);
     if (!tagId) {
       console.warn(`[sio/tag] l'etiquette ${tag} n'existe pas chez Systeme.io.`);
       return { ok: false, raison: "tag_inconnu" };
     }
 
-    const res = await sioUserRequest(cle.apiKey, `/contacts/${contactId}/tags`, {
+    const res = await sioUserRequest(retenue.apiKey, `/contacts/${contactId}/tags`, {
       method: "POST",
       body: { tagId },
     });

@@ -82,9 +82,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // se deduit pas.
     console.error(
       `[newsletter] inscription NON enregistree pour ${verdict.email} : ${pose.raison}. ` +
-        `(aucune_cle = la cle Systeme.io n'est pas connectee ; contact_impossible = ` +
-        `Systeme.io a refuse la creation ; tag_inconnu = l'etiquette "${TAG_NEWSLETTER}" ` +
-        `est introuvable dans le compte.)`,
+        `(aucun_profil_admin = le compte proprietaire est introuvable ; aucune_cle = ` +
+        `aucune cle nulle part ; cle_refusee = Systeme.io a REJETE la ou les cles (401/403), ` +
+        `donc ce n'est pas le contact ; contact_impossible = la creation elle-meme a ete ` +
+        `refusee ; tag_inconnu = l'etiquette "${TAG_NEWSLETTER}" est introuvable.)`,
     );
     // ── 200, ET SURTOUT PAS 502 (31 août 2026) ──
     //

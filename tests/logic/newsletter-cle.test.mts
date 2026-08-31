@@ -43,7 +43,7 @@ test("la cle du compte proprietaire retombe sur le .env", () => {
     /process\.env\.SYSTEME_IO_API_KEY/,
     "une cle posee dans le .env doit etre lue par le chemin qui pose les etiquettes",
   );
-  assert.match(TAG, /async function cleDuProprietaire\(/);
+  assert.match(TAG, /async function clesDuProprietaire\(/);
 });
 
 test("le repli .env n'est PAS dans resolveApiKey, et c'est capital", () => {
@@ -83,7 +83,7 @@ test("un doublon de profil ne se lit pas comme une absence", () => {
   // `.maybeSingle()` ECHOUE quand deux lignes matchent, et l'erreur
   // etait ignoree : deux profils avec la meme adresse rendaient
   // "aucun admin", ce qui est faux et indiagnosticable.
-  const bloc = TAG.slice(TAG.indexOf("async function idProprietaire"), TAG.indexOf("async function cleDuProprietaire"));
+  const bloc = TAG.slice(TAG.indexOf("async function idProprietaire"), TAG.indexOf("async function clesDuProprietaire"));
   assert.doesNotMatch(bloc, /maybeSingle/, "on lit une liste bornee, pas un maybeSingle");
   assert.match(bloc, /\.limit\(1\)/);
   assert.match(bloc, /if \(error\)/, "l'erreur de lecture doit etre vue, jamais avalee");
@@ -117,7 +117,7 @@ test("l'admin se retrouve AUSSI dans auth.users, pas seulement dans profiles", (
   // compte existe et porte la cle.
   const bloc = TAG.slice(
     TAG.indexOf("async function idProprietaire"),
-    TAG.indexOf("async function cleDuProprietaire"),
+    TAG.indexOf("async function clesDuProprietaire"),
   );
   assert.match(bloc, /auth\.admin\.listUsers/, "auth.users est la seule source sure d'une adresse");
   assert.match(bloc, /return idProprietaireViaAuth\(\)/, "le repli doit etre BRANCHE, pas seulement ecrit");
@@ -127,8 +127,38 @@ test("l'admin se retrouve AUSSI dans auth.users, pas seulement dans profiles", (
 test("la lecture de auth.users compare les DEUX adresses admin", () => {
   const bloc = TAG.slice(
     TAG.indexOf("async function idProprietaireViaAuth"),
-    TAG.indexOf("async function cleDuProprietaire"),
+    TAG.indexOf("async function clesDuProprietaire"),
   );
   assert.match(bloc, /ADMIN_EMAILS\.map/, "une seule adresse cherchee rejouerait le bug d'origine");
   assert.match(bloc, /toLowerCase\(\)/, "les adresses de auth.users ne sont pas normalisees");
+});
+
+test("les deux cles sont ESSAYEES, on n'arbitre pas entre elles", () => {
+  // Bene a une cle dans son compte Tiquiz ET une dans le .env, et elle
+  // a dit de la seconde qu'elle est "fonctionnelle (pas celle de mon
+  // compte tiquiz utilisateur)". Choisir un ordre definitif serait un
+  // pari dans les deux sens : le .env fait gagner une valeur perimee
+  // le jour ou elle change sa cle dans l'ecran Parametres, la base est
+  // ce qui bloquait. On essaie, et un REFUS (401/403) passe a la
+  // suivante.
+  assert.match(TAG, /for \(const candidate of cle\.cles\)/);
+  assert.match(TAG, /function cleRejetee\(status: number\)/);
+  assert.match(TAG, /status === 401 \|\| status === 403/);
+});
+
+test("une cle refusee ne se lit pas comme un contact impossible", () => {
+  // C'est le defaut que ce fichier existe pour corriger, une couche
+  // plus bas : un 401 rendait `null` sur la recherche comme sur la
+  // creation, et les deux se lisaient "creation refusee". Bene partait
+  // alors chercher du cote du contact alors que la cle etait rejetee.
+  assert.match(TAG, /\| "cle_refusee"/);
+  assert.match(TAG, /toutesRefusees \? "cle_refusee" : "contact_impossible"/);
+  // Et la raison doit etre NOMMEE dans le journal de la route, sinon
+  // elle n'aide personne.
+  assert.match(ROUTE, /cle_refusee = /);
+});
+
+test("la meme cle n'est jamais essayee deux fois", () => {
+  // Sinon le journal dirait "deux cles refusees" pour une seule.
+  assert.match(TAG, /!cles\.some\(\(c\) => c\.apiKey === duFichier\)/);
 });
