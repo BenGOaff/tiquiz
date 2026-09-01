@@ -5,6 +5,7 @@ import Providers from "@/components/Providers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { RTL_LOCALES, SUPPORTED_LOCALES } from "@/i18n/config";
+import { codeVerificationPinterest } from "@/lib/site/pinterest";
 import { resolvePublicUrl } from "@/lib/authLinks";
 import { headers } from "next/headers";
 import GoogleAnalytics from "@/components/analytics/GoogleAnalytics";
@@ -82,6 +83,15 @@ export async function generateMetadata(): Promise<Metadata> {
     icons: {
       icon: "/favicon.ico",
     },
+    // LA REVENDICATION DU DOMAINE CHEZ PINTEREST (Béné, 1er septembre).
+    //
+    // Elle met son nom et sa photo sur chaque épingle qui vient de
+    // tiquiz.fr, y compris celles épinglées par quelqu'un d'autre.
+    // Absente ou illisible, la balise ne sort pas : une balise fausse
+    // fait échouer la revendication en silence.
+    ...(codeVerificationPinterest()
+      ? { other: { "p:domain_verify": codeVerificationPinterest()! } }
+      : {}),
   };
 }
 

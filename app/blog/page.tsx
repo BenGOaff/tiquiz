@@ -17,6 +17,7 @@ import { ORIGINE_BLOG, jsonLdListe } from "@/lib/blog/seo";
 import { rubriqueDe } from "@/lib/blog/rubriques";
 import CarteArticle, { jourLisible } from "@/components/site/CarteArticle";
 import PastillesRubriques from "@/components/site/PastillesRubriques";
+import { attributsEpingle } from "@/lib/blog/partage";
 
 export const dynamic = "force-static";
 export const revalidate = 3600;
@@ -24,6 +25,21 @@ export const revalidate = 3600;
 const TITRE = "Le blog Tiquiz : quiz, leads et Systeme.io";
 const DESCRIPTION =
   "Comment un quiz capte des leads qualifiés, les tague par profil et les transforme en clients. Méthodes, cas concrets et outils, sans jargon.";
+
+// L'IMAGE DE LA PAGE EST CELLE DE L'ARTICLE EN UNE.
+//
+// Béné, 1er septembre 2026 : "le format des images ne me permet pas de
+// les partager sur pinterest (liste des articles, hub ...)".
+//
+// Mesuré sur la production avant de corriger : `/blog` ne déclarait
+// AUCUNE `og:image`. Ce n'était donc pas un problème de format, c'était
+// qu'il n'y avait rien à prendre : Pinterest, LinkedIn et Facebook
+// partageaient le sommaire du blog sans le moindre visuel.
+//
+// On ne DESSINE pas une image pour ça : on prend celle que la page
+// montre déjà en haut, la couverture de l'article en une. Elle est
+// vraie, elle change avec le blog, et personne n'a à la maintenir.
+const COUVERTURE_UNE = listerArticles()[0]?.couverture ?? null;
 
 export const metadata: Metadata = {
   title: TITRE,
@@ -36,8 +52,16 @@ export const metadata: Metadata = {
     url: `${ORIGINE_BLOG}/blog`,
     siteName: "Tiquiz",
     locale: "fr_FR",
+    ...(COUVERTURE_UNE
+      ? { images: [{ url: `${ORIGINE_BLOG}${COUVERTURE_UNE}`, width: 1200, height: 675 }] }
+      : {}),
   },
-  twitter: { card: "summary_large_image", title: TITRE, description: DESCRIPTION },
+  twitter: {
+    card: "summary_large_image",
+    title: TITRE,
+    description: DESCRIPTION,
+    ...(COUVERTURE_UNE ? { images: [`${ORIGINE_BLOG}${COUVERTURE_UNE}`] } : {}),
+  },
 };
 
 export default function BlogIndex() {
@@ -95,6 +119,7 @@ export default function BlogIndex() {
                       width={1200}
                       height={675}
                       fetchPriority="high"
+                      {...attributsEpingle(une)}
                     />
                   </div>
                 ) : null}

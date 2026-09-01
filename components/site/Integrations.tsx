@@ -76,6 +76,7 @@ export function Capture({
   hauteur,
   legende,
   premiere = false,
+  epingle,
 }: {
   src: string;
   alt: string;
@@ -83,6 +84,13 @@ export function Capture({
   hauteur: number;
   legende?: string;
   premiere?: boolean;
+  /**
+   * Les attributs `data-pin-*` de la page, quand elle a une épingle
+   * verticale. Une capture en 16/9 ne circule pas dans un flux
+   * Pinterest : c'est ce que ces attributs servent à corriger, en
+   * désignant l'image 1000 x 1500 à sa place.
+   */
+  epingle?: Record<string, string>;
 }) {
   return (
     <figure className="tq-lire mt-8">
@@ -95,6 +103,7 @@ export function Capture({
         loading={premiere ? "eager" : "lazy"}
         decoding="async"
         className="w-full rounded-xl border border-[var(--tq-bord)]"
+        {...(epingle ?? {})}
       />
       {legende ? <figcaption className="tq-doux mt-3 text-sm">{legende}</figcaption> : null}
     </figure>

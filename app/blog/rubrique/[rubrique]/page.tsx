@@ -36,6 +36,14 @@ export async function generateMetadata({
   const r = trouverRubrique(rubrique);
   if (!r) return {};
   const titre = `${r.libelle} : les articles Tiquiz`;
+  // L'IMAGE DE LA RUBRIQUE EST CELLE DE SON PREMIER ARTICLE.
+  //
+  // Comme `/blog`, ces pages ne déclaraient AUCUNE `og:image` (mesuré
+  // sur la production le 1er septembre) : partagées, elles sortaient
+  // nues, et Pinterest n'avait rien à épingler. On prend le visuel que
+  // la page affiche déjà en haut, jamais une image dessinée pour
+  // l'occasion.
+  const couverture = articlesDeLaRubrique(r.id)[0]?.couverture ?? null;
   return {
     title: titre,
     description: r.chapeau,
@@ -47,6 +55,15 @@ export async function generateMetadata({
       url: `${ORIGINE_BLOG}/blog/rubrique/${r.id}`,
       siteName: "Tiquiz",
       locale: "fr_FR",
+      ...(couverture
+        ? { images: [{ url: `${ORIGINE_BLOG}${couverture}`, width: 1200, height: 675 }] }
+        : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: titre,
+      description: r.chapeau,
+      ...(couverture ? { images: [`${ORIGINE_BLOG}${couverture}`] } : {}),
     },
   };
 }
