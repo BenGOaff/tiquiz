@@ -9,14 +9,14 @@
 // C'est la bonne décision, et elle vaut plus que du confort. Aujourd'hui
 // ses automatisations, ses séquences d'emails et ses segments sont
 // construits sur ces tags. Le jour où un client paie par NOTRE bon de
-// commande, s'il n'est pas étiqueté comme les autres, il sort de tous
+// commande, s'il n'est pas taggé comme les autres, il sort de tous
 // ses scénarios sans que rien ne le signale.
 //
 // -- RELEVÉ DANS SON COMPTE, PAS INVENTÉ -------------------------------
 //
 // Les noms ci dessous ont été LUS dans son compte Systeme.io le 22 août
 // 2026. Un tag inventé serait créé en double à la première vente, et sa
-// liste de contacts porterait deux étiquettes qui veulent dire la même
+// liste de contacts porterait deux tags qui veulent dire la même
 // chose : exactement le genre de dégât silencieux qu'on ne remarque que
 // trois mois plus tard, en se demandant pourquoi une séquence ne part
 // plus.
@@ -36,7 +36,7 @@ import type { TiquizPlan } from "./webhookInference";
  * Relevé le 22 août 2026. Les variantes `-us` existent aussi dans son
  * compte (`tiquiz-mensuel-us`...) : elles ne sont PAS ici parce que rien
  * dans nos données ne dit aujourd'hui qu'une vente est américaine. Les
- * poser au flair étiquetterait des clients français en `-us`.
+ * poser au flair tagrait des clients français en `-us`.
  */
 export const PLAN_TO_TAG: Record<TiquizPlan, string> = {
   free: "tiquiz-free",
@@ -53,7 +53,7 @@ export const PLAN_TO_TAG: Record<TiquizPlan, string> = {
  *
  * Sert au CONTRÔLE : pour comparer "qui est marqué payant chez
  * Systeme.io" à "qui est payant chez nous", il faut connaître les
- * étiquettes qu'on ne pose pas soi même.
+ * tags qu'on ne pose pas soi même.
  */
 export const TAGS_TIQUIZ = [
   "tiquiz-free",

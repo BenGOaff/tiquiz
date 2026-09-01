@@ -11,7 +11,7 @@
 // chez nous ne créait aucun contact chez eux, donc la personne sortait
 // de toutes les séquences email, en silence. Ce motif a disparu le
 // 25 août : `POST /api/auth/signup` crée le compte, rattache l'affiliée
-// à vie, ET crée le contact chez Systeme.io avec son étiquette.
+// à vie, ET crée le contact chez Systeme.io avec son tag.
 //
 // -- ET ON NOMME LA PERSONNE QUI ENVOIE (Béné, 27 août 2026) ----------
 //
@@ -30,10 +30,10 @@
 // -- CE QUI RESTE À FAIRE CHEZ SYSTEME.IO, ET CE N'EST PAS DU CODE ----
 //
 // Vérifié dans son compte le 27 août : ses 51 règles d'automatisation
-// sont TOUTES déclenchées par un formulaire, AUCUNE par une étiquette.
+// sont TOUTES déclenchées par un formulaire, AUCUNE par un tag.
 // Poser `tiquiz-free` ne déclenche donc rien. Il faut une règle
-// "étiquette tiquiz-free ajoutée -> inscrire à la campagne Tiquiz free",
-// sinon le contact est créé, étiqueté, et il ne reçoit rien.
+// "tag tiquiz-free ajoutée -> inscrire à la campagne Tiquiz free",
+// sinon le contact est créé, taggé, et il ne reçoit rien.
 
 import type { Metadata } from "next";
 import { cookies } from "next/headers";

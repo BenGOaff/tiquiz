@@ -439,7 +439,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
   // L'onglet Automatisation, comme dans l'éditeur de quiz. Un sondage
   // n'a pas de profil : ce sont le tag de capture et les tags par
-  // RÉPONSE qui étiquettent, et le plan ne montre que ceux là.
+  // RÉPONSE qui tagnt, et le plan ne montre que ceux là.
   const planAutomatisation = useMemo(
     () =>
       construirePlanAutomatisation(

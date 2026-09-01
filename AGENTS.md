@@ -1992,11 +1992,11 @@ Trois choses doivent suivre un paiement. Une était là, deux manquaient.
    l'autre app. C'est exactement le reproche du 22 août ("je reçois les
    trucs tipote"). On génère le jeton et on envoie NOTRE email.
    **INTERDIT : `signInWithOtp` dans un chemin qui envoie un email.**
-3. **L'étiquette Systeme.io n'était pas posée.** Ses automatisations sont
-   bâties dessus : un client payé chez nous et non étiqueté sort de
+3. **Le tag Systeme.io n'était pas posée.** Ses automatisations sont
+   bâties dessus : un client payé chez nous et non taggé sort de
    toutes ses séquences sans que rien ne le signale. `poserTagAchat`
    utilise SA clé, celle de ses Paramètres (`resolveApiKey`), et ne crée
-   JAMAIS une étiquette manquante : une étiquette créée par nous avec une
+   JAMAIS un tag manquante : un tag créée par nous avec une
    faute se retrouverait en double dans sa liste.
 
 Les deux sont best-effort et POSTÉRIEURES au plan : "il a payé le client,
@@ -2288,7 +2288,7 @@ surveillerait un écran qui ne bouge plus.
 
 **`product` est validé, jamais écrit tel quel** (`lib/support/produit.ts`,
 alias `formaquiz` et `quizing` acceptés). Valeur inconnue -> `tiquiz`, le
-défaut de la colonne : un ticket mal étiqueté reste lisible, un ticket
+défaut de la colonne : un ticket mal taggé reste lisible, un ticket
 refusé est une cliente sans réponse.
 
 **Et l'écriture se replie sur l'ancienne forme** si la migration n'est
@@ -3793,7 +3793,7 @@ maintenant devant.
 Test : `tests/logic/commission-ht-paypal.test.mts`, dans les deux dépôts.
 
 
-## Poser une étiquette chez Systeme.io ne déclenche RIEN (mesuré le 31 août 2026)
+## Poser un tag chez Systeme.io ne déclenche RIEN (mesuré le 31 août 2026)
 
 Béné : "tout bascule sur le nouveau système et les nouvelles pages,
 nouveau blog, nouveaux domaines, il faut bien que ce soit ça qui
@@ -3832,7 +3832,7 @@ fait deux fois, le 31 août matin sur `tiquiz-free` et le soir sur
 et abonne à une campagne. Poser le tag `newsletter` SUFFIT donc à
 inscrire quelqu'un à Pépites 365.
 
-**Ce qui reste INCONNU :** si `tiquiz-free` et les étiquettes de vente
+**Ce qui reste INCONNU :** si `tiquiz-free` et les tags de vente
 ont la leur. **Le seul endroit où ça se vérifie est son tableau de bord**
 (https://systeme.io/dashboard/automation-rules), pas l'API. Ne plus
 jamais écrire ici qu'une règle n'existe pas sur la foi de cet outil.
@@ -3845,7 +3845,7 @@ jamais écrire ici qu'une règle n'existe pas sur la foi de cet outil.
   rien. L'AGENTS.md de Tipote affirmait "ses séquences email partent
   comme avant" : c'était faux, et c'est corrigé là-bas.
 - **`poserTagAchat` après une vente sur notre bon de commande** : même
-  chose. L'étiquette est posée, aucune séquence ne part.
+  chose. Le tag est posée, aucune séquence ne part.
 
 Le code d'`app/api/auth/signup/route.ts` le disait déjà, depuis le
 25 août : "aucune règle n'écoute encore `tiquiz-free`". C'est la
@@ -3861,12 +3861,12 @@ fréquenté du site.
 
 **Le vrai déblocage est chez Béné, en deux minutes** : créer une règle
 d'automatisation avec le déclencheur "tag ajouté" sur `tiquiz-free`
-(puis sur les étiquettes de vente), qui inscrit à la campagne. Une fois
+(puis sur les tags de vente), qui inscrit à la campagne. Une fois
 qu'elle existe, le bouton bascule et tout marche des deux côtés.
 
 **Règle générale : un tag posé par l'API n'est pas une séquence
 déclenchée.** Les deux se ressemblent et ne sont pas la même chose. Ce
-dépôt a écrit trois fois "son workflow écoute cette étiquette" sans
+dépôt a écrit trois fois "son workflow écoute ce tag" sans
 l'avoir vérifié une seule fois. C'est la leçon d'Ivan (7 août), et celle
 des événements Stripe manquants (31 août) : **écrire le code n'est pas
 la dernière étape, vérifier que le fournisseur envoie ou écoute quelque
@@ -3958,7 +3958,7 @@ console (des `preload ... not used`) est du bruit sans rapport.
 
 `poserTagParNom` rendait un booléen. Un `false` pouvait vouloir dire :
 pas de compte administrateur, aucune clé Systeme.io connectée, contact
-impossible à créer, étiquette introuvable, ou pose refusée. **Un
+impossible à créer, tag introuvable, ou pose refusée. **Un
 booléen ne dit pas où chercher**, et le journal disait "vérifier la clé
 API et l'existence du tag", c'est à dire DEUX pistes sur cinq.
 
@@ -4069,22 +4069,22 @@ qui bloquait. **On les essaie**, un refus passe à la suivante, et le
 journal dit laquelle a été acceptée. Jamais deux fois la même valeur :
 sinon le journal dirait "deux clés refusées" pour une seule.
 
-### 3. ET L'ÉTIQUETTE ÉTAIT HORS DE PORTÉE DEPUIS LE DÉBUT
+### 3. ET LE TAG ÉTAIT HORS DE PORTÉE DEPUIS LE DÉBUT
 
 C'est la trouvaille qui compte, et elle est MESURÉE dans son compte, pas
 déduite :
 
 | Question | Réponse |
 |---|---|
-| combien d'étiquettes | plus de 100 (`hasMore: true`) |
+| combien de tags | plus de 100 (`hasMore: true`) |
 | les 100 plus récentes s'arrêtent quand | **24 mars 2025** |
 | quand a été créée `newsletter` | **30 juillet 2022** |
 | quand ont été créées `tiquiz-free`, `tiquiz-mensuel`... | avril 2026 |
 
 `trouverTag` demandait `?limit=200`. **Le maximum accepté par
-Systeme.io est 100.** L'étiquette `newsletter` était donc INTROUVABLE,
+Systeme.io est 100.** Le tag `newsletter` était donc INTROUVABLE,
 et l'inscription ne pouvait pas aboutir **même avec une clé
-parfaitement valide**. Les étiquettes de VENTE, elles, sont dans la
+parfaitement valide**. Les tags de VENTE, elles, sont dans la
 première page : c'est exactement pour ça que le tagging des achats
 marchait et que celui de la newsletter n'avait jamais eu la moindre
 chance.
@@ -4101,7 +4101,7 @@ Ici elle le disait (`hasMore`), et personne ne le lisait.
 Les trois causes ont été trouvées en INTERROGEANT son compte Systeme.io,
 pas en relisant le code : le contact de test n'existait pas, le même
 corps de création (`{email, locale}`) était accepté par l'API, la liste
-des étiquettes s'arrêtait en mars 2025. Trois mesures, trois minutes.
+des tags s'arrêtait en mars 2025. Trois mesures, trois minutes.
 
 Le contact créé pour ce test a été supprimé après.
 
@@ -4612,7 +4612,7 @@ réel** qui explique selon le bonus offert, le CTA, les profils de
 résultats."
 
 **CE QUE ÇA RÉPARE, ET C'EST LE TROU LE PLUS CHER DU PRODUIT.** Tiquiz
-POSE des étiquettes sur le contact Systeme.io. Mais poser une étiquette
+POSE des tags sur le contact Systeme.io. Mais poser un tag
 ne déclenche RIEN tant qu'aucune règle d'automatisation ne l'écoute, et
 ces règles se créent à la main dans leur tableau de bord (mesuré le
 31 août). Une créatrice met son quiz en ligne, capte 40 adresses, et il
@@ -4621,11 +4621,11 @@ en conclut que Tiquiz ne sert à rien.
 
 **Règle : `lib/automatisation/planSysteme.ts` décide, et il n'annonce que
 ce qui part VRAIMENT.** C'est tout l'enjeu du "pas générique" : les six
-familles d'étiquettes n'ont pas les mêmes conditions, et une liste qui
+familles de tags n'ont pas les mêmes conditions, et une liste qui
 les récite toutes enverrait la créatrice construire des workflows sur des
-étiquettes qu'elle n'aura jamais.
+tags qu'elle n'aura jamais.
 
-| Étiquette | Part quand |
+| Tag | Part quand |
 |---|---|
 | profil (`sio_tag_names`) | QUIZ seulement, un sondage n'a pas de résultat |
 | `sio_capture_tag` | SONDAGE seulement |
@@ -4643,20 +4643,20 @@ moment de la réponse, à partir des libellés de la créatrice. L'écran
 montre donc la liste RÉELLE des valeurs possibles, calculée par
 `tagsDeScorePossibles`. Et `slugifyAxisLabel` n'accepte que `[a-z0-9_]` :
 "En route" donne `score-en_route`, avec un SOULIGNÉ. Deviner un tiret
-ferait créer une règle sur une étiquette qui n'arrive jamais.
+ferait créer une règle sur un tag qui n'arrive jamais.
 
-**Le nom du workflow proposé EST le nom de l'étiquette.** Deux noms
+**Le nom du workflow proposé EST le nom de le tag.** Deux noms
 différents pour la même chose obligent à faire la correspondance de tête
 à chaque fois qu'on relit sa liste de workflows.
 
 **Le module ne rend AUCUNE phrase**, seulement des données (le type
-d'étape, l'étiquette exacte, le contexte) : l'interface existe en 7
-langues, et c'est l'écran qui écrit. Le nom de l'étiquette est
+d'étape, le tag exacte, le contexte) : l'interface existe en 7
+langues, et c'est l'écran qui écrit. Le nom de le tag est
 CLIQUABLE-COPIABLE : c'est le seul endroit où une faute de frappe casse
 tout en silence.
 
 **Ce qui manque est dit à part, et le bloquant passe devant** : sans clé
-Systeme.io reliée, aucun contact n'est créé et aucune étiquette n'est
+Systeme.io reliée, aucun contact n'est créé et aucun tag n'est
 posée, donc tout le reste de l'écran serait un plan pour rien.
 
 **On ne réclame le tag de partage QUE si un bonus de partage est promis**
@@ -4671,5 +4671,38 @@ ignoré.
 pas l'éditeur : le garde-fou est
 `tests/logic/plan-automatisation.test.mts`.
 
-**Pas porté dans Tipote**, qui pose pourtant les mêmes étiquettes. À
+**Pas porté dans Tipote**, qui pose pourtant les mêmes tags. À
 faire si ses créatrices rencontrent le même silence.
+
+## ON DIT TAG, JAMAIS ÉTIQUETTE (Béné, 1er septembre 2026)
+
+"Ne dis jamais étiquette, nulle part, on parle bien de tag en français
+aussi. Supprime tout ce que tu appelles étiquette partout pour dire tag,
+et mets tags bordel !"
+
+**La raison est produit, pas stylistique : c'est le mot que Systeme.io
+affiche.** Son menu CRM en français dit "Tag". Une consigne qui dit
+"étiquette" envoie la créatrice chercher un mot qui n'existe pas sur son
+écran, au moment précis où elle suit une marche à suivre clic par clic.
+
+**Et ça vaut par LANGUE, pas dans l'absolu.** Vérifié sur ses captures du
+tableau de bord Systeme.io :
+
+| Langue | Ce que Systeme.io affiche | Ce qu'on écrit |
+|---|---|---|
+| français, italien, portugais, anglais | Tag | **tag** |
+| **espagnol** | Etiquetas | **etiqueta** |
+
+L'espagnol est la seule exception, et elle est OBLIGATOIRE : y écrire
+"tag" rendrait la consigne fausse, puisque le bouton qu'elle doit
+cliquer s'appelle "Etiqueta añadida". L'arabe n'a pas été vérifié.
+
+**La nuance à ne pas rater : "étiquette" au sens LIBELLÉ n'est pas un
+tag.** Le libellé min/max d'une échelle, le "conversion label" de Google
+Ads, le mot affiché à la place d'un score : ce ne sont pas des tags
+Systeme.io. On y écrit **libellé**, pas "tag", sinon on rend le texte
+faux dans l'autre sens.
+
+Ça couvre aussi le CODE : un fichier `etiquetteVente.ts` et une fonction
+`poserEtiquetteAcheteur` disaient le mot interdit. Renommés en
+`tagVente.ts` et `poserTagAcheteur`.

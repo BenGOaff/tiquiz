@@ -22,7 +22,7 @@
 //
 // 1. Compléter le routage : trois plans Tiquiz en dollars existaient
 //    dans son compte et manquaient à `OFFER_TO_PLAN`. Une vente dessus
-//    ouvrait un accès par repli, donc au bon endroit, mais étiquetée au
+//    ouvrait un accès par repli, donc au bon endroit, mais taggée au
 //    mauvais palier.
 // 2. Donner un ORDRE DE GRANDEUR au montant d'une vente quand le
 //    payload ne le porte pas, ce qui est le cas aujourd'hui sur toutes

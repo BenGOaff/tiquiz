@@ -14,8 +14,8 @@
 //    reçois les trucs tipote c'est pas pro du tout !!" Le tout premier
 //    message qu'une cliente reçoit après avoir payé ne peut pas porter
 //    le nom d'un autre produit.
-// 2. L'étiquette Systeme.io n'était pas posée. Ses automatisations sont
-//    bâties dessus : un client non étiqueté sort de toutes ses séquences
+// 2. Le tag Systeme.io n'était pas posée. Ses automatisations sont
+//    bâties dessus : un client non taggé sort de toutes ses séquences
 //    sans que rien ne le signale.
 // 3. La facture, elle, était déjà là (`invoice_creation` chez Stripe).
 //

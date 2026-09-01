@@ -6,7 +6,7 @@
 // ça je ne suis pas perdue."
 //
 // Ses automatisations et ses séquences d'emails sont bâties sur ces
-// tags. Un client payé par notre bon de commande et mal étiqueté sort de
+// tags. Un client payé par notre bon de commande et mal taggé sort de
 // tous ses scénarios sans que rien ne le signale.
 //
 // Et le contrôle d'écart, en bas de ce fichier, est celui qui aurait
@@ -26,7 +26,7 @@ import {
 
 test("les tags sont ceux qui existent VRAIMENT dans son compte", () => {
   // Relevés le 22 août 2026. Un tag inventé serait créé en double à la
-  // première vente, et sa liste porterait deux étiquettes qui veulent
+  // première vente, et sa liste porterait deux tags qui veulent
   // dire la même chose.
   for (const tag of Object.values(PLAN_TO_TAG)) {
     assert.ok(

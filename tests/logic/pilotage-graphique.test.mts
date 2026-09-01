@@ -210,7 +210,7 @@ test("TRENTE DATES NE S'ÉCRIVENT PAS TOUTES : une sur n, bornes comprises", () 
   assert.equal(v[v.length - 1], 29, "la derniere dit ou il s'arrete");
 });
 
-test("peu de colonnes : toutes les étiquettes s'écrivent", () => {
+test("peu de colonnes : toutes les tags s'écrivent", () => {
   assert.deepEqual(etiquettesVisibles(6, 900), [0, 1, 2, 3, 4, 5]);
   assert.deepEqual(etiquettesVisibles(0, 900), []);
 });

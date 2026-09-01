@@ -21,7 +21,7 @@ import {
 
 const CLE = { sio_api_key_id: "cle-1" };
 
-// ── Un QUIZ : ce sont les profils qui étiquettent ────────────────────
+// ── Un QUIZ : ce sont les profils qui tagnt ────────────────────
 
 test("un workflow par profil, nommé par le tag de la créatrice", () => {
   const plan = construirePlanAutomatisation({ ...CLE, mode: "quiz" }, [
@@ -69,7 +69,7 @@ test("un quiz n'annonce JAMAIS le tag de capture", () => {
 
 // ── Un SONDAGE : la capture et les réponses ──────────────────────────
 
-test("un sondage étiquette par la capture et par les réponses", () => {
+test("un sondage tag par la capture et par les réponses", () => {
   const plan = construirePlanAutomatisation(
     { ...CLE, mode: "survey", sio_capture_tag: "sondage-fait" },
     [],

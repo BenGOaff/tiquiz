@@ -97,7 +97,7 @@ export interface EtapeAutomatisation {
 export type TypeManque =
   /** Aucune clé Systeme.io reliée : AUCUN tag ne part, sur rien. */
   | "cle-api"
-  /** Un profil sans tag : ses répondants ne sont étiquetés nulle part. */
+  /** Un profil sans tag : ses répondants ne sont taggés nulle part. */
   | "tag-profil"
   /** Le partage est proposé mais aucun tag ne le marque. */
   | "tag-partage"
@@ -236,7 +236,7 @@ export function construirePlanAutomatisation(
       });
     });
   } else {
-    // UN QUIZ : ce sont les profils qui étiquettent, jamais le tag de
+    // UN QUIZ : ce sont les profils qui tagnt, jamais le tag de
     // capture (il n'est appliqué que sur les sondages).
     resultats.forEach((r, i) => {
       const titre = propre(r.title);

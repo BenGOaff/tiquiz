@@ -5,28 +5,28 @@
 // -- POURQUOI CETTE PORTE EXISTE (audit du 31 août 2026) ---------------
 //
 // Le bon de commande de l'ATELIER (`atelierduquiz.fr/commande`) n'a
-// jamais posé la moindre étiquette : son propre fichier le disait, "le
+// jamais posé la moindre tag : son propre fichier le disait, "le
 // tag Systeme.io n'est pas encore branché". L'acheteur recevait son
 // accès et sa facture, et sortait de TOUTES les séquences email de
 // Béné, sans que rien ne le signale.
 //
-// Béné, 31 août : l'étiquette d'un acheteur de l'Atelier est
+// Béné, 31 août : le tag d'un acheteur de l'Atelier est
 // `atelier-clients`, celle que portent déjà ses clients actuels.
 //
 // -- POURQUOI ICI ET PAS LÀ-BAS ----------------------------------------
 //
 // Tout ce qui sait parler à Systeme.io vit dans ce dépôt : la clé du
 // compte propriétaire, la création du contact avec ses champs, la
-// recherche paginée d'étiquette. Le recopier dans l'Atelier donnerait
+// recherche paginée de tag. Le recopier dans l'Atelier donnerait
 // deux implémentations qui divergent (ce dépôt l'a payé quatre fois) et
 // une deuxième clé à maintenir.
 //
 // -- L'ÉTIQUETTE N'EST JAMAIS CRÉÉE ------------------------------------
 //
-// `poserTagParNomDetaille` refuse une étiquette inconnue au lieu de la
+// `poserTagParNomDetaille` refuse un tag inconnue au lieu de la
 // créer. C'est le garde-fou qui rend cette porte sûre : même si le nom
 // envoyé était fautif, on ne peut pas polluer sa liste avec une
-// étiquette en double. On répond `tag_inconnu`, et ça se lit.
+// tag en double. On répond `tag_inconnu`, et ça se lit.
 
 import { NextRequest, NextResponse } from "next/server";
 

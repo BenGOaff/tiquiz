@@ -6,8 +6,8 @@
 // via notre système comme ça je ne suis pas perdue."
 //
 // Ses automatisations, ses séquences d'emails et ses segments sont bâtis
-// sur ces étiquettes. Un client payé par NOTRE bon de commande et non
-// étiqueté sort de tous ses scénarios sans que rien ne le signale : il
+// sur ces tags. Un client payé par NOTRE bon de commande et non
+// taggé sort de tous ses scénarios sans que rien ne le signale : il
 // ne reçoit pas la séquence d'accueil, il n'apparaît pas dans ses
 // filtres, et personne ne s'en aperçoit avant des semaines.
 //
@@ -30,11 +30,11 @@
 //
 // La clé utilisée est celle de la PROPRIÉTAIRE du service, c'est à dire
 // le compte administrateur : c'est SON compte Systeme.io qui porte les
-// contacts et les étiquettes de Tiquiz.
+// contacts et les tags de Tiquiz.
 //
 // -- BEST-EFFORT, ET JAMAIS BLOQUANT -----------------------------------
 //
-// Cette fonction ne jette jamais et rend un booléen. Une étiquette qui
+// Cette fonction ne jette jamais et rend un booléen. Un tag qui
 // échoue ne doit PAS priver quelqu'un de l'accès qu'il vient de payer :
 // c'est la règle du 7 août, "il a payé le client, il doit recevoir ses
 // accès, point barre".
@@ -227,7 +227,7 @@ async function trouverContact(apiKey: string, email: string): Promise<number | n
   if (!res.ok || !Array.isArray(res.data?.items)) return null;
   // On ne fait PAS confiance au filtre : selon les API, `?email=` peut
   // être ignoré et rendre la première page complète. On revérifie
-  // l'adresse nous mêmes, sinon on étiquetterait un inconnu.
+  // l'adresse nous mêmes, sinon on tagrait un inconnu.
   const trouve = res.data!.items!.find(
     (c) => String(c?.email ?? "").trim().toLowerCase() === email,
   );
@@ -296,22 +296,22 @@ async function assurerContact(
 }
 
 /**
- * L'identifiant d'une étiquette par son nom, ou `null`.
+ * L'identifiant d'un tag par son nom, ou `null`.
  *
  * -- ON PAGINE, ET C'ÉTAIT UNE BOMBE À RETARDEMENT (31 août 2026) -----
  *
  * Cette fonction demandait `?limit=200`. **Le maximum accepté par
  * Systeme.io est 100** : on ne voyait donc, au mieux, que les 100
- * étiquettes les plus RÉCENTES.
+ * tags les plus RÉCENTES.
  *
  * MESURÉ dans son compte le 31 août 2026, pas déduit : les 100 plus
  * récentes s'arrêtent au **24 mars 2025**, et `hasMore` vaut `true`.
- * Or l'étiquette `newsletter` date du **30 juillet 2022**.
+ * Or le tag `newsletter` date du **30 juillet 2022**.
  *
  * **Elle était donc HORS DE PORTÉE, et l'inscription à la newsletter
  * ne pouvait pas aboutir**, même avec une clé parfaitement valide :
- * `tag_inconnu` sur une étiquette qui existe depuis quatre ans. Les
- * étiquettes de vente (`tiquiz-free`, `tiquiz-mensuel`... avril 2026)
+ * `tag_inconnu` sur un tag qui existe depuis quatre ans. Les
+ * tags de vente (`tiquiz-free`, `tiquiz-mensuel`... avril 2026)
  * sont dans la page, elles : c'est pour ça que le tagging des ventes
  * marchait et que celui-là n'avait jamais eu la moindre chance.
  *
@@ -351,18 +351,18 @@ async function trouverTag(apiKey: string, nom: string): Promise<number | null> {
 }
 
 /**
- * Pose l'étiquette du palier acheté sur le contact.
+ * Pose le tag du palier acheté sur le contact.
  *
  * Le contact est CRÉÉ s'il n'existe pas : voir `assurerContact`. Sans
  * ça, un acheteur venu de notre bon de commande n'entrait dans aucune
  * séquence email, alors que les emails restent chez Systeme.io.
  *
  * Rend `false` sans rien casser quand : aucune clé n'est connectée, le
- * palier n'a pas d'étiquette connue, le contact n'a pas pu être créé,
- * ou l'étiquette n'existe pas.
+ * palier n'a pas de tag connue, le contact n'a pas pu être créé,
+ * ou le tag n'existe pas.
  *
- * **On ne CRÉE jamais l'étiquette manquante**, et c'est délibéré : une
- * étiquette créée par nous avec une faute de frappe se retrouverait en
+ * **On ne CRÉE jamais le tag manquante**, et c'est délibéré : une
+ * tag créée par nous avec une faute de frappe se retrouverait en
  * double dans sa liste, et ses automatisations continueraient de pointer
  * l'ancienne. Mieux vaut ne rien poser et le dire.
  */
@@ -392,11 +392,11 @@ export async function poserTagPlan(
  * Sortie de `poserTagPlan` le 30 août 2026, pour l'inscription à la
  * newsletter : son tag (`newsletter`) n'est le tag d'aucun palier, mais
  * le GESTE est exactement le même (trouver ou créer le contact, résoudre
- * l'étiquette, la poser). Recopier ces trois étapes dans une deuxième
+ * le tag, la poser). Recopier ces trois étapes dans une deuxième
  * route aurait donné deux implémentations qui divergent, ce que ce dépôt
  * a déjà payé quatre fois.
  *
- * L'étiquette n'est JAMAIS créée si elle n'existe pas : voir plus haut.
+ * Le tag n'est JAMAIS créée si elle n'existe pas : voir plus haut.
  */
 /**
  * POURQUOI LA POSE A ÉCHOUÉ.
@@ -404,7 +404,7 @@ export async function poserTagPlan(
  * PANNE DU 31 AOÛT 2026 : le formulaire de la newsletter répondait 502
  * et Béné n'avait aucun moyen de savoir POURQUOI. Cette fonction
  * écrasait CINQ causes distinctes en un seul `false` : pas de compte
- * admin, pas de clé, contact impossible, étiquette inconnue, pose
+ * admin, pas de clé, contact impossible, tag inconnue, pose
  * refusée. Un booléen ne dit pas où chercher.
  *
  * C'est le drame du 19 août ("trois causes, un seul message : le 404
@@ -519,7 +519,7 @@ export async function poserTagParNomDetaille(
 /**
  * La même chose, en booléen.
  *
- * Gardée pour les webhooks de vente : une étiquette qui échoue ne doit
+ * Gardée pour les webhooks de vente : un tag qui échoue ne doit
  * JAMAIS priver quelqu'un de l'accès qu'il vient de payer (règle du
  * 7 août), donc ils n'ont rien à faire de la raison.
  */

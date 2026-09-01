@@ -80,7 +80,7 @@ test("un chemin hors du plan retombe sur l'accueil au lieu de rien allumer", () 
 
 test("L'ÉTAT D'UNE SECTION EST CELUI DE SON ÉCRAN, pas une case oubliée", () => {
   // Le 29 août, Ventes avait sa page construite et servie, et portait
-  // encore l'étiquette "à venir" dans le menu. Béné lit ce menu pour
+  // encore le tag "à venir" dans le menu. Béné lit ce menu pour
   // savoir où travailler : une section prête annoncée "bientôt", c'est
   // un écran qu'elle n'ouvre pas.
   //

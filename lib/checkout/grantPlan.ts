@@ -48,7 +48,7 @@ export interface GrantPlanResult {
   reason?: string;
   /** Le lien de connexion est-il parti ? */
   loginLinkSent?: boolean;
-  /** L'étiquette Systeme.io a-t-elle été posée ? */
+  /** Le tag Systeme.io a-t-elle été posée ? */
   tagPose?: boolean;
 }
 
@@ -180,10 +180,10 @@ export async function grantPlanByEmail(args: {
   // via notre système comme ça je ne suis pas perdue."
   //
   // Ses automatisations et ses séquences d'emails sont bâties sur ces
-  // étiquettes. Un client payé par NOTRE bon de commande et non étiqueté
+  // tags. Un client payé par NOTRE bon de commande et non taggé
   // sort de tous ses scénarios sans que rien ne le signale.
   //
-  // Best-effort, et APRÈS le plan : une étiquette qui échoue ne doit
+  // Best-effort, et APRÈS le plan : un tag qui échoue ne doit
   // jamais priver quelqu'un de l'accès qu'il vient de payer.
   //
   // 25 août : le contact est désormais CRÉÉ chez Systeme.io s'il n'y est
@@ -256,7 +256,7 @@ export async function grantPlanByEmail(args: {
     console.error(`[grantPlan] lien de connexion : ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  // `ok: true` même si l'email ou l'étiquette ont échoué : l'accès EST
+  // `ok: true` même si l'email ou le tag ont échoué : l'accès EST
   // ouvert. Renvoyer un échec ici ferait rejouer la vente par le
   // fournisseur alors que le paiement, lui, a bien abouti.
   return { ok: true, created, previousPlan, loginLinkSent: lienParti, tagPose };

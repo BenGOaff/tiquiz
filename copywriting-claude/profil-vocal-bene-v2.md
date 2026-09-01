@@ -215,7 +215,7 @@ Ce verdict est tombé sur une page d'accueil qui n'avait pourtant aucune faute. 
 - un encadré « en trois phrases » en haut de page ;
 - trois cartes d'offres strictement alignées, même longueur, même forme ;
 - trois chiffres dans trois cases identiques ;
-- une étiquette « Qui écrit ici » au-dessus de sa bio ;
+- un tag « Qui écrit ici » au-dessus de sa bio ;
 - des puces toutes de la même longueur ;
 - une accroche centrée avec deux boutons côte à côte.
 

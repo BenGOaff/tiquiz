@@ -459,12 +459,12 @@ Raisons : c'est flou (générer un tunnel de quelle qualité ?), et "n'importe q
 L'objectif est d'intérioriser la sensibilité de Béné, pas d'appliquer mécaniquement chaque motif. Un texte qui capture naturellement 3 tendances sera toujours meilleur qu'un texte qui en force 10 de manière artificielle.
 
 ### Guide de fréquence
-Chaque tendance documentée porte une étiquette :
+Chaque tendance documentée porte un tag :
 - **RÈGLE DURE** : Ne jamais enfreindre. (Les "Toujours" et "Jamais" ci-dessus.)
 - **TENDANCE FORTE** : Appliquer 70-80% du temps. S'en écarter occasionnellement est naturel.
 - **PRÉFÉRENCE CONTEXTUELLE** : Utile mais dépend du format et du sujet.
 
-En l'absence d'étiquette, traiter comme PRÉFÉRENCE CONTEXTUELLE.
+En l'absence de tag, traiter comme PRÉFÉRENCE CONTEXTUELLE.
 
 ### Le contexte prime sur le modèle
 Un email n'est pas un article. Un article n'est pas un post LinkedIn. Utiliser la matrice d'adaptation par format.
