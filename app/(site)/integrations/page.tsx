@@ -24,6 +24,7 @@ import type { Metadata } from "next";
 import { Capture, EnBref, Faq, FilDAriane, Logo, Tableau } from "@/components/site/Integrations";
 import { HOTE_VENTE } from "@/lib/publicHost";
 import {
+  ENFANTS_DU_HUB,
   LOGO_ZAPIER,
   OUTILS,
   OUTILS_PUBLIES,
@@ -33,7 +34,10 @@ import {
   type QuestionFaq,
 } from "@/lib/site/integrations";
 
-const TITRE = "Intégrations Systeme.io : connecter un formulaire ou un quiz";
+// 45 caractères : Google coupe autour de 60, et le suffixe " · Tiquiz"
+// posé par le gabarit du site compte dedans. Le <h1> de la page, lui,
+// ne bouge pas : c'est lui qui porte la phrase entière.
+const TITRE = "Intégrations Systeme.io : formulaires et quiz";
 const DESCRIPTION =
   "Tally, Typeform, Google Forms, Interact, Zapier : comment chaque outil se connecte à Systeme.io, ce que chaque méthode coûte, et laquelle choisir.";
 const SCHEMA_OG = `${HOTE_VENTE}/integrations/schema-connexion-systemeio-og.webp`;
@@ -79,7 +83,7 @@ const JSON_LD = {
     {
       "@type": "ItemList",
       name: "Connecter un formulaire ou un quiz à Systeme.io",
-      itemListElement: OUTILS_PUBLIES.map((o, i) => ({
+      itemListElement: ENFANTS_DU_HUB.map((o, i) => ({
         "@type": "ListItem",
         position: i + 1,
         name: `${o.nom} et Systeme.io`,
@@ -124,9 +128,9 @@ export default function HubIntegrations() {
 
         <Capture
           src="/integrations/schema-connexion-systemeio.webp"
-          alt="Tally, Typeform, Google Forms et Interact passent par Zapier ou Make pour atteindre Systeme.io, Tiquiz s'y connecte directement"
+          alt="Tally, Typeform, Google Forms, Jotform et Interact passent par Zapier, Make, n8n ou Pabbly pour atteindre Systeme.io, Tiquiz s'y connecte directement"
           largeur={1600}
-          hauteur={840}
+          hauteur={996}
           premiere
         />
       </section>
@@ -215,10 +219,7 @@ export default function HubIntegrations() {
             une page absente est un 404 depuis la page qui doit inspirer
             confiance ; ne rien dire du tout laisse croire qu'on n'a pas
             regardé ces outils. */}
-        <p className="tq-doux tq-lire mt-6 text-sm leading-relaxed">
-          La page Jotform arrive. En attendant, sa ligne du tableau ci-dessus dit déjà ce
-          qu&apos;elle demande.
-        </p>
+
       </section>
 
       <section className="tq-large mt-20">

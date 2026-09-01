@@ -110,12 +110,12 @@ export const OUTILS: readonly OutilIntegration[] = [
     resume: "S'affiche dans une page Systeme.io, mais n'envoie rien dans les contacts.",
   },
   {
-    slug: null,
+    slug: "jotform-systeme-io",
     nom: "Jotform",
     logo: { src: "/integrations/logos/jotform.webp", largeur: 505, hauteur: 96 },
     intermediaire: "Zapier ou Make",
     tagParProfil: "Non",
-    resume: "Même schéma : aucune connexion directe à Systeme.io.",
+    resume: "Il annonce une intégration Systeme.io. Son bouton ouvre Zapier.",
   },
   {
     slug: "interact-systeme-io",
@@ -151,6 +151,19 @@ export const LOGO_ZAPIER: LogoOutil = {
 
 /** Les pages enfants déjà écrites, dans l'ordre du hub. */
 export const OUTILS_PUBLIES = OUTILS.filter((o) => o.slug !== null);
+
+/**
+ * TOUTES les pages filles du hub, Zapier compris.
+ *
+ * L'`ItemList` du JSON-LD doit décrire ce que le hub contient VRAIMENT.
+ * En la construisant sur `OUTILS_PUBLIES`, elle oubliait Zapier, qui a
+ * pourtant sa page et sa carte : une liste qui annonce cinq éléments là
+ * où la page en montre six dit à Google le contraire de ce qu'il lit.
+ */
+export const ENFANTS_DU_HUB: readonly { slug: string; nom: string }[] = [
+  ...OUTILS_PUBLIES.map((o) => ({ slug: o.slug as string, nom: o.nom })),
+  { slug: "zapier-systeme-io", nom: "Zapier" },
+];
 
 /** Une question et sa réponse, affichée ET déclarée en JSON-LD. */
 export interface QuestionFaq {

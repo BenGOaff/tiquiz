@@ -117,6 +117,7 @@ export const PIED: readonly ColonnePied[] = [
       { href: "/integrations/typeform-systeme-io", libelle: "Typeform et Systeme.io" },
       { href: "/integrations/google-forms-systeme-io", libelle: "Google Forms et Systeme.io" },
       { href: "/integrations/interact-systeme-io", libelle: "Interact et Systeme.io" },
+      { href: "/integrations/jotform-systeme-io", libelle: "Jotform et Systeme.io" },
     ],
   },
   {

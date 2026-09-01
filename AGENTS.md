@@ -5319,5 +5319,94 @@ est posée à la main, et son logo vit dans `LOGO_ZAPIER`.
 `tryinteract.com.png` ne montre pas Interact, c'est le visuel Tiquiz
 "le tag se règle directement sur le profil". Placé en le REGARDANT.
 
-**Ce qui reste à écrire :** Jotform, ScoreApp, Outgrow, Riddle, Calendly
-et une page sur les tags Systeme.io.
+### Jotform, et la relecture du 1er septembre au soir
+
+**JOTFORM EST LE SEUL CAS OÙ L'INTÉGRATION EXISTE... SUR LE PAPIER**, et
+c'est ce qui rend la page utile. Trois faits, mesurés et pas recopiés :
+
+1. le bouton « Use this integration » de `jotform.com/integrations/
+   systemeio` mène à `jotform.com/build/?integration=Zapier&app=
+   systeme.io&clientID=...` (relevé sur la page en ligne) ;
+2. le schéma de LEUR page fait passer la connexion par une pastille
+   "zapier" entre Jotform et systeme.io ;
+3. l'écran Intégrations de leur constructeur ouvre un panneau **ZAPIER**
+   qui demande de connecter un compte Zapier avant de proposer ses
+   modèles.
+
+La deuxième est la plus solide des trois : elle vient d'eux et elle se
+lit sans connaître Zapier. **Et l'`alt` fourni avec la capture disait
+autre chose** (« ouvre une adresse contenant integration=Zapier », qui
+n'est pas visible sur l'image) : un texte alternatif décrit ce qu'on
+VOIT, pas ce qu'on sait.
+
+**On ne dit pas que Jotform ment.** Le raccourci fait vraiment gagner la
+configuration du Zap ; il ne fait pas gagner l'abonnement. C'est la
+règle « ne pas retirer les passages qui reconnaissent ce que les
+concurrents font mieux ».
+
+### LES TITRES : sa relecture en annonçait deux trop longs, il y en avait quatre
+
+Mesuré, suffixe « · Tiquiz » compris (le gabarit du site l'ajoute) :
+
+| Page | Avant | Après |
+|---|---|---|
+| le hub | 69 | **54** |
+| Interact | 67 | **56** |
+| Typeform | 63 | **53** |
+| Zapier | 61 | 61, laissé tel quel |
+
+Les deux premiers étaient dans sa liste. Typeform n'y était pas et
+dépassait quand même : "Connecter" saute plutôt que le mot clé, et la
+forme rejoint celle des titres Interact et Jotform.
+
+**LA BORNE DU TEST EST À 62, PAS À 60, ET LA RAISON EST ÉCRITE À CÔTÉ.**
+Le titre Zapier tombe à 61, et "autour de 60" n'est pas un couperet :
+raccourcir de deux caractères une phrase validée pour gagner un pixel
+serait une réécriture, pas une correction. Le contrôle attrape ce qui
+dépasse VRAIMENT.
+
+### Le blog ne pointait PAS vers le hub, et il le contredisait
+
+La consigne demandait des liens entrants « dans le CORPS des deux
+articles cités », et le document de suivi les annonçait comme posés.
+**Mesuré : aucun des onze articles ne contenait la chaîne
+`/integrations`.** Une page liée seulement depuis le pied de page dépend
+de la patience d'un robot.
+
+**Et le paragraphe où il fallait poser le lien était faux trois fois**
+(`comment-creer-quiz-systeme-io`) : « Typeform Plus à 50 €/mois, plus
+Zapier à 217 €/mois. Total : 717 €/mois. Sur 5 ans, près de 5 000 €. »
+
+- **50 + 217 = 267**, pas 717 : l'addition était fausse à l'écran ;
+- **aucun des deux totaux ne donne 5 000 € sur 5 ans** (717 x 60 =
+  43 020), et « 450 € au lieu de 5 000 € » est faux des deux côtés
+  (170 x 5 = 850) ;
+- **217 €/mois contredisait notre propre page Zapier**, qui annonce
+  29,99 $. Poser le lien depuis ce paragraphe aurait mis les deux
+  chiffres à un clic l'un de l'autre.
+
+C'est le drame de la FAQ de la rente (31 août) dans un autre article :
+une passe corrige les PRIX et laisse les CALCULS faits avec les anciens.
+`lib/blog/liensIntegrations.ts` CALCULE les montants (Typeform Plus à
+79 $/mois relevé sur `typeform.com/pricing`, Zapier lu dans `ZAPIER`,
+Tiquiz lu dans `OWNER_CATALOG`) et pose les trois liens sur des ANCRES
+DE TEXTE, jamais sur un index de bloc. `motif()` est désormais exporté
+par `faitsProgramme.ts` : deux constructions de motif finiraient par ne
+plus être d'accord, et c'est le contrôle qui mentirait le premier.
+
+**Les devises ne se convertissent pas.** Typeform et Zapier facturent en
+dollars, Tiquiz en euros : convertir demanderait un taux de change
+inventé, faux le lendemain.
+
+### Le schéma du hub inclut Jotform depuis le 1er septembre au soir
+
+Nouvelle version fournie par Béné (1586 x 992). Les coins sont arrondis
+et TRANSPARENTS : les aplatir sans rogner sortait quatre angles sombres,
+et échantillonner un coin pour la couleur de fond rendait du noir. On
+rogne 6 px, on aplatit sur `rgb(241, 242, 251)` relevé DANS l'image, et
+l'`og:image` est en `fit: contain` sur ce même fond, donc la bande ne se
+voit pas. L'`alt` nomme maintenant Jotform, Pabbly et n8n : il décrit ce
+que le schéma montre.
+
+**Ce qui reste à écrire :** ScoreApp, Outgrow, Riddle, Calendly et une
+page sur les tags Systeme.io.

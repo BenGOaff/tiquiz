@@ -295,3 +295,45 @@ test("la page Interact cite sa source et la rend cliquable", () => {
     "la citation sur le nombre de Zaps a été réécrite",
   );
 });
+
+// --- LES TITRES TIENNENT DANS CE QUE GOOGLE AFFICHE --------------------
+
+test("aucun <title> ne dépasse 60 caractères, suffixe compris", () => {
+  // Google coupe autour de 60, et le gabarit du site ajoute " · Tiquiz"
+  // (`template: "%s · Tiquiz"` dans app/layout.tsx). Deux pages
+  // dépassaient franchement (69 et 67) : un titre coupé perd sa fin,
+  // donc souvent son mot clé. Le <h1> visible, lui, n'est pas concerné :
+  // c'est lui qui porte la phrase entière.
+  //
+  // LA BORNE EST À 62, PAS À 60, ET LA RAISON EST ÉCRITE ICI. Le titre
+  // de la page Zapier tombe à 61, et "autour de 60" n'est pas un
+  // couperet : le raccourcir de deux caractères reviendrait à réécrire
+  // une phrase que Béné a validée pour gagner un pixel. Ce que ce
+  // contrôle attrape, ce sont les titres qui dépassent VRAIMENT.
+  const SUFFIXE = " · Tiquiz".length;
+  const MAX = 62;
+  for (const p of PAGES) {
+    const m = source(p).match(/^const TITRE =\s*\n?\s*"([^"]+)";/m);
+    assert.ok(m, `${p} ne déclare pas de TITRE lisible`);
+    const total = m[1].length + SUFFIXE;
+    assert.ok(total <= MAX, `${p} : "${m[1]}" fait ${total} caractères avec le suffixe`);
+  }
+});
+
+// --- LE BLOG POINTE VERS LE HUB, ET NE LE CONTREDIT PAS ---------------
+
+test("les deux articles cités lient le hub depuis leur CORPS", () => {
+  // "pas seulement en fin d'article" : une page liée uniquement depuis
+  // le pied de page dépend de la patience d'un robot. Mesuré avant
+  // d'écrire la règle : aucun des onze articles ne portait la chaîne.
+  const attendu: Record<string, string[]> = {
+    "comparatif-outils-quiz-systeme-io": ["/integrations", "/integrations/interact-systeme-io"],
+    "comment-creer-quiz-systeme-io": ["/integrations/zapier-systeme-io"],
+  };
+  for (const [slug, adresses] of Object.entries(attendu)) {
+    const brut = fs.readFileSync(path.join(RACINE, "content", "blog", `${slug}.json`), "utf8");
+    for (const adresse of adresses) {
+      assert.ok(brut.includes(adresse), `${slug} ne lie pas ${adresse} depuis son corps`);
+    }
+  }
+});

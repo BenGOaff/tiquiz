@@ -25,7 +25,8 @@ import { Capture, EnBref, Faq, FilDAriane, Tableau } from "@/components/site/Int
 import { HOTE_VENTE } from "@/lib/publicHost";
 import { ZAPIER, faqJsonLd, filDArianeJsonLd, type QuestionFaq } from "@/lib/site/integrations";
 
-const TITRE = "Interact et Systeme.io : ce que demande leur documentation";
+// 47 caractères, suffixe " · Tiquiz" compris (voir le hub).
+const TITRE = "Interact et Systeme.io : leur doc impose Zapier";
 const DESCRIPTION =
   "La documentation d'Interact impose Zapier Pro et un Zap par résultat de quiz pour se connecter à Systeme.io. Le détail exact, et l'alternative.";
 const CHEMIN = "/integrations/interact-systeme-io";
