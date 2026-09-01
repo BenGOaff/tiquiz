@@ -5410,3 +5410,106 @@ que le schéma montre.
 
 **Ce qui reste à écrire :** ScoreApp, Outgrow, Riddle, Calendly et une
 page sur les tags Systeme.io.
+
+## Une vente d'un AUTRE produit ouvrait un abonnement Tiquiz (1er septembre 2026)
+
+Béné, capture du pilotage à l'appui : "des ventes non identifiées sur le
+dashboard c'est des abonnements tiquiz via systeme io **et un autre
+abonnement qui n'a rien à voir**".
+
+Elle décrivait un défaut d'affichage. Il y en avait deux, et le second
+coûte de l'argent tous les mois.
+
+### 1. LE TABLEAU DE BORD JETAIT UN NOM QU'IL AVAIT SOUS LA MAIN
+
+`buildSioSales` ne lisait le plan tarifaire QUE pour combler un montant
+manquant (`const tarif = duPayload == null ? readPricePlan(offre) : null`).
+Une vente qui portait sa somme n'était donc jamais nommée : elle sortait
+en "Produit non identifié" alors que Systeme.io dit très bien de quoi il
+parle ("Le Pacte™ - 24 €/mois"). Le tarif répond à DEUX questions, le
+montant et le nom, et une seule était posée.
+
+### 2. ET SURTOUT : CHAQUE ÉCHÉANCE OUVRAIT UN ACCÈS TIQUIZ
+
+Son compte Systeme.io ne vend pas que Tiquiz et l'Atelier. **Relevé dans
+son compte le 1er septembre : Le Pacte™ (2502221, mensuel), Hacktube,
+Reddit Business, Youtube Influence, Podcast Automation...** Toutes ces
+ventes arrivent sur le MÊME webhook, avec le même genre d'événement.
+
+Depuis le 7 août, une vente confirmée sur une offre INCONNUE ouvre un
+accès Tiquiz, et cette règle reste juste : "il a payé le client, il doit
+recevoir ses accès, point barre". Mais elle a été écrite pour un compte
+qui ne vendait que nous. Appliquée à celui là, elle ouvrait un
+abonnement Tiquiz à chaque personne qui achète Le Pacte, **et à chaque
+échéance**, sans qu'une seule ligne d'erreur ne s'écrive.
+
+**LE REPLI PAR LE MONTANT EST LE PIRE DES DEUX.** Trois de ses autres
+produits coûtent EXACTEMENT le prix d'un palier Tiquiz :
+`inferPlanFromAmount` ouvrait donc un palier PRÉCIS et FAUX, ce qui
+ressemble à un routage réussi. Un repli qui se trompe franchement se
+voit ; un repli qui se trompe avec assurance, non.
+
+### La distinction qui décide, et une seule ferme la porte
+
+**"Je n'ai pas trouvé cette offre" et "je SAIS que ce n'est pas Tiquiz"
+sont deux réponses différentes** (c'est la règle du 23 août, appliquée à
+un catalogue au lieu d'un contrôle).
+
+| L'offre reçue | Ce qu'on fait |
+|---|---|
+| inconnue | on ouvre, exactement comme depuis le 7 août |
+| connue, Tiquiz | on ouvre au bon palier |
+| connue, un AUTRE produit | **rien**, et on le DIT dans le journal |
+
+`venteHorsTiquiz()` (`lib/sio/produitVendu.ts`, pur) lit `PRICE_PLANS`,
+la table RELEVÉE dans son compte. Le troisième cas n'est pas un refus
+déguisé : le client a bien reçu ce qu'il a acheté, chez Systeme.io. Lui
+ouvrir Tiquiz en plus n'est pas un cadeau, c'est un compte payant de
+plus dans les compteurs et une personne qui reçoit les emails d'un
+produit qu'elle n'a pas commandé.
+
+**La garde passe AVANT `createUser`**, pas avant le seul repli : sinon
+un acheteur du Pacte se voyait quand même créer un compte Tiquiz vide.
+Le test vérifie cet ORDRE dans le fichier.
+
+**Ce module ne vit pas dans `webhookInference.ts`** parce que
+`pricePlans.ts` importe déjà son type `TiquizPlan` : l'y mettre
+fabriquerait un cycle d'imports pour une décision de trois lignes.
+
+### Tipote n'est PAS concerné, et c'est vérifié
+
+Son webhook Systeme.io (`app/api/systeme-io/webhook/route.ts` là bas)
+n'a AUCUN repli : `inferPlanFromOffer` rend `null` sur une offre
+inconnue et le profil n'est pas touché ("pas de fallback par nom : c'est
+fragile et inutile"). Le trou est propre à Tiquiz, qui a le repli du
+7 août. Lu ligne par ligne le 1er septembre, pas supposé.
+
+### Et pour SAVOIR au lieu de déduire
+
+```bash
+npm run check:ventes-sio
+```
+
+Il LIT `webhook_logs` et imprime, appel par appel : l'identifiant du
+plan **et le chemin où il a été trouvé**, le montant et son chemin, le
+palier que le routage ouvrirait aujourd'hui, et le produit affiché.
+
+**Ce qu'il existe pour trancher :** "aucun identifiant reçu" et "un
+identifiant qu'on ne connaît pas" sont deux pannes différentes, qui ne
+se corrigent pas au même endroit (une ligne dans `OFFER_ID_PATHS` d'un
+côté, dans `OFFER_TO_PLAN` ou `PRICE_PLANS` de l'autre), et l'écran
+d'admin les affiche toutes les deux "offre inconnue". Quand aucun chemin
+connu ne répond, il BALAIE le payload entier et dit où l'identifiant se
+trouve vraiment. Une liste de chemins qui a cessé de correspondre ne le
+dit jamais toute seule : c'est la leçon des 100 tags et des 51 règles
+d'automatisation, une liste tronquée ne s'annonce pas.
+
+**Ce qui reste ouvert, et qui n'est pas du code :** `3198235` ("Tiquiz
+mensuel" à 9 €) **n'existe plus dans son compte** (mesuré le
+1er septembre), alors que des renouvellements à ce tarif continuent
+d'arriver. La ligne reste dans `OFFER_TO_PLAN`, elle ne coûte rien et
+elle protège l'historique. Pourquoi ces échéances n'arrivent pas avec un
+identifiant routable est la question que `check:ventes-sio` existe pour
+répondre, sur le serveur, là où le journal vit.
+
+Test : `tests/logic/ventes-hors-tiquiz.test.mts`.

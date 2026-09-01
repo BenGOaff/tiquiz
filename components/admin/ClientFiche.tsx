@@ -49,7 +49,7 @@ import { Input } from "@/components/ui/input";
 import { isAtelierSale } from "@/lib/admin/atelier";
 import { readClientKind, type ClientKind, type Person } from "@/lib/admin/people";
 import type { Provenance } from "@/lib/admin/provenance";
-import { NOM_PRODUIT, readSaleProduct } from "@/lib/admin/saleProduct";
+import { nomProduitVendu } from "@/lib/admin/saleProduct";
 import type { Sale } from "@/lib/checkout/sales";
 
 const CLIENTS: Record<ClientKind, { label: string; classe: string }> = {
@@ -595,7 +595,7 @@ export default function ClientFiche({ email }: { email: string }) {
                 <tbody>
                   {p.sales.map((v) => (
                     <tr key={v.ref} className="border-b last:border-0">
-                      <td className="py-2 pr-3">{NOM_PRODUIT[readSaleProduct(v)]}</td>
+                      <td className="py-2 pr-3">{nomProduitVendu(v)}</td>
                       <td className="py-2 pr-3 font-semibold">{montant(v)}</td>
                       <td className="py-2 pr-3 text-muted-foreground">{jour(v.paidAt)}</td>
                       <td className="py-2 pr-3 text-muted-foreground">

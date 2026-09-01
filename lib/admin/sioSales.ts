@@ -161,8 +161,18 @@ export function buildSioSales(rows: EventRow[]): Sale[] {
     // marquée comme telle : son compte porte 54 codes de réduction
     // actifs, dont certains à 100 %, donc une vente remisée vaudrait
     // moins que le prix du plan.
+    //
+    // LE TARIF SE LIT TOUJOURS, MÊME QUAND LE MONTANT EST LÀ.
+    //
+    // Il ne servait qu'à combler un montant manquant, donc une vente qui
+    // portait sa somme n'était JAMAIS nommée : elle sortait en "Produit
+    // non identifié" sur le tableau de bord, y compris quand Systeme.io
+    // sait parfaitement de quoi il parle ("Le Pacte™ - 24 €/mois").
+    // C'est ce que Béné a vu le 1er septembre. Le tarif répond à deux
+    // questions différentes, le montant ET le nom, et une seule était
+    // posée.
     const duPayload = readSioAmountCents(montantBrut);
-    const tarif = duPayload == null ? readPricePlan(offre) : null;
+    const tarif = readPricePlan(offre);
     const amountCents = duPayload ?? tarif?.montantCents ?? 0;
     const amountSource: Sale["amountSource"] =
       duPayload != null ? "payload" : tarif ? "plan" : "inconnu";
@@ -175,10 +185,13 @@ export function buildSioSales(rows: EventRow[]): Sale[] {
       email,
       name: extractStr(payload, NAME_PATHS),
       // Le PLAN plutot que l'offre brute : c'est ce que Bene lit.
-      // Une vente de l'Atelier n'a pas de palier Tiquiz : elle porte le
-      // nom du produit, sinon elle finissait en "inconnu" et se
-      // melangeait aux abonnements dans les totaux.
-      productId: plan ?? (tarif?.produit === "atelier" ? "atelier" : "inconnu"),
+      //
+      // Sans palier Tiquiz, on garde l'IDENTIFIANT DU PLAN TARIFAIRE dès
+      // qu'on le reconnaît : `readSaleProduct` en tire la famille et
+      // `nomProduitVendu` le nom propre du produit. Écrire "inconnu" ici
+      // jetait un nom qu'on avait sous la main, et rangeait Le Pacte, la
+      // formation et une vraie vente orpheline dans le même sac.
+      productId: plan ?? (tarif ? String(offre) : "inconnu"),
       amountCents,
       amountSource,
       currency: tarif?.devise ?? "eur",

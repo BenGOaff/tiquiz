@@ -39,8 +39,7 @@ import type { Person, PeopleTotals } from "@/lib/admin/people";
 import type { Sale } from "@/lib/checkout/sales";
 import { DELAI_ALERTE_HEURES, estEnRetard, type Ticket } from "@/lib/support/tickets";
 import { attenteLisible, pireAttenteHeures } from "@/lib/pilotage/support";
-import { NOM_PRODUIT } from "@/lib/admin/saleProduct";
-import { readSaleProduct } from "@/lib/admin/saleProduct";
+import { nomProduitVendu } from "@/lib/admin/saleProduct";
 
 type Resume = {
   encaisseCents: number;
@@ -315,7 +314,7 @@ export function AccueilPilotage() {
               {ventes.map(({ vente, email, nom }) => (
                 <Ligne
                   key={`${vente.ref}-${vente.paidAt}`}
-                  principal={`${euros(vente.amountCents)} ${NOM_PRODUIT[readSaleProduct(vente)]}`}
+                  principal={`${euros(vente.amountCents)} ${nomProduitVendu(vente)}`}
                   secondaire={nom ?? email}
                   aDroite={vente.refundedAt ? "remboursée" : quand(vente.paidAt)}
                   alerte={Boolean(vente.refundedAt)}

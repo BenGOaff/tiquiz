@@ -56,8 +56,16 @@ export interface PricePlan {
    * l'Atelier, partout, dans les ventes, les stats". Deux produits qui
    * se vendent par le même Systeme.io, encaissés sur le même Stripe : à
    * l'écran, plus rien ne les séparait.
+   *
+   * `"autre"` est arrivé le 1er septembre, et c'est le plus important
+   * des trois. Son compte Systeme.io ne vend pas QUE Tiquiz et
+   * l'Atelier : Tipote, Le Pacte, StoryCash, HackTube, Reddit Business,
+   * QuizCash, les packs de droits de revente... Une vente sur l'un
+   * d'eux arrivait chez nous en "produit inconnu", donc dans le repli
+   * payant, donc **elle ouvrait un compte Tiquiz mensuel**. Voir
+   * `estUnAutreProduit` dans `webhookInference.ts`.
    */
-  produit: "tiquiz" | "atelier";
+  produit: "tiquiz" | "atelier" | "autre";
   /** Le prix AFFICHÉ, en centimes. Jamais forcément la somme encaissée. */
   montantCents: number;
   devise: "eur" | "usd";
@@ -83,6 +91,12 @@ export const PRICE_PLANS: Record<string, PricePlan> = {
   // ── TIQUIZ, PRIX HISTORIQUES ──
   // Gardés : les ventes passées portent ces ids, et le tableau de bord
   // relit l'historique.
+  // 🚨 CE PLAN N'EXISTE PLUS DANS SON COMPTE (mesuré le 1er septembre
+  // 2026 : une recherche "Tiquiz" rend neuf plans, et celui là n'y est
+  // pas). Ses abonnés historiques à 9 €/mois sont toujours prélevés
+  // dessus, et Systeme.io affiche encore "Tiquiz mensuel" sur leurs
+  // factures. On le GARDE : l'historique porte cet id, et le tableau de
+  // bord relit l'historique.
   "3198235": { produit: "tiquiz", nom: "Tiquiz mensuel", montantCents: 900, devise: "eur", plan: "monthly" },
   "3198261": { produit: "tiquiz", nom: "Tiquiz annuel", montantCents: 9000, devise: "eur", plan: "yearly" },
   "3198280": { produit: "tiquiz", nom: "Tiquiz Beta", montantCents: 5700, devise: "eur", plan: "lifetime" },
@@ -104,6 +118,125 @@ export const PRICE_PLANS: Record<string, PricePlan> = {
   "3371197": { produit: "atelier", nom: "Atelier du Quiz simple", montantCents: 700, devise: "eur", plan: null },
   "3371202": { produit: "atelier", nom: "Atelier du Quiz augmenté", montantCents: 4700, devise: "eur", plan: null },
   "3372762": { produit: "atelier", nom: "Atelier du Quiz augmenté", montantCents: 3700, devise: "eur", plan: null },
+
+  // ── TOUT LE RESTE DE SON CATALOGUE (relevé le 1er septembre 2026) ──
+  //
+  // 🚨 CES LIGNES NE SONT PAS DÉCORATIVES : elles EMPÊCHENT d'ouvrir un
+  // accès Tiquiz. Sans elles, une vente sur l'un de ces plans tombait
+  // dans le repli payant du webhook et ouvrait un compte Tiquiz
+  // mensuel, sur un produit qui n'a rien à voir.
+  //
+  // Et le repli par MONTANT est pire encore, parce qu'il a l'air de
+  // trancher : "Youtube Influence sans DR" vaut 1700, comme le mensuel
+  // Tiquiz ; "Reddit Business PREMIUM 29€" vaut 2900, comme le mensuel
+  // PLUS ; "Reddit Assistant BASIC" vaut 900, comme l'ancien mensuel.
+  // Ces trois là n'ouvraient pas un accès au hasard : ils ouvraient un
+  // palier PRÉCIS et FAUX.
+  //
+  // La liste vient de son compte, elle n'est pas devinée. Elle n'a pas
+  // besoin d'être exhaustive pour protéger : une offre inconnue reste
+  // traitée comme avant (Béné, 7 août : "il a payé, il doit recevoir ses
+  // accès"). Ce qu'elle ferme, c'est ce qu'on SAIT ne pas être Tiquiz.
+  "2502221": { produit: "autre", nom: "Le Pacte™ mensuel", montantCents: 2000, devise: "eur", plan: null },
+  "2502223": { produit: "autre", nom: "Le Pacte™ annuel", montantCents: 20000, devise: "eur", plan: null },
+
+  // Tipote, qui n'est pas en vente publique mais dont les plans existent.
+  "3330096": { produit: "autre", nom: "Tipote offre spéciale mensuelle", montantCents: 1900, devise: "eur", plan: null },
+  "3330098": { produit: "autre", nom: "Tipote offre spéciale annuelle", montantCents: 19000, devise: "eur", plan: null },
+  "3134002": { produit: "autre", nom: "Tipote basic mensuel", montantCents: 1900, devise: "eur", plan: null },
+  "3103584": { produit: "autre", nom: "Tipote basic annuel", montantCents: 19000, devise: "eur", plan: null },
+  "3103586": { produit: "autre", nom: "Tipote pro mensuel", montantCents: 4900, devise: "eur", plan: null },
+  "3103591": { produit: "autre", nom: "Tipote pro annuel", montantCents: 49000, devise: "eur", plan: null },
+  "3103592": { produit: "autre", nom: "Tipote elite mensuel", montantCents: 9900, devise: "eur", plan: null },
+  "3103593": { produit: "autre", nom: "Tipote elite annuel", montantCents: 99000, devise: "eur", plan: null },
+  "3064431": { produit: "autre", nom: "Tipote Bêta", montantCents: 9700, devise: "eur", plan: null },
+  "3066719": { produit: "autre", nom: "Tipote beta 2x", montantCents: 4900, devise: "eur", plan: null },
+  "3057068": { produit: "autre", nom: "25 crédits Tipote", montantCents: 300, devise: "eur", plan: null },
+  "3057070": { produit: "autre", nom: "Pack 100 crédits Tipote", montantCents: 1000, devise: "eur", plan: null },
+  "3057072": { produit: "autre", nom: "Pack 250 crédits Tipote", montantCents: 2200, devise: "eur", plan: null },
+
+  // Les plans en marque blanche (revendeurs).
+  "3280962": { produit: "autre", nom: "Webinaire mensuel", montantCents: 4900, devise: "eur", plan: null },
+  "3280963": { produit: "autre", nom: "Webinaire annuel", montantCents: 49000, devise: "eur", plan: null },
+  "3280964": { produit: "autre", nom: "Illimité mensuel", montantCents: 9900, devise: "eur", plan: null },
+  "3280965": { produit: "autre", nom: "Illimité annuel", montantCents: 99000, devise: "eur", plan: null },
+  "3151804": { produit: "autre", nom: "Startup mensuel", montantCents: 1700, devise: "eur", plan: null },
+  "3151805": { produit: "autre", nom: "Startup annuel", montantCents: 17000, devise: "eur", plan: null },
+  "3151806": { produit: "autre", nom: "Webinaire mensuel", montantCents: 4700, devise: "eur", plan: null },
+  "3151807": { produit: "autre", nom: "Webinaire annuel", montantCents: 47000, devise: "eur", plan: null },
+  "3151808": { produit: "autre", nom: "Illimité mensuel", montantCents: 9700, devise: "eur", plan: null },
+  "3151809": { produit: "autre", nom: "Illimité annuel", montantCents: 97000, devise: "eur", plan: null },
+  "3151816": { produit: "autre", nom: "Tipote crm basic", montantCents: 1900, devise: "eur", plan: null },
+  "3151817": { produit: "autre", nom: "Tipote crm basic annuel", montantCents: 19000, devise: "eur", plan: null },
+  "3151820": { produit: "autre", nom: "Webinaire mensuel", montantCents: 4900, devise: "eur", plan: null },
+  "3151821": { produit: "autre", nom: "Webinaire annuel", montantCents: 49000, devise: "eur", plan: null },
+  "3151824": { produit: "autre", nom: "Illimité mensuel", montantCents: 9900, devise: "eur", plan: null },
+  "3151825": { produit: "autre", nom: "Illimité annuel", montantCents: 99000, devise: "eur", plan: null },
+
+  // Les produits d'info et les packs de droits de revente. Ceux qui
+  // portent un montant Tiquiz sont marqués : ce sont eux qui ouvraient
+  // un palier précis et faux.
+  "3040535": { produit: "autre", nom: "DR Pack 2026", montantCents: 4700, devise: "eur", plan: null },
+  "3040531": { produit: "autre", nom: "Pack 2026 en 2 fois", montantCents: 2500, devise: "eur", plan: null },
+  "3040528": { produit: "autre", nom: "Pack 2026", montantCents: 4700, devise: "eur", plan: null },
+  "3015605": { produit: "autre", nom: "Pack 2026 en 3 fois", montantCents: 1300, devise: "eur", plan: null },
+  "3015603": { produit: "autre", nom: "Pack 2026 en 2 fois", montantCents: 1900, devise: "eur", plan: null },
+  "3015110": { produit: "autre", nom: "Droits de revente pack 2026", montantCents: 3700, devise: "eur", plan: null },
+  "3015107": { produit: "autre", nom: "Pack 2026", montantCents: 3700, devise: "eur", plan: null },
+  "3045326": { produit: "autre", nom: "Tipote test", montantCents: 100, devise: "eur", plan: null },
+  "2978217": { produit: "autre", nom: "Affiliation Success™ PREMIUM 3x", montantCents: 6600, devise: "eur", plan: null },
+  "2978213": { produit: "autre", nom: "Affiliation Success™ PREMIUM 2x", montantCents: 9900, devise: "eur", plan: null },
+  "2974956": { produit: "autre", nom: "Affiliation Success PREMIUM 2x", montantCents: 4900, devise: "eur", plan: null },
+  "2974955": { produit: "autre", nom: "Affiliation Success PREMIUM 3x", montantCents: 3300, devise: "eur", plan: null },
+  "2963854": { produit: "autre", nom: "Tipote elite", montantCents: 100, devise: "eur", plan: null },
+  "2963852": { produit: "autre", nom: "Tipote essential", montantCents: 100, devise: "eur", plan: null },
+  "2951176": { produit: "autre", nom: "Affiliation Success™ PREMIUM", montantCents: 9900, devise: "eur", plan: null },
+  "2951173": { produit: "autre", nom: "Affiliation Success™ PREMIUM", montantCents: 19700, devise: "eur", plan: null },
+  "2951168": { produit: "autre", nom: "Affiliation Success™ BASIC", montantCents: 4900, devise: "eur", plan: null },
+  "2951167": { produit: "autre", nom: "Affiliation Success™ BASIC", montantCents: 9700, devise: "eur", plan: null },
+  "2924786": { produit: "autre", nom: "Formule R.O.C.™", montantCents: 3700, devise: "eur", plan: null },
+  // 1700 = le montant du mensuel Tiquiz.
+  "2924762": { produit: "autre", nom: "Youtube Influence™ sans DR", montantCents: 1700, devise: "eur", plan: null },
+  "2924756": { produit: "autre", nom: "Youtube Influence™ DR inclus", montantCents: 3700, devise: "eur", plan: null },
+  "2924754": { produit: "autre", nom: "Affiliation Success PREMIUM", montantCents: 9700, devise: "eur", plan: null },
+  "2924751": { produit: "autre", nom: "Affiliation Success BASIC", montantCents: 3700, devise: "eur", plan: null },
+  // 900 = le montant de l'ancien mensuel Tiquiz.
+  "2898657": { produit: "autre", nom: "DR Objectif 300", montantCents: 900, devise: "eur", plan: null },
+  "2876888": { produit: "autre", nom: "DR StoryCash™", montantCents: 6700, devise: "eur", plan: null },
+  "2876885": { produit: "autre", nom: "StoryCash™", montantCents: 9700, devise: "eur", plan: null },
+  "2876879": { produit: "autre", nom: "QuizCash™ Premium 2x", montantCents: 4900, devise: "eur", plan: null },
+  "2876874": { produit: "autre", nom: "QuizCash™ Premium", montantCents: 19700, devise: "eur", plan: null },
+  "2876872": { produit: "autre", nom: "QuizCash™ Basic", montantCents: 9700, devise: "eur", plan: null },
+  "2876844": { produit: "autre", nom: "Gamizzz™", montantCents: 3700, devise: "eur", plan: null },
+  "2876838": { produit: "autre", nom: "Quizcash™ PREMIUM", montantCents: 9700, devise: "eur", plan: null },
+  "2876835": { produit: "autre", nom: "Templates Notion™", montantCents: 3700, devise: "eur", plan: null },
+  "2876831": { produit: "autre", nom: "QuizCash™ BASIC", montantCents: 3700, devise: "eur", plan: null },
+  "2860843": { produit: "autre", nom: "Infographie Money™", montantCents: 3700, devise: "eur", plan: null },
+  "2860839": { produit: "autre", nom: "DR StoryCash™", montantCents: 3700, devise: "eur", plan: null },
+  "2841236": { produit: "autre", nom: "Reddit Business PREMIUM", montantCents: 9700, devise: "eur", plan: null },
+  "2841229": { produit: "autre", nom: "Reddit Business BASIC", montantCents: 2700, devise: "eur", plan: null },
+  "2841212": { produit: "autre", nom: "Reddit Business", montantCents: 3700, devise: "eur", plan: null },
+  // 2900 = le montant du mensuel PLUS.
+  "2841211": { produit: "autre", nom: "Reddit Business PREMIUM", montantCents: 2900, devise: "eur", plan: null },
+  "2841209": { produit: "autre", nom: "StoryCash™", montantCents: 3700, devise: "eur", plan: null },
+  "2841206": { produit: "autre", nom: "Reddit Assistant BASIC", montantCents: 900, devise: "eur", plan: null },
+  "2793255": { produit: "autre", nom: "Pack Rentrée™ PREMIUM 2x", montantCents: 4900, devise: "eur", plan: null },
+  "2789182": { produit: "autre", nom: "Hacktube™ PREMIUM 2x", montantCents: 9900, devise: "eur", plan: null },
+  "2789180": { produit: "autre", nom: "Hacktube™ PREMIUM", montantCents: 19700, devise: "eur", plan: null },
+  "2789164": { produit: "autre", nom: "Hacktube™ BASIC", montantCents: 9700, devise: "eur", plan: null },
+  "2786475": { produit: "autre", nom: "Pack Rentrée PREMIUM", montantCents: 19700, devise: "eur", plan: null },
+  "2786466": { produit: "autre", nom: "Pack Rentrée™", montantCents: 9700, devise: "eur", plan: null },
+  "2783999": { produit: "autre", nom: "InstaCash Faceless™", montantCents: 2700, devise: "eur", plan: null },
+  "2783997": { produit: "autre", nom: "InstaCash Faceless™ DR", montantCents: 4700, devise: "eur", plan: null },
+  "2783942": { produit: "autre", nom: "AIFluencers™", montantCents: 3700, devise: "eur", plan: null },
+  "2783125": { produit: "autre", nom: "Pack Rentrée™ PREMIUM", montantCents: 9700, devise: "eur", plan: null },
+  "2783119": { produit: "autre", nom: "Pack Rentrée™ BASIC", montantCents: 4700, devise: "eur", plan: null },
+  "2743166": { produit: "autre", nom: "HackTube™ Premium 2x", montantCents: 4900, devise: "eur", plan: null },
+  "2733124": { produit: "autre", nom: "HackTube™ Premium", montantCents: 9700, devise: "eur", plan: null },
+  "2733116": { produit: "autre", nom: "Podcast Automation™", montantCents: 3700, devise: "eur", plan: null },
+  "2733113": { produit: "autre", nom: "Hacktube™ BASIC", montantCents: 4700, devise: "eur", plan: null },
+  "2733110": { produit: "autre", nom: "Hacktube™ Premium BAR", montantCents: 9700, devise: "eur", plan: null },
+  "2733104": { produit: "autre", nom: "Hacktube™ BAR", montantCents: 4700, devise: "eur", plan: null },
 };
 
 /**

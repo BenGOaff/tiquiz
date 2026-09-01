@@ -280,7 +280,7 @@ export function buildAdminStats(
     // La MÊME fenêtre que les autres séries : deux fenêtres calculées
     // séparément donneraient deux axes différents sur le même écran.
     churn: serieChurn(people, derniersMois(maintenant, nbMois)),
-    ventesParProduit: (["tiquiz", "atelier", "inconnu"] as Produit[])
+    ventesParProduit: (["tiquiz", "atelier", "autre", "inconnu"] as Produit[])
       .map((produit) => ({
         produit,
         valeur: serieParMois(

@@ -49,6 +49,10 @@ import { CARTE } from "@/components/pilotage/carte";
 const COULEUR: Record<Produit, string> = {
   tiquiz: "var(--pil-tiquiz)",
   atelier: "var(--pil-atelier)",
+  // Un AUTRE produit et un produit INCONNU partagent la même couleur :
+  // ce sont les deux façons de dire "ce n'est pas à nous". Leur donner
+  // deux teintes ferait croire à deux familles à surveiller.
+  autre: "var(--pil-autre)",
   inconnu: "var(--pil-autre)",
 };
 
