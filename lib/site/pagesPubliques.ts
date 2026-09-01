@@ -50,6 +50,34 @@ export const PAGES_PUBLIQUES: readonly PagePublique[] = [
     priorite: 0.7,
   },
   {
+    chemin: "/integrations",
+    titre: "Connecter ses outils à Systeme.io",
+    resume:
+      "Ce que chaque outil de formulaire ou de quiz demande pour envoyer ses réponses dans Systeme.io : Zapier, un webhook, ou rien du tout. Tally, Typeform, Google Forms, Jotform, Interact et Tiquiz comparés.",
+    priorite: 0.7,
+  },
+  {
+    chemin: "/integrations/zapier-systeme-io",
+    titre: "Zapier et Systeme.io",
+    resume:
+      "L'application Systeme.io est accessible dès le plan gratuit de Zapier. Les actions disponibles, les limites chiffrées, et le moment où le plan gratuit ne suffit plus.",
+    priorite: 0.6,
+  },
+  {
+    chemin: "/integrations/tally-systeme-io",
+    titre: "Connecter Tally à Systeme.io",
+    resume:
+      "Tally n'a pas d'intégration Systeme.io. Les trois méthodes (webhook et code, Zapier, Make), ce que chacune coûte, et le piège de l'identifiant de tag.",
+    priorite: 0.6,
+  },
+  {
+    chemin: "/integrations/typeform-systeme-io",
+    titre: "Connecter Typeform à Systeme.io",
+    resume:
+      "Typeform n'a pas d'intégration Systeme.io native. La méthode avec Zapier, les deux pièges de configuration, et le coût réel des deux abonnements.",
+    priorite: 0.6,
+  },
+  {
     chemin: "/newsletter",
     titre: "La newsletter de Béné",
     resume:

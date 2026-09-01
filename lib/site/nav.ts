@@ -109,6 +109,15 @@ export const PIED: readonly ColonnePied[] = [
     ],
   },
   {
+    titre: "Intégrations",
+    liens: [
+      { href: "/integrations", libelle: "Tous les outils" },
+      { href: "/integrations/zapier-systeme-io", libelle: "Zapier et Systeme.io" },
+      { href: "/integrations/tally-systeme-io", libelle: "Tally et Systeme.io" },
+      { href: "/integrations/typeform-systeme-io", libelle: "Typeform et Systeme.io" },
+    ],
+  },
+  {
     titre: "Aide",
     liens: [
       { href: "/support", libelle: "Centre d'aide et contact" },
