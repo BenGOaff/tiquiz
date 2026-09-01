@@ -58,7 +58,6 @@ import { QrCodeCard } from "@/components/share/QrCodeCard";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { interpolateText } from "@/lib/quizPersonalization";
 import { resultChoiceLabel } from "@/lib/quiz/resultLabel";
-import { construirePlanAutomatisation } from "@/lib/automatisation/planSysteme";
 import { AutomatisationPanel } from "@/components/quiz/AutomatisationPanel";
 import { type TieConflict } from "@/lib/quizTieAnalysis";
 import { tieBreakMode } from "@/lib/quiz/profileWinner";
@@ -820,34 +819,6 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   //
   // `sio_api_key_id` et `sio_capture_tag` ne sont pas édités ici : ils
   // viennent du quiz chargé, qui est lu en `select("*")`.
-  const planAutomatisation = useMemo(
-    () =>
-      construirePlanAutomatisation(
-        {
-          mode: quiz?.mode ?? null,
-          locale: quiz?.locale ?? null,
-          sio_api_key_id: (quiz as { sio_api_key_id?: string | null } | null)?.sio_api_key_id ?? null,
-          sio_capture_tag: (quiz as { sio_capture_tag?: string | null } | null)?.sio_capture_tag ?? null,
-          sio_share_tag_name: sioShareTagName,
-          sio_score_tags: sioScoreTags,
-          scoring_axes: scoringAxesEdit,
-          score_labels: scoreLabelsEdit,
-          virality_enabled: viralityEnabled,
-        },
-        editResults,
-        editQuestions,
-      ),
-    [
-      quiz,
-      sioShareTagName,
-      sioScoreTags,
-      scoringAxesEdit,
-      scoreLabelsEdit,
-      viralityEnabled,
-      editResults,
-      editQuestions,
-    ],
-  );
   const [leftTab, setLeftTab] = useState<"edition" | "design" | "settings">("edition");
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   // Taquet de largeur du panneau split (Béné 30 juil 2026, façon
@@ -4528,6 +4499,25 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                   })()}
                 </SettingsSection>
                 <SettingsSection titre={t("settingsGroupGestion")} aide={t("settingsGroupGestionHint")}>
+                  {/* LA CLÉ SYSTEME.IO EST ICI, ET ELLE N'Y ÉTAIT PAS.
+
+                      Béné, 1er septembre : "en réorganisant la sidebar
+                      on a viré le choix de la clé Systeme io du coup
+                      j'ai une erreur."
+
+                      Elle n'avait pas été retirée : elle n'a jamais été
+                      dans la colonne. Elle vivait dans l'onglet
+                      Partager, à l'intérieur du bloc gaté par
+                      `virality_enabled`. Une créatrice qui ne propose
+                      pas de bonus de partage n'avait donc AUCUN moyen
+                      de choisir sa clé, et rien ne le disait : c'est
+                      le réglage SANS lequel aucun tag ne part.
+
+                      Le composant va chercher les clés et enregistre
+                      lui même (PATCH direct) : l'éditeur ne gère pas
+                      `sio_api_key_id`, donc aucun conflit avec
+                      l'autosave. */}
+                  {!isEmbed && <QuizSioKeyPicker quizId={quizId} variante="colonne" />}
                   <section className="space-y-2">
                     <div>
                       <h3 className="text-sm font-semibold">{t("quizLanguageLabel")}</h3>
@@ -6827,12 +6817,6 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
             </div>
             )}
 
-            {/* Clé API Systeme.io par quiz : permet (ex: freelance)
-            d'envoyer les leads de CE quiz vers le compte SIO du
-            client. Le picker fetch les clés + PATCH /api/quiz/[id]
-            de façon autonome (l'éditeur ne gère pas sio_api_key_id,
-            donc pas de conflit avec l'autosave). */}
-            {!isEmbed && <QuizSioKeyPicker quizId={quizId} />}
             </section>
             )}
 
@@ -6845,7 +6829,26 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       )}
 
       {/* RESULTS TAB */}
-      {mainTab === "automation" && <AutomatisationPanel plan={planAutomatisation} />}
+      {/* Le panneau CONSTRUIT son plan : il est DANS `SioTagsProvider`,
+          donc lui seul sait si une clé Systeme.io répond vraiment. Le
+          construire ici lisait `sio_api_key_id`, qui n'est qu'une
+          SURCHARGE par quiz, et annonçait "aucune clé" à tort. */}
+      {mainTab === "automation" && (
+        <AutomatisationPanel
+          quiz={{
+            mode: quiz?.mode ?? null,
+            locale: quiz?.locale ?? null,
+            sio_capture_tag: (quiz as { sio_capture_tag?: string | null } | null)?.sio_capture_tag ?? null,
+            sio_share_tag_name: sioShareTagName,
+            sio_score_tags: sioScoreTags,
+            scoring_axes: scoringAxesEdit,
+            score_labels: scoreLabelsEdit,
+            virality_enabled: viralityEnabled,
+          }}
+          resultats={editResults}
+          questions={editQuestions}
+        />
+      )}
 
       {mainTab === "results" && (
         <div className="flex-1 overflow-y-auto p-6">

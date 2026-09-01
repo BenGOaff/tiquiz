@@ -100,7 +100,6 @@ import {
 } from "@/lib/quizBranding";
 import { projectBackHref } from "@/lib/nav/projectBack";
 import { SessionLostBanner } from "@/components/editor/SessionLostBanner";
-import { construirePlanAutomatisation } from "@/lib/automatisation/planSysteme";
 import { AutomatisationPanel } from "@/components/quiz/AutomatisationPanel";
 
 // Types
@@ -440,21 +439,6 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   // L'onglet Automatisation, comme dans l'éditeur de quiz. Un sondage
   // n'a pas de profil : ce sont le tag de capture et les tags par
   // RÉPONSE qui tagnt, et le plan ne montre que ceux là.
-  const planAutomatisation = useMemo(
-    () =>
-      construirePlanAutomatisation(
-        {
-          mode: "survey",
-          locale: quiz?.locale ?? null,
-          sio_api_key_id: (quiz as { sio_api_key_id?: string | null } | null)?.sio_api_key_id ?? null,
-          sio_capture_tag: (quiz as { sio_capture_tag?: string | null } | null)?.sio_capture_tag ?? null,
-          sio_share_tag_name: sioShareTagName,
-        },
-        editResults,
-        editQuestions,
-      ),
-    [quiz, sioShareTagName, editResults, editQuestions],
-  );
   // Sous-vue de l'onglet Tendances : agrégat (Synthèse) ou tableau par
   // répondant (Réponses, style Typeform / Tally).
   // Defaut "responses" : l'onglet s'appelle "Réponses" pour un sondage, on
@@ -1916,7 +1900,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       leads du sondage vers un sous-compte SIO (retour
                       Christelle 14 juillet 2026). Le picker PATCH
                       sio_api_key_id de facon autonome. */}
-                  <QuizSioKeyPicker quizId={quizId} />
+                  <QuizSioKeyPicker quizId={quizId} variante="colonne" />
                   <div className="flex flex-wrap gap-1.5">
                     <CapturePill label={t("fieldEmailRequired")} active locked />
                     <CapturePill label={t("fieldFirstNameRequired")} active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />
@@ -2910,7 +2894,22 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
       {/* TRENDS TAB — replaces the quiz "results analytics" tab. Aggregates
           lead.answers per question with a type-aware visualisation. */}
-      {mainTab === "automation" && <AutomatisationPanel plan={planAutomatisation} />}
+      {/* Un sondage n'a pas de profil : ce sont le tag de capture et
+          les tags par RÉPONSE qui taguent, et le plan ne montre que
+          ceux là. Le panneau construit son plan lui même (il est dans
+          `SioTagsProvider`, donc il sait si une clé répond). */}
+      {mainTab === "automation" && (
+        <AutomatisationPanel
+          quiz={{
+            mode: "survey",
+            locale: quiz?.locale ?? null,
+            sio_capture_tag: (quiz as { sio_capture_tag?: string | null } | null)?.sio_capture_tag ?? null,
+            sio_share_tag_name: sioShareTagName,
+          }}
+          resultats={editResults}
+          questions={editQuestions}
+        />
+      )}
 
       {mainTab === "trends" && (
         <div className="flex-1 overflow-y-auto p-6">

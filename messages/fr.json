@@ -3135,25 +3135,7 @@
     "intro": "Tiquiz pose un tag sur le contact Systeme.io de chaque personne qui répond. Voici, pour CE quiz, les règles à créer pour que ces tags déclenchent vraiment quelque chose.",
     "pourquoi": "À savoir : poser un tag ne déclenche rien tout seul. Sans la règle correspondante, la personne reçoit bien son tag et rien d'autre.",
     "ouvrirSysteme": "Ouvrir mes automatisations Systeme.io",
-    "profilTitre": "Le profil \"{profil}\"",
-    "partageTitre": "Le bonus de partage",
-    "captureTitre": "Quelqu'un répond à ton sondage",
-    "reponseTitre": "La réponse \"{reponse}\"",
-    "scoreTitre": "Le score de l'axe \"{axe}\"",
-    "scoreTitreGlobal": "Le score global",
-    "scoreMotif": "Le tag dépend du score obtenu. Crée une règle pour chacun :",
-    "pas1": "Crée un nouveau workflow et nomme-le",
-    "pas2": "Déclencheur : \"Tag ajouté\", puis choisis le tag",
-    "pas2Motif": "celui de la ligne du dessus que tu veux traiter.",
-    "pas3": "Action : \"{action}\", puis choisis",
-    "actionCampagne": "S'abonner à une campagne d'emails",
-    "actionEmail": "Envoyer un email",
-    "envoiProfil": "la campagne que tu veux envoyer aux personnes du profil \"{profil}\".",
-    "envoiPartage": "l'email qui envoie ton bonus de partage, ou l'accès à ta formation.",
-    "envoiGenerique": "la campagne que tu veux leur envoyer.",
-    "accesTitre": "\"{profil}\" : rien à créer",
-    "accesTexte": "Tu as relié une formation ou une communauté à ce profil. Tiquiz ouvre l'accès tout seul au moment du résultat. Une règle de plus l'ouvrirait deux fois.",
-    "manqueCle": "Aucune clé Systeme.io n'est reliée à ce quiz. Tant que c'est le cas, aucun contact n'est créé et aucun tag n'est posé. Va dans l'onglet Créer, section Systeme.io, pour choisir ta clé.",
+    "manqueCle": "Aucune clé Systeme.io n'est reliée à ce quiz. Tant que c'est le cas, aucun contact n'est créé et aucun tag n'est posé. Va dans l'onglet Créer, colonne de gauche, Paramètres, groupe \"Gestion du quiz\".",
     "manqueTagProfil": "Le profil \"{profil}\" n'a pas de tag. Les personnes qui l'obtiennent ne seront reconnaissables nulle part dans Systeme.io.",
     "manqueTagCapture": "Ce sondage n'a pas de tag de capture : personne ne recevra de tag en répondant.",
     "manqueTagPartage": "Tu proposes un bonus de partage, mais aucun tag ne marque ceux qui partagent. Tu ne pourras pas leur envoyer le bonus automatiquement.",
@@ -3161,6 +3143,40 @@
     "videTexte": "Ajoute un tag Systeme.io à tes profils de résultat, dans l'onglet Créer. La marche à suivre s'affichera ici.",
     "noteFin": "Les noms de tags doivent être identiques au caractère près. Clique dessus pour les copier.",
     "copyTag": "Copier le tag",
-    "copyError": "Copie impossible. Le tag est : {tag}"
+    "copyError": "Copie impossible. Le tag est : {tag}",
+    "recetteTitre": "La recette, la même pour chaque tag",
+    "recetteAide": "Trois clics dans Systeme.io, à refaire une fois par tag de la liste ci-dessous.",
+    "recette1": "Crée un workflow et donne-lui le nom du tag.",
+    "recette2": "Déclencheur : \"Tag ajouté\", puis choisis ce tag.",
+    "recette3": "Action : \"S'abonner à une campagne d'emails\", puis choisis la campagne à envoyer.",
+    "actionAutre": "Ici, choisis plutôt l'action \"Envoyer un email\" : celui qui livre ton bonus.",
+    "profilSansNom": "Profil {n}",
+    "tagSansContexte": "Tous les répondants",
+    "groupe": {
+      "profils": {
+        "titre": "Tes profils de résultat",
+        "aide": "Le tag est posé dès que le visiteur obtient ce profil."
+      },
+      "partage": {
+        "titre": "Ton bonus de partage",
+        "aide": "Le tag est posé quand le visiteur partage ton quiz."
+      },
+      "capture-sondage": {
+        "titre": "Les réponses à ton sondage",
+        "aide": "Le tag est posé sur toute personne qui répond."
+      },
+      "reponses-sondage": {
+        "titre": "Les réponses que tu as taguées",
+        "aide": "Le tag est posé quand le visiteur choisit cette réponse."
+      },
+      "score": {
+        "titre": "Les tranches de score",
+        "aide": "Le tag dépend du score obtenu : crée une règle par tranche que tu veux traiter."
+      },
+      "acces-automatique": {
+        "titre": "Rien à créer pour ces profils",
+        "aide": "Tu as relié une formation ou une communauté. Tiquiz ouvre l'accès tout seul, et une règle de plus l'ouvrirait deux fois."
+      }
+    }
   }
 }

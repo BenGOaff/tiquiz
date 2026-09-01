@@ -35,6 +35,29 @@
 //     directement : il ne faut SURTOUT pas créer un workflow de plus,
 //     sinon l'accès s'ouvre deux fois.
 //
+// -- LA RECETTE EST DITE UNE FOIS, PAS UNE FOIS PAR TAG ---------------
+//
+// Béné, 1er septembre, en voyant le premier jet : "empiler les conseils
+// qui disent la même chose t'es sûr que c'est le plus lisible, pratique,
+// intelligent ? Genre 1 : les profils et 2 : le bonus de partage. Et
+// ensuite tu ne répètes pas."
+//
+// Elle avait raison : les trois clics sont IDENTIQUES pour tous les
+// tags. Un quiz à six profils affichait donc six fois la même marche à
+// suivre, soit dix-huit lignes pour six informations. Ce module rend
+// donc des GROUPES (les profils, le bonus de partage...), chacun avec sa
+// liste de tags. L'écran écrit la recette une seule fois, en haut, et
+// chaque groupe ne porte plus que ses noms de tags.
+//
+// -- LE NOM D'UN PROFIL PASSE PAR `resultChoiceLabel` ------------------
+//
+// Le titre d'un profil est du texte RICHE : il porte des balises et des
+// variables. Rendu tel quel, l'écran affichait
+// `<div class="rt-field-fs" style="--rt-fs-m: 24px">Team Capture...`.
+// La règle existe depuis ce matin (retour Christian) et je l'ai oubliée
+// le lendemain, dans le module qui l'aurait le plus utilisée : une règle
+// qui n'est pas APPELÉE ne protège de rien.
+//
 // -- PURE, ET SANS UNE SEULE PHRASE -----------------------------------
 //
 // L'interface existe en 7 langues. Ce module rend des DONNÉES (le nom
@@ -42,6 +65,7 @@
 // phrases. C'est la même règle que partout ailleurs : le serveur dit ce
 // qui se passe, l'interface dit comment le dire.
 
+import { resultChoiceLabel } from "@/lib/quiz/resultLabel";
 import {
   axisSlug,
   normalizeScoringAxes,
@@ -56,44 +80,50 @@ export type ActionSysteme =
   | "campagne"
   /** Envoyer un email unique (le bonus, par exemple). */
   | "email"
-  /** Rien à créer : Tiquiz le fait déjà. */
+  /** RIEN À CRÉER : Tiquiz s'en occupe déjà (formation, communauté). */
   | "rien";
 
-/** La famille d'une étape. L'écran en tire son titre et son explication. */
-export type TypeEtape =
-  | "profil"
+/** La famille d'un groupe. L'écran en tire son titre et son explication. */
+export type TypeGroupe =
+  | "profils"
   | "capture-sondage"
-  | "reponse-sondage"
+  | "reponses-sondage"
   | "score"
   | "partage"
   | "acces-automatique";
 
-export interface EtapeAutomatisation {
+/**
+ * UNE règle à créer : un tag, et ce qu'il désigne.
+ *
+ * Elle ne porte AUCUNE marche à suivre : les trois clics sont les mêmes
+ * pour toutes, ils sont écrits une fois en haut de l'écran.
+ */
+export interface LigneAutomatisation {
   /** Clé stable pour React et pour les tests. */
   cle: string;
-  type: TypeEtape;
   /** Le nom EXACT du tag, tel que Tiquiz le posera. */
   tag: string;
   /**
-   * Le nom de workflow proposé. C'est le tag, tel quel : deux noms
-   * différents pour la même chose obligent à faire la correspondance de
-   * tête à chaque fois qu'on relit sa liste de workflows.
+   * Ce que ce tag désigne : le nom du profil, le libellé de la réponse,
+   * l'axe de score. NETTOYÉ (`resultChoiceLabel`) : le titre d'un profil
+   * est du texte riche, il ne s'affiche jamais brut.
    */
-  nomWorkflow: string;
-  action: ActionSysteme;
-  /** Ce que ce tag désigne : le titre du profil, le libellé de l'axe... */
   contexte?: string;
   /**
-   * Vrai quand le tag n'est pas un nom fixe mais un MOTIF : les tags de
-   * score sont calculés au moment de la réponse. L'écran doit alors
-   * montrer la liste des valeurs possibles, pas promettre un nom unique.
+   * La position du profil (1, 2, 3...), pour que l'écran puisse le
+   * nommer quand son titre est encore vide. Le module ne traduit pas.
    */
-  motif?: boolean;
-  /** Les noms réellement possibles, pour un motif. */
-  valeurs?: string[];
+  rang?: number;
 }
 
-/** Ce qui empêche une étape de fonctionner, ou tout le quiz. */
+/** Une famille de tags, avec l'action à choisir dans Systeme.io. */
+export interface GroupeAutomatisation {
+  type: TypeGroupe;
+  action: ActionSysteme;
+  lignes: LigneAutomatisation[];
+}
+
+/** Ce qui empêche une règle de fonctionner, ou tout le quiz. */
 export type TypeManque =
   /** Aucune clé Systeme.io reliée : AUCUN tag ne part, sur rien. */
   | "cle-api"
@@ -106,14 +136,16 @@ export type TypeManque =
 
 export interface ManqueAutomatisation {
   type: TypeManque;
-  /** Le profil concerné, quand il y en a un. */
+  /** Le profil concerné, quand il y en a un. Nettoyé lui aussi. */
   contexte?: string;
+  /** Sa position, quand son titre est vide. */
+  rang?: number;
   /** Bloquant = rien ne part du tout tant que ce n'est pas réglé. */
   bloquant: boolean;
 }
 
 export interface PlanAutomatisation {
-  etapes: EtapeAutomatisation[];
+  groupes: GroupeAutomatisation[];
   manques: ManqueAutomatisation[];
 }
 
@@ -121,7 +153,6 @@ export interface PlanAutomatisation {
 export interface QuizPourPlan {
   mode?: string | null;
   locale?: string | null;
-  sio_api_key_id?: string | null;
   sio_capture_tag?: string | null;
   sio_share_tag_name?: string | null;
   sio_score_tags?: boolean | null;
@@ -143,8 +174,55 @@ export interface QuestionPourPlan {
   options?: Array<{ sio_tag_name?: string | null; text?: string | null } | null> | null;
 }
 
+/**
+ * CE QUE LE MODULE NE PEUT PAS DEVINER, ET QU'ON LUI DIT.
+ *
+ * -- POURQUOI CE PARAMÈTRE EXISTE, ET CE QU'IL RÉPARE ------------------
+ *
+ * Le premier jet lisait `quiz.sio_api_key_id` et criait "aucune clé
+ * Systeme.io n'est reliée à ce quiz" quand la colonne était vide.
+ * **C'était FAUX pour presque tout le monde.** Cette colonne est une
+ * SURCHARGE par quiz (le cas du freelance qui envoie les leads d'UN quiz
+ * vers le compte de son client) ; `resolveApiKey` retombe ensuite sur la
+ * clé par défaut du compte, puis sur n'importe laquelle, puis sur la clé
+ * historique. Une créatrice qui a branché SA clé une fois et n'a jamais
+ * touché à la surcharge voyait donc un bandeau rouge lui annoncer que
+ * rien ne partait, alors que tout partait.
+ *
+ * C'est le `??` du 2 août dans une autre robe : **une colonne vide ne
+ * veut pas dire "pas de clé", elle veut dire "pas de surcharge".**
+ *
+ * La question ne se lit donc PAS dans une colonne. Elle se lit là où on
+ * demande vraiment ses tags à Systeme.io, et l'écran passe la réponse.
+ *
+ * `null` = ON NE SAIT PAS ENCORE (le chargement n'a pas répondu, ou il a
+ * échoué). On ne dit alors RIEN : un avertissement qui sort à tort fait
+ * chercher au mauvais endroit, et c'est exactement ce qu'on répare.
+ */
+export interface FaitsAutomatisation {
+  /**
+   * Une clé Systeme.io répond-elle pour ce quiz ?
+   *
+   * `true` -> on a pu lire ses tags. `false` -> l'API a répondu
+   * "aucune clé". `null` -> inconnu, on se tait.
+   */
+  cleReliee: boolean | null;
+}
+
 function propre(v: unknown): string {
   return String(v ?? "").trim();
+}
+
+/**
+ * Le nom LISIBLE d'un profil.
+ *
+ * `resultChoiceLabel` attend un secours obligatoire, et on lui passe ""
+ * EXPRÈS : ce module ne traduit pas. Un titre vide rend donc une chaîne
+ * vide, et c'est l'écran qui écrit "Profil 3" dans la langue de la
+ * créatrice, à partir du `rang`.
+ */
+function nomProfil(titre: unknown): string {
+  return resultChoiceLabel(propre(titre), "");
 }
 
 /** Les tags d'un profil, l'ancien champ unique servant de repli. */
@@ -182,119 +260,154 @@ export function tagsDeScorePossibles(quiz: QuizPourPlan): {
 }
 
 /**
+ * LA CLÉ RÉPOND-ELLE, d'après ce que le chargement des tags a donné ?
+ *
+ * PURE, donc testable, et c'est tout l'intérêt : la règle est écrite une
+ * fois au lieu d'être devinée dans un composant.
+ *
+ * - des tags reçus -> la clé répond, quelle que soit sa provenance
+ *   (surcharge du quiz, défaut du compte, clé historique) ;
+ * - `noApiKey` -> l'API a dit qu'il n'y en a AUCUNE : on le dit ;
+ * - une erreur, ou rien encore -> ON NE SAIT PAS, et on se tait.
+ *
+ * Une liste VIDE compte comme une réponse : un compte tout neuf n'a
+ * aucun tag, et sa clé marche très bien.
+ */
+export function cleRelieeDepuisTags(etat: {
+  tags: unknown[] | null;
+  noApiKey: boolean;
+  error: boolean;
+}): boolean | null {
+  if (Array.isArray(etat.tags)) return true;
+  if (etat.noApiKey) return false;
+  return null;
+}
+
+/**
  * Le plan complet pour UN quiz.
  *
- * PURE. Ne rend que des étapes dont le tag part VRAIMENT, et signale à
- * part ce qui manque pour que ça parte.
+ * PURE. Ne rend que des tags qui partent VRAIMENT, groupés par famille,
+ * et signale à part ce qui manque pour qu'ils partent.
+ *
+ * L'ORDRE DES GROUPES EST L'ORDRE DU PARCOURS, et il n'est pas
+ * décoratif : ce que le visiteur déclenche en premier vient en premier,
+ * donc les profils (ou la capture d'un sondage) avant le bonus de
+ * partage. Le groupe "rien à créer" passe en dernier : c'est une note,
+ * pas une tâche.
  */
 export function construirePlanAutomatisation(
   quiz: QuizPourPlan,
   resultats: ResultatPourPlan[],
-  questions: QuestionPourPlan[] = [],
+  questions: QuestionPourPlan[],
+  faits: FaitsAutomatisation,
 ): PlanAutomatisation {
-  const etapes: EtapeAutomatisation[] = [];
+  const groupes: GroupeAutomatisation[] = [];
   const manques: ManqueAutomatisation[] = [];
   const estSondage = propre(quiz.mode) === "survey";
 
   // BLOQUANT EN PREMIER. Sans clé, aucun contact n'est créé et aucun tag
   // n'est posé : tout le reste de l'écran serait un plan pour rien.
-  if (!propre(quiz.sio_api_key_id)) {
+  //
+  // On ne le dit QUE si on le SAIT (`false`). `null` veut dire que le
+  // chargement n'a pas encore répondu : se taire est la bonne réponse,
+  // un bandeau rouge affiché à tort fait chercher au mauvais endroit.
+  if (faits.cleReliee === false) {
     manques.push({ type: "cle-api", bloquant: true });
   }
+
+  const ajouter = (g: GroupeAutomatisation) => {
+    if (g.lignes.length > 0) groupes.push(g);
+  };
 
   if (estSondage) {
     const capture = propre(quiz.sio_capture_tag);
     if (capture) {
-      etapes.push({
-        cle: "capture",
+      ajouter({
         type: "capture-sondage",
-        tag: capture,
-        nomWorkflow: capture,
         action: "campagne",
+        lignes: [{ cle: "capture", tag: capture }],
       });
     } else {
       manques.push({ type: "tag-capture", bloquant: false });
     }
 
-    // Les tags par RÉPONSE. Une seule étape par tag distinct : la même
+    // Les tags par RÉPONSE. Une seule ligne par tag distinct : la même
     // règle sert toutes les questions qui portent ce tag, et en créer
     // une par question ferait partir la campagne plusieurs fois.
     const vus = new Set<string>();
+    const reponses: LigneAutomatisation[] = [];
     questions.forEach((q) => {
       (q.options ?? []).forEach((o) => {
         const tag = propre(o?.sio_tag_name);
         if (!tag || vus.has(tag.toLowerCase())) return;
         vus.add(tag.toLowerCase());
-        etapes.push({
+        reponses.push({
           cle: `reponse-${tag}`,
-          type: "reponse-sondage",
           tag,
-          nomWorkflow: tag,
-          action: "campagne",
-          contexte: propre(o?.text) || undefined,
+          contexte: nomProfil(o?.text) || undefined,
         });
       });
     });
+    ajouter({ type: "reponses-sondage", action: "campagne", lignes: reponses });
   } else {
-    // UN QUIZ : ce sont les profils qui tagnt, jamais le tag de
+    // UN QUIZ : ce sont les profils qui taguent, jamais le tag de
     // capture (il n'est appliqué que sur les sondages).
+    const profils: LigneAutomatisation[] = [];
+    const acces: LigneAutomatisation[] = [];
     resultats.forEach((r, i) => {
-      const titre = propre(r.title);
+      const nom = nomProfil(r.title);
       const tags = tagsDuProfil(r);
       if (tags.length === 0) {
-        manques.push({ type: "tag-profil", contexte: titre || undefined, bloquant: false });
+        manques.push({
+          type: "tag-profil",
+          contexte: nom || undefined,
+          rang: i + 1,
+          bloquant: false,
+        });
         return;
       }
       tags.forEach((tag, j) => {
-        etapes.push({
+        profils.push({
           cle: `profil-${i}-${j}`,
-          type: "profil",
           tag,
-          nomWorkflow: tag,
-          action: "campagne",
-          contexte: titre || undefined,
+          contexte: nom || undefined,
+          rang: i + 1,
         });
       });
       // Formation ou communauté : TIQUIZ ouvre l'accès lui même. Une
       // règle de plus ouvrirait l'accès deux fois, et c'est le genre de
       // doublon qu'on ne voit qu'en recevant deux emails.
       if (propre(r.sio_course_id) || propre(r.sio_community_id)) {
-        etapes.push({
+        acces.push({
           cle: `acces-${i}`,
-          type: "acces-automatique",
           tag: tags[0],
-          nomWorkflow: tags[0],
-          action: "rien",
-          contexte: titre || undefined,
+          contexte: nom || undefined,
+          rang: i + 1,
         });
       }
     });
-  }
+    ajouter({ type: "profils", action: "campagne", lignes: profils });
 
-  // LES TAGS DE SCORE, seulement s'ils sont cochés.
-  if (quiz.sio_score_tags === true) {
-    const { global, parAxe } = tagsDeScorePossibles(quiz);
-    etapes.push({
-      cle: "score-global",
-      type: "score",
-      tag: global[0] ?? "",
-      nomWorkflow: global[0] ?? "",
-      action: "campagne",
-      motif: true,
-      valeurs: global,
-    });
-    parAxe.forEach((a, i) => {
-      etapes.push({
-        cle: `score-axe-${i}`,
-        type: "score",
-        tag: a.valeurs[0] ?? "",
-        nomWorkflow: a.valeurs[0] ?? "",
-        action: "campagne",
-        contexte: a.axe,
-        motif: true,
-        valeurs: a.valeurs,
+    // LES TAGS DE SCORE, seulement s'ils sont cochés.
+    //
+    // Chaque valeur possible devient UNE ligne : le tag n'est pas un
+    // nom fixe (il dépend du score obtenu), et annoncer un motif obligeait
+    // la créatrice à le déplier de tête. Une ligne = une règle à créer.
+    if (quiz.sio_score_tags === true) {
+      const { global, parAxe } = tagsDeScorePossibles(quiz);
+      const scores: LigneAutomatisation[] = global.map((tag) => ({
+        cle: `score-${tag}`,
+        tag,
+      }));
+      parAxe.forEach((a) => {
+        a.valeurs.forEach((tag) => {
+          scores.push({ cle: `score-${tag}`, tag, contexte: a.axe });
+        });
       });
-    });
+      ajouter({ type: "score", action: "campagne", lignes: scores });
+    }
+
+    ajouter({ type: "acces-automatique", action: "rien", lignes: acces });
   }
 
   // LE BONUS DE PARTAGE. Un seul workflow, quel que soit le nombre de
@@ -302,16 +415,15 @@ export function construirePlanAutomatisation(
   //
   // MESURÉ dans la route de partage, pas déduit : le tag part dès qu'il
   // est RENSEIGNÉ, sans regarder `virality_enabled`. On annonce donc
-  // l'étape dans ce cas là, et pas seulement quand le bonus de partage
-  // est activé.
+  // le groupe dans ce cas là, et pas seulement quand le bonus de partage
+  // est activé. Sans tag renseigné, aucun groupe : c'est la demande de
+  // Béné, "ne pas montrer si pas de partage activé".
   const tagPartage = propre(quiz.sio_share_tag_name);
   if (tagPartage) {
-    etapes.push({
-      cle: "partage",
+    ajouter({
       type: "partage",
-      tag: tagPartage,
-      nomWorkflow: tagPartage,
       action: "email",
+      lignes: [{ cle: "partage", tag: tagPartage }],
     });
   } else if (quiz.virality_enabled === true) {
     // On ne réclame le tag QUE si un bonus de partage est réellement
@@ -322,5 +434,12 @@ export function construirePlanAutomatisation(
     manques.push({ type: "tag-partage", bloquant: false });
   }
 
-  return { etapes, manques };
+  // Le groupe "rien à créer" passe en DERNIER, même sur un quiz qui n'a
+  // que ça : c'est une note, et une note ne s'ouvre pas en tête de page.
+  const iRien = groupes.findIndex((g) => g.action === "rien");
+  if (iRien >= 0 && iRien !== groupes.length - 1) {
+    groupes.push(groupes.splice(iRien, 1)[0]);
+  }
+
+  return { groupes, manques };
 }
