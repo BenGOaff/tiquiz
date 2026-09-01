@@ -31,6 +31,7 @@ import { jugerCommentaire } from "@/lib/blog/commentaires";
 import { enregistrerCommentaire } from "@/lib/blog/commentairesStore";
 import { envoyerAlerteCommentaire } from "@/lib/email/commentaireBlogAlerte";
 import { creerLimiteur } from "@/lib/rateLimit/parIp";
+import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +102,37 @@ export async function POST(req: NextRequest) {
     statut: verdict.statut,
     motifs: verdict.motifs,
   }).catch(() => false);
+
+  // « RECHARGE LA PAGE POUR LE VOIR » DOIT ÊTRE VRAI (Béné, 1er
+  // septembre 2026).
+  //
+  //   "J'ai essayé de laisser un commentaire, il m'a dit c'est en ligne
+  //    actualise la page pour le voir, mais non je vois rien."
+  //
+  // Elle avait raison, et le code le savait sans le dire : l'article est
+  // en `force-static` avec `revalidate = 600`. Le commentaire était bien
+  // publié en base, mais la page servie venait du cache, et jusqu'à DIX
+  // MINUTES pouvaient passer avant qu'elle ne le voie. Le commentaire au
+  // dessus de la page disait "dix minutes de retard sur une
+  // conversation, personne ne les voit" : c'est faux pour la seule
+  // personne à qui on demande de recharger, celle qui vient d'écrire.
+  //
+  // On invalide donc la page tout de suite. La régénération a lieu à la
+  // requête suivante, c'est à dire au rechargement qu'on lui demande.
+  //
+  // UNIQUEMENT SUR UN COMMENTAIRE PUBLIÉ : un message retenu en
+  // modération ne change rien à la page, et régénérer pour rien
+  // gaspillerait un rendu à chaque tentative de spam.
+  if (verdict.statut === "publie") {
+    try {
+      revalidatePath(`/blog/${verdict.valeur.slug}`);
+    } catch (err) {
+      // Le commentaire est ENREGISTRÉ : un cache qui ne s'invalide pas
+      // coûte dix minutes d'attente, pas le message. On ne transforme
+      // pas ça en erreur, ça ferait renvoyer le commentaire.
+      console.error("[commentaires] invalidation du cache impossible :", err);
+    }
+  }
 
   // LE STATUT EST DIT EXPLICITEMENT, et c'est lui qui décide la phrase
   // affichée. Annoncer "en cours de validation" à quelqu'un dont le

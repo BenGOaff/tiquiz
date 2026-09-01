@@ -28,11 +28,6 @@
   "couverture": "/blog/img/cas-client-jocelyne-tdah.webp",
   "blocs": [
     {
-      "type": "image",
-      "src": "/blog/img/gagner30clientsparjouravecunquiz-etudedecas2.webp",
-      "alt": "Bannière de l'étude de cas, sur fond sombre : gagner plus de 30 leads qualifiés chaque jour avec un simple quiz"
-    },
-    {
       "type": "html",
       "html": "<p><strong>En 9 jours, pour 63,50€</strong> de budget pub, Jocelyne Bacquet a constitué <strong>une base de 285 lectrices qualifiées</strong> dans une niche où elle était totalement inconnue. </p><p>Voici comment cette auteure expérimentée s'est appuyée sur un quiz Tiquiz et sur Gwenn, freelance passionnée, pour démarrer son projet de développement personnel depuis zéro.</p>"
     },

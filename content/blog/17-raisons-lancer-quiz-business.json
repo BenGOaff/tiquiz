@@ -10,11 +10,11 @@
   "blocs": [
     {
       "type": "html",
-      "html": "<p><strong><em>TL;DR</em></strong></p><p>Lancer un quiz qui vend pour toi en 2026 repose sur 5 leviers : </p><ul><li><p>tu captes 10 fois plus de leads qu’avec un ebook (30-40 % de conversion vs 2-3 %),</p></li><li><p>tes contacts arrivent déjà segmentés par profil donc tu écris des emails qui touchent au lieu de mails génériques,</p></li><li><p>la page de résultat personnalisée pré-vend ton offre à chaque répondant,</p></li><li><p>tu construis ton autorité au passage et tu nourris tes pubs Meta avec de la vraie data prospect,</p></li><li><p>c’est un actif business qui tourne pendant 5 à 10 ans. </p><p><br>Avec un outil comme <a href=\"https://tiquiz.fr/\"><strong>Tiquiz</strong></a>, tu lances un quiz complet en moins d’une heure et tu remplaces définitivement l’ebook gratuit que plus personne ne télécharge.</p></li></ul>"
+      "html": "<p><strong><em>TL;DR</em></strong></p><p>Lancer un quiz qui vend pour toi en 2026 repose sur 5 leviers : </p><ul><li><p>tu captes 10 fois plus de leads qu’avec un ebook (30-40 % de conversion vs 2-3 %),</p></li><li><p>tes contacts arrivent déjà segmentés par profil donc tu écris des emails qui touchent au lieu de mails génériques,</p></li><li><p>la page de résultat personnalisée pré-vend ton offre à chaque répondant,</p></li><li><p>tu construis ton autorité au passage et tu nourris tes pubs Meta avec de la vraie data prospect,</p></li><li><p>c’est un actif business qui tourne pendant 5 à 10 ans. </p><p>Avec un outil comme <a href=\"https://tiquiz.fr/\"><strong>Tiquiz</strong></a>, tu lances un quiz complet en moins d’une heure et tu remplaces définitivement l’ebook gratuit que plus personne ne télécharge.</p></li></ul>"
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "Laisse tomber tes ebooks moisis",
       "id": "laisse-tomber-tes-ebooks-moisis"
     },
@@ -28,13 +28,13 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "🚀 Côté acquisition",
       "id": "cote-acquisition"
     },
     {
       "type": "titre",
-      "niveau": 2,
+      "niveau": 3,
       "texte": "1. Tu captes 10 fois plus de leads",
       "id": "1-tu-captes-10-fois-plus-de-leads"
     },
@@ -57,7 +57,7 @@
     },
     {
       "type": "titre",
-      "niveau": 2,
+      "niveau": 3,
       "texte": "2. Ton quiz se partage tout seul",
       "id": "2-ton-quiz-se-partage-tout-seul"
     },
@@ -76,7 +76,7 @@
     },
     {
       "type": "titre",
-      "niveau": 2,
+      "niveau": 3,
       "texte": "3. Tu n’as pas besoin d’un budget pub",
       "id": "3-tu-n-as-pas-besoin-d-un-budget-pub"
     },
@@ -95,7 +95,7 @@
     },
     {
       "type": "titre",
-      "niveau": 2,
+      "niveau": 3,
       "texte": "4. Tu te démarques sans rien forcer",
       "id": "4-tu-te-demarques-sans-rien-forcer"
     },
@@ -114,13 +114,13 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "🎯 Côté qualification",
       "id": "cote-qualification"
     },
     {
       "type": "titre",
-      "niveau": 2,
+      "niveau": 3,
       "texte": "5. Tu sais qui est en face avant le premier mail",
       "id": "5-tu-sais-qui-est-en-face-avant-le-premier-mail"
     },
@@ -139,7 +139,7 @@
     },
     {
       "type": "titre",
-      "niveau": 2,
+      "niveau": 3,
       "texte": "6. Tu personnalises chaque email envoyé",
       "id": "6-tu-personnalises-chaque-email-envoye"
     },
@@ -158,7 +158,7 @@
     },
     {
       "type": "titre",
-      "niveau": 2,
+      "niveau": 3,
       "texte": "7. Tu fais chuter tes désinscriptions",
       "id": "7-tu-fais-chuter-tes-desinscriptions"
     },
@@ -177,7 +177,7 @@
     },
     {
       "type": "titre",
-      "niveau": 2,
+      "niveau": 3,
       "texte": "8. Tu réveilles ta liste dormante",
       "id": "8-tu-reveilles-ta-liste-dormante"
     },
@@ -196,13 +196,13 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "💰 Côté vente",
       "id": "cote-vente"
     },
     {
       "type": "titre",
-      "niveau": 2,
+      "niveau": 3,
       "texte": "9. Ta page de résultat pré-vend ton offre",
       "id": "9-ta-page-de-resultat-pre-vend-ton-offre"
     },
@@ -221,7 +221,7 @@
     },
     {
       "type": "titre",
-      "niveau": 2,
+      "niveau": 3,
       "texte": "10. Tu valides tes offres avant de les créer",
       "id": "10-tu-valides-tes-offres-avant-de-les-creer"
     },
@@ -240,7 +240,7 @@
     },
     {
       "type": "titre",
-      "niveau": 2,
+      "niveau": 3,
       "texte": "11. Tes clients arrivent déjà chauds",
       "id": "11-tes-clients-arrivent-deja-chauds"
     },
@@ -259,7 +259,7 @@
     },
     {
       "type": "titre",
-      "niveau": 2,
+      "niveau": 3,
       "texte": "12. Tu vends mieux ce que tu as déjà",
       "id": "12-tu-vends-mieux-ce-que-tu-as-deja"
     },
@@ -278,13 +278,13 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "🧠 Côté stratégie",
       "id": "cote-strategie"
     },
     {
       "type": "titre",
-      "niveau": 2,
+      "niveau": 3,
       "texte": "13. Ton quiz fait l’étude de marché que tu n’as jamais faite",
       "id": "13-ton-quiz-fait-l-etude-de-marche-que-tu-n-as-jamais-faite"
     },
@@ -303,7 +303,7 @@
     },
     {
       "type": "titre",
-      "niveau": 2,
+      "niveau": 3,
       "texte": "14. Tu construis ton autorité au passage",
       "id": "14-tu-construis-ton-autorite-au-passage"
     },
@@ -322,7 +322,7 @@
     },
     {
       "type": "titre",
-      "niveau": 2,
+      "niveau": 3,
       "texte": "15. Tu nourris tes pubs avec de la vraie data",
       "id": "15-tu-nourris-tes-pubs-avec-de-la-vraie-data"
     },
@@ -341,13 +341,13 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "🎉 Côté expérience",
       "id": "cote-experience"
     },
     {
       "type": "titre",
-      "niveau": 2,
+      "niveau": 3,
       "texte": "16. Tu mets enfin du fun dans ton marketing",
       "id": "16-tu-mets-enfin-du-fun-dans-ton-marketing"
     },
@@ -366,7 +366,7 @@
     },
     {
       "type": "titre",
-      "niveau": 2,
+      "niveau": 3,
       "texte": "17. Tu construis un actif business qui dure",
       "id": "17-tu-construis-un-actif-business-qui-dure"
     },
@@ -385,7 +385,7 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "FAQ - Créer un quiz dans Systeme io avec Tiquiz",
       "id": "faq-creer-un-quiz-dans-systeme-io-avec-tiquiz"
     },
@@ -420,7 +420,7 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "En bref",
       "id": "en-bref"
     },

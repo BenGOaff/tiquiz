@@ -48,7 +48,16 @@
 //     publié par Béné n'apparaîtrait jamais, et elle conclurait que le
 //     bouton ne marche pas (scénario Jocelyne du 1er août).
 //
-// Dix minutes de retard sur une conversation, personne ne les voit.
+// CE COMMENTAIRE DISAIT « dix minutes de retard sur une conversation,
+// personne ne les voit ». C'ÉTAIT FAUX, et Béné l'a payé le 1er
+// septembre : "il m'a dit c'est en ligne actualise la page pour le voir,
+// mais non je vois rien." La seule personne à qui on demande de
+// recharger est justement celle qui vient d'écrire, et c'est la seule
+// que dix minutes de cache empêchent de se voir.
+//
+// `POST /api/blog/commentaires` appelle donc `revalidatePath` sur cette
+// page dès qu'un commentaire est PUBLIÉ. Les dix minutes ne servent plus
+// qu'au reste (un article corrigé, un commentaire modéré à la main).
 
 import Link from "next/link";
 import { notFound } from "next/navigation";

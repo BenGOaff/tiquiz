@@ -52,6 +52,12 @@ import path from "node:path";
 import { reponctuer } from "../lib/blog/reponctuation.ts";
 import { corrigerFaits } from "../lib/blog/faitsProgramme.ts";
 import { poserAlt } from "../lib/blog/altImages.ts";
+import {
+  corrigerStructure,
+  nettoyerMiseEnPage,
+  normaliserNiveauxTitres,
+  retirerBanniereEnTete,
+} from "../lib/blog/miseEnPage.ts";
 
 const DOSSIER = path.join(process.cwd(), "content", "blog");
 const VERIFIE = process.argv.includes("--verifie");
@@ -148,6 +154,10 @@ function corrigerAncres(html) {
 let typo = 0;
 let faits = 0;
 let alts = 0;
+let miseEnPage = 0;
+let structure = 0;
+let niveaux = 0;
+let bannieres = 0;
 function texte(s) {
   // LES FAITS D'ABORD, LA PONCTUATION ENSUITE.
   //
@@ -163,8 +173,25 @@ function texte(s) {
   return out;
 }
 
+/**
+ * LE HTML D'UN BLOC : la mise en page D'ABORD, le texte ensuite.
+ *
+ * L'ordre compte, pour la même raison que faits-puis-ponctuation : les
+ * corrections de structure portent sur des fragments de HTML ENTIERS, et
+ * la reponctuation change les espaces à l'intérieur. Reponctuer avant
+ * ferait que plus aucun fragment ne serait reconnu, et la correction
+ * échouerait en silence.
+ */
+function html(s) {
+  const cor = corrigerStructure(s);
+  if (cor.corriges > 0) structure += cor.corriges;
+  const propre = nettoyerMiseEnPage(cor.html);
+  if (propre !== cor.html) miseEnPage += 1;
+  return texte(corrigerAncres(propre));
+}
+
 function reparerBloc(b) {
-  if (b.type === "html") return { ...b, html: texte(corrigerAncres(b.html)) };
+  if (b.type === "html") return { ...b, html: html(b.html) };
   if (b.type === "titre") return { ...b, texte: texte(b.texte) };
   if (b.type === "image") {
     // LE TEXTE ALTERNATIF, POSÉ S'IL MANQUE.
@@ -185,7 +212,7 @@ function reparerBloc(b) {
       ...b,
       questions: b.questions.map((q) => ({
         question: texte(q.question),
-        reponse: texte(corrigerAncres(q.reponse)),
+        reponse: html(q.reponse),
       })),
     };
   }
@@ -194,7 +221,17 @@ function reparerBloc(b) {
 
 function reparerArticle(a) {
   const out = { ...a, titre: texte(a.titre), description: texte(a.description) };
-  if (Array.isArray(a.blocs)) out.blocs = a.blocs.map(reparerBloc);
+  if (Array.isArray(a.blocs)) {
+    // LES NIVEAUX DE TITRE SE RECALENT SUR TOUT L'ARTICLE, donc APRÈS
+    // le passage bloc par bloc : la règle a besoin de voir la suite
+    // complète pour savoir quel niveau ouvre les sections.
+    const sansBanniere = retirerBanniereEnTete(a.blocs, String(a.couverture ?? ""));
+    if (sansBanniere.length !== a.blocs.length) bannieres += 1;
+    const avant = sansBanniere.map(reparerBloc);
+    const apres = normaliserNiveauxTitres(avant);
+    if (JSON.stringify(apres) !== JSON.stringify(avant)) niveaux += 1;
+    out.blocs = apres;
+  }
   return out;
 }
 
@@ -216,6 +253,10 @@ console.log(`Fichiers ${VERIFIE ? "a corriger" : "reecrits"} : ${ecrits}/${fichi
 console.log(`Fragments reponctues : ${typo}`);
 console.log(`Faits du programme corriges : ${faits}`);
 console.log(`Textes alternatifs poses : ${alts}`);
+console.log(`Blocs dont la mise en page a ete nettoyee : ${miseEnPage}`);
+console.log(`Fragments de structure repares : ${structure}`);
+console.log(`Articles dont les niveaux de titre ont ete recales : ${niveaux}`);
+console.log(`Bannieres en double retirees : ${bannieres}`);
 for (const r of REGLES) {
   const n = compte.get(r.de) ?? 0;
   if (n > 0) console.log(`  ${n}x  ${r.de}\n        -> ${r.vers}   (${r.pourquoi})`);

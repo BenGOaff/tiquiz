@@ -14,7 +14,7 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "L’email n’est pas mort. Au contraire.",
       "id": "l-email-n-est-pas-mort-au-contraire"
     },
@@ -29,7 +29,7 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "Ce que tu rates sans stratégie de capture d’emails",
       "id": "ce-que-tu-rates-sans-strategie-de-capture-d-emails"
     },
@@ -44,7 +44,7 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "Les vrais avantages d’une stratégie de capture solide",
       "id": "les-vrais-avantages-d-une-strategie-de-capture-solide"
     },
@@ -54,7 +54,7 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "Comment capturer efficacement les emails (la vraie méthode)",
       "id": "comment-capturer-efficacement-les-emails-la-vraie-methode"
     },
@@ -81,13 +81,13 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "Études de cas : des marques qui cartonnent grâce aux quiz",
       "id": "etudes-de-cas-des-marques-qui-cartonnent-grace-aux-quiz"
     },
     {
       "type": "html",
-      "html": "<p>Quelques exemples concrets pour montrer que la méthode marche.</p><p><br>Si ça marche pour eux... pourquoi pas pour toi ?</p>"
+      "html": "<p>Quelques exemples concrets pour montrer que la méthode marche.</p><p>Si ça marche pour eux... pourquoi pas pour toi ?</p>"
     },
     {
       "type": "image",
@@ -109,7 +109,7 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "Tiquiz : le quiz qui se branche direct sur ton Systeme io",
       "id": "tiquiz-le-quiz-qui-se-branche-direct-sur-ton-systeme-io"
     },
@@ -124,7 +124,7 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "FAQ - Créer un quiz dans Systeme io avec Tiquiz",
       "id": "faq-creer-un-quiz-dans-systeme-io-avec-tiquiz"
     },
@@ -175,7 +175,7 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "En bref",
       "id": "en-bref"
     },

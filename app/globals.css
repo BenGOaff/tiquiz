@@ -643,9 +643,33 @@ html[data-pq-compact] body {
   font-weight: 650;
 }
 /* Un paragraphe qui ne porte qu'un <br> vient de l'éditeur d'origine :
-   il servait d'espacement, et notre rythme vertical s'en charge déjà. */
+   il servait d'espacement, et notre rythme vertical s'en charge déjà.
+   La SOURCE est nettoyée depuis le 1er septembre (`lib/blog/miseEnPage.ts`) ;
+   ce filet reste pour le jour où un nouvel article sera importé. */
 .tiquiz-blog p:has(> br:only-child) {
   display: none;
+}
+
+/* UN TITRE APPARTIENT AU TEXTE QUI LE SUIT (Béné, 1er septembre 2026 :
+   "des espaces minimum entre les titres... bref c'est n'importe quoi").
+   
+   Le titre demandait 0,6em sous lui, le paragraphe 1,1em au dessus. Les
+   marges verticales FUSIONNENT en prenant la plus grande : l'écart
+   titre -> texte valait donc 1,1em, exactement comme l'écart entre deux
+   paragraphes ordinaires. Le titre flottait au milieu, sans se rattacher
+   à rien, et c'est ce qui se lit comme "n'importe quoi".
+   
+   On annule la marge du premier élément qui suit un titre : le titre
+   garde la sienne, et l'oeil voit enfin où commence la section. */
+.tiquiz-blog :is(h2, h3, h4) + :is(p, ul, ol, blockquote, figure, table) {
+  margin-top: 0;
+}
+
+/* DEUX TITRES QUI SE SUIVENT forment UN bloc, pas deux sections. Sans
+   ça, le sous-titre part avec la marge d'une nouvelle section et se
+   détache de celui qu'il précise. */
+.tiquiz-blog :is(h2, h3) + :is(h3, h4) {
+  margin-top: 0.9em;
 }
 
 /* ====================================================================
