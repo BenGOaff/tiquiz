@@ -3135,25 +3135,7 @@
     "intro": "O Tiquiz adiciona um tag ao contato Systeme.io de quem responde. Aqui estão as regras a criar para ESTE quiz, para que esses tags façam mesmo alguma coisa.",
     "pourquoi": "A saber: adicionar um tag não desencadeia nada sozinho. Sem a regra correspondente, a pessoa recebe o tag e mais nada.",
     "ouvrirSysteme": "Abrir minhas automações Systeme.io",
-    "profilTitre": "O perfil \"{profil}\"",
-    "partageTitre": "O bónus de partilha",
-    "captureTitre": "Alguém responde à sua pesquisa",
-    "reponseTitre": "A resposta \"{reponse}\"",
-    "scoreTitre": "A pontuação do eixo \"{axe}\"",
-    "scoreTitreGlobal": "A pontuação global",
-    "scoreMotif": "O tag depende da pontuação obtida. Cria uma regra para cada um:",
-    "pas1": "Cria um novo workflow e dá-lhe o nome",
-    "pas2": "Gatilho: \"Tag adicionado\", depois escolhe o tag",
-    "pas2Motif": "o de cima que queres tratar.",
-    "pas3": "Ação: \"{action}\", depois escolhe",
-    "actionCampagne": "Subscrever uma campanha de emails",
-    "actionEmail": "Enviar um email",
-    "envoiProfil": "a campanha que queres enviar às pessoas do perfil \"{profil}\".",
-    "envoiPartage": "o email que entrega o teu bónus de partilha, ou o acesso à tua formação.",
-    "envoiGenerique": "a campanha que lhes queres enviar.",
-    "accesTitre": "\"{profil}\": nada a criar",
-    "accesTexte": "Ligaste uma formação ou uma comunidade a este perfil. O Tiquiz abre o acesso sozinho, no momento do resultado. Mais uma regra abriria duas vezes.",
-    "manqueCle": "Nenhuma chave Systeme.io está ligada a este quiz. Enquanto for assim, nenhum contato é criado e nenhum tag é adicionado. Vá na aba Criar, seção Systeme.io, para escolher sua chave.",
+    "manqueCle": "Nenhuma chave Systeme.io está vinculada a este quiz. Enquanto for assim, nenhum contato é criado e nenhuma tag é aplicada. Vá na aba Criar, coluna da esquerda, Configurações, grupo \"Gerenciamento do quiz\".",
     "manqueTagProfil": "O perfil \"{profil}\" não tem tag. Quem o obtiver não será reconhecível em lado nenhum no Systeme.io.",
     "manqueTagCapture": "Esta pesquisa não tem tag de captura: ninguém receberá um tag ao responder.",
     "manqueTagPartage": "Ofereces um bónus de partilha, mas nenhum tag marca quem partilha. Não poderás enviar-lhes o bónus automaticamente.",
@@ -3161,6 +3143,40 @@
     "videTexte": "Adicione um tag Systeme.io aos seus perfis de resultado, na aba Criar. Os passos aparecerão aqui.",
     "noteFin": "Os nomes dos tags têm de coincidir caráter a caráter. Clica para os copiar.",
     "copyTag": "Copiar o tag",
-    "copyError": "Não foi possível copiar. O tag é: {tag}"
+    "copyError": "Não foi possível copiar. O tag é: {tag}",
+    "recetteTitre": "A receita, a mesma para cada tag",
+    "recetteAide": "Três cliques no Systeme.io, para repetir uma vez por tag da lista abaixo.",
+    "recette1": "Crie um workflow e dê a ele o nome da tag.",
+    "recette2": "Gatilho: \"Tag adicionada\", depois escolha essa tag.",
+    "recette3": "Ação: \"Inscrever em uma campanha de emails\", depois escolha a campanha a enviar.",
+    "actionAutre": "Aqui, escolha a ação \"Enviar um email\": aquele que entrega o seu bônus.",
+    "profilSansNom": "Perfil {n}",
+    "tagSansContexte": "Todas as pessoas que respondem",
+    "groupe": {
+      "profils": {
+        "titre": "Seus perfis de resultado",
+        "aide": "A tag é aplicada assim que o visitante obtém esse perfil."
+      },
+      "partage": {
+        "titre": "Seu bônus de compartilhamento",
+        "aide": "A tag é aplicada quando o visitante compartilha seu quiz."
+      },
+      "capture-sondage": {
+        "titre": "As respostas da sua pesquisa",
+        "aide": "A tag é aplicada a todas as pessoas que respondem."
+      },
+      "reponses-sondage": {
+        "titre": "As respostas que você marcou",
+        "aide": "A tag é aplicada quando o visitante escolhe essa resposta."
+      },
+      "score": {
+        "titre": "As faixas de pontuação",
+        "aide": "A tag depende da pontuação: crie uma regra por faixa que você quiser tratar."
+      },
+      "acces-automatique": {
+        "titre": "Nada a criar para esses perfis",
+        "aide": "Você vinculou um curso ou uma comunidade. O Tiquiz abre o acesso sozinho, e uma regra a mais abriria duas vezes."
+      }
+    }
   }
 }

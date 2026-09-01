@@ -1916,7 +1916,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
                       leads du sondage vers un sous-compte SIO (retour
                       Christelle 14 juillet 2026). Le picker PATCH
                       sio_api_key_id de facon autonome. */}
-                  <QuizSioKeyPicker quizId={quizId} />
+                  <QuizSioKeyPicker quizId={quizId} variante="colonne" />
                   <div className="flex flex-wrap gap-1.5">
                     <CapturePill label={t("fieldEmailRequired")} active locked />
                     <CapturePill label={t("fieldFirstNameRequired")} active={captureFirstName} onToggle={() => setCaptureFirstName(!captureFirstName)} />

@@ -4683,22 +4683,80 @@ tags qu'elle n'aura jamais.
 l'accès DEUX fois, et ça ne se voit qu'en recevant deux emails. La carte
 dit donc de ne rien faire.
 
-**Les tags de score sont un MOTIF, pas un nom.** Ils sont calculés au
-moment de la réponse, à partir des libellés de la créatrice. L'écran
-montre donc la liste RÉELLE des valeurs possibles, calculée par
-`tagsDeScorePossibles`. Et `slugifyAxisLabel` n'accepte que `[a-z0-9_]` :
-"En route" donne `score-en_route`, avec un SOULIGNÉ. Deviner un tiret
-ferait créer une règle sur un tag qui n'arrive jamais.
+**Les tags de score sont CALCULÉS au moment de la réponse**, à partir
+des libellés de la créatrice. L'écran en fait donc UNE LIGNE PAR VALEUR
+POSSIBLE (`tagsDeScorePossibles`) : une ligne = une règle à créer.
+Annoncer un motif obligeait à le déplier de tête. Et `slugifyAxisLabel`
+n'accepte que `[a-z0-9_]` : "En route" donne `score-en_route`, avec un
+SOULIGNÉ. Deviner un tiret ferait créer une règle sur un tag qui
+n'arrive jamais.
 
-**Le nom du workflow proposé EST le nom du tag.** Deux noms
-différents pour la même chose obligent à faire la correspondance de tête
-à chaque fois qu'on relit sa liste de workflows.
+**Le module ne rend AUCUNE phrase**, seulement des données (le type de
+groupe, le tag exact, le contexte) : l'interface existe en 7 langues, et
+c'est l'écran qui écrit. Le nom du tag est CLIQUABLE-COPIABLE : c'est le
+seul endroit où une faute de frappe casse tout en silence.
 
-**Le module ne rend AUCUNE phrase**, seulement des données (le type
-d'étape, le tag exact, le contexte) : l'interface existe en 7
-langues, et c'est l'écran qui écrit. Le nom du tag est
-CLIQUABLE-COPIABLE : c'est le seul endroit où une faute de frappe casse
-tout en silence.
+### LA RECETTE EST DITE UNE FOIS, PAS UNE FOIS PAR TAG (même jour)
+
+Premier jet : une carte par tag, chacune répétant les trois mêmes clics.
+Béné : "empiler les conseils qui disent la même chose t'es sûr que c'est
+le plus lisible, pratique, intelligent ? Genre 1 : les profils et 2 : le
+bonus de partage. Et ensuite tu n'en répètes pas, tu fais un truc facile
+à lire sans avoir besoin de scroller pendant mille ans."
+
+Elle avait raison, et c'est mesurable : les trois clics sont IDENTIQUES
+pour tous les tags. Un quiz à six profils affichait donc **dix-huit
+lignes de marche à suivre pour six informations**.
+
+**Le module rend des GROUPES** (`groupes`, pas `etapes`), chacun avec sa
+liste de tags. L'écran écrit la recette UNE seule fois, en haut, et
+chaque groupe ne porte plus que ses noms de tags. L'ordre des groupes
+est celui du parcours, et le groupe "rien à créer" passe en dernier :
+c'est une note, pas une tâche. Le test interdit que `recette1/2/3`
+apparaisse plus d'une fois dans le composant.
+
+**Et la page NE DÉFILAIT PAS.** L'éditeur est en
+`h-screen ... overflow-hidden` : sans conteneur défilant, tout ce qui
+dépasse est simplement inatteignable. Le panneau porte donc
+`flex-1 overflow-y-auto`, et le test le fige.
+
+### LE NOM D'UN PROFIL PASSE PAR `resultChoiceLabel`
+
+Ce qu'elle a lu à l'écran, mot pour mot :
+
+```
+Le profil "<div class="rt-field-fs" style="--rt-fs-m&nbsp;: 24px">Team Capture..."
+```
+
+Le titre d'un profil est du texte RICHE : il porte des balises et des
+variables. **La règle avait été écrite le matin même** (retour
+Christian, `lib/quiz/resultLabel.ts`) et je l'ai oubliée le lendemain,
+dans le module qui l'aurait le plus utilisée. **Une règle qui n'est pas
+APPELÉE ne protège de rien** : ce n'est plus "elle n'existe pas", c'est
+"elle existe et personne ne l'appelle", ce qui est pire parce qu'on
+croit le sujet réglé.
+
+Le module lui passe un secours VIDE (il ne traduit pas) et porte le
+`rang` à côté : un profil encore sans titre s'affiche "Profil 2" dans la
+langue de la créatrice.
+
+### LA CLÉ SYSTEME.IO N'AVAIT JAMAIS ÉTÉ DANS LA COLONNE
+
+Béné : "en réorganisant la sidebar on a viré le choix de la clé Systeme
+io du coup j'ai une erreur."
+
+Elle n'avait pas été retirée. Elle vivait dans l'onglet **Partager**, et
+pire, à l'INTÉRIEUR du bloc gaté par `virality_enabled` : une créatrice
+qui ne propose pas de bonus de partage n'avait **aucun moyen** de
+choisir sa clé, et rien ne le disait. C'est le réglage sans lequel aucun
+tag ne part.
+
+`QuizSioKeyPicker` prend donc une `variante` (`"carte" | "colonne"`),
+et le rendu de la colonne reprend l'idiome des autres réglages (un
+`<h3>` à la même taille, la phrase d'aide en `text-[11px]`, le select
+pleine largeur). Une carte au milieu de sept sections plates se voit
+comme une pièce rapportée. **Il n'y en a plus qu'UN seul endroit** : le
+groupe "Gestion du quiz", pour le quiz comme pour le sondage.
 
 **Ce qui manque est dit à part, et le bloquant passe devant** : sans clé
 Systeme.io reliée, aucun contact n'est créé et aucun tag n'est

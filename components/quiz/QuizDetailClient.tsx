@@ -4528,6 +4528,25 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                   })()}
                 </SettingsSection>
                 <SettingsSection titre={t("settingsGroupGestion")} aide={t("settingsGroupGestionHint")}>
+                  {/* LA CLÉ SYSTEME.IO EST ICI, ET ELLE N'Y ÉTAIT PAS.
+
+                      Béné, 1er septembre : "en réorganisant la sidebar
+                      on a viré le choix de la clé Systeme io du coup
+                      j'ai une erreur."
+
+                      Elle n'avait pas été retirée : elle n'a jamais été
+                      dans la colonne. Elle vivait dans l'onglet
+                      Partager, à l'intérieur du bloc gaté par
+                      `virality_enabled`. Une créatrice qui ne propose
+                      pas de bonus de partage n'avait donc AUCUN moyen
+                      de choisir sa clé, et rien ne le disait : c'est
+                      le réglage SANS lequel aucun tag ne part.
+
+                      Le composant va chercher les clés et enregistre
+                      lui même (PATCH direct) : l'éditeur ne gère pas
+                      `sio_api_key_id`, donc aucun conflit avec
+                      l'autosave. */}
+                  {!isEmbed && <QuizSioKeyPicker quizId={quizId} variante="colonne" />}
                   <section className="space-y-2">
                     <div>
                       <h3 className="text-sm font-semibold">{t("quizLanguageLabel")}</h3>
@@ -6827,12 +6846,6 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
             </div>
             )}
 
-            {/* Clé API Systeme.io par quiz : permet (ex: freelance)
-            d'envoyer les leads de CE quiz vers le compte SIO du
-            client. Le picker fetch les clés + PATCH /api/quiz/[id]
-            de façon autonome (l'éditeur ne gère pas sio_api_key_id,
-            donc pas de conflit avec l'autosave). */}
-            {!isEmbed && <QuizSioKeyPicker quizId={quizId} />}
             </section>
             )}
 
