@@ -58,6 +58,7 @@ import {
   normaliserNiveauxTitres,
   retirerBanniereEnTete,
 } from "../lib/blog/miseEnPage.ts";
+import { poserTableaux } from "../lib/blog/tableauxRente.ts";
 
 const DOSSIER = path.join(process.cwd(), "content", "blog");
 const VERIFIE = process.argv.includes("--verifie");
@@ -158,6 +159,7 @@ let miseEnPage = 0;
 let structure = 0;
 let niveaux = 0;
 let bannieres = 0;
+let tableaux = 0;
 function texte(s) {
   // LES FAITS D'ABORD, LA PONCTUATION ENSUITE.
   //
@@ -220,7 +222,16 @@ function reparerBloc(b) {
 }
 
 function reparerArticle(a) {
-  const out = { ...a, titre: texte(a.titre), description: texte(a.description) };
+  // LES MOTS CLÉS PASSENT PAR LA MÊME CORRECTION QUE LE RESTE. Ils y ont
+  // échappé jusqu'au 1er septembre, et deux d'entre eux portaient une
+  // promesse fausse ("paiement le 10 du mois", "affiliation sans
+  // seuil"). Un chiffre faux reste faux quand il sert de mot clé.
+  const out = {
+    ...a,
+    titre: texte(a.titre),
+    description: texte(a.description),
+    ...(Array.isArray(a.motsCles) ? { motsCles: a.motsCles.map(texte) } : {}),
+  };
   if (Array.isArray(a.blocs)) {
     // LES NIVEAUX DE TITRE SE RECALENT SUR TOUT L'ARTICLE, donc APRÈS
     // le passage bloc par bloc : la règle a besoin de voir la suite
@@ -228,6 +239,10 @@ function reparerArticle(a) {
     const sansBanniere = retirerBanniereEnTete(a.blocs, String(a.couverture ?? ""));
     if (sansBanniere.length !== a.blocs.length) bannieres += 1;
     const avant = sansBanniere.map(reparerBloc);
+    // LES TABLEAUX PERDUS À L'IMPORT SE REPOSENT ICI, avant le recalage
+    // des niveaux : ils s'accrochent à un titre, donc il faut que ce
+    // titre soit encore celui qu'ils connaissent.
+    tableaux += poserTableaux(avant);
     const apres = normaliserNiveauxTitres(avant);
     if (JSON.stringify(apres) !== JSON.stringify(avant)) niveaux += 1;
     out.blocs = apres;
@@ -257,6 +272,7 @@ console.log(`Blocs dont la mise en page a ete nettoyee : ${miseEnPage}`);
 console.log(`Fragments de structure repares : ${structure}`);
 console.log(`Articles dont les niveaux de titre ont ete recales : ${niveaux}`);
 console.log(`Bannieres en double retirees : ${bannieres}`);
+console.log(`Tableaux de rente reposes : ${tableaux}`);
 for (const r of REGLES) {
   const n = compte.get(r.de) ?? 0;
   if (n > 0) console.log(`  ${n}x  ${r.de}\n        -> ${r.vers}   (${r.pourquoi})`);

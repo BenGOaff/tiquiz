@@ -31,7 +31,7 @@
     "check:caddy": "node scripts/check-caddy-hosts.mjs",
     "check:assets": "node scripts/check-assets.mjs",
     "check:stripe": "node scripts/check-stripe.mjs",
-    "blog:reparer": "node --experimental-strip-types scripts/reparer-blog.mjs",
+    "blog:reparer": "node --experimental-strip-types --import ./tests/logic/register-alias.mjs scripts/reparer-blog.mjs",
     "blog:verifier": "node --experimental-strip-types scripts/reparer-blog.mjs --verifie",
     "blog:epingles": "node scripts/construire-epingles.mjs",
     "check:resend": "node scripts/check-resend.mjs"
