@@ -66,6 +66,10 @@ const PROTECTED_PREFIXES = [
   "/settings",
   "/leads",
   "/stats",
+  // Les generateurs de contenu : ils lisent les quiz de la personne et
+  // consomment de l'IA. Absente d'ici, la page rendrait sa coquille a
+  // quelqu'un de deconnecte avant que la page serveur ne le renvoie.
+  "/generateurs",
   "/admin",
 ];
 

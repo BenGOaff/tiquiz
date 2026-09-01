@@ -19,6 +19,7 @@ export type TutorialPhase =
   | "tour_create_survey"
   | "tour_quizzes"
   | "tour_popquiz"
+  | "tour_generators"
   | "tour_leads"
   | "tour_stats"
   | "tour_complete"
@@ -79,6 +80,7 @@ const PHASE_ORDER: TutorialPhase[] = [
   "tour_create_survey",
   "tour_quizzes",
   "tour_popquiz",
+  "tour_generators",
   "tour_leads",
   "tour_stats",
   "tour_complete",
@@ -91,6 +93,7 @@ export const PHASE_TO_URL: Partial<Record<TutorialPhase, string>> = {
   tour_create_survey: "/survey/new",
   tour_quizzes: "/quizzes",
   tour_popquiz: "/popquizzes",
+  tour_generators: "/generateurs",
   tour_leads: "/leads",
   tour_stats: "/stats",
   tour_complete: "/dashboard",
@@ -375,6 +378,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       // quiz + sondages fusionnés). PAS "quizzes" (drame Gwenn 10 juin).
       if (phase === "tour_quizzes") return element === "projects";
       if (phase === "tour_popquiz") return element === "popquiz";
+      if (phase === "tour_generators") return element === "generators";
       if (phase === "tour_leads") return element === "leads";
       if (phase === "tour_stats") return element === "stats";
 
@@ -392,6 +396,7 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
       case "tour_create_survey":  return tTutorial("tooltipCreateSurvey");
       case "tour_quizzes":        return tTutorial("tooltipQuizzes");
       case "tour_popquiz":        return tTutorial("tooltipPopquiz");
+      case "tour_generators":     return tTutorial("tooltipGenerators");
       case "tour_leads":          return tTutorial("tooltipLeads");
       case "tour_stats":          return tTutorial("tooltipStats");
       case "tour_complete":       return tTutorial("tooltipComplete");

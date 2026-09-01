@@ -16,6 +16,7 @@ import {
   MessageCircleQuestion,
   ShieldCheck,
   Video,
+  Wand2,
   HandCoins,
   GraduationCap,
   Play,
@@ -91,6 +92,10 @@ const MENU_ITEMS = [
   // pour la liste, /popquiz/new pour la création — convention identique
   // au reste du module (singulier pour la création, pluriel pour la liste).
   { key: "popquiz", url: "/popquizzes", icon: Video, end: false },
+  // Les trois générateurs de contenu (bonus, sequence d'emails, promo).
+  // Ils vivent APRES les projets : on genere a partir d'un quiz qui
+  // existe deja, pas avant.
+  { key: "generators", url: "/generateurs", icon: Wand2, end: false },
   { key: "leads", url: "/leads", icon: Users, end: false },
   { key: "stats", url: "/stats", icon: BarChart3, end: false },
 ] as const;

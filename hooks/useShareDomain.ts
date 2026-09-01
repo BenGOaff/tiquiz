@@ -22,6 +22,7 @@
 // aren't briefly relative.
 
 import { useCallback, useEffect, useState } from "react";
+import { urlPubliqueProjet } from "@/lib/quiz/urlPublique";
 
 export interface UseShareDomain {
   /** The selected hostname (e.g. "test.ethilife.fr"). null until the GET resolves. */
@@ -121,13 +122,19 @@ export function useShareDomain(): UseShareDomain {
   const isCustomDomain =
     !!shareDomain && !!mainHost && shareDomain !== mainHost;
 
+  // LA RÈGLE VIT DANS `lib/quiz/urlPublique.ts`, et pas ici : les
+  // générateurs de contenu la lisent aussi, côté serveur, pour mettre
+  // cette adresse dans des emails et des posts. Deux écritures de la
+  // même règle finissent toujours par donner deux adresses.
   const buildPublicUrl = useCallback(
-    (kind: "q" | "p", slug: string, suffix = "") => {
-      if (!shareOrigin) return `/${slug}${suffix}`;
-      return isCustomDomain
-        ? `${shareOrigin}/${slug}${suffix}`
-        : `${shareOrigin}/${kind}/${slug}${suffix}`;
-    },
+    (kind: "q" | "p", slug: string, suffix = "") =>
+      urlPubliqueProjet({
+        origine: shareOrigin,
+        kind,
+        segment: slug,
+        surDomainePerso: isCustomDomain,
+        suffixe: suffix,
+      }),
     [shareOrigin, isCustomDomain],
   );
 
