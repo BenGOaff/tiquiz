@@ -5267,6 +5267,57 @@ chiffres et les deux constructeurs de JSON-LD),
 (le pied de page). Test : `tests/logic/hub-integrations.test.mts`,
 vérifié en rejouant un prix en dur et une capture absente (il rougit).
 
-**Ce qui reste à écrire :** Google Forms et Interact (les textes sont
-prêts), puis Jotform, ScoreApp, Outgrow, Riddle, Calendly et une page sur
-les tags Systeme.io.
+### Google Forms et Interact, et les logos officiels (1er septembre, le soir)
+
+**LA PAGE INTERACT EST LA SEULE DU HUB DONT TOUT L'ARGUMENT EST LA PAROLE
+D'UN CONCURRENT.** Ses trois citations ont donc été relevées sur la page
+d'aide EN LIGNE, pas recopiées du document de départ :
+
+- « A Zapier Pro account » (section « Before you start ») ;
+- « You must create a tag in Systeme.io for each quiz result you want to
+  use, or it won't appear as a selectable option in Zapier. » ;
+- « Repeat this Zap setup for each quiz result tag you want to apply in
+  Systeme.io (one Zap per result tag). »
+
+L'adresse est affichée sous la citation, et le test exige que les deux
+phrases restent MOT POUR MOT. Une citation approchée est indéfendable, et
+c'est la page qu'un concurrent lira en premier.
+
+**L'exception « étiquette » de cette page est OBLIGATOIRE.** La capture
+de leur documentation est traduite par le navigateur : elle affiche
+"étiquette" là où nous écrivons "tag". Sans une légende qui le dit, le
+lecteur croit lire deux notions différentes. Le test tolère le mot sur
+CETTE page seulement, et seulement si la légende dit "traduite par le
+navigateur". Même forme que l'aide de l'éditeur qui doit montrer
+"cher·e".
+
+**LA CAPTURE MOBILE DE GOOGLE FORMS PORTAIT ENCORE SON ADRESSE EMAIL.**
+Le compte Google connecté s'affiche au dessus du formulaire intégré.
+Floutée avant conversion, vérifiée illisible dans le WebP publié.
+Deuxième fois en deux jours : **une capture fournie se REGARDE champ par
+champ, à chaque livraison**, pas seulement la première.
+
+**LA PAGE GOOGLE FORMS N'A PAS DE TABLEAU, ET C'EST VOULU.** Elle répond
+à deux questions distinctes (afficher le formulaire, envoyer les
+réponses), elle ne compare pas des outils. Le test porte donc sur
+`PAGES_QUI_COMPARENT` : exiger un tableau partout en ferait poser un qui
+ne dit rien.
+
+**UN LOGO EST UN MOT, PAS UNE ICÔNE CARRÉE.** Le document demandait du
+96 x 96 : "Typeform" y serait écrasé et "Google Forms" étiré. `Logo`
+(`components/site/Integrations.tsx`) borne la HAUTEUR et laisse
+`width: auto`, avec les dimensions naturelles sur la balise pour que le
+navigateur réserve la place. C'est la règle des images de réponse d'un
+quiz (4 août), et le test l'exige.
+
+**Zapier n'est PAS dans `OUTILS`.** Le hub compare des outils de
+FORMULAIRE ; Zapier est le TRANSPORT que presque tous exigent. Le mettre
+dans le tableau reviendrait à comparer un camion à des colis : sa carte
+est posée à la main, et son logo vit dans `LOGO_ZAPIER`.
+
+**Un fichier livré ne dit pas ce qu'il contient**, une fois de plus :
+`tryinteract.com.png` ne montre pas Interact, c'est le visuel Tiquiz
+"le tag se règle directement sur le profil". Placé en le REGARDANT.
+
+**Ce qui reste à écrire :** Jotform, ScoreApp, Outgrow, Riddle, Calendly
+et une page sur les tags Systeme.io.

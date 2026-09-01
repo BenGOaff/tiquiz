@@ -21,9 +21,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
-import { Capture, EnBref, Faq, FilDAriane, Tableau } from "@/components/site/Integrations";
+import { Capture, EnBref, Faq, FilDAriane, Logo, Tableau } from "@/components/site/Integrations";
 import { HOTE_VENTE } from "@/lib/publicHost";
 import {
+  LOGO_ZAPIER,
   OUTILS,
   OUTILS_PUBLIES,
   ZAPIER,
@@ -151,7 +152,10 @@ export default function HubIntegrations() {
             "Tag automatique par profil",
           ]}
           lignes={OUTILS.map((o) => [
-            <strong key="n">{o.nom}</strong>,
+            <span key="n" className="flex items-center gap-2.5">
+              {o.logo ? <Logo logo={o.logo} nom={o.nom} hauteur={18} /> : null}
+              <strong>{o.nom}</strong>
+            </span>,
             o.nom === "Tiquiz" ? "Oui, avec ta clé API" : "Non",
             o.intermediaire,
             o.tagParProfil,
@@ -191,7 +195,8 @@ export default function HubIntegrations() {
               href={`/integrations/${o.slug}`}
               className="rounded-2xl border border-[var(--tq-bord)] bg-white p-6 transition hover:border-[var(--tq-encre)]"
             >
-              <p className="text-[1.15rem] font-bold">{o.nom} et Systeme.io</p>
+              {o.logo ? <Logo logo={o.logo} nom={o.nom} hauteur={22} /> : null}
+              <p className="mt-4 text-[1.15rem] font-bold">{o.nom} et Systeme.io</p>
               <p className="tq-doux mt-2 leading-relaxed">{o.resume}</p>
             </Link>
           ))}
@@ -199,7 +204,8 @@ export default function HubIntegrations() {
             href="/integrations/zapier-systeme-io"
             className="rounded-2xl border border-[var(--tq-bord)] bg-white p-6 transition hover:border-[var(--tq-encre)]"
           >
-            <p className="text-[1.15rem] font-bold">Zapier et Systeme.io</p>
+            <Logo logo={LOGO_ZAPIER} nom="Zapier" hauteur={22} />
+            <p className="mt-4 text-[1.15rem] font-bold">Zapier et Systeme.io</p>
             <p className="tq-doux mt-2 leading-relaxed">
               Ce que le plan gratuit permet vraiment, et à partir de quand il faut payer.
             </p>
@@ -210,8 +216,8 @@ export default function HubIntegrations() {
             confiance ; ne rien dire du tout laisse croire qu'on n'a pas
             regardé ces outils. */}
         <p className="tq-doux tq-lire mt-6 text-sm leading-relaxed">
-          Les pages Google Forms, Jotform et Interact arrivent. En attendant, leur ligne du tableau
-          ci-dessus dit déjà ce que chacun demande.
+          La page Jotform arrive. En attendant, sa ligne du tableau ci-dessus dit déjà ce
+          qu&apos;elle demande.
         </p>
       </section>
 

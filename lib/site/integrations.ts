@@ -45,11 +45,28 @@ export const ZAPIER = {
   professionnelParMois: "29,99 $",
 } as const;
 
+/**
+ * LE LOGO OFFICIEL D'UN OUTIL.
+ *
+ * Ce sont des MOTS, pas des icônes carrées : les enfermer dans un carré
+ * de 96 les écraserait. On borne donc la HAUTEUR et on garde le format,
+ * exactement comme les images de réponse d'un quiz (règle du 4 août).
+ * Les dimensions voyagent avec le chemin : sans elles, la page saute au
+ * chargement de chaque logo.
+ */
+export interface LogoOutil {
+  src: string;
+  largeur: number;
+  hauteur: number;
+}
+
 /** Un outil comparé sur le hub. */
 export interface OutilIntegration {
   /** L'identifiant du dossier, quand la page existe. */
   slug: string | null;
   nom: string;
+  /** Le logo officiel, fourni par la marque. */
+  logo: LogoOutil | null;
   /** Ce qu'il faut EN PLUS pour atteindre Systeme.io. */
   intermediaire: string;
   /** Un tag différent selon la réponse ? */
@@ -71,6 +88,7 @@ export const OUTILS: readonly OutilIntegration[] = [
   {
     slug: "tally-systeme-io",
     nom: "Tally",
+    logo: { src: "/integrations/logos/tally.webp", largeur: 243, hauteur: 96 },
     intermediaire: "Webhook et un peu de code, ou Zapier / Make",
     tagParProfil: "Non, un Zap par profil",
     resume: "Gratuit et excellent, mais Systeme.io ne figure pas dans ses intégrations.",
@@ -78,13 +96,15 @@ export const OUTILS: readonly OutilIntegration[] = [
   {
     slug: "typeform-systeme-io",
     nom: "Typeform",
+    logo: { src: "/integrations/logos/typeform.webp", largeur: 600, hauteur: 96 },
     intermediaire: "Zapier ou Make",
     tagParProfil: "Non, un Zap par profil",
     resume: "Le plus soigné du marché. La connexion à Systeme.io passe par un tiers.",
   },
   {
-    slug: null,
+    slug: "google-forms-systeme-io",
     nom: "Google Forms",
+    logo: { src: "/integrations/logos/google-forms.webp", largeur: 99, hauteur: 96 },
     intermediaire: "Zapier, Make, ou un script Google Apps",
     tagParProfil: "Non",
     resume: "S'affiche dans une page Systeme.io, mais n'envoie rien dans les contacts.",
@@ -92,13 +112,15 @@ export const OUTILS: readonly OutilIntegration[] = [
   {
     slug: null,
     nom: "Jotform",
+    logo: { src: "/integrations/logos/jotform.webp", largeur: 505, hauteur: 96 },
     intermediaire: "Zapier ou Make",
     tagParProfil: "Non",
     resume: "Même schéma : aucune connexion directe à Systeme.io.",
   },
   {
-    slug: null,
+    slug: "interact-systeme-io",
     nom: "Interact",
+    logo: { src: "/integrations/logos/interact.webp", largeur: 443, hauteur: 96 },
     intermediaire: "Zapier Pro, un Zap par résultat",
     tagParProfil: "Non, tags à créer à la main",
     resume: "Sa documentation impose Zapier Pro et un Zap par résultat de quiz.",
@@ -106,11 +128,26 @@ export const OUTILS: readonly OutilIntegration[] = [
   {
     slug: null,
     nom: "Tiquiz",
+    logo: null,
     intermediaire: "Rien, la clé API suffit",
     tagParProfil: "Oui, et le tag est créé s'il manque",
     resume: "Écrit dans Systeme.io avec ta clé API, sans intermédiaire.",
   },
 ] as const;
+
+/**
+ * ZAPIER N'EST PAS DANS `OUTILS`, ET C'EST VOULU.
+ *
+ * Le hub compare des outils de FORMULAIRE ; Zapier est le TRANSPORT que
+ * presque tous exigent. Le mettre dans le tableau reviendrait à comparer
+ * un camion à des colis. Sa page existe, sa carte est posée à la main,
+ * et son logo vit donc ici.
+ */
+export const LOGO_ZAPIER: LogoOutil = {
+  src: "/integrations/logos/zapier.webp",
+  largeur: 354,
+  hauteur: 96,
+};
 
 /** Les pages enfants déjà écrites, dans l'ordre du hub. */
 export const OUTILS_PUBLIES = OUTILS.filter((o) => o.slug !== null);

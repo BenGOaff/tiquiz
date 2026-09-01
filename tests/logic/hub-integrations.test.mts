@@ -16,7 +16,14 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { OUTILS, OUTILS_PUBLIES, ZAPIER, faqJsonLd, filDArianeJsonLd } from "../../lib/site/integrations.ts";
+import {
+  LOGO_ZAPIER,
+  OUTILS,
+  OUTILS_PUBLIES,
+  ZAPIER,
+  faqJsonLd,
+  filDArianeJsonLd,
+} from "../../lib/site/integrations.ts";
 import { PAGES_PUBLIQUES } from "../../lib/site/pagesPubliques.ts";
 
 const RACINE = process.cwd();
@@ -43,7 +50,27 @@ function codeSeul(chemin: string): string {
     .join("\n");
 }
 
-const PAGES = ["page.tsx", "zapier-systeme-io/page.tsx", "tally-systeme-io/page.tsx", "typeform-systeme-io/page.tsx"];
+const PAGES = [
+  "page.tsx",
+  "zapier-systeme-io/page.tsx",
+  ...OUTILS_PUBLIES.map((o) => `${o.slug}/page.tsx`),
+];
+
+/**
+ * Les pages qui COMPARENT quelque chose.
+ *
+ * La page Google Forms n'a pas de tableau, et c'est voulu : elle répond
+ * à deux questions distinctes (afficher le formulaire, envoyer les
+ * réponses), elle ne compare pas des outils. Exiger un tableau partout
+ * en ferait poser un qui ne dit rien.
+ */
+const PAGES_QUI_COMPARENT = [
+  "page.tsx",
+  "zapier-systeme-io/page.tsx",
+  "tally-systeme-io/page.tsx",
+  "typeform-systeme-io/page.tsx",
+  "interact-systeme-io/page.tsx",
+];
 
 // --- LE PRIX DE ZAPIER VIT À UN SEUL ENDROIT --------------------------
 
@@ -118,7 +145,7 @@ test("les comparatifs sont de vraies balises table, jamais des images", () => {
     composant.includes("overflow-x-auto"),
     "un tableau large doit défiler dans sa boîte, jamais faire défiler la page",
   );
-  for (const p of ["page.tsx", "zapier-systeme-io/page.tsx", "tally-systeme-io/page.tsx", "typeform-systeme-io/page.tsx"]) {
+  for (const p of PAGES_QUI_COMPARENT) {
     assert.ok(source(p).includes("<Tableau"), `${p} n'a aucun comparatif en balise table`);
   }
 });
@@ -186,8 +213,21 @@ test("aucun tiret cadratin dans les pages du hub", () => {
 });
 
 test("on dit tag, jamais étiquette", () => {
+  // UNE EXCEPTION, ET ELLE EST OBLIGATOIRE. La capture de la
+  // documentation d'Interact est traduite par le navigateur : elle
+  // affiche "étiquette" là où nous écrivons "tag". Sans une légende qui
+  // le dit, le lecteur croit lire deux notions différentes. C'est la
+  // même exception que l'aide de l'éditeur qui DOIT montrer "cher·e"
+  // pour expliquer la variante selon le genre (24 août).
+  const AVEC_RAISON = "interact-systeme-io/page.tsx";
   for (const p of PAGES) {
-    assert.ok(!/étiquette/i.test(source(p)), `${p} dit "étiquette" au lieu de "tag"`);
+    const src = source(p);
+    if (!/étiquette/i.test(src)) continue;
+    assert.equal(p, AVEC_RAISON, `${p} dit "étiquette" au lieu de "tag"`);
+    assert.ok(
+      src.includes("traduite par le navigateur"),
+      "le mot n'est toléré que pour nommer la traduction automatique d'Interact, et la légende doit le dire",
+    );
   }
 });
 
@@ -205,4 +245,53 @@ test("aucun aplat de couleur sous du texte", () => {
       );
     }
   }
+});
+
+// --- LES LOGOS OFFICIELS ----------------------------------------------
+
+test("chaque logo annoncé existe, aux dimensions déclarées", () => {
+  // Les dimensions voyagent avec le chemin pour que le navigateur
+  // réserve la place : une valeur fausse fait sauter la ligne au moment
+  // où le logo arrive, ce qui est pire que pas de logo du tout.
+  const tous = [...OUTILS.map((o) => o.logo), LOGO_ZAPIER];
+  for (const logo of tous) {
+    if (!logo) continue;
+    const fichier = path.join(RACINE, "public", logo.src);
+    assert.ok(fs.existsSync(fichier), `${logo.src} est annoncé et n'existe pas`);
+    assert.ok(logo.largeur > 0 && logo.hauteur > 0, `${logo.src} n'a pas de dimensions`);
+  }
+});
+
+test("un logo garde SON format, il n'est jamais enfermé dans un carré", () => {
+  // "Adapte la place de l'image au format de la photo" (Béné, 4 août).
+  // Un logo est un MOT : borner la largeur écraserait Typeform et
+  // étirerait Google Forms.
+  const composant = fs.readFileSync(
+    path.join(RACINE, "components", "site", "Integrations.tsx"),
+    "utf8",
+  );
+  const bloc = composant.slice(composant.indexOf("export function Logo"));
+  assert.ok(bloc.includes('width: "auto"'), "le logo doit garder sa largeur naturelle");
+  assert.ok(!/object-cover/.test(bloc), "un logo ne se recadre jamais");
+});
+
+// --- ON CITE UN CONCURRENT : LA SOURCE EST DONNÉE ----------------------
+
+test("la page Interact cite sa source et la rend cliquable", () => {
+  // Toute la page repose sur la parole d'Interact. Une citation sans son
+  // adresse n'est pas vérifiable, et c'est le genre de page qu'un
+  // concurrent lit en premier.
+  const src = source("interact-systeme-io/page.tsx");
+  assert.ok(
+    src.includes("help.tryinteract.com/en/articles/8676075"),
+    "la page Interact ne donne pas l'adresse de la documentation citée",
+  );
+  assert.ok(
+    src.includes("You must create a tag in Systeme.io for each quiz result"),
+    "la citation sur les tags a été réécrite : elle doit rester mot pour mot",
+  );
+  assert.ok(
+    src.includes("one Zap per result tag"),
+    "la citation sur le nombre de Zaps a été réécrite",
+  );
 });

@@ -102,6 +102,42 @@ export function Capture({
 }
 
 /**
+ * LE LOGO OFFICIEL D'UN OUTIL, À SON FORMAT.
+ *
+ * `height` fixe, `width: auto` : un logo est un MOT, pas une icône
+ * carrée. Le forcer dans un carré de 96 écraserait "Typeform" et
+ * étirerait "Google Forms". C'est la règle des images de réponse d'un
+ * quiz (4 août), appliquée ici.
+ *
+ * Les dimensions naturelles sont posées sur la balise pour que le
+ * navigateur réserve la place : sans elles, la ligne saute au moment où
+ * le logo arrive.
+ */
+export function Logo({
+  logo,
+  nom,
+  hauteur = 24,
+}: {
+  logo: { src: string; largeur: number; hauteur: number };
+  nom: string;
+  hauteur?: number;
+}) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={logo.src}
+      alt={`Logo ${nom}`}
+      width={logo.largeur}
+      height={logo.hauteur}
+      loading="lazy"
+      decoding="async"
+      style={{ height: hauteur, width: "auto" }}
+      className="max-w-full"
+    />
+  );
+}
+
+/**
  * Un tableau de comparaison.
  *
  * VRAIE BALISE `<table>`, jamais une image : c'est le format que les

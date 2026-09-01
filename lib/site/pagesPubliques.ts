@@ -78,6 +78,20 @@ export const PAGES_PUBLIQUES: readonly PagePublique[] = [
     priorite: 0.6,
   },
   {
+    chemin: "/integrations/google-forms-systeme-io",
+    titre: "Connecter Google Forms à Systeme.io",
+    resume:
+      "Afficher un Google Forms dans une page Systeme.io est possible, mais il n'envoie rien dans les contacts. Zapier lit la feuille de calcul liée, pas le formulaire.",
+    priorite: 0.6,
+  },
+  {
+    chemin: "/integrations/interact-systeme-io",
+    titre: "Connecter Interact à Systeme.io",
+    resume:
+      "La documentation d'Interact demande un compte Zapier Pro, un tag créé à la main dans Systeme.io par résultat de quiz, et un Zap par résultat. Les citations et leur source.",
+    priorite: 0.6,
+  },
+  {
     chemin: "/newsletter",
     titre: "La newsletter de Béné",
     resume:
