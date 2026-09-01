@@ -153,7 +153,6 @@ export interface PlanAutomatisation {
 export interface QuizPourPlan {
   mode?: string | null;
   locale?: string | null;
-  sio_api_key_id?: string | null;
   sio_capture_tag?: string | null;
   sio_share_tag_name?: string | null;
   sio_score_tags?: boolean | null;
@@ -173,6 +172,41 @@ export interface ResultatPourPlan {
 
 export interface QuestionPourPlan {
   options?: Array<{ sio_tag_name?: string | null; text?: string | null } | null> | null;
+}
+
+/**
+ * CE QUE LE MODULE NE PEUT PAS DEVINER, ET QU'ON LUI DIT.
+ *
+ * -- POURQUOI CE PARAMÈTRE EXISTE, ET CE QU'IL RÉPARE ------------------
+ *
+ * Le premier jet lisait `quiz.sio_api_key_id` et criait "aucune clé
+ * Systeme.io n'est reliée à ce quiz" quand la colonne était vide.
+ * **C'était FAUX pour presque tout le monde.** Cette colonne est une
+ * SURCHARGE par quiz (le cas du freelance qui envoie les leads d'UN quiz
+ * vers le compte de son client) ; `resolveApiKey` retombe ensuite sur la
+ * clé par défaut du compte, puis sur n'importe laquelle, puis sur la clé
+ * historique. Une créatrice qui a branché SA clé une fois et n'a jamais
+ * touché à la surcharge voyait donc un bandeau rouge lui annoncer que
+ * rien ne partait, alors que tout partait.
+ *
+ * C'est le `??` du 2 août dans une autre robe : **une colonne vide ne
+ * veut pas dire "pas de clé", elle veut dire "pas de surcharge".**
+ *
+ * La question ne se lit donc PAS dans une colonne. Elle se lit là où on
+ * demande vraiment ses tags à Systeme.io, et l'écran passe la réponse.
+ *
+ * `null` = ON NE SAIT PAS ENCORE (le chargement n'a pas répondu, ou il a
+ * échoué). On ne dit alors RIEN : un avertissement qui sort à tort fait
+ * chercher au mauvais endroit, et c'est exactement ce qu'on répare.
+ */
+export interface FaitsAutomatisation {
+  /**
+   * Une clé Systeme.io répond-elle pour ce quiz ?
+   *
+   * `true` -> on a pu lire ses tags. `false` -> l'API a répondu
+   * "aucune clé". `null` -> inconnu, on se tait.
+   */
+  cleReliee: boolean | null;
 }
 
 function propre(v: unknown): string {
@@ -226,6 +260,30 @@ export function tagsDeScorePossibles(quiz: QuizPourPlan): {
 }
 
 /**
+ * LA CLÉ RÉPOND-ELLE, d'après ce que le chargement des tags a donné ?
+ *
+ * PURE, donc testable, et c'est tout l'intérêt : la règle est écrite une
+ * fois au lieu d'être devinée dans un composant.
+ *
+ * - des tags reçus -> la clé répond, quelle que soit sa provenance
+ *   (surcharge du quiz, défaut du compte, clé historique) ;
+ * - `noApiKey` -> l'API a dit qu'il n'y en a AUCUNE : on le dit ;
+ * - une erreur, ou rien encore -> ON NE SAIT PAS, et on se tait.
+ *
+ * Une liste VIDE compte comme une réponse : un compte tout neuf n'a
+ * aucun tag, et sa clé marche très bien.
+ */
+export function cleRelieeDepuisTags(etat: {
+  tags: unknown[] | null;
+  noApiKey: boolean;
+  error: boolean;
+}): boolean | null {
+  if (Array.isArray(etat.tags)) return true;
+  if (etat.noApiKey) return false;
+  return null;
+}
+
+/**
  * Le plan complet pour UN quiz.
  *
  * PURE. Ne rend que des tags qui partent VRAIMENT, groupés par famille,
@@ -240,7 +298,8 @@ export function tagsDeScorePossibles(quiz: QuizPourPlan): {
 export function construirePlanAutomatisation(
   quiz: QuizPourPlan,
   resultats: ResultatPourPlan[],
-  questions: QuestionPourPlan[] = [],
+  questions: QuestionPourPlan[],
+  faits: FaitsAutomatisation,
 ): PlanAutomatisation {
   const groupes: GroupeAutomatisation[] = [];
   const manques: ManqueAutomatisation[] = [];
@@ -248,7 +307,11 @@ export function construirePlanAutomatisation(
 
   // BLOQUANT EN PREMIER. Sans clé, aucun contact n'est créé et aucun tag
   // n'est posé : tout le reste de l'écran serait un plan pour rien.
-  if (!propre(quiz.sio_api_key_id)) {
+  //
+  // On ne le dit QUE si on le SAIT (`false`). `null` veut dire que le
+  // chargement n'a pas encore répondu : se taire est la bonne réponse,
+  // un bandeau rouge affiché à tort fait chercher au mauvais endroit.
+  if (faits.cleReliee === false) {
     manques.push({ type: "cle-api", bloquant: true });
   }
 

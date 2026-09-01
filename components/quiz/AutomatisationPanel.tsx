@@ -28,17 +28,22 @@
 // variables. C'est `resultChoiceLabel` qui le nettoie, dans le module
 // pur, jamais ici : l'écran affiche ce qu'on lui donne.
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Check, Copy, ExternalLink, Info, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import type {
-  GroupeAutomatisation,
-  LigneAutomatisation,
-  ManqueAutomatisation,
-  PlanAutomatisation,
+import { useSioTagsContext } from "@/components/ui/sio-tags-provider";
+import {
+  cleRelieeDepuisTags,
+  construirePlanAutomatisation,
+  type GroupeAutomatisation,
+  type LigneAutomatisation,
+  type ManqueAutomatisation,
+  type QuestionPourPlan,
+  type QuizPourPlan,
+  type ResultatPourPlan,
 } from "@/lib/automatisation/planSysteme";
 
 const URL_REGLES = "https://systeme.io/dashboard/automation-rules";
@@ -178,8 +183,46 @@ function Manque({ manque }: { manque: ManqueAutomatisation }) {
   );
 }
 
-export function AutomatisationPanel({ plan }: { plan: PlanAutomatisation }) {
+export function AutomatisationPanel({
+  quiz,
+  resultats,
+  questions,
+}: {
+  quiz: QuizPourPlan;
+  resultats: ResultatPourPlan[];
+  questions: QuestionPourPlan[];
+}) {
   const t = useTranslations("automatisation");
+
+  // LA CLÉ SE DEMANDE À SYSTEME.IO, ELLE NE SE LIT PAS DANS UNE COLONNE.
+  //
+  // `quiz.sio_api_key_id` est une SURCHARGE par quiz, pas la clé du
+  // compte : vide, elle veut dire "pas de surcharge", et `resolveApiKey`
+  // retombe sur la clé par défaut. Le premier jet criait donc "aucune
+  // clé reliée" à toute créatrice qui n'avait jamais touché à cette
+  // surcharge, c'est à dire à presque tout le monde.
+  //
+  // Le provider, lui, a VRAIMENT demandé ses tags : il sait. C'est ce
+  // panneau qui déclenche le chargement, sinon la réponse n'arriverait
+  // que si la créatrice ouvrait un sélecteur de tag.
+  const sio = useSioTagsContext();
+  const charger = sio?.loadTags;
+  useEffect(() => {
+    void charger?.();
+  }, [charger]);
+
+  const plan = useMemo(
+    () =>
+      construirePlanAutomatisation(quiz, resultats, questions, {
+        cleReliee: cleRelieeDepuisTags({
+          tags: sio?.tags ?? null,
+          noApiKey: sio?.noApiKey ?? false,
+          error: sio?.error ?? false,
+        }),
+      }),
+    [quiz, resultats, questions, sio?.tags, sio?.noApiKey, sio?.error],
+  );
+
   const bloquant = plan.manques.some((m) => m.bloquant);
   const aFaire = plan.groupes.filter((g) => g.action !== "rien");
 

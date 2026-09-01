@@ -4740,23 +4740,68 @@ Le module lui passe un secours VIDE (il ne traduit pas) et porte le
 `rang` à côté : un profil encore sans titre s'affiche "Profil 2" dans la
 langue de la créatrice.
 
-### LA CLÉ SYSTEME.IO N'AVAIT JAMAIS ÉTÉ DANS LA COLONNE
+### LA CLÉ SYSTEME.IO AVAIT BIEN ÉTÉ SORTIE DE LA COLONNE
 
 Béné : "en réorganisant la sidebar on a viré le choix de la clé Systeme
-io du coup j'ai une erreur."
+io du coup j'ai une erreur. Dans l'onglet partager c'était juste pour le
+bonus de partage et donc le tag de partage."
 
-Elle n'avait pas été retirée. Elle vivait dans l'onglet **Partager**, et
-pire, à l'INTÉRIEUR du bloc gaté par `virality_enabled` : une créatrice
-qui ne propose pas de bonus de partage n'avait **aucun moyen** de
-choisir sa clé, et rien ne le disait. C'est le réglage sans lequel aucun
-tag ne part.
+**J'ai d'abord répondu qu'elle n'y avait jamais été. C'était faux**, et
+`git log` le dit en une commande :
 
-`QuizSioKeyPicker` prend donc une `variante` (`"carte" | "colonne"`),
-et le rendu de la colonne reprend l'idiome des autres réglages (un
-`<h3>` à la même taille, la phrase d'aide en `text-[11px]`, le select
-pleine largeur). Une carte au milieu de sept sections plates se voit
-comme une pièce rapportée. **Il n'y en a plus qu'UN seul endroit** : le
-groupe "Gestion du quiz", pour le quiz comme pour le sondage.
+| Date | Onglet qui portait le sélecteur |
+|---|---|
+| jusqu'au 24 août | `create`, donc la COLONNE |
+| 25 août | `share`, à l'intérieur du bloc `virality_enabled` |
+| 1er septembre | `create`, remis dans "Gestion du quiz" |
+
+C'est la refonte de la colonne en `SettingsSection` (25 août) qui l'a
+emporté dans l'onglet Partager, avec le bloc du bonus de partage. Une
+créatrice qui ne propose pas de bonus n'avait donc **aucun moyen** de
+choisir sa clé pendant une semaine, et rien ne le disait.
+
+**La leçon vaut plus que la correction : quand on REGROUPE un écran, on
+compte ce qui entre et ce qui sort.** Sept sections entraient, six sont
+ressorties, et personne n'a compté. Et quand quelqu'un dit "on a viré
+X", `git log -S "X"` répond en dix secondes : je l'ai contredite de
+mémoire avant de mesurer.
+
+`QuizSioKeyPicker` prend une `variante` (`"carte" | "colonne"`), et le
+rendu de la colonne reprend l'idiome des autres réglages (un `<h3>` à la
+même taille, l'aide en `text-[11px]`, le select pleine largeur). Une
+carte au milieu de sept sections plates se voit comme une pièce
+rapportée. **Il n'y en a plus qu'UN seul endroit** : le groupe "Gestion
+du quiz", pour le quiz comme pour le sondage.
+
+### ET LE BANDEAU ROUGE ACCUSAIT UNE COLONNE QUI N'EST PAS LA CLÉ
+
+Sur sa capture, le panneau annonçait "Aucune clé Systeme.io n'est reliée
+à ce quiz" sur un quiz dont les tags partaient très bien.
+
+`quiz.sio_api_key_id` est une **SURCHARGE par quiz** (le cas du
+freelance qui envoie les leads d'UN quiz vers le compte de son client).
+Vide, elle veut dire "pas de surcharge" : `resolveApiKey` retombe sur la
+clé par défaut du compte, puis sur n'importe laquelle, puis sur la clé
+historique. Le bandeau sortait donc chez **presque tout le monde**.
+
+C'est le `??` du 2 août dans une autre robe : **une colonne vide ne veut
+pas dire "pas de clé", elle veut dire "pas de surcharge".**
+
+**Règle : le fait est un PARAMÈTRE OBLIGATOIRE** (`cleReliee`), et il se
+lit là où on demande VRAIMENT ses tags à Systeme.io, c'est à dire dans
+`SioTagsProvider`. Le panneau construit donc son plan lui même : il est
+le seul à être DANS le provider. `cleRelieeDepuisTags` est pure :
+des tags reçus (liste vide comprise) -> la clé répond ; `noApiKey` ->
+on le dit ; une erreur ou rien encore -> **`null`, et on se tait**.
+Un avertissement affiché à tort fait chercher au mauvais endroit, ce qui
+est exactement ce qu'on répare.
+
+### PORTÉ DANS TIPOTE le 1er septembre
+
+L'onglet, le module et les 7 langues vivent des deux côtés. **Une seule
+phrase diffère, et c'est voulu** : Tipote n'a pas de clé par quiz (pas
+de table `sio_api_keys`), la sienne vit dans Réglages > Connexions, pour
+tout le compte. `manqueCle` y renvoie donc là bas.
 
 **Ce qui manque est dit à part, et le bloquant passe devant** : sans clé
 Systeme.io reliée, aucun contact n'est créé et aucun tag n'est
@@ -4774,8 +4819,8 @@ ignoré.
 pas l'éditeur : le garde-fou est
 `tests/logic/plan-automatisation.test.mts`.
 
-**Pas porté dans Tipote**, qui pose pourtant les mêmes tags. À
-faire si ses créatrices rencontrent le même silence.
+**Porté dans Tipote le 1er septembre** : même onglet, même module,
+mêmes 7 langues. Voir plus bas la seule phrase qui diffère.
 
 ## ON DIT TAG, JAMAIS ÉTIQUETTE (Béné, 1er septembre 2026)
 

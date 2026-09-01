@@ -10,9 +10,11 @@
 // même chose t'es sûr que c'est le plus lisible ? Genre 1 : les profils
 // et 2 : le bonus de partage. Et ensuite tu ne répètes pas."
 //
-// Ce test tient donc DEUX promesses :
+// Ce test tient QUATRE promesses :
 //   - on n'annonce QUE les tags qui partent vraiment ;
-//   - on rend des GROUPES, pas une carte par tag.
+//   - on rend des GROUPES, pas une carte par tag ;
+//   - le nom d'un profil ne sort jamais en HTML brut ;
+//   - on ne crie "aucune clé" que quand on le SAIT.
 
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
@@ -20,6 +22,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
+  cleRelieeDepuisTags,
   construirePlanAutomatisation,
   tagsDeScorePossibles,
   tagsDuProfil,
@@ -29,29 +32,103 @@ import {
 
 const lire = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 
-const QUIZ_OK = { mode: "quiz", sio_api_key_id: "cle-1" };
+const QUIZ = { mode: "quiz" };
+/** Une clé répond : le cas normal, et le seul qui n'alerte pas. */
+const RELIEE = { cleReliee: true } as const;
+
 const groupe = (p: PlanAutomatisation, type: string): GroupeAutomatisation | undefined =>
   p.groupes.find((g) => g.type === type);
 const tags = (g: GroupeAutomatisation | undefined) => (g?.lignes ?? []).map((l) => l.tag);
 
-describe("On n'annonce que les tags qui partent vraiment", () => {
-  test("SANS CLÉ, le manque est BLOQUANT et passe devant", () => {
+describe("La clé se DEMANDE à Systeme.io, elle ne se lit pas dans une colonne", () => {
+  test("UNE CLÉ QUI RÉPOND N'ALERTE PAS, même sans surcharge par quiz", () => {
+    // LE BUG DU 1er SEPTEMBRE, celui que Béné a vu à l'écran.
+    // `sio_api_key_id` est une SURCHARGE par quiz (le freelance qui
+    // envoie les leads d'UN quiz chez son client) ; vide, elle veut dire
+    // "pas de surcharge", et `resolveApiKey` retombe sur la clé par
+    // défaut du compte. Le bandeau rouge sortait donc chez presque tout
+    // le monde, sur un quiz dont les tags partaient très bien.
+    const plan = construirePlanAutomatisation(
+      QUIZ,
+      [{ title: "A", sio_tag_names: ["a"] }],
+      [],
+      RELIEE,
+    );
+    assert.equal(plan.manques.some((m) => m.type === "cle-api"), false);
+  });
+
+  test("AUCUNE clé : le manque est BLOQUANT", () => {
     // Sans clé, aucun contact n'est créé et aucun tag n'est posé : tout
     // le reste de l'écran serait un plan pour rien.
-    const plan = construirePlanAutomatisation({ mode: "quiz" }, [
-      { title: "A", sio_tag_names: ["a"] },
-    ]);
+    const plan = construirePlanAutomatisation(
+      QUIZ,
+      [{ title: "A", sio_tag_names: ["a"] }],
+      [],
+      { cleReliee: false },
+    );
     const cle = plan.manques.find((m) => m.type === "cle-api");
     assert.ok(cle, "le manque de clé doit être signalé");
     assert.equal(cle!.bloquant, true);
   });
 
+  test("TANT QU'ON NE SAIT PAS, on se tait", () => {
+    // Un avertissement affiché à tort fait chercher au mauvais endroit :
+    // c'est exactement ce qu'on répare.
+    const plan = construirePlanAutomatisation(
+      QUIZ,
+      [{ title: "A", sio_tag_names: ["a"] }],
+      [],
+      { cleReliee: null },
+    );
+    assert.equal(plan.manques.some((m) => m.type === "cle-api"), false);
+  });
+
+  test("la règle de lecture est PURE et couvre les quatre cas", () => {
+    // Des tags reçus = la clé répond, d'où qu'elle vienne. Une liste
+    // VIDE compte : un compte tout neuf n'a aucun tag et marche.
+    assert.equal(cleRelieeDepuisTags({ tags: [], noApiKey: false, error: false }), true);
+    assert.equal(cleRelieeDepuisTags({ tags: [{}], noApiKey: false, error: false }), true);
+    // L'API a dit "aucune clé" : on le dit.
+    assert.equal(cleRelieeDepuisTags({ tags: null, noApiKey: true, error: false }), false);
+    // Rien encore, ou une panne : inconnu, donc silence.
+    assert.equal(cleRelieeDepuisTags({ tags: null, noApiKey: false, error: false }), null);
+    assert.equal(cleRelieeDepuisTags({ tags: null, noApiKey: false, error: true }), null);
+  });
+
+  test("le module ne lit PLUS `sio_api_key_id`", () => {
+    // La colonne n'est pas la clé. La garder ici rejouerait le bug.
+    // On vise le CODE, pas le commentaire : celui-ci raconte le bug et
+    // doit rester. Un test qui interdit d'expliquer une panne finit par
+    // faire effacer l'explication.
+    const code = lire("lib/automatisation/planSysteme.ts")
+      .split("\n")
+      .filter((l) => !/^\s*(\*|\/\/|\/\*)/.test(l))
+      .join("\n");
+    assert.ok(
+      !/sio_api_key_id/.test(code),
+      "planSysteme ne doit plus deviner la clé depuis une colonne",
+    );
+  });
+
+  test("et l'écran la demande VRAIMENT, il ne l'attend pas", () => {
+    // Sans ce chargement, la réponse n'arriverait que si la créatrice
+    // ouvrait un sélecteur de tag : l'écran resterait muet.
+    const panel = lire("components/quiz/AutomatisationPanel.tsx");
+    assert.match(panel, /useSioTagsContext\(\)/);
+    assert.match(panel, /void charger\?\.\(\)/);
+    assert.match(panel, /cleRelieeDepuisTags/);
+  });
+});
+
+describe("On n'annonce que les tags qui partent vraiment", () => {
   test("un QUIZ annonce ses profils, jamais le tag de capture", () => {
     // `sio_capture_tag` n'est appliqué que sur un SONDAGE. L'annoncer
     // ici enverrait créer un workflow sur un tag jamais posé.
     const plan = construirePlanAutomatisation(
-      { ...QUIZ_OK, sio_capture_tag: "capture-quiz" },
+      { ...QUIZ, sio_capture_tag: "capture-quiz" },
       [{ title: "Team Capture", sio_tag_names: ["team-capture"] }],
+      [],
+      RELIEE,
     );
     assert.deepEqual(tags(groupe(plan, "profils")), ["team-capture"]);
     assert.equal(groupe(plan, "capture-sondage"), undefined);
@@ -59,38 +136,45 @@ describe("On n'annonce que les tags qui partent vraiment", () => {
 
   test("un SONDAGE annonce sa capture et ses réponses, jamais de profil", () => {
     const plan = construirePlanAutomatisation(
-      { mode: "survey", sio_api_key_id: "cle-1", sio_capture_tag: "repondu" },
+      { mode: "survey", sio_capture_tag: "repondu" },
       [{ title: "Ignoré", sio_tag_names: ["jamais"] }],
       [{ options: [{ sio_tag_name: "pas-de-liste", text: "Je n'ai pas de liste" }] }],
+      RELIEE,
     );
     assert.deepEqual(tags(groupe(plan, "capture-sondage")), ["repondu"]);
     assert.deepEqual(tags(groupe(plan, "reponses-sondage")), ["pas-de-liste"]);
     assert.equal(groupe(plan, "profils"), undefined);
   });
 
-  test("UN SEUL groupe par tag de réponse, même répété sur dix questions", () => {
+  test("UNE SEULE ligne par tag de réponse, même répété sur dix questions", () => {
     // La même règle sert toutes les questions qui portent ce tag. En
     // créer une par question ferait partir la campagne plusieurs fois.
     const q = { options: [{ sio_tag_name: "chaud", text: "Oui" }] };
     const plan = construirePlanAutomatisation(
-      { mode: "survey", sio_api_key_id: "cle-1" },
+      { mode: "survey" },
       [],
       [q, q, q],
+      RELIEE,
     );
     assert.deepEqual(tags(groupe(plan, "reponses-sondage")), ["chaud"]);
   });
 
   test("les tags de SCORE n'existent que si la case est cochée", () => {
-    const sans = construirePlanAutomatisation(QUIZ_OK, []);
+    const sans = construirePlanAutomatisation(QUIZ, [], [], RELIEE);
     assert.equal(groupe(sans, "score"), undefined);
 
-    const avec = construirePlanAutomatisation({ ...QUIZ_OK, sio_score_tags: true }, []);
+    const avec = construirePlanAutomatisation(
+      { ...QUIZ, sio_score_tags: true },
+      [],
+      [],
+      RELIEE,
+    );
     const g = groupe(avec, "score");
     assert.ok(g, "les tranches de score doivent être annoncées");
     // UNE LIGNE PAR VALEUR POSSIBLE : le tag n'est pas un nom fixe, et
     // annoncer un motif obligeait à le déplier de tête.
     assert.equal(g!.lignes.length, 3, "les 3 tranches globales");
-    for (const t of g!.lignes) assert.match(t.tag, /^score-/);
+    for (const l of g!.lignes) assert.match(l.tag, /^score-/);
   });
 
   test("UN SOULIGNÉ, PAS UN TIRET, dans un tag d'axe", () => {
@@ -113,8 +197,10 @@ describe("On n'annonce que les tags qui partent vraiment", () => {
     // MESURÉ dans la route de partage : il part sans regarder
     // `virality_enabled`.
     const plan = construirePlanAutomatisation(
-      { ...QUIZ_OK, sio_share_tag_name: "a-partage", virality_enabled: false },
+      { ...QUIZ, sio_share_tag_name: "a-partage", virality_enabled: false },
       [],
+      [],
+      RELIEE,
     );
     assert.deepEqual(tags(groupe(plan, "partage")), ["a-partage"]);
   });
@@ -123,20 +209,33 @@ describe("On n'annonce que les tags qui partent vraiment", () => {
     // Béné : "ne pas montrer si pas de partage activé". Et on ne
     // réclame le tag que si un bonus est réellement promis : crier là
     // dessus ferait rougir l'écran de presque tout le monde.
-    const plan = construirePlanAutomatisation({ ...QUIZ_OK, show_result_share: true }, []);
+    const plan = construirePlanAutomatisation(
+      { ...QUIZ, show_result_share: true },
+      [],
+      [],
+      RELIEE,
+    );
     assert.equal(groupe(plan, "partage"), undefined);
     assert.equal(plan.manques.some((m) => m.type === "tag-partage"), false);
 
-    const promis = construirePlanAutomatisation({ ...QUIZ_OK, virality_enabled: true }, []);
+    const promis = construirePlanAutomatisation(
+      { ...QUIZ, virality_enabled: true },
+      [],
+      [],
+      RELIEE,
+    );
     assert.ok(promis.manques.some((m) => m.type === "tag-partage"));
   });
 
   test("UNE FORMATION RELIÉE : rien à créer, et c'est le piège inverse", () => {
     // Tiquiz ouvre l'accès lui même. Une règle de plus l'ouvrirait deux
     // fois, et ça ne se voit qu'en recevant deux emails.
-    const plan = construirePlanAutomatisation(QUIZ_OK, [
-      { title: "Pro", sio_tag_names: ["pro"], sio_course_id: "form-1" },
-    ]);
+    const plan = construirePlanAutomatisation(
+      QUIZ,
+      [{ title: "Pro", sio_tag_names: ["pro"], sio_course_id: "form-1" }],
+      [],
+      RELIEE,
+    );
     const g = groupe(plan, "acces-automatique");
     assert.ok(g, "le cas doit être dit");
     assert.equal(g!.action, "rien");
@@ -144,11 +243,13 @@ describe("On n'annonce que les tags qui partent vraiment", () => {
     assert.equal(plan.groupes[plan.groupes.length - 1].type, "acces-automatique");
   });
 
-  test("un profil SANS tag est un manque, pas une étape muette", () => {
-    const plan = construirePlanAutomatisation(QUIZ_OK, [
-      { title: "Sans tag" },
-      { title: "Avec", sio_tag_names: ["avec"] },
-    ]);
+  test("un profil SANS tag est un manque, pas une ligne muette", () => {
+    const plan = construirePlanAutomatisation(
+      QUIZ,
+      [{ title: "Sans tag" }, { title: "Avec", sio_tag_names: ["avec"] }],
+      [],
+      RELIEE,
+    );
     assert.deepEqual(tags(groupe(plan, "profils")), ["avec"]);
     const m = plan.manques.find((x) => x.type === "tag-profil");
     assert.ok(m);
@@ -168,9 +269,12 @@ describe("Le nom d'un profil ne sort JAMAIS en HTML brut", () => {
     // Le profil "<div class="rt-field-fs" style="--rt-fs-m&nbsp;: 24px">Team Capture..."
     const brut =
       '<div class="rt-field-fs" style="--rt-fs-m: 24px">Team Capture : ton tunnel perd tes clients</div>';
-    const plan = construirePlanAutomatisation(QUIZ_OK, [
-      { title: brut, sio_tag_names: ["team-capture"] },
-    ]);
+    const plan = construirePlanAutomatisation(
+      QUIZ,
+      [{ title: brut, sio_tag_names: ["team-capture"] }],
+      [],
+      RELIEE,
+    );
     const ligne = groupe(plan, "profils")!.lignes[0];
     assert.ok(ligne.contexte, "le nom doit être là");
     assert.ok(!ligne.contexte!.includes("<"), ligne.contexte);
@@ -179,9 +283,12 @@ describe("Le nom d'un profil ne sort JAMAIS en HTML brut", () => {
   });
 
   test("un placeholder est interpolé à VIDE, pas affiché", () => {
-    const plan = construirePlanAutomatisation(QUIZ_OK, [
-      { title: "Bonjour {name}, tu es le Solopreneur", sio_tag_names: ["solo"] },
-    ]);
+    const plan = construirePlanAutomatisation(
+      QUIZ,
+      [{ title: "Bonjour {name}, tu es le Solopreneur", sio_tag_names: ["solo"] }],
+      [],
+      RELIEE,
+    );
     const nom = groupe(plan, "profils")!.lignes[0].contexte ?? "";
     assert.ok(!nom.includes("{name}"), nom);
   });
@@ -189,10 +296,15 @@ describe("Le nom d'un profil ne sort JAMAIS en HTML brut", () => {
   test("un profil SANS titre porte son RANG, l'écran le traduit", () => {
     // Le module pur ne parle aucune langue : il donne la position, et
     // l'écran écrit "Profil 2" dans la langue de la créatrice.
-    const plan = construirePlanAutomatisation(QUIZ_OK, [
-      { title: "A", sio_tag_names: ["a"] },
-      { title: "", sio_tag_names: ["b"] },
-    ]);
+    const plan = construirePlanAutomatisation(
+      QUIZ,
+      [
+        { title: "A", sio_tag_names: ["a"] },
+        { title: "", sio_tag_names: ["b"] },
+      ],
+      [],
+      RELIEE,
+    );
     const lignes = groupe(plan, "profils")!.lignes;
     assert.equal(lignes[1].contexte, undefined);
     assert.equal(lignes[1].rang, 2);

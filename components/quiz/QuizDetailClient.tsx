@@ -58,7 +58,6 @@ import { QrCodeCard } from "@/components/share/QrCodeCard";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { interpolateText } from "@/lib/quizPersonalization";
 import { resultChoiceLabel } from "@/lib/quiz/resultLabel";
-import { construirePlanAutomatisation } from "@/lib/automatisation/planSysteme";
 import { AutomatisationPanel } from "@/components/quiz/AutomatisationPanel";
 import { type TieConflict } from "@/lib/quizTieAnalysis";
 import { tieBreakMode } from "@/lib/quiz/profileWinner";
@@ -820,34 +819,6 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   //
   // `sio_api_key_id` et `sio_capture_tag` ne sont pas édités ici : ils
   // viennent du quiz chargé, qui est lu en `select("*")`.
-  const planAutomatisation = useMemo(
-    () =>
-      construirePlanAutomatisation(
-        {
-          mode: quiz?.mode ?? null,
-          locale: quiz?.locale ?? null,
-          sio_api_key_id: (quiz as { sio_api_key_id?: string | null } | null)?.sio_api_key_id ?? null,
-          sio_capture_tag: (quiz as { sio_capture_tag?: string | null } | null)?.sio_capture_tag ?? null,
-          sio_share_tag_name: sioShareTagName,
-          sio_score_tags: sioScoreTags,
-          scoring_axes: scoringAxesEdit,
-          score_labels: scoreLabelsEdit,
-          virality_enabled: viralityEnabled,
-        },
-        editResults,
-        editQuestions,
-      ),
-    [
-      quiz,
-      sioShareTagName,
-      sioScoreTags,
-      scoringAxesEdit,
-      scoreLabelsEdit,
-      viralityEnabled,
-      editResults,
-      editQuestions,
-    ],
-  );
   const [leftTab, setLeftTab] = useState<"edition" | "design" | "settings">("edition");
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   // Taquet de largeur du panneau split (Béné 30 juil 2026, façon
@@ -6858,7 +6829,26 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       )}
 
       {/* RESULTS TAB */}
-      {mainTab === "automation" && <AutomatisationPanel plan={planAutomatisation} />}
+      {/* Le panneau CONSTRUIT son plan : il est DANS `SioTagsProvider`,
+          donc lui seul sait si une clé Systeme.io répond vraiment. Le
+          construire ici lisait `sio_api_key_id`, qui n'est qu'une
+          SURCHARGE par quiz, et annonçait "aucune clé" à tort. */}
+      {mainTab === "automation" && (
+        <AutomatisationPanel
+          quiz={{
+            mode: quiz?.mode ?? null,
+            locale: quiz?.locale ?? null,
+            sio_capture_tag: (quiz as { sio_capture_tag?: string | null } | null)?.sio_capture_tag ?? null,
+            sio_share_tag_name: sioShareTagName,
+            sio_score_tags: sioScoreTags,
+            scoring_axes: scoringAxesEdit,
+            score_labels: scoreLabelsEdit,
+            virality_enabled: viralityEnabled,
+          }}
+          resultats={editResults}
+          questions={editQuestions}
+        />
+      )}
 
       {mainTab === "results" && (
         <div className="flex-1 overflow-y-auto p-6">
