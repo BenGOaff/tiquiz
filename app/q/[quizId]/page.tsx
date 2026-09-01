@@ -13,6 +13,7 @@ import { stripHtml } from "@/lib/richText";
 import { toShareLine } from "@/lib/quiz/shareText";
 import { interpolateText } from "@/lib/quizPersonalization";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +54,7 @@ async function resolveCustomDomainOwner(): Promise<string | null> {
   const { data } = await supabaseAdmin
     .from("custom_domains")
     .select("user_id")
-    .ilike("hostname", host)
+    .ilike("hostname", echapperMotifLike(host))
     .eq("status", "verified")
     .maybeSingle();
   return (data?.user_id as string | undefined) ?? null;
@@ -76,7 +77,7 @@ async function fetchQuizMeta(slugOrId: string) {
   const { data } = await supabaseAdmin
     .from("quizzes")
     .select(QUIZ_META_FIELDS)
-    .ilike("slug", slugOrId)
+    .ilike("slug", echapperMotifLike(slugOrId))
     .eq("status", "active")
     .maybeSingle();
   return data;

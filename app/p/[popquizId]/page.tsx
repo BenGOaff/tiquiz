@@ -17,6 +17,7 @@ import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
 import PopquizPlayClient from "./PopquizPlayClient";
 import { TrackingPixels } from "@/components/tracking/TrackingPixels";
 import { resolveEffectivePixels } from "@/lib/effectivePixels";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ async function resolveCustomDomainOwner(): Promise<string | null> {
   const { data } = await supabaseAdmin
     .from("custom_domains")
     .select("user_id")
-    .ilike("hostname", host)
+    .ilike("hostname", echapperMotifLike(host))
     .eq("status", "verified")
     .maybeSingle();
   return (data?.user_id as string | undefined) ?? null;

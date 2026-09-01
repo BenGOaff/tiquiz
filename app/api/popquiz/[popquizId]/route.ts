@@ -13,6 +13,7 @@ import { sanitizeSlug } from "@/lib/quizBranding";
 import { isReservedPublicSlug } from "@/lib/publicSlug";
 import { isSlugTakenByQuiz } from "@/lib/publicSlugServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const dynamic = "force-dynamic";
 
@@ -118,7 +119,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
         .from("popquizzes")
         .select("id")
         .eq("user_id", user.id)
-        .ilike("slug", slug)
+        .ilike("slug", echapperMotifLike(slug))
         .neq("id", popquizId)
         .limit(1)
         .maybeSingle();

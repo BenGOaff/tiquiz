@@ -10,6 +10,7 @@
 // imports the constants from publicSlug.ts but never the lookup.
 
 import { supabaseAdmin } from "./supabaseAdmin";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 /**
  * Checks whether a popquiz of the same user already owns `slug`.
@@ -29,7 +30,7 @@ export async function isSlugTakenByPopquiz(
     .from("popquizzes")
     .select("id")
     .eq("user_id", userId)
-    .ilike("slug", slug)
+    .ilike("slug", echapperMotifLike(slug))
     .limit(1)
     .maybeSingle();
   return !!data;
@@ -44,7 +45,7 @@ export async function isSlugTakenByQuiz(
     .from("quizzes")
     .select("id")
     .eq("user_id", userId)
-    .ilike("slug", slug)
+    .ilike("slug", echapperMotifLike(slug))
     .limit(1)
     .maybeSingle();
   return !!data;

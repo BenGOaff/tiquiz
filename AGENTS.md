@@ -4494,3 +4494,35 @@ contact (mesuré : l'écriture d'un contact n'accepte que des champs et
 une langue). Un contact créé par notre capture d'email affichera donc
 toujours "Affilié : Aucun" tant que la personne n'a pas cliqué le
 bouton.
+
+## Une valeur d'URL n'est pas un motif de recherche (1er septembre 2026)
+
+Dans un LIKE Postgres, **`_` remplace n'importe quel caractère** et `%`
+n'importe quelle suite. Or `_` est parfaitement légal partout : dans une
+adresse email, et rien n'empêche quelqu'un de le taper dans une URL.
+
+La passe du 31 août avait couvert les recherches de COMPTE, chez Tipote
+seulement, et cette page n'en disait rien : **un garde-fou qui ne protège
+qu'un des deux jumeaux ne protège personne**, et une règle absente de
+cette page est une règle que le prochain passage ne connaît pas.
+
+Le même joker vivait sur `slug`, `hostname` et `code`, tous lus dans une
+URL publique. **18 fichiers ici, 29 côté Tipote.** Le plus coûteux :
+
+**`/q/mon_quiz` pouvait servir le quiz d'une AUTRE créatrice**, ou n'en
+servir aucun : deux lignes trouvées font échouer `maybeSingle`, donc un
+404 sur un quiz qui existe et qui tourne peut être en publicité payante.
+
+**ON ÉCHAPPE, ON NE PASSE PAS À `.eq`.** `.eq` serait plus simple, mais
+la casse des valeurs stockées n'est pas garantie (imports Systeme.io,
+slugs historiques) : empêcher un accès serait PIRE que le bug corrigé.
+`echapperMotifLike` (`lib/db/motifLike.ts`) ne change RIEN au
+comportement, sauf exactement le cas fautif. Le `\` s'échappe EN
+PREMIER, sinon on échapperait les barres qu'on vient d'ajouter.
+
+**Le garde-fou BALAIE tout le dépôt, il ne surveille pas une liste de
+fichiers.** Une liste oublie le prochain fichier écrit, et c'est
+exactement comme ça que ces endroits sont arrivés. Vérifié en rejouant
+la version d'avant (le test rougit).
+
+Test : `tests/logic/email-pas-un-motif.test.mts`.

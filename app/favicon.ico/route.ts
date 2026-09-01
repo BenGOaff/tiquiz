@@ -26,6 +26,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { isOwnHost, normaliseHost } from "@/lib/customDomains";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const runtime = "nodejs";
 // `force-dynamic` parce que le résultat dépend du Host de la requête.
@@ -65,7 +66,7 @@ export async function GET(): Promise<NextResponse> {
   const { data } = await supabaseAdmin
     .from("custom_domains")
     .select("favicon_url")
-    .ilike("hostname", host)
+    .ilike("hostname", echapperMotifLike(host))
     .eq("status", "verified")
     .maybeSingle();
 

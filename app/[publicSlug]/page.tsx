@@ -32,6 +32,7 @@ import { stripHtml } from "@/lib/richText";
 import { toShareLine } from "@/lib/quiz/shareText";
 import { interpolateText } from "@/lib/quizPersonalization";
 import { buildCanonicalUrl, fetchOwnerBranding } from "@/lib/publicUrl";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +63,7 @@ async function resolveCustomDomainOwner(): Promise<string | null> {
   const { data } = await supabaseAdmin
     .from("custom_domains")
     .select("user_id")
-    .ilike("hostname", host)
+    .ilike("hostname", echapperMotifLike(host))
     .eq("status", "verified")
     .maybeSingle();
   return (data?.user_id as string | undefined) ?? null;
@@ -92,7 +93,7 @@ async function resolve(slug: string, ownerId: string): Promise<Resolved> {
     .eq("user_id", ownerId)
     .eq("status", "active");
   const { data: quiz } = await (
-    UUID_RE.test(slug) ? quizBase.eq("id", slug) : quizBase.ilike("slug", slug)
+    UUID_RE.test(slug) ? quizBase.eq("id", slug) : quizBase.ilike("slug", echapperMotifLike(slug))
   ).maybeSingle();
   if (quiz) return { kind: "quiz", meta: quiz };
 
@@ -106,7 +107,7 @@ async function resolve(slug: string, ownerId: string): Promise<Resolved> {
     .eq("user_id", ownerId)
     .eq("is_published", true);
   const { data: pqOwner } = await (
-    UUID_RE.test(slug) ? ownerGate.eq("id", slug) : ownerGate.ilike("slug", slug)
+    UUID_RE.test(slug) ? ownerGate.eq("id", slug) : ownerGate.ilike("slug", echapperMotifLike(slug))
   ).maybeSingle();
   if (!pqOwner) return null;
 
