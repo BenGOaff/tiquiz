@@ -4197,10 +4197,26 @@ Corrigés le 31 août : `auth/signup` (4 sorties), `newsletter`,
 les webhooks GARDENT leurs 5xx.
 
 **Restent en 5xx, volontairement :** les écrans d'`/admin` (Béné y a
-accès au serveur) et les routes de génération IA, dont `aiFailure.ts`
-traduit déjà le statut côté client. À reprendre au prochain passage :
-elles perdent la distinction "saturé" / "trop long" / "refusé", donc
-`failureCopy` sort toujours sa phrase générique.
+accès au serveur).
+
+🚨 **ET CETTE PAGE A DIT UNE CHOSE FAUSSE ICI (corrigé le 1er septembre).**
+Elle écrivait que les routes de génération IA gardaient leurs 5xx "dont
+`aiFailure.ts` traduit déjà le statut côté client". **`aiFailure.ts`
+n'existait pas dans ce dépôt** : il ne vivait que dans formaquiz. La
+doc décrivait donc comme actif un garde-fou absent, ce qui est pire
+qu'une doc muette, et c'est exactement la faute du 23 août (un
+garde-fou écrit sur une branche et jamais fusionné, décrit ici comme
+en place pendant 24 heures).
+
+Il existe maintenant (`lib/aiFailure.ts`), il est le jumeau de celui de
+l'Atelier, et il ne porte AUCUNE phrase : l'interface existe en 7
+langues, donc le serveur rend la RAISON et l'écran la traduit. La route
+des générateurs répond 200 avec `ok: false`, jamais 5xx.
+
+**Ce qui reste à faire :** les AUTRES routes de génération IA (le quiz,
+le rééquilibrage, les analyses) répondent encore en 5xx, donc leur
+raison est mangée par Cloudflare. À reprendre : elles perdent la
+distinction "saturé" / "trop long" / "refusé".
 
 ### Et ce qu'il reste à faire, qui n'est PAS du code
 
@@ -4821,6 +4837,129 @@ pas l'éditeur : le garde-fou est
 
 **Porté dans Tipote le 1er septembre** : même onglet, même module,
 mêmes 7 langues. Voir plus bas la seule phrase qui diffère.
+
+## Les trois générateurs de contenu (Béné, 1er septembre 2026)
+
+"Pour les générateurs oui on va le faire pour les membres + et les
+beta/lifetime, ça doit être visible pour les membres gratuits et sans
+plus : s'ils veulent s'en servir on leur propose d'upgrader. On doit le
+faire BIEN, sur une page générateurs : l'user choisit quel générateur il
+veut utiliser (3 cartes cliquables), ensuite un nouvel onglet s'ouvre,
+l'user choisit le quiz pour lequel il veut créer, comme sur l'Atelier."
+Et : "fais ça bien, pas à l'arrache comme pour l'onglet automatisation."
+
+| Le générateur | Ce qu'il écrit | Il marche sur |
+|---|---|---|
+| le BONUS | le bonus entier, comment le fabriquer, les textes qui le remettent | un quiz dont les profils sont remplis |
+| les EMAILS | une séquence post-quiz, écrite pour UN profil | idem |
+| la PROMO | des emails d'invitation et des posts | tout, sondage compris |
+
+### CE QUE LA CRÉATRICE SAISIT : SON OFFRE, ET RIEN D'AUTRE
+
+C'est la leçon de l'Atelier reprise telle quelle (Béné, 5 août : "on ne
+réutilise pas assez les données du quiz"). Le titre, la promesse
+d'accueil, le ton (tu/vous), la langue, les profils, leurs tags et
+l'adresse publique sont RELUS CÔTÉ SERVEUR à chaque appel
+(`lib/generateurs/briefQuiz.ts`). Un formulaire qui redemande ce qu'on
+sait produit des réponses vagues, donc un contenu vague.
+
+Le brief ne transite JAMAIS par le client : sans ça, n'importe qui
+pourrait annoncer un autre quiz que le sien et faire écrire du contenu
+sur des profils qui ne lui appartiennent pas.
+
+### DEUX ÉTAPES, ET UN MORCEAU À LA FOIS
+
+`pistes` rend trois pistes en JSON court, `produire` rend UN morceau.
+Générer tout d'un coup, c'est exactement ce qui a sorti du JSON BRUT à
+l'écran devant des élèves de l'Atelier le 3 août : la réponse coupée à
+la limite de tokens, `JSON.parse` qui échoue, et l'écran qui montre
+notre panne au lieu du livrable.
+
+**L'INDEX D'UN MORCEAU EST RECALCULÉ, jamais recopié du modèle.** Il
+rend parfois deux "email 1", ou saute de 1 à 3 : une numérotation à trou
+fait écrire deux fois le même email et en oublier un autre, en silence.
+
+**Et les morceaux s'écrivent EN SÉRIE, jamais en parallèle** : trois
+appels simultanés donnent un 429 et deux morceaux sur trois vides
+(drame Fabienne, Atelier, 4 août). Un morceau qui échoue n'emporte pas
+les suivants, et ce qui est déjà écrit reste à l'écran.
+
+**Les trois blocs du BONUS sont imposés par nous**, pas choisis par le
+modèle : il en oublierait un une fois sur trois, et la créatrice se
+retrouverait avec un bonus qu'elle ne sait pas livrer. Pour les deux
+autres, le nombre est une décision éditoriale : c'est la piste qui le
+porte, bornée par `MAX_PIECES`.
+
+### LE SOCLE EST CACHÉ, DONC IL N'INTERPOLE RIEN
+
+`lib/prompts/generateurs/socle.ts` est le SEUL bloc marqué
+`cache_control`, et il décrit les TROIS générateurs alors qu'un appel
+n'en sert qu'un : un socle par générateur donnerait trois préfixes,
+donc trois caches à réchauffer.
+
+**Le cache d'Anthropic est un PRÉFIXE EXACT.** Une seule valeur du brief
+glissée dans le socle, et il change à chaque appel : on paie alors
+l'ÉCRITURE du cache (1,25 fois le prix) sans jamais le relire, c'est à
+dire pire que pas de cache. Le test interdit toute interpolation et
+mesure sa longueur (en dessous de 1024 tokens, Anthropic ignore le
+`cache_control` EN SILENCE). La seule preuve que ça marche est dans les
+compteurs `usage` que la route journalise.
+
+### CE QUI EST DIT AU MODÈLE, ET POURQUOI
+
+- **La langue est NOMMÉE**, jamais laissée en code ISO : `pt-BR` fait
+  écrire du portugais européen une fois sur deux. Une langue inconnue ne
+  retombe PAS sur le français (leçon du robot d'aide, 31 août).
+- **Le ton du quiz est imposé**, pas redemandé.
+- **Le lien du quiz n'est donné QUE là où il doit apparaître** : dans la
+  promo et dans les textes de remise. Le CONTENU du bonus se lit hors
+  ligne, y coller l'adresse renverrait le lecteur vers le quiz qu'il
+  vient de finir.
+- **Un champ vide est OMIS**, jamais rendu avec un tiret : une ligne
+  "OFFRE : -" apprend au modèle qu'il a le droit d'en inventer une.
+
+### CE QUE L'ÉCRAN NE DÉCIDE PAS
+
+Quel générateur marche sur quel projet (`blocageGenerateur`), quels
+morceaux il produit (`piecesDeLaPiste`), comment se rend le Markdown
+(`markdownVersHtml`) : tout vit dans `lib/generateurs/`, en fonctions
+pures et testées. **Un projet bloqué est MONTRÉ, avec sa raison** : le
+griser sans un mot se lit comme un bug (règle du 22 août).
+
+**Le rendu s'affiche, le Markdown reste copiable à côté** : montrer
+`## Titre` et `**gras**` serait la même faute que le JSON brut. Et ce
+texte vient d'un modèle, donc d'ailleurs : tout est échappé,
+guillemets compris, et un `href` qui n'est pas http, https ou mailto
+n'est jamais rendu cliquable.
+
+### LE VERROU EST DANS LA ROUTE, PAS À L'ÉCRAN
+
+L'écran MONTRE les trois cartes à tout le monde et propose de monter de
+palier ; c'est `app/api/generateurs/route.ts` qui refuse
+(`canUseAIAnalysis`, donc beta / lifetime / mensuel PLUS / annuel PLUS).
+Un gate posé seulement à l'écran laisse la porte de l'API grande
+ouverte, et c'est par l'API qu'on récupère le contenu.
+
+### L'ADRESSE PUBLIQUE VIT DÉSORMAIS À UN SEUL ENDROIT
+
+`lib/quiz/urlPublique.ts`. La règle était enfermée dans
+`hooks/useShareDomain.ts`, donc côté navigateur seulement ; les
+générateurs tournent côté serveur et mettent cette adresse dans des
+emails et des posts. Une deuxième écriture aurait donné deux adresses
+pour le même quiz, et c'est celle du contenu généré qui serait partie
+dans une campagne. Le hook appelle la fonction, le serveur aussi.
+
+**Le domaine perso de la créatrice gagne** : c'est celui qu'elle
+partage. Et `surDomainePerso` est un PARAMÈTRE, jamais deviné à la
+forme de l'adresse.
+
+**Endroits à respecter :** `lib/generateurs/{catalogue,briefQuiz,blocs,offre,markdown}.ts`,
+`lib/prompts/generateurs/{socle,consignes}.ts`, `lib/aiFailure.ts`,
+`lib/quiz/urlPublique.ts`, `app/api/generateurs/route.ts`,
+`app/generateurs/`. Test : `tests/logic/generateurs.test.mts`.
+**Le module vit dans les DEUX dépôts** : toute évolution se porte des
+deux côtés. La seule différence assumée est le PALIER, Tipote n'ayant
+pas de "PLUS" (voir son `AGENTS.md`).
 
 ## ON DIT TAG, JAMAIS ÉTIQUETTE (Béné, 1er septembre 2026)
 
