@@ -4602,3 +4602,74 @@ d'un caractère : une URL avec `?`, un `style="color:red"`, `12:30`,
 
 Test : les 7 cas ajoutés à `tests/logic/french-typography.test.mts`,
 vérifiés en rejouant la détection d'avant (5 rougissent).
+
+## L'onglet Automatisation : ce qu'il faut créer dans Systeme.io (Béné, 1er septembre 2026)
+
+"Un onglet Automatisation, en plus de créer, partager, résultats, qui
+explique le workflow et les tags précis à créer dans Systeme.io pour
+envoyer ce qu'il faut à qui en a besoin. **Pas un truc générique, un truc
+réel** qui explique selon le bonus offert, le CTA, les profils de
+résultats."
+
+**CE QUE ÇA RÉPARE, ET C'EST LE TROU LE PLUS CHER DU PRODUIT.** Tiquiz
+POSE des étiquettes sur le contact Systeme.io. Mais poser une étiquette
+ne déclenche RIEN tant qu'aucune règle d'automatisation ne l'écoute, et
+ces règles se créent à la main dans leur tableau de bord (mesuré le
+31 août). Une créatrice met son quiz en ligne, capte 40 adresses, et il
+ne se passe rien. Elle n'en conclut pas qu'il lui manque une règle : elle
+en conclut que Tiquiz ne sert à rien.
+
+**Règle : `lib/automatisation/planSysteme.ts` décide, et il n'annonce que
+ce qui part VRAIMENT.** C'est tout l'enjeu du "pas générique" : les six
+familles d'étiquettes n'ont pas les mêmes conditions, et une liste qui
+les récite toutes enverrait la créatrice construire des workflows sur des
+étiquettes qu'elle n'aura jamais.
+
+| Étiquette | Part quand |
+|---|---|
+| profil (`sio_tag_names`) | QUIZ seulement, un sondage n'a pas de résultat |
+| `sio_capture_tag` | SONDAGE seulement |
+| par réponse (`options[].sio_tag_name`) | SONDAGE seulement |
+| score (`score-<tranche>`, `<axe>-<tranche>`) | si `sio_score_tags` est coché |
+| `sio_share_tag_name` | dès qu'il est RENSEIGNÉ, sans regarder `virality_enabled` |
+| formation / communauté | **rien à créer** : Tiquiz ouvre l'accès lui même |
+
+**Le dernier cas est le piège inverse** : une règle de plus ouvrirait
+l'accès DEUX fois, et ça ne se voit qu'en recevant deux emails. La carte
+dit donc de ne rien faire.
+
+**Les tags de score sont un MOTIF, pas un nom.** Ils sont calculés au
+moment de la réponse, à partir des libellés de la créatrice. L'écran
+montre donc la liste RÉELLE des valeurs possibles, calculée par
+`tagsDeScorePossibles`. Et `slugifyAxisLabel` n'accepte que `[a-z0-9_]` :
+"En route" donne `score-en_route`, avec un SOULIGNÉ. Deviner un tiret
+ferait créer une règle sur une étiquette qui n'arrive jamais.
+
+**Le nom du workflow proposé EST le nom de l'étiquette.** Deux noms
+différents pour la même chose obligent à faire la correspondance de tête
+à chaque fois qu'on relit sa liste de workflows.
+
+**Le module ne rend AUCUNE phrase**, seulement des données (le type
+d'étape, l'étiquette exacte, le contexte) : l'interface existe en 7
+langues, et c'est l'écran qui écrit. Le nom de l'étiquette est
+CLIQUABLE-COPIABLE : c'est le seul endroit où une faute de frappe casse
+tout en silence.
+
+**Ce qui manque est dit à part, et le bloquant passe devant** : sans clé
+Systeme.io reliée, aucun contact n'est créé et aucune étiquette n'est
+posée, donc tout le reste de l'écran serait un plan pour rien.
+
+**On ne réclame le tag de partage QUE si un bonus de partage est promis**
+(`virality_enabled`). Les simples boutons de partage de la page de
+résultat sont vrais par défaut : crier là dessus ferait rougir l'écran de
+presque tout le monde, et un avertissement qui sort pour rien finit
+ignoré.
+
+**Endroits à respecter :** `lib/automatisation/planSysteme.ts` (pur),
+`components/quiz/AutomatisationPanel.tsx`, `QuizDetailClient.tsx` et
+`SurveyDetailClient.tsx` (le 4e onglet). Le filet de captures ne couvre
+pas l'éditeur : le garde-fou est
+`tests/logic/plan-automatisation.test.mts`.
+
+**Pas porté dans Tipote**, qui pose pourtant les mêmes étiquettes. À
+faire si ses créatrices rencontrent le même silence.

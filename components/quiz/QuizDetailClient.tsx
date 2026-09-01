@@ -14,7 +14,7 @@ import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
   Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, ImagePlus, Crop, Star, Settings2,
-  Link2, AlertCircle, Wand2, AlignLeft } from "lucide-react";
+  Link2, AlertCircle, Wand2, AlignLeft, Workflow } from "lucide-react";
 import { GifPickerButton } from "@/components/quiz/GifPicker";
 import { ImageCropDialog } from "@/components/quiz/ImageCropDialog";
 import { TiquizStudioButton } from "@/components/visual-studio/TiquizStudioButton";
@@ -58,6 +58,8 @@ import { QrCodeCard } from "@/components/share/QrCodeCard";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
 import { interpolateText } from "@/lib/quizPersonalization";
 import { resultChoiceLabel } from "@/lib/quiz/resultLabel";
+import { construirePlanAutomatisation } from "@/lib/automatisation/planSysteme";
+import { AutomatisationPanel } from "@/components/quiz/AutomatisationPanel";
 import { type TieConflict } from "@/lib/quizTieAnalysis";
 import { tieBreakMode } from "@/lib/quiz/profileWinner";
 import { analyzeOptionSupply, analyzeProfileGaps, analyzeResultCoverage, analyzeResultTies, attributionMode } from "@/lib/quizCoherence";
@@ -809,7 +811,43 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const [editResults, setEditResults] = useState<QuizResult[]>([]);
 
   // Editor state
-  const [mainTab, setMainTab] = useState<"create" | "share" | "results">("create");
+  const [mainTab, setMainTab] = useState<"create" | "share" | "automation" | "results">("create");
+
+  // L'ONGLET AUTOMATISATION (Béné, 1er septembre 2026). Le plan est
+  // construit sur les valeurs À L'ÉCRAN et pas seulement sur celles
+  // enregistrées : une créatrice qui vient de taper un tag doit voir la
+  // marche à suivre tout de suite, sans avoir à sauvegarder d'abord.
+  //
+  // `sio_api_key_id` et `sio_capture_tag` ne sont pas édités ici : ils
+  // viennent du quiz chargé, qui est lu en `select("*")`.
+  const planAutomatisation = useMemo(
+    () =>
+      construirePlanAutomatisation(
+        {
+          mode: quiz?.mode ?? null,
+          locale: quiz?.locale ?? null,
+          sio_api_key_id: (quiz as { sio_api_key_id?: string | null } | null)?.sio_api_key_id ?? null,
+          sio_capture_tag: (quiz as { sio_capture_tag?: string | null } | null)?.sio_capture_tag ?? null,
+          sio_share_tag_name: sioShareTagName,
+          sio_score_tags: sioScoreTags,
+          scoring_axes: scoringAxesEdit,
+          score_labels: scoreLabelsEdit,
+          virality_enabled: viralityEnabled,
+        },
+        editResults,
+        editQuestions,
+      ),
+    [
+      quiz,
+      sioShareTagName,
+      sioScoreTags,
+      scoringAxesEdit,
+      scoreLabelsEdit,
+      viralityEnabled,
+      editResults,
+      editQuestions,
+    ],
+  );
   const [leftTab, setLeftTab] = useState<"edition" | "design" | "settings">("edition");
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   // Taquet de largeur du panneau split (Béné 30 juil 2026, façon
@@ -3329,9 +3367,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           </span>
         </div>
         <nav className="hidden sm:flex items-center bg-muted rounded-lg p-0.5">
-          {(["create","share","results"] as const).map(tab => (
+          {(["create","share","automation","results"] as const).map(tab => (
             <button key={tab} onClick={() => setMainTab(tab)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mainTab === tab ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : <><Eye className="w-3.5 h-3.5 inline mr-1.5" />{t("tabResults")}</>}
+              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : tab === "automation" ? <><Workflow className="w-3.5 h-3.5 inline mr-1.5" />{t("tabAutomation")}</> : <><Eye className="w-3.5 h-3.5 inline mr-1.5" />{t("tabResults")}</>}
             </button>
           ))}
         </nav>
@@ -3424,9 +3462,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           la réaffiche en pleine largeur sous l'en-tête, < sm seulement. */}
       {!isEmbed && (
         <nav className="sm:hidden flex items-stretch border-b shrink-0 bg-background z-10">
-          {(["create","share","results"] as const).map(tab => (
+          {(["create","share","automation","results"] as const).map(tab => (
             <button key={tab} onClick={() => setMainTab(tab)} className={`flex-1 px-2 py-2.5 text-sm font-medium transition-colors inline-flex items-center justify-center gap-1.5 ${mainTab === tab ? "text-foreground border-b-2 border-primary" : "text-muted-foreground"}`}>
-              {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : <><Eye className="w-3.5 h-3.5" />{t("tabResults")}</>}
+              {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : tab === "automation" ? <><Workflow className="w-3.5 h-3.5" />{t("tabAutomation")}</> : <><Eye className="w-3.5 h-3.5" />{t("tabResults")}</>}
             </button>
           ))}
         </nav>
@@ -6807,6 +6845,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       )}
 
       {/* RESULTS TAB */}
+      {mainTab === "automation" && <AutomatisationPanel plan={planAutomatisation} />}
+
       {mainTab === "results" && (
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-5xl mx-auto">
