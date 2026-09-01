@@ -72,6 +72,50 @@ export const TAGS_TIQUIZ = [
   "tiquiz-affilié-us",
 ] as const;
 
+/**
+ * LE TAG COMMUN À TOUS CEUX QUI ONT PAYÉ CHEZ NOUS.
+ *
+ * Béné, 1er septembre 2026 : "il faut que tu ajoutes le tag
+ * tiquiz-clients pour faire partir la campagne tiquiz abonnement à
+ * chaque vente sur notre système."
+ *
+ * Son workflow est déjà en place : *Tag "tiquiz-clients" ajouté ->
+ * S'abonner à la campagne "Tiquiz abonnement"*. Sans ce tag, un client
+ * qui paie sur NOTRE bon de commande porte bien son palier
+ * (`tiquiz-mensuel`...) mais n'entre dans AUCUNE séquence, et rien ne le
+ * signale : c'est le trou d'Ivan (7 août) déplacé d'un cran.
+ *
+ * RELEVÉ dans son compte le 1er septembre 2026, pas inventé : le tag
+ * existe (créé le jour même). La règle du 22 août tient toujours, on ne
+ * CRÉE jamais un tag : `poserTagParNom` répond `tag_inconnu` et on le
+ * lit dans le journal plutôt que de fabriquer un doublon.
+ */
+export const TAG_CLIENT_TIQUIZ = "tiquiz-clients";
+
+/**
+ * Le tag "client" à poser EN PLUS du palier, ou `null`.
+ *
+ * **Il s'AJOUTE, il ne remplace pas.** Ses segments et ses filtres sont
+ * bâtis sur le palier (`tiquiz-mensuel`, `tiquiz-annuel-plus`...) :
+ * poser `tiquiz-clients` à la place les viderait tous d'un coup.
+ *
+ * **`free` en est exclu, et c'est la seule règle.** Une inscription
+ * gratuite a déjà SA campagne, déclenchée par `tiquiz-free` (vérifié
+ * par Béné dans son tableau de bord le 1er septembre). Marquer un
+ * inscrit gratuit comme client l'enverrait dans la séquence
+ * d'abonnement de quelqu'un qui n'a rien payé, et fausserait le seul
+ * segment qui compte pour ses relances.
+ *
+ * Tous les autres paliers en sont, `beta` et `lifetime` compris : le
+ * tag dit "cette personne a payé", pas "cette personne se réabonne
+ * tous les mois".
+ */
+export function readSioClientTag(plan: string | null | undefined): string | null {
+  const p = String(plan ?? "").trim().toLowerCase();
+  if (!p || p === "free") return null;
+  return readSioTag(p) ? TAG_CLIENT_TIQUIZ : null;
+}
+
 /** Le tag à poser pour ce palier, ou `null` si le palier est inconnu. */
 export function readSioTag(plan: string | null | undefined): string | null {
   const p = String(plan ?? "").trim().toLowerCase();

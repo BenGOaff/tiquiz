@@ -3872,6 +3872,51 @@ des événements Stripe manquants (31 août) : **écrire le code n'est pas
 la dernière étape, vérifier que le fournisseur envoie ou écoute quelque
 chose l'est.**
 
+### RÉSOLU LE 1er SEPTEMBRE : les deux règles existent, et elles marchent
+
+Béné : "c'est ok côté systeme io note le quelque part, le signup ajoute
+le tag tiquiz free, et de mon côté j'ai un workflow qui envoie la
+campagne tiquiz free."
+
+| Le tag | Sa règle chez Systeme.io | Qui le pose chez nous |
+|---|---|---|
+| `tiquiz-free` | -> campagne **Tiquiz free** | `tiquiz.fr/signup` |
+| `tiquiz-clients` | -> campagne **Tiquiz abonnement** | `grantPlanByEmail`, toute vente encaissée par nous |
+
+**Ce n'est plus un inconnu, c'est un fait**, et il ferme le trou décrit
+plus haut : l'inscription gratuite envoie bien sa séquence.
+
+**LE PALIER NE DÉCLENCHE RIEN, ET C'EST LA TROUVAILLE.** Béné, le même
+jour : "il faut que tu ajoutes le tag tiquiz-clients pour faire partir
+la campagne tiquiz abonnement à chaque vente sur notre système." Son
+workflow n'écoute pas `tiquiz-mensuel` : il écoute `tiquiz-clients`. Un
+client payé sur notre bon de commande portait donc son palier, et
+n'entrait dans AUCUNE séquence. `readSioClientTag` (`lib/sio/tags.ts`)
+décide, `grantPlanByEmail` pose les deux tags SÉPARÉMENT (une panne
+n'emporte pas l'autre), et un échec CRIE dans le journal.
+
+**Le tag s'AJOUTE au palier, il ne le remplace pas** : ses segments et
+ses filtres sont bâtis sur `tiquiz-mensuel` et compagnie. Et `free` en
+est exclu : il a déjà SA campagne, et marquer client quelqu'un qui n'a
+rien payé fausserait le seul segment qui compte pour ses relances.
+
+**MESURÉ le 1er septembre avant d'écrire une ligne** : le tag existe
+dans son compte (id 2156863, créé le jour même). On ne CRÉE jamais un
+tag (règle du 22 août) : un nom inventé ou mal orthographié se
+retrouverait en double et sa règle continuerait de pointer l'autre.
+
+**Et l'API reste aveugle, re-vérifié le même jour :** interrogée sur les
+règles `tag_added`, elle rend **zéro**, alors que ces deux règles
+existent et fonctionnent. Son silence ne veut toujours rien dire. Le
+seul endroit où une règle se vérifie est son tableau de bord.
+
+**Ce qui reste ouvert :** une vente arrivée par un TUNNEL Systeme.io ne
+passe pas par `grantPlanByEmail`, donc elle ne reçoit pas
+`tiquiz-clients` de notre part. Chez elle, une règle "tag
+`tiquiz-mensuel` ajouté -> ajouter `tiquiz-clients`" couvrirait ces
+ventes là sans une ligne de code.
+
+
 ## Toutes les images en 403 : le garde-fou était à l'étage du dessous (31 août 2026)
 
 Béné : "toutes les images sont cassées c'est pas normal", puis "j'ai
