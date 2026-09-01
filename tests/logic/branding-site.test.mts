@@ -53,6 +53,7 @@ const ECRANS = [
   "app/(site)/integrations/typeform-systeme-io/page.tsx",
   "app/(site)/integrations/google-forms-systeme-io/page.tsx",
   "app/(site)/integrations/interact-systeme-io/page.tsx",
+  "app/(site)/integrations/jotform-systeme-io/page.tsx",
   "components/site/Integrations.tsx",
   "components/site/EncartCta.tsx",
   "components/site/SimulateurAffiliation.tsx",

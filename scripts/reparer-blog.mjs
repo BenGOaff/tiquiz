@@ -59,6 +59,7 @@ import {
   retirerBanniereEnTete,
 } from "../lib/blog/miseEnPage.ts";
 import { poserTableaux } from "../lib/blog/tableauxRente.ts";
+import { corrigerFaitsOutils, poserLiensIntegrations } from "../lib/blog/liensIntegrations.ts";
 
 const DOSSIER = path.join(process.cwd(), "content", "blog");
 const VERIFIE = process.argv.includes("--verifie");
@@ -160,6 +161,7 @@ let structure = 0;
 let niveaux = 0;
 let bannieres = 0;
 let tableaux = 0;
+let liens = 0;
 function texte(s) {
   // LES FAITS D'ABORD, LA PONCTUATION ENSUITE.
   //
@@ -168,7 +170,7 @@ function texte(s) {
   // des `€` et des `:`. Reponctuer d'abord ferait que plus aucune
   // phrase ne serait reconnue, et la correction échouerait en silence.
   // C'est le piège de l'ordre des remplacements, déjà payé le 29 août.
-  const avecFaits = corrigerFaits(s);
+  const avecFaits = corrigerFaitsOutils(corrigerFaits(s));
   if (avecFaits !== s) faits += 1;
   const out = reponctuer(avecFaits);
   if (out !== avecFaits) typo += 1;
@@ -185,7 +187,13 @@ function texte(s) {
  * échouerait en silence.
  */
 function html(s) {
-  const cor = corrigerStructure(s);
+  // LES LIENS VERS LE HUB SE POSENT SUR LE HTML BRUT, avant toute
+  // reponctuation : leur ancre est une phrase entiere, et reponctuer
+  // d'abord changerait les espaces qu'elle contient. Meme ordre que les
+  // faits (29 aout).
+  const avecLiens = poserLiensIntegrations(s);
+  if (avecLiens !== s) liens += 1;
+  const cor = corrigerStructure(avecLiens);
   if (cor.corriges > 0) structure += cor.corriges;
   const propre = nettoyerMiseEnPage(cor.html);
   if (propre !== cor.html) miseEnPage += 1;
@@ -273,6 +281,7 @@ console.log(`Fragments de structure repares : ${structure}`);
 console.log(`Articles dont les niveaux de titre ont ete recales : ${niveaux}`);
 console.log(`Bannieres en double retirees : ${bannieres}`);
 console.log(`Tableaux de rente reposes : ${tableaux}`);
+console.log(`Liens vers le hub integrations poses : ${liens}`);
 for (const r of REGLES) {
   const n = compte.get(r.de) ?? 0;
   if (n > 0) console.log(`  ${n}x  ${r.de}\n        -> ${r.vers}   (${r.pourquoi})`);

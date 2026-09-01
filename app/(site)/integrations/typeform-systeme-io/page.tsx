@@ -20,7 +20,11 @@ import { OWNER_CATALOG, formatCents } from "@/lib/checkout/catalog";
 import { HOTE_VENTE } from "@/lib/publicHost";
 import { ZAPIER, faqJsonLd, filDArianeJsonLd, type QuestionFaq } from "@/lib/site/integrations";
 
-const TITRE = "Connecter Typeform à Systeme.io : méthode et coût réel";
+// 53 caractères avec le suffixe " · Tiquiz". L'ancien en faisait 63,
+// donc Google en coupait la fin. "Connecter" saute plutôt que le mot
+// clé : la requête visée est "typeform systeme io", et c'est la forme
+// que portent déjà les titres Interact et Jotform.
+const TITRE = "Typeform et Systeme.io : méthode et coût réel";
 const DESCRIPTION =
   "Typeform n'a pas d'intégration Systeme.io native. La méthode avec Zapier, les deux pièges de configuration, et le calcul du coût à l'année.";
 const CHEMIN = "/integrations/typeform-systeme-io";

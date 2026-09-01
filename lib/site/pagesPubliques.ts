@@ -92,6 +92,13 @@ export const PAGES_PUBLIQUES: readonly PagePublique[] = [
     priorite: 0.6,
   },
   {
+    chemin: "/integrations/jotform-systeme-io",
+    titre: "Connecter Jotform à Systeme.io",
+    resume:
+      "Jotform annonce une intégration Systeme.io, mais son bouton ouvre Zapier : l'adresse porte integration=Zapier et aucune clé API Systeme.io n'est demandée.",
+    priorite: 0.6,
+  },
+  {
     chemin: "/newsletter",
     titre: "La newsletter de Béné",
     resume:

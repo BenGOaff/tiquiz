@@ -16,9 +16,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
-import { Capture, EnBref, Faq, FilDAriane } from "@/components/site/Integrations";
+import { Capture, EnBref, Faq, FilDAriane, Tableau } from "@/components/site/Integrations";
 import { HOTE_VENTE } from "@/lib/publicHost";
-import { faqJsonLd, filDArianeJsonLd, type QuestionFaq } from "@/lib/site/integrations";
+import { ZAPIER, faqJsonLd, filDArianeJsonLd, type QuestionFaq } from "@/lib/site/integrations";
 
 const TITRE = "Google Forms et Systeme.io : intégrer et connecter";
 const DESCRIPTION =
@@ -157,6 +157,33 @@ export default function GoogleFormsSystemeIo() {
           Le détail des limites de Zapier, chiffré :{" "}
           <Link href="/integrations/zapier-systeme-io">Zapier et Systeme.io</Link>.
         </p>
+      </section>
+
+      <section className="tq-large mt-16">
+        <h2 className="text-[2rem]">Les deux questions, côte à côte</h2>
+        <Tableau
+          legende="Afficher le formulaire dans la page et envoyer les réponses dans les contacts sont deux choses différentes"
+          entetes={[
+            "",
+            "Afficher le formulaire dans la page",
+            "Envoyer les réponses dans les contacts",
+          ]}
+          lignes={[
+            [
+              "Possible ?",
+              "Oui, avec le code d'intégration Google",
+              "Oui, avec Zapier, Make ou un script Apps",
+            ],
+            [
+              "Coût",
+              "0 €",
+              `0 € jusqu'à ${ZAPIER.gratuitTachesParMois} réponses par mois, puis ${ZAPIER.professionnelParMois}`,
+            ],
+            ["Apparence", "celle de Google, hauteur fixe", "sans objet"],
+            ["Le visiteur devient un contact", "Non", "Oui"],
+            ["Tag différent selon la réponse", "Non", "plan Zapier payant, ou du code"],
+          ]}
+        />
       </section>
 
       <section className="tq-large mt-16 pb-24">

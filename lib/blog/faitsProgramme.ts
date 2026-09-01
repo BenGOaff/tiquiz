@@ -500,8 +500,15 @@ export const FAITS: readonly {
  * ordinaire, insécable, insécable fine. C'est le piège nommé dans
  * l'AGENTS.md du 29 août, qui disait déjà qu'une espace insécable ne se
  * tape pas, elle s'exprime.
+ *
+ * EXPORTÉ parce que `liensIntegrations.ts` corrige lui aussi des
+ * phrases entières et doit voir EXACTEMENT ce que celle-ci voit. Deux
+ * constructions de motif finiraient par ne plus être d'accord, et c'est
+ * le contrôle qui mentirait le premier (leçon du 31 août : le motif de
+ * "1 800 € par an" portait une espace ordinaire et l'article une
+ * insécable, donc la réparation ET le contrôle passaient à côté).
  */
-function motif(de: string): RegExp {
+export function motif(de: string): RegExp {
   const echappe = de.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(echappe.replace(/[\s\u00a0\u202f]+/g, "[\\s\\u00a0\\u202f]+"), "g");
 }
