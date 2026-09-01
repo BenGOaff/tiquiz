@@ -18,7 +18,7 @@
 import { PRICE_PLANS } from "@/lib/sio/pricePlans";
 import type { Sale } from "@/lib/checkout/sales";
 
-export type Produit = "tiquiz" | "atelier" | "inconnu";
+export type Produit = "tiquiz" | "atelier" | "autre" | "inconnu";
 
 /** Les paliers Tiquiz, tels qu'ils sont écrits dans `productId`. */
 const PALIERS_TIQUIZ = new Set([
@@ -45,6 +45,13 @@ const PALIERS_TIQUIZ = new Set([
  * `inconnu` est une vraie réponse, pas un échec : une vente qu'on ne
  * sait pas rattacher doit se voir, pas être rangée au hasard dans la
  * colonne la plus probable.
+ *
+ * `autre` est arrivé le 1er septembre 2026, sur une capture de Béné :
+ * son tableau de bord affichait "Produit non identifié" sur des ventes
+ * que Systeme.io nomme très bien ("Le Pacte™ - 24€/mois"). Son compte
+ * ne vend pas que Tiquiz et l'Atelier, et un produit qu'on SAIT ne pas
+ * être le nôtre n'est pas un produit inconnu : il a un nom, et l'écran
+ * le dit. `nomProduitVendu` rend ce nom.
  */
 export function readSaleProduct(sale: Pick<Sale, "ref" | "productId">): Produit {
   const ref = String(sale.ref ?? "").toLowerCase();
@@ -61,6 +68,22 @@ export function readSaleProduct(sale: Pick<Sale, "ref" | "productId">): Produit 
   if (plan) return plan.produit;
 
   return "inconnu";
+}
+
+/**
+ * LE NOM À AFFICHER SUR UNE LIGNE DE VENTE.
+ *
+ * Pour Tiquiz et l'Atelier, le nom de la famille suffit : c'est ce que
+ * Béné lit. Pour un AUTRE produit, c'est son nom propre qui compte
+ * ("Le Pacte™ mensuel") : dire "Autre produit" sur une ligne que
+ * Systeme.io sait nommer, c'est reproduire le "non identifié" avec un
+ * mot de plus.
+ */
+export function nomProduitVendu(sale: Pick<Sale, "ref" | "productId">): string {
+  const famille = readSaleProduct(sale);
+  if (famille !== "autre") return NOM_PRODUIT[famille];
+  const brut = String(sale.productId ?? "").trim().toLowerCase().replace(/^offer-price-/, "");
+  return PRICE_PLANS[brut]?.nom ?? NOM_PRODUIT.autre;
 }
 
 export interface TotalProduit {
@@ -88,7 +111,7 @@ export function totauxParProduit(sales: readonly Sale[]): TotalProduit[] {
     if (!v.refundedAt) agg.totalCents += Number(v.amountCents) || 0;
     par.set(produit, agg);
   }
-  const ordre: Produit[] = ["tiquiz", "atelier", "inconnu"];
+  const ordre: Produit[] = ["tiquiz", "atelier", "autre", "inconnu"];
   return [...par.values()].sort((a, b) => ordre.indexOf(a.produit) - ordre.indexOf(b.produit));
 }
 
@@ -96,5 +119,6 @@ export function totauxParProduit(sales: readonly Sale[]): TotalProduit[] {
 export const NOM_PRODUIT: Record<Produit, string> = {
   tiquiz: "Tiquiz",
   atelier: "Atelier du Quiz",
+  autre: "Autre produit",
   inconnu: "Produit non identifié",
 };

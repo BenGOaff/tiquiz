@@ -64,7 +64,11 @@ test("une vente Atelier passee par Systeme.io ne finit plus en inconnu", () => {
       created_at: "2026-08-03T09:00:00Z",
     },
   ]);
-  assert.equal(v?.productId, "atelier");
+  // Depuis le 1er septembre on GARDE l'identifiant du plan tarifaire au
+  // lieu d'ecrire "atelier" : la famille se lit pareil, et le NOM propre
+  // du produit reste accessible pour la ligne de vente. Ecrire la
+  // famille jetait un nom qu'on avait sous la main.
+  assert.equal(v?.productId, "3316702");
   assert.equal(readSaleProduct(v!), "atelier");
   assert.equal(v?.amountCents, 4700);
 });

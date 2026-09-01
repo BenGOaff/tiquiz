@@ -56,6 +56,7 @@ import {
   isConfirmedSaleEvent,
   type TiquizPlan,
 } from "@/lib/sio/webhookInference";
+import { venteHorsTiquiz, nomDeLOffre } from "@/lib/sio/produitVendu";
 // Une vente encaissée sans accès ouvert PRÉVIENT Béné (drame Ivan, 7 août).
 import { sendSaleRefusedAlert } from "@/lib/email/saleRefusedAlert";
 import { LIFETIME_PLANS } from "@/lib/plans/lifetime";
@@ -366,6 +367,40 @@ export async function POST(req: NextRequest) {
     console.log(
       `[Tiquiz webhook] email=${email} type=${eventType} url=${sourceUrl} planFromUrl=${planFromUrl} offerId=${offerId} planFromOffer=${planFromOffer} → plan=${plan} order=${orderId}`,
     );
+
+    // ── UN AUTRE PRODUIT DE SON COMPTE N'OUVRE PAS TIQUIZ ──
+    //
+    // Béné, 1er septembre 2026, capture du pilotage à l'appui : "des
+    // ventes non identifiées sur le dashboard c'est des abonnements
+    // tiquiz via systeme io et un autre abonnement qui n'a rien a voir".
+    //
+    // Son compte Systeme.io ne vend pas que Tiquiz et l'Atelier : Le
+    // Pacte™ (24 €/mois), Hacktube, Reddit Business, Youtube Influence.
+    // Toutes ces ventes arrivent ICI, sur le même webhook, avec le même
+    // genre d'événement.
+    //
+    // Depuis le 7 août, une vente confirmée sur une offre INCONNUE ouvre
+    // un accès Tiquiz, et cette règle reste juste ("il a payé le client,
+    // il doit recevoir ses accès, point barre"). Mais elle avait été
+    // écrite pour un compte qui ne vendait que nous. Appliquée à celui
+    // là, elle ouvre un abonnement Tiquiz à chaque échéance du Pacte.
+    //
+    // ET LE REPLI PAR LE MONTANT EST LE PIRE DES DEUX : trois de ses
+    // autres produits coûtent EXACTEMENT le prix d'un palier Tiquiz,
+    // donc `inferPlanFromAmount` ouvrait un palier PRÉCIS et FAUX, ce
+    // qui ressemble à un routage réussi. Le test les nomme.
+    //
+    // On ne ferme la porte QUE sur ce qu'on RECONNAÎT (`venteHorsTiquiz`
+    // lit `PRICE_PLANS`, relu dans son compte). Une offre qu'on ne
+    // trouve pas reste traitée comme avant : "je n'ai pas trouvé" et
+    // "je sais que ce n'est pas nous" sont deux réponses différentes.
+    if (venteHorsTiquiz(offerId)) {
+      const nom = nomDeLOffre(offerId) ?? "produit inconnu";
+      const msg = `hors_tiquiz:${offerId}:${nom}`;
+      console.warn(`[Tiquiz webhook] VENTE D'UN AUTRE PRODUIT, aucun accès Tiquiz ouvert - ${msg} email=${email} type=${eventType}`);
+      await logWebhook({ event_id: eventId, event_type: eventType, payload: rawBody, status: "processed", error: msg });
+      return NextResponse.json({ ok: true, skipped: "hors_tiquiz", produit: nom, offer_id: offerId });
+    }
 
     // Create or find user
     let userId: string;

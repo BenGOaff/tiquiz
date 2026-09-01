@@ -192,7 +192,7 @@ export function serieEmpilee(
     return { fiable: false, raison: "montants-absents", concernees: sansMontant };
   }
 
-  const vide = (): Record<Produit, number> => ({ tiquiz: 0, atelier: 0, inconnu: 0 });
+  const vide = (): Record<Produit, number> => ({ tiquiz: 0, atelier: 0, autre: 0, inconnu: 0 });
   const cles = axe(b.debut, b.fin, pas);
   const index = new Map<string, Record<Produit, number>>(cles.map((c) => [c, vide()]));
 

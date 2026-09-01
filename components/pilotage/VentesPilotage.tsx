@@ -26,7 +26,7 @@ import Link from "next/link";
 import { Loader2, Search } from "lucide-react";
 
 import { CARTE } from "@/components/pilotage/carte";
-import { NOM_PRODUIT, readSaleProduct } from "@/lib/admin/saleProduct";
+import { nomProduitVendu } from "@/lib/admin/saleProduct";
 import type { Sale } from "@/lib/checkout/sales";
 
 type LigneVente = { vente: Sale; email: string; nom: string | null };
@@ -191,7 +191,7 @@ export function VentesPilotage({
                         </span>
                       </div>
                       <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                        <span>{NOM_PRODUIT[readSaleProduct(l.vente)]}</span>
+                        <span>{nomProduitVendu(l.vente)}</span>
                         <span>·</span>
                         <span>{quand(l.vente.paidAt)}</span>
                         <span>·</span>
