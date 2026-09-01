@@ -20,6 +20,7 @@
 
 import Link from "next/link";
 import type { Metadata } from "next";
+import { attributsEpinglePour } from "@/lib/blog/partage";
 
 import { Capture, EnBref, Faq, FilDAriane, Logo, Tableau } from "@/components/site/Integrations";
 import { HOTE_VENTE } from "@/lib/publicHost";
@@ -132,6 +133,11 @@ export default function HubIntegrations() {
           largeur={1600}
           hauteur={996}
           premiere
+          epingle={attributsEpinglePour(
+            "hub-integrations",
+            `${HOTE_VENTE}/integrations`,
+            `${TITRE} - ${DESCRIPTION}`,
+          )}
         />
       </section>
 

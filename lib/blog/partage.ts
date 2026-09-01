@@ -72,3 +72,55 @@ export function textePartage(a: Article | ResumeArticle): string {
   const coupe = tout.slice(0, 480);
   return `${coupe.slice(0, coupe.lastIndexOf(" "))}...`;
 }
+
+/**
+ * LES ATTRIBUTS QUE PINTEREST LIT SUR UNE VIGNETTE.
+ *
+ * Béné, 1er septembre 2026 : "le format des images ne me permet pas de
+ * les partager sur pinterest (liste des articles, hub ...) et je manque
+ * de la visibilité à cause de ça."
+ *
+ * Elle a raison, et le défaut était plus bête que le format : depuis la
+ * LISTE des articles, il n'y avait rien du tout à épingler. L'épingle
+ * verticale n'existait que sur la page de l'article, et la vignette
+ * d'une carte est une couverture 1200 x 675, c'est à dire exactement le
+ * format qui ne circule pas dans un flux vertical.
+ *
+ * `data-pin-url` est le morceau qu'on ne peut PAS oublier ici, et c'est
+ * lui qui distingue cette fonction de l'article. Épinglée depuis la
+ * liste, une carte pointerait sinon vers `/blog` : le visiteur qui
+ * clique atterrit sur un sommaire au lieu de l'article promis par
+ * l'image, et l'épingle ne ramène personne.
+ *
+ * Rendre `{}` plutôt que des attributs vides est voulu : sans épingle
+ * construite, on laisse Pinterest faire ce qu'il sait faire avec la
+ * page, au lieu de lui désigner un fichier qui n'existe pas.
+ */
+export function attributsEpingle(
+  a: Article | ResumeArticle,
+): Record<string, string> {
+  return attributsEpinglePour(a.slug, `${ORIGINE_BLOG}/blog/${a.slug}`, textePartage(a));
+}
+
+/**
+ * La même chose pour une page qui n'est PAS un article.
+ *
+ * Le hub intégrations a son épingle (`hub-integrations`), construite par
+ * le même générateur : une page dont tout l'intérêt est d'être trouvée
+ * mérite la même image verticale qu'un article. Les deux passent par
+ * ici, sinon la deuxième finirait par désigner un autre fichier que la
+ * première, et c'est le défaut que ce fichier existe pour éviter.
+ */
+export function attributsEpinglePour(
+  slug: string,
+  urlDeLaPage: string,
+  description: string,
+): Record<string, string> {
+  const epingle = epinglePour(slug);
+  if (!epingle) return {};
+  return {
+    "data-pin-media": epingle,
+    "data-pin-url": urlDeLaPage,
+    "data-pin-description": description,
+  };
+}

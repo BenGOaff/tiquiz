@@ -62,4 +62,15 @@ export async function register() {
     "TIQUIZ",
   );
   if (expediteur) console.error(expediteur);
+
+  // LA REVENDICATION PINTEREST, MÊME RAISON ENCORE.
+  //
+  // Le code n'est PAS obligatoire : tant qu'il est absent, la balise ne
+  // sort pas et on se tait. Mais une valeur POSÉE et illisible fait
+  // échouer la revendication en silence, et c'est exactement le genre de
+  // panne qu'on ne découvre que des mois plus tard, en se demandant
+  // pourquoi son nom n'apparaît sur aucune épingle.
+  const { diagnosticVerificationPinterest } = await import("@/lib/site/pinterest");
+  const pinterest = diagnosticVerificationPinterest();
+  if (pinterest) console.error(`[TIQUIZ] ${pinterest}`);
 }

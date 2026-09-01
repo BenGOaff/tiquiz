@@ -14,6 +14,7 @@
 import Link from "next/link";
 import type { ResumeArticle } from "@/lib/blog/articles";
 import { rubriqueDe } from "@/lib/blog/rubriques";
+import { attributsEpingle } from "@/lib/blog/partage";
 
 export function jourLisible(iso: string): string {
   return new Intl.DateTimeFormat("fr-FR", {
@@ -33,6 +34,13 @@ export default function CarteArticle({
   priorite?: boolean;
 }) {
   const rubrique = rubriqueDe(article.slug);
+  // CE QUE PINTEREST PREND QUAND ON ÉPINGLE DEPUIS LA LISTE.
+  //
+  // La vignette affichée est une couverture 1200 x 675 : elle ne circule
+  // pas dans un flux vertical. `attributsEpingle` désigne l'épingle
+  // 1000 x 1500 de l'article ET l'adresse de l'article, sinon l'épingle
+  // ramènerait le lecteur sur le sommaire du blog.
+  const epingle = attributsEpingle(article);
   return (
     <article className="tq-carte group">
       <Link href={`/blog/${article.slug}`} className="block">
@@ -50,6 +58,7 @@ export default function CarteArticle({
               height={675}
               loading={priorite ? "eager" : "lazy"}
               fetchPriority={priorite ? "high" : undefined}
+              {...epingle}
             />
           </div>
         ) : null}

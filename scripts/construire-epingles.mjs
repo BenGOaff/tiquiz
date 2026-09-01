@@ -61,10 +61,29 @@ const LOGO = path.join(process.cwd(), "public", "logo-tiquiz.webp");
  * nette posée par dessus : sans lui, on lit deux fois la même chose.
  */
 async function fondFloute(chemin) {
+  // L'ASSOMBRISSEMENT DÉPEND DE LA SOURCE, ET C'EST MESURÉ.
+  //
+  // `brightness: 0.55` a été réglé sur ses couvertures d'articles, qui
+  // sont toutes sombres : relevé le 1er septembre, leur luminosité
+  // moyenne va de 22 à 40 sur 255. Appliqué à un visuel CLAIR, le même
+  // réglage ne fait pas un fond sombre, il fait un fond GRIS : la
+  // couleur part, et l'épingle a l'air délavée. C'est ce qui est arrivé
+  // au schéma du hub, mesuré à 236.
+  //
+  // Le seuil est loin des deux groupes (40 d'un côté, 236 de l'autre) :
+  // il ne départage rien à la limite, il constate un écart qui existe.
+  const stats = await sharp(chemin).stats();
+  const moyenne =
+    stats.channels.slice(0, 3).reduce((t, c) => t + c.mean, 0) / 3;
+  const clair = moyenne > 120;
   return sharp(chemin)
     .resize(LARGEUR, HAUTEUR, { fit: "cover", position: "attention" })
     .blur(42)
-    .modulate({ brightness: 0.55, saturation: 1.1 })
+    .modulate(
+      clair
+        ? { brightness: 0.94, saturation: 1.15 }
+        : { brightness: 0.55, saturation: 1.1 },
+    )
     .toBuffer();
 }
 
@@ -79,11 +98,37 @@ const articles = JSON.parse(
   fs.readFileSync(path.join(process.cwd(), "content", "blog", "index.json"), "utf8"),
 );
 
+// ── LES PAGES QUI NE SONT PAS DES ARTICLES ───────────────────────────
+//
+// Béné, 1er septembre 2026 : "le format des images ne me permet pas de
+// les partager sur pinterest (liste des articles, hub ...)".
+//
+// Le hub intégrations n'avait qu'une image PAYSAGE (1200 x 630) : elle
+// s'épingle, mais elle occupe trois fois moins de hauteur que ses
+// voisines dans un flux, donc elle ne circule pas. Il lui faut la même
+// épingle 2:3 qu'un article.
+//
+// UNE PAGE N'ENTRE ICI QUE SI ELLE A UN VISUEL À ELLE. Les six pages
+// d'outil (Tally, Typeform, Jotform...) n'en ont pas : leur `og:image`
+// est une CAPTURE D'ÉCRAN d'un service tiers. Fabriquer une épingle
+// avec, ce serait faire circuler la page de tarifs de Zapier sous le
+// nom de Béné. Et on ne peut pas non plus en dessiner une : ce script
+// refuse d'écrire du texte dans une image (cf. l'en-tête), parce que la
+// police dépend de la machine qui construit. Ces pages attendent donc
+// un visuel d'elle, et elles le disent ici plutôt que de recevoir en
+// silence une épingle qu'elle n'aurait pas choisie.
+const PAGES = [
+  {
+    slug: "hub-integrations",
+    couverture: "/integrations/schema-connexion-systemeio.webp",
+  },
+];
+
 fs.mkdirSync(SORTIE, { recursive: true });
 
 let faites = 0;
 let sautees = 0;
-for (const a of articles) {
+for (const a of [...articles, ...PAGES]) {
   if (!a.couverture) {
     // Sans couverture on ne fabrique RIEN. Une épingle au fond uni ne
     // dit rien de l'article et occupe une place dans un flux.

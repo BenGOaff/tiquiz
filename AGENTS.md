@@ -5513,3 +5513,84 @@ identifiant routable est la question que `check:ventes-sio` existe pour
 répondre, sur le serveur, là où le journal vit.
 
 Test : `tests/logic/ventes-hors-tiquiz.test.mts`.
+
+## Pinterest : hors d'un article, il n'y avait RIEN à épingler (1er septembre 2026)
+
+Béné : "le format des images ne me permet pas de les partager sur
+pinterest (liste des articles, hub ...) et je manque de la visibilité à
+cause de ça."
+
+**Mesuré sur la production avant de toucher au code**, et le défaut
+était plus bête que le format :
+
+| Page | Ce qu'elle déclarait |
+|---|---|
+| `/blog` | **AUCUNE `og:image`**, rien du tout |
+| `/blog/rubrique/<x>` | **AUCUNE** non plus |
+| `/integrations` | une `og:image` 1200 x 630, donc PAYSAGE |
+| un article | l'épingle 1000 x 1500 + `data-pin-media` |
+
+Le travail du 30 août n'avait donc couvert qu'UNE page sur quatre. Le
+sommaire du blog et les rubriques ne sortaient même pas sur LinkedIn ou
+Facebook : partagées, elles s'affichaient nues.
+
+**Règle : `attributsEpingle()` / `attributsEpinglePour()`
+(`lib/blog/partage.ts`), et personne ne recompose ces attributs.**
+
+**`data-pin-url` EST LE MORCEAU QU'ON NE PEUT PAS OUBLIER.** Épinglée
+depuis la liste, une carte pointerait sinon vers `/blog` : le lecteur
+qui clique atterrit sur un sommaire au lieu de l'article que l'image lui
+a promis, et l'épingle ne ramène personne. C'est ce qui distingue une
+carte de liste de la page d'un article, où l'adresse de la page est déjà
+la bonne.
+
+**Le fond de l'épingle s'assombrit SELON la source, et c'est mesuré.**
+`brightness: 0.55` avait été réglé sur ses couvertures d'articles, dont
+la luminosité moyenne va de 22 à 40 sur 255. Le schéma du hub est à
+236 : le même réglage n'en faisait pas un fond sombre, il en faisait un
+fond GRIS, délavé. Le seuil est posé à 120, loin des deux groupes : il
+ne départage rien à la limite, il constate un écart qui existe. **Les
+dix épingles d'articles sont inchangées à l'octet près**, vérifié.
+
+**Les six pages d'outil (Tally, Typeform, Jotform...) n'ont PAS
+d'épingle, et c'est écrit dans le générateur.** Leur `og:image` est une
+CAPTURE D'ÉCRAN d'un service tiers : en faire une épingle ferait
+circuler la page de tarifs de Zapier sous le nom de Béné. Et on ne peut
+pas en dessiner une, parce que ce générateur refuse d'écrire du texte
+dans une image (la police dépend de la machine qui construit). Elles
+attendent un visuel d'elle, et le script le DIT au lieu de recevoir en
+silence une épingle qu'elle n'aurait pas choisie.
+
+### La revendication du domaine
+
+`PINTEREST_DOMAIN_VERIFY` sur le serveur, lue à chaque rendu (aucun
+rebuild). Son nom et sa photo s'affichent alors sur chaque épingle qui
+vient de `tiquiz.fr`, y compris celles épinglées par quelqu'un d'autre.
+
+**Le code est VALIDÉ, pas cru sur parole** : c'est la règle du 2 août,
+un `??` protège du MANQUANT jamais du FAUX. Une balise `p:domain_verify`
+mal formée fait échouer la revendication EN SILENCE, ce qui se découvre
+des mois plus tard. Valeur absente : aucune balise, et on se tait.
+Valeur posée et illisible : aucune balise, et ça CRIE dans `pm2 logs`
+(`instrumentation.ts`). Le message dit la LONGUEUR, jamais la valeur.
+
+Le cas le plus probable est prévu : Pinterest met la balise ENTIÈRE dans
+le presse papier, donc `codeVerificationPinterest` accepte aussi
+`<meta ... content="...">` et en extrait le contenu.
+
+### Ce qui n'était PAS notre bug, et qu'il faut savoir lire
+
+Sa console montrait `429` sur `/resource/PinResource/create/` et
+"Impossible de traiter votre demande". **Un 429 est une limite de débit
+de Pinterest sur SON compte**, pas un refus de notre image : les
+fichiers répondent `200` (vérifié en production avec l'agent de
+Pinterest, épingle et couverture). Les `#__PWS_DATA__ was not found in
+the DOM` viennent du script de Pinterest lui même, sur leur propre page.
+
+**Un symptôme rapporté est une observation, jamais un diagnostic** (même
+leçon que "les champs image ont disparu" du 31 août, qui était un 403).
+Ici les deux étaient vrais en même temps : le 429 bloquait ses essais
+du moment, ET il n'y avait vraiment rien à épingler hors d'un article.
+
+Test : `tests/logic/epingles-pinterest.test.mts`, vérifié en rejouant la
+version d'avant (il rougit).
