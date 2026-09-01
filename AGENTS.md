@@ -5173,3 +5173,151 @@ Tests : `tests/logic/tete-page-vente.test.mts` et
 `tests/logic/liens-site-page-vente.test.mts`, qui portent sur la VRAIE
 capture. Un test qui n'exercerait qu'une chaîne écrite à la main aurait
 été vert le jour du bug.
+
+## Le hub intégrations : capter la recherche entre un concurrent et Systeme.io (Béné, 1er septembre 2026)
+
+"On va créer un hub intégrations pour aller capter les intentions de
+recherches entre les outils concurrents et systeme io pour introduire
+Tiquiz."
+
+**POURQUOI CES PAGES MARCHENT.** Sur `tally + systeme.io`, la première
+page de Google est faite de sept plateformes d'automatisation et de rien
+d'autre. Même schéma sur Typeform, Jotform, Google Forms, Interact.
+Aucune page en français. C'est le seul endroit du web où quelqu'un se
+demande, exactement à cet instant, comment faire arriver un formulaire
+dans Systeme.io.
+
+**LA RÈGLE QUI LES REND SOLIDES : chaque page résout vraiment le problème
+posé, y compris quand la réponse est "prends Zapier".** La page Tally
+explique la méthode gratuite avec du code AVANT de parler de nous. Une
+page d'intégration qui n'explique pas l'intégration est une page de vente
+déguisée, et ça se voit en dix secondes.
+
+**Ce qui est en ligne :** le hub (`/integrations`), Zapier, Tally,
+Typeform. Google Forms, Jotform et Interact sont MONTRÉS dans le
+comparatif du hub, sans lien : une ligne manquante se lit comme un oubli,
+mais un lien vers une page non écrite, c'est cinq 404 dans un pied de
+page (drame du centre d'aide, 24 août). Le test l'exige dans les deux
+sens.
+
+### AUCUN PRIX N'EST ÉCRIT À LA MAIN
+
+Le document de départ annonçait "Zapier Professional 19,99 $/mois", à dix
+endroits. **La capture fournie le même jour affiche "À partir de
+29,99 $/mois"** sur la page de tarifs française. Écrire 19,99 au dessus
+d'une image qui dit 29,99 détruit la page en dix secondes.
+
+`ZAPIER.professionnelParMois` (`lib/site/integrations.ts`) porte donc ce
+que la capture MONTRE, et le prix de Tiquiz vient du CATALOGUE
+(`OWNER_CATALOG`), c'est à dire de ce que le bon de commande encaisse.
+C'est la leçon de `faitsProgramme.ts` : un montant recopié est un montant
+faux au premier changement de tarif, et ici il vit dans un tableau de
+comparaison, donc à l'endroit exact où un lecteur le vérifie.
+
+Le test refuse tout `\d,\d\d $` dans ce qui S'AFFICHE. Il ignore les
+COMMENTAIRES, où l'écart avec le document est expliqué : une exemption
+sans raison écrite à côté est une exemption que le prochain passage prend
+pour un oubli.
+
+### LES TABLEAUX SONT DE VRAIES BALISES `<table>`
+
+Jamais une capture. Une image n'est ni extraite par un moteur, ni
+sélectionnable, ni lisible sur un téléphone : elle rate les trois d'un
+coup. `Tableau` (`components/site/Integrations.tsx`) rend un `<table>`
+dans une boîte `overflow-x-auto` : c'est le tableau qui défile, jamais la
+page.
+
+### LE FAIT QUI PORTE TOUTES CES PAGES, ET IL EST VÉRIFIÉ
+
+**Tiquiz CRÉE le tag Systeme.io quand il manque.** Ce n'est pas une
+formule commerciale : `app/api/quiz/[quizId]/public/route.ts` fait
+`POST /tags` sur un nom introuvable avant de le poser sur le contact.
+C'est exactement ce que ni Zapier (qui ne propose que les tags déjà
+créés) ni un webhook maison (qui doit chercher l'ID, pas le nom) ne font.
+
+**À NE PAS CONFONDRE avec `poserTagParNom`** (les ventes et la
+newsletter), qui ne crée JAMAIS un tag : celui-là tourne avec la clé de
+Béné, et un nom mal orthographié se retrouverait en double dans SA liste
+(règle du 22 août). Deux chemins, deux clés, deux comportements opposés,
+et c'est voulu.
+
+### LA CAPTURE DE ZAPIER PORTAIT SON ADRESSE EMAIL
+
+Le champ "Account" de la capture fournie affichait `blagardette@gmail.com`
+en clair. Floutée avant conversion, vérifiée illisible dans le WebP
+publié.
+
+**Règle : une capture fournie se REGARDE avant d'être publiée**, champ
+par champ. Une adresse, un identifiant de compte ou une clé d'API se
+lisent très bien sur une image, et une page publique est indexée pour
+toujours. C'est la même règle que "un visuel se place en le regardant,
+jamais d'après son nom".
+
+### Le pied de page a une cinquième colonne, donc une grille imbriquée
+
+Une seule grille pour la marque ET les colonnes de liens obligeait à
+recompter les colonnes à chaque page ajoutée : la 5e aurait écrasé les
+autres. Les colonnes de liens vivent maintenant dans leur propre grille et
+passent à la ligne toutes seules.
+
+**Endroits à respecter :** `lib/site/integrations.ts` (pur, il porte les
+chiffres et les deux constructeurs de JSON-LD),
+`components/site/Integrations.tsx`, `app/(site)/integrations/`,
+`lib/site/pagesPubliques.ts` (sitemap + llms.txt) et `lib/site/nav.ts`
+(le pied de page). Test : `tests/logic/hub-integrations.test.mts`,
+vérifié en rejouant un prix en dur et une capture absente (il rougit).
+
+### Google Forms et Interact, et les logos officiels (1er septembre, le soir)
+
+**LA PAGE INTERACT EST LA SEULE DU HUB DONT TOUT L'ARGUMENT EST LA PAROLE
+D'UN CONCURRENT.** Ses trois citations ont donc été relevées sur la page
+d'aide EN LIGNE, pas recopiées du document de départ :
+
+- « A Zapier Pro account » (section « Before you start ») ;
+- « You must create a tag in Systeme.io for each quiz result you want to
+  use, or it won't appear as a selectable option in Zapier. » ;
+- « Repeat this Zap setup for each quiz result tag you want to apply in
+  Systeme.io (one Zap per result tag). »
+
+L'adresse est affichée sous la citation, et le test exige que les deux
+phrases restent MOT POUR MOT. Une citation approchée est indéfendable, et
+c'est la page qu'un concurrent lira en premier.
+
+**L'exception « étiquette » de cette page est OBLIGATOIRE.** La capture
+de leur documentation est traduite par le navigateur : elle affiche
+"étiquette" là où nous écrivons "tag". Sans une légende qui le dit, le
+lecteur croit lire deux notions différentes. Le test tolère le mot sur
+CETTE page seulement, et seulement si la légende dit "traduite par le
+navigateur". Même forme que l'aide de l'éditeur qui doit montrer
+"cher·e".
+
+**LA CAPTURE MOBILE DE GOOGLE FORMS PORTAIT ENCORE SON ADRESSE EMAIL.**
+Le compte Google connecté s'affiche au dessus du formulaire intégré.
+Floutée avant conversion, vérifiée illisible dans le WebP publié.
+Deuxième fois en deux jours : **une capture fournie se REGARDE champ par
+champ, à chaque livraison**, pas seulement la première.
+
+**LA PAGE GOOGLE FORMS N'A PAS DE TABLEAU, ET C'EST VOULU.** Elle répond
+à deux questions distinctes (afficher le formulaire, envoyer les
+réponses), elle ne compare pas des outils. Le test porte donc sur
+`PAGES_QUI_COMPARENT` : exiger un tableau partout en ferait poser un qui
+ne dit rien.
+
+**UN LOGO EST UN MOT, PAS UNE ICÔNE CARRÉE.** Le document demandait du
+96 x 96 : "Typeform" y serait écrasé et "Google Forms" étiré. `Logo`
+(`components/site/Integrations.tsx`) borne la HAUTEUR et laisse
+`width: auto`, avec les dimensions naturelles sur la balise pour que le
+navigateur réserve la place. C'est la règle des images de réponse d'un
+quiz (4 août), et le test l'exige.
+
+**Zapier n'est PAS dans `OUTILS`.** Le hub compare des outils de
+FORMULAIRE ; Zapier est le TRANSPORT que presque tous exigent. Le mettre
+dans le tableau reviendrait à comparer un camion à des colis : sa carte
+est posée à la main, et son logo vit dans `LOGO_ZAPIER`.
+
+**Un fichier livré ne dit pas ce qu'il contient**, une fois de plus :
+`tryinteract.com.png` ne montre pas Interact, c'est le visuel Tiquiz
+"le tag se règle directement sur le profil". Placé en le REGARDANT.
+
+**Ce qui reste à écrire :** Jotform, ScoreApp, Outgrow, Riddle, Calendly
+et une page sur les tags Systeme.io.

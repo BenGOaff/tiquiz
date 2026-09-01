@@ -47,6 +47,13 @@ const ECRANS = [
   "app/(site)/a-propos/page.tsx",
   "app/(site)/newsletter/page.tsx",
   "app/blog/page.tsx",
+  "app/(site)/integrations/page.tsx",
+  "app/(site)/integrations/zapier-systeme-io/page.tsx",
+  "app/(site)/integrations/tally-systeme-io/page.tsx",
+  "app/(site)/integrations/typeform-systeme-io/page.tsx",
+  "app/(site)/integrations/google-forms-systeme-io/page.tsx",
+  "app/(site)/integrations/interact-systeme-io/page.tsx",
+  "components/site/Integrations.tsx",
   "components/site/EncartCta.tsx",
   "components/site/SimulateurAffiliation.tsx",
 ];
