@@ -32,7 +32,7 @@ export const CAROUSEL_SLIDE_COUNT = CAROUSEL_ROLES.length;
  *  mappent les calques texte du canvas (kicker / headline / subline / cta). */
 export interface CarouselSlide {
   role: CarouselRole;
-  /** Petit tag (1-3 mots) au-dessus du titre. "" = pas de tag. */
+  /** Petit libellé (1-3 mots) au-dessus du titre. "" = pas de libellé. */
   kicker: string;
   /** La ligne qui claque. */
   headline: string;
@@ -115,7 +115,7 @@ export function slideStyle(brand: BrandKit, index: number, role: CarouselRole): 
   }
   const dark = isDarkColor(bg);
   const textColor = textOn(bg, brand.textColor);
-  // Accent (tag kicker) : doit pop sur le fond. Sur fond sombre on prend
+  // Accent (libellé kicker) : doit pop sur le fond. Sur fond sombre on prend
   // l'accent de marque (souvent vif) ou blanc ; sur fond clair, le primary.
   let accentColor = dark ? (brand.accentColor || "#ffffff") : brand.primaryColor;
   if (accentColor.toLowerCase() === bg.toLowerCase()) accentColor = textColor;

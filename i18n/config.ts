@@ -6,7 +6,7 @@ export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 export const DEFAULT_LOCALE: SupportedLocale = "en";
 export const RTL_LOCALES: SupportedLocale[] = ["ar"];
 
-// Étiquettes lisibles par locale (langue native). Partagées entre le
+// Libellés lisibles par locale (langue native). Partagés entre le
 // LanguageSwitcher (langue de l'interface) et le sélecteur de langue du
 // quiz dans l'éditeur (langue du joueur public).
 export const LOCALE_LABELS: Record<SupportedLocale, string> = {

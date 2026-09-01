@@ -92,6 +92,7 @@ import {
   otherOptionIndex,
   sanitizeAutreTexte,
 } from "@/lib/quiz/otherOption";
+import { brouillonPourQuestion } from "@/lib/quiz/brouillonReponse";
 import {
   AFFILIATE_VIDE,
   affiliateAbsent,
@@ -1336,8 +1337,14 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
   const [freeTextDraft, setFreeTextDraft] = useState<string>("");
   // Draft state for multi-select questions. Holds the currently-toggled option
   // indices for the active question; commits to `answers` only when the user
-  // taps "Next". Reset whenever currentQ changes (handled in commitAnswer +
-  // an effect below) so each question starts blank.
+  // taps "Next".
+  //
+  // LES QUATRE BROUILLONS SONT REMIS A LA QUESTION COURANTE PAR UN SEUL
+  // EFFET (voir "Le brouillon suit la question" plus bas), jamais a la
+  // main dans un gestionnaire de navigation. Le commentaire qui vivait
+  // ici annoncait cet effet ; il n'existait pas, et c'est ce qui a
+  // produit le retour d'Adeline (le texte tape suivait le visiteur d'une
+  // question a l'autre et ecrasait la reponse suivante).
   const [multiOptionsDraft, setMultiOptionsDraft] = useState<number[]>([]);
   // Le texte tapé dans un "Autre : précisez", et le fait que "Autre" soit
   // choisi en choix SIMPLE. En choix simple, cliquer "Autre" ne valide
@@ -1419,7 +1426,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
     [firstName, gender, scoreCtx],
   );
 
-  // Étiquette courte pour les résultats AUTRES que celui du visiteur
+  // Libellé court pour les résultats AUTRES que celui du visiteur
   // (cf. card "Répartition complète"). On ne veut PAS afficher la
   // phrase personnalisée complète sur un profil qui n'est pas le
   // visiteur — juste le nom du profil ("Solopreneur Invisible") sans
@@ -2201,6 +2208,43 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
     }
   }, [previewData, quiz, draftKey, clearDraft, step, answers, currentQ, firstName]);
 
+  // ─── Le brouillon suit la question (retour Adeline, 1er sept 2026) ───
+  //
+  // "On peut revenir en arrière, ce qui est un plus, mais lorsqu'on le
+  // fait ça efface les cases suivantes déjà remplies."
+  //
+  // Les quatre variables de saisie (texte libre, cases cochées, champ
+  // "Autre" et son ouverture) sont GLOBALES au composant. Sans cet effet,
+  // elles suivaient le visiteur d'une question à l'autre : le texte tapé
+  // en question 3 s'affichait dans la question 4, et le valider écrasait
+  // la réponse déjà donnée. C'est ça qui "effaçait".
+  //
+  // ELLES SONT DONC DÉRIVÉES DE LA RÉPONSE DE LA QUESTION COURANTE, à un
+  // seul endroit, par une fonction pure et testée
+  // (`lib/quiz/brouillonReponse.ts`). Une remise à zéro écrite dans
+  // chaque gestionnaire de navigation en oublierait un : c'est déjà ce
+  // qui se passait (la flèche retour vidait le texte libre, le swipe
+  // avant non, et les cases cochées n'étaient vidées nulle part).
+  //
+  // `resumed` est dans les dépendances pour le seul cas où la reprise
+  // d'un brouillon local ne change pas l'index : sans lui, une reprise
+  // sur la question 1 rouvrirait un champ vide sur une réponse existante.
+  useEffect(() => {
+    if (step !== "quiz" || !quiz) return;
+    const q = quiz.questions[currentQ];
+    if (!q) return;
+    const b = brouillonPourQuestion(answers[currentQ], otherOptionIndex(q.options));
+    setFreeTextDraft(b.texte);
+    setMultiOptionsDraft(b.options);
+    setAutreTexte(b.autreTexte);
+    setAutreChoisi(b.autreChoisi);
+    // `answers` est volontairement HORS des dépendances : cocher une case
+    // ne touche pas `answers`, mais valider une réponse le fait, et
+    // relancer l'effet là remettrait le brouillon de la question qu'on
+    // vient de quitter. La question affichée est le seul déclencheur.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentQ, step, quiz, resumed]);
+
   // Returns the winning profile + the per-profile scores array so the
   // optional "Répartition complète" card can be rendered alongside the
   // primary result. Surveys still short-circuit (no result page).
@@ -2544,7 +2588,6 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
       if (!q) return;
       if (e.key === "ArrowLeft" && currentQ > 0) {
         e.preventDefault();
-        setFreeTextDraft("");
         setNavDir("back");
         setCurrentQ(currentQ - 1);
         return;
@@ -2597,7 +2640,6 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
         setCurrentQ(currentQ + 1);
       }
     } else if (currentQ > 0) {
-      setFreeTextDraft("");
       setNavDir("back");
       setCurrentQ(currentQ - 1);
     }
@@ -3733,7 +3775,11 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
     } else if (qType === "free_text") {
       const cfg = (q.config ?? {}) as Record<string, unknown>;
       const maxLength = typeof cfg.maxLength === "number" ? cfg.maxLength : 1000;
-      const draft = freeTextDraft || (currentAnswer?.kind === "text" ? currentAnswer.value : "");
+      // Le brouillon EST la reponse en cours : il a ete rempli depuis
+      // `answers[currentQ]` a l'arrivee sur la question. Un repli
+      // `freeTextDraft || reponse enregistree` empecherait d'effacer un
+      // texte deja donne (le vider ferait reapparaitre l'ancien).
+      const draft = freeTextDraft;
       const trimmed = draft.trim();
       // Placeholder personnalisé = HTML riche (même éditeur que les autres
       // textes côté créateur). Un attribut placeholder natif ne sait pas
@@ -3782,15 +3828,11 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
       // and a "Next" button at the bottom commits the full array.
       const qCfg = (q.config ?? {}) as Record<string, unknown>;
       const multiSelect = qCfg.multi_select === true;
-      const selectedSet = multiSelect
-        ? new Set(
-            multiOptionsDraft.length > 0
-              ? multiOptionsDraft
-              : currentAnswer?.kind === "options"
-                ? currentAnswer.optionIndices
-                : [],
-          )
-        : null;
+      // Le brouillon EST la selection en cours. Le repli d'avant
+      // (`length > 0 ? brouillon : reponse enregistree`) rendait le
+      // decochage de la DERNIERE case impossible : la selection
+      // enregistree reapparaissait toute seule.
+      const selectedSet = multiSelect ? new Set(multiOptionsDraft) : null;
       answerBlock = (
         <div className="space-y-3">
           <div className={`grid ${imgGridClass} gap-3`}>
@@ -3901,15 +3943,11 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
       // pattern (same as image_choice multi mode).
       const qCfg = (q.config ?? {}) as Record<string, unknown>;
       const multiSelect = qCfg.multi_select === true;
-      const selectedSet = multiSelect
-        ? new Set(
-            multiOptionsDraft.length > 0
-              ? multiOptionsDraft
-              : currentAnswer?.kind === "options"
-                ? currentAnswer.optionIndices
-                : [],
-          )
-        : null;
+      // Le brouillon EST la selection en cours. Le repli d'avant
+      // (`length > 0 ? brouillon : reponse enregistree`) rendait le
+      // decochage de la DERNIERE case impossible : la selection
+      // enregistree reapparaissait toute seule.
+      const selectedSet = multiSelect ? new Set(multiOptionsDraft) : null;
       answerBlock = (
         <div className="space-y-3">
           <div className={`grid gap-3 ${mcGridClass}`}>
@@ -4109,7 +4147,6 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      setFreeTextDraft("");
                       setNavDir("back");
                       setCurrentQ(currentQ - 1);
                     }}
@@ -5017,7 +5054,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
                       <li key={r.id ?? i} className="space-y-1.5">
                         <div className="flex items-center justify-between gap-3 text-sm">
                           {/* TOUS les résultats du breakdown affichent
-                              juste l'étiquette courte du profil ("Solopreneur
+                              juste le libellé court du profil ("Solopreneur
                               Actif mais Dispersé") — sans prénom, sans
                               marqueurs inclusifs. La phrase personnalisée
                               complète ("Béné, tu es la …") reste sur le

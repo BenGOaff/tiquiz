@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -101,7 +102,7 @@ export async function PATCH(req: NextRequest) {
       .select("id")
       .eq("user_id", user.id)
       .eq("status", "verified")
-      .ilike("hostname", domain)
+      .ilike("hostname", echapperMotifLike(domain))
       .maybeSingle();
     if (!match) {
       return NextResponse.json(

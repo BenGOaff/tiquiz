@@ -49,7 +49,7 @@ export interface AffiliateDuQuiz {
   sa: string | null;
   /** Notre code public. */
   ref: string | null;
-  /** `?c=youtube` : l'étiquette que l'affilié pose lui même. */
+  /** `?c=youtube` : le tag que l'affilié pose lui même. */
   canal: string | null;
 }
 
@@ -174,7 +174,7 @@ export function lireAffiliateObjet(valeur: unknown): AffiliateDuQuiz {
 }
 
 /**
- * L'étiquette montrée dans les statistiques du quiz.
+ * Le tag montrée dans les statistiques du quiz.
  *
  * Le canal passe DEVANT le code : quand l'affilié a pris la peine
  * d'écrire `?c=youtube`, c'est cette réponse là qu'il est venu chercher.

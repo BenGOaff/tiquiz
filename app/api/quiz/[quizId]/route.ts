@@ -20,6 +20,7 @@ import { normalizeScoringAxes, scoreDisplayMode } from "@/lib/quizScoring";
 import { classifyDeleteError, deleteRefusalReason, deleteRefusalStatus } from "@/lib/quizDelete";
 import { sanitizeBeatMedia, type BeatMedia } from "@/lib/quiz/resultBeats";
 import { structureChanged } from "@/lib/quiz/funnelCohort";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 const RICH_TEXT_FIELDS = ["introduction"] as const;
 
@@ -395,7 +396,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         const { data: conflict } = await supabase
           .from("quizzes")
           .select("id")
-          .ilike("slug", cleaned)
+          .ilike("slug", echapperMotifLike(cleaned))
           .neq("id", quizId)
           .limit(1)
           .maybeSingle();

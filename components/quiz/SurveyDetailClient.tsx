@@ -15,6 +15,7 @@ import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
   Sparkles, TrendingUp, Star, MessageCircle, Crop, Settings2, ImagePlus,
+  Workflow,
 } from "lucide-react";
 import { GifPickerButton } from "@/components/quiz/GifPicker";
 import { ImageCropDialog } from "@/components/quiz/ImageCropDialog";
@@ -99,6 +100,8 @@ import {
 } from "@/lib/quizBranding";
 import { projectBackHref } from "@/lib/nav/projectBack";
 import { SessionLostBanner } from "@/components/editor/SessionLostBanner";
+import { construirePlanAutomatisation } from "@/lib/automatisation/planSysteme";
+import { AutomatisationPanel } from "@/components/quiz/AutomatisationPanel";
 
 // Types
 // Surveys reuse the QuizDetailClient shell but specialise: questions carry a
@@ -360,6 +363,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
+  // Le projet n'existe pas, ou il n'est pas à ce compte. On l'AFFICHE,
+  // on ne renvoie plus la personne ailleurs sans un mot.
+  const [indisponible, setIndisponible] = useState(false);
   const [quiz, setQuiz] = useState<QuizData | null>(null);
   const [leads, setLeads] = useState<QuizLead[]>([]);
 
@@ -429,7 +435,26 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   void editResults; void setEditResults;
 
   // Editor state
-  const [mainTab, setMainTab] = useState<"create" | "share" | "trends">("create");
+  const [mainTab, setMainTab] = useState<"create" | "share" | "automation" | "trends">("create");
+
+  // L'onglet Automatisation, comme dans l'éditeur de quiz. Un sondage
+  // n'a pas de profil : ce sont le tag de capture et les tags par
+  // RÉPONSE qui tagnt, et le plan ne montre que ceux là.
+  const planAutomatisation = useMemo(
+    () =>
+      construirePlanAutomatisation(
+        {
+          mode: "survey",
+          locale: quiz?.locale ?? null,
+          sio_api_key_id: (quiz as { sio_api_key_id?: string | null } | null)?.sio_api_key_id ?? null,
+          sio_capture_tag: (quiz as { sio_capture_tag?: string | null } | null)?.sio_capture_tag ?? null,
+          sio_share_tag_name: sioShareTagName,
+        },
+        editResults,
+        editQuestions,
+      ),
+    [quiz, sioShareTagName, editResults, editQuestions],
+  );
   // Sous-vue de l'onglet Tendances : agrégat (Synthèse) ou tableau par
   // répondant (Réponses, style Typeform / Tally).
   // Defaut "responses" : l'onglet s'appelle "Réponses" pour un sondage, on
@@ -796,7 +821,7 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
         fetch(`/api/quiz/${quizId}`).then((r) => r.json()),
         fetch(`/api/profile`).then((r) => r.json()).catch(() => null),
       ]);
-      if (!quizRes?.ok || !quizRes.quiz) { toast.error(t("errQuizNotFound")); router.push("/dashboard"); return; }
+      if (!quizRes?.ok || !quizRes.quiz) { setIndisponible(true); return; }
       const q: QuizData = { ...quizRes.quiz, questions: quizRes.quiz.questions ?? [], results: quizRes.quiz.results ?? [] };
       const prof = profileRes?.ok ? (profileRes.profile as ProfileBrand) : null;
       setProfile(prof);
@@ -1535,6 +1560,32 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
   };
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;
+
+  // UN REFUS N'EST PAS UNE PANNE, ET IL NE TÉLÉPORTE PERSONNE
+  // (retour Béné, 1er septembre 2026) : "je n'arrive pas à accéder à ses
+  // quiz, je ne sais pas pourquoi, et pire : ça me redirige directement
+  // vers mon dashboard et pas vers une page 'ce quiz n'est pas
+  // disponible'."
+  //
+  // On disait bien quelque chose, un toast, mais la redirection partait
+  // dans la foulée : elle changeait d'écran avant d'avoir lu la raison,
+  // et se retrouvait sur son tableau de bord sans savoir pourquoi. Un
+  // écran qui explique et propose UNE sortie nommée coûte un clic ; une
+  // téléportation coûte le diagnostic (règle du `ok: false`, 3 août, et
+  // de la flèche retour qui suit la hiérarchie, 1er août).
+  if (indisponible) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="max-w-md text-center space-y-4">
+          <h1 className="text-xl font-semibold">{t("unavailableTitle")}</h1>
+          <p className="text-sm text-muted-foreground">{t("unavailableBody")}</p>
+          <Button asChild>
+            <Link href={projectBackHref("surveyEditor")}>{t("backToProjects")}</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
   if (!quiz) return null;
   const pc = primaryColor;
 
@@ -1569,9 +1620,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           <span className="font-semibold text-sm truncate max-w-[120px] sm:max-w-[200px]">{title || t("titleFallback")}</span>
         </div>
         <nav className="hidden sm:flex items-center bg-muted rounded-lg p-0.5">
-          {(["create","share","trends"] as const).map(tab => (
+          {(["create","share","automation","trends"] as const).map(tab => (
             <button key={tab} onClick={() => setMainTab(tab)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mainTab === tab ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : <><TrendingUp className="w-3.5 h-3.5 inline mr-1.5" />{t("tabTrendsSurvey")}</>}
+              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : tab === "automation" ? <><Workflow className="w-3.5 h-3.5 inline mr-1.5" />{t("tabAutomation")}</> : <><TrendingUp className="w-3.5 h-3.5 inline mr-1.5" />{t("tabTrendsSurvey")}</>}
             </button>
           ))}
         </nav>
@@ -1631,9 +1682,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
           (absente sur téléphone) → on la réaffiche pleine largeur sous l'en-tête
           pour atteindre Partager (le lien) + Tendances. < sm seulement. */}
       <nav className="sm:hidden flex items-stretch border-b shrink-0 bg-background z-10">
-        {(["create","share","trends"] as const).map(tab => (
+        {(["create","share","automation","trends"] as const).map(tab => (
           <button key={tab} onClick={() => setMainTab(tab)} className={`flex-1 px-2 py-2.5 text-sm font-medium transition-colors inline-flex items-center justify-center gap-1.5 ${mainTab === tab ? "text-foreground border-b-2 border-primary" : "text-muted-foreground"}`}>
-            {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : <><TrendingUp className="w-3.5 h-3.5" />{t("tabTrendsSurvey")}</>}
+            {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : tab === "automation" ? <><Workflow className="w-3.5 h-3.5" />{t("tabAutomation")}</> : <><TrendingUp className="w-3.5 h-3.5" />{t("tabTrendsSurvey")}</>}
           </button>
         ))}
       </nav>
@@ -2859,6 +2910,8 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
 
       {/* TRENDS TAB — replaces the quiz "results analytics" tab. Aggregates
           lead.answers per question with a type-aware visualisation. */}
+      {mainTab === "automation" && <AutomatisationPanel plan={planAutomatisation} />}
+
       {mainTab === "trends" && (
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-5xl mx-auto">

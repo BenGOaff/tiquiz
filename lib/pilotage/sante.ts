@@ -141,7 +141,7 @@ export const DEPENDANCES_CONSOLE: readonly Dependance[] = [
     migration: "supabase/migrations/20260823_support_tickets_produit.sql",
     base: "tiquiz",
     sansElle:
-      "Toutes les demandes sont étiquetées Tiquiz, y compris celles de "
+      "Toutes les demandes sont taggées Tiquiz, y compris celles de "
       + "L'Atelier : la réponse part à côté.",
   },
   {

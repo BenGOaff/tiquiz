@@ -12,6 +12,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { isPaidPlan, FREE_LIMITS } from "@/lib/planLimits";
 import { resolveProjectIdForInsert } from "@/lib/projects/scopeFilter";
 import { sanitizeSlug } from "@/lib/quizBranding";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 export const dynamic = "force-dynamic";
 
@@ -83,7 +84,7 @@ async function buildCloneSlug(
     const { data: conflict } = await supabase
       .from("quizzes")
       .select("id")
-      .ilike("slug", candidate)
+      .ilike("slug", echapperMotifLike(candidate))
       .limit(1)
       .maybeSingle();
     if (!conflict) return candidate;

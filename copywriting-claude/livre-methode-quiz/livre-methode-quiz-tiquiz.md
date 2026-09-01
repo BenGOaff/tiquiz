@@ -2838,7 +2838,7 @@ Le calendrier 30 jours du Chapitre 11 vous amène jusqu'à la publication. Voici
 
 **Systeme.io** : plateforme tout-en-un francophone (autorépondeur, tunnels, formations, affiliation) utilisée massivement par les solopreneurs francophones.
 
-**Tag** : étiquette appliquée à un contact dans votre autorépondeur pour le classer dans un segment ou déclencher une automatisation.
+**Tag** : tag appliquée à un contact dans votre autorépondeur pour le classer dans un segment ou déclencher une automatisation.
 
 **Tunnel (de vente)** : enchaînement d'étapes qui amène un visiteur depuis la première interaction jusqu'à l'achat (page de capture → quiz → email → page de vente → checkout).
 

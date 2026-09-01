@@ -59,7 +59,7 @@ affiliés existe** (chantier 2.1).
 
 **FAIT LE 25 AOÛT POUR L'ACHAT. Reste l'inscription gratuite.**
 
-`poserTagAchat` posait l'étiquette qui déclenche les séquences, mais
+`poserTagAchat` posait le tag qui déclenche les séquences, mais
 abandonnait quand le contact n'existait pas là-bas, c'est à dire le cas
 NORMAL de quelqu'un qui achète sur notre bon de commande. Il n'entrait
 dans AUCUNE séquence email, en silence.
@@ -83,15 +83,15 @@ toujours, sans erreur.
    quelqu'un qui s'inscrit en direct sur `quiz.tipote.com/signup`
    n'existe pas dans ses séquences.
 2. **Les autres moments de vie.** Résiliation, remboursement, montée de
-   palier : rien n'est étiqueté. Une séquence "ton abonnement se termine"
-   ne peut pas exister si l'étiquette n'est jamais posée.
-   *Décision Béné du 25 août : sur une montée de palier on AJOUTE la
-   nouvelle étiquette sans retirer l'ancienne.* C'est déjà le
+   palier : rien n'est taggé. Une séquence "ton abonnement se termine"
+   ne peut pas exister si le tag n'est jamais posé.
+   *Décision Béné du 25 août : sur une montée de palier on AJOUTE le
+   nouveau tag sans retirer l'ancien.* C'est déjà le
    comportement, et le contrôle d'écart le tolère explicitement.
 
-**Ne jamais défaire :** on ne CRÉE pas d'étiquette manquante (une
-étiquette créée par nous avec une faute se retrouverait en double, et ses
-automatisations continueraient de pointer l'ancienne), et
+**Ne jamais défaire :** on ne CRÉE pas de tag manquant (un
+tag créé par nous avec une faute se retrouverait en double, et ses
+automatisations continueraient de pointer l'ancien), et
 `assurerContact` ne s'appelle QUE depuis un chemin d'achat (créer un
 contact fait entrer quelqu'un dans sa liste).
 
@@ -292,8 +292,8 @@ exception qui protégeait quelque chose, c'était un trou.
   donc un élève affilié là-bas et pas chez Tipote est payé comme avant.
 - **`tiquiz_free`** : notre `/signup` crée le compte, écrit le
   rattachement À VIE, et crée le contact chez Systeme.io avec
-  l'étiquette `tiquiz-free` (`poserTagPlan`). Les séquences email de
-  Béné partent comme avant, son workflow écoute cette étiquette.
+  le tag `tiquiz-free` (`poserTagPlan`). Les séquences email de
+  Béné partent comme avant, son workflow écoute ce tag.
 
 ## 5. Chantier 4 : ce que le bon de commande ne sait pas encore faire
 

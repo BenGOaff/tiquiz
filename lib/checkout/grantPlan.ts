@@ -34,8 +34,9 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildAuthCallbackUrl, resolveAppUrl } from "@/lib/authLinks";
 import { sendPlanOpenedEmail } from "@/lib/email/planOpenedEmail";
 import { isLifetimePlan } from "@/lib/plans/lifetime";
-import { poserTagPlan } from "@/lib/sio/appliquerTag";
+import { poserTagParNom, poserTagPlan } from "@/lib/sio/appliquerTag";
 import { lireFacturation } from "@/lib/facture/store";
+import { readSioClientTag } from "@/lib/sio/tags";
 import type { TiquizPlan } from "@/lib/sio/webhookInference";
 
 export interface GrantPlanResult {
@@ -48,8 +49,10 @@ export interface GrantPlanResult {
   reason?: string;
   /** Le lien de connexion est-il parti ? */
   loginLinkSent?: boolean;
-  /** L'étiquette Systeme.io a-t-elle été posée ? */
+  /** Le tag de palier Systeme.io a-t-il été posé ? */
   tagPose?: boolean;
+  /** Le tag `tiquiz-clients`, celui qui déclenche sa séquence. */
+  tagClientPose?: boolean;
 }
 
 async function findUserByEmail(email: string): Promise<{ id: string } | null> {
@@ -180,10 +183,10 @@ export async function grantPlanByEmail(args: {
   // via notre système comme ça je ne suis pas perdue."
   //
   // Ses automatisations et ses séquences d'emails sont bâties sur ces
-  // étiquettes. Un client payé par NOTRE bon de commande et non étiqueté
+  // tags. Un client payé par NOTRE bon de commande et non taggé
   // sort de tous ses scénarios sans que rien ne le signale.
   //
-  // Best-effort, et APRÈS le plan : une étiquette qui échoue ne doit
+  // Best-effort, et APRÈS le plan : un tag qui échoue ne doit
   // jamais priver quelqu'un de l'accès qu'il vient de payer.
   //
   // 25 août : le contact est désormais CRÉÉ chez Systeme.io s'il n'y est
@@ -201,6 +204,37 @@ export async function grantPlanByEmail(args: {
     locale: args.locale ?? null,
     acheteur: identiteSio,
   }).catch(() => false);
+
+  // 5 bis. LE TAG "CLIENT", QUI EST CELUI QUI DÉCLENCHE LA SÉQUENCE.
+  //
+  // Béné, 1er septembre : "il faut que tu ajoutes le tag tiquiz-clients
+  // pour faire partir la campagne tiquiz abonnement à chaque vente sur
+  // notre système."
+  //
+  // Le palier seul ne déclenche rien : son workflow écoute
+  // `tiquiz-clients`. Un client payé chez nous portait donc bien son
+  // palier et n'entrait dans aucune séquence, en silence.
+  //
+  // Il s'AJOUTE au palier, il ne le remplace pas : ses segments sont
+  // bâtis dessus. `readSioClientTag` écarte `free`, qui a déjà sa
+  // propre campagne (`tiquiz-free`).
+  //
+  // Best-effort et SÉPARÉ du palier : si l'un des deux échoue, l'autre
+  // est quand même posé. Les enchaîner ferait perdre les deux pour une
+  // seule panne.
+  const tagClient = readSioClientTag(args.plan);
+  let tagClientPose = false;
+  if (tagClient) {
+    tagClientPose = await poserTagParNom(email, tagClient, {
+      locale: args.locale ?? null,
+      acheteur: identiteSio,
+    }).catch(() => false);
+    if (!tagClientPose) {
+      // Elle a payé, sa séquence ne partira pas : ça ne bloque rien,
+      // mais ça ne doit pas rester invisible non plus.
+      console.error(`[grantPlan] tag ${tagClient} NON pose pour ${email}`);
+    }
+  }
 
   // 6. LA CONFIRMATION D'ACHAT, ÉCRITE PAR NOUS, AVEC LE LIEN D'ENTRÉE.
   //
@@ -256,10 +290,10 @@ export async function grantPlanByEmail(args: {
     console.error(`[grantPlan] lien de connexion : ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  // `ok: true` même si l'email ou l'étiquette ont échoué : l'accès EST
+  // `ok: true` même si l'email ou le tag ont échoué : l'accès EST
   // ouvert. Renvoyer un échec ici ferait rejouer la vente par le
   // fournisseur alors que le paiement, lui, a bien abouti.
-  return { ok: true, created, previousPlan, loginLinkSent: lienParti, tagPose };
+  return { ok: true, created, previousPlan, loginLinkSent: lienParti, tagPose, tagClientPose };
 }
 
 /**

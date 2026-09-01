@@ -49,7 +49,7 @@ const ECARTS: Record<EcartTrouve["ecart"], { titre: string; quoiFaire: string; g
     grave: true,
   },
   "tag-manquant": {
-    titre: "Payante chez nous, pas étiquetée chez Systeme.io",
+    titre: "Payante chez nous, pas taggée chez Systeme.io",
     quoiFaire:
       "Elle sort de tes automatisations et de tes séquences d'emails. Ajoute lui le tag dans Systeme.io.",
     grave: false,

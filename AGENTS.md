@@ -1992,11 +1992,11 @@ Trois choses doivent suivre un paiement. Une était là, deux manquaient.
    l'autre app. C'est exactement le reproche du 22 août ("je reçois les
    trucs tipote"). On génère le jeton et on envoie NOTRE email.
    **INTERDIT : `signInWithOtp` dans un chemin qui envoie un email.**
-3. **L'étiquette Systeme.io n'était pas posée.** Ses automatisations sont
-   bâties dessus : un client payé chez nous et non étiqueté sort de
+3. **Le tag Systeme.io n'était pas posée.** Ses automatisations sont
+   bâties dessus : un client payé chez nous et non taggé sort de
    toutes ses séquences sans que rien ne le signale. `poserTagAchat`
    utilise SA clé, celle de ses Paramètres (`resolveApiKey`), et ne crée
-   JAMAIS une étiquette manquante : une étiquette créée par nous avec une
+   JAMAIS un tag manquant : un tag créé par nous avec une
    faute se retrouverait en double dans sa liste.
 
 Les deux sont best-effort et POSTÉRIEURES au plan : "il a payé le client,
@@ -2288,7 +2288,7 @@ surveillerait un écran qui ne bouge plus.
 
 **`product` est validé, jamais écrit tel quel** (`lib/support/produit.ts`,
 alias `formaquiz` et `quizing` acceptés). Valeur inconnue -> `tiquiz`, le
-défaut de la colonne : un ticket mal étiqueté reste lisible, un ticket
+défaut de la colonne : un ticket mal taggé reste lisible, un ticket
 refusé est une cliente sans réponse.
 
 **Et l'écriture se replie sur l'ancienne forme** si la migration n'est
@@ -3793,7 +3793,7 @@ maintenant devant.
 Test : `tests/logic/commission-ht-paypal.test.mts`, dans les deux dépôts.
 
 
-## Poser une étiquette chez Systeme.io ne déclenche RIEN (mesuré le 31 août 2026)
+## Poser un tag chez Systeme.io ne déclenche RIEN (mesuré le 31 août 2026)
 
 Béné : "tout bascule sur le nouveau système et les nouvelles pages,
 nouveau blog, nouveaux domaines, il faut bien que ce soit ça qui
@@ -3832,7 +3832,7 @@ fait deux fois, le 31 août matin sur `tiquiz-free` et le soir sur
 et abonne à une campagne. Poser le tag `newsletter` SUFFIT donc à
 inscrire quelqu'un à Pépites 365.
 
-**Ce qui reste INCONNU :** si `tiquiz-free` et les étiquettes de vente
+**Ce qui reste INCONNU :** si `tiquiz-free` et les tags de vente
 ont la leur. **Le seul endroit où ça se vérifie est son tableau de bord**
 (https://systeme.io/dashboard/automation-rules), pas l'API. Ne plus
 jamais écrire ici qu'une règle n'existe pas sur la foi de cet outil.
@@ -3845,7 +3845,7 @@ jamais écrire ici qu'une règle n'existe pas sur la foi de cet outil.
   rien. L'AGENTS.md de Tipote affirmait "ses séquences email partent
   comme avant" : c'était faux, et c'est corrigé là-bas.
 - **`poserTagAchat` après une vente sur notre bon de commande** : même
-  chose. L'étiquette est posée, aucune séquence ne part.
+  chose. Le tag est posée, aucune séquence ne part.
 
 Le code d'`app/api/auth/signup/route.ts` le disait déjà, depuis le
 25 août : "aucune règle n'écoute encore `tiquiz-free`". C'est la
@@ -3861,16 +3861,61 @@ fréquenté du site.
 
 **Le vrai déblocage est chez Béné, en deux minutes** : créer une règle
 d'automatisation avec le déclencheur "tag ajouté" sur `tiquiz-free`
-(puis sur les étiquettes de vente), qui inscrit à la campagne. Une fois
+(puis sur les tags de vente), qui inscrit à la campagne. Une fois
 qu'elle existe, le bouton bascule et tout marche des deux côtés.
 
 **Règle générale : un tag posé par l'API n'est pas une séquence
 déclenchée.** Les deux se ressemblent et ne sont pas la même chose. Ce
-dépôt a écrit trois fois "son workflow écoute cette étiquette" sans
+dépôt a écrit trois fois "son workflow écoute ce tag" sans
 l'avoir vérifié une seule fois. C'est la leçon d'Ivan (7 août), et celle
 des événements Stripe manquants (31 août) : **écrire le code n'est pas
 la dernière étape, vérifier que le fournisseur envoie ou écoute quelque
 chose l'est.**
+
+### RÉSOLU LE 1er SEPTEMBRE : les deux règles existent, et elles marchent
+
+Béné : "c'est ok côté systeme io note le quelque part, le signup ajoute
+le tag tiquiz free, et de mon côté j'ai un workflow qui envoie la
+campagne tiquiz free."
+
+| Le tag | Sa règle chez Systeme.io | Qui le pose chez nous |
+|---|---|---|
+| `tiquiz-free` | -> campagne **Tiquiz free** | `tiquiz.fr/signup` |
+| `tiquiz-clients` | -> campagne **Tiquiz abonnement** | `grantPlanByEmail`, toute vente encaissée par nous |
+
+**Ce n'est plus un inconnu, c'est un fait**, et il ferme le trou décrit
+plus haut : l'inscription gratuite envoie bien sa séquence.
+
+**LE PALIER NE DÉCLENCHE RIEN, ET C'EST LA TROUVAILLE.** Béné, le même
+jour : "il faut que tu ajoutes le tag tiquiz-clients pour faire partir
+la campagne tiquiz abonnement à chaque vente sur notre système." Son
+workflow n'écoute pas `tiquiz-mensuel` : il écoute `tiquiz-clients`. Un
+client payé sur notre bon de commande portait donc son palier, et
+n'entrait dans AUCUNE séquence. `readSioClientTag` (`lib/sio/tags.ts`)
+décide, `grantPlanByEmail` pose les deux tags SÉPARÉMENT (une panne
+n'emporte pas l'autre), et un échec CRIE dans le journal.
+
+**Le tag s'AJOUTE au palier, il ne le remplace pas** : ses segments et
+ses filtres sont bâtis sur `tiquiz-mensuel` et compagnie. Et `free` en
+est exclu : il a déjà SA campagne, et marquer client quelqu'un qui n'a
+rien payé fausserait le seul segment qui compte pour ses relances.
+
+**MESURÉ le 1er septembre avant d'écrire une ligne** : le tag existe
+dans son compte (id 2156863, créé le jour même). On ne CRÉE jamais un
+tag (règle du 22 août) : un nom inventé ou mal orthographié se
+retrouverait en double et sa règle continuerait de pointer l'autre.
+
+**Et l'API reste aveugle, re-vérifié le même jour :** interrogée sur les
+règles `tag_added`, elle rend **zéro**, alors que ces deux règles
+existent et fonctionnent. Son silence ne veut toujours rien dire. Le
+seul endroit où une règle se vérifie est son tableau de bord.
+
+**Ce qui reste ouvert :** une vente arrivée par un TUNNEL Systeme.io ne
+passe pas par `grantPlanByEmail`, donc elle ne reçoit pas
+`tiquiz-clients` de notre part. Chez elle, une règle "tag
+`tiquiz-mensuel` ajouté -> ajouter `tiquiz-clients`" couvrirait ces
+ventes là sans une ligne de code.
+
 
 ## Toutes les images en 403 : le garde-fou était à l'étage du dessous (31 août 2026)
 
@@ -3958,7 +4003,7 @@ console (des `preload ... not used`) est du bruit sans rapport.
 
 `poserTagParNom` rendait un booléen. Un `false` pouvait vouloir dire :
 pas de compte administrateur, aucune clé Systeme.io connectée, contact
-impossible à créer, étiquette introuvable, ou pose refusée. **Un
+impossible à créer, tag introuvable, ou pose refusée. **Un
 booléen ne dit pas où chercher**, et le journal disait "vérifier la clé
 API et l'existence du tag", c'est à dire DEUX pistes sur cinq.
 
@@ -4069,22 +4114,22 @@ qui bloquait. **On les essaie**, un refus passe à la suivante, et le
 journal dit laquelle a été acceptée. Jamais deux fois la même valeur :
 sinon le journal dirait "deux clés refusées" pour une seule.
 
-### 3. ET L'ÉTIQUETTE ÉTAIT HORS DE PORTÉE DEPUIS LE DÉBUT
+### 3. ET LE TAG ÉTAIT HORS DE PORTÉE DEPUIS LE DÉBUT
 
 C'est la trouvaille qui compte, et elle est MESURÉE dans son compte, pas
 déduite :
 
 | Question | Réponse |
 |---|---|
-| combien d'étiquettes | plus de 100 (`hasMore: true`) |
+| combien de tags | plus de 100 (`hasMore: true`) |
 | les 100 plus récentes s'arrêtent quand | **24 mars 2025** |
 | quand a été créée `newsletter` | **30 juillet 2022** |
 | quand ont été créées `tiquiz-free`, `tiquiz-mensuel`... | avril 2026 |
 
 `trouverTag` demandait `?limit=200`. **Le maximum accepté par
-Systeme.io est 100.** L'étiquette `newsletter` était donc INTROUVABLE,
+Systeme.io est 100.** Le tag `newsletter` était donc INTROUVABLE,
 et l'inscription ne pouvait pas aboutir **même avec une clé
-parfaitement valide**. Les étiquettes de VENTE, elles, sont dans la
+parfaitement valide**. Les tags de VENTE, elles, sont dans la
 première page : c'est exactement pour ça que le tagging des achats
 marchait et que celui de la newsletter n'avait jamais eu la moindre
 chance.
@@ -4101,7 +4146,7 @@ Ici elle le disait (`hasMore`), et personne ne le lisait.
 Les trois causes ont été trouvées en INTERROGEANT son compte Systeme.io,
 pas en relisant le code : le contact de test n'existait pas, le même
 corps de création (`{email, locale}`) était accepté par l'API, la liste
-des étiquettes s'arrêtait en mars 2025. Trois mesures, trois minutes.
+des tags s'arrêtait en mars 2025. Trois mesures, trois minutes.
 
 Le contact créé pour ce test a été supprimé après.
 
@@ -4271,8 +4316,458 @@ C'est la même leçon que les images en 403 : **quand un changement
 déplace l'endroit d'où quelque chose est SERVI, la dernière étape n'est
 pas d'écrire la configuration, c'est d'aller lire la réponse.**
 
+### CE QUI A RÉELLEMENT DÉBLOQUÉ, ET CE QUE MON CONTRÔLE A DIT DE FAUX
+
+Le contrôle a répondu **401** sur la clé du serveur. Béné l'a remplacée
+par celle du compte où `tiquiz.fr` est vérifié, et **les emails
+partent**.
+
+Mais le message que ce contrôle affichait était FAUX, et il faut le
+dire : il annonçait "elle est révoquée, mal recopiée, ou elle n'a pas
+le droit de lire", en mettant les trois sur le même plan. Or **une clé
+Resend en `Sending access` répond 401 sur `/domains` tout en
+fonctionnant parfaitement** : elle sait envoyer, elle n'a pas le droit
+de lister. Sa capture d'écran le montrait d'ailleurs, colonne
+Permission.
+
+Le geste a été le bon par chance, pas par diagnostic. **Un contrôle qui
+ne distingue pas ce qu'il est censé distinguer est pire qu'un contrôle
+absent** (leçon des clés Supabase, 22 août), et je venais de la refaire
+dans l'outil écrit pour l'appliquer. Le script nomme désormais les deux
+causes, dit où trancher (la colonne Permission), et rappelle que le
+journal du serveur, lui, dit toujours la vérité.
+
 **Et ça vaut aussi pour Tipote**, qui retombe sur `hello@tipote.com`
 alors que le compte relevé ce jour là vérifie `send.tipote.com` et pas
 `tipote.com`. On ne l'a PAS changé : quelle adresse Tipote doit employer
 est une décision de Béné, pas une déduction. Le contrôle est là pour
 qu'elle la prenne en connaissance de cause.
+
+## Le brouillon d'une question ne suit PAS le visiteur (retour Adeline, 1er septembre 2026)
+
+"On peut revenir en arrière, ce qui est un plus, mais lorsqu'on le fait
+ça efface les cases suivantes déjà remplies."
+
+**RIEN N'ÉTAIT EFFACÉ EN BASE**, et c'est ce qui rendait le retour
+difficile à croire : `answers` n'est jamais tronqué, aucune ligne de
+code ne coupe le tableau. Ce qui suivait le visiteur, c'était le
+BROUILLON, c'est à dire l'état de SAISIE de la question affichée.
+
+Il vivait dans QUATRE variables globales au composant (`freeTextDraft`,
+`multiOptionsDraft`, `autreTexte`, `autreChoisi`), jamais remises à la
+question courante. Cinq symptômes, un seul défaut :
+
+| Ce qu'elle a vu | Ce qui se passait |
+|---|---|
+| "ça efface les cases suivantes déjà remplies" | le texte tapé en Q3 arrivait pré-rempli en Q4 ; valider ÉCRASAIT la réponse déjà donnée |
+| des cases cochées sans les avoir cochées | la sélection d'un multi-choix restait d'une question à l'autre |
+| revenir puis cliquer décoche tout | le premier clic repartait d'un brouillon VIDE au lieu de la sélection affichée |
+| impossible de tout décocher | l'affichage retombait sur la réponse enregistrée dès que le brouillon était vide |
+| le texte du "Autre" invisible au retour | l'option était surlignée, le champ restait FERMÉ |
+
+**LA CAUSE COMMUNE : la question affichée et l'état de saisie n'étaient
+reliés par rien.** La remise à zéro était recopiée dans les
+gestionnaires de navigation, et il en manquait : la flèche retour vidait
+le texte libre, le swipe AVANT non, et les cases cochées n'étaient
+vidées nulle part.
+
+**Et un commentaire l'annonçait déjà**, posé sur `multiOptionsDraft` :
+"Reset whenever currentQ changes (handled in commitAnswer + an effect
+below)". **Cet effet n'a jamais existé.** Quatrième fois que ce dépôt
+paie une règle écrite en commentaire et démentie par le code (le
+`w-full h-auto` des images de réponse, l'`ADD_ATTR: ["target"]` des
+liens légaux, le "Next décode déjà le segment" du pilotage).
+
+**Règle : `lib/quiz/brouillonReponse.ts` décide, et UN SEUL effet
+applique.** `brouillonPourQuestion(reponse, autreIdx)` rend les quatre
+champs de saisie depuis la réponse de la QUESTION COURANTE ; l'effet
+tourne sur `[currentQ, step, quiz, resumed]`. Plus aucune remise à zéro
+dans un gestionnaire de navigation : c'est ce qui en oubliait un.
+
+**Et le brouillon est le SEUL à décider de l'affichage.** Les deux
+replis du genre `brouillon.length > 0 ? brouillon : réponse
+enregistrée` sont SUPPRIMÉS, pas assouplis : **un brouillon vide est une
+intention, pas une absence.** C'est ce repli qui rendait "tout décocher"
+et "effacer mon texte" impossibles.
+
+`answers` est volontairement HORS des dépendances de l'effet : valider
+une réponse le modifie, et relancer l'effet là remettrait le brouillon
+de la question qu'on vient de quitter. `resumed` y est, pour le seul cas
+où la reprise d'un brouillon local ne change pas l'index.
+
+**Le filet de captures ne pouvait rien voir** : il photographie un écran
+au repos, et ce bug ne vit que dans l'enchaînement des gestes. Le
+garde-fou est `tests/logic/brouillon-question.test.mts`, vérifié en
+rejouant la version d'avant (il rougit).
+
+Le module quiz de Tipote est jumeau : la correction y vit aussi.
+
+## Le menu sous une réponse dit le NOM du profil (retour Christian, 1er septembre 2026)
+
+"Les différents résultats n'apparaissent pas sous les réponses. Seuls
+apparaissent « Résultat 1, Résultat 2 » etc."
+
+Il avait raison, et le menu ne POUVAIT rien afficher d'autre : les deux
+sélecteurs posés sous chaque réponse de l'éditeur jetaient le profil et
+n'en gardaient que le rang.
+
+```
+editResults.map((_, ri) => <option>…Résultat {ri + 1}</option>)
+                  ^^^ le profil, ignoré
+```
+
+Aucun titre, si bien écrit soit-il, ne pouvait apparaître. Sur un quiz à
+six profils, "Résultat 4" ne dit rien : la créatrice branche ses
+réponses au hasard, ou remonte vérifier l'ordre à chaque clic. C'est le
+geste le plus répété de tout l'éditeur.
+
+**LA RÈGLE EXISTAIT DÉJÀ, recopiée à la main quatre fois dans le MÊME
+fichier** (`stripHtml(extractResultLabel(cleanPlaceholdersForLabel(t)))`
+plus un repli). Deux endroits ne l'ont jamais eue. Une règle recopiée
+finit toujours par en oublier un : c'est le `mx-auto` du sous-titre, les
+images de réponse, les réseaux de partage, la sixième fois.
+
+**Règle : `lib/quiz/resultLabel.ts`, `resultChoiceLabel(titre,
+secours)`, et personne ne recompose.** Les trois étapes comptent et
+l'ordre aussi : placeholders interpolés à VIDE (sinon le menu affiche
+"Bonjour {name}, tu es le..."), puis `extractResultLabel` (retire le
+", tu es le·la" et les marques inclusives), puis `stripHtml` (un
+`<option>` ne rend pas de HTML, il montrerait les balises).
+
+**`secours` est OBLIGATOIRE.** Un profil encore sans titre doit rester
+choisissable : une entrée vide dans un menu est pire que "Résultat 3".
+
+Ici les quatre autres endroits passaient déjà par la clé traduite
+`quizEditor.previewResult` ; côté Tipote, trois replis étaient écrits en
+français DANS LE CODE, et une créatrice espagnole lisait "Résultat 4".
+
+**Exception assumée :** `titleForVisual` compose les deux mêmes
+fonctions pour le titre d'une IMAGE générée, sans repli et avec sa
+propre capitalisation. Ce n'est pas un libellé d'interface, et le
+confondre casserait la génération d'images. Le test vise la composition
+SUIVIE D'UN REPLI, pas la composition elle-même.
+
+Test : `tests/logic/nom-du-profil.test.mts`. Le module quiz de Tipote est
+jumeau : la correction y vit aussi.
+
+### Et un projet qui n'est pas à vous ne téléporte plus personne
+
+Béné, en essayant d'ouvrir le quiz de Christian : "je n'arrive pas à
+accéder à ses quiz, je ne sais pas pourquoi, et pire : ça me redirige
+directement vers mon dashboard et pas vers une page 'ce quiz n'est pas
+disponible'."
+
+On DISAIT bien quelque chose, un toast, mais `router.push("/dashboard")`
+partait dans la foulée : elle changeait d'écran avant d'avoir lu la
+raison, et se retrouvait sur son tableau de bord sans savoir pourquoi.
+Un toast qui accompagne une navigation n'est pas un message, c'est un
+reflet.
+
+**Règle : les quatre éditeurs affichent un ÉCRAN** (titre, phrase, et
+UNE sortie nommée qui passe par `projectBackHref`, donc la hiérarchie et
+jamais l'historique). Plus aucune redirection sur un chargement qui
+échoue. Seul le mode EMBED garde le toast : il n'a pas de tableau de
+bord où retourner.
+
+**On ne distingue pas "supprimé" de "pas à toi", et c'est voulu** : la
+route répond 404 dans les deux cas pour ne pas révéler qu'un projet
+existe. La phrase dit donc les deux possibilités, plus la seule chose
+qui inquiète vraiment : rien n'a été modifié.
+
+**Trouvé au passage** : deux de ces quatre écrans affichaient
+`toast.error("Quiz not found")`, écrit en dur EN ANGLAIS dans une
+interface qui existe en 7 langues. Les clés `unavailableTitle` et
+`unavailableBody` sont posées dans les 7 fichiers.
+
+## Deux liens, le même mot, deux gestes opposés (retour Christian, 1er septembre 2026)
+
+Béné : "est-ce que c'est bien expliqué, la différence entre le lien de
+partage pour FAIRE le quiz et celui pour COPIER le quiz dans son compte ?"
+
+Non, et l'écran faisait tout pour les confondre :
+
+| Le geste | Où | Comment il s'appelait |
+|---|---|---|
+| donner le lien pour RÉPONDRE au quiz | onglet de l'éditeur | "Partager", icône `Share2` |
+| donner une COPIE du quiz à quelqu'un | carte de Mes projets | "Partager ce quiz", icône `Share2` |
+| se dupliquer le quiz à soi même | carte de Mes projets | "Dupliquer", icône `CopyPlus` |
+
+**Même mot, même icône, et le deuxième est le seul qui donne son
+travail.** Un créateur qui colle ce lien à son audience installe son
+quiz dans le compte de chaque personne qui clique. Le texte du panneau
+était juste et complet, mais il fallait l'ouvrir pour le découvrir :
+l'entrée, elle, disait le contraire.
+
+**Règle : le geste se nomme par son VERBE, pas par sa famille.**
+"Donner une copie du quiz", icône `Gift`, distincte des deux autres. Et
+la première ligne du panneau pose le contraste AVANT le bouton
+(`partageQuiz.notPublicLink`, 7 langues) : "ce n'est PAS le lien pour
+faire passer le quiz, celui-là est dans l'onglet Partager de l'éditeur".
+
+**Trois gestes voisins ne peuvent pas porter deux icônes.** Le premier
+jet remplaçait `Share2` par `CopyPlus`... qui est déjà l'icône de
+"Dupliquer". On déplaçait la collision au lieu de la retirer.
+
+## Vérifier que le bouton du quiz porte bien l'identifiant (Béné, 1er septembre 2026)
+
+"On peut vérifier que l'url du CTA du quiz se voit bien attribuer l'id
+de l'affilié au bon format ? Il faut récupérer l'id dans l'url
+(`?sa=sa...`) et l'ajouter à l'url du CTA."
+
+```bash
+npm run check:cta-affilie -- "https://quiz.tipote.com/q/mon-quiz?sa=sa0007..."
+```
+
+Il va chercher le VRAI quiz sur le serveur et imprime l'adresse que
+portera chaque bouton (fin de quiz, chaque profil, quiz fermé). Il
+appelle les MÊMES fonctions que le viewer (`lireAffiliateDuQuiz` puis
+`attacherAffiliate`) : un script qui réécrirait la règle finirait par
+dire le contraire de ce que le visiteur voit, c'est le défaut sorti six
+fois dans ces dépôts.
+
+**LE PIÈGE QU'IL EXISTE POUR ATTRAPER : un `sa` mal formé est jeté SANS
+BRUIT.** C'est voulu, cette valeur finit dans un versement. Mais à
+l'écran rien ne le montre : le bouton mène quelque part, il ne porte
+simplement rien. Le script dit la longueur reçue et la forme attendue
+("sa" + 20 à 80 caractères hexadécimaux, `lib/affiliate/saFormat.ts`).
+
+**Ce qu'il ne peut PAS vérifier, et il le dit :** la deuxième moitié
+appartient au vendeur. Systeme.io pose SON cookie quand le visiteur
+atterrit sur SA page ; nous, on ne fait que coller l'identifiant sur le
+bouton. Et leur API n'expose AUCUN moyen d'assigner un affilié à un
+contact (mesuré : l'écriture d'un contact n'accepte que des champs et
+une langue). Un contact créé par notre capture d'email affichera donc
+toujours "Affilié : Aucun" tant que la personne n'a pas cliqué le
+bouton.
+
+## Une valeur d'URL n'est pas un motif de recherche (1er septembre 2026)
+
+Dans un LIKE Postgres, **`_` remplace n'importe quel caractère** et `%`
+n'importe quelle suite. Or `_` est parfaitement légal partout : dans une
+adresse email, et rien n'empêche quelqu'un de le taper dans une URL.
+
+La passe du 31 août avait couvert les recherches de COMPTE, chez Tipote
+seulement, et cette page n'en disait rien : **un garde-fou qui ne protège
+qu'un des deux jumeaux ne protège personne**, et une règle absente de
+cette page est une règle que le prochain passage ne connaît pas.
+
+Le même joker vivait sur `slug`, `hostname` et `code`, tous lus dans une
+URL publique. **18 fichiers ici, 29 côté Tipote.** Le plus coûteux :
+
+**`/q/mon_quiz` pouvait servir le quiz d'une AUTRE créatrice**, ou n'en
+servir aucun : deux lignes trouvées font échouer `maybeSingle`, donc un
+404 sur un quiz qui existe et qui tourne peut être en publicité payante.
+
+**ON ÉCHAPPE, ON NE PASSE PAS À `.eq`.** `.eq` serait plus simple, mais
+la casse des valeurs stockées n'est pas garantie (imports Systeme.io,
+slugs historiques) : empêcher un accès serait PIRE que le bug corrigé.
+`echapperMotifLike` (`lib/db/motifLike.ts`) ne change RIEN au
+comportement, sauf exactement le cas fautif. Le `\` s'échappe EN
+PREMIER, sinon on échapperait les barres qu'on vient d'ajouter.
+
+**Le garde-fou BALAIE tout le dépôt, il ne surveille pas une liste de
+fichiers.** Une liste oublie le prochain fichier écrit, et c'est
+exactement comme ça que ces endroits sont arrivés. Vérifié en rejouant
+la version d'avant (le test rougit).
+
+Test : `tests/logic/email-pas-un-motif.test.mts`.
+
+## Une entité HTML sans balise autour (retour Christian, 1er septembre 2026)
+
+Le titre de son 4e résultat revenait de la base ainsi, et s'affichait tel
+quel sur sa page de résultat :
+
+```
+Ce n'est pas parce que tu n'es pas doué...&nbsp ;
+```
+
+**C'était nous.** La typographie française insère une espace devant `;`,
+`?`, `!` et `:`. Elle a donc coupé l'entité `&nbsp;` en deux.
+
+**Le garde-fou existait, et il a été contourné par la DÉTECTION.**
+`applyFrenchTypographyToHtml` découpe correctement sur les balises ET les
+entités ; c'est `applyFrenchTypography` qui choisissait entre les deux
+versions, et sa règle était :
+
+```
+const LOOKS_LIKE_HTML = /<[a-z!/][^>]*>/i;
+```
+
+**Une chaîne peut porter une ENTITÉ sans porter la moindre balise**, et
+c'était exactement son cas. Elle partait donc vers la version texte brut,
+celle qui ne sait pas ce qu'est un `&nbsp;`.
+
+**Règle : on ne choisit plus.** `applyFrenchTypography` passe TOUJOURS par
+le découpage. Sur du texte sans balise ni entité, les deux rendaient déjà
+le même résultat (un seul `fixFragment` sur toute la chaîne) : il n'y
+avait donc rien à arbitrer, seulement une occasion de se tromper. C'est
+la leçon écrite vingt lignes plus haut dans le même fichier ("quand une
+erreur ne coûte rien à commettre et détruit du travail en silence, on
+rend l'erreur IMPOSSIBLE"), appliquée à la détection elle-même.
+`LOOKS_LIKE_HTML` est SUPPRIMÉE, pas laissée sans appelant.
+
+**Et un champ déjà cassé se répare au prochain enregistrement.**
+`reparerEntitesCassees()` recolle `&nbsp<espace>;` avant le découpage :
+une entité coupée en deux ne redevient jamais une entité toute seule, et
+la cliente n'a aucun moyen de savoir d'où sort ce texte. Même geste que
+`applyFieldFontSize`, qui répare un champ abîmé au premier clic (1er
+août).
+
+**LISTE FERMÉE d'entités, et c'est voulu** : `nbsp`, `amp`, `lt`, `gt`,
+`quot`, `apos` et les formes numériques. `M&M ;` est de la prose
+parfaitement légitime, et le recoller réécrirait ce que la cliente a
+écrit.
+
+### Et ce qui est déjà cassé en base s'affiche juste, sans migration
+
+Béné, en lisant la première correction : "ce genre de souci on l'a eu
+mille fois et il revient toujours, il faut vraiment le corriger et s'en
+débarrasser définitivement, j'en ai marre de corriger toujours les mêmes
+choses."
+
+Corriger à l'ENREGISTREMENT ne suffisait pas : le texte abîmé est DÉJÀ en
+base chez des clientes. Il aurait fallu que chacune rouvre et
+ré-enregistre chaque champ, un par un, pour faire disparaître un texte
+qu'elle n'a jamais tapé.
+
+**`sanitizeRichText` et `stripHtml` réparent donc au PASSAGE.** Tout ce
+qui s'affiche est juste, immédiatement, sans toucher à une seule ligne de
+la base et sans migration. La base garde sa valeur abîmée jusqu'au
+prochain enregistrement du champ, qui la recolle pour de bon.
+
+**Et le vrai invariant est l'IDEMPOTENCE.** Une règle qui INSÈRE une
+espace tourne à CHAQUE enregistrement : si sa sortie n'est pas un point
+fixe, le texte dérive un peu plus à chaque sauvegarde et personne ne voit
+rien avant que ce soit illisible. C'est ça, "il revient toujours". Le
+test l'exige maintenant sur une batterie de cas (deux fois ET trois fois,
+parce qu'un cycle de période 2 passerait un test qui n'applique que deux
+fois), plus une liste de chaînes techniques qui ne doivent pas bouger
+d'un caractère : une URL avec `?`, un `style="color:red"`, `12:30`,
+`&nbsp;`, `&amp;`, `&#233;`.
+
+Test : les 7 cas ajoutés à `tests/logic/french-typography.test.mts`,
+vérifiés en rejouant la détection d'avant (5 rougissent).
+
+## L'onglet Automatisation : ce qu'il faut créer dans Systeme.io (Béné, 1er septembre 2026)
+
+"Un onglet Automatisation, en plus de créer, partager, résultats, qui
+explique le workflow et les tags précis à créer dans Systeme.io pour
+envoyer ce qu'il faut à qui en a besoin. **Pas un truc générique, un truc
+réel** qui explique selon le bonus offert, le CTA, les profils de
+résultats."
+
+**CE QUE ÇA RÉPARE, ET C'EST LE TROU LE PLUS CHER DU PRODUIT.** Tiquiz
+POSE des tags sur le contact Systeme.io. Mais poser un tag
+ne déclenche RIEN tant qu'aucune règle d'automatisation ne l'écoute, et
+ces règles se créent à la main dans leur tableau de bord (mesuré le
+31 août). Une créatrice met son quiz en ligne, capte 40 adresses, et il
+ne se passe rien. Elle n'en conclut pas qu'il lui manque une règle : elle
+en conclut que Tiquiz ne sert à rien.
+
+**Règle : `lib/automatisation/planSysteme.ts` décide, et il n'annonce que
+ce qui part VRAIMENT.** C'est tout l'enjeu du "pas générique" : les six
+familles de tags n'ont pas les mêmes conditions, et une liste qui
+les récite toutes enverrait la créatrice construire des workflows sur des
+tags qu'elle n'aura jamais.
+
+| Tag | Part quand |
+|---|---|
+| profil (`sio_tag_names`) | QUIZ seulement, un sondage n'a pas de résultat |
+| `sio_capture_tag` | SONDAGE seulement |
+| par réponse (`options[].sio_tag_name`) | SONDAGE seulement |
+| score (`score-<tranche>`, `<axe>-<tranche>`) | si `sio_score_tags` est coché |
+| `sio_share_tag_name` | dès qu'il est RENSEIGNÉ, sans regarder `virality_enabled` |
+| formation / communauté | **rien à créer** : Tiquiz ouvre l'accès lui même |
+
+**Le dernier cas est le piège inverse** : une règle de plus ouvrirait
+l'accès DEUX fois, et ça ne se voit qu'en recevant deux emails. La carte
+dit donc de ne rien faire.
+
+**Les tags de score sont un MOTIF, pas un nom.** Ils sont calculés au
+moment de la réponse, à partir des libellés de la créatrice. L'écran
+montre donc la liste RÉELLE des valeurs possibles, calculée par
+`tagsDeScorePossibles`. Et `slugifyAxisLabel` n'accepte que `[a-z0-9_]` :
+"En route" donne `score-en_route`, avec un SOULIGNÉ. Deviner un tiret
+ferait créer une règle sur un tag qui n'arrive jamais.
+
+**Le nom du workflow proposé EST le nom du tag.** Deux noms
+différents pour la même chose obligent à faire la correspondance de tête
+à chaque fois qu'on relit sa liste de workflows.
+
+**Le module ne rend AUCUNE phrase**, seulement des données (le type
+d'étape, le tag exact, le contexte) : l'interface existe en 7
+langues, et c'est l'écran qui écrit. Le nom du tag est
+CLIQUABLE-COPIABLE : c'est le seul endroit où une faute de frappe casse
+tout en silence.
+
+**Ce qui manque est dit à part, et le bloquant passe devant** : sans clé
+Systeme.io reliée, aucun contact n'est créé et aucun tag n'est
+posée, donc tout le reste de l'écran serait un plan pour rien.
+
+**On ne réclame le tag de partage QUE si un bonus de partage est promis**
+(`virality_enabled`). Les simples boutons de partage de la page de
+résultat sont vrais par défaut : crier là dessus ferait rougir l'écran de
+presque tout le monde, et un avertissement qui sort pour rien finit
+ignoré.
+
+**Endroits à respecter :** `lib/automatisation/planSysteme.ts` (pur),
+`components/quiz/AutomatisationPanel.tsx`, `QuizDetailClient.tsx` et
+`SurveyDetailClient.tsx` (le 4e onglet). Le filet de captures ne couvre
+pas l'éditeur : le garde-fou est
+`tests/logic/plan-automatisation.test.mts`.
+
+**Pas porté dans Tipote**, qui pose pourtant les mêmes tags. À
+faire si ses créatrices rencontrent le même silence.
+
+## ON DIT TAG, JAMAIS ÉTIQUETTE (Béné, 1er septembre 2026)
+
+"Ne dis jamais étiquette, nulle part, on parle bien de tag en français
+aussi. Supprime tout ce que tu appelles étiquette partout pour dire tag,
+et mets tags bordel !"
+
+**La raison est produit, pas stylistique : c'est le mot que Systeme.io
+affiche.** Son menu CRM en français dit "Tag". Une consigne qui dit
+"étiquette" envoie la créatrice chercher un mot qui n'existe pas sur son
+écran, au moment précis où elle suit une marche à suivre clic par clic.
+
+**Et ça vaut par LANGUE, pas dans l'absolu.** Vérifié sur ses captures du
+tableau de bord Systeme.io :
+
+| Langue | Ce que Systeme.io affiche | Ce qu'on écrit |
+|---|---|---|
+| français, italien, portugais, anglais | Tag | **tag** |
+| **espagnol** | Etiquetas | **etiqueta** |
+
+L'espagnol est la seule exception, et elle est OBLIGATOIRE : y écrire
+"tag" rendrait la consigne fausse, puisque le bouton qu'elle doit
+cliquer s'appelle "Etiqueta añadida". L'arabe n'a pas été vérifié.
+
+**La nuance à ne pas rater : "étiquette" au sens LIBELLÉ n'est pas un
+tag.** Le libellé min/max d'une échelle, le "conversion label" de Google
+Ads, le mot affiché à la place d'un score : ce ne sont pas des tags
+Systeme.io. On y écrit **libellé**, pas "tag", sinon on rend le texte
+faux dans l'autre sens.
+
+Ça couvre aussi le CODE : un fichier `etiquetteVente.ts` et une fonction
+`poserEtiquetteAcheteur` disaient le mot interdit. Renommés en
+`tagVente.ts` et `poserTagAcheteur`.
+
+**ET LA FAUTE QUE J'AI FAITE EN L'APPLIQUANT, qui vaut plus que la
+règle :** j'ai remplacé le mot partout d'un coup, sans relire les
+phrases. "Étiquette" est féminin, "tag" est masculin : le dépôt s'est
+retrouvé avec "un tag posée", "le tag exacte", "de le tag", "aucune tag
+manquante". Et là où le mot voulait dire LIBELLÉ, le texte est devenu
+faux : la largeur d'un axe de graphique "réserve la largeur des tags",
+l'orientation EXIF d'une photo devenait "un tag tourne-moi de 90
+degrés". Réparé le jour même, mais le geste était mauvais.
+
+**Un remplacement de mot n'est pas une opération mécanique.** Un mot
+porte un GENRE (donc des accords à refaire) et un SENS (donc des
+endroits où il ne s'applique pas). Le contrôle à faire après, et pas
+avant :
+
+```bash
+grep -rnE "(une|nouvelle|cette|aucune|toute) tags?|tags? (créée|posée|manquante|exacte|courte|ancienne|inconnue)|de le tag" . --exclude-dir=node_modules
+```
+
+Zéro ligne, sinon on a laissé une phrase cassée derrière soi.

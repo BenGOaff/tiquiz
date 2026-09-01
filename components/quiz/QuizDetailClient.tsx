@@ -14,7 +14,7 @@ import {
   ArrowLeft, ArrowUp, Copy, Eye, CheckCircle, Share2,
   Loader2, Plus, Trash2, Monitor, Smartphone, Pencil, X, Save, GripVertical,
   Gift, Sparkles, Shuffle, ChevronUp, ChevronDown, ImagePlus, Crop, Star, Settings2,
-  Link2, AlertCircle, Wand2, AlignLeft } from "lucide-react";
+  Link2, AlertCircle, Wand2, AlignLeft, Workflow } from "lucide-react";
 import { GifPickerButton } from "@/components/quiz/GifPicker";
 import { ImageCropDialog } from "@/components/quiz/ImageCropDialog";
 import { TiquizStudioButton } from "@/components/visual-studio/TiquizStudioButton";
@@ -56,7 +56,10 @@ import { useShareDomain } from "@/hooks/useShareDomain";
 import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
 import { QrCodeCard } from "@/components/share/QrCodeCard";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
-import { interpolateText, extractResultLabel } from "@/lib/quizPersonalization";
+import { interpolateText } from "@/lib/quizPersonalization";
+import { resultChoiceLabel } from "@/lib/quiz/resultLabel";
+import { construirePlanAutomatisation } from "@/lib/automatisation/planSysteme";
+import { AutomatisationPanel } from "@/components/quiz/AutomatisationPanel";
 import { type TieConflict } from "@/lib/quizTieAnalysis";
 import { tieBreakMode } from "@/lib/quiz/profileWinner";
 import { analyzeOptionSupply, analyzeProfileGaps, analyzeResultCoverage, analyzeResultTies, attributionMode } from "@/lib/quizCoherence";
@@ -630,6 +633,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
+  // Le projet n'existe pas, ou il n'est pas à ce compte. On l'AFFICHE,
+  // on ne renvoie plus la personne ailleurs sans un mot.
+  const [indisponible, setIndisponible] = useState(false);
   const [quiz, setQuiz] = useState<QuizData | null>(null);
   // Mode "scoring" : vrai quiz note (points par option + tranches de score).
   const isScoring = quiz?.mode === "scoring";
@@ -805,7 +811,43 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   const [editResults, setEditResults] = useState<QuizResult[]>([]);
 
   // Editor state
-  const [mainTab, setMainTab] = useState<"create" | "share" | "results">("create");
+  const [mainTab, setMainTab] = useState<"create" | "share" | "automation" | "results">("create");
+
+  // L'ONGLET AUTOMATISATION (Béné, 1er septembre 2026). Le plan est
+  // construit sur les valeurs À L'ÉCRAN et pas seulement sur celles
+  // enregistrées : une créatrice qui vient de taper un tag doit voir la
+  // marche à suivre tout de suite, sans avoir à sauvegarder d'abord.
+  //
+  // `sio_api_key_id` et `sio_capture_tag` ne sont pas édités ici : ils
+  // viennent du quiz chargé, qui est lu en `select("*")`.
+  const planAutomatisation = useMemo(
+    () =>
+      construirePlanAutomatisation(
+        {
+          mode: quiz?.mode ?? null,
+          locale: quiz?.locale ?? null,
+          sio_api_key_id: (quiz as { sio_api_key_id?: string | null } | null)?.sio_api_key_id ?? null,
+          sio_capture_tag: (quiz as { sio_capture_tag?: string | null } | null)?.sio_capture_tag ?? null,
+          sio_share_tag_name: sioShareTagName,
+          sio_score_tags: sioScoreTags,
+          scoring_axes: scoringAxesEdit,
+          score_labels: scoreLabelsEdit,
+          virality_enabled: viralityEnabled,
+        },
+        editResults,
+        editQuestions,
+      ),
+    [
+      quiz,
+      sioShareTagName,
+      sioScoreTags,
+      scoringAxesEdit,
+      scoreLabelsEdit,
+      viralityEnabled,
+      editResults,
+      editQuestions,
+    ],
+  );
   const [leftTab, setLeftTab] = useState<"edition" | "design" | "settings">("edition");
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   // Taquet de largeur du panneau split (Béné 30 juil 2026, façon
@@ -1367,8 +1409,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           : fetch(`/api/profile`).then((r) => r.json()).catch(() => null),
       ]);
       if (!quizRes?.ok || !quizRes.quiz) {
-        toast.error(t("errQuizNotFound"));
-        if (!isEmbed) router.push("/dashboard");
+        // La RAISON reste dite ; c'est la téléportation qui partait.
+        if (isEmbed) { toast.error(t("errQuizNotFound")); return; }
+        setIndisponible(true);
         return;
       }
       const q: QuizData = { ...quizRes.quiz, questions: quizRes.quiz.questions ?? [], results: quizRes.quiz.results ?? [] };
@@ -3180,6 +3223,32 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   };
 
   if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;
+
+  // UN REFUS N'EST PAS UNE PANNE, ET IL NE TÉLÉPORTE PERSONNE
+  // (retour Béné, 1er septembre 2026) : "je n'arrive pas à accéder à ses
+  // quiz, je ne sais pas pourquoi, et pire : ça me redirige directement
+  // vers mon dashboard et pas vers une page 'ce quiz n'est pas
+  // disponible'."
+  //
+  // On disait bien quelque chose, un toast, mais la redirection partait
+  // dans la foulée : elle changeait d'écran avant d'avoir lu la raison,
+  // et se retrouvait sur son tableau de bord sans savoir pourquoi. Un
+  // écran qui explique et propose UNE sortie nommée coûte un clic ; une
+  // téléportation coûte le diagnostic (règle du `ok: false`, 3 août, et
+  // de la flèche retour qui suit la hiérarchie, 1er août).
+  if (indisponible) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="max-w-md text-center space-y-4">
+          <h1 className="text-xl font-semibold">{t("unavailableTitle")}</h1>
+          <p className="text-sm text-muted-foreground">{t("unavailableBody")}</p>
+          <Button asChild>
+            <Link href={projectBackHref("quizEditor")}>{t("backToProjects")}</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
   if (!quiz) return null;
   const pc = primaryColor;
   // Logo finalement affiché côté visiteur — même résolution que
@@ -3298,9 +3367,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           </span>
         </div>
         <nav className="hidden sm:flex items-center bg-muted rounded-lg p-0.5">
-          {(["create","share","results"] as const).map(tab => (
+          {(["create","share","automation","results"] as const).map(tab => (
             <button key={tab} onClick={() => setMainTab(tab)} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${mainTab === tab ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : <><Eye className="w-3.5 h-3.5 inline mr-1.5" />{t("tabResults")}</>}
+              {tab === "create" ? <><Pencil className="w-3.5 h-3.5 inline mr-1.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5 inline mr-1.5" />{t("tabShare")}</> : tab === "automation" ? <><Workflow className="w-3.5 h-3.5 inline mr-1.5" />{t("tabAutomation")}</> : <><Eye className="w-3.5 h-3.5 inline mr-1.5" />{t("tabResults")}</>}
             </button>
           ))}
         </nav>
@@ -3393,9 +3462,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
           la réaffiche en pleine largeur sous l'en-tête, < sm seulement. */}
       {!isEmbed && (
         <nav className="sm:hidden flex items-stretch border-b shrink-0 bg-background z-10">
-          {(["create","share","results"] as const).map(tab => (
+          {(["create","share","automation","results"] as const).map(tab => (
             <button key={tab} onClick={() => setMainTab(tab)} className={`flex-1 px-2 py-2.5 text-sm font-medium transition-colors inline-flex items-center justify-center gap-1.5 ${mainTab === tab ? "text-foreground border-b-2 border-primary" : "text-muted-foreground"}`}>
-              {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : <><Eye className="w-3.5 h-3.5" />{t("tabResults")}</>}
+              {tab === "create" ? <><Pencil className="w-3.5 h-3.5" />{t("tabCreate")}</> : tab === "share" ? <><Share2 className="w-3.5 h-3.5" />{t("tabShare")}</> : tab === "automation" ? <><Workflow className="w-3.5 h-3.5" />{t("tabAutomation")}</> : <><Eye className="w-3.5 h-3.5" />{t("tabResults")}</>}
             </button>
           ))}
         </nav>
@@ -3468,7 +3537,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           key={`r-${i}`}
                           id={`r-${i}`}
                           index={i}
-                          label={stripHtml(extractResultLabel(cleanPlaceholdersForLabel(r.title))) || t("sidebarEmptyResult")}
+                          label={resultChoiceLabel(r.title, t("sidebarEmptyResult"))}
                           onClick={() => scrollToSection(`r-${i}`)}
                           onRemove={() => removeResult(i)}
                           canDelete={editResults.length > 1}
@@ -5065,7 +5134,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                                       />
                                       <span className="text-xs" style={{ color: `${pc}99` }}>{t("previewPointsFor")}</span>
                                       <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
-                                        {editResults.map((_, ri) => <option key={ri} value={ri}>{t("previewResult", { n: ri + 1 })}</option>)}
+                                        {/* Le NOM du profil, jamais son rang (retour Christian, 1er sept
+                                            2026) : ce menu jetait le profil et n'affichait
+                                            que "Résultat 1, Résultat 2". */}
+                                        {editResults.map((r2, ri) => <option key={ri} value={ri}>{resultChoiceLabel(r2?.title, t("previewResult", { n: ri + 1 }))}</option>)}
                                       </select>
                                     </div>
                                   )}
@@ -5288,7 +5360,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                                   />
                                   <span className="text-xs" style={{ color: `${pc}99` }}>{t("previewPointsFor")}</span>
                                   <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
-                                    {editResults.map((_, ri) => <option key={ri} value={ri}>{t("previewResult", { n: ri + 1 })}</option>)}
+                                    {/* Le NOM du profil, jamais son rang (retour Christian, 1er sept
+                                            2026) : ce menu jetait le profil et n'affichait
+                                            que "Résultat 1, Résultat 2". */}
+                                        {editResults.map((r2, ri) => <option key={ri} value={ri}>{resultChoiceLabel(r2?.title, t("previewResult", { n: ri + 1 }))}</option>)}
                                   </select>
                                 </div>
                               )}
@@ -5669,7 +5744,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     <ul className="mt-2.5 space-y-1.5 text-xs">
                       {tieAnalysis.conflicts.map((c: TieConflict, i: number) => {
                         const titles = c.resultIndices
-                          .map((ri) => stripHtml(extractResultLabel(cleanPlaceholdersForLabel(editResults[ri]?.title))) || t("previewResult", { n: ri + 1 }))
+                          .map((ri) => resultChoiceLabel(editResults[ri]?.title, t("previewResult", { n: ri + 1 })))
                           .join(" ↔ ");
                         const path = c.answers
                           .map((oi, qi) => {
@@ -5770,7 +5845,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           return <li key={i}>{t("trancheGapItem", { from: issue.from, to: issue.to })}</li>;
                         }
                         const nameOf = (ri2: number) =>
-                          stripHtml(extractResultLabel(cleanPlaceholdersForLabel(editResults[ri2]?.title))) || t("previewResult", { n: ri2 + 1 });
+                          resultChoiceLabel(editResults[ri2]?.title, t("previewResult", { n: ri2 + 1 }));
                         return (
                           <li key={i}>
                             {t("trancheOverlapItem", { a: nameOf(issue.a), b: nameOf(issue.b), from: issue.from, to: issue.to })}
@@ -6237,7 +6312,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                             markdown) puis extractResultLabel (vire le ", tu
                             es le·la" + les `·xx` inclusifs) pour ne garder
                             que le label court "Solopreneur Invisible". */}
-                        <p className="text-[11px] text-muted-foreground mb-2">{t("previewResultTagHint", { title: stripHtml(extractResultLabel(cleanPlaceholdersForLabel(r.title))) || t("previewResult", { n: ri + 1 }) })}</p>
+                        <p className="text-[11px] text-muted-foreground mb-2">{t("previewResultTagHint", { title: resultChoiceLabel(r.title, t("previewResult", { n: ri + 1 })) })}</p>
                         {/* Multi-tags par profil (Gwenn 12 juillet 2026).
                             On ecrit sio_tag_names ET sio_tag_name (1er
                             element) pour la compat descendante. */}
@@ -6297,7 +6372,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 <DialogDescription>
                   {rebalanceTarget !== null
                     ? t("rebalanceDialogBody", {
-                        target: cleanPlaceholdersForLabel(editResults[rebalanceTarget]?.title).replace(/<[^>]*>/g, "").trim() || t("previewResult", { n: rebalanceTarget + 1 }),
+                        target: resultChoiceLabel(editResults[rebalanceTarget]?.title, t("previewResult", { n: rebalanceTarget + 1 })),
                       })
                     : ""}
                 </DialogDescription>
@@ -6770,6 +6845,8 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       )}
 
       {/* RESULTS TAB */}
+      {mainTab === "automation" && <AutomatisationPanel plan={planAutomatisation} />}
+
       {mainTab === "results" && (
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-5xl mx-auto">

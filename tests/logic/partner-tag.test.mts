@@ -6,9 +6,9 @@
 // seront attribués aux bons acheteurs ?"
 //
 // Pour Tiquiz oui. Pour l'ATELIER, non : son bon de commande n'avait
-// jamais posé la moindre étiquette. Tout ce qui sait parler à
+// jamais posé la moindre tag. Tout ce qui sait parler à
 // Systeme.io vit dans CE dépôt (la clé du compte propriétaire, la
-// création du contact, la recherche paginée d'étiquette) : l'Atelier
+// création du contact, la recherche paginée de tag) : l'Atelier
 // demande, il ne recopie pas.
 
 import { readFileSync } from "node:fs";

@@ -21,6 +21,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 type RouteContext = { params: Promise<{ quizId: string }> };
 
@@ -33,7 +34,7 @@ async function resolveQuizId(slugOrId: string): Promise<string | null> {
     const { data } = await supabaseAdmin.from("quizzes").select("id").eq("id", needle).maybeSingle();
     if (data?.id) return data.id as string;
   }
-  const { data } = await supabaseAdmin.from("quizzes").select("id").ilike("slug", needle).maybeSingle();
+  const { data } = await supabaseAdmin.from("quizzes").select("id").ilike("slug", echapperMotifLike(needle)).maybeSingle();
   return (data?.id as string) ?? null;
 }
 

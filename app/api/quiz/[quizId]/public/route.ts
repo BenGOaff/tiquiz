@@ -36,6 +36,7 @@ import {
   slugifyAxisLabel,
 } from "@/lib/quizScoring";
 import { affiliateAbsent, lireAffiliateObjet } from "@/lib/quiz/affiliateRelay";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 // No `force-dynamic`: it would make Vercel inject `Cache-Control: private, no-store`,
 // overriding the edge-SWR headers set on the GET response and forcing `cf-cache-status: DYNAMIC`.
@@ -62,7 +63,7 @@ async function resolveQuizId(
     if (data?.id) return data.id as string;
   }
 
-  const q = admin.from("quizzes").select("id").ilike("slug", needle);
+  const q = admin.from("quizzes").select("id").ilike("slug", echapperMotifLike(needle));
   const { data } = opts.requireActive ? await q.eq("status", "active").maybeSingle() : await q.maybeSingle();
   return (data?.id as string) ?? null;
 }

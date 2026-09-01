@@ -29,6 +29,7 @@ import { SALES_HOSTS } from "@/lib/sales/salesHosts";
 import { listerArticles } from "@/lib/blog/articles";
 import { RUBRIQUES } from "@/lib/blog/rubriques";
 import { PAGES_PUBLIQUES } from "@/lib/site/pagesPubliques";
+import { echapperMotifLike } from "@/lib/db/motifLike";
 
 const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
 const PUBLIC_ROUTES = [
@@ -124,7 +125,7 @@ async function buildCustomDomainSitemap(host: string): Promise<MetadataRoute.Sit
   const { data: cd } = await supabaseAdmin
     .from("custom_domains")
     .select("user_id")
-    .ilike("hostname", host)
+    .ilike("hostname", echapperMotifLike(host))
     .eq("status", "verified")
     .maybeSingle();
   const userId = (cd as { user_id?: string } | null)?.user_id;

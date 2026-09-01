@@ -6,7 +6,7 @@
 // ventes et l'affiliation, "sauf pour les emails".
 //
 // C'est cette exception qui crée le trou. `poserTagPlan` posait
-// l'étiquette qui déclenche ses séquences, mais elle abandonnait quand
+// le tag qui déclenche ses séquences, mais elle abandonnait quand
 // le contact n'existait pas là-bas. Or c'est le cas NORMAL de quelqu'un
 // qui achète sur notre bon de commande sans jamais toucher un tunnel :
 // pas de bienvenue, pas de relance, pas de segment, et rien pour le
@@ -157,14 +157,14 @@ describe("Les règles qui ne se voient pas dans un écran", () => {
   });
 
   test("ON NE CRÉE JAMAIS UNE ÉTIQUETTE MANQUANTE", () => {
-    // Règle du 22 août, inchangée : une étiquette créée par nous avec
+    // Règle du 22 août, inchangée : un tag créé par nous avec
     // une faute se retrouverait en double dans sa liste, et ses
     // automatisations continueraient de pointer l'ancienne.
     const src = lire("lib/sio/appliquerTag.ts");
-    assert.match(src, /On ne CRÉE jamais l'étiquette manquante/);
+    assert.match(src, /On ne CRÉE jamais le tag manquant/);
     assert.ok(
       !/sioUserRequest[^\n]*"\/tags"[^\n]*\n?[^\n]*method: "POST"/.test(src),
-      "aucune création d'étiquette",
+      "aucune création de tag",
     );
   });
 

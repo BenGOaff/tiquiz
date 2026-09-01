@@ -29,8 +29,7 @@ import {
   Video,
   BarChart3,
   ArrowLeft,
-  ChevronRight,
-} from "lucide-react";
+  ChevronRight, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { PartagerQuizDialog } from "@/components/quiz/PartagerQuizDialog";
 import { EmbedCodeDialog } from "@/components/popquiz/EmbedCodeDialog";
@@ -663,7 +662,11 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
                               onClick={() => setPartageId(p.id)}
                               title={tPartage("button")}
                             >
-                              <Share2 className="h-4 w-4" />
+                              {/* DONNER une copie : ni l'icone du lien public
+                                  (Share2), ni celle de "dupliquer pour moi"
+                                  (CopyPlus). Les trois gestes se ressemblaient
+                                  (retour Christian, 1er septembre 2026). */}
+                              <Gift className="h-4 w-4" />
                             </Button>
                           ) : null}
                           {/* Bouton stats : réservé aux vrais quiz. La

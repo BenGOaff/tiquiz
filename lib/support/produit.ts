@@ -10,7 +10,7 @@
 // n'importe qui : elle est validée contre une liste, jamais écrite
 // telle quelle. Une valeur inconnue retombe sur `tiquiz`, qui est le
 // défaut de la colonne et l'app d'où viennent tous les tickets
-// existants : un ticket mal étiqueté reste lisible, un ticket refusé est
+// existants : un ticket mal taggé reste lisible, un ticket refusé est
 // une cliente qui n'a pas de réponse.
 
 export const PRODUITS_SUPPORT = ["tiquiz", "atelier", "tipote"] as const;

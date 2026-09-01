@@ -952,7 +952,7 @@ page, jetons `tq-*` de `globals.css`, scope `.tq-site`).
 | `/affiliation` | le programme Tiquiz, avec le simulateur de gains |
 | `/affiliation-atelier` | le programme Atelier, 70 % |
 | `/a-propos` | la page auteur de Béné |
-| `/newsletter` | l'inscription, qui pose l'étiquette `newsletter` chez Systeme.io |
+| `/newsletter` | l'inscription, qui pose le tag `newsletter` chez Systeme.io |
 
 Les adresses légales françaises redirigent vers les pages existantes
 (`/cgv` -> `/terms`, etc.), depuis `lib/site/adressesLegales.ts`.

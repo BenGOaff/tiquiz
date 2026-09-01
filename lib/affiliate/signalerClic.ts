@@ -116,7 +116,7 @@ export function clicASignaler(args: {
 export async function signalerClic(args: {
   ref: string;
   /**
-   * L'étiquette que l'affilié a posée lui même (`?c=youtube`), BRUTE.
+   * Le tag que l'affilié a posée lui même (`?c=youtube`), BRUTE.
    *
    * On ne la nettoie PAS ici, et c'est voulu : la mise en forme d'un
    * canal vit dans `sanitizeChannel`, chez Tipote, avec le reste des
