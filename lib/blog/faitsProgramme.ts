@@ -218,6 +218,35 @@ export const FAITS: readonly {
     vers: `<strong>39,60 € de rente par mois au lieu de ${euros(RENTE_PAR_FILLEUL.mensuel)} €</strong>`,
     pourquoi: "idem : le montant Tiquiz de la comparaison doit etre celui verse.",
   },
+  // ── LES DEUX SOURCES MAL CITÉES (1er septembre 2026) ──
+  //
+  // Sa fiche produit les signalait toutes les deux, et elles vivaient
+  // dans LA MÊME PHRASE de `vendre-avec-un-quiz`. C'est son interdit
+  // numéro un : ne jamais mentir, y compris en attribuant un chiffre à
+  // une source qui ne le contient pas. Les deux sont vérifiables par
+  // n'importe quel lecteur qui ouvre le rapport.
+  //
+  // 1. « ~45 % de ses VISITEURS » : le 44,9 % d'Interact est un taux
+  //    START-TO-LEAD, mesuré sur les personnes qui COMMENCENT le quiz,
+  //    pas sur celles qui voient la page. La formulation obligatoire est
+  //    « des personnes qui commencent un quiz », et le chiffre exact est
+  //    44,9 %, pas « ~45 ».
+  //
+  // 2. « un opt-in classique plafonne à 1 à 3 % (rapport Interact) » :
+  //    LE RAPPORT NE CONTIENT AUCUN CHIFFRE SUR LES OPT-INS CLASSIQUES.
+  //    L'attribution est fausse. Le chiffre reste, présenté pour ce
+  //    qu'il est : ce qu'ELLE observe, pas ce qu'Interact publie.
+  //
+  // LE LIEN VERS LE RAPPORT RESTE, et il se DÉPLACE : il doit couvrir le
+  // chiffre qu'Interact publie vraiment. Au passage, l'import avait coupé
+  // le mot en deux (`Interac` puis `t` dans un second `<em>`), ce qui se
+  // voyait au survol du lien.
+  {
+    de: "qu'<strong>un quiz bien fait séduise jusqu'à ~45 % de ses visiteurs</strong> dans le coaching et la formation, quand <strong>un opt-in classique plafonne à 1 à 3 %</strong> (<a href=\"https://www.tryinteract.com/blog/quiz-conversion-rate-report/\"><em>rapport Interac</em></a><em>t</em>).",
+    vers: "que <strong>44,9 % des personnes qui commencent un quiz</strong> laissent leur email dans le coaching et la formation (<a href=\"https://www.tryinteract.com/blog/quiz-conversion-rate-report/\"><em>rapport Interact</em></a>), quand un opt-in classique plafonne à 1 à 3 % d'après ce que je vois passer.",
+    pourquoi:
+      "44,9 % est un taux start-to-lead, pas un taux de page ; et le 1 a 3 % n'est PAS dans le rapport Interact.",
+  },
   {
     de: "bien plus que ses 6,80 € de rente mensuelle visible",
     vers: `bien plus que ses ${euros(RENTE_PAR_FILLEUL.mensuel)} € de rente mensuelle visible`,

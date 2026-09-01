@@ -149,7 +149,7 @@
     },
     {
       "type": "image",
-      "src": "/blog/img/svg-5-segmentation-fr.svg",
+      "src": "/blog/img/schema-segmentation.webp",
       "alt": "Liste envoyée en bloc contre liste segmentée par quiz : 21 % d'ouvertures contre 24 %, et 2,6 % de clics contre 5,2 %, soit le double"
     },
     {
@@ -168,7 +168,7 @@
     },
     {
       "type": "image",
-      "src": "/blog/img/svg-6-desinscriptions-fr.svg",
+      "src": "/blog/img/schema-desinscriptions.webp",
       "alt": "Le taux de désinscription baisse de 10 % quand la liste est segmentée par quiz au lieu d'être envoyée en bloc"
     },
     {
@@ -250,7 +250,7 @@
     },
     {
       "type": "image",
-      "src": "/blog/img/svg-7-interactif-vs-passif-fr.svg",
+      "src": "/blog/img/schema-interactif-vs-passif.webp",
       "alt": "Le contenu interactif convertit deux fois plus que le contenu passif : quiz, calculatrices et sondages contre ebook, PDF et article de blog"
     },
     {
@@ -332,7 +332,7 @@
     },
     {
       "type": "image",
-      "src": "/blog/img/svg-8-pubs-meta-fr.svg",
+      "src": "/blog/img/schema-pubs-meta.webp",
       "alt": "Trois étapes pour nourrir ses pubs Meta avec les leads d'un quiz : les leads se taguent par profil, Meta en tire une audience similaire, le coût par lead est divisé"
     },
     {

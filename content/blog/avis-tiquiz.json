@@ -61,7 +61,7 @@
     {
       "type": "image",
       "src": "/blog/img/tiquiz-3-formats-1.webp",
-      "alt": "tiquiz avis"
+      "alt": "Les trois formats de Tiquiz : le quiz qui qualifie et capte des leads, le sondage qui recueille les avis, et le pop quiz qui s'affiche pendant une vidéo"
     },
     {
       "type": "html",
@@ -70,7 +70,7 @@
     {
       "type": "image",
       "src": "/blog/img/tiquiz-fonctionnement-systeme-io-1.webp",
-      "alt": "tiquiz c'est quoi"
+      "alt": "Du quiz à ta liste en quatre étapes : on répond, le profil devient un tag, le contact arrive tagué dans Systeme.io, le bon email part tout seul. Sans Zapier ni code"
     },
     {
       "type": "titre",
@@ -85,7 +85,7 @@
     {
       "type": "image",
       "src": "/blog/img/tiquiz-quiz-vs-formulaire-1.webp",
-      "alt": "quiz vs formulaire"
+      "alt": "Formulaire classique : intrusif, peu rempli, peu d'engagement. Quiz interactif : engage dès la première question, récupère 2 à 3 fois plus d'emails et qualifie le contact"
     },
     {
       "type": "titre",
@@ -115,7 +115,7 @@
     {
       "type": "image",
       "src": "/blog/img/tiquiz-points-forts-limites-1.webp",
-      "alt": "tiquiz limites"
+      "alt": "Ce qui marche : premier quiz en moins d'une heure, intégration Systeme.io fiable, l'IA rédige. Les limites : personnalisation visuelle basique, pas de logique conditionnelle poussée"
     },
     {
       "type": "titre",
