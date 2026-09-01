@@ -5020,3 +5020,156 @@ grep -rnE "(une|nouvelle|cette|aucune|toute) tags?|tags? (créée|posée|manquan
 ```
 
 Zéro ligne, sinon on a laissé une phrase cassée derrière soi.
+
+## Le nom d'un fichier ne dit pas ce qu'il y a dedans (1er septembre 2026)
+
+Béné a livré 29 visuels neufs pour remplacer les schémas du blog.
+**Trois d'entre eux étaient décalés d'un cran par rapport à leur nom :**
+`optin-vs-quiz.png` porte le schéma "97 % de tes visiteurs s'évaporent",
+`triple-effet-quiz.png` porte "Opt-in classique vs Quiz interactif".
+Les poser au nom du fichier aurait mis deux schémas au mauvais endroit
+dans le même article, et aucun test ne peut voir ça.
+
+**Règle : un visuel se place en le REGARDANT, jamais d'après son nom.**
+C'est la même règle que les `alt`, et pour la même raison.
+
+**Trois visuels ne sont PAS posés**, et la raison est écrite à côté :
+`comparatif-outils-popquiz` et `tableaucomparatif-videos interactives`
+annoncent **9 €/mois ou 90 €/an** (tarif d'avant le 6 août), et le
+second a en plus sa colonne "Note" décalée d'une ligne (Tiquiz y est
+noté "Vimeo Interactive"). `rente-mensuelle-tiquiz` annonce 9 €/mois ET
+une commission de 50 % sur Tipote, c'est à dire les deux choses que
+Béné demandait de retirer de cet article. Un dessin ne se corrige pas
+en code : ils sont à redessiner.
+
+**Ce qui reste à redessiner, tous visuels confondus :** les trois ci
+dessus, plus quatre schémas qui portent encore `— tipote.fr/tiquiz` en
+pied (`ia generation`, `profile-tag-mapping`, `viralite-share-bonus`, et
+`svg-4-triple-effet-quiz-fr.webp` qui n'a pas de remplaçant).
+
+### Et le remède documenté qui ne marchait pas
+
+`poserAlt` disait "on n'écrase JAMAIS un `alt` existant" et, dans la
+même phrase, que "les mauvais se corrigent en les ajoutant à la table".
+**Les deux ne pouvaient pas être vrais** : un `alt` importé de
+Systeme.io ("tiquiz avis", "qui viral tiquiz") existe, donc il bloquait
+la correction, donc l'ajouter à la table ne faisait rien.
+
+**LA TABLE GAGNE désormais sur ce qu'elle NOMME**, et la protection qui
+comptait reste : une image absente de la table garde son texte, on ne
+perd aucun `alt` correct venu de l'import.
+
+## L'article qui recrute les affiliés ne promet que ce qui est payé (1er septembre 2026)
+
+Béné : "rente mensuelle tiquiz : il manque tous les tableaux et les
+images .. bref l'article est pourri et cassé".
+
+**1. LES TABLEAUX AVAIENT DISPARU À L'IMPORT.** Trois titres se
+suivaient sans rien entre eux ("2.1", "2.2", "2.3"), et la section 8
+annonçait "voici une comparaison" avant d'enchaîner sur "Verdict :".
+L'import n'a pas su lire les blocs tableau de Systeme.io et les a
+laissés tomber, en silence.
+
+**Règle : `lib/blog/tableauxRente.ts` CALCULE les tableaux**, avec les
+mêmes fonctions que le simulateur de la page d'affiliation
+(`tauxCommissionPct`, `commissionCentsAuTaux`). Cet article a déjà
+annoncé 108 €/mois pour 30 filleuls et 1 800 €/an pour 50 filleuls
+annuels : un tableau tapé à la main serait faux au premier changement
+de tarif, de taux ou de base.
+
+**On ne reconstruit PAS le comparatif avec les 4 autres programmes.**
+Je n'ai vérifié aucun de leurs taux, et le verdict annonçait "Systeme io
+reste plus élevé en taux (60 %)". La section compare maintenant les
+CRITÈRES d'une rente solide et ce que Tiquiz répond sur chacun : tout y
+est vérifiable dans notre code.
+
+**2. SIX ENDROITS PROMETTAIENT TIPOTE.** La section 4 entière annonçait
+50 % à vie sur des plans de 19 à 917 €/mois, plus "×14 sur ta rente".
+Tipote n'est pas en vente : ni les plans, ni le taux, ni le ×14 ne sont
+vérifiables. Elle parle maintenant de l'**Atelier du Quiz** (70 %, donc
+27,42 €, calculés depuis le catalogue) et du **barème qui monte de 40 à
+70 %**. Ce qui viendra plus tard est annoncé **sans date, sans prix et
+sans taux**, et l'article le dit explicitement.
+
+**3. SIX ENDROITS ANNONÇAIENT UN VERSEMENT "LE 10 DE CHAQUE MOIS" ET
+"SANS SEUIL".** Il y a un seuil de 20 € et un délai de 30 jours, et le
+versement a lieu ENTRE le 10 et le 13. L'espace affilié le dit
+correctement depuis le 26 août ; le blog promettait l'inverse, y compris
+dans sa `description`, c'est à dire la seule phrase lue avant le clic.
+
+**4. LE PLANCHER ÉTAIT ÉCRIT COMME UN PLAFOND.** 40 % est la première
+marche. L'article SOUS-vendait le programme, ce qui est l'autre façon de
+mentir.
+
+**Les MOTS CLÉS passent maintenant par la même correction que le texte**
+(`motsCles: a.motsCles.map(texte)`) : deux d'entre eux portaient une
+promesse fausse et échappaient au pipeline. Un chiffre faux reste faux
+quand il sert de mot clé.
+
+Test : `tests/logic/rente-affiliation-blog.test.mts`.
+
+## Une décoration à gauche n'est pas le seul défaut de mise en page
+
+Les tableaux se posent APRÈS le paragraphe qui les annonce, jamais juste
+sous le titre : un tableau tombé entre un titre et sa phrase
+d'introduction se lit comme un bloc venu de nulle part. Les ancres de
+`TABLEAUX` sont donc des FRAGMENTS DE TEXTE pour ces cas là, et un `id`
+de titre seulement quand le titre est suivi directement du tableau.
+
+Et **`corrigerFaits` tourne AVANT `poserTableaux`** : une ancre doit
+correspondre au texte CORRIGÉ, pas au texte importé.
+
+## Le SEO de tiquiz.fr : quatre défauts qu'on ne voit pas depuis le code (1er septembre 2026)
+
+Les quatre ont été constatés EN LIGNE, pas déduits.
+
+**1. La page servait DEUX balises `<title>`.** `stripHeadTags` visait
+`<title>` NU, alors que Systeme.io publie
+`<title data-react-helmet="true">`. Le retrait ne mordait pas, et Google
+choisissait lui même. **Et corriger ça seul aurait coûté le mot clé :**
+c'est le titre de la capture qui portait "Systeme.io", la requête la
+plus rentable du produit. Le titre du code le nomme désormais.
+
+**2. Quatre liens seulement menaient chez nous**, les quatre boutons de
+commande. Le reste partait chez `www.tipote.fr` : les cinq liens légaux,
+l'affiliation, l'Atelier, le LOGO, et `www.tipote.fr/tiquiz`, c'est à
+dire SA PROPRE COPIE. Depuis la page qui doit remplacer l'ancienne, un
+lien vers l'ancienne la désigne comme celle qui fait autorité.
+
+**LES DESTINATIONS SONT NOS VRAIES ROUTES, et c'est le piège de ce
+correctif.** Les chemins de Systeme.io (`/mentions-legales`, `/cgv`,
+`/cgu`, `/politique-de-confidentialite`, `/politique-de-cookies`)
+n'existent PAS chez nous : les recopier aurait posé cinq 404 dans le
+pied de page de la page qui vend, c'est à dire le drame du centre
+d'aide du 24 août. Nos pages sont `/legal`, `/terms`, `/terms-of-use`,
+`/privacy` et `/cookies`.
+
+**On traite aussi les liens ÉCHAPPÉS** (`href=\"...\"`) : trois liens
+vers l'Atelier vivaient dans le modèle JSON de la page, et ce sont ceux
+que l'éditeur relit pour reconstruire le bloc.
+
+**`SALES_SITE_LINKS` est une LISTE, pas une règle.** "Tout ce qui pointe
+sur tipote.fr revient chez nous" serait faux : l'optin gratuit et les
+tunnels beta et US y vivent pour de bonnes raisons
+(`SALES_LINKS_LEFT_ALONE`).
+
+**3. Google lisait `tiquiz.fr` en ANGLAIS.** `DEFAULT_LOCALE` vaut "en"
+et un robot n'envoie jamais de cookie : `tiquiz.fr/legal` répondait
+"Legal Notice · Tiquiz". Le français est désormais le défaut **sur les
+domaines de vente seulement** ; un visiteur qui a une préférence a un
+cookie, et ce cookie gagne toujours.
+
+**4. L'accueil du blog plafonnait à 7 articles sur 11.** Les quatre plus
+anciens n'étaient atteignables que par leur rubrique. Pas de
+pagination : elle les enfermerait derrière un clic.
+
+**Le garde-fou des adresses en dur exempte les CLÉS, pas le fichier.**
+`SALES_SITE_LINKS` NOMME ces adresses pour ne plus les servir, et une
+clé de correspondance ne peut pas passer par une constante sans cesser
+de correspondre. Une DESTINATION écrite en dur dans ce même fichier fait
+toujours rougir le test, vérifié en la rejouant.
+
+Tests : `tests/logic/tete-page-vente.test.mts` et
+`tests/logic/liens-site-page-vente.test.mts`, qui portent sur la VRAIE
+capture. Un test qui n'exercerait qu'une chaîne écrite à la main aurait
+été vert le jour du bug.
