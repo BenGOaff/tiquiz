@@ -16,6 +16,7 @@ import { notFound } from "next/navigation";
 
 import { ORIGINE_BLOG } from "@/lib/blog/seo";
 import { RUBRIQUES, articlesDeLaRubrique, trouverRubrique } from "@/lib/blog/rubriques";
+import { CHEMIN_FLUX } from "@/lib/blog/flux";
 import CarteArticle from "@/components/site/CarteArticle";
 import PastillesRubriques from "@/components/site/PastillesRubriques";
 
@@ -47,7 +48,10 @@ export async function generateMetadata({
   return {
     title: titre,
     description: r.chapeau,
-    alternates: { canonical: `${ORIGINE_BLOG}/blog/rubrique/${r.id}` },
+    alternates: {
+      canonical: `${ORIGINE_BLOG}/blog/rubrique/${r.id}`,
+      types: { "application/rss+xml": `${ORIGINE_BLOG}${CHEMIN_FLUX}` },
+    },
     openGraph: {
       type: "website",
       title: titre,

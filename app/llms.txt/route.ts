@@ -28,6 +28,7 @@ import { listerArticles } from "@/lib/blog/articles";
 import { PAGES_PUBLIQUES } from "@/lib/site/pagesPubliques";
 import { OWNER_CATALOG, OWNER_PRODUCT_ORDER } from "@/lib/checkout/catalog";
 import { ORIGINE_BLOG } from "@/lib/blog/seo";
+import { CHEMIN_FLUX } from "@/lib/blog/flux";
 import { echapperMotifLike } from "@/lib/db/motifLike";
 
 const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
@@ -239,6 +240,14 @@ function construireLlmsTxtVente(): string {
     for (const a of articles) {
       lignes.push(`- [${a.titre}](${ORIGINE_BLOG}/blog/${a.slug}) (${a.publieLe}) : ${a.description}`);
     }
+    lignes.push("");
+    // LE FLUX EST ANNONCÉ ICI AUSSI.
+    //
+    // Cette liste est figée au déploiement : un modèle qui la relit trois
+    // mois plus tard ne saura pas ce qui a été publié depuis. Le flux, lui,
+    // dit toujours l'état du jour. Une ligne, et la page cesse de se périmer
+    // en silence.
+    lignes.push(`Flux RSS (toujours à jour) : ${ORIGINE_BLOG}${CHEMIN_FLUX}`);
     lignes.push("");
   }
 

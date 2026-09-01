@@ -5159,7 +5159,7 @@ et un robot n'envoie jamais de cookie : `tiquiz.fr/legal` répondait
 domaines de vente seulement** ; un visiteur qui a une préférence a un
 cookie, et ce cookie gagne toujours.
 
-**4. L'accueil du blog plafonnait à 7 articles sur 11.** Les quatre plus
+**4. L'accueil du blog plafonnait à 7 articles sur 10.** Les trois plus
 anciens n'étaient atteignables que par leur rubrique. Pas de
 pagination : elle les enfermerait derrière un clic.
 
@@ -5369,7 +5369,7 @@ dépasse VRAIMENT.
 
 La consigne demandait des liens entrants « dans le CORPS des deux
 articles cités », et le document de suivi les annonçait comme posés.
-**Mesuré : aucun des onze articles ne contenait la chaîne
+**Mesuré : aucun des dix articles ne contenait la chaîne
 `/integrations`.** Une page liée seulement depuis le pied de page dépend
 de la patience d'un robot.
 
@@ -5594,3 +5594,81 @@ du moment, ET il n'y avait vraiment rien à épingler hors d'un article.
 
 Test : `tests/logic/epingles-pinterest.test.mts`, vérifié en rejouant la
 version d'avant (il rougit).
+
+## Le sitemap existait, le flux non (1er septembre 2026)
+
+Béné : "j'ai un sitemap ? Un feed ? Pour automatiser le flux des
+articles ou je sais pas quoi..."
+
+**Mesuré sur la production avant de répondre :**
+
+| Adresse | |
+|---|---|
+| `/sitemap.xml` | **200**, 29 adresses, les 10 articles dedans |
+| `/llms.txt` | **200** |
+| `/rss.xml`, `/feed.xml`, `/atom.xml`, `/blog/rss.xml` | **404**, tous |
+
+### Ce qu'un sitemap ne sait pas faire
+
+Un sitemap dit à un MOTEUR quelles pages existent. Il ne porte ni titre,
+ni texte, ni image, ni date lisible : **personne ne peut en tirer un
+post ou une épingle**. C'est pour ça qu'il ne remplace pas un flux, et
+que les deux coexistent partout.
+
+Un flux est la prise sur laquelle se branche ce qui automatise : Zapier,
+Make, n8n et Pabbly savent tous surveiller une adresse RSS et fabriquer
+quelque chose à chaque nouvel article.
+
+### LA DÉCISION QUI COMPTE : l'image du flux est l'ÉPINGLE
+
+`<enclosure>` porte l'épingle 1000 x 1500, pas la couverture 1200 x 675.
+C'est le champ que lisent les automatisations quand elles demandent
+"l'image de cet article", et le premier usage de ce flux est de publier
+sur Pinterest, où une image en 16/9 ne circule pas.
+
+**La couverture n'est pas perdue** : elle est DANS la description, donc
+un lecteur de flux et un aperçu email l'affichent normalement. Chacune à
+sa place.
+
+Sans épingle construite, l'article sort SANS `enclosure` plutôt qu'avec
+une couverture paysage : une automatisation qui recevrait le mauvais
+format publierait une épingle qui ne circule pas, et personne ne verrait
+jamais pourquoi.
+
+### Trois détails qui cassent un flux en silence
+
+1. **L'échappement.** Un seul `&` non échappé rend le flux ENTIER
+   illisible, et aucun lecteur ne dit quelle ligne l'a cassé.
+   L'esperluette s'échappe EN PREMIER, sinon on échappe celles qu'on
+   vient d'ajouter (même piège que `echapperMotifLike`).
+2. **La date est à MIDI**, jamais à minuit. `publieLe` est une date
+   courte sans heure : à minuit UTC, un fuseau à l'ouest fait afficher la
+   VEILLE, donc un article du 1er passe pour le 31 chez la moitié des
+   lecteurs.
+3. **`length="0"` dans l'`enclosure`** est toléré partout, donc personne
+   ne le remarque : on lit la vraie taille sur le disque. Le test le
+   refuse, c'est le genre de valeur qu'on écrit sans y penser.
+
+### L'adresse porte `.xml`, et le flux s'annonce
+
+`/blog/rss.xml` et pas `/blog/rss` : un flux se colle dans un outil qui
+attend un fichier, et beaucoup refusent une adresse sans extension.
+
+Il est déclaré sur le sommaire, les rubriques ET les articles
+(`alternates.types`) : un flux qui n'est annoncé nulle part n'existe que
+pour qui connaît déjà son adresse. Et dans `llms.txt`, parce que sa liste
+d'articles est figée au déploiement alors que le flux dit toujours l'état
+du jour.
+
+**AUCUNE base n'est touchée**, et c'est délibéré : le blog s'affiche sans
+Supabase (leçon du 30 août, où un `import` de `supabaseAdmin` faisait
+répondre 500 à toute la page d'article). Un flux qui tombe le jour d'une
+panne de base est un flux sur lequel on ne peut pas compter.
+
+Test : `tests/logic/flux-blog.test.mts`, vérifié en rejouant un mauvais
+type de contenu (il rougit).
+
+**Ce qui n'est PAS vérifié, donc pas promis :** que Systeme.io sache
+lire un flux RSS pour en faire un email. Je ne l'ai pas mesuré dans son
+compte, et cette page a déjà payé deux fois le fait d'écrire qu'un outil
+tiers savait faire quelque chose sans l'avoir regardé.
