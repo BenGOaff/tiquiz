@@ -105,6 +105,7 @@ serveur s'il servait vraiment le fichier.
 |---|---|
 | ce que le produit promet, quoi écrire en com | `PRODUCT_BRIEF.md` |
 | comment ça marche, écran par écran | `CAHIER_DES_CHARGES.md` |
+| **ce qui reste à faire, dit par Béné** | **`CHANTIERS.md`** |
 | ce qui reste à reprendre à Systeme.io | `ROADMAP_SORTIE_SIO.md` |
 | les bugs récurrents et les conventions | `CLAUDE_PITFALLS.md` |
 | sur quelle branche pousser | `CLAUDE_WORKFLOW.md` |
@@ -5668,7 +5669,9 @@ panne de base est un flux sur lequel on ne peut pas compter.
 Test : `tests/logic/flux-blog.test.mts`, vérifié en rejouant un mauvais
 type de contenu (il rougit).
 
-**Ce qui n'est PAS vérifié, donc pas promis :** que Systeme.io sache
-lire un flux RSS pour en faire un email. Je ne l'ai pas mesuré dans son
-compte, et cette page a déjà payé deux fois le fait d'écrire qu'un outil
-tiers savait faire quelque chose sans l'avoir regardé.
+**TRANCHÉ LE MÊME SOIR, et ça ferme la question :** Béné, "on s'en fout
+de vérifier dans systeme io c'est plutôt pour partager sur les réseaux
+etc". Le flux sert donc les automatisations de PARTAGE (Zapier, Make,
+n8n, Pabbly vers Pinterest et les réseaux), pas l'email. Ce qui n'est
+toujours pas vérifié, c'est si Systeme.io sait lire un RSS, et ce n'est
+plus une question à se poser.
