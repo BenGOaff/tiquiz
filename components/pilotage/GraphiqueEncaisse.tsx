@@ -104,7 +104,7 @@ export function GraphiqueEncaisse({ serie }: { serie: SerieEmpilee }) {
   const max = Math.max(1, ...serie.points.map((m) => m.totalCents));
   const iMax = serie.points.findIndex((m) => m.totalCents === max && m.totalCents > 0);
   // Sur beaucoup de colonnes, une largeur estimée suffit à décider
-  // combien de tags tiennent : on ne mesure pas le DOM, ce qui
+  // combien de libellés tiennent : on ne mesure pas le DOM, ce qui
   // ferait dépendre le rendu d'un cycle de mise en page.
   const visibles = new Set(etiquettesVisibles(serie.points.length, 900));
   const jours = serie.pas === "jour";

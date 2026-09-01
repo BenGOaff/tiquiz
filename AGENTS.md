@@ -1996,7 +1996,7 @@ Trois choses doivent suivre un paiement. Une était là, deux manquaient.
    bâties dessus : un client payé chez nous et non taggé sort de
    toutes ses séquences sans que rien ne le signale. `poserTagAchat`
    utilise SA clé, celle de ses Paramètres (`resolveApiKey`), et ne crée
-   JAMAIS un tag manquante : un tag créée par nous avec une
+   JAMAIS un tag manquant : un tag créé par nous avec une
    faute se retrouverait en double dans sa liste.
 
 Les deux sont best-effort et POSTÉRIEURES au plan : "il a payé le client,
@@ -4645,13 +4645,13 @@ montre donc la liste RÉELLE des valeurs possibles, calculée par
 "En route" donne `score-en_route`, avec un SOULIGNÉ. Deviner un tiret
 ferait créer une règle sur un tag qui n'arrive jamais.
 
-**Le nom du workflow proposé EST le nom de le tag.** Deux noms
+**Le nom du workflow proposé EST le nom du tag.** Deux noms
 différents pour la même chose obligent à faire la correspondance de tête
 à chaque fois qu'on relit sa liste de workflows.
 
 **Le module ne rend AUCUNE phrase**, seulement des données (le type
-d'étape, le tag exacte, le contexte) : l'interface existe en 7
-langues, et c'est l'écran qui écrit. Le nom de le tag est
+d'étape, le tag exact, le contexte) : l'interface existe en 7
+langues, et c'est l'écran qui écrit. Le nom du tag est
 CLIQUABLE-COPIABLE : c'est le seul endroit où une faute de frappe casse
 tout en silence.
 
@@ -4706,3 +4706,23 @@ faux dans l'autre sens.
 Ça couvre aussi le CODE : un fichier `etiquetteVente.ts` et une fonction
 `poserEtiquetteAcheteur` disaient le mot interdit. Renommés en
 `tagVente.ts` et `poserTagAcheteur`.
+
+**ET LA FAUTE QUE J'AI FAITE EN L'APPLIQUANT, qui vaut plus que la
+règle :** j'ai remplacé le mot partout d'un coup, sans relire les
+phrases. "Étiquette" est féminin, "tag" est masculin : le dépôt s'est
+retrouvé avec "un tag posée", "le tag exacte", "de le tag", "aucune tag
+manquante". Et là où le mot voulait dire LIBELLÉ, le texte est devenu
+faux : la largeur d'un axe de graphique "réserve la largeur des tags",
+l'orientation EXIF d'une photo devenait "un tag tourne-moi de 90
+degrés". Réparé le jour même, mais le geste était mauvais.
+
+**Un remplacement de mot n'est pas une opération mécanique.** Un mot
+porte un GENRE (donc des accords à refaire) et un SENS (donc des
+endroits où il ne s'applique pas). Le contrôle à faire après, et pas
+avant :
+
+```bash
+grep -rnE "(une|nouvelle|cette|aucune|toute) tags?|tags? (créée|posée|manquante|exacte|courte|ancienne|inconnue)|de le tag" . --exclude-dir=node_modules
+```
+
+Zéro ligne, sinon on a laissé une phrase cassée derrière soi.

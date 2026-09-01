@@ -7,7 +7,7 @@
 //
 // Pourquoi ce backfill défensif : la migration 20260603 a déjà
 // backfillé toutes les lignes existantes, MAIS toute insertion qui
-// passerait à côté du tag project_id (bug futur, route oubliée,
+// passerait à côté du champ project_id (bug futur, route oubliée,
 // import de données externes) crée une orpheline. À chaque appel,
 // on rattrape ces orphelines au passage. Idempotent et silencieux.
 

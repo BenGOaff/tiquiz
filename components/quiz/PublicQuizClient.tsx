@@ -1426,7 +1426,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
     [firstName, gender, scoreCtx],
   );
 
-  // Tag courte pour les résultats AUTRES que celui du visiteur
+  // Libellé court pour les résultats AUTRES que celui du visiteur
   // (cf. card "Répartition complète"). On ne veut PAS afficher la
   // phrase personnalisée complète sur un profil qui n'est pas le
   // visiteur — juste le nom du profil ("Solopreneur Invisible") sans
@@ -5054,7 +5054,7 @@ export default function PublicQuizClient({ quizId, previewData, previewBranding,
                       <li key={r.id ?? i} className="space-y-1.5">
                         <div className="flex items-center justify-between gap-3 text-sm">
                           {/* TOUS les résultats du breakdown affichent
-                              juste le tag courte du profil ("Solopreneur
+                              juste le libellé court du profil ("Solopreneur
                               Actif mais Dispersé") — sans prénom, sans
                               marqueurs inclusifs. La phrase personnalisée
                               complète ("Béné, tu es la …") reste sur le

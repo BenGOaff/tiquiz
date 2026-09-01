@@ -358,13 +358,13 @@ async function trouverTag(apiKey: string, nom: string): Promise<number | null> {
  * séquence email, alors que les emails restent chez Systeme.io.
  *
  * Rend `false` sans rien casser quand : aucune clé n'est connectée, le
- * palier n'a pas de tag connue, le contact n'a pas pu être créé,
+ * palier n'a pas de tag connu, le contact n'a pas pu être créé,
  * ou le tag n'existe pas.
  *
- * **On ne CRÉE jamais le tag manquante**, et c'est délibéré : une
- * tag créée par nous avec une faute de frappe se retrouverait en
+ * **On ne CRÉE jamais le tag manquant**, et c'est délibéré : un
+ * tag créé par nous avec une faute de frappe se retrouverait en
  * double dans sa liste, et ses automatisations continueraient de pointer
- * l'ancienne. Mieux vaut ne rien poser et le dire.
+ * l'ancien. Mieux vaut ne rien poser et le dire.
  */
 /**
  * -- ELLE SERT AUSSI A L'INSCRIPTION GRATUITE (Bene, 25 aout 2026) -----
@@ -404,7 +404,7 @@ export async function poserTagPlan(
  * PANNE DU 31 AOÛT 2026 : le formulaire de la newsletter répondait 502
  * et Béné n'avait aucun moyen de savoir POURQUOI. Cette fonction
  * écrasait CINQ causes distinctes en un seul `false` : pas de compte
- * admin, pas de clé, contact impossible, tag inconnue, pose
+ * admin, pas de clé, contact impossible, tag inconnu, pose
  * refusée. Un booléen ne dit pas où chercher.
  *
  * C'est le drame du 19 août ("trois causes, un seul message : le 404

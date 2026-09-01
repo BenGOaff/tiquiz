@@ -157,11 +157,11 @@ describe("Les règles qui ne se voient pas dans un écran", () => {
   });
 
   test("ON NE CRÉE JAMAIS UNE ÉTIQUETTE MANQUANTE", () => {
-    // Règle du 22 août, inchangée : un tag créée par nous avec
+    // Règle du 22 août, inchangée : un tag créé par nous avec
     // une faute se retrouverait en double dans sa liste, et ses
     // automatisations continueraient de pointer l'ancienne.
     const src = lire("lib/sio/appliquerTag.ts");
-    assert.match(src, /On ne CRÉE jamais le tag manquante/);
+    assert.match(src, /On ne CRÉE jamais le tag manquant/);
     assert.ok(
       !/sioUserRequest[^\n]*"\/tags"[^\n]*\n?[^\n]*method: "POST"/.test(src),
       "aucune création de tag",

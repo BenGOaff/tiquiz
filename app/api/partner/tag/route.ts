@@ -21,11 +21,11 @@
 // deux implémentations qui divergent (ce dépôt l'a payé quatre fois) et
 // une deuxième clé à maintenir.
 //
-// -- L'ÉTIQUETTE N'EST JAMAIS CRÉÉE ------------------------------------
+// -- LE TAG N'EST JAMAIS CRÉÉ ---------------------------------------
 //
-// `poserTagParNomDetaille` refuse un tag inconnue au lieu de la
+// `poserTagParNomDetaille` refuse un tag inconnu au lieu de le
 // créer. C'est le garde-fou qui rend cette porte sûre : même si le nom
-// envoyé était fautif, on ne peut pas polluer sa liste avec une
+// envoyé était fautif, on ne peut pas polluer sa liste avec un
 // tag en double. On répond `tag_inconnu`, et ça se lit.
 
 import { NextRequest, NextResponse } from "next/server";

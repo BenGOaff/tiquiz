@@ -84,14 +84,14 @@ toujours, sans erreur.
    n'existe pas dans ses séquences.
 2. **Les autres moments de vie.** Résiliation, remboursement, montée de
    palier : rien n'est taggé. Une séquence "ton abonnement se termine"
-   ne peut pas exister si le tag n'est jamais posée.
-   *Décision Béné du 25 août : sur une montée de palier on AJOUTE la
-   nouvelle tag sans retirer l'ancienne.* C'est déjà le
+   ne peut pas exister si le tag n'est jamais posé.
+   *Décision Béné du 25 août : sur une montée de palier on AJOUTE le
+   nouveau tag sans retirer l'ancien.* C'est déjà le
    comportement, et le contrôle d'écart le tolère explicitement.
 
-**Ne jamais défaire :** on ne CRÉE pas de tag manquante (une
-tag créée par nous avec une faute se retrouverait en double, et ses
-automatisations continueraient de pointer l'ancienne), et
+**Ne jamais défaire :** on ne CRÉE pas de tag manquant (un
+tag créé par nous avec une faute se retrouverait en double, et ses
+automatisations continueraient de pointer l'ancien), et
 `assurerContact` ne s'appelle QUE depuis un chemin d'achat (créer un
 contact fait entrer quelqu'un dans sa liste).
 
