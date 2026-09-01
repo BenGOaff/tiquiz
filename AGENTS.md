@@ -4297,3 +4297,110 @@ alors que le compte relevé ce jour là vérifie `send.tipote.com` et pas
 `tipote.com`. On ne l'a PAS changé : quelle adresse Tipote doit employer
 est une décision de Béné, pas une déduction. Le contrôle est là pour
 qu'elle la prenne en connaissance de cause.
+
+## Le brouillon d'une question ne suit PAS le visiteur (retour Adeline, 1er septembre 2026)
+
+"On peut revenir en arrière, ce qui est un plus, mais lorsqu'on le fait
+ça efface les cases suivantes déjà remplies."
+
+**RIEN N'ÉTAIT EFFACÉ EN BASE**, et c'est ce qui rendait le retour
+difficile à croire : `answers` n'est jamais tronqué, aucune ligne de
+code ne coupe le tableau. Ce qui suivait le visiteur, c'était le
+BROUILLON, c'est à dire l'état de SAISIE de la question affichée.
+
+Il vivait dans QUATRE variables globales au composant (`freeTextDraft`,
+`multiOptionsDraft`, `autreTexte`, `autreChoisi`), jamais remises à la
+question courante. Cinq symptômes, un seul défaut :
+
+| Ce qu'elle a vu | Ce qui se passait |
+|---|---|
+| "ça efface les cases suivantes déjà remplies" | le texte tapé en Q3 arrivait pré-rempli en Q4 ; valider ÉCRASAIT la réponse déjà donnée |
+| des cases cochées sans les avoir cochées | la sélection d'un multi-choix restait d'une question à l'autre |
+| revenir puis cliquer décoche tout | le premier clic repartait d'un brouillon VIDE au lieu de la sélection affichée |
+| impossible de tout décocher | l'affichage retombait sur la réponse enregistrée dès que le brouillon était vide |
+| le texte du "Autre" invisible au retour | l'option était surlignée, le champ restait FERMÉ |
+
+**LA CAUSE COMMUNE : la question affichée et l'état de saisie n'étaient
+reliés par rien.** La remise à zéro était recopiée dans les
+gestionnaires de navigation, et il en manquait : la flèche retour vidait
+le texte libre, le swipe AVANT non, et les cases cochées n'étaient
+vidées nulle part.
+
+**Et un commentaire l'annonçait déjà**, posé sur `multiOptionsDraft` :
+"Reset whenever currentQ changes (handled in commitAnswer + an effect
+below)". **Cet effet n'a jamais existé.** Quatrième fois que ce dépôt
+paie une règle écrite en commentaire et démentie par le code (le
+`w-full h-auto` des images de réponse, l'`ADD_ATTR: ["target"]` des
+liens légaux, le "Next décode déjà le segment" du pilotage).
+
+**Règle : `lib/quiz/brouillonReponse.ts` décide, et UN SEUL effet
+applique.** `brouillonPourQuestion(reponse, autreIdx)` rend les quatre
+champs de saisie depuis la réponse de la QUESTION COURANTE ; l'effet
+tourne sur `[currentQ, step, quiz, resumed]`. Plus aucune remise à zéro
+dans un gestionnaire de navigation : c'est ce qui en oubliait un.
+
+**Et le brouillon est le SEUL à décider de l'affichage.** Les deux
+replis du genre `brouillon.length > 0 ? brouillon : réponse
+enregistrée` sont SUPPRIMÉS, pas assouplis : **un brouillon vide est une
+intention, pas une absence.** C'est ce repli qui rendait "tout décocher"
+et "effacer mon texte" impossibles.
+
+`answers` est volontairement HORS des dépendances de l'effet : valider
+une réponse le modifie, et relancer l'effet là remettrait le brouillon
+de la question qu'on vient de quitter. `resumed` y est, pour le seul cas
+où la reprise d'un brouillon local ne change pas l'index.
+
+**Le filet de captures ne pouvait rien voir** : il photographie un écran
+au repos, et ce bug ne vit que dans l'enchaînement des gestes. Le
+garde-fou est `tests/logic/brouillon-question.test.mts`, vérifié en
+rejouant la version d'avant (il rougit).
+
+Le module quiz de Tipote est jumeau : la correction y vit aussi.
+
+## Le menu sous une réponse dit le NOM du profil (retour Christian, 1er septembre 2026)
+
+"Les différents résultats n'apparaissent pas sous les réponses. Seuls
+apparaissent « Résultat 1, Résultat 2 » etc."
+
+Il avait raison, et le menu ne POUVAIT rien afficher d'autre : les deux
+sélecteurs posés sous chaque réponse de l'éditeur jetaient le profil et
+n'en gardaient que le rang.
+
+```
+editResults.map((_, ri) => <option>…Résultat {ri + 1}</option>)
+                  ^^^ le profil, ignoré
+```
+
+Aucun titre, si bien écrit soit-il, ne pouvait apparaître. Sur un quiz à
+six profils, "Résultat 4" ne dit rien : la créatrice branche ses
+réponses au hasard, ou remonte vérifier l'ordre à chaque clic. C'est le
+geste le plus répété de tout l'éditeur.
+
+**LA RÈGLE EXISTAIT DÉJÀ, recopiée à la main quatre fois dans le MÊME
+fichier** (`stripHtml(extractResultLabel(cleanPlaceholdersForLabel(t)))`
+plus un repli). Deux endroits ne l'ont jamais eue. Une règle recopiée
+finit toujours par en oublier un : c'est le `mx-auto` du sous-titre, les
+images de réponse, les réseaux de partage, la sixième fois.
+
+**Règle : `lib/quiz/resultLabel.ts`, `resultChoiceLabel(titre,
+secours)`, et personne ne recompose.** Les trois étapes comptent et
+l'ordre aussi : placeholders interpolés à VIDE (sinon le menu affiche
+"Bonjour {name}, tu es le..."), puis `extractResultLabel` (retire le
+", tu es le·la" et les marques inclusives), puis `stripHtml` (un
+`<option>` ne rend pas de HTML, il montrerait les balises).
+
+**`secours` est OBLIGATOIRE.** Un profil encore sans titre doit rester
+choisissable : une entrée vide dans un menu est pire que "Résultat 3".
+
+Ici les quatre autres endroits passaient déjà par la clé traduite
+`quizEditor.previewResult` ; côté Tipote, trois replis étaient écrits en
+français DANS LE CODE, et une créatrice espagnole lisait "Résultat 4".
+
+**Exception assumée :** `titleForVisual` compose les deux mêmes
+fonctions pour le titre d'une IMAGE générée, sans repli et avec sa
+propre capitalisation. Ce n'est pas un libellé d'interface, et le
+confondre casserait la génération d'images. Le test vise la composition
+SUIVIE D'UN REPLI, pas la composition elle-même.
+
+Test : `tests/logic/nom-du-profil.test.mts`. Le module quiz de Tipote est
+jumeau : la correction y vit aussi.

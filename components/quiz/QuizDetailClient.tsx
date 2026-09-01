@@ -56,7 +56,8 @@ import { useShareDomain } from "@/hooks/useShareDomain";
 import { ShareDomainPicker } from "@/components/share/ShareDomainPicker";
 import { QrCodeCard } from "@/components/share/QrCodeCard";
 import { QuizVarInserter, insertAtCursor, type QuizVarFlags } from "@/components/quiz/QuizVarInserter";
-import { interpolateText, extractResultLabel } from "@/lib/quizPersonalization";
+import { interpolateText } from "@/lib/quizPersonalization";
+import { resultChoiceLabel } from "@/lib/quiz/resultLabel";
 import { type TieConflict } from "@/lib/quizTieAnalysis";
 import { tieBreakMode } from "@/lib/quiz/profileWinner";
 import { analyzeOptionSupply, analyzeProfileGaps, analyzeResultCoverage, analyzeResultTies, attributionMode } from "@/lib/quizCoherence";
@@ -3468,7 +3469,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           key={`r-${i}`}
                           id={`r-${i}`}
                           index={i}
-                          label={stripHtml(extractResultLabel(cleanPlaceholdersForLabel(r.title))) || t("sidebarEmptyResult")}
+                          label={resultChoiceLabel(r.title, t("sidebarEmptyResult"))}
                           onClick={() => scrollToSection(`r-${i}`)}
                           onRemove={() => removeResult(i)}
                           canDelete={editResults.length > 1}
@@ -5065,7 +5066,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                                       />
                                       <span className="text-xs" style={{ color: `${pc}99` }}>{t("previewPointsFor")}</span>
                                       <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
-                                        {editResults.map((_, ri) => <option key={ri} value={ri}>{t("previewResult", { n: ri + 1 })}</option>)}
+                                        {/* Le NOM du profil, jamais son rang (retour Christian, 1er sept
+                                            2026) : ce menu jetait le profil et n'affichait
+                                            que "Résultat 1, Résultat 2". */}
+                                        {editResults.map((r2, ri) => <option key={ri} value={ri}>{resultChoiceLabel(r2?.title, t("previewResult", { n: ri + 1 }))}</option>)}
                                       </select>
                                     </div>
                                   )}
@@ -5288,7 +5292,10 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                                   />
                                   <span className="text-xs" style={{ color: `${pc}99` }}>{t("previewPointsFor")}</span>
                                   <select value={opt.result_index} onChange={(e) => updateOptResult(qi, oi, Number(e.target.value))} className="text-xs border rounded px-1.5 py-0.5 bg-background font-medium cursor-pointer" style={{ color: pc }}>
-                                    {editResults.map((_, ri) => <option key={ri} value={ri}>{t("previewResult", { n: ri + 1 })}</option>)}
+                                    {/* Le NOM du profil, jamais son rang (retour Christian, 1er sept
+                                            2026) : ce menu jetait le profil et n'affichait
+                                            que "Résultat 1, Résultat 2". */}
+                                        {editResults.map((r2, ri) => <option key={ri} value={ri}>{resultChoiceLabel(r2?.title, t("previewResult", { n: ri + 1 }))}</option>)}
                                   </select>
                                 </div>
                               )}
@@ -5669,7 +5676,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                     <ul className="mt-2.5 space-y-1.5 text-xs">
                       {tieAnalysis.conflicts.map((c: TieConflict, i: number) => {
                         const titles = c.resultIndices
-                          .map((ri) => stripHtml(extractResultLabel(cleanPlaceholdersForLabel(editResults[ri]?.title))) || t("previewResult", { n: ri + 1 }))
+                          .map((ri) => resultChoiceLabel(editResults[ri]?.title, t("previewResult", { n: ri + 1 })))
                           .join(" ↔ ");
                         const path = c.answers
                           .map((oi, qi) => {
@@ -5770,7 +5777,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                           return <li key={i}>{t("trancheGapItem", { from: issue.from, to: issue.to })}</li>;
                         }
                         const nameOf = (ri2: number) =>
-                          stripHtml(extractResultLabel(cleanPlaceholdersForLabel(editResults[ri2]?.title))) || t("previewResult", { n: ri2 + 1 });
+                          resultChoiceLabel(editResults[ri2]?.title, t("previewResult", { n: ri2 + 1 }));
                         return (
                           <li key={i}>
                             {t("trancheOverlapItem", { a: nameOf(issue.a), b: nameOf(issue.b), from: issue.from, to: issue.to })}
@@ -6237,7 +6244,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                             markdown) puis extractResultLabel (vire le ", tu
                             es le·la" + les `·xx` inclusifs) pour ne garder
                             que le label court "Solopreneur Invisible". */}
-                        <p className="text-[11px] text-muted-foreground mb-2">{t("previewResultTagHint", { title: stripHtml(extractResultLabel(cleanPlaceholdersForLabel(r.title))) || t("previewResult", { n: ri + 1 }) })}</p>
+                        <p className="text-[11px] text-muted-foreground mb-2">{t("previewResultTagHint", { title: resultChoiceLabel(r.title, t("previewResult", { n: ri + 1 })) })}</p>
                         {/* Multi-tags par profil (Gwenn 12 juillet 2026).
                             On ecrit sio_tag_names ET sio_tag_name (1er
                             element) pour la compat descendante. */}
@@ -6297,7 +6304,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
                 <DialogDescription>
                   {rebalanceTarget !== null
                     ? t("rebalanceDialogBody", {
-                        target: cleanPlaceholdersForLabel(editResults[rebalanceTarget]?.title).replace(/<[^>]*>/g, "").trim() || t("previewResult", { n: rebalanceTarget + 1 }),
+                        target: resultChoiceLabel(editResults[rebalanceTarget]?.title, t("previewResult", { n: rebalanceTarget + 1 })),
                       })
                     : ""}
                 </DialogDescription>
