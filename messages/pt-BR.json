@@ -3105,7 +3105,8 @@
     "invoicesStripeNote": "Os pagamentos com cartão são faturados pela Stripe: essas notas são baixadas no botão de gestão da assinatura acima."
   },
   "partageQuiz": {
-    "title": "Compartilhar este quiz",
+    "title": "Dar uma cópia deste quiz",
+    "notPublicLink": "Este NÃO é o link para responder ao quiz: esse fica na aba Compartilhar do editor. Este link instala uma cópia do quiz na conta de outra pessoa.",
     "intro": "Um link, um clique, e o quiz fica instalado na conta da pessoa, com os textos, as imagens e os pontos.",
     "whatTravels": "O conteúdo viaja: títulos, perguntas, respostas, pontos, perfis, imagens, cores e layout. O que identifica você fica com você: suas tags Systeme.io, seus pixels de rastreamento e os endereços dos seus botões. A pessoa vê isso escrito na instalação, e o quiz chega como rascunho.",
     "labelField": "Para quem? (opcional)",
@@ -3126,6 +3127,6 @@
     "loadError": "Não foi possível ler os links de compartilhamento.",
     "createError": "Não foi possível criar o link.",
     "updateError": "Não foi possível salvar a alteração.",
-    "button": "Compartilhar este quiz"
+    "button": "Dar uma cópia do quiz"
   }
 }
