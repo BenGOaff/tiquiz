@@ -44,7 +44,19 @@ export default function BlogIndex() {
   const articles = listerArticles();
   const [une, ...reste] = articles;
   const derniers = reste.slice(0, 4);
-  const grille = reste.slice(0, 6);
+  // LA GRILLE PORTE TOUT LE BLOG, PLUS SEULEMENT SIX ARTICLES.
+  //
+  // 1er septembre 2026 : `reste.slice(0, 6)` plafonnait l'accueil à sept
+  // articles (celui en une, plus six), alors que le sitemap en annonçait
+  // onze. Les quatre plus anciens n'étaient donc atteignables que par
+  // leur rubrique : Google les connaissait, un lecteur arrivé sur /blog
+  // ne pouvait pas les trouver, et aucun lien interne ne leur passait de
+  // poids depuis la page la plus visitée du blog.
+  //
+  // Pas de pagination : elle enfermerait à nouveau les anciens articles
+  // derrière un clic. Le jour où la grille devient trop longue, ce sera
+  // un vrai découpage par rubrique, pas un « page 2 ».
+  const grille = reste;
   const rubriqueUne = une ? rubriqueDe(une.slug) : null;
 
   return (

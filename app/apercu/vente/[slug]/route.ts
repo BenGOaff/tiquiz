@@ -28,7 +28,7 @@ import path from "node:path";
 import { renderSalesPage, type SalesPageMeta } from "@/lib/sales/servePage";
 import { isSalesOpen } from "@/lib/sales/previewGate";
 import { isPublicSalesHost, publicSalesCanonical } from "@/lib/sales/salesHosts";
-import { SALES_CHECKOUT_TARGETS } from "@/lib/sales/salesPageLinks";
+import { SALES_CHECKOUT_TARGETS, SALES_SITE_LINKS } from "@/lib/sales/salesPageLinks";
 import { OWNER_CATALOG } from "@/lib/checkout/catalog";
 
 export const runtime = "nodejs";
@@ -49,7 +49,12 @@ const PAGES: Record<string, Omit<SalesPageMeta, "slug">> = {
     // L'aperçu est en `noindex`, donc ça ne coûtait rien à Google, mais
     // plus rien ne doit nommer l'ancienne page comme la vraie.
     canonical: "https://tiquiz.fr/",
-    title: "Tiquiz : le générateur de quiz qui transforme tes visiteurs en leads",
+    // LE TITRE GARDE « Systeme.io », ET C'EST DÉLIBÉRÉ (1er septembre
+    // 2026). La page servait DEUX titres, et celui de la capture
+    // portait ce mot clé. En corrigeant le doublon, c'est ce titre ci
+    // qui gagne : sans « Systeme.io », on reprenait la main sur
+    // l'affichage en perdant la requête qui vend.
+    title: "Tiquiz : le générateur de quiz connecté à Systeme.io",
     description:
       "Crée un quiz personnalisé en quelques minutes, capture des emails qualifiés et envoie à chaque visiteur le résultat qui lui parle. Sans code, en 7 langues.",
     locale: "fr_FR",
@@ -176,6 +181,11 @@ export async function GET(
       // commande ne sert jamais. Corrigé AVANT de brancher `tiquiz.fr`,
       // parce que sur l'Atelier on l'a découvert en direct.
       checkoutTargets: SALES_CHECKOUT_TARGETS[slug] ?? null,
+      // LES LIENS DE SITE, SUR LE DOMAINE PUBLIC SEULEMENT.
+      //
+      // Derrière la clé d'aperçu, la page est un chantier : son pied de
+      // page doit continuer de désigner le site en ligne.
+      siteLinks: publique ? (SALES_SITE_LINKS[slug] ?? null) : null,
       onRewrite: (info) => {
         if (info.rewritten.length === 0) {
           console.error(
