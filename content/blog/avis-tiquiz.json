@@ -28,7 +28,7 @@
     },
     {
       "type": "html",
-      "html": "<p><strong>Tiquiz</strong> crée un <strong>quiz</strong>, récupère les <strong>leads</strong> et les range dans <strong>Systeme io</strong> avec le bon <strong>tag</strong>, <strong>sans Zapier ni Make</strong>. </p><p>C'est précisément ce que Systeme io ne fait pas tout seul.</p><p><br>Je développe Tiquiz. </p><p>Donc mon avis, tu peux t'en méfier. </p><p>Le mieux, c'est de regarder ceux qui l'utilisent sans avoir de raison de le vendre. </p><p>On commence par Christelle.</p>"
+      "html": "<p><strong>Tiquiz</strong> crée un <strong>quiz</strong>, récupère les <strong>leads</strong> et les range dans <strong>Systeme io</strong> avec le bon <strong>tag</strong>, <strong>sans Zapier ni Make</strong>. </p><p>C'est précisément ce que Systeme io ne fait pas tout seul.</p><p>Je développe Tiquiz. </p><p>Donc mon avis, tu peux t'en méfier. </p><p>Le mieux, c'est de regarder ceux qui l'utilisent sans avoir de raison de le vendre. </p><p>On commence par Christelle.</p>"
     },
     {
       "type": "titre",
@@ -61,7 +61,7 @@
     {
       "type": "image",
       "src": "/blog/img/tiquiz-3-formats-1.webp",
-      "alt": "tiquiz avis"
+      "alt": "Les trois formats de Tiquiz : le quiz qui qualifie et capte des leads, le sondage qui recueille les avis, et le pop quiz qui s'affiche pendant une vidéo"
     },
     {
       "type": "html",
@@ -70,7 +70,7 @@
     {
       "type": "image",
       "src": "/blog/img/tiquiz-fonctionnement-systeme-io-1.webp",
-      "alt": "tiquiz c'est quoi"
+      "alt": "Du quiz à ta liste en quatre étapes : on répond, le profil devient un tag, le contact arrive tagué dans Systeme.io, le bon email part tout seul. Sans Zapier ni code"
     },
     {
       "type": "titre",
@@ -80,12 +80,12 @@
     },
     {
       "type": "html",
-      "html": "<p><strong>Prise en main rapide.</strong></p><p>Un premier <strong>quiz</strong> en ligne en moins d'une heure, même sans être à l'aise avec la technique.</p><p><br><br></p><p><strong>L'intégration Systeme io est fiable.</strong></p><p><strong>tags</strong> arrivent, aucun contact perdu, aucun délai. C'est le nerf de l'outil, et c'est solide.</p><p><br><br></p><p><strong>L'IA rédige ton quiz.</strong></p><p>Tu donnes ton objectif et ta cible, elle propose une première version, tu ajustes en cliquant. Des heures de rédaction en moins.</p><p><br><br></p><p><strong>Moins d'outils dans ta chaîne.</strong></p><p>Moins de réglages, moins de pannes possibles, une mise en ligne directe.</p><p><br><br></p><p>Le format joue aussi : un <strong>quiz</strong> convertit en général bien mieux qu'un formulaire, comme le montrent les <a href=\"https://www.tryinteract.com/blog/quiz-conversion-rate-report/\">données de conversion d'Interact</a>. </p><p>Un quiz, c'est un <strong>lead magnet</strong> vivant, à l'inverse du PDF qu'on télécharge et qu'on oublie (<a href=\"https://systeme.io/fr/blog/exemples-lead-magnets?sa=sa0007878317200141bbe3de2b6644176621db2c6580\">d'autres idées de lead magnets</a>).</p>"
+      "html": "<p><strong>Prise en main rapide.</strong></p><p>Un premier <strong>quiz</strong> en ligne en moins d'une heure, même sans être à l'aise avec la technique.</p><p><strong>L'intégration Systeme io est fiable.</strong></p><p><strong>tags</strong> arrivent, aucun contact perdu, aucun délai. C'est le nerf de l'outil, et c'est solide.</p><p><strong>L'IA rédige ton quiz.</strong></p><p>Tu donnes ton objectif et ta cible, elle propose une première version, tu ajustes en cliquant. Des heures de rédaction en moins.</p><p><strong>Moins d'outils dans ta chaîne.</strong></p><p>Moins de réglages, moins de pannes possibles, une mise en ligne directe.</p><p>Le format joue aussi : un <strong>quiz</strong> convertit en général bien mieux qu'un formulaire, comme le montrent les <a href=\"https://www.tryinteract.com/blog/quiz-conversion-rate-report/\">données de conversion d'Interact</a>. </p><p>Un quiz, c'est un <strong>lead magnet</strong> vivant, à l'inverse du PDF qu'on télécharge et qu'on oublie (<a href=\"https://systeme.io/fr/blog/exemples-lead-magnets?sa=sa0007878317200141bbe3de2b6644176621db2c6580\">d'autres idées de lead magnets</a>).</p>"
     },
     {
       "type": "image",
       "src": "/blog/img/tiquiz-quiz-vs-formulaire-1.webp",
-      "alt": "quiz vs formulaire"
+      "alt": "Formulaire classique : intrusif, peu rempli, peu d'engagement. Quiz interactif : engage dès la première question, récupère 2 à 3 fois plus d'emails et qualifie le contact"
     },
     {
       "type": "titre",
@@ -110,12 +110,12 @@
     },
     {
       "type": "html",
-      "html": "<p>Deux choses manquent aujourd'hui.</p><p><strong>La personnalisation visuelle.</strong></p><p>Couleurs, logo, police : tu as la main. </p><p>Un rendu sur-mesure au pixel pour une charte très pointue : pas encore.</p><p><br><strong>La logique conditionnelle poussée.</strong></p><p>Des parcours à multiples branches selon chaque réponse, ce n'est pas le terrain de Tiquiz pour l'instant.</p><p><br>L'outil évolue vite, donc ces deux points peuvent bouger dans les prochains mois.</p>"
+      "html": "<p>Deux choses manquent aujourd'hui.</p><p><strong>La personnalisation visuelle.</strong></p><p>Couleurs, logo, police : tu as la main. </p><p>Un rendu sur-mesure au pixel pour une charte très pointue : pas encore.</p><p><strong>La logique conditionnelle poussée.</strong></p><p>Des parcours à multiples branches selon chaque réponse, ce n'est pas le terrain de Tiquiz pour l'instant.</p><p>L'outil évolue vite, donc ces deux points peuvent bouger dans les prochains mois.</p>"
     },
     {
       "type": "image",
       "src": "/blog/img/tiquiz-points-forts-limites-1.webp",
-      "alt": "tiquiz limites"
+      "alt": "Ce qui marche : premier quiz en moins d'une heure, intégration Systeme.io fiable, l'IA rédige. Les limites : personnalisation visuelle basique, pas de logique conditionnelle poussée"
     },
     {
       "type": "titre",
@@ -125,7 +125,7 @@
     },
     {
       "type": "html",
-      "html": "<p>Commence par le <strong>gratuit</strong>.</p><p><br>La <strong>version gratuite</strong> te laisse créer ton premier <strong>quiz</strong>, le connecter à <strong>Systeme io</strong> et le publier. <strong>Sans carte bleue, sans limite de durée.</strong></p><p>Le <strong>payant</strong> lève les plafonds : plus de réponses, plus de projets, ton domaine personnalisé, et la mention Tiquiz qui disparaît (rendu plus pro).</p><p>Le bon ordre : tu testes en gratuit, tu vérifies que ça te ramène des leads, tu passes au payant ensuite.</p>"
+      "html": "<p>Commence par le <strong>gratuit</strong>.</p><p>La <strong>version gratuite</strong> te laisse créer ton premier <strong>quiz</strong>, le connecter à <strong>Systeme io</strong> et le publier. <strong>Sans carte bleue, sans limite de durée.</strong></p><p>Le <strong>payant</strong> lève les plafonds : plus de réponses, plus de projets, ton domaine personnalisé, et la mention Tiquiz qui disparaît (rendu plus pro).</p><p>Le bon ordre : tu testes en gratuit, tu vérifies que ça te ramène des leads, tu passes au payant ensuite.</p>"
     },
     {
       "type": "image",
@@ -140,7 +140,7 @@
     },
     {
       "type": "html",
-      "html": "<p>Pour toi si tu es coach, thérapeute, formateur ou consultant sur <strong>Systeme io</strong>, et que tu veux capter et <strong>segmenter</strong> tes contacts sans y passer tes journées.</p><p><br>Moins pour toi si tu as des besoins très techniques, une charte à respecter au millimètre, ou des parcours conditionnels complexes.</p><p>Pour l'immense majorité des solopreneurs sur Systeme io, il fait le travail.</p>"
+      "html": "<p>Pour toi si tu es coach, thérapeute, formateur ou consultant sur <strong>Systeme io</strong>, et que tu veux capter et <strong>segmenter</strong> tes contacts sans y passer tes journées.</p><p>Moins pour toi si tu as des besoins très techniques, une charte à respecter au millimètre, ou des parcours conditionnels complexes.</p><p>Pour l'immense majorité des solopreneurs sur Systeme io, il fait le travail.</p>"
     },
     {
       "type": "titre",
@@ -150,7 +150,7 @@
     },
     {
       "type": "html",
-      "html": "<p>Tiquiz crée le <strong>quiz</strong>. </p><p>C'est déjà beaucoup. </p><p>Mais un quiz en ligne ne remplit pas ta liste par magie.</p><p><br><br></p><p>Amener du trafic dessus, trier tes <strong>leads</strong>, les relancer, vendre : c'est une méthode, pas une fonctionnalité.</p><p><br><br></p><p>C'est pour ça que j'ai monté <a href=\"https://atelierduquiz.fr/\"><strong>l'Atelier du Quiz</strong></a> : 7 jours pour installer tout le système autour de ton quiz. </p><p>Le plan de trafic gratuit, les séquences email prêtes à coller, un coach dispo jour et nuit, et l'accès Tiquiz gratuit inclus.</p><p><br><br></p><p>Tiquiz te donne l'outil. L'Atelier te donne le système qui le rend rentable.</p>"
+      "html": "<p>Tiquiz crée le <strong>quiz</strong>. </p><p>C'est déjà beaucoup. </p><p>Mais un quiz en ligne ne remplit pas ta liste par magie.</p><p>Amener du trafic dessus, trier tes <strong>leads</strong>, les relancer, vendre : c'est une méthode, pas une fonctionnalité.</p><p>C'est pour ça que j'ai monté <a href=\"https://atelierduquiz.fr/\"><strong>l'Atelier du Quiz</strong></a> : 7 jours pour installer tout le système autour de ton quiz. </p><p>Le plan de trafic gratuit, les séquences email prêtes à coller, un coach dispo jour et nuit, et l'accès Tiquiz gratuit inclus.</p><p>Tiquiz te donne l'outil. L'Atelier te donne le système qui le rend rentable.</p>"
     },
     {
       "type": "image",
@@ -165,7 +165,7 @@
     },
     {
       "type": "html",
-      "html": "<p>Si tu es sur <strong>Systeme io</strong> et que tu veux du simple qui fonctionne, Tiquiz coche les cases.</p><p><br><br></p><p>Il crée tes <strong>quiz</strong>, sondages et pop quiz vidéo, capte tes <strong>leads</strong> et les range dans Systeme io avec le bon <strong>tag</strong>. </p><p>Son vrai atout, c'est la simplicité : peu de réglages, une mise en ligne rapide, et un <strong>gratuit</strong> qui te laisse tout essayer avant de payer.</p><p><br><br></p><p>👉 <a href=\"https://tiquiz.fr/\">Je teste Tiquiz gratuitement</a></p><p><br><br></p><p>Pour le système complet autour, pas seulement l'outil : 👉 <a href=\"https://atelierduquiz.fr/\">je rejoins l'Atelier du Quiz</a>.</p>"
+      "html": "<p>Si tu es sur <strong>Systeme io</strong> et que tu veux du simple qui fonctionne, Tiquiz coche les cases.</p><p>Il crée tes <strong>quiz</strong>, sondages et pop quiz vidéo, capte tes <strong>leads</strong> et les range dans Systeme io avec le bon <strong>tag</strong>. </p><p>Son vrai atout, c'est la simplicité : peu de réglages, une mise en ligne rapide, et un <strong>gratuit</strong> qui te laisse tout essayer avant de payer.</p><p>👉 <a href=\"https://tiquiz.fr/\">Je teste Tiquiz gratuitement</a></p><p>Pour le système complet autour, pas seulement l'outil : 👉 <a href=\"https://atelierduquiz.fr/\">je rejoins l'Atelier du Quiz</a>.</p>"
     },
     {
       "type": "titre",

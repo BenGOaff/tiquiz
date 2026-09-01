@@ -14,7 +14,7 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "L’email n’est pas mort. Au contraire.",
       "id": "l-email-n-est-pas-mort-au-contraire"
     },
@@ -24,12 +24,12 @@
     },
     {
       "type": "image",
-      "src": "/blog/img/svg-1-email-vs-social-fr.svg",
+      "src": "/blog/img/schema-email-vs-social.webp",
       "alt": "Email contre réseaux sociaux : 36 € de retour pour 1 € investi contre 5 à 7 €, une audience qui t'appartient à 100 % et aucun algorithme entre toi et elle"
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "Ce que tu rates sans stratégie de capture d’emails",
       "id": "ce-que-tu-rates-sans-strategie-de-capture-d-emails"
     },
@@ -39,12 +39,12 @@
     },
     {
       "type": "image",
-      "src": "/blog/img/svg-2-visiteur-evapore-fr.svg",
-      "alt": "parametres tiquiz"
+      "src": "/blog/img/schema-visiteur-evapore.webp",
+      "alt": "Sur 1 000 visiteurs, un opt-in classique en capture 30 et laisse partir les 970 autres ; le même trafic avec un quiz donne 350 leads, soit 35 % de conversion"
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "Les vrais avantages d’une stratégie de capture solide",
       "id": "les-vrais-avantages-d-une-strategie-de-capture-solide"
     },
@@ -54,7 +54,7 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "Comment capturer efficacement les emails (la vraie méthode)",
       "id": "comment-capturer-efficacement-les-emails-la-vraie-methode"
     },
@@ -76,18 +76,18 @@
     },
     {
       "type": "image",
-      "src": "/blog/img/svg-3-optin-vs-quiz-fr.svg",
-      "alt": "titre quiz tiquiz"
+      "src": "/blog/img/schema-optin-vs-quiz.webp",
+      "alt": "Opt-in classique avec ebook : 2 à 3 % de visiteurs capturés et 3 secondes d'engagement. Quiz interactif : 30 à 40 % capturés, 4 minutes d'engagement et segmentation en 4 profils"
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "Études de cas : des marques qui cartonnent grâce aux quiz",
       "id": "etudes-de-cas-des-marques-qui-cartonnent-grace-aux-quiz"
     },
     {
       "type": "html",
-      "html": "<p>Quelques exemples concrets pour montrer que la méthode marche.</p><p><br>Si ça marche pour eux... pourquoi pas pour toi ?</p>"
+      "html": "<p>Quelques exemples concrets pour montrer que la méthode marche.</p><p>Si ça marche pour eux... pourquoi pas pour toi ?</p>"
     },
     {
       "type": "image",
@@ -109,7 +109,7 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "Tiquiz : le quiz qui se branche direct sur ton Systeme io",
       "id": "tiquiz-le-quiz-qui-se-branche-direct-sur-ton-systeme-io"
     },
@@ -124,7 +124,7 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "FAQ - Créer un quiz dans Systeme io avec Tiquiz",
       "id": "faq-creer-un-quiz-dans-systeme-io-avec-tiquiz"
     },
@@ -175,7 +175,7 @@
     },
     {
       "type": "titre",
-      "niveau": 3,
+      "niveau": 2,
       "texte": "En bref",
       "id": "en-bref"
     },

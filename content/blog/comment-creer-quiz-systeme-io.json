@@ -56,8 +56,8 @@
     },
     {
       "type": "image",
-      "src": "/blog/img/svg-2-connexion-api.svg",
-      "alt": "Clé api Systeme.io"
+      "src": "/blog/img/schema-connexion-api.webp",
+      "alt": "La connexion entre Tiquiz et Systeme.io en un copier-coller : la clé API se copie dans Systeme.io et se colle une seule fois dans Tiquiz"
     },
     {
       "type": "titre",
@@ -75,8 +75,8 @@
     },
     {
       "type": "image",
-      "src": "/blog/img/svg-3-tags-creation.svg",
-      "alt": "Clé api Systeme.io"
+      "src": "/blog/img/schema-tags-creation.webp",
+      "alt": "Un tag Systeme.io par profil de résultat, quiz-débutant, quiz-motivée, quiz-pragmatique et quiz-avancé, chacun déclenchant son propre workflow"
     },
     {
       "type": "titre",
@@ -111,8 +111,8 @@
     },
     {
       "type": "image",
-      "src": "/blog/img/svg-4-ia-generation.svg",
-      "alt": "titre quiz tiquiz"
+      "src": "/blog/img/schema-ia-generation.webp",
+      "alt": "Un brief en quatre lignes, objectif, audience, ton et CTA final, et l'IA rend un quiz complet avec ses questions et ses quatre profils de résultat"
     },
     {
       "type": "titre",
@@ -134,8 +134,8 @@
     },
     {
       "type": "image",
-      "src": "/blog/img/svg-5-profile-tag-mapping.svg",
-      "alt": "qui viral tiquiz"
+      "src": "/blog/img/schema-profil-tag.webp",
+      "alt": "Les réponses du visiteur donnent 10 points, donc le profil Motivée, donc sa page de résultat et le tag quiz-motivee posé automatiquement dans Systeme.io"
     },
     {
       "type": "titre",
@@ -153,8 +153,8 @@
     },
     {
       "type": "image",
-      "src": "/blog/img/svg-7-viralite-share-bonus.svg",
-      "alt": "qui viral tiquiz"
+      "src": "/blog/img/schema-partage-bonus.webp",
+      "alt": "Le partage débloque le résultat : elle finit son quiz, partage pour voir la suite et recevoir le PDF cadeau, et sa story ramène d'autres leads"
     },
     {
       "type": "titre",
@@ -191,12 +191,12 @@
     },
     {
       "type": "image",
-      "src": "/blog/img/svg-6-workflow-systeme-io.svg",
-      "alt": "design tiquiz"
+      "src": "/blog/img/schema-workflow-systeme-io.webp",
+      "alt": "Le tag quiz-motivee déclenche un workflow Systeme.io : email de résultat, inscription à la formation, ajout à la communauté, campagne email et notification de l'équipe"
     },
     {
       "type": "html",
-      "html": "<p><strong>Concrètement, tu te retrouves avec ce schéma :</strong><br><br></p><ul><li><p>un visiteur que tu ne connais pas répond à ton quiz parce que ton sujet l’intéresse. </p></li><li><p>il voit que tu maîtrises ton domaine grâce à la pertinence de tes questions. </p></li><li><p>il laisse son email parce qu’il veut voir ses résultats. Il a déjà passé deux ou trois minutes engagé avec ton univers. </p></li><li><p>Et au moment où il valide, il vient de rentrer dans ta base de prospects qualifiés, parfaitement taggué, prêt à recevoir tes séquences. </p><p><strong><br>C’est un contact chaud qui s’intéresse à ton domaine et que tu vas pouvoir suivre pendant des années.</strong></p></li></ul>"
+      "html": "<p><strong>Concrètement, tu te retrouves avec ce schéma :</strong></p><ul><li><p>un visiteur que tu ne connais pas répond à ton quiz parce que ton sujet l’intéresse. </p></li><li><p>il voit que tu maîtrises ton domaine grâce à la pertinence de tes questions. </p></li><li><p>il laisse son email parce qu’il veut voir ses résultats. Il a déjà passé deux ou trois minutes engagé avec ton univers. </p></li><li><p>Et au moment où il valide, il vient de rentrer dans ta base de prospects qualifiés, parfaitement taggué, prêt à recevoir tes séquences. </p><p><strong><br>C’est un contact chaud qui s’intéresse à ton domaine et que tu vas pouvoir suivre pendant des années.</strong></p></li></ul>"
     },
     {
       "type": "html",

@@ -20,7 +20,11 @@
 // `renderSalesPage`, donc on ne peut plus servir une page de vente sans
 // avoir dit où elle vend.
 
-import { rewriteOrderLinks, type OrderLinkRewrite } from "@/lib/sales/salesPageLinks";
+import {
+  rewriteOrderLinks,
+  rewriteSiteLinks,
+  type OrderLinkRewrite,
+} from "@/lib/sales/salesPageLinks";
 import type { OwnerProductId } from "@/lib/checkout/catalog";
 import {
   baliseVerificationGoogle,
@@ -72,7 +76,19 @@ export type SalesPageMeta = {
  */
 export function stripHeadTags(html: string): string {
   return html
-    .replace(/<title>[\s\S]*?<\/title>/gi, "")
+    // LE TITRE DE LA CAPTURE, ATTRIBUTS COMPRIS.
+    //
+    // 1er septembre 2026 : cette ligne visait `<title>` NU, alors que
+    // Systeme.io publie `<title data-react-helmet="true">`. Le retrait
+    // ne mordait donc pas, et les deux pages de vente en ligne
+    // portaient DEUX titres : le nôtre en haut du head, celui de la
+    // capture plus bas. C'est exactement ce que le commentaire au
+    // dessus promettait d'empêcher, et c'est le titre de la capture que
+    // Google pouvait retenir.
+    //
+    // `<title\b` exige une frontière de mot : on retire `<title>` et
+    // `<title lang="fr">`, jamais un hypothétique `<titlebar>`.
+    .replace(/<title\b[^>]*>[\s\S]*?<\/title>/gi, "")
     .replace(/<meta[^>]*name=["']?description["']?[^>]*>/gi, "")
     .replace(/<meta[^>]*property=["']og:[^"']*["'][^>]*>/gi, "")
     .replace(/<meta[^>]*name=["']twitter:[^"']*["'][^>]*>/gi, "")
@@ -264,6 +280,18 @@ export function renderSalesPage(
      * brancher de commande". On ne peut plus l'oublier par distraction.
      */
     checkoutTargets: Readonly<Record<string, OwnerProductId>> | null;
+    /**
+     * Les liens de SITE capturés avec la page, et où ils doivent mener
+     * sur ce domaine : le pied de page légal, l'affiliation, l'Atelier,
+     * le logo, et la page elle même.
+     *
+     * `null` sur un aperçu : derrière la clé, la page n'est pas le site.
+     * Séparé de `checkoutTargets` parce que les deux ne répondent pas à
+     * la même question, l'un dit où va l'argent et l'autre où va le
+     * visiteur, et qu'on ne veut pas pouvoir corriger l'un en croyant
+     * corriger l'autre.
+     */
+    siteLinks?: Readonly<Record<string, string>> | null;
     /** Appelé avec le résultat de la réécriture, pour journaliser. */
     onRewrite?: (info: OrderLinkRewrite) => void;
   },
@@ -274,6 +302,15 @@ export function renderSalesPage(
     const info = rewriteOrderLinks(sortie, opts.checkoutTargets);
     sortie = info.html;
     opts.onRewrite?.(info);
+  }
+
+  // LA NAVIGATION APRÈS L'ARGENT, ET DANS CET ORDRE.
+  //
+  // Les boutons payants d'abord : ils sont déjà devenus des chemins
+  // relatifs quand on arrive ici, donc aucune des deux listes ne peut
+  // marcher sur les pieds de l'autre.
+  if (opts.siteLinks) {
+    sortie = rewriteSiteLinks(sortie, opts.siteLinks).html;
   }
 
   const tetes = [

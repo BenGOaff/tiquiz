@@ -107,9 +107,26 @@ test("aucune de ces adresses n'est réécrite en dur", () => {
     ["tipote.fr/tiquiz/affiliation", /["'`]https:\/\/www\.tipote\.fr\/tiquiz\/affiliation/],
     ["tipote.fr/atelier-du-quiz", /["'`]https:\/\/www\.tipote\.fr\/atelier-du-quiz/],
   ];
+  // UNE CLÉ DE CORRESPONDANCE N'EST PAS UN LIEN PUBLIÉ (1er sept. 2026).
+  //
+  // `lib/sales/salesPageLinks.ts` NOMME ces adresses pour ne plus les
+  // servir : ce sont les chaînes exactes trouvées dans le HTML capturé
+  // chez Systeme.io, et une clé de correspondance ne peut pas passer par
+  // une constante sans cesser de correspondre. On ne blanchit donc PAS
+  // le fichier entier, on blanchit les lignes où l'adresse est une CLÉ
+  // (suivie de `":`). Une DESTINATION écrite en dur dans ce même fichier
+  // fait toujours rougir le test, et c'est exactement ce que la règle
+  // protège.
+  // On retire la CLÉ de la ligne, et on garde tout le reste : sur
+  // `"https://.../a": "https://.../b"`, seule la première disparaît.
+  // Écarter la ligne entière aurait blanchi la destination du même coup,
+  // c'est à dire exactement ce qu'on veut continuer d'interdire.
+  const sansLesCles = (src: string) =>
+    src.replace(/^(\s*)"https?:\/\/[^"]+"(\s*:)/gm, "$1\"\"$2");
+
   for (const [nom, rx] of motifs) {
     const coupables = fichiersApp()
-      .filter((f) => rx.test(f.src))
+      .filter((f) => rx.test(sansLesCles(f.src)))
       .map((f) => f.chemin);
     assert.deepEqual(
       coupables,

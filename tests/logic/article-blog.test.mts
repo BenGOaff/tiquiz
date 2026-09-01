@@ -121,7 +121,11 @@ test("les dimensions se lisent dans les trois formes de WebP du corpus", () => {
 test("les schemas SVG portent leur taille dans leur viewBox", () => {
   const dossier = path.join(process.cwd(), "public", "blog", "img");
   const svg = fs.readdirSync(dossier).filter((f) => f.endsWith(".svg"));
-  assert.ok(svg.length >= 15, "le corpus porte bien des SVG");
+  // Le 1er septembre, Bene a redessine 15 de ces schemas : ils sont
+  // maintenant en WebP, et il ne reste que 5 SVG (le comparatif Popquiz,
+  // le tunnel de Jocelyne, ses 3 axes et les deux "comment lire les
+  // chiffres"). Le seuil dit "il en reste", pas "il en reste 15".
+  assert.ok(svg.length >= 5, "le corpus porte bien des SVG");
   for (const f of svg) {
     const d = dimensionsSvg(fs.readFileSync(path.join(dossier, f), "utf8"));
     assert.ok(d && d.largeur > 0 && d.hauteur > 0, `${f} : taille illisible`);

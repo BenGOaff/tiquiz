@@ -49,6 +49,7 @@
 // qu'on enverrait toujours chez Systeme.io.
 
 import type { OwnerProductId } from "@/lib/checkout/catalog";
+import { ATELIER_SALES_URL } from "@/lib/affiliateUrls";
 
 /**
  * LES BOUTONS PAYANTS, ET CE QU'ILS VENDENT.
@@ -73,7 +74,11 @@ export const SALES_CHECKOUT_TARGETS: Readonly<
  * - `tiquiz-gratuit` : c'est un optin, pas une vente. Il crée le contact
  *   et son tag, et c'est le seul événement qui porte une URL de tunnel,
  *   donc le seul qui sait d'où vient l'inscrit.
- * - `tiquiz` : le hub de vente, la page d'où l'on vient.
+ * - `tiquiz` : le hub de vente. Le RÉÉCRITEUR DE BOUTONS le laisse
+ *   tranquille parce que ce n'est pas une vente ; c'est la navigation
+ *   (`SALES_SITE_LINKS`) qui le ramène sur l'accueil de ce domaine,
+ *   depuis le 1er septembre. Les deux listes ne se contredisent pas :
+ *   l'une dit où va l'argent, l'autre où va le visiteur.
  * - `tiquiz-beta` et `tiquiz-us` : des tunnels à part, qu'on ne vend pas
  *   depuis notre bon de commande.
  */
@@ -222,5 +227,128 @@ export function rewriteOrderLinks(
     html: sortie,
     rewritten: [...compte.entries()].map(([from, v]) => ({ from, to: v.to, count: v.count })),
     unmapped: [...unmapped],
+  };
+}
+
+
+/**
+ * LES LIENS DE SITE QUI POINTAIENT ENCORE VERS L'ANCIEN DOMAINE.
+ *
+ * En relisant la page capturée le 1er septembre 2026 : quatre liens
+ * seulement menaient chez nous, les quatre boutons de commande réécrits
+ * plus haut. Tout le reste partait chez `www.tipote.fr`, y compris les
+ * cinq liens légaux du pied de page, la page d'affiliation, l'Atelier,
+ * le LOGO en haut de page, et `www.tipote.fr/tiquiz`, c'est à dire SA
+ * PROPRE COPIE. Ce dernier est le plus cher : depuis la page qui doit
+ * remplacer l'ancienne, un lien vers l'ancienne la désigne comme celle
+ * qui fait autorité.
+ *
+ * POURQUOI UNE LISTE ET PAS UNE RÈGLE. « tout ce qui pointe sur
+ * tipote.fr revient chez nous » serait faux : l'optin gratuit et les
+ * tunnels beta et US vivent chez Systeme.io pour de bonnes raisons (voir
+ * `SALES_LINKS_LEFT_ALONE`). Une règle devinée les casserait en
+ * silence. On écrit donc les couples à la main.
+ *
+ * ET LES DESTINATIONS SONT NOS VRAIES ROUTES, VÉRIFIÉES DANS `app/`.
+ * Les chemins de Systeme.io (`/mentions-legales`, `/cgv`, `/cgu`,
+ * `/politique-de-confidentialite`, `/politique-de-cookies`) n'existent
+ * PAS chez nous : les recopier tels quels aurait posé cinq 404 dans le
+ * pied de page de la page qui vend, c'est à dire exactement le drame du
+ * centre d'aide du 24 août. Nos pages sont `/legal`, `/terms`,
+ * `/terms-of-use`, `/privacy` et `/cookies`.
+ */
+export const SALES_SITE_LINKS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  tiquiz: {
+    // SA PROPRE COPIE, ET LE LOGO, MÈNENT À L'ACCUEIL DE CE DOMAINE.
+    "https://www.tipote.fr/tiquiz": "/",
+    "https://www.tipote.fr/quiz": "/",
+    "https://www.tipote.fr/mentions-legales": "/legal",
+    "https://www.tipote.fr/cgv": "/terms",
+    "https://www.tipote.fr/cgu": "/terms-of-use",
+    "https://www.tipote.fr/politique-de-confidentialite": "/privacy",
+    "https://www.tipote.fr/politique-de-cookies": "/cookies",
+    "https://www.tipote.fr/affiliation": "/affiliation",
+    // La DESTINATION vient de `lib/affiliateUrls.ts`, jamais réécrite
+    // ici : c'est la règle du drame de l'Atelier du 3 août. Seule la CLÉ
+    // est une adresse en dur, et elle doit l'être, c'est la chaîne
+    // exacte présente dans le HTML capturé, pas un lien qu'on publie.
+    "https://www.tipote.fr/atelier-du-quiz-bene": ATELIER_SALES_URL,
+  },
+};
+
+/** Ce que la réécriture des liens de site a fait. */
+export interface SiteLinkRewrite {
+  html: string;
+  rewritten: { from: string; to: string; count: number }[];
+}
+
+/**
+ * Ramène sur ce domaine les liens de site capturés avec la page.
+ *
+ * Volontairement SÉPARÉ de `rewriteOrderLinks` : celui là décide où va
+ * l'ARGENT et n'est jamais optionnel ; celui ci décide où va la
+ * NAVIGATION et ne s'applique que sur le domaine public. Derrière la clé
+ * d'aperçu, la page n'est pas le site.
+ */
+export function rewriteSiteLinks(
+  html: string,
+  cibles: Readonly<Record<string, string>>,
+): SiteLinkRewrite {
+  const entrees = Object.entries(cibles);
+  const compte = new Map<string, { to: string; count: number }>();
+
+  const remplace = (url: string): string | null => {
+    const paire = entrees.find(([source]) => samePage(source, url));
+    if (!paire) return null;
+    const [source, destination] = paire;
+    let query = "";
+    try {
+      query = new URL(url).search;
+    } catch {
+      query = "";
+    }
+    const vu = compte.get(source) ?? { to: destination, count: 0 };
+    vu.count += 1;
+    compte.set(source, vu);
+    return `${destination}${query}`;
+  };
+
+  let sortie = String(html ?? "").replace(
+    /href="(https?:\/\/[^"]+)"/gi,
+    (entier, url: string) => {
+      const cible = remplace(url);
+      return cible ? `href="${attr(cible)}"` : entier;
+    },
+  );
+
+  // LES LIENS ÉCRITS DANS UN BLOC DE TEXTE, DONC ÉCHAPPÉS.
+  //
+  // Mesuré sur la capture le 1er septembre : trois liens vers l'Atelier
+  // vivent dans le modèle JSON de la page, sous la forme
+  // `href=\"...\"` et `href=\\\"...\\\"`. Ne traiter que les `href="..."`
+  // nus en laissait trois derrière, et ce sont ceux que l'éditeur relit
+  // pour reconstruire le bloc.
+  sortie = sortie.replace(
+    /href=(\\+)"(https?:\/\/[^"\\]+)\1"/gi,
+    (entier, echappement: string, url: string) => {
+      const cible = remplace(url);
+      return cible ? `href=${echappement}"${cible}${echappement}"` : entier;
+    },
+  );
+
+  // Les deux noms de la même clé chez Systeme.io : la page de l'Atelier
+  // écrit `"link"`, celle de Tiquiz `"linkUrl"`. On traite les deux,
+  // sinon la configuration que l'éditeur relit contredit le HTML.
+  sortie = sortie.replace(
+    /"(link|linkUrl)"\s*:\s*"(https?:\\?\/\\?\/[^"]+)"/gi,
+    (entier, cle: string, brut: string) => {
+      const cible = remplace(brut.replace(/\\\//g, "/"));
+      return cible ? `"${cle}":"${cible}"` : entier;
+    },
+  );
+
+  return {
+    html: sortie,
+    rewritten: [...compte.entries()].map(([from, v]) => ({ from, to: v.to, count: v.count })),
   };
 }

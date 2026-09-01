@@ -593,18 +593,26 @@ test("un `alt` decrit ce qu'on voit, il ne bourre pas de mots cles", async () =>
   assert.ok(doublons <= 2, `${doublons} textes identiques : un copier-coller a du passer`);
 });
 
-test("la reparation POSE les alt, elle ne les ecrase pas", async () => {
+test("la table des alt GAGNE, mais seulement sur ce qu'elle nomme", async () => {
   const { poserAlt } = await import("@/lib/blog/altImages");
   const vide = { src: "/blog/img/gwenn.webp", alt: "" };
   assert.equal(poserAlt(vide), true);
   assert.match(vide.alt, /Gwenn/);
-  // Un `alt` deja ecrit est garde tel quel : certains viennent de
-  // Systeme.io et sont mauvais, mais les remplacer en masse ferait
-  // perdre ceux qui sont bons.
-  const plein = { src: "/blog/img/gwenn.webp", alt: "deja ecrit" };
-  assert.equal(poserAlt(plein), false);
-  assert.equal(plein.alt, "deja ecrit");
-  // Une image inconnue ne recoit rien plutot qu'un texte invente.
-  const inconnue = { src: "/blog/img/pas-dans-la-table.webp", alt: "" };
+  // CORRECTION DU 1er SEPTEMBRE. Cette fonction gardait tout `alt` deja
+  // ecrit, et son commentaire annoncait dans la meme phrase que "les
+  // mauvais se corrigent en les ajoutant a la table". Les deux ne
+  // pouvaient pas etre vrais : un `alt` importe de Systeme.io
+  // ("tiquiz avis", "qui viral tiquiz") existe, donc il bloquait la
+  // correction. Le remede documente ne marchait pas.
+  const mauvais = { src: "/blog/img/gwenn.webp", alt: "tiquiz avis" };
+  assert.equal(poserAlt(mauvais), true);
+  assert.match(mauvais.alt, /Gwenn/);
+  // La protection qui compte reste : une image ABSENTE de la table garde
+  // son texte, on ne perd aucun `alt` correct venu de l'import.
+  const inconnue = { src: "/blog/img/pas-dans-la-table.webp", alt: "un texte a garder" };
   assert.equal(poserAlt(inconnue), false);
+  assert.equal(inconnue.alt, "un texte a garder");
+  // Et une image inconnue sans texte ne recoit rien plutot qu'un texte invente.
+  const rien = { src: "/blog/img/pas-dans-la-table.webp", alt: "" };
+  assert.equal(poserAlt(rien), false);
 });
