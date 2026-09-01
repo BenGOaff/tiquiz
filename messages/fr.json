@@ -1587,6 +1587,8 @@
     "designThemeCustom": "Personnalisé",
     "designAdvancedTitle": "Personnaliser le design",
     "backToProjects": "Mes projets",
+    "unavailableTitle": "Ce projet n'est pas disponible",
+    "unavailableBody": "Il a peut-être été supprimé, ou il appartient à un autre compte. Rien n'a été modifié.",
     "beatsTitle": "Structure de la page (méthode Atelier)",
     "beatsIntro": "Une page de résultat qui convertit suit 4 temps. Les noms ci-dessous sont là pour toi, ils n'apparaissent jamais chez ton visiteur.",
     "beatsMirrorName": "Le miroir.",

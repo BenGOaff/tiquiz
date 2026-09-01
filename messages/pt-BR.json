@@ -1587,6 +1587,8 @@
     "seoNoindexLabel": "Ocultar este quiz dos mecanismos de busca",
     "seoNoindexHint": "Marque esta caixa se você não quiser que o Google, o Bing ou as IAs (ChatGPT, Perplexity…) indexem este quiz. Seu link direto continua compartilhável.",
     "backToProjects": "Meus projetos",
+    "unavailableTitle": "Este projeto não está disponível",
+    "unavailableBody": "Ele pode ter sido excluído, ou pertence a outra conta. Nada foi alterado.",
     "beatsTitle": "Estrutura da página (método Atelier)",
     "beatsIntro": "Uma página de resultado que converte segue 4 tempos. Os nomes abaixo são para você, seu visitante nunca os vê.",
     "beatsMirrorName": "O espelho.",

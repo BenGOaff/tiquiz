@@ -1587,6 +1587,8 @@
     "designThemeCustom": "Personalizzato",
     "designAdvancedTitle": "Personalizza il design",
     "backToProjects": "I miei progetti",
+    "unavailableTitle": "Questo progetto non è disponibile",
+    "unavailableBody": "Potrebbe essere stato eliminato, oppure appartiene a un altro account. Non è stato modificato nulla.",
     "beatsTitle": "Struttura della pagina (metodo Atelier)",
     "beatsIntro": "Una pagina di risultato che converte segue 4 tempi. I nomi qui sotto sono per te, il visitatore non li vede mai.",
     "beatsMirrorName": "Lo specchio.",

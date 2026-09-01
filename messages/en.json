@@ -1587,6 +1587,8 @@
     "designThemeCustom": "Custom",
     "designAdvancedTitle": "Customize the design",
     "backToProjects": "My projects",
+    "unavailableTitle": "This project is not available",
+    "unavailableBody": "It may have been deleted, or it belongs to another account. Nothing has been changed.",
     "beatsTitle": "Page structure (Atelier method)",
     "beatsIntro": "A result page that converts follows 4 beats. The names below are for you, your visitor never sees them.",
     "beatsMirrorName": "The mirror.",

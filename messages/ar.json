@@ -1587,6 +1587,8 @@
     "designThemeCustom": "مخصص",
     "designAdvancedTitle": "تخصيص التصميم",
     "backToProjects": "مشاريعي",
+    "unavailableTitle": "هذا المشروع غير متاح",
+    "unavailableBody": "ربما تم حذفه، أو أنه يخص حسابا آخر. لم يتم تغيير أي شيء.",
     "beatsTitle": "بنية الصفحة (منهج الورشة)",
     "beatsIntro": "صفحة نتيجة تُحوّل تتبع أربع مراحل. الأسماء أدناه لك وحدك، لا يراها زائرك أبداً.",
     "beatsMirrorName": "المرآة.",
