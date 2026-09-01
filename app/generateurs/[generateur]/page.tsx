@@ -20,7 +20,7 @@ import { getTranslations } from "next-intl/server";
 import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { getActiveProjectScope } from "@/lib/projects/scopeFilter";
-import { canUseAIAnalysis, PRICING_PLUS } from "@/lib/planLimits";
+import { canUseAIAnalysis } from "@/lib/planLimits";
 import { GENERATEURS, type GenerateurId } from "@/lib/generateurs/catalogue";
 import { resultChoiceLabel } from "@/lib/quiz/resultLabel";
 import { stripHtml } from "@/lib/richText";
@@ -126,7 +126,7 @@ export default async function GenerateurPage({
       generateur={id}
       projets={projets}
       autorise={canUseAIAnalysis(plan, { userId: user.id, email: user.email ?? null })}
-      offrePlus={`${PRICING_PLUS.monthlyPlus.label} (${PRICING_PLUS.monthlyPlus.price})`}
+      lienPlans="/settings?tab=account"
     />
   );
 }

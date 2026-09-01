@@ -4958,8 +4958,15 @@ forme de l'adresse.
 `lib/quiz/urlPublique.ts`, `app/api/generateurs/route.ts`,
 `app/generateurs/`. Test : `tests/logic/generateurs.test.mts`.
 **Le module vit dans les DEUX dépôts** : toute évolution se porte des
-deux côtés. La seule différence assumée est le PALIER, Tipote n'ayant
-pas de "PLUS" (voir son `AGENTS.md`).
+deux côtés, y compris les DEUX écrans, identiques à l'octet près.
+
+**Les deux différences assumées, et elles sont chez Tipote :** il ouvre
+les générateurs à tout compte payant (il n'a pas de palier "PLUS"), et
+ils y CONSOMMENT DES CRÉDITS (Tiquiz n'en a pas). Le compteur est donc
+une PROP optionnelle de l'écran, nulle ici, et `lib/generateurs/credits.ts`
+ne vit QUE là bas : un module mort ici serait un piège que le prochain
+passage rebrancherait en croyant réparer. Le barème et le calcul qui
+l'a produit sont dans l'`AGENTS.md` de Tipote.
 
 ## ON DIT TAG, JAMAIS ÉTIQUETTE (Béné, 1er septembre 2026)
 

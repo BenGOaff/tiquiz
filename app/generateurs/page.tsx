@@ -44,6 +44,7 @@ export default async function GenerateursPage() {
     <GenerateursClient
       userEmail={user.email ?? ""}
       autorise={canUseAIAnalysis(plan, { userId: user.id, email: user.email ?? null })}
+      lienPlans="/settings?tab=account"
       offrePlus={`${PRICING_PLUS.monthlyPlus.label} (${PRICING_PLUS.monthlyPlus.price})`}
     />
   );
