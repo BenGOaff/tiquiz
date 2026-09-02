@@ -1399,8 +1399,16 @@ npm run build && pm2 restart tiquiz-prod --update-env
 ```
 
 `GIT_TERMINAL_PROMPT=0` a ete ajoute le 2 septembre : sans lui, un 401
-temporaire de GitHub fait attendre un mot de passe et bloque le terminal
-sans rien expliquer (voir la section "Le deploiement fantome").
+bloque le terminal sur un prompt muet, sans rien expliquer.
+
+Et le serveur porte, une fois pour toutes :
+
+```bash
+git config --global http.version HTTP/1.1
+```
+
+Sans lui, git en HTTP/2 sur cette machine recoit un 401 sur TOUT depot
+public, y compris git/git. Voir la section "Le deploiement fantome".
 
 Tu prends ma branche, tu copies le code dans ton dossier local, tu pousses
 sur `main`, puis le serveur tire `main`. `main` est donc la branche de
@@ -6873,54 +6881,47 @@ origin  https://github.com/BenGOaff/tiquiz.git (fetch)
 connaît pas la configuration. Et avant de conclure quoi que ce soit
 depuis ici : `curl -sS https://api.github.com/user`.
 
-### CE QUE `Username for 'https://github.com'` VEUT DIRE SUR UN DÉPÔT PUBLIC
+### LA CAUSE, TROUVÉE À LA SIXIÈME MESURE : git parlait en HTTP/2
 
-Un dépôt public se tire sans aucun identifiant, donc ce prompt ne dit
-pas « il te manque un droit ». Il dit que **GitHub a répondu 401** sur
-le premier appel du pull (`GET /info/refs`), et que git en a conclu
-qu'il lui fallait des identifiants.
+J'ai avancé quatre causes avant celle là (l'URL du remote, un dépôt
+privé, un jeton périmé, une limite de débit) et **les quatre étaient
+fausses**. Aucune n'était mesurée avant d'être annoncée. Ce qui a fini
+par trancher, c'est une suite de mesures qui ÉLIMINENT, chacune en une
+commande :
 
-**J'ai annoncé un jeton périmé dans la config du serveur. C'était FAUX**,
-et sa sortie l'a démenti en une commande :
+| La mesure | Ce qu'elle a éliminé |
+|---|---|
+| `git config --list --name-only` | rien n'est configuré : ni credential, ni proxy, ni insteadOf |
+| `curl` sur l'URL exacte de git -> **200** | GitHub sert bien le dépôt à ce serveur |
+| la trace `GIT_TRACE_CURL` | la 1re requête reçoit **200**, la 2e reçoit **401** |
+| `git ls-remote https://github.com/git/git.git` -> **échoue pareil** | ce n'est pas notre dépôt, c'est git sur cette machine |
+| dans la trace : `HTTP/2` chez elle, `HTTP/1.1` chez moi | la seule différence entre une machine qui marche et une qui échoue |
 
+**`git -c http.version=HTTP/1.1 pull` a débloqué instantanément.**
+
+Sur ce serveur, git en HTTP/2 obtient un 200 sur `info/refs` puis un
+401 sur la requête suivante, sur N'IMPORTE QUEL dépôt public. curl
+passe, parce qu'il ne négocie pas la même chose. Le message
+`Username for 'https://github.com'` ne parlait donc ni de droits, ni du
+dépôt : c'est ce que git affiche quand il reçoit un 401 qu'il ne
+comprend pas.
+
+**Le réglage est POSÉ, pas répété dans la commande :**
+
+```bash
+git config --global http.version HTTP/1.1
 ```
-git config --list --show-origin --name-only | grep -iE "credential|extraheader|insteadof|askpass"
-(aucune ligne)
-```
 
-Rien n'est configuré, donc mes `-c credential.helper=` et
-`-c http.extraHeader=` **n'ont neutralisé rien du tout** : ils ne
-peuvent pas être ce qui a débloqué. Entre l'échec et le succès, la
-seule chose qui a changé, c'est le TEMPS.
+Une fois, pour les trois apps du serveur. Un drapeau recopié dans une
+commande de déploiement est un drapeau qu'on oublie au prochain
+copier-coller.
 
-**Donc l'échec venait de GitHub, et il était temporaire.** L'hypothèse
-la plus probable, et je l'écris COMME une hypothèse parce que je ne l'ai
-pas mesurée : une limite de débit sur les tirages ANONYMES depuis l'IP
-de ce serveur. C'est le seul mécanisme connu qui rend un 401
-intermittent sur un dépôt public sans que rien ne bouge chez nous, et il
-colle aux quatre faits (ça marchait, ça a bloqué, ça remarche, rien
-n'est configuré).
-
-**Ce qui compte, c'est que ça peut revenir.** Deux remèdes, dans cet
-ordre de coût :
-
-1. **`GIT_TERMINAL_PROMPT=0` devant le `git pull`, pour toujours.** Ça
-   ne répare rien, ça garantit qu'un déploiement ne reste JAMAIS coincé
-   sur un prompt muet : il s'arrête avec un message. Le coût est nul,
-   c'est la nouvelle forme de la commande.
-2. **Une clé SSH de déploiement**, le jour où ça revient. Le serveur
-   génère la paire lui-même, seule la partie PUBLIQUE part chez GitHub
-   (ce n'est pas un secret, elle peut se coller dans une conversation),
-   et un tirage authentifié n'est plus soumis à la limite des tirages
-   anonymes. Aucune expiration, contrairement à un jeton.
-
-**Et la leçon de méthode, la troisième de la journée sur la même
-panne :** j'ai avancé trois causes (l'URL du remote, un dépôt privé, un
-jeton périmé) et les trois étaient fausses. Chacune était plausible et
-aucune n'était mesurée avant d'être annoncée. Béné a fait deux
-allers-retours pour rien. **Sur une panne intermittente, "je ne sais pas
-encore pourquoi ça remarche" est une réponse honnête ; une cause
-inventée qui colle à l'histoire ne l'est pas.**
+**La méthode qui a marché, et c'est elle qu'il faut retenir : chaque
+commande devait ÉLIMINER une moitié, pas confirmer une intuition.**
+« curl passe » élimine GitHub. « git/git échoue aussi » élimine le
+dépôt. « HTTP/2 contre HTTP/1.1 » est la dernière différence qui reste.
+Quatre allers-retours ont été perdus à proposer des causes plausibles
+avant de commencer à éliminer.
 
 ### LA CHAÎNE `&&` N'A RIEN CASSÉ : ELLE A RÉVÉLÉ
 
