@@ -108,7 +108,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const plan = tagPlanPourAccueil(profil?.plan);
   if (plan) {
-    const pose = await poserTagPlan(email, plan, {});
+    // "IGNORER" : on ne repose PAS un tag que le contact a deja.
+    //
+    // Bene, 2 septembre 2026 : "pose un garde fou sinon systeme io va
+    // renvoyer toute la campagne tiquiz free". Le marqueur d'accueil
+    // n'existait pas avant ce chantier, donc TOUS les comptes gratuits
+    // deja inscrits passeront ici une fois, a leur premiere connexion
+    // Google. Sans ce garde-fou, chacun se verrait reposer
+    // `tiquiz-free`, un tag qu'il porte depuis son inscription.
+    //
+    // On ne peut pas savoir d'ici si Systeme.io redeclenche sa regle sur
+    // un tag deja present (leur API ne montre pas ces regles), et le
+    // cout de se tromper n'est pas symetrique : ne pas reposer un tag
+    // deja la ne coute rien, le reposer peut renvoyer une campagne
+    // entiere a des gens qui l'ont deja lue.
+    const pose = await poserTagPlan(email, plan, {}, "ignorer");
     if (!pose) {
       // Best-effort, JAMAIS bloquant : un tag qui échoue ne doit pas
       // priver quelqu'un de son compte. Mais ça ne se tait pas : sans

@@ -6710,3 +6710,113 @@ avec sa phrase, le formulaire juste en dessous continue de marcher.
 Test : `tests/logic/connexion-google.test.mts`, vérifié en rejouant les
 trois versions naïves (le tag posé pour tout le monde, le retour toujours
 canonique, l'accueil jamais appelé) : les trois rougissent.
+
+### « PKCE code verifier not found in storage » : on échangeait le code DEUX fois (retour Béné, 2 septembre 2026)
+
+"J'ai réessayé avec mon mail 20mn après avoir supprimé ce compte de mon
+supabase et j'ai la même erreur : PKCE code verifier not found in
+storage. [...] Peut être parce que google n'a pas encore validé l'app ?
+Toujours url `https://quiz.tipote.com/auth/callback` et pas d'erreur
+dans la console."
+
+**Non, Google n'y était pour rien, et la session était OUVERTE.** Le
+message accuse le navigateur ("storage was cleared", "a different
+browser or device"), donc il envoie chercher très loin de la cause, qui
+est chez nous et tient en quatre lignes de `node_modules`.
+
+**MESURÉ dans `@supabase/ssr` et `@supabase/auth-js`, pas déduit :**
+
+```
+createBrowserClient.js:40  detectSessionInUrl: … ?? isBrowser()   -> true
+GoTrueClient.js:283        au montage, si ?code= est là -> _getSessionFromURL()
+GoTrueClient.js:654/666    …qui échange le code ET RETIRE le `-code-verifier`
+GoTrueClient.js:2221       getSession() attend d'abord initializePromise
+```
+
+Le client échange donc le code **tout seul**, au montage, et consomme le
+vérificateur au passage. Notre `exchangeCodeForSession` explicite
+arrivait forcément APRÈS (il attend la même initialisation) et ne
+trouvait plus rien.
+
+**Ce n'était pas une course : c'était déterministe**, et c'est ce qui
+colle exactement à son "la même erreur à chaque essai". Une vraie course
+donne un résultat une fois sur deux.
+
+**Règle : on demande la SESSION d'abord, on n'échange qu'en repli.**
+`getSession()` attend l'initialisation, donc il rend la session que la
+détection automatique vient d'ouvrir. L'échange manuel reste là pour le
+jour où `detectSessionInUrl` serait coupé : le retirer marcherait
+aujourd'hui et casserait ce jour là.
+
+**Et la leçon dépasse Supabase : deux morceaux de code qui consomment la
+MÊME ressource à usage unique finissent toujours par se marcher
+dessus.** Ici la bibliothèque faisait déjà le travail, correctement, et
+on le refaisait par dessus. Le symptôme n'était pas "ça ne marche pas",
+c'était "ça marche et on affiche une erreur", ce qui est pire.
+
+### `tiquiz-free` ne se repose pas sur quelqu'un qui l'a déjà (Béné, 2 septembre 2026)
+
+"Pour tiquiz-free pose un garde fou sinon systeme io va renvoyer toute
+la campagne tiquiz free."
+
+Elle a raison, et le trou était réel : `POST /api/auth/accueil` ne tourne
+qu'une fois par compte (marqueur dans `app_metadata`), mais **ce marqueur
+n'existait pas avant le 2 septembre**. Tous les comptes gratuits DÉJÀ
+inscrits passent donc par l'accueil à leur première connexion Google, et
+`poserTagPlan` reposait le tag qu'ils portent déjà. Chez elle, une règle
+`tag_added` écoute `tiquiz-free` : reposer le tag **relance la
+campagne entière** sur quelqu'un qui l'a lue il y a six mois.
+
+**Règle : `siDejaPose` est un PARAMÈTRE** (`"reposer" | "ignorer"`), et
+l'accueil passe `"ignorer"`. Les webhooks de vente gardent `"reposer"` :
+là, reposer un tag est sans conséquence et ne rien reposer serait un
+accès qui n'ouvre pas.
+
+**Ça ne coûte AUCUN appel de plus, et c'est ce qui rend le garde-fou
+gratuit :** `GET /contacts?email=` renvoie DÉJÀ le tableau complet des
+tags du contact (mesuré dans son compte, son propre contact porte
+`tiquiz-free`, id 1962973). On lisait cette réponse pour n'en garder que
+l'`id`. `trouverContact` rend maintenant `{ id, tags }`, et la
+comparaison se fait en MINUSCULES : Systeme.io n'impose aucune casse.
+
+Nouvelle raison `deja_pose`, distincte de `ok` : le journal dit "le tag
+était déjà là" au lieu de laisser croire qu'on vient de la poser. C'est
+la règle du 31 août, un booléen ne dit jamais où chercher.
+
+### La politique de confidentialité dit ce que Google nous donne (2 septembre 2026)
+
+Béné, capture de la Google Auth Platform à l'appui : "il dit que mon app
+doit être validée [...] et il ne valide pas ma privacy apparemment."
+
+**MESURÉ avant d'écrire une ligne :** `tiquiz.fr/privacy` répond 200,
+610 mots, RGPD complet (finalités, bases légales, durées, droits,
+sous-traitants). Le mot "Google" y apparaissait **une seule fois**, pour
+Google Analytics. **La page ne décrivait donc nulle part la connexion
+Google**, ce qui est exactement ce que leur relecture cherche.
+
+Une section 12 (« Connexion avec Google ») a été ajoutée dans les 5
+langues, et les sections 12 à 15 renumérotées 13 à 16. Elle dit les six
+choses que Google veut lire, et **aucune n'est une formule** :
+
+- c'est OPTIONNEL, le mot de passe reste possible ;
+- Google nous envoie EXACTEMENT trois choses : l'adresse email, le nom
+  affiché, l'identifiant unique du compte ;
+- elles servent à créer le compte, ouvrir la session et reconnaître au
+  retour, rien d'autre ;
+- **aucun autre accès** : ni Gmail, ni Drive, ni Agenda, ni Contacts, ni
+  Photos, aucune permission d'écriture ou de publication, et jamais le
+  mot de passe Google ;
+- jamais vendu, loué, utilisé pour de la publicité, ni partagé au delà
+  des sous-traitants de la section 7 ;
+- révocable sur `myaccount.google.com/permissions`, et le compte Tiquiz
+  survit à la révocation.
+
+**La liste des trois données n'est pas une promesse commerciale :** c'est
+ce que renvoie le scope `openid email profile`, le seul demandé. Écrire
+moins serait vague (donc refusé), écrire plus serait faux.
+
+**Ce qui reste chez Béné :** la carte « Accès aux données » de son écran
+dit que la validation n'est PAS requise pour ces scopes. Le bouton
+fonctionne donc dès aujourd'hui ; c'est l'écran de consentement qui
+affiche encore un avertissement tant que la relecture de marque n'est
+pas passée.

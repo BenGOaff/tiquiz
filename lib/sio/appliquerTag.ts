@@ -214,8 +214,22 @@ function cleRejetee(status: number): boolean {
 }
 
 /** L'identifiant du contact chez Systeme.io, ou `null` s'il n'y est pas. */
-async function trouverContact(apiKey: string, email: string): Promise<number | null> {
-  const res = await sioUserRequest<{ items?: { id?: number; email?: string }[] }>(
+/**
+ * LE CONTACT, ET LES TAGS QU'IL PORTE DÉJÀ.
+ *
+ * Les tags arrivent GRATUITEMENT : mesuré le 2 septembre 2026 sur le
+ * compte de Béné, `/contacts?email=` rend un tableau `tags` complet
+ * (id + nom) sur chaque contact. Cette fonction les jetait. Les garder
+ * ne coûte donc aucun appel de plus, et c'est ce qui permet de ne pas
+ * reposer un tag que la personne a déjà (voir `siDejaPose`).
+ */
+async function trouverContact(
+  apiKey: string,
+  email: string,
+): Promise<{ id: number; tags: Set<string> } | null> {
+  const res = await sioUserRequest<{
+    items?: { id?: number; email?: string; tags?: { name?: string }[] }[];
+  }>(
     apiKey,
     `/contacts?email=${encodeURIComponent(email)}&limit=20`,
   );
@@ -232,7 +246,13 @@ async function trouverContact(apiKey: string, email: string): Promise<number | n
     (c) => String(c?.email ?? "").trim().toLowerCase() === email,
   );
   const id = Number(trouve?.id);
-  return Number.isFinite(id) && id > 0 ? id : null;
+  if (!Number.isFinite(id) || id <= 0) return null;
+  const tags = new Set(
+    (Array.isArray(trouve?.tags) ? trouve!.tags! : [])
+      .map((t) => String(t?.name ?? "").trim().toLowerCase())
+      .filter(Boolean),
+  );
+  return { id, tags };
 }
 
 /**
@@ -258,7 +278,7 @@ async function assurerContact(
   apiKey: string,
   email: string,
   identite: IdentiteContact,
-): Promise<number | "cle_refusee" | null> {
+): Promise<{ id: number; tags: Set<string> } | "cle_refusee" | null> {
   const existant = await trouverContact(apiKey, email);
   if (existant) return existant;
 
@@ -279,7 +299,8 @@ async function assurerContact(
   const id = Number(res.data?.id);
   if (res.ok && Number.isFinite(id) && id > 0) {
     console.log(`[sio/tag] contact cree chez Systeme.io pour ${email}`);
-    return id;
+    // Un contact qu'on vient de creer ne porte AUCUN tag.
+    return { id, tags: new Set<string>() };
   }
 
   // Refus : soit il existait déjà (course entre deux webhooks), soit
@@ -380,10 +401,11 @@ export async function poserTagPlan(
   email: string,
   plan: string,
   identite: IdentiteContact = {},
+  siDejaPose: "reposer" | "ignorer" = "reposer",
 ): Promise<boolean> {
   const tag = readSioTag(plan);
   if (!tag) return false;
-  return poserTagParNom(email, tag, identite);
+  return poserTagParNom(email, tag, identite, siDejaPose);
 }
 
 /**
@@ -412,6 +434,8 @@ export async function poserTagPlan(
  */
 export type RaisonPoseTag =
   | "ok"
+  /** Le contact portait déjà ce tag : rien n'a été envoyé, et c'est un succès. */
+  | "deja_pose"
   | "adresse_ou_tag_vide"
   | "aucun_profil_admin"
   | "aucune_cle"
@@ -438,6 +462,7 @@ export async function poserTagParNomDetaille(
   email: string,
   tag: string,
   identite: IdentiteContact = {},
+  siDejaPose: "reposer" | "ignorer" = "reposer",
 ): Promise<ResultatPoseTag> {
   const adresse = String(email ?? "").trim().toLowerCase();
   if (!adresse || !tag) return { ok: false, raison: "adresse_ou_tag_vide" };
@@ -465,7 +490,7 @@ export async function poserTagParNomDetaille(
     // cas normal d'un client venu de NOTRE bon de commande. Il sortait
     // de toutes ses séquences, en silence.
     let retenue: CleCandidate | null = null;
-    let contactId: number | null = null;
+    let contact: { id: number; tags: Set<string> } | null = null;
     // "Toutes refusées" et "aucun contact" sont deux échecs DIFFÉRENTS,
     // et les confondre renverrait `cle_refusee` sur une clé qui marche
     // très bien : c'est le défaut que ce fichier corrige, refait dans
@@ -482,16 +507,16 @@ export async function poserTagParNomDetaille(
       }
       // La clé a été ACCEPTÉE, quel que soit le sort du contact.
       toutesRefusees = false;
-      if (typeof r === "number") {
+      if (r && typeof r === "object") {
         retenue = candidate;
-        contactId = r;
+        contact = r;
       }
       // Une création refusée pour une AUTRE raison que la clé ne se
       // rejoue pas avec une deuxième clé : le refus vient du corps
       // envoyé, pas de qui l'envoie.
       break;
     }
-    if (!retenue || !contactId) {
+    if (!retenue || !contact) {
       return { ok: false, raison: toutesRefusees ? "cle_refusee" : "contact_impossible" };
     }
 
@@ -501,7 +526,30 @@ export async function poserTagParNomDetaille(
       return { ok: false, raison: "tag_inconnu" };
     }
 
-    const res = await sioUserRequest(retenue.apiKey, `/contacts/${contactId}/tags`, {
+    // LE TAG DÉJÀ POSÉ NE SE REPOSE PAS (Béné, 2 septembre 2026 :
+    // "pose un garde fou sinon systeme io va renvoyer toute la campagne
+    // tiquiz free").
+    //
+    // Le cas est réel et il est arrivé avec la connexion Google : un
+    // compte gratuit qui existe DÉJÀ passe une fois par l'accueil, qui
+    // repose `tiquiz-free` sur un contact qui l'a depuis des mois.
+    // Vérifié sur son propre contact : il porte bien `tiquiz-free`.
+    //
+    // Personne ne peut dire d'ici si Systeme.io redéclenche une règle
+    // sur un tag déjà présent : leur API ne montre pas ces règles
+    // (mesuré trois fois, 31 août et 1er septembre). On ne PARIE donc
+    // pas, on ne repose pas.
+    //
+    // C'est un PARAMÈTRE, jamais le défaut : une vente qui repose son
+    // tag doit continuer de le faire sans condition, et le sens de
+    // l'erreur n'est pas le même des deux côtés (ne pas poser un tag de
+    // vente sort quelqu'un de ses segments).
+    if (siDejaPose === "ignorer" && contact.tags.has(tag.trim().toLowerCase())) {
+      console.log(`[sio/tag] ${tag} est deja posee pour ${adresse}, on ne la repose pas.`);
+      return { ok: true, raison: "deja_pose" };
+    }
+
+    const res = await sioUserRequest(retenue.apiKey, `/contacts/${contact.id}/tags`, {
       method: "POST",
       body: { tagId },
     });
@@ -527,7 +575,8 @@ export async function poserTagParNom(
   email: string,
   tag: string,
   identite: IdentiteContact = {},
+  siDejaPose: "reposer" | "ignorer" = "reposer",
 ): Promise<boolean> {
-  const r = await poserTagParNomDetaille(email, tag, identite);
+  const r = await poserTagParNomDetaille(email, tag, identite, siDejaPose);
   return r.ok;
 }

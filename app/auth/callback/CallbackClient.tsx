@@ -90,9 +90,40 @@ export default function CallbackClient() {
         }
 
         // PKCE flow (?code=...) — c'est par là que revient Google.
+        //
+        // ON N'ÉCHANGE PAS LE CODE NOUS MÊMES EN PREMIER, et c'est tout
+        // le correctif (retour Béné, 2 septembre 2026 : "PKCE code
+        // verifier not found in storage", à chaque essai, y compris sur
+        // un compte fraîchement supprimé).
+        //
+        // MESURÉ dans node_modules, pas déduit :
+        //   createBrowserClient.js:40  detectSessionInUrl: … ?? isBrowser()
+        //   GoTrueClient.js:283        si detectSessionInUrl et ?code= →
+        //                              _getSessionFromURL() échange le code
+        //   GoTrueClient.js:654/666    …et RETIRE le `-code-verifier`
+        //   GoTrueClient.js:2221       getSession() attend initializePromise
+        //
+        // Le client de `@supabase/ssr` échange donc le code TOUT SEUL au
+        // montage, et consomme le vérificateur au passage. Notre appel
+        // arrivait forcément APRÈS (il attend la même initialisation) et
+        // ne trouvait plus rien : `AuthPKCECodeVerifierMissingError`.
+        //
+        // Ce n'était donc pas une panne : la session était OUVERTE, et on
+        // affichait une erreur par dessus. C'est le pire des deux mondes,
+        // parce que le message accuse le navigateur ("storage was
+        // cleared") et envoie chercher très loin de la vraie cause.
+        //
+        // On demande donc la session D'ABORD. L'échange manuel reste en
+        // REPLI, pour le jour où la détection automatique serait coupée :
+        // le retirer marcherait aujourd'hui et casserait ce jour là.
         if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
-          if (error) throw error;
+          let session = (await supabase.auth.getSession()).data.session;
+          if (!session) {
+            const { error } = await supabase.auth.exchangeCodeForSession(code);
+            if (error) throw error;
+            session = (await supabase.auth.getSession()).data.session;
+          }
+          if (!session) throw new Error(t("errUnknown"));
           // CE QU'UNE INSCRIPTION DOIT FAIRE, MÊME SANS FORMULAIRE.
           //
           // `signInWithOAuth` crée le compte DANS Supabase, sans passer
