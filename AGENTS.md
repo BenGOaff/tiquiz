@@ -105,6 +105,7 @@ serveur s'il servait vraiment le fichier.
 |---|---|
 | ce que le produit promet, quoi écrire en com | `PRODUCT_BRIEF.md` |
 | comment ça marche, écran par écran | `CAHIER_DES_CHARGES.md` |
+| **ce qui reste à faire, dit par Béné** | **`CHANTIERS.md`** |
 | ce qui reste à reprendre à Systeme.io | `ROADMAP_SORTIE_SIO.md` |
 | les bugs récurrents et les conventions | `CLAUDE_PITFALLS.md` |
 | sur quelle branche pousser | `CLAUDE_WORKFLOW.md` |
@@ -5159,7 +5160,7 @@ et un robot n'envoie jamais de cookie : `tiquiz.fr/legal` répondait
 domaines de vente seulement** ; un visiteur qui a une préférence a un
 cookie, et ce cookie gagne toujours.
 
-**4. L'accueil du blog plafonnait à 7 articles sur 11.** Les quatre plus
+**4. L'accueil du blog plafonnait à 7 articles sur 10.** Les trois plus
 anciens n'étaient atteignables que par leur rubrique. Pas de
 pagination : elle les enfermerait derrière un clic.
 
@@ -5369,7 +5370,7 @@ dépasse VRAIMENT.
 
 La consigne demandait des liens entrants « dans le CORPS des deux
 articles cités », et le document de suivi les annonçait comme posés.
-**Mesuré : aucun des onze articles ne contenait la chaîne
+**Mesuré : aucun des dix articles ne contenait la chaîne
 `/integrations`.** Une page liée seulement depuis le pied de page dépend
 de la patience d'un robot.
 
@@ -5594,3 +5595,204 @@ du moment, ET il n'y avait vraiment rien à épingler hors d'un article.
 
 Test : `tests/logic/epingles-pinterest.test.mts`, vérifié en rejouant la
 version d'avant (il rougit).
+
+## Le sitemap existait, le flux non (1er septembre 2026)
+
+Béné : "j'ai un sitemap ? Un feed ? Pour automatiser le flux des
+articles ou je sais pas quoi..."
+
+**Mesuré sur la production avant de répondre :**
+
+| Adresse | |
+|---|---|
+| `/sitemap.xml` | **200**, 29 adresses, les 10 articles dedans |
+| `/llms.txt` | **200** |
+| `/rss.xml`, `/feed.xml`, `/atom.xml`, `/blog/rss.xml` | **404**, tous |
+
+### Ce qu'un sitemap ne sait pas faire
+
+Un sitemap dit à un MOTEUR quelles pages existent. Il ne porte ni titre,
+ni texte, ni image, ni date lisible : **personne ne peut en tirer un
+post ou une épingle**. C'est pour ça qu'il ne remplace pas un flux, et
+que les deux coexistent partout.
+
+Un flux est la prise sur laquelle se branche ce qui automatise : Zapier,
+Make, n8n et Pabbly savent tous surveiller une adresse RSS et fabriquer
+quelque chose à chaque nouvel article.
+
+### LA DÉCISION QUI COMPTE : l'image du flux est l'ÉPINGLE
+
+`<enclosure>` porte l'épingle 1000 x 1500, pas la couverture 1200 x 675.
+C'est le champ que lisent les automatisations quand elles demandent
+"l'image de cet article", et le premier usage de ce flux est de publier
+sur Pinterest, où une image en 16/9 ne circule pas.
+
+**La couverture n'est pas perdue** : elle est DANS la description, donc
+un lecteur de flux et un aperçu email l'affichent normalement. Chacune à
+sa place.
+
+Sans épingle construite, l'article sort SANS `enclosure` plutôt qu'avec
+une couverture paysage : une automatisation qui recevrait le mauvais
+format publierait une épingle qui ne circule pas, et personne ne verrait
+jamais pourquoi.
+
+### Trois détails qui cassent un flux en silence
+
+1. **L'échappement.** Un seul `&` non échappé rend le flux ENTIER
+   illisible, et aucun lecteur ne dit quelle ligne l'a cassé.
+   L'esperluette s'échappe EN PREMIER, sinon on échappe celles qu'on
+   vient d'ajouter (même piège que `echapperMotifLike`).
+2. **La date est à MIDI**, jamais à minuit. `publieLe` est une date
+   courte sans heure : à minuit UTC, un fuseau à l'ouest fait afficher la
+   VEILLE, donc un article du 1er passe pour le 31 chez la moitié des
+   lecteurs.
+3. **`length="0"` dans l'`enclosure`** est toléré partout, donc personne
+   ne le remarque : on lit la vraie taille sur le disque. Le test le
+   refuse, c'est le genre de valeur qu'on écrit sans y penser.
+
+### L'adresse porte `.xml`, et le flux s'annonce
+
+`/blog/rss.xml` et pas `/blog/rss` : un flux se colle dans un outil qui
+attend un fichier, et beaucoup refusent une adresse sans extension.
+
+Il est déclaré sur le sommaire, les rubriques ET les articles
+(`alternates.types`) : un flux qui n'est annoncé nulle part n'existe que
+pour qui connaît déjà son adresse. Et dans `llms.txt`, parce que sa liste
+d'articles est figée au déploiement alors que le flux dit toujours l'état
+du jour.
+
+**AUCUNE base n'est touchée**, et c'est délibéré : le blog s'affiche sans
+Supabase (leçon du 30 août, où un `import` de `supabaseAdmin` faisait
+répondre 500 à toute la page d'article). Un flux qui tombe le jour d'une
+panne de base est un flux sur lequel on ne peut pas compter.
+
+Test : `tests/logic/flux-blog.test.mts`, vérifié en rejouant un mauvais
+type de contenu (il rougit).
+
+**TRANCHÉ LE MÊME SOIR, et ça ferme la question :** Béné, "on s'en fout
+de vérifier dans systeme io c'est plutôt pour partager sur les réseaux
+etc". Le flux sert donc les automatisations de PARTAGE (Zapier, Make,
+n8n, Pabbly vers Pinterest et les réseaux), pas l'email. Ce qui n'est
+toujours pas vérifié, c'est si Systeme.io sait lire un RSS, et ce n'est
+plus une question à se poser.
+
+## La page de vente servie n'était pas la page affichée (2 septembre 2026)
+
+Béné : "je voudrais mettre à jour la page de vente de tiquiz pour
+qu'elle reflète sa vraie valeur. [...] je ne veux pas que tu la mettes
+directement en ligne, il faut que tu construises une version de travail
+en dupliquant la page actuelle et en me montrant ce que tu fais dessus.
+Elle ne doit pas être indexée ni rien, je veux juste voir sa version en
+ligne pour corriger. [...] La page doit dérouler toutes les infos dans
+un ordre logique, agréable à découvrir, devancer les objections, avoir
+des enchaînements fluides : il n'est pas question d'empiler les infos à
+ajouter de manière aléatoire."
+
+### LA TROUVAILLE, ET ELLE VAUT POUR TOUTE PAGE CAPTURÉE
+
+**Le HTML que nous servons est IGNORÉ.** Les trois fichiers
+`/v/tiquiz/*.js` sont le bundle React de l'éditeur Systeme.io
+(`webpackChunk_publisher_dist_publisher_sales`), et il RECONSTRUIT la
+page depuis `window.__PRELOADED_STATE__`, c'est à dire depuis le modèle,
+pas depuis le document.
+
+Mesuré dans un vrai Chromium sur la v2 déjà construite : le navigateur
+recevait **23 sections dans le nouvel ordre**, le DOM en rendait **19
+dans l'ancien**, sans aucun bloc neuf, avec le popup de la vente bêta
+revenu. Aucune erreur visible. Une page qui ignore tout ce qu'on lui
+écrit.
+
+**MA PREMIÈRE SONDE AVAIT CONCLU L'INVERSE, et c'est la leçon.** Je
+l'avais lancée sur la page D'ORIGINE, dont l'ordre du DOM est par
+construction celui du modèle : elle ne pouvait pas distinguer « React ne
+touche à rien » de « React réécrit à l'identique ». **Un test qui ne
+distingue pas ce qu'il est censé distinguer est pire qu'un test absent**
+(leçon des clés Supabase, 22 août), et la sonde qui tranche est celle
+qui tourne sur une page DÉLIBÉRÉMENT différente.
+
+**Le bundle est donc retiré de la v2**, et ça ne coûte rien. Comparé
+écran par écran, avec et sans : la bascule mensuel / annuel (17 € et
+29 € -> 170 € et 290 €), le sélecteur de langue, les 10 ancres du menu
+dont aucune morte, les 22 animations au défilement, et la FAQ (1608 px,
+4886 caractères, dépliée) sont IDENTIQUES. La FAQ méritait d'être
+mesurée : elle n'a jamais été un accordéon, ni avec le bundle ni sans,
+et le supposer aurait fait renoncer pour une régression imaginaire.
+
+Deux choses s'améliorent : **1429 Ko -> 669 Ko**, et **22 erreurs React
+-> 0**. Le prix à payer est un aller simple : une page sans son modèle
+ne se rouvre plus dans l'éditeur Systeme.io. Ce n'est pas un problème,
+elle est servie par nous, mais ça se dit au lieu de se faire en silence.
+
+### UN CHANTIER EXIGE LA CLÉ, MÊME SUR LE DOMAINE PUBLIC
+
+`isSalesOpen` répond OUI à tout ce qui arrive sur un hôte de vente :
+c'est voulu, `tiquiz.fr` doit servir sa page sans clé. Mais la route
+d'aperçu sert N'IMPORTE QUEL slug de `PAGES` : ajouter `tiquiz-v2` à
+cette table aurait publié le chantier sur `tiquiz.fr`, indexable, avec
+la mesure d'audience et les données de marque. Et ça se serait vu à
+quoi ? À rien.
+
+`lib/sales/chantier.ts` nomme donc les CHANTIERS, pas les pages
+publiques : **un oubli laisse une page fermée**, ce qui est le sens sûr
+de l'erreur. Retirer un slug de cette liste est le geste qui le publie.
+
+### LA PAGE SE CONSTRUIT, ELLE NE SE RETOUCHE PAS
+
+```bash
+npm run vente:v2               # construit content/sales/tiquiz-v2.html
+npm run vente:v2 -- --verifie  # dit ce qu'il ferait, n'ecrit rien
+```
+
+`content/sales/tiquiz.html` fait 1,4 Mo d'une traite : une retouche à la
+main dedans ne se relit pas et se perd à la prochaine capture. Le plan
+vit dans `lib/sales/planV2.ts` (pur, testé), les blocs neufs dans
+`content/sales/v2/*.html`, et le script REFUSE de finir en silence : une
+section absente du plan, un id disparu, un bloc manquant, une correction
+qui ne mord pas, le popup ou le bundle introuvables -> il s'arrête.
+
+**Ce qui rend le réordonnancement possible est mesuré, pas supposé :**
+les 19 sections sont des frères, chacun dans exactement la même
+enveloppe `<div class="sc-iHGNWg iintFh">`. On les déplace ENTIÈRES : le
+CSS de la page cible des `#section-<id>`, et couper dedans casserait la
+mise en page sans qu'un test puisse le voir.
+
+### CE QUI A CHANGÉ DANS L'ORDRE, ET POURQUOI
+
+Le défaut n'était pas le contenu, c'était la PROGRESSION. Le visiteur
+lisait six blocs de bénéfices avant de savoir COMMENT l'outil marche :
+le mécanisme (les 4 étapes) vivait au 11e rang, enfoui dans le plus gros
+bloc de la page. Et cinq bénéfices à la suite, tous de la même forme
+(visuel, texte, bouton), font un plateau : on décroche au troisième.
+
+Le mécanisme remonte donc au 5e rang, juste après la douleur, et les
+blocs neufs coupent le plateau. Le test fige les deux règles : le
+mécanisme passe devant tous les bénéfices, et la qualification passe
+entre la preuve et le prix.
+
+### LES QUATRE BLOCS NEUFS, ET LEUR SOURCE
+
+| Bloc | Ce qu'il ferme | Vérifié dans |
+|---|---|---|
+| le funnel quiz | chacun repart vers SON offre | `lib/quiz/resultCta.ts`, `lib/quizScoring.ts` |
+| où vit ton quiz | « je suis sur WordPress », « je n'ai pas de site » | `lib/quiz/urlPublique.ts`, l'embed |
+| quand ça tourne | pixels, automatisation, affiliés, générateurs | `lib/effectivePixels.ts`, `lib/automatisation/planSysteme.ts`, `lib/quiz/affiliateRelay.ts`, `lib/generateurs/` |
+| c'est pour toi si | la qualification, avant le prix | trois refus VRAIS, dont l'examen noté qui n'existe pas |
+
+**Chaque bloc porte sa justification en commentaire, et le test
+l'exige.** Sans elle, le prochain passage prend une affirmation vérifiée
+pour une formule commerciale et la réécrit.
+
+**Et « 100+ langues » était faux.** Compté dans `lib/quizLanguages.ts` :
+le catalogue porte EXACTEMENT 100 entrées, qui couvrent 83 langues
+distinctes plus leurs variantes régionales. « 100+ » sur-compte d'une
+unité, « 100 langues » sur-compte les langues distinctes de 17. La page
+dit donc **« 100 langues et variantes »**, et le test compare le chiffre
+affiché au module qui le sert.
+
+**L'INTERFACE EST EN 7 LANGUES, PAS 5.** Béné en annonçait 5 dans sa
+liste du 1er septembre ; `i18n/config.ts` en porte 7
+(fr, en, es, it, ar, pt, pt-BR). La page SOUS-vendait, ce qui est
+l'autre façon de mentir.
+
+Test : `tests/logic/page-vente-v2.test.mts`, vérifié en rejouant la
+version d'avant (il rougit sur le bundle remis).

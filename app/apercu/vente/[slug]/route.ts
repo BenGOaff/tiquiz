@@ -26,7 +26,8 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "node:fs";
 import path from "node:path";
 import { renderSalesPage, type SalesPageMeta } from "@/lib/sales/servePage";
-import { isSalesOpen } from "@/lib/sales/previewGate";
+import { isSalesOpen, isSalesPreviewOpen } from "@/lib/sales/previewGate";
+import { estPagePublique, estUnChantier } from "@/lib/sales/chantier";
 import { isPublicSalesHost, publicSalesCanonical } from "@/lib/sales/salesHosts";
 import { SALES_CHECKOUT_TARGETS, SALES_SITE_LINKS } from "@/lib/sales/salesPageLinks";
 import { OWNER_CATALOG } from "@/lib/checkout/catalog";
@@ -60,6 +61,23 @@ const PAGES: Record<string, Omit<SalesPageMeta, "slug">> = {
     locale: "fr_FR",
     // NOTRE icône, pas celle du compte Systeme.io qui a publié la page
     // d'origine : la capture portait le "t" de Tipote.
+    favicon: "/favicon.ico",
+  },
+
+  // LA VERSION DE TRAVAIL (Béné, 2 septembre 2026).
+  //
+  // Construite par `npm run vente:v2` à partir de `tiquiz.html`, jamais
+  // éditée à la main : le fichier fait 1,4 Mo, et une retouche manuelle
+  // dans un blob pareil ne se relit pas. Le script EST la liste des
+  // changements.
+  //
+  // Elle est dans `CHANTIERS` (`lib/sales/chantier.ts`), donc elle exige
+  // la clé même sur `tiquiz.fr` et n'est jamais indexable.
+  "tiquiz-v2": {
+    canonical: "https://tiquiz.fr/",
+    title: "Tiquiz (version de travail)",
+    description: "Version de travail de la page de vente. Ne pas diffuser.",
+    locale: "fr_FR",
     favicon: "/favicon.ico",
   },
 };
@@ -112,7 +130,17 @@ export async function GET(
 
   // Sans la bonne cle, on ne dit RIEN : ni que la page existe, ni
   // pourquoi elle est refusee.
-  if (!isSalesOpen(req.nextUrl.searchParams.get("k"), req.headers.get("host"), process.env)) {
+  //
+  // UN CHANTIER EXIGE LA CLÉ PARTOUT, y compris sur `tiquiz.fr`.
+  // `isSalesOpen` ouvre tout sur un hôte de vente, ce qui est juste pour
+  // la vraie page et faux pour une version de travail : sans cette
+  // ligne, ajouter un slug à `PAGES` aurait suffi à publier le chantier
+  // sur le domaine public, indexable, sans que rien ne le signale.
+  const cle = req.nextUrl.searchParams.get("k");
+  const ouvert = estUnChantier(slug)
+    ? isSalesPreviewOpen(cle, process.env)
+    : isSalesOpen(cle, req.headers.get("host"), process.env);
+  if (!ouvert) {
     return new NextResponse("Not found", { status: 404 });
   }
 
@@ -155,7 +183,11 @@ export async function GET(
   // clé, elle reste un chantier : `noindex`, canonique vers l'originale.
   //
   // L'hôte est un PARAMÈTRE de la décision, jamais deviné ailleurs.
-  const publique = isPublicSalesHost(req.headers.get("host"));
+  // Un chantier n'est JAMAIS la page publique, même servi depuis
+  // `tiquiz.fr` : pas d'indexation, pas de mesure d'audience, pas de
+  // données de marque qui feraient concurrence à la vraie page sur sa
+  // propre requête.
+  const publique = estPagePublique(isPublicSalesHost(req.headers.get("host")), slug);
   const canonique = (publique && publicSalesCanonical(slug)) || meta.canonical;
 
   // LA MARQUE NE SE DÉCLARE QUE SUR SA PAGE OFFICIELLE.

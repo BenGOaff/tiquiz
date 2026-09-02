@@ -70,6 +70,7 @@ import { lireCommentairesPublies } from "@/lib/blog/commentairesStore";
 import { rubriqueDe } from "@/lib/blog/rubriques";
 import { minutesDeLecture, nettoyerBloc, sommaire } from "@/lib/blog/rendu";
 import { epinglePour, textePartage } from "@/lib/blog/partage";
+import { CHEMIN_FLUX } from "@/lib/blog/flux";
 import {
   ORIGINE_BLOG,
   jsonLdArticle,
@@ -110,7 +111,12 @@ export async function generateMetadata({
     // LA CANONIQUE DÉSIGNE LA NÔTRE, sans hésiter. Deux copies du même
     // article se partagent le crédit, et c'est ce qui empêche de
     // ranker.
-    alternates: { canonical: urlArticle(a.slug) },
+    alternates: {
+      canonical: urlArticle(a.slug),
+      // Le flux est annoncé sur l'article aussi : c'est la page qu'on
+      // partage, donc celle où quelqu'un qui veut suivre le blog arrive.
+      types: { "application/rss+xml": `${ORIGINE_BLOG}${CHEMIN_FLUX}` },
+    },
     openGraph: {
       type: "article",
       title: a.titre,

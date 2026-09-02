@@ -18,6 +18,7 @@ import { rubriqueDe } from "@/lib/blog/rubriques";
 import CarteArticle, { jourLisible } from "@/components/site/CarteArticle";
 import PastillesRubriques from "@/components/site/PastillesRubriques";
 import { attributsEpingle } from "@/lib/blog/partage";
+import { CHEMIN_FLUX } from "@/lib/blog/flux";
 
 export const dynamic = "force-static";
 export const revalidate = 3600;
@@ -44,7 +45,16 @@ const COUVERTURE_UNE = listerArticles()[0]?.couverture ?? null;
 export const metadata: Metadata = {
   title: TITRE,
   description: DESCRIPTION,
-  alternates: { canonical: `${ORIGINE_BLOG}/blog` },
+  alternates: {
+    canonical: `${ORIGINE_BLOG}/blog`,
+    // LA BALISE DE DÉCOUVERTE DU FLUX.
+    //
+    // C'est par elle qu'un lecteur de flux, un navigateur ou une
+    // automatisation trouvent l'adresse sans qu'on ait à la leur donner.
+    // Un flux qui n'est annoncé nulle part n'existe que pour qui connaît
+    // déjà son adresse.
+    types: { "application/rss+xml": `${ORIGINE_BLOG}${CHEMIN_FLUX}` },
+  },
   openGraph: {
     type: "website",
     title: TITRE,

@@ -1,0 +1,107 @@
+<!--
+  APRÈS : ce que Tiquiz fait une fois que le quiz tourne.
+
+  Quatre des ajouts demandés par Béné le 1er septembre 2026 vivent ici,
+  et ils ne sont pas empilés au hasard : ce sont les quatre choses qu'on
+  fait APRÈS avoir un quiz qui marche. Mesurer, brancher, déléguer,
+  écrire la suite.
+
+  CHAQUE CARTE EST VÉRIFIÉE DANS LE CODE, ligne par ligne :
+
+  - MESURER : `lib/effectivePixels.ts`. Meta, GA4 et Google Ads, réglés
+    par défaut sur le profil (`default_meta_pixel_id`, etc.) et
+    surchargeables quiz par quiz. Aucun gate de palier là dessus.
+  - BRANCHER : `lib/automatisation/planSysteme.ts` + l'onglet
+    Automatisation de l'éditeur (1er septembre 2026).
+  - DÉLÉGUER : `lib/quiz/affiliateRelay.ts` (demande de Maurice, 27 août
+    2026). L'affilié colle son `?sa=` au bout du lien du quiz ; le lead
+    est marqué à son nom ET le bouton de fin de quiz emmène
+    l'identifiant sur la page de vente (`attacherAffiliate`).
+  - ÉCRIRE : `lib/generateurs/`. TROIS générateurs, et ils sont réservés
+    aux paliers PLUS (`canUseAIAnalysis`) : la carte le DIT. Annoncer une
+    fonctionnalité sans dire qu'elle est dans le palier du dessus, c'est
+    une déception à la première ouverture du compte.
+-->
+<section id="section-v2-tourne" class="tqv-qt-sec">
+<style>
+.tqv-qt-sec{width:100%;background:#F3F6FC;padding:70px 20px}
+.tqv-qt{width:100%;max-width:1120px;margin:0 auto;font-family:"Open Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#2B3264;box-sizing:border-box}
+.tqv-qt *{box-sizing:border-box}
+.tqv-qt-h{font-size:38px;line-height:1.2;font-weight:700;margin:0 0 16px;text-align:center}
+.tqv-qt-h span{color:#20BBE6}
+.tqv-qt-p{font-size:17px;line-height:1.65;color:#3B3B3B;max-width:740px;margin:0 auto 44px;text-align:center}
+.tqv-qt-grille{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px}
+.tqv-qt-c{background:#fff;border-radius:18px;padding:28px 28px 26px;box-shadow:0 10px 30px rgba(35,40,80,.08)}
+.tqv-qt-num{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;background:#5A6EF6;color:#fff;font-weight:700;font-size:15px;margin:0 0 14px}
+.tqv-qt-c h3{font-size:21px;font-weight:700;margin:0 0 10px;line-height:1.3}
+.tqv-qt-c p{font-size:15.5px;line-height:1.7;color:#3B3B3B;margin:0 0 12px}
+.tqv-qt-c p:last-child{margin:0}
+.tqv-qt-c strong{color:#2B3264}
+.tqv-qt-puces{list-style:none;margin:0;padding:0}
+.tqv-qt-puces li{font-size:15px;line-height:1.6;color:#3B3B3B;padding:0 0 0 24px;margin:0 0 8px;position:relative}
+.tqv-qt-puces li:before{content:"\2713";position:absolute;left:0;top:0;color:#20BBE6;font-weight:700}
+.tqv-qt-quatre{display:flex;align-items:center;gap:10px;margin:0 0 14px}
+.tqv-qt-quatre .tqv-qt-num{margin:0}
+.tqv-qt-plus{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#5A6EF6;background:#EDF1F7;border-radius:999px;padding:5px 12px}
+.tqv-qt-cta{text-align:center;margin:38px 0 0}
+.tqv-qt-cta a{display:inline-block;background:#20BBE6;color:#fff;font-weight:700;font-size:18px;padding:16px 34px;border-radius:14px;box-shadow:0 10px 26px rgba(32,187,230,.32)}
+@media (max-width:900px){
+  .tqv-qt-grille{grid-template-columns:1fr;gap:16px}
+  .tqv-qt-h{font-size:29px}
+  .tqv-qt-sec{padding:52px 16px}
+}
+</style>
+<div class="tqv-qt">
+  <h2 class="tqv-qt-h">Ton quiz tourne. <span>Voilà ce qui vient après.</span></h2>
+  <p class="tqv-qt-p">La plupart des outils de quiz s'arrêtent au moment où le visiteur laisse son email. C'est là que le travail commence vraiment.</p>
+
+  <div class="tqv-qt-grille">
+
+    <div class="tqv-qt-c">
+      <span class="tqv-qt-num">1</span>
+      <h3>Tu sais ce que ta pub te rapporte</h3>
+      <p>Tes pixels de suivi sont <strong>déjà dans le quiz</strong>. Tu colles tes identifiants une fois dans tes réglages, ils s'appliquent à tous tes quiz, et tu peux en changer quiz par quiz quand tu travailles pour un client.</p>
+      <ul class="tqv-qt-puces">
+        <li>Pixel Meta, pour tes campagnes Facebook et Instagram</li>
+        <li>Google Analytics 4, pour ton trafic</li>
+        <li>Google Ads, avec sa conversion nommée</li>
+      </ul>
+      <p>Sans ça, tu paies une publicité et tu ne connais que son coût. Là, tu connais aussi ce qu'elle te ramène.</p>
+    </div>
+
+    <div class="tqv-qt-c">
+      <span class="tqv-qt-num">2</span>
+      <h3>Tiquiz te dit quoi brancher dans Systeme.io</h3>
+      <p>Poser un tag ne déclenche rien tant qu'aucune automatisation ne l'écoute. C'est le piège numéro un&nbsp;: on met son quiz en ligne, on récolte quarante adresses, et il ne se passe rien.</p>
+      <p>L'onglet <strong>Automatisation</strong> lit TON quiz et te donne la liste exacte&nbsp;: le nom de chaque tag, cliquable pour être copié, et la marche à suivre. Une fois, au début.</p>
+      <p>Pas un tutoriel générique&nbsp;: tes profils, ton bonus, tes tranches de score.</p>
+    </div>
+
+    <div class="tqv-qt-c">
+      <span class="tqv-qt-num">3</span>
+      <h3>Tes affiliés partagent ton quiz et touchent leur commission</h3>
+      <p>Ton affilié colle son identifiant Systeme.io au bout du lien de <strong>ton</strong> quiz. Deux choses se passent alors&nbsp;:</p>
+      <ul class="tqv-qt-puces">
+        <li>chaque contact qu'il t'amène arrive marqué à son nom</li>
+        <li>le bouton de fin de quiz emmène son identifiant jusqu'à ta page de vente, donc sa commission est comptée</li>
+      </ul>
+      <p><strong>Un seul quiz pour tous tes partenaires.</strong> Une correction à faire, tu la fais une fois. Pas une copie par affilié.</p>
+    </div>
+
+    <div class="tqv-qt-c">
+      <p class="tqv-qt-quatre"><span class="tqv-qt-num">4</span><span class="tqv-qt-plus">Dans le plan Plus</span></p>
+      <h3>Et l'IA écrit la suite du quiz</h3>
+      <p>Trois générateurs relisent ton quiz (tes profils, ton ton, ta langue, ton adresse publique) et écrivent ce qui vient après&nbsp;:</p>
+      <ul class="tqv-qt-puces">
+        <li>le <strong>bonus</strong> que tu promets à la fin, en entier, avec la façon de le fabriquer</li>
+        <li>la <strong>séquence d'emails</strong> qui part après le quiz, écrite pour un profil précis</li>
+        <li>les <strong>posts et les emails</strong> qui annoncent ton quiz</li>
+      </ul>
+      <p>Tu ne repars pas d'une page blanche. Tu repars d'un premier jet qui parle déjà de ton sujet.</p>
+    </div>
+
+  </div>
+
+  <p class="tqv-qt-cta"><a href="#section-518f489a">Voir les formules</a></p>
+</div>
+</section>

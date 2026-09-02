@@ -1,0 +1,91 @@
+<!--
+  CE QUE ÇA CHANGE : chacun repart vers SON offre.
+
+  Placé juste après les 4 étapes. Le visiteur vient d'apprendre COMMENT
+  on fabrique un quiz ; la question suivante est « et concrètement, ça
+  donne quoi ? ». Ce bloc y répond, et il porte la notion que Béné a
+  demandée le 1er septembre : « ajouter notion de funnel quiz : le lead
+  est diagnostiqué et envoyé vers la bonne offre selon son profil / son
+  niveau : très à la mode et c'est ce qu'on fait ».
+
+  TOUT CE QUI EST AFFIRMÉ ICI EST VÉRIFIÉ DANS LE CODE :
+  - un bouton par profil : `lib/quiz/resultCta.ts`, `quiz_results.cta_url`
+    et `cta_text` ;
+  - pas d'adresse sur le profil = PAS de bouton (Béné, 25 août : « on
+    vire le CTA par défaut, si rien = pas de CTA ») ;
+  - un tag Systeme.io par profil : `sio_tag_names` ;
+  - les tranches de score : `lib/quizScoring.ts`.
+-->
+<section id="section-v2-funnel" class="tqv-fn-sec">
+<style>
+.tqv-fn-sec{width:100%;background:#F3F6FC;padding:70px 20px}
+.tqv-fn{width:100%;max-width:1120px;margin:0 auto;font-family:"Open Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#2B3264;box-sizing:border-box}
+.tqv-fn *{box-sizing:border-box}
+.tqv-fn-h{font-size:38px;line-height:1.2;font-weight:700;margin:0 0 16px;text-align:center}
+.tqv-fn-h span{color:#20BBE6}
+.tqv-fn-p{font-size:17px;line-height:1.65;color:#3B3B3B;max-width:720px;margin:0 auto 44px;text-align:center}
+.tqv-fn-grille{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;align-items:start}
+.tqv-fn-c{background:#fff;border-radius:18px;padding:26px 24px 24px;box-shadow:0 10px 30px rgba(35,40,80,.08);display:flex;flex-direction:column;height:100%}
+.tqv-fn-qui{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5A6EF6;margin:0 0 6px}
+.tqv-fn-rep{font-size:15px;line-height:1.5;color:#3B3B3B;font-style:italic;margin:0 0 18px;padding:12px 14px;background:#F3F6FC;border-radius:12px;display:flex;align-items:center;min-height:70px}
+.tqv-fn-fleche{font-size:20px;color:#20BBE6;line-height:1;margin:0 0 14px;text-align:center}
+.tqv-fn-profil{font-size:19px;font-weight:700;margin:0 0 8px;min-height:52px;display:flex;align-items:flex-start}
+.tqv-fn-mess{font-size:15px;line-height:1.6;color:#3B3B3B;margin:0 0 18px;flex:1}
+.tqv-fn-bouton{display:block;text-align:center;background:#5A6EF6;color:#fff;font-weight:700;font-size:15px;padding:12px 16px;border-radius:12px;margin:0 0 12px}
+.tqv-fn-tag{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#2B3264;background:#EDF1F7;border-radius:999px;padding:6px 12px;align-self:flex-start}
+.tqv-fn-tag b{color:#5A6EF6;font-weight:700}
+.tqv-fn-note{margin:40px auto 0;max-width:820px;background:#fff;border-radius:16px;padding:24px 26px;box-shadow:0 8px 24px rgba(35,40,80,.07)}
+.tqv-fn-note p{font-size:16px;line-height:1.65;color:#3B3B3B;margin:0 0 10px}
+.tqv-fn-note p:last-child{margin:0}
+.tqv-fn-note strong{color:#2B3264}
+.tqv-fn-cta{text-align:center;margin:36px 0 0}
+.tqv-fn-cta a{display:inline-block;background:#20BBE6;color:#fff;font-weight:700;font-size:18px;padding:16px 34px;border-radius:14px;box-shadow:0 10px 26px rgba(32,187,230,.32)}
+@media (max-width:900px){
+  .tqv-fn-grille{grid-template-columns:1fr;gap:16px}
+  .tqv-fn-rep,.tqv-fn-profil{min-height:0}
+  .tqv-fn-h{font-size:29px}
+  .tqv-fn-sec{padding:52px 16px}
+}
+</style>
+<div class="tqv-fn">
+  <h2 class="tqv-fn-h">Un seul quiz. Et chacun repart vers <span>l'offre qui le concerne</span>.</h2>
+  <p class="tqv-fn-p">C'est ça, un funnel quiz&nbsp;: tu ne diagnostiques pas pour le plaisir de diagnostiquer. Chaque résultat a son propre message, son propre bouton et son propre tag. Trois personnes répondent au même quiz, elles ne finissent pas au même endroit.</p>
+
+  <div class="tqv-fn-grille">
+    <div class="tqv-fn-c">
+      <p class="tqv-fn-qui">Marie répond</p>
+      <p class="tqv-fn-rep">«&nbsp;Je débute, je n'ai encore rien vendu.&nbsp;»</p>
+      <p class="tqv-fn-fleche">&#8595;</p>
+      <p class="tqv-fn-profil">Profil&nbsp;: Tu poses les bases</p>
+      <p class="tqv-fn-mess">Elle lit un résultat écrit pour elle, qui nomme ce qui la bloque vraiment.</p>
+      <span class="tqv-fn-bouton">Découvrir la formation d'entrée</span>
+      <span class="tqv-fn-tag">Tag Systeme.io&nbsp;: <b>niveau-debutant</b></span>
+    </div>
+    <div class="tqv-fn-c">
+      <p class="tqv-fn-qui">Karim répond</p>
+      <p class="tqv-fn-rep">«&nbsp;J'ai des clients, mais tout repose sur moi.&nbsp;»</p>
+      <p class="tqv-fn-fleche">&#8595;</p>
+      <p class="tqv-fn-profil">Profil&nbsp;: Tu es au plafond</p>
+      <p class="tqv-fn-mess">Même quiz, autre résultat, autre promesse&nbsp;: il n'a pas le même problème que Marie.</p>
+      <span class="tqv-fn-bouton">Voir le programme d'automatisation</span>
+      <span class="tqv-fn-tag">Tag Systeme.io&nbsp;: <b>niveau-plafond</b></span>
+    </div>
+    <div class="tqv-fn-c">
+      <p class="tqv-fn-qui">Sonia répond</p>
+      <p class="tqv-fn-rep">«&nbsp;Ça tourne, je veux passer à l'échelle.&nbsp;»</p>
+      <p class="tqv-fn-fleche">&#8595;</p>
+      <p class="tqv-fn-profil">Profil&nbsp;: Le moment de déléguer</p>
+      <p class="tqv-fn-mess">Celle-là, tu ne veux surtout pas lui envoyer ta formation débutant.</p>
+      <span class="tqv-fn-bouton">Réserver un appel</span>
+      <span class="tqv-fn-tag">Tag Systeme.io&nbsp;: <b>niveau-echelle</b></span>
+    </div>
+  </div>
+
+  <div class="tqv-fn-note">
+    <p><strong>Le bouton de chaque profil, c'est TON adresse.</strong> Ta page de vente, ton agenda, ton offre&nbsp;: tu l'écris profil par profil. Et si tu n'en mets pas, il n'y a pas de bouton. On n'invente rien à ta place.</p>
+    <p><strong>Tu préfères un score plutôt qu'un profil&nbsp;?</strong> Ça marche pareil&nbsp;: tu poses tes tranches (0 à 40, 41 à 70, 71 à 100), et chaque tranche a son message, son bouton et son tag.</p>
+  </div>
+
+  <p class="tqv-fn-cta"><a href="#section-518f489a">Je construis mon premier funnel</a></p>
+</div>
+</section>
