@@ -14,6 +14,7 @@ import {
 import { sanitizeAiQuizPayload } from "@/lib/aiTextSanitizer";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { fetchAnthropic } from "@/lib/aiRetry";
+import { cleAnthropic } from "@/lib/ai/cleAnthropic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,13 +22,7 @@ export const maxDuration = 300;
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
-function getClaudeApiKey(): string {
-  return (
-    process.env.ANTHROPIC_API_KEY?.trim() ||
-    process.env.CLAUDE_API_KEY_OWNER?.trim() ||
-    ""
-  );
-}
+
 
 function getClaudeModel(): string {
   // Génération de quiz/sondage = rédaction fine → Opus par défaut (qualité
@@ -37,7 +32,7 @@ function getClaudeModel(): string {
 }
 
 export async function POST(req: NextRequest) {
-  const apiKey = getClaudeApiKey();
+  const apiKey = cleAnthropic();
   if (!apiKey) {
     return NextResponse.json(
       { ok: false, error: "Claude API key missing on the server." },

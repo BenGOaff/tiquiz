@@ -20,6 +20,7 @@ import { corsHeaders, preflight } from "@/lib/embed/cors";
 import { checkRateLimit, clientIp, hashIp } from "@/lib/embed/rateLimit";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { fetchAnthropic } from "@/lib/aiRetry";
+import { cleAnthropic } from "@/lib/ai/cleAnthropic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,13 +34,7 @@ const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 // 5 profiles fits comfortably.
 const EMBED_MAX_TOKENS = 6000;
 
-function getClaudeApiKey(): string {
-  return (
-    process.env.ANTHROPIC_API_KEY?.trim() ||
-    process.env.CLAUDE_API_KEY_OWNER?.trim() ||
-    ""
-  );
-}
+
 
 function getClaudeModel(): string {
   // The embed runs on the public marketing surface so we default to
@@ -69,7 +64,7 @@ export async function POST(req: NextRequest) {
   const origin = req.headers.get("origin");
   const headers = corsHeaders(origin);
 
-  const apiKey = getClaudeApiKey();
+  const apiKey = cleAnthropic();
   if (!apiKey) {
     return Response.json(
       { ok: false, error: "Server is not configured for AI generation." },

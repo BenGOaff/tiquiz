@@ -9,6 +9,7 @@ import { buildQuizChatSystemPrompt } from "@/lib/prompts/quiz/chat";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { fetchAnthropic } from "@/lib/aiRetry";
+import { cleAnthropic } from "@/lib/ai/cleAnthropic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,13 +20,7 @@ const MAX_USER_TURNS = 6;
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
-function getClaudeApiKey(): string {
-  return (
-    process.env.ANTHROPIC_API_KEY?.trim() ||
-    process.env.CLAUDE_API_KEY_OWNER?.trim() ||
-    ""
-  );
-}
+
 
 function getChatModel(): string {
   // Haiku = cheap + fast. Chat is a structured conversation, not creative work.
@@ -34,7 +29,7 @@ function getChatModel(): string {
 }
 
 export async function POST(req: NextRequest) {
-  const apiKey = getClaudeApiKey();
+  const apiKey = cleAnthropic();
   if (!apiKey) {
     return NextResponse.json(
       { ok: false, error: "Claude API key missing on the server." },

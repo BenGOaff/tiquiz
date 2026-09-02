@@ -24,6 +24,7 @@ import {
   resoudreEchelle,
   type EchelleRendue,
 } from "@/lib/survey/renderQuestions";
+import { cleAnthropic } from "@/lib/ai/cleAnthropic";
 
 export const SURVEY_AI_MIN_RESPONSES = 5;
 
@@ -32,13 +33,7 @@ const MAX_TEXTES_GARDES = 200;
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
-function getClaudeApiKey(): string {
-  return (
-    process.env.ANTHROPIC_API_KEY?.trim() ||
-    process.env.CLAUDE_API_KEY_OWNER?.trim() ||
-    ""
-  );
-}
+
 
 function getAnalysisModel(): string {
   return resolveAnthropicModel(process.env.TIQUIZ_SURVEY_AI_MODEL || process.env.ANTHROPIC_MODEL, "opus");
@@ -291,7 +286,7 @@ export async function generateSurveyAnalysis(
   aggregate: SurveyAggregate,
   surveyTitle: string,
 ): Promise<SurveyAnalysisResult> {
-  const apiKey = getClaudeApiKey();
+  const apiKey = cleAnthropic();
   if (!apiKey) throw new Error("Claude API key missing");
   const model = getAnalysisModel();
 

@@ -40,6 +40,7 @@ import {
 import { aggregateSurvey, type AggregatedQuestion } from "@/lib/survey/analysis";
 import { ANSWER_READING_RULES, renderQuestionsForPrompt } from "@/lib/survey/renderQuestions";
 import { fetchAnthropic } from "@/lib/aiRetry";
+import { cleAnthropic } from "@/lib/ai/cleAnthropic";
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -49,13 +50,7 @@ const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 export const INSIGHTS_MIN_LEADS = 5;
 export const INSIGHTS_MIN_VIEWS = 20;
 
-function getClaudeApiKey(): string {
-  return (
-    process.env.ANTHROPIC_API_KEY?.trim() ||
-    process.env.CLAUDE_API_KEY_OWNER?.trim() ||
-    ""
-  );
-}
+
 
 function getAnalysisModel(): string {
   return resolveAnthropicModel(process.env.TIQUIZ_SURVEY_AI_MODEL || process.env.ANTHROPIC_MODEL, "opus");
@@ -522,7 +517,7 @@ function renderAggregateForPrompt(a: QuizInsightsAggregate): string {
 export async function generateQuizInsights(
   aggregate: QuizInsightsAggregate,
 ): Promise<QuizInsightsResult> {
-  const apiKey = getClaudeApiKey();
+  const apiKey = cleAnthropic();
   if (!apiKey) throw new Error("Claude API key missing");
   const model = getAnalysisModel();
 
