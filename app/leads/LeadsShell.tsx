@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { PageBanner } from "@/components/ui/page-banner";
 
 type Lead = {
   id: string;
@@ -184,18 +185,16 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
       {/* Banner — counts visible leads only; locked leads are surfaced in
           the dedicated block below the table so they don't muddy the
           headline. */}
-      <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
-        <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
-          <Users className="h-5 w-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold">{t("title")}</h2>
-          <p className="text-sm text-white/70">{t("captured", { count: unlockedFiltered.length })}</p>
-        </div>
-        <Button onClick={exportCSV} variant="secondary" className="shrink-0" disabled={unlockedFiltered.length === 0}>
-          <Download className="h-4 w-4 mr-2" /> {t("exportCsv")}
-        </Button>
-      </div>
+      <PageBanner
+        icon={<Users className="h-5 w-5" />}
+        actions={
+          <Button onClick={exportCSV} variant="secondary" className="shrink-0" disabled={unlockedFiltered.length === 0}>
+            <Download className="h-4 w-4 mr-2" /> {t("exportCsv")}
+          </Button>
+        }
+      >
+        {t("captured", { count: unlockedFiltered.length })}
+      </PageBanner>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">

@@ -48,10 +48,18 @@ export default async function SupportPage() {
     prenom = (data as { first_name?: string | null } | null)?.first_name ?? null;
   }
 
+  // LE TITRE NE S'ECRIT QU'UNE FOIS (Bene, 2 septembre 2026 : "y'a trop
+  // de titres sur une meme page c'est tout en doublon"). Connectee, la
+  // barre du haut le porte deja via `headerTitle` ; hors session il n'y
+  // a pas de barre, donc le titre revient dans la page.
   const formulaire = (
+    <SupportForm emailConnecte={user?.email ?? null} nomConnecte={prenom} />
+  );
+
+  const enveloppe = (avecTitre: boolean) => (
     <div className="mx-auto max-w-2xl space-y-5 p-6">
-      <h1 className="text-2xl font-bold">{t("title")}</h1>
-      <SupportForm emailConnecte={user?.email ?? null} nomConnecte={prenom} />
+      {avecTitre ? <h1 className="text-2xl font-bold">{t("title")}</h1> : null}
+      {formulaire}
     </div>
   );
 
@@ -69,12 +77,12 @@ export default async function SupportPage() {
   // Connecté, il garde `AppShell` : il est dans l'app, et la navigation
   // de l'app est celle qui lui sert.
   if (!user) {
-    return <SiteShell>{formulaire}</SiteShell>;
+    return <SiteShell>{enveloppe(true)}</SiteShell>;
   }
 
   return (
     <AppShell userEmail={user.email ?? ""} headerTitle={t("title")}>
-      {formulaire}
+      {enveloppe(false)}
     </AppShell>
   );
 }

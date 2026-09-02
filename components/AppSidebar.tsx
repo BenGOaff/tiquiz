@@ -12,14 +12,12 @@ import {
   BarChart3,
   PanelLeftClose,
   HelpCircle,
-  MessageSquare,
   MessageCircleQuestion,
   ShieldCheck,
   Video,
   Wand2,
   HandCoins,
   GraduationCap,
-  Play,
 } from "lucide-react";
 import {
   Sidebar,
@@ -34,7 +32,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { helpUrl } from "@/lib/help";
 import {
   AFFILIATE_DASHBOARD_URL,
   AFFILIATE_SIGNUP_URL,
@@ -43,7 +40,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { TutorialSpotlight } from "@/components/tutorial/TutorialSpotlight";
 import { TutorialNudge } from "@/components/tutorial/TutorialNudge";
-import { useTutorial } from "@/hooks/useTutorial";
 import { useAtelierStatus } from "@/hooks/useAtelierStatus";
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -164,39 +160,6 @@ function ResellerAdminItem() {
   );
 }
 
-// Entree discrete "Refaire le tour guide", montree seulement quand la
-// carte TutorialNudge n'est pas visible (fermee via sa croix ou opt-out) :
-// le tour doit toujours rester relancable quelque part (drame testeuse
-// 31 juillet 2026).
-function RestartTourItem() {
-  const t = useTranslations("tutorial");
-  const { tutorialOptOut, nudgeDismissed, isLoading, resetTutorial, setShowWelcome, setPhase } =
-    useTutorial();
-
-  if (isLoading || (!tutorialOptOut && !nudgeDismissed)) return null;
-
-  return (
-    <SidebarMenuItem>
-      <SidebarMenuButton asChild>
-        <button
-          type="button"
-          className={cx(MENU_ITEM_CLASS, "w-full text-left")}
-          onClick={() => {
-            if (tutorialOptOut) {
-              resetTutorial();
-              return;
-            }
-            setShowWelcome(true);
-            setPhase("welcome");
-          }}
-        >
-          <Play className="w-5 h-5" />
-          <span>{tutorialOptOut ? t("helpReactivate") : t("helpRestart")}</span>
-        </button>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
-  );
-}
 
 function SidebarCollapseButton() {
   const { toggleSidebar } = useSidebar();
@@ -216,7 +179,6 @@ function SidebarCollapseButton() {
 
 export function AppSidebar() {
   const t = useTranslations("nav");
-  const tSupport = useTranslations("supportForm");
   // L'Atelier du Quiz (formation de Bene) n'existe qu'en francais : la
   // carte de conversion ci-dessous n'est montree qu'aux interfaces FR.
   const locale = useLocale();
@@ -333,40 +295,26 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 space-y-1">
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <a
-                // Le centre d'aide vit sur le domaine de Tipote, qui ne
-                // connaît pas la langue choisie ici : sans `?lang=`, une
-                // cliente espagnole cliquait sur "Ayuda" et arrivait sur
-                // une aide en français (audit du 6 août 2026). Elle n'a
-                // pas de compte Tipote, donc aucun cookie de langue
-                // là-bas, et l'entête du navigateur ne dit pas forcément
-                // la même chose que le sélecteur de cette sidebar.
-                href={helpUrl(locale)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={MENU_ITEM_CLASS}
-              >
-                <HelpCircle className="w-5 h-5" />
-                <span>{t("support")}</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          {/* ECRIRE A UN HUMAIN.
-              Le centre d'aide juste au dessus repond a la plupart des
-              questions ; celui-ci mene a quelqu'un quand il n'y repond
-              pas. Les deux, dans cet ordre : une reponse tout de suite
-              vaut mieux qu'une reponse demain. */}
+          {/* AIDE ET CONTACT : UNE SEULE ENTREE.
+              Bene, 2 septembre 2026 : "aide + contact c'est au meme
+              endroit = un seul item". Il y en avait deux, l'une vers le
+              centre d'aide de Tipote, l'autre vers notre formulaire, et
+              les deux repondent a la meme question ("j'ai besoin
+              d'aide"). Deux portes pour un besoin, c'est un choix a
+              faire avant meme d'avoir explique son probleme.
+
+              La destination est NOTRE page : elle porte les deux, le
+              centre d'aide en premier (une reponse tout de suite vaut
+              mieux qu'une reponse demain) et le formulaire dessous,
+              avec l'adresse deja remplie quand la session existe. */}
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <Link href="/support" className={MENU_ITEM_CLASS}>
-                <MessageSquare className="w-5 h-5" />
-                <span>{tSupport("title")}</span>
+                <HelpCircle className="w-5 h-5" />
+                <span>{t("support")}</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <RestartTourItem />
           {/* Programme affilié — accessible à tout moment depuis chaque app. */}
           <SidebarMenuItem>
             <SidebarMenuButton asChild>

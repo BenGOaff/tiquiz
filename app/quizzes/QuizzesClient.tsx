@@ -33,6 +33,7 @@ import {
 import { toast } from "sonner";
 import { PartagerQuizDialog } from "@/components/quiz/PartagerQuizDialog";
 import { EmbedCodeDialog } from "@/components/popquiz/EmbedCodeDialog";
+import { PageBanner } from "@/components/ui/page-banner";
 
 type ProjectMode = "quiz" | "survey" | "popquiz";
 
@@ -130,10 +131,23 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
 
         const enriched: Project[] = [];
 
-        // Quiz / Sondages — enrich avec leads_count via /api/quiz/[id]
+        // LE COMPTEUR DE LEADS VIENT DE LA LISTE, PAS D'UN APPEL PAR
+        // PROJET (Béné, 2 septembre 2026 : "la page Mes projets est très
+        // longue à charger : il n'y aurait pas un souci ?").
+        //
+        // Il y en avait un, et il était écrit noir sur blanc au dessus du
+        // code qui le causait. `GET /api/quiz` agrège déjà les leads en
+        // UN appel SQL (`quiz_leads_summary`) et pose `leads_count` sur
+        // chaque ligne, avec ce commentaire : "le dashboard n'a plus
+        // besoin de faire un fetch par quiz (N+1)". Cette boucle faisait
+        // exactement ça, et EN SÉRIE : un aller-retour par projet, chacun
+        // ramenant le quiz ENTIER (questions, résultats, leads) pour n'en
+        // garder qu'un nombre. Vingt projets, vingt requêtes à la queue
+        // leu leu, et la page qui reste blanche pendant ce temps.
+        //
+        // Cinquième fois que ce dépôt paie une règle écrite en
+        // commentaire et démentie par le code.
         for (const row of quizRows) {
-          const qRes = await fetch(`/api/quiz/${row.id}`);
-          const qData = await qRes.json();
           enriched.push({
             id: String(row.id),
             // Gwenn (19 mai 2026) : avant ce fix, `slug: null` était
@@ -148,7 +162,7 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
             completions_count: Number(row.completions_count ?? 0),
             shares_count: Number(row.shares_count ?? 0),
             created_at: String(row.created_at ?? ""),
-            leads_count: qData.leads?.length ?? 0,
+            leads_count: Number(row.leads_count ?? 0),
           });
         }
 
@@ -320,15 +334,9 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
 
   return (
     <AppShell userEmail={userEmail} headerTitle={tProjects("title")}>
-      <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
-        <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
-          <ClipboardList className="h-5 w-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold">{tProjects("title")}</h2>
-          <p className="text-sm text-white/70">{tProjects("subtitle")}</p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+      <PageBanner
+        icon={<ClipboardList className="h-5 w-5" />}
+        actions={<>
           <Button asChild variant="secondary">
             <Link href="/quiz/new">
               <Sparkles className="h-4 w-4 mr-2" />
@@ -355,8 +363,10 @@ export default function QuizzesClient({ userEmail }: { userEmail: string }) {
               {tProjects("createPopquiz")}
             </Link>
           </Button>
-        </div>
-      </div>
+        </>}
+      >
+        {tProjects("subtitle")}
+      </PageBanner>
 
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">…</div>
