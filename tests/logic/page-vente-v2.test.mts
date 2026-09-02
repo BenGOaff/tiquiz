@@ -26,6 +26,12 @@ import { CORRECTIONS_FAQ, rangerFaq, type QuestionFaq } from "@/lib/sales/faqV2"
 import { ICONES_V2, FAMILLES_RETIREES } from "@/lib/sales/iconesV2";
 import { ALT_IMAGES_V2, LOGO, altDe, nonClassees } from "@/lib/sales/altImagesV2";
 import {
+  IMAGES_SURDIMENSIONNEES,
+  DENSITE_COUVERTE,
+  nomReduit,
+  hauteurCible,
+} from "@/lib/sales/imagesV2";
+import {
   AVANTAGES_NOUVEAUX,
   AVANTAGES_PLUS,
   avantagesDuPlan,
@@ -651,5 +657,132 @@ test("une image qui sait sa taille la porte", () => {
     if (w == null && h == null) continue;
     assert.ok(w != null && h != null, `une image ne porte qu'une moitié de ses dimensions : ${t.slice(0, 120)}`);
     assert.ok(Number(w) > 0 && Number(h) > 0, `une dimension vaut zéro : ${t.slice(0, 120)}`);
+  }
+});
+
+// ---------------------------------------------------------------------
+// LES PORTRAITS : 1024 x 1024 pour un affichage en 48 x 48.
+// ---------------------------------------------------------------------
+
+test("les images surdimensionnées sont servies à leur taille utile", () => {
+  const v2 = fs.readFileSync(V2, "utf8");
+  for (const img of IMAGES_SURDIMENSIONNEES) {
+    const reduit = nomReduit(img.fichier, img.cible);
+    assert.ok(!v2.includes(`/v/tiquiz/${img.fichier}`), `${img.fichier} est encore servi en taille réelle`);
+    assert.ok(v2.includes(`/v/tiquiz/${reduit}`), `${reduit} n'est pas servi`);
+    const f = path.join(RACINE, "public/v/tiquiz", reduit);
+    assert.ok(fs.existsSync(f), `${reduit} n'a pas été construit (npm run vente:images)`);
+    // Le fichier d'ORIGINE reste : la vraie page de vente sert le sien,
+    // et le chantier ne change rien à ce qui est en ligne.
+    assert.ok(
+      fs.existsSync(path.join(RACINE, "public/v/tiquiz", img.fichier)),
+      `${img.fichier} a été supprimé : la vraie page de vente en a besoin`,
+    );
+  }
+});
+
+test("la cible couvre TROIS fois l'affichage, sur toutes les densités", () => {
+  // Deux fois couvre les écrans Retina courants, trois fois couvre aussi
+  // les téléphones à très forte densité. Béné : "en faisant attention de
+  // ne rien dégrader en qualité pour aucun des devices".
+  for (const img of IMAGES_SURDIMENSIONNEES) {
+    assert.ok(
+      img.cible >= img.afficheeMax[0] * DENSITE_COUVERTE,
+      `${img.fichier} : ${img.cible}px pour ${img.afficheeMax[0]}px affichés, c'est sous ${DENSITE_COUVERTE}x`,
+    );
+    // Et on ne fabrique jamais de pixels.
+    assert.ok(img.cible <= img.naturelle[0], `${img.fichier} : la cible dépasse la taille réelle`);
+  }
+});
+
+test("on RÉDUIT, on ne recadre jamais", () => {
+  // Une photo recadrée coupe des visages : c'est le reproche fait aux
+  // images de réponse le 4 août.
+  for (const img of IMAGES_SURDIMENSIONNEES) {
+    const attendue = hauteurCible(img);
+    const ratioSource = img.naturelle[0] / img.naturelle[1];
+    const ratioCible = img.cible / attendue;
+    assert.ok(
+      Math.abs(ratioSource - ratioCible) < 0.02,
+      `${img.fichier} : le ratio change (${ratioSource.toFixed(3)} -> ${ratioCible.toFixed(3)})`,
+    );
+  }
+  const script = fs.readFileSync(path.join(RACINE, "scripts/reduire-images-vente.mjs"), "utf8");
+  assert.ok(script.includes('fit: "inside"'), "le script recadre au lieu de réduire");
+  assert.ok(script.includes("withoutEnlargement: true"), "le script peut agrandir une image");
+});
+
+test("aucun SVG et aucun GIF dans la liste", () => {
+  // Un SVG est VECTORIEL : le rasteriser serait exactement la
+  // dégradation qu'on cherche à éviter. Un GIF animé perdrait son
+  // animation sans que personne ne le voie avant la mise en ligne.
+  for (const img of IMAGES_SURDIMENSIONNEES) {
+    assert.ok(!/\.(svg|gif)$/i.test(img.fichier), `${img.fichier} ne doit pas être réduit`);
+  }
+});
+
+test("l'image des aperçus sociaux n'est PAS touchée", () => {
+  // C'est elle que les moteurs et les réseaux affichent : la réduire
+  // dégraderait l'aperçu d'un partage.
+  const v2 = fs.readFileSync(V2, "utf8");
+  const og = /property="og:image" content="([^"]+)"/.exec(v2)?.[1] ?? "";
+  assert.ok(og, "la page ne déclare plus d'og:image");
+  const nom = og.split("/").pop() ?? "";
+  assert.ok(
+    !IMAGES_SURDIMENSIONNEES.some((i) => i.fichier === nom),
+    "l'image des aperçus sociaux a été réduite",
+  );
+});
+
+test("les dimensions déclarées suivent le fichier servi", () => {
+  // Un `width` qui ment sur la taille réelle réserve la mauvaise place,
+  // donc la page saute quand même pendant qu'elle charge.
+  const v2 = fs.readFileSync(V2, "utf8");
+  for (const img of IMAGES_SURDIMENSIONNEES) {
+    const reduit = nomReduit(img.fichier, img.cible);
+    for (const balise of v2.match(/<img\b[^>]*>/gi) ?? []) {
+      if (!balise.includes(reduit)) continue;
+      const w = /\swidth="(\d+)"/.exec(balise)?.[1];
+      if (w == null) continue;
+      assert.equal(Number(w), img.cible, `${reduit} annonce ${w}px`);
+      const h = /\sheight="(\d+)"/.exec(balise)?.[1];
+      assert.equal(Number(h), hauteurCible(img), `${reduit} annonce une hauteur fausse`);
+    }
+  }
+});
+
+test("les images qui annonçaient du PNG et portaient du JPEG sont réparées", () => {
+  // Deux images étaient CASSÉES, et c'est le retrait du bundle qui les a
+  // mises à nu : sur une adresse `data:`, le type déclaré fait foi, donc
+  // le navigateur refusait de les décoder. Trouvé en MESURANT la page
+  // rendue (`naturalWidth === 0`), pas en la relisant.
+  const v2 = fs.readFileSync(V2, "utf8");
+  assert.equal(
+    (v2.match(/data:image\/png;base64,\/9j\//g) ?? []).length,
+    0,
+    "une image annonce encore du PNG en portant du JPEG",
+  );
+  // Et la capture d'origine les porte toujours : on n'a pas fabriqué le
+  // problème, et l'étape de réparation a donc toujours quelque chose à
+  // faire (un test qui ne peut plus échouer ment).
+  const capture = fs.readFileSync(CAPTURE, "utf8");
+  assert.ok(
+    (capture.match(/data:image\/png;base64,\/9j\//g) ?? []).length > 0,
+    "la capture n'en porte plus : retirer l'étape de réparation",
+  );
+});
+
+test("aucune image tronquée ne reste servie", () => {
+  // Un JPEG se termine par `ffd9`. Sans cette marque, les octets
+  // manquent et AUCUN navigateur ne peut décoder : la capture d'origine
+  // en porte deux, tronquées à la source. On ne sert pas une image qui
+  // ne PEUT pas s'afficher.
+  const v2 = fs.readFileSync(V2, "utf8");
+  for (const m of v2.matchAll(/data:image\/jpeg;base64,(\/9j\/[A-Za-z0-9+/=]+)/g)) {
+    const o = Buffer.from(m[1], "base64");
+    assert.ok(
+      o.length > 2 && o[o.length - 2] === 0xff && o[o.length - 1] === 0xd9,
+      "un JPEG en base64 est tronqué et reste servi",
+    );
   }
 });

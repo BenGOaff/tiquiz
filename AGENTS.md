@@ -4398,6 +4398,92 @@ en COLONNES, pas en lignes : une rangée au lieu de trois. Mesuré à
 hauteur RÉSERVÉE (`min-height`) : il s'affiche sur place, il ne pousse
 plus la page au moment exact où on la lit.
 
+### Les portraits : 1024 x 1024 pour un affichage en 48 x 48 (2 septembre 2026)
+
+Béné : "oui vas y pour les portraits en faisant attention de ne rien
+dégrader en qualité pour aucun des devices et moteurs de recherche."
+
+**1286 Ko -> 95 Ko, 93 % de moins, sur 22 fichiers.** Les portraits de
+témoignages faisaient 1024 x 1024 et s'affichent en 48 x 48 : vingt et
+une fois trop grands.
+
+**LA TAILLE D'AFFICHAGE EST MESURÉE, PAS SUPPOSÉE.** Le maximum relevé
+sur QUATRE largeurs (390, 768, 1280, 1920), **toutes images différées
+forcées à charger** : une image encore différée rend 0 x 0, ce qui la
+ferait passer pour non affichée, et une image petite sur un ordinateur
+peut être grande sur un téléphone.
+
+**La cible est TROIS fois l'affichage** (`DENSITE_COUVERTE`). Deux fois
+couvre les écrans Retina courants ; trois fois couvre aussi les
+téléphones à très forte densité, et sur une vignette de 48 px la
+différence entre 96 et 144 pixels coûte quelques kilo-octets. On ne
+descend jamais en dessous, et on ne dépasse jamais la taille réelle :
+on ne fabrique pas de pixels. `fit: "inside"` et
+`withoutEnlargement: true` : on RÉDUIT, on ne recadre jamais.
+
+**Quatre choses ne sont PAS touchées, et c'est ce qui répond à sa
+phrase :**
+
+1. **les SVG.** Ils sont VECTORIELS, donc déjà parfaits à toutes les
+   densités : les rasteriser serait exactement la dégradation qu'elle
+   demande d'éviter. `a787cf8c0b74.svg` (47 Ko) et `22617289340f.svg`
+   (97 Ko) sont du vrai vectoriel, 28 et 77 tracés, zéro bitmap dedans.
+   **Vérifié dans les fichiers, pas supposé** ;
+2. **les GIF animés** : une conversion qui ne demande pas l'animation ne
+   garde que la première image, et ça ne se voit qu'en ligne ;
+3. **l'`og:image`** (`c7c793ad598e.gif`), celle que les moteurs et les
+   réseaux affichent en aperçu. Le test l'exige ;
+4. **les fichiers d'origine.** On écrit un fichier NOUVEAU
+   (`<nom>-<largeur>.webp`) : la vraie page de vente sert les siens, et
+   le chantier ne change rien à ce qui est en ligne.
+
+Et une image dont la marge est faible reste intacte : on ne réduit que
+si le réel fait au moins DEUX fois la cible et que le fichier pèse au
+moins 10 Ko. Les trois captures 1500 x 999 affichées à 314 px sont donc
+laissées telles quelles.
+
+```bash
+npm run vente:images              # construit les fichiers reduits
+npm run vente:images -- --verifie # dit ce qu'il ferait, n'ecrit rien
+```
+
+Le script REFUSE de construire si le fichier ne fait pas la taille que
+la table annonce (l'image a été remplacée depuis la mesure), si la cible
+n'est pas plus petite que le réel, ou si elle passe sous trois fois
+l'affichage. La table pourrait être éditée à la main : le contrôle est
+refait à l'exécution.
+
+### ET LA SONDE A TROUVÉ DEUX IMAGES CASSÉES, exposées par le retrait du bundle
+
+En vérifiant qu'aucune image n'était dégradée, deux rendaient
+`naturalWidth === 0` : **elles ne s'affichaient pas du tout.**
+
+La capture porte des `data:image/png;base64,/9j/...`. Le préfixe `/9j/`
+est la signature d'un JPEG : ces images ANNONCENT du PNG et contiennent
+du JPEG. Sur une adresse `data:`, le type déclaré fait foi, donc le
+navigateur refuse de décoder. Le bundle React de Systeme.io
+reconstruisait ces balises et masquait le problème ; sans lui, elles
+sont nues.
+
+**Elles sont dans la capture d'ORIGINE** (4 sur la vraie page, 2 sur la
+v2) : on ne les a pas fabriquées. On corrige la DÉCLARATION, pas les
+pixels.
+
+**Et l'une des deux est TRONQUÉE à la source** : son base64 ne finit pas
+par `ffd9`, la marque de fin d'un JPEG. Les octets manquent, rien ne
+peut les rendre. Ce sont des aperçus flous de préchargement
+(`tqz-opt-lo`, "optimized low quality"), donc invisibles pour la
+lectrice : on retire la balise et ses 3,5 Ko de base64. **Le script
+REFUSE de retirer une image tronquée qui porterait un texte
+alternatif** : une image qui dit quelque chose se signale, elle ne
+disparaît pas en silence.
+
+**La leçon est celle du 22 août, encore : on mesure la page RENDUE, pas
+le fichier.** Ces deux images étaient cassées depuis le retrait du
+bundle, et aucun test de contenu ne pouvait le voir.
+
+Test : les 7 cas ajoutés à `tests/logic/page-vente-v2.test.mts`.
+
 ## Le nom d'un écran s'écrit UNE fois, dans la barre du haut (2 septembre 2026)
 
 Béné : "y'a trop de titres sur une même page c'est tout en doublon : à
