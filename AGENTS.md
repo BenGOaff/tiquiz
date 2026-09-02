@@ -5796,3 +5796,84 @@ l'autre façon de mentir.
 
 Test : `tests/logic/page-vente-v2.test.mts`, vérifié en rejouant la
 version d'avant (il rougit sur le bundle remis).
+
+### Le deuxième passage (2 septembre, l'après-midi)
+
+Sa relecture a trouvé quatre choses, et l'une d'elles était une
+régression que j'avais causée.
+
+**LA FAQ NE S'OUVRAIT PLUS, ET MA MESURE DISAIT LE CONTRAIRE.** Béné :
+"je ne peux pas cliquer sur les éléments de la faq". Elle avait raison.
+L'accordéon d'origine est piloté par le bundle React ; en le retirant,
+je l'ai figé. J'avais pourtant comparé la FAQ avant et après, et écrit
+« identique » : hauteur au repos 1608 px, texte 4886 caractères, des
+deux côtés. **Je n'avais jamais cliqué.** Refait avec un clic :
+
+```
+ORIGINE  1608 px -> 1730 px   ça s'ouvre
+V2       1608 px -> 1608 px   immobile
+```
+
+Deuxième fois dans le même chantier, sur la même page, qu'un contrôle ne
+distingue pas ce qu'il est censé distinguer. La règle est écrite depuis
+le 22 août ; ce qui manquait ici, c'est de **mesurer le GESTE, pas
+l'état au repos**. Un écran interactif se teste en le touchant.
+
+**La FAQ est refaite en `<details>` natif**, sans une ligne de
+JavaScript : elle ne peut plus se casser en retirant un script, elle
+s'ouvre au clavier, et Ctrl+F ouvre le bon panneau. Seize questions en
+cinq groupes (24 Ko -> 14 Ko).
+
+**ET ELLE EST CONSTRUITE À PARTIR DU JSON-LD.** La page portait déjà un
+`FAQPage` avec les 16 questions ; écrire la FAQ visible à côté aurait
+donné deux listes, donc Google à qui on raconte autre chose qu'à la
+lectrice. Le script LIT les données structurées et fabrique la section
+avec. **Ma propre sonde a d'ailleurs attrapé la suite du piège** : le
+JSON-LD vivait DANS la section, donc la remplacer l'emportait. Il est
+maintenant reconstruit depuis les questions CORRIGÉES et reposé avec
+elle.
+
+**Une seule liste d'avantages pour la grille ET le bon de commande.**
+`lib/checkout/avantages.ts`. Le bon de commande avait sa propre liste de
+six lignes, IDENTIQUE pour les quatre paliers : quelqu'un qui achetait
+« mensuel Plus » à 29 € lisait exactement ce que lisait celui qui
+achetait « mensuel » à 17 €. Il annonce maintenant ce que Plus ajoute,
+et les trois nouveautés (pixels, guide d'automatisation, quiz partagé
+par les affiliés) sont dans les six colonnes de tarif ET sur le bon de
+commande, depuis la même source. Le test interdit qu'un texte y soit
+recopié à la main.
+
+**« C'est pour toi » est devenu un quiz de trois questions.** Béné :
+"on avait un quiz rapide en 3 questions à l'époque, ce serait plus
+logique non ?". Elle a raison : la page qui vend des quiz doit en faire
+vivre un. Trois questions, un verdict qui sait dire NON, et **zéro
+script** (radios + CSS `:has()`), parce que c'est un script qui vient de
+tuer la FAQ. Il ne capture rien et ne prétend pas être un quiz Tiquiz.
+
+**Ce que la relecture a corrigé sur la forme :** le padding des blocs
+neufs (70 px alors que toute la page est à 100 px, mesuré), et leurs
+boutons (trois familles de boutons sur une page, ramenées à celle de la
+page : #5A6EF6, rayon 999px, animation `tqButtonPulse`).
+
+### Ce que la mesure a trouvé en plus, sur le référencement
+
+**La page servait DEUX `<h1>`, tous les deux VISIBLES en même temps**, à
+1280 px comme à 390 px. Ce ne sont pas les versions large et mobile d'un
+même titre : ce sont les deux moitiés d'une phrase (« Booste ton
+trafic » et « Grâce aux quiz interactifs ») découpées en deux titres de
+niveau 1. Un moteur ne sait alors plus quel est le sujet de la page. La
+deuxième moitié devient un paragraphe, et garde exactement sa taille et
+sa couleur (elles viennent du conteneur, pas de la balise).
+
+**65 images sur 105 passent en chargement différé**, les huit premières
+exceptées : différer une image du premier écran la fait arriver plus
+tard, donc dégrade exactement la mesure qu'on cherche à améliorer.
+Mesuré : 1585 Ko d'images téléchargées au chargement, contre 280 Ko
+après.
+
+**Ce qui reste, et qui est plus gros que tout le reste : 2552 Ko de
+CSS.** C'est la feuille de style entière de l'éditeur Systeme.io, dont
+la page n'utilise qu'une fraction. Devant les images, devant tout. Et
+**88 images sur 104 n'ont aucun texte alternatif**, **aucune ne porte
+ses dimensions**. Les trois sont notés dans `CHANTIERS.md` : ce sont des
+chantiers à part, pas des lignes à glisser dans celui-ci.

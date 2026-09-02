@@ -42,6 +42,124 @@ const VERIFIE = process.argv.includes("--verifie");
 const plan = await import(pathToFileURL(path.join(RACINE, "lib/sales/planV2.ts")).href);
 const { ORDRE_V2, POPUP_BETA, CORRECTIONS_V2, SCRIPTS_RETIRES, verifierPlan } = plan;
 
+const faqMod = await import(pathToFileURL(path.join(RACINE, "lib/sales/faqV2.ts")).href);
+const { rangerFaq, CORRECTIONS_FAQ } = faqMod;
+const avMod = await import(pathToFileURL(path.join(RACINE, "lib/checkout/avantages.ts")).href);
+const { AVANTAGES_NOUVEAUX, AVANTAGES_PLUS } = avMod;
+
+/** Échappe ce qui part dans du HTML. Le texte vient d'un JSON, pas de nous. */
+const ech = (t) => String(t).replace(/&(?![a-z#0-9]+;)/gi, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/**
+ * LA FAQ, REFAITE À PARTIR DU JSON-LD.
+ *
+ * Le `FAQPage` de la page porte déjà les 16 questions. On les relit et
+ * on FABRIQUE la section avec : une seule source, donc pas de dérive
+ * entre ce que Google lit et ce que la lectrice voit.
+ *
+ * `<details>` natif, zéro script : ça ne peut plus se casser en retirant
+ * un bundle, et ça s'ouvre au clavier comme à la souris.
+ */
+function construireFaq(html) {
+  const m = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/i.exec(html);
+  if (!m) meurs("le JSON-LD de la FAQ est introuvable : rien n'a ete ecrit.");
+  let brut = m[1];
+  for (const c of CORRECTIONS_FAQ) {
+    if (!brut.includes(c.cherche)) meurs(`la correction FAQ « ${c.cherche} » ne trouve rien.\n   ${c.pourquoi}`);
+    brut = brut.split(c.cherche).join(c.remplace);
+  }
+  let donnees;
+  try { donnees = JSON.parse(brut); } catch (e) { meurs("le JSON-LD de la FAQ est illisible : " + e.message); }
+  const questions = donnees.mainEntity ?? [];
+  const range = rangerFaq(questions);
+  if (range.inconnues.length) meurs("le plan de la FAQ nomme des questions absentes :\n   " + range.inconnues.join("\n   "));
+  if (range.orphelines.length) {
+    meurs(
+      "ces questions n'entrent dans aucun groupe, elles DISPARAITRAIENT de la page\n" +
+        "   alors qu'elles resteraient dans les donnees structurees :\n   " +
+        range.orphelines.map((q) => q.name).join("\n   "),
+    );
+  }
+  const groupes = range.groupes
+    .filter((g) => g.questions.length)
+    .map(
+      (g) => `<div class="tqv-faq-g"><h3>${ech(g.titre)}</h3>` +
+        g.questions
+          .map(
+            (q) =>
+              `<details class="tqv-faq-q"><summary>${ech(q.name)}</summary>` +
+              `<div class="tqv-faq-r">${q.acceptedAnswer.text}</div></details>`,
+          )
+          .join("") +
+        `</div>`,
+    )
+    .join("");
+  // LE JSON-LD REPART AVEC LA SECTION, et c'est une régression que ma
+  // propre sonde a attrapée : il vivait DANS `section-25c05a06`, donc
+  // remplacer la section l'emportait. Google perdait les 16 questions,
+  // en silence, sur la page qu'on veut faire remonter.
+  //
+  // Il est RECONSTRUIT depuis les questions corrigées, pas recopié : une
+  // structure qui dirait « obligé(e) » quand la page dit « faut-il »
+  // serait une deuxième version du texte, donc une divergence de plus.
+  const jsonld =
+    `<script type="application/ld+json">` +
+    JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: questions.map((q) => ({
+        "@type": "Question",
+        name: q.name,
+        acceptedAnswer: { "@type": "Answer", text: q.acceptedAnswer.text },
+      })),
+    }).replace(/</g, "\\u003c") +
+    `</script>`;
+
+  const section =
+    `<section id="section-25c05a06" class="tqv-faq-sec">` +
+    jsonld +
+    `<style>` +
+    `.tqv-faq-sec{width:100%;background:#fff;padding:100px 20px}` +
+    `.tqv-faq{width:100%;max-width:860px;margin:0 auto;font-family:"Open Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#2B3264;box-sizing:border-box}` +
+    `.tqv-faq *{box-sizing:border-box}` +
+    `.tqv-faq-h{font-size:38px;line-height:1.2;font-weight:700;margin:0 0 14px;text-align:center}` +
+    `.tqv-faq-p{font-size:17px;line-height:1.6;color:#3B3B3B;margin:0 0 44px;text-align:center}` +
+    `.tqv-faq-g{margin:0 0 34px}` +
+    `.tqv-faq-g:last-child{margin:0}` +
+    `.tqv-faq-g h3{font-size:14px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#5A6EF6;margin:0 0 12px}` +
+    `.tqv-faq-q{border-top:1px solid #E4E8F2}` +
+    `.tqv-faq-g .tqv-faq-q:last-child{border-bottom:1px solid #E4E8F2}` +
+    `.tqv-faq-q>summary{list-style:none;cursor:pointer;padding:18px 34px 18px 0;font-size:17px;font-weight:600;line-height:1.45;position:relative}` +
+    `.tqv-faq-q>summary::-webkit-details-marker{display:none}` +
+    `.tqv-faq-q>summary::after{content:"+";position:absolute;right:4px;top:16px;font-size:24px;font-weight:400;color:#5A6EF6;line-height:1}` +
+    `.tqv-faq-q[open]>summary::after{content:"\u2212"}` +
+    `.tqv-faq-q>summary:focus-visible{outline:2px solid #5A6EF6;outline-offset:2px;border-radius:6px}` +
+    `.tqv-faq-r{font-size:16px;line-height:1.7;color:#3B3B3B;padding:0 34px 22px 0}` +
+    `.tqv-faq-r a{color:#5A6EF6;text-decoration:underline}` +
+    `@media (max-width:900px){.tqv-faq-sec{padding:60px 16px}.tqv-faq-h{font-size:28px}.tqv-faq-q>summary{font-size:16px}}` +
+    `</style>` +
+    `<div class="tqv-faq"><h2 class="tqv-faq-h">Questions fréquentes</h2>` +
+    `<p class="tqv-faq-p">Clique sur une question pour lire la réponse.</p>` +
+    groupes +
+    `</div></section>`;
+  return { section, nb: questions.length, groupes: range.groupes.filter((g) => g.questions.length).length };
+}
+
+/**
+ * LES AVANTAGES MANQUANTS, INJECTÉS DANS LA GRILLE TARIFAIRE.
+ *
+ * La grille est capturée : on ne la réécrit pas, on ajoute les lignes
+ * qui manquent au format exact de celles qui existent. Le texte vient de
+ * `lib/checkout/avantages.ts`, LA MÊME source que le bon de commande.
+ */
+function ligneTarif(texte) {
+  return (
+    `<li dir="ltr" style="display: flex; align-items: stretch; ">` +
+    `<i class='fas fa-check-circle' style="line-height: inherit"></i>` +
+    `<div><p dir="ltr"><span style="color: rgb(61, 66, 102)">${ech(texte)}</span></p></div></li>`
+  );
+}
+
 function meurs(quoi) {
   console.error("\n❌ " + quoi + "\n");
   process.exit(1);
@@ -157,6 +275,70 @@ console.log(
   `Retire    : le bundle React de l'editeur Systeme.io ` +
     `(${SCRIPTS_RETIRES.bundles.length} scripts + ${SCRIPTS_RETIRES.etats.length} etats)`,
 );
+
+// -------------------------------------------- 5bis. les avantages
+// APRÈS « Statistiques de complétion », qui figure dans les 6 colonnes
+// (compté : 6 dans le DOM). Les nouveautés valent pour tous les paliers,
+// aucun `canUse…` ne les garde.
+{
+  const ancre = '<span style="color: rgb(61, 66, 102)">Statistiques de complétion</span></p></div></li>';
+  const n = html.split(ancre).length - 1;
+  if (n !== 6) meurs(`l'ancre des avantages apparait ${n} fois au lieu de 6 : la grille a bouge.`);
+  html = html.split(ancre).join(ancre + AVANTAGES_NOUVEAUX.map((a) => ligneTarif(a.texte)).join(""));
+  console.log(`Ajoute    : ${AVANTAGES_NOUVEAUX.length} avantages dans les ${n} colonnes de tarif`);
+
+  // Et les générateurs, dans les DEUX colonnes PLUS seulement.
+  const gen = AVANTAGES_PLUS.find((a) => a.texte.includes("générateurs"));
+  if (!gen) meurs("l'avantage des generateurs a disparu de lib/checkout/avantages.ts.");
+  const ancrePlus = '<span style="color: rgb(61, 66, 102)"><strong>Multi-clés API Systeme io :</strong></span><br><span style="color: rgb(61, 66, 102)">Connecte autant de comptes que nécessaire</span></p></div></li>';
+  const p = html.split(ancrePlus).length - 1;
+  if (p !== 2) meurs(`l'ancre PLUS apparait ${p} fois au lieu de 2.`);
+  html = html.split(ancrePlus).join(ancrePlus + ligneTarif(gen.texte));
+  console.log(`Ajoute    : les generateurs dans les ${p} colonnes PLUS`);
+}
+
+// ------------------------------------------ 5quater. les images
+// MESURÉ sur la capture : 69 images sur 104 se chargent sans `lazy`, et
+// AUCUNE ne porte de dimensions. Les deux coûtent au même endroit, le
+// score de chargement :
+//
+//   - sans `lazy`, le navigateur télécharge les 104 images avant même que
+//     le visiteur n'ait fait défiler ;
+//   - sans `width`/`height`, il ne peut pas réserver la place, donc la
+//     page saute pendant qu'elles arrivent (le fameux décalage de mise
+//     en page qui fait cliquer à côté).
+//
+// ON NE TOUCHE PAS AUX PREMIÈRES : une image du premier écran mise en
+// `lazy` arrive PLUS TARD, ce qui dégrade exactement la mesure qu'on
+// cherche à améliorer. Les huit premières sont donc laissées telles
+// quelles, c'est à dire le logo et le visuel d'accroche.
+{
+  let vues = 0, posees = 0;
+  html = html.replace(/<img\b([^>]*)>/gi, (balise, attrs) => {
+    vues++;
+    if (vues <= 8) return balise;
+    if (/\bloading=/i.test(attrs)) return balise;
+    posees++;
+    return `<img${attrs} loading="lazy" decoding="async">`;
+  });
+  console.log(`Images    : ${posees} passees en chargement differe sur ${vues} (les 8 premieres restent immediates)`);
+}
+
+// ------------------------------------------------------- 5ter. la FAQ
+{
+  const faq = construireFaq(html);
+  const blocsFaq = decouper(html);
+  const cible = blocsFaq.find((b) => b.id === "section-25c05a06");
+  if (!cible) meurs("la section FAQ est introuvable.");
+  // On remplace la SECTION seule : l'enveloppe est reposée au
+  // réassemblage, comme pour n'importe quel autre bloc.
+  const avant = html.slice(cible.debut, cible.fin);
+  html = html.slice(0, cible.debut) + OUVRE + faq.section + FERME + html.slice(cible.fin);
+  console.log(
+    `Refaite   : la FAQ, ${faq.nb} questions en ${faq.groupes} groupes, <details> natif ` +
+      `(${(avant.length / 1024).toFixed(0)} Ko -> ${((faq.section.length + OUVRE.length + FERME.length) / 1024).toFixed(0)} Ko)`,
+  );
+}
 
 // Les offsets ont bougé : on redécoupe sur le HTML corrigé.
 const blocs2 = decouper(html);

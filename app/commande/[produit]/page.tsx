@@ -58,6 +58,7 @@ import { isSalesOpen } from "@/lib/sales/previewGate";
 import { pickRef, REF_COOKIE } from "@/lib/affiliate/refLien";
 import { JOURS_MOIS_OFFERT_ANNONCE } from "@/lib/trial/moisOffert";
 import CommandeClient from "./CommandeClient";
+import { AVANTAGES_NOUVEAUX, AVANTAGES_PLUS, estPalierPlus } from "@/lib/checkout/avantages";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,18 @@ const RECURRENCE: Record<string, string> = {
 };
 
 /** Ce que Tiquiz fait, dans les mots de la page de vente. */
+// CE QUE TOUS LES PALIERS CONTIENNENT, raconté plutôt que listé.
+//
+// Béné, 2 septembre 2026 : "tu n'as pas ajouté les nouvelles
+// fonctionnalités dans les blocs tarifs il me semble (pense aussi à les
+// ajouter sur les bons de commande)."
+//
+// LES TROIS DERNIÈRES VIENNENT DE `lib/checkout/avantages.ts`, la MÊME
+// source que la grille tarifaire de la page de vente. Les réécrire ici
+// donnerait deux listes de la même chose, donc deux listes qui
+// divergent, et la divergence vivrait sur l'écran où quelqu'un sort sa
+// carte. C'est le défaut le plus répété de ce dépôt (les prix du blog
+// contre le catalogue, `PRICING_PLUS` contre `OWNER_CATALOG`).
 const INCLUS: readonly { titre: string; detail: string }[] = [
   { titre: "Le quiz parfait à partir d'un prompt", detail: "Généré par l'IA, importé, ou créé à la main. Comme tu veux." },
   { titre: "Des leads qualifiés, pas des touristes", detail: "Chaque réponse te dit qui est la personne en face." },
@@ -81,6 +94,7 @@ const INCLUS: readonly { titre: string; detail: string }[] = [
   { titre: "Des quiz qui te ressemblent", detail: "Ton logo, tes images, tes couleurs, et ton propre domaine." },
   { titre: "Aussi des sondages et des popquiz", detail: "Le même moteur, trois formats, sans rien réapprendre." },
   { titre: "Des chiffres qui disent quoi réparer", detail: "Où tes visiteurs décrochent, question par question." },
+  ...AVANTAGES_NOUVEAUX.map((a) => ({ titre: a.texte, detail: a.detail ?? "" })),
 ];
 
 export default async function Page({
@@ -196,6 +210,30 @@ export default async function Page({
                 </li>
               ))}
             </ul>
+
+            {estPalierPlus(product.id) && (
+              <div className="mt-6 rounded-xl border border-[#c9d3ff] bg-[#eef2ff] px-4 py-4">
+                <p className="text-sm font-bold text-[#2b3264]">
+                  Et parce que c&apos;est une formule Plus
+                </p>
+                <ul className="mt-3 space-y-2.5">
+                  {AVANTAGES_PLUS.map((a) => (
+                    <li key={a.texte} className="flex gap-3">
+                      <span
+                        aria-hidden
+                        className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-bold text-[#5e6dde]"
+                      >
+                        ✓
+                      </span>
+                      <span className="text-[13px] leading-snug sm:text-sm">
+                        <strong className="font-semibold">{a.texte}</strong>{" "}
+                        <span className="text-[#5a6390]">{a.detail}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {autres.length > 0 && (
               <div className="mt-6 rounded-xl border border-[#e4e7f5] bg-[#f3f6fc] px-4 py-3">
