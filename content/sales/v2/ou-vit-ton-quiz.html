@@ -1,0 +1,86 @@
+<!--
+  OBJECTION : « je suis sur WordPress », « je n'ai pas de site ».
+
+  Béné, 1er septembre 2026 : « multi-intégration du quiz : tu peux
+  utiliser le quiz dans Systeme.io, dans WordPress, sur une landing,
+  dans un blog, en standalone, ailleurs. Contrairement à d'autres outils
+  qui forcent à utiliser leur page, leur domaine etc. »
+
+  Placé juste après le bloc « ta marque, tes langues » : les deux
+  répondent à la même inquiétude, « est-ce que mon prospect va sentir
+  qu'il est parti chez quelqu'un d'autre ». Celui-là finit de la fermer.
+
+  VÉRIFIÉ : le lien public (`lib/quiz/urlPublique.ts`, avec le domaine
+  perso servi À LA RACINE), le code d'intégration iframe (l'étape 2 de la
+  page le montre déjà), et le nom de domaine personnalisé qui figure dans
+  la grille tarifaire.
+
+  ON NE NOMME AUCUN CONCURRENT. La page de vente n'est pas le hub
+  intégrations : ici on décrit ce que Tiquiz fait, sans désigner qui fait
+  autrement. Le comparatif documenté, avec ses citations sourcées, vit
+  sur tiquiz.fr/integrations.
+-->
+<section id="section-v2-ou" class="tqv-ou-sec">
+<style>
+.tqv-ou-sec{width:100%;background:#fff;padding:70px 20px}
+.tqv-ou{width:100%;max-width:1120px;margin:0 auto;font-family:"Open Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#2B3264;box-sizing:border-box}
+.tqv-ou *{box-sizing:border-box}
+.tqv-ou-h{font-size:38px;line-height:1.2;font-weight:700;margin:0 0 16px;text-align:center}
+.tqv-ou-h span{color:#20BBE6}
+.tqv-ou-p{font-size:17px;line-height:1.65;color:#3B3B3B;max-width:760px;margin:0 auto 40px;text-align:center}
+.tqv-ou-grille{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.tqv-ou-c{background:#F3F6FC;border-radius:16px;padding:22px 22px 20px}
+.tqv-ou-c b{display:block;font-size:17px;margin:0 0 6px}
+.tqv-ou-c span{display:block;font-size:15px;line-height:1.6;color:#3B3B3B}
+.tqv-ou-ico{font-size:24px;line-height:1.1;margin:0 0 12px;display:block;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.tqv-ou-deux{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;margin:34px 0 0}
+.tqv-ou-m{border:2px solid #EDF1F7;border-radius:16px;padding:24px 24px 22px;min-width:0}
+.tqv-ou-m h3{font-size:19px;font-weight:700;margin:0 0 10px}
+.tqv-ou-m p{font-size:15px;line-height:1.65;color:#3B3B3B;margin:0}
+.tqv-ou-code{margin:14px 0 0;background:#2B3264;color:#cfe9f7;border-radius:12px;padding:14px 16px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.7;overflow-x:auto;white-space:pre}
+.tqv-ou-lien{margin:14px 0 0;background:#F3F6FC;border-radius:12px;padding:14px 16px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;color:#2B3264;overflow-x:auto;white-space:nowrap}
+.tqv-ou-fin{margin:34px auto 0;max-width:820px;text-align:center;font-size:16px;line-height:1.7;color:#3B3B3B}
+.tqv-ou-fin strong{color:#2B3264}
+.tqv-ou-cta{text-align:center;margin:32px 0 0}
+.tqv-ou-cta a{display:inline-block;background:#5A6EF6;color:#fff;font-weight:700;font-size:18px;padding:16px 34px;border-radius:14px;box-shadow:0 10px 26px rgba(90,110,246,.3)}
+@media (max-width:900px){
+  .tqv-ou-grille,.tqv-ou-deux{grid-template-columns:minmax(0,1fr)}
+  .tqv-ou-h{font-size:29px}
+  .tqv-ou-sec{padding:52px 16px}
+}
+</style>
+<div class="tqv-ou">
+  <h2 class="tqv-ou-h">Ton quiz va <span>là où tu es déjà</span>. Pas l'inverse.</h2>
+  <p class="tqv-ou-p">Un quiz qui oblige ton visiteur à partir sur une page qui n'est pas la tienne, c'est un visiteur qui hésite au moment précis où tu lui demandes son email. Ton quiz Tiquiz s'affiche chez toi, sous ton nom de domaine.</p>
+
+  <div class="tqv-ou-grille">
+    <div class="tqv-ou-c"><span class="tqv-ou-ico">&#127959;&#xFE0F;</span><b>Dans un tunnel Systeme.io</b><span>Sur une page de ton tunnel, avant ou après ton formulaire.</span></div>
+    <div class="tqv-ou-c"><span class="tqv-ou-ico">&#128462;&#xFE0F;</span><b>Dans WordPress</b><span>Article, page, barre latérale. Aucun greffon à installer.</span></div>
+    <div class="tqv-ou-c"><span class="tqv-ou-ico">&#127919;&#xFE0F;</span><b>Sur une page de vente</b><span>Juste au dessus de ton bouton, pour qualifier avant de vendre.</span></div>
+    <div class="tqv-ou-c"><span class="tqv-ou-ico">&#9997;&#xFE0F;</span><b>Dans un article de blog</b><span>Au milieu du texte, là où le lecteur est déjà accroché.</span></div>
+    <div class="tqv-ou-c"><span class="tqv-ou-ico">&#127760;&#xFE0F;</span><b>Tout seul, sur ton domaine</b><span>quiz.<em>tonsite</em>.fr. Pas de site&nbsp;? Ton quiz EST ta page.</span></div>
+    <div class="tqv-ou-c"><span class="tqv-ou-ico">&#128279;&#xFE0F;</span><b>Ailleurs</b><span>Partout où tu peux coller un lien ou six lignes de code.</span></div>
+  </div>
+
+  <div class="tqv-ou-deux">
+    <div class="tqv-ou-m">
+      <h3>Soit tu partages un lien</h3>
+      <p>Tu le colles dans un email, une story, une bio, un QR code. Avec ton nom de domaine si tu en as un.</p>
+      <div class="tqv-ou-lien">https://quiz.tonsite.fr/mon-diagnostic</div>
+    </div>
+    <div class="tqv-ou-m">
+      <h3>Soit tu colles six lignes</h3>
+      <p>Tu copies le code depuis Tiquiz, tu le colles dans ta page. Le quiz s'affiche dedans, chez toi.</p>
+      <div class="tqv-ou-code">&lt;iframe
+  src="https://quiz.tonsite.fr/mon-diagnostic"
+  width="100%" height="600"
+  style="border:0"&gt;
+&lt;/iframe&gt;</div>
+    </div>
+  </div>
+
+  <p class="tqv-ou-fin"><strong>Aucune des deux ne te demande de savoir coder.</strong> Copier, coller, c'est tout. Et ton visiteur, lui, ne voit que ton logo, tes couleurs et ton adresse.</p>
+
+  <p class="tqv-ou-cta"><a href="#section-518f489a">Je veux mon quiz chez moi</a></p>
+</div>
+</section>

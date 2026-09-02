@@ -8,11 +8,39 @@ Deux fichiers, deux questions, et aucune des deux ne répond à l'autre.
 écrite** (leçon du 23 août : trois garde-fous décrits comme actifs ici
 pendant 24 heures alors qu'ils vivaient sur une branche non fusionnée).
 
-Dernière mise à jour : 1er septembre 2026, au soir.
+Dernière mise à jour : 2 septembre 2026.
 
 ---
 
 ## 1. La page de vente de Tiquiz
+
+**ÉTAT AU 2 SEPTEMBRE : une version de travail existe, elle attend sa
+relecture.** Rien n'est en ligne, rien n'est indexable.
+
+```
+https://tiquiz.fr/apercu/vente/tiquiz-v2?k=<SALES_PREVIEW_TOKEN>
+```
+
+Elle se construit par `npm run vente:v2` à partir de la capture, jamais
+à la main. Le plan (l'ordre, les blocs neufs, les corrections) vit dans
+`lib/sales/planV2.ts` ; les quatre blocs neufs dans
+`content/sales/v2/*.html`. Le détail et les mesures sont dans
+`AGENTS.md`, section « La page de vente servie n'était pas la page
+affichée ».
+
+Ce qui est FAIT dans la v2 : les six ajouts ci dessous, le retrait de la
+vente bêta, le mécanisme remonté avant les bénéfices, un bloc de
+qualification avant le prix, et le bundle Systeme.io retiré (sans lui,
+le navigateur ignorait le HTML servi et rejouait la page d'origine).
+
+Ce qui RESTE À TRANCHER PAR BÉNÉ, et qui n'est pas du code :
+- les chiffres **+32 % / +4327 visites / +487 leads** du bloc viralité
+  n'ont aucune source écrite nulle part dans les trois dépôts. Ils
+  restent tels quels dans la v2 : je ne retire pas un chiffre qui est
+  peut être vrai, et je ne peux pas confirmer un chiffre que je n'ai pas
+  mesuré. C'est le seul endroit de la page qui promet sans preuve.
+- basculer la vraie page sur la v2, une fois relue.
+
 
 Sa consigne, mot pour mot : "ajouter sur la page de vente de tiquiz".
 
@@ -35,10 +63,14 @@ modèle JSON.
   WordPress, sur une landing, dans un blog, en autonome, ailleurs.
   L'argument est le CONTRASTE : les autres outils forcent leur page et
   leur domaine.
-- **Le multilingue, et les deux chiffres ne disent pas la même chose.**
-  L'interface Tiquiz existe en 5 langues ; la GÉNÉRATION écrit dans plus
-  de 100 langues. Les confondre rendrait la phrase fausse dans un sens
-  ou dans l'autre.
+- **Le multilingue, et les DEUX chiffres étaient faux.** Comptés le
+  2 septembre, pas repris : l'interface existe en **7 langues**
+  (`i18n/config.ts` : fr, en, es, it, ar, pt, pt-BR), pas 5 ; et le
+  catalogue de génération porte **exactement 100 entrées**
+  (`lib/quizLanguages.ts`), qui couvrent 83 langues distinctes plus
+  leurs variantes régionales, donc ni « plus de 100 » ni « 100 langues »
+  tout court. La v2 écrit « 100 langues et variantes », et un test
+  compare le chiffre affiché au module qui le sert.
 - **Le funnel quiz.** Le lead est diagnostiqué et envoyé vers la bonne
   offre selon son profil ou son niveau. "Très à la mode, et c'est ce
   qu'on fait."
