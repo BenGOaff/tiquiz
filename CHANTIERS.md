@@ -8,7 +8,7 @@ Deux fichiers, deux questions, et aucune des deux ne répond à l'autre.
 écrite** (leçon du 23 août : trois garde-fous décrits comme actifs ici
 pendant 24 heures alors qu'ils vivaient sur une branche non fusionnée).
 
-Dernière mise à jour : 2 septembre 2026.
+Dernière mise à jour : 2 septembre 2026, deuxième passage.
 
 ---
 
@@ -33,13 +33,26 @@ vente bêta, le mécanisme remonté avant les bénéfices, un bloc de
 qualification avant le prix, et le bundle Systeme.io retiré (sans lui,
 le navigateur ignorait le HTML servi et rejouait la page d'origine).
 
-Ce qui RESTE À TRANCHER PAR BÉNÉ, et qui n'est pas du code :
-- les chiffres **+32 % / +4327 visites / +487 leads** du bloc viralité
-  n'ont aucune source écrite nulle part dans les trois dépôts. Ils
-  restent tels quels dans la v2 : je ne retire pas un chiffre qui est
-  peut être vrai, et je ne peux pas confirmer un chiffre que je n'ai pas
-  mesuré. C'est le seul endroit de la page qui promet sans preuve.
-- basculer la vraie page sur la v2, une fois relue.
+**Les chiffres du bloc viralité (+32 %, +4327 visites, +487 leads) ne se
+touchent PAS.** Béné, 2 septembre : "c'est juste un exemple pour aider à
+se projeter, n'y touche pas du tout." Question fermée.
+
+### Ce qui reste ouvert sur cette page
+
+- **basculer la vraie page sur la v2**, une fois relue.
+- **2552 Ko de CSS**, mesurés sur la page servie. C'est la feuille de
+  style entière de l'éditeur Systeme.io, dont la page n'utilise qu'une
+  fraction. C'est de loin le premier poste de lenteur, devant les
+  images. Le dégraisser demande de mesurer les sélecteurs réellement
+  employés : un chantier à part, et le seul qui puisse encore diviser le
+  temps de chargement.
+- **88 images sur 104 n'ont aucun texte alternatif**, et **aucune ne
+  porte ses dimensions**. Le premier coûte le référencement et
+  l'accessibilité, le second fait sauter la page pendant qu'elle charge.
+  Les dimensions se calculent (`lib/blog/dimensionsImage.ts` existe déjà
+  et lit les premiers octets d'un fichier) ; les textes s'écrivent en
+  REGARDANT chaque image, une par une, comme pour le blog.
+- **La version anglaise, et les autres langues.** Voir le chantier 4.
 
 
 Sa consigne, mot pour mot : "ajouter sur la page de vente de tiquiz".
@@ -111,6 +124,41 @@ ce qu'elle a. Ce n'est pas de la vente.
 
 ---
 
+## 1bis. Mesurer les pages de vente : ce qui existe, et ce qui manque
+
+Béné, 2 septembre : "dans mon admin : je peux tracker les visites sur
+nos deux pages de vente ? Mesurer les conversions etc ?"
+
+**Mesuré le 2 septembre, pas déduit :**
+
+| | |
+|---|---|
+| les VISITES sur `tiquiz.fr` et `atelierduquiz.fr` | **oui**, Google Analytics 4 (`G-N6LQDRDMDB`), posé par `lib/analytics/google.ts`, uniquement sur les domaines de vente |
+| les visites dans SON admin | **non**. Elles vivent dans Google Analytics, pas chez nous |
+| les CONVERSIONS | **NON, et c'est le vrai trou** |
+
+**Aucun événement de conversion n'est envoyé.** Ni `begin_checkout`
+quand quelqu'un clique un palier, ni `purchase` quand il paie : cherché
+dans tout le dépôt, il n'y a que le `gtag('config')` de la page vue.
+Google voit donc le trafic et ne peut RIEN en faire : impossible de
+savoir quelle source, quelle page ou quelle publicité a produit une
+vente.
+
+Et les deux moitiés vivent à deux endroits qui ne se parlent pas : le
+trafic dans Google Analytics, les ventes dans `/admin` et le centre de
+pilotage (elles viennent des webhooks). Rien ne relie les deux.
+
+**Ce qu'il faudrait, dans cet ordre :**
+1. `begin_checkout` au clic sur un palier, avec le produit et le
+   montant du catalogue ;
+2. `purchase` sur la page de remerciement, avec la référence de la
+   vente, pour que le rapprochement soit possible ;
+3. seulement après : un écran dans l'admin qui montre les deux
+   ensemble.
+
+**Le 1 et le 2 touchent le chemin de paiement**, donc ils se font seuls,
+avec leur propre vérification, pas en même temps qu'autre chose.
+
 ## 2. À discuter, pour l'évolution de Tiquiz
 
 Ce sont des sujets à trancher AVEC elle, pas des tâches.
@@ -140,6 +188,35 @@ Ce sont des sujets à trancher AVEC elle, pas des tâches.
   22 août).
 
 ---
+
+## 4. La page de vente dans toutes les langues
+
+Béné, 2 septembre : "prévois déjà la version EN soit en traduction auto
+sur le bouton switch de langue -> même page mais dans toutes les
+langues, avec bdc dans toutes les langues, accueil dans toutes les
+langues etc (c'est un chantier à part mais il faut commencer à y
+penser)". Sa référence : `https://www.tipote.fr/tiquiz-us`.
+
+**Ce que ça implique, et ce n'est pas une traduction :**
+
+- **la page de vente** est un HTML capturé de 669 Ko. Une version par
+  langue veut dire soit sept captures (donc sept fichiers à maintenir),
+  soit une page dont le TEXTE sort du HTML pour vivre dans des fichiers
+  de langue. La deuxième est la bonne, et c'est un vrai chantier ;
+- **le bon de commande** est déjà en React, donc traduisible avec
+  `next-intl` comme le reste de l'app. C'est le morceau le plus simple,
+  et c'est celui qui encaisse ;
+- **le sélecteur de langue de la page** existe déjà
+  (`tiquiz-lang-floating`, script autonome) mais il ne fait rien
+  aujourd'hui : il attend des versions à afficher ;
+- **la devise** : le catalogue est en euros seuls (décision du 13 août).
+  Une page anglaise qui affiche 17 € n'est pas fausse, mais elle ne
+  convertit pas comme une page qui affiche un prix local. À trancher
+  avant, pas après.
+
+**Le sens de la marche : le bon de commande d'abord.** Une page de vente
+traduite qui mène à un bon de commande français perd la vente au dernier
+écran, et c'est le seul écran qu'on ne peut pas rater.
 
 ## Ce qui est TRANCHÉ, et qui ferme une question ouverte
 

@@ -21,6 +21,14 @@ import {
   verifierPlan,
 } from "@/lib/sales/planV2";
 import { estUnChantier, estPagePublique, CHANTIERS } from "@/lib/sales/chantier";
+import { CORRECTIONS_FAQ, rangerFaq, type QuestionFaq } from "@/lib/sales/faqV2";
+import {
+  AVANTAGES_NOUVEAUX,
+  AVANTAGES_PLUS,
+  avantagesDuPlan,
+  estPalierPlus,
+  tousLesAvantages,
+} from "@/lib/checkout/avantages";
 
 const RACINE = process.cwd();
 const CAPTURE = path.join(RACINE, "content/sales/tiquiz.html");
@@ -295,4 +303,174 @@ test("les générateurs sont annoncés comme réservés au palier Plus", () => {
   assert.ok(/plan Plus/i.test(s));
   const limites = fs.readFileSync(path.join(RACINE, "lib/planLimits.ts"), "utf8");
   assert.ok(/export function canUseAIAnalysis/.test(limites), "le gate a changé de nom : la page ne dit peut-être plus le vrai palier");
+});
+
+// ---------------------------------------------------------------------
+// LA FAQ. Elle avait cessé de s'ouvrir, et ma mesure disait le contraire.
+// ---------------------------------------------------------------------
+
+test("la FAQ est cliquable sans une ligne de JavaScript", () => {
+  const v2 = fs.readFileSync(V2, "utf8");
+  const details = (v2.match(/<details class="tqv-faq-q">/g) ?? []).length;
+  assert.equal(details, 16, "il n'y a pas 16 questions dépliables");
+  // `<details>` natif : ça ne peut pas se casser en retirant un script,
+  // et c'est précisément comme ça que l'accordéon d'origine est mort.
+  assert.ok(!/tqv-faq[\s\S]{0,4000}?addEventListener/.test(v2), "la FAQ dépend d'un script");
+});
+
+test("aucune question de la FAQ ne se perd entre les groupes", () => {
+  const brut = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(
+    fs.readFileSync(CAPTURE, "utf8"),
+  )![1];
+  let questions = JSON.parse(brut).mainEntity as QuestionFaq[];
+  for (const c of CORRECTIONS_FAQ) {
+    questions = JSON.parse(JSON.stringify(questions).split(c.cherche).join(c.remplace));
+  }
+  const range = rangerFaq(questions);
+  assert.deepEqual(range.orphelines.map((q) => q.name), [], "ces questions disparaîtraient de la page");
+  assert.deepEqual(range.inconnues, [], "le plan nomme des questions qui n'existent pas");
+});
+
+test("les données structurées de la FAQ repartent avec la section", () => {
+  // RÉGRESSION RÉELLE, attrapée par ma propre sonde : le JSON-LD vivait
+  // DANS la section, donc la remplacer l'emportait. Google perdait les
+  // 16 questions en silence, sur la page qu'on veut faire remonter.
+  const v2 = fs.readFileSync(V2, "utf8");
+  const blocs = [...v2.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+  assert.equal(blocs.length, 1, "il devrait y avoir exactement un bloc de données structurées");
+  const d = JSON.parse(blocs[0][1].replace(/\\u003c/g, "<"));
+  assert.equal(d["@type"], "FAQPage");
+  assert.equal(d.mainEntity.length, 16);
+  // Et il porte le texte CORRIGÉ : une structure qui dirait autre chose
+  // que la page serait une deuxième version du contenu.
+  assert.ok(d.mainEntity.some((q: { name: string }) => q.name.startsWith("Faut-il un abonnement payant")));
+  assert.ok(!JSON.stringify(d).includes("obligé(e)"), "le JSON-LD garde une formulation genrée");
+  assert.ok(!JSON.stringify(d).includes("hello@tipote.com"), "le JSON-LD garde l'ancienne adresse");
+});
+
+// ---------------------------------------------------------------------
+// LES AVANTAGES : une seule liste pour la grille ET le bon de commande.
+// ---------------------------------------------------------------------
+
+test("les nouveautés sont dans les six colonnes de tarif", () => {
+  const v2 = fs.readFileSync(V2, "utf8");
+  for (const a of AVANTAGES_NOUVEAUX) {
+    const n = v2.split(a.texte).length - 1;
+    assert.ok(n >= 6, `« ${a.texte} » apparaît ${n} fois, il en faut au moins 6 (une par colonne)`);
+  }
+  const gen = AVANTAGES_PLUS.find((a) => a.texte.includes("générateurs"))!;
+  assert.ok(v2.includes(gen.texte), "les générateurs ne sont pas dans la grille");
+});
+
+test("le bon de commande et la grille disent la MÊME chose", () => {
+  // Deux listes de la même chose divergent toujours, et ici la
+  // divergence vivrait sur l'écran où quelqu'un sort sa carte.
+  const commande = fs.readFileSync(path.join(RACINE, "app/commande/[produit]/page.tsx"), "utf8");
+  assert.ok(commande.includes("AVANTAGES_NOUVEAUX"), "le bon de commande réécrit sa propre liste");
+  assert.ok(commande.includes("AVANTAGES_PLUS"), "le bon de commande n'annonce pas ce que Plus ajoute");
+  // Et il ne recopie AUCUN des textes à la main.
+  for (const a of tousLesAvantages()) {
+    assert.ok(!commande.includes(a.texte), `« ${a.texte} » est recopié en dur dans le bon de commande`);
+  }
+});
+
+test("chaque avantage cite le code qui le rend vrai", () => {
+  for (const a of tousLesAvantages()) {
+    assert.ok(a.source.length > 8, `« ${a.texte} » n'a pas de source`);
+  }
+});
+
+test("un palier Plus est lu sur le catalogue, jamais deviné", () => {
+  assert.equal(estPalierPlus("mensuel-plus"), true);
+  assert.equal(estPalierPlus("annuel-plus"), true);
+  assert.equal(estPalierPlus("mensuel"), false);
+  assert.equal(estPalierPlus("annuel"), false);
+  // Le PLUS passe en premier : c'est ce qui justifie l'écart de prix.
+  assert.equal(avantagesDuPlan("mensuel-plus")[0], AVANTAGES_PLUS[0]);
+  assert.ok(!avantagesDuPlan("mensuel").includes(AVANTAGES_PLUS[0]));
+});
+
+// ---------------------------------------------------------------------
+// LA FORME : les blocs neufs se fondent dans la page.
+// ---------------------------------------------------------------------
+
+test("les blocs neufs ont le padding de la page", () => {
+  // MESURÉ : toutes les sections de contenu sont en 100px / 100px. Les
+  // miennes étaient à 70, et ça se voyait.
+  for (const f of blocsNeufs()) {
+    const s = fs.readFileSync(path.join(DOSSIER, f), "utf8");
+    assert.ok(/padding:100px 20px\}/.test(s), `${f} n'a pas le padding de la page`);
+  }
+});
+
+test("les boutons des blocs neufs sont ceux de la page", () => {
+  // Relevé sur la page : #5A6EF6, rayon 999px, 18px, et l'animation
+  // `tqButtonPulse` que portent les 21 boutons d'origine. Trois styles
+  // de bouton sur une page de vente, c'est trois familles à comprendre.
+  for (const f of blocsNeufs()) {
+    const s = fs.readFileSync(path.join(DOSSIER, f), "utf8");
+    if (!/href="#/.test(s)) continue;
+    assert.ok(s.includes("tqButtonPulse"), `${f} n'utilise pas l'animation de la page`);
+    assert.ok(s.includes("#5A6EF6"), `${f} n'utilise pas la couleur de bouton de la page`);
+    assert.ok(s.includes("border-radius:999px"), `${f} n'a pas le rayon de la page`);
+  }
+});
+
+test("le mini quiz ne prétend jamais être un quiz Tiquiz", () => {
+  // SUR LE TEXTE VISIBLE, pas sur le fichier : mon premier jet comptait
+  // 7 boutons radio au lieu de 6, parce que le commentaire qui explique
+  // la mécanique écrit `<input type="radio">` lui aussi. Troisième fois
+  // dans ce chantier qu'un contrôle mesure autre chose que ce qu'il
+  // croit.
+  const s = texteVisible("cest-pour-toi.html");
+  // Trois questions, deux réponses chacune, et un verdict qui peut dire NON.
+  assert.equal((s.match(/type="radio"/g) ?? []).length, 6);
+  assert.ok(s.includes("tqv-pt-oui") && s.includes("tqv-pt-non"));
+  assert.ok(/Non, et je préfère te le dire/.test(s), "le verdict ne sait pas dire non");
+  // Aucun script : c'est ce qui a tué la FAQ d'origine.
+  assert.ok(!/<script/i.test(s), "le mini quiz dépend d'un script");
+  // Et il ne capture RIEN : ni email, ni tag, ni envoi.
+  assert.ok(!/<form|type="email"|action=/i.test(s), "le mini quiz a l'air de capturer quelque chose");
+});
+
+// ---------------------------------------------------------------------
+// LA VENTE BÊTA, SUR TOUTE LA PAGE ET DANS LA FAQ.
+// ---------------------------------------------------------------------
+
+test("ni la page ni la FAQ ne parlent d'accès à vie payant", () => {
+  const v2 = fs.readFileSync(V2, "utf8");
+  // « GRATUIT À VIE » reste : c'est le palier gratuit sans limite de
+  // durée, et c'est vrai. Ce qu'on traque, c'est l'accès à vie VENDU.
+  for (const trace of ["Accès à vie pour", "tiquiz-beta", "vente bêta", "bêta utilisateur"]) {
+    assert.ok(!v2.includes(trace), `« ${trace} » traîne encore`);
+  }
+  assert.ok(v2.includes("GRATUIT À VIE"), "le palier gratuit sans limite de durée a disparu");
+});
+
+// ---------------------------------------------------------------------
+// LE RÉFÉRENCEMENT ET LE CHARGEMENT.
+// ---------------------------------------------------------------------
+
+test("la page ne sert plus qu'un seul <h1>", () => {
+  // MESURÉ : les deux étaient VISIBLES en même temps, à 1280 comme à
+  // 390 px. Ce n'étaient pas deux versions d'un titre, c'étaient les
+  // deux moitiés d'une phrase découpées en deux titres de niveau 1.
+  const v2 = fs.readFileSync(V2, "utf8");
+  const i = v2.indexOf("window.__PRELOADED_STATE__");
+  const dom = i < 0 ? v2 : v2.slice(0, i);
+  assert.equal((dom.match(/<h1\b/g) ?? []).length, 1);
+  const origine = fs.readFileSync(CAPTURE, "utf8");
+  const j = origine.indexOf("window.__PRELOADED_STATE__");
+  assert.equal((origine.slice(0, j).match(/<h1\b/g) ?? []).length, 2, "la capture n'en a plus deux : ce test ne prouve plus rien");
+});
+
+test("les images hors du premier écran sont différées", () => {
+  const v2 = fs.readFileSync(V2, "utf8");
+  const imgs = v2.match(/<img\b[^>]*>/gi) ?? [];
+  const differees = imgs.filter((t) => /loading="lazy"/.test(t)).length;
+  // Les huit premières restent immédiates EXPRÈS : différer une image du
+  // premier écran la fait arriver plus tard, donc dégrade exactement la
+  // mesure qu'on cherche à améliorer.
+  assert.ok(differees >= imgs.length - 12, `${differees} différées sur ${imgs.length}`);
+  assert.ok(!/^[\s\S]{0,60000}?<img[^>]*loading="lazy"/.test(v2), "une image du premier écran a été différée");
 });

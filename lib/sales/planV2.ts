@@ -201,6 +201,22 @@ export const CORRECTIONS_V2: readonly CorrectionV2[] = [
       "sont corrigées : n'en corriger qu'une ferait revenir l'ancienne " +
       "valeur à la première retouche dans leur éditeur.",
   },
+  {
+    cherche: '<h1 dir="ltr"><span style="color: rgb(46, 56, 109)">Grâce aux quiz interactifs</span></h1>',
+    remplace: '<p dir="ltr" class="tqv-sous-titre"><span style="color: rgb(46, 56, 109)">Grâce aux quiz interactifs</span></p>',
+    pourquoi:
+      "LA PAGE SERVAIT DEUX <h1>. Mesuré dans le navigateur : les deux " +
+      "sont VISIBLES en même temps, à 1280 px comme à 390 px. Ce ne sont " +
+      "pas les versions large et mobile d'un même titre, ce sont les deux " +
+      "moitiés d'une seule phrase (« Booste ton trafic » et « Grâce aux " +
+      "quiz interactifs ») découpées en deux titres de niveau 1.\n" +
+      "Un moteur ne sait alors plus quel est le sujet de la page, et sur " +
+      "une page qu'on veut faire remonter sur « quiz Systeme.io », c'est " +
+      "le seul signal qui ne se rattrape pas ailleurs. La deuxième moitié " +
+      "devient un paragraphe : elle garde exactement sa taille et sa " +
+      "couleur (elles viennent du conteneur, pas de la balise), et le " +
+      "titre de la page redevient unique.",
+  },
 ] as const;
 
 /** Les sections d'origine que le plan replace, dans l'ordre. */
