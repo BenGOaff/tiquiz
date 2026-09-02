@@ -17,6 +17,7 @@ import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { NATURAL_WRITING_BLOCK } from "@/lib/prompts/quiz/system";
 import { fetchAnthropic } from "@/lib/aiRetry";
+import { cleAnthropic } from "@/lib/ai/cleAnthropic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,13 +30,7 @@ const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 // letting a runaway client burn Anthropic credits.
 const REWRITE_RATE_LIMIT = { limit: 60, windowMs: 5 * 60 * 1000 };
 
-function getClaudeApiKey(): string {
-  return (
-    process.env.ANTHROPIC_API_KEY?.trim() ||
-    process.env.CLAUDE_API_KEY_OWNER?.trim() ||
-    ""
-  );
-}
+
 
 function getModel(): string {
   // Haiku — fast + cheap. Reformulating a single short string is well within
@@ -56,7 +51,7 @@ export async function POST(
   req: NextRequest,
   context: { params: Promise<{ quizId: string }> },
 ) {
-  const apiKey = getClaudeApiKey();
+  const apiKey = cleAnthropic();
   if (!apiKey) {
     return NextResponse.json(
       { ok: false, error: "AI rewrite unavailable: missing Claude API key." },

@@ -18,6 +18,7 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { checkRateLimit } from "@/lib/aiRateLimit";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { fetchAnthropic } from "@/lib/aiRetry";
+import { cleAnthropic } from "@/lib/ai/cleAnthropic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,13 +31,7 @@ const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 // it. 10 / 5min lets a creator iterate on the proposed diff a few times.
 const REBALANCE_RATE_LIMIT = { limit: 10, windowMs: 5 * 60 * 1000 };
 
-function getClaudeApiKey(): string {
-  return (
-    process.env.ANTHROPIC_API_KEY?.trim() ||
-    process.env.CLAUDE_API_KEY_OWNER?.trim() ||
-    ""
-  );
-}
+
 
 function getModel(): string {
   // Sonnet for the rebalance decision: a one-shot semantic-fit choice across
@@ -83,7 +78,7 @@ export async function POST(
   req: NextRequest,
   context: { params: Promise<{ quizId: string }> },
 ) {
-  const apiKey = getClaudeApiKey();
+  const apiKey = cleAnthropic();
   if (!apiKey) {
     return NextResponse.json(
       { ok: false, error: "AI rebalance unavailable: server is missing the Claude API key." },

@@ -17,6 +17,7 @@ import {
   type StartRateProject,
 } from "@/lib/insights/startRate";
 import { fetchAnthropic } from "@/lib/aiRetry";
+import { cleAnthropic } from "@/lib/ai/cleAnthropic";
 
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -26,13 +27,7 @@ export const GLOBAL_MIN_LEADS = 5;
  *  le prompt et le cout maitrises. Les projets ignores sont signales. */
 const MAX_PROJECTS = 60;
 
-function getClaudeApiKey(): string {
-  return (
-    process.env.ANTHROPIC_API_KEY?.trim() ||
-    process.env.CLAUDE_API_KEY_OWNER?.trim() ||
-    ""
-  );
-}
+
 function getAnalysisModel(): string {
   return resolveAnthropicModel(process.env.TIQUIZ_SURVEY_AI_MODEL || process.env.ANTHROPIC_MODEL, "opus");
 }
@@ -170,7 +165,7 @@ function renderForPrompt(a: GlobalAggregate): string {
 
 /** Genere le compte-rendu strategique global via Claude (Opus). */
 export async function generateGlobalInsights(a: GlobalAggregate): Promise<GlobalReport> {
-  const apiKey = getClaudeApiKey();
+  const apiKey = cleAnthropic();
   if (!apiKey) throw new Error("Claude API key missing");
   const model = getAnalysisModel();
 

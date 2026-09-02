@@ -9,6 +9,7 @@ import { UserAvatarMenu } from "@/components/UserAvatarMenu";
 import { Button } from "@/components/ui/button";
 import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
+import { RestartTourButton } from "@/components/tutorial/RestartTourButton";
 import { SessionResetGate } from "@/components/projects/SessionResetGate";
 import { CoachWidget } from "@/components/coach/CoachWidget";
 
@@ -69,6 +70,11 @@ export default function AppShell({
                   qu'il n'est pas éligible canCreateMore (cf. phase 2
                   chantier multiprofils ROADMAP_RETENTION). */}
               <ProjectSwitcher />
+              {/* Relancer le tour guide, a cote de "Mon espace" : demande
+                  de Bene le 2 septembre 2026. Il vivait au pied de la
+                  sidebar, et seulement une fois la carte d'invitation
+                  fermee. */}
+              <RestartTourButton />
               {headerRight}
               <UserAvatarMenu userEmail={userEmail} />
             </div>

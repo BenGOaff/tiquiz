@@ -4360,6 +4360,121 @@ alors que le compte relevé ce jour là vérifie `send.tipote.com` et pas
 est une décision de Béné, pas une déduction. Le contrôle est là pour
 qu'elle la prenne en connaissance de cause.
 
+### Le bloc de qualification, deuxieme passage (2 septembre 2026)
+
+Béné : "le quiz est moche, il prend trop de place : il faut pouvoir le
+voir sans scroller. En plus les questions sont balourdes, elles ne
+permettent pas vraiment de déterminer si OUI ou NON Tiquiz est fait
+pour le visiteur."
+
+**Les deux reproches étaient justes, et le second est le vrai.** Mon
+premier jet demandait "tu vends quelque chose ?" et "tu es prêt à
+relire l'IA ?" : deux questions auxquelles tout le monde répond oui,
+donc deux questions qui ne trient personne. **Une question de
+qualification qui ne peut pas faire sortir quelqu'un n'en est pas
+une.**
+
+Elle a nommé les trois refus, et ce sont maintenant EXACTEMENT les
+trois secondes options : un résultat rédigé sur mesure pour chaque
+visiteur, des logiques conditionnelles avancées, un design au pixel
+près. Les trois sont vérifiées dans le code, pas inventées.
+
+**Et le bloc dit le POSITIONNEMENT, c'est son vrai sujet.** Béné :
+"Tiquiz c'est pour les personnes qui veulent capturer des leads et il
+est optimisé pour ça, pas pour établir un diagnostic ultra personnalisé
+ni pour évaluer finement une personne. C'est pour attirer des contacts
+qualifiés et les envoyer sur la liste emails où tout se passe ensuite.
+Et ça marche pour tout le monde, mais c'est UNE partie du système
+complet : la partie qui attire des leads, commence à construire la
+confiance et automatise la prospection, avec fun et plus d'efficacité
+qu'un PDF ou un simple formulaire." On ne vend donc pas un outil de
+diagnostic, on vend la PORTE D'ENTRÉE d'un système, et les deux
+verdicts le disent.
+
+**Sans scroller, et sans que rien ne bouge.** Les trois questions sont
+en COLONNES, pas en lignes : une rangée au lieu de trois. Mesuré à
+1280x900 et 1440x800, le bloc fait **786 px, verdict compris**, contre
+811 px au repos et 929 px une fois répondu avant. Le verdict a une
+hauteur RÉSERVÉE (`min-height`) : il s'affiche sur place, il ne pousse
+plus la page au moment exact où on la lit.
+
+## Le nom d'un écran s'écrit UNE fois, dans la barre du haut (2 septembre 2026)
+
+Béné : "y'a trop de titres sur une même page c'est tout en doublon : à
+quoi ça sert ?? Il faut uniformiser ça."
+
+Cinq écrans passaient leur titre à `AppShell` (qui le rend en `<h1>`
+dans la barre) PUIS le réécrivaient en `<h2>` dans un bandeau bleu, mot
+pour mot. **Vérifié chaîne par chaîne avant de retirer quoi que ce
+soit** : les cinq paires étaient identiques (Mes projets, Statistiques,
+Mes leads, Mes Popquiz, Paramètres). Il n'y avait donc rien à perdre,
+seulement une ligne à ne plus répéter.
+
+**Règle : `components/ui/page-banner.tsx`, et le bandeau n'a PAS de
+prop de titre.** Ce qu'il porte est ce que la barre ne peut pas dire :
+la phrase qui explique l'écran, le compteur vivant ("83 leads
+capturés"), et les boutons d'action.
+
+**Le bandeau est un COMPOSANT, pas un gabarit à recopier.** Les cinq
+écrans portaient le même bloc copié-collé (`gradient-primary rounded-xl
+px-5 py-4 ...`), donc cinq occasions de diverger, et c'est exactement
+comme ça que le doublon s'est installé partout à la fois. Le test
+interdit qu'un écran le redessine à la main.
+
+**Exception : la page d'aide hors session.** Sans session il n'y a pas
+de barre, donc pas de titre : il revient dans la page, et c'est le seul
+endroit où le `<h1>` est écrit deux fois dans le fichier.
+
+## Aide et contact : UNE entrée, et le tour guidé passe en haut
+
+Béné, le même jour : "sur Tiquiz il y a trop de trucs dans la sidebar :
+aide + contact c'est au même endroit = un seul item" et "réactiver le
+tour guidé : mets le dans la head bar à côté de 'mon espace'."
+
+Deux entrées répondaient à la même question ("j'ai besoin d'aide"), la
+première vers le centre d'aide de Tipote, la seconde vers notre
+formulaire. **Deux portes pour un besoin, c'est un choix à faire avant
+même d'avoir expliqué son problème.** Il ne reste que `/support`, qui
+porte les deux : le centre d'aide en premier (une réponse tout de suite
+vaut mieux qu'une réponse demain) et le formulaire dessous, avec
+l'adresse déjà remplie quand la session existe.
+
+**Le tour guidé, lui, était introuvable la moitié du temps.** Son
+entrée vivait au pied de la sidebar ET ne s'affichait QUE si la carte
+d'invitation avait été fermée ou le tour désactivé : tant qu'on n'avait
+rien fermé, il n'existait aucun moyen visible de le relancer.
+`RestartTourButton` vit maintenant dans la barre, à côté du sélecteur
+de projet, et **il est toujours là**. Un raccourci qui apparaît et
+disparaît selon un état qu'on ne contrôle pas ne se mémorise pas ; une
+place fixe se retient. L'état décide du GESTE (réactiver ou rouvrir
+l'accueil du tour), jamais de la présence.
+
+## Mes projets : un aller-retour PAR PROJET, en série (2 septembre 2026)
+
+Béné : "la page 'mes projets' est très longue à charger : il n'y aurait
+pas un souci ?"
+
+Il y en avait un, et **il était écrit noir sur blanc au dessus du code
+qui le causait.** `GET /api/quiz` agrège les leads en UN appel SQL
+(`quiz_leads_summary`) et pose `leads_count` sur chaque ligne, sous ce
+commentaire : "le dashboard n'a plus besoin de faire un fetch par quiz
+(N+1)". `QuizzesClient` faisait exactement ça, et EN SÉRIE : un
+`await fetch("/api/quiz/<id>")` par projet, chacun ramenant le quiz
+ENTIER (questions, résultats, leads) pour n'en garder qu'un nombre.
+Vingt projets, vingt requêtes à la queue leu leu, et la page blanche
+pendant ce temps.
+
+**Cinquième fois que ce dépôt paie une règle écrite en commentaire et
+démentie par le code** (le `w-full h-auto` des images de réponse,
+l'`ADD_ATTR: ["target"]` des liens légaux, le "Next décode déjà le
+segment" du pilotage, le brouillon de question d'Adeline, et celui-ci).
+
+Le test tient les DEUX moitiés : le client ne redemande plus chaque
+projet, ET la route agrège toujours. Ne vérifier que la première
+afficherait zéro lead partout sans que rien ne rougisse.
+
+Garde-fou : `tests/logic/barre-et-titres.test.mts`.
+
 ## Le brouillon d'une question ne suit PAS le visiteur (retour Adeline, 1er septembre 2026)
 
 "On peut revenir en arrière, ce qui est un plus, mais lorsqu'on le fait
@@ -4968,6 +5083,165 @@ une PROP optionnelle de l'écran, nulle ici, et `lib/generateurs/credits.ts`
 ne vit QUE là bas : un module mort ici serait un piège que le prochain
 passage rebrancherait en croyant réparer. Le barème et le calcul qui
 l'a produit sont dans l'`AGENTS.md` de Tipote.
+
+## Les générateurs, deuxième passage (Béné, 2 septembre 2026)
+
+Quatre reproches, et le premier rendait la fonctionnalité entièrement
+inutilisable.
+
+### 1. LE GÉNÉRATEUR NE TROUVAIT PAS LA CLÉ ANTHROPIC
+
+"Le générateur de bonus ne fonctionne pas j'ai un message d'erreur c'est
+relou." L'écran disait "L'écriture n'est pas disponible pour le moment.
+On est prévenus.", c'est à dire `not_configured`, c'est à dire "aucune
+clé".
+
+Il y en avait une, et toutes les autres fonctions IA la trouvaient très
+bien. **La route des générateurs lisait `ANTHROPIC_API_KEY` TOUT COURT,
+quand les NEUF autres endroits lisent `ANTHROPIC_API_KEY` PUIS
+`CLAUDE_API_KEY_OWNER`.** Sur le serveur, c'est la seconde qui porte la
+valeur : les générateurs étaient donc le seul écran incapable d'écrire
+quoi que ce soit.
+
+**Neuf copies de la même résolution, et la dixième était fausse.** Une
+règle recopiée finit toujours par en oublier un : c'est le `mx-auto` du
+sous-titre, les images de réponse, les réseaux de partage, les libellés
+de profil. Ici l'oubli coûtait une fonctionnalité entière, et en
+silence, parce qu'un écran qui dit "pas disponible" a l'air de parler
+d'une panne passagère. `lib/ai/cleAnthropic.ts` est le seul endroit,
+et le test l'exige des dix appelants.
+
+**Chez Tipote c'est pire, et le module y est donc indispensable :**
+TROIS noms circulent (`CLAUDE_API_KEY_OWNER`, `ANTHROPIC_API_KEY`,
+`ANTHROPIC_API_KEY_OWNER`) et deux fichiers ne les lisent pas dans le
+même ordre. Là bas le module les essaie tous, et **CRIE quand deux
+portent des valeurs DIFFÉRENTES** : l'ordre déciderait sinon laquelle
+est facturée, et c'est une question pour un humain.
+
+### 2. UN GÉNÉRATEUR D'EMAILS ÉCRIT DES EMAILS, PAS DES PISTES
+
+"Le générateur d'emails ne génère pas 'des pistes' mais des emails
+putain t'as fait n'imp."
+
+Elle a raison, et c'est la faute du 1er août : une mécanique écrite pour
+un cas, appliquée telle quelle à un autre. J'avais fait passer les TROIS
+générateurs par "trois pistes au choix", alors que ça ne veut dire
+quelque chose que pour UN.
+
+L'Atelier fait la distinction depuis le début : son labo BONUS a bien
+ses pistes (la créatrice choisit QUEL bonus elle fabrique), son funnel
+EMAILS n'en a aucune (un bouton, cinq emails). Parce qu'il n'y a rien à
+choisir : une séquence post-quiz a toujours les mêmes cinq temps.
+
+| Générateur | Pistes ? | Pourquoi |
+|---|---|---|
+| bonus | OUI | le bonus est une CRÉATION : trois idées valent mieux qu'une imposée |
+| emails | NON | la séquence a des temps fixes, elle se déroule |
+| promo | NON | annoncer un quiz est une routine, pas une création |
+
+**Règle : `lib/generateurs/sequences.ts`.** Les cinq temps de la
+séquence sont ceux de l'Atelier, MOT POUR MOT (`lib/funnelSequence.ts`
+là bas) : ils ont été corrigés par les retours de vraies élèves et ils
+sont enseignés dans la formation. Les réécrire ici donnerait deux
+méthodes pour la même chose, et Tiquiz serait celui qui se trompe. La
+promo a son propre plan, trois emails et quatre publications, chacune
+par un angle DIFFÉRENT (quatre posts qui disent la même chose autrement,
+c'est un post publié quatre fois).
+
+**`piecesDeLaPiste` ignore ce que le modèle déclare** dès qu'un plan
+fixe existe, et la route REFUSE l'étape des pistes sur ces générateurs :
+un écran resté sur l'ancienne version dépenserait des jetons (et des
+crédits, côté Tipote) pour rien.
+
+**L'intention part dans le PROMPT, le rôle s'affiche TRADUIT.**
+`resume` porte la consigne au modèle, en français ; `cle` est traduite
+par l'écran dans les 7 langues. Afficher `resume` tel quel serait le
+"Résultat 4" du 1er septembre.
+
+### 3. PLUSIEURS ÉTAPES QUI S'ENCHAÎNENT, PAS UNE PAGE QUI EMPILE
+
+"Tu n'as pas repris la belle mise en page facile de l'Atelier [...] fais
+plutôt plusieurs étapes qui s'enchaînent qu'une longue page qui empile
+les infos."
+
+L'écran affichait TOUT en même temps : le projet, le profil, l'offre,
+les pistes et les contenus. À l'ouverture, quatre sections dont trois
+qu'on ne peut pas encore remplir.
+
+**Règle : `lib/generateurs/parcours.ts`**, et les étapes dépendent du
+générateur (c'est tout l'intérêt) :
+
+```
+bonus  : projet -> réglages -> pistes -> contenus
+emails : projet -> réglages -> contenus
+promo  : projet -> contenus
+```
+
+Faire traverser une étape vide à la promo serait un clic pour rien. Le
+fil des étapes en haut se reclique : **revenir en arrière doit être
+aussi facile que d'avancer**, sinon on recommence tout pour corriger un
+mot. Et une étape qu'on ne peut pas franchir DIT ce qui manque, elle ne
+se contente pas d'un bouton gris.
+
+**Sur l'étape des pistes il n'y a pas de bouton "Suivant"** : on avance
+en CHOISISSANT une piste. Un bouton à côté mènerait à un écran de
+contenus sans rien à écrire.
+
+### 4. LES CONTENUS SE RETROUVENT
+
+"Il faut aussi que les users retrouvent leurs créations dans
+'générateurs' : ajoute une étape avec le choix -> 'mes contenus
+générés' > 3 blocs pour classer les 3 types de contenus générés OU
+'générer de nouveaux contenus' > 3 générateurs."
+
+Un contenu généré vivait dans l'onglet du navigateur et nulle part
+ailleurs : un rafraîchissement, et le travail était perdu. Côté Tipote
+il était même PAYÉ en crédits, donc perdu et facturé.
+
+- `/generateurs` : les deux cartes ;
+- `/generateurs/nouveau` : les trois générateurs ;
+- `/generateurs/mes-contenus` : trois blocs, un par générateur.
+
+**Trois choses à ne pas défaire :**
+
+1. **On enregistre APRÈS CHAQUE MORCEAU, pas à la fin.** Une génération
+   dure une minute et demie : l'onglet fermé au septième morceau ne doit
+   pas tout emporter. Une LIGNE par livraison, pas par morceau : une
+   séquence de cinq emails est UN contenu, et cinq lignes obligeraient
+   chaque lecteur à les recoller dans le bon ordre.
+2. **`quiz_id` est en ON DELETE SET NULL et le titre est RECOPIÉ.** Un
+   quiz supprimé ne doit pas emporter les emails écrits pour lui : ils
+   sont peut-être déjà programmés dans Systeme.io. C'est la règle de la
+   facture émise (24 août).
+3. **Un bloc VIDE reste affiché.** Sa présence dit que le générateur
+   existe : le masquer ferait croire qu'il n'y en a que deux.
+
+**L'enregistrement est BEST-EFFORT et ne lève jamais** : le texte est
+déjà à l'écran, faire échouer la réponse pour un souci de base ferait
+perdre les deux. Et la lecture distingue "je n'ai pas pu regarder" de
+"il n'y a rien" : un écran vide se lit "je n'ai rien créé", et ce serait
+faux.
+
+🚨 Migration : `supabase/migrations/20260902_generateurs_contenus.sql`,
+**sur les DEUX Supabase** (Tiquiz et Tipote).
+
+### 5. ET LA LANGUE : j'avais réécrit une table de SEPT à côté des CENT
+
+"Pense au multilangues, on doit offrir la même qualité à toutes les
+langues prises en charge et les contenus + bonus sont générés dans la
+langue du quiz bien sûr."
+
+`consigneLangue` portait une table de sept langues, celles de
+l'INTERFACE. Un quiz écrit en japonais ou en swahili en sortait donc
+avec `la langue de code "ja"`, alors que `buildLanguageDirective`
+(`lib/quizLanguages.ts`) existe depuis des mois et rend "Japanese
+(日本語)" plus ses NOTES RÉGIONALES ("voiture" vs "char", "ordenador" vs
+"computadora"). C'est ce que reçoit déjà la génération de quiz : deux
+qualités de consigne pour deux écrans du même produit, et c'est le
+générateur qui écrivait moins bien.
+
+Test : `tests/logic/generateurs-parcours.test.mts`, dans les deux
+dépôts. Le test de la CLÉ, lui, diffère : Tipote lit trois noms.
 
 ## ON DIT TAG, JAMAIS ÉTIQUETTE (Béné, 1er septembre 2026)
 

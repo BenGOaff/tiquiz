@@ -8,6 +8,7 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { fetchAnthropic } from "@/lib/aiRetry";
+import { cleAnthropic } from "@/lib/ai/cleAnthropic";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,13 +17,7 @@ export const maxDuration = 60;
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 const MAX_TEXT_LEN = 2000;
 
-function getClaudeApiKey(): string {
-  return (
-    process.env.ANTHROPIC_API_KEY?.trim() ||
-    process.env.CLAUDE_API_KEY_OWNER?.trim() ||
-    ""
-  );
-}
+
 
 function getClaudeModel(): string {
   // Résolution centralisée via lib/anthropicModel : safety net pour
@@ -109,7 +104,7 @@ export function foldVariants(v: Variants): string {
 }
 
 export async function POST(req: NextRequest) {
-  const apiKey = getClaudeApiKey();
+  const apiKey = cleAnthropic();
   if (!apiKey) {
     return NextResponse.json({ ok: false, error: "CLAUDE_API_KEY_MISSING" }, { status: 500 });
   }

@@ -33,6 +33,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
+import { cleAnthropic } from "@/lib/ai/cleAnthropic";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
@@ -59,6 +60,8 @@ import {
   type GenerateurId,
 } from "@/lib/generateurs/catalogue";
 import { BLOCS, MAX_PIECES, piecesDeLaPiste, type Piste } from "@/lib/generateurs/blocs";
+import { passeParLesPistes } from "@/lib/generateurs/sequences";
+import { rangerMorceau } from "@/lib/generateurs/contenusStore";
 import { FORMATS_OFFRE, type Offre } from "@/lib/generateurs/offre";
 import { construireBriefQuiz, type BriefQuiz } from "@/lib/generateurs/briefQuiz";
 import { SOCLE_GENERATEURS } from "@/lib/prompts/generateurs/socle";
@@ -108,7 +111,11 @@ const schema = z.discriminatedUnion("step", [
   z.object({
     step: z.literal("produire"),
     ...communSchema,
-    piste: pisteSchema,
+    /**
+     * La piste choisie. ABSENTE sur les générateurs à plan fixe (emails,
+     * promotion) : là il n'y a pas de piste, il y a une séquence.
+     */
+    piste: pisteSchema.optional(),
     /** Le rang du morceau DANS la piste, 0-based. */
     pieceIndex: z.number().int().min(0).max(19),
   }),
@@ -126,9 +133,13 @@ export async function POST(req: NextRequest) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ ok: false, reason: "unauthorized" }, { status: 401 });
 
-  const apiKey = (process.env.ANTHROPIC_API_KEY ?? "").trim();
+  // La clé se lit par `cleAnthropic()`, comme les neuf autres fonctions
+  // IA. Cette route lisait `ANTHROPIC_API_KEY` toute seule, alors que la
+  // valeur vit dans `CLAUDE_API_KEY_OWNER` : elle était la SEULE à ne
+  // rien trouver, et elle annonçait "pas disponible pour le moment".
+  const apiKey = cleAnthropic();
   if (!apiKey) {
-    console.error("[generateurs] ANTHROPIC_API_KEY absente");
+    console.error("[generateurs] aucune cle Anthropic (ANTHROPIC_API_KEY ni CLAUDE_API_KEY_OWNER)");
     return refus("not_configured");
   }
 
@@ -392,6 +403,11 @@ export async function POST(req: NextRequest) {
 
   // ── ÉTAPE 1 : les pistes ──
   if (input.step === "pistes") {
+    // ELLES N'EXISTENT QUE POUR LE BONUS. Un écran resté sur l'ancienne
+    // version dépenserait des jetons pour rien et afficherait trois
+    // "pistes d'emails" que personne n'a demandées : on refuse, et on
+    // dit pourquoi.
+    if (!passeParLesPistes(id)) return refus("pas_de_pistes");
     const out = await appeler(
       consignePistes(id, brief),
       messagePourLeModele({
@@ -415,9 +431,15 @@ export async function POST(req: NextRequest) {
   }
 
   // ── ÉTAPE 2 : un morceau ──
+  // Sur un générateur à plan fixe, `piecesDeLaPiste` ignore ce que
+  // l'écran déclare et rend la séquence : le titre et la punchline
+  // n'ont alors personne pour les porter, et c'est normal.
   const piste: Piste = {
-    ...input.piste,
-    pieces: piecesDeLaPiste(id, input.piste.pieces),
+    titre: input.piste?.titre ?? "",
+    format: input.piste?.format ?? "",
+    punchline: input.piste?.punchline ?? "",
+    pourquoi: input.piste?.pourquoi ?? "",
+    pieces: piecesDeLaPiste(id, input.piste?.pieces),
   };
   const piece = piste.pieces[input.pieceIndex];
   if (!piece) return refus("piece_inconnue");
@@ -438,11 +460,40 @@ export async function POST(req: NextRequest) {
   );
   if (!out.ok) return refus(out.failure);
 
+  const markdown = sanitizeAiText(out.texte);
+
+  // ── ON RANGE LE MORCEAU TOUT DE SUITE ──
+  //
+  // Béné, 2 septembre 2026 : "il faut que les users retrouvent leurs
+  // créations". Un contenu généré ne vivait que dans l'onglet : un
+  // rafraîchissement, et le travail était perdu (et facturé, côté
+  // Tipote). On enregistre APRÈS chaque morceau et pas à la fin : une
+  // génération dure une minute et demie, et l'onglet fermé au septième
+  // morceau ne doit pas tout emporter.
+  //
+  // C'est best-effort et ça ne lève jamais : le texte est déjà à
+  // l'écran, faire échouer la réponse pour un souci d'enregistrement
+  // ferait perdre les deux.
+  await rangerMorceau(
+    {
+      userId: user.id,
+      projectId: (quiz as { project_id?: string | null }).project_id ?? null,
+      generateur: id,
+      quizId: input.quizId,
+      quizTitre: brief.titre,
+      titre: piste.titre,
+      profilIndex: demandeUnProfil(id) ? (input.profilIndex ?? null) : null,
+      profilTitre: profilChoisi?.titre ?? "",
+    },
+    { bloc: piece.bloc, index: piece.index, cle: piece.cle, markdown, tronque: out.tronque },
+  );
+
   return NextResponse.json({
     ok: true,
     bloc: piece.bloc,
     index: piece.index,
-    markdown: sanitizeAiText(out.texte),
+    cle: piece.cle,
+    markdown,
     // Un texte coupé à la limite reste utilisable : on le rend, mais on
     // le DIT. En silence, c'est une créatrice qui publie un contenu qui
     // s'arrête au milieu d'une phrase sans comprendre pourquoi.

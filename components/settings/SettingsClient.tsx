@@ -33,6 +33,7 @@ import SetPasswordForm from "@/components/auth/SetPasswordForm";
 import SioApiKeysManager from "@/components/sio/SioApiKeysManager";
 import { formatCents } from "@/lib/checkout/catalog";
 import { monteeVersProduit, type EtatAbonnement } from "@/lib/checkout/planChange";
+import { PageBanner } from "@/components/ui/page-banner";
 
 type Profile = {
   full_name: string | null;
@@ -675,19 +676,17 @@ export default function SettingsClient() {
 
   return (
     <div className="space-y-5">
-      <div className="gradient-primary rounded-xl px-5 py-4 md:px-6 md:py-5 flex items-center gap-4 text-white">
-        <div className="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center">
-          <Settings className="h-5 w-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-bold">{t("title")}</h2>
-          <p className="text-sm text-white/70">{t("subtitle")}</p>
-        </div>
-        <Button onClick={handleSave} disabled={saving} variant="secondary" className="shrink-0 rounded-full">
-          {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-          {t("saveBtn")}
-        </Button>
-      </div>
+      <PageBanner
+        icon={<Settings className="h-5 w-5" />}
+        actions={
+          <Button onClick={handleSave} disabled={saving} variant="secondary" className="shrink-0 rounded-full">
+            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            {t("saveBtn")}
+          </Button>
+        }
+      >
+        {t("subtitle")}
+      </PageBanner>
 
       <Tabs defaultValue={initialTab} className="space-y-4">
         {/* Pill tabs — same style as the rest of Tiquiz / Tipote post-refresh. */}
