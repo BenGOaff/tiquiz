@@ -271,7 +271,10 @@
     "bannerNotAuth": "You must log in to access this page.",
     "copyright": "© {year} Tiquiz. All rights reserved.",
     "ariaHide": "Hide password",
-    "ariaShow": "Show password"
+    "ariaShow": "Show password",
+    "googleContinuer": "Continue with Google",
+    "googleOu": "or",
+    "googleErreur": "Google sign-in did not go through. Try again, or use your email address."
   },
   "forgotPasswordPage": {
     "title": "Forgot password",
@@ -308,7 +311,10 @@
     "parrainTitreSansNom": "You arrived through a Tiquiz partner link",
     "parrainCadeau": "Your free account opens with no card. And if you subscribe later, this link gives you {jours} days free on the plan of your choice.",
     "quizPretTitre": "Your quiz is waiting",
-    "quizPretCorps": "Create your free account: the quiz you just generated lands inside, ready to edit and publish."
+    "quizPretCorps": "Create your free account: the quiz you just generated lands inside, ready to edit and publish.",
+    "googleContinuer": "Continue with Google",
+    "googleOu": "or",
+    "googleErreur": "Google sign-in did not go through. Try again, or use your email address."
   },
   "callbackPage": {
     "loadingTitle": "Authenticating…",

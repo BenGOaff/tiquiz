@@ -122,3 +122,19 @@ export function redirectionSure(brut: string | null | undefined): string {
   if (v.startsWith("//") || v.startsWith("/\\")) return "/dashboard";
   return v;
 }
+
+/**
+ * Le jeton caché dans le `?redirect=` de la connexion.
+ *
+ * Quelqu'un qui avait déjà un compte arrive sur `/login` avec
+ * `?redirect=/dashboard?tq_session=...` : le jeton y est, mais d'un
+ * cran plus bas. Sans cette lecture, un clic sur « Continuer avec
+ * Google » depuis cet écran repartirait sans lui, et le quiz serait
+ * perdu au retour (l'aller-retour OAuth ne rapporte pas le `redirect`).
+ */
+export function jetonDansRedirection(redirect: string | null | undefined): string | null {
+  const chemin = redirectionSure(redirect);
+  const i = chemin.indexOf("?");
+  if (i === -1) return null;
+  return lireJetonReprise(new URLSearchParams(chemin.slice(i + 1)).get(PARAM_REPRISE));
+}

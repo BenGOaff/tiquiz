@@ -6419,3 +6419,118 @@ versions d'avant (elles rougissent).
 
 **Ce chantier n'a PAS de jumeau chez Tipote** : il n'a ni page de vente
 capturée, ni `embed_quiz_sessions`. Vérifié, pas supposé.
+
+## La connexion Google, et les trois choses qu'elle aurait fait perdre (2 septembre 2026)
+
+Béné : "on pourra bosser sur l'optin et login via Google ?", puis "sans
+rien casser ni perdre de ce qui existe, je ne veux pas de mauvaise
+surprise."
+
+### LE PIÈGE, ET IL ÉTAIT ENTIER
+
+`supabase.auth.signInWithOAuth` crée le compte **DANS Supabase**, sans
+passer par `/api/auth/signup`. Or c'est cette route, et elle seule, qui
+faisait les trois choses qui comptent après une inscription :
+
+| | Ce qu'un bouton branché naïvement aurait coûté |
+|---|---|
+| `rattacherInscrit` | l'affiliée qui a amené la personne n'est JAMAIS rattachée, donc jamais payée sur la vente qui suit |
+| `poserTagPlan(email, "free")` | aucun contact chez Systeme.io, donc **aucune campagne** : la personne s'inscrit et ne reçoit rien |
+| le rattachement du quiz | le quiz de la démo reste orphelin en base |
+
+**Aucun des trois ne produit d'erreur visible.** C'est exactement la
+forme de panne que ce dépôt paie le plus cher, et c'est pour ça que
+`POST /api/auth/accueil` a été écrite AVANT que le bouton n'existe : les
+trois effets vivent au même endroit, quel que soit le chemin d'entrée.
+
+### CE QUI NE BOUGE PAS D'UNE LIGNE
+
+L'accueil est appelé **uniquement sur la branche `?code=`** du callback,
+c'est à dire le retour d'un fournisseur. Les liens email (`verifyOtp`,
+le hash implicite, la récupération de mot de passe) ne sont pas touchés,
+et `/api/auth/signup` garde ses propres effets de bord : l'accueil
+s'ajoute, il ne remplace rien. Le test compte les appels et exige qu'il
+n'y en ait qu'un.
+
+### ELLE NE TOURNE QU'UNE FOIS, ET JAMAIS `free` SUR UN COMPTE QUI PAIE
+
+Le marqueur vit dans `app_metadata` (Supabase) : **aucune migration**, et
+c'est le bon endroit pour un fait que le serveur écrit sur un compte et
+que la personne ne peut pas modifier.
+
+**Le marqueur est posé AVANT les appels réseau.** Deux onglets, ou un
+rechargement pendant que ça tourne, feraient sinon deux accueils, sur un
+chemin qui décide QUI est payé.
+
+Et ce marqueur n'existait pas avant ce chantier : **un compte DÉJÀ
+inscrit qui se connecte par Google passera donc ici une fois.** Reposer
+`tiquiz-free` sur une abonnée la sortirait du seul segment qui compte
+pour les relances de Béné, et ça ne se verrait sur AUCUN écran.
+`tagPlanPourAccueil` rend donc `null` dès que le plan n'est pas gratuit.
+C'est le garde-fou le plus important de ce chantier, et le test le
+rejoue sur les six paliers.
+
+### L'ALLER-RETOUR QUITTE NOTRE DOMAINE : ce qui survit, et comment
+
+Deux choses doivent être encore là au retour, et **aucune ne peut
+voyager dans l'URL** : Supabase ajoute son `?code=` à l'adresse de
+retour, et je n'ai aucun moyen de vérifier d'ici ce que leur serveur
+fait d'une query déjà présente. On ne construit pas sur une supposition.
+
+- **le `?ref=` affilié** vit déjà dans le cookie `tq_ref`, posé par le
+  middleware pour un an : il survit sans qu'on fasse rien ;
+- **le quiz de la démo** n'a pas de cookie : le bouton lui en pose un
+  (`tq_reprise`) juste avant de partir.
+
+**MESURÉ dans Chromium, sur le trajet exact d'un aller-retour OAuth**
+(notre domaine -> un site tiers -> retour chez nous en premier niveau) :
+
+```
+au retour de premier niveau : tq_reprise=abc123
+sur une requête tierce      : (aucun)
+```
+
+`SameSite=Lax` est donc à la fois ce qui le ramène et ce qui le protège :
+il n'est jamais envoyé quand un autre site déclenche une requête vers
+nous en arrière plan.
+
+**Et `Secure` n'est posé qu'en https** : en développement local, un
+cookie `Secure` sur http est jeté par le navigateur en silence, et le
+jeton disparaîtrait sans que rien ne le dise.
+
+### ON REVIENT SUR L'ORIGINE D'OÙ L'ON EST PARTI
+
+`urlRetourGoogle(origine)`. Partir de `tiquiz.fr` et revenir sur
+`quiz.tipote.com` sont **deux sites différents** : le cookie posé avant
+de partir serait perdu, et le quiz avec. C'est déjà ce que fait
+`resolveAppUrl` pour les liens d'email depuis le 2 août, et une origine
+qui n'est pas à nous (ou une adresse locale) retombe sur le domaine
+canonique.
+
+**Et le jeton se lit AUSSI dans le `?redirect=` de la connexion**
+(`jetonDansRedirection`). Quelqu'un qui avait déjà un compte arrive sur
+`/login?redirect=/dashboard?tq_session=...` : sans cette lecture, un clic
+sur Google depuis cet écran repartirait sans son quiz, parce que
+l'aller-retour OAuth ne rapporte pas le `redirect`.
+
+### CE QUI RESTE À FAIRE, ET CE N'EST PAS DU CODE
+
+Le bouton ne peut rien tant que le fournisseur n'est pas déclaré. Trois
+réglages, tous chez Béné, et **aucun ne se devine depuis le code** :
+
+1. un identifiant OAuth chez Google Cloud, avec
+   `https://<projet>.supabase.co/auth/v1/callback` comme URI de
+   redirection autorisée ;
+2. les deux valeurs collées dans Supabase, Authentication > Providers >
+   Google ;
+3. `https://quiz.tipote.com/auth/callback` **et**
+   `https://tiquiz.fr/auth/callback` dans les Redirect URLs de Supabase.
+   Les deux : on revient sur l'origine du départ, et l'inscription est
+   servie sur les deux domaines.
+
+Tant que ce n'est pas fait, le bouton s'affiche et échoue proprement
+avec sa phrase, le formulaire juste en dessous continue de marcher.
+
+Test : `tests/logic/connexion-google.test.mts`, vérifié en rejouant les
+trois versions naïves (le tag posé pour tout le monde, le retour toujours
+canonique, l'accueil jamais appelé) : les trois rougissent.

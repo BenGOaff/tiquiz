@@ -18,6 +18,19 @@ function parseHashParams(hash: string): Record<string, string> {
   return out;
 }
 
+/**
+ * Les effets de bord d'une première entrée, appelés APRÈS que la session
+ * soit ouverte. Ne jette jamais et ne bloque rien : la session compte,
+ * l'accueil compte moins.
+ */
+async function accueillir(): Promise<void> {
+  try {
+    await fetch("/api/auth/accueil", { method: "POST" });
+  } catch {
+    /* le tableau de bord passe avant */
+  }
+}
+
 export default function CallbackClient() {
   const t = useTranslations("callbackPage");
   const router = useRouter();
@@ -76,10 +89,27 @@ export default function CallbackClient() {
           return;
         }
 
-        // PKCE flow (?code=...)
+        // PKCE flow (?code=...) — c'est par là que revient Google.
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
+          // CE QU'UNE INSCRIPTION DOIT FAIRE, MÊME SANS FORMULAIRE.
+          //
+          // `signInWithOAuth` crée le compte DANS Supabase, sans passer
+          // par `/api/auth/signup` : sans cet appel, l'affiliée n'est
+          // jamais rattachée, aucun contact n'est créé chez Systeme.io
+          // (donc aucune campagne ne part), et le quiz de la démo reste
+          // orphelin. Aucun des trois ne produit d'erreur visible.
+          //
+          // La route est le garde-fou, pas cet appel : elle ne tourne
+          // qu'une fois par compte et ne pose jamais `free` sur un
+          // compte qui paie. Elle est donc sans danger sur les autres
+          // liens qui arrivent aussi en `?code=`.
+          //
+          // Best-effort : un accueil qui échoue ne doit pas laisser
+          // quelqu'un devant un écran de connexion alors que sa session
+          // est ouverte.
+          await accueillir();
           router.replace("/dashboard");
           return;
         }

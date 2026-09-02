@@ -271,7 +271,10 @@
     "bannerNotAuth": "Tens de iniciar sessão para aceder a esta página.",
     "copyright": "© {year} Tiquiz. Todos os direitos reservados.",
     "ariaHide": "Ocultar palavra-passe",
-    "ariaShow": "Mostrar palavra-passe"
+    "ariaShow": "Mostrar palavra-passe",
+    "googleContinuer": "Continuar com Google",
+    "googleOu": "ou",
+    "googleErreur": "A ligação com o Google não resultou. Tenta de novo ou usa o teu email."
   },
   "forgotPasswordPage": {
     "title": "Palavra-passe esquecida",
@@ -308,7 +311,10 @@
     "parrainTitreSansNom": "Chegaste pelo link de um parceiro Tiquiz",
     "parrainCadeau": "A tua conta gratuita abre sem cartão. E se mais tarde assinares, este link dá-te {jours} dias grátis no plano que escolheres.",
     "quizPretTitre": "O teu quiz está à espera",
-    "quizPretCorps": "Cria a tua conta gratuita: o quiz que acabaste de gerar aparece lá dentro, pronto a editar e a publicar."
+    "quizPretCorps": "Cria a tua conta gratuita: o quiz que acabaste de gerar aparece lá dentro, pronto a editar e a publicar.",
+    "googleContinuer": "Continuar com Google",
+    "googleOu": "ou",
+    "googleErreur": "A ligação com o Google não resultou. Tenta de novo ou usa o teu email."
   },
   "callbackPage": {
     "loadingTitle": "Autenticação em curso…",
