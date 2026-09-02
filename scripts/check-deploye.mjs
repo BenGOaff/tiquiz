@@ -27,9 +27,11 @@ try {
   // differentes : on ne dit surtout pas que le serveur est a jour.
   console.error("\n  Impossible de joindre GitHub, donc impossible de conclure.\n");
   console.error(`  ${String(e?.message || e).split("\n")[0]}\n`);
-  console.error("  Si le message parle de 'Username for https://github.com',");
-  console.error("  l'URL du depot est cassee. Elle se remet avec :\n");
-  console.error("    git remote set-url origin https://github.com/BenGOaff/tiquiz.git\n");
+  console.error("  Si le message parle de 'Username for https://github.com' :");
+  console.error("  le depot est PUBLIC, donc ce n'est pas un droit d'acces qui");
+  console.error("  manque, c'est un identifiant PERIME que git envoie encore et");
+  console.error("  que GitHub refuse. On lui dit de n'en envoyer aucun :\n");
+  console.error("    GIT_TERMINAL_PROMPT=0 git -c credential.helper= -c http.extraHeader= pull origin main\n");
   process.exit(2);
 }
 

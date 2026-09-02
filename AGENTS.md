@@ -6837,26 +6837,70 @@ pages légales envoyées à Google. C'est le code qui ne part pas en prod ?"
 |---|---|
 | `main` porte-t-il la section Google ? | **OUI** (`25e270d3`, `lastUpdated` au 02/09/2026) |
 | que sert `tiquiz.fr/privacy` ? | **22/04/2026**, aucune section "Connexion avec Google" |
-| le dépôt exige-t-il des identifiants ? | **NON** : `git ls-remote https://github.com/BenGOaff/tiquiz.git` rend son HEAD sans rien demander |
+| le dépôt est-il privé ? | **NON**, `"visibility": "public"` (lu par l'API GitHub, pas par un `git ls-remote`) |
 
 Le code était donc à sa place ; c'est le SERVEUR qui ne l'avait pas.
 
-### Le message d'erreur ne dit pas ce qu'il a l'air de dire
+### MA PREMIÈRE MESURE ÉTAIT INVALIDE, ET C'EST LA LEÇON
 
-`Username for 'https://github.com'` sur un dépôt PUBLIC ne veut pas dire
-"il faut s'authentifier". **Reproduit ici, en une commande :** un nom de
-dépôt qui n'existe pas rend EXACTEMENT ce prompt, parce que GitHub
-répond 404 sans dire si le dépôt est privé ou absent, et git en conclut
-qu'il lui manque des identifiants.
+J'ai lancé `git ls-remote https://github.com/BenGOaff/tiquiz.git`, obtenu
+le HEAD, et écrit ici : « le dépôt ne demande aucun identifiant, donc
+l'URL du serveur est cassée ». **Les deux moitiés étaient fausses.**
+
+L'environnement d'où je mesure est AUTHENTIFIÉ en tant que `BenGOaff`
+(`api.github.com/user` le dit), et il porte un
+`url.https://github.com/.insteadOf` qui réécrit les adresses. Mon test
+ne pouvait donc pas distinguer « ce dépôt est public » de « ce dépôt est
+privé et je suis connecté ». **Un test qui ne distingue pas ce qu'il est
+censé distinguer est pire qu'un test absent** (leçon des clés Supabase,
+22 août), et je l'ai refaite dans l'outil même qui servait à trancher.
+
+Béné a passé un aller-retour à corriger une adresse qui était déjà
+juste. La sortie le disait, mot pour mot :
 
 ```
-git ls-remote https://github.com/BenGOaff/tiquiz.git      -> le HEAD
-git ls-remote https://github.com/BenGOaff/tiquiz-app.git  -> could not read Username
+origin  https://github.com/BenGOaff/tiquiz.git (fetch)
+--- corrigé ---
+origin  https://github.com/BenGOaff/tiquiz.git (fetch)
 ```
 
-Donc : **l'URL du remote du serveur ne désignait pas le bon dépôt.** Elle
-se remet avec `git remote set-url`, et aucun identifiant n'est jamais
-nécessaire puisque le serveur ne fait que TIRER.
+**Ce qui tranche vraiment la visibilité, c'est l'API** (`private`,
+`visibility`), pas une commande git lancée depuis une machine dont on ne
+connaît pas la configuration. Et avant de conclure quoi que ce soit
+depuis ici : `curl -sS https://api.github.com/user`.
+
+### CE QUE `Username for 'https://github.com'` VEUT DIRE SUR UN DÉPÔT PUBLIC
+
+Un dépôt public se tire sans aucun identifiant. Donc ce prompt ne dit
+pas « il faut t'authentifier » : il dit que **git a envoyé des
+identifiants et que GitHub les a refusés** (401), ce qui fait redemander
+git. Un jeton expiré dans `~/.git-credentials`, un
+`http.extraHeader: Authorization` périmé, un helper qui rend une valeur
+morte : sur un dépôt public, tous produisent exactement ce message.
+
+Et ça colle avec « ça marchait avant » : le jeton était valide, il a
+expiré.
+
+**Le contournement est aussi le diagnostic**, et il ne demande aucun
+secret : on dit à git de n'envoyer AUCUN identifiant et de ne rien
+demander.
+
+```bash
+GIT_TERMINAL_PROMPT=0 git -c credential.helper= -c http.extraHeader= pull origin main
+```
+
+Ça passe -> le dépôt était bien joignable, le coupable est un
+identifiant périmé dans la config. Ça échoue -> c'est autre chose, et on
+n'est jamais resté coincé sur un prompt.
+
+**`GIT_TERMINAL_PROMPT=0` fait partie du correctif, pas du confort :**
+un prompt dans une chaîne de déploiement bloque le terminal sans rien
+expliquer, et c'est ce qui a fait croire à Béné que la chaîne `&&` était
+cassée.
+
+**Et on ne lit jamais les VALEURS de cette config.** `git config --list
+--name-only` donne les noms sans les valeurs : un `http.extraHeader`
+porte un jeton en clair, et ces sorties finissent dans une conversation.
 
 ### LA CHAÎNE `&&` N'A RIEN CASSÉ : ELLE A RÉVÉLÉ
 
