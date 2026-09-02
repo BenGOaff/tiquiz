@@ -1393,10 +1393,14 @@ git push origin main
 # sur le serveur
 cd /home/tipote/tiquiz-app
 git stash
-git pull origin main
+GIT_TERMINAL_PROMPT=0 git pull origin main
 npm ci
 npm run build && pm2 restart tiquiz-prod --update-env
 ```
+
+`GIT_TERMINAL_PROMPT=0` a ete ajoute le 2 septembre : sans lui, un 401
+temporaire de GitHub fait attendre un mot de passe et bloque le terminal
+sans rien expliquer (voir la section "Le deploiement fantome").
 
 Tu prends ma branche, tu copies le code dans ton dossier local, tu pousses
 sur `main`, puis le serveur tire `main`. `main` est donc la branche de
@@ -6820,3 +6824,203 @@ dit que la validation n'est PAS requise pour ces scopes. Le bouton
 fonctionne donc dès aujourd'hui ; c'est l'écran de consentement qui
 affiche encore un avertissement tant que la relecture de marque n'est
 pas passée.
+
+## Le déploiement fantôme : le serveur reconstruisait l'ANCIEN code (2 septembre 2026)
+
+Béné : "ton code ne marche pas, il bloque ici et plus rien :
+`Username for 'https://github.com':`. Mais si je fais mon code et que je
+clique entrée entrée entrée ça finit par avancer. Du coup je fais quoi
+bordel ??" Et, dans le même message : "je ne vois pas de modif sur les
+pages légales envoyées à Google. C'est le code qui ne part pas en prod ?"
+
+**Oui. Et ça durait avant la chaîne `&&`, sans que rien ne le dise.**
+
+### Les trois mesures qui tranchent
+
+| Question | Réponse |
+|---|---|
+| `main` porte-t-il la section Google ? | **OUI** (`25e270d3`, `lastUpdated` au 02/09/2026) |
+| que sert `tiquiz.fr/privacy` ? | **22/04/2026**, aucune section "Connexion avec Google" |
+| le dépôt est-il privé ? | **NON**, `"visibility": "public"` (lu par l'API GitHub, pas par un `git ls-remote`) |
+
+Le code était donc à sa place ; c'est le SERVEUR qui ne l'avait pas.
+
+### MA PREMIÈRE MESURE ÉTAIT INVALIDE, ET C'EST LA LEÇON
+
+J'ai lancé `git ls-remote https://github.com/BenGOaff/tiquiz.git`, obtenu
+le HEAD, et écrit ici : « le dépôt ne demande aucun identifiant, donc
+l'URL du serveur est cassée ». **Les deux moitiés étaient fausses.**
+
+L'environnement d'où je mesure est AUTHENTIFIÉ en tant que `BenGOaff`
+(`api.github.com/user` le dit), et il porte un
+`url.https://github.com/.insteadOf` qui réécrit les adresses. Mon test
+ne pouvait donc pas distinguer « ce dépôt est public » de « ce dépôt est
+privé et je suis connecté ». **Un test qui ne distingue pas ce qu'il est
+censé distinguer est pire qu'un test absent** (leçon des clés Supabase,
+22 août), et je l'ai refaite dans l'outil même qui servait à trancher.
+
+Béné a passé un aller-retour à corriger une adresse qui était déjà
+juste. La sortie le disait, mot pour mot :
+
+```
+origin  https://github.com/BenGOaff/tiquiz.git (fetch)
+--- corrigé ---
+origin  https://github.com/BenGOaff/tiquiz.git (fetch)
+```
+
+**Ce qui tranche vraiment la visibilité, c'est l'API** (`private`,
+`visibility`), pas une commande git lancée depuis une machine dont on ne
+connaît pas la configuration. Et avant de conclure quoi que ce soit
+depuis ici : `curl -sS https://api.github.com/user`.
+
+### CE QUE `Username for 'https://github.com'` VEUT DIRE SUR UN DÉPÔT PUBLIC
+
+Un dépôt public se tire sans aucun identifiant, donc ce prompt ne dit
+pas « il te manque un droit ». Il dit que **GitHub a répondu 401** sur
+le premier appel du pull (`GET /info/refs`), et que git en a conclu
+qu'il lui fallait des identifiants.
+
+**J'ai annoncé un jeton périmé dans la config du serveur. C'était FAUX**,
+et sa sortie l'a démenti en une commande :
+
+```
+git config --list --show-origin --name-only | grep -iE "credential|extraheader|insteadof|askpass"
+(aucune ligne)
+```
+
+Rien n'est configuré, donc mes `-c credential.helper=` et
+`-c http.extraHeader=` **n'ont neutralisé rien du tout** : ils ne
+peuvent pas être ce qui a débloqué. Entre l'échec et le succès, la
+seule chose qui a changé, c'est le TEMPS.
+
+**Donc l'échec venait de GitHub, et il était temporaire.** L'hypothèse
+la plus probable, et je l'écris COMME une hypothèse parce que je ne l'ai
+pas mesurée : une limite de débit sur les tirages ANONYMES depuis l'IP
+de ce serveur. C'est le seul mécanisme connu qui rend un 401
+intermittent sur un dépôt public sans que rien ne bouge chez nous, et il
+colle aux quatre faits (ça marchait, ça a bloqué, ça remarche, rien
+n'est configuré).
+
+**Ce qui compte, c'est que ça peut revenir.** Deux remèdes, dans cet
+ordre de coût :
+
+1. **`GIT_TERMINAL_PROMPT=0` devant le `git pull`, pour toujours.** Ça
+   ne répare rien, ça garantit qu'un déploiement ne reste JAMAIS coincé
+   sur un prompt muet : il s'arrête avec un message. Le coût est nul,
+   c'est la nouvelle forme de la commande.
+2. **Une clé SSH de déploiement**, le jour où ça revient. Le serveur
+   génère la paire lui-même, seule la partie PUBLIQUE part chez GitHub
+   (ce n'est pas un secret, elle peut se coller dans une conversation),
+   et un tirage authentifié n'est plus soumis à la limite des tirages
+   anonymes. Aucune expiration, contrairement à un jeton.
+
+**Et la leçon de méthode, la troisième de la journée sur la même
+panne :** j'ai avancé trois causes (l'URL du remote, un dépôt privé, un
+jeton périmé) et les trois étaient fausses. Chacune était plausible et
+aucune n'était mesurée avant d'être annoncée. Béné a fait deux
+allers-retours pour rien. **Sur une panne intermittente, "je ne sais pas
+encore pourquoi ça remarche" est une réponse honnête ; une cause
+inventée qui colle à l'histoire ne l'est pas.**
+
+### LA CHAÎNE `&&` N'A RIEN CASSÉ : ELLE A RÉVÉLÉ
+
+C'est le point à ne pas inverser, et c'est ce que Béné a vécu comme une
+panne. Avec ses commandes sur des LIGNES SÉPARÉES, le `git pull`
+échouait, et `npm ci`, `npm run build` et `pm2 restart` tournaient quand
+même. Tout avait l'air de marcher : aucune ligne rouge, PM2 redémarrait,
+le site répondait. **Et il servait l'ancien code.**
+
+**Règle : une étape de déploiement qui échoue sans arrêter la chaîne
+fabrique un déploiement fantôme**, c'est à dire le pire des symptômes :
+la correction est absente, tout le reste est vert, et on va chercher le
+bug dans le code au lieu du transport. Même famille que le webhook dont
+le réessai ne pouvait pas repasser (24 août) et que les images en 403
+(31 août) : le geste était juste, il n'atteignait pas sa cible.
+
+### Et le contrôle qui manquait
+
+```bash
+npm run check:deploye
+```
+
+Il compare le commit que le SERVEUR a en main avec celui de `main` sur
+GitHub, et **il distingue les trois cas** (leçon des clés Supabase du
+22 août) : à jour, pas à jour, ou "je n'ai pas pu joindre GitHub" (avec
+la commande de réparation du remote imprimée à côté). Un contrôle qui
+répondrait "à jour" quand le fetch échoue serait pire que pas de
+contrôle.
+
+Il dit aussi ce qu'il ne peut PAS savoir : que le code soit tiré ne veut
+pas dire qu'il soit CONSTRUIT. Le build et le redémarrage restent à
+vérifier à l'écran.
+
+## Google refuse le branding : ce qu'il regarde vraiment (2 septembre 2026)
+
+Béné : "google ne valide toujours pas tu as lu les règles en vigueur ?"
+avec ses deux reproches à l'écran.
+
+**Non, je ne les avais pas lues.** J'avais ajouté une section « Connexion
+avec Google » de cinq phrases en supposant que décrire la connexion
+suffisait. Leurs deux pages d'aide (13806988 et 13807376) sont
+explicites, et elles demandent autre chose.
+
+### Reproche 1 : « ne contient pas suffisamment de contenu »
+
+Google exige que la politique **divulgue de façon exhaustive** comment
+l'app ACCÈDE aux données utilisateur Google, les UTILISE, les STOCKE, les
+PROTÈGE, les PARTAGE et les CONSERVE (avec la politique de suppression),
+plus la clause d'**usage limité** (Google API Services User Data Policy,
+Limited Use). Mesuré : la page servait **805 mots visibles**, et la
+section Google en couvrait trois axes sur six.
+
+La section 12 traite maintenant les six, nommés un par un, dans les
+5 langues, avec les scopes demandés (`openid email profile`), la liste
+de ce à quoi on n'accède PAS (Gmail, Drive, Agenda, Contacts, Photos,
+YouTube, écriture, publication), et la clause d'usage limité.
+
+**Ce qui n'est PAS écrit est aussi important :** rien sur un hébergement
+« dans l'Union européenne » (l'article 8 dit l'inverse), aucun délai de
+suppression inventé (on renvoie aux articles 9 et 10). Une politique qui
+promet ce que la page dément juste au dessus est pire qu'une politique
+courte.
+
+### CE QUE LA MESURE A TROUVÉ EN PLUS : Cloudflare masquait les emails
+
+**4 adresses sur 4** de la page étaient servies en
+`<span class="__cf_email__">[email&nbsp;protected]</span>`, y compris
+celle de l'article « Contact » et celle de l'article « Vos droits ».
+C'est l'option « Email Address Obfuscation » de Cloudflare, et elle
+s'applique au HTML SERVI, donc elle est invisible depuis le code.
+
+Un lecteur qui n'exécute pas le JavaScript (le validateur de Google, un
+robot, un lecteur d'écran dégradé) lit donc une politique de
+confidentialité **sans aucune adresse de contact**. `SansObfuscationEmail`
+(`components/legal/LegalPageView.tsx`) pose les marqueurs
+`<!--email_off-->` / `<!--email_on-->`, la directive officielle de
+Cloudflare pour laisser une zone intacte.
+
+**Ça ne se voyait que sur la page RENDUE**, jamais dans le dépôt : c'est
+la leçon du 22 août, appliquée à un intermédiaire qu'on oublie parce
+qu'il ne nous appartient pas.
+
+### Reproche 2 : « votre page d'accueil n'est accessible que via une page de connexion »
+
+**Celui là était PÉRIMÉ, et l'écran le disait :** « Problèmes détectés
+lors de la tentative de validation PRÉCÉDENTE ». Mesuré le même jour
+avec l'agent de Googlebot, sans cookie :
+
+| | |
+|---|---|
+| `tiquiz.fr/` | **200**, aucune redirection, **5325 mots visibles** |
+| lien vers la politique | présent (`/privacy`, `/legal`, `/terms`, `/cookies`) |
+
+Le reproche datait du moment où la page d'accueil déclarée était
+`quiz.tipote.com`, qui est un écran de connexion. Depuis qu'elle a mis
+`tiquiz.fr`, il n'a plus lieu d'être.
+
+**Règle : sur cet écran, on lit d'abord « tentative précédente ».** Un
+rapport d'échec n'est pas un état courant, et corriger un reproche déjà
+réglé coûte un cycle de validation.
+
+Test : `tests/logic/politique-google.test.mts` (9 tests), vérifié en
+rejouant les versions d'avant : 8 rougissent.
