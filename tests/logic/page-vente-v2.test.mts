@@ -263,6 +263,17 @@ function texteVisible(fichier: string): string {
     .replace(/<style[\s\S]*?<\/style>/gi, " ");
 }
 
+/**
+ * Les REGLES CSS d'un bloc neuf : sans les commentaires, mais AVEC le
+ * <style>. `texteVisible` retire les deux, et une assertion sur une
+ * regle y serait donc toujours fausse sans le dire.
+ */
+function regles(fichier: string): string {
+  return fs
+    .readFileSync(path.join(DOSSIER, fichier), "utf8")
+    .replace(/<!--[\s\S]*?-->/g, " ");
+}
+
 test("aucune adresse en dur vers l'ancien tunnel Systeme.io", () => {
   for (const f of blocsNeufs()) {
     const s = texteVisible(f);
@@ -425,21 +436,79 @@ test("les boutons des blocs neufs sont ceux de la page", () => {
   }
 });
 
-test("le mini quiz ne prétend jamais être un quiz Tiquiz", () => {
+test("le mini quiz se lit comme un quiz : une question à la fois", () => {
+  // Béné, 2 septembre, sur le premier jet en trois colonnes : "est-ce que
+  // toi, en tant que visiteur tu comprends que c'est un quiz et que tu
+  // dois cliquer ?? [...] pas un 'vrai' quiz, pas pratique, trop
+  // compliqué". Un quiz pose UNE question, on clique, on avance.
+  //
   // SUR LE TEXTE VISIBLE, pas sur le fichier : mon premier jet comptait
   // 7 boutons radio au lieu de 6, parce que le commentaire qui explique
-  // la mécanique écrit `<input type="radio">` lui aussi. Troisième fois
-  // dans ce chantier qu'un contrôle mesure autre chose que ce qu'il
-  // croit.
+  // la mécanique écrit un `input type=radio` lui aussi.
   const s = texteVisible("cest-pour-toi.html");
-  // Trois questions, deux réponses chacune, et un verdict qui peut dire NON.
-  assert.equal((s.match(/type="radio"/g) ?? []).length, 6);
-  assert.ok(s.includes("tqv-pt-oui") && s.includes("tqv-pt-non"));
-  assert.ok(/Non, et je préfère te le dire/.test(s), "le verdict ne sait pas dire non");
+  const css = regles("cest-pour-toi.html");
+
+  assert.equal((s.match(/type="radio"/g) ?? []).length, 6, "trois questions, deux réponses chacune");
+
+  // Les trois étapes existent, et le CSS n'en montre qu'UNE : celle dont
+  // la réponse manque. Sans ces règles, tout s'affiche d'un coup et on
+  // retombe sur le formulaire en colonnes qu'elle a refusé.
+  for (const id of ["ptE1", "ptE2", "ptE3"]) {
+    assert.ok(s.includes('id="' + id + '"'), "l'étape " + id + " a disparu");
+  }
+  assert.ok(css.includes(".tqv-pt-e{display:none}"), "les étapes ne sont plus masquées par défaut");
+  assert.ok(css.includes(':not(:has(input[name="pt1"]:checked)) #ptE1{display:block}'), "l'étape 1 ne s'affiche plus toute seule");
+  assert.ok(css.includes(':has(input[name="pt2"]:checked):not(:has(input[name="pt3"]:checked)) #ptE3{display:block}'), "l'étape 3 ne dépend plus des deux précédentes");
+
+  // La progression : c'est elle qui dit qu'il y a une suite.
+  assert.ok(s.includes("Question 1 sur 3") && s.includes("Question 3 sur 3"), "le rang de la question n'est plus affiché");
+  assert.ok(s.includes("tqv-pt-jauge"), "la barre de progression a disparu");
+
+  // Les options doivent RESSEMBLER à des boutons : c'est le reproche de
+  // départ, "on ne comprend pas qu'il faut cliquer". Un fond, une
+  // bordure de marque, une flèche, et un survol qui bouge.
+  assert.ok(/\.tqv-pt-ops label\{[^}]*cursor:pointer/.test(css), "les options ne sont plus cliquables à l'oeil");
+  assert.ok(css.includes(".tqv-pt-ops label::after"), "les options n'ont plus leur flèche");
+  assert.ok(/\.tqv-pt-ops label:hover\{[^}]*transform:translateY/.test(css), "les options ne réagissent plus au survol");
+});
+
+test("trois verdicts : une seule réponse discordante ne fait pas un refus", () => {
+  // "trop restrictif" : UNE seconde option sur trois donnait le refus
+  // sec. Quelqu'un qui veut des leads ET une maquette au pixel près se
+  // faisait renvoyer, alors que Tiquiz lui va très bien sur l'essentiel.
+  const s = texteVisible("cest-pour-toi.html");
+  for (const c of ["tqv-pt-oui", "tqv-pt-mixte", "tqv-pt-non"]) {
+    assert.ok(s.includes(c), "le verdict " + c + " n'existe pas");
+  }
+  // Le OUI n'est QUE la combinaison a-a-a, le NON que b-b-b, et les SIX
+  // autres sont énumérées une par une : c'est verbeux, et ça ne peut pas
+  // se tromper de cas.
+  assert.ok(regles("cest-pour-toi.html").includes("#pt1a:checked):has(#pt2a:checked):has(#pt3a:checked) .tqv-pt-oui"));
+  assert.ok(regles("cest-pour-toi.html").includes("#pt1b:checked):has(#pt2b:checked):has(#pt3b:checked) .tqv-pt-non"));
+  const melangees = (regles("cest-pour-toi.html").match(/\.tqv-pt-mixte/g) ?? []).length;
+  assert.equal(melangees, 6, "le verdict nuancé ne couvre pas EXACTEMENT les 6 combinaisons mélangées");
+  // Et il sait toujours dire non.
+  assert.ok(s.includes("Franchement, non."), "le verdict ne sait plus dire non");
+});
+
+test("le mini quiz ne dépend d'aucun script et ne capture rien", () => {
+  const s = texteVisible("cest-pour-toi.html");
   // Aucun script : c'est ce qui a tué la FAQ d'origine.
   assert.ok(!/<script/i.test(s), "le mini quiz dépend d'un script");
-  // Et il ne capture RIEN : ni email, ni tag, ni envoi.
-  assert.ok(!/<form|type="email"|action=/i.test(s), "le mini quiz a l'air de capturer quelque chose");
+  // Le formulaire est là POUR le bouton Recommencer natif, et pour rien
+  // d'autre : sans lui, on ne peut plus rien changer une fois la
+  // troisième réponse donnée. Il n'a ni destination ni champ de saisie.
+  assert.ok(s.includes('<input type="reset"'), "on ne peut plus recommencer le test");
+  assert.ok(!/action=|method=|type="email"|type="text"/i.test(s), "le mini quiz a l'air de capturer quelque chose");
+
+  // La hauteur est RÉSERVÉE autour de la carte, pas dedans : le verdict
+  // s'affiche sur place au lieu de pousser la page. Mesuré à 1280x900 et
+  // 1440x800 : 763 px dans les CINQ états, repos compris.
+  assert.ok(/\.tqv-pt-scene\{min-height:\d+px\}/.test(regles("cest-pour-toi.html")), "la hauteur du verdict n'est plus réservée");
+  // La ligne Recommencer vit HORS de la carte, donc min-height ne
+  // l'absorbe pas : elle occupe sa place en permanence. En display:none,
+  // elle décalait la page de 37 px au moment du verdict.
+  assert.ok(regles("cest-pour-toi.html").includes(".tqv-pt-reprise{visibility:hidden"), "la ligne Recommencer décale la page quand elle apparaît");
 });
 
 // ---------------------------------------------------------------------

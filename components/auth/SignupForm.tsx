@@ -13,6 +13,7 @@ import LegalFooterLinks from "@/components/legal/LegalFooterLinks";
 import type { Parrainage } from "@/lib/affiliate/accueilParrain";
 import { Gift, Sparkles } from "lucide-react";
 import { urlConnexionReprise } from "@/lib/embed/reprise";
+import BoutonGoogle from "@/components/auth/BoutonGoogle";
 import { CANONICAL_APP_URL } from "@/lib/authLinks";
 
 // `jetonQuiz` : le quiz fabriqué sur la page de vente, s'il y en a un.
@@ -173,6 +174,13 @@ export default function SignupForm({
           )}
 
           <CardContent>
+            {/* Google AVANT le formulaire : c'est le chemin le plus
+                court, et celui qui ne demande pas d'inventer un mot de
+                passe de plus. Le formulaire reste dessous, entier. */}
+            <div className="mb-4">
+              <BoutonGoogle namespace="signupPage" jetonQuiz={jetonQuiz} />
+            </div>
+
             <form onSubmit={handleSignup} className="space-y-4">
               {error && (
                 <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">

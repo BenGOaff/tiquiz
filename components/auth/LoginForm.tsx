@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { redirectionSure } from "@/lib/embed/reprise";
+import { jetonDansRedirection, redirectionSure } from "@/lib/embed/reprise";
+import BoutonGoogle from "@/components/auth/BoutonGoogle";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -172,6 +173,19 @@ export default function LoginForm() {
           </CardHeader>
 
           <CardContent>
+            {/* LE JETON EST DANS LE `?redirect=`, PAS EN HAUT DE L'URL.
+                Quelqu'un qui avait déjà un compte arrive ici depuis
+                l'inscription avec `?redirect=/dashboard?tq_session=...`.
+                Sans cette lecture, un clic sur Google repartirait sans
+                son quiz : l'aller-retour OAuth ne rapporte pas le
+                `redirect`, et le quiz serait perdu au retour. */}
+            <div className="mb-4">
+              <BoutonGoogle
+                namespace="loginPage"
+                jetonQuiz={jetonDansRedirection(searchParams?.get("redirect"))}
+              />
+            </div>
+
             {mode === "password" && (
               <form onSubmit={handlePasswordLogin} className="space-y-4">
                 {errorPassword && (
