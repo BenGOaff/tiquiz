@@ -81,6 +81,44 @@ describe("la politique dit ce que Google exige", () => {
   });
 });
 
+describe("la politique reste assez detaillee pour Google", () => {
+  // Google a refuse DEUX fois avec "ne contient pas suffisamment de contenu",
+  // la seconde apres que la section Google eut ete etoffee : ce n'est donc
+  // pas seulement la section 12 qu'ils jugent, c'est la page entiere. Les
+  // articles 3 (collecte), 4 (utilisation), 7 (partage), 11 (securite) et
+  // 13 (cookies) faisaient une a trois phrases ; ils detaillent maintenant.
+  //
+  // Le seuil fige le volume MESURE apres cet etoffement, moins une marge :
+  // un article qu'on raccourcirait plus tard ferait rougir ce test avant
+  // qu'un troisieme refus n'arrive.
+  const PLANCHER: Record<string, number> = { fr: 1500, en: 1300, es: 1450, it: 1350, ar: 1100 };
+
+  for (const langue of LANGUES) {
+    test(`${langue} : la page entiere reste detaillee`, () => {
+      const p = privacy[langue];
+      const mots = [p.intro ?? "", ...p.sections.flatMap((s) => [s.h, ...s.body.flat()])]
+        .join(" ")
+        .split(/\s+/)
+        .filter(Boolean).length;
+      assert.ok(
+        mots >= PLANCHER[langue],
+        `${langue} : ${mots} mots, en dessous du plancher de ${PLANCHER[langue]}`,
+      );
+    });
+  }
+
+  test("les sous-traitants reels sont tous nommes (fr)", () => {
+    const art7 = privacy.fr.sections.find((s) => s.h.startsWith("7."));
+    const t = art7!.body.flatMap((b) => (Array.isArray(b) ? b : [b])).join(" ");
+    // Resend et Cloudflare manquaient : on envoie de vrais emails par l'un et
+    // tous les domaines passent par l'autre. Une liste incomplete est
+    // exactement ce que Google appelle un partage mal divulgue.
+    for (const nom of ["Supabase", "Hostinger", "Cloudflare", "Stripe", "PayPal", "Resend", "Anthropic", "Systeme.io"]) {
+      assert.ok(t.includes(nom), `${nom} est nomme a l'article 7`);
+    }
+  });
+});
+
 describe("l'adresse de contact reste lisible sans JavaScript", () => {
   // Cloudflare remplace toute adresse email du HTML servi par
   // "[email protected]" plus un script. Mesure du 2 septembre sur la
