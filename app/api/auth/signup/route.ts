@@ -36,6 +36,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { buildAuthCallbackUrl, resolveAppUrl } from "@/lib/authLinks";
 import { rattacherInscrit } from "@/lib/affiliate/rattacherInscrit";
+import { lireJetonReprise } from "@/lib/embed/reprise";
+import { lireSessionReclamable, rattacherQuizAnonyme } from "@/lib/embed/rattacherQuiz";
 import { REF_COOKIE } from "@/lib/affiliate/refLien";
 import { SA_COOKIE } from "@/lib/affiliate/sa";
 import { sendSignupEmail } from "@/lib/email/signupEmail";
@@ -76,12 +78,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   let password = "";
   let fullName = "";
   let locale: string | null = null;
+  // Le quiz fabrique sur la page de vente, s'il y en a un. Le jeton
+  // arrive par l'URL (`/signup?tq_session=...`), donc de l'exterieur :
+  // `lireJetonReprise` le VALIDE au lieu de le croire.
+  let jetonReprise: string | null = null;
   try {
     const body = await req.json();
     email = String(body?.email ?? "").trim().toLowerCase();
     password = String(body?.password ?? "");
     fullName = String(body?.fullName ?? "").trim().slice(0, 120);
     locale = typeof body?.locale === "string" ? body.locale.slice(0, 8) : null;
+    jetonReprise = lireJetonReprise(body?.sessionEmbed);
   } catch {
     return NextResponse.json({ ok: false, reason: "invalid_body" }, { status: 400 });
   }
@@ -126,6 +133,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // réécrire. Ici rien ne dépend du statut : c'est un navigateur, il
   // n'y a aucun réessai automatique à déclencher.
   let actionLink: string | null = null;
+  let idDuCompte: string | null = null;
   try {
     // `generateLink` CRÉE la personne en attente de confirmation ET rend
     // le jeton, sans envoyer aucun email. C'est exactement ce qu'on veut.
@@ -152,6 +160,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       console.error(`[signup] aucun jeton rendu pour ${email} : email NON envoye.`);
       return NextResponse.json({ ok: false, reason: "signup_failed" });
     }
+    idDuCompte = data?.user?.id ?? null;
     actionLink = buildAuthCallbackUrl(appUrl, { tokenHash: hashedToken, type: "signup" });
   } catch (e) {
     console.error(`[signup] ${e instanceof Error ? e.message : String(e)}`);
@@ -169,6 +178,33 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     sa: req.cookies.get(SA_COOKIE)?.value,
     pageUrl: req.headers.get("referer"),
   });
+
+  // ── LE QUIZ FABRIQUÉ SUR LA PAGE DE VENTE ──
+  //
+  // Béné, 2 septembre 2026 : "un aperçu gratuit alléchant qui demande de
+  // créer un compte pour continuer."
+  //
+  // C'est ICI que le quiz change de propriétaire, et pas dans le
+  // navigateur. Avant, le jeton voyageait par le `localStorage` d'un
+  // iframe tiers : mesuré, ça lève `SecurityError` dès que les cookies
+  // tiers sont bloqués, donc sur Safari et Firefox par défaut. Le quiz
+  // restait orphelin en base et la personne recommençait de zéro.
+  //
+  // Best-effort et JAMAIS bloquant, comme le rattachement affilié au
+  // dessus : un transfert qui échoue ne doit pas priver quelqu'un de son
+  // inscription. Et il ne se tait pas : le tableau de bord garde son
+  // filet (`EmbedAutoClaim`), qui repassera avec le même jeton.
+  if (jetonReprise && idDuCompte) {
+    const lue = await lireSessionReclamable({ jeton: jetonReprise });
+    if (lue.ok) {
+      const r = await rattacherQuizAnonyme({ sessionId: lue.session.id, userId: idDuCompte });
+      if (!r.ok) {
+        console.error(`[signup] quiz de la page de vente non rattache a ${email} : ${r.raison}`);
+      }
+    } else {
+      console.error(`[signup] session ${jetonReprise} non reclamable pour ${email} : ${lue.raison}`);
+    }
+  }
 
   // ── LE CONTACT CHEZ SYSTEME.IO ──
   //

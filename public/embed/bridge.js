@@ -11,11 +11,11 @@
  *
  * Usage on the host page:
  *   <iframe id="tiquiz-iframe"
- *           src="https://app.tiquiz.fr/embed/preview?locale=fr&source=tiquiz-fr&checkout=https://www.tipote.fr/tiquiz%23section-518f489a"
- *           data-checkout="https://www.tipote.fr/tiquiz#section-518f489a"
+ *           src="https://quiz.tipote.com/embed/preview?locale=fr&source=tiquiz-fr&checkout=https://tiquiz.fr/signup"
+ *           data-checkout="https://tiquiz.fr/signup"
  *           style="width:100%;height:680px;border:0;border-radius:18px;"
  *           loading="lazy"></iframe>
- *   <script src="https://app.tiquiz.fr/embed/bridge.js" async></script>
+ *   <script src="https://quiz.tipote.com/embed/bridge.js" async></script>
  *
  * Multiple iframes per page are supported. Each iframe can override
  * its own data-checkout independently.
@@ -40,7 +40,11 @@
     //   3) hard fallback to the public Tiquiz product page
     var explicit = iframe && iframe.getAttribute("data-checkout");
     var fromIframe = payload && typeof payload.checkout_url === "string" ? payload.checkout_url : "";
-    return (explicit || fromIframe || "https://www.tipote.fr/tiquiz").trim();
+    // LE REPLI EST NOTRE INSCRIPTION, plus un tunnel Systeme.io.
+    // Leur page ne transmet pas la query : le `tq_session` que la
+    // ligne suivante colle sur l'adresse y mourait, donc le quiz que
+    // le visiteur vient de fabriquer restait orphelin en base.
+    return (explicit || fromIframe || "https://tiquiz.fr/signup").trim();
   }
 
   function appendSession(url, token) {

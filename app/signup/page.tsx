@@ -41,6 +41,7 @@ import { cookies } from "next/headers";
 import SignupForm from "@/components/auth/SignupForm";
 import { readParrainage, type Parrainage } from "@/lib/affiliate/accueilParrain";
 import { pickRef, REF_COOKIE, REF_PARAM } from "@/lib/affiliate/refLien";
+import { lireJetonReprise, PARAM_REPRISE } from "@/lib/embed/reprise";
 import { proprietaireDuLien } from "@/lib/trial/proprietaireDuLien";
 
 export const dynamic = "force-dynamic";
@@ -60,6 +61,18 @@ export default async function SignupPage({
   const boite = await cookies();
   const ref = pickRef(sp[REF_PARAM], boite.get(REF_COOKIE)?.value);
 
+  // LE QUIZ FABRIQUÉ SUR LA PAGE DE VENTE.
+  //
+  // Il arrive par l'URL, sur NOTRE domaine, par une navigation de
+  // premier niveau : c'est le seul chemin qui traverse Safari et
+  // Firefox, où un iframe tiers n'a pas le droit d'écrire dans le
+  // stockage du navigateur (mesuré, cf. `lib/embed/reprise.ts`).
+  //
+  // Lu ICI et pas dans le formulaire : `useSearchParams` dans un
+  // composant client exige une frontière Suspense, alors que cette
+  // page lit déjà ses paramètres côté serveur.
+  const jetonQuiz = lireJetonReprise(sp[PARAM_REPRISE]);
+
   let parrainage: Parrainage = { affiche: false };
   if (ref) {
     // Un aller-retour vers Tipote, et UNIQUEMENT quand il y a un code à
@@ -77,5 +90,5 @@ export default async function SignupPage({
     });
   }
 
-  return <SignupForm parrainage={parrainage} />;
+  return <SignupForm parrainage={parrainage} jetonQuiz={jetonQuiz} />;
 }

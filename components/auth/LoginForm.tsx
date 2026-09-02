@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { redirectionSure } from "@/lib/embed/reprise";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabaseBrowser";
@@ -95,8 +96,16 @@ export default function LoginForm() {
         setLoadingPassword(false);
         return;
       }
-      const redirect = searchParams.get("redirect") || "/dashboard";
-      router.push(redirect);
+      // `redirect` VIENT DE L'URL, donc de l'exterieur.
+      //
+      // Il etait pousse tel quel : `?redirect=https://ailleurs.example`
+      // emmenait la personne hors de chez nous JUSTE APRES son mot de
+      // passe, c'est a dire a la seconde ou une fausse page de
+      // connexion est rentable. `redirectionSure` n'accepte qu'un
+      // chemin interne (`lib/embed/reprise.ts`), et refuse le double
+      // slash, qui est une adresse ABSOLUE pour le navigateur alors
+      // qu'elle commence bien par `/`.
+      router.push(redirectionSure(searchParams.get("redirect")));
     } catch {
       setErrorPassword(t("errUnexpected"));
       setLoadingPassword(false);

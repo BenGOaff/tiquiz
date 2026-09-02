@@ -10,6 +10,7 @@ import {
   buildQuizImportPrompt,
   buildSurveyGenerationPrompt,
   buildSurveyImportPrompt,
+  QUIZ_GENERATION_MAX_TOKENS,
 } from "@/lib/prompts/quiz/system";
 import { sanitizeAiQuizPayload } from "@/lib/aiTextSanitizer";
 import { buildClaudeMessageBody } from "@/lib/claudeRequest";
@@ -231,7 +232,7 @@ export async function POST(req: NextRequest) {
             body: JSON.stringify(
               buildClaudeMessageBody({
                 model: getClaudeModel(),
-                max_tokens: 8000,
+                max_tokens: QUIZ_GENERATION_MAX_TOKENS,
                 temperature: 0.7,
                 system,
                 messages: [{ role: "user", content: userPrompt }],

@@ -306,7 +306,9 @@
     "errEmailFailed": "تم إنشاء حسابك لكن بريد التأكيد لم يُرسل. راسلنا وسنفتحه يدويا.",
     "parrainTitre": "دعوة من {prenom} لتجربة Tiquiz مجانا",
     "parrainTitreSansNom": "لقد وصلت عبر رابط أحد شركاء Tiquiz",
-    "parrainCadeau": "حسابك المجاني يفتح دون بطاقة بنكية. وإذا اشتركت لاحقا، يمنحك هذا الرابط {jours} يوما مجانا على الخطة التي تختارها."
+    "parrainCadeau": "حسابك المجاني يفتح دون بطاقة بنكية. وإذا اشتركت لاحقا، يمنحك هذا الرابط {jours} يوما مجانا على الخطة التي تختارها.",
+    "quizPretTitre": "الاختبار في انتظارك",
+    "quizPretCorps": "أنشئ حسابك المجاني: الاختبار الذي أنشأته للتو ينتقل إليه، جاهزا للتعديل والنشر."
   },
   "callbackPage": {
     "loadingTitle": "جاري المصادقة…",
@@ -1527,7 +1529,7 @@
     "trackingAdsHelp": "أين أجد معرّفات Google Ads؟ Conversions →",
     "trackingInvalidFormat": "تنسيق غير صالح",
     "generateAiShort": "توليد (ذكاء اصطناعي)",
-    "unlockTiquizCta": "افتح Tiquiz ←",
+    "unlockTiquizCta": "احتفظ باختباري ←",
     "ariaCropImage": "اقتصاص الصورة",
     "ariaRemoveImage": "إزالة الصورة",
     "surveyLeadTagLabel": "وسم جهات الاتصال (اختياري)",

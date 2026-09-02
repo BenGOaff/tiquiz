@@ -13,7 +13,7 @@
 //   - Stream is SSE so the embed can show a "live writing" effect.
 
 import { NextRequest } from "next/server";
-import { buildQuizGenerationPrompt } from "@/lib/prompts/quiz/system";
+import { buildQuizGenerationPrompt, QUIZ_GENERATION_MAX_TOKENS } from "@/lib/prompts/quiz/system";
 import { sanitizeAiQuizPayload } from "@/lib/aiTextSanitizer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { corsHeaders, preflight } from "@/lib/embed/cors";
@@ -32,7 +32,6 @@ const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 // Defaults are applied in the request handler when the visitor leaves
 // a field at zero. Token cap stays low — even a 10-question quiz with
 // 5 profiles fits comfortably.
-const EMBED_MAX_TOKENS = 6000;
 
 
 
@@ -210,7 +209,7 @@ export async function POST(req: NextRequest) {
             signal: abort.signal,
             body: JSON.stringify({
               model: getClaudeModel(),
-              max_tokens: EMBED_MAX_TOKENS,
+              max_tokens: QUIZ_GENERATION_MAX_TOKENS,
               temperature: 0.7,
               system: prompts.system,
               messages: [{ role: "user", content: prompts.user }],
@@ -242,6 +241,21 @@ export async function POST(req: NextRequest) {
 
         if (!raw) {
           sse("error", { ok: false, error: "Réponse IA vide. Réessaie." });
+          return;
+        }
+
+        // UNE SORTIE TRONQUÉE NE SE LIT PAS "JSON INVALIDE".
+        //
+        // Le budget de sortie était de 6000 jetons ici et de 8000 dans
+        // l'app, alors que l'embed laisse demander jusqu'à 10 questions
+        // et 5 profils. Un quiz qui touchait le plafond revenait coupé au
+        // milieu, `JSON.parse` échouait, et le visiteur lisait "JSON IA
+        // invalide" sur l'écran qui doit lui donner envie.
+        //
+        // Le budget est désormais partagé (QUIZ_GENERATION_MAX_TOKENS),
+        // et le cas restant DIT quoi faire au lieu d'accuser le format.
+        if (json?.stop_reason === "max_tokens") {
+          sse("error", { ok: false, error: "Ton quiz était trop long à écrire. Réessaie avec moins de questions." });
           return;
         }
 

@@ -11,9 +11,20 @@ import { ArrowRight } from "lucide-react";
 import LegalFooterLinks from "@/components/legal/LegalFooterLinks";
 
 import type { Parrainage } from "@/lib/affiliate/accueilParrain";
-import { Gift } from "lucide-react";
+import { Gift, Sparkles } from "lucide-react";
+import { urlConnexionReprise } from "@/lib/embed/reprise";
+import { CANONICAL_APP_URL } from "@/lib/authLinks";
 
-export default function SignupForm({ parrainage }: { parrainage?: Parrainage }) {
+// `jetonQuiz` : le quiz fabriqué sur la page de vente, s'il y en a un.
+// Il est LU CÔTÉ SERVEUR (app/signup/page.tsx) et VALIDÉ là bas : ce
+// composant ne fait que le transmettre, il ne le devine pas.
+export default function SignupForm({
+  parrainage,
+  jetonQuiz,
+}: {
+  parrainage?: Parrainage;
+  jetonQuiz?: string | null;
+}) {
   const t = useTranslations("signupPage");
   // Le serveur renvoie une RAISON, l'ecran sait comment la dire. Chacune
   // nomme l'action a faire : "erreur lors de la creation" laisse devant
@@ -69,6 +80,11 @@ export default function SignupForm({ parrainage }: { parrainage?: Parrainage }) 
           password,
           fullName: cleanName,
           locale: document.documentElement.lang || null,
+          // Le rattachement du quiz se fait CÔTÉ SERVEUR, dans la
+          // foulée de la création du compte. Rien ne dépend du
+          // stockage du navigateur, donc rien ne change entre Chrome,
+          // Safari et Firefox.
+          sessionEmbed: jetonQuiz ?? null,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; reason?: string };
@@ -77,6 +93,11 @@ export default function SignupForm({ parrainage }: { parrainage?: Parrainage }) 
         // UN `ok: false` PRODUIT TOUJOURS QUELQUE CHOSE A L'ECRAN, et
         // chaque raison a SA phrase : "erreur lors de la creation" ne dit
         // pas quoi faire, alors que "tu as deja un compte" si.
+        //
+        // ET SON QUIZ NE SE PERD PAS POUR AUTANT : une adresse deja
+        // inscrite n'autorise aucun rattachement (personne n'a prouve
+        // qu'elle lui appartient), donc on l'emmene se connecter AVEC son
+        // jeton. Le tableau de bord rattache une fois la session ouverte.
         setError(RAISONS_SIGNUP[data.reason ?? ""] ?? t("errSignup"));
         setLoading(false);
         return;
@@ -128,6 +149,24 @@ export default function SignupForm({ parrainage }: { parrainage?: Parrainage }) 
                   <p className="text-muted-foreground">
                     {t("parrainCadeau", { jours: parrainage.joursOfferts })}
                   </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SON QUIZ L'ATTEND, ET ON LE DIT AVANT LE FORMULAIRE.
+              Quelqu'un qui arrive ici depuis la demo de la page de vente
+              vient de fabriquer quelque chose. Le recevoir sur un
+              formulaire nu lui demande de recommencer, alors que son quiz
+              est deja en base : c'est exactement la promesse qu'on doit
+              tenir a cette seconde la. */}
+          {jetonQuiz && (
+            <div className="px-6 pb-4">
+              <div className="flex items-start gap-3 rounded-xl border border-primary/25 bg-primary/5 px-4 py-3 text-sm">
+                <Sparkles className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+                <div className="space-y-1">
+                  <p className="font-semibold">{t("quizPretTitre")}</p>
+                  <p className="text-muted-foreground">{t("quizPretCorps")}</p>
                 </div>
               </div>
             </div>
@@ -198,7 +237,14 @@ export default function SignupForm({ parrainage }: { parrainage?: Parrainage }) 
             <div className="mt-6 pt-6 border-t border-border">
               <p className="text-center text-sm text-muted-foreground mb-3">{t("hasAccount")}</p>
               <Button variant="outline" className="w-full" asChild>
-                <Link href="/login">{t("login")}</Link>
+                {/* AVEC son jeton, et vers le domaine de l'APP : le
+                    tableau de bord n'existe pas sur le domaine de
+                    vente, donc y renvoyer apres la connexion menerait
+                    nulle part. `urlConnexionReprise` sans jeton rend
+                    simplement `/login`. */}
+                <Link href={jetonQuiz ? urlConnexionReprise(CANONICAL_APP_URL, jetonQuiz) : "/login"}>
+                  {t("login")}
+                </Link>
               </Button>
             </div>
           </CardContent>
