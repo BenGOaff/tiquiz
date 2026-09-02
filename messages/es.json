@@ -306,7 +306,9 @@
     "errEmailFailed": "Tu cuenta está creada pero el correo de confirmación no ha salido. Escríbenos y la abrimos a mano.",
     "parrainTitre": "{prenom} te invita a probar Tiquiz gratis",
     "parrainTitreSansNom": "Llegas por el enlace de un socio de Tiquiz",
-    "parrainCadeau": "Tu cuenta gratuita se abre sin tarjeta. Y si más adelante te suscribes, este enlace te da {jours} días gratis en el plan que elijas."
+    "parrainCadeau": "Tu cuenta gratuita se abre sin tarjeta. Y si más adelante te suscribes, este enlace te da {jours} días gratis en el plan que elijas.",
+    "quizPretTitre": "Tu quiz te espera",
+    "quizPretCorps": "Crea tu cuenta gratuita: el quiz que acabas de generar aparece dentro, listo para editar y publicar."
   },
   "callbackPage": {
     "loadingTitle": "Autenticando…",
@@ -1530,7 +1532,7 @@
     "trackingAdsHelp": "¿Dónde encuentro mis IDs Google Ads? Conversions →",
     "trackingInvalidFormat": "Formato inválido",
     "generateAiShort": "Generar (IA)",
-    "unlockTiquizCta": "Desbloquear Tiquiz →",
+    "unlockTiquizCta": "Guardar mi quiz →",
     "ariaCropImage": "Recortar imagen",
     "ariaRemoveImage": "Quitar imagen",
     "surveyLeadTagLabel": "Etiqueta de leads (opcional)",

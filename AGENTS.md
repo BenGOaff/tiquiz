@@ -6286,3 +6286,136 @@ octets par `lib/blog/dimensionsImage.ts`. Les 25 illisibles sont
 laissées telles quelles : inventer une taille déformerait l'image au
 lieu de réserver sa place. Le test refuse une moitié de dimensions
 (`width` sans `height`), qui déforme à coup sûr.
+
+## Le quiz de la démo se retrouve dans le compte (Béné, 2 septembre 2026)
+
+"Il faut qu'ils génèrent un beau quiz, super pertinent, qui donne envie
+d'aller plus loin, et qu'ils le retrouvent derrière, comme la plupart
+des saas le font : un aperçu gratuit alléchant qui demande de créer un
+compte pour continuer."
+
+Et la remarque qui a débloqué la chose : "ça doit être beaucoup plus
+simple maintenant que la page de vente est aussi sur notre serveur."
+Elle a raison, et c'est exactement ce qui rend le correctif possible.
+
+### CE QUI SE PASSAIT, ET C'EST MESURÉ
+
+Le quiz n'était pas perdu : `/api/embed/quiz/generate` crée une VRAIE
+ligne dans `quizzes`, sans propriétaire, marquée du jeton de session, et
+aucun cron ne la purge. Ce qui se perdait, c'était le JETON, et il
+voyageait par deux chemins qui fuyaient tous les deux.
+
+**1. Le `localStorage` écrit DANS l'iframe.** MESURÉ dans Chromium 141,
+deux domaines distincts, comme sur la vraie page :
+
+```
+réglages par défaut     écrit "abc123"        relu "abc123"
+cookies tiers bloqués   écrit SecurityError   relu null
+```
+
+Dès que les cookies tiers sont bloqués (**le défaut de Safari et de
+Firefox**), l'iframe n'a PAS le droit d'écrire, et le `try/catch` autour
+avale l'erreur : personne ne le sait, à commencer par nous.
+
+**2. Le `?tq_session=` collé sur l'URL du bon de commande.** Sauf que
+cette adresse était `www.tipote.fr/tiquiz`, un tunnel Systeme.io, qui ne
+transmet pas la query. C'est la raison même du rapatriement des 8
+destinations affiliées (25 août), reproduite ici sans que personne ne
+fasse le rapprochement. Et même arrivé chez nous, `tq_session` n'était
+lu qu'à UN endroit, le tableau de bord.
+
+Donc : Chrome par défaut, ça marchait. Safari et Firefox, la personne
+repartait de zéro dans son compte alors que son quiz existait en base,
+complet, à côté.
+
+### LA RÈGLE : le jeton voyage par une NAVIGATION, le rattachement se
+fait CÔTÉ SERVEUR
+
+`lib/embed/reprise.ts` (pur, testé) décide où l'on envoie quelqu'un qui
+veut garder son quiz : **notre inscription, sur le domaine où il est
+déjà**. Le jeton part dans une navigation de PREMIER NIVEAU, donc plus
+aucune dépendance au stockage du navigateur, donc plus aucune différence
+entre Chrome, Safari et Firefox.
+
+`lib/embed/rattacherQuiz.ts` fait le transfert, et **il n'y en a qu'un**.
+`/api/auth/signup` l'appelle (le chemin normal désormais) et
+`/api/embed/quiz/claim` aussi (le filet du tableau de bord). Deux
+endroits qui transféreraient chacun de leur côté finiraient par se
+contredire : c'est le défaut sorti six fois dans ce dépôt, et ici la
+contradiction se compte en quiz perdus.
+
+**Quatre choses à ne pas défaire :**
+
+1. **Les adresses sont RELATIVES** (`/embed/preview`, `/signup`). La
+   page de vente est servie sur `tiquiz.fr` en public ET sur le domaine
+   de l'app quand on relit un chantier avec la clé d'aperçu : une
+   adresse absolue serait juste dans un cas et fausse dans l'autre, et
+   l'erreur ne se verrait qu'en cliquant.
+2. **L'iframe n'est plus TIERS.** Il pointait sur `quiz.tipote.com`
+   depuis `tiquiz.fr` ; il pointe maintenant sur la même origine. Ce
+   n'est pas ce qui répare le trou (le jeton ne dépend plus du
+   stockage), mais ça retire la cause qui l'avait créé.
+3. **Le rattachement passe APRÈS la création du compte**, best-effort,
+   et il ne jette jamais : un transfert qui échoue ne doit pas priver
+   quelqu'un de son inscription. Même règle que `rattacherInscrit`.
+4. **Le transfert pose le propriétaire AVANT de marquer la session.**
+   Marquer d'abord laisserait une session "réclamée" dont le quiz n'a
+   toujours pas de propriétaire, c'est à dire un quiz que plus aucun
+   appel ne peut rattraper (le filet refuse une session déjà réclamée).
+   C'est la règle des lots de versement du 25 août : on crée la pièce
+   avant de la solder.
+
+**Le cas "j'ai déjà un compte" ne rattache RIEN**, et c'est voulu : une
+adresse déjà inscrite ne prouve pas qu'elle appartient à la personne
+devant l'écran. Le lien de connexion porte donc le jeton
+(`urlConnexionReprise`), vise le domaine de l'APP (le tableau de bord
+n'existe pas sur le domaine de vente), et c'est `EmbedAutoClaim` qui
+rattache une fois la session ouverte. Ce composant reste, mais il n'est
+plus le chemin principal : c'est le filet.
+
+**Le bouton s'appelle "Garder mon quiz", plus "Débloquer Tiquiz"** : le
+geste se nomme par ce qu'il fait pour la personne, pas par ce qu'il nous
+rapporte.
+
+### TROUVÉ AU PASSAGE, ET C'EST UN VRAI TROU
+
+**Le `?redirect=` de la connexion était poussé tel quel.** Une valeur du
+genre `https://ailleurs.example` emmenait la personne hors de chez nous
+**juste après son mot de passe**, c'est à dire à la seconde exacte où
+une fausse page de connexion est rentable. `redirectionSure` n'accepte
+qu'un chemin interne, et refuse le **double slash** : `//ailleurs.example`
+est une adresse ABSOLUE pour le navigateur, et elle commence bien par
+`/`. C'est le cas qu'on rate toujours, et le test le rejoue.
+
+**Et la démo écrivait avec un budget PLUS PETIT que l'app.**
+`max_tokens` valait 6000 côté embed et 8000 côté app, alors que l'embed
+laisse demander jusqu'à 10 questions et 5 profils. Un quiz qui touchait
+le plafond revenait TRONQUÉ, donc `JSON.parse` échouait, donc le
+visiteur lisait **"JSON IA invalide"** sur l'écran même qui doit lui
+donner envie. Le budget vit maintenant dans le module qui porte le
+prompt (`QUIZ_GENERATION_MAX_TOKENS`), et le cas restant DIT quoi faire
+au lieu d'accuser le format. Le prompt, lui, était déjà le même des deux
+côtés : c'est vérifié, pas supposé.
+
+### ET LA FAUTE QUE J'AI FAITE EN ÉCRIVANT LE TEST
+
+Mon contrôle "le cas tronqué est traité AVANT la lecture du JSON"
+cherchait `JSON.parse` dans le fichier ENTIER. Il tombait sur ma propre
+explication écrite juste au dessus du contrôle, et sortait **rouge sur
+un fichier parfaitement correct**. Un contrôle qui ne distingue pas ce
+qu'il est censé distinguer est pire qu'un contrôle absent, et c'est la
+cinquième fois de la semaine. Les tests qui mesurent un ORDRE dans un
+fichier retirent d'abord les commentaires.
+
+**Endroits à respecter :** `lib/embed/reprise.ts` (pur),
+`lib/embed/rattacherQuiz.ts` (les écritures, aucune décision),
+`app/api/auth/signup/route.ts`, `app/api/embed/quiz/claim/route.ts`,
+`app/signup/page.tsx` + `components/auth/SignupForm.tsx`,
+`components/auth/LoginForm.tsx`, `components/dashboard/EmbedAutoClaim.tsx`,
+`public/embed/bridge.js`, et la correction de l'iframe dans
+`lib/sales/planV2.ts`. Test :
+`tests/logic/reprise-quiz-embed.test.mts`, vérifié en rejouant les trois
+versions d'avant (elles rougissent).
+
+**Ce chantier n'a PAS de jumeau chez Tipote** : il n'a ni page de vente
+capturée, ni `embed_quiz_sessions`. Vérifié, pas supposé.

@@ -85,6 +85,23 @@ export const QUIZ_OBJECTIVES = [
   { value: "recruter", labelFr: "Recruter", labelEn: "Recruit", desc: "Évaluer un candidat pour une sélection" },
 ] as const;
 
+/**
+ * La place que la sortie de ce prompt a besoin d'occuper.
+ *
+ * Elle vit ICI, avec le prompt qui la consomme, parce qu'elle était
+ * écrite en DEUX exemplaires : 8000 dans `/api/quiz/generate` et
+ * **6000 dans `/api/embed/quiz/generate`**, c'est à dire sur la démo de
+ * la page de vente. Or l'embed laisse demander jusqu'à 10 questions et
+ * 5 profils, exactement comme l'app.
+ *
+ * Un quiz qui touche le plafond revient TRONQUÉ, donc `JSON.parse`
+ * échoue, donc le visiteur lit "JSON IA invalide" sur l'écran même qui
+ * doit lui donner envie. C'est le défaut sorti six fois dans ce dépôt :
+ * deux endroits qui décident la même chose finissent par diverger, et
+ * c'est celui qu'on relit le moins qui se trompe.
+ */
+export const QUIZ_GENERATION_MAX_TOKENS = 8000;
+
 export function buildQuizGenerationPrompt(params: QuizPromptParams): {
   system: string;
   user: string;

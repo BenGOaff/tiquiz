@@ -17,6 +17,8 @@ import { getSupabaseServerClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { corsHeaders, preflight } from "@/lib/embed/cors";
 import { resolveProjectIdForInsert } from "@/lib/projects/scopeFilter";
+import { lireJetonReprise } from "@/lib/embed/reprise";
+import { lireSessionReclamable, marquerSessionReclamee, rattacherQuizAnonyme } from "@/lib/embed/rattacherQuiz";
 
 export const runtime = "nodejs";
 
@@ -131,7 +133,9 @@ export async function POST(req: NextRequest) {
     return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400, headers });
   }
 
-  const sessionToken = String(body.session_token ?? "").trim() || null;
+  // Le jeton vient d'une URL publique : on le VALIDE (lib/embed/reprise.ts)
+  // au lieu de l'envoyer tel quel dans un `.eq()`.
+  const sessionToken = lireJetonReprise(body.session_token);
   const webhookSecret = req.headers.get("x-tiquiz-webhook-secret");
   const expectedSecret = process.env.SYSTEME_IO_WEBHOOK_SECRET ?? "";
   const isWebhook = Boolean(expectedSecret) && webhookSecret === expectedSecret;
@@ -173,94 +177,77 @@ export async function POST(req: NextRequest) {
     userEmail = (user.email ?? "").toLowerCase();
   }
 
-  // Pick the session: explicit token wins, otherwise latest un-claimed
-  // for this email.
-  const query = supabaseAdmin
-    .from("embed_quiz_sessions")
-    .select("id, email, quiz, claimed_by_user_id")
-    .is("claimed_by_user_id", null)
-    .order("created_at", { ascending: false })
-    .limit(1);
+  // ── LA SESSION, ET LE TRANSFERT ──
+  //
+  // Les deux vivent dans `lib/embed/rattacherQuiz.ts`, partagés avec
+  // l'inscription (`/api/auth/signup`), qui est devenue le chemin
+  // NORMAL depuis le 2 septembre. Deux endroits qui transféreraient
+  // chacun de leur côté finiraient par se contredire, et ici la
+  // contradiction se compte en quiz perdus.
+  //
+  // Sans jeton explicite (l'appel du webhook), on retombe sur la
+  // dernière session non réclamée de cette adresse.
+  let sessionId: string;
+  let sessionQuiz: unknown = null;
 
-  const { data: sessions, error: selErr } = sessionToken
-    ? await supabaseAdmin
-        .from("embed_quiz_sessions")
-        .select("id, email, quiz, claimed_by_user_id")
-        .eq("id", sessionToken)
-        .limit(1)
-    : await query.eq("email", userEmail);
+  if (sessionToken) {
+    const lue = await lireSessionReclamable({
+      jeton: sessionToken,
+      // Règle anti-usurpation : quand la session PORTE une adresse, elle
+      // doit être celle de la personne connectée. Quand elle n'en porte
+      // pas (l'embed n'en demande plus), c'est la POSSESSION du jeton
+      // qui autorise.
+      emailAttendu: isWebhook ? null : userEmail,
+    });
+    if (!lue.ok) {
+      const statut = lue.raison === "deja-reclamee" ? 409
+        : lue.raison === "pas-la-bonne-adresse" ? 403
+        : 404;
+      return Response.json({ ok: false, reason: lue.raison }, { status: statut, headers });
+    }
+    sessionId = lue.session.id;
+    sessionQuiz = lue.session.quiz;
+  } else {
+    const { data: sessions, error: selErr } = await supabaseAdmin
+      .from("embed_quiz_sessions")
+      .select("id, email, quiz, claimed_by_user_id")
+      .is("claimed_by_user_id", null)
+      .eq("email", userEmail)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (selErr) {
+      console.error("[embed/claim] session lookup failed:", selErr);
+      return Response.json({ ok: false, reason: "session-introuvable" }, { status: 500, headers });
+    }
+    const s = sessions?.[0];
+    if (!s) {
+      return Response.json({ ok: false, reason: "session-introuvable" }, { status: 404, headers });
+    }
+    sessionId = s.id;
+    sessionQuiz = s.quiz;
+  }
 
-  if (selErr) {
-    console.error("[embed/claim] session lookup failed:", selErr);
-    return Response.json({ ok: false, error: "Session introuvable" }, { status: 500, headers });
-  }
-  const session = sessions?.[0];
-  if (!session) {
-    return Response.json({ ok: false, error: "Aucune session à réclamer" }, { status: 404, headers });
-  }
-  if (session.claimed_by_user_id) {
-    return Response.json({ ok: false, error: "Session déjà réclamée" }, { status: 409, headers });
-  }
-  if (!session.quiz) {
-    return Response.json({ ok: false, error: "Cette session n'a pas encore de quiz généré" }, { status: 400, headers });
-  }
-  // Anti email-spoofing rule: when the session HAS an email we require
-  // it to match the logged-in user's. When the session has NO email
-  // (the embed no longer asks for it), we trust possession of the
-  // opaque session_token as the authorization signal — the token is
-  // a UUID stored in the visitor's localStorage / passed through the
-  // checkout URL, never exposed to third parties.
-  if (!isWebhook && session.email && session.email.toLowerCase() !== userEmail) {
-    return Response.json({ ok: false, error: "Cette session n'appartient pas à cet email" }, { status: 403, headers });
-  }
-
-  // Modern path: the /generate route already materialized a real
-  // anonymous quiz row (quizzes.embed_session_id = sessionToken,
-  // user_id NULL). We just transfer ownership atomically — no
-  // duplication, the URL the visitor was editing in /quiz/[id]
-  // becomes their permanent quiz id.
-  const { data: anonQuiz } = await supabaseAdmin
-    .from("quizzes")
-    .select("id")
-    .eq("embed_session_id", session.id)
-    .is("user_id", null)
-    .maybeSingle();
+  const transfert = await rattacherQuizAnonyme({ sessionId, userId });
 
   let imported: { ok: true; quizId: string } | { ok: false; error: string };
-
-  if (anonQuiz?.id) {
-    // Multiprofils Tiquiz phase 3a : au moment du transfert d'ownership
-    // (quiz anonyme généré par /embed/quiz/generate puis revendiqué),
-    // on assigne aussi le projet actif/par défaut du user qui claim.
-    const projectId = await resolveProjectIdForInsert(userId);
-    const { error: transferErr } = await supabaseAdmin
-      .from("quizzes")
-      .update({ user_id: userId, project_id: projectId, embed_session_id: null })
-      .eq("id", anonQuiz.id)
-      .is("user_id", null);
-    if (transferErr) {
-      console.error("[embed/claim] ownership transfer failed:", transferErr);
-      imported = { ok: false, error: "Transfert d'ownership impossible" };
-    } else {
-      imported = { ok: true, quizId: anonQuiz.id };
+  if (transfert.ok) {
+    imported = { ok: true, quizId: transfert.quizId };
+  } else if (transfert.raison === "aucun-quiz-anonyme") {
+    // Repli historique : la session date d'avant la migration 025 et ne
+    // porte que le JSON. On le recopie dans des lignes neuves pour ne
+    // pas laisser un brouillon d'avant le pivot en rade.
+    if (!sessionQuiz) {
+      return Response.json({ ok: false, reason: "aucun-quiz" }, { status: 400, headers });
     }
+    imported = await importDraftIntoQuizzes({ userId, draft: sessionQuiz as EmbedQuiz });
+    if (imported.ok) await marquerSessionReclamee({ sessionId, userId });
   } else {
-    // Legacy fallback: the session was generated before migration 025
-    // and only has the JSON blob. Duplicate it into fresh rows so
-    // pre-pivot drafts aren't stranded.
-    imported = await importDraftIntoQuizzes({
-      userId,
-      draft: session.quiz as EmbedQuiz,
-    });
-  }
-  if (!imported.ok) {
-    return Response.json({ ok: false, error: imported.error }, { status: 500, headers });
+    imported = { ok: false, error: transfert.raison };
   }
 
-  await supabaseAdmin
-    .from("embed_quiz_sessions")
-    .update({ claimed_by_user_id: userId, claimed_at: new Date().toISOString() })
-    .eq("id", session.id);
+  if (!imported.ok) {
+    return Response.json({ ok: false, reason: imported.error }, { status: 500, headers });
+  }
 
   return Response.json({ ok: true, quiz_id: imported.quizId }, { headers });
 }

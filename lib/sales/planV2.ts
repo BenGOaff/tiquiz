@@ -184,6 +184,37 @@ export interface CorrectionV2 {
 
 export const CORRECTIONS_V2: readonly CorrectionV2[] = [
   {
+    // LA DÉMO RENVOIE VERS NOTRE INSCRIPTION, ET DEPUIS NOTRE DOMAINE.
+    cherche:
+      '<iframe src="https://quiz.tipote.com/embed/preview?locale=fr&source=tiquiz-fr' +
+      "&checkout=https%3A%2F%2Fwww.tipote.fr%2Ftiquiz%23section-518f489a\"\n" +
+      '  data-checkout="https://www.tipote.fr/tiquiz#section-518f489a"',
+    remplace:
+      '<iframe src="/embed/preview?locale=fr&source=tiquiz-fr&checkout=%2Fsignup"\n' +
+      '  data-checkout="/signup"',
+    pourquoi:
+      "DEUX DÉFAUTS DANS LA MÊME BALISE, et les deux faisaient perdre le " +
+      "quiz que le visiteur venait de fabriquer.\n" +
+      "1. LA DESTINATION était `www.tipote.fr/tiquiz`, un tunnel " +
+      "Systeme.io, qui ne transmet pas la query (la raison même du " +
+      "rapatriement des 8 destinations affiliées, 25 août). Le " +
+      "`?tq_session=` que le pont colle sur l'adresse mourait donc là, " +
+      "et avec lui le seul chemin qui ne dépend d'aucun stockage.\n" +
+      "2. L'IFRAME ÉTAIT TIERS. La page de vente vit sur `tiquiz.fr`, " +
+      "l'iframe pointait sur `quiz.tipote.com` : deux sites différents. " +
+      "MESURÉ dans Chromium 141, deux domaines distincts, l'iframe qui " +
+      "écrit et le premier plan qui lit :\n" +
+      "  réglages par défaut     écrit \"abc123\"        relu \"abc123\"\n" +
+      "  cookies tiers bloqués   écrit SecurityError   relu null\n" +
+      "Le défaut de Safari et de Firefox interdit donc l'écriture, et le " +
+      "`try/catch` autour l'avale : personne ne le sait.\n" +
+      "Les deux adresses sont RELATIVES, et c'est voulu : la page est " +
+      "servie sur `tiquiz.fr` en public et sur le domaine de l'app quand " +
+      "on relit un chantier avec la clé d'aperçu. Une adresse absolue " +
+      "serait juste dans un cas et fausse dans l'autre, et l'erreur ne " +
+      "se verrait qu'en cliquant.",
+  },
+  {
     cherche: "100+ langues via l'IA",
     remplace: "100 langues et variantes",
     pourquoi:

@@ -16,6 +16,20 @@
 //      re-trigger the call (claim is idempotent server-side anyway,
 //      but the toast would re-fire).
 //
+// DEPUIS LE 2 SEPTEMBRE, CE N'EST PLUS LE CHEMIN PRINCIPAL, c'est le
+// FILET. Le rattachement normal se fait côté SERVEUR, dans
+// `/api/auth/signup` : le jeton y arrive par une navigation de premier
+// niveau sur notre domaine (`/signup?tq_session=...`), donc sans
+// dépendre d'un `localStorage` qu'un iframe tiers n'a pas le droit
+// d'écrire dès que les cookies tiers sont bloqués (mesuré, cf.
+// `lib/embed/reprise.ts`).
+//
+// Ce filet couvre les deux cas que l'inscription ne peut pas couvrir :
+// quelqu'un qui avait DÉJÀ un compte (il arrive ici par le lien de
+// connexion, qui porte le jeton), et un navigateur où le stockage a
+// bien fonctionné mais où l'inscription est passée par un autre
+// chemin.
+//
 // Mount once on the dashboard. It renders nothing when there's no
 // pending token.
 
@@ -24,8 +38,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
+import { PARAM_REPRISE } from "@/lib/embed/reprise";
+
 const STORAGE_KEY = "tiquiz_embed_session";
-const URL_PARAM = "tq_session";
+// Le nom du paramètre est écrit UNE fois, dans le module pur.
+// Il vivait ici en dur ET dans le pont : deux endroits qui nomment la
+// même chose finissent toujours par diverger.
+const URL_PARAM = PARAM_REPRISE;
 
 export default function EmbedAutoClaim() {
   const t = useTranslations("dashboard");
