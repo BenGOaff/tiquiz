@@ -7014,13 +7014,27 @@ avec l'agent de Googlebot, sans cookie :
 | `tiquiz.fr/` | **200**, aucune redirection, **5325 mots visibles** |
 | lien vers la politique | présent (`/privacy`, `/legal`, `/terms`, `/cookies`) |
 
-Le reproche datait du moment où la page d'accueil déclarée était
-`quiz.tipote.com`, qui est un écran de connexion. Depuis qu'elle a mis
-`tiquiz.fr`, il n'a plus lieu d'être.
+**ET J'AI INVENTÉ UNE EXPLICATION.** J'ai écrit que le reproche datait
+du moment où la page d'accueil déclarée était `quiz.tipote.com`. Béné :
+« je n'ai JAMAIS mis ça, j'ai mis tiquiz.fr depuis le début ». C'était la
+QUATRIÈME cause inventée dans la même journée, après l'URL du remote, le
+dépôt privé et le jeton périmé.
 
-**Règle : sur cet écran, on lit d'abord « tentative précédente ».** Un
-rapport d'échec n'est pas un état courant, et corriger un reproche déjà
-réglé coûte un cycle de validation.
+**Ce qui est mesuré s'arrête donc là :** `tiquiz.fr` répond 200 à
+l'agent de Googlebot, sans redirection, avec 5325 mots et le lien vers
+la politique. Pourquoi leur validateur a vu autre chose, **je ne le sais
+pas**, et je n'en propose pas de cause.
+
+**Règle, et c'est la leçon de la journée : sur une panne qu'on ne
+reproduit pas, une cause plausible n'est pas une cause.** Quatre fois de
+suite, une explication qui collait à l'histoire a envoyé Béné corriger
+quelque chose qui n'avait rien. « Je ne sais pas encore, voici ce que je
+mesure » coûte une minute ; une cause inventée coûte un aller-retour et
+la confiance.
+
+Ce qui reste utile sur cet écran : il dit « tentative PRÉCÉDENTE ». Un
+rapport d'échec n'est pas un état courant, et relancer la validation
+après un correctif est le seul moyen de savoir ce qui tient encore.
 
 Test : `tests/logic/politique-google.test.mts` (9 tests), vérifié en
 rejouant les versions d'avant : 8 rougissent.
