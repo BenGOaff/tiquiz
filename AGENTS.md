@@ -5887,7 +5887,7 @@ dégraisser.
 | Poste | Avant | Après |
 |---|---|---|
 | 5 « SVG » de fond (chacun embarque 4 bitmaps en base64) | 1638 Ko | **260 Ko** en WebP |
-| 7 polices Font Awesome, pour 4 icônes | 1769 Ko | **0**, les icônes sont dessinées |
+| polices Font Awesome, pour 4 icônes | 911 Ko téléchargés (1769 Ko déclarés en 15 `@font-face`) | **0**, les icônes sont dessinées |
 | images du premier chargement | 1585 Ko | **280 Ko** (65 différées sur 105) |
 | **la page entière** | **8551 Ko, 72 requêtes, 2708 ms** | **1556 Ko, 21 requêtes, 544 ms** |
 

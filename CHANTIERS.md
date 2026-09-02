@@ -49,8 +49,8 @@ se projeter, n'y touche pas du tout." Question fermée.
   `performance.getEntriesByType` range sous `initiatorType: "css"` tout
   ce qu'une feuille va CHERCHER. Le CSS fait 316 Ko en ligne et il est
   utilisé à 100 % (couverture CDP). Le poids était dans 5 fonds « SVG »
-  qui embarquent des bitmaps (1638 Ko) et 7 polices Font Awesome pour 4
-  icônes (1769 Ko). Le détail est dans `AGENTS.md`.
+  qui embarquent des bitmaps (1638 Ko) et les polices Font Awesome pour 4
+  icônes (911 Ko téléchargés). Le détail est dans `AGENTS.md`.
 - **La version anglaise, et les autres langues.** Voir le chantier 4.
 
 
