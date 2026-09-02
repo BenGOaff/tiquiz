@@ -5871,9 +5871,58 @@ tard, donc dégrade exactement la mesure qu'on cherche à améliorer.
 Mesuré : 1585 Ko d'images téléchargées au chargement, contre 280 Ko
 après.
 
-**Ce qui reste, et qui est plus gros que tout le reste : 2552 Ko de
-CSS.** C'est la feuille de style entière de l'éditeur Systeme.io, dont
-la page n'utilise qu'une fraction. Devant les images, devant tout. Et
-**88 images sur 104 n'ont aucun texte alternatif**, **aucune ne porte
-ses dimensions**. Les trois sont notés dans `CHANTIERS.md` : ce sont des
-chantiers à part, pas des lignes à glisser dans celui-ci.
+### 🚨 J'AI ANNONCÉ « 2552 Ko de CSS, de loin le premier poste de
+lenteur ». C'ÉTAIT FAUX, et je l'ai écrit ici comme un fait.
+
+`performance.getEntriesByType("resource")` range sous
+`initiatorType: "css"` **tout ce qu'une feuille de style va CHERCHER**,
+polices et images de fond comprises. J'ai lu ce total comme le poids du
+CSS. Mesuré autrement, la page porte **316 Ko de CSS en ligne et 13 Ko
+liés**, et la couverture CDP (`CSS.startRuleUsageTracking`) dit que
+**100 % des 2428 règles suivies servent**. Il n'y avait rien à
+dégraisser.
+
+**Le poids était ailleurs, et il a été retiré :**
+
+| Poste | Avant | Après |
+|---|---|---|
+| 5 « SVG » de fond (chacun embarque 4 bitmaps en base64) | 1638 Ko | **260 Ko** en WebP |
+| polices Font Awesome, pour 4 icônes | 911 Ko téléchargés (1769 Ko déclarés en 15 `@font-face`) | **0**, les icônes sont dessinées |
+| images du premier chargement | 1585 Ko | **280 Ko** (65 différées sur 105) |
+| **la page entière** | **8551 Ko, 72 requêtes, 2708 ms** | **1556 Ko, 21 requêtes, 544 ms** |
+
+**La leçon est celle du 22 août, refaite dans un autre outil : un
+chiffre lu dans un outil n'est pas une mesure tant qu'on n'a pas
+vérifié ce qu'il COMPTE.** Et j'ai accusé un fichier innocent pendant
+deux jours, exactement comme la clé anon en août.
+
+**Les 4 icônes sont DESSINÉES À LA MAIN** (`lib/sales/iconesV2.ts`,
+24x24, un cercle, une coche, une flèche, une caméra) et posées en
+`mask-image`. Recopier les tracés de Font Awesome serait recopier du
+code sous licence pour éviter d'en charger la police. Le test borne la
+longueur de chaque tracé : un tracé importé se voit à sa longueur.
+
+**Un masque CSS ne lit que le canal ALPHA.** Ma coche blanche par
+dessus le disque était OPAQUE, donc elle faisait partie du masque : les
+106 coches de la grille de tarifs sont sorties en pastilles pleines. La
+coche est DÉCOUPÉE dans le disque par un `<mask>` SVG, et le test
+l'exige (`<mask>` présent, aucun `stroke="#fff"`).
+
+**Et la grille de tarifs écrit ses classes en guillemets SIMPLES**
+(`class='fas fa-check-circle'`). Mon marquage ne lisait que les doubles :
+38 icônes sur 128. Les deux formes sont lues, et le test le fige.
+
+**Les 104 images portent toutes un texte alternatif**
+(`lib/sales/altImagesV2.ts`, 34 fichiers classés en les REGARDANT sur
+une planche-contact). 18 portent un texte, 18 sont déclarées
+décoratives, et **un `alt` vide est une décision ÉCRITE** : sans la
+raison à côté, le prochain passage prend le vide pour un oubli. On
+n'écrase JAMAIS un `alt` existant. Le logo du pied de page annonçait
+« Logo Tipote » : c'est le logo Tiquiz, et il double le nom écrit à côté,
+donc son texte est vide.
+
+**79 images sur 105 portent leurs dimensions**, lues dans les premiers
+octets par `lib/blog/dimensionsImage.ts`. Les 25 illisibles sont
+laissées telles quelles : inventer une taille déformerait l'image au
+lieu de réserver sa place. Le test refuse une moitié de dimensions
+(`width` sans `height`), qui déforme à coup sûr.

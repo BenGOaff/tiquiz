@@ -40,10 +40,16 @@ const DOSSIER_BLOCS = path.join(RACINE, "content/sales/v2");
 const VERIFIE = process.argv.includes("--verifie");
 
 const plan = await import(pathToFileURL(path.join(RACINE, "lib/sales/planV2.ts")).href);
-const { ORDRE_V2, POPUP_BETA, CORRECTIONS_V2, SCRIPTS_RETIRES, verifierPlan } = plan;
+const { ORDRE_V2, POPUP_BETA, CORRECTIONS_V2, SCRIPTS_RETIRES, FONDS_CONVERTIS, verifierPlan } = plan;
 
 const faqMod = await import(pathToFileURL(path.join(RACINE, "lib/sales/faqV2.ts")).href);
 const { rangerFaq, CORRECTIONS_FAQ } = faqMod;
+const altMod = await import(pathToFileURL(path.join(RACINE, "lib/sales/altImagesV2.ts")).href);
+const { altDe, nonClassees } = altMod;
+const dimMod = await import(pathToFileURL(path.join(RACINE, "lib/blog/dimensionsImage.ts")).href);
+const { dimensionsImage, dimensionsSvg } = dimMod;
+const icoMod = await import(pathToFileURL(path.join(RACINE, "lib/sales/iconesV2.ts")).href);
+const { ICONES_V2, cssIcones, FAMILLES_RETIREES } = icoMod;
 const avMod = await import(pathToFileURL(path.join(RACINE, "lib/checkout/avantages.ts")).href);
 const { AVANTAGES_NOUVEAUX, AVANTAGES_PLUS } = avMod;
 
@@ -297,7 +303,235 @@ console.log(
   console.log(`Ajoute    : les generateurs dans les ${p} colonnes PLUS`);
 }
 
+// -------------------------------------------- 5hexa. les icones
+// 593 Ko de Font Awesome Pro pour TROIS dessins (compte : check-circle
+// 106 fois, arrow-right 21, video 1). On garde les `<i>` et leurs
+// classes, donc toute la mise en page de la page continue de
+// s'appliquer ; on dessine dedans par `mask-image`, et on retire les
+// `@font-face` de Font Awesome.
+{
+  const connues = new Set(ICONES_V2.map((i) => i.classe));
+
+  // 1. Marquer les icônes connues. On AJOUTE une classe, on n'en retire
+  //    aucune : le CSS de la page cible `.fas`, `.far` et `.fa-*`.
+  //
+  //    LES DEUX SORTES DE GUILLEMETS, et ce n'est pas de la prudence :
+  //    mon premier jet ne lisait que `class="…"` et n'a marqué que 38
+  //    icônes sur 128. La page en écrit une partie en `class='…'`
+  //    (`<i class='fas fa-check-circle' style="line-height: inherit">`),
+  //    c'est à dire exactement les cocher de la grille tarifaire. Le
+  //    compte affiché est ce qui l'a dit : 38 pour 128 attendues.
+  const CLASSE = /\bclass=("([^"]*)"|'([^']*)')/i;
+  let marquees = 0;
+  html = html.replace(/<i\b[^>]*>/gi, (balise) => {
+    const m = CLASSE.exec(balise);
+    if (!m) return balise;
+    const classes = m[2] ?? m[3] ?? "";
+    if (!classes.split(/\s+/).some((c) => connues.has(c))) return balise;
+    marquees++;
+    const q = m[2] != null ? '"' : "'";
+    return balise.replace(m[0], `class=${q}${classes} tqv-ico${q}`);
+  });
+
+  // 2. AUCUNE ICÔNE INCONNUE NE DOIT RESTER. Sans ce contrôle, retirer
+  //    les polices laisserait un carré vide sur la grille tarifaire, et
+  //    personne ne le verrait avant une cliente.
+  //
+  //    LE CONTRÔLE NE REJOUE PAS LA MÊME EXPRESSION QUE LE MARQUAGE : il
+  //    balaie TOUT le document à la recherche d'une classe `fa-`, quelle
+  //    que soit la balise et quels que soient les guillemets. Un contrôle
+  //    qui partage l'angle mort de ce qu'il vérifie ne vérifie rien.
+  //    Il regarde les ATTRIBUTS `class`, sur n'importe quelle balise et
+  //    avec les deux sortes de guillemets. Balayer le document entier
+  //    serait pire : la feuille de Font Awesome DÉCLARE ses 2000 icônes
+  //    (`.fa-chevron-down{--fa:"\f078"}`) sans qu'aucune ne soit posée
+  //    sur un élément, et le contrôle crierait sur onze icônes que la
+  //    page n'affiche pas. Un contrôle qui crie pour rien finit
+  //    désactivé, et on se retrouve sans contrôle du tout.
+  const restantes = new Set();
+  for (const m of html.matchAll(/\bclass=("([^"]*)"|'([^']*)')/gi)) {
+    for (const c of (m[2] ?? m[3] ?? "").split(/\s+/)) {
+      const n = c.toLowerCase();
+      if (n.startsWith("fa-") && !connues.has(n)) restantes.add(n);
+    }
+  }
+  if (restantes.size) {
+    meurs(
+      "ces icones ne sont pas dessinees, retirer les polices les rendrait invisibles :\n   " +
+        [...restantes].join(", ") +
+        "\n   Ajoute-les a ICONES_V2 (lib/sales/iconesV2.ts).",
+    );
+  }
+
+  // 3. Poser le CSS des icônes, juste avant la fin du <head>.
+  const style = `<style id="tqv-icones">${cssIcones()}</style>`;
+  if (!html.includes("</head>")) meurs("pas de </head> : impossible de poser le CSS des icones.");
+  html = html.replace("</head>", style + "</head>");
+
+  // 4. Retirer les `@font-face` de Font Awesome, et EUX SEULS.
+  let retirees = 0, poids = 0;
+  const vues = new Set();
+  html = html.replace(/@font-face\s*\{[^}]*\}/gi, (regle) => {
+    const famille = /font-family\s*:\s*["']?([^;"'}]+)/i.exec(regle)?.[1]?.trim();
+    if (!famille || !FAMILLES_RETIREES.includes(famille)) return regle;
+    retirees++;
+    for (const u of regle.matchAll(/\/v\/tiquiz\/([0-9a-f]+)\.woff2?/gi)) {
+      if (vues.has(u[1])) continue;
+      vues.add(u[1]);
+      const f = path.join(RACINE, "public/v/tiquiz", `${u[1]}.woff2`);
+      if (fs.existsSync(f)) poids += fs.statSync(f).size;
+    }
+    return "";
+  });
+  if (retirees === 0) meurs("aucune police Font Awesome trouvee : la capture a bouge.");
+  const attendues = ICONES_V2.reduce((t, i) => t + i.vues, 0);
+  if (marquees < attendues) {
+    meurs(
+      `${marquees} icones marquees, ${attendues} attendues d'apres ICONES_V2.\n` +
+        "   Il en reste qui compteront sur une police qu'on vient de retirer.",
+    );
+  }
+  console.log(
+    `Icones    : ${marquees} icones dessinees en SVG, ${retirees} @font-face retirees ` +
+      `(${(poids / 1024).toFixed(0)} Ko de police en moins)`,
+  );
+}
+
+// ---------------------------------------------- 5penta. les fonds
+// Les cinq « SVG » de fond sont des bitmaps encapsulés : 1639 Ko à eux
+// cinq, contre 316 Ko pour tout le CSS de la page. `npm run vente:fonds`
+// en produit la version WebP ; ici on ne fait que remplacer l'adresse.
+{
+  let poidsAvant = 0, poidsApres = 0;
+  for (const nom of FONDS_CONVERTIS) {
+    const webp = path.join(RACINE, "public/v/tiquiz", `${nom}.webp`);
+    if (!fs.existsSync(webp)) {
+      meurs(`le fond ${nom}.webp est absent. Lance d'abord : npm run vente:fonds`);
+    }
+    const n = html.split(`/v/tiquiz/${nom}.svg`).length - 1;
+    if (n === 0) meurs(`le fond ${nom}.svg n'est reference nulle part : la capture a bouge.`);
+    html = html.split(`/v/tiquiz/${nom}.svg`).join(`/v/tiquiz/${nom}.webp`);
+    poidsAvant += fs.statSync(path.join(RACINE, "public/v/tiquiz", `${nom}.svg`)).size;
+    poidsApres += fs.statSync(webp).size;
+  }
+  console.log(
+    `Fonds     : ${FONDS_CONVERTIS.length} fonds de section en WebP  ` +
+      `(${(poidsAvant / 1024).toFixed(0)} Ko -> ${(poidsApres / 1024).toFixed(0)} Ko)`,
+  );
+}
+
+// ------------------------------------------ 5octo. les textes alternatifs
+// 89 balises <img> sur 105 n'ont AUCUN alt. Sans alt, un lecteur d'écran
+// lit le NOM DU FICHIER : « slash v slash tiquiz slash 4 c 2 8 9 d ».
+// Avec `alt=""`, il la saute, ce qui est le bon comportement pour une
+// décoration. Les deux ne se confondent pas.
+{
+  // ON NE REGARDE QUE CE QUI N'EN A PAS. La capture porte déjà de bons
+  // textes sur trois images (le logo, deux prénoms de la démonstration),
+  // et on n'écrase JAMAIS un alt existant : c'est la règle du blog du
+  // 1er septembre, où l'écraser en masse aurait fait perdre les bons.
+  // Mon premier jet les signalait comme non classées, alors qu'elles
+  // étaient les mieux décrites de la page.
+  const sansAlt = [];
+  for (const m of html.matchAll(/<img\b[^>]*>/gi)) {
+    if (/\balt=/i.test(m[0])) continue;
+    const src = /\bsrc="([^"]*)"/i.exec(m[0])?.[1];
+    if (src) sansAlt.push(src);
+  }
+  const orphelines = nonClassees(sansAlt);
+  if (orphelines.length) {
+    meurs(
+      "ces images n'ont pas de texte alternatif decide :\n   " +
+        orphelines.join("\n   ") +
+        "\n   REGARDE-LES, puis ajoute-les a lib/sales/altImagesV2.ts.\n" +
+        "   Un alt invente a partir du nom de fichier ne veut rien dire.",
+    );
+  }
+  // Le seul alt hérité qui dit FAUX : le logo, décrit « Logo Tipote »
+  // sur la page qui vend Tiquiz. La table gagne sur ce qu'elle nomme.
+  {
+    const faux = 'alt="Logo Tipote"';
+    const n = html.split(faux).length - 1;
+    if (n !== 1) meurs(`« ${faux} » apparait ${n} fois au lieu de 1 : la capture a bouge.`);
+    html = html.split(faux).join('alt="Tiquiz"');
+    console.log("Logo      : « Logo Tipote » corrige en « Tiquiz » (le logo affiche tiquiz)");
+  }
+
+  let posees = 0, vides = 0;
+  html = html.replace(/<img\b([^>]*)>/gi, (balise, attrs) => {
+    if (/\balt=/i.test(attrs)) return balise;
+    const src = /\bsrc="([^"]*)"/i.exec(attrs)?.[1];
+    if (!src) return balise;
+    const alt = altDe(src);
+    if (alt === undefined) return balise; // pas une image locale
+    posees++;
+    if (alt === "") vides++;
+    return `<img${attrs} alt="${alt.replace(/"/g, "&quot;")}">`;
+  });
+  console.log(
+    `Textes alt: ${posees} images decrites  (${posees - vides} portent un texte, ` +
+      `${vides} sont declarees decoratives)`,
+  );
+}
+
 // ------------------------------------------ 5quater. les images
+// LES DIMENSIONS, LUES SUR LE DISQUE.
+//
+// MESURÉ : les 104 images de la page n'en portent AUCUNE. Le navigateur
+// ne peut donc pas réserver leur place, et la page saute pendant
+// qu'elles arrivent : c'est le décalage de mise en page, celui qui fait
+// cliquer à côté du bouton qu'on visait.
+//
+// On ne DEVINE pas : on lit les premiers octets du fichier
+// (`lib/blog/dimensionsImage.ts`, le module déjà écrit pour le blog, qui
+// lit WebP, PNG, JPEG, GIF et le viewBox des SVG). Aucune dépendance de
+// plus, et une image dont on ne sait pas lire la taille reste telle
+// quelle plutôt que de recevoir un chiffre inventé.
+//
+// LE `width` DÉJÀ PRÉSENT NE SE TOUCHE PAS : 37 images en portent un, et
+// c'est la largeur d'AFFICHAGE choisie par la page. On complète avec le
+// `height` PROPORTIONNEL, pour que le ratio réservé soit le bon.
+{
+  const cache = new Map();
+  const lire = (src) => {
+    if (cache.has(src)) return cache.get(src);
+    let d = null;
+    if (src.startsWith("/") && !src.startsWith("//")) {
+      const f = path.join(RACINE, "public", src.split("?")[0]);
+      if (fs.existsSync(f)) {
+        const buf = fs.readFileSync(f);
+        d = f.toLowerCase().endsWith(".svg") ? dimensionsSvg(buf.toString("utf8")) : dimensionsImage(buf);
+      }
+    }
+    cache.set(src, d);
+    return d;
+  };
+
+  let posees = 0, inconnues = 0, vues = 0;
+  html = html.replace(/<img\b([^>]*)>/gi, (balise, attrs) => {
+    vues++;
+    if (/\bheight=/i.test(attrs)) return balise;
+    const src = /\bsrc="([^"]*)"/i.exec(attrs)?.[1];
+    if (!src) return balise;
+    const d = lire(src);
+    if (!d || !d.largeur || !d.hauteur) { inconnues++; return balise; }
+    const largeurAffichee = Number(/\bwidth="(\d+)"/i.exec(attrs)?.[1]);
+    posees++;
+    if (Number.isFinite(largeurAffichee) && largeurAffichee > 0) {
+      // Une largeur d'affichage existe : on rend la HAUTEUR qui garde le
+      // ratio du fichier, pas la hauteur du fichier.
+      const h = Math.round((largeurAffichee * d.hauteur) / d.largeur);
+      return `<img${attrs} height="${h}">`;
+    }
+    return `<img${attrs} width="${d.largeur}" height="${d.hauteur}">`;
+  });
+  console.log(
+    `Dimensions: ${posees} images sur ${vues} savent enfin leur place` +
+      (inconnues ? `  (${inconnues} illisibles, laissees telles quelles)` : ""),
+  );
+}
+
+
 // MESURÉ sur la capture : 69 images sur 104 se chargent sans `lazy`, et
 // AUCUNE ne porte de dimensions. Les deux coûtent au même endroit, le
 // score de chargement :

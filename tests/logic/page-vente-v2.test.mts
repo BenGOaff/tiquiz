@@ -16,12 +16,15 @@ import {
   POPUP_BETA,
   CORRECTIONS_V2,
   SCRIPTS_RETIRES,
+  FONDS_CONVERTIS,
   blocsNeufs,
   sectionsAttendues,
   verifierPlan,
 } from "@/lib/sales/planV2";
 import { estUnChantier, estPagePublique, CHANTIERS } from "@/lib/sales/chantier";
 import { CORRECTIONS_FAQ, rangerFaq, type QuestionFaq } from "@/lib/sales/faqV2";
+import { ICONES_V2, FAMILLES_RETIREES } from "@/lib/sales/iconesV2";
+import { ALT_IMAGES_V2, LOGO, altDe, nonClassees } from "@/lib/sales/altImagesV2";
 import {
   AVANTAGES_NOUVEAUX,
   AVANTAGES_PLUS,
@@ -473,4 +476,180 @@ test("les images hors du premier écran sont différées", () => {
   // mesure qu'on cherche à améliorer.
   assert.ok(differees >= imgs.length - 12, `${differees} différées sur ${imgs.length}`);
   assert.ok(!/^[\s\S]{0,60000}?<img[^>]*loading="lazy"/.test(v2), "une image du premier écran a été différée");
+});
+
+// ---------------------------------------------------------------------
+// LE POIDS. Trois postes mesurés, et le premier n'était pas le CSS.
+// ---------------------------------------------------------------------
+
+test("les fonds de section sont servis en WebP, pas en SVG-bitmap", () => {
+  // Les cinq « SVG » de fond embarquent chacun quatre bitmaps en base64 :
+  // 1638 Ko à eux cinq, contre 316 Ko pour TOUT le CSS de la page.
+  // J'avais annoncé « 2552 Ko de CSS » : c'était une erreur de lecture,
+  // `performance.getEntriesByType` range sous `initiatorType: "css"` tout
+  // ce qu'une feuille va CHERCHER.
+  const v2 = fs.readFileSync(V2, "utf8");
+  for (const nom of FONDS_CONVERTIS) {
+    assert.ok(!v2.includes(`/v/tiquiz/${nom}.svg`), `le fond ${nom} est encore servi en SVG`);
+    assert.ok(v2.includes(`/v/tiquiz/${nom}.webp`), `le fond ${nom} n'est pas remplacé`);
+    const webp = path.join(RACINE, "public/v/tiquiz", `${nom}.webp`);
+    assert.ok(fs.existsSync(webp), `${nom}.webp n'a pas été construit (npm run vente:fonds)`);
+    const svg = path.join(RACINE, "public/v/tiquiz", `${nom}.svg`);
+    // Le SVG reste sur le disque : la page d'origine s'en sert encore.
+    assert.ok(fs.existsSync(svg), `${nom}.svg a été supprimé, la vraie page en a besoin`);
+    assert.ok(
+      fs.statSync(webp).size < fs.statSync(svg).size / 2,
+      `${nom}.webp ne gagne pas la moitié du poids : la conversion a raté`,
+    );
+  }
+});
+
+test("Font Awesome n'est plus chargé, et les quatre icônes sont dessinées", () => {
+  // 593 Ko de police Pro pour quatre dessins. On garde les <i> et leurs
+  // classes (donc toute la mise en page de la page), on dessine dedans.
+  const v2 = fs.readFileSync(V2, "utf8");
+  for (const famille of FAMILLES_RETIREES) {
+    assert.ok(
+      !new RegExp(`@font-face[^}]*${famille.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, "i").test(v2),
+      `la police « ${famille} » est encore déclarée`,
+    );
+  }
+  assert.ok(v2.includes('id="tqv-icones"'), "le CSS des icônes n'est pas posé");
+  for (const i of ICONES_V2) {
+    assert.ok(v2.includes(`.tqv-ico.${i.classe}::after`), `${i.classe} n'a pas de dessin`);
+  }
+});
+
+test("aucune icône ne compte sur une police qu'on a retirée", () => {
+  // C'est LE risque du retrait : une classe `fa-` oubliée devient un
+  // carré vide sur la grille tarifaire, et personne ne le voit avant une
+  // cliente. On regarde les attributs `class`, sur n'importe quelle
+  // balise et avec les deux sortes de guillemets.
+  const v2 = fs.readFileSync(V2, "utf8");
+  const connues = new Set(ICONES_V2.map((i) => i.classe));
+  const restantes = new Set<string>();
+  for (const m of v2.matchAll(/\bclass=("([^"]*)"|'([^']*)')/gi)) {
+    for (const c of (m[2] ?? m[3] ?? "").split(/\s+/)) {
+      const n = c.toLowerCase();
+      if (n.startsWith("fa-") && !connues.has(n)) restantes.add(n);
+    }
+  }
+  assert.deepEqual([...restantes], [], "ces icônes seraient invisibles");
+});
+
+test("les deux sortes de guillemets sont marquées", () => {
+  // Mon premier jet ne lisait que `class="…"` : 38 icônes marquées sur
+  // 128, parce que la grille tarifaire écrit `class='fas fa-check-circle'`.
+  // Le compte affiché par le script est ce qui l'a dit.
+  const v2 = fs.readFileSync(V2, "utf8");
+  const marquees = (v2.match(/\btqv-ico\b/g) ?? []).length;
+  const attendues = ICONES_V2.reduce((t, i) => t + i.vues, 0);
+  // `-1` : la règle CSS elle même porte le nom de classe.
+  assert.ok(marquees - 1 >= attendues, `${marquees - 1} icônes marquées, ${attendues} attendues`);
+});
+
+test("une coche est DÉCOUPÉE dans le disque, jamais posée dessus", () => {
+  // Un masque CSS ne lit que l'ALPHA : une coche blanche posée sur le
+  // disque est opaque, donc elle prend la couleur du disque. Premier
+  // essai : 106 pastilles pleines dans la grille tarifaire.
+  for (const c of ["fa-check-circle", "fa-chevron-circle-up"]) {
+    const i = ICONES_V2.find((x) => x.classe === c)!;
+    assert.ok(i.dessin.includes("<mask"), `${c} ne découpe pas son dessin`);
+    assert.ok(!/stroke="#fff"/.test(i.dessin), `${c} dessine en blanc par dessus`);
+  }
+});
+
+test("les dessins sont les nôtres, pas ceux de Font Awesome", () => {
+  // Leurs tracés sont sous licence. Les nôtres sont des formes
+  // génériques en 24x24 : un cercle, une coche, une flèche, une caméra.
+  for (const i of ICONES_V2) {
+    assert.ok(i.dessin.length < 700, `${i.classe} porte un tracé trop long pour être redessiné à la main`);
+    assert.ok(!/[\d.]{4,},[\d.]{4,},[\d.]{4,},[\d.]{4,}/.test(i.dessin), `${i.classe} ressemble à un tracé importé`);
+  }
+});
+
+// ---------------------------------------------------------------------
+// LES TEXTES ALTERNATIFS. 88 images sur 104 n'en avaient aucun.
+// ---------------------------------------------------------------------
+
+test("plus une seule image sans texte alternatif", () => {
+  const v2 = fs.readFileSync(V2, "utf8");
+  const sans = (v2.match(/<img\b[^>]*>/gi) ?? [])
+    // Le pixel de suivi Meta est un 1x1 en display:none, servi par eux :
+    // il n'affiche rien, et on ne réécrit pas le code d'un tiers.
+    .filter((t) => !/facebook\.com\/tr\?/.test(t))
+    .filter((t) => !/\salt=/.test(t));
+  assert.equal(sans.length, 0, `${sans.length} images sans alt : ${sans.slice(0, 3).join(" | ")}`);
+});
+
+test("un alt vide est une DÉCISION écrite, jamais un oubli", () => {
+  // C'est la seule façon de distinguer « décorative, le lecteur d'écran
+  // doit l'ignorer » de « personne ne l'a regardée ». Sans la raison à
+  // côté, le prochain passage prend le vide pour un trou à combler.
+  for (const a of ALT_IMAGES_V2) {
+    assert.ok(a.pourquoi.trim().length > 10, `${a.src} n'explique pas son texte`);
+    if (a.alt === "") {
+      assert.match(a.pourquoi, /[Dd]écorative|logo/, `${a.src} porte un alt vide sans dire pourquoi`);
+    }
+  }
+});
+
+test("aucun alt n'est fabriqué à partir du nom de fichier", () => {
+  // Ces fichiers s'appellent « a787cf8c0b74.svg ». Un alt qui reprend
+  // ce nom fait entendre douze caractères de hasard à qui écoute.
+  for (const a of ALT_IMAGES_V2) {
+    if (a.alt === "") continue;
+    const nom = a.src.split("/").pop()!.replace(/\.\w+$/, "");
+    assert.ok(!a.alt.includes(nom), `${a.src} recopie son nom de fichier`);
+    assert.ok(!/^image |^photo |^visuel /i.test(a.alt), `${a.src} annonce « image » : un lecteur d'écran le dit déjà`);
+    assert.ok(a.alt.length <= 200, `${a.src} : ${a.alt.length} caractères, c'est un paragraphe`);
+    assert.ok(!/[—–]/.test(a.alt), `${a.src} porte un tiret cadratin`);
+  }
+});
+
+test("le logo dit Tiquiz, parce que c'est ce qu'il affiche", () => {
+  // Il portait « Logo Tipote » dans la capture. C'est le logo Tiquiz.
+  const v2 = fs.readFileSync(V2, "utf8");
+  assert.ok(!/alt="[^"]*Logo Tipote/i.test(v2), "le logo s'annonce encore comme celui de Tipote");
+  assert.equal(altDe(LOGO.src), "", "le logo du pied de page double le nom écrit à côté : son alt reste vide");
+});
+
+test("toutes les images de la page sont classées", () => {
+  // La garde du script REFUSE de construire sur une image inconnue :
+  // sans elle, une image ajoutée demain repartirait sans texte, en
+  // silence. Ce test dit la même chose sur la page déjà construite.
+  // On classe celles qui n'ont RIEN. Une image que Béné a déjà décrite
+  // garde son texte : l'écraser en masse ferait perdre les bons (leçon
+  // des `alt` du blog, 1er septembre).
+  const capture = fs.readFileSync(CAPTURE, "utf8");
+  const srcs = (capture.match(/<img\b[^>]*>/gi) ?? [])
+    .filter((t) => !/\salt=/.test(t))
+    .map((t) => /\ssrc="([^"]+)"/.exec(t)?.[1] ?? "")
+    .filter((s) => s.startsWith("/v/tiquiz/"))
+    // Le GIF du popup de la vente bêta ne survit pas au retrait de sa
+    // section : rien à décrire pour une image que la v2 ne sert plus.
+    .filter((s) => fs.readFileSync(V2, "utf8").includes(s));
+  const oubliees = nonClassees([...new Set(srcs)]);
+  assert.deepEqual(oubliees, [], "des images de la capture ne sont pas classées");
+});
+
+// ---------------------------------------------------------------------
+// LES DIMENSIONS. Sans elles, la page saute pendant qu'elle charge.
+// ---------------------------------------------------------------------
+
+test("une image qui sait sa taille la porte", () => {
+  const v2 = fs.readFileSync(V2, "utf8");
+  const imgs = v2.match(/<img\b[^>]*>/gi) ?? [];
+  const dimensionnees = imgs.filter((t) => /\swidth="\d+"/.test(t) && /\sheight="\d+"/.test(t));
+  // 25 fichiers restent illisibles (des SVG sans viewBox, des sources
+  // distantes) : on les laisse telles quelles plutôt que d'inventer une
+  // taille, qui déformerait l'image au lieu de réserver sa place.
+  assert.ok(dimensionnees.length >= imgs.length - 30, `${dimensionnees.length} sur ${imgs.length}`);
+  for (const t of imgs) {
+    const w = /\swidth="(\d+)"/.exec(t)?.[1];
+    const h = /\sheight="(\d+)"/.exec(t)?.[1];
+    if (w == null && h == null) continue;
+    assert.ok(w != null && h != null, `une image ne porte qu'une moitié de ses dimensions : ${t.slice(0, 120)}`);
+    assert.ok(Number(w) > 0 && Number(h) > 0, `une dimension vaut zéro : ${t.slice(0, 120)}`);
+  }
 });
