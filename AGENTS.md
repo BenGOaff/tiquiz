@@ -6820,3 +6820,72 @@ dit que la validation n'est PAS requise pour ces scopes. Le bouton
 fonctionne donc dès aujourd'hui ; c'est l'écran de consentement qui
 affiche encore un avertissement tant que la relecture de marque n'est
 pas passée.
+
+## Le déploiement fantôme : le serveur reconstruisait l'ANCIEN code (2 septembre 2026)
+
+Béné : "ton code ne marche pas, il bloque ici et plus rien :
+`Username for 'https://github.com':`. Mais si je fais mon code et que je
+clique entrée entrée entrée ça finit par avancer. Du coup je fais quoi
+bordel ??" Et, dans le même message : "je ne vois pas de modif sur les
+pages légales envoyées à Google. C'est le code qui ne part pas en prod ?"
+
+**Oui. Et ça durait avant la chaîne `&&`, sans que rien ne le dise.**
+
+### Les trois mesures qui tranchent
+
+| Question | Réponse |
+|---|---|
+| `main` porte-t-il la section Google ? | **OUI** (`25e270d3`, `lastUpdated` au 02/09/2026) |
+| que sert `tiquiz.fr/privacy` ? | **22/04/2026**, aucune section "Connexion avec Google" |
+| le dépôt exige-t-il des identifiants ? | **NON** : `git ls-remote https://github.com/BenGOaff/tiquiz.git` rend son HEAD sans rien demander |
+
+Le code était donc à sa place ; c'est le SERVEUR qui ne l'avait pas.
+
+### Le message d'erreur ne dit pas ce qu'il a l'air de dire
+
+`Username for 'https://github.com'` sur un dépôt PUBLIC ne veut pas dire
+"il faut s'authentifier". **Reproduit ici, en une commande :** un nom de
+dépôt qui n'existe pas rend EXACTEMENT ce prompt, parce que GitHub
+répond 404 sans dire si le dépôt est privé ou absent, et git en conclut
+qu'il lui manque des identifiants.
+
+```
+git ls-remote https://github.com/BenGOaff/tiquiz.git      -> le HEAD
+git ls-remote https://github.com/BenGOaff/tiquiz-app.git  -> could not read Username
+```
+
+Donc : **l'URL du remote du serveur ne désignait pas le bon dépôt.** Elle
+se remet avec `git remote set-url`, et aucun identifiant n'est jamais
+nécessaire puisque le serveur ne fait que TIRER.
+
+### LA CHAÎNE `&&` N'A RIEN CASSÉ : ELLE A RÉVÉLÉ
+
+C'est le point à ne pas inverser, et c'est ce que Béné a vécu comme une
+panne. Avec ses commandes sur des LIGNES SÉPARÉES, le `git pull`
+échouait, et `npm ci`, `npm run build` et `pm2 restart` tournaient quand
+même. Tout avait l'air de marcher : aucune ligne rouge, PM2 redémarrait,
+le site répondait. **Et il servait l'ancien code.**
+
+**Règle : une étape de déploiement qui échoue sans arrêter la chaîne
+fabrique un déploiement fantôme**, c'est à dire le pire des symptômes :
+la correction est absente, tout le reste est vert, et on va chercher le
+bug dans le code au lieu du transport. Même famille que le webhook dont
+le réessai ne pouvait pas repasser (24 août) et que les images en 403
+(31 août) : le geste était juste, il n'atteignait pas sa cible.
+
+### Et le contrôle qui manquait
+
+```bash
+npm run check:deploye
+```
+
+Il compare le commit que le SERVEUR a en main avec celui de `main` sur
+GitHub, et **il distingue les trois cas** (leçon des clés Supabase du
+22 août) : à jour, pas à jour, ou "je n'ai pas pu joindre GitHub" (avec
+la commande de réparation du remote imprimée à côté). Un contrôle qui
+répondrait "à jour" quand le fetch échoue serait pire que pas de
+contrôle.
+
+Il dit aussi ce qu'il ne peut PAS savoir : que le code soit tiré ne veut
+pas dire qu'il soit CONSTRUIT. Le build et le redémarrage restent à
+vérifier à l'écran.
