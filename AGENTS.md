@@ -6275,6 +6275,122 @@ neufs (70 px alors que toute la page est à 100 px, mesuré), et leurs
 boutons (trois familles de boutons sur une page, ramenées à celle de la
 page : #5A6EF6, rayon 999px, animation `tqButtonPulse`).
 
+### Le troisième passage (2 septembre, le soir) : quatre reproches, quatre causes
+
+"Le logo en bas il descend sur les liens et les icônes sur les boutons
+sont chelou partout. Pareil pour les listes à puces. Peut être qu'on peut
+modifier ou supprimer la partie sur le premier outil de quiz connecté à
+Systeme io ?" Plus, séparément : "les liens légaux doivent toujours
+s'ouvrir dans une nouvelle page, on ne veut pas que le visiteur perde la
+page ni le bon de commande aussi."
+
+**1. LES ICÔNES : j'avais enfreint ma propre règle du matin même.** En
+retirant Font Awesome, les 144 icônes de la CAPTURE ont été dessinées en
+SVG. Mes DEUX blocs neufs, eux, posaient encore des caractères Unicode
+en `content` : `\2713` (la coche) et `\2192` (la flèche). Les deux
+rendent très bien dans Inter et Open Sans sur MA machine, et dans aucune
+des deux sur la sienne : ces glyphes n'existent dans ni l'une ni l'autre,
+donc le navigateur va les chercher où il peut, et sur Windows il rend le
+carré vide.
+
+**Un caractère qui dépend des polices installées n'est pas une icône,
+c'est un pari.** Le test vise donc les `content` qui portent un point de
+code dans TOUS les blocs neufs, pas la présence d'un masque : c'est la
+faute qu'on refait, pas la correction qu'on oublie.
+
+**2. LE LOGO DU PIED DE PAGE : un `width` est une PLACE RÉSERVÉE, pas la
+taille d'un fichier.** L'étape des portraits réécrivait `width` avec la
+largeur du fichier réduit, sous ce commentaire : "un `width` qui ment sur
+la taille reelle est exactement ce qu'un controle finit par relever".
+C'était faux en HTML, et ça a coûté exactement ce que Béné a vu.
+
+| | déclaré | rendu |
+|---|---|---|
+| capture | `width="108"`, aucune hauteur | 108 x 56 |
+| avant correction | `width="324" height="167"` | **108 x 167** |
+| après | `width="108" height="56"` | 108 x 56 |
+
+Sa classe le borne à 108 px : le CSS gagnait sur la largeur, l'attribut
+restait seul sur la hauteur, donc le logo était ÉTIRÉ sur 167 px au lieu
+de 56 et recouvrait les liens légaux sur 92 px. MESURÉ dans Chromium :
+2 images sur 104. Après correction, le bas du logo tombe à 25565 et les
+liens commencent à 25584.
+
+**ET MA PREMIÈRE SONDE EN ACCUSAIT UNE TROISIÈME.** Elle lisait les
+largeurs CSS sans écarter les MEDIA QUERIES, donc elle comparait
+l'attribut d'une image à sa largeur MOBILE. Septième fois de la semaine
+qu'un contrôle ne distingue pas ce qu'il est censé distinguer, et la
+première où je l'ai vu avant de corriger un fichier innocent. Le test
+retire les blocs `@media` avant de lire quoi que ce soit.
+
+**J'avais aussi commencé par écrire la mauvaise correction** : faire lire
+au poseur de dimensions la largeur du CSS. Mesuré ensuite : **zéro image
+de la page est dans ce cas** (aucune n'a une largeur CSS sans attribut
+`width`). C'était donc une branche que rien n'exerce, c'est à dire le
+piège que ce fichier décrit ailleurs (`simuler()`, 31 août). Retirée, et
+la vraie cause corrigée à sa place.
+
+**3. LE WIDGET « 1er outil quiz connecté à Systeme.io » : on retire le
+spectacle, pas le différenciateur.** `#tqz-scoop-widget` faisait 18,1 Ko
+à lui seul (cinq scènes animées, dix-huit confettis en CSS, un script de
+boucle) et racontait le parcours que la page explique DÉJÀ trois fois
+autour de lui : la section qui le porte EST le mécanisme, "où vit ton
+quiz" dit où le quiz est servi, "quand ça tourne" dit ce qui part chez
+Systeme.io tag par tag.
+
+`content/sales/v2/mention-systeme-io.html` garde la PHRASE : "connecté à
+Systeme.io" est la requête la plus rentable du produit (elle porte le
+`<title>` et tout le hub `/integrations`), et c'est le seul argument que
+ni Tally, ni Typeform, ni Interact ne peuvent écrire.
+
+**On remplace le CONTENU du bloc `#rawhtml-21bf9dec`, jamais la
+section** : la retirer emporterait le comparatif et les 4 étapes, c'est à
+dire ce que Béné dit justement être bien expliqué. Et **la boucle
+d'animation part avec** : la garder laisserait un
+`getElementById("tqz-scoop-widget")` qui rend `null` pour toujours. Elle
+est COMPTÉE dans `SCRIPTS_RETIRES.widget`, pas ignorée : le contrôle qui
+vérifie qu'aucun de ses scripts n'a été perdu compare un nombre, et un
+nombre qu'on ajuste à la main le jour où il rougit ne protège plus rien.
+
+**4. LES LIENS LÉGAUX : une TROISIÈME moitié de la règle du 24 août.**
+Celle là portait deux moitiés (le sanitizer pour le texte riche, nos
+liens écrits en dur). La page de vente n'était couverte par AUCUNE des
+deux : elle est CAPTURÉE, et on ne réécrit que ses adresses au moment de
+la servir.
+
+MESURÉ sur la page construite : **10 ancres légales, 6 en
+`target="_self"`, 4 sans rien, ZÉRO en `_blank`.**
+
+**Et le premier jet n'en aurait corrigé que 4 sur 10.** Il gardait tout
+`target` déjà écrit, "parce que la capture pourrait en porter un que
+quelqu'un a choisi". C'était une SUPPOSITION, et le relevé la contredit :
+`_self` est ce que l'éditeur de Systeme.io écrit mécaniquement sur chaque
+lien, ce n'est le choix de personne. `_self` se remplace donc ; un
+`target` NOMMÉ (`_parent`, `_top`, un nom de fenêtre) reste, lui,
+puisqu'il ne s'obtient pas par défaut.
+
+**`ouvrirLiensLegauxDansUnOnglet` tourne HORS du `if (opts.siteLinks)`.**
+Sur un chantier relu derrière la clé d'aperçu, `siteLinks` vaut null,
+donc les liens portent encore les adresses de Systeme.io : ils font
+quitter la page encore plus sûrement. `estLienLegal` les reconnaît, et
+la liste se DÉDUIT de `SALES_SITE_LINKS` (toute clé dont la destination
+est une de nos pages légales) : une deuxième liste écrite à la main
+finirait par ne plus dire la même chose que la première.
+
+**TROUVÉ AU PASSAGE, ET C'ÉTAIT UN 404 :** le bandeau cookies pointait
+sur `/politique-de-cookies`, le chemin de Systeme.io. Nos pages
+s'appellent `/legal`, `/terms`, `/terms-of-use`, `/privacy` et
+`/cookies` : ce lien répondait 404, sur l'encart où on demande justement
+au visiteur de faire confiance. C'est le drame du centre d'aide du
+24 août, à un lien près. `rewriteSiteLinks` ne pouvait rien : il ne
+connaît que les adresses ABSOLUES, et celle ci est écrite en relatif dans
+la configuration JavaScript du bandeau.
+
+Tests : les 4 cas ajoutés à `tests/logic/page-vente-v2.test.mts` et les
+5 de `tests/logic/liens-legaux.test.mts`, vérifiés en rejouant les trois
+versions d'avant (l'ancien garde sur `_self`, la coche Unicode, la
+largeur du fichier) : les trois rougissent.
+
 ### Ce que la mesure a trouvé en plus, sur le référencement
 
 **La page servait DEUX `<h1>`, tous les deux VISIBLES en même temps**, à

@@ -352,3 +352,109 @@ export function rewriteSiteLinks(
     rewritten: [...compte.entries()].map(([from, v]) => ({ from, to: v.to, count: v.count })),
   };
 }
+
+/**
+ * LES PAGES LÉGALES SERVIES PAR CETTE APP.
+ *
+ * La liste des DESTINATIONS, pas des sources : c'est ce vers quoi
+ * `SALES_SITE_LINKS` ramène, et c'est donc ce qu'on retrouve dans le
+ * HTML une fois la réécriture faite.
+ */
+export const CHEMINS_LEGAUX: readonly string[] = [
+  "/legal",
+  "/terms",
+  "/terms-of-use",
+  "/privacy",
+  "/cookies",
+];
+
+/**
+ * LES ADRESSES SYSTEME.IO DE CES MÊMES PAGES, DÉRIVÉES, JAMAIS RECOPIÉES.
+ *
+ * La page de vente est CAPTURÉE : ses liens légaux portent encore les
+ * adresses de Systeme.io (`www.tipote.fr/cgv`...) tant que
+ * `rewriteSiteLinks` n'est pas passé, et il ne passe QUE sur le domaine
+ * public (un chantier relu derrière la clé d'aperçu garde exprès le pied
+ * de page du site en ligne).
+ *
+ * Or la règle de Béné ne parle pas de nos routes, elle parle du
+ * visiteur : "JAMAIS faire quitter la page". Un lien vers les CGV chez
+ * Systeme.io le fait quitter encore plus sûrement.
+ *
+ * La liste se DÉDUIT de `SALES_SITE_LINKS` : toute clé dont la
+ * destination est une de nos pages légales. Une deuxième liste écrite à
+ * la main finirait par ne plus dire la même chose que la première, et
+ * c'est le défaut sorti six fois dans ce dépôt.
+ */
+const ADRESSES_LEGALES_CAPTUREES: ReadonlySet<string> = new Set(
+  Object.values(SALES_SITE_LINKS).flatMap((table) =>
+    Object.entries(table)
+      .filter(([, vers]) => CHEMINS_LEGAUX.includes(vers.replace(/\/+$/, "").toLowerCase() || "/"))
+      .map(([depuis]) => depuis.replace(/\/+$/, "").toLowerCase()),
+  ),
+);
+
+/** Cette adresse mène-t-elle à une page légale, chez nous ou dans la capture ? */
+export function estLienLegal(href: string | null | undefined): boolean {
+  const brut = (href ?? "").trim();
+  if (!brut) return false;
+  if (ADRESSES_LEGALES_CAPTUREES.has(brut.replace(/\/+$/, "").toLowerCase())) return true;
+  let chemin: string;
+  try {
+    // Une adresse relative n'a pas d'origine : on lui en prête une, elle
+    // n'est jamais lue. Une adresse absolue garde la sienne.
+    chemin = new URL(brut, "https://exemple.invalid").pathname;
+  } catch {
+    return false;
+  }
+  const propre = chemin.replace(/\/+$/, "").toLowerCase() || "/";
+  return CHEMINS_LEGAUX.includes(propre);
+}
+
+/**
+ * UN LIEN LÉGAL NE FAIT JAMAIS QUITTER LA PAGE (Béné, 24 août 2026).
+ *
+ * "Un lien vers la politique de confi etc. doit s'ouvrir dans un nouvel
+ * onglet et JAMAIS faire quitter la page à un visiteur !!"
+ *
+ * La règle existait depuis le 24 août, en deux moitiés : le sanitizer
+ * pose le `target` sur les liens écrits par les créatrices, et nos liens
+ * légaux écrits en dur portent `target="_blank"`. La page de vente
+ * n'était couverte NI par l'un NI par l'autre : c'est une page CAPTURÉE,
+ * dont on ne réécrit que les adresses au moment de la servir.
+ *
+ * MESURÉ le 2 septembre sur la production : 10 ancres légales servies,
+ * ZÉRO avec un `target`. Le bon de commande, lui, était déjà bon (2/2).
+ *
+ * `rel="noopener noreferrer"` va avec, toujours : sans `noopener`, la
+ * page ouverte garde une poignée sur la nôtre par `window.opener`.
+ *
+ * ET `target="_self"` SE REMPLACE, c'est le coeur de ce correctif.
+ *
+ * Le premier jet gardait tout `target` déjà posé, "parce que la capture
+ * pourrait en porter un que quelqu'un a choisi". C'était une SUPPOSITION,
+ * et elle était fausse : MESURÉ sur la page construite, les 10 ancres
+ * légales se répartissent en 6 `_self` et 4 sans rien, ZÉRO `_blank`.
+ * `_self` est ce que l'éditeur de Systeme.io écrit mécaniquement sur
+ * chaque lien, ce n'est le choix de personne, et le respecter n'aurait
+ * corrigé que 4 liens sur 10.
+ *
+ * Un `target` NOMMÉ (`_parent`, `_top`, un nom de fenêtre) reste, lui :
+ * celui-là ne s'obtient pas par défaut.
+ */
+export function ouvrirLiensLegauxDansUnOnglet(html: string): { html: string; poses: number } {
+  let poses = 0;
+  const sortie = String(html ?? "").replace(/<a\b[^>]*>/gi, (balise) => {
+    const href = /href=\\?["']([^"'\\>]+)/i.exec(balise)?.[1];
+    if (!estLienLegal(href)) return balise;
+    const cible = /\btarget\s*=\s*\\?["']?([a-z_]+)/i.exec(balise)?.[1]?.toLowerCase();
+    if (cible && cible !== "_self") return balise;
+    poses += 1;
+    const rel = /\brel\s*=/i.test(balise) ? "" : ' rel="noopener noreferrer"';
+    if (cible === "_self") {
+      return balise.replace(/(\btarget\s*=\s*\\?["']?)_self/i, "$1_blank") .replace(/\s*\/?>$/, (fin) => `${rel}${fin.trim() === "/>" ? " />" : ">"}`);
+    }
+    return balise.replace(/\s*\/?>$/, (fin) => ` target="_blank"${rel}${fin.trim() === "/>" ? " />" : ">"}`);
+  });
+  return { html: sortie, poses };
+}

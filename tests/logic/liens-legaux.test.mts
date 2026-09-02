@@ -188,3 +188,88 @@ describe("Béné : un lien légal s'ouvre dans un nouvel onglet", () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------
+// LA PAGE DE VENTE : une TROISIÈME moitié, découverte le 2 septembre 2026.
+//
+// Béné : "les liens légaux doivent toujours s'ouvrir dans une nouvelle
+// page, on ne veut pas que le visiteur perde la page ni le bon de
+// commande aussi."
+//
+// La page de vente n'était couverte NI par le sanitizer (elle n'est pas
+// du texte riche) NI par nos liens écrits en dur (elle est CAPTURÉE chez
+// Systeme.io). MESURÉ sur la page construite : 10 ancres légales, 6 en
+// `target="_self"`, 4 sans rien, ZÉRO en `_blank`.
+//
+// LE PIÈGE, ET IL A FAILLI PASSER : mon premier jet gardait tout `target`
+// déjà écrit, "parce que la capture pourrait en porter un que quelqu'un a
+// choisi". C'était une supposition, et elle aurait corrigé 4 liens sur
+// 10 : `_self` est ce que l'éditeur de Systeme.io écrit mécaniquement sur
+// chaque lien, ce n'est le choix de personne.
+// ---------------------------------------------------------------------
+
+import { estLienLegal, ouvrirLiensLegauxDansUnOnglet } from "@/lib/sales/salesPageLinks";
+
+describe("la page de vente : les liens légaux capturés", () => {
+  const cible = (balise: string) => /\btarget\s*=\s*["']?([a-z_]+)/i.exec(balise)?.[1]?.toLowerCase();
+
+  test("un target=_self de Systeme.io se remplace", () => {
+    const r = ouvrirLiensLegauxDansUnOnglet('<a href="/privacy" target="_self">CGV</a>');
+    assert.equal(r.poses, 1);
+    assert.equal(cible(r.html), "_blank");
+    assert.match(r.html, /rel="noopener noreferrer"/);
+  });
+
+  test("un target NOMMÉ reste, lui : il ne s'obtient pas par défaut", () => {
+    for (const t of ["_parent", "_top", "maFenetre"]) {
+      const r = ouvrirLiensLegauxDansUnOnglet(`<a href="/privacy" target="${t}">CGV</a>`);
+      assert.equal(r.poses, 0, `${t} a été écrasé`);
+      assert.equal(cible(r.html), t.toLowerCase());
+    }
+  });
+
+  test("les adresses légales de la CAPTURE comptent aussi", () => {
+    // Sur un chantier relu derrière la clé d'aperçu, les liens ne sont
+    // pas réécrits : ils portent encore `www.tipote.fr/cgv`. Ils font
+    // quitter la page encore plus sûrement que les nôtres.
+    assert.ok(estLienLegal("https://www.tipote.fr/cgv"));
+    assert.ok(estLienLegal("https://www.tipote.fr/politique-de-confidentialite"));
+    assert.ok(estLienLegal("/privacy"));
+    // Et ce qui n'est PAS légal ne bouge pas.
+    assert.ok(!estLienLegal("https://www.tipote.fr/tiquiz"));
+    assert.ok(!estLienLegal("/signup"));
+    assert.ok(!estLienLegal("#cookies"));
+  });
+
+  test("la page construite ne sert plus AUCUN lien légal en _self", () => {
+    const chemin = path.join(process.cwd(), "content/sales/tiquiz-v2.html");
+    const brut = fs.readFileSync(chemin, "utf8");
+
+    // La capture DOIT encore en porter : sinon ce test ne prouverait rien.
+    const avant = [...brut.matchAll(/<a\b[^>]*>/gi)].filter((m) =>
+      estLienLegal(/href=\\?["']([^"'\\>]+)/i.exec(m[0])?.[1]),
+    );
+    assert.ok(avant.length >= 6, `seulement ${avant.length} ancres légales : la capture a bougé`);
+    assert.ok(
+      avant.some((m) => cible(m[0]) === "_self"),
+      "plus aucun _self dans la page construite : la correction ne sert plus à rien",
+    );
+
+    const { html } = ouvrirLiensLegauxDansUnOnglet(brut);
+    for (const m of html.matchAll(/<a\b[^>]*>/gi)) {
+      const href = /href=\\?["']([^"'\\>]+)/i.exec(m[0])?.[1];
+      if (!estLienLegal(href)) continue;
+      assert.equal(cible(m[0]), "_blank", `${href} ne s'ouvre pas dans un nouvel onglet`);
+    }
+  });
+
+  test("le bandeau cookies ne renvoie plus sur une page qui n'existe pas", () => {
+    // Trouvé en MESURANT la page rendue : « Voir le détail » pointait sur
+    // `/politique-de-cookies`, le chemin de Systeme.io. Nos pages légales
+    // s'appellent autrement, donc c'était un 404 sur le bandeau où on
+    // demande justement au visiteur de faire confiance.
+    const v2 = fs.readFileSync(path.join(process.cwd(), "content/sales/tiquiz-v2.html"), "utf8");
+    assert.ok(!v2.includes("'/politique-de-cookies'"), "le bandeau cookies pointe encore sur un 404");
+    assert.ok(v2.includes("page   : '/cookies'"), "le bandeau cookies n'a plus de destination");
+  });
+});

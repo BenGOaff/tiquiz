@@ -207,7 +207,10 @@ test("les scripts de Béné, eux, sont TOUS conservés", () => {
   const compte = (h: string) => (h.match(/<script\b/gi) ?? []).length;
   const origine = fs.readFileSync(CAPTURE, "utf8");
   const v2 = fs.readFileSync(V2, "utf8");
-  const retires = SCRIPTS_RETIRES.bundles.length + SCRIPTS_RETIRES.etats.length;
+  // Le widget Systeme.io emporte SA boucle d'animation, et rien d'autre :
+  // sans le widget, elle chercherait un élément qui n'existe plus.
+  const retires =
+    SCRIPTS_RETIRES.bundles.length + SCRIPTS_RETIRES.etats.length + SCRIPTS_RETIRES.widget;
   assert.equal(compte(v2), compte(origine) - retires, "on a perdu (ou gardé) autre chose que le bundle");
 });
 
@@ -803,20 +806,37 @@ test("l'image des aperçus sociaux n'est PAS touchée", () => {
   );
 });
 
-test("les dimensions déclarées suivent le fichier servi", () => {
-  // Un `width` qui ment sur la taille réelle réserve la mauvaise place,
-  // donc la page saute quand même pendant qu'elle charge.
+test("la hauteur déclarée suit la largeur déclarée, jamais le fichier", () => {
+  // CE TEST DISAIT L'INVERSE JUSQU'AU 2 SEPTEMBRE, et c'est ce qui a
+  // laissé passer le logo du pied de page.
+  //
+  // Il exigeait `width === img.cible`, c'est à dire la largeur du
+  // FICHIER réduit. Or le `width` d'une balise est la place RÉSERVÉE,
+  // pas la taille du fichier : le logo est déclaré `width="108"` dans la
+  // capture et sa classe le borne à 108 px. En le réécrivant à 324, le
+  // CSS gagnait sur la largeur, l'attribut restait seul sur la hauteur,
+  // et le logo sortait étiré sur 167 px au lieu de 56, par dessus les
+  // liens légaux (Béné : "le logo en bas il descend sur les liens").
+  //
+  // La règle juste : la largeur déclarée ne bouge pas, et la hauteur en
+  // découle par le ratio du fichier, qui ne change pas (on réduit, on ne
+  // recadre jamais).
   const v2 = fs.readFileSync(V2, "utf8");
   for (const img of IMAGES_SURDIMENSIONNEES) {
     const reduit = nomReduit(img.fichier, img.cible);
     for (const balise of v2.match(/<img\b[^>]*>/gi) ?? []) {
       if (!balise.includes(reduit)) continue;
-      const w = /\swidth="(\d+)"/.exec(balise)?.[1];
-      if (w == null) continue;
-      assert.equal(Number(w), img.cible, `${reduit} annonce ${w}px`);
-      const h = /\sheight="(\d+)"/.exec(balise)?.[1];
-      assert.equal(Number(h), hauteurCible(img), `${reduit} annonce une hauteur fausse`);
+      const w = Number(/\swidth="(\d+)"/.exec(balise)?.[1]);
+      const h = Number(/\sheight="(\d+)"/.exec(balise)?.[1]);
+      if (!Number.isFinite(w) || !Number.isFinite(h)) continue;
+      const attendue = Math.max(1, Math.round((w * img.naturelle[1]) / img.naturelle[0]));
+      assert.equal(h, attendue, `${reduit} annonce ${w}x${h}, donc un ratio faux (attendu ${attendue})`);
     }
+  }
+  // Et la cible reste ce qu'on SERT : sans largeur déclarée, c'est elle
+  // qui fait foi, et `hauteurCible` reste la hauteur de ce fichier là.
+  for (const img of IMAGES_SURDIMENSIONNEES) {
+    assert.ok(hauteurCible(img) > 0, `${img.fichier} : hauteur cible absurde`);
   }
 });
 
@@ -854,4 +874,141 @@ test("aucune image tronquée ne reste servie", () => {
       "un JPEG en base64 est tronqué et reste servi",
     );
   }
+});
+
+// ---------------------------------------------------------------------
+// LES ICÔNES DES BLOCS NEUFS (Béné, 2 septembre 2026).
+//
+// "Les icônes sur les boutons sont chelou partout. Pareil pour les
+// listes à puces."
+//
+// Elle avait raison, et j'avais enfreint ma propre règle du matin même.
+// En retirant Font Awesome, les 144 icônes de la CAPTURE ont été
+// dessinées en SVG ; mes DEUX blocs neufs, eux, posaient encore des
+// caractères Unicode en `content` : `\2713` (la coche) et `\2192` (la
+// flèche). Les deux rendent très bien dans Inter et Open Sans sur MA
+// machine et pas sur la sienne : ces glyphes n'existent dans aucune des
+// deux polices, donc le navigateur va les chercher où il peut, et sur
+// Windows il rend le carré vide.
+//
+// Un caractère qui dépend des polices installées n'est pas une icône :
+// c'est un pari. Le test vise donc les `content` qui portent un point de
+// code, pas la présence d'un masque : c'est la faute qu'on refait.
+// ---------------------------------------------------------------------
+
+test("aucun bloc neuf ne dessine une icône avec un caractère Unicode", () => {
+  for (const f of fs.readdirSync(DOSSIER).filter((n) => n.endsWith(".html"))) {
+    const css = regles(f);
+    const fautifs = [...css.matchAll(/content\s*:\s*"\\([0-9a-f]{4})"/gi)].map((m) => m[1]);
+    assert.deepEqual(
+      fautifs,
+      [],
+      `${f} pose une icône en caractère Unicode (\\${fautifs[0]}) : elle sera un carré vide ` +
+        "sur toute machine dont les polices ne la portent pas. Dessine-la en mask-image.",
+    );
+  }
+});
+
+test("la coche et la flèche des blocs neufs sont dessinées", () => {
+  const puces = regles("quand-ca-tourne.html");
+  assert.ok(
+    /\.tqv-qt-puces li:before\{[^}]*mask-image:url\("data:image\/svg\+xml/.test(puces),
+    "la coche des listes à puces n'est plus dessinée",
+  );
+  const options = regles("cest-pour-toi.html");
+  assert.ok(
+    /\.tqv-pt-ops label::after\{[^}]*mask-image:url\("data:image\/svg\+xml/.test(options),
+    "la flèche des options n'est plus dessinée",
+  );
+  // Un masque ne lit que le canal ALPHA : une couleur DOIT être posée à
+  // côté, sinon l'icône est invisible (la leçon des 106 coches de la
+  // grille de tarifs, sorties en pastilles pleines).
+  for (const [nom, css] of [["puces", puces], ["options", options]] as const) {
+    assert.ok(/background-color:#[0-9A-Fa-f]{3,6}/.test(css), `${nom} : le masque n'a aucune couleur`);
+  }
+});
+
+// ---------------------------------------------------------------------
+// LE LOGO DU PIED DE PAGE, ET LA LARGEUR QUI EST UNE PLACE RÉSERVÉE.
+// ---------------------------------------------------------------------
+
+test("aucune image ne porte une largeur que son CSS contredit", () => {
+  // Béné, 2 septembre : "le logo en bas il descend sur les liens".
+  //
+  // L'étape des portraits réécrivait `width` avec la largeur du FICHIER
+  // réduit. Le logo du pied de page est déclaré `width="108"` et sa
+  // classe le borne à 108 px : il est reparti en 324 x 167. Le CSS
+  // gagnait sur la largeur, l'attribut restait seul sur la hauteur, donc
+  // le logo était étiré sur 167 px au lieu de 56 et recouvrait les liens
+  // légaux.
+  //
+  // LES RÈGLES DE MEDIA QUERY SONT ÉCARTÉES, et c'est le coeur du
+  // contrôle : mon premier jet les comptait et accusait une troisième
+  // image dont la seule largeur « en écart » était celle du mobile. Un
+  // contrôle qui ne distingue pas ce qu'il est censé distinguer est pire
+  // qu'un contrôle absent.
+  const v2 = fs.readFileSync(V2, "utf8");
+  const horsMedia = v2.replace(/@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^{}]*\}/g, " ");
+
+  const largeurs = new Map<string, number>();
+  for (const m of horsMedia.matchAll(/\.([A-Za-z][\w-]*)\{([^}]*)\}/g)) {
+    if (/(^|;)\s*height\s*:/.test(m[2])) continue;
+    const w = /(^|;)\s*width\s*:\s*(\d+)px/.exec(m[2]);
+    if (w) largeurs.set(m[1], Number(w[2]));
+  }
+  assert.ok(largeurs.size > 0, "aucune classe de largeur trouvée : la capture a bougé");
+
+  const ecarts: string[] = [];
+  for (const m of v2.matchAll(/<img\b([^>]*)>/gi)) {
+    const attrs = m[1];
+    const declaree = Number(/\bwidth="(\d+)"/i.exec(attrs)?.[1]);
+    if (!Number.isFinite(declaree)) continue;
+    let duCss: number | null = null;
+    for (const c of (/\bclass="([^"]*)"/i.exec(attrs)?.[1] ?? "").split(/\s+/)) {
+      if (largeurs.has(c)) duCss = largeurs.get(c)!;
+    }
+    if (duCss != null && duCss !== declaree) {
+      ecarts.push(`${/id="([^"]*)"/.exec(attrs)?.[1] ?? "?"} : attribut ${declaree}, CSS ${duCss}`);
+    }
+  }
+  assert.deepEqual(ecarts, [], "des images seront étirées :\n   " + ecarts.join("\n   "));
+});
+
+// ---------------------------------------------------------------------
+// LA MENTION SYSTEME.IO, À LA PLACE DU WIDGET ANIMÉ.
+// ---------------------------------------------------------------------
+
+test("le widget animé est parti, la phrase qui vend reste", () => {
+  // Béné, 2 septembre : "peut être qu'on peut modifier ou supprimer la
+  // partie sur le premier outil de quiz connecté à Systeme io ? en faire
+  // une mention plus discrète à un endroit stratégique ?"
+  // SANS LES COMMENTAIRES : la mention qui remplace le widget explique
+  // POURQUOI elle le remplace, donc elle le nomme. Mon premier jet
+  // cherchait le nom dans le fichier entier et rougissait sur ma propre
+  // explication. Un contrôle qui ne distingue pas ce qu'il est censé
+  // distinguer est pire qu'un contrôle absent.
+  const v2 = fs.readFileSync(V2, "utf8").replace(/<!--[\s\S]*?-->/g, " ");
+  assert.ok(!v2.includes("tqz-scoop-widget"), "le widget animé est toujours là");
+  assert.ok(!v2.includes("tqz-sc-conf"), "les confettis du widget sont toujours là");
+
+  // Et la phrase, elle, RESTE. "Connecté à Systeme.io" est la requête la
+  // plus rentable du produit : la retirer avec le spectacle serait
+  // exactement l'erreur que ce correctif ne doit pas faire.
+  assert.ok(v2.includes("tqv-msio"), "la mention discrète n'a pas été posée");
+  assert.ok(
+    /premier outil de quiz[\s\S]{0,80}Systeme\.io/.test(v2),
+    "la page ne dit plus qu'elle est le premier outil connecté à Systeme.io",
+  );
+
+  // La SECTION qui le portait reste, elle aussi : c'est le mécanisme,
+  // avec le comparatif et les 4 étapes. La retirer emporterait ce que
+  // Béné dit justement être bien expliqué.
+  assert.ok(v2.includes("section-3fe5bb60"), "la section du mécanisme a disparu avec le widget");
+
+  // La capture d'origine le porte toujours : l'étape a donc encore
+  // quelque chose à faire (un test qui ne peut plus échouer ment).
+  assert.ok(
+    fs.readFileSync(CAPTURE, "utf8").includes("tqz-scoop-widget"),
+    "la capture ne porte plus le widget : retirer l'étape qui le remplace",
+  );
 });

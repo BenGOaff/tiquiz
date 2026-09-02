@@ -23,6 +23,7 @@
 import {
   rewriteOrderLinks,
   rewriteSiteLinks,
+  ouvrirLiensLegauxDansUnOnglet,
   type OrderLinkRewrite,
 } from "@/lib/sales/salesPageLinks";
 import type { OwnerProductId } from "@/lib/checkout/catalog";
@@ -312,6 +313,18 @@ export function renderSalesPage(
   if (opts.siteLinks) {
     sortie = rewriteSiteLinks(sortie, opts.siteLinks).html;
   }
+
+  // UN LIEN LEGAL NE FAIT JAMAIS QUITTER LA PAGE (Bene, 24 aout).
+  //
+  // APRES la reecriture des liens de site, et HORS de son `if` : sur un
+  // chantier relu derriere la cle d'apercu, `siteLinks` vaut null, donc
+  // les liens legaux portent encore les adresses de Systeme.io. Ils font
+  // quitter la page encore plus surement, et `estLienLegal` les
+  // reconnait pour ca.
+  //
+  // MESURE le 2 septembre sur la page construite : 10 ancres legales,
+  // 6 en `target="_self"`, 4 sans rien, ZERO en `_blank`.
+  sortie = ouvrirLiensLegauxDansUnOnglet(sortie).html;
 
   const tetes = [
     buildHeadTags(meta),
