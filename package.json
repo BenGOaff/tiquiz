@@ -36,7 +36,8 @@
     "blog:epingles": "node scripts/construire-epingles.mjs",
     "check:resend": "node scripts/check-resend.mjs",
     "check:ventes-sio": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --experimental-strip-types --import ./tests/logic/register-alias.mjs scripts/check-ventes-sio.mts",
-    "vente:v2": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --experimental-strip-types --import ./tests/logic/register-alias.mjs scripts/construire-page-vente-v2.mjs"
+    "vente:v2": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --experimental-strip-types --import ./tests/logic/register-alias.mjs scripts/construire-page-vente-v2.mjs",
+    "vente:fonds": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --experimental-strip-types --import ./tests/logic/register-alias.mjs scripts/convertir-fonds-vente.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -219,6 +219,33 @@ export const CORRECTIONS_V2: readonly CorrectionV2[] = [
   },
 ] as const;
 
+/**
+ * LES FONDS DE SECTION, convertis en WebP.
+ *
+ * Ce sont les cinq fichiers `.svg` que le CSS charge en
+ * `background-image`. Ils ne contiennent AUCUN dessin vectoriel : ce
+ * sont des coquilles SVG qui embarquent quatre bitmaps en base64
+ * chacune, avec des filtres et des masques. 364 Ko pour un fond.
+ *
+ * Mesuré : 1639 Ko à eux cinq, contre 316 Ko pour tout le CSS de la
+ * page. **J'avais annoncé « 2552 Ko de CSS » le 2 septembre, et c'était
+ * une erreur de lecture** : `performance.getEntriesByType` range sous
+ * `initiatorType: "css"` tout ce qu'une feuille va CHERCHER. L'outil de
+ * couverture de Chromium, lui, dit que 100 % des 2428 règles suivies
+ * servent. Il n'y a rien à dégraisser dans le CSS.
+ *
+ * `npm run vente:fonds` produit les `.webp` ; le script de construction
+ * remplace les adresses et REFUSE de construire si un fichier manque.
+ * Le `.svg` reste sur le disque : la page d'origine s'en sert encore.
+ */
+export const FONDS_CONVERTIS: readonly string[] = [
+  "a03b938e3075",
+  "5279162cef54",
+  "0d6b6040b35b",
+  "db3f98b94ba8",
+  "0d11eb462cae",
+] as const;
+
 /** Les sections d'origine que le plan replace, dans l'ordre. */
 export function sectionsAttendues(): string[] {
   return ORDRE_V2.filter((b) => b.genre === "origine").map((b) => (b as { id: string }).id);

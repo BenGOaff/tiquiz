@@ -40,18 +40,17 @@ se projeter, n'y touche pas du tout." Question fermée.
 ### Ce qui reste ouvert sur cette page
 
 - **basculer la vraie page sur la v2**, une fois relue.
-- **2552 Ko de CSS**, mesurés sur la page servie. C'est la feuille de
-  style entière de l'éditeur Systeme.io, dont la page n'utilise qu'une
-  fraction. C'est de loin le premier poste de lenteur, devant les
-  images. Le dégraisser demande de mesurer les sélecteurs réellement
-  employés : un chantier à part, et le seul qui puisse encore diviser le
-  temps de chargement.
-- **88 images sur 104 n'ont aucun texte alternatif**, et **aucune ne
-  porte ses dimensions**. Le premier coûte le référencement et
-  l'accessibilité, le second fait sauter la page pendant qu'elle charge.
-  Les dimensions se calculent (`lib/blog/dimensionsImage.ts` existe déjà
-  et lit les premiers octets d'un fichier) ; les textes s'écrivent en
-  REGARDANT chaque image, une par une, comme pour le blog.
+- **La vitesse et les images sont FAITES** (2 septembre). La page passe
+  de **8551 Ko, 72 requêtes et 2708 ms** à **1556 Ko, 21 requêtes et
+  544 ms**. Les 104 images portent un texte alternatif, 79 portent leurs
+  dimensions.
+  🚨 **Cette ligne annonçait « 2552 Ko de CSS, le premier poste de
+  lenteur ». C'était une erreur de lecture de ma part** :
+  `performance.getEntriesByType` range sous `initiatorType: "css"` tout
+  ce qu'une feuille va CHERCHER. Le CSS fait 316 Ko en ligne et il est
+  utilisé à 100 % (couverture CDP). Le poids était dans 5 fonds « SVG »
+  qui embarquent des bitmaps (1638 Ko) et 7 polices Font Awesome pour 4
+  icônes (1769 Ko). Le détail est dans `AGENTS.md`.
 - **La version anglaise, et les autres langues.** Voir le chantier 4.
 
 
