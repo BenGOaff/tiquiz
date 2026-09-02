@@ -6953,3 +6953,74 @@ contrôle.
 Il dit aussi ce qu'il ne peut PAS savoir : que le code soit tiré ne veut
 pas dire qu'il soit CONSTRUIT. Le build et le redémarrage restent à
 vérifier à l'écran.
+
+## Google refuse le branding : ce qu'il regarde vraiment (2 septembre 2026)
+
+Béné : "google ne valide toujours pas tu as lu les règles en vigueur ?"
+avec ses deux reproches à l'écran.
+
+**Non, je ne les avais pas lues.** J'avais ajouté une section « Connexion
+avec Google » de cinq phrases en supposant que décrire la connexion
+suffisait. Leurs deux pages d'aide (13806988 et 13807376) sont
+explicites, et elles demandent autre chose.
+
+### Reproche 1 : « ne contient pas suffisamment de contenu »
+
+Google exige que la politique **divulgue de façon exhaustive** comment
+l'app ACCÈDE aux données utilisateur Google, les UTILISE, les STOCKE, les
+PROTÈGE, les PARTAGE et les CONSERVE (avec la politique de suppression),
+plus la clause d'**usage limité** (Google API Services User Data Policy,
+Limited Use). Mesuré : la page servait **805 mots visibles**, et la
+section Google en couvrait trois axes sur six.
+
+La section 12 traite maintenant les six, nommés un par un, dans les
+5 langues, avec les scopes demandés (`openid email profile`), la liste
+de ce à quoi on n'accède PAS (Gmail, Drive, Agenda, Contacts, Photos,
+YouTube, écriture, publication), et la clause d'usage limité.
+
+**Ce qui n'est PAS écrit est aussi important :** rien sur un hébergement
+« dans l'Union européenne » (l'article 8 dit l'inverse), aucun délai de
+suppression inventé (on renvoie aux articles 9 et 10). Une politique qui
+promet ce que la page dément juste au dessus est pire qu'une politique
+courte.
+
+### CE QUE LA MESURE A TROUVÉ EN PLUS : Cloudflare masquait les emails
+
+**4 adresses sur 4** de la page étaient servies en
+`<span class="__cf_email__">[email&nbsp;protected]</span>`, y compris
+celle de l'article « Contact » et celle de l'article « Vos droits ».
+C'est l'option « Email Address Obfuscation » de Cloudflare, et elle
+s'applique au HTML SERVI, donc elle est invisible depuis le code.
+
+Un lecteur qui n'exécute pas le JavaScript (le validateur de Google, un
+robot, un lecteur d'écran dégradé) lit donc une politique de
+confidentialité **sans aucune adresse de contact**. `SansObfuscationEmail`
+(`components/legal/LegalPageView.tsx`) pose les marqueurs
+`<!--email_off-->` / `<!--email_on-->`, la directive officielle de
+Cloudflare pour laisser une zone intacte.
+
+**Ça ne se voyait que sur la page RENDUE**, jamais dans le dépôt : c'est
+la leçon du 22 août, appliquée à un intermédiaire qu'on oublie parce
+qu'il ne nous appartient pas.
+
+### Reproche 2 : « votre page d'accueil n'est accessible que via une page de connexion »
+
+**Celui là était PÉRIMÉ, et l'écran le disait :** « Problèmes détectés
+lors de la tentative de validation PRÉCÉDENTE ». Mesuré le même jour
+avec l'agent de Googlebot, sans cookie :
+
+| | |
+|---|---|
+| `tiquiz.fr/` | **200**, aucune redirection, **5325 mots visibles** |
+| lien vers la politique | présent (`/privacy`, `/legal`, `/terms`, `/cookies`) |
+
+Le reproche datait du moment où la page d'accueil déclarée était
+`quiz.tipote.com`, qui est un écran de connexion. Depuis qu'elle a mis
+`tiquiz.fr`, il n'a plus lieu d'être.
+
+**Règle : sur cet écran, on lit d'abord « tentative précédente ».** Un
+rapport d'échec n'est pas un état courant, et corriger un reproche déjà
+réglé coûte un cycle de validation.
+
+Test : `tests/logic/politique-google.test.mts` (9 tests), vérifié en
+rejouant les versions d'avant : 8 rougissent.

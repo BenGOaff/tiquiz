@@ -15,6 +15,26 @@ const NAV_LABELS: Record<string, Record<(typeof LEGAL_SLUGS)[number], string>> =
   ar: { privacy: "الخصوصية", legal: "إشعار قانوني", terms: "شروط البيع", "terms-of-use": "شروط الاستخدام", cookies: "ملفات تعريف الارتباط", affiliate: "برنامج الشركاء" },
 };
 
+// Cloudflare "Email Address Obfuscation" remplace toute adresse email du HTML
+// servi par <span class="__cf_email__">[email protected]</span> plus un script
+// qui la reconstruit. Un lecteur qui n'execute pas le JS (le validateur OAuth
+// de Google, un robot d'indexation, un lecteur d'ecran en mode degrade) lit
+// donc une politique de confidentialite SANS adresse de contact, alors que les
+// articles 10, 14 et 16 en donnent une. Mesure du 2 septembre 2026 sur la
+// production : 4 adresses sur 4 etaient masquees.
+//
+// Ces deux marqueurs sont la directive officielle de Cloudflare pour laisser
+// une zone intacte. Ils ne changent rien a l'affichage.
+function SansObfuscationEmail({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <span dangerouslySetInnerHTML={{ __html: "<!--email_off-->" }} />
+      {children}
+      <span dangerouslySetInnerHTML={{ __html: "<!--email_on-->" }} />
+    </>
+  );
+}
+
 export default function LegalPageView({
   page,
   locale,
@@ -65,6 +85,7 @@ export default function LegalPageView({
           {page.intro && (
             <p className="text-base leading-relaxed text-muted-foreground">{page.intro}</p>
           )}
+          <SansObfuscationEmail>
           <div className="space-y-10">
             {page.sections.map((section, i) => (
               <section key={i} className="space-y-3">
@@ -85,6 +106,7 @@ export default function LegalPageView({
               </section>
             ))}
           </div>
+          </SansObfuscationEmail>
         </div>
       </div>
     </main>
