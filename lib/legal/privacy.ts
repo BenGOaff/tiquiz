@@ -3,7 +3,7 @@ import { COMPANY as C } from "./company";
 
 const fr: LegalPage = {
   title: "Politique de confidentialité",
-  lastUpdated: "Dernière mise à jour : 22/04/2026",
+  lastUpdated: "Dernière mise à jour : 02/09/2026",
   intro: `La présente politique décrit comment ${C.name} (édite Tiquiz®) collecte, utilise et protège les données personnelles des visiteurs et utilisateurs des sites tiquiz.fr et de l'application Tiquiz. Les traitements respectent le RGPD et la loi Informatique et Libertés.`,
   sections: [
     {
@@ -101,25 +101,35 @@ const fr: LegalPage = {
       ],
     },
     {
-      h: "12. Cookies",
+      h: "12. Connexion avec Google",
+      body: [
+        "Tiquiz propose une connexion « Continuer avec Google ». Elle est facultative : le compte peut aussi être créé avec une adresse email et un mot de passe.",
+        "Lorsque vous l'utilisez, Google nous transmet trois informations, et trois seulement : votre adresse email, votre nom d'affichage et l'identifiant unique de votre compte Google. Nous les utilisons uniquement pour créer votre compte Tiquiz, ouvrir votre session et vous reconnaître lors des connexions suivantes.",
+        "Tiquiz ne demande aucun autre accès à votre compte Google : ni Gmail, ni Drive, ni Agenda, ni Contacts, ni Photos, ni aucun droit d'écriture ou de publication. Aucun mot de passe Google ne nous est transmis ni conservé.",
+        "Ces informations ne sont ni vendues, ni louées, ni utilisées à des fins publicitaires, ni transmises à des tiers en dehors des sous-traitants listés à l'article 7. Elles sont conservées pendant la durée de vie du compte, selon les durées de l'article 9, et supprimées avec lui.",
+        "Vous pouvez retirer à tout moment l'accès de Tiquiz à votre compte Google depuis myaccount.google.com/permissions. Votre compte Tiquiz continue d'exister : vous vous connectez alors avec votre adresse email.",
+      ],
+    },
+    {
+      h: "13. Cookies",
       body: [
         "Voir la politique de cookies dédiée pour le détail par catégorie et la gestion du consentement.",
       ],
     },
     {
-      h: "13. Mineurs",
+      h: "14. Mineurs",
       body: [
         "Tiquiz est réservé aux personnes majeures. Si vous constatez qu'un mineur nous a transmis des données, contactez-nous à " + C.email + " pour suppression.",
       ],
     },
     {
-      h: "14. Modifications",
+      h: "15. Modifications",
       body: [
         "La politique peut évoluer. En cas de modification substantielle, les utilisateurs en sont informés. Consultez régulièrement cette page.",
       ],
     },
     {
-      h: "15. Contact",
+      h: "16. Contact",
       body: [
         `${C.name}, ${C.address}, ${C.email}.`,
         "Autorité de contrôle : CNIL (www.cnil.fr).",
@@ -130,7 +140,7 @@ const fr: LegalPage = {
 
 const en: LegalPage = {
   title: "Privacy Policy",
-  lastUpdated: "Last updated: 04/22/2026",
+  lastUpdated: "Last updated: 09/02/2026",
   intro: `This policy explains how ${C.name} (the publisher of Tiquiz®) collects, uses and protects personal data of visitors and users of tiquiz.fr and the Tiquiz application. Processing complies with the EU GDPR and the French Data Protection Act.`,
   sections: [
     {
@@ -228,25 +238,35 @@ const en: LegalPage = {
       ],
     },
     {
-      h: "12. Cookies",
+      h: "12. Signing in with Google",
+      body: [
+        "Tiquiz offers a \"Continue with Google\" sign-in. It is optional: an account can also be created with an email address and a password.",
+        "When you use it, Google sends us three pieces of information, and only three: your email address, your display name and the unique identifier of your Google account. We use them solely to create your Tiquiz account, open your session and recognise you on later sign-ins.",
+        "Tiquiz requests no other access to your Google account: no Gmail, no Drive, no Calendar, no Contacts, no Photos, and no write or posting permission. No Google password is ever sent to us or stored by us.",
+        "This information is never sold, rented, used for advertising, or shared with third parties other than the processors listed in section 7. It is kept for the lifetime of the account, under the retention periods in section 9, and deleted with it.",
+        "You can revoke Tiquiz's access to your Google account at any time at myaccount.google.com/permissions. Your Tiquiz account keeps existing: you then sign in with your email address.",
+      ],
+    },
+    {
+      h: "13. Cookies",
       body: [
         "See our dedicated Cookie Policy for the per-category detail and consent management.",
       ],
     },
     {
-      h: "13. Minors",
+      h: "14. Minors",
       body: [
         "Tiquiz is reserved for adults. If a minor has sent us data, contact " + C.email + " for deletion.",
       ],
     },
     {
-      h: "14. Changes",
+      h: "15. Changes",
       body: [
         "This policy may evolve. In case of material change, users are informed. Please check this page regularly.",
       ],
     },
     {
-      h: "15. Contact",
+      h: "16. Contact",
       body: [
         `${C.name}, ${C.address}, ${C.email}.`,
         "Supervisory authority: CNIL (www.cnil.fr).",
@@ -258,7 +278,7 @@ const en: LegalPage = {
 
 const es: LegalPage = {
   title: "Política de privacidad",
-  lastUpdated: "Última actualización: 22/04/2026",
+  lastUpdated: "Última actualización: 02/09/2026",
   intro: `Esta política describe cómo ${C.name} (editora de Tiquiz®) recopila, utiliza y protege los datos personales de visitantes y usuarios de tiquiz.fr y la aplicación Tiquiz. Los tratamientos cumplen con el RGPD.`,
   sections: [
     { h: "1. Responsable del tratamiento",
@@ -306,16 +326,24 @@ const es: LegalPage = {
       body: ["Tienes derecho de acceso, rectificación, supresión, limitación, portabilidad y oposición, así como el derecho a retirar tu consentimiento en cualquier momento. Puedes ejercer estos derechos escribiendo a " + C.email + ". Respondemos en el plazo de un mes. También puedes presentar una reclamación ante la autoridad de control competente."]},
     { h: "11. Seguridad",
       body: ["Aplicamos medidas técnicas y organizativas apropiadas: cifrado en tránsito y en reposo, control de acceso estricto, aislamiento de entornos, registro de actividad."]},
-    { h: "12. Cookies", body: ["Consulta la política de cookies dedicada para el detalle por categoría y la gestión del consentimiento."]},
-    { h: "13. Menores", body: ["Tiquiz está reservado a personas mayores de edad. Si un menor nos ha transmitido datos, contacta con " + C.email + " para su supresión."]},
-    { h: "14. Modificaciones", body: ["Esta política puede evolucionar. En caso de modificación sustancial, se informará a los usuarios. Consulta esta página regularmente."]},
-    { h: "15. Contacto", body: [`${C.name}, ${C.address}, ${C.email}.`, "Autoridad de control: CNIL (www.cnil.fr)."]},
+    { h: "12. Inicio de sesión con Google",
+      body: [
+        "Tiquiz ofrece un inicio de sesión «Continuar con Google». Es opcional: la cuenta también puede crearse con un correo electrónico y una contraseña.",
+        "Cuando lo utilizas, Google nos transmite tres datos, y solo tres: tu dirección de correo electrónico, tu nombre visible y el identificador único de tu cuenta de Google. Los usamos únicamente para crear tu cuenta de Tiquiz, abrir tu sesión y reconocerte en los inicios de sesión posteriores.",
+        "Tiquiz no solicita ningún otro acceso a tu cuenta de Google: ni Gmail, ni Drive, ni Calendario, ni Contactos, ni Fotos, ni permiso de escritura o publicación. Ninguna contraseña de Google se nos transmite ni se almacena.",
+        "Estos datos no se venden, ni se alquilan, ni se usan con fines publicitarios, ni se comunican a terceros fuera de los encargados indicados en el punto 7. Se conservan durante la vida de la cuenta, según los plazos del punto 9, y se eliminan con ella.",
+        "Puedes retirar el acceso de Tiquiz a tu cuenta de Google en cualquier momento en myaccount.google.com/permissions. Tu cuenta de Tiquiz sigue existiendo: a partir de ahí inicias sesión con tu correo electrónico.",
+      ]},
+    { h: "13. Cookies", body: ["Consulta la política de cookies dedicada para el detalle por categoría y la gestión del consentimiento."]},
+    { h: "14. Menores", body: ["Tiquiz está reservado a personas mayores de edad. Si un menor nos ha transmitido datos, contacta con " + C.email + " para su supresión."]},
+    { h: "15. Modificaciones", body: ["Esta política puede evolucionar. En caso de modificación sustancial, se informará a los usuarios. Consulta esta página regularmente."]},
+    { h: "16. Contacto", body: [`${C.name}, ${C.address}, ${C.email}.`, "Autoridad de control: CNIL (www.cnil.fr)."]},
   ],
 };
 
 const it: LegalPage = {
   title: "Informativa sulla privacy",
-  lastUpdated: "Ultimo aggiornamento: 22/04/2026",
+  lastUpdated: "Ultimo aggiornamento: 02/09/2026",
   intro: `La presente informativa descrive come ${C.name} (editore di Tiquiz®) raccoglie, utilizza e protegge i dati personali dei visitatori e utenti di tiquiz.fr e dell'applicazione Tiquiz. I trattamenti rispettano il GDPR.`,
   sections: [
     { h: "1. Titolare del trattamento",
@@ -360,16 +388,24 @@ const it: LegalPage = {
       body: ["Hai diritto di accesso, rettifica, cancellazione, limitazione, portabilità e opposizione, nonché il diritto di revocare il consenso in qualsiasi momento. Puoi esercitare questi diritti scrivendo a " + C.email + ". Rispondiamo entro un mese. Puoi inoltre presentare reclamo all'autorità di controllo competente."]},
     { h: "11. Sicurezza",
       body: ["Adottiamo misure tecniche e organizzative appropriate: cifratura in transito e a riposo, controllo degli accessi rigoroso, isolamento degli ambienti, log."]},
-    { h: "12. Cookie", body: ["Consulta l'informativa dedicata ai cookie per il dettaglio per categoria e la gestione del consenso."]},
-    { h: "13. Minori", body: ["Tiquiz è riservato alle persone maggiorenni. Se un minore ci ha trasmesso dati, contatta " + C.email + " per la cancellazione."]},
-    { h: "14. Modifiche", body: ["La presente informativa può evolvere. In caso di modifica sostanziale, gli utenti ne saranno informati. Consulta regolarmente questa pagina."]},
-    { h: "15. Contatto", body: [`${C.name}, ${C.address}, ${C.email}.`, "Autorità di controllo: CNIL (www.cnil.fr)."]},
+    { h: "12. Accesso con Google",
+      body: [
+        "Tiquiz propone un accesso «Continua con Google». È facoltativo: l'account può essere creato anche con un indirizzo email e una password.",
+        "Quando lo utilizzi, Google ci trasmette tre informazioni, e soltanto tre: il tuo indirizzo email, il tuo nome visualizzato e l'identificativo univoco del tuo account Google. Le usiamo unicamente per creare il tuo account Tiquiz, aprire la tua sessione e riconoscerti agli accessi successivi.",
+        "Tiquiz non richiede nessun altro accesso al tuo account Google: né Gmail, né Drive, né Calendario, né Contatti, né Foto, né alcun permesso di scrittura o pubblicazione. Nessuna password Google ci viene trasmessa né conservata.",
+        "Queste informazioni non vengono vendute, né noleggiate, né usate a fini pubblicitari, né comunicate a terzi al di fuori dei responsabili elencati al punto 7. Sono conservate per la durata di vita dell'account, secondo i termini del punto 9, ed eliminate insieme ad esso.",
+        "Puoi revocare in qualsiasi momento l'accesso di Tiquiz al tuo account Google su myaccount.google.com/permissions. Il tuo account Tiquiz continua a esistere: da quel momento accedi con il tuo indirizzo email.",
+      ]},
+    { h: "13. Cookie", body: ["Consulta l'informativa dedicata ai cookie per il dettaglio per categoria e la gestione del consenso."]},
+    { h: "14. Minori", body: ["Tiquiz è riservato alle persone maggiorenni. Se un minore ci ha trasmesso dati, contatta " + C.email + " per la cancellazione."]},
+    { h: "15. Modifiche", body: ["La presente informativa può evolvere. In caso di modifica sostanziale, gli utenti ne saranno informati. Consulta regolarmente questa pagina."]},
+    { h: "16. Contatto", body: [`${C.name}, ${C.address}, ${C.email}.`, "Autorità di controllo: CNIL (www.cnil.fr)."]},
   ],
 };
 
 const ar: LegalPage = {
   title: "سياسة الخصوصية",
-  lastUpdated: "آخر تحديث: 22/04/2026",
+  lastUpdated: "آخر تحديث: 02/09/2026",
   intro: `تصف هذه السياسة كيف تقوم ${C.name} (الناشرة لـ Tiquiz®) بجمع واستخدام وحماية البيانات الشخصية لزوار ومستخدمي موقع tiquiz.fr وتطبيق Tiquiz. تلتزم عمليات المعالجة باللائحة العامة لحماية البيانات (RGPD).`,
   sections: [
     { h: "1. المسؤول عن المعالجة",
@@ -414,10 +450,18 @@ const ar: LegalPage = {
       body: ["لديك حقوق الوصول، التصحيح، الحذف، التقييد، نقل البيانات، والاعتراض، بالإضافة إلى الحق في سحب موافقتك في أي وقت. يمكنك ممارسة هذه الحقوق بالكتابة إلى " + C.email + ". نرد في غضون شهر. يمكنك أيضًا تقديم شكوى إلى السلطة المختصة."]},
     { h: "11. الأمن",
       body: ["نطبق تدابير تقنية وتنظيمية مناسبة: تشفير أثناء النقل والتخزين، تحكم صارم في الوصول، عزل البيئات، تسجيل."]},
-    { h: "12. ملفات تعريف الارتباط", body: ["راجع سياسة ملفات تعريف الارتباط المخصصة للتفاصيل حسب الفئة وإدارة الموافقة."]},
-    { h: "13. القاصرون", body: ["Tiquiz محجوز للبالغين. إذا أرسل لنا قاصر بيانات، تواصل مع " + C.email + " للحذف."]},
-    { h: "14. التعديلات", body: ["قد تتطور هذه السياسة. في حالة تعديل جوهري، يُبلَّغ المستخدمون. راجع هذه الصفحة بانتظام."]},
-    { h: "15. الاتصال", body: [`${C.name}, ${C.address}, ${C.email}.`, "السلطة الرقابية: CNIL (www.cnil.fr)."]},
+    { h: "12. تسجيل الدخول عبر Google",
+      body: [
+        "يوفر Tiquiz تسجيل دخول عبر «المتابعة باستخدام Google». وهو اختياري: يمكن أيضًا إنشاء الحساب ببريد إلكتروني وكلمة مرور.",
+        "عند استخدامه، ترسل إلينا Google ثلاث معلومات فقط: بريدك الإلكتروني، واسم العرض الخاص بك، والمعرّف الفريد لحسابك على Google. نستخدمها حصريًا لإنشاء حسابك في Tiquiz وفتح جلستك والتعرف عليك في عمليات تسجيل الدخول اللاحقة.",
+        "لا يطلب Tiquiz أي وصول آخر إلى حسابك على Google: لا Gmail، ولا Drive، ولا التقويم، ولا جهات الاتصال، ولا الصور، ولا أي إذن بالكتابة أو النشر. ولا تُرسل إلينا أي كلمة مرور خاصة بـ Google ولا تُخزَّن.",
+        "لا تُباع هذه المعلومات ولا تُؤجَّر ولا تُستخدم لأغراض إعلانية ولا تُنقل إلى أطراف ثالثة خارج المعالجين المذكورين في البند 7. تُحفظ طوال مدة وجود الحساب وفق المدد المذكورة في البند 9، وتُحذف معه.",
+        "يمكنك سحب وصول Tiquiz إلى حسابك على Google في أي وقت عبر myaccount.google.com/permissions. يظل حسابك في Tiquiz قائمًا: عندئذٍ تسجّل الدخول ببريدك الإلكتروني.",
+      ]},
+    { h: "13. ملفات تعريف الارتباط", body: ["راجع سياسة ملفات تعريف الارتباط المخصصة للتفاصيل حسب الفئة وإدارة الموافقة."]},
+    { h: "14. القاصرون", body: ["Tiquiz محجوز للبالغين. إذا أرسل لنا قاصر بيانات، تواصل مع " + C.email + " للحذف."]},
+    { h: "15. التعديلات", body: ["قد تتطور هذه السياسة. في حالة تعديل جوهري، يُبلَّغ المستخدمون. راجع هذه الصفحة بانتظام."]},
+    { h: "16. الاتصال", body: [`${C.name}, ${C.address}, ${C.email}.`, "السلطة الرقابية: CNIL (www.cnil.fr)."]},
   ],
 };
 

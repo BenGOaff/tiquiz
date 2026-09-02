@@ -166,6 +166,19 @@ export const SCRIPTS_RETIRES = {
   bundles: ["c676514098d7", "9205ba0d1bd2", "6f503eba3b72"] as const,
   /** Les trois états qu'il relit pour reconstruire la page. */
   etats: ["__PRELOADED_STATE__", "initialI18nStore", "initialLanguage"] as const,
+  /**
+   * Le SEUL script de Béné qu'on retire, et il part avec ce qu'il pilote.
+   *
+   * C'est la boucle d'animation du widget « Le 1er outil quiz connecté à
+   * Systeme.io », remplacé le 2 septembre par une mention discrète. Le
+   * garder laisserait un `getElementById("tqz-scoop-widget")` qui rend
+   * `null` pour toujours, donc un script qui tourne pour rien.
+   *
+   * Il est COMPTÉ ici, pas ignoré : le contrôle qui vérifie qu'aucun de
+   * ses scripts n'a été perdu compare un nombre, et un nombre qu'on
+   * ajuste à la main le jour où il rougit ne protège plus de rien.
+   */
+  widget: 1,
 } as const;
 
 /**
@@ -247,6 +260,27 @@ export const CORRECTIONS_V2: readonly CorrectionV2[] = [
       "devient un paragraphe : elle garde exactement sa taille et sa " +
       "couleur (elles viennent du conteneur, pas de la balise), et le " +
       "titre de la page redevient unique.",
+  },
+  {
+    cherche: "page   : '/politique-de-cookies'",
+    remplace: "page   : '/cookies'",
+    pourquoi:
+      "UN 404 DANS LE BANDEAU COOKIES, trouvé en mesurant la page rendue " +
+      "le 2 septembre 2026 : le lien « Voir le détail » pointait sur " +
+      "`/politique-de-cookies`, le chemin de Systeme.io. Nos pages " +
+      "légales s'appellent `/legal`, `/terms`, `/terms-of-use`, " +
+      "`/privacy` et `/cookies` (vérifié dans `app/`), donc cette " +
+      "adresse répondait 404, sur le bandeau où on demande justement " +
+      "au visiteur de faire confiance.\n" +
+      "C'est le drame du centre d'aide du 24 août, à un lien près : " +
+      "`rewriteSiteLinks` ne peut rien ici, il ne connaît que les " +
+      "adresses ABSOLUES, et celle ci est écrite en relatif dans la " +
+      "configuration JavaScript du bandeau. Une correction de chaîne " +
+      "est donc le bon outil, et le script REFUSE de construire si " +
+      "elle ne mord plus.\n" +
+      "L'adresse reste RELATIVE : la page est servie sur `tiquiz.fr` en " +
+      "public et sur le domaine de l'app derrière la clé d'aperçu, et " +
+      "`/cookies` existe des deux côtés.",
   },
 ] as const;
 

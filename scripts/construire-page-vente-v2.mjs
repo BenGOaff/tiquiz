@@ -282,6 +282,44 @@ console.log(
     `(${SCRIPTS_RETIRES.bundles.length} scripts + ${SCRIPTS_RETIRES.etats.length} etats)`,
 );
 
+// ------------------------------- 5septa. la mention Systeme.io
+// Béné, 2 septembre 2026 : "peut être qu'on peut modifier ou supprimer
+// la partie sur le premier outil de quiz connecté à Systeme io ? en
+// faire une mention plus discrète à un endroit stratégique ? On explique
+// assez bien le parcours ailleurs il me semble."
+//
+// Le widget animé (#tqz-scoop-widget) vit dans un bloc HTML libre de
+// Systeme.io, `#rawhtml-21bf9dec`, à l'intérieur de la section qui EST
+// le mécanisme. On remplace le CONTENU de ce bloc, jamais la section :
+// la retirer emporterait le comparatif et les 4 étapes, c'est à dire ce
+// que Béné dit justement être bien expliqué.
+//
+// Les bornes sont les deux seules choses stables : le `<style>` du
+// widget et le `</script>` de sa boucle d'animation. Les deux DOIVENT
+// être là, sinon la capture a bougé et on s'arrête : couper à l'aveugle
+// dans 1,4 Mo laisserait une page à moitié fermée.
+{
+  const iRaw = html.indexOf('id="rawhtml-21bf9dec"');
+  if (iRaw < 0) meurs("le bloc #rawhtml-21bf9dec du widget Systeme.io est introuvable.");
+  const iStyle = html.indexOf("<style", iRaw);
+  const iWidget = html.indexOf('id="tqz-scoop-widget"', iRaw);
+  if (iStyle < 0 || iWidget < 0 || iStyle > iWidget) {
+    meurs("le widget #tqz-scoop-widget n'est plus dans #rawhtml-21bf9dec.");
+  }
+  const iScript = html.indexOf("<script", iWidget);
+  const iFin = iScript < 0 ? -1 : html.indexOf("</script>", iScript);
+  if (iFin < 0) meurs("la boucle d'animation du widget est introuvable : bornes incertaines.");
+  const fin = iFin + "</script>".length;
+
+  const mention = fs.readFileSync(path.join(RACINE, "content/sales/v2/mention-systeme-io.html"), "utf8");
+  const octets = fin - iStyle;
+  html = html.slice(0, iStyle) + mention + html.slice(fin);
+  console.log(
+    "Mention   : le widget anime remplace par une mention discrete  " +
+      `(${(octets / 1024).toFixed(1)} Ko en moins)`,
+  );
+}
+
 // -------------------------------------------- 5bis. les avantages
 // APRÈS « Statistiques de complétion », qui figure dans les 6 colonnes
 // (compté : 6 dans le DOM). Les nouveautés valent pour tous les paliers,
@@ -597,18 +635,32 @@ console.log(
     remplacees += n;
   }
 
-  // LES DIMENSIONS DECLAREES SUIVENT LE FICHIER. Le ratio ne bouge pas
-  // (on reduit, on ne recadre jamais), mais un `width` qui ment sur la
-  // taille reelle est exactement ce qu'un controle finit par relever.
-  const hauteur = (nat, cible) => Math.max(1, Math.round((cible * nat[1]) / nat[0]));
+  // LE `width` D'UNE BALISE EST LA PLACE RESERVEE, PAS LA TAILLE DU
+  // FICHIER (Bene, 2 septembre : "le logo en bas il descend sur les
+  // liens").
+  //
+  // Cette etape ecrivait `width="<cible>" height="<hauteur du fichier>"`,
+  // donc la taille du FICHIER. Le logo du pied de page est declare
+  // `width="108"` dans la capture et sa classe le borne a 108 px : il
+  // est reparti en `width="324" height="167"`. Le CSS gagnait sur la
+  // largeur, l'attribut restait seul sur la hauteur, et le logo etait
+  // ETIRE sur 167 px au lieu de 56, donc par dessus les liens legaux.
+  // MESURE : 3 images sur 104, dont ce logo.
+  //
+  // On ne touche donc PAS a la largeur deja declaree : on recalcule la
+  // seule hauteur, sur le ratio du fichier, qui ne bouge pas (on reduit,
+  // on ne recadre jamais). Sans largeur declaree, la cible fait foi.
+  const hauteur = (nat, largeur) => Math.max(1, Math.round((largeur * nat[1]) / nat[0]));
   html = html.replace(/<img\b[^>]*>/gi, (balise) => {
     const m = /\/v\/tiquiz\/([^"']+?)-(\d+)\.webp/.exec(balise);
     if (!m) return balise;
     const img = images.find((x) => x.fichier.startsWith(`${m[1]}.`) && x.cible === Number(m[2]));
     if (!img) return balise;
+    const declaree = Number(/\swidth="(\d+)"/.exec(balise)?.[1]);
+    const largeur = Number.isFinite(declaree) && declaree > 0 ? declaree : img.cible;
     return balise
-      .replace(/\swidth="\d+"/, ` width="${img.cible}"`)
-      .replace(/\sheight="\d+"/, ` height="${hauteur(img.naturelle, img.cible)}"`);
+      .replace(/\swidth="\d+"/, ` width="${largeur}"`)
+      .replace(/\sheight="\d+"/, ` height="${hauteur(img.naturelle, largeur)}"`);
   });
 
   console.log(
