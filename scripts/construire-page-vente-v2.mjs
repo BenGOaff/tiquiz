@@ -558,6 +558,121 @@ console.log(
   console.log(`Images    : ${posees} passees en chargement differe sur ${vues} (les 8 premieres restent immediates)`);
 }
 
+// -------------------------------------- 5nona. les images surdimensionnees
+// CETTE ETAPE PASSE EN DERNIER, et c'est obligatoire : les etapes des
+// textes alternatifs et des dimensions travaillent sur les NOMS
+// D'ORIGINE. Renommer avant, c'est leur presenter des fichiers qu'elles
+// ne connaissent pas, et le garde-fou des alt refuse alors de construire.
+// Les portraits de temoignages font 1024 x 1024 et s'affichent en
+// 48 x 48. `npm run vente:images` en produit une version a la taille
+// utile (trois fois l'affichage, pour les ecrans a forte densite) ; ici
+// on ne fait que remplacer l'adresse ET les dimensions declarees.
+//
+// Les fichiers d'ORIGINE restent : la vraie page de vente sert les
+// siens, le chantier ne change rien a ce qui est en ligne.
+{
+  const src = fs.readFileSync(path.join(RACINE, "lib/sales/imagesV2.ts"), "utf8");
+  const images = [...src.matchAll(
+    /\{ fichier: "([^"]+)", naturelle: \[(\d+), (\d+)\], afficheeMax: \[(\d+), (\d+)\], cible: (\d+) \}/g,
+  )].map((m) => ({
+    fichier: m[1],
+    naturelle: [Number(m[2]), Number(m[3])],
+    cible: Number(m[6]),
+  }));
+  if (images.length === 0) meurs("lib/sales/imagesV2.ts ne rend aucune image : le motif a bouge.");
+
+  let poidsAvant = 0, poidsApres = 0, remplacees = 0;
+  for (const img of images) {
+    const base = img.fichier.replace(/\.[a-z0-9]+$/i, "");
+    const reduit = `${base}-${img.cible}.webp`;
+    const chemin = path.join(RACINE, "public/v/tiquiz", reduit);
+    if (!fs.existsSync(chemin)) {
+      meurs(`${reduit} est absent. Lance d'abord : npm run vente:images`);
+    }
+    const n = html.split(`/v/tiquiz/${img.fichier}`).length - 1;
+    if (n === 0) meurs(`${img.fichier} n'est reference nulle part : la capture a bouge.`);
+    html = html.split(`/v/tiquiz/${img.fichier}`).join(`/v/tiquiz/${reduit}`);
+    poidsAvant += fs.statSync(path.join(RACINE, "public/v/tiquiz", img.fichier)).size;
+    poidsApres += fs.statSync(chemin).size;
+    remplacees += n;
+  }
+
+  // LES DIMENSIONS DECLAREES SUIVENT LE FICHIER. Le ratio ne bouge pas
+  // (on reduit, on ne recadre jamais), mais un `width` qui ment sur la
+  // taille reelle est exactement ce qu'un controle finit par relever.
+  const hauteur = (nat, cible) => Math.max(1, Math.round((cible * nat[1]) / nat[0]));
+  html = html.replace(/<img\b[^>]*>/gi, (balise) => {
+    const m = /\/v\/tiquiz\/([^"']+?)-(\d+)\.webp/.exec(balise);
+    if (!m) return balise;
+    const img = images.find((x) => x.fichier.startsWith(`${m[1]}.`) && x.cible === Number(m[2]));
+    if (!img) return balise;
+    return balise
+      .replace(/\swidth="\d+"/, ` width="${img.cible}"`)
+      .replace(/\sheight="\d+"/, ` height="${hauteur(img.naturelle, img.cible)}"`);
+  });
+
+  console.log(
+    `Portraits : ${images.length} images ramenees a leur taille utile, ${remplacees} references  ` +
+      `(${(poidsAvant / 1024).toFixed(0)} Ko -> ${(poidsApres / 1024).toFixed(0)} Ko)`,
+  );
+}
+
+// ------------------------------------ 5deca. les images mal declarees
+// DEUX IMAGES ÉTAIENT CASSÉES, et c'est le retrait du bundle qui les a
+// mises à nu.
+//
+// La capture porte des `data:image/png;base64,/9j/...`. Le préfixe
+// `/9j/` est la signature d'un JPEG : ces images ANNONCENT du PNG et
+// contiennent du JPEG. Sur une adresse `data:`, le type déclaré fait
+// foi, donc le navigateur refuse de les décoder. Le bundle React de
+// Systeme.io reconstruisait ces balises et masquait le problème ; sans
+// lui, elles s'affichent vides.
+//
+// Trouvé en MESURANT la page rendue (`naturalWidth === 0`), pas en la
+// relisant. Et vérifié dans les deux fichiers : elles sont dans la
+// capture d'origine, on ne les a pas fabriquées.
+//
+// On corrige la DÉCLARATION, pas les pixels : pas un octet d'image ne
+// bouge.
+{
+  const avant = (html.match(/data:image\/png;base64,\/9j\//g) ?? []).length;
+  if (avant === 0) {
+    meurs(
+      "aucune image ne declare du PNG en portant du JPEG : la capture a change, " +
+        "retire cette etape plutot que de la laisser sans effet.",
+    );
+  }
+  html = html.split("data:image/png;base64,/9j/").join("data:image/jpeg;base64,/9j/");
+
+  // ET L'UNE D'ELLES EST TRONQUEE DANS LA CAPTURE ELLE MEME.
+  //
+  // Son base64 ne finit pas par `ffd9`, la marque de fin d'un JPEG :
+  // les octets manquent, aucun navigateur ne peut la decoder, et rien
+  // ne peut les rendre. Ce sont des apercus flous de prechargement
+  // (`tqz-opt-lo`, "optimized low quality"), donc invisibles pour la
+  // lectrice, mais on ne sert pas une image qui ne PEUT pas s'afficher :
+  // on retire la balise, et ses 3,5 Ko de base64 avec.
+  let retirees = 0;
+  html = html.replace(/<img\b[^>]*data:image\/jpeg;base64,(\/9j\/[A-Za-z0-9+/=]+)[^>]*>/gi, (balise, b64) => {
+    const octets = Buffer.from(b64, "base64");
+    const complet = octets.length > 2 && octets[octets.length - 2] === 0xff && octets[octets.length - 1] === 0xd9;
+    if (complet) return balise;
+    // On ne retire QUE ce qui est decoratif : un apercu porte un alt
+    // vide. Une image qui dit quelque chose se signalerait plutot que
+    // de disparaitre en silence.
+    if (!/alt=""/.test(balise)) {
+      meurs("une image JPEG tronquee porte un texte alternatif : a regarder a la main.");
+    }
+    retirees++;
+    return "";
+  });
+
+  console.log(
+    `Reparees  : ${avant} images qui annoncaient du PNG et portaient du JPEG` +
+      (retirees > 0 ? `, ${retirees} apercu(s) tronque(s) dans la capture retire(s)` : ""),
+  );
+}
+
 // ------------------------------------------------------- 5ter. la FAQ
 {
   const faq = construireFaq(html);
