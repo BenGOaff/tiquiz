@@ -1,147 +1,208 @@
 <!--
-  QUALIFICATION : trois questions, une réponse franche. Juste avant le prix.
+  QUALIFICATION : un vrai petit quiz, une question a la fois. Juste avant
+  le prix.
 
-  Béné, 2 septembre 2026, sur le premier jet : "le quiz est moche, il
-  prend trop de place : il faut pouvoir le voir sans scroller. En plus
-  les questions sont balourdes, elles ne permettent pas vraiment de
-  déterminer si OUI ou NON Tiquiz est fait pour le visiteur."
+  -- CE QUE BÉNÉ A DIT, DEUX FOIS ------------------------------------
 
-  -- CE QUE LES TROIS QUESTIONS DOIVENT TRANCHER -----------------------
+  Béné, 2 septembre, premier jet : "le quiz est moche, il prend trop de place :
+  il faut pouvoir le voir sans scroller. En plus les questions sont
+  balourdes, elles ne permettent pas vraiment de determiner si OUI ou NON
+  Tiquiz est fait pour le visiteur."
 
-  Elle a nommé les trois refus, et ce sont EXACTEMENT les trois options
-  du bas de chaque colonne. Rien n'est inventé :
+  Béné, 2 septembre, deuxième jet (les trois questions en colonnes) : "est-ce
+  que toi, en tant que visiteur tu comprends que c'est un quiz et que tu
+  dois cliquer pour savoir si Tiquiz est fait pour toi ?? C'est moche pas
+  ergonomique, pas un 'vrai' quiz, pas pratique, trop complique, trop
+  restrictif, pas assez bien ecrit."
 
-  1. un résultat rédigé sur mesure pour chaque visiteur (Tiquiz attribue
-     un profil PRÉÉCRIT, cf. lib/quizScoring.ts et quiz_results) ;
-  2. des logiques conditionnelles avancées (le parcours est linéaire) ;
-  3. un design au pixel près (le branding se règle, la structure non).
+  Elle avait raison sur les six points, et ils ont TOUS la meme cause :
+  j'avais fait un FORMULAIRE en trois colonnes, pas un quiz. Un quiz pose
+  UNE question, on clique, on avance, on obtient un resultat. Un
+  formulaire montre tout d'un coup et attend qu'on remplisse.
 
-  Mon premier jet demandait "tu vends quelque chose ?" et "tu es prêt à
-  relire l'IA ?" : deux questions auxquelles tout le monde répond oui,
-  donc deux questions qui ne trient personne. Une question de
-  qualification qui ne peut pas faire sortir quelqu'un n'en est pas une.
+  | Ce qu'elle a vu | Ce qui le causait |
+  |---|---|
+  | on ne comprend pas qu'il faut cliquer | des libelles plats, bord gris clair, aucune affordance |
+  | pas un "vrai" quiz | trois questions affichees ensemble, aucune progression, aucun resultat qui arrive |
+  | trop complique | six options a lire avant de bouger le doigt |
+  | trop restrictif | UNE reponse "non" sur trois donnait un refus sec |
+  | pas assez bien ecrit | du vocabulaire d'outil ("branches conditionnelles poussees") |
+  | moche | trois colonnes serrees a 16 px de gouttiere |
+
+  -- CE QUI CHANGE ----------------------------------------------------
+
+  1. UNE QUESTION A LA FOIS, avec une barre de progression et "1 sur 3".
+     C'est ce qui fait qu'un quiz se lit comme un quiz.
+  2. DEUX GROS BOUTONS, pleine largeur, fond bleu clair, fleche a droite,
+     qui montent au survol. On ne peut plus les prendre pour du texte.
+  3. TROIS VERDICTS, plus deux. Le refus sec sur une seule reponse etait
+     le "trop restrictif" : quelqu'un qui veut des leads ET une maquette
+     au pixel pres se faisait renvoyer, alors que Tiquiz lui va tres
+     bien sur l'essentiel. Trois reponses "non" restent un vrai non.
+  4. UN BOUTON RECOMMENCER, en <input type="reset"> natif : sans lui, on
+     ne peut plus rien changer une fois la troisieme reponse donnee.
+
+  -- CE QUE LES TROIS QUESTIONS TRANCHENT -----------------------------
+
+  Elle a nomme les trois refus, et ce sont EXACTEMENT les trois secondes
+  options. Rien n'est invente :
+
+  1. un resultat redige sur mesure pour chaque visiteur (Tiquiz attribue
+     un profil PREECRIT, cf. lib/quizScoring.ts et quiz_results) ;
+  2. des logiques conditionnelles avancees (le parcours est lineaire) ;
+  3. un design au pixel pres (le branding se regle, la structure non).
+
+  Une question de qualification qui ne peut faire sortir personne n'en
+  est pas une : c'est ce qui avait tue le tout premier jet ("tu vends
+  quelque chose ?", "tu es pret a relire l'IA ?").
 
   -- LE POSITIONNEMENT, ET C'EST LE VRAI SUJET DU BLOC -----------------
 
-  Béné : "Tiquiz c'est pour les personnes qui veulent capturer des leads
-  et il est optimisé pour ça, pas pour établir un diagnostic ultra
-  personnalisé ni pour évaluer finement une personne. C'est pour attirer
-  des contacts qualifiés et les envoyer sur la liste emails où tout se
-  passe ensuite. Et ça marche pour tout le monde, mais c'est UNE partie
-  du système complet : la partie qui attire des leads, commence à
+  Bene : "Tiquiz c'est pour les personnes qui veulent capturer des leads
+  et il est optimise pour ca, pas pour etablir un diagnostic ultra
+  personnalise ni pour evaluer finement une personne. C'est pour attirer
+  des contacts qualifies et les envoyer sur la liste emails ou tout se
+  passe ensuite. Et ca marche pour tout le monde, mais c'est UNE partie
+  du systeme complet : la partie qui attire des leads, commence a
   construire la confiance et automatise la prospection, avec fun et plus
-  d'efficacité qu'un PDF ou un simple formulaire."
-
-  D'où la phrase d'accroche du bloc et les deux verdicts : on ne vend pas
-  un outil de diagnostic, on vend la PORTE D'ENTRÉE d'un système.
-
-  -- SANS SCROLLER ----------------------------------------------------
-
-  Les trois questions sont en COLONNES, pas en lignes : une rangée de
-  200 px au lieu de trois rangées de 116. Mesuré à 1280x900, tout le bloc
-  tient dans l'écran, verdict compris. Le verdict a une hauteur réservée
-  (`min-height`) pour que la réponse s'affiche SUR PLACE, sans pousser la
-  page vers le bas au moment où on la lit.
+  d'efficacite qu'un PDF ou un simple formulaire."
 
   -- CE QUE CE BLOC N'EST PAS -----------------------------------------
 
-  Ce n'est PAS un quiz Tiquiz, et il ne prétend pas l'être : aucune
+  Ce n'est PAS un quiz Tiquiz, et il ne pretend pas l'etre : aucune
   capture d'email, aucun tag, aucun profil, rien qui parte nulle part.
 
   -- ET IL MARCHE SANS JAVASCRIPT DE NOTRE PART -----------------------
 
-  Tout est en boutons radio + CSS `:has()`. Aucun script : c'est un
-  script qui a cassé la FAQ le 2 septembre. Un bloc qui n'a besoin de
-  rien ne peut pas se casser quand on retire quelque chose.
+  Boutons radio + CSS `:has()`, et un <input type="reset"> pour repartir
+  a zero. Aucun script : c'est un script qui a casse la FAQ le
+  2 septembre. Un bloc qui n'a besoin de rien ne peut pas se casser quand
+  on retire quelque chose. Le <form> est sur : la page capturee n'en
+  contient aucun autre (mesure), donc pas d'imbrication.
 -->
 <section id="section-v2-pourtoi" class="tqv-pt-sec">
 <style>
 .tqv-pt-sec{width:100%;background:#fff;padding:100px 20px}
-.tqv-pt{width:100%;max-width:1060px;margin:0 auto;font-family:"Open Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#2B3264;box-sizing:border-box}
+.tqv-pt{width:100%;max-width:720px;margin:0 auto;font-family:"Open Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#2B3264;box-sizing:border-box}
 .tqv-pt *{box-sizing:border-box}
 .tqv-pt-h{font-size:34px;line-height:1.2;font-weight:700;margin:0 0 10px;text-align:center}
 .tqv-pt-h span{color:#20BBE6}
-.tqv-pt-p{font-size:16.5px;line-height:1.6;color:#3B3B3B;max-width:760px;margin:0 auto 24px;text-align:center}
-.tqv-pt-grille{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0 0 22px}
-.tqv-pt-q{border:1px solid #E4E8F2;border-radius:16px;padding:18px 18px 16px;display:flex;flex-direction:column}
-.tqv-pt-q>p{font-size:16px;font-weight:700;line-height:1.35;margin:0 0 12px;min-height:44px}
-.tqv-pt-q>p b{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:999px;background:#5A6EF6;color:#fff;font-size:13px;margin:0 8px 0 0;vertical-align:1px}
-.tqv-pt-ops{display:flex;flex-direction:column;gap:8px;margin:auto 0 0}
+.tqv-pt-p{font-size:16.5px;line-height:1.6;color:#3B3B3B;margin:0 auto 26px;text-align:center}
+.tqv-pt-scene{min-height:396px}
+.tqv-pt-carte{border:1px solid #E4E8F2;border-radius:20px;padding:26px 26px 24px;box-shadow:0 10px 30px rgba(43,50,100,.06)}
+/* La barre de progression : elle dit qu'il y a une suite, donc qu'on avance. */
+.tqv-pt-prog{display:flex;align-items:center;gap:12px;margin:0 0 18px}
+.tqv-pt-piste{flex:1;height:6px;border-radius:999px;background:#E9ECF7;overflow:hidden}
+.tqv-pt-jauge{display:block;height:100%;border-radius:999px;background:#5A6EF6;width:6%;transition:width .28s ease}
+.tqv-pt-rang{display:none;font-size:13px;font-weight:700;color:#6B7392;white-space:nowrap}
+.tqv-pt-e{display:none}
+.tqv-pt-e>p{font-size:21px;font-weight:700;line-height:1.35;margin:0 0 18px}
+.tqv-pt-ops{display:flex;flex-direction:column;gap:12px}
 .tqv-pt-ops input{position:absolute;opacity:0;width:0;height:0}
-.tqv-pt-ops label{cursor:pointer;font-size:14.5px;line-height:1.35;padding:10px 14px;border-radius:12px;border:2px solid #E4E8F2;color:#2B3264;background:#fff}
-.tqv-pt-ops label:hover{border-color:#5A6EF6}
-.tqv-pt-ops input:focus-visible+label{outline:2px solid #5A6EF6;outline-offset:2px}
-.tqv-pt-ops input:checked+label{background:#5A6EF6;border-color:#5A6EF6;color:#fff;font-weight:600}
-.tqv-pt-sortie{min-height:228px}
-.tqv-pt-v{border-radius:18px;padding:22px 26px;background:#F3F6FC;display:none}
-.tqv-pt-v h3{font-size:22px;font-weight:700;margin:0 0 8px;line-height:1.3}
-.tqv-pt-v p{font-size:15.5px;line-height:1.65;color:#3B3B3B;margin:0 0 10px}
-.tqv-pt-v p:last-child{margin:0}
-.tqv-pt-v a{display:inline-block;background:#5A6EF6;color:#fff;font-weight:700;font-size:17px;padding:12px 28px;border-radius:999px;box-shadow:0 9px 24px rgba(90,110,246,.435);animation:tqButtonPulse 1.4s ease-in-out infinite;margin:6px 0 0}
-.tqv-pt-att{font-size:15px;line-height:1.6;color:#6B7392;text-align:center;margin:22px 0 0}
-/* Le verdict n'apparaît que quand les TROIS réponses sont données.
-   Sans ça, on annonce « c'est pour toi » à quelqu'un qui n'a rien dit. */
+/* Deux gros boutons pleine largeur : le premier jet avait des libelles
+   plats sur bord gris clair, et personne ne voyait qu'il fallait cliquer. */
+.tqv-pt-ops label{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:16.5px;line-height:1.4;font-weight:600;padding:17px 22px;border-radius:14px;border:2px solid #C9D2FB;color:#2B3264;background:#F1F4FE;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.tqv-pt-ops label::after{content:"\2192";font-size:20px;font-weight:700;color:#5A6EF6;flex:0 0 auto}
+.tqv-pt-ops label:hover{border-color:#5A6EF6;background:#E7ECFE;transform:translateY(-2px);box-shadow:0 10px 22px rgba(90,110,246,.22)}
+.tqv-pt-ops input:focus-visible+label{outline:3px solid #5A6EF6;outline-offset:3px}
+.tqv-pt-v{display:none}
+.tqv-pt-v h3{font-size:24px;font-weight:700;margin:0 0 10px;line-height:1.3}
+.tqv-pt-v p{font-size:16px;line-height:1.65;color:#3B3B3B;margin:0 0 12px}
+.tqv-pt-cta{display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin:18px 0 0}
+.tqv-pt-cta a{display:inline-block;background:#5A6EF6;color:#fff;font-weight:700;font-size:17px;padding:13px 30px;border-radius:999px;box-shadow:0 9px 24px rgba(90,110,246,.435);animation:tqButtonPulse 1.4s ease-in-out infinite}
+.tqv-pt-reprise{visibility:hidden;text-align:center;margin:16px 0 0}
+.tqv-pt-reprise input{font:inherit;font-size:14.5px;font-weight:600;color:#6B7392;background:none;border:0;border-bottom:1px solid #C6CCE0;padding:2px 0;cursor:pointer}
+.tqv-pt-reprise input:hover{color:#5A6EF6;border-bottom-color:#5A6EF6}
+/* Une question a la fois. On affiche l'etape dont la reponse manque. */
+.tqv-pt:not(:has(input[name="pt1"]:checked)) #ptE1{display:block}
+.tqv-pt:has(input[name="pt1"]:checked):not(:has(input[name="pt2"]:checked)) #ptE2{display:block}
+.tqv-pt:has(input[name="pt1"]:checked):has(input[name="pt2"]:checked):not(:has(input[name="pt3"]:checked)) #ptE3{display:block}
+.tqv-pt:not(:has(input[name="pt1"]:checked)) #ptR1{display:block}
+.tqv-pt:has(input[name="pt1"]:checked):not(:has(input[name="pt2"]:checked)) #ptR2{display:block}
+.tqv-pt:has(input[name="pt1"]:checked):has(input[name="pt2"]:checked):not(:has(input[name="pt3"]:checked)) #ptR3{display:block}
+.tqv-pt:has(input[name="pt1"]:checked) .tqv-pt-jauge{width:35%}
+.tqv-pt:has(input[name="pt1"]:checked):has(input[name="pt2"]:checked) .tqv-pt-jauge{width:68%}
+.tqv-pt:has(input[name="pt1"]:checked):has(input[name="pt2"]:checked):has(input[name="pt3"]:checked) .tqv-pt-jauge{width:100%}
+.tqv-pt:has(input[name="pt3"]:checked) .tqv-pt-prog{display:none}
+.tqv-pt:has(input[name="pt3"]:checked) .tqv-pt-reprise{visibility:visible}
+/* TROIS verdicts. Les six combinaisons melangees sont enumerees une par
+   une : c'est verbeux, et ca ne peut pas se tromper de cas. */
 .tqv-pt:has(#pt1a:checked):has(#pt2a:checked):has(#pt3a:checked) .tqv-pt-oui{display:block}
-.tqv-pt:has(#pt1a:checked):has(#pt2a:checked):has(#pt3a:checked) .tqv-pt-att{display:none}
-.tqv-pt:has(#pt1b:checked) .tqv-pt-non,
-.tqv-pt:has(#pt2b:checked) .tqv-pt-non,
-.tqv-pt:has(#pt3b:checked) .tqv-pt-non{display:block}
-.tqv-pt:has(#pt1b:checked) .tqv-pt-att,
-.tqv-pt:has(#pt2b:checked) .tqv-pt-att,
-.tqv-pt:has(#pt3b:checked) .tqv-pt-att{display:none}
+.tqv-pt:has(#pt1b:checked):has(#pt2b:checked):has(#pt3b:checked) .tqv-pt-non{display:block}
+.tqv-pt:has(#pt1a:checked):has(#pt2a:checked):has(#pt3b:checked) .tqv-pt-mixte,
+.tqv-pt:has(#pt1a:checked):has(#pt2b:checked):has(#pt3a:checked) .tqv-pt-mixte,
+.tqv-pt:has(#pt1a:checked):has(#pt2b:checked):has(#pt3b:checked) .tqv-pt-mixte,
+.tqv-pt:has(#pt1b:checked):has(#pt2a:checked):has(#pt3a:checked) .tqv-pt-mixte,
+.tqv-pt:has(#pt1b:checked):has(#pt2a:checked):has(#pt3b:checked) .tqv-pt-mixte,
+.tqv-pt:has(#pt1b:checked):has(#pt2b:checked):has(#pt3a:checked) .tqv-pt-mixte{display:block}
 @media (max-width:900px){
   .tqv-pt-sec{padding:60px 16px}
   .tqv-pt-h{font-size:27px}
-  .tqv-pt-grille{grid-template-columns:minmax(0,1fr);gap:12px}
-  .tqv-pt-q>p{min-height:0;font-size:16.5px}
-  .tqv-pt-sortie{min-height:0}
-  .tqv-pt-v{padding:22px 20px}
+  .tqv-pt-scene{min-height:0}
+  .tqv-pt-carte{padding:22px 20px}
+  .tqv-pt-e>p{font-size:19px}
+  .tqv-pt-ops label{font-size:16px;padding:16px 18px}
 }
 </style>
-<div class="tqv-pt">
-  <h2 class="tqv-pt-h">Tiquiz fait <span>une seule chose</span>, et il la fait très bien.</h2>
-  <p class="tqv-pt-p">Attirer des contacts qualifiés et les emmener dans ta liste emails, là où la vente se joue. Trois questions pour voir si c'est ce que tu cherches.</p>
+<form class="tqv-pt">
+  <h2 class="tqv-pt-h">Est-ce que Tiquiz est fait <span>pour toi</span>&nbsp;?</h2>
+  <p class="tqv-pt-p">Trois questions, dix secondes, et je te réponds franchement. Même si la réponse est non.</p>
 
-  <div class="tqv-pt-grille">
-    <div class="tqv-pt-q">
-      <p><b>1</b>À la fin du quiz, ton visiteur reçoit&nbsp;:</p>
+  <div class="tqv-pt-scene">
+  <div class="tqv-pt-carte">
+    <div class="tqv-pt-prog">
+      <span class="tqv-pt-piste"><span class="tqv-pt-jauge"></span></span>
+      <span class="tqv-pt-rang" id="ptR1">Question 1 sur 3</span>
+      <span class="tqv-pt-rang" id="ptR2">Question 2 sur 3</span>
+      <span class="tqv-pt-rang" id="ptR3">Question 3 sur 3</span>
+    </div>
+
+    <div class="tqv-pt-e" id="ptE1">
+      <p>À la fin de ton quiz, tu veux que la personne&nbsp;:</p>
       <div class="tqv-pt-ops">
-        <input type="radio" name="pt1" id="pt1a"><label for="pt1a">Un profil parmi ceux que j'ai écrits</label>
-        <input type="radio" name="pt1" id="pt1b"><label for="pt1b">Un texte sur mesure, différent pour chacun</label>
+        <input type="radio" name="pt1" id="pt1a"><label for="pt1a">Se reconnaisse dans un des profils que j'ai écrits</label>
+        <input type="radio" name="pt1" id="pt1b"><label for="pt1b">Reçoive une analyse rédigée sur mesure, rien que pour elle</label>
       </div>
     </div>
 
-    <div class="tqv-pt-q">
-      <p><b>2</b>Le parcours des questions, tu le veux&nbsp;:</p>
+    <div class="tqv-pt-e" id="ptE2">
+      <p>Les questions de ton quiz, tu les vois comment&nbsp;?</p>
       <div class="tqv-pt-ops">
-        <input type="radio" name="pt2" id="pt2a"><label for="pt2a">Le même pour tout le monde, et court</label>
-        <input type="radio" name="pt2" id="pt2b"><label for="pt2b">Avec des branches conditionnelles poussées</label>
+        <input type="radio" name="pt2" id="pt2a"><label for="pt2a">Les mêmes pour tout le monde, et ça va vite</label>
+        <input type="radio" name="pt2" id="pt2b"><label for="pt2b">Un parcours qui change à chaque réponse donnée</label>
       </div>
     </div>
 
-    <div class="tqv-pt-q">
-      <p><b>3</b>L'apparence de ton quiz, tu la veux&nbsp;:</p>
+    <div class="tqv-pt-e" id="ptE3">
+      <p>Et l'allure de ton quiz&nbsp;?</p>
       <div class="tqv-pt-ops">
-        <input type="radio" name="pt3" id="pt3a"><label for="pt3a">À mes couleurs, et en ligne aujourd'hui</label>
-        <input type="radio" name="pt3" id="pt3b"><label for="pt3b">Au pixel près, comme ma maquette</label>
+        <input type="radio" name="pt3" id="pt3a"><label for="pt3a">Mes couleurs, mon logo, et c'est en ligne aujourd'hui</label>
+        <input type="radio" name="pt3" id="pt3b"><label for="pt3b">Ma maquette reproduite au pixel près</label>
       </div>
     </div>
-  </div>
-
-  <div class="tqv-pt-sortie">
-    <p class="tqv-pt-att">Réponds aux trois questions pour voir le verdict.</p>
 
     <div class="tqv-pt-v tqv-pt-oui">
-      <h3>Oui, c'est fait pour toi.</h3>
-      <p>Tiquiz est la porte d'entrée de ton système&nbsp;: ton visiteur apprend quelque chose sur lui, la confiance démarre, et il arrive dans ta liste déjà taggé. Le reste de la vente se joue dans tes emails, comme d'habitude. C'est là qu'un quiz gagne contre un PDF ou un formulaire&nbsp;: on y répond pour le plaisir, on le partage, et tu récupères un contact dont tu sais déjà ce qu'il cherche.</p>
-      <p><a href="#section-518f489a">Voir les formules</a></p>
+      <h3>Oui. Et pas qu'un peu.</h3>
+      <p>C'est exactement le métier de Tiquiz&nbsp;: des gens qui répondent pour le plaisir, qui apprennent un truc sur eux, et qui arrivent dans ta liste emails déjà taggés selon leur profil. La vente, elle, se joue dans tes emails, comme d'habitude.</p>
+      <p>Tiquiz, c'est la porte d'entrée. Et une porte d'entrée à laquelle on a envie de répondre, ça remplit une liste bien plus vite qu'un PDF ou qu'un formulaire.</p>
+      <div class="tqv-pt-cta"><a href="#section-518f489a">Voir les formules</a></div>
+    </div>
+
+    <div class="tqv-pt-v tqv-pt-mixte">
+      <h3>Sur l'essentiel, oui.</h3>
+      <p>Attirer des contacts qualifiés et les emmener dans ta liste emails&nbsp;: c'est ce que Tiquiz fait, et il le fait très bien. Sur un point, il ne fera pas ce que tu as en tête. Un texte écrit sur mesure pour chaque personne, un parcours qui se ramifie, une maquette reproduite au pixel près&nbsp;: ces trois là, il ne sait pas.</p>
+      <p>C'est ce choix qui te permet de mettre ton quiz en ligne aujourd'hui plutôt que dans trois semaines. À toi de voir si ça vaut le coup. Moi je pense que oui, mais tu me diras.</p>
+      <div class="tqv-pt-cta"><a href="#section-518f489a">Voir les formules</a></div>
     </div>
 
     <div class="tqv-pt-v tqv-pt-non">
-      <h3>Non, et je préfère te le dire.</h3>
-      <p>Un résultat sur mesure pour chaque personne, des branches conditionnelles poussées, une mise en page au pixel près&nbsp;: Tiquiz ne fait aucune des trois. Il attribue un profil parmi ceux que tu as écrits, il pose tes questions dans l'ordre, et il s'habille à tes couleurs. C'est ce choix là qui le rend rapide à mettre en ligne.</p>
+      <h3>Franchement, non.</h3>
+      <p>Un texte rédigé sur mesure pour chacun, un parcours qui se ramifie, une maquette au pixel près&nbsp;: Tiquiz ne fait aucune des trois, et il ne les fera pas. Il attribue un des profils que tu as écrits, il pose tes questions dans l'ordre, il prend tes couleurs. C'est ce choix là qui le rend rapide à mettre en ligne.</p>
       <p>Tu peux quand même t'en servir comme porte d'entrée pour remplir ta liste, et faire le travail fin ailleurs. Mais je ne vais pas te le vendre en te laissant croire qu'il fera autre chose.</p>
     </div>
   </div>
-</div>
+  </div>
+
+  <p class="tqv-pt-reprise"><input type="reset" value="Recommencer le test"></p>
+</form>
 </section>

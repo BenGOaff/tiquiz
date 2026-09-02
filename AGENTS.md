@@ -4360,43 +4360,103 @@ alors que le compte relevé ce jour là vérifie `send.tipote.com` et pas
 est une décision de Béné, pas une déduction. Le contrôle est là pour
 qu'elle la prenne en connaissance de cause.
 
-### Le bloc de qualification, deuxieme passage (2 septembre 2026)
+### Le bloc de qualification : trois passages, et le troisième est le bon (2 septembre 2026)
 
-Béné : "le quiz est moche, il prend trop de place : il faut pouvoir le
-voir sans scroller. En plus les questions sont balourdes, elles ne
-permettent pas vraiment de déterminer si OUI ou NON Tiquiz est fait
-pour le visiteur."
+Béné, sur le premier jet : "le quiz est moche, il prend trop de place :
+il faut pouvoir le voir sans scroller. En plus les questions sont
+balourdes, elles ne permettent pas vraiment de déterminer si OUI ou NON
+Tiquiz est fait pour le visiteur."
 
-**Les deux reproches étaient justes, et le second est le vrai.** Mon
-premier jet demandait "tu vends quelque chose ?" et "tu es prêt à
-relire l'IA ?" : deux questions auxquelles tout le monde répond oui,
-donc deux questions qui ne trient personne. **Une question de
-qualification qui ne peut pas faire sortir quelqu'un n'en est pas
-une.**
+Puis, sur le deuxième (les trois questions en colonnes) : "est-ce que
+toi, en tant que visiteur tu comprends que c'est un quiz et que tu dois
+cliquer pour savoir si Tiquiz est fait pour toi ?? C'est moche pas
+ergonomique, pas un 'vrai' quiz, pas pratique, trop compliqué, trop
+restrictif, pas assez bien écrit."
 
-Elle a nommé les trois refus, et ce sont maintenant EXACTEMENT les
-trois secondes options : un résultat rédigé sur mesure pour chaque
-visiteur, des logiques conditionnelles avancées, un design au pixel
-près. Les trois sont vérifiées dans le code, pas inventées.
+**Six reproches, UNE cause : j'avais fait un FORMULAIRE, pas un quiz.**
+Un quiz pose UNE question, on clique, on avance, on obtient un résultat.
+Un formulaire montre tout d'un coup et attend qu'on remplisse. Corriger
+le premier jet en resserrant la mise en page (les colonnes) n'a réglé
+que la hauteur, et a laissé les cinq autres reproches intacts.
 
-**Et le bloc dit le POSITIONNEMENT, c'est son vrai sujet.** Béné :
-"Tiquiz c'est pour les personnes qui veulent capturer des leads et il
-est optimisé pour ça, pas pour établir un diagnostic ultra personnalisé
-ni pour évaluer finement une personne. C'est pour attirer des contacts
-qualifiés et les envoyer sur la liste emails où tout se passe ensuite.
-Et ça marche pour tout le monde, mais c'est UNE partie du système
-complet : la partie qui attire des leads, commence à construire la
-confiance et automatise la prospection, avec fun et plus d'efficacité
-qu'un PDF ou un simple formulaire." On ne vend donc pas un outil de
-diagnostic, on vend la PORTE D'ENTRÉE d'un système, et les deux
-verdicts le disent.
+| Ce qu'elle a vu | Ce qui le causait |
+|---|---|
+| on ne comprend pas qu'il faut cliquer | des libellés plats, bord gris clair, aucune affordance |
+| pas un "vrai" quiz | trois questions ensemble, aucune progression, aucun résultat qui ARRIVE |
+| trop compliqué | six options à lire avant de bouger le doigt |
+| trop restrictif | UNE réponse discordante sur trois donnait un refus sec |
+| pas assez bien écrit | du vocabulaire d'outil ("branches conditionnelles poussées") |
+| moche | trois colonnes serrées à 16 px de gouttière |
 
-**Sans scroller, et sans que rien ne bouge.** Les trois questions sont
-en COLONNES, pas en lignes : une rangée au lieu de trois. Mesuré à
-1280x900 et 1440x800, le bloc fait **786 px, verdict compris**, contre
-811 px au repos et 929 px une fois répondu avant. Le verdict a une
-hauteur RÉSERVÉE (`min-height`) : il s'affiche sur place, il ne pousse
-plus la page au moment exact où on la lit.
+**Ce qui change, et les quatre points comptent :**
+
+1. **UNE question à la fois**, avec une barre de progression et
+   "Question 1 sur 3". C'est ce qui fait qu'un quiz se lit comme un quiz.
+2. **Deux gros boutons** pleine largeur, fond bleu clair, flèche à
+   droite, qui montent au survol. On ne peut plus les prendre pour du
+   texte.
+3. **TROIS verdicts**, plus deux. Le refus sec sur une seule réponse
+   était le "trop restrictif" : quelqu'un qui veut des leads ET une
+   maquette au pixel près se faisait renvoyer, alors que Tiquiz lui va
+   très bien sur l'essentiel. Trois réponses discordantes restent un
+   vrai non ("Franchement, non."), et le bloc garde donc sa capacité à
+   faire sortir quelqu'un.
+4. **Un bouton Recommencer**, en `<input type="reset">` NATIF : sans
+   lui, on ne peut plus rien changer une fois la troisième réponse
+   donnée. Le `<form>` n'existe que pour ça, et il est sûr : la page
+   capturée n'en contient aucun autre (mesuré), donc pas d'imbrication.
+
+**LES TROIS REFUS SONT VRAIS, et ce sont exactement les trois secondes
+options** : un résultat rédigé sur mesure pour chaque visiteur (Tiquiz
+attribue un profil PRÉÉCRIT, `lib/quizScoring.ts`), des logiques
+conditionnelles avancées (le parcours est linéaire), un design au pixel
+près. Une question de qualification qui ne peut faire sortir personne
+n'en est pas une : c'est ce qui avait tué le tout premier jet ("tu vends
+quelque chose ?", "tu es prêt à relire l'IA ?").
+
+**Le bloc dit le POSITIONNEMENT, c'est son vrai sujet.** Béné : "Tiquiz
+c'est pour les personnes qui veulent capturer des leads et il est
+optimisé pour ça, pas pour établir un diagnostic ultra personnalisé ni
+pour évaluer finement une personne. [...] c'est UNE partie du système
+complet." On ne vend pas un outil de diagnostic, on vend la PORTE
+D'ENTRÉE d'un système, et les trois verdicts le disent.
+
+**ZÉRO JAVASCRIPT, et ce n'est pas un caprice** : c'est un script qui a
+tué la FAQ de cette page le matin même. Boutons radio + CSS `:has()`
+pour l'enchaînement et les verdicts, `<input type="reset">` pour
+repartir. Un bloc qui n'a besoin de rien ne peut pas se casser quand on
+retire quelque chose.
+
+**LA HAUTEUR EST RÉSERVÉE AUTOUR DE LA CARTE, PAS DEDANS.** Mesuré à
+1280x900 et 1440x800 : **763 px dans les CINQ états** (repos, question
+2, et les trois verdicts), donc la page ne bouge pas d'un pixel au
+moment exact où on la lit. Posée DANS la carte, la réserve affichait
+140 px de vide sous une question courte ; dehors, c'est du fond blanc,
+donc invisible. Et la ligne "Recommencer" vit hors de la carte, donc
+`min-height` ne l'absorbe pas : elle est en `visibility:hidden`, pas en
+`display:none`, sinon la page se décalait de 37 px.
+
+**Et la mesure porte sur le GESTE, pas sur l'état au repos** (la leçon
+de la FAQ, le même jour) : la sonde CLIQUE vraiment, vérifie que
+l'étape 1 disparaît, que l'étape 2 s'affiche, que la jauge avance de
+32 px à 187 px, que les trois combinaisons donnent les trois verdicts et
+que Recommencer remet tout à zéro.
+
+**Ce que ce bloc n'est PAS :** un quiz Tiquiz. Aucune capture d'email,
+aucun tag, aucun profil, rien qui parte nulle part, et le test l'exige.
+
+Garde-fou : les trois tests de `tests/logic/page-vente-v2.test.mts`,
+vérifiés en rejouant QUATRE versions d'avant (les trois étapes affichées
+d'un coup, le verdict nuancé retiré, la reprise en `display:none`, les
+options sans relief) : les quatre rougissent.
+
+**Et ma faute en écrivant le test, qui est la sixième de la semaine :**
+mes assertions CSS passaient par `texteVisible()`, qui retire le
+`<style>`. Elles portaient donc sur une chaîne d'où la règle testée
+avait été enlevée. `regles()` lit le fichier sans les commentaires mais
+AVEC le CSS. Un contrôle qui ne distingue pas ce qu'il est censé
+distinguer est pire qu'un contrôle absent, et il faut le rappeler à
+chaque helper de test qu'on écrit, pas seulement aux clés d'API.
 
 ### Les portraits : 1024 x 1024 pour un affichage en 48 x 48 (2 septembre 2026)
 
