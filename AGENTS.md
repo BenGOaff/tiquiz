@@ -1393,10 +1393,14 @@ git push origin main
 # sur le serveur
 cd /home/tipote/tiquiz-app
 git stash
-git pull origin main
+GIT_TERMINAL_PROMPT=0 git pull origin main
 npm ci
 npm run build && pm2 restart tiquiz-prod --update-env
 ```
+
+`GIT_TERMINAL_PROMPT=0` a ete ajoute le 2 septembre : sans lui, un 401
+temporaire de GitHub fait attendre un mot de passe et bloque le terminal
+sans rien expliquer (voir la section "Le deploiement fantome").
 
 Tu prends ma branche, tu copies le code dans ton dossier local, tu pousses
 sur `main`, puis le serveur tire `main`. `main` est donc la branche de
@@ -6871,36 +6875,52 @@ depuis ici : `curl -sS https://api.github.com/user`.
 
 ### CE QUE `Username for 'https://github.com'` VEUT DIRE SUR UN DÉPÔT PUBLIC
 
-Un dépôt public se tire sans aucun identifiant. Donc ce prompt ne dit
-pas « il faut t'authentifier » : il dit que **git a envoyé des
-identifiants et que GitHub les a refusés** (401), ce qui fait redemander
-git. Un jeton expiré dans `~/.git-credentials`, un
-`http.extraHeader: Authorization` périmé, un helper qui rend une valeur
-morte : sur un dépôt public, tous produisent exactement ce message.
+Un dépôt public se tire sans aucun identifiant, donc ce prompt ne dit
+pas « il te manque un droit ». Il dit que **GitHub a répondu 401** sur
+le premier appel du pull (`GET /info/refs`), et que git en a conclu
+qu'il lui fallait des identifiants.
 
-Et ça colle avec « ça marchait avant » : le jeton était valide, il a
-expiré.
+**J'ai annoncé un jeton périmé dans la config du serveur. C'était FAUX**,
+et sa sortie l'a démenti en une commande :
 
-**Le contournement est aussi le diagnostic**, et il ne demande aucun
-secret : on dit à git de n'envoyer AUCUN identifiant et de ne rien
-demander.
-
-```bash
-GIT_TERMINAL_PROMPT=0 git -c credential.helper= -c http.extraHeader= pull origin main
+```
+git config --list --show-origin --name-only | grep -iE "credential|extraheader|insteadof|askpass"
+(aucune ligne)
 ```
 
-Ça passe -> le dépôt était bien joignable, le coupable est un
-identifiant périmé dans la config. Ça échoue -> c'est autre chose, et on
-n'est jamais resté coincé sur un prompt.
+Rien n'est configuré, donc mes `-c credential.helper=` et
+`-c http.extraHeader=` **n'ont neutralisé rien du tout** : ils ne
+peuvent pas être ce qui a débloqué. Entre l'échec et le succès, la
+seule chose qui a changé, c'est le TEMPS.
 
-**`GIT_TERMINAL_PROMPT=0` fait partie du correctif, pas du confort :**
-un prompt dans une chaîne de déploiement bloque le terminal sans rien
-expliquer, et c'est ce qui a fait croire à Béné que la chaîne `&&` était
-cassée.
+**Donc l'échec venait de GitHub, et il était temporaire.** L'hypothèse
+la plus probable, et je l'écris COMME une hypothèse parce que je ne l'ai
+pas mesurée : une limite de débit sur les tirages ANONYMES depuis l'IP
+de ce serveur. C'est le seul mécanisme connu qui rend un 401
+intermittent sur un dépôt public sans que rien ne bouge chez nous, et il
+colle aux quatre faits (ça marchait, ça a bloqué, ça remarche, rien
+n'est configuré).
 
-**Et on ne lit jamais les VALEURS de cette config.** `git config --list
---name-only` donne les noms sans les valeurs : un `http.extraHeader`
-porte un jeton en clair, et ces sorties finissent dans une conversation.
+**Ce qui compte, c'est que ça peut revenir.** Deux remèdes, dans cet
+ordre de coût :
+
+1. **`GIT_TERMINAL_PROMPT=0` devant le `git pull`, pour toujours.** Ça
+   ne répare rien, ça garantit qu'un déploiement ne reste JAMAIS coincé
+   sur un prompt muet : il s'arrête avec un message. Le coût est nul,
+   c'est la nouvelle forme de la commande.
+2. **Une clé SSH de déploiement**, le jour où ça revient. Le serveur
+   génère la paire lui-même, seule la partie PUBLIQUE part chez GitHub
+   (ce n'est pas un secret, elle peut se coller dans une conversation),
+   et un tirage authentifié n'est plus soumis à la limite des tirages
+   anonymes. Aucune expiration, contrairement à un jeton.
+
+**Et la leçon de méthode, la troisième de la journée sur la même
+panne :** j'ai avancé trois causes (l'URL du remote, un dépôt privé, un
+jeton périmé) et les trois étaient fausses. Chacune était plausible et
+aucune n'était mesurée avant d'être annoncée. Béné a fait deux
+allers-retours pour rien. **Sur une panne intermittente, "je ne sais pas
+encore pourquoi ça remarche" est une réponse honnête ; une cause
+inventée qui colle à l'histoire ne l'est pas.**
 
 ### LA CHAÎNE `&&` N'A RIEN CASSÉ : ELLE A RÉVÉLÉ
 
