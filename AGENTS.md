@@ -3923,6 +3923,13 @@ règles `tag_added`, elle rend **zéro**, alors que ces deux règles
 existent et fonctionnent. Son silence ne veut toujours rien dire. Le
 seul endroit où une règle se vérifie est son tableau de bord.
 
+**QUESTION CLOSE LE 3 SEPTEMBRE.** Béné : "c'est ok j'ai vérifié tu peux
+le noter pour arrêter de m'en reparler stp ?" Elle a passé en revue ses
+règles d'automatisation dans son tableau de bord. **Ne plus lui reposer
+la question**, et ne plus ouvrir de tâche là dessus : le sujet est
+tranché par elle, pas par une mesure de notre côté, et c'est le seul
+endroit où il POUVAIT l'être.
+
 **Ce qui reste ouvert :** une vente arrivée par un TUNNEL Systeme.io ne
 passe pas par `grantPlanByEmail`, donc elle ne reçoit pas
 `tiquiz-clients` de notre part. Chez elle, une règle "tag
@@ -7087,3 +7094,42 @@ après un correctif est le seul moyen de savoir ce qui tient encore.
 
 Test : `tests/logic/politique-google.test.mts` (9 tests), vérifié en
 rejouant les versions d'avant : 8 rougissent.
+
+## Les robots d'IA bloqués par Cloudflare : ce que ça coûte VRAIMENT (3 septembre 2026)
+
+J'avais alerté que le blocage de `Google-Extended` "contredit tout le
+travail GEO". Béné : "pas compris t'es sûr de toi ?" **Elle avait
+raison de douter : mon alerte était trop forte.**
+
+**Ce qui est bloqué, mesuré sur les quatre domaines** (le bloc Cloudflare
+« Managed robots.txt » arrive AVANT notre robots.txt applicatif) :
+`Google-Extended`, `GPTBot`, `ClaudeBot`, `CCBot`, `Bytespider`,
+`Amazonbot`, `Applebot-Extended`, `meta-externalagent`. **Ce sont tous
+des robots d'ENTRAÎNEMENT.**
+
+**Ce qui n'est PAS bloqué, et c'est ce qui compte :**
+
+| | |
+|---|---|
+| `Googlebot` | le référencement classique, intact |
+| `OAI-SearchBot` | ce qui CITE le site dans la recherche ChatGPT |
+| `ChatGPT-User` | quelqu'un pose une question, ChatGPT va lire la page |
+| `Claude-User`, `Claude-SearchBot` | pareil côté Claude |
+
+**Vérifié aux sources, pas de mémoire.** Google écrit noir sur blanc que
+`Google-Extended` "does not impact a site's inclusion in Google Search
+nor is it used as a ranking signal". OpenAI et Anthropic documentent
+chacun trois agents SÉPARÉS : entraînement d'un côté, recherche et
+navigation à la demande de l'autre.
+
+**Le `llms.txt`, les 33 textes alternatifs et le flux RSS servent donc
+exactement les robots qui PASSENT.** Décision : on ne touche à rien.
+Béné garde sa visibilité dans les réponses d'IA et refuse que son
+contenu entraîne gratuitement des modèles.
+
+**La leçon est la mienne : "un bot d'IA est bloqué" ne dit RIEN tant
+qu'on n'a pas regardé LEQUEL.** Entraînement et citation portent des
+noms différents chez les trois fournisseurs, et les confondre transforme
+un réglage sain en fausse alerte. C'est la règle du 22 août appliquée à
+un nom d'agent : une liste ne dit pas ce qu'elle contient tant qu'on ne
+l'a pas lue.
