@@ -132,6 +132,22 @@ function gabaritPistes(id: GenerateurId): string {
 Chaque piste porte ${combien}. Les résumés d'une même piste ne se recouvrent pas : si deux d'entre eux pourraient être échangés, la piste est mauvaise.`;
 }
 
+/** Le gabarit JSON d'UNE piste, pour la relance. */
+function gabaritUnePiste(id: GenerateurId): string {
+  const commun = `"titre": "le nom du livrable, tel qu'il sera affiché",
+  "format": "sa forme en deux ou trois mots",
+  "punchline": "une phrase qui donne envie, adressée au lecteur",
+  "pourquoi": "pourquoi cette piste là pour CE quiz, une phrase, adressée à la créatrice"`;
+  if (id === "bonus") return `{\n  ${commun}\n}`;
+  const bloc = id === "emails" ? `"email"` : `"email" ou "post"`;
+  return `{
+  ${commun},
+  "pieces": [
+    { "bloc": ${bloc}, "resume": "en une ligne, ce que CE morceau dit et rien d'autre" }
+  ]
+}`;
+}
+
 const CONSIGNE_PISTES: Record<GenerateurId, string> = {
   bonus: `ON TE DEMANDE TROIS PISTES DE BONUS POST-QUIZ.
 
@@ -176,6 +192,45 @@ export function consignePistes(id: GenerateurId, brief: BriefQuiz): string {
     gabaritPistes(id),
     "",
     "TROIS pistes, ni plus ni moins. `recommandee` est l'indice de celle que tu conseilles, à partir de 0.",
+  ].join("\n");
+}
+
+/**
+ * UNE PISTE DE PLUS, PAS UNE NOUVELLE FOURNÉE.
+ *
+ * Porté du labo de l'Atelier (`buildOnePisteSystemPrompt`).
+ *
+ * Béné, 6 août 2026 : "aucune ne te convainc ?" Le bouton dit ce qu'il
+ * coûte et ce qu'il rend, une idée et pas trois. Sans ça, on clique en
+ * craignant de perdre les trois qui sont à l'écran, donc on ne clique
+ * pas.
+ *
+ * `connues` est OBLIGATOIRE et part dans le prompt : une génération
+ * payée pour un doublon de ce qu'elle a déjà sous les yeux serait la
+ * pire dépense possible.
+ */
+export function consigneUnePisteDePlus(
+  id: GenerateurId,
+  brief: BriefQuiz,
+  connues: { format: string; titre: string }[],
+): string {
+  const liste = connues.map((p, i) => `${i + 1}. ${p.format} : ${p.titre}`).join("\n");
+  return [
+    CONSIGNE_PISTES[id],
+    "",
+    consigneLangue(brief.langue),
+    consigneTon(brief),
+    "",
+    "ELLE A DÉJÀ CES PISTES SOUS LES YEUX, ET AUCUNE NE LA CONVAINC :",
+    liste,
+    "",
+    "TU EN PROPOSES UNE SEULE, VRAIMENT AUTRE CHOSE :",
+    "- un format qui n'est PAS dans la liste ci dessus ;",
+    "- un angle différent, pas une reformulation d'une piste existante ;",
+    "- si les pistes existantes couvrent déjà les formats évidents, va chercher plus loin plutôt que de revenir sur l'un d'eux.",
+    "",
+    "TU RÉPONDS UNIQUEMENT PAR CET OBJET JSON, sans un mot avant ni après, sans bloc de code :",
+    gabaritUnePiste(id),
   ].join("\n");
 }
 
