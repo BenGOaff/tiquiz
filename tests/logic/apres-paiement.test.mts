@@ -81,19 +81,27 @@ test("le plan est pose AVANT l'email et AVANT l'etiquette", () => {
   assert.ok(iMail > iPlan, "l'email part avant que le plan soit pose");
 });
 
-test("on ne CREE jamais une etiquette manquante chez Systeme.io", () => {
-  // Une etiquette creee par nous avec une faute se retrouverait en
-  // double dans sa liste, et ses automatisations continueraient de
-  // pointer l'ancienne. Mieux vaut ne rien poser et le dire.
+test("on ne CREE jamais un tag manquant chez Systeme.io", () => {
+  // Un tag cree par nous avec une faute se retrouverait en double dans
+  // sa liste, et ses automatisations continueraient de pointer
+  // l'ancien. Mieux vaut ne rien poser et le dire.
   const src = lire("lib/sio/appliquerTag.ts");
   assert.ok(
     !/method: "POST"[\s\S]{0,120}\/tags"/.test(src),
-    "le code cree desormais des etiquettes chez Systeme.io",
+    "le code cree desormais des tags chez Systeme.io",
   );
-  assert.ok(src.includes("l'etiquette"), "le code ne dit plus pourquoi il n'a rien pose");
+  // ON VISE LE FAIT, PAS LE MOT. Ce test exigeait la chaine exacte
+  // "l'etiquette", donc il a rougi le 3 septembre quand ce mot banni
+  // (Bene, 1er septembre) a ete retire du journal. Un garde-fou qui
+  // fige une FORMULATION empeche de corriger la formulation ; celui-ci
+  // doit dire "le code explique pourquoi il n'a rien pose", rien de plus.
+  assert.ok(
+    /n'existe pas chez Systeme\.io/.test(src),
+    "le code ne dit plus pourquoi il n'a rien pose",
+  );
 });
 
-test("on revérifie l'adresse du contact avant de l'etiqueter", () => {
+test("on revérifie l'adresse du contact avant de lui poser un tag", () => {
   // Selon les API, un filtre `?email=` peut etre ignore et rendre la
   // premiere page complete. Sans cette verification, on etiquetterait
   // un inconnu.

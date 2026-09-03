@@ -6795,6 +6795,54 @@ Nouvelle raison `deja_pose`, distincte de `ok` : le journal dit "le tag
 était déjà là" au lieu de laisser croire qu'on vient de la poser. C'est
 la règle du 31 août, un booléen ne dit jamais où chercher.
 
+**VÉRIFIÉ EN PRODUCTION LE 3 SEPTEMBRE**, sur son propre compte, après
+une vraie connexion Google :
+
+```
+[sio/tag] tiquiz-free est deja pose pour blagardette@gmail.com, on ne le repose pas.
+[rattacher] benebottet@gmail.com : rattache sa0007878317200141bbe3de2b...
+[rattacher] mareineethique@gmail.com : rattache_a_un_autre sa443cbc...
+```
+
+Les trois lignes prouvent trois choses d'un coup : le garde-fou tient,
+le `?ref=` survit à l'aller-retour Google, et le premier rattachement
+gagne sur une vraie inscrite.
+
+### ET LE SUCCÈS D'UNE POSE NE LAISSAIT AUCUNE TRACE
+
+Pour répondre à « est-ce que cette personne recevra sa campagne ? », il
+a fallu raisonner par ÉLIMINATION : pas de refus, pas de « déjà posé »,
+donc c'est passé. Seuls l'échec, le refus et le « déjà posé » étaient
+journalisés. **Sur le chemin qui décide si quelqu'un entre dans ses
+séquences email, une déduction n'est pas une mesure**, et un journal
+muet sur le cas NORMAL oblige à deviner le jour où ça cloche.
+`poserTagParNomDetaille` écrit donc `<tag> pose pour <adresse>.`
+
+**Et les quatre journaux de ce fichier disaient encore "étiquette"**,
+avec ses accords au féminin (« est deja posee »), c'est à dire le mot
+banni le 1er septembre, dans les lignes que Béné LIT quand elle
+diagnostique. `tests/logic/on-dit-tag.test.mts` ne balayait que
+`messages/*.json` : il couvre maintenant `lib/sio/`.
+
+**On cible le DOSSIER `lib/sio/`, jamais la sous-chaîne "sio"** :
+filtrer les chemins qui la contiennent ramène `dimenSIOn`, `sesSIOn` et
+`commisSIOn`. C'est le faux positif que ce même test raconte déjà pour
+"conver-sio-ne", et il se refait tout seul.
+
+**MES DEUX FAUTES EN L'ÉCRIVANT, et ce sont les 8e et 9e de la
+semaine :**
+
+1. mon contrôle du log de succès cherchait `console.log(\`[sio/tag]...pose`,
+   qui matche AUSSI le message « est deja pose » du garde-fou juste au
+   dessus. Retirer le log de succès laissait le test VERT. Il vise
+   désormais le journal situé ENTRE `pose_refusee` et `raison: "ok"`,
+   et il rougit quand on le retire ;
+2. `apres-paiement.test.mts` exigeait la chaîne littérale `"l'etiquette"`
+   pour prouver que le code explique pourquoi il n'a rien posé. **Un
+   garde-fou qui fige une FORMULATION empêche de corriger la
+   formulation** : il a rougi sur une correction juste. Il vise
+   maintenant le FAIT (`n'existe pas chez Systeme.io`).
+
 ### La politique de confidentialité dit ce que Google nous donne (2 septembre 2026)
 
 Béné, capture de la Google Auth Platform à l'appui : "il dit que mon app

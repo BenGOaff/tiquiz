@@ -17,7 +17,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 const INTERDIT = /étiquet|etiquet/i;
 
@@ -62,4 +62,84 @@ test("L'ESPAGNOL GARDE SON MOT, et c'est OBLIGATOIRE", () => {
     /etiqueta/i.test(src),
     "l'espagnol a perdu son mot : la consigne ne correspond plus à leur écran",
   );
+});
+
+// ── ET LE CODE AUSSI, PAS SEULEMENT LES TRADUCTIONS (3 septembre 2026)
+//
+// Le 3 septembre, un journal de production affichait encore :
+//
+//   [sio/tag] l'etiquette newsletter n'existe pas chez Systeme.io.
+//   [sio/tag] tiquiz-free est deja posee pour ...
+//   ... n'est pas etiquete newsletter.
+//
+// Béné les LIT : c'est par ces lignes qu'on a diagnostiqué la connexion
+// Google ce jour là. Le mot banni vivait donc sous ses yeux, avec en
+// prime les accords fautifs que sa correction du 1er septembre avait
+// laissés derrière elle ("posee", "etiquette" au féminin alors que
+// "tag" est masculin).
+//
+// Le test d'origine ne balayait que `messages/*.json`. Un garde-fou qui
+// ne couvre pas l'endroit où la faute s'est installée ne protège rien.
+//
+// ON CIBLE LE DOSSIER `lib/sio/`, JAMAIS LA SOUS-CHAÎNE "sio". Filtrer
+// les chemins qui CONTIENNENT "sio" ramène `dimenSIOn`, `sesSIOn` et
+// `commisSIOn` : c'est le faux positif que le test du dessus raconte
+// déjà pour "conver-sio-ne", et il se refait tout seul.
+//
+// Et "étiquette" au sens LIBELLÉ reste légitime partout ailleurs :
+// étiqueter un lien avec utm_source, le libellé d'un axe, le "conversion
+// label" de Google Ads. Ce ne sont pas des tags Systeme.io, et les faire
+// rougir rendrait le texte faux dans l'autre sens.
+test("aucune étiquette dans le code qui parle des tags Systeme.io", () => {
+  const dossier = new URL("../../lib/sio/", import.meta.url);
+  const fautifs: string[] = [];
+
+  for (const nom of readdirSync(dossier)) {
+    if (!nom.endsWith(".ts")) continue;
+    const src = readFileSync(new URL(nom, dossier), "utf8");
+    src.split("\n").forEach((ligne, i) => {
+      if (INTERDIT.test(ligne)) fautifs.push(`lib/sio/${nom}:${i + 1} ${ligne.trim()}`);
+    });
+  }
+
+  assert.deepEqual(fautifs, [], "le mot banni est revenu dans les journaux que Béné lit");
+});
+
+// ── UNE POSE RÉUSSIE SE JOURNALISE (3 septembre 2026)
+//
+// Seuls l'échec, le refus et le « déjà posé » l'étaient. Répondre à
+// « est-ce que cette personne recevra sa campagne ? » demandait donc de
+// raisonner par élimination sur ce qui N'ÉTAIT PAS écrit, et c'est ce
+// qu'il a fallu faire le 3 septembre pour un vrai compte.
+//
+// Sur le chemin qui décide si quelqu'un entre dans ses séquences email,
+// une déduction n'est pas une mesure.
+test("le succès d'une pose de tag laisse une trace, pas seulement l'échec", () => {
+  const src = readFileSync(new URL("../../lib/sio/appliquerTag.ts", import.meta.url), "utf8");
+
+  // On lit le CODE, pas les commentaires : sinon l'explication ci-dessus
+  // ferait passer le test toute seule.
+  const code = src.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+
+  // ON VISE LE JOURNAL QUI PRÉCÈDE LE RETOUR DE SUCCÈS, pas "un log qui
+  // parle de pose". Premier jet : /console\.log\(`\[sio\/tag\][^`]*pose/,
+  // qui matchait le message « est deja pose pour ... » du garde-fou juste
+  // au dessus. Retirer le log de succès laissait donc le test VERT, sur
+  // le contrôle écrit exprès pour ça.
+  //
+  // Huitième fois de la semaine : un contrôle qui ne distingue pas ce
+  // qu'il est censé distinguer est pire qu'un contrôle absent, et ça vaut
+  // pour le test qu'on écrit à l'instant, pas seulement pour les clés
+  // d'API.
+  const finDeLaPose = code.indexOf('raison: "pose_refusee"');
+  const retourOk = code.indexOf('raison: "ok"', finDeLaPose);
+  assert.ok(finDeLaPose > 0 && retourOk > finDeLaPose, "la pose a changé de forme");
+
+  const entreLesDeux = code.slice(finDeLaPose, retourOk);
+  const succes = entreLesDeux.match(/console\.log\(`[^`]*`\)/);
+  assert.ok(succes, "une pose réussie ne laisse aucune ligne : le cas NORMAL est muet");
+
+  // Et elle nomme les deux choses qu'on cherche quand on lit le journal.
+  assert.match(succes[0], /\$\{tag\}/, "la ligne ne dit pas QUEL tag");
+  assert.match(succes[0], /\$\{adresse\}/, "la ligne ne dit pas POUR QUI");
 });
