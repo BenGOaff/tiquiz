@@ -25,6 +25,8 @@ import { LanguageCombobox } from "@/components/quiz/LanguageCombobox";
 import { SURVEY_OBJECTIVES } from "@/lib/prompts/quiz/system";
 import { toast } from "sonner";
 import { asImportFailureReason } from "@/lib/quiz/importFailure";
+import { useEchecIa } from "@/hooks/useEchecIa";
+import { lireEchecIa } from "@/lib/ia/lireEchecIa";
 
 type GeneratedSurvey = Record<string, unknown>;
 
@@ -33,6 +35,7 @@ export default function SurveyFormClient() {
   // Même namespace partagé que l'écran quiz : une raison d'échec d'import
   // ne doit exister qu'à un seul endroit (cf. lib/quiz/importFailure.ts).
   const tImport = useTranslations("importErrors");
+  const direEchec = useEchecIa();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<"ai" | "import" | "manual">("ai");
@@ -246,9 +249,9 @@ export default function SurveyFormClient() {
           locale: aiLocale,
         }),
       });
-      if (!res.ok) {
-        const errText = await res.text().catch(() => "");
-        toast.error(`${t("errAi")}${errText ? ` : ${errText.slice(0, 150)}` : ""}`);
+      const echec = await lireEchecIa(res);
+      if (echec) {
+        toast.error(`${t("errAi")} : ${direEchec(echec.reason)}`);
         return;
       }
       const survey = await consumeSseStream(res);
@@ -295,9 +298,9 @@ export default function SurveyFormClient() {
           locale: aiLocale,
         }),
       });
-      if (!res.ok) {
-        const errText = await res.text().catch(() => "");
-        toast.error(`${t("errImport")}${errText ? ` : ${errText.slice(0, 150)}` : ""}`);
+      const echecImport = await lireEchecIa(res);
+      if (echecImport) {
+        toast.error(`${t("errImport")} : ${direEchec(echecImport.reason)}`);
         return;
       }
       const survey = await consumeSseStream(res);

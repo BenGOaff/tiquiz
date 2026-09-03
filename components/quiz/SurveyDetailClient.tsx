@@ -101,6 +101,7 @@ import {
 import { projectBackHref } from "@/lib/nav/projectBack";
 import { SessionLostBanner } from "@/components/editor/SessionLostBanner";
 import { AutomatisationPanel } from "@/components/quiz/AutomatisationPanel";
+import { useEchecIa } from "@/hooks/useEchecIa";
 
 // Types
 // Surveys reuse the QuizDetailClient shell but specialise: questions carry a
@@ -359,6 +360,7 @@ function SortableSidebarQuestion({ id, index, label, onClick, onRemove, canDelet
 export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) {
   const t = useTranslations("quizEditor");
   const st = useTranslations("survey");
+  const direEchec = useEchecIa();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -1048,7 +1050,9 @@ export default function SurveyDetailClient({ quizId }: SurveyDetailClientProps) 
       });
       const data = await res.json();
       if (!res.ok || !data?.ok) {
-        toast.error(data?.error ?? t("errGeneric"));
+        // La RAISON, traduite. Avant : `data.error`, une phrase technique
+        // en anglais recopiee telle quelle a l'ecran (3 septembre 2026).
+        toast.error(direEchec(data?.reason));
         return null;
       }
       return Array.isArray(data.proposals) ? data.proposals : null;

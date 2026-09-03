@@ -4233,10 +4233,48 @@ l'Atelier, et il ne porte AUCUNE phrase : l'interface existe en 7
 langues, donc le serveur rend la RAISON et l'écran la traduit. La route
 des générateurs répond 200 avec `ok: false`, jamais 5xx.
 
-**Ce qui reste à faire :** les AUTRES routes de génération IA (le quiz,
-le rééquilibrage, les analyses) répondent encore en 5xx, donc leur
-raison est mangée par Cloudflare. À reprendre : elles perdent la
-distinction "saturé" / "trop long" / "refusé".
+**FAIT LE 3 SEPTEMBRE : les six chemins IA y passent aussi.**
+`/api/quiz/generate`, `rebalance`, `rewrite`, `gender-variants`,
+`idea-chat` et `/api/embed/quiz/generate` répondaient encore en 500,
+502, 503 ou 504 : leur raison n'atteignait jamais la créatrice.
+
+**ET LE DÉFAUT ÉTAIT PIRE QUE LE STATUT.** `/api/quiz/generate`
+renvoyait `{ error: "Claude API key missing on the server." }` et le
+client AFFICHAIT ce champ tel quel : une créatrice espagnole lisait une
+phrase technique en anglais. Le rééquilibrage, lui, faisait
+`setRebalanceError(data?.error ?? "Une erreur est survenue.")`, donc une
+phrase FRANÇAISE écrite en dur dans une interface qui existe en
+7 langues. C'est la faute des replis "Résultat 4" du 1er septembre.
+
+**Règle : `lib/ia/echecIa.ts` répond, `hooks/useEchecIa.ts` traduit.**
+Le serveur rend une RAISON, jamais une phrase. Les 9 raisons vivent dans
+le namespace `erreursIa` des 7 fichiers de `messages/`, en phrases
+NEUTRES : les mêmes servent la génération d'un quiz, un rééquilibrage et
+les générateurs. Une raison inconnue retombe sur `generic`, elle
+n'affiche JAMAIS sa clé.
+
+**LE DISCRIMINANT EST LE `Content-Type`, PAS LE STATUT**
+(`lib/ia/lireEchecIa.ts`). Ces routes STREAMENT : un flux répond
+`text/event-stream`, un échec `application/json`. Le client testait
+`res.ok` puis lisait `res.body` ; avec un 200 nu il aurait cherché un
+flux qui n'existe pas, donc attendu un quiz qui n'arrive jamais. C'est
+le piège de ce chantier, et il ne se voit pas en lisant le statut.
+
+**Deux routes gardent leur corps tel quel, et c'est délibéré.**
+`gender-variants` affiche déjà une phrase traduite avec le CODE entre
+parenthèses pour le diagnostic (design commenté sur place), et la démo
+de la page de vente porte des messages de déploiement en français. Là,
+seul le statut empêchait le corps d'arriver : le corps ne change pas.
+
+**Le 429 reste un 429**, comme tous les 4xx : ils passent intacts à
+travers Cloudflare et ils disent la bonne chose.
+
+Le test `corps-avale-par-cloudflare.test.mts` couvre maintenant les 11
+chemins, exige les 9 raisons dans les 7 langues, et refuse qu'un écran
+recopie le champ `error` du serveur. Vérifié en rejouant trois versions
+d'avant : les trois rougissent. **Le module quiz de Tipote est jumeau :
+les 5 mêmes routes y portaient les mêmes 5xx, la correction y vit
+aussi.**
 
 ### Et ce qu'il reste à faire, qui n'est PAS du code
 

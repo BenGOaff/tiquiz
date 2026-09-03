@@ -36,10 +36,25 @@ const ECRANS = [
   "app/api/commande/session/route.ts",
   "app/api/commande/paypal/route.ts",
   "app/api/depart/route.ts",
+
+  // -- LES SIX CHEMINS IA, AJOUTES LE 3 SEPTEMBRE 2026 -----------------
+  //
+  // L'AGENTS.md les notait "a reprendre" depuis le 1er septembre : ils
+  // repondaient encore en 500 / 502 / 503, donc leur raison n'atteignait
+  // jamais la creatrice. Et le defaut etait pire que le statut :
+  // `/api/quiz/generate` renvoyait `{ error: "Claude API key missing on
+  // the server." }` et le client AFFICHAIT ce champ tel quel, donc une
+  // creatrice espagnole lisait une phrase technique en anglais.
+  "app/api/quiz/generate/route.ts",
+  "app/api/quiz/[quizId]/rebalance/route.ts",
+  "app/api/quiz/[quizId]/rewrite/route.ts",
+  "app/api/quiz/gender-variants/route.ts",
+  "app/api/quiz/idea-chat/route.ts",
+  "app/api/embed/quiz/generate/route.ts",
 ];
 
 for (const rel of ECRANS) {
-  test(`${rel} : aucun 502/503/504, la raison doit arriver`, () => {
+  test(`${rel} : aucun 5xx, la raison doit arriver`, () => {
     const src = readFileSync(rel, "utf8");
     const code = src
       .split("\n")
@@ -47,7 +62,7 @@ for (const rel of ECRANS) {
       .join("\n");
     assert.doesNotMatch(
       code,
-      /status:\s*50[234]/,
+      /status:\s*50\d/,
       "Cloudflare remplace le corps : la raison n'arriverait pas a l'ecran",
     );
   });
@@ -80,4 +95,67 @@ test("les WEBHOOKS gardent leurs 5xx : eux, le reessai les sert", () => {
   // son acces. La regle ci-dessus ne les concerne pas.
   const src = readFileSync("app/api/commande/webhook/route.ts", "utf8");
   assert.match(src, /status: 502/);
+});
+
+// ── LA RAISON DOIT ETRE DISABLE DANS LES 7 LANGUES (3 septembre 2026)
+//
+// Le serveur rend une RAISON, jamais une phrase : l'interface existe en
+// 7 langues, et une phrase ecrite dans le code y arrive forcement dans
+// une seule. C'est la faute des replis "Resultat 4" du 1er septembre,
+// et celle de `setRebalanceError(data?.error ?? "Une erreur est
+// survenue.")`, une phrase FRANCAISE ecrite en dur dans le code.
+const RAISONS = [
+  "busy",
+  "too_long",
+  "refused",
+  "unreachable",
+  "empty",
+  "unreadable",
+  "rate_limited",
+  "not_configured",
+  "generic",
+];
+
+for (const loc of ["fr", "en", "es", "it", "ar", "pt", "pt-BR"]) {
+  test(`${loc} : les 9 raisons d'echec IA sont traduites`, () => {
+    const d = JSON.parse(readFileSync(`messages/${loc}.json`, "utf8")) as {
+      erreursIa?: Record<string, string>;
+    };
+    const bloc = d.erreursIa ?? {};
+    const manquantes = RAISONS.filter((r) => !bloc[r] || !bloc[r].trim());
+    assert.deepEqual(manquantes, [], `${loc} : des raisons n'ont pas de phrase`);
+  });
+}
+
+// Une raison INCONNUE ne doit jamais s'afficher telle quelle : un ecran
+// reste sur une ancienne version montrerait "not_configured" en toutes
+// lettres a une creatrice.
+test("le hook retombe sur generic, il n'affiche jamais la cle", () => {
+  const src = readFileSync("hooks/useEchecIa.ts", "utf8");
+  assert.match(src, /"generic"/, "aucun repli sur generic");
+  assert.match(src, /CONNUES\.has/, "la raison n'est pas verifiee avant d'etre traduite");
+});
+
+// LES CLIENTS NE RECOPIENT PLUS `error` A L'ECRAN. C'est ce qui affichait
+// "Claude API key missing on the server." et "Une erreur est survenue."
+test("aucun ecran de generation n'affiche le champ error brut", () => {
+  const ECRANS_IA = [
+    "components/quiz/QuizFormClient.tsx",
+    "components/quiz/SurveyFormClient.tsx",
+    "components/quiz/QuizDetailClient.tsx",
+    "components/quiz/SurveyDetailClient.tsx",
+  ];
+  const fautifs: string[] = [];
+  for (const f of ECRANS_IA) {
+    const code = readFileSync(f, "utf8")
+      .split("\n")
+      .filter((l) => !l.trim().startsWith("//"))
+      .join("\n");
+    // `data.error` / `json.error` passe DIRECTEMENT dans un toast ou un
+    // setter d'erreur : c'est la forme qu'on ferme.
+    if (/(toast\.error|setRebalanceError)\(\s*(data|json|err)\?\.error/.test(code)) {
+      fautifs.push(f);
+    }
+  }
+  assert.deepEqual(fautifs, [], "un ecran recopie encore le message technique du serveur");
 });

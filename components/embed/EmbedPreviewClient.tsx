@@ -127,7 +127,11 @@ export default function EmbedPreviewClient({
           source,
         }),
       });
-      if (!res.ok || !res.body) {
+      // Un echec repond 200 + application/json (le flux, lui, repond du
+      // text/event-stream) : sans ce test, un 200 d'erreur passait pour un
+      // flux et le visiteur attendait un quiz qui n'arrivait jamais.
+      const typeReponse = res.headers.get("content-type") ?? "";
+      if (!res.ok || !res.body || typeReponse.includes("application/json")) {
         const text = await res.text().catch(() => "");
         let msg = text || `HTTP ${res.status}`;
         try {
