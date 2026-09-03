@@ -1898,8 +1898,11 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
         additions: Array.isArray(data.additions) ? data.additions : [],
         rationale: typeof data.rationale === "string" ? data.rationale : null,
       });
-    } catch (e: any) {
-      setRebalanceError(e?.message ?? "Une erreur est survenue.");
+    } catch {
+      // On n'a meme pas joint la route : c'est le reseau. `e.message`
+      // etait un message technique, et son repli une phrase francaise
+      // ecrite en dur dans une interface qui existe en 7 langues.
+      setRebalanceError(direEchec("unreachable"));
     } finally {
       setRebalanceLoading(false);
     }
