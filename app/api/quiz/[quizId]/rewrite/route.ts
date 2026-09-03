@@ -18,6 +18,8 @@ import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { NATURAL_WRITING_BLOCK } from "@/lib/prompts/quiz/system";
 import { fetchAnthropic } from "@/lib/aiRetry";
 import { cleAnthropic } from "@/lib/ai/cleAnthropic";
+import { echecIa } from "@/lib/ia/echecIa";
+import { classifyThrown, classifyUpstream } from "@/lib/aiFailure";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,10 +55,7 @@ export async function POST(
 ) {
   const apiKey = cleAnthropic();
   if (!apiKey) {
-    return NextResponse.json(
-      { ok: false, error: "AI rewrite unavailable: missing Claude API key." },
-      { status: 503 },
-    );
+    return echecIa("not_configured");
   }
 
   const { quizId } = await context.params;
@@ -189,19 +188,13 @@ NATURAL WRITING — banned AI tics: em dashes (—) for incise, brochure verbs (
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
       console.error("[rewrite] Claude API error:", res.status, errText.slice(0, 500));
-      return NextResponse.json(
-        { ok: false, error: `AI rewrite failed (${res.status}). Try again.` },
-        { status: 502 },
-      );
+      return echecIa(classifyUpstream(res.status));
     }
     const json = await res.json();
     raw = String((Array.isArray(json?.content) && json.content[0]?.text) || "").trim();
   } catch (e: any) {
     console.error("[rewrite] Fetch failure:", e);
-    return NextResponse.json(
-      { ok: false, error: e?.name === "AbortError" ? "AI rewrite timed out." : "AI rewrite failed." },
-      { status: 502 },
-    );
+    return echecIa(classifyThrown(e));
   }
 
   const stripped = raw
@@ -214,10 +207,7 @@ NATURAL WRITING — banned AI tics: em dashes (—) for incise, brochure verbs (
     parsed = JSON.parse(stripped);
   } catch {
     console.error("[rewrite] JSON parse failed:", stripped.slice(0, 300));
-    return NextResponse.json(
-      { ok: false, error: "AI returned an unreadable response. Please try again." },
-      { status: 502 },
-    );
+    return echecIa("unreadable");
   }
 
   const proposals = Array.isArray(parsed.proposals)
@@ -228,10 +218,7 @@ NATURAL WRITING — banned AI tics: em dashes (—) for incise, brochure verbs (
     : [];
 
   if (proposals.length === 0) {
-    return NextResponse.json(
-      { ok: false, error: "AI didn't return any proposal." },
-      { status: 502 },
-    );
+    return echecIa("empty");
   }
 
   return NextResponse.json({ ok: true, proposals });

@@ -19,6 +19,8 @@ import { checkRateLimit } from "@/lib/aiRateLimit";
 import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { fetchAnthropic } from "@/lib/aiRetry";
 import { cleAnthropic } from "@/lib/ai/cleAnthropic";
+import { echecIa } from "@/lib/ia/echecIa";
+import { classifyThrown, classifyUpstream } from "@/lib/aiFailure";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -80,10 +82,7 @@ export async function POST(
 ) {
   const apiKey = cleAnthropic();
   if (!apiKey) {
-    return NextResponse.json(
-      { ok: false, error: "AI rebalance unavailable: server is missing the Claude API key." },
-      { status: 503 },
-    );
+    return echecIa("not_configured");
   }
 
   const { quizId } = await context.params;
@@ -328,10 +327,7 @@ Respond STRICTLY with valid JSON, no surrounding text, in this exact shape:
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
       console.error("[rebalance] Claude API error:", res.status, errText.slice(0, 500));
-      return NextResponse.json(
-        { ok: false, error: `AI rebalance failed (${res.status}). Try again in a minute.` },
-        { status: 502 },
-      );
+      return echecIa(classifyUpstream(res.status));
     }
     const json = await res.json();
     claudeText = String(
@@ -339,10 +335,7 @@ Respond STRICTLY with valid JSON, no surrounding text, in this exact shape:
     ).trim();
   } catch (e: any) {
     console.error("[rebalance] Fetch failure:", e);
-    return NextResponse.json(
-      { ok: false, error: e?.name === "AbortError" ? "AI rebalance timed out." : "AI rebalance failed." },
-      { status: 502 },
-    );
+    return echecIa(classifyThrown(e));
   }
 
   // Parse + validate. Strip any backtick fences Claude might have added
@@ -357,17 +350,11 @@ Respond STRICTLY with valid JSON, no surrounding text, in this exact shape:
     parsed = JSON.parse(stripped) as RebalanceResponse;
   } catch (e) {
     console.error("[rebalance] Could not parse Claude JSON:", stripped.slice(0, 500));
-    return NextResponse.json(
-      { ok: false, error: "AI returned an unreadable response. Please try again." },
-      { status: 502 },
-    );
+    return echecIa("unreadable");
   }
 
   if (!Array.isArray(parsed.changes)) {
-    return NextResponse.json(
-      { ok: false, error: "AI response missing `changes` array." },
-      { status: 502 },
-    );
+    return echecIa("unreadable");
   }
 
   // Validate every change references real indices and matches the current

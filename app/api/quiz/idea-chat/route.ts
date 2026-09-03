@@ -10,6 +10,7 @@ import { resolveAnthropicModel } from "@/lib/anthropicModel";
 import { sanitizeAiText } from "@/lib/aiTextSanitizer";
 import { fetchAnthropic } from "@/lib/aiRetry";
 import { cleAnthropic } from "@/lib/ai/cleAnthropic";
+import { echecIa } from "@/lib/ia/echecIa";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,10 +32,7 @@ function getChatModel(): string {
 export async function POST(req: NextRequest) {
   const apiKey = cleAnthropic();
   if (!apiKey) {
-    return NextResponse.json(
-      { ok: false, error: "Claude API key missing on the server." },
-      { status: 500 },
-    );
+    return echecIa("not_configured");
   }
 
   let system: string;
@@ -100,10 +98,8 @@ export async function POST(req: NextRequest) {
 
     system = buildQuizChatSystemPrompt({ locale, addressForm, targetAudience });
   } catch (e) {
-    return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : "Unknown error" },
-      { status: 500 },
-    );
+    console.error("[quiz/idea-chat] construction du prompt impossible :", e);
+    return echecIa("generic");
   }
 
   // SSE stream of assistant deltas

@@ -65,10 +65,10 @@ export async function POST(req: NextRequest) {
 
   const apiKey = cleAnthropic();
   if (!apiKey) {
-    return Response.json(
-      { ok: false, error: "Server is not configured for AI generation." },
-      { status: 500, headers },
-    );
+    // 200 delibere : Cloudflare remplace le corps d'un 5xx, donc la
+    // raison n'arrivait jamais (mesure du 31 aout). Le client discrimine
+    // sur le Content-Type, pas sur le statut.
+    return Response.json({ ok: false, error: "Server is not configured for AI generation." }, { headers });
   }
 
   let body: Record<string, unknown>;
@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
     const userMsg = isMissingTable
       ? "Tiquiz n'a pas encore appliqué la migration de l'embed. Demande à ton admin de pousser supabase/migrations/023 + 024."
       : "Impossible d'initialiser la session : " + detail;
-    return Response.json({ ok: false, error: userMsg }, { status: 500, headers });
+    return Response.json({ ok: false, error: userMsg }, { headers });
   }
   const sessionToken = sessionRow.id as string;
 

@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Send, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { renderInlineMarkdown } from "@/lib/renderInlineMarkdown";
+import { useEchecIa } from "@/hooks/useEchecIa";
+import { lireEchecIa } from "@/lib/ia/lireEchecIa";
 
 export type QuizBrief = {
   objectives: string[];
@@ -37,6 +39,7 @@ export function QuizIdeaChat({
   onBriefReady: (brief: QuizBrief) => void;
 }) {
   const t = useTranslations("quizForm");
+  const direEchec = useEchecIa();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -85,8 +88,12 @@ export function QuizIdeaChat({
         body: JSON.stringify({ messages: apiHistory, locale }),
       });
 
-      if (!res.ok || !res.body) {
-        setMessages((prev) => [...prev.slice(0, -1), { role: "assistant", content: t("aiChatError") }]);
+      // Le discriminant est le Content-Type : un echec repond 200 + JSON
+      // depuis le 3 septembre, pour que Cloudflare ne mange pas sa raison.
+      const echec = await lireEchecIa(res);
+      if (echec || !res.body) {
+        const phrase = echec ? direEchec(echec.reason) : t("aiChatError");
+        setMessages((prev) => [...prev.slice(0, -1), { role: "assistant", content: phrase }]);
         setStreaming(false);
         return;
       }

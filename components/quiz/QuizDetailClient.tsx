@@ -181,6 +181,7 @@ import { SessionLostBanner } from "@/components/editor/SessionLostBanner";
 import { resolveIntroStart } from "@/lib/quiz/introStart";
 import { profilsSansCta } from "@/lib/quiz/resultCta";
 import { SettingsSection } from "@/components/quiz/SettingsSection";
+import { useEchecIa } from "@/hooks/useEchecIa";
 
 // Types
 // Un quiz (profil ou scoring) peut mélanger des types de questions, comme le
@@ -625,6 +626,7 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
   // repurpose the publish CTA into the paywall trigger.
   const isEmbed = !!embedSessionToken;
   const t = useTranslations("quizEditor");
+  const direEchec = useEchecIa();
   // The UI locale of the page (next-intl). Distinct from the quiz's
   // own `locale` state below, which represents the quiz content
   // language. We only need this to pick a CTA label in embed mode.
@@ -1800,7 +1802,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       });
       const data = await res.json();
       if (!res.ok || !data?.ok) {
-        toast.error(data?.error ?? t("errGeneric"));
+        // La RAISON, traduite. Avant : `data.error`, une phrase technique
+        // en anglais recopiee telle quelle a l'ecran (3 septembre 2026).
+        toast.error(direEchec(data?.reason));
         return null;
       }
       return Array.isArray(data.proposals) ? data.proposals : null;
@@ -1884,7 +1888,9 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
       });
       const data = await res.json();
       if (!res.ok || !data?.ok) {
-        setRebalanceError(data?.error ?? "Une erreur est survenue.");
+        // "Une erreur est survenue." etait ecrit EN FRANCAIS dans le code,
+        // dans une interface qui existe en 7 langues.
+        setRebalanceError(direEchec(data?.reason));
         return;
       }
       setRebalanceProposal({
@@ -1892,8 +1898,11 @@ export default function QuizDetailClient({ quizId, embedSessionToken }: QuizDeta
         additions: Array.isArray(data.additions) ? data.additions : [],
         rationale: typeof data.rationale === "string" ? data.rationale : null,
       });
-    } catch (e: any) {
-      setRebalanceError(e?.message ?? "Une erreur est survenue.");
+    } catch {
+      // On n'a meme pas joint la route : c'est le reseau. `e.message`
+      // etait un message technique, et son repli une phrase francaise
+      // ecrite en dur dans une interface qui existe en 7 langues.
+      setRebalanceError(direEchec("unreachable"));
     } finally {
       setRebalanceLoading(false);
     }
