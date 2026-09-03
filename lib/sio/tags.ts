@@ -1,6 +1,6 @@
 // lib/sio/tags.ts
 //
-// LES MÊMES ÉTIQUETTES, QUE LE CLIENT PAIE CHEZ SYSTEME.IO OU CHEZ NOUS.
+// LES MÊMES TAGS, QUE LE CLIENT PAIE CHEZ SYSTEME.IO OU CHEZ NOUS.
 //
 // Béné, 22 août : "oui pourquoi pas un contrôle des tags, et on utilise
 // les mêmes pour ceux qui vont payer via notre système comme ça je ne

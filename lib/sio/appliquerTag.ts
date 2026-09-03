@@ -1,6 +1,6 @@
 // lib/sio/appliquerTag.ts
 //
-// POSER L'ÉTIQUETTE SYSTEME.IO SUR UN CLIENT QUI A PAYÉ CHEZ NOUS.
+// POSER LE TAG SYSTEME.IO SUR UN CLIENT QUI A PAYÉ CHEZ NOUS.
 //
 // Béné, 22 août : "on utilise les mêmes [tags] pour ceux qui vont payer
 // via notre système comme ça je ne suis pas perdue."
@@ -367,7 +367,7 @@ async function trouverTag(apiKey: string, nom: string): Promise<number | null> {
     if (!res.data?.hasMore || items.length === 0 || !Number.isFinite(dernier)) return null;
     apres = dernier;
   }
-  console.warn(`[sio/tag] etiquette ${nom} introuvable apres 30 pages.`);
+  console.warn(`[sio/tag] tag ${nom} introuvable apres 30 pages.`);
   return null;
 }
 
@@ -409,7 +409,7 @@ export async function poserTagPlan(
 }
 
 /**
- * POSE UNE ÉTIQUETTE DÉSIGNÉE PAR SON NOM.
+ * POSE UN TAG DÉSIGNÉ PAR SON NOM.
  *
  * Sortie de `poserTagPlan` le 30 août 2026, pour l'inscription à la
  * newsletter : son tag (`newsletter`) n'est le tag d'aucun palier, mais
@@ -474,10 +474,10 @@ export async function poserTagParNomDetaille(
         cle.raison === "aucun_profil_admin"
           ? `[sio/tag] AUCUN PROFIL ne porte l'une des adresses admin ` +
             `(${ADMIN_EMAILS.join(" / ")}) dans la table profiles, et ` +
-            `SYSTEME_IO_API_KEY est absente du .env. ${adresse} n'est pas etiquete.`
+            `SYSTEME_IO_API_KEY est absente du .env. ${adresse} ne recoit aucun tag.`
           : `[sio/tag] le profil admin existe, mais AUCUNE CLE : ni dans ` +
             `sio_api_keys (ecran Parametres), ni dans SYSTEME_IO_API_KEY. ` +
-            `${adresse} n'est pas etiquete ${tag}.`,
+            `${adresse} ne recoit pas le tag ${tag}.`,
       );
       return { ok: false, raison: cle.raison };
     }
@@ -522,7 +522,7 @@ export async function poserTagParNomDetaille(
 
     const tagId = await trouverTag(retenue.apiKey, tag);
     if (!tagId) {
-      console.warn(`[sio/tag] l'etiquette ${tag} n'existe pas chez Systeme.io.`);
+      console.warn(`[sio/tag] le tag ${tag} n'existe pas chez Systeme.io.`);
       return { ok: false, raison: "tag_inconnu" };
     }
 
@@ -545,7 +545,7 @@ export async function poserTagParNomDetaille(
     // l'erreur n'est pas le même des deux côtés (ne pas poser un tag de
     // vente sort quelqu'un de ses segments).
     if (siDejaPose === "ignorer" && contact.tags.has(tag.trim().toLowerCase())) {
-      console.log(`[sio/tag] ${tag} est deja posee pour ${adresse}, on ne la repose pas.`);
+      console.log(`[sio/tag] ${tag} est deja pose pour ${adresse}, on ne le repose pas.`);
       return { ok: true, raison: "deja_pose" };
     }
 
@@ -554,9 +554,22 @@ export async function poserTagParNomDetaille(
       body: { tagId },
     });
     if (!res.ok) {
-      console.warn(`[sio/tag] pose refusee pour ${adresse} (${res.status}).`);
+      console.warn(`[sio/tag] ${tag} REFUSE pour ${adresse} (${res.status}).`);
       return { ok: false, raison: "pose_refusee" };
     }
+    // LE SUCCÈS SE DIT, LUI AUSSI (3 septembre 2026).
+    //
+    // Seuls l'échec, le refus et le « déjà posé » étaient journalisés :
+    // une pose RÉUSSIE ne laissait aucune trace. Le 3 septembre, il a
+    // fallu raisonner par élimination (« pas de refus, pas de déjà
+    // posé, donc c'est passé ») pour répondre à une question simple :
+    // est-ce que cette personne va recevoir sa campagne ?
+    //
+    // Sur le chemin qui décide si une créatrice entre ou non dans ses
+    // séquences email, une déduction n'est pas une mesure. Et un
+    // journal muet sur le cas NORMAL oblige à deviner le jour où
+    // quelque chose cloche.
+    console.log(`[sio/tag] ${tag} pose pour ${adresse}.`);
     return { ok: true, raison: "ok" };
   } catch (e) {
     console.error(`[sio/tag] ${e instanceof Error ? e.message : String(e)}`);
