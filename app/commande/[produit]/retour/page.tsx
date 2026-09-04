@@ -35,6 +35,9 @@ import { readOwnerPaypal, readOwnerStripe } from "@/lib/checkout/ownerAccount";
 import { getOwnerPaypalSubscription } from "@/lib/checkout/paypalOwner";
 import { retrieveOwnerSession } from "@/lib/checkout/stripeCheckout";
 import { isSalesOpen } from "@/lib/sales/previewGate";
+import { isPublicSalesHost } from "@/lib/sales/salesHosts";
+import { evenementPurchase } from "@/lib/analytics/conversions";
+import ConversionGa4 from "@/components/analytics/ConversionGa4";
 
 export const dynamic = "force-dynamic";
 
@@ -102,8 +105,27 @@ export default async function Page({
         ? "paye"
         : "en_attente";
 
+  // ── ÉTAPE 2 DU TUNNEL : IL A PAYÉ ──
+  //
+  // Il ne part QUE sur `etat === "paye"`, c'est à dire quand le
+  // fournisseur vient de confirmer le paiement, relu ci dessus. Cette
+  // adresse est une URL comme une autre : quelqu'un peut l'ouvrir sans
+  // avoir rien payé, et compter une conversion parce qu'un navigateur
+  // est arrivé ici reviendrait à inventer du chiffre d'affaires.
+  //
+  // La RÉFÉRENCE est l'identifiant du fournisseur, jamais un compteur
+  // maison : c'est elle qui permet à GA4 de dédupliquer, donc c'est elle
+  // qui empêche qu'un rafraîchissement compte une vente de plus. Sans
+  // elle, `evenementPurchase` ne rend rien du tout.
+  const referenceVente = aboPaypal ? abonnementPaypal : session ? sessionId : null;
+  const conversion =
+    etat === "paye"
+      ? evenementPurchase({ produitId: product.id, reference: referenceVente })
+      : null;
+
   return (
     <main className="min-h-screen bg-white text-[#2b3264]">
+      <ConversionGa4 estHoteDeVente={isPublicSalesHost(host)} evenement={conversion} />
       <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6 sm:py-14">
         {etat === "paye" && (
           <>

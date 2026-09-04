@@ -55,6 +55,9 @@ import {
   readOwnerStripePublishable,
 } from "@/lib/checkout/ownerAccount";
 import { isSalesOpen } from "@/lib/sales/previewGate";
+import { isPublicSalesHost } from "@/lib/sales/salesHosts";
+import { evenementBeginCheckout } from "@/lib/analytics/conversions";
+import ConversionGa4 from "@/components/analytics/ConversionGa4";
 import { pickRef, REF_COOKIE } from "@/lib/affiliate/refLien";
 import { JOURS_MOIS_OFFERT_ANNONCE } from "@/lib/trial/moisOffert";
 import CommandeClient from "./CommandeClient";
@@ -155,6 +158,17 @@ export default async function Page({
     // Le fond clair est posé ici, pas hérité : cette page est publique et
     // ne doit rien devoir au thème de celui qui l'ouvre.
     <main className="min-h-screen bg-white text-[#2b3264]">
+      {/* ── ÉTAPE 1 DU TUNNEL : IL EST ENTRÉ DANS LE BON DE COMMANDE ──
+          Béné, 2 septembre : "mesurer les conversions etc ?". Il n'y
+          avait aucun événement, donc Google voyait le trafic sans
+          pouvoir dire quelle source ou quelle publicité produisait une
+          vente. Le montant vient du CATALOGUE (`conversions.ts`),
+          jamais d'ici, et le composant repasse par la même porte que la
+          balise : domaine de vente, chemin, ET consentement. */}
+      <ConversionGa4
+        estHoteDeVente={isPublicSalesHost(host)}
+        evenement={evenementBeginCheckout(product.id)}
+      />
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
         <div className="grid items-start gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
           {/* ---------------- Ce qu'on achète ---------------- */}
