@@ -67,6 +67,7 @@ import {
   type Piste,
 } from "@/lib/generateurs/blocs";
 import { passeParLesPistes } from "@/lib/generateurs/sequences";
+import { MAX_TRANCHES, longueurDuMorceau } from "@/lib/generateurs/longueurSortie";
 import { rangerMorceau } from "@/lib/generateurs/contenusStore";
 import {
   FORMATS_OFFRE,
@@ -158,6 +159,18 @@ const schema = z.discriminatedUnion("step", [
     pistes: z.array(pisteSchema).max(6).optional(),
     /** Le rang du morceau DANS la piste, 0-based. */
     pieceIndex: z.number().int().min(0).max(19),
+    /**
+     * LE TEXTE DÉJÀ ÉCRIT, quand on demande la SUITE.
+     *
+     * Béné, 4 septembre 2026 : "rien ne doit tronqué ni annulé". Un
+     * morceau plus long qu'une tranche ne se coupe donc pas : le modèle
+     * reprend exactement là où il s'est arrêté, et on recolle.
+     *
+     * C'est le client qui le renvoie, parce que c'est le serveur qui
+     * vient de le lui écrire : il repart dans SON prompt, sur SON
+     * compte. On le borne en taille, c'est tout.
+     */
+    suiteDe: z.string().max(120_000).optional(),
   }),
 ]);
 
@@ -372,6 +385,17 @@ export async function POST(req: NextRequest) {
     variable: string,
     message: string,
     maxTokens: number,
+    /**
+     * LE TEXTE DÉJÀ ÉCRIT, quand on demande la SUITE.
+     *
+     * Posé en dernier message `assistant`, le modèle REPREND là où ça
+     * s'arrête au lieu de recommencer. C'est ce qui permet de rendre un
+     * contenu plus long qu'une tranche sans le couper ni le jeter.
+     *
+     * L'API refuse un prefill qui finit par une espace : d'où le
+     * `trimEnd` chez l'appelant.
+     */
+    prefill?: string,
   ): Promise<Sortie> {
     let res: Response;
     try {
@@ -435,7 +459,12 @@ export async function POST(req: NextRequest) {
               },
               { type: "text", text: variable },
             ],
-            messages: [{ role: "user", content: message }],
+            messages: prefill
+              ? [
+                  { role: "user", content: message },
+                  { role: "assistant", content: prefill },
+                ]
+              : [{ role: "user", content: message }],
           }),
         ),
         signal: AbortSignal.timeout(Math.max(1_000, budgetLeft())),
@@ -477,7 +506,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const brut = (data?.content ?? []).map((c) => c.text ?? "").join("").trim();
+    // ON NE ROGNE PAS UNE SUITE. Sur une continuation, le modèle rend
+    // souvent le saut de ligne qui ouvre le paragraphe suivant : le
+    // `trim` le mangerait et recollerait "...fin de phrase.## Titre".
+    const assemble = (data?.content ?? []).map((c) => c.text ?? "").join("");
+    const brut = prefill ? assemble.replace(/\s+$/, "") : assemble.trim();
     if (!brut) {
       console.error("[generateurs] reponse vide", data?.stop_reason ?? "");
       return { ok: false, failure: "empty" };
@@ -491,8 +524,9 @@ export async function POST(req: NextRequest) {
     variable: string,
     message: string,
     maxTokens: number,
+    prefill?: string,
   ): Promise<Sortie> {
-    let out = await appelUnique(fixe, variable, message, maxTokens);
+    let out = await appelUnique(fixe, variable, message, maxTokens, prefill);
     for (let attempt = 1; attempt < MAX_ATTEMPTS; attempt++) {
       if (out.ok || !isRetryable(out.failure)) return out;
       const wait = retryDelayMs(attempt, out.retryAfter);
@@ -501,7 +535,7 @@ export async function POST(req: NextRequest) {
       if (budgetLeft() < wait + 45_000) return out;
       console.warn("[generateurs] sature, reprise dans", wait, "ms");
       await new Promise((r) => setTimeout(r, wait));
-      out = await appelUnique(fixe, variable, message, maxTokens);
+      out = await appelUnique(fixe, variable, message, maxTokens, prefill);
     }
     return out;
   }
@@ -610,34 +644,87 @@ export async function POST(req: NextRequest) {
     if (!profilChoisi) return refus("profil_manquant");
   }
 
-  // Le bonus est le plus long des trois ; les emails et les posts
-  // tiennent largement en dessous, et un budget trop large ne rend pas
-  // un texte meilleur, il rend un texte plus long.
-  const maxTokens = piece.bloc === "contenu" ? 4200 : piece.bloc === "post" ? 900 : 1800;
+  // ── LA LONGUEUR ET SON PLAFOND SORTENT DU MÊME ENDROIT ──
+  //
+  // `longueurSortie.ts` porte la fourchette de mots DITE au modèle et le
+  // plafond `max_tokens` posé ici. Les deux étaient écrits séparément :
+  // trois blocs sur six annonçaient un nombre de mots dans le texte de
+  // leur consigne, les trois autres n'en annonçaient aucun, et le
+  // plafond vivait dans ce ternaire. Deux endroits qui disent la
+  // longueur finissent toujours par ne plus dire la même chose, et
+  // c'est le plafond qui a raison contre le texte : il COUPE.
+  //
+  // Le plafond ne DESCEND jamais en dessous de ce qu'il valait avant
+  // (`PLANCHER`), et il ne coûte rien tant qu'il n'est pas atteint :
+  // on paie ce qui est ÉCRIT, pas ce qui est autorisé.
+  const longueur = longueurDuMorceau(id, piece.bloc);
 
-  const out = await appeler(
-    consigneProduction({ id, piece }),
-    consigneDuQuiz(brief),
-    messagePourLeModele({
-      brief,
-      offres,
-      plan: input.plan,
-      declencheur: input.declencheur,
-      // ICI on écrit pour UN profil, donc c'est SON offre qui part.
-      profilIndex: typeof input.profilIndex === "number" ? input.profilIndex : null,
-      profil: profilChoisi,
-      // L'ADRESSE DU QUIZ NE SORT QUE LÀ OÙ ELLE DOIT APPARAÎTRE : le
-      // contenu d'un bonus se lit hors ligne, y coller le lien
-      // renverrait le lecteur vers le quiz qu'il vient de finir.
-      lienQuiz: lienQuizAutorise(id, piece.bloc) ? brief.urlPublique : "",
-      piste: piste.titre || piste.format || piste.punchline ? piste : null,
-      demande: "Produis ce morceau, et rien d'autre.",
-    }),
-    maxTokens,
-  );
-  if (!out.ok) return refus(out.failure);
+  const consigneFixe = consigneProduction({ id, piece });
+  const consigneVariable = consigneDuQuiz(brief);
+  const message = messagePourLeModele({
+    brief,
+    offres,
+    plan: input.plan,
+    declencheur: input.declencheur,
+    // ICI on écrit pour UN profil, donc c'est SON offre qui part.
+    profilIndex: typeof input.profilIndex === "number" ? input.profilIndex : null,
+    profil: profilChoisi,
+    // L'ADRESSE DU QUIZ NE SORT QUE LÀ OÙ ELLE DOIT APPARAÎTRE : le
+    // contenu d'un bonus se lit hors ligne, y coller le lien
+    // renverrait le lecteur vers le quiz qu'il vient de finir.
+    lienQuiz: lienQuizAutorise(id, piece.bloc) ? brief.urlPublique : "",
+    piste: piste.titre || piste.format || piste.punchline ? piste : null,
+    demande: "Produis ce morceau, et rien d'autre.",
+  });
 
-  const markdown = sanitizeAiText(out.texte);
+  // ── RIEN N'EST TRONQUÉ, RIEN N'EST ANNULÉ ──
+  //
+  // Béné, 4 septembre 2026 : "si la sortie doit faire 20000 mots ben
+  // elle en 20000 c'est tout. Un email qui demande à faire XX mots ben
+  // il sort XX mots, on ne détruit jamais la qualité."
+  //
+  // Un morceau plus long qu'une tranche ne se coupe donc pas et ne se
+  // refuse pas : le modèle REPREND là où il s'est arrêté (le texte déjà
+  // écrit part en dernier message `assistant`) et on recolle. C'est la
+  // seule façon de rendre un contenu long sans rien perdre, parce que
+  // la limite n'est pas une limite de contenu : c'est le temps qu'une
+  // requête a le droit de durer.
+  //
+  // `suiteDe` : la SUITE demandée par l'écran quand une tranche n'a pas
+  // suffi. Ce qui a déjà été écrit n'est jamais réécrit, donc jamais
+  // repayé.
+  const dejaEcrit = (input.suiteDe ?? "").replace(/\s+$/, "");
+  let texte = dejaEcrit;
+  let complet = false;
+
+  for (let tranche = 0; tranche < MAX_TRANCHES; tranche++) {
+    const out = await appeler(
+      consigneFixe,
+      consigneVariable,
+      message,
+      longueur.trancheMax,
+      texte || undefined,
+    );
+    // UN ÉCHEC NE JETTE PAS CE QUI EST DÉJÀ ÉCRIT. Sur la première
+    // tranche il n'y a rien à sauver, on dit ce qui s'est passé ; sur
+    // une suite, on rend ce qu'on a et l'écran propose de continuer.
+    if (!out.ok) {
+      if (!texte) return refus(out.failure);
+      break;
+    }
+    texte += out.texte;
+    if (!out.tronque) {
+      complet = true;
+      break;
+    }
+    // Une tranche de plus dans la MÊME requête seulement s'il reste de
+    // quoi l'écrire : sinon elle sortirait vide, et c'est l'écran qui
+    // enchaîne, sans rien perdre.
+    if (budgetLeft() < 45_000) break;
+    console.warn("[generateurs] le morceau continue, tranche suivante");
+  }
+
+  const markdown = sanitizeAiText(texte);
 
   // ── ON RANGE LE MORCEAU TOUT DE SUITE ──
   //
@@ -682,7 +769,10 @@ export async function POST(req: NextRequest) {
       index: piece.index,
       cle: piece.cle,
       markdown,
-      tronque: out.tronque,
+      // `tronque` veut dire "il reste de la suite à écrire", plus "on
+      // t'a rendu un texte coupé" : l'écran enchaîne tout seul, et le
+      // morceau enregistré porte toujours TOUT ce qui a été écrit.
+      tronque: !complet,
       profil: morceauPourUnProfil ? (input.profilIndex ?? null) : null,
     },
   );
@@ -693,10 +783,11 @@ export async function POST(req: NextRequest) {
     index: piece.index,
     cle: piece.cle,
     markdown,
-    // Un texte coupé à la limite reste utilisable : on le rend, mais on
-    // le DIT. En silence, c'est une créatrice qui publie un contenu qui
-    // s'arrête au milieu d'une phrase sans comprendre pourquoi.
-    tronque: out.tronque,
+    // IL RESTE DE LA SUITE : l'écran rappelle la route avec `suiteDe`
+    // et le texte grandit. Rien n'est perdu entre deux tranches, le
+    // morceau est déjà enregistré avec tout ce qui a été écrit.
+    complet,
+    tronque: !complet,
   });
 }
 
