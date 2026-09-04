@@ -29,20 +29,26 @@ import { SALES_HOSTS } from "@/lib/sales/salesHosts";
 import { listerArticles } from "@/lib/blog/articles";
 import { RUBRIQUES } from "@/lib/blog/rubriques";
 import { PAGES_PUBLIQUES } from "@/lib/site/pagesPubliques";
+import { ADRESSES_LEGALES_FR } from "@/lib/site/adressesLegales";
 import { echapperMotifLike } from "@/lib/db/motifLike";
 
 const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
-const PUBLIC_ROUTES = [
-  "",
-  "/login",
-  "/signup",
-  "/privacy",
-  "/legal",
-  "/terms",
-  "/terms-of-use",
-  "/cookies",
-  "/affiliate",
-];
+// LES SIX PAGES LÉGALES, DÉRIVÉES DE LEUR SOURCE UNIQUE.
+//
+// Elles étaient recopiées à la main ici, et la branche du domaine de
+// VENTE avait sa propre liste... qui ne les contenait pas. Résultat
+// mesuré le 4 septembre : `quiz.tipote.com/sitemap.xml` déclarait
+// `/privacy`, `tiquiz.fr/sitemap.xml` ne le déclarait pas, alors que
+// c'est l'adresse `https://tiquiz.fr/privacy` que Google lit dans la
+// configuration de marque.
+//
+// Deux listes écrites séparément finissent toujours par diverger : le
+// fichier `lib/site/pagesPubliques.ts` le dit dans son propre en-tête,
+// et c'est arrivé une ligne plus bas. `ADRESSES_LEGALES_FR` porte la
+// page canonique en VALEUR, donc c'est elle la source.
+const CHEMINS_LEGAUX = [...new Set(Object.values(ADRESSES_LEGALES_FR))].sort();
+
+const PUBLIC_ROUTES = ["", "/login", "/signup", ...CHEMINS_LEGAUX];
 
 export const revalidate = 3600; // 1h
 
@@ -112,6 +118,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         lastModified: new Date(),
         changeFrequency: "monthly" as const,
         priority: p.priorite,
+      })),
+      // LES PAGES LÉGALES, sur CE domaine.
+      //
+      // Ce sont les adresses que Google lit dans la configuration de
+      // marque (`https://tiquiz.fr/privacy`, `/terms-of-use`). Les
+      // omettre du sitemap de ce domaine ne les rend pas invisibles,
+      // puisque le pied de page y mène, mais ça fait dépendre leur
+      // indexation du seul fait qu'un robot suive un lien.
+      //
+      // Priorité basse et volontairement basse : ce sont des pages de
+      // cadre, pas des pages à faire remonter sur une requête.
+      ...CHEMINS_LEGAUX.map((chemin) => ({
+        url: `${HOTE_VENTE}${chemin}`,
+        lastModified: new Date(),
+        changeFrequency: "yearly" as const,
+        priority: 0.3,
       })),
     ];
   }

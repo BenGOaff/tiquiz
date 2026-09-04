@@ -8003,3 +8003,86 @@ construit les deux événements et ne parle à personne),
 `app/commande/[produit]/page.tsx`,
 `app/commande/[produit]/retour/page.tsx`.
 Test : `tests/logic/conversions-vente.test.mts`.
+
+## Le sitemap du domaine de vente oubliait les pages légales (4 septembre 2026)
+
+Béné, après le énième refus de validation de marque par Google : "je
+l'ai fait mille fois et mille fois je reviens là donc NON c'est pas la
+solution".
+
+Elle avait raison, et je lui répétais un bouton. Ce qui suit est ce que
+la MESURE a donné, et ce qu'elle n'a pas donné.
+
+### Ce que Google reproche, et ce qui est mesuré
+
+Deux reproches, tous les deux sur `tiquiz.fr` :
+
+1. `https://tiquiz.fr/privacy` "ne contient pas suffisamment de contenu" ;
+2. "votre page d'accueil n'est accessible que via une page de connexion".
+
+**Le deuxième est faux, et c'est le robot de Google qui le prouve.** Le
+HTML récupéré par l'inspection d'URL de la Search Console porte
+**5382 mots visibles, ZÉRO balise `<form>`, ZÉRO champ mot de passe**.
+Le premier est au minimum discutable : **1786 mots rendus par le
+serveur**, en français, avec les six axes que Google réclame, contre
+805 mots avant la correction du 2 septembre.
+
+**Et ce n'est pas Cloudflare** : testé avec un agent vide, un agent
+inconnu, `Google-InspectionTool` et un navigateur, `/` et `/privacy`
+répondent **200 avec le contenu complet**, aucun `cf-mitigated`. Le
+`robots.txt` sert `Allow: /` pour `*`, les deux pages portent
+`index, follow`, aucun `noindex`. **L'hypothèse a été testée AVANT
+d'être proposée, et elle est morte.**
+
+### LE TROU RÉEL, ET IL EST CHEZ NOUS
+
+`tiquiz.fr/sitemap.xml` déclarait **29 adresses et AUCUNE page légale**.
+Pendant que `quiz.tipote.com/sitemap.xml` les déclarait toutes.
+
+La cause est le défaut que ce dépôt paie en boucle : **deux listes.**
+`PUBLIC_ROUTES` (branche de l'app) portait les six chemins légaux
+recopiés à la main ; la branche du domaine de VENTE avait sa propre
+liste (`PAGES_PUBLIQUES` + le blog) et ne les contenait pas. Et
+`lib/site/pagesPubliques.ts` dit dans son PROPRE en-tête "deux listes
+écrites séparément finissent toujours par diverger". C'est arrivé une
+branche plus bas.
+
+Or c'est exactement `https://tiquiz.fr/privacy` que Google lit dans la
+configuration de marque.
+
+**Règle : les chemins légaux sont DÉRIVÉS de `ADRESSES_LEGALES_FR`**
+(qui porte la page canonique en VALEUR), et les deux branches lisent
+`CHEMINS_LEGAUX`. Une adresse légale ajoutée demain entre dans les deux
+sitemaps sans qu'on y pense.
+
+### CE QUE JE NE PRÉTENDS PAS
+
+**Je ne dis pas que c'est la cause du refus.** Un relecteur de marque va
+chercher l'adresse directement, il ne passe pas par le sitemap. C'est un
+trou réel, chez nous, qui ferme une variable et qui aide de toute façon
+ces pages à être indexées.
+
+**Sur le refus lui même : je ne sais pas.** Tout ce qui est mesurable
+est propre. C'est le cinquième passage sur ce sujet, et j'ai déjà
+inventé quatre causes le 2 septembre, dont une qui a envoyé Béné
+corriger une adresse GitHub déjà juste. Une cause plausible n'est pas
+une cause.
+
+### Ce qui reste à mesurer, et qui n'est pas du code
+
+L'inspection d'URL de la Search Console sur `https://tiquiz.fr/privacy`
+(elle l'a déjà faite sur `/`). Si Google répond "URL inconnue de
+Google", c'est un fait qui change le tableau. Sinon, le bouton "Je pense
+que les problèmes détectés sont incorrects" devient le bon, avec les
+chiffres mesurés ci dessus dans la demande.
+
+**Et le rappel qui désamorce l'urgence :** sa propre console écrit "La
+validation n'est pas requise, car votre application ne demande aucun
+niveau d'accès sensible ou restreint". Le plafond de 100 utilisateurs ne
+vise que les scopes sensibles ou restreints, ce que sa page Audience dit
+aussi en toutes lettres. **Aucune connexion ne casse pendant ce temps**,
+et le branding ne décide que de l'affichage du logo.
+
+Test : le bloc "les pages légales sont déclarées sur le domaine de
+vente" de `tests/logic/site-public.test.mts`, vérifié en rejouant la
+version d'avant (2 tests rougissent).
