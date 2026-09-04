@@ -45,9 +45,27 @@ se projeter, n'y touche pas du tout." Question fermée.
   trois choses que la capture ne sait pas faire : le MÊME en-tête et le
   MÊME pied que `/blog` et `/integrations`, la TRADUCTION (`?lang=en`
   change toute la page, gabarit des documents légaux), et un HTML rendu
-  par le serveur. Le texte vit dans `lib/site/landing.ts`, les prix
-  viennent de `OWNER_CATALOG`. **La coquille du site (en-tête et pied)
-  reste en français**, c'est la part de chantier 4 qui n'est pas faite.
+  par le serveur. Le texte vit dans `lib/site/landing.ts`, les prix ET
+  les fonctionnalités viennent du code (`OWNER_CATALOG`,
+  `lib/checkout/avantages.ts`, `FREE_LIMITS`).
+  **Le premier jet était austère, et c'était ma faute** : j'avais
+  appliqué à une page de VENTE les règles de sobriété du BLOG. Béné :
+  "on est donc passés de ma super jolie page ultra design à ... ça."
+  Refaite dans SON système visuel, relevé dans
+  `content/sales/v2/funnel-quiz.html` et dans la capture.
+  **La coquille du site (en-tête et pied) reste en français**, c'est la
+  part de chantier 4 qui n'est pas faite.
+- 🆕 **LE SITE PUBLIC PORTE MAINTENANT LES COULEURS DE LA PAGE DE
+  VENTE** (4 septembre). Béné : "je préfère que tu alignes le blog sur
+  ma belle page de vente que l'inverse." `.tq-site` (globals.css) a
+  basculé, donc le blog, les 7 pages d'intégrations, les pages légales,
+  l'en-tête et le pied ont suivi le même jour sans être touchés. La
+  fonte est Open Sans, auto hébergée depuis SES fichiers
+  (`/v/tiquiz/*.woff2`), donc aucun appel à Google Fonts. Le détail des
+  7 jetons est dans `AGENTS.md`.
+  **Ce qui reste à faire de ce côté :** les MISES EN PAGE des pages du
+  site sont encore celles du blog (colonnes, rythme vertical). Seules
+  les couleurs, la fonte et les boutons ont basculé.
 - **basculer la vraie page sur la v2**, une fois relue.
 - **La vitesse et les images sont FAITES** (2 septembre). La page passe
   de **8551 Ko, 72 requêtes et 2708 ms** à **1556 Ko, 21 requêtes et

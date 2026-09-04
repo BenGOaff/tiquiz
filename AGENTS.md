@@ -8004,6 +8004,123 @@ construit les deux événements et ne parle à personne),
 `app/commande/[produit]/retour/page.tsx`.
 Test : `tests/logic/conversions-vente.test.mts`.
 
+## Le site public s'aligne sur la PAGE DE VENTE (Béné, 4 septembre 2026)
+
+Une landing de relecture avait été écrite en vraie page Next. Béné :
+"wow on est donc passés de ma super jolie page ultra design à ... ça.
+C'est très décevant. Vraiment. Je ne peux pas accepter cette daube."
+
+**Elle avait raison, et la faute est nommable en une ligne : j'ai
+appliqué à une page de VENTE les règles de sobriété du BLOG.** La règle
+du 31 août interdit un aplat de couleur SOUS DU TEXTE. Elle n'a jamais
+interdit les visuels, les cartes, les ombres ni la couleur. J'avais
+sorti une page sans une seule image pour vendre un outil de quiz.
+
+C'est la même famille que les trois drames du 1er août : une logique
+écrite pour un cas, appliquée telle quelle à un autre.
+
+### ET ELLE A TRANCHÉ LE SENS DE L'ALIGNEMENT
+
+"Je préfère que tu alignes le blog sur ma belle page de vente que
+l'inverse."
+
+Le site public avait sa propre palette crème, reprise de Typeform en
+août ; la page de vente a la sienne. **Deux systèmes visuels sur un même
+domaine, c'est deux sites empilés**, et ça se voyait à la couture entre
+l'en-tête et n'importe quelle page.
+
+`.tq-site` (globals.css) porte donc désormais les couleurs de la page de
+vente, et les 20 fichiers qui lisent ces jetons ont suivi le même jour,
+sans être touchés.
+
+| | avant | après |
+|---|---|---|
+| encre des titres | #0b1020 | **#2B3264** |
+| corps | #4a5270 | **#3B3B3B** |
+| bleu des boutons | #1d6bf0 | **#5A6EF6** |
+| cyan des mots surlignés | #22d3ee | **#20BBE6** |
+| fond | #fbfaf8 | **#F3F6FC** |
+| pastilles | #f2f1ee | **#EDF1F7** |
+| bord | #e4e2dd | **#E4E8F3** |
+| fonte | Inter (système) | **Open Sans, auto hébergée** |
+
+**AUCUNE VALEUR N'EST CHOISIE, elles sont toutes RELEVÉES** dans
+`content/sales/v2/funnel-quiz.html` (le bloc qu'elle a relu et corrigé
+trois fois le 2 septembre) et dans la capture
+`content/sales/tiquiz.html`.
+
+**Et la fonte vient de SES fichiers.** Sa page de vente auto héberge
+Open Sans en 5 graisses (`/v/tiquiz/*.woff2`, relevées dans ses
+`@font-face`). On les REPREND : un aller-retour réseau en moins qu'avec
+Google Fonts, et surtout la garantie que le site rend exactement comme
+sa page. Vérifié dans un navigateur, pas déduit : `document.fonts` rend
+bien Open Sans en 400, 600, 700 et 800.
+
+**Le mot surligné passe au CYAN, pas au bleu des boutons.** Le bleu
+appelle au clic, le cyan souligne : les confondre fait lire un titre
+comme un lien.
+
+### LE MOT SURLIGNÉ A FAIT ROUGIR UN TEST JUSTE
+
+`branding-site.test.mts` exigeait la chaîne `color: var(--tq-bleu)` sur
+`.tq-surb`. Il est donc sorti ROUGE sur une correction JUSTE. **Un
+garde-fou qui fige une FORMULATION empêche de corriger la
+formulation** : il vise maintenant le FAIT (c'est une couleur de TEXTE,
+prise dans les jetons de marque, et il n'y a AUCUN fond). La règle était
+déjà écrite dans ce fichier, au 3 septembre, et je l'ai repayée.
+
+### CE QUI N'EST PAS SUR LA LANDING, ET POURQUOI
+
+- **Aucune capture du produit.** La seule que l'app sait produire vient
+  de `/visual-test`, la fixture des tests visuels : elle porte un
+  bandeau "Mode aperçu" et un quiz de démo écrit SANS ACCENTS ("Quel
+  createur de quiz es-tu ?"). La maquette du haut de page est donc
+  DESSINÉE en HTML, comme son bloc funnel : traduite avec le reste,
+  nette à toutes les densités, et elle ne pèse rien.
+- **Aucun témoignage.** Sa page de vente en porte quinze avec les
+  portraits (relevés dans `lib/sales/altImagesV2.ts`). Je n'ai aucun
+  moyen de vérifier d'ici qui a dit quoi, et un faux témoignage est son
+  interdit numéro un. Ils s'ajoutent quand elle donne les vrais.
+- **Aucune icône en caractère Unicode** (leçon du 2 septembre) : les
+  coches, les flèches et les pictogrammes sont des TRACÉS SVG.
+
+### LE COMPILATEUR JSX MANGE L'ESPACE APRÈS UNE EXPRESSION
+
+Trouvé en regardant le hub intégrations après la bascule. La page
+affichait, en production, **"à partir de 29,99 $par mois"**.
+
+La source est juste (`{ZAPIER.professionnelParMois} par mois`), et le
+`{" "}` posé DEVANT l'expression prouve que quelqu'un avait déjà vu le
+problème d'un côté sans voir l'autre.
+
+**Deux extractions de texte sur trois MENTAIENT, et c'est la leçon.**
+
+| ce qu'on fait | ce que ça rend |
+|---|---|
+| retirer les balises avec `''` | colle deux voisins qui, à l'écran, sont séparés |
+| retirer les balises avec `' '` | INVENTE une espace là où React pose son `<!-- -->`, donc cache exactement ce bug |
+| lire les NOEUDS DE TEXTE dans un navigateur | la seule mesure qui dit ce que le lecteur voit |
+
+Ma première mesure disait "$par" (juste, par accident), ma deuxième
+disait "aucune faute sur 17 pages" (faux), et j'ai failli conclure que
+le bug n'existait pas. **Un test qui ne distingue pas ce qu'il est censé
+distinguer est pire qu'un test absent**, et j'ai réussi à me tromper
+dans les DEUX sens sur la même mesure.
+
+**La sonde qui tranche** parcourt les COMMENTAIRES de séparation de
+React et regarde ses deux voisins : un texte qui finit par un caractère
+visible, un commentaire, un texte qui commence par une lettre. Sur les
+17 pages du site elle rend **5 candidats, dont 3 légitimes** (`(SAS`,
+`filleul` + `s` pour le pluriel, `(70`) et **2 vrais collages**, les
+deux corrigés :
+
+- `/integrations` : "29,99 $par mois" ;
+- `/integrations/interact-systeme-io` : "2étapes".
+
+Une sonde qui rendait 8 fautes par page (parce qu'elle lisait aussi les
+scripts de Next) aurait fini ignorée : c'est le même défaut que le filet
+genre-neutre du 24 août.
+
 ## Le sitemap du domaine de vente oubliait les pages légales (4 septembre 2026)
 
 Béné, après le énième refus de validation de marque par Google : "je

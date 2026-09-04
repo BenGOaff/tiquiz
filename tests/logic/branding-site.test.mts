@@ -99,12 +99,26 @@ describe("Le site public n'a plus un seul aplat sous du texte", () => {
   test("LE SURLIGNEUR DE MARQUE est une COULEUR DE TEXTE, plus un rectangle", () => {
     // "Au pire mets carrement le texte en couleur." C'etait un degrade
     // bleu avec du blanc dessus, repris des vignettes.
+    //
+    // CE TEST VISE LE FAIT, PAS LA FORMULATION. Il exigeait la chaine
+    // `var(--tq-bleu)` : il est donc sorti ROUGE le 4 septembre sur une
+    // correction JUSTE, le jour ou le surligneur est passe au CYAN pour
+    // s'aligner sur la page de vente (Bene : "je prefere que tu alignes
+    // le blog sur ma belle page de vente que l'inverse"). Un garde-fou
+    // qui fige une formulation empeche de corriger la formulation.
+    //
+    // Ce qui compte, et qui ne bouge pas : c'est une COULEUR DE TEXTE,
+    // elle vient d'un jeton de marque, et il n'y a AUCUN fond.
     const css = fs.readFileSync(path.join(RACINE, "app/globals.css"), "utf8");
     const bloc = css.slice(css.indexOf(".tq-surb {"), css.indexOf("}", css.indexOf(".tq-surb {")));
     assert.ok(bloc.length > 0, ".tq-surb doit exister");
     assert.ok(!/background/.test(bloc), ".tq-surb ne doit plus poser de fond");
     assert.ok(!/linear-gradient/.test(bloc), "et surtout pas un degrade");
-    assert.match(bloc, /color:\s*var\(--tq-bleu\)/);
+    assert.match(
+      bloc,
+      /color:\s*var\(--tq-(bleu|cyan)\)/,
+      "le surligneur doit rester une couleur de texte prise dans les jetons de marque",
+    );
   });
 
   test("le PIED de page reste sombre, et c'est le seul", () => {

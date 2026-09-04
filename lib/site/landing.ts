@@ -61,6 +61,36 @@ export interface Question {
   r: string;
 }
 
+/**
+ * LA MAQUETTE DU HAUT DE PAGE, DESSINÉE EN HTML.
+ *
+ * Pas une capture d'écran, et c'est une décision. La seule capture que
+ * l'app sait produire aujourd'hui vient de `/visual-test`, la fixture
+ * des tests visuels : elle porte un bandeau "Mode aperçu" et un quiz de
+ * démonstration écrit SANS ACCENTS ("Quel createur de quiz es-tu ?").
+ * La poser en haut de la page de Béné mettrait du texte de test sur son
+ * argument principal.
+ *
+ * Dessinée en HTML, la maquette est traduite avec le reste, nette à
+ * toutes les densités, et elle ne pèse rien. C'est le geste de son bloc
+ * `content/sales/v2/funnel-quiz.html`, qu'elle a relu trois fois.
+ */
+export interface Maquette {
+  progression: string;
+  question: string;
+  reponses: readonly string[];
+  /** La réponse mise en avant, par son index dans `reponses`. */
+  choisie: number;
+}
+
+/** Un profil de la démonstration du funnel : ce qu'il lit, et son tag. */
+export interface ProfilDemo {
+  reponse: string;
+  profil: string;
+  offre: string;
+  tag: string;
+}
+
 export interface ColonneTarif {
   nom: string;
   /** Le prix affiché en gros. */
@@ -95,8 +125,16 @@ export interface ContenuLanding {
   chiffreLegende: string;
   chiffreSource: string;
 
+  maquette: Maquette;
+
   mecaniqueTitre: string;
   etapes: Etape[];
+
+  funnelTitre: string;
+  funnelMotCle: string;
+  funnelCorps: string;
+  funnelProfils: readonly ProfilDemo[];
+  funnelTagLegende: string;
 
   sioTitre: string;
   sioCorps: string[];
@@ -217,6 +255,44 @@ const fr: ContenuLanding = {
   chiffreSource:
     "Rapport Interact sur les taux de conversion des quiz. Ce n'est pas un taux de page : c'est le taux mesuré à partir du moment où le quiz est commencé.",
 
+  maquette: {
+    progression: "Question 2 sur 6",
+    question: "Combien de personnes reçoivent tes emails aujourd'hui ?",
+    reponses: [
+      "Personne, je démarre tout juste",
+      "Quelques dizaines, surtout des proches",
+      "Plusieurs centaines, ça bouge un peu",
+    ],
+    choisie: 1,
+  },
+
+  funnelTitre: "Un seul quiz. Et chacun repart vers",
+  funnelMotCle: "l'offre qui le concerne",
+  funnelCorps:
+    "Tu ne diagnostiques pas pour le plaisir de diagnostiquer. Chaque résultat a son propre texte, son propre bouton et son propre tag. Trois personnes répondent au même quiz, elles ne finissent pas au même endroit.",
+  funnelProfils: [
+    {
+      reponse: "Je démarre tout juste",
+      profil: "Tu poses les bases",
+      offre: "Vers ton offre d'entrée",
+      tag: "profil-debutant",
+    },
+    {
+      reponse: "Quelques dizaines de contacts",
+      profil: "Tu as une liste, pas encore de rythme",
+      offre: "Vers ton accompagnement",
+      tag: "profil-liste-tiede",
+    },
+    {
+      reponse: "Plusieurs centaines de contacts",
+      profil: "Tu as l'audience, il manque l'offre",
+      offre: "Vers ton offre haute",
+      tag: "profil-audience",
+    },
+  ],
+  funnelTagLegende:
+    "Le tag part dans Systeme.io avec le contact. S'il n'existe pas encore, Tiquiz le crée.",
+
   mecaniqueTitre: "Comment ça marche",
   etapes: [
     {
@@ -323,6 +399,44 @@ const en: ContenuLanding = {
     "of people who start a quiz leave their email, in the coaching and training category.",
   chiffreSource:
     "Interact report on quiz conversion rates. This is not a page rate: it is measured from the moment the quiz is started.",
+
+  maquette: {
+    progression: "Question 2 of 6",
+    question: "How many people get your emails today?",
+    reponses: [
+      "Nobody, I am just starting out",
+      "A few dozen, mostly people I know",
+      "Several hundred, it is picking up",
+    ],
+    choisie: 1,
+  },
+
+  funnelTitre: "One quiz. And everyone leaves towards",
+  funnelMotCle: "the offer that fits them",
+  funnelCorps:
+    "You are not diagnosing for the fun of it. Every result has its own text, its own button and its own tag. Three people answer the same quiz, they do not end up in the same place.",
+  funnelProfils: [
+    {
+      reponse: "I am just starting out",
+      profil: "You are laying the groundwork",
+      offre: "To your entry offer",
+      tag: "profil-debutant",
+    },
+    {
+      reponse: "A few dozen contacts",
+      profil: "You have a list, not a rhythm yet",
+      offre: "To your coaching offer",
+      tag: "profil-liste-tiede",
+    },
+    {
+      reponse: "Several hundred contacts",
+      profil: "You have the audience, the offer is missing",
+      offre: "To your premium offer",
+      tag: "profil-audience",
+    },
+  ],
+  funnelTagLegende:
+    "The tag travels to Systeme.io with the contact. If it does not exist yet, Tiquiz creates it.",
 
   mecaniqueTitre: "How it works",
   etapes: [

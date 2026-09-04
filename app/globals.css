@@ -701,25 +701,63 @@ html[data-pq-compact] body {
    derrière connexion garde ses propres jetons, intacts.
    ==================================================================== */
 
+/* OPEN SANS, LES MÊMES FICHIERS QUE SERT LA PAGE DE VENTE.
+   Relevés dans `content/sales/tiquiz.html` : cinq graisses auto
+   hébergées dans `/v/tiquiz/*.woff2`. On les REPREND au lieu d'appeler
+   Google Fonts : c'est un aller-retour réseau en moins, et surtout la
+   garantie que le site rend exactement comme sa page de vente. */
+@font-face{font-family:"Open Sans";font-style:normal;font-weight:300;font-display:swap;src:url(/v/tiquiz/b5e59792056f.woff2) format("woff2")}
+@font-face{font-family:"Open Sans";font-style:normal;font-weight:400;font-display:swap;src:url(/v/tiquiz/de630f9eab4d.woff2) format("woff2")}
+@font-face{font-family:"Open Sans";font-style:normal;font-weight:600;font-display:swap;src:url(/v/tiquiz/d7e5d6cff8b7.woff2) format("woff2")}
+@font-face{font-family:"Open Sans";font-style:normal;font-weight:700;font-display:swap;src:url(/v/tiquiz/6941218b029a.woff2) format("woff2")}
+@font-face{font-family:"Open Sans";font-style:normal;font-weight:800;font-display:swap;src:url(/v/tiquiz/d1ad3b6892b9.woff2) format("woff2")}
+
 .tq-site {
-  /* 17 px, pas 16. Beneé, 30 août : "Typeform = pleine page, tiquiz =
+  /* 17 px, pas 16. Béné, 30 août : "Typeform = pleine page, tiquiz =
      tout ratatiné en tout petit". Typeform ouvre son blog à 17 px sur un
      conteneur de 1280 : c'est ça qui fait respirer, pas la couleur. */
   font-size: 17px;
-  --tq-encre: #0b1020;
-  --tq-encre-douce: #4a5270;
-  --tq-marine: #050a1e;
-  --tq-bleu: #1d6bf0;
-  --tq-bleu-fonce: #0b3fa8;
-  --tq-cyan: #22d3ee;
+
+  /* ================================================================
+     LES COULEURS SONT CELLES DE LA PAGE DE VENTE, ET C'EST SA
+     DÉCISION.
+
+     Béné, 4 septembre 2026 : "je préfère que tu alignes le blog sur ma
+     belle page de vente que l'inverse."
+
+     Jusqu'ici le site public avait sa propre palette crème, reprise de
+     Typeform en août. Deux systèmes visuels sur un même domaine, c'est
+     deux sites empilés : on le voyait à la couture entre l'en-tête et
+     n'importe quelle page.
+
+     Chaque valeur ci dessous est RELEVÉE, jamais choisie : dans
+     `content/sales/v2/funnel-quiz.html`, le bloc qu'elle a relu trois
+     fois le 2 septembre, et dans la capture `content/sales/tiquiz.html`.
+
+       #2B3264  l'encre des titres
+       #3B3B3B  le corps de texte
+       #5A6EF6  le bleu des boutons
+       #20BBE6  le cyan des mots surlignés
+       #F3F6FC  le fond pâle qui alterne avec le blanc
+       #EDF1F7  les pastilles
+       #E4E8F3  le bord des cartes
+     ================================================================ */
+  --tq-encre: #2b3264;
+  --tq-encre-douce: #3b3b3b;
+  /* Le pied de page garde le geste Typeform (coins arrondis, fond
+     sombre) et prend la marine de SA marque, pas un noir générique. */
+  --tq-marine: #1d2450;
+  --tq-bleu: #5a6ef6;
+  --tq-bleu-fonce: #4256e0;
+  --tq-cyan: #20bbe6;
   --tq-violet: #7c4dff;
-  --tq-creme: #fbfaf8;
-  --tq-panneau: #f2f1ee;
-  --tq-bord: #e4e2dd;
+  --tq-creme: #f3f6fc;
+  --tq-panneau: #edf1f7;
+  --tq-bord: #e4e8f3;
 
   background: var(--tq-creme);
   color: var(--tq-encre);
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  font-family: "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -779,9 +817,12 @@ html[data-pq-compact] body {
    dégradé. Le fond coloré sous du texte n'existe plus sur ce site
    qu'aux DEUX endroits où rien ne se lit longtemps : un bouton, et
    le pied de page sombre. */
+/* LE MOT SURLIGNÉ D'UN TITRE. Sur sa page de vente c'est le CYAN, pas
+   le bleu des boutons : le bleu appelle au clic, le cyan souligne. Les
+   confondre ferait lire un titre comme un lien. */
 .tq-surb {
-  color: var(--tq-bleu);
-  font-weight: 900;
+  color: var(--tq-cyan);
+  font-weight: 800;
 }
 
 /* L'ÉTIQUETTE DE RUBRIQUE. Petite, en capitales, à la couleur de
@@ -867,15 +908,22 @@ html[data-pq-compact] body {
   font-size: 1rem;
   background: var(--tq-bleu);
   color: #fff;
+  /* 700 et l'ombre portée : c'est le bouton de sa page de vente, relevé
+     dans `funnel-quiz.html`. Sans l'ombre il se pose à plat sur le fond
+     pâle et il ne se voit plus. */
+  font-weight: 700;
+  box-shadow: 0 9px 24px rgba(90, 110, 246, 0.35);
   transition: all 0.15s ease;
 }
 .tq-bouton:hover {
   background: var(--tq-bleu-fonce);
+  box-shadow: 0 11px 28px rgba(90, 110, 246, 0.45);
 }
 .tq-bouton-fantome {
-  background: transparent;
+  background: #fff;
   color: var(--tq-encre);
-  border: 1px solid var(--tq-bord);
+  border: 1px solid #d8deee;
+  box-shadow: none;
 }
 .tq-bouton-fantome:hover {
   background: #fff;
