@@ -12,7 +12,7 @@
 // bruit : une page construite que personne ne peut atteindre, un lien
 // légal qui ne mène nulle part, et un chiffre de commission qui ment.
 
-import { test } from "node:test";
+import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -226,4 +226,64 @@ test("deux articles ne partagent pas la meme couverture", () => {
     assert.equal(deja, undefined, `${a.slug} et ${deja} partagent ${a.couverture}`);
     vues.set(a.couverture!, a.slug);
   }
+});
+
+// ── LE SITEMAP DU DOMAINE DE VENTE DÉCLARE LES PAGES LÉGALES ──────
+//
+// Béné, 4 septembre 2026, après le énième refus de validation de
+// marque : "je l'ai fait mille fois et mille fois je reviens là donc
+// NON c'est pas la solution".
+//
+// Mesuré ce jour là sur la production, et c'est un trou réel :
+// `tiquiz.fr/sitemap.xml` déclarait 29 adresses et AUCUNE page
+// légale, alors que `quiz.tipote.com/sitemap.xml` les déclarait toutes
+// (`PUBLIC_ROUTES`). Deux listes écrites séparément, elles avaient
+// divergé, et c'est le défaut que ce dépôt paie en boucle.
+//
+// Or c'est `https://tiquiz.fr/privacy` que Google lit dans la
+// configuration de marque, et c'est cette page qu'il reproche de "ne
+// pas contenir suffisamment de contenu".
+//
+// ON NE PRÉTEND PAS QUE C'EST LA CAUSE DU REFUS : un relecteur va
+// chercher l'adresse directement. Ce test fige le fait que les deux
+// branches lisent la MÊME source, pour que la divergence ne puisse pas
+// revenir.
+describe("les pages légales sont déclarées sur le domaine de vente", () => {
+  const src = fs.readFileSync(
+    path.join(process.cwd(), "app/sitemap.ts"),
+    "utf8",
+  );
+  const sansCommentaires = src
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+
+  test("les chemins légaux sont DÉRIVÉS, jamais recopiés à la main", () => {
+    // La source est `ADRESSES_LEGALES_FR`, qui porte la page canonique
+    // en valeur. Une liste recopiée est ce qui a produit la divergence.
+    assert.match(sansCommentaires, /ADRESSES_LEGALES_FR/);
+    assert.match(sansCommentaires, /CHEMINS_LEGAUX/);
+    // Plus aucun chemin légal écrit en dur dans un tableau de routes.
+    assert.doesNotMatch(sansCommentaires, /"\/privacy"/);
+    assert.doesNotMatch(sansCommentaires, /"\/terms-of-use"/);
+  });
+
+  test("la branche du domaine de VENTE les déclare, pas seulement l'app", () => {
+    // Les deux branches doivent s'en servir. N'en vérifier qu'une
+    // laisserait exactement le trou qu'on vient de fermer.
+    const usages = sansCommentaires.match(/CHEMINS_LEGAUX/g) ?? [];
+    assert.ok(
+      usages.length >= 3,
+      `CHEMINS_LEGAUX doit être défini ET lu par les deux branches, vu ${usages.length} fois`,
+    );
+    assert.match(sansCommentaires, /\$\{HOTE_VENTE\}\$\{chemin\}/);
+  });
+
+  test("les six documents légaux sont couverts", () => {
+    // Si Béné ajoute une adresse légale demain, elle entre dans les
+    // deux sitemaps sans qu'on y pense.
+    const canoniques = new Set(Object.values(ADRESSES_LEGALES_FR));
+    for (const attendu of ["/privacy", "/terms", "/terms-of-use", "/legal", "/cookies"]) {
+      assert.ok(canoniques.has(attendu), `${attendu} doit être une page canonique`);
+    }
+  });
 });
