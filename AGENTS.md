@@ -8121,6 +8121,113 @@ Une sonde qui rendait 8 fautes par page (parce qu'elle lisait aussi les
 scripts de Next) aurait fini ignorée : c'est le même défaut que le filet
 genre-neutre du 24 août.
 
+### Deuxième passage : ce que "ultra design" veut dire, mesuré
+
+Béné : "tu vas vraiment devoir faire des efforts sur le design, on est
+très loin d'un saas premium de 2026. Rapproche-toi beaucoup plus de ma
+page d'origine. On est à peine à 20 % de ce que je veux."
+
+**LA MÉTHODE QUI A MARCHÉ, ET C'EST ELLE QU'IL FAUT RETENIR : j'ai
+SERVI sa page de vente dans un navigateur et je l'ai REGARDÉE, section
+par section, au lieu d'en relire le CSS.** Le premier passage avait
+relevé les couleurs, la fonte et le bouton, c'est à dire ce qu'un
+fichier CSS raconte. Ce qui faisait la différence n'était pas là : ce
+sont des GESTES, et ils ne se voient qu'à l'écran.
+
+Les huit qui manquaient, tous les huit relevés dans la capture :
+
+| Le geste | Ce qu'il fait |
+|---|---|
+| le SURLIGNEUR pâle derrière un fragment de titre, curseur au bout | sa signature la plus visible, sur presque chaque titre |
+| les SCINTILLES au dessus du bouton principal | ce qui fait que le bouton n'a pas l'air posé à plat |
+| la RASSURANCE sous chaque bouton | "Gratuit à vie", "Pas besoin de CB", répétée à CHAQUE bouton |
+| le BANDEAU DÉFILANT de fonctionnalités | il remplit le vide sous le haut de page |
+| les pastilles "ÉTAPE n" + des lignes qui ALTERNENT texte / visuel | à la place d'une grille de quatre cartes plates |
+| de vraies MAQUETTES de produit dans ces lignes | montrer au lieu de décrire |
+| les cartes de tarif à RUBAN coloré + l'interrupteur mensuel / annuel | c'est l'écran où quelqu'un sort sa carte |
+| le BANDEAU DÉGRADÉ de fin | blanc sur bleu, le seul aplat de la page |
+
+**Deux choses viennent de ce que font les landings qui vendent en 2026,
+pas d'elle** : la preuve sociale remontée AVANT la première
+fonctionnalité, et une grille "bento" à la place d'une liste à puces.
+
+### LES AVIS SONT VRAIS, ET ILS NE SE TRADUISENT JAMAIS
+
+Béné : "on a ici des avis tous frais sur tiquiz, tu peux les
+utiliser : fr.trustpilot.com/review/tiquiz.fr".
+
+Les six sont relevés mot pour mot dans `lib/site/landing.ts`, constante
+`AVIS`, avec leur auteur et leur date. **Ils vivent HORS des objets de
+langue** : un témoignage traduit n'est plus un témoignage, c'est une
+reformulation signée du nom de quelqu'un d'autre, et c'est son interdit
+numéro un. On ne corrige NI l'orthographe NI la ponctuation.
+
+🚨 **ET LES DEUX CHIFFRES DE TRUSTPILOT SE CONTREDISENT EN APPARENCE.**
+Mesuré : 6 avis, une répartition de **100 % en 5 étoiles**, et un
+**TrustScore de 4,2/5**. Le TrustScore est une note PONDÉRÉE (volume et
+fraîcheur), pas la moyenne. La page n'affiche donc **aucune note
+chiffrée** : à côté de "tous en 5 étoiles", un 4,2 se lirait comme une
+erreur, et l'écrire sans le 100 % sous-vendrait. On dit le FAIT, et on
+met le lien pour que n'importe qui vérifie. Le test l'interdit.
+
+### CE QUE MES PROPRES MESURES ONT ENCORE RATÉ
+
+- **`textContent` ignore `display:none`.** Ma première vérification de
+  l'interrupteur de tarif lisait `textContent` et rendait "0 €0 €" : j'ai
+  cru la bascule cassée alors qu'elle marchait. `innerText` respecte le
+  rendu, et c'est le seul qui dit ce que la lectrice voit. Troisième fois
+  de la semaine qu'une extraction de texte mal choisie ment.
+- **Un accent grave TERMINE un littéral de gabarit**, y compris dans un
+  commentaire CSS écrit dedans. Deux fois de suite.
+- **`pkill -f "next dev"` tue mon propre shell** (sortie 144). On tue par
+  PID, ou on change de port.
+
+### QUATRE DÉFAUTS QUE SEUL LE RENDU A MONTRÉS
+
+Aucun n'aurait été vu par `tsc` ni par un test de contenu :
+
+1. **le bouton "Copier" du champ de lien affichait "Étape"** : j'avais
+   passé `t.etapeMot`, la mauvaise chaîne ;
+2. **l'étape 1 réutilisait la maquette du haut de page**, donc le même
+   écran deux fois sur la même page ;
+3. **le gros chiffre de la colonne annuelle affichait "ou 170,00 € par
+   an"** en 42 px : un prix se lit d'un coup d'oeil, une phrase non ;
+4. **les trois boutons de tarif menaient à `/signup`** et portaient le
+   même libellé, dont la colonne à 29 €. Ils mènent aux bons de commande
+   (`/commande/mensuel`, `/commande/annuel`, et les deux PLUS), et comme
+   l'interrupteur n'a AUCUN script, les DEUX destinations sont rendues et
+   `:has()` montre la bonne. Le gratuit ne porte aucune des deux classes,
+   sinon son bouton disparaissait dès qu'on passait à l'année.
+
+### CE QUI RESTE ABSENT, ET POURQUOI
+
+- **Aucune capture d'écran du produit.** La seule que l'app sait
+  produire vient de `/visual-test`, la fixture des tests visuels : elle
+  porte un bandeau "Mode aperçu" et un quiz de démo écrit SANS ACCENTS
+  ("Quel createur de quiz es-tu ?"). Les maquettes sont DESSINÉES en
+  HTML (`pieces.tsx`) : traduites avec le reste, nettes à toutes les
+  densités, et elles ne pèsent rien.
+- **Aucune vidéo de démo.** Sa page en a deux ; je n'en ai aucune.
+- **Aucun portrait sur les avis.** Trustpilot n'en fournit pas.
+- **La FAQ n'a que 4 questions**, la sienne en a 18 en 5 groupes. Les
+  siennes sont déjà écrites et validées : elles se portent depuis sa
+  page, elles ne se réinventent pas.
+
+### SUR L'APLAT DE COULEUR SOUS DU TEXTE
+
+La règle du 31 août ("aucun aplat sous du texte, NULLE PART") a été
+écrite pour le BLOG et les pages qui se LISENT, après trois remontées
+sur des pavés bleus saturés portant du texte blanc.
+
+Deux endroits de la landing en portent, et les deux sont SON geste sur
+SA page : le surligneur du titre (une TEINTE pâle sous du texte à
+l'encre) et le bandeau dégradé de fin (où rien ne se lit longtemps,
+comme le pied de page). **Ne pas les "corriger" au prochain passage.**
+
+Test : `tests/logic/landing.test.mts`, vérifié en rejouant deux versions
+fautives (les deux payantes vers `/signup`, un avis recopié dans une
+langue) : les deux rougissent.
+
 ## Le sitemap du domaine de vente oubliait les pages légales (4 septembre 2026)
 
 Béné, après le énième refus de validation de marque par Google : "je

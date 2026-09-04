@@ -1,72 +1,62 @@
 // app/(site)/apercu-landing-8f2c9d41/page.tsx
 //
-// LA LANDING EN VRAIE PAGE NEXT, POUR RELECTURE.
+// LA LANDING, DEUXIÈME PASSAGE.
 //
-// Béné, 4 septembre 2026 : "propose moi une landing (pas besoin d'un
-// secret dessus, juste met un slug introuvable) pour que je voie à quoi
-// elle pourrait ressembler en vrai next avec la traduction".
+// Béné, 4 septembre 2026 : "tu vas vraiment devoir faire des efforts sur
+// le design, on est très loin d'un saas premium de 2026... rapproche-toi
+// beaucoup plus de ma page d'origine. On est à peine à 20 % de ce que je
+// veux."
 //
-// -- LE PREMIER JET ÉTAIT AUSTÈRE, ET C'ÉTAIT MA FAUTE ----------------
+// -- CE QUI A CHANGÉ, ET D'OÙ ÇA VIENT --------------------------------
 //
-// Béné, le même jour : "on est donc passés de ma super jolie page ultra
-// design à ... ça. C'est très décevant."
+// J'ai SERVI sa page de vente dans un navigateur et je l'ai regardée
+// section par section, au lieu d'en relire le CSS. Huit gestes lui
+// appartiennent et manquaient tous :
 //
-// Elle avait raison. J'avais appliqué à une page de VENTE les règles de
-// sobriété du BLOG. La règle du 31 août dit "aucun aplat de couleur
-// SOUS DU TEXTE" : elle interdit un pavé bleu derrière un paragraphe,
-// elle n'a jamais interdit les visuels, les cartes, les ombres ni la
-// couleur. J'avais sorti une page sans une seule image pour vendre un
-// outil de quiz.
+//   1. le SURLIGNEUR pâle derrière un fragment de titre, avec le trait
+//      vertical de curseur au bout ;
+//   2. les SCINTILLES au dessus du bouton principal ;
+//   3. la RASSURANCE sous chaque bouton ("Gratuit à vie", "Pas besoin
+//      de CB") ;
+//   4. le BANDEAU DÉFILANT de fonctionnalités ;
+//   5. les pastilles "ÉTAPE n" et des lignes qui ALTERNENT texte /
+//      visuel, au lieu d'une grille de quatre cartes plates ;
+//   6. de vraies MAQUETTES de produit dans ces lignes ;
+//   7. les cartes de tarif à RUBAN coloré, avec l'interrupteur
+//      mensuel / annuel et sa pastille "2 mois offerts" ;
+//   8. le BANDEAU DÉGRADÉ de fin.
 //
-// -- LE SYSTÈME VISUEL EST LE SIEN, MESURÉ ---------------------------
+// Et deux choses viennent de ce que font les landings qui vendent en
+// 2026, pas d'elle : la PREUVE SOCIALE remontée AVANT la première
+// fonctionnalité (une barre Trustpilot dès le haut de page), et une
+// grille "bento" à la place d'une liste à puces.
 //
-// Rien n'est inventé ici. Tout est relevé dans `content/sales/v2/
-// funnel-quiz.html`, le bloc qu'elle a relu et corrigé trois fois le
-// 2 septembre, et dans la capture `content/sales/tiquiz.html` :
+// -- LES AVIS SONT VRAIS, ET C'EST LE PLUS IMPORTANT ------------------
 //
-//   fonte      Open Sans, les MÊMES fichiers .woff2 que sert sa page
-//              de vente (`/v/tiquiz/*.woff2`), donc aucun appel à
-//              Google Fonts et aucun rendu différent du sien ;
-//   sections   `padding: 100px 20px`, alternance #F3F6FC / #fff ;
-//   conteneur  1120px ;
-//   titres     38px/1.2/700 centrés, le mot clé en #20BBE6 ;
-//   corps      17px/1.65 en #3B3B3B, borné à 720px ;
-//   cartes     blanches, rayon 18px, ombre 0 10px 30px rgba(35,40,80,.08) ;
-//   CTA        #5A6EF6, rayon 999px, et l'animation `tqButtonPulse`,
-//              recopiée à l'identique de sa page ;
-//   mobile     rupture à 900px, sections à 60px, titres à 29px.
+// Béné : "on a ici des avis tous frais sur tiquiz, tu peux les utiliser".
+// Les six sont relevés sur `fr.trustpilot.com/review/tiquiz.fr`, mot
+// pour mot, avec leur auteur et leur date, dans `lib/site/landing.ts`.
+// Ils ne se traduisent JAMAIS : un témoignage traduit n'est plus un
+// témoignage. Et la page n'affiche AUCUNE note chiffrée : Trustpilot
+// montre 100 % de 5 étoiles ET un TrustScore pondéré de 4,2, et les
+// deux côte à côte se liraient comme une erreur.
 //
-// -- AUCUNE ICÔNE EN CARACTÈRE UNICODE -------------------------------
+// -- CE QUI RESTE ABSENT, ET POURQUOI ---------------------------------
 //
-// Leçon du 2 septembre : `\2713` et `\2192` n'existent ni dans Inter ni
-// dans Open Sans, donc Windows rend un carré vide. Les pictogrammes
-// sont des TRACÉS SVG écrits ici.
+// Aucune capture d'écran du produit : la seule que l'app sait produire
+// vient de `/visual-test`, avec un bandeau "Mode aperçu" et un quiz de
+// démo écrit SANS ACCENTS. Les maquettes sont DESSINÉES (`pieces.tsx`).
 //
-// -- PAS DE CAPTURE DU PRODUIT, ET C'EST UNE DÉCISION ----------------
+// -- ZÉRO JAVASCRIPT --------------------------------------------------
 //
-// La seule capture que l'app sait produire vient de `/visual-test`, la
-// fixture des tests visuels : bandeau "Mode aperçu" et quiz de démo
-// écrit SANS ACCENTS ("Quel createur de quiz es-tu ?"). La maquette du
-// haut de page est donc dessinée en HTML, comme son bloc funnel.
+// L'interrupteur de tarif et la FAQ marchent sans une ligne de script :
+// c'est un script qui a figé la FAQ de sa page de vente le 2 septembre.
 //
-// -- PAS DE TÉMOIGNAGE, NON PLUS -------------------------------------
-//
-// Sa page de vente en porte quinze, avec les portraits. Je n'ai aucun
-// moyen de vérifier d'ici qui a dit quoi, et un faux témoignage est son
-// interdit numéro un. Ils s'ajoutent quand elle donne les vrais.
-//
-// -- ELLE EST EN `noindex`, ET CE N'EST PAS QU'UNE PRÉCAUTION --------
+// -- ELLE EST EN `noindex` --------------------------------------------
 //
 // Deux pages qui prétendent être l'accueil de Tiquiz se feraient
-// concurrence sur la même requête. Elle n'est ni dans le sitemap, ni
-// dans `llms.txt`, ni dans le pied de page.
-//
-// -- LES LIENS MÈNENT À DES PAGES QUI EXISTENT -----------------------
-//
-// `/embed/preview` est le générateur d'aujourd'hui, `/signup`
-// l'inscription gratuite. Poser un lien vers `/generateur-de-quiz`
-// avant de l'avoir écrit, ce serait un 404 sur la page qui doit
-// inspirer confiance (drame du centre d'aide, 24 août).
+// concurrence sur la même requête. Hors sitemap, hors `llms.txt`, hors
+// pied de page.
 
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -74,7 +64,28 @@ import { getLocale } from "next-intl/server";
 
 import { SUPPORTED_LOCALES } from "@/i18n/config";
 import { HOTE_VENTE } from "@/lib/publicHost";
-import { avantagesPartages, colonnesDeTarif, contenuLanding } from "@/lib/site/landing";
+import {
+  AVIS,
+  TRUSTPILOT_URL,
+  avantagesPartages,
+  colonnesDeTarif,
+  contenuLanding,
+} from "@/lib/site/landing";
+import { CSS } from "./styles";
+import {
+  BlocCode,
+  ChampLien,
+  Chevron,
+  CocheFine,
+  CochePleine,
+  Etoiles,
+  Fleche,
+  FlecheBas,
+  MaquetteBrief,
+  MaquetteQuiz,
+  Picto,
+  Scintilles,
+} from "./pieces";
 
 const CHEMIN = "/apercu-landing-8f2c9d41";
 const LIEN_GENERATEUR = "/embed/preview";
@@ -98,20 +109,19 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   };
 }
 
-/* Les cinq pictogrammes de "ton quiz vit où tu veux", DESSINÉS.
-   Jamais un caractère Unicode : il n'existe pas dans la fonte. */
-const PICTOS: readonly string[] = [
-  // un globe : ton propre domaine
-  "M12 3a9 9 0 100 18 9 9 0 000-18zm0 0c2.5 2.4 2.5 15.6 0 18m0-18c-2.5 2.4-2.5 15.6 0 18M3.5 9h17M3.5 15h17",
-  // un entonnoir : une page Systeme.io
-  "M3 4h18l-7 8v7l-4 2v-9L3 4z",
-  // un bloc de code : intégré dans une page
-  "M9 8l-4 4 4 4m6-8l4 4-4 4",
-  // un lien : sa propre adresse
-  "M10 13a5 5 0 007.5.5l2-2a5 5 0 00-7-7l-1 1m0 8a5 5 0 01-7.5-.5l-2 2a5 5 0 007 7l1-1",
-  // un globe à méridiens : les langues
-  "M4 7h16M4 12h16M4 17h16M12 3v18",
-];
+/** La rassurance sous un bouton. Trois items, une coche dessinée. */
+function Rassurances({ items }: { items: readonly string[] }) {
+  return (
+    <ul className="tql-rassure">
+      {items.map((r) => (
+        <li key={r}>
+          <CocheFine />
+          {r}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default async function ApercuLandingPage({ searchParams }: PageProps) {
   const langue = await resoudreLangue(searchParams);
@@ -119,16 +129,16 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
   const colonnes = colonnesDeTarif(t);
   const partages = avantagesPartages();
 
-  // Le titre porte son mot clé en couleur. On DÉCOUPE au lieu de
-  // réécrire le titre en deux morceaux : le fragment doit rester une
-  // partie de la phrase, sinon la traduction suivante le perdra.
-  const [avant, apres] = t.titre.split(t.motCle);
+  // Le titre porte son mot clé surligné. On DÉCOUPE au lieu de réécrire
+  // le titre en deux morceaux : le fragment doit rester une partie de la
+  // phrase, sinon la traduction suivante le perdra.
+  const [avantH1, apresH1] = t.titre.split(t.motCle);
 
   return (
     <main className="tql" lang={t.langue}>
       <style>{CSS}</style>
 
-      {/* ── L'ACCROCHE, ET LA MAQUETTE ─────────────────────────── */}
+      {/* ── LE HAUT DE PAGE ────────────────────────────────────── */}
       <section className="tql-sec tql-hero">
         <span aria-hidden className="tql-blob tql-blob-a" />
         <span aria-hidden className="tql-blob tql-blob-b" />
@@ -136,49 +146,64 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           <div>
             <p className="tql-surtitre">{t.etiquette}</p>
             <h1 className="tql-h1">
-              {avant}
-              <span>{t.motCle}</span>
-              {apres}
+              {avantH1}
+              <span className="tql-surb">{t.motCle}</span>
+              <span aria-hidden className="tql-curseur" />
+              {apresH1}
             </h1>
             <p className="tql-accroche">{t.accroche}</p>
             <div className="tql-boutons">
-              <Link href={LIEN_GENERATEUR} className="tql-cta">
-                {t.ctaPrincipal}
-              </Link>
+              <span className="tql-avec-scint">
+                <Scintilles />
+                <Link href={LIEN_GENERATEUR} className="tql-cta">
+                  {t.ctaPrincipal}
+                  <Fleche />
+                </Link>
+              </span>
               <Link href={LIEN_INSCRIPTION} className="tql-cta-2">
                 {t.ctaSecondaire}
               </Link>
             </div>
-            <p className="tql-souscta">{t.sousCta}</p>
+            <Rassurances items={t.rassurances} />
+
+            {/* LA PREUVE AVANT LA PREMIÈRE FONCTIONNALITÉ. C'est ce que
+                font les landings qui convertissent en 2026, et ici elle
+                est vraie et vérifiable en un clic. */}
+            <p className="tql-preuve">
+              <Etoiles />
+              <span className="tql-preuve-t">{t.preuve}</span>
+              <a href={TRUSTPILOT_URL} target="_blank" rel="noopener noreferrer">
+                {t.preuveLien}
+              </a>
+            </p>
           </div>
 
-          {/* La maquette : dessinée, pas photographiée. */}
-          <div className="tql-maq" aria-hidden>
-            <div className="tql-maq-barre">
-              <span style={{ width: "34%" }} />
-            </div>
-            <p className="tql-maq-prog">{t.maquette.progression}</p>
-            <p className="tql-maq-q">{t.maquette.question}</p>
-            {t.maquette.reponses.map((r, i) => (
-              <p
-                key={r}
-                className={i === t.maquette.choisie ? "tql-maq-r tql-maq-r-on" : "tql-maq-r"}
-              >
-                <span className="tql-maq-puce" />
-                {r}
-              </p>
-            ))}
-          </div>
+          <MaquetteQuiz m={t.maquette} />
         </div>
       </section>
+
+      {/* ── LE BANDEAU DÉFILANT ────────────────────────────────── */}
+      {/* Le lot est écrit DEUX fois et la piste glisse de -50 % : c'est
+          ce qui rend la boucle invisible. Un seul lot ferait un saut. */}
+      <div className="tql-ruban" aria-hidden>
+        <div className="tql-ruban-piste">
+          {[0, 1].map((lot) => (
+            <div className="tql-ruban-lot" key={lot}>
+              {t.bandeau.map((mot) => (
+                <span key={mot}>{mot}</span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* ── LE PROBLÈME, ET LE CHIFFRE ─────────────────────────── */}
       <section className="tql-sec tql-blanc">
         <div className="tql-large tql-deux">
           <div>
-            <h2 className="tql-h2 tql-h2-gauche">{t.problemeTitre}</h2>
+            <h2 className="tql-h2 tql-h2-g">{t.problemeTitre}</h2>
             {t.problemeCorps.map((p) => (
-              <p key={p} className="tql-p tql-p-gauche">
+              <p key={p} className="tql-p tql-p-g">
                 {p}
               </p>
             ))}
@@ -191,19 +216,50 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
         </div>
       </section>
 
-      {/* ── LES 4 ÉTAPES ───────────────────────────────────────── */}
+      {/* ── LES ÉTAPES, EN LIGNES QUI ALTERNENT ────────────────── */}
       <section className="tql-sec">
         <div className="tql-large">
-          <h2 className="tql-h2">{t.mecaniqueTitre}</h2>
-          <div className="tql-grille-4">
-            {t.etapes.map((e, i) => (
-              <div key={e.titre} className="tql-carte">
-                <span className="tql-num">{i + 1}</span>
-                <h3 className="tql-h3">{e.titre}</h3>
-                <p className="tql-corps">{e.corps}</p>
+          <h2 className="tql-h2">
+            {t.mecaniqueTitre} <span className="tql-surb">{t.mecaniqueMotCle}</span> ?
+          </h2>
+          {t.etapes.map((e, i) => (
+            <div className="tql-etape" key={e.titre}>
+              <div className="tql-etape-txt">
+                <span className="tql-pastille-etape">
+                  {t.etapeMot} {i + 1}
+                </span>
+                <h3>{e.titre}</h3>
+                <p>{e.corps}</p>
               </div>
-            ))}
-          </div>
+              <div>
+                {/* QUATRE ÉTAPES, QUATRE VISUELS. Le premier jet posait
+                    la maquette du quiz sur l'étape 1 ET dans le haut de
+                    page : le même écran deux fois, ce qui se lit comme
+                    un manque de soin. */}
+                {i === 0 ? (
+                  <MaquetteBrief b={t.brief} />
+                ) : i === 1 ? (
+                  <MaquetteQuiz m={t.maquette} />
+                ) : i === 2 ? (
+                  <div className="tql-carte">
+                    <h3 className="tql-h3">{t.ouCodeTitre}</h3>
+                    <p className="tql-corps">{t.ouCodeCorps}</p>
+                    <BlocCode />
+                  </div>
+                ) : (
+                  <div className="tql-carte tql-carte-flux">
+                    <p className="tql-cite">{t.funnelProfils[1].reponse}</p>
+                    <FlecheBas />
+                    <h3 className="tql-h3">{t.funnelProfils[1].profil}</h3>
+                    <p className="tql-bouton-faux">{t.funnelProfils[1].offre}</p>
+                    <span className="tql-tag">
+                      <b>tag</b> {t.funnelProfils[1].tag}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -211,25 +267,14 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
       <section className="tql-sec tql-blanc">
         <div className="tql-large">
           <h2 className="tql-h2">
-            {t.funnelTitre} <span>{t.funnelMotCle}</span>.
+            {t.funnelTitre} <span className="tql-surb">{t.funnelMotCle}</span>.
           </h2>
           <p className="tql-p">{t.funnelCorps}</p>
           <div className="tql-grille-3">
             {t.funnelProfils.map((p) => (
               <div key={p.tag} className="tql-carte tql-carte-flux">
                 <p className="tql-cite">{p.reponse}</p>
-                <span aria-hidden className="tql-fleche">
-                  <svg viewBox="0 0 24 24" width="22" height="22">
-                    <path
-                      d="M12 4v15m0 0l-6-6m6 6l6-6"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>
+                <FlecheBas />
                 <h3 className="tql-h3">{p.profil}</h3>
                 <p className="tql-bouton-faux">{p.offre}</p>
                 <span className="tql-tag">
@@ -242,70 +287,163 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
         </div>
       </section>
 
-      {/* ── LE TAG SYSTEME.IO ──────────────────────────────────── */}
+      {/* ── L'EXCLUSIVITÉ SYSTEME.IO ───────────────────────────── */}
       <section className="tql-sec">
         <div className="tql-large tql-lire-bloc">
+          <p className="tql-surtitre tql-surtitre-c">{t.etiquette}</p>
           <h2 className="tql-h2">{t.sioTitre}</h2>
           {t.sioCorps.map((p) => (
             <p key={p} className="tql-p">
               {p}
             </p>
           ))}
-        </div>
-      </section>
-
-      {/* ── OÙ VIT TON QUIZ ────────────────────────────────────── */}
-      <section className="tql-sec tql-blanc">
-        <div className="tql-large">
-          <h2 className="tql-h2">{t.ouTitre}</h2>
-          <p className="tql-p">{t.ouCorps}</p>
-          <div className="tql-grille-5">
-            {t.ouListe.map((item, i) => (
-              <div key={item} className="tql-carte tql-carte-picto">
-                <span aria-hidden className="tql-picto">
-                  <svg viewBox="0 0 24 24" width="26" height="26">
-                    <path
-                      d={PICTOS[i % PICTOS.length]}
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.7"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>
-                <p className="tql-corps">{item}</p>
-              </div>
-            ))}
+          <div className="tql-boutons tql-centre" style={{ marginTop: 30 }}>
+            <span className="tql-avec-scint">
+              <Scintilles />
+              <Link href={LIEN_INSCRIPTION} className="tql-cta">
+                {t.ctaSecondaire}
+                <Fleche />
+              </Link>
+            </span>
           </div>
         </div>
       </section>
 
-      {/* ── LES TARIFS ─────────────────────────────────────────── */}
-      <section className="tql-sec">
+      {/* ── OÙ VIT TON QUIZ, EN BENTO ──────────────────────────── */}
+      <section className="tql-sec tql-blanc">
         <div className="tql-large">
-          <h2 className="tql-h2">{t.prixTitre}</h2>
+          <h2 className="tql-h2">
+            {t.ouTitre} <span className="tql-surb">{t.ouMotCle}</span>.
+          </h2>
+          <p className="tql-p">{t.ouCorps}</p>
+          <div className="tql-bento">
+            {t.ouCarreaux.map((c, i) => (
+              <div key={c.titre} className="tql-carte">
+                <Picto i={i} />
+                <h3 className="tql-h3">{c.titre}</h3>
+                <p className="tql-corps">{c.corps}</p>
+              </div>
+            ))}
+          </div>
+          <div className="tql-grille-2">
+            <div className="tql-carte">
+              <h3 className="tql-h3">{t.ouLienTitre}</h3>
+              <p className="tql-corps">{t.ouLienCorps}</p>
+              <ChampLien copier={t.copier} />
+            </div>
+            <div className="tql-carte">
+              <h3 className="tql-h3">{t.ouCodeTitre}</h3>
+              <p className="tql-corps">{t.ouCodeCorps}</p>
+              <BlocCode />
+            </div>
+          </div>
+          <p className="tql-legende">{t.ouNote}</p>
+        </div>
+      </section>
+
+      {/* ── LES AVIS, VRAIS ET VÉRIFIABLES ─────────────────────── */}
+      <section className="tql-sec">
+        <span aria-hidden className="tql-blob tql-blob-c" />
+        <div className="tql-large">
+          <h2 className="tql-h2">
+            {t.avisTitre} <span className="tql-surb">{t.avisMotCle}</span>.
+          </h2>
+          <p className="tql-p">{t.avisCorps}</p>
+          <div className="tql-grille-3">
+            {AVIS.map((a) => (
+              <article key={a.auteur} className="tql-carte tql-avis">
+                <Etoiles />
+                <p className="tql-avis-titre">{a.titre}</p>
+                <p className="tql-avis-texte">{a.texte}</p>
+                <div className="tql-avis-tete">
+                  <p className="tql-avis-nom">{a.auteur}</p>
+                  <span className="tql-avis-date">{a.date}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+          <p className="tql-legende">
+            <a href={TRUSTPILOT_URL} target="_blank" rel="noopener noreferrer">
+              {t.avisSur}
+            </a>
+          </p>
+        </div>
+      </section>
+
+      {/* ── LES TARIFS ─────────────────────────────────────────── */}
+      <section className="tql-sec tql-blanc">
+        <div className="tql-large tql-tarifs">
+          <h2 className="tql-h2">
+            {t.prixTitre} <span className="tql-surb">{t.prixMotCle}</span>
+          </h2>
           <p className="tql-p">{t.prixNote}</p>
 
-          {/* TROIS COLONNES, PAS CINQ. Le mensuel et l'annuel d'un même
-              palier ne sont pas deux offres : c'est la même chose payée
-              autrement. Cinq cartes obligeaient à relire quatre fois les
-              mêmes lignes pour trouver ce qui change. */}
+          {/* L'INTERRUPTEUR, SANS UNE LIGNE DE SCRIPT. Les deux radios
+              sont hors écran, les libellés les pilotent, et `:has()`
+              montre le bon prix. */}
+          <input type="radio" name="tql-cadence" id="tql-mois" defaultChecked />
+          <input type="radio" name="tql-cadence" id="tql-an" />
+          <div className="tql-centre" style={{ display: "flex" }}>
+            <div className="tql-bascule">
+              <label htmlFor="tql-mois">{t.prixMensuel}</label>
+              <label htmlFor="tql-an">
+                {t.prixAnnuel}
+                <span className="tql-eco">{t.prixEconomie}</span>
+              </label>
+            </div>
+          </div>
+
           <div className="tql-grille-3">
             {colonnes.map((c, i) => (
-              <div key={c.nom} className={i === 1 ? "tql-carte tql-carte-mise" : "tql-carte"}>
-                <p className="tql-palier">{c.nom}</p>
-                <p className="tql-prix">{c.prix}</p>
-                <p className="tql-cadence">{c.cadence}</p>
-                {c.prixAn ? <p className="tql-cadence tql-cadence-an">{c.prixAn}</p> : null}
-                <ul className="tql-liste">
-                  {c.lignes.map((ligne) => (
-                    <li key={ligne}>
-                      <Coche />
-                      <span>{ligne}</span>
-                    </li>
-                  ))}
-                </ul>
+              <div key={c.nom} className={i === 1 ? "tql-col tql-col-mise" : "tql-col"}>
+                <p className={`tql-ruban-col tql-r${i + 1}`}>{t.prixRubans[i].ruban}</p>
+                <div className="tql-col-corps">
+                  <p className="tql-col-pour">{t.prixRubans[i].pour}</p>
+                  {/* LE GROS CHIFFRE CHANGE, PAS LA PHRASE. Le premier
+                      jet affichait "ou 170,00 € par an" en 42 px : un
+                      prix se lit d'un coup d'oeil, une phrase non. */}
+                  <p className="tql-prix">
+                    <span className="tql-prix-mois">{c.prix}</span>
+                    <span className="tql-prix-an">{c.prixAn ?? c.prix}</span>
+                  </p>
+                  <p className="tql-cadence">
+                    <span className="tql-prix-mois">{c.cadence}</span>
+                    <span className="tql-prix-an">{c.cadenceAn ?? c.cadence}</span>
+                  </p>
+                  <ul className="tql-liste">
+                    {c.lignes.map((ligne) => (
+                      <li key={ligne}>
+                        <CochePleine />
+                        <span>{ligne}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {/* LES DEUX DESTINATIONS SONT RENDUES, et `:has()`
+                      montre la bonne. L'interrupteur n'a aucun script,
+                      donc un lien ne peut pas changer d'adresse : sans
+                      ça, qui choisit l'année atterrit sur le bon de
+                      commande du MOIS, et ne le voit qu'en payant. */}
+                  {c.lienAn ? (
+                    <>
+                      <Link href={c.lien} className="tql-col-cta tql-prix-mois">
+                        {c.cta}
+                        <Fleche />
+                      </Link>
+                      <Link href={c.lienAn} className="tql-col-cta tql-prix-an">
+                        {c.cta}
+                        <Fleche />
+                      </Link>
+                    </>
+                  ) : (
+                    /* LE GRATUIT N'A PAS DE CADENCE, donc son bouton ne
+                       porte AUCUNE des deux classes : avec elles, il
+                       disparaissait dès qu'on passait à l'année. */
+                    <Link href={c.lien} className="tql-col-cta">
+                      {c.cta}
+                      <Fleche />
+                    </Link>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -318,7 +456,7 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
             <ul className="tql-liste tql-liste-3">
               {partages.map((ligne) => (
                 <li key={ligne}>
-                  <Coche />
+                  <CochePleine />
                   <span>{ligne}</span>
                 </li>
               ))}
@@ -327,217 +465,36 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
         </div>
       </section>
 
-      {/* ── LA FAQ, EN `<details>` NATIF ───────────────────────── */}
-      {/* Zéro JavaScript : c'est un script qui a figé la FAQ de la page
-          de vente le 2 septembre. Un bloc qui n'a besoin de rien ne peut
-          pas se casser quand on retire quelque chose, il s'ouvre au
-          clavier, et Ctrl+F ouvre le bon panneau. */}
-      <section className="tql-sec tql-blanc">
+      {/* ── LA FAQ ─────────────────────────────────────────────── */}
+      <section className="tql-sec tql-serre">
         <div className="tql-large tql-lire-bloc">
           <h2 className="tql-h2">{t.faqTitre}</h2>
-          {t.faq.map((f) => (
-            <details key={f.q} className="tql-faq">
-              <summary>
-                {f.q}
-                <span aria-hidden className="tql-chev">
-                  <svg viewBox="0 0 24 24" width="18" height="18">
-                    <path
-                      d="M6 9l6 6 6-6"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>
-              </summary>
-              <p>{f.r}</p>
-            </details>
-          ))}
+          <div style={{ marginTop: 28 }}>
+            {t.faq.map((f) => (
+              <details key={f.q} className="tql-faq">
+                <summary>
+                  {f.q}
+                  <Chevron />
+                </summary>
+                <p>{f.r}</p>
+              </details>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ── LA SORTIE ──────────────────────────────────────────── */}
-      <section className="tql-sec tql-fin">
-        <span aria-hidden className="tql-blob tql-blob-c" />
-        <div className="tql-large tql-lire-bloc">
-          <h2 className="tql-h2">{t.finTitre}</h2>
-          <p className="tql-p">{t.finCorps}</p>
-          <div className="tql-boutons tql-boutons-centre">
-            <Link href={LIEN_GENERATEUR} className="tql-cta">
-              {t.ctaPrincipal}
-            </Link>
-            <Link href={LIEN_INSCRIPTION} className="tql-cta-2">
-              {t.ctaSecondaire}
-            </Link>
-          </div>
-          <p className="tql-souscta tql-souscta-centre">{t.sousCta}</p>
+      {/* ── LE BANDEAU DÉGRADÉ DE FIN ──────────────────────────── */}
+      <section className="tql-bande">
+        <div className="tql-large">
+          <h2>{t.bandeTitre}</h2>
+          <p>{t.bandeCorps}</p>
+          <Link href={LIEN_GENERATEUR} className="tql-bande-cta">
+            {t.bandeCta}
+            <Fleche />
+          </Link>
+          <Rassurances items={t.rassurances} />
         </div>
       </section>
     </main>
   );
 }
-
-/** La coche des listes, en TRACÉ. Voir l'en-tête : pas d'Unicode. */
-function Coche() {
-  return (
-    <span aria-hidden className="tql-coche">
-      <svg viewBox="0 0 24 24" width="16" height="16">
-        <path
-          d="M4 12.5l5.5 5.5L20 7"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </span>
-  );
-}
-
-/* ── LE SYSTÈME VISUEL, RELEVÉ DANS SA PAGE ─────────────────────── */
-const CSS = `
-
-/* LA PALETTE N'EST PAS RECOPIÉE ICI : elle vient des jetons du site
-   (globals.css, .tq-site), qui portent depuis le 4 septembre les
-   couleurs de la page de vente. Deux copies d'une même palette
-   divergent toujours, et la divergence se verrait entre l'en-tête et
-   le haut de cette page. La fonte vient du même endroit. */
-.tql{--e:var(--tq-encre);--c:var(--tq-encre-douce);--b:var(--tq-bleu);--cy:var(--tq-cyan);
-  --pale:var(--tq-creme);--pill:var(--tq-panneau);color:var(--e);background:var(--pale)}
-.tql *{box-sizing:border-box}
-.tql-sec{position:relative;overflow:hidden;padding:100px 20px;background:var(--pale)}
-.tql-blanc{background:#fff}
-.tql-large{position:relative;width:100%;max-width:1120px;margin:0 auto}
-
-/* Les flous décoratifs : ils ne portent AUCUN texte, donc ils ne
-   tombent pas sous la règle du 31 août. */
-.tql-blob{position:absolute;border-radius:999px;filter:blur(70px);opacity:.55;pointer-events:none}
-.tql-blob-a{width:340px;height:340px;background:#9BB4FF;top:-90px;right:-70px}
-.tql-blob-b{width:260px;height:260px;background:#8FE3F7;bottom:-120px;left:-90px}
-.tql-blob-c{width:420px;height:300px;background:#A9BEFF;top:-140px;left:50%;transform:translateX(-50%)}
-
-/* IL N'Y A PLUS DE COUTURE AVEC LA COQUILLE DU SITE : depuis le
-   4 septembre l'en-tête et le pied de page portent la MÊME palette,
-   celle de la page de vente. Béné : "je préfère que tu alignes le blog
-   sur ma belle page de vente que l'inverse." */
-.tql-hero{padding-top:76px}
-.tql-hero-grille{display:grid;grid-template-columns:1.05fr .95fr;gap:52px;align-items:center}
-.tql-surtitre{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--b);margin:0 0 14px}
-.tql-h1{font-size:46px;line-height:1.14;font-weight:800;margin:0 0 20px;letter-spacing:-.015em}
-.tql-h1 span{color:var(--cy)}
-.tql-accroche{font-size:18px;line-height:1.62;color:var(--c);margin:0 0 30px;max-width:560px}
-.tql-boutons{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
-.tql-boutons-centre{justify-content:center}
-.tql-cta{display:inline-block;background:var(--b);color:#fff;font-weight:700;font-size:18px;padding:13px 30px;border-radius:999px;
-  box-shadow:0 9px 24px rgba(90,110,246,.435);animation:tqlPulse 1.4s ease-in-out infinite}
-.tql-cta-2{display:inline-block;background:#fff;color:var(--e);font-weight:700;font-size:17px;padding:12px 26px;border-radius:999px;
-  border:1px solid #D8DEEE}
-.tql-cta-2:hover{border-color:var(--b);color:var(--b)}
-.tql-souscta{font-size:14px;color:#6B7291;margin:16px 0 0}
-.tql-souscta-centre{text-align:center}
-
-@keyframes tqlPulse{
-  0%{transform:scale(1);box-shadow:0 4px 14px rgba(90,110,246,.28),0 0 0 0 rgba(32,187,230,0)}
-  30%{transform:scale(1.04);box-shadow:0 10px 30px rgba(90,110,246,.45),0 0 0 6px rgba(32,187,230,.12)}
-  60%{transform:scale(1.015);box-shadow:0 7px 22px rgba(90,110,246,.35),0 0 0 14px rgba(32,187,230,0)}
-  100%{transform:scale(1);box-shadow:0 4px 14px rgba(90,110,246,.28),0 0 0 0 rgba(32,187,230,0)}
-}
-@media (prefers-reduced-motion:reduce){.tql-cta{animation:none}}
-
-/* LA MAQUETTE, dessinée. */
-.tql-maq{background:#fff;border-radius:22px;padding:28px 26px 24px;box-shadow:0 18px 50px rgba(35,40,80,.13)}
-.tql-maq-barre{height:6px;border-radius:999px;background:var(--pill);overflow:hidden}
-.tql-maq-barre span{display:block;height:100%;border-radius:999px;background:var(--cy)}
-.tql-maq-prog{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8A90AE;margin:12px 0 14px}
-.tql-maq-q{font-size:20px;font-weight:700;line-height:1.35;margin:0 0 18px}
-.tql-maq-r{display:flex;align-items:center;gap:11px;font-size:15px;line-height:1.45;color:var(--c);
-  border:1px solid #E4E8F3;border-radius:14px;padding:13px 15px;margin:0 0 10px;background:#fff}
-.tql-maq-puce{flex:none;width:16px;height:16px;border-radius:999px;border:2px solid #C9D0E6}
-.tql-maq-r-on{border-color:var(--b);background:#F5F7FF;color:var(--e);font-weight:600}
-.tql-maq-r-on .tql-maq-puce{border-color:var(--b);background:var(--b);box-shadow:inset 0 0 0 3px #fff}
-
-/* TITRES ET CORPS */
-.tql-h2{font-size:38px;line-height:1.2;font-weight:700;margin:0 0 16px;text-align:center;letter-spacing:-.01em}
-.tql-h2 span{color:var(--cy)}
-.tql-h2-gauche{text-align:left}
-.tql-p{font-size:17px;line-height:1.65;color:var(--c);max-width:720px;margin:0 auto 20px;text-align:center}
-.tql-p-gauche{text-align:left;margin-left:0}
-.tql-lire-bloc{max-width:820px}
-.tql-h3{font-size:19px;font-weight:700;line-height:1.35;margin:0 0 8px}
-.tql-corps{font-size:15px;line-height:1.6;color:var(--c);margin:0}
-.tql-legende{font-size:14px;color:#6B7291;text-align:center;margin:26px 0 0}
-
-/* CARTES ET GRILLES */
-.tql-carte{background:#fff;border-radius:18px;padding:26px 24px;box-shadow:0 10px 30px rgba(35,40,80,.08)}
-.tql-deux{display:grid;grid-template-columns:1.35fr 1fr;gap:44px;align-items:start}
-.tql-grille-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;align-items:stretch;margin-top:40px}
-.tql-grille-4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;margin-top:40px}
-.tql-grille-5{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;margin-top:40px}
-.tql-num{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:999px;
-  background:var(--b);color:#fff;font-weight:800;font-size:15px;margin-bottom:14px}
-
-.tql-chiffre-carte{text-align:center}
-.tql-chiffre{font-size:64px;line-height:1;font-weight:800;color:var(--b);margin:0 0 14px;letter-spacing:-.03em}
-.tql-chiffre-leg{font-size:16px;line-height:1.55;color:var(--e);font-weight:600;margin:0 0 14px}
-.tql-chiffre-src{font-size:13px;line-height:1.55;color:#6B7291;margin:0}
-
-.tql-carte-flux{display:flex;flex-direction:column}
-.tql-cite{font-size:15px;line-height:1.5;color:var(--c);font-style:italic;margin:0 0 14px;padding:12px 14px;
-  background:var(--pale);border-radius:12px;min-height:70px;display:flex;align-items:center}
-.tql-fleche{display:block;text-align:center;color:var(--cy);margin:0 0 12px}
-.tql-bouton-faux{display:block;text-align:center;background:var(--b);color:#fff;font-weight:700;font-size:15px;
-  padding:12px 16px;border-radius:12px;margin:auto 0 12px}
-.tql-tag{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--e);
-  background:var(--pill);border-radius:999px;padding:6px 12px;align-self:flex-start}
-.tql-tag b{color:var(--b);font-weight:700}
-
-.tql-carte-picto{text-align:center;padding:24px 18px}
-.tql-picto{display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:999px;
-  background:var(--pale);color:var(--b);margin-bottom:14px}
-
-/* TARIFS */
-.tql-palier{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--b);margin:0 0 10px}
-.tql-prix{font-size:40px;font-weight:800;line-height:1;margin:0 0 6px;letter-spacing:-.02em}
-.tql-cadence{font-size:14px;color:#6B7291;margin:0}
-.tql-cadence-an{margin-top:2px}
-.tql-carte-mise{box-shadow:0 16px 44px rgba(90,110,246,.22);border:2px solid var(--b)}
-.tql-liste{list-style:none;margin:20px 0 0;padding:20px 0 0;border-top:1px solid #E9ECF6}
-.tql-liste li{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.55;color:var(--c);margin:0 0 10px}
-.tql-liste li:last-child{margin:0}
-.tql-coche{flex:none;color:var(--cy);margin-top:1px}
-.tql-partage{margin-top:26px}
-.tql-partage .tql-h3{text-align:center;margin-bottom:4px}
-.tql-liste-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 26px}
-
-/* FAQ */
-.tql-faq{border-bottom:1px solid #E9ECF6;padding:0}
-.tql-faq summary{display:flex;align-items:center;justify-content:space-between;gap:16px;cursor:pointer;list-style:none;
-  font-size:17px;font-weight:700;padding:20px 0;color:var(--e)}
-.tql-faq summary::-webkit-details-marker{display:none}
-.tql-chev{flex:none;color:var(--b);transition:transform .15s ease}
-.tql-faq[open] .tql-chev{transform:rotate(180deg)}
-.tql-faq p{font-size:16px;line-height:1.65;color:var(--c);margin:0 0 20px}
-
-.tql-fin{text-align:center}
-.tql-fin .tql-p{margin-bottom:30px}
-
-@media (max-width:1000px){
-  .tql-grille-5{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .tql-grille-4{grid-template-columns:repeat(2,minmax(0,1fr))}
-}
-@media (max-width:900px){
-  .tql-sec{padding:60px 16px}
-  .tql-hero{padding-top:44px}
-  .tql-hero-grille,.tql-deux{grid-template-columns:1fr;gap:34px}
-  .tql-h1{font-size:32px}
-  .tql-h2{font-size:29px}
-  .tql-accroche{font-size:17px}
-  .tql-grille-3,.tql-grille-5{grid-template-columns:1fr;gap:16px}
-  .tql-liste-3{grid-template-columns:1fr}
-  .tql-cite{min-height:0}
-  .tql-bouton-faux{margin-top:0}
-}
-`;
