@@ -7896,3 +7896,110 @@ noms différents chez les trois fournisseurs, et les confondre transforme
 un réglage sain en fausse alerte. C'est la règle du 22 août appliquée à
 un nom d'agent : une liste ne dit pas ce qu'elle contient tant qu'on ne
 l'a pas lue.
+
+## Mesurer les conversions : le montant vient du CATALOGUE (4 septembre 2026)
+
+Béné : "dans mon admin : je peux tracker les visites sur nos deux pages
+de vente ? Mesurer les conversions etc ?" Et sa consigne, dans l'ordre :
+"1. `begin_checkout` au clic sur un palier, avec le produit et le montant
+du catalogue ; 2. `purchase` sur la page de remerciement, avec la
+référence de la vente ; 3. seulement après : un écran dans l'admin qui
+montre les deux ensemble." Plus : "le 1 et le 2 touchent le chemin de
+paiement, donc ils se font seuls, avec leur propre vérification."
+
+**Les points 1 et 2 sont faits. Le 3 ne l'est pas**, et c'est son ordre.
+
+### CE QUI MANQUAIT, MESURÉ AVANT D'ÉCRIRE UNE LIGNE
+
+GA4 était bien posé (`G-N6LQDRDMDB`, `lib/analytics/google.ts`, sur les
+domaines de vente uniquement, après consentement). Mais **il n'y avait
+dans tout le dépôt que le `gtag('config')` de la page vue** : aucun
+événement de conversion, nulle part. Google voyait donc le trafic et ne
+pouvait RIEN en faire : impossible de savoir quelle source, quelle page
+ou quelle publicité avait produit une vente.
+
+### LES QUATRE DÉCISIONS, ET AUCUNE N'EST COSMÉTIQUE
+
+**1. `begin_checkout` part à l'ARRIVÉE sur `/commande/<produit>`**, pas
+au clic sur la page de vente. Sa consigne dit "au clic sur un palier", et
+c'est le même moment du tunnel ; ce qui change, c'est l'endroit où le
+code vit. La page de vente est une CAPTURE reconstruite par
+`npm run vente:v2` : instrumenter ses boutons voudrait dire patcher un
+HTML capturé, donc recommencer à chaque capture, sur une page qui porte
+plus de cent liens.
+
+**Ce que ça ne mesure PAS, et il faut le dire :** un clic sur un bouton
+qui part chez Systeme.io (`SALES_LINKS_LEFT_ALONE`) n'arrive jamais chez
+nous, donc il ne comptera pas. Ces ventes là se lisent dans `/admin`.
+
+**2. `purchase` ne part QUE sur `etat === "paye"`**, c'est à dire quand
+le fournisseur vient de confirmer, relu CÔTÉ SERVEUR par la page de
+retour. Cette adresse est une URL comme une autre : compter une
+conversion parce qu'un navigateur est arrivé là reviendrait à inventer du
+chiffre d'affaires. C'est la même règle que l'accès, écrite en tête de
+cette page depuis le 7 août : elle affiche, elle ne décide pas.
+
+**3. LA RÉFÉRENCE EST OBLIGATOIRE, et c'est le garde-fou.**
+`transaction_id` est ce qui permet à GA4 de DÉDUPLIQUER : la page de
+retour se rafraîchit, se partage, se rouvre le lendemain. Sans référence,
+chaque ouverture compterait une vente de plus et le chiffre d'affaires de
+ses rapports grossirait tout seul. Pas de référence -> AUCUN événement.
+
+**4. LE MONTANT VIENT DU CATALOGUE** (`OWNER_CATALOG`), jamais d'un
+payload, jamais écrit à la main. Un montant recopié serait faux au premier
+changement de tarif, et **un chiffre gonflé dans un tableau de bord est
+pire qu'une absence de chiffre : il fait dépenser** (règle du 22 août).
+Le test refuse tout littéral à quatre chiffres dans le module.
+
+**Et GA4 attend le montant DANS L'UNITÉ, pas en centimes.** Le catalogue
+est en centimes (c'est ce que Stripe encaisse) : envoyer `1700` au lieu
+de `17` multiplierait son chiffre d'affaires par cent, en silence.
+
+### LA MÊME PORTE QUE LA BALISE, CONSENTEMENT COMPRIS
+
+`ConversionGa4` rappelle `chargerAnalytics`, exactement comme
+`GoogleAnalytics` : le domaine de vente, le chemin, ET le choix de la
+personne. **Une conversion envoyée après un "refuser" serait pire qu'une
+visite mesurée sans accord**, parce qu'elle porte un montant et une
+référence de commande. Deux portes qui décideraient chacune de leur côté
+finiraient par ne plus dire la même chose : c'est le défaut sorti six
+fois dans ce dépôt, d'où la même fonction et pas une condition recopiée.
+
+### ON POUSSE UN OBJET `arguments`, JAMAIS UN TABLEAU QUI Y RESSEMBLE
+
+Mon premier jet faisait `dataLayer.push(["event", nom, params])`. Ça
+RESSEMBLE au shim de Google (`function gtag(){dataLayer.push(arguments);}`,
+écrit juste à côté dans `GoogleAnalytics.tsx`) et ce n'est pas la même
+chose : un tableau ordinaire n'est documenté nulle part, et **je n'ai
+aucun moyen de vérifier d'ici ce que gtag.js en ferait**. Une conversion
+ignorée en silence ne se découvre qu'en regardant un rapport vide des
+semaines plus tard.
+
+On pousse donc un vrai objet `arguments`, la forme documentée. Et
+`dataLayer` est une FILE : ce qu'on y met avant que la balise se charge
+(`afterInteractive`) est traité au chargement, rien n'est perdu.
+
+### CE QUI N'EST PAS MESURÉ, ET QUI SE DIT
+
+**Aucun de ces deux événements n'a jamais atteint GA4 depuis ce dépôt.**
+Ce qui est vérifié : les montants sortent du catalogue au centime, la
+forme est celle que Google documente, et les quatre versions fautives
+font rougir le test (des centimes envoyés tels quels, un `purchase` sans
+référence, une conversion sur une simple ouverture de l'URL, l'envoi qui
+ignore le consentement). Ce qui reste à constater : une conversion qui
+apparaît vraiment dans ses rapports, et ça se lit dans GA4, pas ici.
+
+### Tipote n'est PAS concerné, et c'est vérifié
+
+Mesuré le 4 septembre, pas supposé : pas de `app/commande`, pas de
+`lib/checkout`, pas de `lib/analytics`, et les seules mentions de `gtag`
+y sont les pixels des CRÉATRICES sur leurs pages publiques
+(`lib/clientPixels.ts`), pas notre mesure de vente. Ce chantier n'a donc
+pas de jumeau là bas.
+
+**Endroits à respecter :** `lib/analytics/conversions.ts` (pur, il
+construit les deux événements et ne parle à personne),
+`components/analytics/ConversionGa4.tsx` (l'envoi, aucune décision),
+`app/commande/[produit]/page.tsx`,
+`app/commande/[produit]/retour/page.tsx`.
+Test : `tests/logic/conversions-vente.test.mts`.

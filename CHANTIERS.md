@@ -8,7 +8,7 @@ Deux fichiers, deux questions, et aucune des deux ne répond à l'autre.
 écrite** (leçon du 23 août : trois garde-fous décrits comme actifs ici
 pendant 24 heures alors qu'ils vivaient sur une branche non fusionnée).
 
-Dernière mise à jour : 2 septembre 2026, deuxième passage.
+Dernière mise à jour : 4 septembre 2026.
 
 ---
 
@@ -148,15 +148,30 @@ trafic dans Google Analytics, les ventes dans `/admin` et le centre de
 pilotage (elles viennent des webhooks). Rien ne relie les deux.
 
 **Ce qu'il faudrait, dans cet ordre :**
-1. `begin_checkout` au clic sur un palier, avec le produit et le
-   montant du catalogue ;
-2. `purchase` sur la page de remerciement, avec la référence de la
-   vente, pour que le rapprochement soit possible ;
-3. seulement après : un écran dans l'admin qui montre les deux
-   ensemble.
+1. ✅ **FAIT le 4 septembre.** `begin_checkout`, avec le produit et le
+   montant du catalogue. Il part à l'ARRIVÉE sur
+   `/commande/<produit>` : instrumenter les boutons de la page de vente
+   voudrait dire patcher un HTML capturé, donc recommencer à chaque
+   `npm run vente:v2`. Un clic qui part chez Systeme.io
+   (`SALES_LINKS_LEFT_ALONE`) ne comptera donc jamais, et ces ventes là
+   se lisent dans `/admin`.
+2. ✅ **FAIT le 4 septembre.** `purchase` sur la page de retour, avec la
+   référence du fournisseur en `transaction_id`. Il ne part QUE sur un
+   paiement confirmé, relu côté serveur : sans référence, un
+   rafraîchissement compterait une vente de plus.
+3. **RESTE À FAIRE : l'écran dans l'admin** qui montre le trafic et les
+   ventes ensemble. C'est le point qui répond vraiment à sa question
+   ("dans MON admin") : aujourd'hui le trafic vit dans Google Analytics
+   et les ventes dans `/admin`, et rien ne relie les deux.
 
 **Le 1 et le 2 touchent le chemin de paiement**, donc ils se font seuls,
 avec leur propre vérification, pas en même temps qu'autre chose.
+
+🚨 **Ce qui n'est PAS mesuré :** aucun de ces deux événements n'a encore
+atteint GA4 depuis ce dépôt. Les montants sortent du catalogue au
+centime et la forme est celle que Google documente ; qu'une conversion
+apparaisse vraiment dans ses rapports se lit dans GA4, pas ici. Le
+détail vit dans `AGENTS.md`, section « Mesurer les conversions ».
 
 ## 2. À discuter, pour l'évolution de Tiquiz
 
