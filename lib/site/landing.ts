@@ -42,7 +42,14 @@
 // Aucun exemple de campagne payante : la publicité fait peur à cette
 // audience, l'argument qui porte est le gratuit.
 
-import { OWNER_CATALOG, OWNER_PRODUCT_ORDER, formatOwnerPrice } from "@/lib/checkout/catalog";
+import { OWNER_CATALOG, formatOwnerPrice } from "@/lib/checkout/catalog";
+import {
+  AVANTAGES_COMMUNS,
+  AVANTAGES_NOUVEAUX,
+  AVANTAGES_PAYANTS,
+  AVANTAGES_PLUS,
+} from "@/lib/checkout/avantages";
+import { FREE_LIMITS } from "@/lib/planLimits";
 
 export interface Etape {
   titre: string;
@@ -54,10 +61,16 @@ export interface Question {
   r: string;
 }
 
-export interface Palier {
+export interface ColonneTarif {
   nom: string;
+  /** Le prix affiché en gros. */
   prix: string;
-  rythme: string;
+  /** Ce qui va juste dessous : "par mois", ou "pour commencer" sur le gratuit. */
+  cadence: string;
+  /** L'annuel, déjà composé, ou null quand la colonne n'en a pas. */
+  prixAn: string | null;
+  /** Ce que CETTE colonne ajoute. Jamais recopié : lu dans `avantages.ts`. */
+  lignes: readonly string[];
 }
 
 export interface ContenuLanding {
@@ -94,7 +107,13 @@ export interface ContenuLanding {
 
   prixTitre: string;
   prixNote: string;
-  gratuit: Palier;
+  prixParMois: string;
+  /** "ou {prix} par an". `{prix}` est rempli depuis `OWNER_CATALOG`. */
+  prixOuParAn: string;
+  gratuit: { nom: string; prix: string; rythme: string };
+  /** Les limites du gratuit. `{quiz}`, `{popquiz}` et `{leads}` sont remplis depuis `FREE_LIMITS`. */
+  gratuitLignes: readonly string[];
+  partageTitre: string;
 
   faqTitre: string;
   faq: Question[];
@@ -103,16 +122,72 @@ export interface ContenuLanding {
   finCorps: string;
 }
 
-/** Les quatre paliers vendus, lus dans le catalogue. */
-export function paliersDuCatalogue(rythmeMois: string, rythmeAn: string): Palier[] {
-  return OWNER_PRODUCT_ORDER.map((id) => {
-    const p = OWNER_CATALOG[id];
-    return {
-      nom: p.label,
-      prix: formatOwnerPrice(p),
-      rythme: p.interval === "year" ? rythmeAn : rythmeMois,
-    };
-  });
+/**
+ * LES TROIS COLONNES DE TARIF, ET AUCUN TEXTE RECOPIÉ.
+ *
+ * Les prix viennent de `OWNER_CATALOG`, les limites du gratuit de
+ * `FREE_LIMITS`, et les fonctionnalités de `lib/checkout/avantages.ts`,
+ * qui est LA source depuis le 2 septembre : la grille de la page de
+ * vente et le bon de commande la lisent déjà, et un test compare les
+ * deux au mot près.
+ *
+ * Réécrire ces lignes ici ferait une troisième liste, donc une
+ * troisième occasion de promettre sur la page ce que le bon de commande
+ * ne promet pas. C'est le défaut le plus cher de ce dépôt, et ici il
+ * vivrait sur l'écran où quelqu'un sort sa carte.
+ */
+/*
+ * CE QUE ÇA LAISSE OUVERT, ET IL FAUT LE DIRE : `avantages.ts` n'existe
+ * QU'EN FRANÇAIS. Sur `?lang=en`, la coquille de la page est traduite et
+ * les lignes de fonctionnalités restent en français.
+ *
+ * Les traduire ici fabriquerait la deuxième liste, donc la divergence
+ * qu'on vient de fermer. La traduction se fait dans `avantages.ts`, une
+ * fois, quand le texte français est validé, et les trois écrans qui le
+ * lisent en profitent le même jour.
+ */
+export function colonnesDeTarif(t: ContenuLanding): ColonneTarif[] {
+  const prix = (id: "mensuel" | "annuel" | "mensuel-plus" | "annuel-plus") =>
+    formatOwnerPrice(OWNER_CATALOG[id]);
+  const parAn = (id: "annuel" | "annuel-plus") =>
+    t.prixOuParAn.replace("{prix}", prix(id));
+  return [
+    {
+      nom: t.gratuit.nom,
+      prix: t.gratuit.prix,
+      cadence: t.gratuit.rythme,
+      prixAn: null,
+      // `replaceAll` ET PAS `replace` : une ligne peut nommer deux fois
+      // la même limite ("1 quiz et 1 sondage"), et `replace` avec une
+      // chaîne ne remplace que la PREMIÈRE. C'est sorti à l'écran, pas
+      // au typecheck : le rendu affichait "1 quiz et {quiz} sondage".
+      lignes: t.gratuitLignes.map((ligne) =>
+        ligne
+          .replaceAll("{quiz}", String(FREE_LIMITS.maxQuizzesPerMode))
+          .replaceAll("{popquiz}", String(FREE_LIMITS.maxPopquizzes))
+          .replaceAll("{leads}", String(FREE_LIMITS.visibleLeadsPerMonth)),
+      ),
+    },
+    {
+      nom: OWNER_CATALOG["mensuel"].label.replace(/ mensuel$/i, ""),
+      prix: prix("mensuel"),
+      cadence: t.prixParMois,
+      prixAn: parAn("annuel"),
+      lignes: AVANTAGES_PAYANTS.map((a) => a.texte),
+    },
+    {
+      nom: OWNER_CATALOG["mensuel-plus"].label.replace(/ mensuel Plus$/i, " PLUS"),
+      prix: prix("mensuel-plus"),
+      cadence: t.prixParMois,
+      prixAn: parAn("annuel-plus"),
+      lignes: AVANTAGES_PLUS.map((a) => a.texte),
+    },
+  ];
+}
+
+/** Ce que TOUS les paliers portent, gratuit compris. Même source. */
+export function avantagesPartages(): readonly string[] {
+  return [...AVANTAGES_COMMUNS, ...AVANTAGES_NOUVEAUX].map((a) => a.texte);
 }
 
 const fr: ContenuLanding = {
@@ -187,7 +262,15 @@ const fr: ContenuLanding = {
   prixTitre: "Les tarifs",
   prixNote:
     "Les prix affichés sont ceux du bon de commande, à l'euro. Tu peux commencer gratuitement et monter de palier quand ton quiz travaille.",
+  prixParMois: "par mois",
+  prixOuParAn: "ou {prix} par an",
   gratuit: { nom: "Gratuit", prix: "0 €", rythme: "pour commencer" },
+  gratuitLignes: [
+    "{quiz} quiz et {quiz} sondage actifs",
+    "{popquiz} Popquiz",
+    "{leads} réponses visibles sur 30 jours glissants, les suivantes sont capturées et floutées",
+  ],
+  partageTitre: "Dans tous les paliers, gratuit compris",
 
   faqTitre: "Les questions qu'on nous pose",
   faq: [
@@ -286,7 +369,15 @@ const en: ContenuLanding = {
   prixTitre: "Pricing",
   prixNote:
     "These are the checkout prices, to the euro. You can start for free and move up once your quiz is working.",
+  prixParMois: "per month",
+  prixOuParAn: "or {prix} per year",
   gratuit: { nom: "Free", prix: "0 €", rythme: "to get started" },
+  gratuitLignes: [
+    "{quiz} active quiz and {quiz} active survey",
+    "{popquiz} Popquiz",
+    "{leads} responses visible over a rolling 30 days, the rest are captured and blurred",
+  ],
+  partageTitre: "In every plan, free included",
 
   faqTitre: "Questions we get",
   faq: [

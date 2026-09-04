@@ -818,6 +818,19 @@ html[data-pq-compact] body {
   color: var(--tq-bleu);
 }
 
+/* LA PUCE D'UNE LISTE DE FONCTIONNALITÉS : un point bleu, jamais un
+   aplat sous le texte (règle du 31 août). Le `flex-none` et le
+   `margin-top` la calent sur la première ligne, pas sur le milieu d'un
+   item qui passe sur deux lignes. */
+.tq-puce {
+  flex: none;
+  width: 0.375rem;
+  height: 0.375rem;
+  margin-top: 0.5rem;
+  border-radius: 999px;
+  background: var(--tq-bleu);
+}
+
 /* LES PASTILLES DE FILTRE, reprises de Typeform : l'active est pleine
    et sombre, les autres sont des contours. */
 .tq-pastille {

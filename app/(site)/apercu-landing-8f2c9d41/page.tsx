@@ -40,7 +40,7 @@ import { getLocale } from "next-intl/server";
 
 import { SUPPORTED_LOCALES } from "@/i18n/config";
 import { HOTE_VENTE } from "@/lib/publicHost";
-import { contenuLanding, paliersDuCatalogue } from "@/lib/site/landing";
+import { avantagesPartages, colonnesDeTarif, contenuLanding } from "@/lib/site/landing";
 
 const CHEMIN = "/apercu-landing-8f2c9d41";
 const LIEN_GENERATEUR = "/embed/preview";
@@ -68,10 +68,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 export default async function ApercuLandingPage({ searchParams }: PageProps) {
   const langue = await resoudreLangue(searchParams);
   const t = contenuLanding(langue);
-  const paliers = paliersDuCatalogue(
-    t.langue === "fr" ? "par mois" : "per month",
-    t.langue === "fr" ? "par an" : "per year",
-  );
+  const colonnes = colonnesDeTarif(t);
+  const partages = avantagesPartages();
 
   // Le titre porte son mot clé en couleur. On DÉCOUPE au lieu de
   // réécrire le titre en deux morceaux : le fragment doit rester une
@@ -185,18 +183,46 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
         <div className="tq-large">
           <h2 className="text-3xl sm:text-4xl">{t.prixTitre}</h2>
           <p className="tq-lire tq-doux mt-4 leading-relaxed">{t.prixNote}</p>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {[t.gratuit, ...paliers].map((p) => (
+          {/* TROIS COLONNES, PAS CINQ. Le mensuel et l'annuel d'un même
+              palier ne sont pas deux offres : c'est la même chose, payée
+              autrement. Cinq cartes obligeaient à lire quatre fois les
+              mêmes lignes pour trouver ce qui change. */}
+          <div className="mt-10 grid gap-4 lg:grid-cols-3">
+            {colonnes.map((c) => (
               <div
-                key={p.nom}
-                className="rounded-2xl border border-[var(--tq-bord)] p-5"
+                key={c.nom}
+                className="flex flex-col rounded-2xl border border-[var(--tq-bord)] p-6"
                 style={{ background: "var(--tq-creme)" }}
               >
-                <p className="text-sm font-semibold">{p.nom}</p>
-                <p className="mt-3 text-3xl font-black leading-none">{p.prix}</p>
-                <p className="tq-doux mt-2 text-sm">{p.rythme}</p>
+                <p className="text-sm font-semibold">{c.nom}</p>
+                <p className="mt-3 text-3xl font-black leading-none">{c.prix}</p>
+                <p className="tq-doux mt-2 text-sm">{c.cadence}</p>
+                {c.prixAn ? <p className="tq-doux text-sm">{c.prixAn}</p> : null}
+                <ul className="mt-5 space-y-2 border-t border-[var(--tq-bord)] pt-5 text-sm">
+                  {c.lignes.map((ligne) => (
+                    <li key={ligne} className="flex gap-2 leading-relaxed">
+                      <span aria-hidden className="tq-puce" />
+                      <span>{ligne}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))}
+          </div>
+
+          {/* CE QUE TOUT LE MONDE A, DIT UNE FOIS. Recopier ces sept
+              lignes dans les trois colonnes noierait ce qui les
+              distingue, et c'est justement ce qu'on vient chercher ici. */}
+          <div className="mt-10 border-t border-[var(--tq-bord)] pt-8">
+            <h3 className="text-lg font-semibold">{t.partageTitre}</h3>
+            <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+              {partages.map((ligne) => (
+                <li key={ligne} className="flex gap-2 leading-relaxed">
+                  <span aria-hidden className="tq-puce" />
+                  <span>{ligne}</span>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>
