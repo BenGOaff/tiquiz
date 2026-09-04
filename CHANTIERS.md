@@ -39,6 +39,15 @@ se projeter, n'y touche pas du tout." Question fermée.
 
 ### Ce qui reste ouvert sur cette page
 
+- 🆕 **UNE LANDING EN VRAIE PAGE NEXT EXISTE, pour relecture** (4 septembre) :
+  `/apercu-landing-8f2c9d41`, slug introuvable et `noindex`, donc hors
+  sitemap, hors `llms.txt` et hors pied de page. Elle démontre les
+  trois choses que la capture ne sait pas faire : le MÊME en-tête et le
+  MÊME pied que `/blog` et `/integrations`, la TRADUCTION (`?lang=en`
+  change toute la page, gabarit des documents légaux), et un HTML rendu
+  par le serveur. Le texte vit dans `lib/site/landing.ts`, les prix
+  viennent de `OWNER_CATALOG`. **La coquille du site (en-tête et pied)
+  reste en français**, c'est la part de chantier 4 qui n'est pas faite.
 - **basculer la vraie page sur la v2**, une fois relue.
 - **La vitesse et les images sont FAITES** (2 septembre). La page passe
   de **8551 Ko, 72 requêtes et 2708 ms** à **1556 Ko, 21 requêtes et
