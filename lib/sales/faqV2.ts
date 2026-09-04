@@ -140,6 +140,38 @@ export const CORRECTIONS_FAQ: readonly { cherche: string; remplace: string; pour
     pourquoi: "Même raison. « Je démarre de zéro » dit en plus quelque chose de plus concret.",
   },
   {
+    cherche: "https://www.tipote.fr/atelier-du-quiz-bene",
+    remplace: "https://atelierduquiz.fr/",
+    pourquoi:
+      "Un lien qui atterrit chez Systeme.io ne paie PLUS PERSONNE depuis " +
+      "que nos liens portent `?ref=` (24 août) : leur page ignore ce " +
+      "paramètre, notre middleware ne voit jamais la requête, et leur " +
+      "webhook ne sait lire qu'un `sa`. `atelierduquiz.fr` est un hôte de " +
+      "vente à nous depuis le 26 août, et son middleware capte le `?ref=`.",
+  },
+  {
+    cherche: "Tu peux découvrir l'Atelier du Quiz ici >>",
+    remplace: "Tu peux découvrir l'Atelier du Quiz sur atelierduquiz.fr",
+    pourquoi:
+      "« ici >> » ne dit rien quand le lien disparaît, et il disparaît " +
+      "partout où la réponse est rendue en TEXTE (la FAQ de la landing " +
+      "lit le même JSON-LD). Nommer la destination marche dans les deux " +
+      "cas, et le lien reste cliquable là où il existe.",
+  },
+  {
+    // ON VISE LE TEXTE DU LIEN, PAS LA PHRASE. Le premier jet cherchait
+    // « Par email en cliquant ici >> », qui TRAVERSE la balise <a> : dans
+    // le JSON-LD brut, seul « cliquant ici &gt;&gt; » est le texte du
+    // lien, et la correction ne trouvait rien.
+    cherche: "cliquant ici >>",
+    remplace: "écrivant à hello@tiquiz.fr.",
+    pourquoi:
+      "C'est la seule ligne de la FAQ qui promet une réponse humaine, et " +
+      "« en cliquant ici » ne dit rien partout où le lien disparaît (la " +
+      "FAQ de la landing rend la réponse en TEXTE). Nommer l'adresse " +
+      "marche dans les deux cas, et le lien reste cliquable là où il est.",
+  },
+  {
     cherche: "mailto:hello@tipote.com",
     remplace: "mailto:hello@tiquiz.fr",
     pourquoi:
@@ -148,6 +180,41 @@ export const CORRECTIONS_FAQ: readonly { cherche: string; remplace: string; pour
       "seule ligne de la page qui promet une réponse humaine.",
   },
 ] as const;
+
+/**
+ * APPLIQUE LES CORRECTIONS, QUEL QUE SOIT L'ÉCHAPPEMENT DU TEXTE.
+ *
+ * Deux consommateurs lisent la même liste et ne voient pas le même
+ * texte : le script de la page v2 travaille sur le JSON-LD BRUT, où les
+ * chevrons sont écrits `&gt;&gt;`, et l'extracteur de la landing
+ * travaille sur le texte DÉSÉCHAPPÉ. La correction « ici >> » trouvait
+ * donc chez l'un et pas chez l'autre.
+ *
+ * Une deuxième liste écrite pour l'autre forme aurait diverge en une
+ * semaine. Cette fonction essaie les DEUX formes, et rend le nombre de
+ * corrections qui ont mordu pour que l'appelant puisse REFUSER quand
+ * une ne trouve rien : une correction qui ne trouve rien est une
+ * correction qu'on croit appliquée.
+ */
+export function appliquerCorrectionsFaq(texte: string): { texte: string; mordu: boolean[] } {
+  let out = texte;
+  const mordu: boolean[] = [];
+  for (const c of CORRECTIONS_FAQ) {
+    const echappe = (t: string) => t.replace(/>/g, "&gt;").replace(/</g, "&lt;");
+    const formes = [c.cherche, echappe(c.cherche)];
+    let touche = false;
+    for (const f of formes) {
+      if (!out.includes(f)) continue;
+      // Le remplacement suit la forme trouvée : sinon on injecterait un
+      // chevron nu dans du JSON destiné à du HTML.
+      const remplace = f === c.cherche ? c.remplace : echappe(c.remplace);
+      out = out.split(f).join(remplace);
+      touche = true;
+    }
+    mordu.push(touche);
+  }
+  return { texte: out, mordu };
+}
 
 /** Le rang d'une question dans le plan, ou -1 si aucun groupe ne la prend. */
 export function rangDansLesGroupes(nom: string): number {

@@ -8228,6 +8228,138 @@ Test : `tests/logic/landing.test.mts`, vérifié en rejouant deux versions
 fautives (les deux payantes vers `/signup`, un avis recopié dans une
 langue) : les deux rougissent.
 
+### Troisième passage : les paddings, sa FAQ, sa vidéo, ses animations
+
+Béné, 4 septembre 2026 : "un truc sur lequel toutes les IA se plantent :
+les paddings hauts et bas. Je veux au moins 100px en haut et 100px en
+bas pour chaque section sauf le hero si pas adapté." Puis : "et la FAQ
+bordel tu as déjà tout sur la page de vente : pourquoi tu ne reproduis
+pas ?? Et pourquoi tu ne reprends pas au moins une partie des animations
+de ma page d'origine ?"
+
+**Elle avait raison sur les quatre points, et trois fois sur quatre la
+réponse était déjà dans le dépôt.**
+
+#### 1. LES PADDINGS SE MESURENT
+
+Relevé AVANT de toucher à quoi que ce soit, sur la page rendue :
+
+| | haut / bas |
+|---|---|
+| le hero | 72 / 84 |
+| la FAQ | 70 / 70 |
+| le bandeau de fin | 96 / 96 |
+| **tout, sous 900 px de large** | **60 / 60** |
+
+Tout est à **100 minimum, haut et bas, y compris en mobile**. Seules les
+marges LATÉRALES se resserrent : sa règle porte sur le haut et le bas.
+Le seul bloc en dessous est le bandeau défilant, qui n'est pas une
+section mais un filet de 16 px.
+
+**Le garde-fou est une MESURE, pas une lecture de CSS** :
+`tests/visual/landing-paddings.spec.ts` lit les `padding` CALCULÉS sur
+les trois viewports. C'est le geste d'`intro-bounds.spec.ts` : une
+capture d'écran ne fait pas rougir une section trop serrée, elle
+s'affiche très bien.
+
+#### 2. SA FAQ EXISTAIT DÉJÀ, EN ENTIER
+
+Les 16 questions ET leurs réponses vivent dans le `FAQPage` en données
+structurées de `content/sales/tiquiz.html` ; le regroupement en cinq
+groupes vit dans `lib/sales/faqV2.ts` depuis le 2 septembre.
+**Il n'y avait rien à écrire, seulement à lire.**
+`npm run faq:extraire` fait le pont et écrit `content/faq-vente.json`.
+
+**Le JSON-LD est la source, pas le DOM** : les questions y sont
+APPARIÉES avec leurs réponses. Dans le DOM il faudrait deviner quel
+paragraphe répond à quel titre, et une seule paire décalée donnerait une
+réponse qui ne correspond pas à sa question.
+
+**Deux défauts trouvés en extrayant, et les deux étaient en ligne :**
+- la réponse "formation" pointait sur `www.tipote.fr/atelier-du-quiz-bene`,
+  un tunnel Systeme.io. **Un lien qui atterrit là ne paie plus personne**
+  depuis que nos liens portent `?ref=` (24 août) ;
+- deux réponses disaient "en cliquant ici >>", ce qui ne dit RIEN partout
+  où le lien disparaît, et il disparaît dès que la réponse est rendue en
+  TEXTE. Dont la seule ligne de la FAQ qui promet une réponse humaine.
+
+Les deux sont corrigés **dans `CORRECTIONS_FAQ`**, donc sa page v2 en
+profite aussi.
+
+**ET UNE CORRECTION QUI NE TROUVE RIEN EST UNE CORRECTION QU'ON CROIT
+APPLIQUÉE.** Les deux consommateurs de cette liste ne voient pas le même
+texte : le script de la page v2 travaille sur le JSON-LD BRUT, où les
+chevrons sont écrits `&gt;&gt;`, et l'extracteur de la landing sur le
+texte déséchappé. La correction trouvait chez l'un et pas chez l'autre.
+`appliquerCorrectionsFaq()` essaie les DEUX formes et rend ce qui a
+mordu, pour que l'appelant REFUSE. Une deuxième liste écrite pour
+l'autre forme aurait divergé en une semaine.
+
+**Et une chaîne cherchée ne traverse pas une balise** : `cherche`
+valait "Par email en cliquant ici >>", alors que dans le JSON-LD seul
+"cliquant ici &gt;&gt;" est le TEXTE DU LIEN, "Par email en " étant
+dehors. On vise le texte du lien.
+
+#### 3. LA VIDÉO EST UN POPQUIZ, ET ELLE EN A DONNÉ L'ADRESSE
+
+**MESURÉ avant de l'intégrer** : la page répond **200** et porte
+`content-security-policy: frame-ancestors *`, donc elle s'affiche depuis
+n'importe quel domaine.
+
+🚨 **CE QUI N'A PAS PU ÊTRE VÉRIFIÉ D'ICI : le RENDU.** Le navigateur de
+ce conteneur n'a AUCUNE route vers `quiz.tipote.com`
+(`ERR_CONNECTION_RESET` en direct, aucune requête à travers le proxy) :
+la capture montre un cadre blanc, et c'est l'environnement, pas la page.
+Un lien "ouvrir dans un nouvel onglet" est posé sous le cadre, parce
+qu'un cadre qui échoue affiche la page d'erreur du navigateur DEDANS :
+aucun repli posé derrière ne s'afficherait.
+
+#### 4. SES ANIMATIONS SE LÈVENT, ELLES NE SE REDESSINENT PAS
+
+Sa page porte **234 keyframes**, groupés par bloc, et chaque bloc est une
+ÎLE autonome (son `<style>`, puis son markup). `npm run anims:extraire`
+en lève trois, à l'octet près : l'opt-in contre le quiz, le branding qui
+change, les pixels.
+
+**Trois pièges, tous trouvés en MESURANT :**
+
+1. **Le re-préfixage désappariait tout.** Renommer `.tqvs` en
+   `.tqla-tqvs` en laissait 112 non traités : le style et le markup ne se
+   correspondaient plus, donc l'animation ne partait pas. Vérifié avant
+   de renoncer : `tqvs`, `tqbr` et `tqpx` n'existent dans AUCUN fichier
+   de code du dépôt, donc il n'y avait rien à protéger.
+2. **J'ai levé la variante MOBILE.** `indexOf("@keyframes tqvs")` tombe
+   sur `tqvsmbUpL`, qui apparaît plus tôt dans le fichier. Servie sur un
+   grand écran, elle mesurait **10463 px de haut**. L'ancre est
+   maintenant exacte (`@keyframes tqvs[A-Z]`).
+3. **Les blocs levés étaient INERTES.** Ses règles s'écrivent
+   `.tqvs.tqz-visible .machin{animation:...}` : un script pose
+   `tqz-visible` à 85 % du viewport. Mesuré : **0 élément animé** sans
+   lui, **23 et 31** avec. `DeclencheurAnims` refait sa mécanique en
+   vingt lignes, même seuil, avec sa relance toutes les 13,5 s. Il est
+   RÉÉCRIT, pas levé, et je le dis : ses scripts sont minifiés, il y en a
+   un par bloc, et ils parlent à des ids de sa page.
+
+**On ne sert qu'UNE variante.** Poser les deux en comptant sur ses media
+queries les affichait TOUTES LES DEUX, à 1280 comme à 390 : ce qui les
+départage sur sa page vit dans un conteneur Systeme.io, hors de l'île.
+Et la variante grand écran s'adapte au téléphone (mesurée à 358x456 sur
+un viewport de 390).
+
+#### ET LA LEÇON DE STRUCTURE
+
+`import faq from "...json"` compile très bien avec Next et le runner de
+tests natif le REFUSE (Node exige `with { type: "json" }`). Mais le vrai
+enseignement est plus ancien : **un module qui touche au disque n'est
+plus chargeable par le runner, donc plus testé.** La lecture vit donc
+dans `app/(site)/apercu-landing-8f2c9d41/faq.ts`, à côté d'`anims.tsx`
+qui lit déjà des fichiers, et `lib/site/landing.ts` reste PUR.
+
+**Et un garde-fou existant a rougi à juste titre** : `affiliate-links`
+interdit `tipote.fr/atelier-du-quiz` écrit en dur. Ma chaîne est une CLÉ
+DE RECHERCHE, pas une destination : l'exemption porte sur `cherche:` et
+lui seul, jamais sur `remplace:`, et jamais sur le fichier entier.
+
 ## Le sitemap du domaine de vente oubliait les pages légales (4 septembre 2026)
 
 Béné, après le énième refus de validation de marque par Google : "je

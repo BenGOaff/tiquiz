@@ -43,7 +43,7 @@ const plan = await import(pathToFileURL(path.join(RACINE, "lib/sales/planV2.ts")
 const { ORDRE_V2, POPUP_BETA, CORRECTIONS_V2, SCRIPTS_RETIRES, FONDS_CONVERTIS, verifierPlan } = plan;
 
 const faqMod = await import(pathToFileURL(path.join(RACINE, "lib/sales/faqV2.ts")).href);
-const { rangerFaq, CORRECTIONS_FAQ } = faqMod;
+const { rangerFaq, CORRECTIONS_FAQ, appliquerCorrectionsFaq } = faqMod;
 const altMod = await import(pathToFileURL(path.join(RACINE, "lib/sales/altImagesV2.ts")).href);
 const { altDe, nonClassees } = altMod;
 const dimMod = await import(pathToFileURL(path.join(RACINE, "lib/blog/dimensionsImage.ts")).href);
@@ -70,9 +70,15 @@ function construireFaq(html) {
   const m = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/i.exec(html);
   if (!m) meurs("le JSON-LD de la FAQ est introuvable : rien n'a ete ecrit.");
   let brut = m[1];
-  for (const c of CORRECTIONS_FAQ) {
-    if (!brut.includes(c.cherche)) meurs(`la correction FAQ « ${c.cherche} » ne trouve rien.\n   ${c.pourquoi}`);
-    brut = brut.split(c.cherche).join(c.remplace);
+  // UNE SEULE FONCTION APPLIQUE LES CORRECTIONS, et elle connait les
+  // deux echappements : ici le JSON-LD est BRUT (les chevrons y sont
+  // `&gt;&gt;`), l'extracteur de la landing lit le texte desechappe.
+  {
+    const r = appliquerCorrectionsFaq(brut);
+    brut = r.texte;
+    r.mordu.forEach((ok, i) => {
+      if (!ok) meurs(`la correction FAQ « ${CORRECTIONS_FAQ[i].cherche} » ne trouve rien.\n   ${CORRECTIONS_FAQ[i].pourquoi}`);
+    });
   }
   let donnees;
   try { donnees = JSON.parse(brut); } catch (e) { meurs("le JSON-LD de la FAQ est illisible : " + e.message); }

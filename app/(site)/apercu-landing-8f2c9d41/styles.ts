@@ -52,9 +52,17 @@ export const CSS = `
 .tql a{color:inherit}
 
 /* ── LE RYTHME ───────────────────────────────────────────────────── */
+/* AU MOINS 100 PX EN HAUT ET EN BAS, SUR CHAQUE SECTION, Y COMPRIS EN
+   MOBILE. Béné, 4 septembre 2026 : "un truc sur lequel toutes les IA se
+   plantent : les paddings hauts et bas. Je veux au moins 100px en haut
+   et 100px en bas pour chaque section sauf le hero si pas adapté."
+   Mesuré avant : le hero était à 72/84, la FAQ à 70/70, le bandeau de
+   fin à 96/96, et TOUT tombait à 60 en dessous de 900 px.
+   "tests/visual/landing-paddings.spec.ts" MESURE les valeurs calculées :
+   un "padding" raboté par un futur passage le fait rougir. */
 .tql-sec{position:relative;overflow:hidden;padding:100px 20px;background:var(--pale)}
 .tql-blanc{background:#fff}
-.tql-serre{padding:70px 20px}
+
 .tql-large{position:relative;width:100%;max-width:1120px;margin:0 auto}
 .tql-lire-bloc{max-width:840px}
 
@@ -133,7 +141,10 @@ export const CSS = `
 .tql-etoiles{display:inline-flex;gap:2px;color:#F5A623}
 
 /* ── LE HAUT DE PAGE ─────────────────────────────────────────────── */
-.tql-hero{padding-top:72px;padding-bottom:84px}
+/* LE HERO EST LA SEULE EXCEPTION ADMISE (Béné : "sauf le hero si pas
+   adapté"), et il n'en profite pas : 100 en haut sous l'en-tête collant,
+   110 en bas pour que la maquette respire avant le bandeau. */
+.tql-hero{padding-top:100px;padding-bottom:110px}
 .tql-hero-grille{display:grid;grid-template-columns:1.12fr .88fr;gap:52px;align-items:center}
 
 /* ── LA MAQUETTE ─────────────────────────────────────────────────── */
@@ -271,7 +282,25 @@ export const CSS = `
 .tql-partage .tql-h3{text-align:center;margin-bottom:14px}
 .tql-liste-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 26px;border-top:0;padding-top:0;margin:0}
 
+/* ── LA DÉMO EN IFRAME ──────────────────────────────────────────── */
+/* Le rapport 16/9 est tenu par le padding, pas par une hauteur figée :
+   c'est ce qu'elle avait écrit elle même dans son bout de code. */
+.tql-demo{position:relative;padding-bottom:56.25%;height:0;max-width:900px;margin:40px auto 0;
+  border-radius:16px;overflow:hidden;box-shadow:0 20px 54px rgba(35,40,80,.16);background:#fff}
+.tql-demo iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0}
+
+/* ── SES BLOCS ANIMÉS, LEVÉS DE SA PAGE ────────────────────────── */
+/* On leur donne de la place et on ne touche à RIEN dedans : ils portent
+   leur propre style, à l'octet près. */
+.tql-anim{margin-top:56px}
+.tql-anim>div{max-width:100%;overflow:hidden}
+
 /* ── LA FAQ ──────────────────────────────────────────────────────── */
+/* SEIZE QUESTIONS À LA FILE, C'EST UN MUR : le titre de groupe est ce
+   qui permet de sauter directement à la sienne. */
+.tql-faq-groupe{margin-top:34px}
+.tql-faq-titre{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--b);margin:0 0 4px}
 .tql-faq{border-bottom:1px solid #E9ECF6}
 .tql-faq summary{display:flex;align-items:center;justify-content:space-between;gap:16px;cursor:pointer;
   list-style:none;font-size:17px;font-weight:700;padding:20px 0;color:var(--e)}
@@ -284,7 +313,7 @@ export const CSS = `
 /* Le SEUL aplat de couleur sous du texte de la page, et c'est le sien :
    rien ne s'y lit longtemps, comme le pied de page du site. */
 .tql-bande{background:linear-gradient(160deg,var(--b) 0%,#4A5FE8 55%,var(--cy) 130%);
-  color:#fff;text-align:center;padding:96px 20px}
+  color:#fff;text-align:center;padding:100px 20px}
 .tql-bande h2{font-size:40px;line-height:1.2;font-weight:800;margin:0 auto 18px;max-width:760px;letter-spacing:-.015em}
 .tql-bande p{font-size:17.5px;line-height:1.6;margin:0 auto 32px;max-width:680px;color:rgba(255,255,255,.9)}
 .tql-bande-cta{display:inline-flex;align-items:center;gap:9px;background:#fff;color:var(--b);font-weight:800;
@@ -298,9 +327,12 @@ export const CSS = `
   .tql-bento,.tql-grille-3{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (max-width:900px){
-  .tql-sec{padding:60px 16px}
-  .tql-serre{padding:48px 16px}
-  .tql-hero{padding-top:40px;padding-bottom:56px}
+  /* Les marges LATÉRALES se resserrent, les VERTICALES ne bougent pas :
+     c'est la règle du 4 septembre, et elle ne porte que sur le haut et
+     le bas. */
+  .tql-sec{padding:100px 16px}
+  .tql-hero{padding-top:100px;padding-bottom:100px}
+  .tql-bande{padding:100px 16px}
   .tql-hero-grille,.tql-deux,.tql-etape,.tql-grille-2{grid-template-columns:1fr;gap:32px}
   .tql-etape{margin-top:44px}
   .tql-etape:nth-child(even) .tql-etape-txt{order:0}

@@ -66,12 +66,16 @@ import { SUPPORTED_LOCALES } from "@/i18n/config";
 import { HOTE_VENTE } from "@/lib/publicHost";
 import {
   AVIS,
+  DEMO_POPQUIZ,
   TRUSTPILOT_URL,
   avantagesPartages,
   colonnesDeTarif,
   contenuLanding,
 } from "@/lib/site/landing";
 import { CSS } from "./styles";
+import { AnimVente } from "./anims";
+import { faqDeLaPageDeVente } from "./faq";
+import DeclencheurAnims from "./DeclencheurAnims";
 import {
   BlocCode,
   ChampLien,
@@ -128,6 +132,7 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
   const t = contenuLanding(langue);
   const colonnes = colonnesDeTarif(t);
   const partages = avantagesPartages();
+  const faq = faqDeLaPageDeVente();
 
   // Le titre porte son mot clé surligné. On DÉCOUPE au lieu de réécrire
   // le titre en deux morceaux : le fragment doit rester une partie de la
@@ -137,6 +142,7 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
   return (
     <main className="tql" lang={t.langue}>
       <style>{CSS}</style>
+      <DeclencheurAnims />
 
       {/* ── LE HAUT DE PAGE ────────────────────────────────────── */}
       <section className="tql-sec tql-hero">
@@ -197,6 +203,53 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
         </div>
       </div>
 
+      {/* ── LA DÉMO : SON VRAI POPQUIZ ─────────────────────────── */}
+      {/* Béné, 4 septembre 2026, en donnant l'adresse : "la vidéo démo
+          normalement tu as l'url ? C'est un popquiz".
+          MESURÉ avant de l'intégrer : la page répond 200 et porte
+          `content-security-policy: frame-ancestors *`, donc elle
+          s'affiche depuis n'importe quel domaine. Ce n'est pas une
+          vidéo : c'est un Popquiz, donc le visiteur RÉPOND pendant
+          qu'il regarde, et la page montre le produit au lieu d'en
+          parler. */}
+      <section className="tql-sec tql-blanc">
+        <div className="tql-large">
+          <h2 className="tql-h2">
+            {t.demoTitre} <span className="tql-surb">{t.demoMotCle}</span>
+          </h2>
+          <p className="tql-p">{t.demoCorps}</p>
+          {/* L'IFRAME EST CELLE QU'ELLE A DONNÉE, aux attributs près
+              (`allow`, `allowfullscreen`, le rapport 16/9 tenu par le
+              padding). Pas de `loading="lazy"` : son bout de code n'en
+              avait pas, et ce bloc est le deuxième de la page.
+
+              🚨 CE QUI N'A PAS PU ÊTRE VÉRIFIÉ D'ICI : le RENDU. `curl`
+              répond 200 avec `content-security-policy: frame-ancestors *`,
+              donc la page s'affiche depuis n'importe quel domaine. Mais
+              le navigateur de ce conteneur n'a AUCUNE route vers
+              quiz.tipote.com (ERR_CONNECTION_RESET en direct, rien à
+              travers le proxy) : la capture montre un cadre blanc, et
+              c'est mon environnement, pas sa page. À confirmer à
+              l'écran. */}
+          <div className="tql-demo">
+            <iframe
+              src={DEMO_POPQUIZ}
+              title="Popquiz Tiquiz"
+              allow="autoplay;fullscreen;clipboard-write"
+              allowFullScreen
+            />
+          </div>
+          {/* LA SORTIE DE SECOURS. Un cadre qui ne charge pas montre la
+              page d'erreur du navigateur DEDANS : aucun repli posé
+              derrière ne s'afficherait. Ce lien, lui, est toujours là. */}
+          <p className="tql-legende">
+            <a href={DEMO_POPQUIZ} target="_blank" rel="noopener noreferrer">
+              {t.demoLien}
+            </a>
+          </p>
+        </div>
+      </section>
+
       {/* ── LE PROBLÈME, ET LE CHIFFRE ─────────────────────────── */}
       <section className="tql-sec tql-blanc">
         <div className="tql-large tql-deux">
@@ -213,6 +266,16 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
             <p className="tql-chiffre-leg">{t.chiffreLegende}</p>
             <p className="tql-chiffre-src">{t.chiffreSource}</p>
           </div>
+        </div>
+
+        {/* SON ANIMATION, LEVÉE DE SA PAGE. Béné : "pourquoi tu ne
+            reprends pas au moins une partie des animations de ma page
+            d'origine ? Elles sont super et elles montrent bien le
+            fonctionnement !" Celle ci montre exactement ce que la
+            section dit : un PDF qu'on ne lit pas contre un quiz auquel
+            on répond. */}
+        <div className="tql-large tql-anim">
+          <AnimVente bloc="opt-in-vs-quiz" />
         </div>
       </section>
 
@@ -338,6 +401,11 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
             </div>
           </div>
           <p className="tql-legende">{t.ouNote}</p>
+
+          {/* Le même quiz qui prend ses couleurs et son logo. */}
+          <div className="tql-anim">
+            <AnimVente bloc="ton-branding" />
+          </div>
         </div>
       </section>
 
@@ -465,21 +533,32 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
         </div>
       </section>
 
-      {/* ── LA FAQ ─────────────────────────────────────────────── */}
-      <section className="tql-sec tql-serre">
+      {/* ── LA FAQ, LES 16 QUESTIONS DE SA PAGE ────────────────── */}
+      {/* Béné : "et la FAQ bordel tu as déjà tout sur la page de vente :
+          pourquoi tu ne reproduis pas ??" Il n'y avait rien à écrire :
+          les questions ET les réponses vivent dans le `FAQPage` de sa
+          page, et les cinq groupes dans `lib/sales/faqV2.ts` depuis le
+          2 septembre. `npm run faq:extraire` fait le pont.
+          SEIZE QUESTIONS À LA FILE, C'EST UN MUR : groupées, on saute
+          directement à la sienne. */}
+      <section className="tql-sec">
         <div className="tql-large tql-lire-bloc">
           <h2 className="tql-h2">{t.faqTitre}</h2>
-          <div style={{ marginTop: 28 }}>
-            {t.faq.map((f) => (
-              <details key={f.q} className="tql-faq">
-                <summary>
-                  {f.q}
-                  <Chevron />
-                </summary>
-                <p>{f.r}</p>
-              </details>
-            ))}
-          </div>
+          <p className="tql-p">{t.faqCorps}</p>
+          {faq.map((g) => (
+            <div key={g.titre} className="tql-faq-groupe">
+              <p className="tql-faq-titre">{g.titre}</p>
+              {g.questions.map((f) => (
+                <details key={f.q} className="tql-faq">
+                  <summary>
+                    {f.q}
+                    <Chevron />
+                  </summary>
+                  <p>{f.r}</p>
+                </details>
+              ))}
+            </div>
+          ))}
         </div>
       </section>
 

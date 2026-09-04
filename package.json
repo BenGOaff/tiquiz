@@ -39,7 +39,9 @@
     "vente:v2": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --experimental-strip-types --import ./tests/logic/register-alias.mjs scripts/construire-page-vente-v2.mjs",
     "vente:fonds": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --experimental-strip-types --import ./tests/logic/register-alias.mjs scripts/convertir-fonds-vente.mjs",
     "vente:images": "node scripts/reduire-images-vente.mjs",
-    "check:deploye": "node scripts/check-deploye.mjs"
+    "check:deploye": "node scripts/check-deploye.mjs",
+    "faq:extraire": "node --experimental-strip-types scripts/extraire-faq-vente.mjs",
+    "anims:extraire": "node scripts/extraire-anims-vente.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

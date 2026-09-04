@@ -256,7 +256,15 @@ export interface ContenuLanding {
   partageTitre: string;
 
   faqTitre: string;
+  faqCorps: string;
+  /** Les 16 questions viennent de SA page de vente : voir `FAQ_VENTE`. */
   faq: Question[];
+
+  /** La démo : son vrai popquiz, en iframe. */
+  demoTitre: string;
+  demoMotCle: string;
+  demoCorps: string;
+  demoLien: string;
 
   finTitre: string;
   finCorps: string;
@@ -319,6 +327,32 @@ export const AVIS: readonly Avis[] = [
     date: "2 septembre 2026",
   },
 ] as const;
+
+/**
+ * LA FAQ DE SA PAGE DE VENTE : ELLE NE VIT PAS ICI, ET C'EST VOULU.
+ *
+ * Béné, 4 septembre 2026 : "et la FAQ bordel tu as déjà tout sur la page
+ * de vente : pourquoi tu ne reproduis pas ??"
+ *
+ * Elle a raison, et il n'y avait rien à écrire : les 16 questions ET
+ * leurs réponses vivent dans le `FAQPage` en données structurées de
+ * `content/sales/tiquiz.html`, et le regroupement en cinq groupes dans
+ * `lib/sales/faqV2.ts` depuis le 2 septembre. `npm run faq:extraire`
+ * lit les deux et écrit `content/faq-vente.json`.
+ *
+ * CE MODULE NE LE LIT PAS, parce qu'un module qui touche au disque n'est
+ * plus chargeable par le runner de tests, donc plus testé, donc
+ * exactement là où les bugs s'installent (règle du 1er août). La lecture
+ * vit dans `app/(site)/apercu-landing-8f2c9d41/faq.ts`, à côté de
+ * `anims.tsx` qui lit déjà des fichiers.
+ */
+export interface GroupeQuestions {
+  titre: string;
+  questions: readonly Question[];
+}
+
+/** Le popquiz de démonstration, celui qu'elle m'a donné. */
+export const DEMO_POPQUIZ = "https://quiz.tipote.com/embed/p/0a7d8f50-f329-48e5-b5af-36c642f00c7c";
 
 /** L'adresse publique de la fiche, pour que n'importe qui vérifie. */
 export const TRUSTPILOT_URL = "https://fr.trustpilot.com/review/tiquiz.fr";
@@ -591,7 +625,15 @@ const fr: ContenuLanding = {
   ],
   partageTitre: "Dans tous les paliers, gratuit compris",
 
-  faqTitre: "Les questions qu'on nous pose",
+  faqTitre: "Questions fréquentes",
+  faqCorps: "Clique sur une question pour lire la réponse.",
+
+  demoTitre: "Tiquiz en action :",
+  demoMotCle: "teste la création de ton quiz",
+  demoCorps:
+    "C'est un vrai Popquiz Tiquiz, pas une vidéo. Réponds aux questions posées pendant la vidéo, comme le feraient tes visiteurs.",
+  demoLien: "Ouvrir la démo dans un nouvel onglet",
+
   faq: [
     {
       q: "Faut-il savoir coder ?",
@@ -790,7 +832,15 @@ const en: ContenuLanding = {
   ],
   partageTitre: "In every plan, free included",
 
-  faqTitre: "Questions we get",
+  faqTitre: "Frequently asked",
+  faqCorps: "Click a question to read the answer.",
+
+  demoTitre: "Tiquiz in action:",
+  demoMotCle: "try building your quiz",
+  demoCorps:
+    "This is a real Tiquiz Popquiz, not a video. Answer the questions asked during it, exactly like your visitors would.",
+  demoLien: "Open the demo in a new tab",
+
   faq: [
     {
       q: "Do I need to know how to code?",
