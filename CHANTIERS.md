@@ -62,6 +62,25 @@ se projeter, n'y touche pas du tout." Question fermée.
   grille comparative des trois paliers, le bénéfice Systeme.io réécrit
   (connexion native, sans Zapier), et un titre plus une légende autour
   de chacune de ses trois animations. Le détail est dans `AGENTS.md`.
+  **CINQUIÈME PASSAGE, 5 septembre**, et c'est celui qui compte : le
+  quatrième avait répondu à sa LISTE, pas écrit la page. Sa page de
+  vente a été extraite en ordre de lecture (545 lignes), et il en
+  manquait quatre choses. Son vocabulaire d'audience (les métiers de ses
+  quinze témoignages, jamais "créateurs" tout court). Ses QUINZE
+  témoignages, sous son titre "Il y a un avant, et un après Tiquiz",
+  précédés de la transformation tirée de son persona. Son titre de
+  problème, qui dit ce que ça COÛTE, et l'argument de la plateforme qui
+  peut sauter. Et sa signature de CTA : un bouton après chaque section,
+  à la première personne ("Je veux capturer ces emails"), six au lieu de
+  trois. Deux sections de sa page étaient absentes : la viralité et les
+  trois formats (quiz, sondage, Popquiz). Le haut de page portait en
+  plus un anglicisme que j'avais écrit ("repart avec"), remplacé par son
+  insight clé : "Pas besoin de plus de trafic. Juste de savoir qui te
+  lit." Le détail est dans `AGENTS.md`.
+  **CE QUI ATTEND SA DÉCISION, en plus des 100 langues :** les quinze
+  témoignages viennent de SA page, ils ne sont pas les six avis
+  Trustpilot qu'elle a fait retirer le matin même. Si elle n'en veut
+  pas non plus, c'est une ligne à retirer.
   **La coquille du site (en-tête et pied) reste en français**, c'est la
   part de chantier 4 qui n'est pas faite.
   **CE QUI ATTEND SA DÉCISION :** son animation `ton-branding` annonce

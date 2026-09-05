@@ -8570,6 +8570,130 @@ QUATRE versions fautives (l'ancienne règle d'héritage, une puce payante
 sans sa conséquence, le lien vers Trustpilot, l'ancienne accroche qui
 vend le processus) : les quatre rougissent.
 
+### Cinquième passage : j'avais corrigé sa liste, pas écrit la page (5 septembre 2026)
+
+Béné, après le quatrième passage : "pourquoi 'créateurs' c'est des
+entrepreneurs, des coachs, des auteurs, des affiliés, des infopreneurs
+... ils ne se définissent pas comme étant des 'créateurs' j'ai bossé dur
+sur ma page initiale, il faut arrêter de chier dessus comme ça." Et :
+"et du coup ... c'est tout ce que tu as corrigé ? [...] Tu considères
+que là c'est ok, tu m'as sorti la MEILLEURE version possible ?"
+
+**Elle a raison sur les deux, et le deuxième reproche est le vrai : le
+quatrième passage a répondu à sa liste de douze défauts, il n'a pas fait
+la réécriture qu'elle demandait.**
+
+#### LA MÉTHODE, ET C'EST ELLE QUI A TOUT CHANGÉ
+
+**J'ai EXTRAIT sa page de vente en ordre de lecture** (545 lignes de
+texte visible, `content/sales/tiquiz.html` sans ses scripts) au lieu de
+la relire en diagonale. C'est le geste du 3 septembre sur le labo de
+l'Atelier ("relever les phrases de l'un et les chercher dans l'autre
+trouve les absences"), et il a rendu quatre choses que je n'avais pas
+vues.
+
+| Ce que sa page a | Ce que la landing avait |
+|---|---|
+| un CTA APRÈS CHAQUE SECTION, à la première personne | trois boutons en tout |
+| quinze témoignages nommés, avec leur métier | un nombre |
+| le COÛT de ne rien faire, et la plateforme qui peut sauter | "un opt-in demande, un quiz donne" |
+| une section viralité, et une section trois formats | rien |
+
+#### 1. SON VOCABULAIRE SE LIT DANS SES PROPRES TÉMOIGNAGES
+
+Je n'avais pas à inventer la liste : les quinze témoignages de sa page
+portent leur métier, écrit par les intéressés. Entrepreneur, infopreneur,
+consultant, formatrice, coach, solopreneur, thérapeute, affilié,
+marketeur, créateur de contenu. **C'est cette liste qui décide des mots
+de la page**, et "créateurs" tout court n'y est jamais.
+
+Le test bannit le mot NU dans `preuve` et `pourQui` ; "créateur de
+contenu" et "course creators" restent, ce sont des métiers.
+
+#### 2. LES QUINZE TÉMOIGNAGES REVIENNENT, ET CE NE SONT PAS LES SIX
+
+Elle a fait retirer six avis Trustpilot le 5 septembre au matin, et le
+lien qui menait chez eux. Ceux là sont autre chose : **ils vivent déjà
+sur SA page**, sous son titre ("Il y a un avant ... et un après
+Tiquiz"), ils sont quinze, ils portent un prénom et un métier, et aucun
+ne fait quitter la page.
+
+`TEMOIGNAGES` (`lib/site/landing.ts`) vit HORS des objets de langue :
+**un témoignage ne se traduit jamais, ne se corrige pas, ne se
+raccourcit pas.** C'est quelqu'un qui a écrit ça, et le réécrire en
+ferait un faux témoignage, c'est à dire sa ligne rouge numéro un.
+
+Ils sont précédés de la TRANSFORMATION, quatre lignes tirées de son
+persona ("maintenant, imaginons que tout change") : une page qui décrit
+le problème puis l'outil saute l'étape où le lecteur se projette.
+
+#### 3. LE COÛT DE NE RIEN FAIRE : son titre valait mieux que le mien
+
+Le mien disait "Un opt-in demande. Un quiz donne." Le sien dit **"Chaque
+visiteur qui repart sans te laisser son email est un client perdu"**, et
+il est meilleur pour une raison précise : il dit ce que ça COÛTE, pas ce
+que l'outil FAIT.
+
+Son deuxième argument manquait entièrement, et c'est le plus fort de sa
+page : **"tes abonnés ne t'appartiennent pas : ton compte sur n'importe
+quel réseau peut sauter à tout moment. Ta liste email, elle, est à toi."**
+
+#### 4. UN BOUTON APRÈS CHAQUE SECTION, ET IL DIT UN DÉSIR
+
+Sa signature, relevée section par section : "Je veux capturer ces
+emails", "Je veux mon quiz viral", "Je veux vendre avec un quiz", "Je me
+lance gratuitement". **Ce n'est pas un libellé de bouton, c'est la
+phrase que le lecteur vient de se dire.** Six boutons maintenant, contre
+trois, avec sa rassurance dessous ("Pas besoin de CB").
+
+#### 5. DEUX ARGUMENTS DE SA PAGE ÉTAIENT ABSENTS
+
+- **la VIRALITÉ** : le seul levier qui RAMÈNE des visiteurs au lieu d'en
+  convertir. Vrai dans le code (`virality_enabled`, le bonus de partage).
+  **AUCUN chiffre** : ceux de sa page portent sur ses propres quiz, je ne
+  peux pas les sourcer. Et la note dit la nuance de Jocelyne (4 août) :
+  sur un sujet intime, un partage bas n'est pas un défaut du quiz ;
+- **les TROIS FORMATS** : quiz, sondage, Popquiz. Ils sont dans la
+  grille de tarifs depuis le début et aucun écran ne disait ce qu'ils
+  font. Deux produits payés, jamais montrés.
+
+#### ET LE HAUT DE PAGE PORTAIT UN ANGLICISME QUE J'AI ÉCRIT MOI MÊME
+
+"Ton visiteur repart AVEC un résultat. Toi, AVEC son email." C'est le
+calque banni par son guide anti-IA (point 17, "ce que tu repars avec",
+de *what you walk away with*), et je l'avais posé en `<h1>`.
+
+Le titre dit maintenant son INSIGHT CLÉ, celui de son persona : **"Pas
+besoin de plus de trafic. Juste de savoir qui te lit."** Onze mots, une
+construction qui est la sienne ("Pas besoin de CB"), et il finit sur le
+fragment coloré, donc plus de ponctuation orpheline après le curseur.
+
+#### MA FAUTE EN ÉCRIVANT LE TEST, ET ELLE EST NOUVELLE
+
+J'ai écrit le fichier de test par un heredoc Python. **`\b` dans une
+chaîne Python ordinaire n'est pas un mot-frontière : c'est un
+CARACTÈRE DE RETOUR ARRIÈRE**, et il est parti tel quel dans le
+fichier. Le motif `/<CtaSection\b/` cherchait donc `<CtaSection` suivi
+d'un octet 0x08, ne trouvait rien, et le test annonçait "seulement 0
+boutons de milieu de page" sur une page qui en porte cinq.
+
+**Ici il a rougi, donc je l'ai vu. Dans une assertion NÉGATIVE, il
+serait passé au vert pour toujours**, et c'est exactement la panne que
+ce fichier décrit depuis le 22 août. Le contrôle qui l'a trouvé tient en
+une commande :
+
+```bash
+grep -nP '[\x00-\x08\x0b\x0c\x0e-\x1f]' tests/logic/*.test.mts
+```
+
+Zéro ligne. Un motif écrit par un heredoc Python passe par une chaîne
+BRUTE (`r"""..."""`), toujours.
+
+Test : `tests/logic/landing.test.mts` (39 cas), vérifié en rejouant
+trois versions fautives (le mot "créateurs" remis, deux boutons de
+milieu de page retirés, l'argument de la plateforme retiré plus un
+chiffre sans source dans la viralité) : les trois rougissent.
+
 ## Le sitemap du domaine de vente oubliait les pages légales (4 septembre 2026)
 
 Béné, après le énième refus de validation de marque par Google : "je

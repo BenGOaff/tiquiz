@@ -115,6 +115,34 @@ export const CSS = `
 .tql-corps{font-size:15px;line-height:1.6;color:var(--c);margin:0}
 .tql-legende{font-size:14px;color:#6B7291;text-align:center;margin:26px 0 0}
 
+/* LE BOUTON DE FIN DE SECTION, ET SA RASSURANCE.
+   Sa page en pose un apres presque chaque section. La landing n'en
+   avait que trois en tout, donc il fallait scroller jusqu'aux tarifs
+   pour trouver un bouton. */
+.tql-mid{text-align:center;margin:52px auto 0}
+.tql-mid-r{display:flex;justify-content:center;align-items:center;gap:8px;
+  margin:16px 0 0;font-size:14px;color:#6B7291}
+
+/* CE QUI CHANGE APRES : les quatre lignes viennent de son persona. */
+.tql-apres{list-style:none;padding:0;margin:34px auto 0;max-width:860px;
+  display:grid;gap:16px}
+.tql-apres li{display:flex;align-items:flex-start;gap:14px;
+  font-size:17px;line-height:1.6;color:#3B3B3B;text-align:left}
+.tql-apres li svg{flex:0 0 auto;margin-top:4px}
+
+/* LES QUINZE TEMOIGNAGES DE SA PAGE.
+   Colonnes en macon (CSS multi-colonnes) et pas une grille : les
+   temoignages n'ont pas la meme longueur, et une grille alignerait
+   toutes les cartes sur la plus haute, donc du vide sous les courtes. */
+.tql-temoins{margin:44px 0 0;columns:3;column-gap:22px}
+.tql-temoin{break-inside:avoid;margin:0 0 22px;padding:24px;
+  background:#fff;border:1px solid #E4E8F3;border-radius:16px;
+  box-shadow:0 2px 10px rgba(43,50,100,.05)}
+.tql-temoin blockquote{margin:0;font-size:15px;line-height:1.65;color:#3B3B3B}
+.tql-temoin figcaption{margin:14px 0 0;font-size:14px;color:#6B7291}
+.tql-temoin figcaption b{color:#2B3264}
+.tql-temoin figcaption span::before{content:", "}
+
 /* ── BOUTONS, SCINTILLES, RASSURANCE ─────────────────────────────── */
 .tql-boutons{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
 .tql-centre{justify-content:center;text-align:center}
@@ -378,6 +406,7 @@ export const CSS = `
 /* ── MOBILE ──────────────────────────────────────────────────────── */
 @media (max-width:1000px){
   .tql-bento,.tql-grille-3{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tql-temoins{columns:2}
 }
 @media (max-width:900px){
   /* Les marges LATÉRALES se resserrent, les VERTICALES ne bougent pas :
@@ -399,5 +428,8 @@ export const CSS = `
   .tql-bouton-faux{margin-top:0}
   .tql-etape-txt h3{font-size:22px}
   .tql-scint{display:none}
+  /* Trois colonnes de temoignages sur un telephone donneraient des
+     lignes de quatre mots. */
+  .tql-temoins{columns:1}
 }
 "`;

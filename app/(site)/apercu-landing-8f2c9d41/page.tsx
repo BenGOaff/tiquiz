@@ -75,6 +75,7 @@ import { HOTE_VENTE } from "@/lib/publicHost";
 import { ZAPIER } from "@/lib/site/integrations";
 import {
   DEMO_POPQUIZ,
+  TEMOIGNAGES,
   colonnesDeTarif,
   comparatifDesPlans,
   contenuLanding,
@@ -130,6 +131,34 @@ function Rassurances({ items }: { items: readonly string[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * LE BOUTON DE FIN DE SECTION.
+ *
+ * Sa page en pose un après presque chaque section, et son libellé est
+ * toujours un désir à la première personne : "Je veux capturer ces
+ * emails", "Je veux vendre avec un quiz", "Je me lance gratuitement".
+ * Ce n'est pas une étiquette, c'est la phrase que le lecteur vient de
+ * se dire, et c'est ce qui fait qu'on clique au milieu d'une page.
+ *
+ * La rassurance dessous est la sienne aussi ("Pas besoin de CB -
+ * aucune obligation") : elle ne coûte rien et elle retire la seule
+ * raison d'hésiter à ce moment là.
+ */
+function CtaSection({ libelle, rassurance }: { libelle: string; rassurance: string }) {
+  return (
+    <div className="tql-mid">
+      <Link href={LIEN_INSCRIPTION} className="tql-cta">
+        {libelle}
+        <Fleche />
+      </Link>
+      <p className="tql-mid-r">
+        <CocheFine />
+        {rassurance}
+      </p>
+    </div>
   );
 }
 
@@ -226,7 +255,10 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
       <section className="tql-sec tql-blanc">
         <div className="tql-large tql-deux">
           <div>
-            <h2 className="tql-h2 tql-h2-g">{t.problemeTitre}</h2>
+            <h2 className="tql-h2 tql-h2-g">
+              {t.problemeTitre.split(t.problemeMotCle)[0]}
+              <span className="tql-surb">{t.problemeMotCle}</span>
+            </h2>
             {t.problemeCorps.map((p) => (
               <p key={p} className="tql-p tql-p-g">
                 {p}
@@ -250,6 +282,7 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           <p className="tql-anim-leg">{t.animLegende}</p>
           <AnimVente bloc="opt-in-vs-quiz" />
         </div>
+        <CtaSection libelle={t.ctas.probleme} rassurance={t.ctaRassurance} />
       </section>
 
       {/* ── LA DÉMO : SON VRAI POPQUIZ ─────────────────────────── */}
@@ -339,6 +372,7 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
               </div>
             </div>
           ))}
+          <CtaSection libelle={t.ctas.etapes} rassurance={t.ctaRassurance} />
         </div>
       </section>
 
@@ -363,6 +397,29 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
             ))}
           </div>
           <p className="tql-legende">{t.funnelTagLegende}</p>
+          <CtaSection libelle={t.ctas.funnel} rassurance={t.ctaRassurance} />
+        </div>
+      </section>
+
+      {/* ── LA VIRALITÉ ────────────────────────────────────────── */}
+      {/* SA PAGE A CETTE SECTION, LA LANDING NON. C'est le seul levier
+          qui RAMÈNE des visiteurs au lieu d'en convertir, et il est
+          vrai dans le code (`virality_enabled`, le bonus de partage).
+          AUCUN chiffre : ceux de sa page portent sur ses propres quiz.
+          La note dit la nuance de Jocelyne (4 août) : sur un sujet
+          intime, un partage bas n'est pas un défaut du quiz. */}
+      <section className="tql-sec tql-blanc">
+        <div className="tql-large tql-lire-bloc">
+          <h2 className="tql-h2">
+            {t.viralTitre} <span className="tql-surb">{t.viralMotCle}</span>
+          </h2>
+          {t.viralCorps.map((p) => (
+            <p key={p} className="tql-p">
+              {p}
+            </p>
+          ))}
+          <p className="tql-legende">{t.viralNote}</p>
+          <CtaSection libelle={t.viralCta} rassurance={t.ctaRassurance} />
         </div>
       </section>
 
@@ -396,12 +453,34 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
             <span className="tql-avec-scint">
               <Scintilles />
               <Link href={LIEN_INSCRIPTION} className="tql-cta">
-                {t.ctaSecondaire}
+                {t.ctas.sio}
                 <Fleche />
               </Link>
             </span>
           </div>
           <Rassurances items={t.rassurances} />
+        </div>
+      </section>
+
+      {/* ── LES TROIS FORMATS ──────────────────────────────────── */}
+      {/* La landing ne vendait QUE le quiz. Les sondages et les Popquiz
+          sont dans le même abonnement, ils sont dans la grille de
+          tarifs, et aucun écran ne disait ce qu'ils font. Deux produits
+          payés et jamais montrés. */}
+      <section className="tql-sec">
+        <div className="tql-large">
+          <h2 className="tql-h2">
+            {t.formatsTitre} <span className="tql-surb">{t.formatsMotCle}</span>
+          </h2>
+          <p className="tql-p">{t.formatsCorps}</p>
+          <div className="tql-grille-3">
+            {t.formats.map((c) => (
+              <div className="tql-carte" key={c.titre}>
+                <h3 className="tql-h3">{c.titre}</h3>
+                <p className="tql-corps">{c.corps}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -471,6 +550,46 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
             <AnimVente bloc="ton-branding" />
           </div>
           <p className="tql-legende">{t.brandingNote}</p>
+          <CtaSection libelle={t.ctas.branding} rassurance={t.ctaRassurance} />
+        </div>
+      </section>
+
+      {/* ── L'APRÈS, ET CEUX QUI Y SONT DÉJÀ ───────────────────── */}
+      {/* LA TRANSFORMATION D'ABORD, LES TÉMOIGNAGES ENSUITE. Son
+          persona bascule à "maintenant, imaginons que tout change" :
+          une page qui décrit le problème puis l'outil saute l'étape où
+          le lecteur se projette, et c'est celle qui fait acheter.
+
+          LES QUINZE TÉMOIGNAGES SONT CEUX DE SA PAGE DE VENTE, sous son
+          titre à elle. Ce ne sont pas les six avis Trustpilot qu'elle a
+          fait retirer le 5 septembre : ils sont quinze, ils portent un
+          prénom et un métier, ils vivent déjà sur sa page, et aucun ne
+          fait quitter celle-ci. Ils ne sont ni traduits ni corrigés. */}
+      <section className="tql-sec tql-blanc">
+        <div className="tql-large">
+          <h2 className="tql-h2">
+            {t.avisTitre} <span className="tql-surb">{t.avisMotCle}</span>
+          </h2>
+          <p className="tql-p">{t.avisCorps}</p>
+          <ul className="tql-apres">
+            {t.apres.map((a) => (
+              <li key={a}>
+                <CochePleine />
+                <span>{a}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="tql-temoins">
+            {TEMOIGNAGES.map((v) => (
+              <figure className="tql-temoin" key={v.nom}>
+                <blockquote>{v.texte}</blockquote>
+                <figcaption>
+                  <b>{v.nom}</b>
+                  {v.metier ? <span>{v.metier}</span> : null}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
         </div>
       </section>
 

@@ -37,6 +37,7 @@ import assert from "node:assert/strict";
 
 import {
   LANDING,
+  TEMOIGNAGES,
   colonnesDeTarif,
   comparatifDesPlans,
   contenuLanding,
@@ -367,6 +368,163 @@ describe("le haut de page vend le RÉSULTAT, pas le processus", () => {
     const hero = PAGE_CODE.indexOf("tql-hero");
     const etapes = PAGE_CODE.indexOf("tql-pastille-etape");
     assert.ok(hero > 0 && etapes > hero, "les étapes doivent venir après le haut de page");
+  });
+});
+
+describe("la page parle de son audience avec SES mots", () => {
+  // Béné, 5 septembre 2026 : "pourquoi 'créateurs' c'est des
+  // entrepreneurs, des coachs, des auteurs, des affiliés, des
+  // infopreneurs ... ils ne se définissent pas comme étant des
+  // 'créateurs' j'ai bossé dur sur ma page initiale, il faut arrêter de
+  // chier dessus comme ça."
+  //
+  // Elle a raison : j'avais substitué mon mot au sien. Et la liste
+  // juste n'est pas à inventer, elle est SUR SA PAGE : les métiers des
+  // quinze témoignages sont écrits par les intéressés (entrepreneur,
+  // infopreneur, consultant, formatrice, coach, solopreneur,
+  // thérapeute, affilié, marketeur).
+
+  test("aucun \"créateurs\" tout court dans ce qui S'AFFICHE", () => {
+    // "créateur de contenu" reste : c'est un métier, et il est écrit
+    // par la personne elle même sur sa page. C'est le mot NU, employé
+    // comme nom de l'audience, qui est faux.
+    for (const langue of Object.keys(LANDING)) {
+      for (const champ of ["preuve", "pourQui"] as const) {
+        const v = LANDING[langue][champ];
+        assert.ok(
+          !/créateurs(?!\s+de\s+contenu)/i.test(v) &&
+            !/(?<!course |content )\bcreators\b/i.test(v),
+          `${langue}.${champ} appelle l'audience "créateurs" -> ${v}`,
+        );
+      }
+    }
+  });
+
+  test("le haut de page NOMME plusieurs métiers, il ne dit pas \"les gens\"", () => {
+    // "Le lecteur a un prénom. Jamais 'n'importe qui', jamais 'les
+    // gens', jamais une masse."
+    assert.ok(
+      /entrepreneur/i.test(LANDING.fr.pourQui) && /affili/i.test(LANDING.fr.pourQui),
+      "le haut de page ne nomme pas les métiers qu'elle a listés",
+    );
+    assert.ok(
+      !/n'importe qui|les gens\b/i.test(LANDING.fr.pourQui),
+      "le haut de page parle d'une masse",
+    );
+  });
+});
+
+describe("les quinze témoignages sont ceux de SA page", () => {
+  // Béné avait fait retirer SIX avis Trustpilot, et le lien qui menait
+  // chez eux. Ceux-ci sont autre chose : ils vivent déjà sur sa page de
+  // vente, ils portent un prénom et un métier, ils sont quinze, et
+  // aucun ne fait quitter la page.
+
+  test("il y en a quinze, tous avec un texte et un nom", () => {
+    assert.equal(TEMOIGNAGES.length, 15);
+    for (const v of TEMOIGNAGES) {
+      assert.ok(v.nom.trim().length > 1, "un témoignage sans nom");
+      assert.ok(v.texte.trim().length > 60, `témoignage trop court : ${v.nom}`);
+    }
+  });
+
+  test("un témoignage ne se traduit JAMAIS", () => {
+    // Il vit HORS des objets de langue : c'est quelqu'un qui a écrit
+    // ça. Le traduire, le corriger ou le raccourcir en ferait un texte
+    // que personne n'a écrit, donc un faux témoignage, donc sa ligne
+    // rouge numéro un.
+    assert.ok(
+      !/temoignages|avis:/i.test(JSON.stringify(Object.keys(LANDING.fr))),
+      "les témoignages sont passés dans un objet de langue",
+    );
+    assert.ok(
+      /export const TEMOIGNAGES/.test(CODE),
+      "TEMOIGNAGES doit rester une constante unique, hors des langues",
+    );
+  });
+
+  test("la page les affiche, et la transformation les précède", () => {
+    const apres = PAGE_CODE.indexOf("tql-apres");
+    const temoins = PAGE_CODE.indexOf("tql-temoins");
+    assert.ok(apres > 0, "la transformation n'est pas rendue");
+    assert.ok(temoins > apres, "les témoignages doivent venir après la projection");
+  });
+});
+
+describe("chaque section se termine par un désir, pas par un vide", () => {
+  // Relevé sur sa page : "Je veux capturer ces emails", "Je veux mon
+  // quiz viral", "Je me lance gratuitement". Ma landing n'avait que
+  // TROIS boutons en tout, donc il fallait scroller jusqu'aux tarifs
+  // pour en trouver un.
+
+  test("au moins cinq boutons de milieu de page", () => {
+    const n = (PAGE_CODE.match(/<CtaSection\b/g) ?? []).length;
+    assert.ok(n >= 5, `seulement ${n} boutons de milieu de page`);
+  });
+
+  test("les libellés français sont à la PREMIÈRE personne", () => {
+    const libelles = [...Object.values(LANDING.fr.ctas), LANDING.fr.viralCta];
+    for (const l of libelles) {
+      assert.match(l, /^Je /, `"${l}" n'est pas un désir à la première personne`);
+    }
+  });
+
+  test("chaque bouton porte sa rassurance", () => {
+    for (const langue of Object.keys(LANDING)) {
+      assert.ok(
+        LANDING[langue].ctaRassurance.trim().length > 5,
+        `${langue} : aucune rassurance sous les boutons`,
+      );
+    }
+    assert.match(PAGE_CODE, /rassurance=\{t\.ctaRassurance\}/);
+  });
+});
+
+describe("le coût de ne rien faire est dit, et les trois formats aussi", () => {
+  test("le titre du problème est celui de SA page", () => {
+    // "Chaque visiteur qui repart sans te laisser son email est un
+    // client perdu." C'est son titre, et il vaut mieux que le mien
+    // ("un opt-in demande, un quiz donne") : il dit ce que ça COÛTE.
+    assert.match(LANDING.fr.problemeTitre, /client perdu/i);
+    assert.ok(
+      LANDING.fr.problemeTitre.includes(LANDING.fr.problemeMotCle),
+      "le mot clé coloré doit être un morceau du titre",
+    );
+    // Son deuxième argument : la plateforme peut sauter, la liste est à toi.
+    assert.ok(
+      LANDING.fr.problemeCorps.some((p) => /appartiennent pas/i.test(p)),
+      "l'argument de la plateforme qui peut sauter a disparu",
+    );
+  });
+
+  test("les sondages et les Popquiz sont VENDUS, pas seulement facturés", () => {
+    // Ils sont dans la grille de tarifs depuis le début, et aucun écran
+    // ne disait ce qu'ils font : deux produits payés, jamais montrés.
+    assert.equal(LANDING.fr.formats.length, 3);
+    const tout = LANDING.fr.formats.map((f) => `${f.titre} ${f.corps}`).join(" ");
+    assert.match(tout, /sondage/i);
+    assert.match(tout, /popquiz/i);
+    assert.ok(PAGE_CODE.includes("t.formats.map"), "les formats ne sont pas rendus");
+  });
+
+  test("la viralité n'annonce AUCUN chiffre", () => {
+    // Ceux de sa page portent sur ses propres quiz : je ne peux pas les
+    // sourcer, donc ils ne sortent pas. Un chiffre sans source ne sort
+    // pas, c'est sa ligne rouge numéro un.
+    for (const langue of Object.keys(LANDING)) {
+      const t = LANDING[langue];
+      const bloc = `${t.viralTitre} ${t.viralCorps.join(" ")} ${t.viralNote}`;
+      assert.ok(
+        !/\d[\d\s.,]*\s*(%|visites|visits|leads)/i.test(bloc),
+        `${langue} : le bloc viralité annonce un chiffre sans source`,
+      );
+    }
+  });
+
+  test("et il dit que le partage se coupe", () => {
+    // Retour Jocelyne, 4 août : sur un sujet intime, un taux de partage
+    // bas n'est ni un défaut du quiz ni un cadeau trop faible.
+    assert.match(LANDING.fr.viralNote, /jamais obligatoire|couper/i);
   });
 });
 
