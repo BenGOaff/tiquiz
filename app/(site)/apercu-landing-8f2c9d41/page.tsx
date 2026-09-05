@@ -76,6 +76,7 @@ import { OUTILS, ZAPIER } from "@/lib/site/integrations";
 import {
   DEMO_POPQUIZ,
   TEMOIGNAGES,
+  preuvePrecoce,
   colonnesDeTarif,
   comparatifDesPlans,
   contenuLanding,
@@ -148,6 +149,40 @@ function Rassurances({ items }: { items: readonly string[] }) {
  * aucune obligation") : elle ne coûte rien et elle retire la seule
  * raison d'hésiter à ce moment là.
  */
+/**
+ * LES SIX DÉLAIS DU FLUX DE CAPTURES, LES SIENS.
+ *
+ * Sa page affiche "Capturé il y a 3min ... 45min". Ce sont des délais
+ * FIGÉS, pas un tirage : un nombre aléatoire rendu côté serveur ne
+ * correspond pas à celui de l'hydratation, et React se plaint.
+ *
+ * Et ils illustrent un flux, ils n'annoncent aucun volume réel : c'est
+ * la même règle que les trois chiffres de son bloc viralité.
+ */
+const DELAIS_CAPTURE = [3, 7, 14, 22, 31, 45] as const;
+
+/**
+ * LE LIEN VERS LA PAGE DÉTAILLÉE D'UNE FONCTIONNALITÉ.
+ *
+ * Béné, 5 septembre 2026 : "sur la landing on présente pourquoi cette
+ * fonctionnalité + les bénéfices + comment ça marche en une phrase.
+ * Sur la page détail on détaille comment ça marche."
+ *
+ * Le lien est INTERNE : il ne fait pas quitter le domaine, c'est sa
+ * règle du 5 septembre au matin ("on ne veut pas que les gens quittent
+ * la page ... on veut qu'ils commandent bordel !").
+ */
+function EnSavoirPlus({ slug, quoi }: { slug: string; quoi: string }) {
+  return (
+    <p className="tql-savoir">
+      <Link href={`/fonctionnalites/${slug}`} className="tql-savoir-a">
+        {quoi}
+        <Fleche />
+      </Link>
+    </p>
+  );
+}
+
 function CtaSection({ libelle, rassurance }: { libelle: string; rassurance: string }) {
   return (
     <div className="tql-mid">
@@ -233,7 +268,6 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           <MaquetteQuiz m={t.maquette} />
         </div>
       </section>
-
       {/* ── LE BANDEAU DÉFILANT ────────────────────────────────── */}
       {/* Le lot est écrit DEUX fois et la piste glisse de -50 % : c'est
           ce qui rend la boucle invisible. Un seul lot ferait un saut. */}
@@ -248,6 +282,36 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           ))}
         </div>
       </div>
+      {/* ── LA PREUVE SOCIALE PRÉCOCE ──────────────────────────── */}
+      {/* Béné, 5 septembre 2026, dans sa liste des sections
+          indispensables : "Preuve sociale précoce : affichez
+          immédiatement des logos de clients, des notes ou des avatars
+          d'utilisateurs pour crédibiliser votre offre."
+
+          Sa page de vente n'en a pas : ses quinze témoignages arrivent
+          au deux tiers. Trois d'entre eux remontent ici, en une ligne
+          chacun, AVEC LEUR NOM : un chiffre tout seul ne crédibilise
+          rien, c'est le prénom et le métier qui le font.
+
+          AUCUNE NOTE MOYENNE, ET AUCUN LOGO. Je n'ai pas relevé la note
+          Trustpilot, et l'inventer serait exactement ce qu'elle
+          interdit ; les logos de ses clientes ne m'appartiennent pas. */}
+      <section className="tql-sec tql-preuve-tot">
+        <div className="tql-large">
+          <p className="tql-preuve-nb">{t.preuve}</p>
+          <div className="tql-preuve-lignes">
+            {preuvePrecoce(TEMOIGNAGES).map((v) => (
+              <figure key={v.nom} className="tql-preuve-un">
+                <blockquote>{v.texte}</blockquote>
+                <figcaption>
+                  {v.nom}
+                  {v.metier ? <span> · {v.metier}</span> : null}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* ── LE PROBLÈME, ET LE CHIFFRE ─────────────────────────── */}
       {/* PAS : le problème, puis ce qu'il coûte, puis la solution. Ce
@@ -285,7 +349,6 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
         </div>
         <CtaSection libelle={t.ctas.probleme} rassurance={t.ctaRassurance} />
       </section>
-
       {/* ── POURQUOI UN QUIZ, ET PAS UN PDF DE PLUS ────────────── */}
       {/* Béné, 5 septembre : "pour montrer pourquoi les quiz, et
           pourquoi tiquiz ?" Ce sont DEUX questions, et la page n'en
@@ -299,15 +362,16 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
       <section className="tql-sec">
         <div className="tql-large">
           <h2 className="tql-h2">
-            {t.formatsLeadTitre} <span className="tql-surb">{t.formatsLeadMotCle}</span>
+            {t.formatsLeadTitre} <span className="tql-surb">{t.formatsLeadMotCle}</span>{" "}
+            {t.formatsLeadFin}
           </h2>
           <p className="tql-p">{t.formatsLeadCorps}</p>
           <div className="tql-comp-boite">
-            <table className="tql-comp tql-comp-txt">
+            <table className="tql-comp tql-comp-oui">
               <thead>
                 <tr>
                   {t.formatsLeadColonnes.map((c, i) => (
-                    <th key={c || i} className={i === 3 ? "tql-col-nous" : undefined}>
+                    <th key={c || i} className={i === 1 ? "tql-col-nous" : undefined}>
                       {c}
                     </th>
                   ))}
@@ -318,8 +382,11 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
                   <tr key={l.critere}>
                     <th scope="row">{l.critere}</th>
                     {l.valeurs.map((v, i) => (
-                      <td key={v} className={i === 2 ? "tql-col-nous" : undefined}>
-                        {v}
+                      <td
+                        key={l.critere + i}
+                        className={i === 0 ? "tql-col-nous" : undefined}
+                      >
+                        {v ? <CochePleine /> : <Croix />}
                       </td>
                     ))}
                   </tr>
@@ -330,52 +397,11 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           <p className="tql-legende">{t.formatsLeadNote}</p>
         </div>
       </section>
-
-      {/* ── LA DÉMO : SON VRAI POPQUIZ ─────────────────────────── */}
-      {/* LE TITRE NE PROMET PLUS DE TESTER LE GÉNÉRATEUR. Béné : "le
-          quiz à tester il est ailleurs, là on teste le fonctionnement.
-          Et c'est vraiment un titre qui fait vendre ?" Non : il
-          décrivait un écran. Celui-ci dit ce que le visiteur va vivre,
-          et c'est la preuve par le résultat, le déclencheur numéro 12
-          de sa propre bibliothèque.
-
-          🚨 CE QUI N'A PAS PU ÊTRE VÉRIFIÉ D'ICI : le RENDU. `curl`
-          répond 200 avec `content-security-policy: frame-ancestors *`,
-          donc la page s'affiche depuis n'importe quel domaine. Mais le
-          navigateur de ce conteneur n'a AUCUNE route vers
-          quiz.tipote.com : le cadre sort blanc, et c'est mon
-          environnement, pas sa page. À confirmer à l'écran. */}
-      <section className="tql-sec tql-blanc">
-        <div className="tql-large">
-          <h2 className="tql-h2">
-            {t.demoTitre} <span className="tql-surb">{t.demoMotCle}</span>
-          </h2>
-          <p className="tql-p">{t.demoCorps}</p>
-          <div className="tql-demo">
-            <iframe
-              src={DEMO_POPQUIZ}
-              title="Popquiz Tiquiz"
-              allow="autoplay;fullscreen;clipboard-write"
-              allowFullScreen
-            />
-          </div>
-          {/* LA SORTIE DE SECOURS. Un cadre qui ne charge pas montre la
-              page d'erreur du navigateur DEDANS : aucun repli posé
-              derrière ne s'afficherait. Ce lien, lui, est toujours là,
-              et il reste sur nos domaines. */}
-          <p className="tql-legende">
-            <a href={DEMO_POPQUIZ} target="_blank" rel="noopener noreferrer">
-              {t.demoLien}
-            </a>
-          </p>
-        </div>
-      </section>
-
       {/* ── LES ÉTAPES, EN LIGNES QUI ALTERNENT ────────────────── */}
       {/* LE COMMENT VIT ICI, et pas au premier écran. Un visiteur veut
           savoir comment ça marche APRÈS avoir compris ce qu'il y gagne,
           jamais avant. */}
-      <section className="tql-sec">
+      <section className="tql-sec tql-blanc">
         <div className="tql-large">
           <h2 className="tql-h2">
             {t.mecaniqueTitre} <span className="tql-surb">{t.mecaniqueMotCle}</span> ?
@@ -419,56 +445,48 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
             </div>
           ))}
           <CtaSection libelle={t.ctas.etapes} rassurance={t.ctaRassurance} />
+          <EnSavoirPlus slug="automatisations" quoi="Le détail du guide d'automatisation" />
         </div>
       </section>
+      {/* ── LA DÉMO : SON VRAI POPQUIZ ─────────────────────────── */}
+      {/* LE TITRE NE PROMET PLUS DE TESTER LE GÉNÉRATEUR. Béné : "le
+          quiz à tester il est ailleurs, là on teste le fonctionnement.
+          Et c'est vraiment un titre qui fait vendre ?" Non : il
+          décrivait un écran. Celui-ci dit ce que le visiteur va vivre,
+          et c'est la preuve par le résultat, le déclencheur numéro 12
+          de sa propre bibliothèque.
 
-      {/* ── LE FUNNEL : CHACUN VERS SON OFFRE ──────────────────── */}
-      <section className="tql-sec tql-blanc">
+          🚨 CE QUI N'A PAS PU ÊTRE VÉRIFIÉ D'ICI : le RENDU. `curl`
+          répond 200 avec `content-security-policy: frame-ancestors *`,
+          donc la page s'affiche depuis n'importe quel domaine. Mais le
+          navigateur de ce conteneur n'a AUCUNE route vers
+          quiz.tipote.com : le cadre sort blanc, et c'est mon
+          environnement, pas sa page. À confirmer à l'écran. */}
+      <section className="tql-sec">
         <div className="tql-large">
           <h2 className="tql-h2">
-            {t.funnelTitre} <span className="tql-surb">{t.funnelMotCle}</span>.
+            {t.demoTitre} <span className="tql-surb">{t.demoMotCle}</span>
           </h2>
-          <p className="tql-p">{t.funnelCorps}</p>
-          <div className="tql-grille-3">
-            {t.funnelProfils.map((p) => (
-              <div key={p.tag} className="tql-carte tql-carte-flux">
-                <p className="tql-cite">{p.reponse}</p>
-                <FlecheBas />
-                <h3 className="tql-h3">{p.profil}</h3>
-                <p className="tql-bouton-faux">{p.offre}</p>
-                <span className="tql-tag">
-                  <b>tag</b> {p.tag}
-                </span>
-              </div>
-            ))}
+          <p className="tql-p">{t.demoCorps}</p>
+          <div className="tql-demo">
+            <iframe
+              src={DEMO_POPQUIZ}
+              title="Popquiz Tiquiz"
+              allow="autoplay;fullscreen;clipboard-write"
+              allowFullScreen
+            />
           </div>
-          <p className="tql-legende">{t.funnelTagLegende}</p>
-          <CtaSection libelle={t.ctas.funnel} rassurance={t.ctaRassurance} />
+          {/* LA SORTIE DE SECOURS. Un cadre qui ne charge pas montre la
+              page d'erreur du navigateur DEDANS : aucun repli posé
+              derrière ne s'afficherait. Ce lien, lui, est toujours là,
+              et il reste sur nos domaines. */}
+          <p className="tql-legende">
+            <a href={DEMO_POPQUIZ} target="_blank" rel="noopener noreferrer">
+              {t.demoLien}
+            </a>
+          </p>
         </div>
       </section>
-
-      {/* ── LA VIRALITÉ ────────────────────────────────────────── */}
-      {/* SA PAGE A CETTE SECTION, LA LANDING NON. C'est le seul levier
-          qui RAMÈNE des visiteurs au lieu d'en convertir, et il est
-          vrai dans le code (`virality_enabled`, le bonus de partage).
-          AUCUN chiffre : ceux de sa page portent sur ses propres quiz.
-          La note dit la nuance de Jocelyne (4 août) : sur un sujet
-          intime, un partage bas n'est pas un défaut du quiz. */}
-      <section className="tql-sec tql-blanc">
-        <div className="tql-large tql-lire-bloc">
-          <h2 className="tql-h2">
-            {t.viralTitre} <span className="tql-surb">{t.viralMotCle}</span>
-          </h2>
-          {t.viralCorps.map((p) => (
-            <p key={p} className="tql-p">
-              {p}
-            </p>
-          ))}
-          <p className="tql-legende">{t.viralNote}</p>
-          <CtaSection libelle={t.viralCta} rassurance={t.ctaRassurance} />
-        </div>
-      </section>
-
       {/* ── SYSTEME.IO, SANS INTERMÉDIAIRE ─────────────────────── */}
       {/* Le titre annonçait "le tag est posé même s'il n'existe pas
           encore". Béné : "oui ok c'est super, mais NON c'est pas un
@@ -476,7 +494,7 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           connecté nativement, pas besoin de lier zapier, make, pabbly
           ou autre." La création du tag reste écrite : c'est la PREUVE
           de la connexion, ce n'est plus l'argument. */}
-      <section className="tql-sec">
+      <section className="tql-sec tql-blanc">
         <div className="tql-large tql-lire-bloc">
           <p className="tql-surtitre tql-surtitre-c">{t.etiquette}</p>
           <h2 className="tql-h2">
@@ -505,9 +523,9 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
             </span>
           </div>
           <Rassurances items={t.rassurances} />
+          <EnSavoirPlus slug="integration-systeme-io" quoi="Le détail de la connexion Systeme.io" />
         </div>
       </section>
-
       {/* ── POURQUOI TIQUIZ, ET PAS UN AUTRE OUTIL DE QUIZ ─────── */}
       {/* La deuxième question de Béné, et elle était traitée en cinq
           morceaux répartis dans la page, donc nulle part.
@@ -517,7 +535,7 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           documentation de l'outil, et le lien mène aux preuves.
           Réécrire ces lignes ici en ferait une deuxième liste, donc une
           divergence, sur l'écran où un lecteur vérifie. */}
-      <section className="tql-sec tql-blanc">
+      <section className="tql-sec">
         <div className="tql-large">
           <h2 className="tql-h2">
             {t.outilsTitre} <span className="tql-surb">{t.outilsMotCle}</span>
@@ -549,13 +567,171 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           </p>
         </div>
       </section>
+      {/* ── LA VIRALITÉ ────────────────────────────────────────── */}
+      {/* SA PAGE A CETTE SECTION, LA LANDING NON. C'est le seul levier
+          qui RAMÈNE des visiteurs au lieu d'en convertir, et il est
+          vrai dans le code (`virality_enabled`, le bonus de partage).
+          AUCUN chiffre : ceux de sa page portent sur ses propres quiz.
+          La note dit la nuance de Jocelyne (4 août) : sur un sujet
+          intime, un partage bas n'est pas un défaut du quiz. */}
+      <section className="tql-sec tql-blanc">
+        <div className="tql-large tql-lire-bloc">
+          <h2 className="tql-h2">
+            {t.viralTitre} <span className="tql-surb">{t.viralMotCle}</span>
+          </h2>
+          {t.viralCorps.map((p) => (
+            <p key={p} className="tql-p">
+              {p}
+            </p>
+          ))}
+          <p className="tql-legende">{t.viralNote}</p>
+          <CtaSection libelle={t.viralCta} rassurance={t.ctaRassurance} />
+          <EnSavoirPlus slug="partage-viral" quoi="Le détail du partage et du bonus" />
+        </div>
+      </section>
+      {/* ── LES LEADS QUALIFIÉS ────────────────────────────────── */}
+      {/* UNE DES TROIS SECTIONS DE SA PAGE QUI MANQUAIENT ICI.
+          Relevée en extrayant sa page en ordre de lecture. Son texte,
+          mot pour mot : c'est l'argument qui répond à "j'ai déjà une
+          liste, elle ne me rapporte rien". */}
+      <section className="tql-sec">
+        <div className="tql-large tql-deux-col">
+          <div>
+            <h2 className="tql-h2">
+              {t.qualifiesTitre} <span className="tql-surb">{t.qualifiesMotCle}</span>.{" "}
+              {t.qualifiesFin}
+            </h2>
+            {t.qualifiesCorps.map((p) => (
+              <p key={p} className="tql-p">
+                {p}
+              </p>
+            ))}
+            <CtaSection libelle={t.ctas.qualifies} rassurance={t.ctaRassurance} />
+          </div>
+          {/* Le flux de captures, dessiné, comme sur sa page. Les six
+              prénoms et les six délais sont les siens : ils illustrent
+              un flux, ils n'annoncent aucun volume réel. */}
+          <div className="tql-flux" aria-hidden>
+            {t.qualifiesNoms.map((n, i) => (
+              <p key={n} className="tql-flux-un">
+                <span className="tql-flux-pt" />
+                <span className="tql-flux-nom">{n}</span>
+                <span className="tql-flux-quand">
+                  {t.qualifiesDepuis.replace("{n}", String(DELAIS_CAPTURE[i])) }
+                </span>
+              </p>
+            ))}
+          </div>
+        </div>
+      </section>
 
+      {/* ── LES OFFRES IRRÉSISTIBLES ───────────────────────────── */}
+      {/* LA DEUXIÈME SECTION MANQUANTE, ET C'EST CELLE QUI VEND LE
+          MIEUX : elle ne parle pas de capturer une adresse, elle parle
+          de ce que le quiz t'APPREND. Ses sept puces, son texte. */}
+      <section className="tql-sec tql-blanc">
+        <div className="tql-large tql-deux-col">
+          {/* Le sondage dessiné : sa question, ses quatre réponses. */}
+          <div className="tql-sondage" aria-hidden>
+            <p className="tql-sondage-q">{t.offresSondage.question}</p>
+            {t.offresSondage.reponses.map((r) => (
+              <p key={r.texte} className="tql-sondage-l">
+                <span className="tql-sondage-pct">{r.pct} %</span>
+                <span className="tql-sondage-barre">
+                  <span style={{ width: `${r.pct * 2}%` }} />
+                </span>
+                <span className="tql-sondage-txt">{r.texte}</span>
+              </p>
+            ))}
+          </div>
+          <div>
+            <h2 className="tql-h2">
+              {t.offresTitre} <span className="tql-surb">{t.offresMotCle}</span>{" "}
+              {t.offresFin}
+            </h2>
+            <p className="tql-p">{t.offresIntro}</p>
+            <ul className="tql-puces">
+              {t.offresPuces.map((x) => (
+                <li key={x}>
+                  <CochePleine />
+                  <span>{x}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="tql-p">{t.offresConclusion}</p>
+            <CtaSection libelle={t.ctas.offres} rassurance={t.ctaRassurance} />
+          </div>
+        </div>
+      </section>
+
+      {/* ── LE FUNNEL : CHACUN VERS SON OFFRE ──────────────────── */}
+      <section className="tql-sec">
+        <div className="tql-large">
+          <h2 className="tql-h2">
+            {t.funnelTitre} <span className="tql-surb">{t.funnelMotCle}</span>.
+          </h2>
+          <p className="tql-p">{t.funnelCorps}</p>
+          <div className="tql-grille-3">
+            {t.funnelProfils.map((p) => (
+              <div key={p.tag} className="tql-carte tql-carte-flux">
+                <p className="tql-cite">{p.reponse}</p>
+                <FlecheBas />
+                <h3 className="tql-h3">{p.profil}</h3>
+                <p className="tql-bouton-faux">{p.offre}</p>
+                <span className="tql-tag">
+                  <b>tag</b> {p.tag}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="tql-legende">{t.funnelTagLegende}</p>
+          <CtaSection libelle={t.ctas.funnel} rassurance={t.ctaRassurance} />
+          <EnSavoirPlus slug="suivi-des-leads" quoi="Le détail du suivi des leads" />
+        </div>
+      </section>
+      {/* ── DÉMARQUE-TOI ───────────────────────────────────────── */}
+      {/* LA TROISIÈME SECTION MANQUANTE. Courte chez elle, courte ici :
+          c'est une respiration entre deux blocs qui expliquent, pas un
+          argument de plus à démontrer. */}
+      <section className="tql-sec tql-blanc">
+        <div className="tql-large tql-lire-bloc">
+          <h2 className="tql-h2">
+            {t.demarqueTitre} <span className="tql-surb">{t.demarqueMotCle}</span>{" "}
+            {t.demarqueFin}
+          </h2>
+          {t.demarqueCorps.map((x) => (
+            <p key={x} className="tql-p">
+              {x}
+            </p>
+          ))}
+          <CtaSection libelle={t.ctas.demarque} rassurance={t.ctaRassurance} />
+        </div>
+      </section>
+
+      {/* ── LES DEUX MÉCANIQUES : PROFIL, OU SCORE ─────────────── */}
+      {/* SON ANIMATION `tes-pixels` MONTRE EXACTEMENT ÇA, et elle
+          dormait dans `content/sales/anim/` sans être servie nulle part.
+          Elle répond à l'objection la plus chère du persona : "je ne
+          suis pas sûr que ça marche dans mon domaine". */}
+      <section className="tql-sec">
+        <div className="tql-large">
+          <h2 className="tql-h2">
+            {t.modesTitre} <span className="tql-surb">{t.modesMotCle}</span>
+          </h2>
+          <p className="tql-p">{t.modesCorps}</p>
+          <div className="tql-anim">
+            <AnimVente bloc="tes-pixels" />
+          </div>
+          <p className="tql-legende">{t.modesNote}</p>
+          <EnSavoirPlus slug="quiz-profil-ou-score" quoi="Le détail des deux mécaniques" />
+        </div>
+      </section>
       {/* ── LES TROIS FORMATS ──────────────────────────────────── */}
       {/* La landing ne vendait QUE le quiz. Les sondages et les Popquiz
           sont dans le même abonnement, ils sont dans la grille de
           tarifs, et aucun écran ne disait ce qu'ils font. Deux produits
           payés et jamais montrés. */}
-      <section className="tql-sec">
+      <section className="tql-sec tql-blanc">
         <div className="tql-large">
           <h2 className="tql-h2">
             {t.formatsTitre} <span className="tql-surb">{t.formatsMotCle}</span>
@@ -569,29 +745,31 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
               </div>
             ))}
           </div>
+          <EnSavoirPlus slug="sondages" quoi="Le détail des sondages et des Popquiz" />
         </div>
       </section>
-
-      {/* ── LES DEUX MÉCANIQUES : PROFIL, OU SCORE ─────────────── */}
-      {/* SON ANIMATION `tes-pixels` MONTRE EXACTEMENT ÇA, et elle
-          dormait dans `content/sales/anim/` sans être servie nulle part.
-          Elle répond à l'objection la plus chère du persona : "je ne
-          suis pas sûr que ça marche dans mon domaine". */}
-      <section className="tql-sec tql-blanc">
+      {/* ── TON BRANDING ───────────────────────────────────────── */}
+      {/* Béné : "ton logo ta marque arrive comme un cheveu sur la soupe,
+          sans texte ni contexte, incompréhensible." Elle avait raison :
+          l'animation était posée nue au bas d'une autre section. Elle a
+          désormais son titre, sa phrase et sa légende, comme sur SA
+          page. */}
+      <section className="tql-sec">
         <div className="tql-large">
           <h2 className="tql-h2">
-            {t.modesTitre} <span className="tql-surb">{t.modesMotCle}</span>
+            {t.brandingTitre} <span className="tql-surb">{t.brandingMotCle}</span>
           </h2>
-          <p className="tql-p">{t.modesCorps}</p>
+          <p className="tql-p">{t.brandingCorps}</p>
           <div className="tql-anim">
-            <AnimVente bloc="tes-pixels" />
+            <AnimVente bloc="ton-branding" />
           </div>
-          <p className="tql-legende">{t.modesNote}</p>
+          <p className="tql-legende">{t.brandingNote}</p>
+          <CtaSection libelle={t.ctas.branding} rassurance={t.ctaRassurance} />
+          <EnSavoirPlus slug="branding-et-langues" quoi="Le détail du branding et des langues" />
         </div>
       </section>
-
       {/* ── OÙ VIT TON QUIZ, EN BENTO ──────────────────────────── */}
-      <section className="tql-sec">
+      <section className="tql-sec tql-blanc">
         <div className="tql-large">
           <h2 className="tql-h2">
             {t.ouTitre} <span className="tql-surb">{t.ouMotCle}</span>.
@@ -606,42 +784,24 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
               </div>
             ))}
           </div>
+          {/* LA CARTE DU CODE VIVAIT ICI ET SUR L'ÉTAPE 3, mot pour
+              mot, avec le même <BlocCode /> : le même encart deux fois
+              sur la même page, mesuré. C'est le défaut qu'elle avait
+              relevé le 4 septembre sur la maquette du haut de page.
+              Elle est retirée d'ici, pas de l'étape 3 : c'est là qu'on
+              explique le mécanisme. Le détail des deux chemins vit
+              maintenant sur /fonctionnalites/ou-vit-ton-quiz. */}
           <div className="tql-grille-2">
             <div className="tql-carte">
               <h3 className="tql-h3">{t.ouLienTitre}</h3>
               <p className="tql-corps">{t.ouLienCorps}</p>
               <ChampLien copier={t.copier} />
             </div>
-            <div className="tql-carte">
-              <h3 className="tql-h3">{t.ouCodeTitre}</h3>
-              <p className="tql-corps">{t.ouCodeCorps}</p>
-              <BlocCode />
-            </div>
           </div>
           <p className="tql-legende">{t.ouNote}</p>
+          <EnSavoirPlus slug="ou-vit-ton-quiz" quoi="Le détail : lien, code, domaine" />
         </div>
       </section>
-
-      {/* ── TON BRANDING ───────────────────────────────────────── */}
-      {/* Béné : "ton logo ta marque arrive comme un cheveu sur la soupe,
-          sans texte ni contexte, incompréhensible." Elle avait raison :
-          l'animation était posée nue au bas d'une autre section. Elle a
-          désormais son titre, sa phrase et sa légende, comme sur SA
-          page. */}
-      <section className="tql-sec tql-blanc">
-        <div className="tql-large">
-          <h2 className="tql-h2">
-            {t.brandingTitre} <span className="tql-surb">{t.brandingMotCle}</span>
-          </h2>
-          <p className="tql-p">{t.brandingCorps}</p>
-          <div className="tql-anim">
-            <AnimVente bloc="ton-branding" />
-          </div>
-          <p className="tql-legende">{t.brandingNote}</p>
-          <CtaSection libelle={t.ctas.branding} rassurance={t.ctaRassurance} />
-        </div>
-      </section>
-
       {/* ── L'APRÈS, ET CEUX QUI Y SONT DÉJÀ ───────────────────── */}
       {/* LA TRANSFORMATION D'ABORD, LES TÉMOIGNAGES ENSUITE. Son
           persona bascule à "maintenant, imaginons que tout change" :
@@ -653,7 +813,7 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           fait retirer le 5 septembre : ils sont quinze, ils portent un
           prénom et un métier, ils vivent déjà sur sa page, et aucun ne
           fait quitter celle-ci. Ils ne sont ni traduits ni corrigés. */}
-      <section className="tql-sec tql-blanc">
+      <section className="tql-sec">
         <div className="tql-large">
           <h2 className="tql-h2">
             {t.avisTitre} <span className="tql-surb">{t.avisMotCle}</span>
@@ -680,14 +840,13 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           </div>
         </div>
       </section>
-
       {/* ── LES OBJECTIONS ─────────────────────────────────────── */}
       {/* À LA PLACE DES SIX AVIS. Les cinq objections sont celles du
           persona de `copywriting-claude/Persona tiquiz.md`, dans ses
           mots à lui. Un bloc qui répond à ce que le lecteur pense juste
           avant de cliquer mesure +28 % de clics ; six témoignages ne
           répondent à aucune question précise. */}
-      <section className="tql-sec">
+      <section className="tql-sec tql-blanc">
         <span aria-hidden className="tql-blob tql-blob-c" />
         <div className="tql-large tql-lire-bloc">
           <h2 className="tql-h2">
@@ -703,7 +862,6 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           </div>
         </div>
       </section>
-
       {/* ── CE QUI N'EST PAS POUR TOI ──────────────────────────── */}
       {/* Béné, 5 septembre : "sans bullshit". Une page qui ne dit que
           du bien se lit comme une page de vente ; une page qui sait
@@ -715,7 +873,7 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           profil (`lib/quizScoring.ts`), le parcours est LINÉAIRE, et le
           design suit son branding sans être libre au pixel. Un refus
           inventé pour faire honnête serait du bullshit de plus. */}
-      <section className="tql-sec tql-blanc">
+      <section className="tql-sec">
         <div className="tql-large tql-lire-bloc">
           <h2 className="tql-h2">
             {t.pasPourToiTitre} <span className="tql-surb">{t.pasPourToiMotCle}</span>
@@ -732,7 +890,6 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           <p className="tql-p tql-p-fort">{t.pasPourToiFin}</p>
         </div>
       </section>
-
       {/* ── LES TARIFS ─────────────────────────────────────────── */}
       <section className="tql-sec tql-blanc">
         <div className="tql-large tql-tarifs">
@@ -868,7 +1025,6 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           </div>
         </div>
       </section>
-
       {/* ── LA FAQ, LES 16 QUESTIONS DE SA PAGE ────────────────── */}
       {/* Les questions ET les réponses vivent dans le `FAQPage` de sa
           page de vente, et les cinq groupes dans `lib/sales/faqV2.ts`.
@@ -894,7 +1050,6 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           ))}
         </div>
       </section>
-
       {/* ── LE BANDEAU DÉGRADÉ DE FIN ──────────────────────────── */}
       <section className="tql-bande">
         <div className="tql-large">

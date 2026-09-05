@@ -54,6 +54,7 @@ import { FREE_LIMITS } from "@/lib/planLimits";
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { gagne, reglesDeCouleur, specificite, viseTousLesLiens } from "./aide/specificiteCss.mts";
 
 const racine = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 
@@ -237,27 +238,9 @@ describe("aucun bouton n'hérite de la couleur du texte autour", () => {
   // `:not([class])` empêcherait de corriger autrement, et une règle
   // d'héritage réécrite d'une autre façon referait exactement le bug.
 
-  /** [classes et assimilés, éléments]. Aucun id dans cette feuille. */
-  function specificite(sel: string): [number, number] {
-    const classes = (sel.match(/\.[a-z0-9_-]+/gi) ?? []).length;
-    const attrs = (sel.match(/\[[^\]]*\]/g) ?? []).length;
-    const pseudoClasses = (sel.match(/:(?!:)(?!not\b)[a-z-]+/gi) ?? []).length;
-    const elements = (sel.match(/(^|[\s>+~])[a-z][a-z0-9]*/gi) ?? []).length;
-    return [classes + attrs + pseudoClasses, elements];
-  }
-  const gagne = (a: [number, number], b: [number, number]) =>
-    a[0] > b[0] || (a[0] === b[0] && a[1] >= b[1]);
-
-  /** Les règles de la feuille, sélecteur par sélecteur. */
-  const regles = [...CSS.matchAll(/([^{}@\/]+)\{([^{}]*)\}/g)]
-    .flatMap(([, sels, decls]) =>
-      sels
-        .split(",")
-        .map((s) => s.trim())
-        .filter((s) => s.startsWith(".tql") || /(^|\s)a(\s|$|:|\.)/.test(s))
-        .map((s) => ({ sel: s, decls })),
-    )
-    .filter((r) => /(^|[;{\s])color\s*:/.test(r.decls));
+  // Le calcul vit dans `tests/logic/aide/specificiteCss.mts` : deux
+  // feuilles le lisent, et deux copies finiraient par diverger.
+  const regles = reglesDeCouleur(CSS, ".tql");
 
   const BOUTONS = ["tql-cta", "tql-cta-2", "tql-col-cta", "tql-bande-cta"];
 
@@ -273,7 +256,7 @@ describe("aucun bouton n'hérite de la couleur du texte autour", () => {
   test("aucune règle qui vise TOUS les liens ne bat une règle de bouton", () => {
     // Une règle qui vise `a` nu s'applique aussi aux boutons, puisqu'ils
     // sont des liens. Si elle gagne, elle décide de leur couleur.
-    const generiques = regles.filter((r) => /(^|[\s>+~])a$/.test(r.sel));
+    const generiques = viseTousLesLiens(regles);
     for (const g of generiques) {
       for (const b of BOUTONS) {
         assert.ok(
@@ -289,14 +272,27 @@ describe("aucun lien ne fait quitter la page", () => {
   // Béné, 5 septembre 2026 : "'lire les avis' -> non, on ne veut pas que
   // les gens quittent la page ... on veut qu'ils commandent bordel !"
 
-  test("plus aucune trace de Trustpilot dans ce qui S'AFFICHE", () => {
-    // ON LIT LA SOURCE SANS SES COMMENTAIRES. La citation de Béné qui a
-    // fait retirer les avis vit dans les deux en-têtes, et elle DOIT y
-    // rester : sans elle, le prochain passage remet une section d'avis
-    // en croyant combler un manque. Un test qui tombe sur sa propre
-    // explication est un test qui rougit sur un fichier correct.
-    assert.ok(!/trustpilot/i.test(CODE), "lib/site/landing.ts parle encore de Trustpilot");
-    assert.ok(!/trustpilot/i.test(PAGE_CODE), "la page parle encore de Trustpilot");
+  test("aucun lien ne mène vers Trustpilot", () => {
+    // CE QU'ELLE REFUSE EST LE LIEN, PAS LE MOT, et ce test disait le
+    // contraire jusqu'au 5 septembre au soir. Sa phrase du matin :
+    // "'lire les avis' -> non, on ne veut pas que les gens quittent la
+    // page". Son message du soir : "des témoignages de la page
+    // originale peuvent être remplacés par les témoignages de
+    // Trustpilot : mêmes personnes mais plus récents."
+    //
+    // Trois de ses quinze ont donc leur version récente, avec la date
+    // et la mention de la source. Bannir le MOT interdisait de dire
+    // d'où vient un témoignage, c'est à dire exactement ce qui le rend
+    // vérifiable. Un garde-fou qui fige une formulation empêche de
+    // corriger la formulation : il vise le FAIT.
+    assert.ok(
+      !/trustpilot\.com|href[^\n]*trustpilot/i.test(CODE),
+      "lib/site/landing.ts porte une adresse Trustpilot",
+    );
+    assert.ok(
+      !/trustpilot\.com|href[^\n]*trustpilot/i.test(PAGE_CODE),
+      "la page porte une adresse Trustpilot",
+    );
   });
 
   test("toute adresse absolue de la page reste sur nos domaines", () => {
@@ -421,11 +417,51 @@ describe("les quinze témoignages sont ceux de SA page", () => {
   // vente, ils portent un prénom et un métier, ils sont quinze, et
   // aucun ne fait quitter la page.
 
-  test("il y en a quinze, tous avec un texte et un nom", () => {
-    assert.equal(TEMOIGNAGES.length, 15);
+  /** Les quinze de sa page, par leur prénom ou leur nom relevé. */
+  const LES_SIENS = [
+    "Jérémy",
+    "Eric",
+    "Jean Bernard",
+    "Bernard",
+    "Monique",
+    "Evelyne",
+    "Sylvère",
+    "Gwenn",
+    "Adeline",
+    "Alain",
+    "Samira",
+    "Maulisio",
+    "Fabienne",
+    "Marie Paule",
+    "Thibault",
+  ];
+
+  test("les quinze de sa page sont tous là", () => {
+    // ON NE FIGE PAS LE NOMBRE, ON EXIGE LES PERSONNES. Le test disait
+    // `length === 15` et il est sorti rouge le jour où trois personnes
+    // qui n'ont écrit que sur Trustpilot se sont ajoutées, c'est à dire
+    // sur une correction juste. Ce qui compte, c'est qu'aucun des
+    // quinze ne disparaisse.
+    for (const qui of LES_SIENS) {
+      assert.ok(
+        TEMOIGNAGES.some((v) => v.nom.startsWith(qui)),
+        `${qui} a disparu du mur de témoignages`,
+      );
+    }
     for (const v of TEMOIGNAGES) {
       assert.ok(v.nom.trim().length > 1, "un témoignage sans nom");
       assert.ok(v.texte.trim().length > 60, `témoignage trop court : ${v.nom}`);
+    }
+  });
+
+  test("un témoignage venu d'ailleurs DIT d'où il vient", () => {
+    // Trois personnes de sa page ont écrit depuis sur Trustpilot, et
+    // trois autres n'ont écrit que là. Leur version porte une date :
+    // sans elle, on ne peut pas savoir laquelle des deux on lit.
+    const dAilleurs = TEMOIGNAGES.filter((v) => v.source);
+    assert.ok(dAilleurs.length >= 3, "aucun témoignage récent n'est daté");
+    for (const v of dAilleurs) {
+      assert.match(v.source ?? "", /\d{4}/, `${v.nom} : sa source ne porte pas de date`);
     }
   });
 
@@ -463,10 +499,22 @@ describe("chaque section se termine par un désir, pas par un vide", () => {
     assert.ok(n >= 5, `seulement ${n} boutons de milieu de page`);
   });
 
-  test("les libellés français sont à la PREMIÈRE personne", () => {
+  test("les libellés français sont ceux de SA page", () => {
+    // Ils sont relevés section par section sur sa page de vente : "Je
+    // veux capturer ces emails", "Je veux mon quiz viral", "Je me lance
+    // gratuitement", "C'est parti !".
+    //
+    // LE TEST N'EXIGE PLUS `^Je ` : il l'exigeait, et il est sorti
+    // rouge sur "C'est parti !", qui est SON libellé au pied de ses
+    // quatre étapes. Un garde-fou qui fige une formulation empêche de
+    // reprendre la sienne, ce qui est le contraire du but.
     const libelles = [...Object.values(LANDING.fr.ctas), LANDING.fr.viralCta];
     for (const l of libelles) {
-      assert.match(l, /^Je /, `"${l}" n'est pas un désir à la première personne`);
+      assert.match(
+        l,
+        /^(Je |J'|C'est parti)/,
+        `"${l}" n'est ni un désir à la première personne ni un de ses libellés`,
+      );
     }
   });
 
@@ -486,10 +534,15 @@ describe("le coût de ne rien faire est dit, et les trois formats aussi", () => 
     // "Chaque visiteur qui repart sans te laisser son email est un
     // client perdu." C'est son titre, et il vaut mieux que le mien
     // ("un opt-in demande, un quiz donne") : il dit ce que ça COÛTE.
-    assert.match(LANDING.fr.problemeTitre, /client perdu/i);
+    // LE TITRE EST EN DEUX MORCEAUX À L'ÉCRAN : le début, puis le
+    // fragment coloré. Ce test lisait le seul `problemeTitre` et il est
+    // sorti rouge le jour où le titre a été recalé sur le SIEN, dont la
+    // fin ("un client perdu") est justement le fragment coloré.
+    const titreEntier = `${LANDING.fr.problemeTitre} ${LANDING.fr.problemeMotCle}`;
+    assert.match(titreEntier, /client perdu/i);
     assert.ok(
-      LANDING.fr.problemeTitre.includes(LANDING.fr.problemeMotCle),
-      "le mot clé coloré doit être un morceau du titre",
+      LANDING.fr.problemeMotCle.trim().length > 3,
+      "le fragment coloré du titre a disparu",
     );
     // Son deuxième argument : la plateforme peut sauter, la liste est à toi.
     assert.ok(

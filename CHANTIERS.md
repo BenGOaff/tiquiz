@@ -8,7 +8,7 @@ Deux fichiers, deux questions, et aucune des deux ne répond à l'autre.
 écrite** (leçon du 23 août : trois garde-fous décrits comme actifs ici
 pendant 24 heures alors qu'ils vivaient sur une branche non fusionnée).
 
-Dernière mise à jour : 4 septembre 2026.
+Dernière mise à jour : 5 septembre 2026.
 
 ---
 
@@ -88,6 +88,26 @@ se projeter, n'y touche pas du tout." Question fermée.
   vrais et vérifiables dans le code, posé avant les tarifs. Aucun
   pourcentage inventé dans le comparatif des formats : on compare ce
   qu'on OBTIENT, pas des taux qu'on ne peut pas sourcer.
+  **SEPTIÈME PASSAGE, 5 septembre**, sur sa vraie question : "pourquoi
+  tu ne reprends pas les mots, la mise en forme, les animations, le
+  rythme, les arguments de la page de vente originale ?" Mesuré, section
+  par section : 19 chez elle, 11 reproduites ; 19 items de bandeau
+  défilant, 8 repris ; et son comparatif à sept critères "Prends 5 ans
+  d'avance" existait déjà, j'en avais réinventé un moins bon à côté.
+  Trois sections entières manquaient. Son titre de haut de page avait
+  été remplacé par le mien. Tout est repris depuis SA page.
+  **ET LES 14 PAGES DE FONCTIONNALITÉS, sa deuxième demande** : "sur la
+  landing on présente pourquoi cette fonctionnalité + les bénéfices +
+  comment ça marche en une phrase. Sur la page détail on détaille
+  comment ça marche avec des screenshot etc." `/fonctionnalites` est le
+  hub, `/fonctionnalites/<slug>` les 14 pages, et huit blocs de la
+  landing portent maintenant un lien "le détail". Une seule source
+  (`lib/site/fonctionnalites.ts`) alimente les deux écrans.
+  **LES 14 CAPTURES D'ÉCRAN SONT À PRENDRE, et chaque page dit
+  laquelle** dans un encadré visible : je ne peux pas les produire d'ici
+  (la seule que l'app sait rendre porte un bandeau "Mode aperçu" et un
+  quiz de démo sans accents). C'est deux minutes par écran dans un vrai
+  compte.
   **CE QUI ATTEND SA DÉCISION, en plus des 100 langues :** les quinze
   témoignages viennent de SA page, ils ne sont pas les six avis
   Trustpilot qu'elle a fait retirer le matin même. Si elle n'en veut

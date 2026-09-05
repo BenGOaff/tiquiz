@@ -435,6 +435,76 @@ export const CSS = `
 .tql-bande .tql-rassure li{color:rgba(255,255,255,.85)}
 .tql-bande .tql-coche-fine{color:#fff}
 
+/* ── LA PREUVE SOCIALE PRECOCE ───────────────────────────────────── */
+/* Elle demande "immediatement des logos de clients, des notes ou des
+   avatars". Ni logo (ils ne nous appartiennent pas) ni note moyenne
+   (je ne l'ai pas relevee, et l'inventer est son interdit numero un) :
+   trois temoignages nommes, en une bande sobre juste sous le bandeau.
+
+   AUCUN APLAT SOUS DU TEXTE : fond de page, filet en haut de chaque
+   citation, encre normale. Regle du 31 aout. */
+/* 100px HAUT ET BAS, comme toute section : sa regle du 4 septembre
+   ne fait aucune exception pour une bande courte. */
+.tql-preuve-tot{padding-top:100px;padding-bottom:100px}
+.tql-preuve-nb{margin:0 0 26px;text-align:center;font-weight:800;font-size:17px;color:var(--e)}
+.tql-preuve-lignes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+.tql-preuve-un{margin:0;padding:20px 0 0;border-top:3px solid var(--b)}
+.tql-preuve-un blockquote{margin:0 0 10px;font-size:15px;line-height:1.6;color:var(--c)}
+.tql-preuve-un figcaption{font-size:13.5px;font-weight:800;color:var(--e)}
+.tql-preuve-un figcaption span{font-weight:600;color:var(--c)}
+
+/* ── LES DEUX COLONNES TEXTE / VISUEL ────────────────────────────── */
+/* Le geste de sa page : un bloc qui explique, un visuel qui montre. */
+.tql-deux-col{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:56px;align-items:center}
+
+/* Le flux de captures de leads, dessine. */
+.tql-flux{display:grid;gap:10px}
+.tql-flux-un{display:flex;align-items:center;gap:12px;margin:0;padding:13px 16px;
+  background:#fff;border:1px solid var(--bord);border-radius:14px;
+  box-shadow:0 6px 18px rgba(13,20,60,.05)}
+.tql-flux-pt{width:9px;height:9px;border-radius:999px;background:var(--cy);flex:0 0 auto}
+.tql-flux-nom{font-weight:700;font-size:14.5px;color:var(--e)}
+.tql-flux-quand{margin-left:auto;font-size:12.5px;color:var(--c)}
+
+/* Le sondage dessine : sa question, ses quatre reponses chiffrees. */
+.tql-sondage{background:#fff;border:1px solid var(--bord);border-radius:18px;
+  padding:24px;box-shadow:0 10px 30px rgba(13,20,60,.06)}
+.tql-sondage-q{margin:0 0 18px;font-weight:800;font-size:16px;color:var(--e)}
+.tql-sondage-l{display:grid;grid-template-columns:44px 1fr;grid-template-areas:"pct barre" ". txt";
+  gap:4px 12px;margin:0 0 14px;align-items:center}
+.tql-sondage-pct{grid-area:pct;font-weight:800;font-size:14px;color:var(--b)}
+.tql-sondage-barre{grid-area:barre;height:9px;border-radius:999px;background:var(--pale);overflow:hidden}
+.tql-sondage-barre span{display:block;height:100%;border-radius:999px;
+  background:linear-gradient(90deg,var(--b),var(--cy))}
+.tql-sondage-txt{grid-area:txt;font-size:13.5px;color:var(--c)}
+
+/* Les puces a coche, quand la liste EST l'argument. */
+.tql-puces{list-style:none;padding:0;margin:20px 0 24px;display:grid;gap:11px}
+.tql-puces li{display:flex;align-items:flex-start;gap:11px;font-size:15.5px;
+  line-height:1.5;color:var(--c)}
+.tql-puces .tql-coche-pleine{flex:0 0 auto;margin-top:2px;color:var(--b)}
+
+/* Le comparatif de SA page : sept lignes, une coche ou une croix. */
+.tql-comp-oui td{text-align:center}
+.tql-comp-oui tbody th{font-weight:700;color:var(--e);text-align:left}
+.tql-comp-oui .tql-coche-pleine{color:var(--b)}
+.tql-comp-oui .tql-croix{color:#C3C8DB}
+
+/* ── LE LIEN VERS LA PAGE DETAILLEE ──────────────────────────────── */
+/* Discret : il ne doit pas concurrencer le bouton juste au dessus, qui
+   est le geste qu'on veut. Un lien de lecture, pas un deuxieme CTA. */
+.tql-savoir{margin:18px 0 0;text-align:center}
+/* SA PROPRE CLASSE, PAS un selecteur .tql-savoir suivi d'un a nu : un
+   selecteur qui finit par un a nu vise TOUS les liens de ce bloc, boutons compris, et il les bat
+   en specificite (1 classe + 1 element contre 1 classe seule). C'est
+   exactement l'arithmetique du bug de boutons illisibles du 5 septembre,
+   et le garde-fou l'a attrape avant qu'elle ne le voie. */
+.tql-savoir-a{display:inline-flex;align-items:center;gap:7px;font-size:15px;
+  font-weight:800;color:var(--b);text-decoration:none}
+.tql-savoir-a:hover{text-decoration:underline}
+.tql-savoir-a .tql-fleche-b{width:15px;height:15px}
+
 /* ── MOBILE ──────────────────────────────────────────────────────── */
 @media (max-width:1000px){
   .tql-bento,.tql-grille-3{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -447,7 +517,10 @@ export const CSS = `
   .tql-sec{padding:100px 16px}
   .tql-hero{padding-top:100px;padding-bottom:100px}
   .tql-bande{padding:100px 16px}
-  .tql-hero-grille,.tql-deux,.tql-etape,.tql-grille-2{grid-template-columns:1fr;gap:32px}
+  .tql-hero-grille,.tql-deux,.tql-etape,.tql-grille-2,.tql-deux-col{grid-template-columns:1fr;gap:32px}
+  .tql-preuve-lignes{grid-template-columns:1fr;gap:18px}
+  /* La verticale ne bouge pas, meme sur cette bande plus courte. */
+  .tql-preuve-tot{padding:100px 16px}
   .tql-etape{margin-top:44px}
   .tql-etape:nth-child(even) .tql-etape-txt{order:0}
   .tql-h1{font-size:33px}

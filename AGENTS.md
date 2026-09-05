@@ -8792,6 +8792,150 @@ formats, un refus qui ne dit pas ce qui se passe à la place, le tableau
 des outils recopié à la main au lieu de lire `OUTILS`) : les trois
 rougissent.
 
+### Septième passage : ses mots, ses témoignages, et 14 pages de détail (5 septembre 2026)
+
+Béné : "ce que je ne comprends pas c'est pourquoi tu ne reprends pas :
+les mots, la mise en forme, le design, les animations, le rythme, les
+arguments... De la page de vente originale ? J'ai beaucoup bossé pour
+cette page, pourquoi la landing devrait être aussi différente alors
+qu'elle a fait ses preuves ?"
+
+**Elle avait raison, et la mesure le dit mieux que moi.** J'ai extrait
+les 19 sections de `content/sales/tiquiz.html` en ordre de lecture, et
+comparé une par une :
+
+| | sa page | la landing avant |
+|---|---|---|
+| sections | 19 | 11 reproduites |
+| items du bandeau défilant | 19 | 8 |
+| le comparatif à 7 critères | il existe | j'en avais réinventé un moins bon |
+| le titre du haut de page | le sien | remplacé par le mien |
+
+**Trois sections entières manquaient** (les profils qualifiés, les
+offres, "démarque-toi"), et son comparatif "Prends 5 ans d'avance"
+existait déjà, avec ses sept critères et ses trois colonnes : j'en avais
+écrit un autre à côté. **Reprendre une page qui marche, c'est reprendre
+ses MOTS, pas sa structure.** C'est la leçon du labo de l'Atelier du
+3 septembre, repayée sur la page de vente.
+
+### LES 14 PAGES DE FONCTIONNALITÉS
+
+Sa demande : "je veux aussi une page avec le détail de chaque
+fonctionnalité pour creuser le sujet : sur la landing on présente
+pourquoi cette fonctionnalité + les bénéfices + comment ça marche en une
+phrase. Sur la page détail on détaille comment ça marche avec des
+screenshot etc."
+
+`lib/site/fonctionnalites.ts` porte les 14, `/fonctionnalites` est le
+hub, `/fonctionnalites/<slug>` la page dédiée. **Une seule source pour
+les deux écrans** : `resume`, `pourquoi`, `benefices` et `commentCourt`
+s'affichent sur la landing, `detail` seulement sur la page dédiée.
+Écrire les deux séparément donnerait, dans six mois, une landing qui
+promet ce que la page détaillée ne décrit plus.
+
+**CHAQUE FONCTIONNALITÉ PORTE LE FICHIER QUI LA REND VRAIE** (`source`),
+et le test vérifie que ce fichier EXISTE. Ce n'est pas décoratif : il a
+attrapé ma première citation, `supabase/migrations/20260504_popquiz_
+module.sql`, qui vit dans le dépôt de TIPOTE et pas ici (le nôtre est
+`026_popquiz_schema.sql`). Une fonctionnalité retirée du produit fait
+donc rougir la page qui la vend.
+
+**LA CAPTURE MANQUANTE EST NOMMÉE, PAS OUBLIÉE.** Je ne peux pas la
+produire d'ici : la seule que l'app sait rendre vient de `/visual-test`,
+qui porte un bandeau "Mode aperçu" et un quiz de démo écrit sans
+accents. Chaque page DIT donc quel écran il faut photographier, dans un
+encadré visible. Un espace vide passerait pour un oubli ; nommé, il se
+remplit en deux minutes dans un vrai compte.
+
+**Le module est en FRANÇAIS seulement**, même choix assumé que
+`lib/checkout/avantages.ts` et pour la même raison : traduire tout de
+suite fabriquerait une deuxième liste à tenir. C'est écrit dans son
+en-tête, pas laissé à deviner.
+
+### ET CE QUE LE RENDU A TROUVÉ, QUE LE CODE NE DISAIT PAS
+
+Trois défauts, tous les trois vus en SERVANT les pages et en les
+REGARDANT, aucun visible dans la source :
+
+**1. LE BOUTON ÉTAIT BLEU SUR BLEU.** Mesuré : `rgb(90,110,246)` sur
+`rgb(90,110,246)`, contraste 1:1, donc invisible. La cause, demandée au
+navigateur (`CSS.getMatchedStylesForNode`) et pas devinée :
+
+```
+.tqf a    -> var(--b)   (0,1,1)   gagne
+.tqf-cta  -> #fff       (0,1,0)
+```
+
+**C'est mot pour mot son bug des boutons illisibles du matin même**, dans
+l'autre feuille, quatrième fois cette semaine. Corrigé par
+`a:not([class])`, comme la landing.
+
+**2. LE TEXTE DES CARTES DU HUB SORTAIT EN BLEU DE BOUTON.** La carte EST
+un lien, donc son titre et son résumé héritaient de la couleur des
+liens : trois cartes sur trois se lisaient comme des liens, et le bleu ne
+servait plus à distinguer quoi que ce soit. Les deux posent maintenant
+leur couleur explicitement.
+
+**3. UN FILET VERTICAL SUR LES PUCES.** Sa règle du 31 août est générale
+et je l'ai enfreinte : "un filet reste HORIZONTAL, jamais vertical : une
+décoration à gauche déplace ce qu'elle décore". Mesuré : le texte des
+puces partait 19 px à droite des titres de la même section. Remplacé par
+la coche DESSINÉE (jamais un caractère Unicode, drame du 2 septembre),
+le même tracé que la landing.
+
+**LE CALCUL DE SPÉCIFICITÉ VIT MAINTENANT DANS UN SEUL FICHIER**
+(`tests/logic/aide/specificiteCss.mts`), lu par le test de la landing ET
+par celui des fonctionnalités. Une deuxième copie du même calcul aurait
+divergé, et c'est le défaut que ces dépôts paient en boucle. Les deux
+gardes ont été vérifiés en rejouant les vraies versions fautives : ils
+rougissent.
+
+### ET MON PROPRE TEST ÉTAIT FAUX AVANT LE CODE, ENCORE
+
+Mon contrôle des puces promesses exigeait **70 caractères**, et il a
+rejeté deux puces parfaitement bonnes ("Pas de site ? Ton quiz EST la
+page, avec sa propre adresse.", 59 caractères). **Un seuil de longueur
+fige une FORME, pas le fait.**
+
+Ce qui sépare vraiment une étiquette d'une puce promesse, c'est la
+STRUCTURE : une étiquette est un groupe nominal nu ("Réponses
+illimitées"), une puce est une PHRASE qui porte une CHARNIÈRE (`,` `:`
+`?`) introduisant la conséquence. Le test vise les deux, et **un
+deuxième test lui donne quatre étiquettes et exige qu'il les refuse** :
+un garde-fou relâché qui ne peut plus échouer ment.
+
+**Et un accent grave a re-terminé un littéral de gabarit**, dans un
+commentaire CSS, pour la CINQUIÈME fois. `tsc` l'a attrapé, comme il
+doit. Ce n'est pas un garde-fou qui manque, c'est moi qui le refais.
+
+### CE QUE LA CAPTURE D'ÉCRAN M'A FAIT CROIRE, ET QUI ÉTAIT FAUX
+
+En regardant la page réduite à 761 px de large, le gros bouton bleu
+paraissait VIDE. J'ai failli chercher une chaîne mal passée (le "bouton
+Copier affichait Étape" du 4 septembre). Mesuré, il portait bien "Créer
+mon compte gratuit" : c'est le sous-échantillonnage qui avait effacé le
+texte. **Un symptôme lu sur une image réduite est une observation, pas
+une mesure** ; et il se trouve qu'il y avait quand même un vrai bug
+dessous, le bleu sur bleu. Regarder d'abord, mesurer ensuite, dans cet
+ordre et jamais un seul des deux.
+
+### CE QUI RESTE OUVERT, ET QUI EST SA DÉCISION
+
+- **"raccourcir un peu pour renvoyer vers les pages détaillées".**
+  Mesuré : sa page fait 20942 px, la landing 23324. UNE duplication
+  réelle a été retirée (la carte du code s'affichait deux fois sur la
+  même page, mot pour mot, avec le même encart). Le reste de l'écart,
+  c'est du texte qu'elle a validé : décider lequel saute est un choix
+  éditorial qui lui appartient.
+- **Les 14 captures d'écran**, nommées une par une sur chaque page.
+- **La coche est RECOPIÉE de la landing, pas importée**, parce que son
+  `pieces.tsx` vit dans un dossier d'aperçu au nom temporaire
+  (`apercu-landing-8f2c9d41`) : l'importer casserait ces pages le jour
+  où la landing prendra son adresse définitive. À rassembler ce jour là.
+
+Test : `tests/logic/fonctionnalites.test.mts` (15 cas) et
+`tests/logic/landing.test.mts` (50 cas).
+
 ## Le sitemap du domaine de vente oubliait les pages légales (4 septembre 2026)
 
 Béné, après le énième refus de validation de marque par Google : "je
