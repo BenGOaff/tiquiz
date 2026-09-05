@@ -123,6 +123,23 @@ export const AVANTAGES_PAYANTS: readonly Avantage[] = [
     detail: "Ton quiz peut décoller un mardi sans qu'un seul email se floute.",
     source: "lib/planLimits.ts, visibleLeadsPerMonth",
   },
+  {
+    // Béné, 5 septembre 2026 : "pour mensuel et annuel (sans plus)
+    // annonce aussi le retrait du watermark tiquiz."
+    //
+    // MESURÉ AVANT DE L'ÉCRIRE, dans app/api/quiz/[quizId]/public :
+    // `footerAllowed = isPaidPlan(ownerPlan) || isResellerSub`, et
+    // `hideBranding = footerAllowed && quiz.hide_branding`. C'est donc
+    // vrai sur TOUS les paliers payants, et jamais en gratuit.
+    //
+    // Et la ligne manquait partout : ni sur la page de vente, ni sur le
+    // bon de commande. Une fonctionnalité qu'on ne montre pas n'existe
+    // pas pour la cliente, et celle là est ce qu'on remarque en premier
+    // sur un quiz publié.
+    texte: "Ton quiz sans la mention Tiquiz, et ton propre pied de page",
+    detail: "Ton visiteur ne voit que ta marque, du début à la fin.",
+    source: "app/api/quiz/[quizId]/public/route.ts, footerAllowed",
+  },
 ] as const;
 
 /**

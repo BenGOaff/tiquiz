@@ -37,7 +37,80 @@ const SOURCE = "content/sales/tiquiz.html";
  * le fichier. La variante mobile servie sur un grand écran mesurait
  * 10463 px de haut. D'où l'ancre exacte ci dessous.
  */
+/**
+ * LE `tqz` NE SE COUPE PAS AU PRÉFIXE, IL SE COUPE À L'ID DU BLOC.
+ *
+ * Béné, 5 septembre : "y'a plein d'animations sur ma page d'origine et
+ * j'ai l'impression que tu reproduis un screen fixe, pas les
+ * animations... sors toi les doigts du cul pour les animations, on
+ * avait un joli truc à la base !!"
+ *
+ * Elle a raison : sa page porte 473 keyframes, dont 258 sous le seul
+ * préfixe `tqz`, et je n'en avais levé que trois familles. Les blocs
+ * `tqz` PARTAGENT leur préfixe, donc l'ancre par `@keyframes` ne peut
+ * pas les départager : on coupe sur SON propre `id="rawhtml-…"`, qui
+ * est déjà la frontière de bloc de son éditeur.
+ *
+ * MESURÉ AVANT DE LEVER : sur les neuf blocs, deux classes seulement
+ * sont partagées, `tqz-visible` et `tqz1-visible`, et ce sont les deux
+ * déclencheurs de visibilité. Aucune collision de style, donc aucun
+ * re-préfixage nécessaire (et le re-préfixage est ce qui avait
+ * désapparié 112 règles au premier essai).
+ */
 const BLOCS = [
+  // LE BLOC QU'ELLE M'AVAIT FAIT RETIRER DE LA PAGE v2, LE 2 SEPTEMBRE.
+  // Là bas il répétait les trois explications qui l'entouraient. Ici il
+  // REMPLACE le bloc de texte qu'elle appelle imbuvable, et c'est la
+  // seule animation de sa page qui montre le tag arriver dans
+  // Systeme.io. Si elle n'en veut décidément pas, c'est une ligne.
+  // ── LES CINQ BLOCS QU ON LEVE ────────────────────────────────────
+  //
+  // Bene, 5 septembre 2026 : "y a plein d animation sur ma page
+  // d origine et j ai l impression que tu reproduis un screen fixe,
+  // pas les animations.... reprends tout ca."
+  //
+  // Chacun a ete SERVI dans un navigateur et REGARDE avant d etre
+  // retenu, pas juge sur son nom (regle du 1er septembre). Ceux qu on
+  // ne prend pas sont nommes juste en dessous, AVEC leur raison : sans
+  // elle, le prochain passage "finit le travail" et remet en ligne ce
+  // qu on a ecarte expres.
+  { rawhtml: "rawhtml-4d9241b5", fichier: "viralite-trafic", quoi: "Le trafic et les leads qui montent quand les visiteurs partagent." },
+  { rawhtml: "rawhtml-163b8beb", fichier: "leads-qualifies", quoi: "Les leads qui tombent un par un, avec leur nom et l'heure de capture." },
+  { rawhtml: "rawhtml-998cb49e", fichier: "offres-sur-mesure", quoi: "La question qui fait dire au visiteur ce qu'il veut vraiment acheter." },
+  { rawhtml: "rawhtml-f22556ab", fichier: "comparatif-formats", quoi: "Le comparatif du quiz contre l'ebook et la formation offerte, critere par critere." },
+  { rawhtml: "rawhtml-30ad93c0", fichier: "generation-ia", quoi: "Le brief tape, puis le quiz qui s'ecrit tout seul." },
+
+  // ── LES CINQ QU ON NE LEVE PAS, ET POURQUOI ──────────────────────
+  //
+  // rawhtml-21bf9dec  "Le 1er outil quiz connecte a Systeme.io"
+  //   Ses cinq scenes sont pilotees par SON script, qu on ne leve pas :
+  //   servi sans lui, le bloc rend un titre et rien d autre (mesure).
+  //   Et elle l a fait retirer de la page v2 le 2 septembre.
+  //
+  // rawhtml-b8b48544  le partage sur les reseaux
+  //   Le bloc met en scene une publication FACEBOOK attribuee a Mark
+  //   Zuckerberg, nom et photo, avec 503 reactions et 138 partages.
+  //   C est une publication fabriquee au nom d une personne reelle : on
+  //   ne la republie pas. Elle porte en plus "TIQUIZ.COM", qui n est
+  //   aucun de nos domaines.
+  //
+  // rawhtml-f0639bfe  le lien et le code embed
+  //   Le lien affiche "app.tiquiz.com/sandra-costa/formation-canine".
+  //   Ce domaine n existe pas : les notres sont quiz.tipote.com et
+  //   tiquiz.fr. Notre propre dessin (ChampLien + BlocCode) montre la
+  //   vraie adresse, donc on garde le dessin.
+  //
+  // rawhtml-ce57993d  les trois ecrans du Popquiz
+  //   Le troisieme ecran affiche "il n y a que 20 codes promos
+  //   disponibles, profite du tien avant les autres" : c est de la
+  //   FAUSSE RARETE, son interdit numero un. Le montrer sur notre
+  //   landing, c est l enseigner.
+  //
+  // rawhtml-8ecf2c31  le bonus de fin de quiz
+  //   Il fait partir le tag vers onze outils d emailing concurrents
+  //   (Brevo, Mailchimp, Klaviyo...). Notre argument est la connexion
+  //   NATIVE a Systeme.io : ce visuel promet des integrations qui
+  //   n existent pas chez nous.
   { prefixe: "tqvs", fichier: "opt-in-vs-quiz", quoi: "Un PDF qu'on ne lit pas contre un quiz auquel on répond." },
   { prefixe: "tqvsmb", fichier: "opt-in-vs-quiz-mobile", quoi: "La même chose, la variante mobile de sa page." },
   { prefixe: "tqbr", fichier: "ton-branding", quoi: "Le même quiz qui prend les couleurs et le logo de la créatrice." },
@@ -71,6 +144,41 @@ function finDeLElement(s, debut) {
 
 let ok = 0;
 for (const b of BLOCS) {
+  if (b.rawhtml) {
+    // SA FRONTIÈRE, PAS LA NÔTRE : on coupe du div qui porte son id
+    // jusqu'au div suivant. Le <style> de l'île est DEDANS.
+    const debut = html.indexOf(`id="${b.rawhtml}"`);
+    if (debut < 0) {
+      console.error(`REFUS : ${b.rawhtml} introuvable dans ${SOURCE}.`);
+      process.exit(1);
+    }
+    const ouvre = html.lastIndexOf("<div", debut);
+    const ferme = finDeLElement(html, ouvre);
+    if (ouvre < 0 || ferme < 0) {
+      console.error(`REFUS : ${b.rawhtml} : le div n'a pas de fin.`);
+      process.exit(1);
+    }
+    const bloc = html.slice(ouvre, ferme);
+    const anims = (bloc.match(/@keyframes\s+[A-Za-z]/g) || []).length;
+    // Une île sans animation serait un dessin fixe : exactement ce
+    // qu'elle reproche. On refuse plutôt que d'écrire un fichier mort.
+    if (anims < 3) {
+      console.error(`REFUS : ${b.rawhtml} : seulement ${anims} keyframes.`);
+      process.exit(1);
+    }
+    const sortieId = `<!-- LEVÉ DE content/sales/tiquiz.html PAR scripts/extraire-anims-vente.mjs.
+     NE PAS RETOUCHER À LA MAIN : relance le script.
+     Ce que ce bloc MONTRE : ${b.quoi} -->
+${bloc}
+`;
+    writeFileSync(`content/sales/anim/${b.fichier}.html`, sortieId, "utf8");
+    console.log(
+      `${b.fichier.padEnd(20)} ${String(sortieId.length).padStart(7)} o   ` +
+        `${anims} keyframes   ${(bloc.match(/</g) || []).length} balises`,
+    );
+    ok++;
+    continue;
+  }
   // L'ANCRE EST EXACTE : ses keyframes s'appellent `tqvsUpL`, donc le
   // préfixe est suivi d'une MAJUSCULE. Sans ce garde, "tqvs" attrapait
   // "tqvsmbUpL", c'est à dire l'autre variante.

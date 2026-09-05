@@ -31,6 +31,11 @@ import { join } from "node:path";
 
 /** Les blocs levés, et ce que chacun MONTRE. */
 export const BLOCS_ANIMES = {
+  "viralite-trafic": "Le trafic et les leads qui montent quand les visiteurs partagent.",
+  "leads-qualifies": "Les leads qui tombent un par un, avec leur nom et l'heure de capture.",
+  "offres-sur-mesure": "La question qui fait dire au visiteur ce qu'il veut vraiment acheter.",
+  "comparatif-formats": "Le quiz contre l'ebook et la formation offerte, critère par critère.",
+  "generation-ia": "Le brief tapé, puis le quiz qui s'écrit tout seul.",
   "opt-in-vs-quiz": "Un PDF qu'on ne lit pas contre un quiz auquel on répond.",
   "opt-in-vs-quiz-mobile": "La même chose, sa variante mobile.",
   "ton-branding": "Le même quiz qui prend les couleurs et le logo de la créatrice.",
@@ -71,6 +76,28 @@ function lire(bloc: BlocAnime): string {
  * (mesurée à 358x456 sur un viewport de 390), donc les variantes
  * mobiles restent extraites mais ne sont pas servies.
  */
-export function AnimVente({ bloc }: { bloc: BlocAnime }) {
-  return <div aria-hidden data-anim-vente={bloc} dangerouslySetInnerHTML={{ __html: lire(bloc) }} />;
+/**
+ * `decoratif` est un PARAMÈTRE, jamais deviné.
+ *
+ * La plupart de ses blocs sont des dessins qui bougent : le texte
+ * autour porte l'argument, donc on les cache aux lecteurs d'écran.
+ * Deux d'entre eux, non : son comparatif des formats et son sondage
+ * portent de VRAIES phrases et de vrais chiffres, et ils remplacent un
+ * tableau que la landing rendait en HTML. Les masquer retirerait
+ * l'argument à un lecteur d'écran et à un moteur.
+ */
+export function AnimVente({
+  bloc,
+  decoratif = true,
+}: {
+  bloc: BlocAnime;
+  decoratif?: boolean;
+}) {
+  return (
+    <div
+      aria-hidden={decoratif || undefined}
+      data-anim-vente={bloc}
+      dangerouslySetInnerHTML={{ __html: lire(bloc) }}
+    />
+  );
 }

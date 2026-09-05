@@ -1,0 +1,351 @@
+<!-- LEVÉ DE content/sales/tiquiz.html PAR scripts/extraire-anims-vente.mjs.
+     NE PAS RETOUCHER À LA MAIN : relance le script.
+     Ce que ce bloc MONTRE : Le comparatif du quiz contre l'ebook et la formation offerte, critere par critere. -->
+<div id="rawhtml-f22556ab" class="sc-evdWiR hOAxvc"><!-- TIQUIZ — Tableau comparatif Quiz vs Ebook vs Formation — Widget Systeme.io -->
+<style>
+.tqz-cmp *{margin:0;padding:0;box-sizing:border-box}
+.tqz-cmp{
+  width:100%;max-width:960px;margin:0 auto;padding:20px 12px;
+  font-family:'Inter','Open Sans',system-ui,sans-serif;
+}
+
+/* ── LAYOUT DESKTOP : grille 4 colonnes ── */
+.tqz-cmp-desktop{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr 1fr;
+  gap:14px;
+  align-items:start;
+}
+
+/* ── COLONNE LABELS : wrapper transparent ── */
+.tqz-cmp-lw{
+  display:flex;flex-direction:column;
+}
+/* Spacer invisible = même hauteur que les headers des autres colonnes */
+.tqz-cmp-lw-spacer{
+  height:70px;flex-shrink:0;
+}
+/* Carte blanche ne contenant QUE les lignes de critères */
+.tqz-cmp-lw-card{
+  background:#fff;
+  border-radius:18px;
+  box-shadow:0 8px 30px rgba(43,50,100,.1);
+  overflow:hidden;
+}
+
+/* ── COLONNES COMPARATIVES ── */
+.tqz-cmp-col{
+  border-radius:18px;overflow:hidden;
+  box-shadow:0 8px 30px rgba(43,50,100,.1);
+}
+
+/* Header de chaque colonne — 70px fixe */
+.tqz-cmp-head{
+  padding:18px 10px;text-align:center;
+  font-size:20px;font-weight:900;
+  height:70px;display:flex;align-items:center;justify-content:center;
+}
+
+/* Tiquiz header */
+.tqz-col-tiquiz .tqz-cmp-head{
+  background:linear-gradient(135deg,#2B3264 0%,#3d4580 100%);
+  color:#fff;
+}
+.tqz-col-tiquiz .tqz-cmp-head span{
+  background:linear-gradient(135deg,#20BBE6,#05DFF3);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  font-size:24px;letter-spacing:-.02em;
+}
+
+/* Ebook & Formation headers */
+.tqz-col-other .tqz-cmp-head{
+  background:#2B3264;color:#fff;
+}
+
+/* ── CELLULES — classe unique partout ── */
+.tqz-cmp-cell{
+  padding:14px 10px;text-align:center;
+  border-top:2px solid #e8eaf3;
+  background:#fff;
+  font-size:22px;
+  height:52px;
+  display:flex;align-items:center;justify-content:center;
+}
+/* Pas de border sur la première cellule de chaque colonne */
+.tqz-cmp-cell:first-child,
+.tqz-cmp-head+.tqz-cmp-cell{border-top:none}
+
+/* Cellules texte (labels) */
+.tqz-cell-label{
+  font-size:14px;font-weight:700;color:#2B3264;
+}
+
+/* Check animé */
+.tqz-check{
+  width:30px;height:30px;border-radius:50%;
+  background:linear-gradient(135deg,#5E6DDE,#20BBE6);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transform:scale(0);
+}
+.tqz-check svg{width:14px;height:14px}
+.tqz-check svg path{fill:none;stroke:#fff;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+
+/* Dash */
+.tqz-dash{
+  color:#c5c9db;font-size:22px;font-weight:300;
+  opacity:0;
+}
+
+/* ── MASQUÉ PAR DÉFAUT ── */
+.tqz-cmp-lw,.tqz-cmp-col{opacity:0;transform:translateY(20px)}
+.tqz-cmp.tqz-visible .tqz-cmp-lw{animation:tqzFadeIn .6s ease .1s forwards}
+.tqz-cmp.tqz-visible .tqz-cmp-desktop .tqz-cmp-col:nth-child(2){animation:tqzFadeIn .6s ease .25s forwards}
+.tqz-cmp.tqz-visible .tqz-cmp-desktop .tqz-cmp-col:nth-child(3){animation:tqzFadeIn .6s ease .4s forwards}
+.tqz-cmp.tqz-visible .tqz-cmp-desktop .tqz-cmp-col:nth-child(4){animation:tqzFadeIn .6s ease .55s forwards}
+
+@keyframes tqzFadeIn{to{opacity:1;transform:translateY(0)}}
+
+/* ── CHECKS/DASH POP-IN stagger par ligne ── */
+.tqz-cmp.tqz-visible .tqz-cmp-col .tqz-cmp-cell:nth-child(2) .tqz-check,
+.tqz-cmp.tqz-visible .tqz-cmp-col .tqz-cmp-cell:nth-child(2) .tqz-dash{animation:tqzPopIn .4s ease .7s forwards}
+.tqz-cmp.tqz-visible .tqz-cmp-col .tqz-cmp-cell:nth-child(3) .tqz-check,
+.tqz-cmp.tqz-visible .tqz-cmp-col .tqz-cmp-cell:nth-child(3) .tqz-dash{animation:tqzPopIn .4s ease .85s forwards}
+.tqz-cmp.tqz-visible .tqz-cmp-col .tqz-cmp-cell:nth-child(4) .tqz-check,
+.tqz-cmp.tqz-visible .tqz-cmp-col .tqz-cmp-cell:nth-child(4) .tqz-dash{animation:tqzPopIn .4s ease 1s forwards}
+.tqz-cmp.tqz-visible .tqz-cmp-col .tqz-cmp-cell:nth-child(5) .tqz-check,
+.tqz-cmp.tqz-visible .tqz-cmp-col .tqz-cmp-cell:nth-child(5) .tqz-dash{animation:tqzPopIn .4s ease 1.15s forwards}
+.tqz-cmp.tqz-visible .tqz-cmp-col .tqz-cmp-cell:nth-child(6) .tqz-check,
+.tqz-cmp.tqz-visible .tqz-cmp-col .tqz-cmp-cell:nth-child(6) .tqz-dash{animation:tqzPopIn .4s ease 1.3s forwards}
+.tqz-cmp.tqz-visible .tqz-cmp-col .tqz-cmp-cell:nth-child(7) .tqz-check,
+.tqz-cmp.tqz-visible .tqz-cmp-col .tqz-cmp-cell:nth-child(7) .tqz-dash{animation:tqzPopIn .4s ease 1.45s forwards}
+.tqz-cmp.tqz-visible .tqz-cmp-col .tqz-cmp-cell:nth-child(8) .tqz-check,
+.tqz-cmp.tqz-visible .tqz-cmp-col .tqz-cmp-cell:nth-child(8) .tqz-dash{animation:tqzPopIn .4s ease 1.6s forwards}
+
+@keyframes tqzPopIn{
+  0%{opacity:0;transform:scale(0)}
+  70%{transform:scale(1.15)}
+  100%{opacity:1;transform:scale(1)}
+}
+
+/* ── SHIMMER checks Tiquiz ── */
+@keyframes tqzCheckPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(32,187,230,0)}
+  50%{box-shadow:0 0 0 6px rgba(32,187,230,.15)}
+}
+.tqz-cmp.tqz-visible .tqz-col-tiquiz .tqz-cmp-cell:nth-child(2) .tqz-check{animation:tqzPopIn .4s ease .7s forwards,tqzCheckPulse 3s ease-in-out 2.5s infinite}
+.tqz-cmp.tqz-visible .tqz-col-tiquiz .tqz-cmp-cell:nth-child(3) .tqz-check{animation:tqzPopIn .4s ease .85s forwards,tqzCheckPulse 3s ease-in-out 2.8s infinite}
+.tqz-cmp.tqz-visible .tqz-col-tiquiz .tqz-cmp-cell:nth-child(4) .tqz-check{animation:tqzPopIn .4s ease 1s forwards,tqzCheckPulse 3s ease-in-out 3.1s infinite}
+.tqz-cmp.tqz-visible .tqz-col-tiquiz .tqz-cmp-cell:nth-child(5) .tqz-check{animation:tqzPopIn .4s ease 1.15s forwards,tqzCheckPulse 3s ease-in-out 3.4s infinite}
+.tqz-cmp.tqz-visible .tqz-col-tiquiz .tqz-cmp-cell:nth-child(6) .tqz-check{animation:tqzPopIn .4s ease 1.3s forwards,tqzCheckPulse 3s ease-in-out 3.7s infinite}
+.tqz-cmp.tqz-visible .tqz-col-tiquiz .tqz-cmp-cell:nth-child(7) .tqz-check{animation:tqzPopIn .4s ease 1.45s forwards,tqzCheckPulse 3s ease-in-out 4s infinite}
+.tqz-cmp.tqz-visible .tqz-col-tiquiz .tqz-cmp-cell:nth-child(8) .tqz-check{animation:tqzPopIn .4s ease 1.6s forwards,tqzCheckPulse 3s ease-in-out 4.3s infinite}
+
+/* ── GLOW header Tiquiz ── */
+@keyframes tqzHeadGlow{
+  0%,100%{box-shadow:inset 0 0 0 0 rgba(32,187,230,0)}
+  50%{box-shadow:inset 0 0 30px rgba(32,187,230,.12)}
+}
+.tqz-cmp.tqz-visible .tqz-col-tiquiz .tqz-cmp-head{animation:tqzHeadGlow 4s ease-in-out 2s infinite}
+
+/* ── RESPONSIVE : paires côte à côte ── */
+.tqz-cmp-mobile{display:none}
+
+@media(max-width:700px){
+  .tqz-cmp-desktop{display:none}
+  .tqz-cmp-mobile{display:flex;flex-direction:column;gap:24px}
+
+  .tqz-cmp-pair{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    align-items:start;
+  }
+  .tqz-cmp-pair .tqz-cmp-lw,
+  .tqz-cmp-pair .tqz-cmp-col{opacity:0;transform:translateY(20px)}
+  .tqz-cmp.tqz-visible .tqz-cmp-pair .tqz-cmp-lw{animation:tqzFadeIn .6s ease .1s forwards}
+  .tqz-cmp.tqz-visible .tqz-cmp-pair .tqz-cmp-col{animation:tqzFadeIn .6s ease .25s forwards}
+  .tqz-cmp.tqz-visible .tqz-cmp-pair .tqz-check,
+  .tqz-cmp.tqz-visible .tqz-cmp-pair .tqz-dash{animation:tqzPopIn .4s ease .6s forwards}
+
+  .tqz-cell-label{font-size:12px;padding:14px 6px}
+  .tqz-cmp-head{font-size:17px;padding:18px 6px}
+  .tqz-col-tiquiz .tqz-cmp-head span{font-size:20px}
+}
+
+@media(max-width:380px){
+  .tqz-cell-label{font-size:11px;padding:12px 4px}
+  .tqz-cmp-head{font-size:14px}
+  .tqz-col-tiquiz .tqz-cmp-head span{font-size:17px}
+}
+</style>
+
+<div class="tqz-cmp" id="tqz-cmp-table">
+
+  <!-- ═══════ VERSION DESKTOP ═══════ -->
+  <div class="tqz-cmp-desktop">
+
+    <!-- COL 1 : LABELS — spacer transparent + carte blanche en dessous -->
+    <div class="tqz-cmp-lw">
+      <div class="tqz-cmp-lw-spacer"></div>
+      <div class="tqz-cmp-lw-card">
+        <div class="tqz-cmp-cell tqz-cell-label">Viral</div>
+        <div class="tqz-cmp-cell tqz-cell-label">Connexion avec l'audience</div>
+        <div class="tqz-cmp-cell tqz-cell-label">Interactions / Engagement</div>
+        <div class="tqz-cmp-cell tqz-cell-label">Facile à créer</div>
+        <div class="tqz-cmp-cell tqz-cell-label">Faible coût d'acquisition</div>
+        <div class="tqz-cmp-cell tqz-cell-label">Prospects qualifiés</div>
+        <div class="tqz-cmp-cell tqz-cell-label">Fonctionne en automatique</div>
+      </div>
+    </div>
+
+    <!-- COL 2 : TIQUIZ -->
+    <div class="tqz-cmp-col tqz-col-tiquiz">
+      <div class="tqz-cmp-head"><span>Tiquiz</span></div>
+      <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+      <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+      <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+      <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+      <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+      <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+      <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+    </div>
+
+    <!-- COL 3 : EBOOK -->
+    <div class="tqz-cmp-col tqz-col-other">
+      <div class="tqz-cmp-head">Ebook</div>
+      <div class="tqz-cmp-cell"><span class="tqz-dash">—</span></div>
+      <div class="tqz-cmp-cell"><span class="tqz-dash">—</span></div>
+      <div class="tqz-cmp-cell"><span class="tqz-dash">—</span></div>
+      <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+      <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+      <div class="tqz-cmp-cell"><span class="tqz-dash">—</span></div>
+      <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+    </div>
+
+    <!-- COL 4 : FORMATION OFFERTE -->
+    <div class="tqz-cmp-col tqz-col-other">
+      <div class="tqz-cmp-head">Formation offerte</div>
+      <div class="tqz-cmp-cell"><span class="tqz-dash">—</span></div>
+      <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+      <div class="tqz-cmp-cell"><span class="tqz-dash">—</span></div>
+      <div class="tqz-cmp-cell"><span class="tqz-dash">—</span></div>
+      <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+      <div class="tqz-cmp-cell"><span class="tqz-dash">—</span></div>
+      <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+    </div>
+
+  </div>
+
+  <!-- ═══════ VERSION MOBILE ═══════ -->
+  <div class="tqz-cmp-mobile">
+
+    <!-- PAIRE 1 : Labels + Tiquiz -->
+    <div class="tqz-cmp-pair">
+      <div class="tqz-cmp-lw">
+        <div class="tqz-cmp-lw-spacer"></div>
+        <div class="tqz-cmp-lw-card">
+          <div class="tqz-cmp-cell tqz-cell-label">Viral</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Connexion avec l'audience</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Interactions / Engagement</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Facile à créer</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Faible coût d'acquisition</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Prospects qualifiés</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Fonctionne en automatique</div>
+        </div>
+      </div>
+      <div class="tqz-cmp-col tqz-col-tiquiz">
+        <div class="tqz-cmp-head"><span>Tiquiz</span></div>
+        <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+        <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+        <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+        <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+        <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+        <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+        <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+      </div>
+    </div>
+
+    <!-- PAIRE 2 : Labels + Ebook -->
+    <div class="tqz-cmp-pair">
+      <div class="tqz-cmp-lw">
+        <div class="tqz-cmp-lw-spacer"></div>
+        <div class="tqz-cmp-lw-card">
+          <div class="tqz-cmp-cell tqz-cell-label">Viral</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Connexion avec l'audience</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Interactions / Engagement</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Facile à créer</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Faible coût d'acquisition</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Prospects qualifiés</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Fonctionne en automatique</div>
+        </div>
+      </div>
+      <div class="tqz-cmp-col tqz-col-other">
+        <div class="tqz-cmp-head">Ebook</div>
+        <div class="tqz-cmp-cell"><span class="tqz-dash">—</span></div>
+        <div class="tqz-cmp-cell"><span class="tqz-dash">—</span></div>
+        <div class="tqz-cmp-cell"><span class="tqz-dash">—</span></div>
+        <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+        <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+        <div class="tqz-cmp-cell"><span class="tqz-dash">—</span></div>
+        <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+      </div>
+    </div>
+
+    <!-- PAIRE 3 : Labels + Formation offerte -->
+    <div class="tqz-cmp-pair">
+      <div class="tqz-cmp-lw">
+        <div class="tqz-cmp-lw-spacer"></div>
+        <div class="tqz-cmp-lw-card">
+          <div class="tqz-cmp-cell tqz-cell-label">Viral</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Connexion avec l'audience</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Interactions / Engagement</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Facile à créer</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Faible coût d'acquisition</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Prospects qualifiés</div>
+          <div class="tqz-cmp-cell tqz-cell-label">Fonctionne en automatique</div>
+        </div>
+      </div>
+      <div class="tqz-cmp-col tqz-col-other">
+        <div class="tqz-cmp-head">Formation offerte</div>
+        <div class="tqz-cmp-cell"><span class="tqz-dash">—</span></div>
+        <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+        <div class="tqz-cmp-cell"><span class="tqz-dash">—</span></div>
+        <div class="tqz-cmp-cell"><span class="tqz-dash">—</span></div>
+        <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+        <div class="tqz-cmp-cell"><span class="tqz-dash">—</span></div>
+        <div class="tqz-cmp-cell"><div class="tqz-check"><svg viewBox="0 0 14 14"><path d="M2 7.5 L5.5 11 L12 3"/></svg></div></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Scroll reveal SIO -->
+<script>
+(function(){
+  var done=false;
+  function check(){
+    var el=document.getElementById('tqz-cmp-table');
+    if(!el||done)return;
+    var rect=el.getBoundingClientRect();
+    var winH=window.innerHeight||document.documentElement.clientHeight;
+    if(rect.top<winH*0.85){
+      el.classList.add('tqz-visible');
+      done=true;
+      window.removeEventListener('scroll',check);
+      window.removeEventListener('resize',check);
+    }
+  }
+  window.addEventListener('scroll',check,{passive:true});
+  window.addEventListener('resize',check,{passive:true});
+  var polls=0;
+  var poller=setInterval(function(){
+    check();
+    polls++;
+    if(done||polls>33)clearInterval(poller);
+  },300);
+  check();
+})();
+</script></div>
