@@ -172,6 +172,18 @@ export interface Temoignage {
   nom: string;
   metier: string | null;
   texte: string;
+  /** D'OÙ VIENT CE TÉMOIGNAGE, QUAND CE N'EST PAS SA PAGE DE VENTE.
+   *
+   *  Béné, 5 septembre 2026 : "des témoignages de la page originale
+   *  peuvent être remplacés par les témoignages de Trustpilot : mêmes
+   *  personnes mais plus récents. Garde les autres."
+   *
+   *  Trois personnes de sa page ont écrit depuis sur Trustpilot (Eric
+   *  Legrigeois, Monique Pulby, Gwenn) : c'est leur version RÉCENTE qui
+   *  s'affiche, avec la date. Les douze autres gardent le texte de sa
+   *  page. Et trois personnes n'ont écrit que sur Trustpilot : elles
+   *  s'ajoutent, elles ne remplacent personne. */
+  source?: string;
 }
 
 export interface ColonneTarif {
@@ -305,27 +317,64 @@ export interface ContenuLanding {
   ouCodeCorps: string;
   ouNote: string;
 
-  /** POURQUOI UN QUIZ, ET PAS UN PDF DE PLUS.
+  /** POURQUOI UN QUIZ, ET PAS UN EBOOK DE PLUS.
    *
-   *  Béné, 5 septembre 2026 : "en donnant tous les arguments au bon
-   *  moment, pour montrer pourquoi les quiz, et pourquoi tiquiz ?"
+   *  Béné, 5 septembre 2026 : "pourquoi tu ne reprends pas les mots, la
+   *  mise en forme, le design, les animations, le rythme, les arguments
+   *  de la page de vente originale ? J'ai beaucoup bossé pour cette
+   *  page, pourquoi la landing devrait être aussi différente alors
+   *  qu'elle a fait ses preuves ?"
    *
-   *  Ce sont DEUX questions, et la page n'en traitait qu'une. Celle-ci
-   *  répond à la première, juste après la douleur : c'est le moment où
-   *  le lecteur se dit "d'accord, mais j'ai déjà un PDF".
+   *  Elle avait raison, et ce bloc est la preuve la plus nette : j'ai
+   *  écrit le 5 septembre un comparatif PDF / webinaire / quiz sur cinq
+   *  critères en annonçant qu'il manquait. IL NE MANQUAIT PAS. Sa
+   *  section "Prends 5 ans d'avance sur tes concurrents" porte depuis le
+   *  début un comparatif Tiquiz / Ebook / Formation offerte sur SEPT
+   *  critères. Le sien est repris tel quel, mot pour mot.
    *
-   *  AUCUN CHIFFRE DE COMPARAISON. Le 44,9 % de la carte voisine porte
-   *  sa source ; je n'ai rien d'équivalent pour un PDF ou un webinaire,
-   *  donc la comparaison porte sur ce qu'on OBTIENT, qui se constate
-   *  sans mesurer. Un tableau qui inventerait deux taux pour rendre le
-   *  troisième flatteur serait exactement ce qu'elle interdit. */
+   *  AUCUN CHIFFRE DE COMPARAISON, et c'est déjà son choix à elle : ses
+   *  sept lignes disent oui ou non, jamais un taux. Le 44,9 % de la
+   *  carte voisine porte sa source ; je n'ai rien d'équivalent pour un
+   *  ebook, donc rien n'est chiffré ici. */
   formatsLeadTitre: string;
   formatsLeadMotCle: string;
+  formatsLeadFin: string;
   formatsLeadCorps: string;
   /** Les en-têtes : le critère, puis les trois colonnes. */
   formatsLeadColonnes: readonly string[];
-  formatsLeadLignes: readonly { critere: string; valeurs: readonly string[] }[];
+  /** Ses sept critères. `true` coche, `false` barre : c'est sa lecture. */
+  formatsLeadLignes: readonly { critere: string; valeurs: readonly boolean[] }[];
   formatsLeadNote: string;
+
+  /** LES TROIS SECTIONS DE SA PAGE QUI N'ÉTAIENT PAS ICI.
+   *
+   *  Relevées en extrayant sa page en ordre de lecture : elle a dix-neuf
+   *  sections, la landing en reprenait onze. Ces trois là portent trois
+   *  arguments que rien d'autre ne dit, et le deuxième est celui qui
+   *  vend le mieux (ce que le quiz t'apprend, en plus de l'adresse).
+   *
+   *  Le texte est le SIEN. On ne le réécrit pas. */
+  qualifiesTitre: string;
+  qualifiesMotCle: string;
+  qualifiesFin: string;
+  qualifiesCorps: readonly string[];
+  /** Les captures de leads qui défilent, comme sur sa page. */
+  qualifiesNoms: readonly string[];
+  qualifiesDepuis: string;
+
+  offresTitre: string;
+  offresMotCle: string;
+  offresFin: string;
+  offresIntro: string;
+  offresPuces: readonly string[];
+  offresConclusion: string;
+  /** Le sondage dessiné : sa question, ses quatre réponses chiffrées. */
+  offresSondage: { question: string; reponses: readonly { texte: string; pct: number }[] };
+
+  demarqueTitre: string;
+  demarqueMotCle: string;
+  demarqueFin: string;
+  demarqueCorps: readonly string[];
 
   /** POURQUOI TIQUIZ, ET PAS UN AUTRE OUTIL DE QUIZ.
    *
@@ -433,11 +482,23 @@ export interface ContenuLanding {
    *  Ma landing n'en avait que TROIS en tout (haut de page, tarifs,
    *  bandeau) : il fallait scroller jusqu'aux prix pour trouver un
    *  bouton. */
+  /** LES BOUTONS, ET C'EST SA SIGNATURE.
+   *
+   *  Un bouton après chaque section, à la PREMIÈRE PERSONNE : ce n'est
+   *  pas un libellé, c'est la phrase que le lecteur vient de se dire.
+   *  Les onze sont relevés section par section sur sa page de vente et
+   *  ne se réécrivent pas. */
   ctas: {
     probleme: string;
+    viral: string;
+    qualifies: string;
+    offres: string;
     etapes: string;
     funnel: string;
+    demarque: string;
     sio: string;
+    modes: string;
+    formats: string;
     branding: string;
   };
   /** La rassurance sous chaque bouton du milieu de page. Sa page pose
@@ -486,7 +547,6 @@ export interface ContenuLanding {
   faqTitre: string;
   faqCorps: string;
   /** Les 16 questions viennent de SA page de vente : voir `FAQ_VENTE`. */
-  faq: Question[];
 
   /** La démo : son vrai popquiz, en iframe. */
   demoTitre: string;
@@ -543,7 +603,8 @@ export const TEMOIGNAGES: readonly Temoignage[] = [
     nom: "Gwenn",
     metier: "Solopreneur",
     texte:
-      "Enfin un outil de quiz parfaitement pensé marketing, qui est directement relié à Systeme.io pour récupérer les leads et les taguer automatiquement, sans devoir passer par des outils comme Zapier ou Make.",
+      "Enfin un outil de quiz parfaitement pensé marketing, qui est directement relié à Systeme.io pour récupérer les leads et les taguer automatiquement, sans devoir passer par des outils comme Zapier ou Make. Hyper pratique et complet, avec plein de types de quiz et de sondages possibles. J'adore !",
+    source: "Trustpilot, 2 septembre 2026",
   },
   {
     nom: "Adeline",
@@ -552,10 +613,11 @@ export const TEMOIGNAGES: readonly Temoignage[] = [
       "Super outil ! Très simple d'utilisation, et surtout : le quiz punaise mais c'est le meilleur lead magnet aujourd'hui ! Je suis fan, voilà. Merci Béné pour ce bijou !",
   },
   {
-    nom: "Eric L.",
+    nom: "Eric Legrigeois",
     metier: "Infopreneur",
     texte:
-      "Tiquiz est une révolution pour ceux qui veulent segmenter leur audience avec des quiz connectés à Systeme.io. Créé par une experte du domaine. Je recommande à 1000%.",
+      "Tiquiz un outil de quiz parfaitement pensé marketing, qui est connecté à Systeme.io pour récupérer les leads et les taguer automatiquement, sans devoir passer par des outils comme Zapier ou Make. Je remercie Béné pour avoir développer Tiquiz , pour sa présence , ses retours à mes questions , sa réactivité pour faire évoluer l'outil.",
+    source: "Trustpilot, 2 septembre 2026",
   },
   {
     nom: "Bernard C.",
@@ -564,10 +626,11 @@ export const TEMOIGNAGES: readonly Temoignage[] = [
       "Tiquiz m'a vraiment aidé à clarifier mes idées pour qualifier mes prospects. Mes leads sont tagués automatiquement dans Systeme.io, un vrai gain de temps.",
   },
   {
-    nom: "Monique P.",
+    nom: "Monique Pulby",
     metier: "Formatrice",
     texte:
-      "Pour avoir essayé d'autres outils de quiz, Tiquiz est bien plus simple et l'idée de connecter directement à Systeme.io c'est une vraie pépite. Je recommande.",
+      "As-tu déjà galéré à créer un quiz, à gérer les résultats qui en découlent, à le rattacher à une campagne d'emails ? Moi oui, jusqu'à ce que je découvre Tiquiz. Il fait tout ça. Tu as seulement besoin de lui préciser à qui tu souhaites adresser le quiz, ce à quoi il doit servir et quel résultat tu aimerais obtenir. Et le tour est joué : tu obtiens un quiz qualitatif. Bref, une pépite. Je recommande à 100 %",
+    source: "Trustpilot, 27 juillet 2026",
   },
   {
     nom: "Jean Bernard R.",
@@ -629,7 +692,55 @@ export const TEMOIGNAGES: readonly Temoignage[] = [
     texte:
       "Franchement, je suis bluffé. J'ai pris le temps de créer mon premier quiz et le résultat est tout simplement topissime. Bravo !",
   },
+  {
+    nom: "Maurice Massolin",
+    metier: null,
+    texte:
+      "J'utilise Tiquiz pour mon quiz de diagnostic client, connecté à System.io avec des séquences emails segmentées par profil. La connexion est propre, les tags s'appliquent automatiquement, et l'interface est suffisamment intuitive pour qu'on configure tout sans développeur. Pour quelqu'un qui opère seul et qui veut un funnel de capture qui tourne sans surveillance, Tiquiz fait exactement ce qu'il promet.",
+    source: "Trustpilot, 4 septembre 2026",
+  },
+  {
+    nom: "Christian",
+    metier: null,
+    texte:
+      "J'ai créé mes deux premiers quizz qui ont donné des résultats que je n'aurais jamais imaginés. Ce qui est fabuleux c'est que Tiquiz comble une lacune de System.io qui ne permet pas de faire des quiz. Ca fonctionne comme un rêve.",
+    source: "Trustpilot, 2 septembre 2026",
+  },
+  {
+    nom: "Chris Lecroard",
+    metier: null,
+    texte:
+      "Excellent logiciel la conceptrice est à l'écoute et l'ensemble est cohérent avec nos besoins et nos missions.",
+    source: "Trustpilot, 2 septembre 2026",
+  },
 ] as const;
+
+/**
+ * LES TROIS TÉMOIGNAGES DE LA PREUVE PRÉCOCE.
+ *
+ * Béné veut une preuve sociale "immédiatement", en haut de page. Trois
+ * témoignages y tiennent, pas quinze.
+ *
+ * ON PREND LES TROIS PLUS COURTS, ON N'EN COUPE AUCUN. Un témoignage
+ * ne se raccourcit pas : c'est quelqu'un qui a écrit ça, et en garder
+ * la première phrase serait le réécrire, donc fabriquer un faux
+ * témoignage. Trier par longueur choisit ceux qui tiennent DÉJÀ en
+ * deux lignes.
+ *
+ * Le tri est STABLE (l'index départage les longueurs égales) : sans
+ * ça, deux rendus du serveur pourraient ne pas donner le même trio, et
+ * l'hydratation crierait.
+ */
+export function preuvePrecoce(
+  tous: readonly Temoignage[],
+  combien = 3,
+): readonly Temoignage[] {
+  return [...tous]
+    .map((v, i) => ({ v, i }))
+    .sort((a, b) => a.v.texte.length - b.v.texte.length || a.i - b.i)
+    .slice(0, combien)
+    .map((x) => x.v);
+}
 
 /** Le popquiz de démonstration, celui qu'elle m'a donné. */
 export const DEMO_POPQUIZ = "https://quiz.tipote.com/embed/p/0a7d8f50-f329-48e5-b5af-36c642f00c7c";
@@ -776,40 +887,50 @@ const fr: ContenuLanding = {
     "Décris ton sujet, l'IA écrit le quiz, et chaque profil renvoie vers ton offre. Le contact arrive dans Systeme.io avec son tag, créé automatiquement s'il n'existe pas.",
 
   etiquette: "Générateur de quiz connecté à Systeme.io",
-  titre: "Pas besoin de plus de trafic. Juste de savoir qui te lit",
-  motCle: "qui te lit",
+  titre: "Booste ton trafic",
+  motCle: "grâce aux quiz interactifs",
   accroche:
-    "Un quiz pose les questions à ta place. Ton visiteur répond parce que ça parle de lui, il laisse son adresse pour avoir son résultat, et il arrive dans Systeme.io déjà rangé dans le bon tag.",
+    "Crée des quiz viraux qui attirent du trafic qualifié sur tes offres et transforment tes visiteurs en clients payants, sans investir en publicité.",
   pourQui:
     "Pour les entrepreneurs, les coachs, les consultants, les formateurs, les infopreneurs et les affiliés qui ont une offre et pas assez de monde à qui la présenter.",
-  ctaPrincipal: "Créer mon quiz gratuitement",
-  ctaSecondaire: "Créer mon compte gratuit",
+  ctaPrincipal: "Commencer gratuitement",
+  ctaSecondaire: "Voir la démo",
   sousCta: "Aucune carte demandée. Le quiz que tu génères reste à toi.",
-  rassurances: ["Gratuit à vie", "Pas besoin de CB", "Connecté à Systeme.io"],
+  rassurances: ["Connecté à Systeme.io", "Quiz illimités", "IA intégrée"],
   bandeau: [
+    "Quiz IA illimités",
+    "Sondages illimités",
+    "Popquiz",
+    "Connexion Systeme.io",
+    "Capture de leads",
+    "Résultats personnalisés",
+    "Scoring intelligent",
+    "Partage viral",
+    "Tags automatiques",
     "Branding personnalisé",
-    "Domaine personnalisé",
-    "Tags Systeme.io automatiques",
-    "Quiz illimités",
-    "IA intégrée",
-    "Sondages et Popquiz",
+    "Statistiques détaillées",
+    "Intégration embed",
+    "Lien partageable",
+    "Nom de domaine personnalisé",
     "Design responsive",
-    "100 langues",
+    "7 langues",
+    "Zéro code",
+    "Mini-tunnels de vente",
+    "Données exploitables",
   ],
   preuve: "Plus de 200 entrepreneurs utilisent déjà Tiquiz",
   copier: "Copier",
 
-  problemeTitre: "Chaque visiteur qui s'en va sans laisser son email est un client perdu",
+  problemeTitre: "Chaque visiteur qui repart sans te laisser son email est",
   problemeMotCle: "un client perdu",
   problemeCorps: [
-    "Quelqu'un découvre ton contenu, le lit, et s'en va. Tu ne peux plus lui parler, plus rien lui proposer. Il ne reviendra pas.",
-    "Et tes abonnés ne t'appartiennent pas. Ton compte sur n'importe quel réseau peut sauter du jour au lendemain, et ton audience part avec. Ta liste email, elle, est à toi.",
-    "Le problème, c'est qu'aujourd'hui presque plus personne n'échange son adresse contre un PDF de plus, qui ne sera pas lu de toute façon.",
-    "Le quiz inverse la mécanique. Ton prospect répond parce que ça parle de lui, et il laisse son email parce qu'il veut son résultat.",
+    "Quand tu as la chance qu'un visiteur découvre ton contenu et le lise, mais que tu ne captures pas son email : tu ne peux plus lui parler, plus rien lui proposer.",
+    "Et tes abonnés ne t'appartiennent pas : ton compte sur n'importe quel réseau social peut sauter à tout moment et tu peux tout perdre. Alors que ta liste email, elle, est à toi.",
+    "Le problème c'est qu'aujourd'hui peu de visiteurs échangent leur mail contre un simple PDF (qui ne sera pas lu, de toute façon).",
+    "Le quiz inverse la mécanique : ton prospect répond parce que ça parle de lui, et il laisse son email parce qu'il veut son résultat. C'est interactif au lieu d'être à sens unique.",
   ],
 
-  animLegende:
-    "Le visiteur fait le même effort dans les deux cas. Ce que tu récupères, non.",
+  animLegende: "Même effort pour attirer ton visiteur. 5x plus de données pour toi.",
 
   chiffre: "44,9 %",
   chiffreLegende:
@@ -870,24 +991,24 @@ const fr: ContenuLanding = {
   etapeMot: "Étape",
   etapes: [
     {
-      titre: "Tu décris ton sujet",
+      titre: "Crée le quiz parfait à partir d'un simple prompt",
       corps:
-        "Ton thème, à qui tu parles, ce que tu veux obtenir. Trois champs, pas un formulaire de dix minutes.",
+        "Personnalise ton quiz en un éclair à l'aide de l'intelligence artificielle de Tiquiz. Tu obtiens en quelques secondes un modèle unique que tu n'as plus qu'à customiser avec ta personnalité, ton logo, tes images, tes couleurs, ainsi que les URL de ton choix. Tu as déjà un quiz, ou tu ne veux pas utiliser l'IA ? Tu peux aussi importer un quiz existant ou le créer 100 % manuellement.",
     },
     {
-      titre: "L'IA écrit le quiz",
+      titre: "Partage ton quiz en 1 clic",
       corps:
-        "Les questions, les réponses et les profils de résultat arrivent sous tes yeux. C'est une base de départ solide, et tu la corriges là où ça ne sonne pas comme toi.",
+        "Copie le lien de ton quiz et diffuse-le par email ou sur tes réseaux, avec ton nom de domaine personnalisé. Ou copie le code html et intègre-le partout où ça te semble le plus efficace : pop-up, page d'accueil, pied de page, en-tête, article de blog, appel à l'action.",
     },
     {
-      titre: "Tu publies",
+      titre: "Propage ta marque comme une trainée de poudre",
       corps:
-        "Sur ton domaine, dans une page Systeme.io, dans WordPress, ou tout seul avec sa propre adresse. Tu choisis, et le design suit ta marque.",
+        "Pour découvrir les résultats de leur quiz, tes prospects devront d'abord le partager sur leurs réseaux, exposant ainsi ta marque à de nouvelles personnes qui leur ressemblent. Résultat : ton quiz devient viral, et tu boostes ta présence en ligne sans dépenser un centime en publicité.",
     },
     {
-      titre: "Chaque profil part vers son offre",
+      titre: "Capture, exporte, automatise !",
       corps:
-        "Le résultat n'est pas une impasse : il renvoie vers l'offre qui correspond à ce profil là, et le contact arrive dans Systeme.io avec son tag.",
+        "Capture tes leads directement dans Tiquiz, exporte-les en 1 clic vers ton autorépondeur, puis déclenche les automatisations de ton choix.",
     },
   ],
 
@@ -939,55 +1060,76 @@ const fr: ContenuLanding = {
   ouNote:
     "Aucune des deux ne demande de savoir coder. Copier, coller, c'est tout. Et ton visiteur ne voit que ton logo, tes couleurs et ton adresse.",
 
-  formatsLeadTitre: "Le PDF gratuit ne marche plus. Le quiz,",
-  formatsLeadMotCle: "si",
+  formatsLeadTitre: "Prends",
+  formatsLeadMotCle: "5 ans d'avance",
+  formatsLeadFin: "sur tes concurrents",
   formatsLeadCorps:
-    "Ton visiteur a déjà quinze PDF qu'il n'a jamais ouverts. Il ne donne plus son adresse pour un seizième. Un quiz, lui, répond à une question qu'il se pose sur lui même, tout de suite.",
-  formatsLeadColonnes: ["", "Un PDF, un ebook", "Un webinaire", "Un quiz"],
+    "Contrairement à un simple ebook ou une formation offerte, les quiz cochent toutes les cases qui te permettent d'améliorer ta présence en ligne et maximiser tes conversions.",
+  formatsLeadColonnes: ["", "Tiquiz", "Ebook", "Formation offerte"],
   formatsLeadLignes: [
-    {
-      critere: "Ce que ton visiteur y gagne",
-      valeurs: [
-        "Un document à lire plus tard",
-        "45 minutes de son temps, à une heure imposée",
-        "Une réponse sur lui, en deux minutes",
-      ],
-    },
-    {
-      critere: "Ce que tu récupères",
-      valeurs: [
-        "Une adresse email",
-        "Une adresse, et sa présence",
-        "Une adresse, et tout ce qu'il vient de te dire sur lui",
-      ],
-    },
-    {
-      critere: "Ce que tu peux lui écrire ensuite",
-      valeurs: [
-        "Le même email qu'à tout le monde",
-        "Le même suivi qu'à tout le monde",
-        "Un message par profil, avec l'offre qui le concerne",
-      ],
-    },
-    {
-      critere: "Est-ce qu'il le partage ?",
-      valeurs: [
-        "Rarement",
-        "Non",
-        "Oui : un résultat sur soi, ça se montre",
-      ],
-    },
-    {
-      critere: "Ce qu'il te faut pour le produire",
-      valeurs: [
-        "L'écrire, le mettre en page",
-        "Le préparer, l'animer en direct",
-        "Décrire ton sujet, relire ce que l'IA propose",
-      ],
-    },
+    { critere: "Viral", valeurs: [true, false, false] },
+    { critere: "Connexion avec l'audience", valeurs: [true, false, true] },
+    { critere: "Interactions / Engagement", valeurs: [true, false, true] },
+    { critere: "Facile à créer", valeurs: [true, true, false] },
+    { critere: "Faible coût d'acquisition", valeurs: [true, true, false] },
+    { critere: "Prospects qualifiés", valeurs: [true, false, true] },
+    { critere: "Fonctionne en automatique", valeurs: [true, true, false] },
   ],
   formatsLeadNote:
-    "Un quiz ne remplace pas ton contenu. Il remplace le formulaire qui demande une adresse sans rien donner en échange.",
+    "Grâce aux quiz, tu te démarques de tes concurrents, tu engages ton audience de manière ludique, tu génères du trafic qualifié, et tu transformes plus facilement tes visiteurs en clients payants.",
+
+  qualifiesTitre: "Capture des",
+  qualifiesMotCle: "leads qualifiés",
+  qualifiesFin: "Pas des touristes.",
+  qualifiesCorps: [
+    "Oublie les prospects qui s'inscrivent sur ta liste sans jamais passer à l'action.",
+    "Lorsque des prospects prennent sur leur temps pour remplir un quiz, c'est qu'ils sont (vraiment) intéressés par le sujet, au point d'y consacrer du temps.",
+    "Ces prospects s'intéressent réellement à ce que tu proposes, et sont beaucoup plus qualifiés que ceux qui téléchargent un simple ebook...",
+    "C'est avec eux que tu veux remplir ta liste !",
+  ],
+  qualifiesNoms: [
+    "Fanny Martin",
+    "Tariq Hanbal Rahal",
+    "Patricia Clément",
+    "Luc Grenier",
+    "Karen Payne",
+    "Théodore Guay",
+  ],
+  qualifiesDepuis: "Capturé il y a {n} min",
+
+  offresTitre: "Crée des",
+  offresMotCle: "Offres Irrésistibles",
+  offresFin: "que tes prospects vont s'arracher",
+  offresIntro:
+    "Lorsque tu crées un quiz, tu ne recueilles pas seulement des adresses e-mail, tu obtiens également des informations précieuses sur :",
+  offresPuces: [
+    "Les difficultés actuelles de ton audience",
+    "Leurs désirs",
+    "Leurs objectifs et aspirations",
+    "Leurs préférences et leurs goûts",
+    "Les problèmes non résolus qu'ils rencontrent",
+    "Les solutions qu'ils ont déjà essayées",
+    "Leur niveau de satisfaction avec les solutions existantes",
+  ],
+  offresConclusion:
+    "Retrouve ces informations directement sur ton tableau de bord, afin de les analyser plus facilement et transformer ces données brutes en offres ciblées que tes prospects sont déjà prêts à t'acheter.",
+  offresSondage: {
+    question: "Si tu voulais être aidé sur ce sujet, ce serait :",
+    reponses: [
+      { texte: "Formation", pct: 41 },
+      { texte: "Document écrit", pct: 36 },
+      { texte: "Coaching", pct: 12 },
+      { texte: "Challenge", pct: 11 },
+    ],
+  },
+
+  demarqueTitre: "Démarque-toi",
+  demarqueMotCle: "avec du contenu frais",
+  demarqueFin: "et engageant",
+  demarqueCorps: [
+    "Tiquiz est une manière innovante de faire participer ton audience, de la tenir engagée et d'instaurer une relation plus conviviale entre vous.",
+    "Ton marketing devient un jeu captivant où tout le monde y gagne : tes prospects s'amusent en découvrant tes offres, et toi, tu vois tes conversions grimper en flèche.",
+  ],
 
   outilsTitre: "Les autres outils de quiz s'arrêtent",
   outilsMotCle: "avant Systeme.io",
@@ -1010,11 +1152,12 @@ const fr: ContenuLanding = {
   pasPourToiFin:
     "Si l'un des trois est indispensable chez toi, ne prends pas Tiquiz : tu perdrais ton temps et le mien.",
 
-  viralTitre: "Tes prospects t'en amènent",
-  viralMotCle: "d'autres",
+  viralTitre: "Booste ton trafic",
+  viralMotCle: "grâce à la viralité des quiz",
   viralCorps: [
-    "Un résultat de quiz, ça se montre. Tu peux demander à ton visiteur de partager le sien pour débloquer un bonus, et ton quiz part chez des gens qui lui ressemblent : exactement ceux que tu cherchais.",
-    "C'est le seul endroit de ton système où un lead t'en ramène un autre, et ça ne te coûte pas un centime de publicité.",
+    "Pour découvrir les résultats de leur quiz, tes prospects doivent d'abord le partager sur leurs réseaux sociaux (optionnel). Et c'est là que la viralité opère !",
+    "Chaque partage expose ta marque à un nouveau public, ce qui augmente le trafic vers ton site, tes réseaux, ta page de vente.",
+    "Ce qui améliore ton classement dans les résultats des moteurs de recherche, ce qui augmente la visibilité de tes offres. Sans que tu doives redoubler d'efforts !",
   ],
   viralNote:
     "Le partage n'est jamais obligatoire, et tu peux le couper. Sur un sujet intime, argent, santé, famille, personne ne partage, et c'est normal : ça ne dit rien de la qualité de ton quiz.",
@@ -1080,9 +1223,15 @@ const fr: ContenuLanding = {
 
   ctas: {
     probleme: "Je veux capturer ces emails",
-    etapes: "Je crée mon quiz gratuitement",
+    viral: "Je veux mon quiz viral",
+    qualifies: "Je veux attirer des vrais clients",
+    offres: "Je veux améliorer mes offres",
+    etapes: "C'est parti !",
     funnel: "Je veux vendre avec un quiz",
+    demarque: "Je veux me démarquer",
     sio: "Je me lance gratuitement",
+    modes: "Je crée mon quiz aujourd'hui",
+    formats: "J'ai besoin de ça aussi",
     branding: "Je crée mon quiz maintenant",
   },
   ctaRassurance: "Gratuit, sans carte bancaire",
@@ -1145,24 +1294,6 @@ const fr: ContenuLanding = {
     "Cette démo est elle même un Popquiz Tiquiz. Les questions s'affichent pendant la vidéo et tu y réponds : tu vis exactement ce que vivra la personne qui arrivera sur ton quiz.",
   demoLien: "Ouvrir la démo dans un nouvel onglet",
 
-  faq: [
-    {
-      q: "Faut-il savoir coder ?",
-      r: "Non. Tu écris ce dont parle ton quiz, tu relis ce que l'IA propose, et tu publies. Il n'y a rien à installer.",
-    },
-    {
-      q: "Est-ce que je peux m'en servir sans Systeme.io ?",
-      r: "Oui. Le quiz fonctionne tout seul, capture les emails et affiche les résultats sans aucune connexion. Systeme.io ajoute l'automatisation derrière, ce n'est pas une condition.",
-    },
-    {
-      q: "L'IA écrit un quiz utilisable du premier coup ?",
-      r: "Elle écrit une base de départ solide, et c'est le retour constant de ceux qui s'en servent. Compte quelques minutes de relecture pour remplacer deux ou trois formulations par les tiennes. Personne ne publie un texte généré sans le relire, et c'est très bien comme ça.",
-    },
-    {
-      q: "Dans quelles langues ?",
-      r: "L'interface est traduite en 7 langues. La génération, elle, couvre 100 langues et variantes régionales : un quiz écrit en portugais du Brésil ne sort pas en portugais du Portugal.",
-    },
-  ],
 
   bandeTitre: "Ta liste emails ne va pas se construire toute seule",
   bandeCorps:
@@ -1322,55 +1453,76 @@ const en: ContenuLanding = {
   ouNote:
     "Neither one asks you to know how to code. Copy, paste, done. And your visitor only sees your logo, your colours and your address.",
 
-  formatsLeadTitre: "The free PDF stopped working. A quiz",
-  formatsLeadMotCle: "has not",
+  formatsLeadTitre: "Get",
+  formatsLeadMotCle: "5 years ahead",
+  formatsLeadFin: "of your competitors",
   formatsLeadCorps:
-    "Your visitor already has fifteen PDFs they never opened. They will not hand over their address for a sixteenth. A quiz answers a question they are already asking about themselves, right now.",
-  formatsLeadColonnes: ["", "A PDF, an ebook", "A webinar", "A quiz"],
+    "Unlike a plain ebook or a free training, quizzes tick every box that improves your presence online and maximises your conversions.",
+  formatsLeadColonnes: ["", "Tiquiz", "Ebook", "Free training"],
   formatsLeadLignes: [
-    {
-      critere: "What your visitor gets",
-      valeurs: [
-        "A document to read later",
-        "45 minutes of their time, at a fixed hour",
-        "An answer about themselves, in two minutes",
-      ],
-    },
-    {
-      critere: "What you get back",
-      valeurs: [
-        "An email address",
-        "An address, and their attendance",
-        "An address, and everything they just told you about themselves",
-      ],
-    },
-    {
-      critere: "What you can write to them next",
-      valeurs: [
-        "The same email as everyone else",
-        "The same follow up as everyone else",
-        "One message per profile, with the offer that fits",
-      ],
-    },
-    {
-      critere: "Do they share it?",
-      valeurs: [
-        "Rarely",
-        "No",
-        "Yes: a result about yourself is worth showing",
-      ],
-    },
-    {
-      critere: "What it takes you to produce",
-      valeurs: [
-        "Writing it, laying it out",
-        "Preparing it, running it live",
-        "Describing your topic, reading over what the AI drafts",
-      ],
-    },
+    { critere: "Viral", valeurs: [true, false, false] },
+    { critere: "Connection with your audience", valeurs: [true, false, true] },
+    { critere: "Interaction and engagement", valeurs: [true, false, true] },
+    { critere: "Easy to build", valeurs: [true, true, false] },
+    { critere: "Low acquisition cost", valeurs: [true, true, false] },
+    { critere: "Qualified prospects", valeurs: [true, false, true] },
+    { critere: "Runs on its own", valeurs: [true, true, false] },
   ],
   formatsLeadNote:
-    "A quiz does not replace your content. It replaces the form that asks for an address and gives nothing back.",
+    "With quizzes you stand out from your competitors, you engage your audience in a playful way, you bring in qualified traffic, and you turn visitors into paying customers more easily.",
+
+  qualifiesTitre: "Capture",
+  qualifiesMotCle: "qualified leads",
+  qualifiesFin: "Not tourists.",
+  qualifiesCorps: [
+    "Forget the prospects who join your list and never do anything with it.",
+    "When someone takes the time to fill in a quiz, they are (really) interested in the topic, enough to spend time on it.",
+    "Those prospects genuinely care about what you offer, and they are far more qualified than the ones who download a plain ebook.",
+    "Those are the ones you want on your list.",
+  ],
+  qualifiesNoms: [
+    "Fanny Martin",
+    "Tariq Hanbal Rahal",
+    "Patricia Clément",
+    "Luc Grenier",
+    "Karen Payne",
+    "Théodore Guay",
+  ],
+  qualifiesDepuis: "Captured {n} min ago",
+
+  offresTitre: "Build",
+  offresMotCle: "irresistible offers",
+  offresFin: "your prospects will fight over",
+  offresIntro:
+    "When you build a quiz you do not just collect email addresses, you also learn a great deal about:",
+  offresPuces: [
+    "What your audience struggles with right now",
+    "What they want",
+    "Their goals and aspirations",
+    "Their preferences and their tastes",
+    "The problems they have not solved yet",
+    "The solutions they have already tried",
+    "How happy they are with what exists today",
+  ],
+  offresConclusion:
+    "You find all of it straight from your dashboard, ready to be analysed and turned into targeted offers your prospects are already willing to buy.",
+  offresSondage: {
+    question: "If you wanted help on this, it would be:",
+    reponses: [
+      { texte: "A course", pct: 41 },
+      { texte: "Something written", pct: 36 },
+      { texte: "Coaching", pct: 12 },
+      { texte: "A challenge", pct: 11 },
+    ],
+  },
+
+  demarqueTitre: "Stand out",
+  demarqueMotCle: "with fresh, engaging content",
+  demarqueFin: "",
+  demarqueCorps: [
+    "Tiquiz is a fresh way to get your audience involved, keep it engaged and build a friendlier relationship along the way.",
+    "Your marketing becomes a game everyone wins: your prospects have fun discovering your offers, and you watch your conversions climb.",
+  ],
 
   outilsTitre: "Other quiz tools stop",
   outilsMotCle: "before Systeme.io",
@@ -1463,9 +1615,15 @@ const en: ContenuLanding = {
 
   ctas: {
     probleme: "I want to capture those emails",
-    etapes: "Build my quiz for free",
+    viral: "I want my quiz to go viral",
+    qualifies: "I want real customers",
+    offres: "I want better offers",
+    etapes: "Let's go",
     funnel: "I want to sell with a quiz",
+    demarque: "I want to stand out",
     sio: "Get me started for free",
+    modes: "Build my quiz today",
+    formats: "I need that too",
     branding: "Build my quiz now",
   },
   ctaRassurance: "Free, no card needed",
@@ -1528,24 +1686,6 @@ const en: ContenuLanding = {
     "This demo is itself a Tiquiz Popquiz. Questions appear during the video and you answer them: you go through exactly what the person landing on your quiz will go through.",
   demoLien: "Open the demo in a new tab",
 
-  faq: [
-    {
-      q: "Do I need to know how to code?",
-      r: "No. You write what your quiz is about, you read what the AI proposes, and you publish. There is nothing to install.",
-    },
-    {
-      q: "Can I use it without Systeme.io?",
-      r: "Yes. The quiz runs on its own, captures emails and shows results with no connection at all. Systeme.io adds the automation behind it, it is not a requirement.",
-    },
-    {
-      q: "Does the AI write a usable quiz on the first try?",
-      r: "It writes a solid starting point, and that is the consistent feedback from people using it. Budget a few minutes of reading to swap two or three sentences for your own. Nobody publishes generated text without reading it, and that is exactly as it should be.",
-    },
-    {
-      q: "Which languages?",
-      r: "The interface is translated into 7 languages. Generation covers 100 languages and regional variants: a quiz written in Brazilian Portuguese does not come out in European Portuguese.",
-    },
-  ],
 
   bandeTitre: "Your email list will not build itself",
   bandeCorps:

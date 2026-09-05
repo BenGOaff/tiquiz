@@ -16,6 +16,7 @@
 // Un test EXIGE que toute page déclarée ici soit atteignable depuis le
 // pied de page : une page que Google connaît et qu'aucun humain ne peut
 // trouver depuis le site est une page qui ne sert à rien.
+import { FONCTIONNALITES } from "@/lib/site/fonctionnalites";
 
 export interface PagePublique {
   chemin: string;
@@ -27,7 +28,7 @@ export interface PagePublique {
   priorite: number;
 }
 
-export const PAGES_PUBLIQUES: readonly PagePublique[] = [
+const PAGES_ECRITES: readonly PagePublique[] = [
   {
     chemin: "/affiliation",
     titre: "Programme d'affiliation Tiquiz",
@@ -99,6 +100,13 @@ export const PAGES_PUBLIQUES: readonly PagePublique[] = [
     priorite: 0.6,
   },
   {
+    chemin: "/fonctionnalites",
+    titre: "Tout ce que Tiquiz sait faire",
+    resume:
+      "La connexion Systeme.io, les quiz par profil ou scorés, les sondages, les Popquiz, les tags automatiques, les générateurs : chaque fonctionnalité expliquée en détail.",
+    priorite: 0.7,
+  },
+  {
     chemin: "/newsletter",
     titre: "La newsletter de Béné",
     resume:
@@ -113,3 +121,25 @@ export const PAGES_PUBLIQUES: readonly PagePublique[] = [
     priorite: 0.5,
   },
 ] as const;
+
+/**
+ * LES PAGES DE FONCTIONNALITÉS SONT DÉRIVÉES, JAMAIS RECOPIÉES.
+ *
+ * Quatorze chemins à tenir à la main dans une deuxième liste, c'est
+ * quatorze occasions d'oublier une page dans le sitemap. Et ce fichier
+ * dit dans son propre en-tête que deux listes écrites séparément
+ * finissent toujours par diverger : c'est arrivé une branche plus bas
+ * le 4 septembre, sur les pages légales du domaine de vente.
+ *
+ * Une fonctionnalité ajoutée dans `lib/site/fonctionnalites.ts` entre
+ * donc dans le sitemap et dans `llms.txt` sans qu'on y pense.
+ */
+export const PAGES_PUBLIQUES: readonly PagePublique[] = [
+  ...PAGES_ECRITES,
+  ...FONCTIONNALITES.map((f) => ({
+    chemin: `/fonctionnalites/${f.slug}`,
+    titre: f.nom,
+    resume: f.resume,
+    priorite: 0.6,
+  })),
+];

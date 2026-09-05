@@ -33,6 +33,7 @@
 
 import { AFFILIATE_DASHBOARD_URL, ATELIER_SALES_URL } from "@/lib/affiliateUrls";
 import { ADRESSES_LEGALES_FR } from "@/lib/site/adressesLegales";
+import { FONCTIONNALITES } from "@/lib/site/fonctionnalites";
 
 /** Un lien du site public. */
 export interface LienSite {
@@ -94,6 +95,7 @@ export const PIED: readonly ColonnePied[] = [
     titre: "Tiquiz",
     liens: [
       { href: "/", libelle: "Ce que fait Tiquiz" },
+      { href: "/fonctionnalites", libelle: "Toutes les fonctionnalités" },
       { href: "/commande/mensuel", libelle: "Tarifs et abonnement" },
       { href: ATELIER_SALES_URL, libelle: "L'Atelier du Quiz" },
       { href: "/blog", libelle: "Le blog" },
@@ -169,12 +171,36 @@ export function attributsLien(href: string): {
   return {};
 }
 
-/** Toutes les adresses internes citées par le menu ou le pied de page. */
+/**
+ * LES PAGES QU'UN HUB REND ATTEIGNABLES.
+ *
+ * Les six pages d'intégration sont listées une par une dans le pied :
+ * elles sont six, et leurs mots clés valent d'être écrits en toutes
+ * lettres. Les quatorze fonctionnalités, non : un pied de page à
+ * quatorze liens de plus ne se lit plus, il se parcourt.
+ *
+ * Elles sont donc atteignables PAR LEUR HUB, qui les liste toutes, et
+ * qui est lui même dans le pied. Un visiteur perdu y arrive en deux
+ * clics, un robot aussi.
+ *
+ * LA CONDITION COMPTE : un hub absent du pied ne rend rien atteignable.
+ * `cheminsDuSite` le vérifie au lieu de le supposer, sinon retirer le
+ * hub du pied orphelinerait quatorze pages en silence.
+ */
+export const PAGES_PAR_HUB: readonly { hub: string; enfants: readonly string[] }[] = [
+  {
+    hub: "/fonctionnalites",
+    enfants: FONCTIONNALITES.map((f) => `/fonctionnalites/${f.slug}`),
+  },
+];
+
+/** Toutes les adresses internes citées par le menu, le pied, ou un hub. */
 export function cheminsDuSite(): string[] {
-  const tout = [
+  const directs = [
     ...MENU.map((l) => l.href),
     CTA_MENU.href,
     ...PIED.flatMap((c) => c.liens.map((l) => l.href)),
   ];
-  return [...new Set(tout.filter((h) => !estLienExterne(h)))];
+  const parHub = PAGES_PAR_HUB.filter((h) => directs.includes(h.hub)).flatMap((h) => h.enfants);
+  return [...new Set([...directs, ...parHub].filter((h) => !estLienExterne(h)))];
 }
