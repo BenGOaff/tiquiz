@@ -72,7 +72,7 @@ import { getLocale } from "next-intl/server";
 
 import { SUPPORTED_LOCALES } from "@/i18n/config";
 import { HOTE_VENTE } from "@/lib/publicHost";
-import { ZAPIER } from "@/lib/site/integrations";
+import { OUTILS, ZAPIER } from "@/lib/site/integrations";
 import {
   DEMO_POPQUIZ,
   TEMOIGNAGES,
@@ -88,6 +88,7 @@ import {
   BlocCode,
   ChampLien,
   Chevron,
+  Croix,
   CocheFine,
   CochePleine,
   Fleche,
@@ -285,6 +286,51 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
         <CtaSection libelle={t.ctas.probleme} rassurance={t.ctaRassurance} />
       </section>
 
+      {/* ── POURQUOI UN QUIZ, ET PAS UN PDF DE PLUS ────────────── */}
+      {/* Béné, 5 septembre : "pour montrer pourquoi les quiz, et
+          pourquoi tiquiz ?" Ce sont DEUX questions, et la page n'en
+          traitait qu'une. Celle-ci répond à la première, à l'endroit où
+          le lecteur se dit "d'accord, mais j'ai déjà un PDF".
+
+          AUCUN CHIFFRE DE COMPARAISON : le 44,9 % de la carte au dessus
+          porte sa source, je n'ai rien d'équivalent pour un PDF ou un
+          webinaire. La comparaison porte donc sur ce qu'on OBTIENT, qui
+          se constate sans mesurer. */}
+      <section className="tql-sec">
+        <div className="tql-large">
+          <h2 className="tql-h2">
+            {t.formatsLeadTitre} <span className="tql-surb">{t.formatsLeadMotCle}</span>
+          </h2>
+          <p className="tql-p">{t.formatsLeadCorps}</p>
+          <div className="tql-comp-boite">
+            <table className="tql-comp tql-comp-txt">
+              <thead>
+                <tr>
+                  {t.formatsLeadColonnes.map((c, i) => (
+                    <th key={c || i} className={i === 3 ? "tql-col-nous" : undefined}>
+                      {c}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {t.formatsLeadLignes.map((l) => (
+                  <tr key={l.critere}>
+                    <th scope="row">{l.critere}</th>
+                    {l.valeurs.map((v, i) => (
+                      <td key={v} className={i === 2 ? "tql-col-nous" : undefined}>
+                        {v}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="tql-legende">{t.formatsLeadNote}</p>
+        </div>
+      </section>
+
       {/* ── LA DÉMO : SON VRAI POPQUIZ ─────────────────────────── */}
       {/* LE TITRE NE PROMET PLUS DE TESTER LE GÉNÉRATEUR. Béné : "le
           quiz à tester il est ailleurs, là on teste le fonctionnement.
@@ -462,6 +508,48 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
         </div>
       </section>
 
+      {/* ── POURQUOI TIQUIZ, ET PAS UN AUTRE OUTIL DE QUIZ ─────── */}
+      {/* La deuxième question de Béné, et elle était traitée en cinq
+          morceaux répartis dans la page, donc nulle part.
+
+          LE TABLEAU SE CONSTRUIT SUR `OUTILS`, la table qui alimente
+          déjà les six pages du hub : chaque ligne y est sourcée sur la
+          documentation de l'outil, et le lien mène aux preuves.
+          Réécrire ces lignes ici en ferait une deuxième liste, donc une
+          divergence, sur l'écran où un lecteur vérifie. */}
+      <section className="tql-sec tql-blanc">
+        <div className="tql-large">
+          <h2 className="tql-h2">
+            {t.outilsTitre} <span className="tql-surb">{t.outilsMotCle}</span>
+          </h2>
+          <p className="tql-p">{t.outilsCorps}</p>
+          <div className="tql-comp-boite">
+            <table className="tql-comp tql-comp-txt">
+              <thead>
+                <tr>
+                  {t.outilsColonnes.map((c, i) => (
+                    <th key={c || i}>{c}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {OUTILS.map((o) => (
+                  <tr key={o.nom} className={o.slug === null ? "tql-lg-nous" : undefined}>
+                    <th scope="row">{o.nom}</th>
+                    <td>{o.intermediaire}</td>
+                    <td>{o.tagParProfil}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="tql-legende">
+            {t.outilsNote}{" "}
+            <Link href="/integrations">{t.outilsLien}</Link>
+          </p>
+        </div>
+      </section>
+
       {/* ── LES TROIS FORMATS ──────────────────────────────────── */}
       {/* La landing ne vendait QUE le quiz. Les sondages et les Popquiz
           sont dans le même abonnement, ils sont dans la grille de
@@ -613,6 +701,35 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── CE QUI N'EST PAS POUR TOI ──────────────────────────── */}
+      {/* Béné, 5 septembre : "sans bullshit". Une page qui ne dit que
+          du bien se lit comme une page de vente ; une page qui sait
+          dire non se lit comme quelqu'un d'honnête, et c'est sa force
+          ("c'est pas pour toi, ça va pas t'aider").
+
+          LES TROIS REFUS SONT VRAIS, ce sont ceux du bloc de
+          qualification de sa page v2 : le résultat est PRÉÉCRIT par
+          profil (`lib/quizScoring.ts`), le parcours est LINÉAIRE, et le
+          design suit son branding sans être libre au pixel. Un refus
+          inventé pour faire honnête serait du bullshit de plus. */}
+      <section className="tql-sec tql-blanc">
+        <div className="tql-large tql-lire-bloc">
+          <h2 className="tql-h2">
+            {t.pasPourToiTitre} <span className="tql-surb">{t.pasPourToiMotCle}</span>
+          </h2>
+          <p className="tql-p">{t.pasPourToiCorps}</p>
+          <ul className="tql-non-liste">
+            {t.pasPourToi.map((x) => (
+              <li key={x}>
+                <Croix />
+                <span>{x}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="tql-p tql-p-fort">{t.pasPourToiFin}</p>
         </div>
       </section>
 

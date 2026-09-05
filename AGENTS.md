@@ -8694,6 +8694,104 @@ trois versions fautives (le mot "créateurs" remis, deux boutons de
 milieu de page retirés, l'argument de la plateforme retiré plus un
 chiffre sans source dans la viralité) : les trois rougissent.
 
+### Sixième passage : "pourquoi les quiz" et "pourquoi Tiquiz" (5 septembre 2026)
+
+Béné : "cette fois c'est la MEILLEURE version aussi bien niveau copy que
+design et UX UI que tu puisses proposer ? Pour vendre Tiquiz aux bonnes
+personnes ? Avec pertinence et authenticité ? Sans bullshit (n'écris pas
+sans bullshit, je veux juste PAS de bullshit) ? En donnant tous les
+arguments au bon moment, pour montrer pourquoi les quiz, et pourquoi
+tiquiz ?"
+
+**La réponse honnête était NON, et sa question dit exactement pourquoi :
+la page vendait Tiquiz sans jamais vendre le QUIZ.** Elle démarre sur le
+coût de ne rien faire, puis enchaîne sur ce que Tiquiz fait, donc elle
+suppose acquis que le lecteur a déjà choisi un quiz comme outil de
+capture. Quelqu'un qui hésite entre un PDF, un webinaire et un quiz
+n'avait rien à lire.
+
+**"n'écris pas sans bullshit" est une consigne de FOND, pas de style.**
+On ne dit pas qu'on est honnête, on l'est : chaque argument ajouté ici
+se vérifie dans le code ou n'entre pas.
+
+#### CE QUI MANQUAIT, ET LES TROIS SE PLACENT À UN ENDROIT PRÉCIS
+
+| Le bloc | Où il est posé | Pourquoi là |
+|---|---|---|
+| **pourquoi un quiz** (5 critères x 3 formats) | après le problème, AVANT la démo | il faut avoir choisi le format avant de regarder l'outil |
+| **pourquoi Tiquiz** (le tableau des 6 outils) | juste après la section Systeme.io | c'est la preuve de ce que la section vient de promettre |
+| **et ce n'est PAS pour toi si** (3 refus vrais) | après les objections, AVANT les tarifs | savoir dire non est ce qui rend croyable tout le reste |
+
+#### 1. LE COMPARATIF DES FORMATS NE PORTE AUCUN CHIFFRE INVENTÉ
+
+Cinq critères (ce que le visiteur donne, ce qu'il reçoit, ce que tu
+apprends de lui, le temps que ça te prend, ce que tu peux en faire
+ensuite), trois formats : PDF ou ebook, webinaire, quiz.
+
+**On compare ce qu'on OBTIENT, jamais des taux de conversion.** Le
+44,9 % d'Interact a une source publique et il est déjà cité sur la page ;
+je n'ai rien d'équivalent pour un PDF ou un webinaire, donc il n'y a
+aucun pourcentage dans ce tableau. Un chiffre inventé dans une
+comparaison est exactement l'endroit où un lecteur va vérifier.
+
+#### 2. LE TABLEAU DES OUTILS LIT `OUTILS`, IL NE LE RECOPIE PAS
+
+`lib/site/integrations.ts` porte déjà les six outils (Tally, Typeform,
+Google Forms, Jotform, Interact, Tiquiz) avec, pour chacun,
+l'intermédiaire exigé et la pose du tag par profil. Ces lignes ont été
+relevées sur les pages d'aide des concurrents en septembre, et deux
+d'entre elles sont des CITATIONS.
+
+La landing les AFFICHE depuis ce module, et le test l'exige : recopier
+une seule cellule à la main donnerait, dans six mois, une page qui
+contredit `/integrations` sur le même domaine. Le lien vers le hub est
+posé sous le tableau (interne, donc il ne fait pas quitter le domaine).
+
+#### 3. LES TROIS REFUS SONT VRAIS, ET ILS DISENT CE QUI SE PASSE À LA PLACE
+
+Ce sont les mêmes que le bloc de qualification de sa page v2, et ils se
+vérifient dans le code : le résultat est un profil PRÉÉCRIT
+(`lib/quizScoring.ts`), le parcours est LINÉAIRE, et le branding est un
+jeu de réglages, pas une maquette libre.
+
+**Un refus qui ne dit pas ce qui se passe à la place n'est pas un
+refus, c'est une excuse.** Chaque ligne porte donc les deux moitiés, et
+le test le vérifie ("Tiquiz attribue un profil que TU as écrit à
+l'avance", "tout le monde voit les mêmes questions, seul le résultat
+change"). La ligne de fin assume : "si l'un des trois est indispensable
+chez toi, ne prends pas Tiquiz".
+
+**La croix est DESSINÉE** (`Croix` dans `pieces.tsx`), jamais un
+caractère Unicode : c'est la leçon du 2 septembre, un glyphe absent
+d'Open Sans rend un carré vide sur Windows.
+
+#### LES QUATRE FAUTES DE CE PASSAGE
+
+1. **Un accent grave dans un commentaire CSS écrit à l'intérieur d'un
+   littéral de gabarit** a terminé le littéral : 500 au chargement,
+   "Expected a semicolon" à la ligne 376 de `styles.ts`. **Quatrième
+   fois.** Le commentaire concerné le dit maintenant en toutes lettres.
+2. **De la spécificité, encore, et exactement la même arithmétique que
+   son bug de boutons :** `.tql-comp thead th` pèse (0,1,2) et
+   `.tql-col-nous` (0,1,0), donc la teinte de la colonne "Un quiz"
+   s'arrêtait à la ligne d'en-tête. Corrigé par des sélecteurs préfixés
+   par la table.
+3. **Mon garde-fou sur `OUTILS` balayait le fichier ENTIER** et tombait
+   sur le témoignage de Gwenn, qui contient "sans devoir passer par des
+   outils comme Zapier ou Make", c'est à dire mot pour mot une cellule
+   du tableau. Il exclut désormais le bloc `TEMOIGNAGES` avant de
+   chercher, avec la raison écrite à côté : **on ne réécrit jamais un
+   témoignage pour faire passer un test.**
+4. **Le répertoire du shell a dérivé** vers `/home/user`, et un `grep`
+   sur un chemin relatif a répondu "No such file". C'est la faute du
+   22 août : chemin ABSOLU dès qu'on traverse plusieurs dépôts.
+
+Test : `tests/logic/landing.test.mts` (46 cas), vérifié en rejouant
+trois versions fautives (un pourcentage inventé dans le comparatif des
+formats, un refus qui ne dit pas ce qui se passe à la place, le tableau
+des outils recopié à la main au lieu de lire `OUTILS`) : les trois
+rougissent.
+
 ## Le sitemap du domaine de vente oubliait les pages légales (4 septembre 2026)
 
 Béné, après le énième refus de validation de marque par Google : "je

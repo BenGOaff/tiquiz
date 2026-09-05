@@ -77,6 +77,17 @@ se projeter, n'y touche pas du tout." Question fermée.
   plus un anglicisme que j'avais écrit ("repart avec"), remplacé par son
   insight clé : "Pas besoin de plus de trafic. Juste de savoir qui te
   lit." Le détail est dans `AGENTS.md`.
+  **SIXIÈME PASSAGE, 5 septembre**, sur sa question : "en donnant tous
+  les arguments au bon moment, pour montrer pourquoi les quiz, et
+  pourquoi tiquiz ?" La réponse était non, et il manquait trois blocs.
+  Un comparatif des FORMATS (PDF ou ebook, webinaire, quiz) sur cinq
+  critères, posé après le problème et avant la démo : la page vendait
+  Tiquiz sans jamais vendre le quiz. Un comparatif des OUTILS, lu depuis
+  `lib/site/integrations.ts` (jamais recopié), posé juste après la
+  section Systeme.io. Et un bloc "ce n'est PAS pour toi si", trois refus
+  vrais et vérifiables dans le code, posé avant les tarifs. Aucun
+  pourcentage inventé dans le comparatif des formats : on compare ce
+  qu'on OBTIENT, pas des taux qu'on ne peut pas sourcer.
   **CE QUI ATTEND SA DÉCISION, en plus des 100 langues :** les quinze
   témoignages viennent de SA page, ils ne sont pas les six avis
   Trustpilot qu'elle a fait retirer le matin même. Si elle n'en veut

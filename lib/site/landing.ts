@@ -305,6 +305,65 @@ export interface ContenuLanding {
   ouCodeCorps: string;
   ouNote: string;
 
+  /** POURQUOI UN QUIZ, ET PAS UN PDF DE PLUS.
+   *
+   *  Béné, 5 septembre 2026 : "en donnant tous les arguments au bon
+   *  moment, pour montrer pourquoi les quiz, et pourquoi tiquiz ?"
+   *
+   *  Ce sont DEUX questions, et la page n'en traitait qu'une. Celle-ci
+   *  répond à la première, juste après la douleur : c'est le moment où
+   *  le lecteur se dit "d'accord, mais j'ai déjà un PDF".
+   *
+   *  AUCUN CHIFFRE DE COMPARAISON. Le 44,9 % de la carte voisine porte
+   *  sa source ; je n'ai rien d'équivalent pour un PDF ou un webinaire,
+   *  donc la comparaison porte sur ce qu'on OBTIENT, qui se constate
+   *  sans mesurer. Un tableau qui inventerait deux taux pour rendre le
+   *  troisième flatteur serait exactement ce qu'elle interdit. */
+  formatsLeadTitre: string;
+  formatsLeadMotCle: string;
+  formatsLeadCorps: string;
+  /** Les en-têtes : le critère, puis les trois colonnes. */
+  formatsLeadColonnes: readonly string[];
+  formatsLeadLignes: readonly { critere: string; valeurs: readonly string[] }[];
+  formatsLeadNote: string;
+
+  /** POURQUOI TIQUIZ, ET PAS UN AUTRE OUTIL DE QUIZ.
+   *
+   *  La deuxième question. Elle était traitée en cinq morceaux répartis
+   *  dans la page, donc nulle part : quelqu'un qui compare des outils
+   *  n'avait aucun endroit où lire la réponse.
+   *
+   *  Le tableau se construit sur `OUTILS` (`lib/site/integrations.ts`),
+   *  la table qui alimente déjà les six pages du hub : chaque ligne y
+   *  est SOURCÉE sur la documentation de l'outil, et le lien vers le
+   *  hub mène aux preuves. Réécrire ces lignes ici en ferait une
+   *  deuxième liste, donc une divergence, sur l'écran où un lecteur
+   *  vérifie. */
+  outilsTitre: string;
+  outilsMotCle: string;
+  outilsCorps: string;
+  outilsColonnes: readonly string[];
+  outilsNote: string;
+  outilsLien: string;
+
+  /** CE QUI N'EST PAS POUR TOI, ET C'EST LE BLOC QUI REND LE RESTE
+   *  CROYABLE.
+   *
+   *  Béné, 5 septembre 2026 : "sans bullshit". Une page qui ne dit que
+   *  du bien se lit comme une page de vente ; une page qui sait dire
+   *  non se lit comme quelqu'un d'honnête, et c'est sa force ("c'est
+   *  pas pour toi, ça va pas t'aider").
+   *
+   *  Les trois refus sont VRAIS et vérifiables dans le code, ce sont
+   *  les mêmes que le bloc de qualification de sa page v2 : le résultat
+   *  est PRÉÉCRIT par profil (`lib/quizScoring.ts`), le parcours est
+   *  LINÉAIRE, et le design suit son branding sans être libre au pixel. */
+  pasPourToiTitre: string;
+  pasPourToiMotCle: string;
+  pasPourToiCorps: string;
+  pasPourToi: readonly string[];
+  pasPourToiFin: string;
+
   /** LA VIRALITÉ, ET C'EST UN ARGUMENT DE SA PAGE QUE J'AVAIS SAUTÉ.
    *
    *  "Pour découvrir les résultats de leur quiz, tes prospects devront
@@ -880,6 +939,77 @@ const fr: ContenuLanding = {
   ouNote:
     "Aucune des deux ne demande de savoir coder. Copier, coller, c'est tout. Et ton visiteur ne voit que ton logo, tes couleurs et ton adresse.",
 
+  formatsLeadTitre: "Le PDF gratuit ne marche plus. Le quiz,",
+  formatsLeadMotCle: "si",
+  formatsLeadCorps:
+    "Ton visiteur a déjà quinze PDF qu'il n'a jamais ouverts. Il ne donne plus son adresse pour un seizième. Un quiz, lui, répond à une question qu'il se pose sur lui même, tout de suite.",
+  formatsLeadColonnes: ["", "Un PDF, un ebook", "Un webinaire", "Un quiz"],
+  formatsLeadLignes: [
+    {
+      critere: "Ce que ton visiteur y gagne",
+      valeurs: [
+        "Un document à lire plus tard",
+        "45 minutes de son temps, à une heure imposée",
+        "Une réponse sur lui, en deux minutes",
+      ],
+    },
+    {
+      critere: "Ce que tu récupères",
+      valeurs: [
+        "Une adresse email",
+        "Une adresse, et sa présence",
+        "Une adresse, et tout ce qu'il vient de te dire sur lui",
+      ],
+    },
+    {
+      critere: "Ce que tu peux lui écrire ensuite",
+      valeurs: [
+        "Le même email qu'à tout le monde",
+        "Le même suivi qu'à tout le monde",
+        "Un message par profil, avec l'offre qui le concerne",
+      ],
+    },
+    {
+      critere: "Est-ce qu'il le partage ?",
+      valeurs: [
+        "Rarement",
+        "Non",
+        "Oui : un résultat sur soi, ça se montre",
+      ],
+    },
+    {
+      critere: "Ce qu'il te faut pour le produire",
+      valeurs: [
+        "L'écrire, le mettre en page",
+        "Le préparer, l'animer en direct",
+        "Décrire ton sujet, relire ce que l'IA propose",
+      ],
+    },
+  ],
+  formatsLeadNote:
+    "Un quiz ne remplace pas ton contenu. Il remplace le formulaire qui demande une adresse sans rien donner en échange.",
+
+  outilsTitre: "Les autres outils de quiz s'arrêtent",
+  outilsMotCle: "avant Systeme.io",
+  outilsCorps:
+    "Ils font tous de très bons quiz. La question n'est pas là : elle est de savoir ce qu'il faut installer entre leur formulaire et ton compte Systeme.io, et qui pose le tag une fois le lead arrivé.",
+  outilsColonnes: ["", "Ce qu'il faut entre les deux", "Un tag par profil"],
+  outilsNote:
+    "Chaque ligne vient de la documentation de l'outil, pas de nous. Les sources sont sur nos pages d'intégration, une par outil.",
+  outilsLien: "Voir le détail, outil par outil",
+
+  pasPourToiTitre: "Et ce n'est pas pour toi",
+  pasPourToiMotCle: "si",
+  pasPourToiCorps:
+    "Autant que tu le saches avant de créer ton compte plutôt qu'après.",
+  pasPourToi: [
+    "Tu veux un texte de résultat rédigé sur mesure pour chaque visiteur. Tiquiz attribue un profil que TU as écrit à l'avance, il ne rédige pas au cas par cas.",
+    "Tu veux des parcours qui se ramifient selon les réponses. Le parcours est linéaire : tout le monde voit les mêmes questions, seul le résultat change.",
+    "Tu veux poser chaque élément au pixel près. Tu règles ton logo, tes couleurs, ta police et la disposition, pas la maquette entière.",
+  ],
+  pasPourToiFin:
+    "Si l'un des trois est indispensable chez toi, ne prends pas Tiquiz : tu perdrais ton temps et le mien.",
+
   viralTitre: "Tes prospects t'en amènent",
   viralMotCle: "d'autres",
   viralCorps: [
@@ -1191,6 +1321,77 @@ const en: ContenuLanding = {
     "You copy the snippet from Tiquiz and paste it into your page. The quiz shows up inside it, in your place.",
   ouNote:
     "Neither one asks you to know how to code. Copy, paste, done. And your visitor only sees your logo, your colours and your address.",
+
+  formatsLeadTitre: "The free PDF stopped working. A quiz",
+  formatsLeadMotCle: "has not",
+  formatsLeadCorps:
+    "Your visitor already has fifteen PDFs they never opened. They will not hand over their address for a sixteenth. A quiz answers a question they are already asking about themselves, right now.",
+  formatsLeadColonnes: ["", "A PDF, an ebook", "A webinar", "A quiz"],
+  formatsLeadLignes: [
+    {
+      critere: "What your visitor gets",
+      valeurs: [
+        "A document to read later",
+        "45 minutes of their time, at a fixed hour",
+        "An answer about themselves, in two minutes",
+      ],
+    },
+    {
+      critere: "What you get back",
+      valeurs: [
+        "An email address",
+        "An address, and their attendance",
+        "An address, and everything they just told you about themselves",
+      ],
+    },
+    {
+      critere: "What you can write to them next",
+      valeurs: [
+        "The same email as everyone else",
+        "The same follow up as everyone else",
+        "One message per profile, with the offer that fits",
+      ],
+    },
+    {
+      critere: "Do they share it?",
+      valeurs: [
+        "Rarely",
+        "No",
+        "Yes: a result about yourself is worth showing",
+      ],
+    },
+    {
+      critere: "What it takes you to produce",
+      valeurs: [
+        "Writing it, laying it out",
+        "Preparing it, running it live",
+        "Describing your topic, reading over what the AI drafts",
+      ],
+    },
+  ],
+  formatsLeadNote:
+    "A quiz does not replace your content. It replaces the form that asks for an address and gives nothing back.",
+
+  outilsTitre: "Other quiz tools stop",
+  outilsMotCle: "before Systeme.io",
+  outilsCorps:
+    "They all build very good quizzes. That is not the question: the question is what you have to install between their form and your Systeme.io account, and who applies the tag once the lead arrives.",
+  outilsColonnes: ["", "What goes in between", "One tag per profile"],
+  outilsNote:
+    "Every line comes from the tool's own documentation, not from us. The sources are on our integration pages, one per tool.",
+  outilsLien: "See the detail, tool by tool",
+
+  pasPourToiTitre: "And it is not for you",
+  pasPourToiMotCle: "if",
+  pasPourToiCorps:
+    "Better you know before creating an account than after.",
+  pasPourToi: [
+    "You want result copy written from scratch for every single visitor. Tiquiz assigns a profile YOU wrote in advance, it does not draft case by case.",
+    "You want paths that branch on the answers. The path is linear: everyone sees the same questions, only the result changes.",
+    "You want to place every element to the pixel. You set your logo, your colours, your font and the layout, not the whole design.",
+  ],
+  pasPourToiFin:
+    "If one of those three is essential where you are, do not take Tiquiz: you would waste your time and mine.",
 
   viralTitre: "Your prospects bring you",
   viralMotCle: "more prospects",

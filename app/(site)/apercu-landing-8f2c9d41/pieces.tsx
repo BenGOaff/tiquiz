@@ -47,6 +47,23 @@ export function CochePleine() {
   );
 }
 
+/**
+ * LA CROIX DU BLOC "ce n'est pas pour toi si".
+ *
+ * DESSINÉE, jamais un caractère Unicode : la coche et la flèche de la
+ * page de vente ont été refaites le 2 septembre pour exactement ça,
+ * parce qu'un glyphe absent d'Open Sans rend un carré vide sur Windows.
+ */
+export function Croix() {
+  return (
+    <span aria-hidden className="tql-croix">
+      <svg viewBox="0 0 24 24" width="16" height="16">
+        <path d="M6 6l12 12M18 6L6 18" {...T} strokeWidth="2.6" />
+      </svg>
+    </span>
+  );
+}
+
 /** La coche fine, pour les rassurances sous un bouton. */
 export function CocheFine() {
   return (

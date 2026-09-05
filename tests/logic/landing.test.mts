@@ -49,6 +49,7 @@ import {
   AVANTAGES_PLUS,
 } from "@/lib/checkout/avantages";
 import { OWNER_CATALOG, formatOwnerPrice } from "@/lib/checkout/catalog";
+import { OUTILS } from "@/lib/site/integrations";
 import { FREE_LIMITS } from "@/lib/planLimits";
 
 import { readFileSync } from "node:fs";
@@ -525,6 +526,126 @@ describe("le coût de ne rien faire est dit, et les trois formats aussi", () => 
     // Retour Jocelyne, 4 août : sur un sujet intime, un taux de partage
     // bas n'est ni un défaut du quiz ni un cadeau trop faible.
     assert.match(LANDING.fr.viralNote, /jamais obligatoire|couper/i);
+  });
+});
+
+describe("la page répond aux DEUX questions : pourquoi un quiz, pourquoi Tiquiz", () => {
+  // Béné, 5 septembre 2026 : "en donnant tous les arguments au bon
+  // moment, pour montrer pourquoi les quiz, et pourquoi tiquiz ?"
+  //
+  // Ce sont deux questions distinctes. La page n'en traitait qu'une :
+  // "pourquoi Tiquiz" vivait en cinq morceaux répartis un peu partout,
+  // donc nulle part, et "pourquoi un quiz plutôt qu'un PDF" reposait
+  // sur une seule animation.
+
+  test("le comparatif des formats n'invente AUCUN chiffre", () => {
+    // Le 44,9 % de la carte voisine porte sa source. Je n'ai rien
+    // d'équivalent pour un PDF ou un webinaire : un tableau qui
+    // inventerait deux taux pour rendre le troisième flatteur serait
+    // exactement le bullshit qu'elle interdit.
+    for (const langue of Object.keys(LANDING)) {
+      const t = LANDING[langue];
+      const cellules = t.formatsLeadLignes.flatMap((l) => [l.critere, ...l.valeurs]).join(" | ");
+      assert.ok(
+        !/\d+[.,]?\d*\s*%/.test(cellules),
+        `${langue} : le comparatif des formats annonce un pourcentage sans source`,
+      );
+      assert.ok(
+        !/\bx\s?\d|\d+\s*(fois plus|times more)/i.test(cellules),
+        `${langue} : le comparatif des formats annonce un multiplicateur sans source`,
+      );
+    }
+  });
+
+  test("il compare bien TROIS formats, sur au moins quatre critères", () => {
+    for (const langue of Object.keys(LANDING)) {
+      const t = LANDING[langue];
+      assert.equal(t.formatsLeadColonnes.length, 4, `${langue} : il faut le critère plus trois formats`);
+      assert.ok(t.formatsLeadLignes.length >= 4, `${langue} : trop peu de critères`);
+      for (const l of t.formatsLeadLignes) {
+        assert.equal(l.valeurs.length, 3, `${langue} : "${l.critere}" n'a pas trois valeurs`);
+      }
+    }
+  });
+
+  test("le comparatif des outils LIT `OUTILS`, il ne le recopie pas", () => {
+    // C'est la table qui alimente les six pages du hub, et chaque ligne
+    // y est sourcée sur la documentation de l'outil. Une deuxième liste
+    // écrite ici divergerait, sur l'écran où un lecteur vérifie.
+    assert.ok(
+      /OUTILS\.map\(/.test(PAGE_CODE),
+      "la page ne construit pas le comparatif sur OUTILS",
+    );
+    // ON ÉCARTE LES TÉMOIGNAGES DU BALAYAGE, et ce n'est pas un
+    // assouplissement : Gwenn écrit "sans devoir passer par des outils
+    // comme Zapier ou Make", c'est à dire mot pour mot une cellule du
+    // tableau. Ce n'est pas une copie, c'est quelqu'un qui parle, et un
+    // témoignage ne se réécrit jamais pour faire passer un test.
+    const sansTemoins = CODE.replace(
+      /export const TEMOIGNAGES[\s\S]*?\n\] as const;/,
+      " ",
+    );
+    for (const o of OUTILS) {
+      assert.ok(
+        !sansTemoins.includes(o.intermediaire),
+        `"${o.intermediaire}" est recopié dans lib/site/landing.ts`,
+      );
+    }
+    // Tiquiz est la ligne SANS page fille, et elle doit rester dans la
+    // table : un comparatif qui ne se compare pas ne dit rien.
+    assert.ok(OUTILS.some((o) => o.nom === "Tiquiz"));
+  });
+
+  test("et il mène aux sources, sur nos domaines", () => {
+    assert.ok(
+      /href="\/integrations"/.test(PAGE_CODE),
+      "le comparatif des outils ne mène pas au hub, donc aux sources",
+    );
+  });
+});
+
+describe("la page sait dire non, et c'est ce qui rend le reste croyable", () => {
+  // Béné, 5 septembre 2026 : "sans bullshit". Une page qui ne dit que
+  // du bien se lit comme une page de vente. Sa force à elle, c'est de
+  // savoir dire "c'est pas pour toi, ça va pas t'aider".
+
+  test("trois refus au moins, et ils sont VRAIS", () => {
+    for (const langue of Object.keys(LANDING)) {
+      assert.ok(
+        LANDING[langue].pasPourToi.length >= 3,
+        `${langue} : moins de trois refus`,
+      );
+    }
+    // Les trois sont ceux du bloc de qualification de sa page v2 : le
+    // résultat est préécrit par profil, le parcours est linéaire, et le
+    // design suit son branding sans être libre au pixel. Un refus
+    // inventé pour faire honnête serait du bullshit de plus.
+    const fr = LANDING.fr.pasPourToi.join(" ");
+    assert.match(fr, /sur mesure pour chaque visiteur/i);
+    assert.match(fr, /linéaire/i);
+    assert.match(fr, /pixel/i);
+  });
+
+  test("chaque refus DIT ce que Tiquiz fait à la place", () => {
+    // "Non" tout court fait partir quelqu'un que le produit sert très
+    // bien. Chaque ligne porte donc la limite ET le comportement réel.
+    for (const langue of Object.keys(LANDING)) {
+      for (const x of LANDING[langue].pasPourToi) {
+        assert.ok(
+          x.split(/[.!?]/).filter((p) => p.trim().length > 12).length >= 2,
+          `${langue} : "${x.slice(0, 40)}..." ne dit pas ce qui se passe à la place`,
+        );
+      }
+    }
+  });
+
+  test("il est posé AVANT le prix, jamais après", () => {
+    // Après, c'est un remords. Avant, c'est une porte qu'on laisse
+    // ouverte pour sortir.
+    const non = PAGE_CODE.indexOf("tql-non-liste");
+    const prix = PAGE_CODE.indexOf("colonnes.map");
+    assert.ok(non > 0, "le bloc des refus n'est pas rendu");
+    assert.ok(prix > non, "les refus doivent précéder les tarifs");
   });
 });
 

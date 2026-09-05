@@ -361,6 +361,38 @@ export const CSS = `
 .tql-comp tbody tr:last-child th,.tql-comp tbody tr:last-child td{border-bottom:0}
 /* UN TIRET, PAS UNE CASE VIDE : une case vide se lit "on a oublie". */
 .tql-non{color:#B9BFD4;font-weight:700}
+
+/* LES DEUX TABLEAUX D'ARGUMENTS.
+   Ils reprennent la boite et les bordures de la grille de tarifs, mais
+   leurs cellules portent des PHRASES : centrer et brider a 18 % comme
+   une colonne de coches donnerait des lignes de trois mots. */
+.tql-comp-txt td{text-align:left;width:auto;color:var(--c);line-height:1.5}
+.tql-comp-txt thead th:first-child{width:26%}
+.tql-comp-txt tbody th{font-weight:700;color:var(--e)}
+/* La colonne qui nous concerne est TEINTEE, jamais un aplat sous du
+   texte : c'est la regle du 31 aout.
+
+   LES SELECTEURS SONT PREFIXES PAR LE TABLEAU, ET CE N'EST PAS
+   DECORATIF : sans ce prefixe, la regle d'en tete du tableau (une
+   classe, deux elements) bat la classe de colonne (une classe seule),
+   donc la teinte sautait sur la ligne d'en tete et la colonne se
+   lisait en deux morceaux. Exactement l'arithmetique du bug de boutons
+   du 5 septembre.
+
+   (Aucun accent grave dans ce commentaire : il vit DANS le litteral de
+   gabarit, et un accent grave le terminerait. Quatrieme fois.) */
+.tql-comp td.tql-col-nous,
+.tql-comp thead th.tql-col-nous{background:#F1F5FE}
+.tql-comp tbody tr.tql-lg-nous th,
+.tql-comp tbody tr.tql-lg-nous td{background:#F1F5FE;font-weight:700;color:var(--e)}
+
+/* CE QUI N'EST PAS POUR TOI. Une croix DESSINEE, pas un caractere. */
+.tql-non-liste{list-style:none;padding:0;margin:30px 0 0;display:grid;gap:18px}
+.tql-non-liste li{display:flex;align-items:flex-start;gap:14px;
+  font-size:17px;line-height:1.6;color:#3B3B3B;text-align:left}
+.tql-croix{flex:0 0 auto;margin-top:4px;color:#B9BFD4;display:inline-flex}
+/* La phrase de fin est collee au dernier refus sans cette marge. */
+.tql-non-liste+.tql-p{margin-top:30px}
 .tql-val{font-weight:700;color:var(--e)}
 
 /* ── LA DÉMO EN IFRAME ──────────────────────────────────────────── */
