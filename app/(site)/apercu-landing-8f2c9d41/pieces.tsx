@@ -47,6 +47,23 @@ export function CochePleine() {
   );
 }
 
+/**
+ * LA CROIX DU BLOC "ce n'est pas pour toi si".
+ *
+ * DESSINÉE, jamais un caractère Unicode : la coche et la flèche de la
+ * page de vente ont été refaites le 2 septembre pour exactement ça,
+ * parce qu'un glyphe absent d'Open Sans rend un carré vide sur Windows.
+ */
+export function Croix() {
+  return (
+    <span aria-hidden className="tql-croix">
+      <svg viewBox="0 0 24 24" width="16" height="16">
+        <path d="M6 6l12 12M18 6L6 18" {...T} strokeWidth="2.6" />
+      </svg>
+    </span>
+  );
+}
+
 /** La coche fine, pour les rassurances sous un bouton. */
 export function CocheFine() {
   return (
@@ -65,28 +82,6 @@ export function Fleche() {
       <svg viewBox="0 0 24 24" width="17" height="17">
         <path d="M4 12h15m0 0l-6-6m6 6l-6 6" {...T} strokeWidth="2.2" />
       </svg>
-    </span>
-  );
-}
-
-/**
- * LES CINQ ÉTOILES D'UN AVIS.
- *
- * Toutes pleines, et c'est un FAIT, pas une décoration : les six avis
- * relevés sur Trustpilot sont tous en 5 étoiles. Le jour où il en
- * arrive un à 4, ce composant prend un paramètre.
- */
-export function Etoiles() {
-  return (
-    <span aria-hidden className="tql-etoiles">
-      {[0, 1, 2, 3, 4].map((i) => (
-        <svg key={i} viewBox="0 0 24 24" width="15" height="15">
-          <path
-            d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.4-5.8-3-5.8 3 1.1-6.4L2.6 9.4l6.5-.9z"
-            fill="currentColor"
-          />
-        </svg>
-      ))}
     </span>
   );
 }

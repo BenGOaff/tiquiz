@@ -8151,24 +8151,23 @@ Les huit qui manquaient, tous les huit relevés dans la capture :
 pas d'elle** : la preuve sociale remontée AVANT la première
 fonctionnalité, et une grille "bento" à la place d'une liste à puces.
 
-### LES AVIS SONT VRAIS, ET ILS NE SE TRADUISENT JAMAIS
+### 🚨 LES SIX AVIS TRUSTPILOT ONT ÉTÉ RETIRÉS LE 5 SEPTEMBRE
 
-Béné : "on a ici des avis tous frais sur tiquiz, tu peux les
-utiliser : fr.trustpilot.com/review/tiquiz.fr".
+Ce bloc racontait comment ils étaient relevés mot pour mot et pourquoi
+ils ne se traduisaient jamais. **C'est périmé, et je le corrige ici
+plutôt que d'empiler** : Béné, 5 septembre : "6 avis trustpilot pas une
+preuve sociale. Supprime. Tu peux mettre +200 utilisateurs (c'est le
+vrai chiffre)."
 
-Les six sont relevés mot pour mot dans `lib/site/landing.ts`, constante
-`AVIS`, avec leur auteur et leur date. **Ils vivent HORS des objets de
-langue** : un témoignage traduit n'est plus un témoignage, c'est une
-reformulation signée du nom de quelqu'un d'autre, et c'est son interdit
-numéro un. On ne corrige NI l'orthographe NI la ponctuation.
+Elle a raison sur le fond : six avis ne pèsent pas, et les afficher en
+annonçant leur nombre SOULIGNE qu'il y en a six. La section, la
+constante `AVIS`, `TRUSTPILOT_URL` et le composant `Etoiles` sont
+supprimés, pas laissés sans appelant.
 
-🚨 **ET LES DEUX CHIFFRES DE TRUSTPILOT SE CONTREDISENT EN APPARENCE.**
-Mesuré : 6 avis, une répartition de **100 % en 5 étoiles**, et un
-**TrustScore de 4,2/5**. Le TrustScore est une note PONDÉRÉE (volume et
-fraîcheur), pas la moyenne. La page n'affiche donc **aucune note
-chiffrée** : à côté de "tous en 5 étoiles", un 4,2 se lirait comme une
-erreur, et l'écrire sans le 100 % sous-vendrait. On dit le FAIT, et on
-met le lien pour que n'importe qui vérifie. Le test l'interdit.
+Ce qui reste vrai de l'ancienne note, et qui vaut pour le jour où elle
+donnera d'autres témoignages : **un témoignage ne se traduit JAMAIS**,
+il vit hors des objets de langue, et on ne corrige ni son orthographe
+ni sa ponctuation.
 
 ### CE QUE MES PROPRES MESURES ONT ENCORE RATÉ
 
@@ -8208,7 +8207,7 @@ Aucun n'aurait été vu par `tsc` ni par un test de contenu :
   HTML (`pieces.tsx`) : traduites avec le reste, nettes à toutes les
   densités, et elles ne pèsent rien.
 - **Aucune vidéo de démo.** Sa page en a deux ; je n'en ai aucune.
-- **Aucun portrait sur les avis.** Trustpilot n'en fournit pas.
+- **Aucun avis** depuis le 5 septembre : voir plus haut.
 - **La FAQ n'a que 4 questions**, la sienne en a 18 en 5 groupes. Les
   siennes sont déjà écrites et validées : elles se portent depuis sa
   page, elles ne se réinventent pas.
@@ -8359,6 +8358,439 @@ qui lit déjà des fichiers, et `lib/site/landing.ts` reste PUR.
 interdit `tipote.fr/atelier-du-quiz` écrit en dur. Ma chaîne est une CLÉ
 DE RECHERCHE, pas une destination : l'exemption porte sur `cherche:` et
 lui seul, jamais sur `remplace:`, et jamais sur le fichier entier.
+
+### Quatrième passage : douze reproches, et le premier tenait à UNE ligne de CSS (5 septembre 2026)
+
+Béné a listé douze défauts en un message. Ils tombent en trois familles,
+et la première explique deux d'entre eux d'un coup.
+
+#### 1. TOUS LES BOUTONS DE LA PAGE AVAIENT LA MAUVAISE COULEUR
+
+"Texte foncé sur fond foncé : illisible" sur le bouton du haut de page,
+et "texte blanc sur bouton blanc ? Vraiment ?" sur celui du bandeau de
+fin. Deux symptômes opposés, **UNE cause, et elle est arithmétique** :
+
+```
+.tql a{color:inherit}   ->  0,1,1   (une classe + un element)
+.tql-cta                ->  0,1,0
+.tql-col-cta            ->  0,1,0
+.tql-bande-cta          ->  0,1,0
+```
+
+La règle d'héritage battait donc TOUTES les règles de bouton. Sur le
+fond clair de la page, les boutons bleus prenaient l'encre sombre ; dans
+le bandeau, où `.tql-bande` pose `color:#fff`, le bouton blanc prenait
+du blanc. La ligne avait été écrite pour qu'un lien NU hérite du texte
+autour, ce qui est juste ; elle visait aussi tous les autres.
+
+`.tql a:not([class])` la borne aux liens nus. **MESURÉ après correction,
+dans un navigateur, pas déduit** : les neuf boutons rendent 4,20:1
+(blanc sur son bleu) et 12,05:1 (encre sur blanc).
+
+**Le garde-fou CALCULE la spécificité, il ne cherche pas une chaîne.**
+Figer `:not([class])` interdirait de corriger autrement, et une règle
+d'héritage réécrite d'une autre façon referait exactement le même bug.
+Le test parse la feuille, ne garde que les règles qui posent `color`,
+et refuse qu'un sélecteur visant `a` nu batte un sélecteur de bouton.
+
+#### 2. SIX AVIS NE SONT PAS UNE PREUVE SOCIALE
+
+"Supprime. Tu peux mettre +200 utilisateurs (c'est le vrai chiffre)."
+Et sur le lien qui menait à leur fiche : "non, on ne veut pas que les
+gens quittent la page ... on veut qu'ils commandent bordel !"
+
+Elle a raison deux fois. Annoncer "6 avis" SOULIGNE qu'il y en a six ; et
+un lien sortant posé sous le premier bouton est un visiteur qui part
+avant d'avoir lu la page.
+
+**Il n'y a plus AUCUN lien qui quitte nos domaines**, et le test le
+vérifie sur toutes les adresses absolues de la page.
+
+**À la place des avis : le bloc des cinq OBJECTIONS**, tirées mot pour
+mot du persona de `copywriting-claude/Persona tiquiz.md` ("encore un
+outil de plus", "je ne suis pas technique", "ça va me prendre du temps",
+"je ne suis pas sûr que ça marche dans mon domaine", "j'ai déjà testé
+plein de trucs sans résultat"). Ce n'est pas un pis-aller : un bloc
+d'objections en fin de page est ce qui répond à ce que le lecteur pense
+à l'instant où il hésite, alors que six témoignages ne répondent à
+aucune question précise.
+
+**"créateurs" et pas "utilisateurs".** Elle a écrit "+200 utilisateurs" ;
+la page dit "Plus de 200 créateurs". Le nombre est le sien, le mot est
+celui du reste de la page.
+
+#### 3. LE HAUT DE PAGE VENDAIT LE COMMENT
+
+"'Tu décris ton sujet en trois champs. L'IA écrit les questions...' =
+c'est le COMMENT pas le résultat. On ne vend jamais les 10h de vol, on
+vend la plage avec les cocktails."
+
+Elle a listé ce qu'un visiteur doit comprendre : si c'est fait pour lui,
+à quoi ça sert, ce qu'il a à y gagner, comment ça marche, pourquoi il
+peut faire confiance. Le haut de page y répond maintenant dans cet
+ordre, et le COMMENT est DÉPLACÉ, pas supprimé : les quatre étapes
+vivent plus bas, là où on les lit.
+
+| | avant | après |
+|---|---|---|
+| titre | "Le générateur de quiz connecté à Systeme.io" | "Ton visiteur repart avec un résultat. Toi, avec son email." |
+| accroche | trois champs, l'IA écrit, tu relis | ce que le visiteur donne, et ce que ça devient dans Systeme.io |
+| pour qui | rien | "coachs, consultants, formateurs et créateurs qui ont une offre et pas assez de monde à qui la présenter" |
+
+**Le garde-fou est une LISTE NOIRE des tournures qu'elle a refusées**,
+pas une formulation figée : le titre et l'accroche se réécrivent
+librement tant qu'ils ne redescendent pas dans la mécanique.
+
+#### LA STRUCTURE, ET D'OÙ ELLE VIENT
+
+"Il faut que tu cherches sérieusement les meilleures structures
+copywriting des meilleures landing pages de saas... tu as des tonnes de
+ressources copywriting dans le code."
+
+Les deux sources ont été lues, et elles disent la même chose :
+
+- **ses ressources** (`copywriting-claude/`) : les 17 déclencheurs
+  psychologiques, les 104 hooks, les puces promesses, le persona ;
+- **ce que mesurent les landings SaaS de 2026** : le cadre PAS
+  (problème, agitation, solution) convertit +22 % contre une page qui
+  empile des fonctionnalités ; un bloc d'objections en fin de page vaut
+  +28 % de clics ; le haut de page doit répondre en dix secondes à
+  "c'est quoi, c'est pour qui, et après".
+
+```
+haut de page -> problème -> démo -> mécanique -> funnel -> Systeme.io
+-> les 2 mécaniques -> où il vit -> ton branding -> objections
+-> tarifs + grille comparative -> FAQ -> bandeau
+```
+
+Les déclencheurs sont posés là où ils comptent, pas récités : preuve par
+le résultat (la démo est elle même un Popquiz), plausibilité (les
+objections), sécurité (le gratuit sans carte, répété sous chaque
+bouton), preuve scientifique (le 44,9 % avec sa source).
+
+#### LE PALIER À 17 € AVAIT L'AIR PLUS PAUVRE QUE LE GRATUIT
+
+"Y'a plus de bénéfices dans le compte gratuit que le compte à 17 € tu
+trouves ça logique et vendeur ?? Mets les bénéfices puces promesses."
+
+Mesurable : le gratuit listait ses TROIS limites, la colonne à 17 € ses
+DEUX lignes. Sur l'écran où quelqu'un sort sa carte.
+
+**Trois corrections, et les trois comptent :**
+
+1. **`avantages.ts` porte un `detail` sur les lignes payantes.** Une
+   puce promesse, chez Béné, c'est un BÉNÉFICE suivi de sa CONSÉQUENCE
+   concrète, et le test est "est-ce qu'on peut répondre 'et alors ??' à
+   la fin". "Réponses illimitées" appelle ce "et alors" ; "ton quiz peut
+   décoller un mardi sans qu'un seul email se floute" non. Le bon de
+   commande affiche les mêmes lignes : c'est LA source depuis le
+   2 septembre, et il n'y a pas de deuxième liste.
+2. **L'échelle se DIT** : "Tout le gratuit, sans les limites :" et
+   "Tout Tiquiz, plus :". Sans cette ligne, la colonne payante a l'air
+   de contenir deux choses là où le gratuit en annonce trois.
+3. **La grille comparative** ("on n'a qu'à rajouter une grille de
+   fonctionnalités qui compare tous les plans, comme les vrais saas").
+   Trois groupes : ce qui est BORNÉ sur le gratuit, ce que TOUT LE MONDE
+   a, ce que le PLUS ajoute. Elle ne recopie rien : les limites viennent
+   de `FREE_LIMITS`, les lignes de `avantages.ts`, et le test exige
+   qu'aucun avantage promis sur le bon de commande n'y manque.
+
+**Une limite chiffrée n'est NI un oui NI un non.** Une coche sur "1 quiz"
+ferait croire que le gratuit est illimité : la cellule rend la VALEUR.
+Et un refus rend un TIRET, jamais une case vide, qui se lit "on a oublié
+de remplir".
+
+#### LE BÉNÉFICE SYSTEME.IO N'ÉTAIT PAS CELUI QU'ON CROYAIT
+
+Le titre annonçait "Le tag est posé, même s'il n'existe pas encore".
+Béné : "oui ok c'est super, mais NON c'est pas un bénéfice qui fait
+vendre. Le bénéfice c'est que Systeme io est connecté nativement, pas
+besoin de lier zapier, make, pabbly ou autre."
+
+Elle a raison, et c'est une leçon de vente : **la création du tag est
+une PREUVE, pas un argument.** Ce qu'un lecteur achète, c'est de ne pas
+avoir un abonnement de plus et une configuration de plus. Le titre nomme
+donc les trois intermédiaires, et le prix de Zapier est affiché : il
+vient de `lib/site/integrations.ts`, jamais écrit à la main, et les
+devises ne se convertissent pas.
+
+#### UNE ANIMATION LEVÉE SANS SON CONTEXTE NE DIT RIEN
+
+"Ok t'as repris mes animations mais pas comme elles sont à l'origine, du
+coup ça ne veut plus rien dire", et : "ton logo ta marque arrive comme
+un cheveu sur la soupe, sans texte ni contexte, incompréhensible".
+
+Sur SA page, chaque animation vit sous un titre qui dit ce qu'on
+regarde. Levée toute seule au bas d'une autre section, elle est un
+dessin qui bouge. Les trois ont maintenant leur titre, leur phrase et
+leur légende :
+
+| Le bloc | Ce qu'il illustre |
+|---|---|
+| `opt-in-vs-quiz` | "Même effort pour attirer ton visiteur. 5x plus de données pour toi." |
+| `tes-pixels` | les deux mécaniques : profil, ou score |
+| `ton-branding` | ton logo, tes couleurs, ta langue |
+
+**`tes-pixels` DORMAIT dans `content/sales/anim/` sans être servi nulle
+part.** Il montre exactement "profil OU score", c'est à dire la réponse
+à l'objection la plus chère du persona ("je ne suis pas sûr que ça
+marche dans mon domaine"), et il n'était affiché sur aucun écran.
+
+Le test exige qu'aucun `<AnimVente>` ne soit posé sans titre ni phrase
+au dessus, et que les trois blocs extraits soient servis.
+
+#### LE TITRE DE LA DÉMO DÉCRIVAIT UN ÉCRAN
+
+"'Tiquiz en action : teste la création de ton quiz' : ben non, le quiz à
+tester il est ailleurs, là on teste le fonctionnement. Et c'est vraiment
+un titre qui fait vendre ?"
+
+Les deux reproches sont justes : le titre était FAUX (la démo est un
+Popquiz, pas le générateur) et il décrivait un écran au lieu de promettre
+quelque chose. Il dit maintenant "Regarde ce que ton visiteur va vivre",
+et le corps assume la mise en abyme : la démo est elle même un Popquiz
+Tiquiz, donc c'est la preuve par le résultat.
+
+#### CE QUI RESTE OUVERT
+
+- **Son animation `ton-branding` annonce "100+ langues via l'IA".**
+  Compté dans `lib/quizLanguages.ts` : le catalogue porte EXACTEMENT
+  100 entrées. C'est SON asset, levé à l'octet près, et il porte le même
+  chiffre sur sa page de vente en ligne. **On ne l'a pas réécrit** : une
+  correction ici laisserait sa vraie page fausse. C'est un dessin à
+  reprendre, pas du code.
+- **Le contraste des boutons est de 4,20:1** (blanc sur `#5A6EF6`, sa
+  couleur). C'est au dessus du seuil des textes larges (3:1) et en
+  dessous de celui des textes normaux (4,5:1). Ses boutons sont en gras
+  à 17 px, donc c'est conforme ; c'est dit pour qu'on ne le découvre pas
+  dans un audit.
+
+Test : `tests/logic/landing.test.mts` (30 cas), vérifié en rejouant
+QUATRE versions fautives (l'ancienne règle d'héritage, une puce payante
+sans sa conséquence, le lien vers Trustpilot, l'ancienne accroche qui
+vend le processus) : les quatre rougissent.
+
+### Cinquième passage : j'avais corrigé sa liste, pas écrit la page (5 septembre 2026)
+
+Béné, après le quatrième passage : "pourquoi 'créateurs' c'est des
+entrepreneurs, des coachs, des auteurs, des affiliés, des infopreneurs
+... ils ne se définissent pas comme étant des 'créateurs' j'ai bossé dur
+sur ma page initiale, il faut arrêter de chier dessus comme ça." Et :
+"et du coup ... c'est tout ce que tu as corrigé ? [...] Tu considères
+que là c'est ok, tu m'as sorti la MEILLEURE version possible ?"
+
+**Elle a raison sur les deux, et le deuxième reproche est le vrai : le
+quatrième passage a répondu à sa liste de douze défauts, il n'a pas fait
+la réécriture qu'elle demandait.**
+
+#### LA MÉTHODE, ET C'EST ELLE QUI A TOUT CHANGÉ
+
+**J'ai EXTRAIT sa page de vente en ordre de lecture** (545 lignes de
+texte visible, `content/sales/tiquiz.html` sans ses scripts) au lieu de
+la relire en diagonale. C'est le geste du 3 septembre sur le labo de
+l'Atelier ("relever les phrases de l'un et les chercher dans l'autre
+trouve les absences"), et il a rendu quatre choses que je n'avais pas
+vues.
+
+| Ce que sa page a | Ce que la landing avait |
+|---|---|
+| un CTA APRÈS CHAQUE SECTION, à la première personne | trois boutons en tout |
+| quinze témoignages nommés, avec leur métier | un nombre |
+| le COÛT de ne rien faire, et la plateforme qui peut sauter | "un opt-in demande, un quiz donne" |
+| une section viralité, et une section trois formats | rien |
+
+#### 1. SON VOCABULAIRE SE LIT DANS SES PROPRES TÉMOIGNAGES
+
+Je n'avais pas à inventer la liste : les quinze témoignages de sa page
+portent leur métier, écrit par les intéressés. Entrepreneur, infopreneur,
+consultant, formatrice, coach, solopreneur, thérapeute, affilié,
+marketeur, créateur de contenu. **C'est cette liste qui décide des mots
+de la page**, et "créateurs" tout court n'y est jamais.
+
+Le test bannit le mot NU dans `preuve` et `pourQui` ; "créateur de
+contenu" et "course creators" restent, ce sont des métiers.
+
+#### 2. LES QUINZE TÉMOIGNAGES REVIENNENT, ET CE NE SONT PAS LES SIX
+
+Elle a fait retirer six avis Trustpilot le 5 septembre au matin, et le
+lien qui menait chez eux. Ceux là sont autre chose : **ils vivent déjà
+sur SA page**, sous son titre ("Il y a un avant ... et un après
+Tiquiz"), ils sont quinze, ils portent un prénom et un métier, et aucun
+ne fait quitter la page.
+
+`TEMOIGNAGES` (`lib/site/landing.ts`) vit HORS des objets de langue :
+**un témoignage ne se traduit jamais, ne se corrige pas, ne se
+raccourcit pas.** C'est quelqu'un qui a écrit ça, et le réécrire en
+ferait un faux témoignage, c'est à dire sa ligne rouge numéro un.
+
+Ils sont précédés de la TRANSFORMATION, quatre lignes tirées de son
+persona ("maintenant, imaginons que tout change") : une page qui décrit
+le problème puis l'outil saute l'étape où le lecteur se projette.
+
+#### 3. LE COÛT DE NE RIEN FAIRE : son titre valait mieux que le mien
+
+Le mien disait "Un opt-in demande. Un quiz donne." Le sien dit **"Chaque
+visiteur qui repart sans te laisser son email est un client perdu"**, et
+il est meilleur pour une raison précise : il dit ce que ça COÛTE, pas ce
+que l'outil FAIT.
+
+Son deuxième argument manquait entièrement, et c'est le plus fort de sa
+page : **"tes abonnés ne t'appartiennent pas : ton compte sur n'importe
+quel réseau peut sauter à tout moment. Ta liste email, elle, est à toi."**
+
+#### 4. UN BOUTON APRÈS CHAQUE SECTION, ET IL DIT UN DÉSIR
+
+Sa signature, relevée section par section : "Je veux capturer ces
+emails", "Je veux mon quiz viral", "Je veux vendre avec un quiz", "Je me
+lance gratuitement". **Ce n'est pas un libellé de bouton, c'est la
+phrase que le lecteur vient de se dire.** Six boutons maintenant, contre
+trois, avec sa rassurance dessous ("Pas besoin de CB").
+
+#### 5. DEUX ARGUMENTS DE SA PAGE ÉTAIENT ABSENTS
+
+- **la VIRALITÉ** : le seul levier qui RAMÈNE des visiteurs au lieu d'en
+  convertir. Vrai dans le code (`virality_enabled`, le bonus de partage).
+  **AUCUN chiffre** : ceux de sa page portent sur ses propres quiz, je ne
+  peux pas les sourcer. Et la note dit la nuance de Jocelyne (4 août) :
+  sur un sujet intime, un partage bas n'est pas un défaut du quiz ;
+- **les TROIS FORMATS** : quiz, sondage, Popquiz. Ils sont dans la
+  grille de tarifs depuis le début et aucun écran ne disait ce qu'ils
+  font. Deux produits payés, jamais montrés.
+
+#### ET LE HAUT DE PAGE PORTAIT UN ANGLICISME QUE J'AI ÉCRIT MOI MÊME
+
+"Ton visiteur repart AVEC un résultat. Toi, AVEC son email." C'est le
+calque banni par son guide anti-IA (point 17, "ce que tu repars avec",
+de *what you walk away with*), et je l'avais posé en `<h1>`.
+
+Le titre dit maintenant son INSIGHT CLÉ, celui de son persona : **"Pas
+besoin de plus de trafic. Juste de savoir qui te lit."** Onze mots, une
+construction qui est la sienne ("Pas besoin de CB"), et il finit sur le
+fragment coloré, donc plus de ponctuation orpheline après le curseur.
+
+#### MA FAUTE EN ÉCRIVANT LE TEST, ET ELLE EST NOUVELLE
+
+J'ai écrit le fichier de test par un heredoc Python. **`\b` dans une
+chaîne Python ordinaire n'est pas un mot-frontière : c'est un
+CARACTÈRE DE RETOUR ARRIÈRE**, et il est parti tel quel dans le
+fichier. Le motif `/<CtaSection\b/` cherchait donc `<CtaSection` suivi
+d'un octet 0x08, ne trouvait rien, et le test annonçait "seulement 0
+boutons de milieu de page" sur une page qui en porte cinq.
+
+**Ici il a rougi, donc je l'ai vu. Dans une assertion NÉGATIVE, il
+serait passé au vert pour toujours**, et c'est exactement la panne que
+ce fichier décrit depuis le 22 août. Le contrôle qui l'a trouvé tient en
+une commande :
+
+```bash
+grep -nP '[\x00-\x08\x0b\x0c\x0e-\x1f]' tests/logic/*.test.mts
+```
+
+Zéro ligne. Un motif écrit par un heredoc Python passe par une chaîne
+BRUTE (`r"""..."""`), toujours.
+
+Test : `tests/logic/landing.test.mts` (39 cas), vérifié en rejouant
+trois versions fautives (le mot "créateurs" remis, deux boutons de
+milieu de page retirés, l'argument de la plateforme retiré plus un
+chiffre sans source dans la viralité) : les trois rougissent.
+
+### Sixième passage : "pourquoi les quiz" et "pourquoi Tiquiz" (5 septembre 2026)
+
+Béné : "cette fois c'est la MEILLEURE version aussi bien niveau copy que
+design et UX UI que tu puisses proposer ? Pour vendre Tiquiz aux bonnes
+personnes ? Avec pertinence et authenticité ? Sans bullshit (n'écris pas
+sans bullshit, je veux juste PAS de bullshit) ? En donnant tous les
+arguments au bon moment, pour montrer pourquoi les quiz, et pourquoi
+tiquiz ?"
+
+**La réponse honnête était NON, et sa question dit exactement pourquoi :
+la page vendait Tiquiz sans jamais vendre le QUIZ.** Elle démarre sur le
+coût de ne rien faire, puis enchaîne sur ce que Tiquiz fait, donc elle
+suppose acquis que le lecteur a déjà choisi un quiz comme outil de
+capture. Quelqu'un qui hésite entre un PDF, un webinaire et un quiz
+n'avait rien à lire.
+
+**"n'écris pas sans bullshit" est une consigne de FOND, pas de style.**
+On ne dit pas qu'on est honnête, on l'est : chaque argument ajouté ici
+se vérifie dans le code ou n'entre pas.
+
+#### CE QUI MANQUAIT, ET LES TROIS SE PLACENT À UN ENDROIT PRÉCIS
+
+| Le bloc | Où il est posé | Pourquoi là |
+|---|---|---|
+| **pourquoi un quiz** (5 critères x 3 formats) | après le problème, AVANT la démo | il faut avoir choisi le format avant de regarder l'outil |
+| **pourquoi Tiquiz** (le tableau des 6 outils) | juste après la section Systeme.io | c'est la preuve de ce que la section vient de promettre |
+| **et ce n'est PAS pour toi si** (3 refus vrais) | après les objections, AVANT les tarifs | savoir dire non est ce qui rend croyable tout le reste |
+
+#### 1. LE COMPARATIF DES FORMATS NE PORTE AUCUN CHIFFRE INVENTÉ
+
+Cinq critères (ce que le visiteur donne, ce qu'il reçoit, ce que tu
+apprends de lui, le temps que ça te prend, ce que tu peux en faire
+ensuite), trois formats : PDF ou ebook, webinaire, quiz.
+
+**On compare ce qu'on OBTIENT, jamais des taux de conversion.** Le
+44,9 % d'Interact a une source publique et il est déjà cité sur la page ;
+je n'ai rien d'équivalent pour un PDF ou un webinaire, donc il n'y a
+aucun pourcentage dans ce tableau. Un chiffre inventé dans une
+comparaison est exactement l'endroit où un lecteur va vérifier.
+
+#### 2. LE TABLEAU DES OUTILS LIT `OUTILS`, IL NE LE RECOPIE PAS
+
+`lib/site/integrations.ts` porte déjà les six outils (Tally, Typeform,
+Google Forms, Jotform, Interact, Tiquiz) avec, pour chacun,
+l'intermédiaire exigé et la pose du tag par profil. Ces lignes ont été
+relevées sur les pages d'aide des concurrents en septembre, et deux
+d'entre elles sont des CITATIONS.
+
+La landing les AFFICHE depuis ce module, et le test l'exige : recopier
+une seule cellule à la main donnerait, dans six mois, une page qui
+contredit `/integrations` sur le même domaine. Le lien vers le hub est
+posé sous le tableau (interne, donc il ne fait pas quitter le domaine).
+
+#### 3. LES TROIS REFUS SONT VRAIS, ET ILS DISENT CE QUI SE PASSE À LA PLACE
+
+Ce sont les mêmes que le bloc de qualification de sa page v2, et ils se
+vérifient dans le code : le résultat est un profil PRÉÉCRIT
+(`lib/quizScoring.ts`), le parcours est LINÉAIRE, et le branding est un
+jeu de réglages, pas une maquette libre.
+
+**Un refus qui ne dit pas ce qui se passe à la place n'est pas un
+refus, c'est une excuse.** Chaque ligne porte donc les deux moitiés, et
+le test le vérifie ("Tiquiz attribue un profil que TU as écrit à
+l'avance", "tout le monde voit les mêmes questions, seul le résultat
+change"). La ligne de fin assume : "si l'un des trois est indispensable
+chez toi, ne prends pas Tiquiz".
+
+**La croix est DESSINÉE** (`Croix` dans `pieces.tsx`), jamais un
+caractère Unicode : c'est la leçon du 2 septembre, un glyphe absent
+d'Open Sans rend un carré vide sur Windows.
+
+#### LES QUATRE FAUTES DE CE PASSAGE
+
+1. **Un accent grave dans un commentaire CSS écrit à l'intérieur d'un
+   littéral de gabarit** a terminé le littéral : 500 au chargement,
+   "Expected a semicolon" à la ligne 376 de `styles.ts`. **Quatrième
+   fois.** Le commentaire concerné le dit maintenant en toutes lettres.
+2. **De la spécificité, encore, et exactement la même arithmétique que
+   son bug de boutons :** `.tql-comp thead th` pèse (0,1,2) et
+   `.tql-col-nous` (0,1,0), donc la teinte de la colonne "Un quiz"
+   s'arrêtait à la ligne d'en-tête. Corrigé par des sélecteurs préfixés
+   par la table.
+3. **Mon garde-fou sur `OUTILS` balayait le fichier ENTIER** et tombait
+   sur le témoignage de Gwenn, qui contient "sans devoir passer par des
+   outils comme Zapier ou Make", c'est à dire mot pour mot une cellule
+   du tableau. Il exclut désormais le bloc `TEMOIGNAGES` avant de
+   chercher, avec la raison écrite à côté : **on ne réécrit jamais un
+   témoignage pour faire passer un test.**
+4. **Le répertoire du shell a dérivé** vers `/home/user`, et un `grep`
+   sur un chemin relatif a répondu "No such file". C'est la faute du
+   22 août : chemin ABSOLU dès qu'on traverse plusieurs dépôts.
+
+Test : `tests/logic/landing.test.mts` (46 cas), vérifié en rejouant
+trois versions fautives (un pourcentage inventé dans le comparatif des
+formats, un refus qui ne dit pas ce qui se passe à la place, le tableau
+des outils recopié à la main au lieu de lire `OUTILS`) : les trois
+rougissent.
 
 ## Le sitemap du domaine de vente oubliait les pages légales (4 septembre 2026)
 

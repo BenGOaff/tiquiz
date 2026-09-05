@@ -49,7 +49,21 @@ export const CSS = `
   --pale:var(--tq-creme);--pill:var(--tq-panneau);--bord:var(--tq-bord);
   color:var(--e);background:var(--pale)}
 .tql *{box-sizing:border-box}
-.tql a{color:inherit}
+/* LE :not([class]) N'EST PAS COSMETIQUE, il repare deux bugs qu'elle a
+   vus le 5 septembre : "texte fonce sur fond fonce : illisible" sur le
+   bouton du haut de page, et "texte blanc sur bouton blanc" sur celui du
+   bandeau de fin. UNE seule cause, et elle est arithmetique.
+   La regle .tql a vaut 0,1,1 en specificite (une classe + un element) ;
+   .tql-cta, .tql-col-cta et .tql-bande-cta valent 0,1,0. L'heritage
+   gagnait donc sur TOUS les boutons de la page : l'encre sombre sur le
+   bleu, le blanc sur le blanc du bandeau.
+   Un lien NU herite du texte autour, c'est ce qu'on voulait ; un lien qui
+   porte une classe a deja choisi sa couleur. INTERDIT : revenir a
+   .tql a nu, et INTERDIT de poser un !important par dessus, qui
+   masquerait la cause au lieu de la retirer.
+   (Aucun accent grave dans ce commentaire : il vit DANS le litteral de
+   gabarit, et un accent grave le terminerait. Troisieme fois.) */
+.tql a:not([class]){color:inherit}
 
 /* ── LE RYTHME ───────────────────────────────────────────────────── */
 /* AU MOINS 100 PX EN HAUT ET EN BAS, SUR CHAQUE SECTION, Y COMPRIS EN
@@ -101,6 +115,34 @@ export const CSS = `
 .tql-corps{font-size:15px;line-height:1.6;color:var(--c);margin:0}
 .tql-legende{font-size:14px;color:#6B7291;text-align:center;margin:26px 0 0}
 
+/* LE BOUTON DE FIN DE SECTION, ET SA RASSURANCE.
+   Sa page en pose un apres presque chaque section. La landing n'en
+   avait que trois en tout, donc il fallait scroller jusqu'aux tarifs
+   pour trouver un bouton. */
+.tql-mid{text-align:center;margin:52px auto 0}
+.tql-mid-r{display:flex;justify-content:center;align-items:center;gap:8px;
+  margin:16px 0 0;font-size:14px;color:#6B7291}
+
+/* CE QUI CHANGE APRES : les quatre lignes viennent de son persona. */
+.tql-apres{list-style:none;padding:0;margin:34px auto 0;max-width:860px;
+  display:grid;gap:16px}
+.tql-apres li{display:flex;align-items:flex-start;gap:14px;
+  font-size:17px;line-height:1.6;color:#3B3B3B;text-align:left}
+.tql-apres li svg{flex:0 0 auto;margin-top:4px}
+
+/* LES QUINZE TEMOIGNAGES DE SA PAGE.
+   Colonnes en macon (CSS multi-colonnes) et pas une grille : les
+   temoignages n'ont pas la meme longueur, et une grille alignerait
+   toutes les cartes sur la plus haute, donc du vide sous les courtes. */
+.tql-temoins{margin:44px 0 0;columns:3;column-gap:22px}
+.tql-temoin{break-inside:avoid;margin:0 0 22px;padding:24px;
+  background:#fff;border:1px solid #E4E8F3;border-radius:16px;
+  box-shadow:0 2px 10px rgba(43,50,100,.05)}
+.tql-temoin blockquote{margin:0;font-size:15px;line-height:1.65;color:#3B3B3B}
+.tql-temoin figcaption{margin:14px 0 0;font-size:14px;color:#6B7291}
+.tql-temoin figcaption b{color:#2B3264}
+.tql-temoin figcaption span::before{content:", "}
+
 /* ── BOUTONS, SCINTILLES, RASSURANCE ─────────────────────────────── */
 .tql-boutons{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
 .tql-centre{justify-content:center;text-align:center}
@@ -137,8 +179,11 @@ export const CSS = `
 .tql-preuve{display:inline-flex;align-items:center;gap:12px;margin:26px 0 0;padding:10px 18px;
   background:#fff;border:1px solid var(--bord);border-radius:999px;box-shadow:0 6px 18px rgba(35,40,80,.07)}
 .tql-preuve-t{font-size:14px;font-weight:700}
-.tql-preuve a{font-size:13px;font-weight:600;color:var(--b);text-decoration:underline}
-.tql-etoiles{display:inline-flex;gap:2px;color:#F5A623}
+.tql-preuve .tql-coche{color:var(--b);flex:none}
+/* A QUI CA S'ADRESSE, sous l'accroche. Un visiteur doit savoir en dix
+   secondes si la page parle de lui : c'est la premiere des quatre
+   questions du haut de page. */
+.tql-pourqui{font-size:15px;line-height:1.6;color:var(--c);margin:0 0 38px;font-weight:600}
 
 /* ── LE HAUT DE PAGE ─────────────────────────────────────────────── */
 /* LE HERO EST LA SEULE EXCEPTION ADMISE (Béné : "sauf le hero si pas
@@ -235,12 +280,20 @@ export const CSS = `
   overflow-x:auto;white-space:pre}
 
 /* ── LES AVIS ────────────────────────────────────────────────────── */
-.tql-avis{display:flex;flex-direction:column;gap:12px}
-.tql-avis-tete{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-.tql-avis-nom{font-size:15px;font-weight:700;margin:0}
-.tql-avis-date{font-size:12px;color:#8A90AE;flex:none}
-.tql-avis-titre{font-size:16px;font-weight:700;line-height:1.35;margin:0}
-.tql-avis-texte{font-size:14.5px;line-height:1.62;color:var(--c);margin:0}
+/* ── LES OBJECTIONS ─────────────────────────────────────────────── */
+/* Elles remplacent les six avis. UNE COLONNE, pas une grille : on les
+   lit dans l'ordre, et chacune doit se lire en entier avant la
+   suivante. Une grille en ferait un mur qu'on survole. */
+.tql-objs{display:flex;flex-direction:column;gap:14px;margin-top:30px}
+.tql-obj{display:flex;flex-direction:column;gap:8px}
+/* LA QUESTION EST EN ITALIQUE : c'est la voix du LECTEUR, pas la
+   notre. Sans cette difference, les deux paragraphes se lisent comme un
+   seul bloc de notre argumentaire, et le bloc perd tout son interet.
+   PAS DE GUILLEMETS EN PSEUDO-ELEMENT : ils seraient les memes dans les
+   sept langues, alors que le francais ecrit des chevrons et l'anglais
+   des guillemets courbes. Le style suffit. */
+.tql-obj-q{font-size:17px;font-style:italic;font-weight:700;line-height:1.4;margin:0;color:var(--e)}
+.tql-obj-r{font-size:15.5px;line-height:1.65;color:var(--c);margin:0}
 
 /* ── LES TARIFS ──────────────────────────────────────────────────── */
 /* L'INTERRUPTEUR N'A AUCUN JAVASCRIPT : deux boutons radio et ":has()",
@@ -271,6 +324,11 @@ export const CSS = `
 .tql-col-pour{font-size:13px;color:#8A90AE;margin:0 0 12px}
 .tql-prix{font-size:42px;font-weight:800;line-height:1;margin:0;letter-spacing:-.025em;color:var(--b)}
 .tql-cadence{font-size:13px;color:#8A90AE;margin:6px 0 0}
+/* LA PHRASE QUI INTRODUIT UNE ANIMATION. Levee toute seule, une
+   animation ne dit rien a qui la decouvre : sur SA page chacune vit
+   sous un titre qui dit ce qu'on regarde. */
+.tql-anim-leg{text-align:center;font-size:17px;font-weight:700;color:var(--e);margin:0 0 22px}
+.tql-p-fort{font-weight:700;color:var(--e)}
 .tql-liste{list-style:none;margin:18px 0 22px;padding:18px 0 0;border-top:1px solid #E9ECF6;flex:1}
 .tql-liste li{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.55;color:var(--c);margin:0 0 10px}
 .tql-liste li:last-child{margin:0}
@@ -278,9 +336,64 @@ export const CSS = `
 .tql-col-cta{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--b);color:#fff;
   font-weight:700;font-size:15.5px;padding:13px 18px;border-radius:999px}
 .tql-col-cta:hover{background:var(--tq-bleu-fonce)}
-.tql-partage{margin-top:26px}
-.tql-partage .tql-h3{text-align:center;margin-bottom:14px}
-.tql-liste-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 26px;border-top:0;padding-top:0;margin:0}
+/* ── LA PUCE PROMESSE ───────────────────────────────────────────── */
+/* Le benefice en gras, sa consequence concrete dessous. Les deux
+   viennent de avantages.ts : le bon de commande affiche exactement les
+   memes lignes. */
+.tql-liste li b{display:block;font-weight:700;color:var(--e)}
+.tql-puce-detail{display:block;font-style:normal;font-size:13.5px;line-height:1.5;color:#7A8098;margin-top:3px}
+/* "Tout le gratuit, plus :" au dessus des puces. L'echelle se DIT. */
+.tql-inclus{font-size:13px;font-weight:700;color:var(--b);margin:18px 0 -8px;text-transform:uppercase;letter-spacing:.04em}
+
+/* ── LA GRILLE COMPARATIVE ──────────────────────────────────────── */
+/* Une vraie table, dans SA boite qui defile : la page ne defile jamais
+   laterallement. */
+.tql-comp-titre{text-align:center;margin:70px 0 10px;font-size:24px}
+.tql-comp-boite{overflow-x:auto;margin-top:26px;border:1px solid var(--bord);border-radius:18px;background:#fff}
+.tql-comp{width:100%;border-collapse:collapse;min-width:640px;font-size:14.5px}
+.tql-comp th,.tql-comp td{padding:13px 16px;text-align:left;border-bottom:1px solid #EEF1F8}
+.tql-comp thead th{font-size:15px;font-weight:800;color:var(--e);background:var(--pill);white-space:nowrap}
+.tql-comp thead th:first-child{width:46%}
+.tql-comp tbody th{font-weight:500;color:var(--c);line-height:1.45}
+.tql-comp td{text-align:center;width:18%}
+.tql-comp-groupe th{font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--b);background:var(--pale);padding-top:16px;padding-bottom:16px}
+.tql-comp tbody tr:last-child th,.tql-comp tbody tr:last-child td{border-bottom:0}
+/* UN TIRET, PAS UNE CASE VIDE : une case vide se lit "on a oublie". */
+.tql-non{color:#B9BFD4;font-weight:700}
+
+/* LES DEUX TABLEAUX D'ARGUMENTS.
+   Ils reprennent la boite et les bordures de la grille de tarifs, mais
+   leurs cellules portent des PHRASES : centrer et brider a 18 % comme
+   une colonne de coches donnerait des lignes de trois mots. */
+.tql-comp-txt td{text-align:left;width:auto;color:var(--c);line-height:1.5}
+.tql-comp-txt thead th:first-child{width:26%}
+.tql-comp-txt tbody th{font-weight:700;color:var(--e)}
+/* La colonne qui nous concerne est TEINTEE, jamais un aplat sous du
+   texte : c'est la regle du 31 aout.
+
+   LES SELECTEURS SONT PREFIXES PAR LE TABLEAU, ET CE N'EST PAS
+   DECORATIF : sans ce prefixe, la regle d'en tete du tableau (une
+   classe, deux elements) bat la classe de colonne (une classe seule),
+   donc la teinte sautait sur la ligne d'en tete et la colonne se
+   lisait en deux morceaux. Exactement l'arithmetique du bug de boutons
+   du 5 septembre.
+
+   (Aucun accent grave dans ce commentaire : il vit DANS le litteral de
+   gabarit, et un accent grave le terminerait. Quatrieme fois.) */
+.tql-comp td.tql-col-nous,
+.tql-comp thead th.tql-col-nous{background:#F1F5FE}
+.tql-comp tbody tr.tql-lg-nous th,
+.tql-comp tbody tr.tql-lg-nous td{background:#F1F5FE;font-weight:700;color:var(--e)}
+
+/* CE QUI N'EST PAS POUR TOI. Une croix DESSINEE, pas un caractere. */
+.tql-non-liste{list-style:none;padding:0;margin:30px 0 0;display:grid;gap:18px}
+.tql-non-liste li{display:flex;align-items:flex-start;gap:14px;
+  font-size:17px;line-height:1.6;color:#3B3B3B;text-align:left}
+.tql-croix{flex:0 0 auto;margin-top:4px;color:#B9BFD4;display:inline-flex}
+/* La phrase de fin est collee au dernier refus sans cette marge. */
+.tql-non-liste+.tql-p{margin-top:30px}
+.tql-val{font-weight:700;color:var(--e)}
 
 /* ── LA DÉMO EN IFRAME ──────────────────────────────────────────── */
 /* Le rapport 16/9 est tenu par le padding, pas par une hauteur figée :
@@ -325,6 +438,7 @@ export const CSS = `
 /* ── MOBILE ──────────────────────────────────────────────────────── */
 @media (max-width:1000px){
   .tql-bento,.tql-grille-3{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tql-temoins{columns:2}
 }
 @media (max-width:900px){
   /* Les marges LATÉRALES se resserrent, les VERTICALES ne bougent pas :
@@ -341,10 +455,13 @@ export const CSS = `
   .tql-bande h2{font-size:28px}
   .tql-accroche{font-size:17px}
   .tql-grille-3,.tql-bento{grid-template-columns:1fr;gap:16px}
-  .tql-liste-3{grid-template-columns:1fr}
+  .tql-comp-titre{font-size:21px;margin-top:56px}
   .tql-cite{min-height:0}
   .tql-bouton-faux{margin-top:0}
   .tql-etape-txt h3{font-size:22px}
   .tql-scint{display:none}
+  /* Trois colonnes de temoignages sur un telephone donneraient des
+     lignes de quatre mots. */
+  .tql-temoins{columns:1}
 }
 "`;
