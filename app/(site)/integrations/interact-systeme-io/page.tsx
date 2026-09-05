@@ -185,7 +185,8 @@ export default function InteractSystemeIo() {
         />
         <p className="tq-doux tq-lire mt-6 leading-relaxed">
           Le plan gratuit de Zapier ne couvre pas ce cas : {ZAPIER.gratuitTachesParMois} tâches par
-          mois, et des Zaps limités à {ZAPIER.gratuitEtapesParZap} étapes alors qu&apos;il en faut
+          mois, et des Zaps limités à {ZAPIER.gratuitEtapesParZap}{" "}
+          étapes alors qu&apos;il en faut
           davantage. Le détail est sur la page{" "}
           <Link href="/integrations/zapier-systeme-io">Zapier et Systeme.io</Link>.
         </p>

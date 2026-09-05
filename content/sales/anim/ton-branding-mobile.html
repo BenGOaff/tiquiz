@@ -1,0 +1,136 @@
+<!-- LEVÉ DE content/sales/tiquiz.html PAR scripts/extraire-anims-vente.mjs.
+     NE PAS RETOUCHER À LA MAIN : relance le script.
+     Ce que ce bloc MONTRE : La même chose, la variante mobile de sa page. -->
+<style>
+.tqbrmb *{margin:0;padding:0;box-sizing:border-box}
+.tqbrmb{width:100%;max-width:470px;margin:0 auto;padding:30px 10px;position:relative;font-family:'Inter','Open Sans',sans-serif}
+.tqbrmb-frame{position:relative;background:linear-gradient(160deg,#f0f2fb 0%,#e4e7f5 100%);border-radius:24px;box-shadow:0 12px 40px rgba(43,50,100,.1);padding:14px;opacity:0;transform:translateY(20px)}
+.tqbrmb-card{position:relative;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 6px 22px rgba(43,50,100,.08)}
+.tqbrmb-top{height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:#20BBE6}
+.tqbrmb-logo{display:flex;align-items:center;gap:9px}
+.tqbrmb-logo i{width:26px;height:26px;border-radius:8px;background:rgba(255,255,255,.28);display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:900;font-size:14px;color:#fff}
+.tqbrmb-logo b{color:#fff;font-size:13.5px;font-weight:800;letter-spacing:.5px}
+.tqbrmb-flag{background:rgba(255,255,255,.24);border-radius:50px;position:relative;width:50px;height:25px}
+.tqbrmb-flag span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:900;letter-spacing:1px;opacity:0}
+.tqbrmb-body{padding:18px 18px 18px}
+.tqbrmb-prog{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.tqbrmb-prog small{font-size:10.5px;font-weight:800;letter-spacing:1px;color:#8A93B8;flex:none}
+.tqbrmb-track{flex:1;height:6px;border-radius:50px;background:#EDF1F7;overflow:hidden}
+.tqbrmb-fill{display:block;height:100%;width:40%;border-radius:50px;background:#20BBE6}
+.tqbrmb-q{position:relative;height:24px;margin-bottom:12px}
+.tqbrmb-q span{position:absolute;inset:0;font-size:16px;font-weight:800;color:#2B3264;line-height:1.4;opacity:0;white-space:nowrap}
+.tqbrmb-opt{height:38px;border-radius:10px;background:#F0F3FA;margin-bottom:8px;position:relative;display:flex;align-items:center;padding:0 38px 0 12px}
+.tqbrmb-opt .ot{position:relative;height:18px;flex:1}
+.tqbrmb-opt .ot span{position:absolute;inset:0;font-size:13px;font-weight:700;color:#2B3264;opacity:0;white-space:nowrap}
+.tqbrmb-dot{position:absolute;right:11px;top:50%;transform:translateY(-50%);width:15px;height:15px;border-radius:50%;border:2.5px solid #C9D1E6}
+.tqbrmb-opt.o1{background:rgba(32,187,230,.1)}
+.tqbrmb-opt.o1 .tqbrmb-dot{border-color:#20BBE6;background:#20BBE6}
+.tqbrmb-btn{position:relative;margin-top:12px;height:42px;border-radius:50px;background:#20BBE6;overflow:hidden}
+.tqbrmb-btn span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:800;opacity:0}
+/* ---- theme panel + cursor ---- */
+.tqbrmb-panel{position:absolute;top:86px;right:-16px;background:#fff;border-radius:16px;box-shadow:0 12px 34px rgba(43,50,100,.18);padding:12px 12px 10px;z-index:3;opacity:0;transform:translateX(18px)}
+.tqbrmb-panel small{display:block;font-size:9.5px;font-weight:800;letter-spacing:1.2px;color:#8A93B8;text-transform:uppercase;margin-bottom:8px;text-align:center}
+.tqbrmb-sw{position:relative;width:26px;height:26px;border-radius:50%;margin:0 auto 8px}
+.tqbrmb-sw:after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid transparent}
+.tqbrmb-s1{background:#20BBE6}
+.tqbrmb-s2{background:#8B5CF6}
+.tqbrmb-s3{background:#FF6663}
+.tqbrmb-sw i{position:absolute;inset:-4px;border-radius:50%;border:2.5px solid #2B3264;opacity:0}
+/* cursor */
+.tqbrmb-cur{position:absolute;z-index:4;width:16px;height:16px;border-radius:50%;background:rgba(43,50,100,.85);border:2.5px solid #fff;box-shadow:0 4px 12px rgba(43,50,100,.4);top:121px;right:-2px;opacity:0;pointer-events:none}
+/* floating chips */
+.tqbrmb-chip{position:absolute;background:#fff;border-radius:50px;box-shadow:0 8px 28px rgba(43,50,100,.14);padding:10px 16px;font-size:13px;font-weight:800;color:#2B3264;opacity:0;z-index:2}
+.tqbrmb-c1{top:-2px;left:-6px;transform:translateX(-16px)}
+.tqbrmb-c3{bottom:-8px;left:7%;transform:translateY(14px)}
+.tqbrmb-chip b{background:linear-gradient(90deg,#20BBE7,#5A6EF6);-webkit-background-clip:text;background-clip:text;color:transparent}
+/* ── ANIMATIONS ── */
+.tqbrmb.tqz-visible .tqbrmb-frame{animation:tqbrmbUp .65s cubic-bezier(.34,1.56,.64,1) forwards .15s}
+.tqbrmb.tqz-visible .tqbrmb-panel{animation:tqbrmbPanel .55s cubic-bezier(.34,1.56,.64,1) forwards .9s,tqbrmbFloatP 5s ease-in-out 2s infinite}
+.tqbrmb.tqz-visible .tqbrmb-cur{animation:tqbrmbCur 9s ease-in-out 1.2s infinite}
+.tqbrmb.tqz-visible .tqbrmb-c1{animation:tqbrmbIn .55s cubic-bezier(.34,1.56,.64,1) forwards 1.1s,tqbrmbFloat 4.5s ease-in-out 1.8s infinite}
+.tqbrmb.tqz-visible .tqbrmb-c3{animation:tqbrmbIn .55s cubic-bezier(.34,1.56,.64,1) forwards 1.35s,tqbrmbFloat 5.8s ease-in-out 2.1s infinite}
+.tqbrmb.tqz-visible .tqbrmb-top{animation:tqbrmbTheme 9s ease-in-out 1.2s infinite}
+.tqbrmb.tqz-visible .tqbrmb-btn{animation:tqbrmbTheme 9s ease-in-out 1.2s infinite}
+.tqbrmb.tqz-visible .tqbrmb-fill{animation:tqbrmbTheme 9s ease-in-out 1.2s infinite,tqbrmbFill 9s ease-in-out 1.2s infinite}
+.tqbrmb.tqz-visible .tqbrmb-opt.o1 .tqbrmb-dot{animation:tqbrmbDot 9s ease-in-out 1.2s infinite}
+.tqbrmb.tqz-visible .tqbrmb-opt.o1{animation:tqbrmbOptBg 9s ease-in-out 1.2s infinite}
+.tqbrmb.tqz-visible .tqbrmb-s1 i{animation:tqbrmbRing1 9s ease 1.2s infinite}
+.tqbrmb.tqz-visible .tqbrmb-s2 i{animation:tqbrmbRing2 9s ease 1.2s infinite}
+.tqbrmb.tqz-visible .tqbrmb-s3 i{animation:tqbrmbRing3 9s ease 1.2s infinite}
+.tqbrmb.tqz-visible .tqbrmb-l1{animation:tqbrmbTxt1 9s ease 1.2s infinite}
+.tqbrmb.tqz-visible .tqbrmb-l2{animation:tqbrmbTxt2 9s ease 1.2s infinite}
+.tqbrmb.tqz-visible .tqbrmb-l3{animation:tqbrmbTxt3 9s ease 1.2s infinite}
+@keyframes tqbrmbUp{to{opacity:1;transform:translateY(0)}}
+@keyframes tqbrmbPanel{to{opacity:1;transform:translateX(0)}}
+@keyframes tqbrmbIn{to{opacity:1;transform:translate(0,0)}}
+@keyframes tqbrmbFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes tqbrmbFloatP{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+/* cursor path : rest s1 → s2 (click 33%) → s3 (click 66%) → s1 (click ~99%) ; positions match swatch centers */
+@keyframes tqbrmbCur{
+0%{opacity:1;top:121px;right:-2px;transform:scale(1)}
+1.5%{transform:scale(.75)}3%{transform:scale(1)}
+26%{top:121px;right:-2px}
+31%{top:155px;right:-2px;transform:scale(1)}
+33%{transform:scale(.75)}35%{transform:scale(1)}
+59%{top:155px;right:-2px}
+64%{top:189px;right:-2px;transform:scale(1)}
+66%{transform:scale(.75)}68%{transform:scale(1)}
+92%{top:189px;right:-2px}
+97%{top:121px;right:-2px}
+98.5%{transform:scale(.75)}
+100%{opacity:1;top:121px;right:-2px;transform:scale(1)}}
+@keyframes tqbrmbTheme{0%,26%{background:#20BBE6}33%,59%{background:#8B5CF6}66%,92%{background:#FF6663}100%{background:#20BBE6}}
+@keyframes tqbrmbFill{0%,26%{width:40%}33%,59%{width:60%}66%,92%{width:80%}100%{width:40%}}
+@keyframes tqbrmbDot{0%,26%{border-color:#20BBE6;background:#20BBE6}33%,59%{border-color:#8B5CF6;background:#8B5CF6}66%,92%{border-color:#FF6663;background:#FF6663}100%{border-color:#20BBE6;background:#20BBE6}}
+@keyframes tqbrmbOptBg{0%,26%{background:rgba(32,187,230,.1)}33%,59%{background:rgba(139,92,246,.1)}66%,92%{background:rgba(255,102,99,.1)}100%{background:rgba(32,187,230,.1)}}
+@keyframes tqbrmbRing1{0%,26%{opacity:1}33%,92%{opacity:0}100%{opacity:1}}
+@keyframes tqbrmbRing2{0%,26%{opacity:0}33%,59%{opacity:1}66%,100%{opacity:0}}
+@keyframes tqbrmbRing3{0%,59%{opacity:0}66%,92%{opacity:1}100%{opacity:0}}
+@keyframes tqbrmbTxt1{0%,26%{opacity:1}33%,92%{opacity:0}100%{opacity:1}}
+@keyframes tqbrmbTxt2{0%,26%{opacity:0}33%,59%{opacity:1}66%,100%{opacity:0}}
+@keyframes tqbrmbTxt3{0%,59%{opacity:0}66%,92%{opacity:1}100%{opacity:0}}
+@media(max-width:500px){
+.tqbrmb{padding:26px 4px}
+.tqbrmb-frame{padding:10px}
+.tqbrmb-panel{right:-8px}
+.tqbrmb-cur{right:6px}
+.tqbrmb-c1{left:0}
+.tqbrmb-q span{font-size:14px}
+.tqbrmb-opt .ot span{font-size:12px}
+}
+</style>
+<div class="tqbrmb" id="tqbrmb-widget">
+<div class="tqbrmb-frame">
+<div class="tqbrmb-card">
+<div class="tqbrmb-top">
+<div class="tqbrmb-logo"><i>T</i><b>TA MARQUE</b></div>
+<div class="tqbrmb-flag"><span class="tqbrmb-l1">FR</span><span class="tqbrmb-l2">EN</span><span class="tqbrmb-l3">ES</span></div>
+</div>
+<div class="tqbrmb-body">
+<div class="tqbrmb-prog"><small>2/5</small><span class="tqbrmb-track"><span class="tqbrmb-fill"></span></span></div>
+<div class="tqbrmb-q">
+<span class="tqbrmb-l1">Quel est ton objectif n°1 ?</span>
+<span class="tqbrmb-l2">What's your #1 goal?</span>
+<span class="tqbrmb-l3">¿Cuál es tu objetivo n°1?</span>
+</div>
+<div class="tqbrmb-opt o1"><span class="ot"><span class="tqbrmb-l1">Gagner du temps</span><span class="tqbrmb-l2">Save time</span><span class="tqbrmb-l3">Ganar tiempo</span></span><span class="tqbrmb-dot"></span></div>
+<div class="tqbrmb-opt o2"><span class="ot"><span class="tqbrmb-l1">Trouver des clients</span><span class="tqbrmb-l2">Get more clients</span><span class="tqbrmb-l3">Conseguir clientes</span></span><span class="tqbrmb-dot"></span></div>
+<div class="tqbrmb-opt o3"><span class="ot"><span class="tqbrmb-l1">Les deux !</span><span class="tqbrmb-l2">Both!</span><span class="tqbrmb-l3">¡Los dos!</span></span><span class="tqbrmb-dot"></span></div>
+<div class="tqbrmb-btn">
+<span class="tqbrmb-l1">Suivant →</span>
+<span class="tqbrmb-l2">Next →</span>
+<span class="tqbrmb-l3">Siguiente →</span>
+</div>
+</div>
+</div>
+</div>
+<div class="tqbrmb-panel">
+<small>Ton thème</small>
+<div class="tqbrmb-sw tqbrmb-s1"><i></i></div>
+<div class="tqbrmb-sw tqbrmb-s2"><i></i></div>
+<div class="tqbrmb-sw tqbrmb-s3"><i></i></div>
+</div>
+<div class="tqbrmb-cur"></div>
+<div class="tqbrmb-chip tqbrmb-c1">🖼 Ton logo</div>
+<div class="tqbrmb-chip tqbrmb-c3">🌍 <b>100+ langues via l'IA</b></div>
+</div>

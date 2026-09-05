@@ -8004,6 +8004,362 @@ construit les deux événements et ne parle à personne),
 `app/commande/[produit]/retour/page.tsx`.
 Test : `tests/logic/conversions-vente.test.mts`.
 
+## Le site public s'aligne sur la PAGE DE VENTE (Béné, 4 septembre 2026)
+
+Une landing de relecture avait été écrite en vraie page Next. Béné :
+"wow on est donc passés de ma super jolie page ultra design à ... ça.
+C'est très décevant. Vraiment. Je ne peux pas accepter cette daube."
+
+**Elle avait raison, et la faute est nommable en une ligne : j'ai
+appliqué à une page de VENTE les règles de sobriété du BLOG.** La règle
+du 31 août interdit un aplat de couleur SOUS DU TEXTE. Elle n'a jamais
+interdit les visuels, les cartes, les ombres ni la couleur. J'avais
+sorti une page sans une seule image pour vendre un outil de quiz.
+
+C'est la même famille que les trois drames du 1er août : une logique
+écrite pour un cas, appliquée telle quelle à un autre.
+
+### ET ELLE A TRANCHÉ LE SENS DE L'ALIGNEMENT
+
+"Je préfère que tu alignes le blog sur ma belle page de vente que
+l'inverse."
+
+Le site public avait sa propre palette crème, reprise de Typeform en
+août ; la page de vente a la sienne. **Deux systèmes visuels sur un même
+domaine, c'est deux sites empilés**, et ça se voyait à la couture entre
+l'en-tête et n'importe quelle page.
+
+`.tq-site` (globals.css) porte donc désormais les couleurs de la page de
+vente, et les 20 fichiers qui lisent ces jetons ont suivi le même jour,
+sans être touchés.
+
+| | avant | après |
+|---|---|---|
+| encre des titres | #0b1020 | **#2B3264** |
+| corps | #4a5270 | **#3B3B3B** |
+| bleu des boutons | #1d6bf0 | **#5A6EF6** |
+| cyan des mots surlignés | #22d3ee | **#20BBE6** |
+| fond | #fbfaf8 | **#F3F6FC** |
+| pastilles | #f2f1ee | **#EDF1F7** |
+| bord | #e4e2dd | **#E4E8F3** |
+| fonte | Inter (système) | **Open Sans, auto hébergée** |
+
+**AUCUNE VALEUR N'EST CHOISIE, elles sont toutes RELEVÉES** dans
+`content/sales/v2/funnel-quiz.html` (le bloc qu'elle a relu et corrigé
+trois fois le 2 septembre) et dans la capture
+`content/sales/tiquiz.html`.
+
+**Et la fonte vient de SES fichiers.** Sa page de vente auto héberge
+Open Sans en 5 graisses (`/v/tiquiz/*.woff2`, relevées dans ses
+`@font-face`). On les REPREND : un aller-retour réseau en moins qu'avec
+Google Fonts, et surtout la garantie que le site rend exactement comme
+sa page. Vérifié dans un navigateur, pas déduit : `document.fonts` rend
+bien Open Sans en 400, 600, 700 et 800.
+
+**Le mot surligné passe au CYAN, pas au bleu des boutons.** Le bleu
+appelle au clic, le cyan souligne : les confondre fait lire un titre
+comme un lien.
+
+### LE MOT SURLIGNÉ A FAIT ROUGIR UN TEST JUSTE
+
+`branding-site.test.mts` exigeait la chaîne `color: var(--tq-bleu)` sur
+`.tq-surb`. Il est donc sorti ROUGE sur une correction JUSTE. **Un
+garde-fou qui fige une FORMULATION empêche de corriger la
+formulation** : il vise maintenant le FAIT (c'est une couleur de TEXTE,
+prise dans les jetons de marque, et il n'y a AUCUN fond). La règle était
+déjà écrite dans ce fichier, au 3 septembre, et je l'ai repayée.
+
+### CE QUI N'EST PAS SUR LA LANDING, ET POURQUOI
+
+- **Aucune capture du produit.** La seule que l'app sait produire vient
+  de `/visual-test`, la fixture des tests visuels : elle porte un
+  bandeau "Mode aperçu" et un quiz de démo écrit SANS ACCENTS ("Quel
+  createur de quiz es-tu ?"). La maquette du haut de page est donc
+  DESSINÉE en HTML, comme son bloc funnel : traduite avec le reste,
+  nette à toutes les densités, et elle ne pèse rien.
+- **Aucun témoignage.** Sa page de vente en porte quinze avec les
+  portraits (relevés dans `lib/sales/altImagesV2.ts`). Je n'ai aucun
+  moyen de vérifier d'ici qui a dit quoi, et un faux témoignage est son
+  interdit numéro un. Ils s'ajoutent quand elle donne les vrais.
+- **Aucune icône en caractère Unicode** (leçon du 2 septembre) : les
+  coches, les flèches et les pictogrammes sont des TRACÉS SVG.
+
+### LE COMPILATEUR JSX MANGE L'ESPACE APRÈS UNE EXPRESSION
+
+Trouvé en regardant le hub intégrations après la bascule. La page
+affichait, en production, **"à partir de 29,99 $par mois"**.
+
+La source est juste (`{ZAPIER.professionnelParMois} par mois`), et le
+`{" "}` posé DEVANT l'expression prouve que quelqu'un avait déjà vu le
+problème d'un côté sans voir l'autre.
+
+**Deux extractions de texte sur trois MENTAIENT, et c'est la leçon.**
+
+| ce qu'on fait | ce que ça rend |
+|---|---|
+| retirer les balises avec `''` | colle deux voisins qui, à l'écran, sont séparés |
+| retirer les balises avec `' '` | INVENTE une espace là où React pose son `<!-- -->`, donc cache exactement ce bug |
+| lire les NOEUDS DE TEXTE dans un navigateur | la seule mesure qui dit ce que le lecteur voit |
+
+Ma première mesure disait "$par" (juste, par accident), ma deuxième
+disait "aucune faute sur 17 pages" (faux), et j'ai failli conclure que
+le bug n'existait pas. **Un test qui ne distingue pas ce qu'il est censé
+distinguer est pire qu'un test absent**, et j'ai réussi à me tromper
+dans les DEUX sens sur la même mesure.
+
+**La sonde qui tranche** parcourt les COMMENTAIRES de séparation de
+React et regarde ses deux voisins : un texte qui finit par un caractère
+visible, un commentaire, un texte qui commence par une lettre. Sur les
+17 pages du site elle rend **5 candidats, dont 3 légitimes** (`(SAS`,
+`filleul` + `s` pour le pluriel, `(70`) et **2 vrais collages**, les
+deux corrigés :
+
+- `/integrations` : "29,99 $par mois" ;
+- `/integrations/interact-systeme-io` : "2étapes".
+
+Une sonde qui rendait 8 fautes par page (parce qu'elle lisait aussi les
+scripts de Next) aurait fini ignorée : c'est le même défaut que le filet
+genre-neutre du 24 août.
+
+### Deuxième passage : ce que "ultra design" veut dire, mesuré
+
+Béné : "tu vas vraiment devoir faire des efforts sur le design, on est
+très loin d'un saas premium de 2026. Rapproche-toi beaucoup plus de ma
+page d'origine. On est à peine à 20 % de ce que je veux."
+
+**LA MÉTHODE QUI A MARCHÉ, ET C'EST ELLE QU'IL FAUT RETENIR : j'ai
+SERVI sa page de vente dans un navigateur et je l'ai REGARDÉE, section
+par section, au lieu d'en relire le CSS.** Le premier passage avait
+relevé les couleurs, la fonte et le bouton, c'est à dire ce qu'un
+fichier CSS raconte. Ce qui faisait la différence n'était pas là : ce
+sont des GESTES, et ils ne se voient qu'à l'écran.
+
+Les huit qui manquaient, tous les huit relevés dans la capture :
+
+| Le geste | Ce qu'il fait |
+|---|---|
+| le SURLIGNEUR pâle derrière un fragment de titre, curseur au bout | sa signature la plus visible, sur presque chaque titre |
+| les SCINTILLES au dessus du bouton principal | ce qui fait que le bouton n'a pas l'air posé à plat |
+| la RASSURANCE sous chaque bouton | "Gratuit à vie", "Pas besoin de CB", répétée à CHAQUE bouton |
+| le BANDEAU DÉFILANT de fonctionnalités | il remplit le vide sous le haut de page |
+| les pastilles "ÉTAPE n" + des lignes qui ALTERNENT texte / visuel | à la place d'une grille de quatre cartes plates |
+| de vraies MAQUETTES de produit dans ces lignes | montrer au lieu de décrire |
+| les cartes de tarif à RUBAN coloré + l'interrupteur mensuel / annuel | c'est l'écran où quelqu'un sort sa carte |
+| le BANDEAU DÉGRADÉ de fin | blanc sur bleu, le seul aplat de la page |
+
+**Deux choses viennent de ce que font les landings qui vendent en 2026,
+pas d'elle** : la preuve sociale remontée AVANT la première
+fonctionnalité, et une grille "bento" à la place d'une liste à puces.
+
+### LES AVIS SONT VRAIS, ET ILS NE SE TRADUISENT JAMAIS
+
+Béné : "on a ici des avis tous frais sur tiquiz, tu peux les
+utiliser : fr.trustpilot.com/review/tiquiz.fr".
+
+Les six sont relevés mot pour mot dans `lib/site/landing.ts`, constante
+`AVIS`, avec leur auteur et leur date. **Ils vivent HORS des objets de
+langue** : un témoignage traduit n'est plus un témoignage, c'est une
+reformulation signée du nom de quelqu'un d'autre, et c'est son interdit
+numéro un. On ne corrige NI l'orthographe NI la ponctuation.
+
+🚨 **ET LES DEUX CHIFFRES DE TRUSTPILOT SE CONTREDISENT EN APPARENCE.**
+Mesuré : 6 avis, une répartition de **100 % en 5 étoiles**, et un
+**TrustScore de 4,2/5**. Le TrustScore est une note PONDÉRÉE (volume et
+fraîcheur), pas la moyenne. La page n'affiche donc **aucune note
+chiffrée** : à côté de "tous en 5 étoiles", un 4,2 se lirait comme une
+erreur, et l'écrire sans le 100 % sous-vendrait. On dit le FAIT, et on
+met le lien pour que n'importe qui vérifie. Le test l'interdit.
+
+### CE QUE MES PROPRES MESURES ONT ENCORE RATÉ
+
+- **`textContent` ignore `display:none`.** Ma première vérification de
+  l'interrupteur de tarif lisait `textContent` et rendait "0 €0 €" : j'ai
+  cru la bascule cassée alors qu'elle marchait. `innerText` respecte le
+  rendu, et c'est le seul qui dit ce que la lectrice voit. Troisième fois
+  de la semaine qu'une extraction de texte mal choisie ment.
+- **Un accent grave TERMINE un littéral de gabarit**, y compris dans un
+  commentaire CSS écrit dedans. Deux fois de suite.
+- **`pkill -f "next dev"` tue mon propre shell** (sortie 144). On tue par
+  PID, ou on change de port.
+
+### QUATRE DÉFAUTS QUE SEUL LE RENDU A MONTRÉS
+
+Aucun n'aurait été vu par `tsc` ni par un test de contenu :
+
+1. **le bouton "Copier" du champ de lien affichait "Étape"** : j'avais
+   passé `t.etapeMot`, la mauvaise chaîne ;
+2. **l'étape 1 réutilisait la maquette du haut de page**, donc le même
+   écran deux fois sur la même page ;
+3. **le gros chiffre de la colonne annuelle affichait "ou 170,00 € par
+   an"** en 42 px : un prix se lit d'un coup d'oeil, une phrase non ;
+4. **les trois boutons de tarif menaient à `/signup`** et portaient le
+   même libellé, dont la colonne à 29 €. Ils mènent aux bons de commande
+   (`/commande/mensuel`, `/commande/annuel`, et les deux PLUS), et comme
+   l'interrupteur n'a AUCUN script, les DEUX destinations sont rendues et
+   `:has()` montre la bonne. Le gratuit ne porte aucune des deux classes,
+   sinon son bouton disparaissait dès qu'on passait à l'année.
+
+### CE QUI RESTE ABSENT, ET POURQUOI
+
+- **Aucune capture d'écran du produit.** La seule que l'app sait
+  produire vient de `/visual-test`, la fixture des tests visuels : elle
+  porte un bandeau "Mode aperçu" et un quiz de démo écrit SANS ACCENTS
+  ("Quel createur de quiz es-tu ?"). Les maquettes sont DESSINÉES en
+  HTML (`pieces.tsx`) : traduites avec le reste, nettes à toutes les
+  densités, et elles ne pèsent rien.
+- **Aucune vidéo de démo.** Sa page en a deux ; je n'en ai aucune.
+- **Aucun portrait sur les avis.** Trustpilot n'en fournit pas.
+- **La FAQ n'a que 4 questions**, la sienne en a 18 en 5 groupes. Les
+  siennes sont déjà écrites et validées : elles se portent depuis sa
+  page, elles ne se réinventent pas.
+
+### SUR L'APLAT DE COULEUR SOUS DU TEXTE
+
+La règle du 31 août ("aucun aplat sous du texte, NULLE PART") a été
+écrite pour le BLOG et les pages qui se LISENT, après trois remontées
+sur des pavés bleus saturés portant du texte blanc.
+
+Deux endroits de la landing en portent, et les deux sont SON geste sur
+SA page : le surligneur du titre (une TEINTE pâle sous du texte à
+l'encre) et le bandeau dégradé de fin (où rien ne se lit longtemps,
+comme le pied de page). **Ne pas les "corriger" au prochain passage.**
+
+Test : `tests/logic/landing.test.mts`, vérifié en rejouant deux versions
+fautives (les deux payantes vers `/signup`, un avis recopié dans une
+langue) : les deux rougissent.
+
+### Troisième passage : les paddings, sa FAQ, sa vidéo, ses animations
+
+Béné, 4 septembre 2026 : "un truc sur lequel toutes les IA se plantent :
+les paddings hauts et bas. Je veux au moins 100px en haut et 100px en
+bas pour chaque section sauf le hero si pas adapté." Puis : "et la FAQ
+bordel tu as déjà tout sur la page de vente : pourquoi tu ne reproduis
+pas ?? Et pourquoi tu ne reprends pas au moins une partie des animations
+de ma page d'origine ?"
+
+**Elle avait raison sur les quatre points, et trois fois sur quatre la
+réponse était déjà dans le dépôt.**
+
+#### 1. LES PADDINGS SE MESURENT
+
+Relevé AVANT de toucher à quoi que ce soit, sur la page rendue :
+
+| | haut / bas |
+|---|---|
+| le hero | 72 / 84 |
+| la FAQ | 70 / 70 |
+| le bandeau de fin | 96 / 96 |
+| **tout, sous 900 px de large** | **60 / 60** |
+
+Tout est à **100 minimum, haut et bas, y compris en mobile**. Seules les
+marges LATÉRALES se resserrent : sa règle porte sur le haut et le bas.
+Le seul bloc en dessous est le bandeau défilant, qui n'est pas une
+section mais un filet de 16 px.
+
+**Le garde-fou est une MESURE, pas une lecture de CSS** :
+`tests/visual/landing-paddings.spec.ts` lit les `padding` CALCULÉS sur
+les trois viewports. C'est le geste d'`intro-bounds.spec.ts` : une
+capture d'écran ne fait pas rougir une section trop serrée, elle
+s'affiche très bien.
+
+#### 2. SA FAQ EXISTAIT DÉJÀ, EN ENTIER
+
+Les 16 questions ET leurs réponses vivent dans le `FAQPage` en données
+structurées de `content/sales/tiquiz.html` ; le regroupement en cinq
+groupes vit dans `lib/sales/faqV2.ts` depuis le 2 septembre.
+**Il n'y avait rien à écrire, seulement à lire.**
+`npm run faq:extraire` fait le pont et écrit `content/faq-vente.json`.
+
+**Le JSON-LD est la source, pas le DOM** : les questions y sont
+APPARIÉES avec leurs réponses. Dans le DOM il faudrait deviner quel
+paragraphe répond à quel titre, et une seule paire décalée donnerait une
+réponse qui ne correspond pas à sa question.
+
+**Deux défauts trouvés en extrayant, et les deux étaient en ligne :**
+- la réponse "formation" pointait sur `www.tipote.fr/atelier-du-quiz-bene`,
+  un tunnel Systeme.io. **Un lien qui atterrit là ne paie plus personne**
+  depuis que nos liens portent `?ref=` (24 août) ;
+- deux réponses disaient "en cliquant ici >>", ce qui ne dit RIEN partout
+  où le lien disparaît, et il disparaît dès que la réponse est rendue en
+  TEXTE. Dont la seule ligne de la FAQ qui promet une réponse humaine.
+
+Les deux sont corrigés **dans `CORRECTIONS_FAQ`**, donc sa page v2 en
+profite aussi.
+
+**ET UNE CORRECTION QUI NE TROUVE RIEN EST UNE CORRECTION QU'ON CROIT
+APPLIQUÉE.** Les deux consommateurs de cette liste ne voient pas le même
+texte : le script de la page v2 travaille sur le JSON-LD BRUT, où les
+chevrons sont écrits `&gt;&gt;`, et l'extracteur de la landing sur le
+texte déséchappé. La correction trouvait chez l'un et pas chez l'autre.
+`appliquerCorrectionsFaq()` essaie les DEUX formes et rend ce qui a
+mordu, pour que l'appelant REFUSE. Une deuxième liste écrite pour
+l'autre forme aurait divergé en une semaine.
+
+**Et une chaîne cherchée ne traverse pas une balise** : `cherche`
+valait "Par email en cliquant ici >>", alors que dans le JSON-LD seul
+"cliquant ici &gt;&gt;" est le TEXTE DU LIEN, "Par email en " étant
+dehors. On vise le texte du lien.
+
+#### 3. LA VIDÉO EST UN POPQUIZ, ET ELLE EN A DONNÉ L'ADRESSE
+
+**MESURÉ avant de l'intégrer** : la page répond **200** et porte
+`content-security-policy: frame-ancestors *`, donc elle s'affiche depuis
+n'importe quel domaine.
+
+🚨 **CE QUI N'A PAS PU ÊTRE VÉRIFIÉ D'ICI : le RENDU.** Le navigateur de
+ce conteneur n'a AUCUNE route vers `quiz.tipote.com`
+(`ERR_CONNECTION_RESET` en direct, aucune requête à travers le proxy) :
+la capture montre un cadre blanc, et c'est l'environnement, pas la page.
+Un lien "ouvrir dans un nouvel onglet" est posé sous le cadre, parce
+qu'un cadre qui échoue affiche la page d'erreur du navigateur DEDANS :
+aucun repli posé derrière ne s'afficherait.
+
+#### 4. SES ANIMATIONS SE LÈVENT, ELLES NE SE REDESSINENT PAS
+
+Sa page porte **234 keyframes**, groupés par bloc, et chaque bloc est une
+ÎLE autonome (son `<style>`, puis son markup). `npm run anims:extraire`
+en lève trois, à l'octet près : l'opt-in contre le quiz, le branding qui
+change, les pixels.
+
+**Trois pièges, tous trouvés en MESURANT :**
+
+1. **Le re-préfixage désappariait tout.** Renommer `.tqvs` en
+   `.tqla-tqvs` en laissait 112 non traités : le style et le markup ne se
+   correspondaient plus, donc l'animation ne partait pas. Vérifié avant
+   de renoncer : `tqvs`, `tqbr` et `tqpx` n'existent dans AUCUN fichier
+   de code du dépôt, donc il n'y avait rien à protéger.
+2. **J'ai levé la variante MOBILE.** `indexOf("@keyframes tqvs")` tombe
+   sur `tqvsmbUpL`, qui apparaît plus tôt dans le fichier. Servie sur un
+   grand écran, elle mesurait **10463 px de haut**. L'ancre est
+   maintenant exacte (`@keyframes tqvs[A-Z]`).
+3. **Les blocs levés étaient INERTES.** Ses règles s'écrivent
+   `.tqvs.tqz-visible .machin{animation:...}` : un script pose
+   `tqz-visible` à 85 % du viewport. Mesuré : **0 élément animé** sans
+   lui, **23 et 31** avec. `DeclencheurAnims` refait sa mécanique en
+   vingt lignes, même seuil, avec sa relance toutes les 13,5 s. Il est
+   RÉÉCRIT, pas levé, et je le dis : ses scripts sont minifiés, il y en a
+   un par bloc, et ils parlent à des ids de sa page.
+
+**On ne sert qu'UNE variante.** Poser les deux en comptant sur ses media
+queries les affichait TOUTES LES DEUX, à 1280 comme à 390 : ce qui les
+départage sur sa page vit dans un conteneur Systeme.io, hors de l'île.
+Et la variante grand écran s'adapte au téléphone (mesurée à 358x456 sur
+un viewport de 390).
+
+#### ET LA LEÇON DE STRUCTURE
+
+`import faq from "...json"` compile très bien avec Next et le runner de
+tests natif le REFUSE (Node exige `with { type: "json" }`). Mais le vrai
+enseignement est plus ancien : **un module qui touche au disque n'est
+plus chargeable par le runner, donc plus testé.** La lecture vit donc
+dans `app/(site)/apercu-landing-8f2c9d41/faq.ts`, à côté d'`anims.tsx`
+qui lit déjà des fichiers, et `lib/site/landing.ts` reste PUR.
+
+**Et un garde-fou existant a rougi à juste titre** : `affiliate-links`
+interdit `tipote.fr/atelier-du-quiz` écrit en dur. Ma chaîne est une CLÉ
+DE RECHERCHE, pas une destination : l'exemption porte sur `cherche:` et
+lui seul, jamais sur `remplace:`, et jamais sur le fichier entier.
+
 ## Le sitemap du domaine de vente oubliait les pages légales (4 septembre 2026)
 
 Béné, après le énième refus de validation de marque par Google : "je

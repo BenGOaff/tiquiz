@@ -1,38 +1,62 @@
 // app/(site)/apercu-landing-8f2c9d41/page.tsx
 //
-// LA LANDING EN VRAIE PAGE NEXT, POUR RELECTURE.
+// LA LANDING, DEUXIÈME PASSAGE.
 //
-// Béné, 4 septembre 2026 : "propose moi une landing (pas besoin d'un
-// secret dessus, juste met un slug introuvable) pour que je voie à quoi
-// elle pourrait ressembler en vrai next avec la traduction".
+// Béné, 4 septembre 2026 : "tu vas vraiment devoir faire des efforts sur
+// le design, on est très loin d'un saas premium de 2026... rapproche-toi
+// beaucoup plus de ma page d'origine. On est à peine à 20 % de ce que je
+// veux."
 //
-// -- CE QUE CETTE PAGE DÉMONTRE ---------------------------------------
+// -- CE QUI A CHANGÉ, ET D'OÙ ÇA VIENT --------------------------------
 //
-//   1. elle vit dans le groupe `(site)`, donc elle porte le MÊME
-//      en-tête et le MÊME pied de page que /blog et /integrations.
-//      L'accueil actuel, lui, est une capture Systeme.io de 1,4 Mo qui
-//      ne partage rien avec le reste du domaine ;
-//   2. elle se traduit. `?lang=en` change toute la page, exactement
-//      comme les pages légales. Le texte vit dans `lib/site/landing.ts`,
-//      pas dans ce fichier ;
-//   3. son HTML est rendu par le SERVEUR, donc lisible par un robot qui
-//      n'exécute pas de JavaScript.
+// J'ai SERVI sa page de vente dans un navigateur et je l'ai regardée
+// section par section, au lieu d'en relire le CSS. Huit gestes lui
+// appartiennent et manquaient tous :
 //
-// -- ELLE EST EN `noindex`, ET CE N'EST PAS QU'UNE PRÉCAUTION ---------
+//   1. le SURLIGNEUR pâle derrière un fragment de titre, avec le trait
+//      vertical de curseur au bout ;
+//   2. les SCINTILLES au dessus du bouton principal ;
+//   3. la RASSURANCE sous chaque bouton ("Gratuit à vie", "Pas besoin
+//      de CB") ;
+//   4. le BANDEAU DÉFILANT de fonctionnalités ;
+//   5. les pastilles "ÉTAPE n" et des lignes qui ALTERNENT texte /
+//      visuel, au lieu d'une grille de quatre cartes plates ;
+//   6. de vraies MAQUETTES de produit dans ces lignes ;
+//   7. les cartes de tarif à RUBAN coloré, avec l'interrupteur
+//      mensuel / annuel et sa pastille "2 mois offerts" ;
+//   8. le BANDEAU DÉGRADÉ de fin.
 //
-// Le slug introuvable suffit à ce que personne ne tombe dessus. Le
-// `noindex`, lui, répond à autre chose : deux pages qui prétendent être
-// l'accueil de Tiquiz se feraient concurrence sur la même requête, et
-// c'est la règle déjà écrite pour les données structurées de la page de
-// vente. Elle n'est donc ni dans le sitemap, ni dans `llms.txt`, ni
-// dans le pied de page.
+// Et deux choses viennent de ce que font les landings qui vendent en
+// 2026, pas d'elle : la PREUVE SOCIALE remontée AVANT la première
+// fonctionnalité (une barre Trustpilot dès le haut de page), et une
+// grille "bento" à la place d'une liste à puces.
 //
-// -- LES LIENS MÈNENT À DES PAGES QUI EXISTENT ------------------------
+// -- LES AVIS SONT VRAIS, ET C'EST LE PLUS IMPORTANT ------------------
 //
-// `/embed/preview` est le générateur d'aujourd'hui, `/signup`
-// l'inscription gratuite. Poser un lien vers `/generateur-de-quiz`
-// avant de l'avoir écrit, ce serait un 404 sur la page qui doit inspirer
-// confiance (drame du centre d'aide, 24 août).
+// Béné : "on a ici des avis tous frais sur tiquiz, tu peux les utiliser".
+// Les six sont relevés sur `fr.trustpilot.com/review/tiquiz.fr`, mot
+// pour mot, avec leur auteur et leur date, dans `lib/site/landing.ts`.
+// Ils ne se traduisent JAMAIS : un témoignage traduit n'est plus un
+// témoignage. Et la page n'affiche AUCUNE note chiffrée : Trustpilot
+// montre 100 % de 5 étoiles ET un TrustScore pondéré de 4,2, et les
+// deux côte à côte se liraient comme une erreur.
+//
+// -- CE QUI RESTE ABSENT, ET POURQUOI ---------------------------------
+//
+// Aucune capture d'écran du produit : la seule que l'app sait produire
+// vient de `/visual-test`, avec un bandeau "Mode aperçu" et un quiz de
+// démo écrit SANS ACCENTS. Les maquettes sont DESSINÉES (`pieces.tsx`).
+//
+// -- ZÉRO JAVASCRIPT --------------------------------------------------
+//
+// L'interrupteur de tarif et la FAQ marchent sans une ligne de script :
+// c'est un script qui a figé la FAQ de sa page de vente le 2 septembre.
+//
+// -- ELLE EST EN `noindex` --------------------------------------------
+//
+// Deux pages qui prétendent être l'accueil de Tiquiz se feraient
+// concurrence sur la même requête. Hors sitemap, hors `llms.txt`, hors
+// pied de page.
 
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -40,7 +64,32 @@ import { getLocale } from "next-intl/server";
 
 import { SUPPORTED_LOCALES } from "@/i18n/config";
 import { HOTE_VENTE } from "@/lib/publicHost";
-import { avantagesPartages, colonnesDeTarif, contenuLanding } from "@/lib/site/landing";
+import {
+  AVIS,
+  DEMO_POPQUIZ,
+  TRUSTPILOT_URL,
+  avantagesPartages,
+  colonnesDeTarif,
+  contenuLanding,
+} from "@/lib/site/landing";
+import { CSS } from "./styles";
+import { AnimVente } from "./anims";
+import { faqDeLaPageDeVente } from "./faq";
+import DeclencheurAnims from "./DeclencheurAnims";
+import {
+  BlocCode,
+  ChampLien,
+  Chevron,
+  CocheFine,
+  CochePleine,
+  Etoiles,
+  Fleche,
+  FlecheBas,
+  MaquetteBrief,
+  MaquetteQuiz,
+  Picto,
+  Scintilles,
+} from "./pieces";
 
 const CHEMIN = "/apercu-landing-8f2c9d41";
 const LIEN_GENERATEUR = "/embed/preview";
@@ -59,10 +108,23 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   return {
     title: t.metaTitre,
     description: t.metaDescription,
-    // Une page de relecture ne se met pas en concurrence avec l'accueil.
     robots: { index: false, follow: false },
     alternates: { canonical: `${HOTE_VENTE}${CHEMIN}` },
   };
+}
+
+/** La rassurance sous un bouton. Trois items, une coche dessinée. */
+function Rassurances({ items }: { items: readonly string[] }) {
+  return (
+    <ul className="tql-rassure">
+      {items.map((r) => (
+        <li key={r}>
+          <CocheFine />
+          {r}
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 export default async function ApercuLandingPage({ searchParams }: PageProps) {
@@ -70,155 +132,399 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
   const t = contenuLanding(langue);
   const colonnes = colonnesDeTarif(t);
   const partages = avantagesPartages();
+  const faq = faqDeLaPageDeVente();
 
-  // Le titre porte son mot clé en couleur. On DÉCOUPE au lieu de
-  // réécrire le titre en deux morceaux : le fragment doit rester une
-  // partie de la phrase, sinon la traduction suivante le perdra.
-  const [avant, apres] = t.titre.split(t.motCle);
+  // Le titre porte son mot clé surligné. On DÉCOUPE au lieu de réécrire
+  // le titre en deux morceaux : le fragment doit rester une partie de la
+  // phrase, sinon la traduction suivante le perdra.
+  const [avantH1, apresH1] = t.titre.split(t.motCle);
 
   return (
-    <main lang={t.langue}>
-      {/* ── L'ACCROCHE ─────────────────────────────────────────── */}
-      <section className="tq-large pt-16 pb-14 sm:pt-24 sm:pb-20">
-        <p className="tq-etiquette">{t.etiquette}</p>
-        <h1 className="mt-4 max-w-4xl text-4xl sm:text-6xl">
-          {avant}
-          <span className="tq-surb">{t.motCle}</span>
-          {apres}
-        </h1>
-        <p className="tq-lire tq-doux mt-6 text-lg leading-relaxed">{t.accroche}</p>
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <Link href={LIEN_GENERATEUR} className="tq-bouton">
-            {t.ctaPrincipal}
-          </Link>
-          <Link href={LIEN_INSCRIPTION} className="tq-bouton tq-bouton-fantome">
-            {t.ctaSecondaire}
-          </Link>
+    <main className="tql" lang={t.langue}>
+      <style>{CSS}</style>
+      <DeclencheurAnims />
+
+      {/* ── LE HAUT DE PAGE ────────────────────────────────────── */}
+      <section className="tql-sec tql-hero">
+        <span aria-hidden className="tql-blob tql-blob-a" />
+        <span aria-hidden className="tql-blob tql-blob-b" />
+        <div className="tql-large tql-hero-grille">
+          <div>
+            <p className="tql-surtitre">{t.etiquette}</p>
+            <h1 className="tql-h1">
+              {avantH1}
+              <span className="tql-surb">{t.motCle}</span>
+              <span aria-hidden className="tql-curseur" />
+              {apresH1}
+            </h1>
+            <p className="tql-accroche">{t.accroche}</p>
+            <div className="tql-boutons">
+              <span className="tql-avec-scint">
+                <Scintilles />
+                <Link href={LIEN_GENERATEUR} className="tql-cta">
+                  {t.ctaPrincipal}
+                  <Fleche />
+                </Link>
+              </span>
+              <Link href={LIEN_INSCRIPTION} className="tql-cta-2">
+                {t.ctaSecondaire}
+              </Link>
+            </div>
+            <Rassurances items={t.rassurances} />
+
+            {/* LA PREUVE AVANT LA PREMIÈRE FONCTIONNALITÉ. C'est ce que
+                font les landings qui convertissent en 2026, et ici elle
+                est vraie et vérifiable en un clic. */}
+            <p className="tql-preuve">
+              <Etoiles />
+              <span className="tql-preuve-t">{t.preuve}</span>
+              <a href={TRUSTPILOT_URL} target="_blank" rel="noopener noreferrer">
+                {t.preuveLien}
+              </a>
+            </p>
+          </div>
+
+          <MaquetteQuiz m={t.maquette} />
         </div>
-        <p className="tq-doux mt-4 text-sm">{t.sousCta}</p>
+      </section>
+
+      {/* ── LE BANDEAU DÉFILANT ────────────────────────────────── */}
+      {/* Le lot est écrit DEUX fois et la piste glisse de -50 % : c'est
+          ce qui rend la boucle invisible. Un seul lot ferait un saut. */}
+      <div className="tql-ruban" aria-hidden>
+        <div className="tql-ruban-piste">
+          {[0, 1].map((lot) => (
+            <div className="tql-ruban-lot" key={lot}>
+              {t.bandeau.map((mot) => (
+                <span key={mot}>{mot}</span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── LA DÉMO : SON VRAI POPQUIZ ─────────────────────────── */}
+      {/* Béné, 4 septembre 2026, en donnant l'adresse : "la vidéo démo
+          normalement tu as l'url ? C'est un popquiz".
+          MESURÉ avant de l'intégrer : la page répond 200 et porte
+          `content-security-policy: frame-ancestors *`, donc elle
+          s'affiche depuis n'importe quel domaine. Ce n'est pas une
+          vidéo : c'est un Popquiz, donc le visiteur RÉPOND pendant
+          qu'il regarde, et la page montre le produit au lieu d'en
+          parler. */}
+      <section className="tql-sec tql-blanc">
+        <div className="tql-large">
+          <h2 className="tql-h2">
+            {t.demoTitre} <span className="tql-surb">{t.demoMotCle}</span>
+          </h2>
+          <p className="tql-p">{t.demoCorps}</p>
+          {/* L'IFRAME EST CELLE QU'ELLE A DONNÉE, aux attributs près
+              (`allow`, `allowfullscreen`, le rapport 16/9 tenu par le
+              padding). Pas de `loading="lazy"` : son bout de code n'en
+              avait pas, et ce bloc est le deuxième de la page.
+
+              🚨 CE QUI N'A PAS PU ÊTRE VÉRIFIÉ D'ICI : le RENDU. `curl`
+              répond 200 avec `content-security-policy: frame-ancestors *`,
+              donc la page s'affiche depuis n'importe quel domaine. Mais
+              le navigateur de ce conteneur n'a AUCUNE route vers
+              quiz.tipote.com (ERR_CONNECTION_RESET en direct, rien à
+              travers le proxy) : la capture montre un cadre blanc, et
+              c'est mon environnement, pas sa page. À confirmer à
+              l'écran. */}
+          <div className="tql-demo">
+            <iframe
+              src={DEMO_POPQUIZ}
+              title="Popquiz Tiquiz"
+              allow="autoplay;fullscreen;clipboard-write"
+              allowFullScreen
+            />
+          </div>
+          {/* LA SORTIE DE SECOURS. Un cadre qui ne charge pas montre la
+              page d'erreur du navigateur DEDANS : aucun repli posé
+              derrière ne s'afficherait. Ce lien, lui, est toujours là. */}
+          <p className="tql-legende">
+            <a href={DEMO_POPQUIZ} target="_blank" rel="noopener noreferrer">
+              {t.demoLien}
+            </a>
+          </p>
+        </div>
       </section>
 
       {/* ── LE PROBLÈME, ET LE CHIFFRE ─────────────────────────── */}
-      <section className="border-y border-[var(--tq-bord)] bg-white py-16 sm:py-20">
-        <div className="tq-large grid gap-12 lg:grid-cols-[1.4fr_1fr] lg:items-start">
+      <section className="tql-sec tql-blanc">
+        <div className="tql-large tql-deux">
           <div>
-            <h2 className="text-3xl sm:text-4xl">{t.problemeTitre}</h2>
+            <h2 className="tql-h2 tql-h2-g">{t.problemeTitre}</h2>
             {t.problemeCorps.map((p) => (
-              <p key={p} className="tq-lire tq-doux mt-5 leading-relaxed">
+              <p key={p} className="tql-p tql-p-g">
                 {p}
               </p>
             ))}
           </div>
-          {/* LE CHIFFRE EST EN COULEUR, PAS DANS UN RECTANGLE BLEU.
-              Règle du 31 août : aucun aplat de couleur sous du texte,
-              nulle part. Le bleu ne sert qu'au bouton, à la pastille,
-              au filet horizontal et au chiffre. */}
-          <div className="border-t-2 border-[var(--tq-bleu)] pt-6">
-            <p
-              className="text-6xl font-black leading-none sm:text-7xl"
-              style={{ color: "var(--tq-bleu)" }}
-            >
-              {t.chiffre}
+          <div className="tql-carte tql-chiffre-carte">
+            <p className="tql-chiffre">{t.chiffre}</p>
+            <p className="tql-chiffre-leg">{t.chiffreLegende}</p>
+            <p className="tql-chiffre-src">{t.chiffreSource}</p>
+          </div>
+        </div>
+
+        {/* SON ANIMATION, LEVÉE DE SA PAGE. Béné : "pourquoi tu ne
+            reprends pas au moins une partie des animations de ma page
+            d'origine ? Elles sont super et elles montrent bien le
+            fonctionnement !" Celle ci montre exactement ce que la
+            section dit : un PDF qu'on ne lit pas contre un quiz auquel
+            on répond. */}
+        <div className="tql-large tql-anim">
+          <AnimVente bloc="opt-in-vs-quiz" />
+        </div>
+      </section>
+
+      {/* ── LES ÉTAPES, EN LIGNES QUI ALTERNENT ────────────────── */}
+      <section className="tql-sec">
+        <div className="tql-large">
+          <h2 className="tql-h2">
+            {t.mecaniqueTitre} <span className="tql-surb">{t.mecaniqueMotCle}</span> ?
+          </h2>
+          {t.etapes.map((e, i) => (
+            <div className="tql-etape" key={e.titre}>
+              <div className="tql-etape-txt">
+                <span className="tql-pastille-etape">
+                  {t.etapeMot} {i + 1}
+                </span>
+                <h3>{e.titre}</h3>
+                <p>{e.corps}</p>
+              </div>
+              <div>
+                {/* QUATRE ÉTAPES, QUATRE VISUELS. Le premier jet posait
+                    la maquette du quiz sur l'étape 1 ET dans le haut de
+                    page : le même écran deux fois, ce qui se lit comme
+                    un manque de soin. */}
+                {i === 0 ? (
+                  <MaquetteBrief b={t.brief} />
+                ) : i === 1 ? (
+                  <MaquetteQuiz m={t.maquette} />
+                ) : i === 2 ? (
+                  <div className="tql-carte">
+                    <h3 className="tql-h3">{t.ouCodeTitre}</h3>
+                    <p className="tql-corps">{t.ouCodeCorps}</p>
+                    <BlocCode />
+                  </div>
+                ) : (
+                  <div className="tql-carte tql-carte-flux">
+                    <p className="tql-cite">{t.funnelProfils[1].reponse}</p>
+                    <FlecheBas />
+                    <h3 className="tql-h3">{t.funnelProfils[1].profil}</h3>
+                    <p className="tql-bouton-faux">{t.funnelProfils[1].offre}</p>
+                    <span className="tql-tag">
+                      <b>tag</b> {t.funnelProfils[1].tag}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── LE FUNNEL : CHACUN VERS SON OFFRE ──────────────────── */}
+      <section className="tql-sec tql-blanc">
+        <div className="tql-large">
+          <h2 className="tql-h2">
+            {t.funnelTitre} <span className="tql-surb">{t.funnelMotCle}</span>.
+          </h2>
+          <p className="tql-p">{t.funnelCorps}</p>
+          <div className="tql-grille-3">
+            {t.funnelProfils.map((p) => (
+              <div key={p.tag} className="tql-carte tql-carte-flux">
+                <p className="tql-cite">{p.reponse}</p>
+                <FlecheBas />
+                <h3 className="tql-h3">{p.profil}</h3>
+                <p className="tql-bouton-faux">{p.offre}</p>
+                <span className="tql-tag">
+                  <b>tag</b> {p.tag}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="tql-legende">{t.funnelTagLegende}</p>
+        </div>
+      </section>
+
+      {/* ── L'EXCLUSIVITÉ SYSTEME.IO ───────────────────────────── */}
+      <section className="tql-sec">
+        <div className="tql-large tql-lire-bloc">
+          <p className="tql-surtitre tql-surtitre-c">{t.etiquette}</p>
+          <h2 className="tql-h2">{t.sioTitre}</h2>
+          {t.sioCorps.map((p) => (
+            <p key={p} className="tql-p">
+              {p}
             </p>
-            <p className="mt-4 font-semibold leading-snug">{t.chiffreLegende}</p>
-            <p className="tq-doux mt-3 text-sm leading-relaxed">{t.chiffreSource}</p>
+          ))}
+          <div className="tql-boutons tql-centre" style={{ marginTop: 30 }}>
+            <span className="tql-avec-scint">
+              <Scintilles />
+              <Link href={LIEN_INSCRIPTION} className="tql-cta">
+                {t.ctaSecondaire}
+                <Fleche />
+              </Link>
+            </span>
           </div>
         </div>
       </section>
 
-      {/* ── LE MÉCANISME ───────────────────────────────────────── */}
-      <section className="tq-large py-16 sm:py-20">
-        <h2 className="text-3xl sm:text-4xl">{t.mecaniqueTitre}</h2>
-        <ol className="mt-10 grid gap-10 sm:grid-cols-2">
-          {t.etapes.map((e, i) => (
-            <li key={e.titre} className="flex gap-4">
-              <span
-                aria-hidden
-                className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                style={{ background: "var(--tq-bleu)" }}
-              >
-                {i + 1}
-              </span>
-              <div>
-                <h3 className="text-lg">{e.titre}</h3>
-                <p className="tq-doux mt-2 leading-relaxed">{e.corps}</p>
+      {/* ── OÙ VIT TON QUIZ, EN BENTO ──────────────────────────── */}
+      <section className="tql-sec tql-blanc">
+        <div className="tql-large">
+          <h2 className="tql-h2">
+            {t.ouTitre} <span className="tql-surb">{t.ouMotCle}</span>.
+          </h2>
+          <p className="tql-p">{t.ouCorps}</p>
+          <div className="tql-bento">
+            {t.ouCarreaux.map((c, i) => (
+              <div key={c.titre} className="tql-carte">
+                <Picto i={i} />
+                <h3 className="tql-h3">{c.titre}</h3>
+                <p className="tql-corps">{c.corps}</p>
               </div>
-            </li>
-          ))}
-        </ol>
-      </section>
+            ))}
+          </div>
+          <div className="tql-grille-2">
+            <div className="tql-carte">
+              <h3 className="tql-h3">{t.ouLienTitre}</h3>
+              <p className="tql-corps">{t.ouLienCorps}</p>
+              <ChampLien copier={t.copier} />
+            </div>
+            <div className="tql-carte">
+              <h3 className="tql-h3">{t.ouCodeTitre}</h3>
+              <p className="tql-corps">{t.ouCodeCorps}</p>
+              <BlocCode />
+            </div>
+          </div>
+          <p className="tql-legende">{t.ouNote}</p>
 
-      {/* ── LE DIFFÉRENCIATEUR ─────────────────────────────────── */}
-      <section className="border-y border-[var(--tq-bord)] bg-white py-16 sm:py-20">
-        <div className="tq-large">
-          <h2 className="tq-lire text-3xl sm:text-4xl">{t.sioTitre}</h2>
-          {t.sioCorps.map((p) => (
-            <p key={p} className="tq-lire tq-doux mt-5 leading-relaxed">
-              {p}
-            </p>
-          ))}
+          {/* Le même quiz qui prend ses couleurs et son logo. */}
+          <div className="tql-anim">
+            <AnimVente bloc="ton-branding" />
+          </div>
         </div>
       </section>
 
-      {/* ── OÙ VIT LE QUIZ ─────────────────────────────────────── */}
-      <section className="tq-large py-16 sm:py-20">
-        <h2 className="text-3xl sm:text-4xl">{t.ouTitre}</h2>
-        <p className="tq-lire tq-doux mt-5 leading-relaxed">{t.ouCorps}</p>
-        <ul className="mt-8 grid gap-x-10 gap-y-4 sm:grid-cols-2">
-          {t.ouListe.map((item) => (
-            <li key={item} className="flex gap-3 leading-relaxed">
-              <span
-                aria-hidden
-                className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full"
-                style={{ background: "var(--tq-bleu)" }}
-              />
-              {item}
-            </li>
-          ))}
-        </ul>
+      {/* ── LES AVIS, VRAIS ET VÉRIFIABLES ─────────────────────── */}
+      <section className="tql-sec">
+        <span aria-hidden className="tql-blob tql-blob-c" />
+        <div className="tql-large">
+          <h2 className="tql-h2">
+            {t.avisTitre} <span className="tql-surb">{t.avisMotCle}</span>.
+          </h2>
+          <p className="tql-p">{t.avisCorps}</p>
+          <div className="tql-grille-3">
+            {AVIS.map((a) => (
+              <article key={a.auteur} className="tql-carte tql-avis">
+                <Etoiles />
+                <p className="tql-avis-titre">{a.titre}</p>
+                <p className="tql-avis-texte">{a.texte}</p>
+                <div className="tql-avis-tete">
+                  <p className="tql-avis-nom">{a.auteur}</p>
+                  <span className="tql-avis-date">{a.date}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+          <p className="tql-legende">
+            <a href={TRUSTPILOT_URL} target="_blank" rel="noopener noreferrer">
+              {t.avisSur}
+            </a>
+          </p>
+        </div>
       </section>
 
       {/* ── LES TARIFS ─────────────────────────────────────────── */}
-      <section className="border-y border-[var(--tq-bord)] bg-white py-16 sm:py-20">
-        <div className="tq-large">
-          <h2 className="text-3xl sm:text-4xl">{t.prixTitre}</h2>
-          <p className="tq-lire tq-doux mt-4 leading-relaxed">{t.prixNote}</p>
-          {/* TROIS COLONNES, PAS CINQ. Le mensuel et l'annuel d'un même
-              palier ne sont pas deux offres : c'est la même chose, payée
-              autrement. Cinq cartes obligeaient à lire quatre fois les
-              mêmes lignes pour trouver ce qui change. */}
-          <div className="mt-10 grid gap-4 lg:grid-cols-3">
-            {colonnes.map((c) => (
-              <div
-                key={c.nom}
-                className="flex flex-col rounded-2xl border border-[var(--tq-bord)] p-6"
-                style={{ background: "var(--tq-creme)" }}
-              >
-                <p className="text-sm font-semibold">{c.nom}</p>
-                <p className="mt-3 text-3xl font-black leading-none">{c.prix}</p>
-                <p className="tq-doux mt-2 text-sm">{c.cadence}</p>
-                {c.prixAn ? <p className="tq-doux text-sm">{c.prixAn}</p> : null}
-                <ul className="mt-5 space-y-2 border-t border-[var(--tq-bord)] pt-5 text-sm">
-                  {c.lignes.map((ligne) => (
-                    <li key={ligne} className="flex gap-2 leading-relaxed">
-                      <span aria-hidden className="tq-puce" />
-                      <span>{ligne}</span>
-                    </li>
-                  ))}
-                </ul>
+      <section className="tql-sec tql-blanc">
+        <div className="tql-large tql-tarifs">
+          <h2 className="tql-h2">
+            {t.prixTitre} <span className="tql-surb">{t.prixMotCle}</span>
+          </h2>
+          <p className="tql-p">{t.prixNote}</p>
+
+          {/* L'INTERRUPTEUR, SANS UNE LIGNE DE SCRIPT. Les deux radios
+              sont hors écran, les libellés les pilotent, et `:has()`
+              montre le bon prix. */}
+          <input type="radio" name="tql-cadence" id="tql-mois" defaultChecked />
+          <input type="radio" name="tql-cadence" id="tql-an" />
+          <div className="tql-centre" style={{ display: "flex" }}>
+            <div className="tql-bascule">
+              <label htmlFor="tql-mois">{t.prixMensuel}</label>
+              <label htmlFor="tql-an">
+                {t.prixAnnuel}
+                <span className="tql-eco">{t.prixEconomie}</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="tql-grille-3">
+            {colonnes.map((c, i) => (
+              <div key={c.nom} className={i === 1 ? "tql-col tql-col-mise" : "tql-col"}>
+                <p className={`tql-ruban-col tql-r${i + 1}`}>{t.prixRubans[i].ruban}</p>
+                <div className="tql-col-corps">
+                  <p className="tql-col-pour">{t.prixRubans[i].pour}</p>
+                  {/* LE GROS CHIFFRE CHANGE, PAS LA PHRASE. Le premier
+                      jet affichait "ou 170,00 € par an" en 42 px : un
+                      prix se lit d'un coup d'oeil, une phrase non. */}
+                  <p className="tql-prix">
+                    <span className="tql-prix-mois">{c.prix}</span>
+                    <span className="tql-prix-an">{c.prixAn ?? c.prix}</span>
+                  </p>
+                  <p className="tql-cadence">
+                    <span className="tql-prix-mois">{c.cadence}</span>
+                    <span className="tql-prix-an">{c.cadenceAn ?? c.cadence}</span>
+                  </p>
+                  <ul className="tql-liste">
+                    {c.lignes.map((ligne) => (
+                      <li key={ligne}>
+                        <CochePleine />
+                        <span>{ligne}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {/* LES DEUX DESTINATIONS SONT RENDUES, et `:has()`
+                      montre la bonne. L'interrupteur n'a aucun script,
+                      donc un lien ne peut pas changer d'adresse : sans
+                      ça, qui choisit l'année atterrit sur le bon de
+                      commande du MOIS, et ne le voit qu'en payant. */}
+                  {c.lienAn ? (
+                    <>
+                      <Link href={c.lien} className="tql-col-cta tql-prix-mois">
+                        {c.cta}
+                        <Fleche />
+                      </Link>
+                      <Link href={c.lienAn} className="tql-col-cta tql-prix-an">
+                        {c.cta}
+                        <Fleche />
+                      </Link>
+                    </>
+                  ) : (
+                    /* LE GRATUIT N'A PAS DE CADENCE, donc son bouton ne
+                       porte AUCUNE des deux classes : avec elles, il
+                       disparaissait dès qu'on passait à l'année. */
+                    <Link href={c.lien} className="tql-col-cta">
+                      {c.cta}
+                      <Fleche />
+                    </Link>
+                  )}
+                </div>
               </div>
             ))}
           </div>
 
-          {/* CE QUE TOUT LE MONDE A, DIT UNE FOIS. Recopier ces sept
+          {/* CE QUE TOUT LE MONDE A, DIT UNE FOIS. Recopier ces dix
               lignes dans les trois colonnes noierait ce qui les
-              distingue, et c'est justement ce qu'on vient chercher ici. */}
-          <div className="mt-10 border-t border-[var(--tq-bord)] pt-8">
-            <h3 className="text-lg font-semibold">{t.partageTitre}</h3>
-            <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+              distingue, et c'est ce qu'on vient chercher ici. */}
+          <div className="tql-carte tql-partage">
+            <h3 className="tql-h3">{t.partageTitre}</h3>
+            <ul className="tql-liste tql-liste-3">
               {partages.map((ligne) => (
-                <li key={ligne} className="flex gap-2 leading-relaxed">
-                  <span aria-hidden className="tq-puce" />
+                <li key={ligne}>
+                  <CochePleine />
                   <span>{ligne}</span>
                 </li>
               ))}
@@ -227,36 +533,45 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
         </div>
       </section>
 
-      {/* ── LA FAQ, EN `<details>` NATIF ───────────────────────── */}
-      {/* Zéro JavaScript : c'est un script qui a figé la FAQ de la page
-          de vente le 2 septembre. Un bloc qui n'a besoin de rien ne peut
-          pas se casser quand on retire quelque chose, il s'ouvre au
-          clavier, et Ctrl+F ouvre le bon panneau. */}
-      <section className="tq-large py-16 sm:py-20">
-        <h2 className="text-3xl sm:text-4xl">{t.faqTitre}</h2>
-        <div className="tq-lire mt-8">
-          {t.faq.map((f) => (
-            <details key={f.q} className="border-b border-[var(--tq-bord)] py-5">
-              <summary className="cursor-pointer list-none font-semibold">{f.q}</summary>
-              <p className="tq-doux mt-3 leading-relaxed">{f.r}</p>
-            </details>
+      {/* ── LA FAQ, LES 16 QUESTIONS DE SA PAGE ────────────────── */}
+      {/* Béné : "et la FAQ bordel tu as déjà tout sur la page de vente :
+          pourquoi tu ne reproduis pas ??" Il n'y avait rien à écrire :
+          les questions ET les réponses vivent dans le `FAQPage` de sa
+          page, et les cinq groupes dans `lib/sales/faqV2.ts` depuis le
+          2 septembre. `npm run faq:extraire` fait le pont.
+          SEIZE QUESTIONS À LA FILE, C'EST UN MUR : groupées, on saute
+          directement à la sienne. */}
+      <section className="tql-sec">
+        <div className="tql-large tql-lire-bloc">
+          <h2 className="tql-h2">{t.faqTitre}</h2>
+          <p className="tql-p">{t.faqCorps}</p>
+          {faq.map((g) => (
+            <div key={g.titre} className="tql-faq-groupe">
+              <p className="tql-faq-titre">{g.titre}</p>
+              {g.questions.map((f) => (
+                <details key={f.q} className="tql-faq">
+                  <summary>
+                    {f.q}
+                    <Chevron />
+                  </summary>
+                  <p>{f.r}</p>
+                </details>
+              ))}
+            </div>
           ))}
         </div>
       </section>
 
-      {/* ── LA SORTIE ──────────────────────────────────────────── */}
-      <section className="border-t border-[var(--tq-bord)] bg-white py-16 sm:py-20">
-        <div className="tq-large">
-          <h2 className="tq-lire text-3xl sm:text-4xl">{t.finTitre}</h2>
-          <p className="tq-lire tq-doux mt-5 leading-relaxed">{t.finCorps}</p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Link href={LIEN_GENERATEUR} className="tq-bouton">
-              {t.ctaPrincipal}
-            </Link>
-            <Link href={LIEN_INSCRIPTION} className="tq-bouton tq-bouton-fantome">
-              {t.ctaSecondaire}
-            </Link>
-          </div>
+      {/* ── LE BANDEAU DÉGRADÉ DE FIN ──────────────────────────── */}
+      <section className="tql-bande">
+        <div className="tql-large">
+          <h2>{t.bandeTitre}</h2>
+          <p>{t.bandeCorps}</p>
+          <Link href={LIEN_GENERATEUR} className="tql-bande-cta">
+            {t.bandeCta}
+            <Fleche />
+          </Link>
+          <Rassurances items={t.rassurances} />
         </div>
       </section>
     </main>

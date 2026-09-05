@@ -25,7 +25,9 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  AVIS,
   LANDING,
+  TRUSTPILOT_URL,
   avantagesPartages,
   colonnesDeTarif,
   contenuLanding,
@@ -127,6 +129,92 @@ describe("les langues écrites", () => {
         !/[—–]/.test(tout),
         `${langue} : tiret cadratin ou demi-cadratin dans le texte de la landing`,
       );
+    }
+  });
+});
+
+describe("les avis sont ceux de Trustpilot, et rien d'autre", () => {
+  // Bene, 4 septembre 2026 : "on a ici des avis tous frais sur tiquiz,
+  // tu peux les utiliser : fr.trustpilot.com/review/tiquiz.fr".
+  //
+  // Un faux temoignage est son interdit numero un. Ce filet ne peut pas
+  // aller verifier Trustpilot, donc il tient ce qu'il PEUT tenir : les
+  // avis ne vivent pas dans les objets de langue (donc ils ne se
+  // traduisent jamais), chacun porte son auteur ET sa date, et le lien
+  // vers la fiche publique reste affiche pour que n'importe qui verifie.
+
+  test("aucun avis ne vit dans un objet de langue", () => {
+    for (const langue of Object.keys(LANDING)) {
+      const tout = JSON.stringify(LANDING[langue]);
+      for (const a of AVIS) {
+        assert.ok(
+          !tout.includes(a.texte.slice(0, 40)),
+          `${langue} : le texte de ${a.auteur} a ete recopie dans une langue, donc il sera traduit`,
+        );
+      }
+    }
+  });
+
+  test("chaque avis porte son auteur et sa date", () => {
+    assert.ok(AVIS.length >= 3, "au moins trois avis, sinon la section ne pese rien");
+    for (const a of AVIS) {
+      assert.ok(a.auteur.trim().length > 1, "un avis sans auteur n'est pas un temoignage");
+      assert.match(a.date, /\d{4}/, `${a.auteur} : la date doit etre affichable`);
+      assert.ok(a.texte.trim().length > 40, `${a.auteur} : le texte est trop court pour etre l'avis`);
+    }
+  });
+
+  test("le lien vers la fiche publique pointe bien sur Trustpilot", () => {
+    assert.match(TRUSTPILOT_URL, /^https:\/\/(fr\.)?trustpilot\.com\/review\/tiquiz\.fr$/);
+  });
+
+  test("AUCUNE note chiffree n'est annoncee", () => {
+    // Trustpilot affiche 100 % de 5 etoiles ET un TrustScore pondere de
+    // 4,2. Les deux cote a cote se liraient comme une erreur : la page
+    // dit le FAIT ("tous en 5 etoiles") et met le lien.
+    for (const langue of Object.keys(LANDING)) {
+      const preuve = LANDING[langue].preuve;
+      assert.ok(
+        !/\d[,.]\d\s*\/\s*5|\d[,.]\d\s*sur\s*5/i.test(preuve),
+        `${langue} : la barre de preuve annonce une note chiffree -> ${preuve}`,
+      );
+    }
+  });
+});
+
+describe("l'interrupteur de tarif mene au bon bon de commande", () => {
+  // L'interrupteur mensuel / annuel n'a AUCUN JavaScript : un lien ne
+  // peut donc pas changer d'adresse au clic. Les deux sont rendues, et
+  // `:has()` montre la bonne. Sans ca, quelqu'un qui choisit l'annee
+  // atterrit sur le bon de commande du MOIS, et ne le voit qu'en payant.
+
+  test("chaque colonne payante porte SES deux destinations", () => {
+    const c = colonnesDeTarif(LANDING.fr);
+    assert.equal(c[0].lienAn, null, "le gratuit n'a pas de cadence");
+    assert.equal(c[1].lien, "/commande/mensuel");
+    assert.equal(c[1].lienAn, "/commande/annuel");
+    assert.equal(c[2].lien, "/commande/mensuel-plus");
+    assert.equal(c[2].lienAn, "/commande/annuel-plus");
+  });
+
+  test("le libelle du bouton n'est pas le meme sur les trois colonnes", () => {
+    // "Creer mon compte gratuit" sur la colonne a 29 EUR etait faux.
+    for (const langue of Object.keys(LANDING)) {
+      const libelles = colonnesDeTarif(LANDING[langue]).map((c) => c.cta);
+      assert.equal(new Set(libelles).size, 3, `${langue} : deux colonnes portent le meme bouton`);
+    }
+  });
+
+  test("le prix annuel est un PRIX, jamais une phrase", () => {
+    // Le premier jet affichait "ou 170,00 EUR par an" en 42 px.
+    for (const langue of Object.keys(LANDING)) {
+      for (const c of colonnesDeTarif(LANDING[langue])) {
+        if (!c.prixAn) continue;
+        assert.ok(
+          c.prixAn.split(/\s+/).length <= 2,
+          `${langue} : le gros chiffre porte une phrase -> ${c.prixAn}`,
+        );
+      }
     }
   });
 });

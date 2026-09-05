@@ -118,7 +118,8 @@ export default function HubIntegrations() {
             Aucun des grands outils de formulaire ne parle directement à Systeme.io. Tally,
             Typeform, Google Forms, Jotform et Interact passent tous par un intermédiaire :
             Zapier, Make ou Pabbly. Compter un abonnement de plus, à partir de{" "}
-            {ZAPIER.professionnelParMois} par mois dès qu&apos;il faut un tag différent selon la
+            {ZAPIER.professionnelParMois}{" "}
+            par mois dès qu&apos;il faut un tag différent selon la
             réponse.
           </p>
           <p>

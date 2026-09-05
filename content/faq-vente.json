@@ -1,0 +1,94 @@
+{
+  "_source": "content/sales/tiquiz.html, bloc FAQPage. Genere par scripts/extraire-faq-vente.mjs, NE PAS editer a la main.",
+  "groupes": [
+    {
+      "titre": "Avant de commencer",
+      "questions": [
+        {
+          "q": "Ai-je besoin d'une carte bancaire pour essayer Tiquiz ?",
+          "r": "Non. La version gratuite de Tiquiz est accessible sans carte bancaire. Tu crées ton compte, tu commences à créer tes quiz, point. Si tu veux débloquer les fonctionnalités avancées, tu pourras passer sur un plan payant à tout moment depuis ton espace."
+        },
+        {
+          "q": "Est-ce que j'aurai quelque chose à télécharger ?",
+          "r": "Non, rien du tout. Tiquiz est un logiciel 100% en ligne (SaaS). Tu as juste besoin d'un navigateur web et d'une connexion Internet pour l'utiliser. Compatible PC, Mac, Chromebook... tout ce qui a un navigateur."
+        },
+        {
+          "q": "Je démarre de zéro, est-ce que Tiquiz peut m'aider quand même ?",
+          "r": "Absolument. Tiquiz a été pensé pour les solopreneurs, coachs, consultants et créateurs de contenu, y compris ceux qui démarrent de zéro. L'IA t'aide à créer tes quiz même si tu ne sais pas par où commencer, et les quiz vont t'aider à construire ta première liste de contacts qualifiés grâce à leur viralité naturelle."
+        },
+        {
+          "q": "Pourra-t-on utiliser Tiquiz depuis un smartphone ?",
+          "r": "Oui, Tiquiz est responsive donc tu peux l'utiliser depuis un smartphone. Et plus important encore : tes quiz seront parfaitement compatibles pour les smartphones."
+        }
+      ]
+    },
+    {
+      "titre": "Systeme.io et les connexions",
+      "questions": [
+        {
+          "q": "J'ai absolument besoin d'un compte Systeme io ?",
+          "r": "Non pas du tout. Mais Tiquiz est optimisé pour synchroniser tes contacts capturés avec Systeme io, alors si tu veux profiter de toute sa puissance, c'est quand même conseillé 😉 Quoi qu'il en soit, tu pourras toujours exporter tes leads manuellement pour les importer dans ton autorépondeur."
+        },
+        {
+          "q": "Faut-il un abonnement payant chez Systeme.io ?",
+          "r": "Non, ce n'est pas obligatoire. Mais on te le recommande chaudement. Systeme.io est notre partenaire de confiance et le meilleur rapport qualité-prix du marché pour les solopreneurs francophones. C'est le seul autorépondeur avec lequel Tiquiz offre une connexion directe et automatique. Cas concret : ton contact termine ton quiz et s'inscrit via le formulaire d'optin intégré. Résultat : il est automatiquement tagué dans Systeme.io et l'automatisation que tu as paramétrée se déclenche toute seule. Si tu utilises un autre autorépondeur, tu pourras toujours télécharger tes contacts en CSV et les importer manuellement."
+        },
+        {
+          "q": "Est-ce que Tiquiz est compatible avec le compte gratuit de Systeme.io ?",
+          "r": "Oui, à 100%. Tu n'as pas besoin d'un plan payant chez Systeme.io pour profiter de la connexion directe avec Tiquiz. Le compte gratuit suffit."
+        },
+        {
+          "q": "Ai-je besoin de connecter Zapier, Make ou Google Sheets ?",
+          "r": "Non. Contrairement à d'autres outils de quiz, Tiquiz se connecte directement à Systeme.io sans passer par un outil tiers. Zéro bidouille, zéro abonnement supplémentaire. Tes contacts et leurs tags arrivent directement dans Systeme.io."
+        },
+        {
+          "q": "Ai-je besoin de clés API pour utiliser l'IA de Tiquiz ?",
+          "r": "Non. L'intelligence artificielle est intégrée directement dans Tiquiz. Tu n'as rien à configurer, pas de clé API à copier-coller, pas de compte OpenAI ou autre à créer. Tu ouvres Tiquiz, tu décris ton quiz et l'IA fait le travail."
+        }
+      ]
+    },
+    {
+      "titre": "Les quiz et le partage",
+      "questions": [
+        {
+          "q": "Mes utilisateurs sont-ils obligés de partager leur quiz pour voir leurs résultats ?",
+          "r": "Non. Le partage sur les réseaux sociaux rend tes quiz viraux, mais ce n'est pas une obligation. Si ta thématique ne s'y prête pas, il te suffit de désactiver l'option de partage dans ton interface. Tes utilisateurs recevront leurs résultats en échange de leur adresse email, en toute discrétion."
+        },
+        {
+          "q": "Sur quels réseaux sociaux peut-on partager les quiz ?",
+          "r": "Facebook, Instagram, Twitter/X, LinkedIn, Pinterest et WhatsApp."
+        }
+      ]
+    },
+    {
+      "titre": "L'abonnement",
+      "questions": [
+        {
+          "q": "Y a-t-il des frais cachés ?",
+          "r": "Aucun. Le prix affiché est le prix que tu paies et c'est tout. Pas de supplément surprise, pas de \"module complémentaire obligatoire\", pas de frais de mise en service. Et si tu es sur la version gratuite, elle reste gratuite. Et si tu as un abonnement, tu n'auras pas de mauvaise surprise, tout est compris dedans."
+        },
+        {
+          "q": "Comment résilier mon abonnement ?",
+          "r": "En un clic depuis ton espace Tiquiz. Tu vas dans tes paramètres, tu cliques sur \"Résilier\" et c'est fait. Pas besoin d'envoyer un email, pas besoin de justifier quoi que ce soit, pas de période d'engagement. Tu es libre."
+        }
+      ]
+    },
+    {
+      "titre": "Pour aller plus loin",
+      "questions": [
+        {
+          "q": "Est-ce qu'il y a une formation ?",
+          "r": "Oui exactement ! Pour aider tous les utilisateurs débutants, j'ai créé L'Atelier du Quiz. Bien plus qu'une formation c'est un quizing : un espace complet pensé pour t'aider à avancer plus rapidement et à obtenir des résultats avec tes quiz. Tu peux découvrir l'Atelier du Quiz sur atelierduquiz.fr"
+        },
+        {
+          "q": "C'est quoi Tipote ?",
+          "r": "Tipote est la plateforme complète dont Tiquiz fait partie. Elle comprend Tiquiz et plein d'autres fonctionnalités pour les solopreneurs, coachs, consultants et créateurs de contenu. Pour découvrir tout ce que Tipote peut faire pour toi, rendez-vous sur tipote.fr."
+        },
+        {
+          "q": "J'ai encore des questions, comment te joindre ?",
+          "r": "Par email en écrivant à hello@tiquiz.fr. Je réponds aussi vite que possible et on ne te laisse jamais sans réponse."
+        }
+      ]
+    }
+  ]
+}

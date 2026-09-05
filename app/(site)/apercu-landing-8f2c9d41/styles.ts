@@ -1,0 +1,350 @@
+// app/(site)/apercu-landing-8f2c9d41/styles.ts
+//
+// LE SYSTÈME VISUEL DE LA LANDING, RELEVÉ DANS SA PAGE DE VENTE.
+//
+// Béné, 4 septembre 2026 : "on est à peine à 20 % de ce que je veux.
+// Rapproche-toi beaucoup plus de ma page d'origine."
+//
+// Ce fichier est le résultat d'une LECTURE de sa page servie dans un
+// navigateur, section par section, pas d'une lecture de son CSS. Ce qui
+// manquait au premier jet, et que la capture montre :
+//
+//   1. le SURLIGNEUR pâle derrière un fragment de titre, avec le trait
+//      vertical de curseur au bout. C'est sa signature la plus visible ;
+//   2. les SCINTILLES : une dispersion de points bleus et cyan au
+//      dessus du bouton principal ;
+//   3. la RASSURANCE sous chaque bouton ("Gratuit à vie", "Pas besoin
+//      de CB"), avec une coche dessinée ;
+//   4. le BANDEAU DÉFILANT de fonctionnalités ;
+//   5. les pastilles "ÉTAPE n" en cyan, et des lignes qui ALTERNENT
+//      texte / visuel ;
+//   6. de vraies MAQUETTES de produit dans ces lignes ;
+//   7. les cartes de tarif à RUBAN coloré, et l'interrupteur
+//      mensuel / annuel avec sa pastille "2 mois offerts" ;
+//   8. le BANDEAU DÉGRADÉ de fin, blanc sur bleu.
+//
+// -- SUR L'APLAT DE COULEUR SOUS DU TEXTE ----------------------------
+//
+// La règle du 31 août ("aucun aplat sous du texte, NULLE PART") a été
+// écrite pour le BLOG et pour les pages qui se LISENT, après trois
+// remontées sur des pavés bleus saturés portant du texte blanc.
+//
+// Deux endroits d'ici en portent quand même, et les deux sont SON geste
+// sur SA page, relevés dedans :
+//   - le surligneur du titre : une TEINTE pâle sous du texte à l'encre,
+//     pas un pavé saturé sous du blanc ;
+//   - le bandeau dégradé de fin, où rien ne se lit longtemps, comme le
+//     pied de page du site.
+// Ne pas les "corriger" au prochain passage : ils sont voulus, et la
+// raison est ici.
+//
+// -- LES VALEURS SONT MESURÉES ---------------------------------------
+//
+// Fonte, palette, rayons, ombres et rythme viennent de `.tq-site`
+// (globals.css), qui porte depuis le 4 septembre les couleurs de la
+// page de vente. Ce fichier n'en recopie AUCUNE : il les lit.
+
+export const CSS = `
+.tql{--e:var(--tq-encre);--c:var(--tq-encre-douce);--b:var(--tq-bleu);--cy:var(--tq-cyan);
+  --pale:var(--tq-creme);--pill:var(--tq-panneau);--bord:var(--tq-bord);
+  color:var(--e);background:var(--pale)}
+.tql *{box-sizing:border-box}
+.tql a{color:inherit}
+
+/* ── LE RYTHME ───────────────────────────────────────────────────── */
+/* AU MOINS 100 PX EN HAUT ET EN BAS, SUR CHAQUE SECTION, Y COMPRIS EN
+   MOBILE. Béné, 4 septembre 2026 : "un truc sur lequel toutes les IA se
+   plantent : les paddings hauts et bas. Je veux au moins 100px en haut
+   et 100px en bas pour chaque section sauf le hero si pas adapté."
+   Mesuré avant : le hero était à 72/84, la FAQ à 70/70, le bandeau de
+   fin à 96/96, et TOUT tombait à 60 en dessous de 900 px.
+   "tests/visual/landing-paddings.spec.ts" MESURE les valeurs calculées :
+   un "padding" raboté par un futur passage le fait rougir. */
+.tql-sec{position:relative;overflow:hidden;padding:100px 20px;background:var(--pale)}
+.tql-blanc{background:#fff}
+
+.tql-large{position:relative;width:100%;max-width:1120px;margin:0 auto}
+.tql-lire-bloc{max-width:840px}
+
+/* Les flous décoratifs : aucun texte dessus, donc hors de la règle du
+   31 août. Ils portent la profondeur que sa page a et que la mienne
+   n'avait pas. */
+.tql-blob{position:absolute;border-radius:999px;filter:blur(80px);opacity:.5;pointer-events:none}
+.tql-blob-a{width:380px;height:380px;background:#9BB4FF;top:-120px;right:-90px}
+.tql-blob-b{width:280px;height:280px;background:#8FE3F7;bottom:-140px;left:-110px}
+.tql-blob-c{width:460px;height:320px;background:#A9BEFF;top:-160px;left:50%;transform:translateX(-50%)}
+
+/* ── TITRES, ET LE SURLIGNEUR ────────────────────────────────────── */
+.tql-surtitre{font-size:13px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--b);margin:0 0 14px}
+.tql-surtitre-c{text-align:center}
+.tql-h1{font-size:46px;line-height:1.14;font-weight:800;margin:0 0 22px;letter-spacing:-.02em;
+  text-wrap:balance}
+.tql-h2{font-size:38px;line-height:1.2;font-weight:700;margin:0 0 16px;text-align:center;letter-spacing:-.012em}
+.tql-h2-g{text-align:left}
+.tql-h3{font-size:19px;font-weight:700;line-height:1.35;margin:0 0 8px}
+
+/* SON SURLIGNEUR : une teinte pâle derrière le fragment, et le trait
+   vertical de curseur au bout, comme si le titre venait d'être tapé.
+   Le "box-decoration-break" garde la teinte propre quand le fragment
+   passe sur deux lignes : sans lui, la deuxième ligne perd son fond. */
+.tql-surb{color:var(--cy);position:relative;padding:0 .12em;
+  background:linear-gradient(180deg,rgba(32,187,230,.14) 0%,rgba(90,110,246,.13) 100%);
+  border-radius:6px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.tql-curseur{display:inline-block;width:3px;height:.95em;margin-left:.12em;border-radius:2px;
+  background:var(--b);vertical-align:-.08em;animation:tqlClign 1.1s step-end infinite}
+@keyframes tqlClign{0%,100%{opacity:1}50%{opacity:.15}}
+
+.tql-accroche{font-size:19px;line-height:1.6;color:var(--c);margin:0 0 30px;max-width:560px}
+.tql-p{font-size:17px;line-height:1.65;color:var(--c);max-width:720px;margin:0 auto 20px;text-align:center}
+.tql-p-g{text-align:left;margin-left:0}
+.tql-corps{font-size:15px;line-height:1.6;color:var(--c);margin:0}
+.tql-legende{font-size:14px;color:#6B7291;text-align:center;margin:26px 0 0}
+
+/* ── BOUTONS, SCINTILLES, RASSURANCE ─────────────────────────────── */
+.tql-boutons{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.tql-centre{justify-content:center;text-align:center}
+.tql-cta{display:inline-flex;align-items:center;gap:9px;background:var(--b);color:#fff;font-weight:700;
+  font-size:18px;padding:14px 30px;border-radius:999px;box-shadow:0 9px 24px rgba(90,110,246,.435);
+  animation:tqlPulse 1.4s ease-in-out infinite}
+.tql-cta-2{display:inline-flex;align-items:center;gap:8px;background:#fff;color:var(--e);font-weight:700;
+  font-size:17px;padding:13px 26px;border-radius:999px;border:1px solid #D8DEEE}
+.tql-cta-2:hover{border-color:var(--b);color:var(--b)}
+.tql-fleche-b{display:inline-flex;margin-top:1px}
+
+/* L'animation du bouton, recopiée à l'identique de sa page de vente. */
+@keyframes tqlPulse{
+  0%{transform:scale(1);box-shadow:0 4px 14px rgba(90,110,246,.28),0 0 0 0 rgba(32,187,230,0)}
+  30%{transform:scale(1.04);box-shadow:0 10px 30px rgba(90,110,246,.45),0 0 0 6px rgba(32,187,230,.12)}
+  60%{transform:scale(1.015);box-shadow:0 7px 22px rgba(90,110,246,.35),0 0 0 14px rgba(32,187,230,0)}
+  100%{transform:scale(1);box-shadow:0 4px 14px rgba(90,110,246,.28),0 0 0 0 rgba(32,187,230,0)}
+}
+@media (prefers-reduced-motion:reduce){
+  .tql-cta{animation:none}.tql-curseur{animation:none}.tql-ruban-piste{animation:none}
+}
+
+.tql-avec-scint{position:relative;display:inline-block}
+.tql-scint{position:absolute;left:-52px;right:-52px;top:-58px;height:62px;pointer-events:none}
+.tql-pt{position:absolute;border-radius:999px}
+.tql-pt-b{background:var(--b);opacity:.5}
+.tql-pt-c{background:var(--cy);opacity:.65}
+
+.tql-rassure{display:flex;flex-wrap:wrap;gap:6px 20px;margin:18px 0 0;padding:0;list-style:none}
+.tql-rassure li{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;color:#6B7291}
+.tql-coche-fine{display:inline-flex;color:var(--cy)}
+
+/* ── LA BARRE DE PREUVE TRUSTPILOT ───────────────────────────────── */
+.tql-preuve{display:inline-flex;align-items:center;gap:12px;margin:26px 0 0;padding:10px 18px;
+  background:#fff;border:1px solid var(--bord);border-radius:999px;box-shadow:0 6px 18px rgba(35,40,80,.07)}
+.tql-preuve-t{font-size:14px;font-weight:700}
+.tql-preuve a{font-size:13px;font-weight:600;color:var(--b);text-decoration:underline}
+.tql-etoiles{display:inline-flex;gap:2px;color:#F5A623}
+
+/* ── LE HAUT DE PAGE ─────────────────────────────────────────────── */
+/* LE HERO EST LA SEULE EXCEPTION ADMISE (Béné : "sauf le hero si pas
+   adapté"), et il n'en profite pas : 100 en haut sous l'en-tête collant,
+   110 en bas pour que la maquette respire avant le bandeau. */
+.tql-hero{padding-top:100px;padding-bottom:110px}
+.tql-hero-grille{display:grid;grid-template-columns:1.12fr .88fr;gap:52px;align-items:center}
+
+/* ── LA MAQUETTE ─────────────────────────────────────────────────── */
+.tql-maq{background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(35,40,80,.16);overflow:hidden}
+.tql-maq-tete{display:flex;align-items:center;gap:6px;padding:12px 16px;background:#F7F9FE;
+  border-bottom:1px solid var(--bord)}
+.tql-maq-pt{width:9px;height:9px;border-radius:999px;background:#D5DCEC}
+.tql-maq-url{margin-left:12px;font-size:12px;color:#8A90AE;font-weight:600}
+.tql-maq-corps{padding:26px 26px 24px}
+.tql-maq-barre{height:6px;border-radius:999px;background:var(--pill);overflow:hidden}
+.tql-maq-barre span{display:block;height:100%;border-radius:999px;
+  background:linear-gradient(90deg,var(--cy),var(--b))}
+.tql-maq-prog{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:#8A90AE;margin:12px 0 14px}
+.tql-maq-q{font-size:20px;font-weight:700;line-height:1.35;margin:0 0 18px}
+.tql-maq-r{display:flex;align-items:center;gap:11px;font-size:15px;line-height:1.45;color:var(--c);
+  border:1px solid #E4E8F3;border-radius:14px;padding:13px 15px;margin:0 0 10px;background:#fff}
+.tql-maq-puce{flex:none;width:16px;height:16px;border-radius:999px;border:2px solid #C9D0E6}
+.tql-maq-r-on{border-color:var(--b);background:#F5F7FF;color:var(--e);font-weight:600}
+.tql-maq-r-on .tql-maq-puce{border-color:var(--b);background:var(--b);box-shadow:inset 0 0 0 3px #fff}
+
+/* LE BRIEF DESSINÉ */
+.tql-brief-champ{border:1px solid #E4E8F3;border-radius:12px;padding:11px 14px;margin:0 0 10px}
+.tql-brief-lab{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  color:#8A90AE;margin:0 0 4px}
+.tql-brief-val{font-size:15px;font-weight:600;color:var(--e);margin:0}
+.tql-brief-b{display:block;text-align:center;background:var(--b);color:#fff;font-weight:700;font-size:15px;
+  padding:12px 16px;border-radius:12px;margin:16px 0 0}
+
+/* ── LE BANDEAU DÉFILANT ─────────────────────────────────────────── */
+.tql-ruban{border-top:1px solid var(--bord);border-bottom:1px solid var(--bord);background:#fff;
+  padding:16px 0;overflow:hidden;position:relative}
+.tql-ruban::before,.tql-ruban::after{content:"";position:absolute;top:0;bottom:0;width:90px;z-index:2}
+.tql-ruban::before{left:0;background:linear-gradient(90deg,#fff,rgba(255,255,255,0))}
+.tql-ruban::after{right:0;background:linear-gradient(270deg,#fff,rgba(255,255,255,0))}
+.tql-ruban-piste{display:flex;width:max-content;animation:tqlDefile 34s linear infinite}
+.tql-ruban-lot{display:flex;flex:none}
+.tql-ruban-lot span{display:flex;align-items:center;gap:12px;padding:0 26px;font-size:14px;
+  font-weight:700;color:#6B7291;white-space:nowrap}
+.tql-ruban-lot span::after{content:"";width:5px;height:5px;border-radius:999px;background:var(--cy)}
+@keyframes tqlDefile{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ── CARTES ET GRILLES ───────────────────────────────────────────── */
+.tql-carte{background:#fff;border-radius:18px;padding:26px 24px;box-shadow:0 10px 30px rgba(35,40,80,.08)}
+.tql-deux{display:grid;grid-template-columns:1.3fr 1fr;gap:48px;align-items:center}
+.tql-grille-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;align-items:stretch;margin-top:40px}
+.tql-grille-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;margin-top:32px}
+.tql-bento{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:40px}
+.tql-bento .tql-carte{padding:24px 22px}
+.tql-picto{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;
+  border-radius:12px;background:var(--pale);color:var(--b);margin-bottom:14px}
+
+/* ── LES ÉTAPES, EN LIGNES QUI ALTERNENT ─────────────────────────── */
+.tql-etape{display:grid;grid-template-columns:1fr 1fr;gap:52px;align-items:center;margin-top:64px}
+.tql-etape:nth-child(even) .tql-etape-txt{order:2}
+.tql-pastille-etape{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.1em;
+  text-transform:uppercase;color:#fff;background:var(--cy);border-radius:999px;padding:5px 12px;margin-bottom:14px}
+.tql-etape-txt h3{font-size:26px;line-height:1.25;font-weight:700;margin:0 0 12px}
+.tql-etape-txt p{font-size:16px;line-height:1.65;color:var(--c);margin:0}
+
+/* ── LE CHIFFRE ──────────────────────────────────────────────────── */
+.tql-chiffre-carte{text-align:center}
+.tql-chiffre{font-size:68px;line-height:1;font-weight:800;margin:0 0 14px;letter-spacing:-.03em;
+  background:linear-gradient(135deg,var(--b),var(--cy));-webkit-background-clip:text;
+  background-clip:text;color:transparent}
+.tql-chiffre-leg{font-size:16px;line-height:1.55;color:var(--e);font-weight:600;margin:0 0 14px}
+.tql-chiffre-src{font-size:13px;line-height:1.55;color:#6B7291;margin:0}
+
+/* ── LE FUNNEL ───────────────────────────────────────────────────── */
+.tql-carte-flux{display:flex;flex-direction:column}
+.tql-cite{font-size:15px;line-height:1.5;color:var(--c);font-style:italic;margin:0 0 14px;padding:12px 14px;
+  background:var(--pale);border-radius:12px;min-height:70px;display:flex;align-items:center}
+.tql-fleche-bas{display:block;text-align:center;color:var(--cy);margin:0 0 12px}
+.tql-bouton-faux{display:block;text-align:center;background:var(--b);color:#fff;font-weight:700;font-size:15px;
+  padding:12px 16px;border-radius:12px;margin:auto 0 12px}
+.tql-tag{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--e);
+  background:var(--pill);border-radius:999px;padding:6px 12px;align-self:flex-start}
+.tql-tag b{color:var(--b);font-weight:700}
+
+/* ── LE LIEN ET LE CODE ──────────────────────────────────────────── */
+.tql-champ{display:flex;align-items:center;gap:10px;margin-top:16px;padding:10px 12px;
+  background:var(--pale);border:1px solid var(--bord);border-radius:12px}
+.tql-champ-url{flex:1;font-size:13px;color:#6B7291;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tql-champ-b{flex:none;font-size:12px;font-weight:700;color:#fff;background:var(--b);border-radius:8px;padding:6px 12px}
+.tql-code{margin:16px 0 0;padding:16px 18px;background:#1D2450;color:#C9D6FF;border-radius:12px;
+  font-size:12.5px;line-height:1.6;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  overflow-x:auto;white-space:pre}
+
+/* ── LES AVIS ────────────────────────────────────────────────────── */
+.tql-avis{display:flex;flex-direction:column;gap:12px}
+.tql-avis-tete{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.tql-avis-nom{font-size:15px;font-weight:700;margin:0}
+.tql-avis-date{font-size:12px;color:#8A90AE;flex:none}
+.tql-avis-titre{font-size:16px;font-weight:700;line-height:1.35;margin:0}
+.tql-avis-texte{font-size:14.5px;line-height:1.62;color:var(--c);margin:0}
+
+/* ── LES TARIFS ──────────────────────────────────────────────────── */
+/* L'INTERRUPTEUR N'A AUCUN JAVASCRIPT : deux boutons radio et ":has()",
+   la technique de son bloc "c'est pour toi" du 2 septembre. C'est un
+   script qui avait figé la FAQ de sa page de vente ce jour là ; un bloc
+   qui n'a besoin de rien ne peut pas se casser quand on retire
+   quelque chose. */
+.tql-tarifs input{position:absolute;opacity:0;pointer-events:none}
+.tql-bascule{display:inline-flex;align-items:center;gap:6px;margin:0 auto 8px;padding:5px;
+  background:#fff;border:1px solid var(--bord);border-radius:999px}
+.tql-bascule label{cursor:pointer;font-size:14.5px;font-weight:700;color:#6B7291;padding:8px 18px;border-radius:999px}
+.tql-tarifs:has(#tql-mois:checked) label[for="tql-mois"],
+.tql-tarifs:has(#tql-an:checked) label[for="tql-an"]{background:var(--b);color:#fff}
+.tql-eco{display:inline-flex;align-items:center;font-size:11.5px;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;color:#fff;background:var(--cy);border-radius:999px;padding:5px 11px;margin-left:6px}
+.tql-tarifs:has(#tql-an:checked) .tql-prix-mois,
+.tql-tarifs:has(#tql-mois:checked) .tql-prix-an{display:none}
+
+.tql-col{background:#fff;border-radius:18px;box-shadow:0 12px 34px rgba(35,40,80,.09);overflow:hidden;
+  display:flex;flex-direction:column}
+.tql-col-mise{box-shadow:0 20px 50px rgba(90,110,246,.24);border:2px solid var(--b)}
+.tql-ruban-col{font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#fff;
+  text-align:center;padding:9px 12px}
+.tql-r1{background:var(--cy)}
+.tql-r2{background:var(--b)}
+.tql-r3{background:linear-gradient(90deg,var(--b),#7C4DFF)}
+.tql-col-corps{padding:24px 22px 22px;display:flex;flex-direction:column;flex:1}
+.tql-col-pour{font-size:13px;color:#8A90AE;margin:0 0 12px}
+.tql-prix{font-size:42px;font-weight:800;line-height:1;margin:0;letter-spacing:-.025em;color:var(--b)}
+.tql-cadence{font-size:13px;color:#8A90AE;margin:6px 0 0}
+.tql-liste{list-style:none;margin:18px 0 22px;padding:18px 0 0;border-top:1px solid #E9ECF6;flex:1}
+.tql-liste li{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.55;color:var(--c);margin:0 0 10px}
+.tql-liste li:last-child{margin:0}
+.tql-coche-pleine{flex:none;color:var(--b);margin-top:1px;display:inline-flex}
+.tql-col-cta{display:flex;align-items:center;justify-content:center;gap:8px;background:var(--b);color:#fff;
+  font-weight:700;font-size:15.5px;padding:13px 18px;border-radius:999px}
+.tql-col-cta:hover{background:var(--tq-bleu-fonce)}
+.tql-partage{margin-top:26px}
+.tql-partage .tql-h3{text-align:center;margin-bottom:14px}
+.tql-liste-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 26px;border-top:0;padding-top:0;margin:0}
+
+/* ── LA DÉMO EN IFRAME ──────────────────────────────────────────── */
+/* Le rapport 16/9 est tenu par le padding, pas par une hauteur figée :
+   c'est ce qu'elle avait écrit elle même dans son bout de code. */
+.tql-demo{position:relative;padding-bottom:56.25%;height:0;max-width:900px;margin:40px auto 0;
+  border-radius:16px;overflow:hidden;box-shadow:0 20px 54px rgba(35,40,80,.16);background:#fff}
+.tql-demo iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0}
+
+/* ── SES BLOCS ANIMÉS, LEVÉS DE SA PAGE ────────────────────────── */
+/* On leur donne de la place et on ne touche à RIEN dedans : ils portent
+   leur propre style, à l'octet près. */
+.tql-anim{margin-top:56px}
+.tql-anim>div{max-width:100%;overflow:hidden}
+
+/* ── LA FAQ ──────────────────────────────────────────────────────── */
+/* SEIZE QUESTIONS À LA FILE, C'EST UN MUR : le titre de groupe est ce
+   qui permet de sauter directement à la sienne. */
+.tql-faq-groupe{margin-top:34px}
+.tql-faq-titre{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--b);margin:0 0 4px}
+.tql-faq{border-bottom:1px solid #E9ECF6}
+.tql-faq summary{display:flex;align-items:center;justify-content:space-between;gap:16px;cursor:pointer;
+  list-style:none;font-size:17px;font-weight:700;padding:20px 0;color:var(--e)}
+.tql-faq summary::-webkit-details-marker{display:none}
+.tql-chev{flex:none;color:var(--b);transition:transform .15s ease}
+.tql-faq[open] .tql-chev{transform:rotate(180deg)}
+.tql-faq p{font-size:16px;line-height:1.65;color:var(--c);margin:0 0 20px}
+
+/* ── LE BANDEAU DÉGRADÉ DE FIN ───────────────────────────────────── */
+/* Le SEUL aplat de couleur sous du texte de la page, et c'est le sien :
+   rien ne s'y lit longtemps, comme le pied de page du site. */
+.tql-bande{background:linear-gradient(160deg,var(--b) 0%,#4A5FE8 55%,var(--cy) 130%);
+  color:#fff;text-align:center;padding:100px 20px}
+.tql-bande h2{font-size:40px;line-height:1.2;font-weight:800;margin:0 auto 18px;max-width:760px;letter-spacing:-.015em}
+.tql-bande p{font-size:17.5px;line-height:1.6;margin:0 auto 32px;max-width:680px;color:rgba(255,255,255,.9)}
+.tql-bande-cta{display:inline-flex;align-items:center;gap:9px;background:#fff;color:var(--b);font-weight:800;
+  font-size:18px;padding:15px 32px;border-radius:999px;box-shadow:0 12px 30px rgba(13,20,60,.25)}
+.tql-bande .tql-rassure{justify-content:center;margin-top:22px}
+.tql-bande .tql-rassure li{color:rgba(255,255,255,.85)}
+.tql-bande .tql-coche-fine{color:#fff}
+
+/* ── MOBILE ──────────────────────────────────────────────────────── */
+@media (max-width:1000px){
+  .tql-bento,.tql-grille-3{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:900px){
+  /* Les marges LATÉRALES se resserrent, les VERTICALES ne bougent pas :
+     c'est la règle du 4 septembre, et elle ne porte que sur le haut et
+     le bas. */
+  .tql-sec{padding:100px 16px}
+  .tql-hero{padding-top:100px;padding-bottom:100px}
+  .tql-bande{padding:100px 16px}
+  .tql-hero-grille,.tql-deux,.tql-etape,.tql-grille-2{grid-template-columns:1fr;gap:32px}
+  .tql-etape{margin-top:44px}
+  .tql-etape:nth-child(even) .tql-etape-txt{order:0}
+  .tql-h1{font-size:33px}
+  .tql-h2{font-size:28px}
+  .tql-bande h2{font-size:28px}
+  .tql-accroche{font-size:17px}
+  .tql-grille-3,.tql-bento{grid-template-columns:1fr;gap:16px}
+  .tql-liste-3{grid-template-columns:1fr}
+  .tql-cite{min-height:0}
+  .tql-bouton-faux{margin-top:0}
+  .tql-etape-txt h3{font-size:22px}
+  .tql-scint{display:none}
+}
+"`;

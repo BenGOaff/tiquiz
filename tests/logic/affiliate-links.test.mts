@@ -121,8 +121,17 @@ test("aucune de ces adresses n'est réécrite en dur", () => {
   // `"https://.../a": "https://.../b"`, seule la première disparaît.
   // Écarter la ligne entière aurait blanchi la destination du même coup,
   // c'est à dire exactement ce qu'on veut continuer d'interdire.
+  //
+  // MÊME RAISON POUR UN `cherche:` (4 sept. 2026). `lib/sales/faqV2.ts`
+  // NOMME l'ancienne adresse pour la REMPLACER par la nouvelle : c'est
+  // la chaîne exacte à trouver dans le HTML capturé, et elle ne peut pas
+  // passer par une constante sans cesser de correspondre. On blanchit
+  // donc `cherche:` et LUI SEUL : un `remplace:` reste une DESTINATION,
+  // et il continue de faire rougir le test.
   const sansLesCles = (src: string) =>
-    src.replace(/^(\s*)"https?:\/\/[^"]+"(\s*:)/gm, "$1\"\"$2");
+    src
+      .replace(/^(\s*)"https?:\/\/[^"]+"(\s*:)/gm, "$1\"\"$2")
+      .replace(/(\bcherche:\s*)"[^"]*"/g, '$1""');
 
   for (const [nom, rx] of motifs) {
     const coupables = fichiersApp()
