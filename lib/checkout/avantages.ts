@@ -93,10 +93,36 @@ export const AVANTAGES_NOUVEAUX: readonly Avantage[] = [
   },
 ] as const;
 
-/** Ce que les deux paliers de base contiennent en plus du gratuit. */
+/**
+ * Ce que les deux paliers de base contiennent en plus du gratuit.
+ *
+ * LES DEUX PORTENT UN `detail` DEPUIS LE 5 SEPTEMBRE, et c'est une
+ * correction, pas une décoration. Béné, en relisant la grille de la
+ * landing : "y'a plus de bénéfices dans le compte gratuit que le compte
+ * à 17 € tu trouves ça logique et vendeur ?? Mets les bénéfices puces
+ * promesses."
+ *
+ * Elle avait raison, et c'était mesurable : la colonne gratuite listait
+ * ses TROIS limites, la colonne à 17 € ses DEUX lignes. Le palier payant
+ * paraissait donc plus pauvre que le gratuit, sur l'écran où quelqu'un
+ * sort sa carte.
+ *
+ * Une puce promesse, chez elle, c'est un BÉNÉFICE suivi de sa
+ * CONSÉQUENCE concrète, et le test est "est-ce qu'on peut répondre
+ * 'et alors ??' à la fin". "Réponses illimitées" appelle ce "et alors" ;
+ * "ton quiz peut décoller un mardi sans qu'un seul email se floute" non.
+ */
 export const AVANTAGES_PAYANTS: readonly Avantage[] = [
-  { texte: "Quiz, sondages et Popquiz illimités", source: "lib/planLimits.ts, FREE_LIMITS" },
-  { texte: "Réponses illimitées", source: "lib/planLimits.ts, visibleLeadsPerMonth" },
+  {
+    texte: "Quiz, sondages et Popquiz illimités",
+    detail: "Tu testes trois accroches sur trois quiz, au lieu d'en sacrifier deux.",
+    source: "lib/planLimits.ts, FREE_LIMITS",
+  },
+  {
+    texte: "Réponses illimitées",
+    detail: "Ton quiz peut décoller un mardi sans qu'un seul email se floute.",
+    source: "lib/planLimits.ts, visibleLeadsPerMonth",
+  },
 ] as const;
 
 /**

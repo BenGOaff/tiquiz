@@ -70,28 +70,6 @@ export function Fleche() {
 }
 
 /**
- * LES CINQ ÉTOILES D'UN AVIS.
- *
- * Toutes pleines, et c'est un FAIT, pas une décoration : les six avis
- * relevés sur Trustpilot sont tous en 5 étoiles. Le jour où il en
- * arrive un à 4, ce composant prend un paramètre.
- */
-export function Etoiles() {
-  return (
-    <span aria-hidden className="tql-etoiles">
-      {[0, 1, 2, 3, 4].map((i) => (
-        <svg key={i} viewBox="0 0 24 24" width="15" height="15">
-          <path
-            d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.4-5.8-3-5.8 3 1.1-6.4L2.6 9.4l6.5-.9z"
-            fill="currentColor"
-          />
-        </svg>
-      ))}
-    </span>
-  );
-}
-
-/**
  * LES SCINTILLES AUTOUR D'UN BOUTON.
  *
  * C'est son geste, relevé sur sa page de vente : une dispersion de

@@ -83,32 +83,6 @@ export interface Maquette {
   choisie: number;
 }
 
-/**
- * UN AVIS TRUSTPILOT. IL NE SE TRADUIT JAMAIS.
- *
- * Béné, 4 septembre 2026 : "on a ici des avis tous frais sur tiquiz, tu
- * peux les utiliser : fr.trustpilot.com/review/tiquiz.fr".
- *
- * Les six avis sont RELEVÉS sur cette page, mot pour mot, avec leur
- * auteur et leur date. Ils vivent donc HORS des objets de langue : un
- * témoignage traduit n'est plus un témoignage, c'est une reformulation
- * signée du nom de quelqu'un d'autre. C'est son interdit numéro un.
- *
- * MESURÉ, ET LES DEUX CHIFFRES SEMBLENT SE CONTREDIRE : Trustpilot
- * affiche 6 avis, une répartition de 100 % en 5 étoiles, et un
- * TrustScore de 4,2/5. Le TrustScore est une note PONDÉRÉE (volume et
- * fraîcheur), pas la moyenne. On n'affiche donc AUCUNE note chiffrée :
- * à côté de "100 % en 5 étoiles", un 4,2 se lirait comme une erreur.
- * On dit le fait, et on met le lien pour que n'importe qui vérifie.
- */
-export interface Avis {
-  auteur: string;
-  titre: string;
-  texte: string;
-  /** La date telle qu'affichée par Trustpilot. */
-  date: string;
-}
-
 /** Un carreau de la grille "ton quiz vit où tu veux". */
 export interface Carreau {
   titre: string;
@@ -147,6 +121,35 @@ export interface ProfilDemo {
   tag: string;
 }
 
+/** Une puce promesse : le bénéfice, et sa conséquence concrète. */
+export interface PuceTarif {
+  texte: string;
+  detail?: string;
+}
+
+/**
+ * UNE LIGNE DE LA GRILLE COMPARATIVE.
+ *
+ * Béné, 5 septembre 2026 : "on n'a qu'à rajouter une grille de
+ * fonctionnalités qui compare tous les plans, comme les vrais saas."
+ *
+ * `true` rend une coche, `false` un tiret, une CHAÎNE rend la valeur
+ * ("1", "Illimité"). Les trois cas sont nécessaires : une limite
+ * chiffrée n'est ni un oui ni un non, et l'écrire en coche ferait
+ * croire que le gratuit est illimité.
+ */
+export interface LigneComparatif {
+  intitule: string;
+  gratuit: string | boolean;
+  tiquiz: string | boolean;
+  plus: string | boolean;
+}
+
+export interface GroupeComparatif {
+  titre: string;
+  lignes: readonly LigneComparatif[];
+}
+
 export interface ColonneTarif {
   nom: string;
   /** Le prix affiché en gros. */
@@ -159,8 +162,23 @@ export interface ColonneTarif {
   prixAn: string | null;
   /** "par an", ou null avec `prixAn`. */
   cadenceAn: string | null;
-  /** Ce que CETTE colonne ajoute. Jamais recopié : lu dans `avantages.ts`. */
-  lignes: readonly string[];
+  /** Ce que CETTE colonne ajoute, en PUCES PROMESSES.
+   *
+   *  Béné, 5 septembre 2026 : "y'a plus de bénéfices dans le compte
+   *  gratuit que le compte à 17 € tu trouves ça logique et vendeur ??
+   *  Mets les bénéfices puces promesses."
+   *
+   *  Une puce promesse porte le bénéfice ET sa conséquence concrète.
+   *  Les deux viennent de `avantages.ts` (`texte` + `detail`), jamais
+   *  recopiés : le bon de commande affiche exactement les mêmes. */
+  lignes: readonly PuceTarif[];
+  /** "Tout le gratuit, plus :" au dessus des puces, ou null sur le gratuit.
+   *
+   *  L'ÉCHELLE SE DIT, elle ne se devine pas. Sans cette ligne, la
+   *  colonne à 17 € a l'air de contenir DEUX choses quand le gratuit en
+   *  annonce trois, alors qu'elle contient tout le gratuit sans ses
+   *  limites. */
+  inclus: string | null;
   /** Le libellé du bouton, et ses DEUX destinations.
    *
    *  L'interrupteur mensuel / annuel n'a aucun JavaScript, donc un lien
@@ -191,9 +209,21 @@ export interface ContenuLanding {
   rassurances: readonly string[];
   /** Le bandeau défilant des fonctionnalités, comme sur sa page. */
   bandeau: readonly string[];
-  /** La barre de preuve Trustpilot, et son lien. */
+  /** LA PREUVE SOCIALE, ET C'EST UN NOMBRE D'UTILISATEURS.
+   *
+   *  Béné, 5 septembre 2026 : "6 avis trustpilot pas une preuve
+   *  sociale. Supprime. Tu peux mettre +200 utilisateurs (c'est le vrai
+   *  chiffre)." Et, sur le lien qui menait à Trustpilot : "non, on ne
+   *  veut pas que les gens quittent la page ... on veut qu'ils
+   *  commandent bordel !"
+   *
+   *  Il n'y a donc AUCUN lien sortant sur cette page : chaque lien qui
+   *  part est un visiteur qui ne revient pas, et il partait juste sous
+   *  le premier bouton. */
   preuve: string;
-  preuveLien: string;
+  /** À QUI ça s'adresse, dit dans le haut de page. Un visiteur doit
+   *  savoir en dix secondes si la page parle de lui. */
+  pourQui: string;
   /** Le bouton du champ de lien. Il affichait "Étape" : j'avais passé
    *  la mauvaise chaîne, et ça ne se voit qu'à l'écran. */
   copier: string;
@@ -220,8 +250,22 @@ export interface ContenuLanding {
   funnelProfils: readonly ProfilDemo[];
   funnelTagLegende: string;
 
+  /** LE BÉNÉFICE, PAS LA MÉCANIQUE.
+   *
+   *  Le titre disait "Le tag est posé, même s'il n'existe pas encore".
+   *  Béné : "oui ok c'est super, mais NON c'est pas un bénéfice qui fait
+   *  vendre. Le bénéfice c'est que Systeme io est connecté nativement,
+   *  pas besoin de lier zapier, make, pabbly ou autre."
+   *
+   *  La création du tag reste écrite : c'est vrai, c'est unique, et
+   *  c'est la PREUVE de la connexion native. Ce n'est plus le titre. */
   sioTitre: string;
+  sioMotCle: string;
   sioCorps: string[];
+  /** Le prix de l'intermédiaire qu'on évite. Il vient de
+   *  `lib/site/integrations.ts`, relevé sur la page de tarifs de
+   *  Zapier, jamais recopié à la main. */
+  sioPrix: string;
 
   ouTitre: string;
   ouMotCle: string;
@@ -234,10 +278,35 @@ export interface ContenuLanding {
   ouCodeCorps: string;
   ouNote: string;
 
-  avisTitre: string;
-  avisMotCle: string;
-  avisCorps: string;
-  avisSur: string;
+  /** LES DEUX MÉCANIQUES : profil, ou score. Son animation le montre. */
+  modesTitre: string;
+  modesMotCle: string;
+  modesCorps: string;
+  modesNote: string;
+
+  /** LE BRANDING. Son animation arrivait NUE : "ton logo ta marque
+   *  arrive comme un cheveu sur la soupe, sans texte ni contexte,
+   *  incompréhensible". Une animation sans titre au dessus ne dit rien
+   *  à quelqu'un qui la découvre. */
+  brandingTitre: string;
+  brandingMotCle: string;
+  brandingCorps: string;
+  brandingNote: string;
+
+  /** La phrase qui introduit l'animation opt-in contre quiz. */
+  animLegende: string;
+
+  /** LE BLOC D'OBJECTIONS, à la place des avis.
+   *
+   *  Il remplace les six témoignages, et ce n'est pas un pis-aller :
+   *  les cinq objections viennent du persona de `copywriting-claude/`
+   *  ("encore un outil de plus", "je ne suis pas technique", "ça va me
+   *  prendre du temps", "je ne suis pas sûr que ça marche dans mon
+   *  domaine", "j'ai déjà testé plein de trucs"). Répondre à ce que le
+   *  lecteur pense À CET INSTANT est ce qui débloque un achat. */
+  objectionsTitre: string;
+  objectionsMotCle: string;
+  objections: readonly Question[];
 
   prixTitre: string;
   prixMotCle: string;
@@ -251,6 +320,16 @@ export interface ContenuLanding {
   prixParMois: string;
   prixParAn: string;
   gratuit: { nom: string; prix: string; rythme: string };
+  /** "Tout le gratuit, plus :" et "Tout Tiquiz, plus :". */
+  prixInclus: readonly string[];
+  /** La grille comparative complète, comme les vrais SaaS. */
+  comparatifTitre: string;
+  comparatifCorps: string;
+  /** Les en-têtes de colonnes, et les trois titres de groupes. */
+  comparatifGroupes: readonly string[];
+  /** Les quatre lignes de limites, dans l'ordre du groupe 1. */
+  comparatifLimites: readonly string[];
+  illimite: string;
   /** Les limites du gratuit. `{quiz}`, `{popquiz}` et `{leads}` sont remplis depuis `FREE_LIMITS`. */
   gratuitLignes: readonly string[];
   partageTitre: string;
@@ -266,67 +345,11 @@ export interface ContenuLanding {
   demoCorps: string;
   demoLien: string;
 
-  finTitre: string;
-  finCorps: string;
   /** Le bandeau dégradé de fin, le seul aplat de couleur de la page. */
   bandeTitre: string;
   bandeCorps: string;
   bandeCta: string;
 }
-
-/**
- * LES SIX AVIS, RELEVÉS SUR TRUSTPILOT LE 4 SEPTEMBRE 2026.
- *
- * Recopiés mot pour mot. On ne corrige NI l'orthographe NI la ponctuation
- * (Eric écrit "pour avoir développer", Christian "quizz") : corriger le
- * texte de quelqu'un, c'est écrire à sa place. Les seules coupes sont
- * marquées par des points de suspension entre crochets, et il n'y en a
- * aucune pour l'instant.
- */
-export const AVIS: readonly Avis[] = [
-  {
-    auteur: "Maurice Massolin",
-    titre: "Un outil simple, puissant, et vraiment connecté à ce qui compte.",
-    texte:
-      "J'utilise Tiquiz pour mon quiz de diagnostic client, connecté à System.io avec des séquences emails segmentées par profil. La connexion est propre, les tags s'appliquent automatiquement, et l'interface est suffisamment intuitive pour qu'on configure tout sans développeur. Pour quelqu'un qui opère seul et qui veut un funnel de capture qui tourne sans surveillance, Tiquiz fait exactement ce qu'il promet.",
-    date: "4 septembre 2026",
-  },
-  {
-    auteur: "Monique Pulby",
-    titre: "Un générateur de quiz qui te facilite la vie",
-    texte:
-      "As-tu déjà galéré à créer un quiz, à gérer les résultats qui en découlent, à le rattacher à une campagne d'emails ? Moi oui, jusqu'à ce que je découvre Tiquiz. Il fait tout ça. Tu as seulement besoin de lui préciser à qui tu souhaites adresser le quiz, ce à quoi il doit servir et quel résultat tu aimerais obtenir. Et le tour est joué : tu obtiens un quiz qualitatif. Bref, une pépite. Je recommande à 100 %",
-    date: "27 juillet 2026",
-  },
-  {
-    auteur: "Eric Legrigeois",
-    titre: "Un outil de quiz parfaitement pensé marketing",
-    texte:
-      "Tiquiz un outil de quiz parfaitement pensé marketing, qui est connecté à Systeme.io pour récupérer les leads et les taguer automatiquement, sans devoir passer par des outils comme Zapier ou Make. Je remercie Béné pour avoir développer Tiquiz , pour sa présence , ses retours à mes questions , sa réactivité pour faire évoluer l'outil.",
-    date: "2 septembre 2026",
-  },
-  {
-    auteur: "Christian",
-    titre: "J'ai découvert quelque chose de super.",
-    texte:
-      "J'ai créé mes deux premiers quizz qui ont donné des résultats que je n'aurais jamais imaginés. Ce qui est fabuleux c'est que Tiquiz comble une lacune de System.io qui ne permet pas de faire des quiz. Ca fonctionne comme un rêve.",
-    date: "2 septembre 2026",
-  },
-  {
-    auteur: "Gwenn",
-    titre: "Enfin un outil de quiz parfaitement pensé marketing",
-    texte:
-      "Enfin un outil de quiz parfaitement pensé marketing, qui est directement relié à Systeme.io pour récupérer les leads et les taguer automatiquement, sans devoir passer par des outils comme Zapier ou Make. Hyper pratique et complet, avec plein de types de quiz et de sondages possibles. J'adore !",
-    date: "2 septembre 2026",
-  },
-  {
-    auteur: "Chris Lecroard",
-    titre: "Tiquiz c'est de la bombe",
-    texte:
-      "Excellent logiciel la conceptrice est à l'écoute et l'ensemble est cohérent avec nos besoins et nos missions.",
-    date: "2 septembre 2026",
-  },
-] as const;
 
 /**
  * LA FAQ DE SA PAGE DE VENTE : ELLE NE VIT PAS ICI, ET C'EST VOULU.
@@ -353,9 +376,6 @@ export interface GroupeQuestions {
 
 /** Le popquiz de démonstration, celui qu'elle m'a donné. */
 export const DEMO_POPQUIZ = "https://quiz.tipote.com/embed/p/0a7d8f50-f329-48e5-b5af-36c642f00c7c";
-
-/** L'adresse publique de la fiche, pour que n'importe qui vérifie. */
-export const TRUSTPILOT_URL = "https://fr.trustpilot.com/review/tiquiz.fr";
 
 /**
  * LES TROIS COLONNES DE TARIF, ET AUCUN TEXTE RECOPIÉ.
@@ -384,6 +404,8 @@ export const TRUSTPILOT_URL = "https://fr.trustpilot.com/review/tiquiz.fr";
 export function colonnesDeTarif(t: ContenuLanding): ColonneTarif[] {
   const prix = (id: "mensuel" | "annuel" | "mensuel-plus" | "annuel-plus") =>
     formatOwnerPrice(OWNER_CATALOG[id]);
+  const puces = (as: readonly { texte: string; detail?: string }[]): PuceTarif[] =>
+    as.map((a) => ({ texte: a.texte, detail: a.detail }));
 
   return [
     {
@@ -395,16 +417,17 @@ export function colonnesDeTarif(t: ContenuLanding): ColonneTarif[] {
       cta: t.prixRubans[0].cta,
       lien: "/signup",
       lienAn: null,
+      inclus: null,
       // `replaceAll` ET PAS `replace` : une ligne peut nommer deux fois
       // la même limite ("1 quiz et 1 sondage"), et `replace` avec une
       // chaîne ne remplace que la PREMIÈRE. C'est sorti à l'écran, pas
       // au typecheck : le rendu affichait "1 quiz et {quiz} sondage".
-      lignes: t.gratuitLignes.map((ligne) =>
-        ligne
+      lignes: t.gratuitLignes.map((ligne) => ({
+        texte: ligne
           .replaceAll("{quiz}", String(FREE_LIMITS.maxQuizzesPerMode))
           .replaceAll("{popquiz}", String(FREE_LIMITS.maxPopquizzes))
           .replaceAll("{leads}", String(FREE_LIMITS.visibleLeadsPerMonth)),
-      ),
+      })),
     },
     {
       nom: OWNER_CATALOG["mensuel"].label.replace(/ mensuel$/i, ""),
@@ -415,7 +438,8 @@ export function colonnesDeTarif(t: ContenuLanding): ColonneTarif[] {
       cta: t.prixRubans[1].cta,
       lien: "/commande/mensuel",
       lienAn: "/commande/annuel",
-      lignes: AVANTAGES_PAYANTS.map((a) => a.texte),
+      inclus: t.prixInclus[0],
+      lignes: puces(AVANTAGES_PAYANTS),
     },
     {
       nom: OWNER_CATALOG["mensuel-plus"].label.replace(/ mensuel Plus$/i, " PLUS"),
@@ -426,14 +450,66 @@ export function colonnesDeTarif(t: ContenuLanding): ColonneTarif[] {
       cta: t.prixRubans[2].cta,
       lien: "/commande/mensuel-plus",
       lienAn: "/commande/annuel-plus",
-      lignes: AVANTAGES_PLUS.map((a) => a.texte),
+      inclus: t.prixInclus[1],
+      lignes: puces(AVANTAGES_PLUS),
     },
   ];
 }
 
-/** Ce que TOUS les paliers portent, gratuit compris. Même source. */
-export function avantagesPartages(): readonly string[] {
-  return [...AVANTAGES_COMMUNS, ...AVANTAGES_NOUVEAUX].map((a) => a.texte);
+/**
+ * LA GRILLE COMPARATIVE, LIGNE PAR LIGNE.
+ *
+ * Béné, 5 septembre 2026 : "on n'a qu'à rajouter une grille de
+ * fonctionnalités qui compare tous les plans, comme les vrais saas."
+ *
+ * ELLE NE RECOPIE RIEN. Les limites viennent de `FREE_LIMITS`, les
+ * lignes de `avantages.ts`. Une grille de comparaison est exactement
+ * l'écran où un lecteur vérifie, donc c'est le dernier endroit où on
+ * peut se permettre une deuxième liste.
+ *
+ * Les trois groupes disent trois choses différentes, et les mélanger
+ * ferait perdre le sens : ce qui est BORNÉ sur le gratuit, ce que TOUT
+ * LE MONDE a, et ce que le PLUS ajoute.
+ */
+export function comparatifDesPlans(t: ContenuLanding): GroupeComparatif[] {
+  const ill = t.illimite;
+  const [gTitre, cTitre, pTitre] = t.comparatifGroupes;
+  const [lQuiz, lSondage, lPopquiz, lReponses] = t.comparatifLimites;
+
+  return [
+    {
+      titre: gTitre,
+      lignes: [
+        { intitule: lQuiz, gratuit: String(FREE_LIMITS.maxQuizzesPerMode), tiquiz: ill, plus: ill },
+        { intitule: lSondage, gratuit: String(FREE_LIMITS.maxQuizzesPerMode), tiquiz: ill, plus: ill },
+        { intitule: lPopquiz, gratuit: String(FREE_LIMITS.maxPopquizzes), tiquiz: ill, plus: ill },
+        {
+          intitule: lReponses,
+          gratuit: String(FREE_LIMITS.visibleLeadsPerMonth),
+          tiquiz: ill,
+          plus: ill,
+        },
+      ],
+    },
+    {
+      titre: cTitre,
+      lignes: [...AVANTAGES_COMMUNS, ...AVANTAGES_NOUVEAUX].map((a) => ({
+        intitule: a.texte,
+        gratuit: true,
+        tiquiz: true,
+        plus: true,
+      })),
+    },
+    {
+      titre: pTitre,
+      lignes: AVANTAGES_PLUS.map((a) => ({
+        intitule: a.texte,
+        gratuit: false,
+        tiquiz: false,
+        plus: true,
+      })),
+    },
+  ];
 }
 
 const fr: ContenuLanding = {
@@ -442,12 +518,14 @@ const fr: ContenuLanding = {
   metaDescription:
     "Décris ton sujet, l'IA écrit le quiz, et chaque profil renvoie vers ton offre. Le contact arrive dans Systeme.io avec son tag, créé automatiquement s'il n'existe pas.",
 
-  etiquette: "Générateur de quiz",
-  titre: "Le générateur de quiz connecté à Systeme.io",
-  motCle: "connecté à Systeme.io",
+  etiquette: "Générateur de quiz connecté à Systeme.io",
+  titre: "Ton visiteur repart avec un résultat. Toi, avec son email.",
+  motCle: "son email",
   accroche:
-    "Tu décris ton sujet en trois champs. L'IA écrit les questions, les réponses et les profils de résultat. Tu relis, tu remplaces deux ou trois formulations par les tiennes, et c'est en ligne.",
-  ctaPrincipal: "Tester le générateur",
+    "Un quiz répond à la question que ton visiteur se pose sur lui même. En échange il laisse son adresse, et il arrive dans Systeme.io déjà rangé dans le bon tag, avec le profil qui dit quoi lui vendre.",
+  pourQui:
+    "Pour les coachs, consultants, formateurs et créateurs qui ont une offre et pas assez de monde à qui la présenter.",
+  ctaPrincipal: "Créer mon quiz gratuitement",
   ctaSecondaire: "Créer mon compte gratuit",
   sousCta: "Aucune carte demandée. Le quiz que tu génères reste à toi.",
   rassurances: ["Gratuit à vie", "Pas besoin de CB", "Connecté à Systeme.io"],
@@ -461,8 +539,7 @@ const fr: ContenuLanding = {
     "Design responsive",
     "100 langues",
   ],
-  preuve: "6 avis sur Trustpilot, tous en 5 étoiles",
-  preuveLien: "Lire les avis",
+  preuve: "Plus de 200 créateurs ont déjà créé leur quiz avec Tiquiz",
   copier: "Copier",
 
   problemeTitre: "Un opt-in demande. Un quiz donne.",
@@ -470,6 +547,9 @@ const fr: ContenuLanding = {
     "Une page de capture demande une adresse et promet un PDF que personne n'ouvrira. La personne doit décider de te faire confiance avant d'avoir reçu quoi que ce soit.",
     "Un quiz fait l'inverse. Il répond à une question que ton visiteur se pose sur lui même, il lui rend un résultat qui lui parle, et l'adresse email arrive au milieu de ça, au moment où il veut savoir la suite.",
   ],
+
+  animLegende:
+    "Le visiteur fait le même effort dans les deux cas. Ce que tu récupères, non.",
 
   chiffre: "44,9 %",
   chiffreLegende:
@@ -551,12 +631,14 @@ const fr: ContenuLanding = {
     },
   ],
 
-  sioTitre: "Le tag est posé, même s'il n'existe pas encore",
+  sioTitre: "Connecté à Systeme.io, sans Zapier au milieu",
+  sioMotCle: "sans Zapier au milieu",
   sioCorps: [
-    "C'est la seule chose que les autres outils de quiz ne savent pas faire, et c'est celle qui coûte le plus de temps. Tiquiz écrit le nom du tag que tu as choisi, et si ce tag n'existe pas encore dans ton compte Systeme.io, il le crée.",
-    "Ailleurs, il faut passer par Zapier. Et Zapier ne propose que les tags déjà créés à la main : un profil de résultat oublié, c'est un lead qui arrive sans rien pour le reconnaître.",
+    "Les autres outils de quiz ne parlent pas à Systeme.io. Pour qu'un lead y arrive, il faut un intermédiaire : Zapier, Make ou Pabbly. Un abonnement de plus, une configuration de plus, et un endroit de plus où ça peut casser sans que personne ne le voie.",
+    "Tiquiz écrit directement dans ton compte. Le contact arrive avec son tag, et si ce tag n'existe pas encore, Tiquiz le crée. Chez Zapier, seuls les tags déjà créés à la main sont proposés : un profil oublié, c'est un lead qui arrive sans rien pour le reconnaître.",
     "Deux outils suffisent pour tout le système, Tiquiz et Systeme.io. Un des deux, tu l'utilises déjà.",
   ],
+  sioPrix: "Zapier commence à {prix} par mois, pour faire ce que Tiquiz fait tout seul.",
 
   ouTitre: "Ton quiz va",
   ouMotCle: "là où tu es déjà",
@@ -597,16 +679,49 @@ const fr: ContenuLanding = {
   ouNote:
     "Aucune des deux ne demande de savoir coder. Copier, coller, c'est tout. Et ton visiteur ne voit que ton logo, tes couleurs et ton adresse.",
 
-  avisTitre: "Il y a un avant, et un",
-  avisMotCle: "après Tiquiz",
-  avisCorps:
-    "Ces personnes ont laissé leur avis sur Trustpilot. Ce sont leurs mots, pas les miens.",
-  avisSur: "Voir la fiche Trustpilot",
+  modesTitre: "Ton quiz dit qui ils sont, ou",
+  modesMotCle: "où ils en sont",
+  modesCorps:
+    "Deux mécaniques, et c'est toi qui choisis. Le quiz par profil range chaque personne dans un type ; le quiz scoré lui donne une note et un niveau. Dans les deux cas, le tag part dans Systeme.io tout seul.",
+  modesNote:
+    "C'est ce qui fait qu'un quiz Tiquiz marche aussi bien pour un test de personnalité que pour un bilan de compétences ou un diagnostic de niveau.",
+
+  brandingTitre: "Ton visiteur voit ta marque,",
+  brandingMotCle: "jamais la nôtre",
+  brandingCorps:
+    "Ton logo, tes couleurs, ta police, ton nom de domaine. Le quiz ressemble à ton site, pas à un outil que tu as loué le mois dernier.",
+  brandingNote:
+    "Et l'IA écrit dans la langue de ton audience, variantes régionales comprises : un quiz en portugais du Brésil ne sort pas en portugais du Portugal.",
+
+  objectionsTitre: "Ce que tu es",
+  objectionsMotCle: "en train de te dire",
+  objections: [
+    {
+      q: "Encore un outil de plus à apprendre.",
+      r: "Tiquiz en remplace deux : ton créateur de formulaire, et l'intermédiaire qui l'envoie vers Systeme.io. Et tu ne changes rien à ce que tu utilises déjà.",
+    },
+    {
+      q: "Je ne suis pas technique.",
+      r: "Il n'y a rien à installer, rien à connecter à la main, aucune ligne de code à écrire. Tu décris ton sujet, tu relis, tu publies. Si tu sais copier un lien, tu sais mettre ton quiz en ligne.",
+    },
+    {
+      q: "Ça va me prendre du temps.",
+      r: "L'IA écrit la première version. Le temps que tu passes, c'est celui de la relecture : tu remplaces deux ou trois formulations par les tiennes. C'est du temps où tu écris ton message, pas où tu te bats avec un outil.",
+    },
+    {
+      q: "Je ne suis pas sûr que ça marche dans mon domaine.",
+      r: "Un quiz marche partout où quelqu'un se pose une question sur lui même, et c'est à peu près partout. Profil ou score, tu choisis la mécanique. Et le gratuit existe pour que tu le vérifies chez toi avant de payer quoi que ce soit.",
+    },
+    {
+      q: "J'ai déjà testé plein de trucs sans résultat.",
+      r: "Alors ne me crois pas sur parole. Crée ton quiz gratuitement, mets le en ligne, et regarde le nombre d'adresses au bout d'une semaine. C'est le seul argument qui compte, et c'est le tien.",
+    },
+  ],
 
   prixTitre: "Des tarifs tout en",
   prixMotCle: "douceur",
   prixNote:
-    "Les prix affichés sont ceux du bon de commande, à l'euro. Tu commences gratuitement, sans carte, et tu montes de palier quand ton quiz travaille.",
+    "Les prix affichés sont ceux du bon de commande, à l'euro. Tu commences gratuitement, sans carte, et tu montes de palier le jour où ton quiz te rapporte plus qu'il ne te coûte.",
   prixMensuel: "Mensuel",
   prixAnnuel: "Annuel",
   prixEconomie: "2 mois offerts",
@@ -623,15 +738,31 @@ const fr: ContenuLanding = {
     "{popquiz} Popquiz",
     "{leads} réponses visibles sur 30 jours glissants, les suivantes sont capturées et floutées",
   ],
+  prixInclus: ["Tout le gratuit, sans les limites :", "Tout Tiquiz, plus :"],
+  comparatifTitre: "Le détail, ligne par ligne",
+  comparatifCorps:
+    "Tout ce que Tiquiz sait faire, et qui l'a dans quel palier. Rien n'est caché en bas d'une page de conditions.",
+  comparatifGroupes: [
+    "Ce que tu peux créer",
+    "Dans tous les paliers, gratuit compris",
+    "Réservé aux paliers PLUS",
+  ],
+  comparatifLimites: [
+    "Quiz actifs",
+    "Sondages actifs",
+    "Popquiz (vidéos interactives)",
+    "Réponses visibles sur 30 jours glissants",
+  ],
+  illimite: "Illimité",
   partageTitre: "Dans tous les paliers, gratuit compris",
 
   faqTitre: "Questions fréquentes",
   faqCorps: "Clique sur une question pour lire la réponse.",
 
-  demoTitre: "Tiquiz en action :",
-  demoMotCle: "teste la création de ton quiz",
+  demoTitre: "Regarde ce que",
+  demoMotCle: "ton visiteur va vivre",
   demoCorps:
-    "C'est un vrai Popquiz Tiquiz, pas une vidéo. Réponds aux questions posées pendant la vidéo, comme le feraient tes visiteurs.",
+    "Cette démo est elle même un Popquiz Tiquiz. Les questions s'affichent pendant la vidéo et tu y réponds : tu vis exactement ce que vivra la personne qui arrivera sur ton quiz.",
   demoLien: "Ouvrir la démo dans un nouvel onglet",
 
   faq: [
@@ -653,9 +784,6 @@ const fr: ContenuLanding = {
     },
   ],
 
-  finTitre: "Teste le générateur avant de créer un compte",
-  finCorps:
-    "Décris ton sujet, regarde le quiz s'écrire, passe le tien. Si ça te plaît, tu le gardes en créant ton compte gratuit, et il t'attend dedans.",
   bandeTitre: "Ta liste emails ne va pas se construire toute seule",
   bandeCorps:
     "Pendant que tu hésites, tes visiteurs quittent ton site sans laisser leur email. Un quiz change ça, et tu le crées en quelques minutes.",
@@ -668,12 +796,14 @@ const en: ContenuLanding = {
   metaDescription:
     "Describe your topic, the AI writes the quiz, and every result profile points to the matching offer. The contact lands in Systeme.io with its tag, created for you if it does not exist yet.",
 
-  etiquette: "Quiz builder",
-  titre: "The quiz builder that connects to Systeme.io",
-  motCle: "connects to Systeme.io",
+  etiquette: "Quiz builder connected to Systeme.io",
+  titre: "Your visitor leaves with a result. You leave with their email.",
+  motCle: "their email",
   accroche:
-    "You describe your topic in three fields. The AI writes the questions, the answers and the result profiles. You read it over, you swap two or three sentences for your own, and it goes live.",
-  ctaPrincipal: "Try the builder",
+    "A quiz answers the question your visitor is already asking about themselves. In return they leave their address, and they land in Systeme.io already filed under the right tag, with the profile that tells you what to sell them.",
+  pourQui:
+    "For the coaches, consultants, trainers and creators who have an offer and not enough people to show it to.",
+  ctaPrincipal: "Build my quiz for free",
   ctaSecondaire: "Create my free account",
   sousCta: "No card required. The quiz you generate stays yours.",
   rassurances: ["Free forever", "No card needed", "Connected to Systeme.io"],
@@ -687,8 +817,7 @@ const en: ContenuLanding = {
     "Responsive design",
     "100 languages",
   ],
-  preuve: "6 reviews on Trustpilot, all five stars",
-  preuveLien: "Read the reviews",
+  preuve: "More than 200 creators have already built their quiz with Tiquiz",
   copier: "Copy",
 
   problemeTitre: "An opt-in asks. A quiz gives.",
@@ -696,6 +825,9 @@ const en: ContenuLanding = {
     "A capture page asks for an address and promises a PDF nobody will open. Your visitor has to decide to trust you before receiving anything at all.",
     "A quiz does the opposite. It answers a question your visitor is already asking about themselves, hands back a result that fits, and the email address comes in the middle of that, right when they want to know what follows.",
   ],
+
+  animLegende:
+    "Your visitor makes the same effort either way. What you get back does not compare.",
 
   chiffre: "44.9%",
   chiffreLegende:
@@ -777,12 +909,14 @@ const en: ContenuLanding = {
     },
   ],
 
-  sioTitre: "The tag gets applied, even if it does not exist yet",
+  sioTitre: "Connected to Systeme.io, with no Zapier in between",
+  sioMotCle: "no Zapier in between",
   sioCorps: [
-    "This is the one thing other quiz tools cannot do, and it is the one that eats the most time. Tiquiz writes the tag name you chose, and if that tag does not exist in your Systeme.io account yet, it creates it.",
-    "Everywhere else you go through Zapier. And Zapier only offers tags you already created by hand: one forgotten result profile means a lead arriving with nothing to recognise it by.",
+    "Other quiz tools do not talk to Systeme.io. For a lead to land there, you need a middleman: Zapier, Make or Pabbly. One more subscription, one more setup, and one more place where things break without anyone noticing.",
+    "Tiquiz writes straight into your account. The contact arrives with its tag, and if that tag does not exist yet, Tiquiz creates it. Zapier only offers tags you already created by hand: one forgotten profile means a lead arriving with nothing to recognise it by.",
     "Two tools cover the whole system, Tiquiz and Systeme.io. One of the two, you already use.",
   ],
+  sioPrix: "Zapier starts at {prix} per month, to do what Tiquiz does on its own.",
 
   ouTitre: "Your quiz goes",
   ouMotCle: "where you already are",
@@ -805,15 +939,49 @@ const en: ContenuLanding = {
   ouNote:
     "Neither one asks you to know how to code. Copy, paste, done. And your visitor only sees your logo, your colours and your address.",
 
-  avisTitre: "There is a before, and an",
-  avisMotCle: "after Tiquiz",
-  avisCorps: "These people left their review on Trustpilot. These are their words, not mine.",
-  avisSur: "See the Trustpilot page",
+  modesTitre: "Your quiz says who they are, or",
+  modesMotCle: "where they stand",
+  modesCorps:
+    "Two mechanics, and you pick. A profile quiz files each person under a type; a scored quiz gives them a number and a level. Either way, the tag reaches Systeme.io on its own.",
+  modesNote:
+    "That is what makes a Tiquiz quiz work just as well for a personality test as for a skills review or a maturity diagnosis.",
+
+  brandingTitre: "Your visitor sees your brand,",
+  brandingMotCle: "never ours",
+  brandingCorps:
+    "Your logo, your colours, your font, your domain name. The quiz looks like your site, not like a tool you rented last month.",
+  brandingNote:
+    "And the AI writes in your audience's language, regional variants included: a quiz in Brazilian Portuguese does not come out in European Portuguese.",
+
+  objectionsTitre: "What you are",
+  objectionsMotCle: "thinking right now",
+  objections: [
+    {
+      q: "One more tool to learn.",
+      r: "Tiquiz replaces two: your form builder, and the middleman that sends it to Systeme.io. And you change nothing about what you already use.",
+    },
+    {
+      q: "I am not technical.",
+      r: "Nothing to install, nothing to wire by hand, not a line of code to write. You describe your topic, you read it over, you publish. If you can copy a link, you can put your quiz online.",
+    },
+    {
+      q: "This is going to take me time.",
+      r: "The AI writes the first version. The time you spend is reading time: you swap two or three sentences for your own. That is time spent on your message, not on fighting a tool.",
+    },
+    {
+      q: "I am not sure it works in my field.",
+      r: "A quiz works anywhere someone is asking a question about themselves, which is very nearly everywhere. Profile or score, you pick the mechanic. And the free plan exists so you can check it on your own audience before paying anything.",
+    },
+    {
+      q: "I have already tried plenty of things that led nowhere.",
+      r: "Then do not take my word for it. Build your quiz for free, put it online, and count the addresses after a week. That is the only argument that counts, and it is yours.",
+    },
+  ],
 
   prixTitre: "Pricing, the",
   prixMotCle: "gentle way",
   prixNote:
-    "These are the checkout prices, to the euro. You start for free, with no card, and move up once your quiz is working.",
+    "These are the checkout prices, to the euro. You start for free, with no card, and move up the day your quiz brings in more than it costs.",
   prixMensuel: "Monthly",
   prixAnnuel: "Yearly",
   prixEconomie: "2 months free",
@@ -830,15 +998,31 @@ const en: ContenuLanding = {
     "{popquiz} Popquiz",
     "{leads} responses visible over a rolling 30 days, the rest are captured and blurred",
   ],
+  prixInclus: ["Everything in Free, without the limits:", "Everything in Tiquiz, plus:"],
+  comparatifTitre: "The detail, line by line",
+  comparatifCorps:
+    "Everything Tiquiz can do, and which plan has it. Nothing hidden at the bottom of a terms page.",
+  comparatifGroupes: [
+    "What you can create",
+    "In every plan, free included",
+    "PLUS plans only",
+  ],
+  comparatifLimites: [
+    "Active quizzes",
+    "Active surveys",
+    "Popquiz (interactive videos)",
+    "Responses visible over a rolling 30 days",
+  ],
+  illimite: "Unlimited",
   partageTitre: "In every plan, free included",
 
   faqTitre: "Frequently asked",
   faqCorps: "Click a question to read the answer.",
 
-  demoTitre: "Tiquiz in action:",
-  demoMotCle: "try building your quiz",
+  demoTitre: "See what",
+  demoMotCle: "your visitor will experience",
   demoCorps:
-    "This is a real Tiquiz Popquiz, not a video. Answer the questions asked during it, exactly like your visitors would.",
+    "This demo is itself a Tiquiz Popquiz. Questions appear during the video and you answer them: you go through exactly what the person landing on your quiz will go through.",
   demoLien: "Open the demo in a new tab",
 
   faq: [
@@ -860,9 +1044,6 @@ const en: ContenuLanding = {
     },
   ],
 
-  finTitre: "Try the builder before creating an account",
-  finCorps:
-    "Describe your topic, watch the quiz being written, take it yourself. If you like it, you keep it by creating your free account, and it is waiting for you inside.",
   bandeTitre: "Your email list will not build itself",
   bandeCorps:
     "While you hesitate, your visitors leave without giving you their email. A quiz changes that, and you build one in minutes.",

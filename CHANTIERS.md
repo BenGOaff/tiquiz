@@ -53,8 +53,22 @@ se projeter, n'y touche pas du tout." Question fermée.
   "on est donc passés de ma super jolie page ultra design à ... ça."
   Refaite dans SON système visuel, relevé dans
   `content/sales/v2/funnel-quiz.html` et dans la capture.
+  **QUATRIÈME PASSAGE, 5 septembre**, sur ses douze reproches : les
+  boutons illisibles (une seule cause, `.tql a{color:inherit}` battait
+  toutes les règles de bouton en spécificité), les six avis Trustpilot
+  RETIRÉS au profit de "+200 créateurs" et d'un bloc d'objections, plus
+  aucun lien qui quitte la page, le haut de page qui vend le RÉSULTAT et
+  plus le processus, des puces promesses sur les colonnes payantes, une
+  grille comparative des trois paliers, le bénéfice Systeme.io réécrit
+  (connexion native, sans Zapier), et un titre plus une légende autour
+  de chacune de ses trois animations. Le détail est dans `AGENTS.md`.
   **La coquille du site (en-tête et pied) reste en français**, c'est la
   part de chantier 4 qui n'est pas faite.
+  **CE QUI ATTEND SA DÉCISION :** son animation `ton-branding` annonce
+  "100+ langues via l'IA" alors que le catalogue en porte exactement
+  100. C'est SON dessin, levé à l'octet près, et il porte le même
+  chiffre sur sa page de vente EN LIGNE : le corriger ici laisserait la
+  vraie page fausse.
 - 🆕 **LE SITE PUBLIC PORTE MAINTENANT LES COULEURS DE LA PAGE DE
   VENTE** (4 septembre). Béné : "je préfère que tu alignes le blog sur
   ma belle page de vente que l'inverse." `.tq-site` (globals.css) a
