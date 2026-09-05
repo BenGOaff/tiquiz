@@ -100,18 +100,6 @@ export interface Ruban {
   cta: string;
 }
 
-/**
- * LE BRIEF DE L'ÉTAPE 1, DESSINÉ.
- *
- * L'étape 1 réutilisait la maquette du haut de page : le même écran
- * deux fois sur la même page, ce qui se lit comme un manque de soin.
- * Elle a sa propre maquette, les trois champs qu'on remplit vraiment.
- */
-export interface Brief {
-  titre: string;
-  champs: readonly { etiquette: string; valeur: string }[];
-  bouton: string;
-}
 
 /** Un profil de la démonstration du funnel : ce qu'il lit, et son tag. */
 export interface ProfilDemo {
@@ -125,6 +113,21 @@ export interface ProfilDemo {
 export interface PuceTarif {
   texte: string;
   detail?: string;
+  /**
+   * UNE LIMITE N'EST PAS UN AVANTAGE, ET ELLE NE PORTE PAS DE COCHE.
+   *
+   * Béné, 5 septembre 2026 : "les tarifs sont moches", et avant ça
+   * "y'a plus de bénéfices dans le compte gratuit que le compte à
+   * 17 €". La colonne gratuite listait ses trois LIMITES avec la même
+   * coche bleue que les avantages des colonnes payantes : "10 réponses
+   * visibles sur 30 jours glissants, les suivantes sont floutées" se
+   * lisait comme une bonne nouvelle.
+   *
+   * `limite: true` rend une pastille neutre à la place de la coche.
+   * C'est la même règle que la grille comparative, où une limite
+   * chiffrée rend sa VALEUR et jamais une coche.
+   */
+  limite?: boolean;
 }
 
 /**
@@ -172,6 +175,22 @@ export interface Temoignage {
   nom: string;
   metier: string | null;
   texte: string;
+  /**
+   * SON PORTRAIT, LEVÉ DE SA PAGE.
+   *
+   * Béné, 5 septembre 2026 : "les témoignages idem tu m'as mis ça tout
+   * moche alors que c'est beau sur la page d'origine."
+   *
+   * L'APPARIEMENT EST MESURÉ, PAS DEVINÉ : chaque portrait est lu dans
+   * `content/sales/tiquiz.html` avec le nom qui le SUIT dans la même
+   * carte. Les ranger dans l'ordre du tableau aurait mis la photo de
+   * quelqu'un sur le témoignage d'un autre, et aucun test ne peut voir
+   * ça (règle du 1er septembre : un visuel se place en le REGARDANT).
+   *
+   * Les trois personnes qui n'ont écrit que sur Trustpilot n'ont pas de
+   * portrait sur sa page : leur carte porte l'initiale de leur prénom.
+   */
+  portrait?: string;
   /** D'OÙ VIENT CE TÉMOIGNAGE, QUAND CE N'EST PAS SA PAGE DE VENTE.
    *
    *  Béné, 5 septembre 2026 : "des témoignages de la page originale
@@ -275,7 +294,6 @@ export interface ContenuLanding {
   chiffreSource: string;
 
   maquette: Maquette;
-  brief: Brief;
 
   mecaniqueTitre: string;
   mecaniqueMotCle: string;
@@ -298,6 +316,22 @@ export interface ContenuLanding {
    *
    *  La création du tag reste écrite : c'est vrai, c'est unique, et
    *  c'est la PREUVE de la connexion native. Ce n'est plus le titre. */
+  /**
+   * LES MOTS QUI DÉFILENT DANS LE TITRE, machine à écrire.
+   *
+   * Béné, 5 septembre 2026 : "sur ma page initiale il n'y a pas que ça
+   * comme H1 [...] c'est un texte qui défile en mode machine à écrire
+   * mais moderne."
+   *
+   * Ce sont SES cinq phrases, relevées dans `content/sales/tiquiz.html`
+   * (bloc `rawhtml-125dab43`), avec son rythme : 85 ms par lettre à
+   * l'écriture, 1400 ms de pause, 45 ms à l'effacement, 250 ms avant le
+   * mot suivant, curseur cyan qui clignote à 0,8 s.
+   *
+   * `titre` reste le PREMIER de la liste : c'est lui que reçoit un
+   * lecteur sans JavaScript, et c'est lui que lit un moteur.
+   */
+  titreDefilant: readonly string[];
   sioTitre: string;
   sioMotCle: string;
   sioCorps: string[];
@@ -341,9 +375,7 @@ export interface ContenuLanding {
   formatsLeadFin: string;
   formatsLeadCorps: string;
   /** Les en-têtes : le critère, puis les trois colonnes. */
-  formatsLeadColonnes: readonly string[];
   /** Ses sept critères. `true` coche, `false` barre : c'est sa lecture. */
-  formatsLeadLignes: readonly { critere: string; valeurs: readonly boolean[] }[];
   formatsLeadNote: string;
 
   /** LES TROIS SECTIONS DE SA PAGE QUI N'ÉTAIENT PAS ICI.
@@ -359,8 +391,6 @@ export interface ContenuLanding {
   qualifiesFin: string;
   qualifiesCorps: readonly string[];
   /** Les captures de leads qui défilent, comme sur sa page. */
-  qualifiesNoms: readonly string[];
-  qualifiesDepuis: string;
 
   offresTitre: string;
   offresMotCle: string;
@@ -369,7 +399,6 @@ export interface ContenuLanding {
   offresPuces: readonly string[];
   offresConclusion: string;
   /** Le sondage dessiné : sa question, ses quatre réponses chiffrées. */
-  offresSondage: { question: string; reponses: readonly { texte: string; pct: number }[] };
 
   demarqueTitre: string;
   demarqueMotCle: string;
@@ -392,6 +421,19 @@ export interface ContenuLanding {
   outilsMotCle: string;
   outilsCorps: string;
   outilsColonnes: readonly string[];
+  /**
+   * CE QUE LE TABLEAU VEUT DIRE, EN CLAIR.
+   *
+   * Béné, 5 septembre 2026 : "l'idée de la comparaison est bien mais
+   * c'est peu compréhensible par un néophyte : c'est QUOI l'intérêt, le
+   * vrai gain, l'avantage ?"
+   *
+   * Elle a raison : "Zapier Pro, un Zap par résultat" est un FAIT, pas
+   * un argument. Quelqu'un qui n'a jamais ouvert Zapier ne peut pas
+   * traduire ça en abonnement, en temps et en clics. La phrase le dit,
+   * et le prix vient de `lib/site/integrations.ts`, jamais recopié.
+   */
+  outilsGain: string;
   outilsNote: string;
   outilsLien: string;
 
@@ -601,6 +643,7 @@ export interface GroupeQuestions {
 export const TEMOIGNAGES: readonly Temoignage[] = [
   {
     nom: "Gwenn",
+    portrait: "/v/tiquiz/70db92d7817f.webp",
     metier: "Solopreneur",
     texte:
       "Enfin un outil de quiz parfaitement pensé marketing, qui est directement relié à Systeme.io pour récupérer les leads et les taguer automatiquement, sans devoir passer par des outils comme Zapier ou Make. Hyper pratique et complet, avec plein de types de quiz et de sondages possibles. J'adore !",
@@ -608,12 +651,14 @@ export const TEMOIGNAGES: readonly Temoignage[] = [
   },
   {
     nom: "Adeline",
+    portrait: "/v/tiquiz/85f9bbeaf5fa.webp",
     metier: "Thérapeute",
     texte:
       "Super outil ! Très simple d'utilisation, et surtout : le quiz punaise mais c'est le meilleur lead magnet aujourd'hui ! Je suis fan, voilà. Merci Béné pour ce bijou !",
   },
   {
     nom: "Eric Legrigeois",
+    portrait: "/v/tiquiz/425d46aa062b.webp",
     metier: "Infopreneur",
     texte:
       "Tiquiz un outil de quiz parfaitement pensé marketing, qui est connecté à Systeme.io pour récupérer les leads et les taguer automatiquement, sans devoir passer par des outils comme Zapier ou Make. Je remercie Béné pour avoir développer Tiquiz , pour sa présence , ses retours à mes questions , sa réactivité pour faire évoluer l'outil.",
@@ -621,12 +666,14 @@ export const TEMOIGNAGES: readonly Temoignage[] = [
   },
   {
     nom: "Bernard C.",
+    portrait: "/v/tiquiz/45dd58b35935.webp",
     metier: "Consultant",
     texte:
       "Tiquiz m'a vraiment aidé à clarifier mes idées pour qualifier mes prospects. Mes leads sont tagués automatiquement dans Systeme.io, un vrai gain de temps.",
   },
   {
     nom: "Monique Pulby",
+    portrait: "/v/tiquiz/3c784e1f489a.webp",
     metier: "Formatrice",
     texte:
       "As-tu déjà galéré à créer un quiz, à gérer les résultats qui en découlent, à le rattacher à une campagne d'emails ? Moi oui, jusqu'à ce que je découvre Tiquiz. Il fait tout ça. Tu as seulement besoin de lui préciser à qui tu souhaites adresser le quiz, ce à quoi il doit servir et quel résultat tu aimerais obtenir. Et le tour est joué : tu obtiens un quiz qualitatif. Bref, une pépite. Je recommande à 100 %",
@@ -634,60 +681,70 @@ export const TEMOIGNAGES: readonly Temoignage[] = [
   },
   {
     nom: "Jean Bernard R.",
+    portrait: "/v/tiquiz/b474dd490206.webp",
     metier: "Créateur de contenu",
     texte:
       "J'ai testé la génération de quiz et le résultat est incroyable. Les CTA personnalisés pour chaque profil fonctionnent parfaitement. Ces quiz c'est un truc de ouf !",
   },
   {
     nom: "Evelyne G.",
+    portrait: "/v/tiquiz/45eea45dcb9d.webp",
     metier: "Coach",
     texte:
       "Un travail de dingue pour mettre autant de fonctionnalités dans un outil de quiz aussi simple. Tout est bien organisé, les automatisations sont top.",
   },
   {
     nom: "Alain M.",
+    portrait: "/v/tiquiz/8629b749bd40.webp",
     metier: "Affilié",
     texte:
       "L'outil s'améliore tous les jours. Les quiz connectés à Systeme.io, c'est exactement ce qu'il manquait. Si j'ai des suggestions, c'est avec plaisir !",
   },
   {
     nom: "Jérémy B.",
+    portrait: "/v/tiquiz/7d265fde9f4a.webp",
     metier: "Entrepreneur",
     texte:
       "Un véritable couteau suisse pour générer des leads avec des quiz. Que tu sois débutant ou non, tu automatises tout ou presque. Je recommande à 1000% !",
   },
   {
     nom: "Maulisio T.",
+    portrait: "/v/tiquiz/87edd75bf22d.webp",
     metier: "Marketeur",
     texte:
       "Meilleur outil de quiz pour segmenter et convertir. La connexion directe avec Systeme.io change tout. Plus besoin de bidouiller des intégrations.",
   },
   {
     nom: "Samira L.",
+    portrait: "/v/tiquiz/39cddeab9489.webp",
     metier: "Entrepreneuse",
     texte:
       "J'ai testé la création de quiz pour ma future offre. Vu que j'avais déjà paramétré ma cible, le rendu est juste top. Vraiment, merci !",
   },
   {
     nom: "Fabienne G.",
+    portrait: "/v/tiquiz/3089473d0b33.webp",
     metier: null,
     texte:
       "Bravo pour la création de Tiquiz, c'est une révolution ! Mes quiz convertissent enfin comme il faut et mes leads arrivent directement dans mes tunnels.",
   },
   {
     nom: "Marie Paule C.",
+    portrait: "/v/tiquiz/c52457fd6112.webp",
     metier: null,
     texte:
       "Vraiment bravo et félicitations pour cet outil de quiz. Les résultats personnalisés par profil sont géniaux et la connexion Systeme.io est un vrai plus.",
   },
   {
     nom: "Thibault L.",
+    portrait: "/v/tiquiz/9ed1ddc2a09f.webp",
     metier: null,
     texte:
       "Les quiz Tiquiz sont puissants et ultra simples à créer. La segmentation automatique des leads, c'est exactement ce dont j'avais besoin.",
   },
   {
     nom: "Sylvère M.",
+    portrait: "/v/tiquiz/fb9aab2a3438.webp",
     metier: null,
     texte:
       "Franchement, je suis bluffé. J'ai pris le temps de créer mon premier quiz et le résultat est tout simplement topissime. Bravo !",
@@ -743,6 +800,43 @@ export function preuvePrecoce(
 }
 
 /** Le popquiz de démonstration, celui qu'elle m'a donné. */
+/**
+ * UN BLOC DE TEXTE S'ALIGNE À GAUCHE DÈS QU'IL EST LONG.
+ *
+ * Béné, 5 septembre 2026, sur la section Systeme.io : "ce gros bloc de
+ * texte est imbuvable [...] aligne à gauche quand il y a plus de
+ * 3 lignes (règle élémentaire pour être plus facile à lire)". Et sur
+ * les leads qualifiés : "aligne à gauche les longs textes pour une
+ * meilleure lecture".
+ *
+ * ON NE COMPTE PAS LES LIGNES, PARCE QU'ON NE PEUT PAS. Le nombre de
+ * lignes dépend de la césure, donc de la largeur, donc de la langue et
+ * de l'appareil : mesuré le 5 septembre sur la page rendue, un
+ * paragraphe de 216 caractères tenait en 3 lignes et un autre de 198 en
+ * prenait 4. Une estimation "caractères divisés par 70" se trompe donc
+ * dans les deux sens, et un texte centré sur cinq lignes est exactement
+ * ce qu'elle refuse.
+ *
+ * La règle est donc SÛRE au lieu d'être précise, et le SENS de
+ * l'erreur décide du seuil : aligner à gauche un paragraphe qui tenait
+ * en trois lignes ne coûte rien, laisser centré un pavé de cinq lignes
+ * est exactement ce qu'elle refuse. Un bloc qui porte PLUSIEURS
+ * paragraphes est donc long par construction, et un paragraphe seul
+ * l'est au delà de 150 caractères, c'est à dire bien AVANT les trois
+ * lignes (mesuré : une ligne pleine tient 65 à 70 caractères à 17 px
+ * dans 720 px, et la césure en fait perdre jusqu'à 15 %).
+ *
+ * Le contrôle qui compte vraiment est ailleurs, et il MESURE :
+ * `tests/visual/landing-paddings.spec.ts` refuse qu'un paragraphe
+ * centré dépasse trois lignes rendues, sur les trois largeurs.
+ */
+export const CARACTERES_BLOC_LONG = 150;
+
+export function blocLong(paragraphes: readonly string[]): boolean {
+  if (paragraphes.length > 1) return true;
+  return (paragraphes[0]?.length ?? 0) > CARACTERES_BLOC_LONG;
+}
+
 export const DEMO_POPQUIZ = "https://quiz.tipote.com/embed/p/0a7d8f50-f329-48e5-b5af-36c642f00c7c";
 
 /**
@@ -770,8 +864,22 @@ export const DEMO_POPQUIZ = "https://quiz.tipote.com/embed/p/0a7d8f50-f329-48e5-
  * lisent en profitent le même jour.
  */
 export function colonnesDeTarif(t: ContenuLanding): ColonneTarif[] {
-  const prix = (id: "mensuel" | "annuel" | "mensuel-plus" | "annuel-plus") =>
-    formatOwnerPrice(OWNER_CATALOG[id]);
+  // LE PRIX EN GROS, SANS SES DEUX ZÉROS.
+  //
+  // Béné, 5 septembre 2026 : "les tarifs sont moches." `17,00 €` en
+  // 44 px, c'est un montant de facture posé là où on lit un prix d'un
+  // coup d'oeil. On retire les centimes QUAND ILS SONT NULS, et
+  // seulement là : un tarif à 17,50 € doit garder ses cinquante
+  // centimes, sinon la grille annoncerait moins que le bon de commande.
+  //
+  // On ne touche PAS à `formatCents` : le bon de commande et les
+  // factures affichent un montant, pas une accroche, et ils doivent
+  // garder leurs décimales.
+  const prix = (id: "mensuel" | "annuel" | "mensuel-plus" | "annuel-plus") => {
+    const p = OWNER_CATALOG[id];
+    const brut = formatOwnerPrice(p);
+    return p.amountCents % 100 === 0 ? brut.replace(/[.,]00/, "") : brut;
+  };
   const puces = (as: readonly { texte: string; detail?: string }[]): PuceTarif[] =>
     as.map((a) => ({ texte: a.texte, detail: a.detail }));
 
@@ -795,6 +903,9 @@ export function colonnesDeTarif(t: ContenuLanding): ColonneTarif[] {
           .replaceAll("{quiz}", String(FREE_LIMITS.maxQuizzesPerMode))
           .replaceAll("{popquiz}", String(FREE_LIMITS.maxPopquizzes))
           .replaceAll("{leads}", String(FREE_LIMITS.visibleLeadsPerMonth)),
+        // CE SONT DES LIMITES, PAS DES AVANTAGES : elles ne portent pas
+        // la coche des colonnes payantes.
+        limite: true,
       })),
     },
     {
@@ -888,6 +999,13 @@ const fr: ContenuLanding = {
 
   etiquette: "Générateur de quiz connecté à Systeme.io",
   titre: "Booste ton trafic",
+  titreDefilant: [
+    "Booste ton trafic",
+    "Génère plus de leads",
+    "Améliore tes offres",
+    "Booste tes ventes",
+    "Démarque-toi",
+  ],
   motCle: "grâce aux quiz interactifs",
   accroche:
     "Crée des quiz viraux qui attirent du trafic qualifié sur tes offres et transforment tes visiteurs en clients payants, sans investir en publicité.",
@@ -949,16 +1067,6 @@ const fr: ContenuLanding = {
     choisie: 1,
   },
 
-  brief: {
-    titre: "Ton nouveau quiz",
-    champs: [
-      { etiquette: "De quoi parle ton quiz ?", valeur: "Trouver son premier client" },
-      { etiquette: "À qui tu parles ?", valeur: "Coachs qui démarrent" },
-      { etiquette: "Ce que tu veux obtenir", valeur: "Des leads qualifiés par niveau" },
-    ],
-    bouton: "Générer mon quiz",
-  },
-
   funnelTitre: "Un seul quiz. Et chacun repart vers",
   funnelMotCle: "l'offre qui le concerne",
   funnelCorps:
@@ -1012,12 +1120,11 @@ const fr: ContenuLanding = {
     },
   ],
 
-  sioTitre: "Connecté à Systeme.io, sans Zapier au milieu",
-  sioMotCle: "sans Zapier au milieu",
+  sioTitre: "Connexion native à Systeme.io",
+  sioMotCle: "native",
   sioCorps: [
-    "Les autres outils de quiz ne parlent pas à Systeme.io. Pour qu'un lead y arrive, il faut un intermédiaire : Zapier, Make ou Pabbly. Un abonnement de plus, une configuration de plus, et un endroit de plus où ça peut casser sans que personne ne le voie.",
-    "Tiquiz écrit directement dans ton compte. Le contact arrive avec son tag, et si ce tag n'existe pas encore, Tiquiz le crée. Chez Zapier, seuls les tags déjà créés à la main sont proposés : un profil oublié, c'est un lead qui arrive sans rien pour le reconnaître.",
-    "Deux outils suffisent pour tout le système, Tiquiz et Systeme.io. Un des deux, tu l'utilises déjà.",
+    "Les autres outils de quiz ne parlent pas à Systeme.io. Il leur faut Zapier, Make ou Pabbly au milieu : un abonnement de plus, une configuration de plus, et un endroit de plus où ça casse sans que personne ne le voie.",
+    "Deux outils suffisent pour tout ton système, Tiquiz et Systeme.io. Un des deux, tu l'utilises déjà.",
   ],
   sioPrix: "Zapier commence à {prix} par mois, pour faire ce que Tiquiz fait tout seul.",
 
@@ -1065,16 +1172,6 @@ const fr: ContenuLanding = {
   formatsLeadFin: "sur tes concurrents",
   formatsLeadCorps:
     "Contrairement à un simple ebook ou une formation offerte, les quiz cochent toutes les cases qui te permettent d'améliorer ta présence en ligne et maximiser tes conversions.",
-  formatsLeadColonnes: ["", "Tiquiz", "Ebook", "Formation offerte"],
-  formatsLeadLignes: [
-    { critere: "Viral", valeurs: [true, false, false] },
-    { critere: "Connexion avec l'audience", valeurs: [true, false, true] },
-    { critere: "Interactions / Engagement", valeurs: [true, false, true] },
-    { critere: "Facile à créer", valeurs: [true, true, false] },
-    { critere: "Faible coût d'acquisition", valeurs: [true, true, false] },
-    { critere: "Prospects qualifiés", valeurs: [true, false, true] },
-    { critere: "Fonctionne en automatique", valeurs: [true, true, false] },
-  ],
   formatsLeadNote:
     "Grâce aux quiz, tu te démarques de tes concurrents, tu engages ton audience de manière ludique, tu génères du trafic qualifié, et tu transformes plus facilement tes visiteurs en clients payants.",
 
@@ -1083,20 +1180,8 @@ const fr: ContenuLanding = {
   qualifiesFin: "Pas des touristes.",
   qualifiesCorps: [
     "Oublie les prospects qui s'inscrivent sur ta liste sans jamais passer à l'action.",
-    "Lorsque des prospects prennent sur leur temps pour remplir un quiz, c'est qu'ils sont (vraiment) intéressés par le sujet, au point d'y consacrer du temps.",
-    "Ces prospects s'intéressent réellement à ce que tu proposes, et sont beaucoup plus qualifiés que ceux qui téléchargent un simple ebook...",
-    "C'est avec eux que tu veux remplir ta liste !",
+    "Quelqu'un qui prend le temps de répondre à un quiz est intéressé par le sujet, bien plus que celui qui télécharge un ebook et l'oublie. C'est avec ces gens là que tu veux remplir ta liste.",
   ],
-  qualifiesNoms: [
-    "Fanny Martin",
-    "Tariq Hanbal Rahal",
-    "Patricia Clément",
-    "Luc Grenier",
-    "Karen Payne",
-    "Théodore Guay",
-  ],
-  qualifiesDepuis: "Capturé il y a {n} min",
-
   offresTitre: "Crée des",
   offresMotCle: "Offres Irrésistibles",
   offresFin: "que tes prospects vont s'arracher",
@@ -1113,16 +1198,6 @@ const fr: ContenuLanding = {
   ],
   offresConclusion:
     "Retrouve ces informations directement sur ton tableau de bord, afin de les analyser plus facilement et transformer ces données brutes en offres ciblées que tes prospects sont déjà prêts à t'acheter.",
-  offresSondage: {
-    question: "Si tu voulais être aidé sur ce sujet, ce serait :",
-    reponses: [
-      { texte: "Formation", pct: 41 },
-      { texte: "Document écrit", pct: 36 },
-      { texte: "Coaching", pct: 12 },
-      { texte: "Challenge", pct: 11 },
-    ],
-  },
-
   demarqueTitre: "Démarque-toi",
   demarqueMotCle: "avec du contenu frais",
   demarqueFin: "et engageant",
@@ -1136,9 +1211,10 @@ const fr: ContenuLanding = {
   outilsCorps:
     "Ils font tous de très bons quiz. La question n'est pas là : elle est de savoir ce qu'il faut installer entre leur formulaire et ton compte Systeme.io, et qui pose le tag une fois le lead arrivé.",
   outilsColonnes: ["", "Ce qu'il faut entre les deux", "Un tag par profil"],
-  outilsNote:
-    "Chaque ligne vient de la documentation de l'outil, pas de nous. Les sources sont sur nos pages d'intégration, une par outil.",
-  outilsLien: "Voir le détail, outil par outil",
+  outilsGain:
+    "Concrètement : ailleurs, tu paies un abonnement de plus (à partir de {prix}), tu crées chaque tag à la main dans Systeme.io, puis tu construis un scénario par profil de résultat. Avec Tiquiz, tu choisis le tag dans une liste au moment où tu écris le profil, et s'il n'existe pas encore, il est créé pour toi.",
+  outilsNote: "",
+  outilsLien: "Voir le détail des intégrations",
 
   pasPourToiTitre: "Et ce n'est pas pour toi",
   pasPourToiMotCle: "si",
@@ -1268,7 +1344,7 @@ const fr: ContenuLanding = {
     "{leads} réponses visibles sur 30 jours glissants, les suivantes sont capturées et floutées",
   ],
   prixInclus: ["Tout le gratuit, sans les limites :", "Tout Tiquiz, plus :"],
-  comparatifTitre: "Le détail, ligne par ligne",
+  comparatifTitre: "Ce que tu as dans chaque palier",
   comparatifCorps:
     "Tout ce que Tiquiz sait faire, et qui l'a dans quel palier. Rien n'est caché en bas d'une page de conditions.",
   comparatifGroupes: [
@@ -1308,10 +1384,17 @@ const en: ContenuLanding = {
     "Describe your topic, the AI writes the quiz, and every result profile points to the matching offer. The contact lands in Systeme.io with its tag, created for you if it does not exist yet.",
 
   etiquette: "Quiz builder connected to Systeme.io",
-  titre: "You don't need more traffic. Just to know who is reading you",
-  motCle: "who is reading you",
+  titre: "Grow your traffic",
+  titreDefilant: [
+    "Grow your traffic",
+    "Generate more leads",
+    "Sharpen your offers",
+    "Grow your sales",
+    "Stand out",
+  ],
+  motCle: "with interactive quizzes",
   accroche:
-    "A quiz asks the questions for you. Your visitor answers because it is about them, leaves their address to get their result, and lands in Systeme.io already filed under the right tag.",
+    "Build viral quizzes that bring qualified traffic to your offers and turn your visitors into paying customers, without spending on ads.",
   pourQui:
     "For the entrepreneurs, coaches, consultants, trainers, course creators and affiliates who have an offer and not enough people to show it to.",
   ctaPrincipal: "Build my quiz for free",
@@ -1358,16 +1441,6 @@ const en: ContenuLanding = {
       "Several hundred, it is picking up",
     ],
     choisie: 1,
-  },
-
-  brief: {
-    titre: "Your new quiz",
-    champs: [
-      { etiquette: "What is your quiz about?", valeur: "Finding your first client" },
-      { etiquette: "Who are you talking to?", valeur: "Coaches just starting out" },
-      { etiquette: "What you want out of it", valeur: "Leads qualified by level" },
-    ],
-    bouton: "Generate my quiz",
   },
 
   funnelTitre: "One quiz. And everyone leaves towards",
@@ -1423,8 +1496,8 @@ const en: ContenuLanding = {
     },
   ],
 
-  sioTitre: "Connected to Systeme.io, with no Zapier in between",
-  sioMotCle: "no Zapier in between",
+  sioTitre: "Native Systeme.io connection",
+  sioMotCle: "Native",
   sioCorps: [
     "Other quiz tools do not talk to Systeme.io. For a lead to land there, you need a middleman: Zapier, Make or Pabbly. One more subscription, one more setup, and one more place where things break without anyone noticing.",
     "Tiquiz writes straight into your account. The contact arrives with its tag, and if that tag does not exist yet, Tiquiz creates it. Zapier only offers tags you already created by hand: one forgotten profile means a lead arriving with nothing to recognise it by.",
@@ -1458,16 +1531,6 @@ const en: ContenuLanding = {
   formatsLeadFin: "of your competitors",
   formatsLeadCorps:
     "Unlike a plain ebook or a free training, quizzes tick every box that improves your presence online and maximises your conversions.",
-  formatsLeadColonnes: ["", "Tiquiz", "Ebook", "Free training"],
-  formatsLeadLignes: [
-    { critere: "Viral", valeurs: [true, false, false] },
-    { critere: "Connection with your audience", valeurs: [true, false, true] },
-    { critere: "Interaction and engagement", valeurs: [true, false, true] },
-    { critere: "Easy to build", valeurs: [true, true, false] },
-    { critere: "Low acquisition cost", valeurs: [true, true, false] },
-    { critere: "Qualified prospects", valeurs: [true, false, true] },
-    { critere: "Runs on its own", valeurs: [true, true, false] },
-  ],
   formatsLeadNote:
     "With quizzes you stand out from your competitors, you engage your audience in a playful way, you bring in qualified traffic, and you turn visitors into paying customers more easily.",
 
@@ -1480,16 +1543,6 @@ const en: ContenuLanding = {
     "Those prospects genuinely care about what you offer, and they are far more qualified than the ones who download a plain ebook.",
     "Those are the ones you want on your list.",
   ],
-  qualifiesNoms: [
-    "Fanny Martin",
-    "Tariq Hanbal Rahal",
-    "Patricia Clément",
-    "Luc Grenier",
-    "Karen Payne",
-    "Théodore Guay",
-  ],
-  qualifiesDepuis: "Captured {n} min ago",
-
   offresTitre: "Build",
   offresMotCle: "irresistible offers",
   offresFin: "your prospects will fight over",
@@ -1506,16 +1559,6 @@ const en: ContenuLanding = {
   ],
   offresConclusion:
     "You find all of it straight from your dashboard, ready to be analysed and turned into targeted offers your prospects are already willing to buy.",
-  offresSondage: {
-    question: "If you wanted help on this, it would be:",
-    reponses: [
-      { texte: "A course", pct: 41 },
-      { texte: "Something written", pct: 36 },
-      { texte: "Coaching", pct: 12 },
-      { texte: "A challenge", pct: 11 },
-    ],
-  },
-
   demarqueTitre: "Stand out",
   demarqueMotCle: "with fresh, engaging content",
   demarqueFin: "",
@@ -1529,8 +1572,9 @@ const en: ContenuLanding = {
   outilsCorps:
     "They all build very good quizzes. That is not the question: the question is what you have to install between their form and your Systeme.io account, and who applies the tag once the lead arrives.",
   outilsColonnes: ["", "What goes in between", "One tag per profile"],
-  outilsNote:
-    "Every line comes from the tool's own documentation, not from us. The sources are on our integration pages, one per tool.",
+  outilsGain:
+    "In plain terms: elsewhere you pay for one more subscription (from {prix}), you create every tag by hand in Systeme.io, then you build one scenario per result profile. With Tiquiz you pick the tag from a list while you write the profile, and if it does not exist yet, it is created for you.",
+  outilsNote: "",
   outilsLien: "See the detail, tool by tool",
 
   pasPourToiTitre: "And it is not for you",

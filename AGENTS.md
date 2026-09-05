@@ -8936,6 +8936,317 @@ ordre et jamais un seul des deux.
 Test : `tests/logic/fonctionnalites.test.mts` (15 cas) et
 `tests/logic/landing.test.mts` (50 cas).
 
+### Huitième passage : ses animations, sa FAQ, ses témoignages (5 septembre 2026)
+
+Seize reproches en un message, et la moitié disait la même chose : je
+reproduisais des ÉCRANS FIXES là où sa page BOUGE, et je redessinais en
+HTML plat ce qu'elle avait déjà dessiné.
+
+#### 1. LE H1 DÉFILE, ET C'EST SON RYTHME
+
+"Sur ma page initiale il n'y a pas que ça comme H1 : il y a aussi
+'génère plus de leads', 'améliore tes offres' : c'est un texte qui
+défile en mode machine à écrire mais moderne."
+
+`Machine.tsx` reprend ses CINQ phrases et ses QUATRE durées, relevées
+dans `content/sales/tiquiz.html` (bloc `rawhtml-125dab43`) : 85 ms par
+lettre, 1400 ms de pause, 45 ms à l'effacement, 250 ms avant le mot
+suivant, curseur cyan à 0,8 s. Elles ne sont pas choisies, elles sont
+LEVÉES.
+
+**Le premier mot est rendu par le SERVEUR** : c'est lui que lit un
+moteur et celui qui n'a pas de JavaScript. Un `<h1>` vide au premier
+rendu serait un `<h1>` vide pour Google.
+
+**On ne pose PAS de gabarit invisible derrière le mot** : il porterait
+la phrase la plus longue dans le DOM, donc le `<h1>` contiendrait deux
+titres à la suite. La hauteur est tenue par `white-space:nowrap` sur
+grand écran, comme chez elle, et mesurée sous 900 px.
+
+#### 2. DES SCINTILLES FIXES N'ONT AUCUN INTÉRÊT
+
+"Les bulles de boutons ne fonctionnent pas : elles sont fixes et non
+animées : aucun intérêt, soit tu supprimes soit tu reproduis."
+
+Elle avait raison : douze points posés, zéro animation. Ils respirent
+maintenant, chacun à son rythme, et **le décalage est CALCULÉ depuis la
+position du point** : un `Math.random()` donnerait un rendu serveur
+différent du rendu client, donc une erreur d'hydratation React.
+
+#### 3. CINQ ANIMATIONS DE PLUS, ET CINQ QU'ON REFUSE
+
+"Y'a plein d'animations sur ma page d'origine et j'ai l'impression que
+tu reproduis un screen fixe, pas les animations.... reprends tout ça."
+
+Dix blocs de plus ont été levés, **SERVIS dans un navigateur et
+REGARDÉS un par un** avant d'être retenus (règle du 1er septembre : un
+visuel se place en le regardant, jamais d'après son nom). Cinq sont
+posés, et ils REMPLACENT mes dessins quand ils disent la même chose :
+
+| Le bloc | Où | Ce qu'il remplace |
+|---|---|---|
+| `comparatif-formats` | pourquoi un quiz | mon tableau, écrit à côté du sien |
+| `generation-ia` | étape 1 | ma maquette de brief |
+| `offres-sur-mesure` | les offres | mes quatre barres de sondage |
+| `leads-qualifies` | les leads qualifiés | mon flux dessiné |
+| `viralite-trafic` | la viralité | rien, la section n'avait aucun visuel |
+
+**LES CINQ AUTRES SONT REFUSÉS, ET LA RAISON EST ÉCRITE DANS LE SCRIPT
+D'EXTRACTION.** Sans elle, le prochain passage "finit le travail" et
+remet en ligne ce qu'on a écarté exprès.
+
+| Refusé | Pourquoi |
+|---|---|
+| `rawhtml-b8b48544` | une publication Facebook FABRIQUÉE au nom de **Mark Zuckerberg**, photo comprise, avec 503 réactions. On ne republie pas une publication inventée au nom d'une personne réelle. Elle porte en plus "TIQUIZ.COM", qui n'est aucun de nos domaines |
+| `rawhtml-ce57993d` | son troisième écran affiche "il n'y a que 20 codes promos disponibles, profite du tien avant les autres" : c'est de la FAUSSE RARETÉ, son interdit numéro un. Le montrer, c'est l'enseigner |
+| `rawhtml-f0639bfe` | le lien affiché est `app.tiquiz.com/sandra-costa/...`, un domaine qui n'existe pas |
+| `rawhtml-8ecf2c31` | il fait partir le tag vers onze outils d'emailing concurrents, alors que notre argument est la connexion NATIVE à Systeme.io |
+| `rawhtml-21bf9dec` | ses cinq scènes sont pilotées par SON script : servi sans lui, le bloc rend un titre et rien d'autre (mesuré). Et elle l'a fait retirer de la v2 le 2 septembre |
+
+**Les trois premiers vivent sur sa page EN LIGNE.** Ce n'est pas une
+décision de code : c'est à elle de trancher si elle les garde là-bas.
+
+**`AnimVente` prend un `decoratif`**, et c'est un PARAMÈTRE : la plupart
+de ses blocs sont des dessins, mais son comparatif et son sondage
+portent de vraies phrases et de vrais chiffres, et ils REMPLACENT un
+tableau que la landing rendait en HTML. Les masquer aux lecteurs
+d'écran retirerait l'argument.
+
+**Et `viralite-trafic` porte deux nombres que je ne peux pas sourcer**
+(+4327 visites, +487 leads). Ils viennent de ses propres quiz, ils sont
+déjà publiés sur sa page : la décision de les garder est la sienne.
+
+#### 4. UN BLOC DE PLUS DE TROIS LIGNES S'ALIGNE À GAUCHE
+
+"Ce gros bloc de texte est imbuvable [...] aligne à gauche quand il y a
+plus de 3 lignes (règle élémentaire pour être plus facile à lire)."
+
+**ON NE COMPTE PAS LES LIGNES, PARCE QU'ON NE PEUT PAS.** Mesuré le
+5 septembre sur la page rendue : un paragraphe de 216 caractères tenait
+en 3 lignes, un autre de 198 en prenait 4. Une estimation "caractères
+divisés par 70" se trompe donc dans les deux sens.
+
+`blocLong()` est donc SÛR au lieu d'être précis, et le sens de l'erreur
+décide du seuil : aligner à gauche un paragraphe de trois lignes ne
+coûte rien, laisser centré un pavé de cinq est ce qu'elle refuse.
+**Sous 900 px, TOUT le corps de texte est à gauche** : mesuré à 390 px,
+onze paragraphes centrés rendaient 4 ou 5 lignes.
+
+Le contrôle qui compte MESURE : aucun paragraphe centré ne dépasse
+trois lignes rendues, sur les trois largeurs.
+
+#### 5. LA RASSURANCE SUIT SON BOUTON
+
+"Attention aux trucs centrés et pas centrés ... comme 'Connecté à
+Systeme.io - Quiz illimités - IA intégrée' aligné à gauche sous un
+bouton centré." La rangée de boutons dit déjà si elle est centrée
+(`.tql-centre`) : la ligne du dessous s'aligne dessus au lieu de le
+redécider.
+
+#### 6. UN TABLEAU DE FAITS N'EST PAS UN ARGUMENT
+
+"L'idée de la comparaison est bien mais c'est peu compréhensible par un
+néophyte : c'est QUOI l'intérêt, le vrai gain, l'avantage ?"
+
+"Zapier Pro, un Zap par résultat" est un FAIT. Quelqu'un qui n'a jamais
+ouvert Zapier ne peut pas le traduire en abonnement, en temps et en
+clics. `outilsGain` le dit en clair sous le tableau, et le prix vient de
+`lib/site/integrations.ts`, jamais recopié.
+
+Le "blabla" au dessus du lien est retiré : il ne reste que "Voir le
+détail des intégrations", en lien discret, comme elle l'a demandé.
+
+#### 7. LA FAQ MARCHAIT DÉJÀ, C'EST L'AFFORDANCE QUI MANQUAIT
+
+"La FAQ doit être sous forme de VRAIE FAQ (question -> clic ->
+réponse)."
+
+**MESURÉ AVANT DE TOUCHER À QUOI QUE CE SOIT** (leçon du 2 septembre :
+on mesure le GESTE, pas l'état au repos) : clic sur la première
+question, 67 px -> 166 px, 16 questions, aucune ouverte au repos.
+L'accordéon fonctionnait.
+
+Ce qui manquait, c'est qu'une liste de titres séparés par un filet gris
+et un chevron pâle ne se LIT pas comme quelque chose qui s'ouvre.
+Chaque question est maintenant une carte blanche avec son chevron dans
+sa pastille, un survol, et une bordure bleue quand la réponse est
+ouverte.
+
+#### 8. LES TÉMOIGNAGES ONT LEUR PORTRAIT
+
+"Les témoignages idem tu m'as mis ça tout moche alors que c'est beau sur
+la page d'origine."
+
+Les quinze portraits sont levés de sa page, et **l'appariement nom /
+photo est MESURÉ** : chaque portrait est lu avec le nom qui le suit dans
+la même carte. Les ranger dans l'ordre du tableau aurait mis la photo de
+quelqu'un sur le témoignage d'un autre, et aucun test ne peut voir ça.
+Les trois personnes venues de Trustpilot n'ont pas de portrait chez
+elle : leur carte porte l'initiale de leur prénom.
+
+**CE QU'ON NE REPREND PAS : les cinq étoiles.** Sa page en affiche cinq
+sur cinq sur les quinze cartes. C'est une NOTE, et je ne l'ai relevée
+pour personne. Afficher une note qu'on n'a pas est exactement ce qu'elle
+interdit.
+
+#### 9. "C'EST PAS POUR TOI" EST SON MINI QUIZ
+
+"On a créé un mini quiz pourquoi tu ne le reprends pas ??"
+
+Il existe depuis le 2 septembre, elle l'a relu trois fois, il pose UNE
+question à la fois, il sait dire non, et il n'a aucun script. La landing
+avait une liste à puces à la place. Une liste, ce n'est pas un quiz.
+
+`BlocVente` le lit et applique DEUX corrections, **et la lecture REFUSE
+si l'une ne trouve rien** : l'ancre de ses tarifs (qui n'existe pas ici)
+et son padding mobile de 60 px (sa règle en demande 100). Une correction
+qui ne mord pas est une correction qu'on croit appliquée.
+
+**Le bloc n'existe qu'en français**, donc la version anglaise garde la
+liste : le traduire ferait une deuxième version qui divergerait de la
+sienne en une semaine.
+
+#### 10. LES TARIFS
+
+"Les tarifs sont moches. Pour mensuel et annuel (sans plus) annonce
+aussi le retrait du watermark tiquiz." Et : "tu t'es trompé dans le
+détail, relis les limites du plan gratos. Pas de retrait de logo tiquiz
+en gratuit."
+
+**Elle avait raison sur le fait, et je l'ai VÉRIFIÉ avant d'écrire la
+ligne :** `app/api/quiz/[quizId]/public/route.ts` fait
+`footerAllowed = isPaidPlan(ownerPlan) || isResellerSub`, puis
+`hideBranding = footerAllowed && quiz.hide_branding`. C'est donc vrai
+sur TOUS les paliers payants et jamais en gratuit. La ligne manquait
+partout, sur la landing comme sur le bon de commande : elle vit
+maintenant dans `avantages.ts`, la source unique.
+
+**Le branding logo et couleurs, lui, est bien GRATUIT** (`brand_logo_url`
+et `brand_color_*` sont lus sans condition) : cette ligne là était juste,
+et elle reste dans les avantages communs.
+
+Deux corrections de forme, mesurées :
+
+- **le gros prix perd ses deux zéros** quand les centimes sont nuls.
+  `17,00 €` en 44 px est un montant de facture posé là où on lit un prix
+  d'un coup d'oeil. On ne touche PAS à `formatCents` : le bon de commande
+  et les factures gardent leurs décimales ;
+- **une limite ne porte plus de coche.** "10 réponses visibles, les
+  suivantes sont floutées" avec une coche bleue se lit comme une bonne
+  nouvelle. Pastille neutre, même règle que la grille comparative.
+
+Et "Le détail, ligne par ligne" est devenu "Ce que tu as dans chaque
+palier" : ce n'était pas un titre, c'était une légende.
+
+#### CE QUE JE N'AI PAS PU REPRODUIRE, ET JE LE DIS
+
+"La vidéo démo s'affiche avec un large espace blanc dessous."
+
+**Le navigateur de ce conteneur n'a AUCUNE route vers
+`quiz.tipote.com`** (`ERR_CONNECTION_RESET`, mesuré) : le cadre ne
+charge pas, donc je ne peux pas voir ce qu'elle voit.
+
+Ce qui EST mesuré, par `curl` sur l'embed en production : sa page
+dessine DÉJÀ sa propre boîte (`aspect-video rounded-2xl bg-black
+shadow-...`) et ajoute sous la vidéo un lien "via Tiquiz". Notre boîte
+en rajoutait une deuxième par dessus, avec un fond BLANC : c'est la
+seule surface blanche que notre code produit autour de cette vidéo. Elle
+est retirée, et la hauteur réserve les 16/9 PLUS la ligne du lien
+(sinon la boîte est 24 px trop courte pour son propre contenu).
+
+**Si l'espace blanc est toujours là, il vient de l'embed et pas de la
+landing**, et ça se tranchera sur son écran.
+
+#### ET LE FILET A TROUVÉ UN BLOC FIGÉ POUR TOUJOURS
+
+Les captures sont passées, et c'est la MESURE des animations qui a
+rougi. Trois défauts empilés, et le premier est un vrai bug que sa
+lectrice aurait vu.
+
+**1. UN BLOC FRANCHI D'UN COUP RESTAIT INERTE, POUR TOUJOURS.**
+`DeclencheurAnims` ne regardait les blocs que sur `scroll` et `resize`,
+et il exigeait `bottom > -40`, c'est à dire "le bloc n'est pas encore
+remonté au dessus de l'écran". Un bloc DÉPASSÉ ne remplissait donc plus
+la condition, et il ne s'animait jamais.
+
+**MESURÉ le 5 septembre, un seul saut jusqu'en bas puis on remonte** (le
+geste de quelqu'un qui appuie sur Fin, qui clique une ancre du menu, ou
+qui jette la molette) :
+
+| | avec `bottom > -40` | après |
+|---|---|---|
+| `opt-in-vs-quiz` | **0 animé** | 23 |
+| `tes-pixels` | **0 animé** | 15 |
+| `ton-branding` | **0 animé** | 31 |
+
+Trois de ses huit blocs figés dans leur état d'AVANT l'animation, et ça
+ne se voit pas : ils s'affichent très bien, ils ne bougent simplement
+jamais. C'est la famille du 31 août (les images en 403) : le geste était
+juste, il n'atteignait pas sa cible.
+
+**Règle : un bloc DÉPASSÉ a été vu, donc on le démarre.** La condition
+est `top < h * SEUIL`, et rien d'autre. Et il y a DEUX mécaniques, parce
+que chacune couvre ce que l'autre ne peut pas : `IntersectionObserver`
+voit un bloc entrer SANS défilement (la page s'allonge, une image
+arrive) et ne dit rien sur un saut (pas de changement d'état, donc pas
+d'entrée) ; le filet sur `scroll` rattrape exactement le saut.
+`demarrer` est idempotent, les deux peuvent le réclamer.
+
+**2. ET LE TEST NE DESCENDAIT PAS LA PAGE.** Il faisait
+`window.scrollTo(0, y)` toutes les 40 ms. Mesuré position par position :
+`scrollY` restait entre 250 et 760 alors qu'on demandait jusqu'à 26200,
+et il RECULAIT parfois. `globals.css` pose `scroll-behavior: smooth` :
+chaque appel lançait une animation que le suivant interrompait.
+
+Le résultat dépendait donc du PAS choisi, ce qui est le symptôme :
+**pas de 400, le bloc s'anime ; pas de 500, il reste inerte**, sur la
+même page et le même viewport. Le test annonçait "on descend vraiment"
+et ne descendait pas. `behavior: "instant"` place la fenêtre au lieu de
+l'y emmener, et le test VÉRIFIE maintenant qu'il est arrivé en bas :
+sans ça, il dirait la même chose sur une page qu'il n'a jamais
+parcourue.
+
+**3. ET SES DEUX SEUILS NE DISTINGUAIENT PAS CE QU'ILS DEVAIENT.**
+
+| Le seuil | Ce qu'il faisait | Ce qu'il fait |
+|---|---|---|
+| `animes > 5` | rougissait sur `viralite-trafic`, qui en déclare SIX et en anime cinq, donc un bloc qui marche | `> 0` : il attrape un bloc INERTE, il n'arbitre pas entre 5 et 6 |
+| `hauteur < 1200` | rougissait sur la variante mobile de son comparatif, 1390 px, servie par la media query de sa propre île | `< 3000` : loin des deux groupes (1390 légitime, 10463 fautif) |
+
+Un seuil qui départage à la limite finit par crier sur du travail juste,
+et un test qui crie pour rien finit désactivé.
+
+**LA MÉTHODE QUI A TRANCHÉ, et c'est elle qu'il faut retenir :** ma
+première correction était FAUSSE. J'avais conclu "la page s'allonge
+pendant qu'on la descend", posé un `IntersectionObserver`, et re-mesuré :
+**rien n'avait changé**. C'est en imprimant la position du bloc à CHAQUE
+pas, au lieu de raisonner sur ce qu'elle devait être, que le défilement
+mort est apparu. Une cause plausible n'est pas une cause (règle du
+2 septembre), et la sonde qui tranche est celle qui imprime, pas celle
+qui conclut.
+
+Garde-fou : le cas "un saut d'un seul coup ne laisse aucun bloc figé"
+de `tests/visual/landing-paddings.spec.ts`, vérifié en rejouant la
+version d'avant (il rougit, et il nomme les trois blocs).
+
+#### LES TROIS FAUTES DE CE PASSAGE
+
+1. **Un accent grave dans un commentaire CSS écrit dans un littéral de
+   gabarit**, deux fois de plus. `tsc` les attrape comme il doit ; ce
+   n'est pas un garde-fou qui manque, c'est moi qui le refais.
+2. **Une cause plausible annoncée avant d'être mesurée**, et corrigée
+   pour rien : voir le bloc figé ci dessus. C'est la faute du
+   2 septembre, refaite dans l'outil même qui sert à trancher.
+3. **Un test qui figeait une FORMULATION a rougi sur une correction
+   juste**, pour la quatrième fois : il exigeait le mot "Zapier" DANS le
+   titre de la section Systeme.io, alors qu'elle venait de demander
+   "Connexion native à Systeme.io". Il vise maintenant le FAIT : la
+   SECTION dit ce qu'on évite, et le titre ne revend plus la mécanique
+   du tag.
+
+Test : `tests/logic/landing.test.mts`, et la mesure des paddings dans
+`tests/visual/landing-paddings.spec.ts`.
+
 ## Le sitemap du domaine de vente oubliait les pages légales (4 septembre 2026)
 
 Béné, après le énième refus de validation de marque par Google : "je

@@ -109,9 +109,33 @@ export const CSS = `
   background:var(--b);vertical-align:-.08em;animation:tqlClign 1.1s step-end infinite}
 @keyframes tqlClign{0%,100%{opacity:1}50%{opacity:.15}}
 
+/* SON TITRE QUI DEFILE. Deux lignes, comme sur sa page de vente : la
+   premiere s ecrit lettre par lettre, la seconde ne bouge pas.
+   Le nowrap tient la hauteur sur grand ecran : ses cinq phrases n ont
+   pas la meme longueur, et une phrase qui passerait sur deux lignes
+   ferait sauter toute la page cinq fois par cycle. Sous 900 px le
+   texte a le droit de revenir a la ligne, comme chez elle. */
+.tql-machine{display:inline-block;white-space:nowrap}
+.tql-h1-l2{display:block}
+.tql-curseur-cy{background:var(--cy);animation-duration:.8s}
+
 .tql-accroche{font-size:19px;line-height:1.6;color:var(--c);margin:0 0 30px;max-width:560px}
 .tql-p{font-size:17px;line-height:1.65;color:var(--c);max-width:720px;margin:0 auto 20px;text-align:center}
 .tql-p-g{text-align:left;margin-left:0}
+/* UN BLOC LONG SE LIT ALIGNE A GAUCHE, et sa colonne reste CENTREE
+   sous le titre : basculer aussi la marge decalerait le bloc a gauche
+   d un conteneur centre, ce qui est exactement le melange de centre et
+   de non centre qu elle a releve le 5 septembre. */
+.tql-p-lire{text-align:left}
+/* LA PHRASE QUI TRADUIT LE TABLEAU. Alignee a gauche : elle fait plus
+   de trois lignes, donc sa regle du 5 septembre s applique. */
+.tql-gain{text-align:left;max-width:760px;margin-top:26px}
+
+/* LA PASTILLE NEUTRE D UNE LIMITE, a la place de la coche. Meme regle
+   que la grille comparative : une limite chiffree rend sa VALEUR,
+   jamais une coche. */
+.tql-lim-pt{flex:none;width:7px;height:7px;margin:8px 5px 0;border-radius:999px;background:#B9C2DC}
+.tql-li-lim b{font-weight:600;color:#6B7291}
 .tql-corps{font-size:15px;line-height:1.6;color:var(--c);margin:0}
 .tql-legende{font-size:14px;color:#6B7291;text-align:center;margin:26px 0 0}
 
@@ -134,14 +158,28 @@ export const CSS = `
    Colonnes en macon (CSS multi-colonnes) et pas une grille : les
    temoignages n'ont pas la meme longueur, et une grille alignerait
    toutes les cartes sur la plus haute, donc du vide sous les courtes. */
+/* SES CARTES DE TEMOIGNAGE, avec le portrait en haut comme chez elle.
+   Bene, 5 septembre 2026 : "les temoignages idem tu m as mis ca tout
+   moche alors que c est beau sur la page d origine."
+
+   CE QU ON NE REPREND PAS : les cinq etoiles. Sur sa page, les quinze
+   cartes en portent cinq sur cinq. C est une NOTE, et je ne peux la
+   verifier pour personne : trois de ces gens ont ecrit sur Trustpilot,
+   les douze autres lui ont ecrit directement. Afficher une note qu on
+   n a pas relevee est exactement ce qu elle interdit. */
 .tql-temoins{margin:44px 0 0;columns:3;column-gap:22px}
-.tql-temoin{break-inside:avoid;margin:0 0 22px;padding:24px;
+.tql-temoin{break-inside:avoid;margin:0 0 22px;padding:22px 24px 24px;
   background:#fff;border:1px solid #E4E8F3;border-radius:16px;
   box-shadow:0 2px 10px rgba(43,50,100,.05)}
 .tql-temoin blockquote{margin:0;font-size:15px;line-height:1.65;color:#3B3B3B}
-.tql-temoin figcaption{margin:14px 0 0;font-size:14px;color:#6B7291}
-.tql-temoin figcaption b{color:#2B3264}
-.tql-temoin figcaption span::before{content:", "}
+.tql-temoin-qui{display:flex;align-items:center;gap:12px;margin:0 0 14px;
+  padding:0 0 14px;border-bottom:1px solid #EEF1F9}
+.tql-temoin-photo{width:48px;height:48px;border-radius:999px;object-fit:cover;flex:none}
+.tql-temoin-init{width:48px;height:48px;border-radius:999px;flex:none;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--pill);color:var(--b);font-weight:800;font-size:19px}
+.tql-temoin-nom{display:flex;flex-direction:column;line-height:1.3;font-size:14px;color:#6B7291}
+.tql-temoin-nom b{color:#2B3264;font-size:15px}
 
 /* ── BOUTONS, SCINTILLES, RASSURANCE ─────────────────────────────── */
 .tql-boutons{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
@@ -162,16 +200,30 @@ export const CSS = `
   100%{transform:scale(1);box-shadow:0 4px 14px rgba(90,110,246,.28),0 0 0 0 rgba(32,187,230,0)}
 }
 @media (prefers-reduced-motion:reduce){
-  .tql-cta{animation:none}.tql-curseur{animation:none}.tql-ruban-piste{animation:none}
+  .tql-cta{animation:none}.tql-curseur{animation:none}.tql-pt{animation:none}.tql-ruban-piste{animation:none}
 }
 
 .tql-avec-scint{position:relative;display:inline-block}
 .tql-scint{position:absolute;left:-52px;right:-52px;top:-58px;height:62px;pointer-events:none}
-.tql-pt{position:absolute;border-radius:999px}
+/* ELLES SCINTILLENT. Fixes, elles n avaient aucun interet : c est ce
+   que Bene a releve le 5 septembre. Chaque point respire a son propre
+   rythme, le decalage venant de sa position (voir pieces.tsx). */
+.tql-pt{position:absolute;border-radius:999px;animation-name:tqlScint;
+  animation-timing-function:ease-in-out;animation-iteration-count:infinite}
 .tql-pt-b{background:var(--b);opacity:.5}
 .tql-pt-c{background:var(--cy);opacity:.65}
+@keyframes tqlScint{
+  0%,100%{transform:scale(.6);opacity:.18}
+  50%{transform:scale(1.25);opacity:.95}
+}
 
 .tql-rassure{display:flex;flex-wrap:wrap;gap:6px 20px;margin:18px 0 0;padding:0;list-style:none}
+/* LA RASSURANCE SUIT SON BOUTON. Bene, 5 septembre 2026 : "attention
+   aux trucs centres et pas centres ... comme Connecte a Systeme.io -
+   Quiz illimites - IA integree, aligne a gauche sous un bouton
+   centre". La rangee de boutons dit deja si elle est centree : la
+   ligne du dessous s aligne dessus au lieu de le redecider. */
+.tql-centre+.tql-rassure{justify-content:center}
 .tql-rassure li{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:600;color:#6B7291}
 .tql-coche-fine{display:inline-flex;color:var(--cy)}
 
@@ -396,11 +448,27 @@ export const CSS = `
 .tql-val{font-weight:700;color:var(--e)}
 
 /* ── LA DÉMO EN IFRAME ──────────────────────────────────────────── */
-/* Le rapport 16/9 est tenu par le padding, pas par une hauteur figée :
-   c'est ce qu'elle avait écrit elle même dans son bout de code. */
-.tql-demo{position:relative;padding-bottom:56.25%;height:0;max-width:900px;margin:40px auto 0;
-  border-radius:16px;overflow:hidden;box-shadow:0 20px 54px rgba(35,40,80,.16);background:#fff}
-.tql-demo iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0}
+/* Bene, 5 septembre 2026 : "la video demo s affiche avec un large
+   espace blanc dessous."
+
+   MESURE DANS LE HTML SERVI PAR L EMBED (curl sur
+   quiz.tipote.com/embed/p/..., 5 septembre), pas deduit : la page de
+   l embed dessine DEJA sa propre boite, aspect-video overflow-hidden
+   rounded-2xl bg-black shadow-..., centree dans un min-h-screen, et
+   elle ajoute sous la video un lien "via Tiquiz" (11 px, mt-2).
+
+   Notre boite en rajoutait une deuxieme par dessus : un fond BLANC, un
+   rayon et une ombre, c est a dire exactement la surface blanche qui
+   depasse autour de la video noire. On la retire : l embed est
+   transparent, il porte son propre rayon et sa propre ombre.
+
+   Et la hauteur reserve les 16/9 PLUS la ligne du lien : sans elle, la
+   boite est 24 px trop courte pour son propre contenu, donc l iframe
+   defile au lieu de s afficher entiere. */
+.tql-demo{position:relative;padding-bottom:calc(56.25% + 26px);height:0;max-width:900px;
+  margin:40px auto 0}
+.tql-demo iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0;
+  background:transparent}
 
 /* ── SES BLOCS ANIMÉS, LEVÉS DE SA PAGE ────────────────────────── */
 /* On leur donne de la place et on ne touche à RIEN dedans : ils portent
@@ -411,16 +479,33 @@ export const CSS = `
 /* ── LA FAQ ──────────────────────────────────────────────────────── */
 /* SEIZE QUESTIONS À LA FILE, C'EST UN MUR : le titre de groupe est ce
    qui permet de sauter directement à la sienne. */
-.tql-faq-groupe{margin-top:34px}
+.tql-faq-groupe{margin-top:38px}
 .tql-faq-titre{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--b);margin:0 0 4px}
-.tql-faq{border-bottom:1px solid #E9ECF6}
+  color:var(--b);margin:0 0 12px}
+
+/* CHAQUE QUESTION EST UNE CARTE CLIQUABLE. Bene, 5 septembre 2026 :
+   "la FAQ doit etre sous forme de VRAIE FAQ (question -> clic ->
+   reponse)."
+
+   MESURE AVANT DE TOUCHER A QUOI QUE CE SOIT : l accordeon MARCHAIT
+   deja (clic sur la premiere question, 67 px -> 166 px, 16 questions,
+   aucune ouverte au repos). Ce qui manquait n etait pas le geste,
+   c etait l AFFORDANCE : une liste de titres separes par un filet gris
+   et un chevron pale ne se lit pas comme quelque chose qui s ouvre.
+   D ou la carte blanche, le chevron dans sa pastille, le survol, et la
+   bordure bleue quand la reponse est ouverte. */
+.tql-faq{background:#fff;border:1px solid var(--bord);border-radius:14px;margin-bottom:10px;
+  transition:border-color .15s ease,box-shadow .15s ease}
+.tql-faq:hover{border-color:#C9D3F5;box-shadow:0 6px 18px rgba(35,40,80,.06)}
+.tql-faq[open]{border-color:var(--b);box-shadow:0 10px 26px rgba(90,110,246,.12)}
 .tql-faq summary{display:flex;align-items:center;justify-content:space-between;gap:16px;cursor:pointer;
-  list-style:none;font-size:17px;font-weight:700;padding:20px 0;color:var(--e)}
+  list-style:none;font-size:17px;font-weight:700;padding:18px 20px;color:var(--e)}
 .tql-faq summary::-webkit-details-marker{display:none}
-.tql-chev{flex:none;color:var(--b);transition:transform .15s ease}
-.tql-faq[open] .tql-chev{transform:rotate(180deg)}
-.tql-faq p{font-size:16px;line-height:1.65;color:var(--c);margin:0 0 20px}
+.tql-chev{flex:none;width:30px;height:30px;border-radius:999px;background:var(--pill);
+  color:var(--b);display:inline-flex;align-items:center;justify-content:center;
+  transition:transform .15s ease,background .15s ease}
+.tql-faq[open] .tql-chev{transform:rotate(180deg);background:var(--b);color:#fff}
+.tql-faq p{font-size:16px;line-height:1.65;color:var(--c);margin:0 20px 18px}
 
 /* ── LE BANDEAU DÉGRADÉ DE FIN ───────────────────────────────────── */
 /* Le SEUL aplat de couleur sous du texte de la page, et c'est le sien :
@@ -524,6 +609,13 @@ export const CSS = `
   .tql-etape{margin-top:44px}
   .tql-etape:nth-child(even) .tql-etape-txt{order:0}
   .tql-h1{font-size:33px}
+  .tql-machine{white-space:normal}
+  /* SOUS 900 PX, TOUT LE CORPS DE TEXTE EST ALIGNE A GAUCHE. Mesure du
+     5 septembre a 390 px : onze paragraphes centres rendaient 4 ou
+     5 lignes. Sa regle ("aligne a gauche quand il y a plus de
+     3 lignes") ne laisse donc rien de centre a cette largeur. Les
+     TITRES restent centres : ils font une ou deux lignes. */
+  .tql-p,.tql-legende{text-align:left}
   .tql-h2{font-size:28px}
   .tql-bande h2{font-size:28px}
   .tql-accroche{font-size:17px}

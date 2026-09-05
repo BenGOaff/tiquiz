@@ -1,0 +1,246 @@
+<!-- LEVÉ DE content/sales/tiquiz.html PAR scripts/extraire-anims-vente.mjs.
+     NE PAS RETOUCHER À LA MAIN : relance le script.
+     Ce que ce bloc MONTRE : Le brief tape, puis le quiz qui s'ecrit tout seul. -->
+<div id="rawhtml-30ad93c0" class="sc-evdWiR hOAxvc"><!-- TIQUIZ — Quiz Builder animé (éducation canine) — Coller dans un bloc HTML Systeme.io -->
+<style>
+.tqz1-qb *{margin:0;padding:0;box-sizing:border-box}
+.tqz1-qb{width:100%;max-width:420px;margin:0 auto;padding:30px 16px;font-family:'Inter','Open Sans',system-ui,sans-serif}
+
+/* ── PHONE FRAME ── */
+.tqz1-qb-phone{
+  background:#fff;border-radius:32px;
+  box-shadow:0 25px 70px rgba(43,50,100,.18),0 4px 12px rgba(43,50,100,.06);
+  border:3px solid #eaecf5;
+  overflow:hidden;
+  opacity:0;transform:translateY(20px);
+}
+.tqz1-qb.tqz1-visible .tqz1-qb-phone{animation:tqz1QbIn .7s cubic-bezier(.22,1,.36,1) .15s forwards}
+@keyframes tqz1QbIn{to{opacity:1;transform:translateY(0)}}
+
+/* ── HEADER ── */
+.tqz1-qb-header{
+  display:flex;align-items:center;gap:12px;
+  padding:18px 20px 14px;
+  border-bottom:1px solid #f0f1f7;
+}
+.tqz1-qb-back{
+  width:32px;height:32px;border-radius:50%;
+  background:#f4f5fb;
+  display:flex;align-items:center;justify-content:center;
+}
+.tqz1-qb-back svg{width:16px;height:16px;fill:none;stroke:#2B3264;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.tqz1-qb-htitle{font-size:16px;font-weight:800;color:#2B3264}
+
+/* ── TOGGLE TU/VOUS ── */
+.tqz1-qb-toggle{
+  display:flex;align-items:center;gap:8px;
+  padding:14px 20px 0;
+}
+.tqz1-qb-tg-track{
+  width:44px;height:24px;border-radius:12px;
+  background:linear-gradient(135deg,#5E6DDE,#20BBE6);
+  position:relative;cursor:pointer;
+}
+.tqz1-qb-tg-dot{
+  width:18px;height:18px;border-radius:50%;background:#fff;
+  position:absolute;top:3px;right:3px;
+  box-shadow:0 1px 4px rgba(0,0,0,.15);
+}
+.tqz1-qb-tg-labels{display:flex;gap:4px;font-size:11px;font-weight:800;letter-spacing:.06em;color:#8890B5}
+.tqz1-qb-tg-labels span:last-child{color:#5E6DDE}
+
+/* ── TEXTAREA ── */
+.tqz1-qb-textarea{
+  margin:14px 20px 0;
+  background:#f8f9fc;border:1.5px solid #e4e7f5;border-radius:14px;
+  padding:14px 16px;min-height:72px;
+  font-size:13px;color:#2B3264;font-weight:500;line-height:1.5;
+  font-family:'Inter','Open Sans',system-ui,sans-serif;
+  overflow:hidden;position:relative;
+}
+.tqz1-qb-typed{
+  display:inline;
+}
+.tqz1-qb-cursor{
+  display:inline-block;width:1.5px;height:16px;background:#5E6DDE;
+  vertical-align:text-bottom;margin-left:1px;
+  opacity:0;
+}
+.tqz1-qb.tqz1-visible .tqz1-qb-cursor{animation:tqz1Blink 1s step-end .5s infinite}
+@keyframes tqz1Blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ── BOUTON GÉNÉRER ── */
+.tqz1-qb-gen{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  margin:16px auto 0;
+  padding:12px 28px;
+  background:linear-gradient(135deg,#5E6DDE,#20BBE6);
+  color:#fff;font-size:14px;font-weight:800;
+  border:none;border-radius:30px;cursor:pointer;
+  box-shadow:0 6px 20px rgba(94,109,222,.3);
+  opacity:0;transform:scale(.9);
+}
+.tqz1-qb-gen svg{width:18px;height:18px;fill:#fff}
+.tqz1-qb.tqz1-visible .tqz1-qb-gen{animation:tqz1GenIn .5s ease 3.2s forwards}
+@keyframes tqz1GenIn{to{opacity:1;transform:scale(1)}}
+/* Pulse continu après apparition */
+.tqz1-qb.tqz1-visible .tqz1-qb-gen{animation:tqz1GenIn .5s ease 3.2s forwards,tqz1GenPulse 3s ease-in-out 4.5s infinite}
+@keyframes tqz1GenPulse{
+  0%,100%{box-shadow:0 6px 20px rgba(94,109,222,.3)}
+  50%{box-shadow:0 6px 28px rgba(94,109,222,.5)}
+}
+
+/* ── QUESTIONS LIST ── */
+.tqz1-qb-list{padding:6px 20px 20px}
+
+.tqz1-qb-q{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 16px;margin-top:10px;
+  background:#f8f9fc;border:1.5px solid #e4e7f5;border-radius:12px;
+  opacity:0;transform:translateY(12px);
+}
+.tqz1-qb-q:first-child{
+  border-color:#5E6DDE;
+  background:linear-gradient(135deg,rgba(94,109,222,.05),rgba(32,187,230,.03));
+}
+.tqz1-qb-qnum{
+  flex-shrink:0;width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,#5E6DDE,#20BBE6);
+  color:#fff;font-size:12px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+}
+.tqz1-qb-q:not(:first-child) .tqz1-qb-qnum{
+  background:#e4e7f5;color:#8890B5;
+}
+.tqz1-qb-qtxt{
+  font-size:13px;font-weight:600;color:#2B3264;line-height:1.35;
+  text-align:left;
+}
+
+/* Questions AU SCROLL — stagger */
+.tqz1-qb.tqz1-visible .tqz1-qb-q:nth-child(1){animation:tqz1QIn .45s cubic-bezier(.22,1,.36,1) 3.8s forwards}
+.tqz1-qb.tqz1-visible .tqz1-qb-q:nth-child(2){animation:tqz1QIn .45s cubic-bezier(.22,1,.36,1) 4.1s forwards}
+.tqz1-qb.tqz1-visible .tqz1-qb-q:nth-child(3){animation:tqz1QIn .45s cubic-bezier(.22,1,.36,1) 4.4s forwards}
+.tqz1-qb.tqz1-visible .tqz1-qb-q:nth-child(4){animation:tqz1QIn .45s cubic-bezier(.22,1,.36,1) 4.7s forwards}
+.tqz1-qb.tqz1-visible .tqz1-qb-q:nth-child(5){animation:tqz1QIn .45s cubic-bezier(.22,1,.36,1) 5.0s forwards}
+@keyframes tqz1QIn{to{opacity:1;transform:translateY(0)}}
+
+/* Highlight continu sur Q1 */
+@keyframes tqz1Q1Glow{
+  0%,100%{border-color:#5E6DDE;box-shadow:none}
+  50%{border-color:#20BBE6;box-shadow:0 0 0 3px rgba(32,187,230,.08)}
+}
+.tqz1-qb.tqz1-visible .tqz1-qb-q:first-child{animation:tqz1QIn .45s cubic-bezier(.22,1,.36,1) 3.8s forwards,tqz1Q1Glow 4s ease-in-out 6s infinite}
+
+/* ── RESPONSIVE ── */
+@media(max-width:500px){
+  .tqz1-qb{padding:20px 10px}
+  .tqz1-qb-textarea{font-size:12px;min-height:60px}
+  .tqz1-qb-qtxt{font-size:12px}
+  .tqz1-qb-htitle{font-size:14px}
+}
+</style>
+
+<div class="tqz1-qb" id="tqz1-qb-widget">
+  <div class="tqz1-qb-phone">
+
+    <!-- Header -->
+    <div class="tqz1-qb-header">
+      <div class="tqz1-qb-back"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></div>
+      <div class="tqz1-qb-htitle">Mon questionnaire</div>
+    </div>
+
+    <!-- Toggle TU/VOUS -->
+    <div class="tqz1-qb-toggle">
+      <div class="tqz1-qb-tg-track"><div class="tqz1-qb-tg-dot"></div></div>
+      <div class="tqz1-qb-tg-labels"><span>TU</span><span>VOUS</span></div>
+    </div>
+
+    <!-- Textarea avec typing -->
+    <div class="tqz1-qb-textarea">
+      <span class="tqz1-qb-typed" id="tqz1-qb-typed"></span><span class="tqz1-qb-cursor"></span>
+    </div>
+
+    <!-- Bouton Générer -->
+    <div style="text-align:center">
+      <button class="tqz1-qb-gen">
+        <svg viewBox="0 0 24 24"><path d="M12 2L9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61z"/></svg>
+        Générer
+      </button>
+    </div>
+
+    <!-- Questions générées -->
+    <div class="tqz1-qb-list">
+      <div class="tqz1-qb-q">
+        <div class="tqz1-qb-qnum">1</div>
+        <div class="tqz1-qb-qtxt">Quel est le plus gros défi avec ton chien au quotidien ?</div>
+      </div>
+      <div class="tqz1-qb-q">
+        <div class="tqz1-qb-qnum">2</div>
+        <div class="tqz1-qb-qtxt">Depuis combien de temps as-tu ton chien ?</div>
+      </div>
+      <div class="tqz1-qb-q">
+        <div class="tqz1-qb-qnum">3</div>
+        <div class="tqz1-qb-qtxt">As-tu déjà essayé une méthode d'éducation canine ?</div>
+      </div>
+      <div class="tqz1-qb-q">
+        <div class="tqz1-qb-qnum">4</div>
+        <div class="tqz1-qb-qtxt">Quel résultat attends-tu d'une formation ?</div>
+      </div>
+      <div class="tqz1-qb-q">
+        <div class="tqz1-qb-qnum">5</div>
+        <div class="tqz1-qb-qtxt">Quel budget es-tu prêt(e) à investir pour éduquer ton chien ?</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Scroll reveal + typing animation compatible Systeme.io -->
+<script>
+(function(){
+  var done=false;
+  var typed=false;
+  var txt="Je veux un quiz pour qualifier mes visiteurs prêts à commander ma formation sur l'éducation canine";
+
+  function startTyping(){
+    if(typed)return;
+    typed=true;
+    var el=document.getElementById('tqz1-qb-typed');
+    if(!el)return;
+    var i=0;
+    var iv=setInterval(function(){
+      if(i<txt.length){
+        el.textContent+=txt.charAt(i);
+        i++;
+      }else{
+        clearInterval(iv);
+      }
+    },28);
+  }
+
+  function check(){
+    var el=document.getElementById('tqz1-qb-widget');
+    if(!el||done)return;
+    var rect=el.getBoundingClientRect();
+    var winH=window.innerHeight||document.documentElement.clientHeight;
+    if(rect.top<winH*0.85){
+      el.classList.add('tqz1-visible');
+      done=true;
+      window.removeEventListener('scroll',check);
+      window.removeEventListener('resize',check);
+      // Démarrer le typing après 0.6s (quand le phone est visible)
+      setTimeout(startTyping,600);
+    }
+  }
+  window.addEventListener('scroll',check,{passive:true});
+  window.addEventListener('resize',check,{passive:true});
+  var polls=0;
+  var poller=setInterval(function(){
+    check();
+    polls++;
+    if(done||polls>33)clearInterval(poller);
+  },300);
+  check();
+})();
+</script></div>

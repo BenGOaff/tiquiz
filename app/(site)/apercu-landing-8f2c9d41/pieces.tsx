@@ -16,7 +16,7 @@
 // elles ne pèsent rien. C'est le geste de son bloc
 // `content/sales/v2/funnel-quiz.html`, qu'elle a relu trois fois.
 
-import type { Brief, Maquette } from "@/lib/site/landing";
+import type { Maquette } from "@/lib/site/landing";
 
 const T = {
   fill: "none" as const,
@@ -117,7 +117,21 @@ export function Scintilles() {
         <span
           key={i}
           className={p.c === 1 ? "tql-pt tql-pt-b" : "tql-pt tql-pt-c"}
-          style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.r, height: p.r }}
+          style={{
+            left: `${p.x}%`,
+            top: `${p.y}%`,
+            width: p.r,
+            height: p.r,
+            // LE DÉCALAGE EST CALCULÉ, PAS TIRÉ AU HASARD. Béné,
+            // 5 septembre 2026 : "les bulles de boutons ne fonctionnent
+            // pas : elles sont fixes et non animées : aucun intérêt".
+            // Elles scintillent maintenant, chacune à son rythme, et
+            // le décalage vient de la POSITION du point : un
+            // `Math.random()` donnerait un rendu serveur différent du
+            // rendu client, donc une erreur d'hydratation React.
+            animationDelay: `${((p.x * 7 + p.y * 3) % 260) / 100}s`,
+            animationDuration: `${2.4 + ((p.x + p.y) % 5) * 0.35}s`,
+          }}
         />
       ))}
     </span>
@@ -224,35 +238,6 @@ export function ChampLien({ copier }: { copier: string }) {
     <div className="tql-champ" aria-hidden>
       <span className="tql-champ-url">https://quiz.tonsite.fr/mon-quiz</span>
       <span className="tql-champ-b">{copier}</span>
-    </div>
-  );
-}
-
-/**
- * LA MAQUETTE DU BRIEF : les trois champs qu'on remplit vraiment.
- *
- * L'étape 1 réutilisait la maquette du quiz, donc la page montrait deux
- * fois le même écran. Celle là montre ce que l'étape 1 fait DIRE : trois
- * champs, pas un formulaire de dix minutes.
- */
-export function MaquetteBrief({ b }: { b: Brief }) {
-  return (
-    <div className="tql-maq" aria-hidden>
-      <div className="tql-maq-tete">
-        <span className="tql-maq-pt" />
-        <span className="tql-maq-pt" />
-        <span className="tql-maq-pt" />
-        <span className="tql-maq-url">{b.titre}</span>
-      </div>
-      <div className="tql-maq-corps">
-        {b.champs.map((c) => (
-          <div key={c.etiquette} className="tql-brief-champ">
-            <p className="tql-brief-lab">{c.etiquette}</p>
-            <p className="tql-brief-val">{c.valeur}</p>
-          </div>
-        ))}
-        <p className="tql-brief-b">{b.bouton}</p>
-      </div>
     </div>
   );
 }

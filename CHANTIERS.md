@@ -103,6 +103,27 @@ se projeter, n'y touche pas du tout." Question fermée.
   hub, `/fonctionnalites/<slug>` les 14 pages, et huit blocs de la
   landing portent maintenant un lien "le détail". Une seule source
   (`lib/site/fonctionnalites.ts`) alimente les deux écrans.
+  **HUITIÈME PASSAGE, 5 septembre**, sur ses seize reproches : le H1
+  DÉFILE en machine à écrire (ses cinq phrases, ses quatre durées,
+  levées de sa page), les scintilles du bouton bougent enfin, cinq
+  animations de plus sont posées et REMPLACENT mes dessins, sa FAQ est
+  restylée en cartes, ses quinze témoignages portent leur portrait, le
+  mini quiz "c'est pas pour toi" est repris de sa page v2, un bloc de
+  plus de trois lignes s'aligne à gauche, et les tarifs perdent leurs
+  ",00" avec le retrait du watermark annoncé sur les paliers payants.
+  **CINQ ANIMATIONS SUR DIX SONT REFUSÉES, et la raison est écrite dans
+  le script d'extraction** : une publication Facebook FABRIQUÉE au nom
+  de Mark Zuckerberg, un écran de FAUSSE RARETÉ ("il n'y a que 20 codes
+  promos disponibles"), un domaine qui n'existe pas (`app.tiquiz.com`),
+  un bloc qui envoie le tag vers onze outils concurrents, et un bloc
+  vide sans son script. **Les trois premiers vivent sur sa page EN
+  LIGNE : c'est à elle de trancher si elle les y garde.**
+  **ET LE FILET A TROUVÉ UN BLOC FIGÉ POUR TOUJOURS** : trois de ses
+  huit animations restaient inertes quand on saute d'un coup jusqu'en
+  bas (appui sur Fin, clic sur une ancre, molette jetée). Elles
+  s'affichaient très bien, elles ne bougeaient simplement jamais.
+  Corrigé, et le test qui l'a trouvé ne descendait pas la page qu'il
+  annonçait descendre. Le détail est dans `AGENTS.md`.
   **LES 14 CAPTURES D'ÉCRAN SONT À PRENDRE, et chaque page dit
   laquelle** dans un encadré visible : je ne peux pas les produire d'ici
   (la seule que l'app sait rendre porte un bandeau "Mode aperçu" et un

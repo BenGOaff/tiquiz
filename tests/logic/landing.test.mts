@@ -58,6 +58,21 @@ import { gagne, reglesDeCouleur, specificite, viseTousLesLiens } from "./aide/sp
 
 const racine = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 
+/**
+ * LE TEXTE VISIBLE D'UN BLOC ANIMÉ LEVÉ DE SA PAGE.
+ *
+ * On retire le `<style>` et les balises : ce qui reste est ce qu'un
+ * lecteur voit. Sans retirer le style, un test qui cherche un
+ * pourcentage tomberait sur un `width:41%` de CSS, donc il crierait
+ * pour rien, donc il finirait désactivé.
+ */
+function texteDuBloc(nom: string): string {
+  return racine(`content/sales/anim/${nom}.html`)
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ");
+}
+
 const SOURCE = racine("lib/site/landing.ts");
 /** Le module SANS ses commentaires : sinon un contrôle tombe sur sa propre explication. */
 const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
@@ -77,12 +92,30 @@ describe("la landing lit les tarifs, elle ne les recopie pas", () => {
   });
 
   test("les trois colonnes portent les prix du catalogue", () => {
+    // LE MONTANT VIENT DU CATALOGUE, ET LA GRILLE RETIRE LES CENTIMES
+    // QUAND ILS SONT NULS. Béné, 5 septembre 2026 : "les tarifs sont
+    // moches" ; "17,00 €" en 44 px est un montant de facture posé là où
+    // on lit un prix d'un coup d'oeil. Le test compare donc les EUROS,
+    // pas la mise en forme : figer "17,00 €" interdirait de corriger la
+    // mise en forme, et c'est le défaut qui sort en boucle ici.
+    const euros = (id: "mensuel" | "annuel" | "mensuel-plus" | "annuel-plus") =>
+      String(OWNER_CATALOG[id].amountCents / 100);
     const c = colonnesDeTarif(LANDING.fr);
     assert.equal(c.length, 3);
-    assert.equal(c[1].prix, formatOwnerPrice(OWNER_CATALOG["mensuel"]));
-    assert.ok(c[1].prixAn?.includes(formatOwnerPrice(OWNER_CATALOG["annuel"])));
-    assert.equal(c[2].prix, formatOwnerPrice(OWNER_CATALOG["mensuel-plus"]));
-    assert.ok(c[2].prixAn?.includes(formatOwnerPrice(OWNER_CATALOG["annuel-plus"])));
+    assert.ok(c[1].prix.startsWith(euros("mensuel")), `-> ${c[1].prix}`);
+    assert.ok(c[1].prixAn?.includes(euros("annuel")), `-> ${c[1].prixAn}`);
+    assert.ok(c[2].prix.startsWith(euros("mensuel-plus")), `-> ${c[2].prix}`);
+    assert.ok(c[2].prixAn?.includes(euros("annuel-plus")), `-> ${c[2].prixAn}`);
+    // Un tarif à centimes NON nuls les garde : sinon la grille
+    // annoncerait moins que ce que le bon de commande encaisse.
+    for (const id of ["mensuel", "annuel", "mensuel-plus", "annuel-plus"] as const) {
+      if (OWNER_CATALOG[id].amountCents % 100 !== 0) {
+        assert.ok(
+          formatOwnerPrice(OWNER_CATALOG[id]).includes(","),
+          `${id} a des centimes : ils doivent rester affichés`,
+        );
+      }
+    }
     // Le gratuit n'est pas au catalogue : il n'a pas de prix annuel.
     assert.equal(c[0].prixAn, null);
   });
@@ -591,33 +624,40 @@ describe("la page répond aux DEUX questions : pourquoi un quiz, pourquoi Tiquiz
   // donc nulle part, et "pourquoi un quiz plutôt qu'un PDF" reposait
   // sur une seule animation.
 
-  test("le comparatif des formats n'invente AUCUN chiffre", () => {
-    // Le 44,9 % de la carte voisine porte sa source. Je n'ai rien
-    // d'équivalent pour un PDF ou un webinaire : un tableau qui
-    // inventerait deux taux pour rendre le troisième flatteur serait
+  test("son comparatif des formats n'invente AUCUN chiffre", () => {
+    // Le 44,9 % de la carte voisine porte sa source. Rien d'equivalent
+    // n'existe pour un PDF ou un webinaire : un comparatif qui
+    // inventerait deux taux pour rendre le troisieme flatteur serait
     // exactement le bullshit qu'elle interdit.
-    for (const langue of Object.keys(LANDING)) {
-      const t = LANDING[langue];
-      const cellules = t.formatsLeadLignes.flatMap((l) => [l.critere, ...l.valeurs]).join(" | ");
-      assert.ok(
-        !/\d+[.,]?\d*\s*%/.test(cellules),
-        `${langue} : le comparatif des formats annonce un pourcentage sans source`,
-      );
-      assert.ok(
-        !/\bx\s?\d|\d+\s*(fois plus|times more)/i.test(cellules),
-        `${langue} : le comparatif des formats annonce un multiplicateur sans source`,
-      );
-    }
+    //
+    // LE TEST A CHANGE DE CIBLE LE 5 SEPTEMBRE, ET C'EST LE POINT.
+    // Bene : "pourquoi tu ne reprends pas [...] de la page de vente
+    // originale ? J'ai beaucoup bosse pour cette page." J'avais ecrit
+    // MON tableau a cote du sien ; c'est le sien qui est servi, donc
+    // c'est le sien que le garde-fou doit lire. Un test qui surveille
+    // un contenu qu'aucun ecran n'affiche ne peut plus echouer.
+    const bloc = texteDuBloc("comparatif-formats");
+    assert.ok(
+      !/\d+[.,]?\d*\s*%/.test(bloc),
+      "le comparatif des formats annonce un pourcentage sans source",
+    );
+    assert.ok(
+      !/\bx\s?\d|\d+\s*(fois plus|times more)/i.test(bloc),
+      "le comparatif des formats annonce un multiplicateur sans source",
+    );
   });
 
-  test("il compare bien TROIS formats, sur au moins quatre critères", () => {
-    for (const langue of Object.keys(LANDING)) {
-      const t = LANDING[langue];
-      assert.equal(t.formatsLeadColonnes.length, 4, `${langue} : il faut le critère plus trois formats`);
-      assert.ok(t.formatsLeadLignes.length >= 4, `${langue} : trop peu de critères`);
-      for (const l of t.formatsLeadLignes) {
-        assert.equal(l.valeurs.length, 3, `${langue} : "${l.critere}" n'a pas trois valeurs`);
-      }
+  test("il compare bien TROIS formats, sur au moins quatre criteres", () => {
+    const bloc = texteDuBloc("comparatif-formats");
+    for (const format of ["Tiquiz", "Ebook", "Formation offerte"]) {
+      assert.ok(bloc.includes(format), `le comparatif ne nomme plus "${format}"`);
+    }
+    for (const critere of ["Viral", "Facile a creer", "Prospects qualifies"]) {
+      const sansAccent = critere
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "");
+      const nu = bloc.normalize("NFD").replace(/[̀-ͯ]/g, "");
+      assert.ok(nu.includes(sansAccent), `le comparatif ne porte plus le critere "${critere}"`);
     }
   });
 
@@ -738,16 +778,31 @@ describe("le bénéfice Systeme.io est la connexion, pas la mécanique du tag", 
   // fait vendre. Le bénéfice c'est que Systeme io est connecté
   // nativement, pas besoin de lier zapier, make, pabbly ou autre."
 
-  test("le titre nomme les intermédiaires qu'on évite", () => {
+  test("la section dit ce qu'on évite, et le titre reste du français", () => {
+    // CE TEST A FIGÉ UNE FORMULATION, ET IL A ROUGI SUR UNE CORRECTION
+    // JUSTE. Il exigeait le mot "Zapier" DANS LE TITRE, alors que Béné
+    // a demandé le contraire le 5 septembre : "'Connecté à Systeme.io,
+    // sans Zapier au milieu' c'est de l'anglais mal traduit, moche en
+    // français. 'Connexion native à Systeme'."
+    //
+    // Un garde-fou qui fige une formulation empêche de corriger la
+    // formulation (quatrième fois dans ce dépôt). Il vise donc le
+    // FAIT : la SECTION dit ce qu'on évite, le titre dit le bénéfice,
+    // et le mot surligné reste un morceau du titre.
     for (const langue of Object.keys(LANDING)) {
       const t = LANDING[langue];
+      const section = `${t.sioTitre} ${t.sioCorps.join(" ")} ${t.sioPrix}`;
       assert.ok(
-        /zapier/i.test(`${t.sioTitre} ${t.sioMotCle}`),
-        `${langue} : le titre ne dit pas ce qu'on évite -> ${t.sioTitre}`,
+        /zapier/i.test(section),
+        `${langue} : la section ne dit nulle part ce qu'on évite`,
       );
       assert.ok(
         t.sioTitre.includes(t.sioMotCle),
         `${langue} : le mot surligné doit être un morceau du titre`,
+      );
+      assert.ok(
+        !/\btag\b/i.test(`${t.sioTitre} ${t.sioMotCle}`),
+        `${langue} : le titre revend la mécanique du tag -> ${t.sioTitre}`,
       );
     }
   });

@@ -80,11 +80,14 @@ import {
   colonnesDeTarif,
   comparatifDesPlans,
   contenuLanding,
+  blocLong,
 } from "@/lib/site/landing";
 import { CSS } from "./styles";
 import { AnimVente } from "./anims";
 import { faqDeLaPageDeVente } from "./faq";
 import DeclencheurAnims from "./DeclencheurAnims";
+import Machine from "./Machine";
+import { BlocVente } from "./blocsVente";
 import {
   BlocCode,
   ChampLien,
@@ -94,7 +97,6 @@ import {
   CochePleine,
   Fleche,
   FlecheBas,
-  MaquetteBrief,
   MaquetteQuiz,
   Picto,
   Scintilles,
@@ -135,31 +137,6 @@ function Rassurances({ items }: { items: readonly string[] }) {
     </ul>
   );
 }
-
-/**
- * LE BOUTON DE FIN DE SECTION.
- *
- * Sa page en pose un après presque chaque section, et son libellé est
- * toujours un désir à la première personne : "Je veux capturer ces
- * emails", "Je veux vendre avec un quiz", "Je me lance gratuitement".
- * Ce n'est pas une étiquette, c'est la phrase que le lecteur vient de
- * se dire, et c'est ce qui fait qu'on clique au milieu d'une page.
- *
- * La rassurance dessous est la sienne aussi ("Pas besoin de CB -
- * aucune obligation") : elle ne coûte rien et elle retire la seule
- * raison d'hésiter à ce moment là.
- */
-/**
- * LES SIX DÉLAIS DU FLUX DE CAPTURES, LES SIENS.
- *
- * Sa page affiche "Capturé il y a 3min ... 45min". Ce sont des délais
- * FIGÉS, pas un tirage : un nombre aléatoire rendu côté serveur ne
- * correspond pas à celui de l'hydratation, et React se plaint.
- *
- * Et ils illustrent un flux, ils n'annoncent aucun volume réel : c'est
- * la même règle que les trois chiffres de son bloc viralité.
- */
-const DELAIS_CAPTURE = [3, 7, 14, 22, 31, 45] as const;
 
 /**
  * LE LIEN VERS LA PAGE DÉTAILLÉE D'UNE FONCTIONNALITÉ.
@@ -214,10 +191,6 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
   const comparatif = comparatifDesPlans(t);
   const faq = faqDeLaPageDeVente();
 
-  // Le titre porte son mot clé surligné. On DÉCOUPE au lieu de réécrire
-  // le titre en deux morceaux : le fragment doit rester une partie de la
-  // phrase, sinon la traduction suivante le perdra.
-  const [avantH1, apresH1] = t.titre.split(t.motCle);
 
   return (
     <main className="tql" lang={t.langue}>
@@ -235,11 +208,14 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
         <div className="tql-large tql-hero-grille">
           <div>
             <p className="tql-surtitre">{t.etiquette}</p>
+            {/* SON TITRE, EN DEUX LIGNES, comme sur sa page de vente :
+                la première DÉFILE en machine à écrire (ses cinq
+                phrases, son rythme), la seconde ne bouge pas. Le
+                premier mot est rendu par le serveur : c'est lui que
+                lit un moteur, et celui qui n'a pas de JavaScript. */}
             <h1 className="tql-h1">
-              {avantH1}
-              <span className="tql-surb">{t.motCle}</span>
-              <span aria-hidden className="tql-curseur" />
-              {apresH1}
+              <Machine mots={t.titreDefilant} />
+              <span className="tql-h1-l2">{t.motCle}</span>
             </h1>
             <p className="tql-accroche">{t.accroche}</p>
             <p className="tql-pourqui">{t.pourQui}</p>
@@ -366,33 +342,14 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
             {t.formatsLeadFin}
           </h2>
           <p className="tql-p">{t.formatsLeadCorps}</p>
-          <div className="tql-comp-boite">
-            <table className="tql-comp tql-comp-oui">
-              <thead>
-                <tr>
-                  {t.formatsLeadColonnes.map((c, i) => (
-                    <th key={c || i} className={i === 1 ? "tql-col-nous" : undefined}>
-                      {c}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {t.formatsLeadLignes.map((l) => (
-                  <tr key={l.critere}>
-                    <th scope="row">{l.critere}</th>
-                    {l.valeurs.map((v, i) => (
-                      <td
-                        key={l.critere + i}
-                        className={i === 0 ? "tql-col-nous" : undefined}
-                      >
-                        {v ? <CochePleine /> : <Croix />}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* SON COMPARATIF, LEVÉ DE SA PAGE. J'en avais écrit un autre
+              à côté, avec mes propres critères : elle a bossé sur le
+              sien, il est en ligne, et il porte SEPT critères là où le
+              mien en avait cinq. `decoratif={false}` : ce bloc porte de
+              vraies phrases, les masquer retirerait l'argument à un
+              lecteur d'écran et à un moteur. */}
+          <div className="tql-anim">
+            <AnimVente bloc="comparatif-formats" decoratif={false} />
           </div>
           <p className="tql-legende">{t.formatsLeadNote}</p>
         </div>
@@ -421,7 +378,10 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
                     page : le même écran deux fois, ce qui se lit comme
                     un manque de soin. */}
                 {i === 0 ? (
-                  <MaquetteBrief b={t.brief} />
+                  /* SON ANIMATION, à la place de ma maquette dessinée :
+                     le brief s'écrit tout seul, c'est exactement ce que
+                     l'étape 1 raconte, et c'est elle qui l'a dessinée. */
+                  <AnimVente bloc="generation-ia" />
                 ) : i === 1 ? (
                   <MaquetteQuiz m={t.maquette} />
                 ) : i === 2 ? (
@@ -502,7 +462,7 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
             <span className="tql-surb">{t.sioMotCle}</span>
           </h2>
           {t.sioCorps.map((p) => (
-            <p key={p} className="tql-p">
+            <p key={p} className={`tql-p${blocLong(t.sioCorps) ? " tql-p-lire" : ""}`}>
               {p}
             </p>
           ))}
@@ -561,8 +521,13 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
               </tbody>
             </table>
           </div>
+          {/* CE QUE LE TABLEAU VEUT DIRE, EN CLAIR. "C'est QUOI
+              l'intérêt, le vrai gain, l'avantage ?" Le prix de
+              l'abonnement en plus vient du module, jamais recopié. */}
+          <p className="tql-p tql-p-fort tql-gain">
+            {t.outilsGain.replace("{prix}", ZAPIER.professionnelParMois)}
+          </p>
           <p className="tql-legende">
-            {t.outilsNote}{" "}
             <Link href="/integrations">{t.outilsLien}</Link>
           </p>
         </div>
@@ -580,10 +545,21 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
             {t.viralTitre} <span className="tql-surb">{t.viralMotCle}</span>
           </h2>
           {t.viralCorps.map((p) => (
-            <p key={p} className="tql-p">
+            <p key={p} className={`tql-p${blocLong(t.viralCorps) ? " tql-p-lire" : ""}`}>
               {p}
             </p>
           ))}
+          {/* SON ANIMATION. Béné, 5 septembre 2026 : "gros bloc de
+              texte imbuvable : on avait une belle animation pour
+              illustrer ça." La courbe qui monte et les deux compteurs
+              sont les SIENS, levés à l'octet près de sa page en ligne.
+              Ils portent deux nombres (+4327 visites, +487 leads) que
+              je ne peux pas sourcer : ils viennent de ses propres quiz,
+              ils sont déjà publiés sur sa page de vente, et c'est sa
+              décision de les garder ou non. */}
+          <div className="tql-anim">
+            <AnimVente bloc="viralite-trafic" />
+          </div>
           <p className="tql-legende">{t.viralNote}</p>
           <CtaSection libelle={t.viralCta} rassurance={t.ctaRassurance} />
           <EnSavoirPlus slug="partage-viral" quoi="Le détail du partage et du bonus" />
@@ -602,26 +578,19 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
               {t.qualifiesFin}
             </h2>
             {t.qualifiesCorps.map((p) => (
-              <p key={p} className="tql-p">
+              <p key={p} className={`tql-p tql-p-g${blocLong(t.qualifiesCorps) ? " tql-p-lire" : ""}`}>
                 {p}
               </p>
             ))}
             <CtaSection libelle={t.ctas.qualifies} rassurance={t.ctaRassurance} />
           </div>
-          {/* Le flux de captures, dessiné, comme sur sa page. Les six
-              prénoms et les six délais sont les siens : ils illustrent
-              un flux, ils n'annoncent aucun volume réel. */}
-          <div className="tql-flux" aria-hidden>
-            {t.qualifiesNoms.map((n, i) => (
-              <p key={n} className="tql-flux-un">
-                <span className="tql-flux-pt" />
-                <span className="tql-flux-nom">{n}</span>
-                <span className="tql-flux-quand">
-                  {t.qualifiesDepuis.replace("{n}", String(DELAIS_CAPTURE[i])) }
-                </span>
-              </p>
-            ))}
-          </div>
+          {/* SON FLUX DE CAPTURES, LEVÉ DE SA PAGE. Béné, 5 septembre
+              2026 : "sors toi les doigts du cul pour les animations, on
+              avait un joli truc à la base !!" Elle avait raison : je
+              l'avais REDESSINÉ en HTML plat, alors que le sien vit dans
+              sa page, avec ses portraits et ses lignes qui tombent une
+              par une. */}
+          <AnimVente bloc="leads-qualifies" />
         </div>
       </section>
 
@@ -631,19 +600,12 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           de ce que le quiz t'APPREND. Ses sept puces, son texte. */}
       <section className="tql-sec tql-blanc">
         <div className="tql-large tql-deux-col">
-          {/* Le sondage dessiné : sa question, ses quatre réponses. */}
-          <div className="tql-sondage" aria-hidden>
-            <p className="tql-sondage-q">{t.offresSondage.question}</p>
-            {t.offresSondage.reponses.map((r) => (
-              <p key={r.texte} className="tql-sondage-l">
-                <span className="tql-sondage-pct">{r.pct} %</span>
-                <span className="tql-sondage-barre">
-                  <span style={{ width: `${r.pct * 2}%` }} />
-                </span>
-                <span className="tql-sondage-txt">{r.texte}</span>
-              </p>
-            ))}
-          </div>
+          {/* SON CAMEMBERT ANIMÉ, à la place de mes quatre barres
+              dessinées : c'est la même question et les mêmes quatre
+              réponses, en mieux, et c'est le sien.
+              `decoratif={false}` : il porte les chiffres du sondage,
+              donc un lecteur d'écran doit les entendre. */}
+          <AnimVente bloc="offres-sur-mesure" decoratif={false} />
           <div>
             <h2 className="tql-h2">
               {t.offresTitre} <span className="tql-surb">{t.offresMotCle}</span>{" "}
@@ -658,7 +620,9 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
                 </li>
               ))}
             </ul>
-            <p className="tql-p">{t.offresConclusion}</p>
+            <p className={`tql-p${blocLong([t.offresConclusion]) ? " tql-p-lire" : ""}`}>
+              {t.offresConclusion}
+            </p>
             <CtaSection libelle={t.ctas.offres} rassurance={t.ctaRassurance} />
           </div>
         </div>
@@ -830,11 +794,34 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           <div className="tql-temoins">
             {TEMOIGNAGES.map((v) => (
               <figure className="tql-temoin" key={v.nom}>
-                <blockquote>{v.texte}</blockquote>
-                <figcaption>
-                  <b>{v.nom}</b>
-                  {v.metier ? <span>{v.metier}</span> : null}
+                {/* LE PORTRAIT EN HAUT, comme sur sa page : "les
+                    témoignages idem tu m'as mis ça tout moche alors que
+                    c'est beau sur la page d'origine." L'appariement
+                    nom / photo est mesuré dans sa page, pas déduit de
+                    l'ordre du tableau. Les trois personnes venues de
+                    Trustpilot n'ont pas de portrait chez elle : leur
+                    carte porte l'initiale de leur prénom. */}
+                <figcaption className="tql-temoin-qui">
+                  {v.portrait ? (
+                    <img
+                      className="tql-temoin-photo"
+                      src={v.portrait}
+                      alt=""
+                      width={48}
+                      height={48}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span aria-hidden className="tql-temoin-init">
+                      {v.nom.slice(0, 1)}
+                    </span>
+                  )}
+                  <span className="tql-temoin-nom">
+                    <b>{v.nom}</b>
+                    {v.metier ? <span>{v.metier}</span> : null}
+                  </span>
                 </figcaption>
+                <blockquote>{v.texte}</blockquote>
               </figure>
             ))}
           </div>
@@ -873,25 +860,38 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
           profil (`lib/quizScoring.ts`), le parcours est LINÉAIRE, et le
           design suit son branding sans être libre au pixel. Un refus
           inventé pour faire honnête serait du bullshit de plus. */}
-      <section className="tql-sec">
-        <div className="tql-large tql-lire-bloc">
-          <h2 className="tql-h2">
-            {t.pasPourToiTitre} <span className="tql-surb">{t.pasPourToiMotCle}</span>
-          </h2>
-          <p className="tql-p">{t.pasPourToiCorps}</p>
-          <ul className="tql-non-liste">
-            {t.pasPourToi.map((x) => (
-              <li key={x}>
-                <Croix />
-                <span>{x}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="tql-p tql-p-fort">{t.pasPourToiFin}</p>
-        </div>
-      </section>
+      {/* SON MINI QUIZ, ET PLUS UNE LISTE À PUCES. Béné, 5 septembre
+          2026 : "'c'est pas pour toi si' -> on a créé un mini quiz
+          pourquoi tu ne le reprends pas ??" Il existe depuis le
+          2 septembre, elle l'a relu trois fois, il pose une question à
+          la fois et il sait dire non. Une liste, ce n'est pas un quiz.
+
+          IL N'EXISTE QU'EN FRANÇAIS, donc la version anglaise garde la
+          liste : traduire son bloc en ferait une deuxième version à
+          tenir, qui divergerait de la sienne en une semaine. */}
+      {t.langue === "fr" ? (
+        <BlocVente nom="cest-pour-toi" />
+      ) : (
+        <section className="tql-sec">
+          <div className="tql-large tql-lire-bloc">
+            <h2 className="tql-h2">
+              {t.pasPourToiTitre} <span className="tql-surb">{t.pasPourToiMotCle}</span>
+            </h2>
+            <p className="tql-p">{t.pasPourToiCorps}</p>
+            <ul className="tql-non-liste">
+              {t.pasPourToi.map((x) => (
+                <li key={x}>
+                  <Croix />
+                  <span>{x}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="tql-p tql-p-fort">{t.pasPourToiFin}</p>
+          </div>
+        </section>
+      )}
       {/* ── LES TARIFS ─────────────────────────────────────────── */}
-      <section className="tql-sec tql-blanc">
+      <section className="tql-sec tql-blanc" id="tarifs">
         <div className="tql-large tql-tarifs">
           <h2 className="tql-h2">
             {t.prixTitre} <span className="tql-surb">{t.prixMotCle}</span>
@@ -936,8 +936,12 @@ export default async function ApercuLandingPage({ searchParams }: PageProps) {
                   {c.inclus ? <p className="tql-inclus">{c.inclus}</p> : null}
                   <ul className="tql-liste">
                     {c.lignes.map((ligne) => (
-                      <li key={ligne.texte}>
-                        <CochePleine />
+                      <li key={ligne.texte} className={ligne.limite ? "tql-li-lim" : undefined}>
+                        {/* UNE LIMITE NE PORTE PAS DE COCHE. "10
+                            réponses visibles, les suivantes sont
+                            floutées" avec une coche bleue se lit comme
+                            une bonne nouvelle. */}
+                        {ligne.limite ? <span aria-hidden className="tql-lim-pt" /> : <CochePleine />}
                         <span>
                           <b>{ligne.texte}</b>
                           {/* LA PUCE PROMESSE EN DEUX TEMPS : le
