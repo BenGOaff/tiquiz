@@ -34,7 +34,13 @@ import { cheminsDuSite } from "../../lib/site/nav.ts";
 import { CSS } from "@/app/(site)/fonctionnalites/styles";
 import { gagne, reglesDeCouleur, specificite, viseTousLesLiens } from "./aide/specificiteCss.mts";
 
-const PAGE_LANDING = readFileSync("app/(site)/apercu-landing-8f2c9d41/page.tsx", "utf8");
+// LA LANDING EST DEUX FICHIERS DEPUIS LE 6 SEPTEMBRE. `/` est la
+// landing courte, `/tarifs` la vraie page de vente : les guards qui
+// portent sur "ce que la landing fait" les lisent tous les deux.
+const PAGE_LANDING =
+  readFileSync("app/(site)/apercu-landing-8f2c9d41/page.tsx", "utf8") +
+  "\n" +
+  readFileSync("app/(site)/tarifs/page.tsx", "utf8");
 const PAGE_HUB = readFileSync("app/(site)/fonctionnalites/page.tsx", "utf8");
 const PAGE_DETAIL = readFileSync("app/(site)/fonctionnalites/[slug]/page.tsx", "utf8");
 
@@ -160,7 +166,7 @@ describe("un seul texte pour deux écrans", () => {
 });
 
 describe("les pages sont trouvables", () => {
-  test("les quatorze sont déclarées dans le sitemap", () => {
+  test("les huit sont déclarées dans le sitemap", () => {
     const declares = new Set(PAGES_PUBLIQUES.map((p) => p.chemin));
     assert.ok(declares.has("/fonctionnalites"), "le hub n'est pas déclaré");
     for (const f of FONCTIONNALITES) {
@@ -183,14 +189,38 @@ describe("les pages sont trouvables", () => {
     }
   });
 
-  test("la landing renvoie vers le détail, sans quitter le domaine", () => {
-    // Sa règle du 5 septembre au matin : "on ne veut pas que les gens
-    // quittent la page ... on veut qu'ils commandent bordel !"
-    const liens = [...PAGE_LANDING.matchAll(/<EnSavoirPlus slug="([a-z0-9-]+)"/g)].map((m) => m[1]);
-    assert.ok(liens.length >= 6, `seulement ${liens.length} renvois vers le détail`);
-    for (const slug of liens) {
-      assert.ok(fonctionnaliteParSlug(slug), `la landing renvoie vers ${slug}, qui n'existe pas`);
+  test("le maillage relie les huit pages entre elles, et au tarif", () => {
+    // 🚨 CE TEST A CHANGE DE CIBLE LE 6 SEPTEMBRE.
+    //
+    // Il comptait les `<EnSavoirPlus slug="...">` de la landing longue,
+    // qui portait les quatorze sections. La landing courte n'en porte
+    // plus aucune : les chercher la ferait rougir un travail juste.
+    //
+    // CE QUI COMPTE MAINTENANT, ET C'EST SA CONSIGNE : "chaque page
+    // /fonctionnalites/<slug> pointe vers /tarifs et vers deux autres
+    // pages fonctionnalites liees." Une page de detail atteinte depuis
+    // une recherche est un cul-de-sac si elle ne mene qu'au tarif.
+    for (const f of FONCTIONNALITES) {
+      assert.equal(f.liees.length, 2, `${f.slug} ne cite pas deux voisines`);
+      for (const slug of f.liees) {
+        assert.ok(fonctionnaliteParSlug(slug), `${f.slug} cite ${slug}, qui n'existe pas`);
+        assert.notEqual(slug, f.slug, `${f.slug} se cite elle meme`);
+      }
     }
+    assert.ok(
+      /href="\/tarifs"/.test(PAGE_DETAIL),
+      "la page de detail ne mene pas au tarif",
+    );
+    assert.ok(
+      /href="\/tarifs"/.test(PAGE_HUB),
+      "le hub ne mene pas au tarif",
+    );
+    // ET LA LANDING MENE AU HUB : sans ca, les huit pages ne sont
+    // atteignables que depuis le pied de page.
+    assert.ok(
+      /href="\/fonctionnalites"/.test(PAGE_LANDING),
+      "la landing ne renvoie jamais vers les fonctionnalites",
+    );
   });
 });
 

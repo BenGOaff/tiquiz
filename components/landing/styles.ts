@@ -1,4 +1,4 @@
-// app/(site)/apercu-landing-8f2c9d41/styles.ts
+// components/landing/styles.ts
 //
 // LE SYSTÈME VISUEL DE LA LANDING, RELEVÉ DANS SA PAGE DE VENTE.
 //
@@ -105,19 +105,19 @@ export const CSS = `
 .tql-surb{color:var(--cy);position:relative;padding:0 .12em;
   background:linear-gradient(180deg,rgba(32,187,230,.14) 0%,rgba(90,110,246,.13) 100%);
   border-radius:6px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
-.tql-curseur{display:inline-block;width:3px;height:.95em;margin-left:.12em;border-radius:2px;
-  background:var(--b);vertical-align:-.08em;animation:tqlClign 1.1s step-end infinite}
-@keyframes tqlClign{0%,100%{opacity:1}50%{opacity:.15}}
-
-/* SON TITRE QUI DEFILE. Deux lignes, comme sur sa page de vente : la
-   premiere s ecrit lettre par lettre, la seconde ne bouge pas.
-   Le nowrap tient la hauteur sur grand ecran : ses cinq phrases n ont
+/* SON TITRE QUI TOURNE, EN FONDU ENCHAINE. Deux lignes, comme sur sa
+   page de vente : la premiere change d angle, la seconde ne bouge pas.
+   Bene, 6 septembre : "le mot doit toujours etre affiche en entier,
+   jamais tronque lettre par lettre". Un fondu ne montre donc jamais
+   qu une phrase complete, la ou la machine a ecrire passait les trois
+   quarts du cycle sur un mot coupe.
+   Le nowrap tient la hauteur sur grand ecran : ses trois phrases n ont
    pas la meme longueur, et une phrase qui passerait sur deux lignes
-   ferait sauter toute la page cinq fois par cycle. Sous 900 px le
-   texte a le droit de revenir a la ligne, comme chez elle. */
-.tql-machine{display:inline-block;white-space:nowrap}
+   ferait sauter toute la page a chaque tour. Sous 900 px le texte a le
+   droit de revenir a la ligne, comme chez elle. */
+.tql-fondu{display:inline-block;white-space:nowrap;opacity:1;transition:opacity 400ms ease}
+.tql-fondu-off{opacity:0}
 .tql-h1-l2{display:block}
-.tql-curseur-cy{background:var(--cy);animation-duration:.8s}
 
 .tql-accroche{font-size:19px;line-height:1.6;color:var(--c);margin:0 0 30px;max-width:560px}
 .tql-p{font-size:17px;line-height:1.65;color:var(--c);max-width:720px;margin:0 auto 20px;text-align:center}
@@ -146,6 +146,12 @@ export const CSS = `
 .tql-mid{text-align:center;margin:52px auto 0}
 .tql-mid-r{display:flex;justify-content:center;align-items:center;gap:8px;
   margin:16px 0 0;font-size:14px;color:#6B7291}
+/* LA RASSURANCE SUIT SON BOUTON. La rangee dit deja si elle est
+   centree : la ligne du dessous s aligne dessus au lieu de le
+   redecider (Bene, 5 septembre, sur les trucs centres et pas
+   centres). */
+.tql-mid-g{text-align:left;margin-left:0}
+.tql-mid-g .tql-mid-r{justify-content:flex-start}
 
 /* CE QUI CHANGE APRES : les quatre lignes viennent de son persona. */
 .tql-apres{list-style:none;padding:0;margin:34px auto 0;max-width:860px;
@@ -200,7 +206,7 @@ export const CSS = `
   100%{transform:scale(1);box-shadow:0 4px 14px rgba(90,110,246,.28),0 0 0 0 rgba(32,187,230,0)}
 }
 @media (prefers-reduced-motion:reduce){
-  .tql-cta{animation:none}.tql-curseur{animation:none}.tql-pt{animation:none}.tql-ruban-piste{animation:none}
+  .tql-cta{animation:none}.tql-fondu{transition:none}.tql-pt{animation:none}.tql-ruban-piste{animation:none}
 }
 
 .tql-avec-scint{position:relative;display:inline-block}
@@ -590,6 +596,46 @@ export const CSS = `
 .tql-savoir-a:hover{text-decoration:underline}
 .tql-savoir-a .tql-fleche-b{width:15px;height:15px}
 
+/* -- LES CAPTURES DU LOGICIEL, ET CELLES QUI MANQUENT ------------- */
+/* Bene, 6 septembre : "c'est le manque numero un de la page actuelle :
+   on y voit beaucoup de quiz, on n'y voit jamais le logiciel."
+   L'image garde SON format (regle du 4 aout) : aucune hauteur imposee,
+   aucun object-cover. Deux captures de proportions differentes donnent
+   deux blocs de hauteurs differentes, et c'est voulu. */
+.tql-capture{display:block;width:100%;height:auto;border-radius:18px;border:1px solid var(--bord);
+  box-shadow:0 18px 44px rgba(43,50,100,.12)}
+/* L'emplacement d'une capture qui n'existe pas encore. Il DIT quel
+   ecran photographier : un cadre vide passerait pour un defaut de mise
+   en page, celui-ci se remplit en deux minutes dans un vrai compte. */
+.tql-capture-vide{border:1px dashed var(--bord);border-radius:18px;background:var(--pale);
+  padding:34px 24px;text-align:center}
+.tql-capture-vide p{font-size:15px;line-height:1.55;color:var(--c);margin:0}
+.tql-capture-vide-t{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--b);margin:0 0 10px !important}
+
+/* -- LE CHIFFRE, SEUL AU MILIEU ----------------------------------- */
+/* Sur la page longue il vivait dans une grille ; ici il est seul, donc
+   il se borne lui meme au lieu de s'etaler sur toute la largeur. */
+.tql-chiffre-seul{max-width:640px;margin:44px auto 0}
+
+/* -- LES TROIS PALIERS, EN TROIS LIGNES --------------------------- */
+/* AUCUN MONTANT N'EST ECRIT DANS LE CSS ni dans le texte : il vient de
+   paliersAffiches(), donc de OWNER_CATALOG. (Pas d'accent grave dans
+   ce fichier : il TERMINE le litteral de gabarit, sixieme fois.) */
+.tql-paliers{list-style:none;margin:34px 0 0;padding:0;display:flex;flex-direction:column;gap:14px}
+.tql-paliers li{display:grid;grid-template-columns:220px 1fr;gap:20px;align-items:baseline;
+  background:#fff;border:1px solid var(--bord);border-radius:16px;padding:20px 24px}
+.tql-palier-nom{font-size:18px;font-weight:800;color:var(--e)}
+.tql-palier-prix{font-size:18px;font-weight:800;color:var(--b);margin-left:8px}
+.tql-palier-cadence{font-size:13px;font-weight:600;color:#6B7291;margin-left:4px}
+.tql-paliers li>span:last-child{font-size:15px;line-height:1.6;color:var(--c)}
+
+/* -- LA RASSURANCE SOUS LE BOUTON DU HAUT DE PAGE ----------------- */
+/* Elle suit l'alignement de sa rangee de boutons : une ligne centree
+   sous un bouton aligne a gauche est exactement ce que Bene a releve
+   le 5 septembre. */
+.tql-sous-cta{font-size:14px;color:#6B7291;margin:12px 0 0}
+
 /* ── MOBILE ──────────────────────────────────────────────────────── */
 @media (max-width:1000px){
   .tql-bento,.tql-grille-3{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -609,7 +655,7 @@ export const CSS = `
   .tql-etape{margin-top:44px}
   .tql-etape:nth-child(even) .tql-etape-txt{order:0}
   .tql-h1{font-size:33px}
-  .tql-machine{white-space:normal}
+  .tql-fondu{white-space:normal}
   /* SOUS 900 PX, TOUT LE CORPS DE TEXTE EST ALIGNE A GAUCHE. Mesure du
      5 septembre a 390 px : onze paragraphes centres rendaient 4 ou
      5 lignes. Sa regle ("aligne a gauche quand il y a plus de
@@ -628,5 +674,6 @@ export const CSS = `
   /* Trois colonnes de temoignages sur un telephone donneraient des
      lignes de quatre mots. */
   .tql-temoins{columns:1}
+  .tql-paliers li{grid-template-columns:1fr;gap:8px}
 }
 "`;

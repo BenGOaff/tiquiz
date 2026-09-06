@@ -36,7 +36,10 @@ import {
   FONCTIONNALITES,
   LIBELLE_PALIER,
   fonctionnaliteParSlug,
+  fonctionnalitesLiees,
 } from "@/lib/site/fonctionnalites";
+import { AnimVente } from "@/components/landing/anims";
+import DeclencheurAnims from "@/components/landing/DeclencheurAnims";
 
 export function generateStaticParams() {
   return FONCTIONNALITES.map((f) => ({ slug: f.slug }));
@@ -70,10 +73,12 @@ export async function generateMetadata({
  *
  * Un `content: "\2713"` rend tres bien dans Inter et dans aucune des
  * polices de Bene : sur Windows le navigateur sort un carre vide (drame
- * du 2 septembre). Le trace est celui de la landing, recopie a dessein :
- * son `pieces.tsx` vit dans un dossier d'apercu au nom temporaire
- * (`apercu-landing-8f2c9d41`), donc l'importer casserait ces pages le
- * jour ou la landing prendra son adresse definitive.
+ * du 2 septembre). Le trace est celui de la landing, ET IL RESTE
+ * RECOPIE, pour une raison qui a change le 6 septembre : `pieces.tsx`
+ * vit maintenant dans `components/landing/`, donc il serait importable,
+ * mais son `CochePleine` porte la classe `tql-coche-pleine`, stylee dans
+ * la feuille de la landing. L'importer ici donnerait une coche sans
+ * taille ni couleur : c'est le TRACE qui est partage, pas l'habillage.
  */
 function Coche() {
   return (
@@ -101,8 +106,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const f = fonctionnaliteParSlug(slug);
   if (!f) notFound();
 
-  const rang = FONCTIONNALITES.findIndex((x) => x.slug === f.slug);
-  const suivante = FONCTIONNALITES[(rang + 1) % FONCTIONNALITES.length];
+  const voisines = fonctionnalitesLiees(f);
 
   return (
     <main className="tqf">
@@ -149,6 +153,27 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
             </div>
           ))}
 
+          {/* SON VISUEL, DÉPLACÉ TEL QUEL. C'est le bloc animé de la
+              section correspondante de sa page de vente, levé à l'octet
+              près : "chaque page reprend la section correspondante de la
+              page actuelle, telle qu'elle est écrite, avec son visuel."
+
+              LA FEUILLE DE LA LANDING NE VIENT PAS AVEC, et c'est
+              vérifié : chaque île porte son propre `<style>`, et
+              `DeclencheurAnims` ne travaille que sur `[data-anim-vente]`,
+              sans lire une seule classe `tql-`. La poser ici aurait
+              chargé 30 Ko de CSS pour rien.
+
+              QUATRE PAGES SUR HUIT N'EN ONT PAS, et rien ne s'affiche :
+              un visuel inventé pour combler serait pire que son
+              absence. */}
+          {f.visuel ? (
+            <div className="tqf-visuel">
+              <DeclencheurAnims />
+              <AnimVente bloc={f.visuel} />
+            </div>
+          ) : null}
+
           <p className="tqf-ou">
             <strong>Où ça se passe :</strong> {f.ou}
           </p>
@@ -164,12 +189,30 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
               Créer mon compte gratuit
             </Link>
             <p className="tqf-rassure">Gratuit, sans carte bancaire.</p>
+            <p className="tqf-tarifs">
+              <Link href="/tarifs">Le détail de chaque palier</Link>
+            </p>
           </div>
 
-          <p className="tqf-suite">
-            Fonctionnalité suivante :{" "}
-            <Link href={`/fonctionnalites/${suivante.slug}`}>{suivante.nom}</Link>
-          </p>
+          {/* LES DEUX VOISINES, ET PAS "LA SUIVANTE". Un enchaînement
+              circulaire mène au hasard : quelqu'un qui lit la connexion
+              Systeme.io se demande ce que sont les profils, pas ce qui
+              vient après dans la liste. Les deux slugs sont déclarés à
+              côté de la fonctionnalité, et le test exige qu'ils existent
+              et qu'aucune page ne se cite elle même. */}
+          {voisines.length > 0 ? (
+            <div className="tqf-voisines">
+              <p className="tqf-voisines-t">À lire aussi</p>
+              <ul>
+                {voisines.map((v) => (
+                  <li key={v.slug}>
+                    <Link href={`/fonctionnalites/${v.slug}`}>{v.nom}</Link>
+                    <span>{v.resume}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       </section>
     </main>

@@ -1,4 +1,4 @@
-// app/(site)/apercu-landing-8f2c9d41/faq.ts
+// components/landing/faq.ts
 //
 // LA FAQ DE SA PAGE DE VENTE, LUE SUR LE DISQUE.
 //

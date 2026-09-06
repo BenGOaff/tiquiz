@@ -29,6 +29,19 @@ export interface PagePublique {
 }
 
 const PAGES_ECRITES: readonly PagePublique[] = [
+  // LA RACINE N'EST PAS DÉCLARÉE ICI, ET C'EST VOLONTAIRE. Elle sert la
+  // page de vente capturée, qui porte déjà ses propres données
+  // structurées (`lib/sales/servePage.ts`). Et la landing courte qui la
+  // remplacera un jour vit derrière un slug introuvable, en noindex,
+  // tant que Béné ne l'a pas validée : la déclarer ici l'annoncerait à
+  // Google avant qu'elle ne soit en ligne.
+  {
+    chemin: "/tarifs",
+    titre: "Tarifs Tiquiz",
+    resume:
+      "Trois paliers, le premier ne coûte rien et ne demande pas de carte bancaire. Le détail ligne par ligne, ce que ça remplace, et les questions d'argent.",
+    priorite: 0.9,
+  },
   {
     chemin: "/affiliation",
     titre: "Programme d'affiliation Tiquiz",
@@ -125,8 +138,8 @@ const PAGES_ECRITES: readonly PagePublique[] = [
 /**
  * LES PAGES DE FONCTIONNALITÉS SONT DÉRIVÉES, JAMAIS RECOPIÉES.
  *
- * Quatorze chemins à tenir à la main dans une deuxième liste, c'est
- * quatorze occasions d'oublier une page dans le sitemap. Et ce fichier
+ * Huit chemins à tenir à la main dans une deuxième liste, c'est huit
+ * occasions d'oublier une page dans le sitemap. Et ce fichier
  * dit dans son propre en-tête que deux listes écrites séparément
  * finissent toujours par diverger : c'est arrivé une branche plus bas
  * le 4 septembre, sur les pages légales du domaine de vente.

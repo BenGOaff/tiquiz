@@ -38,6 +38,11 @@
 /** Le palier minimum, tel que `lib/planLimits.ts` le décide vraiment. */
 export type Palier = "gratuit" | "payant" | "plus";
 
+// LA TABLE VIT DANS UN MODULE PUR (`lib/site/blocsAnimes.ts`), pas dans
+// `anims.tsx` : celui la lit le disque et porte du JSX, donc le runner
+// de tests natif ne sait pas le charger.
+import type { BlocAnime } from "@/lib/site/blocsAnimes";
+
 export interface Fonctionnalite {
   slug: string;
   nom: string;
@@ -68,11 +73,118 @@ export interface Fonctionnalite {
   capture: string;
   /** Le fichier qui rend la phrase vraie. Le test vérifie qu'il existe. */
   source: string;
+  /**
+   * LES DEUX PAGES VOISINES, ET C'EST DU MAILLAGE, PAS DE LA DÉCO.
+   *
+   * Béné, 6 septembre 2026 : "chaque page /fonctionnalites/<slug>
+   * pointe vers /tarifs et vers deux autres pages fonctionnalités
+   * liées."
+   *
+   * Une page de détail atteinte depuis une recherche est un cul-de-sac
+   * si elle ne mène qu'au tarif : le lecteur a une question de plus, et
+   * il repart la poser à Google. Le test EXIGE que les deux slugs
+   * existent et qu'aucune page ne se cite elle même.
+   */
+  liees: readonly [string, string];
+  /**
+   * LE VISUEL DE LA SECTION CORRESPONDANTE, QUAND IL EN EXISTE UN.
+   *
+   * Béné, 6 septembre 2026 : "chaque page reprend la section
+   * correspondante de la page actuelle, telle qu'elle est écrite, avec
+   * son visuel."
+   *
+   * Ce sont ses blocs animés, levés à l'octet près de sa page de vente
+   * par `npm run anims:extraire` : on les DÉPLACE, on ne les redessine
+   * pas. Quatre fonctionnalités sur huit en ont un ; les quatre autres
+   * portent `null`, et un visuel inventé pour combler serait pire que
+   * son absence.
+   */
+  visuel: BlocAnime | null;
 }
 
 export const FONCTIONNALITES: readonly Fonctionnalite[] = [
   {
-    slug: "integration-systeme-io",
+    slug: "generation-ia",
+    nom: "La génération par l'IA",
+    resume:
+      "Tu décris ton sujet, l'IA écrit les questions, les options et les profils de résultat.",
+    palier: "gratuit",
+    pourquoi:
+      "La page blanche est ce qui arrête le plus de monde. Écrire dix questions, quatre options par question et quatre profils de résultat cohérents entre eux, c'est une journée de travail, et c'est la journée que personne ne trouve.",
+    benefices: [
+      "Tu pars d'une première version complète en quelques secondes : le travail qui te reste est de la relecture, pas de la rédaction.",
+      "Les profils sont cohérents entre eux dès le départ : chaque question laisse une chance à chaque profil, donc aucun résultat n'est inattribuable.",
+      "Tu peux aussi ne pas t'en servir : l'import d'un quiz existant et l'écriture manuelle sont là, au même endroit.",
+    ],
+    commentCourt:
+      "Tu choisis un objectif, un format, ton public et la mécanique, et le quiz revient écrit.",
+    detail: [
+      {
+        titre: "Ce que tu donnes",
+        corps: [
+          "L'objectif du quiz, le format (court ou long), ton public cible, et la mécanique : par profil ou avec un score.",
+          "Le ton et la langue viennent de tes réglages : tu ne les ressaisis pas à chaque quiz.",
+          "Cent langues et variantes sont reconnues, avec leurs notes régionales.",
+        ],
+      },
+      {
+        titre: "Ce que tu récupères",
+        corps: [
+          "Les questions, leurs options, et les profils de résultat avec leur texte.",
+          "Tout est modifiable, tout de suite, dans l'éditeur. Rien n'est verrouillé.",
+        ],
+      },
+      {
+        titre: "Et si tu ne veux pas d'IA",
+        corps: [
+          "Tu écris ton quiz à la main, ou tu importes un quiz existant depuis un fichier. Les trois chemins mènent au même éditeur.",
+        ],
+      },
+      {
+        titre: "Ce que l'IA écrit APRÈS le quiz",
+        corps: [
+          "Trois générateurs prolongent le quiz une fois qu'il tourne : le bonus que tu remets à la fin, la séquence d'emails qui suit, et les contenus qui annoncent le quiz.",
+          "Ils repartent de ton quiz : son sujet, ses profils, son ton, ta langue et l'adresse publique. Tu ne redécris rien.",
+          "Ils sont réservés aux paliers PLUS.",
+        ],
+      },
+
+      {
+        titre: "Le parcours",
+        corps: [
+          "Combien de personnes ont VU chaque question, et combien y ont RÉPONDU. Les deux, parce qu'ils appellent deux corrections opposées : vu sans réponse, la question bloque ; répondu puis parti, c'est la fatigue, et reformuler ne sert à rien.",
+          "La chute est portée par la question qui la SUBIT, jamais par la suivante. Quelqu'un qui abandonne entre la 6 et la 7 s'est arrêté SUR la 6 : il n'a jamais lu la 7.",
+          "Rien n'est signalé en dessous de 20 personnes. Sur huit visiteurs, une personne vaut 12,5 %, et une alerte qui part là dessus fait réécrire un quiz qui va très bien.",
+        ],
+      },
+      {
+        titre: "La répartition par résultat",
+        corps: [
+          "Combien de personnes pour chaque profil, y compris ceux qui n'ont encore personne. Un profil à zéro est une information, pas une ligne à cacher.",
+        ],
+      },
+      {
+        titre: "Deux choses qu'on dit à chaque fois",
+        corps: [
+          "Perdre du monde est NORMAL et sain : ce sont d'abord les visiteurs non qualifiés, et aucun quiz ne vise 100 % de complétion.",
+          "Une seule modification à la fois, puis 20 à 30 nouvelles réponses avant de juger.",
+        ],
+      },
+      {
+        titre: "Et sur le palier PLUS",
+        corps: [
+          "L'IA lit tes statistiques et te dit ce qu'elle en comprend, en langage normal, avec ce qu'il y a à faire ensuite.",
+        ],
+      },
+    ],
+    ou: "Créer un quiz, onglet Générer avec l'IA.",
+    capture: "L'écran Créer un quiz, onglet Générer avec l'IA, avec l'objectif et le public cible remplis.",
+    source: "lib/prompts/quiz/system.ts",
+    liees: ["resultats-par-profil", "quiz-profil-ou-score"],
+    visuel: "generation-ia",
+  },
+  {
+    slug: "connexion-systeme-io",
     nom: "L'intégration Systeme.io",
     resume:
       "Tes leads arrivent directement dans ton compte Systeme.io, sans Zapier, Make ni Pabbly au milieu.",
@@ -116,27 +228,61 @@ export const FONCTIONNALITES: readonly Fonctionnalite[] = [
           "La connexion Systeme.io ajoute l'automatisation derrière : ce n'est pas une condition pour se servir de Tiquiz.",
         ],
       },
+      {
+        titre: "Une clé par compte, ou une clé par quiz",
+        corps: [
+          "Une seule clé suffit dans l'immense majorité des cas : tu la colles une fois, tous tes quiz s'en servent.",
+          "Tu travailles pour des clients ? Tu peux enregistrer plusieurs clés et choisir, quiz par quiz, dans quel compte Systeme.io les leads doivent arriver. Le quiz de ta cliente remplit SA liste, pas la tienne.",
+          "Le choix vit dans l'onglet Créer de l'éditeur, section Gestion du quiz.",
+        ],
+      },
+      {
+        titre: "Poser un tag ne déclenche rien tout seul",
+        corps: [
+          "C'est le piège le plus cher, et il n'est pas chez nous : chez Systeme.io, un tag posé ne déclenche une séquence que si une règle d'automatisation l'écoute.",
+          "Sans cette règle, tu mets ton quiz en ligne, tu captes quarante adresses, et il ne se passe rien. L'onglet Automatiser de l'éditeur liste donc les tags exacts que ton quiz va poser, et la marche à suivre pour créer la règle une fois pour toutes.",
+          "Les accès à une formation ou à une communauté font exception : Tiquiz les ouvre lui même, une règle de plus les ouvrirait deux fois.",
+        ],
+      },
     ],
     ou: "Réglages, section Connexions.",
     capture: "L'écran Réglages > Connexions avec une clé Systeme.io reliée (la clé masquée).",
     source: "app/api/quiz/[quizId]/public/route.ts",
+    liees: ["resultats-par-profil", "ou-placer-son-quiz"],
+    visuel: "leads-qualifies",
   },
   {
-    slug: "suivi-des-leads",
-    nom: "Le suivi des leads et le tag automatique",
+    slug: "resultats-par-profil",
+    nom: "Les résultats par profil",
     resume:
-      "Chaque personne qui répond arrive dans ta liste avec son résultat, son tag et ce qu'elle a répondu.",
+      "Un seul quiz, et chacun repart vers le texte, le bouton et l'offre qui le concernent.",
     palier: "gratuit",
     pourquoi:
-      "Une adresse email toute seule ne te dit rien. Tu ne sais pas à qui tu parles, donc tu écris le même message à tout le monde, donc presque personne ne répond.",
+      "Un diagnostic qui dit la même chose à tout le monde n'est pas un diagnostic. Et surtout, il renvoie tout le monde vers la même offre, alors que le quiz vient justement d'apprendre que ces gens ne veulent pas la même chose.",
     benefices: [
-      "Tu sais QUI est chaque contact avant de lui écrire : tu ne fais plus d'emails à l'aveugle, tu écris à quelqu'un dont tu connais le blocage.",
-      "Le tri se fait tout seul, à la seconde où la personne répond : tu n'as aucune liste à segmenter à la main le dimanche soir.",
-      "Tu récupères aussi ce qu'elle a répondu, question par question : c'est là que tu trouves les mots exacts à mettre dans ta prochaine page de vente.",
+      "Chaque profil a son propre bouton : celui qui débute et celui qui est déjà lancé n'atterrissent pas sur la même page, donc tu arrêtes de vendre à contretemps.",
+      "Le tag part avec le contact : ta séquence email sait de qui elle parle dès le premier message, sans que tu tries quoi que ce soit à la main.",
+      "Tu écris les profils une fois, ils tournent tant que le quiz tourne.",
     ],
     commentCourt:
-      "Le lead, son profil, son tag et ses réponses arrivent ensemble, dans Tiquiz et dans Systeme.io.",
+      "Chaque réponse vote pour un profil, le profil le plus voté gagne, et il porte son texte, son bouton et son tag.",
     detail: [
+      {
+        titre: "Comment le profil est attribué",
+        corps: [
+          "Chaque option de réponse porte un profil. À la fin, le profil le plus voté est celui qui s'affiche.",
+          "Le nom du profil s'affiche directement sous chaque réponse dans l'éditeur : tu vois ce que tu branches, tu ne comptes pas des numéros.",
+          "En mode score, la mécanique change : c'est la tranche de points qui décide. Les deux ne se mélangent jamais.",
+        ],
+      },
+      {
+        titre: "Ce que porte un profil",
+        corps: [
+          "Un titre et un texte, une image, un bouton avec sa propre adresse, et un tag Systeme.io.",
+          "Tu peux aussi dérouler la page de résultat en quatre temps : ce qu'il reconnaît de lui, la cause, le chemin, puis le pont vers ton offre.",
+        ],
+      },
+
       {
         titre: "Ce que Tiquiz enregistre",
         corps: [
@@ -159,84 +305,11 @@ export const FONCTIONNALITES: readonly Fonctionnalite[] = [
         ],
       },
     ],
-    ou: "Mes leads, et l'onglet Résultats de chaque projet.",
-    capture: "L'écran Mes leads, avec la colonne du profil obtenu et le tag posé.",
-    source: "app/api/quiz/[quizId]/public/route.ts",
-  },
-  {
-    slug: "cles-api-systeme-io",
-    nom: "Plusieurs comptes Systeme.io",
-    resume:
-      "Tu relies autant de comptes Systeme.io que tu as de clients, et tu choisis lequel reçoit les leads de chaque quiz.",
-    palier: "plus",
-    pourquoi:
-      "Quand tu montes des quiz pour tes clients, leurs leads doivent atterrir chez EUX, pas chez toi. Avec une seule clé, il faut exporter et réimporter à la main, à chaque fois.",
-    benefices: [
-      "Chaque client garde ses leads dans son propre compte : tu n'as plus de fichier CSV à faire circuler par email, et tu ne détiens plus les données de quelqu'un d'autre.",
-      "Tu changes de compte quiz par quiz, depuis un menu : monter un quiz pour un nouveau client devient une affaire de minutes.",
-    ],
-    commentCourt:
-      "Tu ajoutes une clé par compte, et chaque quiz porte celle qu'il doit utiliser.",
-    detail: [
-      {
-        titre: "Comment ça se règle",
-        corps: [
-          "Tu ajoutes tes clés dans Réglages, section Connexions. Elles portent le nom que tu leur donnes.",
-          "Dans l'éditeur d'un quiz, groupe Gestion du quiz, tu choisis la clé de ce quiz là. Sans choix, le quiz utilise la clé par défaut de ton compte.",
-        ],
-      },
-      {
-        titre: "Le palier",
-        corps: [
-          "Une clé sur les paliers gratuit, Mensuel et Annuel. Plusieurs clés sur Mensuel PLUS et Annuel PLUS.",
-        ],
-      },
-    ],
-    ou: "Réglages > Connexions, puis l'éditeur du quiz.",
-    capture: "La liste des clés dans Réglages, et le sélecteur de clé dans l'éditeur.",
-    source: "lib/planLimits.ts",
-  },
-  {
-    slug: "automatisations",
-    nom: "Le guide d'automatisation",
-    resume:
-      "Tiquiz te donne les tags exacts à créer dans Systeme.io, et la marche à suivre en trois clics.",
-    palier: "payant",
-    pourquoi:
-      "Poser un tag ne déclenche rien tant qu'aucune règle d'automatisation ne l'écoute, et ces règles se créent à la main dans Systeme.io. Une créatrice met son quiz en ligne, capte quarante adresses, et il ne se passe rien. Elle n'en conclut pas qu'il lui manque une règle : elle en conclut que l'outil ne sert à rien.",
-    benefices: [
-      "Tu sais exactement quels tags créer, écrits au caractère près : tu ne passes plus une soirée à chercher pourquoi ta séquence ne part pas.",
-      "L'écran ne liste QUE les tags que ton quiz enverra vraiment : tu ne construis pas de workflow sur un tag qui n'arrivera jamais.",
-      "Chaque nom se copie d'un clic : une faute de frappe dans un nom de tag casse tout en silence, et c'est le seul endroit où ça arrive.",
-    ],
-    commentCourt:
-      "Un onglet de l'éditeur liste les tags de TON quiz, groupés, avec la recette dite une fois.",
-    detail: [
-      {
-        titre: "Ce que l'onglet affiche",
-        corps: [
-          "Les tags de profil, un par résultat, si ton projet est un quiz.",
-          "Le tag de capture et les tags par réponse, si ton projet est un sondage.",
-          "Les tags de score, une ligne par tranche possible, si tu les as activés.",
-          "Le tag de partage, si tu promets un bonus contre un partage.",
-        ],
-      },
-      {
-        titre: "Ce qu'il te dit de NE PAS faire",
-        corps: [
-          "Les accès à une formation ou à une communauté sont ouverts par Tiquiz lui même. Créer une règle de plus les ouvrirait DEUX fois, et ça ne se voit qu'en recevant deux emails. La carte le dit en toutes lettres.",
-        ],
-      },
-      {
-        titre: "La recette, une seule fois",
-        corps: [
-          "Les trois clics sont les mêmes pour tous les tags : elle est écrite en haut de l'écran, pas répétée sous chaque nom. Un quiz à six profils affichait dix-huit lignes de marche à suivre pour six informations.",
-        ],
-      },
-    ],
-    ou: "L'onglet Automatiser de l'éditeur.",
-    capture: "L'onglet Automatiser sur un quiz à plusieurs profils, avec ses groupes de tags.",
-    source: "lib/automatisation/planSysteme.ts",
+    ou: "Éditeur du quiz, colonne Résultats, puis Mes leads.",
+    capture: "Un profil de résultat ouvert dans l'éditeur, avec son bouton et son tag.",
+    source: "lib/quizScoring.ts",
+    liees: ["connexion-systeme-io", "quiz-profil-ou-score"],
+    visuel: "offres-sur-mesure",
   },
   {
     slug: "quiz-profil-ou-score",
@@ -281,91 +354,11 @@ export const FONCTIONNALITES: readonly Fonctionnalite[] = [
     ou: "Le choix se fait à la création du projet, et se change dans l'éditeur.",
     capture: "Les deux cartes de choix à la création, et un écran de résultat scoré avec ses axes.",
     source: "lib/quizScoring.ts",
+    liees: ["resultats-par-profil", "sondages-et-popquiz"],
+    visuel: "tes-pixels",
   },
   {
-    slug: "sondages",
-    nom: "Les sondages",
-    resume:
-      "Tu poses une question à ton audience et tu récoltes ses réponses avec ses mots à elle.",
-    palier: "gratuit",
-    pourquoi:
-      "Tu peux passer six mois à construire une offre que personne n'attendait. La seule façon de ne pas le faire, c'est de demander avant, et d'écouter les mots employés.",
-    benefices: [
-      "Tu sais quoi vendre avant de le fabriquer : tu ne passes plus des semaines sur une offre qui n'intéresse personne.",
-      "Tu récupères les mots exacts de ton audience : ce sont eux qui vont dans ta page de vente, et une page écrite avec leurs mots convertit mieux qu'une page écrite avec les tiens.",
-      "Chaque réponse peut poser son propre tag : tu segmentes sur ce que les gens t'ont dit, pas seulement sur le fait qu'ils ont répondu.",
-    ],
-    commentCourt:
-      "Même moteur que les quiz, mais sans résultat à afficher : ce sont les réponses qui t'intéressent.",
-    detail: [
-      {
-        titre: "Les types de questions",
-        corps: [
-          "Choix simple ou multiple, oui ou non, texte libre, échelle de notation, étoiles, et classement par ordre d'importance.",
-          "Le texte libre est celui qui rapporte le plus : c'est là que les gens écrivent avec leurs mots.",
-        ],
-      },
-      {
-        titre: "Ce que tu vois ensuite",
-        corps: [
-          "La répartition par option, avec les pourcentages.",
-          "La liste des réponses écrites, avec un bouton pour les copier d'un bloc.",
-          "La moyenne et la répartition des notes, pour les échelles.",
-        ],
-      },
-      {
-        titre: "Et sur le palier PLUS",
-        corps: [
-          "L'IA lit toutes les réponses et te dit ce qui en ressort : les thèmes qui reviennent, les mots employés, ce sur quoi les gens sont d'accord et ce qui les divise.",
-        ],
-      },
-    ],
-    ou: "Mes projets, bouton Créer, puis Sondage.",
-    capture: "Un sondage avec ses réponses libres et la synthèse par question.",
-    source: "app/api/quiz/[quizId]/survey-results/route.ts",
-  },
-  {
-    slug: "popquiz",
-    nom: "Les Popquiz",
-    resume:
-      "Des questions s'affichent pendant ta vidéo, et ton spectateur répond sans quitter l'écran.",
-    palier: "gratuit",
-    pourquoi:
-      "Une vidéo qui tourne bien ne rapporte rien tant que personne ne laisse son email. Un lien en description est vu par une poignée de gens, et cliqué par presque personne.",
-    benefices: [
-      "Ta vidéo capture des adresses pendant qu'elle est regardée : tu ne comptes plus sur un lien en description que personne n'ouvre.",
-      "Tu vois où les gens décrochent, minute par minute : tu sais quel passage refaire au lieu de deviner.",
-      "Ça marche sur une vidéo que tu as DÉJÀ publiée : tu n'as rien à retourner ni à remonter.",
-    ],
-    commentCourt:
-      "Tu colles l'adresse de ta vidéo, tu poses tes questions aux moments qui comptent, et c'est en ligne.",
-    detail: [
-      {
-        titre: "D'où vient la vidéo",
-        corps: [
-          "YouTube, Vimeo, ou ton propre fichier envoyé dans Tiquiz. Les trois marchent pareil.",
-        ],
-      },
-      {
-        titre: "Où se posent les questions",
-        corps: [
-          "Tu choisis le moment de chaque question, à la seconde. La vidéo se met en pause, la question s'affiche par dessus, et la lecture reprend quand ton spectateur a répondu.",
-        ],
-      },
-      {
-        titre: "Ce que ça te rapporte",
-        corps: [
-          "L'email, le tag correspondant, et les réponses données pendant la vidéo.",
-          "Et le point exact où chaque personne s'est arrêtée, ce qu'aucune plateforme vidéo ne te dit sur ton propre contenu.",
-        ],
-      },
-    ],
-    ou: "Mes projets, bouton Créer, puis Popquiz.",
-    capture: "Un Popquiz en lecture, question affichée par dessus la vidéo.",
-    source: "supabase/migrations/026_popquiz_schema.sql",
-  },
-  {
-    slug: "partage-viral",
+    slug: "partage-et-viralite",
     nom: "Le partage et le bonus",
     resume:
       "Ton visiteur partage son résultat pour débloquer un bonus, et ton quiz part chez des gens qui lui ressemblent.",
@@ -403,6 +396,71 @@ export const FONCTIONNALITES: readonly Fonctionnalite[] = [
     ou: "L'onglet Partager de l'éditeur.",
     capture: "L'écran de partage vu par le visiteur, avec le bonus à débloquer.",
     source: "lib/quiz/shareNetworks.ts",
+    liees: ["resultats-par-profil", "branding-et-langues"],
+    visuel: "viralite-trafic",
+  },
+  {
+    slug: "sondages-et-popquiz",
+    nom: "Les sondages et les Popquiz",
+    resume:
+      "Tu poses une question à ton audience et tu récoltes ses réponses avec ses mots à elle.",
+    palier: "gratuit",
+    pourquoi:
+      "Tu peux passer six mois à construire une offre que personne n'attendait. La seule façon de ne pas le faire, c'est de demander avant, et d'écouter les mots employés.",
+    benefices: [
+      "Tu sais quoi vendre avant de le fabriquer : tu ne passes plus des semaines sur une offre qui n'intéresse personne.",
+      "Tu récupères les mots exacts de ton audience : ce sont eux qui vont dans ta page de vente, et une page écrite avec leurs mots convertit mieux qu'une page écrite avec les tiens.",
+      "Chaque réponse peut poser son propre tag : tu segmentes sur ce que les gens t'ont dit, pas seulement sur le fait qu'ils ont répondu.",
+    ],
+    commentCourt:
+      "Même moteur que les quiz, mais sans résultat à afficher : ce sont les réponses qui t'intéressent.",
+    detail: [
+      {
+        titre: "Les types de questions",
+        corps: [
+          "Choix simple ou multiple, oui ou non, texte libre, échelle de notation, étoiles, et classement par ordre d'importance.",
+          "Le texte libre est celui qui rapporte le plus : c'est là que les gens écrivent avec leurs mots.",
+        ],
+      },
+      {
+        titre: "Ce que tu vois ensuite",
+        corps: [
+          "La répartition par option, avec les pourcentages.",
+          "La liste des réponses écrites, avec un bouton pour les copier d'un bloc.",
+          "La moyenne et la répartition des notes, pour les échelles.",
+        ],
+      },
+      {
+        titre: "Et sur le palier PLUS",
+        corps: [
+          "L'IA lit toutes les réponses et te dit ce qui en ressort : les thèmes qui reviennent, les mots employés, ce sur quoi les gens sont d'accord et ce qui les divise.",
+        ],
+      },
+      {
+        titre: "D'où vient la vidéo",
+        corps: [
+          "YouTube, Vimeo, ou ton propre fichier envoyé dans Tiquiz. Les trois marchent pareil.",
+        ],
+      },
+      {
+        titre: "Où se posent les questions",
+        corps: [
+          "Tu choisis le moment de chaque question, à la seconde. La vidéo se met en pause, la question s'affiche par dessus, et la lecture reprend quand ton spectateur a répondu.",
+        ],
+      },
+      {
+        titre: "Ce que ça te rapporte",
+        corps: [
+          "L'email, le tag correspondant, et les réponses données pendant la vidéo.",
+          "Et le point exact où chaque personne s'est arrêtée, ce qu'aucune plateforme vidéo ne te dit sur ton propre contenu.",
+        ],
+      },
+    ],
+    ou: "Mes projets, bouton Créer, puis Sondage.",
+    capture: "Un sondage avec ses réponses libres et la synthèse par question.",
+    source: "app/api/quiz/[quizId]/survey-results/route.ts",
+    liees: ["generation-ia", "quiz-profil-ou-score"],
+    visuel: null,
   },
   {
     slug: "branding-et-langues",
@@ -445,9 +503,11 @@ export const FONCTIONNALITES: readonly Fonctionnalite[] = [
     ou: "L'éditeur, colonne de réglages.",
     capture: "Le même quiz avec deux brandings différents, côte à côte.",
     source: "lib/quiz/introLayout.ts",
+    liees: ["ou-placer-son-quiz", "partage-et-viralite"],
+    visuel: "ton-branding",
   },
   {
-    slug: "ou-vit-ton-quiz",
+    slug: "ou-placer-son-quiz",
     nom: "Un lien, ou six lignes de code",
     resume:
       "Ton quiz vit sur ton domaine, dans une page Systeme.io, dans WordPress, ou tout seul.",
@@ -479,173 +539,37 @@ export const FONCTIONNALITES: readonly Fonctionnalite[] = [
     ou: "L'onglet Partager de l'éditeur.",
     capture: "Le champ du lien avec son bouton Copier, et le bloc de code.",
     source: "lib/quiz/urlPublique.ts",
-  },
-  {
-    slug: "analyse-des-resultats",
-    nom: "L'analyse des résultats",
-    resume:
-      "Tu vois combien de personnes commencent, où elles s'arrêtent, et quel profil ressort le plus.",
-    palier: "gratuit",
-    pourquoi:
-      "Sans chiffres, tu modifies ton quiz au hasard. Et avec les mauvais chiffres, c'est pire : tu corriges une question que les partants n'ont jamais lue.",
-    benefices: [
-      "Tu vois quelle question fait décrocher, et laquelle exactement : tu ne réécris pas trois fois la mauvaise.",
-      "Tu vois la répartition de tes profils : tu sais quel segment est le plus gros, donc quelle offre pousser en premier.",
-      "Tu vois ce qui se passe en temps réel, pas dans un rapport mensuel.",
-    ],
-    commentCourt:
-      "Un écran par projet : vues, démarrages, complétions, leads, et le parcours question par question.",
-    detail: [
-      {
-        titre: "Le parcours",
-        corps: [
-          "Combien de personnes ont VU chaque question, et combien y ont RÉPONDU. Les deux, parce qu'ils appellent deux corrections opposées : vu sans réponse, la question bloque ; répondu puis parti, c'est la fatigue, et reformuler ne sert à rien.",
-          "La chute est portée par la question qui la SUBIT, jamais par la suivante. Quelqu'un qui abandonne entre la 6 et la 7 s'est arrêté SUR la 6 : il n'a jamais lu la 7.",
-          "Rien n'est signalé en dessous de 20 personnes. Sur huit visiteurs, une personne vaut 12,5 %, et une alerte qui part là dessus fait réécrire un quiz qui va très bien.",
-        ],
-      },
-      {
-        titre: "La répartition par résultat",
-        corps: [
-          "Combien de personnes pour chaque profil, y compris ceux qui n'ont encore personne. Un profil à zéro est une information, pas une ligne à cacher.",
-        ],
-      },
-      {
-        titre: "Deux choses qu'on dit à chaque fois",
-        corps: [
-          "Perdre du monde est NORMAL et sain : ce sont d'abord les visiteurs non qualifiés, et aucun quiz ne vise 100 % de complétion.",
-          "Une seule modification à la fois, puis 20 à 30 nouvelles réponses avant de juger.",
-        ],
-      },
-      {
-        titre: "Et sur le palier PLUS",
-        corps: [
-          "L'IA lit tes statistiques et te dit ce qu'elle en comprend, en langage normal, avec ce qu'il y a à faire ensuite.",
-        ],
-      },
-    ],
-    ou: "Le bouton Statistiques d'un projet.",
-    capture: "L'écran de statistiques d'un quiz qui a de la donnée, avec le parcours par question.",
-    source: "lib/quiz/funnelSignal.ts",
-  },
-  {
-    slug: "generateur-de-bonus",
-    nom: "Le générateur de bonus",
-    resume:
-      "L'IA écrit le bonus que tu offres à la fin de ton quiz, son mode d'emploi et les textes qui le remettent.",
-    palier: "plus",
-    pourquoi:
-      "Le quiz capture l'adresse, le bonus fait la suite. Sauf qu'écrire un bonus qui donne envie d'acheter derrière prend des jours, et c'est l'étape où la plupart des gens abandonnent.",
-    benefices: [
-      "Tu obtiens un bonus complet en une fois : tu ne repousses plus ton lancement de trois semaines parce qu'il te manque le cadeau.",
-      "Le bonus ramène vers TON offre payante : il ouvre un vide que seule ton offre comble, au lieu de se suffire à lui même.",
-      "Un bonus par profil si tu veux : chaque personne reçoit ce qui correspond à son résultat, pas le même PDF pour tout le monde.",
-    ],
-    commentCourt:
-      "Tu dis ce que tu vends, l'IA propose trois pistes, tu en choisis une, et elle écrit.",
-    detail: [
-      {
-        titre: "Ce que tu remplis, et ce que tu ne remplis pas",
-        corps: [
-          "Ton offre payante, à qui elle s'adresse, et ce que chaque profil doit recevoir.",
-          "Le titre du quiz, sa promesse, ton ton, ta langue, tes profils et leurs tags sont RELUS depuis ton projet : on ne te redemande pas ce qu'on sait déjà.",
-        ],
-      },
-      {
-        titre: "Trois pistes, tu en choisis une",
-        corps: [
-          "Elles sont volontairement différentes. Tu prends celle qui te ressemble, pas la plus impressionnante.",
-          "Chaque piste dit ce qu'elle te coûtera en temps, y compris le temps par personne : un format personnalisé se découvre au quarantième lead, c'est à dire quand ton quiz commence à marcher.",
-        ],
-      },
-      {
-        titre: "Ce que tu récupères",
-        corps: [
-          "Le contenu du bonus lui même.",
-          "Ton mode d'emploi : comment le fabriquer et le livrer.",
-          "Les textes qui le remettent : l'écran de résultat, l'email, le message de partage.",
-          "Le tout se relit, se corrige sur place, s'exporte en PDF, et se retrouve dans ta bibliothèque.",
-        ],
-      },
-    ],
-    ou: "Générateurs, puis Bonus.",
-    capture: "L'écran des trois pistes, et un bonus produit dans ses trois dossiers.",
-    source: "lib/generateurs/catalogue.ts",
-  },
-  {
-    slug: "generateur-d-emails",
-    nom: "Le générateur d'emails",
-    resume:
-      "L'IA écrit la séquence d'emails qui part après ton quiz, écrite pour le profil obtenu.",
-    palier: "plus",
-    pourquoi:
-      "Le quiz range tes contacts par profil, et la plupart des gens leur envoient quand même le même email. Tout le travail de segmentation est perdu à l'étape suivante.",
-    benefices: [
-      "Chaque profil reçoit une séquence qui lui parle de SON blocage : tes emails sont ouverts parce qu'ils tombent juste.",
-      "Cinq emails écrits d'un coup : tu ne repousses plus la suite de ton tunnel au mois prochain.",
-      "Ils se collent directement dans Systeme.io : tu écris, tu copies, c'est programmé.",
-    ],
-    commentCourt:
-      "Tu choisis le profil, et l'IA écrit les cinq temps de la séquence post-quiz.",
-    detail: [
-      {
-        titre: "Les cinq temps",
-        corps: [
-          "La séquence n'a pas de pistes à choisir, et c'est voulu : elle a des temps FIXES, elle se déroule. Ce sont exactement ceux enseignés dans l'Atelier du Quiz.",
-        ],
-      },
-      {
-        titre: "Ce qui est repris de ton quiz",
-        corps: [
-          "Le profil obtenu, son texte de résultat, ton offre, ton ton, ta langue, et l'adresse publique de ton quiz.",
-          "Le lien n'est posé QUE là où il doit apparaître : dans un email d'invitation, oui ; dans le contenu d'un bonus qui se lit hors ligne, non.",
-        ],
-      },
-      {
-        titre: "Ce que tu peux corriger",
-        corps: [
-          "Tout, sur place, avec un éditeur. Et chaque email se regénère seul si celui là ne te va pas.",
-        ],
-      },
-    ],
-    ou: "Générateurs, puis Emails.",
-    capture: "Un email produit, ouvert dans l'éditeur.",
-    source: "lib/generateurs/sequences.ts",
-  },
-  {
-    slug: "generateur-de-promo",
-    nom: "Le générateur de contenus de promo",
-    resume:
-      "L'IA écrit les emails et les publications qui annoncent ton quiz, chacun sous un angle différent.",
-    palier: "plus",
-    pourquoi:
-      "Un quiz que personne ne voit ne rapporte rien. Et annoncer la même chose quatre fois avec les mêmes mots, c'est un post publié quatre fois.",
-    benefices: [
-      "Tu as de quoi annoncer ton quiz pendant une semaine, prêt à copier : tu ne te retrouves plus devant une page blanche le jour du lancement.",
-      "Chaque publication attaque par un angle différent : ton audience ne lit pas quatre fois le même message.",
-    ],
-    commentCourt:
-      "Un bouton par contenu, et tu récupères trois emails et quatre publications.",
-    detail: [
-      {
-        titre: "Ce qui est produit",
-        corps: [
-          "Trois emails d'invitation et quatre publications, chacun sous un angle qui lui est propre.",
-          "Ils portent l'adresse publique de ton quiz, avec ton nom de domaine si tu en as un.",
-        ],
-      },
-      {
-        titre: "Pas de pistes ici non plus",
-        corps: [
-          "Annoncer un quiz est une routine, pas une création : il n'y a rien à choisir entre trois directions, alors on ne te fait pas payer une étape pour rien.",
-        ],
-      },
-    ],
-    ou: "Générateurs, puis Promotion.",
-    capture: "La bibliothèque des contenus générés, avec les trois blocs.",
-    source: "lib/generateurs/sequences.ts",
+    liees: ["connexion-systeme-io", "branding-et-langues"],
+    visuel: null,
   },
 ] as const;
+
+/**
+ * LES ADRESSES D'AVANT, ET POURQUOI ELLES REDIRIGENT.
+ *
+ * La refonte du 6 septembre ramène quatorze pages à HUIT, celles que
+ * Béné nomme. Cinq slugs sont renommés, six pages sont FONDUES dans une
+ * autre (leur contenu y vit en entier, en sections de détail).
+ *
+ * Une adresse qui a existé ne meurt pas : elle peut être dans un
+ * sitemap déjà lu, dans un favori, dans un lien posé ailleurs. Un 404
+ * là dessus, c'est un lecteur perdu et un signal négatif de plus. On
+ * REDIRIGE, en 308, vers la page qui porte désormais le sujet.
+ */
+export const ANCIENS_SLUGS: Readonly<Record<string, string>> = {
+  "integration-systeme-io": "connexion-systeme-io",
+  "cles-api-systeme-io": "connexion-systeme-io",
+  automatisations: "connexion-systeme-io",
+  "suivi-des-leads": "resultats-par-profil",
+  "analyse-des-resultats": "generation-ia",
+  "generateur-de-bonus": "generation-ia",
+  "generateur-d-emails": "generation-ia",
+  "generateur-de-promo": "generation-ia",
+  "partage-viral": "partage-et-viralite",
+  sondages: "sondages-et-popquiz",
+  popquiz: "sondages-et-popquiz",
+  "ou-vit-ton-quiz": "ou-placer-son-quiz",
+};
 
 /** Retrouve une fonctionnalité par son slug, ou rend `null`. */
 export function fonctionnaliteParSlug(slug: string): Fonctionnalite | null {
@@ -665,3 +589,17 @@ export const LIBELLE_PALIER: Readonly<Record<Palier, string>> = {
   payant: "Dans les paliers payants",
   plus: "Réservé aux paliers PLUS",
 };
+
+/**
+ * LES DEUX PAGES VOISINES, RÉSOLUES.
+ *
+ * Un slug qui ne correspond à rien est IGNORÉ plutôt que rendu en lien
+ * mort : mieux vaut une voisine que deux liens dont un tombe. Le test,
+ * lui, exige que les deux existent : c'est là que ça se voit, pas à
+ * l'écran d'une lectrice.
+ */
+export function fonctionnalitesLiees(f: Fonctionnalite): Fonctionnalite[] {
+  return f.liees
+    .map((slug) => fonctionnaliteParSlug(slug))
+    .filter((x): x is Fonctionnalite => x !== null && x.slug !== f.slug);
+}

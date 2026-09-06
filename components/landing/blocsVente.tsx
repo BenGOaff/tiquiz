@@ -1,4 +1,4 @@
-// app/(site)/apercu-landing-8f2c9d41/blocsVente.tsx
+// components/landing/blocsVente.tsx
 //
 // SES BLOCS DE LA PAGE V2, SERVIS SUR LA LANDING.
 //

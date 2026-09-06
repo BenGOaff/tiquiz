@@ -50,9 +50,11 @@ import {
 } from "@/lib/checkout/avantages";
 import { OWNER_CATALOG, formatOwnerPrice } from "@/lib/checkout/catalog";
 import { OUTILS } from "@/lib/site/integrations";
+import { FONCTIONNALITES, fonctionnaliteParSlug } from "@/lib/site/fonctionnalites";
+import { BLOCS_ANIMES, BLOCS_EN_ATTENTE } from "@/lib/site/blocsAnimes";
 import { FREE_LIMITS } from "@/lib/planLimits";
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { gagne, reglesDeCouleur, specificite, viseTousLesLiens } from "./aide/specificiteCss.mts";
 
@@ -77,8 +79,22 @@ const SOURCE = racine("lib/site/landing.ts");
 /** Le module SANS ses commentaires : sinon un contrôle tombe sur sa propre explication. */
 const CODE = SOURCE.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/^\s*\/\/.*$/gm, " ");
 
-const PAGE_CODE = racine("app/(site)/apercu-landing-8f2c9d41/page.tsx").replace(/\{?\/\*[\s\S]*?\*\/\}?/g, " ").replace(/^\s*\/\/.*$/gm, " ");
-const CSS = racine("app/(site)/apercu-landing-8f2c9d41/styles.ts");
+// LA LANDING EST TROIS FICHIERS DEPUIS LE 6 SEPTEMBRE, et ce filet les
+// lit tous les trois. Bene : "/ = la landing courte, /tarifs = la vraie
+// page de vente". Ne surveiller que l'un des deux laisserait la moitie
+// de ses regles sans garde-fou le jour ou un bloc passe de l'un a
+// l'autre, ce qui est exactement ce qui vient d'arriver.
+//
+// Les commentaires sont retires AVANT toute mesure : un test qui compte
+// la presence ou l'ORDRE de quelque chose dans un fichier tombe sinon
+// sur sa propre explication (leçon du 3 septembre, trois fois).
+const sansCommentaires = (t: string) =>
+  t.replace(/\{?\/\*[\s\S]*?\*\/\}?/g, " ").replace(/^\s*\/\/.*$/gm, " ");
+const PAGE_ACCUEIL = sansCommentaires(racine("app/(site)/apercu-landing-8f2c9d41/page.tsx"));
+const PAGE_TARIFS = sansCommentaires(racine("app/(site)/tarifs/page.tsx"));
+const MORCEAUX = sansCommentaires(racine("components/landing/morceaux.tsx"));
+const PAGE_CODE = `${PAGE_ACCUEIL}\n${PAGE_TARIFS}\n${MORCEAUX}`;
+const CSS = racine("components/landing/styles.ts");
 
 describe("la landing lit les tarifs, elle ne les recopie pas", () => {
   test("aucun prix n'est écrit dans le module", () => {
@@ -361,6 +377,17 @@ describe("le haut de page vend le RÉSULTAT, pas le processus", () => {
   // formulation figée : le titre et l'accroche peuvent être réécrits
   // librement tant qu'ils ne redescendent pas dans la mécanique.
 
+  // 🚨 CETTE LISTE NE VISE PLUS L'ACCROCHE, ET C'EST BÉNÉ QUI A TRANCHÉ.
+  //
+  // Le 6 septembre 2026 elle a écrit l'accroche elle même, marquée
+  // "verbatim" dans sa consigne : "L'IA écrit ton quiz à partir d'une
+  // description de ton sujet. Tu relis, tu remplaces deux ou trois
+  // formulations par les tiennes, tu publies."
+  //
+  // "Tu relis" est dans SA phrase, et ce test le refusait au nom de sa
+  // règle du 5 septembre. Un garde-fou qui empêche de reprendre le texte
+  // de l'autrice ne protège plus rien : la règle reste, elle vise le
+  // TITRE, qui est le seul endroit où elle avait vu le défaut.
   const PROCESSUS = [
     /trois champs/i,
     /three fields/i,
@@ -370,9 +397,9 @@ describe("le haut de page vend le RÉSULTAT, pas le processus", () => {
     /the AI writes the questions/i,
   ];
 
-  test("l'accroche ne décrit pas les étapes", () => {
+  test("le titre ne décrit pas les étapes", () => {
     for (const langue of Object.keys(LANDING)) {
-      const haut = `${LANDING[langue].titre} ${LANDING[langue].accroche}`;
+      const haut = `${LANDING[langue].titre} ${LANDING[langue].titreDefilant.join(" ")}`;
       for (const motif of PROCESSUS) {
         assert.ok(
           !motif.test(haut),
@@ -394,10 +421,40 @@ describe("le haut de page vend le RÉSULTAT, pas le processus", () => {
   test("les étapes existent toujours, mais plus bas dans la page", () => {
     // Le COMMENT n'est pas supprimé : il est déplacé. Un visiteur veut
     // savoir comment ça marche APRÈS avoir compris ce qu'il y gagne.
-    assert.equal(LANDING.fr.etapes.length, 4);
+    //
+    // TROIS ÉTAPES, PLUS QUATRE, depuis le 6 septembre. Béné : "l'étape
+    // viralité part sur /fonctionnalites/partage-et-viralite : ce n'est
+    // pas une étape, c'est une conséquence, et elle est optionnelle."
+    assert.equal(LANDING.fr.etapes.length, 3);
     const hero = PAGE_CODE.indexOf("tql-hero");
     const etapes = PAGE_CODE.indexOf("tql-pastille-etape");
     assert.ok(hero > 0 && etapes > hero, "les étapes doivent venir après le haut de page");
+  });
+
+  test("chaque étape montre le LOGICIEL, ou dit quelle capture manque", () => {
+    // Béné, 6 septembre 2026 : "c'est le manque numéro un de la page
+    // actuelle : on y voit beaucoup de quiz, on n'y voit jamais le
+    // logiciel. Prévois les emplacements d'image même si les captures
+    // arrivent après."
+    //
+    // UN EMPLACEMENT VIDE PASSERAIT POUR UN DÉFAUT DE MISE EN PAGE.
+    // Nommé, il se remplit en deux minutes dans un vrai compte, et le
+    // test empêche qu'on l'oublie en silence.
+    for (const langue of Object.keys(LANDING)) {
+      for (const e of LANDING[langue].etapes) {
+        if (e.capture.src === null) {
+          assert.ok(
+            e.capture.aPrendre.trim().length > 20,
+            `${langue} : "${e.titre}" n'a ni capture ni description de celle qui manque`,
+          );
+        } else {
+          assert.ok(
+            e.capture.alt.trim().length > 10,
+            `${langue} : la capture de "${e.titre}" n'a pas de texte alternatif`,
+          );
+        }
+      }
+    }
   });
 });
 
@@ -521,44 +578,56 @@ describe("les quinze témoignages sont ceux de SA page", () => {
   });
 });
 
-describe("chaque section se termine par un désir, pas par un vide", () => {
-  // Relevé sur sa page : "Je veux capturer ces emails", "Je veux mon
-  // quiz viral", "Je me lance gratuitement". Ma landing n'avait que
-  // TROIS boutons en tout, donc il fallait scroller jusqu'aux tarifs
-  // pour en trouver un.
+describe("un seul libellé de bouton, et il est partout", () => {
+  // Béné, 6 septembre 2026 : "un seul libellé de bouton principal sur
+  // toute la page : « Créer mon quiz gratuitement → », avec « Gratuit,
+  // sans carte bancaire » dessous. La page actuelle en compte treize
+  // différents, c'est à unifier."
+  //
+  // 🚨 CE BLOC REMPLACE "chaque section se termine par un désir".
+  // Celui là exigeait des libellés à la première personne ("Je veux
+  // capturer ces emails"), relevés sur sa page de vente le 5 septembre.
+  // Elle a tranché l'inverse le 6 : treize promesses différentes, c'est
+  // treize choses à tenir, et aucune répétition qui s'installe. On ne
+  // garde pas les deux règles, on garde la dernière.
 
-  test("au moins cinq boutons de milieu de page", () => {
-    const n = (PAGE_CODE.match(/<CtaSection\b/g) ?? []).length;
-    assert.ok(n >= 5, `seulement ${n} boutons de milieu de page`);
-  });
-
-  test("les libellés français sont ceux de SA page", () => {
-    // Ils sont relevés section par section sur sa page de vente : "Je
-    // veux capturer ces emails", "Je veux mon quiz viral", "Je me lance
-    // gratuitement", "C'est parti !".
-    //
-    // LE TEST N'EXIGE PLUS `^Je ` : il l'exigeait, et il est sorti
-    // rouge sur "C'est parti !", qui est SON libellé au pied de ses
-    // quatre étapes. Un garde-fou qui fige une formulation empêche de
-    // reprendre la sienne, ce qui est le contraire du but.
-    const libelles = [...Object.values(LANDING.fr.ctas), LANDING.fr.viralCta];
-    for (const l of libelles) {
-      assert.match(
-        l,
-        /^(Je |J'|C'est parti)/,
-        `"${l}" n'est ni un désir à la première personne ni un de ses libellés`,
-      );
-    }
-  });
-
-  test("chaque bouton porte sa rassurance", () => {
+  test("le libellé et sa rassurance vivent dans le contenu, en une seule paire", () => {
     for (const langue of Object.keys(LANDING)) {
-      assert.ok(
-        LANDING[langue].ctaRassurance.trim().length > 5,
-        `${langue} : aucune rassurance sous les boutons`,
+      const t = LANDING[langue];
+      assert.ok(t.ctaPrincipal.trim().length > 5, `${langue} : aucun libellé de bouton`);
+      assert.ok(t.sousCta.trim().length > 5, `${langue} : aucune rassurance sous le bouton`);
+    }
+  });
+
+  test("aucun bouton principal ne porte un libellé écrit à la main", () => {
+    // LA RÈGLE EST "UN SEUL LIBELLÉ", PAS "UN SEUL COMPOSANT. Trois
+    // endroits l'assemblent, et c'est voulu : le bouton du haut de page,
+    // celui de milieu de page et celui du bandeau final n'ont pas la
+    // même forme (`tql-cta`, `tql-bande-cta`). Ce qui compte, c'est
+    // qu'ils lisent tous LE MÊME champ : un libellé écrit en dur
+    // rouvrirait la porte aux treize.
+    for (const bouton of [
+      ...PAGE_CODE.matchAll(/className="(tql-cta|tql-bande-cta)"[^>]*>([\s\S]{0,120}?)</g),
+    ]) {
+      assert.match(
+        bouton[2],
+        /\{t\.ctaPrincipal\}/,
+        `un bouton principal n'affiche pas t.ctaPrincipal : "${bouton[2].trim().slice(0, 40)}"`,
       );
     }
-    assert.match(PAGE_CODE, /rassurance=\{t\.ctaRassurance\}/);
+    // Et il y en a VRAIMENT, sinon ce test ne peut plus échouer.
+    const n = (PAGE_CODE.match(/className="(tql-cta|tql-bande-cta)"/g) ?? []).length;
+    assert.ok(n >= 3, `seulement ${n} boutons principaux dans les trois fichiers`);
+  });
+
+  test("le bouton revient plusieurs fois sur la landing", () => {
+    // Trois boutons en tout obligeaient à descendre jusqu'aux tarifs
+    // pour en trouver un. Ils sont posés au pied des sections qui
+    // finissent un argument.
+    const n =
+      (PAGE_ACCUEIL.match(/<CtaPrincipal\b/g) ?? []).length +
+      (PAGE_ACCUEIL.match(/className="tql-cta"/g) ?? []).length;
+    assert.ok(n >= 4, `seulement ${n} boutons principaux sur la landing`);
   });
 });
 
@@ -591,7 +660,26 @@ describe("le coût de ne rien faire est dit, et les trois formats aussi", () => 
     const tout = LANDING.fr.formats.map((f) => `${f.titre} ${f.corps}`).join(" ");
     assert.match(tout, /sondage/i);
     assert.match(tout, /popquiz/i);
-    assert.ok(PAGE_CODE.includes("t.formats.map"), "les formats ne sont pas rendus");
+    // ILS NE SONT PLUS SUR LA LANDING, ILS ONT LEUR PAGE. Béné,
+    // 6 septembre : "les sondages et Popquiz partent sur
+    // /fonctionnalites/sondages-et-popquiz". La landing courte ne peut
+    // pas porter les huit fonctionnalités, mais un produit facturé qui
+    // n'est montré NULLE PART reste le défaut qu'on ferme ici.
+    const page = fonctionnaliteParSlug("sondages-et-popquiz");
+    assert.ok(page, "la page qui vend les sondages et les Popquiz n'existe pas");
+    // ON LIT LA PAGE ENTIÈRE, son nom et son détail compris : c'est le
+    // titre qui nomme les deux produits, et le corps qui dit ce qu'ils
+    // font. Ne lire que le résumé ferait rougir une page correcte.
+    const vendu = [
+      page.nom,
+      page.resume,
+      page.pourquoi,
+      ...page.benefices,
+      page.commentCourt,
+      ...page.detail.flatMap((d) => [d.titre, ...d.corps]),
+    ].join(" ");
+    assert.match(vendu, /sondage/i);
+    assert.match(vendu, /popquiz/i);
   });
 
   test("la viralité n'annonce AUCUN chiffre", () => {
@@ -732,13 +820,30 @@ describe("la page sait dire non, et c'est ce qui rend le reste croyable", () => 
     }
   });
 
-  test("il est posé AVANT le prix, jamais après", () => {
-    // Après, c'est un remords. Avant, c'est une porte qu'on laisse
-    // ouverte pour sortir.
-    const non = PAGE_CODE.indexOf("tql-non-liste");
-    const prix = PAGE_CODE.indexOf("colonnes.map");
-    assert.ok(non > 0, "le bloc des refus n'est pas rendu");
-    assert.ok(prix > non, "les refus doivent précéder les tarifs");
+  test("la landing sait dire non AVANT que /tarifs ne montre un prix", () => {
+    // Après le prix, c'est un remords. Avant, c'est une porte qu'on
+    // laisse ouverte pour sortir.
+    //
+    // DEPUIS LE 6 SEPTEMBRE, LA RÈGLE VAUT À L'ÉCHELLE DU SITE : la
+    // qualification vit sur `/` (son mini quiz, qui pose une question à
+    // la fois et sait répondre "franchement, non"), et le prix vit sur
+    // `/tarifs`. L'ordre est donc tenu par la navigation, pas par la
+    // position dans un fichier.
+    assert.ok(
+      /BlocVente nom="cest-pour-toi"/.test(PAGE_ACCUEIL),
+      "la landing ne porte plus le mini quiz de qualification",
+    );
+    // ET SON MINI QUIZ N'EXISTE QU'EN FRANÇAIS : sans repli, la landing
+    // anglaise ne dirait jamais non. C'est la liste des trois refus qui
+    // le dit là bas, et ce test l'exige.
+    assert.ok(
+      /tql-non-liste/.test(PAGE_ACCUEIL),
+      "hors français, la landing ne dit jamais non",
+    );
+    assert.ok(
+      !/colonnes\.map/.test(PAGE_ACCUEIL),
+      "la landing ne doit pas porter la grille de tarifs : elle vit sur /tarifs",
+    );
   });
 });
 
@@ -762,12 +867,40 @@ describe("chaque animation levée porte son contexte", () => {
     }
   });
 
-  test("les trois animations extraites sont servies", () => {
-    for (const bloc of ["opt-in-vs-quiz", "ton-branding", "tes-pixels"]) {
+  test("un bloc levé de sa page est SERVI, ou son attente est écrite", () => {
+    // 🚨 CE TEST A CHANGÉ DE CIBLE LE 6 SEPTEMBRE, et la raison compte.
+    //
+    // Il nommait trois blocs et exigeait qu'ils soient sur la landing.
+    // La refonte a déplacé leurs sections vers `/fonctionnalites/<slug>`
+    // ("chaque page reprend la section correspondante de la page
+    // actuelle, avec son visuel"), donc les chercher sur la landing
+    // ferait rougir un travail juste.
+    //
+    // CE QUI RESTE VRAI, ET C'EST LE VRAI SUJET : un bloc extrait de sa
+    // page et affiché NULLE PART est du travail perdu que personne ne
+    // remarque. On le vérifie donc à l'échelle du site, et un bloc qui
+    // n'a pas encore de page doit être DÉCLARÉ en attente, avec sa
+    // raison. Une exemption sans raison écrite est une exemption que le
+    // prochain passage prend pour un oubli.
+    const servisParLesFonctionnalites: string[] = FONCTIONNALITES.map((f) => f.visuel).filter(
+      (v) => v !== null,
+    );
+    for (const bloc of Object.keys(BLOCS_ANIMES)) {
+      if (bloc.endsWith("-mobile")) continue; // servi par la media query de son île
+      const servi =
+        PAGE_CODE.includes(`bloc="${bloc}"`) || servisParLesFonctionnalites.includes(bloc);
+      const enAttente = Object.prototype.hasOwnProperty.call(BLOCS_EN_ATTENTE, bloc);
       assert.ok(
-        PAGE_CODE.includes(`bloc="${bloc}"`),
-        `"${bloc}" est extrait de sa page et n'est affiché nulle part`,
+        servi || enAttente,
+        `"${bloc}" est extrait de sa page, n'est affiché nulle part, et n'est pas déclaré en attente`,
       );
+      if (enAttente) {
+        assert.ok(
+          BLOCS_EN_ATTENTE[bloc].length > 40,
+          `"${bloc}" est en attente sans raison écrite`,
+        );
+        assert.ok(!servi, `"${bloc}" est servi ET déclaré en attente : la liste ment`);
+      }
     }
   });
 });
@@ -894,4 +1027,55 @@ describe("l'interrupteur de tarif mene au bon bon de commande", () => {
       }
     }
   });
+});
+
+// -- UN COMPOSANT CLIENT NE TIRE JAMAIS `node:fs` ----------------------
+
+test("aucun composant client de la landing n'importe un module qui lit le disque", () => {
+  // LE BUG QUE CE TEST EXISTE POUR ATTRAPER, et il est arrivé le
+  // 6 septembre : en sortant les composants de la landing vers
+  // `components/landing/`, `DeclencheurAnims` (client) s'est mis à
+  // importer une constante depuis `anims.tsx`, qui lit le disque. Le
+  // bundle refuse alors de se construire :
+  //
+  //   the chunking context does not support external modules
+  //   (request: node:fs)
+  //
+  // ET `npx tsc --noEmit` A RÉPONDU EXIT 0 DESSUS. C'est la leçon de
+  // `pdf-parse` (7 août) : un vert local ne prouve rien sur ce qui se
+  // passe une fois compilé. Seul le filet de captures l'a vu, et
+  // seulement parce que la page ne s'affichait plus du tout.
+  //
+  // On regarde les imports DIRECTS : c'est le cas qui se produit, et un
+  // parcours complet du graphe rendrait le test lent et bavard.
+  const dossier = join(process.cwd(), "components/landing");
+  const fichiers = readdirSync(dossier).filter((f) => /\.tsx?$/.test(f));
+
+  const lit = (f: string) => readFileSync(join(dossier, f), "utf8");
+  const touchentLeDisque = new Set(
+    fichiers.filter((f) => /from "node:(fs|path)"/.test(lit(f))),
+  );
+  assert.ok(
+    touchentLeDisque.size > 0,
+    "aucun module de la landing ne lit le disque : ce test ne protege plus rien",
+  );
+
+  const fautifs: string[] = [];
+  for (const f of fichiers) {
+    const src = lit(f);
+    if (!/^\s*["']use client["']/m.test(src)) continue;
+    for (const serveur of touchentLeDisque) {
+      const nom = serveur.replace(/\.tsx?$/, "");
+      // `import type` est effacé à la compilation : il ne tire rien.
+      const motif = new RegExp(
+        `import\\s+(?!type\\b)[^;]*from\\s+["'](?:\\./)?${nom}["']`,
+      );
+      if (motif.test(src)) fautifs.push(`${f} -> ${serveur}`);
+    }
+  }
+  assert.deepEqual(
+    fautifs,
+    [],
+    `ces imports cassent le bundle du navigateur : ${fautifs.join(", ")}`,
+  );
 });

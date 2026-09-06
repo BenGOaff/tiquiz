@@ -52,13 +52,25 @@ export interface ColonnePied {
 /**
  * LE MENU, ET IL RESTE COURT.
  *
- * Cinq entrées au plus : au delà, un menu ne se lit plus, il se
- * parcourt. Tout le reste vit dans le pied de page, qui est fait pour
- * ça. L'entrée "Tarifs" mène à la page de vente, qui les porte : une
- * page de tarifs séparée dirait la même chose deux fois, et les deux
- * finiraient par se contredire au premier changement de prix.
+ * Béné, 6 septembre 2026 : "ajoute Fonctionnalités et Tarifs au menu
+ * principal : ils manquent, alors que Blog, L'Atelier du Quiz et
+ * Affiliation envoient le visiteur ailleurs avant qu'il ait compris le
+ * produit."
+ *
+ * ELLE A RAISON, ET L'ANCIENNE JUSTIFICATION EST TOMBÉE AVEC. Cette
+ * page disait qu'une page de tarifs séparée "dirait la même chose deux
+ * fois" : c'était vrai tant que la page de vente PORTAIT les tarifs.
+ * Depuis le 6 septembre, `/` est une landing courte et `/tarifs` est la
+ * seule page qui les porte, en lisant `OWNER_CATALOG` : il n'y a plus
+ * deux listes, il y en a une, et le menu doit y mener.
+ *
+ * Les deux entrées produit passent DEVANT les trois qui font sortir :
+ * un menu se lit de gauche à droite, et Blog en tête envoie ailleurs
+ * quelqu'un qui ne sait pas encore ce qu'on vend.
  */
 export const MENU: readonly LienSite[] = [
+  { href: "/fonctionnalites", libelle: "Fonctionnalités" },
+  { href: "/tarifs", libelle: "Tarifs" },
   { href: "/blog", libelle: "Blog" },
   // L'ATELIER EST DANS LE MENU (Béné, 30 août 2026) : "le blog tiquiz.fr
   // = le blog de l'atelier ET de tiquiz, on centralise tout dessus."
@@ -71,8 +83,17 @@ export const MENU: readonly LienSite[] = [
   { href: "/support", libelle: "Aide" },
 ] as const;
 
-/** L'appel à l'action de l'en-tête. Il mène là où on vend. */
-export const CTA_MENU: LienSite = { href: "/", libelle: "Découvrir Tiquiz" };
+/**
+ * L'APPEL À L'ACTION DE L'EN-TÊTE.
+ *
+ * Béné, 6 septembre 2026 : "le bouton principal du header devient
+ * « Créer un compte gratuit » au lieu de « Découvrir Tiquiz »."
+ *
+ * "Découvrir" menait à l'accueil, c'est à dire à la page où le visiteur
+ * est déjà : un bouton qui ne fait rien avancer. Celui-ci nomme le
+ * geste, et il mène à l'inscription.
+ */
+export const CTA_MENU: LienSite = { href: "/signup", libelle: "Créer un compte gratuit" };
 
 // Ré-exportée telle quelle : la table vit dans un module SANS import,
 // parce que `next.config.ts` la lit et ne résout pas l'alias `@/`.
@@ -94,9 +115,16 @@ export const PIED: readonly ColonnePied[] = [
   {
     titre: "Tiquiz",
     liens: [
-      { href: "/", libelle: "Ce que fait Tiquiz" },
-      { href: "/fonctionnalites", libelle: "Toutes les fonctionnalités" },
-      { href: "/commande/mensuel", libelle: "Tarifs et abonnement" },
+      // DEUX LIENS POUR UNE SEULE PAGE, ET BÉNÉ L'A RELEVÉ le
+      // 6 septembre : "« Ce que fait Tiquiz » et « Toutes les
+      // fonctionnalités » sont deux liens pour la même page. Garde
+      // /fonctionnalites et supprime l'autre." Le premier menait à `/`,
+      // qui est la page où on est déjà en lisant le pied.
+      { href: "/fonctionnalites", libelle: "Ce que fait Tiquiz" },
+      // ET LE TARIF MÈNE À LA PAGE DE TARIFS, plus au bon de commande
+      // mensuel : envoyer quelqu'un payer avant qu'il ait vu les trois
+      // paliers, c'est lui faire choisir sans les avoir comparés.
+      { href: "/tarifs", libelle: "Tarifs et abonnement" },
       { href: ATELIER_SALES_URL, libelle: "L'Atelier du Quiz" },
       { href: "/blog", libelle: "Le blog" },
       { href: "/newsletter", libelle: "La newsletter" },
@@ -176,8 +204,8 @@ export function attributsLien(href: string): {
  *
  * Les six pages d'intégration sont listées une par une dans le pied :
  * elles sont six, et leurs mots clés valent d'être écrits en toutes
- * lettres. Les quatorze fonctionnalités, non : un pied de page à
- * quatorze liens de plus ne se lit plus, il se parcourt.
+ * lettres. Les huit fonctionnalités, non : un pied de page à huit liens
+ * de plus ne se lit plus, il se parcourt.
  *
  * Elles sont donc atteignables PAR LEUR HUB, qui les liste toutes, et
  * qui est lui même dans le pied. Un visiteur perdu y arrive en deux
@@ -185,7 +213,7 @@ export function attributsLien(href: string): {
  *
  * LA CONDITION COMPTE : un hub absent du pied ne rend rien atteignable.
  * `cheminsDuSite` le vérifie au lieu de le supposer, sinon retirer le
- * hub du pied orphelinerait quatorze pages en silence.
+ * hub du pied orphelinerait huit pages en silence.
  */
 export const PAGES_PAR_HUB: readonly { hub: string; enfants: readonly string[] }[] = [
   {
@@ -194,9 +222,26 @@ export const PAGES_PAR_HUB: readonly { hub: string; enfants: readonly string[] }
   },
 ];
 
+/**
+ * L'ACCUEIL EST ATTEIGNABLE PAR LE LOGO, ET C'EST DÉCLARÉ.
+ *
+ * `SiteHeader` pose un `<Link href="/">` sur le logo, sur toutes les
+ * pages du site. Depuis le 6 septembre le pied ne cite plus `/` (les
+ * deux liens "Ce que fait Tiquiz" et "Toutes les fonctionnalités"
+ * menaient à deux pages différentes pour un seul sujet), donc sans
+ * cette ligne le garde-fou d'atteignabilité déclarerait la page
+ * d'accueil orpheline.
+ *
+ * ON LE DÉCLARE AU LIEU DE RELÂCHER LE TEST : c'est un fait de l'écran,
+ * et le jour où le logo cesserait d'être un lien, cette ligne serait
+ * fausse et se corrigerait ici, à un seul endroit.
+ */
+export const LIEN_LOGO = "/";
+
 /** Toutes les adresses internes citées par le menu, le pied, ou un hub. */
 export function cheminsDuSite(): string[] {
   const directs = [
+    LIEN_LOGO,
     ...MENU.map((l) => l.href),
     CTA_MENU.href,
     ...PIED.flatMap((c) => c.liens.map((l) => l.href)),

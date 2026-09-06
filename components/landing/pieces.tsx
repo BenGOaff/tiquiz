@@ -1,4 +1,4 @@
-// app/(site)/apercu-landing-8f2c9d41/pieces.tsx
+// components/landing/pieces.tsx
 //
 // LES PIÈCES DESSINÉES DE LA LANDING.
 //

@@ -9329,3 +9329,180 @@ et le branding ne décide que de l'affichage du logo.
 Test : le bloc "les pages légales sont déclarées sur le domaine de
 vente" de `tests/logic/site-public.test.mts`, vérifié en rejouant la
 version d'avant (2 tests rougissent).
+
+### Neuvième passage : la landing raccourcit, le reste DÉMÉNAGE (6 septembre 2026)
+
+Béné : "la page actuelle fait environ 5 000 mots et une quinzaine
+d'écrans. C'est une page de vente, pas une landing. Elle a été écrite
+pour une audience chaude qui connaît déjà Béné. Le trafic à venir est
+froid : affiliés, SEO, Capterra. Un visiteur froid décroche au troisième
+écran. **Rien n'est à jeter. Tout est à déplacer.**"
+
+Et sa règle numéro un, écrite en tête de sa consigne : **on ne touche
+pas au design.** Palette, typographie, composants, cartes, maquettes,
+classes `tql-`, animations au défilement, bandeau défilant : tout reste,
+aucune librairie de plus. Les huit passages précédents ont construit ce
+système visuel avec elle ; ce passage DÉPLACE du texte dedans.
+
+#### CE QUI VA OÙ
+
+```
+/                    six blocs : haut de page, preuve, integrations,
+                     trois etapes, demo + mini quiz, objections + prix
+/tarifs              les 3 paliers, la grille comparative, le cout
+                     compare, les 5 objections, la FAQ d'argent,
+                     les 16 autres temoignages, le CTA final
+/fonctionnalites     le hub, une carte par fonctionnalite
+/fonctionnalites/<8> chacune reprend SA section, telle qu'elle est
+                     ecrite, avec son visuel
+```
+
+**LES HUIT SLUGS sont les siens, nommés dans sa consigne :**
+`generation-ia`, `connexion-systeme-io`, `resultats-par-profil`,
+`quiz-profil-ou-score`, `partage-et-viralite`, `sondages-et-popquiz`,
+`branding-et-langues`, `ou-placer-son-quiz`. La liste passe donc de 14 à
+8, et `lib/site/pagesPubliques.ts` les DÉRIVE : le sitemap suit sans
+qu'on y pense.
+
+#### UN SEUL LIBELLÉ DE BOUTON, ET IL Y EN AVAIT TREIZE
+
+"Créer mon quiz gratuitement", partout, avec "Gratuit, sans carte
+bancaire" dessous. Le huitième passage avait posé sa signature (un
+bouton après chaque section, à la première personne) ; sa consigne du
+6 septembre la remplace, et c'est un choix de landing FROIDE : treize
+libellés, c'est treize promesses à tenir, et aucune répétition qui
+s'installe chez quelqu'un qui découvre le produit.
+
+`CtaPrincipal` (`components/landing/morceaux.tsx`) porte le libellé, et
+le test compte les occurrences : un deuxième libellé fait rougir.
+
+#### "QUIZ ILLIMITÉS" EST RETIRÉ DU HAUT DE PAGE, ET C'EST ELLE QUI L'A VU
+
+Sa consigne : les trois preuves sont "Connecté à Systeme.io · Sans
+Zapier ni Make · Zéro ligne de code", et **"Quiz illimités" saute parce
+que c'est faux sur le plan gratuit** (`FREE_LIMITS` : 1 quiz). Une
+promesse fausse posée à trente pixels d'un bouton "Gratuit, sans carte
+bancaire" est exactement ce qui fait partir quelqu'un au moment de
+l'inscription.
+
+#### LES DEUX TÉMOIGNAGES EN DOUBLE
+
+🚨 **J'AI ÉCRIT ICI "EXACTEMENT LE MÊME TEXTE, MOT POUR MOT". C'EST
+FAUX, et je corrige plutôt que d'empiler.** Je l'ai aussi dit à Béné
+dans ce sens là, et ça a orienté sa décision.
+
+**Ce que la mesure donne vraiment**, sur les 153 paires possibles :
+"Gwenn, Solopreneur" (49 mots) et "Eric Legrigeois, Infopreneur"
+(54 mots) partagent UNE suite de **21 mots d'affilée**, soit 43 % de
+l'un et 39 % de l'autre : « ...à Systeme.io pour récupérer les leads et
+les taguer automatiquement, sans devoir passer par des outils comme
+Zapier ou Make ». Le reste diffère : Gwenn ouvre par "Enfin un outil" et
+finit par "J'adore !", Eric remercie Béné nommément. La plus longue
+suite commune entre deux témoignages DIFFÉRENTS fait 5 mots.
+
+**ET LES DEUX SONT DÉJÀ LA VERSION TRUSTPILOT DU 2 SEPTEMBRE 2026.**
+Béné, 6 septembre : "garde celui de Trustpilot, le dernier à jour pour
+les deux." Son critère ne les départage donc pas : il les garde tous
+les deux. Ce sont deux personnes réelles qui ont écrit le même jour, pas
+une vieille version et une neuve.
+
+**RÈGLE : jamais les deux sur le même écran** (sa consigne du
+6 septembre). La landing en montre trois, nommés par elle (Maurice,
+Adeline, Bernard C.) ; les autres vont sur `/tarifs`. Les deux
+tomberaient donc sur `/tarifs`, et `sansDoublons` garde le PREMIER de la
+liste : **Gwenn s'affiche, Eric ne s'affiche nulle part.**
+
+**ÇA RESTE SA DÉCISION, et elle n'est pas prise** : lequel des deux
+noms garder est une ligne à changer. On ne réécrit ni ne fusionne
+jamais les deux textes : ce sont des gens qui ont écrit ça.
+
+#### CE QUE LE MIDDLEWARE FAIT, ET CE QU'ELLE A TRANCHÉ
+
+`tiquiz.fr/` **sert encore sa page de vente capturée.** Béné, le même
+jour : "montre moi la landing sur la page aperçu 8f2 etc pas directement
+en page d'accueil, on la valide d'abord ensemble."
+
+La landing vit donc derrière `/apercu-landing-8f2c9d41` : slug
+introuvable, `noindex, nofollow`, absente du sitemap, de `llms.txt` et
+du pied de page. **C'est le sens SÛR de l'erreur** : un oubli laisse la
+page fermée, et la mettre en ligne est un geste explicite (une ligne du
+middleware, la canonique de la page, une entrée de sitemap), jamais un
+effet de bord d'un prochain passage.
+
+#### LE TRACKING AFFILIÉ COUVRE CHAQUE PAGE, ET C'EST MESURÉ
+
+Béné, le même jour : "n'oublie pas le tracking affilié partout, sur
+toutes les pages du site et du blog."
+
+**Relevé avant d'écrire une ligne : rien ne manquait.** Le `matcher` du
+middleware couvre tout sauf les fichiers statiques, ses onze sorties
+passent TOUTES par `poseSa`, et `clicASignaler` répond oui sur chaque
+chemin de page. Je le dis dans ce sens là : `tracking-affilie-partout.
+test.mts` ne corrige pas un trou, il empêche d'en creuser un.
+
+**Et il DÉRIVE la liste des pages** (`PAGES_PUBLIQUES`, `RUBRIQUES`, les
+articles du blog) au lieu de la recopier : une liste écrite à la main
+oublierait la prochaine page ajoutée, c'est à dire exactement celle sur
+laquelle le trou s'ouvrirait.
+
+**LE PIÈGE QU'IL SURVEILLE EST RÉEL** : `clicASignaler` refuse tout
+chemin qui finit par une extension, pour ne pas compter une image comme
+une visite. Un article dont le slug finirait par `.io` ou `.fr`
+tomberait dans ce refus, et l'affiliée qui le partage ne verrait jamais
+un seul clic. Mesuré sur les 11 articles : aucun n'est dans ce cas.
+
+**Vérifié en rejouant deux versions fautives** (une sortie sans
+`poseSa`, un `matcher` qui exclut `/blog`) : les deux rougissent, et la
+seconde NOMME les quinze pages qui perdraient le cookie.
+
+#### CE QUE MES PROPRES CONTRÔLES ONT ENCORE RATÉ
+
+1. **Un matcher Next est ANCRÉ, `RegExp.test` non.** Mon contrôle
+   `/_next/static/...` passait parce que le motif se satisfaisait
+   ailleurs dans la chaîne : il ne distinguait pas ce qu'il était censé
+   distinguer. Attrapé en l'exécutant, pas en le relisant.
+2. **Un test qui figeait `url.pathname = \`/apercu/vente/`** est sorti
+   ROUGE sur une correction juste, pour la CINQUIÈME fois de la semaine.
+   Il vise maintenant le FAIT : la racine d'un hôte de vente est
+   réécrite, et cette réponse porte le cookie. La destination peut
+   changer, le fait non.
+3. **`pkill -f "playwright test"` a tué mon propre shell** (sortie 144),
+   exactement comme ce fichier le décrit depuis le 4 septembre pour
+   `next dev`. Ce n'est pas un garde-fou qui manque, c'est moi qui le
+   refais : on tue par PID.
+4. **UN COMPOSANT CLIENT QUI TIRE `node:fs`, et `tsc` a répondu exit 0
+   dessus.** En sortant les composants vers `components/landing/`,
+   `DeclencheurAnims` (client) s'est mis à importer une constante depuis
+   `anims.tsx`, qui LIT LE DISQUE. Le bundle refuse alors de se
+   construire :
+
+   ```
+   the chunking context does not support external modules
+   (request: node:fs)
+   ```
+
+   **La landing ne s'affichait plus du tout**, et rien ne le disait :
+   `npx tsc --noEmit` vert, `npm run test:logic` vert. C'est
+   littéralement la leçon de `pdf-parse` (7 août), et c'est le FILET DE
+   CAPTURES qui l'a attrapé, pas la relecture.
+
+   `DECLENCHEURS` vit donc dans `lib/site/blocsAnimes.ts`, le module
+   PUR, et les deux côtés l'y lisent. Garde-fou : le cas "aucun
+   composant client de la landing n'importe un module qui lit le
+   disque" de `tests/logic/landing.test.mts`, vérifié en rejouant la
+   version fautive (il rougit et nomme la paire).
+
+   **Et il EXIGE qu'un module de la landing lise encore le disque** :
+   sans ça, le jour où plus rien n'appelle `node:fs`, le test passerait
+   au vert sans rien vérifier.
+
+#### CE QUI RESTE À FAIRE, ET C'EST SA DÉCISION
+
+- **valider la landing**, sur `/apercu-landing-8f2c9d41` ;
+- **les captures d'écran des trois étapes** : chaque emplacement DIT
+  quel écran photographier, dans un encadré visible. Je ne peux pas les
+  produire d'ici (la seule que l'app sait rendre porte un bandeau "Mode
+  aperçu" et un quiz de démo sans accents) ;
+- **la vidéo de 8 secondes** du haut de page : tant qu'elle n'existe
+  pas, la maquette dessinée reste, et c'est ce que sa consigne demande ;
+- **les deux témoignages identiques** : lequel des deux est le bon.

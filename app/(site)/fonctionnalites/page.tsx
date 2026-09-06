@@ -50,10 +50,13 @@ export default function Page() {
       <section className="tqf-tete">
         <div className="tqf-large">
           <h1>Tout ce que Tiquiz sait faire</h1>
+          {/* LE NOMBRE VIENT DE LA LISTE, jamais écrit à la main : il
+              a annoncé "quatorze" pendant que la liste en portait huit,
+              et personne ne l'aurait vu depuis le code. */}
           <p className="tqf-chapo">
-            Quatorze fonctionnalités, expliquées une par une : à quoi elles servent, ce
-            qu'elles te rapportent, et comment elles marchent vraiment. Clique sur
-            celle qui t'intéresse.
+            {FONCTIONNALITES.length} fonctionnalités, expliquées une par une : à quoi
+            elles servent, ce qu'elles te rapportent, et comment elles marchent
+            vraiment. Clique sur celle qui t'intéresse.
           </p>
         </div>
       </section>
@@ -71,6 +74,14 @@ export default function Page() {
                 <span className="tqf-lire">Le détail</span>
               </Link>
             ))}
+          </div>
+
+          {/* LE MAILLAGE : le hub mène aux huit enfants ET au tarif. */}
+          <div className="tqf-fin">
+            <Link href="/tarifs" className="tqf-cta">
+              Voir les tarifs
+            </Link>
+            <p className="tqf-rassure">Le premier palier ne coûte rien, et il n'expire pas.</p>
           </div>
         </div>
       </section>

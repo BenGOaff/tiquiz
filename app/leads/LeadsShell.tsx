@@ -416,8 +416,26 @@ export default function LeadsShell({ userEmail }: { userEmail: string }) {
                   <p className="text-sm text-amber-800/80 dark:text-amber-200/80 mt-1">
                     {t("lockedDescription")}
                   </p>
+                  {/* LE MOMENT DE CONVERSION LE PLUS FORT DU PRODUIT.
+                      Béné, 6 septembre 2026 : "dans l'app Tiquiz, le
+                      bouton d'upgrade doit pointer vers /tarifs. Le
+                      moment où un utilisateur voit sa 11e réponse
+                      floutée est le moment de conversion le plus fort."
+
+                      `/settings?tab=billing` montrait un écran de
+                      gestion d'abonnement à quelqu'un qui n'en a pas
+                      encore ; `/tarifs` montre les trois paliers et ce
+                      qu'ils contiennent.
+
+                      ET C'EST SÛR ICI, PARCE QUE CE BLOC N'EXISTE QU'EN
+                      GRATUIT : seul un palier gratuit a des réponses
+                      floutées. Sur un abonné, `/tarifs` mènerait au bon
+                      de commande, donc à un DEUXIÈME abonnement pendant
+                      que le premier prélève (le bug d'argent du
+                      23 août) : les écrans qui s'adressent à un abonné
+                      gardent `/settings`, qui passe par le prorata. */}
                   <Button asChild className="mt-4 bg-amber-600 hover:bg-amber-700 text-white">
-                    <Link href="/settings?tab=billing">
+                    <Link href="/tarifs">
                       <Sparkles className="h-4 w-4 mr-2" /> {t("lockedUnlockCta")}
                     </Link>
                   </Button>

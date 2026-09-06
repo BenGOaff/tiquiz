@@ -193,6 +193,20 @@ export async function middleware(req: NextRequest, event: NextFetchEvent) {
   const slugDeVente = salesSlugForHost(req.headers.get("host"));
   if (slugDeVente && pathname === "/") {
     const url = req.nextUrl.clone();
+    // LA RACINE SERT ENCORE SA PAGE DE VENTE, ET C'EST SA DECISION.
+    //
+    // Bene, 6 septembre 2026 : "montre moi la landing sur la page
+    // apercu 8f2 etc pas directement en page d'accueil, on la valide
+    // d'abord ensemble."
+    //
+    // La landing courte existe et vit derriere son slug introuvable
+    // (`/apercu-landing-8f2c9d41`, en noindex). Basculer cette ligne
+    // est le geste qui la met en ligne : il se fait une fois qu'elle a
+    // valide, jamais comme effet de bord d'un autre chantier.
+    //
+    // ON REECRIT, ON NE REDIRIGE PAS : l'adresse vue par le visiteur
+    // reste `tiquiz.fr`, et le partage d'un lien ne fait pas apparaitre
+    // un chemin technique.
     url.pathname = `/apercu/vente/${slugDeVente}`;
     return poseSa(NextResponse.rewrite(url));
   }
