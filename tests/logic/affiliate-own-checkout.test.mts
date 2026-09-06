@@ -113,12 +113,25 @@ test("1. le middleware range le sa des la premiere page", () => {
   const mw = fs.readFileSync(path.join(process.cwd(), "middleware.ts"), "utf8");
   assert.ok(mw.includes("SA_COOKIE"), "le middleware ne pose plus le cookie");
   assert.ok(mw.includes("readSa("), "le middleware ecrit une valeur non validee dans un cookie");
-  // La page de vente est justement celle ou le lien atterrit.
-  const i = mw.indexOf("url.pathname = `/apercu/vente/");
-  assert.ok(i > 0, "la reecriture de la page de vente a disparu");
+  // LA RACINE D'UN HOTE DE VENTE EST REECRITE, ET C'EST ELLE QUI POSE LE
+  // COOKIE : c'est la premiere page ou le lien affilie atterrit.
+  //
+  // ON VISE LE FAIT, PAS LA DESTINATION. Ce test figeait
+  // `url.pathname = \`/apercu/vente/` et il est donc sorti ROUGE le
+  // 6 septembre 2026, sur une correction juste : Bene a demande que `/`
+  // serve la landing courte au lieu de la capture Systeme.io, donc la
+  // cible a change et le fait n'a pas bouge. Un garde-fou qui fige une
+  // FORMULATION empeche de corriger la formulation.
+  const i = mw.indexOf('slugDeVente && pathname === "/"');
+  assert.ok(i > 0, "la reecriture de la racine d'un hote de vente a disparu");
+  const bloc = mw.slice(i, i + 900);
   assert.ok(
-    mw.slice(i, i + 200).includes("poseSa("),
-    "la page de vente ne pose pas le cookie : le lien d'affiliation ne sert a rien",
+    /url\.pathname\s*=/.test(bloc),
+    "la racine d'un hote de vente ne reecrit plus vers une page a nous",
+  );
+  assert.ok(
+    bloc.includes("poseSa("),
+    "la premiere page ne pose pas le cookie : le lien d'affiliation ne sert a rien",
   );
 });
 

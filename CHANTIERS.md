@@ -140,6 +140,27 @@ se projeter, n'y touche pas du tout." Question fermée.
   100. C'est SON dessin, levé à l'octet près, et il porte le même
   chiffre sur sa page de vente EN LIGNE : le corriger ici laisserait la
   vraie page fausse.
+  **NEUVIÈME PASSAGE, 6 septembre : la landing est RACCOURCIE, et le
+  reste est DÉPLACÉ.** Béné : "la page actuelle fait environ 5 000 mots
+  et une quinzaine d'écrans. C'est une page de vente, pas une landing.
+  Elle a été écrite pour une audience chaude qui connaît déjà Béné. Le
+  trafic à venir est froid : affiliés, SEO, Capterra. Un visiteur froid
+  décroche au troisième écran. **Rien n'est à jeter. Tout est à
+  déplacer.**" Six blocs sur la landing, `/tarifs` porte la vraie page
+  de vente (les 3 paliers, la grille comparative, la comparaison de
+  coût, les 5 objections, la FAQ d'argent, les 16 autres témoignages),
+  et les 8 pages de fonctionnalités reprennent chacune sa section, avec
+  son texte et son visuel. **UN SEUL LIBELLÉ DE BOUTON** sur toute la
+  page, contre treize. Le menu gagne Fonctionnalités et Tarifs ; le
+  pied perd le doublon "Ce que fait Tiquiz" / "Toutes les
+  fonctionnalités". Le bouton qui monte de palier depuis les leads
+  floutés mène à `/tarifs` : "le moment où un utilisateur voit sa 11e
+  réponse floutée est le moment de conversion le plus fort du produit."
+  **ELLE N'EST PAS EN LIGNE, ET C'EST SA DÉCISION** (6 septembre) :
+  "montre moi la landing sur la page aperçu 8f2 etc pas directement en
+  page d'accueil, on la valide d'abord ensemble." `tiquiz.fr/` sert
+  donc encore sa page de vente capturée. La bascule est UNE ligne du
+  middleware, et elle se fait une fois qu'elle a validé.
 - 🆕 **LE SITE PUBLIC PORTE MAINTENANT LES COULEURS DE LA PAGE DE
   VENTE** (4 septembre). Béné : "je préfère que tu alignes le blog sur
   ma belle page de vente que l'inverse." `.tq-site` (globals.css) a

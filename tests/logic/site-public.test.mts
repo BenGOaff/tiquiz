@@ -89,7 +89,16 @@ test("un lien legal ou externe s'ouvre dans un nouvel onglet", () => {
 });
 
 test("le menu reste court, et il mene quelque part", () => {
-  assert.ok(MENU.length <= 5, "au dela de 5 entrees un menu ne se lit plus, il se parcourt");
+  // LA BORNE EST PASSEE DE 5 A 7 LE 6 SEPTEMBRE, ET C'EST SA DEMANDE :
+  // "ajoute Fonctionnalites et Tarifs au menu principal : ils manquent,
+  // alors que Blog, L'Atelier du Quiz et Affiliation envoient le
+  // visiteur ailleurs avant qu'il ait compris le produit."
+  //
+  // ELLE N'A DEMANDE DE RETIRER PERSONNE, donc on n'a rien retire : le
+  // menu passe a sept. La borne reste, parce que la raison reste (au
+  // dela, un menu ne se lit plus, il se parcourt), et sept est le
+  // maximum a ne pas depasser sans la reconsulter.
+  assert.ok(MENU.length <= 7, "au dela de 7 entrees un menu ne se lit plus, il se parcourt");
   for (const l of [...MENU, CTA_MENU]) {
     assert.ok(l.href.startsWith("/") || estLienExterne(l.href), `lien douteux : ${l.href}`);
     assert.ok(l.libelle.trim().length > 0, "un lien sans libelle");

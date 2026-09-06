@@ -50,10 +50,26 @@ import {
   AVANTAGES_PLUS,
 } from "@/lib/checkout/avantages";
 import { FREE_LIMITS } from "@/lib/planLimits";
+import { TYPEFORM_PLUS_PAR_MOIS_USD, ZAPIER_PRO_PAR_MOIS_USD } from "@/lib/blog/liensIntegrations";
 
 export interface Etape {
   titre: string;
   corps: string;
+  /**
+   * LA CAPTURE DE L'INTERFACE, ET C'EST LE MANQUE NUMÉRO UN.
+   *
+   * Béné, 6 septembre 2026 : "chaque étape porte une capture réelle de
+   * l'interface Tiquiz [...] c'est le manque numéro un de la page
+   * actuelle : on y voit beaucoup de quiz, on n'y voit jamais le
+   * logiciel. Prévois les emplacements d'image même si les captures
+   * arrivent après."
+   *
+   * `src` est renseigné quand la capture EXISTE dans le dépôt ; `null`
+   * quand elle reste à prendre, et l'écran DIT alors laquelle. Un
+   * emplacement vide sans un mot passerait pour un oubli de mise en
+   * page ; nommé, il se remplit en deux minutes dans un vrai compte.
+   */
+  capture: { src: string; alt: string } | { src: null; aPrendre: string };
 }
 
 export interface Question {
@@ -473,7 +489,6 @@ export interface ContenuLanding {
   viralMotCle: string;
   viralCorps: string[];
   viralNote: string;
-  viralCta: string;
 
   /** LES TROIS FORMATS. Sa page les vend ensemble, la landing n'en
    *  vendait qu'un : "Tiquiz, c'est des quiz... mais aussi des sondages
@@ -513,41 +528,20 @@ export interface ContenuLanding {
   objectionsMotCle: string;
   objections: readonly Question[];
 
-  /** LE CTA DE FIN DE SECTION, SA SIGNATURE.
+  /**
+   * UN SEUL LIBELLÉ DE BOUTON PRINCIPAL, SUR TOUTE LA PAGE.
    *
-   *  Relevé sur sa page : chaque section se termine par un désir à la
-   *  première personne ("Je veux capturer ces emails", "Je veux vendre
-   *  avec un quiz", "Je me lance gratuitement"). Ce n'est pas un
-   *  libellé de bouton, c'est la phrase que le lecteur vient de se
-   *  dire, et c'est ce qui fait qu'on clique au milieu d'une page.
+   * Béné, 6 septembre 2026 : "un seul libellé de bouton principal sur
+   * toute la page : « Créer mon quiz gratuitement → », avec « Gratuit,
+   * sans carte bancaire » dessous. La page actuelle en compte treize
+   * différents, c'est à unifier."
    *
-   *  Ma landing n'en avait que TROIS en tout (haut de page, tarifs,
-   *  bandeau) : il fallait scroller jusqu'aux prix pour trouver un
-   *  bouton. */
-  /** LES BOUTONS, ET C'EST SA SIGNATURE.
-   *
-   *  Un bouton après chaque section, à la PREMIÈRE PERSONNE : ce n'est
-   *  pas un libellé, c'est la phrase que le lecteur vient de se dire.
-   *  Les onze sont relevés section par section sur sa page de vente et
-   *  ne se réécrivent pas. */
-  ctas: {
-    probleme: string;
-    viral: string;
-    qualifies: string;
-    offres: string;
-    etapes: string;
-    funnel: string;
-    demarque: string;
-    sio: string;
-    modes: string;
-    formats: string;
-    branding: string;
-  };
-  /** La rassurance sous chaque bouton du milieu de page. Sa page pose
-   *  "Pas besoin de CB - aucune obligation" sous le premier : la
-   *  répéter à chaque bouton est le déclencheur de sécurité, et il ne
-   *  coûte rien. */
-  ctaRassurance: string;
+   * Les onze `ctas` par section et les deux libellés du bandeau et de
+   * la viralité sont donc SUPPRIMÉS, pas laissés sans appelant : une
+   * table morte de onze phrases est exactement ce qu'un prochain
+   * passage rebranche en croyant réparer. Le bouton, c'est
+   * `ctaPrincipal` ; la ligne du dessous, c'est `sousCta`.
+   */
 
   /** LA TRANSFORMATION, ET ELLE VIENT DE SON PERSONA.
    *
@@ -586,8 +580,87 @@ export interface ContenuLanding {
   gratuitLignes: readonly string[];
   partageTitre: string;
 
+  /**
+   * LE TITRE DE LA PREUVE SUR L'ACCUEIL.
+   *
+   * Béné, 6 septembre 2026 : la landing courte porte "Ce qu'en font les
+   * gens qui s'en servent" et TROIS témoignages ; les seize autres
+   * partent sur `/tarifs`, sous son titre à elle
+   * (`avisTitre` / `avisMotCle`). Deux écrans, deux titres, une seule
+   * table de témoignages.
+   */
+  preuveTitre: string;
+
+  /**
+   * LES TROIS PALIERS EN UNE LIGNE CHACUN, POUR L'ACCUEIL.
+   *
+   * Le tableau complet et la bascule mensuel / annuel vivent sur
+   * `/tarifs` : c'est là qu'on choisit. Ici on répond seulement à
+   * "combien ça coûte", en trois lignes, avant de renvoyer au détail.
+   *
+   * AUCUN PRIX N'EST ÉCRIT ICI : `resume` les prend dans
+   * `colonnesDeTarif`, qui les prend dans `OWNER_CATALOG`. Un montant
+   * recopié serait faux au premier changement de tarif, et il vivrait
+   * sur l'écran où un lecteur le vérifie.
+   */
+  paliers: readonly { nom: string; resume: string }[];
+  paliersNote: string;
+  paliersLien: string;
+
   faqTitre: string;
   faqCorps: string;
+
+  /* -- CE QUI NE VIT QUE SUR /tarifs ------------------------------ */
+
+  /**
+   * LA PAGE QUI VEND, ET C'EST ELLE QUI PORTE LE DÉTAIL.
+   *
+   * Béné, 6 septembre 2026 : "/tarifs = la vraie page de vente". La
+   * landing répond "combien ça coûte" en trois lignes ; ici on répond
+   * "qu'est-ce que je prends", et on lève ce qui reste.
+   */
+  tarifsMetaTitre: string;
+  tarifsMetaDescription: string;
+  tarifsTitre: string;
+  tarifsMotCle: string;
+  tarifsCorps: string;
+  tarifsLienFonctionnalites: string;
+
+  /**
+   * LA COMPARAISON DE COÛT, ET ELLE RESTE FACTUELLE.
+   *
+   * Sa consigne : "Tiquiz à 17 €/mois contre Typeform plus Zapier,
+   * sachant que Zapier commence à 29,99 $ par mois. Reste factuel, ne
+   * dénigre aucun outil."
+   *
+   * AUCUN MONTANT N'EST ÉCRIT ICI : `comparaisonDeCout` les prend dans
+   * `OWNER_CATALOG` et dans `liensIntegrations.ts`, où ils ont été
+   * relevés sur les pages de tarifs. Et LES DEVISES NE SE CONVERTISSENT
+   * PAS : Typeform et Zapier facturent en dollars, Tiquiz en euros, et
+   * un taux de change inventé serait faux le lendemain.
+   */
+  coutTitre: string;
+  coutMotCle: string;
+  coutCorps: string;
+  coutColonnes: readonly [string, string, string];
+  coutLigneTiquiz: string;
+  coutLigneAilleurs: string;
+  coutNote: string;
+
+  /**
+   * LA FAQ ARGENT, SUR LA PAGE OÙ ON SORT SA CARTE.
+   *
+   * Trois de ces quatre questions vivent DÉJÀ dans sa page de vente et
+   * sont sélectionnées telles quelles par `faqArgent()`. La quatrième
+   * (changer de palier sans être facturé deux fois) n'existait nulle
+   * part : elle est écrite ici, et elle est vraie dans le code
+   * (`lib/checkout/planChange.ts` : prorata chez Stripe, et chez PayPal
+   * l'ancien abonnement n'est arrêté qu'une fois le nouveau ACTIVÉ).
+   */
+  faqArgentTitre: string;
+  faqArgentCorps: string;
+  faqPalierQ: string;
+  faqPalierR: string;
   /** Les 16 questions viennent de SA page de vente : voir `FAQ_VENTE`. */
 
   /** La démo : son vrai popquiz, en iframe. */
@@ -599,7 +672,6 @@ export interface ContenuLanding {
   /** Le bandeau dégradé de fin, le seul aplat de couleur de la page. */
   bandeTitre: string;
   bandeCorps: string;
-  bandeCta: string;
 }
 
 /**
@@ -617,12 +689,93 @@ export interface ContenuLanding {
  * CE MODULE NE LE LIT PAS, parce qu'un module qui touche au disque n'est
  * plus chargeable par le runner de tests, donc plus testé, donc
  * exactement là où les bugs s'installent (règle du 1er août). La lecture
- * vit dans `app/(site)/apercu-landing-8f2c9d41/faq.ts`, à côté de
+ * vit dans `components/landing/faq.ts`, à côté de
  * `anims.tsx` qui lit déjà des fichiers.
  */
 export interface GroupeQuestions {
   titre: string;
   questions: readonly Question[];
+}
+
+/**
+ * LES DEUX ADDITIONS, CÔTE À CÔTE.
+ *
+ * AUCUN MONTANT N'EST ÉCRIT ICI. Tiquiz vient de `OWNER_CATALOG`,
+ * Typeform Plus et Zapier Professional de `lib/blog/liensIntegrations.ts`,
+ * où ils ont été relevés sur les pages de tarifs des deux outils et où
+ * un test les surveille déjà. Un montant recopié serait faux au premier
+ * changement de tarif, et il vivrait sur l'écran où un lecteur vérifie.
+ *
+ * ET ON NE CONVERTIT PAS LES DEVISES : la ligne du bas est en dollars,
+ * celle du haut en euros, et la note le dit. Un taux de change inventé
+ * serait faux le lendemain.
+ */
+export function comparaisonDeCout(t: ContenuLanding): {
+  intitule: string;
+  formulaire: string;
+  intermediaire: string;
+  total: string;
+}[] {
+  const tiquiz = formatOwnerPrice(OWNER_CATALOG.mensuel).replace(/[.,]00/, "");
+  const ailleurs = TYPEFORM_PLUS_PAR_MOIS_USD + ZAPIER_PRO_PAR_MOIS_USD;
+  return [
+    {
+      intitule: t.coutLigneTiquiz,
+      formulaire: tiquiz,
+      // UN TIRET, PAS UNE CASE VIDE : une cellule vide se lit "on a
+      // oublié de remplir", un tiret se lit "il n'y en a pas".
+      intermediaire: "-",
+      total: `${tiquiz} ${t.prixParMois}`,
+    },
+    {
+      intitule: t.coutLigneAilleurs,
+      formulaire: `${TYPEFORM_PLUS_PAR_MOIS_USD} $`,
+      intermediaire: `${ZAPIER_PRO_PAR_MOIS_USD.toLocaleString("fr-FR")} $`,
+      total: `${ailleurs.toLocaleString("fr-FR")} $ ${t.prixParMois}`,
+    },
+  ];
+}
+
+/**
+ * LA FAQ ARGENT, ET ELLE SE SÉLECTIONNE AU LIEU DE SE RÉÉCRIRE.
+ *
+ * Béné, 6 septembre : "la FAQ argent uniquement : frais cachés,
+ * résiliation, changement de palier sans double facturation, carte
+ * bancaire à l'inscription."
+ *
+ * TROIS DE CES QUATRE QUESTIONS EXISTENT DÉJÀ dans sa page de vente, et
+ * elles sont prises TELLES QUELLES, par le début de leur intitulé
+ * (`GROUPES_FAQ` les nomme de la même façon). Les réécrire ici ferait
+ * deux versions de la même réponse, sur deux pages du même domaine.
+ *
+ * LA QUATRIÈME N'EXISTAIT NULLE PART, et c'est dit : elle vit dans
+ * l'objet de langue (`faqPalierQ` / `faqPalierR`), et elle est vraie
+ * dans le code, pas dans une formule.
+ *
+ * `manquantes` est rendu à l'appelant pour qu'il REFUSE : une sélection
+ * qui ne trouve rien est une sélection qu'on croit appliquée (leçon des
+ * corrections de FAQ du 4 septembre).
+ */
+export const DEBUTS_FAQ_ARGENT: readonly string[] = [
+  "Y a-t-il des frais cachés",
+  "Comment résilier mon abonnement",
+  "Ai-je besoin d'une carte bancaire",
+];
+
+export function faqArgent(
+  t: ContenuLanding,
+  groupes: readonly GroupeQuestions[],
+): { questions: Question[]; manquantes: string[] } {
+  const toutes = groupes.flatMap((g) => g.questions);
+  const questions: Question[] = [];
+  const manquantes: string[] = [];
+  for (const debut of DEBUTS_FAQ_ARGENT) {
+    const trouvee = toutes.find((q) => q.q.startsWith(debut));
+    if (trouvee) questions.push(trouvee);
+    else manquantes.push(debut);
+  }
+  questions.push({ q: t.faqPalierQ, r: t.faqPalierR });
+  return { questions, manquantes };
 }
 
 /**
@@ -788,6 +941,104 @@ export const TEMOIGNAGES: readonly Temoignage[] = [
  * ça, deux rendus du serveur pourraient ne pas donner le même trio, et
  * l'hydratation crierait.
  */
+/**
+ * DEUX TÉMOIGNAGES QUI DISENT LA MÊME CHOSE NE VONT PAS SUR LA MÊME PAGE.
+ *
+ * Béné, 6 septembre 2026 : "deux témoignages sont le même texte sous
+ * deux noms. Celui de « Gwenn, Solopreneur » et celui d'« Eric
+ * Legrigeois, Infopreneur » sont quasi identiques mot pour mot. Ne les
+ * affiche jamais sur la même page."
+ *
+ * Elle a raison, et c'est mesurable : les deux partagent une suite de
+ * 21 MOTS D'AFFILÉE ("outil de quiz parfaitement pensé marketing qui
+ * est ... à Systeme.io pour récupérer les leads et les taguer
+ * automatiquement sans devoir passer par des outils comme Zapier ou
+ * Make"), et les deux viennent de Trustpilot le même jour. Deux avis
+ * qui se recopient, lus l'un sous l'autre, ne crédibilisent pas : ils
+ * font douter des treize autres.
+ *
+ * ON NE RETIRE PAS UN NOM EN DUR. Un nom écrit dans le code protège
+ * contre CE doublon là et contre aucun autre, et il faudrait y penser
+ * le jour où elle colle un seizième avis. La règle regarde le TEXTE :
+ * deux témoignages qui partagent une suite de `MOTS_COMMUNS` mots sont
+ * le même, et c'est le PREMIER de la liste qui reste.
+ *
+ * LE SEUIL EST LOIN DES DEUX GROUPES, jamais à la limite. MESURÉ le
+ * 6 septembre sur les 153 paires possibles : la plus longue suite
+ * commune entre deux témoignages DIFFÉRENTS fait 5 mots, celle du
+ * doublon en fait 21. Un seuil qui départage à la limite finit par
+ * retirer un vrai témoignage, et personne ne s'en aperçoit.
+ *
+ * ET ON NE RÉÉCRIT JAMAIS UN TÉMOIGNAGE POUR ÉVITER LE DOUBLON : ce
+ * sont des gens qui ont écrit ça. On en affiche un, pas un mélange.
+ */
+export const MOTS_COMMUNS = 12;
+
+function motsNormalises(texte: string): string[] {
+  return texte
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean);
+}
+
+/** Les suites de `MOTS_COMMUNS` mots d'un texte, en clés comparables. */
+function suites(texte: string): Set<string> {
+  const mots = motsNormalises(texte);
+  const out = new Set<string>();
+  for (let i = 0; i + MOTS_COMMUNS <= mots.length; i += 1) {
+    out.add(mots.slice(i, i + MOTS_COMMUNS).join(" "));
+  }
+  return out;
+}
+
+export function sansDoublons(tous: readonly Temoignage[]): Temoignage[] {
+  const gardes: Temoignage[] = [];
+  const vues: Set<string>[] = [];
+  for (const v of tous) {
+    const s = suites(v.texte);
+    const deja = vues.some((autre) => [...s].some((x) => autre.has(x)));
+    if (deja) continue;
+    gardes.push(v);
+    vues.push(s);
+  }
+  return gardes;
+}
+
+/**
+ * LES TROIS TÉMOIGNAGES DE L'ACCUEIL, NOMMÉS PAR ELLE.
+ *
+ * Béné, 6 septembre 2026 : "trois témoignages seulement, verbatim, sans
+ * modifier leur texte : Maurice Massolin, Adeline (thérapeute),
+ * Bernard C. (consultant). Les 16 autres partent sur /tarifs."
+ *
+ * Ce sont des NOMS, pas un tri : les choisir par longueur (ce que
+ * faisait `preuvePrecoce`) donnerait trois autres personnes au premier
+ * avis ajouté, sans que personne ne le décide. Un nom qui ne serait
+ * plus dans la table est IGNORÉ plutôt que rendu vide.
+ */
+export const TEMOINS_ACCUEIL = ["Maurice Massolin", "Adeline", "Bernard C."] as const;
+
+export function temoinsAccueil(tous: readonly Temoignage[]): Temoignage[] {
+  return TEMOINS_ACCUEIL.map((nom) => tous.find((v) => v.nom === nom)).filter(
+    (x): x is Temoignage => x !== undefined,
+  );
+}
+
+/**
+ * LES TÉMOIGNAGES DE `/tarifs` : tous les autres, sans doublon.
+ *
+ * Les trois de l'accueil en sortent (ils y sont déjà, et les revoir
+ * n'apprend rien), et le doublon Gwenn / Eric est réduit à un.
+ */
+export function temoinsTarifs(tous: readonly Temoignage[]): Temoignage[] {
+  const surLAccueil = new Set<string>(TEMOINS_ACCUEIL);
+  return sansDoublons(tous.filter((v) => !surLAccueil.has(v.nom)));
+}
+
 export function preuvePrecoce(
   tous: readonly Temoignage[],
   combien = 3,
@@ -936,6 +1187,39 @@ export function colonnesDeTarif(t: ContenuLanding): ColonneTarif[] {
 }
 
 /**
+ * LES TROIS PALIERS DE L'ACCUEIL, AVEC LEUR PRIX.
+ *
+ * Béné, 6 septembre 2026 : "Gratuit à vie / Tiquiz 17 €/mois / Tiquiz
+ * PLUS 29 €/mois avec ses résumés d'une ligne."
+ *
+ * LE PRIX VIENT DE `colonnesDeTarif`, DONC DE `OWNER_CATALOG`, jamais
+ * du texte : c'est le montant que le bon de commande encaisse. Un prix
+ * recopié dans un objet de langue serait faux au premier changement de
+ * tarif, et il vivrait à un clic de la page qui le contredirait.
+ *
+ * Le NOM affiché, lui, reste celui de l'objet de langue : "Gratuit à
+ * vie" n'existe nulle part dans le catalogue, et "Tiquiz PLUS" y est
+ * écrit "Tiquiz mensuel Plus", ce qui nommerait une cadence sur une
+ * ligne qui n'en parle pas.
+ */
+export function paliersAffiches(
+  t: ContenuLanding,
+): { nom: string; prix: string; cadence: string | null; resume: string }[] {
+  const colonnes = colonnesDeTarif(t);
+  return t.paliers.map((p, i) => {
+    const c = colonnes[i];
+    return {
+      nom: p.nom,
+      // Le gratuit porte son mot ("Gratuit") et aucune cadence : écrire
+      // "0 €/mois" ferait lire un abonnement là où il n'y en a pas.
+      prix: c ? c.prix : "",
+      cadence: c && i > 0 ? c.cadence : null,
+      resume: p.resume,
+    };
+  });
+}
+
+/**
  * LA GRILLE COMPARATIVE, LIGNE PAR LIGNE.
  *
  * Béné, 5 septembre 2026 : "on n'a qu'à rajouter une grille de
@@ -999,22 +1283,23 @@ const fr: ContenuLanding = {
 
   etiquette: "Générateur de quiz connecté à Systeme.io",
   titre: "Booste ton trafic",
-  titreDefilant: [
-    "Booste ton trafic",
-    "Génère plus de leads",
-    "Améliore tes offres",
-    "Booste tes ventes",
-    "Démarque-toi",
-  ],
+  // TROIS ANGLES, DANS CET ORDRE (Béné, 6 septembre 2026). Cinq
+  // phrases faisaient un cycle de quinze secondes : le visiteur
+  // décroche avant d'avoir vu la troisième.
+  titreDefilant: ["Booste ton trafic", "Génère plus de leads", "Booste tes ventes"],
   motCle: "grâce aux quiz interactifs",
   accroche:
-    "Crée des quiz viraux qui attirent du trafic qualifié sur tes offres et transforment tes visiteurs en clients payants, sans investir en publicité.",
+    "L'IA écrit ton quiz à partir d'une description de ton sujet. Tu relis, tu remplaces deux ou trois formulations par les tiennes, tu publies. Chaque personne qui répond arrive dans Systeme.io avec son email et le tag qui correspond à son profil.",
   pourQui:
     "Pour les entrepreneurs, les coachs, les consultants, les formateurs, les infopreneurs et les affiliés qui ont une offre et pas assez de monde à qui la présenter.",
-  ctaPrincipal: "Commencer gratuitement",
+  ctaPrincipal: "Créer mon quiz gratuitement",
   ctaSecondaire: "Voir la démo",
-  sousCta: "Aucune carte demandée. Le quiz que tu génères reste à toi.",
-  rassurances: ["Connecté à Systeme.io", "Quiz illimités", "IA intégrée"],
+  sousCta: "Gratuit, sans carte bancaire",
+  // "QUIZ ILLIMITÉS" EST RETIRÉ, ET C'EST ELLE QUI L'A VU : c'est FAUX
+  // sur le plan gratuit, borné à 1 quiz, et la ligne se lisait juste à
+  // côté de "gratuit, sans carte". Une promesse fausse posée sous le
+  // premier bouton coûte plus qu'elle ne rapporte.
+  rassurances: ["Connecté à Systeme.io", "Sans Zapier ni Make", "Zéro ligne de code"],
   bandeau: [
     "Quiz IA illimités",
     "Sondages illimités",
@@ -1036,7 +1321,7 @@ const fr: ContenuLanding = {
     "Mini-tunnels de vente",
     "Données exploitables",
   ],
-  preuve: "Plus de 200 entrepreneurs utilisent déjà Tiquiz",
+  preuve: "Plus de 200 solopreneurs ont créé leur compte Tiquiz",
   copier: "Copier",
 
   problemeTitre: "Chaque visiteur qui repart sans te laisser son email est",
@@ -1094,29 +1379,46 @@ const fr: ContenuLanding = {
   funnelTagLegende:
     "Le tag part dans Systeme.io avec le contact. S'il n'existe pas encore, Tiquiz le crée.",
 
-  mecaniqueTitre: "Comment marche",
-  mecaniqueMotCle: "Tiquiz",
+  mecaniqueTitre: "Trois étapes, et ton quiz",
+  mecaniqueMotCle: "tourne",
   etapeMot: "Étape",
+  // SES TROIS ÉTAPES, MOT POUR MOT (Béné, 6 septembre 2026).
+  //
+  // L'étape "viralité" de l'ancienne page part sur
+  // /fonctionnalites/partage-et-viralite : "ce n'est pas une étape,
+  // c'est une conséquence, et elle est optionnelle."
+  //
+  // CHAQUE ÉTAPE PORTE UNE CAPTURE DU LOGICIEL, pas un dessin de quiz.
+  // Deux existent dans le dépôt, la troisième est NOMMÉE et reste à
+  // prendre : un emplacement vide sans un mot passerait pour un oubli.
   etapes: [
     {
-      titre: "Crée le quiz parfait à partir d'un simple prompt",
+      titre: "Tu décris ton sujet, l'IA écrit le quiz",
       corps:
-        "Personnalise ton quiz en un éclair à l'aide de l'intelligence artificielle de Tiquiz. Tu obtiens en quelques secondes un modèle unique que tu n'as plus qu'à customiser avec ta personnalité, ton logo, tes images, tes couleurs, ainsi que les URL de ton choix. Tu as déjà un quiz, ou tu ne veux pas utiliser l'IA ? Tu peux aussi importer un quiz existant ou le créer 100 % manuellement.",
+        "Tu expliques à qui tu t'adresses et ce que le quiz doit servir. Tu récupères les questions, les options et les profils de résultat en quelques secondes. Tu relis, tu mets ta personnalité, ton logo, tes couleurs. Et si tu ne veux pas d'IA, tu importes un quiz existant ou tu écris tout toi-même.",
+      capture: {
+        src: "/screenshots/tiquiz-creer-quiz.png",
+        alt: "L'écran Créer un quiz de Tiquiz : le choix entre créer manuellement, générer avec l'IA ou importer un fichier, puis l'objectif, le format court ou long, le public cible et le type de quiz par profil ou avec un score.",
+      },
     },
     {
-      titre: "Partage ton quiz en 1 clic",
+      titre: "Tu le publies là où tes gens passent déjà",
       corps:
-        "Copie le lien de ton quiz et diffuse-le par email ou sur tes réseaux, avec ton nom de domaine personnalisé. Ou copie le code html et intègre-le partout où ça te semble le plus efficace : pop-up, page d'accueil, pied de page, en-tête, article de blog, appel à l'action.",
+        "Tu copies un lien et tu le colles dans un email, une story, une bio, un QR code. Ou tu copies six lignes de code et tu poses le quiz dans une page Systeme.io, un article WordPress, une page de vente. Avec ton nom de domaine si tu en as un, sinon le quiz est la page.",
+      capture: {
+        src: "/screenshots/tiquiz-editeur.png",
+        alt: "L'éditeur de quiz Tiquiz : la liste des questions et des résultats à gauche, l'aperçu du quiz à droite, et les onglets Créer, Partager, Automatiser et Résultats en haut.",
+      },
     },
     {
-      titre: "Propage ta marque comme une trainée de poudre",
+      titre: "Les leads arrivent dans Systeme.io, déjà rangés",
       corps:
-        "Pour découvrir les résultats de leur quiz, tes prospects devront d'abord le partager sur leurs réseaux, exposant ainsi ta marque à de nouvelles personnes qui leur ressemblent. Résultat : ton quiz devient viral, et tu boostes ta présence en ligne sans dépenser un centime en publicité.",
-    },
-    {
-      titre: "Capture, exporte, automatise !",
-      corps:
-        "Capture tes leads directement dans Tiquiz, exporte-les en 1 clic vers ton autorépondeur, puis déclenche les automatisations de ton choix.",
+        "Chaque personne qui répond entre dans ton compte Systeme.io avec son email et le tag de son profil. Le tag part avec le contact, et s'il n'existe pas encore, Tiquiz le crée. À partir de là, tes automatisations font le reste.",
+      capture: {
+        src: null,
+        aPrendre:
+          "L'écran Mes leads, avec la colonne des tags posés sur chaque contact.",
+      },
     },
   ],
 
@@ -1206,8 +1508,8 @@ const fr: ContenuLanding = {
     "Ton marketing devient un jeu captivant où tout le monde y gagne : tes prospects s'amusent en découvrant tes offres, et toi, tu vois tes conversions grimper en flèche.",
   ],
 
-  outilsTitre: "Les autres outils de quiz s'arrêtent",
-  outilsMotCle: "avant Systeme.io",
+  outilsTitre: "Ce qu'il faut installer entre ton quiz et",
+  outilsMotCle: "Systeme.io",
   outilsCorps:
     "Ils font tous de très bons quiz. La question n'est pas là : elle est de savoir ce qu'il faut installer entre leur formulaire et ton compte Systeme.io, et qui pose le tag une fois le lead arrivé.",
   outilsColonnes: ["", "Ce qu'il faut entre les deux", "Un tag par profil"],
@@ -1237,7 +1539,6 @@ const fr: ContenuLanding = {
   ],
   viralNote:
     "Le partage n'est jamais obligatoire, et tu peux le couper. Sur un sujet intime, argent, santé, famille, personne ne partage, et c'est normal : ça ne dit rien de la qualité de ton quiz.",
-  viralCta: "Je veux mon quiz viral",
 
   formatsTitre: "Un quiz, un sondage, ou une",
   formatsMotCle: "vidéo qui pose des questions",
@@ -1280,7 +1581,7 @@ const fr: ContenuLanding = {
       r: "Tiquiz en remplace deux : ton créateur de formulaire, et l'intermédiaire qui l'envoie vers Systeme.io. Et tu ne changes rien à ce que tu utilises déjà.",
     },
     {
-      q: "Je ne suis pas technique.",
+      q: "Moi et la technique, ça fait deux.",
       r: "Il n'y a rien à installer, rien à connecter à la main, aucune ligne de code à écrire. Tu décris ton sujet, tu relis, tu publies. Si tu sais copier un lien, tu sais mettre ton quiz en ligne.",
     },
     {
@@ -1292,25 +1593,11 @@ const fr: ContenuLanding = {
       r: "Un quiz marche partout où quelqu'un se pose une question sur lui même, et c'est à peu près partout. Profil ou score, tu choisis la mécanique. Et le gratuit existe pour que tu le vérifies chez toi avant de payer quoi que ce soit.",
     },
     {
-      q: "J'ai déjà testé plein de trucs sans résultat.",
-      r: "Alors ne me crois pas sur parole. Crée ton quiz gratuitement, mets le en ligne, et regarde le nombre d'adresses au bout d'une semaine. C'est le seul argument qui compte, et c'est le tien.",
+      q: "J'ai déjà testé d'autres outils, ça n'a rien donné.",
+      r: "Alors ne me crois pas sur parole. Crée ton quiz gratuitement, mets-le en ligne, et regarde le nombre d'adresses au bout d'une semaine. C'est le seul argument qui compte, et c'est le tien.",
     },
   ],
 
-  ctas: {
-    probleme: "Je veux capturer ces emails",
-    viral: "Je veux mon quiz viral",
-    qualifies: "Je veux attirer des vrais clients",
-    offres: "Je veux améliorer mes offres",
-    etapes: "C'est parti !",
-    funnel: "Je veux vendre avec un quiz",
-    demarque: "Je veux me démarquer",
-    sio: "Je me lance gratuitement",
-    modes: "Je crée mon quiz aujourd'hui",
-    formats: "J'ai besoin de ça aussi",
-    branding: "Je crée mon quiz maintenant",
-  },
-  ctaRassurance: "Gratuit, sans carte bancaire",
 
   avisTitre: "Il y a un avant, et un",
   avisMotCle: "après Tiquiz",
@@ -1323,8 +1610,8 @@ const fr: ContenuLanding = {
     "Et ça continue de tourner les jours où tu ne publies rien.",
   ],
 
-  prixTitre: "Des tarifs tout en",
-  prixMotCle: "douceur",
+  prixTitre: "Trois paliers, et le premier",
+  prixMotCle: "ne coûte rien",
   prixNote:
     "Les prix affichés sont ceux du bon de commande, à l'euro. Tu commences gratuitement, sans carte, et tu montes de palier le jour où ton quiz te rapporte plus qu'il ne te coûte.",
   prixMensuel: "Mensuel",
@@ -1361,8 +1648,60 @@ const fr: ContenuLanding = {
   illimite: "Illimité",
   partageTitre: "Dans tous les paliers, gratuit compris",
 
+  preuveTitre: "Ce qu'en font les gens qui s'en servent",
+
+  // LES TROIS LIGNES DE PALIERS, ET AUCUN PRIX ÉCRIT ICI.
+  // `paliersAffiches` les prend dans `colonnesDeTarif`, donc dans
+  // `OWNER_CATALOG` : c'est le montant que le bon de commande encaisse.
+  paliers: [
+    {
+      nom: "Gratuit à vie",
+      resume:
+        "1 quiz, 1 sondage, 1 Popquiz, 10 réponses visibles sur 30 jours glissants. Sans carte bancaire.",
+    },
+    {
+      nom: "Tiquiz",
+      resume:
+        "Quiz, sondages et Popquiz illimités, réponses illimitées, ta marque seule sur le quiz.",
+    },
+    {
+      nom: "Tiquiz PLUS",
+      resume:
+        "Multiprofils, analyse IA des résultats, plusieurs clés API Systeme.io, les 3 générateurs.",
+    },
+  ],
+  paliersNote:
+    "En annuel, deux mois sont offerts. Les prix affichés sont ceux du bon de commande, à l'euro.",
+  paliersLien: "Le détail de chaque palier",
+
   faqTitre: "Questions fréquentes",
   faqCorps: "Clique sur une question pour lire la réponse.",
+
+  tarifsMetaTitre: "Tarifs Tiquiz : gratuit à vie, ou tout débloquer",
+  tarifsMetaDescription:
+    "Trois paliers, le premier ne coûte rien et ne demande pas de carte bancaire. Le détail ligne par ligne, ce que ça remplace, et les questions d'argent.",
+  tarifsTitre: "Choisis ton palier, et",
+  tarifsMotCle: "change d'avis quand tu veux",
+  tarifsCorps:
+    "Le gratuit n'expire pas et ne demande pas de carte. Les deux autres se résilient depuis ton compte, en deux clics, sans écrire à personne.",
+  tarifsLienFonctionnalites: "Voir ce que fait chaque fonctionnalité",
+
+  coutTitre: "Ce que ça remplace, et ce que",
+  coutMotCle: "ça te coûte",
+  coutCorps:
+    "Pour envoyer les réponses d'un formulaire dans Systeme.io, la plupart des outils demandent un intermédiaire, donc un deuxième abonnement. Voici les deux additions, côte à côte.",
+  coutColonnes: ["Ce que tu paies", "Le formulaire", "L'intermédiaire"],
+  coutLigneTiquiz: "Tiquiz, connecté à Systeme.io sans intermédiaire",
+  coutLigneAilleurs: "Typeform Plus, plus Zapier Professional",
+  coutNote:
+    "Les deux additions ne sont pas dans la même monnaie : Typeform et Zapier facturent en dollars, Tiquiz en euros. On ne convertit pas, un taux de change inventé serait faux demain. Ces deux outils font très bien des choses que Tiquiz ne fait pas.",
+
+  faqArgentTitre: "Les questions d'argent",
+  faqArgentCorps:
+    "Les autres questions sont sur la page d'accueil et dans le centre d'aide.",
+  faqPalierQ: "Si je change de palier en cours de mois, je paie deux fois ?",
+  faqPalierR:
+    "Non. En carte bancaire, ce qui reste de ton mois en cours est déduit du nouveau palier, et le montant exact s'affiche avant que tu valides. En PayPal, le nouvel abonnement ne remplace l'ancien qu'une fois qu'il est actif : il n'y a jamais deux prélèvements en route en même temps.",
 
   demoTitre: "Regarde ce que",
   demoMotCle: "ton visiteur va vivre",
@@ -1374,7 +1713,6 @@ const fr: ContenuLanding = {
   bandeTitre: "Ta liste emails ne va pas se construire toute seule",
   bandeCorps:
     "Pendant que tu hésites, tes visiteurs quittent ton site sans laisser leur email. Un quiz change ça, et tu le crées en quelques minutes.",
-  bandeCta: "Je crée mon quiz aujourd'hui",
 };
 
 const en: ContenuLanding = {
@@ -1385,22 +1723,16 @@ const en: ContenuLanding = {
 
   etiquette: "Quiz builder connected to Systeme.io",
   titre: "Grow your traffic",
-  titreDefilant: [
-    "Grow your traffic",
-    "Generate more leads",
-    "Sharpen your offers",
-    "Grow your sales",
-    "Stand out",
-  ],
+  titreDefilant: ["Grow your traffic", "Generate more leads", "Grow your sales"],
   motCle: "with interactive quizzes",
   accroche:
-    "Build viral quizzes that bring qualified traffic to your offers and turn your visitors into paying customers, without spending on ads.",
+    "The AI writes your quiz from a description of your topic. You read it over, you swap two or three sentences for your own, you publish. Everyone who answers lands in Systeme.io with their email and the tag that matches their profile.",
   pourQui:
     "For the entrepreneurs, coaches, consultants, trainers, course creators and affiliates who have an offer and not enough people to show it to.",
   ctaPrincipal: "Build my quiz for free",
-  ctaSecondaire: "Create my free account",
-  sousCta: "No card required. The quiz you generate stays yours.",
-  rassurances: ["Free forever", "No card needed", "Connected to Systeme.io"],
+  ctaSecondaire: "Watch the demo",
+  sousCta: "Free, no credit card",
+  rassurances: ["Connected to Systeme.io", "No Zapier, no Make", "Not a line of code"],
   bandeau: [
     "Your own branding",
     "Your own domain",
@@ -1411,7 +1743,7 @@ const en: ContenuLanding = {
     "Responsive design",
     "100 languages",
   ],
-  preuve: "More than 200 entrepreneurs already use Tiquiz",
+  preuve: "More than 200 solopreneurs have created their Tiquiz account",
   copier: "Copy",
 
   problemeTitre: "Every visitor who leaves without their email is a lost customer",
@@ -1470,29 +1802,36 @@ const en: ContenuLanding = {
   funnelTagLegende:
     "The tag travels to Systeme.io with the contact. If it does not exist yet, Tiquiz creates it.",
 
-  mecaniqueTitre: "How",
-  mecaniqueMotCle: "Tiquiz",
+  mecaniqueTitre: "Three steps, and your quiz",
+  mecaniqueMotCle: "runs",
   etapeMot: "Step",
   etapes: [
     {
-      titre: "You describe your topic",
+      titre: "You describe your topic, the AI writes the quiz",
       corps:
-        "Your subject, who you are talking to, what you want out of it. Three fields, not a ten minute form.",
+        "You say who you are talking to and what the quiz is for. Questions, options and result profiles come back in seconds. You read them over, you add your personality, your logo, your colours. And if you would rather skip the AI, you import an existing quiz or write everything yourself.",
+      capture: {
+        src: "/screenshots/tiquiz-creer-quiz.png",
+        alt: "The Tiquiz quiz builder: choose between writing manually, generating with AI or importing a file, then the goal, the short or long format, the audience and the profile or score mechanic.",
+      },
     },
     {
-      titre: "The AI writes the quiz",
+      titre: "You publish it where your people already are",
       corps:
-        "Questions, answers and result profiles appear in front of you. It is a solid starting point, and you fix whatever does not sound like you.",
+        "You copy a link and paste it into an email, a story, a bio, a QR code. Or you copy six lines of code and drop the quiz into a Systeme.io page, a WordPress article, a sales page. On your own domain if you have one, otherwise the quiz is the page.",
+      capture: {
+        src: "/screenshots/tiquiz-editeur.png",
+        alt: "The Tiquiz editor: questions and results on the left, a live preview of the quiz on the right, and the Create, Share, Automate and Results tabs on top.",
+      },
     },
     {
-      titre: "You publish",
+      titre: "Leads land in Systeme.io, already sorted",
       corps:
-        "On your own domain, inside a Systeme.io page, inside WordPress, or on its own address. You choose, and the design follows your brand.",
-    },
-    {
-      titre: "Every profile points to its offer",
-      corps:
-        "The result is not a dead end: it points to the offer that matches that profile, and the contact lands in Systeme.io with its tag.",
+        "Everyone who answers enters your Systeme.io account with their email and their profile tag. The tag travels with the contact, and if it does not exist yet, Tiquiz creates it. From there, your automations do the rest.",
+      capture: {
+        src: null,
+        aPrendre: "The Leads screen, with the tags column on each contact.",
+      },
     },
   ],
 
@@ -1567,8 +1906,8 @@ const en: ContenuLanding = {
     "Your marketing becomes a game everyone wins: your prospects have fun discovering your offers, and you watch your conversions climb.",
   ],
 
-  outilsTitre: "Other quiz tools stop",
-  outilsMotCle: "before Systeme.io",
+  outilsTitre: "What you have to install between your quiz and",
+  outilsMotCle: "Systeme.io",
   outilsCorps:
     "They all build very good quizzes. That is not the question: the question is what you have to install between their form and your Systeme.io account, and who applies the tag once the lead arrives.",
   outilsColonnes: ["", "What goes in between", "One tag per profile"],
@@ -1597,7 +1936,6 @@ const en: ContenuLanding = {
   ],
   viralNote:
     "Sharing is never mandatory, and you can switch it off. On a private topic, money, health, family, nobody shares, and that is normal: it says nothing about the quality of your quiz.",
-  viralCta: "I want my quiz to go viral",
 
   formatsTitre: "A quiz, a survey, or a",
   formatsMotCle: "video that asks questions",
@@ -1640,7 +1978,7 @@ const en: ContenuLanding = {
       r: "Tiquiz replaces two: your form builder, and the middleman that sends it to Systeme.io. And you change nothing about what you already use.",
     },
     {
-      q: "I am not technical.",
+      q: "Me and tech, that makes two.",
       r: "Nothing to install, nothing to wire by hand, not a line of code to write. You describe your topic, you read it over, you publish. If you can copy a link, you can put your quiz online.",
     },
     {
@@ -1657,20 +1995,6 @@ const en: ContenuLanding = {
     },
   ],
 
-  ctas: {
-    probleme: "I want to capture those emails",
-    viral: "I want my quiz to go viral",
-    qualifies: "I want real customers",
-    offres: "I want better offers",
-    etapes: "Let's go",
-    funnel: "I want to sell with a quiz",
-    demarque: "I want to stand out",
-    sio: "Get me started for free",
-    modes: "Build my quiz today",
-    formats: "I need that too",
-    branding: "Build my quiz now",
-  },
-  ctaRassurance: "Free, no card needed",
 
   avisTitre: "There is a before, and an",
   avisMotCle: "after Tiquiz",
@@ -1683,8 +2007,8 @@ const en: ContenuLanding = {
     "And it keeps running on the days you publish nothing.",
   ],
 
-  prixTitre: "Pricing, the",
-  prixMotCle: "gentle way",
+  prixTitre: "Three tiers, and the first one",
+  prixMotCle: "costs nothing",
   prixNote:
     "These are the checkout prices, to the euro. You start for free, with no card, and move up the day your quiz brings in more than it costs.",
   prixMensuel: "Monthly",
@@ -1721,8 +2045,55 @@ const en: ContenuLanding = {
   illimite: "Unlimited",
   partageTitre: "In every plan, free included",
 
+  preuveTitre: "What the people using it do with it",
+  paliers: [
+    {
+      nom: "Free forever",
+      resume:
+        "1 quiz, 1 survey, 1 Popquiz, 10 answers visible over a rolling 30 days. No credit card.",
+    },
+    {
+      nom: "Tiquiz",
+      resume:
+        "Unlimited quizzes, surveys and Popquiz, unlimited answers, your brand alone on the quiz.",
+    },
+    {
+      nom: "Tiquiz PLUS",
+      resume:
+        "Multiple profiles, AI analysis of results, several Systeme.io API keys, all 3 generators.",
+    },
+  ],
+  paliersNote:
+    "Two months are free on the yearly plan. The prices shown are the ones on the order form, to the euro.",
+  paliersLien: "The detail of each tier",
+
   faqTitre: "Frequently asked",
   faqCorps: "Click a question to read the answer.",
+
+  tarifsMetaTitre: "Tiquiz pricing: free forever, or unlock everything",
+  tarifsMetaDescription:
+    "Three tiers, the first one costs nothing and asks for no card. The full breakdown, what it replaces, and the money questions.",
+  tarifsTitre: "Pick your tier, and",
+  tarifsMotCle: "change your mind any time",
+  tarifsCorps:
+    "The free tier never expires and asks for no card. The other two are cancelled from your account, in two clicks, without writing to anyone.",
+  tarifsLienFonctionnalites: "See what each feature does",
+
+  coutTitre: "What it replaces, and what",
+  coutMotCle: "it costs you",
+  coutCorps:
+    "To send form answers into Systeme.io, most tools need a middleman, so a second subscription. Here are the two bills, side by side.",
+  coutColonnes: ["What you pay", "The form tool", "The middleman"],
+  coutLigneTiquiz: "Tiquiz, connected to Systeme.io with no middleman",
+  coutLigneAilleurs: "Typeform Plus, plus Zapier Professional",
+  coutNote:
+    "The two bills are not in the same currency: Typeform and Zapier bill in dollars, Tiquiz in euros. We do not convert, an invented exchange rate would be wrong tomorrow. Both tools do things Tiquiz does not do.",
+
+  faqArgentTitre: "The money questions",
+  faqArgentCorps: "The other questions live on the home page and in the help centre.",
+  faqPalierQ: "If I switch tiers mid-month, do I pay twice?",
+  faqPalierR:
+    "No. On card, what is left of your current month is deducted from the new tier, and the exact amount shows before you confirm. On PayPal, the new subscription only replaces the old one once it is active: there are never two charges running at the same time.",
 
   demoTitre: "See what",
   demoMotCle: "your visitor will experience",
@@ -1734,7 +2105,6 @@ const en: ContenuLanding = {
   bandeTitre: "Your email list will not build itself",
   bandeCorps:
     "While you hesitate, your visitors leave without giving you their email. A quiz changes that, and you build one in minutes.",
-  bandeCta: "Build my quiz today",
 };
 
 /**

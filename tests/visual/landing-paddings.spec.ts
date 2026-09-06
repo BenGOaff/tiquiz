@@ -23,7 +23,27 @@
 
 import { test, expect } from "@playwright/test";
 
+// L'ADRESSE DE LA LANDING, ET ELLE N'EST PAS `/`.
+//
+// Bene, 6 septembre 2026 : "montre moi la landing sur la page apercu
+// 8f2 etc pas directement en page d'accueil, on la valide d'abord
+// ensemble." `tiquiz.fr/` sert donc encore sa page de vente ; la
+// landing vit derriere ce slug introuvable, en noindex.
 const LANDING = "/apercu-landing-8f2c9d41?lang=fr";
+
+// OÙ VIVENT SES ANIMATIONS DEPUIS LE 6 SEPTEMBRE, ET C'EST SA DÉCISION.
+//
+// La landing courte ne porte AUCUN de ses blocs animés : les sections
+// qu'ils illustraient sont parties sur `/fonctionnalites/<slug>`
+// ("rien n'est à jeter, tout est à déplacer"). Le fait que ce test
+// mesure n'a pas bougé d'un pouce (un bloc levé de sa page est INERTE
+// tant que le déclencheur ne pose pas sa classe) ; c'est la page qui le
+// porte qui a changé.
+//
+// ON RETARGETE, ON NE RELÂCHE PAS. Un test qu'on assouplit parce qu'il
+// rougit ne protège plus rien, et c'est exactement ce bloc là qui a
+// trouvé trois animations figées pour toujours le 5 septembre.
+const PAGE_ANIMEE = "/fonctionnalites/generation-ia";
 
 /** Le minimum qu'elle demande, en pixels, en haut ET en bas. */
 const MINIMUM = 100;
@@ -57,7 +77,7 @@ test("chaque section de la landing porte au moins 100 px en haut et en bas", asy
 });
 
 test("les blocs animés levés de la page de vente s'animent vraiment", async ({ page }) => {
-  await page.goto(LANDING, { waitUntil: "domcontentloaded" });
+  await page.goto(PAGE_ANIMEE, { waitUntil: "domcontentloaded" });
 
   // ON DESCEND VRAIMENT, ET C'EST À PRENDRE AU MOT.
   //
@@ -138,7 +158,7 @@ test("un saut d'un seul coup ne laisse aucun bloc figé", async ({ page }) => {
   // opt-in-vs-quiz, tes-pixels et ton-branding restaient à ZÉRO élément
   // animé, donc figés dans leur état d'avant l'animation, pour toujours.
   // Ils s'affichaient très bien : rien ne le disait.
-  await page.goto(LANDING, { waitUntil: "domcontentloaded" });
+  await page.goto(PAGE_ANIMEE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(400);
 
   await page.evaluate(() =>
@@ -146,8 +166,13 @@ test("un saut d'un seul coup ne laisse aucun bloc figé", async ({ page }) => {
   );
   await page.waitForTimeout(800);
 
-  // On remonte au milieu : c'est là qu'on REGARDE ce qui a été franchi.
-  await page.evaluate(() => window.scrollTo({ top: 12000, behavior: "instant" }));
+  // On remonte au MILIEU de la page, mesuré et pas écrit en dur : un
+  // `12000` calibré sur la longue landing renverrait tout en haut d'une
+  // page de fonctionnalité, donc ne regarderait rien de ce qui a été
+  // franchi, donc passerait au vert sans rien vérifier.
+  await page.evaluate(() =>
+    window.scrollTo({ top: document.documentElement.scrollHeight / 2, behavior: "instant" }),
+  );
   await page.waitForTimeout(400);
 
   const figes = await page.evaluate(() =>

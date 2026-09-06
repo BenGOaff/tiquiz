@@ -92,6 +92,31 @@ export const CSS = `
   box-shadow:0 12px 28px rgba(90,110,246,.30)}
 .tqf-rassure{margin-top:12px;font-size:14px;color:var(--c)}
 .tqf-suite{margin-top:44px;padding-top:22px;border-top:1px solid var(--bord);font-size:15.5px}
+/* AUCUNE COULEUR POSEE SUR UN LIEN NU : la regle .tqf a:not([class])
+   la donne deja, et un selecteur qui vise l'element a pese (0,1,1),
+   donc il battrait .tqf-cta (0,1,0). C'est le bug du bleu sur bleu du
+   5 septembre, et le garde-fou le refuse a juste titre.
+   (Aucun accent grave dans ce fichier : il TERMINE le litteral de
+   gabarit. Septieme fois.) */
+.tqf-tarifs{margin-top:16px;font-size:15px}
+
+/* -- LE VISUEL LEVE DE SA PAGE DE VENTE --------------------------- */
+/* L'ile porte son propre style et sa propre largeur : on ne lui impose
+   qu'une respiration et un debordement borne. Une largeur forcee
+   deformerait un dessin qui a ete regle sur sa page. */
+.tqf-visuel{margin:34px 0;overflow-x:auto}
+
+/* -- LES DEUX PAGES VOISINES -------------------------------------- */
+/* Le filet est HORIZONTAL, jamais vertical : une decoration a gauche
+   deplace ce qu'elle decore (regle du 31 aout, mesuree a 20 px). */
+.tqf-voisines{margin-top:44px;padding-top:22px;border-top:1px solid var(--bord)}
+.tqf-voisines-t{margin:0 0 14px;font-size:12.5px;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--b)}
+.tqf-voisines ul{list-style:none;margin:0;padding:0;display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.tqf-voisines li{background:#fff;border:1px solid var(--bord);border-radius:14px;padding:16px 18px}
+.tqf-voisines li a{display:block;font-size:16px;margin-bottom:6px}
+.tqf-voisines li span{display:block;font-size:14.5px;line-height:1.55;color:var(--c)}
 
 @media (max-width:1000px){
   .tqf-grille{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -103,5 +128,6 @@ export const CSS = `
   .tqf-grille{grid-template-columns:1fr}
   .tqf h1{font-size:31px}
   .tqf h2{font-size:23px}
+  .tqf-voisines ul{grid-template-columns:1fr}
 }
 `;
