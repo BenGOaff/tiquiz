@@ -53,6 +53,25 @@ export interface ResumePeriode {
   sansMontant: number;
 }
 
+/**
+ * COMBIEN DE VENTES DANS CETTE PÉRIODE, remboursements exclus.
+ *
+ * Exporté le 7 septembre 2026 pour l'écran Trafic, et c'est le point
+ * qui compte : cet écran divise des VUES par des VENTES, et il montre
+ * Tiquiz et l'Atelier séparément parce que ce sont deux sites, deux
+ * publics, deux tunnels.
+ *
+ * Il lui faut donc le compte par site, et `resumePeriode` reçoit déjà
+ * les ventes des DEUX (`[...sales, ...atelier.sales]`). Recompter à
+ * côté avec un filtre réécrit à la main donnerait deux définitions de
+ * "une vente comptée", et c'est le défaut que ce dépôt paie en boucle.
+ * `resumePeriode` appelle cette fonction lui aussi : il n'y a qu'UNE
+ * règle, appelée trois fois.
+ */
+export function compterVentes(sales: readonly Sale[], periode: Periode): number {
+  return sales.filter((v) => dansLaPeriode(v.paidAt, periode) && !v.refundedAt).length;
+}
+
 export function resumePeriode(args: {
   sales: readonly Sale[];
   people: readonly Person[];
@@ -98,7 +117,7 @@ export function resumePeriode(args: {
       .filter((v) => !v.refundedAt)
       .reduce((s, v) => s + (Number(v.amountCents) || 0), 0),
     rembourseCents: rembourses.reduce((s, v) => s + (Number(v.amountCents) || 0), 0),
-    ventes: ventes.filter((v) => !v.refundedAt).length,
+    ventes: compterVentes(args.sales, periode),
     nouveauxComptes: contacts.length,
     departs: args.people.filter(
       (p) => p.status === "parti" && dansLaPeriode(p.lastSignIn, periode),

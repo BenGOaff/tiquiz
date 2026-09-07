@@ -49,7 +49,7 @@ import { buildSioSales } from "@/lib/admin/sioSales";
 import { buildPeople, monthlyTrend, type ChurnRow, type ProfileRow } from "@/lib/admin/people";
 import { fetchAtelier } from "@/lib/admin/atelier";
 import { lirePeriode, tronqueeParLeJournal, DEBUT_DU_JOURNAL } from "@/lib/pilotage/periode";
-import { resumePeriode } from "@/lib/pilotage/resumePeriode";
+import { compterVentes, resumePeriode } from "@/lib/pilotage/resumePeriode";
 import { lireTrafic } from "@/lib/pilotage/trafic";
 import { lireComptesTipote, lireCoutAffiliation } from "@/lib/pilotage/affilies";
 import { buildMrr, serieChurn } from "@/lib/admin/mrr";
@@ -187,7 +187,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     // exception. Un ecran de pilotage qui tombe parce qu'une autre app
     // ne repond pas serait une plaisanterie.
     const [atelier, tipote] = await Promise.all([
-      fetchAtelier(process.env),
+      // LA MEME PERIODE que le trafic de Tiquiz et que les ventes.
+      // Deux periodes differentes sur un ecran qui les divise l'une par
+      // l'autre donneraient un taux faux, et rien ne le dirait.
+      fetchAtelier(process.env, { debut: periode.debut, fin: periode.fin }),
       lireComptesTipote(process.env),
     ]);
 
@@ -300,6 +303,30 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       // dire la difference : un site annonce desert fait prendre des
       // decisions.
       trafic: await lireTrafic({ debutJour: periode.debut, finJour: periode.fin }),
+      // LE TRAFIC DE L'ATELIER, tel que L'ATELIER le compte.
+      //
+      // Il vit dans son depot, avec sa propre base : le pilotage vient
+      // le lire, exactement comme il lit ses eleves et ses ventes
+      // (`fetchAtelier`, 21 aout). Absent = son serveur n'a pas repondu,
+      // ou sa version deployee ne rend pas encore ce champ ; l'ecran dit
+      // "je n'ai pas pu regarder", jamais "aucune visite".
+      traficAtelier: atelier.trafic ?? null,
+      // LES VENTES PAR SITE, ET C'EST CE QUI REND LE TAUX HONNETE.
+      //
+      // `resume.ventes` additionne Tiquiz ET l'Atelier (voir l'appel a
+      // `resumePeriode` plus haut : `[...sales, ...atelier.sales]`).
+      // L'ecran Trafic divise des VUES par des VENTES : diviser les vues
+      // de tiquiz.fr par les ventes des DEUX sites gonflerait le taux
+      // sans que rien ne le dise, et c'est exactement le chiffre qui
+      // fait depenser (regle du 22 aout).
+      //
+      // Les deux comptes passent par `compterVentes`, la MEME fonction
+      // que le resume : un filtre reecrit a la main donnerait deux
+      // definitions de "une vente comptee dans cette periode".
+      ventesParSite: {
+        tiquiz: compterVentes(sales, periode),
+        atelier: compterVentes(atelier.sales, periode),
+      },
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

@@ -258,3 +258,98 @@ test("le trafic et les ventes viennent du MÊME appel", () => {
     "les ventes ne se recomptent pas ici : elles viennent de resumePeriode",
   );
 });
+
+// ---------------------------------------------------------------------
+// LE COMPTEUR DE L'ATELIER (Béné, 7 septembre 2026)
+//
+// "il me faut aussi le compteur de l'Atelier."
+//
+// En le branchant, un défaut introduit la veille est apparu :
+// `resumePeriode` reçoit `[...sales, ...atelier.sales]`, donc
+// `resume.ventes` additionne les DEUX sites. L'entonnoir divisait les
+// vues de tiquiz.fr par les ventes de Tiquiz ET de l'Atelier : le
+// numérateur et le dénominateur ne parlaient pas de la même population,
+// et rien ne le disait. C'est exactement le chiffre qui fait dépenser.
+// ---------------------------------------------------------------------
+
+test("chaque site divise ses vues par SES ventes, jamais par le total", () => {
+  const ecran = lire("components/pilotage/TraficPilotage.tsx");
+
+  // L'entonnoir de Tiquiz prend `ventesParSite.tiquiz`, celui de
+  // l'Atelier `ventesParSite.atelier`. Un seul des deux qui lirait
+  // `resume.ventes` gonflerait son taux en silence.
+  assert.match(
+    ecran,
+    /ventesParSite\?\.tiquiz/,
+    "l'entonnoir de Tiquiz doit prendre les ventes de Tiquiz, pas le total des deux sites",
+  );
+  assert.match(
+    ecran,
+    /ventesParSite\?\.atelier/,
+    "l'entonnoir de l'Atelier doit prendre les ventes de l'Atelier",
+  );
+
+  // Et l'écran DIT de quel site parle chaque bloc : deux entonnoirs sans
+  // titre se lisent comme un seul chiffre coupé en deux.
+  assert.ok(ecran.includes("tiquiz.fr"), "le bloc Tiquiz doit nommer son site");
+  assert.ok(ecran.includes("atelierduquiz.fr"), "le bloc Atelier doit nommer son site");
+});
+
+test("il n'y a qu'UNE définition de 'une vente comptée dans cette période'", () => {
+  const resume = lire("lib/pilotage/resumePeriode.ts");
+  assert.match(
+    resume,
+    /export function compterVentes\(/,
+    "compterVentes doit être exporté : l'écran Trafic en a besoin par site",
+  );
+  // `resumePeriode` DOIT l'appeler lui aussi. Sinon il reste deux règles
+  // de comptage, et c'est le défaut que ce dépôt paie en boucle.
+  assert.match(
+    resume,
+    /ventes:\s*compterVentes\(/,
+    "resumePeriode doit appeler compterVentes, sinon il y a deux règles de comptage",
+  );
+
+  const route = lire("app/api/admin/pilotage/route.ts");
+  assert.match(route, /compterVentes\(sales, periode\)/, "les ventes Tiquiz passent par compterVentes");
+  assert.match(
+    route,
+    /compterVentes\(atelier\.sales, periode\)/,
+    "les ventes de l'Atelier passent par la MÊME fonction",
+  );
+});
+
+test("le trafic de l'Atelier voyage dans le MÊME appel que ses ventes", () => {
+  const atelier = lire("lib/admin/atelier.ts");
+  // Une deuxième porte voudrait dire un deuxième secret, un deuxième
+  // délai maximum et un deuxième `reachable` : le pilotage pourrait
+  // alors montrer les ventes de l'Atelier sans son trafic, donc un taux
+  // calculé sur un dénominateur absent.
+  const portes = atelier.match(/\/api\/partner\//g) ?? [];
+  assert.equal(portes.length, 1, "l'Atelier ne doit être appelé que par UNE porte partenaire");
+
+  // Et la période est un PARAMÈTRE : deux périodes différentes sur un
+  // écran qui les divise l'une par l'autre donneraient un taux faux.
+  assert.match(
+    atelier,
+    /periode\?:\s*\{\s*debut/,
+    "fetchAtelier doit recevoir la période, jamais la deviner",
+  );
+  assert.match(atelier, /q\.set\("debut"/, "la période doit partir dans l'appel");
+});
+
+test("un Atelier muet n'est jamais affiché comme un site sans visite", () => {
+  const ecran = lire("components/pilotage/TraficPilotage.tsx");
+  const bloc = ecran.slice(ecran.indexOf("function AtelierBloc"));
+  assert.ok(bloc.length > 0, "le bloc de l'Atelier a disparu");
+
+  // Les DEUX cas muets (pas de champ du tout, champ illisible) doivent
+  // produire une phrase, jamais un zéro : "je n'ai pas pu regarder" et
+  // "il n'y a rien" sont deux réponses différentes (règle du 23 août).
+  assert.match(bloc, /!trafic \?/, "le cas 'champ absent' doit être traité à part");
+  assert.match(bloc, /trafic\.lisible === false \?/, "le cas 'illisible' doit être traité à part");
+  assert.ok(
+    (bloc.match(/pas un site sans visite|pas encore lisible|pas pu être lu/g) ?? []).length >= 2,
+    "les deux cas muets doivent DIRE qu'ils n'ont pas pu regarder",
+  );
+});

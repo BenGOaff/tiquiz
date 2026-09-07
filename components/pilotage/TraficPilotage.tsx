@@ -44,6 +44,16 @@ type Donnees = {
   periode: { libelle: string; debut: string | null };
   resume: { ventes: number; encaisseCents: number };
   trafic?: Trafic;
+  /** Le trafic de l'Atelier, tel que L'ATELIER le compte. */
+  traficAtelier?: Trafic | null;
+  /**
+   * LES VENTES PAR SITE.
+   *
+   * `resume.ventes` additionne les deux : diviser les vues de tiquiz.fr
+   * par ce total gonflerait le taux sans que rien ne le dise. Chaque
+   * entonnoir prend SES ventes.
+   */
+  ventesParSite?: { tiquiz: number; atelier: number };
 };
 
 function nombre(n: number): string {
@@ -89,9 +99,28 @@ export function TraficPilotage() {
     () => (d?.trafic?.lisible ? d.trafic.lignes : []),
     [d],
   );
+  const lignesAtelier = useMemo<LigneTrafic[]>(
+    () => (d?.traficAtelier?.lisible ? d.traficAtelier.lignes : []),
+    [d],
+  );
+
+  // CHAQUE SITE A SON ENTONNOIR, ET SES PROPRES VENTES.
+  //
+  // Fusionner les deux donnerait un taux qui ne parle d'aucun des deux :
+  // tiquiz.fr et atelierduquiz.fr n'ont ni le même public, ni le même
+  // prix, ni le même tunnel. Et `resume.ventes` additionne DÉJÀ les deux
+  // sites, donc l'utiliser pour Tiquiz seul gonflerait son taux.
   const entonnoir = useMemo(
-    () => construireEntonnoir({ lignes, ventes: d?.resume.ventes ?? 0 }),
+    () =>
+      construireEntonnoir({
+        lignes,
+        ventes: d?.ventesParSite?.tiquiz ?? d?.resume.ventes ?? 0,
+      }),
     [lignes, d],
+  );
+  const entonnoirAtelier = useMemo(
+    () => construireEntonnoir({ lignes: lignesAtelier, ventes: d?.ventesParSite?.atelier ?? 0 }),
+    [lignesAtelier, d],
   );
 
   if (!d && !erreur) {
@@ -134,6 +163,7 @@ export function TraficPilotage() {
         </div>
       ) : (
         <>
+          <h2 className="text-lg font-semibold">tiquiz.fr</h2>
           <Entonnoir e={entonnoir} encaisseCents={d.resume.encaisseCents} />
 
           {avantLeComptage ? (
@@ -161,6 +191,8 @@ export function TraficPilotage() {
 
           <Courbe jours={vuesParJour(lignes)} />
 
+          <AtelierBloc trafic={d.traficAtelier ?? undefined} e={entonnoirAtelier} lignes={lignesAtelier} />
+
           <p className="text-xs text-muted-foreground">
             On compte des <strong>vues de page</strong>, jamais des visiteurs : aucun cookie
             n&apos;est posé pour ces chiffres, donc on ne sait pas distinguer une personne qui
@@ -178,7 +210,21 @@ function Entonnoir({
   encaisseCents,
 }: {
   e: ReturnType<typeof construireEntonnoir>;
-  encaisseCents: number;
+  /**
+   * OPTIONNEL, ET C'EST DÉLIBÉRÉ.
+   *
+   * `resume.encaisseCents` additionne Tiquiz ET l'Atelier, et je n'ai
+   * pas vérifié comment ce total se compose par site (les montants
+   * estimés `amountSource: "plan"` sont écartés d'un chiffre d'affaires
+   * depuis le 22 août, et je ne l'ai pas remesuré ici).
+   *
+   * Afficher un montant qu'on n'a pas mesuré est exactement ce qui fait
+   * prendre une décision sur un chiffre faux. Le bloc de l'Atelier
+   * montre donc ses vues et ses ventes, qui sont exactes, et PAS de
+   * montant. Le jour où le partage du chiffre d'affaires est mesuré, ce
+   * paramètre le reçoit.
+   */
+  encaisseCents?: number;
 }) {
   const marches = [
     { titre: "Vues du site", valeur: nombre(e.vues), note: "toutes les pages publiques" },
@@ -205,8 +251,9 @@ function Entonnoir({
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold">Le parcours, marche par marche</h2>
         <p className="text-sm text-muted-foreground">
-          {euros(encaisseCents)} encaissés
-          {e.tauxGlobal === null ? null : <> · {e.tauxGlobal} % des vues finissent en vente</>}
+          {encaisseCents === undefined ? null : <>{euros(encaisseCents)} encaissés</>}
+          {encaisseCents !== undefined && e.tauxGlobal !== null ? " · " : null}
+          {e.tauxGlobal === null ? null : <>{e.tauxGlobal} % des vues finissent en vente</>}
         </p>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -283,6 +330,82 @@ function Courbe({ jours }: { jours: { jour: string; vues: number }[] }) {
       <p className="mt-2 text-xs text-muted-foreground">
         {jours[0]?.jour} au {jours[jours.length - 1]?.jour}
       </p>
+    </div>
+  );
+}
+
+/**
+ * LE TRAFIC DE L'ATELIER (Béné, 7 septembre 2026 : "il me faut aussi le
+ * compteur de l'Atelier").
+ *
+ * L'Atelier vit dans un autre dépôt, avec sa PROPRE base. Le pilotage
+ * vient le lire, exactement comme il lit ses élèves et ses ventes
+ * (`fetchAtelier`, 21 août) : c'est lui qui compte chez lui, et une
+ * panne de Tiquiz ne lui fait perdre aucune vue.
+ *
+ * TROIS ÉTATS, ET ILS NE SE CONFONDENT PAS :
+ *   - absent   : son serveur n'a pas répondu, OU sa version déployée ne
+ *                rend pas encore ce champ. Ce n'est pas zéro visite ;
+ *   - illisible: il a répondu, mais sa table n'a pas pu être lue (sa
+ *                migration n'est pas passée). Ce n'est pas zéro visite ;
+ *   - lisible  : on affiche.
+ *
+ * Un écran qui rendrait "0 vue" dans les deux premiers cas ferait
+ * conclure que la page de vente de l'Atelier n'intéresse personne, et
+ * c'est le genre de chiffre qui fait prendre une décision (22 août).
+ */
+function AtelierBloc({
+  trafic,
+  e,
+  lignes,
+}: {
+  trafic?: Trafic;
+  e: ReturnType<typeof construireEntonnoir>;
+  lignes: LigneTrafic[];
+}) {
+  return (
+    <div className="space-y-4 border-t pt-6">
+      <h2 className="text-lg font-semibold">atelierduquiz.fr</h2>
+
+      {!trafic ? (
+        <div className={`${CARTE} p-5`}>
+          <p className="text-sm font-medium">Le trafic de l&apos;Atelier n&apos;est pas encore lisible.</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Ce n&apos;est pas un site sans visite : soit son serveur n&apos;a pas répondu, soit sa
+            mise à jour n&apos;est pas encore déployée. Ses ventes, elles, sont bien comptées dans le
+            reste du pilotage.
+          </p>
+        </div>
+      ) : trafic.lisible === false ? (
+        <div className={`${CARTE} p-5`}>
+          <p className="text-sm font-medium">Le comptage de l&apos;Atelier n&apos;a pas pu être lu.</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Le plus probable est que sa migration{" "}
+            <code>20260907_trafic_pages_publiques.sql</code> ne soit pas encore passée sur SON
+            Supabase.
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">Raison : {trafic.raison}</p>
+        </div>
+      ) : (
+        <>
+          <Entonnoir e={e} />
+          <div className="grid gap-4 md:grid-cols-2">
+            <Classement
+              titre="D&apos;où vient le monde"
+              aide="Les navigations d'une de ses pages vers une autre sont écartées : elles n'ont amené personne."
+              lignes={sourcesDuTrafic(lignes)}
+              total={e.vues}
+            />
+            <Classement
+              titre="Les pages les plus vues"
+              aide="Le chemin exact, pas une famille."
+              lignes={pagesLesPlusVues(lignes)}
+              total={e.vues}
+            />
+          </div>
+          <Courbe jours={vuesParJour(lignes)} />
+        </>
+      )}
     </div>
   );
 }
