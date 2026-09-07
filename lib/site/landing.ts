@@ -1094,44 +1094,48 @@ export function preuvePrecoce(
     .map((x) => x.v);
 }
 
-/** Le popquiz de démonstration, celui qu'elle m'a donné. */
 /**
- * UN BLOC DE TEXTE S'ALIGNE À GAUCHE DÈS QU'IL EST LONG.
+ * 🚨 `blocLong` ET `CARACTERES_BLOC_LONG` ONT ÉTÉ SUPPRIMÉS LE
+ * 7 SEPTEMBRE, ET CE BLOC DIT POURQUOI, PARCE QUE LA NOTE QU'IL
+ * REMPLACE EST PÉRIMÉE.
  *
- * Béné, 5 septembre 2026, sur la section Systeme.io : "ce gros bloc de
- * texte est imbuvable [...] aligne à gauche quand il y a plus de
- * 3 lignes (règle élémentaire pour être plus facile à lire)". Et sur
- * les leads qualifiés : "aligne à gauche les longs textes pour une
- * meilleure lecture".
+ * Ils décidaient quels paragraphes basculaient à gauche, sur un seuil
+ * de 150 caractères, pendant que le reste du corps de texte restait
+ * centré. Béné, 7 septembre 2026 : "tout ce qui fait plus de deux
+ * lignes doit être en texte aligné à gauche et pas texte centré."
  *
- * ON NE COMPTE PAS LES LIGNES, PARCE QU'ON NE PEUT PAS. Le nombre de
- * lignes dépend de la césure, donc de la largeur, donc de la langue et
- * de l'appareil : mesuré le 5 septembre sur la page rendue, un
- * paragraphe de 216 caractères tenait en 3 lignes et un autre de 198 en
- * prenait 4. Une estimation "caractères divisés par 70" se trompe donc
- * dans les deux sens, et un texte centré sur cinq lignes est exactement
- * ce qu'elle refuse.
+ * DEUX MESURES ONT TRANCHÉ, ET AUCUNE DES DEUX N'EST UNE DÉDUCTION.
  *
- * La règle est donc SÛRE au lieu d'être précise, et le SENS de
- * l'erreur décide du seuil : aligner à gauche un paragraphe qui tenait
- * en trois lignes ne coûte rien, laisser centré un pavé de cinq lignes
- * est exactement ce qu'elle refuse. Un bloc qui porte PLUSIEURS
- * paragraphes est donc long par construction, et un paragraphe seul
- * l'est au delà de 150 caractères, c'est à dire bien AVANT les trois
- * lignes (mesuré : une ligne pleine tient 65 à 70 caractères à 17 px
- * dans 720 px, et la césure en fait perdre jusqu'à 15 %).
+ * 1. Sur la landing rendue, un paragraphe de 141 caractères prenait
+ *    3 lignes dans une colonne étroite pendant qu'un de 150 en prenait
+ *    UNE dans un conteneur large. Un seuil en caractères ne peut donc
+ *    pas décider : c'est la LARGEUR de la colonne qui décide, et elle
+ *    change d'un bloc à l'autre.
+ * 2. Sa page de vente, ouverte dans un navigateur : 112 blocs de texte
+ *    alignés à GAUCHE contre 32 centrés, dans des colonnes de 510 à
+ *    550 px. Sa page fait déjà ce qu'elle demande.
  *
- * Le contrôle qui compte vraiment est ailleurs, et il MESURE :
- * `tests/visual/landing-paddings.spec.ts` refuse qu'un paragraphe
- * centré dépasse trois lignes rendues, sur les trois largeurs.
+ * Donc on ne décide plus : tout le corps de texte est aligné à gauche
+ * (`.tql-p`, `components/landing/styles.ts`), sa colonne reste centrée
+ * sous le titre, et il n'y a plus de seuil à oublier au prochain
+ * paragraphe ajouté. C'est le même geste que la suppression de
+ * `LOOKS_LIKE_HTML` (1er septembre) : quand une erreur ne coûte rien à
+ * commettre et se voit tard, on rend l'erreur impossible au lieu de la
+ * détecter.
+ *
+ * 🚨 ET LE CONTRÔLE QUE LA NOTE PRÉCÉDENTE ANNONÇAIT N'EXISTAIT PAS.
+ * Elle écrivait "le contrôle qui compte vraiment est ailleurs, et il
+ * MESURE : tests/visual/landing-paddings.spec.ts refuse qu'un
+ * paragraphe centré dépasse trois lignes rendues". Mesuré le
+ * 7 septembre : aucune occurrence de `textAlign` dans tout
+ * `tests/visual/`. Huitième fois que ce dépôt paie une règle écrite en
+ * commentaire et démentie par le code.
+ *
+ * Il existe maintenant, il refuse DEUX lignes, sur la landing et sur
+ * /tarifs, aux trois largeurs.
  */
-export const CARACTERES_BLOC_LONG = 150;
 
-export function blocLong(paragraphes: readonly string[]): boolean {
-  if (paragraphes.length > 1) return true;
-  return (paragraphes[0]?.length ?? 0) > CARACTERES_BLOC_LONG;
-}
-
+/** Le popquiz de démonstration, celui qu'elle m'a donné. */
 export const DEMO_POPQUIZ = "https://quiz.tipote.com/embed/p/0a7d8f50-f329-48e5-b5af-36c642f00c7c";
 
 /**

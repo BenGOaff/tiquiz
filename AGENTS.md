@@ -9791,3 +9791,150 @@ Filet : **178 captures et mesures** (111 + 67), `test:logic` 2518,
 fautives (la légende sans "automatique", le corps sans l'export, le
 visuel redevenu décoratif, le bonus n8n de retour, le guillemet
 orphelin, une feuille qui perd la constante) : les six rougissent.
+
+### Douzième passage : sa disposition, mesurée sur SA page (7 septembre 2026)
+
+Béné, en regardant la section des autres outils : "pourquoi tu mets
+verticalement ce qui était horizontal à la base ? Les automatisations
+c'est : animation à gauche, texte à droite. Et tout ce qui fait plus de
+deux lignes doit être en texte aligné à gauche et pas texte centré.
+Revois toute la disposition pour une meilleure lecture, adaptée à une
+lecture, fluide et recommandée pour guider l'oeil, équilibrée et
+élégante."
+
+#### LA MÉTHODE : ON MESURE SA PAGE, ON NE DISCUTE PAS DE GOÛT
+
+Sa page de vente ouverte dans un navigateur, alignement par alignement :
+
+| | sa page | la landing avant |
+|---|---|---|
+| blocs de texte alignés à GAUCHE | **112** | quasi zéro |
+| blocs de texte CENTRÉS | 32 | tout |
+| largeur de ses colonnes de texte | 510 à 550 px | 720 px, centrés |
+| ses H2 de section | à GAUCHE dans leur colonne | centrés |
+
+**Sa page fait déjà ce qu'elle demande, à 78 %.** Il n'y avait donc rien
+à arbitrer : la landing faisait l'inverse.
+
+#### 1. LES DEUX COLONNES, ET ELLES SONT TAILLÉES SUR UNE MESURE
+
+Son bloc vit dans la rangée `row-ee65297c` de sa page : **une colonne de
+6 sur 12 pour l'animation, une colonne de 6 pour le texte de l'étape**.
+Je l'avais empilé verticalement.
+
+**LA LARGEUR VIENT DE CE QUE L'ÎLE MESURE, pas d'un réglage esthétique.**
+Relevé dans le navigateur : 260 + 46 + 323 px de contenu, plus 36 px de
+gouttières et 32 px de marge interne, soit **672 px**.
+
+| la colonne fait | ce qui se passe |
+|---|---|
+| 532 px (moitié de 1120) | l'île est rognée de 25 px |
+| 532 px + passage à la ligne | 1346 px de haut contre 605 px pour son texte |
+| **695 px (boîte de 1240)** | **rien n'est rogné, 720 px contre 633 px** |
+
+D'où deux décisions : la boîte de cette disposition passe à **1240 px**,
+et **les colonnes s'empilent dès 1240 px, pas 900**. Entre les deux, la
+colonne de l'animation passerait sous les 672 px dont elle a besoin ;
+empilée, elle a toute la largeur (mesuré à 900 px : 868 de large, aucun
+rognage).
+
+**Sa propre page rogne 25 px de ses cartes** dans sa colonne de 530.
+Servir la même chose aurait été recopier un défaut.
+
+**LE TEXTE EST PREMIER DANS LE DOM, l'animation passe à gauche par le
+CSS.** Une fois les colonnes empilées sur un téléphone, l'ordre du DOM
+décide : le titre doit y précéder son visuel, sinon l'animation arrive
+sans contexte (sa remarque du 5 septembre). Inverser le DOM pour "mettre
+l'animation à gauche" casserait le mobile sans qu'une capture le dise.
+C'est l'idiome de `.tql-etape`, qui croise déjà ses lignes depuis le
+4 août.
+
+**UNE REQUÊTE DE CONTENEUR A ÉTÉ ESSAYÉE PUIS RETIRÉE**, et la raison
+est écrite dans `cssIles.ts` : elle faisait passer l'île à la ligne dans
+sa colonne, donc 1346 px de haut contre 605 px pour son texte, c'est à
+dire exactement le déséquilibre qu'on corrigeait.
+
+#### 2. LE CORPS DE TEXTE EST À GAUCHE, ET IL N'Y A PLUS DE SEUIL
+
+🚨 **`blocLong` ET `CARACTERES_BLOC_LONG` SONT SUPPRIMÉS**, et la note du
+5 septembre qui les décrivait est corrigée en place dans
+`lib/site/landing.ts`.
+
+Ils décidaient au cas par cas, sur un seuil de 150 caractères. **Un
+seuil en caractères ne peut pas décider, et c'est mesuré** : sur la
+landing rendue, un paragraphe de 141 caractères prenait 3 lignes dans
+une colonne étroite pendant qu'un de 150 en prenait UNE dans un
+conteneur large. C'est la LARGEUR de la colonne qui décide, et elle
+change d'un bloc à l'autre.
+
+`.tql-p` est donc aligné à gauche **sans condition**, dans une colonne
+centrée bornée à **640 px** (720 px à 17 px donnent 90 caractères par
+ligne, la où une ligne se lit le mieux vers 65 à 75, et 640 rapproche la
+landing de ses colonnes à elle). Même geste que la suppression de
+`LOOKS_LIKE_HTML` le 1er septembre : **quand une erreur ne coûte rien à
+commettre et se voit tard, on rend l'erreur impossible au lieu de la
+détecter.** Un seuil, c'est un seuil qu'on oublie au prochain paragraphe
+ajouté.
+
+**Et la règle vaut pour TOUT le corps, pas pour les seuls `.tql-p`** :
+mesuré à 390 px, la légende du chiffre, sa source, le texte du bandeau
+de fin et le pied d'article du blog rendaient 3 et 4 lignes centrées.
+
+**LES TITRES RESTENT HORS DE SA RÈGLE** : elle parle du TEXTE, et sa
+page centre ses H1 et plusieurs de ses H2.
+
+#### 3. LE TITRE ET SON CORPS PARTAGENT UNE BOÎTE
+
+C'est ce que la mise à gauche a révélé, et c'est un vrai défaut de
+lecture : dans la section Systeme.io, le titre était centré sur 1120 px
+et son paragraphe démarrait à 400 px. **Il flottait, sans bord commun
+avec quoi que ce soit** : le mélange de centré et de non centré qu'elle
+a relevé le 5 septembre, et le drame du sous-titre du 3 août dans une
+autre robe.
+
+La section du 44,9 % le faisait déjà bien, par accident : sa boîte fait
+760 px et son paragraphe part du bord GAUCHE de cette boîte, donc du
+bord de la carte au dessus. **`.tql-intro` généralise ce geste** : une
+boîte de 760, le titre centré dedans, le corps ancré à gauche. Mesuré
+après correction : boîte, titre et texte partagent 340-1100 sur les six
+blocs de la landing et de `/tarifs`.
+
+#### 🚨 ET UN CONTRÔLE QUE CETTE PAGE DÉCRIVAIT N'EXISTAIT PAS
+
+Le commentaire de `blocLong` affirmait : "le contrôle qui compte
+vraiment est ailleurs, et il MESURE : `tests/visual/landing-paddings.
+spec.ts` refuse qu'un paragraphe centré dépasse trois lignes rendues".
+
+**Ce test n'a jamais existé.** Mesuré, pas déduit : aucune occurrence de
+`textAlign` dans tout `tests/visual/`. **Huitième fois que ce dépôt paie
+une règle écrite en commentaire et démentie par le code** (le
+`w-full h-auto` des images de réponse, l'`ADD_ATTR: ["target"]` des
+liens légaux, le "Next décode déjà le segment" du pilotage, le brouillon
+d'Adeline, le N+1 de Mes projets, la rassurance centrée, l'export de
+leads).
+
+Il existe maintenant, et il refuse **DEUX** lignes, sur la landing et
+sur `/tarifs`, aux trois largeurs. Deux autres mesures l'accompagnent :
+les bords partagés de `.tql-intro`, et la position rendue des deux
+colonnes (jamais l'ordre du DOM, qui dit exactement le contraire de ce
+que la lectrice voit).
+
+#### CE QUE MES PROPRES SONDES ONT ENCORE RATÉ
+
+**Un débordement n'est une perte que s'il est ROGNÉ.** Ma première sonde
+comptait tout élément dont `scrollWidth` dépasse `clientWidth` : avec
+`overflow:visible` le contenu sort de sa boîte et reste AFFICHÉ. Ma
+deuxième remontait la chaîne des ancêtres jusqu'à un `overflow:hidden`,
+et elle a alors accusé le bandeau défilant, le carrousel de témoignages,
+les flous décoratifs du hero et une légende de tableau pour lecteurs
+d'écran, tous rognés exprès. **Onzième fois qu'une sonde ne distingue
+pas ce qu'elle est censée distinguer**, et cette fois dans les deux sens
+successivement.
+
+Ce qui tranche vraiment vit déjà dans `tests/visual/responsive-site.
+spec.ts` : les îles animées, et le débordement de la PAGE.
+
+**Et un accent grave a terminé le littéral de la feuille DEUX fois de
+plus** dans la même heure, une fois dans un commentaire CSS, une fois
+dans un commentaire de code juste avant. Septième et huitième fois. Ce
+n'est pas un garde-fou qui manque, c'est moi qui le refais.

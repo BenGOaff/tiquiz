@@ -82,6 +82,22 @@ export const CSS = `
 .tql-large{position:relative;width:100%;max-width:1120px;margin:0 auto}
 .tql-lire-bloc{max-width:840px}
 
+/* TITRE ET CORPS PARTAGENT UNE BOITE, ET LE CORPS PART DE SON BORD.
+
+   Mesure du 7 septembre, section Systeme.io : le titre etait centre
+   sur 1120 px et son paragraphe, aligne a gauche dans une colonne de
+   640 centree, demarrait a 400 px. Il flottait, sans bord commun avec
+   quoi que ce soit : c est le melange de centre et de non centre
+   qu elle a releve le 5 septembre, et le drame du sous titre du
+   3 aout dans une autre robe.
+
+   La section du 44,9 % le faisait deja bien, par accident : sa boite
+   fait 760 px et son paragraphe part du bord GAUCHE de cette boite,
+   donc du bord de la carte au dessus. On generalise ce geste : une
+   boite de 760, le titre centre dedans, le corps ancre a gauche. */
+.tql-intro{max-width:760px;margin:0 auto}
+.tql-intro .tql-p{max-width:none;margin-left:0;margin-right:0}
+
 /* Les flous décoratifs : aucun texte dessus, donc hors de la règle du
    31 août. Ils portent la profondeur que sa page a et que la mienne
    n'avait pas. */
@@ -122,16 +138,28 @@ export const CSS = `
 .tql-h1-l2{display:block}
 
 .tql-accroche{font-size:19px;line-height:1.6;color:var(--c);margin:0 0 30px;max-width:560px}
-.tql-p{font-size:17px;line-height:1.65;color:var(--c);max-width:720px;margin:0 auto 20px;text-align:center}
-.tql-p-g{text-align:left;margin-left:0}
-/* UN BLOC LONG SE LIT ALIGNE A GAUCHE, et sa colonne reste CENTREE
-   sous le titre : basculer aussi la marge decalerait le bloc a gauche
-   d un conteneur centre, ce qui est exactement le melange de centre et
-   de non centre qu elle a releve le 5 septembre. */
-.tql-p-lire{text-align:left}
-/* LA PHRASE QUI TRADUIT LE TABLEAU. Alignee a gauche : elle fait plus
-   de trois lignes, donc sa regle du 5 septembre s applique. */
-.tql-gain{text-align:left;max-width:760px;margin-top:26px}
+/* LE CORPS DE TEXTE EST ALIGNE A GAUCHE, ET SA COLONNE RESTE CENTREE.
+
+   Bene, 7 septembre 2026 : "tout ce qui fait plus de deux lignes doit
+   etre en texte aligne a gauche et pas texte centre."
+
+   MESURE SUR SA PROPRE PAGE (fichier ouvert dans un navigateur, pas
+   deduit) : 112 blocs de texte alignes a gauche contre 32 centres,
+   soit 78 % a gauche, dans des colonnes de 510 a 550 px. La landing
+   faisait l inverse : tout centre sur 720 px.
+
+   720 px a 17 px donnent environ 90 caracteres par ligne, la ou une
+   ligne se lit le mieux vers 65 a 75. La borne descend donc a 640 px,
+   ce qui rapproche aussi la landing de la largeur de ses colonnes. */
+.tql-p{font-size:17px;line-height:1.65;color:var(--c);max-width:640px;margin:0 auto 20px;text-align:left}
+.tql-p-g{margin-left:0}
+/* 🚨 LA CLASSE .tql-p-lire A ETE SUPPRIMEE LE 7 SEPTEMBRE : elle basculait un
+   paragraphe a gauche au cas par cas, et le corps de texte l est
+   desormais SANS CONDITION. Une classe qui ne fait plus rien est un
+   piege que le prochain passage rebranche en croyant reparer. */
+/* LA PHRASE QUI TRADUIT LE TABLEAU : elle porte une largeur a elle,
+   parce qu elle commente un tableau large et pas un paragraphe. */
+.tql-gain{max-width:760px;margin-top:26px}
 
 /* LA PASTILLE NEUTRE D UNE LIMITE, a la place de la coche. Meme regle
    que la grille comparative : une limite chiffree rend sa VALEUR,
@@ -577,8 +605,58 @@ export const CSS = `
 
 /* ── LES DEUX COLONNES TEXTE / VISUEL ────────────────────────────── */
 /* Le geste de sa page : un bloc qui explique, un visuel qui montre. */
-.tql-deux-col{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-  gap:56px;align-items:center}
+/* DEUX COLONNES, ET LA LARGEUR VIENT DE CE QUE L ILE MESURE.
+
+   Relevee dans le navigateur : son bloc des autres outils rend
+   260 + 46 + 323 px de contenu, plus 36 px de gouttieres et 32 px de
+   marge interne, soit 672 px. Une demi colonne de 1120 en fait 532 :
+   l ile y etait rognee de 25 px, ou empilee sur 1346 px de haut quand
+   on la laissait passer a la ligne, contre 605 px pour son texte. Ni
+   l un ni l autre n est equilibre.
+
+   Le conteneur passe donc a 1240 px pour CETTE disposition, ce qui
+   donne 695 px a l animation et 497 px au texte, c est a dire la
+   largeur de colonne de sa propre page (510 a 550 px, mesuree).
+
+   ET LES COLONNES S EMPILENT DES 1240 PX, pas 900 : en dessous, la
+   colonne de l animation passerait sous les 672 px dont elle a besoin,
+   donc l ile serait rognee. Empilee, elle dispose de toute la largeur
+   et tient sans rien perdre (mesure a 900 px : 868 de large, aucun
+   rognage). */
+.tql-deux-col{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);
+  gap:48px;align-items:center;max-width:1240px}
+@media (max-width:1240px){
+  .tql-deux-col{grid-template-columns:1fr;gap:36px}
+  /* Colonnes empilees : le titre repasse devant son visuel, et il
+     retrouve le centrage de tous les autres titres de section. */
+  .tql-visuel-gauche{order:0}
+  .tql-deux-col-txt .tql-h2{text-align:center}
+  .tql-deux-col-txt .tql-p{max-width:640px;margin-left:auto;margin-right:auto}
+  .tql-deux-col-txt .tql-legende{text-align:center}
+  .tql-deux-col-txt .tql-mid-g{text-align:center;margin-left:auto}
+  .tql-deux-col-txt .tql-mid-g .tql-mid-r{justify-content:center}
+}
+/* LE TEXTE PARTAGE LE BORD DE SA COLONNE : titre, corps et legende.
+   Un titre centre au dessus d un corps aligne a gauche est exactement
+   le melange de centre et de non centre qu elle a releve le
+   5 septembre. Le titre descend a 32 px : 38 px dans une demi colonne
+   se coupe en quatre lignes. */
+.tql-deux-col-txt .tql-h2{text-align:left;font-size:32px}
+.tql-deux-col-txt .tql-p{max-width:none;margin-left:0;margin-right:0}
+.tql-deux-col-txt .tql-legende{text-align:left;margin-top:18px}
+/* L ANIMATION A GAUCHE, LE TEXTE A DROITE (Bene, 7 septembre 2026 :
+   "les automatisations c est : animation a gauche, texte a droite").
+
+   C EST LA DISPOSITION DE SA PAGE, MESUREE, pas supposee : son bloc
+   vit dans la rangee row-ee65297c, deux colonnes de 6 sur 12,
+   l animation a gauche et le texte de l etape a droite.
+
+   Le DOM garde le TEXTE EN PREMIER : une fois les colonnes empilees
+   sur un telephone, le titre doit preceder son visuel, sinon
+   l animation arrive sans contexte (sa remarque du 5 septembre). C est
+   l ordre CSS qui les croise sur grand ecran, comme .tql-etape le fait
+   deja depuis le 4 septembre. */
+.tql-visuel-gauche{order:-1}
 
 /* Le flux de captures de leads, dessine. */
 .tql-flux{display:grid;gap:10px}
@@ -692,7 +770,11 @@ export const CSS = `
      5 lignes. Sa regle ("aligne a gauche quand il y a plus de
      3 lignes") ne laisse donc rien de centre a cette largeur. Les
      TITRES restent centres : ils font une ou deux lignes. */
-  .tql-p,.tql-legende{text-align:left}
+  /* Et la regle vaut pour TOUT le corps de texte, pas pour les seuls
+     .tql-p : mesure du 7 septembre a 390 px, la legende du chiffre,
+     sa source et le texte du bandeau de fin rendaient 3 et 4 lignes
+     centrees. */
+  .tql-p,.tql-legende,.tql-chiffre-leg,.tql-chiffre-src,.tql-bande p{text-align:left}
 
   .tql-h2{font-size:28px}
   .tql-bande h2{font-size:28px}

@@ -47,7 +47,6 @@ import {
   contenuLanding,
   faqArgent,
   temoinsTarifs,
-  blocLong,
 } from "@/lib/site/landing";
 import { CSS } from "@/components/landing/styles";
 import { faqDeLaPageDeVente } from "@/components/landing/faq";
@@ -87,10 +86,12 @@ export default async function TarifsPage({ searchParams }: PageProps) {
       <section className="tql-sec tql-hero">
         <span aria-hidden className="tql-blob tql-blob-a" />
         <div className="tql-large">
-          <h1 className="tql-h1 tql-centre">
-            {t.tarifsTitre} <span className="tql-surb">{t.tarifsMotCle}</span>
-          </h1>
-          <p className="tql-p">{t.tarifsCorps}</p>
+          <div className="tql-intro">
+            <h1 className="tql-h1 tql-centre">
+              {t.tarifsTitre} <span className="tql-surb">{t.tarifsMotCle}</span>
+            </h1>
+            <p className="tql-p">{t.tarifsCorps}</p>
+          </div>
           <BlocTarifs t={t} colonnes={colonnes} />
         </div>
       </section>
@@ -111,10 +112,12 @@ export default async function TarifsPage({ searchParams }: PageProps) {
           deux devises restent séparées. */}
       <section className="tql-sec">
         <div className="tql-large">
-          <h2 className="tql-h2">
-            {t.coutTitre} <span className="tql-surb">{t.coutMotCle}</span>
-          </h2>
-          <p className="tql-p">{t.coutCorps}</p>
+          <div className="tql-intro">
+            <h2 className="tql-h2">
+              {t.coutTitre} <span className="tql-surb">{t.coutMotCle}</span>
+            </h2>
+            <p className="tql-p">{t.coutCorps}</p>
+          </div>
           <div className="tql-comp-boite">
             <table className="tql-comp tql-comp-txt">
               <thead>
@@ -158,7 +161,7 @@ export default async function TarifsPage({ searchParams }: PageProps) {
             {t.objections.map((o) => (
               <div key={o.q} className="tql-carte tql-obj">
                 <p className="tql-obj-q">{o.q}</p>
-                <p className={`tql-obj-r${blocLong([o.r]) ? " tql-p-lire" : ""}`}>{o.r}</p>
+                <p className="tql-obj-r">{o.r}</p>
               </div>
             ))}
           </div>
@@ -175,8 +178,10 @@ export default async function TarifsPage({ searchParams }: PageProps) {
           APPLIQUÉE : `faqArgent` rend ce qui manque, et on le dit. */}
       <section className="tql-sec">
         <div className="tql-large tql-lire-bloc">
-          <h2 className="tql-h2">{t.faqArgentTitre}</h2>
-          <p className="tql-p">{t.faqArgentCorps}</p>
+          <div className="tql-intro">
+            <h2 className="tql-h2">{t.faqArgentTitre}</h2>
+            <p className="tql-p">{t.faqArgentCorps}</p>
+          </div>
           {argent.questions.map((f) => (
             <details key={f.q} className="tql-faq">
               <summary>
@@ -207,10 +212,12 @@ export default async function TarifsPage({ searchParams }: PageProps) {
           JAMAIS s'afficher sur la même page. */}
       <section className="tql-sec tql-blanc">
         <div className="tql-large">
-          <h2 className="tql-h2">
-            {t.avisTitre} <span className="tql-surb">{t.avisMotCle}</span>
-          </h2>
-          <p className="tql-p">{t.avisCorps}</p>
+          <div className="tql-intro">
+            <h2 className="tql-h2">
+              {t.avisTitre} <span className="tql-surb">{t.avisMotCle}</span>
+            </h2>
+            <p className="tql-p">{t.avisCorps}</p>
+          </div>
           <ul className="tql-apres">
             {t.apres.map((a) => (
               <li key={a}>

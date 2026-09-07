@@ -1001,6 +1001,157 @@ describe("le bloc des autres outils ne promet aucune connexion qui n'existe pas"
   });
 });
 
+describe("le corps de texte est aligné à gauche, sans exception à tenir", () => {
+  // Béné, 7 septembre 2026 : "tout ce qui fait plus de deux lignes doit
+  // etre en texte aligné à gauche et pas texte centré."
+  //
+  // DEUX MESURES ONT DÉCIDÉ, et aucune n'est une déduction.
+  //
+  //   1. sur la landing rendue, un paragraphe de 141 caractères prenait
+  //      3 lignes dans une colonne étroite quand un de 150 en prenait
+  //      UNE dans un conteneur large : un seuil en caractères ne peut
+  //      pas décider, c'est la LARGEUR de la colonne qui décide ;
+  //   2. sa page de vente, ouverte dans un navigateur : 112 blocs de
+  //      texte alignés à gauche contre 32 centrés, dans des colonnes de
+  //      510 à 550 px. Sa page fait déjà ce qu'elle demande.
+  //
+  // Donc on ne décide plus, et `blocLong` a été SUPPRIMÉ. Un seuil qui
+  // arbitre est un seuil qu'on oublie au prochain paragraphe ajouté ;
+  // une règle sans condition ne s'oublie pas.
+
+  test("la feuille aligne le corps de texte à gauche", () => {
+    const css = racine("components/landing/styles.ts");
+    const regle = css.match(/\n\.tql-p\{[^}]*\}/);
+    assert.ok(regle, "la règle .tql-p a disparu de la feuille");
+    assert.ok(
+      /text-align:left/.test(regle![0]),
+      `le corps de texte est redevenu centré : ${regle![0].trim()}`,
+    );
+  });
+
+  test("plus rien ne décide au cas par cas", () => {
+    // Une fonction morte qui arbitre est un piège que le prochain
+    // passage rebranche en croyant réparer (leçon de `simuler()`,
+    // 31 août). Elle est retirée, pas laissée sans appelant.
+    const lib = racine("lib/site/landing.ts");
+    assert.ok(
+      !/export function blocLong/.test(lib),
+      "blocLong est revenu : le corps de texte est aligné sans condition",
+    );
+    assert.ok(
+      !/export const CARACTERES_BLOC_LONG/.test(lib),
+      "le seuil en caractères est revenu, et il ne peut pas décider",
+    );
+    // ON RETIRE LES COMMENTAIRES AVANT DE CHERCHER : la feuille
+    // EXPLIQUE le retrait de cette classe, donc son nom y vit encore.
+    // Un test qui mesure la présence de quelque chose dans un fichier
+    // tombe sinon sur sa propre explication (déjà payé trois fois).
+    const feuille = racine("components/landing/styles.ts").replace(/\/\*[\s\S]*?\*\//g, " ");
+    assert.ok(
+      !/tql-p-lire/.test(feuille),
+      "la classe .tql-p-lire est revenue : elle ne ferait plus rien",
+    );
+    for (const p of [
+      "app/(site)/apercu-landing-8f2c9d41/page.tsx",
+      "app/(site)/tarifs/page.tsx",
+    ]) {
+      assert.ok(!/blocLong/.test(racine(p)), `${p} appelle encore blocLong`);
+    }
+  });
+
+  test("le titre et son corps vivent dans la même boîte", () => {
+    // Mesuré le 7 septembre : le titre de la section Systeme.io était
+    // centré sur 1120 px et son paragraphe démarrait à 400 px, sans
+    // bord commun avec quoi que ce soit. C'est le mélange de centré et
+    // de non centré qu'elle a relevé le 5 septembre.
+    //
+    // Le test exige la BOÎTE, pas une position : les positions se
+    // mesurent dans le navigateur (`landing-paddings.spec.ts`), et un
+    // test qui figerait des pixels ici rougirait sur une correction
+    // juste.
+    const css = racine("components/landing/styles.ts");
+    assert.ok(/\.tql-intro\{/.test(css), "la boîte .tql-intro a disparu de la feuille");
+    for (const p of [
+      "app/(site)/apercu-landing-8f2c9d41/page.tsx",
+      "app/(site)/tarifs/page.tsx",
+    ]) {
+      assert.ok(
+        /className="tql-intro"/.test(racine(p)),
+        `${p} : plus aucun titre ne partage sa boîte avec son corps`,
+      );
+    }
+  });
+});
+
+describe("les automatisations : animation à gauche, texte à droite", () => {
+  // Béné, 7 septembre 2026 : "pourquoi tu mets verticalement ce qui
+  // était horizontal à la base ? Les automatisations c'est : animation
+  // à gauche, texte à droite."
+  //
+  // C'EST LA DISPOSITION DE SA PAGE, MESURÉE : son bloc vit dans la
+  // rangée row-ee65297c de `content/sales/tiquiz.html`, une colonne de
+  // 6 sur 12 pour l'animation et une colonne de 6 pour le texte de
+  // l'étape. Je l'avais empilé verticalement.
+
+  test("la section porte la grille à deux colonnes", () => {
+    assert.ok(
+      /tql-large tql-deux-col/.test(PAGE_ACCUEIL),
+      "la section des autres outils n'est plus en deux colonnes",
+    );
+    assert.ok(
+      /className="tql-visuel-gauche"/.test(PAGE_ACCUEIL),
+      "l'animation ne passe plus à gauche",
+    );
+  });
+
+  test("le texte est PREMIER dans le DOM, et c'est le CSS qui croise", () => {
+    // Une fois les colonnes empilées sur un téléphone, l'ordre du DOM
+    // décide : le titre doit y précéder son visuel, sinon l'animation
+    // arrive sans contexte (sa remarque du 5 septembre). L'inverser
+    // dans le DOM pour "mettre l'animation à gauche" casserait le
+    // mobile sans qu'une capture le dise.
+    const txt = PAGE_ACCUEIL.indexOf('className="tql-deux-col-txt"');
+    const anim = PAGE_ACCUEIL.indexOf('className="tql-visuel-gauche"');
+    assert.ok(txt > 0 && anim > 0, "la section des autres outils a changé de forme");
+    assert.ok(
+      txt < anim,
+      "l'animation est passée devant le texte dans le DOM : sur téléphone elle arriverait avant son titre",
+    );
+    const css = racine("components/landing/styles.ts");
+    assert.ok(
+      /\.tql-visuel-gauche\{order:-1\}/.test(css),
+      "l'animation ne remonte plus à gauche par l'ordre CSS",
+    );
+    assert.ok(
+      /\.tql-visuel-gauche\{order:0\}/.test(css),
+      "l'ordre n'est plus remis à zéro quand les colonnes s'empilent : le visuel passerait devant son titre",
+    );
+  });
+
+  test("les colonnes s'empilent AVANT que celle de l'animation ne soit trop étroite", () => {
+    // MESURÉ dans le navigateur : son île rend 260 + 46 + 323 px de
+    // contenu, plus 36 de gouttières et 32 de marge interne, soit
+    // 672 px. Une demi colonne de 1120 en fait 532 : elle y était
+    // rognée de 25 px, ou empilée sur 1346 px de haut contre 605 px
+    // pour son texte quand on la laissait passer à la ligne.
+    //
+    // Le conteneur passe donc à 1240 px et les colonnes s'empilent dès
+    // 1240, pas 900 : en dessous, la colonne de l'animation passerait
+    // sous les 672 px dont elle a besoin.
+    const css = racine("components/landing/styles.ts");
+    const regle = css.match(/\.tql-deux-col\{[^}]*\}/);
+    assert.ok(regle, "la grille à deux colonnes a disparu");
+    assert.ok(
+      /max-width:1240px/.test(regle![0]),
+      `la boîte des deux colonnes n'est plus taillée sur ce que l'île mesure : ${regle![0]}`,
+    );
+    assert.ok(
+      /@media \(max-width:1240px\)\{\s*\.tql-deux-col\{grid-template-columns:1fr/.test(css),
+      "les colonnes ne s'empilent plus à 1240 px : l'animation serait rognée entre 900 et 1240",
+    );
+  });
+});
+
 describe("chaque animation levée porte son contexte", () => {
   // Béné, 5 septembre 2026 : "ok t'as repris mes animations mais pas
   // comme elles sont à l'origine, du coup ça ne veut plus rien dire" et
