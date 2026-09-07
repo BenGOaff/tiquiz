@@ -195,7 +195,11 @@ export default function BlogIndex() {
               <h2 className="mx-auto mt-6 max-w-[20ch] text-[1.9rem] sm:text-[2.4rem]">
                 Ton premier quiz tourne <span className="tq-surb">ce soir</span>
               </h2>
-              <p className="tq-doux mx-auto mt-5 max-w-[52ch] leading-relaxed">
+              {/* Sur un telephone ce paragraphe rend QUATRE lignes (mesure du
+                  7 septembre a 390 px), donc il s aligne a gauche : sa regle
+                  dit "plus de deux lignes, texte a gauche". Sur grand ecran
+                  il tient en deux lignes et la carte reste centree. */}
+              <p className="tq-doux mx-auto mt-5 max-w-[52ch] leading-relaxed max-sm:text-left">
                 Tiquiz écrit le quiz, pose les tags par profil et te rend des leads déjà triés dans
                 Systeme.io. Sans Zapier, sans Make.
               </p>

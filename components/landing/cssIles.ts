@@ -46,6 +46,24 @@
 // accent grave dans un commentaire ecrit a l interieur TERMINE le
 // litteral. Sixieme fois que ce depot le paie.
 
+// -- ET UNE ILE POSEE EN COLONNE : ON DIMENSIONNE LA COLONNE ---------
+//
+// Depuis le 7 septembre, son bloc des autres outils vit dans une
+// colonne (animation a gauche, texte a droite). Une media query ne
+// pourrait rien y faire : elle mesure la FENETRE, pas la colonne.
+//
+// La correction n est donc PAS ici : c est la colonne qui a ete taillee
+// sur ce que l ile mesure (672 px, releve dans le navigateur), dans
+// components/landing/styles.ts. Une requete de conteneur qui la ferait
+// passer a la ligne a ete essayee puis RETIREE : mesuree, elle rendait
+// l animation sur 1346 px de haut contre 605 px pour son texte, ce qui
+// est exactement le desequilibre qu on corrigeait.
+//
+// MESURE SUR SA PROPRE PAGE, ou ce bloc vit deja dans une colonne de 6
+// sur 12 : il y rend 530 px de large pour 600 px de contenu, deborde
+// de 30 px sur la gauche de sa colonne et rogne 25 px de ses cartes.
+// Servir la meme chose serait recopier un defaut.
+
 export const CSS_ILES_ANIMEES = `
 @media (max-width:900px){
   [data-anim-vente]{overflow-x:auto}

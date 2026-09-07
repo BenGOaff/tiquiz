@@ -62,7 +62,6 @@ import {
   contenuLanding,
   paliersAffiches,
   sansDoublons,
-  blocLong,
 } from "@/lib/site/landing";
 import { CSS } from "@/components/landing/styles";
 import { tailleCapture } from "@/components/landing/captures";
@@ -305,10 +304,12 @@ export default async function AccueilPage({ searchParams }: PageProps) {
           installer, il ne dit pas que les autres s'arrêtent. */}
       <section className="tql-sec">
         <div className="tql-large">
-          <h2 className="tql-h2">
-            {t.outilsTitre} <span className="tql-surb">{t.outilsMotCle}</span>
-          </h2>
-          <p className="tql-p">{t.outilsCorps}</p>
+          <div className="tql-intro">
+            <h2 className="tql-h2">
+              {t.outilsTitre} <span className="tql-surb">{t.outilsMotCle}</span>
+            </h2>
+            <p className="tql-p">{t.outilsCorps}</p>
+          </div>
           <div className="tql-comp-boite">
             <table className="tql-comp tql-comp-txt">
               <thead>
@@ -375,18 +376,26 @@ export default async function AccueilPage({ searchParams }: PageProps) {
           vraies phrases (le tag, la campagne, l'accès), donc les
           masquer à un lecteur d'écran retirerait l'argument. */}
       <section className="tql-sec tql-blanc">
-        <div className="tql-large">
-          <h2 className="tql-h2">
-            {t.autresTitre} <span className="tql-surb">{t.autresMotCle}</span>
-          </h2>
-          {t.autresCorps.map((c) => (
-            <p className="tql-p" key={c}>
-              {c}
-            </p>
-          ))}
-          <AnimVente bloc="autres-outils" decoratif={false} />
-          <p className="tql-legende">{t.autresLegende}</p>
-          <CtaPrincipal t={t} />
+        <div className="tql-large tql-deux-col">
+          {/* LE TEXTE EST PREMIER DANS LE DOM, L ANIMATION PASSE A
+              GAUCHE PAR LE CSS. Sur un telephone les deux colonnes
+              s empilent dans l ordre du DOM : le titre doit y preceder
+              son visuel, sinon l animation arrive sans contexte. */}
+          <div className="tql-deux-col-txt">
+            <h2 className="tql-h2">
+              {t.autresTitre} <span className="tql-surb">{t.autresMotCle}</span>
+            </h2>
+            {t.autresCorps.map((c) => (
+              <p className="tql-p" key={c}>
+                {c}
+              </p>
+            ))}
+            <p className="tql-legende">{t.autresLegende}</p>
+            <CtaPrincipal t={t} centre={false} />
+          </div>
+          <div className="tql-visuel-gauche">
+            <AnimVente bloc="autres-outils" decoratif={false} />
+          </div>
         </div>
       </section>
 
@@ -427,10 +436,12 @@ export default async function AccueilPage({ searchParams }: PageProps) {
           route vers quiz.tipote.com. À confirmer à l'écran. */}
       <section className="tql-sec" id="demo">
         <div className="tql-large">
-          <h2 className="tql-h2">
-            {t.demoTitre} <span className="tql-surb">{t.demoMotCle}</span>
-          </h2>
-          <p className="tql-p">{t.demoCorps}</p>
+          <div className="tql-intro">
+            <h2 className="tql-h2">
+              {t.demoTitre} <span className="tql-surb">{t.demoMotCle}</span>
+            </h2>
+            <p className="tql-p">{t.demoCorps}</p>
+          </div>
           <div className="tql-demo">
             <iframe
               src={DEMO_POPQUIZ}
@@ -466,10 +477,12 @@ export default async function AccueilPage({ searchParams }: PageProps) {
            chacun dit ce que Tiquiz fait à la place. */
         <section className="tql-sec tql-blanc">
           <div className="tql-large tql-lire-bloc">
-            <h2 className="tql-h2">
-              {t.pasPourToiTitre} <span className="tql-surb">{t.pasPourToiMotCle}</span>
-            </h2>
-            <p className="tql-p">{t.pasPourToiCorps}</p>
+            <div className="tql-intro">
+              <h2 className="tql-h2">
+                {t.pasPourToiTitre} <span className="tql-surb">{t.pasPourToiMotCle}</span>
+              </h2>
+              <p className="tql-p">{t.pasPourToiCorps}</p>
+            </div>
             <ul className="tql-non-liste">
               {t.pasPourToi.map((x) => (
                 <li key={x}>
@@ -499,7 +512,7 @@ export default async function AccueilPage({ searchParams }: PageProps) {
             {t.objections.slice(0, 3).map((o) => (
               <div key={o.q} className="tql-carte tql-obj">
                 <p className="tql-obj-q">{o.q}</p>
-                <p className={`tql-obj-r${blocLong([o.r]) ? " tql-p-lire" : ""}`}>{o.r}</p>
+                <p className="tql-obj-r">{o.r}</p>
               </div>
             ))}
           </div>

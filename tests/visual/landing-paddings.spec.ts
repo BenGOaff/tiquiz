@@ -76,6 +76,129 @@ test("chaque section de la landing porte au moins 100 px en haut et en bas", asy
   ).toEqual([]);
 });
 
+// LES PAGES OU LE CORPS DE TEXTE SE MESURE. La landing et /tarifs
+// portent presque tout le texte du site public ; les pages de
+// fonctionnalites, elles, sont alignees a gauche de bout en bout (leur
+// feuille ne centre que le bloc de fin).
+const PAGES_DE_TEXTE = [LANDING, "/tarifs?lang=fr"];
+
+test("aucun bloc de texte centré ne dépasse deux lignes rendues", async ({ page }) => {
+  // 🚨 CE CONTROLE N EXISTAIT PAS AVANT LE 7 SEPTEMBRE, et le
+  // commentaire de `blocLong` (lib/site/landing.ts) affirmait pourtant
+  // qu il vivait ici et refusait TROIS lignes. Huitieme fois que ce
+  // depot paie une regle ecrite en commentaire et dementie par le
+  // code : il existe maintenant, et il refuse DEUX lignes.
+  //
+  // Bene, 7 septembre 2026 : "tout ce qui fait plus de deux lignes doit
+  // etre en texte aligne a gauche et pas texte centre."
+  //
+  // ON MESURE LES LIGNES RENDUES, on ne compte pas les caracteres : un
+  // paragraphe de 141 caracteres prend 3 lignes dans une colonne
+  // etroite quand un de 150 en prend UNE dans un conteneur large
+  // (mesure du 7 septembre). C est la LARGEUR qui decide, et elle
+  // change d un bloc a l autre.
+  //
+  // LES TITRES SONT HORS DE SA REGLE : elle parle du TEXTE, et sa page
+  // centre ses H1 et plusieurs de ses H2 (mesure : 32 blocs centres
+  // contre 112 alignes a gauche, tous les titres de section compris).
+  for (const url of PAGES_DE_TEXTE) {
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(400);
+    const fautifs = await page.evaluate(() => {
+      const out: string[] = [];
+      for (const el of Array.from(document.querySelectorAll("p,li,figcaption,blockquote"))) {
+        if (el.querySelector("p,li")) continue;
+        const s = getComputedStyle(el);
+        if (s.textAlign !== "center") continue;
+        const lh = parseFloat(s.lineHeight);
+        if (!lh) continue;
+        const texte = (el as HTMLElement).innerText.trim();
+        if (!texte) continue;
+        const lignes = Math.round(el.getBoundingClientRect().height / lh);
+        if (lignes > 2) out.push(`${lignes} lignes, ${Math.round(el.getBoundingClientRect().width)} px : ${texte.slice(0, 60)}`);
+      }
+      return out;
+    });
+    expect(
+      fautifs,
+      `${url} : ${fautifs.length} bloc(s) de texte centré(s) sur plus de deux lignes\n  ${fautifs.join("\n  ")}`,
+    ).toEqual([]);
+  }
+});
+
+test("le titre et son corps partagent le même bord", async ({ page }) => {
+  // Mesure du 7 septembre, section Systeme.io : le titre etait centre
+  // sur 1120 px et son paragraphe demarrait a 400 px, sans bord commun
+  // avec quoi que ce soit. C est le melange de centre et de non centre
+  // qu elle a releve le 5 septembre.
+  //
+  // La boite `.tql-intro` les reunit : le titre y est centre, le corps
+  // part de son bord gauche, et les deux bords de la boite sont ceux du
+  // titre. Le test refuse un ecart de plus de 1 px.
+  for (const url of PAGES_DE_TEXTE) {
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(400);
+    const ecarts = await page.evaluate(() => {
+      const out: string[] = [];
+      for (const boite of Array.from(document.querySelectorAll(".tql-intro"))) {
+        const titre = boite.querySelector("h1,h2");
+        const corps = boite.querySelector("p");
+        if (!titre || !corps) {
+          out.push("une boite .tql-intro sans titre ou sans corps");
+          continue;
+        }
+        const b = boite.getBoundingClientRect();
+        const c = corps.getBoundingClientRect();
+        const t = titre.getBoundingClientRect();
+        const nom = (titre as HTMLElement).innerText.trim().slice(0, 34);
+        if (Math.abs(c.left - b.left) > 1) out.push(`${nom} : le corps part a ${Math.round(c.left)}, la boite a ${Math.round(b.left)}`);
+        if (Math.abs(t.left - b.left) > 1 || Math.abs(t.right - b.right) > 1) out.push(`${nom} : le titre ne remplit pas sa boite`);
+      }
+      return out;
+    });
+    expect(ecarts, `${url} :\n  ${ecarts.join("\n  ")}`).toEqual([]);
+  }
+});
+
+test("la section des autres outils met l'animation à gauche et le texte à droite", async ({ page }) => {
+  // Bene, 7 septembre 2026 : "pourquoi tu mets verticalement ce qui
+  // etait horizontal a la base ? Les automatisations c est : animation
+  // a gauche, texte a droite."
+  //
+  // C EST LA DISPOSITION DE SA PAGE, MESUREE : son bloc vit dans la
+  // rangee row-ee65297c, une colonne de 6 pour l animation et une
+  // colonne de 6 pour le texte de l etape.
+  //
+  // Le test mesure la POSITION rendue, pas l ordre du DOM : le texte y
+  // est premier pour que le titre precede son visuel une fois les
+  // colonnes empilees, et c est le CSS qui les croise. Verifier le DOM
+  // dirait donc exactement le contraire de ce que la lectrice voit.
+  const large = page.viewportSize()?.width ?? 0;
+  test.skip(large <= 1240, "en dessous de 1241 px les colonnes s'empilent, il n'y a plus de gauche ni de droite");
+  await page.goto(LANDING, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(400);
+  const r = await page.evaluate(() => {
+    const anim = document.querySelector('[data-anim-vente="autres-outils"]');
+    const txt = document.querySelector(".tql-deux-col-txt");
+    if (!anim || !txt) return null;
+    const a = anim.getBoundingClientRect();
+    const t = txt.getBoundingClientRect();
+    return {
+      animGauche: Math.round(a.left), animDroite: Math.round(a.right), animLarge: Math.round(a.width),
+      txtGauche: Math.round(t.left), animHaut: Math.round(a.height), txtHaut: Math.round(t.height),
+      rognage: anim.scrollWidth - anim.clientWidth,
+    };
+  });
+  expect(r, "la section des autres outils n'est plus dans la page").not.toBeNull();
+  expect(r!.animGauche, `l'animation devrait etre a gauche du texte (${r!.animGauche} contre ${r!.txtGauche})`).toBeLessThan(r!.txtGauche);
+  // ET SA COLONNE EST ASSEZ LARGE POUR ELLE : 672 px releves dans le
+  // navigateur (260 + 46 + 323 de contenu, 36 de gouttieres, 32 de
+  // marge interne). En dessous, l ile est rognee ou passe a la ligne
+  // sur 1346 px de haut contre 605 px pour son texte.
+  expect(r!.animLarge, "la colonne de l'animation est passee sous les 672 px dont elle a besoin").toBeGreaterThanOrEqual(672);
+  expect(r!.rognage, "l'animation est rognee dans sa colonne").toBeLessThanOrEqual(2);
+});
+
 test("les blocs animés levés de la page de vente s'animent vraiment", async ({ page }) => {
   await page.goto(PAGE_ANIMEE, { waitUntil: "domcontentloaded" });
 
