@@ -45,6 +45,7 @@ export type SectionId =
   | "accueil"
   | "clients"
   | "ventes"
+  | "trafic"
   | "affilies"
   | "revendeurs"
   | "business"
@@ -108,6 +109,17 @@ export const SECTIONS: readonly Section[] = [
     nom: "Ventes",
     question: "Qui a acheté quoi, quand, comment, via qui, et combien il paie ?",
     etat: "prete",
+    periode: true,
+  },
+  {
+    id: "trafic",
+    chemin: "/trafic",
+    nom: "Trafic et conversions",
+    question: "Combien de monde arrive, combien achète, et par où ils viennent ?",
+    etat: "prete",
+    // La période gouverne tout cet écran : les vues ET les ventes en
+    // viennent, et c'est justement ce qui permet de les diviser l'une
+    // par l'autre sans mentir.
     periode: true,
   },
   {

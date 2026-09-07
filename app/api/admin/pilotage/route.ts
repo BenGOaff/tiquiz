@@ -50,6 +50,7 @@ import { buildPeople, monthlyTrend, type ChurnRow, type ProfileRow } from "@/lib
 import { fetchAtelier } from "@/lib/admin/atelier";
 import { lirePeriode, tronqueeParLeJournal, DEBUT_DU_JOURNAL } from "@/lib/pilotage/periode";
 import { resumePeriode } from "@/lib/pilotage/resumePeriode";
+import { lireTrafic } from "@/lib/pilotage/trafic";
 import { lireComptesTipote, lireCoutAffiliation } from "@/lib/pilotage/affilies";
 import { buildMrr, serieChurn } from "@/lib/admin/mrr";
 import { derniersMois } from "@/lib/admin/adminStats";
@@ -284,6 +285,21 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       tipote: tipote.ok
         ? { lisible: true as const, comptes: tipote.comptes, tronque: tipote.tronque }
         : { lisible: false as const, raison: tipote.raison },
+      // LE TRAFIC, SUR LA MEME PERIODE ET DANS LE MEME APPEL QUE LES
+      // VENTES (Bene, 4 septembre, point 3 : "un ecran dans l'admin qui
+      // montre les deux ensemble").
+      //
+      // Deux appels separes finiraient par porter deux periodes
+      // differentes le jour ou l'un des deux oublie le parametre, et
+      // l'ecran afficherait un taux de conversion qui divise des
+      // pommes par des poires. Le denominateur et le numerateur
+      // viennent donc de la MEME reponse.
+      //
+      // `lisible: false` = on n'a pas pu regarder (migration pas
+      // passee, base muette). Ce n'est PAS zero vue, et l'ecran doit
+      // dire la difference : un site annonce desert fait prendre des
+      // decisions.
+      trafic: await lireTrafic({ debutJour: periode.debut, finJour: periode.fin }),
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
