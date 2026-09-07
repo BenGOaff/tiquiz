@@ -44,6 +44,8 @@
 // (globals.css), qui porte depuis le 4 septembre les couleurs de la
 // page de vente. Ce fichier n'en recopie AUCUNE : il les lit.
 
+import { CSS_ILES_ANIMEES } from "./cssIles";
+
 export const CSS = `
 .tql{--e:var(--tq-encre);--c:var(--tq-encre-douce);--b:var(--tq-bleu);--cy:var(--tq-cyan);
   --pale:var(--tq-creme);--pill:var(--tq-panneau);--bord:var(--tq-bord);
@@ -289,6 +291,35 @@ export const CSS = `
   font-weight:700;color:#6B7291;white-space:nowrap}
 .tql-ruban-lot span::after{content:"";width:5px;height:5px;border-radius:999px;background:var(--cy)}
 @keyframes tqlDefile{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* LE BANDEAU DU HAUT : A QUI CA S ADRESSE, AU DESSUS DE LA LIGNE DE
+   FLOTTAISON (Bene, 7 septembre 2026). Le LABEL ne defile pas : sans
+   lui, une file de metiers qui glisse ne dit pas a quoi elle repond.
+   L overflow passe donc sur le CADRE, sinon il couperait le label. */
+.tql-ruban-haut{display:flex;align-items:center;gap:18px;padding:14px 26px;overflow:visible}
+.tql-ruban-haut::before,.tql-ruban-haut::after{display:none}
+.tql-ruban-lb{flex:none;margin:0;font-size:12.5px;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--e)}
+.tql-ruban-cadre{flex:1;min-width:0;overflow:hidden;position:relative}
+.tql-ruban-cadre::before,.tql-ruban-cadre::after{content:"";position:absolute;top:0;bottom:0;
+  width:60px;z-index:2;pointer-events:none}
+.tql-ruban-cadre::before{left:0;background:linear-gradient(90deg,#fff,rgba(255,255,255,0))}
+.tql-ruban-cadre::after{right:0;background:linear-gradient(270deg,#fff,rgba(255,255,255,0))}
+@media (max-width:700px){
+  .tql-ruban-haut{flex-direction:column;align-items:flex-start;gap:8px;padding:14px 20px}
+  .tql-ruban-cadre{width:100%}
+}
+
+/* CE QUI EST LU MAIS PAS AFFICHE. Sa phrase entiere reste dans la page
+   pour un moteur et un lecteur d ecran : le defile ne peut pas porter
+   "qui ont une offre et pas assez de monde a qui la presenter". */
+.tql-vh{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* LE CHIFFRE A SA SECTION : il repond a "et alors ?" juste en dessous. */
+.tql-chiffre-bloc{max-width:760px;text-align:center}
+.tql-chiffre-bloc .tql-chiffre-carte{margin:30px 0 0}
+.tql-chiffre-bloc .tql-p{margin:22px 0 0}
 
 /* ── CARTES ET GRILLES ───────────────────────────────────────────── */
 .tql-carte{background:#fff;border-radius:18px;padding:26px 24px;box-shadow:0 10px 30px rgba(35,40,80,.08)}
@@ -662,6 +693,7 @@ export const CSS = `
      3 lignes") ne laisse donc rien de centre a cette largeur. Les
      TITRES restent centres : ils font une ou deux lignes. */
   .tql-p,.tql-legende{text-align:left}
+
   .tql-h2{font-size:28px}
   .tql-bande h2{font-size:28px}
   .tql-accroche{font-size:17px}
@@ -676,4 +708,20 @@ export const CSS = `
   .tql-temoins{columns:1}
   .tql-paliers li{grid-template-columns:1fr;gap:8px}
 }
-"`;
+/* 🚨 UN GUILLEMET DOUBLE ORPHELIN VIVAIT ICI, ET IL AVALAIT LA SUITE.
+
+   Il finissait la feuille, donc il ne se voyait pas : un guillemet non
+   ferme met l analyseur CSS en erreur et il ABANDONNE tout ce qui
+   vient apres. Tant que rien ne suivait, il ne coutait rien.
+
+   Mesure du 7 septembre : la regle qui heberge ses iles animees, posee
+   juste derriere, etait SERVIE dans le HTML et n avait aucun effet.
+   Le navigateur repondait overflow-x visible sur un element dont la
+   feuille disait auto. Une regle CSS morte ne leve rien, ne dit rien,
+   et se relit comme une regle vivante.
+
+   Toute regle ajoutee en fin de cette feuille aurait subi la meme
+   chose. Le test compare desormais ce que la feuille DECLARE a ce que
+   le navigateur APPLIQUE. */
+${CSS_ILES_ANIMEES}
+`;

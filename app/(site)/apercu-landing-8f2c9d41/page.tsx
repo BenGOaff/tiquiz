@@ -61,7 +61,7 @@ import {
   TEMOIGNAGES,
   contenuLanding,
   paliersAffiches,
-  temoinsAccueil,
+  sansDoublons,
   blocLong,
 } from "@/lib/site/landing";
 import { CSS } from "@/components/landing/styles";
@@ -70,6 +70,10 @@ import Machine from "@/components/landing/Machine";
 import { BlocVente } from "@/components/landing/blocsVente";
 import { BandeFinale, CtaPrincipal, Rassurances } from "@/components/landing/morceaux";
 import { CochePleine, Croix, Fleche, MaquetteQuiz } from "@/components/landing/pieces";
+import Temoignages from "@/components/landing/Temoignages";
+import { AnimVente } from "@/components/landing/anims";
+import AnimTag from "@/components/landing/AnimTag";
+import DeclencheurAnims from "@/components/landing/DeclencheurAnims";
 
 const LIEN_INSCRIPTION = "/signup";
 
@@ -126,17 +130,60 @@ function CaptureEtape({ capture }: { capture: import("@/lib/site/landing").Etape
 export default async function AccueilPage({ searchParams }: PageProps) {
   const langue = await resoudreLangue(searchParams);
   const t = contenuLanding(langue);
-  const temoins = temoinsAccueil(TEMOIGNAGES);
+  // LES DEUX TÉMOIGNAGES QUI SE RESSEMBLENT NE SONT JAMAIS SUR LE MÊME
+  // ÉCRAN (sa règle du 6 septembre). Gwenn et Eric Legrigeois partagent
+  // une suite de 21 mots d'affilée, mesurée : `sansDoublons` garde le
+  // premier de la liste. Sur un carrousel qui montre tout, ce filtre
+  // n'est pas optionnel.
+  const temoins = sansDoublons([...TEMOIGNAGES]);
 
   return (
     <main className="tql" lang={t.langue}>
       <style>{CSS}</style>
-      {/* AUCUN DE SES BLOCS ANIMÉS SUR CETTE PAGE, ET C'EST SA
-          DÉCISION. Les sections qu'ils illustraient sont parties sur
-          `/fonctionnalites/<slug>` ("rien n'est à jeter, tout est à
-          déplacer"). `DeclencheurAnims` est donc RETIRÉ : monté pour
-          rien, il ferait croire au prochain passage qu'il manque des
-          blocs à poser ici. Il vit sur les pages qui en portent. */}
+      {/* AUCUNE DE SES ÎLES LEVÉES SUR CETTE PAGE : les sections
+          qu'elles illustraient sont parties sur `/fonctionnalites/<slug>`
+          ("rien n'est à jeter, tout est à déplacer"). Le déclencheur
+          revient quand même, parce que `AnimTag` en a besoin : c'est
+          lui qui pose `tqz-visible`, et sans lui la scène est INERTE
+          (mesuré le 5 septembre : 0 élément animé sans déclencheur). */}
+      <DeclencheurAnims />
+
+      {/* ── LE BANDEAU : À QUI ÇA S'ADRESSE ──────────────────────── */}
+      {/* Béné, 7 septembre 2026, sur la phrase "Pour les entrepreneurs,
+          les coachs, les consultants..." : "mets le dans le bandeau
+          défilant visible sans scroller, au dessus de la ligne de
+          flotaison."
+
+          IL PASSE DONC AVANT LE HAUT DE PAGE, et il ne porte plus des
+          noms de fonctionnalités (ils vivent sur /fonctionnalites) mais
+          les métiers de ses lecteurs. Le label ne défile pas : sans
+          lui, une file de métiers qui glisse ne dit pas à quoi elle
+          répond.
+
+          Le lot est écrit DEUX fois et la piste glisse de -50 % : c'est
+          ce qui rend la BOUCLE invisible. Un seul lot ferait un saut à
+          chaque tour, et ce n'est donc pas le bandeau qui est en
+          double, c'est son contenu.
+
+          LA PHRASE ENTIÈRE RESTE DANS LA PAGE, hors écran : un moteur
+          et un lecteur d'écran lisent "qui ont une offre et pas assez
+          de monde à qui la présenter", que le défilé ne peut pas
+          porter. */}
+      <div className="tql-ruban tql-ruban-haut">
+        <p className="tql-vh">{t.pourQui}</p>
+        <p className="tql-ruban-lb">{t.bandeauLabel}</p>
+        <div className="tql-ruban-cadre" aria-hidden>
+          <div className="tql-ruban-piste">
+            {[0, 1].map((lot) => (
+              <div className="tql-ruban-lot" key={lot}>
+                {t.bandeau.map((mot) => (
+                  <span key={mot}>{mot}</span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* ── 1. LE HAUT DE PAGE ─────────────────────────────────── */}
       {/* IL RÉPOND À QUATRE QUESTIONS, DANS CET ORDRE : à quoi ça sert,
@@ -156,7 +203,6 @@ export default async function AccueilPage({ searchParams }: PageProps) {
               <span className="tql-h1-l2">{t.motCle}</span>
             </h1>
             <p className="tql-accroche">{t.accroche}</p>
-            <p className="tql-pourqui">{t.pourQui}</p>
             <div className="tql-boutons">
               <Link href={LIEN_INSCRIPTION} className="tql-cta">
                 {t.ctaPrincipal}
@@ -169,7 +215,15 @@ export default async function AccueilPage({ searchParams }: PageProps) {
                 {t.ctaSecondaire}
               </a>
             </div>
-            <p className="tql-mid-r tql-sous-cta">{t.sousCta}</p>
+            {/* ELLE SUIT SON BOUTON, ET C'EST LA CORRECTION DU
+                7 SEPTEMBRE. Béné : "le 'gratuit sans carte bancaire'
+                n'est pas centré." Il ne l'était pas : il portait
+                `tql-mid-r`, qui CENTRE sans condition, sous une rangée
+                de boutons alignée à gauche. Le commentaire de la règle
+                disait déjà "elle suit l'alignement de sa rangée de
+                boutons" : une règle écrite en commentaire n'est pas une
+                règle, c'est la sixième fois que ce dépôt le paie. */}
+            <p className="tql-sous-cta">{t.sousCta}</p>
             <Rassurances items={t.rassurances} />
 
             <p className="tql-preuve">
@@ -189,53 +243,51 @@ export default async function AccueilPage({ searchParams }: PageProps) {
         </div>
       </section>
 
-      {/* ── LE BANDEAU DÉFILANT, UNE SEULE FOIS ────────────────── */}
-      {/* Béné, 6 septembre : "le bandeau défilant des fonctionnalités
-          apparaît deux fois. Garde-le une seule fois."
-          Le lot est écrit DEUX fois et la piste glisse de -50 % : c'est
-          ce qui rend la BOUCLE invisible, et ce n'est pas le bandeau qui
-          est en double, c'est son contenu. Un seul lot ferait un saut à
-          chaque tour. */}
-      <div className="tql-ruban" aria-hidden>
-        <div className="tql-ruban-piste">
-          {[0, 1].map((lot) => (
-            <div className="tql-ruban-lot" key={lot}>
-              {t.bandeau.map((mot) => (
-                <span key={mot}>{mot}</span>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* ── 2. POURQUOI UN QUIZ ────────────────────────────────── */}
+      {/* Béné, 7 septembre 2026, sur le 44,9 % : "ça arrive comme un
+          cheveu sur la soupe, on peut dire 'et alors??' donc c'est pas
+          complet et pas au bon endroit."
 
-      {/* ── 2. LA PREUVE ───────────────────────────────────────── */}
-      {/* TROIS TÉMOIGNAGES, NOMMÉS PAR ELLE, verbatim. Les seize autres
-          sont sur /tarifs : c'est là qu'on hésite encore, et c'est là
-          qu'un mur d'avis sert à quelque chose.
-
-          ET LE CHIFFRE INTERACT NE SE REFORMULE JAMAIS : "des personnes
-          qui commencent un quiz", plus la mention que ce n'est pas un
-          taux de page. C'est le seul chiffre externe de tout le site. */}
-      <section className="tql-sec tql-blanc">
-        <div className="tql-large">
-          <h2 className="tql-h2">{t.preuveTitre}</h2>
-          <div className="tql-preuve-lignes">
-            {temoins.map((v) => (
-              <figure key={v.nom} className="tql-preuve-un">
-                <blockquote>{v.texte}</blockquote>
-                <figcaption>
-                  {v.nom}
-                  {v.metier ? <span> · {v.metier}</span> : null}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-          <div className="tql-carte tql-chiffre-carte tql-chiffre-seul">
+          Elle a raison deux fois. Il était posé sous les témoignages,
+          sans titre : un pourcentage tout seul ne dit rien à personne.
+          Il ouvre maintenant la page, sous son propre titre, et la
+          ligne du dessous dit ce que ça CHANGE pour la personne qui
+          lit. C'est le seul chiffre externe de tout le site, et il ne
+          se reformule jamais : "des personnes qui COMMENCENT un quiz",
+          plus la mention que ce n'est pas un taux de page. */}
+      <section className="tql-sec">
+        <div className="tql-large tql-chiffre-bloc">
+          <h2 className="tql-h2">
+            {t.chiffreTitre} <span className="tql-surb">{t.chiffreMotCle}</span>
+          </h2>
+          <div className="tql-carte tql-chiffre-carte">
             <p className="tql-chiffre">{t.chiffre}</p>
             <p className="tql-chiffre-leg">{t.chiffreLegende}</p>
             <p className="tql-chiffre-src">{t.chiffreSource}</p>
           </div>
+          <p className="tql-p tql-p-fort">{t.chiffreEtAlors}</p>
+          <CtaPrincipal t={t} />
         </div>
+      </section>
+
+      {/* ── 3. LA PREUVE : SES TÉMOIGNAGES ─────────────────────── */}
+      {/* Béné, 7 septembre 2026 : "c'est mal mis en forme, moche ->
+          mets de jolis témoignages avec les photos des users, style
+          screenshot comme sur ma page d'origine."
+
+          C'est donc le dessin de SON carrousel `tqz-tm`, avec nos
+          portraits locaux et les textes verbatim. Voir le composant :
+          il ne peut pas être une île levée, parce qu'elle demande
+          d'AJOUTER Maurice, et une île est du HTML figé sans données.
+
+          LES DIX-HUIT DÉFILENT, plus trois choisis à la main : sur une
+          landing courte, un mur d'avis coûte un écran entier, un
+          carrousel n'en coûte aucun. */}
+      <section className="tql-sec tql-blanc">
+        <div className="tql-large">
+          <h2 className="tql-h2">{t.preuveTitre}</h2>
+        </div>
+        <Temoignages items={temoins} />
       </section>
 
       {/* ── 3. LE TABLEAU DES INTÉGRATIONS ─────────────────────── */}
@@ -283,12 +335,57 @@ export default async function AccueilPage({ searchParams }: PageProps) {
           <p className="tql-p tql-p-fort tql-gain">
             {t.outilsGain.replace("{prix}", ZAPIER.professionnelParMois)}
           </p>
+          {/* L'ANIMATION REMPLACE LA MOITIÉ DU PARAGRAPHE (Béné,
+              7 septembre : "c'est long, il faut faire un effort pour
+              comprendre"). Elle montre le geste, la phrase garde le
+              seul fait qu'un dessin ne peut pas porter : le prix. */}
+          <AnimTag t={t} />
           <p className="tql-legende">
             <Link href="/integrations">
               {t.outilsLien}
               <Fleche />
             </Link>
           </p>
+          <CtaPrincipal t={t} />
+        </div>
+      </section>
+
+      {/* ── 3bis. ET SANS SYSTEME.IO ────────────────────────────── */}
+      {/* Béné, 7 septembre 2026 : "garde tout pour les utilisateurs qui
+          n'utilisent pas systeme io : c'est possible aussi. Moins
+          simple, mais possible."
+
+          ELLE AVAIT RAISON DE LEVER MON REFUS. J'avais écarté son bloc
+          parce qu'il montre douze outils d'emailing concurrents, alors
+          que l'argument de la section juste au dessus est la connexion
+          NATIVE. Mais refuser le bloc, c'était refuser le PUBLIC : la
+          moitié des gens qui liront cette page n'ont pas Systeme.io, et
+          la page ne leur disait rien.
+
+          CE QUI EST VRAI, ET MESURÉ LE 7 SEPTEMBRE : aucun webhook
+          sortant, aucune intégration native ailleurs que Systeme.io. Le
+          seul chemin est l'export CSV de Mes leads, et il porte LE
+          PROFIL OBTENU (`app/leads/LeadsShell.tsx`). Le texte dit donc
+          les deux temps, et `autresLegende` nomme lequel des deux est
+          automatique : sans elle, un visuel qui montre Brevo au dessus
+          de "S'abonner à la campagne" promet une connexion qui
+          n'existe pas.
+
+          LE VISUEL N'EST PAS DÉCORATIF : ses trois cartes portent de
+          vraies phrases (le tag, la campagne, l'accès), donc les
+          masquer à un lecteur d'écran retirerait l'argument. */}
+      <section className="tql-sec tql-blanc">
+        <div className="tql-large">
+          <h2 className="tql-h2">
+            {t.autresTitre} <span className="tql-surb">{t.autresMotCle}</span>
+          </h2>
+          {t.autresCorps.map((c) => (
+            <p className="tql-p" key={c}>
+              {c}
+            </p>
+          ))}
+          <AnimVente bloc="autres-outils" decoratif={false} />
+          <p className="tql-legende">{t.autresLegende}</p>
           <CtaPrincipal t={t} />
         </div>
       </section>
