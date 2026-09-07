@@ -1,6 +1,7 @@
 // app/q/[quizId]/page.tsx
 // Public quiz page (no auth required).
 // The "[quizId]" URL segment accepts either the quiz UUID or a custom slug.
+import { cache } from "react";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -47,7 +48,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // domain could serve someone else's quizzes through it (e.g. phishing).
 const CUSTOM_HOST_HEADER = "x-tiquiz-custom-host";
 
-async function resolveCustomDomainOwner(): Promise<string | null> {
+const resolveCustomDomainOwner = cache(async function resolveCustomDomainOwner(): Promise<string | null> {
   const h = await headers();
   const host = h.get(CUSTOM_HOST_HEADER);
   if (!host) return null;
@@ -58,13 +59,19 @@ async function resolveCustomDomainOwner(): Promise<string | null> {
     .eq("status", "verified")
     .maybeSingle();
   return (data?.user_id as string | undefined) ?? null;
-}
+});
 
 // Champs sélectionnés sur quizzes — étendre ici si on ajoute des
 // colonnes (ex : pixel ids) dont on a besoin server-side.
 const QUIZ_META_FIELDS = "id, user_id, slug, title, introduction, og_image_url, og_description, share_message, locale, seo_noindex, meta_pixel_id, ga4_measurement_id, google_ads_conversion_id";
 
-async function fetchQuizMeta(slugOrId: string) {
+// MEMOISE PAR REQUETE. `generateMetadata` et le composant de page
+// tournent tous les deux sur la MEME requete et appelaient chacun cette
+// fonction : deux allers-retours Supabase pour la meme ligne, a chaque
+// chargement d'un quiz public. Next ne deduplique que `fetch`, jamais un
+// client Supabase, donc c'est `cache()` de React qui le fait ici.
+// Meme raison pour `resolveCustomDomainOwner`, appelee deux fois aussi.
+const fetchQuizMeta = cache(async function fetchQuizMeta(slugOrId: string) {
   if (UUID_RE.test(slugOrId)) {
     const { data } = await supabaseAdmin
       .from("quizzes")
@@ -81,7 +88,7 @@ async function fetchQuizMeta(slugOrId: string) {
     .eq("status", "active")
     .maybeSingle();
   return data;
-}
+});
 
 // Note : la résolution du custom domain + share_site_name de l'owner
 // vit dans `fetchOwnerBranding` (lib/publicUrl.ts) — partagé entre les
@@ -271,7 +278,23 @@ export default async function PublicQuizPage({ params, searchParams }: Props) {
   let updatedAt: string | null = null;
   let language: string | null = null;
   if (meta?.user_id) {
-    const [profileRes, fullQuizRes] = await Promise.all([
+    // CES TROIS CHAMPS ETAIENT VIDES EN PRODUCTION, EN SILENCE.
+    //
+    // Mesure du 7 septembre 2026 sur `quiz.tipote.com/q/rps` : le
+    // JSON-LD servi ne portait ni `numberOfQuestions`, ni `dateCreated`,
+    // ni `dateModified`, ni `inLanguage`. La requete demandait
+    // `questions` et `content_locale` sur la table `quizzes`, et AUCUNE
+    // des deux colonnes n'y existe : les questions vivent dans
+    // `quiz_questions`, `content_locale` vit sur `profiles`. PostgREST
+    // rejette alors le select ENTIER, donc `created_at` et `updated_at`,
+    // qui eux existent, tombaient avec.
+    //
+    // Personne ne l'a vu parce que l'erreur n'etait jamais lue : la ligne
+    // faisait `fullQuizRes.data as ... | null` et se contentait du null.
+    // On la lit maintenant, et on CRIE : un JSON-LD amputa ne casse aucun
+    // ecran, il ne coute que le referencement et la lecture par les IA.
+    const quizRowId = (meta as { id?: string }).id ?? quizId;
+    const [profileRes, datesRes, countRes] = await Promise.all([
       supabaseAdmin
         .from("profiles")
         .select("brand_website_url, full_name")
@@ -279,22 +302,33 @@ export default async function PublicQuizPage({ params, searchParams }: Props) {
         .maybeSingle(),
       supabaseAdmin
         .from("quizzes")
-        .select("questions, created_at, updated_at, content_locale")
-        .eq("id", (meta as { id?: string }).id ?? quizId)
+        .select("created_at, updated_at")
+        .eq("id", quizRowId)
         .maybeSingle(),
+      // `head: true` : on veut le NOMBRE, pas les questions. Les tirer
+      // pour les compter ramenerait tout l'enonce de chaque question sur
+      // une page qui n'en affiche aucune.
+      supabaseAdmin
+        .from("quiz_questions")
+        .select("id", { count: "exact", head: true })
+        .eq("quiz_id", quizRowId),
     ]);
+    if (datesRes.error) console.error("[q/page] dates du quiz illisibles :", datesRes.error.message);
+    if (countRes.error) console.error("[q/page] nombre de questions illisible :", countRes.error.message);
     const profile = profileRes.data as
       | { brand_website_url?: string | null; full_name?: string | null }
       | null;
     authorName = profile?.full_name ?? null;
     authorUrl = profile?.brand_website_url ?? null;
-    const q = fullQuizRes.data as
-      | { questions?: unknown[]; created_at?: string; updated_at?: string; content_locale?: string }
-      | null;
-    if (Array.isArray(q?.questions)) questionCount = q!.questions.length;
-    createdAt = q?.created_at ?? null;
-    updatedAt = q?.updated_at ?? null;
-    language = q?.content_locale ?? null;
+    const dates = datesRes.data as { created_at?: string; updated_at?: string } | null;
+    createdAt = dates?.created_at ?? null;
+    updatedAt = dates?.updated_at ?? null;
+    questionCount = typeof countRes.count === "number" ? countRes.count : null;
+    // La langue DECLAREE d'une page de quiz est celle que son visiteur
+    // lit, c'est a dire `quizzes.locale`. `profiles.content_locale` est
+    // la langue par defaut des contenus de la creatrice : ce n'est pas
+    // la meme question, et ce n'est pas sur cette table.
+    language = (meta as { locale?: string | null }).locale ?? null;
   }
 
   const canonical = (await buildCanonicalUrl(`/q/${quizId}`)) ?? "";

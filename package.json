@@ -40,6 +40,7 @@
     "vente:fonds": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --experimental-strip-types --import ./tests/logic/register-alias.mjs scripts/convertir-fonds-vente.mjs",
     "vente:images": "node scripts/reduire-images-vente.mjs",
     "check:deploye": "node scripts/check-deploye.mjs",
+    "check:vitesse-quiz": "node scripts/check-vitesse-quiz.mjs",
     "faq:extraire": "node --experimental-strip-types scripts/extraire-faq-vente.mjs",
     "anims:extraire": "node scripts/extraire-anims-vente.mjs"
   },
