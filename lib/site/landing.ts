@@ -360,6 +360,31 @@ export interface ContenuLanding {
    *  Zapier, jamais recopié à la main. */
   sioPrix: string;
 
+  /**
+   * TU N'ES PAS CHEZ SYSTEME.IO, ET C'EST POSSIBLE QUAND MEME.
+   *
+   * Béné, 7 septembre 2026, sur le bloc qui montre douze outils
+   * d'emailing : "garde tout pour les utilisateurs qui n'utilisent pas
+   * systeme io : c'est possible aussi. Moins simple, mais possible."
+   *
+   * ELLE A RAISON, ET LE CHEMIN EST MESURÉ : l'export CSV de Mes leads
+   * (`app/leads/LeadsShell.tsx`) porte l'email, le prénom, le nom, le
+   * téléphone, le pays, le quiz, LE PROFIL OBTENU, le tag, les scores
+   * et la date. La segmentation par profil survit donc à l'import dans
+   * n'importe quel outil, et c'est elle qui fait la valeur du quiz.
+   *
+   * CE QUE CE BLOC NE DOIT JAMAIS LAISSER CROIRE : que le tag part TOUT
+   * SEUL dans Brevo ou Mailchimp. Mesuré le 7 septembre : aucun webhook
+   * sortant, aucune intégration native ailleurs que Systeme.io. D'où
+   * `autresLegende`, qui dit lequel des deux chemins est automatique,
+   * et le test qui l'exige.
+   */
+  autresTitre: string;
+  autresMotCle: string;
+  autresCorps: readonly string[];
+  /** Ce que le visuel montre, et ce qu'il ne promet pas. */
+  autresLegende: string;
+
   ouTitre: string;
   ouMotCle: string;
   ouCorps: string;
@@ -1474,6 +1499,16 @@ const fr: ContenuLanding = {
   ],
   sioPrix: "Zapier commence à {prix} par mois, pour faire ce que Tiquiz fait tout seul.",
 
+  autresTitre: "Tu utilises un autre",
+  autresMotCle: "outil d'emailing",
+  autresCorps: [
+    "Ton quiz marche exactement pareil : il capture, il attribue son profil, il garde tout dans Mes leads. Ce qui change, c'est la sortie.",
+    "Avec Systeme.io, le contact part tout seul avec son tag, sa campagne et ses accès. Avec Brevo, Mailchimp, Kit, ActiveCampaign ou n'importe quel autre, tu exportes tes leads en un clic et tu les importes chez toi. Moins simple, et ça marche.",
+    "L'export porte l'adresse, le prénom, le nom, le téléphone, le pays, le quiz, le profil obtenu, les scores et la date. Ta segmentation par profil te suit donc dans ton outil : c'est elle qui fait la valeur d'un quiz, et elle ne reste pas coincée chez nous.",
+  ],
+  autresLegende:
+    "Le lead capturé par ton quiz, et ce qu'il déclenche. Les trois actions de droite sont automatiques chez Systeme.io. Ailleurs, elles partent de ton import.",
+
   ouTitre: "Ton quiz va",
   ouMotCle: "là où tu es déjà",
   ouCorps:
@@ -1922,6 +1957,16 @@ const en: ContenuLanding = {
     "Two tools cover the whole system, Tiquiz and Systeme.io. One of the two, you already use.",
   ],
   sioPrix: "Zapier starts at {prix} per month, to do what Tiquiz does on its own.",
+
+  autresTitre: "You use another",
+  autresMotCle: "email tool",
+  autresCorps: [
+    "Your quiz works exactly the same: it captures, it assigns its profile, it keeps everything in My leads. What changes is the way out.",
+    "With Systeme.io, the contact leaves on its own with its tag, its campaign and its access. With Brevo, Mailchimp, Kit, ActiveCampaign or any other, you export your leads in one click and import them on your side. Less simple, and it works.",
+    "The export carries the address, the first name, the last name, the phone, the country, the quiz, the profile obtained, the scores and the date. Your profile segmentation follows you into your own tool: it is what makes a quiz worth running, and it does not stay stuck with us.",
+  ],
+  autresLegende:
+    "The lead your quiz captured, and what it triggers. The three actions on the right are automatic on Systeme.io. Elsewhere, they start from your import.",
 
   ouTitre: "Your quiz goes",
   ouMotCle: "where you already are",

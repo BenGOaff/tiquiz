@@ -15,6 +15,8 @@
 // dans un littéral de gabarit, et un accent grave le termine. C'est
 // arrivé quatre fois.
 
+import { CSS_ILES_ANIMEES } from "@/components/landing/cssIles";
+
 export const CSS = `
 .tqf{--b:#5A6EF6;--cy:#20BBE6;--e:#2B3264;--c:#3B3B3B;--fond:#F3F6FC;
   --pale:#EDF1F7;--bord:#E4E8F3;
@@ -130,4 +132,5 @@ export const CSS = `
   .tqf h2{font-size:23px}
   .tqf-voisines ul{grid-template-columns:1fr}
 }
+${CSS_ILES_ANIMEES}
 `;

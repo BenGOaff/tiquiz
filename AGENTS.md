@@ -9000,7 +9000,7 @@ remet en ligne ce qu'on a écarté exprès.
 | `rawhtml-b8b48544` | une publication Facebook FABRIQUÉE au nom de **Mark Zuckerberg**, photo comprise, avec 503 réactions. On ne republie pas une publication inventée au nom d'une personne réelle. Elle porte en plus "TIQUIZ.COM", qui n'est aucun de nos domaines |
 | `rawhtml-ce57993d` | son troisième écran affiche "il n'y a que 20 codes promos disponibles, profite du tien avant les autres" : c'est de la FAUSSE RARETÉ, son interdit numéro un. Le montrer, c'est l'enseigner |
 | `rawhtml-f0639bfe` | le lien affiché est `app.tiquiz.com/sandra-costa/...`, un domaine qui n'existe pas |
-| `rawhtml-8ecf2c31` | il fait partir le tag vers onze outils d'emailing concurrents, alors que notre argument est la connexion NATIVE à Systeme.io |
+| ~~`rawhtml-8ecf2c31`~~ | **REFUS LEVÉ le 7 septembre, voir le onzième passage.** Il était écarté parce qu'il montre douze outils d'emailing concurrents ; Béné : "garde tout pour les utilisateurs qui n'utilisent pas systeme io" |
 | `rawhtml-21bf9dec` | ses cinq scènes sont pilotées par SON script : servi sans lui, le bloc rend un titre et rien d'autre (mesuré). Et elle l'a fait retirer de la v2 le 2 septembre |
 
 **Les trois premiers vivent sur sa page EN LIGNE.** Ce n'est pas une
@@ -9664,3 +9664,130 @@ dont les trois mesures d'animations qui exigent le déclencheur client.
 
 Test : `tests/visual/landing-paddings.spec.ts` (12 cas), et
 `tests/logic/landing.test.mts`.
+
+### Onzième passage : elle lève mon refus, et le responsive de tout le site (7 septembre 2026)
+
+Deux décisions d'elle, et la seconde a ouvert un chantier plus large que
+la question posée.
+
+**1. "Oui garde les étoiles."** La note du huitième passage est corrigée
+en place plus haut : elles sont affichées, c'est SON asset et SA
+décision, et le message qui accompagnait la version le lui disait pour
+qu'elle puisse dire non.
+
+**2. "Garde tout pour les utilisateurs qui n'utilisent pas systeme io :
+c'est possible aussi. Moins simple, mais possible."**
+
+#### ELLE A LEVÉ UN REFUS QUI ÉTAIT LE MIEN, ET ELLE AVAIT RAISON
+
+J'avais écarté `rawhtml-8ecf2c31` le 5 septembre parce qu'il montre
+douze outils d'emailing concurrents (décodés et REGARDÉS un par un :
+Brevo, ActiveCampaign, MailerLite, Kit, Klaviyo, Mailchimp, Podia,
+Mailjet, Omnisend...) alors que l'argument de la section juste au dessus
+est la connexion NATIVE à Systeme.io.
+
+**Le raisonnement était juste et la conclusion était mauvaise : refuser
+le bloc, c'était refuser le PUBLIC.** La moitié des gens qui liront
+cette page n'ont pas Systeme.io, et la page ne leur disait rien.
+
+#### CE QUI EST VRAI POUR EUX, ET C'EST MESURÉ
+
+Balayé le 7 septembre dans tout le dépôt : **aucun webhook sortant,
+aucune intégration native ailleurs que Systeme.io.** Le seul chemin
+existant est l'export CSV de Mes leads, et il est meilleur qu'il n'en a
+l'air : `app/leads/LeadsShell.tsx` exporte l'adresse, le prénom, le nom,
+le téléphone, le pays, le quiz, **le profil obtenu**, le tag, les scores
+et la date. La segmentation par profil survit donc à l'import dans
+n'importe quel outil, et c'est elle qui fait la valeur d'un quiz.
+
+**Le texte de la section dit donc les DEUX temps**, et `autresLegende`
+nomme lequel est automatique : "les trois actions de droite sont
+automatiques chez Systeme.io. Ailleurs, elles partent de ton import."
+Sans cette phrase, un visuel qui montre Brevo au dessus de "S'abonner à
+la campagne" promet une connexion qui n'existe pas, c'est à dire son
+interdit numéro un. Le test l'exige, dans les deux langues.
+
+**Trouvé en cherchant :** le commentaire de `LeadsShell.tsx` renvoie à
+"/api/leads/export", **qui n'existe pas** (`app/api/leads/` ne porte
+qu'un `route.ts`). L'export client marche très bien ; c'est le
+commentaire qui ment. Septième fois que ce dépôt paie une règle écrite
+en commentaire.
+
+#### LE TEXTE DU TÉLÉPHONE ANNONÇAIT SON BONUS À ELLE
+
+Son bloc porte "Télécharge gratuitement mes scripts n8n à importer en
+1 clic pour lancer 10 bots qui travailleront pour toi dès ce soir". Sur
+SA page c'est son exemple, et c'est cohérent. Sur la landing de Tiquiz,
+c'est un cadeau que personne ne recevra.
+
+**Corrigé par une CORRECTION NOMMÉE dans l'extracteur**, la mécanique de
+`CORRECTIONS_FAQ` (4 septembre) : on ne retouche jamais un fichier levé
+à la main, et le script REFUSE quand une correction ne trouve pas sa
+cible. Le remplacement décrit ce que Tiquiz sait vraiment faire.
+
+**ET LE REFUS A MORDU DU PREMIER COUP, SUR MOI :** ma chaîne portait une
+espace ORDINAIRE devant le `:`, sa page une INSÉCABLE. C'est mot pour
+mot la faute du 31 août, écrite dans ce fichier, et je l'ai refaite.
+`motif()` accepte donc n'importe quelle espace.
+
+#### "PENSE ÉVIDEMMENT AU RESPONSIVE POUR TOUT"
+
+Elle l'a écrit pendant que je regardais son bloc sur un téléphone, et
+c'est exactement ce que la mesure venait de montrer.
+
+**Relevé sur les ONZE pages du site, à 1440, 900, 390 et 320 px** :
+aucune page ne débordait, et pourtant **trois de ses blocs avaient leur
+contenu coupé à l'intérieur de leur boîte**, sans que rien ne dise qu'il
+existait :
+
+| | rogné |
+|---|---|
+| `autres-outils` | +762 px (le téléphone à gauche, les trois cartes à droite) |
+| `viralite-trafic` | +46 px, sur `/fonctionnalites/partage-et-viralite` |
+| `ton-branding` | +26 px, sur `/fonctionnalites/branding-et-langues` |
+
+Les deux derniers étaient là depuis le 6 septembre, sur des pages déjà
+en relecture. **Aucune capture ne pouvait le voir** : la page s'affiche
+très bien, et le contenu manquant ne manque à personne sauf à la
+lectrice.
+
+**Règle : `components/landing/cssIles.ts`, et les DEUX feuilles
+l'interpolent.** On ne rogne pas et on ne redessine pas son travail : la
+boîte défile (la règle déjà écrite pour les tableaux du hub, "c'est le
+tableau qui défile, jamais la page"). Pour `autres-outils` on fait
+mieux : ses trois colonnes passent l'une sous l'autre, donc plus rien à
+faire glisser.
+
+**LA RÈGLE A D'ABORD ÉTÉ ÉCRITE DANS UNE SEULE FEUILLE**, celle de la
+landing, et les deux blocs des pages de fonctionnalités sont restés
+coupés : elles ont LEUR feuille. Une règle, deux feuilles, écrite dans
+une seule, c'est le défaut que ce dépôt paie en boucle depuis juin,
+transposé au CSS.
+
+#### 🚨 ET UN GUILLEMET ORPHELIN AVALAIT TOUT CE QUI SUIVAIT
+
+La correction a ensuite été SERVIE dans le HTML **sans aucun effet**. Le
+navigateur répondait `overflow-x: visible` sur un élément dont la
+feuille disait `auto`.
+
+La cause : **un guillemet double orphelin traînait en fin de
+`components/landing/styles.ts`** (`}\n"` puis la fin du gabarit). Un
+guillemet non fermé met l'analyseur CSS en erreur et lui fait ABANDONNER
+tout ce qui suit. Il ne coûtait rien tant que rien ne venait après ; la
+première règle posée derrière est morte.
+
+**Toute règle ajoutée en fin de cette feuille aurait subi la même
+chose**, et c'est indétectable à la lecture : le fichier est correct,
+le HTML servi porte la règle, et elle ne fait rien.
+
+**Le filet mesure donc ce que le navigateur APPLIQUE, jamais ce que le
+fichier déclare** (`tests/visual/responsive-site.spec.ts`) : un test qui
+aurait cherché la règle dans la source serait sorti VERT sur une page
+cassée. Et `tests/logic/landing.test.mts` compte les guillemets des trois
+feuilles : un nombre impair fait rougir.
+
+Filet : **178 captures et mesures** (111 + 67), `test:logic` 2518,
+`tsc` exit 0. Les gardes ont été vérifiés en rejouant six versions
+fautives (la légende sans "automatique", le corps sans l'export, le
+visuel redevenu décoratif, le bonus n8n de retour, le guillemet
+orphelin, une feuille qui perd la constante) : les six rougissent.

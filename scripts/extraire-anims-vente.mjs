@@ -63,7 +63,7 @@ const BLOCS = [
   // REMPLACE le bloc de texte qu'elle appelle imbuvable, et c'est la
   // seule animation de sa page qui montre le tag arriver dans
   // Systeme.io. Si elle n'en veut décidément pas, c'est une ligne.
-  // ── LES CINQ BLOCS QU ON LEVE ────────────────────────────────────
+  // ── LES SIX BLOCS QU ON LEVE ─────────────────────────────────────
   //
   // Bene, 5 septembre 2026 : "y a plein d animation sur ma page
   // d origine et j ai l impression que tu reproduis un screen fixe,
@@ -80,7 +80,31 @@ const BLOCS = [
   { rawhtml: "rawhtml-f22556ab", fichier: "comparatif-formats", quoi: "Le comparatif du quiz contre l'ebook et la formation offerte, critere par critere." },
   { rawhtml: "rawhtml-30ad93c0", fichier: "generation-ia", quoi: "Le brief tape, puis le quiz qui s'ecrit tout seul." },
 
-  // ── LES CINQ QU ON NE LEVE PAS, ET POURQUOI ──────────────────────
+  // rawhtml-8ecf2c31, LEVE LE 7 SEPTEMBRE, ET LE REFUS ETAIT A MOI.
+  //
+  // Il etait ecarte parce qu il montre douze outils d emailing
+  // concurrents (Brevo, ActiveCampaign, MailerLite, Kit, Klaviyo,
+  // Mailchimp, Podia, Mailjet, Omnisend..., decodes et REGARDES un par
+  // un) alors que notre argument est la connexion NATIVE a Systeme.io.
+  //
+  // Bene, 7 septembre : "garde tout pour les utilisateurs qui
+  // n utilisent pas systeme io : c est possible aussi. Moins simple,
+  // mais possible."
+  //
+  // Elle a raison, et c est MESURE : l export CSV de Mes leads porte
+  // l email, le prenom, le nom, le telephone, le pays, le quiz, LE
+  // PROFIL OBTENU, le tag, les scores et la date
+  // (app/leads/LeadsShell.tsx). N importe quel outil le reimporte, et
+  // la segmentation par profil survit au passage.
+  //
+  // CE QUE LE VISUEL NE DOIT PAS LAISSER CROIRE : que le tag parte
+  // TOUT SEUL dans Brevo ou Mailchimp. Mesure le 7 septembre : aucun
+  // webhook sortant, aucune integration native ailleurs que
+  // Systeme.io. Le texte qui l entoure sur la landing dit donc les
+  // deux temps, et le test l exige.
+  { rawhtml: "rawhtml-8ecf2c31", fichier: "autres-outils", quoi: "Le lead capture qui part vers l'outil d'emailing de la creatrice, quel qu'il soit." },
+
+  // ── LES QUATRE QU ON NE LEVE PAS, ET POURQUOI ────────────────────
   //
   // rawhtml-21bf9dec  "Le 1er outil quiz connecte a Systeme.io"
   //   Ses cinq scenes sont pilotees par SON script, qu on ne leve pas :
@@ -105,18 +129,52 @@ const BLOCS = [
   //   disponibles, profite du tien avant les autres" : c est de la
   //   FAUSSE RARETE, son interdit numero un. Le montrer sur notre
   //   landing, c est l enseigner.
-  //
-  // rawhtml-8ecf2c31  le bonus de fin de quiz
-  //   Il fait partir le tag vers onze outils d emailing concurrents
-  //   (Brevo, Mailchimp, Klaviyo...). Notre argument est la connexion
-  //   NATIVE a Systeme.io : ce visuel promet des integrations qui
-  //   n existent pas chez nous.
   { prefixe: "tqvs", fichier: "opt-in-vs-quiz", quoi: "Un PDF qu'on ne lit pas contre un quiz auquel on répond." },
   { prefixe: "tqvsmb", fichier: "opt-in-vs-quiz-mobile", quoi: "La même chose, la variante mobile de sa page." },
   { prefixe: "tqbr", fichier: "ton-branding", quoi: "Le même quiz qui prend les couleurs et le logo de la créatrice." },
   { prefixe: "tqbrmb", fichier: "ton-branding-mobile", quoi: "La même chose, la variante mobile de sa page." },
   { prefixe: "tqpx", fichier: "tes-pixels", quoi: "Les pixels Meta, Analytics et Ads qui se posent sur le quiz." },
   { prefixe: "tqpxmb", fichier: "tes-pixels-mobile", quoi: "La même chose, la variante mobile de sa page." },
+];
+
+/**
+ * LES CORRECTIONS DE TEXTE, NOMMEES, AVEC LEUR RAISON.
+ *
+ * Meme mecanique que `CORRECTIONS_FAQ` (4 septembre) : on ne retouche
+ * jamais un fichier leve a la main, on corrige ICI, et le script REFUSE
+ * quand une correction ne trouve pas sa cible. Une correction qui ne
+ * mord pas est une correction qu on croit appliquee.
+ */
+/** Une chaine cherchee dans SA page : chaque espace y accepte
+ *  l insecable, que Systeme.io pose devant `:` `?` `!` et `;`. */
+function motif(texte) {
+  const echappe = texte.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(echappe.replace(/ /g, "[\\s\\u00a0]+"), "g");
+}
+
+const CORRECTIONS = [
+  {
+    bloc: "autres-outils",
+    // Le telephone de son bloc annonce SON bonus a elle : "telecharge
+    // gratuitement mes scripts n8n a importer en 1 clic pour lancer
+    // 10 bots qui travailleront pour toi des ce soir". Sur SA page de
+    // vente c est son exemple, et c est coherent. Sur la landing de
+    // Tiquiz, ca annonce un cadeau n8n que personne ne recevra : c est
+    // une promesse de contenu qu on ne livre pas, donc son interdit
+    // numero un.
+    //
+    // Le remplacement decrit ce que Tiquiz sait VRAIMENT faire : le
+    // generateur ecrit un bonus par profil, et l export PDF existe
+    // (lib/bonus/printable.ts). C est un exemple, pas une offre.
+    // L ESPACE EST INSECABLE DANS SA PAGE, et une chaine litterale ne
+    // la trouve pas : c est la faute du 31 aout, refaite ici. `motif()`
+    // accepte donc n importe quelle espace, et le remplacement porte
+    // l insecable devant le deux points (typographie francaise).
+    cherche:
+      "Télécharge gratuitement mes scripts n8n à importer en 1 clic pour lancer 10 bots qui travailleront pour toi dès ce soir :",
+    remplace:
+      "Reçois ton plan d'action détaillé, écrit pour ton profil, dans ta boîte mail\u00a0:",
+  },
 ];
 
 const html = readFileSync(SOURCE, "utf8");
@@ -166,10 +224,22 @@ for (const b of BLOCS) {
       console.error(`REFUS : ${b.rawhtml} : seulement ${anims} keyframes.`);
       process.exit(1);
     }
+    let bloc2 = bloc;
+    for (const c of CORRECTIONS.filter((c) => c.bloc === b.fichier)) {
+      const m = motif(c.cherche);
+      if (!m.test(bloc2)) {
+        console.error(
+          `REFUS : ${b.fichier} : la correction "${c.cherche.slice(0, 40)}..." ne trouve rien. ` +
+            `Sa page a bougé : relire la correction avant de servir le bloc.`,
+        );
+        process.exit(1);
+      }
+      bloc2 = bloc2.replace(motif(c.cherche), c.remplace);
+    }
     const sortieId = `<!-- LEVÉ DE content/sales/tiquiz.html PAR scripts/extraire-anims-vente.mjs.
      NE PAS RETOUCHER À LA MAIN : relance le script.
      Ce que ce bloc MONTRE : ${b.quoi} -->
-${bloc}
+${bloc2}
 `;
     writeFileSync(`content/sales/anim/${b.fichier}.html`, sortieId, "utf8");
     console.log(

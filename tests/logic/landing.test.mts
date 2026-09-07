@@ -847,6 +847,160 @@ describe("la page sait dire non, et c'est ce qui rend le reste croyable", () => 
   });
 });
 
+describe("la règle qui héberge ses îles vit à UN endroit", () => {
+  // Béné, 7 septembre 2026 : "pense évidemment au responsive pour tout."
+  //
+  // La règle a d'abord été écrite dans la feuille de la landing. Mesuré
+  // ensuite : deux blocs restaient coupés sur téléphone, parce que les
+  // pages de fonctionnalités ont LEUR feuille. Une règle, deux
+  // feuilles, écrite dans une seule : c'est le défaut que ce dépôt paie
+  // en boucle depuis juin, transposé au CSS.
+  //
+  // Le filet de captures mesure ce que le navigateur APPLIQUE ; ce test
+  // là tient l'autre bout, le jour où quelqu'un retire l'interpolation
+  // d'une des deux feuilles.
+
+  test("les deux feuilles du site public interpolent la même constante", () => {
+    const feuilles = {
+      "components/landing/styles.ts": racine("components/landing/styles.ts"),
+      "app/(site)/fonctionnalites/styles.ts": racine("app/(site)/fonctionnalites/styles.ts"),
+    };
+    for (const [nom, code] of Object.entries(feuilles)) {
+      assert.ok(
+        code.includes("${CSS_ILES_ANIMEES}"),
+        `${nom} n'héberge plus ses îles animées : ses blocs seront coupés sur téléphone`,
+      );
+    }
+  });
+
+  test("la constante borne bien les îles, et sous 900 px seulement", () => {
+    const css = racine("components/landing/cssIles.ts");
+    assert.ok(
+      /@media \(max-width:900px\)/.test(css),
+      "la règle s'applique à toutes les largeurs : sur grand écran elle ferait défiler un bloc qui tient très bien",
+    );
+    assert.ok(
+      /\[data-anim-vente\]\{overflow-x:auto\}/.test(css),
+      "plus aucune règle ne rend le contenu d'une île atteignable quand il dépasse",
+    );
+  });
+
+  test("aucune feuille du site ne laisse un guillemet non fermé", () => {
+    // 🚨 CE QUI A ÉTÉ TROUVÉ LE 7 SEPTEMBRE, et ça vaut plus que la
+    // règle elle même : un guillemet double ORPHELIN traînait en fin de
+    // la feuille de la landing. Un guillemet non fermé fait abandonner
+    // à l'analyseur CSS tout ce qui suit. Il ne coûtait rien tant que
+    // rien ne venait après ; la première règle posée derrière a été
+    // servie dans le HTML, lisible, et morte.
+    for (const f of [
+      "components/landing/styles.ts",
+      "app/(site)/fonctionnalites/styles.ts",
+      "components/landing/cssIles.ts",
+    ]) {
+      const gabarit = racine(f).replace(/\/\*[\s\S]*?\*\//g, " ");
+      const guillemets = (gabarit.match(/"/g) || []).length;
+      assert.equal(
+        guillemets % 2,
+        0,
+        `${f} porte un nombre impair de guillemets : l'un d'eux n'est pas fermé, et il avale les règles qui suivent`,
+      );
+    }
+  });
+});
+
+describe("le bloc des autres outils ne promet aucune connexion qui n'existe pas", () => {
+  // Béné, 7 septembre 2026 : "garde tout pour les utilisateurs qui
+  // n'utilisent pas systeme io : c'est possible aussi. Moins simple,
+  // mais possible."
+  //
+  // Elle lève un refus qui était le mien, et elle a raison : la moitié
+  // des gens qui liront cette page n'ont pas Systeme.io. MAIS le visuel
+  // qu'elle veut garder montre douze outils d'emailing au dessus de
+  // "Ajouter un tag" et "S'abonner à la campagne", et MESURÉ le
+  // 7 septembre, dans tout le dépôt : aucun webhook sortant, aucune
+  // intégration native ailleurs que Systeme.io. Le seul chemin est
+  // l'export CSV de Mes leads.
+  //
+  // Ce test tient donc la seule chose qui rende ce bloc publiable : le
+  // texte autour dit lequel des deux chemins est AUTOMATIQUE, et il
+  // nomme l'export. Sans ça, le visuel promet une intégration qui
+  // n'existe pas, c'est à dire son interdit numéro un.
+
+  test("la légende dit lequel des deux chemins est automatique", () => {
+    for (const t of [contenuLanding("fr"), contenuLanding("en")]) {
+      const l = t.autresLegende.toLowerCase();
+      assert.ok(
+        l.includes("systeme.io"),
+        "la légende ne nomme pas Systeme.io : rien ne dit alors où les trois actions partent toutes seules",
+      );
+      assert.ok(
+        /automatique|automatic/.test(l),
+        "la légende ne dit pas que ces trois actions sont automatiques CHEZ Systeme.io, donc le visuel promet la même chose partout",
+      );
+    }
+  });
+
+  test("le corps nomme l'export, le seul chemin qui existe vraiment", () => {
+    for (const t of [contenuLanding("fr"), contenuLanding("en")]) {
+      const corps = t.autresCorps.join(" ").toLowerCase();
+      assert.ok(
+        /export/.test(corps),
+        "le corps ne parle pas de l'export : c'est pourtant le seul chemin mesuré vers un autre outil",
+      );
+      assert.ok(
+        /profil|profile/.test(corps),
+        "le corps ne dit pas que le PROFIL part avec l'export : c'est ce qui fait la valeur du quiz une fois chez l'autre outil",
+      );
+    }
+  });
+
+  test("aucune phrase ne promet une connexion directe à un autre outil", () => {
+    // On vise la PROMESSE, pas une formulation : un outil concurrent
+    // NOMMÉ dans la même phrase qu'une connexion automatique.
+    const interdits =
+      /(brevo|mailchimp|klaviyo|activecampaign|mailerlite|kit)[^.]{0,80}(connect|synchronis|automatiqu|natif|native|direct)/i;
+    for (const t of [contenuLanding("fr"), contenuLanding("en")]) {
+      for (const phrase of [...t.autresCorps, t.autresLegende]) {
+        assert.ok(
+          !interdits.test(phrase),
+          `cette phrase promet une connexion qui n'existe pas : "${phrase}"`,
+        );
+      }
+    }
+  });
+
+  test("le visuel ne promet plus le bonus n8n de sa page de vente", () => {
+    // Le téléphone de son bloc annonçait SON cadeau à elle : "télécharge
+    // gratuitement mes scripts n8n... 10 bots qui travailleront pour toi
+    // dès ce soir". Sur SA page c'est son exemple ; sur la landing de
+    // Tiquiz, c'est un cadeau que personne ne recevra.
+    //
+    // `scripts/extraire-anims-vente.mjs` le remplace par un exemple
+    // vrai, et REFUSE quand la correction ne trouve rien. Ce test tient
+    // l'autre bout : une extraction relancée sans la correction ferait
+    // revenir la promesse en silence.
+    const texte = texteDuBloc("autres-outils");
+    assert.ok(
+      !/n8n/i.test(texte),
+      "le bloc annonce à nouveau les scripts n8n : un cadeau que Tiquiz ne livre pas",
+    );
+    assert.ok(
+      /plan d'action/i.test(texte),
+      "le remplacement n'est plus là : l'extraction a dû être relancée sans la correction",
+    );
+  });
+
+  test("le visuel n'est PAS décoratif : ses cartes portent l'argument", () => {
+    const i = PAGE_CODE.indexOf('<AnimVente bloc="autres-outils"');
+    assert.ok(i > 0, "le bloc des autres outils n'est plus servi sur la landing");
+    const balise = PAGE_CODE.slice(i, i + 200);
+    assert.ok(
+      /decoratif=\{false\}/.test(balise),
+      "le bloc est masqué aux lecteurs d'écran alors que ses trois cartes portent de vraies phrases",
+    );
+  });
+});
+
 describe("chaque animation levée porte son contexte", () => {
   // Béné, 5 septembre 2026 : "ok t'as repris mes animations mais pas
   // comme elles sont à l'origine, du coup ça ne veut plus rien dire" et

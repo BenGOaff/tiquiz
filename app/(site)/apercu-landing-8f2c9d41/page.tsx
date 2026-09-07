@@ -71,6 +71,7 @@ import { BlocVente } from "@/components/landing/blocsVente";
 import { BandeFinale, CtaPrincipal, Rassurances } from "@/components/landing/morceaux";
 import { CochePleine, Croix, Fleche, MaquetteQuiz } from "@/components/landing/pieces";
 import Temoignages from "@/components/landing/Temoignages";
+import { AnimVente } from "@/components/landing/anims";
 import AnimTag from "@/components/landing/AnimTag";
 import DeclencheurAnims from "@/components/landing/DeclencheurAnims";
 
@@ -345,6 +346,46 @@ export default async function AccueilPage({ searchParams }: PageProps) {
               <Fleche />
             </Link>
           </p>
+          <CtaPrincipal t={t} />
+        </div>
+      </section>
+
+      {/* ── 3bis. ET SANS SYSTEME.IO ────────────────────────────── */}
+      {/* Béné, 7 septembre 2026 : "garde tout pour les utilisateurs qui
+          n'utilisent pas systeme io : c'est possible aussi. Moins
+          simple, mais possible."
+
+          ELLE AVAIT RAISON DE LEVER MON REFUS. J'avais écarté son bloc
+          parce qu'il montre douze outils d'emailing concurrents, alors
+          que l'argument de la section juste au dessus est la connexion
+          NATIVE. Mais refuser le bloc, c'était refuser le PUBLIC : la
+          moitié des gens qui liront cette page n'ont pas Systeme.io, et
+          la page ne leur disait rien.
+
+          CE QUI EST VRAI, ET MESURÉ LE 7 SEPTEMBRE : aucun webhook
+          sortant, aucune intégration native ailleurs que Systeme.io. Le
+          seul chemin est l'export CSV de Mes leads, et il porte LE
+          PROFIL OBTENU (`app/leads/LeadsShell.tsx`). Le texte dit donc
+          les deux temps, et `autresLegende` nomme lequel des deux est
+          automatique : sans elle, un visuel qui montre Brevo au dessus
+          de "S'abonner à la campagne" promet une connexion qui
+          n'existe pas.
+
+          LE VISUEL N'EST PAS DÉCORATIF : ses trois cartes portent de
+          vraies phrases (le tag, la campagne, l'accès), donc les
+          masquer à un lecteur d'écran retirerait l'argument. */}
+      <section className="tql-sec tql-blanc">
+        <div className="tql-large">
+          <h2 className="tql-h2">
+            {t.autresTitre} <span className="tql-surb">{t.autresMotCle}</span>
+          </h2>
+          {t.autresCorps.map((c) => (
+            <p className="tql-p" key={c}>
+              {c}
+            </p>
+          ))}
+          <AnimVente bloc="autres-outils" decoratif={false} />
+          <p className="tql-legende">{t.autresLegende}</p>
           <CtaPrincipal t={t} />
         </div>
       </section>

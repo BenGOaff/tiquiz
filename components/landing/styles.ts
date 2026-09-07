@@ -44,6 +44,8 @@
 // (globals.css), qui porte depuis le 4 septembre les couleurs de la
 // page de vente. Ce fichier n'en recopie AUCUNE : il les lit.
 
+import { CSS_ILES_ANIMEES } from "./cssIles";
+
 export const CSS = `
 .tql{--e:var(--tq-encre);--c:var(--tq-encre-douce);--b:var(--tq-bleu);--cy:var(--tq-cyan);
   --pale:var(--tq-creme);--pill:var(--tq-panneau);--bord:var(--tq-bord);
@@ -691,6 +693,7 @@ export const CSS = `
      3 lignes") ne laisse donc rien de centre a cette largeur. Les
      TITRES restent centres : ils font une ou deux lignes. */
   .tql-p,.tql-legende{text-align:left}
+
   .tql-h2{font-size:28px}
   .tql-bande h2{font-size:28px}
   .tql-accroche{font-size:17px}
@@ -705,4 +708,20 @@ export const CSS = `
   .tql-temoins{columns:1}
   .tql-paliers li{grid-template-columns:1fr;gap:8px}
 }
-"`;
+/* 🚨 UN GUILLEMET DOUBLE ORPHELIN VIVAIT ICI, ET IL AVALAIT LA SUITE.
+
+   Il finissait la feuille, donc il ne se voyait pas : un guillemet non
+   ferme met l analyseur CSS en erreur et il ABANDONNE tout ce qui
+   vient apres. Tant que rien ne suivait, il ne coutait rien.
+
+   Mesure du 7 septembre : la regle qui heberge ses iles animees, posee
+   juste derriere, etait SERVIE dans le HTML et n avait aucun effet.
+   Le navigateur repondait overflow-x visible sur un element dont la
+   feuille disait auto. Une regle CSS morte ne leve rien, ne dit rien,
+   et se relit comme une regle vivante.
+
+   Toute regle ajoutee en fin de cette feuille aurait subi la meme
+   chose. Le test compare desormais ce que la feuille DECLARE a ce que
+   le navigateur APPLIQUE. */
+${CSS_ILES_ANIMEES}
+`;

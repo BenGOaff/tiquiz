@@ -25,6 +25,8 @@ export const BLOCS_ANIMES = {
   "ton-branding-mobile": "La même chose, sa variante mobile.",
   "tes-pixels": "Les pixels Meta, Analytics et Ads qui se posent sur le quiz.",
   "tes-pixels-mobile": "La même chose, sa variante mobile.",
+  "autres-outils":
+    "Le lead capturé qui part vers l'outil d'emailing de la créatrice, quel qu'il soit.",
 } as const;
 
 export type BlocAnime = keyof typeof BLOCS_ANIMES;
