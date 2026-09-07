@@ -9938,3 +9938,176 @@ spec.ts` : les îles animées, et le débordement de la PAGE.
 plus** dans la même heure, une fois dans un commentaire CSS, une fois
 dans un commentaire de code juste avant. Septième et huitième fois. Ce
 n'est pas un garde-fou qui manque, c'est moi qui le refais.
+
+## Un client anglophone est parti : ce qui était vrai, ce qui ne l'était pas (7 septembre 2026)
+
+Béné transmet l'email d'un client, ancien fondateur technique, qui a
+failli s'abonner et qui est reparti se coder son propre quiz dans
+Systeme.io. Elle : "il faut tout vérifier ce qu'il a affirmé pour que je
+puisse ensuite lui faire un retour. Et surtout corriger parce que ça
+fait chier de perdre un de mes premiers clients anglophones sur des
+trucs qui sont censés être nickel."
+
+**Trois reproches. Les trois sont vrais, et les trois étaient
+mesurables depuis le dépôt.** Ce qui suit dit aussi ce qui n'a PAS été
+mesuré, parce que c'est ce qu'elle va lui répondre.
+
+### 1. "some parts of the quiz UI were in French - I did set the language to English"
+
+**QUATRE chemins servaient du français à un quiz réglé en anglais**, et
+les quatre ont la même cause : le repli de langue était réécrit à la
+main, différemment, à chaque endroit.
+
+| Ce qui parlait français | Qui le voyait |
+|---|---|
+| le bandeau "Mode aperçu, rien n'est enregistré" | le créateur, à chaque test de son quiz |
+| le toast "Aperçu de ton brouillon" | idem, sur un quiz pas encore publié |
+| **les DEUX écrans d'erreur du viewer** | **tout le monde, dans toutes les langues** |
+| le bandeau de reprise, sur un quiz `pt-BR` | ses visiteurs brésiliens |
+
+Les deux premiers étaient écrits EN DUR dans `PublicQuizClient`. Les
+deux écrans d'erreur appellent `getT(null)` et `getT(json?.quiz?.locale)`
+sur une réponse d'erreur, **qui ne porte jamais de quiz** : les deux
+rendaient donc le français, pour tout le monde. C'est l'écran qu'on voit
+quand ça a l'air cassé, c'est à dire celui où une phrase dans la
+mauvaise langue coûte le plus cher.
+
+Le quatrième est le plus proche de sa phrase ("the message that your
+answers are saved") : `RESUME_COPY` n'avait **aucun repli BCP-47**,
+alors que `pt-BR` est proposée dans le sélecteur de l'éditeur. Un quiz
+brésilien y prenait la ligne FRANÇAISE au milieu d'un quiz portugais.
+Chez Tipote c'était pire : son `getT` n'avait aucun repli du tout, donc
+un quiz `pt-BR` sortait **entièrement en français**.
+
+**Règle : `lib/quiz/langueViewer.ts`, `repliLangue()`, et personne ne
+réécrit de repli.** Une seule fonction, appelée par `translations`, par
+`RESUME_COPY` et par les nouvelles phrases d'aperçu. Trois copies d'une
+même règle finissent toujours par ne plus dire la même chose, et c'est
+exactement ce qui venait d'arriver.
+
+**Et les écrans d'erreur prennent la langue du NAVIGATEUR**
+(`getTErreur`), parce qu'à ce moment là on n'a pas celle du quiz. On ne
+touche PAS à `getT(null)` pour le reste du viewer : l'éditeur écrit
+`locale: locale || null`, donc un quiz français dont la créatrice n'a
+jamais ouvert le sélecteur y est bien à null, et il doit rester français.
+
+### 2. "the quiz was just showing white, including the demo"
+
+**Mesuré, et c'est un fait de conception :** la page publique d'un quiz
+ne rend **aucun contenu côté serveur**. Le HTML ne porte que le JSON-LD
+et les pixels ; tout le quiz est monté par le navigateur après un appel
+à `/api/quiz/<id>/public`.
+
+**Et il n'existait AUCUN `error.tsx` ni `global-error.tsx` dans tout
+`app/`**, dans les deux dépôts. La moindre exception côté client, un
+fragment JavaScript qui répond 404 après un déploiement, et la page
+reste blanche, sans un mot.
+
+C'est la règle du 3 août ("un `ok: false` produit TOUJOURS quelque chose
+à l'écran") : elle ne couvrait que le serveur, le navigateur n'avait
+rien. `app/global-error.tsx` et `app/q/[quizId]/error.tsx` affichent
+désormais une phrase et un bouton "recharger", **dans la langue du
+navigateur** (`lib/site/messagesPanne.ts`), en style INLINE et sans
+importer un composant d'UI : cet écran s'affiche quand quelque chose a
+déjà échoué, peut être la feuille de style elle même.
+
+🚨 **CE QUI N'EST PAS MESURÉ, ET QU'IL FAUT DIRE :** je n'ai pas
+reproduit sa page blanche, et je ne sais pas ce qui l'a causée ce jour
+là. Un déploiement pendant sa visite est plausible (son process est
+`npm run build && pm2 restart`, et un fragment remplacé pendant qu'un
+onglet est ouvert répond 404), et **une cause plausible n'est pas une
+cause**. Ce qui est corrigé, c'est le SILENCE : la même panne affichera
+maintenant une phrase au lieu de rien.
+
+### 3. "it was loading a bit slow"
+
+Mesuré sur `quiz.tipote.com/q/rps`, trois fois :
+
+| | |
+|---|---|
+| le HTML (vide de tout contenu de quiz) | **0,5 à 2,2 s** |
+| le JavaScript | 17 fichiers, 343 Ko transférés |
+| l'appel API, qui ne part QU'APRÈS | **0,3 à 1,5 s** |
+
+Les trois s'enchaînent, ils ne se recouvrent pas : le visiteur voit un
+spinner pendant **1,5 à 4 secondes** avant le premier mot du quiz.
+
+**Ce qui a été corrigé, et c'est mesurable :** `generateMetadata` et le
+composant de page tournent sur la MÊME requête et appelaient chacun
+`fetchQuizMeta`, donc **deux allers-retours Supabase pour la même
+ligne**, à chaque chargement. Next ne déduplique que `fetch`, jamais un
+client Supabase : c'est `cache()` de React qui le fait, posé sur
+`fetchQuizMeta` et sur `resolveCustomDomainOwner`.
+
+**Ce qui reste, et qui n'est pas du code : Cloudflare ne met PAS les
+fragments JavaScript en cache.** Mesuré trois fois de suite,
+`cf-cache-status: DYNAMIC` sur `/_next/static/chunks/*.js`, alors qu'ils
+portent `cache-control: public, max-age=31536000, immutable` et
+qu'`app.tipote.com/favicon.ico` répond `REVALIDATED` sur la même zone.
+Chaque premier visiteur les télécharge donc depuis le serveur, en
+France. C'est une règle de cache de son compte, pas notre code, et je ne
+dis pas laquelle : je dis que le résultat est mesuré et où le regarder
+(Caching > Cache Rules).
+
+```bash
+npm run check:vitesse-quiz -- https://quiz.tipote.com/q/mon-quiz
+```
+
+Il mesure les trois temps, dit si le HTML porte du contenu, et compte
+les fragments servis par le cache Cloudflare. Il annonce le poids
+**décompressé** et le dit : `fetch` décompresse tout seul et n'expose
+pas la taille compressée, donc un chiffre mal nommé serait pire qu'un
+chiffre absent.
+
+### CE QUE LA MESURE A TROUVÉ EN PLUS, ET QUE PERSONNE N'AVAIT VU
+
+En allant chronométrer la page, une requête demandait **des colonnes qui
+n'existent pas**, et elle échouait EN ENTIER, en silence.
+
+```
+.select("questions, created_at, updated_at, content_locale")  sur `quizzes`
+```
+
+`questions` vit dans la table `quiz_questions`. `content_locale` vit sur
+`profiles` (Tiquiz) et sur `business_profiles` (Tipote). PostgREST
+rejette alors le select complet, donc `created_at` et `updated_at`, qui
+eux existent, tombaient avec.
+
+| Ce que ça coûtait | Mesuré sur |
+|---|---|
+| Tiquiz : `numberOfQuestions`, `dateCreated`, `dateModified`, `inLanguage` absents du JSON-LD de CHAQUE quiz public | `quiz.tipote.com/q/rps` |
+| Tipote : **aucune balise `application/ld+json` du tout, et `pixels` à null** | `app.tipote.com/q/chemindepuissance` |
+
+Chez Tipote c'est la même requête qui porte les pixels Meta, GA4 et
+Google Ads rendus côté serveur : ils n'étaient donc pas émis non plus.
+
+**Personne ne l'a vu parce que l'erreur n'était jamais lue** : la ligne
+faisait `res.data as ... | null` et se contentait du null. Elle est lue
+maintenant, et elle CRIE dans le journal. Le nombre de questions passe
+par un `head: true` sur `quiz_questions` : les tirer pour les compter
+ramènerait tout l'énoncé de chaque question sur une page qui n'en
+affiche aucune. Et `inLanguage` vient de `quizzes.locale`, la langue que
+le visiteur LIT ; `content_locale` est la langue par défaut des contenus
+de la créatrice, ce n'est pas la même question et ce n'est pas sur cette
+table.
+
+### CE QU'IL A DIT ET QUI EST FAUX, POUR SA RÉPONSE
+
+**"systeme.io does not natively support custom quiz results tailored to
+questions"** : vrai, et c'est exactement l'argument du produit.
+
+**Sa solution maison** (une page de tunnel par question, les réponses
+enchaînées en paramètres GET, un cookie pour le résultat, une page de
+routage) fonctionne et il a raison sur les trois gains qu'il cite
+(rapidité, coût, statistiques dans Systeme.io). Ce qu'elle perd, et il
+ne le dit pas : les réponses passent dans l'URL, donc elles se
+bricolent ; il n'y a ni tag par profil posé automatiquement, ni relance
+par profil, ni partage du résultat, ni reprise, ni statistiques par
+question. Et **chaque nouveau quiz demande de refaire tout le tunnel.**
+
+Test : `tests/logic/langue-du-viewer.test.mts` (les deux dépôts),
+vérifié en rejouant SIX versions d'avant côté Tiquiz (la bannière
+française en dur, `getT(null)` sur l'écran d'erreur, `RESUME_COPY`
+indexé à la main, le select sur les colonnes inexistantes, le `cache()`
+retiré, le message de panne retiré) et DEUX côté Tipote : toutes
+rougissent.
