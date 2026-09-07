@@ -10039,15 +10039,67 @@ ligne**, à chaque chargement. Next ne déduplique que `fetch`, jamais un
 client Supabase : c'est `cache()` de React qui le fait, posé sur
 `fetchQuizMeta` et sur `resolveCustomDomainOwner`.
 
-**Ce qui reste, et qui n'est pas du code : Cloudflare ne met PAS les
-fragments JavaScript en cache.** Mesuré trois fois de suite,
+**Ce qui restait, et qui n'était pas du code : Cloudflare ne mettait PAS
+les fragments JavaScript en cache.** Mesuré trois fois de suite,
 `cf-cache-status: DYNAMIC` sur `/_next/static/chunks/*.js`, alors qu'ils
 portent `cache-control: public, max-age=31536000, immutable` et
 qu'`app.tipote.com/favicon.ico` répond `REVALIDATED` sur la même zone.
-Chaque premier visiteur les télécharge donc depuis le serveur, en
-France. C'est une règle de cache de son compte, pas notre code, et je ne
-dis pas laquelle : je dis que le résultat est mesuré et où le regarder
-(Caching > Cache Rules).
+Chaque premier visiteur les téléchargeait donc depuis le serveur, en
+France.
+
+### CORRIGÉ LE 7 SEPTEMBRE, et c'est SA question qui a rendu la chose sûre
+
+Béné : "vérifie dans le code pourquoi on avait mis ça. Je veux bien
+changer mais si on avait mis ça c'est sûrement pour une bonne raison, il
+ne faut rien casser."
+
+Deux règles vivaient sur la zone `tipote.com` : `bypath chunks` (Bypass
+sur `/_next/static/`) et `next-image-bypass` (sur `/_next/image`).
+
+**AUCUNE TRACE DE LEUR RAISON NULLE PART**, et c'est dit dans ce sens là
+plutôt que d'inventer une cause qui collerait à l'histoire (règle du
+2 septembre). Cherché dans les TROIS dépôts : code, markdown, configs,
+historique git. Rien.
+
+**Ce que le code dit, lui, et il disait l'inverse.**
+`infra/caddy/Caddyfile` pose `public, max-age=31536000, immutable` sur
+`/_next/static/*` de chacun des quatre hôtes, depuis juin, sous le
+commentaire "Hashed static assets: aggressive immutable cache". La règle
+Cloudflare contredisait donc notre propre configuration serveur.
+
+**Le seul vrai risque a été MESURÉ, pas supposé.** C'est celui du
+30 août ("un lien affilié ne se met jamais en cache") : un cache partagé
+qui servirait le `Set-Cookie` d'UN affilié à tous les visiteurs
+suivants. Relevé en production sur `quiz.`, `app.` et `affiliate.` :
+**aucun `Set-Cookie` sur ces fichiers**, et c'est structurel, pas un
+hasard. Le `matcher` du middleware exclut `_next/static` et
+`_next/image` dans les trois dépôts : il n'y tourne JAMAIS, donc aucun
+clic affilié ni aucun cookie ne peut y passer.
+
+**Le réglage exact : `Eligible for cache`, et l'Edge TTL reste sur "Use
+cache-control header if present, bypass cache if not".** Notre serveur
+envoie déjà l'année, il n'y a aucun chiffre à taper. "Ignore
+cache-control header and use this TTL" écraserait ce que le serveur dit,
+y compris sur une réponse d'erreur.
+
+**Mesuré après : `0 / 20` -> `20 / 20`.** Et l'honnêteté du chiffre
+compte plus que le chiffre : le total affiché est passé de 1275 ms à
+592 ms, mais le HTML et l'API n'ont RIEN à voir avec cette règle et
+varient d'un essai à l'autre. Ce que la règle enlève vraiment, ce sont
+les **1146 Ko de JavaScript** qui s'ajoutent APRÈS ce total, et le gain
+est plus grand pour un visiteur loin de la France que pour une mesure
+lancée depuis le serveur lui même.
+
+**La troisième règle, `pages`, a été SUPPRIMÉE par Béné le même jour**
+(la liste n'en affiche plus que deux). Elle mettait en cache le HTML de
+`/p/` et `/q/`, c'est à dire exactement ce qui porte le cookie affilié.
+Elle était inerte (la page envoie un cookie de langue, donc Cloudflare
+refusait de la garder), et c'est ce qui la rendait dangereuse : un piège
+armé qui n'attendait que la disparition de ce cookie.
+
+**Ne pas remettre un Bypass sur `/_next/static/`** sans écrire la raison
+à côté. C'est exactement ce qui a coûté cette journée : une règle sans
+motif écrit est une règle que personne n'ose retirer.
 
 ```bash
 npm run check:vitesse-quiz -- https://quiz.tipote.com/q/mon-quiz
