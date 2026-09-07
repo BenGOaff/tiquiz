@@ -20,6 +20,7 @@ test("les sections du plan sont là, et elles seules", () => {
       "accueil",
       "clients",
       "ventes",
+      "trafic",
       "affilies",
       "revendeurs",
       "business",
@@ -115,7 +116,7 @@ test("LE SÉLECTEUR DE PÉRIODE N'EXISTE QUE LÀ OÙ IL FAIT QUELQUE CHOSE", () 
   // une liste de réglages ne se filtrent pas par mois : l'y laisser en
   // ferait un bouton qui ne fait rien, et on le reclique.
   const avec = SECTIONS.filter((s) => s.periode).map((s) => s.id);
-  assert.deepEqual(avec, ["accueil", "ventes", "business"]);
+  assert.deepEqual(avec, ["accueil", "ventes", "trafic", "business"]);
 });
 
 test("chaque section se prononce sur la période", () => {

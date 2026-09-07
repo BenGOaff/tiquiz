@@ -10039,15 +10039,67 @@ ligne**, à chaque chargement. Next ne déduplique que `fetch`, jamais un
 client Supabase : c'est `cache()` de React qui le fait, posé sur
 `fetchQuizMeta` et sur `resolveCustomDomainOwner`.
 
-**Ce qui reste, et qui n'est pas du code : Cloudflare ne met PAS les
-fragments JavaScript en cache.** Mesuré trois fois de suite,
+**Ce qui restait, et qui n'était pas du code : Cloudflare ne mettait PAS
+les fragments JavaScript en cache.** Mesuré trois fois de suite,
 `cf-cache-status: DYNAMIC` sur `/_next/static/chunks/*.js`, alors qu'ils
 portent `cache-control: public, max-age=31536000, immutable` et
 qu'`app.tipote.com/favicon.ico` répond `REVALIDATED` sur la même zone.
-Chaque premier visiteur les télécharge donc depuis le serveur, en
-France. C'est une règle de cache de son compte, pas notre code, et je ne
-dis pas laquelle : je dis que le résultat est mesuré et où le regarder
-(Caching > Cache Rules).
+Chaque premier visiteur les téléchargeait donc depuis le serveur, en
+France.
+
+### CORRIGÉ LE 7 SEPTEMBRE, et c'est SA question qui a rendu la chose sûre
+
+Béné : "vérifie dans le code pourquoi on avait mis ça. Je veux bien
+changer mais si on avait mis ça c'est sûrement pour une bonne raison, il
+ne faut rien casser."
+
+Deux règles vivaient sur la zone `tipote.com` : `bypath chunks` (Bypass
+sur `/_next/static/`) et `next-image-bypass` (sur `/_next/image`).
+
+**AUCUNE TRACE DE LEUR RAISON NULLE PART**, et c'est dit dans ce sens là
+plutôt que d'inventer une cause qui collerait à l'histoire (règle du
+2 septembre). Cherché dans les TROIS dépôts : code, markdown, configs,
+historique git. Rien.
+
+**Ce que le code dit, lui, et il disait l'inverse.**
+`infra/caddy/Caddyfile` pose `public, max-age=31536000, immutable` sur
+`/_next/static/*` de chacun des quatre hôtes, depuis juin, sous le
+commentaire "Hashed static assets: aggressive immutable cache". La règle
+Cloudflare contredisait donc notre propre configuration serveur.
+
+**Le seul vrai risque a été MESURÉ, pas supposé.** C'est celui du
+30 août ("un lien affilié ne se met jamais en cache") : un cache partagé
+qui servirait le `Set-Cookie` d'UN affilié à tous les visiteurs
+suivants. Relevé en production sur `quiz.`, `app.` et `affiliate.` :
+**aucun `Set-Cookie` sur ces fichiers**, et c'est structurel, pas un
+hasard. Le `matcher` du middleware exclut `_next/static` et
+`_next/image` dans les trois dépôts : il n'y tourne JAMAIS, donc aucun
+clic affilié ni aucun cookie ne peut y passer.
+
+**Le réglage exact : `Eligible for cache`, et l'Edge TTL reste sur "Use
+cache-control header if present, bypass cache if not".** Notre serveur
+envoie déjà l'année, il n'y a aucun chiffre à taper. "Ignore
+cache-control header and use this TTL" écraserait ce que le serveur dit,
+y compris sur une réponse d'erreur.
+
+**Mesuré après : `0 / 20` -> `20 / 20`.** Et l'honnêteté du chiffre
+compte plus que le chiffre : le total affiché est passé de 1275 ms à
+592 ms, mais le HTML et l'API n'ont RIEN à voir avec cette règle et
+varient d'un essai à l'autre. Ce que la règle enlève vraiment, ce sont
+les **1146 Ko de JavaScript** qui s'ajoutent APRÈS ce total, et le gain
+est plus grand pour un visiteur loin de la France que pour une mesure
+lancée depuis le serveur lui même.
+
+**La troisième règle, `pages`, a été SUPPRIMÉE par Béné le même jour**
+(la liste n'en affiche plus que deux). Elle mettait en cache le HTML de
+`/p/` et `/q/`, c'est à dire exactement ce qui porte le cookie affilié.
+Elle était inerte (la page envoie un cookie de langue, donc Cloudflare
+refusait de la garder), et c'est ce qui la rendait dangereuse : un piège
+armé qui n'attendait que la disparition de ce cookie.
+
+**Ne pas remettre un Bypass sur `/_next/static/`** sans écrire la raison
+à côté. C'est exactement ce qui a coûté cette journée : une règle sans
+motif écrit est une règle que personne n'ose retirer.
 
 ```bash
 npm run check:vitesse-quiz -- https://quiz.tipote.com/q/mon-quiz
@@ -10110,4 +10162,180 @@ vérifié en rejouant SIX versions d'avant côté Tiquiz (la bannière
 française en dur, `getT(null)` sur l'écran d'erreur, `RESUME_COPY`
 indexé à la main, le select sur les colonnes inexistantes, le `cache()`
 retiré, le message de panne retiré) et DEUX côté Tipote : toutes
+rougissent.
+
+## Le trafic et les ventes sur le même écran (Béné, 4 septembre 2026, point 3)
+
+Sa consigne, dans son ordre : "1. `begin_checkout` au clic sur un
+palier ; 2. `purchase` sur la page de remerciement ; 3. **seulement
+après** : un écran dans l'admin qui montre les deux ensemble."
+
+Les points 1 et 2 sont faits depuis le 4 septembre. Voici le 3.
+
+### CE QUI MANQUAIT, ET CE N'ÉTAIT PAS L'ÉCRAN
+
+Le numérateur existait (les ventes, exactes, dans `resumePeriode`).
+**Le DÉNOMINATEUR n'existait nulle part côté serveur** : aucune table de
+trafic dans aucune migration, mesuré avant d'écrire une ligne.
+
+### POURQUOI ON COMPTE NOUS MÊMES, ET PAS EN LISANT GA4
+
+Deux raisons, et la seconde seule aurait suffi.
+
+Lire GA4 depuis le serveur demanderait un compte de service Google, un
+identifiant de propriété et une clé de plus dans le `.env` (vérifié :
+il n'y en a aucun dans les trois dépôts). Ça, ce n'est qu'un coût.
+
+**Le vrai problème : GA4 ne compte QUE les gens qui ont accepté le
+bandeau cookies** (`chargerAnalytics` ne charge la balise qu'après
+accord), et pas ceux qui ont un bloqueur. Son chiffre de trafic est donc
+SOUS-compté, alors que le chiffre de ventes, lui, est exact. Diviser
+l'un par l'autre donnerait **un taux de conversion trop beau, affiché
+comme un fait**. C'est la règle du 22 août : un chiffre gonflé dans un
+tableau de bord est pire qu'une absence de chiffre, il fait dépenser.
+
+### CE QU'ON NE STOCKE PAS, ET C'EST LA CONDITION DE TOUT LE RESTE
+
+Ni adresse IP, ni cookie, ni identifiant, ni empreinte. On incrémente un
+compteur par **(jour, hôte, chemin, source)**. Rien dans cette table ne
+désigne une personne, donc rien n'y demande de consentement, donc le
+compteur voit AUSSI ceux qui refusent le bandeau. Ce n'est pas un effet
+de bord : c'est exactement ce qui le rend plus juste que GA4.
+
+**Corollaire assumé, et l'écran le dit : on compte des VUES DE PAGE,
+jamais des visiteurs.** Sans cookie, on ne sait pas distinguer une
+personne de deux pages qu'elle ouvre. Écrire "visiteurs" serait mentir
+sur ce qu'on mesure, et le test l'interdit.
+
+### LE MIDDLEWARE TOURNE SUR EDGE : MESURÉ, PAS SUPPOSÉ
+
+Next 16 a renommé `middleware.ts` en `proxy.ts`, et `proxy.ts` tourne
+sur Node par défaut. **Notre fichier s'appelle encore `middleware.ts`, et
+il est compilé pour EDGE** : `.next/server/middleware-manifest.json` le
+range dans `server/edge/chunks/` avec un `edge-wrapper`.
+
+Donc **pas de `supabaseAdmin` dans la chaîne du middleware**, ni aucun
+module qui touche au disque (leçon du `node:fs` du 6 septembre, qui
+cassait le bundle sans qu'un `tsc` vert ne dise rien). L'écriture passe
+par une route interne :
+
+```
+middleware (Edge)  ->  event.waitUntil( POST /api/interne/trafic )
+                                          ^ runtime nodejs, X-Cron-Secret
+```
+
+`event.waitUntil` est ce qui met l'appel HORS du chemin critique : la
+page part sans l'attendre. Et `AbortSignal.timeout(2000)` plus un
+`catch` silencieux : **un compteur qui tombe ne doit jamais coûter une
+page**, c'est la règle du webhook qui ne bloque pas un accès payé.
+
+**On réutilise `CRON_SECRET`, et la raison est écrite à côté** : une
+variable NEUVE est une variable qui peut ne jamais être posée sur le
+serveur, et le compteur resterait alors à zéro en silence pendant des
+semaines (drame `PARTNER_SHARED_SECRET`, 23 août). La comparaison passe
+par `safeEqual`, jamais `!==` (audit du 24 août).
+
+### L'INCRÉMENT EST ATOMIQUE, ET LA TABLE EST FERMÉE
+
+```sql
+insert into trafic_jour (...) values (..., 1)
+on conflict (jour, hote, chemin, source) do update set vues = trafic_jour.vues + 1
+```
+
+Lire puis écrire perdrait des vues dès que deux requêtes arrivent en même
+temps, c'est à dire exactement les jours qui comptent. RLS activée, et
+`revoke ... from anon` sur la fonction : ce compteur ne s'incrémente que
+depuis le serveur.
+
+### LES QUATRE GARDES, ET POURQUOI LES ROBOTS SONT EXCLUS
+
+`vueASignaler` (module PUR, la seule décision) : l'hôte doit être un
+hôte de vente, le chemin n'est ni une API ni un fichier, l'`accept`
+contient `text/html`, et l'agent n'est pas un robot.
+
+**Sans le filtre robots, le compteur additionne Googlebot, les sondes de
+disponibilité et les aspirateurs**, et le taux de conversion s'effondre
+sans qu'une seule vente ait manqué. C'est le funnel de Jocelyne dans une
+autre robe : le chiffre existe et il ne veut rien dire.
+
+**Un agent VIDE est traité comme un robot.** Un navigateur qui affiche
+une page en envoie toujours un ; le sens du repli est donc d'exclure,
+parce qu'un robot compté est une erreur invisible et qu'un humain raté
+est une vue en moins, visible seulement si le total s'effondre.
+
+### LES TROIS MARCHES, ET LE SEUIL QUI ÉVITE UN TAUX QUI NE DIT RIEN
+
+| | d'où ça vient |
+|---|---|
+| les vues du site public | `trafic_jour` |
+| les vues d'un bon de commande | les MÊMES lignes, chemin `/commande/*` |
+| les ventes encaissées | `resumePeriode`, la MÊME source que l'écran Ventes |
+
+**Le nombre de ventes est PASSÉ au module, jamais recalculé dedans** :
+deux comptes pour la même chose finissent toujours par se contredire, et
+c'est celui du tableau de bord qu'elle croirait.
+
+**`/commande/mensuel/retour` n'est PAS une entrée de tunnel**, et
+`estUnBonDeCommande` l'exclut par un motif à un seul segment. Cette page
+n'est atteinte qu'APRÈS avoir payé : la compter gonflerait le taux de
+passage et compterait la vente deux fois.
+
+**En dessous de 100 vues, aucun taux ne s'affiche** (`null`, et l'écran
+dit "pas encore assez de vues"). À 20 vues, une seule vente vaut
+5 points : on prendrait une variation de hasard pour un signal. **Les
+COMPTES, eux, s'affichent toujours** : ils sont exacts dès la première
+vue, et les cacher parce que le taux n'est pas mûr reviendrait à cacher
+la seule chose qu'on sait.
+
+Le second taux (bon de commande -> vente) se juge sur un seuil DIX FOIS
+plus bas : ces vues sont bien plus rares, et exiger 100 y rendrait le
+chiffre invisible pendant des mois.
+
+### `interne` EST COMPTÉ DANS LES PAGES, ÉCARTÉ DES SOURCES
+
+Une navigation d'une de nos pages vers une autre est une vraie vue, mais
+elle n'a amené personne. La laisser dans le classement des sources la
+mettrait presque toujours en tête et masquerait les vraies, qui sont la
+seule chose que ce tableau doit dire.
+
+### "JE N'AI PAS PU REGARDER" N'EST PAS "IL N'Y A RIEN"
+
+`lireTrafic` rend `{lisible: false, raison}` sur une erreur, et l'écran
+écrit "le comptage n'a pas pu être lu" plus **"ce n'est pas un site sans
+visite"**. Un zéro affiché sur une panne de lecture se lit comme un
+constat, et c'est la règle du 23 août.
+
+**Et le compteur démarre le 7 septembre** : l'écran le DIT sur toute
+période antérieure, au lieu de laisser croire que le site n'avait pas de
+trafic avant.
+
+### CE QUE CET ÉCRAN NE COUVRE PAS, ET IL FAUT LE DIRE
+
+**Le trafic d'`atelierduquiz.fr` n'y est pas.** L'Atelier vit dans le
+dépôt formaquiz, avec sa propre base : le compteur devrait y être porté,
+et ce n'est pas fait. L'écran ne prétend donc rien sur lui.
+
+Et un clic sur un bouton qui part chez Systeme.io
+(`SALES_LINKS_LEFT_ALONE`) n'arrive jamais chez nous : ces ventes là se
+lisent dans `/admin`, exactement comme pour `begin_checkout`.
+
+### MA FAUTE, ET C'EST LA DOUZIÈME DE LA SEMAINE
+
+Après avoir rejoué les cinq versions fautives (les cinq rougissent
+comme il faut), mon contrôle de remise en état a répondu
+**`# pass 0 / # fail 1`** sur un fichier parfaitement correct. J'ai
+failli aller réparer cinq fichiers qui n'avaient rien.
+
+La commande omettait `--import ./tests/logic/register-alias.mjs` : le
+fichier ne pouvait donc pas résoudre `@/lib/...`, il échouait au
+CHARGEMENT, et ça se lit exactement comme un test rouge. **Un contrôle
+qui ne distingue pas ce qu'il est censé distinguer est pire qu'un
+contrôle absent**, et cette fois c'était le contrôle censé prouver que
+les autres contrôles étaient sains.
+
+Test : `tests/logic/trafic-et-ventes.test.mts` (15 cas), vérifié en
+rejouant CINQ versions fautives (le filtre robot retiré, aucun seuil sur
+les taux, la page de retour comptée comme un bon de commande, le
+middleware qui décide tout seul au lieu d'appeler le module pur, l'écran
+qui affiche zéro au lieu de dire qu'il n'a pas pu lire) : les cinq
 rougissent.
