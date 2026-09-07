@@ -1,0 +1,403 @@
+<!-- TIQUIZ — Mockup Quiz Mobile 3 écrans superposés — Widget Systeme.io -->
+<style>
+.tqz-mk *{margin:0;padding:0;box-sizing:border-box}
+.tqz-mk{
+  width:100%;max-width:1060px;margin:0 auto;padding:50px 20px 60px;
+  position:relative;height:620px;
+  font-family:'Inter','Open Sans',system-ui,sans-serif;
+}
+
+/* ── PHONE FRAME ── */
+.tqz-phone{
+  width:280px;height:560px;position:absolute;
+  background:#fff;border-radius:40px;
+  box-shadow:0 25px 70px rgba(43,50,100,.22),0 4px 12px rgba(43,50,100,.08);
+  border:3px solid #eaecf5;
+  overflow:hidden;
+  opacity:0;
+}
+
+/* Placement superposé */
+.tqz-phone.tqz-p1{
+  left:0;top:20px;
+  transform:rotate(-5deg) translateY(30px);
+  z-index:1;
+}
+.tqz-phone.tqz-p2{
+  left:50%;top:0;
+  transform:translateX(-50%) rotate(-1deg) translateY(30px);
+  z-index:2;
+}
+.tqz-phone.tqz-p3{
+  right:0;top:20px;
+  transform:rotate(3deg) translateY(30px);
+  z-index:3;
+}
+
+/* ── PHONES : apparition AU SCROLL uniquement ── */
+.tqz-mk.tqz-visible .tqz-phone.tqz-p1{animation:tqzP1In .8s cubic-bezier(.22,1,.36,1) .2s forwards}
+.tqz-mk.tqz-visible .tqz-phone.tqz-p2{animation:tqzP2In .8s cubic-bezier(.22,1,.36,1) .5s forwards}
+.tqz-mk.tqz-visible .tqz-phone.tqz-p3{animation:tqzP3In .8s cubic-bezier(.22,1,.36,1) .8s forwards}
+
+@keyframes tqzP1In{to{opacity:1;transform:rotate(-5deg) translateY(0)}}
+@keyframes tqzP2In{to{opacity:1;transform:translateX(-50%) rotate(-1deg) translateY(0)}}
+@keyframes tqzP3In{to{opacity:1;transform:rotate(3deg) translateY(0)}}
+
+@media(max-width:1060px){
+  .tqz-mk{max-width:920px}
+}
+
+/* ── STATUS BAR ── */
+.tqz-status{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:12px 22px 8px;font-size:12px;font-weight:600;color:#2B3264;
+}
+.tqz-status-r{display:flex;gap:3px;align-items:center}
+.tqz-status-r svg{width:15px;height:15px;fill:#2B3264}
+
+/* ── SCREEN CONTENT ── */
+.tqz-scr{padding:0 18px 22px;text-align:left}
+
+/* ── IMAGE PLACEHOLDER ── */
+.tqz-img-ph{
+  width:calc(100% + 36px);margin-left:-18px;height:150px;
+  background:linear-gradient(135deg,#e4e7f5 0%,#d0d5eb 100%);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:14px;overflow:hidden;position:relative;
+  opacity:0;
+}
+.tqz-img-ph img{width:100%;height:100%;object-fit:cover}
+.tqz-img-ph .tqz-pht{
+  color:#8890B5;font-size:11px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.05em;text-align:center;line-height:1.4;
+}
+
+/* ══════ SCREEN 1 : INTRO ══════ */
+.tqz-s1-title{
+  font-size:19px;font-weight:900;color:#2B3264;line-height:1.25;
+  margin-bottom:12px;text-align:left;
+  opacity:0;transform:translateY(8px);
+}
+.tqz-s1-text{
+  font-size:12px;color:#5a5f7a;line-height:1.55;
+  margin-bottom:6px;text-align:left;
+  opacity:0;transform:translateY(8px);
+}
+.tqz-s1-text b{color:#2B3264}
+.tqz-s1-text .tqz-hl{color:#5E6DDE;font-weight:700}
+
+.tqz-cta{
+  display:block;width:auto;margin:14px 0 0;padding:13px 32px;
+  background:linear-gradient(135deg,#5E6DDE,#20BBE6);
+  color:#fff;font-size:14px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.03em;border:none;border-radius:30px;
+  text-align:center;cursor:pointer;
+  box-shadow:0 6px 24px rgba(94,109,222,.35);
+  opacity:0;transform:translateY(8px);
+  position:relative;
+}
+
+/* SVG arrows */
+.tqz-cta-wrap{position:relative}
+.tqz-arrow-left{
+  display:block;width:70px;height:50px;
+  margin:8px 0 0 0;
+  opacity:0;transform:translateY(8px);
+}
+.tqz-arrow-right{
+  display:block;width:70px;height:50px;
+  margin:8px 0 0 auto;
+  opacity:0;transform:translateY(8px);
+}
+.tqz-arrow-left path,.tqz-arrow-right path{
+  fill:none;stroke:#5E6DDE;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;
+}
+.tqz-arrow-left polygon,.tqz-arrow-right polygon{fill:#5E6DDE}
+@keyframes tqzArrBobL{
+  0%,100%{transform:translate(0,0)}
+  50%{transform:translate(3px,-3px)}
+}
+@keyframes tqzArrBobR{
+  0%,100%{transform:translate(0,0)}
+  50%{transform:translate(-3px,-3px)}
+}
+
+@keyframes tqzFadeUp{to{opacity:1;transform:translateY(0)}}
+@keyframes tqzImgIn{to{opacity:1}}
+
+/* ── TOUTES LES ANIMATIONS D'ENTRÉE : AU SCROLL ── */
+/* Images */
+.tqz-mk.tqz-visible .tqz-img-ph{animation:tqzImgIn .6s ease .3s forwards}
+/* Screen 1 text stagger */
+.tqz-mk.tqz-visible .tqz-s1-title{animation:tqzFadeUp .5s ease .6s forwards}
+.tqz-mk.tqz-visible .tqz-s1-text:nth-of-type(1){animation:tqzFadeUp .4s ease .75s forwards}
+.tqz-mk.tqz-visible .tqz-s1-text:nth-of-type(2){animation:tqzFadeUp .4s ease .85s forwards}
+.tqz-mk.tqz-visible .tqz-s1-text:nth-of-type(3){animation:tqzFadeUp .4s ease .95s forwards}
+.tqz-mk.tqz-visible .tqz-s1-text:nth-of-type(4){animation:tqzFadeUp .4s ease 1.05s forwards}
+.tqz-mk.tqz-visible .tqz-cta{animation:tqzFadeUp .5s ease 1.2s forwards}
+.tqz-mk.tqz-visible .tqz-arrow-left{animation:tqzFadeUp .5s ease 1.8s forwards,tqzArrBobL 2.5s ease-in-out 2.5s infinite}
+.tqz-mk.tqz-visible .tqz-arrow-right{animation:tqzFadeUp .5s ease 1.8s forwards,tqzArrBobR 2.5s ease-in-out 2.5s infinite}
+
+/* ══════ SCREEN 2 : QUESTION ══════ */
+.tqz-q-step{
+  font-size:11px;font-weight:800;color:#20BBE6;text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:6px;text-align:left;
+}
+.tqz-q-title{
+  font-size:17px;font-weight:800;color:#2B3264;line-height:1.3;
+  margin-bottom:14px;text-align:left;
+}
+.tqz-ans{
+  padding:11px 14px;border-radius:12px;margin-bottom:8px;
+  border:2px solid #e4e7f5;font-size:12px;color:#2B3264;
+  font-weight:600;line-height:1.4;text-align:left;
+  display:flex;align-items:flex-start;gap:8px;
+  opacity:0;transform:translateX(-15px);
+}
+@keyframes tqzSlideR{to{opacity:1;transform:translateX(0)}}
+
+.tqz-ans .tqz-em{font-size:15px;flex-shrink:0;line-height:1}
+.tqz-ans.tqz-sel{
+  border-color:#5E6DDE;
+  background:linear-gradient(135deg,rgba(94,109,222,.07),rgba(32,187,230,.05));
+}
+
+/* Answers AU SCROLL */
+.tqz-mk.tqz-visible .tqz-ans:nth-child(1){animation:tqzSlideR .4s ease 1.1s forwards}
+.tqz-mk.tqz-visible .tqz-ans:nth-child(2){animation:tqzSlideR .4s ease 1.3s forwards}
+.tqz-mk.tqz-visible .tqz-ans:nth-child(3){animation:tqzSlideR .4s ease 1.5s forwards}
+.tqz-mk.tqz-visible .tqz-ans:nth-child(4){animation:tqzSlideR .4s ease 1.7s forwards}
+
+/* Continuous: selected answer pulse AU SCROLL */
+@keyframes tqzAnsPulse{
+  0%,100%{border-color:#5E6DDE;box-shadow:none}
+  50%{border-color:#20BBE6;box-shadow:0 0 0 3px rgba(32,187,230,.1)}
+}
+.tqz-mk.tqz-visible .tqz-ans.tqz-sel{animation:tqzSlideR .4s ease 1.1s forwards,tqzAnsPulse 4s ease-in-out 2.5s infinite}
+
+/* Screen 2: answer highlight cycling AU SCROLL */
+@keyframes tqzAnsHL{
+  0%,20%{border-color:#e4e7f5;background:transparent;transform:scale(1)}
+  10%{border-color:#20BBE6;background:rgba(32,187,230,.08);transform:scale(1.02)}
+}
+.tqz-mk.tqz-visible .tqz-p2 .tqz-ans:nth-child(1){animation:tqzSlideR .4s ease 1.1s forwards,tqzAnsHL 5s ease-in-out 2.5s infinite}
+.tqz-mk.tqz-visible .tqz-p2 .tqz-ans:nth-child(2){animation:tqzSlideR .4s ease 1.3s forwards,tqzAnsHL 5s ease-in-out 3.75s infinite}
+.tqz-mk.tqz-visible .tqz-p2 .tqz-ans:nth-child(3){animation:tqzSlideR .4s ease 1.5s forwards,tqzAnsHL 5s ease-in-out 5s infinite}
+.tqz-mk.tqz-visible .tqz-p2 .tqz-ans:nth-child(4){animation:tqzSlideR .4s ease 1.7s forwards,tqzAnsHL 5s ease-in-out 6.25s infinite}
+/* Selected answer override */
+@keyframes tqzSelPulse{
+  0%,100%{border-color:#5E6DDE;box-shadow:0 0 0 0 rgba(32,187,230,0)}
+  50%{border-color:#20BBE6;box-shadow:0 0 0 4px rgba(32,187,230,.12)}
+}
+.tqz-mk.tqz-visible .tqz-p2 .tqz-ans.tqz-sel{animation:tqzSlideR .4s ease 1.1s forwards,tqzSelPulse 3s ease-in-out 2.5s infinite}
+
+/* Screen 2: step color cycle AU SCROLL */
+@keyframes tqzStepGlow{
+  0%,100%{color:#20BBE6}
+  50%{color:#5E6DDE}
+}
+.tqz-mk.tqz-visible .tqz-q-step{animation:tqzStepGlow 4s ease-in-out 2s infinite}
+
+/* ══════ SCREEN 3 : OFFRE ══════ */
+.tqz-o-badge{
+  display:inline-block;font-size:11px;font-weight:800;color:#20BBE6;
+  text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;text-align:left;
+  opacity:0;transform:translateY(8px);
+}
+.tqz-o-title{
+  font-size:16px;font-weight:900;color:#2B3264;line-height:1.25;
+  margin-bottom:10px;text-align:left;
+  opacity:0;transform:translateY(8px);
+}
+.tqz-o-title span{color:#5E6DDE}
+.tqz-o-text{
+  font-size:11.5px;color:#5a5f7a;line-height:1.5;
+  margin-bottom:8px;text-align:left;
+  opacity:0;transform:translateY(8px);
+}
+.tqz-o-text b{color:#2B3264}
+.tqz-o-urg{
+  font-size:11px;font-weight:700;color:#e74c3c;font-style:italic;
+  margin-bottom:14px;text-align:left;
+  opacity:0;transform:translateY(8px);
+}
+.tqz-cta-o{
+  display:block;width:100%;padding:13px 16px;
+  background:linear-gradient(135deg,#5E6DDE,#20BBE6);
+  color:#fff;font-size:12.5px;font-weight:800;text-transform:uppercase;
+  letter-spacing:.03em;border:none;border-radius:30px;
+  text-align:center;cursor:pointer;white-space:nowrap;
+  box-shadow:0 6px 24px rgba(94,109,222,.35);
+  opacity:0;transform:translateY(8px);
+  position:relative;
+}
+
+/* Offer elements AU SCROLL */
+.tqz-mk.tqz-visible .tqz-o-badge{animation:tqzFadeUp .4s ease 1.0s forwards,tqzBadgeShimmer 3s ease-in-out 2.5s infinite}
+.tqz-mk.tqz-visible .tqz-o-title{animation:tqzFadeUp .4s ease 1.1s forwards}
+.tqz-mk.tqz-visible .tqz-o-text:nth-of-type(1){animation:tqzFadeUp .4s ease 1.2s forwards}
+.tqz-mk.tqz-visible .tqz-o-urg{animation:tqzFadeUp .4s ease 1.4s forwards,tqzUrgBlink 2.5s ease-in-out 2.5s infinite}
+.tqz-mk.tqz-visible .tqz-cta-o{animation:tqzFadeUp .5s ease 1.6s forwards}
+
+/* Continuous image zooms AU SCROLL */
+@keyframes tqzImgZoom{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.03)}
+}
+.tqz-mk.tqz-visible .tqz-p1 .tqz-img-ph{animation:tqzImgIn .6s ease .3s forwards,tqzImgZoom 5s ease-in-out 2s infinite}
+.tqz-mk.tqz-visible .tqz-p3 .tqz-img-ph{animation:tqzImgIn .6s ease .3s forwards,tqzImgZoom 6s ease-in-out 2.5s infinite}
+
+/* Urgency blink */
+@keyframes tqzUrgBlink{
+  0%,100%{opacity:1}
+  50%{opacity:.55}
+}
+/* Badge shimmer */
+@keyframes tqzBadgeShimmer{
+  0%,100%{color:#20BBE6}
+  50%{color:#5E6DDE}
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:780px){
+  .tqz-mk{height:auto;display:flex;flex-direction:column;align-items:center;gap:28px;padding:30px 16px}
+  .tqz-phone{
+    position:relative!important;left:auto!important;right:auto!important;top:auto!important;
+    transform:none!important;height:auto!important;
+    width:100%;max-width:320px;
+  }
+  .tqz-mk.tqz-visible .tqz-phone.tqz-p1{animation:tqzMobIn .6s ease .2s forwards}
+  .tqz-mk.tqz-visible .tqz-phone.tqz-p2{animation:tqzMobIn .6s ease .4s forwards}
+  .tqz-mk.tqz-visible .tqz-phone.tqz-p3{animation:tqzMobIn .6s ease .6s forwards}
+  @keyframes tqzMobIn{to{opacity:1;transform:none}}
+}
+@media(max-width:380px){
+  .tqz-phone{max-width:280px}
+  .tqz-s1-title{font-size:17px}
+  .tqz-q-title{font-size:15px}
+  .tqz-o-title{font-size:14px}
+}
+</style>
+
+<div class="tqz-mk" id="tqz-mk-widget">
+
+  <!-- ══════════════ SCREEN 1 : INTRO ══════════════ -->
+  <div class="tqz-phone tqz-p1">
+    <div class="tqz-status">
+      <span>16:17</span>
+      <div class="tqz-status-r">
+        <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+      </div>
+    </div>
+    <div class="tqz-scr">
+      <div class="tqz-img-ph">
+        <img src="https://d1yei2z3i6k35z.cloudfront.net/473100/69da1673d0c831.93521721_Designsanstitre15.png" alt="">
+      </div>
+
+      <div class="tqz-s1-title">Pourquoi personne ne te trouve sur Google (et comment y remédier)</div>
+
+      <p class="tqz-s1-text">Tu penses que ton business est visible sur Google ? Mauvaise nouvelle : dans 80% des cas… ce n'est pas le cas.</p>
+      <p class="tqz-s1-text">Pire que ça : tes clients cherchent tes services tous les jours mais tombent chez tes concurrents 😣</p>
+      <p class="tqz-s1-text"><b>Fais ce quiz pour évaluer comment te rendre plus visible sans trop d'efforts</b></p>
+
+      <div class="tqz-cta-wrap">
+        <button class="tqz-cta">Fais le quiz</button>
+        <svg class="tqz-arrow-left" viewBox="0 0 60 50"><path d="M5,45 Q20,20 50,5"/><polygon points="56,2 51,8 49,2"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SCREEN 2 : QUESTION ══════════════ -->
+  <div class="tqz-phone tqz-p2">
+    <div class="tqz-status">
+      <span>16:17</span>
+      <div class="tqz-status-r">
+        <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+      </div>
+    </div>
+    <div class="tqz-scr">
+      <div class="tqz-img-ph">
+        <img src="https://d1yei2z3i6k35z.cloudfront.net/473100/69da167e22d9e1.20842507_Designsanstitre16.png" alt="">
+      </div>
+
+      <div class="tqz-q-step">Question 4/5</div>
+      <div class="tqz-q-title">Aujourd'hui, tes clients viennent surtout de :</div>
+
+      <div>
+        <div class="tqz-ans tqz-sel">
+          <span class="tqz-em">🔍</span>
+          <span>Google</span>
+        </div>
+        <div class="tqz-ans">
+          <span class="tqz-em">🤝</span>
+          <span>Un peu Google + bouche-à-oreille</span>
+        </div>
+        <div class="tqz-ans">
+          <span class="tqz-em">🗣️</span>
+          <span>Principalement bouche-à-oreille</span>
+        </div>
+        <div class="tqz-ans">
+          <span class="tqz-em">🪄</span>
+          <span>C'est un miracle s'ils me trouvent</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ SCREEN 3 : OFFRE ══════════════ -->
+  <div class="tqz-phone tqz-p3">
+    <div class="tqz-status">
+      <span>16:17</span>
+      <div class="tqz-status-r">
+        <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+      </div>
+    </div>
+    <div class="tqz-scr">
+      <div class="tqz-img-ph">
+        <img src="https://d1yei2z3i6k35z.cloudfront.net/473100/69da173e77e933.81017767_Designsanstitre17.png" alt="">
+      </div>
+
+      <div class="tqz-o-badge">Bonus débloqué !</div>
+      <div class="tqz-o-title">🎉 Félicitation Hugo, tu viens de débloquer une réduction de <span>—50%</span> sur l'optimisation de visibilité !</div>
+      <p class="tqz-o-text"><b>Entre le code promo QUIZ</b> sur la page suivante et profite de mon expertise pour <b>49€ au lieu de 99€</b></p>
+      <p class="tqz-o-urg">⚠️ Attention : il n'y a que 20 codes promos disponibles, profite du tien avant les autres !</p>
+
+      <div class="tqz-cta-wrap">
+        <button class="tqz-cta-o">J'en profite maintenant</button>
+        <svg class="tqz-arrow-right" viewBox="0 0 70 50"><path d="M65,45 Q50,20 20,5"/><polygon points="14,2 21,2 19,8"/></svg>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Scroll reveal compatible Systeme.io (scroll + polling fallback) -->
+<script>
+(function(){
+  var done=false;
+  function check(){
+    var el=document.getElementById('tqz-mk-widget');
+    if(!el||done)return;
+    var rect=el.getBoundingClientRect();
+    var winH=window.innerHeight||document.documentElement.clientHeight;
+    if(rect.top<winH*0.85){
+      el.classList.add('tqz-visible');
+      done=true;
+      window.removeEventListener('scroll',check);
+      window.removeEventListener('resize',check);
+    }
+  }
+  window.addEventListener('scroll',check,{passive:true});
+  window.addEventListener('resize',check,{passive:true});
+  var polls=0;
+  var poller=setInterval(function(){
+    check();
+    polls++;
+    if(done||polls>33)clearInterval(poller);
+  },300);
+  check();
+})();
+</script>
