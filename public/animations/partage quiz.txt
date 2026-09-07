@@ -1,0 +1,205 @@
+<!-- TIQUIZ — Partage & Embed animé — Coller dans un bloc HTML Systeme.io -->
+<style>
+.tqz-sh *{margin:0;padding:0;box-sizing:border-box}
+.tqz-sh{width:100%;max-width:480px;margin:0 auto;padding:30px 16px;font-family:'Inter','Open Sans',system-ui,sans-serif}
+
+/* ── PHONE FRAME ── */
+.tqz-sh-phone{
+  background:#fff;border-radius:32px;
+  box-shadow:0 25px 70px rgba(43,50,100,.18),0 4px 12px rgba(43,50,100,.06);
+  border:3px solid #eaecf5;
+  overflow:hidden;padding:28px 24px 24px;
+  opacity:0;transform:translateY(20px);
+}
+.tqz-sh.tqz-visible .tqz-sh-phone{animation:tqzShIn .7s cubic-bezier(.22,1,.36,1) .15s forwards}
+@keyframes tqzShIn{to{opacity:1;transform:translateY(0)}}
+
+/* ── SECTION 1 : LIEN ── */
+.tqz-sh-section{
+  margin-bottom:28px;
+  opacity:0;transform:translateY(12px);
+}
+.tqz-sh.tqz-visible .tqz-sh-section:nth-child(1){animation:tqzSecIn .5s ease .6s forwards}
+.tqz-sh.tqz-visible .tqz-sh-section:nth-child(2){animation:tqzSecIn .5s ease 1.4s forwards}
+@keyframes tqzSecIn{to{opacity:1;transform:translateY(0)}}
+
+/* Header de section */
+.tqz-sh-head{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:14px;
+}
+.tqz-sh-head-left{
+  display:flex;align-items:center;gap:10px;
+}
+.tqz-sh-icon{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,rgba(94,109,222,.1),rgba(32,187,230,.08));
+  display:flex;align-items:center;justify-content:center;
+}
+.tqz-sh-icon svg{width:18px;height:18px;fill:none;stroke:#5E6DDE;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tqz-sh-stitle{font-size:16px;font-weight:800;color:#2B3264}
+
+/* Bouton Copier */
+.tqz-sh-copy{
+  padding:8px 16px;border-radius:8px;
+  border:1.5px solid #5E6DDE;
+  background:transparent;
+  color:#5E6DDE;font-size:12px;font-weight:700;
+  cursor:pointer;
+  font-family:'Inter','Open Sans',system-ui,sans-serif;
+  opacity:0;transform:scale(.9);
+}
+.tqz-sh.tqz-visible .tqz-sh-section:nth-child(1) .tqz-sh-copy{animation:tqzCopyIn .4s ease 1.0s forwards,tqzCopyPulse 4s ease-in-out 3s infinite}
+.tqz-sh.tqz-visible .tqz-sh-section:nth-child(2) .tqz-sh-copy{animation:tqzCopyIn .4s ease 1.8s forwards,tqzCopyPulse 4s ease-in-out 4s infinite}
+@keyframes tqzCopyIn{to{opacity:1;transform:scale(1)}}
+@keyframes tqzCopyPulse{
+  0%,100%{border-color:#5E6DDE;box-shadow:none}
+  50%{border-color:#20BBE6;box-shadow:0 0 0 3px rgba(32,187,230,.1)}
+}
+
+/* Label */
+.tqz-sh-label{font-size:12px;font-weight:600;color:#8890B5;margin-bottom:8px}
+
+/* Input lien */
+.tqz-sh-input{
+  width:100%;padding:13px 16px;
+  background:#f8f9fc;border:1.5px solid #e4e7f5;border-radius:10px;
+  font-size:13px;font-weight:500;color:#2B3264;
+  font-family:'Inter','Open Sans',system-ui,sans-serif;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+}
+/* Typing effect pour le lien */
+.tqz-sh-input span{display:inline}
+
+/* ── SECTION 2 : CODE EMBED ── */
+.tqz-sh-code{
+  background:#2B3264;border-radius:14px;
+  padding:18px 18px;
+  font-family:'Courier New',monospace;
+  font-size:12px;line-height:1.6;color:rgba(255,255,255,.75);
+  overflow:hidden;
+  position:relative;
+}
+.tqz-sh-code .tqz-hl-tag{color:#20BBE6}
+.tqz-sh-code .tqz-hl-attr{color:#8B95E8}
+.tqz-sh-code .tqz-hl-val{color:#05DFF3}
+.tqz-sh-code .tqz-hl-cmt{color:rgba(255,255,255,.35)}
+
+/* Code lines slide-in */
+.tqz-sh-code-line{
+  opacity:0;transform:translateX(-10px);
+}
+.tqz-sh.tqz-visible .tqz-sh-code-line:nth-child(1){animation:tqzCodeIn .3s ease 2.2s forwards}
+.tqz-sh.tqz-visible .tqz-sh-code-line:nth-child(2){animation:tqzCodeIn .3s ease 2.5s forwards}
+.tqz-sh.tqz-visible .tqz-sh-code-line:nth-child(3){animation:tqzCodeIn .3s ease 2.8s forwards}
+.tqz-sh.tqz-visible .tqz-sh-code-line:nth-child(4){animation:tqzCodeIn .3s ease 3.1s forwards}
+.tqz-sh.tqz-visible .tqz-sh-code-line:nth-child(5){animation:tqzCodeIn .3s ease 3.4s forwards}
+@keyframes tqzCodeIn{to{opacity:1;transform:translateX(0)}}
+
+/* Shimmer continu sur le bloc code */
+@keyframes tqzCodeGlow{
+  0%,100%{box-shadow:0 0 0 0 rgba(32,187,230,0)}
+  50%{box-shadow:0 0 20px rgba(32,187,230,.08)}
+}
+.tqz-sh.tqz-visible .tqz-sh-code{animation:tqzCodeGlow 5s ease-in-out 4s infinite}
+
+/* ── RESPONSIVE ── */
+@media(max-width:500px){
+  .tqz-sh{padding:20px 10px}
+  .tqz-sh-phone{padding:22px 18px 20px;border-radius:24px}
+  .tqz-sh-stitle{font-size:14px}
+  .tqz-sh-code{font-size:11px;padding:14px 14px}
+  .tqz-sh-input{font-size:12px}
+}
+</style>
+
+<div class="tqz-sh" id="tqz-sh-widget">
+  <div class="tqz-sh-phone">
+
+    <!-- SECTION 1 : Partager avec un lien -->
+    <div class="tqz-sh-section">
+      <div class="tqz-sh-head">
+        <div class="tqz-sh-head-left">
+          <div class="tqz-sh-icon">
+            <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          </div>
+          <div class="tqz-sh-stitle">Partager avec un lien</div>
+        </div>
+        <button class="tqz-sh-copy">Copier le lien</button>
+      </div>
+      <div class="tqz-sh-label">Lien</div>
+      <div class="tqz-sh-input">
+        <span id="tqz-sh-url"></span>
+      </div>
+    </div>
+
+    <!-- SECTION 2 : Ajouter à mon site -->
+    <div class="tqz-sh-section">
+      <div class="tqz-sh-head">
+        <div class="tqz-sh-head-left">
+          <div class="tqz-sh-icon">
+            <svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          </div>
+          <div class="tqz-sh-stitle">Ajouter à mon site</div>
+        </div>
+        <button class="tqz-sh-copy">Copier le code</button>
+      </div>
+      <div class="tqz-sh-code">
+        <div class="tqz-sh-code-line"><span class="tqz-hl-cmt">&lt;!-- Tiquiz begin --&gt;</span></div>
+        <div class="tqz-sh-code-line"><span class="tqz-hl-tag">&lt;iframe</span> <span class="tqz-hl-attr">src</span>=<span class="tqz-hl-val">"https://app.tiquiz.com/sandra-costa/formation-canine"</span></div>
+        <div class="tqz-sh-code-line">&nbsp;&nbsp;<span class="tqz-hl-attr">style</span>=<span class="tqz-hl-val">"border:0"</span> <span class="tqz-hl-attr">width</span>=<span class="tqz-hl-val">"100%"</span> <span class="tqz-hl-attr">height</span>=<span class="tqz-hl-val">"600"</span></div>
+        <div class="tqz-sh-code-line">&nbsp;&nbsp;<span class="tqz-hl-attr">frameborder</span>=<span class="tqz-hl-val">"0"</span><span class="tqz-hl-tag">&gt;&lt;/iframe&gt;</span></div>
+        <div class="tqz-sh-code-line"><span class="tqz-hl-cmt">&lt;!-- end Tiquiz --&gt;</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Scroll reveal + URL typing compatible Systeme.io -->
+<script>
+(function(){
+  var done=false;
+  var typed=false;
+  var url="https://app.tiquiz.com/sandra-costa/formation-canine";
+
+  function startTyping(){
+    if(typed)return;
+    typed=true;
+    var el=document.getElementById('tqz-sh-url');
+    if(!el)return;
+    var i=0;
+    var iv=setInterval(function(){
+      if(i<url.length){
+        el.textContent+=url.charAt(i);
+        i++;
+      }else{
+        clearInterval(iv);
+      }
+    },22);
+  }
+
+  function check(){
+    var el=document.getElementById('tqz-sh-widget');
+    if(!el||done)return;
+    var rect=el.getBoundingClientRect();
+    var winH=window.innerHeight||document.documentElement.clientHeight;
+    if(rect.top<winH*0.85){
+      el.classList.add('tqz-visible');
+      done=true;
+      window.removeEventListener('scroll',check);
+      window.removeEventListener('resize',check);
+      setTimeout(startTyping,800);
+    }
+  }
+  window.addEventListener('scroll',check,{passive:true});
+  window.addEventListener('resize',check,{passive:true});
+  var polls=0;
+  var poller=setInterval(function(){
+    check();
+    polls++;
+    if(done||polls>33)clearInterval(poller);
+  },300);
+  check();
+})();
+</script>

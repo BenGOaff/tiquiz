@@ -279,6 +279,7 @@ export interface ContenuLanding {
   /** Les trois rassurances sous le bouton, avec une coche dessinée. */
   rassurances: readonly string[];
   /** Le bandeau défilant des fonctionnalités, comme sur sa page. */
+  bandeauLabel: string;
   bandeau: readonly string[];
   /** LA PREUVE SOCIALE, ET C'EST UN NOMBRE D'UTILISATEURS.
    *
@@ -305,8 +306,11 @@ export interface ContenuLanding {
   problemeMotCle: string;
   problemeCorps: string[];
 
+  chiffreTitre: string;
+  chiffreMotCle: string;
   chiffre: string;
   chiffreLegende: string;
+  chiffreEtAlors: string;
   chiffreSource: string;
 
   maquette: Maquette;
@@ -450,6 +454,18 @@ export interface ContenuLanding {
    * et le prix vient de `lib/site/integrations.ts`, jamais recopié.
    */
   outilsGain: string;
+  /** Les mots de l'animation du tag. Elle remplace un paragraphe :
+      ses phrases sont donc traduites comme le reste, jamais dessinées. */
+  tagAnim: {
+    profilTitre: string;
+    profil: string;
+    champ: string;
+    options: readonly string[];
+    cree: string;
+    arrivee: string;
+    campagne: string;
+    legende: string;
+  };
   outilsNote: string;
   outilsLien: string;
 
@@ -877,34 +893,37 @@ export const TEMOIGNAGES: readonly Temoignage[] = [
   {
     nom: "Fabienne G.",
     portrait: "/v/tiquiz/3089473d0b33.webp",
-    metier: null,
+    metier: "Coach",
     texte:
       "Bravo pour la création de Tiquiz, c'est une révolution ! Mes quiz convertissent enfin comme il faut et mes leads arrivent directement dans mes tunnels.",
   },
   {
     nom: "Marie Paule C.",
     portrait: "/v/tiquiz/c52457fd6112.webp",
-    metier: null,
+    metier: "Formatrice",
     texte:
       "Vraiment bravo et félicitations pour cet outil de quiz. Les résultats personnalisés par profil sont géniaux et la connexion Systeme.io est un vrai plus.",
   },
   {
     nom: "Thibault L.",
     portrait: "/v/tiquiz/9ed1ddc2a09f.webp",
-    metier: null,
+    metier: "Consultant",
     texte:
       "Les quiz Tiquiz sont puissants et ultra simples à créer. La segmentation automatique des leads, c'est exactement ce dont j'avais besoin.",
   },
   {
     nom: "Sylvère M.",
     portrait: "/v/tiquiz/fb9aab2a3438.webp",
-    metier: null,
+    metier: "Entrepreneur",
     texte:
       "Franchement, je suis bluffé. J'ai pris le temps de créer mon premier quiz et le résultat est tout simplement topissime. Bravo !",
   },
   {
     nom: "Maurice Massolin",
-    metier: null,
+    // Béné, 7 septembre 2026 : "ajoute que Maurice est coach pour
+    // femmes entrepreneures". Il n'est pas dans le carrousel de sa page
+    // (mesuré) : son métier n'y était donc écrit nulle part.
+    metier: "Coach pour femmes entrepreneures",
     texte:
       "J'utilise Tiquiz pour mon quiz de diagnostic client, connecté à System.io avec des séquences emails segmentées par profil. La connexion est propre, les tags s'appliquent automatiquement, et l'interface est suffisamment intuitive pour qu'on configure tout sans développeur. Pour quelqu'un qui opère seul et qui veut un funnel de capture qui tourne sans surveillance, Tiquiz fait exactement ce qu'il promet.",
     source: "Trustpilot, 4 septembre 2026",
@@ -1288,8 +1307,12 @@ const fr: ContenuLanding = {
   // décroche avant d'avoir vu la troisième.
   titreDefilant: ["Booste ton trafic", "Génère plus de leads", "Booste tes ventes"],
   motCle: "grâce aux quiz interactifs",
+  // SA PHRASE, MOT POUR MOT (Béné, 7 septembre 2026). L'ancienne
+  // accroche décrivait le MÉCANISME (l'IA écrit, tu relis, tu publies) :
+  // c'est le COMMENT, et elle l'a déjà refusé une fois le 5 septembre.
+  // Le comment vit plus bas, dans les trois étapes.
   accroche:
-    "L'IA écrit ton quiz à partir d'une description de ton sujet. Tu relis, tu remplaces deux ou trois formulations par les tiennes, tu publies. Chaque personne qui répond arrive dans Systeme.io avec son email et le tag qui correspond à son profil.",
+    "Crée des quiz viraux qui attirent du trafic qualifié sur tes offres et transforment tes visiteurs en clients payants, sans investir en publicité.",
   pourQui:
     "Pour les entrepreneurs, les coachs, les consultants, les formateurs, les infopreneurs et les affiliés qui ont une offre et pas assez de monde à qui la présenter.",
   ctaPrincipal: "Créer mon quiz gratuitement",
@@ -1299,27 +1322,32 @@ const fr: ContenuLanding = {
   // sur le plan gratuit, borné à 1 quiz, et la ligne se lisait juste à
   // côté de "gratuit, sans carte". Une promesse fausse posée sous le
   // premier bouton coûte plus qu'elle ne rapporte.
-  rassurances: ["Connecté à Systeme.io", "Sans Zapier ni Make", "Zéro ligne de code"],
+  // SES TROIS PREUVES, MOT POUR MOT (Béné, 7 septembre 2026). "Sans
+  // Zapier ni Make" et "zéro ligne de code" disaient ce qu'on ÉVITE ;
+  // elle veut ce qu'on APPORTE. Le nom du produit garde son point,
+  // c'est comme ça qu'il s'écrit partout ailleurs, sa page comprise.
+  rassurances: ["Connexion native à Systeme.io", "Adapté aux débutants", "Automatisations"],
+  // LE BANDEAU PORTE DÉSORMAIS À QUI ÇA S'ADRESSE, ET IL EST REMONTÉ
+  // AU DESSUS DE LA LIGNE DE FLOTTAISON (Béné, 7 septembre 2026 : "mets
+  // le dans le bandeau défilant visible sans scroller"). Il portait 19
+  // noms de fonctionnalités, qui vivent maintenant sur /fonctionnalites.
+  //
+  // LES SIX PREMIERS SONT LES SIENS, dans l'ordre de sa phrase. Les
+  // quatre suivants sont RELEVÉS dans les métiers de ses propres
+  // témoignages : ce sont de vraies personnes, pas une liste élargie
+  // pour faire du volume.
+  bandeauLabel: "C'est pour toi si tu es",
   bandeau: [
-    "Quiz IA illimités",
-    "Sondages illimités",
-    "Popquiz",
-    "Connexion Systeme.io",
-    "Capture de leads",
-    "Résultats personnalisés",
-    "Scoring intelligent",
-    "Partage viral",
-    "Tags automatiques",
-    "Branding personnalisé",
-    "Statistiques détaillées",
-    "Intégration embed",
-    "Lien partageable",
-    "Nom de domaine personnalisé",
-    "Design responsive",
-    "7 langues",
-    "Zéro code",
-    "Mini-tunnels de vente",
-    "Données exploitables",
+    "Entrepreneur",
+    "Coach",
+    "Consultant",
+    "Formateur",
+    "Infopreneur",
+    "Affilié",
+    "Thérapeute",
+    "Créateur de contenu",
+    "Solopreneur",
+    "Marketeur",
   ],
   preuve: "Plus de 200 solopreneurs ont créé leur compte Tiquiz",
   copier: "Copier",
@@ -1335,9 +1363,25 @@ const fr: ContenuLanding = {
 
   animLegende: "Même effort pour attirer ton visiteur. 5x plus de données pour toi.",
 
+  // LE CHIFFRE A SA SECTION, ET IL RÉPOND AU "ET ALORS ?"
+  //
+  // Béné, 7 septembre 2026 : "ça arrive comme un cheveu sur la soupe,
+  // on peut dire 'et alors??' donc c'est pas complet et pas au bon
+  // endroit." Il était posé sous les témoignages, sans titre et sans
+  // conséquence : un pourcentage tout seul ne dit rien à personne.
+  //
+  // Il ouvre maintenant la page, juste après le haut de page : c'est
+  // l'argument qui justifie tout ce qui suit, et le seul chiffre
+  // externe de tout le site.
+  chiffreTitre: "Pourquoi un quiz, et pas",
+  chiffreMotCle: "un PDF de plus",
   chiffre: "44,9 %",
   chiffreLegende:
     "des personnes qui commencent un quiz laissent leur email, dans la catégorie coaching et formation.",
+  // LA CONSÉQUENCE, C'EST CE QUI MANQUAIT. Le chiffre dit un fait,
+  // cette ligne dit ce que ça change pour la personne qui lit.
+  chiffreEtAlors:
+    "Presque une personne sur deux. Va regarder le taux de ta dernière page de capture, et compare : c'est le même trafic, le même effort pour l'attirer, et ce n'est pas du tout le même nombre d'adresses à la fin.",
   chiffreSource:
     "Rapport Interact sur les taux de conversion des quiz. Ce n'est pas un taux de page : c'est le taux mesuré à partir du moment où le quiz est commencé.",
 
@@ -1513,8 +1557,36 @@ const fr: ContenuLanding = {
   outilsCorps:
     "Ils font tous de très bons quiz. La question n'est pas là : elle est de savoir ce qu'il faut installer entre leur formulaire et ton compte Systeme.io, et qui pose le tag une fois le lead arrivé.",
   outilsColonnes: ["", "Ce qu'il faut entre les deux", "Un tag par profil"],
+  // LA PHRASE A ÉTÉ COUPÉE EN DEUX, ET LA MOITIÉ TIQUIZ EST DEVENUE UNE
+  // ANIMATION (Béné, 7 septembre 2026 : "c'est long, il faut faire un
+  // effort pour comprendre. Fais une animation qui relate ça en
+  // t'inspirant des animations déjà présentes").
+  //
+  // Il reste le FAIT qu'une animation ne peut pas porter : le prix de
+  // l'abonnement en plus. Il vient de `lib/site/integrations.ts`,
+  // relevé sur la page de tarifs de Zapier, jamais écrit à la main.
   outilsGain:
-    "Concrètement : ailleurs, tu paies un abonnement de plus (à partir de {prix}), tu crées chaque tag à la main dans Systeme.io, puis tu construis un scénario par profil de résultat. Avec Tiquiz, tu choisis le tag dans une liste au moment où tu écris le profil, et s'il n'existe pas encore, il est créé pour toi.",
+    "Ailleurs, il faut un abonnement de plus, à partir de {prix}, et un scénario à construire par profil de résultat. Chez nous, c'est un menu déroulant.",
+  // L'ANIMATION QUI REMPLACE LE PARAGRAPHE. Elle montre le seul geste
+  // dont il parle : le tag se choisit dans un menu, au moment où on
+  // écrit le profil, et il part avec le contact.
+  //
+  // ELLE NE MONTRE QUE NOTRE MOITIÉ, ET C'EST VOULU. Sa propre
+  // animation `automatisations` (public/animations) fait partir le tag
+  // vers douze outils d'emailing concurrents, Brevo, Klaviyo et Kit
+  // compris : vérifié en décodant ses douze logos. Notre argument est
+  // la connexion NATIVE à Systeme.io, donc on s'en INSPIRE, on ne la
+  // lève pas.
+  tagAnim: {
+    profilTitre: "Ton profil de résultat",
+    profil: "Tu poses les bases",
+    champ: "Tag Systeme.io",
+    options: ["profil-debutant", "profil-liste-tiede", "profil-audience"],
+    cree: "Créé pour toi",
+    arrivee: "Contact ajouté",
+    campagne: "Ta campagne part",
+  legende: "Le tag n'existait pas encore dans ton compte : Tiquiz le crée au moment où tu l'écris.",
+  },
   outilsNote: "",
   outilsLien: "Voir le détail des intégrations",
 
@@ -1726,22 +1798,25 @@ const en: ContenuLanding = {
   titreDefilant: ["Grow your traffic", "Generate more leads", "Grow your sales"],
   motCle: "with interactive quizzes",
   accroche:
-    "The AI writes your quiz from a description of your topic. You read it over, you swap two or three sentences for your own, you publish. Everyone who answers lands in Systeme.io with their email and the tag that matches their profile.",
+    "Build viral quizzes that bring qualified traffic to your offers and turn your visitors into paying customers, without spending a euro on ads.",
   pourQui:
     "For the entrepreneurs, coaches, consultants, trainers, course creators and affiliates who have an offer and not enough people to show it to.",
   ctaPrincipal: "Build my quiz for free",
   ctaSecondaire: "Watch the demo",
   sousCta: "Free, no credit card",
-  rassurances: ["Connected to Systeme.io", "No Zapier, no Make", "Not a line of code"],
+  rassurances: ["Native Systeme.io connection", "Made for beginners", "Automations"],
+  bandeauLabel: "This is for you if you are",
   bandeau: [
-    "Your own branding",
-    "Your own domain",
-    "Automatic Systeme.io tags",
-    "Unlimited quizzes",
-    "AI built in",
-    "Surveys and Popquiz",
-    "Responsive design",
-    "100 languages",
+    "An entrepreneur",
+    "A coach",
+    "A consultant",
+    "A trainer",
+    "A course creator",
+    "An affiliate",
+    "A therapist",
+    "A content creator",
+    "A solopreneur",
+    "A marketer",
   ],
   preuve: "More than 200 solopreneurs have created their Tiquiz account",
   copier: "Copy",
@@ -1758,9 +1833,13 @@ const en: ContenuLanding = {
   animLegende:
     "Your visitor makes the same effort either way. What you get back does not compare.",
 
+  chiffreTitre: "Why a quiz, and not",
+  chiffreMotCle: "one more PDF",
   chiffre: "44.9%",
   chiffreLegende:
     "of people who start a quiz leave their email, in the coaching and training category.",
+  chiffreEtAlors:
+    "Almost one person in two. Go and look at the rate of your last opt-in page, and compare: same traffic, same effort to bring it in, and nowhere near the same number of addresses at the end.",
   chiffreSource:
     "Interact report on quiz conversion rates. This is not a page rate: it is measured from the moment the quiz is started.",
 
@@ -1912,7 +1991,17 @@ const en: ContenuLanding = {
     "They all build very good quizzes. That is not the question: the question is what you have to install between their form and your Systeme.io account, and who applies the tag once the lead arrives.",
   outilsColonnes: ["", "What goes in between", "One tag per profile"],
   outilsGain:
-    "In plain terms: elsewhere you pay for one more subscription (from {prix}), you create every tag by hand in Systeme.io, then you build one scenario per result profile. With Tiquiz you pick the tag from a list while you write the profile, and if it does not exist yet, it is created for you.",
+    "Everywhere else you need one more subscription, from {prix}, and one scenario to build per result profile. Here, it is a drop-down.",
+  tagAnim: {
+    profilTitre: "Your result profile",
+    profil: "You are laying the groundwork",
+    champ: "Systeme.io tag",
+    options: ["profile-beginner", "profile-warm-list", "profile-audience"],
+    cree: "Created for you",
+    arrivee: "Contact added",
+    campagne: "Your campaign goes out",
+    legende: "The tag did not exist in your account yet: Tiquiz creates it as you write it.",
+  },
   outilsNote: "",
   outilsLien: "See the detail, tool by tool",
 

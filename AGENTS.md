@@ -9084,10 +9084,15 @@ quelqu'un sur le témoignage d'un autre, et aucun test ne peut voir ça.
 Les trois personnes venues de Trustpilot n'ont pas de portrait chez
 elle : leur carte porte l'initiale de leur prénom.
 
-**CE QU'ON NE REPREND PAS : les cinq étoiles.** Sa page en affiche cinq
-sur cinq sur les quinze cartes. C'est une NOTE, et je ne l'ai relevée
-pour personne. Afficher une note qu'on n'a pas est exactement ce qu'elle
-interdit.
+🚨 **"CE QU'ON NE REPREND PAS : les cinq étoiles" EST PÉRIMÉ (7
+septembre).** Ce passage écartait les étoiles, avec la bonne raison :
+"afficher une note qu'on n'a pas est exactement ce qu'elle interdit".
+Elle a demandé depuis "de jolis témoignages avec les photos des users,
+style screenshot comme sur ma page d'origine", et sa page les porte, sur
+ses propres clients. **C'est SON asset et SA décision** : elles sont
+affichées, et le message de cette version le lui dit en toutes lettres
+pour qu'elle puisse dire non. Une note d'état des lieux se relit quand
+on corrige ce qu'elle décrit (leçon du 31 août).
 
 #### 9. "C'EST PAS POUR TOI" EST SON MINI QUIZ
 
@@ -9506,3 +9511,156 @@ seconde NOMME les quinze pages qui perdraient le cookie.
 - **la vidéo de 8 secondes** du haut de page : tant qu'elle n'existe
   pas, la maquette dessinée reste, et c'est ce que sa consigne demande ;
 - **les deux témoignages identiques** : lequel des deux est le bon.
+
+### Dixième passage : le haut de page, ses mots, et une animation à la place d'un paragraphe (7 septembre 2026)
+
+Huit reproches sur le seul haut de page, capture à l'appui. Le dernier
+les résume tous : **"tu dois bien reprendre la qualité et les mots
+utilisés sur la page originale : `https://www.tipote.fr/part-tiquiz`.
+ET adapter pour une landing : mêmes mots et expressions, même qualité
+d'animations."**
+
+#### CE QUE LA MESURE A DONNÉ AVANT D'ÉCRIRE UNE LIGNE
+
+**`content/sales/tiquiz.html` EST sa page `part-tiquiz`.** Vérifié en
+allant chercher l'URL en ligne et en comparant : 1 460 437 octets contre
+1 442 663 dans la capture, et **8 lignes de texte visible d'écart** sur
+545. Ses mots sont donc déjà dans le dépôt, et ils y étaient depuis le
+début : il n'y avait rien à aller chercher ailleurs.
+
+#### 1. LA RASSURANCE N'ÉTAIT PAS CENTRÉE, ET LA RÈGLE EXISTAIT DÉJÀ
+
+Elle portait `tql-mid-r`, une classe qui CENTRE sans condition, sous une
+rangée de boutons qui, elle, s'aligne à gauche sur le haut de page. Le
+commentaire de la règle disait pourtant, depuis le 5 septembre : "elle
+suit l'alignement de sa rangée de boutons".
+
+**Sixième fois que ce dépôt paie une règle écrite en commentaire et
+démentie par le code** (le `w-full h-auto` des images de réponse,
+l'`ADD_ATTR: ["target"]` des liens légaux, le "Next décode déjà le
+segment" du pilotage, le brouillon d'Adeline, le N+1 de Mes projets).
+
+#### 2. LE BANDEAU DÉFILANT PASSE AU DESSUS DE LA LIGNE DE FLOTTAISON
+
+"Pour les entrepreneurs, les coachs, les consultants, les formateurs,
+les infopreneurs et les affiliés qui ont une offre et pas assez de monde
+à qui la présenter" : **elle veut cette phrase visible SANS scroller.**
+Elle vit donc dans le bandeau, au dessus du titre, sous le libellé
+"C'est pour toi si tu es", et les dix métiers défilent.
+
+**Les dix métiers sont RELEVÉS dans ses quinze témoignages**, écrits par
+les intéressés eux mêmes : entrepreneur, coach, consultant, formateur,
+infopreneur, affilié, thérapeute, créateur de contenu, solopreneur,
+marketeur. C'est la leçon du 5 septembre ("son vocabulaire se lit dans
+ses propres témoignages"), appliquée au bandeau.
+
+**La phrase ENTIÈRE reste dans le HTML**, en `.tql-vh` (masquée à
+l'oeil, lue par un moteur et un lecteur d'écran) : un bandeau qui défile
+ne dit rien à un robot, et cette phrase est la seule qui nomme la cible.
+
+**Et le fondu des bords a dû DÉMÉNAGER.** Il vivait sur le bandeau lui
+même, en `overflow:hidden` : le libellé posé à côté était donc rogné. Le
+cadre défilant a maintenant sa propre boîte, le libellé vit dehors.
+
+#### 3. LE HAUT DE PAGE DIT LE RÉSULTAT, PAS LE MÉCANISME
+
+Son accroche, mot pour mot : **"Crée des quiz viraux qui attirent du
+trafic qualifié sur tes offres et transforment tes visiteurs en clients
+payants, sans investir en publicité."** L'ancienne décrivait les trois
+champs, l'IA qui écrit, la relecture : c'est le COMMENT, et il vit plus
+bas depuis le 5 septembre.
+
+Les trois preuves deviennent les siennes : **connexion native à
+Systeme.io · adapté aux débutants · automatisations.**
+
+#### 4. LE 44,9 % ARRIVAIT SANS SON "ET ALORS"
+
+"Ça arrive comme un cheveu sur la soupe, on peut dire 'et alors ??' donc
+c'est pas complet et pas au bon endroit."
+
+Un chiffre nu n'est pas un argument : c'est la règle des puces promesses
+appliquée à une statistique. Il ouvre maintenant la section **"Pourquoi
+un quiz, et pas un PDF de plus"**, et il est suivi de son "et alors" :
+"presque une personne sur deux. Va regarder le taux de ta dernière page
+de capture, et compare : c'est le même trafic, le même effort pour
+l'attirer, et ce n'est pas du tout le même nombre d'adresses à la fin."
+
+**"Va regarder ta dernière page de capture" est SA tournure** :
+interpeller le lecteur et lui faire vérifier lui même, plutôt que de
+lui demander de croire un pourcentage.
+
+#### 5. LE PARAGRAPHE DES INTÉGRATIONS EST DEVENU UNE ANIMATION
+
+"C'est long, il faut faire un effort pour comprendre. Fais une animation
+qui relate ça en t'inspirant des animations déjà présentes."
+
+`components/landing/AnimTag.tsx` : le profil, le menu de tags qui
+s'ouvre, le tag choisi, "Créé pour toi", une bille qui file jusqu'à la
+carte Systeme.io, le contact qui arrive, la campagne qui part. Cinq
+secondes, aucun script, **`forwards` sur chaque animation** donc la
+scène finit VISIBLE (règle du 6 septembre : un bloc jamais déclenché ne
+doit pas rester vide).
+
+**ON S'INSPIRE DE SA GRAMMAIRE, ON NE LÈVE PAS SON BLOC, et c'est
+mesuré.** `public/animations/automatisations.txt` est
+`rawhtml-8ecf2c31`, celui que `scripts/extraire-anims-vente.mjs` REFUSE
+depuis le 5 septembre. Ses douze logos en base64 ont été décodés et
+regardés : **Brevo, Klaviyo, Kit (ConvertKit)**, c'est à dire des outils
+d'emailing CONCURRENTS, alors que l'argument de la page est la connexion
+NATIVE à Systeme.io. Le refus était juste, la mesure le confirme.
+
+#### 6. LES TÉMOIGNAGES REPRENNENT SON DESSIN
+
+"C'est mal mis en forme, moche : mets de jolis témoignages avec les
+photos des users, style screenshot comme sur ma page d'origine."
+
+`components/landing/Temoignages.tsx` reprend son carrousel `tqz-tm` :
+cartes de 320 px, portrait rond de 48 px cerclé, défilement infini,
+pause au survol, bords en fondu, rupture à 600 px. **Ce n'est PAS une
+île levée** : une île est du HTML figé sans données, et elle demande
+justement d'AJOUTER quelqu'un. C'est son CSS avec `TEMOIGNAGES` pour
+source.
+
+**Maurice Massolin est "coach pour femmes entrepreneures", et il n'est
+pas dans son carrousel** (vérifié : ses quinze cartes ne le portent
+pas). Son métier vient donc d'elle, pas d'un relevé, et c'est écrit à
+côté. Quatre métiers manquants ont été remplis en LISANT ses cartes
+(Fabienne G. coach, Marie Paule C. formatrice, Thibault L. consultant,
+Sylvère M. entrepreneur), jamais devinés.
+
+**`align-items:flex-start` sur la piste** : sans lui, une carte courte
+s'étirait à la hauteur de celle de Monique (460 caractères), et ça
+laissait du vide sous le texte. Mesuré, pas déduit.
+
+#### ET LE TEST QUE J'AI ÉCRIT SORTAIT ROUGE SUR UNE ANIMATION QUI MARCHE
+
+**C'est la dixième fois de la semaine, et c'est la même faute.** J'ai
+ajouté à `tests/visual/landing-paddings.spec.ts` une mesure du GESTE (le
+menu de tags s'ouvre-t-il vraiment ? le carrousel bouge-t-il ?), et elle
+est sortie rouge sur les trois viewports en annonçant "l'animation est
+inerte".
+
+**Elle ne l'était pas.** `playwright.visual.config.ts` pose
+`contextOptions: { reducedMotion: "reduce" }` pour TOUT le filet, et
+c'est juste : une capture d'écran doit être stable. Mais sous cette
+préférence, le CSS de ces deux blocs coupe EXPRÈS ce que je venais
+mesurer (`.tqtag-liste{display:none}`, le carrousel arrêté).
+
+**Le geste n'existe que sans la préférence : on mesure donc là où il
+existe.** Le test vit dans son propre `test.describe` avec
+`test.use({ contextOptions: { reducedMotion: "no-preference" } })`, et
+il passe 3/3. Le reste du filet garde la préférence.
+
+**La règle générale : avant d'accuser le code, regarder ce que le
+HARNAIS impose au navigateur.** Un réglage global du filet peut désarmer
+exactement la chose qu'un nouveau test vient vérifier, et le symptôme est
+alors indiscernable d'un vrai bug.
+
+**Et une deuxième panique a été désamorcée en cours de route** : mes
+sondes d'hydratation rendaient `[]` sur TOUTES les pages, y compris une
+où le mécanisme marche de façon prouvée. Elles ne distinguaient donc
+rien. Ce qui tranche, c'est le filet du dépôt : **111/111 au vert**,
+dont les trois mesures d'animations qui exigent le déclencheur client.
+
+Test : `tests/visual/landing-paddings.spec.ts` (12 cas), et
+`tests/logic/landing.test.mts`.

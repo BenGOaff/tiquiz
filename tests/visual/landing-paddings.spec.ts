@@ -190,3 +190,74 @@ test("un saut d'un seul coup ne laisse aucun bloc figé", async ({ page }) => {
 
   expect(figes, `blocs figés après un saut : ${figes.join(", ")}`).toEqual([]);
 });
+
+/**
+ * L'ANIMATION DU TAG JOUE VRAIMENT, ET LE CARROUSEL DÉFILE.
+ *
+ * Béné, 7 septembre 2026, sur le paragraphe des intégrations : "c'est
+ * long, il faut faire un effort pour comprendre. Fais une animation qui
+ * relate ça." Une animation INERTE serait pire que le paragraphe : elle
+ * prend la place et ne dit rien.
+ *
+ * ON MESURE LE GESTE, PAS L'ÉTAT AU REPOS (leçon du 2 septembre). Le
+ * bloc est servi RÉVÉLÉ, donc une capture au repos le montre déjà
+ * terminé : ce qui prouve qu'il joue, c'est qu'il PASSE par un état
+ * intermédiaire (le menu ouvert) avant son état final.
+ *
+ * -- ET IL LUI FAUT SON PROPRE CONTEXTE, C'EST TOUT LE SUJET ---------
+ *
+ * `playwright.visual.config.ts` pose `reducedMotion: "reduce"` pour
+ * TOUT le filet, et c'est juste : une capture d'écran doit être stable.
+ * Mais sous cette préférence, le CSS de ces deux blocs coupe exprès ce
+ * qu'on vient mesurer (`.tqtag-liste{display:none}`, le carrousel
+ * arrêté). MESURÉ : ce test sortait rouge sur les trois viewports, en
+ * annonçant "l'animation est inerte" sur une animation qui marche.
+ *
+ * C'est encore un contrôle qui ne distingue pas ce qu'il est censé
+ * distinguer, et c'était le mien. Le geste n'existe que sans la
+ * préférence : on mesure donc là où il existe.
+ */
+test.describe("le mouvement, mesuré là où il existe", () => {
+  test.use({ contextOptions: { reducedMotion: "no-preference" } });
+
+  test("l'animation du tag joue, et le carrousel de témoignages défile", async ({ page }) => {
+    await page.goto(LANDING, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(1500);
+
+    // On descend jusqu'à l'animation SANS la révéler d'avance : le
+    // déclencheur retire la classe au montage sur les blocs hors écran.
+    const boite = await page.locator(".tqtag").boundingBox();
+    if (!boite) throw new Error("l'animation du tag n'est pas dans la page");
+    await page.evaluate((y) => window.scrollTo({ top: y, behavior: "instant" }), boite.y - 300);
+
+    const opacite = (s: string) =>
+      page.evaluate((sel) => {
+        const el = document.querySelector(sel);
+        return el ? Number(getComputedStyle(el).opacity) : -1;
+      }, s);
+
+    // Le menu s'ouvre entre 1,0 s et 2,1 s : on regarde au milieu.
+    await page.waitForTimeout(1500);
+    const listeOuverte = await opacite(".tqtag-liste");
+
+    // Puis la scène finit : le tag choisi et la carte Systeme.io.
+    await page.waitForTimeout(4200);
+    const choisi = await opacite(".tqtag-choisi");
+    const arrivee = await opacite(".tqtag-camp");
+
+    expect(
+      listeOuverte,
+      `le menu de tags ne s'ouvre jamais (opacité ${listeOuverte}) : l'animation est inerte`,
+    ).toBeGreaterThan(0.5);
+    expect(choisi, "le tag choisi n'apparaît pas dans le champ").toBeGreaterThan(0.9);
+    expect(arrivee, "le contact n'arrive jamais dans Systeme.io").toBeGreaterThan(0.9);
+
+    // LE CARROUSEL : deux mesures à 900 ms d'écart. Une piste figée rend
+    // deux fois la même matrice, et c'est exactement ce qu'on refuse.
+    const piste = ".tqtm-piste";
+    const t1 = await page.evaluate((s) => getComputedStyle(document.querySelector(s)!).transform, piste);
+    await page.waitForTimeout(900);
+    const t2 = await page.evaluate((s) => getComputedStyle(document.querySelector(s)!).transform, piste);
+    expect(t2, `le carrousel de témoignages ne défile pas (${t1})`).not.toBe(t1);
+  });
+});

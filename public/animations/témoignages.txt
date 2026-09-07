@@ -1,0 +1,306 @@
+<style>
+.tqz-tm{max-width:100%;overflow:hidden;position:relative;padding:20px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:left}
+.tqz-tm *{box-sizing:border-box}
+.tqz-tm-track{display:flex;gap:20px;animation:tqzScroll 50s linear infinite;width:max-content}
+.tqz-tm-track:hover{animation-play-state:paused}
+
+.tqz-tm-card{width:320px;flex-shrink:0;background:#fff;border:1px solid #e8e9f0;border-radius:14px;padding:24px;transition:box-shadow .3s ease,transform .3s ease;text-align:left}
+.tqz-tm-card:hover{box-shadow:0 8px 30px rgba(43,50,100,.1);transform:translateY(-3px)}
+
+.tqz-tm-top{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.tqz-tm-av{width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid #eef0ff}
+.tqz-tm-info{flex:1}
+.tqz-tm-name{font-size:14px;font-weight:700;color:#2B3264}
+.tqz-tm-role{font-size:11px;color:#6b7194;margin-top:1px}
+.tqz-tm-stars{color:#FFB800;font-size:13px;letter-spacing:1px;margin-top:2px}
+
+.tqz-tm-txt{font-size:13px;color:#3d4266;line-height:1.55;margin:0}
+
+@keyframes tqzScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* fade edges */
+.tqz-tm::before,.tqz-tm::after{content:'';position:absolute;top:0;bottom:0;width:60px;z-index:2;pointer-events:none}
+.tqz-tm::before{left:0;background:linear-gradient(90deg,#fff 0%,transparent 100%)}
+.tqz-tm::after{right:0;background:linear-gradient(270deg,#fff 0%,transparent 100%)}
+
+@media(max-width:600px){
+  .tqz-tm-card{width:270px;padding:18px}
+  .tqz-tm-av{width:40px;height:40px}
+  .tqz-tm-name{font-size:13px}
+  .tqz-tm-txt{font-size:12px}
+  .tqz-tm::before,.tqz-tm::after{width:30px}
+}
+</style>
+
+<div class="tqz-tm">
+  <div class="tqz-tm-track">
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69a93e6d54227_avis-tipote10.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">J&#233;r&#233;my B.</div>
+          <div class="tqz-tm-role">Entrepreneur</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Un v&#233;ritable couteau suisse pour g&#233;n&#233;rer des leads avec des quiz. Que tu sois d&#233;butant ou non, tu automatises tout ou presque. Je recommande &#224; 1000% !</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69a9b9e3404de_503499461_122237150750193885_1174529389704311732_n.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Eric L.</div>
+          <div class="tqz-tm-role">Infopreneur</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Tiquiz est une r&#233;volution pour ceux qui veulent segmenter leur audience avec des quiz connect&#233;s &#224; Systeme.io. Cr&#233;&#233; par une experte du domaine. Je recommande &#224; 1000%.</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69aa866919724_photo_2026-02-11_18-47-10.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Jean Bernard R.</div>
+          <div class="tqz-tm-role">Cr&#233;ateur de contenu</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">J'ai test&#233; la g&#233;n&#233;ration de quiz et le r&#233;sultat est incroyable. Les CTA personnalis&#233;s pour chaque profil fonctionnent parfaitement. Ces quiz c'est un truc de ouf !</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69a93fce5610b_avis-tipote7.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Bernard C.</div>
+          <div class="tqz-tm-role">Consultant</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Tiquiz m'a vraiment aid&#233; &#224; clarifier mes id&#233;es pour qualifier mes prospects. Mes leads sont tag&#233;s automatiquement dans Systeme.io, un vrai gain de temps.</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69a93ff798166_avis-tipote6.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Monique P.</div>
+          <div class="tqz-tm-role">Formatrice</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Pour avoir essay&#233; d'autres outils de quiz, Tiquiz est bien plus simple et l'id&#233;e de connecter directement &#224; Systeme.io c'est une vraie p&#233;pite. Je recommande.</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69a9402fdf69d_avis-tipote8.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Evelyne G.</div>
+          <div class="tqz-tm-role">Coach</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Un travail de dingue pour mettre autant de fonctionnalit&#233;s dans un outil de quiz aussi simple. Tout est bien organis&#233;, les automatisations sont top.</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69a940923fab1_photo_2024-09-22_21-39-42.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Sylv&#232;re M.</div>
+          <div class="tqz-tm-role">Entrepreneur</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Franchement, je suis bluff&#233;. J'ai pris le temps de cr&#233;er mon premier quiz et le r&#233;sultat est tout simplement topissime. Bravo !</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69a9411e3efd3_avis-tipote1.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Gwenn</div>
+          <div class="tqz-tm-role">Solopreneur</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Enfin un outil de quiz parfaitement pensé marketing, qui est directement relié à Systeme.io pour récupérer les leads et les taguer automatiquement, sans devoir passer par des outils comme Zapier ou Make.</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://ifs-association.com/wp-content/uploads/avatars/219/6233a3867d402-bpfull.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Adeline</div>
+          <div class="tqz-tm-role">Thérapeute</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Super outil ! Très simple d’utilisation, et surtout : le quiz punaise mais c’est le meilleur lead magnet aujourd’hui ! Je suis fan, voilà. Merci Béné pour ce bijou !</p>
+    </div>
+    
+    
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69a940de7eb1c_2026-03-05_09-37-28.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Alain M.</div>
+          <div class="tqz-tm-role">Affili&#233;</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">L'outil s'am&#233;liore tous les jours. Les quiz connect&#233;s &#224; Systeme.io, c'est exactement ce qu'il manquait. Si j'ai des suggestions, c'est avec plaisir !</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69b046c9588b4_avis-tipote.png" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Samira L.</div>
+          <div class="tqz-tm-role">Entrepreneuse</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">J'ai test&#233; la cr&#233;ation de quiz pour ma future offre. Vu que j'avais d&#233;j&#224; param&#233;tr&#233; ma cible, le rendu est juste top. Vraiment, merci !</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69a93fa9b2e22_avis-tipote9.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Maulisio T.</div>
+          <div class="tqz-tm-role">Marketeur</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Meilleur outil de quiz pour segmenter et convertir. La connexion directe avec Systeme.io change tout. Plus besoin de bidouiller des int&#233;grations.</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69a9417b5a41e_avis-tipote2.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Fabienne G.</div>
+          <div class="tqz-tm-role">Coach</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Bravo pour la cr&#233;ation de Tiquiz, c'est une r&#233;volution ! Mes quiz convertissent enfin comme il faut et mes leads arrivent directement dans mes tunnels.</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69a941b214164_photo_2020-03-22_19-46-23.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Marie Paule C.</div>
+          <div class="tqz-tm-role">Formatrice</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Vraiment bravo et f&#233;licitations pour cet outil de quiz. Les r&#233;sultats personnalis&#233;s par profil sont g&#233;niaux et la connexion Systeme.io est un vrai plus.</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69aab25cddb28_avistipote.png" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Thibault L.</div>
+          <div class="tqz-tm-role">Consultant</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Les quiz Tiquiz sont puissants et ultra simples &#224; cr&#233;er. La segmentation automatique des leads, c'est exactement ce dont j'avais besoin.</p>
+    </div>
+
+    <!-- DUPLICATE SET for seamless loop -->
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69a93e6d54227_avis-tipote10.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">J&#233;r&#233;my B.</div>
+          <div class="tqz-tm-role">Entrepreneur</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Un v&#233;ritable couteau suisse pour g&#233;n&#233;rer des leads avec des quiz. Que tu sois d&#233;butant ou non, tu automatises tout ou presque. Je recommande &#224; 1000% !</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69a9b9e3404de_503499461_122237150750193885_1174529389704311732_n.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Eric L.</div>
+          <div class="tqz-tm-role">Infopreneur</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Tiquiz est une r&#233;volution pour ceux qui veulent segmenter leur audience avec des quiz connect&#233;s &#224; Systeme.io. Cr&#233;&#233; par une experte du domaine. Je recommande &#224; 1000%.</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69aa866919724_photo_2026-02-11_18-47-10.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Jean Bernard R.</div>
+          <div class="tqz-tm-role">Cr&#233;ateur de contenu</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">J'ai test&#233; la g&#233;n&#233;ration de quiz et le r&#233;sultat est incroyable. Les CTA personnalis&#233;s pour chaque profil fonctionnent parfaitement. Ces quiz c'est un truc de ouf !</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69a93fce5610b_avis-tipote7.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Bernard C.</div>
+          <div class="tqz-tm-role">Consultant</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Tiquiz m'a vraiment aid&#233; &#224; clarifier mes id&#233;es pour qualifier mes prospects. Mes leads sont tag&#233;s automatiquement dans Systeme.io, un vrai gain de temps.</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69a93ff798166_avis-tipote6.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Monique P.</div>
+          <div class="tqz-tm-role">Formatrice</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Pour avoir essay&#233; d'autres outils de quiz, Tiquiz est bien plus simple et l'id&#233;e de connecter directement &#224; Systeme.io c'est une vraie p&#233;pite. Je recommande.</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69a9402fdf69d_avis-tipote8.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Evelyne G.</div>
+          <div class="tqz-tm-role">Coach</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Un travail de dingue pour mettre autant de fonctionnalit&#233;s dans un outil de quiz aussi simple. Tout est bien organis&#233;, les automatisations sont top.</p>
+    </div>
+
+    <div class="tqz-tm-card">
+      <div class="tqz-tm-top">
+        <img class="tqz-tm-av" src="https://d1yei2z3i6k35z.cloudfront.net/473100/69a940923fab1_photo_2024-09-22_21-39-42.jpg" alt="">
+        <div class="tqz-tm-info">
+          <div class="tqz-tm-name">Sylv&#232;re M.</div>
+          <div class="tqz-tm-role">Entrepreneur</div>
+          <div class="tqz-tm-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        </div>
+      </div>
+      <p class="tqz-tm-txt">Franchement, je suis bluff&#233;. J'ai pris le temps de cr&#233;er mon premier quiz et le r&#233;sultat est tout simplement topissime. Bravo !</p>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,5 @@
+<iframe src="https://quiz.tipote.com/embed/preview?locale=fr&source=tiquiz-fr&checkout=https%3A%2F%2Fwww.tipote.fr%2Ftiquiz%23section-518f489a"
+  data-checkout="https://www.tipote.fr/tiquiz#section-518f489a"
+  style="width:100%;max-width:1100px;height:min(720px,90vh);min-height:560px;border:0;border-radius:18px;display:block;margin:0 auto;box-shadow:0 16px 48px rgba(35,40,80,.18);"
+  loading="lazy" title="Démo Tiquiz"></iframe>
+<script src="https://quiz.tipote.com/embed/bridge.js" async></script>
