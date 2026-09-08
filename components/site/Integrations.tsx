@@ -20,13 +20,35 @@
 //   à la couleur de marque. Un filet vertical déplacerait le texte.
 // - le tableau SCROLLE dans sa boîte : sans ça, c'est la page entière
 //   qui part en travers sur un téléphone.
+//
+// -- LA LANGUE EST UNE PROP OBLIGATOIRE (8 septembre 2026) -------------
+//
+// Trois de ces briques portaient une chaîne FRANÇAISE en dur : le
+// libellé du fil d'Ariane, le titre de l'encadré, le titre de la FAQ.
+// Sur une page anglaise, les deux derniers se voient et le premier est
+// ce qu'un lecteur d'écran ANNONCE : un texte qu'on n'affiche pas reste
+// un texte que quelqu'un lit.
+//
+// Elle est OBLIGATOIRE et pas facultative avec un défaut français : un
+// appelant qui se tait ne compile pas, donc la prochaine page ajoutée
+// ici ne peut plus servir "Questions fréquentes" en anglais sans que
+// personne ne le voie (règle du 1er août).
 
 import Link from "next/link";
 
+import { chromeIntegrations } from "@/lib/site/hubIntegrations";
+import type { LanguePublique } from "@/lib/site/langues";
+
 /** Le fil d'Ariane visible, doublé d'un JSON-LD par la page. */
-export function FilDAriane({ etapes }: { etapes: readonly { nom: string; chemin?: string }[] }) {
+export function FilDAriane({
+  langue,
+  etapes,
+}: {
+  langue: LanguePublique;
+  etapes: readonly { nom: string; chemin?: string }[];
+}) {
   return (
-    <nav aria-label="Fil d'Ariane" className="tq-doux text-sm">
+    <nav aria-label={chromeIntegrations(langue).filDAriane} className="tq-doux text-sm">
       <ol className="flex flex-wrap items-center gap-x-2 gap-y-1">
         {etapes.map((e, i) => (
           <li key={e.nom} className="flex items-center gap-2">
@@ -52,11 +74,17 @@ export function FilDAriane({ etapes }: { etapes: readonly { nom: string; chemin?
  * qui permet de répondre à la question sans faire descendre le lecteur.
  * Il passe donc AVANT la première image, toujours.
  */
-export function EnBref({ children }: { children: React.ReactNode }) {
+export function EnBref({
+  langue,
+  children,
+}: {
+  langue: LanguePublique;
+  children: React.ReactNode;
+}) {
   return (
     <aside className="tq-lire mt-8 rounded-2xl border border-[var(--tq-bord)] bg-white p-6">
       <div className="h-1 w-12 rounded-full bg-[var(--tq-bleu)]" aria-hidden />
-      <p className="tq-etiquette mt-4">En bref</p>
+      <p className="tq-etiquette mt-4">{chromeIntegrations(langue).enBref}</p>
       <div className="mt-3 space-y-3 leading-relaxed">{children}</div>
     </aside>
   );
@@ -192,10 +220,16 @@ export function Tableau({
 }
 
 /** La FAQ, VISIBLE sur la page (et déclarée en JSON-LD par la page). */
-export function Faq({ questions }: { questions: readonly { q: string; r: string }[] }) {
+export function Faq({
+  langue,
+  questions,
+}: {
+  langue: LanguePublique;
+  questions: readonly { q: string; r: string }[];
+}) {
   return (
     <section className="tq-large mt-20">
-      <h2 className="text-[2rem]">Questions fréquentes</h2>
+      <h2 className="text-[2rem]">{chromeIntegrations(langue).faq}</h2>
       <dl className="tq-lire mt-8 space-y-8">
         {questions.map((x) => (
           <div key={x.q}>

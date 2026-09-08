@@ -26,6 +26,9 @@
 // fois est un prix faux neuf fois le jour où il change, et c'est
 // exactement ce qui a coûté deux passages au blog. Il vit ici, une fois.
 
+import { usd, usdFr } from "@/lib/site/montantAnglais";
+import { LANGUE_SANS_PREFIXE, type LanguePublique } from "@/lib/site/langues";
+
 /**
  * LES CHIFFRES DE ZAPIER, RELEVÉS SUR LA CAPTURE QUE LA PAGE AFFICHE.
  *
@@ -39,10 +42,24 @@
  * bas en paiement annuel sur certains marchés : ce n'est PAS écrit ici,
  * parce que ce n'est pas sur la capture et que je ne l'ai pas vérifié.
  */
+export const ZAPIER_PRO_USD = 29.99;
+
 export const ZAPIER = {
   gratuitTachesParMois: 100,
   gratuitEtapesParZap: 2,
-  professionnelParMois: "29,99 $",
+  /**
+   * LE MÊME NOMBRE, DEUX ÉCRITURES, ET C'EST VOULU.
+   *
+   * `29,99 $` en français, `$29.99` en anglais : un montant EST de la
+   * ponctuation, et le premier posé dans une page anglaise se lit
+   * comme une coquille (règle du 8 septembre, mesurée sur les articles
+   * anglais du blog). Les deux DÉRIVENT de `ZAPIER_PRO_USD` : écrire
+   * les deux chaînes à la main laisserait l'une dériver de l'autre le
+   * jour où Zapier change son tarif, et personne ne le verrait avant
+   * qu'un lecteur ne compare les deux pages.
+   */
+  professionnelParMois: usdFr(ZAPIER_PRO_USD),
+  professionnelParMoisEn: usd(ZAPIER_PRO_USD),
 } as const;
 
 /**
@@ -134,6 +151,80 @@ export const OUTILS: readonly OutilIntegration[] = [
     resume: "Écrit dans Systeme.io avec ta clé API, sans intermédiaire.",
   },
 ] as const;
+
+/**
+ * LES TROIS CHAMPS DE TEXTE, EN ANGLAIS.
+ *
+ * Béné, 8 septembre 2026 : "continue la traduction de tout stp." Et,
+ * le même jour : "il faut à chaque fois utiliser le champ sémantique,
+ * les expressions, tournures de phrases, ponctuation etc. propre à
+ * chaque langue, c'est pas uniquement du mot à mot."
+ *
+ * -- POURQUOI UNE TABLE À CÔTÉ, ET PAS UN `OUTILS` PAR LANGUE --------
+ *
+ * `OUTILS` porte la STRUCTURE : le slug, le logo et ses dimensions,
+ * l'ordre du tableau. Dupliquer le tableau entier laisserait ces
+ * champs là diverger sans que rien ne le dise, et c'est le défaut que
+ * ce dépôt paie en boucle depuis juin. Une langue n'apporte donc que
+ * du TEXTE, rangé par nom d'outil.
+ *
+ * **Et `OUTILS` reste exporté tel quel, au caractère près.** L'aperçu
+ * de la landing le lit (`app/(site)/apercu-landing-8f2c9d41`), Béné
+ * est en train de le relire, et une refactorisation qui déplace ses
+ * chaînes n'était demandée par personne.
+ *
+ * Le `Record` est typé sur les NOMS des outils : en oublier un ne
+ * compile pas. Sans ça, un outil manquant afficherait du FRANÇAIS dans
+ * une ligne de tableau anglaise, la page s'afficherait parfaitement,
+ * et personne ne le verrait (règle du 8 septembre).
+ */
+type NomOutil = (typeof OUTILS)[number]["nom"];
+
+type TexteOutil = Pick<OutilIntegration, "intermediaire" | "tagParProfil" | "resume">;
+
+const TEXTES_OUTILS_EN: Readonly<Record<NomOutil, TexteOutil>> = {
+  Tally: {
+    intermediaire: "A webhook and some code, or Zapier / Make",
+    tagParProfil: "No, one Zap per profile",
+    resume: "Free and genuinely good, but Systeme.io is not in its integration list.",
+  },
+  Typeform: {
+    intermediaire: "Zapier or Make",
+    tagParProfil: "No, one Zap per profile",
+    resume: "The most polished one out there. Reaching Systeme.io goes through a third party.",
+  },
+  "Google Forms": {
+    intermediaire: "Zapier, Make, or a Google Apps Script",
+    tagParProfil: "No",
+    resume: "It embeds inside a Systeme.io page, but it sends nothing to your contacts.",
+  },
+  Jotform: {
+    intermediaire: "Zapier or Make",
+    tagParProfil: "No",
+    resume: "It advertises a Systeme.io integration. The button opens Zapier.",
+  },
+  Interact: {
+    intermediaire: "Zapier Pro, one Zap per result",
+    tagParProfil: "No, tags created by hand",
+    resume: "Its own documentation requires Zapier Pro and one Zap per quiz result.",
+  },
+  Tiquiz: {
+    intermediaire: "Nothing, your API key is enough",
+    tagParProfil: "Yes, and the tag is created if it is missing",
+    resume: "It writes into Systeme.io with your API key, with nothing in between.",
+  },
+};
+
+/**
+ * LES OUTILS DANS UNE LANGUE, STRUCTURE INTACTE.
+ *
+ * Le français rend `OUTILS` LUI MÊME, pas une copie : deux tableaux
+ * pour la même langue finiraient par ne plus dire la même chose.
+ */
+export function outilsPourLangue(langue: LanguePublique): readonly OutilIntegration[] {
+  if (langue === LANGUE_SANS_PREFIXE) return OUTILS;
+  return OUTILS.map((o) => ({ ...o, ...TEXTES_OUTILS_EN[o.nom] }));
+}
 
 /**
  * ZAPIER N'EST PAS DANS `OUTILS`, ET C'EST VOULU.

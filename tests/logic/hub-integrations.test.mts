@@ -25,12 +25,34 @@ import {
   filDArianeJsonLd,
 } from "../../lib/site/integrations.ts";
 import { PAGES_PUBLIQUES } from "../../lib/site/pagesPubliques.ts";
+import { cheminPageDuSite, sourcePageDuSite } from "./aide/pageDuSite.mts";
+import { contenuHub } from "../../lib/site/hubIntegrations.ts";
+import { LANGUES_PUBLIQUES } from "../../lib/site/langues.ts";
 
 const RACINE = process.cwd();
-const DOSSIER = path.join(RACINE, "app", "(site)", "integrations");
+
+/**
+ * LA SOURCE D'UNE PAGE DU HUB, CHERCHEE ET PAS RECOPIEE.
+ *
+ * Un groupe de routes de Next n'ajoute AUCUN segment d'URL : depuis le
+ * 8 septembre le hub vit dans `app/(site-langues)/integrations/` (il lit
+ * la langue de l'adresse) et ses six pages filles dans `app/(site)/`,
+ * pour la meme URL. Un dossier ecrit en dur ici fige donc un RANGEMENT
+ * et rougit sur un code juste : c'est exactement ce qui est arrive.
+ */
+/** Une page du hub existe-t-elle, quel que soit son groupe de routes ? */
+function pageExiste(adresse: string): boolean {
+  try {
+    cheminPageDuSite(adresse);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function source(chemin: string): string {
-  return fs.readFileSync(path.join(DOSSIER, chemin), "utf8");
+  const adresse = chemin === "page.tsx" ? "/integrations" : `/integrations/${path.dirname(chemin)}`;
+  return sourcePageDuSite(adresse);
 }
 
 /**
@@ -106,7 +128,7 @@ test("le hub ne lie que les outils dont la page est écrite", () => {
   for (const outil of OUTILS) {
     if (outil.slug === null) continue;
     assert.ok(
-      fs.existsSync(path.join(DOSSIER, outil.slug, "page.tsx")),
+      pageExiste(`/integrations/${outil.slug}`),
       `${outil.slug} est publié mais sa page n'existe pas`,
     );
   }
@@ -157,7 +179,12 @@ test("chaque page enfant déclare un fil d'Ariane et une FAQ", () => {
     const src = source(p);
     assert.ok(src.includes("filDArianeJsonLd"), `${p} n'a pas de fil d'Ariane`);
     assert.ok(src.includes("faqJsonLd"), `${p} ne déclare pas sa FAQ`);
-    assert.ok(src.includes("<Faq questions={FAQ}"), `${p} déclare une FAQ qu'elle n'affiche pas`);
+    // ON VISE LE FAIT, PAS LA FORMULATION. Ce contrôle exigeait
+    // `<Faq questions={FAQ}` au caractère près, et il a rougi le jour où
+    // la brique a pris une prop `langue` obligatoire, c'est à dire sur
+    // une correction JUSTE. Un garde-fou qui fige une formulation
+    // empêche de corriger la formulation.
+    assert.ok(/<Faq[\s\S]{0,120}questions={FAQ}/.test(src), `${p} déclare une FAQ qu'elle n'affiche pas`);
   }
 });
 
@@ -235,8 +262,10 @@ test("aucun aplat de couleur sous du texte", () => {
   // Béné, trois fois : "supprime l'arrière plan bleu sous le texte,
   // j'en veux pas, NULLE PART." Le bleu ne sert qu'à un bouton, une
   // pastille numérotée, un filet horizontal ou un chiffre.
-  for (const p of [...PAGES, "../../../components/site/Integrations.tsx"]) {
-    const src = p.startsWith("../") ? fs.readFileSync(path.join(DOSSIER, p), "utf8") : source(p);
+  for (const p of [...PAGES, "components/site/Integrations.tsx"]) {
+    const src = p.startsWith("components/")
+      ? fs.readFileSync(path.join(RACINE, p), "utf8")
+      : source(p);
     assert.ok(!/bg-\[var\(--tq-marine\)\]/.test(src), `${p} pose un aplat marine`);
     for (const [, classes] of src.matchAll(/className="([^"]*bg-\[var\(--tq-bleu\)\][^"]*)"/g)) {
       assert.ok(
@@ -312,11 +341,23 @@ test("aucun <title> ne dépasse 60 caractères, suffixe compris", () => {
   // contrôle attrape, ce sont les titres qui dépassent VRAIMENT.
   const SUFFIXE = " · Tiquiz".length;
   const MAX = 62;
-  for (const p of PAGES) {
+  const borne = (quoi: string, titre: string) => {
+    const total = titre.length + SUFFIXE;
+    assert.ok(total <= MAX, `${quoi} : "${titre}" fait ${total} caractères avec le suffixe`);
+  };
+
+  // LE HUB PORTE SES TITRES DANS SON MODULE, UN PAR LANGUE. Chercher un
+  // `const TITRE` dans sa page rougirait sur un code juste depuis qu'il
+  // est bilingue, et surtout ça ne mesurerait plus l'anglais : un titre
+  // anglais trop long se coupe exactement pareil dans Google.
+  for (const langue of LANGUES_PUBLIQUES) {
+    borne(`le hub en ${langue}`, contenuHub(langue).titre);
+  }
+
+  for (const p of PAGES.slice(1)) {
     const m = source(p).match(/^const TITRE =\s*\n?\s*"([^"]+)";/m);
     assert.ok(m, `${p} ne déclare pas de TITRE lisible`);
-    const total = m[1].length + SUFFIXE;
-    assert.ok(total <= MAX, `${p} : "${m[1]}" fait ${total} caractères avec le suffixe`);
+    borne(p, m[1]);
   }
 });
 

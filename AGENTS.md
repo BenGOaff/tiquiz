@@ -10974,7 +10974,8 @@ dans ce sens là.
 | **le hub et les 8 pages de fonctionnalités** | **fr + en** |
 | **`/generateur-de-quiz`** | **fr + en** |
 | **`/a-propos`** | **fr + en** |
-| `/integrations`, `/affiliation` | fr |
+| **`/integrations`** (le HUB seul, ses 6 pages filles restent fr) | **fr + en** |
+| `/affiliation` | fr |
 | les 10 articles du blog | fr |
 | ses 4 articles anglais | **SERVIS** sur `/en/blog/<slug>` |
 
@@ -11393,6 +11394,79 @@ QUATRE versions fautives (un `alt` anglais remis en français, `€30,000`
 écrit `30 000 EUR`, la page revenue dans `app/(site)/`, une phrase du
 module recopiée dans la page) : les quatre rougissent.
 
+
+### Le hub intégrations passe en anglais, ses SIX pages filles non (8 septembre)
+
+Suite du chantier. `/integrations` est servi en `fr` et en `en`, et il a
+déménagé dans `app/(site-langues)/` (c'est le seul groupe qui lit
+l'en-tête posé par le middleware, donc le seul où le chrome et les liens
+peuvent suivre `/en/`). **Un groupe de routes n'ajoute aucun segment
+d'URL** : l'adresse ne bouge pas d'un caractère, et c'est sa contrainte
+du jour ("je ne veux pas changer les URL actuelles").
+
+**MESURÉ après le déplacement, sur le serveur :**
+
+| | `<html lang>` | canonique | h1 | tableau |
+|---|---|---|---|---|
+| `/integrations` | `fr` | `.../integrations` | Connecter un formulaire... | "Zapier ou Make" |
+| `/en/integrations` | `en` | `.../en/integrations` | Connect a form or a quiz... | "Zapier or Make" |
+
+Les deux portent leurs trois `hreflang`, chacune sa canonique, et
+`?ref=jocelyne` pose toujours `tq_ref` sur l'adresse préfixée.
+
+#### CE QUI EST TRADUIT, ET CE QUI NE L'EST PAS
+
+**Le TABLEAU comparatif l'est, les SIX CARTES d'outil non.** Le tableau
+est de la donnée pure : `outilsPourLangue(langue)` garde le nom, le
+slug et le logo, et ne change que les trois champs de texte. Les cartes,
+elles, MÈNENT aux six pages détaillées, qui sont en français (1409
+lignes) : traduire leur titre promettrait de l'anglais derrière le clic.
+
+**Le français rend `OUTILS` LUI MÊME**, pas une copie : deux tableaux
+pour la même langue finiraient par ne plus dire la même chose. Et
+`TEXTES_OUTILS_EN` est un `Record` typé sur les NOMS des outils, donc en
+oublier un ne compile pas : un outil manquant afficherait du FRANÇAIS
+dans une ligne anglaise, la page s'afficherait parfaitement, et personne
+ne le verrait.
+
+**ET UNE LIGNE LE DIT** (`outilsLangueDesPages`), au lieu de laisser la
+surprise au clic. C'est la règle du chrome, appliquée à une carte : un
+libellé resté français est une INFORMATION, pas un oubli.
+
+**LE GARDE-FOU S'AUTO-CORRIGE, et c'est le point.** Tant qu'aucune page
+fille ne déclare l'anglais, la ligne est OBLIGATOIRE ; le jour où les
+six l'ont, le même test exige qu'elle DISPARAISSE et refuse un état
+intermédiaire ("2 pages filles sur 6 sont traduites : finir, ou retirer
+la langue déclarée"). Un garde-fou qui fige l'état du jour aurait
+empêché de finir le travail.
+
+**Et le sitemap ne déclare l'anglais QUE sur le hub** : le poser sur les
+six enfants mettrait `/en/integrations/tally-systeme-io` dans le sitemap
+ET dans ses `hreflang`, et Google y trouverait du français sous une
+adresse anglaise, donc jugerait l'anglais sur du contenu dupliqué.
+
+#### CE QUE `git checkout --` M'A COÛTÉ, ET C'EST NOUVEAU
+
+Pour rejouer la version fautive "la page revenue dans `(site)`", j'ai
+fait `rm -rf "app/(site)/integrations"`. **Ce dossier ne portait pas que
+la page : il porte les SIX pages filles.** Le `git checkout --` qui a
+suivi les a bien restaurées... **dans leur version d'AVANT le commit en
+cours**, donc sans le `langue={LANGUE_SANS_PREFIXE}` que ce chantier
+venait de leur poser.
+
+`tsc` l'a dit tout de suite (18 erreurs, `Property 'langue' is missing`),
+donc rien n'est parti. Mais la leçon vaut : **un `git checkout --` sur un
+travail non committé restaure l'état du DÉPÔT, pas l'état de la séance**,
+et un `rm -rf` de répertoire emporte des voisins qu'on n'avait pas en
+tête. Pour rejouer un déplacement de page, on déplace le FICHIER
+(`git mv` ou un `mv` du seul `page.tsx`), jamais son dossier.
+
+Test : `tests/logic/hub-en-anglais.test.mts` (8 cas), vérifié en rejouant
+SIX versions fautives (la ligne d'avertissement retirée alors que les
+pages filles sont en français, `at 0 €` à la française dans l'anglais,
+l'anglais qui rend `OUTILS` tel quel, le français qui rend une copie au
+lieu de `OUTILS` lui même, une phrase du module recopiée dans la page, la
+page revenue dans `(site)`) : les six rougissent.
 
 ### Le CHROME parlait français sur les pages anglaises (8 septembre)
 

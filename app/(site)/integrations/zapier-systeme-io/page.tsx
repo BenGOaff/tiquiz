@@ -22,6 +22,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 import { Capture, EnBref, Faq, FilDAriane, Tableau } from "@/components/site/Integrations";
+import { LANGUE_SANS_PREFIXE } from "@/lib/site/langues";
 import { HOTE_VENTE } from "@/lib/publicHost";
 import { ZAPIER, faqJsonLd, filDArianeJsonLd, type QuestionFaq } from "@/lib/site/integrations";
 
@@ -83,7 +84,7 @@ export default function ZapierSystemeIo() {
       />
 
       <section className="tq-large pt-12 sm:pt-16">
-        <FilDAriane
+        <FilDAriane langue={LANGUE_SANS_PREFIXE}
           etapes={[
             { nom: "Accueil", chemin: "/" },
             { nom: "Intégrations", chemin: "/integrations" },
@@ -95,7 +96,7 @@ export default function ZapierSystemeIo() {
           Connecter <span className="tq-surb">Zapier</span> à Systeme.io
         </h1>
 
-        <EnBref>
+        <EnBref langue={LANGUE_SANS_PREFIXE}>
           <p>
             L&apos;application Systeme.io existe sur Zapier et elle est accessible dès le plan
             gratuit : elle n&apos;est pas classée « Premium ». La limite est ailleurs.
@@ -213,7 +214,7 @@ export default function ZapierSystemeIo() {
         </div>
       </section>
 
-      <Faq questions={FAQ} />
+      <Faq langue={LANGUE_SANS_PREFIXE} questions={FAQ} />
       <div className="pb-24" />
     </main>
   );

@@ -59,6 +59,7 @@ import {
   TYPEFORM_PLUS_PAR_MOIS_USD,
   ZAPIER_PRO_PAR_MOIS_USD,
 } from "@/lib/blog/liensIntegrations";
+import { eur, usd } from "@/lib/site/montantAnglais";
 
 // Les deux prix viennent de la table FRANCAISE, ils ne sont pas recopies :
 // un tarif ecrit deux fois est un tarif qui divergera, et le blog
@@ -72,26 +73,14 @@ const TAUX_ATELIER = 0.7;
 /** Ce que coute le montage concurrent, additionne une seule fois. */
 const TOTAL_CONCURRENT_USD = TYPEFORM_PLUS_PAR_MOIS_USD + ZAPIER_PRO_PAR_MOIS_USD;
 
-/**
- * Un montant en DOLLARS, ecrit a l'anglaise.
+/*
+ * LES MONTANTS A L'ANGLAISE VIVENT DANS `lib/site/montantAnglais.ts`.
  *
- * Typeform et Zapier facturent en dollars, et on ne convertit AUCUNE
- * devise (regle du 1er septembre) : convertir demanderait un taux de
- * change invente, faux le lendemain. Les deux chiffres viennent de
- * `liensIntegrations.ts`, releves sur leurs pages de tarifs, jamais
- * recopies : c'est exactement l'endroit ou un lecteur verifie.
+ * Ils y ont demenage le 8 septembre : le hub integrations en a besoin
+ * pour son prix Zapier, et deux copies d'un formateur de montant
+ * finissent toujours par diverger. Le comportement ne change pas d'un
+ * caractere, et les cas de ce fichier le figent.
  */
-function usd(n: number): string {
-  const a = Math.round(n * 100) / 100;
-  return `$${Number.isInteger(a) ? String(a) : a.toFixed(2)}`;
-}
-
-/** Un montant en euros, ecrit a l'anglaise : le point decimal. */
-function eur(n: number): string {
-  const a = Math.round(n * 100) / 100;
-  const s = Number.isInteger(a) ? String(a) : a.toFixed(2);
-  return `\u20ac${s.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
-}
 
 /**
  * LES LIENS, ET CE QU'ILS COUTENT QUAND ILS SONT FAUX.

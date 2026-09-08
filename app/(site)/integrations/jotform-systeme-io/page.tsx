@@ -25,6 +25,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 import { Capture, EnBref, Faq, FilDAriane, Tableau } from "@/components/site/Integrations";
+import { LANGUE_SANS_PREFIXE } from "@/lib/site/langues";
 import { HOTE_VENTE } from "@/lib/publicHost";
 import { ZAPIER, faqJsonLd, filDArianeJsonLd, type QuestionFaq } from "@/lib/site/integrations";
 
@@ -86,7 +87,7 @@ export default function JotformSystemeIo() {
       />
 
       <section className="tq-large pt-12 sm:pt-16">
-        <FilDAriane
+        <FilDAriane langue={LANGUE_SANS_PREFIXE}
           etapes={[
             { nom: "Accueil", chemin: "/" },
             { nom: "Intégrations", chemin: "/integrations" },
@@ -98,7 +99,7 @@ export default function JotformSystemeIo() {
           Connecter <span className="tq-surb">Jotform</span> à Systeme.io
         </h1>
 
-        <EnBref>
+        <EnBref langue={LANGUE_SANS_PREFIXE}>
           <p>
             Jotform a bien une page « intégration systeme.io », mais son bouton ouvre Zapier :
             l&apos;adresse contient <code>integration=Zapier</code>. Aucune clé API Systeme.io
@@ -207,7 +208,7 @@ export default function JotformSystemeIo() {
         </div>
       </section>
 
-      <Faq questions={FAQ} />
+      <Faq langue={LANGUE_SANS_PREFIXE} questions={FAQ} />
       <div className="pb-24" />
     </main>
   );

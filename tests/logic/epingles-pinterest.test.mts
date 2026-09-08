@@ -18,6 +18,7 @@ import { listerArticles } from "@/lib/blog/articles";
 import { metadonneesSommaire } from "@/lib/blog/metaSommaire";
 import { codeVerificationPinterest, diagnosticVerificationPinterest } from "@/lib/site/pinterest";
 import { LANGUES_PUBLIQUES } from "@/lib/site/langues";
+import { sourcePageDuSite } from "./aide/pageDuSite.mts";
 
 test("chaque article publié a son épingle verticale sur le disque", () => {
   // TOUTES LES LANGUES, jamais la seule qui a servi de modele. Mesure du
@@ -108,7 +109,10 @@ test("le hub a son épingle verticale, et elle est branchée", () => {
     existsSync("public/blog/pin/hub-integrations.jpg"),
     "npm run blog:epingles doit construire l'épingle du hub",
   );
-  const hub = readFileSync("app/(site)/integrations/page.tsx", "utf8");
+  // Le hub a change de GROUPE de routes le 8 septembre (il lit la langue
+  // de l'adresse) : on le CHERCHE, un chemin ecrit en dur fige un
+  // rangement et rougit sur un code juste.
+  const hub = sourcePageDuSite("/integrations");
   assert.match(hub, /attributsEpinglePour\(\s*"hub-integrations"/);
 });
 

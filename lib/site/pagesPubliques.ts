@@ -114,6 +114,15 @@ const PAGES_ECRITES: readonly PagePublique[] = [
   },
   {
     chemin: "/integrations",
+    // LE HUB EST BILINGUE, SES SIX PAGES FILLES NON.
+    //
+    // On ne déclare que les langues qu'une page a VRAIMENT (règle du
+    // 8 septembre) : `contenuHub("en")` porte son texte entier, alors
+    // que les six pages d'outil sont encore en français. Les déclarer
+    // ici mettrait `/en/integrations/tally-systeme-io` dans le sitemap
+    // ET dans ses `hreflang`, et Google y trouverait du français sous
+    // une adresse anglaise.
+    langues: LANGUES_PUBLIQUES,
     titre: "Connecter ses outils à Systeme.io",
     resume:
       "Ce que chaque outil de formulaire ou de quiz demande pour envoyer ses réponses dans Systeme.io : Zapier, un webhook, ou rien du tout. Tally, Typeform, Google Forms, Jotform, Interact et Tiquiz comparés.",

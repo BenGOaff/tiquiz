@@ -97,19 +97,20 @@ describe("le chrome du site suit la langue de la page", () => {
 
   test("un `en` pose sur une page SANS version anglaise ne s'affiche jamais", () => {
     // Le sens de l'erreur : on ne peut pas mentir par inadvertance.
-    // `/integrations` existe, il est dans le sitemap, et il n'a pas de
+    // `/affiliation` existe, il est dans le sitemap, et il n'a pas de
     // texte anglais (mesure du 8 septembre).
     //
     // Le test VERIFIE d'abord sa propre premisse, et c'est ce qui l'a
-    // sauve : sa fixture etait `/a-propos`, qui a recu sa version
-    // anglaise le 8 septembre. Sans cette ligne il serait passe au vert
-    // en ne mesurant plus rien du tout.
+    // sauve DEUX FOIS : sa fixture etait `/a-propos`, puis
+    // `/integrations`, et les deux ont recu leur version anglaise le
+    // 8 septembre. Sans cette ligne il serait passe au vert en ne
+    // mesurant plus rien du tout.
     assert.ok(
-      !languesDeclarees("/integrations").includes("en"),
-      "ce test repose sur le fait que /integrations n'a pas de version anglaise",
+      !languesDeclarees("/affiliation").includes("en"),
+      "ce test repose sur le fait que /affiliation n'a pas de version anglaise",
     );
-    const menteur: LienSite = { href: "/integrations", libelle: "Intégrations", en: "Integrations" };
-    assert.equal(libellePourLangue(menteur, "en"), "Intégrations");
+    const menteur: LienSite = { href: "/affiliation", libelle: "Affiliation", en: "Affiliate" };
+    assert.equal(libellePourLangue(menteur, "en"), "Affiliation");
   });
 
   test("une adresse servie par l'APP se traduit sans jamais etre prefixee", () => {

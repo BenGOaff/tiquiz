@@ -407,10 +407,20 @@ test("le menu et le pied de page suivent la langue, mais SEULEMENT ou l'anglais 
   assert.equal(hrefPourLangue("/a-propos", "en"), "/en/a-propos");
 
   // ET ON NE PREFIXE QUE CE QUI EXISTE. Prefixer tout donnerait des
-  // 404 dans le menu, sur toutes les pages a la fois : `/integrations`
-  // et `/affiliation` n'ont aucune version anglaise.
-  assert.equal(hrefPourLangue("/integrations", "en"), "/integrations");
-  assert.equal(hrefPourLangue("/affiliation", "en"), "/affiliation");
+  // 404 dans le menu, sur toutes les pages a la fois.
+  //
+  // LA PREMISSE EST VERIFIEE, ET ELLE A DEJA BOUGE : ce test portait sur
+  // `/integrations`, qui a recu sa version anglaise le 8 septembre. Sans
+  // cette ligne il serait passe au vert en ne mesurant plus rien.
+  for (const fixture of ["/affiliation", "/affiliation-atelier"]) {
+    const page = PAGES_PUBLIQUES.find((p) => p.chemin === fixture);
+    assert.ok(page, `${fixture} n'est plus dans PAGES_PUBLIQUES`);
+    assert.ok(
+      !languesDePage(page).includes("en"),
+      `ce test repose sur le fait que ${fixture} n'a pas de version anglaise`,
+    );
+    assert.equal(hrefPourLangue(fixture, "en"), fixture);
+  }
 
   // UN SLUG D'ARTICLE NE SE TRADUIT PAS PAR UN PREFIXE : l'anglais de
   // `17-raisons-lancer-quiz-business` s'appelle `17-reasons-...`, donc

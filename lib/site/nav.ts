@@ -187,7 +187,7 @@ export const PIED: readonly ColonnePied[] = [
     titre: "Intégrations",
     titreEn: "Integrations",
     liens: [
-      { href: "/integrations", libelle: "Tous les outils" },
+      { href: "/integrations", libelle: "Tous les outils", en: "All the tools" },
       { href: "/integrations/zapier-systeme-io", libelle: "Zapier et Systeme.io" },
       { href: "/integrations/tally-systeme-io", libelle: "Tally et Systeme.io" },
       { href: "/integrations/typeform-systeme-io", libelle: "Typeform et Systeme.io" },

@@ -22,6 +22,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 import { Capture, EnBref, Faq, FilDAriane, Tableau } from "@/components/site/Integrations";
+import { LANGUE_SANS_PREFIXE } from "@/lib/site/langues";
 import { HOTE_VENTE } from "@/lib/publicHost";
 import { ZAPIER, faqJsonLd, filDArianeJsonLd, type QuestionFaq } from "@/lib/site/integrations";
 
@@ -88,7 +89,7 @@ export default function InteractSystemeIo() {
       />
 
       <section className="tq-large pt-12 sm:pt-16">
-        <FilDAriane
+        <FilDAriane langue={LANGUE_SANS_PREFIXE}
           etapes={[
             { nom: "Accueil", chemin: "/" },
             { nom: "Intégrations", chemin: "/integrations" },
@@ -100,7 +101,7 @@ export default function InteractSystemeIo() {
           Connecter <span className="tq-surb">Interact</span> à Systeme.io
         </h1>
 
-        <EnBref>
+        <EnBref langue={LANGUE_SANS_PREFIXE}>
           <p>
             Interact n&apos;a pas d&apos;intégration native avec Systeme.io. Sa documentation
             demande un compte Zapier Pro, un Zap distinct par résultat de quiz, et la création à la
@@ -243,7 +244,7 @@ export default function InteractSystemeIo() {
         </div>
       </section>
 
-      <Faq questions={FAQ} />
+      <Faq langue={LANGUE_SANS_PREFIXE} questions={FAQ} />
       <div className="pb-24" />
     </main>
   );
